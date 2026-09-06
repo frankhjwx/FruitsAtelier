@@ -306,7 +306,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
-        if (LibraryVisible) return;
+        if (LibraryVisible) { OpenLibraryCard(x, y); return; }
         if (drag != DragKind.None || buttonTargetIsUnavailable()) return;
         Guid sourceId = Guid.Empty;
         if (listBounds.Contains(x, y))
