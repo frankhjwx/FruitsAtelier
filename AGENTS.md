@@ -2,7 +2,7 @@
 
 ## Project Entry Points
 
-- [README](README.en.md): startup instructions and documentation index.
+- [README](README.md): startup instructions and documentation index.
 - [Architecture](docs/ARCHITECTURE.md): modules and platform boundaries.
 - Depending on the change, read [Editing Controls](docs/EDITOR_UI.md), [Data Model](docs/PROJECT_MODEL.md), [File Format](docs/STABLE_FORMAT.md), or [Localization Maintenance](docs/LOCALIZATION.md).
 
