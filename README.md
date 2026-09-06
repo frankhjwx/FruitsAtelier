@@ -1,4 +1,6 @@
-# FruitsAtelier
+# 水果工坊 · FruitsAtelier
+
+![水果工坊](assets/branding/wordmark-zh.svg)
 
 **简体中文** | [English](README.en.md)
 
@@ -12,7 +14,8 @@
 - 编辑水果、FSlider 和香蕉雨，支持节拍吸附、多选、批量移动、剪切复制和撤销重做。
 - 将导入的 Legacy Slider 转换为可编辑的 FSlider，调整锚点、贝塞尔控制柄和行程次数。
 - 播放 MP3 / OGG / WAV，拖动时间轴定位；预览支持 AR、CS 和 Catch 皮肤。
-- 保存 `.catchproj`，或导出 `.osu`。工程文件保留可编辑节点和控制柄。
+- 自定义 workspace，保存 `project.catchdiff` 与自动命名的各难度文件；资源只引用，仅 Export 写入 osu!stable Songs。
+- 独立曲库界面，支持原始／罗马字歌名、Artist、作者与 Tags 搜索。参见 [workspace 使用说明](docs/WORKSPACE.md)。
 - 中英文界面。
 
 ## 运行

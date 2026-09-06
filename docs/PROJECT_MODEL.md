@@ -1,5 +1,7 @@
 # 工程与数据模型
 
+默认保存使用 [workspace 工程目录](WORKSPACE.md)：`project.catchdiff` 清单与独立难度文件。本文的 `.catchproj` schema 1/2 描述保留的兼容格式及文档编码。
+
 创作模型通过 UTF-8 JSON `.catchproj` schema 2 持久化（兼容读取 schema 1）；本项目自行解析、输出 stable v14 / Mode=2 `.osu`。工程创作信息、导入上下文和派生输出保持分离。
 
 ## 权威数据与派生数据

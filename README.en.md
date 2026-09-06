@@ -1,5 +1,7 @@
 # FruitsAtelier
 
+![FruitsAtelier](assets/branding/wordmark-en.svg)
+
 [简体中文](README.md) | **English**
 
 An independent osu!catch beatmap editor for Windows and macOS. Edit fruits and FSliders on a time–X canvas and preview Catch objects alongside the music.
@@ -12,7 +14,8 @@ The project is under active development.
 - Edit fruits, FSliders, and banana showers with beat snapping, multi-selection, group movement, cut/copy, and undo/redo.
 - Convert imported Legacy Sliders into editable FSliders, then adjust anchors, Bézier handles, and span counts.
 - Play MP3 / OGG / WAV audio and seek using the timeline. Preview objects with AR, CS, and Catch skins.
-- Save `.catchproj` projects or export `.osu` beatmaps. Project files retain editable anchors and handles.
+- Manage projects in a configurable workspace with `project.catchdiff` and automatically named difficulty files. Resources stay referenced; only explicit export writes to osu!stable Songs.
+- Browse and search the local Catch library by original/romanised title, artist, creator and tags. [Workspace guide](docs/WORKSPACE.md).
 - Chinese and English interface.
 
 ## Running

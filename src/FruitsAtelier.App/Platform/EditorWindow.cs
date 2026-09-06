@@ -57,10 +57,14 @@ internal sealed partial class EditorWindow : IDisposable
         }
         var instance = Native.GetModuleHandle(null);
         var className = "FruitsAtelier." + Environment.ProcessId;
+        string iconPath = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "app-icon.ico");
+        largeBrandIcon = Native.LoadImage(0, iconPath, 1, 32, 32, 0x10);
+        smallBrandIcon = Native.LoadImage(0, iconPath, 1, 16, 16, 0x10);
         var windowClass = new Native.WindowClass
         {
             Size = (uint)Marshal.SizeOf<Native.WindowClass>(), Style = 3 | 0x0008,
             Procedure = procedure, Instance = instance, ClassName = className,
+            Icon = largeBrandIcon, SmallIcon = smallBrandIcon,
             Cursor = Native.LoadCursor(0, (nint)32512)
         };
         if (Native.RegisterClassEx(ref windowClass) == 0) throw new Win32Exception();
@@ -200,6 +204,8 @@ internal sealed partial class EditorWindow : IDisposable
                 view.Wheel(point.X * 96f / dpi, point.Y * 96f / dpi, (short)((ulong)wParam >> 16), (wParam & 0x0008) != 0);
                 Invalidate(); return 0;
             case 0x0100:
+                if ((int)wParam == 86 && Native.Control && view.LibraryTextFocused)
+                { view.PasteLibraryText(Native.ReadClipboardText(window)); Invalidate(); return 0; }
                 view.KeyDown((int)wParam, Native.Control, Native.Shift);
                 if (!view.WantsCapture && Native.GetCapture() == window) Native.ReleaseCapture();
                 UpdateTitle(); Invalidate(); return 0;
@@ -246,10 +252,13 @@ internal sealed partial class EditorWindow : IDisposable
         string cache = Path.Combine(Path.GetDirectoryName(AppLog.Path)!, "..", "skins");
         view.LoadSkin(SkinArchive.Import(archive, Path.GetFullPath(cache)));
     }
+    private nint largeBrandIcon, smallBrandIcon;
     public void Dispose()
     {
         if (disposed) return;
         disposed = true;
+        if (largeBrandIcon != 0) { Native.DestroyIcon(largeBrandIcon); largeBrandIcon = 0; }
+        if (smallBrandIcon != 0) { Native.DestroyIcon(smallBrandIcon); smallBrandIcon = 0; }
         audio.Dispose();
         canvas?.Dispose();
         AppLog.Write($"Window closed. Frames={frames}");

@@ -32,6 +32,10 @@ SDK 选择和构建命令见[构建与测试](TESTING.md)，包版本与许可�
 
 表中 `Core/`、`App/` 分别简写对应的源项目目录。Mac 项目通过链接源码复用 `EditorView`、`ICanvas`、皮肤和谱面包处理代码，通过项目引用使用 Core。Core 不引用窗口或图形设备类型。
 
+## Workspace 与曲库
+
+`Core/Workspace` 提供工程目录事务、SQLite 索引、元数据扫描、资源引用诊断和显式导出计划。共享 `EditorView.Library` 负责曲库/设置/导出页面；平台宿主负责文件夹选择、音频切换和资源导出。曲库扫描与星级计算在后台执行，UI 读取完成后的结果。详见 [workspace](WORKSPACE.md)。
+
 ## 编辑与转换
 
 宿主将输入映射到 DIP 坐标后交给 `EditorView`。内容修改以事务提交到 `EditorHistory`，一次拖动、批量操作或曲线草稿形成一步撤销。选择和视口作为会话状态单独维护。

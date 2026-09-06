@@ -45,6 +45,25 @@ internal static class Native
     [StructLayout(LayoutKind.Sequential)]
     internal struct MinMaxInfo { internal Point Reserved, MaxSize, MaxPosition, MinTrackSize, MaxTrackSize; }
 
+    [DllImport("user32.dll")] internal static extern bool OpenClipboard(nint owner);
+    [DllImport("user32.dll")] internal static extern bool CloseClipboard();
+    [DllImport("user32.dll")] internal static extern nint GetClipboardData(uint format);
+    [DllImport("kernel32.dll")] internal static extern nint GlobalLock(nint memory);
+    [DllImport("kernel32.dll")] internal static extern bool GlobalUnlock(nint memory);
+    internal static string ReadClipboardText(nint owner)
+    {
+        if (!OpenClipboard(owner)) return "";
+        try
+        {
+            nint data = GetClipboardData(13); if (data == 0) return "";
+            nint pointer = GlobalLock(data); if (pointer == 0) return "";
+            try { return Marshal.PtrToStringUni(pointer) ?? ""; }
+            finally { GlobalUnlock(data); }
+        }
+        finally { CloseClipboard(); }
+    }
+    [DllImport("user32.dll", EntryPoint = "LoadImageW", CharSet = CharSet.Unicode)] internal static extern nint LoadImage(nint instance, string name, uint type, int width, int height, uint flags);
+    [DllImport("user32.dll")] internal static extern bool DestroyIcon(nint icon);
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] internal static extern ushort RegisterClassEx(ref WindowClass value);
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] internal static extern nint CreateWindowEx(uint extended, string className, string title, uint style, int x, int y, int width, int height, nint parent, nint menu, nint instance, nint param);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern nint DefWindowProc(nint hwnd, uint message, nuint wParam, nint lParam);

@@ -86,3 +86,11 @@ Its source, attribution and full licence ship in [assets/icons/osu](assets/icons
 The colour scale follows the published star-rating stops in osu!web
 `resources/js/utils/beatmap-helper.ts` at commit `61b0a41431395f86ff68fa12744f3266448ec885`;
 interpolation is independently implemented as gamma-2.2 RGB interpolation.
+
+## Workspace database
+
+- Microsoft.Data.Sqlite / Microsoft.Data.Sqlite.Core 8.0.22: MIT; https://github.com/dotnet/efcore.
+- SQLitePCLRaw core, bundle_e_sqlite3, provider.e_sqlite3 and lib.e_sqlite3 2.1.6: Apache-2.0; https://github.com/ericsink/SQLitePCL.raw.
+- SQLite native engine: public domain; https://sqlite.org/copyright.html.
+
+Package versions are pinned in the project and lock files. License texts are included under `Core/Workspace/Licenses` and distributed with the desktop application.

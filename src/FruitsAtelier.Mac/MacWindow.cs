@@ -10,7 +10,7 @@ using L = FruitsAtelier.Localization.Strings;
 
 namespace FruitsAtelier.Mac;
 
-internal sealed class MacWindow : Window
+internal sealed partial class MacWindow : Window
 {
     private readonly EditorControl editor = new();
     private readonly MacAudio audio;
@@ -24,13 +24,15 @@ internal sealed class MacWindow : Window
         Width = 1440; Height = 900; MinWidth = 980; MinHeight = 620;
         View.RendererStatusKey = "mac.renderStatus";
         Content = editor; Title = L.Get("window.initialTitle");
+        string icon = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "app-icon.png");
+        if (File.Exists(icon)) Icon = new WindowIcon(icon);
         editor.Changed = UpdateTitle;
         View.RequestClose = Close;
-        View.RequestOpen = () => RunFile(async () => { if (await ConfirmDiscard()) { var path = await Pick(L.Get("files.open"), ["*.osz", "*.osu", "*.catchproj"]); if (path is not null) await OpenPath(path); } });
+        View.RequestOpen = () => RunFile(async () => { if (await ConfirmDiscard()) { var path = await Pick(L.Get("files.open"), ["*.osz", "*.osu", "*.catchproj", "*.catchdiff"]); if (path is not null) await OpenPath(path); } });
         View.RequestNewProject = () => RunFile(async () =>
         {
             if (!await ConfirmDiscard()) return;
-            await audio.LoadAsync(null); projectPath = null; View.NewProject();
+            await audio.LoadAsync(null); projectPath = null; View.NewProject(); View.CloseLibrary();
         });
         View.RequestImportDifficulty = () => RunFile(async () =>
         {
@@ -48,7 +50,8 @@ internal sealed class MacWindow : Window
         });
         View.RequestSave = () => RunFile(async () => { await Save(false); });
         View.RequestSaveAs = () => RunFile(async () => { await Save(true); });
-        View.RequestExport = () => RunFile(Export);
+        View.RequestExport = View.ShowWorkspaceExport;
+        ConfigureLibrary(initialPath is null && !smokeCheck);
         View.RequestAudio = () => RunFile(async () =>
         {
             if (!View.PrepareFileOperation()) return;
@@ -105,7 +108,7 @@ internal sealed class MacWindow : Window
             _ = audio.LoadAsync(View.Document.AudioPath); state = audio.State;
         }
         View.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading, state.Error is null ? null : L.Reformat(state.Error), state.FilePath);
-        if (state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
+        if (View.LibraryVisible || View.WorkspaceSession is not null || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
             editor.Refresh();
         lastReady = state.CanPlay; lastPosition = state.PositionMs; lastError = state.Error;
     }
@@ -151,6 +154,16 @@ internal sealed class MacWindow : Window
     }
     private async Task OpenPath(string path)
     {
+        if (Path.GetFileName(path).Equals(WorkspaceProject.ManifestName, StringComparison.OrdinalIgnoreCase))
+        {
+            View.LoadWorkspace(WorkspaceProject.Open(Path.GetDirectoryName(path)!));
+            await audio.LoadAsync(View.Document.AudioPath); PollAudio(); return;
+        }
+        if (Path.GetExtension(path).Equals(".catchdiff", StringComparison.OrdinalIgnoreCase))
+        {
+            View.LoadWorkspace(WorkspaceProject.Open(Path.GetDirectoryName(path)!));
+            await audio.LoadAsync(View.Document.AudioPath); PollAudio(); return;
+        }
         var project = BeatmapArchive.OpenProject(path, Path.Combine(MacPaths.Artifacts, "beatmaps"));
         View.LoadProject(project);
         projectPath = Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase) ? path : null;
@@ -161,23 +174,10 @@ internal sealed class MacWindow : Window
     private async Task<bool> Save(bool saveAs)
     {
         if (!View.PrepareFileOperation()) return false;
-        var destination = !saveAs ? projectPath : null;
-        destination ??= await SavePicker(L.Get("files.saveProject"), "catchproj", SafeName(View.ProjectName) + ".catchproj");
-        if (destination is null) return false;
-        ProjectSerializer.WriteFile(View.CaptureProject(), destination); projectPath = destination; View.MarkSaved();
-        View.SetNotice(L.Get("files.saved", destination)); return true;
+        await Task.CompletedTask;
+        return View.SaveWorkspace(saveAs);
     }
-    private async Task Export()
-    {
-        if (!View.PrepareFileOperation()) return;
-        var destination = await SavePicker(L.Get("files.export"), "osu", SafeName(View.Document.Name + " [" + View.CurrentDifficultyName + "]") + ".osu");
-        if (destination is null) return;
-        var result = OsuBeatmapWriter.Serialize(View.Document, View.CompensateTinyDroplets);
-        BeatmapResources.Copy(View.Document, Path.GetDirectoryName(destination)!, result.ReadBack);
-        OsuBeatmapWriter.WriteFile(View.Document, destination, View.CompensateTinyDroplets);
-        View.SetNotice(result.ObjectSequenceMatches ? L.Get("files.exportMatched", result.MaxConvertedXError, result.MaxConvertedTimeErrorMs) : L.Get("files.exportChanged"));
-        if (result.Diagnostics.Count > 0) await Message(L.Get("files.diagnostics"), string.Join("\n", result.Diagnostics.Take(8)));
-    }
+
     private static string SafeName(string name) => string.IsNullOrWhiteSpace(name) ? L.Get("files.untitled") : new string(name.Where(c => !Path.GetInvalidFileNameChars().Contains(c) && c != ':').Take(100).ToArray());
     private async Task SmokeCheck()
     {
@@ -244,5 +244,6 @@ internal sealed class MacWindow : Window
         using var narrow = new RenderTargetBitmap(new PixelSize((int)editor.Bounds.Width, (int)editor.Bounds.Height), new Vector(96, 96));
         narrow.Render(editor); narrow.Save(Path.Combine(folder, "project-tabs-narrow.png"));
         L.SetLanguage("zh-CN");
+        await WorkspaceSmoke(folder);
     }
 }

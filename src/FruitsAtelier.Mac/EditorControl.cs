@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Media;
 using FruitsAtelier.App.Editor;
 
@@ -57,8 +58,18 @@ internal sealed class EditorControl : Control, IDisposable
         var p = e.GetPosition(this); View.Wheel((float)p.X, (float)p.Y, (float)e.Delta.Y * 120, MacInput.Control(e.KeyModifiers));
         e.Handled = true; Refresh();
     }
-    protected override void OnKeyDown(KeyEventArgs e)
+    protected override async void OnKeyDown(KeyEventArgs e)
     {
+        if (e.Key == Key.V && MacInput.Control(e.KeyModifiers) && View.LibraryTextFocused)
+        {
+            e.Handled = true;
+            if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+            {
+                try { View.PasteLibraryText(await clipboard.TryGetTextAsync() ?? ""); }
+                catch (Exception error) { View.SetNotice(error.Message); }
+            }
+            Refresh(); return;
+        }
         View.KeyDown(MacInput.VirtualKey(e.Key, View.IsEditingText), MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         e.Handled = e.Key is Key.Tab or Key.Space or Key.Back or Key.Delete or Key.Enter or Key.Escape || MacInput.Control(e.KeyModifiers);
         Refresh();

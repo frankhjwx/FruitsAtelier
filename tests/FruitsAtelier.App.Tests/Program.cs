@@ -4,6 +4,7 @@ using FruitsAtelier.Core;
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Workspace library isolates input, saving and export", LibraryTests.Run),
     ("Difficulty tabs use content width and truncate Unicode names after 16 characters", DifficultyTabTests.Layout),
     ("Difficulty tab stars follow edits, undo and CS", DifficultyTabTests.Editing),
     ("Overflow difficulty tabs scroll, switch and add without losing content", DifficultyTabTests.Overflow),

@@ -3,6 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.22" />
     <EmbeddedResource Include="Localization/*.json" LogicalName="FruitsAtelier.Localization.%(Filename)%(Extension)" WithCulture="false" />
   </ItemGroup>
 </Project>

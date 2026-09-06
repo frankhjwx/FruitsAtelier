@@ -21,7 +21,7 @@ internal sealed partial class EditorWindow
         view.RequestNewProject = () => FileOperation(() =>
         {
             if (!ConfirmDiscard()) return;
-            ResetAudio(); projectPath = null; view.NewProject();
+            ResetAudio(); projectPath = null; view.NewProject(); view.CloseLibrary();
         });
         view.RequestImportDifficulty = () => FileOperation(() =>
         {
@@ -36,7 +36,8 @@ internal sealed partial class EditorWindow
         };
         view.RequestSave = () => FileOperation(() => SaveProject(false));
         view.RequestSaveAs = () => FileOperation(() => SaveProject(true));
-        view.RequestExport = () => FileOperation(ExportBeatmap);
+        view.RequestExport = view.ShowWorkspaceExport;
+        ConfigureLibrary();
         view.RequestAudio = () => FileOperation(() =>
         {
             if (!view.PrepareFileOperation()) return;
@@ -53,7 +54,7 @@ internal sealed partial class EditorWindow
     {
         try { operation(); }
         catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException
-            or InvalidOperationException or ArgumentException or NotSupportedException or System.Text.Json.JsonException)
+            or InvalidOperationException or ArgumentException or NotSupportedException or System.Text.Json.JsonException or Microsoft.Data.Sqlite.SqliteException)
         {
             view.SetNotice(L.Get("files.failed", L.Localized(error.Message)));
             AppLog.Write(error.ToString());
@@ -64,6 +65,11 @@ internal sealed partial class EditorWindow
 
     private void OpenPath(string path)
     {
+        if (Path.GetExtension(path).Equals(".catchdiff", StringComparison.OrdinalIgnoreCase))
+        {
+            view.LoadWorkspace(WorkspaceProject.Open(Path.GetDirectoryName(path)!));
+            ResetAudio(); if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath); return;
+        }
         var project = BeatmapArchive.OpenProject(path, Path.Combine(Artifacts, "beatmaps"));
         view.LoadProject(project);
         projectPath = Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase) ? path : null;
@@ -75,38 +81,7 @@ internal sealed partial class EditorWindow
     private bool SaveProject(bool saveAs)
     {
         if (!view.PrepareFileOperation()) return false;
-        string? destination = projectPath;
-        if (saveAs || destination is null)
-        {
-            string folder = Path.Combine(Artifacts, "projects");
-            Directory.CreateDirectory(folder);
-            destination = MapFileDialog.Select(hwnd, true, L.Get("files.saveProject"), MapFileDialog.ProjectFilter,
-                destination ?? Path.Combine(folder, SafeName(view.ProjectName) + ".catchproj"), "catchproj");
-        }
-        if (destination is null) return false;
-        ProjectSerializer.WriteFile(view.CaptureProject(), destination);
-        projectPath = destination;
-        view.MarkSaved();
-        view.SetNotice(L.Get("files.saved", destination));
-        return true;
-    }
-
-    private void ExportBeatmap()
-    {
-        if (!view.PrepareFileOperation()) return;
-        string folder = Path.Combine(Artifacts, "exports", SafeName(view.Document.Name));
-        Directory.CreateDirectory(folder);
-        string? destination = MapFileDialog.Select(hwnd, true, L.Get("files.export"), MapFileDialog.OsuFilter,
-            Path.Combine(folder, SafeName(view.Document.Name + " [" + view.CurrentDifficultyName + "]") + ".osu"), "osu");
-        if (destination is null) return;
-        var result = OsuBeatmapWriter.Serialize(view.Document, view.CompensateTinyDroplets);
-        CopyResources(view.Document, Path.GetDirectoryName(destination)!, result.ReadBack);
-        OsuBeatmapWriter.WriteFile(view.Document, destination, view.CompensateTinyDroplets);
-        view.SetNotice(result.ObjectSequenceMatches
-            ? L.Get("files.exportMatched", result.MaxConvertedXError, result.MaxConvertedTimeErrorMs)
-            : L.Get("files.exportChanged"));
-        if (result.Diagnostics.Count > 0)
-            Native.MessageBox(hwnd, string.Join("\n", result.Diagnostics.Take(8)), L.Get("files.diagnostics"), 0x40);
+        return view.SaveWorkspace(saveAs);
     }
 
     internal static void CopyResources(MapDocument document, string destinationDirectory, MapDocument exportedDocument)
@@ -122,6 +97,7 @@ internal sealed partial class EditorWindow
 
     private void PollAudio()
     {
+        if (view.LibraryVisible || view.WorkspaceSession is not null) Invalidate();
         if (!string.Equals(audio.FilePath, view.Document.AudioPath, StringComparison.OrdinalIgnoreCase))
         {
             if (string.IsNullOrWhiteSpace(view.Document.AudioPath)) ResetAudio();
