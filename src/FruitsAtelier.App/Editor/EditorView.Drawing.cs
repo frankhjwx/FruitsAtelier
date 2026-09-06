@@ -484,9 +484,8 @@ public sealed partial class EditorView
         c.Text(L.Get("ui.preview"), r.X, r.Y, 13, Foreground, r.Width, true);
         Button(c, new(r.Right - 92, r.Y - 5, 92, 27), L.Get("ui.debugCurves"), () => showPreviewCurves = !showPreviewCurves, showPreviewCurves);
         double preempt = CatchScrollTiming.PreemptMs(Document.ApproachRate);
-        c.Text(L.Get("ui.previewAr", Number(Document.ApproachRate), Number(preempt)), r.X, r.Y + 23, 10, Foreground, r.Width);
-        c.Text(conversion!.Success ? L.Get("ui.generated") : L.Get("ui.partialFailure"), r.X, r.Y + 40, 10, conversion.Success ? Accent : Error, r.Width);
-        Rect stage = new(r.X, r.Y + 62, r.Width, r.Height - 82);
+        c.Text(L.Get("ui.previewStats", Number(Document.ApproachRate), Number(Document.CircleSize)), r.X, r.Y + 23, 10, Foreground, r.Width);
+        Rect stage = new(r.X, r.Y + 42, r.Width, r.Height - 48);
         c.Fill(stage, 0x151A22, 5);
         c.Clip(stage);
         float fallAspect = (float)(CatchScrollTiming.FallDistance / CatchScrollTiming.PlayfieldWidth);
@@ -526,7 +525,6 @@ public sealed partial class EditorView
             DrawCatchObject(c, item, fieldLeft + (float)(item.X / 512) * fieldWidth, y, fieldWidth);
         }
         c.Unclip();
-        c.Text(L.Get("ui.previewSkin", Number(Document.CircleSize), skin?.Name ?? L.Get("ui.basicShapes")), r.X, r.Bottom - 13, 10, Muted, r.Width);
     }
 
     private void DrawTransport(ICanvas c)

@@ -11,6 +11,7 @@ internal static class Program
         try
         {
             if (args.Contains("--m2-check")) return Diagnostics.M2Check.Run(args.Where(p => File.Exists(p) && Path.GetExtension(p).Equals(".osz", StringComparison.OrdinalIgnoreCase)));
+            L.SetLanguage(FruitsAtelier.Localization.LanguagePreference.ReadLanguage());
             using var window = new EditorWindow();
             return window.Run(args.Contains("--render-check"), args.FirstOrDefault(File.Exists));
         }

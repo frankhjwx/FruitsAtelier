@@ -28,6 +28,7 @@ internal sealed partial class MacWindow : Window
         if (File.Exists(icon)) Icon = new WindowIcon(icon);
         editor.Changed = UpdateTitle;
         View.RequestClose = Close;
+        View.RequestLanguagePreference = language => RunFile(() => { FruitsAtelier.Localization.LanguagePreference.SaveLanguage(language); return Task.CompletedTask; });
         View.RequestOpen = () => RunFile(async () => { if (await ConfirmDiscard()) { var path = await Pick(L.Get("files.open"), ["*.osz", "*.osu", "*.catchproj", "*.catchdiff"]); if (path is not null) await OpenPath(path); } });
         View.RequestNewProject = () => RunFile(async () =>
         {

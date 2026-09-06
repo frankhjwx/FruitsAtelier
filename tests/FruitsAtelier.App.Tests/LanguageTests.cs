@@ -3,6 +3,34 @@ using FruitsAtelier.Localization;
 
 internal static class LanguageTests
 {
+    public static void PreferencesAndPreview()
+    {
+        string folder = Path.Combine(Path.GetTempPath(), "atelier-language-" + Guid.NewGuid());
+        string path = Path.Combine(folder, "language.json"), previous = Strings.Language;
+        try
+        {
+            Check(LanguagePreference.ReadLanguage(path) == "en", "Missing preference must default to English");
+            LanguagePreference.SaveLanguage("zh-CN", path);
+            Check(LanguagePreference.ReadLanguage(path) == "zh-CN", "Explicit Chinese preference must persist");
+            LanguagePreference.SaveLanguage("en", path);
+            Check(LanguagePreference.ReadLanguage(path) == "en", "Explicit English preference must persist");
+            File.WriteAllText(path, "{\"Language\":\"unknown\"}");
+            Check(LanguagePreference.ReadLanguage(path) == "en", "Unsupported preference falls back to English");
+            File.WriteAllText(path, "invalid JSON");
+            Check(LanguagePreference.ReadLanguage(path) == "en", "Damaged preference falls back to English");
+            Strings.SetLanguage("en");
+            var ui = new Ui();
+            ui.LoadDocument(new MapDocument { Name = "Preview", ApproachRate = 8, CircleSize = 5, IsDemo = false });
+            ui.Paint();
+            Check(ui.Canvas.Texts.Count(t => t.Value == "AR 8 · CS 5 · NM") == 1, "Preview must have one compact stats line");
+            Check(!ui.Canvas.Texts.Any(t => t.Value.Contains(" ms · NM") || t.Value == Strings.Get("ui.generated") || t.Value == Strings.Get("ui.previewSkin", "5", Strings.Get("ui.basicShapes"))), "Removed preview details remain visible");
+            ui.View.RequestLanguagePreference = language => LanguagePreference.SaveLanguage(language, path);
+            ui.ClickText("中文 / EN");
+            Check(LanguagePreference.ReadLanguage(path) == "zh-CN" && !ui.View.IsDirty, "Language button persists choice without editing project");
+        }
+        finally { Strings.SetLanguage(previous); if (Directory.Exists(folder)) Directory.Delete(folder, true); }
+    }
+
     public static void SwitchWithoutEditing()
     {
         Strings.SetLanguage("zh-CN");

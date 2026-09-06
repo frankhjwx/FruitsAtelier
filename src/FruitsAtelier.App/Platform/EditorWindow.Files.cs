@@ -12,6 +12,7 @@ internal sealed partial class EditorWindow
 
     private void ConfigureFiles()
     {
+        view.RequestLanguagePreference = language => FileOperation(() => FruitsAtelier.Localization.LanguagePreference.SaveLanguage(language));
         view.RequestOpen = () => FileOperation(() =>
         {
             if (!ConfirmDiscard()) return;

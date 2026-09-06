@@ -4,6 +4,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    public Action<string>? RequestLanguagePreference { get; set; }
     private string renderedLanguage = L.Language;
 
     private void CycleLanguage()
@@ -12,6 +13,7 @@ public sealed partial class EditorView
         var languages = L.AvailableLanguages;
         int current = languages.ToList().IndexOf(L.Language);
         L.SetLanguage(languages[(current + 1) % languages.Count]);
+        RequestLanguagePreference?.Invoke(L.Language);
         RefreshLanguage();
     }
 

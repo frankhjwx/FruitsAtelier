@@ -534,5 +534,6 @@
   "library.details": "查看详情",
   "library.songsOptional": "Songs 未绑定（可稍后设置）",
   "library.unboundEmpty": "尚未绑定 Songs。可以先新建工程，稍后在设置中绑定。",
-  "library.bindForExport": "导出到 osu!stable 前，请在设置中绑定 Songs 文件夹。"
+  "library.bindForExport": "导出到 osu!stable 前，请在设置中绑定 Songs 文件夹。",
+  "ui.previewStats": "AR {0} · CS {1} · NM"
 }

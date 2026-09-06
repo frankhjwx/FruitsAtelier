@@ -534,5 +534,6 @@
   "library.details": "View details",
   "library.songsOptional": "Songs not bound (optional)",
   "library.unboundEmpty": "Songs is not bound. Create a project now and bind Songs later in Settings.",
-  "library.bindForExport": "Bind a Songs folder in Settings before exporting to osu!stable."
+  "library.bindForExport": "Bind a Songs folder in Settings before exporting to osu!stable.",
+  "ui.previewStats": "AR {0} · CS {1} · NM"
 }

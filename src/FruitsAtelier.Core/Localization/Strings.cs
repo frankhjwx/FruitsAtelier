@@ -5,7 +5,7 @@ namespace FruitsAtelier.Localization;
 public static class Strings
 {
     private static readonly LocalizationCatalog catalog = LoadCatalog();
-    private static string language = "zh-CN";
+    private static string language = "en";
     private static readonly object messageLock = new();
     private static readonly Dictionary<string, (string Key, object?[] Args)> messages = new(StringComparer.Ordinal);
     private static readonly Queue<string> messageOrder = new();
