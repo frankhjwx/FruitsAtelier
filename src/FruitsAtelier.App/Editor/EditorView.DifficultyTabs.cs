@@ -12,20 +12,81 @@ public sealed partial class EditorView
     private int visibleDifficultyTabs = 1;
     private static readonly string catchIconPath = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "osu", "RulesetCatch.png");
 
+    private bool RatingEditInProgress => draftTrack != Guid.Empty || draftBanana != Guid.Empty
+        || drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.DraftHandle or DragKind.BananaStart or DragKind.BananaEnd;
+    private static readonly SemaphoreSlim ratingWorkers = new(1);
     public double? CurrentStarRating => DifficultyRating(activeDifficulty);
+    public bool CurrentStarRatingFailed => difficulties[activeDifficulty].RatingFailed;
+    public bool CurrentStarRatingRefreshing => RatingRefreshing(activeDifficulty);
+    public bool StarRatingsRefreshing
+    {
+        get
+        {
+            // Hidden tabs must also retire completed tasks, otherwise the host redraws forever.
+            for (int i = 0; i < difficulties.Count; i++)
+                if (difficulties[i].RatingTask is { IsCompleted: true }) _ = DifficultyRating(i);
+            return difficulties.Any(d => d.RatingTask is not null) || RatingEditInProgress;
+        }
+    }
+
+    private bool RatingRefreshing(int index) => difficulties[index].RatingTask is not null
+        || index == activeDifficulty && RatingEditInProgress;
 
     private double? DifficultyRating(int index)
     {
         var session = difficulties[index];
         var document = session.History.Document;
-        if (index == activeDifficulty && (draftTrack != Guid.Empty || draftBanana != Guid.Empty)) return null;
-        if (session.RatingSnapshot is not null && session.RatingCompensation == compensateTinyDroplets
-            && session.RatingSnapshot.ContentEquals(document)) return session.Stars;
-        var converted = index == activeDifficulty ? Conversion : CatchStreamConverter.Convert(document, compensateTinyDroplets);
-        session.Stars = converted.Success ? CatchDifficultyCalculator.Calculate(converted.Objects, document.CircleSize).StarRating : null;
-        session.RatingSnapshot = document.DeepClone();
-        session.RatingCompensation = compensateTinyDroplets;
-        return session.Stars;
+        bool matches = session.RatingSnapshot is not null && session.RatingCompensation == compensateTinyDroplets
+            && session.RatingSnapshot.ContentEquals(document);
+        if (session.RatingTask is { IsCompleted: true } completed)
+        {
+            session.RatingTask = null;
+            if (!matches) session.RatingSnapshot = null;
+            if (matches)
+            {
+                double? result = completed.IsCompletedSuccessfully ? completed.Result : null;
+                session.RatingFailed = result is null;
+                if (result is { } stars) session.Stars = stars;
+                else SetNotice(L.Get("project.starCalculationFailed", session.Name));
+            }
+        }
+        // Keep the previous complete result while a curve or banana shower is unfinished.
+        if (index == activeDifficulty && RatingEditInProgress) return session.Stars ?? 0;
+        if (session.RatingTask is null && !matches)
+        {
+            var snapshot = document.DeepClone();
+            bool compensation = compensateTinyDroplets;
+            session.RatingSnapshot = snapshot; session.RatingCompensation = compensation; session.RatingFailed = false;
+            var cancellation = session.RatingCancellation.Token;
+            session.RatingTask = Task.Run(async () =>
+            {
+                try
+                {
+                    await ratingWorkers.WaitAsync(cancellation);
+                    try
+                    {
+                        cancellation.ThrowIfCancellationRequested();
+                        var converted = CatchStreamConverter.Convert(snapshot, compensation);
+                        return converted.Success ? CatchDifficultyCalculator.Calculate(converted.Objects, snapshot.CircleSize).StarRating : (double?)null;
+                    }
+                    finally { ratingWorkers.Release(); }
+                }
+                catch (OperationCanceledException) { return null; }
+                catch (Exception) { return null; }
+            });
+        }
+        return session.Stars ?? 0;
+    }
+
+    private static void DrawRatingSpinner(ICanvas c, float x, float y)
+    {
+        double angle = Environment.TickCount64 / 140.0;
+        for (int i = 0; i < 8; i++)
+        {
+            double a = angle + i * Math.PI / 4;
+            c.Line(x + (float)Math.Cos(a) * 3, y + (float)Math.Sin(a) * 3,
+                x + (float)Math.Cos(a) * 5, y + (float)Math.Sin(a) * 5, Accent, 1.5f, (i + 1) / 8f);
+        }
     }
 
     // osu!web's published star-rating colour stops; gamma-correct RGB interpolation.
@@ -121,7 +182,9 @@ public sealed partial class EditorView
             c.Text(names[index], x + 36, 98, 12, active ? Foreground : Muted, rect.Width - 101, active);
             c.Text(stars is null ? L.Get("project.starsUnavailable") : L.Get("project.stars", stars.Value),
                 rect.Right - 59, 99, 10, active ? Foreground : Muted, 47);
-            if (difficulties[index].History.IsDirty) c.Circle(rect.Right - 9, 106, 2.5f, Gold);
+            if (RatingRefreshing(index)) DrawRatingSpinner(c, rect.Right - 9, 106);
+            else if (difficulties[index].RatingFailed) c.Text("!", rect.Right - 12, 98, 12, Error, 10, true);
+            else if (difficulties[index].History.IsDirty) c.Circle(rect.Right - 9, 106, 2.5f, Gold);
             hits.Add(new(rect, () => SwitchDifficulty(target), true));
             x = rect.Right + 6;
         }

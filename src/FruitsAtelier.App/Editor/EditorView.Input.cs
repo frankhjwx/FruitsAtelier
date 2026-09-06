@@ -176,6 +176,7 @@ public sealed partial class EditorView
             foreach (var track in Document.Tracks)
                 for (int s = 0; s < track.Nodes.Count - 1; s++)
                 {
+                    if (!SegmentNearPointer(track, s, y)) continue;
                     var last = Screen(CurveMath.Evaluate(track, s, 0));
                     for (int n = 1; n <= 64; n++)
                     {
@@ -298,6 +299,7 @@ public sealed partial class EditorView
         if (drag is DragKind.Objects or DragKind.BananaStart or DragKind.BananaEnd)
         {
             objectDragStart = null;
+            dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
             objectDragPrepared = false;
             if (AudioPlaying || pinPlayhead) FollowPlayhead();
         }
@@ -443,6 +445,7 @@ public sealed partial class EditorView
         }
         drag = DragKind.None;
         objectDragStart = null;
+        dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         objectDragPrepared = false;
         draftTrack = Guid.Empty;
         draftBanana = Guid.Empty;

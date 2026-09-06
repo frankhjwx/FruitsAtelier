@@ -6,6 +6,8 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 // Existing interaction fixtures use Chinese labels explicitly.
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
+if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+
 var tests = new (string Name, Action Run)[]
 {
     ("Fresh process defaults to English", () => { if (startupLanguage != "en") throw new Exception("Default language must be English"); }),
@@ -15,6 +17,7 @@ var tests = new (string Name, Action Run)[]
     ("External folders and full OSZ resources persist across restarts", ExternalResourceTests.Run),
     ("Difficulty tabs use content width and truncate Unicode names after 16 characters", DifficultyTabTests.Layout),
     ("Difficulty tab stars follow edits, undo and CS", DifficultyTabTests.Editing),
+    ("Star ratings refresh asynchronously without losing cached or newer results", DifficultyTabTests.AsyncRatings),
     ("Overflow difficulty tabs scroll, switch and add without losing content", DifficultyTabTests.Overflow),
     ("Multi-difficulty projects preserve content, history and compatibility", ProjectTests.Run),
     ("Canvas seeks follow the current beat grid and timing changes", CanvasSeekSnapTests.BeatGrid),

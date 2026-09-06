@@ -59,3 +59,22 @@ Windows `AudioTransport` 在串行 worker 上处理加载、播放、暂停和 s
 Mac 通过 `Native/Audio.m` 调用 AVAudioPlayer，播放位置取自播放器。OGG 先由 NVorbis 解码为有容量上限的 PCM WAV，过期加载结果被丢弃，EOF 后重建播放器。平台操作见[macOS 说明](MACOS.md)。
 
 Windows resize 时先释放 back buffer 对应的 Direct2D target，调整 DXGI buffer 后重建；零尺寸跳过呈现。鼠标捕获丢失或失焦会取消活动交互。Mac 将对应事件映射到相同的编辑器取消方法。
+
+## Interactive editing performance
+
+The editor keeps a per-instance `CatchConversionCache`. Unchanged FSliders, imported
+sliders, and banana showers reuse their derived output only when their source content,
+conversion settings, timing points, and incoming legacy RNG state match. Cached entries
+restore the outgoing RNG state, so a change to an earlier parent invalidates downstream
+results wherever the random sequence changes. Failed conversions are not cached.
+The normal converter remains available without a cache for export and independent checks.
+
+Canvas and preview rendering select the visible interval from time-sorted catch objects
+by binary search. Sidebar labels are formatted only for visible rows, offscreen anchors
+are culled, and timeline events share pixel-sized markers (hyperdash takes precedence).
+Hit testing rejects distant curve segments before sampling them. Editing snapshots
+copy existing identities without generating replacement IDs, and group dragging uses
+direct target lookup. Undo/redo still retains independent document snapshots.
+
+Star calculation runs against separate snapshots on a bounded background worker and
+waits for an active content drag to finish. See [Catch difficulty](CATCH_DIFFICULTY.md).

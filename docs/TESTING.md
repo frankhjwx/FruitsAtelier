@@ -72,3 +72,20 @@ dotnet run --project tests/FruitsAtelier.Audio.Tests -c Release
 该命令打开 Mac 窗口，执行水果放置、撤销、工程往返和中英文截图检查后退出。截图写入 `artifacts/macos-check`，日志写入 `artifacts/logs/macos.log`。
 
 修改输入或绘制后，手动检查相关操作、语言切换、窗口缩放和文件对话框。当前仍需补充 Windows 实机窗口/音频、Intel Mac、跨屏 DPI、Mac MP3 和 stable 客户端对照检查。
+
+## Editing performance benchmark
+
+Run the shared App test executable with `--benchmark-editing` to measure adding and
+continuously dragging objects in synthetic maps of 1,000 fruits, 10,000 fruits,
+and 1,000 FSliders. On macOS, from the repository root:
+
+```bash
+bash -c 'source scripts/macos-dotnet.sh; "$FA_DOTNET" run --project ../macOS/tests/App -c Release -- --benchmark-editing'
+```
+
+The report separates pointer handling, conversion, and drawing, and includes
+current-thread allocations and submitted drawing commands. It uses a command-counting
+canvas, so these are CPU measurements, not native rendering or end-to-end FPS.
+Performance results depend on hardware and runtime warm-up; compare the same fixture
+and environment. Functional tests compare cached conversion against full conversion
+after edits to geometry, timing, repeats, source ordering, and RNG-consuming objects.

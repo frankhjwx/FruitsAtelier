@@ -19,7 +19,9 @@ public sealed partial class EditorView
         public double Playhead, ViewStart;
         public MapDocument? RatingSnapshot;
         public double? Stars;
-        public bool RatingCompensation;
+        public bool RatingCompensation, RatingFailed;
+        public Task<double?>? RatingTask;
+        public readonly CancellationTokenSource RatingCancellation = new();
     }
     private readonly List<DifficultySession> difficulties = BeatmapProject.FromDocuments([DemoMap.Create()]).Difficulties
         .Select(d => new DifficultySession(d)).ToList();
@@ -40,6 +42,7 @@ public sealed partial class EditorView
     private CatchSkin? skin;
     private bool compensateTinyDroplets = true;
     private MapDocument? convertedSnapshot;
+    private CatchConversionCache editorConversionCache = new();
     private CatchConversionResult? conversion;
     private bool convertedWithCompensation;
     private HashSet<(Guid SourceId, int EventIndex)> hyperdashObjects = [];
@@ -87,14 +90,20 @@ public sealed partial class EditorView
         StatusMessage = message;
     }
 
+    private Fruit[] sortedListFruits = [];
+
     private void EnsureConversion()
     {
         if (convertedSnapshot is not null && convertedSnapshot.ContentEquals(Document)
             && convertedWithCompensation == compensateTinyDroplets) return;
         convertedSnapshot = Document.DeepClone();
         convertedWithCompensation = compensateTinyDroplets;
-        var input = convertedSnapshot.DeepClone();
-        input.Tracks.RemoveAll(t => t.Nodes.Count < 2);
+        sortedListFruits = Document.Fruits.OrderBy(f => f.TimeMs).ToArray();
+        var input = Document;
+        if (input.Tracks.Any(t => t.Nodes.Count < 2))
+        {
+            input = Document.DeepClone(); input.Tracks.RemoveAll(t => t.Nodes.Count < 2);
+        }
         // Nested slider fruits inherit their parent's full-map visual index.
         skinIndices = input.Fruits.Select(f => (f.Id, Time: f.TimeMs, f.SourceOrder))
             .Concat(input.Tracks.Select(t => (t.Id, Time: t.Nodes[0].TimeMs, t.SourceOrder)))
@@ -103,7 +112,7 @@ public sealed partial class EditorView
             .OrderBy(source => source.Time).ThenBy(source => source.SourceOrder)
             .Select((source, index) => (source.Id, Index: index))
             .ToDictionary(source => source.Id, source => source.Index);
-        conversion = CatchStreamConverter.Convert(input, compensateTinyDroplets);
+        conversion = CatchStreamConverter.Convert(input, compensateTinyDroplets, editorConversionCache);
         hyperdashObjects = HyperDashCalculator.GetHyperDashStarts(conversion.Objects, Document.CircleSize);
     }
 
@@ -318,6 +327,7 @@ public sealed partial class EditorView
         history.Commit();
         draftTrack = Guid.Empty;
         drag = DragKind.None;
+        dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         tool = Tool.Select;
         SelectObjects([track.Id]);
         StatusMessage = L.Get("editor.status.sliderFinished");

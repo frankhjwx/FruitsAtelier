@@ -7,7 +7,7 @@ public static class CatchStreamConverter
     private const double samplingTolerance = 0.02;
     private const int maximumSamples = 30_000;
 
-    public static CatchConversionResult Convert(MapDocument document, bool compensateTinyDroplets = true)
+    public static CatchConversionResult Convert(MapDocument document, bool compensateTinyDroplets = true, CatchConversionCache? cache = null)
     {
         ArgumentNullException.ThrowIfNull(document);
         var sliders = new List<GeneratedSlider>();
@@ -22,6 +22,7 @@ public static class CatchStreamConverter
             return Finish();
         }
 
+        cache?.Begin(document, compensateTinyDroplets);
         var parents = document.Fruits.Select(f => new Source(f.TimeMs, f.SourceOrder, f, null, null, null))
             .Concat(document.Tracks.Select(t => new Source(t.Nodes.Count > 0 ? t.Nodes[0].TimeMs : 0, t.SourceOrder, null, t, null, null)))
             .Concat(document.ImportedSliders.Select(s => new Source(s.TimeMs, s.SourceOrder, null, null, s, null)))
@@ -46,6 +47,12 @@ public static class CatchStreamConverter
 
             try
             {
+                var before = rng;
+                if (cache is not null && cache.TryGet(source.Track, source.ImportedSlider, source.BananaShower, ref rng, out var cachedSlider, out var cachedObjects))
+                {
+                    if (cachedSlider is not null) sliders.Add(cachedSlider);
+                    objects.AddRange(cachedObjects); continue;
+                }
                 if (source.ImportedSlider is ImportedSlider imported)
                 {
                     var candidateRng = rng;
@@ -53,13 +60,16 @@ public static class CatchStreamConverter
                     sliders.Add(convertedImport.Slider);
                     objects.AddRange(convertedImport.Objects);
                     rng = candidateRng;
+                    cache?.Store(null, imported, null, before, rng, convertedImport.Slider, convertedImport.Objects);
                     continue;
                 }
                 if (source.BananaShower is BananaShower shower)
                 {
                     var candidateRng = rng;
-                    objects.AddRange(ConvertBananas(shower, ref candidateRng));
+                    var bananas = ConvertBananas(shower, ref candidateRng);
+                    objects.AddRange(bananas);
                     rng = candidateRng;
+                    cache?.Store(null, null, shower, before, rng, null, bananas);
                     continue;
                 }
                 var track = source.Track!;
@@ -69,6 +79,7 @@ public static class CatchStreamConverter
                     requireCompensation, ref rng);
                 sliders.Add(converted.Slider);
                 objects.AddRange(converted.Objects);
+                cache?.Store(track, null, null, before, rng, converted.Slider, converted.Objects);
             }
             catch (CatchConversionException error)
             {
@@ -78,6 +89,7 @@ public static class CatchStreamConverter
             }
         }
 
+        cache?.End();
         if (!success)
             diagnostics.Add(L.Get("core.conversion.incomplete"));
         return Finish();

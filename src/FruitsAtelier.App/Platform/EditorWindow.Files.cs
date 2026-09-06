@@ -104,7 +104,7 @@ internal sealed partial class EditorWindow
 
     private void PollAudio()
     {
-        if (view.LibraryVisible || view.WorkspaceSession is not null) Invalidate();
+        if (view.LibraryVisible || view.WorkspaceSession is not null || view.StarRatingsRefreshing) Invalidate();
         if (!string.Equals(audio.FilePath, view.Document.AudioPath, StringComparison.OrdinalIgnoreCase))
         {
             if (string.IsNullOrWhiteSpace(view.Document.AudioPath)) ResetAudio();
