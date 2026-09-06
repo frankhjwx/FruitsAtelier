@@ -22,7 +22,6 @@ internal sealed partial class MacWindow : Window
     {
         audio = new(smokeCheck);
         Width = 1440; Height = 900; MinWidth = 980; MinHeight = 620;
-        View.RendererStatusKey = "mac.renderStatus";
         Content = editor; Title = L.Get("window.initialTitle");
         string icon = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "app-icon.png");
         if (File.Exists(icon)) Icon = new WindowIcon(icon);

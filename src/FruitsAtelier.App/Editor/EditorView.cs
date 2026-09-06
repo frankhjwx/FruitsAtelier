@@ -66,7 +66,6 @@ public sealed partial class EditorView
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
     public bool IsEditingText => editField >= 0 || LibraryVisible && libraryField >= 0;
-    public string RendererStatusKey { get; set; } = "ui.renderStatus";
     public bool WantsCapture => drag != DragKind.None;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;

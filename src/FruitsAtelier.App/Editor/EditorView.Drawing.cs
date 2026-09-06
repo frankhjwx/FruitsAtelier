@@ -573,8 +573,7 @@ public sealed partial class EditorView
         c.Fill(new(0, height - 28, width, 28), 0x171C23);
         c.Circle(13, height - 14, 3, IsDirty ? Gold : Accent);
         string notice = conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
-        c.Text(notice, 25, height - 21, 11, conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 292));
-        c.Text(L.Get(RendererStatusKey, pixelsPerMs / 0.09 * 100, L.Get(IsDirty ? "ui.unsaved" : Document.IsDemo ? "ui.demoData" : "ui.unchanged")), width - 247, height - 21, 11, IsDirty ? Gold : Muted, 237);
+        c.Text(notice, 25, height - 21, 11, conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 40));
     }
 
     private Rect MenuBounds => menu == 3 ? new(Math.Min(difficultyAddButton.X, width - 288), difficultyAddButton.Bottom + 4, 282, 82)

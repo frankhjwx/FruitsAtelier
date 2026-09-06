@@ -4,7 +4,6 @@ using FruitsAtelier.Mac;
 void Check(bool ok, string message) { if (!ok) throw new Exception(message); Console.WriteLine("PASS " + message); }
 Check(MacInput.Control(KeyModifiers.Meta) && MacInput.Control(KeyModifiers.Control) && !MacInput.Control(KeyModifiers.Shift), "Command/Ctrl are mapped without treating Shift as Ctrl");
 Check(MacInput.VirtualKey(Key.Z) == 90 && MacInput.VirtualKey(Key.Delete) == 46 && MacInput.VirtualKey(Key.Back) == 8 && MacInput.VirtualKey(Key.Back, false) == 46, "Shortcut and numeric backspace key mapping");
-Check(new FruitsAtelier.App.Editor.EditorView().RendererStatusKey == "ui.renderStatus", "Shared editor preserves the Windows renderer label by default");
 string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"));
 string directory = Path.Combine(root, "artifacts", "macos-check"); Directory.CreateDirectory(directory);
 string wav = Path.Combine(directory, "silence.wav");
