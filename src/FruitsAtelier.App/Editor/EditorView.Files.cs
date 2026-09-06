@@ -18,7 +18,7 @@ public sealed partial class EditorView
     public string AudioNotice { get; private set; } = L.Get("editor.audio.notLoaded");
     public double AudioDurationMs { get; private set; }
     private const double playbackLineFromBottom = 0.25;
-    private bool pinPlayhead;
+    private bool pinPlayhead = true;
     public double TimelineDurationMs => Math.Max(Document.DurationMs, AudioDurationMs);
     private double EditableDurationMs => Math.Min(int.MaxValue, AudioReady ? TimelineDurationMs : Document.DurationMs);
     public bool CompensateTinyDroplets => compensateTinyDroplets;
@@ -42,7 +42,7 @@ public sealed partial class EditorView
         AudioReady = AudioPlaying = AudioLoading = false;
         AudioDurationMs = 0;
         AudioNotice = L.Get("editor.audio.notLoaded");
-        pinPlayhead = false;
+        pinPlayhead = true;
         StatusMessage = L.Get("editor.status.documentOpened", document.Name, document.TimingPoints.Count);
     }
 

@@ -27,7 +27,7 @@ internal static class SliderSelectionTests
                 map.Tracks.Add(track);
                 source = track.Id;
             }
-            ui.View.LoadDocument(map); ui.Paint();
+            ui.LoadDocument(map); ui.Paint();
             var item = ui.View.Conversion.Objects.First(o => o.SourceId == source && o.Kind == kind);
             // A nearby large standalone fruit must not steal the generated object's centre hit.
             ui.View.Document.Fruits.Add(new() { TimeMs = item.TimeMs, X = item.X + 50 });

@@ -252,7 +252,7 @@ internal static class RequestedInteractionTests
     private static Ui Load(MapDocument map)
     {
         var ui = new Ui();
-        ui.View.LoadDocument(map);
+        ui.LoadDocument(map);
         ui.Paint();
         return ui;
     }

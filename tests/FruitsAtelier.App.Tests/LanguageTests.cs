@@ -33,7 +33,7 @@ internal static class LanguageTests
             var map = new MapDocument { Name = "Language fixture", DurationMs = 10000 };
             map.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 });
             map.Fruits.Add(new Fruit { TimeMs = 1500, X = 350 });
-            ui.View.LoadDocument(map); ui.Paint();
+            ui.LoadDocument(map); ui.Paint();
             ui.ClickMap(1000, 100);
             var p = Screen(ui, 1500, 350);
             ui.View.PointerDown(p.X, p.Y, 0, false, true); ui.View.PointerUp(p.X, p.Y, 0); ui.Paint();

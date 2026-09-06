@@ -28,6 +28,9 @@ var tests = new (string Name, Action Run)[]
     ("Clicking higher on the canvas selects a later time", UpwardClickTime),
     ("Wheel up reveals later time and middle drag keeps content under the pointer", WheelAndPan),
     ("Overview wheel seeks continuously, follows the clock and preserves playback and content", OverviewWheel),
+    ("Default and reset view follow AR while preserving imported difficulty", TimeZoomTests.DefaultsAndReset),
+    ("Zoom slider and wheel share scale, bounds and content isolation", TimeZoomTests.SliderAndWheel),
+    ("Zoom slider fits both languages and preserves playback following", TimeZoomTests.PlaybackAndLanguages),
     ("Control-wheel keeps the painted time anchor fixed away from limits", ZoomPaintedAnchor),
     ("Restore AR scale positions the playhead without editing map or history", RestoreArViewport),
     ("AR controls preview fall distance, visibility and reversible numeric edits", ArPreviewAndInput),
@@ -123,7 +126,7 @@ static void MultiTimingEditing()
     doc.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, Uninherited = true });
     doc.TimingPoints.Add(new() { TimeMs = 1100, BeatLengthMs = 400, Uninherited = true });
     doc.TimingPoints.Add(new() { TimeMs = 1180, BeatLengthMs = -50, Uninherited = false });
-    ui.View.LoadDocument(doc); ui.Paint();
+    ui.LoadDocument(doc); ui.Paint();
     ui.SetSnapDivisor(6); ui.Key('F'); ui.ClickMap(1210, 100);
     Near(1233.333333333333, ui.View.Document.Fruits.Single().TimeMs);
     ui.SetSnapDivisor(4); ui.ClickMap(1490, 400);
@@ -801,7 +804,24 @@ sealed class Ui
     private float width = 1440, height = 900;
     public EditorView View { get; } = new();
     public RecordingCanvas Canvas { get; } = new();
-    public Ui() => Paint();
+    public Ui(bool overview = true)
+    {
+        Paint();
+        if (overview) ShowFixtureOverview();
+    }
+    public void LoadDocument(MapDocument document)
+    {
+        View.LoadDocument(document);
+        Paint();
+        ShowFixtureOverview();
+    }
+    private void ShowFixtureOverview()
+    {
+        // Multi-second editing fixtures need an overview independent of the application's default AR scale.
+        View.Wheel(Plot.X, Plot.Bottom, (float)(120 * Math.Log(0.09 / View.PixelsPerMs) / Math.Log(1.16)), true);
+        View.Wheel(Plot.X, Plot.Bottom, (float)(-View.ViewStartMs * View.PixelsPerMs / 78 * 120), false);
+        Paint();
+    }
     public Fruit Fruit(Guid id) => View.Document.Fruits.Single(f => f.Id == id);
     public Anchor Anchor(Guid id) => View.Document.Tracks.SelectMany(t => t.Nodes).Single(n => n.Id == id);
     public void Paint() { Canvas.Clear(); View.Render(Canvas, width, height); }

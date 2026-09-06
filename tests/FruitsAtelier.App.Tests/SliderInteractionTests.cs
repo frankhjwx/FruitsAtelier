@@ -355,7 +355,7 @@ internal static class SliderInteractionTests
 
     private static Ui Load(MapDocument map)
     {
-        var ui = new Ui(); ui.View.LoadDocument(map); ui.Paint(); return ui;
+        var ui = new Ui(); ui.LoadDocument(map); ui.Paint(); return ui;
     }
 
     private static (float X, float Y) Screen(Ui ui, double time, double x)

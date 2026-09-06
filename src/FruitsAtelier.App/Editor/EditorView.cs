@@ -16,9 +16,9 @@ public sealed partial class EditorView
     private readonly List<NumericField> fields = [];
     private readonly List<(Rect Bounds, Guid Id, Guid Track)> rows = [];
     private float width, height, mouseX = -1, mouseY = -1, listScroll;
-    private Rect canvas, plot, leftPanel, rightPanel, overview, listBounds, snapSlider;
+    private Rect canvas, plot, leftPanel, rightPanel, overview, listBounds, snapSlider, zoomSlider;
     private double viewStart, pixelsPerMs = 0.09, playhead = 1500;
-    private bool useArScale;
+    private bool useArScale = true;
     private CatchSkin? skin;
     private bool compensateTinyDroplets = true;
     private MapDocument? convertedSnapshot;
@@ -59,6 +59,7 @@ public sealed partial class EditorView
     public Rect PlayfieldBounds => Playfield;
     public Rect CanvasPlotBounds => plot;
     public Rect SnapSliderBounds => snapSlider;
+    public Rect ZoomSliderBounds => zoomSlider;
     public string ActiveTool => tool.ToString();
     public string StatusMessage { get; private set; } = L.Get("editor.status.demoLoaded");
     public void SetNotice(string notice) => StatusMessage = notice;
@@ -90,7 +91,7 @@ public sealed partial class EditorView
     }
 
     private enum Tool { Select, Fruit, Slider, Banana }
-    private enum DragKind { None, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Marquee, SnapDivisor }
+    private enum DragKind { None, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Marquee, SnapDivisor, TimeZoom }
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
     private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply);
     private float PlayfieldScale => plot.Width / (512 + PlayfieldPadding * 2);
@@ -124,10 +125,10 @@ public sealed partial class EditorView
 
     private void ResetView()
     {
-        pinPlayhead = false;
-        useArScale = false;
+        pinPlayhead = true;
+        useArScale = true;
         viewStart = 0;
-        pixelsPerMs = 0.09;
+        if (Playfield.Width > 0) pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
         if (AudioPlaying) FollowPlayhead();
     }
 
@@ -148,6 +149,24 @@ public sealed partial class EditorView
         viewStart = transform.ViewStartMs;
         pixelsPerMs = transform.PixelsPerMs;
         ClampView();
+    }
+
+    private double DisplayApproachRate
+    {
+        get
+        {
+            double preempt = CatchScrollTiming.FallDistance / pixelsPerMs * (Playfield.Width / 512);
+            return preempt >= 1200 ? 5 - (preempt - 1200) / 120 : 5 + (1200 - preempt) / 150;
+        }
+    }
+
+    private void SetTimeZoom(float x)
+    {
+        double ar = Math.Round(Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1) * 10, 1);
+        double scale = CatchScrollTiming.PixelsPerMs(ar, Playfield.Width);
+        // The slider has no canvas pointer anchor: keep the viewport centre stable while paused.
+        ZoomTimeAt(plot.Y + plot.Height / 2, scale / pixelsPerMs);
+        StatusMessage = L.Get("editor.status.timeZoom", DisplayApproachRate);
     }
 
     private void RestoreArScale()

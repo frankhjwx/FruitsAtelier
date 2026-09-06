@@ -8,7 +8,7 @@ internal static class ClipboardMultiTests
     {
         var ui = new Ui();
         var map = MixedMap();
-        ui.View.LoadDocument(map);
+        ui.LoadDocument(map);
         var originals = Parents(ui.View.Document).OrderBy(p => p.Time).ThenBy(p => p.Order).ToArray();
         var oldIds = originals.Select(p => p.Id).ToHashSet();
         Select(ui, originals.Reverse().Select(p => p.Id));
@@ -58,7 +58,7 @@ internal static class ClipboardMultiTests
     public static void MixedCutIsOneTransaction()
     {
         var ui = new Ui();
-        ui.View.LoadDocument(MixedMap());
+        ui.LoadDocument(MixedMap());
         var before = ui.View.Document.DeepClone();
         Guid untouched = ui.View.Document.Fruits.Single(f => f.TimeMs == 800).Id;
         var ids = Parents(ui.View.Document).Select(p => p.Id).Where(id => id != untouched).ToArray();
@@ -84,7 +84,7 @@ internal static class ClipboardMultiTests
         track.Nodes.Add(new() { TimeMs = 1100, X = 100 });
         track.Nodes.Add(new() { TimeMs = 2100, X = 200 });
         map.Tracks.Add(track);
-        ui.View.LoadDocument(map);
+        ui.LoadDocument(map);
         Select(ui, Parents(map).Select(p => p.Id));
         Check(ui.View.CopySelection(), "Overflow fixture copy failed.");
         var before = ui.View.Document.DeepClone();
@@ -102,7 +102,7 @@ internal static class ClipboardMultiTests
     public static void InvalidMemberRejectsWholeCopyAndCut()
     {
         var ui = new Ui();
-        ui.View.LoadDocument(MixedMap());
+        ui.LoadDocument(MixedMap());
         Select(ui, Parents(ui.View.Document).Select(p => p.Id));
         Check(ui.View.CopySelection(), "Valid initial batch was rejected.");
         ui.View.Document.ImportedSliders[0].SpanCount = 0;

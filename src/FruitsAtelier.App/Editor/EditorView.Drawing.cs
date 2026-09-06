@@ -146,8 +146,14 @@ public sealed partial class EditorView
     private void DrawCanvas(ICanvas c)
     {
         c.Fill(new(canvas.X, 84, canvas.Width, 38), 0x1C2129);
-        c.Text(L.Get("ui.canvas"), canvas.X + 17, 96, 13, Foreground, 170, true);
-        c.Text(L.Get("ui.zoomHint", pixelsPerMs), canvas.X + 151, 97, 11, Muted, Math.Max(0, canvas.Width - 407));
+        c.Text(L.Get("ui.canvas"), canvas.X + 12, 96, 13, Foreground, 104, true);
+        c.Text(L.Get("ui.timeZoom"), canvas.X + 124, 97, 11, Muted, 38);
+        zoomSlider = new(canvas.X + 170, 88, Math.Max(30, canvas.Width - 478), 29);
+        float zoomX = zoomSlider.X + (float)Math.Clamp(DisplayApproachRate / 10, 0, 1) * zoomSlider.Width;
+        c.Line(zoomSlider.X, 103, zoomSlider.Right, 103, Grid, 3);
+        c.Line(zoomSlider.X, 103, zoomX, 103, Accent, 3);
+        c.Circle(zoomX, 103, 6, Accent);
+        c.Text(L.Get("ui.zoomAr", DisplayApproachRate), zoomSlider.Right + 8, 97, 11, Foreground, 48);
         Button(c, new(canvas.Right - 246, 88, 98, 29), showTargets ? L.Get("ui.hideCurves") : L.Get("ui.showCurves"), () => showTargets = !showTargets);
         var matchButton = new Rect(canvas.Right - 143, 88, 132, 29);
         Button(c, matchButton, L.Get("ui.restoreAr"), RestoreArScale, useArScale);

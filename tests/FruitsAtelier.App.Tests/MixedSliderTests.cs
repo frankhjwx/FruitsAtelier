@@ -5,7 +5,7 @@ internal static class MixedSliderTests
     public static void Author()
     {
         var ui = new Ui();
-        ui.View.LoadDocument(new MapDocument { DurationMs = 12000 }); ui.Paint();
+        ui.LoadDocument(new MapDocument { DurationMs = 12000 }); ui.Paint();
         var kinds = new[] { CurveKind.Linear, CurveKind.Bezier, CurveKind.Bezier, CurveKind.Linear, CurveKind.Linear, CurveKind.Bezier };
         ui.Key('B'); ui.ClickMap(1000, 100);
         for (int i = 0; i < kinds.Length; i++)
@@ -44,7 +44,7 @@ internal static class MixedSliderTests
         var ui = new Ui();
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode: 2\n[Difficulty]\nSliderMultiplier: 1\nSliderTickRate: 1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n160,192,1000,2,0,B|220:250|300:192,1,200\n");
         Guid id = map.ImportedSliders.Single().Id;
-        ui.View.LoadDocument(map); ui.Paint();
+        ui.LoadDocument(map); ui.Paint();
         ui.ClickText("Legacy Slider  1000");
         ui.ClickText("转换为 FSlider");
         var track = ui.View.Document.Tracks.Single();

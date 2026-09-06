@@ -45,6 +45,12 @@ public sealed partial class EditorView
             menu = -1;
             return;
         }
+        if (zoomSlider.Contains(x, y))
+        {
+            SetTimeZoom(x);
+            drag = DragKind.TimeZoom;
+            return;
+        }
         if (snapSlider.Contains(x, y))
         {
             SetSnapDivisor(x);
@@ -198,6 +204,7 @@ public sealed partial class EditorView
     {
         mouseX = x; mouseY = y;
         if (drag == DragKind.None) return;
+        if (drag == DragKind.TimeZoom) { SetTimeZoom(x); return; }
         if (drag == DragKind.SnapDivisor) { SetSnapDivisor(x); return; }
         if (drag == DragKind.Marquee) { MoveBox(x, y); return; }
         if (drag == DragKind.Pan)
@@ -330,7 +337,7 @@ public sealed partial class EditorView
         if (ctrl)
         {
             ZoomTimeAt(y, Math.Pow(1.16, delta / 120));
-            StatusMessage = L.Get("editor.status.timeZoom", pixelsPerMs);
+            StatusMessage = L.Get("editor.status.timeZoom", DisplayApproachRate);
         }
         else if (AudioPlaying) SeekTo(playhead + delta / 120 * 78 / pixelsPerMs);
         else viewStart += delta / 120 * 78 / pixelsPerMs;
