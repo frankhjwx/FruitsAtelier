@@ -21,6 +21,7 @@ public sealed partial class EditorView
     private string searchTaskQuery = "", libraryQuery = "", libraryError = "", libraryNotice = "";
     private IReadOnlyList<LibraryMap> libraryMaps = [];
     private List<IGrouping<string, LibraryMap>> libraryGroups = [];
+    private readonly List<(Rect Bounds, LibraryMap Map)> libraryCards = [];
     private Dictionary<string, double?> libraryRatings = [];
     private string? selectedLibraryGroup;
     private bool librarySettingsOpen, libraryProjectsOnly, libraryReplace, exportPage, resourcePage;
@@ -136,8 +137,21 @@ public sealed partial class EditorView
         if (LibraryVisible && !librarySettingsOpen && !exportPage && libraryDatabase is not null && DateTime.UtcNow >= nextLibraryScan) StartLibraryScan();
         if (WorkspaceSession is not null && DateTime.UtcNow >= nextResourceCheck) CheckWorkspaceResources();
     }
+    private void OpenLibraryCard(float x, float y)
+    {
+        if (librarySettingsOpen || exportPage || resourcePage) return;
+        foreach (var card in libraryCards)
+        {
+            if (!card.Bounds.Contains(x, y)) continue;
+            selectedLibraryGroup = libraryProjectsOnly ? card.Map.ProjectPath ?? card.Map.Directory : card.Map.Directory;
+            libraryField = -1;
+            RequestLibraryOpen?.Invoke(card.Map);
+            return;
+        }
+    }
     private void DrawLibrary(ICanvas c)
     {
+        libraryCards.Clear();
         c.Fill(new(0, 0, width, height), Background);
         c.Fill(new(0, 0, width, 64), Panel);
         c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png"), new(20, 13, 48, 36));
@@ -197,6 +211,7 @@ public sealed partial class EditorView
         {
             var group = libraryGroups[i]; var map = group.First(); float y = 170 + (i - libraryScroll) * 86;
             var rect = new Rect(214, y, listWidth, 78);
+            libraryCards.Add((rect, map));
             c.Fill(rect, selectedLibraryGroup == group.Key ? 0x304445u : Surface, 6);
             c.Clip(rect);
             if (map.Background.Length > 0 && File.Exists(map.Background)) c.Image(map.Background, new(224, y + 9, 76, 60));

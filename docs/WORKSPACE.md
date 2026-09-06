@@ -31,7 +31,7 @@ OSZ 完整解压到 `workspace/Resources/<SHA-256 内容指纹>/`，保留目录
 
 ## 曲库与搜索
 
-曲库直接扫描 `.osu` 元数据，只索引 Mode=2；进入编辑器时仍要求当前格式读取器支持的 v14 谱面。不同 Songs 目录分别识别谱面集，不以歌名或线上 ID 合并。开始编辑将该目录内的 Catch 难度导入 workspace；已有对应工程时提供“继续编辑”。“我的工程”同时显示未关联 Songs 的新工程。
+曲库直接扫描 `.osu` 元数据，只索引 Mode=2；进入编辑器时仍要求当前格式读取器支持的 v14 谱面。不同 Songs 目录分别识别谱面集，不以歌名或线上 ID 合并。开始编辑将该目录内的 Catch 难度导入 workspace；已有对应工程时提供“继续编辑”。在“全部歌曲”或“我的工程”中双击谱面卡片可直接执行同一打开操作；单击仍只选择卡片，当前工程有未保存修改时仍先提示。“我的工程”同时显示未关联 Songs 的新工程。
 
 搜索对 Title、TitleUnicode、Artist、ArtistUnicode、Creator、Version、Tags、Source 做 Unicode 规范化与大小写无关的子串匹配，多个关键词须全部命中。支持原始与 romanised 元数据，不推断未提供的读音。SQL 使用绑定参数。
 
