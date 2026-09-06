@@ -36,7 +36,7 @@ public sealed class LibraryDatabase
         Directory.CreateDirectory(workspace);
         using var db = Open();
         using var command = db.CreateCommand();
-        command.CommandText = "CREATE TABLE IF NOT EXISTS maps(path TEXT PRIMARY KEY, root TEXT NOT NULL, stamp INTEGER NOT NULL, size INTEGER NOT NULL, data TEXT NOT NULL, search TEXT NOT NULL); CREATE TABLE IF NOT EXISTS projects(path TEXT PRIMARY KEY, source TEXT, name TEXT NOT NULL); PRAGMA user_version=1;";
+        command.CommandText = "CREATE TABLE IF NOT EXISTS maps(path TEXT PRIMARY KEY, root TEXT NOT NULL, stamp INTEGER NOT NULL, size INTEGER NOT NULL, data TEXT NOT NULL, search TEXT NOT NULL); CREATE TABLE IF NOT EXISTS projects(path TEXT PRIMARY KEY, source TEXT, name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS external_sources(path TEXT PRIMARY KEY, archive TEXT); CREATE TABLE IF NOT EXISTS project_sources(project TEXT NOT NULL, source TEXT NOT NULL, PRIMARY KEY(project,source)); PRAGMA user_version=2;";
         command.ExecuteNonQuery();
     }
     private SqliteConnection Open()
@@ -44,21 +44,63 @@ public sealed class LibraryDatabase
         string path = Path.Combine(workspace, "library.db"); WorkspaceProject.RejectLinks(path);
         var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString()); db.Open(); return db;
     }
+    public void RegisterSource(string directory, string? archive = null)
+    {
+        directory = Path.GetFullPath(directory);
+        WorkspaceProject.RejectLinks(directory);
+        if (!Directory.Exists(directory)) throw new DirectoryNotFoundException(directory);
+        if (WorkspaceProject.Within(directory, workspace)
+            || WorkspaceProject.Within(workspace, directory) && !WorkspaceProject.Within(Path.Combine(workspace, "Resources"), directory))
+            throw new InvalidOperationException(L.Get("library.externalOverlap"));
+        if (songs.Length > 0 && WorkspaceProject.Within(songs, directory)) return;
+        using var db = Open(); using var command = db.CreateCommand();
+        command.CommandText = "INSERT INTO external_sources VALUES($p,$a) ON CONFLICT(path) DO UPDATE SET archive=COALESCE(excluded.archive,archive)";
+        command.Parameters.AddWithValue("$p", directory);
+        command.Parameters.AddWithValue("$a", archive is null ? DBNull.Value : Path.GetFullPath(archive));
+        command.ExecuteNonQuery();
+    }
+    public IReadOnlyList<string> SourceDirectories()
+    {
+        using var db = Open(); using var command = db.CreateCommand();
+        command.CommandText = "SELECT path FROM external_sources ORDER BY path";
+        using var reader = command.ExecuteReader(); var paths = new List<string>();
+        while (reader.Read()) paths.Add(reader.GetString(0));
+        return paths;
+    }
+    public string? ProjectForSource(string directory)
+    {
+        ReindexProjects();
+        using var db = Open(); using var command = db.CreateCommand();
+        command.CommandText = "SELECT project FROM project_sources WHERE source=$s ORDER BY project LIMIT 1";
+        command.Parameters.AddWithValue("$s", Path.GetFullPath(directory));
+        return command.ExecuteScalar() as string;
+    }
     public static string Normalize(string value) => value.Normalize(NormalizationForm.FormKC).ToUpperInvariant();
     public LibraryScan Scan(CancellationToken cancellation = default)
     {
-        if (songs.Length == 0) { ReindexProjects(); return new(0, []); }
-        if (!Directory.Exists(songs)) throw new DirectoryNotFoundException(songs);
+        var roots = SourceDirectories().ToList();
+        if (songs.Length > 0) roots.Add(songs);
+        int count = 0; var errors = new List<string>();
+        foreach (string root in roots.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            cancellation.ThrowIfCancellationRequested();
+            if (!Directory.Exists(root)) { errors.Add(L.Get("library.sourceMissing", root)); continue; }
+            var result = ScanRoot(root, cancellation); count += result.Count; errors.AddRange(result.Errors);
+        }
+        ReindexProjects(); return new(count, errors);
+    }
+    private LibraryScan ScanRoot(string root, CancellationToken cancellation)
+    {
         using var db = Open();
         using var transaction = db.BeginTransaction();
         var errors = new List<string>(); var seen = new HashSet<string>(StringComparer.Ordinal);
         var cached = new Dictionary<string, (long Stamp, long Size)>();
         using (var command = db.CreateCommand())
         {
-            command.Transaction = transaction; command.CommandText = "SELECT path,stamp,size FROM maps WHERE root=$root"; command.Parameters.AddWithValue("$root", songs);
+            command.Transaction = transaction; command.CommandText = "SELECT path,stamp,size FROM maps WHERE root=$root"; command.Parameters.AddWithValue("$root", root);
             using var reader = command.ExecuteReader(); while (reader.Read()) cached[reader.GetString(0)] = (reader.GetInt64(1), reader.GetInt64(2));
         }
-        var directories = new Stack<string>(); directories.Push(songs);
+        var directories = new Stack<string>(); directories.Push(root);
         while (directories.TryPop(out string? directory))
         {
             cancellation.ThrowIfCancellationRequested();
@@ -84,7 +126,7 @@ public sealed class LibraryDatabase
                     seen.Add(file);
                     using var command = db.CreateCommand(); command.Transaction = transaction;
                     command.CommandText = "INSERT OR REPLACE INTO maps VALUES($p,$r,$t,$s,$d,$q)";
-                    command.Parameters.AddWithValue("$p", file); command.Parameters.AddWithValue("$r", songs);
+                    command.Parameters.AddWithValue("$p", file); command.Parameters.AddWithValue("$r", root);
                     command.Parameters.AddWithValue("$t", stamp); command.Parameters.AddWithValue("$s", info.Length);
                     command.Parameters.AddWithValue("$d", JsonSerializer.Serialize(map));
                     command.Parameters.AddWithValue("$q", Normalize(string.Join(" ", map.Title, map.TitleUnicode, map.Artist, map.ArtistUnicode, map.Creator, map.Difficulty, map.Tags, map.Source)));
@@ -100,7 +142,7 @@ public sealed class LibraryDatabase
                 using var command = db.CreateCommand(); command.Transaction = transaction;
                 command.CommandText = "DELETE FROM maps WHERE path=$p"; command.Parameters.AddWithValue("$p", path); command.ExecuteNonQuery();
             }
-        transaction.Commit(); ReindexProjects();
+        transaction.Commit();
         return new(seen.Count, errors);
     }
 
@@ -109,7 +151,7 @@ public sealed class LibraryDatabase
     {
         foreach (var previous in Directory.EnumerateDirectories(workspace, "*.previous")) WorkspaceProject.Recover(previous[..^9]);
         using var db = Open(); using var transaction = db.BeginTransaction();
-        using (var clear = db.CreateCommand()) { clear.Transaction = transaction; clear.CommandText = "DELETE FROM projects"; clear.ExecuteNonQuery(); }
+        using (var clear = db.CreateCommand()) { clear.Transaction = transaction; clear.CommandText = "DELETE FROM projects; DELETE FROM project_sources"; clear.ExecuteNonQuery(); }
         foreach (string folder in Directory.EnumerateDirectories(workspace))
         {
             if (!File.Exists(Path.Combine(folder, WorkspaceProject.ManifestName)) || folder.EndsWith(".saving") || folder.EndsWith(".previous")) continue;
@@ -119,8 +161,18 @@ public sealed class LibraryDatabase
                 using var command = db.CreateCommand(); command.Transaction = transaction;
                 command.CommandText = "INSERT INTO projects VALUES($p,$s,$n)";
                 command.Parameters.AddWithValue("$p", folder);
-                command.Parameters.AddWithValue("$s", manifest.SongsRoot is not null && manifest.SourceDirectory is not null ? Path.GetFullPath(Path.Combine(manifest.SongsRoot, manifest.SourceDirectory)) : DBNull.Value);
+                command.Parameters.AddWithValue("$s", manifest.SongsRoot is not null && manifest.SourceDirectory is not null ? Path.GetFullPath(Path.Combine(manifest.SongsRoot, manifest.SourceDirectory)) : manifest.ExternalSourceDirectory is { } external ? Path.GetFullPath(external) : DBNull.Value);
                 command.Parameters.AddWithValue("$n", manifest.Name); command.ExecuteNonQuery();
+                var sources = manifest.Difficulties.Select(d => d.Source).Where(p => p is not null)
+                    .Select(p => Path.GetDirectoryName(Path.GetFullPath(p!))!).ToList();
+                if (manifest.ExternalSourceDirectory is { } externalDirectory) sources.Add(externalDirectory);
+                if (manifest.SongsRoot is not null && manifest.SourceDirectory is not null) sources.Add(Path.Combine(manifest.SongsRoot, manifest.SourceDirectory));
+                foreach (string source in sources.Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    using var link = db.CreateCommand(); link.Transaction = transaction;
+                    link.CommandText = "INSERT OR IGNORE INTO project_sources VALUES($p,$s)";
+                    link.Parameters.AddWithValue("$p", folder); link.Parameters.AddWithValue("$s", Path.GetFullPath(source)); link.ExecuteNonQuery();
+                }
             }
             catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { /* A damaged project stays on disk; explicit open reports the error. */ }
         }
@@ -131,7 +183,7 @@ public sealed class LibraryDatabase
     {
         using var db = Open(); using var command = db.CreateCommand();
         var words = Normalize(query).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-        command.CommandText = "SELECT m.data,(SELECT p.path FROM projects p WHERE p.source=json_extract(m.data,'$.Directory') LIMIT 1) FROM maps m WHERE m.root=$r";
+        command.CommandText = "SELECT m.data,(SELECT p.project FROM project_sources p WHERE p.source=json_extract(m.data,'$.Directory') ORDER BY p.project LIMIT 1) FROM maps m WHERE (m.root=$r OR m.root IN (SELECT path FROM external_sources))";
         command.Parameters.AddWithValue("$r", songs);
         for (int i = 0; i < words.Length; i++) { command.CommandText += $" AND instr(m.search,$q{i})>0"; command.Parameters.AddWithValue("$q" + i, words[i]); }
         command.CommandText += " ORDER BY json_extract(m.data,'$.Title') COLLATE NOCASE,path";

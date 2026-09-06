@@ -12,6 +12,7 @@ public sealed class WorkspaceManifest
     public string Name { get; set; } = "";
     public string? SongsRoot { get; set; }
     public string? SourceDirectory { get; set; }
+    public string? ExternalSourceDirectory { get; set; }
     public List<WorkspaceDifficulty> Difficulties { get; set; } = [];
 }
 
@@ -72,10 +73,12 @@ public static class WorkspaceProject
 
     public static WorkspaceSession Create(string workspace, BeatmapProject project, string songsRoot)
     {
-        ValidateRoots(workspace, songsRoot);
+        ValidateRoots(workspace, songsRoot, false);
         var manifest = new WorkspaceManifest { Name = project.Name, SongsRoot = string.IsNullOrWhiteSpace(songsRoot) ? null : Path.GetFullPath(songsRoot) };
         var source = project.Difficulties.Select(d => d.Document.SourcePath).FirstOrDefault(p => p is not null && manifest.SongsRoot is not null && Within(manifest.SongsRoot, p));
         if (source is not null) manifest.SourceDirectory = Path.GetRelativePath(songsRoot, Path.GetDirectoryName(source)!);
+        if (source is null && project.Difficulties.Select(d => d.Document.SourcePath).FirstOrDefault(p => p is not null) is { } external)
+            manifest.ExternalSourceDirectory = Path.GetDirectoryName(Path.GetFullPath(external));
         string directory = Path.Combine(workspace, SafeName(project.Name) + " [" + manifest.Id.ToString("N")[..8] + "]");
         var session = new WorkspaceSession(directory, manifest, project);
         Save(session, project);
@@ -152,7 +155,7 @@ public static class WorkspaceProject
                 AtomicFile.Write(Path.Combine(staging, name), ProjectSerializer.Serialize(diff.Document, Path.Combine(directory, name)));
             }
             var manifest = new WorkspaceManifest { Id = session.Manifest.Id, Name = project.Name, SongsRoot = session.Manifest.SongsRoot,
-                SourceDirectory = session.Manifest.SourceDirectory, Difficulties = entries };
+                SourceDirectory = session.Manifest.SourceDirectory, ExternalSourceDirectory = session.Manifest.ExternalSourceDirectory, Difficulties = entries };
             AtomicFile.Write(Path.Combine(staging, ManifestName), JsonSerializer.Serialize(manifest, json));
             if (System.IO.Directory.Exists(directory)) System.IO.Directory.Move(directory, previous);
             try { System.IO.Directory.Move(staging, directory); }

@@ -55,6 +55,21 @@ internal sealed partial class MacWindow
             var folders = await StorageProvider.OpenFolderPickerAsync(new() { Title = L.Get(workspace ? "library.workspace" : "library.songs"), AllowMultiple = false });
             if (folders.FirstOrDefault()?.TryGetLocalPath() is { } path) View.SetLibraryFolder(workspace, path);
         });
+        View.RequestLibraryImport = folder => RunFile(async () =>
+        {
+            if (folder)
+            {
+                var folders = await StorageProvider.OpenFolderPickerAsync(new() { Title = L.Get("library.importFolder"), AllowMultiple = false });
+                if (folders.FirstOrDefault()?.TryGetLocalPath() is not { } path) return;
+                LibraryOperations.ImportFolder(path, View.LibrarySettings); View.RefreshLibrary();
+            }
+            else
+            {
+                if (!await ConfirmDiscard()) return;
+                var path = await Pick(L.Get("library.importFile"), ["*.osz", "*.osu", "*.catchproj", "*.catchdiff"]);
+                if (path is not null) await OpenPath(path);
+            }
+        });
         View.RequestLibraryOpen = map => RunFile(async () =>
         {
             if (View.WorkspaceSession?.Directory == map.ProjectPath) { View.CloseLibrary(); return; }

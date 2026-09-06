@@ -16,6 +16,7 @@
 - 播放 MP3 / OGG / WAV，拖动时间轴定位；预览支持 AR、CS 和 Catch 皮肤。
 - 自定义 workspace，保存 `project.catchdiff` 与自动命名的各难度文件；资源只引用，仅 Export 写入 osu!stable Songs。
 - 独立曲库界面，支持原始／罗马字歌名、Artist、作者与 Tags 搜索。参见 [workspace 使用说明](docs/WORKSPACE.md)。
+- 持久引用外部文件夹，或将 OSZ 完整解压到 workspace 资源目录；重启后仍可从曲库继续使用。
 - 默认英文界面，支持切换中文并记住语言设置。
 
 ## 运行

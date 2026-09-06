@@ -39,8 +39,13 @@ internal sealed partial class MacWindow : Window
         {
             if (!View.PrepareFileOperation()) return;
             var path = await Pick(L.Get("project.import"), ["*.osu"]);
-            if (path is not null && View.AddDifficulty(OsuBeatmapReader.ReadFile(path)))
-            { await audio.LoadAsync(null); await audio.LoadAsync(View.Document.AudioPath); audio.Seek(View.PlayheadMs); PollAudio(); }
+            if (path is not null)
+            {
+                var document = OsuBeatmapReader.ReadFile(path);
+                LibraryOperations.ImportFolder(Path.GetDirectoryName(path)!, View.LibrarySettings);
+                if (View.AddDifficulty(document))
+                { await audio.LoadAsync(null); await audio.LoadAsync(View.Document.AudioPath); audio.Seek(View.PlayheadMs); PollAudio(); }
+            }
         });
         View.RequestDifficultyChanged = () => RunFile(async () =>
         {
@@ -165,8 +170,9 @@ internal sealed partial class MacWindow : Window
             View.LoadWorkspace(WorkspaceProject.Open(Path.GetDirectoryName(path)!));
             await audio.LoadAsync(View.Document.AudioPath); PollAudio(); return;
         }
-        var project = BeatmapArchive.OpenProject(path, Path.Combine(MacPaths.Artifacts, "beatmaps"));
-        View.LoadProject(project);
+        var session = await Task.Run(() => LibraryOperations.ImportPath(path, View.LibrarySettings));
+        View.LoadWorkspace(session);
+        View.RefreshLibrary();
         projectPath = Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase) ? path : null;
         await audio.LoadAsync(View.Document.AudioPath);
         PollAudio();
