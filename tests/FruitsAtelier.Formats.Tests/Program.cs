@@ -1,4 +1,6 @@
 using FruitsAtelier.Core;
+using System.Globalization;
+using L = FruitsAtelier.Localization.Strings;
 
 var tests = new (string Name, Action Run)[]
 {
@@ -11,11 +13,11 @@ var tests = new (string Name, Action Run)[]
     ("Legacy fractional coordinates truncate but original spelling survives", LegacyCoordinates),
     ("Sixth beat time quantization is reported without mutating source", SixthBeat),
     ("Collapsing fractional times preserves current parent order rather than stale source order", QuantizedOrder),
-    ("Generated Bezier exports as slider and reports actual reconversion", CurveExport),
+    ("Generated Bezier exports as slider and reports actual reconversion", () => EachLanguage(CurveExport)),
     ("Authored repeats retain span count and every repeat fruit and tick after export", AuthoredRepeats),
     ("Mixed segment kinds and repeat counts survive project files and old defaults", MixedProject),
     ("Converted Legacy repeat retains identity, object count and samples as a FSlider", PromotedRepeat),
-    ("Changing promoted repeat count resizes edge samples without losing head or tail", ChangedRepeatEdges),
+    ("Changing promoted repeat count resizes edge samples without losing head or tail", () => EachLanguage(ChangedRepeatEdges)),
     ("Temporary SV restores following imported slider speed", RestoreSv),
     ("Independent duration formula survives the head lookup window", SliderTimingTests.RestorationStaysOutsideHeadWindow),
     ("An isolated edited slider does not restore unused original SV", SliderTimingTests.IsolatedEditedSliderDoesNotRestoreUnusedSv),
@@ -53,6 +55,21 @@ foreach (var (name, run) in tests)
 }
 Console.WriteLine($"{tests.Length - failed - skipped}/{tests.Length - skipped} format tests passed; {skipped} external-fixture tests skipped.");
 return failed == 0 ? 0 : 1;
+
+static void EachLanguage(Action test)
+{
+    string previous = L.Language;
+    try
+    {
+        foreach (string language in L.AvailableLanguages)
+        {
+            L.SetLanguage(language);
+            try { test(); }
+            catch (Exception error) { throw new Exception($"{language}: {error.Message}", error); }
+        }
+    }
+    finally { L.SetLanguage(previous); }
+}
 
 static string Fixture() => """
 osu file format v14
@@ -162,7 +179,9 @@ static void CurveExport()
     Equal(1, r.ReadBack.ImportedSliders.Count); Equal(0, r.ReadBack.Tracks.Count);
     Equal('L', r.ReadBack.ImportedSliders[0].PathType); Equal(1, r.ReadBack.ImportedSliders[0].SpanCount);
     Check(r.MaxCoordinateQuantization <= 0.5, "Unexpected integer error");
-    Check(r.Diagnostics.Any(x => x.Contains("回读") || x.Contains("量化")), "No reconversion report");
+    Check(r.ObjectSequenceMatches, "Reconversion changed object sequence");
+    Check(r.Diagnostics.Contains(L.Get("core.writer.rounding", r.MaxTimeQuantizationMs.ToString("R", CultureInfo.InvariantCulture), r.MaxCoordinateQuantization.ToString("R", CultureInfo.InvariantCulture))), "No quantization report");
+    Check(r.Diagnostics.Contains(L.Get("core.writer.readBackError", r.MaxConvertedTimeErrorMs.ToString("R", CultureInfo.InvariantCulture), r.MaxConvertedXError.ToString("R", CultureInfo.InvariantCulture))), "No reconversion report");
 }
 
 static void QuantizedOrder()
@@ -261,6 +280,7 @@ static void ChangedRepeatEdges()
 {
     var d = OsuBeatmapReader.Read(ConvertibleRepeatFixture());
     var edit = ImportedSliderEditing.ConvertToTrack(d, d.ImportedSliders.Single().Id);
+    int originalSpans = edit.Track.SpanCount;
     edit.Track.SpanCount = 3;
     var result = OsuBeatmapWriter.Serialize(d, false);
     var slider = result.ReadBack.ImportedSliders.Single();
@@ -268,7 +288,7 @@ static void ChangedRepeatEdges()
     string[] fields = slider.OriginalLine!.Split(',');
     Equal("2|4|0|8", fields[8]); Equal("2:3|3:2|0:0|1:0", fields[9]); Equal("2:3:4:65:edge.wav", fields[10]);
     Check(result.ObjectSequenceMatches, "Repeat-count change lost generated events on export");
-    Check(result.Diagnostics.Any(message => message.Contains("边缘样本")), "Changed repeat samples lack a diagnostic");
+    Check(result.Diagnostics.Contains(L.Get("core.writer.spanSamples", edit.Track.Name, originalSpans, slider.SpanCount)), "Changed repeat samples lack a diagnostic");
 }
 
 static void RestoreSv()
