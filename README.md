@@ -16,6 +16,7 @@ The project is under active development.
 - Play MP3 / OGG / WAV audio and seek using the timeline. Preview objects with AR, CS, and Catch skins.
 - Manage projects in a configurable workspace with `project.catchdiff` and automatically named difficulty files. Resources stay referenced; only explicit export writes to osu!stable Songs.
 - Browse and search the local Catch library by original/romanised title, artist, creator and tags. [Workspace guide](docs/WORKSPACE.md).
+- Import external folders by reference, or fully extract OSZ archives into managed workspace resources; sources stay available in the library across restarts.
 - English interface by default, with a saved preference for English or Simplified Chinese.
 
 ## Running

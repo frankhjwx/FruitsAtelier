@@ -28,7 +28,12 @@ internal sealed partial class EditorWindow
         {
             if (!view.PrepareFileOperation()) return;
             string? path = MapFileDialog.Select(hwnd, false, L.Get("project.import"), MapFileDialog.OsuFilter);
-            if (path is not null) view.AddDifficulty(OsuBeatmapReader.ReadFile(path));
+            if (path is not null)
+            {
+                var document = OsuBeatmapReader.ReadFile(path);
+                LibraryOperations.ImportFolder(Path.GetDirectoryName(path)!, view.LibrarySettings);
+                view.AddDifficulty(document);
+            }
         });
         view.RequestDifficultyChanged = () =>
         {
@@ -71,12 +76,13 @@ internal sealed partial class EditorWindow
             view.LoadWorkspace(WorkspaceProject.Open(Path.GetDirectoryName(path)!));
             ResetAudio(); if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath); return;
         }
-        var project = BeatmapArchive.OpenProject(path, Path.Combine(Artifacts, "beatmaps"));
-        view.LoadProject(project);
+        var session = LibraryOperations.ImportPath(path, view.LibrarySettings);
+        view.LoadWorkspace(session);
+        view.RefreshLibrary();
         projectPath = Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase) ? path : null;
         ResetAudio();
         if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath);
-        AppLog.Write($"Opened project: {path}; difficulties={project.Difficulties.Count}");
+        AppLog.Write($"Opened project: {path}; difficulties={session.Project.Difficulties.Count}");
     }
 
     private bool SaveProject(bool saveAs)

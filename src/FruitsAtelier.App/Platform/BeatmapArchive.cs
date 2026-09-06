@@ -6,14 +6,14 @@ namespace FruitsAtelier.App.Platform;
 
 public static class BeatmapArchive
 {
-    public static FruitsAtelier.Core.BeatmapProject OpenProject(string path, string cacheRoot)
+    public static FruitsAtelier.Core.BeatmapProject OpenProject(string path, string cacheRoot, bool completeArchive = false)
     {
         if (Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase))
             return FruitsAtelier.Core.ProjectSerializer.ReadProjectFile(path);
         if (!Path.GetExtension(path).Equals(".osz", StringComparison.OrdinalIgnoreCase))
             return FruitsAtelier.Core.BeatmapProject.FromDocuments([FruitsAtelier.Core.OsuBeatmapReader.ReadFile(path)]);
         var documents = new List<FruitsAtelier.Core.MapDocument>();
-        foreach (string map in Import(path, cacheRoot))
+        foreach (string map in Import(path, cacheRoot, completeArchive))
         {
             // Mixed-mode beatmap sets may contain unsupported rulesets. Only inspect General/Mode here;
             // malformed Catch maps still fail the entire open operation before replacing the editor.
@@ -35,7 +35,7 @@ public static class BeatmapArchive
     private static readonly HashSet<string> extensions = new(StringComparer.OrdinalIgnoreCase)
         { ".osu", ".mp3", ".ogg", ".wav", ".jpg", ".jpeg", ".png" };
 
-    public static IReadOnlyList<string> Import(string archivePath, string cacheRoot)
+    public static IReadOnlyList<string> Import(string archivePath, string cacheRoot, bool completeArchive = false)
     {
         string root = Path.GetFullPath(cacheRoot);
         RejectLinks(root);
@@ -47,6 +47,7 @@ public static class BeatmapArchive
         if (archive.Entries.Count > 20000) throw new InvalidDataException(L.Get("archive.fileCount"));
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var selected = new List<(ZipArchiveEntry Entry, string Path)>();
+        var directories = new List<string>();
         long total = 0;
         foreach (var entry in archive.Entries)
         {
@@ -55,8 +56,9 @@ public static class BeatmapArchive
             if (((entry.ExternalAttributes >> 16) & 0xF000) == 0xA000
                 || (entry.ExternalAttributes & (int)FileAttributes.ReparsePoint) != 0)
                 throw new InvalidDataException(L.Get("archive.link"));
-            if (entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\')) continue;
-            if (!extensions.Contains(Path.GetExtension(path))) continue;
+            if (entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\')) { if (completeArchive) directories.Add(path); continue; }
+            if (path.Equals(".complete", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException(L.Get("archive.invalidPath"));
+            if (!completeArchive && !extensions.Contains(Path.GetExtension(path))) continue;
             long maximum = path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase) ? 16L * 1024 * 1024 : 256L * 1024 * 1024;
             if (entry.Length > maximum || (total += entry.Length) > 512L * 1024 * 1024)
                 throw new InvalidDataException(L.Get("archive.expansionLimit"));
@@ -68,6 +70,11 @@ public static class BeatmapArchive
         if (Directory.Exists(destination))
         {
             ValidateCache(destination, key, selected);
+            foreach (string directory in directories)
+            {
+                string folder = Within(destination, directory); RejectLinks(folder);
+                if (!Directory.Exists(folder)) throw new InvalidDataException(L.Get("archive.cacheModified"));
+            }
             return Maps(destination, selected);
         }
         Directory.CreateDirectory(root);
@@ -76,6 +83,7 @@ public static class BeatmapArchive
         Directory.CreateDirectory(staging);
         try
         {
+            foreach (string directory in directories) Directory.CreateDirectory(Within(staging, directory));
             foreach (var (entry, path) in selected)
             {
                 string target = Within(staging, path);

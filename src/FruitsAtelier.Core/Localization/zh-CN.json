@@ -533,7 +533,11 @@
   "library.referenceHelp": "以下工程引用已丢失。请恢复来源文件；音频可通过“文件 → 加载音频”重新选择。",
   "library.details": "查看详情",
   "library.songsOptional": "Songs 未绑定（可稍后设置）",
-  "library.unboundEmpty": "尚未绑定 Songs。可以先新建工程，稍后在设置中绑定。",
+  "library.unboundEmpty": "导入外部文件夹或 OSZ，或在设置中绑定 osu!stable Songs。",
   "library.bindForExport": "导出到 osu!stable 前，请在设置中绑定 Songs 文件夹。",
-  "ui.previewStats": "AR {0} · CS {1} · NM"
+  "ui.previewStats": "AR {0} · CS {1} · NM",
+  "library.importFolder": "导入文件夹…",
+  "library.importFile": "导入谱面 / OSZ…",
+  "library.externalOverlap": "请选择外部来源文件夹或受管理的 Resources 文件夹，不能选择 workspace 或其上级目录。",
+  "library.sourceMissing": "来源文件夹丢失：{0}"
 }

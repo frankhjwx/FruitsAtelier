@@ -10,10 +10,12 @@ public sealed partial class EditorView
     public WorkspaceSession? WorkspaceSession { get; set; }
     public bool LibraryVisible { get; private set; }
     public Action<bool>? RequestLibraryFolder { get; set; }
+    public Action<bool>? RequestLibraryImport { get; set; }
     public Action<LibraryMap>? RequestLibraryOpen { get; set; }
     public Action<bool, string>? RequestWorkspaceExport { get; set; }
     private LibraryDatabase? libraryDatabase;
     private Task<LibraryScan>? scanTask;
+    private bool libraryRescanRequested;
     private Task<IReadOnlyList<LibraryMap>>? searchTask;
     private Task<Dictionary<string, double?>>? ratingTask;
     private string searchTaskQuery = "", libraryQuery = "", libraryError = "", libraryNotice = "";
@@ -83,23 +85,17 @@ public sealed partial class EditorView
     {
         CheckWorkspaceResources(); StartLibraryScan(); CloseLibrary();
     }
-    public void RefreshLibrary() { librarySettingsOpen = false; StartLibraryScan(); }
+    public void RefreshLibrary() { librarySettingsOpen = false; libraryRescanRequested = scanTask is { IsCompleted: false }; StartLibraryScan(); }
     private void StartLibraryScan()
     {
         if (scanTask is { IsCompleted: false }) return;
         try
         {
+            libraryRescanRequested = false;
             libraryDatabase = new(LibrarySettings.Workspace, LibrarySettings.Songs);
             var db = libraryDatabase;
-            if (string.IsNullOrWhiteSpace(LibrarySettings.Songs))
-            {
-                db.ReindexProjects(); libraryNotice = L.Get("library.songsOptional");
-            }
-            else
-            {
-                scanTask = Task.Run(() => { db.ReindexProjects(); return db.Scan(); });
-                libraryNotice = L.Get("library.scanning");
-            }
+            scanTask = Task.Run(() => db.Scan());
+            libraryNotice = L.Get("library.scanning");
             libraryError = "";
             QueueLibrarySearch(); nextLibraryScan = DateTime.UtcNow.AddMinutes(1);
         }
@@ -113,6 +109,7 @@ public sealed partial class EditorView
             try { var result = scanTask.GetAwaiter().GetResult(); libraryNotice = L.Get("library.indexed", result.Count); libraryError = string.Join("\n", result.Errors.Take(3)); QueueLibrarySearch(); }
             catch (Exception e) { libraryError = e.Message; QueueLibrarySearch(); }
             scanTask = null;
+            if (libraryRescanRequested) StartLibraryScan();
         }
         if (searchTask is { IsCompleted: true })
         {
@@ -185,6 +182,8 @@ public sealed partial class EditorView
         Button(c, new(16, 134, 158, 36), L.Get("library.projects"), () => { libraryProjectsOnly = true; libraryDatabase?.ReindexProjects(); QueueLibrarySearch(); }, libraryProjectsOnly);
         Button(c, new(16, 208, 158, 36), L.Get("library.refresh"), StartLibraryScan, enabled: scanTask is null);
         Button(c, new(16, 254, 158, 36), L.Get("library.new"), () => RequestNewProject?.Invoke());
+        Button(c, new(16, 314, 158, 36), L.Get("library.importFolder"), () => RequestLibraryImport?.Invoke(true), enabled: scanTask is null);
+        Button(c, new(16, 360, 158, 36), L.Get("library.importFile"), () => RequestLibraryImport?.Invoke(false), enabled: scanTask is null);
         c.Text(libraryNotice, 16, height - 96, 12, Muted, 158);
         float listWidth = width - 558;
         var queryRect = new Rect(214, 84, width - 238, 40);
@@ -220,6 +219,7 @@ public sealed partial class EditorView
         c.Text(map.Title, x, 170, 15, Foreground, 288, true);
         c.Text(map.Artist + " · " + map.Creator, x, 201, 12, Muted, 288);
         c.Text(map.Tags, x, 228, 12, Muted, 288);
+        c.Text(map.Directory, x, 250, 11, Muted, 288);
         Button(c, new(x, 272, 288, 38), L.Get(map.ProjectPath is null ? "library.start" : "library.continue"), () => RequestLibraryOpen?.Invoke(map));
         var entries = group.ToArray(); int count = Math.Max(1, (int)(height - 390) / 40);
         libraryDiffScroll = Math.Clamp(libraryDiffScroll, 0, Math.Max(0, entries.Length - count));
