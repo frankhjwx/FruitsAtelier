@@ -19,7 +19,7 @@ internal sealed partial class MacWindow
             string set = Path.Combine(songs, "Set " + i); Directory.CreateDirectory(set);
             var document = new MapDocument { Name = "Library song " + i, IsDemo = false };
             var metadata = new OsuSection { Name = "Metadata" };
-            metadata.Lines.AddRange(["Title:Library song " + i, "TitleUnicode:曲库示例 " + i, "Artist:Fruits Atelier", "ArtistUnicode:果实工坊", "Creator:Mapper", "Version:Rain", "Tags:electronic piano"]);
+            metadata.Lines.AddRange(["Title:Library song " + i, "TitleUnicode:曲库示例 " + i, "Artist:FruitsAtelier", "ArtistUnicode:水果工坊", "Creator:Mapper", "Version:Rain", "Tags:electronic piano"]);
             document.OriginalSections.Add(metadata);
             document.Fruits.Add(new Fruit { TimeMs = 1000, X = 120 });
             OsuBeatmapWriter.WriteFile(document, Path.Combine(set, "Rain.osu"));
@@ -32,7 +32,7 @@ internal sealed partial class MacWindow
         for (int attempt = 0; attempt < 30; attempt++) { editor.Refresh(); await Task.Delay(50); }
         Capture("library-zh.png");
         View.KeyDown(70, true, false);
-        foreach (char c in "果实 piano") View.TextInput(c);
+        foreach (char c in "水果 piano") View.TextInput(c);
         for (int attempt = 0; attempt < 8; attempt++) { editor.Refresh(); await Task.Delay(50); }
         Capture("library-search.png");
         var session = LibraryOperations.Open(new LibraryDatabase(workspace, songs).Search("").First(), View.LibrarySettings);

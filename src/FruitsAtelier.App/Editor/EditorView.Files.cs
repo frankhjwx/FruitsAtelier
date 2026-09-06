@@ -79,7 +79,6 @@ public sealed partial class EditorView
         metadata.Lines.Add("Version:" + L.Get("project.defaultDifficulty", 1));
         document.OriginalSections.Add(metadata);
         LoadProject(BeatmapProject.FromDocuments([document]));
-        projectStructureDirty = true;
     }
 
     public bool SwitchDifficulty(int index)
