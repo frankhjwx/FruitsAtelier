@@ -111,7 +111,7 @@ public sealed partial class EditorView
             {
                 tool = Tool.Select;
                 Select(Guid.Empty);
-                SeekTo(MapAt(x, y, false).TimeMs);
+                SeekTo(MapAt(x, y, true).TimeMs);
             }
             else if (tool == Tool.Fruit)
             {
@@ -123,7 +123,7 @@ public sealed partial class EditorView
                         Document.DurationMs = Math.Max(Document.DurationMs, fruit.TimeMs);
                     })) Select(fruit.Id);
             }
-            else { Select(Guid.Empty); SeekTo(MapAt(x, y, false).TimeMs); }
+            else { Select(Guid.Empty); SeekTo(MapAt(x, y, true).TimeMs); }
         }
         if (AudioPlaying || pinPlayhead) FollowPlayhead();
     }

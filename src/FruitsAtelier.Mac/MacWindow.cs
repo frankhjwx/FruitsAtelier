@@ -187,8 +187,8 @@ internal sealed class MacWindow : Window
         int original = View.Document.Fruits.Count;
         View.KeyDown(70, false, false);
         var bounds = View.PlayfieldBounds;
-        View.PointerDown(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2, 0, false, false);
-        View.PointerUp(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2, 0);
+        View.PointerDown(bounds.Right - 10, bounds.Y + bounds.Height / 2, 0, false, false);
+        View.PointerUp(bounds.Right - 10, bounds.Y + bounds.Height / 2, 0);
         if (View.Document.Fruits.Count != original + 1) throw new InvalidOperationException("Fruit placement failed");
         View.KeyDown(90, true, false);
         if (View.Document.Fruits.Count != original) throw new InvalidOperationException("Undo failed");

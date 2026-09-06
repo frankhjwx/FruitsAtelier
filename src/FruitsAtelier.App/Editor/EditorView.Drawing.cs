@@ -9,7 +9,11 @@ public sealed partial class EditorView
     public void Render(ICanvas c, float width, float height)
     {
         RefreshLanguage();
-        if (drag == DragKind.Marquee && (this.width != width || this.height != height)) CancelBox();
+        if (this.width != width || this.height != height)
+        {
+            if (drag == DragKind.Marquee) CancelBox();
+            else if (drag == DragKind.Timeline) CancelInteraction();
+        }
         this.width = width;
         this.height = height;
         hits.Clear(); fields.Clear(); rows.Clear();
@@ -553,7 +557,7 @@ public sealed partial class EditorView
         float viewX = overview.X + (float)(visibleStart / TimelineDurationMs) * overview.Width;
         float viewWidth = (float)((visibleEnd - visibleStart) / TimelineDurationMs) * overview.Width;
         c.Stroke(new(viewX, overview.Y + 1, viewWidth, overview.Height - 2), 0x71849A, 1, 3);
-        float headX = overview.X + (float)(playhead / TimelineDurationMs) * overview.Width;
+        float headX = TimelineHeadX;
         c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, Gold, 2);
         Diamond(c, headX, overview.Y - 2, 4, Gold);
     }

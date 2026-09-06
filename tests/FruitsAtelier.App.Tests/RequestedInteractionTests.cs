@@ -41,7 +41,8 @@ internal static class RequestedInteractionTests
             $"Clicking another object did not leave Slider editing and select that object (tool={ui.View.ActiveTool}, selected={string.Join(',', ui.View.SelectedObjectIds)}).");
 
         DoubleClick(ui, 1000, 100);
-        ui.ClickMap(3000, 480);
+        ui.ClickMap(3017, 480);
+        Near(3000, ui.View.PlayheadMs);
         Check(ui.View.ActiveTool == "Select" && ui.View.SelectedObjectIds.Count == 0,
             "Clicking blank canvas did not leave Slider editing.");
 

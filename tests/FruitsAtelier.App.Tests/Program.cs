@@ -4,6 +4,10 @@ using FruitsAtelier.Core;
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Canvas seeks follow the current beat grid and timing changes", CanvasSeekSnapTests.BeatGrid),
+    ("Free canvas seeking retains continuous time", CanvasSeekSnapTests.FreeMode),
+    ("Timeline grabs retain the exact original time after round trips", TimelineDragTests.ReturnToStart),
+    ("Timeline background clicks seek and drag limits preserve the origin", TimelineDragTests.ClickAndLimits),
     ("Fruit tools place quarters and sixths without moving existing objects", PlaceOnBothGrids),
     ("Beat snap slider exposes every requested divisor through one drag control", RequestedInteractionTests.SnapDivisors),
     ("Double-click enters one Slider and other clicks leave its edit mode", RequestedInteractionTests.DoubleClickEditing),
@@ -107,7 +111,9 @@ static void ContinuousFollow()
     float navY = ui.Canvas.Texts.Single(t => t.Value == "时间导航").Y + 50;
     ui.Click(900, navY);
     double later = ui.View.ViewStartMs;
-    ui.Click(899, navY);
+    ui.View.PointerDown(900, navY, 0, false, false);
+    ui.View.PointerMove(899, navY, false, false);
+    ui.View.PointerUp(899, navY, 0); ui.Paint();
     True(ui.View.ViewStartMs < later && later - ui.View.ViewStartMs < 100, "Paused backward seek did not track continuously.");
     Near(offset, ui.View.PlayheadMs - ui.View.ViewStartMs);
     ui.View.Wheel(600, 300, 120, false);
@@ -418,6 +424,7 @@ static void UpwardPainting()
 static void UpwardClickTime()
 {
     var ui = new Ui();
+    ui.ClickText("自由");
     var plot = ui.Plot;
     ui.Click(plot.Right - 10, plot.Bottom - 100);
     double earlier = ui.View.PlayheadMs;

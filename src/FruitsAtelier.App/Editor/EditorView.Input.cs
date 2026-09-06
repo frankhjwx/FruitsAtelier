@@ -6,6 +6,11 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private double timelineMsPerDip;
+    private float TimelineHeadX => overview.X + (float)(playhead / TimelineDurationMs) * overview.Width;
+    private bool HitsTimelineHead(float x, float y) => Math.Abs(x - TimelineHeadX) <= 6
+        && y >= overview.Y - 7 && y <= overview.Bottom + 2;
+
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
         mouseX = x; mouseY = y;
@@ -87,10 +92,14 @@ public sealed partial class EditorView
                     return;
                 }
         }
-        if (overview.Contains(x, y))
+        if (overview.Contains(x, y) || HitsTimelineHead(x, y))
         {
+            bool grabbedHead = HitsTimelineHead(x, y);
             drag = DragKind.Timeline;
-            NavigateTime(x);
+            dragStartX = x;
+            timelineMsPerDip = TimelineDurationMs / overview.Width;
+            if (!grabbedHead) SeekTo(Math.Clamp(((double)x - overview.X) / overview.Width, 0, 1) * TimelineDurationMs);
+            dragStartTime = playhead;
             return;
         }
         if (!plot.Contains(x, y)) return;
@@ -533,7 +542,9 @@ public sealed partial class EditorView
 
     private void NavigateTime(float x)
     {
-        SeekTo(Math.Clamp((x - overview.X) / overview.Width, 0, 1) * TimelineDurationMs);
+        // Keep the original time authoritative; never reconstruct it from the rounded painted head.
+        double time = Math.Clamp(dragStartTime + ((double)x - dragStartX) * timelineMsPerDip, 0, TimelineDurationMs);
+        if (time != playhead) SeekTo(time);
     }
 
     private void FocusField(int index)
