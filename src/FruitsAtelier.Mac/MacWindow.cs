@@ -51,7 +51,7 @@ internal sealed partial class MacWindow : Window
         View.RequestSave = () => RunFile(async () => { await Save(false); });
         View.RequestSaveAs = () => RunFile(async () => { await Save(true); });
         View.RequestExport = View.ShowWorkspaceExport;
-        ConfigureLibrary(initialPath is null && !smokeCheck);
+        ConfigureLibrary(initialPath is null && !smokeCheck, smokeCheck);
         View.RequestAudio = () => RunFile(async () =>
         {
             if (!View.PrepareFileOperation()) return;

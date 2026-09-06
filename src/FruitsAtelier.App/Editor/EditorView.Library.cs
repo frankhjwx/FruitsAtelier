@@ -28,14 +28,14 @@ public sealed partial class EditorView
     private DateTime searchAfter, nextLibraryScan = DateTime.MinValue, nextResourceCheck;
     private IReadOnlyList<string> resourceErrors = [];
 
-    public void InitializeLibrary(bool show)
+    public void InitializeLibrary(bool show, LibrarySettings? settings = null)
     {
-        try { LibrarySettings = LibrarySettings.Load(); }
+        try { LibrarySettings = settings ?? LibrarySettings.Load(); }
         catch (Exception e) { libraryError = e.Message; }
         draftWorkspace = LibrarySettings.Workspace; draftSongs = LibrarySettings.Songs;
         LibraryVisible = show;
-        if (!string.IsNullOrWhiteSpace(LibrarySettings.Songs)) StartLibraryScan();
-        else librarySettingsOpen = show;
+        librarySettingsOpen = false;
+        StartLibraryScan();
     }
     public void SetLibraryFolder(bool workspace, string path)
     {
@@ -46,7 +46,8 @@ public sealed partial class EditorView
         if (!PrepareFileOperation()) return;
         if (AudioPlaying) RequestTogglePlayback?.Invoke();
         LibraryVisible = true; exportPage = resourcePage = false; libraryField = -1;
-        if (libraryDatabase is null) librarySettingsOpen = true;
+        librarySettingsOpen = false;
+        if (libraryDatabase is null) StartLibraryScan();
         else { QueueLibrarySearch(); if (DateTime.UtcNow >= nextLibraryScan) StartLibraryScan(); }
     }
     public void ShowWorkspaceExport()
@@ -65,7 +66,6 @@ public sealed partial class EditorView
     public bool SaveWorkspace(bool copy = false)
     {
         if (!PrepareFileOperation()) return false;
-        if ((WorkspaceSession is null || copy) && string.IsNullOrWhiteSpace(LibrarySettings.Songs)) { ShowLibrary(); librarySettingsOpen = true; return false; }
         var project = CaptureProject();
         if (WorkspaceSession is null || copy) WorkspaceSession = WorkspaceProject.Create(LibrarySettings.Workspace, project, LibrarySettings.Songs);
         else WorkspaceProject.Save(WorkspaceSession, project);
@@ -90,8 +90,17 @@ public sealed partial class EditorView
         try
         {
             libraryDatabase = new(LibrarySettings.Workspace, LibrarySettings.Songs);
-            var db = libraryDatabase; scanTask = Task.Run(() => { db.ReindexProjects(); return db.Scan(); });
-            libraryNotice = L.Get("library.scanning"); libraryError = "";
+            var db = libraryDatabase;
+            if (string.IsNullOrWhiteSpace(LibrarySettings.Songs))
+            {
+                db.ReindexProjects(); libraryNotice = L.Get("library.songsOptional");
+            }
+            else
+            {
+                scanTask = Task.Run(() => { db.ReindexProjects(); return db.Scan(); });
+                libraryNotice = L.Get("library.scanning");
+            }
+            libraryError = "";
             QueueLibrarySearch(); nextLibraryScan = DateTime.UtcNow.AddMinutes(1);
         }
         catch (Exception e) { libraryError = e.Message; }
@@ -200,7 +209,7 @@ public sealed partial class EditorView
             hits.Add(new(rect, () => { selectedLibraryGroup = group.Key; libraryDiffScroll = 0; libraryField = -1; }, true));
         }
         DrawLibraryDetails(c, width - 320);
-        if (libraryGroups.Count == 0) c.Text(L.Get("library.empty"), 226, 204, 15, Muted, listWidth - 24);
+        if (libraryGroups.Count == 0) c.Text(L.Get(string.IsNullOrWhiteSpace(LibrarySettings.Songs) && !libraryProjectsOnly ? "library.unboundEmpty" : "library.empty"), 226, 204, 15, Muted, listWidth - 24);
         if (libraryError.Length > 0) c.Text(libraryError.Replace('\n', ' '), 214, height - 34, 12, Error, width - 238);
     }
     private void DrawLibraryDetails(ICanvas c, float x)
@@ -249,15 +258,17 @@ public sealed partial class EditorView
     private void DrawExportPage(ICanvas c)
     {
         c.Text(L.Get("library.exportDescription", CurrentDifficultyName), 32, 98, 16, Foreground, width - 64);
-        c.Text(LibrarySettings.Songs, 32, 132, 13, Muted, width - 64);
+        bool bound = !string.IsNullOrWhiteSpace(LibrarySettings.Songs);
+        c.Text(bound ? LibrarySettings.Songs : L.Get("library.bindForExport"), 32, 132, 13, Muted, width - 64);
         LibraryTextField(c, 3, L.Get("library.newDifficultyName"), exportName, 190);
-        Button(c, new(32, 310, 240, 42), L.Get("library.exportNew"), () => RequestWorkspaceExport?.Invoke(false, exportName));
-        Button(c, new(292, 310, 240, 42), L.Get("library.exportOverride"), () => RequestWorkspaceExport?.Invoke(true, exportName));
+        Button(c, new(32, 310, 240, 42), L.Get("library.exportNew"), () => RequestWorkspaceExport?.Invoke(false, exportName), enabled: bound);
+        Button(c, new(292, 310, 240, 42), L.Get("library.exportOverride"), () => RequestWorkspaceExport?.Invoke(true, exportName), enabled: bound);
         var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id);
         c.Text(L.Get("library.overrideTarget", entry?.ExportTarget ?? entry?.Source ?? L.Get("library.noTarget")), 32, 382, 13, Muted, width - 64);
         c.Text(L.Get("library.exportConflictHint"), 32, 414, 13, Gold, width - 64);
         if (resourceErrors.Count > 0) c.Text(L.Get("library.missingResources", string.Join("\n", resourceErrors)), 32, 466, 14, Error, width - 64);
     }
+    public bool LibraryLoading => scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false };
     public bool LibraryTextFocused => LibraryVisible && libraryField >= 0;
     public void PasteLibraryText(string text)
     {

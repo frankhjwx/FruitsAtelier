@@ -10,14 +10,15 @@ public sealed class LibrarySettings
     public string Workspace { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "FruitsAtelier Workspace");
     public string Songs { get; set; } = "";
     public static string SettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FruitsAtelier", "library.json");
-    public static LibrarySettings Load() => File.Exists(SettingsPath) ? JsonSerializer.Deserialize<LibrarySettings>(File.ReadAllText(SettingsPath)) ?? new() : new();
-    public void Save()
+    public static LibrarySettings Load(string? path = null) => File.Exists(path ?? SettingsPath) ? JsonSerializer.Deserialize<LibrarySettings>(File.ReadAllText(path ?? SettingsPath)) ?? new() : new();
+    public void Save(string? path = null)
     {
-        Workspace = Path.GetFullPath(Workspace); Songs = Path.GetFullPath(Songs);
+        Workspace = Path.GetFullPath(Workspace); Songs = string.IsNullOrWhiteSpace(Songs) ? "" : Path.GetFullPath(Songs);
         WorkspaceProject.ValidateRoots(Workspace, Songs);
         Directory.CreateDirectory(Workspace);
-        Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
-        AtomicFile.Write(SettingsPath, JsonSerializer.Serialize(this));
+        path = Path.GetFullPath(path ?? SettingsPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        AtomicFile.Write(path, JsonSerializer.Serialize(this));
     }
 }
 
@@ -31,7 +32,7 @@ public sealed class LibraryDatabase
     public LibraryDatabase(string workspace, string songs)
     {
         WorkspaceProject.ValidateRoots(workspace, songs, false);
-        this.workspace = Path.GetFullPath(workspace); this.songs = Path.GetFullPath(songs);
+        this.workspace = Path.GetFullPath(workspace); this.songs = string.IsNullOrWhiteSpace(songs) ? "" : Path.GetFullPath(songs);
         Directory.CreateDirectory(workspace);
         using var db = Open();
         using var command = db.CreateCommand();
@@ -46,6 +47,7 @@ public sealed class LibraryDatabase
     public static string Normalize(string value) => value.Normalize(NormalizationForm.FormKC).ToUpperInvariant();
     public LibraryScan Scan(CancellationToken cancellation = default)
     {
+        if (songs.Length == 0) { ReindexProjects(); return new(0, []); }
         if (!Directory.Exists(songs)) throw new DirectoryNotFoundException(songs);
         using var db = Open();
         using var transaction = db.BeginTransaction();

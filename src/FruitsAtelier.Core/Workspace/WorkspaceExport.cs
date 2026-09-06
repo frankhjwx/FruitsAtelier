@@ -7,6 +7,7 @@ public static class WorkspaceExport
 {
     public static WorkspaceExportPlan Plan(WorkspaceSession session, ProjectDifficulty difficulty, string songs, bool overwrite, string newName, bool compensate)
     {
+        if (string.IsNullOrWhiteSpace(songs)) throw new InvalidOperationException(L.Get("library.bindForExport"));
         WorkspaceProject.ValidateRoots(Path.GetDirectoryName(session.Directory)!, songs);
         var missing = WorkspaceProject.MissingResources(BeatmapProject.FromDocuments([difficulty.Document]));
         if (missing.Count > 0) throw new IOException(L.Get("library.missingResources", string.Join("\n", missing)));

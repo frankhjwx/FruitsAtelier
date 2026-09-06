@@ -9,6 +9,8 @@ internal sealed partial class MacWindow
 {
     private async Task WorkspaceSmoke(string folder)
     {
+        View.ShowLibrary(); editor.Refresh(); await Task.Delay(200);
+        Capture("library-unbound.png");
         string fixture = Path.Combine(folder, "library-fixture");
         string songs = Path.Combine(fixture, "Songs"), workspace = Path.Combine(fixture, "Workspace");
         Directory.CreateDirectory(songs);
@@ -45,9 +47,9 @@ internal sealed partial class MacWindow
             bitmap.Render(editor); bitmap.Save(Path.Combine(folder, name));
         }
     }
-    private void ConfigureLibrary(bool show)
+    private void ConfigureLibrary(bool show, bool smokeCheck)
     {
-        View.InitializeLibrary(show);
+        View.InitializeLibrary(show, smokeCheck ? new LibrarySettings { Workspace = Path.Combine(MacPaths.Artifacts, "macos-check", "startup-workspace") } : null);
         View.RequestLibraryFolder = workspace => RunFile(async () =>
         {
             var folders = await StorageProvider.OpenFolderPickerAsync(new() { Title = L.Get(workspace ? "library.workspace" : "library.songs"), AllowMultiple = false });

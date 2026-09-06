@@ -63,7 +63,9 @@ public static class WorkspaceProject
     }
     public static void ValidateRoots(string workspace, string songs, bool requireSongs = true)
     {
-        RejectLinks(workspace); RejectLinks(songs);
+        RejectLinks(workspace);
+        if (string.IsNullOrWhiteSpace(songs)) return;
+        RejectLinks(songs);
         if (requireSongs && !System.IO.Directory.Exists(songs)) throw new DirectoryNotFoundException(songs);
         if (Within(songs, workspace) || Within(workspace, songs)) throw new InvalidOperationException(L.Get("library.rootsOverlap"));
     }
@@ -71,8 +73,8 @@ public static class WorkspaceProject
     public static WorkspaceSession Create(string workspace, BeatmapProject project, string songsRoot)
     {
         ValidateRoots(workspace, songsRoot);
-        var manifest = new WorkspaceManifest { Name = project.Name, SongsRoot = Path.GetFullPath(songsRoot) };
-        var source = project.Difficulties.Select(d => d.Document.SourcePath).FirstOrDefault(p => p is not null && Within(songsRoot, p));
+        var manifest = new WorkspaceManifest { Name = project.Name, SongsRoot = string.IsNullOrWhiteSpace(songsRoot) ? null : Path.GetFullPath(songsRoot) };
+        var source = project.Difficulties.Select(d => d.Document.SourcePath).FirstOrDefault(p => p is not null && manifest.SongsRoot is not null && Within(manifest.SongsRoot, p));
         if (source is not null) manifest.SourceDirectory = Path.GetRelativePath(songsRoot, Path.GetDirectoryName(source)!);
         string directory = Path.Combine(workspace, SafeName(project.Name) + " [" + manifest.Id.ToString("N")[..8] + "]");
         var session = new WorkspaceSession(directory, manifest, project);

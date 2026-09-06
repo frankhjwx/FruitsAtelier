@@ -505,9 +505,9 @@
   "library.title": "曲库",
   "library.settings": "设置",
   "library.editor": "编辑器",
-  "library.settingsDescription": "选择工程 workspace 和 osu!stable Songs 文件夹。资源仅引用，不复制。",
+  "library.settingsDescription": "选择工程 workspace。osu!stable Songs 可以留空，之后再到设置中绑定。",
   "library.workspace": "Workspace 文件夹",
-  "library.songs": "osu!stable Songs 文件夹",
+  "library.songs": "osu!stable Songs 文件夹（可选）",
   "library.apply": "应用并扫描",
   "library.all": "全部歌曲",
   "library.projects": "我的工程",
@@ -531,5 +531,8 @@
   "library.exported": "已导出：{0}",
   "library.referenceErrors": "引用错误",
   "library.referenceHelp": "以下工程引用已丢失。请恢复来源文件；音频可通过“文件 → 加载音频”重新选择。",
-  "library.details": "查看详情"
+  "library.details": "查看详情",
+  "library.songsOptional": "Songs 未绑定（可稍后设置）",
+  "library.unboundEmpty": "尚未绑定 Songs。可以先新建工程，稍后在设置中绑定。",
+  "library.bindForExport": "导出到 osu!stable 前，请在设置中绑定 Songs 文件夹。"
 }

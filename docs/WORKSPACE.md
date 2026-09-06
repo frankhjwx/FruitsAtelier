@@ -1,6 +1,6 @@
 # Workspace 与本地曲库
 
-应用支持 osu!stable 的 Songs 目录。通过主菜单旁的“曲库”进入独立页面，在“设置”选择 workspace 与 Songs；两者必须彼此独立。设置保存在系统应用数据目录的 `FruitsAtelier/library.json`，不依赖当前启动目录。
+应用支持 osu!stable 的 Songs 目录。通过主菜单旁的“曲库”进入独立页面，在“设置”选择 workspace 与 Songs；Songs 为可选设置，可以留空，之后主动从设置中绑定；应用不会在启动或进入曲库时自动打开设置。已绑定时，两者必须彼此独立。未绑定 Songs 时仍可新建、保存、另存为和打开 workspace 工程，“我的工程”照常可用；扫描 Songs 与导出到 osu!stable 需要绑定后使用。设置保存在系统应用数据目录的 `FruitsAtelier/library.json`，不依赖当前启动目录。
 
 ## 文件结构
 

@@ -505,9 +505,9 @@
   "library.title": "Library",
   "library.settings": "Settings",
   "library.editor": "Editor",
-  "library.settingsDescription": "Choose a workspace for projects and your osu!stable Songs folder. Resources stay in Songs.",
+  "library.settingsDescription": "Choose a workspace. You can leave osu!stable Songs empty and bind it later in Settings.",
   "library.workspace": "Workspace folder",
-  "library.songs": "osu!stable Songs folder",
+  "library.songs": "osu!stable Songs folder (optional)",
   "library.apply": "Apply and scan",
   "library.all": "All songs",
   "library.projects": "My projects",
@@ -531,5 +531,8 @@
   "library.exported": "Exported: {0}",
   "library.referenceErrors": "Reference errors",
   "library.referenceHelp": "These references are missing. Restore the source files or use File → Load audio to select an available audio file.",
-  "library.details": "View details"
+  "library.details": "View details",
+  "library.songsOptional": "Songs not bound (optional)",
+  "library.unboundEmpty": "Songs is not bound. Create a project now and bind Songs later in Settings.",
+  "library.bindForExport": "Bind a Songs folder in Settings before exporting to osu!stable."
 }
