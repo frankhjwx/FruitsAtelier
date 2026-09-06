@@ -1,6 +1,6 @@
 # 本地化维护
 
-应用自有 GUI 文案、状态提示与 Core 用户诊断通过 `FruitsAtelier.Localization.Strings` 读取，默认语言为 `zh-CN`，顶部按钮可切换当前可用语言。已存在的谱面标题、对象 Name、皮肤名和用户文件内容是数据，不随语言切换翻译或改写。
+应用自有 GUI 文案、状态提示与 Core 用户诊断通过 `FruitsAtelier.Localization.Strings` 读取，首次启动默认语言为 `en`，不跟随操作系统语言。顶部按钮可切换当前可用语言，用户选择保存在系统应用数据目录的 `FruitsAtelier/language.json`，后续启动优先恢复该选择；未保存选择或设置损坏时使用英文。已存在的谱面标题、对象 Name、皮肤名和用户文件内容是数据，不随语言切换翻译或改写。
 
 ## 语言表与新增词条
 

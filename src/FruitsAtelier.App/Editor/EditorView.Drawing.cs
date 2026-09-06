@@ -18,6 +18,8 @@ public sealed partial class EditorView
         this.width = width;
         this.height = height;
         hits.Clear(); fields.Clear(); rows.Clear();
+        PumpLibrary();
+        if (LibraryVisible) { DrawLibrary(c); return; }
         float leftWidth = width < 1100 ? 168 : 192;
         float rightWidth = width < 1100 ? 224 : 270;
         float bodyHeight = Math.Max(180, height - 248);
@@ -37,6 +39,12 @@ public sealed partial class EditorView
         DrawSelectionBox(c);
         DrawTransport(c);
         DrawStatus(c);
+        if (resourceErrors.Count > 0)
+        {
+            c.Fill(new(0, height - 145, width, 25), 0x48272Du);
+            c.Text(L.Get("library.missingResources", string.Join("; ", resourceErrors)), 12, height - 140, 12, Error, width - 140);
+            Button(c, new(width - 126, height - 145, 114, 25), L.Get("library.details"), () => { resourcePage = LibraryVisible = true; exportPage = false; libraryScroll = 0; });
+        }
         if (menu >= 0) DrawMenu(c);
         DrawContextMenu(c);
     }
@@ -45,11 +53,12 @@ public sealed partial class EditorView
     {
         c.Fill(new(0, 0, width, 39), 0x1B2028);
         c.Fill(new(0, 40, width, 44), Panel);
-        c.Text(L.Get("ui.logoBrand"), 12, 11, 13, Foreground, 94, true);
+        c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png"), new(26, 2, 52, 36));
         Button(c, new(109, 6, 50, 28), L.Get("ui.file"), () => menu = menu == 0 ? -1 : 0, menu == 0);
         Button(c, new(162, 6, 50, 28), L.Get("ui.edit"), () => menu = menu == 1 ? -1 : 1, menu == 1);
         Button(c, new(215, 6, 50, 28), L.Get("ui.view"), () => menu = menu == 2 ? -1 : 2, menu == 2);
-        c.Text(ProjectName + (IsDirty ? " *" : ""), 285, 11, 13, Muted, Math.Max(20, width - 420));
+        Button(c, new(274, 6, 78, 28), L.Get("library.title"), ShowLibrary);
+        c.Text(ProjectName + (IsDirty ? " *" : ""), 366, 11, 13, Muted, Math.Max(20, width - 496));
         DrawDifficultyTabs(c);
         Button(c, new(width - 110, 6, 100, 28), L.Get("ui.languageButton"), CycleLanguage);
         float x = 12;
@@ -475,9 +484,8 @@ public sealed partial class EditorView
         c.Text(L.Get("ui.preview"), r.X, r.Y, 13, Foreground, r.Width, true);
         Button(c, new(r.Right - 92, r.Y - 5, 92, 27), L.Get("ui.debugCurves"), () => showPreviewCurves = !showPreviewCurves, showPreviewCurves);
         double preempt = CatchScrollTiming.PreemptMs(Document.ApproachRate);
-        c.Text(L.Get("ui.previewAr", Number(Document.ApproachRate), Number(preempt)), r.X, r.Y + 23, 10, Foreground, r.Width);
-        c.Text(conversion!.Success ? L.Get("ui.generated") : L.Get("ui.partialFailure"), r.X, r.Y + 40, 10, conversion.Success ? Accent : Error, r.Width);
-        Rect stage = new(r.X, r.Y + 62, r.Width, r.Height - 82);
+        c.Text(L.Get("ui.previewStats", Number(Document.ApproachRate), Number(Document.CircleSize)), r.X, r.Y + 23, 10, Foreground, r.Width);
+        Rect stage = new(r.X, r.Y + 42, r.Width, r.Height - 48);
         c.Fill(stage, 0x151A22, 5);
         c.Clip(stage);
         float fallAspect = (float)(CatchScrollTiming.FallDistance / CatchScrollTiming.PlayfieldWidth);
@@ -517,7 +525,6 @@ public sealed partial class EditorView
             DrawCatchObject(c, item, fieldLeft + (float)(item.X / 512) * fieldWidth, y, fieldWidth);
         }
         c.Unclip();
-        c.Text(L.Get("ui.previewSkin", Number(Document.CircleSize), skin?.Name ?? L.Get("ui.basicShapes")), r.X, r.Bottom - 13, 10, Muted, r.Width);
     }
 
     private void DrawTransport(ICanvas c)

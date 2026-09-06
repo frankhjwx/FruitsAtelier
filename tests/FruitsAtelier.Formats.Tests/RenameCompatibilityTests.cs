@@ -20,7 +20,7 @@ internal static class RenameCompatibilityTests
             foreach (string language in L.AvailableLanguages)
             {
                 L.SetLanguage(language);
-                Check(L.Get("app.name") == "FruitsAtelier", "Application title is not renamed");
+                Check(L.Get("app.name") == (language == "zh-CN" ? "水果工坊" : "FruitsAtelier"), "Application title is not renamed");
                 Check(L.Get("ui.sliderTool") == "FSlider  B", "Slider tool is not renamed");
                 Check(L.Get("core.names.importedSlider", 1, 0).StartsWith("FSlider "), "New converted sliders retain the old name");
                 Check(document.Tracks[0].Name == "VCE Slider preserved user name", "Language change rewrote old object data");

@@ -80,3 +80,9 @@ N 工具左键设置开始时间，右键在更晚时间完成；Esc 或切换�
 `.osu` 导出针对当前难度，建议文件名含难度名称；保存工程使用 `.catchproj`。资源仍通过路径引用，不会自动复制进工程文件。
 
 星级计算方式、缓存失效及与导出/官网版本的边界见 [Catch 星级](CATCH_DIFFICULTY.md)。
+
+## 曲库与 workspace
+
+顶部“曲库”打开独立曲库页面，可配置 workspace 与 stable Songs、搜索双语元数据、查看难度并进入工程。编辑器 diff 标签保持原布局。资源引用丢失显示工程错误条；保存不写 Songs，Export 页面提供覆盖关联难度或建立新 diff。详见 [workspace](WORKSPACE.md)。
+
+Catch Preview 标题下仅以一行显示 `AR … · CS … · NM`，不显示下落时间、生成状态或皮肤名称。预览中的滚动与物件绘制仍按 AR/CS 正常计算。

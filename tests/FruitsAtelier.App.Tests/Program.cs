@@ -2,8 +2,15 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+string startupLanguage = FruitsAtelier.Localization.Strings.Language;
+// Existing interaction fixtures use Chinese labels explicitly.
+FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
+
 var tests = new (string Name, Action Run)[]
 {
+    ("Fresh process defaults to English", () => { if (startupLanguage != "en") throw new Exception("Default language must be English"); }),
+    ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),
+    ("Workspace library isolates input, saving and export", LibraryTests.Run),
     ("Difficulty tabs use content width and truncate Unicode names after 16 characters", DifficultyTabTests.Layout),
     ("Difficulty tab stars follow edits, undo and CS", DifficultyTabTests.Editing),
     ("Overflow difficulty tabs scroll, switch and add without losing content", DifficultyTabTests.Overflow),

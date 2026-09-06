@@ -37,6 +37,7 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        WorkspaceSession = null; resourceErrors = [];
         CancelInteraction();
         difficulties.Clear();
         difficulties.AddRange(project.Difficulties.Select(d => new DifficultySession(d)));

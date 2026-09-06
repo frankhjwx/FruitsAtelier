@@ -5,7 +5,7 @@ namespace FruitsAtelier.App.Platform;
 
 internal static class MapFileDialog
 {
-    internal static string OpenFilter => L.Get("dialog.openFilter") + "\0*.osz;*.osu;*.catchproj\0\0";
+    internal static string OpenFilter => L.Get("dialog.openFilter") + "\0*.osz;*.osu;*.catchproj;*.catchdiff\0\0";
     internal static string OsuFilter => L.Get("dialog.osuFilter") + "\0*.osu\0\0";
     internal static string ProjectFilter => L.Get("dialog.projectFilter") + "\0*.catchproj\0\0";
     internal static string AudioFilter => L.Get("dialog.audioFilter") + "\0*.mp3;*.ogg;*.wav\0\0";
@@ -40,6 +40,33 @@ internal static class MapFileDialog
         }
         finally { Marshal.FreeHGlobal(buffer); }
     }
+
+    internal static string? SelectFolder(nint owner, string title)
+    {
+        nint display = Marshal.AllocHGlobal(32768 * sizeof(char));
+        try
+        {
+            var info = new BrowseInfo { Owner = owner, DisplayName = display, Title = title, Flags = 0x41 };
+            nint pidl = SHBrowseForFolder(ref info);
+            if (pidl == 0) return null;
+            try { return SHGetPathFromIDList(pidl, display) ? Marshal.PtrToStringUni(display) : null; }
+            finally { Marshal.FreeCoTaskMem(pidl); }
+        }
+        finally { Marshal.FreeHGlobal(display); }
+    }
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct BrowseInfo
+    {
+        internal nint Owner, Root, DisplayName;
+        [MarshalAs(UnmanagedType.LPWStr)] internal string Title;
+        internal uint Flags;
+        internal nint Callback, Param;
+        internal int Image;
+    }
+    [DllImport("shell32.dll", EntryPoint = "SHBrowseForFolderW", CharSet = CharSet.Unicode)]
+    private static extern nint SHBrowseForFolder(ref BrowseInfo info);
+    [DllImport("shell32.dll", EntryPoint = "SHGetPathFromIDListW", CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SHGetPathFromIDList(nint pidl, nint path);
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct OpenFileName

@@ -11,6 +11,7 @@ internal static class Program
     public static int Main(string[] args)
     {
         Arguments = args;
+        FruitsAtelier.Localization.Strings.SetLanguage(args.Contains("--smoke-check") ? "en" : FruitsAtelier.Localization.LanguagePreference.ReadLanguage());
         try { return AppBuilder.Configure<MacApplication>().UsePlatformDetect().StartWithClassicDesktopLifetime(args); }
         catch (Exception error) { MacPaths.Log(error.ToString()); Console.Error.WriteLine(error); return 1; }
     }
