@@ -39,6 +39,8 @@ public sealed partial class EditorView
         project.Validate();
         WorkspaceSession = null; resourceErrors = [];
         CancelInteraction();
+        foreach (var difficulty in difficulties) difficulty.RatingCancellation.Cancel();
+        editorConversionCache = new();
         difficulties.Clear();
         difficulties.AddRange(project.Difficulties.Select(d => new DifficultySession(d)));
         activeDifficulty = firstDifficultyTab = 0;

@@ -24,22 +24,56 @@ internal static class DifficultyTabTests
     public static void Editing()
     {
         var ui = new Ui();
-        double initial = ui.View.CurrentStarRating!.Value;
+        double initial = Rating(ui.View);
         ui.Key('F'); ui.ClickMap(1250, 480);
-        double changed = ui.View.CurrentStarRating!.Value;
+        Check(ui.View.CurrentStarRating == initial && ui.View.CurrentStarRatingRefreshing, "Edits retain cached stars while refreshing");
+        double changed = Rating(ui.View);
         Check(initial != changed, "Object edits must recalculate difficulty");
         ui.Key('Z', ctrl: true);
-        Check(Math.Abs(ui.View.CurrentStarRating!.Value - initial) < 1e-12, "Undo restores rating");
+        Check(Math.Abs(Rating(ui.View) - initial) < 1e-12, "Undo restores rating");
         ui.Key('B'); ui.ClickMap(1750, 240);
-        Check(ui.View.CurrentStarRating is null, "Unfinished drafts must not display partial stars");
+        Check(ui.View.CurrentStarRating == initial && ui.View.CurrentStarRatingRefreshing, "Unfinished drafts retain cached stars and indicate pending refresh");
         ui.Key(27);
         ui.SetCs("8");
-        Check(ui.View.CurrentStarRating != initial, "CS must affect rating");
+        Check(Rating(ui.View) != initial, "CS must affect rating");
         ui.Key('Z', ctrl: true);
         ui.View.AddDifficulty(); ui.Paint();
-        Check(ui.View.CurrentStarRating == 0, "Blank difficulty is zero stars");
+        Check(Rating(ui.View) == 0, "Blank difficulty is zero stars");
         ui.Key(9, ctrl: true, shift: true);
-        Check(ui.View.ActiveDifficultyIndex == 0 && ui.View.CurrentStarRating == initial, "Ctrl Shift Tab restores previous difficulty");
+        Check(ui.View.ActiveDifficultyIndex == 0 && Rating(ui.View) == initial, "Ctrl Shift Tab restores previous difficulty");
+    }
+
+    private static double Rating(EditorView view)
+    {
+        double value = view.CurrentStarRating ?? 0;
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (view.CurrentStarRatingRefreshing && DateTime.UtcNow < deadline)
+        {
+            Thread.Sleep(10); value = view.CurrentStarRating ?? 0;
+        }
+        Check(!view.CurrentStarRatingRefreshing, "Rating calculation completes");
+        return value;
+    }
+
+    public static void AsyncRatings()
+    {
+        var view = new EditorView(); view.NewProject();
+        Check(view.CurrentStarRating == 0 && view.CurrentStarRatingRefreshing, "First calculation shows a zero placeholder and refresh state");
+        Check(Rating(view) == 0 && !view.CurrentStarRatingFailed, "A calculated zero is a completed result");
+        var document = view.Document;
+        for (int i = 0; i < 400; i++) document.Fruits.Add(new Fruit { X = i % 2 == 0 ? 20 : 490, TimeMs = i * 100 });
+        Check(view.CurrentStarRating == 0 && view.CurrentStarRatingRefreshing, "Large edits retain the last result");
+        document.Fruits.Clear();
+        Check(Rating(view) == 0, "An outdated nonzero calculation cannot overwrite a newer blank map");
+        document.CircleSize = -1;
+        _ = view.CurrentStarRating;
+        Check(Rating(view) == 0 && view.CurrentStarRatingFailed, "Failure keeps cached value and stops the spinner");
+        document.CircleSize = 5;
+        Check(Rating(view) == 0 && !view.CurrentStarRatingFailed, "A corrected map retries and clears failure");
+        document.Fruits.Add(new Fruit { X = 20, TimeMs = 100 });
+        _ = view.CurrentStarRating;
+        view.NewProject();
+        Check(Rating(view) == 0, "Replacing a project cannot accept the previous project's pending result");
     }
 
     public static void Overflow()

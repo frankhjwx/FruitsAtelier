@@ -13,6 +13,7 @@ public readonly record struct MapPoint(double TimeMs, double X)
 
 public sealed class Fruit
 {
+    internal Fruit DeepClone() => (Fruit)MemberwiseClone();
     public Guid Id { get; set; } = Guid.NewGuid();
     public double TimeMs { get; set; }
     public double X { get; set; }
@@ -22,6 +23,7 @@ public sealed class Fruit
 
 public sealed class Anchor
 {
+    internal Anchor DeepClone() => (Anchor)MemberwiseClone();
     public Guid Id { get; set; } = Guid.NewGuid();
     public double TimeMs { get; set; }
     public double X { get; set; }
@@ -38,7 +40,13 @@ public sealed class CurveTrack
     public string Name { get; set; } = L.Get("core.names.curve");
     public CurveKind Kind { get; set; } = CurveKind.Bezier;
     public int SourceOrder { get; set; } = int.MaxValue;
-    public List<Anchor> Nodes { get; } = new();
+    public List<Anchor> Nodes { get; private set; } = new();
+    internal CurveTrack DeepClone()
+    {
+        var copy = (CurveTrack)MemberwiseClone();
+        copy.Nodes = Nodes.Select(n => n.DeepClone()).ToList();
+        return copy;
+    }
     public int SpanCount { get; set; } = 1;
     public string? OriginalLine { get; set; }
     public bool? CompensateTinyDroplets { get; set; }
@@ -131,20 +139,8 @@ public sealed partial class MapDocument
             BeatLengthMs = BeatLengthMs, TimingOffsetMs = TimingOffsetMs, ApproachRate = ApproachRate,
             CircleSize = CircleSize, SliderMultiplier = SliderMultiplier, SliderTickRate = SliderTickRate
         };
-        copy.Fruits.AddRange(Fruits.Select(f => new Fruit { Id = f.Id, TimeMs = f.TimeMs, X = f.X, SourceOrder = f.SourceOrder, OriginalLine = f.OriginalLine }));
-        foreach (var track in Tracks)
-        {
-            var clonedTrack = new CurveTrack
-            {
-                Id = track.Id, Name = track.Name, Kind = track.Kind, SourceOrder = track.SourceOrder,
-                SpanCount = track.SpanCount, OriginalLine = track.OriginalLine, CompensateTinyDroplets = track.CompensateTinyDroplets
-            };
-            clonedTrack.Nodes.AddRange(track.Nodes.Select(n => new Anchor
-            {
-                Id = n.Id, TimeMs = n.TimeMs, X = n.X, HandleIn = n.HandleIn, HandleOut = n.HandleOut, OutgoingKind = n.OutgoingKind
-            }));
-            copy.Tracks.Add(clonedTrack);
-        }
+        copy.Fruits.AddRange(Fruits.Select(f => f.DeepClone()));
+        copy.Tracks.AddRange(Tracks.Select(t => t.DeepClone()));
         copy.TimingPoints.AddRange(TimingPoints.Select(t => t.DeepClone()));
         copy.ImportedSliders.AddRange(ImportedSliders.Select(s => s.DeepClone()));
         copy.BananaShowers.AddRange(BananaShowers.Select(b => b.DeepClone()));

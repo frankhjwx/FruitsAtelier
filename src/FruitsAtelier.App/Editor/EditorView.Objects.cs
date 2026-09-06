@@ -44,19 +44,43 @@ public sealed partial class EditorView
     private ConvertedCatchObject? HitCatchObject(float x, float y)
     {
         EnsureConversion();
-        return conversion!.Objects
-            .OrderBy(o => PointerDistance(new(o.TimeMs, o.X), x, y))
-            .FirstOrDefault(item =>
-            {
-                var p = Screen(new(item.TimeMs, item.X));
-                float scale = Playfield.Width / 512;
-                var bounds = skin?.Bounds(SkinObjectKind(item.Kind), skinIndices.GetValueOrDefault(item.SourceId),
-                    p.X, p.Y, CatchSize.FruitDiameter(Document.CircleSize) * scale);
-                if (bounds is { } b)
-                    return Math.Abs(x - p.X) <= Math.Max(7, b.Width / 2)
-                        && Math.Abs(y - p.Y) <= Math.Max(7, b.Height / 2);
-                return Near(new(item.TimeMs, item.X), x, y, Math.Max(7, ObjectRadius(item.Kind) * scale));
-            });
+        ConvertedCatchObject? closest = null;
+        double distance = double.PositiveInfinity;
+        foreach (var item in conversion!.Objects)
+        {
+            var point = new MapPoint(item.TimeMs, item.X);
+            double candidateDistance = PointerDistance(point, x, y);
+            if (candidateDistance >= distance) continue;
+            var p = Screen(point);
+            float scale = Playfield.Width / 512;
+            var bounds = skin?.Bounds(SkinObjectKind(item.Kind), skinIndices.GetValueOrDefault(item.SourceId),
+                p.X, p.Y, CatchSize.FruitDiameter(Document.CircleSize) * scale);
+            bool hit = bounds is { } b
+                ? Math.Abs(x - p.X) <= Math.Max(7, b.Width / 2) && Math.Abs(y - p.Y) <= Math.Max(7, b.Height / 2)
+                : Near(point, x, y, Math.Max(7, ObjectRadius(item.Kind) * scale));
+            if (hit) { closest = item; distance = candidateDistance; }
+        }
+        return closest;
+    }
+
+    // Conversion output is time-sorted; work scales with the visible time window.
+    private IEnumerable<ConvertedCatchObject> ObjectsInTimeRange(double start, double end)
+    {
+        var objects = conversion!.Objects;
+        int low = 0, high = objects.Count;
+        while (low < high)
+        {
+            int middle = low + (high - low) / 2;
+            if (objects[middle].TimeMs < start) low = middle + 1;
+            else high = middle;
+        }
+        for (int i = low; i < objects.Count && objects[i].TimeMs <= end; i++) yield return objects[i];
+    }
+
+    private bool SegmentNearPointer(CurveTrack track, int segment, float y)
+    {
+        float a = Screen(Point(track.Nodes[segment])).Y, b = Screen(Point(track.Nodes[segment + 1])).Y;
+        return y >= Math.Min(a, b) - 6 && y <= Math.Max(a, b) + 6;
     }
 
     private Guid HitTrackPath(float x, float y)
@@ -68,6 +92,7 @@ public sealed partial class EditorView
                 if (Near(Point(node), x, y, 9)) return track.Id;
             for (int segment = 0; segment < track.Nodes.Count - 1; segment++)
             {
+                if (!SegmentNearPointer(track, segment, y)) continue;
                 var previous = Screen(CurveMath.Evaluate(track, segment, 0));
                 for (int sample = 1; sample <= 64; sample++)
                 {
@@ -141,6 +166,9 @@ public sealed partial class EditorView
         BeginPointerDrag(x, y);
     }
 
+    private Dictionary<Guid, Fruit> dragFruits = [];
+    private Dictionary<Guid, CurveTrack> dragTracks = [];
+    private Dictionary<Guid, BananaShower> dragBananas = [];
     private void MoveSelectedObjects(float x, float y)
     {
         if (objectDragStart is null) return;
@@ -151,6 +179,9 @@ public sealed partial class EditorView
                 foreach (Guid id in objectSelection.Where(id => Document.ImportedSliders.Any(slider => slider.Id == id)).ToArray())
                     ImportedSliderEditing.ConvertToTrack(Document, id);
                 objectDragStart = Document.DeepClone();
+                dragFruits = Document.Fruits.ToDictionary(item => item.Id);
+                dragTracks = Document.Tracks.ToDictionary(item => item.Id);
+                dragBananas = Document.BananaShowers.ToDictionary(item => item.Id);
                 objectDragPrepared = true;
             }
             catch (Exception error) when (error is ArgumentException or InvalidOperationException or InvalidDataException)
@@ -201,23 +232,24 @@ public sealed partial class EditorView
 
         foreach (var source in objectDragStart.Fruits.Where(item => objectSelection.Contains(item.Id)))
         {
-            var target = Document.Fruits.Single(item => item.Id == source.Id);
+            var target = dragFruits[source.Id];
             target.TimeMs = source.TimeMs + deltaTime;
             target.X = source.X + deltaX;
         }
         foreach (var source in objectDragStart.Tracks.Where(item => objectSelection.Contains(item.Id)))
         {
-            var target = Document.Tracks.Single(item => item.Id == source.Id);
-            foreach (var sourceNode in source.Nodes)
+            var target = dragTracks[source.Id];
+            for (int i = 0; i < source.Nodes.Count; i++)
             {
-                var targetNode = target.Nodes.Single(node => node.Id == sourceNode.Id);
+                var sourceNode = source.Nodes[i];
+                var targetNode = target.Nodes[i];
                 targetNode.TimeMs = sourceNode.TimeMs + deltaTime;
                 targetNode.X = sourceNode.X + deltaX;
             }
         }
         foreach (var source in objectDragStart.BananaShowers.Where(item => objectSelection.Contains(item.Id)))
         {
-            var target = Document.BananaShowers.Single(item => item.Id == source.Id);
+            var target = dragBananas[source.Id];
             target.TimeMs = source.TimeMs + deltaTime;
             target.EndTimeMs = source.EndTimeMs + deltaTime;
         }

@@ -118,25 +118,30 @@ public sealed partial class EditorView
         {
             DrawRow(track.Name, track.Id, track.Id, track.Kind == CurveKind.Bezier ? Purple : Accent, false, true);
             for (int i = 0; i < track.Nodes.Count; i++)
-                DrawRow(L.Get("ui.anchorRow", i + 1, Number(track.Nodes[i].TimeMs)), track.Nodes[i].Id, track.Id, Muted, true, true);
+                DrawRow(RowVisible() ? L.Get("ui.anchorRow", i + 1, Number(track.Nodes[i].TimeMs)) : "", track.Nodes[i].Id, track.Id, Muted, true, true);
         }
         if (Document.ImportedSliders.Count + Document.BananaShowers.Count > 0)
         {
             c.Text(L.Get("ui.importedObjects"), 16, y + 7, 11, Muted); y += 29;
             foreach (var slider in Document.ImportedSliders)
-                DrawRow(L.Get("ui.sliderRow", Number(slider.TimeMs)), slider.Id, Guid.Empty, Purple, false, true);
+                DrawRow(RowVisible() ? L.Get("ui.sliderRow", Number(slider.TimeMs)) : "", slider.Id, Guid.Empty, Purple, false, true);
             foreach (var shower in Document.BananaShowers)
-                DrawRow(L.Get("ui.bananaRow", Number(shower.TimeMs)), shower.Id, Guid.Empty, Gold, false, true);
+                DrawRow(RowVisible() ? L.Get("ui.bananaRow", Number(shower.TimeMs)) : "", shower.Id, Guid.Empty, Gold, false, true);
         }
         c.Text(L.Get("ui.standaloneFruits"), 16, y + 7, 11, Muted); y += 29;
         int fruitIndex = 0;
-        foreach (var fruit in Document.Fruits.OrderBy(f => f.TimeMs))
-            DrawRow(L.Get("ui.fruitRow", ++fruitIndex, Number(fruit.TimeMs)), fruit.Id, Guid.Empty, Gold, false, false);
+        foreach (var fruit in sortedListFruits)
+        {
+            fruitIndex++;
+            DrawRow(RowVisible() ? L.Get("ui.fruitRow", fruitIndex, Number(fruit.TimeMs)) : "", fruit.Id, Guid.Empty, Gold, false, false);
+        }
         c.Unclip();
         c.Line(leftPanel.Right, leftPanel.Y, leftPanel.Right, leftPanel.Bottom, Grid);
         c.Fill(new(0, leftPanel.Bottom - 45, leftPanel.Width, 45), Panel);
         c.Text(L.Get("ui.listLegend"), 13, leftPanel.Bottom - 36, 11, Muted, leftPanel.Width - 18);
         c.Text(L.Get("ui.objectCounts", conversion?.Objects.Count ?? 0, hyperdashObjects.Count), 13, leftPanel.Bottom - 19, 10, Gold, leftPanel.Width - 18);
+
+        bool RowVisible() => y + 28 >= listRect.Y && y < listRect.Bottom;
 
         void DrawRow(string label, Guid id, Guid trackId, uint color, bool indent, bool diamond)
         {
@@ -197,6 +202,7 @@ public sealed partial class EditorView
         foreach (var shower in Document.BananaShowers.Where(item => item.Id != draftBanana))
         {
             var bounds = BananaRectangle(shower);
+            if (bounds.Bottom < plot.Y - 8 || bounds.Y > plot.Bottom + 8) continue;
             bool selected = objectSelection.Count == 1 && objectSelection.Contains(shower.Id);
             c.Fill(bounds, selected ? 0x2B291Fu : 0x211F1Bu);
             c.Stroke(bounds, selected ? Gold : 0x8C7445u, selected ? 2 : 1);
@@ -218,7 +224,8 @@ public sealed partial class EditorView
             c.Line(playfield.X, startY, playfield.Right, startY, Gold, 2);
             c.Line(playfield.X, cursorY, playfield.Right, cursorY, Gold, 1);
         }
-        foreach (var item in conversion!.Objects)
+        double margin = CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512 * 1.5 / pixelsPerMs;
+        foreach (var item in ObjectsInTimeRange(viewStart - margin, viewStart + plot.Height / pixelsPerMs + margin))
         {
             var p = Screen(new(item.TimeMs, item.X));
             float radius = (float)(CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512);
@@ -269,6 +276,7 @@ public sealed partial class EditorView
                         if (index < track.Nodes.Count - 1 && CurveMath.SegmentKind(track, index) == CurveKind.Bezier
                             || track.Id == draftTrack && tool == Tool.Slider) DrawHandle(node.HandleOut, DragKind.HandleOut);
                     }
+                    if (p.Y < plot.Y - 9 || p.Y > plot.Bottom + 9) continue;
                     bool nodeSelected = tool == Tool.Slider && anchorSelection.Contains(node.Id);
                     Diamond(c, p.X, p.Y, nodeSelected ? 8 : 5.5f, nodeSelected ? Error : color, opacity);
                     if (nodeSelected) c.Circle(p.X, p.Y, 3, Foreground);
@@ -517,7 +525,7 @@ public sealed partial class EditorView
                 }
             }
         }
-        foreach (var item in conversion!.Objects)
+        foreach (var item in ObjectsInTimeRange(playhead, playhead + preempt))
         {
             double remaining = item.TimeMs - playhead;
             if (remaining < 0 || remaining > preempt) continue;
@@ -553,10 +561,25 @@ public sealed partial class EditorView
                     float end = overview.X + (float)(CurveMath.EndTimeMs(track) / TimelineDurationMs) * overview.Width;
                     c.Fill(new(start, overview.Y + 9, Math.Max(2, end - start), 6), track.Kind == CurveKind.Bezier ? Purple : Accent, 2);
                 }
-        foreach (var item in conversion!.Objects.Where(o => o.Kind != CatchObjectKind.TinyDroplet))
+        // The overview is a pixel-sized summary. Preserve hyperdash markers when events overlap.
+        int lastPixel = int.MinValue;
+        bool hyper = false;
+        foreach (var item in conversion!.Objects)
         {
-            float x = overview.X + (float)(item.TimeMs / TimelineDurationMs) * overview.Width;
-            c.Line(x, overview.Y + 23, x, overview.Y + 32, hyperdashObjects.Contains((item.SourceId, item.EventIndex)) ? Error : Foreground, 2);
+            if (item.Kind == CatchObjectKind.TinyDroplet) continue;
+            int pixel = (int)Math.Round(item.TimeMs / TimelineDurationMs * overview.Width);
+            if (pixel != lastPixel)
+            {
+                FlushMarker(); lastPixel = pixel; hyper = false;
+            }
+            hyper |= hyperdashObjects.Contains((item.SourceId, item.EventIndex));
+        }
+        FlushMarker();
+        void FlushMarker()
+        {
+            if (lastPixel == int.MinValue) return;
+            float x = overview.X + lastPixel;
+            c.Line(x, overview.Y + 23, x, overview.Y + 32, hyper ? Error : Foreground, 2);
         }
         double visibleStart = Math.Clamp(viewStart, 0, TimelineDurationMs);
         double visibleEnd = Math.Clamp(viewStart + plot.Height / pixelsPerMs, visibleStart, TimelineDurationMs);

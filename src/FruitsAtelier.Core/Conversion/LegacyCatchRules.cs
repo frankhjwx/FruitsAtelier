@@ -18,6 +18,8 @@ internal struct CatchLegacyRandom
         w = 273326509;
     }
 
+    internal readonly bool SameState(CatchLegacyRandom other) => x == other.x && y == other.y && z == other.z && w == other.w;
+
     public int Next()
     {
         uint t = x ^ (x << 11);

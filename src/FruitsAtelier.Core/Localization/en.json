@@ -537,5 +537,6 @@
   "library.importFolder": "Import folder…",
   "library.importFile": "Import map / OSZ…",
   "library.externalOverlap": "Choose an external source folder or a managed Resources folder, not the workspace or its parent.",
-  "library.sourceMissing": "Source folder missing: {0}"
+  "library.sourceMissing": "Source folder missing: {0}",
+  "project.starCalculationFailed": "Could not refresh stars for {0}. The previous value is retained; check the map for conversion errors."
 }

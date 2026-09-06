@@ -537,5 +537,6 @@
   "library.importFolder": "导入文件夹…",
   "library.importFile": "导入谱面 / OSZ…",
   "library.externalOverlap": "请选择外部来源文件夹或受管理的 Resources 文件夹，不能选择 workspace 或其上级目录。",
-  "library.sourceMissing": "来源文件夹丢失：{0}"
+  "library.sourceMissing": "来源文件夹丢失：{0}",
+  "project.starCalculationFailed": "无法刷新 {0} 的星级。已保留之前的数值，请检查谱面的转换错误。"
 }

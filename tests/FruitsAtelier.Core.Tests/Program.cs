@@ -2,6 +2,7 @@ using FruitsAtelier.Core;
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Incremental conversion matches full output across edits, RNG changes and failures", ConversionCacheTests.EditingMatchesFullConversion),
     ("Timeline coordinate round trips and bounds", CoordinateRoundTrips),
     ("Zoom preserves mouse time at scale limits", ZoomAnchor),
     ("Beat snap quarters, sixths, offsets and midpoint", SnapGrid),
