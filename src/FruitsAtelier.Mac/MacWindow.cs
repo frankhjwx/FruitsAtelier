@@ -27,6 +27,25 @@ internal sealed class MacWindow : Window
         editor.Changed = UpdateTitle;
         View.RequestClose = Close;
         View.RequestOpen = () => RunFile(async () => { if (await ConfirmDiscard()) { var path = await Pick(L.Get("files.open"), ["*.osz", "*.osu", "*.catchproj"]); if (path is not null) await OpenPath(path); } });
+        View.RequestNewProject = () => RunFile(async () =>
+        {
+            if (!await ConfirmDiscard()) return;
+            await audio.LoadAsync(null); projectPath = null; View.NewProject();
+        });
+        View.RequestImportDifficulty = () => RunFile(async () =>
+        {
+            if (!View.PrepareFileOperation()) return;
+            var path = await Pick(L.Get("project.import"), ["*.osu"]);
+            if (path is not null && View.AddDifficulty(OsuBeatmapReader.ReadFile(path)))
+            { await audio.LoadAsync(null); await audio.LoadAsync(View.Document.AudioPath); audio.Seek(View.PlayheadMs); PollAudio(); }
+        });
+        View.RequestDifficultyChanged = () => RunFile(async () =>
+        {
+            await audio.LoadAsync(null);
+            await audio.LoadAsync(View.Document.AudioPath);
+            audio.Seek(View.PlayheadMs);
+            PollAudio();
+        });
         View.RequestSave = () => RunFile(async () => { await Save(false); });
         View.RequestSaveAs = () => RunFile(async () => { await Save(true); });
         View.RequestExport = () => RunFile(Export);
@@ -77,7 +96,7 @@ internal sealed class MacWindow : Window
         Closed += (_, _) => { timer.Stop(); audio.Dispose(); editor.Dispose(); };
         Deactivated += (_, _) => { View.CancelInteraction(); editor.Refresh(); };
     }
-    private void UpdateTitle() => Title = L.Get("window.title", View.Document.Name, View.IsDirty ? " *" : "", L.Get(View.Document.IsDemo ? "window.demo" : "window.milestone"));
+    private void UpdateTitle() => Title = L.Get("window.title", View.ProjectName, View.IsDirty ? " *" : "", L.Get(View.Document.IsDemo ? "window.demo" : "window.milestone"));
     private void PollAudio()
     {
         var state = audio.State;
@@ -132,31 +151,26 @@ internal sealed class MacWindow : Window
     }
     private async Task OpenPath(string path)
     {
-        if (Path.GetExtension(path).Equals(".osz", StringComparison.OrdinalIgnoreCase))
-        {
-            var maps = BeatmapArchive.Import(path, Path.Combine(MacPaths.Artifacts, "beatmaps"));
-            path = maps.Count == 1 ? maps[0] : await Pick(L.Get("files.difficulty"), ["*.osu"], Path.GetDirectoryName(maps[0])) ?? "";
-            if (path.Length == 0) return;
-        }
-        bool project = Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase);
-        var document = project ? ProjectSerializer.ReadFile(path) : OsuBeatmapReader.ReadFile(path);
-        View.LoadDocument(document); projectPath = project ? path : null;
-        await audio.LoadAsync(document.AudioPath);
+        var project = BeatmapArchive.OpenProject(path, Path.Combine(MacPaths.Artifacts, "beatmaps"));
+        View.LoadProject(project);
+        projectPath = Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase) ? path : null;
+        await audio.LoadAsync(View.Document.AudioPath);
         PollAudio();
     }
+
     private async Task<bool> Save(bool saveAs)
     {
         if (!View.PrepareFileOperation()) return false;
         var destination = !saveAs ? projectPath : null;
-        destination ??= await SavePicker(L.Get("files.saveProject"), "catchproj", SafeName(View.Document.Name) + ".catchproj");
+        destination ??= await SavePicker(L.Get("files.saveProject"), "catchproj", SafeName(View.ProjectName) + ".catchproj");
         if (destination is null) return false;
-        ProjectSerializer.WriteFile(View.Document, destination); projectPath = destination; View.MarkSaved();
+        ProjectSerializer.WriteFile(View.CaptureProject(), destination); projectPath = destination; View.MarkSaved();
         View.SetNotice(L.Get("files.saved", destination)); return true;
     }
     private async Task Export()
     {
         if (!View.PrepareFileOperation()) return;
-        var destination = await SavePicker(L.Get("files.export"), "osu", SafeName(View.Document.Name) + ".osu");
+        var destination = await SavePicker(L.Get("files.export"), "osu", SafeName(View.Document.Name + " [" + View.CurrentDifficultyName + "]") + ".osu");
         if (destination is null) return;
         var result = OsuBeatmapWriter.Serialize(View.Document, View.CompensateTinyDroplets);
         BeatmapResources.Copy(View.Document, Path.GetDirectoryName(destination)!, result.ReadBack);
@@ -195,11 +209,40 @@ internal sealed class MacWindow : Window
         ProjectSerializer.WriteFile(View.Document, Path.Combine(folder, "smoke.catchproj"));
         var restored = ProjectSerializer.ReadFile(Path.Combine(folder, "smoke.catchproj"));
         if (!View.Document.ContentEquals(restored)) throw new InvalidOperationException("Project round-trip failed");
+        View.AddDifficulty();
+        ProjectSerializer.WriteFile(View.CaptureProject(), Path.Combine(folder, "multi.catchproj"));
+        View.LoadProject(ProjectSerializer.ReadProjectFile(Path.Combine(folder, "multi.catchproj")));
+        if (View.DifficultyCount != 2 || !View.SwitchDifficulty(1) || View.Document.Fruits.Count != 0)
+            throw new InvalidOperationException("Multi-difficulty project round-trip failed");
+        var tabPreview = View.CaptureProject();
+        tabPreview.Difficulties[0].Name = "Rain";
+        tabPreview.Difficulties[1].Name = "Cup";
+        foreach (int interval in new[] { 300, 150 })
+        {
+            var fixture = new MapDocument { Name = tabPreview.Name, IsDemo = false };
+            for (int index = 0; index < 80; index++)
+                fixture.Fruits.Add(new Fruit { TimeMs = 1000 + index * interval, X = index % 2 == 0 ? 90 : 422 });
+            tabPreview.Difficulties.Add(new ProjectDifficulty { Name = interval == 300 ? "Platter" : "A very long difficulty name", Document = fixture });
+        }
+        View.LoadProject(tabPreview);
+        editor.Refresh();
+        using (var multi = new RenderTargetBitmap(new PixelSize((int)editor.Bounds.Width, (int)editor.Bounds.Height), new Vector(96, 96)))
+        {
+            multi.Render(editor);
+            View.SwitchDifficulty(2);
+            editor.Refresh();
+            multi.Render(editor); multi.Save(Path.Combine(folder, "project-difficulties.png"));
+            View.PointerDown(700, 500, 0, false, false);
+        }
         L.SetLanguage("en");
         editor.Refresh();
         using var english = new RenderTargetBitmap(new PixelSize((int)editor.Bounds.Width, (int)editor.Bounds.Height), new Vector(96, 96));
         english.Render(editor); english.Save(Path.Combine(folder, "editor-en.png"));
+        Width = 980;
+        await Task.Delay(150);
+        editor.Refresh();
+        using var narrow = new RenderTargetBitmap(new PixelSize((int)editor.Bounds.Width, (int)editor.Bounds.Height), new Vector(96, 96));
+        narrow.Render(editor); narrow.Save(Path.Combine(folder, "project-tabs-narrow.png"));
         L.SetLanguage("zh-CN");
-        await Task.CompletedTask;
     }
 }

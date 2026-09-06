@@ -2,6 +2,8 @@ using FruitsAtelier.Core;
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Catch stars match 21 official algorithm fixtures", CatchDifficultyTests.OfficialValues),
+    ("Catch star calculation respects object participation and input boundaries", CatchDifficultyTests.Participation),
     ("CS scales nominal fruit, default droplets and catcher independently", Sizes),
     ("Static bananas use the arrival scale across the CS range", BananaSizes),
     ("Hyperdash uses full catcher width and marks the departure object", Departure),

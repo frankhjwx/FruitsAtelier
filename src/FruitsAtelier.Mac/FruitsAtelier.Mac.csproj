@@ -16,6 +16,7 @@
     <Compile Include="../FruitsAtelier.App/Platform/BeatmapArchive.cs" Link="Platform/BeatmapArchive.cs" />
     <Compile Include="../FruitsAtelier.App/Platform/BeatmapResources.cs" Link="Platform/BeatmapResources.cs" />
     <Compile Include="../FruitsAtelier.App/Platform/SkinArchive.cs" Link="Platform/SkinArchive.cs" />
+    <Content Include="../../assets/icons/osu/*" Link="assets/icons/osu/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../assets/skins/default.osk" Condition="Exists('../../assets/skins/default.osk')" Link="assets/skins/default.osk" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="Licenses/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../../THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" />

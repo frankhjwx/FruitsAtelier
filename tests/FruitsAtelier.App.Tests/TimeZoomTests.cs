@@ -37,7 +37,7 @@ internal static class TimeZoomTests
         var slider = ui.View.ZoomSliderBounds;
         double preempt = 440 / ui.View.PixelsPerMs * ui.Plot.Width / 512;
         float fraction = (float)((preempt >= 1200 ? 5 - (preempt - 1200) / 120 : 5 + (1200 - preempt) / 150) / 10);
-        if (!ui.Canvas.Circles.Any(c => c.Color == 0x59D3C3 && Math.Abs(c.X - (slider.X + fraction * slider.Width)) < 0.01 && c.Y == 103))
+        if (!ui.Canvas.Circles.Any(c => c.Color == 0x59D3C3 && Math.Abs(c.X - (slider.X + fraction * slider.Width)) < 0.01 && c.Y == slider.Y + 15))
             throw new Exception("Slider thumb did not follow wheel zoom.");
         ui.View.PointerDown(slider.X, slider.Y + 15, 0, false, false);
         if (!ui.View.WantsCapture) throw new Exception("Slider did not capture dragging.");

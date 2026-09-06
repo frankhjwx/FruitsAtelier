@@ -82,7 +82,7 @@ public static class OsuBeatmapReader
         double Difficulty(string key, double fallback) => Setting(document, "Difficulty", key) is { } value ? Number(value) : fallback;
     }
 
-    internal static string? Setting(MapDocument document, string section, string key) => document.OriginalSections
+    public static string? Setting(MapDocument document, string section, string key) => document.OriginalSections
         .Where(s => s.Name == section).SelectMany(s => s.Lines).Select(line => line.Split(':', 2))
         .Where(parts => parts.Length == 2 && parts[0].Trim() == key).Select(parts => parts[1].Trim()).LastOrDefault();
 

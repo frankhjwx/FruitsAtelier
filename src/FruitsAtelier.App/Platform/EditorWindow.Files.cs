@@ -18,6 +18,22 @@ internal sealed partial class EditorWindow
             string? path = MapFileDialog.Select(hwnd, false, L.Get("files.open"), MapFileDialog.OpenFilter);
             if (path is not null) OpenPath(path);
         });
+        view.RequestNewProject = () => FileOperation(() =>
+        {
+            if (!ConfirmDiscard()) return;
+            ResetAudio(); projectPath = null; view.NewProject();
+        });
+        view.RequestImportDifficulty = () => FileOperation(() =>
+        {
+            if (!view.PrepareFileOperation()) return;
+            string? path = MapFileDialog.Select(hwnd, false, L.Get("project.import"), MapFileDialog.OsuFilter);
+            if (path is not null) view.AddDifficulty(OsuBeatmapReader.ReadFile(path));
+        });
+        view.RequestDifficultyChanged = () =>
+        {
+            ResetAudio();
+            if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) { audio.Load(view.Document.AudioPath); audio.Seek(view.PlayheadMs); }
+        };
         view.RequestSave = () => FileOperation(() => SaveProject(false));
         view.RequestSaveAs = () => FileOperation(() => SaveProject(true));
         view.RequestExport = () => FileOperation(ExportBeatmap);
@@ -48,19 +64,12 @@ internal sealed partial class EditorWindow
 
     private void OpenPath(string path)
     {
-        if (Path.GetExtension(path).Equals(".osz", StringComparison.OrdinalIgnoreCase))
-        {
-            var maps = BeatmapArchive.Import(path, Path.Combine(Artifacts, "beatmaps"));
-            path = maps.Count == 1 ? maps[0] : MapFileDialog.Select(hwnd, false, L.Get("files.difficulty"), MapFileDialog.OsuFilter, Path.GetDirectoryName(maps[0])) ?? "";
-            if (path.Length == 0) return;
-        }
-        bool project = Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase);
-        var document = project ? ProjectSerializer.ReadFile(path) : OsuBeatmapReader.ReadFile(path);
-        view.LoadDocument(document);
-        projectPath = project ? path : null;
+        var project = BeatmapArchive.OpenProject(path, Path.Combine(Artifacts, "beatmaps"));
+        view.LoadProject(project);
+        projectPath = Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase) ? path : null;
         ResetAudio();
-        if (!string.IsNullOrWhiteSpace(document.AudioPath)) audio.Load(document.AudioPath);
-        AppLog.Write($"Opened map: {path}; timing={document.TimingPoints.Count}; fruit={document.Fruits.Count}; sliders={document.ImportedSliders.Count}; bananaShowers={document.BananaShowers.Count}");
+        if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath);
+        AppLog.Write($"Opened project: {path}; difficulties={project.Difficulties.Count}");
     }
 
     private bool SaveProject(bool saveAs)
@@ -72,10 +81,10 @@ internal sealed partial class EditorWindow
             string folder = Path.Combine(Artifacts, "projects");
             Directory.CreateDirectory(folder);
             destination = MapFileDialog.Select(hwnd, true, L.Get("files.saveProject"), MapFileDialog.ProjectFilter,
-                destination ?? Path.Combine(folder, SafeName(view.Document.Name) + ".catchproj"), "catchproj");
+                destination ?? Path.Combine(folder, SafeName(view.ProjectName) + ".catchproj"), "catchproj");
         }
         if (destination is null) return false;
-        ProjectSerializer.WriteFile(view.Document, destination);
+        ProjectSerializer.WriteFile(view.CaptureProject(), destination);
         projectPath = destination;
         view.MarkSaved();
         view.SetNotice(L.Get("files.saved", destination));
@@ -88,7 +97,7 @@ internal sealed partial class EditorWindow
         string folder = Path.Combine(Artifacts, "exports", SafeName(view.Document.Name));
         Directory.CreateDirectory(folder);
         string? destination = MapFileDialog.Select(hwnd, true, L.Get("files.export"), MapFileDialog.OsuFilter,
-            Path.Combine(folder, SafeName(view.Document.Name) + ".osu"), "osu");
+            Path.Combine(folder, SafeName(view.Document.Name + " [" + view.CurrentDifficultyName + "]") + ".osu"), "osu");
         if (destination is null) return;
         var result = OsuBeatmapWriter.Serialize(view.Document, view.CompensateTinyDroplets);
         CopyResources(view.Document, Path.GetDirectoryName(destination)!, result.ReadBack);

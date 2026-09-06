@@ -129,6 +129,14 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         if (filled) context!.FillEllipse(ellipse, Brush(color));
         else context!.DrawEllipse(ellipse, Brush(color), width);
     }
+    public float MeasureText(string text, float size, bool bold = false)
+    {
+        using var format = textFactory!.CreateTextFormat("Segoe UI", null, bold ? FontWeight.SemiBold : FontWeight.Normal,
+            FontStyle.Normal, FontStretch.Normal, size, "zh-CN");
+        format.WordWrapping = WordWrapping.NoWrap;
+        using var layout = textFactory.CreateTextLayout(text, format, 10000, size * 2);
+        return layout.Metrics.WidthIncludingTrailingWhitespace;
+    }
     public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false)
     {
         if (maxWidth <= 0 || string.IsNullOrEmpty(text)) return;

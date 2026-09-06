@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace FruitsAtelier.Core;
 
-public static class ProjectSerializer
+public static partial class ProjectSerializer
 {
     private sealed class ProjectFile
     {

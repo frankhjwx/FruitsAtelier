@@ -2,6 +2,7 @@ using FruitsAtelier.Core;
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Multi-difficulty projects preserve content, history and compatibility", MultiProjectTests.Run),
     ("Pre-rename schema 1 projects preserve user names and editable curves", RenameCompatibilityTests.Run),
     ("Reader preserves original timing order, duplicates, samples and unknown sections", ReadOriginal),
     ("Unedited export retains all object and timing text", OriginalRoundTrip),
