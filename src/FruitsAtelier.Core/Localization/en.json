@@ -482,5 +482,16 @@
   "mac.audioFormat": "Unsupported audio format.",
   "mac.audioLimit": "Decoded audio exceeds the 512 MiB limit.",
   "files.skin": "Open skin",
-  "mac.renderStatus": "macOS  ·  {0:0}%  ·  {1}"
+  "mac.renderStatus": "macOS  ·  {0:0}%  ·  {1}",
+  "project.new": "New project",
+  "project.add": "Add blank difficulty",
+  "project.import": "Import .osu difficulty…",
+  "project.defaultDifficulty": "Difficulty {0}",
+  "project.selector": "{0}/{1} · {2}{3}",
+  "project.previous": "Previous page",
+  "project.next": "Next page",
+  "project.invalid": "A project requires a name and 1–256 valid difficulties with unique IDs.",
+  "project.noCatch": "This archive contains no Catch (Mode=2) difficulties.",
+  "project.stars": "★ {0:F2}",
+  "project.starsUnavailable": "★ —"
 }

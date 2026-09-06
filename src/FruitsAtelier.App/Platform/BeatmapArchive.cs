@@ -6,6 +6,32 @@ namespace FruitsAtelier.App.Platform;
 
 public static class BeatmapArchive
 {
+    public static FruitsAtelier.Core.BeatmapProject OpenProject(string path, string cacheRoot)
+    {
+        if (Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase))
+            return FruitsAtelier.Core.ProjectSerializer.ReadProjectFile(path);
+        if (!Path.GetExtension(path).Equals(".osz", StringComparison.OrdinalIgnoreCase))
+            return FruitsAtelier.Core.BeatmapProject.FromDocuments([FruitsAtelier.Core.OsuBeatmapReader.ReadFile(path)]);
+        var documents = new List<FruitsAtelier.Core.MapDocument>();
+        foreach (string map in Import(path, cacheRoot))
+        {
+            // Mixed-mode beatmap sets may contain unsupported rulesets. Only inspect General/Mode here;
+            // malformed Catch maps still fail the entire open operation before replacing the editor.
+            bool general = false;
+            string? mode = null;
+            foreach (string line in File.ReadLines(map))
+            {
+                string value = line.Trim();
+                if (value.StartsWith('[')) general = value == "[General]";
+                else if (general && value.Split(':', 2) is [var key, var setting] && key.Trim() == "Mode") mode = setting.Trim();
+            }
+            if (mode != "2") continue;
+            documents.Add(FruitsAtelier.Core.OsuBeatmapReader.ReadFile(map));
+        }
+        if (documents.Count == 0) throw new InvalidDataException(L.Get("project.noCatch"));
+        return FruitsAtelier.Core.BeatmapProject.FromDocuments(documents);
+    }
+
     private static readonly HashSet<string> extensions = new(StringComparer.OrdinalIgnoreCase)
         { ".osu", ".mp3", ".ogg", ".wav", ".jpg", ".jpeg", ".png" };
 

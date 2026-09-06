@@ -40,7 +40,7 @@ public sealed partial class EditorView
         if (editField >= 0 && !CommitField()) return;
         if (menu >= 0)
         {
-            var popup = new Rendering.Rect(109 + menu * 53, 38, 282, menu is 0 or 1 ? 281 : 171);
+            var popup = MenuBounds;
             if (popup.Contains(x, y))
             {
                 for (int i = hits.Count - 1; i >= 0; i--)
@@ -335,6 +335,12 @@ public sealed partial class EditorView
     {
         if (drag != DragKind.None) return;
         if (contextItems.Count > 0) { contextItems.Clear(); return; }
+        if (difficultyTabStrip.Contains(x, y))
+        {
+            firstDifficultyTab = Math.Clamp(firstDifficultyTab + (delta < 0 ? 1 : delta > 0 ? -1 : 0), 0,
+                Math.Max(0, difficulties.Count - visibleDifficultyTabs));
+            return;
+        }
         if (leftPanel.Contains(x, y)) { listScroll = Math.Max(0, listScroll - delta / 120 * 65); return; }
         if (overview.Contains(x, y))
         {
@@ -386,6 +392,7 @@ public sealed partial class EditorView
             contextItems.Clear();
             if (virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (virtualKey == 89) Redo();
+            else if (virtualKey == 9) SwitchDifficulty((activeDifficulty + (shift ? difficulties.Count - 1 : 1)) % difficulties.Count);
             else if (virtualKey == 79) RequestOpen?.Invoke();
             else if (virtualKey == 83) { if (shift) RequestSaveAs?.Invoke(); else RequestSave?.Invoke(); }
             else if (virtualKey == 69) RequestExport?.Invoke();

@@ -71,3 +71,18 @@ OGG decoding reuses NVorbis 0.10.4 under the existing license above.
 The self-contained local bundle also includes Microsoft's .NET runtime and its
 bundled license and third-party notices. Local ad-hoc signing is not Developer ID
 signing or notarization.
+
+## Catch difficulty and ruleset icon
+
+No-mod Catch star calculation adapts the MIT-licensed `CatchDifficultyCalculator`,
+`CatchDifficultyHitObject`, `MovementEvaluator`, `Movement`, `StrainSkill` and
+`StrainDecaySkill` from ppy/osu commit `48c4800e3ae4ee752452cdff83bd3787ccf3105f`
+(difficulty version 20260706). The MIT notice is retained in
+`src/FruitsAtelier.Core/Gameplay/LICENSE.osu.txt`; see [calculation boundaries](docs/CATCH_DIFFICULTY.md).
+
+The unmodified Catch icon is from ppy/osu-resources commit
+`d8d01c29ce0f298159aea3644b947d8b4a1882a2`, under CC BY-NC 4.0.
+Its source, attribution and full licence ship in [assets/icons/osu](assets/icons/osu/README.md).
+The colour scale follows the published star-rating stops in osu!web
+`resources/js/utils/beatmap-helper.ts` at commit `61b0a41431395f86ff68fa12744f3266448ec885`;
+interpolation is independently implemented as gamma-2.2 RGB interpolation.

@@ -11,7 +11,25 @@ public sealed partial class EditorView
     private const uint Background = 0x171A20, Panel = 0x20252E, Surface = 0x282F3A;
     private const uint Foreground = 0xE7EBF2, Muted = 0x9AA8BC, Grid = 0x343C49;
     private const uint Accent = 0x59D3C3, Gold = 0xF2C66D, Purple = 0xAB9DF2, Error = 0xFF7F8D;
-    private readonly EditorHistory history = new(DemoMap.Create());
+    private sealed class DifficultySession(ProjectDifficulty difficulty)
+    {
+        public Guid Id { get; } = difficulty.Id;
+        public string Name { get; } = difficulty.Name;
+        public EditorHistory History { get; } = new(difficulty.Document);
+        public double Playhead, ViewStart;
+        public MapDocument? RatingSnapshot;
+        public double? Stars;
+        public bool RatingCompensation;
+    }
+    private readonly List<DifficultySession> difficulties = BeatmapProject.FromDocuments([DemoMap.Create()]).Difficulties
+        .Select(d => new DifficultySession(d)).ToList();
+    private int activeDifficulty;
+    private bool projectStructureDirty;
+    private EditorHistory history => difficulties[activeDifficulty].History;
+    public string ProjectName { get; private set; } = L.Get("core.names.demo");
+    public string CurrentDifficultyName => difficulties[activeDifficulty].Name;
+    public int DifficultyCount => difficulties.Count;
+    public int ActiveDifficultyIndex => activeDifficulty;
     private readonly List<HitArea> hits = [];
     private readonly List<NumericField> fields = [];
     private readonly List<(Rect Bounds, Guid Id, Guid Track)> rows = [];
@@ -46,7 +64,7 @@ public sealed partial class EditorView
     public Action? RequestClose { get; set; }
     public Action? RequestResetDemo { get; set; }
     public Action? RequestLoadSkin { get; set; }
-    public bool IsDirty => history.IsDirty;
+    public bool IsDirty => projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
     public bool IsEditingText => editField >= 0;
     public string RendererStatusKey { get; set; } = "ui.renderStatus";
     public bool WantsCapture => drag != DragKind.None;
@@ -114,7 +132,7 @@ public sealed partial class EditorView
     public void ResetDemo()
     {
         CancelInteraction();
-        history.Reset(DemoMap.Create());
+        LoadDocument(DemoMap.Create());
         Select(Guid.Empty);
         tool = Tool.Select;
         ResetView();
@@ -139,6 +157,8 @@ public sealed partial class EditorView
         // Blank time before the start and after the end keeps the playback line fixed at both endpoints.
         double padding = plot.Height * playbackLineFromBottom / pixelsPerMs;
         viewStart = Math.Clamp(viewStart, -padding, Math.Max(-padding, TimelineDurationMs - padding));
+        // Float pointer deltas can leave a sub-microsecond remainder when navigating back to zero.
+        if (Math.Abs(viewStart) < 0.001) viewStart = 0;
     }
 
     private void ZoomTimeAt(float y, double factor)

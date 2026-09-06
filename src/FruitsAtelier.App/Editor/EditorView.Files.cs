@@ -6,6 +6,9 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     public Action? RequestOpen { get; set; }
+    public Action? RequestNewProject { get; set; }
+    public Action? RequestImportDifficulty { get; set; }
+    public Action? RequestDifficultyChanged { get; set; }
     public Action? RequestSave { get; set; }
     public Action? RequestSaveAs { get; set; }
     public Action? RequestExport { get; set; }
@@ -28,8 +31,24 @@ public sealed partial class EditorView
 
     public void LoadDocument(MapDocument document)
     {
+        LoadProject(BeatmapProject.FromDocuments([document]));
+    }
+
+    public void LoadProject(BeatmapProject project)
+    {
+        project.Validate();
         CancelInteraction();
-        history.Reset(document);
+        difficulties.Clear();
+        difficulties.AddRange(project.Difficulties.Select(d => new DifficultySession(d)));
+        activeDifficulty = firstDifficultyTab = 0;
+        ProjectName = project.Name;
+        projectStructureDirty = false;
+        ResetDifficultyView();
+    }
+
+    private void ResetDifficultyView()
+    {
+        var document = Document;
         convertedSnapshot = null;
         Select(Guid.Empty);
         tool = Tool.Select;
@@ -46,7 +65,67 @@ public sealed partial class EditorView
         StatusMessage = L.Get("editor.status.documentOpened", document.Name, document.TimingPoints.Count);
     }
 
-    public void MarkSaved() => history.MarkSaved();
+    public BeatmapProject CaptureProject() => new()
+    {
+        Name = ProjectName,
+        Difficulties = difficulties.Select(d => new ProjectDifficulty { Id = d.Id, Name = d.Name, Document = d.History.Document.DeepClone() }).ToList()
+    };
+
+    public void NewProject()
+    {
+        var document = new MapDocument { IsDemo = false };
+        var metadata = new OsuSection { Name = "Metadata" };
+        metadata.Lines.Add("Version:" + L.Get("project.defaultDifficulty", 1));
+        document.OriginalSections.Add(metadata);
+        LoadProject(BeatmapProject.FromDocuments([document]));
+        projectStructureDirty = true;
+    }
+
+    public bool SwitchDifficulty(int index)
+    {
+        if (index < 0 || index >= difficulties.Count) return false;
+        if (index == activeDifficulty) return true;
+        if (!PrepareFileOperation()) return false;
+        difficulties[activeDifficulty].Playhead = playhead;
+        difficulties[activeDifficulty].ViewStart = viewStart;
+        activeDifficulty = index;
+        RevealDifficultyTab();
+        ResetDifficultyView();
+        playhead = difficulties[index].Playhead;
+        viewStart = difficulties[index].ViewStart;
+        RequestDifficultyChanged?.Invoke();
+        return true;
+    }
+
+    public bool AddDifficulty(MapDocument? imported = null)
+    {
+        if (!PrepareFileOperation()) return false;
+        if (difficulties.Count >= 256) { SetNotice(L.Get("project.invalid")); return false; }
+        var document = imported?.DeepClone() ?? Document.DeepClone();
+        string name = imported is null ? L.Get("project.defaultDifficulty", difficulties.Count + 1)
+            : OsuBeatmapReader.Setting(document, "Metadata", "Version") ?? L.Get("project.defaultDifficulty", difficulties.Count + 1);
+        if (imported is null)
+        {
+            document.Fruits.Clear(); document.Tracks.Clear(); document.ImportedSliders.Clear(); document.BananaShowers.Clear();
+            document.IsDemo = false;
+            foreach (var section in document.OriginalSections.Where(s => s.Name == "HitObjects")) section.Lines.Clear();
+            var metadata = document.OriginalSections.FirstOrDefault(s => s.Name == "Metadata");
+            if (metadata is null) { metadata = new OsuSection { Name = "Metadata" }; document.OriginalSections.Add(metadata); }
+            metadata.Lines.RemoveAll(line => line.Split(':', 2)[0].Trim() is "Version" or "BeatmapID");
+            metadata.Lines.Add("Version:" + name);
+            metadata.Lines.Add("BeatmapID:0");
+        }
+        OsuBeatmapReader.Validate(document);
+        difficulties.Add(new DifficultySession(new ProjectDifficulty { Name = name, Document = document }));
+        projectStructureDirty = true;
+        return SwitchDifficulty(difficulties.Count - 1);
+    }
+
+    public void MarkSaved()
+    {
+        foreach (var difficulty in difficulties) difficulty.History.MarkSaved();
+        projectStructureDirty = false;
+    }
 
     public void ChangeAudioPath(string path) => Edit(L.Get("editor.command.changeAudio"), () => Document.AudioPath = path);
 

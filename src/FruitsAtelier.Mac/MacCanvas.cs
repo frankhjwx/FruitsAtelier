@@ -61,6 +61,12 @@ internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICa
     }
     public void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1)
         => context.DrawEllipse(filled ? Brush(color) : null, filled ? null : new Pen(Brush(color), width), new Point(x, y), radius, radius);
+    public float MeasureText(string text, float size, bool bold = false)
+    {
+        var formatted = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            new Typeface("Arial, PingFang SC", FontStyle.Normal, bold ? FontWeight.SemiBold : FontWeight.Normal), size, Brush(0xFFFFFF));
+        return (float)formatted.WidthIncludingTrailingWhitespace;
+    }
     public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false)
     {
         if (maxWidth <= 0 || text.Length == 0) return;

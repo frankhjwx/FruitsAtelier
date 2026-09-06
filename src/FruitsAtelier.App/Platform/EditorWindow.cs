@@ -237,7 +237,7 @@ internal sealed partial class EditorWindow : IDisposable
 
     private void UpdateTitle()
     {
-        string title = L.Get("window.title", view.Document.Name, view.IsDirty ? " *" : "", L.Get(view.Document.IsDemo ? "window.demo" : "window.milestone"));
+        string title = L.Get("window.title", view.ProjectName, view.IsDirty ? " *" : "", L.Get(view.Document.IsDemo ? "window.demo" : "window.milestone"));
         if (title == lastTitle) return;
         Native.SetWindowText(hwnd, title); lastTitle = title;
     }

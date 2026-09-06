@@ -482,5 +482,16 @@
   "mac.audioFormat": "不支持的音频格式。",
   "mac.audioLimit": "解码音频超过 512 MiB 上限。",
   "files.skin": "打开皮肤",
-  "mac.renderStatus": "macOS  ·  {0:0}%  ·  {1}"
+  "mac.renderStatus": "macOS  ·  {0:0}%  ·  {1}",
+  "project.new": "新建工程",
+  "project.add": "新增空白难度",
+  "project.import": "导入 .osu 难度…",
+  "project.defaultDifficulty": "Difficulty {0}",
+  "project.selector": "{0}/{1} · {2}{3}",
+  "project.previous": "上一页",
+  "project.next": "下一页",
+  "project.invalid": "工程需要名称及 1–256 个具有唯一 ID 的有效难度。",
+  "project.noCatch": "此谱面包不包含 Catch（Mode=2）难度。",
+  "project.stars": "★ {0:F2}",
+  "project.starsUnavailable": "★ —"
 }

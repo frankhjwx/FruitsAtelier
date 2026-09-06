@@ -34,6 +34,7 @@ internal static class MultiSelectionTests
             "Empty click did not leave existing-slider edit mode.");
         ui.ClickText(track.Name); ui.Key('B');
         ui.ClickText("新 Slider");
+        ui.View.Wheel(ui.Plot.X, ui.Plot.Bottom, -120, true); ui.Paint();
         ui.ClickMap(5500, 80); ui.ClickMap(6500, 160); ui.Key(13);
         Check(ui.View.Document.Tracks.Count == 2 && ui.View.Document.Tracks.Single(t => t.Id == track.Id).Nodes.Count == 5,
             "Explicit New Slider did not create a separate curve.");

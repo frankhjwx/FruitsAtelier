@@ -4,6 +4,10 @@ using FruitsAtelier.Core;
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Difficulty tabs use content width and truncate Unicode names after 16 characters", DifficultyTabTests.Layout),
+    ("Difficulty tab stars follow edits, undo and CS", DifficultyTabTests.Editing),
+    ("Overflow difficulty tabs scroll, switch and add without losing content", DifficultyTabTests.Overflow),
+    ("Multi-difficulty projects preserve content, history and compatibility", ProjectTests.Run),
     ("Canvas seeks follow the current beat grid and timing changes", CanvasSeekSnapTests.BeatGrid),
     ("Free canvas seeking retains continuous time", CanvasSeekSnapTests.FreeMode),
     ("Timeline grabs retain the exact original time after round trips", TimelineDragTests.ReturnToStart),
