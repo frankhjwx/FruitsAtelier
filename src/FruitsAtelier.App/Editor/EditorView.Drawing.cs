@@ -18,6 +18,7 @@ public sealed partial class EditorView
         this.width = width;
         this.height = height;
         hits.Clear(); fields.Clear(); rows.Clear();
+        PumpSliderBatch();
         PumpLibrary();
         if (LibraryVisible) { DrawLibrary(c); return; }
         float leftWidth = width < 1100 ? 168 : 192;
@@ -47,6 +48,7 @@ public sealed partial class EditorView
         }
         if (menu >= 0) DrawMenu(c);
         DrawContextMenu(c);
+        DrawSliderDialog(c);
     }
 
     private void DrawChrome(ICanvas c)
@@ -600,7 +602,7 @@ public sealed partial class EditorView
     }
 
     private Rect MenuBounds => menu == 3 ? new(Math.Min(difficultyAddButton.X, width - 288), difficultyAddButton.Bottom + 4, 282, 82)
-        : new(109 + menu * 53, 38, 282, menu == 0 ? 315 : menu == 1 ? 281 : 171);
+        : new(109 + menu * 53, 38, 282, menu == 0 ? 315 : menu == 1 ? 315 : 171);
 
     private void DrawMenu(ICanvas c)
     {
@@ -633,6 +635,7 @@ public sealed partial class EditorView
             Item(L.Get("ui.cutMenu"), () => CutSelection(), CanCopySelection);
             Item(L.Get("ui.copyMenu"), () => CopySelection(), CanCopySelection);
             Item(L.Get("ui.pasteMenu"), () => PasteSelection(), CanPasteSelection);
+            Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
         }
         else
         {

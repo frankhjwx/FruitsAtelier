@@ -89,3 +89,20 @@ canvas, so these are CPU measurements, not native rendering or end-to-end FPS.
 Performance results depend on hardware and runtime warm-up; compare the same fixture
 and environment. Functional tests compare cached conversion against full conversion
 after edits to geometry, timing, repeats, source ordering, and RNG-consuming objects.
+
+## Imported slider corpus
+
+The Core test executable accepts `--slider-corpus <workspace>` for opt-in, read-only
+checks against existing `.catchdiff` documents. It never saves or opens a workspace
+recovery session. The report compares fitted anchor counts with the previous 0.001
+linear simplification, measures sampled error on the longest converted sliders, and
+lists preserved failures. External map data is not required by CI or committed.
+
+```bash
+bash -c 'source scripts/macos-dotnet.sh; "$FA_DOTNET" run --project ../tests/FruitsAtelier.Core.Tests -c Release -- --slider-corpus "/path/to/workspace"'
+```
+
+Synthetic regressions cover long smooth curves, sharp reversals, boundaries, repeated
+sliders, random smooth inputs, cancellation, first-import prompts, current-difficulty
+menu scope, per-difficulty undo, and stale asynchronous results. The macOS smoke check
+captures both localized import prompts and the Edit menu in the native renderer.

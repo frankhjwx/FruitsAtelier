@@ -1,8 +1,12 @@
 using FruitsAtelier.Core;
 
+if (args.Length == 2 && args[0] == "--slider-corpus") return ImportedSliderCorpus.Run(args[1]);
+
 var tests = new (string Name, Action Run)[]
 {
     ("Incremental conversion matches full output across edits, RNG changes and failures", ConversionCacheTests.EditingMatchesFullConversion),
+    ("Sparse curve fitting preserves corners and bounds whole-trajectory error", ImportedCurveFitTests.SparseAndBounded),
+    ("Batch conversion preserves failures, RNG and cancellation", ImportedCurveFitTests.BatchPreservesFailuresAndCancellation),
     ("Timeline coordinate round trips and bounds", CoordinateRoundTrips),
     ("Zoom preserves mouse time at scale limits", ZoomAnchor),
     ("Beat snap quarters, sixths, offsets and midpoint", SnapGrid),

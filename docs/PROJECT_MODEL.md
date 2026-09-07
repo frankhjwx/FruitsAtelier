@@ -38,7 +38,7 @@ Difficulty 包含 ApproachRate、CircleSize、SliderMultiplier、SliderTickRate�
 
 时间权威值为 double 毫秒，分拍吸附不预先取整。TimingMap 查询当前红点 BPM / offset / Meter 和继承 SV，网格与吸附使用局部拍格及红点边界，绿点不重置相位。每条 slider 锁定起始 timing，沿途变化不修改其速度。切换吸附不修改已有对象或 SliderTickRate。
 
-EditorHistory 使用深复制实现事务、撤销和 dirty 比较，保留对象 ID、逐段类型、行程次数、Tiny 覆盖值、原始行和 timing。保存工程更新基线，不清除撤销重做。视图通过 ContentEquals 失效转换缓存，目前没有文档 revision 或异步转换。取消活动拖动或草稿恢复整个事务，后续字段按对象 ID 定位，避免写入旧快照。
+EditorHistory 使用深复制实现事务、撤销和 dirty 比较，保留对象 ID、逐段类型、行程次数、Tiny 覆盖值、原始行和 timing。保存工程更新基线，不清除撤销重做。视图通过 ContentEquals 失效转换缓存；批量 Legacy 转换使用独立后台快照，完成后校验来源快照再应用。取消活动拖动或草稿恢复整个事务，后续字段按对象 ID 定位，避免写入旧快照。
 
 对象选择集合仅保存完整父对象 ID；同一 slider 的多个派生子对象按 SourceId 去重。B 模式的锚点选择集合限定于当前编辑轨迹，V/F 模式不会局部编辑锚点。框选的开始选择另存快照，Esc 或捕获取消恢复选择，不产生内容历史。
 
@@ -54,7 +54,11 @@ EditorHistory 使用深复制实现事务、撤销和 dirty 比较，保留对�
 
 批量删除锚点允许端点，保留未删除点的 ID、时刻和顺序。合并相邻段前清除将被激活的旧线性段隐藏柄，并根据剩余可用柄决定段类型；新端点移除不再使用的外向柄。剩余不足两个锚点时 App 删除整个父 slider，撤销恢复完整数据。
 
-`.osu` 读入并保留 L/B/P/C 几何控制点、长度、span 数与原始行的对象称为 Legacy Slider。属性或右键“转换为 FSlider”根据路径弧长和起始速度构建首 span 的时间—X 线性节点；这不恢复原作者的控制柄。转换先验证对象数量、类型、顺序、时刻及 TinyDroplet 贴合，再以一个事务替换；失败不替换，撤销恢复 Legacy 表示。
+`.osu` 读入并保留 L/B/P/C 几何控制点、长度、span 数与原始行的对象称为 Legacy Slider。属性或右键“转换为 FSlider”根据路径弧长和起始速度拟合首 span 的时间—X 轨迹，优先使用直线段，平滑部分使用三次贝塞尔段；这不恢复原作者的控制柄。起终点、转向、平台边界及明显折角优先保留，不吸附到节拍。允许最大 0.25 横向场地单位的拟合误差：在原始折线的每个区间检查三次曲线与直线差值的端点及导数根，超差时继续分段。柄的时间坐标为区间三等分，横向控制点限制在端点范围内并保持方向，避免产生新的反向运动。
+
+转换验证对象数量、类型、顺序、时刻、Fruit/Droplet 横向位置误差及现有 TinyDroplet 贴合规则，再替换源对象。0.25 是导入轨迹拟合容差，与 FSlider 内部 0.0001 对齐容差不同；Legacy 的随机 tiny 偏移不会被当作可编辑轨迹拟合。轨迹近似可能轻微改变星级。重复路径、SV 或 TinyDroplet 约束不可满足时保留原 Legacy Slider。
+
+批量转换一次构建候选并在完整谱面上下文中验证；失败父对象恢复后重新计算下游 RNG。每个 diff 的成功替换合为一个撤销事务，失败对象保留并列出原因。后台任务取消或工程变化时不应用结果。
 
 FSlider 保留原父 Id、SourceOrder、OriginalLine 和 SpanCount。节点只定义首 span，后续 repeat 共用并反向求值；`SpanCount=1` 为单程。新建及由 Legacy 转换的 FSlider 设置 `CompensateTinyDroplets=true`，表示贴合是强约束；`null/false` 仅用于旧工程兼容及底层对照。香蕉雨保存可编辑的开始/结束时间范围；画布上的 X=0–512 矩形和上下手柄是该时间范围的编辑表示，不保存逐根 banana 位置。
 

@@ -538,5 +538,22 @@
   "library.importFile": "Import map / OSZ…",
   "library.externalOverlap": "Choose an external source folder or a managed Resources folder, not the workspace or its parent.",
   "library.sourceMissing": "Source folder missing: {0}",
-  "project.starCalculationFailed": "Could not refresh stars for {0}. The previous value is retained; check the map for conversion errors."
+  "project.starCalculationFailed": "Could not refresh stars for {0}. The previous value is retained; check the map for conversion errors.",
+  "core.importEditing.fitFailed": "The fitted curve exceeds the allowed position error.",
+  "sliderBatch.title": "Convert Legacy Sliders",
+  "sliderBatch.menu": "Convert all sliders to FSliders",
+  "sliderBatch.command": "Convert all Legacy Sliders",
+  "sliderBatch.prompt": "Convert the imported Legacy Sliders? Sliders: {0} · Difficulties: {1}",
+  "sliderBatch.help": "Fewer editable anchors; small position changes. Failed sliders stay unchanged.",
+  "sliderBatch.later": "You can undo per difficulty, or convert later from Edit.",
+  "sliderBatch.keep": "Keep Legacy Sliders",
+  "sliderBatch.convert": "Convert to FSliders",
+  "sliderBatch.working": "Converting and validating sliders…",
+  "sliderBatch.cancel": "Cancel",
+  "sliderBatch.close": "Close",
+  "sliderBatch.cancelled": "Slider conversion cancelled; no changes applied.",
+  "sliderBatch.changed": "The project changed during conversion; results were discarded.",
+  "sliderBatch.finished": "Converted {0} sliders; preserved {1} Legacy Sliders.",
+  "sliderBatch.preserved": "These {0} sliders could not be converted and remain unchanged:",
+  "sliderBatch.failure": "{0} · {1} ms: {2}"
 }

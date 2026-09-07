@@ -27,7 +27,11 @@ public sealed class WorkspaceDifficulty
     public string? ExportHash { get; set; }
 }
 
-public sealed record WorkspaceSession(string Directory, WorkspaceManifest Manifest, BeatmapProject Project);
+public sealed record WorkspaceSession(string Directory, WorkspaceManifest Manifest, BeatmapProject Project)
+{
+    // Only the first source import offers conversion; opening its persisted project never does.
+    public bool IsNewImport { get; init; }
+}
 
 public static class WorkspaceProject
 {

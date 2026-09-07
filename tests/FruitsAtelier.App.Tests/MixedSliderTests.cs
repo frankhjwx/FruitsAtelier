@@ -53,8 +53,9 @@ internal static class MixedSliderTests
         ui.ClickMap(track.Nodes[0].TimeMs, track.Nodes[0].X);
         ui.SetField("位置  X", "155");
         Check(Math.Abs(track.Nodes[0].X - 155) < 0.001, "An imported slider node remained read-only.");
-        ui.ClickText("控制点：直线");
-        Check(CurveMath.SegmentKind(track, 0) == CurveKind.Bezier, "Imported straight segment cannot become Bezier.");
+        bool wasCurved = CurvePointEditing.IsCurved(track, track.Nodes[0].Id);
+        ui.ClickText(wasCurved ? "控制点：曲线" : "控制点：直线");
+        Check(CurvePointEditing.IsCurved(track, track.Nodes[0].Id) != wasCurved, "Fitted control point cannot be edited.");
         var output = OsuBeatmapWriter.Serialize(ui.View.Document);
         Check(output.ReadBack.ImportedSliders.Single().SpanCount == 1 && output.ObjectSequenceMatches, "Edited FSlider did not survive osu export.");
         Check(ui.View.Document.ContentEquals(ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document))), "Edited imported slider cannot be saved and reopened.");

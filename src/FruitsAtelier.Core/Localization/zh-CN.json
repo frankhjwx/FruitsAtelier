@@ -538,5 +538,22 @@
   "library.importFile": "导入谱面 / OSZ…",
   "library.externalOverlap": "请选择外部来源文件夹或受管理的 Resources 文件夹，不能选择 workspace 或其上级目录。",
   "library.sourceMissing": "来源文件夹丢失：{0}",
-  "project.starCalculationFailed": "无法刷新 {0} 的星级。已保留之前的数值，请检查谱面的转换错误。"
+  "project.starCalculationFailed": "无法刷新 {0} 的星级。已保留之前的数值，请检查谱面的转换错误。",
+  "core.importEditing.fitFailed": "拟合曲线超出了允许的位置误差。",
+  "sliderBatch.title": "转换 Legacy Slider",
+  "sliderBatch.menu": "将所有 slider 转为 FSlider",
+  "sliderBatch.command": "批量转换 Legacy Slider",
+  "sliderBatch.prompt": "将新导入的 {1} 个难度内的 {0} 个 slider 转为 FSlider？",
+  "sliderBatch.help": "使用更少的可编辑锚点，允许微小位置偏差；失败的 slider 保持原样。",
+  "sliderBatch.later": "每个难度均可一次撤销，也可以稍后从 Edit 菜单转换。",
+  "sliderBatch.keep": "保留 Legacy Slider",
+  "sliderBatch.convert": "转为 FSlider",
+  "sliderBatch.working": "正在转换并验证 slider…",
+  "sliderBatch.cancel": "取消",
+  "sliderBatch.close": "关闭",
+  "sliderBatch.cancelled": "已取消 slider 转换，未应用任何修改。",
+  "sliderBatch.changed": "转换期间工程已变化，转换结果未应用。",
+  "sliderBatch.finished": "已转换 {0} 个 slider，保留 {1} 个 Legacy Slider。",
+  "sliderBatch.preserved": "以下 {0} 个 slider 未能转换，已保留原样：",
+  "sliderBatch.failure": "{0} · {1} ms：{2}"
 }

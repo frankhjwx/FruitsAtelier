@@ -103,7 +103,7 @@ internal static class EditableSliderTests
             True(doc.ImportedSliders.Count == 0 && doc.Tracks.Single() == converted.Track, "Editable replacement was not atomic.");
             True(converted.Track.Id == slider.Id && converted.Track.SourceOrder == slider.SourceOrder
                 && converted.Track.OriginalLine == slider.OriginalLine && converted.Track.SpanCount == 1, "Imported identity or source metadata was lost.");
-            True(converted.Track.Nodes.All(n => n.OutgoingKind == CurveKind.Linear), "Imported path was not represented with explicit editable straight segments.");
+            True(converted.Track.Nodes.All(n => n.OutgoingKind is CurveKind.Linear or CurveKind.Bezier), "Imported path must use editable mixed segments.");
             True(converted.Diagnostics.Count == 0 && converted.Track.CompensateTinyDroplets == true,
                 "A successful Legacy conversion exposed internal metrics or lost the FSlider alignment policy.");
             var after = CatchStreamConverter.Convert(doc);

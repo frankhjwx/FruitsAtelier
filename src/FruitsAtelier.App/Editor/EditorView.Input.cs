@@ -14,6 +14,12 @@ public sealed partial class EditorView
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
         mouseX = x; mouseY = y;
+        if (SliderDialogVisible)
+        {
+            if (button == 0) for (int i = sliderDialogHits.Count - 1; i >= 0; i--)
+                if (sliderDialogHits[i].Bounds.Contains(x, y)) { if (sliderDialogHits[i].Enabled) sliderDialogHits[i].Action(); break; }
+            return;
+        }
         if (LibraryVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
         if (button == 2 && draftBanana != Guid.Empty && tool == Tool.Banana && plot.Contains(x, y))
@@ -213,6 +219,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (SliderDialogVisible) return;
         if (LibraryVisible) return;
         mouseX = x; mouseY = y;
         if (drag == DragKind.None) return;
@@ -291,6 +298,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
+        if (SliderDialogVisible) return;
         if (LibraryVisible) return;
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
         PointerMove(x, y, false, false);
@@ -308,6 +316,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (SliderDialogVisible) return;
         if (LibraryVisible) { OpenLibraryCard(x, y); return; }
         if (drag != DragKind.None || buttonTargetIsUnavailable()) return;
         Guid sourceId = Guid.Empty;
@@ -339,6 +348,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl)
     {
+        if (SliderDialogVisible) return;
         if (LibraryVisible) { if (x >= width - 330) libraryDiffScroll = Math.Max(0, libraryDiffScroll - (int)(delta / 120)); else libraryScroll = Math.Max(0, libraryScroll - (int)(delta / 120) * 3); return; }
         if (drag != DragKind.None) return;
         if (contextItems.Count > 0) { contextItems.Clear(); return; }
@@ -368,6 +378,12 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (SliderDialogVisible)
+        {
+            if (virtualKey == 27)
+            { if (SliderImportPromptVisible) AnswerSliderImport(false); else if (SliderConversionBusy) CancelSliderConversion(); else sliderBatchErrors = []; }
+            return;
+        }
         if (LibraryVisible) { LibraryKey(virtualKey, ctrl); return; }
         if (editField >= 0)
         {
@@ -426,6 +442,7 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (SliderDialogVisible) return;
         if (LibraryVisible) { if (libraryField >= 0 && !char.IsControl(value) && LibraryFieldValue.Length < 4096) { LibraryFieldValue = (libraryReplace ? "" : LibraryFieldValue) + value; libraryReplace = false; } return; }
         if (editField < 0 || char.IsControl(value)) return;
         if (!(char.IsAsciiDigit(value) || value is '.' or '-' or '+' or 'e' or 'E')) return;

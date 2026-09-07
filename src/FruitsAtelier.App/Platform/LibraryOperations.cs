@@ -22,7 +22,7 @@ public static class LibraryOperations
         if (!Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase)
             && sourceDirectory is not null && db.ProjectForSource(sourceDirectory) is { } existing)
             return WorkspaceProject.Open(existing);
-        return WorkspaceProject.Create(settings.Workspace, project, settings.Songs);
+        return WorkspaceProject.Create(settings.Workspace, project, settings.Songs) with { IsNewImport = !Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase) };
     }
     public static void ImportFolder(string directory, LibrarySettings settings)
         => new LibraryDatabase(settings.Workspace, settings.Songs).RegisterSource(directory);
@@ -30,9 +30,12 @@ public static class LibraryOperations
     public static WorkspaceSession Open(LibraryMap map, LibrarySettings settings)
     {
         if (map.ProjectPath is not null) return WorkspaceProject.Open(map.ProjectPath);
+        // A library card may predate the project's creation or the next database scan.
+        if (new LibraryDatabase(settings.Workspace, settings.Songs).ProjectForSource(map.Directory) is { } existing)
+            return WorkspaceProject.Open(existing);
         var documents = Directory.EnumerateFiles(map.Directory).Where(p => Path.GetExtension(p).Equals(".osu", StringComparison.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase)
             .Where(p => LibraryDatabase.ReadMetadata(p) is not null).Select(OsuBeatmapReader.ReadFile).ToArray();
-        return WorkspaceProject.Create(settings.Workspace, BeatmapProject.FromDocuments(documents), settings.Songs);
+        return WorkspaceProject.Create(settings.Workspace, BeatmapProject.FromDocuments(documents), settings.Songs) with { IsNewImport = true };
     }
     public static void Export(WorkspaceSession session, BeatmapProject project, WorkspaceExportPlan plan)
     {
