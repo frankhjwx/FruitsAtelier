@@ -81,6 +81,7 @@ public sealed partial class EditorView
     {
         LoadProject(session.Project); WorkspaceSession = session; CheckWorkspaceResources();
         libraryDatabase?.ReindexProjects(); QueueLibrarySearch(); CloseLibrary();
+        if (session.IsNewImport) OfferSliderConversion(true);
     }
     public void LibraryExportFinished()
     {

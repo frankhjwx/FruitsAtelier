@@ -12,7 +12,7 @@ public sealed partial class EditorView
     private int visibleDifficultyTabs = 1;
     private static readonly string catchIconPath = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "osu", "RulesetCatch.png");
 
-    private bool RatingEditInProgress => draftTrack != Guid.Empty || draftBanana != Guid.Empty
+    private bool RatingEditInProgress => SliderConversionBusy || draftTrack != Guid.Empty || draftBanana != Guid.Empty
         || drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.DraftHandle or DragKind.BananaStart or DragKind.BananaEnd;
     private static readonly SemaphoreSlim ratingWorkers = new(1);
     public double? CurrentStarRating => DifficultyRating(activeDifficulty);

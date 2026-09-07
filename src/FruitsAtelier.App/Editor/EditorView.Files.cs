@@ -37,6 +37,12 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        var retiredCancellation = sliderBatchCancellation;
+        retiredCancellation?.Cancel();
+        if (sliderBatchTask is { } retiredTask)
+            _ = retiredTask.ContinueWith(t => { _ = t.Exception; retiredCancellation?.Dispose(); }, TaskScheduler.Default);
+        sliderBatchTask = null; sliderBatchCancellation = null;
+        sliderImportTargets = []; sliderBatchErrors = []; sliderDialogHits.Clear();
         WorkspaceSession = null; resourceErrors = [];
         CancelInteraction();
         foreach (var difficulty in difficulties) difficulty.RatingCancellation.Cancel();
@@ -120,7 +126,9 @@ public sealed partial class EditorView
         OsuBeatmapReader.Validate(document);
         difficulties.Add(new DifficultySession(new ProjectDifficulty { Name = name, Document = document }));
         projectStructureDirty = true;
-        return SwitchDifficulty(difficulties.Count - 1);
+        bool switched = SwitchDifficulty(difficulties.Count - 1);
+        if (switched && imported is not null) OfferSliderConversion(false);
+        return switched;
     }
 
     public void MarkSaved()
@@ -133,6 +141,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
+        if (SliderDialogVisible) return false;
         if (draftBanana != Guid.Empty)
         {
             StatusMessage = L.Get("editor.status.bananaNeedsEnd");

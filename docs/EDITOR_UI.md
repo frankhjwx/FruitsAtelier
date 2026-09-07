@@ -42,7 +42,11 @@ Fruit 工具在空白处放置水果。吸附提供每拍 4、5、6、7、8、9�
 
 右键锚点可转换曲线/直线控制点；右键轨迹可插入无柄点。普通插点可能改变形状，“分割插点 · 保持形状”用于保形分割。批量删除锚点可包含端点；剩余不足两个点时删除整条轨迹。
 
-行程次数作用于整条 FSlider，首行程的节点在后续往返中共用。Legacy Slider 可从属性或右键菜单转换为 FSlider；失败时显示原因并保留原对象。
+行程次数作用于整条 FSlider，首行程的节点在后续往返中共用。Legacy Slider 可从属性或右键菜单转换为 FSlider；转换生成少量直线/贝塞尔锚点，允许最多 0.25 场地单位的位置近似，方便继续编辑。失败时显示原因并保留原对象。
+
+首次从 Songs、外部文件夹、`.osu` 或 `.osz` 创建 workspace project 时，如果含 Legacy Slider，会询问是否转换所有新导入 diff 的 slider。选择保留后可以继续使用 Legacy 表示；重新打开已有工程不会重复询问。向工程单独导入 diff 时只询问该 diff。
+
+Edit（编辑）菜单的“Convert all sliders to FSliders / 将所有 slider 转为 FSlider”处理当前 diff；没有 Legacy Slider 时禁用。批量转换在后台运行，期间显示可取消的提示并阻止内容编辑，取消不应用部分结果。每个 diff 可以一次撤销所有成功转换；失败对象及原因在结果提示中分页列出。转换结果在保存工程时写入 workspace，原始 Songs/外部文件不变，仍需 Export 才会写出 `.osu`。
 
 FSlider 的 TinyDroplet 贴合由生成器处理。`Tiny 贴合`开关只影响未保存轨迹级策略的旧工程数据。
 
