@@ -95,7 +95,16 @@ public sealed class MacAudio : IDisposable
             if (!playbackRequested) error = L.Get("mac.audioPlayFailed");
         }
     }
-    public void Pause() { lock (gate) if (player != 0) { PauseNative(player); playbackRequested = false; } }
+    public void Pause()
+    {
+        lock (gate) if (player != 0)
+        {
+            bool pending = playbackRequested && DeviceTime(player) < playbackDeviceStart;
+            PauseNative(player); playbackRequested = false;
+            // Canceling a scheduled start must not expose the player's pre-roll position.
+            if (pending) Rearm(player, playbackMapStart / 1000);
+        }
+    }
     public void Seek(double ms)
     {
         lock (gate) if (player != 0 && double.IsFinite(ms))
@@ -110,6 +119,10 @@ public sealed class MacAudio : IDisposable
     private void StartPlayback()
     {
         playbackMapStart = Position(player) * 1000;
+        // A paused AVAudioPlayer retains output state that offsets currentTime on resume.
+        // Reset that session before taking the device-clock origin, preserving the map position.
+        playbackRequested = false;
+        if (Rearm(player, playbackMapStart / 1000) == 0) { error = L.Get("mac.audioPlayFailed"); return; }
         playbackDeviceStart = DeviceTime(player) + SchedulingLeadSeconds;
         playbackRequested = PlayAt(player, playbackDeviceStart) != 0;
     }
@@ -142,6 +155,7 @@ public sealed class MacAudio : IDisposable
         long length = stream.Length; stream.Position = 4; writer.Write((int)length - 8); stream.Position = 40; writer.Write((int)length - 44);
     }
     [DllImport("FruitsAtelierAudio", EntryPoint="fa_audio_host_time")] private static extern double HostTime();
+    [DllImport("FruitsAtelierAudio", EntryPoint="fa_audio_rearm")] private static extern int Rearm(nint player, double position);
     private const string Library = "FruitsAtelierAudio";
     [DllImport(Library, EntryPoint="fa_audio_open")] private static extern nint Open([MarshalAs(UnmanagedType.LPUTF8Str)] string path, StringBuilder error, int capacity);
     [DllImport(Library, EntryPoint="fa_audio_close")] private static extern void Close(nint handle);

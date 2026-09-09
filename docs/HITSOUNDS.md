@@ -59,7 +59,11 @@ Windows dispatches elapsed events from transport polls. The Mac host queues the 
 100 ms of events with original beatmap timestamps. `MacAudio` maps its music device clock
 to the monotonic host clock used by the source node's render timestamps. Music starts/resumes
 with a 150 ms scheduling lead. This lead delays startup, not hitsounds relative to music.
-Seek establishes a new origin; pause, content changes, and clock jumps larger than 250 ms
+Before starting or resuming, the music player stops its previous output session, restores
+the paused map position, and prepares again before sampling a new device-clock origin.
+A plain pause followed by `playAtTime` can retain stale output timing, so resume must use
+this same reset path even when the playhead did not move. The hitsound PCM bank and mixer
+remain loaded throughout. Seek establishes a new origin; pause, content changes, and clock jumps larger than 250 ms
 cancel queued sounds before rescheduling.
 
 Do not put per-note `AVAudioPlayer` creation, `prepareToPlay`, seek, or `playAtTime` calls

@@ -122,3 +122,9 @@ Pass `--profile-map /path/to/difficulty.catchdiff` to the same Mac test project 
 read-only whole-map comparison with hitsounds disabled and enabled. It reports sample
 preload time/memory, event density, transport and drawing-command CPU quantiles. It does
 not open/recover a workspace session or save user data, and excludes native GPU rendering.
+
+Use `--check-resume-music /path/to/music.mp3` with the Mac native test project to check an
+existing music file against muted WAV hitsounds. This read-only check exercises repeated
+pause/resume with different pause lengths, seek, and cancellation during the startup lead.
+The music fixture must be at least three seconds long. Tests compare the actual music
+position and native PCM render timestamps; all device output stays muted.

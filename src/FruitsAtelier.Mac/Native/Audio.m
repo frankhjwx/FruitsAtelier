@@ -38,3 +38,10 @@ void *fa_audio_open_data(const unsigned char *bytes, int length) {
 double fa_audio_device_time(void *handle) { return [(__bridge AVAudioPlayer *)handle deviceCurrentTime]; }
 int fa_audio_play_at(void *handle, double time) { return [(__bridge AVAudioPlayer *)handle playAtTime:time]; }
 int fa_audio_prepare(void *handle) { return [(__bridge AVAudioPlayer *)handle prepareToPlay]; }
+
+// Transport transitions only. Hitsounds retain their independent, continuously running mixer.
+int fa_audio_rearm(void *handle, double position) {
+    AVAudioPlayer *player = (__bridge AVAudioPlayer *)handle;
+    [player stop]; player.currentTime = position;
+    return [player prepareToPlay];
+}

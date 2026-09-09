@@ -17,6 +17,7 @@ using (var writer = new BinaryWriter(File.Create(wav)))
     writer.Write((short)1); writer.Write((short)1); writer.Write(44100); writer.Write(88200); writer.Write((short)2); writer.Write((short)16);
     writer.Write("data"u8); writer.Write(count * 2); writer.Write(new byte[count * 2]);
 }
+if (args.Length == 2 && args[0] == "--check-resume-music") { await HitsoundLatencyTests.Run(wav, args[1]); return; }
 using var audio = new MacAudio(muted: true);
 await audio.LoadAsync(wav);
 Check(audio.State.CanPlay && Math.Abs(audio.State.DurationMs - 3000) < 2, "Native WAV opens with actual duration");
