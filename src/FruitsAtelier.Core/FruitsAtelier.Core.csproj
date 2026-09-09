@@ -3,6 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="../../assets/audio/osu/*" Link="assets/audio/osu/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <InternalsVisibleTo Include="FruitsAtelier.Core.Tests" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.22" />
     <EmbeddedResource Include="Localization/*.json" LogicalName="FruitsAtelier.Localization.%(Filename)%(Extension)" WithCulture="false" />

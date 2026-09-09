@@ -1,64 +1,66 @@
-# 技术架构
+# Architecture
 
-## 平台与依赖
+## Platforms and dependencies
 
-应用使用 C# 12 / .NET 8。Windows 和 macOS 共用编辑器、数据模型与文件格式，窗口、绘制和音频分别接入系统实现。
+The application uses C# 12 / .NET 8. Windows and macOS share the editor, data model, and file formats, while providing separate windowing, drawing, and audio implementations.
 
-| 层 | Windows | macOS |
+| Layer | Windows | macOS |
 | --- | --- | --- |
-| 入口 | `FruitsAtelier.App`，`net8.0-windows` | `FruitsAtelier.Mac`，`net8.0` |
-| 窗口与输入 | Win32、DPI 消息、原生文件对话框 | Avalonia 桌面窗口与文件选择器 |
-| 绘制 | DX11 / DXGI、Direct2D / DirectWrite，Vortice 3.6.2 | Avalonia 11.3.7，`MacCanvas` 实现 `ICanvas` |
-| PNG | Windows Imaging Component | Avalonia 位图 |
-| 音频 | NAudio 共享模式 WASAPI；Media Foundation / NVorbis / WAV reader | AVAudioPlayer；NVorbis 将 OGG 解码为 PCM WAV |
+| Entry point | `FruitsAtelier.App`, `net8.0-windows` | `FruitsAtelier.Mac`, `net8.0` |
+| Window and input | Win32, DPI messages, native file dialogs | Avalonia desktop window and file picker |
+| Drawing | DX11 / DXGI, Direct2D / DirectWrite, Vortice 3.6.2 | Avalonia 11.3.7, `MacCanvas` implements `ICanvas` |
+| PNG | Windows Imaging Component | Avalonia bitmaps |
+| Audio | NAudio shared-mode WASAPI; Media Foundation / NVorbis / WAV reader | AVAudioPlayer music; AVAudioEngine PCM hitsound mixer; NVorbis for OGG |
 
-SDK 选择和构建命令见[构建与测试](TESTING.md)，包版本与许可证见[第三方声明](../THIRD_PARTY_NOTICES.md)。
+See [Building and Testing](TESTING.md) for SDK selection and build commands, and [Third-party notices](../THIRD_PARTY_NOTICES.md) for package versions and licenses.
 
-## 代码布局
+## Source layout
 
-| 目录 | 职责 |
+| Directory | Responsibility |
 | --- | --- |
-| `src/FruitsAtelier.Core/Model` | 文档、FSlider、导入对象和 timing |
-| `Core/Formats` | `.osu` 读写、工程 JSON 和原子保存 |
-| `Core/Editing`、`Core/Curves`、`Core/Timing` | 事务、撤销、时间坐标、曲线求值和节拍吸附 |
-| `Core/Conversion`、`Core/Gameplay` | 路径生成、Catch 事件、RNG、尺寸和 hyperdash |
-| `Core/Localization` | 语言表、格式化与校验 |
-| `src/FruitsAtelier.App/Editor` | 共享布局、输入、选择、剪贴板和转换缓存 |
-| `App/Rendering`、`App/Platform`、`App/Audio` | Windows 宿主及资源管理 |
-| `App/Skinning` | 共享皮肤映射、尺寸和裁剪 |
-| `src/FruitsAtelier.Mac` | Mac 窗口、画布、音频和原生音频桥接 |
-| `tests` | 控制台测试项目 |
-| `macOS/tests` | 共享 App / Skinning / SkinArchive 测试的跨平台项目入口 |
+| `src/FruitsAtelier.Core/Model` | Documents, FSliders, imported objects, and timing |
+| `Core/Formats` | `.osu` reading/writing, project JSON, and atomic saves |
+| `Core/Editing`, `Core/Curves`, `Core/Timing` | Transactions, undo, time coordinates, curve evaluation, and beat snapping |
+| `Core/Conversion`, `Core/Gameplay` | Path generation, Catch events, RNG, sizing, and hyperdash |
+| `Core/Localization` | Language tables, formatting, and validation |
+| `src/FruitsAtelier.App/Editor` | Shared layout, input, selection, clipboard, and conversion cache |
+| `App/Rendering`, `App/Platform`, `App/Audio` | Windows host and resource management |
+| `App/Skinning` | Shared skin mapping, sizing, and cropping |
+| `src/FruitsAtelier.Mac` | Mac window, canvas, audio, and native audio bridge |
+| `tests` | Console test projects |
+| `macOS/tests` | Cross-platform project entry points for shared App / Skinning / SkinArchive tests |
 
-表中 `Core/`、`App/` 分别简写对应的源项目目录。Mac 项目通过链接源码复用 `EditorView`、`ICanvas`、皮肤和谱面包处理代码，通过项目引用使用 Core。Core 不引用窗口或图形设备类型。
+`Core/` and `App/` abbreviate their respective source project directories. The Mac project links `EditorView`, `ICanvas`, skinning, and beatmap archive source files, and references the Core project. Core does not reference window or graphics-device types.
 
-## Workspace 与曲库
+## Workspace and library
 
-`Core/Workspace` 提供工程目录事务、SQLite 索引、元数据扫描、资源引用诊断和显式导出计划。共享 `EditorView.Library` 负责曲库/设置/导出页面；平台宿主负责文件夹选择、音频切换和资源导出。曲库扫描与星级计算在后台执行，UI 读取完成后的结果。详见 [workspace](WORKSPACE.md)。
+`Core/Workspace` provides project-directory transactions, SQLite indexing, metadata scanning, resource-reference diagnostics, and explicit export plans. Shared `EditorView.Library` implements the library/settings/export pages; platform hosts handle folder selection, audio changes, and resource export. Library scanning and star calculations run in the background, with completed results read by the UI. See [Workspace](WORKSPACE.md).
 
-## 编辑与转换
+## Editing and conversion
 
-宿主将输入映射到 DIP 坐标后交给 `EditorView`。内容修改以事务提交到 `EditorHistory`，一次拖动、批量操作或曲线草稿形成一步撤销。选择和视口作为会话状态单独维护。
+Hosts map input to DIP coordinates before passing it to `EditorView`. Content changes commit through `EditorHistory` transactions; a drag, batch operation, or curve draft becomes one undo step. Selection and viewport are separate session state.
 
-转换缓存比较文档快照和 Tiny 补偿设置；变更后同步转换完整文档，再按视口裁剪绘制。语言切换会重建诊断缓存。两视图使用同一转换结果，完整对象序列用于 RNG 和 hyperdash 计算。
+The conversion cache compares document snapshots and Tiny compensation settings. Changes trigger synchronous conversion of the full document before viewport culling. Language changes rebuild diagnostic caches. Both views share the conversion result; RNG and hyperdash use the complete object sequence.
 
-绘制经 `ICanvas` 提交，编辑器不持有设备资源。Windows 播放时从 `WM_PAINT` 请求下一次绘制，通过 `Present(1)` 呈现；Mac 由约 16 ms 的定时器请求重绘。播放位置由各平台音频后端提供。
+Drawing goes through `ICanvas`; the editor owns no device resources. During Windows playback, `WM_PAINT` requests the next frame and `Present(1)` presents it. Mac requests redraws with an approximately 16 ms timer. Each platform audio backend supplies playback position.
 
-模型及转换流程见[数据模型](PROJECT_MODEL.md)，显示公式见[Catch 绘制与转换](CATCH_RENDERING.md)。
+See [Project Model](PROJECT_MODEL.md) for data and conversion flow, and [Catch Rendering and Conversion](CATCH_RENDERING.md) for display formulas.
 
-## 文件与资源
+## Files and resources
 
-Core 负责文本与工程序列化；宿主负责对话框、谱面包提取和资源复制。`.osz` 导入只提取支持的文件，`.osk` 只提取 `skin.ini` 与 Catch PNG。导入器校验路径、重复条目、链接及解压容量，先写临时目录再发布缓存。
+Core handles text and project serialization. Hosts handle dialogs, archive extraction, and resource copying. Workspace OSZ import preserves complete archives as described in [Workspace](WORKSPACE.md); the legacy supported-file importer extracts supported entries. `.osk` import extracts `skin.ini` and Catch PNGs. Importers validate paths, duplicate entries, links, and extraction limits, and write temporary directories before publishing caches.
 
-皮肤包上限为 256 MiB，选中文件各 16 MiB、总计 64 MiB，ZIP 条目上限为 20000。源码运行时资源缓存位于 `artifacts/beatmaps` 和 `artifacts/skins`；Mac 独立应用使用 `~/Library/Application Support/FruitsAtelier`。可选默认皮肤见[皮肤说明](../assets/skins/README.md)。
+Skin archives are limited to 256 MiB, selected files to 16 MiB each and 64 MiB total, and ZIP entries to 20000. Source builds cache resources under `artifacts/beatmaps` and `artifacts/skins`; the standalone Mac application uses `~/Library/Application Support/FruitsAtelier`. See [Skins](../assets/skins/README.md) for the optional default skin.
 
-## 音频与生命周期
+## Audio and lifecycle
 
-Windows `AudioTransport` 在串行 worker 上处理加载、播放、暂停和 seek，UI 读取不可变状态快照。MP3 连续解码到有界 PCM 缓存；暂停可复用活动 WASAPI 会话，seek 和 EOF 重播重建输出。细节见[Windows 音频](../src/FruitsAtelier.App/Audio/REFERENCE.md)。
+Windows `AudioTransport` serializes load, play, pause, and seek operations on a worker; the UI reads immutable state snapshots. MP3 decoding fills a bounded PCM cache continuously. Pause can reuse an active WASAPI session; seek and EOF replay rebuild output. See the [Windows audio reference](../src/FruitsAtelier.App/Audio/REFERENCE.md).
 
-Mac 通过 `Native/Audio.m` 调用 AVAudioPlayer，播放位置取自播放器。OGG 先由 NVorbis 解码为有容量上限的 PCM WAV，过期加载结果被丢弃，EOF 后重建播放器。平台操作见[macOS 说明](MACOS.md)。
+Mac calls AVAudioPlayer through `Native/Audio.m` and obtains position from the player. NVorbis first decodes OGG into capacity-limited PCM WAV. Stale load results are discarded, and replay after EOF rebuilds the player. Hitsounds preload project PCM on a worker and submit timestamps to a persistent native mixer; see [Hitsounds](HITSOUNDS.md). See [Running on macOS](MACOS.md).
 
-Windows resize 时先释放 back buffer 对应的 Direct2D target，调整 DXGI buffer 后重建；零尺寸跳过呈现。鼠标捕获丢失或失焦会取消活动交互。Mac 将对应事件映射到相同的编辑器取消方法。
+Preview hitsound scheduling, sample resolution, and platform playback are documented in [Hitsounds](HITSOUNDS.md).
+
+On Windows resize, release the Direct2D target attached to the back buffer before resizing DXGI buffers, then recreate it. Skip presentation at zero size. Lost mouse capture or focus cancels active interactions. Mac maps its corresponding events to the same editor cancellation methods.
 
 ## Interactive editing performance
 

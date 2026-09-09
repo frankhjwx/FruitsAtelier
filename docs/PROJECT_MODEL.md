@@ -1,98 +1,98 @@
-# 工程与数据模型
+# Project and Data Model
 
-默认保存使用 [workspace 工程目录](WORKSPACE.md)：`project.catchdiff` 清单与独立难度文件。本文的 `.catchproj` schema 1/2 描述保留的兼容格式及文档编码。
+Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-创作模型通过 UTF-8 JSON `.catchproj` schema 2 持久化（兼容读取 schema 1）；本项目自行解析、输出 stable v14 / Mode=2 `.osu`。工程创作信息、导入上下文和派生输出保持分离。
+The authoring model persists as UTF-8 JSON `.catchproj` schema 2, with schema 1 read compatibility. The project implements stable v14 / Mode=2 `.osu` parsing and writing. Authored content, imported context, and derived output remain separate.
 
-## 权威数据与派生数据
+## Authoritative and derived data
 
-| 类别 | 当前内容 | 规则 |
+| Category | Contents | Rule |
 | --- | --- | --- |
-| 创作数据 | 独立 fruit、轨迹、锚点、逐段类型、控制柄、行程次数、timing / difficulty | 编辑与撤销的权威内容 |
-| 导入上下文 | 原始节、对象行、源顺序、完整 timing、slider / 香蕉、资源引用 | 随工程保存，未编辑对象输出保留原表示 |
-| 派生结果 | slider 几何路径、SV、F/D/T / 香蕉、RNG、误差、hyperdash | 可重算，不覆盖创作意图 |
-| 会话状态 | 对象/锚点选择集合、工具、语言、吸附、视口、transport 时间、皮肤、图层、Tiny 补偿开关、内部批量剪贴板 | 不属于谱面内容 |
+| Authored data | Standalone fruits, tracks, anchors, segment types, handles, span counts, timing/difficulty | Authoritative content for editing and undo |
+| Imported context | Raw sections and object lines, source order, complete timing, sliders/bananas, resource references | Saved with the project; unedited objects retain their original representation on export |
+| Derived results | Slider geometry, SV, F/D/T/bananas, RNG, errors, hyperdash | Recomputable; never overwrite authoring intent |
+| Session state | Object/anchor selection, tool, language, snapping, viewport, transport time, skin, layers, Tiny compensation toggle, internal batch clipboard | Not beatmap content |
 
-## 工程与难度
+## Projects and difficulties
 
-`BeatmapProject` 保存工程 Name 和 1–256 个 `ProjectDifficulty`；每个难度包含独立 Guid、Version 显示名及完整 `MapDocument`。schema 2 使用 `Project` 外层容器，一次原子保存全部难度；schema 1 的 `Document` 自动包装为单难度工程。资源路径对每个难度分别相对工程目录写入和解析，保持旧文件的路径安全检查。整个工程的 JSON 上限为 32 MiB。
+`BeatmapProject` stores a project Name and 1–256 `ProjectDifficulty` entries. Each difficulty contains its own Guid, Version display name, and complete `MapDocument`. Schema 2 uses a `Project` outer container and atomically saves all difficulties together. Schema 1's `Document` is automatically wrapped as a single-difficulty project. Each difficulty's resource paths are written and resolved relative to the project directory, retaining the older path safety checks. Project JSON is limited to 32 MiB.
 
-编辑器为每个难度维护独立 `EditorHistory`，通过当前难度访问 `Document`。撤销仅影响当前难度；保存更新全部历史的 baseline。增加难度是工程结构操作，不进入单难度物件撤销栈，保存前保持工程 dirty。当前难度、标签滚动位置、播放头和视口属于会话状态，不写入工程。打开工程默认选第一个难度；切换难度不产生内容历史。工程容器不强制合并不同 `.osu` 的音乐或 timing，避免导入时覆盖原始内容。
+The editor maintains an independent `EditorHistory` per difficulty and accesses `Document` through the current difficulty. Undo affects only that difficulty; saving updates every history baseline. Adding a difficulty changes project structure rather than a difficulty's object undo stack and keeps the project dirty until saved. The active difficulty, tab scroll position, playhead, and viewport are session state and are not persisted. Opening selects the first difficulty; switching does not create content history. The project container does not force imported `.osu` difficulties to share audio or timing, avoiding overwriting source content.
 
-## 实际模型
+## Concrete model
 
-| 类型 | 字段与语义 |
+| Type | Fields and semantics |
 | --- | --- |
-| MapDocument | Name、DurationMs、difficulty、TimingPoints、Fruits、Tracks、ImportedSliders、BananaShowers、SourcePath、AudioPath、OriginalSections |
-| Fruit | 稳定 Guid Id、TimeMs、X、SourceOrder、OriginalLine |
-| CurveTrack | 稳定 Guid Id、Name、Kind（默认 Linear / Bezier）、Nodes、SourceOrder、SpanCount、OriginalLine、CompensateTinyDroplets |
-| Anchor | 稳定 Guid Id、TimeMs、X、HandleIn、HandleOut、OutgoingKind（可空） |
-| MapPoint | double TimeMs、double X；控制柄中表示相对锚点偏移 |
-| TimingPoint | TimeMs、BeatLengthMs、Meter、Uninherited、采样/音量/效果字段、SourceOrder、OriginalLine |
-| ImportedSlider | Id、TimeMs、X / Y、PathType、ControlPoints、SpanCount、PixelLength、SourceOrder、OriginalLine |
-| BananaShower | Id、TimeMs、EndTimeMs、SourceOrder、OriginalLine |
+| MapDocument | Name, DurationMs, difficulty, TimingPoints, Fruits, Tracks, ImportedSliders, BananaShowers, SourcePath, AudioPath, OriginalSections |
+| Fruit | Stable Guid Id, TimeMs, X, SourceOrder, OriginalLine |
+| CurveTrack | Stable Guid Id, Name, Kind (default Linear / Bezier), Nodes, SourceOrder, SpanCount, OriginalLine, CompensateTinyDroplets |
+| Anchor | Stable Guid Id, TimeMs, X, HandleIn, HandleOut, nullable OutgoingKind |
+| MapPoint | Double TimeMs and X; handles store offsets relative to anchors |
+| TimingPoint | TimeMs, BeatLengthMs, Meter, Uninherited, sample/volume/effect fields, SourceOrder, OriginalLine |
+| ImportedSlider | Id, TimeMs, X / Y, PathType, ControlPoints, SpanCount, PixelLength, SourceOrder, OriginalLine |
+| BananaShower | Id, TimeMs, EndTimeMs, SourceOrder, OriginalLine |
 
-Difficulty 包含 ApproachRate、CircleSize、SliderMultiplier、SliderTickRate。演示默认时长 30000 ms、拍长 500 ms、offset=0、AR=8、CS=5、SliderMultiplier=1.4、SliderTickRate=1。MapDocument 的 BeatLengthMs / TimingOffsetMs 为无红点时的回退值；真实谱面保留全部 timing 点。
+Difficulty includes ApproachRate, CircleSize, SliderMultiplier, and SliderTickRate. Demo defaults are duration 30000 ms, beat length 500 ms, offset=0, AR=8, CS=5, SliderMultiplier=1.4, and SliderTickRate=1. MapDocument's BeatLengthMs / TimingOffsetMs are fallbacks when no red timing point exists; real beatmaps retain all timing points.
 
-导入 `.osu` 时，`DurationMs` 先由最后一个物件推导；关联音频解码完成后，如果实际音频更长，则完整音频范围可用于放置、数值编辑和拖动物件。加载与导航不修改文档；第一次把物件编辑到原范围之外时，在同一个用户编辑事务中扩展 `DurationMs`。
+Import initially derives `.osu` `DurationMs` from the last object. Once associated audio is decoded, a longer audio duration becomes available for placement, numeric editing, and dragging. Loading and navigation do not modify the document. The first object edit beyond the original range extends `DurationMs` within the same user transaction.
 
-时间权威值为 double 毫秒，分拍吸附不预先取整。TimingMap 查询当前红点 BPM / offset / Meter 和继承 SV，网格与吸附使用局部拍格及红点边界，绿点不重置相位。每条 slider 锁定起始 timing，沿途变化不修改其速度。切换吸附不修改已有对象或 SliderTickRate。
+Authoritative time is double-precision milliseconds; beat snapping does not round early. TimingMap queries the active red point's BPM / offset / Meter and inherited SV. Grid and snapping use local beat spacing and red-point boundaries; green points do not reset phase. Each slider locks its start timing, so timing changes along its path do not alter velocity. Changing snapping does not alter existing objects or SliderTickRate.
 
-EditorHistory 使用深复制实现事务、撤销和 dirty 比较，保留对象 ID、逐段类型、行程次数、Tiny 覆盖值、原始行和 timing。保存工程更新基线，不清除撤销重做。视图通过 ContentEquals 失效转换缓存；批量 Legacy 转换使用独立后台快照，完成后校验来源快照再应用。取消活动拖动或草稿恢复整个事务，后续字段按对象 ID 定位，避免写入旧快照。
+EditorHistory uses deep copies for transactions, undo, and dirty comparisons, preserving object IDs, segment types, span counts, Tiny overrides, raw lines, and timing. Saving updates the baseline without clearing undo/redo. ContentEquals invalidates the view's conversion cache. Batch Legacy conversion uses an independent background snapshot and validates its source snapshot before applying results. Cancelling an active drag or draft restores the complete transaction; later field edits locate objects by ID to avoid writing into stale snapshots.
 
-对象选择集合仅保存完整父对象 ID；同一 slider 的多个派生子对象按 SourceId 去重。B 模式的锚点选择集合限定于当前编辑轨迹，V/F 模式不会局部编辑锚点。框选的开始选择另存快照，Esc 或捕获取消恢复选择，不产生内容历史。
+Object selection stores complete parent IDs only. Multiple children of the same slider are deduplicated by SourceId. Anchor selection in B mode is restricted to the active track; V/F modes do not partially edit anchors. Box selection separately snapshots the starting selection. Esc or lost capture restores it without creating content history.
 
-内部剪贴板保存选中完整父对象的深复制快照。粘贴令 `新时刻 = 播放头 + 原时刻 − 所选对象最早开始时间`，保持对象间相对时间、X、几何、相对控制柄、SpanCount 和样本字段，重新分配所有父对象与节点 ID；必要时扩展文档时长，任一对象越界则整批回滚。复制不进撤销栈，批量剪切、删除和每次粘贴各为一个事务；不改剪贴板快照和未选对象，不读写系统剪贴板。
+The internal clipboard stores deep snapshots of selected complete parent objects. Paste applies `new time = playhead + original time − earliest selected start`, preserving relative times, X, geometry, relative handles, SpanCount, and sample fields, while assigning new parent/node IDs. It extends document duration as needed and rolls back the entire batch if any object is out of bounds. Copy creates no undo entry; each batch cut, delete, or paste is one transaction. Clipboard snapshots and unselected objects stay unchanged; the system clipboard is not used.
 
-界面语言和语言资源不写入 `.catchproj`。内建默认名在新建对象时通过资源取得；既有 Name、导入元数据和原始行均作为用户数据保留，切换语言不改名。语言变化会使转换诊断缓存失效，不改变转换几何或文档历史。
+Interface language and resources are not serialized in `.catchproj`. Built-in default names come from resources when creating objects. Existing Name values, imported metadata, and raw lines remain user data; switching languages does not rename them. Language changes invalidate conversion diagnostic caches without changing geometry or document history.
 
-## FSlider 与 Legacy Slider
+## FSliders and Legacy Sliders
 
-轨迹位于 `(timeMs, X)` 平面，段类型为 `Nodes[i].OutgoingKind ?? track.Kind`。null 继承轨迹默认类型；同一轨迹可混合线性和三次贝塞尔。端点时间递增，贝塞尔控制点时间非递减；其时间求值先解 `time(u)`，不能用线性时间比例代替 u。锚点至少间隔 0.001 ms，控制点 X 限制到 0..512。
+Tracks lie in the `(timeMs, X)` plane, with segment type `Nodes[i].OutgoingKind ?? track.Kind`. Null inherits the track default; a track may mix linear and cubic Bezier segments. Endpoint times increase, and Bezier control-point times are nondecreasing. Time evaluation solves `time(u)` rather than substituting a linear time fraction for u. Anchors are at least 0.001 ms apart, and control-point X stays in 0..512.
 
-控制柄保存为相对偏移，锚点移动时一同平移。统一 Slider 工具（B）点击添加无柄点，按住向上拖动设置方向柄；控制点曲线/直线转换通过柄和相邻段类型实现。右键插点默认无柄，邻点有柄时相邻段仍可弯曲，不保证保形；分割按钮按该段类型保留形状及后续类型，不用采样结果覆盖已有锚点和柄。几何 slider 的 Y 不是编辑时间。
+Handles store relative offsets and move with their anchor. The unified Slider tool (B) adds handle-free points on click and direction handles by holding and dragging upward. Converting control points between curved and straight uses handles and adjacent segment types. Right-click insertion creates a point without handles; neighboring handles may still curve adjacent segments, so ordinary insertion need not preserve shape. The split action preserves the segment's shape and subsequent types according to its type, without replacing existing anchors/handles with sampled output. Geometric slider Y is not editing time.
 
-批量删除锚点允许端点，保留未删除点的 ID、时刻和顺序。合并相邻段前清除将被激活的旧线性段隐藏柄，并根据剩余可用柄决定段类型；新端点移除不再使用的外向柄。剩余不足两个锚点时 App 删除整个父 slider，撤销恢复完整数据。
+Batch anchor deletion allows endpoints and preserves surviving IDs, times, and order. Before merging adjacent segments, it clears hidden handles from old linear segments that would become active, then chooses the segment type from remaining usable handles. New endpoints lose unused outward handles. When fewer than two anchors remain, App deletes the parent slider; undo restores all data.
 
-`.osu` 读入并保留 L/B/P/C 几何控制点、长度、span 数与原始行的对象称为 Legacy Slider。属性或右键“转换为 FSlider”根据路径弧长和起始速度拟合首 span 的时间—X 轨迹，优先使用直线段，平滑部分使用三次贝塞尔段；这不恢复原作者的控制柄。起终点、转向、平台边界及明显折角优先保留，不吸附到节拍。允许最大 0.25 横向场地单位的拟合误差：在原始折线的每个区间检查三次曲线与直线差值的端点及导数根，超差时继续分段。柄的时间坐标为区间三等分，横向控制点限制在端点范围内并保持方向，避免产生新的反向运动。
+A Legacy Slider retains imported `.osu` L/B/P/C geometry, declared length, span count, and original line. **Convert to FSlider** in properties or the context menu fits the first span's time–X track from path arc length and start velocity, preferring straight segments and using cubic Bezier segments for smooth portions. It does not recover the original author's handles. Endpoints, reversals, plateau boundaries, and significant corners are prioritized without beat snapping. Maximum lateral fitting error is 0.25 playfield units: each original polyline interval checks the cubic-versus-line difference at endpoints and derivative roots, subdividing when necessary. Handle times divide intervals into thirds; lateral controls stay within endpoint bounds and preserve direction to avoid introducing reversals.
 
-转换验证对象数量、类型、顺序、时刻、Fruit/Droplet 横向位置误差及现有 TinyDroplet 贴合规则，再替换源对象。0.25 是导入轨迹拟合容差，与 FSlider 内部 0.0001 对齐容差不同；Legacy 的随机 tiny 偏移不会被当作可编辑轨迹拟合。轨迹近似可能轻微改变星级。重复路径、SV 或 TinyDroplet 约束不可满足时保留原 Legacy Slider。
+Conversion validates object counts, types, ordering, times, Fruit/Droplet lateral error, and existing TinyDroplet alignment rules before replacing the source. The 0.25 imported-track fitting tolerance differs from the internal FSlider alignment tolerance of 0.0001. Legacy random tiny offsets are not fitted as editable track geometry. Approximation may slightly change stars. Unsatisfied repeat-path, SV, or TinyDroplet constraints preserve the Legacy Slider.
 
-批量转换一次构建候选并在完整谱面上下文中验证；失败父对象恢复后重新计算下游 RNG。每个 diff 的成功替换合为一个撤销事务，失败对象保留并列出原因。后台任务取消或工程变化时不应用结果。
+Batch conversion builds candidates once and validates in the complete beatmap context. Restoring failed parents recalculates downstream RNG. All successful replacements per difficulty form one undo transaction; failures remain with listed reasons. Cancelled background tasks or changed projects do not apply results.
 
-FSlider 保留原父 Id、SourceOrder、OriginalLine 和 SpanCount。节点只定义首 span，后续 repeat 共用并反向求值；`SpanCount=1` 为单程。新建及由 Legacy 转换的 FSlider 设置 `CompensateTinyDroplets=true`，表示贴合是强约束；`null/false` 仅用于旧工程兼容及底层对照。香蕉雨保存可编辑的开始/结束时间范围；画布上的 X=0–512 矩形和上下手柄是该时间范围的编辑表示，不保存逐根 banana 位置。
+FSliders retain the original parent Id, SourceOrder, OriginalLine, and SpanCount. Nodes define the first span; repeats share them with reversed evaluation. `SpanCount=1` is a single traversal. New and Legacy-converted FSliders set `CompensateTinyDroplets=true`, making alignment mandatory; `null/false` remains for old-project compatibility and low-level comparisons. Banana showers store editable start/end times. Their X=0–512 canvas rectangle and top/bottom handles edit that range; individual banana positions are not saved.
 
-## 派生转换
+## Derived conversion
 
 ```text
-完整 MapDocument
-  → 混合段时间—X 求值 / 未编辑导入 L/B/P/C 路径近似
-  → 起始 timing 与 SV / 首 span 生成路径与 SpanCount 往返
-  → head / tick / repeat / legacy-last-tick / tail、tiny 与香蕉事件
-  → 按完整父对象顺序执行 RNG
-  → 路径弧长位置 + 随机偏移
-  → 按时间稳定排序 F/D/T / 香蕉
-  → 误差、失败诊断与 hyperdash
+Complete MapDocument
+  → mixed-segment time–X evaluation / unedited imported L/B/P/C approximation
+  → start timing and SV / first-span path and SpanCount traversals
+  → head / tick / repeat / legacy-last-tick / tail, tiny, and banana events
+  → RNG in complete parent-object order
+  → arc-length positions + random offsets
+  → stable time sorting of F/D/T / bananas
+  → errors, failure diagnostics, and hyperdash
 ```
 
-`ConvertedCatchObject` 包含 SourceId、EventIndex、Kind、TimeMs、X、TargetX、PathX、RandomOffset、IsStandalone。`X` 是实际位置，`PathX` 是随机偏移前的位置；新曲线的 `TargetX` 是创作目标，导入对象没有额外贴合目标。`(SourceId, EventIndex)` 标识来源并供 hyperdash 绘制共用。
+`ConvertedCatchObject` contains SourceId, EventIndex, Kind, TimeMs, X, TargetX, PathX, RandomOffset, and IsStandalone. `X` is the actual position; `PathX` precedes random offsets. New curves' `TargetX` is the authored target; imported objects have no additional alignment target. `(SourceId, EventIndex)` identifies the source and is shared by hyperdash rendering.
 
-`GeneratedSlider` 保存来源、IsImported、SpanCount、开始时间、总时长、速度、SV、TickDistance、单 span 长度与几何路径、补偿是否应用/成功及最大 tick/tiny 误差。`CatchConversionResult` 提供 Sliders、Objects、Diagnostics、Success 和最大误差。
+`GeneratedSlider` stores its source, IsImported, SpanCount, start time, total duration, velocity, SV, TickDistance, single-span length and geometry, compensation applied/succeeded flags, and maximum tick/tiny errors. `CatchConversionResult` provides Sliders, Objects, Diagnostics, Success, and maximum error.
 
-每条 FSlider 生成一个保留 SpanCount 的 `.osu` slider，按首 span 弧长和行程方向查询实际位置；F/D/T 内部对齐容差为 0.0001 场地单位，最终位置经过 float 运算。几何 Y 在边界折回不额外增加 repeat 或 tick。Legacy Slider 使用原长度裁剪/延长、重复 span 与反向求值。
+Each FSlider generates one `.osu` slider preserving SpanCount. Actual position follows first-span arc length and traversal direction. Internal F/D/T alignment tolerance is 0.0001 playfield units; final positions use float arithmetic. Folding geometric Y at boundaries does not add repeats or ticks. Legacy Sliders use original-length clipping/extension, repeated spans, and reversed evaluation.
 
-普通 Droplet 没有横向 RNG 偏移；TinyDroplet 根据实际 RNG 和事件路径进度反求偏移前 X。FSlider 的贴合受 `0..512`、共享 repeat 路径及水平速度约束，自动 SV 可在 stable 的 0.1–10 范围内提高；强约束目标不可达时该轨迹失败，不退回偏离曲线的结果。Legacy Slider 保留 osu 原始 TinyDroplet RNG 偏移。
+Ordinary Droplets have no lateral RNG offset. TinyDroplet alignment solves the pre-offset X from actual RNG and event path progress. FSlider alignment is constrained by `0..512`, shared repeat geometry, and horizontal velocity. Automatic SV may increase within stable's 0.1–10 range. Unreachable mandatory targets fail the track rather than returning an off-track result. Legacy Sliders retain osu's original TinyDroplet RNG offsets.
 
-RNG 固定种子 1337，父对象按开始时间、SourceOrder 稳定排序；无导入顺序的新对象使用确定性集合顺序。一个 stream 的全部 nested RNG 处理完再进入下一个父对象，最后才展开按时间排序。Droplet 消耗旋转随机数，TinyDroplet 使用横向偏移；每根香蕉消耗位置及三次外观随机数，时间保留 float 累加规则。视口裁剪不改变输入。
+RNG uses seed 1337. Parents are stably ordered by start time and SourceOrder; new objects without imported order use deterministic collection order. All nested RNG for one stream is processed before the next parent, and time sorting happens only afterward. Droplets consume rotation randomness; TinyDroplets use lateral offsets. Each banana consumes position randomness and three appearance draws, with float time accumulation retained. Viewport culling does not change input.
 
-失败对象不生成结果，整体 Success=false，RNG 仅对应成功生成的子集。路径长度、事件数、导入控制点、repeat、采样和网格均有显式容量限制；具体数值、继承 NaN 的 Catch 处理与源码依据见[转换模块说明](../src/FruitsAtelier.Core/Conversion/UPSTREAM.md)。
+Failed objects produce no result, set overall Success=false, and leave RNG corresponding only to successfully generated objects. Path length, event count, imported controls, repeats, sampling, and grid sizes have explicit limits. Values, Catch handling of inherited NaN, and source references are in the [conversion module documentation](../src/FruitsAtelier.Core/Conversion/UPSTREAM.md).
 
-Hyperdash 使用完整结果中的 Fruit / Droplet，跳过 TinyDroplet 和香蕉，保留方向和剩余移动量。标记属于起跳对象，CS 改动后重新计算。
+Hyperdash uses all Fruit / Droplet results, skipping TinyDroplets and Bananas, and preserves direction and remaining movement. Markers belong to the departure object and recalculate when CS changes.
 
-## 持久化与输出
+## Persistence and export
 
-`.catchproj` 保存节点、柄、OutgoingKind、轨迹默认 Kind、SpanCount、OriginalLine、CompensateTinyDroplets、difficulty、完整 timing 及资源引用，不写入撤销栈、派生对象或 GPU 缓存。旧工程缺省 OutgoingKind=null、SpanCount=1、Tiny 覆盖=null。读取验证 schema、ID、模型边界和曲线约束，拒绝不支持的字段与版本；继承 NaN 使用 JSON 命名浮点表示。保存采用同目录临时文件后替换，资源路径相对工程目录保存，不复制音频本体。
+`.catchproj` saves nodes, handles, OutgoingKind, default track Kind, SpanCount, OriginalLine, CompensateTinyDroplets, difficulty, complete timing, and resource references. It excludes undo history, derived objects, and GPU caches. Older projects default to OutgoingKind=null, SpanCount=1, and Tiny override=null. Reading validates schema, IDs, model boundaries, and curve constraints, rejecting unsupported fields and versions. Inherited NaN uses named JSON floating-point representation. Saving replaces a same-directory temporary file and stores resource paths relative to the project directory without copying audio.
 
-`.osu` 目前接受并输出 v14 / Mode=2，见[stable 文件规范](STABLE_FORMAT.md)。Legacy Slider 保留原始行；FSlider 按整数时间和路径坐标编码，保留 SpanCount，需要时插入继承 SV 并恢复。由 Legacy 转换的 FSlider 复用原类型/音效/sample 字段；行程次数改变时保留仍存在的边缘样本，新增边缘使用默认值并报告。无法与同时间对象兼容的 SV 冲突明确拒绝。输出回读比较完整对象序列、时间及 X；量化可能产生误差或序列变化。
+`.osu` currently accepts and emits v14 / Mode=2; see [stable File Contract](STABLE_FORMAT.md). Legacy Sliders retain original lines. FSliders encode integer time and path coordinates, preserve SpanCount, and insert/restore inherited SV as needed. Legacy-converted FSliders reuse original type/hitsound/sample fields. Span-count edits preserve surviving edge samples; new edges receive defaults and a diagnostic. Incompatible same-time SV conflicts fail explicitly. Export read-back compares the full object sequence, times, and X; quantization can introduce errors or sequence changes.
 
-工程保存与 `.osu` 输出是独立操作，后者不能代替保存创作意图。视频和 storyboard 不加载，原始节文本保留不代表这些资源已打包。
+Project saving and `.osu` export are independent; exporting cannot replace saving authoring intent. Video and storyboard playback are unsupported. Preserving raw section text alone does not mean its referenced assets have been packaged; workspace archive retention is described separately in [Workspace](WORKSPACE.md).

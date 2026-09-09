@@ -2,6 +2,8 @@ using System.Diagnostics;
 using NAudio.Wave;
 using FruitsAtelier.App.Audio;
 
+if (args.Contains("--hitsound-check")) { HitsoundMixerTests.Run(); return 0; }
+
 string root = FindRoot();
 string directory = Path.Combine(root, "artifacts", "tests", "audio");
 Directory.CreateDirectory(directory);
@@ -16,6 +18,7 @@ using (var writer = new WaveFileWriter(wave, new WaveFormat(44100, 16, 2)))
 
 var tests = new (string Name, Func<Task> Run)[]
 {
+    ("Hitsound PCM mix, volume and stop", () => { HitsoundMixerTests.Run(); return Task.CompletedTask; }),
     ("WAV real output drives the clock; pause and paused seek stay stopped", WavePlayback),
     ("Playing seeks preserve playback and latest rapid seek wins", PlayingSeek),
     ("EOF stops at duration and play restarts from zero", EndAndReplay),

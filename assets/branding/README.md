@@ -1,4 +1,4 @@
-# FruitsAtelier · 水果工坊
+# FruitsAtelier Branding
 
 The approved identity is an italic FA monogram with a single leaf above the A. Vector paths were reconstructed from the supplied reference; the previous cherry artwork is not the active identity.
 

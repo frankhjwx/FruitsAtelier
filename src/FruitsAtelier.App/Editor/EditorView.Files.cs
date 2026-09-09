@@ -53,6 +53,7 @@ public sealed partial class EditorView
         ProjectName = project.Name;
         projectStructureDirty = false;
         ResetDifficultyView();
+        PreloadProjectHitsounds();
     }
 
     private void ResetDifficultyView()
@@ -126,6 +127,7 @@ public sealed partial class EditorView
         OsuBeatmapReader.Validate(document);
         difficulties.Add(new DifficultySession(new ProjectDifficulty { Name = name, Document = document }));
         projectStructureDirty = true;
+        PreloadProjectHitsounds();
         bool switched = SwitchDifficulty(difficulties.Count - 1);
         if (switched && imported is not null) OfferSliderConversion(false);
         return switched;
@@ -156,6 +158,7 @@ public sealed partial class EditorView
 
     public void UpdateTransport(double positionMs, double durationMs, bool ready, bool playing, bool loading, string? error, string? filename)
     {
+        UpdateHitsounds(positionMs, ready && playing && !loading, filename);
         bool wasReady = AudioReady;
         AudioReady = ready; AudioPlaying = playing; AudioLoading = loading;
         AudioDurationMs = double.IsFinite(durationMs) ? Math.Max(0, durationMs) : 0;
@@ -169,6 +172,7 @@ public sealed partial class EditorView
     {
         playhead = Math.Clamp(time, 0, TimelineDurationMs);
         FollowPlayhead();
+        ResetHitsounds();
         RequestSeek?.Invoke(playhead);
         StatusMessage = L.Get("editor.status.seek", Time(playhead), AudioReady ? "" : L.Get("editor.audio.notLoadedSuffix"));
     }

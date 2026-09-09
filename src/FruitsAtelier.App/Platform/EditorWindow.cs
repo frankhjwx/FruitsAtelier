@@ -259,6 +259,7 @@ internal sealed partial class EditorWindow : IDisposable
         disposed = true;
         if (largeBrandIcon != 0) { Native.DestroyIcon(largeBrandIcon); largeBrandIcon = 0; }
         if (smallBrandIcon != 0) { Native.DestroyIcon(smallBrandIcon); smallBrandIcon = 0; }
+        hitsounds.Dispose();
         audio.Dispose();
         canvas?.Dispose();
         AppLog.Write($"Window closed. Frames={frames}");

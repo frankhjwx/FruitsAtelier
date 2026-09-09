@@ -1,9 +1,9 @@
-# 旧项目迁移
+# Migrating Older Projects
 
-VibeCatchEditor 更名为 **FruitsAtelier**，可编辑的 `VCE Slider` 更名为 **FSlider**。导入后尚未转换的对象仍称为 Legacy Slider。
+VibeCatchEditor was renamed **FruitsAtelier**, and the editable `VCE Slider` was renamed **FSlider**. Imported objects that have not been converted are still called Legacy Sliders.
 
-- 解决方案、项目目录、命名空间和应用名称使用 FruitsAtelier。启动脚本仍为 `Run-Editor.cmd` 与 `Run-Editor-Mac.command`。
-- `.catchproj` 继续使用 schema 1 和原有属性名，无需转换文件。已有工程标题和对象名称保留原值；新建对象使用 FSlider 默认名。
-- Mac 独立应用的缓存目录为 `~/Library/Application Support/FruitsAtelier`。已有工程引用的资源继续按原路径读取，旧缓存目录不会自动迁移或删除。
+- Solution names, project directories, namespaces, and application names use FruitsAtelier. The launch scripts remain `Run-Editor.cmd` and `Run-Editor-Mac.command`.
+- `.catchproj` still supports schema 1 and its original property names; existing files need no conversion. Existing project titles and object names remain unchanged. Newly created sliders use the FSlider default name. See [Project Model](PROJECT_MODEL.md) for current persistence formats.
+- The standalone Mac application caches resources in `~/Library/Application Support/FruitsAtelier`. Resources referenced by existing projects continue to resolve through their original paths. Old cache directories are not automatically migrated or deleted.
 
-旧格式样例位于 [vibecatch-schema1.catchproj](../tests/FruitsAtelier.Formats.Tests/Fixtures/vibecatch-schema1.catchproj)，由 Formats 测试检查读写兼容性。
+The [vibecatch-schema1.catchproj](../tests/FruitsAtelier.Formats.Tests/Fixtures/vibecatch-schema1.catchproj) fixture verifies read/write compatibility in the Formats tests.

@@ -1,35 +1,36 @@
-# 功能与文件说明
+# Features and Files
 
-FruitsAtelier 用于在时间—X 画布中编辑 osu!catch 谱面，并随音乐检查对象排列。应用使用独立的 Windows 和 macOS 桌面宿主。
+FruitsAtelier edits osu!catch beatmaps on a time–X canvas and previews object placement alongside music. The application has separate Windows and macOS desktop hosts.
 
-## 编辑对象
+## Editable objects
 
-| 对象 | 编辑方式 |
+| Object | Editing |
 | --- | --- |
-| Fruit | 在指定时刻与 X 位置放置、移动和删除 |
-| FSlider | 用时间递增的锚点和贝塞尔控制柄定义轨迹；支持直线/曲线混合与往返行程 |
-| Legacy Slider | 保留导入的 L/B/P/C 路径和样本信息；转换为 FSlider 后编辑节点 |
-| 香蕉雨 | 编辑开始与结束时间；逐根香蕉的位置由谱面 RNG 生成 |
+| Fruit | Place, move, and delete at a specific time and X position |
+| FSlider | Define a path with increasing-time anchors and Bezier handles; mix straight and curved segments and repeat spans |
+| Legacy Slider | Preserve imported L/B/P/C paths and samples; convert to FSlider to edit nodes |
+| Banana shower | Edit start and end times; individual banana positions come from the beatmap RNG |
 
-主画布和右侧预览显示转换得到的 Fruit、Droplet、TinyDroplet 与香蕉。FSlider 生成 slider 对应的 Catch 对象序列；辅助锚点本身不增加 tick。
+The main canvas and right-hand preview show converted Fruit, Droplet, TinyDroplet, and Banana objects. FSliders generate the corresponding Catch slider sequence; auxiliary anchors do not add ticks.
 
-Legacy Slider 转换为 FSlider 时保留父对象 ID、源顺序、行程次数和样本信息。转换受路径边界、SV 和共享往返路径约束；失败时保留原对象并显示原因。
+Converting a Legacy Slider to FSlider preserves its parent ID, source order, span count, and sample information. Conversion is constrained by path boundaries, SV, and the shared repeat path. On failure, the original object is retained and the reason is displayed.
 
-具体快捷键、选择和控制点操作见[编辑操作](EDITOR_UI.md)。
+See [Editing Controls](EDITOR_UI.md) for shortcuts, selection, and control-point operations.
 
-## 文件
+## Files
 
-| 格式 | 用途 |
+| Format | Purpose |
 | --- | --- |
-| `.osz` | 打开谱面包，选择难度并加载关联资源 |
-| `.osu` | 读取和导出 v14 / Mode=2 Catch 谱面 |
-| `.catchproj` | 保存编辑工程，包括节点、控制柄、timing、导入上下文和资源引用 |
-| `.osk` | 导入 Catch 皮肤图片与配置 |
+| `.osz` | Open a beatmap archive with its difficulties and associated resources |
+| `.osu` | Read and export v14 / Mode=2 Catch beatmaps |
+| `.catchproj` | Compatible editor project format containing nodes, handles, timing, imported context, and resource references |
+| `.catchdiff` | Workspace project manifest and separate difficulty documents; see [Workspace](WORKSPACE.md) |
+| `.osk` | Import Catch skin images and configuration |
 
-工程通过路径引用音频。移动工程时需同时保留资源的相对位置。导出 `.osu` 会量化时间和路径坐标，并显示回读结果；继续编辑时使用 `.catchproj`。
+Projects reference audio by path. Preserve the relative resource locations when moving a project. Exporting `.osu` quantizes times and path coordinates and reports read-back results; save the editor project to retain editable data.
 
-## 当前范围
+## Current scope
 
-支持多 timing、继承 SV、节拍吸附、批量对象操作、撤销重做、中英文界面，以及 MP3 / OGG / WAV 播放与定位。预览按 AR、CS 和所选皮肤显示对象与 hyperdash 标记。
+Supported features include multiple timing points, inherited SV, beat snapping, batch object operations, undo/redo, English and Chinese interfaces, and MP3 / OGG / WAV playback and seeking. The preview uses AR, CS, and the selected skin to display objects and hyperdash markers.
 
-目前不提供游戏判定试玩、音频波形、变速、视频或 storyboard 播放。皮肤采用静态显示，未实现完整的旋转、命中特效和香蕉缩放动画。
+Gameplay judgement, audio waveforms, playback-rate changes, video, and storyboard playback are not provided. Skin rendering is static; full rotation, hit effects, and banana scaling animations are not implemented.

@@ -15,6 +15,8 @@ public sealed class MacAudio : IDisposable
     private string? path, error, cachePath;
     private bool loading, disposed, playbackRequested;
     private readonly bool muted;
+    private double playbackDeviceStart, playbackMapStart;
+    public const double SchedulingLeadSeconds = .15;
     public MacAudio(bool muted = false) => this.muted = muted;
     public MacAudioState State
     {
@@ -22,9 +24,13 @@ public sealed class MacAudio : IDisposable
         {
             lock (gate)
             {
-                bool playing = player != 0 && Playing(player) != 0;
                 double duration = player == 0 ? 0 : Duration(player) * 1000;
-                double position = player == 0 ? 0 : playbackRequested && !playing ? duration : Position(player) * 1000;
+                double nativePosition = player == 0 ? 0 : Position(player) * 1000;
+                // Native completion callbacks can lag behind the device reaching EOF.
+                bool pending = player != 0 && playbackRequested && DeviceTime(player) < playbackDeviceStart;
+                bool playing = pending || player != 0 && Playing(player) != 0 && nativePosition < duration;
+                if (pending) nativePosition = playbackMapStart;
+                double position = player == 0 ? 0 : playbackRequested && !playing ? duration : nativePosition;
                 return new(path, position, duration, playing, player != 0, loading, error);
             }
         }
@@ -85,12 +91,46 @@ public sealed class MacAudio : IDisposable
                 if (replacement == 0) { error = L.Get("files.failed", message.ToString()); return; }
                 Close(player); player = replacement; Volume(player, muted ? 0 : 1);
             }
-            playbackRequested = PlayNative(player) != 0;
+            StartPlayback();
             if (!playbackRequested) error = L.Get("mac.audioPlayFailed");
         }
     }
-    public void Pause() { lock (gate) if (player != 0) { PauseNative(player); playbackRequested = false; } }
-    public void Seek(double ms) { lock (gate) if (player != 0 && double.IsFinite(ms)) { playbackRequested = Playing(player) != 0; SeekNative(player, Math.Clamp(ms / 1000, 0, Duration(player))); } }
+    public void Pause()
+    {
+        lock (gate) if (player != 0)
+        {
+            bool pending = playbackRequested && DeviceTime(player) < playbackDeviceStart;
+            PauseNative(player); playbackRequested = false;
+            // Canceling a scheduled start must not expose the player's pre-roll position.
+            if (pending) Rearm(player, playbackMapStart / 1000);
+        }
+    }
+    public void Seek(double ms)
+    {
+        lock (gate) if (player != 0 && double.IsFinite(ms))
+        {
+            bool resume = playbackRequested && (DeviceTime(player) < playbackDeviceStart || Position(player) < Duration(player));
+            PauseNative(player);
+            SeekNative(player, Math.Clamp(ms / 1000, 0, Duration(player)));
+            playbackRequested = false;
+            if (resume) StartPlayback();
+        }
+    }
+    private void StartPlayback()
+    {
+        playbackMapStart = Position(player) * 1000;
+        // A paused AVAudioPlayer retains output state that offsets currentTime on resume.
+        // Reset that session before taking the device-clock origin, preserving the map position.
+        playbackRequested = false;
+        if (Rearm(player, playbackMapStart / 1000) == 0) { error = L.Get("mac.audioPlayFailed"); return; }
+        playbackDeviceStart = DeviceTime(player) + SchedulingLeadSeconds;
+        playbackRequested = PlayAt(player, playbackDeviceStart) != 0;
+    }
+    public double? HitsoundHostTime(double mapTimeMs)
+    {
+        lock (gate) return player != 0 && playbackRequested && double.IsFinite(mapTimeMs)
+            ? HostTime() + playbackDeviceStart - DeviceTime(player) + (mapTimeMs - playbackMapStart) / 1000 : null;
+    }
     private static void DeleteCache(string? filename) { if (filename is not null) try { File.Delete(filename); } catch (IOException) { } }
     private void Release() { if (player != 0) Close(player); player = 0; playbackRequested = false; DeleteCache(cachePath); cachePath = null; }
     public void Dispose() { lock (gate) { if (disposed) return; disposed = true; load?.Cancel(); load?.Dispose(); Release(); } }
@@ -114,10 +154,13 @@ public sealed class MacAudio : IDisposable
         }
         long length = stream.Length; stream.Position = 4; writer.Write((int)length - 8); stream.Position = 40; writer.Write((int)length - 44);
     }
+    [DllImport("FruitsAtelierAudio", EntryPoint="fa_audio_host_time")] private static extern double HostTime();
+    [DllImport("FruitsAtelierAudio", EntryPoint="fa_audio_rearm")] private static extern int Rearm(nint player, double position);
     private const string Library = "FruitsAtelierAudio";
     [DllImport(Library, EntryPoint="fa_audio_open")] private static extern nint Open([MarshalAs(UnmanagedType.LPUTF8Str)] string path, StringBuilder error, int capacity);
     [DllImport(Library, EntryPoint="fa_audio_close")] private static extern void Close(nint handle);
-    [DllImport(Library, EntryPoint="fa_audio_play")] private static extern int PlayNative(nint handle);
+    [DllImport(Library, EntryPoint="fa_audio_play_at")] private static extern int PlayAt(nint handle, double time);
+    [DllImport(Library, EntryPoint="fa_audio_device_time")] private static extern double DeviceTime(nint handle);
     [DllImport(Library, EntryPoint="fa_audio_pause")] private static extern void PauseNative(nint handle);
     [DllImport(Library, EntryPoint="fa_audio_seek")] private static extern void SeekNative(nint handle, double seconds);
     [DllImport(Library, EntryPoint="fa_audio_position")] private static extern double Position(nint handle);

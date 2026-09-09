@@ -10,6 +10,8 @@ The project is under active development.
 
 ## Features
 
+- Preview [Catch hitsounds](docs/HITSOUNDS.md), including beatmap samples, slider ticks and banana sounds.
+
 - Open `.osz` archives, v14 / Mode=2 `.osu` beatmaps, and `.catchproj` projects.
 - Edit fruits, FSliders, and banana showers with beat snapping, multi-selection, group movement, cut/copy, and undo/redo.
 - Convert imported Legacy Sliders into editable FSliders, then adjust anchors, Bézier handles, and span counts.
@@ -35,7 +37,7 @@ Double-click [Run-Editor-Mac.command](Run-Editor-Mac.command) to build and launc
 bash scripts/Publish-Mac.sh
 ```
 
-The output is `artifacts/macos/FruitsAtelier.app`, including the .NET runtime. See the [macOS guide](docs/MACOS.md) (Chinese).
+The output is `artifacts/macos/FruitsAtelier.app`, including the .NET runtime. See the [macOS guide](docs/MACOS.md).
 
 ### Windows
 
@@ -44,8 +46,6 @@ Requires .NET SDK **10.0.400** (pinned in the root `global.json`) and the **.NET
 The compiled application is located at `src/FruitsAtelier.App/bin/Release/net8.0-windows/FruitsAtelier.App.exe`.
 
 ## Documentation
-
-The following guides are in Chinese; third-party notices are in English.
 
 - [Editing controls](docs/EDITOR_UI.md)
 - [Features and files](docs/PRODUCT.md)

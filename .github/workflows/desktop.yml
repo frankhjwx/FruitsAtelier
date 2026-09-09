@@ -25,6 +25,8 @@ jobs:
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
           dotnet run --no-build --project ../tests/FruitsAtelier.Formats.Tests -c Release -- --skip-external-fixtures
+      - name: Hitsound PCM regression (no audio device)
+        run: dotnet run --no-build --project ../tests/FruitsAtelier.Audio.Tests -c Release -- --hitsound-check
   macos:
     runs-on: macos-14
     steps:

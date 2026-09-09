@@ -10,6 +10,7 @@ if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Catch hitsound samples and playback boundaries", HitsoundTests.Run),
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),
     ("Fresh process defaults to English", () => { if (startupLanguage != "en") throw new Exception("Default language must be English"); }),
     ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),

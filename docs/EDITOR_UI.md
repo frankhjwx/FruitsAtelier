@@ -1,96 +1,96 @@
-# 编辑操作
+# Editing Controls
 
-## 工作区
+## Workspace
 
-左侧为对象列表，中间是时间—X 画布，右侧为属性和 Catch 预览，底部为时间导航。场地 X 为 `0..512`，时间向上递增。启动时显示可编辑的演示谱面。
+The object list is on the left, the time–X canvas in the center, properties and Catch Preview on the right, and time navigation at the bottom. Playfield X spans `0..512`; time increases upward. Startup displays an editable demo beatmap.
 
-右上角调整 AR 和 CS；预览按 AR 下落速度显示对象。主画布默认按谱面的 AR 比例显示，演示谱面的默认值为 AR 8。画布顶部的“缩放”滑杆可点击或拖动调整时间间距，以 AR 0–10 显示当前缩放速度，独立于谱面 AR；“还原 AR 比例”和“重置视图”恢复该比例。滚轮浏览时间，中键拖动平移，Ctrl + 滚轮以鼠标所在时间缩放，并同步更新滑杆。滑杆在暂停浏览时以视口中心缩放，播放时保持播放线位置。
+Adjust AR and CS at the top right. The preview uses AR for falling speed. The main canvas initially follows beatmap AR; the demo defaults to AR 8. Click or drag the canvas's **Zoom** slider to change time spacing, shown as AR 0–10 independently of beatmap AR. **Restore AR scale** and **Reset view** restore the beatmap scale. Scroll to browse time, drag with the middle button to pan, and Ctrl+scroll to zoom around the pointer's time while updating the slider. When paused, slider zoom centers on the viewport; during playback, it preserves the play line.
 
-播放和 seek 时，播放线固定在绘图区距底部 25% 处，内容随时间移动。暂停后可手动浏览，下一次播放或定位恢复跟随。
+During playback and seeking, the play line stays 25% above the bottom of the drawing area while content moves. Paused navigation is free; playback or seeking resumes following.
 
-## 工具与选择
+## Tools and selection
 
-| 输入 | 操作 |
+| Input | Action |
 | --- | --- |
-| V / F / B / N | 选择 / Fruit / FSlider / 香蕉雨 |
-| V/F 模式下点击对象 | 选择完整对象；slider 子对象归属父 slider |
-| 空白拖动 | V/F 模式框选对象；FSlider 编辑模式框选锚点 |
-| Ctrl 点选 / Ctrl 框选 | 增减选择 / 叠加选择 |
-| 拖动已选对象 | 按共同的 X 和时间偏移移动整组 |
-| Ctrl + X / C / V | 剪切 / 复制 / 粘贴完整对象 |
-| Delete | 删除所选对象；锚点编辑中删除所选锚点 |
-| Ctrl + Z / Y | 撤销 / 重做 |
-| Esc | 取消活动拖动、框选、草稿或数值编辑 |
+| V / F / B / N | Select / Fruit / FSlider / Banana shower |
+| Click an object in V/F mode | Select the complete object; slider children belong to the parent slider |
+| Drag empty space | Box-select objects in V/F mode or anchors in FSlider edit mode |
+| Ctrl+click / Ctrl+box-select | Toggle selection / add to selection |
+| Drag selected objects | Move the group by a shared X and time offset |
+| Ctrl+X / C / V | Cut / copy / paste complete objects |
+| Delete | Delete selected objects, or selected anchors in anchor-edit mode |
+| Ctrl+Z / Y | Undo / redo |
+| Esc | Cancel an active drag, box selection, draft, or numeric edit |
 
-Mac 同时接受 Command 和 Ctrl 组合快捷键，Delete / Backspace 均可删除对象。
+Mac accepts both Command and Ctrl shortcuts; Delete and Backspace both delete objects.
 
-slider 的 Fruit、Droplet 和 TinyDroplet 共用父对象选择；选中多个子对象只计一个 slider。隐藏曲线后仍可通过实际对象选择整条轨迹。
+A slider's Fruit, Droplet, and TinyDroplet share parent selection. Selecting several children counts as one slider. Even with curves hidden, actual objects can select their complete track.
 
-剪贴板保存在应用内部。粘贴将最早起点对齐播放头，保持其余对象的相对时间和位置，生成新 ID。每次批量移动、删除、剪切或粘贴可一步撤销。
+The clipboard is internal to the application. Paste aligns the earliest start to the playhead, preserves other objects' relative times and positions, and assigns new IDs. Each batch move, delete, cut, or paste is one undo step.
 
-## Fruit 与节拍
+## Fruits and beats
 
-Fruit 工具在空白处放置水果。吸附提供每拍 4、5、6、7、8、9、12、16 等分及自由时间，按当前红点的 BPM 和 offset 计算。选择工具下点击画布空白处定位播放线时，也会吸附到当前分拍；退出 FSlider 锚点编辑的空白点击遵循同一规则。开启“自由”后可连续定位。切换吸附不会移动已有对象。
+The Fruit tool places fruits in empty space. Snapping offers 4, 5, 6, 7, 8, 9, 12, and 16 subdivisions per beat, plus free time, using the active red point's BPM and offset. Clicking empty canvas in Select mode to position the play line uses the current beat subdivision, as does the empty-space click that exits FSlider anchor editing. **Free** enables continuous positioning. Changing snapping does not move existing objects.
 
-`Tick ×…` 修改谱面的 SliderTickRate，影响 slider 生成对象的间距，与编辑吸附独立。
+`Tick ×…` changes beatmap SliderTickRate and affects generated slider-object spacing independently of editing snap.
 
-## FSlider
+## FSliders
 
-未选轨迹时按 B 开始绘制。点击放置无柄锚点，按住向上拖动拉出方向柄；同一条轨迹可以混合直线与贝塞尔段。Enter 完成，Esc 取消草稿。编辑已有轨迹时，用属性区“新 Slider”开始另一条。
+Press B with no track selected to start drawing. Click to place anchors without handles; hold and drag upward to pull direction handles. One track may mix straight and Bezier segments. Enter finishes; Esc cancels the draft. While editing an existing track, use **New Slider** in properties to start another.
 
-选中 FSlider 后按 B，或双击轨迹进入锚点编辑。已选中整条轨迹时，点击锚点也会进入编辑。锚点与柄可以拖动或通过属性输入数值。时间保持递增，控制点 X 限于场地范围。
+Select an FSlider and press B, or double-click its track, to edit anchors. Clicking an anchor on an already selected complete track also enters editing. Drag anchors/handles or edit their numeric properties. Times remain increasing, and control-point X stays within the playfield.
 
-右键锚点可转换曲线/直线控制点；右键轨迹可插入无柄点。普通插点可能改变形状，“分割插点 · 保持形状”用于保形分割。批量删除锚点可包含端点；剩余不足两个点时删除整条轨迹。
+Right-click an anchor to convert between curved and straight control points; right-click the track to insert a handle-free point. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
 
-行程次数作用于整条 FSlider，首行程的节点在后续往返中共用。Legacy Slider 可从属性或右键菜单转换为 FSlider；转换生成少量直线/贝塞尔锚点，允许最多 0.25 场地单位的位置近似，方便继续编辑。失败时显示原因并保留原对象。
+Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Convert Legacy Sliders from properties or the context menu. Conversion creates a small set of straight/Bezier anchors with at most 0.25 playfield units of positional approximation for continued editing. Failure shows the reason and retains the original object.
 
-首次从 Songs、外部文件夹、`.osu` 或 `.osz` 创建 workspace project 时，如果含 Legacy Slider，会询问是否转换所有新导入 diff 的 slider。选择保留后可以继续使用 Legacy 表示；重新打开已有工程不会重复询问。向工程单独导入 diff 时只询问该 diff。
+The first workspace import from Songs, an external folder, `.osu`, or `.osz` asks whether to convert sliders in all newly imported difficulties if they contain Legacy Sliders. Keeping Legacy preserves that representation. Reopening an existing project does not prompt again. Importing one difficulty into a project prompts only for that difficulty.
 
-Edit（编辑）菜单的“Convert all sliders to FSliders / 将所有 slider 转为 FSlider”处理当前 diff；没有 Legacy Slider 时禁用。批量转换在后台运行，期间显示可取消的提示并阻止内容编辑，取消不应用部分结果。每个 diff 可以一次撤销所有成功转换；失败对象及原因在结果提示中分页列出。转换结果在保存工程时写入 workspace，原始 Songs/外部文件不变，仍需 Export 才会写出 `.osu`。
+**Edit → Convert all sliders to FSliders** processes the current difficulty and is disabled when it has no Legacy Sliders. Batch conversion runs in the background with a cancellable prompt and blocks content editing. Cancellation applies no partial results. All successful conversions per difficulty can be undone together; failures and reasons appear in paginated results. Saving persists conversion in the workspace without modifying original Songs/external files; Export is still required to write `.osu`.
 
-FSlider 的 TinyDroplet 贴合由生成器处理。`Tiny 贴合`开关只影响未保存轨迹级策略的旧工程数据。
+The generator handles FSlider TinyDroplet alignment. The Tiny alignment toggle only affects older project data without a saved per-track policy.
 
-## 香蕉雨
+## Banana showers
 
-N 工具左键设置开始时间，右键在更晚时间完成；Esc 或切换工具取消。香蕉雨显示为横跨场地的时间矩形：拖动主体平移，拖动上下手柄调整起止时间，也可在属性中输入。逐根香蕉的 X 由 RNG 生成。
+With N, left-click to set the start, then right-click at a later time to finish. Esc or switching tools cancels. A banana shower appears as a time rectangle spanning the playfield. Drag its body to move it or its top/bottom handles to change start/end times; properties also accept numeric values. RNG generates individual banana X positions.
 
-## 文件与播放
+## Files and playback
 
-| 输入 | 操作 |
+| Input | Action |
 | --- | --- |
-| Ctrl + O | 打开 `.osz` / `.osu` / `.catchproj` |
-| Ctrl + S / Ctrl + Shift + S | 保存 / 另存工程 |
-| Ctrl + E | 导出 `.osu` |
-| Space | 播放 / 暂停 |
-| 底部时间轴点击、拖动或滚轮 | 定位并保持原播放/暂停状态 |
-| Home | 回到开始 |
+| Ctrl+O | Open `.osz` / `.osu` / `.catchproj` |
+| Ctrl+S / Ctrl+Shift+S | Save / Save As project |
+| Ctrl+E | Export `.osu` |
+| Space | Play / pause |
+| Click, drag, or scroll the bottom timeline | Seek while preserving play/pause state |
+| Home | Return to the start |
 
-文件菜单可更换 MP3 / OGG / WAV 音频。没有可播放音频时仍可手动定位和编辑。`.catchproj` 保存可编辑数据；导出 `.osu` 后，继续修改时仍需保存工程。
+The File menu can replace MP3 / OGG / WAV audio. Manual seeking and editing remain available without playable audio. Save the editor project to retain editable data; further changes after `.osu` export still require a project save.
 
-## 显示设置
+## Display settings
 
-顶部语言按钮切换中文与英文，已有谱面标题和对象名称保持原值。主画布可隐藏曲线和节点，右侧预览有独立的“调试曲线”开关。
+The top-bar language button switches English and Chinese. Existing beatmap titles and object names retain their values. The main canvas can hide curves and nodes, while the right-hand preview has a separate debug-curve toggle.
 
-“皮肤…”可导入 `.osk` 中的 Catch 图片和配置。没有皮肤或纹理缺失时显示基础图形，详见[皮肤说明](../assets/skins/README.md)。绘制与命中尺寸规则见[Catch 绘制与转换](CATCH_RENDERING.md)。
+The skin picker imports Catch images and configuration from `.osk`. Missing skins or textures fall back to basic shapes; see [Skins](../assets/skins/README.md). Drawing and hit-test sizes are described in [Catch Rendering and Conversion](CATCH_RENDERING.md).
 
-## 多难度工程
+## Multiple difficulties
 
-文件菜单的“新建工程”创建含一个空白难度的 project。打开 `.osz` 会将包内全部 Catch（Mode=2）难度作为同一工程载入，其他模式跳过；Catch 文件损坏时不替换当前工程。打开单个 `.osu` 或旧版 `.catchproj` 时创建单难度工程。
+**File → New project** creates a project with one blank difficulty. Opening `.osz` loads all Catch (Mode=2) difficulties into one project and skips other modes. A damaged Catch file does not replace the current project. Opening a single `.osu` or older `.catchproj` creates a single-difficulty project.
 
-主工具栏下方的独立一行以 Chrome 式标签展示各难度：官方 Catch 图标、Version 名称、实时 No Mod 星级及未保存圆点。图标颜色按星级变化，当前标签顶部圆角，底部向两侧展开并贴合下方内容区。标签按实际文字宽度排列，不拉伸填满整行；名称超过 16 个 Unicode 字符时显示前 16 个字符加省略号，工程中的完整名称保持不变。点击标签切换；标签溢出时可用左右箭头或在标签栏滚轮浏览，Ctrl+Tab / Ctrl+Shift+Tab 循环切换并显示当前标签。右侧“＋”打开新增/导入菜单。“新增空白难度”继承当前难度的音乐、timing、参数及资源上下文，清空物件；“导入 .osu 难度”把一个文件加入当前工程。不同难度可以使用不同的音频引用。
+A separate row below the main toolbar displays Chrome-style difficulty tabs with the official Catch icon, Version, live No Mod stars, and an unsaved dot. Icon color follows stars. Active tabs have rounded top corners and spread outward at the bottom to join the content below. Tabs use actual text widths rather than filling the row. Names longer than 16 Unicode characters show the first 16 plus an ellipsis; stored names remain complete. Click to switch; use arrows or the tab-row wheel when tabs overflow. Ctrl+Tab / Ctrl+Shift+Tab cycle and reveal the active tab. The **+** button opens the add/import menu. A new blank difficulty inherits the active difficulty's audio, timing, settings, and resource context but clears objects. Importing an `.osu` adds one file. Difficulties may reference different audio.
 
-切换难度会先结束可提交的编辑，未完成的香蕉或无效输入会阻止切换。切换暂停播放，保留每个难度的播放头与时间视口起点，以及独立的撤销/重做历史。对象选择和当前工具重置。标题及状态栏的未保存状态覆盖整个工程，包括未显示的难度；保存一次写入所有难度，更新全部保存基线但保留撤销历史。新建、打开或关闭时，未保存确认针对整个工程。
+Switching commits valid pending edits first; unfinished banana drafts or invalid input prevent switching. It pauses playback and retains each difficulty's playhead, time-viewport start, and undo/redo history. Selection and the active tool reset. Title/status dirty indicators cover the whole project, including hidden difficulties. One save writes every difficulty and updates baselines without clearing undo history. Unsaved confirmation on new/open/close applies to the whole project.
 
-`.osu` 导出针对当前难度，建议文件名含难度名称；保存工程使用 `.catchproj`。资源仍通过路径引用，不会自动复制进工程文件。
+`.osu` export applies to the active difficulty; suggested filenames include its name. Workspace project saving is described in [Workspace](WORKSPACE.md), and the compatible `.catchproj` format in [Project Model](PROJECT_MODEL.md). Resource paths remain references rather than embedded project-file contents.
 
-星级计算方式、缓存失效及与导出/官网版本的边界见 [Catch 星级](CATCH_DIFFICULTY.md)。
+See [Catch Star Rating](CATCH_DIFFICULTY.md) for calculation, cache invalidation, and export/website-version limits.
 
-## 曲库与 workspace
+## Library and workspace
 
-顶部“曲库”打开独立曲库页面，可配置 workspace 与 stable Songs、搜索双语元数据、查看难度并进入工程。编辑器 diff 标签保持原布局。资源引用丢失显示工程错误条；保存不写 Songs，Export 页面提供覆盖关联难度或建立新 diff。详见 [workspace](WORKSPACE.md)。
+**Library** opens a separate page for workspace/stable Songs settings, bilingual metadata search, difficulty browsing, and project opening. Editor difficulty tabs retain their layout. Missing resource references show an error bar. Saving never writes to Songs; Export offers associated-difficulty overwrite or a new difficulty. See [Workspace](WORKSPACE.md).
 
-Catch Preview 标题下仅以一行显示 `AR … · CS … · NM`，不显示下落时间、生成状态或皮肤名称。预览中的滚动与物件绘制仍按 AR/CS 正常计算。
+Below the Catch Preview title, one line shows `AR … · CS … · NM`. It omits fall time, generation status, and skin name. Preview scrolling and object drawing still follow AR/CS.
 
-新建工程的默认空白难度是未修改状态，直接打开或导入外部谱面不会触发未保存提示。编辑内容、绑定音频或添加／导入难度后仍会提示保存；撤销回初始空白状态会清除修改标记。
+A new project's blank difficulty starts unmodified, so directly opening or importing an external beatmap does not trigger an unsaved prompt. Content edits, audio binding, and added/imported difficulties do prompt. Undoing to the initial blank state clears the dirty marker.
 
-底部状态栏显示当前操作反馈（例如保存结果、操作限制）及优先显示的转换错误，不是日志查看入口。平台、内部缩放百分比与重复的未保存状态不再显示。
+The bottom status bar shows current action feedback, such as save results or operation limits, with conversion errors taking priority. It is not a log viewer. Platform details, internal zoom percentages, and duplicate dirty indicators are omitted.

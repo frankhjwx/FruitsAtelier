@@ -1,9 +1,10 @@
-# 默认 Catch 皮肤
+# Default Catch Skin
 
-仓库不附带默认皮肤资源；没有皮肤时可正常构建和运行，以基础图形显示对象。
+The repository does not bundle default skin images. Default hitsound recordings are
+packaged separately in [assets/audio/osu](../audio/osu/README.md). It builds and runs without a skin, displaying objects as basic shapes.
 
-本地可自行放置 `default.osk`，构建时仅在文件存在时复制到输出目录，应用启动时只提取 `skin.ini` 和 Catch PNG；源码运行时缓存位于 `artifacts/skins`。该路径已被 Git 忽略，不会随源码上传。
+You may place a local `default.osk` here. The build copies it to the output directory only when it exists. At startup, the application extracts `skin.ini` and Catch PNGs; source builds cache them in `artifacts/skins`. This path is ignored by Git and is not uploaded with the source.
 
-工具栏“皮肤…”直接选择 `.osk`，不需要用户手动解压。当前加载 fruit、overlay、fruit-drop 及对应 `@2x` 图片和相关颜色；不加载音效、光标或其他模式资源。
+The toolbar's skin picker accepts `.osk` directly without manual extraction. It currently loads fruit, overlay, fruit-drop, their `@2x` images, and related colors; it does not load sounds, cursors, or other ruleset resources.
 
-皮肤版权归各自作者所有，代码的 MIT 声明不适用于皮肤图片；发布包含本地皮肤的构建前需确认相应资源许可。可选皮肤测试的资源要求见[构建与测试](../../docs/TESTING.md)。
+Skin copyright belongs to each author; the code's MIT license does not cover skin images. Verify asset licenses before distributing builds that include a local skin. See [Building and Testing](../../docs/TESTING.md) for optional skin-test resource requirements.

@@ -1,34 +1,34 @@
-# 构建与测试
+# Building and Testing
 
-## SDK 与构建
+## SDKs and builds
 
-项目目标为 .NET 8，语言版本为 C# 12。两个 SDK 入口由 `global.json` 分别固定：
+The project targets .NET 8 with C# 12. Two `global.json` entry points pin SDK versions:
 
-| 入口 | SDK | 用途 |
+| Entry point | SDK | Purpose |
 | --- | --- | --- |
-| 仓库根目录 | 10.0.400 | Windows 启动脚本和根目录构建 |
-| `macOS/` | 8.0.419 | Mac 脚本，以及 Windows/macOS CI |
+| Repository root | 10.0.400 | Windows launch scripts and root builds |
+| `macOS/` | 8.0.419 | Mac scripts and Windows/macOS CI |
 
-Windows 在仓库根目录构建：
+Build on Windows from the repository root:
 
 ```powershell
 dotnet build FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
 ```
 
-使用 SDK 8.0.419 构建 Windows 解决方案时，先进入 `macOS/`：
+To build the Windows solution with SDK 8.0.419, enter `macOS/` first:
 
 ```powershell
 cd macOS
 dotnet build ../FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
 ```
 
-Mac 启动与打包见[macOS 运行](MACOS.md)。包版本由各项目及 `packages.lock.json` 固定，NuGet 缓存位于 `artifacts/packages`。
+See [Running on macOS](MACOS.md) for launch and packaging. Project files and `packages.lock.json` pin package versions; NuGet caches packages in `artifacts/packages`.
 
-## 自动回归
+## Automated regressions
 
-测试项目是控制台程序，使用 `dotnet run` 执行。格式导出的量化、回读和边缘样本诊断检查会遍历所有可用语言，使用本地化表验证消息及参数，避免依赖默认界面语言。
+Test projects are console programs run with `dotnet run`. Format-export quantization, read-back, and edge-sample diagnostic checks iterate over every available language, verifying messages and parameters against localization tables rather than assuming the default UI language.
 
-Windows 在完成解决方案构建后，从仓库根目录运行：
+After building the solution, run on Windows from the repository root:
 
 ```powershell
 foreach ($suite in @('Core', 'Gameplay', 'App', 'Skinning', 'SkinArchive')) {
@@ -38,40 +38,40 @@ foreach ($suite in @('Core', 'Gameplay', 'App', 'Skinning', 'SkinArchive')) {
 dotnet run --no-build --project tests/FruitsAtelier.Formats.Tests -c Release -- --skip-external-fixtures
 ```
 
-Mac 从仓库根目录运行：
+Run on Mac from the repository root:
 
 ```bash
-bash scripts/Test-Mac.sh                      # 共享回归及 Mac 输入/音频检查
-bash scripts/Test-Mac.sh --skip-device-tests  # 共享回归，跳过整个 Mac 原生测试项目
-bash scripts/Test-Mac.sh --native-only        # 仅 Mac 输入/音频检查
+bash scripts/Test-Mac.sh                      # Shared regressions and Mac input/audio checks
+bash scripts/Test-Mac.sh --skip-device-tests  # Shared regressions; skips the entire native Mac test project
+bash scripts/Test-Mac.sh --native-only        # Mac input/audio checks only
 ```
 
-[Desktop regression](../.github/workflows/desktop.yml) 在 push 和 PR 时运行：Windows 构建解决方案并执行共享回归；macOS 执行共享回归并打包应用。运行结果见 [GitHub Actions](https://github.com/frankhjwx/FruitsAtelier/actions)。
+[Desktop regression](../.github/workflows/desktop.yml) runs on pushes and PRs: Windows builds the solution and runs shared regressions; macOS runs shared regressions and packages the app. Results are available in [GitHub Actions](https://github.com/frankhjwx/FruitsAtelier/actions).
 
-## 外部测试资源
+## External test resources
 
-仓库包含合成格式样例、旧版本 `.catchproj` 兼容样例和 OGG 音频样例。以下检查另需本地资源：
+The repository contains synthetic format fixtures, older `.catchproj` compatibility fixtures, and OGG audio fixtures. These checks additionally require local resources:
 
-- Formats 默认运行的两个真实谱面检查需要 `artifacts/beatmaps` 下的外部谱面；`--skip-external-fixtures` 跳过这两项，CI 和 Mac 脚本使用该参数。
-- Core 的 `--fixtures` 参数启用额外的真实谱面检查。
-- Windows `Audio.Tests` 完整运行需要默认音频设备及 `artifacts/beatmaps` 下的 MP3 样例。`--recovery-check` 只运行注入输出故障的检查，`--lifecycle-check` 只运行播放生命周期检查。
-- 指定默认皮肤和用户工程的测试依赖未提交的本地文件；查看各测试输出中的跳过信息。
+- The two real-beatmap checks enabled by default in Formats need external beatmaps under `artifacts/beatmaps`. `--skip-external-fixtures` skips them and is used by CI and Mac scripts.
+- Core's `--fixtures` option enables additional real-beatmap checks.
+- A full Windows `Audio.Tests` run needs a default audio device and MP3 fixtures under `artifacts/beatmaps`. `--recovery-check` runs only injected output-failure checks; `--lifecycle-check` runs only playback lifecycle checks.
+- Tests using a specific default skin or user project depend on uncommitted local files. Check test output for skipped cases.
 
-自动设备测试输出静音 PCM，采样比较在静音前进行。Windows 音频测试命令：
+Automated device tests output silent PCM; sample comparisons happen before muting. Run Windows audio tests with:
 
 ```powershell
 dotnet run --project tests/FruitsAtelier.Audio.Tests -c Release
 ```
 
-## 窗口检查
+## Window checks
 
 ```bash
 ./Run-Editor-Mac.command --smoke-check
 ```
 
-该命令打开 Mac 窗口，执行水果放置、撤销、工程往返和中英文截图检查后退出。截图写入 `artifacts/macos-check`，日志写入 `artifacts/logs/macos.log`。
+This opens a Mac window, checks fruit placement, undo, project round trips, and English/Chinese screenshots, then exits. Screenshots go to `artifacts/macos-check` and logs to `artifacts/logs/macos.log`.
 
-修改输入或绘制后，手动检查相关操作、语言切换、窗口缩放和文件对话框。当前仍需补充 Windows 实机窗口/音频、Intel Mac、跨屏 DPI、Mac MP3 和 stable 客户端对照检查。
+After changing input or drawing, manually check affected operations, language switching, window resizing, and file dialogs. Additional coverage is still needed for physical Windows window/audio behavior, Intel Mac, cross-display DPI, Mac MP3, and stable-client comparisons.
 
 ## Editing performance benchmark
 
@@ -106,3 +106,25 @@ Synthetic regressions cover long smooth curves, sharp reversals, boundaries, rep
 sliders, random smooth inputs, cancellation, first-import prompts, current-difficulty
 menu scope, per-difficulty undo, and stale asynchronous results. The macOS smoke check
 captures both localized import prompts and the Edit menu in the native renderer.
+
+## Hitsound scheduling profile
+
+Run the muted native profile to compare the time spent submitting 32 simultaneous hits
+per UI tick over 120 ticks. It reports p50/p95/max submission time, decoded PCM memory,
+and any sample loads or engine creations during playback. This measures the audio dispatch
+path, not end-to-end editor FPS or acoustic latency.
+
+```bash
+bash -c 'source scripts/macos-dotnet.sh; "$FA_DOTNET" run --project ../tests/FruitsAtelier.Mac.Tests -c Release -- --profile-hitsounds'
+```
+
+Pass `--profile-map /path/to/difficulty.catchdiff` to the same Mac test project for a
+read-only whole-map comparison with hitsounds disabled and enabled. It reports sample
+preload time/memory, event density, transport and drawing-command CPU quantiles. It does
+not open/recover a workspace session or save user data, and excludes native GPU rendering.
+
+Use `--check-resume-music /path/to/music.mp3` with the Mac native test project to check an
+existing music file against muted WAV hitsounds. This read-only check exercises repeated
+pause/resume with different pause lengths, seek, and cancellation during the startup lead.
+The music fixture must be at least three seconds long. Tests compare the actual music
+position and native PCM render timestamps; all device output stays muted.

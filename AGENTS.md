@@ -23,5 +23,5 @@
 - Store build artifacts, test logs, and screenshots in `artifacts/`; do not commit them to Git.
 - Write documentation for project readers: describe current behavior, usage, and design details needed for maintenance. Keep conversational prompt responses, progress reports, temporary acceptance-build paths, and one-off test counts in tasks or PRs.
 - Maintain each rule in its relevant document and link to it elsewhere. Update documentation when behavior changes and remove obsolete conclusions.
-- Keep AI-facing project instructions in English.
+- Use English as the baseline for project documentation and AI-facing instructions. Maintain technical and AI documentation in English; preserve README.zh-CN.md as the translated user entry point, alongside localization resources and translation-specific examples.
 - Do not start subagents automatically. Use them only when the user explicitly requests parallel agent work.

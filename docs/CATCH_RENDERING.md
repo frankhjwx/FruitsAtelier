@@ -1,59 +1,59 @@
-# Catch 绘制与转换
+# Catch Rendering and Conversion
 
-两视图共用实际转换结果、AR 下落比例、CS 尺寸和皮肤绘制。当前条件为 NM / 1×，支持多 timing、独立 fruit、导入 L/B/P/C slider、混合线性/贝塞尔轨迹及 repeat、香蕉雨。真实音频 transport 驱动当前时间，无音频时允许明确标注的手动定位。
+Both views share actual conversion results, AR fall scaling, CS sizes, and skin rendering. Current conditions are NM / 1×, with multiple timing points, standalone fruits, imported L/B/P/C sliders, mixed linear/Bezier tracks with repeats, and banana showers. The real audio transport drives current time; without audio, explicitly indicated manual positioning remains available.
 
-## AR 与中心位置
+## AR and center positions
 
-- 场地横向为 512 单位；下落起点 Y=−100，接取线 Y=340，行程为 440（场地几何高度为 384）。
-- AR ≤ 5 时 preempt 为 `1200 + 120 × (5 − AR)` ms；AR > 5 时为 `1200 − 150 × (AR − 5)` ms。
-- AR 先转换为 float，分段结果截断到整数毫秒。AR 0 / 5 / 8 / 10 对应 1800 / 1200 / 750 / 450 ms。
-- 有效显示场地宽 W 时，`DIP/ms = (440 / preemptMs) × (W / 512)`。
-- 剩余时间 Δt 时，`screenY = catchLineY − Δt × DIP/ms`。预览只显示 `0 ≤ Δt ≤ preemptMs`的转换对象。
+- The playfield is 512 units wide; fall starts at Y=−100 and ends at the catch line Y=340, a distance of 440 (geometric playfield height is 384).
+- For AR ≤ 5, preempt is `1200 + 120 × (5 − AR)` ms; for AR > 5, it is `1200 − 150 × (AR − 5)` ms.
+- AR is first converted to float, and the piecewise result is truncated to integer milliseconds. AR 0 / 5 / 8 / 10 gives 1800 / 1200 / 750 / 450 ms.
+- For effective displayed width W, `DIP/ms = (440 / preemptMs) × (W / 512)`.
+- With remaining time Δt, `screenY = catchLineY − Δt × DIP/ms`. The preview shows converted objects only for `0 ≤ Δt ≤ preemptMs`.
 
-预览将 512:440 范围等比装入面板，保持横纵比例并留边。主画布“还原 AR 比例”使用同一公式，当前时间固定在距绘图区底部 25% 的播放线；Ctrl + 滚轮可自由缩放。还原模式随宽度与 AR 更新，不改变模型。
+The preview fits the 512:440 region proportionally into its panel with margins. The main canvas's **Restore AR scale** uses the same formula, with current time fixed at the play line 25% above the drawing area's bottom. Ctrl+scroll freely adjusts zoom. Restored scaling follows width and AR without changing the model.
 
-主画布播放线为 `plotBottom − plotHeight × 0.25`；播放、seek、AR 还原与 resize 保持定位，谱面起止允许留白，暂停可以手动平移。底部导航连续移动。
+The main play line is `plotBottom − plotHeight × 0.25`. Playback, seek, AR restoration, and resize retain that placement. Empty space is allowed before/after beatmap boundaries; paused navigation permits manual panning. Bottom navigation moves continuously.
 
-固定来源：[CatchPlayfieldAdjustmentContainer.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/UI/CatchPlayfieldAdjustmentContainer.cs)、[CatchHitObject.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Objects/CatchHitObject.cs)、[IBeatmapDifficultyInfo.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/IBeatmapDifficultyInfo.cs)。
+Pinned sources: [CatchPlayfieldAdjustmentContainer.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/UI/CatchPlayfieldAdjustmentContainer.cs), [CatchHitObject.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Objects/CatchHitObject.cs), and [IBeatmapDifficultyInfo.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/IBeatmapDifficultyInfo.cs).
 
-本项目将 preempt 截断为整数毫秒；参考版本的滚动 time range 保留小数，因此小数 AR 下存在取整差异。
+This project truncates preempt to integer milliseconds; the reference version's scrolling time range retains fractions, creating a rounding difference for fractional AR.
 
-## CS 与皮肤尺寸
+## CS and skin sizing
 
-CatchScale 参考 legacy CircleSize 计算，保留 float 运算边界：
+CatchScale follows legacy CircleSize, retaining float arithmetic boundaries:
 
 ```text
 cs = (float)CircleSize
 scale = (float)(1.0f − 0.7f × ((cs − 5) / 5)) / 2
-名义 fruit 直径 = 128 × scale
-完整 catcher 宽度 = 106.75 × (2 × scale)
-实际接取宽度 = 完整 catcher 宽度 × 0.8
+nominal fruit diameter = 128 × scale
+full catcher width = 106.75 × (2 × scale)
+effective catch width = full catcher width × 0.8
 ```
 
-上述几何再乘视图宽度 / 512。CS=5 时名义 fruit 直径为 64 单位。基础图形回退的 Droplet / TinyDroplet 半径分别为 `16 × scale` / `8 × scale`；它们与 legacy PNG 的可见尺寸规则不同。
+Multiply these dimensions by view width / 512. At CS=5, nominal fruit diameter is 64 units. Basic-shape fallback Droplet / TinyDroplet radii are `16 × scale` / `8 × scale`; these differ from legacy PNG visible-size rules.
 
-PNG 按原始逻辑宽高显示，@2x 的逻辑尺寸为像素尺寸的一半。每轴从中心裁剪到最多 160 逻辑像素，不将大图整体等比缩小。目标尺寸为 `裁剪后逻辑尺寸 × 名义 fruit 直径 / 128 × 视图宽度 / 512`，drop 额外乘 0.8，tiny 额外乘 0.4，banana 额外乘 0.6。透明边距参与尺寸，overlay 不乘底图颜色。
+PNGs use original logical dimensions; `@2x` logical dimensions are half their pixel dimensions. Each axis is center-cropped to at most 160 logical pixels rather than scaling the whole oversized image down. Target size is `cropped logical size × nominal fruit diameter / 128 × view width / 512`, additionally multiplied by 0.8 for drops, 0.4 for tiny droplets, and 0.6 for bananas. Transparent margins count toward size; overlays do not inherit base-image tint.
 
-香蕉在两视图使用静态到达尺寸 0.6，底图与 overlay 同步缩放，几何回退半径为 `FruitRadius(CS) × 0.6`。随机缩放和旋转动画不实现；视觉简化不改变香蕉 RNG 的消耗顺序。
+Bananas use the static arrival scale 0.6 in both views, scaling base and overlay together. The fallback radius is `FruitRadius(CS) × 0.6`. Random scale/rotation animations are not implemented; this visual simplification does not change banana RNG consumption order.
 
-选择工具命中范围使用底图与 overlay 实际目标矩形的并集，保留最小点击容差，不含扩大 hyperdash 层，也不作逐像素 alpha 检测。缺失纹理按对应几何尺寸回退。点击 slider 的任意 Fruit / Droplet / TinyDroplet，以 SourceId 选择整个 slider，选择本身不改变转换结果。
+Selection hit testing uses the union of actual base/overlay destination rectangles with a minimum click tolerance. It excludes the enlarged hyperdash layer and does not test pixel alpha. Missing textures fall back to the corresponding geometric sizes. Clicking any slider Fruit / Droplet / TinyDroplet selects the entire slider by SourceId; selection does not change conversion output.
 
-水果变体按完整父对象顺序的索引循环 pear / grapes / apple / orange；slider nested fruit 继承其父对象索引。仓库不附带皮肤；可选本地默认包由 `assets/skins/default.osk` 导入，其他包通过“皮肤…”选择，无皮肤时使用基础图形。ZIP 限制见[架构](ARCHITECTURE.md)，资源权限见[第三方声明](../THIRD_PARTY_NOTICES.md)。
+Fruit variants cycle pear / grapes / apple / orange by index in the complete parent-object order. Nested slider fruits inherit the parent index. The repository does not bundle a skin; an optional local default imports from `assets/skins/default.osk`, and the skin picker accepts other archives. Missing skins use basic shapes. See [Architecture](ARCHITECTURE.md) for ZIP limits and [Third-party notices](../THIRD_PARTY_NOTICES.md) for asset licensing.
 
-尺寸来源：[LegacyRulesetExtensions.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Rulesets/Objects/Legacy/LegacyRulesetExtensions.cs)、[Catcher.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/UI/Catcher.cs)。皮肤来源及具体映射见[Skinning/REFERENCE.md](../src/FruitsAtelier.App/Skinning/REFERENCE.md)。
+Sizing sources: [LegacyRulesetExtensions.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Rulesets/Objects/Legacy/LegacyRulesetExtensions.cs), [Catcher.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/UI/Catcher.cs). Skin sources and mappings are in [Skinning/REFERENCE.md](../src/FruitsAtelier.App/Skinning/REFERENCE.md).
 
-## 实际 stream、Tiny 和 hyperdash
+## Actual streams, tiny droplets, and hyperdash
 
-时间—X 轨迹按每个锚点的 OutgoingKind（null 继承轨迹 Kind）求值，可混合线性与贝塞尔段。生成满足速度约束的首 span 路径，再按 SpanCount 产生 head / tick / repeat / legacy-last-tick / tail 和 tiny 事件。首 span 节点共用于后续往返；对象按路径弧长定位，叠加固定 Legacy RNG。分割插点保持该段形状，不自动成为 tick；SliderTickRate 与编辑分拍吸附独立。
+Time–X tracks evaluate each anchor's OutgoingKind (null inherits track Kind), supporting mixed linear and Bezier segments. A first-span path satisfies velocity constraints; SpanCount then generates head / tick / repeat / legacy-last-tick / tail and tiny events. Later traversals reuse first-span nodes. Objects follow arc length with fixed Legacy RNG applied. Splitting preserves segment shape and does not automatically create a tick. SliderTickRate is independent of editing beat subdivisions.
 
-Legacy Slider 按原 L/B/P/C 路径、声明长度和 repeat 生成，反向 span 保留对应 tick 位置并生成折返 fruit。选中后可从属性或右键执行“转换为 FSlider”，以一个事务转为首 span 的时间—X 线性节点，保留父 ID、源顺序、SpanCount 和原始 sample 信息。转换前后比较对象类型、时刻并验证全部 TinyDroplet 贴合，失败不替换 Legacy Slider。
+Legacy Sliders use original L/B/P/C geometry, declared length, and repeats. Reversed spans preserve corresponding tick positions and generate repeat fruits. **Convert to FSlider** from properties or the context menu replaces one slider in a transaction with a fitted time–X track for its first span, preserving parent ID, source order, SpanCount, and original samples. Conversion compares object types/times and verifies TinyDroplet alignment; failure preserves the Legacy Slider. See [Project Model](PROJECT_MODEL.md) for current fitting rules and tolerances.
 
-整图父对象的开始时间与原始顺序决定 RNG 消耗，即使时间重叠也先处理一个 stream 的全部 nested 对象，再处理下个父对象。普通 Droplet 的 X 位于路径上，只消耗旋转随机数；获得横向 RNG 偏移的是 TinyDroplet。Legacy Slider 保留该偏移，FSlider 通过反向调整导出路径来贴合目标时间—X 轨迹。新建或由 Legacy 转换的 FSlider 将贴合作为强约束，无法满足边界、共享 repeat 路径或 SV 条件时不生成该轨迹；自动 SV 上限为 stable 的 10。失败轨迹使结果不完整，不显示伪造 stream。
+Parent start times and source order across the whole map determine RNG consumption. Even for overlapping times, one stream's complete nested sequence is processed before the next parent. Ordinary Droplets lie on the path and consume rotation randomness only; TinyDroplets receive lateral RNG offsets. Legacy Sliders retain offsets, while FSliders reverse-adjust exported geometry to match the target time–X track. New and Legacy-converted FSliders require alignment and fail when boundaries, shared repeats, or SV prevent it; automatic SV is capped at stable's 10. Failed tracks leave an incomplete result instead of displaying fabricated streams.
 
-Hyperdash 对时间稳定排序的 Fruit / Droplet 计算，TinyDroplet 和香蕉不参与。使用每个时间先截断到整数、`1000f / 60f / 4`的时间余量、完整 catcher 半宽及前一方向/剩余移动量；余量小于零时标记当前起跳对象。来源：[CatchBeatmapProcessor.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapProcessor.cs)及[CatchBeatmap.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmap.cs)。
+Hyperdash uses stably time-sorted Fruits / Droplets, excluding TinyDroplets and Bananas. It truncates each time to an integer and uses the `1000f / 60f / 4` time allowance, full catcher half-width, previous direction, and remaining movement. A negative allowance marks the current departure object. Sources: [CatchBeatmapProcessor.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapProcessor.cs) and [CatchBeatmap.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmap.cs).
 
-普通对象绘制白色底图 tint；hyperdash 用皮肤 HyperDashFruit（回退 HyperDash / 红色）的 1.2 倍底层标记。当前不完整复刻 additive 光晕、旋转、combo 色和命中特效。
+Ordinary objects use white base tint. Hyperdash adds a 1.2× underlay in the skin's HyperDashFruit color, falling back to HyperDash / red. Full additive glow, rotation, combo colors, and hit effects are not reproduced.
 
-## 图层
+## Layers
 
-主画布曲线位于实际对象之上；选中 100% 不透明，未选中 50%，隐藏后对象仍保留。Legacy Slider 的覆盖线来自原始路径，FSlider 按本地混合段绘制；不使用随机 tiny 连线冒充轨迹。
+Main-canvas curves render above actual objects, at 100% opacity when selected and 50% otherwise. Hiding curves retains objects. Legacy overlays use the original path; FSliders draw their authored mixed segments rather than connecting random tiny positions as a substitute track.

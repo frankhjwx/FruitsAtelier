@@ -1,37 +1,37 @@
-# macOS 运行
+# Running on macOS
 
-Mac 宿主使用 Avalonia 桌面窗口和 AVAudioPlayer。构建脚本支持当前机器架构：Apple Silicon 为 `osx-arm64`，Intel 为 `osx-x64`。
+The Mac host uses Avalonia desktop windows, AVAudioPlayer for music, and a persistent AVAudioEngine mixer for hitsounds. Build scripts target the current machine architecture: `osx-arm64` for Apple Silicon and `osx-x64` for Intel.
 
-## 从源码启动
+## Running from source
 
-需要 .NET SDK **8.0.419** 和 Xcode Command Line Tools（`xcrun clang`）。可在仓库根目录安装项目内 SDK：
+Install .NET SDK **8.0.419** and Xcode Command Line Tools (`xcrun clang`). A project-local SDK can be installed from the repository root:
 
 ```bash
 bash scripts/Install-Mac-SDK.sh
 ```
 
-双击根目录 [Run-Editor-Mac.command](../Run-Editor-Mac.command)，或在终端执行：
+Double-click [Run-Editor-Mac.command](../Run-Editor-Mac.command) in the root directory, or run:
 
 ```bash
 ./Run-Editor-Mac.command
 ```
 
-脚本优先使用 `artifacts/dotnet/dotnet`，否则使用 PATH 中的 `dotnet`，并切换到 `macOS/` 以应用该目录的 SDK 版本设置。
+The script prefers `artifacts/dotnet/dotnet`, otherwise uses `dotnet` on PATH, and changes to `macOS/` to apply that directory's SDK version settings.
 
-## 打包
+## Packaging
 
 ```bash
 bash scripts/Publish-Mac.sh
 ```
 
-输出为 `artifacts/macos/FruitsAtelier.app`，包含 .NET 运行时，可双击启动。脚本按本机架构编译并进行 ad-hoc 签名；公开分发还需要 Developer ID 签名和公证。
+The output is `artifacts/macos/FruitsAtelier.app`, includes the .NET runtime, and can be launched by double-clicking. The script builds for the local architecture and applies ad-hoc signing. Public distribution additionally requires Developer ID signing and notarization.
 
-脱离仓库运行时，缓存和日志写入 `~/Library/Application Support/FruitsAtelier`。
+Outside the repository, caches and logs are written to `~/Library/Application Support/FruitsAtelier`.
 
-## 操作差异
+## Platform differences
 
-Mac 同时接受 Command 和 Ctrl 组合快捷键。普通 Delete / Backspace 删除对象；数值输入时 Backspace 删除字符。
+Mac accepts both Command and Ctrl shortcuts. Delete / Backspace deletes objects; Backspace removes characters during numeric input.
 
-打开包含多个难度的谱面包后，从解压目录选择目标 `.osu`。关闭或替换未保存文档时，可以保存、放弃或取消。
+Opening a beatmap archive loads its Catch difficulties into one project. Closing or replacing unsaved content offers Save, Discard, and Cancel.
 
-其余编辑操作见[编辑操作](EDITOR_UI.md)，测试命令见[构建与测试](TESTING.md)。
+See [Editing Controls](EDITOR_UI.md) for other operations and [Building and Testing](TESTING.md) for test commands.
