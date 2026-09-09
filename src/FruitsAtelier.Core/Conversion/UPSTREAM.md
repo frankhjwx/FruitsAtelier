@@ -29,7 +29,7 @@ the `2026.807.0` dependency tag used by this pinned lazer commit. The framework
 MIT notice is retained separately in `LICENCE.osu-framework.txt`.
 
 `CatchStreamConverter` retains the source Bezier handles. Its derived path
-includes actual event positions, with adaptive sampling between them. It
+is constrained only by actual event positions, without intermediate curve samples. It
 queries the resulting path for each event rather than assigning the target X
 directly to generated objects. Internal fruit/tick alignment must remain within
 0.0001 playfield units; final object X values use float precision.

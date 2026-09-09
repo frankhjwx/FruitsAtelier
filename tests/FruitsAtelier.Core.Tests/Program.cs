@@ -28,6 +28,7 @@ var tests = new (string Name, Action Run)[]
     ("Catch fall speed preserves gameplay width scale", CatchFallSpeed),
     ("Slider conversion follows legacy events and RNG golden sequence", ConversionTests.LegacyEventsAndRandom),
     ("Slider tick rate remains separate from editor snap and timing offset", ConversionTests.IndependentTickRate),
+    ("Horizontal endpoint handles constrain only actual gameplay events", ConversionTests.HorizontalEndHandle),
     ("Bezier tick coordinates come from generated slider arc length", ConversionTests.BezierTickAlignment),
     ("FSlider generation enforces stable's SV=10 limit", ConversionTests.StableSliderVelocityLimit),
     ("Tiny RNG compensation changes geometry and preserves target X", ConversionTests.TinyCompensation),
