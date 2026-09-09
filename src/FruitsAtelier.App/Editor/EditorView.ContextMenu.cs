@@ -16,6 +16,10 @@ public sealed partial class EditorView
         contextItems.Clear();
         menu = -1;
         if (!plot.Contains(x, y) && !listBounds.Contains(x, y)) return;
+        var extendTrack = draftTrack == Guid.Empty && objectSelection.Count <= 1 ? SelectedTrack : null;
+        var extendPoint = MapAt(x, y, true);
+        bool canExtend = extendTrack is not null && plot.Contains(x, y)
+            && extendPoint.TimeMs >= CurveMath.EndTimeMs(extendTrack) + CurveMath.MinimumAnchorSpacingMs;
         bool anchors = tool == Tool.Slider && SelectedTrack is not null && !listBounds.Contains(x, y);
         var previousAnchors = anchorSelection.ToArray();
         Guid previousTrack = selectedTrack;
@@ -48,7 +52,14 @@ public sealed partial class EditorView
             if (!anchors && !found && HitBananaRectangle(x, y) is { } shower)
             { PickObject(shower.Id, false); found = true; }
         }
-        if (!anchors && !found && objectSelection.Count <= 1) Select(Guid.Empty);
+        if (!anchors && !found && objectSelection.Count <= 1 && !canExtend) Select(Guid.Empty);
+        if (canExtend && !found && location is null)
+            contextItems.Add(new(L.Get("editor.command.extendSlider"), () => ExtendSlider(extendTrack!.Id, extendPoint)));
+        if (SelectedTrack is { } repeatTrack && draftTrack == Guid.Empty)
+        {
+            contextItems.Add(new(L.Get("editor.command.addReverse"), () => ChangeReverseCount(repeatTrack.Id, 1), repeatTrack.SpanCount < 9000));
+            contextItems.Add(new(L.Get("editor.command.removeReverse"), () => ChangeReverseCount(repeatTrack.Id, -1), repeatTrack.SpanCount > 1));
+        }
         if (anchorHit && anchorSelection.Count > 0 && SelectedAnchor is { } node && SelectedTrack is { } track)
         {
             bool curved = CurvePointEditing.IsCurved(track, node.Id);

@@ -374,6 +374,12 @@ public sealed partial class EditorView
         else if (SelectedTrack is { } track)
         {
             Badge(c, new(x, y, Math.Min(w, 154), 24), L.Get("ui.trackBadge"), Purple); y += 35;
+            Field(c, x, ref y, w, L.Get("ui.reverseCount"), track.SpanCount - 1, value =>
+            {
+                if (value != Math.Truncate(value) || value is < 0 or > 8999) throw new ArgumentException(L.Get("ui.reverseRange"));
+                track.SpanCount = (int)value + 1;
+                Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
+            });
             if (SelectedAnchor is { } node)
             {
                 Field(c, x, ref y, w, L.Get("ui.timeField"), node.TimeMs, value =>
@@ -414,12 +420,6 @@ public sealed partial class EditorView
                 var objects = conversion!.Objects.Where(o => o.SourceId == track.Id).ToArray();
                 c.Text(L.Get("ui.streamCounts", objects.Count(o => o.Kind == CatchObjectKind.Fruit), objects.Count(o => o.Kind == CatchObjectKind.Droplet), objects.Count(o => o.Kind == CatchObjectKind.TinyDroplet)), x, y, 11, Accent, w); y += 20;
                 c.Text(L.Get("ui.anchorCount", track.Nodes.Count), x, y, 12, Muted, w); y += 26;
-                Field(c, x, ref y, w, L.Get("ui.spanCount"), track.SpanCount, value =>
-                {
-                    if (value != Math.Truncate(value) || value is < 1 or > 9000) throw new ArgumentException(L.Get("ui.spanRange"));
-                    track.SpanCount = (int)value;
-                    Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
-                });
                 c.Text(L.Get("ui.pickAnchorHint"), x, y, 11, Muted, w); y += 40;
             }
             Button(c, new(x, y + 3, w, 28), L.Get("ui.splitPreserving"), SplitSelected, false, draftTrack == Guid.Empty);

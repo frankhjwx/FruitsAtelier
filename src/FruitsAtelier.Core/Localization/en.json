@@ -558,5 +558,10 @@
   "sliderBatch.changed": "The project changed during conversion; results were discarded.",
   "sliderBatch.finished": "Converted {0} sliders; preserved {1} Legacy Sliders.",
   "sliderBatch.preserved": "These {0} sliders could not be converted and remain unchanged:",
-  "sliderBatch.failure": "{0} · {1} ms: {2}"
+  "sliderBatch.failure": "{0} · {1} ms: {2}",
+  "ui.reverseCount": "Reverses",
+  "ui.reverseRange": "Reverses must be an integer from 0 to 8999",
+  "editor.command.extendSlider": "Extend slider to here",
+  "editor.command.addReverse": "Add reverse",
+  "editor.command.removeReverse": "Remove reverse"
 }

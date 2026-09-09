@@ -558,5 +558,10 @@
   "sliderBatch.changed": "转换期间工程已变化，转换结果未应用。",
   "sliderBatch.finished": "已转换 {0} 个 slider，保留 {1} 个 Legacy Slider。",
   "sliderBatch.preserved": "以下 {0} 个 slider 未能转换，已保留原样：",
-  "sliderBatch.failure": "{0} · {1} ms：{2}"
+  "sliderBatch.failure": "{0} · {1} ms：{2}",
+  "ui.reverseCount": "折返次数",
+  "ui.reverseRange": "折返次数必须为 0 到 8999 的整数",
+  "editor.command.extendSlider": "延伸滑条到这里",
+  "editor.command.addReverse": "增加一次折返",
+  "editor.command.removeReverse": "减少一次折返"
 }
