@@ -430,7 +430,7 @@
   "ui.sliderHint": "B  FSlider · Click points / Drag handles",
   "ui.sliderRow": "Legacy Slider  {0}",
   "ui.sliderTool": "FSlider  B",
-  "ui.anchorSnap": "Snap dragged anchors",
+  "ui.anchorSnap": "Snap interior anchors",
   "ui.snap": "Snap",
   "ui.snapDivisor": "1/{0}",
   "ui.spanCount": "Spans",

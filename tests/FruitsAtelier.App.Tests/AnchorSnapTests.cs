@@ -30,6 +30,23 @@ internal static class AnchorSnapTests
         ui.Key('Z', ctrl: true); ui.ClickText(L.Get("ui.anchorSnap"));
         Drag(2000, 2183.25); Near(2183.25, ui.Anchor(track.Nodes[1].Id).TimeMs);
         ui.Key('Z', ctrl: true); ui.Key('Y', ctrl: true); Near(2183.25, ui.Anchor(track.Nodes[1].Id).TimeMs);
+        ui.Key('Z', ctrl: true);
+        void DragEndpoint(int index, double to, double expected)
+        {
+            var node = ui.Anchor(track.Nodes[index].Id);
+            ui.Key('V'); ui.ClickMap(node.TimeMs, node.X); ui.Key('B');
+            ui.DownMap(node.TimeMs, node.X); ui.MoveMap(to, node.X + 5); ui.UpMap(to, node.X + 5);
+            Near(expected, ui.Anchor(node.Id).TimeMs);
+            ui.Key('Z', ctrl: true);
+        }
+        // Global Free currently enabled: both endpoints remain free.
+        DragEndpoint(0, 1183.25, 1183.25); DragEndpoint(2, 3183.25, 3183.25);
+        ui.ClickText(L.Get("ui.free"));
+        DragEndpoint(0, 1183.25, 1125); DragEndpoint(2, 3183.25, 3125);
+        // A rejected snapped target cannot clamp the endpoint to an off-grid time.
+        DragEndpoint(0, 2183.25, 1000);
+        ui.ClickText(L.Get("ui.anchorSnap")); ui.ClickText(L.Get("ui.free"));
+        DragEndpoint(0, 1183.25, 1183.25); DragEndpoint(2, 3183.25, 3183.25);
     }
     private static void Near(double expected, double actual)
     {

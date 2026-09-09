@@ -430,7 +430,7 @@
   "ui.sliderHint": "B  FSlider · 点击直线 / 拖柄曲线",
   "ui.sliderRow": "Legacy Slider  {0}",
   "ui.sliderTool": "FSlider  B",
-  "ui.anchorSnap": "拖动锚点时吸附",
+  "ui.anchorSnap": "内部锚点吸附",
   "ui.snap": "吸附",
   "ui.snapDivisor": "1/{0}",
   "ui.spanCount": "行程次数",
