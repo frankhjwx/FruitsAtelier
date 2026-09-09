@@ -80,7 +80,13 @@ public static class ImportedSliderEditing
                 double duration = path.Distance / velocity * source.SpanCount;
                 if (sliders.TryGetValue(id, out var result)
                     && result.StartTimeMs == source.TimeMs && result.SpanCount == source.SpanCount
-                    && Math.Abs(result.DurationMs - duration) <= 0.000001) continue;
+                    && Math.Abs(result.DurationMs - duration) <= 0.000001)
+                {
+                    // Persist the actual fallback policy for a newly imported track.
+                    // Generation of existing tracks leaves their saved preference intact.
+                    if (!result.TinyCompensationApplied) track.CompensateTinyDroplets = false;
+                    continue;
+                }
                 changed = true;
                 if (fallbackLevel[id] == 0)
                 {

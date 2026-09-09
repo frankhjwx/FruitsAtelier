@@ -72,7 +72,9 @@ public static class CatchStreamConverter
                 }
                 var track = source.Track!;
                 ValidateTrack(document, track);
-                bool requireCompensation = track.CompensateTinyDroplets == true;
+                // Repeats share one geometric path but receive independent tiny offsets.
+                // A saved alignment preference must not prohibit their compatibility fallback.
+                bool requireCompensation = track.CompensateTinyDroplets == true && track.SpanCount == 1;
                 var converted = ConvertTrack(document, track, track.CompensateTinyDroplets ?? compensateTinyDroplets,
                     requireCompensation, ref rng);
                 sliders.Add(converted.Slider);

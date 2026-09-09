@@ -36,7 +36,7 @@ directly to generated objects. Internal fruit/tick alignment must remain within
 
 Tiny compensation uses the actual seeded offset and the path-progress time of
 each event, including legacy timing discrepancies. The desired pre-offset X is
-limited to 0..512. FSliders that require compensation fail when the target is unreachable.
+limited to 0..512. Single-span FSliders that require compensation fail when the target is unreachable. Repeated FSliders treat this saved preference as best effort: conflicting random offsets fall back to the normal uncompensated stream while preserving fruit/droplet targets.
 Legacy compatibility settings can instead retain uncompensated positions. The result reports both whether compensation was applied
 and whether every tiny target met the internal tolerance.
 

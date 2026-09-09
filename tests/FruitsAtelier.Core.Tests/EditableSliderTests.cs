@@ -81,10 +81,32 @@ internal static class EditableSliderTests
         True(!actual.Sliders[0].TinyCompensationApplied, "Conflicting repeat offsets were reported as compensated.");
         True(actual.Diagnostics.Count == 0, "A compatible repeat fallback exposed an internal compensation warning.");
         True(actual.Objects.SequenceEqual(plain.Objects), "Repeat fallback fabricated tiny positions or changed the RNG sequence.");
+        track.CompensateTinyDroplets = true;
+        var required = CatchStreamConverter.Convert(doc, true);
+        Valid(required);
+        True(required.Objects.SequenceEqual(plain.Objects), "Saved tiny alignment must allow repeat fallback.");
+        True(track.CompensateTinyDroplets == true, "Generation mutated the saved preference.");
+        var export = OsuBeatmapWriter.Serialize(doc, true);
+        True(export.ReadBack.ImportedSliders.Single().SpanCount == 3, "Fallback export lost repeats.");
         track.CompensateTinyDroplets = false;
         var preserved = CatchStreamConverter.Convert(doc, true);
         Valid(preserved);
         True(preserved.Objects.SequenceEqual(plain.Objects) && preserved.Diagnostics.Count == 0, "Track-level tiny preference did not override the global default.");
+        var edited = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = true };
+        edited.Nodes.Add(new Anchor { TimeMs = 241992.33333333317, X = 186.2392051021486, HandleIn = new(0, 0), HandleOut = new(0, 0), OutgoingKind = CurveKind.Bezier });
+        edited.Nodes.Add(new Anchor { TimeMs = 242251.09021210903, X = 371.344827803147, HandleIn = new(-110.59651961948839, 0.27939038317435916), HandleOut = new(128.47108038316946, -8.715352438245418), OutgoingKind = CurveKind.Bezier });
+        edited.Nodes.Add(new Anchor { TimeMs = 242472.6132794908, X = 178.00397011848435, HandleIn = new(-20.890448022575583, 82.3523498366423), HandleOut = new(0, 0), OutgoingKind = CurveKind.Linear });
+        edited.Nodes.Add(new Anchor { TimeMs = 242575.66666666648, X = 440.2050634076596, HandleIn = new(0, 0), HandleOut = new(0, 0), OutgoingKind = null });
+        var fractional = new MapDocument { DurationMs = 360742, BeatLengthMs = 333.333333333333, SliderMultiplier = 1.9, SliderTickRate = 2 };
+        fractional.Tracks.Add(edited);
+        foreach (int spans in new[] { 1, 2, 3, 4 })
+        {
+            edited.SpanCount = spans;
+            var generated = CatchStreamConverter.Convert(fractional); Valid(generated);
+            True(generated.MaxTickError <= CatchStreamConverter.AlignmentTolerance, "Repeat fallback changed fruit/droplet targets.");
+            True(Math.Abs(generated.Sliders.Single().DurationMs - (edited.Nodes[^1].TimeMs - edited.Nodes[0].TimeMs) * spans) < 1e-6, "Repeat fallback changed duration.");
+            OsuBeatmapWriter.Serialize(fractional);
+        }
     }
 
     public static void ImportToEditable()
