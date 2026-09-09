@@ -47,8 +47,6 @@ The compiled application is located at `src/FruitsAtelier.App/bin/Release/net8.0
 
 ## Documentation
 
-Guides for using, building, and contributing to FruitsAtelier.
-
 - [Editing controls](docs/EDITOR_UI.md)
 - [Features and files](docs/PRODUCT.md)
 - [Building and testing](docs/TESTING.md)
