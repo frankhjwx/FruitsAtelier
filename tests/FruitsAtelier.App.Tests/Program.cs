@@ -80,6 +80,7 @@ var tests = new (string Name, Action Run)[]
     ("Slider pen gestures combine corner points and curve handles", SliderInteractionTests.DrawGestures),
     ("Selected control points and handles highlight and drag", SliderInteractionTests.ControlSelectionAndDrag),
     ("A selected FSlider enters anchor editing on one point click and scopes its context menu", SliderInteractionTests.SelectedAnchorEntryAndContext),
+    ("FSlider reverse controls and forward extension preserve existing curves", SliderInteractionTests.ReverseAndExtend),
     ("Point context menu inserts converts and deletes with undo", SliderInteractionTests.PointContextMenu),
     ("Fruit context menu copies cuts pastes and deletes", SliderInteractionTests.FruitClipboardAndDelete),
     ("Slider context menu operates on the entire parent", SliderInteractionTests.SliderClipboardAndDelete),

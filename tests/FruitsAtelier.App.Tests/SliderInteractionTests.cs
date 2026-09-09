@@ -346,6 +346,40 @@ internal static class SliderInteractionTests
         Check(ui.View.Document.Tracks.Count == 0, "Draft-tail editing split the complete slider's undo transaction.");
     }
 
+    public static void ReverseAndExtend()
+    {
+        var map = CurveMap();
+        var original = map.Tracks.Single();
+        foreach (var node in original.Nodes)
+        {
+            node.TimeMs /= 4;
+            node.HandleIn = new(node.HandleIn.TimeMs / 4, node.HandleIn.X);
+            node.HandleOut = new(node.HandleOut.TimeMs / 4, node.HandleOut.X);
+        }
+        var ui = Load(map);
+        ui.ClickText(original.Name); ui.Key('B');
+        RightMap(ui, 750, 350); ui.ClickText("增加一次折返");
+        Check(ui.View.Document.Tracks.Single().SpanCount == 2, "Reverse not added during anchor editing.");
+        RightMap(ui, 750, 350); ui.ClickText("增加一次折返");
+        Check(ui.View.Document.Tracks.Single().SpanCount == 3, "Multiple reverses not supported.");
+        RightMap(ui, 750, 350); ui.ClickText("减少一次折返");
+        var before = ui.View.Document.DeepClone();
+        RightMap(ui, 3500, 400); ui.ClickText("延伸滑条到这里");
+        var extended = ui.View.Document.Tracks.Single();
+        Check(extended.SpanCount == 2 && extended.Nodes.Count == 4, "Extension lost repeat count or failed to append.");
+        Near(3500, extended.Nodes[^1].TimeMs); Near(400, extended.Nodes[^1].X);
+        Near(6750, CurveMath.EndTimeMs(extended));
+        Near(before.Tracks[0].Nodes[^1].HandleIn.TimeMs, extended.Nodes[^2].HandleIn.TimeMs);
+        Check(CurveMath.SegmentKind(extended, 2) == CurveKind.Linear, "Extension must start as a straight segment.");
+        for (double time = 250; time <= 1250; time += 25)
+            Near(CurveMath.PositionAtTime(before.Tracks[0], time), CurveMath.PositionAtTime(extended, time));
+        Valid(ui);
+        var output = OsuBeatmapWriter.Serialize(ui.View.Document, false);
+        Check(output.ReadBack.ImportedSliders.Single().SpanCount == 2, "Export lost reverse count.");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.ContentEquals(before), "Extension undo changed existing curve or reverses.");
+    }
+
     private static MapDocument CurveMap()
     {
         var map = new MapDocument { DurationMs = 12000 };

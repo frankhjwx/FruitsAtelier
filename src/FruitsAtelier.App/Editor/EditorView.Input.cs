@@ -242,19 +242,24 @@ public sealed partial class EditorView
         if (drag == DragKind.Objects) { MoveSelectedObjects(x, y); return; }
         if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y); return; }
         var raw = Transform.ToMap(x, y) - dragOffset;
-        double time = anchorSnap ? TimingMap.Snap(Document, raw.TimeMs, divisor) : raw.TimeMs;
-        var p = new MapPoint(Math.Clamp(time, 0, EditableDurationMs), Math.Clamp(raw.X, 0, 512));
+        var p = new MapPoint(Math.Clamp(raw.TimeMs, 0, EditableDurationMs), Math.Clamp(raw.X, 0, 512));
         if (SelectedTrack is { } track && SelectedAnchor is { } node)
         {
             if (drag == DragKind.Anchor)
             {
+                bool endpoint = node == track.Nodes[0] || node == track.Nodes[^1];
+                bool snapTime = endpoint ? snap : anchorSnap;
+                if (snapTime) p = new(Math.Clamp(TimingMap.Snap(Document, raw.TimeMs, divisor), 0, EditableDurationMs), p.X);
                 // The draft's last outgoing handle is visible before its future segment exists.
                 if (track.Id == draftTrack && node == track.Nodes[^1])
                     p = new(p.TimeMs, Math.Clamp(p.X, Math.Max(0, -node.HandleOut.X), Math.Min(512, 512 - node.HandleOut.X)));
                 var start = Point(node);
                 if (!CurveMath.TryMoveAnchor(track, node.Id, p.TimeMs, p.X, out var error))
                 {
-                    ClampMove(start, p, value => CurveMath.TryMoveAnchor(track, node.Id, value.TimeMs, value.X, out _));
+                    if (endpoint && snapTime)
+                        CurveMath.TryMoveAnchor(track, node.Id, start.TimeMs, p.X, out _);
+                    else
+                        ClampMove(start, p, value => CurveMath.TryMoveAnchor(track, node.Id, value.TimeMs, value.X, out _));
                     StatusMessage = error;
                 }
                 else
