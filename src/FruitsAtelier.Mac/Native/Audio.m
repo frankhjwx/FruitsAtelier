@@ -33,3 +33,8 @@ void *fa_audio_open_data(const unsigned char *bytes, int length) {
         return (__bridge_retained void *)player;
     }
 }
+
+// All AVAudioPlayer instances on the output device share this scheduling clock.
+double fa_audio_device_time(void *handle) { return [(__bridge AVAudioPlayer *)handle deviceCurrentTime]; }
+int fa_audio_play_at(void *handle, double time) { return [(__bridge AVAudioPlayer *)handle playAtTime:time]; }
+int fa_audio_prepare(void *handle) { return [(__bridge AVAudioPlayer *)handle prepareToPlay]; }

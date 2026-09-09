@@ -46,4 +46,5 @@ using (var hitsounds = new MacHitsoundPlayer(muted: true))
     hitsounds.Play(new(FruitsAtelier.Core.CatchObjectKind.Droplet, Path.Combine(root, "tests", "FruitsAtelier.Audio.Tests", "Fixtures", "quiet-tone.ogg"), .5f, "slidertick"));
     Check(hitsounds.ActiveVoices == 1, "Custom OGG hitsound decodes and plays (muted)");
 }
+await HitsoundLatencyTests.Run(wav);
 Console.WriteLine("Mac native checks passed.");

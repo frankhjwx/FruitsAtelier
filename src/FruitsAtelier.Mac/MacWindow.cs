@@ -23,7 +23,10 @@ internal sealed partial class MacWindow : Window
     {
         audio = new(smokeCheck);
         hitsounds = new(smokeCheck);
-        View.RequestHitsound = hitsounds.Play;
+        View.RequestScheduleHitsound = (sound, time) =>
+        {
+            if (audio.HitsoundDeviceTime(time) is { } deadline) hitsounds.Schedule(sound, deadline);
+        };
         View.RequestPrepareHitsound = hitsounds.Prepare;
         View.RequestStopHitsounds = hitsounds.Stop;
         Width = 1440; Height = 900; MinWidth = 980; MinHeight = 620;

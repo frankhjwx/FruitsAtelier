@@ -46,6 +46,7 @@ static class HitsoundTests
             resolver = new(document, events);
             Require(resolver.Resolve(events[3]).Count == 0, "Zero timing volume mutes samples");
             Scheduler();
+            ScheduledPlayback();
         }
         finally { Directory.Delete(root, true); }
     }
@@ -70,6 +71,29 @@ static class HitsoundTests
         Require(sounds.Count == 6, "Backward seek rearms future objects without a backlog");
         Poll(1000); Require(sounds.Count == 6, "Long discontinuities discard stale events");
         Poll(0, false); view.StartHitsounds(0); Poll(16); Require(sounds.Count == 7, "First host poll after replay still includes the time-zero object");
+    }
+    private static void ScheduledPlayback()
+    {
+        var document = new MapDocument { AudioPath = "music.wav" };
+        foreach (double time in new[] { 0.0, 100, 100, 150, 500 }) document.Fruits.Add(new() { TimeMs = time });
+        var view = new EditorView(); view.LoadDocument(document);
+        var queued = new List<double>(); int cancellations = 0;
+        view.RequestScheduleHitsound = (_, time) => queued.Add(time);
+        view.RequestStopHitsounds = () => { queued.Clear(); cancellations++; };
+        void Poll(double time, bool playing = true) => view.UpdateTransport(time, 5000, true, playing, false, null, "music.wav");
+        view.StartHitsounds(0); Poll(0);
+        Require(queued.SequenceEqual(new[] { 0.0, 100, 100 }), "Lookahead queues notes with original timestamps before their hit time");
+        Poll(16); Require(queued.Count == 3, "Lookahead does not duplicate previously scheduled notes");
+        Poll(60); Require(queued.Last() == 150, "Lookahead extends as the device clock advances");
+        Poll(60, false); Require(queued.Count == 0, "Pause cancels future notes");
+        view.StartHitsounds(60); Poll(60);
+        Require(queued.SequenceEqual(new[] { 100.0, 100, 150 }), "Resume reschedules canceled future notes without past notes");
+        view.ResetHitsounds(); Poll(400);
+        Require(queued.SequenceEqual(new[] { 500.0 }), "Seek schedules only the destination horizon");
+        int beforeEdit = cancellations;
+        view.Document.Fruits.Add(new() { TimeMs = 450 }); Poll(416);
+        Require(cancellations > beforeEdit && queued.SequenceEqual(new[] { 450.0, 500 }), "Edits cancel and rebuild future sounds");
+        Poll(900); Require(queued.Count == 0, "Large clock jumps cancel queued sounds");
     }
     private static void Require(bool ok, string message) { if (!ok) throw new Exception(message); }
 }

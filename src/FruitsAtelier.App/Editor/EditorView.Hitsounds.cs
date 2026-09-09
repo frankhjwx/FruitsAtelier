@@ -4,6 +4,8 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    public Action<Hitsound, double>? RequestScheduleHitsound { get; set; }
+    private double? scheduledThrough;
     public Action<Hitsound>? RequestHitsound { get; set; }
     public Action<Hitsound>? RequestPrepareHitsound { get; set; }
     private double preparedThrough = double.NegativeInfinity;
@@ -18,12 +20,14 @@ public sealed partial class EditorView
     {
         if (hitsoundPosition != position) hitsoundPosition = position - 0.001;
         hitsoundDocument = Document; hitsoundFile = Document.AudioPath;
+        scheduledThrough = null;
         PrepareUpcoming(position);
     }
 
     public void ResetHitsounds()
     {
         hitsoundPosition = null;
+        scheduledThrough = null;
         preparedThrough = double.NegativeInfinity;
         RequestStopHitsounds?.Invoke();
     }
@@ -37,19 +41,37 @@ public sealed partial class EditorView
         if (!double.IsFinite(position) || !playing)
         {
             RequestStopHitsounds?.Invoke();
+            scheduledThrough = null;
             if (!double.IsFinite(position) || hitsoundPosition != position) hitsoundPosition = null;
             return;
         }
         double start = hitsoundPosition ?? position - 0.001;
         hitsoundPosition = position;
-        // A discontinuous clock (seek, replay, or suspended UI) must not burst old sounds.
-        if (position < start || position - start > 250) { RequestStopHitsounds?.Invoke(); return; }
-        if (RequestHitsound is null) return;
+        // Cancel queued future sounds when the transport jumps or content changes.
+        bool discontinuity = position < start || position - start > 250;
+        if (discontinuity)
+        {
+            RequestStopHitsounds?.Invoke(); scheduledThrough = null;
+            if (RequestScheduleHitsound is null) return;
+            start = position - .001;
+        }
+        if (RequestHitsound is null && RequestScheduleHitsound is null) return;
+        var previousConversion = hitsoundConversion;
         var current = GetHitsoundConversion();
+        if (previousConversion is not null && !ReferenceEquals(previousConversion, current))
+        {
+            RequestStopHitsounds?.Invoke(); scheduledThrough = null;
+            start = position - .001;
+        }
         var objects = current.Objects;
-        int low = FirstAfter(objects, start);
-        for (int i = low; i < objects.Count && objects[i].TimeMs <= position; i++)
-            foreach (var sound in hitsoundResolver!.Resolve(objects[i])) RequestHitsound(sound);
+        bool scheduled = RequestScheduleHitsound is not null;
+        double end = scheduled ? position + 100 : position;
+        int low = FirstAfter(objects, scheduled ? scheduledThrough ?? start : start);
+        for (int i = low; i < objects.Count && objects[i].TimeMs <= end; i++)
+            foreach (var sound in hitsoundResolver!.Resolve(objects[i]))
+                if (scheduled) RequestScheduleHitsound!(sound, objects[i].TimeMs);
+                else RequestHitsound!(sound);
+        if (scheduled) scheduledThrough = end;
         if (position + 500 >= preparedThrough) PrepareUpcoming(position);
     }
 
