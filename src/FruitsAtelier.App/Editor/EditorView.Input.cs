@@ -242,7 +242,7 @@ public sealed partial class EditorView
         if (drag == DragKind.Objects) { MoveSelectedObjects(x, y); return; }
         if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y); return; }
         var raw = Transform.ToMap(x, y) - dragOffset;
-        double time = snap ? TimingMap.Snap(Document, raw.TimeMs, divisor) : raw.TimeMs;
+        double time = anchorSnap ? TimingMap.Snap(Document, raw.TimeMs, divisor) : raw.TimeMs;
         var p = new MapPoint(Math.Clamp(time, 0, EditableDurationMs), Math.Clamp(raw.X, 0, 512));
         if (SelectedTrack is { } track && SelectedAnchor is { } node)
         {

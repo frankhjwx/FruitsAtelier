@@ -57,6 +57,8 @@ public sealed partial class EditorView
     private MapDocument? objectDragStart;
     private bool objectDragPrepared;
     private bool snap = true;
+    private bool anchorSnap;
+    public bool AnchorSnapEnabled => anchorSnap;
     private static readonly int[] SnapDivisors = [4, 5, 6, 7, 8, 9, 12, 16];
     // Keep edge room stable while CS is edited; 54.4 is the CS=0 fruit radius.
     private const float PlayfieldPadding = 54.4f;

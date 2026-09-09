@@ -22,6 +22,19 @@ internal sealed partial class MacWindow
         View.KeyDown(90, true, false); editor.Refresh();
         if (View.Document.ImportedSliders.Count != 1) throw new InvalidOperationException("Batch conversion undo failed.");
         L.SetLanguage("en"); editor.Refresh(); await Task.Delay(80); View.PointerDown(180, 18, 0, false, false); editor.Refresh(); Capture("slider-edit-menu.png");
+        View.PointerDown(180, 18, 0, false, false); // Close the Edit menu.
+        View.KeyDown(66, false, false); editor.Refresh();
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            L.SetLanguage(language); editor.Refresh(); await Task.Delay(80);
+            Capture("anchor-snap-" + language + ".png");
+            float optionX = (float)editor.Bounds.Width - (editor.Bounds.Width < 1100 ? 224 : 270) + 24;
+            View.PointerDown(optionX, 225, 0, false, false); View.PointerUp(optionX, 225, 0); editor.Refresh();
+            if (!View.AnchorSnapEnabled) throw new InvalidOperationException("Anchor snap checkbox did not enable snapping.");
+            Capture("anchor-snap-checked-" + language + ".png");
+            View.PointerDown(optionX, 225, 0, false, false); View.PointerUp(optionX, 225, 0); editor.Refresh();
+            if (View.AnchorSnapEnabled) throw new InvalidOperationException("Anchor snap checkbox did not disable snapping.");
+        }
         void Capture(string name)
         {
             using var bitmap = new RenderTargetBitmap(new PixelSize((int)editor.Bounds.Width, (int)editor.Bounds.Height), new Vector(96, 96));

@@ -4,8 +4,6 @@ namespace FruitsAtelier.Core;
 public static class CatchStreamConverter
 {
     public const double AlignmentTolerance = 0.0001;
-    private const double samplingTolerance = 0.02;
-    private const int maximumSamples = 30_000;
 
     public static CatchConversionResult Convert(MapDocument document, bool compensateTinyDroplets = true, CatchConversionCache? cache = null)
     {
@@ -216,44 +214,10 @@ public static class CatchStreamConverter
             knots[pathTime] = wantedX;
         }
 
-        double[] knotTimes = knots.Keys.ToArray();
-        double[] offsets = knots.Select(k => k.Value - CurveMath.PositionAtTime(track, k.Key)).ToArray();
-        double[] divisions = knotTimes.Concat(track.Nodes.Select(n => n.TimeMs)).Distinct().Order().ToArray();
-        var samples = new List<MapPoint> { new(divisions[0], Evaluate(divisions[0])) };
-        for (int i = 1; i < divisions.Length; i++)
-            Subdivide(samples[^1], new(divisions[i], Evaluate(divisions[i])), 0);
-        return samples;
-
-        double Evaluate(double time)
-        {
-            int index = Array.BinarySearch(knotTimes, time);
-            if (index >= 0) return knots[time];
-            index = ~index;
-            double adjustment = index <= 0 ? offsets[0] : index >= offsets.Length ? offsets[^1]
-                : offsets[index - 1] + (offsets[index] - offsets[index - 1]) * (time - knotTimes[index - 1]) / (knotTimes[index] - knotTimes[index - 1]);
-            return Math.Clamp(CurveMath.PositionAtTime(track, time) + adjustment, 0, 512);
-        }
-
-        void Subdivide(MapPoint a, MapPoint b, int depth)
-        {
-            double interval = b.TimeMs - a.TimeMs;
-            var middle = new MapPoint(a.TimeMs + interval / 2, Evaluate(a.TimeMs + interval / 2));
-            double quarter = Evaluate(a.TimeMs + interval / 4);
-            double threeQuarter = Evaluate(a.TimeMs + interval * 0.75);
-            double error = Math.Max(Math.Abs(middle.X - (a.X + b.X) / 2),
-                Math.Max(Math.Abs(quarter - (a.X * 0.75 + b.X * 0.25)), Math.Abs(threeQuarter - (a.X * 0.25 + b.X * 0.75))));
-            bool canSplit = depth < 24 && interval > 0.0000001
-                && middle.TimeMs > a.TimeMs && middle.TimeMs < b.TimeMs;
-            if (canSplit && samples.Count < maximumSamples && (interval > 25 || error > samplingTolerance))
-            {
-                Subdivide(a, middle, depth + 1);
-                Subdivide(middle, b, depth + 1);
-                return;
-            }
-            // Every gameplay event is already a division endpoint, so accepting a numerically
-            // indivisible interval only relaxes the visual curve between exact object knots.
-            samples.Add(b);
-        }
+        // Only gameplay events constrain the exported path. Authoring anchors and
+        // intermediate Bezier samples are not additional catch objects; following
+        // their local slope can reject an otherwise realizable event sequence.
+        return knots.Select(k => new MapPoint(k.Key, k.Value)).ToList();
     }
 
     private static void ValidateTrack(MapDocument document, CurveTrack track)

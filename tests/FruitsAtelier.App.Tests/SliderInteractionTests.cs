@@ -295,9 +295,13 @@ internal static class SliderInteractionTests
         Guid sourceId = map.ImportedSliders.Single().Id;
         // The return span goes X=300 to X=100 between 2000 and 3000 ms.
         RightMap(ui, 2500, 200); ui.ClickText("插入控制点");
-        Check(original.ContentEquals(ui.View.Document) && ui.View.Document.ImportedSliders.Single().Id == sourceId,
-            "A Legacy repeat that cannot guarantee TinyDroplet alignment was partially converted.");
-        Check(ui.View.StatusMessage.Contains("TinyDroplet"), "The rejected Legacy repeat conversion did not explain its FSlider alignment constraint.");
+        Check(ui.View.Document.ImportedSliders.Count == 0, "Repeat insertion left the source unconverted.");
+        var converted = ui.View.Document.Tracks.Single();
+        Check(converted.Id == sourceId && converted.SpanCount == 2 && converted.Nodes.Any(n => Math.Abs(n.TimeMs - 1500) < .001),
+            "Return-span insertion did not map back to the first-span anchor.");
+        Check(Math.Abs(CurveMath.EndTimeMs(converted) - 3000) < .001, "Repeat insertion changed the duration.");
+        Valid(ui); ui.Key('Z', ctrl: true);
+        Check(original.ContentEquals(ui.View.Document), "Undo did not restore the imported repeat.");
     }
 
     public static void LegacyContextConversion()

@@ -25,7 +25,7 @@ internal static class ImportedCurveFitTests
             Verify(wave, Fit(wave, 1));
         }
     }
-    public static void BatchPreservesFailuresAndCancellation()
+    public static void BatchPreservesDurationAndCancellation()
     {
         var document = new MapDocument { DurationMs = 20000, SliderMultiplier = 5, SliderTickRate = 2 };
         var good = new ImportedSlider { TimeMs = 100, X = 100, Y = 100, PathType = 'L', PixelLength = 200, SourceOrder = 1 };
@@ -38,11 +38,41 @@ internal static class ImportedCurveFitTests
         try { ImportedSliderEditing.ConvertAll(document, cancellation.Token); throw new Exception("Cancellation ignored."); }
         catch (OperationCanceledException) { Check(document.ContentEquals(original), "Cancellation changed the source."); }
         var result = ImportedSliderEditing.ConvertAll(document);
-        Check(result.Tracks.Count == 1 && result.Tracks[0].Id == good.Id, "Valid slider was not converted.");
-        Check(result.Failures.Count == 1 && result.Failures[0].Id == repeated.Id && ReferenceEquals(document.ImportedSliders.Single(), repeated), "Failed original was not preserved.");
-        var before = CatchStreamConverter.Convert(original).Objects.Where(o => o.SourceId == repeated.Id);
-        var after = CatchStreamConverter.Convert(document).Objects.Where(o => o.SourceId == repeated.Id);
-        Check(before.SequenceEqual(after), "Failed slider's RNG context changed.");
+        Check(result.Tracks.Count == 2 && result.Failures.Count == 0 && document.ImportedSliders.Count == 0, "Valid repeated sliders must also convert.");
+        var converted = CatchStreamConverter.Convert(document);
+        Check(converted.Success, "Approximate conversion cannot be generated.");
+        foreach (var source in original.ImportedSliders)
+        {
+            var output = converted.Sliders.Single(s => s.SourceId == source.Id);
+            Check(output.StartTimeMs == source.TimeMs && output.SpanCount == source.SpanCount
+                && Math.Abs(output.DurationMs - ImportedSliderConverter.DurationMs(original, source)) < .000001,
+                "Conversion changed the slider's timing or span count.");
+        }
+        Check(document.Tracks.Single(t => t.Id == repeated.Id).CompensateTinyDroplets == false, "Conflicting repeat did not opt out of strict tiny alignment.");
+        var saved = ProjectSerializer.Read(ProjectSerializer.Serialize(document));
+        Check(saved.ContentEquals(document), "Approximation policy did not survive a project round trip.");
+        var exported = OsuBeatmapWriter.Serialize(document).ReadBack;
+        foreach (var source in original.ImportedSliders)
+        {
+            var output = exported.ImportedSliders.Single(s => Math.Abs(s.TimeMs - source.TimeMs) < 1);
+            Check(output.SpanCount == source.SpanCount && Math.Abs(ImportedSliderConverter.DurationMs(exported, output)
+                - ImportedSliderConverter.DurationMs(original, source)) < .001, "Export changed the converted duration.");
+        }
+    }
+    public static void DenseCornerFallback()
+    {
+        var document = new MapDocument { DurationMs = 10000 };
+        var source = new ImportedSlider { TimeMs = 100, X = 100, Y = 100, PathType = 'L', PixelLength = 100 };
+        source.ControlPoints.AddRange([new(100, 100), new(100.00005, 100), new(100, 100), new(200, 100)]);
+        document.ImportedSliders.Add(source);
+        double duration = ImportedSliderConverter.DurationMs(document, source);
+        var result = ImportedSliderEditing.ConvertAll(document);
+        Check(result.Tracks.Count == 1 && result.Failures.Count == 0, "Sub-millisecond corner prevented conversion.");
+        var track = result.Tracks.Single();
+        Check(track.CompensateTinyDroplets == false && track.Nodes.Count <= 2049, "Dense corner did not use a bounded approximation.");
+        var generated = CatchStreamConverter.Convert(document);
+        Check(generated.Success && Math.Abs(generated.Sliders.Single().DurationMs - duration) < .000001, "Fallback changed duration or produced an invalid track.");
+        Check(CurveMath.Validate(document).Count == 0, "Fallback anchor spacing is invalid.");
     }
     private static CurveTrack Fit(IReadOnlyList<MapPoint> points, double velocity)
     {

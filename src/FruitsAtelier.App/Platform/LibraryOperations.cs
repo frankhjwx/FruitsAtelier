@@ -3,6 +3,18 @@ namespace FruitsAtelier.App.Platform;
 
 public static class LibraryOperations
 {
+    public static MapDocument StandaloneExportDocument(ProjectDifficulty difficulty, string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("project.invalid"));
+        var document = difficulty.Document.DeepClone();
+        var metadata = document.OriginalSections.FirstOrDefault(s => s.Name == "Metadata");
+        if (metadata is null) { metadata = new OsuSection { Name = "Metadata" }; document.OriginalSections.Add(metadata); }
+        metadata.Lines.RemoveAll(line => line.Split(':', 2)[0].Trim() is "Version" or "BeatmapID");
+        metadata.Lines.Add("Version:" + name.Trim());
+        metadata.Lines.Add("BeatmapID:0");
+        return document;
+    }
+
     public static WorkspaceSession ImportPath(string path, LibrarySettings settings)
     {
         path = Path.GetFullPath(path);

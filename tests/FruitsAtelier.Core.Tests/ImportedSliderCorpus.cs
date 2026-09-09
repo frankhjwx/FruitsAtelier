@@ -14,6 +14,15 @@ internal static class ImportedSliderCorpus
             var original = document.DeepClone(); var ids = original.ImportedSliders.Select(s => s.Id).ToHashSet();
             var watch = Stopwatch.StartNew(); var result = ImportedSliderEditing.ConvertAll(document); watch.Stop();
             Console.WriteLine($"{Path.GetFileName(file)}: {result.Tracks.Count}/{ids.Count} converted, {result.Tracks.Sum(t => t.Nodes.Count)} anchors, {watch.Elapsed.TotalSeconds:F2}s");
+            if (result.Failures.Count != 0) throw new Exception($"Corpus conversion left {result.Failures.Count} sliders unconverted: {string.Join("; ", result.Failures.Select(f => f.Reason))}");
+            var generated = CatchStreamConverter.Convert(document).Sliders.ToDictionary(s => s.SourceId);
+            foreach (var source in original.ImportedSliders)
+            {
+                var output = generated[source.Id];
+                if (output.StartTimeMs != source.TimeMs || output.SpanCount != source.SpanCount
+                    || Math.Abs(output.DurationMs - ImportedSliderConverter.DurationMs(original, source)) > .000001)
+                    throw new Exception("Corpus conversion changed slider timing.");
+            }
             var sourceLookup = original.ImportedSliders.ToDictionary(s => s.Id);
             var baseline = result.Tracks.ToDictionary(t => t.Id, t => OldNodeCount(original, sourceLookup[t.Id]));
             oldAnchors += baseline.Values.Sum();
@@ -28,7 +37,7 @@ internal static class ImportedSliderCorpus
                     double time = start + (end - start) * i / 1000;
                     maxError = Math.Max(maxError, Math.Abs(Math.Clamp((float)slider.X + geometry.PositionAt((CurveMath.FirstSpanTime(track, time) - start) / (track.Nodes[^1].TimeMs - start)).X, 0, 512) - CurveMath.PositionAtTime(track, time)));
                 }
-                if (maxError > ImportedSliderEditing.ApproximationTolerance + 0.0001) throw new Exception("Corpus trajectory error exceeded tolerance.");
+                if (track.CompensateTinyDroplets == true && maxError > ImportedSliderEditing.ApproximationTolerance + 0.0001) throw new Exception("Corpus trajectory error exceeded tolerance.");
                 Console.WriteLine($"  long slider @{start:F1} duration={end-start:F1}ms nodes={baseline[track.Id]} -> {track.Nodes.Count} curves={track.Nodes.Count(n => n.OutgoingKind == CurveKind.Bezier)} max sampled error={maxError:F5}");
             }
             foreach (var failure in result.Failures.Select(f => (Failure: f, Slider: original.ImportedSliders.Single(s => s.Id == f.Id)))

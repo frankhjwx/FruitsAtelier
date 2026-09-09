@@ -6,7 +6,8 @@ var tests = new (string Name, Action Run)[]
 {
     ("Incremental conversion matches full output across edits, RNG changes and failures", ConversionCacheTests.EditingMatchesFullConversion),
     ("Sparse curve fitting preserves corners and bounds whole-trajectory error", ImportedCurveFitTests.SparseAndBounded),
-    ("Batch conversion preserves failures, RNG and cancellation", ImportedCurveFitTests.BatchPreservesFailuresAndCancellation),
+    ("Batch conversion completes repeats and preserves duration, export and cancellation", ImportedCurveFitTests.BatchPreservesDurationAndCancellation),
+    ("Dense imported corners approximate within editable limits without changing duration", ImportedCurveFitTests.DenseCornerFallback),
     ("Timeline coordinate round trips and bounds", CoordinateRoundTrips),
     ("Zoom preserves mouse time at scale limits", ZoomAnchor),
     ("Beat snap quarters, sixths, offsets and midpoint", SnapGrid),
@@ -27,6 +28,7 @@ var tests = new (string Name, Action Run)[]
     ("Catch fall speed preserves gameplay width scale", CatchFallSpeed),
     ("Slider conversion follows legacy events and RNG golden sequence", ConversionTests.LegacyEventsAndRandom),
     ("Slider tick rate remains separate from editor snap and timing offset", ConversionTests.IndependentTickRate),
+    ("Horizontal endpoint handles constrain only actual gameplay events", ConversionTests.HorizontalEndHandle),
     ("Bezier tick coordinates come from generated slider arc length", ConversionTests.BezierTickAlignment),
     ("FSlider generation enforces stable's SV=10 limit", ConversionTests.StableSliderVelocityLimit),
     ("Tiny RNG compensation changes geometry and preserves target X", ConversionTests.TinyCompensation),

@@ -74,6 +74,31 @@ internal static class ConversionTests
             "Conversion replaced authoring handles or baked a stream into standalone fruit.");
     }
 
+    public static void HorizontalEndHandle()
+    {
+        // Near-horizontal endpoint tangent: instantaneous speed is unbounded,
+        // but the actual catch events remain reachable at a legal slider velocity.
+        var track = new CurveTrack { Name = "Horizontal endpoint" };
+        track.Nodes.Add(new Anchor { TimeMs = 0, X = 180, HandleOut = new(80, 100) });
+        track.Nodes.Add(new Anchor { TimeMs = 480, X = 180, HandleIn = new(0, 64) });
+        foreach (int spans in new[] { 1, 2 })
+        foreach (bool compensate in new[] { false, true })
+        {
+            track.SpanCount = spans;
+            var document = With(track);
+            var before = document.DeepClone();
+            var result = CatchStreamConverter.Convert(document, compensate);
+            Valid(result);
+            var slider = result.Sliders.Single();
+            Near(480 * spans, slider.DurationMs);
+            foreach (var item in result.Objects.Where(o => o.Kind != CatchObjectKind.TinyDroplet || slider.TinyCompensationSucceeded))
+                Near(CurveMath.PositionAtTime(track, item.TimeMs), item.X, CatchStreamConverter.AlignmentTolerance);
+            True(document.ContentEquals(before), "Generation changed authoring handles.");
+            var exported = OsuBeatmapWriter.Serialize(document, compensate);
+            True(exported.ObjectSequenceMatches, "Export changed the gameplay event sequence.");
+        }
+    }
+
     public static void TinyCompensation()
     {
         var document = With(Constant(0, 1000, 256));

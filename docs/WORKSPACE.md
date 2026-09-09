@@ -1,6 +1,6 @@
 # Workspace and Local Library
 
-The application supports osu!stable's Songs directory. Use **Library** beside the main menu to open the library page, then choose a workspace and Songs directory in **Settings**. Songs is optional and may be configured later; startup and entering the library do not automatically open Settings. When configured, Songs and the workspace must be separate directories. Creating, saving, saving as, and opening workspace projects, including **My Projects**, work without Songs. Scanning Songs and exporting to osu!stable require it. Settings are stored in `FruitsAtelier/library.json` under the system application-data directory, independently of the launch directory.
+The application supports osu!stable's Songs directory. Use **Library** beside the main menu to open the library page, then choose a workspace and Songs directory in **Settings**. Songs is optional and may be configured later; startup and entering the library do not automatically open Settings. When configured, Songs and the workspace must be separate directories. Creating, saving, saving as, and opening workspace projects, including **My Projects**, work without Songs. Scanning Songs and exporting into Songs require it; standalone `.osu` export does not. Settings are stored in `FruitsAtelier/library.json` under the system application-data directory, independently of the launch directory.
 
 ## File structure
 
@@ -41,15 +41,16 @@ The database's maps/projects/project_sources tables are rebuildable indexes. The
 
 ## Resource errors
 
-Opening a project and refreshing the editor check source `.osu` files, audio, Events resource references (including animation frames), and custom object samples. Missing resources produce a red editor error bar; **View details** shows full paths. Editing and saving remain available, but exporting a difficulty with missing resources fails. Restoring the original path clears the error; audio can also be replaced from the File menu.
+Opening a project and refreshing the editor check source `.osu` files, audio, Events resource references (including animation frames), and custom object samples. Missing resources produce a red editor error bar; **View details** shows full paths. Editing and saving remain available, but exporting into Songs with missing resources fails. Standalone `.osu` export remains available. Restoring the original path clears the error; audio can also be replaced from the File menu.
 
 ## Explicit export
 
 Saving, adding difficulties, browsing, and searching do not write to Songs. Choose Export from the File menu or press Ctrl/Cmd+E to open the export page for the current difficulty:
 
+- **Export .osu to…:** opens the native save dialog without requiring Songs or a saved workspace project. Exports only the current difficulty, with the entered Version and BeatmapID 0. Audio, backgrounds and custom samples remain file references and must be supplied separately. This does not change the project, saved state, or linked export target. The original source file is protected against overwrite; choose another filename.
 - **Overwrite associated difficulty:** displays the target path and validates its source or last-export fingerprint. External changes, a missing target, or a target outside the current Songs directory prevent overwrite.
 - **Export as new difficulty:** accepts a Version and generates an osu!-style `.osu` filename. It cannot overwrite an existing filename, and the new file has BeatmapID 0.
 
-The first export of an unassociated project creates a new Songs subdirectory. Export completes conversion and conflict checks first, copies referenced resources as needed, then writes `.osu` and saves the target association. Other difficulties remain unchanged. Export several difficulties by switching and exporting each one.
+The first Songs export of an unassociated project creates a new Songs subdirectory. Export completes conversion and conflict checks first, copies referenced resources as needed, then writes `.osu` and saves the target association. Other difficulties remain unchanged. Export several difficulties by switching and exporting each one.
 
 When a source file changes externally, export as a new difficulty or reimport the external `.osu` before continuing. The application does not merge both sets of edits automatically. Export does not replace project saving or guarantee that stable immediately refreshes its own library.

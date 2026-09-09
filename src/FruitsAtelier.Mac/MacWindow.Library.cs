@@ -78,9 +78,19 @@ internal sealed partial class MacWindow
             View.LoadWorkspace(session);
             await audio.LoadAsync(View.Document.AudioPath); PollAudio();
         });
+        View.RequestOsuExport = name => RunFile(async () =>
+        {
+            var project = View.CaptureProject();
+            var document = LibraryOperations.StandaloneExportDocument(project.Difficulties[View.ActiveDifficultyIndex], name);
+            string filename = WorkspaceProject.DifficultyFileName(document, name, ".osu");
+            var path = await SavePicker(L.Get("library.exportFile"), "osu", filename);
+            if (path is null) return;
+            await Task.Run(() => OsuBeatmapWriter.WriteFile(document, path, View.CompensateTinyDroplets));
+            View.CloseLibrary(); View.SetNotice(L.Get("library.exported", path));
+        });
         View.RequestWorkspaceExport = (overwrite, name) => RunFile(async () =>
         {
-            if (View.WorkspaceSession is null || !View.SaveWorkspace()) return;
+            if (!View.SaveWorkspace() || View.WorkspaceSession is null) return;
             var project = View.CaptureProject();
             var plan = WorkspaceExport.Plan(View.WorkspaceSession, project.Difficulties[View.ActiveDifficultyIndex], View.LibrarySettings.Songs, overwrite, name, View.CompensateTinyDroplets);
             await Task.Run(() => LibraryOperations.Export(View.WorkspaceSession, project, plan));

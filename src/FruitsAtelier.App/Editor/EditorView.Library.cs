@@ -12,6 +12,7 @@ public sealed partial class EditorView
     public Action<bool>? RequestLibraryFolder { get; set; }
     public Action<bool>? RequestLibraryImport { get; set; }
     public Action<LibraryMap>? RequestLibraryOpen { get; set; }
+    public Action<string>? RequestOsuExport { get; set; }
     public Action<bool, string>? RequestWorkspaceExport { get; set; }
     private LibraryDatabase? libraryDatabase;
     private Task<LibraryScan>? scanTask;
@@ -56,7 +57,6 @@ public sealed partial class EditorView
     public void ShowWorkspaceExport()
     {
         if (!PrepareFileOperation()) return;
-        if (WorkspaceSession is null) { RequestSave?.Invoke(); if (WorkspaceSession is null) return; }
         exportName = CurrentDifficultyName + " (FruitsAtelier)";
         exportPage = LibraryVisible = true; librarySettingsOpen = false; libraryField = -1;
     }
@@ -279,10 +279,12 @@ public sealed partial class EditorView
         LibraryTextField(c, 3, L.Get("library.newDifficultyName"), exportName, 190);
         Button(c, new(32, 310, 240, 42), L.Get("library.exportNew"), () => RequestWorkspaceExport?.Invoke(false, exportName), enabled: bound);
         Button(c, new(292, 310, 240, 42), L.Get("library.exportOverride"), () => RequestWorkspaceExport?.Invoke(true, exportName), enabled: bound);
+        Button(c, new(552, 310, 260, 42), L.Get("library.exportFile"), () => RequestOsuExport?.Invoke(exportName));
+        c.Text(L.Get("library.exportFileHint"), 32, 454, 13, Muted, width - 64);
         var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id);
         c.Text(L.Get("library.overrideTarget", entry?.ExportTarget ?? entry?.Source ?? L.Get("library.noTarget")), 32, 382, 13, Muted, width - 64);
         c.Text(L.Get("library.exportConflictHint"), 32, 414, 13, Gold, width - 64);
-        if (resourceErrors.Count > 0) c.Text(L.Get("library.missingResources", string.Join("\n", resourceErrors)), 32, 466, 14, Error, width - 64);
+        if (resourceErrors.Count > 0) c.Text(L.Get("library.missingResources", string.Join("\n", resourceErrors)), 32, 494, 14, Error, width - 64);
     }
     public bool LibraryLoading => scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false };
     public bool LibraryTextFocused => LibraryVisible && libraryField >= 0;

@@ -10,6 +10,7 @@ if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Anchor dragging defaults to free time with independent opt-in snapping", AnchorSnapTests.Dragging),
     ("Catch hitsound samples and playback boundaries", HitsoundTests.Run),
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),
     ("Fresh process defaults to English", () => { if (startupLanguage != "en") throw new Exception("Default language must be English"); }),
@@ -85,7 +86,7 @@ var tests = new (string Name, Action Run)[]
     ("Hierarchy selection completes or cancels drafts and selects immediately", SliderInteractionTests.HierarchyCompletesDraft),
     ("Closing a context menu does not pass clicks to the canvas", SliderInteractionTests.ContextOutsideClick),
     ("Deleting a point never revives dormant neighbour handles", SliderInteractionTests.DeleteDoesNotActivateDormantHandles),
-    ("An incompatible Legacy repeat remains unchanged during point insertion", SliderInteractionTests.RepeatInsertion),
+    ("Legacy repeat insertion uses an approximate FSlider and preserves duration", SliderInteractionTests.RepeatInsertion),
     ("Moving a draft tail keeps its visible future handle in bounds", SliderInteractionTests.DraftTailHandleBounds),
     ("Mixed clipboard batches preserve relative time and independent source order", ClipboardMultiTests.MixedBatchPreservesSnapshotAndOrder),
     ("Cutting a mixed batch is one reversible transaction", ClipboardMultiTests.MixedCutIsOneTransaction),
