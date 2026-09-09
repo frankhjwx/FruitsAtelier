@@ -87,7 +87,7 @@ See [Catch Star Rating](CATCH_DIFFICULTY.md) for calculation, cache invalidation
 
 ## Library and workspace
 
-**Library** opens a separate page for workspace/stable Songs settings, bilingual metadata search, difficulty browsing, and project opening. Editor difficulty tabs retain their layout. Missing resource references show an error bar. Saving never writes to Songs; Export offers associated-difficulty overwrite or a new difficulty. See [Workspace](WORKSPACE.md).
+**Library** opens a separate page for workspace/stable Songs settings, bilingual metadata search, difficulty browsing, and project opening. Editor difficulty tabs retain their layout. Missing resource references show an error bar. Saving never writes to Songs; Export offers a standalone `.osu` save dialog, associated-difficulty overwrite, or a new difficulty in Songs. See [Workspace](WORKSPACE.md).
 
 Below the Catch Preview title, one line shows `AR … · CS … · NM`. It omits fall time, generation status, and skin name. Preview scrolling and object drawing still follow AR/CS.
 

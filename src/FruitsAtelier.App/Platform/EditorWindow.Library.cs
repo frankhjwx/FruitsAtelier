@@ -34,9 +34,19 @@ internal sealed partial class EditorWindow
             view.LoadWorkspace(LibraryOperations.Open(map, view.LibrarySettings));
             ResetAudio(); if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath);
         });
+        view.RequestOsuExport = name => FileOperation(() =>
+        {
+            var project = view.CaptureProject();
+            var document = LibraryOperations.StandaloneExportDocument(project.Difficulties[view.ActiveDifficultyIndex], name);
+            string filename = WorkspaceProject.DifficultyFileName(document, name, ".osu");
+            var path = MapFileDialog.Select(hwnd, true, L.Get("library.exportFile"), MapFileDialog.OsuFilter, filename, "osu");
+            if (path is null) return;
+            OsuBeatmapWriter.WriteFile(document, path, view.CompensateTinyDroplets);
+            view.CloseLibrary(); view.SetNotice(L.Get("library.exported", path));
+        });
         view.RequestWorkspaceExport = (overwrite, name) => FileOperation(() =>
         {
-            if (view.WorkspaceSession is null || !view.SaveWorkspace()) return;
+            if (!view.SaveWorkspace() || view.WorkspaceSession is null) return;
             var project = view.CaptureProject();
             var plan = WorkspaceExport.Plan(view.WorkspaceSession, project.Difficulties[view.ActiveDifficultyIndex], view.LibrarySettings.Songs, overwrite, name, view.CompensateTinyDroplets);
             LibraryOperations.Export(view.WorkspaceSession, project, plan);

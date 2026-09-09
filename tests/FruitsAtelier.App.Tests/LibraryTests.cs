@@ -10,6 +10,7 @@ internal static class LibraryTests
         string songs = Path.Combine(root, "Songs"); Directory.CreateDirectory(songs);
         try
         {
+            StandaloneExport(root);
             OptionalSongs(root);
             var view = new EditorView(); view.NewProject();
             view.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); view.LibrarySettings.Songs = songs;
@@ -30,6 +31,28 @@ internal static class LibraryTests
             WaitForLibrary(view);
         }
         finally { Directory.Delete(root, true); }
+    }
+    private static void StandaloneExport(string root)
+    {
+        var view = new EditorView(); view.NewProject();
+        view.LibrarySettings.Songs = "";
+        bool saveRequested = false;
+        view.RequestSave = () => saveRequested = true;
+        var before = view.CaptureProject();
+        string? requestedName = null;
+        view.RequestOsuExport = name => requestedName = name;
+        view.ShowWorkspaceExport();
+        var canvas = new RecordingCanvas(); view.Render(canvas, 980, 620);
+        view.PointerDown(600, 328, 0, false, false); view.PointerUp(600, 328, 0);
+        Check(requestedName is not null && !saveRequested && view.WorkspaceSession is null, "standalone export works without Songs or workspace save");
+        var document = FruitsAtelier.App.Platform.LibraryOperations.StandaloneExportDocument(before.Difficulties[0], "Standalone");
+        string destination = Path.Combine(root, "standalone.osu");
+        OsuBeatmapWriter.WriteFile(document, destination);
+        var read = OsuBeatmapReader.ReadFile(destination);
+        Check(OsuBeatmapReader.Setting(read, "Metadata", "Version") == "Standalone", "standalone version is applied");
+        Check(OsuBeatmapReader.Setting(read, "Metadata", "BeatmapID") == "0", "standalone resets beatmap ID");
+        Check(view.Document.ContentEquals(before.Difficulties[0].Document), "standalone export leaves document unchanged");
+        Check(Directory.GetFiles(root).Length == 1, "standalone exports only one file");
     }
     private static void OptionalSongs(string root)
     {
