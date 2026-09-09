@@ -37,7 +37,7 @@ Double-click [Run-Editor-Mac.command](Run-Editor-Mac.command) to build and launc
 bash scripts/Publish-Mac.sh
 ```
 
-The output is `artifacts/macos/FruitsAtelier.app`, including the .NET runtime. See the [macOS guide](docs/MACOS.md) (Chinese).
+The output is `artifacts/macos/FruitsAtelier.app`, including the .NET runtime. See the [macOS guide](docs/MACOS.md).
 
 ### Windows
 
@@ -47,7 +47,7 @@ The compiled application is located at `src/FruitsAtelier.App/bin/Release/net8.0
 
 ## Documentation
 
-The following guides are in Chinese; third-party notices are in English.
+Guides for using, building, and contributing to FruitsAtelier.
 
 - [Editing controls](docs/EDITOR_UI.md)
 - [Features and files](docs/PRODUCT.md)
