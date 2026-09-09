@@ -6,7 +6,8 @@ var tests = new (string Name, Action Run)[]
 {
     ("Incremental conversion matches full output across edits, RNG changes and failures", ConversionCacheTests.EditingMatchesFullConversion),
     ("Sparse curve fitting preserves corners and bounds whole-trajectory error", ImportedCurveFitTests.SparseAndBounded),
-    ("Batch conversion preserves failures, RNG and cancellation", ImportedCurveFitTests.BatchPreservesFailuresAndCancellation),
+    ("Batch conversion completes repeats and preserves duration, export and cancellation", ImportedCurveFitTests.BatchPreservesDurationAndCancellation),
+    ("Dense imported corners approximate within editable limits without changing duration", ImportedCurveFitTests.DenseCornerFallback),
     ("Timeline coordinate round trips and bounds", CoordinateRoundTrips),
     ("Zoom preserves mouse time at scale limits", ZoomAnchor),
     ("Beat snap quarters, sixths, offsets and midpoint", SnapGrid),

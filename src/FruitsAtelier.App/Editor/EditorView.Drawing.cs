@@ -335,6 +335,15 @@ public sealed partial class EditorView
         if (tool == Tool.Slider)
         {
             Button(c, new(x, y, w, 28), L.Get("ui.newSlider"), StartNewSlider); y += 34;
+            var option = new Rect(x, y, w, 26);
+            c.Stroke(new(x + 2, y + 4, 16, 16), anchorSnap ? Accent : Muted, 1, 2);
+            if (anchorSnap)
+            {
+                c.Line(x + 5, y + 12, x + 9, y + 16, Accent, 2);
+                c.Line(x + 9, y + 16, x + 15, y + 8, Accent, 2);
+            }
+            c.Text(L.Get("ui.anchorSnap"), x + 26, y + 5, 12, Foreground, w - 26);
+            hits.Add(new(option, () => anchorSnap = !anchorSnap, true)); y += 32;
         }
         if (objectSelection.Count > 1 || anchorSelection.Count > 1)
         {

@@ -144,9 +144,11 @@ internal static class EditableSliderTests
         conflicting.ControlPoints.AddRange([new(100, 100), new(300, 100)]);
         repeated.ImportedSliders.Add(conflicting);
         var repeatedBefore = repeated.DeepClone();
-        try { ImportedSliderEditing.ConvertToTrack(repeated, conflicting.Id); throw new Exception("Conflicting Legacy repeat unexpectedly became a FSlider."); }
-        catch (InvalidOperationException error) { True(error.Message.Contains("TinyDroplet"), "Strict alignment failure was not explained."); }
-        True(repeated.ContentEquals(repeatedBefore), "A failed strict conversion modified the Legacy Slider.");
+        var approximate = ImportedSliderEditing.ConvertToTrack(repeated, conflicting.Id).Track;
+        True(repeated.ImportedSliders.Count == 0 && approximate.CompensateTinyDroplets == false, "Conflicting repeat must produce an approximate editable track.");
+        var repeatedOutput = CatchStreamConverter.Convert(repeated); Valid(repeatedOutput);
+        True(Math.Abs(repeatedOutput.Sliders.Single().DurationMs - ImportedSliderConverter.DurationMs(repeatedBefore, conflicting)) < .000001,
+            "Approximate repeat changed its total duration.");
 
         var invalid = new MapDocument();
         var zero = new ImportedSlider { X = 100, Y = 100, PathType = 'L' }; zero.ControlPoints.Add(new(100, 100)); invalid.ImportedSliders.Add(zero);
@@ -173,8 +175,16 @@ internal static class EditableSliderTests
                 var result = ImportedSliderEditing.ConvertToTrack(doc, source.Id);
                 watch.Stop();
                 var after = CatchStreamConverter.Convert(doc);
-                Valid(after); Compare(before.Objects, after.Objects, 0.01);
-                double error = before.Objects.Zip(after.Objects, (a, b) => Math.Abs(a.X - b.X)).Max();
+                Valid(after);
+                var beforeSlider = before.Sliders.Single(s => s.SourceId == source.Id);
+                var afterSlider = after.Sliders.Single(s => s.SourceId == source.Id);
+                True(beforeSlider.StartTimeMs == afterSlider.StartTimeMs && beforeSlider.SpanCount == afterSlider.SpanCount
+                    && Math.Abs(beforeSlider.DurationMs - afterSlider.DurationMs) < .000001, "Real fixture duration changed.");
+                double error = Enumerable.Range(0, 501).Select(i =>
+                {
+                    double time = source.TimeMs + beforeSlider.DurationMs * i / 500;
+                    return Math.Abs(ImportedSliderConverter.PositionAtTime(original, source, time) - CurveMath.PositionAtTime(result.Track, time));
+                }).Max();
                 Console.WriteLine($"EDIT-FIXTURE {mapName} {source.PathType} spans={source.SpanCount} anchors={result.Track.Nodes.Count} X={error:R} convertMs={watch.Elapsed.TotalMilliseconds:F1}");
             }
         }

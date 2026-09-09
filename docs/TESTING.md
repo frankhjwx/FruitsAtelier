@@ -96,7 +96,7 @@ The Core test executable accepts `--slider-corpus <workspace>` for opt-in, read-
 checks against existing `.catchdiff` documents. It never saves or opens a workspace
 recovery session. The report compares fitted anchor counts with the previous 0.001
 linear simplification, measures sampled error on the longest converted sliders, and
-lists preserved failures. External map data is not required by CI or committed.
+requires complete conversion and checks start time, duration, and repeats for every source slider. External map data is not required by CI or committed.
 
 ```bash
 bash -c 'source scripts/macos-dotnet.sh; "$FA_DOTNET" run --project ../tests/FruitsAtelier.Core.Tests -c Release -- --slider-corpus "/path/to/workspace"'

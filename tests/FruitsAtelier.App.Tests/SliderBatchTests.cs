@@ -45,10 +45,10 @@ internal static class SliderBatchTests
         var repeated = new ImportedSlider { TimeMs = 3000, X = 100, Y = 100, PathType = 'L', PixelLength = 300, SpanCount = 3 };
         repeated.ControlPoints.AddRange([new(100, 100), new(300, 100)]); mixed.ImportedSliders.Add(repeated);
         view.LoadDocument(mixed); view.ConvertAllSliders(); Wait();
-        Check(view.Document.Tracks.Count == 1 && view.Document.ImportedSliders.Single().Id == repeated.Id, "Partial failure did not preserve the failed slider.");
-        Check(canvas.Texts.Any(t => t.Value == L.Get("sliderBatch.preserved", 1)), "Partial failure was not explained.");
-        Click(L.Get("sliderBatch.close")); view.KeyDown(90, true, false);
-        Check(view.Document.ImportedSliders.Count == 2 && !view.IsDirty, "Partial batch cannot be undone in one step.");
+        Check(view.Document.Tracks.Count == 2 && view.Document.ImportedSliders.Count == 0, "Batch must convert all valid sliders, including conflicting repeats.");
+        Check(view.PrepareFileOperation(), "Successful approximate conversion should not show a failure dialog.");
+        view.KeyDown(90, true, false);
+        Check(view.Document.ImportedSliders.Count == 2 && !view.IsDirty, "Complete batch cannot be undone in one step.");
 
         string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-slider-import-" + Guid.NewGuid());
         Directory.CreateDirectory(root);
