@@ -15,6 +15,8 @@ internal sealed partial class EditorWindow
     {
         view.RequestHitsound = hitsounds.Play;
         view.RequestPrepareHitsound = hitsounds.Prepare;
+        view.RequestPreloadHitsounds = hitsounds.PreloadProject;
+        view.PreloadProjectHitsounds();
         view.RequestStopHitsounds = hitsounds.Stop;
         view.RequestLanguagePreference = language => FileOperation(() => FruitsAtelier.Localization.LanguagePreference.SaveLanguage(language));
         view.RequestOpen = () => FileOperation(() =>

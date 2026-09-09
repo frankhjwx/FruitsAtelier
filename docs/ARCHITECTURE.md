@@ -10,7 +10,7 @@ The application uses C# 12 / .NET 8. Windows and macOS share the editor, data mo
 | Window and input | Win32, DPI messages, native file dialogs | Avalonia desktop window and file picker |
 | Drawing | DX11 / DXGI, Direct2D / DirectWrite, Vortice 3.6.2 | Avalonia 11.3.7, `MacCanvas` implements `ICanvas` |
 | PNG | Windows Imaging Component | Avalonia bitmaps |
-| Audio | NAudio shared-mode WASAPI; Media Foundation / NVorbis / WAV reader | AVAudioPlayer; NVorbis decodes OGG to PCM WAV |
+| Audio | NAudio shared-mode WASAPI; Media Foundation / NVorbis / WAV reader | AVAudioPlayer music; AVAudioEngine PCM hitsound mixer; NVorbis for OGG |
 
 See [Building and Testing](TESTING.md) for SDK selection and build commands, and [Third-party notices](../THIRD_PARTY_NOTICES.md) for package versions and licenses.
 
@@ -56,7 +56,7 @@ Skin archives are limited to 256 MiB, selected files to 16 MiB each and 64 MiB t
 
 Windows `AudioTransport` serializes load, play, pause, and seek operations on a worker; the UI reads immutable state snapshots. MP3 decoding fills a bounded PCM cache continuously. Pause can reuse an active WASAPI session; seek and EOF replay rebuild output. See the [Windows audio reference](../src/FruitsAtelier.App/Audio/REFERENCE.md).
 
-Mac calls AVAudioPlayer through `Native/Audio.m` and obtains position from the player. NVorbis first decodes OGG into capacity-limited PCM WAV. Stale load results are discarded, and replay after EOF rebuilds the player. See [Running on macOS](MACOS.md).
+Mac calls AVAudioPlayer through `Native/Audio.m` and obtains position from the player. NVorbis first decodes OGG into capacity-limited PCM WAV. Stale load results are discarded, and replay after EOF rebuilds the player. Hitsounds preload project PCM on a worker and submit timestamps to a persistent native mixer; see [Hitsounds](HITSOUNDS.md). See [Running on macOS](MACOS.md).
 
 Preview hitsound scheduling, sample resolution, and platform playback are documented in [Hitsounds](HITSOUNDS.md).
 

@@ -55,6 +55,14 @@ static class HitsoundTests
             plain.Fruits[0].OriginalLine = "100,192,100,1,8,0:0:0:0:";
             var layered = new HitsoundResolver(plain, new[] { item }).Resolve(item);
             Require(layered.Count == 2 && layered[0].Name == "hitnormal" && layered[1].Name == "hitclap", "Additions retain the default normal layer");
+            var preloadView = new EditorView();
+            IReadOnlyList<MapDocument>? snapshot = null;
+            preloadView.RequestPreloadHitsounds = maps => snapshot = maps;
+            preloadView.LoadProject(BeatmapProject.FromDocuments(new[] { plain, plain.DeepClone() }));
+            Require(snapshot?.Count == 2 && !ReferenceEquals(snapshot[0], preloadView.Document), "Opening a project preloads all difficulties using isolated snapshots");
+            int oldCount = snapshot![0].Fruits.Count;
+            preloadView.Document.Fruits.Add(new() { TimeMs = 1000 });
+            Require(snapshot[0].Fruits.Count == oldCount, "Loader snapshots do not observe live editor changes");
             Scheduler();
             ScheduledPlayback();
         }

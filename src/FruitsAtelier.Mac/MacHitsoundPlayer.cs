@@ -4,95 +4,131 @@ using NVorbis;
 
 namespace FruitsAtelier.Mac;
 
+/// <summary>Project PCM bank feeding one persistent native mixer. The UI only queues timestamps.</summary>
 public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
 {
-    private sealed class Voice(string key, nint handle, int bytes)
-    {
-        public string Key { get; } = key;
-        public nint Handle { get; } = handle;
-        public int Bytes { get; } = bytes;
-        public double BusyUntil { get; set; }
-    }
-    private readonly Dictionary<string, byte[]> cache = new();
-    private readonly List<Voice> voices = new();
+    private readonly object gate = new();
+    private readonly Dictionary<string, nint> samples = new();
+    private readonly HashSet<string> pending = new();
+    private Task preparation = Task.CompletedTask;
+    private nint engine;
     private bool disposed;
-    private long cacheBytes, voiceBytes;
-    private const long MemoryLimit = 64 * 1024 * 1024;
+    private int generation;
+    private long bytes;
+    private const long MemoryLimit = 256 * 1024 * 1024;
+    public Task Preparation { get { lock (gate) return preparation; } }
     internal int NativePlayerCreations { get; private set; }
-    private Voice? lastVoice;
-    internal double LastVoicePositionMs => lastVoice is null ? 0 : Position(lastVoice.Handle) * 1000;
-    public int ActiveVoices => voices.Count(v => v.BusyUntil > DeviceTime(v.Handle));
+    internal int SampleLoads { get; private set; }
+    internal long DecodedBytes { get { lock (gate) return bytes; } }
+    internal double LastVoicePositionMs { get { lock (gate) return engine == 0 ? 0 : Position(engine) * 1000; } }
+    internal double LastRenderedStart { get { lock (gate) return engine == 0 ? 0 : RenderedStart(engine); } }
+    public int ActiveVoices { get { lock (gate) return engine == 0 ? 0 : (int)Active(engine); } }
 
+    public void PreloadProject(IReadOnlyList<MapDocument> documents)
+    {
+        lock (gate)
+        {
+            if (disposed) return;
+            int version = ++generation;
+            Stop();
+            preparation = preparation.ContinueWith(_ =>
+            {
+                lock (gate)
+                {
+                    if (disposed || version != generation) return;
+                    ReleaseBank(); pending.Clear();
+                }
+                // Snapshots are taken by the editor before dispatch; workers never inspect live edits.
+                foreach (var document in documents)
+                {
+                    if (Retired(version)) return;
+                    document.Tracks.RemoveAll(t => t.Nodes.Count < 2);
+                    var objects = CatchStreamConverter.Convert(document).Objects;
+                    var resolver = new HitsoundResolver(document, objects);
+                    foreach (var sound in objects.SelectMany(resolver.Resolve).DistinctBy(Key))
+                    {
+                        if (Retired(version)) return;
+                        LoadSample(sound, version);
+                    }
+                }
+            }, TaskScheduler.Default);
+        }
+    }
+    private bool Retired(int version) { lock (gate) return disposed || version != generation; }
     public void Prepare(Hitsound sound)
     {
-        if (disposed) return;
-        string key = Key(sound);
-        byte[] data = GetData(sound);
-        // Retain prepared native players, not just compressed file bytes.
-        if (!voices.Any(v => v.Key == key)) CreateVoice(key, data, sound);
+        lock (gate)
+        {
+            if (disposed || samples.ContainsKey(Key(sound)) || !pending.Add(Key(sound))) return;
+            int version = generation;
+            preparation = preparation.ContinueWith(_ => LoadSample(sound, version), TaskScheduler.Default);
+        }
     }
-    public void Play(Hitsound sound) => PlayInternal(sound, null);
-    public void Schedule(Hitsound sound, double deviceTime)
+    private void LoadSample(Hitsound sound, int version)
     {
-        if (double.IsFinite(deviceTime)) PlayInternal(sound, deviceTime);
-    }
-    private void PlayInternal(Hitsound sound, double? deviceTime)
-    {
-        if (disposed) return;
+        lock (gate) if (disposed || version != generation || samples.ContainsKey(Key(sound))) return;
+        nint sample = 0;
+        string? temporary = null;
         try
         {
-            string key = Key(sound);
-            var voice = voices.FirstOrDefault(v => v.Key == key && v.BusyUntil <= DeviceTime(v.Handle));
-            if (voice is null && voices.Count >= 32)
+            // Native WAV/MP3 decoding and managed OGG conversion happen only on this loader worker.
+            string? path = sound.FilePath;
+            if (path is null || Path.GetExtension(path).Equals(".ogg", StringComparison.OrdinalIgnoreCase)
+                || !File.Exists(path) || new FileInfo(path).Length > 16 * 1024 * 1024)
             {
-                // Preserve new attacks under load by reusing the oldest matching tail.
-                voice = voices.Where(v => v.Key == key).MinBy(v => v.BusyUntil);
+                temporary = Path.Combine(Path.GetTempPath(), "fa-hitsound-" + Guid.NewGuid() + ".wav");
+                File.WriteAllBytes(temporary, Load(sound)); path = temporary;
             }
-            if (voice is null) voice = CreateVoice(key, GetData(sound), sound);
-            if (voice is null) return;
-            // A completed voice retains its output resources. Reset before reusing it.
-            if (voice.BusyUntil != 0) { Pause(voice.Handle); Seek(voice.Handle, 0); PrepareNative(voice.Handle); }
-            Volume(voice.Handle, muted ? 0 : sound.Volume);
-            double now = DeviceTime(voice.Handle);
-            double start = Math.Max(now, deviceTime ?? now);
-            int played = deviceTime.HasValue ? PlayAt(voice.Handle, start) : PlayNative(voice.Handle);
-            if (played != 0) { voice.BusyUntil = start + Duration(voice.Handle) + .01; lastVoice = voice; }
+            sample = OpenSample(path);
+            if (sample == 0)
+            {
+                temporary ??= Path.Combine(Path.GetTempPath(), "fa-hitsound-" + Guid.NewGuid() + ".wav");
+                File.WriteAllBytes(temporary, HitsoundSamples.CreateWave(sound)); sample = OpenSample(temporary);
+            }
+            lock (gate)
+            {
+                if (disposed || version != generation || sample == 0) return;
+                long size = SampleBytes(sample);
+                if (bytes + size > MemoryLimit) { MacPaths.Log("Hitsound project PCM bank exceeds 256 MiB; sample skipped: " + Key(sound)); return; }
+                if (engine == 0) { engine = Open(muted ? 1 : 0); NativePlayerCreations++; }
+                samples[Key(sound)] = sample; sample = 0; bytes += size; SampleLoads++;
+                pending.Remove(Key(sound));
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         { MacPaths.Log(ex.ToString()); }
-    }
-    private Voice? CreateVoice(string key, byte[] data, Hitsound sound)
-    {
-        // Warming samples must never interrupt an active or future scheduled voice.
-        while (voices.Count >= 32 || voiceBytes + data.Length > MemoryLimit)
+        finally
         {
-            var idle = voices.FirstOrDefault(v => v.BusyUntil <= DeviceTime(v.Handle));
-            if (idle is null) return null;
-            if (lastVoice == idle) lastVoice = null;
-            Close(idle.Handle); voices.Remove(idle); voiceBytes -= idle.Bytes;
+            if (sample != 0) CloseSample(sample);
+            if (temporary is not null) File.Delete(temporary);
+            lock (gate) if (!disposed && version == generation)
+            {
+                // Remember rejected samples too; playback preparation must not repeatedly decode them.
+                samples.TryAdd(Key(sound), 0); pending.Remove(Key(sound));
+            }
         }
-        nint player = Open(data, data.Length);
-        if (player == 0)
-        {
-            var fallback = HitsoundSamples.CreateWave(sound);
-            cacheBytes += fallback.Length - data.Length; cache[key] = fallback; data = fallback;
-            player = Open(data, data.Length);
-            if (player == 0) return null;
-        }
-        var voice = new Voice(key, player, data.Length);
-        voices.Add(voice); voiceBytes += data.Length; NativePlayerCreations++;
-        return voice;
     }
     private static string Key(Hitsound sound) => sound.FilePath ?? $"{sound.Kind}/{sound.SampleSet}/{sound.Name}";
-    private byte[] GetData(Hitsound sound)
+    public void Play(Hitsound sound) => Schedule(sound, HostTime());
+    public void Schedule(Hitsound sound, double hostTime)
     {
-        string key = Key(sound);
-        if (cache.TryGetValue(key, out var data)) return data;
-        data = Load(sound);
-        if (cacheBytes + data.Length > MemoryLimit) { cache.Clear(); cacheBytes = 0; }
-        cache[key] = data; cacheBytes += data.Length;
-        return data;
+        if (!double.IsFinite(hostTime)) return;
+        lock (gate)
+        {
+            // Never fall back to disk I/O or decoding on a playback miss.
+            if (!disposed && engine != 0 && samples.TryGetValue(Key(sound), out nint sample) && sample != 0)
+                ScheduleNative(engine, sample, hostTime, sound.Volume);
+        }
     }
+    public void Stop() { lock (gate) if (engine != 0) StopNative(engine); }
+    private void ReleaseBank()
+    {
+        // Stop/join the render callback before releasing sample memory referenced by queued voices.
+        if (engine != 0) Close(engine); engine = 0;
+        foreach (nint sample in samples.Values) if (sample != 0) CloseSample(sample);
+        samples.Clear(); bytes = 0;
+    }
+    public void Dispose() { lock (gate) { if (disposed) return; disposed = true; generation++; ReleaseBank(); } }
     private static byte[] Load(Hitsound sound)
     {
         if (sound.FilePath is not null)
@@ -121,31 +157,16 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
         }
         return HitsoundSamples.CreateWave(sound);
     }
-    public void Stop()
-    {
-        foreach (var voice in voices)
-        {
-            if (voice.BusyUntil == 0) continue;
-            Pause(voice.Handle); Seek(voice.Handle, 0); PrepareNative(voice.Handle); voice.BusyUntil = 0;
-        }
-    }
-    public void Dispose()
-    {
-        if (disposed) return;
-        disposed = true;
-        foreach (var voice in voices) Close(voice.Handle);
-        voices.Clear(); cache.Clear(); lastVoice = null; voiceBytes = cacheBytes = 0;
-    }
+    [DllImport("FruitsAtelierAudio", EntryPoint="fa_hitsounds_rendered_start")] private static extern double RenderedStart(nint engine);
     private const string Library = "FruitsAtelierAudio";
-    [DllImport(Library, EntryPoint = "fa_audio_open_data")] private static extern nint Open(byte[] data, int length);
-    [DllImport(Library, EntryPoint = "fa_audio_close")] private static extern void Close(nint handle);
-    [DllImport(Library, EntryPoint = "fa_audio_play")] private static extern int PlayNative(nint handle);
-    [DllImport(Library, EntryPoint = "fa_audio_play_at")] private static extern int PlayAt(nint handle, double time);
-    [DllImport(Library, EntryPoint = "fa_audio_device_time")] private static extern double DeviceTime(nint handle);
-    [DllImport(Library, EntryPoint = "fa_audio_position")] private static extern double Position(nint handle);
-    [DllImport(Library, EntryPoint = "fa_audio_duration")] private static extern double Duration(nint handle);
-    [DllImport(Library, EntryPoint = "fa_audio_prepare")] private static extern int PrepareNative(nint handle);
-    [DllImport(Library, EntryPoint = "fa_audio_pause")] private static extern void Pause(nint handle);
-    [DllImport(Library, EntryPoint = "fa_audio_seek")] private static extern void Seek(nint handle, double position);
-    [DllImport(Library, EntryPoint = "fa_audio_volume")] private static extern void Volume(nint handle, float volume);
+    [DllImport(Library, EntryPoint="fa_hitsounds_open")] private static extern nint Open(int muted);
+    [DllImport(Library, EntryPoint="fa_hitsounds_close")] private static extern void Close(nint engine);
+    [DllImport(Library, EntryPoint="fa_hitsounds_sample")] private static extern nint OpenSample([MarshalAs(UnmanagedType.LPUTF8Str)] string path);
+    [DllImport(Library, EntryPoint="fa_hitsounds_sample_close")] private static extern void CloseSample(nint sample);
+    [DllImport(Library, EntryPoint="fa_hitsounds_sample_bytes")] private static extern uint SampleBytes(nint sample);
+    [DllImport(Library, EntryPoint="fa_hitsounds_schedule")] private static extern int ScheduleNative(nint engine, nint sample, double start, float volume);
+    [DllImport(Library, EntryPoint="fa_hitsounds_stop")] private static extern void StopNative(nint engine);
+    [DllImport(Library, EntryPoint="fa_hitsounds_position")] private static extern double Position(nint engine);
+    [DllImport(Library, EntryPoint="fa_hitsounds_active")] private static extern uint Active(nint engine);
+    [DllImport(Library, EntryPoint="fa_audio_host_time")] private static extern double HostTime();
 }

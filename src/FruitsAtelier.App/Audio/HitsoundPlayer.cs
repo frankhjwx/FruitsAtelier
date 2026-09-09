@@ -14,6 +14,18 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
     private WasapiOut? output;
     private bool unavailable;
     public WaveFormat WaveFormat { get; } = WaveFormat.CreateIeeeFloatWaveFormat(HitsoundSamples.SampleRate, 1);
+    public void PreloadProject(IReadOnlyList<MapDocument> documents)
+    {
+        Stop(); cache.Clear(); cacheBytes = 0;
+        foreach (var document in documents)
+        {
+            document.Tracks.RemoveAll(t => t.Nodes.Count < 2);
+            var objects = CatchStreamConverter.Convert(document).Objects;
+            var resolver = new HitsoundResolver(document, objects);
+            foreach (var sound in objects.SelectMany(resolver.Resolve).DistinctBy(s => s.FilePath ?? $"{s.Kind}/{s.SampleSet}/{s.Name}"))
+                Prepare(sound);
+        }
+    }
     public void Prepare(Hitsound sound) { if (!unavailable) GetSamples(sound); }
     public void Play(Hitsound sound)
     {
@@ -72,7 +84,7 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
             }
             catch (Exception ex) { log?.Invoke(ex.ToString()); }
         }
-        if (cacheBytes + samples.LongLength * 4 > 64 * 1024 * 1024) { cache.Clear(); cacheBytes = 0; }
+        if (cacheBytes + samples.LongLength * 4 > 256 * 1024 * 1024) { log?.Invoke("Hitsound project PCM bank exceeds 256 MiB; sample skipped: " + key); samples = []; }
         cache[key] = samples; cacheBytes += samples.LongLength * 4;
         return samples;
     }

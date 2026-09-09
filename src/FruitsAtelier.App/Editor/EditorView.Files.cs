@@ -53,6 +53,7 @@ public sealed partial class EditorView
         ProjectName = project.Name;
         projectStructureDirty = false;
         ResetDifficultyView();
+        PreloadProjectHitsounds();
     }
 
     private void ResetDifficultyView()
@@ -126,6 +127,7 @@ public sealed partial class EditorView
         OsuBeatmapReader.Validate(document);
         difficulties.Add(new DifficultySession(new ProjectDifficulty { Name = name, Document = document }));
         projectStructureDirty = true;
+        PreloadProjectHitsounds();
         bool switched = SwitchDifficulty(difficulties.Count - 1);
         if (switched && imported is not null) OfferSliderConversion(false);
         return switched;

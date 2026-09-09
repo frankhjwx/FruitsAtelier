@@ -25,9 +25,11 @@ internal sealed partial class MacWindow : Window
         hitsounds = new(smokeCheck);
         View.RequestScheduleHitsound = (sound, time) =>
         {
-            if (audio.HitsoundDeviceTime(time) is { } deadline) hitsounds.Schedule(sound, deadline);
+            if (audio.HitsoundHostTime(time) is { } deadline) hitsounds.Schedule(sound, deadline);
         };
         View.RequestPrepareHitsound = hitsounds.Prepare;
+        View.RequestPreloadHitsounds = hitsounds.PreloadProject;
+        View.PreloadProjectHitsounds();
         View.RequestStopHitsounds = hitsounds.Stop;
         Width = 1440; Height = 900; MinWidth = 980; MinHeight = 620;
         Content = editor; Title = L.Get("window.initialTitle");
@@ -77,7 +79,7 @@ internal sealed partial class MacWindow : Window
             if (path is not null) View.LoadSkin(SkinArchive.Import(path, Path.Combine(MacPaths.Artifacts, "skins")));
         });
         View.RequestResetDemo = () => RunFile(async () => { if (await ConfirmDiscard()) { await audio.LoadAsync(null); projectPath = null; View.LoadDocument(DemoMap.Create()); } });
-        View.RequestTogglePlayback = () => { if (audio.State.IsPlaying) audio.Pause(); else { var state = audio.State; View.StartHitsounds(state.PositionMs >= state.DurationMs - 1 ? 0 : state.PositionMs); audio.Play(); } PollAudio(); };
+        View.RequestTogglePlayback = () => RunFile(async () => { if (audio.State.IsPlaying) audio.Pause(); else { var state = audio.State; View.StartHitsounds(state.PositionMs >= state.DurationMs - 1 ? 0 : state.PositionMs); await hitsounds.Preparation; audio.Play(); } PollAudio(); });
         View.RequestSeek = time => { audio.Seek(time); PollAudio(); };
         timer.Tick += (_, _) => PollAudio();
         Opened += async (_, _) =>

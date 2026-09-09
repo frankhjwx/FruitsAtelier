@@ -1,6 +1,6 @@
 # Running on macOS
 
-The Mac host uses Avalonia desktop windows and AVAudioPlayer. Build scripts target the current machine architecture: `osx-arm64` for Apple Silicon and `osx-x64` for Intel.
+The Mac host uses Avalonia desktop windows, AVAudioPlayer for music, and a persistent AVAudioEngine mixer for hitsounds. Build scripts target the current machine architecture: `osx-arm64` for Apple Silicon and `osx-x64` for Intel.
 
 ## Running from source
 

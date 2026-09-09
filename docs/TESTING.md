@@ -106,3 +106,19 @@ Synthetic regressions cover long smooth curves, sharp reversals, boundaries, rep
 sliders, random smooth inputs, cancellation, first-import prompts, current-difficulty
 menu scope, per-difficulty undo, and stale asynchronous results. The macOS smoke check
 captures both localized import prompts and the Edit menu in the native renderer.
+
+## Hitsound scheduling profile
+
+Run the muted native profile to compare the time spent submitting 32 simultaneous hits
+per UI tick over 120 ticks. It reports p50/p95/max submission time, decoded PCM memory,
+and any sample loads or engine creations during playback. This measures the audio dispatch
+path, not end-to-end editor FPS or acoustic latency.
+
+```bash
+bash -c 'source scripts/macos-dotnet.sh; "$FA_DOTNET" run --project ../tests/FruitsAtelier.Mac.Tests -c Release -- --profile-hitsounds'
+```
+
+Pass `--profile-map /path/to/difficulty.catchdiff` to the same Mac test project for a
+read-only whole-map comparison with hitsounds disabled and enabled. It reports sample
+preload time/memory, event density, transport and drawing-command CPU quantiles. It does
+not open/recover a workspace session or save user data, and excludes native GPU rendering.

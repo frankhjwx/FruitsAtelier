@@ -113,10 +113,10 @@ public sealed class MacAudio : IDisposable
         playbackDeviceStart = DeviceTime(player) + SchedulingLeadSeconds;
         playbackRequested = PlayAt(player, playbackDeviceStart) != 0;
     }
-    public double? HitsoundDeviceTime(double mapTimeMs)
+    public double? HitsoundHostTime(double mapTimeMs)
     {
         lock (gate) return player != 0 && playbackRequested && double.IsFinite(mapTimeMs)
-            ? playbackDeviceStart + (mapTimeMs - playbackMapStart) / 1000 : null;
+            ? HostTime() + playbackDeviceStart - DeviceTime(player) + (mapTimeMs - playbackMapStart) / 1000 : null;
     }
     private static void DeleteCache(string? filename) { if (filename is not null) try { File.Delete(filename); } catch (IOException) { } }
     private void Release() { if (player != 0) Close(player); player = 0; playbackRequested = false; DeleteCache(cachePath); cachePath = null; }
@@ -141,6 +141,7 @@ public sealed class MacAudio : IDisposable
         }
         long length = stream.Length; stream.Position = 4; writer.Write((int)length - 8); stream.Position = 40; writer.Write((int)length - 44);
     }
+    [DllImport("FruitsAtelierAudio", EntryPoint="fa_audio_host_time")] private static extern double HostTime();
     private const string Library = "FruitsAtelierAudio";
     [DllImport(Library, EntryPoint="fa_audio_open")] private static extern nint Open([MarshalAs(UnmanagedType.LPUTF8Str)] string path, StringBuilder error, int capacity);
     [DllImport(Library, EntryPoint="fa_audio_close")] private static extern void Close(nint handle);

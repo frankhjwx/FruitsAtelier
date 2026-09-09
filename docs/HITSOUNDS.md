@@ -1,8 +1,8 @@
 # Preview hitsounds
 
 The editor plays hitsounds as the music clock crosses converted Catch objects. Windows
-uses a separate WASAPI mixer; macOS reuses prepared AVAudioPlayer voices and schedules
-them on the music player's audio-device clock. Music playback remains
+uses a separate WASAPI mixer; macOS mixes preloaded PCM through a persistent
+AVAudioSourceNode, aligned with the music transport. Music playback remains
 the source of the playhead position. Pausing, seeking, changing maps, or closing the
 window stops active hitsound voices. Seeking does not play the skipped interval.
 
@@ -38,28 +38,35 @@ separate Catch sample. Source revisions, checksums and asset licenses are in
 A synthesized emergency tone remains available for corrupt/oversized input or missing
 application assets. Imported skin audio is not currently used.
 
-Both backends retain a bounded sample cache and allow up to 32 simultaneous voices.
-At the Mac voice limit, a new attack may reuse the oldest tail of the same sample.
-Source files and managed decoded buffers are limited to 16 MiB per sample; each cache
-is limited to 64 MiB. The Mac native voice pool also has a 64 MiB backing-data budget.
-macOS passes WAV/MP3 data to AVAudioPlayer and decodes OGG into
-PCM WAV. Samples in the upcoming second are warmed before starting playback and
-periodically during playback. On Mac this preparation also creates native players; completed
-and paused voices retain their resources for reuse. Uncached samples decode on demand.
+Opening a project preloads the samples referenced by every difficulty, including notes far
+beyond the current playhead. The editor supplies isolated document snapshots. macOS builds
+the PCM bank on a background loader and waits for it before starting playback; Windows
+preloads during project opening. Identical file paths share decoded memory. A project bank
+has a 256 MiB limit and source/decoded samples have a 16 MiB limit. Samples beyond the bank
+limit are skipped and logged rather than evicting earlier samples and decoding them again
+during playback. Replacing a project releases its previous bank. Newly edited events are
+prepared ahead of playback; Mac playback misses never synchronously load a file.
+
+Windows uses its persistent WASAPI mixer with 32 voices. macOS uses one persistent
+`AVAudioEngine` / `AVAudioSourceNode` mixer with 128 voices and a bounded 2,047-command queue.
+Native WAV/MP3 decoding and OGG conversion happen during preparation. The real-time callback
+only mixes immutable PCM into the output: no file I/O, allocations, locks, or Objective-C
+calls. Under voice pressure the oldest attack is replaced; the newest command is dropped
+if the queue is full. Pause/seek cancellation invalidates queued and active voices by
+changing their generation. The engine is stopped before its sample memory is released.
 
 Windows dispatches elapsed events from transport polls. The Mac host queues the next
-100 ms of events with their original beatmap timestamps. `MacAudio` maps those timestamps
-to the shared `deviceCurrentTime` clock and both music and hitsounds use `playAtTime`.
-Music starts/resumes with a 150 ms scheduling lead, giving the initial sounds time to be
-submitted before the common start deadline. This lead delays transport startup, not the
-hitsounds relative to the music. Seek establishes a new device-clock origin. Pause,
-content changes, and clock jumps larger than 250 ms cancel queued voices before rescheduling.
+100 ms of events with original beatmap timestamps. `MacAudio` maps its music device clock
+to the monotonic host clock used by the source node's render timestamps. Music starts/resumes
+with a 150 ms scheduling lead. This lead delays startup, not hitsounds relative to music.
+Seek establishes a new origin; pause, content changes, and clock jumps larger than 250 ms
+cancel queued sounds before rescheduling.
 
-Keep player allocation and preparation ahead of hit deadlines. Caching only encoded bytes
-still leaves native initialization and output startup on every hit; emitting elapsed events
-from a UI timer also introduces frame-dependent lateness. Timing regression tests compare
-music and hitsound playback clocks while the managed thread waits, check native voice reuse,
-and verify cancellation of future sounds. Device-clock tests do not measure acoustic output
+Do not put per-note `AVAudioPlayer` creation, `prepareToPlay`, seek, or `playAtTime` calls
+back on the UI thread. Even prepared players can block when scheduling or resetting many
+overlapping samples. Preloading encoded bytes alone is insufficient: decode to PCM before
+playback and keep the output device running. Timing tests check actual source-node render
+timestamps as well as the music/host-clock mapping. These checks do not measure acoustic
 latency from speakers or headphones.
 
 ## Maintenance
@@ -74,7 +81,9 @@ filenames, path isolation, slider edges, silent tiny droplets, bananas, simultan
 objects, pause/resume, seek, and replay. Mac native tests exercise custom WAV/OGG samples
 and stopping voices with their output muted. The device-free Windows audio suite
 (`--hitsound-check`) compares mixed PCM, gain, clipping, custom WAV decoding, and stop
-behavior, and runs in Windows CI. `HitsoundLatencyTests` exercises Mac scheduling and reuse. Run the affected suites and both platform
+behavior, and runs in Windows CI. `HitsoundLatencyTests` exercises Mac scheduling and reuse. `HitsoundPerformance` measures
+dense scheduling batches, checks preload across difficulties, and tests native PCM overlap,
+gain, clipping, future deadlines, and cancellation without audible output. Run the affected suites and both platform
 builds as described in [Testing](TESTING.md). Native device tests keep application output
 muted without changing system volume.
 
@@ -88,3 +97,5 @@ sample generator are implemented locally.
 
 Apple scheduling references: [play(atTime:)](https://developer.apple.com/documentation/avfaudio/avaudioplayer/play(attime:))
 and [deviceCurrentTime](https://developer.apple.com/documentation/avfaudio/avaudioplayer/devicecurrenttime).
+
+Apple mixer reference: [AVAudioSourceNode](https://developer.apple.com/documentation/avfaudio/avaudiosourcenode).
