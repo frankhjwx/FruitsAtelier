@@ -22,9 +22,11 @@ public sealed class MacAudio : IDisposable
         {
             lock (gate)
             {
-                bool playing = player != 0 && Playing(player) != 0;
                 double duration = player == 0 ? 0 : Duration(player) * 1000;
-                double position = player == 0 ? 0 : playbackRequested && !playing ? duration : Position(player) * 1000;
+                double nativePosition = player == 0 ? 0 : Position(player) * 1000;
+                // Native completion callbacks can lag behind the device reaching EOF.
+                bool playing = player != 0 && Playing(player) != 0 && nativePosition < duration;
+                double position = player == 0 ? 0 : playbackRequested && !playing ? duration : nativePosition;
                 return new(path, position, duration, playing, player != 0, loading, error);
             }
         }

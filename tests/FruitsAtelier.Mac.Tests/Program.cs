@@ -33,8 +33,17 @@ Check(audio.State.FilePath == wav && audio.State.CanPlay && Math.Abs(audio.State
 await audio.LoadAsync(Path.Combine(directory, "missing.mp3"));
 Check(!audio.State.CanPlay && !audio.State.IsLoading && audio.State.Error is not null, "Failed load disables playback and reports an error");
 await audio.LoadAsync(wav); audio.Seek(2990); audio.Play(); await Task.Delay(200);
-Check(!audio.State.IsPlaying && Math.Abs(audio.State.PositionMs - 3000) < 5, "Playback ends at EOF and holds the final position");
+Check(!audio.State.IsPlaying && Math.Abs(audio.State.PositionMs - 3000) < 5, $"Playback ends at EOF and holds the final position: {audio.State}");
 audio.Play(); await Task.Delay(100);
 Check(audio.State.IsPlaying && audio.State.PositionMs < 1000, "Replay starts at the beginning after EOF");
 audio.Pause();
+using (var hitsounds = new MacHitsoundPlayer(muted: true))
+{
+    hitsounds.Play(new(FruitsAtelier.Core.CatchObjectKind.Fruit, wav, .5f));
+    hitsounds.Play(new(FruitsAtelier.Core.CatchObjectKind.Banana, null, 1, "catch-banana"));
+    Check(hitsounds.ActiveVoices >= 1, "Native hitsounds start alongside the music transport (muted)");
+    hitsounds.Stop(); Check(hitsounds.ActiveVoices == 0, "Stopping clears all hitsound voices");
+    hitsounds.Play(new(FruitsAtelier.Core.CatchObjectKind.Droplet, Path.Combine(root, "tests", "FruitsAtelier.Audio.Tests", "Fixtures", "quiet-tone.ogg"), .5f, "slidertick"));
+    Check(hitsounds.ActiveVoices == 1, "Custom OGG hitsound decodes and plays (muted)");
+}
 Console.WriteLine("Mac native checks passed.");

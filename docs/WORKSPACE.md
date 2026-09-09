@@ -1,55 +1,55 @@
-# Workspace 与本地曲库
+# Workspace and Local Library
 
-应用支持 osu!stable 的 Songs 目录。通过主菜单旁的“曲库”进入独立页面，在“设置”选择 workspace 与 Songs；Songs 为可选设置，可以留空，之后主动从设置中绑定；应用不会在启动或进入曲库时自动打开设置。已绑定时，两者必须彼此独立。未绑定 Songs 时仍可新建、保存、另存为和打开 workspace 工程，“我的工程”照常可用；扫描 Songs 与导出到 osu!stable 需要绑定后使用。设置保存在系统应用数据目录的 `FruitsAtelier/library.json`，不依赖当前启动目录。
+The application supports osu!stable's Songs directory. Use **Library** beside the main menu to open the library page, then choose a workspace and Songs directory in **Settings**. Songs is optional and may be configured later; startup and entering the library do not automatically open Settings. When configured, Songs and the workspace must be separate directories. Creating, saving, saving as, and opening workspace projects, including **My Projects**, work without Songs. Scanning Songs and exporting to osu!stable require it. Settings are stored in `FruitsAtelier/library.json` under the system application-data directory, independently of the launch directory.
 
-## 文件结构
+## File structure
 
 ```text
 Workspace/
   library.db
   Resources/
-    OSZ内容指纹/
-      原始目录与全部文件
-  歌名 [工程短ID]/
+    OSZ-content-fingerprint/
+      original directories and all files
+  Song title [short-project-ID]/
     project.catchdiff
     Artist - Title (Creator) [Difficulty].catchdiff
 ```
 
-`project.catchdiff` 是工程清单：保存稳定工程 ID、名称、难度顺序、难度 ID、文件名、Songs／外部文件夹来源以及每个难度的来源与导出指纹。其他 `.catchdiff` 文件保存完整文档，沿用 schema 1 文档编码，包含控制柄、timing 与原始导入上下文。文件名根据原始 Metadata 的 Artist、Title、Creator 与工程内难度名自动生成，过滤跨平台不允许的字符；名称冲突时添加数字后缀。文件名不作为身份标识。
+`project.catchdiff` is the project manifest. It stores a stable project ID, name, difficulty order, difficulty IDs, filenames, Songs/external-folder origins, and each difficulty's source and export fingerprints. Other `.catchdiff` files contain complete documents using schema 1 document encoding, including handles, timing, and original imported context. Filenames are generated from the original Metadata Artist, Title, Creator, and project difficulty name, with characters invalid across platforms removed. Numeric suffixes resolve collisions. Filenames are not identities.
 
-保存先生成完整临时工程目录，再通过目录重命名发布。发生中断时，可从保留的 `.previous` 目录恢复；清单与难度文件不会拼接不同保存版本。资源路径相对最终工程位置记录。保存工程不复制资源；外部目录保持原位，OSZ 的完整解压资源独立保存在 `Resources`，不会随工程快照保存被清除。
+Saving first creates a complete temporary project directory, then publishes it by renaming directories. An interrupted save can recover from the retained `.previous` directory; the manifest and difficulty files never combine different save versions. Resource paths are recorded relative to the final project location. Saving does not copy resources: external directories stay in place, and complete OSZ contents remain separately in `Resources`, unaffected by project snapshot saves.
 
-旧 `.catchproj` 仍可打开，下次保存写入 workspace 工程。另存为在当前 workspace 创建独立工程副本。
+Older `.catchproj` files still open; the next save writes a workspace project. Save As creates an independent project copy in the current workspace.
 
-## 外部资源导入
+## Importing external resources
 
-曲库左侧的“导入文件夹…”登记用户选择的来源目录，并递归扫描其中的 Catch 谱面；文件留在原位置，不写入或复制该目录。也可以用“导入谱面 / OSZ…”或编辑器的 Open 打开 `.osu`、`.osz`；导入的来源自动登记，工程立即保存到 workspace。重复打开已有来源会继续已有工程，不覆盖编辑内容。新增难度时手动选择的外部 `.osu` 同样登记其来源目录。
+**Import folder…** on the library's left side registers the selected source directory and recursively scans its Catch beatmaps. Files remain in place; the directory is neither modified nor copied. **Import beatmap / OSZ…** and the editor's Open action also accept `.osu` and `.osz`; imported sources are registered automatically and the project is immediately saved to the workspace. Reopening an existing source continues its existing project without overwriting edits. An external `.osu` manually selected when adding a difficulty also registers its source directory.
 
-OSZ 完整解压到 `workspace/Resources/<SHA-256 内容指纹>/`，保留目录结构、空目录、音频、背景、视频、storyboard 与其他文件。同内容的包复用目录，原 OSZ 路径作为来源信息保留在数据库；之后移动或删除原包不影响已解压资源。提取失败不会发布半成品目录，路径穿越、符号链接、重名和超限包会被拒绝。当前上限：原包 1 GiB、20000 个条目、单个 `.osu` 16 MiB、其他文件 256 MiB、解压总量 512 MiB。完整保存视频和 storyboard 不代表编辑器支持预览它们。
+OSZ contents are fully extracted to `workspace/Resources/<SHA-256 content fingerprint>/`, preserving directory structure, empty directories, audio, backgrounds, videos, storyboards, and other files. Identical archives reuse a directory. The original OSZ path remains recorded in the database; moving or deleting the archive later does not affect extracted resources. Failed extraction does not publish an incomplete directory. Path traversal, symbolic links, duplicate names, and oversized archives are rejected. Current limits are 1 GiB per archive, 20000 entries, 16 MiB per `.osu`, 256 MiB per other file, and 512 MiB total extracted data. Preserving videos and storyboards does not imply preview support.
 
-外部来源存储在当前 workspace 的 `library.db` 中，重启后自动扫描，并与 Songs 一起搜索；无需绑定 Songs。来源目录丢失时保留登记与索引，曲库报告错误，已有工程也显示缺失引用。恢复原目录后可重新扫描。手动导入的来源不能是 workspace 或其上级目录，应用管理的 `Resources` 目录除外。
+External sources are stored in the current workspace's `library.db`, scanned after restart, and searched alongside Songs without requiring Songs to be configured. Missing source directories retain their registration and index, produce library errors, and appear as missing references in existing projects. Rescan after restoring the original directory. A manually imported source cannot be the workspace or its ancestor; the application-managed `Resources` directory is an exception.
 
-## 曲库与搜索
+## Library and search
 
-曲库直接扫描 `.osu` 元数据，只索引 Mode=2；进入编辑器时仍要求当前格式读取器支持的 v14 谱面。不同 Songs 目录分别识别谱面集，不以歌名或线上 ID 合并。开始编辑将该目录内的 Catch 难度导入 workspace；已有对应工程时提供“继续编辑”。在“全部歌曲”或“我的工程”中双击谱面卡片可直接执行同一打开操作；单击仍只选择卡片，当前工程有未保存修改时仍先提示。“我的工程”同时显示未关联 Songs 的新工程。
+The library scans `.osu` metadata directly and indexes only Mode=2. Entering the editor still requires v14, as supported by the current format reader. Separate Songs directories identify separate beatmap sets; titles and online IDs do not merge sets. Starting an edit imports the directory's Catch difficulties into the workspace, while an existing associated project offers **Continue editing**. Double-clicking a beatmap card in **All Songs** or **My Projects** performs the same open operation. A single click only selects the card, and unsaved changes still prompt first. **My Projects** also includes new projects without Songs associations.
 
-搜索对 Title、TitleUnicode、Artist、ArtistUnicode、Creator、Version、Tags、Source 做 Unicode 规范化与大小写无关的子串匹配，多个关键词须全部命中。支持原始与 romanised 元数据，不推断未提供的读音。SQL 使用绑定参数。
+Search uses Unicode normalization and case-insensitive substring matching across Title, TitleUnicode, Artist, ArtistUnicode, Creator, Version, Tags, and Source. All search terms must match. Original and romanized metadata are supported, but missing readings are not inferred. SQL uses bound parameters.
 
-扫描在后台进行，以修改时间及大小增量更新。应用启动、进入曲库、手动刷新及曲库页面每分钟检查会触发扫描。不可访问的目录会报告错误，并保留已有索引；断开的 Songs 不阻止打开现有工程。列表仅绘制可见行，选中谱面集后后台计算 Catch 星级。
+Scanning runs in the background and updates incrementally by modification time and size. It runs on startup, when entering the library, on manual refresh, and during the library page's once-per-minute check. Inaccessible directories report errors and retain their index; disconnected Songs does not prevent opening existing projects. Lists draw only visible rows. Selecting a beatmap set calculates Catch stars in the background.
 
-数据库的 maps/projects/project_sources 表是可重建的索引；external_sources 保存外部目录登记与原始 OSZ 路径，属于持久配置；工程清单与难度文件才是创作数据。导出覆盖前的原始 `.osu` 内容另外保存在 `export_backups` 表；重建索引不删除这些备份。不要把包含备份的数据库当成无价值缓存直接删除。
+The database's maps/projects/project_sources tables are rebuildable indexes. The external_sources table contains persistent external-folder registrations and original OSZ paths. Project manifests and difficulty files hold authored data. Original `.osu` contents before export overwrites are also stored in export_backups; rebuilding the index does not delete them. Do not delete a database containing backups as if it were disposable cache data.
 
-## 资源错误
+## Resource errors
 
-工程打开及编辑器刷新时检查源 `.osu`、音频、Events 中的资源引用（含动画帧）以及物件自定义采样。缺失时在编辑器显示红色错误条，“查看详情”显示完整路径。工程可继续编辑与保存；导出涉及缺失资源的难度会报错。恢复原路径可消除错误；音频也可从文件菜单重新选择。
+Opening a project and refreshing the editor check source `.osu` files, audio, Events resource references (including animation frames), and custom object samples. Missing resources produce a red editor error bar; **View details** shows full paths. Editing and saving remain available, but exporting a difficulty with missing resources fails. Restoring the original path clears the error; audio can also be replaced from the File menu.
 
-## 显式导出
+## Explicit export
 
-保存、新增难度、浏览、搜索均不写 Songs。使用文件菜单 Export 或 Ctrl/Cmd+E 打开导出页面，对当前难度选择：
+Saving, adding difficulties, browsing, and searching do not write to Songs. Choose Export from the File menu or press Ctrl/Cmd+E to open the export page for the current difficulty:
 
-- 覆盖关联难度：显示目标路径，先校验来源或上次导出指纹。外部修改、目标丢失或目标不在当前 Songs 中时拒绝覆盖。
-- 导出为新难度：输入 Version，按 osu! 风格生成新 `.osu` 文件名；不能覆盖同名文件，新文件的 BeatmapID 为 0。
+- **Overwrite associated difficulty:** displays the target path and validates its source or last-export fingerprint. External changes, a missing target, or a target outside the current Songs directory prevent overwrite.
+- **Export as new difficulty:** accepts a Version and generates an osu!-style `.osu` filename. It cannot overwrite an existing filename, and the new file has BeatmapID 0.
 
-无来源工程首次导出会创建新的 Songs 子目录。导出先完成转换及冲突检查，再按需复制引用资源，最后写入 `.osu` 并保存目标关联。其他难度保持原样。若需要一次导出多个难度，可逐个切换 diff 执行 Export。
+The first export of an unassociated project creates a new Songs subdirectory. Export completes conversion and conflict checks first, copies referenced resources as needed, then writes `.osu` and saves the target association. Other difficulties remain unchanged. Export several difficulties by switching and exporting each one.
 
-源文件被外部修改时，可以导出为新难度，或重新导入外部 `.osu` 后继续处理；应用不会自动合并两边的编辑。导出并不代替工程保存，也不保证 stable 立即刷新自身曲库。
+When a source file changes externally, export as a new difficulty or reimport the external `.osu` before continuing. The application does not merge both sets of edits automatically. Export does not replace project saving or guarantee that stable immediately refreshes its own library.

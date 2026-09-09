@@ -10,6 +10,8 @@ The project is under active development.
 
 ## Features
 
+- Preview [Catch hitsounds](docs/HITSOUNDS.md), including beatmap samples, slider ticks and banana sounds.
+
 - Open `.osz` archives, v14 / Mode=2 `.osu` beatmaps, and `.catchproj` projects.
 - Edit fruits, FSliders, and banana showers with beat snapping, multi-selection, group movement, cut/copy, and undo/redo.
 - Convert imported Legacy Sliders into editable FSliders, then adjust anchors, Bézier handles, and span counts.

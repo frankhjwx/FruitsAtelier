@@ -156,6 +156,7 @@ public sealed partial class EditorView
 
     public void UpdateTransport(double positionMs, double durationMs, bool ready, bool playing, bool loading, string? error, string? filename)
     {
+        UpdateHitsounds(positionMs, ready && playing && !loading, filename);
         bool wasReady = AudioReady;
         AudioReady = ready; AudioPlaying = playing; AudioLoading = loading;
         AudioDurationMs = double.IsFinite(durationMs) ? Math.Max(0, durationMs) : 0;
@@ -169,6 +170,7 @@ public sealed partial class EditorView
     {
         playhead = Math.Clamp(time, 0, TimelineDurationMs);
         FollowPlayhead();
+        ResetHitsounds();
         RequestSeek?.Invoke(playhead);
         StatusMessage = L.Get("editor.status.seek", Time(playhead), AudioReady ? "" : L.Get("editor.audio.notLoadedSuffix"));
     }

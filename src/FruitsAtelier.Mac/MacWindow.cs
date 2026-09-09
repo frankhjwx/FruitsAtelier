@@ -14,6 +14,7 @@ internal sealed partial class MacWindow : Window
 {
     private readonly EditorControl editor = new();
     private readonly MacAudio audio;
+    private readonly MacHitsoundPlayer hitsounds;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(16) };
     private string? projectPath;
     private bool busy, allowClose;
@@ -21,6 +22,10 @@ internal sealed partial class MacWindow : Window
     public MacWindow(string? initialPath, bool smokeCheck)
     {
         audio = new(smokeCheck);
+        hitsounds = new(smokeCheck);
+        View.RequestHitsound = hitsounds.Play;
+        View.RequestPrepareHitsound = hitsounds.Prepare;
+        View.RequestStopHitsounds = hitsounds.Stop;
         Width = 1440; Height = 900; MinWidth = 980; MinHeight = 620;
         Content = editor; Title = L.Get("window.initialTitle");
         string icon = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "app-icon.png");
@@ -69,7 +74,7 @@ internal sealed partial class MacWindow : Window
             if (path is not null) View.LoadSkin(SkinArchive.Import(path, Path.Combine(MacPaths.Artifacts, "skins")));
         });
         View.RequestResetDemo = () => RunFile(async () => { if (await ConfirmDiscard()) { await audio.LoadAsync(null); projectPath = null; View.LoadDocument(DemoMap.Create()); } });
-        View.RequestTogglePlayback = () => { if (audio.State.IsPlaying) audio.Pause(); else audio.Play(); PollAudio(); };
+        View.RequestTogglePlayback = () => { if (audio.State.IsPlaying) audio.Pause(); else { var state = audio.State; View.StartHitsounds(state.PositionMs >= state.DurationMs - 1 ? 0 : state.PositionMs); audio.Play(); } PollAudio(); };
         View.RequestSeek = time => { audio.Seek(time); PollAudio(); };
         timer.Tick += (_, _) => PollAudio();
         Opened += async (_, _) =>
@@ -101,7 +106,7 @@ internal sealed partial class MacWindow : Window
             e.Cancel = true;
             RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
         };
-        Closed += (_, _) => { timer.Stop(); audio.Dispose(); editor.Dispose(); };
+        Closed += (_, _) => { timer.Stop(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
         Deactivated += (_, _) => { View.CancelInteraction(); editor.Refresh(); };
     }
     private void UpdateTitle() => Title = L.Get("window.title", View.ProjectName, View.IsDirty ? " *" : "", L.Get(View.Document.IsDemo ? "window.demo" : "window.milestone"));

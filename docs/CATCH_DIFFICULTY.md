@@ -1,46 +1,32 @@
-# Catch 星级
+# Catch Star Rating
 
-标签上的星级是当前编辑内容的 **No Mod、1×** Catch 移动难度。Core 的
-`CatchDifficultyCalculator` 使用 ppy/osu commit
-`48c4800e3ae4ee752452cdff83bd3787ccf3105f` 的算法版本 **20260706**。
-它不读取难度名称推测等级，也不把 AR 当作星级。
+Difficulty tabs show the **No Mod, 1×** Catch movement difficulty of the current edited content. Core's `CatchDifficultyCalculator` uses algorithm version **20260706** from ppy/osu commit `48c4800e3ae4ee752452cdff83bd3787ccf3105f`. It does not infer difficulty from the difficulty name or treat AR as a star rating.
 
-## 计算流程
+## Calculation
 
-完整 Catch 转换结果按时间稳定排序，只取 Fruit 和 Droplet，包含 slider 的
-head、tick、repeat 和 tail。TinyDroplet 和 Banana 不贡献移动星级或最大连击。
-沿用完整序列的 hyperdash 预处理，按 CS 计算 catcher 宽度，CS > 5.5 时使用官方的额外宽度修正。
+The complete Catch conversion result is stably sorted by time. Only Fruit and Droplet objects participate, including slider heads, ticks, repeats, and tails. TinyDroplets and Bananas contribute neither movement stars nor maximum combo. Hyperdash preprocessing uses the full sequence. Catcher width follows CS, including the official extra width adjustment above CS 5.5.
 
-位置归一化至半接盘宽 41，采用最小必要移动和位置误差 16；hyperdash 后重置玩家位置。
-每一步使用至少 40 ms 的 strain time，计入位移、转向、连续线性间距衰减、边缘 dash
-及重复小幅往返修正。移动 strain 按每秒 0.2 衰减，每 750 ms 取峰值；峰值降序按
-0.94 递减权重求和，最终 `stars = sqrt(difficulty) * 4.59`。
+Positions are normalized to a catcher half-width of 41, with minimum required movement and a position tolerance of 16; hyperdashes reset the player's position. Each step uses at least 40 ms of strain time and accounts for distance, direction changes, continuous linear-spacing decay, edge dashes, and repeated small movements. Movement strain decays by 0.2 per second, with peaks recorded every 750 ms. Peaks are sorted descending and summed with successively decreasing weights of 0.94; finally, `stars = sqrt(difficulty) * 4.59`.
 
-## 显示与失效
+## Display and invalidation
 
-星级在后台根据独立文档快照计算，同一时间只执行一个编辑器星级任务。当前文档变化后保留上次成功星级并显示旋转指示；首次尚无结果显示 `0.00★` 和旋转指示。真正算出的零星结果会停止旋转。
+Stars are calculated in the background against independent document snapshots, with one editor star task at a time. When the document changes, the last successful value remains visible with a spinner. Before the first result, the display shows `0.00★` and a spinner. A successfully calculated zero-star result stops the spinner.
 
-物件拖动中、草稿 FSlider 或香蕉雨未完成时保留旧值并等待完成后刷新。连续编辑会合并等待期间的变化，过时快照的结果不发布；替换工程会取消旧工程尚未开始的计算。转换失败时保留缓存值、停止旋转并显示 `!` 和状态提示，修改后重试。缓存仅保存在当前会话中。
+During object drags or unfinished FSlider/banana drafts, the old value remains until editing completes. Continuous edits coalesce pending changes; stale snapshot results are not published. Replacing a project cancels its queued calculations. Conversion failures retain the cached value, stop the spinner, and show `!` with a status message; further edits retry. The cache lasts only for the current session.
 
-图标采用官方 Catch ruleset 图标，依据官网星级色标作 gamma-2.2 RGB 插值：
+The official Catch ruleset icon uses gamma-2.2 RGB interpolation over the website's star-color scale:
 
-| 星级节点 | 颜色 |
+| Star threshold | Color |
 | --- | --- |
-| < 0.1 / 不可用 | `#AAAAAA` |
+| < 0.1 / unavailable | `#AAAAAA` |
 | 0.1 / 1.25 / 2 / 2.5 | `#4290FB` / `#4FC0FF` / `#4FFFD5` / `#7CFF4F` |
 | 3.3 / 4.2 / 4.9 / 5.8 | `#F6F05C` / `#FF8068` / `#FF4E6F` / `#C645B8` |
 | 6.7 / 7.7 / ≥ 9 | `#6563DE` / `#18158E` / `#000000` |
 
-高星级图标加浅色背衬以适应深色界面。来源和许可见 [第三方声明](../THIRD_PARTY_NOTICES.md)。
+High-star icons receive a light backing for dark interfaces. Sources and licenses are in [Third-party notices](../THIRD_PARTY_NOTICES.md).
 
-## 对照与边界
+## Comparisons and limits
 
-Gameplay 回归包含 21 个由该固定版本官方 `CatchDifficultyHitObject`、`MovementEvaluator`、
-`Movement`、`StrainSkill`、`StrainDecaySkill` 直接运行得到的数值：覆盖 CS 3/5/8 下的
-交替跳跃、线性移动、小幅往返、长休息、分数时间、同时间物件和堆叠，容差 1e-12。
-独立测试验证 Droplet、TinyDroplet、Banana 的参与规则和输入边界；App 测试覆盖编辑、
-撤销、CS、草稿及标签切换的缓存行为。
+Gameplay regressions contain 21 reference values obtained by directly running the pinned official `CatchDifficultyHitObject`, `MovementEvaluator`, `Movement`, `StrainSkill`, and `StrainDecaySkill` implementations. They cover alternating jumps, linear movement, small repeated movements, long breaks, fractional times, simultaneous objects, and stacks at CS 3/5/8, with tolerance 1e-12. Independent tests verify Droplet, TinyDroplet, and Banana participation and input boundaries. App tests cover cache behavior for edits, undo, CS, drafts, and tab switching.
 
-星级针对编辑器完整转换得到的当前物件序列；`.osu` 导出的整数时间/坐标量化可能使回读
-星级略有变化。本站分数取决于服务器的计算版本及其保存的谱面；不保证与不同算法版本
-或尚未重新计算的网页缓存完全相同。当前不计算 mod 星级或 pp。
+Ratings use the current complete object sequence converted by the editor. Integer time/coordinate quantization in `.osu` export may slightly change the read-back rating. Website values depend on the server's calculation version and stored beatmap; agreement with different algorithm versions or stale website caches is not guaranteed. Mod ratings and pp are not currently calculated.

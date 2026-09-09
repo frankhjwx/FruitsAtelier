@@ -24,3 +24,12 @@ double fa_audio_position(void *handle) { return [(__bridge AVAudioPlayer *)handl
 double fa_audio_duration(void *handle) { return [(__bridge AVAudioPlayer *)handle duration]; }
 int fa_audio_playing(void *handle) { return [(__bridge AVAudioPlayer *)handle isPlaying]; }
 void fa_audio_volume(void *handle, float volume) { [(__bridge AVAudioPlayer *)handle setVolume:volume]; }
+
+void *fa_audio_open_data(const unsigned char *bytes, int length) {
+    @autoreleasepool {
+        NSData *data = [NSData dataWithBytes:bytes length:length];
+        AVAudioPlayer *player = [[AVAudioPlayer alloc] initWithData:data error:NULL];
+        if (!player || ![player prepareToPlay]) return NULL;
+        return (__bridge_retained void *)player;
+    }
+}
