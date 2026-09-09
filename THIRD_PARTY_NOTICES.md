@@ -94,3 +94,12 @@ interpolation is independently implemented as gamma-2.2 RGB interpolation.
 - SQLite native engine: public domain; https://sqlite.org/copyright.html.
 
 Package versions are pinned in the project and lock files. License texts are included under `Core/Workspace/Licenses` and distributed with the desktop application.
+
+## Default hitsound samples
+
+The classic normal/soft/drum sample banks and the Catch banana sample are unmodified
+recordings from ppy/osu-resources commit `d8d01c29ce0f298159aea3644b947d8b4a1882a2`,
+copyright ppy Pty Ltd and contributors, licensed under CC BY-NC 4.0. Source paths,
+checksums, attribution, and the full license ship in
+[assets/audio/osu](assets/audio/osu/README.md). These audio assets retain their own
+license independently of the application code.

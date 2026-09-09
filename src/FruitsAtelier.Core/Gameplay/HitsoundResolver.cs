@@ -42,7 +42,7 @@ public sealed class HitsoundResolver
     public IReadOnlyList<Hitsound> Resolve(ConvertedCatchObject item)
     {
         if (item.Kind == CatchObjectKind.TinyDroplet) return Array.Empty<Hitsound>();
-        if (item.Kind == CatchObjectKind.Banana) return new[] { new Hitsound(item.Kind, null, 1, "catch-banana") };
+        if (item.Kind == CatchObjectKind.Banana) return new[] { new Hitsound(item.Kind, HitsoundDefaults.Find(1, "catch-banana"), 1, "catch-banana") };
         int low = 0, high = timing.Length;
         while (low < high) { int mid = (low + high) / 2; if (timing[mid].TimeMs <= item.TimeMs) low = mid + 1; else high = mid; }
         var point = low > 0 ? timing[low - 1] : null;
@@ -106,7 +106,7 @@ public sealed class HitsoundResolver
             if (index > 0)
                 foreach (string extension in new[] { ".wav", ".ogg", ".mp3" })
                     if (files.TryGetValue(basename + extension, out path)) break;
-            return new(item.Kind, path, gain, name, sampleSet);
+            return new(item.Kind, path ?? HitsoundDefaults.Find(sampleSet, name), gain, name, sampleSet);
         }
     }
     private static string At(string[] values, int i) => i < values.Length ? values[i] : "";

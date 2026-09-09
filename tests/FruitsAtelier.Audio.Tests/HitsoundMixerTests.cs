@@ -29,6 +29,10 @@ static class HitsoundMixerTests
                 if (Math.Abs(buffer[i] - custom[i]) > .0001) throw new Exception("Custom WAV was not decoded as its own PCM");
         }
         finally { File.Delete(path); }
+        mixer.Stop();
+        var normal = HitsoundDefaults.Find(1, "hitnormal") ?? throw new Exception("Default hitnormal asset missing from build output");
+        mixer.Queue(new(CatchObjectKind.Fruit, normal, 1)); mixer.Read(buffer, 0, buffer.Length);
+        if (!buffer.Any(v => Math.Abs(v) > .001)) throw new Exception("Default normal-only note emitted silent PCM");
         Console.WriteLine("PASS Hitsound PCM mixing, volume, overlap, stop, clipping and custom WAV decoding");
     }
 }

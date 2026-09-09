@@ -12,7 +12,7 @@ window stops active hitsound voices. Seeking does not play the skipped interval.
 | Slider head, repeat, tail | The corresponding edge flags and sample banks |
 | Droplet (slider tick) | `slidertick` |
 | Tiny droplet / slider body | Silent; no looping slide or whistle sound |
-| Banana | Dedicated built-in banana sound |
+| Banana | Packaged Catch banana sample |
 
 ## Sample selection
 
@@ -28,11 +28,18 @@ Resources are resolved relative to the source map directory, or the audio direct
 a new document without a source map. Lookup is case-insensitive and limited to indexed
 files inside that directory, excluding symbolic links. For an enabled custom sample index,
 lookup checks `.wav`, `.ogg`, then `.mp3`; index 1 has no numeric suffix, while higher
-indices use names such as `soft-hitclap2.wav`. Index zero selects built-in samples.
-Missing, invalid, or oversized audio falls back to an original synthesized preview sound.
-The original synthesized fallback sounds distinguish object kinds, banks, and additions. Imported skin audio is not currently used.
+indices use names such as `soft-hitclap2.wav`. Index zero selects the packaged osu!
+classic default samples. Missing beatmap samples also fall back to these recordings,
+including the normal layer on fruits without additional flags. Normal, soft, and drum
+each include hitnormal, hitwhistle, hitfinish, hitclap, and slidertick. Banana uses its
+separate Catch sample. Source revisions, checksums and asset licenses are in
+[Default samples](../assets/audio/osu/README.md).
+
+A synthesized emergency tone remains available for corrupt/oversized input or missing
+application assets. Imported skin audio is not currently used.
 
 Both backends retain a bounded sample cache and allow up to 32 simultaneous voices.
+At the Mac voice limit, a new attack may reuse the oldest tail of the same sample.
 Source files and managed decoded buffers are limited to 16 MiB per sample; each cache
 is limited to 64 MiB. The Mac native voice pool also has a 64 MiB backing-data budget.
 macOS passes WAV/MP3 data to AVAudioPlayer and decodes OGG into

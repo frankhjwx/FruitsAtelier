@@ -25,10 +25,10 @@ static class HitsoundTests
             Require(sounds.Count == 4 && sounds[0].FilePath == Path.Combine(root, "Custom.wav") && sounds.All(s => s.Volume == .75f), "Case-insensitive custom sample replaces normal while retaining additions and explicit volume");
             fruit.OriginalLine = "100,192,100,1,14,1:3:0:75:../outside.wav";
             resolver = new(document, new[] { item });
-            Require(resolver.Resolve(item).All(s => s.FilePath is null || Path.GetDirectoryName(s.FilePath) == root), "Sample paths cannot escape the map resource index");
+            Require(resolver.Resolve(item).All(s => s.Name != "custom"), "Sample paths cannot escape the map resource index");
             Require(resolver.Resolve(item with { Kind = CatchObjectKind.TinyDroplet }).Count == 0, "Tiny droplets and slider body are silent");
             var banana = resolver.Resolve(item with { Kind = CatchObjectKind.Banana });
-            Require(banana.Count == 1 && banana[0].Name == "catch-banana" && banana[0].FilePath is null, "Bananas use their dedicated sound");
+            Require(banana.Count == 1 && banana[0].Name == "catch-banana" && banana[0].FilePath == HitsoundDefaults.Find(1, "catch-banana"), "Bananas use their dedicated sound");
             var slider = new ImportedSlider { TimeMs = 0, OriginalLine = "100,192,0,2,2,L|300:192,2,200,0|8|4,1:0|2:3|3:1,0:0:0:0:" };
             document.ImportedSliders.Add(slider);
             var events = new[] {
@@ -45,6 +45,16 @@ static class HitsoundTests
             document.TimingPoints.Add(new() { TimeMs = 500, Volume = 0 });
             resolver = new(document, events);
             Require(resolver.Resolve(events[3]).Count == 0, "Zero timing volume mutes samples");
+            foreach (int bank in new[] { 1, 2, 3 })
+                foreach (string name in new[] { "hitnormal", "hitwhistle", "hitfinish", "hitclap", "slidertick" })
+                    Require(HitsoundDefaults.Find(bank, name) is not null, $"Packaged sample missing: {bank}/{name}");
+            var plain = new MapDocument(); plain.Fruits.Add(new Fruit { Id = item.SourceId, TimeMs = 100 });
+            var baseSound = new HitsoundResolver(plain, new[] { item }).Resolve(item).Single();
+            Require(baseSound.Name == "hitnormal" && baseSound.FilePath == HitsoundDefaults.Find(1, "hitnormal") && baseSound.FilePath is not null,
+                "A fruit with no additions plays the actual default normal sample");
+            plain.Fruits[0].OriginalLine = "100,192,100,1,8,0:0:0:0:";
+            var layered = new HitsoundResolver(plain, new[] { item }).Resolve(item);
+            Require(layered.Count == 2 && layered[0].Name == "hitnormal" && layered[1].Name == "hitclap", "Additions retain the default normal layer");
             Scheduler();
             ScheduledPlayback();
         }

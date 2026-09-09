@@ -43,6 +43,11 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
         {
             string key = Key(sound);
             var voice = voices.FirstOrDefault(v => v.Key == key && v.BusyUntil <= DeviceTime(v.Handle));
+            if (voice is null && voices.Count >= 32)
+            {
+                // Preserve new attacks under load by reusing the oldest matching tail.
+                voice = voices.Where(v => v.Key == key).MinBy(v => v.BusyUntil);
+            }
             if (voice is null) voice = CreateVoice(key, GetData(sound), sound);
             if (voice is null) return;
             // A completed voice retains its output resources. Reset before reusing it.

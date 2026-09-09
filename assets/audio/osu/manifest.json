@@ -1,0 +1,86 @@
+{
+  "repository": "ppy/osu-resources",
+  "commit": "d8d01c29ce0f298159aea3644b947d8b4a1882a2",
+  "files": [
+    {
+      "file": "normal-hitnormal.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/normal-hitnormal.wav",
+      "sha256": "4ea26f94b4d0918309f0788214c79d26e412ee42bc8cb9518c661412e711c7f7"
+    },
+    {
+      "file": "normal-hitclap.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/normal-hitclap.wav",
+      "sha256": "8eff6fd6927593de7ff964480d4aeabdf2647924d3cc4c15045ebfaa83e3dfc2"
+    },
+    {
+      "file": "normal-hitfinish.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/normal-hitfinish.wav",
+      "sha256": "a723b41585f71d5ad0bec53a585fbe8c09497dbcd54683a05495b66a5f4ff43c"
+    },
+    {
+      "file": "normal-hitwhistle.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/normal-hitwhistle.wav",
+      "sha256": "ce3a0f97152855dd9ba9fa3a9454892956f8618c79cf8f49fc37b315fb792433"
+    },
+    {
+      "file": "normal-slidertick.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/normal-slidertick.wav",
+      "sha256": "c2b9e60c1088b954dd6d6b657c682f7fabfabfe5bb47d8f5411eb9f0da2af45c"
+    },
+    {
+      "file": "soft-hitnormal.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/soft-hitnormal.wav",
+      "sha256": "67ddd85be838217c26525d61be66bb41df700a5a14dcab000a59c4b47b262efa"
+    },
+    {
+      "file": "soft-hitclap.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/soft-hitclap.wav",
+      "sha256": "c5f771bd04099ee4472c402ff811e81d3ea83c7b9884755117ffc00018557597"
+    },
+    {
+      "file": "soft-hitfinish.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/soft-hitfinish.wav",
+      "sha256": "1ac4cf399a5d598444c258ffb74fd5655b3396d804ed2f4571dd52f7658d631c"
+    },
+    {
+      "file": "soft-hitwhistle.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/soft-hitwhistle.wav",
+      "sha256": "d023d6020fcd3aad2663563af3475b81bc37faa3b4a6c247719e71b7ed5c7b4b"
+    },
+    {
+      "file": "soft-slidertick.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/soft-slidertick.wav",
+      "sha256": "6aeff6d5b5bcd9b208d1c188877690a9fb08ce9ecbe86290472e0aa638d16127"
+    },
+    {
+      "file": "drum-hitnormal.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/drum-hitnormal.wav",
+      "sha256": "7f49bacb51a0d576eea7358354656f5319caa401de75ea6bcae3fdd7c18352f8"
+    },
+    {
+      "file": "drum-hitclap.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/drum-hitclap.wav",
+      "sha256": "a0b71977c71b72c05f1c570100ecb41fa93d93f77e0ae9ce30853421b765410d"
+    },
+    {
+      "file": "drum-hitfinish.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/drum-hitfinish.wav",
+      "sha256": "d03a9204720519dd6b2efd3607ae2858f6ca157ebee00ae8a99e3911d12fa7ab"
+    },
+    {
+      "file": "drum-hitwhistle.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/drum-hitwhistle.wav",
+      "sha256": "a1c043dff72484d79a9b3bce3c6c1be7a193219dbf2626bc3350a246dffc9b54"
+    },
+    {
+      "file": "drum-slidertick.wav",
+      "source": "osu.Game.Resources/Skins/Legacy/drum-slidertick.wav",
+      "sha256": "51ec06c0d71e5a4a022ff9dfad84affec6005d62eec5ec8764380698413d47ab"
+    },
+    {
+      "file": "catch-banana.wav",
+      "source": "osu.Game.Resources/Samples/Gameplay/catch-banana.wav",
+      "sha256": "6da3deac1fde5992357e92c87926a6e55adc61d4a794df94e1cdc5d27717f8dd"
+    }
+  ]
+}
