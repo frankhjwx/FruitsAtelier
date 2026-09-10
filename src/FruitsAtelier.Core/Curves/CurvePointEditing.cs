@@ -6,6 +6,19 @@ public static class CurvePointEditing
     public static Anchor InsertCorner(CurveTrack track, int segment, double parameter)
     {
         var working = CloneValidated(track);
+        if (working.Nodes[segment].OutgoingCurve is not null)
+        {
+            double time = CurveMath.Evaluate(working, segment, parameter).TimeMs;
+            ControlCurveEditing.ConvertToPen(working, segment);
+            segment = working.Nodes.FindIndex(n => n.TimeMs > time) - 1;
+            double lo = 0, hi = 1;
+            for (int i = 0; i < 60; i++)
+            {
+                double mid = (lo + hi) / 2;
+                if (CurveMath.Evaluate(working, segment, mid).TimeMs < time) lo = mid; else hi = mid;
+            }
+            parameter = (lo + hi) / 2;
+        }
         ClearInactiveSegment(working, segment);
         CurveMath.Split(working, segment, parameter);
         var inserted = working.Nodes[segment + 1];
@@ -21,6 +34,10 @@ public static class CurvePointEditing
     {
         var working = CloneValidated(track);
         int index = FindNode(working, nodeId);
+        if (index + 1 < working.Nodes.Count) ControlCurveEditing.ConvertToPen(working, index);
+        index = FindNode(working, nodeId);
+        if (index > 0) ControlCurveEditing.ConvertToPen(working, index - 1);
+        index = FindNode(working, nodeId);
         if (curved && IsCurved(working, nodeId)) return;
         if (index > 0) ClearInactiveSegment(working, index - 1);
         if (index + 1 < working.Nodes.Count) ClearInactiveSegment(working, index);
@@ -40,11 +57,7 @@ public static class CurvePointEditing
         int index = FindNode(working, nodeId);
         if (working.Nodes.Count < 3 || index == 0 || index == working.Nodes.Count - 1)
             throw new ArgumentException(L.Get("core.points.internalOnly"), nameof(nodeId));
-        ClearInactiveSegment(working, index - 1);
-        ClearInactiveSegment(working, index);
-        working.Nodes.RemoveAt(index);
-        RecomputeSegment(working, index - 1);
-        Validate(working);
+        RemoveMany(working, [nodeId]);
         Apply(track, working);
     }
 
@@ -57,6 +70,8 @@ public static class CurvePointEditing
         var working = CloneValidated(track);
         var existing = working.Nodes.Select(n => n.Id).ToHashSet();
         if (!selected.IsSubsetOf(existing)) throw new ArgumentException(L.Get("core.points.unknownSelection"), nameof(nodeIds));
+        for (int i = working.Nodes.Count - 2; i >= 0; i--)
+            if (selected.Contains(working.Nodes[i].Id) || selected.Contains(working.Nodes[i + 1].Id)) ControlCurveEditing.ConvertToPen(working, i);
         var retained = Enumerable.Range(0, working.Nodes.Count).Where(i => !selected.Contains(working.Nodes[i].Id)).ToArray();
         if (retained.Length < 2) throw new ArgumentException(L.Get("core.points.minimumRemaining"), nameof(nodeIds));
         var originalKinds = Enumerable.Range(0, working.Nodes.Count - 1).Select(i => CurveMath.SegmentKind(working, i)).ToArray();
@@ -82,6 +97,7 @@ public static class CurvePointEditing
         ArgumentNullException.ThrowIfNull(track);
         int index = FindNode(track, nodeId);
         var node = track.Nodes[index];
+        if (node.OutgoingCurve is not null || index > 0 && track.Nodes[index - 1].OutgoingCurve is not null) return true;
         return index > 0 && CurveMath.SegmentKind(track, index - 1) == CurveKind.Bezier && Nonzero(node.HandleIn)
             || index + 1 < track.Nodes.Count && CurveMath.SegmentKind(track, index) == CurveKind.Bezier && Nonzero(node.HandleOut);
     }
@@ -164,6 +180,7 @@ public static class CurvePointEditing
                 node.HandleIn = changed.HandleIn;
                 node.HandleOut = changed.HandleOut;
                 node.OutgoingKind = changed.OutgoingKind;
+                node.OutgoingCurve = changed.OutgoingCurve;
                 nodes.Add(node);
             }
             else nodes.Add(changed);

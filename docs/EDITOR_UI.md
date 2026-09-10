@@ -36,11 +36,13 @@ The Fruit tool places fruits in empty space. Snapping offers 4, 5, 6, 7, 8, 9, 1
 
 ## FSliders
 
-Press B with no track selected to start drawing. Click to place anchors without handles; hold and drag upward to pull direction handles. One track may mix straight and Bezier segments. Enter finishes; Esc cancels the draft. While editing an existing track, use **New Slider** in properties to start another.
+The global **Slider editing mode** selector on the Snap toolbar row is available with every tool and selection. It displays the current mode and offers **osu legacy mode** and **pen tool mode**. Scroll within the properties panel to reach controls on short windows. The mode is a session setting: both tools edit the same FSlider objects, and changing modes does not change geometry or create undo history. New and existing sliders may be edited with either tool. Imported Legacy Sliders still require conversion to an editable FSlider.
+
+In **pen tool mode**, press B with no track selected to start drawing. Click to place anchors without handles; hold and drag upward to pull direction handles. One track may mix straight and Bezier segments. Enter finishes; Esc cancels the draft. While editing an existing track, use **New Slider** in properties to start another.
 
 Select an FSlider and press B, or double-click its track, to edit anchors. Clicking an anchor on an already selected complete track also enters editing. Drag anchors/handles or edit their numeric properties. Interior anchor dragging is free by default. Enable **Snap interior anchors** in the FSlider properties to snap interior anchor times to the selected beat subdivision; this checkbox is independent of the general Free setting. Head and tail anchors follow the global Snap/Free setting instead. Invalid snapped endpoint moves keep their previous time rather than clamping between grid lines. Handles remain free, and the option does not change placement or whole-object snapping. Times remain increasing, and control-point X stays within the playfield.
 
-Right-click an anchor to convert between curved and straight control points; right-click the track to insert a handle-free point. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
+In pen tool mode, right-click an anchor to convert between curved and straight control points; right-click the track to insert a handle-free point. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
 
 Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Convert Legacy Sliders from properties or the context menu. Conversion preserves start time, total duration, and span count. It first fits a small set of straight/Bezier anchors within 0.25 playfield units, then relaxes TinyDroplet alignment or uses a linear approximation if needed to complete the conversion. Exact nested-object positions and sequences are not required to match. Invalid or unrepresentable input retains its original object with a reason.
 
@@ -49,6 +51,28 @@ The first workspace import from Songs, an external folder, `.osu`, or `.osz` ask
 **Edit → Convert all sliders to FSliders** processes the current difficulty and is disabled when it has no Legacy Sliders. Batch conversion runs in the background with a cancellable prompt and blocks content editing. Cancellation applies no partial results. Conversions per difficulty can be undone together; valid sliders that previously failed strict alignment now convert approximately. Invalid input and reasons appear in paginated results. Saving persists conversion in the workspace without modifying original Songs/external files; Export is still required to write `.osu`.
 
 The generator handles FSlider TinyDroplet alignment. The Tiny alignment toggle only affects older project data without a saved per-track policy.
+
+### osu legacy mode
+
+See [Slider interaction reference](SLIDER_INTERACTION.md) for the source comparison and coordinate constraints.
+
+Left-click a start point, move the pointer to preview the endpoint, and left-click to add controls. Releasing the right mouse button or pressing Enter completes the slider; Esc cancels the complete draft. Click the last placed point again to begin a new segment; this does not depend on the system double-click interval. Each draft segment defaults to a line with two points, a circular arc with three, and a Bezier with four or more; counts include the segment endpoints. White controls shape the curve and do not necessarily lie on it. Red segment boundaries lie on the path and allow corners.
+
+A single selected slider exposes controls in Select mode as well as the Slider tool. For a completed slider, drag a control, Ctrl-click controls to select multiple, hold Ctrl and drag to move the selection, or box-select. Ctrl-click between the slider's first and last times to insert a control at the pointer's position; the time interval determines its place in the control polygon. Insertion can change shape. Right-click a point to delete that point, or press Delete to remove selected controls. Double-click an interior point to toggle its segment boundary. Removing a boundary merges its adjacent control polygons; removing endpoints changes the time range. Fewer than two remaining controls deletes the slider. Each edit is undoable. Control times must remain ordered. A circular preview or drag that would reverse time or leave the playfield falls back to Bezier; moving back during the same gesture can restore the arc. Explicit circular-arc commands still reject invalid geometry.
+
+Right-click the curve for insertion and explicit curve types. A circular arc requires exactly three points. Existing Bezier segments retain their type when their point count decreases; changing tools never implicitly turns a three-point Bezier into an arc. A line receiving its first internal control becomes an arc using the current map AR. Ordinary control dragging uses the interior-anchor snap setting; endpoint moves use the global snap setting.
+
+Circular arcs retain a reference ratio derived from the map AR at creation (`440 / preemptMs` in playfield units per millisecond). Changing map AR or viewport zoom stretches their appearance without changing time–X coordinates. The reference excludes window width and DPI. Editing an existing arc preserves this reference; explicitly choosing a new circular arc uses the current map AR.
+
+### Editing shared curves with the pen
+
+A cubic Bezier exposes exactly the same controls in either tool. Arcs and higher-degree Beziers remain exact when selecting or switching modes. Pen mode displays endpoint handles from a bounded cubic approximation; provisional handles have a minimum 18-DIP display length so they remain clickable. Their stored offsets remain in map coordinates. The first actual handle movement or numeric handle edit converts only its affected segment, potentially adding anchors. The conversion and gesture share one undo step. Pen corner conversion/deletion and ordinary pen insertion may likewise require local conversion. Undo restores the exact original controls and AR reference. Shape-preserving splitting retains exact custom segment geometry.
+
+### Reverses and direction
+
+Both modes share the **Reverses** property and **Add reverse / Remove reverse** menu actions. Dragging a base-path endpoint instead edits the path and therefore changes the duration of every traversal.
+
+**Reverse path direction** (Ctrl+G) reverses the first span's horizontal trajectory while preserving its time range and repeat count. It is distinct from adding a reverse. All repeated spans derive from the same controls; changing the base path updates every traversal.
 
 ## Banana showers
 

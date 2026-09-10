@@ -563,5 +563,19 @@
   "ui.reverseRange": "Reverses must be an integer from 0 to 8999",
   "editor.command.extendSlider": "Extend slider to here",
   "editor.command.addReverse": "Add reverse",
-  "editor.command.removeReverse": "Remove reverse"
+  "editor.command.removeReverse": "Remove reverse",
+  "core.controlCurve.invalid": "Invalid control-point curve.",
+  "core.controlCurve.monotone": "The arc must move forward in time and remain inside the playfield.",
+  "core.controlCurve.threePoints": "A circular arc needs exactly three points.",
+  "core.controlCurve.fitLimit": "This segment cannot be converted within the editing tolerance.",
+  "ui.sliderEditingMode": "Slider editing mode",
+  "ui.osuLegacyMode": "osu legacy mode",
+  "ui.penToolMode": "pen tool mode",
+  "editor.command.toggleBoundary": "Toggle segment boundary",
+  "editor.command.reversePath": "Reverse path direction",
+  "editor.command.curveType": "Change curve type",
+  "ui.curveLine": "Straight segment",
+  "ui.curveBezier": "Bezier segment",
+  "ui.curveArc": "Circular arc",
+  "ui.controlPoint": "Control point"
 }

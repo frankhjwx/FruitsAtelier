@@ -59,6 +59,14 @@ public sealed partial class EditorView
         {
             contextItems.Add(new(L.Get("editor.command.addReverse"), () => ChangeReverseCount(repeatTrack.Id, 1), repeatTrack.SpanCount < 9000));
             contextItems.Add(new(L.Get("editor.command.removeReverse"), () => ChangeReverseCount(repeatTrack.Id, -1), repeatTrack.SpanCount > 1));
+            contextItems.Add(new(L.Get("editor.command.reversePath"), ReverseSelectedPath, Shortcut: "Ctrl+G"));
+            if (LegacyMode && anchors && location is not null)
+            {
+                int segment = Math.Clamp(repeatTrack.Nodes.FindIndex(n => n.TimeMs > location.FirstSpanTimeMs) - 1, 0, repeatTrack.Nodes.Count - 2);
+                foreach (var type in Enum.GetValues<SliderCurveType>())
+                    contextItems.Add(new(L.Get(type == SliderCurveType.Linear ? "ui.curveLine" : type == SliderCurveType.Bezier ? "ui.curveBezier" : "ui.curveArc"),
+                        () => Edit(L.Get("editor.command.curveType"), () => SliderControlEditing.SetType(repeatTrack, segment, type, ControlCurveMath.ReferenceScale(Document.ApproachRate)))));
+            }
         }
         if (anchorHit && anchorSelection.Count > 0 && SelectedAnchor is { } node && SelectedTrack is { } track)
         {
@@ -130,6 +138,19 @@ public sealed partial class EditorView
 
     private void InsertControlPoint(SliderLocation location)
     {
+        if (LegacyMode)
+        {
+            Guid insertedId = Guid.Empty;
+            CurveTrack? target = null;
+            if (Edit(L.Get("editor.command.insertPoint"), () =>
+            {
+                target = Document.Tracks.FirstOrDefault(t => t.Id == location.Id) ?? ImportedSliderEditing.ConvertToTrack(Document, location.Id).Track;
+                int index = target.Nodes.FindIndex(n => n.TimeMs > location.FirstSpanTimeMs) - 1;
+                if (index < 0) throw new ArgumentException(L.Get("editor.error.insertBetweenPoints"));
+                insertedId = SliderControlEditing.Insert(target, index, new(location.FirstSpanTimeMs, CurveMath.PositionAtTime(target, location.FirstSpanTimeMs)), ControlCurveMath.ReferenceScale(Document.ApproachRate));
+            })) { tool = Tool.Slider; SelectAnchors(target!, [insertedId]); }
+            return;
+        }
         Anchor? inserted = null;
         if (!Edit(L.Get("editor.command.insertPoint"), () =>
         {

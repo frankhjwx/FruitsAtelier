@@ -213,6 +213,7 @@ public sealed partial class EditorView
                 IncludeX(node.X);
                 IncludeX(node.X + node.HandleIn.X);
                 IncludeX(node.X + node.HandleOut.X);
+                if (node.OutgoingCurve is { } curve) foreach (var point in curve.Controls) IncludeX(node.X + point.Offset.X);
             }
             if (track.Nodes.Count >= 2)
                 IncludeTime(track.Nodes[0].TimeMs + (track.Nodes[^1].TimeMs - track.Nodes[0].TimeMs) * track.SpanCount);

@@ -20,7 +20,7 @@ public static partial class ProjectSerializer
             var document = Read(Serialize(diff.Document, projectPath));
             copy.Difficulties.Add(new ProjectDifficulty { Id = diff.Id, Name = diff.Name, Document = document });
         }
-        string text = JsonSerializer.Serialize(new MultiProjectFile { SchemaVersion = 2, Project = copy }, options);
+        string text = JsonSerializer.Serialize(new MultiProjectFile { SchemaVersion = copy.Difficulties.Any(d => HasControlCurves(d.Document)) ? 4 : 2, Project = copy }, options);
         if (System.Text.Encoding.UTF8.GetByteCount(text) > OsuBeatmapReader.MaximumFileBytes)
             throw new InvalidDataException(L.Get("core.project.writeLimit"));
         return text;
@@ -34,10 +34,10 @@ public static partial class ProjectSerializer
         {
             using var json = JsonDocument.Parse(text);
             if (json.RootElement.ValueKind != JsonValueKind.Object) throw new InvalidDataException(L.Get("core.project.schema"));
-            if (json.RootElement.TryGetProperty("SchemaVersion", out var version) && version.TryGetInt32(out int schema) && schema == 1)
+            if (json.RootElement.TryGetProperty("SchemaVersion", out var version) && version.TryGetInt32(out int schema) && schema is 1 or 3)
                 return BeatmapProject.FromDocuments([Read(text, projectPath)]);
             var file = JsonSerializer.Deserialize<MultiProjectFile>(text, options);
-            if (file?.SchemaVersion != 2 || file.Project is null) throw new InvalidDataException(L.Get("core.project.schema"));
+            if (file?.SchemaVersion is not (2 or 4) || file.Project is null) throw new InvalidDataException(L.Get("core.project.schema"));
             file.Project.Validate();
             foreach (var diff in file.Project.Difficulties)
                 diff.Document = Read(Serialize(diff.Document), projectPath);

@@ -29,7 +29,8 @@ public sealed partial class EditorView
 
     private void SelectAnchors(CurveTrack track, IEnumerable<Guid> ids, Guid primary = default)
     {
-        var selected = ids.Where(id => track.Nodes.Any(n => n.Id == id)).Distinct().ToArray();
+        var validIds = LegacyMode ? SliderControlEditing.Vertices(track).Select(v => v.Id).ToHashSet() : track.Nodes.Select(n => n.Id).ToHashSet();
+        var selected = ids.Where(validIds.Contains).Distinct().ToArray();
         objectSelection.Clear(); anchorSelection.Clear(); anchorSelection.UnionWith(selected);
         selectedTrack = track.Id;
         selection = anchorSelection.Contains(primary) ? primary : selected.FirstOrDefault(track.Id);
@@ -79,10 +80,10 @@ public sealed partial class EditorView
             if (track is null) return;
             var ids = boxAdds ? selectionBeforeBox.Anchors.ToHashSet() : [];
             if (showTargets)
-                foreach (var node in track.Nodes)
+                foreach (var vertex in LegacyMode ? SliderControlEditing.Vertices(track) : track.Nodes.Select(n => new SliderVertex(n.Id, Point(n), SliderCurveType.Linear)).ToList())
                 {
-                    var point = Screen(Point(node));
-                    if (selectionBox.Contains(point.X, point.Y)) ids.Add(node.Id);
+                    var point = Screen(vertex.Point);
+                    if (selectionBox.Contains(point.X, point.Y)) ids.Add(vertex.Id);
                 }
             SelectAnchors(track, ids);
         }
@@ -167,7 +168,7 @@ public sealed partial class EditorView
         FinishForSelection();
         Select(Guid.Empty);
         tool = Tool.Slider;
-        StatusMessage = L.Get("editor.help.newSlider");
+        StatusMessage = "";
     }
 
     private void DeleteSelectedObjects()

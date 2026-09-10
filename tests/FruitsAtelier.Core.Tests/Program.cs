@@ -4,6 +4,11 @@ if (args.Length == 2 && args[0] == "--slider-corpus") return ImportedSliderCorpu
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Shared slider curves persist exact AR references and clone independently", SliderModeTests.PersistenceAndAr),
+    ("Legacy controls edit, split, merge and reject invalid moves atomically", SliderModeTests.SharedEditing),
+    ("Pen conversion approximates locally and undo restores exact geometry", SliderModeTests.PenConversionAndHistory),
+    ("Arc splitting, direction reversal and repeats share the conversion pipeline", SliderModeTests.SplitReverseAndConversion),
+    ("Shared curve validation rejects invalid arcs, scales and identities", SliderModeTests.RejectBadArcsAndControls),
     ("Incremental conversion matches full output across edits, RNG changes and failures", ConversionCacheTests.EditingMatchesFullConversion),
     ("Sparse curve fitting preserves corners and bounds whole-trajectory error", ImportedCurveFitTests.SparseAndBounded),
     ("Batch conversion completes repeats and preserves duration, export and cancellation", ImportedCurveFitTests.BatchPreservesDurationAndCancellation),

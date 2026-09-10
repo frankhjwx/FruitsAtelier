@@ -69,7 +69,9 @@ dotnet run --project tests/FruitsAtelier.Audio.Tests -c Release
 ./Run-Editor-Mac.command --smoke-check
 ```
 
-This opens a Mac window, checks fruit placement, undo, project round trips, and English/Chinese screenshots, then exits. Screenshots go to `artifacts/macos-check` and logs to `artifacts/logs/macos.log`.
+This opens a Mac window, checks fruit placement, undo, project round trips, both slider editing modes, and English/Chinese screenshots, then exits. Slider screenshots also cover narrow and scrolled properties panels. Screenshots go to `artifacts/macos-check` and logs to `artifacts/logs/macos.log`.
+
+Shared Core and App regressions cover exact control-curve persistence, fixed AR reference ratios, bidirectional editing, local pen conversion and undo, control insertion/deletion, segment boundaries, global mode switching, and repeated-slider export. Switching editing modes must leave the document and history unchanged.
 
 After changing input or drawing, manually check affected operations, language switching, window resizing, and file dialogs. Additional coverage is still needed for physical Windows window/audio behavior, Intel Mac, cross-display DPI, Mac MP3, and stable-client comparisons.
 

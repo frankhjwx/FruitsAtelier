@@ -2,7 +2,7 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON `.catchproj` schema 2, with schema 1 read compatibility. The project implements stable v14 / Mode=2 `.osu` parsing and writing. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. All four schemas are readable. Older applications reject the newer schemas rather than silently discarding curve geometry. The project implements stable v14 / Mode=2 `.osu` parsing and writing. Authored content, imported context, and derived output remain separate.
 
 ## Authoritative and derived data
 
@@ -26,7 +26,9 @@ The editor maintains an independent `EditorHistory` per difficulty and accesses 
 | MapDocument | Name, DurationMs, difficulty, TimingPoints, Fruits, Tracks, ImportedSliders, BananaShowers, SourcePath, AudioPath, OriginalSections |
 | Fruit | Stable Guid Id, TimeMs, X, SourceOrder, OriginalLine |
 | CurveTrack | Stable Guid Id, Name, Kind (default Linear / Bezier), Nodes, SourceOrder, SpanCount, OriginalLine, CompensateTinyDroplets |
-| Anchor | Stable Guid Id, TimeMs, X, HandleIn, HandleOut, nullable OutgoingKind |
+| Anchor | Stable Guid Id, TimeMs, X, HandleIn, HandleOut, nullable OutgoingKind and OutgoingCurve |
+| ControlCurve | Exact Bezier or CircularArc kind, fixed ReferenceScale, interior CurveControl list |
+| CurveControl | Stable Guid Id and MapPoint Offset relative to the segment start anchor |
 | MapPoint | Double TimeMs and X; handles store offsets relative to anchors |
 | TimingPoint | TimeMs, BeatLengthMs, Meter, Uninherited, sample/volume/effect fields, SourceOrder, OriginalLine |
 | ImportedSlider | Id, TimeMs, X / Y, PathType, ControlPoints, SpanCount, PixelLength, SourceOrder, OriginalLine |
@@ -50,7 +52,15 @@ Interface language and resources are not serialized in `.catchproj`. Built-in de
 
 Tracks lie in the `(timeMs, X)` plane, with segment type `Nodes[i].OutgoingKind ?? track.Kind`. Null inherits the track default; a track may mix linear and cubic Bezier segments. Endpoint times increase, and Bezier control-point times are nondecreasing. Time evaluation solves `time(u)` rather than substituting a linear time fraction for u. Anchors are at least 0.001 ms apart, and control-point X stays in 0..512.
 
-Handles store relative offsets and move with their anchor. The unified Slider tool (B) adds handle-free points on click and direction handles by holding and dragging upward. Converting control points between curved and straight uses handles and adjacent segment types. Right-click insertion creates a point without handles; neighboring handles may still curve adjacent segments, so ordinary insertion need not preserve shape. The split action preserves the segment's shape and subsequent types according to its type, without replacing existing anchors/handles with sampled output. Geometric slider Y is not editing time.
+Handles store relative offsets and move with their anchor. The Slider tool (B) has a session-only editing-mode choice. Pen tool mode adds handle-free points on click and direction handles by holding and dragging upward; osu legacy mode edits a control-polygon projection of the same track. Converting control points between curved and straight uses handles and adjacent segment types. Right-click insertion creates a point without handles; neighboring handles may still curve adjacent segments, so ordinary insertion need not preserve shape. The split action preserves the segment's shape and subsequent types according to its type, without replacing existing anchors/handles with sampled output. Geometric slider Y is not editing time.
+
+An anchor's optional `OutgoingCurve` takes precedence over its outgoing pen handles and `OutgoingKind` for evaluation. It stores exact circular arcs or arbitrary-degree Beziers (up to 64 interior controls). Relative control offsets follow whole-object translation and copy/paste, which assigns fresh control identities. Endpoint times and Bezier control times are ordered; circular-arc validation checks coordinate extrema and time derivative signs, not just rendered samples. Collinear arcs evaluate as lines.
+
+`SliderControlEditing.Vertices` is a non-persisted projection. Cubic pen handles have deterministic temporary vertex identities; projecting or switching modes does not mutate content. Exact segments, identities and AR references participate in clone, undo, equality and conversion-cache invalidation. Save files never store viewport scale or editing mode.
+
+For arcs, `ReferenceScale = 440 / CatchScrollTiming.PreemptMs(creationAR)`. It converts relative milliseconds to playfield units for circle construction, independently of window width and DPI. Subsequent AR edits only affect display. Bezier evaluation remains in time–X coordinates.
+
+`ControlCurveEditing` splits exact segments without changing their shape and converts a single segment to cubic pen form only for a content edit that needs it. Degree elevation is exact for quadratic/cubic input. Higher-degree input uses Bernstein-coefficient error bounds; circular arcs use a fourth-derivative Hermite remainder bound plus any control clamping error. Adaptive subdivision bounds parameter-matched X error to 0.001 playfield units and time error to 0.01 ms, with at most 4096 cubics and the existing minimum anchor spacing. This is not a universal bound on X at equal times near a horizontal time tangent. Conversion failure leaves the gesture's source intact. Resulting cubic controls remain time ordered and within the playfield.
 
 Batch anchor deletion allows endpoints and preserves surviving IDs, times, and order. Before merging adjacent segments, it clears hidden handles from old linear segments that would become active, then chooses the segment type from remaining usable handles. New endpoints lose unused outward handles. When fewer than two anchors remain, App deletes the parent slider; undo restores all data.
 
@@ -91,7 +101,7 @@ Hyperdash uses all Fruit / Droplet results, skipping TinyDroplets and Bananas, a
 
 ## Persistence and export
 
-`.catchproj` saves nodes, handles, OutgoingKind, default track Kind, SpanCount, OriginalLine, CompensateTinyDroplets, difficulty, complete timing, and resource references. It excludes undo history, derived objects, and GPU caches. Older projects default to OutgoingKind=null, SpanCount=1, and Tiny override=null. Reading validates schema, IDs, model boundaries, and curve constraints, rejecting unsupported fields and versions. Inherited NaN uses named JSON floating-point representation. Saving replaces a same-directory temporary file and stores resource paths relative to the project directory without copying audio.
+`.catchproj` saves nodes, handles, optional exact OutgoingCurve controls and reference ratios, OutgoingKind, default track Kind, SpanCount, OriginalLine, CompensateTinyDroplets, difficulty, complete timing, and resource references. It excludes undo history, derived objects, and GPU caches. Older projects default to OutgoingKind=null, SpanCount=1, and Tiny override=null. Reading validates schema, IDs, model boundaries, and curve constraints, rejecting unsupported fields and versions. Inherited NaN uses named JSON floating-point representation. Saving replaces a same-directory temporary file and stores resource paths relative to the project directory without copying audio.
 
 `.osu` currently accepts and emits v14 / Mode=2; see [stable File Contract](STABLE_FORMAT.md). Legacy Sliders retain original lines. FSliders encode integer time and path coordinates, preserve SpanCount, and insert/restore inherited SV as needed. Legacy-converted FSliders reuse original type/hitsound/sample fields. Span-count edits preserve surviving edge samples; new edges receive defaults and a diagnostic. Incompatible same-time SV conflicts fail explicitly. Export read-back compares the full object sequence, times, and X; quantization can introduce errors or sequence changes.
 

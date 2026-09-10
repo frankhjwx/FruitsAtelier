@@ -27,6 +27,11 @@ public sealed partial class EditorView
             FinishBanana(x, y);
             return;
         }
+        if (contextItems.Count == 0 && menu < 0 && plot.Contains(x, y) && LegacyMode)
+        {
+            if (editField >= 0 && !CommitField()) return;
+            if (HandleLegacyPointerDown(x, y, button, ctrl)) return;
+        }
         if (button == 2)
         {
             if (editField >= 0 && !CommitField()) return;
@@ -118,11 +123,12 @@ public sealed partial class EditorView
                 {
                     tool = Tool.Slider;
                     PickAnchor(selectedObject, node, false);
-                    BeginNodeDrag(selectedObject, node, DragKind.Anchor, x, y);
+                    if (LegacyMode) BeginLegacyDrag(selectedObject, Point(node), x, y);
+                    else BeginNodeDrag(selectedObject, node, DragKind.Anchor, x, y);
                     return;
                 }
         }
-        if (tool == Tool.Slider && showTargets && SelectedTrack is { } selected)
+        if (tool == Tool.Slider && !LegacyMode && showTargets && SelectedTrack is { } selected)
         {
             foreach (var node in selected.Nodes)
                 if (Near(Point(node), x, y, 7))
@@ -134,9 +140,9 @@ public sealed partial class EditorView
             foreach (var node in selected.Nodes)
             {
                 int index = selected.Nodes.IndexOf(node);
-                if (index > 0 && node.HandleIn != default && CurveMath.SegmentKind(selected, index - 1) == CurveKind.Bezier && Near(Point(node) + node.HandleIn, x, y, 7))
+                if (index > 0 && PenHandle(selected, index, true) != default && CurveMath.SegmentKind(selected, index - 1) == CurveKind.Bezier && HitPenHandle(selected, index, true, x, y))
                 { BeginNodeDrag(selected, node, DragKind.HandleIn, x, y); return; }
-                if (node.HandleOut != default && (index < selected.Nodes.Count - 1 && CurveMath.SegmentKind(selected, index) == CurveKind.Bezier || selected.Id == draftTrack) && Near(Point(node) + node.HandleOut, x, y, 7))
+                if (PenHandle(selected, index, false) != default && (index < selected.Nodes.Count - 1 && CurveMath.SegmentKind(selected, index) == CurveKind.Bezier || selected.Id == draftTrack) && HitPenHandle(selected, index, false, x, y))
                 { BeginNodeDrag(selected, node, DragKind.HandleOut, x, y); return; }
             }
         }
@@ -152,7 +158,7 @@ public sealed partial class EditorView
         }
         if (tool == Tool.Slider)
         {
-            if (!ctrl) AddCurveAnchor(x, y);
+            if (!ctrl) { if (LegacyMode) PlaceLegacyPoint(x, y); else AddCurveAnchor(x, y); }
             return;
         }
         var hitObject = HitCatchObject(x, y);
@@ -222,7 +228,11 @@ public sealed partial class EditorView
         if (SliderDialogVisible) return;
         if (LibraryVisible) return;
         mouseX = x; mouseY = y;
-        if (drag == DragKind.None) return;
+        if (drag == DragKind.None)
+        {
+            if (LegacyMode && draftTrack != Guid.Empty) UpdateLegacyPreview(x, y);
+            return;
+        }
         if (drag == DragKind.TimeZoom) { SetTimeZoom(x); return; }
         if (drag == DragKind.SnapDivisor) { SetSnapDivisor(x); return; }
         if (drag == DragKind.Marquee) { MoveBox(x, y); return; }
@@ -239,6 +249,7 @@ public sealed partial class EditorView
             if (MathF.Abs(x - dragStartX) < 2 && MathF.Abs(y - dragStartY) < 2) return;
             dragMoved = true;
         }
+        if (drag == DragKind.LegacyControl) { MoveLegacyPoints(x, y); return; }
         if (drag == DragKind.Objects) { MoveSelectedObjects(x, y); return; }
         if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y); return; }
         var raw = Transform.ToMap(x, y) - dragOffset;
@@ -287,6 +298,12 @@ public sealed partial class EditorView
             else
             {
                 bool incoming = drag == DragKind.HandleIn;
+                int segment = track.Nodes.IndexOf(node) - (incoming ? 1 : 0);
+                try
+                {
+                    ControlCurveEditing.ConvertToPen(track, segment);
+                }
+                catch (ArgumentException ex) { StatusMessage = ex.Message; return; }
                 var start = incoming ? node.HandleIn : node.HandleOut;
                 var cursor = Transform.ToMap(x, y) - dragOffset;
                 var desired = cursor - Point(node);
@@ -305,10 +322,19 @@ public sealed partial class EditorView
     {
         if (SliderDialogVisible) return;
         if (LibraryVisible) return;
+        if (button == 2 && legacyFinishOnRelease)
+        {
+            legacyFinishOnRelease = false;
+            if (draftTrack != Guid.Empty && UpdateLegacyPreview(x, y)) FinishCurve();
+            return;
+        }
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
         PointerMove(x, y, false, false);
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
-        if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd) history.Commit();
+        if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl) history.Commit();
+        if (drag == DragKind.LegacyControl && !dragMoved && legacyDeselectOnRelease != Guid.Empty && SelectedTrack is { } legacyTrack)
+            SelectAnchors(legacyTrack, anchorSelection.Where(id => id != legacyDeselectOnRelease).ToArray());
+        legacyDeselectOnRelease = Guid.Empty;
         if (drag is DragKind.Objects or DragKind.BananaStart or DragKind.BananaEnd)
         {
             objectDragStart = null;
@@ -323,6 +349,7 @@ public sealed partial class EditorView
     {
         if (SliderDialogVisible) return;
         if (LibraryVisible) { OpenLibraryCard(x, y); return; }
+        if (menu < 0 && contextItems.Count == 0 && editField < 0 && LegacyDoubleClick(x, y)) return;
         if (drag != DragKind.None || buttonTargetIsUnavailable()) return;
         Guid sourceId = Guid.Empty;
         if (listBounds.Contains(x, y))
@@ -346,7 +373,7 @@ public sealed partial class EditorView
         if (Document.Tracks.FirstOrDefault(track => track.Id == sourceId) is not { } track) return;
         tool = Tool.Slider;
         SelectAnchors(track, []);
-        StatusMessage = L.Get("editor.help.anchors");
+        StatusMessage = "";
 
         bool buttonTargetIsUnavailable() => editField >= 0 || draftTrack != Guid.Empty || draftBanana != Guid.Empty || menu >= 0 || contextItems.Count > 0;
     }
@@ -361,6 +388,12 @@ public sealed partial class EditorView
         {
             firstDifficultyTab = Math.Clamp(firstDifficultyTab + (delta < 0 ? 1 : delta > 0 ? -1 : 0), 0,
                 Math.Max(0, difficulties.Count - visibleDifficultyTabs));
+            return;
+        }
+        if (rightPanel.Contains(x, y))
+        {
+            if (editField >= 0 && !CommitField()) return;
+            inspectorScroll = Math.Clamp(inspectorScroll - delta / 120 * 48, 0, Math.Max(0, inspectorContentHeight - (rightPanel.Height - 50)));
             return;
         }
         if (leftPanel.Contains(x, y)) { listScroll = Math.Max(0, listScroll - delta / 120 * 65); return; }
@@ -428,6 +461,7 @@ public sealed partial class EditorView
             else if (virtualKey == 67) CopySelection();
             else if (virtualKey == 88) CutSelection();
             else if (virtualKey == 86) PasteSelection();
+            else if (virtualKey == 71) ReverseSelectedPath();
             return;
         }
         if (drag != DragKind.None) return;
@@ -459,7 +493,7 @@ public sealed partial class EditorView
     public void CancelInteraction()
     {
         if (drag == DragKind.Marquee) { CancelBox(); contextItems.Clear(); return; }
-        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd)
+        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl)
         {
             history.Cancel();
             if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) Select(Guid.Empty);
@@ -470,6 +504,9 @@ public sealed partial class EditorView
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         objectDragPrepared = false;
         draftTrack = Guid.Empty;
+        legacyDraft = null; legacyPreviewVertices = null; legacyDragStart = null;
+        legacyFinishOnRelease = false; legacyDeselectOnRelease = Guid.Empty;
+        penPreview.Clear();
         draftBanana = Guid.Empty;
         editField = -1;
         fieldError = "";
@@ -509,7 +546,7 @@ public sealed partial class EditorView
         drag = DragKind.DraftHandle;
         BeginPointerDrag(x, y);
         dragOffset = new(0, 0);
-        StatusMessage = L.Get("editor.help.drawingSlider");
+        StatusMessage = "";
     }
 
     private void StartBanana(float x, float y)
@@ -533,7 +570,7 @@ public sealed partial class EditorView
     {
         if (draftBanana == Guid.Empty)
         {
-            StatusMessage = L.Get("editor.help.banana");
+            StatusMessage = "";
             return;
         }
         var shower = Document.BananaShowers.First(item => item.Id == draftBanana);
@@ -559,8 +596,8 @@ public sealed partial class EditorView
         drag = kind;
         BeginPointerDrag(x, y);
         var original = Point(node);
-        if (kind == DragKind.HandleIn) original += node.HandleIn;
-        else if (kind == DragKind.HandleOut) original += node.HandleOut;
+        if (kind == DragKind.HandleIn) original += PenHandle(track, track.Nodes.IndexOf(node), true);
+        else if (kind == DragKind.HandleOut) original += PenHandle(track, track.Nodes.IndexOf(node), false);
         dragOffset = Transform.ToMap(x, y) - original;
     }
 
