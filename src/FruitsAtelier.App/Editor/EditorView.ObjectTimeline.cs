@@ -9,6 +9,8 @@ public sealed partial class EditorView
     private Rect objectTimeline;
     private double objectTimelineScale = .18;
     private readonly List<(Guid Id, double Time, Rect Bounds)> timelineObjects = [];
+    private CatchConversionResult? timelineConversion;
+    private (Guid Id, double Start, double End, int SourceOrder, uint Color)[] timelineSources = [];
     private bool boxTimeline;
     private double timelineBoxStart;
     public Rect ObjectTimelineBounds => objectTimeline;
@@ -42,13 +44,19 @@ public sealed partial class EditorView
             c.Line(X(tick.TimeMs), objectTimeline.Bottom - (tick.IsBeat ? 12 : 5), X(tick.TimeMs), objectTimeline.Bottom,
                 tick.IsTimingBoundary ? Error : tick.IsBeat ? Muted : Grid);
         }
-        var objects = Document.Fruits.Select(f => (f.Id, Start: f.TimeMs, End: f.TimeMs, f.SourceOrder, Color: Accent))
+        if (!ReferenceEquals(timelineConversion, conversion))
+        {
+            // Slider duration resolves timing and geometry; recompute only when content changes, not on every frame.
+            var sliderEnds = conversion!.Sliders.ToDictionary(s => s.SourceId, s => s.StartTimeMs + s.DurationMs);
+            timelineSources = Document.Fruits.Select(f => (f.Id, Start: f.TimeMs, End: f.TimeMs, f.SourceOrder, Color: Accent))
             .Concat(Document.Tracks.Where(t => t.Nodes.Count > 0).Select(t => (t.Id, Start: t.Nodes[0].TimeMs, End: CurveMath.EndTimeMs(t), t.SourceOrder, Color: Purple)))
-            .Concat(Document.ImportedSliders.Select(s => (s.Id, Start: s.TimeMs, End: ImportedSliderConverter.EndTimeMs(Document, s), s.SourceOrder, Color: Purple)))
+            .Concat(Document.ImportedSliders.Select(s => (s.Id, Start: s.TimeMs, End: sliderEnds.TryGetValue(s.Id, out double endTime) ? endTime : ImportedSliderConverter.EndTimeMs(Document, s), s.SourceOrder, Color: Purple)))
             .Concat(Document.BananaShowers.Select(s => (s.Id, Start: s.TimeMs, End: s.EndTimeMs, s.SourceOrder, Color: Gold)))
-            .OrderBy(o => o.Start).ThenBy(o => o.SourceOrder);
+            .OrderBy(o => o.Start).ThenBy(o => o.SourceOrder).ToArray();
+            timelineConversion = conversion;
+        }
         int number = 0;
-        foreach (var item in objects)
+        foreach (var item in timelineSources)
         {
             number++;
             if (item.End < start - 20 / objectTimelineScale || item.Start > end + 20 / objectTimelineScale) continue;

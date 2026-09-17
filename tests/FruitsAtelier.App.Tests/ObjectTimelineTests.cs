@@ -3,6 +3,31 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class ObjectTimelineTests
 {
+    public static void CachedDurationsFollowEdits()
+    {
+        var ui = new Ui(false);
+        var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
+        var slider = new ImportedSlider { TimeMs = 1000, X = 100, Y = 192, PathType = 'L', PixelLength = 100, SpanCount = 1 };
+        slider.ControlPoints.Add(new(200, 192));
+        map.ImportedSliders.Add(slider);
+        ui.LoadDocument(map); ui.Paint();
+        float Width()
+        {
+            var r = ui.View.ObjectTimelineBounds;
+            return ui.Canvas.Outlines.Single(o => o.Bounds.Y == r.Y + 8 && o.Bounds.Height == 38).Bounds.Width;
+        }
+        float initial = Width();
+        ui.Paint();
+        if (Width() != initial) throw new Exception("An unchanged timeline moved");
+        ui.View.Document.BeatLengthMs *= 2;
+        ui.Paint();
+        if (Math.Abs(Width() - (38 + (initial - 38) * 2)) > .01) throw new Exception("Timing edit left a stale slider duration");
+        ui.View.Document.ImportedSliders[0].SpanCount = 2;
+        ui.Paint();
+        if (Math.Abs(Width() - (38 + (initial - 38) * 4)) > .01) throw new Exception("Repeat edit left a stale slider duration");
+        ui.LoadDocument(map); ui.Paint();
+        if (Math.Abs(Width() - initial) > .01) throw new Exception("Document replacement retained stale timeline data");
+    }
     public static void NavigationAndSelection()
     {
         var ui = new Ui(false);
