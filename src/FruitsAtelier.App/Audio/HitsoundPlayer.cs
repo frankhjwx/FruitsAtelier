@@ -1,5 +1,4 @@
 using FruitsAtelier.Core;
-using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
 namespace FruitsAtelier.App.Audio;
@@ -11,7 +10,7 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
     private readonly Dictionary<string, float[]> cache = new();
     private long cacheBytes;
     private readonly List<(float[] Samples, int Position, float Volume)> voices = new();
-    private WasapiOut? output;
+    private readonly List<(float[] Samples, double TimeMs, float Volume)> scheduled = new();
     private bool unavailable;
     public WaveFormat WaveFormat { get; } = WaveFormat.CreateIeeeFloatWaveFormat(HitsoundSamples.SampleRate, 1);
     public void PreloadProject(IReadOnlyList<MapDocument> documents)
@@ -27,20 +26,50 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
         }
     }
     public void Prepare(Hitsound sound) { if (!unavailable) GetSamples(sound); }
-    public void Play(Hitsound sound)
+    public void Schedule(Hitsound sound, double timeMs)
     {
-        if (unavailable) return;
-        try
+        if (unavailable || !double.IsFinite(timeMs)) return;
+        var samples = GetSamples(sound);
+        lock (gate)
         {
-            if (output is null)
-            {
-                output = new WasapiOut(AudioClientShareMode.Shared, true, 20);
-                output.Init(new NAudio.Wave.SampleProviders.SampleToWaveProvider(this));
-                output.Play();
-            }
-            Queue(sound);
+            if (scheduled.Count == 2048) scheduled.RemoveAt(0);
+            scheduled.Add((samples, timeMs, sound.Volume));
         }
-        catch (Exception ex) { unavailable = true; output?.Dispose(); output = null; log?.Invoke(ex.ToString()); }
+    }
+    internal ISampleProvider MixWithMusic(ISampleProvider music, double startMs) => new MusicMixer(this, music, startMs);
+
+    private sealed class MusicMixer(HitsoundPlayer owner, ISampleProvider music, double startMs) : ISampleProvider
+    {
+        private long framesRead;
+        public WaveFormat WaveFormat => music.WaveFormat;
+        public int Read(float[] buffer, int offset, int count)
+        {
+            int read = music.Read(buffer, offset, count);
+            int channels = WaveFormat.Channels, rate = WaveFormat.SampleRate;
+            int frames = read / channels;
+            lock (owner.gate)
+            {
+                for (int v = owner.scheduled.Count - 1; v >= 0; v--)
+                {
+                    var voice = owner.scheduled[v];
+                    long firstFrame = (long)Math.Round((voice.TimeMs - startMs) * rate / 1000);
+                    int begin = (int)Math.Clamp(firstFrame - framesRead, 0, frames);
+                    for (int frame = begin; frame < frames; frame++)
+                    {
+                        double position = (framesRead + frame - firstFrame) * (double)HitsoundSamples.SampleRate / rate;
+                        if (position >= voice.Samples.Length) break;
+                        int index = (int)position;
+                        float a = voice.Samples[index], b = voice.Samples[Math.Min(index + 1, voice.Samples.Length - 1)];
+                        float sample = (a + (b - a) * (float)(position - index)) * voice.Volume;
+                        for (int channel = 0; channel < channels; channel++)
+                            buffer[offset + frame * channels + channel] += sample;
+                    }
+                }
+            }
+            framesRead += frames;
+            for (int i = offset; i < offset + read; i++) buffer[i] = Math.Clamp(buffer[i], -1, 1);
+            return read;
+        }
     }
     internal void Queue(Hitsound sound)
     {
@@ -90,7 +119,8 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
     }
     public int Read(float[] buffer, int offset, int count)
     {
-        Array.Clear(buffer, offset, count);
+        // NAudio's SampleToWaveProvider aliases a byte[] as float[]; Array.Clear would clear byte counts.
+        for (int i = offset; i < offset + count; i++) buffer[i] = 0;
         lock (gate)
         {
             for (int v = voices.Count - 1; v >= 0; v--)
@@ -105,6 +135,6 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
         for (int i = offset; i < offset + count; i++) buffer[i] = Math.Clamp(buffer[i], -1, 1);
         return count;
     }
-    public void Stop() { lock (gate) voices.Clear(); }
-    public void Dispose() { unavailable = true; output?.Dispose(); output = null; Stop(); }
+    public void Stop() { lock (gate) { voices.Clear(); scheduled.Clear(); } }
+    public void Dispose() { unavailable = true; Stop(); }
 }

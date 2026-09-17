@@ -112,6 +112,12 @@ static class HitsoundTests
         view.Document.Fruits.Add(new() { TimeMs = 450 }); Poll(416);
         Require(cancellations > beforeEdit && queued.SequenceEqual(new[] { 450.0, 500 }), "Edits cancel and rebuild future sounds");
         Poll(900); Require(queued.Count == 0, "Large clock jumps cancel queued sounds");
+        view.HitsoundLookaheadMs = 250;
+        view.PrimeScheduledHitsounds(0);
+        Require(queued.SequenceEqual(new[] { 0.0, 100, 100, 150 }), "Windows primes the music buffer horizon before output starts");
+        Poll(16); Require(queued.Count == 4, "First device poll does not duplicate primed hits");
+        view.PrimeScheduledHitsounds(400);
+        Require(queued.SequenceEqual(new[] { 450.0, 500 }), "Seek priming replaces the previous scheduled interval");
     }
     private static void Require(bool ok, string message) { if (!ok) throw new Exception(message); }
 }

@@ -10,7 +10,7 @@ internal static class OutputRecoveryTests
             var players = new List<ControlledPlayer>();
             using var audio = new AudioTransport(0, () =>
             {
-                var player = new ControlledPlayer { DelayStop = players.Count == 0 };
+                var player = new ControlledPlayer();
                 players.Add(player);
                 return player;
             }, TimeSpan.FromMilliseconds(30));
@@ -20,15 +20,21 @@ internal static class OutputRecoveryTests
                 audio.Play();
                 await Flush(audio);
                 if (!playing) { audio.Pause(); await Flush(audio); }
+                var retired = players[^1];
+                retired.DelayStop = true;
+                int previousCount = players.Count;
                 audio.Seek(1500);
                 await Flush(audio);
                 Check(audio.Error is null && audio.CanPlay && audio.IsPlaying == playing && Math.Abs(audio.PositionMs - 1500) < 1,
                     audio.Error ?? "Seek did not rebuild a timed-out session at the requested position");
-                Check(players.Count == 2 && !players[0].Disposed, "Unconfirmed playback thread was disposed or output was not rebuilt");
-                Check(players[0].ReadSamples() > 0, "A retired session lost its reader before it stopped");
-                Check(players[0].OnlySilence && players[1].OnlySilence, "Automatic tests sent non-zero samples to output");
-                players[0].CompleteStop(new IOException("Delayed error from retired output"));
-                await players[0].DisposedTask.WaitAsync(TimeSpan.FromSeconds(2));
+                Check(players.Count == previousCount + 1, "Output was not rebuilt");
+                if (playing)
+                {
+                    Check(!retired.Disposed && retired.ReadSamples() > 0, "A retired session lost its reader before it stopped");
+                    retired.CompleteStop(new IOException("Delayed error from retired output"));
+                    await retired.DisposedTask.WaitAsync(TimeSpan.FromSeconds(2));
+                }
+                Check(players.All(player => player.OnlySilence), "Automatic tests sent non-zero samples to output");
                 await Flush(audio);
                 Check(audio.CanPlay && audio.Error is null && audio.IsPlaying == playing && audio.PositionMs < audio.DurationMs,
                     "Late callback from a retired session changed the replacement clock or error");
@@ -105,7 +111,7 @@ internal static class OutputRecoveryTests
     {
         private IWaveProvider? source;
         private readonly TaskCompletionSource<bool> disposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public bool DelayStop { get; init; }
+        public bool DelayStop { get; set; }
         public bool Disposed => disposed.Task.IsCompleted;
         public Task DisposedTask => disposed.Task;
         public bool OnlySilence { get; private set; } = true;
