@@ -4,7 +4,7 @@ internal static class LibraryScanProgressTests
 {
     public static void Run()
     {
-        string root = Path.Combine(Path.GetTempPath(), "atelier-scan-progress-" + Guid.NewGuid());
+        string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-scan-progress-" + Guid.NewGuid());
         try
         {
             string songs = Path.Combine(root, "Songs"); Directory.CreateDirectory(songs);

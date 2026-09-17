@@ -7,7 +7,7 @@ internal static class LibraryResponsivenessTests
 {
     public static void Run()
     {
-        string root = Path.Combine(Path.GetTempPath(), "atelier-library-lock-" + Guid.NewGuid());
+        string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-library-lock-" + Guid.NewGuid());
         Directory.CreateDirectory(root);
         try
         {
