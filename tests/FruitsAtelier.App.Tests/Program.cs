@@ -7,9 +7,11 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Cached timeline durations follow timing, repeat and document changes", ObjectTimelineTests.CachedDurationsFollowEdits),
     ("Selected-slider body drag, point drag and two-stage right-click follow the same rules in both modes", ToolPaletteTests.SelectedSliderControls),
     ("Timeline layout, centered numbers, box selection and deletion", ObjectTimelineTests.BoxAndDelete),
     ("Slider drafts draw one endpoint fruit", ToolPaletteTests.NoDuplicateDraftGhost),

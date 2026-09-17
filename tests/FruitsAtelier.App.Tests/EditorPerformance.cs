@@ -5,6 +5,25 @@ using FruitsAtelier.Core;
 
 internal static class EditorPerformance
 {
+    public static int RunMap(string path)
+    {
+        var watch = Stopwatch.StartNew();
+        var document = OsuBeatmapReader.ReadFile(path);
+        Console.WriteLine($"Read: {watch.Elapsed.TotalMilliseconds:F1} ms; sliders={document.ImportedSliders.Count}; timing={document.TimingPoints.Count}");
+        var view = new EditorView();
+        watch.Restart(); view.LoadDocument(document);
+        Console.WriteLine($"LoadDocument: {watch.Elapsed.TotalMilliseconds:F1} ms");
+        watch.Restart(); _ = view.Conversion;
+        Console.WriteLine($"Conversion: {watch.Elapsed.TotalMilliseconds:F1} ms");
+        var canvas = new CountCanvas();
+        for (int i = 0; i < 12; i++)
+        {
+            watch.Restart(); view.Render(canvas, 1440, 900);
+            Console.WriteLine($"Render {i}: {watch.Elapsed.TotalMilliseconds:F1} ms");
+        }
+        view.NewProject();
+        return 0;
+    }
     public static int Run()
     {
         foreach (var (count, sliders) in new[] { (1000, false), (10000, false), (1000, true) })

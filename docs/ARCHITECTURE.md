@@ -74,6 +74,10 @@ The normal converter remains available without a cache for export and independen
 Canvas and preview rendering select the visible interval from time-sorted catch objects
 by binary search. Offscreen anchors
 are culled, and timeline events share pixel-sized markers (hyperdash takes precedence).
+The object timeline caches its ordered source intervals against the conversion result.
+Imported slider ends reuse converted durations, so repainting does not rebuild every
+slider's geometry and timing state. Content changes invalidate these intervals along
+with conversion; scrolling, playback and selection reuse them.
 Hit testing rejects distant curve segments before sampling them. Editing snapshots
 copy existing identities without generating replacement IDs, and group dragging uses
 direct target lookup. Undo/redo still retains independent document snapshots.
