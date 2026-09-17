@@ -41,6 +41,22 @@ Check(!audio.State.IsPlaying && Math.Abs(audio.State.PositionMs - 3000) < 5, $"P
 audio.Play(); await Task.Delay(100);
 Check(audio.State.IsPlaying && audio.State.PositionMs < 1000, "Replay starts at the beginning after EOF");
 audio.Pause();
+foreach (double speed in new[] { .25, .5, .75, 1 })
+{
+    audio.Seek(500); audio.SetPlaybackSpeed(speed); audio.Play();
+    await Task.Delay(250);
+    double start = audio.State.PositionMs;
+    await Task.Delay(400);
+    Check(Math.Abs(audio.State.PositionMs - start - 400 * speed) < 55, $"Native map clock follows {speed}x tempo");
+    double before = audio.State.PositionMs;
+    audio.SetPlaybackSpeed(speed == 1 ? .5 : 1);
+    Check(Math.Abs(audio.State.PositionMs - before) < 30, "Changing tempo retains the source position");
+    audio.Pause(); double atPause = audio.State.PositionMs;
+    await Task.Delay(80); audio.Play();
+    Check(Math.Abs(audio.State.PositionMs - atPause) < 3, "Tempo resume retains pause position");
+    audio.Pause();
+}
+audio.SetPlaybackSpeed(1);
 using (var hitsounds = new MacHitsoundPlayer(muted: true))
 {
     hitsounds.Prepare(new(FruitsAtelier.Core.CatchObjectKind.Fruit, wav, .5f));

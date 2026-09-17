@@ -15,8 +15,10 @@ public sealed partial class EditorView
     public Action<string>? RequestOsuExport { get; set; }
     public Action<bool, string>? RequestWorkspaceExport { get; set; }
     private LibraryDatabase? libraryDatabase;
-    private Task<LibraryScan>? scanTask;
+    private Task<(LibraryDatabase Database, LibraryScan Scan)>? scanTask;
     private bool libraryRescanRequested;
+    private bool libraryProjectsNeedReindex;
+    private LibraryScanProgress? libraryScanProgress;
     private Task<IReadOnlyList<LibraryMap>>? searchTask;
     private Task<Dictionary<string, double?>>? ratingTask;
     private string searchTaskQuery = "", libraryQuery = "", libraryError = "", libraryNotice = "";
@@ -61,6 +63,12 @@ public sealed partial class EditorView
         exportPage = LibraryVisible = true; librarySettingsOpen = false; libraryField = -1;
     }
     public void CloseLibrary() { LibraryVisible = exportPage = resourcePage = false; libraryField = -1; }
+    public bool TryResumeLibraryProject(LibraryMap map)
+    {
+        if (WorkspaceSession is not { } session || map.ProjectPath is null || session.Directory != map.ProjectPath) return false;
+        CloseLibrary();
+        return true;
+    }
     public void CheckWorkspaceResources()
     {
         resourceErrors = WorkspaceSession is null ? [] : WorkspaceProject.MissingResources(new BeatmapProject { Name = ProjectName, Difficulties = difficulties.Select(d => new ProjectDifficulty { Id = d.Id, Name = d.Name, Document = d.History.Document }).ToList() });
@@ -73,14 +81,14 @@ public sealed partial class EditorView
         if (WorkspaceSession is null || copy) WorkspaceSession = WorkspaceProject.Create(LibrarySettings.Workspace, project, LibrarySettings.Songs);
         else WorkspaceProject.Save(WorkspaceSession, project);
         MarkSaved(); CheckWorkspaceResources();
-        libraryDatabase?.ReindexProjects(); QueueLibrarySearch();
+        libraryProjectsNeedReindex = true; QueueLibrarySearch();
         SetNotice(L.Get("files.saved", WorkspaceSession.Directory));
         return true;
     }
     public void LoadWorkspace(WorkspaceSession session)
     {
         LoadProject(session.Project); WorkspaceSession = session; CheckWorkspaceResources();
-        libraryDatabase?.ReindexProjects(); QueueLibrarySearch(); CloseLibrary();
+        libraryProjectsNeedReindex = true; QueueLibrarySearch(); CloseLibrary();
         if (session.IsNewImport) OfferSliderConversion(true);
     }
     public void LibraryExportFinished()
@@ -94,9 +102,14 @@ public sealed partial class EditorView
         try
         {
             libraryRescanRequested = false;
-            libraryDatabase = new(LibrarySettings.Workspace, LibrarySettings.Songs);
-            var db = libraryDatabase;
-            scanTask = Task.Run(() => db.Scan());
+            string workspace = LibrarySettings.Workspace, songs = LibrarySettings.Songs;
+            Volatile.Write(ref libraryScanProgress, new(0, 0, 0));
+            // Schema initialization can wait on another scan's SQLite write lock as well.
+            scanTask = Task.Run(() =>
+            {
+                var db = new LibraryDatabase(workspace, songs);
+                return (db, db.Scan(progress: p => Volatile.Write(ref libraryScanProgress, p)));
+            });
             libraryNotice = L.Get("library.scanning");
             libraryError = "";
             QueueLibrarySearch(); nextLibraryScan = DateTime.UtcNow.AddMinutes(1);
@@ -106,9 +119,11 @@ public sealed partial class EditorView
     private void QueueLibrarySearch() { searchAfter = DateTime.UtcNow.AddMilliseconds(150); searchTaskQuery = "\0"; libraryScroll = 0; }
     private void PumpLibrary()
     {
+        if (scanTask is { IsCompleted: false } && Volatile.Read(ref libraryScanProgress) is { } progress)
+            libraryNotice = L.Get("library.scanProgress", progress.Files, progress.Indexed, progress.Errors);
         if (scanTask is { IsCompleted: true })
         {
-            try { var result = scanTask.GetAwaiter().GetResult(); libraryNotice = L.Get("library.indexed", result.Count); libraryError = string.Join("\n", result.Errors.Take(3)); QueueLibrarySearch(); }
+            try { var (db, result) = scanTask.GetAwaiter().GetResult(); libraryDatabase = db; libraryNotice = L.Get("library.indexed", result.Count); libraryError = string.Join("\n", result.Errors.Take(3)); QueueLibrarySearch(); }
             catch (Exception e) { libraryError = e.Message; QueueLibrarySearch(); }
             scanTask = null;
             if (libraryRescanRequested) StartLibraryScan();
@@ -128,7 +143,13 @@ public sealed partial class EditorView
         {
             var db = libraryDatabase; string query = libraryQuery; bool projects = libraryProjectsOnly;
             searchTaskQuery = libraryQuery + libraryProjectsOnly;
-            searchTask = Task.Run(() => db.Search(query, projects));
+            bool reindex = libraryProjectsNeedReindex;
+            libraryProjectsNeedReindex = false;
+            searchTask = Task.Run(() =>
+            {
+                if (reindex) db.ReindexProjects();
+                return db.Search(query, projects);
+            });
         }
         if (ratingTask is { IsCompleted: true })
         {
@@ -194,12 +215,13 @@ public sealed partial class EditorView
         }
         c.Fill(new(0, 64, 190, height - 64), Panel);
         Button(c, new(16, 88, 158, 36), L.Get("library.all"), () => { libraryProjectsOnly = false; QueueLibrarySearch(); }, !libraryProjectsOnly);
-        Button(c, new(16, 134, 158, 36), L.Get("library.projects"), () => { libraryProjectsOnly = true; libraryDatabase?.ReindexProjects(); QueueLibrarySearch(); }, libraryProjectsOnly);
+        Button(c, new(16, 134, 158, 36), L.Get("library.projects"), () => { libraryProjectsOnly = true; libraryProjectsNeedReindex = true; QueueLibrarySearch(); }, libraryProjectsOnly);
         Button(c, new(16, 208, 158, 36), L.Get("library.refresh"), StartLibraryScan, enabled: scanTask is null);
         Button(c, new(16, 254, 158, 36), L.Get("library.new"), () => RequestNewProject?.Invoke());
         Button(c, new(16, 314, 158, 36), L.Get("library.importFolder"), () => RequestLibraryImport?.Invoke(true), enabled: scanTask is null);
         Button(c, new(16, 360, 158, 36), L.Get("library.importFile"), () => RequestLibraryImport?.Invoke(false), enabled: scanTask is null);
-        c.Text(libraryNotice, 16, height - 96, 12, Muted, 158);
+        var noticeLines = libraryNotice.Split('\n');
+        for (int i = 0; i < noticeLines.Length; i++) c.Text(noticeLines[i], 16, height - 96 + i * 19, 12, Muted, 158);
         float listWidth = width - 558;
         var queryRect = new Rect(214, 84, width - 238, 40);
         c.Fill(queryRect, Surface, 6); c.Stroke(queryRect, libraryField == 2 ? Accent : Grid, radius: 6);

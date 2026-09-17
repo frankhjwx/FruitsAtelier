@@ -6,7 +6,7 @@ internal static class SliderInteractionTests
     {
         var ui = Load(new MapDocument { DurationMs = 12000 });
         ui.Key('B');
-        ui.ClickMap(1000, 100); ui.ClickMap(2000, 200); ui.ClickMap(3000, 260);
+        ui.ClickMap(1000, 100); ui.ClickMap(2000, 200, ctrl: true); ui.ClickMap(3000, 260, ctrl: true);
         ui.Key(13);
         var straight = ui.View.Document.Tracks.Single();
         Check(straight.Nodes.Count == 3 && straight.Nodes.All(n => n.HandleIn == default && n.HandleOut == default),
@@ -26,13 +26,13 @@ internal static class SliderInteractionTests
         Guid middle = curved.Nodes[1].Id;
         Check(curved.Nodes[1].HandleIn != default && curved.Nodes[1].HandleOut != default,
             "Press-drag did not create both active direction handles.");
-        Check(curved.Nodes[0].HandleIn == default && curved.Nodes[0].HandleOut == default
+        Check(curved.Nodes[0].HandleIn == default && curved.Nodes[0].HandleOut != default
             && curved.Nodes[2].HandleIn == default && curved.Nodes[2].HandleOut == default,
-            "A simple click acquired an implicit direction handle.");
+            "Curve endpoints have invalid direction handles.");
         ui.DownMap(5000, 200); ui.MoveMap(5125, 210); ui.UpMap(5125, 210);
         Near(5125, ui.Anchor(middle).TimeMs);
         ui.Key(13);
-        Check(ui.View.ActiveTool == "Select" && !ui.View.WantsCapture, "Completing Slider retained drawing capture/tool.");
+        Check(ui.View.ActiveTool == "Slider" && !ui.View.WantsCapture, "Completing Slider retained drawing capture/tool.");
         Check(Enumerable.Range(0, 2).All(i => CurveMath.SegmentKind(curved, i) == CurveKind.Bezier),
             "The dragged point did not curve its adjacent segments.");
         Valid(ui);
@@ -45,7 +45,7 @@ internal static class SliderInteractionTests
         var ui = Load(CurveMap());
         var track = ui.View.Document.Tracks.Single();
         Guid nodeId = track.Nodes[1].Id;
-        ui.ClickText(track.Name);
+        ui.SelectTrack(track.Id);
         var saved = ui.View.Document.DeepClone();
         Check(!DotAt(ui, 3000, 350, 3, 0xE7EBF2), "Whole-object selection unexpectedly highlighted a point.");
         ui.Key('B');
@@ -59,7 +59,7 @@ internal static class SliderInteractionTests
         ui.Key('Y', ctrl: true); Near(3125, ui.Anchor(nodeId).TimeMs);
         ui.Key('Z', ctrl: true);
 
-        ui.ClickText(track.Name); ui.Key('B');
+        ui.SelectTrack(track.Id); ui.Key('B');
         ui.ClickMap(3000, 350);
         Check(ui.Canvas.Circles.Any(c => At(ui, c, 3250, 320) && Math.Abs(c.Radius - 4.5) < 0.001),
             "The unselected outgoing handle was not drawn.");
@@ -80,7 +80,7 @@ internal static class SliderInteractionTests
         var ui = Load(CurveMap());
         var track = ui.View.Document.Tracks.Single();
         var node = track.Nodes[1];
-        ui.ClickText(track.Name);
+        ui.SelectTrack(track.Id);
         Check(ui.View.ActiveTool == "Select" && ui.View.SelectedAnchorIds.Count == 0,
             "Selecting the FSlider unexpectedly entered point editing.");
 
@@ -94,11 +94,9 @@ internal static class SliderInteractionTests
             "The selected anchor does not use the distinct high-contrast colour.");
 
         double farTime = 2000;
-        RightMap(ui, farTime, CurveMath.PositionAtTime(track, farTime));
-        Check(ui.Canvas.Texts.Any(text => text.Value == "插入控制点"),
-            "Right-clicking the selected curve away from its anchor lost the insertion action.");
-        Check(!ui.Canvas.Texts.Any(text => text.Value is "转换为曲线控制点" or "转换为直线控制点"),
-            "A distant curve click offered a point-type action for the previously selected anchor.");
+        ui.MoveMap(farTime, CurveMath.PositionAtTime(track, farTime));
+        ui.Key('I', ctrl: true);
+        Check(track.Nodes.Count == 4, "Ctrl+I did not insert at the pointer location.");
     }
 
     public static void PointContextMenu()
@@ -108,8 +106,7 @@ internal static class SliderInteractionTests
         var track = ui.View.Document.Tracks.Single();
         Guid trackId = track.Id;
         var oldIds = track.Nodes.Select(n => n.Id).ToHashSet();
-        RightMap(ui, 1777, CurveMath.PositionAtTime(track, 1777));
-        ui.ClickText("插入控制点");
+        ui.SelectTrack(track.Id); ui.MoveMap(1777, CurveMath.PositionAtTime(track, 1777)); ui.Key('I', ctrl: true);
         track = ui.View.Document.Tracks.Single();
         var inserted = track.Nodes.Single(n => !oldIds.Contains(n.Id));
         Guid nodeId = inserted.Id;
@@ -123,18 +120,20 @@ internal static class SliderInteractionTests
         ui.Key('Y', ctrl: true);
         Check(withCorner.ContentEquals(ui.View.Document), "Redo insertion changed its identity or handles.");
 
-        RightNode(ui, nodeId); ui.ClickText("转换为曲线控制点");
+        SelectNode(ui, nodeId); ui.Key('L', ctrl: true);
         Check(ui.Anchor(nodeId).HandleIn != default || ui.Anchor(nodeId).HandleOut != default,
             "Converting a corner did not expose an editable handle.");
         Valid(ui);
         ui.Key('Z', ctrl: true);
         Check(withCorner.ContentEquals(ui.View.Document), "Undo point conversion changed another control point.");
         ui.Key('Y', ctrl: true);
-        RightNode(ui, nodeId); ui.ClickText("转换为直线控制点");
+        SelectNode(ui, nodeId); ui.Key('L', ctrl: true);
         Check(ui.Anchor(nodeId).HandleIn == default && ui.Anchor(nodeId).HandleOut == default,
             "Converting to a corner retained a handle.");
+        RightNode(ui, nodeId);
+        Check(CurvePointEditing.IsCurved(ui.View.Document.Tracks.Single(), nodeId), "Right-click did not restore the straight point to curved.");
         var beforeDelete = ui.View.Document.DeepClone();
-        RightNode(ui, nodeId); ui.ClickText("删除控制点");
+        RightNode(ui, nodeId);
         Check(ui.View.Document.Tracks.Single().Id == trackId && ui.View.Document.Tracks.Single().Nodes.Count == 3,
             "Delete control point removed the whole slider or retained the point.");
         ui.Key('Z', ctrl: true);
@@ -149,7 +148,7 @@ internal static class SliderInteractionTests
         var ui = Load(map);
         Guid originalId = ui.View.Document.Fruits.Single().Id;
         var baseline = ui.View.Document.DeepClone();
-        RightMap(ui, 1000, 80); ui.ClickText("复制");
+        ui.ClickMap(1000, 80); ui.Key('C', ctrl: true);
         Check(baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Copy mutated the map or history baseline.");
         Navigate(ui, 4000); double pasteTime = ui.View.PlayheadMs;
         ui.Key('V', ctrl: true);
@@ -159,7 +158,7 @@ internal static class SliderInteractionTests
         ui.Key('Z', ctrl: true);
         Check(baseline.ContentEquals(ui.View.Document), "Pasting fruit did not undo in one step.");
         ui.Key('Y', ctrl: true);
-        RightMap(ui, pasteTime, 80); ui.ClickText("剪切");
+        ui.ClickMap(pasteTime, 80); ui.Key('X', ctrl: true);
         Check(ui.View.Document.Fruits.Single().Id == originalId, "Cut removed the wrong fruit.");
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.Fruits.Any(f => f.Id == pastedId), "Undo cut did not restore the original pasted identity.");
@@ -167,7 +166,7 @@ internal static class SliderInteractionTests
         ui.Key('V', ctrl: true);
         var third = ui.View.Document.Fruits.Single(f => f.Id != originalId && f.Id != pastedId);
         Near(pasteTime, third.TimeMs); Near(80, third.X);
-        RightMap(ui, pasteTime, 80); ui.ClickText("删除");
+        RightMap(ui, pasteTime, 80);
         Check(ui.View.Document.Fruits.Count == 2 && ui.View.Document.Fruits.All(f => f.Id != third.Id),
             "Context delete removed more than the selected fruit.");
         ui.Key('Z', ctrl: true);
@@ -188,7 +187,7 @@ internal static class SliderInteractionTests
         source.Nodes[1].OutgoingKind = CurveKind.Linear;
         var ui = Load(map);
         var baseline = ui.View.Document.DeepClone();
-        RightMap(ui, 1400, CurveMath.PositionAtTime(source, 1400)); ui.ClickText("复制");
+        ui.SelectTrack(source.Id); ui.Key('C', ctrl: true);
         Check(baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Slider copy dirtied the model.");
         Navigate(ui, 4000); double time = ui.View.PlayheadMs;
         ui.Key('V', ctrl: true);
@@ -207,38 +206,16 @@ internal static class SliderInteractionTests
         Check(baseline.ContentEquals(ui.View.Document), "Slider paste did not undo atomically.");
         ui.Key('Y', ctrl: true);
         pasted = ui.View.Document.Tracks.Single(t => t.Id == pastedId);
-        RightMap(ui, time + 400, CurveMath.PositionAtTime(pasted, time + 400)); ui.ClickText("剪切");
+        ui.SelectTrack(pasted.Id); ui.Key('X', ctrl: true);
         Check(ui.View.Document.Tracks.Single().Id == source.Id, "Cut removed only a slider point or the wrong parent.");
         ui.Key('Z', ctrl: true);
         pasted = ui.View.Document.Tracks.Single(t => t.Id == pastedId);
-        RightMap(ui, time + 400, CurveMath.PositionAtTime(pasted, time + 400)); ui.ClickText("删除");
+        RightMap(ui, time + 400, CurveMath.PositionAtTime(pasted, time + 400));
         Check(ui.View.Document.Tracks.Single().Id == source.Id, "Delete did not remove the entire selected slider.");
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.Tracks.Single(t => t.Id == pastedId).Nodes.Count == source.Nodes.Count,
             "Undo did not restore the complete deleted slider.");
         Valid(ui);
-    }
-
-    public static void HierarchyCompletesDraft()
-    {
-        var map = new MapDocument { DurationMs = 12000 };
-        map.Fruits.Add(new Fruit { TimeMs = 900, X = 480 });
-        var ui = Load(map);
-        var baseline = ui.View.Document.DeepClone();
-        ui.Key('B'); ui.ClickMap(1000, 100); ui.ClickMap(2000, 250);
-        ui.ClickText("Fruit 01   900");
-        Check(ui.View.ActiveTool == "Select" && !ui.View.WantsCapture && ui.View.Document.Tracks.Single().Nodes.Count == 2,
-            "Hierarchy selection did not finish the two-point draft and switch tool.");
-        ui.Key('Z', ctrl: true);
-        Check(baseline.ContentEquals(ui.View.Document), "Hierarchy-completed draft did not undo as one edit.");
-        ui.Key('Y', ctrl: true);
-        var complete = ui.View.Document.DeepClone();
-        ui.Key('B'); ui.ClickMap(4000, 200);
-        ui.ClickText("Fruit 01   900");
-        Check(complete.ContentEquals(ui.View.Document) && ui.View.ActiveTool == "Select" && !ui.View.WantsCapture,
-            "Hierarchy selection retained a one-point draft or canceled earlier work.");
-        ui.Key('Z', ctrl: true);
-        Check(baseline.ContentEquals(ui.View.Document), "Canceled one-point draft consumed an undo entry.");
     }
 
     public static void ContextOutsideClick()
@@ -247,23 +224,15 @@ internal static class SliderInteractionTests
         map.Fruits.Add(new Fruit { TimeMs = 1000, X = 80 });
         var ui = Load(map);
         var baseline = ui.View.Document.DeepClone();
+        RightMap(ui, 3000, 450);
+        Check(!ui.Canvas.Texts.Any(t => t.Value == "澶嶅埗"), "Right-click opened a context menu.");
+        Check(baseline.ContentEquals(ui.View.Document), "Right-clicking empty canvas edited the map.");
         RightMap(ui, 1000, 80);
-        Check(ui.Canvas.Texts.Any(t => t.Value == "复制"), "Context menu did not open.");
-        double oldPlayhead = ui.View.PlayheadMs;
-        ui.ClickMap(3000, 450);
-        Check(!ui.Canvas.Texts.Any(t => t.Value == "复制"), "Outside click left context menu open.");
-        Near(oldPlayhead, ui.View.PlayheadMs);
-        Check(baseline.ContentEquals(ui.View.Document), "Outside click edited the underlying canvas.");
+        Check(ui.View.Document.Fruits.Count == 0, "Right-click did not delete the fruit.");
+        ui.Key('Z', ctrl: true);
+        Check(baseline.ContentEquals(ui.View.Document), "Deletion did not undo exactly.");
         ui.ClickMap(3000, 450);
         Near(3000, ui.View.PlayheadMs);
-        ui.ClickText("Fruit 01   1000");
-        RightMap(ui, 1000, 80);
-        Check(ui.Canvas.Texts.Any(t => t.Value == "复制"), "Context menu did not reopen after recentering the fruit.");
-        ui.Key(27);
-        Check(!ui.Canvas.Texts.Any(t => t.Value == "复制"), "Escape did not close context menu.");
-        ui.Key('C', ctrl: true);
-        Check(ui.View.CanPasteSelection && baseline.ContentEquals(ui.View.Document),
-            "Escape dismissed the object selection as well as its context menu.");
     }
 
     public static void DeleteDoesNotActivateDormantHandles()
@@ -274,7 +243,7 @@ internal static class SliderInteractionTests
         track.Nodes[2].HandleIn = new(-900, -180);
         var ui = Load(map);
         var original = ui.View.Document.DeepClone();
-        RightNode(ui, track.Nodes[1].Id); ui.ClickText("删除控制点");
+        RightNode(ui, track.Nodes[1].Id);
         track = ui.View.Document.Tracks.Single();
         Check(track.Nodes.Count == 2, "Deleting an internal point did not merge its adjacent segments.");
         Check(CurveMath.SegmentKind(track, 0) != CurveKind.Bezier || track.Nodes[1].HandleIn == default,
@@ -294,7 +263,7 @@ internal static class SliderInteractionTests
         var original = ui.View.Document.DeepClone();
         Guid sourceId = map.ImportedSliders.Single().Id;
         // The return span goes X=300 to X=100 between 2000 and 3000 ms.
-        RightMap(ui, 2500, 200); ui.ClickText("插入控制点");
+        ui.MoveMap(2500, 200); ui.Key('I', ctrl: true);
         Check(ui.View.Document.ImportedSliders.Count == 0, "Repeat insertion left the source unconverted.");
         var converted = ui.View.Document.Tracks.Single();
         Check(converted.Id == sourceId && converted.SpanCount == 2 && converted.Nodes.Any(n => Math.Abs(n.TimeMs - 1500) < .001),
@@ -310,17 +279,14 @@ internal static class SliderInteractionTests
         map.DurationMs = 12000;
         var ui = Load(map);
         Guid sourceId = map.ImportedSliders.Single().Id;
-        RightMap(ui, 1500, 200);
-        Check(ui.Canvas.Texts.Any(text => text.Value == "转换为 FSlider"), "Legacy Slider context menu has no explicit FSlider conversion action.");
-        var action = ui.Canvas.Texts.Last(text => text.Value == "转换为 FSlider");
-        ui.Click(action.X + 4, action.Y + 5);
+        ui.ClickMap(1500, 200); ui.Key('D', ctrl: true);
         var track = ui.View.Document.Tracks.Single();
         Check(track.Id == sourceId && track.CompensateTinyDroplets == true && ui.View.Document.ImportedSliders.Count == 0,
             "Context conversion did not replace the Legacy Slider with one FSlider.");
         var objects = ui.View.Conversion.Objects.Where(item => item.SourceId == sourceId).ToArray();
         Check(objects.Length > 0 && objects.All(item => Math.Abs(item.X - CurveMath.PositionAtTime(track, item.TimeMs))
             <= CatchStreamConverter.AlignmentTolerance), "Converted FSlider objects are not aligned to its target path.");
-        Check(ui.Canvas.Texts.Any(text => text.Value == "FSlider"), "The converted object is not labelled as a FSlider.");
+        Check(ui.View.SelectedObjectIds.Contains(track.Id), "Conversion did not retain canvas selection.");
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.ImportedSliders.Single().Id == sourceId && ui.View.Document.Tracks.Count == 0,
             "Undo did not restore the Legacy Slider representation.");
@@ -357,14 +323,14 @@ internal static class SliderInteractionTests
             node.HandleOut = new(node.HandleOut.TimeMs / 4, node.HandleOut.X);
         }
         var ui = Load(map);
-        ui.ClickText(original.Name); ui.Key('B');
-        RightMap(ui, 750, 350); ui.ClickText("增加一次折返");
+        ui.SelectTrack(original.Id); ui.Key('B');
+        ui.Key(187, ctrl: true);
         Check(ui.View.Document.Tracks.Single().SpanCount == 2, "Reverse not added during anchor editing.");
-        RightMap(ui, 750, 350); ui.ClickText("增加一次折返");
+        ui.Key(187, ctrl: true);
         Check(ui.View.Document.Tracks.Single().SpanCount == 3, "Multiple reverses not supported.");
-        RightMap(ui, 750, 350); ui.ClickText("减少一次折返");
+        ui.Key(189, ctrl: true);
         var before = ui.View.Document.DeepClone();
-        RightMap(ui, 3500, 400); ui.ClickText("延伸滑条到这里");
+        ui.MoveMap(3500, 400); ui.Key('J', ctrl: true);
         var extended = ui.View.Document.Tracks.Single();
         Check(extended.SpanCount == 2 && extended.Nodes.Count == 4, "Extension lost repeat count or failed to append.");
         Near(3500, extended.Nodes[^1].TimeMs); Near(400, extended.Nodes[^1].X);
@@ -416,11 +382,19 @@ internal static class SliderInteractionTests
         ui.View.PointerUp(p.X, p.Y, 2); ui.Paint();
     }
 
+    private static void SelectNode(Ui ui, Guid id)
+    {
+        var node = ui.Anchor(id);
+        var track = ui.View.Document.Tracks.Single(t => t.Nodes.Any(n => n.Id == id));
+        ui.SelectTrack(track.Id); ui.Key('B'); ui.ClickMap(node.TimeMs, node.X);
+    }
+
     private static void RightNode(Ui ui, Guid id)
     {
         var node = ui.Anchor(id);
         var track = ui.View.Document.Tracks.Single(t => t.Nodes.Any(n => n.Id == id));
-        ui.ClickText(track.Name); ui.Key('B');
+        ui.SelectTrack(track.Id); ui.Key('B');
+        ui.ClickMap(node.TimeMs, node.X);
         RightMap(ui, node.TimeMs, node.X);
     }
 

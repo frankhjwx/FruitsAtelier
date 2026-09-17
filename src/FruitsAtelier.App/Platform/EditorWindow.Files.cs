@@ -21,15 +21,13 @@ internal sealed partial class EditorWindow
         view.PreloadProjectHitsounds();
         view.RequestStopHitsounds = hitsounds.Stop;
         view.RequestLanguagePreference = language => FileOperation(() => FruitsAtelier.Localization.LanguagePreference.SaveLanguage(language));
-        view.RequestOpen = () => FileOperation(() =>
+        view.RequestOpen = () => ConfirmDiscard(() =>
         {
-            if (!ConfirmDiscard()) return;
             string? path = MapFileDialog.Select(hwnd, false, L.Get("files.open"), MapFileDialog.OpenFilter);
             if (path is not null) OpenPath(path);
         });
-        view.RequestNewProject = () => FileOperation(() =>
+        view.RequestNewProject = () => ConfirmDiscard(() =>
         {
-            if (!ConfirmDiscard()) return;
             ResetAudio(); projectPath = null; view.NewProject(); view.CloseLibrary();
         });
         view.RequestImportDifficulty = () => FileOperation(() =>
@@ -66,6 +64,7 @@ internal sealed partial class EditorWindow
             else { view.PrimeScheduledHitsounds(audio.PositionMs >= audio.DurationMs - 1 ? 0 : audio.PositionMs); audio.Play(); }
             PollAudio();
         };
+        view.RequestPlaybackSpeed = speed => audio.SetPlaybackSpeed(speed);
         view.RequestSeek = time =>
         {
             if (!audio.CanPlay) return;
@@ -119,7 +118,7 @@ internal sealed partial class EditorWindow
         return string.IsNullOrWhiteSpace(result) ? L.Get("files.untitled") : result.Trim().TrimEnd('.');
     }
 
-    private void ResetAudio() { view.ResetHitsounds(); audio.Dispose(); audio = new AudioTransport { Hitsounds = hitsounds }; }
+    private void ResetAudio() { view.ResetHitsounds(); audio.Dispose(); audio = new AudioTransport { Hitsounds = hitsounds }; audio.SetPlaybackSpeed(view.PlaybackSpeed); }
 
     private void PollAudio()
     {

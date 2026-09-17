@@ -58,11 +58,11 @@ public sealed partial class EditorView
 
     private void ResetDifficultyView()
     {
+        nextFruitNewCombo = false;
         var document = Document;
         convertedSnapshot = null;
         Select(Guid.Empty);
         tool = Tool.Select;
-        listScroll = 0;
         menu = -1;
         ResetView();
         playhead = Math.Clamp(document.Fruits.Select(f => f.TimeMs)

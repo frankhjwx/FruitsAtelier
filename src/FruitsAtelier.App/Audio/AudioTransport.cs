@@ -12,7 +12,7 @@ public sealed record AudioState(string? FilePath, double PositionMs, double Dura
 
 public sealed class AudioTransport : IDisposable
 {
-    private enum CommandKind { Load, Play, Pause, Seek, Refresh, Barrier }
+    private enum CommandKind { Load, Play, Pause, Seek, Speed, Refresh, Barrier }
     private sealed record Command(CommandKind Kind, long LoadVersion, string? Path = null, double Position = 0,
         long SeekVersion = 0, long IntentVersion = 0, TaskCompletionSource<bool>? Completion = null);
     private sealed class OutputSession : IDisposable
@@ -46,6 +46,8 @@ public sealed class AudioTransport : IDisposable
     private long loadVersion, seekVersion, appliedSeekVersion, loadedVersion;
     private long intentVersion, appliedIntentVersion;
     private double requestedPosition, basePosition, duration;
+    private double playbackSpeed = 1, requestedSpeed = 1;
+    public double PlaybackSpeed => Volatile.Read(ref playbackSpeed);
     private bool playIntent;
     private bool requestedPlaying;
     private WaveStream? reader;
@@ -125,6 +127,13 @@ public sealed class AudioTransport : IDisposable
         }
     }
 
+    public void SetPlaybackSpeed(double speed)
+    {
+        if (!double.IsFinite(speed) || speed < .25 || speed > 1) return;
+        lock (stateLock)
+            if (disposed == 0) { requestedSpeed = speed; commands.Writer.TryWrite(new(CommandKind.Speed, loadVersion, Position: speed)); }
+    }
+
     public Task WaitForCommandsAsync()
     {
         var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -171,6 +180,16 @@ public sealed class AudioTransport : IDisposable
                                 if (output is { Started: true } && reader is not null)
                                     await ResetOutputAsync(output.Stopped.Task.IsCompleted ? duration : DevicePosition());
                                 Interlocked.Exchange(ref appliedIntentVersion, command.IntentVersion);
+                                break;
+                            case CommandKind.Speed:
+                                if (playbackSpeed == command.Position) break;
+                                double position = output is null ? basePosition : DevicePosition();
+                                playbackSpeed = command.Position;
+                                if (reader is not null)
+                                {
+                                    await ResetOutputAsync(position);
+                                    if (playIntent) StartOutput();
+                                }
                                 break;
                             case CommandKind.Seek:
                                 if (command.SeekVersion != Interlocked.Read(ref seekVersion) || reader is null) break;
@@ -222,6 +241,7 @@ public sealed class AudioTransport : IDisposable
         if (!double.IsFinite(duration) || duration <= 0) throw new InvalidDataException(L.Get("audio.noDuration"));
         if (reader.WaveFormat.Channels is < 1 or > 2) throw new NotSupportedException(L.Get("audio.channels"));
         basePosition = 0;
+        lock (stateLock) playbackSpeed = requestedSpeed;
         output = CreateOutput();
         lock (stateLock)
             if (loadedVersion == loadVersion) appliedSeekVersion = seekVersion;
@@ -242,7 +262,8 @@ public sealed class AudioTransport : IDisposable
     private OutputSession CreateOutput()
     {
         ISampleProvider samples = reader!.ToSampleProvider();
-        if (Hitsounds is not null) samples = Hitsounds.MixWithMusic(samples, basePosition);
+        if (playbackSpeed != 1) samples = new TempoSampleProvider(samples, playbackSpeed);
+        if (Hitsounds is not null) samples = Hitsounds.MixWithMusic(samples, basePosition, playbackSpeed);
         var pcm = new SampleToWaveProvider16(samples) { Volume = outputGain };
         long version = loadedVersion;
         return new(pcm, () => commands.Writer.TryWrite(new(CommandKind.Refresh, version)), createPlayer);
@@ -295,7 +316,7 @@ public sealed class AudioTransport : IDisposable
     }
 
     private double DevicePosition() => Math.Clamp(basePosition
-        + output!.PositionBytes * 1000.0 / output.Player.OutputWaveFormat.AverageBytesPerSecond, 0, duration);
+        + output!.PositionBytes * 1000.0 * playbackSpeed / output.Player.OutputWaveFormat.AverageBytesPerSecond, 0, duration);
 
     private void Publish(double position, bool playing)
     {

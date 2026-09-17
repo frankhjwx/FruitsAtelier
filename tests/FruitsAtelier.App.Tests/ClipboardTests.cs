@@ -37,7 +37,7 @@ internal static class ClipboardTests
         track.Nodes.Add(new() { TimeMs = 1500, X = 240, HandleIn = new(-100, -40), HandleOut = new(100, 50), OutgoingKind = CurveKind.Linear });
         track.Nodes.Add(new() { TimeMs = 2000, X = 300, HandleIn = new(-100, -20) });
         var map = new MapDocument { DurationMs = 3200 }; map.Tracks.Add(track);
-        ui.LoadDocument(map); ui.Paint(); ui.ClickText("锚点 2   1500");
+        ui.LoadDocument(map); ui.Paint(); ui.SelectTrack(track.Id); ui.Key('B'); ui.ClickMap(1500, ui.View.Document.Tracks.Single(t => t.Id == track.Id).Nodes[1].X);
         Check(ui.View.CopySelection(), "Selecting an anchor did not copy its parent track.");
         ui.View.Document.Tracks[0].Nodes[1].X = 250;
         ui.View.UpdateTransport(2500, 6000, true, false, false, null, "fixture.wav");
@@ -54,7 +54,7 @@ internal static class ClipboardTests
         Check(ui.View.Document.Tracks.Count == 1, "Paste undo retained the clone.");
 
         ui.View.UpdateTransport(0, 6000, true, false, false, null, "fixture.wav"); ui.Paint();
-        ui.ClickText("锚点 2   1500");
+        ui.SelectTrack(track.Id); ui.Key('B'); ui.ClickMap(1500, ui.View.Document.Tracks.Single(t => t.Id == track.Id).Nodes[1].X);
         Check(ui.View.CutSelection(), ui.View.StatusMessage);
         Check(ui.View.Document.Tracks.Count == 0 && ui.View.CanPasteSelection, "Cut deleted only the anchor or lost the clipboard.");
         ui.Key('Z', ctrl: true);
@@ -69,7 +69,7 @@ internal static class ClipboardTests
         var ui = new Ui();
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n3000,250,4,1,0,100,1,0\n[HitObjects]\n160,192,1000,6,2,B|220:250|300:192,2,200,2|4|8,1:2|2:3|3:4,2:3:4:70:clap.wav\n256,192,6000,12,8,6500,2:3:4:60:banana.wav\n");
         var source = map.ImportedSliders.Single(); var shower = map.BananaShowers.Single();
-        ui.LoadDocument(map); ui.Paint(); ui.ClickText("Legacy Slider  1000");
+        ui.LoadDocument(map); ui.Paint(); ui.Key('V'); ui.ClickMap(1000, 160);
         Check(ui.View.CopySelection(), "Imported slider copy failed.");
         ui.View.UpdateTransport(4000.5, 10000, true, false, false, null, "fixture.wav");
         Check(ui.View.PasteSelection(), ui.View.StatusMessage);
@@ -82,7 +82,7 @@ internal static class ClipboardTests
         Check(output.OriginalLine!.EndsWith("2|4|8,1:2|2:3|3:4,2:3:4:70:clap.wav", StringComparison.Ordinal), "Imported paste lost edge or hit samples.");
 
         ui.View.UpdateTransport(0, 10000, true, false, false, null, "fixture.wav"); ui.Paint();
-        ui.ClickText("香蕉雨  6000");
+        ui.Key('V'); ui.ClickMap(6200, 256);
         Check(ui.View.CopySelection(), "Banana shower copy failed.");
         ui.View.UpdateTransport(7000.25, 10000, true, false, false, null, "fixture.wav");
         Check(ui.View.PasteSelection(), ui.View.StatusMessage);
@@ -105,7 +105,7 @@ internal static class ClipboardTests
         var map = new MapDocument { DurationMs = 5000 };
         var track = new CurveTrack { Kind = CurveKind.Linear, Name = "Overflow slider" };
         track.Nodes.Add(new() { TimeMs = 1000, X = 100 }); track.Nodes.Add(new() { TimeMs = 2000, X = 100 }); map.Tracks.Add(track);
-        ui.LoadDocument(map); ui.Paint(); ui.ClickText("Overflow slider");
+        ui.LoadDocument(map); ui.Paint(); ui.SelectTrack(track.Id);
         Check(ui.View.CopySelection(), "Completed slider could not be copied.");
         var before = ui.View.Document.DeepClone();
         ui.View.UpdateTransport(int.MaxValue - 100, int.MaxValue, true, false, false, null, "fixture.wav");

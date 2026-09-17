@@ -18,6 +18,9 @@ using (var writer = new WaveFileWriter(wave, new WaveFormat(44100, 16, 2)))
 
 var tests = new (string Name, Func<Task> Run)[]
 {
+    ("MP3 timeline accounts for tagged encoder delay and untagged decoder delay", () => { Mp3TimelineTests.Run(); return Task.CompletedTask; }),
+    ("Tempo preserves pitch, stereo and exact output duration", () => { PlaybackSpeedTests.PitchAndDuration(); return Task.CompletedTask; }),
+    ("Speed changes preserve map position, pause and seek", () => PlaybackSpeedTests.Clock(wave)),
     ("Hitsound PCM mix, volume and stop", () => { HitsoundMixerTests.Run(); return Task.CompletedTask; }),
     ("Pause and resume preserve the playhead and first PCM frame despite read-ahead", () => PausePositionTests.Run(wave)),
     ("WAV real output drives the clock; pause and paused seek stay stopped", WavePlayback),
@@ -36,6 +39,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Repeated output failure stays unavailable until an explicit reload", () => OutputRecoveryTests.RepeatedFailure(wave)),
     ("EOF replay does not reuse an output waiting for its stopped callback", () => OutputRecoveryTests.EndBeforeCallback(wave))
 };
+if (args.Contains("--speed-check")) tests = tests.Take(4).ToArray();
 if (args.Contains("--lifecycle-check")) tests = tests.Where(test => test.Run == (Func<Task>)RepeatedLifecycle).ToArray();
 if (args.Contains("--recovery-check")) tests = tests.TakeLast(3).ToArray();
 int passed = 0;

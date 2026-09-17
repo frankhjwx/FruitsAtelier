@@ -112,3 +112,7 @@ Apple scheduling references: [play(atTime:)](https://developer.apple.com/documen
 and [deviceCurrentTime](https://developer.apple.com/documentation/avfaudio/avaudioplayer/devicecurrenttime).
 
 Apple mixer reference: [AVAudioSourceNode](https://developer.apple.com/documentation/avfaudio/avaudiosourcenode).
+
+## Playback speed
+
+Song tempo is adjustable to 25%, 50%, 75%, and 100% with pitch preserved. Windows stretches music before mixing hitsounds: event map offsets are divided by tempo to locate output frames, while each sample advances at its normal sample rate. macOS applies a music-only AVAudioUnitTimePitch and divides event offsets by tempo when scheduling the independent hitsound engine. Speed changes retain the map playhead; macOS cancels future hitsounds and reschedules against the new start time.

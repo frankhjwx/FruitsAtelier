@@ -11,91 +11,6 @@ public sealed partial class EditorView
     private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "");
     private sealed record SliderLocation(Guid Id, double FirstSpanTimeMs);
 
-    private void OpenContextMenu(float x, float y)
-    {
-        contextItems.Clear();
-        menu = -1;
-        if (!plot.Contains(x, y) && !listBounds.Contains(x, y)) return;
-        var extendTrack = draftTrack == Guid.Empty && objectSelection.Count <= 1 ? SelectedTrack : null;
-        var extendPoint = MapAt(x, y, true);
-        bool canExtend = extendTrack is not null && plot.Contains(x, y)
-            && extendPoint.TimeMs >= CurveMath.EndTimeMs(extendTrack) + CurveMath.MinimumAnchorSpacingMs;
-        bool anchors = tool == Tool.Slider && SelectedTrack is not null && !listBounds.Contains(x, y);
-        var previousAnchors = anchorSelection.ToArray();
-        Guid previousTrack = selectedTrack;
-        if (draftTrack != Guid.Empty || !anchors) FinishForSelection();
-        if (anchors && Document.Tracks.FirstOrDefault(t => t.Id == previousTrack) is { } editing)
-        { tool = Tool.Slider; SelectAnchors(editing, previousAnchors); }
-        SliderLocation? location = null;
-        bool found = false;
-        bool anchorHit = false;
-        if (listBounds.Contains(x, y))
-        {
-            foreach (var row in rows)
-                if (row.Bounds.Contains(x, y)) { PickObject(row.Track != Guid.Empty ? row.Track : row.Id, false); found = true; break; }
-        }
-        else
-        {
-            if (showTargets)
-            {
-                var point = Document.Tracks.OrderByDescending(t => t.Id == selectedTrack)
-                    .SelectMany(t => t.Nodes.Select(n => (Track: t, Node: n)))
-                    .FirstOrDefault(p => Near(Point(p.Node), x, y, 7));
-                if (anchors && point.Node is not null && point.Track.Id == selectedTrack)
-                { PickAnchor(point.Track, point.Node, false); found = true; anchorHit = true; }
-                location = HitSliderLocation(x, y);
-            }
-            if (!anchors && !found && HitCatchObject(x, y) is { } hit)
-            { PickObject(hit.SourceId, false); found = true; }
-            if (!anchors && !found && location is not null)
-            { PickObject(location.Id, false); found = true; }
-            if (!anchors && !found && HitBananaRectangle(x, y) is { } shower)
-            { PickObject(shower.Id, false); found = true; }
-        }
-        if (!anchors && !found && objectSelection.Count <= 1 && !canExtend) Select(Guid.Empty);
-        if (canExtend && !found && location is null)
-            contextItems.Add(new(L.Get("editor.command.extendSlider"), () => ExtendSlider(extendTrack!.Id, extendPoint)));
-        if (SelectedTrack is { } repeatTrack && draftTrack == Guid.Empty)
-        {
-            contextItems.Add(new(L.Get("editor.command.addReverse"), () => ChangeReverseCount(repeatTrack.Id, 1), repeatTrack.SpanCount < 9000));
-            contextItems.Add(new(L.Get("editor.command.removeReverse"), () => ChangeReverseCount(repeatTrack.Id, -1), repeatTrack.SpanCount > 1));
-            contextItems.Add(new(L.Get("editor.command.reversePath"), ReverseSelectedPath, Shortcut: "Ctrl+G"));
-            if (LegacyMode && anchors && location is not null)
-            {
-                int segment = Math.Clamp(repeatTrack.Nodes.FindIndex(n => n.TimeMs > location.FirstSpanTimeMs) - 1, 0, repeatTrack.Nodes.Count - 2);
-                foreach (var type in Enum.GetValues<SliderCurveType>())
-                    contextItems.Add(new(L.Get(type == SliderCurveType.Linear ? "ui.curveLine" : type == SliderCurveType.Bezier ? "ui.curveBezier" : "ui.curveArc"),
-                        () => Edit(L.Get("editor.command.curveType"), () => SliderControlEditing.SetType(repeatTrack, segment, type, ControlCurveMath.ReferenceScale(Document.ApproachRate)))));
-            }
-        }
-        if (anchorHit && anchorSelection.Count > 0 && SelectedAnchor is { } node && SelectedTrack is { } track)
-        {
-            bool curved = CurvePointEditing.IsCurved(track, node.Id);
-            if (anchorSelection.Count == 1)
-                contextItems.Add(new(curved ? L.Get("editor.command.pointToCorner") : L.Get("editor.command.pointToCurve"), () => SetSelectedPointCurved(!curved)));
-            contextItems.Add(new(L.Get("editor.command.deletePoint"), DeleteSelectedAnchors, Shortcut: L.Get("editor.shortcut.delete")));
-        }
-        else if (objectSelection.Count <= 1 && location is not null && (SelectedTrack?.Id ?? SelectedImportedSlider?.Id) == location.Id)
-        {
-            var target = location;
-            contextItems.Add(new(L.Get("editor.command.insertPoint"), () => InsertControlPoint(target)));
-        }
-        if (objectSelection.Count <= 1 && SelectedImportedSlider is not null)
-            contextItems.Add(new(L.Get("editor.command.editSlider"), EditImportedSlider));
-        if (!anchors && objectSelection.Count == 1 && SelectedTrack is not null)
-            contextItems.Add(new(L.Get("editor.command.editAnchors"), () => ChangeTool(Tool.Slider)));
-        if (CanCopySelection && anchorSelection.Count <= 1)
-        {
-            contextItems.Add(new(L.Get("editor.command.delete"), DeleteSelectedObject, Shortcut: SelectedAnchor is null ? L.Get("editor.shortcut.delete") : ""));
-            contextItems.Add(new(L.Get("editor.command.cut"), () => CutSelection(), Shortcut: L.Get("editor.shortcut.cut")));
-            contextItems.Add(new(L.Get("editor.command.copy"), () => CopySelection(), Shortcut: L.Get("editor.shortcut.copy")));
-        }
-        contextItems.Add(new(L.Get("editor.command.paste"), () => PasteSelection(), CanPasteSelection, L.Get("editor.shortcut.paste")));
-        float popupWidth = Math.Min(270, width - 8), popupHeight = contextItems.Count * 32 + 12;
-        contextBounds = new(Math.Clamp(x, 4, Math.Max(4, width - popupWidth - 4)),
-            Math.Clamp(y, 4, Math.Max(4, height - popupHeight - 4)), popupWidth, popupHeight);
-    }
-
     private void DrawContextMenu(ICanvas c)
     {
         if (contextItems.Count == 0) return;
@@ -136,7 +51,7 @@ public sealed partial class EditorView
             StatusMessage = curved ? L.Get("editor.status.pointToCurve") : L.Get("editor.status.pointToCorner");
     }
 
-    private void InsertControlPoint(SliderLocation location)
+    private void InsertControlPoint(SliderLocation location, double? desiredX = null)
     {
         if (LegacyMode)
         {
@@ -166,6 +81,9 @@ public sealed partial class EditorView
                 else high = middle;
             }
             inserted = CurvePointEditing.InsertCorner(track, segment, (low + high) / 2);
+            if (desiredX is { } x && !CurveMath.TryMoveAnchor(track, inserted.Id, inserted.TimeMs, x, out var error))
+                throw new ArgumentException(error);
+            if (desiredX is not null) CurvePointEditing.SetCurved(track, inserted.Id, true);
         })) return;
         Select(inserted!.Id, location.Id);
         tool = Tool.Slider;

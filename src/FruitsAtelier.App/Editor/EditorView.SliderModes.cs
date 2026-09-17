@@ -16,8 +16,6 @@ public sealed partial class EditorView
     private List<SliderVertex>? legacyDragStart;
     private MapPoint legacyDragPoint;
     private bool legacyPreviewValid;
-    private bool legacyFinishOnRelease;
-    private Guid legacyDeselectOnRelease;
     private bool LegacyControlsActive => LegacyMode && showTargets && tool is Tool.Select or Tool.Slider
         && (objectSelection.Count <= 1) && SelectedTrack is not null;
     private readonly Dictionary<Guid, (ControlCurve Curve, MapPoint Start, MapPoint End, IReadOnlyList<ControlCurveEditing.Cubic> Cubics)> penPreview = [];
@@ -83,7 +81,7 @@ public sealed partial class EditorView
         return (h.X - x) * (h.X - x) + (h.Y - y) * (h.Y - y) <= 49;
     }
 
-    private void PlaceLegacyPoint(float x, float y)
+    private void PlaceLegacyPoint(float x, float y, bool straight = false)
     {
         var point = MapAt(x, y, true);
         if (draftTrack == Guid.Empty)
@@ -108,16 +106,17 @@ public sealed partial class EditorView
                 }
                 return;
             }
-            if (!UpdateLegacyPreview(x, y)) return;
+            if (straight) legacyDraft[^1] = legacyDraft[^1] with { Type = SliderCurveType.Linear };
+            if (!UpdateLegacyPreview(x, y, straight)) return;
             var vertices = legacyPreviewVertices!.ToList();
             // Retain authored identities, including the currently previewed endpoint.
             legacyDraft = vertices;
-            legacyDraft[^1] = legacyDraft[^1] with { Type = null };
+            legacyDraft[^1] = legacyDraft[^1] with { Type = straight ? SliderCurveType.Linear : null };
         }
         StatusMessage = "";
     }
 
-    private bool UpdateLegacyPreview(float x, float y)
+    private bool UpdateLegacyPreview(float x, float y, bool straight = false)
     {
         if (legacyDraft is not { Count: > 0 } || SelectedTrack is not { } track || !plot.Contains(x, y)) return false;
         var point = MapAt(x, y, true);
@@ -140,7 +139,7 @@ public sealed partial class EditorView
         }
         int start = candidate.Count - 2;
         while (start > 0 && candidate[start].Type is null) start--;
-        candidate[start] = candidate[start] with { Type = SliderControlEditing.AutomaticType(candidate.Count - start) };
+        candidate[start] = candidate[start] with { Type = straight ? SliderCurveType.Linear : SliderControlEditing.AutomaticType(candidate.Count - start) };
         try
         {
             SliderControlEditing.Apply(track, candidate, allowArcFallback: true);
@@ -157,36 +156,19 @@ public sealed partial class EditorView
         if (!LegacyMode || !plot.Contains(x, y) || tool != Tool.Slider && !LegacyControlsActive) return false;
         if (draftTrack != Guid.Empty)
         {
-            if (button == 0) { PlaceLegacyPoint(x, y); return true; }
-            if (button == 2) { legacyFinishOnRelease = true; return true; }
+            if (button == 0) { PlaceLegacyPoint(x, y, ctrl); return true; }
             return false;
         }
         if (SelectedTrack is not { } track)
         {
-            if (button == 0 && !ctrl) { PlaceLegacyPoint(x, y); return true; }
+            if (button == 0) { PlaceLegacyPoint(x, y, ctrl); return true; }
             return false;
         }
         var vertices = SliderControlEditing.Vertices(track);
-        var hit = vertices.OrderBy(p => PointerDistance(p.Point, x, y)).FirstOrDefault(p => Near(p.Point, x, y, 8));
+        var hit = vertices.OrderBy(p => PointerDistance(p.Point, x, y)).ThenBy(p => p.Type is null ? 1 : 0).FirstOrDefault(p => Near(p.Point, x, y, 8));
         if (hit is not null)
         {
-            if (button == 2)
-            {
-                tool = Tool.Slider;
-                SelectAnchors(track, [hit.Id]);
-                DeleteLegacyPoints(); return true;
-            }
             if (button != 0) return false;
-            if (ctrl)
-            {
-                var ids = anchorSelection.ToHashSet();
-                legacyDeselectOnRelease = ids.Contains(hit.Id) ? hit.Id : Guid.Empty;
-                ids.Add(hit.Id);
-                tool = Tool.Slider;
-                SelectAnchors(track, ids, hit.Id);
-                BeginLegacyDrag(track, hit.Point, x, y);
-                return true;
-            }
             tool = Tool.Slider;
             if (!anchorSelection.Contains(hit.Id)) SelectAnchors(track, [hit.Id]);
             BeginLegacyDrag(track, hit.Point, x, y);

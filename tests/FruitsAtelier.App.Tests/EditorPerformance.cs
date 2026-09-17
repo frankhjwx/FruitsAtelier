@@ -60,9 +60,9 @@ internal static class EditorPerformance
         public void Fill(Rect r,uint c,float radius=0) { if(r.X==0 && r.Y==0) Commands=0; Commands++; }
         public void Stroke(Rect r,uint c,float width=1,float radius=0)=>Commands++;
         public void Line(float x,float y,float x2,float y2,uint c,float width=1,float opacity=1)=>Commands++;
-        public void Circle(float x,float y,float radius,uint c,bool filled=true,float width=1)=>Commands++;
+        public void Circle(float x,float y,float radius,uint c,bool filled=true,float width=1,float opacity=1)=>Commands++;
         public void Text(string t,float x,float y,float size,uint c,float maxWidth=10000,bool bold=false)=>Commands++;
-        public bool Image(string p,Rect r,uint tint=0xFFFFFF,Rect? source=null) { Commands++;return false; }
+        public bool Image(string p,Rect r,uint tint=0xFFFFFF,Rect? source=null,float opacity=1) { Commands++;return false; }
         public void Clip(Rect r) { }
         public void Unclip() { }
     }

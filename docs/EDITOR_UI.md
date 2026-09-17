@@ -2,24 +2,40 @@
 
 ## Workspace
 
-The object list is on the left, the time–X canvas in the center, properties and Catch Preview on the right, and time navigation at the bottom. Playfield X spans `0..512`; time increases upward. Startup displays an editable demo beatmap.
+The time–X canvas occupies the main area, properties and Catch Preview are on the right, and time navigation is at the bottom. Select objects directly on the canvas. Playfield X spans `0..512`; time increases upward. Startup displays an editable demo beatmap.
 
-Adjust AR and CS at the top right. The preview uses AR for falling speed. The main canvas initially follows beatmap AR; the demo defaults to AR 8. Click or drag the canvas's **Zoom** slider to change time spacing, shown as AR 0–10 independently of beatmap AR. **Restore AR scale** and **Reset view** restore the beatmap scale. Scroll to browse time, drag with the middle button to pan, and Ctrl+scroll to zoom around the pointer's time while updating the slider. When paused, slider zoom centers on the viewport; during playback, it preserves the play line.
+Adjust beatmap AR and CS at the top right. The preview uses AR for falling speed. The main canvas uses the beatmap's AR timing ratio; its **Zoom** slider changes the displayed width of X=0..512 and scales object sizes and time spacing together. Zooming out shows more notes vertically without changing their coordinates, map AR, or CS. The playfield stays horizontally centered, from a minimum **256 DIP** wide to the full available width with CS0 edge padding. Percentages are relative to that available width; resizing preserves the zoom percentage except when the minimum width requires clamping. **Reset view** restores 100% and follows the playhead. Scroll to browse time, drag with the middle button to pan, and Ctrl+scroll to scale around the pointer's time. When paused, slider zoom preserves the viewport's center time; during playback, it preserves the play line.
 
 During playback and seeking, the play line stays 25% above the bottom of the drawing area while content moves. Paused navigation is free; playback or seeking resumes following.
 
+## Object timeline and playback speed
+
+The row beneath Zoom spans both the left tools and canvas columns. It is a horizontal object timeline centered on the current playhead, with centered object numbers. Circles show source objects in time order; capsules show complete slider and banana-shower durations. The ruler uses the current beat subdivision. Click an object or duration body to select its parent and seek to its start; Ctrl/Shift-click toggles selection. Drag empty space in the note row to box-select parent objects; Ctrl/Shift adds to the selection. Right-click a note to delete it, or delete the selected group if that note is already selected. Esc cancels a box selection and deletion is undoable. The bottom ruler remains available for click/drag seeking without snapping. Scroll steps through beat subdivisions; Ctrl+scroll or the +/− buttons changes this timeline's scale independently of canvas Zoom. Finish an active drawing draft before selecting or dragging in this row.
+
+The transport offers **25%, 50%, 75%, and 100%** playback speed. Only song tempo changes, with pitch preserved. Hitsounds keep their original pitch and real-time duration, with trigger times mapped to the slower music clock. Changing speed preserves the map position and play/pause state. This setting does not edit or export beatmap timing.
+
 ## Tools and selection
+
+The left palette has equally sized Select, Fruit, FSlider, and Banana buttons with transparent outer margins. The active icon is fully opaque; the other three use 45% opacity. Labels share one font size. Clicking FSlider starts placement; B also enters control editing for a selected slider. Finishing placement keeps the current tool active.
+
+Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with its time snapped to the current beat subdivision (unless Free is enabled). Fruit left-click places immediately, including over an existing object. In Fruit mode, right-click empty canvas toggles **New combo** for the next fruit. During playback, right-click arms/toggles New combo even over a note; when paused, right-click on a note deletes it. The combo flag survives project saving, `.osu` export, copying, and undo/redo. It resets after placement or changing difficulty.
 
 | Input | Action |
 | --- | --- |
 | V / F / B / N | Select / Fruit / FSlider / Banana shower |
-| Click an object in V/F mode | Select the complete object; slider children belong to the parent slider |
-| Drag empty space | Box-select objects in V/F mode or anchors in FSlider edit mode |
-| Ctrl+click / Ctrl+box-select | Toggle selection / add to selection |
+| Click an object in Select mode | Select the complete object; slider children belong to the parent slider |
+| Drag empty space | Box-select objects in Select mode or anchors in FSlider edit mode |
+| Ctrl+click / Ctrl+box-select | Toggle object selection / add to box selection; selected-slider point actions take priority |
 | Drag selected objects | Move the group by a shared X and time offset |
 | Ctrl+X / C / V | Cut / copy / paste complete objects |
 | Delete | Delete selected objects, or selected anchors in anchor-edit mode |
 | Ctrl+Z / Y | Undo / redo |
+| Right-click a note / edited point | Delete an object; a straight point becomes curved, a curved point is deleted; no context menu |
+| Ctrl+L | Toggle the selected point between straight and curved |
+| Ctrl+I | Insert a control point on the curve under the pointer |
+| Ctrl+D | Convert the selected Legacy Slider to FSlider |
+| Ctrl+= / Ctrl+− | Add / remove one reverse |
+| Ctrl+J | Extend the selected FSlider to the pointer |
 | Esc | Cancel an active drag, box selection, draft, or numeric edit |
 
 Mac accepts both Command and Ctrl shortcuts; Delete and Backspace both delete objects.
@@ -38,13 +54,13 @@ The Fruit tool places fruits in empty space. Snapping offers 4, 5, 6, 7, 8, 9, 1
 
 The global **Slider editing mode** selector on the Snap toolbar row is available with every tool and selection. It displays the current mode and offers **osu legacy mode** and **pen tool mode**. Scroll within the properties panel to reach controls on short windows. The mode is a session setting: both tools edit the same FSlider objects, and changing modes does not change geometry or create undo history. New and existing sliders may be edited with either tool. Imported Legacy Sliders still require conversion to an editable FSlider.
 
-In **pen tool mode**, press B with no track selected to start drawing. Click to place anchors without handles; hold and drag upward to pull direction handles. One track may mix straight and Bezier segments. Enter finishes; Esc cancels the draft. While editing an existing track, use **New Slider** in properties to start another.
+In **pen tool mode**, press B with no track selected to start drawing. Click to add curved anchors; Ctrl+click adds a straight segment. Hold and drag upward to pull direction handles. Click the last anchor again to begin a new curve section. Right-click a placed draft point to remove it, or right-click elsewhere to finish at that position. One track may mix straight and Bezier segments. Enter also finishes; Esc cancels the draft. While editing an existing track, use **New Slider** in properties to start another.
 
 Select an FSlider and press B, or double-click its track, to edit anchors. Clicking an anchor on an already selected complete track also enters editing. Drag anchors/handles or edit their numeric properties. Interior anchor dragging is free by default. Enable **Snap interior anchors** in the FSlider properties to snap interior anchor times to the selected beat subdivision; this checkbox is independent of the general Free setting. Head and tail anchors follow the global Snap/Free setting instead. Invalid snapped endpoint moves keep their previous time rather than clamping between grid lines. Handles remain free, and the option does not change placement or whole-object snapping. Times remain increasing, and control-point X stays within the playfield.
 
-In pen tool mode, right-click an anchor to convert between curved and straight control points; right-click the track to insert a handle-free point. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
+With a single slider selected, left-dragging the body away from anchors moves the whole slider, and left-dragging an anchor moves that anchor. Ctrl+click at a new position inside the slider's time range inserts a curved anchor; Ctrl+click on an existing anchor makes it straight. Right-click a straight anchor to restore a curved anchor, then right-click the curved anchor to delete it. These rules apply in both editing modes, including points exposed in Select mode. In legacy mode, an interior straight anchor is a segment boundary; restoring it to curved merges it back into the control polygon. Right-click the slider body away from anchors to delete the parent. Ctrl+L also toggles the selected point, and Ctrl+I inserts on the curve under the pointer. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
 
-Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Convert Legacy Sliders from properties or the context menu. Conversion preserves start time, total duration, and span count. It first fits a small set of straight/Bezier anchors within 0.25 playfield units, then relaxes TinyDroplet alignment or uses a linear approximation if needed to complete the conversion. Exact nested-object positions and sequences are not required to match. Invalid or unrepresentable input retains its original object with a reason.
+Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Convert Legacy Sliders from properties or with Ctrl+D. Conversion preserves start time, total duration, and span count. It first fits a small set of straight/Bezier anchors within 0.25 playfield units, then relaxes TinyDroplet alignment or uses a linear approximation if needed to complete the conversion. Exact nested-object positions and sequences are not required to match. Invalid or unrepresentable input retains its original object with a reason.
 
 The first workspace import from Songs, an external folder, `.osu`, or `.osz` asks whether to convert sliders in all newly imported difficulties if they contain Legacy Sliders. Keeping Legacy preserves that representation. Reopening an existing project does not prompt again. Importing one difficulty into a project prompts only for that difficulty.
 
@@ -56,11 +72,11 @@ The generator handles FSlider TinyDroplet alignment. The Tiny alignment toggle o
 
 See [Slider interaction reference](SLIDER_INTERACTION.md) for the source comparison and coordinate constraints.
 
-Left-click a start point, move the pointer to preview the endpoint, and left-click to add controls. Releasing the right mouse button or pressing Enter completes the slider; Esc cancels the complete draft. Click the last placed point again to begin a new segment; this does not depend on the system double-click interval. Each draft segment defaults to a line with two points, a circular arc with three, and a Bezier with four or more; counts include the segment endpoints. White controls shape the curve and do not necessarily lie on it. Red segment boundaries lie on the path and allow corners.
+Left-click a start point, move the pointer to preview the endpoint, and left-click to add controls. Right-clicking away from placed points or pressing Enter completes the slider; Esc cancels the complete draft. Right-click a placed point to remove it. Ctrl+click adds a straight segment. Click the last placed point again to begin a new segment; this does not depend on the system double-click interval. Each draft segment defaults to a line with two points, a circular arc with three, and a Bezier with four or more; counts include the segment endpoints. White controls shape the curve and do not necessarily lie on it. Red segment boundaries lie on the path and allow corners.
 
-A single selected slider exposes controls in Select mode as well as the Slider tool. For a completed slider, drag a control, Ctrl-click controls to select multiple, hold Ctrl and drag to move the selection, or box-select. Ctrl-click between the slider's first and last times to insert a control at the pointer's position; the time interval determines its place in the control polygon. Insertion can change shape. Right-click a point to delete that point, or press Delete to remove selected controls. Double-click an interior point to toggle its segment boundary. Removing a boundary merges its adjacent control polygons; removing endpoints changes the time range. Fewer than two remaining controls deletes the slider. Each edit is undoable. Control times must remain ordered. A circular preview or drag that would reverse time or leave the playfield falls back to Bezier; moving back during the same gesture can restore the arc. Explicit circular-arc commands still reject invalid geometry.
+A single selected slider exposes controls in Select mode as well as the Slider tool. For a completed slider, drag a control, Ctrl-click an existing control to turn it into a straight segment boundary, or box-select controls. Ctrl-click between the slider's first and last times to insert a control at the pointer's position; the time interval determines its place in the control polygon. Insertion can change shape. Right-click a straight point to return it to a curved control; right-click a curved control to delete it. Delete removes selected controls directly. Double-click an interior point to toggle its segment boundary. Removing a boundary merges its adjacent control polygons; removing endpoints changes the time range. Fewer than two remaining controls deletes the slider. Each edit is undoable. Control times must remain ordered. A circular preview or drag that would reverse time or leave the playfield falls back to Bezier; moving back during the same gesture can restore the arc. Explicit circular-arc commands still reject invalid geometry.
 
-Right-click the curve for insertion and explicit curve types. A circular arc requires exactly three points. Existing Bezier segments retain their type when their point count decreases; changing tools never implicitly turns a three-point Bezier into an arc. A line receiving its first internal control becomes an arc using the current map AR. Ordinary control dragging uses the interior-anchor snap setting; endpoint moves use the global snap setting.
+Use Ctrl+I for insertion and Ctrl+L to toggle the selected point between straight and curved. A circular arc requires exactly three points. Existing Bezier segments retain their type when their point count decreases; changing tools never implicitly turns a three-point Bezier into an arc. A line receiving its first internal control becomes an arc using the current map AR. Ordinary control dragging uses the interior-anchor snap setting; endpoint moves use the global snap setting.
 
 Circular arcs retain a reference ratio derived from the map AR at creation (`440 / preemptMs` in playfield units per millisecond). Changing map AR or viewport zoom stretches their appearance without changing time–X coordinates. The reference excludes window width and DPI. Editing an existing arc preserves this reference; explicitly choosing a new circular arc uses the current map AR.
 
@@ -70,7 +86,7 @@ A cubic Bezier exposes exactly the same controls in either tool. Arcs and higher
 
 ### Reverses and direction
 
-Both modes share the **Reverses** property and **Add reverse / Remove reverse** menu actions. Dragging a base-path endpoint instead edits the path and therefore changes the duration of every traversal.
+Both modes share the **Reverses** property and **Ctrl+= / Ctrl+−** shortcuts. Dragging a base-path endpoint instead edits the path and therefore changes the duration of every traversal.
 
 **Reverse path direction** (Ctrl+G) reverses the first span's horizontal trajectory while preserving its time range and repeat count. It is distinct from adding a reverse. All repeated spans derive from the same controls; changing the base path updates every traversal.
 
@@ -119,4 +135,4 @@ A new project's blank difficulty starts unmodified, so directly opening or impor
 
 The bottom status bar shows current action feedback, such as save results or operation limits, with conversion errors taking priority. It is not a log viewer. Platform details, internal zoom percentages, and duplicate dirty indicators are omitted.
 
-FSlider properties expose **Reverses** in both whole-slider and anchor editing: 0 plays the path once, 1 returns once, and higher counts continue alternating. The slider context menu offers **Add reverse** and **Remove reverse**. With a completed FSlider selected, right-click empty canvas at a time after its final end and choose **Extend slider to here**. A new anchor is placed at the clicked position using the placement snap setting, with a straight segment from the base path endpoint. Existing segments remain unchanged. Extending a repeated slider lengthens its base path for every span; it does not append after the repeats. Each operation is undoable.
+FSlider properties expose **Reverses** in both whole-slider and anchor editing: 0 plays the path once, 1 returns once, and higher counts continue alternating. Use **Ctrl+= / Ctrl+−** to add/remove a reverse. With a completed FSlider selected, move the pointer to empty canvas at a time after its final end and press **Ctrl+J**. A new anchor is placed at the pointer position using the placement snap setting, with a straight segment from the base path endpoint. Existing segments remain unchanged. Extending a repeated slider lengthens its base path for every span; it does not append after the repeats. Each operation is undoable.

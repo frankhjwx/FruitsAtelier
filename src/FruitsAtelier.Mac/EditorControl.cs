@@ -14,7 +14,7 @@ public static class MacInput
     {
         >= Key.A and <= Key.Z => 65 + key - Key.A,
         Key.Back => editingText ? 8 : 46, Key.Tab => 9, Key.Enter => 13, Key.Escape => 27,
-        Key.Space => 32, Key.Home => 36, Key.Delete => 46, _ => 0
+        Key.Space => 32, Key.Home => 36, Key.Delete => 46, Key.OemPlus => 187, Key.OemMinus => 189, _ => 0
     };
 }
 internal sealed class EditorControl : Control, IDisposable

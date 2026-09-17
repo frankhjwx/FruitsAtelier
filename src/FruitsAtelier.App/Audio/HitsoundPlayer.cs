@@ -36,9 +36,9 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
             scheduled.Add((samples, timeMs, sound.Volume));
         }
     }
-    internal ISampleProvider MixWithMusic(ISampleProvider music, double startMs) => new MusicMixer(this, music, startMs);
+    internal ISampleProvider MixWithMusic(ISampleProvider music, double startMs, double speed = 1) => new MusicMixer(this, music, startMs, speed);
 
-    private sealed class MusicMixer(HitsoundPlayer owner, ISampleProvider music, double startMs) : ISampleProvider
+    private sealed class MusicMixer(HitsoundPlayer owner, ISampleProvider music, double startMs, double speed) : ISampleProvider
     {
         private long framesRead;
         public WaveFormat WaveFormat => music.WaveFormat;
@@ -52,7 +52,7 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
                 for (int v = owner.scheduled.Count - 1; v >= 0; v--)
                 {
                     var voice = owner.scheduled[v];
-                    long firstFrame = (long)Math.Round((voice.TimeMs - startMs) * rate / 1000);
+                    long firstFrame = (long)Math.Round((voice.TimeMs - startMs) * rate / (1000 * speed));
                     int begin = (int)Math.Clamp(firstFrame - framesRead, 0, frames);
                     for (int frame = begin; frame < frames; frame++)
                     {

@@ -34,11 +34,12 @@ public sealed partial class EditorView
     public int ActiveDifficultyIndex => activeDifficulty;
     private readonly List<HitArea> hits = [];
     private readonly List<NumericField> fields = [];
-    private readonly List<(Rect Bounds, Guid Id, Guid Track)> rows = [];
-    private float width, height, mouseX = -1, mouseY = -1, listScroll;
-    private Rect canvas, plot, leftPanel, rightPanel, overview, listBounds, snapSlider, zoomSlider;
+    private float width, height, mouseX = -1, mouseY = -1;
+    private Rect canvas, plot, rightPanel, overview, snapSlider, zoomSlider;
     private double viewStart, pixelsPerMs = 0.09, playhead = 1500;
-    private bool useArScale = true;
+    private double canvasZoom = 1;
+    public const float MinimumPlayfieldWidth = 256;
+    public double CanvasZoom => canvasZoom;
     private CatchSkin? skin;
     private bool compensateTinyDroplets = true;
     private MapDocument? convertedSnapshot;
@@ -92,15 +93,12 @@ public sealed partial class EditorView
         StatusMessage = message;
     }
 
-    private Fruit[] sortedListFruits = [];
-
     private void EnsureConversion()
     {
         if (convertedSnapshot is not null && convertedSnapshot.ContentEquals(Document)
             && convertedWithCompensation == compensateTinyDroplets) return;
         convertedSnapshot = Document.DeepClone();
         convertedWithCompensation = compensateTinyDroplets;
-        sortedListFruits = Document.Fruits.OrderBy(f => f.TimeMs).ToArray();
         var input = Document;
         if (input.Tracks.Any(t => t.Nodes.Count < 2))
         {
@@ -119,15 +117,17 @@ public sealed partial class EditorView
     }
 
     private enum Tool { Select, Fruit, Slider, Banana }
-    private enum DragKind { None, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Marquee, SnapDivisor, TimeZoom, LegacyControl }
+    private enum DragKind { None, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Marquee, SnapDivisor, CanvasZoom, LegacyControl }
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
     private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply);
-    private float PlayfieldScale => plot.Width / (512 + PlayfieldPadding * 2);
+    private float FullPlayfieldWidth => plot.Width * 512 / (512 + PlayfieldPadding * 2);
+    private double MinimumCanvasZoom => Math.Min(1, MinimumPlayfieldWidth / Math.Max(1, FullPlayfieldWidth));
+    private float PlayfieldScale => FullPlayfieldWidth * (float)canvasZoom / 512;
     private Rect Playfield
     {
         get
         {
-            float margin = PlayfieldPadding * PlayfieldScale;
+            float margin = (plot.Width - 512 * PlayfieldScale) / 2;
             return new(plot.X + margin, plot.Y, 512 * PlayfieldScale, plot.Height);
         }
     }
@@ -147,14 +147,13 @@ public sealed partial class EditorView
         tool = Tool.Select;
         ResetView();
         playhead = 1500;
-        listScroll = 0;
         StatusMessage = L.Get("editor.status.demoReset");
     }
 
     private void ResetView()
     {
         pinPlayhead = true;
-        useArScale = true;
+        canvasZoom = 1;
         viewStart = 0;
         if (Playfield.Width > 0) pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
         if (AudioPlaying) FollowPlayhead();
@@ -171,40 +170,23 @@ public sealed partial class EditorView
         if (Math.Abs(viewStart) < 0.001) viewStart = 0;
     }
 
-    private void ZoomTimeAt(float y, double factor)
+    private void ZoomCanvasAt(float y, double factor)
     {
-        useArScale = false;
-        var transform = Transform;
-        transform.ZoomAt(Math.Clamp(y, plot.Y, plot.Bottom), factor);
-        viewStart = transform.ViewStartMs;
-        pixelsPerMs = transform.PixelsPerMs;
+        y = Math.Clamp(y, plot.Y, plot.Bottom);
+        double anchorTime = Transform.ToMap(Playfield.X, y).TimeMs;
+        canvasZoom = Math.Clamp(canvasZoom * factor, MinimumCanvasZoom, 1);
+        pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
+        viewStart = anchorTime - (plot.Bottom - y) / pixelsPerMs;
         ClampView();
     }
 
-    private double DisplayApproachRate
+    private void SetCanvasZoom(float x)
     {
-        get
-        {
-            double preempt = CatchScrollTiming.FallDistance / pixelsPerMs * (Playfield.Width / 512);
-            return preempt >= 1200 ? 5 - (preempt - 1200) / 120 : 5 + (1200 - preempt) / 150;
-        }
-    }
-
-    private void SetTimeZoom(float x)
-    {
-        double ar = Math.Round(Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1) * 10, 1);
-        double scale = CatchScrollTiming.PixelsPerMs(ar, Playfield.Width);
+        double scale = MinimumCanvasZoom + Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1) * (1 - MinimumCanvasZoom);
         // The slider has no canvas pointer anchor: keep the viewport centre stable while paused.
-        ZoomTimeAt(plot.Y + plot.Height / 2, scale / pixelsPerMs);
-        StatusMessage = L.Get("editor.status.timeZoom", DisplayApproachRate);
-    }
-
-    private void RestoreArScale()
-    {
-        useArScale = true;
-        pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
-        FollowPlayhead();
-        StatusMessage = L.Get("editor.status.arScale", Number(Document.ApproachRate), Number(CatchScrollTiming.PreemptMs(Document.ApproachRate)));
+        if (!AudioPlaying) pinPlayhead = false;
+        ZoomCanvasAt(plot.Y + plot.Height / 2, scale / canvasZoom);
+        StatusMessage = L.Get("editor.status.canvasZoom", canvasZoom * 100);
     }
 
     private void CycleTickRate()
@@ -328,8 +310,8 @@ public sealed partial class EditorView
         draftTrack = Guid.Empty;
         drag = DragKind.None;
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
-        tool = Tool.Select;
-        SelectObjects([track.Id]);
+        tool = Tool.Slider;
+        Select(Guid.Empty);
         StatusMessage = L.Get("editor.status.sliderFinished");
     }
 

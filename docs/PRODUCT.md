@@ -1,6 +1,6 @@
 # Features and Files
 
-FruitsAtelier edits osu!catch beatmaps on a time–X canvas and previews object placement alongside music. The application has separate Windows and macOS desktop hosts.
+FruitsAtelier edits osu!catch beatmaps on a time鈥揦 canvas and previews object placement alongside music. The application has separate Windows and macOS desktop hosts.
 
 ## Editable objects
 
@@ -33,4 +33,4 @@ Projects reference audio by path. Preserve the relative resource locations when 
 
 Supported features include multiple timing points, inherited SV, beat snapping, batch object operations, undo/redo, English and Chinese interfaces, and MP3 / OGG / WAV playback and seeking. The preview uses AR, CS, and the selected skin to display objects and hyperdash markers.
 
-Gameplay judgement, audio waveforms, playback-rate changes, video, and storyboard playback are not provided. Skin rendering is static; full rotation, hit effects, and banana scaling animations are not implemented.
+Song playback supports 25%, 50%, 75%, and 100% speed while preserving pitch; hitsounds keep their original speed. Gameplay judgement, audio waveforms, video, and storyboard playback are not provided. Skin rendering is static; full rotation, hit effects, and banana scaling animations are not implemented.

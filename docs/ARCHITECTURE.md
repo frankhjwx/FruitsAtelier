@@ -10,7 +10,7 @@ The application uses C# 12 / .NET 8. Windows and macOS share the editor, data mo
 | Window and input | Win32, DPI messages, native file dialogs | Avalonia desktop window and file picker |
 | Drawing | DX11 / DXGI, Direct2D / DirectWrite, Vortice 3.6.2 | Avalonia 11.3.7, `MacCanvas` implements `ICanvas` |
 | PNG | Windows Imaging Component | Avalonia bitmaps |
-| Audio | NAudio shared-mode WASAPI; Media Foundation / NVorbis / WAV reader | AVAudioPlayer music; AVAudioEngine PCM hitsound mixer; NVorbis for OGG |
+| Audio | NAudio shared-mode WASAPI; Media Foundation / NVorbis / WAV reader | AVAudioEngine music with AVAudioUnitTimePitch; separate PCM hitsound mixer; NVorbis for OGG |
 
 See [Building and Testing](TESTING.md) for SDK selection and build commands, and [Third-party notices](../THIRD_PARTY_NOTICES.md) for package versions and licenses.
 
@@ -54,9 +54,9 @@ Skin archives are limited to 256 MiB, selected files to 16 MiB each and 64 MiB t
 
 ## Audio and lifecycle
 
-Windows `AudioTransport` serializes load, play, pause, and seek operations on a worker; the UI reads immutable state snapshots. MP3 decoding fills a bounded PCM cache continuously. Pause captures the consumed position and rebuilds output at that frame; seek and EOF replay also rebuild output. Timestamped hitsounds are mixed into the music stream before PCM output. See the [Windows audio reference](../src/FruitsAtelier.App/Audio/REFERENCE.md).
+Windows `AudioTransport` serializes load, play, pause, and seek operations on a worker; the UI reads immutable state snapshots. MP3 decoding fills a bounded PCM cache continuously. Pause captures the consumed position and rebuilds output at that frame; seek and EOF replay also rebuild output. SoundTouch.Net 2.3.2 changes music tempo while preserving pitch; timestamped hitsounds are mixed afterward at their original sample speed. Device elapsed time is multiplied by tempo to recover map time. Changing speed rebuilds output at its consumed position. See the [Windows audio reference](../src/FruitsAtelier.App/Audio/REFERENCE.md).
 
-Mac calls AVAudioPlayer through `Native/Audio.m` and obtains position from the player. NVorbis first decodes OGG into capacity-limited PCM WAV. Stale load results are discarded, and replay after EOF rebuilds the player. Hitsounds preload project PCM on a worker and submit timestamps to a persistent native mixer; see [Hitsounds](HITSOUNDS.md). See [Running on macOS](MACOS.md).
+Mac schedules an AVAudioPlayerNode through `Native/Audio.m`; AVAudioUnitTimePitch changes music tempo with pitch fixed at zero. Map position uses the output render timestamp, scheduled start, source position and tempo. The time-pitch unit is bypassed at 100%. NVorbis first decodes OGG into capacity-limited PCM WAV. Stale load results are discarded, and replay after EOF rebuilds the player. Hitsounds preload project PCM on a worker and submit timestamps to a persistent native mixer; see [Hitsounds](HITSOUNDS.md). See [Running on macOS](MACOS.md).
 
 Preview hitsound scheduling, sample resolution, and platform playback are documented in [Hitsounds](HITSOUNDS.md).
 
@@ -72,7 +72,7 @@ results wherever the random sequence changes. Failed conversions are not cached.
 The normal converter remains available without a cache for export and independent checks.
 
 Canvas and preview rendering select the visible interval from time-sorted catch objects
-by binary search. Sidebar labels are formatted only for visible rows, offscreen anchors
+by binary search. Offscreen anchors
 are culled, and timeline events share pixel-sized markers (hyperdash takes precedence).
 Hit testing rejects distant curve segments before sampling them. Editing snapshots
 copy existing identities without generating replacement IDs, and group dragging uses

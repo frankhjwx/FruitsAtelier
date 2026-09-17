@@ -20,6 +20,7 @@
     <Compile Include="../FruitsAtelier.App/Platform/LibraryOperations.cs" Link="Platform/LibraryOperations.cs" />
     <Compile Include="../FruitsAtelier.App/Platform/BeatmapResources.cs" Link="Platform/BeatmapResources.cs" />
     <Compile Include="../FruitsAtelier.App/Platform/SkinArchive.cs" Link="Platform/SkinArchive.cs" />
+    <Content Include="../../assets/icons/tools/*.png" Link="assets/icons/tools/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../assets/icons/osu/*" Link="assets/icons/osu/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../assets/skins/default.osk" Condition="Exists('../../assets/skins/default.osk')" Link="assets/skins/default.osk" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="Licenses/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

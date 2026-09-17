@@ -40,10 +40,8 @@ internal sealed partial class EditorWindow : IDisposable
             { view.SetNotice(L.Get("window.skinFailed", L.Localized(error.Message))); }
             Invalidate();
         };
-        view.RequestResetDemo = () =>
-        {
-            if (ConfirmDiscard()) { ResetAudio(); projectPath = null; view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); Invalidate(); }
-        };
+        view.RequestResetDemo = () => ConfirmDiscard(() =>
+        { ResetAudio(); projectPath = null; view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); Invalidate(); });
     }
 
     public int Run(bool renderCheck = false, string? initialPath = null)
@@ -105,16 +103,18 @@ internal sealed partial class EditorWindow : IDisposable
         return 0;
     }
 
-    private bool ConfirmDiscard()
+    private void ConfirmDiscard(Action continuation)
     {
-        if (!view.PrepareFileOperation()) return false;
+        if (view.DiscardConfirmationVisible || !view.PrepareFileOperation()) return;
         if (Native.GetCapture() == hwnd) Native.ReleaseCapture();
-        if (!view.IsDirty) return true;
-        int answer = Native.MessageBox(hwnd, L.Get("window.confirmDiscard"),
-            L.Get("app.name"), 0x00000003 | 0x00000030 | 0x00000200);
-        return answer == 7 || answer == 6 && SaveProject(false);
+        if (!view.IsDirty) { FileOperation(continuation); return; }
+        view.ShowDiscardConfirmation(answer => FileOperation(() =>
+        {
+            if (answer == 7 || answer == 6 && SaveProject(false)) continuation();
+        }));
+        Invalidate();
     }
-    private void Close() { if (ConfirmDiscard()) Native.DestroyWindow(hwnd); }
+    private void Close() => ConfirmDiscard(() => Native.DestroyWindow(hwnd));
     private void Invalidate() { if (hwnd != 0) Native.InvalidateRect(hwnd, 0, false); }
 
     private nint WndProc(nint window, uint message, nuint wParam, nint lParam)
@@ -204,7 +204,7 @@ internal sealed partial class EditorWindow : IDisposable
                 view.Wheel(point.X * 96f / dpi, point.Y * 96f / dpi, (short)((ulong)wParam >> 16), (wParam & 0x0008) != 0);
                 Invalidate(); return 0;
             case 0x0100:
-                if ((int)wParam == 86 && Native.Control && view.LibraryTextFocused)
+                if ((int)wParam == 86 && Native.Control && view.LibraryTextFocused && !view.DiscardConfirmationVisible)
                 { view.PasteLibraryText(Native.ReadClipboardText(window)); Invalidate(); return 0; }
                 view.KeyDown((int)wParam, Native.Control, Native.Shift);
                 if (!view.WantsCapture && Native.GetCapture() == window) Native.ReleaseCapture();

@@ -115,3 +115,10 @@ copyright ppy Pty Ltd and contributors, licensed under CC BY-NC 4.0. Source path
 checksums, attribution, and the full license ship in
 [assets/audio/osu](assets/audio/osu/README.md). These audio assets retain their own
 license independently of the application code.
+
+## SoundTouch.Net
+
+Windows music tempo processing dynamically links **SoundTouch.Net 2.3.2**, licensed under LGPL-2.1-or-later.
+Copyright (c) Olli Parviainen (SoundTouch) and Olaf Woudenberg (C# port, 2011–2019).
+The unmodified package corresponds to [owoudenberg/soundtouch.net commit 98e5b8fd2f8efed0ddf7c8f66b435bfb231659dc](https://github.com/owoudenberg/soundtouch.net/tree/98e5b8fd2f8efed0ddf7c8f66b435bfb231659dc); its complete corresponding source is available there.
+The library remains a separate, replaceable assembly. The license is shipped as `Audio/Licenses/SoundTouch.Net.txt`.

@@ -24,7 +24,7 @@ The editor maintains an independent `EditorHistory` per difficulty and accesses 
 | Type | Fields and semantics |
 | --- | --- |
 | MapDocument | Name, DurationMs, difficulty, TimingPoints, Fruits, Tracks, ImportedSliders, BananaShowers, SourcePath, AudioPath, OriginalSections |
-| Fruit | Stable Guid Id, TimeMs, X, SourceOrder, OriginalLine |
+| Fruit | Stable Guid Id, TimeMs, X, SourceOrder, OriginalLine (including the authored New combo flag) |
 | CurveTrack | Stable Guid Id, Name, Kind (default Linear / Bezier), Nodes, SourceOrder, SpanCount, OriginalLine, CompensateTinyDroplets |
 | Anchor | Stable Guid Id, TimeMs, X, HandleIn, HandleOut, nullable OutgoingKind and OutgoingCurve |
 | ControlCurve | Exact Bezier or CircularArc kind, fixed ReferenceScale, interior CurveControl list |
@@ -42,7 +42,7 @@ Authoritative time is double-precision milliseconds; beat snapping does not roun
 
 EditorHistory uses deep copies for transactions, undo, and dirty comparisons, preserving object IDs, segment types, span counts, Tiny overrides, raw lines, and timing. Saving updates the baseline without clearing undo/redo. ContentEquals invalidates the view's conversion cache. Batch Legacy conversion uses an independent background snapshot and validates its source snapshot before applying results. Cancelling an active drag or draft restores the complete transaction; later field edits locate objects by ID to avoid writing into stale snapshots.
 
-Object selection stores complete parent IDs only. Multiple children of the same slider are deduplicated by SourceId. Anchor selection in B mode is restricted to the active track; V/F modes do not partially edit anchors. Box selection separately snapshots the starting selection. Esc or lost capture restores it without creating content history.
+Object selection stores complete parent IDs only. Multiple children of the same slider are deduplicated by SourceId. Anchor selection in B mode is restricted to the active track; Fruit mode places objects immediately; Select mode selects complete objects and can enter control editing for a selected slider. Box selection separately snapshots the starting selection. Esc or lost capture restores it without creating content history.
 
 The internal clipboard stores deep snapshots of selected complete parent objects. Paste applies `new time = playhead + original time − earliest selected start`, preserving relative times, X, geometry, relative handles, SpanCount, and sample fields, while assigning new parent/node IDs. It extends document duration as needed and rolls back the entire batch if any object is out of bounds. Copy creates no undo entry; each batch cut, delete, or paste is one transaction. Clipboard snapshots and unselected objects stay unchanged; the system clipboard is not used.
 

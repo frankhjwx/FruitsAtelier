@@ -13,16 +13,16 @@ internal sealed class MediaFoundationAudioReader : WaveStream
     private readonly WaveFormat format;
     private readonly int chunkSize;
     private readonly long length;
+    private readonly long leadingBytes;
     private long position;
     private bool disposed;
 
-    private MediaFoundationAudioReader(MediaFoundationReader decoder, Func<bool>? cancelled)
+    private MediaFoundationAudioReader(MediaFoundationReader decoder, Func<bool>? cancelled, int leadingFrames)
     {
         format = decoder.WaveFormat;
         chunkSize = 65536 / format.BlockAlign * format.BlockAlign;
         chunks = new();
-        // Media Foundation seeks may return different compressed frames while reporting the requested position.
-        // A continuous decode gives every later seek one stable PCM frame index, including the decoder's start padding.
+        // Continuous decoding makes later seeks frame-exact; the logical origin excludes MP3 codec padding.
         while (true)
         {
             if (cancelled?.Invoke() == true) throw new OperationCanceledException(L.Get("audio.cancelled"));
@@ -42,6 +42,8 @@ internal sealed class MediaFoundationAudioReader : WaveStream
             chunks.Add(chunk);
             if (used < chunk.Length) break;
         }
+        leadingBytes = Math.Clamp((long)leadingFrames * format.BlockAlign, -528L * format.BlockAlign, length);
+        length -= leadingBytes;
     }
 
     public static MediaFoundationAudioReader Open(string path, Func<bool>? cancelled = null)
@@ -54,7 +56,7 @@ internal sealed class MediaFoundationAudioReader : WaveStream
         try
         {
             using var decoder = new MediaFoundationReader(path, new() { SingleReaderObject = true });
-            return new(decoder, cancelled);
+            return new(decoder, cancelled, Mp3Timeline.LeadingFrames(path));
         }
         finally { ReleaseRuntime(); }
     }
@@ -79,9 +81,17 @@ internal sealed class MediaFoundationAudioReader : WaveStream
         int total = remaining;
         while (remaining > 0)
         {
-            int within = (int)(position % chunkSize);
+            long source = position + leadingBytes;
+            if (source < 0)
+            {
+                int silence = (int)Math.Min(remaining, -source);
+                destination[..silence].Clear(); destination = destination[silence..];
+                position += silence; remaining -= silence;
+                continue;
+            }
+            int within = (int)(source % chunkSize);
             int copy = Math.Min(remaining, chunkSize - within);
-            chunks[(int)(position / chunkSize)].AsSpan(within, copy).CopyTo(destination);
+            chunks[(int)(source / chunkSize)].AsSpan(within, copy).CopyTo(destination);
             destination = destination[copy..];
             position += copy;
             remaining -= copy;

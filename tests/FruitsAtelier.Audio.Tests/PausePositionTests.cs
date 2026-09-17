@@ -31,7 +31,7 @@ internal static class PausePositionTests
         }
     }
 
-    private sealed class BufferedPlayer : IWavePlayer, IWavePosition
+    internal sealed class BufferedPlayer : IWavePlayer, IWavePosition
     {
         private IWaveProvider source = null!;
         private long position;
