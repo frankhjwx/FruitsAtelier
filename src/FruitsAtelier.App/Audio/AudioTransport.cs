@@ -40,6 +40,7 @@ public sealed class AudioTransport : IDisposable
     private readonly Task worker;
     private readonly Func<IWavePlayer> createPlayer;
     private readonly float outputGain;
+    internal HitsoundPlayer? Hitsounds { get; set; }
     private readonly TimeSpan stopTimeout;
     private AudioState state = new(null, 0, 0, false, false, false, null);
     private long loadVersion, seekVersion, appliedSeekVersion, loadedVersion;
@@ -155,9 +156,7 @@ public sealed class AudioTransport : IDisposable
                                 if (output.Started)
                                 {
                                     var playbackState = output.Player.PlaybackState;
-                                    if (!output.Stopped.Task.IsCompleted && playbackState == PlaybackState.Paused)
-                                        output.Player.Play();
-                                    else if (output.Stopped.Task.IsCompleted || playbackState == PlaybackState.Stopped)
+                                    if (output.Stopped.Task.IsCompleted || playbackState == PlaybackState.Stopped)
                                         await ResetOutputAsync(0);
                                 }
                                 else if (basePosition >= duration - 0.5)
@@ -167,7 +166,10 @@ public sealed class AudioTransport : IDisposable
                                 break;
                             case CommandKind.Pause:
                                 playIntent = false;
-                                output?.Player.Pause();
+                                // WasapiOut.Pause leaves submitted buffers and the device clock running.
+                                // Rebuild from the consumed position, not the decoder's read-ahead position.
+                                if (output is { Started: true } && reader is not null)
+                                    await ResetOutputAsync(output.Stopped.Task.IsCompleted ? duration : DevicePosition());
                                 Interlocked.Exchange(ref appliedIntentVersion, command.IntentVersion);
                                 break;
                             case CommandKind.Seek:
@@ -239,7 +241,9 @@ public sealed class AudioTransport : IDisposable
 
     private OutputSession CreateOutput()
     {
-        var pcm = new SampleToWaveProvider16(reader!.ToSampleProvider()) { Volume = outputGain };
+        ISampleProvider samples = reader!.ToSampleProvider();
+        if (Hitsounds is not null) samples = Hitsounds.MixWithMusic(samples, basePosition);
+        var pcm = new SampleToWaveProvider16(samples) { Volume = outputGain };
         long version = loadedVersion;
         return new(pcm, () => commands.Writer.TryWrite(new(CommandKind.Refresh, version)), createPlayer);
     }

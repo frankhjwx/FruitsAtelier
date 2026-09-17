@@ -8,6 +8,13 @@ public sealed partial class EditorView
     public void PreloadProjectHitsounds() => RequestPreloadHitsounds?.Invoke(
         difficulties.Select(d => d.History.Document.DeepClone()).ToArray());
     public Action<Hitsound, double>? RequestScheduleHitsound { get; set; }
+    public double HitsoundLookaheadMs { get; set; } = 100;
+    public void PrimeScheduledHitsounds(double position)
+    {
+        ResetHitsounds();
+        StartHitsounds(position);
+        UpdateHitsounds(position, true, Document.AudioPath);
+    }
     private double? scheduledThrough;
     public Action<Hitsound>? RequestHitsound { get; set; }
     public Action<Hitsound>? RequestPrepareHitsound { get; set; }
@@ -68,7 +75,7 @@ public sealed partial class EditorView
         }
         var objects = current.Objects;
         bool scheduled = RequestScheduleHitsound is not null;
-        double end = scheduled ? position + 100 : position;
+        double end = scheduled ? position + HitsoundLookaheadMs : position;
         int low = FirstAfter(objects, scheduled ? scheduledThrough ?? start : start);
         for (int i = low; i < objects.Count && objects[i].TimeMs <= end; i++)
             foreach (var sound in resolvedHitsounds[i])

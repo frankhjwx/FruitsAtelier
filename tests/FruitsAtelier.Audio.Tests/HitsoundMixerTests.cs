@@ -1,10 +1,14 @@
 using FruitsAtelier.App.Audio;
 using FruitsAtelier.Core;
+using NAudio.Wave.SampleProviders;
+using NAudio.Wave;
 
 static class HitsoundMixerTests
 {
     public static void Run()
     {
+        ByteAdapterBuffers();
+        ScheduledMusic();
         using var mixer = new HitsoundPlayer();
         var buffer = new float[4096];
         var sound = new Hitsound(CatchObjectKind.Fruit, null, .5f);
@@ -34,5 +38,97 @@ static class HitsoundMixerTests
         mixer.Queue(new(CatchObjectKind.Fruit, normal, 1)); mixer.Read(buffer, 0, buffer.Length);
         if (!buffer.Any(v => Math.Abs(v) > .001)) throw new Exception("Default normal-only note emitted silent PCM");
         Console.WriteLine("PASS Hitsound PCM mixing, volume, overlap, stop, clipping and custom WAV decoding");
+    }
+
+    private static void ScheduledMusic()
+    {
+        foreach (int rate in new[] { 44100, 48000 })
+        foreach (int channels in new[] { 1, 2 })
+        {
+            using var mixer = new HitsoundPlayer();
+            var sound = new Hitsound(CatchObjectKind.Fruit, null, .5f);
+            var sample = HitsoundSamples.Create(sound);
+            mixer.Schedule(sound, 537.25);
+            var combined = mixer.MixWithMusic(new ConstantMusic(rate, channels), 500);
+            long hitFrame = (long)Math.Round(37.25 * rate / 1000);
+            var buffer = new float[257 * channels + 6];
+            for (int block = 0; block < 30; block++)
+            {
+                Array.Fill(buffer, .75f);
+                int count = 257 * channels;
+                if (combined.Read(buffer, 3, count) != count) throw new Exception("Mixed music read length changed");
+                for (int i = 0; i < 257; i++)
+                {
+                    double position = (block * 257 + i - hitFrame) * 44100.0 / rate;
+                    float expected = .1f;
+                    if (position >= 0 && position < sample.Length)
+                    {
+                        int index = (int)position;
+                        expected += (sample[index] + (sample[Math.Min(index + 1, sample.Length - 1)] - sample[index]) * (float)(position - index)) * sound.Volume;
+                    }
+                    for (int c = 0; c < channels; c++)
+                        if (Math.Abs(buffer[3 + i * channels + c] - expected) > .00001f)
+                            throw new Exception($"Scheduled hit differs from its music frame at {rate} Hz / {channels} channels");
+                }
+                if (buffer.Take(3).Concat(buffer.TakeLast(3)).Any(v => v != .75f)) throw new Exception("Scheduled mixer overwrote buffer boundaries");
+            }
+            mixer.Schedule(sound, 1000);
+            mixer.Stop();
+            var resumed = mixer.MixWithMusic(new ConstantMusic(rate, channels), 1000);
+            resumed.Read(buffer, 0, channels * 257);
+            if (buffer.Take(channels * 257).Any(v => v != .1f)) throw new Exception("Canceled future hit survived a new music session");
+        }
+        Console.WriteLine("PASS Timestamped hitsounds share music frames across buffer boundaries, sample rates, channels and cancellation");
+    }
+
+    private sealed class ConstantMusic(int rate, int channels) : ISampleProvider
+    {
+        public WaveFormat WaveFormat { get; } = WaveFormat.CreateIeeeFloatWaveFormat(rate, channels);
+        public int Read(float[] buffer, int offset, int count)
+        {
+            for (int i = offset; i < offset + count; i++) buffer[i] = .1f;
+            return count;
+        }
+    }
+
+    private static void ByteAdapterBuffers()
+    {
+        foreach (int sampleCount in new[] { 256, 4096 })
+        foreach (int offset in new[] { 0, 12 })
+        {
+            using var mixer = new HitsoundPlayer();
+            var adapter = new SampleToWaveProvider(mixer);
+            var sound = new Hitsound(CatchObjectKind.Fruit, null, .5f);
+            var samples = HitsoundSamples.Create(sound);
+            int byteCount = sampleCount * sizeof(float);
+            var buffer = Enumerable.Repeat((byte)0x5a, offset + byteCount + 12).ToArray();
+
+            ReadAndCompare(null, 0);
+            mixer.Queue(sound);
+            for (int position = 0; position < samples.Length + sampleCount * 2; position += sampleCount)
+                ReadAndCompare(samples, position);
+
+            mixer.Queue(sound);
+            ReadAndCompare(samples, 0);
+            mixer.Stop();
+            ReadAndCompare(null, 0);
+            ReadAndCompare(null, 0);
+
+            void ReadAndCompare(float[]? expected, int position)
+            {
+                if (adapter.Read(buffer, offset, byteCount) != byteCount)
+                    throw new Exception("Hitsound byte adapter did not fill the requested buffer");
+                for (int i = 0; i < sampleCount; i++)
+                {
+                    float value = expected is not null && position + i < expected.Length ? expected[position + i] * sound.Volume : 0;
+                    float actual = BitConverter.ToSingle(buffer, offset + i * sizeof(float));
+                    if (!float.IsFinite(actual) || Math.Abs(actual - value) > .00001f)
+                        throw new Exception($"Hitsound byte adapter retained or altered PCM: count={sampleCount}, offset={offset}, position={position}, sample={i}, expected={value}, actual={actual}");
+                }
+                if (buffer.Take(offset).Concat(buffer.Skip(offset + byteCount)).Any(b => b != 0x5a))
+                    throw new Exception("Hitsound byte adapter wrote outside the requested range");
+            }
+        }
+        Console.WriteLine("PASS Hitsound byte adapter preserves PCM and clears reused buffers after voice completion and stop");
     }
 }

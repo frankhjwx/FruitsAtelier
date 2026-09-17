@@ -1,7 +1,7 @@
 # Preview hitsounds
 
-The editor plays hitsounds as the music clock crosses converted Catch objects. Windows
-uses a separate WASAPI mixer; macOS mixes preloaded PCM through a persistent
+The editor schedules hitsounds at converted Catch object timestamps. Windows
+mixes them into the music's WASAPI output stream; macOS mixes preloaded PCM through a persistent
 AVAudioSourceNode, aligned with the music transport. Music playback remains
 the source of the playhead position. Pausing, seeking, changing maps, or closing the
 window stops active hitsound voices. Seeking does not play the skipped interval.
@@ -47,7 +47,16 @@ limit are skipped and logged rather than evicting earlier samples and decoding t
 during playback. Replacing a project releases its previous bank. Newly edited events are
 prepared ahead of playback; Mac playback misses never synchronously load a file.
 
-Windows uses its persistent WASAPI mixer with 32 voices. macOS uses one persistent
+Windows retains a bounded 2,048-event window of timestamped samples and mixes them at
+the corresponding music frames before the final PCM conversion and output gain. Mono
+hitsounds are copied to each music channel; differing sample rates use linear interpolation.
+The host primes 250 ms of events before play/resume/seek and extends this horizon from
+transport polls. Both music and hitsounds pass through the same device buffer, avoiding
+an additional per-hit output buffer. UI stalls beyond the horizon can still omit attacks.
+Pause, seek, and content changes clear the event window. Pausing rebuilds music output
+at its consumed frame, so resume uses the same position for audio and the playhead.
+
+macOS uses one persistent
 `AVAudioEngine` / `AVAudioSourceNode` mixer with 128 voices and a bounded 2,047-command queue.
 Native WAV/MP3 decoding and OGG conversion happen during preparation. The real-time callback
 only mixes immutable PCM into the output: no file I/O, allocations, locks, or Objective-C
@@ -55,7 +64,7 @@ calls. Under voice pressure the oldest attack is replaced; the newest command is
 if the queue is full. Pause/seek cancellation invalidates queued and active voices by
 changing their generation. The engine is stopped before its sample memory is released.
 
-Windows dispatches elapsed events from transport polls. The Mac host queues the next
+The Mac host queues the next
 100 ms of events with original beatmap timestamps. `MacAudio` maps its music device clock
 to the monotonic host clock used by the source node's render timestamps. Music starts/resumes
 with a 150 ms scheduling lead. This lead delays startup, not hitsounds relative to music.

@@ -13,7 +13,9 @@ internal sealed partial class EditorWindow
 
     private void ConfigureFiles()
     {
-        view.RequestHitsound = hitsounds.Play;
+        audio.Hitsounds = hitsounds;
+        view.HitsoundLookaheadMs = 250;
+        view.RequestScheduleHitsound = hitsounds.Schedule;
         view.RequestPrepareHitsound = hitsounds.Prepare;
         view.RequestPreloadHitsounds = hitsounds.PreloadProject;
         view.PreloadProjectHitsounds();
@@ -58,8 +60,19 @@ internal sealed partial class EditorWindow
             view.ChangeAudioPath(path);
             audio.Load(path);
         });
-        view.RequestTogglePlayback = () => { if (audio.IsPlaying) audio.Pause(); else { view.StartHitsounds(audio.PositionMs >= audio.DurationMs - 1 ? 0 : audio.PositionMs); audio.Play(); } PollAudio(); };
-        view.RequestSeek = time => { if (audio.CanPlay) audio.Seek(time); };
+        view.RequestTogglePlayback = () =>
+        {
+            if (audio.IsPlaying) { audio.Pause(); view.ResetHitsounds(); }
+            else { view.PrimeScheduledHitsounds(audio.PositionMs >= audio.DurationMs - 1 ? 0 : audio.PositionMs); audio.Play(); }
+            PollAudio();
+        };
+        view.RequestSeek = time =>
+        {
+            if (!audio.CanPlay) return;
+            if (audio.IsPlaying) view.PrimeScheduledHitsounds(Math.Clamp(time, 0, audio.DurationMs));
+            else view.ResetHitsounds();
+            audio.Seek(time);
+        };
     }
 
     private void FileOperation(Action operation)
@@ -106,7 +119,7 @@ internal sealed partial class EditorWindow
         return string.IsNullOrWhiteSpace(result) ? L.Get("files.untitled") : result.Trim().TrimEnd('.');
     }
 
-    private void ResetAudio() { view.ResetHitsounds(); audio.Dispose(); audio = new AudioTransport(); }
+    private void ResetAudio() { view.ResetHitsounds(); audio.Dispose(); audio = new AudioTransport { Hitsounds = hitsounds }; }
 
     private void PollAudio()
     {

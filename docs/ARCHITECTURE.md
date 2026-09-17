@@ -54,7 +54,7 @@ Skin archives are limited to 256 MiB, selected files to 16 MiB each and 64 MiB t
 
 ## Audio and lifecycle
 
-Windows `AudioTransport` serializes load, play, pause, and seek operations on a worker; the UI reads immutable state snapshots. MP3 decoding fills a bounded PCM cache continuously. Pause can reuse an active WASAPI session; seek and EOF replay rebuild output. See the [Windows audio reference](../src/FruitsAtelier.App/Audio/REFERENCE.md).
+Windows `AudioTransport` serializes load, play, pause, and seek operations on a worker; the UI reads immutable state snapshots. MP3 decoding fills a bounded PCM cache continuously. Pause captures the consumed position and rebuilds output at that frame; seek and EOF replay also rebuild output. Timestamped hitsounds are mixed into the music stream before PCM output. See the [Windows audio reference](../src/FruitsAtelier.App/Audio/REFERENCE.md).
 
 Mac calls AVAudioPlayer through `Native/Audio.m` and obtains position from the player. NVorbis first decodes OGG into capacity-limited PCM WAV. Stale load results are discarded, and replay after EOF rebuilds the player. Hitsounds preload project PCM on a worker and submit timestamps to a persistent native mixer; see [Hitsounds](HITSOUNDS.md). See [Running on macOS](MACOS.md).
 

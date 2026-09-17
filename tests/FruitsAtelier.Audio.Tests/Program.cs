@@ -19,6 +19,7 @@ using (var writer = new WaveFileWriter(wave, new WaveFormat(44100, 16, 2)))
 var tests = new (string Name, Func<Task> Run)[]
 {
     ("Hitsound PCM mix, volume and stop", () => { HitsoundMixerTests.Run(); return Task.CompletedTask; }),
+    ("Pause and resume preserve the playhead and first PCM frame despite read-ahead", () => PausePositionTests.Run(wave)),
     ("WAV real output drives the clock; pause and paused seek stay stopped", WavePlayback),
     ("Playing seeks preserve playback and latest rapid seek wins", PlayingSeek),
     ("EOF stops at duration and play restarts from zero", EndAndReplay),
