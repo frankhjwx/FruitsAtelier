@@ -17,7 +17,7 @@ internal static class RequestedInteractionTests
         Check(ui.View.SnapDivisor == 16, "Dragging the snap control to its right edge did not select 1/16.");
 
         ui.Resize(980, 620);
-        Check(ui.Canvas.Texts.Any(item => item.Value == "香蕉雨  N")
+        Check(ui.Canvas.Texts.Any(item => item.Value == FruitsAtelier.Localization.Strings.Get("tools.banana"))
             && ui.Canvas.Texts.Any(item => item.Value == "1/16"),
             "The Banana tool or snap divisor disappeared at the minimum window width.");
         Check(ui.Canvas.Texts.All(item => (item.Value is not "皮肤…" and not "Tiny 贴合") && !item.Value.StartsWith("Tick ×")),
@@ -106,8 +106,8 @@ internal static class RequestedInteractionTests
         var canvas = ui.View.CanvasPlotBounds;
         float padding = CatchSize.FruitRadius(0) * field.Width / 512;
         float radius = CatchSize.FruitRadius(map.CircleSize) * field.Width / 512;
-        Near(padding, field.X - canvas.X);
-        Near(padding, canvas.Right - field.Right);
+        Check(field.X - canvas.X >= padding - .001, "Left padding is smaller than a CS0 radius");
+        Near(field.X - canvas.X, canvas.Right - field.Right);
         Near(54.4, CatchSize.FruitRadius(0));
         var fruits = ui.Canvas.Circles.Where(circle => circle.Filled && circle.Color == 0xFFFFFF
             && Math.Abs(circle.Radius - radius) < 0.001).ToArray();

@@ -80,6 +80,7 @@ internal sealed partial class MacWindow : Window
         });
         View.RequestResetDemo = () => RunFile(async () => { if (await ConfirmDiscard()) { await audio.LoadAsync(null); projectPath = null; View.LoadDocument(DemoMap.Create()); } });
         View.RequestTogglePlayback = () => RunFile(async () => { if (audio.State.IsPlaying) audio.Pause(); else { var state = audio.State; View.StartHitsounds(state.PositionMs >= state.DurationMs - 1 ? 0 : state.PositionMs); await hitsounds.Preparation; audio.Play(); } PollAudio(); });
+        View.RequestPlaybackSpeed = speed => { View.ResetHitsounds(); audio.SetPlaybackSpeed(speed); View.StartHitsounds(audio.State.PositionMs); PollAudio(); };
         View.RequestSeek = time => { audio.Seek(time); PollAudio(); };
         timer.Tick += (_, _) => PollAudio();
         Opened += async (_, _) =>

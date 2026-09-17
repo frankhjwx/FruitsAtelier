@@ -59,8 +59,11 @@ internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICa
         using var state = context.PushOpacity(opacity);
         context.DrawLine(new Pen(Brush(color), width), new Point(x1, y1), new Point(x2, y2));
     }
-    public void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1)
-        => context.DrawEllipse(filled ? Brush(color) : null, filled ? null : new Pen(Brush(color), width), new Point(x, y), radius, radius);
+    public void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1, float opacity = 1)
+    {
+        using var state = context.PushOpacity(opacity);
+        context.DrawEllipse(filled ? Brush(color) : null, filled ? null : new Pen(Brush(color), width), new Point(x, y), radius, radius);
+    }
     public float MeasureText(string text, float size, bool bold = false)
     {
         var formatted = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
@@ -75,12 +78,13 @@ internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICa
         using var clip = context.PushClip(new Avalonia.Rect(x, y, maxWidth, size * 1.8));
         context.DrawText(formatted, new Point(x, y));
     }
-    public bool Image(string filePath, R destination, uint tint = 0xFFFFFF, R? source = null)
+    public bool Image(string filePath, R destination, uint tint = 0xFFFFFF, R? source = null, float opacity = 1)
     {
         try
         {
             var bitmap = images.Get(filePath, tint);
             if (bitmap is null) return false;
+            using var state = context.PushOpacity(opacity);
             context.DrawImage(bitmap, source is R s ? Convert(s) : new Avalonia.Rect(bitmap.Size), Convert(destination));
             return true;
         }

@@ -87,7 +87,7 @@ public sealed class CatchSkin
     }
 
     public bool Draw(ICanvas canvas, CatchSkinObject kind, int index, float centerX, float centerY,
-        float nominalFruitDiameter, uint tint = 0xFFFFFF)
+        float nominalFruitDiameter, uint tint = 0xFFFFFF, float opacity = 1)
     {
         if (!float.IsFinite(nominalFruitDiameter) || nominalFruitDiameter <= 0) return false;
         var sprite = SpriteFor(kind, index);
@@ -99,7 +99,7 @@ public sealed class CatchSkin
         bool DrawTexture(SkinTexture? texture, uint colour)
         {
             if (texture is null) return false;
-            return canvas.Image(texture.FilePath, Destination(texture, centerX, centerY, scale), colour, texture.Source);
+            return canvas.Image(texture.FilePath, Destination(texture, centerX, centerY, scale), colour, texture.Source, opacity);
         }
     }
 

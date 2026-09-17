@@ -44,15 +44,16 @@ static class HitsoundMixerTests
     {
         foreach (int rate in new[] { 44100, 48000 })
         foreach (int channels in new[] { 1, 2 })
+        foreach (double speed in new[] { .25, .5, .75, 1 })
         {
             using var mixer = new HitsoundPlayer();
             var sound = new Hitsound(CatchObjectKind.Fruit, null, .5f);
             var sample = HitsoundSamples.Create(sound);
             mixer.Schedule(sound, 537.25);
-            var combined = mixer.MixWithMusic(new ConstantMusic(rate, channels), 500);
-            long hitFrame = (long)Math.Round(37.25 * rate / 1000);
+            var combined = mixer.MixWithMusic(new ConstantMusic(rate, channels), 500, speed);
+            long hitFrame = (long)Math.Round(37.25 * rate / (1000 * speed));
             var buffer = new float[257 * channels + 6];
-            for (int block = 0; block < 30; block++)
+            for (int block = 0; block < 70; block++)
             {
                 Array.Fill(buffer, .75f);
                 int count = 257 * channels;

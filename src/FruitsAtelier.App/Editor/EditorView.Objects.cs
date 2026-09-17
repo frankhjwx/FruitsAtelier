@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private void DrawCatchObject(ICanvas c, ConvertedCatchObject item, float x, float y, float fieldWidth)
+    private void DrawCatchObject(ICanvas c, ConvertedCatchObject item, float x, float y, float fieldWidth, float opacity = 1)
     {
         float scale = fieldWidth / 512;
         float diameter = CatchSize.FruitDiameter(Document.CircleSize) * scale;
@@ -17,12 +17,12 @@ public sealed partial class EditorView
         if (skin is not null)
         {
             int skinIndex = skinIndices.GetValueOrDefault(item.SourceId);
-            if (hyper) skin.Draw(c, kind, skinIndex, x, y, diameter * 1.2f, hyperColour);
-            if (skin.Draw(c, kind, skinIndex, x, y, diameter, 0xFFFFFF)) return;
+            if (hyper) skin.Draw(c, kind, skinIndex, x, y, diameter * 1.2f, hyperColour, opacity);
+            if (skin.Draw(c, kind, skinIndex, x, y, diameter, 0xFFFFFF, opacity)) return;
         }
         float radius = ObjectRadius(item.Kind) * scale;
-        if (hyper) c.Circle(x, y, radius * 1.2f, hyperColour);
-        c.Circle(x, y, radius, item.Kind == CatchObjectKind.Banana ? Gold : 0xFFFFFF);
+        if (hyper) c.Circle(x, y, radius * 1.2f, hyperColour, opacity: opacity);
+        c.Circle(x, y, radius, item.Kind == CatchObjectKind.Banana ? Gold : 0xFFFFFF, opacity: opacity);
     }
 
     private static CatchSkinObject SkinObjectKind(CatchObjectKind kind) => kind switch

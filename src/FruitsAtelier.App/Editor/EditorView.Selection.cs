@@ -61,6 +61,7 @@ public sealed partial class EditorView
 
     private void BeginBox(float x, float y, bool additive, bool anchors)
     {
+        boxTimeline = false;
         selectionBeforeBox = new(objectSelection.ToArray(), anchorSelection.ToArray(), selection, selectedTrack, selectedPart);
         boxAdds = additive; boxAnchors = anchors;
         selectionBox = new(x, y, 0, 0);
@@ -70,11 +71,19 @@ public sealed partial class EditorView
 
     private void MoveBox(float x, float y)
     {
-        x = Math.Clamp(x, plot.X, plot.Right); y = Math.Clamp(y, plot.Y, plot.Bottom);
+        var area = boxTimeline ? objectTimeline : plot;
+        x = Math.Clamp(x, area.X, area.Right); y = Math.Clamp(y, area.Y, area.Bottom);
         if (Math.Abs(x - dragStartX) >= 3 || Math.Abs(y - dragStartY) >= 3) dragMoved = true;
         if (!dragMoved || selectionBeforeBox is null) return;
         selectionBox = new(Math.Min(x, dragStartX), Math.Min(y, dragStartY), Math.Abs(x - dragStartX), Math.Abs(y - dragStartY));
-        if (boxAnchors)
+        if (boxTimeline)
+        {
+            var ids = boxAdds ? selectionBeforeBox.Objects.ToHashSet() : [];
+            foreach (var item in timelineObjects)
+                if (Intersects(item.Bounds, selectionBox)) ids.Add(item.Id);
+            SelectObjects(ids);
+        }
+        else if (boxAnchors)
         {
             var track = Document.Tracks.FirstOrDefault(t => t.Id == selectionBeforeBox.Track);
             if (track is null) return;
@@ -104,27 +113,19 @@ public sealed partial class EditorView
     private void FinishBox(float x, float y)
     {
         bool moved = dragMoved;
+        double clickTime = boxTimeline ? ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale : MapAt(x, y, true).TimeMs;
         drag = DragKind.None;
         selectionBeforeBox = null;
+        boxTimeline = false;
         if (!moved && !boxAdds)
         {
             if (boxAnchors)
             {
                 tool = Tool.Select;
                 Select(Guid.Empty);
-                SeekTo(MapAt(x, y, true).TimeMs);
+                SeekTo(clickTime);
             }
-            else if (tool == Tool.Fruit)
-            {
-                var point = MapAt(x, y, true);
-                var fruit = new Fruit { TimeMs = point.TimeMs, X = point.X };
-                if (Edit(L.Get("editor.command.addFruit"), () =>
-                    {
-                        Document.Fruits.Add(fruit);
-                        Document.DurationMs = Math.Max(Document.DurationMs, fruit.TimeMs);
-                    })) Select(fruit.Id);
-            }
-            else { Select(Guid.Empty); SeekTo(MapAt(x, y, true).TimeMs); }
+            else { Select(Guid.Empty); SeekTo(clickTime); }
         }
         if (AudioPlaying || pinPlayhead) FollowPlayhead();
     }
@@ -138,6 +139,7 @@ public sealed partial class EditorView
             selection = saved.Primary; selectedTrack = saved.Track; selectedPart = saved.Part;
         }
         selectionBeforeBox = null;
+        boxTimeline = false;
         drag = DragKind.None;
         if (AudioPlaying || pinPlayhead) FollowPlayhead();
     }
@@ -145,7 +147,7 @@ public sealed partial class EditorView
     private void DrawSelectionBox(ICanvas c)
     {
         if (drag != DragKind.Marquee || !dragMoved) return;
-        c.Clip(plot);
+        c.Clip(boxTimeline ? objectTimeline : plot);
         c.Stroke(selectionBox, Accent, 1.5f);
         c.Unclip();
     }

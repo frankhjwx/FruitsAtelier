@@ -12,6 +12,7 @@
     <Content Include="../FruitsAtelier.Core/Workspace/Licenses/*.txt" Link="Licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="Audio/Licenses/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../FruitsAtelier.Core/Conversion/LICENCE*.txt" Link="Licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../assets/icons/tools/*.png" Link="assets/icons/tools/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../assets/icons/osu/*" Link="assets/icons/osu/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../assets/skins/default.osk" Condition="Exists('../../assets/skins/default.osk')" Link="assets/skins/default.osk" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
@@ -19,6 +20,7 @@
     <PackageReference Include="Vortice.Direct3D11" Version="3.6.2" />
     <PackageReference Include="Vortice.Direct2D1" Version="3.6.2" />
     <PackageReference Include="Vortice.DXGI" Version="3.6.2" />
+    <PackageReference Include="SoundTouch.Net" Version="2.3.2" />
     <PackageReference Include="NAudio.Core" Version="2.2.1" />
     <PackageReference Include="NAudio.WinMM" Version="2.2.1" />
     <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />

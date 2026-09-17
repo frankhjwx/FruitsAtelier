@@ -123,11 +123,11 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     }
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)
         => context!.DrawLine(new Vector2(x1, y1), new Vector2(x2, y2), Brush(color, opacity), width);
-    public void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1)
+    public void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1, float opacity = 1)
     {
         var ellipse = new Ellipse(new Vector2(x, y), radius, radius);
-        if (filled) context!.FillEllipse(ellipse, Brush(color));
-        else context!.DrawEllipse(ellipse, Brush(color), width);
+        if (filled) context!.FillEllipse(ellipse, Brush(color, opacity));
+        else context!.DrawEllipse(ellipse, Brush(color, opacity), width);
     }
     public float MeasureText(string text, float size, bool bold = false)
     {
@@ -152,7 +152,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     public void Clip(Rect r) { context!.PushAxisAlignedClip(Convert(r), AntialiasMode.PerPrimitive); clipDepth++; }
     public void Unclip() { if (clipDepth > 0) { context!.PopAxisAlignedClip(); clipDepth--; } }
 
-    public bool Image(string filePath, Rect destination, uint tint = 0xFFFFFF, Rect? source = null)
+    public bool Image(string filePath, Rect destination, uint tint = 0xFFFFFF, Rect? source = null, float opacity = 1)
     {
         if (!ValidRectangle(destination)) return false;
         ImageKey key = default;
@@ -177,7 +177,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
             }
             var region = source ?? new Rect(0, 0, image.Width, image.Height);
             if (!ValidRectangle(region) || region.X < 0 || region.Y < 0 || region.Right > image.Width || region.Bottom > image.Height) return false;
-            context!.DrawBitmap(image.Bitmap, Convert(destination), 1, Vortice.Direct2D1.BitmapInterpolationMode.Linear, Convert(region));
+            context!.DrawBitmap(image.Bitmap, Convert(destination), opacity, Vortice.Direct2D1.BitmapInterpolationMode.Linear, Convert(region));
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException

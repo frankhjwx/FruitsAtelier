@@ -25,6 +25,7 @@ public sealed class LibrarySettings
 public sealed record LibraryMap(string Path, string Directory, string Title, string TitleUnicode, string Artist, string ArtistUnicode,
     string Creator, string Difficulty, string Tags, string Source, string Audio, string Background, string? ProjectPath = null);
 public sealed record LibraryScan(int Count, IReadOnlyList<string> Errors);
+public sealed record LibraryScanProgress(int Files, int Indexed, int Errors);
 
 public sealed class LibraryDatabase
 {
@@ -76,8 +77,15 @@ public sealed class LibraryDatabase
         return command.ExecuteScalar() as string;
     }
     public static string Normalize(string value) => value.Normalize(NormalizationForm.FormKC).ToUpperInvariant();
-    public LibraryScan Scan(CancellationToken cancellation = default)
+    public LibraryScan Scan(CancellationToken cancellation = default, Action<LibraryScanProgress>? progress = null)
     {
+        int files = 0, indexed = 0, failures = 0;
+        void Report(bool accepted, bool failed)
+        {
+            files++; if (accepted) indexed++; if (failed) failures++;
+            progress?.Invoke(new(files, indexed, failures));
+        }
+        progress?.Invoke(new(0, 0, 0));
         var roots = SourceDirectories().ToList();
         if (songs.Length > 0) roots.Add(songs);
         int count = 0; var errors = new List<string>();
@@ -85,11 +93,11 @@ public sealed class LibraryDatabase
         {
             cancellation.ThrowIfCancellationRequested();
             if (!Directory.Exists(root)) { errors.Add(L.Get("library.sourceMissing", root)); continue; }
-            var result = ScanRoot(root, cancellation); count += result.Count; errors.AddRange(result.Errors);
+            var result = ScanRoot(root, cancellation, Report); count += result.Count; errors.AddRange(result.Errors);
         }
         ReindexProjects(); return new(count, errors);
     }
-    private LibraryScan ScanRoot(string root, CancellationToken cancellation)
+    private LibraryScan ScanRoot(string root, CancellationToken cancellation, Action<bool, bool> report)
     {
         using var db = Open();
         using var transaction = db.BeginTransaction();
@@ -116,11 +124,12 @@ public sealed class LibraryDatabase
             foreach (var file in files)
             {
                 cancellation.ThrowIfCancellationRequested();
+                bool accepted = false, failed = false;
                 try
                 {
                     WorkspaceProject.RejectLinks(file);
                     var info = new FileInfo(file); var stamp = info.LastWriteTimeUtc.Ticks;
-                    if (cached.TryGetValue(file, out var old) && old == (stamp, info.Length)) { seen.Add(file); continue; }
+                    if (cached.TryGetValue(file, out var old) && old == (stamp, info.Length)) { seen.Add(file); accepted = true; continue; }
                     var map = ReadMetadata(file);
                     if (map is null) continue;
                     seen.Add(file);
@@ -131,8 +140,10 @@ public sealed class LibraryDatabase
                     command.Parameters.AddWithValue("$d", JsonSerializer.Serialize(map));
                     command.Parameters.AddWithValue("$q", Normalize(string.Join(" ", map.Title, map.TitleUnicode, map.Artist, map.ArtistUnicode, map.Creator, map.Difficulty, map.Tags, map.Source)));
                     command.ExecuteNonQuery();
+                    accepted = true;
                 }
-                catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { errors.Add(file + ": " + e.Message); }
+                catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException) { failed = true; errors.Add(file + ": " + e.Message); }
+                finally { report(accepted, failed); }
             }
         }
         // Only prune on a complete scan; inaccessible subtrees must not erase cached maps.

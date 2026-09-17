@@ -93,6 +93,7 @@ internal static class Native
     [DllImport("user32.dll")] internal static extern bool ScreenToClient(nint hwnd, ref Point point);
     [DllImport("user32.dll")] internal static extern short GetKeyState(int key);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern nint LoadCursor(nint instance, nint name);
+    [DllImport("user32.dll")] internal static extern bool SetForegroundWindow(nint hwnd);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern int MessageBox(nint hwnd, string text, string title, uint flags);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern bool SetWindowText(nint hwnd, string text);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] internal static extern nint GetModuleHandle(string? module);

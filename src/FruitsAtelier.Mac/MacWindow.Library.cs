@@ -72,7 +72,7 @@ internal sealed partial class MacWindow
         });
         View.RequestLibraryOpen = map => RunFile(async () =>
         {
-            if (View.WorkspaceSession?.Directory == map.ProjectPath) { View.CloseLibrary(); return; }
+            if (View.TryResumeLibraryProject(map)) return;
             if (!await ConfirmDiscard()) return;
             var session = await Task.Run(() => LibraryOperations.Open(map, View.LibrarySettings));
             View.LoadWorkspace(session);

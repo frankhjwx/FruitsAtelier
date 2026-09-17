@@ -10,9 +10,9 @@ Both views share actual conversion results, AR fall scaling, CS sizes, and skin 
 - For effective displayed width W, `DIP/ms = (440 / preemptMs) × (W / 512)`.
 - With remaining time Δt, `screenY = catchLineY − Δt × DIP/ms`. The preview shows converted objects only for `0 ≤ Δt ≤ preemptMs`.
 
-The preview fits the 512:440 region proportionally into its panel with margins. The main canvas's **Restore AR scale** uses the same formula, with current time fixed at the play line 25% above the drawing area's bottom. Ctrl+scroll freely adjusts zoom. Restored scaling follows width and AR without changing the model.
+The preview fits the 512:440 region proportionally into its panel with margins. The main canvas uses the same timing formula with its zoomed playfield width. The Zoom slider and Ctrl+scroll scale that width, object sizes, and time spacing together, from 256 DIP to the available width with edge padding. Reset view restores full width. These view changes preserve map coordinates and beatmap AR/CS.
 
-The main play line is `plotBottom − plotHeight × 0.25`. Playback, seek, AR restoration, and resize retain that placement. Empty space is allowed before/after beatmap boundaries; paused navigation permits manual panning. Bottom navigation moves continuously.
+The main play line is `plotBottom − plotHeight × 0.25`. Playback, seek, view reset, and resize retain that placement. Empty space is allowed before/after beatmap boundaries; paused navigation permits manual panning. Bottom navigation moves continuously.
 
 Pinned sources: [CatchPlayfieldAdjustmentContainer.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/UI/CatchPlayfieldAdjustmentContainer.cs), [CatchHitObject.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Objects/CatchHitObject.cs), and [IBeatmapDifficultyInfo.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/IBeatmapDifficultyInfo.cs).
 

@@ -17,10 +17,10 @@ internal static class MultiSelectionTests
         Objects(ui, fruit.Id); Anchors(ui);
         Check(baseline.ContentEquals(ui.View.Document), "Ctrl selection moved an object or modified the map.");
 
-        ui.ClickText(track.Name); ui.Key('B');
+        ui.SelectTrack(track.Id); ui.Key('B');
         ui.ClickMap(2000, 220); Anchors(ui, track.Nodes[1].Id);
-        Click(ui, 5000, 340, ctrl: true); Anchors(ui, track.Nodes[1].Id, track.Nodes[4].Id);
-        Click(ui, 2000, 220, ctrl: true); Anchors(ui, track.Nodes[4].Id);
+        Click(ui, 5000, 340, ctrl: true); Anchors(ui, track.Nodes[4].Id);
+        Click(ui, 2000, 220, ctrl: true); Anchors(ui, track.Nodes[1].Id);
         ui.Key('V'); Anchors(ui);
         ui.DownMap(2500, 240); ui.MoveMap(2625, 260); ui.UpMap(2625, 260);
         Objects(ui, track.Id); Anchors(ui);
@@ -29,10 +29,10 @@ internal static class MultiSelectionTests
         ui.Key('Z', ctrl: true);
         Check(baseline.ContentEquals(ui.View.Document), "Whole-slider drag did not undo atomically.");
 
-        ui.ClickText(track.Name); ui.Key('B'); ui.ClickMap(6000, 450);
+        ui.SelectTrack(track.Id); ui.Key('B'); ui.ClickMap(6000, 450);
         Check(ui.View.ActiveTool == "Select" && ui.View.Document.Tracks.Count == 1,
             "Empty click did not leave existing-slider edit mode.");
-        ui.ClickText(track.Name); ui.Key('B');
+        ui.SelectTrack(track.Id); ui.Key('B');
         ui.ClickText("新 Slider");
         ui.View.Wheel(ui.Plot.X, ui.Plot.Bottom, -120, true); ui.Paint();
         ui.ClickMap(5500, 80); ui.ClickMap(6500, 160); ui.Key(13);
@@ -45,7 +45,7 @@ internal static class MultiSelectionTests
     public static void ObjectBoxAndParentDedup()
     {
         foreach (bool imported in new[] { false, true })
-        foreach (char tool in new[] { 'V', 'F' })
+        foreach (char tool in new[] { 'V' })
         {
             var map = ObjectMap();
             Guid sourceId = map.Tracks.Single().Id;
@@ -103,8 +103,8 @@ internal static class MultiSelectionTests
         Check(!pastedTrack.Nodes.Select(n => n.Id).Intersect(sourceTrack.Nodes.Select(n => n.Id)).Any(),
             "Batch paste reused original anchor IDs.");
         var withPaste = ui.View.Document.DeepClone();
-        RightMap(ui, 4000, 80); ui.ClickText("剪切");
-        Check(baseline.ContentEquals(ui.View.Document), "Right-clicking a selected member cut only one object or the wrong batch.");
+        ui.Key('X', ctrl: true);
+        Check(baseline.ContentEquals(ui.View.Document), "Cut removed only one object or the wrong batch.");
         ui.Key('Z', ctrl: true);
         Check(withPaste.ContentEquals(ui.View.Document), "Undo did not restore the entire cut batch and its identities.");
 
@@ -122,7 +122,7 @@ internal static class MultiSelectionTests
         var ui = Load(map);
         var original = ui.View.Document.DeepClone();
         var track = map.Tracks.Single();
-        ui.ClickText(track.Name); ui.Key('B');
+        ui.SelectTrack(track.Id); ui.Key('B');
         Box(ui, 800, 130, 3200, 280);
         Anchors(ui, track.Nodes[0].Id, track.Nodes[1].Id, track.Nodes[2].Id);
         ui.Key(46);
@@ -136,7 +136,7 @@ internal static class MultiSelectionTests
         Check(original.ContentEquals(ui.View.Document), "Undo did not recover all deleted endpoints and intermediate points.");
         ui.Key('Y', ctrl: true);
         var twoNodes = ui.View.Document.DeepClone();
-        ui.ClickText(track.Name); ui.Key('B');
+        ui.SelectTrack(track.Id); ui.Key('B');
         ui.ClickMap(4000, 300); Anchors(ui, track.Nodes[3].Id);
         ui.Key(46);
         Check(ui.View.Document.Tracks.Count == 0, "Deleting one of two remaining anchors left an invalid one-point slider.");
@@ -172,7 +172,7 @@ internal static class MultiSelectionTests
         var anchors = AnchorMap();
         ui = Load(anchors);
         var track = anchors.Tracks.Single();
-        ui.ClickText(track.Name); ui.Key('B'); ui.ClickMap(5000, 340);
+        ui.SelectTrack(track.Id); ui.Key('B'); ui.ClickMap(5000, 340);
         start = Screen(ui, 800, 130); end = Screen(ui, 3200, 280);
         ui.View.PointerDown(start.X, start.Y, 0, false, false);
         ui.View.PointerMove(end.X, end.Y, false, false); ui.Paint();

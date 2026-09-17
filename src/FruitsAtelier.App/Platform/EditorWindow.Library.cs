@@ -22,17 +22,21 @@ internal sealed partial class EditorWindow
             }
             else
             {
-                if (!ConfirmDiscard()) return;
-                var path = MapFileDialog.Select(hwnd, false, L.Get("library.importFile"), MapFileDialog.OpenFilter);
-                if (path is not null) OpenPath(path);
+                ConfirmDiscard(() =>
+                {
+                    var path = MapFileDialog.Select(hwnd, false, L.Get("library.importFile"), MapFileDialog.OpenFilter);
+                    if (path is not null) OpenPath(path);
+                });
             }
         });
         view.RequestLibraryOpen = map => FileOperation(() =>
         {
-            if (view.WorkspaceSession?.Directory == map.ProjectPath) { view.CloseLibrary(); return; }
-            if (!ConfirmDiscard()) return;
-            view.LoadWorkspace(LibraryOperations.Open(map, view.LibrarySettings));
-            ResetAudio(); if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath);
+            if (view.TryResumeLibraryProject(map)) return;
+            ConfirmDiscard(() =>
+            {
+                view.LoadWorkspace(LibraryOperations.Open(map, view.LibrarySettings));
+                ResetAudio(); if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath);
+            });
         });
         view.RequestOsuExport = name => FileOperation(() =>
         {

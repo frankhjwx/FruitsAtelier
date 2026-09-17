@@ -17,7 +17,7 @@ internal static class DifficultyTabTests
         var emoji = canvas.Texts.Single(t => t.Value == string.Concat(Enumerable.Repeat("🍎", 16)) + "…");
         Check(a.Y >= 84 && a.Y < 128 && a.Y == b.Y, "Tabs must be below the toolbar");
         Check(emoji.X - b.X > b.X - a.X, "Tab widths must follow name width");
-        Check(canvas.Texts.Single(t => t.Value == "+").X < 1100, "Tabs must not stretch across the row");
+        Check(canvas.Texts.Single(t => t.Value == "+" && t.Y < 128).X < 1100, "Tabs must not stretch across the row");
         Check(view.CaptureProject().Difficulties[1].Name.Length == 20, "Truncation must not alter project names");
     }
 
@@ -93,7 +93,7 @@ internal static class DifficultyTabTests
         Check(canvas.Texts.Any(t => t.Value == "Diff 11"), "Resize keeps selected tab visible");
         view.KeyDown(9, true, false); canvas.Clear(); view.Render(canvas, 980, 620);
         Check(view.ActiveDifficultyIndex == 0 && canvas.Texts.Any(t => t.Value == "Diff 0"), "Keyboard wraps and reveals current tab");
-        var plus = canvas.Texts.Single(t => t.Value == "+");
+        var plus = canvas.Texts.Single(t => t.Value == "+" && t.Y < 128);
         view.PointerDown(plus.X + 2, plus.Y + 2, 0, false, false); canvas.Clear(); view.Render(canvas, 980, 620);
         var add = canvas.Texts.Single(t => t.Value == L.Get("project.add"));
         view.PointerDown(add.X + 2, add.Y + 2, 0, false, false);

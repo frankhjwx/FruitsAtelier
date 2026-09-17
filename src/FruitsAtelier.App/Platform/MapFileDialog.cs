@@ -12,6 +12,7 @@ internal static class MapFileDialog
 
     internal static string? Select(nint owner, bool save, string title, string filter, string? initialPath = null, string? extension = null)
     {
+        PrepareOwner(owner);
         nint buffer = Marshal.AllocHGlobal(32768 * sizeof(char));
         try
         {
@@ -43,30 +44,74 @@ internal static class MapFileDialog
 
     internal static string? SelectFolder(nint owner, string title)
     {
-        nint display = Marshal.AllocHGlobal(32768 * sizeof(char));
+        PrepareOwner(owner);
+        IFileDialog? dialog = null;
+        IShellItem? selected = null;
         try
         {
-            var info = new BrowseInfo { Owner = owner, DisplayName = display, Title = title, Flags = 0x41 };
-            nint pidl = SHBrowseForFolder(ref info);
-            if (pidl == 0) return null;
-            try { return SHGetPathFromIDList(pidl, display) ? Marshal.PtrToStringUni(display) : null; }
-            finally { Marshal.FreeCoTaskMem(pidl); }
+            dialog = (IFileDialog)Activator.CreateInstance(Type.GetTypeFromCLSID(new Guid("DC1C5A9C-E88A-4DDE-A5A1-60F82A20AEF7"))!)!;
+            dialog.GetOptions(out uint options);
+            // FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST | FOS_NOCHANGEDIR.
+            dialog.SetOptions(options | 0x20 | 0x40 | 0x800 | 0x8);
+            dialog.SetTitle(title);
+            AppLog.Write($"Folder dialog opening: owner={owner}");
+            int result = dialog.Show(owner);
+            AppLog.Write($"Folder dialog closed: HRESULT=0x{result:X8}");
+            if (result == unchecked((int)0x800704C7)) return null;
+            Marshal.ThrowExceptionForHR(result);
+            dialog.GetResult(out selected);
+            selected.GetDisplayName(0x80058000, out nint path); // SIGDN_FILESYSPATH
+            try { return Marshal.PtrToStringUni(path); }
+            finally { Marshal.FreeCoTaskMem(path); }
         }
-        finally { Marshal.FreeHGlobal(display); }
+        catch (COMException error)
+        {
+            throw new InvalidOperationException(L.Get("dialog.fileFailed", error.ErrorCode), error);
+        }
+        finally
+        {
+            if (selected is not null) Marshal.ReleaseComObject(selected);
+            if (dialog is not null) Marshal.ReleaseComObject(dialog);
+        }
     }
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct BrowseInfo
+    private static void PrepareOwner(nint owner)
     {
-        internal nint Owner, Root, DisplayName;
-        [MarshalAs(UnmanagedType.LPWStr)] internal string Title;
-        internal uint Flags;
-        internal nint Callback, Param;
-        internal int Image;
+        if (Native.GetCapture() == owner) Native.ReleaseCapture();
+        if (Native.IsIconic(owner)) Native.ShowWindow(owner, 9);
+        Native.SetForegroundWindow(owner);
     }
-    [DllImport("shell32.dll", EntryPoint = "SHBrowseForFolderW", CharSet = CharSet.Unicode)]
-    private static extern nint SHBrowseForFolder(ref BrowseInfo info);
-    [DllImport("shell32.dll", EntryPoint = "SHGetPathFromIDListW", CharSet = CharSet.Unicode)]
-    [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SHGetPathFromIDList(nint pidl, nint path);
+
+    // Preserve native vtable order, including methods preceding those used by folder selection.
+    [ComImport, Guid("42F85136-DB7E-439C-85F1-E4075D135FC8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IFileDialog
+    {
+        [PreserveSig] int Show(nint owner);
+        void SetFileTypes(uint count, nint filters);
+        void SetFileTypeIndex(uint index);
+        void GetFileTypeIndex(out uint index);
+        void Advise(nint events, out uint cookie);
+        void Unadvise(uint cookie);
+        void SetOptions(uint options);
+        void GetOptions(out uint options);
+        void SetDefaultFolder(nint folder);
+        void SetFolder(nint folder);
+        void GetFolder(out nint folder);
+        void GetCurrentSelection(out nint item);
+        void SetFileName([MarshalAs(UnmanagedType.LPWStr)] string name);
+        void GetFileName([MarshalAs(UnmanagedType.LPWStr)] out string name);
+        void SetTitle([MarshalAs(UnmanagedType.LPWStr)] string title);
+        void SetOkButtonLabel([MarshalAs(UnmanagedType.LPWStr)] string text);
+        void SetFileNameLabel([MarshalAs(UnmanagedType.LPWStr)] string text);
+        void GetResult(out IShellItem item);
+    }
+
+    [ComImport, Guid("43826D1E-E718-42EE-BC55-A1E261C37BFE"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IShellItem
+    {
+        void BindToHandler(nint context, in Guid handler, in Guid iid, out nint result);
+        void GetParent(out IShellItem parent);
+        void GetDisplayName(uint type, out nint name);
+    }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct OpenFileName

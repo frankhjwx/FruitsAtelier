@@ -15,7 +15,7 @@ internal static class MixedSliderTests
             {
                 ui.DownMap(time, x); ui.MoveMap(time + 125, x + 30); ui.UpMap(time + 125, x + 30);
             }
-            else ui.ClickMap(time, x);
+            else ui.ClickMap(time, x, ctrl: kinds[i] == CurveKind.Linear);
         }
         ui.Key(13);
         var track = ui.View.Document.Tracks.Single();
@@ -25,9 +25,10 @@ internal static class MixedSliderTests
         Check(ui.View.Document.Tracks.Count == 0, "Mixed authoring did not undo in one transaction.");
         ui.Key('Y', ctrl: true);
         track = ui.View.Document.Tracks.Single();
-        ui.ClickText("锚点 2   1500");
+        ui.SelectTrack(track.Id); ui.Key('B'); ui.ClickMap(1500, ui.View.Document.Tracks.Single(t => t.Id == track.Id).Nodes[1].X);
         ui.Key('B'); ui.ClickMap(1500, track.Nodes[1].X);
-        ui.ClickText("控制点：直线");
+        ui.Key('L', ctrl: true);
+        ui.Key('L', ctrl: true);
         Check(CurveMath.SegmentKind(track, 1) == CurveKind.Bezier, "The selected outgoing segment was not changed.");
         ui.SetField("出柄 ΔX", "25");
         var samples = Enumerable.Range(0, 21).Select(i => CurveMath.PositionAtTime(track, 1500 + i * 25)).ToArray();
@@ -45,7 +46,7 @@ internal static class MixedSliderTests
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode: 2\n[Difficulty]\nSliderMultiplier: 1\nSliderTickRate: 1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n160,192,1000,2,0,B|220:250|300:192,1,200\n");
         Guid id = map.ImportedSliders.Single().Id;
         ui.LoadDocument(map); ui.Paint();
-        ui.ClickText("Legacy Slider  1000");
+        ui.Key('V'); ui.ClickMap(1000, 160);
         ui.ClickText("转换为 FSlider");
         var track = ui.View.Document.Tracks.Single();
         Check(track.Id == id && track.SpanCount == 1 && track.CompensateTinyDroplets == true

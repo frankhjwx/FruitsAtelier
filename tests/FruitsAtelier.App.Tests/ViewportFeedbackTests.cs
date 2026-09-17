@@ -19,7 +19,7 @@ internal static class ViewportFeedbackTests
                 ui.Paint();
                 AssertPinned(ui);
             }
-            ui.ClickText("还原 AR 比例");
+            ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.resetView"));
             AssertPinned(ui);
         }
         ui.View.UpdateTransport(15000, 60000, true, false, false, null, "song.mp3");
@@ -39,7 +39,7 @@ internal static class ViewportFeedbackTests
         if (Math.Abs(head.Y1 - (plot.Bottom - plot.Height * 0.25)) > 0.01)
             throw new Exception("Playback line moved away from the lower-quarter anchor.");
         var viewport = ui.Canvas.Outlines.Single(o => o.Color == 0x71849A).Bounds;
-        if (viewport.X < 219.99 || viewport.Right > ui.Canvas.Texts.Single(t => t.Value.EndsWith(" 秒")).X + 100.01 || viewport.Width < 0)
+        if (viewport.X < 219.99 || viewport.Right > ui.Width - 27.99 || viewport.Width < 0)
             throw new Exception("Overview viewport extended beyond the song range.");
     }
 }

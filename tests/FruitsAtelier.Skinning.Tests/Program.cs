@@ -254,12 +254,12 @@ sealed class RecordingCanvas : ICanvas
 {
     public bool AcceptImages { get; set; } = true;
     public List<(string Path, Rect Destination, uint Tint, Rect? Source)> Calls { get; } = [];
-    public bool Image(string filePath, Rect destination, uint tint = 0xFFFFFF, Rect? source = null)
+    public bool Image(string filePath, Rect destination, uint tint = 0xFFFFFF, Rect? source = null, float opacity = 1)
     { Calls.Add((filePath, destination, tint, source)); return AcceptImages; }
     public void Fill(Rect r, uint color, float radius = 0) { }
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0) { }
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1) { }
-    public void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1) { }
+    public void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1, float opacity = 1) { }
     public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false) { }
     public void Clip(Rect r) { }
     public void Unclip() { }

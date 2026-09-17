@@ -1,47 +1,94 @@
 #import <Foundation/Foundation.h>
 #import <AVFoundation/AVFoundation.h>
+#import <mach/mach_time.h>
+#include <math.h>
+#include <stdint.h>
 
-// Each retained player is owned by one managed transport and accessed under its lock.
+// Music owns its time-pitch unit; hitsounds use their independent engine.
+@interface FAMusic : NSObject
+@property(nonatomic, strong) AVAudioEngine *engine;
+@property(nonatomic, strong) AVAudioPlayerNode *node;
+@property(nonatomic, strong) AVAudioUnitTimePitch *tempo;
+@property(nonatomic, strong) AVAudioFile *file;
+@property(nonatomic) double position;
+@property(nonatomic) double start;
+@property(nonatomic) BOOL playing;
+@end
+@implementation FAMusic
+@end
+
+static double hostTime(void) { return [AVAudioTime secondsForHostTime:mach_absolute_time()]; }
+static double duration(FAMusic *music) { return music.file.length / music.file.processingFormat.sampleRate; }
+static double position(FAMusic *music) {
+    if (!music.playing) return music.position;
+    // The output render timestamp stops advancing when the device stops rendering.
+    AVAudioTime *render = music.engine.outputNode.lastRenderTime;
+    double now = render.isHostTimeValid ? [AVAudioTime secondsForHostTime:render.hostTime] : music.start;
+    return fmin(duration(music), music.position + fmax(0, now - music.start) * music.tempo.rate);
+}
+static void pauseMusic(FAMusic *music) {
+    music.position = position(music);
+    music.playing = NO;
+    [music.node stop];
+    [music.tempo reset];
+}
 void *fa_audio_open(const char *path, char *message, int capacity) {
     @autoreleasepool {
         NSError *error = nil;
-        AVAudioPlayer *player = [[AVAudioPlayer alloc] initWithContentsOfURL:
-            [NSURL fileURLWithPath:[NSString stringWithUTF8String:path]] error:&error];
-        if (!player || ![player prepareToPlay]) {
-            snprintf(message, capacity, "%s", (error.localizedDescription ?: @"Audio preparation failed").UTF8String);
-            return NULL;
+        FAMusic *music = [FAMusic new];
+        music.file = [[AVAudioFile alloc] initForReading:[NSURL fileURLWithPath:[NSString stringWithUTF8String:path]] error:&error];
+        if (music.file) {
+            music.engine = [AVAudioEngine new];
+            music.node = [AVAudioPlayerNode new];
+            music.tempo = [AVAudioUnitTimePitch new];
+            music.tempo.rate = 1;
+            music.tempo.pitch = 0;
+            music.tempo.bypass = YES;
+            [music.engine attachNode:music.node];
+            [music.engine attachNode:music.tempo];
+            [music.engine connect:music.node to:music.tempo format:music.file.processingFormat];
+            [music.engine connect:music.tempo to:music.engine.mainMixerNode format:music.file.processingFormat];
+            [music.engine prepare];
+            if ([music.engine startAndReturnError:&error]) return (__bridge_retained void *)music;
         }
-        return (__bridge_retained void *)player;
+        snprintf(message, capacity, "%s", (error.localizedDescription ?: @"Audio preparation failed").UTF8String);
+        return NULL;
     }
 }
 void fa_audio_close(void *handle) {
-    @autoreleasepool { AVAudioPlayer *player = (__bridge_transfer AVAudioPlayer *)handle; [player stop]; }
+    @autoreleasepool { FAMusic *music = (__bridge_transfer FAMusic *)handle; [music.node stop]; [music.engine stop]; }
 }
-int fa_audio_play(void *handle) { return [(__bridge AVAudioPlayer *)handle play]; }
-void fa_audio_pause(void *handle) { [(__bridge AVAudioPlayer *)handle pause]; }
-void fa_audio_seek(void *handle, double seconds) { [(__bridge AVAudioPlayer *)handle setCurrentTime:seconds]; }
-double fa_audio_position(void *handle) { return [(__bridge AVAudioPlayer *)handle currentTime]; }
-double fa_audio_duration(void *handle) { return [(__bridge AVAudioPlayer *)handle duration]; }
-int fa_audio_playing(void *handle) { return [(__bridge AVAudioPlayer *)handle isPlaying]; }
-void fa_audio_volume(void *handle, float volume) { [(__bridge AVAudioPlayer *)handle setVolume:volume]; }
-
-void *fa_audio_open_data(const unsigned char *bytes, int length) {
-    @autoreleasepool {
-        NSData *data = [NSData dataWithBytes:bytes length:length];
-        AVAudioPlayer *player = [[AVAudioPlayer alloc] initWithData:data error:NULL];
-        if (!player || ![player prepareToPlay]) return NULL;
-        return (__bridge_retained void *)player;
-    }
+void fa_audio_pause(void *handle) { pauseMusic((__bridge FAMusic *)handle); }
+void fa_audio_seek(void *handle, double seconds) {
+    FAMusic *music = (__bridge FAMusic *)handle;
+    pauseMusic(music); music.position = fmax(0, fmin(duration(music), seconds));
 }
-
-// All AVAudioPlayer instances on the output device share this scheduling clock.
-double fa_audio_device_time(void *handle) { return [(__bridge AVAudioPlayer *)handle deviceCurrentTime]; }
-int fa_audio_play_at(void *handle, double time) { return [(__bridge AVAudioPlayer *)handle playAtTime:time]; }
-int fa_audio_prepare(void *handle) { return [(__bridge AVAudioPlayer *)handle prepareToPlay]; }
-
-// Transport transitions only. Hitsounds retain their independent, continuously running mixer.
-int fa_audio_rearm(void *handle, double position) {
-    AVAudioPlayer *player = (__bridge AVAudioPlayer *)handle;
-    [player stop]; player.currentTime = position;
-    return [player prepareToPlay];
+double fa_audio_position(void *handle) { return position((__bridge FAMusic *)handle); }
+double fa_audio_duration(void *handle) { return duration((__bridge FAMusic *)handle); }
+int fa_audio_playing(void *handle) {
+    FAMusic *music = (__bridge FAMusic *)handle;
+    return music.playing && music.engine.isRunning && position(music) < duration(music);
+}
+void fa_audio_volume(void *handle, float volume) { [(__bridge FAMusic *)handle node].volume = volume; }
+double fa_audio_device_time(void *handle) { return hostTime(); }
+int fa_audio_play_at(void *handle, double time) {
+    FAMusic *music = (__bridge FAMusic *)handle;
+    AVAudioFramePosition frame = (AVAudioFramePosition)llround(music.position * music.file.processingFormat.sampleRate);
+    AVAudioFramePosition remaining = music.file.length - frame;
+    if (remaining <= 0 || remaining > UINT32_MAX) return 0;
+    NSError *error = nil;
+    if (!music.engine.isRunning && ![music.engine startAndReturnError:&error]) return 0;
+    [music.node scheduleSegment:music.file startingFrame:frame frameCount:(AVAudioFrameCount)remaining atTime:nil completionHandler:nil];
+    music.start = time;
+    [music.node playAtTime:[AVAudioTime timeWithHostTime:[AVAudioTime hostTimeForSeconds:time]]];
+    music.playing = YES;
+    return 1;
+}
+int fa_audio_rearm(void *handle, double seconds) {
+    fa_audio_seek(handle, seconds);
+    return 1;
+}
+void fa_audio_rate(void *handle, float rate) {
+    FAMusic *music = (__bridge FAMusic *)handle;
+    music.tempo.rate = rate; music.tempo.bypass = rate == 1;
 }
