@@ -262,5 +262,6 @@ internal sealed partial class MacWindow : Window
         L.SetLanguage("zh-CN");
         await WorkspaceSmoke(folder);
         await SliderConversionSmoke(folder);
+        await SliderModesSmoke(folder);
     }
 }

@@ -51,6 +51,18 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
+## Slider editing interaction references
+
+The control-point placement progression, point selection/insertion semantics and curve-type
+validation were checked against MIT-licensed [ppy/osu commit
+429b1c028d1921b81e174ddbd7eff32550e75237](https://github.com/ppy/osu/tree/429b1c028d1921b81e174ddbd7eff32550e75237):
+`SliderPlacementBlueprint.cs`, `SliderSelectionBlueprint.cs`,
+`PathControlPointVisualiser.cs` and `PathControlPointPiece.cs`.
+The MIT notice above and the retained `Conversion/LICENCE.osu.txt` apply to adapted
+osu! behavior. The original UI classes are not bundled. FruitsAtelier's time–X
+curve representation, AR reference geometry, pen conversion and shared-mode
+transactions are implemented in Core and the shared editor.
+
 ## User-supplied skin assets
 
 No default skin artwork is distributed in this repository. `assets/skins/default.osk` is an optional, Git-ignored local archive; when present, it is copied to local build outputs. Artwork rights remain with their respective owners. Permission to use an archive locally is not a grant to publicly redistribute the artwork; confirm the applicable resource licence before distributing a build containing it. Without a skin, the editor uses geometric fallback rendering. Importing an `.osk` never executes its contents.

@@ -10,6 +10,11 @@ if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Legacy drafting and pen sliders coexist", SliderModeInteractionTests.LegacyDraftAndMixedModes),
+    ("Mode switching and AR preserve curves until a real pen edit", SliderModeInteractionTests.SwitchArAndLocalPenEdit),
+    ("Legacy insertion, deletion and double-click segmentation are undoable", SliderModeInteractionTests.InsertDeleteAndBoundary),
+    ("Lazer placement and selected-slider controls avoid extra mode transitions", SliderModeInteractionTests.LazerPlacementAndSelection),
+    ("Slider mode menu is global and repeat dragging is removed", SliderModeInteractionTests.GlobalModeMenu),
     ("Anchor dragging defaults to free time with independent opt-in snapping", AnchorSnapTests.Dragging),
     ("Catch hitsound samples and playback boundaries", HitsoundTests.Run),
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),

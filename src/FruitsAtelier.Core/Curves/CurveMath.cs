@@ -36,6 +36,7 @@ public static class CurveMath
         var start = track.Nodes[segment];
         var end = track.Nodes[segment + 1];
         MapPoint p0 = Point(start), p3 = Point(end);
+        if (start.OutgoingCurve is not null) return ControlCurveMath.Evaluate(track, segment, u);
         if (SegmentKind(track, segment) == CurveKind.Linear) return MapPoint.Lerp(p0, p3, u);
         MapPoint p1 = p0 + start.HandleOut, p2 = p3 + end.HandleIn;
         var a = MapPoint.Lerp(p0, p1, u);
@@ -59,7 +60,7 @@ public static class CurveMath
             else upper = middle;
         }
         int segment = lower;
-        if (SegmentKind(track, segment) == CurveKind.Linear)
+        if (track.Nodes[segment].OutgoingCurve is null && SegmentKind(track, segment) == CurveKind.Linear)
         {
             var start = track.Nodes[segment]; var end = track.Nodes[segment + 1];
             return start.X + (end.X - start.X) * (time - start.TimeMs) / (end.TimeMs - start.TimeMs);
@@ -86,6 +87,11 @@ public static class CurveMath
             || split.TimeMs < p0.TimeMs + MinimumAnchorSpacingMs || p3.TimeMs < split.TimeMs + MinimumAnchorSpacingMs)
             throw new ArgumentOutOfRangeException(nameof(u), L.Get("core.curves.splitSpacing"));
         var added = new Anchor { TimeMs = split.TimeMs, X = split.X, OutgoingKind = start.OutgoingKind };
+        if (start.OutgoingCurve is not null)
+        {
+            ControlCurveEditing.Split(track, segment, u);
+            return;
+        }
         if (SegmentKind(track, segment) == CurveKind.Bezier)
         {
             MapPoint p1 = p0 + start.HandleOut, p2 = p3 + end.HandleIn;
@@ -164,6 +170,8 @@ public static class CurveMath
             foreach (var node in track.Nodes)
             {
                 CheckId(node.Id, ids, errors);
+                if (node.OutgoingCurve is { } curve)
+                    foreach (var control in curve.Controls) CheckId(control.Id, ids, errors);
                 if (node.TimeMs > document.DurationMs) errors.Add(L.Get("core.curves.anchorEnd"));
             }
         }
@@ -197,8 +205,8 @@ public static class CurveMath
             var node = track.Nodes[i];
             if (!IsPositionValid(node.TimeMs, node.X)) errors.Add(L.Get("core.curves.anchorRange"));
             if (node.OutgoingKind is CurveKind kind && !Enum.IsDefined(kind)) errors.Add(L.Get("core.curves.segmentKind"));
-            bool usesIn = i > 0 && SegmentKind(track, i - 1) == CurveKind.Bezier;
-            bool usesOut = i + 1 < track.Nodes.Count && SegmentKind(track, i) == CurveKind.Bezier;
+            bool usesIn = i > 0 && track.Nodes[i - 1].OutgoingCurve is null && SegmentKind(track, i - 1) == CurveKind.Bezier;
+            bool usesOut = i + 1 < track.Nodes.Count && node.OutgoingCurve is null && SegmentKind(track, i) == CurveKind.Bezier;
             if (!ValidHandle(node, node.HandleIn, incoming: true, usesIn) || !ValidHandle(node, node.HandleOut, incoming: false, usesOut))
                 errors.Add(L.Get("core.curves.handleRange"));
         }
@@ -206,9 +214,11 @@ public static class CurveMath
         {
             var a = track.Nodes[i]; var b = track.Nodes[i + 1];
             if (b.TimeMs <= a.TimeMs || b.TimeMs < a.TimeMs + MinimumAnchorSpacingMs) errors.Add(L.Get("core.curves.anchorSpacing"));
-            if (SegmentKind(track, i) == CurveKind.Bezier && a.TimeMs + a.HandleOut.TimeMs > b.TimeMs + b.HandleIn.TimeMs)
+            if (a.OutgoingCurve is not null && ControlCurveMath.Validate(track, i) is { } curveError) errors.Add(curveError);
+            if (a.OutgoingCurve is null && SegmentKind(track, i) == CurveKind.Bezier && a.TimeMs + a.HandleOut.TimeMs > b.TimeMs + b.HandleIn.TimeMs)
                 errors.Add(L.Get("core.curves.handleOrder"));
         }
+        if (track.Nodes.LastOrDefault()?.OutgoingCurve is not null) errors.Add(L.Get("core.controlCurve.invalid"));
         return errors;
     }
 

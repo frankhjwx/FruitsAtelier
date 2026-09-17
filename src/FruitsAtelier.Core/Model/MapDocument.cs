@@ -23,13 +23,20 @@ public sealed class Fruit
 
 public sealed class Anchor
 {
-    internal Anchor DeepClone() => (Anchor)MemberwiseClone();
+    internal Anchor DeepClone()
+    {
+        var copy = (Anchor)MemberwiseClone();
+        copy.OutgoingCurve = OutgoingCurve?.DeepClone();
+        return copy;
+    }
     public Guid Id { get; set; } = Guid.NewGuid();
     public double TimeMs { get; set; }
     public double X { get; set; }
     public MapPoint HandleIn { get; set; }
     public MapPoint HandleOut { get; set; }
     public CurveKind? OutgoingKind { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ControlCurve? OutgoingCurve { get; set; }
 }
 
 public enum CurveKind { Linear, Bezier }
@@ -171,7 +178,7 @@ public sealed partial class MapDocument
             {
                 var an = a.Nodes[j]; var bn = b.Nodes[j];
                 if (an.Id != bn.Id || an.TimeMs != bn.TimeMs || an.X != bn.X
-                    || an.HandleIn != bn.HandleIn || an.HandleOut != bn.HandleOut || an.OutgoingKind != bn.OutgoingKind) return false;
+                    || an.HandleIn != bn.HandleIn || an.HandleOut != bn.HandleOut || an.OutgoingKind != bn.OutgoingKind || !ControlCurve.Equal(an.OutgoingCurve, bn.OutgoingCurve)) return false;
             }
         }
         for (int i = 0; i < TimingPoints.Count; i++) if (!TimingPoints[i].ContentEquals(other.TimingPoints[i])) return false;

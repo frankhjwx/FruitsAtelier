@@ -49,7 +49,7 @@ public sealed class CatchConversionCache
         for (int i = 0; i < a.Nodes.Count; i++)
         {
             var x = a.Nodes[i]; var y = b.Nodes[i];
-            if (x.Id != y.Id || x.TimeMs != y.TimeMs || x.X != y.X || x.HandleIn != y.HandleIn || x.HandleOut != y.HandleOut || x.OutgoingKind != y.OutgoingKind) return false;
+            if (x.Id != y.Id || x.TimeMs != y.TimeMs || x.X != y.X || x.HandleIn != y.HandleIn || x.HandleOut != y.HandleOut || x.OutgoingKind != y.OutgoingKind || !ControlCurve.Equal(x.OutgoingCurve, y.OutgoingCurve)) return false;
         }
         return true;
     }

@@ -80,7 +80,8 @@ public sealed partial class EditorView
             {
                 var replacement = replacements[track.Id];
                 track.Id = replacement.NewId; track.SourceOrder = replacement.Order;
-                foreach (var node in track.Nodes) { node.Id = Guid.NewGuid(); node.TimeMs = ShiftTime(node.TimeMs); }
+                foreach (var node in track.Nodes) { node.Id = Guid.NewGuid(); node.TimeMs = ShiftTime(node.TimeMs);
+                    if (node.OutgoingCurve is { } curve) foreach (var point in curve.Controls) point.Id = Guid.NewGuid(); }
                 IncludeEnd(CurveMath.EndTimeMs(track));
             }
             foreach (var slider in pasted.ImportedSliders)

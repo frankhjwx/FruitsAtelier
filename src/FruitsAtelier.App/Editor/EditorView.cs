@@ -119,7 +119,7 @@ public sealed partial class EditorView
     }
 
     private enum Tool { Select, Fruit, Slider, Banana }
-    private enum DragKind { None, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Marquee, SnapDivisor, TimeZoom }
+    private enum DragKind { None, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Marquee, SnapDivisor, TimeZoom, LegacyControl }
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
     private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply);
     private float PlayfieldScale => plot.Width / (512 + PlayfieldPadding * 2);
@@ -255,6 +255,7 @@ public sealed partial class EditorView
         if (draftTrack != Guid.Empty) FinishCurve();
         if (draftTrack != Guid.Empty) return;
         tool = next;
+        legacyDragStart = null;
         if (next == Tool.Slider)
         {
             if (SelectedImportedSlider is not null) EditImportedSlider();
@@ -264,13 +265,7 @@ public sealed partial class EditorView
         else if (anchorSelection.Count > 0 && SelectedTrack is { } parent) SelectObjects([parent.Id]);
         menu = -1;
         contextItems.Clear();
-        StatusMessage = next switch
-        {
-            Tool.Fruit => L.Get("editor.help.fruit"),
-            Tool.Slider => SelectedTrack is null ? L.Get("editor.help.slider") : L.Get("editor.help.anchors"),
-            Tool.Banana => L.Get("editor.help.banana"),
-            _ => L.Get("editor.help.select")
-        };
+        StatusMessage = "";
     }
 
     private void Undo()
@@ -305,6 +300,7 @@ public sealed partial class EditorView
 
     private void DeleteSelection()
     {
+        if (LegacyMode && tool == Tool.Slider) { DeleteLegacyPoints(); return; }
         if (tool == Tool.Slider) DeleteSelectedAnchors();
         else DeleteSelectedObjects();
     }
@@ -324,9 +320,11 @@ public sealed partial class EditorView
     {
         if (draftTrack == Guid.Empty) return;
         var track = Document.Tracks.First(t => t.Id == draftTrack);
+        if (LegacyMode && legacyDraft is not null && !legacyPreviewValid) { StatusMessage = L.Get("editor.status.needTwoAnchors"); return; }
         if (track.Nodes.Count < 2) { StatusMessage = L.Get("editor.status.needTwoAnchors"); return; }
         Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
         history.Commit();
+        legacyDraft = null; legacyPreviewVertices = null;
         draftTrack = Guid.Empty;
         drag = DragKind.None;
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();

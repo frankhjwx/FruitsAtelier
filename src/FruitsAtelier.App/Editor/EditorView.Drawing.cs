@@ -78,6 +78,10 @@ public sealed partial class EditorView
         c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, 55, 11, snap ? Foreground : Muted, 30);
         x += 116;
         Button(c, new(x, 47, 46, 30), L.Get("ui.free"), () => snap = !snap, !snap); x += 63;
+        var modeBounds = new Rect(x, 47, 140, 30);
+        Button(c, modeBounds, L.Get(LegacyMode ? "ui.osuLegacyMode" : "ui.penToolMode") + " ▾",
+            () => OpenSliderModeMenu(modeBounds.X, modeBounds.Bottom), true);
+        x += 144;
         Button(c, new(x, 47, 60, 30), L.Get("ui.undo"), Undo, false, history.CanUndo); x += 64;
         Button(c, new(x, 47, 60, 30), L.Get("ui.redo"), Redo, false, history.CanRedo); x += 72;
         Button(c, new(x, 47, 80, 30), L.Get("ui.resetView"), ResetView);
@@ -93,9 +97,12 @@ public sealed partial class EditorView
             x += 97;
         }
         if (width >= 1320)
+        {
             Button(c, new(x, 47, 75, 30), L.Get("ui.tickRate", Number(Document.SliderTickRate)), CycleTickRate);
+            x += 79;
+        }
         var timing = TimingMap.At(Document, playhead);
-        if (width > 1320) c.Text(L.Get("ui.timing", 60000 / timing.BeatLengthMs, timing.SliderVelocityMultiplier), width - 220, 56, 12, Muted, 208);
+        if (width - x >= 232) c.Text(L.Get("ui.timing", 60000 / timing.BeatLengthMs, timing.SliderVelocityMultiplier), width - 220, 56, 12, Muted, 208);
         c.Line(0, 83, width, 83, Grid);
         void ToolButton(string text, Tool mode, float w)
         {
@@ -268,15 +275,20 @@ public sealed partial class EditorView
                         }
                     }
                 }
+                if (selected && LegacyControlsActive)
+                {
+                    DrawLegacyControls(c, track);
+                    continue;
+                }
                 foreach (var node in track.Nodes)
                 {
                     var p = Screen(Point(node));
                     if (selected && tool == Tool.Slider)
                     {
                         int index = track.Nodes.IndexOf(node);
-                        if (index > 0 && CurveMath.SegmentKind(track, index - 1) == CurveKind.Bezier) DrawHandle(node.HandleIn, DragKind.HandleIn);
+                        if (index > 0 && CurveMath.SegmentKind(track, index - 1) == CurveKind.Bezier) DrawHandle(PenHandle(track, index, true), DragKind.HandleIn);
                         if (index < track.Nodes.Count - 1 && CurveMath.SegmentKind(track, index) == CurveKind.Bezier
-                            || track.Id == draftTrack && tool == Tool.Slider) DrawHandle(node.HandleOut, DragKind.HandleOut);
+                            || track.Id == draftTrack && tool == Tool.Slider) DrawHandle(PenHandle(track, index, false), DragKind.HandleOut);
                     }
                     if (p.Y < plot.Y - 9 || p.Y > plot.Bottom + 9) continue;
                     bool nodeSelected = tool == Tool.Slider && anchorSelection.Contains(node.Id);
@@ -286,7 +298,7 @@ public sealed partial class EditorView
                     {
                         if (offset == default) return;
                         bool active = selection == node.Id && selectedPart == part;
-                        var h = Screen(Point(node) + offset);
+                        var h = PenHandleScreen(track, track.Nodes.IndexOf(node), part == DragKind.HandleIn);
                         c.Line(p.X, p.Y, h.X, h.Y, active ? Foreground : 0x625E7C);
                         c.Circle(h.X, h.Y, active ? 6 : 4.5f, active ? Foreground : Background);
                         c.Circle(h.X, h.Y, active ? 6 : 4.5f, active ? Foreground : Purple, false, 1.5f);
@@ -304,12 +316,6 @@ public sealed partial class EditorView
         c.Line(plot.X, headY, plot.Right, headY, Gold, 1.5f);
         c.Fill(new(plot.X, headY - 3, 5, 6), Gold);
         c.Unclip();
-        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty)
-        {
-            var r = new Rect(plot.X + 8, plot.Bottom - 37, Math.Min(plot.Width - 16, 380), 29);
-            c.Fill(r, 0x343042, 5);
-            c.Text(L.Get(draftBanana != Guid.Empty ? "ui.bananaDrawingHint" : "ui.drawingHint"), r.X + 9, r.Y + 7, 11, Foreground, r.Width - 16);
-        }
     }
 
     private void DrawInspector(ICanvas c)
@@ -331,7 +337,11 @@ public sealed partial class EditorView
             if (value < 0 || value > 10) throw new ArgumentException(L.Get("ui.csRange"));
             Document.CircleSize = value;
         }, 24);
-        float y = rightPanel.Y + 50;
+        inspectorScroll = Math.Clamp(inspectorScroll, 0, Math.Max(0, inspectorContentHeight - (rightPanel.Height - 50)));
+        var inspectorClip = new Rect(rightPanel.X, rightPanel.Y + 43, rightPanel.Width, rightPanel.Height - 43);
+        int contentHits = hits.Count, contentFields = fields.Count;
+        c.Clip(inspectorClip);
+        float y = rightPanel.Y + 50 - inspectorScroll;
         if (tool == Tool.Slider)
         {
             Button(c, new(x, y, w, 28), L.Get("ui.newSlider"), StartNewSlider); y += 34;
@@ -350,7 +360,6 @@ public sealed partial class EditorView
             bool anchors = tool == Tool.Slider;
             c.Text(L.Get("ui.selectedCount", anchors ? anchorSelection.Count : objectSelection.Count, L.Get(anchors ? "ui.anchorNoun" : "ui.objectNoun")), x, y, 15, Accent, w, true); y += 32;
             Button(c, new(x, y, w, 29), L.Get("ui.deleteSelected"), DeleteSelection); y += 37;
-            c.Text(anchors ? L.Get("ui.anchorMultiHint") : L.Get("ui.objectMultiHint"), x, y, 11, Muted, w); y += 28;
         }
         else if (SelectedFruit is { } fruit)
         {
@@ -380,7 +389,8 @@ public sealed partial class EditorView
                 track.SpanCount = (int)value + 1;
                 Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
             });
-            if (SelectedAnchor is { } node)
+            if (LegacyMode && tool == Tool.Slider) DrawLegacyInspector(c, track, x, ref y, w);
+            else if (SelectedAnchor is { } node)
             {
                 Field(c, x, ref y, w, L.Get("ui.timeField"), node.TimeMs, value =>
                 {
@@ -400,13 +410,13 @@ public sealed partial class EditorView
                 {
                     if (index > 0 && CurveMath.SegmentKind(track, index - 1) == CurveKind.Bezier)
                     {
-                        Field(c, x, ref y, w, L.Get("ui.inTime"), node.HandleIn.TimeMs, value => SetHandle(track.Id, node.Id, true, value, null));
-                        Field(c, x, ref y, w, L.Get("ui.inX"), node.HandleIn.X, value => SetHandle(track.Id, node.Id, true, null, value));
+                        Field(c, x, ref y, w, L.Get("ui.inTime"), PenHandle(track, index, true).TimeMs, value => SetHandle(track.Id, node.Id, true, value, null));
+                        Field(c, x, ref y, w, L.Get("ui.inX"), PenHandle(track, index, true).X, value => SetHandle(track.Id, node.Id, true, null, value));
                     }
                     if (index < track.Nodes.Count - 1 && CurveMath.SegmentKind(track, index) == CurveKind.Bezier)
                     {
-                        Field(c, x, ref y, w, L.Get("ui.outTime"), node.HandleOut.TimeMs, value => SetHandle(track.Id, node.Id, false, value, null));
-                        Field(c, x, ref y, w, L.Get("ui.outX"), node.HandleOut.X, value => SetHandle(track.Id, node.Id, false, null, value));
+                        Field(c, x, ref y, w, L.Get("ui.outTime"), PenHandle(track, index, false).TimeMs, value => SetHandle(track.Id, node.Id, false, value, null));
+                        Field(c, x, ref y, w, L.Get("ui.outX"), PenHandle(track, index, false).X, value => SetHandle(track.Id, node.Id, false, null, value));
                     }
                 }
             }
@@ -420,7 +430,6 @@ public sealed partial class EditorView
                 var objects = conversion!.Objects.Where(o => o.SourceId == track.Id).ToArray();
                 c.Text(L.Get("ui.streamCounts", objects.Count(o => o.Kind == CatchObjectKind.Fruit), objects.Count(o => o.Kind == CatchObjectKind.Droplet), objects.Count(o => o.Kind == CatchObjectKind.TinyDroplet)), x, y, 11, Accent, w); y += 20;
                 c.Text(L.Get("ui.anchorCount", track.Nodes.Count), x, y, 12, Muted, w); y += 26;
-                c.Text(L.Get("ui.pickAnchorHint"), x, y, 11, Muted, w); y += 40;
             }
             Button(c, new(x, y + 3, w, 28), L.Get("ui.splitPreserving"), SplitSelected, false, draftTrack == Guid.Empty);
             y += 35;
@@ -430,7 +439,6 @@ public sealed partial class EditorView
             c.Text(L.Get("ui.importedSlider"), x, y, 16, Purple, w, true); y += 31;
             c.Text(L.Get("ui.importedDetails", Number(imported.TimeMs), imported.PathType, imported.SpanCount), x, y, 12, Foreground, w); y += 25;
             Button(c, new(x, y, w, 30), L.Get("ui.editSlider"), EditImportedSlider); y += 37;
-            c.Text(L.Get("ui.promoteHint"), x, y, 11, Muted, w); y += 25;
         }
         else if (SelectedBananaShower is { } shower)
         {
@@ -438,7 +446,6 @@ public sealed partial class EditorView
             if (draftBanana == shower.Id)
             {
                 c.Text(L.Get("ui.timeRange", Number(shower.TimeMs), Number(shower.EndTimeMs)), x, y, 12, Foreground, w); y += 25;
-                c.Text(L.Get("ui.bananaDrawingHint"), x, y, 12, Muted, w);
             }
             else
             {
@@ -453,20 +460,12 @@ public sealed partial class EditorView
                     Document.BananaShowers.First(item => item.Id == shower.Id).EndTimeMs = value;
                     Document.DurationMs = Math.Max(Document.DurationMs, value);
                 });
-                c.Text(L.Get("ui.bananaHint"), x, y, 12, Muted, w); y += 30;
                 Button(c, new(x, y, w, 29), L.Get("ui.deleteBanana"), DeleteSelection);
             }
         }
         else
         {
             c.Text(L.Get("ui.noSelection"), x, y, 16, Foreground, w, true); y += 33;
-            c.Text(L.Get("ui.selectHint"), x, y, 12, Muted, w); y += 27;
-            c.Text(L.Get("ui.fruitHint"), x, y, 12, Gold, w); y += 25;
-            c.Text(L.Get("ui.sliderHint"), x, y, 12, Purple, w); y += 25;
-            c.Text(L.Get("ui.selectToolHint"), x, y, 12, Accent, w); y += 35;
-            c.Text(L.Get("ui.undoHint"), x, y, 11, Muted, w); y += 24;
-            c.Text(L.Get("ui.panHint"), x, y, 11, Muted, w); y += 24;
-            c.Text(L.Get("ui.wheelHint"), x, y, 11, Muted, w); y += 24;
         }
         if (fieldError.Length > 0)
         {
@@ -474,7 +473,19 @@ public sealed partial class EditorView
             y += 27;
         }
         float previewTop = Math.Max(y + 22, rightPanel.Y + rightPanel.Height * 0.60f);
+        inspectorContentHeight = y + inspectorScroll - rightPanel.Y - 50 + 18;
         if (rightPanel.Bottom - previewTop > 120) DrawPreview(c, new(x, previewTop, w, rightPanel.Bottom - previewTop - 15));
+        c.Unclip();
+        for (int i = hits.Count - 1; i >= contentHits; i--)
+            if (hits[i].Bounds.Y < inspectorClip.Y || hits[i].Bounds.Bottom > inspectorClip.Bottom) hits.RemoveAt(i);
+        for (int i = fields.Count - 1; i >= contentFields; i--)
+            if (fields[i].Bounds.Y < inspectorClip.Y || fields[i].Bounds.Bottom > inspectorClip.Bottom) fields.RemoveAt(i);
+        if (inspectorContentHeight > rightPanel.Height - 50)
+        {
+            float visible = rightPanel.Height - 50, bar = Math.Max(20, visible * visible / inspectorContentHeight);
+            float top = rightPanel.Y + 50 + inspectorScroll / (inspectorContentHeight - visible) * (visible - bar);
+            c.Fill(new(rightPanel.Right - 5, top, 3, bar), Muted, 1);
+        }
     }
 
     private (CurveTrack Track, Anchor Node) ResolveAnchor(Guid trackId, Guid nodeId)
@@ -492,8 +503,10 @@ public sealed partial class EditorView
     private void SetHandle(Guid trackId, Guid nodeId, bool incoming, double? time, double? x)
     {
         var (track, node) = ResolveAnchor(trackId, nodeId);
-        var current = incoming ? node.HandleIn : node.HandleOut;
+        var current = PenHandle(track, track.Nodes.IndexOf(node), incoming);
         var offset = new MapPoint(time ?? current.TimeMs, x ?? current.X);
+        if (offset == current) return;
+        ControlCurveEditing.ConvertToPen(track, track.Nodes.IndexOf(node) - (incoming ? 1 : 0));
         if (!CurveMath.TryMoveHandle(track, node.Id, incoming, offset, out var error)) throw new ArgumentException(error);
     }
 

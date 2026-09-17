@@ -563,5 +563,19 @@
   "ui.reverseRange": "折返次数必须为 0 到 8999 的整数",
   "editor.command.extendSlider": "延伸滑条到这里",
   "editor.command.addReverse": "增加一次折返",
-  "editor.command.removeReverse": "减少一次折返"
+  "editor.command.removeReverse": "减少一次折返",
+  "core.controlCurve.invalid": "控制点曲线无效。",
+  "core.controlCurve.monotone": "圆弧必须沿时间向前，并保持在场地范围内。",
+  "core.controlCurve.threePoints": "圆弧需要恰好三个点。",
+  "core.controlCurve.fitLimit": "无法在编辑误差范围内转换此曲段。",
+  "ui.sliderEditingMode": "Slider 编辑模式",
+  "ui.osuLegacyMode": "osu legacy mode",
+  "ui.penToolMode": "pen tool mode",
+  "editor.command.toggleBoundary": "切换分段点",
+  "editor.command.reversePath": "反转路径方向",
+  "editor.command.curveType": "修改曲线类型",
+  "ui.curveLine": "直线段",
+  "ui.curveBezier": "贝塞尔曲段",
+  "ui.curveArc": "圆弧",
+  "ui.controlPoint": "控制点"
 }
