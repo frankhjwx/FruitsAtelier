@@ -30,6 +30,8 @@ public sealed record LibraryScanProgress(int Files, int Indexed, int Errors);
 public sealed class LibraryDatabase
 {
     private readonly string workspace, songs;
+    private long revision;
+    public long Revision => Interlocked.Read(ref revision);
     public LibraryDatabase(string workspace, string songs)
     {
         WorkspaceProject.ValidateRoots(workspace, songs, false);
@@ -39,12 +41,15 @@ public sealed class LibraryDatabase
         using var command = db.CreateCommand();
         command.CommandText = "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS maps(path TEXT PRIMARY KEY, root TEXT NOT NULL, stamp INTEGER NOT NULL, size INTEGER NOT NULL, data TEXT NOT NULL, search TEXT NOT NULL); CREATE TABLE IF NOT EXISTS projects(path TEXT PRIMARY KEY, source TEXT, name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS external_sources(path TEXT PRIMARY KEY, archive TEXT); CREATE TABLE IF NOT EXISTS project_sources(project TEXT NOT NULL, source TEXT NOT NULL, PRIMARY KEY(project,source)); PRAGMA user_version=2;";
         command.ExecuteNonQuery();
+        command.CommandText = "CREATE INDEX IF NOT EXISTS maps_root ON maps(root); CREATE INDEX IF NOT EXISTS project_sources_source ON project_sources(source,project);";
+        command.ExecuteNonQuery();
     }
     private SqliteConnection Open()
     {
         string path = Path.Combine(workspace, "library.db"); WorkspaceProject.RejectLinks(path);
         var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString()); db.Open(); return db;
     }
+    public LibrarySearchSnapshot SearchSnapshot(string query, bool projectsOnly = false) => new(Open(), songs, query, projectsOnly);
     public void RegisterSource(string directory, string? archive = null)
     {
         directory = Path.GetFullPath(directory);
@@ -139,6 +144,7 @@ public sealed class LibraryDatabase
                     command.Parameters.AddWithValue("$d", JsonSerializer.Serialize(map));
                     command.Parameters.AddWithValue("$q", Normalize(string.Join(" ", map.Title, map.TitleUnicode, map.Artist, map.ArtistUnicode, map.Creator, map.Difficulty, map.Tags, map.Source)));
                     command.ExecuteNonQuery();
+                    Interlocked.Increment(ref revision);
                     accepted = true;
                 }
                 catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException) { failed = true; errors.Add(file + ": " + e.Message); }
@@ -151,6 +157,7 @@ public sealed class LibraryDatabase
             {
                 using var command = db.CreateCommand();
                 command.CommandText = "DELETE FROM maps WHERE path=$p"; command.Parameters.AddWithValue("$p", path); command.ExecuteNonQuery();
+                Interlocked.Increment(ref revision);
             }
         return new(seen.Count, errors);
     }

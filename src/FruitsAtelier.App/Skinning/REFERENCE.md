@@ -21,3 +21,7 @@ Static editor bananas use `CatchSize.BananaScaleFactor = 0.6`, the referenced ar
 Timeline repeat markers use the skin's reverse arrow at a 128-unit nominal size, preserving aspect ratio and transparent padding, capped to twice the marker diameter. Arrow sprites remain unrotated in the horizontal timeline. Missing or undecodable images use the editor's geometric right arrow. The filename and right-facing convention follow the [osu! skinning specification](https://osu.ppy.sh/wiki/en/Skinning/osu%21#reversearrow.png).
 
 No upstream drawable or framework implementation is embedded. PNG decoding belongs to the platform canvas: Windows Imaging Component on Windows and Avalonia bitmaps on macOS. Invalid or missing PNGs return failure for the caller's geometric fallback.
+
+`CatchSkin.DrawCatcher` uses `fruit-catcher-idle-0` or `fruit-catcher-idle`, preferring @2x. It retains raw logical dimensions and aligns logical Y=16 with the catch line at scale 0.35 times the CS catcher scale. This follows `osu.Game.Rulesets.Catch/Skinning/Legacy/LegacyCatcher.cs` at the pinned revision above; the idle pose is static while position follows autoplay.
+
+Catcher trails and hyperdash afterimages use additive sprite blending, with opacity supplied by map-time effects. Body tint uses HyperDash; afterimages use HyperDashAfterImage, falling back to HyperDash and then red. HyperDashFruit remains independent. Effect timing follows CatcherArea.cs and CatcherTrail.cs at the pinned revision.

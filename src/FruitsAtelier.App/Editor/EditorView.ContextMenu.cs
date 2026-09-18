@@ -24,7 +24,11 @@ public sealed partial class EditorView
             if (item.Enabled && rect.Contains(mouseX, mouseY)) c.Fill(rect, 0x343E4D, 4);
             c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, item.Enabled ? Foreground : 0x5B6777, rect.Width - (item.Shortcut.Length > 0 ? 90 : 18));
             string shortcut = item.Shortcut;
-            if (shortcut.Length > 0) c.Text(shortcut, rect.Right - 72, rect.Y + 7, 11, item.Enabled ? Muted : 0x5B6777, 66);
+            if (shortcut.Length > 0)
+            {
+                float shortcutWidth = c.MeasureText(shortcut, 11);
+                c.Text(shortcut, rect.Right - 9 - shortcutWidth, rect.Y + 7, 11, item.Enabled ? Muted : 0x5B6777, shortcutWidth + 1);
+            }
         }
     }
 
@@ -90,11 +94,11 @@ public sealed partial class EditorView
         StatusMessage = L.Get("editor.status.pointInserted");
     }
 
-    private SliderLocation? HitSliderLocation(float x, float y)
+    private SliderLocation? HitSliderLocation(float x, float y, Guid? sourceId = null)
     {
         double best = 9;
         SliderLocation? result = null;
-        foreach (var track in Document.Tracks.Where(t => t.Nodes.Count >= 2))
+        foreach (var track in Document.Tracks.Where(t => t.Nodes.Count >= 2 && (sourceId is null || t.Id == sourceId)))
         {
             double duration = track.Nodes[^1].TimeMs - track.Nodes[0].TimeMs;
             for (int span = 0; span < track.SpanCount; span++)
@@ -115,7 +119,7 @@ public sealed partial class EditorView
             }
         }
         EnsureConversion();
-        foreach (var slider in conversion!.Sliders.Where(s => s.IsImported && s.Path.Count >= 2))
+        foreach (var slider in conversion!.Sliders.Where(s => s.IsImported && s.Path.Count >= 2 && (sourceId is null || s.SourceId == sourceId)))
         {
             double duration = slider.DurationMs / slider.SpanCount;
             double[] distances = new double[slider.Path.Count];

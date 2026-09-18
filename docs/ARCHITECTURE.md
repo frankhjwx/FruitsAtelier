@@ -34,7 +34,7 @@ See [Building and Testing](TESTING.md) for SDK selection and build commands, and
 
 ## Workspace and library
 
-`Core/Workspace` provides project-directory transactions, SQLite indexing, metadata scanning, resource-reference diagnostics, and explicit export plans. Shared `EditorView.Library` implements the library/settings/export pages; platform hosts handle folder selection, audio changes, and resource export. Library scanning and star calculations run in the background. The UI reads committed maps during scanning and completed star results. See [Workspace](WORKSPACE.md).
+`Core/Workspace` provides project-directory transactions, SQLite indexing, metadata scanning, resource-reference diagnostics, and explicit export plans. Shared `EditorView.Library` implements the library/settings pages, and `EditorView.Export` draws the modal export overlay above the editor; platform hosts handle folder selection, audio changes, and resource export. Library scanning and star calculations run in the background. The UI reads committed maps during scanning and completed star results. See [Workspace](WORKSPACE.md).
 
 ## Editing and conversion
 

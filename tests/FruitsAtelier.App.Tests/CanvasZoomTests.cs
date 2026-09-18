@@ -22,6 +22,7 @@ internal static class CanvasZoomTests
         var map = new MapDocument { DurationMs = 30000 };
         map.Fruits.Add(new Fruit { TimeMs = 100, X = 256 });
         ui.Resize(1440, 900); ui.View.LoadDocument(map); ui.Paint();
+        ui.OpenPreview();
         float fullWidth = ui.Plot.Width;
         float mainRadius = FruitRadius(false), previewRadius = FruitRadius(true);
         double visibleDuration = ui.Plot.Height / ui.View.PixelsPerMs;

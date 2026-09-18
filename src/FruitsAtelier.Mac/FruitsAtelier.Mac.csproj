@@ -16,6 +16,7 @@
     <Compile Include="../FruitsAtelier.App/Editor/*.cs" Link="Editor/%(Filename)%(Extension)" />
     <Compile Include="../FruitsAtelier.App/Skinning/CatchSkin.cs" Link="Skinning/CatchSkin.cs" />
     <Compile Include="../FruitsAtelier.App/Rendering/ICanvas.cs" Link="Rendering/ICanvas.cs" />
+    <Compile Include="../FruitsAtelier.App/Rendering/ThumbnailCache.cs" Link="Rendering/ThumbnailCache.cs" />
     <Compile Include="../FruitsAtelier.App/Platform/BeatmapArchive.cs" Link="Platform/BeatmapArchive.cs" />
     <Compile Include="../FruitsAtelier.App/Platform/LibraryOperations.cs" Link="Platform/LibraryOperations.cs" />
     <Compile Include="../FruitsAtelier.App/Platform/BeatmapResources.cs" Link="Platform/BeatmapResources.cs" />

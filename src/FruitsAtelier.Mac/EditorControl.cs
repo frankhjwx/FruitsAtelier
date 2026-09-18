@@ -14,12 +14,12 @@ public static class MacInput
     {
         >= Key.A and <= Key.Z => 65 + key - Key.A,
         Key.Back => editingText ? 8 : 46, Key.Tab => 9, Key.Enter => 13, Key.Escape => 27,
-        Key.Space => 32, Key.Home => 36, Key.Delete => 46, Key.OemPlus => 187, Key.OemMinus => 189, _ => 0
+        Key.Space => 32, Key.Home => 36, Key.Delete => 46, Key.Up => 38, Key.Down => 40, Key.OemPlus => 187, Key.OemMinus => 189, _ => 0
     };
 }
 internal sealed class EditorControl : Control, IDisposable
 {
-    internal EditorView View { get; } = new();
+    internal EditorView View { get; } = new(loadDemo: false);
     private readonly ImageCache images = new();
     internal Action? Changed;
     public EditorControl()
@@ -51,7 +51,7 @@ internal sealed class EditorControl : Control, IDisposable
     {
         var p = e.GetPosition(this);
         View.PointerMove((float)p.X, (float)p.Y, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
-        Cursor = new Cursor(View.TimelineResizeCursor ? StandardCursorType.SizeWestEast : StandardCursorType.Arrow);
+        Cursor = new Cursor(View.TimelineResizeCursor || View.PreviewResizeCursor ? StandardCursorType.SizeWestEast : StandardCursorType.Arrow);
         Refresh();
     }
     protected override void OnPointerReleased(PointerReleasedEventArgs e)

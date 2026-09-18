@@ -16,6 +16,9 @@ public interface ICanvas
     float MeasureText(string text, float size, bool bold = false) => text.Length * size * 0.6f;
     void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false);
     bool Image(string filePath, Rect destination, uint tint = 0xFFFFFF, Rect? source = null, float opacity = 1);
+    bool AdditiveImage(string filePath, Rect destination, uint tint, float opacity)
+        => Image(filePath, destination, tint, opacity: opacity);
+    bool Thumbnail(string filePath, Rect destination) => false;
     void Clip(Rect r);
     void Unclip();
 }

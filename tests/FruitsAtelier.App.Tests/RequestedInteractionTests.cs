@@ -142,11 +142,8 @@ internal static class RequestedInteractionTests
         Near(1000, shower.TimeMs); Near(2000, shower.EndTimeMs);
         Check(ui.View.ActiveTool == "Banana" && ui.View.Conversion.Objects.Any(item => item.SourceId == shower.Id),
             "Finishing banana placement did not keep the tool active or generate bananas.");
-        ui.SetField("开始时间", "1100");
-        ui.SetField("结束时间", "2100");
-        Near(1100, shower.TimeMs); Near(2100, shower.EndTimeMs);
-        ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
-        Check(ui.View.Document.BananaShowers.Count == 0, "Banana placement and precise edits were not undoable.");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.BananaShowers.Count == 0, "Banana placement was not undoable.");
 
         var cancel = Load(new MapDocument { DurationMs = 10000 });
         cancel.Key('F'); cancel.ClickMap(500, 128);

@@ -7,11 +7,12 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private void DrawCatchObject(ICanvas c, ConvertedCatchObject item, float x, float y, float fieldWidth, float opacity = 1)
+    private void DrawCatchObject(ICanvas c, ConvertedCatchObject item, float x, float y, float fieldWidth, float opacity = 1, double? circleSize = null, HashSet<(Guid SourceId, int EventIndex)>? hyperStarts = null)
     {
         float scale = fieldWidth / 512;
-        float diameter = CatchSize.FruitDiameter(Document.CircleSize) * scale;
-        bool hyper = hyperdashObjects.Contains((item.SourceId, item.EventIndex));
+        double cs = circleSize ?? Document.CircleSize;
+        float diameter = CatchSize.FruitDiameter(cs) * scale;
+        bool hyper = (hyperStarts ?? hyperdashObjects).Contains((item.SourceId, item.EventIndex));
         uint hyperColour = skin?.HyperDashFruitColour ?? 0xFF3030;
         var kind = SkinObjectKind(item.Kind);
         if (skin is not null)
@@ -20,7 +21,7 @@ public sealed partial class EditorView
             if (hyper) skin.Draw(c, kind, skinIndex, x, y, diameter * 1.2f, hyperColour, opacity);
             if (skin.Draw(c, kind, skinIndex, x, y, diameter, 0xFFFFFF, opacity)) return;
         }
-        float radius = ObjectRadius(item.Kind) * scale;
+        float radius = (item.Kind switch { CatchObjectKind.Droplet => CatchSize.DefaultDropletRadius(cs), CatchObjectKind.TinyDroplet => CatchSize.DefaultTinyDropletRadius(cs), CatchObjectKind.Banana => CatchSize.BananaRadius(cs), _ => CatchSize.FruitRadius(cs) }) * scale;
         if (hyper) c.Circle(x, y, radius * 1.2f, hyperColour, opacity: opacity);
         c.Circle(x, y, radius, item.Kind == CatchObjectKind.Banana ? Gold : 0xFFFFFF, opacity: opacity);
     }
@@ -41,13 +42,16 @@ public sealed partial class EditorView
         _ => CatchSize.FruitRadius(Document.CircleSize)
     };
 
-    private ConvertedCatchObject? HitCatchObject(float x, float y)
+    private ConvertedCatchObject? HitCatchObject(float x, float y, Guid? sourceId = null)
     {
         EnsureConversion();
         ConvertedCatchObject? closest = null;
         double distance = double.PositiveInfinity;
-        foreach (var item in conversion!.Objects)
+        double pointerTime = viewStart + (plot.Bottom - y) / pixelsPerMs;
+        double timeRadius = Math.Max(7, CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512) / pixelsPerMs;
+        foreach (var item in ObjectsInTimeRange(pointerTime - timeRadius, pointerTime + timeRadius))
         {
+            if (sourceId is { } id && item.SourceId != id) continue;
             var point = new MapPoint(item.TimeMs, item.X);
             double candidateDistance = PointerDistance(point, x, y);
             if (candidateDistance >= distance) continue;

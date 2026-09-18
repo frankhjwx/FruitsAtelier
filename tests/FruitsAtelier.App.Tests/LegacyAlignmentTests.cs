@@ -48,12 +48,7 @@ internal static class LegacyAlignmentTests
         var details = ui.Canvas.Texts.Single(t => t.Value.StartsWith("AR ") && !t.Value.Contains("NM"));
         ui.Click(details.X + 10, details.Y + 3); ui.Type("1"); ui.Key(13);
         Check(ui.View.Document.ApproachRate == ar && ui.View.Document.CircleSize == cs && !ui.View.IsDirty, "Details AR/CS are read-only");
-        ui.FocusField(L.Get("ui.timeField")); ui.Key(13);
-        Check(ui.View.Document.Fruits[0].TimeMs == 1000.75 && !ui.View.IsDirty, "Opening a timestamp does not quantize stored precision");
-        ui.SetField(L.Get("ui.timeField"), "00:02:123");
-        Check(ui.View.Document.Fruits[0].TimeMs == 2123, "Timestamp input parses milliseconds");
-        ui.Key('Z', ctrl: true);
-        Check(ui.View.Document.Fruits[0].TimeMs == 1000.75, "Timestamp edits are undoable");
+        Check(ui.View.Document.Fruits[0].TimeMs == 1000.75 && !ui.View.IsDirty, "Read-only details preserve timestamp precision");
         ui.View.UpdateTransport(59999.9, 100000, true, false, false, null, "fixture.wav"); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value == "00:59:999"), "Timestamp truncation does not round into the next minute");
     }

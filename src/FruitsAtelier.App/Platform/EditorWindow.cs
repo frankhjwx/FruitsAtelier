@@ -10,7 +10,7 @@ namespace FruitsAtelier.App.Platform;
 internal sealed partial class EditorWindow : IDisposable
 {
     private readonly Native.WindowProc procedure;
-    private readonly EditorView view = new();
+    private readonly EditorView view = new(loadDemo: false);
     private D2DCanvas? canvas;
     private nint hwnd;
     private float dpi = 96;
@@ -47,6 +47,8 @@ internal sealed partial class EditorWindow : IDisposable
 
     public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null)
     {
+        view.InitializeLibrary(!renderCheck && profileMap is null, renderCheck || profileMap is not null
+            ? new FruitsAtelier.Core.LibrarySettings { Workspace = Path.Combine(Artifacts, "render-library") } : null);
         string defaultSkin = Path.Combine(AppContext.BaseDirectory, "assets", "skins", "default.osk");
         if (File.Exists(defaultSkin))
         {
@@ -92,6 +94,7 @@ internal sealed partial class EditorWindow : IDisposable
         if (initialPath is not null) FileOperation(() => OpenPath(initialPath));
         if (renderCheck)
         {
+            view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
             Diagnostics.RenderCheck.Run(canvas, view);
             Native.DestroyWindow(hwnd);
             return 0;
@@ -121,7 +124,7 @@ internal sealed partial class EditorWindow : IDisposable
         }));
         Invalidate();
     }
-    private void Close() => ConfirmDiscard(() => Native.DestroyWindow(hwnd));
+    private void Close() => ConfirmDiscard(() => { view.SaveLibraryMemory(); Native.DestroyWindow(hwnd); });
     private void Invalidate() { if (hwnd != 0) Native.InvalidateRect(hwnd, 0, false); }
 
     private nint WndProc(nint window, uint message, nuint wParam, nint lParam)
@@ -206,11 +209,11 @@ internal sealed partial class EditorWindow : IDisposable
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0020: // WM_SETCURSOR
                 if ((lParam.ToInt64() & 0xffff) == 1)
-                { Native.SetCursor(Native.LoadCursor(0, (nint)(view.TimelineResizeCursor ? 32644 : 32512))); return 1; }
+                { Native.SetCursor(Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor ? 32644 : 32512))); return 1; }
                 break;
             case 0x0200:
                 view.PointerMove(x, y, Native.Shift, Native.Control);
-                Native.SetCursor(Native.LoadCursor(0, (nint)(view.TimelineResizeCursor ? 32644 : 32512)));
+                Native.SetCursor(Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor ? 32644 : 32512)));
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0202:
             case 0x0205:

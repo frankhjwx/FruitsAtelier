@@ -6,7 +6,6 @@ internal sealed partial class EditorWindow
 {
     private void ConfigureLibrary()
     {
-        view.InitializeLibrary(false);
         view.RequestLibraryFolder = workspace => FileOperation(() =>
         {
             var path = MapFileDialog.SelectFolder(hwnd, L.Get(workspace ? "library.workspace" : "library.songs"));

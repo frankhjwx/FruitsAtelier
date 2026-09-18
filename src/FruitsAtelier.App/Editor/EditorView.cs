@@ -23,8 +23,15 @@ public sealed partial class EditorView
         public Task<double?>? RatingTask;
         public readonly CancellationTokenSource RatingCancellation = new();
     }
-    private readonly List<DifficultySession> difficulties = BeatmapProject.FromDocuments([DemoMap.Create()]).Difficulties
-        .Select(d => new DifficultySession(d)).ToList();
+    private readonly List<DifficultySession> difficulties;
+    public bool HasEditorProject { get; private set; }
+    public EditorView(bool loadDemo = true)
+    {
+        difficulties = BeatmapProject.FromDocuments([loadDemo ? DemoMap.Create() : new MapDocument { IsDemo = false }])
+            .Difficulties.Select(d => new DifficultySession(d)).ToList();
+        HasEditorProject = loadDemo;
+        if (!loadDemo) { ProjectName = ""; StatusMessage = ""; playhead = 0; }
+    }
     private int activeDifficulty;
     private bool projectStructureDirty;
     private EditorHistory history => difficulties[activeDifficulty].History;
@@ -71,8 +78,8 @@ public sealed partial class EditorView
     public Action? RequestResetDemo { get; set; }
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
-    public bool IsEditingText => editField >= 0 || LibraryVisible && libraryField >= 0;
-    public bool WantsCapture => drag != DragKind.None;
+    public bool IsEditingText => editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
+    public bool WantsCapture => drag != DragKind.None || libraryPointerActive;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;
     public double PlayheadMs => playhead;
@@ -119,7 +126,7 @@ public sealed partial class EditorView
     }
 
     private enum Tool { Select, Fruit, Slider, Banana }
-    private enum DragKind { None, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail }
+    private enum DragKind { None, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail, PreviewResize }
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
     private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp);
     private float FullPlayfieldWidth => plot.Width * 512 / (512 + PlayfieldPadding * 2);

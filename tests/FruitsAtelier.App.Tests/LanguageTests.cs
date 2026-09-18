@@ -3,6 +3,11 @@ using FruitsAtelier.Localization;
 
 internal static class LanguageTests
 {
+    private static void ChooseLanguage(Ui ui, string code)
+    {
+        ui.ClickText(Strings.Get("ui.languageButton", System.Globalization.CultureInfo.GetCultureInfo(Strings.Language).NativeName) + " ▾");
+        ui.ClickText(System.Globalization.CultureInfo.GetCultureInfo(code).NativeName);
+    }
     public static void PreferencesAndPreview()
     {
         string folder = Path.Combine(Path.GetTempPath(), "atelier-language-" + Guid.NewGuid());
@@ -22,10 +27,11 @@ internal static class LanguageTests
             var ui = new Ui();
             ui.LoadDocument(new MapDocument { Name = "Preview", ApproachRate = 8, CircleSize = 5, IsDemo = false });
             ui.Paint();
+            ui.OpenPreview();
             Check(ui.Canvas.Texts.Count(t => t.Value == "AR 8 · CS 5 · NM") == 1, "Preview must have one compact stats line");
             Check(!ui.Canvas.Texts.Any(t => t.Value.Contains(" ms · NM") || t.Value == Strings.Get("ui.generated") || t.Value == Strings.Get("ui.previewSkin", "5", Strings.Get("ui.basicShapes"))), "Removed preview details remain visible");
             ui.View.RequestLanguagePreference = language => LanguagePreference.SaveLanguage(language, path);
-            ui.ClickText("中文 / EN");
+            ChooseLanguage(ui, "zh-CN");
             Check(LanguagePreference.ReadLanguage(path) == "zh-CN" && !ui.View.IsDirty, "Language button persists choice without editing project");
         }
         finally { Strings.SetLanguage(previous); if (Directory.Exists(folder)) Directory.Delete(folder, true); }
@@ -38,7 +44,7 @@ internal static class LanguageTests
         {
             var ui = new Ui();
             var baseline = ui.View.Document.DeepClone();
-            ui.ClickText("中文 / EN");
+            ChooseLanguage(ui, "en");
             Check(Strings.Language == "en", "Language button did not select English.");
             Check(ui.Canvas.Texts.Any(t => t.Value == "File") && ui.Canvas.Texts.Any(t => t.Value == "Zoom"), "English chrome is missing.");
             Check(!ui.Canvas.Texts.Any(t => t.Value.Contains("尚未") || t.Value == "对象" || t.Value == "未加载音频"), "Chinese chrome or audio placeholder remained.");
@@ -46,7 +52,7 @@ internal static class LanguageTests
             Check(ui.View.StatusMessage.All(c => c < 0x4e00 || c > 0x9fff), "Fruit status was not English.");
             ui.Key('Z', ctrl: true);
             Check(ui.View.Document.ContentEquals(baseline) && !ui.View.IsDirty, "Language changes entered content history.");
-            ui.ClickText("中文 / EN");
+            ChooseLanguage(ui, "zh-CN");
             Check(Strings.Language == "zh-CN" && ui.Canvas.Texts.Any(t => t.Value == "文件"), "Chinese did not restore.");
         }
         finally { Strings.SetLanguage("zh-CN"); }

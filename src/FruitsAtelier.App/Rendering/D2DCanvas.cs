@@ -28,6 +28,10 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     private readonly HashSet<ImageKey> failedImages = [];
     private readonly Dictionary<string, (long Version, long Length)> imageVersions = new(StringComparer.OrdinalIgnoreCase);
     private long imageBytes;
+    private sealed record ThumbnailPixels(uint Width, uint Height, byte[] Pixels);
+    private readonly ThumbnailCache<ThumbnailPixels> thumbnails = new(DecodeThumbnail);
+    private readonly Dictionary<string, (ThumbnailPixels Pixels, ID2D1Bitmap1 Bitmap, long Used)> thumbnailImages = [];
+    private long thumbnailClock;
     private const long imageCacheLimit = 64 * 1024 * 1024;
     private readonly record struct ImageKey(string Path, uint Tint, long Version, long Length);
     private sealed record CachedImage(ID2D1Bitmap1 Bitmap, int Width, int Height);
@@ -189,6 +193,54 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         }
     }
 
+    public bool AdditiveImage(string filePath, Rect destination, uint tint, float opacity)
+    {
+        var previous = context!.PrimitiveBlend;
+        try { context.PrimitiveBlend = PrimitiveBlend.Add; return Image(filePath, destination, tint, opacity: opacity); }
+        finally { context.PrimitiveBlend = previous; }
+    }
+
+    public bool Thumbnail(string filePath, Rect destination)
+    {
+        if (!ValidRectangle(destination) || thumbnails.Get(filePath) is not { } pixels) return false;
+        if (!thumbnailImages.TryGetValue(filePath, out var cached) || !ReferenceEquals(cached.Pixels, pixels))
+        {
+            if (cached.Bitmap is not null) { cached.Bitmap.Dispose(); thumbnailImages.Remove(filePath); }
+            if (thumbnailImages.Count >= 128)
+            {
+                var oldest = thumbnailImages.MinBy(pair => pair.Value.Used);
+                oldest.Value.Bitmap.Dispose(); thumbnailImages.Remove(oldest.Key);
+            }
+            imagingFactory ??= new IWICImagingFactory();
+            using var source = imagingFactory.CreateBitmapFromMemory(pixels.Width, pixels.Height, Vortice.WIC.PixelFormat.Format32bppPBGRA, pixels.Pixels, pixels.Width * 4);
+            var properties = new BitmapProperties1(new PixelFormat(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Premultiplied), 96, 96, BitmapOptions.None);
+            cached = (pixels, context!.CreateBitmapFromWicBitmap(source, properties), 0);
+        }
+        thumbnailImages[filePath] = (pixels, cached.Bitmap, ++thumbnailClock);
+        float scale = Math.Min(destination.Width / pixels.Width, destination.Height / pixels.Height);
+        var fitted = new Rect(destination.X + (destination.Width - pixels.Width * scale) / 2, destination.Y + (destination.Height - pixels.Height * scale) / 2, pixels.Width * scale, pixels.Height * scale);
+        context!.DrawBitmap(cached.Bitmap, Convert(fitted), 1, Vortice.Direct2D1.BitmapInterpolationMode.Linear, new DRect(0, 0, pixels.Width, pixels.Height));
+        return true;
+    }
+    private static ThumbnailPixels? DecodeThumbnail(string path)
+    {
+        var file = new FileInfo(path);
+        if (!file.Exists || file.Length is < 24 or > 32 * 1024 * 1024) return null;
+        using var factory = new IWICImagingFactory();
+        using var decoder = factory.CreateDecoderFromFileName(path, FileAccess.Read, DecodeOptions.CacheOnLoad);
+        using var frame = decoder.GetFrame(0);
+        frame.GetSize(out uint width, out uint height);
+        if (width is < 1 or > 16384 || height is < 1 or > 16384 || (long)width * height > 32 * 1024 * 1024) return null;
+        double scale = Math.Min(1, Math.Min(192d / width, 152d / height));
+        width = Math.Max(1, (uint)(width * scale)); height = Math.Max(1, (uint)(height * scale));
+        using var scaler = factory.CreateBitmapScaler();
+        scaler.Initialize(frame, width, height, Vortice.WIC.BitmapInterpolationMode.Fant);
+        using var converter = factory.CreateFormatConverter();
+        converter.Initialize(scaler, Vortice.WIC.PixelFormat.Format32bppPBGRA).CheckError();
+        var pixels = new byte[width * height * 4];
+        converter.CopyPixels(width * 4, pixels);
+        return new(width, height, pixels);
+    }
     private CachedImage LoadImage(string path, uint tint)
     {
         imagingFactory ??= new IWICImagingFactory();
@@ -229,6 +281,9 @@ public sealed class D2DCanvas : ICanvas, IDisposable
 
     public void Dispose()
     {
+        thumbnails.Dispose();
+        foreach (var thumbnail in thumbnailImages.Values) thumbnail.Bitmap.Dispose();
+        thumbnailImages.Clear();
         ClearImages();
         imagingFactory?.Dispose(); imagingFactory = null;
         foreach (var format in formats.Values) format.Dispose(); formats.Clear();

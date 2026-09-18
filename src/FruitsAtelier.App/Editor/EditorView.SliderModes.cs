@@ -9,7 +9,6 @@ public enum SliderEditingMode { PenTool, OsuLegacy }
 public sealed partial class EditorView
 {
     public SliderEditingMode SliderMode { get; private set; } = SliderEditingMode.OsuLegacy;
-    private float inspectorScroll, inspectorContentHeight;
     private bool LegacyMode => SliderMode == SliderEditingMode.OsuLegacy;
     private List<SliderVertex>? legacyDraft;
     private List<SliderVertex>? legacyPreviewVertices;

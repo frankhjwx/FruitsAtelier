@@ -27,6 +27,8 @@ public sealed class CatchSkin
     public string Name { get; private set; }
     public IReadOnlyList<uint> ComboColours => comboColours;
     public uint HyperDashFruitColour { get; private set; } = 0xFF0000;
+    public uint HyperDashColour { get; private set; } = 0xFF0000;
+    public uint HyperDashAfterImageColour { get; private set; } = 0xFF0000;
     public int TextureCount => textures.Count;
 
     private CatchSkin(string folder)
@@ -50,6 +52,8 @@ public sealed class CatchSkin
                 LoadTexture($"fruit-{name}-overlay");
             }
             LoadTexture("reversearrow");
+            LoadTexture("fruit-catcher-idle");
+            LoadTexture("fruit-catcher-idle-0");
             if (files.TryGetValue("skin.ini", out var configuration)) candidate.ReadConfiguration(configuration);
             if (candidate.textures.Count == 0) { message = L.Get("skin.noTextures"); return false; }
             skin = candidate;
@@ -72,6 +76,22 @@ public sealed class CatchSkin
             message = L.Get("skin.loadFailed", L.Localized(ex.Message));
             return false;
         }
+    }
+
+    public float? CatcherHeightBelowPlate(float fieldWidth, double circleSize)
+    {
+        if (!textures.TryGetValue("fruit-catcher-idle-0", out var texture) && !textures.TryGetValue("fruit-catcher-idle", out texture)) return null;
+        return Math.Max(0, texture.PixelHeight / (float)texture.Density - 16) * .35f * CatchSize.Scale(circleSize) * 2 * fieldWidth / 512;
+    }
+    public bool DrawCatcher(ICanvas canvas, float centerX, float catchY, float fieldWidth, double circleSize, uint tint = 0xFFFFFF, float opacity = 1, bool additive = false)
+    {
+        if (!textures.TryGetValue("fruit-catcher-idle-0", out var texture) && !textures.TryGetValue("fruit-catcher-idle", out texture)) return false;
+        float scale = .5f * .7f * CatchSize.Scale(circleSize) * 2 * fieldWidth / 512;
+        float width = texture.PixelWidth / (float)texture.Density * scale;
+        float height = texture.PixelHeight / (float)texture.Density * scale;
+        var destination = new Rect(centerX - width / 2, catchY - 16 * scale, width, height);
+        return additive ? canvas.AdditiveImage(texture.FilePath, destination, tint, opacity)
+            : canvas.Image(texture.FilePath, destination, tint, opacity: opacity);
     }
 
     public bool DrawReverseArrow(ICanvas canvas, float centerX, float centerY, float diameter)
@@ -145,7 +165,7 @@ public sealed class CatchSkin
     {
         if (new FileInfo(path).Length > 1024 * 1024) return;
         string section = "";
-        uint? hyper = null, hyperFruit = null;
+        uint? hyper = null, hyperFruit = null, hyperAfterImage = null;
         var combos = new SortedDictionary<int, uint>();
         foreach (string raw in File.ReadLines(path).Take(4096))
         {
@@ -160,12 +180,15 @@ public sealed class CatchSkin
             if (!section.Equals("Colours", StringComparison.OrdinalIgnoreCase) || !TryColour(value, out uint colour)) continue;
             if (key.Equals("HyperDashFruit", StringComparison.OrdinalIgnoreCase)) hyperFruit = colour;
             else if (key.Equals("HyperDash", StringComparison.OrdinalIgnoreCase)) hyper = colour;
+            else if (key.Equals("HyperDashAfterImage", StringComparison.OrdinalIgnoreCase)) hyperAfterImage = colour;
             else if (key.StartsWith("Combo", StringComparison.OrdinalIgnoreCase)
                 && int.TryParse(key.AsSpan(5), NumberStyles.None, CultureInfo.InvariantCulture, out int index) && index is >= 1 and <= 8)
                 combos[index] = colour;
         }
         comboColours.AddRange(combos.Values);
         HyperDashFruitColour = hyperFruit ?? hyper ?? 0xFF0000;
+        HyperDashColour = hyper ?? 0xFF0000;
+        HyperDashAfterImageColour = hyperAfterImage ?? HyperDashColour;
     }
 
     private static bool TryColour(string text, out uint colour)

@@ -12,6 +12,15 @@ internal sealed class ImageCache : IDisposable
 {
     private readonly Dictionary<(string, uint, long, long), Bitmap> images = [];
     private long bytes;
+    private readonly ThumbnailCache<Bitmap> thumbnails = new(path =>
+    {
+        var file = new FileInfo(path);
+        if (!file.Exists || file.Length is < 24 or > 32 * 1024 * 1024) return null;
+        using var bitmap = new Bitmap(path);
+        double scale = Math.Min(1, Math.Min(192d / bitmap.PixelSize.Width, 152d / bitmap.PixelSize.Height));
+        return bitmap.CreateScaledBitmap(new PixelSize(Math.Max(1, (int)(bitmap.PixelSize.Width * scale)), Math.Max(1, (int)(bitmap.PixelSize.Height * scale))));
+    });
+    public Bitmap? Thumbnail(string path) => thumbnails.Get(path);
     public unsafe Bitmap? Get(string path, uint tint)
     {
         var file = new FileInfo(path);
@@ -21,7 +30,7 @@ internal sealed class ImageCache : IDisposable
         using var decoded = new Bitmap(path);
         long size = (long)decoded.PixelSize.Width * decoded.PixelSize.Height * 4;
         if (size > 64 * 1024 * 1024) return null;
-        if (bytes + size > 64 * 1024 * 1024 || images.Count >= 256) Dispose();
+        if (bytes + size > 64 * 1024 * 1024 || images.Count >= 256) ClearImages();
         var result = new WriteableBitmap(decoded.PixelSize, new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
         try
         {
@@ -44,7 +53,8 @@ internal sealed class ImageCache : IDisposable
         }
         catch { result.Dispose(); throw; }
     }
-    public void Dispose() { foreach (var image in images.Values) image.Dispose(); images.Clear(); bytes = 0; }
+    private void ClearImages() { foreach (var image in images.Values) image.Dispose(); images.Clear(); bytes = 0; }
+    public void Dispose() { ClearImages(); thumbnails.Dispose(); }
 }
 
 internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICanvas, IDisposable
@@ -89,6 +99,19 @@ internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICa
             return true;
         }
         catch (Exception e) when (e is IOException or ArgumentException or NotSupportedException) { return false; }
+    }
+    public bool AdditiveImage(string filePath, R destination, uint tint, float opacity)
+    {
+        using var state = context.PushRenderOptions(new RenderOptions { BitmapBlendingMode = Avalonia.Media.Imaging.BitmapBlendingMode.Plus });
+        return Image(filePath, destination, tint, opacity: opacity);
+    }
+    public bool Thumbnail(string filePath, R destination)
+    {
+        if (images.Thumbnail(filePath) is not { } bitmap) return false;
+        double scale = Math.Min(destination.Width / bitmap.Size.Width, destination.Height / bitmap.Size.Height);
+        var fitted = new Avalonia.Rect(destination.X + (destination.Width - bitmap.Size.Width * scale) / 2, destination.Y + (destination.Height - bitmap.Size.Height * scale) / 2, bitmap.Size.Width * scale, bitmap.Size.Height * scale);
+        context.DrawImage(bitmap, new Avalonia.Rect(bitmap.Size), fitted);
+        return true;
     }
     public void Clip(R r) => clips.Push(context.PushClip(Convert(r)));
     public void Unclip() { if (clips.TryPop(out var clip)) clip.Dispose(); }
