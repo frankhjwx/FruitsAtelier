@@ -27,6 +27,7 @@ internal sealed partial class EditorWindow : IDisposable
         procedure = WndProc;
         ConfigureFiles();
         view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
+        view.RequestPasteTime = () => view.PasteTimeJumpText(Native.ReadClipboardText(hwnd), view.TimeJumpSession);
         view.RequestClose = Close;
         view.RequestLoadSkin = () =>
         {
@@ -45,7 +46,7 @@ internal sealed partial class EditorWindow : IDisposable
         { ResetAudio(); projectPath = null; view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); Invalidate(); });
     }
 
-    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null)
+    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000)
     {
         view.InitializeLibrary(!renderCheck && profileMap is null, renderCheck || profileMap is not null
             ? new FruitsAtelier.Core.LibrarySettings { Workspace = Path.Combine(Artifacts, "render-library") } : null);
@@ -87,7 +88,7 @@ internal sealed partial class EditorWindow : IDisposable
         AppLog.Write($"Window ready. Adapter={canvas.AdapterName}; DPI={dpi}; Client={client.Right}x{client.Bottom}");
         if (profileMap is not null)
         {
-            Diagnostics.RenderCheck.ProfileMap(canvas, view, profileMap, dpi);
+            Diagnostics.RenderCheck.ProfileMap(canvas, view, profileMap, dpi, profileStartMs);
             Native.DestroyWindow(hwnd);
             return 0;
         }

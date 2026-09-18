@@ -67,7 +67,7 @@ public sealed partial class EditorView
     private bool snap = true;
     private bool anchorSnap;
     public bool AnchorSnapEnabled => anchorSnap;
-    private static readonly int[] SnapDivisors = [4, 5, 6, 7, 8, 9, 12, 16];
+    private static readonly int[] SnapDivisors = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
     // Keep edge room stable while CS is edited; 54.4 is the CS=0 fruit radius.
     private const float PlayfieldPadding = 54.4f;
     private int divisor = 4, menu = -1, editField = -1;
@@ -78,7 +78,7 @@ public sealed partial class EditorView
     public Action? RequestResetDemo { get; set; }
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
-    public bool IsEditingText => editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
+    public bool IsEditingText => TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
     public bool WantsCapture => drag != DragKind.None || libraryPointerActive;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;
@@ -174,7 +174,7 @@ public sealed partial class EditorView
 
     private void ClampView()
     {
-        if (drag is DragKind.Marquee or DragKind.Objects or DragKind.BananaStart or DragKind.BananaEnd) return;
+        if (ViewportFrozenByDrag) return;
         if (AudioPlaying || pinPlayhead) { FollowPlayhead(); return; }
         // Blank time before the start and after the end keeps the playback line fixed at both endpoints.
         double padding = plot.Height * playbackLineFromBottom / pixelsPerMs;

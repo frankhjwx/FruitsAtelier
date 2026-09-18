@@ -17,12 +17,13 @@ public sealed partial class EditorView
     private void DrawToolPalette(ICanvas c)
     {
         toolButtons.Clear();
-        float size = Math.Min(96, Math.Max(48, (canvas.Bottom - plot.Y - 8) / 4));
+        float size = Math.Min(96, plot.Height / 4);
+        float top = plot.Y + (plot.Height - size * 4) / 2;
         for (int i = 0; i < 4; i++)
         {
             var mode = (Tool)i;
             string name = i == 2 ? "fslider" : mode.ToString().ToLowerInvariant();
-            var bounds = new Rect((108 - size) / 2, plot.Y + i * size, size, size);
+            var bounds = new Rect((108 - size) / 2, top + i * size, size, size);
             toolButtons.Add(bounds);
             bool active = mode == tool;
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "tools", name + ".png"), bounds, opacity: active ? 1 : .45f);

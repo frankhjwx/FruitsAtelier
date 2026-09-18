@@ -14,6 +14,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Background resource checks refresh missing files and discard stale edits and projects", ResourcePollingTests.RefreshAndStaleResults),
     ("Preview drawer, mods, resizing and aligned shortcuts preserve content", PreviewSidebarTests.Sidebar),
     ("Preview aspect modes, Fit height and edge overscan", PreviewSidebarTests.DisplayModesAndOverscan),
     ("Automatic catcher movement and seeking", PreviewSidebarTests.AutomaticCatcher),
@@ -68,6 +69,7 @@ var tests = new (string Name, Action Run)[]
     ("Timeline background clicks seek and drag limits preserve the origin", TimelineDragTests.ClickAndLimits),
     ("Fruit tools place quarters and sixths without moving existing objects", PlaceOnBothGrids),
     ("Beat snap slider exposes every requested divisor through one drag control", RequestedInteractionTests.SnapDivisors),
+    ("Centred controls and timestamp clipboard dialog preserve editor content", TimeJumpTests.Run),
     ("Double-click enters one Slider and other clicks leave its edit mode", RequestedInteractionTests.DoubleClickEditing),
     ("A Legacy Slider conversion shortcut converts it to a strictly aligned FSlider", SliderInteractionTests.LegacyContextConversion),
     ("Selected parents snap from the earliest start and keep one time and X offset", RequestedInteractionTests.MultiObjectDrag),
@@ -135,7 +137,7 @@ var tests = new (string Name, Action Run)[]
     ("Multi-selection clipboard shortcuts and deletion preserve batch transactions", MultiSelectionTests.BatchClipboardDelete),
     ("Anchor boxes delete endpoints and remove insufficient tracks atomically", MultiSelectionTests.AnchorBoxAndEndpointDelete),
     ("Canceling object and anchor boxes restores selection without history", MultiSelectionTests.SelectionCancellation),
-    ("Playback does not change the transform during a selection box", MultiSelectionTests.PlaybackBoxTransform),
+    ("Playback keeps scrolling and updates selection under a stationary box", MultiSelectionTests.PlaybackBoxTransform),
     ("Language switching refreshes chrome without editing the map", LanguageTests.SwitchWithoutEditing),
     ("English batch menus and Core diagnostics use the same catalog", LanguageTests.EnglishMultiMenusAndDiagnostics)
 };
@@ -824,7 +826,7 @@ sealed class Ui
     public void Key(int key, bool ctrl = false, bool shift = false) { View.KeyDown(key, ctrl, shift); Paint(); }
     public void SetSnapDivisor(int divisor)
     {
-        int[] values = [4, 5, 6, 7, 8, 9, 12, 16];
+        int[] values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
         int index = Array.IndexOf(values, divisor);
         if (index < 0) throw new ArgumentOutOfRangeException(nameof(divisor));
         var slider = View.SnapSliderBounds;

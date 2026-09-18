@@ -14,7 +14,8 @@ internal static class Program
             if (args.Contains("--m2-check")) return Diagnostics.M2Check.Run(args.Where(p => File.Exists(p) && Path.GetExtension(p).Equals(".osz", StringComparison.OrdinalIgnoreCase)));
             L.SetLanguage(FruitsAtelier.Localization.LanguagePreference.ReadLanguage());
             using var window = new EditorWindow();
-            if (args.Length == 2 && args[0] == "--profile-map") return window.Run(profileMap: args[1]);
+            if (args.Length is 2 or 3 && args[0] == "--profile-map") return window.Run(profileMap: args[1],
+                profileStartMs: args.Length == 3 ? double.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture) : 70000);
             return window.Run(args.Contains("--render-check"), args.FirstOrDefault(File.Exists));
         }
         catch (Exception exception)

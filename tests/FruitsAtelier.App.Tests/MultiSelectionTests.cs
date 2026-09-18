@@ -183,18 +183,26 @@ internal static class MultiSelectionTests
 
     public static void PlaybackBoxTransform()
     {
-        var map = ObjectMap();
+        var map = new MapDocument { DurationMs = 20000, CircleSize = 10 };
+        foreach (double time in new[] { 2000d, 2100d, 2500d, 2600d }) map.Fruits.Add(new Fruit { TimeMs = time, X = 80 });
         var ui = Load(map);
         var baseline = ui.View.Document.DeepClone();
         ui.View.UpdateTransport(2000, 20000, true, true, false, null, "fixture.wav"); ui.Paint();
+        double originalStart = ui.View.ViewStartMs;
+        float lineY = Screen(ui, 2000, 256).Y;
         var start = Screen(ui, 1800, 30); var end = Screen(ui, 2300, 125);
-        ui.View.PointerDown(start.X, start.Y, 0, false, false); ui.Paint();
-        ui.View.UpdateTransport(3500, 20000, true, true, false, null, "fixture.wav"); ui.Paint();
+        ui.View.PointerDown(start.X, start.Y, 0, false, false);
         ui.View.PointerMove(end.X, end.Y, false, false); ui.Paint();
+        Objects(ui, map.Fruits[0].Id, map.Fruits[1].Id);
+        ui.View.UpdateTransport(2500, 20000, true, true, false, null, "fixture.wav"); ui.Paint();
+        Near(originalStart + 500, ui.View.ViewStartMs);
+        Near(lineY, Screen(ui, 2500, 256).Y);
+        Objects(ui, map.Fruits[2].Id, map.Fruits[3].Id);
+        Check(ui.View.AudioPlaying && ui.View.WantsCapture, "playback and pointer capture continue during marquee");
         ui.View.PointerUp(end.X, end.Y, 0); ui.Paint();
-        Objects(ui, map.Fruits[1].Id);
-        Near(3500, ui.View.PlayheadMs);
-        Check(baseline.ContentEquals(ui.View.Document) && !ui.View.WantsCapture,
+        Objects(ui, map.Fruits[2].Id, map.Fruits[3].Id);
+        Near(2500, ui.View.PlayheadMs);
+        Check(baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty && !ui.View.WantsCapture,
             "Playback marquee edited objects or retained capture after release.");
     }
 

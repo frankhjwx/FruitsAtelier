@@ -11,6 +11,8 @@ public sealed partial class EditorView
     private SelectionSnapshot? selectionBeforeBox;
     private Rect selectionBox;
     private bool boxAdds, boxAnchors;
+    private bool ViewportFrozenByDrag => drag is DragKind.Objects or DragKind.BananaStart or DragKind.BananaEnd
+        || drag == DragKind.Marquee && (!AudioPlaying || boxTimeline);
     private sealed record SelectionSnapshot(Guid[] Objects, Guid[] Anchors, Guid Primary, Guid Track, DragKind Part);
     public IReadOnlyCollection<Guid> SelectedObjectIds => objectSelection.ToArray();
     public IReadOnlyCollection<Guid> SelectedAnchorIds => anchorSelection.ToArray();
@@ -100,7 +102,10 @@ public sealed partial class EditorView
         {
             var ids = boxAdds ? selectionBeforeBox.Objects.ToHashSet() : [];
             EnsureConversion();
-            foreach (var item in conversion!.Objects)
+            double padding = CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512 / pixelsPerMs;
+            double start = viewStart + (plot.Bottom - selectionBox.Bottom) / pixelsPerMs - padding;
+            double end = viewStart + (plot.Bottom - selectionBox.Y) / pixelsPerMs + padding;
+            foreach (var item in ObjectsInTimeRange(start, end))
             {
                 var bounds = CatchHitBounds(item);
                 if (Intersects(bounds, plot) && Intersects(bounds, selectionBox)) ids.Add(item.SourceId);

@@ -21,6 +21,12 @@ public sealed partial class EditorView
         }
         ResetTextCaret();
         mouseX = x; mouseY = y;
+        if (TimeJumpVisible)
+        {
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         if (LanguagePointerDown(x, y, button)) return;
         if (SliderDialogVisible)
         {
@@ -235,6 +241,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (TimeJumpVisible) { mouseX = x; mouseY = y; return; }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (ExportVisible) { mouseX = x; mouseY = y; return; }
@@ -335,6 +342,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
+        if (TimeJumpVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
@@ -361,6 +369,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (TimeJumpVisible) { timeJumpSelected = true; return; }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (ExportVisible) return;
@@ -394,6 +403,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl)
     {
+        if (TimeJumpVisible) return;
         if (languageMenuOpen) return;
         if (ErrorVisible)
         {
@@ -458,6 +468,7 @@ public sealed partial class EditorView
             if (virtualKey is 27 or 13) AnswerDiscard(2);
             return;
         }
+        if (TimeJumpVisible) { TimeJumpKey(virtualKey, ctrl); return; }
         if (SliderDialogVisible)
         {
             if (virtualKey == 27)
@@ -549,6 +560,12 @@ public sealed partial class EditorView
         if (languageMenuOpen) return;
         ResetTextCaret();
         if (ErrorVisible || DiscardConfirmationVisible) return;
+        if (TimeJumpVisible)
+        {
+            if (!char.IsControl(value) && (timeJumpSelected || timeJumpText.Length < 128))
+            { timeJumpText = (timeJumpSelected ? "" : timeJumpText) + value; timeJumpSelected = false; timeJumpError = ""; }
+            return;
+        }
         if (SliderDialogVisible) return;
         if (LibraryVisible || ExportVisible) { if (libraryField >= 0 && !char.IsControl(value) && LibraryFieldValue.Length < 4096) { LibraryFieldValue = (libraryReplace ? "" : LibraryFieldValue) + value; libraryReplace = false; } return; }
         if (editField < 0 || char.IsControl(value)) return;

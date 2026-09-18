@@ -140,6 +140,7 @@ internal static class PreviewSidebarTests
         Check(ui.Canvas.Texts.Any(text => text.Value == L.Get("ui.previewStats", "4", "2.5", "EZ")), "Easy stats");
         ui.ClickText(L.Get("preview.hardRock"));
         Near(10, ui.View.PreviewApproachRate); Near(6.5, ui.View.PreviewCircleSize);
+        Check(ui.Canvas.Texts.Any(text => text.Value == L.Get("ui.previewStats", "10", "6.5", "HR")), "Hard Rock stats use the gameplay AR cap");
         ui.ClickText(L.Get("preview.normal"));
         Near(8, ui.View.PreviewApproachRate); Near(5, ui.View.PreviewCircleSize);
         float before = ui.View.CanvasPlotBounds.Width;

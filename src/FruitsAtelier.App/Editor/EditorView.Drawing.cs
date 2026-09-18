@@ -32,6 +32,7 @@ public sealed partial class EditorView
         pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
         ClampView();
         EnsureConversion();
+        if (AudioPlaying && drag == DragKind.Marquee && !boxTimeline && dragMoved) MoveBox(mouseX, mouseY);
         c.Fill(new(0, 0, width, height), Background);
         DrawChrome(c);
         DrawCanvas(c);
@@ -53,6 +54,7 @@ public sealed partial class EditorView
         DrawLanguageMenu(c);
         DrawSliderDialog(c);
         DrawExportOverlay(c);
+        DrawTimeJump(c);
         DrawDiscardConfirmation(c);
     }
 
@@ -333,7 +335,7 @@ public sealed partial class EditorView
         float top = height - 120;
         c.Fill(new(0, top, width, 92), 0x20252E);
         c.Line(0, top, width, top, Grid);
-        var transport = new Rect(16, top + 14, 40, 36);
+        var transport = new Rect(16, top + 28, 40, 36);
         c.Fill(transport, AudioPlaying ? 0x344A50u : Surface, 5);
         c.Stroke(transport, AudioReady ? Accent : Muted, 1.5f, 5);
         float cx = transport.X + transport.Width / 2, cy = transport.Y + transport.Height / 2;
@@ -346,8 +348,13 @@ public sealed partial class EditorView
         else for (int i = 0; i < 13; i++)
             c.Line(cx - 5 + i, cy - 8 + i * 8f / 12, cx - 5 + i, cy + 8 - i * 8f / 12, icon);
         hits.Add(new(transport, TogglePlayback, AudioReady));
-        c.Text(Time(playhead), 69, top + 14, 21, Foreground, 149, true);
-        c.Text("/ " + Time(TimelineDurationMs), 70, top + 42, 11, Muted, 130);
+        TimeDisplayBounds = new(64, top + 22, 150, 48);
+        if (TimeDisplayBounds.Contains(mouseX, mouseY)) c.Fill(TimeDisplayBounds, Surface, 4);
+        c.Text(Time(playhead), 69, top + 22, 21, Foreground, 145, true);
+        c.Text("/ " + Time(TimelineDurationMs), 70, top + 50, 11, Muted, 130);
+        hits.Add(new(TimeDisplayBounds, OpenTimeJump, true));
+        if (TimeDisplayBounds.Contains(mouseX, mouseY) && !TimeJumpVisible)
+            c.Text(L.Get("timeJump.title"), 69, top - 20, 12, Foreground, 200);
         if (!AudioReady) c.Text(AudioNotice, 16, top + 71, 10, Gold, 192);
 
         float rateX = overview.Right - 360;

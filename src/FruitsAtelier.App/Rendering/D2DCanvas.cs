@@ -39,6 +39,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     private float dpi;
     public string AdapterName { get; private set; } = "";
     public int LoadedImageCount => images.Count;
+    internal int ImageDecodeCount { get; private set; }
 
     public D2DCanvas(nint hwnd, int width, int height, float dpi)
     {
@@ -174,6 +175,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
             if (!images.TryGetValue(key, out var image))
             {
                 image = LoadImage(filePath, key.Tint);
+                ImageDecodeCount++;
                 long bytes = (long)image.Width * image.Height * 4;
                 if (imageBytes + bytes > imageCacheLimit || images.Count >= 128) ClearImages();
                 images.Add(key, image);

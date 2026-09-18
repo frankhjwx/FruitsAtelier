@@ -3,7 +3,9 @@ namespace FruitsAtelier.Core;
 public sealed class OsuSection
 {
     public string Name { get; set; } = "";
-    public List<string> Lines { get; } = [];
+    public OsuSectionLines Lines { get; private init; } = new();
+
+    internal OsuSection DeepClone() => new() { Name = Name, Lines = Lines.DeepClone() };
 }
 
 public sealed partial class MapDocument
@@ -19,16 +21,12 @@ public sealed partial class MapDocument
         copy.AudioPath = AudioPath;
         copy.IsDemo = IsDemo;
         foreach (var section in OriginalSections)
-        {
-            var cloned = new OsuSection { Name = section.Name };
-            cloned.Lines.AddRange(section.Lines);
-            copy.OriginalSections.Add(cloned);
-        }
+            copy.OriginalSections.Add(section.DeepClone());
     }
 
     private bool FileStateEquals(MapDocument other) => SourcePath == other.SourcePath
         && AudioPath == other.AudioPath && IsDemo == other.IsDemo
         && OriginalSections.Count == other.OriginalSections.Count
         && OriginalSections.Zip(other.OriginalSections).All(pair => pair.First.Name == pair.Second.Name
-            && pair.First.Lines.SequenceEqual(pair.Second.Lines));
+            && pair.First.Lines.ContentEquals(pair.Second.Lines));
 }

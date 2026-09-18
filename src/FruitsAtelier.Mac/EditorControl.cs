@@ -25,6 +25,17 @@ internal sealed class EditorControl : Control, IDisposable
     public EditorControl()
     {
         Focusable = true; ClipToBounds = true;
+        View.RequestPasteTime = async () =>
+        {
+            int session = View.TimeJumpSession;
+            try
+            {
+                if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+                    View.PasteTimeJumpText(await clipboard.TryGetTextAsync() ?? "", session);
+            }
+            catch (Exception error) { View.SetNotice(error.Message); }
+            Refresh();
+        };
         View.RequestCopyText = async text =>
         {
             try { if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard) await clipboard.SetTextAsync(text); }
