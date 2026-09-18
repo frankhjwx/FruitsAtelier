@@ -49,6 +49,7 @@ internal sealed partial class MacWindow
     }
     private void ConfigureLibrary(bool show, bool smokeCheck)
     {
+        View.RequestOpenExternalPath = path => RunFile(() => { LibraryOperations.OpenExternalPath(path); return Task.CompletedTask; });
         View.InitializeLibrary(show, smokeCheck ? new LibrarySettings { Workspace = Path.Combine(MacPaths.Artifacts, "macos-check", "startup-workspace") } : null);
         View.RequestLibraryFolder = workspace => RunFile(async () =>
         {
@@ -75,7 +76,7 @@ internal sealed partial class MacWindow
             if (View.TryResumeLibraryProject(map)) return;
             if (!await ConfirmDiscard()) return;
             var session = await Task.Run(() => LibraryOperations.Open(map, View.LibrarySettings));
-            View.LoadWorkspace(session);
+            View.LoadWorkspace(session, checkAdditionalDifficulties: true);
             await audio.LoadAsync(View.Document.AudioPath); PollAudio();
         });
         View.RequestOsuExport = name => RunFile(async () =>
@@ -90,11 +91,13 @@ internal sealed partial class MacWindow
         });
         View.RequestWorkspaceExport = (overwrite, name) => RunFile(async () =>
         {
-            if (!View.SaveWorkspace() || View.WorkspaceSession is null) return;
+            if (!View.PrepareFileOperation()) return;
+            if ((overwrite || View.WorkspaceSession is null) && !View.SaveWorkspace()) return;
+            if (View.WorkspaceSession is null) return;
             var project = View.CaptureProject();
             var plan = WorkspaceExport.Plan(View.WorkspaceSession, project.Difficulties[View.ActiveDifficultyIndex], View.LibrarySettings.Songs, overwrite, name, View.CompensateTinyDroplets);
             await Task.Run(() => LibraryOperations.Export(View.WorkspaceSession, project, plan));
-            View.LibraryExportFinished(); View.SetNotice(L.Get("library.exported", plan.Target));
+            View.LibraryExportFinished(plan); View.SetNotice(L.Get("library.exported", plan.Target));
         });
     }
 }

@@ -1,7 +1,7 @@
 # Catch conversion references
 
 The conversion implements sliders for the editor's time–X curves, including repeat spans,
-imported v14 L/B/P/C slider paths with repeats, and banana showers. It uses the
+imported v12–v14 L/B/P/C slider paths with repeats, and banana showers. It uses the
 following osu!lazer sources at commit
 `48c4800e3ae4ee752452cdff83bd3787ccf3105f` in [ppy/osu](https://github.com/ppy/osu/tree/48c4800e3ae4ee752452cdff83bd3787ccf3105f).
 Adapted portions retain the upstream MIT licence in `LICENCE.osu.txt`.
@@ -16,7 +16,7 @@ Adapted portions retain the upstream MIT licence in `LICENCE.osu.txt`.
 | `osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmap.cs` | Stable time ordering after flattening parent objects |
 | `osu.Game.Rulesets.Catch/Objects/JuiceStreamPath.cs` | Time–X velocity bound and Pythagorean construction of a linear slider path within geometric Y bounds |
 | `osu.Game/Rulesets/Objects/SliderPath.cs` | Arc-length lookup of the resulting linear path |
-| `osu.Game/Rulesets/Objects/Legacy/ConvertHitObjectParser.cs` | v14 duplicate-point segmentation, collinear perfect curves, float-to-integer coordinates |
+| `osu.Game/Rulesets/Objects/Legacy/ConvertHitObjectParser.cs` | v12–v14 duplicate-point segmentation, collinear perfect curves, float-to-integer coordinates |
 | `osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs` | Red/green timing precedence, inherited SV and NaN tick metadata |
 | `osu.Game.Rulesets.Catch/Objects/BananaShower.cs` | Integer shower endpoints, float halving/accumulation and inclusive banana creation |
 | `osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapConverter.cs` | Imported path/repeat conversion and Catch-specific tick rules |
@@ -70,7 +70,7 @@ The inherited NaN tick flag is retained in the model and timing query; the
 referenced Catch converter does not forward that osu!-specific GenerateTicks
 flag into JuiceStream, so Catch events still follow its independent TickDistance.
 
-The file reader/writer performs v14 import/export separately. Native source
+The file reader/writer performs v12–v14 import and v14 export separately. Native source
 paths, curve-generated double paths and file-quantised paths are distinct
 representations; round-trip validation must compare the post-encoding result.
 

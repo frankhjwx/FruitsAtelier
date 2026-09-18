@@ -3,6 +3,35 @@ namespace FruitsAtelier.App.Platform;
 
 public static class LibraryOperations
 {
+    public static void OpenExternalPath(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+            return;
+        }
+        if (!File.Exists(path)) throw new FileNotFoundException(null, path);
+        var start = new System.Diagnostics.ProcessStartInfo(OperatingSystem.IsMacOS() ? "/usr/bin/open" : "notepad.exe") { UseShellExecute = false };
+        if (OperatingSystem.IsMacOS()) start.ArgumentList.Add("-t");
+        start.ArgumentList.Add(Path.GetFullPath(path));
+        System.Diagnostics.Process.Start(start);
+    }
+    public static IReadOnlyList<LibraryMap> MissingDifficulties(WorkspaceSession session, BeatmapProject project)
+    {
+        var known = session.Manifest.Difficulties.Select(d => d.Source)
+            .Concat(project.Difficulties.Select(d => d.Document.SourcePath)).Where(p => p is not null)
+            .Select(p => Path.GetFullPath(p!)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var folders = session.Manifest.Difficulties.SelectMany(d => new[] { d.Source, d.ExportTarget }).Where(p => p is not null)
+            .Select(p => Path.GetDirectoryName(p!)!).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (session.Manifest.ExternalSourceDirectory is { } external) folders.Add(external);
+        if (session.Manifest.SongsRoot is { } root && session.Manifest.SourceDirectory is { } relative)
+            folders.Add(Path.Combine(root, relative));
+        return folders.Where(Directory.Exists).SelectMany(Directory.EnumerateFiles)
+            .Where(p => Path.GetExtension(p).Equals(".osu", StringComparison.OrdinalIgnoreCase) && !known.Contains(Path.GetFullPath(p)))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase)
+            .Select(LibraryDatabase.ReadMetadata).OfType<LibraryMap>().ToArray();
+    }
+
     public static MapDocument StandaloneExportDocument(ProjectDifficulty difficulty, string name)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("project.invalid"));
@@ -51,11 +80,33 @@ public static class LibraryOperations
     }
     public static void Export(WorkspaceSession session, BeatmapProject project, WorkspaceExportPlan plan)
     {
+        ProjectDifficulty? added = null;
+        if (plan.ExpectedHash is null)
+        {
+            var document = plan.Document.DeepClone();
+            document.SourcePath = plan.Target;
+            added = BeatmapProject.FromDocuments([document]).Difficulties.Single();
+            var saved = WorkspaceProject.Open(session.Directory).Project.Difficulties.FirstOrDefault(d => d.Id == plan.DifficultyId);
+            int originalIndex = project.Difficulties.FindIndex(d => d.Id == plan.DifficultyId);
+            if (saved is not null) project.Difficulties[originalIndex] = saved;
+            else project.Difficulties.RemoveAt(originalIndex);
+            project.Difficulties.Add(added);
+            project.Validate();
+        }
         // All conversion and conflict checks have completed before touching Songs.
         string folder = Path.GetDirectoryName(plan.Target)!;
         Directory.CreateDirectory(folder);
         BeatmapResources.Copy(plan.Document, folder, plan.Output.ReadBack);
-        WorkspaceExport.Commit(session, plan);
+        WorkspaceExport.Commit(session, plan, updateAssociation: added is null);
+        if (added is not null)
+        {
+            string hash = WorkspaceProject.Hash(plan.Target);
+            session.Manifest.Difficulties.Add(new WorkspaceDifficulty
+            {
+                Id = added.Id, Name = added.Name, Source = plan.Target, SourceHash = hash,
+                ExportTarget = plan.Target, ExportHash = hash
+            });
+        }
         WorkspaceProject.Save(session, project);
     }
 }

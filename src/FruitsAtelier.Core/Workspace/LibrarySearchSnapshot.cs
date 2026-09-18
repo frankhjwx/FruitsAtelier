@@ -11,9 +11,11 @@ public sealed class LibrarySearchSnapshot : IDisposable
 {
     private readonly SqliteConnection db;
     private readonly string catalogPath;
+    private readonly bool projectsOnly;
     public int Count { get; }
     internal LibrarySearchSnapshot(SqliteConnection connection, string songs, string query, bool projectsOnly)
     {
+        this.projectsOnly = projectsOnly;
         catalogPath = connection.DataSource;
         connection.Dispose();
         db = new SqliteConnection("Data Source=:memory:;Pooling=False");
@@ -74,13 +76,38 @@ public sealed class LibrarySearchSnapshot : IDisposable
             string? project = reader.IsDBNull(4) ? null : reader.GetString(4);
             var map = reader.IsDBNull(6) ? new LibraryMap(reader.GetString(2), reader.GetString(1), reader.GetString(3), "", "", "", "", "", "", "", "", "", project)
                 : JsonSerializer.Deserialize<LibraryMap>(reader.GetString(6))! with { ProjectPath = project };
-            rows.Add(new(reader.GetInt32(0), reader.GetString(1), map, reader.GetInt32(5)));
+            int difficultyCount = reader.GetInt32(5);
+            if (projectsOnly && project is not null)
+                lock (WorkspaceProject.Gate) difficultyCount = WorkspaceProject.ReadManifest(project).Difficulties.Count;
+            rows.Add(new(reader.GetInt32(0), reader.GetString(1), map, difficultyCount));
         }
         return rows;
     }
     public IReadOnlyList<LibraryMap> Difficulties(LibrarySetRow set, int start, int count = 64)
     {
         using var attachment = Attach();
+        if (projectsOnly && set.Map.ProjectPath is { } project)
+        {
+            WorkspaceManifest manifest;
+            lock (WorkspaceProject.Gate) manifest = WorkspaceProject.ReadManifest(project);
+            var entries = new List<LibraryMap>();
+            foreach (var difficulty in manifest.Difficulties.Skip(Math.Max(0, start)).Take(Math.Clamp(count, 1, 128)))
+            {
+                if (Path.GetFileName(difficulty.File) != difficulty.File || !difficulty.File.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("project.invalid"));
+                var metadata = set.Map;
+                if (difficulty.Source is { } source)
+                {
+                    using var lookup = db.CreateCommand();
+                    lookup.CommandText = "SELECT data FROM maps WHERE path=$p";
+                    lookup.Parameters.AddWithValue("$p", source);
+                    if (lookup.ExecuteScalar() is string data) metadata = JsonSerializer.Deserialize<LibraryMap>(data)!;
+                }
+                entries.Add(metadata with { Path = Path.Combine(project, difficulty.File), Directory = project,
+                    Difficulty = difficulty.Name, ProjectPath = project });
+            }
+            return entries;
+        }
         using var command = db.CreateCommand();
         command.CommandText = "SELECT m.data FROM matches s JOIN maps m ON m.path=s.path WHERE s.groupKey=$k ORDER BY s.path LIMIT $n OFFSET $s";
         command.Parameters.AddWithValue("$k", set.Key); command.Parameters.AddWithValue("$n", Math.Clamp(count, 1, 128)); command.Parameters.AddWithValue("$s", Math.Max(0, start));

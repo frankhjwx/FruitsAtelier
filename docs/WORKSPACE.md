@@ -1,6 +1,14 @@
 # Workspace and Local Library
 
+**My Projects** shows the difficulty count and names from each saved workspace manifest. **All Songs** shows the source set's difficulties. Opening or resuming an existing workspace from the Library checks its source folders for additional `.osu` difficulties and offers to import them. Import appends difficulties without replacing existing edits or undo history; save the project to persist them.
+
+Creating a new difficulty in osu! saves the current edits into a new workspace difficulty and a new `.osu`, then activates the new difficulty. The original difficulty retains its last saved content and export link; its source `.osu` is unchanged. The new workspace difficulty retains editable FSliders and handles. Files recorded only as older export targets are offered for import when they are not already represented by a project difficulty.
+
+Right-click an editor difficulty tab to open its source `.osu`, saved `.catchdiff`, or containing folder. Files open in a text editor; unavailable files are disabled. For workspace difficulties, the folder action opens the workspace directory. **Open osu! Songs folder** opens the difficulty's source beatmap directory, falling back to its export directory when no source is linked.
+
 The application opens in the Library and supports osu!stable's Songs directory. Choose a workspace and Songs directory in **Settings**. Songs is optional and may be configured later; startup and entering the library do not automatically open Settings. When configured, Songs and the workspace must be separate directories. Creating, saving, saving as, and opening workspace projects, including **My Projects**, work without Songs. Scanning Songs and exporting into Songs require it; standalone `.osu` export does not. Settings are stored in `FruitsAtelier/library.json` under the system application-data directory, independently of the launch directory.
+
+Saving an imported difficulty with no export record opens the export choices before writing its edits. Once a difficulty has been exported to Songs, including an overwrite or a newly created difficulty, Save / Ctrl+S updates its linked `.osu` directly. Ctrl+E always opens the manual export panel. Export associations persist in the workspace manifest.
 
 ## File structure
 
@@ -35,7 +43,7 @@ External sources are stored in the current workspace's `library.db`, scanned aft
 
 The sidebar contains **All songs** and **My projects**. Each set card shows its title and `artist // mapper`. Background thumbnails fit their frames proportionally, without stretching. Scroll the beatmap list with the wheel, drag its contents, or drag its right-hand scrollbar. The difficulty list has its own scrollbar. Double-click a set, press Enter with a set selected, or use its editing button to enter the editor. **← Library** and Esc return to the library without discarding the current editing session. The current set remains visible on return. Search text, selection, list position and difficulty-list position are remembered separately for each category in `workspace/library-view.json`, including across restarts. Background scans preserve the list position.
 
-The library scans `.osu` metadata directly and indexes only Mode=2. Entering the editor still requires v14, as supported by the current format reader. Separate Songs directories identify separate beatmap sets; titles and online IDs do not merge sets. Starting an edit imports the directory's Catch difficulties into the workspace, while an existing associated project offers **Continue editing**. Double-clicking a beatmap card in **All Songs** or **My Projects** performs the same open operation. A single click only selects the card, and unsaved changes still prompt first. **My Projects** also includes new projects without Songs associations.
+The library scans `.osu` metadata directly and indexes only Mode=2. Entering the editor supports v12, v13 and v14 through the format reader. Separate Songs directories identify separate beatmap sets; titles and online IDs do not merge sets. Starting an edit imports the directory's Catch difficulties into the workspace, while an existing associated project offers **Continue editing**. Double-clicking a beatmap card in **All Songs** or **My Projects** performs the same open operation. A single click only selects the card, and unsaved changes still prompt first. **My Projects** also includes new projects without Songs associations.
 
 Search uses Unicode normalization and case-insensitive substring matching across Title, TitleUnicode, Artist, ArtistUnicode, Creator, Version, Tags, and Source. All search terms must match. Original and romanized metadata are supported, but missing readings are not inferred. SQL uses bound parameters.
 
@@ -53,7 +61,7 @@ Opening a project and refreshing the editor check source `.osu` files, audio, Ev
 
 ## Explicit export
 
-Saving, adding difficulties, browsing, and searching do not write to Songs. Save from the File menu or Ctrl/Cmd+S saves the project and opens the export overlay for the current difficulty. Export or Ctrl/Cmd+E opens the same overlay directly. The map editor stays visible underneath, with canvas input blocked until Cancel or Esc dismisses the overlay. Save As still creates a project copy.
+Adding difficulties, browsing, and searching do not write to Songs. Save from the File menu or Ctrl/Cmd+S updates the linked Songs file for an already exported difficulty; an imported difficulty without an export record opens the export choices first. Export or Ctrl/Cmd+E always opens the overlay directly. The map editor stays visible underneath, with canvas input blocked until Cancel or Esc dismisses the overlay. Save As still creates a project copy.
 
 Select an export mode, edit its fields, then use the single action button. New difficulty is selected initially. Up/Down changes the mode, Tab focuses the name field where applicable, and Enter activates the action when the name field is not focused. Repeating the save shortcut inside the overlay preserves the current input.
 

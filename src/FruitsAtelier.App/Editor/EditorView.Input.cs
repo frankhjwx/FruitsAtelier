@@ -37,6 +37,7 @@ public sealed partial class EditorView
         if (LibraryVisible && LibraryPointerDown(x, y, button)) return;
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
+        if (button == 2 && DifficultyTabContext(x, y)) return;
         if (menu >= 0 && button != 0) { menu = -1; return; }
         if (button == 2)
         {
@@ -57,6 +58,7 @@ public sealed partial class EditorView
             drag = DragKind.Pan; dragStartY = y; dragStartTime = AudioPlaying ? playhead : viewStart; return;
         }
         if (button != 0) return;
+        if (BeginTabPointer(x, y)) return;
         if (editField >= 0 && !CommitField()) return;
         if (menu >= 0)
         {
@@ -241,13 +243,13 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
-        if (TimeJumpVisible) { mouseX = x; mouseY = y; return; }
+        mouseX = x; mouseY = y;
+        if (TimeJumpVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
-        if (ExportVisible) { mouseX = x; mouseY = y; return; }
-        if (languageMenuOpen) { mouseX = x; mouseY = y; return; }
-        if (LibraryVisible) { mouseX = x; mouseY = y; MoveLibraryPointer(y); return; }
-        mouseX = x; mouseY = y;
+        if (ExportVisible || languageMenuOpen) return;
+        if (LibraryVisible) { MoveLibraryPointer(y); return; }
+        if (tabPointer) { MoveTabPointer(x); return; }
         if (drag == DragKind.PreviewResize) { previewWidth = Math.Clamp(width - x, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)); return; }
         if (drag == DragKind.None)
         {
@@ -342,6 +344,12 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
+        if (tabPointer && button == 0)
+        {
+            MoveTabPointer(x); tabPointer = false;
+            if (!tabMoved) SwitchDifficulty(tabPressed);
+            return;
+        }
         if (TimeJumpVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
@@ -424,6 +432,7 @@ public sealed partial class EditorView
         if (contextItems.Count > 0) { contextItems.Clear(); return; }
         if (difficultyTabStrip.Contains(x, y))
         {
+            tabRemainder = 0;
             firstDifficultyTab = Math.Clamp(firstDifficultyTab + (delta < 0 ? 1 : delta > 0 ? -1 : 0), 0,
                 Math.Max(0, difficulties.Count - visibleDifficultyTabs));
             return;
@@ -577,6 +586,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction()
     {
+        tabPointer = false;
         if (libraryPointerActive) { libraryPointerActive = false; libraryPressedMap = null; RememberLibraryPosition(); }
         if (drag == DragKind.Marquee) { CancelBox(); contextItems.Clear(); return; }
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)

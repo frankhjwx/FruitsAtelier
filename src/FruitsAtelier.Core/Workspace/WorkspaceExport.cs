@@ -36,7 +36,7 @@ public static class WorkspaceExport
         return new(difficulty.Id, document, target!, expected, OsuBeatmapWriter.Serialize(document, compensate));
     }
 
-    public static void Commit(WorkspaceSession session, WorkspaceExportPlan plan)
+    public static void Commit(WorkspaceSession session, WorkspaceExportPlan plan, bool updateAssociation = true)
     {
         WorkspaceProject.RejectLinks(plan.Target);
         if (plan.ExpectedHash is null)
@@ -60,8 +60,11 @@ public static class WorkspaceExport
             }
             AtomicFile.Write(plan.Target, plan.Output.Text);
         }
-        var entry = session.Manifest.Difficulties.Single(d => d.Id == plan.DifficultyId);
-        entry.ExportTarget = plan.Target; entry.ExportHash = WorkspaceProject.Hash(plan.Target);
+        if (updateAssociation)
+        {
+            var entry = session.Manifest.Difficulties.Single(d => d.Id == plan.DifficultyId);
+            entry.ExportTarget = plan.Target; entry.ExportHash = WorkspaceProject.Hash(plan.Target);
+        }
     }
     private static void SetMetadata(MapDocument document, string key, string value)
     {

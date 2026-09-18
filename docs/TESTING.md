@@ -62,6 +62,8 @@ It creates 500,000 synthetic map records in distinct sets under `artifacts/libra
 
 ## External test resources
 
+To check an individual supported `.osu` without modifying it, run the Formats test executable with `--import-roundtrip <path>`. This verifies project persistence and v14 export preserve raw object/timing lines and the converted Catch sequence, times and positions.
+
 The repository contains synthetic format fixtures, older `.catchproj` compatibility fixtures, and OGG audio fixtures. These checks additionally require local resources:
 
 - The two real-beatmap checks enabled by default in Formats need external beatmaps under `artifacts/beatmaps`. `--skip-external-fixtures` skips them and is used by CI and Mac scripts.

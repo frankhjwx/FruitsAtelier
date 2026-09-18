@@ -2,8 +2,21 @@ using FruitsAtelier.Core;
 using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
 
+if (args.Length == 2 && args[0] == "--import-roundtrip")
+{
+    var imported = OsuBeatmapReader.ReadFile(args[1]);
+    var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(imported));
+    Check(imported.ContentEquals(restored), "Project round trip changed imported content");
+    var exported = OsuBeatmapWriter.Serialize(restored);
+    Preserved(imported, exported.ReadBack);
+    Check(exported.ObjectSequenceMatches && exported.MaxConvertedXError == 0 && exported.MaxConvertedTimeErrorMs == 0, "Import/export changed Catch objects");
+    Console.WriteLine($"PASS {Path.GetFileName(args[1])}: {imported.Fruits.Count} fruits, {imported.ImportedSliders.Count} sliders, {imported.BananaShowers.Count} showers; project and v14 export preserve content");
+    return 0;
+}
+
 var tests = new (string Name, Action Run)[]
 {
+    ("v12 and v13 imports preserve gameplay, optional fields and v14 export", OlderVersions),
     ("Workspace isolation, recovery, indexing and explicit export", WorkspaceTests.Run),
     ("Multi-difficulty projects preserve content, history and compatibility", MultiProjectTests.Run),
     ("Pre-rename schema 1 projects preserve user names and editable curves", RenameCompatibilityTests.Run),
@@ -137,6 +150,31 @@ static void OriginalRoundTrip()
     Check(r.Text.Contains("Video,0,\"unloaded.mp4\""), "Video reference dropped");
     Check(r.Text.Contains("[PrivateData]\r\ncustom:value\r\nkeep,this,line"), "Unknown section altered");
     Check(r.ObjectSequenceMatches, "Unedited sequence changed"); Near(0, r.MaxConvertedXError); Near(0, r.MaxConvertedTimeErrorMs);
+}
+
+static void OlderVersions()
+{
+    foreach (int version in new[] { 12, 13 })
+    foreach (bool optional in new[] { false, true })
+    {
+        string text = Fixture();
+        if (optional) text = text.Replace("ApproachRate:8", "")
+            .Replace(",2|4|8,2:3|3:2|1:0,2:3:4:65:edge.wav", "")
+            .Replace(",1:2:3:60:spinner.wav", "");
+        var reference = CatchStreamConverter.Convert(OsuBeatmapReader.Read(text));
+        var document = OsuBeatmapReader.Read("\uFEFF\n" + text.Replace("format v14", $"format v{version}"));
+        Near(optional ? 7 : 8, document.ApproachRate);
+        var converted = CatchStreamConverter.Convert(document);
+        Check(reference.Success && converted.Success, "Old-format conversion failed");
+        Check(reference.Objects.Select(o => (o.Kind, o.TimeMs, o.X)).SequenceEqual(converted.Objects.Select(o => (o.Kind, o.TimeMs, o.X))), "Version changed gameplay");
+        var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(document));
+        Check(document.ContentEquals(restored), "Old-format project round trip changed content");
+        var result = OsuBeatmapWriter.Serialize(restored);
+        Check(result.Text.StartsWith("osu file format v14\r\n"), "Output must use v14");
+        Preserved(document, result.ReadBack);
+        Check(result.ObjectSequenceMatches, "Old-format export changed object sequence");
+        Near(0, result.MaxConvertedXError); Near(0, result.MaxConvertedTimeErrorMs);
+    }
 }
 
 static void EditFruit()
@@ -382,7 +420,8 @@ static void InvalidProjects()
 static void InvalidBeatmaps()
 {
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("Mode: 2", "Mode: 0")), "non-Catch input");
-    Throws(() => OsuBeatmapReader.Read(Fixture().Replace("format v14", "format v13")), "unsupported version");
+    foreach (string version in new[] { "v11", "v15", "v128", "v12x" })
+        Throws(() => OsuBeatmapReader.Read(Fixture().Replace("format v14", "format " + version)), "unsupported version");
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("250,21,8", "250,128,8")), "unknown object");
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("-100,500,4", "-100,NaN,4")), "NaN red timing");
 }

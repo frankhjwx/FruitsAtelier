@@ -12,7 +12,7 @@
 
 - 预览播放 [Catch 打击音](docs/HITSOUNDS.md)，支持谱面自定义音效、滑条 tick 和香蕉音效。
 
-- 打开 `.osz`、v14 / Mode=2 `.osu` 和 `.catchproj` 工程。
+- 打开 `.osz`、v12–v14 / Mode=2 `.osu` 和 `.catchproj` 工程。
 - 编辑水果、FSlider 和香蕉雨，支持节拍吸附、多选、批量移动、剪切复制和撤销重做。
 - 将导入的 Legacy Slider 转换为可编辑的 FSlider，调整锚点、贝塞尔控制柄和行程次数。
 - 播放 MP3 / OGG / WAV，拖动时间轴定位；预览支持 AR、CS 和 Catch 皮肤。

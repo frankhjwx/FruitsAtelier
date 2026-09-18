@@ -79,7 +79,7 @@ public sealed partial class EditorView
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
     public bool IsEditingText => TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
-    public bool WantsCapture => drag != DragKind.None || libraryPointerActive;
+    public bool WantsCapture => drag != DragKind.None || libraryPointerActive || tabPointer;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;
     public double PlayheadMs => playhead;

@@ -23,6 +23,10 @@ internal static class DiscardConfirmationTests
             view.ShowDiscardConfirmation(a => answer = a);
             canvas.Clear(); view.Render(canvas, 980, 620);
             var text = canvas.Texts.Single(t => t.Value == L.Get(key));
+            view.PointerMove(text.X + 2, text.Y + 2, false, false);
+            canvas.Clear(); view.Render(canvas, 980, 620);
+            if (!canvas.Fills.Any(f => f.Bounds.Contains(text.X + 2, text.Y + 2) && f.Color is 0x3D495A or 0x3A6260))
+                throw new Exception("Modal buttons must respond to pointer hover");
             view.PointerDown(text.X + 2, text.Y + 2, 0, false, false);
             if (answer != expected || view.DiscardConfirmationVisible) throw new Exception("Incorrect confirmation action");
         }

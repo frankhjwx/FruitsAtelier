@@ -36,7 +36,7 @@ public static class OsuBeatmapReader
             if (!header)
             {
                 if (trimmed.Length == 0) continue;
-                if (trimmed != "osu file format v14")
+                if (trimmed is not ("osu file format v12" or "osu file format v13" or "osu file format v14"))
                     throw new InvalidDataException(L.Get("core.reader.formatVersion"));
                 header = true;
                 continue;

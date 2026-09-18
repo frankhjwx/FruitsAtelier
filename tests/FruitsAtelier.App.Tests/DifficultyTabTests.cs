@@ -13,12 +13,23 @@ internal static class DifficultyTabTests
         var view = new EditorView(); view.LoadProject(project);
         var canvas = new RecordingCanvas(); view.Render(canvas, 1440, 900);
         var a = canvas.Texts.Single(t => t.Value == "A");
-        var b = canvas.Texts.Single(t => t.Value == "1234567890123456…");
-        var emoji = canvas.Texts.Single(t => t.Value == string.Concat(Enumerable.Repeat("🍎", 16)) + "…");
+        var b = canvas.Texts.Single(t => t.Value == project.Difficulties[1].Name);
+        var emoji = canvas.Texts.Single(t => t.Value == project.Difficulties[2].Name);
         Check(a.Y >= 40 && a.Y < 84 && a.Y == b.Y, "Tabs must be below the toolbar");
         Check(emoji.X - b.X > b.X - a.X, "Tab widths must follow name width");
         Check(canvas.Texts.Single(t => t.Value == "+" && t.Y < 128).X < 1100, "Tabs must not stretch across the row");
         Check(view.CaptureProject().Difficulties[1].Name.Length == 20, "Truncation must not alter project names");
+        canvas.Clear(); view.Render(canvas, 600, 620);
+        b = canvas.Texts.Single(t => t.Y == 54 && t.Value.StartsWith("123") && t.Value.EndsWith("…"));
+        view.PointerMove(b.X + 2, b.Y + 2, false, false);
+        canvas.Clear(); view.Render(canvas, 600, 620);
+        var tip = canvas.Texts.Single(t => t.Value == project.Difficulties[1].Name);
+        view.PointerMove(b.X + 12, b.Y + 2, false, false);
+        canvas.Clear(); view.Render(canvas, 600, 620);
+        Check(canvas.Texts.Single(t => t.Value == project.Difficulties[1].Name).X == tip.X + 10, "Full-name tooltip follows the pointer");
+        view.PointerMove(800, 300, false, false);
+        canvas.Clear(); view.Render(canvas, 600, 620);
+        Check(!canvas.Texts.Any(t => t.Value == project.Difficulties[1].Name), "Full-name tooltip disappears outside the tab");
     }
 
     public static void Editing()
@@ -91,12 +102,19 @@ internal static class DifficultyTabTests
         canvas.Clear(); view.Render(canvas, 980, 620);
         var last = canvas.Texts.Single(t => t.Value == "Diff 11");
         view.PointerDown(last.X + 2, last.Y + 2, 0, false, false);
+        view.PointerUp(last.X + 2, last.Y + 2, 0);
         Check(view.ActiveDifficultyIndex == 11 && !view.IsDirty, "Scrolled tabs remain clickable and clean");
         view.Render(canvas, 1440, 900);
         canvas.Clear(); view.Render(canvas, 980, 620);
         Check(canvas.Texts.Any(t => t.Value == "Diff 11"), "Resize keeps selected tab visible");
         view.KeyDown(9, true, false); canvas.Clear(); view.Render(canvas, 980, 620);
         Check(view.ActiveDifficultyIndex == 0 && canvas.Texts.Any(t => t.Value == "Diff 0"), "Keyboard wraps and reveals current tab");
+        var first = canvas.Texts.Single(t => t.Value == "Diff 0");
+        view.PointerDown(first.X + 60, first.Y + 2, 0, false, false);
+        view.PointerMove(first.X - 140, first.Y + 2, false, false);
+        canvas.Clear(); view.Render(canvas, 980, 620);
+        view.PointerUp(first.X - 140, first.Y + 2, 0);
+        Check(view.ActiveDifficultyIndex == 0 && !view.IsDirty && !canvas.Texts.Any(t => t.Value == "Diff 0"), "Dragging scrolls tabs without switching or editing difficulties");
         var plus = canvas.Texts.Single(t => t.Value == "+" && t.Y < 128);
         view.PointerDown(plus.X + 2, plus.Y + 2, 0, false, false); canvas.Clear(); view.Render(canvas, 980, 620);
         var add = canvas.Texts.Single(t => t.Value == L.Get("project.add"));

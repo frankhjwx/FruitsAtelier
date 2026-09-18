@@ -4,12 +4,14 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 
 ## Input and output
 
-- Accept only v14 / Mode=2; the reader rejects other format versions and unsupported object types.
+- Accept v12, v13 and v14 / Mode=2; export v14. The reader rejects other format versions and unsupported object types.
 - Preserve General, Editor, Metadata, Difficulty, Events, TimingPoints, Colours, HitObjects, and audio/sample references.
 - Preserve raw section text and unedited object lines; unsupported object types are errors.
 - Save authored anchors, Bezier handles, and editing constraints in the editor project, rather than custom `.osu` object fields.
 
 ## Object and timing rules
+
+Versions 12–14 share the Catch timing, slider tick and legacy coordinate rules used here. Import preserves raw sections and object/sample fields; saving an editor project retains that content, and `.osu` export emits a v14 header. Older timing-offset and tick-generation rules (before v5 and v8 respectively) are outside the supported input range. These boundaries were checked against the pinned [LegacyBeatmapDecoder](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs) and [CatchBeatmapConverter](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapConverter.cs).
 
 | Item | Representation |
 | --- | --- |

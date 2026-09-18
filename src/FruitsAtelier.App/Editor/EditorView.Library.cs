@@ -100,6 +100,7 @@ public sealed partial class EditorView
     {
         if (WorkspaceSession is not { } session || map.ProjectPath is null || session.Directory != map.ProjectPath) return false;
         CloseLibrary();
+        OfferAdditionalDifficulties();
         return true;
     }
     public void CheckWorkspaceResources()
@@ -124,14 +125,55 @@ public sealed partial class EditorView
         SetNotice(L.Get("files.saved", WorkspaceSession.Directory));
         return true;
     }
-    public void LoadWorkspace(WorkspaceSession session)
+    public bool CurrentDifficultyHasExport => WorkspaceSession?.Manifest.Difficulties
+        .Any(d => d.Id == difficulties[activeDifficulty].Id && d.ExportTarget is not null && d.ExportHash is not null) == true;
+    public void SaveCurrentDifficulty()
+    {
+        if (!PrepareFileOperation()) return;
+        var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id);
+        if (CurrentDifficultyHasExport)
+            RequestWorkspaceExport?.Invoke(true, CurrentDifficultyName);
+        else if (entry?.Source is not null || Document.SourcePath is { } source && Path.GetExtension(source).Equals(".osu", StringComparison.OrdinalIgnoreCase))
+            ShowWorkspaceExport();
+        else SaveWorkspace();
+    }
+    public void LoadWorkspace(WorkspaceSession session, bool checkAdditionalDifficulties = false)
     {
         LoadProject(session.Project); WorkspaceSession = session; CheckWorkspaceResources();
         libraryProjectsNeedReindex = true; QueueLibrarySearch(); CloseLibrary();
         if (session.IsNewImport) OfferSliderConversion(true);
+        else if (checkAdditionalDifficulties) OfferAdditionalDifficulties();
     }
-    public void LibraryExportFinished()
+    private void OfferAdditionalDifficulties()
     {
+        if (WorkspaceSession is not { } session) return;
+        var additions = FruitsAtelier.App.Platform.LibraryOperations.MissingDifficulties(session, CaptureProject());
+        if (additions.Count == 0) return;
+        ShowDiscardConfirmation(answer =>
+        {
+            if (answer != 6) return;
+            try
+            {
+                var imported = BeatmapProject.FromDocuments(additions.Select(m => OsuBeatmapReader.ReadFile(m.Path)).ToArray());
+                var candidate = CaptureProject();
+                candidate.Difficulties.AddRange(imported.Difficulties);
+                candidate.Validate();
+                difficulties.AddRange(imported.Difficulties.Select(d => new DifficultySession(d)));
+                projectStructureDirty = true;
+                PreloadProjectHitsounds();
+            }
+            catch (Exception e) { ShowError(e.Message); }
+        });
+        additionalDifficulties = additions;
+    }
+    public void LibraryExportFinished(WorkspaceExportPlan plan)
+    {
+        if (plan.ExpectedHash is null && WorkspaceSession is { } session)
+        {
+            LoadWorkspace(WorkspaceProject.Open(session.Directory));
+            int index = WorkspaceSession!.Manifest.Difficulties.FindIndex(d => string.Equals(d.Source, plan.Target, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0) SwitchDifficulty(index);
+        }
         CheckWorkspaceResources(); StartLibraryScan(); CloseLibrary();
     }
     public void RefreshLibrary() { librarySettingsOpen = false; libraryRescanRequested = scanTask is { IsCompleted: false }; StartLibraryScan(); }
@@ -245,12 +287,11 @@ public sealed partial class EditorView
         libraryCards.Clear();
         libraryScrollTrack = libraryDiffTrack = default;
         c.Fill(new(0, 0, width, height), Background);
-        c.Fill(new(0, 0, width, 64), Panel);
-        c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png"), new(20, 13, 48, 36));
-        c.Text(L.Get(resourcePage ? "library.referenceErrors" : exportPage ? "library.export" : "library.title"), 82, 21, 20, Foreground, width - 480, true);
-        Button(c, new(width - 454, 16, 110, 32), L.Get("library.settings"), () => { draftWorkspace = LibrarySettings.Workspace; draftSongs = LibrarySettings.Songs; librarySettingsOpen = !librarySettingsOpen; exportPage = resourcePage = false; }, librarySettingsOpen);
-        DrawLanguageButton(c, new(width - 330, 16, 198, 32));
-        if (HasEditorProject) Button(c, new(width - 122, 16, 106, 32), L.Get("library.editor"), CloseLibrary);
+        DrawHeader(c);
+        c.Text(L.Get(resourcePage ? "library.referenceErrors" : exportPage ? "library.export" : "library.title"), 109, 11, 13, Foreground, width - 535, true);
+        Button(c, new(width - 414, 6, 110, 28), L.Get("library.settings"), () => { draftWorkspace = LibrarySettings.Workspace; draftSongs = LibrarySettings.Songs; librarySettingsOpen = !librarySettingsOpen; exportPage = resourcePage = false; }, librarySettingsOpen);
+        DrawLanguageButton(c, HeaderLanguageBounds);
+        if (HasEditorProject) Button(c, HeaderNavigationBounds, L.Get("library.editor"), CloseLibrary);
         if (resourcePage)
         {
             c.Text(L.Get("library.referenceHelp"), 32, 96, 14, Muted, width - 64);
@@ -288,7 +329,7 @@ public sealed partial class EditorView
             c.Text(libraryError, 32, 430, 14, Error, width - 64);
             return;
         }
-        c.Fill(new(0, 64, 190, height - 64), Panel);
+        c.Fill(new(0, HeaderHeight, 190, height - HeaderHeight), Panel);
         Button(c, new(16, 88, 158, 36), L.Get("library.all"), () => SwitchLibraryCategory(false), !libraryProjectsOnly);
         Button(c, new(16, 134, 158, 36), L.Get("library.projects"), () => SwitchLibraryCategory(true), libraryProjectsOnly);
         var noticeLines = libraryNotice.Split('\n');
@@ -331,7 +372,7 @@ public sealed partial class EditorView
             c.Text(title, 314, y + 10, 16, Foreground, listWidth - 116, true);
             string artist = map.ArtistUnicode.Length > 0 ? map.ArtistUnicode : map.Artist;
             c.Text(map.Creator.Length > 0 ? L.Get("library.artistMapper", artist, map.Creator) : artist, 314, y + 33, 12, Muted, listWidth - 116);
-            c.Text(L.Get(map.ProjectPath is null ? "library.diffCount" : "library.projectCount", group.Count), 314, y + 53, 11, Accent, listWidth - 116);
+            c.Text(L.Get(libraryProjectsOnly ? "library.projectCount" : "library.diffCount", group.Count), 314, y + 53, 11, Accent, listWidth - 116);
             c.Unclip();
         }
         c.Unclip();
@@ -358,7 +399,8 @@ public sealed partial class EditorView
         {
             var diff = libraryBrowser.Detail(i);
             if (diff is null) continue;
-            if (!libraryRatings.ContainsKey(diff.Path) && diff.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)) pending.Add(diff);
+            if (!libraryRatings.ContainsKey(diff.Path) && (diff.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
+                || diff.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))) pending.Add(diff);
             float y = 334 + (i - libraryDiffScroll) * 40;
             libraryRatings.TryGetValue(diff.Path, out var stars);
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "osu", "RulesetCatch.png"), new(x, y, 22, 22), DifficultyColour(stars));
@@ -373,7 +415,7 @@ public sealed partial class EditorView
                 var result = new Dictionary<string, double?>();
                 foreach (var entry in pending)
                 {
-                    try { var d = OsuBeatmapReader.ReadFile(entry.Path); var converted = CatchStreamConverter.Convert(d); result[entry.Path] = converted.Success ? CatchDifficultyCalculator.Calculate(converted.Objects, d.CircleSize).StarRating : null; }
+                    try { var d = entry.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase) ? ProjectSerializer.ReadFile(entry.Path) : OsuBeatmapReader.ReadFile(entry.Path); var converted = CatchStreamConverter.Convert(d); result[entry.Path] = converted.Success ? CatchDifficultyCalculator.Calculate(converted.Objects, d.CircleSize).StarRating : null; }
                     catch (Exception) { result[entry.Path] = null; }
                 }
                 return result;

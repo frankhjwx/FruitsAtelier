@@ -7,7 +7,82 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private int firstDifficultyTab;
+    private float tabRemainder, tabDragX, tabDragStartOffset, tabAvailable;
+    private float[] tabWidths = [];
+    private bool tabPointer, tabMoved, tabOverflow;
+    private int tabPressed;
+    private readonly HashSet<int> truncatedTabs = [];
+
+    private bool BeginTabPointer(float x, float y)
+    {
+        if (!tabOverflow || menu >= 0 || contextItems.Count > 0) return false;
+        int hit = difficultyTabTargets.FindIndex(t => t.Bounds.Contains(x, y));
+        if (hit < 0) return false;
+        tabPointer = true; tabMoved = false; tabPressed = difficultyTabTargets[hit].Index;
+        tabDragX = x; tabDragStartOffset = tabWidths.Take(firstDifficultyTab).Sum(w => w + 6) + tabRemainder;
+        return true;
+    }
+    private void MoveTabPointer(float x)
+    {
+        if (Math.Abs(x - tabDragX) > 4) tabMoved = true;
+        if (!tabMoved) return;
+        float offset = Math.Clamp(tabDragStartOffset + tabDragX - x, 0, Math.Max(0, tabWidths.Sum(w => w + 6) - 6 - tabAvailable));
+        firstDifficultyTab = 0;
+        while (firstDifficultyTab < tabWidths.Length - 1 && offset >= tabWidths[firstDifficultyTab] + 6)
+            offset -= tabWidths[firstDifficultyTab++] + 6;
+        tabRemainder = offset; revealDifficultyTabs = false;
+    }
+    public Action<string>? RequestOpenExternalPath { get; set; }
+    private readonly List<(Rect Bounds, int Index)> difficultyTabTargets = [];
+
+    private bool DifficultyTabContext(float x, float y)
+    {
+        var target = difficultyTabTargets.FindIndex(t => t.Bounds.Contains(x, y));
+        if (target < 0) return false;
+        var difficulty = difficulties[difficultyTabTargets[target].Index];
+        var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulty.Id);
+        string? osu = entry?.Source ?? difficulty.History.Document.SourcePath;
+        if (osu is not null && !Path.GetExtension(osu).Equals(".osu", StringComparison.OrdinalIgnoreCase)) osu = null;
+        string? catchdiff = entry is null || WorkspaceSession is null ? null : Path.Combine(WorkspaceSession.Directory, entry.File);
+        string? folder = catchdiff is not null ? Path.GetDirectoryName(catchdiff) : osu is not null ? Path.GetDirectoryName(osu) : null;
+        string? songsFolder = (osu ?? entry?.ExportTarget) is { } source ? Path.GetDirectoryName(source) : null;
+        contextItems.Clear(); menu = -1;
+        contextItems.Add(new(L.Get("project.openOsu"), () => RequestOpenExternalPath?.Invoke(osu!), File.Exists(osu)));
+        contextItems.Add(new(L.Get("project.openCatchdiff"), () => RequestOpenExternalPath?.Invoke(catchdiff!), File.Exists(catchdiff)));
+        contextItems.Add(new(L.Get("project.openFolder"), () => RequestOpenExternalPath?.Invoke(folder!), Directory.Exists(folder)));
+        contextItems.Add(new(L.Get("project.openSongsFolder"), () => RequestOpenExternalPath?.Invoke(songsFolder!), Directory.Exists(songsFolder)));
+        float menuHeight = 12 + contextItems.Count * 32;
+        contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 240)), Math.Clamp(y, 0, Math.Max(0, height - menuHeight)), 240, menuHeight);
+        return true;
+    }
     private bool revealDifficultyTabs = true;
+    private void DrawDifficultyTooltip(ICanvas c)
+    {
+        if (LibraryVisible || ExportVisible || ErrorVisible || DiscardConfirmationVisible || SliderDialogVisible
+            || TimeJumpVisible || languageMenuOpen || menu >= 0 || contextItems.Count > 0 || drag != DragKind.None) return;
+        int hovered = difficultyTabTargets.FindIndex(t => t.Bounds.Contains(mouseX, mouseY));
+        if (hovered < 0) return;
+        string name = difficulties[difficultyTabTargets[hovered].Index].Name;
+        if (!truncatedTabs.Contains(difficultyTabTargets[hovered].Index) || tabPointer) return;
+        float maxWidth = Math.Min(640, width - 32);
+        var lines = new List<string>();
+        string line = "";
+        var elements = System.Globalization.StringInfo.GetTextElementEnumerator(name);
+        while (elements.MoveNext())
+        {
+            string element = elements.GetTextElement();
+            if (line.Length > 0 && c.MeasureText(line + element, 12) > maxWidth - 20)
+            { lines.Add(line); line = ""; }
+            line += element;
+        }
+        lines.Add(line);
+        float boxWidth = Math.Min(maxWidth, lines.Max(s => c.MeasureText(s, 12)) + 20), boxHeight = lines.Count * 18 + 14;
+        float x = Math.Clamp(mouseX + 14, 8, Math.Max(8, width - boxWidth - 8));
+        float y = Math.Clamp(mouseY + 20, 8, Math.Max(8, height - boxHeight - 8));
+        c.Fill(new(x, y, boxWidth, boxHeight), Surface, 5);
+        c.Stroke(new(x, y, boxWidth, boxHeight), Muted, 1, 5);
+        for (int i = 0; i < lines.Count; i++) c.Text(lines[i], x + 10, y + 7 + i * 18, 12, Foreground, boxWidth - 20);
+    }
     private Rect difficultyTabStrip, difficultyAddButton;
     private int visibleDifficultyTabs = 1;
     private static readonly string catchIconPath = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "osu", "RulesetCatch.png");
@@ -116,6 +191,15 @@ public sealed partial class EditorView
         return characters.Length > 16 ? name[..characters[16]] + "…" : name;
     }
 
+    private static string FitTabName(ICanvas c, string name, float available)
+    {
+        if (c.MeasureText(name, 12, true) <= available) return name;
+        int[] elements = System.Globalization.StringInfo.ParseCombiningCharacters(name);
+        for (int length = elements.Length - 1; length > 0; length--)
+            if (c.MeasureText(name[..elements[length]] + "…", 12, true) <= available) return name[..elements[length]] + "…";
+        return "…";
+    }
+
     private static void DrawChromeTab(ICanvas c, Rect rect, uint colour)
     {
         const float radius = 8;
@@ -134,17 +218,43 @@ public sealed partial class EditorView
 
     private void DrawDifficultyTabs(ICanvas c)
     {
+        difficultyTabTargets.Clear();
         difficultyTabStrip = new(12, 40, Math.Max(220, width - 24), 44);
         c.Fill(new(0, 40, width, 44), 0x191E26);
         c.Line(0, 83, width, 83, Grid);
-        string[] names = difficulties.Select(d => TabName(d.Name)).ToArray();
+        truncatedTabs.Clear();
+        string[] names = difficulties.Select(d => d.Name).ToArray();
         float[] widths = names.Select(name => (float)Math.Ceiling(c.MeasureText(name, 12, true)) + 102).ToArray();
+        float budget = difficultyTabStrip.Width - 38 - (widths.Length - 1) * 6;
+        if (widths.Sum() > budget)
+        {
+            if (difficulties.Count > 8)
+                for (int i = 0; i < names.Length; i++) widths[i] = Math.Min(widths[i], (float)Math.Ceiling(c.MeasureText(TabName(names[i]), 12, true)) + 102);
+            else
+            {
+                float low = 132, high = widths.Max();
+                for (int n = 0; n < 24; n++)
+                {
+                    float cap = (low + high) / 2;
+                    if (widths.Sum(w => Math.Min(w, cap)) > budget) high = cap; else low = cap;
+                }
+                for (int i = 0; i < widths.Length; i++) widths[i] = Math.Min(widths[i], low);
+            }
+        }
         bool overflow = widths.Sum() + (widths.Length - 1) * 6 > difficultyTabStrip.Width - 38;
         float available = difficultyTabStrip.Width - (overflow ? 102 : 38);
+        for (int i = 0; i < widths.Length; i++)
+        {
+            widths[i] = Math.Min(widths[i], available);
+            names[i] = FitTabName(c, names[i], widths[i] - 102);
+            if (names[i] != difficulties[i].Name) truncatedTabs.Add(i);
+        }
+        tabWidths = widths; tabAvailable = available; tabOverflow = overflow;
+        if (!overflow) { firstDifficultyTab = 0; tabRemainder = 0; }
         firstDifficultyTab = Math.Clamp(firstDifficultyTab, 0, difficulties.Count - 1);
         int CountVisible(int first)
         {
-            float used = 0;
+            float used = -tabRemainder;
             int count = 0;
             for (int i = first; i < widths.Length; i++)
             {
@@ -155,6 +265,7 @@ public sealed partial class EditorView
         }
         if (revealDifficultyTabs)
         {
+            tabRemainder = 0;
             if (activeDifficulty < firstDifficultyTab) firstDifficultyTab = activeDifficulty;
             while (activeDifficulty >= firstDifficultyTab + CountVisible(firstDifficultyTab)) firstDifficultyTab++;
             revealDifficultyTabs = false;
@@ -163,14 +274,19 @@ public sealed partial class EditorView
         float x = difficultyTabStrip.X;
         if (overflow)
         {
-            Button(c, new(x, 48, 30, 28), "‹", () => firstDifficultyTab = Math.Max(0, firstDifficultyTab - 1), enabled: firstDifficultyTab > 0);
+            Button(c, new(x, 48, 30, 28), "‹", () => { firstDifficultyTab = Math.Max(0, firstDifficultyTab - 1); tabRemainder = 0; }, enabled: firstDifficultyTab > 0 || tabRemainder > 0);
             x += 32;
         }
-        for (int index = firstDifficultyTab; index < firstDifficultyTab + visibleDifficultyTabs; index++)
+        float tabLeft = x;
+        if (overflow) c.Clip(new(tabLeft, 40, available, 44));
+        x -= tabRemainder;
+        for (int index = firstDifficultyTab; index < difficulties.Count && x < tabLeft + available; index++)
         {
             int target = index;
             bool active = index == activeDifficulty;
             var rect = new Rect(x, 46, widths[index], 38);
+            var hitRect = new Rect(Math.Max(tabLeft, rect.X), rect.Y, Math.Max(0, Math.Min(tabLeft + available, rect.Right) - Math.Max(tabLeft, rect.X)), rect.Height);
+            difficultyTabTargets.Add((hitRect, index));
             double? stars = DifficultyRating(index);
             uint colour = DifficultyColour(stars);
             bool hover = rect.Contains(mouseX, mouseY);
@@ -185,12 +301,13 @@ public sealed partial class EditorView
             if (RatingRefreshing(index)) DrawRatingSpinner(c, rect.Right - 9, 106);
             else if (difficulties[index].RatingFailed) c.Text("!", rect.Right - 12, 54, 12, Error, 10, true);
             else if (difficulties[index].History.IsDirty) c.Circle(rect.Right - 9, 62, 2.5f, Gold);
-            hits.Add(new(rect, () => SwitchDifficulty(target), true));
+            hits.Add(new(hitRect, () => SwitchDifficulty(target), true));
             x = rect.Right + 6;
         }
         if (overflow)
         {
-            Button(c, new(x, 48, 30, 28), "›", () => firstDifficultyTab = Math.Min(difficulties.Count - 1, firstDifficultyTab + 1),
+            c.Unclip(); x = tabLeft + available + 6;
+            Button(c, new(x, 48, 30, 28), "›", () => { firstDifficultyTab = Math.Min(difficulties.Count - 1, firstDifficultyTab + 1); tabRemainder = 0; },
                 enabled: firstDifficultyTab + visibleDifficultyTabs < difficulties.Count);
             x += 32;
         }

@@ -56,20 +56,20 @@ public sealed partial class EditorView
         DrawExportOverlay(c);
         DrawTimeJump(c);
         DrawDiscardConfirmation(c);
+        DrawDifficultyTooltip(c);
     }
 
     private void DrawChrome(ICanvas c)
     {
-        c.Fill(new(0, 0, width, 39), 0x1B2028);
+        DrawHeader(c);
         c.Fill(new(0, 40, width, 44), Panel);
-        c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png"), new(26, 2, 52, 36));
         Button(c, new(109, 6, 50, 28), L.Get("ui.file"), () => menu = menu == 0 ? -1 : 0, menu == 0);
         Button(c, new(162, 6, 50, 28), L.Get("ui.edit"), () => menu = menu == 1 ? -1 : 1, menu == 1);
         Button(c, new(215, 6, 50, 28), L.Get("ui.view"), () => { gridLevelMenuOpen = false; menu = menu == 2 ? -1 : 2; }, menu == 2);
         c.Text(ProjectName + (IsDirty ? " *" : ""), 286, 11, 13, Muted, Math.Max(20, width - 600));
         DrawDifficultyTabs(c);
-        DrawLanguageButton(c, new(width - 298, 6, 198, 28));
-        Button(c, new(width - 94, 6, 82, 28), L.Get("library.back"), ShowLibrary);
+        DrawLanguageButton(c, HeaderLanguageBounds);
+        Button(c, HeaderNavigationBounds, L.Get("library.back"), ShowLibrary);
         c.Line(0, 83, width, 83, Grid);
     }
 

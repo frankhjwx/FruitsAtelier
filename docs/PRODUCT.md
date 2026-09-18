@@ -22,7 +22,7 @@ See [Editing Controls](EDITOR_UI.md) for shortcuts, selection, and control-point
 | Format | Purpose |
 | --- | --- |
 | `.osz` | Open a beatmap archive with its difficulties and associated resources |
-| `.osu` | Read and export v14 / Mode=2 Catch beatmaps |
+| `.osu` | Read v12–v14 / Mode=2 Catch beatmaps; export v14 |
 | `.catchproj` | Compatible editor project format containing nodes, handles, timing, imported context, and resource references |
 | `.catchdiff` | Workspace project manifest and separate difficulty documents; see [Workspace](WORKSPACE.md) |
 | `.osk` | Import Catch skin images and configuration |

@@ -58,7 +58,7 @@ var tests = new (string Name, Action Run)[]
     ("Library double-click opens only visible project cards through the host", LibraryDoubleClickTests.Run),
     ("Library double-click replaces the demo with an unassociated imported map", LibraryOpenTests.Run),
     ("External folders and full OSZ resources persist across restarts", ExternalResourceTests.Run),
-    ("Difficulty tabs use content width and truncate Unicode names after 16 characters", DifficultyTabTests.Layout),
+    ("Difficulty tabs adapt names to available width and show full-name tooltips", DifficultyTabTests.Layout),
     ("Difficulty tab stars follow edits, undo and CS", DifficultyTabTests.Editing),
     ("Star ratings refresh asynchronously without losing cached or newer results", DifficultyTabTests.AsyncRatings),
     ("Overflow difficulty tabs scroll, switch and add without losing content", DifficultyTabTests.Overflow),

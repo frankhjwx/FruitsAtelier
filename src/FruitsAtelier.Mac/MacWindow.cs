@@ -63,7 +63,11 @@ internal sealed partial class MacWindow : Window
             audio.Seek(View.PlayheadMs);
             PollAudio();
         });
-        View.RequestSave = () => RunFile(async () => { if (await Save(false)) View.ShowWorkspaceExport(); });
+        View.RequestSave = () =>
+        {
+            if (View.CurrentDifficultyHasExport) View.RequestWorkspaceExport?.Invoke(true, View.CurrentDifficultyName);
+            else RunFile(() => { View.SaveCurrentDifficulty(); return Task.CompletedTask; });
+        };
         View.RequestSaveAs = () => RunFile(async () => { await Save(true); });
         View.RequestExport = View.ShowWorkspaceExport;
         ConfigureLibrary(initialPath is null && !smokeCheck, smokeCheck);
