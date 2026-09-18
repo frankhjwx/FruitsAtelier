@@ -8,7 +8,7 @@ internal static class LibraryScaleTests
 {
     public static void Pagination()
     {
-        string root = Path.Combine(Path.GetTempPath(), "atelier-pages-" + Guid.NewGuid().ToString("N"));
+        string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-pages-" + Guid.NewGuid().ToString("N"));
         try
         {
             string songs = Path.Combine(root, "Songs"), workspace = Path.Combine(root, "Workspace");

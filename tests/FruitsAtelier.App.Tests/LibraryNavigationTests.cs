@@ -6,7 +6,7 @@ internal static class LibraryNavigationTests
 {
     public static void Run()
     {
-        string root = Path.Combine(Path.GetTempPath(), "atelier-navigation-" + Guid.NewGuid());
+        string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-navigation-" + Guid.NewGuid());
         var settings = new LibrarySettings { Workspace = root };
         var view = new EditorView(loadDemo: false);
         var canvas = new RecordingCanvas();
