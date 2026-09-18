@@ -51,6 +51,7 @@ internal sealed class EditorControl : Control, IDisposable
     internal void Refresh() { InvalidateVisual(); Changed?.Invoke(); }
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
+        View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         Focus(); var p = e.GetPosition(this); var state = e.GetCurrentPoint(this).Properties;
         int button = state.IsRightButtonPressed ? 2 : state.IsMiddleButtonPressed ? 1 : 0;
         if (e.ClickCount == 2 && button == 0) View.PointerDoubleClick((float)p.X, (float)p.Y, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
@@ -60,6 +61,7 @@ internal sealed class EditorControl : Control, IDisposable
     }
     protected override void OnPointerMoved(PointerEventArgs e)
     {
+        View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         var p = e.GetPosition(this);
         View.PointerMove((float)p.X, (float)p.Y, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
         Cursor = new Cursor(View.TimelineResizeCursor || View.PreviewResizeCursor ? StandardCursorType.SizeWestEast : StandardCursorType.Arrow);
@@ -75,11 +77,13 @@ internal sealed class EditorControl : Control, IDisposable
     protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e) { if (View.WantsCapture) View.CancelInteraction(); Refresh(); }
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
+        View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         var p = e.GetPosition(this); View.Wheel((float)p.X, (float)p.Y, (float)e.Delta.Y * 120, MacInput.Control(e.KeyModifiers));
         e.Handled = true; Refresh();
     }
     protected override async void OnKeyDown(KeyEventArgs e)
     {
+        View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         if (e.Key == Key.V && MacInput.Control(e.KeyModifiers) && View.LibraryTextFocused && !View.ErrorVisible && !View.DiscardConfirmationVisible)
         {
             e.Handled = true;
@@ -92,6 +96,12 @@ internal sealed class EditorControl : Control, IDisposable
         }
         View.KeyDown(MacInput.VirtualKey(e.Key, View.IsEditingText), MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         e.Handled = e.Key is Key.Tab or Key.Space or Key.Back or Key.Delete or Key.Enter or Key.Escape || MacInput.Control(e.KeyModifiers);
+        Refresh();
+    }
+    protected override void OnKeyUp(KeyEventArgs e)
+    {
+        base.OnKeyUp(e);
+        View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         Refresh();
     }
     protected override void OnTextInput(TextInputEventArgs e)

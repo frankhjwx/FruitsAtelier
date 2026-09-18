@@ -29,7 +29,7 @@ internal static class TextInputFeedbackTests
             Check(canvas.Texts.Any(t => t.Value == "x") && Caret(), "Typing replaces the selected text and resets blinking");
             view.SetTextInputFocus(false); Paint();
             Check(!Caret() && !view.TextCaretNeedsRedraw, "An unfocused window must not blink");
-            view.CloseLibrary(); view.SetTextInputFocus(true); Paint();
+            view.NewProject(); view.CloseLibrary(); view.SetTextInputFocus(true); Paint();
             foreach (var (menu, last) in new[] { ("ui.file", "ui.exitMenu"), ("ui.view", "ui.follow"), ("ui.edit", "sliderBatch.menu") })
             {
                 var label = canvas.Texts.Single(t => t.Value == L.Get(menu));

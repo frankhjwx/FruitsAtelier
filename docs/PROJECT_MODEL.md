@@ -36,7 +36,7 @@ Raw section lines retain independent mutable storage in document snapshots. Unch
 | ImportedSlider | Id, TimeMs, X / Y, PathType, ControlPoints, SpanCount, PixelLength, SourceOrder, OriginalLine |
 | BananaShower | Id, TimeMs, EndTimeMs, SourceOrder, OriginalLine |
 
-Difficulty includes ApproachRate, CircleSize, SliderMultiplier, and SliderTickRate. Demo defaults are duration 30000 ms, beat length 500 ms, offset=0, AR=8, CS=5, SliderMultiplier=1.4, and SliderTickRate=1. MapDocument's BeatLengthMs / TimingOffsetMs are fallbacks when no red timing point exists; real beatmaps retain all timing points.
+Difficulty includes ApproachRate, CircleSize, SliderMultiplier, and SliderTickRate. DistanceSpacing is a per-difficulty editor multiplier (0.1–6, default 1), included in cloning, dirty comparison, undo and project persistence. Demo defaults are duration 30000 ms, beat length 500 ms, offset=0, AR=8, CS=5, SliderMultiplier=1.4, and SliderTickRate=1. MapDocument's BeatLengthMs / TimingOffsetMs are fallbacks when no red timing point exists; real beatmaps retain all timing points.
 
 Import initially derives `.osu` `DurationMs` from the last object. Once associated audio is decoded, a longer audio duration becomes available for placement, numeric editing, and dragging. Loading and navigation do not modify the document. The first object edit beyond the original range extends `DurationMs` within the same user transaction.
 

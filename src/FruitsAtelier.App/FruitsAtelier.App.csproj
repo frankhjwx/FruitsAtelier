@@ -27,4 +27,7 @@
     <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
     <PackageReference Include="NVorbis" Version="0.10.4" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="../../assets/icons/assist/*.png" Link="assets/icons/assist/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

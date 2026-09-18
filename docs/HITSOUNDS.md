@@ -14,6 +14,8 @@ window stops active hitsound voices. Seeking does not play the skipped interval.
 | Tiny droplet / slider body | Silent; no looping slide or whistle sound |
 | Banana | Packaged Catch banana sample |
 
+The right toolbar edits Whistle, Finish and Clap flags for fruits and slider edges through undoable transactions. Whole-slider selection applies an addition to all edges; clicking a slider fruit scopes it to that edge. ObjectFlags updates the preserved stable columns while retaining sample banks, volume, custom filenames and unrelated flags. Editing and export controls are described in [Editing controls](EDITOR_UI.md#distance-spacing-and-object-flags).
+
 ## Sample selection
 
 `HitsoundResolver` reads the object's preserved `.osu` line, including FSliders converted

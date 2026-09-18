@@ -63,6 +63,7 @@ public sealed partial class EditorView
     private void ResetDifficultyView()
     {
         nextFruitNewCombo = false;
+        nextSounds = 0; soundEdge = null;
         var document = Document;
         convertedSnapshot = null;
         Select(Guid.Empty);

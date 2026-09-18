@@ -24,9 +24,9 @@ public sealed partial class EditorView
         if (LibraryVisible) { DrawLibrary(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
         float rightWidth = catchPreviewVisible ? Math.Clamp(previewWidth, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)) : 0;
         float bodyHeight = Math.Max(180, height - 204);
-        rightPanel = new(width - (catchPreviewVisible ? rightWidth : 224), 84, catchPreviewVisible ? rightWidth : 224, catchPreviewVisible ? bodyHeight : 38);
+        rightPanel = new(width - (catchPreviewVisible ? rightWidth : 290), 84, catchPreviewVisible ? rightWidth : 290, catchPreviewVisible ? bodyHeight : 38);
         canvas = new(108, 84, Math.Max(120, width - rightWidth - 109), bodyHeight);
-        plot = new(canvas.X + 70, canvas.Y + 140, Math.Max(50, canvas.Width - 94), Math.Max(80, canvas.Height - 152));
+        plot = new(canvas.X + 70, canvas.Y + 140, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 152));
         overview = new(220, height - 77, Math.Max(100, width - 248), 40);
         canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, 1);
         pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
@@ -38,6 +38,8 @@ public sealed partial class EditorView
         DrawCanvas(c);
         DrawInspector(c);
         DrawToolPalette(c);
+        DrawDistanceReadout(c);
+        DrawAssistPalette(c);
         DrawSelectionBox(c);
         DrawPreviewSidebar(c);
         DrawLegacyConversionButton(c);
@@ -86,13 +88,13 @@ public sealed partial class EditorView
         c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + 8, canvas.Y + 13, 11, Foreground, 48);
         Button(c, new(toolbarRight - 390, canvas.Y + 4, 101, 29), showTargets ? L.Get("ui.hideCurves") : L.Get("ui.showCurves"), () => showTargets = !showTargets);
         float snapLeft = toolbarRight - 158;
-        c.Text(L.Get("ui.snap"), snapLeft, canvas.Y + 13, 11, Muted);
+        c.Text(L.Get(DistanceSpacingVisible ? "assist.spacing" : "ui.snap"), DistanceSpacingVisible ? snapLeft - 76 : snapLeft, canvas.Y + 13, 11, Muted, DistanceSpacingVisible ? 114 : 40);
         snapSlider = new(snapLeft + 40, canvas.Y + 4, 106, 29);
         float sliderStart = snapSlider.X + 7, sliderEnd = snapSlider.Right - 31;
-        float snapX = sliderStart + Array.IndexOf(SnapDivisors, divisor) / (float)(SnapDivisors.Length - 1) * (sliderEnd - sliderStart);
+        float snapX = sliderStart + (DistanceSpacingVisible ? (float)((Document.DistanceSpacing - .1) / 5.9) : Array.IndexOf(SnapDivisors, divisor) / (float)(SnapDivisors.Length - 1)) * (sliderEnd - sliderStart);
         c.Line(sliderStart, canvas.Y + 19, sliderEnd, canvas.Y + 19, Accent, 2);
         c.Circle(snapX, canvas.Y + 19, 6, Accent);
-        c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, canvas.Y + 13, 11, Foreground, 30);
+        c.Text(DistanceSpacingVisible ? L.Get("assist.ratio", Document.DistanceSpacing) : L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, canvas.Y + 13, 10, Foreground, 40);
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
         c.Text(L.Get("ui.timeAxis"), canvas.X + 11, canvas.Y + 120, 10, Muted, 43);
         DrawObjectTimeline(c);
@@ -103,7 +105,7 @@ public sealed partial class EditorView
             c.Text(x.ToString(), sx - 9, canvas.Y + 120, 10, Muted, 30);
             c.Line(sx, plot.Y, sx, plot.Bottom, x == 256 ? 0x3C4653u : 0x262D37u);
         }
-        if (gridSnap)
+        if (EffectiveGridSnap)
             for (int x = gridSize; x < 512; x += gridSize)
             {
                 float sx = Screen(new(0, x)).X;
@@ -240,7 +242,7 @@ public sealed partial class EditorView
         c.Line(rightPanel.X, rightPanel.Y, rightPanel.X, rightPanel.Bottom, Grid);
         float x = rightPanel.X + 16, w = rightPanel.Width - 32;
         c.Text(L.Get("ui.properties"), x, rightPanel.Y + 15, 12, Foreground, 48, true);
-        c.Text($"{L.Get("ui.ar")} {Number(Document.ApproachRate)}   {L.Get("ui.cs")} {Number(Document.CircleSize)}",
+        c.Text($"{L.Get("ui.ar")} {Number(Document.ApproachRate)}   {L.Get("ui.cs")} {Number(Document.CircleSize)}   {L.Get("ui.sv")} {Number(Document.SliderMultiplier)}",
             x + 56, rightPanel.Y + 15, 12, Muted, w - 56);
     }
 

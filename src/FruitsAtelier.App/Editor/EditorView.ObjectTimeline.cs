@@ -143,7 +143,7 @@ public sealed partial class EditorView
             if (!item.Bounds.Contains(x, y)) continue;
             tool = Tool.Select;
             PickObject(item.Id, toggle);
-            if (!toggle && IsTimelineTail(item, x, y))
+            if (!notesLocked && !toggle && IsTimelineTail(item, x, y))
             {
                 var source = timelineSources.First(o => o.Id == item.Id);
                 int spans = Document.Tracks.FirstOrDefault(t => t.Id == item.Id)?.SpanCount
@@ -157,22 +157,13 @@ public sealed partial class EditorView
                     drag = DragKind.TimelineTail; BeginPointerDrag(x, y);
                 }
             }
+            else if (!toggle) BeginObjectDrag(x, y, timeline: true);
             return;
         }
-        if (y < objectTimeline.Bottom - 14)
-        {
-            timelineBoxStart = ObjectTimelineStartMs;
-            tool = Tool.Select;
-            BeginBox(x, y, toggle, false);
-            boxTimeline = true;
-            return;
-        }
-        double time = ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale;
-        drag = DragKind.Timeline;
-        dragStartX = x;
-        timelineMsPerDip = 1 / objectTimelineScale;
-        SeekTo(time);
-        dragStartTime = playhead;
+        timelineBoxStart = ObjectTimelineStartMs;
+        tool = Tool.Select;
+        BeginBox(x, y, toggle, false);
+        boxTimeline = true;
     }
     private void DeleteTimelineObject(float x, float y)
     {

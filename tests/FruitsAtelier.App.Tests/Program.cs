@@ -14,6 +14,13 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Object timeline navigation and group movement preserve geometry and undo", ObjectTimelineTests.MoveAndNavigate),
+    ("Returning to Library saves, discards or cancels before closing the editor", LibraryExitTests.Run),
+    ("Distance spacing placement, persistence, Alt and undo", AssistToolsTests.SpacingAndPlacement),
+    ("Distance readouts, slider tails, base SV and layout", AssistToolsTests.DistanceRules),
+    ("Distance snapping moves selected groups by a shared offset", AssistToolsTests.GroupDistanceDrag),
+    ("Combo, hitsound editing and note locking", AssistToolsTests.SoundsAndLocks),
+    ("Slider edge and whole-slider sounds survive conversion and export", AssistToolsTests.SliderSounds),
     ("Background resource checks refresh missing files and discard stale edits and projects", ResourcePollingTests.RefreshAndStaleResults),
     ("Preview drawer, mods, resizing and aligned shortcuts preserve content", PreviewSidebarTests.Sidebar),
     ("Preview aspect modes, Fit height and edge overscan", PreviewSidebarTests.DisplayModesAndOverscan),

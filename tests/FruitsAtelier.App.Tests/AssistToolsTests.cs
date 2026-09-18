@@ -1,0 +1,167 @@
+using FruitsAtelier.Core;
+using FruitsAtelier.Localization;
+
+internal static class AssistToolsTests
+{
+    private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
+    private static void Near(double expected, double actual) => Check(Math.Abs(expected - actual) < .001, $"Expected {expected}, got {actual}");
+    private static MapDocument Map()
+    {
+        var map = new MapDocument { DurationMs = 10000, SliderMultiplier = 1.4, IsDemo = false };
+        map.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 });
+        map.Fruits.Add(new Fruit { TimeMs = 2000, X = 310 });
+        return map;
+    }
+    public static void SpacingAndPlacement()
+    {
+        var ui = new Ui(); ui.LoadDocument(Map()); ui.Key('F');
+        Check(ui.View.AssistButtonBounds.Count == 7, "Missing assist buttons");
+        var icons = ui.Canvas.Images.Where(i => i.Path.Contains(Path.Combine("icons", "assist"))).ToArray();
+        Check(icons.Length == 7 && icons.All(i => File.Exists(i.Path)), "Generated assist icons are missing from the application output");
+        var p = ui.View.CanvasPlotBounds;
+        ui.View.SetModifiers(true, false); ui.Paint();
+        Check(ui.View.DistanceSpacingVisible && ui.View.DistanceSnapEnabled, "Alt did not switch snapping");
+        ui.MoveMap(1500, 240);
+        Near(1, ui.View.DistanceReadout.Previous!.Value);
+        Near(.5, ui.View.DistanceReadout.Next!.Value);
+        ui.ClickMap(1500, 270);
+        Near(240, ui.View.Document.Fruits.Single(f => f.TimeMs == 1500).X);
+        ui.Key('V');
+        Near(1, ui.View.DistanceReadout.Previous!.Value);
+        Near(.5, ui.View.DistanceReadout.Next!.Value);
+        ui.Key('Z', ctrl: true);
+        ui.Key('V');
+        Check(ui.View.DistanceReadout == (null, null), "Clearing selection retained distance readouts");
+        ui.Key('B'); ui.MoveMap(1500, 240);
+        Near(1, ui.View.DistanceReadout.Previous!.Value);
+        Near(.5, ui.View.DistanceReadout.Next!.Value);
+        ui.View.PointerMove(10, 10, false, false); ui.Paint();
+        Check(ui.View.DistanceReadout == (null, null), "A hidden placement preview retained distance readouts");
+        ui.View.SetModifiers(true, false);
+        ui.View.Wheel(p.X + 10, p.Y + 10, 120, false); ui.Paint();
+        Near(1.1, ui.View.Document.DistanceSpacing);
+        Near(1.1, ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document)).DistanceSpacing);
+        Near(1.1, OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack.DistanceSpacing);
+        ui.Key('Z', ctrl: true); Near(1, ui.View.Document.DistanceSpacing);
+        ui.Key('Y', ctrl: true); Near(1.1, ui.View.Document.DistanceSpacing);
+        ui.View.SetModifiers(true, true); ui.View.Wheel(p.X + 10, p.Y + 10, 120, false); Near(1.11, ui.View.Document.DistanceSpacing);
+        ui.View.SetModifiers(false, false); ui.Key('Y');
+        Check(ui.View.DistanceSnapEnabled, "Y did not enable distance snap");
+        ui.View.SetModifiers(true, false); Check(!ui.View.DistanceSnapEnabled, "Alt must invert persistent snap");
+        ui.View.CancelInteraction(); Check(!ui.View.DistanceSpacingVisible && ui.View.DistanceSnapEnabled, "Focus cancellation left Alt active");
+        var original = ui.View.Document.DeepClone();
+        ui.View.SetModifiers(true, false); ui.Paint();
+        var slider = ui.View.SnapSliderBounds;
+        ui.View.PointerDown(slider.X + 20, slider.Y + 10, 0, false, false);
+        ui.View.PointerMove(slider.X + 60, slider.Y + 10, false, false);
+        ui.View.CancelInteraction(); Check(original.ContentEquals(ui.View.Document), "Cancelled spacing drag changed document");
+        ui.View.SetModifiers(true, false); ui.Paint();
+        ui.View.PointerDown(slider.X + 20, slider.Y + 10, 0, false, false);
+        ui.View.PointerMove(slider.X + 60, slider.Y + 10, false, false);
+        ui.View.PointerUp(slider.X + 60, slider.Y + 10, 0);
+        ui.Key('Z', ctrl: true); Check(original.ContentEquals(ui.View.Document), "Spacing drag must be one undo entry");
+        var project = BeatmapProject.FromDocuments([Map(), Map()]);
+        project.Difficulties[0].Document.DistanceSpacing = 1.7;
+        ui.View.LoadProject(project); ui.Paint(); Near(1.7, ui.View.Document.DistanceSpacing);
+        ui.View.SwitchDifficulty(1); Near(1, ui.View.Document.DistanceSpacing);
+        ui.View.SwitchDifficulty(0); Near(1.7, ui.View.Document.DistanceSpacing);
+        string json = ProjectSerializer.Serialize(Map()).Replace("\"DistanceSpacing\": 1,", "");
+        Near(1, ProjectSerializer.Read(json).DistanceSpacing);
+    }
+
+    public static void DistanceRules()
+    {
+        var map = Map();
+        map.TimingPoints.Add(new TimingPoint { TimeMs = 0, BeatLengthMs = 500 });
+        map.TimingPoints.Add(new TimingPoint { TimeMs = 0, BeatLengthMs = -50, Uninherited = false });
+        var references = DistanceSnap.References(map, CatchStreamConverter.Convert(map));
+        Near(.28, references[0].Velocity);
+        Near(1.5, DistanceSnap.Ratio(new(1000, 100), new(1500, 310), .28)!.Value);
+        Check(DistanceSnap.Ratio(new(1000, 100), new(1000, 310), .28) is null, "Simultaneous objects must have no ratio");
+        var snapped = DistanceSnap.Snap(new(1500, 20), references[0], 1, out bool outside);
+        Near(240, snapped.X); Check(!outside, "Valid opposite side rejected");
+        DistanceSnap.Snap(new(5000, 20), references[0], 6, out outside); Check(outside, "Impossible spacing not reported");
+        var slider = new ImportedSlider { TimeMs = 2500, X = 100, Y = 192, PathType = 'L', PixelLength = 140, SpanCount = 2 };
+        slider.ControlPoints.AddRange([new(100, 192), new(240, 192)]); map.ImportedSliders.Add(slider);
+        var last = DistanceSnap.References(map, CatchStreamConverter.Convert(map)).Last();
+        Near(.56, last.Velocity); Near(3000, last.End.TimeMs); Near(100, last.End.X);
+        var ui = new Ui(); ui.LoadDocument(map); ui.ClickMap(2000, 310);
+        Near(.75, ui.View.DistanceReadout.Previous!.Value);
+        double ratio = ui.View.DistanceReadout.Previous.Value;
+        ui.View.Wheel(ui.Plot.X, ui.Plot.Y + 50, 120, true); ui.Paint(); Near(ratio, ui.View.DistanceReadout.Previous!.Value);
+        Check(ui.Canvas.Texts.Any(t => t.Value.Contains("SV 1.4")), "Details must show base SV");
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            Strings.SetLanguage(language); ui.Resize(980, 620);
+            var bounds = ui.View.AssistButtonBounds;
+            Check(bounds.All(b => b.X >= ui.View.CanvasPlotBounds.Right && b.Width == b.Height), "Assist buttons must be square and beside the plot");
+            var first = bounds[0];
+            ui.View.Wheel(first.X + 10, first.Y + 10, -1200, false); ui.Paint();
+            Check(ui.View.AssistButtonBounds[^1].Bottom <= ui.View.CanvasPlotBounds.Bottom + .01, "Small-window scrolling does not reach Lock Notes");
+        }
+    }
+
+    public static void SoundsAndLocks()
+    {
+        var ui = new Ui(); var map = Map(); ui.LoadDocument(map);
+        Guid id = map.Fruits[0].Id;
+        ui.ClickFruit(id); ui.Key('Q'); ui.Key('W'); ui.Key('E'); ui.Key('R');
+        Check(ObjectFlags.NewCombo(ui.View.Document, id), "Combo toggle missing");
+        Check(ObjectFlags.Sounds(ui.View.Document, id).Single() == 14, "Combined additions missing");
+        var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document));
+        Check(ObjectFlags.Sounds(restored, id).Single() == 14, "Saved flags missing");
+        var exported = OsuBeatmapWriter.Serialize(restored).ReadBack;
+        Check(ObjectFlags.Sounds(exported, exported.Fruits[0].Id).Single() == 14, "Export lost additions");
+        var converted = CatchStreamConverter.Convert(restored);
+        Check(new HitsoundResolver(restored, converted.Objects).Resolve(converted.Objects.First(o => o.SourceId == id)).Count == 4, "Playback does not reflect additions");
+        ui.Key('R'); Check(ObjectFlags.Sounds(ui.View.Document, id).Single() == 6, "Cannot remove clap");
+        ui.Key('Z', ctrl: true); Check(ObjectFlags.Sounds(ui.View.Document, id).Single() == 14, "Sound undo failed");
+        ui.ClickFruit(id); ui.Key('L'); var locked = ui.View.Document.DeepClone();
+        ui.DownMap(1000, 100); ui.MoveMap(1250, 200); ui.UpMap(1250, 200);
+        Check(locked.ContentEquals(ui.View.Document), "Locked drag moved note");
+        ui.Key(46); Check(locked.ContentEquals(ui.View.Document), "Locked delete removed note");
+        ui.Key('W'); Check(ObjectFlags.Sounds(ui.View.Document, id).Single() == 12, "Lock blocked sound edit");
+        ui.Key('L'); ui.Key(46); Check(ui.View.Document.Fruits.Count == 1, "Unlock did not restore editing");
+        ui.Key('F'); ui.Key('W'); ui.ClickMap(1250, 180);
+        Check(ObjectFlags.Sounds(ui.View.Document, ui.View.Document.Fruits.Single(f => f.TimeMs == 1250).Id).Single() == 2, "Placement sound missing");
+        ui.Key('L'); ui.Key('B'); ui.ClickMap(3000, 200); ui.ClickMap(3500, 240); ui.Key(13);
+        Check(ui.View.Document.Tracks.Count == 1 && ui.View.Document.Tracks[0].Nodes.Count == 2, "Lock prevented completing a new slider");
+    }
+
+    public static void GroupDistanceDrag()
+    {
+        var map = Map(); map.Fruits.Add(new Fruit { TimeMs = 500, X = 80 });
+        var ui = new Ui(); ui.LoadDocument(map);
+        ui.ClickMap(1000, 100); ui.ClickMap(2000, 310, ctrl: true);
+        ui.Key('Y');
+        var before = ui.View.Document.DeepClone();
+        ui.DownMap(1000, 100); ui.MoveMap(1250, 180); ui.UpMap(1250, 180);
+        Near(290, ui.Fruit(map.Fruits[0].Id).X); Near(500, ui.Fruit(map.Fruits[1].Id).X);
+        Near(1250, ui.Fruit(map.Fruits[0].Id).TimeMs); Near(2250, ui.Fruit(map.Fruits[1].Id).TimeMs);
+        ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Distance group movement did not undo atomically");
+    }
+
+    public static void SliderSounds()
+    {
+        var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,2,0,L|240:192,2,140,2|4|8,1:2|2:3|3:1,2:3:7:60:\n");
+        var ui = new Ui(); ui.LoadDocument(map); var id = map.ImportedSliders.Single().Id;
+        ui.ClickMap(1000, 100); ui.Key('R');
+        Check(ObjectFlags.Sounds(ui.View.Document, id).SequenceEqual(new[] { 10, 4, 8 }), "Head click changed other edges");
+        Check(ui.View.Document.ImportedSliders.Single().OriginalLine!.EndsWith("1:2|2:3|3:1,2:3:7:60:"), "Sample banks were overwritten");
+        var output = OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack;
+        Check(ObjectFlags.Sounds(output, output.ImportedSliders.Single().Id).SequenceEqual(new[] { 10, 4, 8 }), "Edge export failed");
+        ui.Key('Z', ctrl: true);
+        ui.View.SetModifiers(false, false);
+        var timeline = ui.View.ObjectTimelineBounds;
+        float x = timeline.X + (float)((1000 - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+        ui.Click(x, timeline.Y + 20); ui.Key('W');
+        Check(ObjectFlags.Sounds(ui.View.Document, id).SequenceEqual(new[] { 2, 6, 10 }), "Whole-slider toggle failed");
+        ui.Key('L'); var before = ui.View.Document.DeepClone(); ui.Key(187, ctrl: true);
+        Check(before.ContentEquals(ui.View.Document), "Lock allowed reverse edit");
+        ui.View.ConvertAllSliders(); Check(!ui.View.SliderConversionBusy, "Lock allowed batch geometry conversion");
+        ui.Key('L'); ui.Key('D', ctrl: true);
+        Check(ui.View.Document.Tracks.Count == 1, "Cannot convert sound-edited slider");
+        var fs = OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack;
+        Check(ObjectFlags.Sounds(fs, fs.ImportedSliders.Single().Id).SequenceEqual(new[] { 2, 6, 10 }), "FSlider export lost edge flags");
+    }
+}
