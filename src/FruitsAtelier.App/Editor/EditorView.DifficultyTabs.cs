@@ -134,9 +134,9 @@ public sealed partial class EditorView
 
     private void DrawDifficultyTabs(ICanvas c)
     {
-        difficultyTabStrip = new(12, 84, Math.Max(220, width - 24), 44);
-        c.Fill(new(0, 84, width, 44), 0x191E26);
-        c.Line(0, 127, width, 127, Grid);
+        difficultyTabStrip = new(12, 40, Math.Max(220, width - 24), 44);
+        c.Fill(new(0, 40, width, 44), 0x191E26);
+        c.Line(0, 83, width, 83, Grid);
         string[] names = difficulties.Select(d => TabName(d.Name)).ToArray();
         float[] widths = names.Select(name => (float)Math.Ceiling(c.MeasureText(name, 12, true)) + 102).ToArray();
         bool overflow = widths.Sum() + (widths.Length - 1) * 6 > difficultyTabStrip.Width - 38;
@@ -163,38 +163,38 @@ public sealed partial class EditorView
         float x = difficultyTabStrip.X;
         if (overflow)
         {
-            Button(c, new(x, 92, 30, 28), "‹", () => firstDifficultyTab = Math.Max(0, firstDifficultyTab - 1), enabled: firstDifficultyTab > 0);
+            Button(c, new(x, 48, 30, 28), "‹", () => firstDifficultyTab = Math.Max(0, firstDifficultyTab - 1), enabled: firstDifficultyTab > 0);
             x += 32;
         }
         for (int index = firstDifficultyTab; index < firstDifficultyTab + visibleDifficultyTabs; index++)
         {
             int target = index;
             bool active = index == activeDifficulty;
-            var rect = new Rect(x, 90, widths[index], 38);
+            var rect = new Rect(x, 46, widths[index], 38);
             double? stars = DifficultyRating(index);
             uint colour = DifficultyColour(stars);
             bool hover = rect.Contains(mouseX, mouseY);
             if (active || hover) DrawChromeTab(c, rect, active ? Panel : 0x2B3542u);
-            else if (index + 1 != activeDifficulty) c.Line(rect.Right + 3, 100, rect.Right + 3, 117, Grid);
+            else if (index + 1 != activeDifficulty) c.Line(rect.Right + 3, 56, rect.Right + 3, 73, Grid);
             // A light backing keeps even the official black (9★+) icon readable on dark chrome.
-            if (stars >= 6.7) c.Circle(x + 19, 106, 10, 0xE7EBF2);
-            c.Image(catchIconPath, new(x + 9, 96, 20, 20), colour);
-            c.Text(names[index], x + 36, 98, 12, active ? Foreground : Muted, rect.Width - 101, active);
+            if (stars >= 6.7) c.Circle(x + 19, 62, 10, 0xE7EBF2);
+            c.Image(catchIconPath, new(x + 9, 52, 20, 20), colour);
+            c.Text(names[index], x + 36, 54, 12, active ? Foreground : Muted, rect.Width - 101, active);
             c.Text(stars is null ? L.Get("project.starsUnavailable") : L.Get("project.stars", stars.Value),
-                rect.Right - 59, 99, 10, active ? Foreground : Muted, 47);
+                rect.Right - 59, 55, 10, active ? Foreground : Muted, 47);
             if (RatingRefreshing(index)) DrawRatingSpinner(c, rect.Right - 9, 106);
-            else if (difficulties[index].RatingFailed) c.Text("!", rect.Right - 12, 98, 12, Error, 10, true);
-            else if (difficulties[index].History.IsDirty) c.Circle(rect.Right - 9, 106, 2.5f, Gold);
+            else if (difficulties[index].RatingFailed) c.Text("!", rect.Right - 12, 54, 12, Error, 10, true);
+            else if (difficulties[index].History.IsDirty) c.Circle(rect.Right - 9, 62, 2.5f, Gold);
             hits.Add(new(rect, () => SwitchDifficulty(target), true));
             x = rect.Right + 6;
         }
         if (overflow)
         {
-            Button(c, new(x, 92, 30, 28), "›", () => firstDifficultyTab = Math.Min(difficulties.Count - 1, firstDifficultyTab + 1),
+            Button(c, new(x, 48, 30, 28), "›", () => firstDifficultyTab = Math.Min(difficulties.Count - 1, firstDifficultyTab + 1),
                 enabled: firstDifficultyTab + visibleDifficultyTabs < difficulties.Count);
             x += 32;
         }
-        difficultyAddButton = new(x, 92, 30, 28);
+        difficultyAddButton = new(x, 48, 30, 28);
         Button(c, difficultyAddButton, "+", () => menu = menu == 3 ? -1 : 3, menu == 3);
     }
 }

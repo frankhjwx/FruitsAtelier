@@ -180,7 +180,7 @@ public static class CurveMath
             CheckId(slider.Id, ids, errors);
             if (!double.IsFinite(slider.TimeMs) || slider.TimeMs < 0 || !double.IsFinite(slider.X) || !double.IsFinite(slider.Y)
                 || !double.IsFinite(slider.PixelLength) || slider.PixelLength < 0 || slider.SpanCount is < 1 or > 9000
-                || slider.ControlPoints.Count is < 1 or > 10000
+                || slider.ControlPoints.Count is < 1 or > ImportedSlider.MaximumControlPoints
                 || slider.ControlPoints.Any(p => !double.IsFinite(p.X) || !double.IsFinite(p.GeometryY)))
                 errors.Add(L.Get("core.curves.importedSlider"));
             if (char.ToUpperInvariant(slider.PathType) is not ('L' or 'B' or 'P' or 'C')) errors.Add(L.Get("core.curves.importedPath"));

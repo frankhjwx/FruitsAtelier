@@ -27,6 +27,14 @@ jobs:
           dotnet run --no-build --project ../tests/FruitsAtelier.Formats.Tests -c Release -- --skip-external-fixtures
       - name: Hitsound PCM regression (no audio device)
         run: dotnet run --no-build --project ../tests/FruitsAtelier.Audio.Tests -c Release -- --hitsound-check
+      - name: Install the release SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Build and check the distributable Windows package
+        run: |
+          ../scripts/Publish-Windows.ps1 -Version 0.0.0-alpha.1
+          ../scripts/Test-WindowsPackage.ps1 -Archive ../artifacts/releases/FruitsAtelier-0.0.0-alpha.1-win-x64.zip
   macos:
     runs-on: macos-14
     steps:

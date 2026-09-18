@@ -26,6 +26,7 @@ internal sealed partial class EditorWindow : IDisposable
     {
         procedure = WndProc;
         ConfigureFiles();
+        view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
         view.RequestClose = Close;
         view.RequestLoadSkin = () =>
         {
@@ -37,14 +38,14 @@ internal sealed partial class EditorWindow : IDisposable
                 if (archive is not null) LoadSkinArchive(archive);
             }
             catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
-            { view.SetNotice(L.Get("window.skinFailed", L.Localized(error.Message))); }
+            { AppLog.Write(error.ToString()); view.ShowError(L.Get("window.skinFailed", L.Localized(error.Message))); }
             Invalidate();
         };
         view.RequestResetDemo = () => ConfirmDiscard(() =>
         { ResetAudio(); projectPath = null; view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); Invalidate(); });
     }
 
-    public int Run(bool renderCheck = false, string? initialPath = null)
+    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null)
     {
         string defaultSkin = Path.Combine(AppContext.BaseDirectory, "assets", "skins", "default.osk");
         if (File.Exists(defaultSkin))
@@ -82,7 +83,13 @@ internal sealed partial class EditorWindow : IDisposable
         Native.GetClientRect(hwnd, out var client);
         canvas = new D2DCanvas(hwnd, client.Right, client.Bottom, dpi);
         AppLog.Write($"Window ready. Adapter={canvas.AdapterName}; DPI={dpi}; Client={client.Right}x{client.Bottom}");
-        if (initialPath is not null) OpenPath(initialPath);
+        if (profileMap is not null)
+        {
+            Diagnostics.RenderCheck.ProfileMap(canvas, view, profileMap, dpi);
+            Native.DestroyWindow(hwnd);
+            return 0;
+        }
+        if (initialPath is not null) FileOperation(() => OpenPath(initialPath));
         if (renderCheck)
         {
             Diagnostics.RenderCheck.Run(canvas, view);
@@ -128,7 +135,15 @@ internal sealed partial class EditorWindow : IDisposable
             if (!failed)
             {
                 failed = true;
-                Native.MessageBox(window, L.Get("window.operationFailed", exception.Message), L.Get("app.name"), 0x10);
+                if (message is 0x000F or 0x0001)
+                    Native.ShowError(window, L.Get("window.operationFailed", exception.Message), L.Get("app.name"));
+                else
+                {
+                    if (Native.GetCapture() == window) Native.ReleaseCapture();
+                    view.ShowError(L.Get("window.operationFailed", L.Localized(exception.Message)));
+                    failed = false;
+                    Invalidate();
+                }
             }
             return 0;
         }
@@ -163,7 +178,7 @@ internal sealed partial class EditorWindow : IDisposable
                 if (audio.IsPlaying && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0014: return 1; // WM_ERASEBKGND
-            case 0x0113: PollAudio(); return 0; // WM_TIMER
+            case 0x0113: PollAudio(); if (view.TextCaretNeedsRedraw && !Native.IsIconic(window)) Invalidate(); return 0; // WM_TIMER
             case 0x0005: Invalidate(); return 0;
             case 0x02E0: // WM_DPICHANGED
                 view.CancelInteraction();
@@ -189,8 +204,13 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.SetFocus(window);
                 view.PointerDoubleClick(x, y, Native.Shift, Native.Control);
                 UpdateTitle(); Invalidate(); return 0;
+            case 0x0020: // WM_SETCURSOR
+                if ((lParam.ToInt64() & 0xffff) == 1)
+                { Native.SetCursor(Native.LoadCursor(0, (nint)(view.TimelineResizeCursor ? 32644 : 32512))); return 1; }
+                break;
             case 0x0200:
                 view.PointerMove(x, y, Native.Shift, Native.Control);
+                Native.SetCursor(Native.LoadCursor(0, (nint)(view.TimelineResizeCursor ? 32644 : 32512)));
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0202:
             case 0x0205:
@@ -204,7 +224,7 @@ internal sealed partial class EditorWindow : IDisposable
                 view.Wheel(point.X * 96f / dpi, point.Y * 96f / dpi, (short)((ulong)wParam >> 16), (wParam & 0x0008) != 0);
                 Invalidate(); return 0;
             case 0x0100:
-                if ((int)wParam == 86 && Native.Control && view.LibraryTextFocused && !view.DiscardConfirmationVisible)
+                if ((int)wParam == 86 && Native.Control && view.LibraryTextFocused && !view.DiscardConfirmationVisible && !view.ErrorVisible)
                 { view.PasteLibraryText(Native.ReadClipboardText(window)); Invalidate(); return 0; }
                 view.KeyDown((int)wParam, Native.Control, Native.Shift);
                 if (!view.WantsCapture && Native.GetCapture() == window) Native.ReleaseCapture();
@@ -212,7 +232,10 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0102:
                 if (!Native.Control) view.TextInput((char)wParam);
                 UpdateTitle(); Invalidate(); return 0;
+            case 0x0007: view.SetTextInputFocus(true); Invalidate(); return 0; // WM_SETFOCUS
             case 0x0008: // WM_KILLFOCUS
+                view.SetTextInputFocus(false);
+                goto case 0x001F;
             case 0x001F: // WM_CANCELMODE
                 view.CancelInteraction();
                 if (Native.GetCapture() == window) Native.ReleaseCapture();

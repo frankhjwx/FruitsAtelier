@@ -68,7 +68,7 @@ public sealed partial class EditorView
             history.Document.Tracks.AddRange(result.Result.Tracks); history.Commit(); count += ids.Count;
         }
         sliderBatchErrors = results.SelectMany(r => r.Result.Failures.Select(f =>
-            L.Get("sliderBatch.failure", r.Session.Name, Number(f.TimeMs), f.Reason))).ToArray();
+            L.Get("sliderBatch.failure", r.Session.Name, Time(f.TimeMs), f.Reason))).ToArray();
         sliderErrorPage = 0; convertedSnapshot = null;
         SetNotice(L.Get("sliderBatch.finished", count, sliderBatchErrors.Length));
     }

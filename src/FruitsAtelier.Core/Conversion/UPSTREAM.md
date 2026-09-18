@@ -83,7 +83,7 @@ object cannot be generated, the result is
 marked incomplete and RNG only describes the successfully generated subset.
 
 Limits are explicit: generated SV at most 10, generated path length at most 100000 units, at most 50000
-nested objects, 30000 authoring samples, 65536 generated path points, 10000
+nested objects, 30000 authoring samples, 65536 generated path points, 65536
 imported control points, 9000 spans and 200000 imported path samples. Imported
 editing is bounded to 30000 anchors and 20 million simplification checks. Grid
 enumeration is bounded to 10000 lines. Inputs

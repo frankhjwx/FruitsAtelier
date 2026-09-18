@@ -96,6 +96,8 @@ public sealed partial class EditorView
         CheckWorkspaceResources(); StartLibraryScan(); CloseLibrary();
     }
     public void RefreshLibrary() { librarySettingsOpen = false; libraryRescanRequested = scanTask is { IsCompleted: false }; StartLibraryScan(); }
+    private LibraryDatabase? scanningDatabase;
+    private DateTime nextScanRefresh;
     private void StartLibraryScan()
     {
         if (scanTask is { IsCompleted: false }) return;
@@ -103,11 +105,13 @@ public sealed partial class EditorView
         {
             libraryRescanRequested = false;
             string workspace = LibrarySettings.Workspace, songs = LibrarySettings.Songs;
+            Volatile.Write(ref scanningDatabase, null);
             Volatile.Write(ref libraryScanProgress, new(0, 0, 0));
             // Schema initialization can wait on another scan's SQLite write lock as well.
             scanTask = Task.Run(() =>
             {
                 var db = new LibraryDatabase(workspace, songs);
+                Volatile.Write(ref scanningDatabase, db);
                 return (db, db.Scan(progress: p => Volatile.Write(ref libraryScanProgress, p)));
             });
             libraryNotice = L.Get("library.scanning");
@@ -119,11 +123,17 @@ public sealed partial class EditorView
     private void QueueLibrarySearch() { searchAfter = DateTime.UtcNow.AddMilliseconds(150); searchTaskQuery = "\0"; libraryScroll = 0; }
     private void PumpLibrary()
     {
+        if (scanTask is { IsCompleted: false } && Volatile.Read(ref scanningDatabase) is { } scanning && DateTime.UtcNow >= nextScanRefresh)
+        {
+            libraryDatabase = scanning;
+            searchTaskQuery = "\0";
+            nextScanRefresh = DateTime.UtcNow.AddMilliseconds(500);
+        }
         if (scanTask is { IsCompleted: false } && Volatile.Read(ref libraryScanProgress) is { } progress)
             libraryNotice = L.Get("library.scanProgress", progress.Files, progress.Indexed, progress.Errors);
         if (scanTask is { IsCompleted: true })
         {
-            try { var (db, result) = scanTask.GetAwaiter().GetResult(); libraryDatabase = db; libraryNotice = L.Get("library.indexed", result.Count); libraryError = string.Join("\n", result.Errors.Take(3)); QueueLibrarySearch(); }
+            try { var (db, result) = scanTask.GetAwaiter().GetResult(); libraryDatabase = db; libraryNotice = L.Get("library.indexed", result.Count); libraryError = ""; QueueLibrarySearch(); }
             catch (Exception e) { libraryError = e.Message; QueueLibrarySearch(); }
             scanTask = null;
             if (libraryRescanRequested) StartLibraryScan();
@@ -225,7 +235,9 @@ public sealed partial class EditorView
         float listWidth = width - 558;
         var queryRect = new Rect(214, 84, width - 238, 40);
         c.Fill(queryRect, Surface, 6); c.Stroke(queryRect, libraryField == 2 ? Accent : Grid, radius: 6);
-        c.Text(libraryQuery.Length == 0 ? L.Get("library.search") : libraryQuery + (libraryField == 2 ? "│" : ""), 226, 95, 14, libraryQuery.Length == 0 ? Muted : Foreground, queryRect.Width - 24);
+        if (libraryQuery.Length == 0 && libraryField != 2)
+            c.Text(L.Get("library.search"), 226, 95, 14, Muted, queryRect.Width - 24);
+        else DrawInputText(c, new(226, 95, queryRect.Width - 24, 20), libraryQuery, 14, libraryField == 2, libraryReplace);
         hits.Add(new(queryRect, () => { libraryField = 2; libraryReplace = false; }, true));
         c.Text(L.Get("library.results", libraryGroups.Count), 214, 140, 12, Muted, listWidth);
         int visible = Math.Max(1, (int)(height - 222) / 86);
@@ -289,7 +301,7 @@ public sealed partial class EditorView
         c.Text(label, 32, y, 14, Foreground, width - 64, true);
         var rect = new Rect(32, y + 28, width - (index < 2 ? 216 : 64), 42);
         c.Fill(rect, Surface, 5); c.Stroke(rect, libraryField == index ? Accent : Grid, radius: 5);
-        c.Text(value + (libraryField == index ? "│" : ""), 44, y + 40, 14, Foreground, rect.Width - 24);
+        DrawInputText(c, new(44, y + 40, rect.Width - 24, 20), value, 14, libraryField == index, libraryReplace);
         hits.Add(new(rect, () => { libraryField = index; libraryReplace = false; }, true));
         if (index < 2) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestLibraryFolder?.Invoke(index == 0));
     }
@@ -309,10 +321,11 @@ public sealed partial class EditorView
         if (resourceErrors.Count > 0) c.Text(L.Get("library.missingResources", string.Join("\n", resourceErrors)), 32, 494, 14, Error, width - 64);
     }
     public bool LibraryLoading => scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false };
-    public bool LibraryTextFocused => LibraryVisible && libraryField >= 0;
+    public bool LibraryTextFocused => LibraryVisible && libraryField >= 0 && !ErrorVisible && !DiscardConfirmationVisible;
     public void PasteLibraryText(string text)
     {
         if (!LibraryTextFocused) return;
+        ResetTextCaret();
         string value = new(text.Where(c => !char.IsControl(c)).ToArray());
         LibraryFieldValue = new string(((libraryReplace ? "" : LibraryFieldValue) + value).Take(4096).ToArray());
         libraryReplace = false;

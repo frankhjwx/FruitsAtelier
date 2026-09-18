@@ -34,13 +34,15 @@ See [Building and Testing](TESTING.md) for SDK selection and build commands, and
 
 ## Workspace and library
 
-`Core/Workspace` provides project-directory transactions, SQLite indexing, metadata scanning, resource-reference diagnostics, and explicit export plans. Shared `EditorView.Library` implements the library/settings/export pages; platform hosts handle folder selection, audio changes, and resource export. Library scanning and star calculations run in the background, with completed results read by the UI. See [Workspace](WORKSPACE.md).
+`Core/Workspace` provides project-directory transactions, SQLite indexing, metadata scanning, resource-reference diagnostics, and explicit export plans. Shared `EditorView.Library` implements the library/settings/export pages; platform hosts handle folder selection, audio changes, and resource export. Library scanning and star calculations run in the background. The UI reads committed maps during scanning and completed star results. See [Workspace](WORKSPACE.md).
 
 ## Editing and conversion
 
 Hosts map input to DIP coordinates before passing it to `EditorView`. Content changes commit through `EditorHistory` transactions; a drag, batch operation, or curve draft becomes one undo step. Selection and viewport are separate session state.
 
 The conversion cache compares document snapshots and Tiny compensation settings. Changes trigger synchronous conversion of the full document before viewport culling. Language changes rebuild diagnostic caches. Both views share the conversion result; RNG and hyperdash use the complete object sequence.
+
+The canvas and object timeline share an immutable timing lookup built alongside the conversion snapshot. It sorts timing groups once and uses binary search for local BPM, meter and SV. Playback reuses it; content changes, undo and document replacement rebuild it. Grid drawing must not rebuild timing groups for each visible tick.
 
 Drawing goes through `ICanvas`; the editor owns no device resources. During Windows playback, `WM_PAINT` requests the next frame and `Present(1)` presents it. Mac requests redraws with an approximately 16 ms timer. Each platform audio backend supplies playback position.
 

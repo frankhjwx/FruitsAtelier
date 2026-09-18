@@ -74,7 +74,7 @@ internal static class MapFileDialog
             if (dialog is not null) Marshal.ReleaseComObject(dialog);
         }
     }
-    private static void PrepareOwner(nint owner)
+    internal static void PrepareOwner(nint owner)
     {
         if (Native.GetCapture() == owner) Native.ReleaseCapture();
         if (Native.IsIconic(owner)) Native.ShowWindow(owner, 9);

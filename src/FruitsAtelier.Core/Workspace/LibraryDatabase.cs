@@ -37,7 +37,7 @@ public sealed class LibraryDatabase
         Directory.CreateDirectory(workspace);
         using var db = Open();
         using var command = db.CreateCommand();
-        command.CommandText = "CREATE TABLE IF NOT EXISTS maps(path TEXT PRIMARY KEY, root TEXT NOT NULL, stamp INTEGER NOT NULL, size INTEGER NOT NULL, data TEXT NOT NULL, search TEXT NOT NULL); CREATE TABLE IF NOT EXISTS projects(path TEXT PRIMARY KEY, source TEXT, name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS external_sources(path TEXT PRIMARY KEY, archive TEXT); CREATE TABLE IF NOT EXISTS project_sources(project TEXT NOT NULL, source TEXT NOT NULL, PRIMARY KEY(project,source)); PRAGMA user_version=2;";
+        command.CommandText = "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS maps(path TEXT PRIMARY KEY, root TEXT NOT NULL, stamp INTEGER NOT NULL, size INTEGER NOT NULL, data TEXT NOT NULL, search TEXT NOT NULL); CREATE TABLE IF NOT EXISTS projects(path TEXT PRIMARY KEY, source TEXT, name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS external_sources(path TEXT PRIMARY KEY, archive TEXT); CREATE TABLE IF NOT EXISTS project_sources(project TEXT NOT NULL, source TEXT NOT NULL, PRIMARY KEY(project,source)); PRAGMA user_version=2;";
         command.ExecuteNonQuery();
     }
     private SqliteConnection Open()
@@ -100,12 +100,11 @@ public sealed class LibraryDatabase
     private LibraryScan ScanRoot(string root, CancellationToken cancellation, Action<bool, bool> report)
     {
         using var db = Open();
-        using var transaction = db.BeginTransaction();
         var errors = new List<string>(); var seen = new HashSet<string>(StringComparer.Ordinal);
         var cached = new Dictionary<string, (long Stamp, long Size)>();
         using (var command = db.CreateCommand())
         {
-            command.Transaction = transaction; command.CommandText = "SELECT path,stamp,size FROM maps WHERE root=$root"; command.Parameters.AddWithValue("$root", root);
+            command.CommandText = "SELECT path,stamp,size FROM maps WHERE root=$root"; command.Parameters.AddWithValue("$root", root);
             using var reader = command.ExecuteReader(); while (reader.Read()) cached[reader.GetString(0)] = (reader.GetInt64(1), reader.GetInt64(2));
         }
         var directories = new Stack<string>(); directories.Push(root);
@@ -133,7 +132,7 @@ public sealed class LibraryDatabase
                     var map = ReadMetadata(file);
                     if (map is null) continue;
                     seen.Add(file);
-                    using var command = db.CreateCommand(); command.Transaction = transaction;
+                    using var command = db.CreateCommand();
                     command.CommandText = "INSERT OR REPLACE INTO maps VALUES($p,$r,$t,$s,$d,$q)";
                     command.Parameters.AddWithValue("$p", file); command.Parameters.AddWithValue("$r", root);
                     command.Parameters.AddWithValue("$t", stamp); command.Parameters.AddWithValue("$s", info.Length);
@@ -150,10 +149,9 @@ public sealed class LibraryDatabase
         if (errors.Count == 0)
             foreach (var path in cached.Keys.Where(p => !seen.Contains(p)))
             {
-                using var command = db.CreateCommand(); command.Transaction = transaction;
+                using var command = db.CreateCommand();
                 command.CommandText = "DELETE FROM maps WHERE path=$p"; command.Parameters.AddWithValue("$p", path); command.ExecuteNonQuery();
             }
-        transaction.Commit();
         return new(seen.Count, errors);
     }
 

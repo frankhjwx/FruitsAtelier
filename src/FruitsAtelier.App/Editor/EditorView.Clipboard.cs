@@ -7,6 +7,46 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private MapDocument? objectClipboard;
+    private DifficultySession? clipboardDifficulty;
+    public Action<string>? RequestCopyText { get; set; }
+    public string ObjectClipboardText { get; private set; } = "";
+
+    private void StoreClipboard(MapDocument snapshot, string text)
+    {
+        objectClipboard = snapshot;
+        clipboardDifficulty = difficulties[activeDifficulty];
+        ObjectClipboardText = text;
+        RequestCopyText?.Invoke(text);
+    }
+
+    private string SelectionReference(MapDocument snapshot)
+    {
+        var parents = ClipboardParents(snapshot).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
+        var numbers = ComboNumbers();
+        return Time(parents[0].TimeMs) + " (" + string.Join(",", parents.Select(p => numbers[p.Id])) + ") - ";
+    }
+
+    private Dictionary<Guid, int> ComboNumbers()
+    {
+        var lines = Document.Fruits.Select(f => (f.Id, f.OriginalLine))
+            .Concat(Document.Tracks.Select(t => (t.Id, t.OriginalLine)))
+            .Concat(Document.ImportedSliders.Select(t => (t.Id, t.OriginalLine)))
+            .Concat(Document.BananaShowers.Select(t => (t.Id, t.OriginalLine))).ToDictionary(p => p.Id, p => p.OriginalLine);
+        var spinners = Document.BananaShowers.Select(s => s.Id).ToHashSet();
+        var result = new Dictionary<Guid, int>();
+        int number = 0;
+        bool afterSpinner = false;
+        foreach (var parent in ClipboardParents(Document).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder))
+        {
+            var parts = lines[parent.Id]?.Split(',');
+            int flags = parts is { Length: > 3 } && int.TryParse(parts[3], out int value) ? value : 0;
+            bool spinner = spinners.Contains(parent.Id);
+            if ((flags & 4) != 0 || spinner || afterSpinner) number = 0;
+            result[parent.Id] = ++number;
+            afterSpinner = spinner;
+        }
+        return result;
+    }
 
     private bool ClipboardInteractionReady => draftTrack == Guid.Empty && draftBanana == Guid.Empty && drag == DragKind.None && editField < 0;
 
@@ -22,12 +62,12 @@ public sealed partial class EditorView
         }
     }
 
-    public bool CanPasteSelection => ClipboardInteractionReady && objectClipboard is not null;
+    public bool CanPasteSelection => ClipboardInteractionReady && objectClipboard is not null && ReferenceEquals(clipboardDifficulty, difficulties[activeDifficulty]);
 
     public bool CopySelection()
     {
         if (!TryCopySnapshot(out var snapshot)) return false;
-        objectClipboard = snapshot;
+        StoreClipboard(snapshot!, SelectionReference(snapshot!));
         StatusMessage = L.Get("editor.status.objectsCopied", ClipboardParents(snapshot!).Count());
         return true;
     }
@@ -36,6 +76,7 @@ public sealed partial class EditorView
     {
         if (!TryCopySnapshot(out var snapshot)) return false;
         var ids = ClipboardParents(snapshot!).Select(p => p.Id).ToHashSet();
+        string reference = SelectionReference(snapshot!);
         if (!Edit(L.Get("editor.command.cutObjects"), () =>
         {
             Document.Fruits.RemoveAll(f => ids.Contains(f.Id));
@@ -43,7 +84,7 @@ public sealed partial class EditorView
             Document.ImportedSliders.RemoveAll(s => ids.Contains(s.Id));
             Document.BananaShowers.RemoveAll(s => ids.Contains(s.Id));
         })) return false;
-        objectClipboard = snapshot;
+        StoreClipboard(snapshot!, reference);
         Select(Guid.Empty);
         StatusMessage = L.Get("editor.status.objectsCut", ids.Count);
         return true;

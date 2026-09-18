@@ -13,12 +13,13 @@ public sealed partial class EditorView
 
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
-        if (DiscardConfirmationVisible)
+        if (ErrorVisible || DiscardConfirmationVisible)
         {
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
         }
+        ResetTextCaret();
         mouseX = x; mouseY = y;
         if (SliderDialogVisible)
         {
@@ -28,6 +29,7 @@ public sealed partial class EditorView
         }
         if (LibraryVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
+        if (menu >= 0 && button != 0) { menu = -1; return; }
         if (button == 2)
         {
             if (editField >= 0 && !CommitField()) return;
@@ -51,9 +53,9 @@ public sealed partial class EditorView
         if (menu >= 0)
         {
             var popup = MenuBounds;
-            if (popup.Contains(x, y))
+            if (popup.Contains(x, y) || menu == 2 && gridLevelMenuOpen && gridLevelMenuBounds.Contains(x, y))
             {
-                for (int i = hits.Count - 1; i >= 0; i--)
+                for (int i = hits.Count - 1; i >= menuHitStart; i--)
                     if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); return; }
                 return;
             }
@@ -172,7 +174,7 @@ public sealed partial class EditorView
             if (ctrl) return;
             if (!hitObject.IsStandalone)
             {
-                StatusMessage = L.Get("editor.status.parentSelected", hitObject.Kind == CatchObjectKind.Banana ? L.Get("editor.object.bananaShower") : L.Get("editor.object.sliderWithSpace"), Number(hitObject.TimeMs));
+                StatusMessage = L.Get("editor.status.parentSelected", hitObject.Kind == CatchObjectKind.Banana ? L.Get("editor.object.bananaShower") : L.Get("editor.object.sliderWithSpace"), Time(hitObject.TimeMs));
                 BeginObjectDrag(x, y);
                 return;
             }
@@ -228,7 +230,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
-        if (DiscardConfirmationVisible) return;
+        if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (LibraryVisible) return;
         mouseX = x; mouseY = y;
@@ -253,11 +255,12 @@ public sealed partial class EditorView
             if (MathF.Abs(x - dragStartX) < 2 && MathF.Abs(y - dragStartY) < 2) return;
             dragMoved = true;
         }
+        if (drag == DragKind.TimelineTail) { MoveTimelineTail(x); return; }
         if (drag == DragKind.LegacyControl) { MoveLegacyPoints(x, y); return; }
         if (drag == DragKind.Objects) { MoveSelectedObjects(x, y); return; }
         if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y); return; }
         var raw = Transform.ToMap(x, y) - dragOffset;
-        var p = new MapPoint(Math.Clamp(raw.TimeMs, 0, EditableDurationMs), Math.Clamp(raw.X, 0, 512));
+        var p = new MapPoint(Math.Clamp(raw.TimeMs, 0, EditableDurationMs), Math.Clamp(SnapX(raw.X), 0, 512));
         if (SelectedTrack is { } track && SelectedAnchor is { } node)
         {
             if (drag == DragKind.Anchor)
@@ -280,7 +283,7 @@ public sealed partial class EditorView
                 else
                 {
                     Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
-                    StatusMessage = L.Get("editor.status.anchorPosition", Number(node.TimeMs), Number(node.X));
+                    StatusMessage = L.Get("editor.status.anchorPosition", Time(node.TimeMs), Number(node.X));
                 }
             }
             else if (drag == DragKind.DraftHandle)
@@ -324,13 +327,13 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
-        if (DiscardConfirmationVisible) return;
+        if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (LibraryVisible) return;
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
         PointerMove(x, y, false, false);
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
-        if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl) history.Commit();
+        if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail) history.Commit();
         if (draftTrack != Guid.Empty && drag == DragKind.Anchor && !dragMoved
             && SelectedTrack is { } draft && SelectedAnchor == draft.Nodes[^1])
         {
@@ -349,7 +352,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
-        if (DiscardConfirmationVisible) return;
+        if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (LibraryVisible) { OpenLibraryCard(x, y); return; }
         if (ctrl || tool == Tool.Fruit) { PointerDown(x, y, 0, shift, ctrl); return; }
@@ -381,7 +384,12 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl)
     {
-        if (DiscardConfirmationVisible) return;
+        if (ErrorVisible)
+        {
+            errorScroll = Math.Clamp(errorScroll - (int)(delta / 120) * 3, 0, Math.Max(0, errorLineCount - errorVisibleLines));
+            return;
+        }
+        if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (LibraryVisible) { if (x >= width - 330) libraryDiffScroll = Math.Max(0, libraryDiffScroll - (int)(delta / 120)); else libraryScroll = Math.Max(0, libraryScroll - (int)(delta / 120) * 3); return; }
         if (drag != DragKind.None) return;
@@ -423,6 +431,12 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        ResetTextCaret();
+        if (ErrorVisible)
+        {
+            if (virtualKey is 27 or 13) DismissError();
+            return;
+        }
         if (DiscardConfirmationVisible)
         {
             if (virtualKey is 27 or 13) AnswerDiscard(2);
@@ -487,6 +501,8 @@ public sealed partial class EditorView
         contextItems.Clear();
         switch (virtualKey)
         {
+            case 71: gridSize = gridSize == 32 ? 4 : gridSize * 2; break;
+            case 84: gridSnap = !gridSnap; break;
             case 13: FinishCurve(); break;
             case 46: DeleteSelection(); break;
             case 86: ChangeTool(Tool.Select); break;
@@ -500,11 +516,12 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
-        if (DiscardConfirmationVisible) return;
+        ResetTextCaret();
+        if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (LibraryVisible) { if (libraryField >= 0 && !char.IsControl(value) && LibraryFieldValue.Length < 4096) { LibraryFieldValue = (libraryReplace ? "" : LibraryFieldValue) + value; libraryReplace = false; } return; }
         if (editField < 0 || char.IsControl(value)) return;
-        if (!(char.IsAsciiDigit(value) || value is '.' or '-' or '+' or 'e' or 'E')) return;
+        if (!(char.IsAsciiDigit(value) || value is '.' or '-' or '+' or 'e' or 'E' || value == ':' && fields[editField].Timestamp)) return;
         if (replaceText) { editBuffer = ""; replaceText = false; }
         if (editBuffer.Length < 30) editBuffer += value;
         fieldError = "";
@@ -513,7 +530,7 @@ public sealed partial class EditorView
     public void CancelInteraction()
     {
         if (drag == DragKind.Marquee) { CancelBox(); contextItems.Clear(); return; }
-        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl)
+        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
         {
             history.Cancel();
             if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) Select(Guid.Empty);
@@ -596,7 +613,7 @@ public sealed partial class EditorView
         Document.DurationMs = Math.Max(Document.DurationMs, time);
         draftBanana = shower.Id;
         SelectObjects([shower.Id], shower.Id);
-        StatusMessage = L.Get("editor.status.bananaStarted", Number(time));
+        StatusMessage = L.Get("editor.status.bananaStarted", Time(time));
     }
 
     private void FinishBanana(float x, float y)
@@ -618,7 +635,7 @@ public sealed partial class EditorView
         history.Commit();
         draftBanana = Guid.Empty;
         SelectObjects([shower.Id], shower.Id);
-        StatusMessage = L.Get("editor.status.bananaFinished", Number(shower.TimeMs), Number(end));
+        StatusMessage = L.Get("editor.status.bananaFinished", Time(shower.TimeMs), Time(end));
     }
 
     private void BeginNodeDrag(CurveTrack track, Anchor node, DragKind kind, float x, float y)
@@ -659,7 +676,7 @@ public sealed partial class EditorView
     private void FocusField(int index)
     {
         editField = index;
-        editBuffer = fields[index].Value.ToString("G17", CultureInfo.InvariantCulture);
+        editBuffer = fields[index].Timestamp ? Time(fields[index].Value) : fields[index].Value.ToString("G17", CultureInfo.InvariantCulture);
         fieldError = "";
         replaceText = true;
     }
@@ -667,9 +684,20 @@ public sealed partial class EditorView
     private bool CommitField()
     {
         if (editField < 0 || editField >= fields.Count) { editField = -1; return true; }
-        if (!double.TryParse(editBuffer, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) || !double.IsFinite(value))
-        { fieldError = L.Get("editor.error.finiteNumberRequired"); return false; }
         var field = fields[editField];
+        if (field.Timestamp && replaceText && editBuffer == Time(field.Value)) { editField = -1; fieldError = ""; return true; }
+        string input = editBuffer;
+        if (field.Timestamp && input.Contains(':'))
+        {
+            var parts = input.Split(':');
+            if (parts.Length != 3 || !long.TryParse(parts[0], out long minutes) || minutes < 0
+                || !int.TryParse(parts[1], out int seconds) || seconds is < 0 or >= 60
+                || !int.TryParse(parts[2], out int milliseconds) || milliseconds is < 0 or >= 1000)
+            { fieldError = L.Get("editor.error.timestampRequired"); return false; }
+            input = (minutes * 60000d + seconds * 1000 + milliseconds).ToString("R", CultureInfo.InvariantCulture);
+        }
+        if (!double.TryParse(input, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) || !double.IsFinite(value))
+        { fieldError = L.Get("editor.error.finiteNumberRequired"); return false; }
         history.Begin(L.Get("editor.command.changeField", field.Label));
         try
         {

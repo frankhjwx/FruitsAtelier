@@ -49,6 +49,7 @@ public sealed class CatchSkin
                 LoadTexture($"fruit-{name}");
                 LoadTexture($"fruit-{name}-overlay");
             }
+            LoadTexture("reversearrow");
             if (files.TryGetValue("skin.ini", out var configuration)) candidate.ReadConfiguration(configuration);
             if (candidate.textures.Count == 0) { message = L.Get("skin.noTextures"); return false; }
             skin = candidate;
@@ -71,6 +72,14 @@ public sealed class CatchSkin
             message = L.Get("skin.loadFailed", L.Localized(ex.Message));
             return false;
         }
+    }
+
+    public bool DrawReverseArrow(ICanvas canvas, float centerX, float centerY, float diameter)
+    {
+        if (!float.IsFinite(diameter) || diameter <= 0 || !textures.TryGetValue("reversearrow", out var texture)) return false;
+        float scale = Math.Min(diameter / (128 * texture.Density), diameter * 2 / Math.Max(texture.PixelWidth, texture.PixelHeight));
+        float width = texture.PixelWidth * scale, height = texture.PixelHeight * scale;
+        return canvas.Image(texture.FilePath, new(centerX - width / 2, centerY - height / 2, width, height));
     }
 
     public CatchSkinSprite SpriteFor(CatchSkinObject kind, int index = 0)

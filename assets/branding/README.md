@@ -3,7 +3,8 @@
 The approved identity is an italic FA monogram with a single leaf above the A. Vector paths were reconstructed from the supplied reference; the previous cherry artwork is not the active identity.
 
 - `mark.svg` / `mark.png`: purple standalone mark for application chrome and compact placements.
-- `app-icon.svg` / `.png` / `.ico` / `.icns`: text-free, white-on-charcoal desktop icon. ICO contains 16–256 px representations; ICNS includes 16–1024 px representations.
+- `app-icon.ico`: Windows executable and window icon, generated directly from `mark.png` with transparent padding and preserved proportions. Contains 16–256 px representations.
+- `app-icon.svg` / `.png` / `.icns`: white-on-charcoal macOS icon. ICNS includes 16–1024 px representations.
 - `wordmark-en.svg` / `.png`: mark on the left and FruitsAtelier on the right.
 - `wordmark-zh.svg` / `.png`: mark on the left and 水果工坊 on the right.
 

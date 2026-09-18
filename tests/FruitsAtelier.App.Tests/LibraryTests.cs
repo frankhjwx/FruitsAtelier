@@ -22,6 +22,9 @@ internal static class LibraryTests
             var before = view.CaptureProject();
             view.ShowLibrary(); canvas.Clear(); view.Render(canvas, 980, 620);
             Check(canvas.Texts.Any(t => t.Value == L.Get("library.title")), "separate library page");
+            view.PointerDown(250, 100, 0, false, false); view.PointerUp(250, 100, 0);
+            canvas.Clear(); view.Render(canvas, 980, 620);
+            Check(canvas.Lines.Any(l => l.X1 == 226 && l.X2 == 226 && l.Y1 == 96), "empty focused search shows a drawn caret");
             view.KeyDown(70, false, false); view.PointerDown(700, 480, 0, false, false); view.PointerUp(700, 480, 0);
             Check(view.CaptureProject().Difficulties[0].Document.ContentEquals(before.Difficulties[0].Document), "library input cannot edit map");
             view.CloseLibrary(); view.ShowWorkspaceExport(); canvas.Clear(); view.Render(canvas, 980, 620);

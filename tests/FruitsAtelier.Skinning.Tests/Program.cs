@@ -10,6 +10,7 @@ string defaultSkinPackage = Path.Combine(root, "assets", "skins", "default.osk")
 var tests = new List<(string Name, Action Run)>
 {
     ("A doubled texture has the same logical size and is preferred over 1x", HighDensity),
+    ("Reverse arrows use skin density and fall back for missing or undecodable images", ReverseArrows),
     ("Oversized artwork is centre cropped without distorting the other axis", CentreCrop),
     ("Base tint and independently sized white overlay compose at one centre", Overlay),
     ("Droplets keep their aspect ratio; tiny droplets are half their size", Droplets),
@@ -31,6 +32,28 @@ foreach (var (name, run) in tests)
 }
 Console.WriteLine($"{passed}/{tests.Count} skin layout tests passed; PNG decoding is verified separately by the renderer.");
 return passed == tests.Count ? 0 : 1;
+
+void ReverseArrows()
+{
+    string folder = Fixture("reverse-arrows");
+    Header(folder, "reversearrow.png", 128, 64);
+    Header(folder, "reversearrow@2x.png", 256, 128);
+    var canvas = new RecordingCanvas();
+    True(Load(folder).DrawReverseArrow(canvas, 100, 200, 38));
+    var image = canvas.Calls.Single();
+    True(image.Path.EndsWith("reversearrow@2x.png"));
+    Rectangle(image.Destination, 81, 190.5f, 38, 19);
+    Equal(0xFFFFFF, image.Tint);
+    canvas.AcceptImages = false;
+    True(!Load(folder).DrawReverseArrow(canvas, 100, 200, 38));
+    File.WriteAllBytes(Path.Combine(folder, "reversearrow@2x.png"), new byte[24]);
+    canvas.Calls.Clear(); canvas.AcceptImages = true;
+    True(Load(folder).DrawReverseArrow(canvas, 100, 200, 38));
+    True(canvas.Calls.Single().Path.EndsWith("reversearrow.png"));
+    string missing = Fixture("no-reverse-arrow");
+    Header(missing, "fruit-pear.png", 128, 128);
+    True(!Load(missing).DrawReverseArrow(canvas, 100, 200, 38));
+}
 
 void HighDensity()
 {

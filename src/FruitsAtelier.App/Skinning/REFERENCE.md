@@ -16,6 +16,8 @@ Static editor bananas use `CatchSize.BananaScaleFactor = 0.6`, the referenced ar
 
 `CatchSkin.Bounds` returns the union of the base and overlay destination rectangles using the same scale and geometry as `Draw`. It includes transparent padding and the logical centre crop, but excludes the enlarged hyperdash layer. An absent sprite or invalid nominal diameter returns null so the caller can use geometric fallback bounds. This is a rectangle for hit testing, not a per-pixel alpha test.
 
-`.osk` importing is owned by the application; this loader reads only an extracted folder's `skin.ini` and `fruit-*.png` files.
+`.osk` importing is owned by the application; this loader reads an extracted folder's `skin.ini`, `fruit-*.png`, and `reversearrow.png` / `reversearrow@2x.png` files. The extraction cache uses a versioned directory so packages imported before reverse-arrow support are extracted again.
+
+Timeline repeat markers use the skin's reverse arrow at a 128-unit nominal size, preserving aspect ratio and transparent padding, capped to twice the marker diameter. Arrow sprites remain unrotated in the horizontal timeline. Missing or undecodable images use the editor's geometric right arrow. The filename and right-facing convention follow the [osu! skinning specification](https://osu.ppy.sh/wiki/en/Skinning/osu%21#reversearrow.png).
 
 No upstream drawable or framework implementation is embedded. PNG decoding belongs to the platform canvas: Windows Imaging Component on Windows and Avalonia bitmaps on macOS. Invalid or missing PNGs return failure for the caller's geometric fallback.

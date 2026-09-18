@@ -9,8 +9,19 @@ FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
 if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
 
+if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.InspectMap(args[1]);
+
 var tests = new (string Name, Action Run)[]
 {
+    ("Timeline tails adjust reverses with undo and cancellation", ObjectTimelineTests.TailReverses),
+    ("Timeline reverse circles follow spans, tail edits and undo", ObjectTimelineTests.ReverseMarkers),
+    ("Grid Level opens a checked View submenu", GridLevelMenuTests.Run),
+    ("Playback reuses timing data and edits invalidate it", ObjectTimelineTests.TimingCacheInvalidation),
+    ("Operation errors remain visible and isolate input on editor and library pages", OperationErrorTests.Run),
+    ("Text inputs blink, highlight selection and menus fit their rows", TextInputFeedbackTests.Run),
+    ("Legacy clipboard and horizontal grid preserve pattern scope", LegacyAlignmentTests.ClipboardAndGrid),
+    ("Legacy timestamps and read-only details preserve precision", LegacyAlignmentTests.TimestampAndReadOnly),
+    ("Legacy samples use edge leniency and slider-start tick samples", LegacyAlignmentTests.Samples),
     ("Cached timeline durations follow timing, repeat and document changes", ObjectTimelineTests.CachedDurationsFollowEdits),
     ("Selected-slider body drag, point drag and two-stage right-click follow the same rules in both modes", ToolPaletteTests.SelectedSliderControls),
     ("Timeline layout, centered numbers, box selection and deletion", ObjectTimelineTests.BoxAndDelete),
@@ -23,7 +34,7 @@ var tests = new (string Name, Action Run)[]
     ("Mode switching and AR preserve curves until a real pen edit", SliderModeInteractionTests.SwitchArAndLocalPenEdit),
     ("Legacy insertion, deletion and double-click segmentation are undoable", SliderModeInteractionTests.InsertDeleteAndBoundary),
     ("Lazer placement and selected-slider controls avoid extra mode transitions", SliderModeInteractionTests.LazerPlacementAndSelection),
-    ("Slider mode menu is global and repeat dragging is removed", SliderModeInteractionTests.GlobalModeMenu),
+    ("FSlider hover offers both editing modes without changing content", SliderModeInteractionTests.GlobalModeMenu),
     ("Anchor dragging defaults to free time with independent opt-in snapping", AnchorSnapTests.Dragging),
     ("Catch hitsound samples and playback boundaries", HitsoundTests.Run),
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),
@@ -41,8 +52,8 @@ var tests = new (string Name, Action Run)[]
     ("Star ratings refresh asynchronously without losing cached or newer results", DifficultyTabTests.AsyncRatings),
     ("Overflow difficulty tabs scroll, switch and add without losing content", DifficultyTabTests.Overflow),
     ("Multi-difficulty projects preserve content, history and compatibility", ProjectTests.Run),
-    ("Canvas seeks follow the current beat grid and timing changes", CanvasSeekSnapTests.BeatGrid),
-    ("Free canvas seeking retains continuous time", CanvasSeekSnapTests.FreeMode),
+    ("Select blank-canvas clicks seek across beat divisors", CanvasSeekSnapTests.BeatGrid),
+    ("Canvas and timeline navigation do not edit content", CanvasSeekSnapTests.FreeMode),
     ("Timeline grabs retain the exact original time after round trips", TimelineDragTests.ReturnToStart),
     ("Timeline background clicks seek and drag limits preserve the origin", TimelineDragTests.ClickAndLimits),
     ("Fruit tools place quarters and sixths without moving existing objects", PlaceOnBothGrids),
@@ -66,21 +77,21 @@ var tests = new (string Name, Action Run)[]
     ("Rejected anchor time preserves curve controls and accepts a corrected time", AnchorNumericRetry),
     ("Ctrl-click-created slider keeps corner points and commits one transaction", DraftCompletion),
     ("Painted fruit, time ruler and playhead share an upward time axis", UpwardPainting),
-    ("Clicking higher on the canvas selects a later time", UpwardClickTime),
+    ("Select blank clicks seek while objects and box drags preserve time", UpwardClickTime),
     ("Wheel up reveals later time and middle drag keeps content under the pointer", WheelAndPan),
     ("Overview wheel seeks continuously, follows the clock and preserves playback and content", OverviewWheel),
-    ("Object timeline selects parent durations, seeks and scales independently", ObjectTimelineTests.NavigationAndSelection),
+    ("Object timeline selects without seeking and scales independently", ObjectTimelineTests.NavigationAndSelection),
     ("Playback speed buttons work in both languages without editing content", ObjectTimelineTests.SpeedControls),
     ("Canvas layout and reset enforce full width and the minimum size", CanvasZoomTests.DefaultsAndReset),
     ("Zoom slider and wheel share scale, bounds and content isolation", CanvasZoomTests.SliderAndWheel),
     ("Zoom slider fits both languages and preserves playback following", CanvasZoomTests.PlaybackAndLanguages),
     ("Control-wheel keeps pointer time fixed while scaling object positions", ZoomPaintedAnchor),
     ("Reset view positions the playhead without editing map or history", ResetCanvasViewport),
-    ("AR controls preview fall distance, visibility and reversible numeric edits", ArPreviewAndInput),
+    ("Read-only AR controls preview fall distance and visibility", ArPreviewAndInput),
     ("AR scale works with a hidden preview and follows canvas width changes", ArScaleResize),
     ("Hiding main curves preserves every converted fruit, droplet and tiny droplet", MainCurveVisibility),
     ("Preview debug curves are independent and remain behind converted objects", PreviewCurveLayers),
-    ("CS numeric edits scale main and preview objects together and undo restores them", CircleSizeAcrossViews),
+    ("Map CS scales main and preview objects together", CircleSizeAcrossViews),
     ("Main curves overlay objects and selection changes only their opacity", MainCurveSelectionOpacity),
     ("Imported timing boundaries drive both quarter and sixth editing", MultiTimingEditing),
     ("Playback commands and device clock stay separate from content history", TransportIntegration),
@@ -147,7 +158,7 @@ static void ContinuousFollow()
     ui.View.UpdateTransport(8000, 60000, true, true, false, null, "song.mp3"); ui.Paint();
     Near(8000 - offset, ui.View.ViewStartMs);
     ui.View.UpdateTransport(8000, 60000, true, false, false, null, "song.mp3"); ui.Paint();
-    float navY = ui.Canvas.Texts.Single(t => t.Value == "时间导航").Y + 50;
+    float navY = ui.Canvas.Outlines.Single(s => s.Color == 0x71849A).Bounds.Y + 20;
     ui.Click(900, navY);
     double later = ui.View.ViewStartMs;
     ui.View.PointerDown(900, navY, 0, false, false);
@@ -247,7 +258,7 @@ static void SelectOffGrid()
     var ui = new Ui();
     var id = ui.View.Document.Fruits[0].Id;
     ui.ClickFruit(id);
-    ui.SetField("时间  ms", "1001");
+    ui.SetField("时间", "1001");
     Near(1001, ui.Fruit(id).TimeMs);
     ui.ClickFruit(id);
     Near(1001, ui.Fruit(id).TimeMs);
@@ -351,7 +362,7 @@ static void NumericRejectAndRetry()
     var ui = new Ui();
     var id = ui.View.Document.Fruits[0].Id;
     ui.ClickFruit(id);
-    ui.FocusField("时间  ms");
+    ui.FocusField("时间");
     ui.Type("-1");
     ui.View.KeyDown(13, false, false);
     Near(250, ui.Fruit(id).TimeMs);
@@ -376,7 +387,7 @@ static void NumericIsolation()
     var id = ui.View.Document.Fruits[0].Id;
     int count = ui.View.Document.Fruits.Count;
     ui.ClickFruit(id);
-    ui.FocusField("时间  ms");
+    ui.FocusField("时间");
     ui.Type("1e309");
     ui.Key(13);
     Near(250, ui.Fruit(id).TimeMs);
@@ -399,7 +410,7 @@ static void AnchorNumericRetry()
     ui.ClickMap(2500, 392);
     ui.Key('B');
     ui.ClickMap(2500, 392);
-    ui.FocusField("时间  ms");
+    ui.FocusField("时间");
     ui.Type("1100");
     ui.View.KeyDown(13, false, false);
     Near(2500, ui.Anchor(id).TimeMs);
@@ -447,8 +458,8 @@ static void UpwardPainting()
     True(fruits[1].Y < fruits[0].Y, "The later fruit was not painted above the earlier fruit.");
     Near(plot.Bottom - 250 * ui.View.PixelsPerMs, fruits[0].Y);
     Near(plot.Bottom - 500 * ui.View.PixelsPerMs, fruits[1].Y);
-    var zero = ui.Canvas.Texts.Single(t => t.Value == "0" && t.X < plot.X && t.Y > plot.Y);
-    var beat = ui.Canvas.Texts.Single(t => t.Value == "500" && t.X < plot.X && t.Y > plot.Y);
+    var zero = ui.Canvas.Texts.Single(t => t.Value == "00:00:000" && t.X < plot.X && t.Y > plot.Y);
+    var beat = ui.Canvas.Texts.Single(t => t.Value == "00:00:500" && t.X < plot.X && t.Y > plot.Y);
     True(beat.Y < zero.Y, "The time ruler increases downward.");
     True(zero.Y >= plot.Bottom - 16 && zero.Y + 14 <= plot.Bottom,
         "The zero-time label must remain readable inside the bottom edge.");
@@ -463,17 +474,16 @@ static void UpwardPainting()
 static void UpwardClickTime()
 {
     var ui = new Ui();
-    ui.ClickText("自由");
-    var plot = ui.Plot;
-    ui.Click(plot.Right - 10, plot.Bottom - 100);
-    double earlier = ui.View.PlayheadMs;
-    Near(100 / ui.View.PixelsPerMs, earlier);
-    float laterDistance = plot.Height * .25f + 150;
-    double expectedLater = ui.View.ViewStartMs + laterDistance / ui.View.PixelsPerMs;
-    ui.Click(plot.Right - 10, plot.Bottom - laterDistance);
-    True(ui.View.PlayheadMs > earlier, "A higher canvas click did not select a later time.");
-    Near(expectedLater, ui.View.PlayheadMs);
-    True(!ui.View.IsDirty, "Time navigation mutated the map.");
+    var map = new MapDocument { DurationMs = 10000 };
+    map.Fruits.Add(new() { TimeMs = 1000, X = 100 });
+    ui.LoadDocument(map);
+    ui.ClickMap(1128, 480); Near(1125, ui.View.PlayheadMs);
+    ui.ClickMap(1730, 480); Near(1750, ui.View.PlayheadMs);
+    ui.ClickMap(1000, 100); Near(1750, ui.View.PlayheadMs);
+    ui.ClickMap(2300, 480, ctrl: true); Near(1750, ui.View.PlayheadMs);
+    ui.DownMap(2500, 450); ui.MoveMap(3000, 490); ui.UpMap(3000, 490);
+    Near(1750, ui.View.PlayheadMs);
+    True(!ui.View.IsDirty, "Navigation or selection mutated the map.");
 }
 
 static void WheelAndPan()
@@ -511,7 +521,7 @@ static void OverviewWheel()
         ui.View.RequestTogglePlayback = () => toggles++;
         ui.View.UpdateTransport(5000, ready ? 60000 : 0, ready, playing, false, null, ready ? "song.mp3" : null);
         ui.Paint();
-        float x = 700, y = ui.Canvas.Texts.Single(t => t.Value == "时间导航").Y + 50;
+        float x = 700, y = ui.Canvas.Outlines.Single(s => s.Color == 0x71849A).Bounds.Y + 20;
         double start = ui.View.PlayheadMs;
         double scale = ui.View.PixelsPerMs;
         ui.View.Wheel(x, y, 30, false); ui.Paint();
@@ -598,22 +608,10 @@ static void ArPreviewAndInput()
         ui.Resize(1440, height);
         AssertArPreview(ui, 1800, fixtures, 142, 182);
     }
-    string arZero = Snapshot(ui);
-    foreach (string invalid in new[] { "-1", "11" })
-    {
-        ui.SetAr(invalid);
-        Near(0, ui.View.Document.ApproachRate);
-        True(Snapshot(ui) == arZero, "An out-of-range AR changed the document.");
-        ui.Key(27);
-    }
-    ui.Key('Z', ctrl: true);
-    Near(10, ui.View.Document.ApproachRate);
-    ui.Key('Z', ctrl: true);
-    True(Snapshot(ui) == original, "AR undo did not restore the original numeric value and fixture objects.");
-    ui.Key('Y', ctrl: true);
-    Near(10, ui.View.Document.ApproachRate);
-    ui.Key('Y', ctrl: true);
-    True(Snapshot(ui) == arZero, "AR redo did not restore the accepted document.");
+    ui.SetAr("10");
+    AssertArPreview(ui, 450, fixtures, 42, 82);
+    ui.Paint();
+    True(ui.Canvas.Texts.Any(t => t.Value.Contains("AR 10")), "AR must be displayed as read-only text.");
 }
 
 static void AssertArPreview(Ui ui, double preempt, (double Remaining, double X)[] fixtures, double halfX, double topX)
@@ -725,15 +723,10 @@ static void CircleSizeAcrossViews()
     True(previewRatio < 1, "CS setup did not reduce object size.");
     AssertScaled(main, MainInterior(), previewRatio);
     AssertScaled(preview, ObjectCircles(ui, preview: true), previewRatio);
-    True(ui.View.IsDirty, "An accepted CS edit did not dirty the map.");
-    ui.Key('Z', ctrl: true);
-    Near(originalCs, ui.View.Document.CircleSize);
-    True(Snapshot(ui) == original && !ui.View.IsDirty, "One undo did not restore the original CS document.");
-    True(MainInterior().SequenceEqual(main), "CS undo did not restore main object sizes.");
-    True(ObjectCircles(ui, preview: true).SequenceEqual(preview), "CS undo did not restore preview sizes.");
-    ui.Key('Y', ctrl: true);
-    AssertScaled(main, MainInterior(), previewRatio);
-    AssertScaled(preview, ObjectCircles(ui, preview: true), previewRatio);
+    ui.SetCs(originalCs.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    True(Snapshot(ui) == original, "Restoring fixture CS changed object data.");
+    True(MainInterior().SequenceEqual(main), "Restoring CS did not restore main object sizes.");
+    True(ObjectCircles(ui, preview: true).SequenceEqual(preview), "Restoring CS did not restore preview sizes.");
 }
 
 static void MainCurveSelectionOpacity()
@@ -855,6 +848,7 @@ sealed class Ui
     public RecordingCanvas Canvas { get; } = new();
     public Ui(bool overview = true)
     {
+        View.SetSliderEditingMode(SliderEditingMode.PenTool);
         Paint();
         if (overview) ShowFixtureOverview();
     }
@@ -877,20 +871,8 @@ sealed class Ui
     public Anchor Anchor(Guid id) => View.Document.Tracks.SelectMany(t => t.Nodes).Single(n => n.Id == id);
     public void Paint() { Canvas.Clear(); View.Render(Canvas, width, height); }
     public void Resize(float width, float height) { this.width = width; this.height = height; Paint(); }
-    public void SetAr(string value)
-    {
-        var label = Canvas.Texts.Single(t => t.Value == "AR");
-        Click(label.X + 40, label.Y + 5);
-        Type(value);
-        Key(13);
-    }
-    public void SetCs(string value)
-    {
-        var label = Canvas.Texts.Single(t => t.Value == "CS");
-        Click(label.X + 40, label.Y + 5);
-        Type(value);
-        Key(13);
-    }
+    public void SetAr(string value) { View.Document.ApproachRate = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture); Paint(); }
+    public void SetCs(string value) { View.Document.CircleSize = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture); Paint(); }
     public void Key(int key, bool ctrl = false, bool shift = false) { View.KeyDown(key, ctrl, shift); Paint(); }
     public void SetSnapDivisor(int divisor)
     {
@@ -915,6 +897,8 @@ sealed class Ui
     public void ClickFruit(Guid id) { var fruit = Fruit(id); ClickMap(fruit.TimeMs, fruit.X); }
     public void ClickText(string text)
     {
+        if (text == FruitsAtelier.Localization.Strings.Get("ui.resetView") && !Canvas.Texts.Any(t => t.Value == text))
+            ClickText(FruitsAtelier.Localization.Strings.Get("ui.view"));
         var label = Canvas.Texts.Single(t => t.Value == text);
         Click(label.X + 4, label.Y + 5);
     }
@@ -973,9 +957,10 @@ sealed class RecordingCanvas : ICanvas
     public List<Dot> Circles { get; } = [];
     public List<Segment> Lines { get; } = [];
     public List<Outline> Outlines { get; } = [];
+    public List<Outline> Fills { get; } = [];
     public List<Operation> Operations { get; } = [];
-    public void Clear() { Images.Clear(); Texts.Clear(); Clips.Clear(); Circles.Clear(); Lines.Clear(); Outlines.Clear(); Operations.Clear(); clipStack.Clear(); }
-    public void Fill(Rect r, uint color, float radius = 0) { }
+    public void Clear() { Fills.Clear(); Images.Clear(); Texts.Clear(); Clips.Clear(); Circles.Clear(); Lines.Clear(); Outlines.Clear(); Operations.Clear(); clipStack.Clear(); }
+    public void Fill(Rect r, uint color, float radius = 0) => Fills.Add(new(r, color));
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0) => Outlines.Add(new(r, color));
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)
     {

@@ -41,7 +41,9 @@ bash scripts/Publish-Mac.sh
 
 ### Windows
 
-需要 .NET SDK **10.0.400**（根目录 `global.json` 指定）和 **.NET 8 运行时**。双击 [Run-Editor.cmd](Run-Editor.cmd) 构建并启动。
+使用发行版时，从 [Releases](https://github.com/frankhjwx/FruitsAtelier/releases) 下载 Windows x64 ZIP，完整解压后双击 `FruitsAtelier.App.exe`。包内自带 .NET，无需另行安装；请保留 exe 旁的 DLL 和 assets 文件夹。
+
+从源码构建需要 .NET SDK **10.0.400**（根目录 `global.json` 指定）和 **.NET 8 运行时**。双击 [Run-Editor.cmd](Run-Editor.cmd) 构建并启动。
 
 编译后的程序位于 `src/FruitsAtelier.App/bin/Release/net8.0-windows/FruitsAtelier.App.exe`。
 
@@ -50,6 +52,7 @@ bash scripts/Publish-Mac.sh
 - [编辑操作](docs/EDITOR_UI.md)
 - [功能与文件说明](docs/PRODUCT.md)
 - [构建与测试](docs/TESTING.md)
+- [Windows 打包与版本发布](docs/RELEASING.md)
 - [技术架构](docs/ARCHITECTURE.md)
 - [工程数据模型](docs/PROJECT_MODEL.md) · [Catch 绘制与转换](docs/CATCH_RENDERING.md) · [文件格式](docs/STABLE_FORMAT.md)
 - [本地化维护](docs/LOCALIZATION.md)

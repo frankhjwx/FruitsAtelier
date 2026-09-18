@@ -113,7 +113,8 @@ internal sealed partial class MacWindow : Window
             RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
         };
         Closed += (_, _) => { timer.Stop(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
-        Deactivated += (_, _) => { View.CancelInteraction(); editor.Refresh(); };
+        Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); editor.Refresh(); };
+        Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(); editor.Refresh(); };
     }
     private void UpdateTitle() => Title = L.Get("window.title", View.ProjectName, View.IsDirty ? " *" : "", L.Get(View.Document.IsDemo ? "window.demo" : "window.milestone"));
     private void PollAudio()
@@ -124,7 +125,7 @@ internal sealed partial class MacWindow : Window
             _ = audio.LoadAsync(View.Document.AudioPath); state = audio.State;
         }
         View.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading, state.Error is null ? null : L.Reformat(state.Error), state.FilePath);
-        if (View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
+        if (View.TextCaretNeedsRedraw || View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
             editor.Refresh();
         lastReady = state.CanPlay; lastPosition = state.PositionMs; lastError = state.Error;
     }
@@ -136,7 +137,7 @@ internal sealed partial class MacWindow : Window
         if (busy) return;
         busy = true; editor.IsEnabled = false;
         try { await operation(); }
-        catch (Exception error) { MacPaths.Log(error.ToString()); View.SetNotice(L.Get("files.failed", error.Message)); await Message(L.Get("files.incomplete"), error.Message); }
+        catch (Exception error) { MacPaths.Log(error.ToString()); View.SetNotice(L.Get("files.failed", L.Localized(error.Message))); View.ShowError(L.Reformat(error.Message)); }
         finally { busy = false; editor.IsEnabled = true; editor.Refresh(); editor.Focus(); }
     }
     private async Task<bool> ConfirmDiscard()

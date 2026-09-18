@@ -9,8 +9,13 @@ public static class OsuBeatmapReader
 
     public static MapDocument ReadFile(string path)
     {
-        if (new FileInfo(path).Length > MaximumFileBytes) throw new InvalidDataException(L.Get("core.reader.fileLimit"));
-        return Read(File.ReadAllText(path), Path.GetFullPath(path));
+        try
+        {
+            if (new FileInfo(path).Length > MaximumFileBytes) throw new InvalidDataException(L.Get("core.reader.fileLimit"));
+            return Read(File.ReadAllText(path), Path.GetFullPath(path));
+        }
+        catch (InvalidDataException error)
+        { throw new InvalidDataException(L.Get("core.reader.fileError", Path.GetFileName(path), L.Localized(error.Message)), error); }
     }
 
     public static MapDocument Read(string text, string? sourcePath = null)
@@ -176,7 +181,7 @@ public static class OsuBeatmapReader
             Id(slider.Id); Time(slider.TimeMs); X(slider.X);
             if (!double.IsFinite(slider.Y) || !double.IsFinite(slider.PixelLength) || slider.PixelLength < 0
                 || slider.SpanCount is < 1 or > 10000 || !"LBCP".Contains(slider.PathType)
-                || slider.ControlPoints.Count is < 1 or > 65536
+                || slider.ControlPoints.Count is < 1 or > ImportedSlider.MaximumControlPoints
                 || slider.ControlPoints.Any(p => !double.IsFinite(p.X) || !double.IsFinite(p.GeometryY)))
                 throw new InvalidDataException(L.Get("core.reader.importedParameters"));
         }
