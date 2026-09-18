@@ -108,6 +108,19 @@ internal static class RenderCheck
         {
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            view.SetModifiers(true, false);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            var spacing = view.SnapSliderBounds;
+            view.PointerDown(spacing.X + 30, spacing.Y + 12, 0, false, false);
+            view.PointerUp(spacing.X + 30, spacing.Y + 12, 0);
+            view.SetModifiers(false, false);
+            view.KeyDown(90, true, false);
+            foreach (int key in new[] { 81, 87, 69, 82, 84, 89, 76 })
+            {
+                view.KeyDown(key, false, false);
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+                view.KeyDown(key, false, false);
+            }
             var toggle = view.PreviewToggleBounds;
             var timeDisplay = view.TimeDisplayBounds;
             view.PointerDown(timeDisplay.X + 10, timeDisplay.Y + 10, 0, false, false);
@@ -178,13 +191,14 @@ internal static class RenderCheck
             }
             FruitsAtelier.Localization.Strings.SetLanguage(exportLanguage);
             view.KeyDown(27, false, false);
-            view.ShowLibrary();
+            var editorProject = view.CaptureProject();
+            view.MarkSaved(); view.ShowLibrary();
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             view.PointerMove(size.Item1 - 400, 30, false, false);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             view.PointerDown(size.Item1 - 230, 30, 0, false, false); view.PointerUp(size.Item1 - 230, 30, 0);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
-            view.KeyDown(27, false, false); view.CloseLibrary();
+            view.KeyDown(27, false, false); view.LoadProject(editorProject); view.CloseLibrary();
             cases.Add(new { dpi, widthDip = size.Item1, heightDip = size.Item2, rendered = true, previewDrawer = true, previewMods = true, reverseMarkers = true, gridSubmenu = true, errorDialog = true, exportOverlay = true, libraryNavigation = true });
         }
         canvas.Resize(0, 0, 96);

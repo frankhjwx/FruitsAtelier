@@ -20,6 +20,7 @@ public sealed partial class EditorView
 
     private void SelectObjects(IEnumerable<Guid> ids, Guid primary = default)
     {
+        soundEdge = null;
         var selected = ids.Distinct().ToArray();
         objectSelection.Clear(); objectSelection.UnionWith(selected);
         anchorSelection.Clear();
@@ -31,6 +32,7 @@ public sealed partial class EditorView
 
     private void SelectAnchors(CurveTrack track, IEnumerable<Guid> ids, Guid primary = default)
     {
+        soundEdge = null;
         var validIds = LegacyMode ? SliderControlEditing.Vertices(track).Select(v => v.Id).ToHashSet() : track.Nodes.Select(n => n.Id).ToHashSet();
         var selected = ids.Where(validIds.Contains).Distinct().ToArray();
         objectSelection.Clear(); anchorSelection.Clear(); anchorSelection.UnionWith(selected);
@@ -129,9 +131,8 @@ public sealed partial class EditorView
             {
                 tool = Tool.Select;
                 Select(Guid.Empty);
-                if (timelineClick) SeekTo(clickTime);
             }
-            else { Select(Guid.Empty); if (timelineClick || tool == Tool.Select) SeekTo(clickTime); }
+            else { Select(Guid.Empty); if (!timelineClick && tool == Tool.Select) SeekTo(clickTime); }
         }
         if (AudioPlaying || pinPlayhead) FollowPlayhead();
     }

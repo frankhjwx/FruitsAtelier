@@ -51,17 +51,23 @@ public sealed partial class EditorView
 
     private bool gridSnap;
     private int gridSize = 4;
-    private double SnapX(double x) => gridSnap ? Math.Round(x / gridSize, MidpointRounding.AwayFromZero) * gridSize : x;
+    private double SnapX(double x) => EffectiveGridSnap ? Math.Round(x / gridSize, MidpointRounding.AwayFromZero) * gridSize : x;
+
+    private MapPoint? PlacementGhostPoint()
+    {
+        if (tool is not (Tool.Fruit or Tool.Slider) || !plot.Contains(mouseX, mouseY) || drag != DragKind.None
+            || menu >= 0 || contextItems.Count > 0 || editField >= 0 || tool == Tool.Slider && draftTrack == Guid.Empty && SelectedTrack is not null) return null;
+        if (tool == Tool.Slider && SelectedTrack is { } draft && draft.Id == draftTrack
+            && (LegacyMode && legacyPreviewValid || draft.Nodes.Any(n => Near(Point(n), mouseX, mouseY, 8)))) return null;
+        var point = PlacementPoint(mouseX, mouseY);
+        if (tool == Tool.Fruit && ObjectsInTimeRange(point.TimeMs - 1, point.TimeMs + 1)
+            .Any(item => item.Kind == CatchObjectKind.Fruit && Math.Abs(item.X - point.X) < .01)) return null;
+        return point;
+    }
 
     private void DrawPlacementGhost(ICanvas c)
     {
-        if (tool is not (Tool.Fruit or Tool.Slider) || !plot.Contains(mouseX, mouseY) || drag != DragKind.None
-            || menu >= 0 || contextItems.Count > 0 || editField >= 0 || tool == Tool.Slider && draftTrack == Guid.Empty && SelectedTrack is not null) return;
-        if (tool == Tool.Slider && SelectedTrack is { } draft && draft.Id == draftTrack
-            && (LegacyMode && legacyPreviewValid || draft.Nodes.Any(n => Near(Point(n), mouseX, mouseY, 8)))) return;
-        var point = MapAt(mouseX, mouseY, true);
-        if (tool == Tool.Fruit && ObjectsInTimeRange(point.TimeMs - 1, point.TimeMs + 1)
-            .Any(item => item.Kind == CatchObjectKind.Fruit && Math.Abs(item.X - point.X) < .01)) return;
+        if (PlacementGhostPoint() is not { } point) return;
         var p = Screen(point);
         float diameter = CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512;
         if (skin is null || !skin.Draw(c, CatchSkinObject.Fruit, 0, p.X, p.Y, diameter, opacity: .6f))
@@ -73,13 +79,12 @@ public sealed partial class EditorView
 
     private void PlaceFruit(float x, float y)
     {
-        var point = MapAt(x, y, true);
+        var point = PlacementPoint(x, y);
         var fruit = new Fruit { TimeMs = point.TimeMs, X = point.X };
-        // OriginalLine owns stable hit-object flags and samples, including combo bits.
-        if (nextFruitNewCombo) fruit.OriginalLine = FormattableString.Invariant($"{point.X},192,{point.TimeMs},5,0,0:0:0:0:");
         if (Edit(L.Get("editor.command.addFruit"), () =>
         {
             Document.Fruits.Add(fruit);
+            ApplyPlacementFlags(fruit.Id);
             Document.DurationMs = Math.Max(Document.DurationMs, fruit.TimeMs);
         })) { Select(fruit.Id); nextFruitNewCombo = false; }
     }

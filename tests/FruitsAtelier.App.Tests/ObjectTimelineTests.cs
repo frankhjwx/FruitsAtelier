@@ -3,6 +3,53 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class ObjectTimelineTests
 {
+    public static void MoveAndNavigate()
+    {
+        var map = new MapDocument { BeatLengthMs = 500, DurationMs = 10000 };
+        map.Fruits.Add(new Fruit { TimeMs = 1000, X = 123 });
+        var slider = new ImportedSlider { TimeMs = 2000, X = 200, Y = 192, PixelLength = 140, PathType = 'L', SpanCount = 1,
+            OriginalLine = "200,192,2000,2,0,L|340:192,1,140" };
+        slider.ControlPoints.AddRange([new(200, 192), new(340, 192)]);
+        map.ImportedSliders.Add(slider);
+        var ui = new Ui(false); ui.LoadDocument(map);
+        ui.View.UpdateTransport(1500, 10000, true, false, false, null, null); ui.Paint();
+        var r = ui.View.ObjectTimelineBounds;
+        float X(double time) => r.X + (float)((time - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+        float y = r.Y + 27;
+        ui.View.Wheel(r.X + 100, y, 120, false);
+        if (ui.View.PlayheadMs != 1375) throw new Exception("Wheel up must seek earlier");
+        ui.View.Wheel(r.X + 100, y, -120, false);
+        if (ui.View.PlayheadMs != 1500) throw new Exception("Wheel down must seek later");
+        ui.Paint();
+        foreach (float emptyY in new[] { r.Y + 3, r.Y + 27, r.Bottom - 3 })
+        {
+            ui.Click(X(1000), y);
+            ui.Click(X(3000), emptyY);
+            if (ui.View.PlayheadMs != 1500 || ui.View.SelectedObjectIds.Count != 0)
+                throw new Exception("Empty timeline click must clear selection without seeking");
+        }
+        ui.View.UpdateTransport(1500, 10000, true, false, false, null, null); ui.Paint();
+        ui.Click(X(1000), y);
+        ui.View.PointerDown(X(2000), y, 0, false, true); ui.View.PointerUp(X(2000), y, 0); ui.Paint();
+        var before = ui.View.Document.DeepClone();
+        float start = X(1000), end = X(1250);
+        ui.View.PointerDown(start, y, 0, false, false);
+        ui.View.PointerMove(end, y + 10, false, false); ui.Paint();
+        ui.View.PointerUp(end, y + 10, 0); ui.Paint();
+        if (ui.View.Document.Fruits.Single().TimeMs != 1250 || ui.View.Document.Fruits.Single().X != 123
+            || ui.View.Document.ImportedSliders.Single().TimeMs != 2250 || ui.View.PlayheadMs != 1500)
+            throw new Exception("Timeline dragging must shift the group in time without changing X, slider type, or playhead");
+        _ = OsuBeatmapWriter.Serialize(ui.View.Document);
+        ui.Key('Z', ctrl: true);
+        if (!before.ContentEquals(ui.View.Document)) throw new Exception("Timeline movement must be one undo step");
+        ui.View.PointerDown(start, y, 0, false, false); ui.View.PointerMove(end, y, false, false);
+        ui.Key(27);
+        if (!before.ContentEquals(ui.View.Document)) throw new Exception("Escape must cancel timeline movement");
+        ui.Key('L');
+        ui.View.PointerDown(start, y, 0, false, false); ui.View.PointerUp(end, y, 0);
+        if (!before.ContentEquals(ui.View.Document)) throw new Exception("Locked notes must not move on the timeline");
+    }
+
     public static void TimingCacheInvalidation()
     {
         var ui = new Ui(false);
@@ -157,7 +204,7 @@ internal static class ObjectTimelineTests
         ui.View.PointerMove(origin + 90, y, false, false); ui.Paint();
         ui.View.PointerMove(origin, y, false, false);
         ui.View.PointerUp(origin, y, 0);
-        if (Math.Abs(ui.View.PlayheadMs - 2300) > .01 || ui.View.WantsCapture) throw new Exception("Timeline drag changed its origin after repaint");
+        if (ui.View.PlayheadMs != 1500 || requested != -1 || ui.View.WantsCapture) throw new Exception("Empty timeline drag must not seek");
         double zoom = ui.View.CanvasZoom, scale = ui.View.ObjectTimelinePixelsPerMs;
         ui.View.Wheel(rect.X + 100, rect.Y + 20, 120, true); ui.Paint();
         if (ui.View.CanvasZoom != zoom || ui.View.ObjectTimelinePixelsPerMs <= scale || ui.View.IsDirty)

@@ -59,7 +59,24 @@ public sealed partial class EditorView
     }
     public void ShowLibrary()
     {
-        if (!PrepareFileOperation()) return;
+        if (DiscardConfirmationVisible || !PrepareFileOperation()) return;
+        if (HasEditorProject && IsDirty)
+        {
+            ShowDiscardConfirmation(answer =>
+            {
+                if (answer == 2) return;
+                try
+                {
+                    if (answer == 7 || answer == 6 && SaveWorkspace()) LeaveEditor();
+                }
+                catch (Exception error) { ShowError(L.Reformat(error.Message)); }
+            });
+            return;
+        }
+        LeaveEditor();
+    }
+    private void LeaveEditor()
+    {
         if (AudioPlaying) RequestTogglePlayback?.Invoke();
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
         if (WorkspaceSession is { } session)
@@ -74,6 +91,13 @@ public sealed partial class EditorView
                 selectedLibraryGroup = current;
             }
         }
+        if (HasEditorProject)
+        {
+            ResetHitsounds();
+            LoadProject(BeatmapProject.FromDocuments([new MapDocument { IsDemo = false }]));
+            HasEditorProject = false;
+        }
+        hits.Clear(); fields.Clear();
         revealLibrarySelection = true;
         LibraryVisible = true; exportPage = resourcePage = false; libraryField = -1;
         librarySettingsOpen = false;
@@ -82,7 +106,7 @@ public sealed partial class EditorView
     }
     public void ShowWorkspaceExport()
     {
-        if (ExportVisible) return;
+        if (!HasEditorProject || ExportVisible) return;
         if (!PrepareFileOperation()) return;
         if (AudioPlaying) RequestTogglePlayback?.Invoke();
         exportName = CurrentDifficultyName + " (FruitsAtelier)";

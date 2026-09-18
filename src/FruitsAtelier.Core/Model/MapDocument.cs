@@ -133,6 +133,7 @@ public sealed partial class MapDocument
     public double CircleSize { get; set; } = 5;
     public double SliderMultiplier { get; set; } = 1.4;
     public double SliderTickRate { get; set; } = 1;
+    public double DistanceSpacing { get; set; } = 1;
     public List<Fruit> Fruits { get; } = new();
     public List<CurveTrack> Tracks { get; } = new();
     public List<TimingPoint> TimingPoints { get; } = new();
@@ -145,7 +146,7 @@ public sealed partial class MapDocument
         {
             Name = Name, DurationMs = DurationMs,
             BeatLengthMs = BeatLengthMs, TimingOffsetMs = TimingOffsetMs, ApproachRate = ApproachRate,
-            CircleSize = CircleSize, SliderMultiplier = SliderMultiplier, SliderTickRate = SliderTickRate
+            CircleSize = CircleSize, SliderMultiplier = SliderMultiplier, SliderTickRate = SliderTickRate, DistanceSpacing = DistanceSpacing
         };
         copy.Fruits.AddRange(Fruits.Select(f => f.DeepClone()));
         copy.Tracks.AddRange(Tracks.Select(t => t.DeepClone()));
@@ -161,7 +162,7 @@ public sealed partial class MapDocument
         if (Name != other.Name || DurationMs != other.DurationMs || BeatLengthMs != other.BeatLengthMs
             || TimingOffsetMs != other.TimingOffsetMs || ApproachRate != other.ApproachRate
             || CircleSize != other.CircleSize || SliderMultiplier != other.SliderMultiplier || SliderTickRate != other.SliderTickRate
-            || Fruits.Count != other.Fruits.Count || Tracks.Count != other.Tracks.Count
+            || DistanceSpacing != other.DistanceSpacing || Fruits.Count != other.Fruits.Count || Tracks.Count != other.Tracks.Count
             || TimingPoints.Count != other.TimingPoints.Count || ImportedSliders.Count != other.ImportedSliders.Count
             || BananaShowers.Count != other.BananaShowers.Count || !FileStateEquals(other))
             return false;

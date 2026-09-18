@@ -34,12 +34,16 @@ internal static class LibraryNavigationTests
             Paint(); var position = Titles();
             view.PointerDoubleClick(selected.X + 2, selected.Y + 2, false, false); Paint();
             Check(!view.LibraryVisible && view.HasEditorProject, "map opens directly");
+            string projectDirectory = view.WorkspaceSession!.Directory;
             view.ChangeAudioPath("unsaved.ogg"); var before = view.Document.DeepClone();
             view.KeyDown(27, false, false); Settle();
-            Check(view.LibraryVisible && view.IsDirty && view.Document.ContentEquals(before), "Escape returns without losing edits");
+            Check(view.DiscardConfirmationVisible && !view.LibraryVisible && view.Document.ContentEquals(before), "Escape prompts before leaving with edits");
+            Click(L.Get("mac.discard")); Settle();
+            Check(view.LibraryVisible && !view.HasEditorProject, "Discard returns to Library");
             Check(Titles().SequenceEqual(position), "return restores selected map position: " + string.Join("; ", position.Select(t => t.Value + "@" + t.Y)) + " -> " + string.Join("; ", Titles().Select(t => t.Value + "@" + t.Y)));
             view.RefreshLibrary(); Settle(); Check(Titles().SequenceEqual(position), "scan preserves position");
-            Click(L.Get("library.editor")); Paint();
+            Check(!canvas.Texts.Any(t => t.Value == L.Get("library.editor")), "Library has no editor resume button");
+            view.LoadWorkspace(WorkspaceProject.Open(projectDirectory)); Paint();
             Click(L.Get("ui.view")); Click(L.Get("ui.edit"));
             Check(canvas.Texts.Any(t => t.Value == L.Get("sliderBatch.menu")), "one click switches open menus");
             view.KeyDown(27, false, false); Paint();

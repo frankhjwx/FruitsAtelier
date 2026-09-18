@@ -126,7 +126,7 @@ public sealed partial class EditorView
     }
 
     private enum Tool { Select, Fruit, Slider, Banana }
-    private enum DragKind { None, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail, PreviewResize }
+    private enum DragKind { None, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Marquee, SnapDivisor, DistanceSpacing, CanvasZoom, LegacyControl, TimelineTail, PreviewResize }
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
     private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp);
     private float FullPlayfieldWidth => plot.Width * 512 / (512 + PlayfieldPadding * 2);
@@ -227,6 +227,7 @@ public sealed partial class EditorView
 
     private void Select(Guid id, Guid track = default)
     {
+        soundEdge = null;
         objectSelection.Clear(); anchorSelection.Clear();
         if (Document.Tracks.FirstOrDefault(t => t.Id == track)?.Nodes.Any(n => n.Id == id) == true)
             anchorSelection.Add(id);
@@ -286,7 +287,14 @@ public sealed partial class EditorView
     private bool Edit(string label, Action change)
     {
         history.Begin(label);
-        try { change(); history.Commit(); return true; }
+        try
+        {
+            var before = notesLocked ? Document.DeepClone() : null;
+            change();
+            if (before is not null && !PositionsEqual(before, Document))
+            { history.Cancel(); StatusMessage = L.Get("assist.locked"); return false; }
+            history.Commit(); return true;
+        }
         catch (ArgumentException ex) { history.Cancel(); StatusMessage = fieldError = ex.Message; }
         catch (InvalidOperationException ex) { history.Cancel(); StatusMessage = fieldError = ex.Message; }
         catch (InvalidDataException ex) { history.Cancel(); StatusMessage = fieldError = ex.Message; }

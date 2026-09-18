@@ -83,8 +83,14 @@ public sealed partial class EditorView
         }
         if (snapSlider.Contains(x, y))
         {
-            SetSnapDivisor(x);
-            drag = DragKind.SnapDivisor;
+            if (DistanceSpacingVisible)
+            {
+                if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
+                history.Begin(L.Get("assist.spacingChange"));
+                SetDistanceSpacing(x);
+                drag = DragKind.DistanceSpacing;
+            }
+            else { SetSnapDivisor(x); drag = DragKind.SnapDivisor; }
             BeginPointerDrag(x, y);
             return;
         }
@@ -113,6 +119,13 @@ public sealed partial class EditorView
             return;
         }
         if (!plot.Contains(x, y)) return;
+        if (notesLocked && tool != Tool.Fruit && draftTrack == Guid.Empty && draftBanana == Guid.Empty)
+        {
+            if (HitCatchObject(x, y) is { } lockedHit) { PickObject(lockedHit.SourceId, ctrl); PickSoundEdge(lockedHit); return; }
+            else if (HitSliderLocation(x, y) is { } lockedSlider) { PickObject(lockedSlider.Id, ctrl); return; }
+            else if (HitBananaRectangle(x, y) is { } lockedBanana) { PickObject(lockedBanana.Id, ctrl); return; }
+            else if (tool == Tool.Select || SelectedTrack is not null) { BeginBox(x, y, ctrl, false); return; }
+        }
         if (tool == Tool.Fruit) { PlaceFruit(x, y); return; }
         if (tool == Tool.Slider && draftTrack != Guid.Empty && LegacyMode)
         {
@@ -184,6 +197,7 @@ public sealed partial class EditorView
         if (!sliderPathOverBanana && hitObject is not null)
         {
             PickObject(hitObject.SourceId, ctrl);
+            PickSoundEdge(hitObject);
             if (ctrl) return;
             if (!hitObject.IsStandalone)
             {
@@ -258,6 +272,7 @@ public sealed partial class EditorView
         }
         if (drag == DragKind.CanvasZoom) { SetCanvasZoom(x); return; }
         if (drag == DragKind.SnapDivisor) { SetSnapDivisor(x); return; }
+        if (drag == DragKind.DistanceSpacing) { SetDistanceSpacing(x); return; }
         if (drag == DragKind.Marquee) { MoveBox(x, y); return; }
         if (drag == DragKind.Pan)
         {
@@ -358,7 +373,7 @@ public sealed partial class EditorView
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
         PointerMove(x, y, false, false);
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
-        if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail) history.Commit();
+        if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail or DragKind.DistanceSpacing) history.Commit();
         if (draftTrack != Guid.Empty && drag == DragKind.Anchor && !dragMoved
             && SelectedTrack is { } draft && SelectedAnchor == draft.Nodes[^1])
         {
@@ -377,6 +392,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (notesLocked && plot.Contains(x, y)) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (TimeJumpVisible) { timeJumpSelected = true; return; }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
@@ -430,6 +446,8 @@ public sealed partial class EditorView
         }
         if (drag != DragKind.None) return;
         if (contextItems.Count > 0) { contextItems.Clear(); return; }
+        if (altHeld && (canvas.Contains(x, y) || snapSlider.Contains(x, y))) { AdjustDistanceSpacing(delta); return; }
+        if (assistPalette.Contains(x, y)) { assistScroll = Math.Clamp(assistScroll - delta / 120 * 64, 0, assistScrollLimit); return; }
         if (difficultyTabStrip.Contains(x, y))
         {
             tabRemainder = 0;
@@ -444,7 +462,7 @@ public sealed partial class EditorView
         if (objectTimeline.Contains(x, y))
         {
             if (ctrl) ZoomObjectTimeline(Math.Pow(1.25, delta / 120));
-            else SeekTo(playhead + delta / 120 * TimingMap.At(Document, playhead).BeatLengthMs / divisor);
+            else SeekTo(playhead - delta / 120 * TimingMap.At(Document, playhead).BeatLengthMs / divisor);
             return;
         }
         if (overview.Contains(x, y))
@@ -553,6 +571,12 @@ public sealed partial class EditorView
         {
             case 71: gridSize = gridSize == 32 ? 4 : gridSize * 2; break;
             case 84: gridSnap = !gridSnap; break;
+            case 81: ToggleCombo(); break;
+            case 87: ToggleSound(2); break;
+            case 69: ToggleSound(4); break;
+            case 82: ToggleSound(8); break;
+            case 89: distanceSnap = !distanceSnap; break;
+            case 76: ToggleNotesLock(); break;
             case 13: FinishCurve(); break;
             case 46: DeleteSelection(); break;
             case 86: ChangeTool(Tool.Select); break;
@@ -586,6 +610,8 @@ public sealed partial class EditorView
 
     public void CancelInteraction()
     {
+        SetModifiers(false, false);
+        if (drag == DragKind.DistanceSpacing) history.Cancel();
         tabPointer = false;
         if (libraryPointerActive) { libraryPointerActive = false; libraryPressedMap = null; RememberLibraryPosition(); }
         if (drag == DragKind.Marquee) { CancelBox(); contextItems.Clear(); return; }
@@ -611,7 +637,7 @@ public sealed partial class EditorView
 
     private void AddCurveAnchor(float x, float y, bool straight = false)
     {
-        var p = MapAt(x, y, true);
+        var p = PlacementPoint(x, y);
         CurveTrack track;
         if (draftTrack == Guid.Empty)
         {
@@ -639,6 +665,7 @@ public sealed partial class EditorView
             previous.OutgoingKind = straight || previous.HandleOut == default ? CurveKind.Linear : CurveKind.Bezier;
         }
         track.Nodes.Add(node);
+        if (track.Nodes.Count == 1) ApplyPlacementFlags(track.Id);
         if (!straight && track.Nodes.Count > 1)
         {
             var previous = track.Nodes[^2];
@@ -669,6 +696,8 @@ public sealed partial class EditorView
         history.Begin(L.Get("editor.command.drawBanana"));
         var shower = new BananaShower { TimeMs = time, EndTimeMs = time };
         Document.BananaShowers.Add(shower);
+        if (nextFruitNewCombo) ObjectFlags.SetNewCombo(Document, shower.Id, true);
+        nextFruitNewCombo = false;
         Document.DurationMs = Math.Max(Document.DurationMs, time);
         draftBanana = shower.Id;
         SelectObjects([shower.Id], shower.Id);
@@ -700,6 +729,7 @@ public sealed partial class EditorView
     private void BeginNodeDrag(CurveTrack track, Anchor node, DragKind kind, float x, float y)
     {
         Select(node.Id, track.Id);
+        if (HitCatchObject(x, y) is { } item) PickSoundEdge(item);
         selectedPart = kind;
         if (draftTrack == Guid.Empty) history.Begin(kind == DragKind.Anchor ? L.Get("editor.command.moveAnchor") : L.Get("editor.command.adjustHandle"));
         drag = kind;

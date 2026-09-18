@@ -32,6 +32,7 @@ public sealed partial class EditorView
     public void CancelSliderConversion() => sliderBatchCancellation?.Cancel();
     private void StartSliderBatch(int[] targets)
     {
+        if (notesLocked) { StatusMessage = L.Get("assist.locked"); return; }
         if (SliderDialogVisible || !PrepareFileOperation()) return;
         sliderDialogHits.Clear();
         if (AudioPlaying) RequestTogglePlayback?.Invoke();

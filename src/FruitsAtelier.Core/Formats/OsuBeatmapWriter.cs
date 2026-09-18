@@ -100,6 +100,7 @@ public static class OsuBeatmapWriter
         }
         var timing = BuildTiming(document, generated);
         var output = document.DeepClone();
+        SetNumber(output, "Editor", "DistanceSpacing", document.DistanceSpacing);
         Set(output, "General", "Mode", "2");
         string? originalAudio = OsuBeatmapReader.Setting(output, "General", "AudioFilename");
         if (document.AudioPath is not null)

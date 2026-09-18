@@ -200,11 +200,13 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0201:
             case 0x0204:
             case 0x0207:
+                view.SetModifiers(Native.Alt, Native.Shift);
                 Native.SetFocus(window);
                 view.PointerDown(x, y, message == 0x0207 ? 1 : message == 0x0204 ? 2 : 0, Native.Shift, Native.Control);
                 if (view.WantsCapture) Native.SetCapture(window);
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0203: // WM_LBUTTONDBLCLK
+                view.SetModifiers(Native.Alt, Native.Shift);
                 Native.SetFocus(window);
                 view.PointerDoubleClick(x, y, Native.Shift, Native.Control);
                 UpdateTitle(); Invalidate(); return 0;
@@ -213,6 +215,7 @@ internal sealed partial class EditorWindow : IDisposable
                 { Native.SetCursor(Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor ? 32644 : 32512))); return 1; }
                 break;
             case 0x0200:
+                view.SetModifiers(Native.Alt, Native.Shift);
                 view.PointerMove(x, y, Native.Shift, Native.Control);
                 Native.SetCursor(Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor ? 32644 : 32512)));
                 UpdateTitle(); Invalidate(); return 0;
@@ -223,16 +226,28 @@ internal sealed partial class EditorWindow : IDisposable
                 if (!view.WantsCapture && Native.GetCapture() == window) Native.ReleaseCapture();
                 UpdateTitle(); Invalidate(); return 0;
             case 0x020A:
+                view.SetModifiers(Native.Alt, Native.Shift);
                 var point = new Native.Point { X = (short)((long)lParam & 0xFFFF), Y = (short)(((long)lParam >> 16) & 0xFFFF) };
                 Native.ScreenToClient(window, ref point);
                 view.Wheel(point.X * 96f / dpi, point.Y * 96f / dpi, (short)((ulong)wParam >> 16), (wParam & 0x0008) != 0);
                 Invalidate(); return 0;
             case 0x0100:
+                view.SetModifiers(Native.Alt, Native.Shift);
                 if ((int)wParam == 86 && Native.Control && view.LibraryTextFocused && !view.DiscardConfirmationVisible && !view.ErrorVisible)
                 { view.PasteLibraryText(Native.ReadClipboardText(window)); Invalidate(); return 0; }
                 view.KeyDown((int)wParam, Native.Control, Native.Shift);
                 if (!view.WantsCapture && Native.GetCapture() == window) Native.ReleaseCapture();
                 UpdateTitle(); Invalidate(); return 0;
+            case 0x0104: // WM_SYSKEYDOWN: Alt changes editor snapping without opening the system menu.
+                view.SetModifiers(Native.Alt, Native.Shift);
+                if ((int)wParam == 0x12) { Invalidate(); return 0; }
+                break;
+            case 0x0101: // WM_KEYUP
+            case 0x0105: // WM_SYSKEYUP
+                view.SetModifiers(Native.Alt, Native.Shift);
+                Invalidate();
+                if ((int)wParam is 0x12 or 0x10) return 0;
+                break;
             case 0x0102:
                 if (!Native.Control) view.TextInput((char)wParam);
                 UpdateTitle(); Invalidate(); return 0;

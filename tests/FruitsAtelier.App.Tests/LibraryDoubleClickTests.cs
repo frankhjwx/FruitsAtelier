@@ -11,9 +11,8 @@ internal static class LibraryDoubleClickTests
         {
             string workspace = Path.Combine(root, "Workspace");
             var session = WorkspaceProject.Create(workspace, BeatmapProject.FromDocuments([new MapDocument { Name = "Click project", IsDemo = false }]), "");
-            var view = new EditorView();
+            var view = new EditorView(loadDemo: false);
             view.InitializeLibrary(true, new LibrarySettings { Workspace = workspace });
-            view.ChangeAudioPath("unsaved.ogg");
             var canvas = new RecordingCanvas();
             int opens = 0; LibraryMap? target = null;
             view.RequestLibraryOpen = map => { opens++; target = map; };
@@ -24,7 +23,7 @@ internal static class LibraryDoubleClickTests
             Check(opens == 0, "single click only selects");
             view.PointerDoubleClick(x, y, false, false);
             Check(opens == 1 && target?.ProjectPath == session.Directory, "double click invokes the existing project-open callback exactly once");
-            Check(view.IsDirty && view.Document.AudioPath == "unsaved.ogg", "double click leaves discard decisions and document replacement to the host");
+            Check(!view.HasEditorProject && !view.IsDirty, "double click leaves project loading to the host");
             view.PointerDoubleClick(220, 110, false, false);
             view.PointerDoubleClick(20, 190, false, false);
             view.PointerDoubleClick(230, 600, false, false);

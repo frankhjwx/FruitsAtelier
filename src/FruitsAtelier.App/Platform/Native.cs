@@ -129,4 +129,5 @@ internal static class Native
     [DllImport("dwmapi.dll")] internal static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
     internal static bool Control => GetKeyState(0x11) < 0;
     internal static bool Shift => GetKeyState(0x10) < 0;
+    internal static bool Alt => GetKeyState(0x12) < 0;
 }

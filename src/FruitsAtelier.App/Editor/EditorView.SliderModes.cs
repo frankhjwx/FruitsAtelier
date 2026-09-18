@@ -82,7 +82,7 @@ public sealed partial class EditorView
 
     private void PlaceLegacyPoint(float x, float y, bool straight = false)
     {
-        var point = MapAt(x, y, true);
+        var point = PlacementPoint(x, y);
         if (draftTrack == Guid.Empty)
         {
             history.Begin(L.Get("editor.command.drawTrack"));
@@ -90,6 +90,7 @@ public sealed partial class EditorView
                 Name = L.Get("editor.track.defaultName", Document.Tracks.Count + 1) };
             var node = new Anchor { TimeMs = point.TimeMs, X = point.X };
             track.Nodes.Add(node); Document.Tracks.Add(track); draftTrack = track.Id;
+            ApplyPlacementFlags(track.Id);
             legacyDraft = [new(node.Id, point, SliderCurveType.Linear, ControlCurveMath.ReferenceScale(Document.ApproachRate))];
             SelectAnchors(track, []);
             Document.DurationMs = Math.Max(Document.DurationMs, point.TimeMs);
@@ -118,7 +119,7 @@ public sealed partial class EditorView
     private bool UpdateLegacyPreview(float x, float y, bool straight = false)
     {
         if (legacyDraft is not { Count: > 0 } || SelectedTrack is not { } track || !plot.Contains(x, y)) return false;
-        var point = MapAt(x, y, true);
+        var point = PlacementPoint(x, y);
         var candidate = legacyDraft.ToList();
         if (Near(candidate[^1].Point, x, y, 8) || point == candidate[^1].Point)
         {
@@ -196,6 +197,7 @@ public sealed partial class EditorView
 
     private void BeginLegacyDrag(CurveTrack track, MapPoint point, float x, float y, bool alreadyBegun = false)
     {
+        if (HitCatchObject(x, y) is { } item) PickSoundEdge(item);
         if (!alreadyBegun) history.Begin(L.Get("editor.command.moveAnchor"));
         legacyDragStart = SliderControlEditing.Vertices(track);
         legacyDragPoint = point; dragOffset = Transform.ToMap(x, y) - point;

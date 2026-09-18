@@ -65,6 +65,9 @@ public static class OsuBeatmapReader
         document.CircleSize = Difficulty("CircleSize", 5);
         document.SliderMultiplier = Difficulty("SliderMultiplier", 1.4);
         document.SliderTickRate = Difficulty("SliderTickRate", 1);
+        if (Setting(document, "Editor", "DistanceSpacing") is { } spacing
+            && double.TryParse(spacing, NumberStyles.Float, CultureInfo.InvariantCulture, out double distanceSpacing)
+            && double.IsFinite(distanceSpacing)) document.DistanceSpacing = Math.Clamp(distanceSpacing, .1, 6);
         var firstTiming = document.TimingPoints.Where(t => t.Uninherited).OrderBy(t => t.TimeMs).FirstOrDefault()
             ?? throw new InvalidDataException(L.Get("core.reader.timingRequired"));
         document.BeatLengthMs = firstTiming.BeatLengthMs;
@@ -157,6 +160,8 @@ public static class OsuBeatmapReader
 
     public static void Validate(MapDocument document)
     {
+        if (!double.IsFinite(document.DistanceSpacing) || document.DistanceSpacing is < .1 or > 6)
+            throw new InvalidDataException(L.Get("core.distanceSpacing.range"));
         if (!double.IsFinite(document.DurationMs) || document.DurationMs <= 0 || document.DurationMs > int.MaxValue)
             throw new InvalidDataException(L.Get("core.reader.projectDuration"));
         if (!double.IsFinite(document.BeatLengthMs) || document.BeatLengthMs <= 0 || !double.IsFinite(document.TimingOffsetMs))
