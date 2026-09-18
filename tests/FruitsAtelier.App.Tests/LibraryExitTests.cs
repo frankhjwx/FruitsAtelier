@@ -6,7 +6,7 @@ internal static class LibraryExitTests
 {
     public static void Run()
     {
-        string root = Path.Combine(Path.GetTempPath(), "atelier-library-exit-" + Guid.NewGuid());
+        string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-library-exit-" + Guid.NewGuid());
         var view = new EditorView();
         view.LibrarySettings.Workspace = root; view.LibrarySettings.Songs = "";
         var canvas = new RecordingCanvas();
