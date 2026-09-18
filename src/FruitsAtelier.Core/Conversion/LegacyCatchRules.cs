@@ -9,6 +9,7 @@ internal struct CatchLegacyRandom
     private uint y;
     private uint z;
     private uint w;
+    internal readonly uint LastUInt => w;
 
     public CatchLegacyRandom(int seed)
     {

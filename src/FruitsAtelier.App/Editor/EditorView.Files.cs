@@ -37,6 +37,7 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        HasEditorProject = true;
         var retiredCancellation = sliderBatchCancellation;
         retiredCancellation?.Cancel();
         if (sliderBatchTask is { } retiredTask)

@@ -46,7 +46,7 @@ internal sealed partial class EditorWindow
             ResetAudio();
             if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) { audio.Load(view.Document.AudioPath); audio.Seek(view.PlayheadMs); }
         };
-        view.RequestSave = () => FileOperation(() => SaveProject(false));
+        view.RequestSave = () => FileOperation(() => { if (SaveProject(false)) view.ShowWorkspaceExport(); });
         view.RequestSaveAs = () => FileOperation(() => SaveProject(true));
         view.RequestExport = view.ShowWorkspaceExport;
         ConfigureLibrary();

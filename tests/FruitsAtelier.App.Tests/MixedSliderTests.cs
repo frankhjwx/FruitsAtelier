@@ -30,9 +30,10 @@ internal static class MixedSliderTests
         ui.Key('L', ctrl: true);
         ui.Key('L', ctrl: true);
         Check(CurveMath.SegmentKind(track, 1) == CurveKind.Bezier, "The selected outgoing segment was not changed.");
-        ui.SetField("出柄 ΔX", "25");
+
         var samples = Enumerable.Range(0, 21).Select(i => CurveMath.PositionAtTime(track, 1500 + i * 25)).ToArray();
-        ui.ClickText("分割插点  ·  保持形状");
+        ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.edit"));
+        ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.splitMenu"));
         Check(track.Nodes.Count == 8, "A node was not inserted into the selected segment.");
         Check(samples.Zip(Enumerable.Range(0, 21).Select(i => CurveMath.PositionAtTime(track, 1500 + i * 25)))
             .All(p => Math.Abs(p.First - p.Second) < 0.00001), "Splitting changed the curve geometry.");
@@ -47,15 +48,15 @@ internal static class MixedSliderTests
         Guid id = map.ImportedSliders.Single().Id;
         ui.LoadDocument(map); ui.Paint();
         ui.Key('V'); ui.ClickMap(1000, 160);
-        ui.ClickText("转换为 FSlider");
+        ui.Key('D', ctrl: true);
         var track = ui.View.Document.Tracks.Single();
         Check(track.Id == id && track.SpanCount == 1 && track.CompensateTinyDroplets == true
             && ui.View.Document.ImportedSliders.Count == 0, "Conversion lost the original parent identity or FSlider alignment policy.");
         ui.ClickMap(track.Nodes[0].TimeMs, track.Nodes[0].X);
-        ui.SetField("位置  X", "155");
+        ui.DownMap(track.Nodes[0].TimeMs, track.Nodes[0].X); ui.MoveMap(track.Nodes[0].TimeMs, 155); ui.UpMap(track.Nodes[0].TimeMs, 155);
         Check(Math.Abs(track.Nodes[0].X - 155) < 0.001, "An imported slider node remained read-only.");
         bool wasCurved = CurvePointEditing.IsCurved(track, track.Nodes[0].Id);
-        ui.ClickText(wasCurved ? "控制点：曲线" : "控制点：直线");
+        ui.Key('L', ctrl: true);
         Check(CurvePointEditing.IsCurved(track, track.Nodes[0].Id) != wasCurved, "Fitted control point cannot be edited.");
         var output = OsuBeatmapWriter.Serialize(ui.View.Document);
         Check(output.ReadBack.ImportedSliders.Single().SpanCount == 1 && output.ObjectSequenceMatches, "Edited FSlider did not survive osu export.");

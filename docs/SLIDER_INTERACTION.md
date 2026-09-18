@@ -34,5 +34,5 @@ a pen operation requires handles, within the bounds documented in
 [Project Model](PROJECT_MODEL.md). Undo restores the exact original segment.
 
 Interaction documentation belongs here and in [Editing Controls](EDITOR_UI.md).
-The canvas and properties panel show controls and values rather than instructional
+The canvas and preview sidebar show controls and values rather than instructional
 paragraphs or explanations of internal conversion behavior.

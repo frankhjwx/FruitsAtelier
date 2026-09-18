@@ -10,6 +10,7 @@ string defaultSkinPackage = Path.Combine(root, "assets", "skins", "default.osk")
 var tests = new List<(string Name, Action Run)>
 {
     ("A doubled texture has the same logical size and is preferred over 1x", HighDensity),
+    ("Catcher uses raw dimensions, density and the legacy plate origin", CatcherPlate),
     ("Reverse arrows use skin density and fall back for missing or undecodable images", ReverseArrows),
     ("Oversized artwork is centre cropped without distorting the other axis", CentreCrop),
     ("Base tint and independently sized white overlay compose at one centre", Overlay),
@@ -32,6 +33,26 @@ foreach (var (name, run) in tests)
 }
 Console.WriteLine($"{passed}/{tests.Count} skin layout tests passed; PNG decoding is verified separately by the renderer.");
 return passed == tests.Count ? 0 : 1;
+
+void CatcherPlate()
+{
+    string folder = Fixture("catcher-plate");
+    Header(folder, "fruit-catcher-idle-0@2x.png", 600, 400);
+    File.WriteAllText(Path.Combine(folder, "skin.ini"), "[Colours]\nHyperDash: 10,20,30\nHyperDashAfterImage: 40,50,60\nHyperDashFruit: 70,80,90\n");
+    var skin = Load(folder);
+    Equal(0x0A141E, skin.HyperDashColour);
+    Equal(0x28323C, skin.HyperDashAfterImageColour);
+    Equal(0x46505A, skin.HyperDashFruitColour);
+    var canvas = new RecordingCanvas();
+    True(skin.DrawCatcher(canvas, 256, 340, 512, 5));
+    Rectangle(canvas.Calls.Single().Destination, 203.5f, 334.4f, 105, 70);
+    Equal(64.4f, skin.CatcherHeightBelowPlate(512, 5)!.Value);
+    canvas.Calls.Clear();
+    True(skin.DrawCatcher(canvas, 256, 340, 512, 5, skin.HyperDashColour, .4f));
+    Equal(0x0A141E, canvas.Calls.Single().Tint);
+    canvas.AcceptImages = false;
+    True(!skin.DrawCatcher(canvas, 256, 340, 512, 5));
+}
 
 void ReverseArrows()
 {

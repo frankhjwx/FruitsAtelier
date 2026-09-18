@@ -17,7 +17,7 @@ internal static class SliderModeInteractionTests
         ui.Key('Z', ctrl: true); Check(ui.View.Document.Tracks.Count == 0, "Draft was not one undo step.");
         ui.Key('Y', ctrl: true); Check(saved.ContentEquals(ui.View.Document), "Redo changed authored controls.");
         ui.Key('B'); ui.View.SetSliderEditingMode(SliderEditingMode.PenTool); ui.Paint();
-        ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.newSlider"));
+        var sliderButton = ui.View.ToolButtonBounds[2]; ui.Click(sliderButton.X + 10, sliderButton.Y + 10);
         ui.ClickMap(2000, 300); ui.DownMap(2500, 350); ui.MoveMap(2625, 380); ui.UpMap(2625, 380); ui.ClickMap(3000, 300); ui.Key(13);
         Check(ui.View.Document.Tracks.Count == 2 && ui.View.Document.Tracks[0].Nodes[0].OutgoingCurve is not null
             && ui.View.Document.Tracks[1].Nodes.All(n => n.OutgoingCurve is null), "Both editing styles did not coexist.");

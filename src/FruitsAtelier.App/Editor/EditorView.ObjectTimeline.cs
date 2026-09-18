@@ -21,7 +21,7 @@ public sealed partial class EditorView
         => item.Bounds.Contains(x, y) && Math.Abs(x - (item.Bounds.Right - 19)) <= 10
         && (Document.Tracks.Any(t => t.Id == item.Id && t.Nodes.Count > 1)
             || Document.ImportedSliders.Any(s => s.Id == item.Id));
-    public bool TimelineResizeCursor => !LibraryVisible && !SliderDialogVisible && !DiscardConfirmationVisible && !ErrorVisible
+    public bool TimelineResizeCursor => !LibraryVisible && !ExportVisible && !SliderDialogVisible && !DiscardConfirmationVisible && !ErrorVisible
         && (drag == DragKind.TimelineTail || menu < 0 && contextItems.Count == 0 && objectTimeline.Contains(mouseX, mouseY)
             && timelineObjects.AsEnumerable().Reverse().Where(i => i.Bounds.Contains(mouseX, mouseY)).Take(1)
                 .Any(i => IsTimelineTail(i, mouseX, mouseY)));

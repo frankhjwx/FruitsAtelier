@@ -41,6 +41,14 @@ internal static class WorkspaceTests
             Check(db.Search("drum bass").Count == 1 && db.Search("missing").Count == 0, "tag search");
             Check(db.Search("%_'").Count == 0, "literal SQL search");
             Check(db.Search("", true).Single().ProjectPath == session.Directory, "source association");
+            foreach (string query in new[] { "", "romanised artist", "原始 歌手", "drum bass", "missing", "%_'" })
+            foreach (bool projects in new[] { false, true })
+            {
+                using var snapshot = db.SearchSnapshot(query, projects);
+                var expected = db.Search(query, projects);
+                Check(snapshot.Count == expected.Select(map => projects ? map.ProjectPath : map.Directory).Distinct().Count(), "paged search matches catalog filtering");
+                Check(snapshot.Page(0).Select(row => row.Map).SequenceEqual(expected), "paged search preserves metadata and project association");
+            }
             var plan = WorkspaceExport.Plan(session, project.Difficulties[0], songs, true, "", true);
             WorkspaceExport.Commit(session, plan); WorkspaceProject.Save(session, project);
             Check(OsuBeatmapReader.ReadFile(source).Fruits[0].X == 400, "explicit overwrite");

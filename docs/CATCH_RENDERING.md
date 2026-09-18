@@ -1,6 +1,8 @@
 # Catch Rendering and Conversion
 
-Both views share actual conversion results, AR fall scaling, CS sizes, and skin rendering. Current conditions are NM / 1×, with multiple timing points, standalone fruits, imported L/B/P/C sliders, mixed linear/Bezier tracks with repeats, and banana showers. The real audio transport drives current time; without audio, explicitly indicated manual positioning remains available.
+Both views use actual conversion results, AR fall scaling, CS sizes, and skin rendering, with multiple timing points, standalone fruits, imported L/B/P/C sliders, mixed linear/Bezier tracks with repeats, and banana showers. The canvas uses the map's original settings. Catch Preview is a collapsed-by-default, resizable right sidebar with mutually exclusive NM, Easy and Hard Rock modes. The real audio transport drives current time; without audio, explicitly indicated manual positioning remains available.
+
+Easy multiplies AR and CS by 0.5. Hard Rock multiplies AR by 1.4 and CS by 1.3, capped at 10. Hard Rock's preview replays complete-parent RNG ordering, including standalone-fruit offsets, slider droplet draws and banana draws, against the existing converted geometry. Each mode recalculates hyperdash indicators with its effective CS. Preview results are cached by conversion result and mode, and only the current time window is drawn. These controls do not edit, save or export modified beatmap settings. Debug curves continue to show the authored paths.
 
 ## AR and center positions
 
@@ -8,15 +10,23 @@ Both views share actual conversion results, AR fall scaling, CS sizes, and skin 
 - For AR ≤ 5, preempt is `1200 + 120 × (5 − AR)` ms; for AR > 5, it is `1200 − 150 × (AR − 5)` ms.
 - AR is first converted to float, and the piecewise result is truncated to integer milliseconds. AR 0 / 5 / 8 / 10 gives 1800 / 1200 / 750 / 450 ms.
 - For effective displayed width W, `DIP/ms = (440 / preemptMs) × (W / 512)`.
-- With remaining time Δt, `screenY = catchLineY − Δt × DIP/ms`. The preview shows converted objects only for `0 ≤ Δt ≤ preemptMs`.
+- With remaining time Δt, `screenY = catchLineY − Δt × DIP/ms`. The preview queries through its upper edge plus sprite overscan, drawing partially entering sprites before their centres enter the viewport.
 
-The preview fits the 512:440 region proportionally into its panel with margins. The main canvas uses the same timing formula with its zoomed playfield width. The Zoom slider and Ctrl+scroll scale that width, object sizes, and time spacing together, from 256 DIP to the available width with edge padding. Reset view restores full width. These view changes preserve map coordinates and beatmap AR/CS.
+The preview offers 4:3, 16:9 and Fit modes. Mode and Resolution controls remain at the top; standard viewports are centred horizontally and vertically in the remaining sidebar area. The preview area represents the full game view, including the catcher. Standard modes have no frame. Fit retains its outer boundary and an internal, bottom-aligned 4:3 reference frame covering the complete legacy game view, including the catcher area. No catch-line guide is drawn. Standard modes fit the full game viewport into the panel: the field width is `viewportHeight × 1024/768 × 0.8`, its top is at 15% of viewport height, and the catch line is another 340 map units below that top. Fit fills the available panel and uses 80% of its inset reference-frame width for the playfield, with the same legacy catch-line placement inside that frame. Increasing panel height therefore exposes more future notes while retaining object proportions and AR-based fall speed.
+
+The automatic catcher follows converted objects using cached replay frames and binary-search interpolation, including when seeking backwards. Its movement follows the pinned [CatchAutoGenerator.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Replays/CatchAutoGenerator.cs) rules. Legacy skin artwork aligns its top-origin offset of 16 logical pixels to the Y=340 catch line, with artwork scale `0.35 × 2 × CatchScale × fieldWidth/512`. The idle pose uses the first animation frame or static idle image, without the fruit texture crop. Missing artwork uses a geometric catcher. See [LegacyCatcher.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Skinning/Legacy/LegacyCatcher.cs).
+
+The main canvas uses the same timing formula with its zoomed playfield width. The Zoom slider and Ctrl+scroll scale that width, object sizes, and time spacing together, from 256 DIP to the available width with edge padding. Reset view restores full width. These view changes preserve map coordinates and beatmap AR/CS.
 
 The main play line is `plotBottom − plotHeight × 0.25`. Playback, seek, view reset, and resize retain that placement. Empty space is allowed before/after beatmap boundaries; paused navigation permits manual panning. Bottom navigation moves continuously.
 
 Pinned sources: [CatchPlayfieldAdjustmentContainer.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/UI/CatchPlayfieldAdjustmentContainer.cs), [CatchHitObject.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Objects/CatchHitObject.cs), and [IBeatmapDifficultyInfo.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/IBeatmapDifficultyInfo.cs).
 
 This project truncates preempt to integer milliseconds; the reference version's scrolling time range retains fractions, creating a rounding difference for fractional AR.
+
+Catcher dash trails sample map time every 16 ms and fade from 0.4 opacity over 800 ms with OutQuint easing. Hyperdash starts at the departure fruit, colours the body over a 180 ms transition, and adds a 1200 ms afterimage that rises 10 field units and grows from 0.95 to 1.2 scale. Skin sprites use additive blending for trails and afterimages; geometric fallback ghosts use alpha blending. `HyperDash` and `HyperDashAfterImage` skin colours are independent from `HyperDashFruit`. Effects reconstruct from cached movement and hyperdash intervals when seeking, rather than accumulating render-frame history. These rules reference `Catcher.cs`, `CatcherArea.cs`, `CatcherTrail.cs` and `CatcherTrailDisplay.cs` at the pinned ppy/osu revision above.
+
+Caught Fruits and Bananas remain on the plate at half size with deterministic collision-separated offsets; Droplets eject immediately and TinyDroplets do not stack. At the last converted event of the parent before a New Combo (and at the final parent), the stack explodes: 250 ms upward, 500 ms downward, horizontal spreading and a 750 ms fade. Plate batches and transient droplets are cached and queried by time so seeks restore them without replaying all prior frames. Stack offset randomness is deterministic for preview rather than sharing the runtime random generator. Source rules: Catcher.cs, CaughtObject.cs, CaughtDroplet.cs and CatchBeatmapProcessor.cs at the pinned revision.
 
 ## CS and skin sizing
 

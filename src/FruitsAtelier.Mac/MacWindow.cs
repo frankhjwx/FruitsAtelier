@@ -63,7 +63,7 @@ internal sealed partial class MacWindow : Window
             audio.Seek(View.PlayheadMs);
             PollAudio();
         });
-        View.RequestSave = () => RunFile(async () => { await Save(false); });
+        View.RequestSave = () => RunFile(async () => { if (await Save(false)) View.ShowWorkspaceExport(); });
         View.RequestSaveAs = () => RunFile(async () => { await Save(true); });
         View.RequestExport = View.ShowWorkspaceExport;
         ConfigureLibrary(initialPath is null && !smokeCheck, smokeCheck);
@@ -112,7 +112,7 @@ internal sealed partial class MacWindow : Window
             e.Cancel = true;
             RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
         };
-        Closed += (_, _) => { timer.Stop(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
+        Closed += (_, _) => { View.SaveLibraryMemory(); timer.Stop(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
         Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); editor.Refresh(); };
         Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(); editor.Refresh(); };
     }
@@ -199,6 +199,7 @@ internal sealed partial class MacWindow : Window
     private static string SafeName(string name) => string.IsNullOrWhiteSpace(name) ? L.Get("files.untitled") : new string(name.Where(c => !Path.GetInvalidFileNameChars().Contains(c) && c != ':').Take(100).ToArray());
     private async Task SmokeCheck()
     {
+        View.LoadDocument(DemoMap.Create()); View.CloseLibrary(); editor.Refresh();
         string folder = Path.Combine(MacPaths.Artifacts, "macos-check"); Directory.CreateDirectory(folder);
         using var bitmap = new RenderTargetBitmap(new PixelSize((int)editor.Bounds.Width, (int)editor.Bounds.Height), new Vector(96, 96));
         bitmap.Render(editor); bitmap.Save(Path.Combine(folder, "editor.png"));

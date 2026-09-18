@@ -33,7 +33,7 @@ internal static class MultiSelectionTests
         Check(ui.View.ActiveTool == "Select" && ui.View.Document.Tracks.Count == 1,
             "Empty click did not leave existing-slider edit mode.");
         ui.SelectTrack(track.Id); ui.Key('B');
-        ui.ClickText("新 Slider");
+        var sliderButton = ui.View.ToolButtonBounds[2]; ui.Click(sliderButton.X + 10, sliderButton.Y + 10);
         ui.View.Wheel(ui.Plot.X, ui.Plot.Bottom, -120, true); ui.Paint();
         ui.ClickMap(5500, 80); ui.ClickMap(6500, 160); ui.Key(13);
         Check(ui.View.Document.Tracks.Count == 2 && ui.View.Document.Tracks.Single(t => t.Id == track.Id).Nodes.Count == 5,

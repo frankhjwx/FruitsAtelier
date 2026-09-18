@@ -45,14 +45,53 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view)
     {
+        string thumbnailPath = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png");
+        var thumbnailWait = Stopwatch.StartNew();
+        bool thumbnailReady = false;
+        while (!thumbnailReady && thumbnailWait.Elapsed.TotalSeconds < 5)
+        {
+            canvas.Begin(); thumbnailReady = canvas.Thumbnail(thumbnailPath, new(20, 20, 76, 60)); canvas.End();
+            if (!thumbnailReady) Thread.Sleep(10);
+        }
+        if (!thumbnailReady) throw new InvalidOperationException("Background thumbnail decoding did not produce a drawable bitmap.");
         var cases = new List<object>();
         var repeated = new ImportedSlider { TimeMs = 0, X = 100, Y = 192, PathType = 'L', PixelLength = 100, SpanCount = 3 };
         repeated.ControlPoints.AddRange([new(100, 192), new(200, 192)]);
         view.Document.ImportedSliders.Add(repeated);
+        view.Document.Fruits.AddRange([new Fruit { TimeMs = 10000, X = 50 }, new Fruit { TimeMs = 10100, X = 450 }]);
         foreach (int dpi in new[] { 96, 144, 192 })
         foreach (var size in new[] { (1440, 900), (980, 620) })
         {
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            var toggle = view.PreviewToggleBounds;
+            view.PointerDown(toggle.X + 10, toggle.Y + 10, 0, false, false); view.PointerUp(toggle.X + 10, toggle.Y + 10, 0);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            var splitter = view.PreviewResizeBounds;
+            view.PointerDown(splitter.X + 4, splitter.Y + 20, 0, false, false);
+            view.PointerMove(splitter.X - 32, splitter.Y + 20, false, false);
+            view.PointerUp(splitter.X - 32, splitter.Y + 20, 0);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            float previewLeft = view.PreviewResizeBounds.X + 20, previewWidth = size.Item1 - previewLeft - 16;
+            for (int mod = 0; mod < 3; mod++)
+            {
+                float modX = previewLeft + 66 + mod * (previewWidth - 66) / 3 + 12;
+                view.PointerDown(modX, 193, 0, false, false); view.PointerUp(modX, 193, 0);
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            }
+            for (int mode = 0; mode < 3; mode++)
+            {
+                float modeX = previewLeft + 66 + mode * (previewWidth - 66) / 3 + 12;
+                view.PointerDown(modeX, 224, 0, false, false); view.PointerUp(modeX, 224, 0);
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            }
+            foreach (double time in new[] { 10032d, 10080d, 10200d, 11500d, 10032d })
+            {
+                view.UpdateTransport(time, 15000, true, false, false, null, null);
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            }
+            toggle = view.PreviewToggleBounds;
+            view.PointerDown(toggle.X + 10, toggle.Y + 10, 0, false, false); view.PointerUp(toggle.X + 10, toggle.Y + 10, 0);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
@@ -62,7 +101,27 @@ internal static class RenderCheck
             view.ShowError("bad-map.osu\n" + FruitsAtelier.Localization.Strings.Get("core.reader.importedParameters"));
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             view.KeyDown(13, false, false);
-            cases.Add(new { dpi, widthDip = size.Item1, heightDip = size.Item2, rendered = true, reverseMarkers = true, gridSubmenu = true, errorDialog = true });
+            view.ShowWorkspaceExport();
+            string exportLanguage = FruitsAtelier.Localization.Strings.Language;
+            foreach (string language in FruitsAtelier.Localization.Strings.AvailableLanguages)
+            {
+                FruitsAtelier.Localization.Strings.SetLanguage(language);
+                for (int mode = 0; mode < 3; mode++)
+                {
+                    canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+                    view.KeyDown(40, false, false);
+                }
+            }
+            FruitsAtelier.Localization.Strings.SetLanguage(exportLanguage);
+            view.KeyDown(27, false, false);
+            view.ShowLibrary();
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            view.PointerMove(size.Item1 - 400, 30, false, false);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            view.PointerDown(size.Item1 - 230, 30, 0, false, false); view.PointerUp(size.Item1 - 230, 30, 0);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            view.KeyDown(27, false, false); view.CloseLibrary();
+            cases.Add(new { dpi, widthDip = size.Item1, heightDip = size.Item2, rendered = true, previewDrawer = true, previewMods = true, reverseMarkers = true, gridSubmenu = true, errorDialog = true, exportOverlay = true, libraryNavigation = true });
         }
         canvas.Resize(0, 0, 96);
         canvas.Resize(1440, 900, 96);
@@ -83,7 +142,7 @@ internal static class RenderCheck
             adapter = canvas.AdapterName,
             skin = view.SkinName, decodedSkinImages = canvas.LoadedImageCount,
             note = "DPI values exercise render targets and DIP layout; not OS display-setting changes. Hidden-window timing includes EndDraw/Present and is not a visible-refresh guarantee.",
-            cases, zeroSizeThenRestore = true, visibleFruitCount = 1000, measuredFrames = timings.Count,
+            cases, backgroundThumbnail = thumbnailReady, zeroSizeThenRestore = true, visibleFruitCount = 1000, measuredFrames = timings.Count,
             medianFrameMs = timings[timings.Count / 2], p95FrameMs = timings[(int)(timings.Count * .95)],
             modelErrors = CurveMath.Validate(view.Document)
         };

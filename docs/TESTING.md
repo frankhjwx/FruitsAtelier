@@ -50,6 +50,16 @@ bash scripts/Test-Mac.sh --native-only        # Mac input/audio checks only
 
 [Desktop regression](../.github/workflows/desktop.yml) runs on pushes and PRs: Windows builds the solution and runs shared regressions; macOS runs shared regressions and packages the app. Results are available in [GitHub Actions](https://github.com/frankhjwx/FruitsAtelier/actions).
 
+## Library scale benchmark
+
+Run the opt-in benchmark from the repository root after building:
+
+```powershell
+dotnet run --no-build --project tests/FruitsAtelier.App.Tests -c Release -- --benchmark-library
+```
+
+It creates 500,000 synthetic map records in distinct sets under `artifacts/library-scale/`, checks random SQL pages and the last set, and exercises 100 scrollbar jumps over 2,000 UI frames. `artifacts/library-scale/benchmark.json` records index time, page latency, UI timing, allocation and peak cached rows. Pass an existing fixture directory after `--benchmark-library` to reuse its database. The benchmark uses `RecordingCanvas`: it measures metadata/query/UI work, not GPU presentation, image decoding, real map scanning, or visible FPS. The native Windows `--render-check` separately checks asynchronous thumbnail decoding and drawing.
+
 ## External test resources
 
 The repository contains synthetic format fixtures, older `.catchproj` compatibility fixtures, and OGG audio fixtures. These checks additionally require local resources:

@@ -11,6 +11,7 @@ internal static class LibraryTests
         try
         {
             StandaloneExport(root);
+            ExportOverlay();
             OptionalSongs(root);
             var view = new EditorView(); view.NewProject();
             view.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); view.LibrarySettings.Songs = songs;
@@ -46,7 +47,8 @@ internal static class LibraryTests
         view.RequestOsuExport = name => requestedName = name;
         view.ShowWorkspaceExport();
         var canvas = new RecordingCanvas(); view.Render(canvas, 980, 620);
-        view.PointerDown(600, 328, 0, false, false); view.PointerUp(600, 328, 0);
+        Click(view, canvas, L.Get("library.exportFile"));
+        Click(view, canvas, L.Get("library.exportChooseLocation"));
         Check(requestedName is not null && !saveRequested && view.WorkspaceSession is null, "standalone export works without Songs or workspace save");
         var document = FruitsAtelier.App.Platform.LibraryOperations.StandaloneExportDocument(before.Difficulties[0], "Standalone");
         string destination = Path.Combine(root, "standalone.osu");
@@ -81,8 +83,7 @@ internal static class LibraryTests
         }
         bool exported = false; view.RequestWorkspaceExport = (_, _) => exported = true;
         view.ShowWorkspaceExport(); canvas.Clear(); view.Render(canvas, 980, 620);
-        Check(canvas.Texts.Any(t => t.Value == L.Get("library.bindForExport")), "export explains optional binding requirement");
-        view.PointerDown(70, 328, 0, false, false);
+        Click(view, canvas, L.Get("library.exportCreate"));
         Check(!exported, "unbound export is disabled");
         view.ShowLibrary(); canvas.Clear(); view.Render(canvas, 980, 620);
         view.PointerDown(620, 30, 0, false, false); canvas.Clear(); view.Render(canvas, 980, 620);
@@ -97,6 +98,53 @@ internal static class LibraryTests
         var deadline = DateTime.UtcNow.AddSeconds(10);
         while (view.LibraryLoading && DateTime.UtcNow < deadline) Thread.Sleep(10);
         Check(!view.LibraryLoading, "background work completed");
+    }
+    private static void Click(EditorView view, RecordingCanvas canvas, string label)
+    {
+        var text = canvas.Texts.Last(t => t.Value == label);
+        view.PointerDown(text.X + 4, text.Y + 4, 0, false, false);
+        view.PointerUp(text.X + 4, text.Y + 4, 0);
+        canvas.Clear(); view.Render(canvas, 980, 620);
+    }
+
+    private static void ExportOverlay()
+    {
+        var view = new EditorView();
+        var canvas = new RecordingCanvas(); view.Render(canvas, 980, 620);
+        var before = view.Document.DeepClone();
+        var bounds = view.CanvasPlotBounds;
+        var zoom = view.CanvasZoom;
+        view.RequestSave = view.ShowWorkspaceExport;
+        view.KeyDown(83, true, false);
+        Check(view.ExportVisible && !view.LibraryVisible, "Ctrl+S opens overlay without switching to library");
+        canvas.Clear(); view.Render(canvas, 980, 620);
+        Check(canvas.Texts.Any(t => t.Value == L.Get("ui.file")), "editor chrome remains beneath overlay");
+        Check(view.CanvasPlotBounds == bounds, "overlay keeps canvas layout");
+        view.KeyDown(70, false, false);
+        view.PointerDown(bounds.X, bounds.Bottom - 20, 0, false, false);
+        view.PointerMove(bounds.Right, bounds.Y, false, false);
+        view.PointerUp(bounds.Right, bounds.Y, 0);
+        view.PointerDoubleClick(bounds.X, bounds.Y, false, false);
+        view.Wheel(bounds.X, bounds.Y, 120, true);
+        view.KeyDown(46, false, false); view.KeyDown(90, true, false);
+        Check(view.Document.ContentEquals(before) && view.CanvasZoom == zoom, "modal blocks edits, undo and canvas zoom");
+        Click(view, canvas, L.Get("library.exportOverride"));
+        Check(!canvas.Texts.Any(t => t.Value == L.Get("library.newDifficultyName")), "update mode hides name field");
+        Click(view, canvas, L.Get("library.exportFile"));
+        Check(!canvas.Texts.Any(t => t.Value == L.Get("library.exportNewTarget") || t.Value == L.Get("library.exportReplaceTarget")), "standalone hides target preview");
+        var label = canvas.Texts.Last(t => t.Value == L.Get("library.newDifficultyName"));
+        view.PointerDown(label.X + 12, label.Y + 40, 0, false, false);
+        view.KeyDown(65, true, false); view.PasteLibraryText("Overlay export");
+        view.KeyDown(83, true, false);
+        string? name = null; view.RequestOsuExport = value => name = value;
+        canvas.Clear(); view.Render(canvas, 980, 620);
+        Click(view, canvas, L.Get("library.exportChooseLocation"));
+        Check(name == "Overlay export", "repeated save shortcut preserves typed export name");
+        view.KeyDown(27, false, false);
+        Check(!view.ExportVisible && view.Document.ContentEquals(before), "Escape dismisses without changing content");
+        view.ShowWorkspaceExport(); canvas.Clear(); view.Render(canvas, 980, 620);
+        Click(view, canvas, L.Get("mac.cancel"));
+        Check(!view.ExportVisible, "cancel dismisses overlay");
     }
     private static void Check(bool condition, string name) { if (!condition) throw new Exception(name); }
 }

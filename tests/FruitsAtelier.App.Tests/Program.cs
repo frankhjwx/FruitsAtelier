@@ -7,12 +7,20 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Length > 0 && args[0] == "--benchmark-library") return LibraryScaleTests.Benchmark(args.Length > 1 ? args[1] : null);
 if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
 
 if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.InspectMap(args[1]);
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Preview drawer, mods, resizing and aligned shortcuts preserve content", PreviewSidebarTests.Sidebar),
+    ("Preview aspect modes, Fit height and edge overscan", PreviewSidebarTests.DisplayModesAndOverscan),
+    ("Automatic catcher movement and seeking", PreviewSidebarTests.AutomaticCatcher),
+    ("Caught stacks and combo explosions survive seeking", PreviewSidebarTests.PlateEffects),
+    ("Dash and hyperdash catcher effects follow map time", PreviewSidebarTests.DashEffects),
+    ("Selected legacy slider hover offers an undoable conversion", PreviewSidebarTests.LegacyConversion),
+    ("Hard Rock preview applies deterministic positions without changing source", PreviewSidebarTests.HardRock),
     ("Timeline tails adjust reverses with undo and cancellation", ObjectTimelineTests.TailReverses),
     ("Timeline reverse circles follow spans, tail edits and undo", ObjectTimelineTests.ReverseMarkers),
     ("Grid Level opens a checked View submenu", GridLevelMenuTests.Run),
@@ -41,6 +49,8 @@ var tests = new (string Name, Action Run)[]
     ("Fresh process defaults to English", () => { if (startupLanguage != "en") throw new Exception("Default language must be English"); }),
     ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),
     ("Workspace library isolates input, saving and export", LibraryTests.Run),
+    ("Library navigation preserves position, supports dragging and returns with Escape", LibraryNavigationTests.Run),
+    ("Library pages sets and difficulties and reaches uncached scrollbar positions", LibraryScaleTests.Pagination),
     ("Library remains responsive while SQLite is write-locked", LibraryResponsivenessTests.Run),
     ("Library progress survives oversized maps", LibraryScanProgressTests.Run),
     ("In-window save confirmation blocks editing and supports cancellation", DiscardConfirmationTests.Run),
@@ -63,7 +73,7 @@ var tests = new (string Name, Action Run)[]
     ("Selected parents snap from the earliest start and keep one time and X offset", RequestedInteractionTests.MultiObjectDrag),
     ("A single Slider uses its start as the snap reference while moving", RequestedInteractionTests.SingleSliderSnap),
     ("The main canvas reserves CS0 padding while timing grid lines stay inside X=0..512", RequestedInteractionTests.PlayfieldPadding),
-    ("Banana placement uses left-start right-end and exposes precise times", RequestedInteractionTests.BananaPlacement),
+    ("Banana placement uses left-start right-end and is undoable", RequestedInteractionTests.BananaPlacement),
     ("Banana showers expose an X=0..512 range with draggable body and time handles", RequestedInteractionTests.BananaRectangleEditing),
     ("A long audio track extends imported-map Fruit and Banana editing past the last source object", RequestedInteractionTests.AudioExtendsEditableDuration),
     ("Selecting an exact numeric time does not resnap or create undo", SelectOffGrid),
@@ -72,9 +82,6 @@ var tests = new (string Name, Action Run)[]
     ("Capture cancellation restores the document and releases capture intent", CaptureCancellation),
     ("Undo cancels a curve draft without undoing the preceding fruit", DraftUndo),
     ("A zero-length handle does not prevent dragging its anchor", ZeroHandleAnchor),
-    ("Rejected numeric edits can be corrected before another paint", NumericRejectAndRetry),
-    ("Non-finite numeric input and field shortcuts cannot mutate objects", NumericIsolation),
-    ("Rejected anchor time preserves curve controls and accepts a corrected time", AnchorNumericRetry),
     ("Ctrl-click-created slider keeps corner points and commits one transaction", DraftCompletion),
     ("Painted fruit, time ruler and playhead share an upward time axis", UpwardPainting),
     ("Select blank clicks seek while objects and box drags preserve time", UpwardClickTime),
@@ -256,15 +263,10 @@ static void PlaceOnBothGrids()
 static void SelectOffGrid()
 {
     var ui = new Ui();
-    var id = ui.View.Document.Fruits[0].Id;
-    ui.ClickFruit(id);
-    ui.SetField("时间", "1001");
-    Near(1001, ui.Fruit(id).TimeMs);
-    ui.ClickFruit(id);
-    Near(1001, ui.Fruit(id).TimeMs);
-    ui.Key('Z', ctrl: true);
-    Near(250, ui.Fruit(id).TimeMs);
-    True(!ui.View.IsDirty, "A selection click created an extra undo transaction.");
+    var map = new MapDocument(); map.Fruits.Add(new Fruit { TimeMs = 1001, X = 200 });
+    ui.LoadDocument(map); ui.ClickFruit(map.Fruits[0].Id);
+    Near(1001, ui.View.Document.Fruits[0].TimeMs);
+    True(!ui.View.IsDirty, "Selecting an off-grid fruit changed the document.");
 }
 
 static void DragUndoRedo()
@@ -345,8 +347,7 @@ static void ZeroHandleAnchor()
     ui.ClickMap(2500, 392);
     ui.Key('B');
     ui.ClickMap(2500, 392);
-    ui.SetField("入柄 Δms", "0");
-    ui.SetField("入柄 ΔX", "0");
+    ui.Anchor(id).HandleIn = default; ui.Paint();
     True(ui.Anchor(id).HandleIn == new MapPoint(0, 0), "Zero-length handle setup failed.");
     ui.DownMap(2500, 392);
     ui.MoveMap(2625, 360);
@@ -357,74 +358,8 @@ static void ZeroHandleAnchor()
     Valid(ui);
 }
 
-static void NumericRejectAndRetry()
-{
-    var ui = new Ui();
-    var id = ui.View.Document.Fruits[0].Id;
-    ui.ClickFruit(id);
-    ui.FocusField("时间");
-    ui.Type("-1");
-    ui.View.KeyDown(13, false, false);
-    Near(250, ui.Fruit(id).TimeMs);
-    True(!ui.View.IsDirty, "Rejected time polluted the model.");
-    // Queued input can arrive before WM_PAINT refreshes field callbacks.
-    ui.View.KeyDown('A', true, false);
-    ui.Type("1001");
-    ui.View.KeyDown(13, false, false);
-    ui.Paint();
-    Near(1001, ui.Fruit(id).TimeMs);
-    ui.Key('Z', ctrl: true);
-    Near(250, ui.Fruit(id).TimeMs);
-    True(!ui.View.IsDirty, "A rejected numeric edit added undo history.");
-    ui.Key('Y', ctrl: true);
-    Near(1001, ui.Fruit(id).TimeMs);
-    Valid(ui);
-}
 
-static void NumericIsolation()
-{
-    var ui = new Ui();
-    var id = ui.View.Document.Fruits[0].Id;
-    int count = ui.View.Document.Fruits.Count;
-    ui.ClickFruit(id);
-    ui.FocusField("时间");
-    ui.Type("1e309");
-    ui.Key(13);
-    Near(250, ui.Fruit(id).TimeMs);
-    ui.Key('Z', ctrl: true);
-    ui.Key(46);
-    ui.Key('B');
-    True(ui.View.Document.Fruits.Count == count, "Delete in a numeric field deleted a fruit.");
-    True(ui.View.ActiveTool == "Select", "A field keystroke switched editor tools.");
-    ui.Key(27);
-    True(!ui.View.IsDirty, "Cancelling invalid field input mutated the document.");
-    Valid(ui);
-}
 
-static void AnchorNumericRetry()
-{
-    var ui = new Ui();
-    var id = ui.View.Document.Tracks[0].Nodes[1].Id;
-    var originalIn = ui.Anchor(id).HandleIn;
-    var originalOut = ui.Anchor(id).HandleOut;
-    ui.ClickMap(2500, 392);
-    ui.Key('B');
-    ui.ClickMap(2500, 392);
-    ui.FocusField("时间");
-    ui.Type("1100");
-    ui.View.KeyDown(13, false, false);
-    Near(2500, ui.Anchor(id).TimeMs);
-    ui.View.KeyDown('A', true, false);
-    ui.Type("2600");
-    ui.View.KeyDown(13, false, false);
-    ui.Paint();
-    Near(2600, ui.Anchor(id).TimeMs);
-    True(ui.Anchor(id).HandleIn == originalIn && ui.Anchor(id).HandleOut == originalOut, "Numeric time edit changed relative controls.");
-    ui.Key('Z', ctrl: true);
-    Near(2500, ui.Anchor(id).TimeMs);
-    True(!ui.View.IsDirty, "Rejected anchor edit created a transaction.");
-    Valid(ui);
-}
 
 static void DraftCompletion()
 {
@@ -587,7 +522,7 @@ static void ResetCanvasViewport()
 
 static void ArPreviewAndInput()
 {
-    var ui = new Ui();
+    var ui = new Ui(); ui.OpenPreview();
     ui.View.Document.Tracks.Clear();
     var fixtures = new (double Remaining, double X)[]
     {
@@ -616,20 +551,22 @@ static void ArPreviewAndInput()
 
 static void AssertArPreview(Ui ui, double preempt, (double Remaining, double X)[] fixtures, double halfX, double topX)
 {
-    var catchLine = ui.Canvas.Lines.Single(l => l.Color == 0x677085);
-    var field = ui.Canvas.Outlines.Single(s => s.Color == 0x2B3442 && s.Bounds.X > ui.Plot.Right).Bounds;
+    var field = StandardPreviewFallBounds(ui);
+    var catchLine = (X1: field.X, X2: field.Right, Y1: field.Bottom);
     Near(440.0 / 512, field.Height / field.Width);
     Near(field.Bottom, catchLine.Y1);
     var fruits = ui.Canvas.Circles.Where(c => c.Filled && c.Color == 0xFFFFFF && c.X > ui.Plot.Right
         && Math.Abs(c.Radius - CatchSize.FruitRadius(ui.View.Document.CircleSize) * field.Width / 512) < 0.001).ToArray();
+    double visibleAhead = (catchLine.Y1 - ui.View.PreviewViewport.Y
+        + CatchSize.FruitDiameter(ui.View.Document.CircleSize) * field.Width / 512 * 1.2) / (field.Height / preempt);
     int expectedCount = ui.View.Document.Fruits.Count(f => f.TimeMs >= ui.View.PlayheadMs
-        && f.TimeMs <= ui.View.PlayheadMs + preempt);
-    True(fruits.Length == expectedCount, "Preview includes fruit outside the AR preempt window.");
+        && f.TimeMs <= ui.View.PlayheadMs + visibleAhead);
+    True(fruits.Length == expectedCount, "Preview must preload objects through the viewport's padded upper edge.");
     foreach (var fixture in fixtures)
     {
         float expectedX = catchLine.X1 + (float)(fixture.X / 512) * (catchLine.X2 - catchLine.X1);
         var matches = fruits.Where(f => Math.Abs(f.X - expectedX) < 0.001).ToArray();
-        bool visible = fixture.Remaining >= 0 && fixture.Remaining <= preempt;
+        bool visible = fixture.Remaining >= 0 && fixture.Remaining <= visibleAhead;
         True(matches.Length == (visible ? 1 : 0), $"Incorrect preview visibility for fruit at offset {fixture.Remaining}.");
     }
     RecordingCanvas.Dot AtX(double x) => fruits.Single(f => Math.Abs(f.X
@@ -680,7 +617,7 @@ static void MainCurveVisibility()
 
 static void PreviewCurveLayers()
 {
-    var ui = new Ui();
+    var ui = new Ui(); ui.OpenPreview();
     var objects = ObjectCircles(ui, preview: true);
     True(objects.Length > 0, "Preview has no converted objects.");
     True(!CurveCommands(ui, preview: true).Any(), "Debug curves are visible in the preview by default.");
@@ -704,7 +641,7 @@ static void PreviewCurveLayers()
 
 static void CircleSizeAcrossViews()
 {
-    var ui = new Ui();
+    var ui = new Ui(); ui.OpenPreview();
     string original = Snapshot(ui);
     double originalCs = ui.View.Document.CircleSize;
     var plot = ui.Plot;
@@ -713,8 +650,10 @@ static void CircleSizeAcrossViews()
     RecordingCanvas.Dot[] MainInterior() => ObjectCircles(ui, preview: false)
         .Where(c => c.Y > plot.Y + margin && c.Y < plot.Bottom - margin).ToArray();
     var main = MainInterior();
-    var preview = ObjectCircles(ui, preview: true);
-    var field = ui.Canvas.Outlines.Single(s => s.Color == 0x2B3442 && s.Bounds.X > plot.Right).Bounds;
+    RecordingCanvas.Dot[] PreviewInterior() => ObjectCircles(ui, preview: true)
+        .Where(c => c.Y > ui.View.PreviewViewport.Y + margin && c.Y < StandardPreviewFallBounds(ui).Bottom - margin).ToArray();
+    var preview = PreviewInterior();
+    var field = StandardPreviewFallBounds(ui);
     AssertObjectKinds(ui, main, plot.Width);
     AssertObjectKinds(ui, preview, field.Width);
     ui.SetCs("7");
@@ -722,16 +661,24 @@ static void CircleSizeAcrossViews()
     double previewRatio = CatchSize.FruitRadius(7) / CatchSize.FruitRadius(originalCs);
     True(previewRatio < 1, "CS setup did not reduce object size.");
     AssertScaled(main, MainInterior(), previewRatio);
-    AssertScaled(preview, ObjectCircles(ui, preview: true), previewRatio);
+    AssertScaled(preview, PreviewInterior(), previewRatio);
     ui.SetCs(originalCs.ToString(System.Globalization.CultureInfo.InvariantCulture));
     True(Snapshot(ui) == original, "Restoring fixture CS changed object data.");
     True(MainInterior().SequenceEqual(main), "Restoring CS did not restore main object sizes.");
-    True(ObjectCircles(ui, preview: true).SequenceEqual(preview), "Restoring CS did not restore preview sizes.");
+    True(PreviewInterior().SequenceEqual(preview), "Restoring CS did not restore preview sizes.");
+}
+
+static Rect StandardPreviewFallBounds(Ui ui)
+{
+    var viewport = ui.View.PreviewViewport;
+    float width = viewport.Height * 1024 / 768 * .8f;
+    float catchY = viewport.Y + viewport.Height * .15f + 340 * width / 512;
+    return new(viewport.X + (viewport.Width - width) / 2, catchY - 440 * width / 512, width, 440 * width / 512);
 }
 
 static void MainCurveSelectionOpacity()
 {
-    var ui = new Ui();
+    var ui = new Ui(); ui.OpenPreview();
     string original = Snapshot(ui);
     var objects = ObjectCircles(ui, preview: false);
     True(CurveCommands(ui, preview: false).Any(), "The main curve fixture is empty.");
@@ -749,7 +696,7 @@ static void MainCurveSelectionOpacity()
     True(ObjectCircles(ui, preview: false).SequenceEqual(objects), "Curve selection changed the converted objects.");
     AssertMainDrawOrder();
     AssertPreviewLayer();
-    ui.Key(27);
+    ui.DownMap(100, 500); ui.MoveMap(300, 480); ui.UpMap(300, 480);
     foreach (var command in CurveCommands(ui, preview: false)) Near(0.5, command.Segment!.Value.Opacity);
     AssertMainDrawOrder();
     AssertPreviewLayer();
@@ -869,6 +816,7 @@ sealed class Ui
     }
     public Fruit Fruit(Guid id) => View.Document.Fruits.Single(f => f.Id == id);
     public Anchor Anchor(Guid id) => View.Document.Tracks.SelectMany(t => t.Nodes).Single(n => n.Id == id);
+    public void OpenPreview() { if (!View.CatchPreviewVisible) { var r = View.PreviewToggleBounds; Click(r.X + 10, r.Y + 10); } }
     public void Paint() { Canvas.Clear(); View.Render(Canvas, width, height); }
     public void Resize(float width, float height) { this.width = width; this.height = height; Paint(); }
     public void SetAr(string value) { View.Document.ApproachRate = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture); Paint(); }
@@ -897,9 +845,10 @@ sealed class Ui
     public void ClickFruit(Guid id) { var fruit = Fruit(id); ClickMap(fruit.TimeMs, fruit.X); }
     public void ClickText(string text)
     {
-        if (text == FruitsAtelier.Localization.Strings.Get("ui.resetView") && !Canvas.Texts.Any(t => t.Value == text))
+        if ((text == FruitsAtelier.Localization.Strings.Get("ui.resetView") || text == FruitsAtelier.Localization.Strings.Get("ui.anchorSnap")) && !Canvas.Texts.Any(t => t.Value == text))
             ClickText(FruitsAtelier.Localization.Strings.Get("ui.view"));
-        var label = Canvas.Texts.Single(t => t.Value == text);
+        string visible = text.Split("  ", 2)[0];
+        var label = Canvas.Texts.Single(t => t.Value == visible);
         Click(label.X + 4, label.Y + 5);
     }
     public void FocusField(string text)

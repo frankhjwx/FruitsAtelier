@@ -21,13 +21,15 @@ public sealed partial class EditorView
         }
         ResetTextCaret();
         mouseX = x; mouseY = y;
+        if (LanguagePointerDown(x, y, button)) return;
         if (SliderDialogVisible)
         {
             if (button == 0) for (int i = sliderDialogHits.Count - 1; i >= 0; i--)
                 if (sliderDialogHits[i].Bounds.Contains(x, y)) { if (sliderDialogHits[i].Enabled) sliderDialogHits[i].Action(); break; }
             return;
         }
-        if (LibraryVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
+        if (LibraryVisible && LibraryPointerDown(x, y, button)) return;
+        if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
         if (menu >= 0 && button != 0) { menu = -1; return; }
         if (button == 2)
@@ -59,9 +61,12 @@ public sealed partial class EditorView
                     if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); return; }
                 return;
             }
+            bool sameHeader = menu < 3 && new FruitsAtelier.App.Rendering.Rect(109 + menu * 53, 6, 50, 28).Contains(x, y);
             menu = -1;
-            return;
+            if (sameHeader) return;
+            if (y >= 39) return;
         }
+        if (catchPreviewVisible && PreviewResizeBounds.Contains(x, y)) { drag = DragKind.PreviewResize; return; }
         if (zoomSlider.Contains(x, y))
         {
             SetCanvasZoom(x);
@@ -232,8 +237,11 @@ public sealed partial class EditorView
     {
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
-        if (LibraryVisible) return;
+        if (ExportVisible) { mouseX = x; mouseY = y; return; }
+        if (languageMenuOpen) { mouseX = x; mouseY = y; return; }
+        if (LibraryVisible) { mouseX = x; mouseY = y; MoveLibraryPointer(y); return; }
         mouseX = x; mouseY = y;
+        if (drag == DragKind.PreviewResize) { previewWidth = Math.Clamp(width - x, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)); return; }
         if (drag == DragKind.None)
         {
             if (LegacyMode && draftTrack != Guid.Empty) UpdateLegacyPreview(x, y);
@@ -329,7 +337,8 @@ public sealed partial class EditorView
     {
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
-        if (LibraryVisible) return;
+        if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
+        if (ExportVisible) return;
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
         PointerMove(x, y, false, false);
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
@@ -354,7 +363,8 @@ public sealed partial class EditorView
     {
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
-        if (LibraryVisible) { OpenLibraryCard(x, y); return; }
+        if (ExportVisible) return;
+        if (LibraryVisible) { if (!libraryPointerMoved && contextItems.Count == 0 && !languageMenuOpen) OpenLibraryCard(x, y); return; }
         if (ctrl || tool == Tool.Fruit) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (!LegacyMode && draftTrack != Guid.Empty && SelectedTrack is { } draft && Near(Point(draft.Nodes[^1]), x, y, 8))
         { draft.Nodes[^1].HandleOut = default; draftStraight = true; return; }
@@ -384,6 +394,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl)
     {
+        if (languageMenuOpen) return;
         if (ErrorVisible)
         {
             errorScroll = Math.Clamp(errorScroll - (int)(delta / 120) * 3, 0, Math.Max(0, errorLineCount - errorVisibleLines));
@@ -391,7 +402,14 @@ public sealed partial class EditorView
         }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
-        if (LibraryVisible) { if (x >= width - 330) libraryDiffScroll = Math.Max(0, libraryDiffScroll - (int)(delta / 120)); else libraryScroll = Math.Max(0, libraryScroll - (int)(delta / 120) * 3); return; }
+        if (ExportVisible) return;
+        if (LibraryVisible)
+        {
+            if (languageMenuOpen || contextItems.Count > 0 || librarySettingsOpen) return;
+            if (x >= width - 330) libraryDiffScroll = Math.Max(0, libraryDiffScroll - (int)(delta / 120));
+            else libraryScroll = Math.Clamp(libraryScroll - delta / 120 * 3, 0, LibraryMaxScroll);
+            RememberLibraryPosition(); return;
+        }
         if (drag != DragKind.None) return;
         if (contextItems.Count > 0) { contextItems.Clear(); return; }
         if (difficultyTabStrip.Contains(x, y))
@@ -402,8 +420,6 @@ public sealed partial class EditorView
         }
         if (rightPanel.Contains(x, y))
         {
-            if (editField >= 0 && !CommitField()) return;
-            inspectorScroll = Math.Clamp(inspectorScroll - delta / 120 * 48, 0, Math.Max(0, inspectorContentHeight - (rightPanel.Height - 50)));
             return;
         }
         if (objectTimeline.Contains(x, y))
@@ -448,7 +464,20 @@ public sealed partial class EditorView
             { if (SliderImportPromptVisible) AnswerSliderImport(false); else if (SliderConversionBusy) CancelSliderConversion(); else sliderBatchErrors = []; }
             return;
         }
+        if (ExportVisible) { ExportKey(virtualKey, ctrl); return; }
         if (LibraryVisible) { LibraryKey(virtualKey, ctrl); return; }
+        if (ctrl && !shift && virtualKey is 83 or 69 && drag == DragKind.None)
+        {
+            if (virtualKey == 83) RequestSave?.Invoke(); else RequestExport?.Invoke();
+            return;
+        }
+        if (languageMenuOpen)
+        {
+            if (virtualKey == 27) languageMenuOpen = false;
+            else if (virtualKey is 38 or 40) languageSelection = (languageSelection + (virtualKey == 38 ? L.AvailableLanguages.Count - 1 : 1)) % L.AvailableLanguages.Count;
+            else if (virtualKey == 13) SelectLanguage(L.AvailableLanguages[languageSelection]);
+            return;
+        }
         if (editField >= 0)
         {
             if (virtualKey == 27) { editField = -1; fieldError = ""; return; }
@@ -471,7 +500,8 @@ public sealed partial class EditorView
         {
             if (contextItems.Count > 0) { contextItems.Clear(); return; }
             if (drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty) CancelInteraction();
-            else { Select(Guid.Empty); menu = -1; }
+            else if (menu >= 0) menu = -1;
+            else ShowLibrary();
             return;
         }
         if (ctrl)
@@ -516,10 +546,11 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (languageMenuOpen) return;
         ResetTextCaret();
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
-        if (LibraryVisible) { if (libraryField >= 0 && !char.IsControl(value) && LibraryFieldValue.Length < 4096) { LibraryFieldValue = (libraryReplace ? "" : LibraryFieldValue) + value; libraryReplace = false; } return; }
+        if (LibraryVisible || ExportVisible) { if (libraryField >= 0 && !char.IsControl(value) && LibraryFieldValue.Length < 4096) { LibraryFieldValue = (libraryReplace ? "" : LibraryFieldValue) + value; libraryReplace = false; } return; }
         if (editField < 0 || char.IsControl(value)) return;
         if (!(char.IsAsciiDigit(value) || value is '.' or '-' or '+' or 'e' or 'E' || value == ':' && fields[editField].Timestamp)) return;
         if (replaceText) { editBuffer = ""; replaceText = false; }
@@ -529,6 +560,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction()
     {
+        if (libraryPointerActive) { libraryPointerActive = false; libraryPressedMap = null; RememberLibraryPosition(); }
         if (drag == DragKind.Marquee) { CancelBox(); contextItems.Clear(); return; }
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
         {
