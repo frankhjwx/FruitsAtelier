@@ -104,7 +104,13 @@ public sealed partial class EditorView
     }
     public void CheckWorkspaceResources()
     {
-        resourceErrors = WorkspaceSession is null ? [] : WorkspaceProject.MissingResources(new BeatmapProject { Name = ProjectName, Difficulties = difficulties.Select(d => new ProjectDifficulty { Id = d.Id, Name = d.Name, Document = d.History.Document }).ToList() });
+        if (WorkspaceSession is null) resourceErrors = [];
+        else
+        {
+            var snapshot = ResourceSnapshot();
+            resourceReferences ??= WorkspaceProject.ResourceReferences(snapshot);
+            resourceErrors = resourceReferences.FindMissing();
+        }
         nextResourceCheck = DateTime.UtcNow.AddSeconds(3);
     }
     public bool SaveWorkspace(bool copy = false)
@@ -222,7 +228,7 @@ public sealed partial class EditorView
             ratingTask = null;
         }
         if (LibraryVisible && !librarySettingsOpen && !exportPage && libraryDatabase is not null && DateTime.UtcNow >= nextLibraryScan) StartLibraryScan();
-        if (!LibraryVisible && WorkspaceSession is not null && DateTime.UtcNow >= nextResourceCheck) CheckWorkspaceResources();
+        PumpWorkspaceResources();
     }
     private void OpenLibraryCard(float x, float y)
     {

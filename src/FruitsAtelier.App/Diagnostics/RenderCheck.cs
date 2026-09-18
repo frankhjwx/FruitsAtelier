@@ -8,35 +8,79 @@ namespace FruitsAtelier.App.Diagnostics;
 
 internal static class RenderCheck
 {
-    internal static void ProfileMap(D2DCanvas canvas, EditorView view, string path, float dpi)
+    private readonly record struct ProfileFrame(double TimeMs, double TransportMs, double DrawingMs, double TotalMs,
+        long AllocatedBytes, int Gen0, int Gen1, int Gen2, int ImageDecodes);
+    internal static void ProfileMap(D2DCanvas canvas, EditorView view, string path, float dpi, double startMs)
     {
+        if (!double.IsFinite(startMs) || startMs < 0) throw new ArgumentOutOfRangeException(nameof(startMs));
         view.RequestPreloadHitsounds = null; view.RequestStopHitsounds = null;
         view.RequestScheduleHitsound = (_, _) => { }; view.RequestPrepareHitsound = _ => { };
         var document = OsuBeatmapReader.ReadFile(path);
-        view.LoadDocument(document);
+        var documents = new[] { document }.Concat(Directory.EnumerateFiles(Path.GetDirectoryName(path)!, "*.osu")
+            .Where(file => !Path.GetFullPath(file).Equals(Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase))
+            .Select(OsuBeatmapReader.ReadFile)).ToArray();
+        var project = BeatmapProject.FromDocuments(documents);
+        view.LoadWorkspace(new(Path.GetDirectoryName(path)!, new WorkspaceManifest { Name = project.Name }, project));
+        var resourcesWatch = Stopwatch.StartNew();
+        view.CheckWorkspaceResources();
+        AppLog.Write($"Playback profile resource check: {resourcesWatch.Elapsed.TotalMilliseconds:F2}ms");
         canvas.Resize((int)(1440 * dpi / 96), (int)(900 * dpi / 96), dpi);
         void Draw() { canvas.Begin(); view.Render(canvas, 1440, 900); canvas.End(); }
         Draw();
-        view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom,
-            (float)(120 * Math.Log(.32 / view.CanvasZoom) / Math.Log(1.16)), true);
-        var snap = view.SnapSliderBounds;
-        view.PointerDown(snap.Right - 31, snap.Y + snap.Height / 2, 0, false, false);
-        view.PointerUp(snap.Right - 31, snap.Y + snap.Height / 2, 0);
-        view.StartHitsounds(89038);
-        var frames = new List<double>(); var transport = new List<double>();
-        var watch = new Stopwatch();
-        for (int i = 0; i < 140; i++)
+        var cases = new List<object>();
+        for (int mode = 0; mode < 3; mode++)
         {
-            watch.Restart();
-            view.UpdateTransport(89038 + i * 1000d / 120, document.DurationMs, true, true, false, null, document.AudioPath);
-            if (i >= 20) transport.Add(watch.Elapsed.TotalMilliseconds);
-            watch.Restart(); Draw();
-            if (i >= 20) frames.Add(watch.Elapsed.TotalMilliseconds);
+            if (mode == 1)
+            {
+                var toggle = view.PreviewToggleBounds;
+                view.PointerDown(toggle.X + 10, toggle.Y + 10, 0, false, false); view.PointerUp(toggle.X + 10, toggle.Y + 10, 0);
+                Draw();
+            }
+            if (mode == 2)
+            {
+                float left = view.PreviewResizeBounds.X + 20, width = 1440 - left - 16;
+                float x = left + 66 + 2 * (width - 66) / 3 + 12;
+                view.PointerDown(x, 193, 0, false, false); view.PointerUp(x, 193, 0);
+                Draw();
+            }
+            view.StartHitsounds(startMs);
+            var frames = new List<double>(); var transport = new List<double>();
+            var drawing = new List<double>();
+            var samples = new List<ProfileFrame>(3620);
+            var watch = new Stopwatch();
+            for (int i = 0; i < 3620; i++)
+            {
+                long allocated = GC.GetAllocatedBytesForCurrentThread();
+                int gen0 = GC.CollectionCount(0), gen1 = GC.CollectionCount(1), gen2 = GC.CollectionCount(2), decodes = canvas.ImageDecodeCount;
+                watch.Restart();
+                view.UpdateTransport(startMs + i * 1000d / 120, document.DurationMs, true, true, false, null, document.AudioPath);
+                double transportMs = watch.Elapsed.TotalMilliseconds;
+                if (i >= 20) transport.Add(transportMs);
+                watch.Restart(); canvas.Begin(); view.Render(canvas, 1440, 900);
+                double drawingMs = watch.Elapsed.TotalMilliseconds;
+                if (i >= 20) drawing.Add(drawingMs);
+                canvas.End();
+                double totalMs = watch.Elapsed.TotalMilliseconds;
+                if (i >= 20) frames.Add(totalMs);
+                samples.Add(new(startMs + i * 1000d / 120, transportMs, drawingMs, totalMs,
+                    GC.GetAllocatedBytesForCurrentThread() - allocated, GC.CollectionCount(0) - gen0,
+                    GC.CollectionCount(1) - gen1, GC.CollectionCount(2) - gen2, canvas.ImageDecodeCount - decodes));
+            }
+            frames.Sort(); transport.Sort(); drawing.Sort();
+            cases.Add(new { preview = mode == 0 ? "closed" : mode == 1 ? "NM" : "HR", ar = view.PreviewApproachRate,
+                renderMedianMs = frames[1800], renderP95Ms = frames[3420], renderMaxMs = frames[^1],
+                drawingMedianMs = drawing[1800], drawingP95Ms = drawing[3420],
+                transportMedianMs = transport[1800], transportP95Ms = transport[3420], transportMaxMs = transport[^1], samples });
+            AppLog.Write($"Playback profile case {mode} complete: drawing max {drawing[^1]:F2}ms");
         }
-        frames.Sort(); transport.Sort();
-        var report = new { map = Path.GetFileName(path), timingPoints = document.TimingPoints.Count,
-            startMs = 89038, snap = view.SnapDivisor, zoom = view.CanvasZoom, dpi, adapter = canvas.AdapterName,
-            renderMedianMs = frames[60], renderP95Ms = frames[114], transportMedianMs = transport[60], transportP95Ms = transport[114],
+        var comparison = Stopwatch.StartNew();
+        var snapshot = document.DeepClone();
+        comparison.Restart();
+        for (int i = 0; i < 100; i++) _ = document.ContentEquals(snapshot);
+        double compareMs = comparison.Elapsed.TotalMilliseconds / 100;
+        var report = new { map = Path.GetFileName(path), difficulties = documents.Length, timingPoints = document.TimingPoints.Count,
+            sourceLines = document.OriginalSections.Sum(s => s.Lines.Count), compareMs,
+            startMs, snap = view.SnapDivisor, zoom = view.CanvasZoom, dpi, adapter = canvas.AdapterName, cases,
             note = "Hidden Direct2D window with skin; render includes EndDraw/Present. Hitsound callbacks are silent and exclude device submission. This is not measured screen FPS." };
         string reportPath = Path.Combine(Path.GetDirectoryName(AppLog.Path)!, "playback-profile.json");
         File.WriteAllText(reportPath, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
@@ -65,6 +109,14 @@ internal static class RenderCheck
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             var toggle = view.PreviewToggleBounds;
+            var timeDisplay = view.TimeDisplayBounds;
+            view.PointerDown(timeDisplay.X + 10, timeDisplay.Y + 10, 0, false, false);
+            view.PointerUp(timeDisplay.X + 10, timeDisplay.Y + 10, 0);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            view.PasteTimeJumpText("00:01:234", view.TimeJumpSession);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            view.KeyDown(13, false, false);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             view.PointerDown(toggle.X + 10, toggle.Y + 10, 0, false, false); view.PointerUp(toggle.X + 10, toggle.Y + 10, 0);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             var splitter = view.PreviewResizeBounds;
@@ -93,6 +145,18 @@ internal static class RenderCheck
             toggle = view.PreviewToggleBounds;
             view.PointerDown(toggle.X + 10, toggle.Y + 10, 0, false, false); view.PointerUp(toggle.X + 10, toggle.Y + 10, 0);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            view.UpdateTransport(10000, 15000, true, true, false, null, null);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            var plot = view.CanvasPlotBounds;
+            double startMs = view.ViewStartMs;
+            view.PointerDown(plot.X + 4, plot.Y + 10, 0, false, false);
+            view.PointerMove(plot.Right - 12, plot.Bottom - 12, false, false);
+            view.UpdateTransport(10100, 15000, true, true, false, null, null);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            if (Math.Abs(view.ViewStartMs - startMs - 100) > .001 || !view.AudioPlaying)
+                throw new InvalidOperationException("Canvas marquee stopped following playback.");
+            view.PointerUp(plot.Right - 12, plot.Bottom - 12, 0);
+            view.UpdateTransport(10100, 15000, true, false, false, null, null);
             view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             view.PointerMove(270, 55, false, false);

@@ -4,6 +4,7 @@ if (args.Length == 2 && args[0] == "--slider-corpus") return ImportedSliderCorpu
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Source section snapshots detect all writes, undo and project round trips", SourceSectionTests.SnapshotsAndWrites),
     ("Timing lookup preserves boundary precedence and owns its snapshot", TimingLookupTests.BoundariesAndSnapshot),
     ("Dense imported sliders share reader, validation and conversion limits", DenseImportedSliderTests.ReadAndConvert),
     ("Shared slider curves persist exact AR references and clone independently", SliderModeTests.PersistenceAndAr),

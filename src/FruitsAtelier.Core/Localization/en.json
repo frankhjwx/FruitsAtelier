@@ -1,4 +1,5 @@
 {
+  "library.resourceCheckFailed": "Could not check project resources: {0}",
   "ui.horizontalGridOff": "Grid X: Off",
   "editor.error.timestampRequired": "Enter mm:ss:fff or milliseconds.",
   "ui.horizontalGrid": "Grid X: {0}",
@@ -602,6 +603,10 @@
   "preview.hardRock": "Hard Rock",
   "preview.convertSlider": "Convert to FSlider  Ctrl + D",
   "library.artistMapper": "{0} // {1}",
+  "timeJump.title": "Jump to time",
+  "timeJump.copy": "Copy",
+  "timeJump.paste": "Paste",
+  "timeJump.go": "Jump",
   "preview.mode": "Mode",
   "preview.resolution": "Resolution",
   "preview.ratio43": "4:3",

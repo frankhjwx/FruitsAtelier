@@ -21,6 +21,8 @@ The editor maintains an independent `EditorHistory` per difficulty and accesses 
 
 ## Concrete model
 
+Raw section lines retain independent mutable storage in document snapshots. Unchanged clones share a non-persisted equality identity, so repeated dirty, conversion and difficulty checks do not scan entire storyboards. Every line mutation invalidates that identity; different identities fall back to content comparison. Project JSON still stores section lines as string arrays.
+
 | Type | Fields and semantics |
 | --- | --- |
 | MapDocument | Name, DurationMs, difficulty, TimingPoints, Fruits, Tracks, ImportedSliders, BananaShowers, SourcePath, AudioPath, OriginalSections |

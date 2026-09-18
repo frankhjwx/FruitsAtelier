@@ -181,8 +181,12 @@ public static class WorkspaceProject
     }
 
     public static IReadOnlyList<string> MissingResources(BeatmapProject project)
+        => ResourceReferences(project).FindMissing();
+
+    public static WorkspaceResourceReferences ResourceReferences(BeatmapProject project)
     {
-        var missing = new HashSet<string>();
+        var paths = new HashSet<string>();
+        var invalid = new HashSet<string>();
         foreach (var diff in project.Difficulties)
         {
             var d = diff.Document;
@@ -212,11 +216,11 @@ public static class WorkspaceProject
             {
                 if (string.IsNullOrWhiteSpace(name)) return;
                 try { Check(OsuBeatmapReader.ResolveResource(d.SourcePath, name.Replace('\\', '/'))); }
-                catch (Exception e) when (e is ArgumentException or NotSupportedException) { missing.Add(name); }
+                catch (Exception e) when (e is ArgumentException or NotSupportedException) { invalid.Add(name); }
             }
         }
-        return missing.ToArray();
-        void Check(string? path) { if (!string.IsNullOrWhiteSpace(path) && !System.IO.File.Exists(path)) missing.Add(path); }
+        return new(paths.ToArray(), invalid.ToArray());
+        void Check(string? path) { if (!string.IsNullOrWhiteSpace(path)) paths.Add(path); }
     }
     internal static string[] Csv(string line)
     {

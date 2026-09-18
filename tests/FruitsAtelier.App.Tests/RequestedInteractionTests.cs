@@ -5,7 +5,8 @@ internal static class RequestedInteractionTests
     public static void SnapDivisors()
     {
         var ui = new Ui();
-        foreach (int divisor in new[] { 4, 5, 6, 7, 8, 9, 12, 16 })
+        Check(ui.View.SnapDivisor == 4, "Default snap remains 1/4.");
+        foreach (int divisor in new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16 })
         {
             ui.SetSnapDivisor(divisor);
             Check(ui.View.SnapDivisor == divisor, $"Snap slider did not select 1/{divisor}.");
@@ -22,6 +23,13 @@ internal static class RequestedInteractionTests
             "The Banana tool or snap divisor disappeared at the minimum window width.");
         Check(ui.Canvas.Texts.All(item => (item.Value is not "皮肤…" and not "Tiny 贴合") && !item.Value.StartsWith("Tick ×")),
             "Optional toolbar controls were not collapsed at the minimum window width.");
+        foreach (int divisor in new[] { 1, 2, 3 })
+        {
+            ui.LoadDocument(new MapDocument { DurationMs = 10000, BeatLengthMs = 600 });
+            ui.SetSnapDivisor(divisor); ui.Key('F'); ui.ClickMap(1234, 256);
+            double expected = TimingMap.Snap(ui.View.Document, 1234, divisor);
+            Check(Math.Abs(ui.View.Document.Fruits.Single().TimeMs - expected) < .01, "Coarse snap applies to placement.");
+        }
     }
 
     public static void DoubleClickEditing()

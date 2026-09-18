@@ -37,6 +37,7 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        TimeJumpVisible = false;
         HasEditorProject = true;
         var retiredCancellation = sliderBatchCancellation;
         retiredCancellation?.Cancel();
@@ -45,6 +46,7 @@ public sealed partial class EditorView
         sliderBatchTask = null; sliderBatchCancellation = null;
         sliderImportTargets = []; sliderBatchErrors = []; sliderDialogHits.Clear();
         WorkspaceSession = null; resourceErrors = [];
+        resourceSnapshot = null; resourceReferences = null;
         CancelInteraction();
         foreach (var difficulty in difficulties) difficulty.RatingCancellation.Cancel();
         editorConversionCache = new();
@@ -180,7 +182,7 @@ public sealed partial class EditorView
 
     private void FollowPlayhead()
     {
-        if (drag is DragKind.Marquee or DragKind.Objects or DragKind.BananaStart or DragKind.BananaEnd) return;
+        if (ViewportFrozenByDrag) return;
         pinPlayhead = true;
         viewStart = playhead - plot.Height * playbackLineFromBottom / pixelsPerMs;
     }
