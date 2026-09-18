@@ -3,6 +3,110 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class ObjectTimelineTests
 {
+    public static void TimingCacheInvalidation()
+    {
+        var ui = new Ui(false);
+        var map = new MapDocument { BeatLengthMs = 500, DurationMs = 200000 };
+        for (int i = 0; i < 2000; i++)
+            map.TimingPoints.Add(new() { TimeMs = i * 100, BeatLengthMs = -100, Uninherited = false });
+        ui.LoadDocument(map);
+        ui.SetSnapDivisor(16); ui.Paint();
+        long bytes = GC.GetAllocatedBytesForCurrentThread();
+        ui.Paint();
+        if (GC.GetAllocatedBytesForCurrentThread() - bytes > 4 * 1024 * 1024)
+            throw new Exception("Dense timing data caused excessive per-frame allocation.");
+        var field = typeof(FruitsAtelier.App.Editor.EditorView).GetField("renderedTiming", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        TimingMap.Lookup Lookup() => (TimingMap.Lookup)field.GetValue(ui.View)!;
+        var initial = Lookup();
+        ui.View.UpdateTransport(1000, 10000, true, true, false, null, null); ui.Paint();
+        if (!ReferenceEquals(initial, Lookup())) throw new Exception("Playback rebuilt unchanged timing data.");
+        ui.View.Document.BeatLengthMs = 400; ui.Paint();
+        if (ReferenceEquals(initial, Lookup()) || Lookup().At(1000).BeatLengthMs != 400) throw new Exception("Timing edit retained a stale lookup.");
+        ui.View.Document.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = 300, Uninherited = true }); ui.Paint();
+        if (Lookup().At(1000).BeatLengthMs != 300) throw new Exception("Inserted red point did not invalidate timing data.");
+        ui.LoadDocument(map);
+        if (Lookup().At(1000).BeatLengthMs != 500) throw new Exception("Document replacement reused another map's timing.");
+    }
+
+    public static void ReverseMarkers()
+    {
+        foreach (bool imported in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500, SliderMultiplier = 1 };
+            var slider = new ImportedSlider { TimeMs = 1000, X = 100, Y = 192, PathType = 'L', PixelLength = 100, SpanCount = 3 };
+            slider.ControlPoints.AddRange([new(100, 192), new(200, 192)]);
+            var track = new CurveTrack { Kind = CurveKind.Linear, SpanCount = 3 };
+            track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 200 }]);
+            if (imported) map.ImportedSliders.Add(slider); else map.Tracks.Add(track);
+            var ui = new Ui(false); ui.LoadDocument(map);
+            ui.View.UpdateTransport(1750, 10000, true, false, false, null, null); ui.Paint();
+            var r = ui.View.ObjectTimelineBounds;
+            float X(double t) => r.X + (float)((t - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+            float y = r.Y + 27;
+            void CheckMarkers(int spans)
+            {
+                var circles = ui.Canvas.Circles.Where(c => c.Y == y && c.Radius == 19).ToArray();
+                if (circles.Length != spans + 1) throw new Exception("Timeline must show a head, each reverse boundary, and an empty tail.");
+                for (int i = 0; i <= spans; i++)
+                    if (!circles.Any(c => Math.Abs(c.X - X(1000 + i * 500)) < .01)) throw new Exception("Reverse circle is not at its span boundary.");
+                for (int i = 1; i < spans; i++)
+                    if (!ui.Canvas.Lines.Any(l => Math.Abs(l.X1 - (X(1000 + i * 500) - 8)) < .01 && l.Y1 == y && l.Y2 == y))
+                        throw new Exception("Reverse boundary has no right-facing arrow.");
+            }
+            CheckMarkers(3);
+            ui.View.PointerDown(X(2500), y, 0, false, false);
+            ui.View.PointerUp(X(1500), y, 0); ui.Paint();
+            CheckMarkers(1);
+            ui.Key('Z', ctrl: true); CheckMarkers(3);
+        }
+    }
+
+    public static void TailReverses()
+    {
+        if (new FruitsAtelier.App.Editor.EditorView().SliderMode != FruitsAtelier.App.Editor.SliderEditingMode.OsuLegacy)
+            throw new Exception("New sessions must use legacy slider mode.");
+        foreach (bool imported in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500, SliderMultiplier = 1 };
+            if (imported)
+            {
+                var slider = new ImportedSlider { TimeMs = 1000, X = 100, Y = 192, PathType = 'L', PixelLength = 100,
+                    OriginalLine = "100,192,1000,2,0,L|200:192,1,100,2|4,1:0|2:0,0:0:0:0:" };
+                slider.ControlPoints.AddRange([new(100, 192), new(200, 192)]);
+                map.ImportedSliders.Add(slider);
+            }
+            else
+            {
+                var track = new CurveTrack { Kind = CurveKind.Linear };
+                track.Nodes.Add(new() { TimeMs = 1000, X = 100 });
+                track.Nodes.Add(new() { TimeMs = 1500, X = 200 });
+                map.Tracks.Add(track);
+            }
+            var ui = new Ui(false); ui.LoadDocument(map);
+            ui.View.UpdateTransport(1500, 10000, true, false, false, null, null); ui.Paint();
+            int Spans() => imported ? ui.View.Document.ImportedSliders.Single().SpanCount : ui.View.Document.Tracks.Single().SpanCount;
+            var before = ui.View.Document.DeepClone();
+            var r = ui.View.ObjectTimelineBounds;
+            float x = r.X + (float)((1500 - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs), y = r.Y + 27;
+            float span = (float)(500 * ui.View.ObjectTimelinePixelsPerMs);
+            ui.View.PointerMove(x, y, false, false);
+            if (!ui.View.TimelineResizeCursor) throw new Exception("Slider tail has no resize cursor.");
+            ui.View.PointerDown(x, y, 0, false, false);
+            ui.View.PointerMove(x + 2 * span, y, false, false); ui.Paint();
+            if (Spans() != 3 || ui.View.PlayheadMs != 1500) throw new Exception("Tail drag did not add two reverses without seeking.");
+            ui.View.PointerMove(x - 2 * span, y, false, false); ui.Paint();
+            if (Spans() != 1 || !before.ContentEquals(ui.View.Document)) throw new Exception("Dragging back changed the original path or samples.");
+            ui.View.PointerUp(x + span, y, 0); ui.Paint();
+            if (Spans() != 2) throw new Exception("Release did not commit reverse count.");
+            if (imported && !ui.View.Document.ImportedSliders[0].OriginalLine!.Contains(",2,100,2|0|4,1:0|0:0|2:0,"))
+                throw new Exception("Imported edge samples were not retained.");
+            ui.Key('Z', ctrl: true);
+            if (!before.ContentEquals(ui.View.Document)) throw new Exception("Undo did not restore the slider.");
+            ui.View.PointerDown(x, y, 0, false, false);
+            ui.View.PointerMove(x + span, y, false, false); ui.View.CancelInteraction(); ui.Paint();
+            if (!before.ContentEquals(ui.View.Document)) throw new Exception("Cancellation did not restore the slider.");
+        }
+    }
     public static void CachedDurationsFollowEdits()
     {
         var ui = new Ui(false);
@@ -43,11 +147,11 @@ internal static class ObjectTimelineTests
         double requested = -1;
         ui.View.RequestSeek = t => requested = t;
         ui.Click(X(1000), rect.Y + 27);
-        if (!ui.View.SelectedObjectIds.SequenceEqual(new[] { fruit.Id }) || requested != 1000)
-            throw new Exception("Timeline fruit did not select and seek its source");
+        if (!ui.View.SelectedObjectIds.SequenceEqual(new[] { fruit.Id }) || requested != -1 || ui.View.PlayheadMs != 1500)
+            throw new Exception("Timeline fruit selection moved the playhead");
         ui.Click(X(2500), rect.Y + 27);
-        if (!ui.View.SelectedObjectIds.SequenceEqual(new[] { shower.Id }) || requested != 2000)
-            throw new Exception("Duration body did not select its parent at its start");
+        if (!ui.View.SelectedObjectIds.SequenceEqual(new[] { shower.Id }) || requested != -1 || ui.View.PlayheadMs != 1500)
+            throw new Exception("Duration selection moved the playhead");
         float origin = X(2300), y = rect.Bottom - 3;
         ui.View.PointerDown(origin, y, 0, false, false);
         ui.View.PointerMove(origin + 90, y, false, false); ui.Paint();

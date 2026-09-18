@@ -8,6 +8,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private bool nextFruitNewCombo;
+    private bool sliderModeFlyoutOpen;
     private bool draftStraight;
     public bool NextFruitNewCombo => nextFruitNewCombo;
     private readonly List<Rect> toolButtons = [];
@@ -35,7 +36,21 @@ public sealed partial class EditorView
                 ChangeTool(mode);
             }, true));
         }
+        var slider = toolButtons[2];
+        var hoverArea = new Rect(slider.Right, slider.Y, 144, Math.Max(66, slider.Height));
+        var flyout = new Rect(slider.Right, slider.Y, 144, 66);
+        sliderModeFlyoutOpen = slider.Contains(mouseX, mouseY) || sliderModeFlyoutOpen && hoverArea.Contains(mouseX, mouseY);
+        if (sliderModeFlyoutOpen)
+        {
+            c.Fill(flyout, Surface, 4);
+            Button(c, new(flyout.X, flyout.Y, 142, 32), L.Get("ui.osuLegacyMode"), () => SetSliderEditingMode(SliderEditingMode.OsuLegacy), LegacyMode);
+            Button(c, new(flyout.X, flyout.Y + 34, 142, 32), L.Get("ui.penToolMode"), () => SetSliderEditingMode(SliderEditingMode.PenTool), !LegacyMode);
+        }
     }
+
+    private bool gridSnap;
+    private int gridSize = 4;
+    private double SnapX(double x) => gridSnap ? Math.Round(x / gridSize, MidpointRounding.AwayFromZero) * gridSize : x;
 
     private void DrawPlacementGhost(ICanvas c)
     {

@@ -41,7 +41,9 @@ The output is `artifacts/macos/FruitsAtelier.app`, including the .NET runtime. S
 
 ### Windows
 
-Requires .NET SDK **10.0.400** (pinned in the root `global.json`) and the **.NET 8 runtime**. Double-click [Run-Editor.cmd](Run-Editor.cmd) to build and launch the editor.
+For packaged versions, download the Windows x64 ZIP from [Releases](https://github.com/frankhjwx/FruitsAtelier/releases), extract the whole folder, and run `FruitsAtelier.App.exe`. The package includes .NET; keep its DLLs and assets alongside the exe.
+
+Building from source requires .NET SDK **10.0.400** (pinned in the root `global.json`) and the **.NET 8 runtime**. Double-click [Run-Editor.cmd](Run-Editor.cmd) to build and launch the editor.
 
 The compiled application is located at `src/FruitsAtelier.App/bin/Release/net8.0-windows/FruitsAtelier.App.exe`.
 
@@ -50,6 +52,7 @@ The compiled application is located at `src/FruitsAtelier.App/bin/Release/net8.0
 - [Editing controls](docs/EDITOR_UI.md)
 - [Features and files](docs/PRODUCT.md)
 - [Building and testing](docs/TESTING.md)
+- [Windows packaging and versioned releases](docs/RELEASING.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Project data model](docs/PROJECT_MODEL.md) · [Catch rendering and conversion](docs/CATCH_RENDERING.md) · [File format](docs/STABLE_FORMAT.md)
 - [Localization maintenance](docs/LOCALIZATION.md)

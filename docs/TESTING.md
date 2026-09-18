@@ -24,6 +24,8 @@ dotnet build ../FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
 
 See [Running on macOS](MACOS.md) for launch and packaging. Project files and `packages.lock.json` pin package versions; NuGet caches packages in `artifacts/packages`.
 
+Windows distribution uses the self-contained ZIP and extracted-executable check described in [Windows releases](RELEASING.md). Desktop CI checks packaging before a version is tagged; the tag workflow repeats the regressions and package check before publishing its assets.
+
 ## Automated regressions
 
 Test projects are console programs run with `dotnet run`. Format-export quantization, read-back, and edge-sample diagnostic checks iterate over every available language, verifying messages and parameters against localization tables rather than assuming the default UI language.
@@ -92,6 +94,12 @@ Performance results depend on hardware and runtime warm-up; compare the same fix
 and environment. Functional tests compare cached conversion against full conversion
 after edits to geometry, timing, repeats, source ordering, and RNG-consuming objects.
 
+## Playback rendering profile
+
+For a read-only CPU profile of an existing `.osu` file, run the App test executable with `--map-performance <path>`. It measures playback around 89 seconds at 32% Zoom and 1/16 Snap, reporting render median/p95, allocation per frame, rendering phases, and transport/hitsound scheduling with silent callbacks. The counting canvas excludes GPU and device submission.
+
+On Windows, run `FruitsAtelier.App.exe --profile-map <path>` for the same playback scenario in a hidden Direct2D window with the active default skin. The report is written to `artifacts/logs/playback-profile.json` in repository builds, or the application log directory in distributed builds. Rendering includes `EndDraw` and `Present`; it is not a visible-screen FPS measurement. Neither profile saves or imports the map into the workspace, plays audio, or changes system volume.
+
 ## Imported slider corpus
 
 The Core test executable accepts `--slider-corpus <workspace>` for opt-in, read-only
@@ -130,3 +138,11 @@ existing music file against muted WAV hitsounds. This read-only check exercises 
 pause/resume with different pause lengths, seek, and cancellation during the startup lead.
 The music fixture must be at least three seconds long. Tests compare the actual music
 position and native PCM render timestamps; all device output stays muted.
+
+## Legacy sample boundary comparison
+
+Run the App test executable with `--legacy-map <difficulty.osu>` for a read-only
+report of sample-bank/index/volume boundary corrections during the first 40 seconds.
+Synthetic App regressions cover the inclusive 5 ms edge boundary, the slider body's
+6 ms start lookup, tick inheritance across timing changes, same-difficulty clipboard
+scope, combo reference numbers, horizontal grids, and timestamp precision.

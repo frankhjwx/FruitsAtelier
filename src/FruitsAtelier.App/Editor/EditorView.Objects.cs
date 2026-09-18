@@ -152,7 +152,7 @@ public sealed partial class EditorView
             target.EndTimeMs = Math.Clamp(time, Math.Min(EditableDurationMs, source.TimeMs + 0.001), EditableDurationMs);
             Document.DurationMs = Math.Max(Document.DurationMs, target.EndTimeMs);
         }
-        StatusMessage = L.Get("editor.status.bananaRange", Number(target.TimeMs), Number(target.EndTimeMs));
+        StatusMessage = L.Get("editor.status.bananaRange", Time(target.TimeMs), Time(target.EndTimeMs));
     }
 
     private void BeginObjectDrag(float x, float y)
@@ -228,7 +228,7 @@ public sealed partial class EditorView
             deltaTime = TimingMap.Snap(Document, minTime + deltaTime, divisor) - minTime;
         if (double.IsFinite(minTime)) deltaTime = Math.Clamp(deltaTime, -minTime, EditableDurationMs - maxTime);
         else deltaTime = 0;
-        if (double.IsFinite(minX)) deltaX = Math.Clamp(deltaX, -minX, 512 - maxX);
+        if (double.IsFinite(minX)) deltaX = Math.Clamp(SnapX(minX + deltaX) - minX, -minX, 512 - maxX);
         else deltaX = 0;
 
         foreach (var source in objectDragStart.Fruits.Where(item => objectSelection.Contains(item.Id)))

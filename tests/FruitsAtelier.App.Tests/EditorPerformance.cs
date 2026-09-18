@@ -16,10 +16,40 @@ internal static class EditorPerformance
         watch.Restart(); _ = view.Conversion;
         Console.WriteLine($"Conversion: {watch.Elapsed.TotalMilliseconds:F1} ms");
         var canvas = new CountCanvas();
-        for (int i = 0; i < 12; i++)
+        view.Render(canvas, 1440, 900);
+        view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom,
+            (float)(120 * Math.Log(.32 / view.CanvasZoom) / Math.Log(1.16)), true);
+        var snap = view.SnapSliderBounds;
+        view.PointerDown(snap.Right - 31, snap.Y + snap.Height / 2, 0, false, false);
+        view.PointerUp(snap.Right - 31, snap.Y + snap.Height / 2, 0);
+        view.RequestScheduleHitsound = (_, _) => { };
+        view.RequestPrepareHitsound = _ => { };
+        view.HitsoundLookaheadMs = 250;
+        view.StartHitsounds(89038);
+        var frames = new List<double>();
+        var transport = new List<double>();
+        long allocated = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 120; i++)
         {
+            watch.Restart();
+            view.UpdateTransport(89038 + i * 1000d / 120, document.DurationMs, true, true, false, null, document.AudioPath);
+            if (i >= 20) transport.Add(watch.Elapsed.TotalMilliseconds);
             watch.Restart(); view.Render(canvas, 1440, 900);
-            Console.WriteLine($"Render {i}: {watch.Elapsed.TotalMilliseconds:F1} ms");
+            if (i >= 20) frames.Add(watch.Elapsed.TotalMilliseconds);
+        }
+        frames.Sort();
+        transport.Sort();
+        Console.WriteLine($"Transport + hitsound scheduling CPU: median={transport[50]:F3} p95={transport[95]:F3} ms (silent callbacks)");
+        Console.WriteLine($"Playback CPU render: median={frames[50]:F3} p95={frames[95]:F3} ms; allocations={(GC.GetAllocatedBytesForCurrentThread() - allocated) / 120 / 1024} KiB/frame");
+        foreach (string phase in new[] { "EnsureConversion", "DrawChrome", "DrawInspector", "DrawCanvas", "DrawObjectTimeline", "DrawTransport", "DrawStatus" })
+        {
+            var method = typeof(EditorView).GetMethod(phase, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+            Action run = phase == "EnsureConversion" ? method.CreateDelegate<Action>(view) : () => method.Invoke(view, [canvas]);
+            var samples = new List<double>();
+            long bytes = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 40; i++) { watch.Restart(); run(); samples.Add(watch.Elapsed.TotalMilliseconds); }
+            samples.Sort();
+            Console.WriteLine($"  {phase}: median={samples[20]:F3} p95={samples[38]:F3} ms; allocated={(GC.GetAllocatedBytesForCurrentThread() - bytes) / 40 / 1024} KiB/call");
         }
         view.NewProject();
         return 0;

@@ -14,7 +14,13 @@ internal static class LibraryScanProgressTests
             File.WriteAllText(Path.Combine(songs, "standard.osu"), "osu file format v14\n[General]\nMode:0\n");
             var db = new LibraryDatabase(Path.Combine(root, "Workspace"), songs);
             var progress = new List<LibraryScanProgress>();
-            var scan = db.Scan(progress: progress.Add);
+            bool visibleDuringScan = false;
+            var scan = db.Scan(progress: p =>
+            {
+                progress.Add(p);
+                if (p.Indexed > 0) visibleDuringScan |= db.Search("").Count > 0;
+            });
+            if (!visibleDuringScan) throw new Exception("Indexed maps must be searchable before Scan returns");
             if (scan.Count != 1 || scan.Errors.Count != 1 || !scan.Errors[0].Contains(oversized)
                 || progress[^1] != new LibraryScanProgress(3, 1, 1) || db.Search("").Count != 1)
                 throw new Exception("Oversized map must not abort scanning or hide its path; progress must include all examined files");

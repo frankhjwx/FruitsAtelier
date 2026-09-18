@@ -14,7 +14,7 @@ internal sealed class ImportedSliderGeometry
 
     public ImportedSliderGeometry(ImportedSlider slider)
     {
-        if (slider.ControlPoints.Count is < 1 or > 10000) throw new CatchConversionException(L.Get("core.importGeometry.pointCount"));
+        if (slider.ControlPoints.Count is < 1 or > ImportedSlider.MaximumControlPoints) throw new CatchConversionException(L.Get("core.importGeometry.pointCount"));
         var head = new Vector2((float)slider.X, (float)slider.Y);
         Vector2[] controls = slider.ControlPoints.Select(p => new Vector2((float)p.X, (float)p.GeometryY) - head).ToArray();
         char type = char.ToUpperInvariant(slider.PathType);

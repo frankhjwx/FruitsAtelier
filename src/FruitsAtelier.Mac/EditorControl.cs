@@ -22,7 +22,15 @@ internal sealed class EditorControl : Control, IDisposable
     internal EditorView View { get; } = new();
     private readonly ImageCache images = new();
     internal Action? Changed;
-    public EditorControl() { Focusable = true; ClipToBounds = true; }
+    public EditorControl()
+    {
+        Focusable = true; ClipToBounds = true;
+        View.RequestCopyText = async text =>
+        {
+            try { if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard) await clipboard.SetTextAsync(text); }
+            catch (Exception error) { View.SetNotice(error.Message); }
+        };
+    }
     public override void Render(DrawingContext context)
     {
         base.Render(context);
@@ -43,6 +51,7 @@ internal sealed class EditorControl : Control, IDisposable
     {
         var p = e.GetPosition(this);
         View.PointerMove((float)p.X, (float)p.Y, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
+        Cursor = new Cursor(View.TimelineResizeCursor ? StandardCursorType.SizeWestEast : StandardCursorType.Arrow);
         Refresh();
     }
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
@@ -60,7 +69,7 @@ internal sealed class EditorControl : Control, IDisposable
     }
     protected override async void OnKeyDown(KeyEventArgs e)
     {
-        if (e.Key == Key.V && MacInput.Control(e.KeyModifiers) && View.LibraryTextFocused)
+        if (e.Key == Key.V && MacInput.Control(e.KeyModifiers) && View.LibraryTextFocused && !View.ErrorVisible && !View.DiscardConfirmationVisible)
         {
             e.Handled = true;
             if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
@@ -79,6 +88,7 @@ internal sealed class EditorControl : Control, IDisposable
         foreach (char c in e.Text ?? "") View.TextInput(c);
         e.Handled = true; Refresh();
     }
-    protected override void OnLostFocus(Avalonia.Interactivity.RoutedEventArgs e) { View.CancelInteraction(); Refresh(); }
+    protected override void OnGotFocus(GotFocusEventArgs e) { base.OnGotFocus(e); View.SetTextInputFocus(true); Refresh(); }
+    protected override void OnLostFocus(Avalonia.Interactivity.RoutedEventArgs e) { base.OnLostFocus(e); View.SetTextInputFocus(false); View.CancelInteraction(); Refresh(); }
     public void Dispose() => images.Dispose();
 }

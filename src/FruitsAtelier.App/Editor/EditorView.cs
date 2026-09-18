@@ -93,11 +93,13 @@ public sealed partial class EditorView
         StatusMessage = message;
     }
 
+    private TimingMap.Lookup? renderedTiming;
     private void EnsureConversion()
     {
         if (convertedSnapshot is not null && convertedSnapshot.ContentEquals(Document)
             && convertedWithCompensation == compensateTinyDroplets) return;
         convertedSnapshot = Document.DeepClone();
+        renderedTiming = new TimingMap.Lookup(Document);
         convertedWithCompensation = compensateTinyDroplets;
         var input = Document;
         if (input.Tracks.Any(t => t.Nodes.Count < 2))
@@ -117,9 +119,9 @@ public sealed partial class EditorView
     }
 
     private enum Tool { Select, Fruit, Slider, Banana }
-    private enum DragKind { None, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Marquee, SnapDivisor, CanvasZoom, LegacyControl }
+    private enum DragKind { None, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail }
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
-    private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply);
+    private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp);
     private float FullPlayfieldWidth => plot.Width * 512 / (512 + PlayfieldPadding * 2);
     private double MinimumCanvasZoom => Math.Min(1, MinimumPlayfieldWidth / Math.Max(1, FullPlayfieldWidth));
     private float PlayfieldScale => FullPlayfieldWidth * (float)canvasZoom / 512;
@@ -136,7 +138,11 @@ public sealed partial class EditorView
     private CurveTrack? SelectedTrack => Document.Tracks.FirstOrDefault(t => t.Id == selectedTrack || t.Id == selection);
     private Anchor? SelectedAnchor => SelectedTrack?.Nodes.FirstOrDefault(n => n.Id == selection);
     private static string Number(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
-    private static string Time(double value) => $"{(int)value / 60000:00}:{value / 1000 % 60:00.000}";
+    private static string Time(double value)
+    {
+        long milliseconds = (long)Math.Abs(value);
+        return FormattableString.Invariant($"{(value < 0 ? "-" : "")}{milliseconds / 60000:00}:{milliseconds / 1000 % 60:00}:{milliseconds % 1000:000}");
+    }
     private static MapPoint Point(Anchor node) => new(node.TimeMs, node.X);
 
     public void ResetDemo()
@@ -203,7 +209,7 @@ public sealed partial class EditorView
     {
         var p = Transform.ToMap(x, y);
         double time = useSnap && snap ? TimingMap.Snap(Document, p.TimeMs, divisor) : p.TimeMs;
-        return new(Math.Clamp(time, 0, EditableDurationMs), Math.Clamp(p.X, 0, 512));
+        return new(Math.Clamp(time, 0, EditableDurationMs), Math.Clamp(SnapX(p.X), 0, 512));
     }
 
     private (float X, float Y) Screen(MapPoint p)

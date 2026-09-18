@@ -107,6 +107,12 @@ interpolation is independently implemented as gamma-2.2 RGB interpolation.
 
 Package versions are pinned in the project and lock files. License texts are included under `Core/Workspace/Licenses` and distributed with the desktop application.
 
+Hitsound timing selection follows `LegacyBeatmapDecoder.applySamples` and
+`JuiceStream.CreateNestedHitObjects` at the pinned ppy/osu revision
+`48c4800e3ae4ee752452cdff83bd3787ccf3105f`: 5 ms edge sample tolerance and
+slider-start samples for droplets. The upstream MIT licence is retained in
+`src/FruitsAtelier.Core/Conversion/LICENCE.osu.txt`.
+
 ## Default hitsound samples
 
 The classic normal/soft/drum sample banks and the Catch banana sample are unmodified

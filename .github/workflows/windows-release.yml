@@ -1,0 +1,123 @@
+name: Windows release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing version tag to build and test (does not publish a Release)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-2022
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      commit: ${{ steps.version.outputs.commit }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.sha || inputs.tag }}
+          fetch-depth: 0
+      - name: Validate the tagged source
+        id: version
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          $tag = $env:RELEASE_TAG
+          if ($tag -cnotmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|rc)\.[1-9][0-9]*)?$') {
+            throw 'Use vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-alpha.N / beta.N / rc.N.'
+          }
+          $commit = git rev-parse HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve source commit.' }
+          $tagCommit = git rev-parse "refs/tags/$tag^{commit}"
+          if ($LASTEXITCODE -ne 0 -or $commit -ne $tagCommit) { throw 'The tag must exist and identify the checked-out commit.' }
+          "version=$($tag.Substring(1))" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "commit=$commit" >> $env:GITHUB_OUTPUT
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          dotnet-version: 8.0.419
+      - name: Build regression suites
+        run: dotnet build FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
+      - name: Run regression suites
+        shell: pwsh
+        run: |
+          foreach ($suite in @('Core', 'Gameplay', 'App', 'Skinning', 'SkinArchive')) {
+            dotnet run --no-build --project "tests/FruitsAtelier.$suite.Tests" -c Release
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          dotnet run --no-build --project tests/FruitsAtelier.Formats.Tests -c Release -- --skip-external-fixtures
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet run --no-build --project tests/FruitsAtelier.Audio.Tests -c Release -- --hitsound-check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Publish self-contained Windows package
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: ./scripts/Publish-Windows.ps1 -Version $env:RELEASE_VERSION
+      - name: Verify the extracted executable and bundled runtime
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: ./scripts/Test-WindowsPackage.ps1 -Archive "artifacts/releases/FruitsAtelier-$env:RELEASE_VERSION-win-x64.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ steps.version.outputs.version }}
+          path: |
+            artifacts/releases/*.zip
+            artifacts/releases/*.sha256
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-package-check-${{ github.run_id }}
+          path: artifacts/package-check/**/package-check.json
+          if-no-files-found: ignore
+
+  release:
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build.outputs.tag }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-${{ needs.build.outputs.version }}
+          path: release-assets
+      - name: Publish the verified assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+          SOURCE_COMMIT: ${{ needs.build.outputs.commit }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT" || { echo 'Tag moved since the build; refusing to publish.'; exit 1; }
+          (cd release-assets && sha256sum --check *.sha256)
+          if state=$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' 2>/dev/null); then
+            test "$state" = true || { echo 'Published releases are not overwritten. Use a new version tag.'; exit 1; }
+          else
+            flags=()
+            if [[ "$RELEASE_TAG" == *-* ]]; then flags+=(--prerelease); fi
+            gh release create "$RELEASE_TAG" --verify-tag --draft --title "FruitsAtelier $RELEASE_TAG" --generate-notes "${flags[@]}"
+          fi
+          gh release upload "$RELEASE_TAG" release-assets/*.zip release-assets/*.sha256 --clobber
+          gh release edit "$RELEASE_TAG" --draft=false

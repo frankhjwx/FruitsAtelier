@@ -25,7 +25,7 @@ for(const [language,text] of [['en','FruitsAtelier'],['zh','水果工坊']]) {
  await sharp(Buffer.from(appSvg)).png().toFile(path.join(root,'app-icon.png'));
  for(const language of ['en','zh']) await sharp(path.join(root,`wordmark-${language}.svg`)).png().toFile(path.join(root,`wordmark-${language}.png`));
  const sizes=[16,24,32,48,64,128,256];const icons=[];
- for(const size of sizes) icons.push(await sharp(Buffer.from(appSvg)).resize(size,size).png().toBuffer());
+ for(const size of sizes) icons.push(await sharp(path.join(root,'mark.png')).resize(size,size,{fit:'contain',background:{r:0,g:0,b:0,alpha:0}}).png().toBuffer());
  const header=Buffer.alloc(6+16*sizes.length);header.writeUInt16LE(1,2);header.writeUInt16LE(sizes.length,4);let offset=header.length;
  icons.forEach((png,i)=>{const p=6+16*i;header[p]=sizes[i]===256?0:sizes[i];header[p+1]=header[p];header.writeUInt16LE(1,p+4);header.writeUInt16LE(32,p+6);header.writeUInt32LE(png.length,p+8);header.writeUInt32LE(offset,p+12);offset+=png.length;});
  fs.writeFileSync(path.join(root,'app-icon.ico'),Buffer.concat([header,...icons]));

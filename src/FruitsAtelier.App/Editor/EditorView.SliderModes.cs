@@ -8,7 +8,7 @@ public enum SliderEditingMode { PenTool, OsuLegacy }
 
 public sealed partial class EditorView
 {
-    public SliderEditingMode SliderMode { get; private set; } = SliderEditingMode.PenTool;
+    public SliderEditingMode SliderMode { get; private set; } = SliderEditingMode.OsuLegacy;
     private float inspectorScroll, inspectorContentHeight;
     private bool LegacyMode => SliderMode == SliderEditingMode.OsuLegacy;
     private List<SliderVertex>? legacyDraft;
@@ -209,7 +209,7 @@ public sealed partial class EditorView
         var raw = Transform.ToMap(x, y) - dragOffset;
         bool endpoint = anchorSelection.Contains(legacyDragStart[0].Id) || anchorSelection.Contains(legacyDragStart[^1].Id);
         bool snapped = endpoint ? snap : anchorSnap;
-        var point = new MapPoint(snapped ? TimingMap.Snap(Document, raw.TimeMs, divisor) : raw.TimeMs, raw.X);
+        var point = new MapPoint(snapped ? TimingMap.Snap(Document, raw.TimeMs, divisor) : raw.TimeMs, SnapX(raw.X));
         var delta = point - legacyDragPoint;
         bool Try(MapPoint offset)
         {

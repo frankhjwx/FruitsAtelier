@@ -15,7 +15,7 @@ internal static class DifficultyTabTests
         var a = canvas.Texts.Single(t => t.Value == "A");
         var b = canvas.Texts.Single(t => t.Value == "1234567890123456…");
         var emoji = canvas.Texts.Single(t => t.Value == string.Concat(Enumerable.Repeat("🍎", 16)) + "…");
-        Check(a.Y >= 84 && a.Y < 128 && a.Y == b.Y, "Tabs must be below the toolbar");
+        Check(a.Y >= 40 && a.Y < 84 && a.Y == b.Y, "Tabs must be below the toolbar");
         Check(emoji.X - b.X > b.X - a.X, "Tab widths must follow name width");
         Check(canvas.Texts.Single(t => t.Value == "+" && t.Y < 128).X < 1100, "Tabs must not stretch across the row");
         Check(view.CaptureProject().Difficulties[1].Name.Length == 20, "Truncation must not alter project names");
@@ -26,7 +26,10 @@ internal static class DifficultyTabTests
         var ui = new Ui();
         double initial = Rating(ui.View);
         ui.Key('F'); ui.ClickMap(1250, 480);
-        Check(ui.View.CurrentStarRating == initial && ui.View.CurrentStarRatingRefreshing, "Edits retain cached stars while refreshing");
+        double expected = CatchDifficultyCalculator.Calculate(ui.View.Conversion.Objects, ui.View.Document.CircleSize).StarRating;
+        double displayed = ui.View.CurrentStarRating ?? 0;
+        Check(ui.View.CurrentStarRatingRefreshing ? displayed == initial : Math.Abs(displayed - expected) < 1e-12,
+            "Edits show the cached rating while pending or the correct completed result");
         double changed = Rating(ui.View);
         Check(initial != changed, "Object edits must recalculate difficulty");
         ui.Key('Z', ctrl: true);
@@ -34,9 +37,10 @@ internal static class DifficultyTabTests
         ui.Key('B'); ui.ClickMap(1750, 240);
         Check(ui.View.CurrentStarRating == initial && ui.View.CurrentStarRatingRefreshing, "Unfinished drafts retain cached stars and indicate pending refresh");
         ui.Key(27);
+        double originalCs = ui.View.Document.CircleSize;
         ui.SetCs("8");
         Check(Rating(ui.View) != initial, "CS must affect rating");
-        ui.Key('Z', ctrl: true);
+        ui.SetCs(originalCs.ToString(System.Globalization.CultureInfo.InvariantCulture));
         ui.View.AddDifficulty(); ui.Paint();
         Check(Rating(ui.View) == 0, "Blank difficulty is zero stars");
         ui.Key(9, ctrl: true, shift: true);
@@ -83,7 +87,7 @@ internal static class DifficultyTabTests
         var view = new EditorView(); view.LoadProject(project);
         var canvas = new RecordingCanvas(); view.Render(canvas, 980, 620);
         Check(canvas.Texts.Any(t => t.Value == "Diff 0") && !canvas.Texts.Any(t => t.Value == "Diff 11"), "Overflow clips hidden tabs");
-        for (int i = 0; i < 12; i++) view.Wheel(400, 106, -120, false);
+        for (int i = 0; i < 12; i++) view.Wheel(400, 62, -120, false);
         canvas.Clear(); view.Render(canvas, 980, 620);
         var last = canvas.Texts.Single(t => t.Value == "Diff 11");
         view.PointerDown(last.X + 2, last.Y + 2, 0, false, false);

@@ -7,6 +7,7 @@ internal static class SkinFileDialog
 {
     internal static string? SelectArchive(nint owner)
     {
+        MapFileDialog.PrepareOwner(owner);
         nint buffer = Marshal.AllocHGlobal(32768 * sizeof(char));
         try
         {

@@ -82,7 +82,8 @@ internal sealed partial class EditorWindow
         {
             view.SetNotice(L.Get("files.failed", L.Localized(error.Message)));
             AppLog.Write(error.ToString());
-            Native.MessageBox(hwnd, error.Message, L.Get("files.incomplete"), 0x10);
+            if (Native.GetCapture() == hwnd) Native.ReleaseCapture();
+            view.ShowError(L.Reformat(error.Message));
         }
         UpdateTitle(); Invalidate();
     }

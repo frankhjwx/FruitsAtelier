@@ -81,6 +81,7 @@ public sealed class TimingPoint
 
 public sealed class ImportedSlider
 {
+    public const int MaximumControlPoints = 65536;
     public Guid Id { get; set; } = Guid.NewGuid();
     public int SourceOrder { get; set; } = int.MaxValue;
     public string? OriginalLine { get; set; }

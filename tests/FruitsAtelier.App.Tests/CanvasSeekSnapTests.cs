@@ -26,13 +26,11 @@ internal static class CanvasSeekSnapTests
     public static void FreeMode()
     {
         var ui = Create();
-        ui.ClickText("自由");
-        ui.ClickMap(1137.25, 480);
-        Near(1137.25, ui.View.PlayheadMs);
-        ui.ClickText("自由");
         ui.ClickMap(1137.25, 480);
         Near(1125, ui.View.PlayheadMs);
-        if (ui.View.IsDirty) throw new Exception("Changing seek modes edited the beatmap.");
+        var timeline = ui.View.ObjectTimelineBounds;
+        ui.Click(timeline.X + timeline.Width * .75f, timeline.Bottom - 3);
+        if (ui.View.PlayheadMs <= 0 || ui.View.IsDirty) throw new Exception("Timeline seeks without modifying content.");
     }
 
     private static Ui Create()

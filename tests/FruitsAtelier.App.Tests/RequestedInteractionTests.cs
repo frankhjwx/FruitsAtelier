@@ -42,7 +42,7 @@ internal static class RequestedInteractionTests
 
         DoubleClick(ui, 1000, 100);
         ui.ClickMap(3017, 480);
-        Near(3000, ui.View.PlayheadMs);
+        Near(0, ui.View.PlayheadMs);
         Check(ui.View.ActiveTool == "Select" && ui.View.SelectedObjectIds.Count == 0,
             "Clicking blank canvas did not leave Slider editing.");
 
@@ -132,7 +132,7 @@ internal static class RequestedInteractionTests
         ui.ClickMap(1010, 256);
         Check(ui.View.Document.BananaShowers.Count == 1 && ui.View.IsDirty,
             "Left-click did not begin a banana shower transaction.");
-        Check(!ui.View.PrepareFileOperation() && !ui.Canvas.Texts.Any(item => item.Value == "开始时间  ms"),
+        Check(!ui.View.PrepareFileOperation() && !ui.Canvas.Texts.Any(item => item.Value == "开始时间"),
             "An unfinished banana shower allowed file output or precise field editing.");
         var point = Screen(ui, 1990, 256);
         ui.View.PointerDown(point.X, point.Y, 2, false, false);
@@ -142,8 +142,8 @@ internal static class RequestedInteractionTests
         Near(1000, shower.TimeMs); Near(2000, shower.EndTimeMs);
         Check(ui.View.ActiveTool == "Banana" && ui.View.Conversion.Objects.Any(item => item.SourceId == shower.Id),
             "Finishing banana placement did not keep the tool active or generate bananas.");
-        ui.SetField("开始时间  ms", "1100");
-        ui.SetField("结束时间  ms", "2100");
+        ui.SetField("开始时间", "1100");
+        ui.SetField("结束时间", "2100");
         Near(1100, shower.TimeMs); Near(2100, shower.EndTimeMs);
         ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
         Check(ui.View.Document.BananaShowers.Count == 0, "Banana placement and precise edits were not undoable.");

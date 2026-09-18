@@ -95,10 +95,8 @@ internal static class SliderModeInteractionTests
             ui.Key(key);
             foreach (var mode in Enum.GetValues<SliderEditingMode>())
             {
-                var current = FruitsAtelier.Localization.Strings.Get(ui.View.SliderMode == SliderEditingMode.OsuLegacy ? "ui.osuLegacyMode" : "ui.penToolMode") + " ▾";
-                var label = ui.Canvas.Texts.Single(t => t.Value == current);
-                Check(label.Y >= 47 && label.Y <= 77, "Mode selector is not on the Snap toolbar row.");
-                ui.ClickText(current);
+                var slider = ui.View.ToolButtonBounds[2];
+                ui.View.PointerMove(slider.X + slider.Width / 2, slider.Y + slider.Height / 2, false, false); ui.Paint();
                 ui.ClickText(FruitsAtelier.Localization.Strings.Get(mode == SliderEditingMode.OsuLegacy ? "ui.osuLegacyMode" : "ui.penToolMode"));
                 Check(ui.View.SliderMode == mode, "Global mode menu was unavailable for the current tool.");
                 Check(before.ContentEquals(ui.View.Document), "Global mode switching changed content.");

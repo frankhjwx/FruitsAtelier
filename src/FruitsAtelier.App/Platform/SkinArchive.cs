@@ -45,7 +45,8 @@ public static class SkinArchive
         if (selected.Select(e => e.Folder).Distinct(StringComparer.OrdinalIgnoreCase).Count() != 1)
             throw new InvalidDataException(L.Get("skinArchive.multipleFolders"));
 
-        string destination = ChildPath(root, key);
+        // Extraction contents changed to include reverse arrows; older caches contain only Catch sprites.
+        string destination = ChildPath(root, "v2-" + key);
         if (Directory.Exists(destination))
         {
             EnsureComplete(destination, key, selected);
@@ -150,6 +151,8 @@ public static class SkinArchive
     }
 
     private static bool IsSelected(string name) => name.Equals("skin.ini", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("reversearrow.png", StringComparison.OrdinalIgnoreCase)
+        || name.Equals("reversearrow@2x.png", StringComparison.OrdinalIgnoreCase)
         || (name.StartsWith("fruit-", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".png", StringComparison.OrdinalIgnoreCase));
 
     private static string ChildPath(string root, string name)

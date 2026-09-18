@@ -143,7 +143,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
-        if (SliderDialogVisible) return false;
+        if (SliderDialogVisible || ErrorVisible) return false;
         if (draftBanana != Guid.Empty)
         {
             StatusMessage = L.Get("editor.status.bananaNeedsEnd");
