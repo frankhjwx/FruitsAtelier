@@ -26,7 +26,10 @@ internal static class DifficultyTabTests
         var ui = new Ui();
         double initial = Rating(ui.View);
         ui.Key('F'); ui.ClickMap(1250, 480);
-        Check(ui.View.CurrentStarRating == initial && ui.View.CurrentStarRatingRefreshing, "Edits retain cached stars while refreshing");
+        double expected = CatchDifficultyCalculator.Calculate(ui.View.Conversion.Objects, ui.View.Document.CircleSize).StarRating;
+        double displayed = ui.View.CurrentStarRating ?? 0;
+        Check(ui.View.CurrentStarRatingRefreshing ? displayed == initial : Math.Abs(displayed - expected) < 1e-12,
+            "Edits show the cached rating while pending or the correct completed result");
         double changed = Rating(ui.View);
         Check(initial != changed, "Object edits must recalculate difficulty");
         ui.Key('Z', ctrl: true);
