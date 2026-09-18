@@ -100,10 +100,37 @@ public sealed partial class EditorView
         if (button == 2 && libraryListBounds.Contains(x, y))
         {
             libraryField = -1;
+            var map = libraryCards.FirstOrDefault(card => card.Bounds.Contains(x, y)).Map;
+            if (map is not null)
+            {
+                libraryBrowser?.SelectMap(map);
+                selectedLibraryGroup = libraryProjectsOnly ? map.ProjectPath ?? map.Directory : map.Directory;
+                libraryDiffScroll = 0;
+                RememberLibraryPosition();
+                string? project = map.ProjectPath;
+                string? songsFolder = project is null ? map.Directory : null;
+                if (project is not null && File.Exists(Path.Combine(project, WorkspaceProject.ManifestName)))
+                {
+                    try
+                    {
+                        var manifest = WorkspaceProject.ReadManifest(project);
+                        songsFolder = manifest.SongsRoot is { } root && manifest.SourceDirectory is { } source
+                            ? Path.GetFullPath(Path.Combine(root, source)) : manifest.ExternalSourceDirectory;
+                        songsFolder ??= manifest.Difficulties.Select(d => d.Source ?? d.ExportTarget)
+                            .Where(p => p is not null).Select(p => Path.GetDirectoryName(p!)).FirstOrDefault();
+                    }
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException)
+                    { libraryNotice = L.Reformat(error.Message); }
+                }
+                contextItems.Add(new(L.Get(project is null ? "library.start" : "library.continue"), () => OpenSelectedLibraryMap(map)));
+                contextItems.Add(new(L.Get("library.openProjectFolder"), () => RequestOpenExternalPath?.Invoke(project!), Directory.Exists(project)));
+                contextItems.Add(new(L.Get("project.openSongsFolder"), () => RequestOpenExternalPath?.Invoke(songsFolder!), Directory.Exists(songsFolder)));
+            }
             contextItems.Add(new(L.Get("library.new"), () => RequestNewProject?.Invoke()));
             contextItems.Add(new(L.Get("library.importFolder"), () => RequestLibraryImport?.Invoke(true)));
             contextItems.Add(new(L.Get("library.importFile"), () => RequestLibraryImport?.Invoke(false)));
-            contextBounds = new(Math.Clamp(x, 0, width - 270), Math.Clamp(y, 64, height - 108), 270, 108);
+            float menuHeight = 12 + contextItems.Count * 32;
+            contextBounds = new(Math.Clamp(x, 0, width - 270), Math.Clamp(y, 64, Math.Max(64, height - menuHeight)), 270, menuHeight);
             return true;
         }
         if (button != 0) return true;

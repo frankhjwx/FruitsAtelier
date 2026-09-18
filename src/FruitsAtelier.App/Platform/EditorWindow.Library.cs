@@ -6,6 +6,12 @@ internal sealed partial class EditorWindow
 {
     private void ConfigureLibrary()
     {
+        view.RequestSkinPreference = () => view.LibrarySettings.Save();
+        view.RequestDefaultSkinArchive = () => FileOperation(() =>
+        {
+            var archive = SkinFileDialog.SelectArchive(hwnd);
+            if (archive is not null) view.SetDefaultSkinArchive(archive);
+        });
         view.RequestOpenExternalPath = path => FileOperation(() => LibraryOperations.OpenExternalPath(path));
         view.RequestLibraryFolder = workspace => FileOperation(() =>
         {

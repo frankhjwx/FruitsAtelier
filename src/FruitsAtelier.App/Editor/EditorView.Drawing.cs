@@ -68,9 +68,9 @@ public sealed partial class EditorView
         Button(c, new(109, 6, 50, 28), L.Get("ui.file"), () => menu = menu == 0 ? -1 : 0, menu == 0);
         Button(c, new(162, 6, 50, 28), L.Get("ui.edit"), () => menu = menu == 1 ? -1 : 1, menu == 1);
         Button(c, new(215, 6, 50, 28), L.Get("ui.view"), () => { gridLevelMenuOpen = false; menu = menu == 2 ? -1 : 2; }, menu == 2);
-        c.Text(ProjectName + (IsDirty ? " *" : ""), 286, 11, 13, Muted, Math.Max(20, width - 600));
         DrawDifficultyTabs(c);
         DrawLanguageButton(c, HeaderLanguageBounds);
+        DrawSkinSelector(c);
         Button(c, HeaderNavigationBounds, L.Get("library.back"), ShowLibrary);
         c.Line(0, 83, width, 83, Grid);
     }

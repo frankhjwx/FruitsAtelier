@@ -9,6 +9,7 @@ Directory.CreateDirectory(runDirectory);
 string defaultSkinPackage = Path.Combine(root, "assets", "skins", "default.osk");
 var tests = new List<(string Name, Action Run)>
 {
+    ("Each custom image falls back independently to default and then geometry", PerImageFallback),
     ("A doubled texture has the same logical size and is preferred over 1x", HighDensity),
     ("Catcher uses raw dimensions, density and the legacy plate origin", CatcherPlate),
     ("Reverse arrows use skin density and fall back for missing or undecodable images", ReverseArrows),
@@ -33,6 +34,33 @@ foreach (var (name, run) in tests)
 }
 Console.WriteLine($"{passed}/{tests.Count} skin layout tests passed; PNG decoding is verified separately by the renderer.");
 return passed == tests.Count ? 0 : 1;
+
+void PerImageFallback()
+{
+    string defaults = Fixture("fallback-default"), custom = Fixture("fallback-custom");
+    Header(defaults, "fruit-pear@2x.png", 256, 256);
+    Header(defaults, "fruit-pear-overlay.png", 128, 128);
+    Header(defaults, "fruit-drop.png", 64, 64);
+    Header(defaults, "reversearrow.png", 128, 128);
+    Header(defaults, "fruit-catcher-idle.png", 200, 200);
+    Header(custom, "fruit-pear.png", 128, 128);
+    File.WriteAllText(Path.Combine(custom, "fruit-drop.png"), "broken PNG");
+    True(CatchSkin.TryLoad(defaults, out var baseline, out _));
+    True(CatchSkin.TryLoad(custom, out var skin, out _, baseline));
+    True(skin!.SpriteFor(CatchSkinObject.Fruit).Base!.FilePath == Path.Combine(custom, "fruit-pear.png"));
+    True(skin.SpriteFor(CatchSkinObject.Fruit).Overlay!.FilePath == Path.Combine(defaults, "fruit-pear-overlay.png"));
+    True(skin.SpriteFor(CatchSkinObject.Droplet).Base!.FilePath == Path.Combine(defaults, "fruit-drop.png"));
+    var canvas = new RecordingCanvas { RejectPath = Path.Combine(custom, "fruit-pear.png") };
+    True(skin.Draw(canvas, CatchSkinObject.Fruit, 0, 100, 100, 40));
+    True(canvas.Calls.Any(c => c.Path == Path.Combine(defaults, "fruit-pear@2x.png")));
+    True(skin.DrawReverseArrow(canvas, 100, 100, 40));
+    True(skin.DrawCatcher(canvas, 100, 100, 512, 5));
+    True(!skin.Draw(canvas, CatchSkinObject.Banana, 0, 100, 100, 40));
+    True(skin.SpriteFor(CatchSkinObject.Banana).Base is null);
+    string empty = Fixture("fallback-empty");
+    True(CatchSkin.TryLoad(empty, out var emptySkin, out _, baseline));
+    True(emptySkin!.SpriteFor(CatchSkinObject.Droplet).Base is not null);
+}
 
 void CatcherPlate()
 {
@@ -297,9 +325,10 @@ static string FindRoot()
 sealed class RecordingCanvas : ICanvas
 {
     public bool AcceptImages { get; set; } = true;
+    public string? RejectPath { get; set; }
     public List<(string Path, Rect Destination, uint Tint, Rect? Source)> Calls { get; } = [];
     public bool Image(string filePath, Rect destination, uint tint = 0xFFFFFF, Rect? source = null, float opacity = 1)
-    { Calls.Add((filePath, destination, tint, source)); return AcceptImages; }
+    { Calls.Add((filePath, destination, tint, source)); return AcceptImages && filePath != RejectPath; }
     public void Fill(Rect r, uint color, float radius = 0) { }
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0) { }
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1) { }

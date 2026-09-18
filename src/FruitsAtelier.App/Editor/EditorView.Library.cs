@@ -39,7 +39,7 @@ public sealed partial class EditorView
     private float libraryScroll;
     private string exportName = "";
     private int exportMode;
-    private string draftWorkspace = "", draftSongs = "";
+    private string draftWorkspace = "", draftOsuRoot = "", draftDefaultSkin = "";
     private DateTime searchAfter, nextLibraryScan = DateTime.MinValue, nextResourceCheck;
     private IReadOnlyList<string> resourceErrors = [];
 
@@ -47,7 +47,7 @@ public sealed partial class EditorView
     {
         try { LibrarySettings = settings ?? LibrarySettings.Load(); }
         catch (Exception e) { libraryError = e.Message; }
-        draftWorkspace = LibrarySettings.Workspace; draftSongs = LibrarySettings.Songs;
+        draftWorkspace = LibrarySettings.Workspace; draftOsuRoot = LibrarySettings.OsuRoot; draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         LibraryVisible = show;
         librarySettingsOpen = false;
         LoadLibraryMemory();
@@ -55,7 +55,7 @@ public sealed partial class EditorView
     }
     public void SetLibraryFolder(bool workspace, string path)
     {
-        if (workspace) draftWorkspace = path; else draftSongs = path;
+        if (workspace) draftWorkspace = path; else draftOsuRoot = path;
     }
     public void ShowLibrary()
     {
@@ -313,7 +313,7 @@ public sealed partial class EditorView
         c.Fill(new(0, 0, width, height), Background);
         DrawHeader(c);
         c.Text(L.Get(resourcePage ? "library.referenceErrors" : exportPage ? "library.export" : "library.title"), 109, 11, 13, Foreground, width - 535, true);
-        Button(c, new(width - 414, 6, 110, 28), L.Get("library.settings"), () => { draftWorkspace = LibrarySettings.Workspace; draftSongs = LibrarySettings.Songs; librarySettingsOpen = !librarySettingsOpen; exportPage = resourcePage = false; }, librarySettingsOpen);
+        Button(c, new(width - 414, 6, 110, 28), L.Get("library.settings"), () => { draftWorkspace = LibrarySettings.Workspace; draftOsuRoot = LibrarySettings.OsuRoot; draftDefaultSkin = LibrarySettings.DefaultSkin ?? ""; librarySettingsOpen = !librarySettingsOpen; exportPage = resourcePage = false; }, librarySettingsOpen);
         DrawLanguageButton(c, HeaderLanguageBounds);
         if (HasEditorProject) Button(c, HeaderNavigationBounds, L.Get("library.editor"), CloseLibrary);
         if (resourcePage)
@@ -338,19 +338,22 @@ public sealed partial class EditorView
         {
             c.Text(L.Get("library.settingsDescription"), 32, 98, 15, Muted, width - 64);
             LibraryTextField(c, 0, L.Get("library.workspace"), draftWorkspace, 158);
-            LibraryTextField(c, 1, L.Get("library.songs"), draftSongs, 256);
-            Button(c, new(32, 366, 200, 38), L.Get("library.apply"), () =>
+            LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, 256);
+            LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, 354);
+            Button(c, new(32, 450, 200, 38), L.Get("library.apply"), () =>
             {
                 try
                 {
-                    var settings = new LibrarySettings { Workspace = draftWorkspace, Songs = draftSongs }; settings.Save();
-                    SaveLibraryMemory(); LibrarySettings = settings; librarySettingsOpen = false; libraryField = -1;
+                    var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
+                    if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
+                    settings.Save();
+                    SaveLibraryMemory(); LibrarySettings = settings; InitializeSkin(); librarySettingsOpen = false; libraryField = -1;
                     libraryRatings.Clear(); libraryBrowser?.Retire(); libraryBrowser = null; libraryDatabase = null; libraryResultsReady = false;
                     LoadLibraryMemory(); StartLibraryScan();
                 }
                 catch (Exception e) { libraryError = e.Message; }
             }, enabled: scanTask is null && searchTask is null);
-            c.Text(libraryError, 32, 430, 14, Error, width - 64);
+            c.Text(libraryError, 32, 500, 14, Error, width - 64);
             return;
         }
         c.Fill(new(0, HeaderHeight, 190, height - HeaderHeight), Panel);
@@ -449,10 +452,11 @@ public sealed partial class EditorView
     private void LibraryTextField(ICanvas c, int index, string label, string value, float y)
     {
         c.Text(label, 32, y, 14, Foreground, width - 64, true);
-        var rect = new Rect(32, y + 28, width - (index < 2 ? 216 : 64), 42);
+        var rect = new Rect(32, y + 28, width - (index < 2 || index == 4 ? 216 : 64), 42);
         c.Fill(rect, Surface, 5); c.Stroke(rect, libraryField == index ? Accent : Grid, radius: 5);
         DrawInputText(c, new(44, y + 40, rect.Width - 24, 20), value, 14, libraryField == index, libraryReplace);
         hits.Add(new(rect, () => { libraryField = index; libraryReplace = false; }, true));
+        if (index == 4) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestDefaultSkinArchive?.Invoke());
         if (index < 2) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestLibraryFolder?.Invoke(index == 0));
     }
     public bool LibraryLoading => scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
@@ -481,7 +485,7 @@ public sealed partial class EditorView
     }
     private string LibraryFieldValue
     {
-        get => libraryField switch { 0 => draftWorkspace, 1 => draftSongs, 2 => libraryQuery, 3 => exportName, _ => "" };
-        set { switch (libraryField) { case 0: draftWorkspace = value; break; case 1: draftSongs = value; break; case 2: libraryQuery = value; libraryScroll = 0; libraryResultsReady = false; QueueLibrarySearch(); RememberLibraryPosition(); break; case 3: exportName = value; break; } }
+        get => libraryField switch { 0 => draftWorkspace, 1 => draftOsuRoot, 2 => libraryQuery, 3 => exportName, 4 => draftDefaultSkin, _ => "" };
+        set { switch (libraryField) { case 0: draftWorkspace = value; break; case 1: draftOsuRoot = value; break; case 2: libraryQuery = value; libraryScroll = 0; libraryResultsReady = false; QueueLibrarySearch(); RememberLibraryPosition(); break; case 3: exportName = value; break; case 4: draftDefaultSkin = value; break; } }
     }
 }

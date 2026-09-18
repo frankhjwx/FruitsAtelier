@@ -39,8 +39,10 @@ internal static class ExternalResourceTests
             var legacy = ProjectSerializer.ReadProject(ProjectSerializer.Serialize(session.Project));
             legacy.Name = "Explicit legacy project"; legacy.Difficulties[0].Document.Fruits[0].X = 333;
             File.WriteAllText(legacyPath, ProjectSerializer.Serialize(legacy));
-            var legacySession = LibraryOperations.ImportPath(legacyPath, settings);
-            Check(legacySession.Directory != session.Directory && legacySession.Project.Difficulties[0].Document.Fruits[0].X == 333, "opening a legacy project preserves its own authored content");
+            Reject(() => LibraryOperations.ImportPath(legacyPath, settings));
+            Check(WorkspaceProject.Open(session.Directory).Project.Difficulties[0].Document.Fruits[0].X == 222
+                && ProjectSerializer.ReadProject(File.ReadAllText(legacyPath)).Difficulties[0].Document.Fruits[0].X == 333,
+                "duplicate source import leaves both existing edits and the import file unchanged");
             Directory.Move(external, external + " moved");
             Check(new LibraryDatabase(settings.Workspace, "").Scan().Errors.Count > 0 && db.Search("").Count == 2, "missing source reported without forgetting index");
             Check(WorkspaceProject.MissingResources(WorkspaceProject.Open(session.Directory).Project).Count > 0, "project reports broken external references");

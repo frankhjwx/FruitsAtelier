@@ -49,6 +49,12 @@ internal sealed partial class MacWindow
     }
     private void ConfigureLibrary(bool show, bool smokeCheck)
     {
+        View.RequestSkinPreference = () => View.LibrarySettings.Save();
+        View.RequestDefaultSkinArchive = () => RunFile(async () =>
+        {
+            var archive = await Pick(L.Get("skin.defaultArchive"), ["*.osk"]);
+            if (archive is not null) View.SetDefaultSkinArchive(archive);
+        });
         View.RequestOpenExternalPath = path => RunFile(() => { LibraryOperations.OpenExternalPath(path); return Task.CompletedTask; });
         View.InitializeLibrary(show, smokeCheck ? new LibrarySettings { Workspace = Path.Combine(MacPaths.Artifacts, "macos-check", "startup-workspace") } : null);
         View.RequestLibraryFolder = workspace => RunFile(async () =>

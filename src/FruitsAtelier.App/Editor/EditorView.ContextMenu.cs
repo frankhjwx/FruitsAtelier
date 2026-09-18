@@ -8,7 +8,7 @@ public sealed partial class EditorView
 {
     private readonly List<ContextItem> contextItems = [];
     private Rect contextBounds;
-    private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "");
+    private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "", uint? Color = null);
     private sealed record SliderLocation(Guid Id, double FirstSpanTimeMs);
 
     private void DrawContextMenu(ICanvas c)
@@ -22,7 +22,7 @@ public sealed partial class EditorView
             var item = contextItems[i];
             var rect = ContextItemBounds(i);
             if (item.Enabled && rect.Contains(mouseX, mouseY)) c.Fill(rect, 0x343E4D, 4);
-            c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, item.Enabled ? Foreground : 0x5B6777, rect.Width - (item.Shortcut.Length > 0 ? 90 : 18));
+            c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, item.Enabled ? item.Color ?? Foreground : 0x5B6777, rect.Width - (item.Shortcut.Length > 0 ? 90 : 18));
             string shortcut = item.Shortcut;
             if (shortcut.Length > 0)
             {

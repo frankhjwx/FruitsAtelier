@@ -17,6 +17,9 @@ internal static class WorkspaceTests
             var document = OsuBeatmapReader.ReadFile(source);
             var project = BeatmapProject.FromDocuments([document]);
             var session = WorkspaceProject.Create(workspace, project, songs);
+            Reject(() => WorkspaceProject.Create(workspace, project, songs));
+            Reject(() => WorkspaceProject.Create(workspace, project, ""));
+            Check(Directory.GetDirectories(workspace).Length == 1, "a source directory has only one project even when Songs is unbound");
             Check(File.Exists(Path.Combine(session.Directory, "project.catchdiff")), "manifest");
             string file = session.Manifest.Difficulties[0].File;
             Check(file == "Artist - Romanised Title (Mapper) [Rain].catchdiff", "osu naming");

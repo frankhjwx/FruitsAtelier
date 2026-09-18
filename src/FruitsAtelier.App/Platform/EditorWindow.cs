@@ -36,7 +36,7 @@ internal sealed partial class EditorWindow : IDisposable
             try
             {
                 string? archive = SkinFileDialog.SelectArchive(hwnd);
-                if (archive is not null) LoadSkinArchive(archive);
+                if (archive is not null) view.ImportSkin(archive);
             }
             catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
             { AppLog.Write(error.ToString()); view.ShowError(L.Get("window.skinFailed", L.Localized(error.Message))); }
@@ -50,13 +50,7 @@ internal sealed partial class EditorWindow : IDisposable
     {
         view.InitializeLibrary(!renderCheck && profileMap is null, renderCheck || profileMap is not null
             ? new FruitsAtelier.Core.LibrarySettings { Workspace = Path.Combine(Artifacts, "render-library") } : null);
-        string defaultSkin = Path.Combine(AppContext.BaseDirectory, "assets", "skins", "default.osk");
-        if (File.Exists(defaultSkin))
-        {
-            try { LoadSkinArchive(defaultSkin); }
-            catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
-            { view.SetNotice(L.Get("window.defaultSkinFailed", L.Localized(error.Message))); }
-        }
+        view.InitializeSkin();
         var instance = Native.GetModuleHandle(null);
         var className = "FruitsAtelier." + Environment.ProcessId;
         string iconPath = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "app-icon.ico");
@@ -285,14 +279,9 @@ internal sealed partial class EditorWindow : IDisposable
 
     private void UpdateTitle()
     {
-        string title = L.Get("window.title", view.ProjectName, view.IsDirty ? " *" : "", L.Get(view.Document.IsDemo ? "window.demo" : "window.milestone"));
+        string title = view.WindowTitle;
         if (title == lastTitle) return;
         Native.SetWindowText(hwnd, title); lastTitle = title;
-    }
-    private void LoadSkinArchive(string archive)
-    {
-        string cache = Path.Combine(Path.GetDirectoryName(AppLog.Path)!, "..", "skins");
-        view.LoadSkin(SkinArchive.Import(archive, Path.GetFullPath(cache)));
     }
     private nint largeBrandIcon, smallBrandIcon;
     public void Dispose()

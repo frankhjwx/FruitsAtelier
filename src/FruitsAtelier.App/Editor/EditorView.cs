@@ -96,7 +96,7 @@ public sealed partial class EditorView
 
     public void LoadSkin(string folder)
     {
-        if (CatchSkin.TryLoad(folder, out var loaded, out string message)) skin = loaded;
+        if (CatchSkin.TryLoad(folder, out var loaded, out string message, defaultSkin, allowEmpty: true)) skin = loaded;
         StatusMessage = message;
     }
 

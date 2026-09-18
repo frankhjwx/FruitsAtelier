@@ -23,6 +23,7 @@ public sealed class CatchSkin
     private static readonly string[] fruitNames = ["pear", "grapes", "apple", "orange"];
     private readonly Dictionary<string, SkinTexture> textures = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<uint> comboColours = [];
+    private CatchSkin? fallback;
     public string FolderPath { get; }
     public string Name { get; private set; }
     public IReadOnlyList<uint> ComboColours => comboColours;
@@ -37,12 +38,13 @@ public sealed class CatchSkin
         Name = Path.GetFileName(Path.TrimEndingDirectorySeparator(folder));
     }
 
-    public static bool TryLoad(string folder, out CatchSkin? skin, out string message)
+    public static bool TryLoad(string folder, out CatchSkin? skin, out string message, CatchSkin? fallback = null, bool allowEmpty = false)
     {
         skin = null;
         try
         {
             var candidate = new CatchSkin(Path.GetFullPath(folder));
+            candidate.fallback = fallback;
             if (!Directory.Exists(candidate.FolderPath)) { message = L.Get("skin.folderMissing"); return false; }
             var files = Directory.EnumerateFiles(candidate.FolderPath).ToDictionary(p => Path.GetFileName(p)!, p => p, StringComparer.OrdinalIgnoreCase);
             int invalid = 0;
@@ -55,7 +57,7 @@ public sealed class CatchSkin
             LoadTexture("fruit-catcher-idle");
             LoadTexture("fruit-catcher-idle-0");
             if (files.TryGetValue("skin.ini", out var configuration)) candidate.ReadConfiguration(configuration);
-            if (candidate.textures.Count == 0) { message = L.Get("skin.noTextures"); return false; }
+            if (candidate.textures.Count == 0 && fallback is null && !allowEmpty) { message = L.Get("skin.noTextures"); return false; }
             skin = candidate;
             message = L.Get("skin.loaded", candidate.Name, candidate.TextureCount, invalid > 0 ? L.Get("skin.invalidImages", invalid) : "");
             return true;
@@ -80,55 +82,72 @@ public sealed class CatchSkin
 
     public float? CatcherHeightBelowPlate(float fieldWidth, double circleSize)
     {
-        if (!textures.TryGetValue("fruit-catcher-idle-0", out var texture) && !textures.TryGetValue("fruit-catcher-idle", out texture)) return null;
+        var texture = Candidates("fruit-catcher-idle-0", "fruit-catcher-idle").FirstOrDefault();
+        if (texture is null) return null;
         return Math.Max(0, texture.PixelHeight / (float)texture.Density - 16) * .35f * CatchSize.Scale(circleSize) * 2 * fieldWidth / 512;
     }
     public bool DrawCatcher(ICanvas canvas, float centerX, float catchY, float fieldWidth, double circleSize, uint tint = 0xFFFFFF, float opacity = 1, bool additive = false)
     {
-        if (!textures.TryGetValue("fruit-catcher-idle-0", out var texture) && !textures.TryGetValue("fruit-catcher-idle", out texture)) return false;
-        float scale = .5f * .7f * CatchSize.Scale(circleSize) * 2 * fieldWidth / 512;
-        float width = texture.PixelWidth / (float)texture.Density * scale;
-        float height = texture.PixelHeight / (float)texture.Density * scale;
-        var destination = new Rect(centerX - width / 2, catchY - 16 * scale, width, height);
-        return additive ? canvas.AdditiveImage(texture.FilePath, destination, tint, opacity)
-            : canvas.Image(texture.FilePath, destination, tint, opacity: opacity);
+        foreach (var texture in Candidates("fruit-catcher-idle-0", "fruit-catcher-idle"))
+        {
+            float scale = .5f * .7f * CatchSize.Scale(circleSize) * 2 * fieldWidth / 512;
+            float width = texture.PixelWidth / (float)texture.Density * scale;
+            float height = texture.PixelHeight / (float)texture.Density * scale;
+            var destination = new Rect(centerX - width / 2, catchY - 16 * scale, width, height);
+            if (additive ? canvas.AdditiveImage(texture.FilePath, destination, tint, opacity)
+                : canvas.Image(texture.FilePath, destination, tint, opacity: opacity)) return true;
+        }
+        return false;
     }
 
     public bool DrawReverseArrow(ICanvas canvas, float centerX, float centerY, float diameter)
     {
-        if (!float.IsFinite(diameter) || diameter <= 0 || !textures.TryGetValue("reversearrow", out var texture)) return false;
-        float scale = Math.Min(diameter / (128 * texture.Density), diameter * 2 / Math.Max(texture.PixelWidth, texture.PixelHeight));
-        float width = texture.PixelWidth * scale, height = texture.PixelHeight * scale;
-        return canvas.Image(texture.FilePath, new(centerX - width / 2, centerY - height / 2, width, height));
+        if (!float.IsFinite(diameter) || diameter <= 0) return false;
+        foreach (var texture in Candidates("reversearrow"))
+        {
+            float scale = Math.Min(diameter / (128 * texture.Density), diameter * 2 / Math.Max(texture.PixelWidth, texture.PixelHeight));
+            float width = texture.PixelWidth * scale, height = texture.PixelHeight * scale;
+            if (canvas.Image(texture.FilePath, new(centerX - width / 2, centerY - height / 2, width, height))) return true;
+        }
+        return false;
     }
 
-    public CatchSkinSprite SpriteFor(CatchSkinObject kind, int index = 0)
+    private IEnumerable<SkinTexture> Candidates(params string[] components)
     {
-        string component = kind switch
+        foreach (string component in components)
+            if (textures.TryGetValue(component, out var texture)) yield return texture;
+        if (fallback is not null)
+            foreach (var texture in fallback.Candidates(components)) yield return texture;
+    }
+
+    private static string Component(CatchSkinObject kind, int index) => kind switch
         {
             CatchSkinObject.Droplet or CatchSkinObject.TinyDroplet => "fruit-drop",
             CatchSkinObject.Banana => "fruit-bananas",
             _ => "fruit-" + fruitNames[((index % 4) + 4) % 4]
         };
-        textures.TryGetValue(component, out var baseTexture);
-        textures.TryGetValue(component + "-overlay", out var overlay);
-        return new(baseTexture, overlay);
+
+    public CatchSkinSprite SpriteFor(CatchSkinObject kind, int index = 0)
+    {
+        string component = Component(kind, index);
+        return new(Candidates(component).FirstOrDefault(), Candidates(component + "-overlay").FirstOrDefault());
     }
 
     public bool Draw(ICanvas canvas, CatchSkinObject kind, int index, float centerX, float centerY,
         float nominalFruitDiameter, uint tint = 0xFFFFFF, float opacity = 1)
     {
         if (!float.IsFinite(nominalFruitDiameter) || nominalFruitDiameter <= 0) return false;
-        var sprite = SpriteFor(kind, index);
+        string component = Component(kind, index);
         float scale = ObjectScale(kind, nominalFruitDiameter);
-        bool drawn = DrawTexture(sprite.Base, tint);
-        drawn |= DrawTexture(sprite.Overlay, 0xFFFFFF);
+        bool drawn = DrawTexture(component, tint);
+        drawn |= DrawTexture(component + "-overlay", 0xFFFFFF);
         return drawn;
 
-        bool DrawTexture(SkinTexture? texture, uint colour)
+        bool DrawTexture(string name, uint colour)
         {
-            if (texture is null) return false;
-            return canvas.Image(texture.FilePath, Destination(texture, centerX, centerY, scale), colour, texture.Source, opacity);
+            foreach (var texture in Candidates(name))
+                if (canvas.Image(texture.FilePath, Destination(texture, centerX, centerY, scale), colour, texture.Source, opacity)) return true;
+            return false;
         }
     }
 

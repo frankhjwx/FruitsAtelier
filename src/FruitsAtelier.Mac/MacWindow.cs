@@ -80,7 +80,7 @@ internal sealed partial class MacWindow : Window
         View.RequestLoadSkin = () => RunFile(async () =>
         {
             View.CancelInteraction(); var path = await Pick(L.Get("files.skin"), ["*.osk"]);
-            if (path is not null) View.LoadSkin(SkinArchive.Import(path, Path.Combine(MacPaths.Artifacts, "skins")));
+            if (path is not null) View.ImportSkin(path);
         });
         View.RequestResetDemo = () => RunFile(async () => { if (await ConfirmDiscard()) { await audio.LoadAsync(null); projectPath = null; View.LoadDocument(DemoMap.Create()); } });
         View.RequestTogglePlayback = () => RunFile(async () => { if (audio.State.IsPlaying) audio.Pause(); else { var state = audio.State; View.StartHitsounds(state.PositionMs >= state.DurationMs - 1 ? 0 : state.PositionMs); await hitsounds.Preparation; audio.Play(); } PollAudio(); });
@@ -91,12 +91,7 @@ internal sealed partial class MacWindow : Window
         {
             MacPaths.Log($"Native macOS window opened: {Bounds}, scaling={RenderScaling}");
             timer.Start(); editor.Focus();
-            string defaultSkin = Path.Combine(AppContext.BaseDirectory, "assets", "skins", "default.osk");
-            if (File.Exists(defaultSkin))
-            {
-                try { View.LoadSkin(SkinArchive.Import(defaultSkin, Path.Combine(MacPaths.Artifacts, "skins"))); }
-                catch (Exception error) { View.SetNotice(L.Get("window.defaultSkinFailed", error.Message)); }
-            }
+            View.InitializeSkin();
             if (initialPath is not null) RunFile(() => OpenPath(initialPath));
             if (smokeCheck)
             {
@@ -120,7 +115,7 @@ internal sealed partial class MacWindow : Window
         Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); editor.Refresh(); };
         Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(); editor.Refresh(); };
     }
-    private void UpdateTitle() => Title = L.Get("window.title", View.ProjectName, View.IsDirty ? " *" : "", L.Get(View.Document.IsDemo ? "window.demo" : "window.milestone"));
+    private void UpdateTitle() => Title = View.WindowTitle;
     private void PollAudio()
     {
         var state = audio.State;

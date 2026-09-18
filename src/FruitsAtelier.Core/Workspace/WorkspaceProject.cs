@@ -77,7 +77,20 @@ public static class WorkspaceProject
 
     public static WorkspaceSession Create(string workspace, BeatmapProject project, string songsRoot)
     {
+        lock (Gate) return CreateLocked(workspace, project, songsRoot);
+    }
+    private static WorkspaceSession CreateLocked(string workspace, BeatmapProject project, string songsRoot)
+    {
         ValidateRoots(workspace, songsRoot, false);
+        var sources = project.Difficulties.Select(d => d.Document.SourcePath).Where(p => p is not null)
+            .Select(p => Path.GetDirectoryName(Path.GetFullPath(p!))!).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (sources.Length > 0)
+        {
+            var database = new LibraryDatabase(workspace, songsRoot);
+            foreach (string folder in sources)
+                if (database.ProjectForSource(folder) is { } existing)
+                    throw new InvalidOperationException(L.Get("library.sourceAlreadyLinked", existing));
+        }
         var manifest = new WorkspaceManifest { Name = project.Name, SongsRoot = string.IsNullOrWhiteSpace(songsRoot) ? null : Path.GetFullPath(songsRoot) };
         var source = project.Difficulties.Select(d => d.Document.SourcePath).FirstOrDefault(p => p is not null && manifest.SongsRoot is not null && Within(manifest.SongsRoot, p));
         if (source is not null) manifest.SourceDirectory = Path.GetRelativePath(songsRoot, Path.GetDirectoryName(source)!);

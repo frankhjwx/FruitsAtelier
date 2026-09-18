@@ -8,12 +8,33 @@ namespace FruitsAtelier.Core;
 public sealed class LibrarySettings
 {
     public string Workspace { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "FruitsAtelier Workspace");
-    public string Songs { get; set; } = "";
+    private string osuRoot = "", legacySongs = "";
+    public string OsuRoot { get => osuRoot; set { osuRoot = value; legacySongs = ""; } }
+    public string? SelectedSkin { get; set; }
+    public string? DefaultSkin { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string Songs
+    {
+        get => string.IsNullOrWhiteSpace(OsuRoot) ? legacySongs : Path.Combine(OsuRoot, "Songs");
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value)) { OsuRoot = ""; return; }
+            string path = Path.TrimEndingDirectorySeparator(Path.GetFullPath(value));
+            if (Path.GetFileName(path).Equals("Songs", StringComparison.OrdinalIgnoreCase)) OsuRoot = Path.GetDirectoryName(path)!;
+            else { osuRoot = ""; legacySongs = path; }
+        }
+    }
+    [System.Text.Json.Serialization.JsonPropertyName("Songs")]
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? LegacySongs { get => legacySongs.Length == 0 ? null : legacySongs; set { if (value is not null) Songs = value; } }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string Skins => string.IsNullOrWhiteSpace(OsuRoot) ? "" : Path.Combine(OsuRoot, "Skins");
     public static string SettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FruitsAtelier", "library.json");
     public static LibrarySettings Load(string? path = null) => File.Exists(path ?? SettingsPath) ? JsonSerializer.Deserialize<LibrarySettings>(File.ReadAllText(path ?? SettingsPath)) ?? new() : new();
     public void Save(string? path = null)
     {
-        Workspace = Path.GetFullPath(Workspace); Songs = string.IsNullOrWhiteSpace(Songs) ? "" : Path.GetFullPath(Songs);
+        Workspace = Path.GetFullPath(Workspace);
+        if (!string.IsNullOrWhiteSpace(OsuRoot)) OsuRoot = Path.GetFullPath(OsuRoot);
         WorkspaceProject.ValidateRoots(Workspace, Songs);
         Directory.CreateDirectory(Workspace);
         path = Path.GetFullPath(path ?? SettingsPath);
