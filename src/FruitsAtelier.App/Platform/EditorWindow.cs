@@ -21,7 +21,6 @@ internal sealed partial class EditorWindow : IDisposable
     private readonly Stopwatch playbackSampleTimer = new();
     private int playbackSampleFrames;
     private bool playbackSampleComplete;
-    private TestplayFramePacer? testplayPacer;
 
     public EditorWindow()
     {
@@ -43,8 +42,6 @@ internal sealed partial class EditorWindow : IDisposable
             { AppLog.Write(error.ToString()); view.ShowError(L.Get("window.skinFailed", L.Localized(error.Message))); }
             Invalidate();
         };
-        view.RequestResetDemo = () => ConfirmDiscard(() =>
-        { ResetAudio(); projectPath = null; view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); Invalidate(); });
     }
 
     public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000)
@@ -100,7 +97,6 @@ internal sealed partial class EditorWindow : IDisposable
         Native.SetTimer(hwnd, 1, 16, 0);
         Native.ShowWindow(hwnd, 5);
         Native.UpdateWindow(hwnd);
-        using var pacer = testplayPacer = new TestplayFramePacer();
         while (true)
         {
             Native.Message msg;
@@ -108,8 +104,7 @@ internal sealed partial class EditorWindow : IDisposable
             {
                 if (!Native.PeekMessage(out msg, 0, 0, 0, 1))
                 {
-                    if (pacer.FrameDue) Invalidate();
-                    else pacer.Wait();
+                    if (canvas is not null && canvas.WaitForFrameOrInput()) Invalidate();
                     continue;
                 }
                 if (msg.Id == 0x0012) break;
@@ -179,7 +174,6 @@ internal sealed partial class EditorWindow : IDisposable
                     if (canvas is not null && rect.Right > 0 && rect.Bottom > 0 && !Native.IsIconic(window))
                     {
                         PollAudio();
-                        if (view.IsTestplaying) testplayPacer?.FrameStarted();
                         renderTimer.Restart();
                         canvas.Resize(rect.Right, rect.Bottom, dpi);
                         if (view.IsTestplaying && !canvas.TryAcquireFrame()) return 0;
@@ -192,7 +186,7 @@ internal sealed partial class EditorWindow : IDisposable
                     }
                 }
                 finally { Native.EndPaint(window, ref paint); }
-                // Testplay is paced by an input-interruptible timer, not a blocking Present(1).
+                // DXGI readiness wakes testplay drawing; window messages can interrupt that wait.
                 if (audio.IsPlaying && !view.IsTestplaying && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0014: return 1; // WM_ERASEBKGND

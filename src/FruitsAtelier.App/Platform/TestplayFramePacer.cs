@@ -7,13 +7,19 @@ namespace FruitsAtelier.App.Platform;
 
 internal sealed class TestplayFramePacer : IDisposable
 {
-    public const double FramesPerSecond = 1000;
+    private readonly double framesPerSecond;
+    private readonly long spinReserveTicks;
     private readonly SafeWaitHandle timer;
     private readonly nint[] handles;
     private long nextFrame;
 
-    public TestplayFramePacer()
+    public TestplayFramePacer(double framesPerSecond = 1000, double spinReserveMs = 0)
     {
+        if (!double.IsFinite(framesPerSecond) || framesPerSecond <= 0) throw new ArgumentOutOfRangeException(nameof(framesPerSecond));
+        this.framesPerSecond = framesPerSecond;
+        if (!double.IsFinite(spinReserveMs) || spinReserveMs < 0 || spinReserveMs >= 1000 / framesPerSecond)
+            throw new ArgumentOutOfRangeException(nameof(spinReserveMs));
+        spinReserveTicks = (long)(Stopwatch.Frequency * spinReserveMs / 1000);
         timer = CreateWaitableTimerEx(0, null, 2, 0x1F0003);
         if (timer.IsInvalid)
         {
@@ -25,12 +31,15 @@ internal sealed class TestplayFramePacer : IDisposable
     }
 
     public bool FrameDue => Stopwatch.GetTimestamp() >= nextFrame;
-    public void FrameStarted() => nextFrame = Stopwatch.GetTimestamp() + (long)(Stopwatch.Frequency / FramesPerSecond);
+    public void FrameStarted() => nextFrame = Stopwatch.GetTimestamp() + (long)(Stopwatch.Frequency / framesPerSecond);
 
     public void Wait()
     {
         long remaining = nextFrame - Stopwatch.GetTimestamp();
         if (remaining <= 0) return;
+        // Return to the message pump during the bounded tail, so input remains interruptible.
+        if (remaining <= spinReserveTicks) { Thread.SpinWait(32); return; }
+        remaining -= spinReserveTicks;
         long due = -Math.Max(1, (long)(remaining * (10_000_000d / Stopwatch.Frequency)));
         if (!SetWaitableTimer(timer, ref due, 0, 0, 0, false)) throw new Win32Exception();
         // Waiting for a frame must remain interruptible by keyboard, focus and window messages.

@@ -99,6 +99,9 @@ testplay input thread while the owner UI thread is blocked. It checks that held
 movement, release and catch callbacks continue without UI message processing, and
 reports median, P95 and maximum queue-to-processing time. App tests compare shared
 plate trajectories, retained snapshots, caught-only stacks and final effect expiry.
+The same native check compares the 1000 Hz timer-only baseline with the 2000 Hz
+bounded-tail worker, reporting actual median and P95 update intervals separately
+from message dispatch latency. These rates do not measure hardware input or scanout.
 Autoplay regressions cover Tab repeat/release, live judgement and sounds, return to
 manual movement, and session reset. Visual tests cover deterministic rotation,
 banana arrival transforms, static editor sprites, combo palette offsets, and the

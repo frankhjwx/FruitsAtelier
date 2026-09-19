@@ -437,12 +437,10 @@ public sealed partial class EditorView
         if (menu == 0)
         {
             Item(L.Get("project.new"), () => RequestNewProject?.Invoke());
-            Item(L.Get("ui.reloadDemo"), () => RequestResetDemo?.Invoke());
             Item(L.Get("ui.openMenu"), () => RequestOpen?.Invoke());
             Item(L.Get("ui.saveMenu"), () => RequestSave?.Invoke());
             Item(L.Get("ui.saveAsMenu"), () => RequestSaveAs?.Invoke());
             Item(L.Get("ui.exportMenu"), () => RequestExport?.Invoke());
-            Item(L.Get("ui.audioMenu"), () => RequestAudio?.Invoke());
             Item(L.Get("ui.exitMenu"), () => RequestClose?.Invoke());
         }
         else if (menu == 3)
