@@ -14,7 +14,7 @@ internal sealed partial class EditorWindow : IDisposable
     private D2DCanvas? canvas;
     private nint hwnd;
     private float dpi = 96;
-    private bool failed, disposed;
+    private bool failed, disposed, painting, recoveringRenderer;
     private string lastTitle = "";
     private int frames;
     private readonly Stopwatch renderTimer = new();
@@ -88,6 +88,7 @@ internal sealed partial class EditorWindow : IDisposable
         if (renderCheck)
         {
             view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
+            CheckPaintLifecycle();
             Diagnostics.RenderCheck.Run(canvas, view, hwnd);
             Native.DestroyWindow(hwnd);
             return 0;
@@ -146,7 +147,7 @@ internal sealed partial class EditorWindow : IDisposable
         Invalidate();
     }
     private void Close() => ConfirmDiscard(() => { view.SaveLibraryMemory(); Native.DestroyWindow(hwnd); });
-    private void Invalidate() { if (hwnd != 0) Native.InvalidateRect(hwnd, 0, false); }
+    private void Invalidate() { if (hwnd != 0 && !failed && !NativeModalScope.Active) Native.InvalidateRect(hwnd, 0, false); }
 
     private nint WndProc(nint window, uint message, nuint wParam, nint lParam)
     {
@@ -159,7 +160,33 @@ internal sealed partial class EditorWindow : IDisposable
             if (!failed)
             {
                 failed = true;
-                if (message is 0x000F or 0x0001)
+                if (message == 0x000F)
+                {
+                    audio.Pause();
+                    view.StopTestplay();
+                    if (recoveringRenderer)
+                    {
+                        Native.ShowError(window, L.Get("window.operationFailed", exception.Message), L.Get("app.name"));
+                        return 0;
+                    }
+                    recoveringRenderer = true;
+                    try
+                    {
+                        canvas?.Dispose(); canvas = null;
+                        Native.GetClientRect(window, out var size);
+                        canvas = new D2DCanvas(window, Math.Max(1, size.Right), Math.Max(1, size.Bottom), dpi);
+                        view.ShowError(L.Get("window.operationFailed", L.Localized(exception.Message)));
+                        AppLog.Write("Renderer recreated after paint failure; document retained.");
+                        failed = false;
+                        Invalidate();
+                    }
+                    catch (Exception recoveryError)
+                    {
+                        AppLog.Write(recoveryError.ToString());
+                        Native.ShowError(window, L.Get("window.operationFailed", recoveryError.Message), L.Get("app.name"));
+                    }
+                }
+                else if (message == 0x0001)
                     Native.ShowError(window, L.Get("window.operationFailed", exception.Message), L.Get("app.name"));
                 else
                 {
@@ -181,8 +208,11 @@ internal sealed partial class EditorWindow : IDisposable
         {
             case 0x000F: // WM_PAINT
                 Native.BeginPaint(window, out var paint);
+                bool ownsPaint = false;
                 try
                 {
+                    if (painting || failed || NativeModalScope.Active) return 0;
+                    painting = ownsPaint = true;
                     Native.GetClientRect(window, out var rect);
                     if (canvas is not null && rect.Right > 0 && rect.Bottom > 0 && !Native.IsIconic(window))
                     {
@@ -193,17 +223,31 @@ internal sealed partial class EditorWindow : IDisposable
                         canvas.Begin();
                         view.Render(canvas, rect.Right * 96 / dpi, rect.Bottom * 96 / dpi);
                         canvas.End(lowLatency: view.IsTestplaying);
+                        recoveringRenderer = false;
                         RecordPlaybackRate();
                         renderTimer.Stop();
                         if (++frames == 1) AppLog.Write($"First frame: {renderTimer.Elapsed.TotalMilliseconds:F2}ms");
                     }
                 }
-                finally { Native.EndPaint(window, ref paint); }
+                finally
+                {
+                    if (ownsPaint)
+                    {
+                        try { canvas?.AbortDraw(); }
+                        catch (Exception abortError) { AppLog.Write(abortError.ToString()); }
+                    }
+                    Native.EndPaint(window, ref paint);
+                    if (ownsPaint) painting = false;
+                }
                 // DXGI readiness wakes testplay drawing; window messages can interrupt that wait.
                 if (audio.IsPlaying && !view.IsTestplaying && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0014: return 1; // WM_ERASEBKGND
-            case 0x0113: PollUpdates(); PollAudio(); if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw) && !Native.IsIconic(window)) Invalidate(); return 0; // WM_TIMER
+            case 0x0113: // WM_TIMER
+                if (painting || failed || NativeModalScope.Active) return 0;
+                PollUpdates(); PollAudio();
+                if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
+                return 0;
             case 0x0005: Invalidate(); return 0;
             case 0x02E0: // WM_DPICHANGED
                 view.CancelInteraction();

@@ -12,6 +12,7 @@ internal static class MapFileDialog
 
     internal static string? Select(nint owner, bool save, string title, string filter, string? initialPath = null, string? extension = null)
     {
+        using var modal = new NativeModalScope(owner);
         PrepareOwner(owner);
         nint buffer = Marshal.AllocHGlobal(32768 * sizeof(char));
         try
@@ -44,6 +45,7 @@ internal static class MapFileDialog
 
     internal static string? SelectFolder(nint owner, string title)
     {
+        using var modal = new NativeModalScope(owner);
         PrepareOwner(owner);
         IFileDialog? dialog = null;
         IShellItem? selected = null;
