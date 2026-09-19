@@ -17,11 +17,26 @@ public sealed partial class EditorView
     public UpdateStatus UpdateStatus { get; set; } = new(UpdatePhase.Idle);
     private bool updatesPage;
 
+    private void OpenUpdates()
+    {
+        if (!PrepareFileOperation()) return;
+        updatesPage = true; libraryField = bindingCapture = -1; FinishVolumeDrag();
+        if (UpdateStatus.Phase is UpdatePhase.Idle or UpdatePhase.Current or UpdatePhase.Failed)
+            RequestUpdateCheck?.Invoke();
+    }
+
+    private void DrawUpdateNotice(ICanvas c)
+    {
+        if (RequestUpdateCheck is null || UpdateStatus.Phase is not (UpdatePhase.Available or UpdatePhase.Ready)) return;
+        Button(c, new(Math.Max(16, width - 430), height - 34, Math.Min(414, width - 32), 28),
+            L.Get("update.noticeButton", UpdateStatus.Version), OpenUpdates, active: true);
+    }
+
     private void DrawUpdateSettingsButton(ICanvas c)
     {
         if (RequestUpdateCheck is null) return;
         Button(c, new(250, 574, 270, 32), L.Get(UpdateStatus.Phase is UpdatePhase.Available or UpdatePhase.Ready ? "update.availableButton" : "update.title"), () =>
-        { updatesPage = true; libraryField = bindingCapture = -1; FinishVolumeDrag(); });
+        { OpenUpdates(); });
     }
 
     private void DrawUpdates(ICanvas c)
@@ -39,14 +54,16 @@ public sealed partial class EditorView
         };
         c.Text(L.Get(key, UpdateStatus.Version, UpdateStatus.Progress), 32, 246, 15, Foreground, width - 64);
         var phase = UpdateStatus.Phase;
-        Button(c, new(32, 296, 260, 38), L.Get(phase == UpdatePhase.Ready ? "update.restart" : phase == UpdatePhase.Available ? "update.download" : "update.check"), () =>
+        Button(c, new(32, 296, 210, 38), L.Get("update.check"), () => RequestUpdateCheck?.Invoke(), active: true,
+            enabled: phase is not (UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Unsupported));
+        if (phase is UpdatePhase.Available or UpdatePhase.Ready)
+            Button(c, new(254, 296, 320, 38), L.Get(phase == UpdatePhase.Ready ? "update.restart" : "update.download"), () =>
         {
             if (phase == UpdatePhase.Ready) RequestUpdateRestart?.Invoke();
-            else if (phase == UpdatePhase.Available) RequestUpdateDownload?.Invoke();
-            else RequestUpdateCheck?.Invoke();
-        }, enabled: phase is not (UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Unsupported));
-        Button(c, new(310, 296, 220, 38), L.Get("update.notes"), () => RequestUpdateNotes?.Invoke());
-        c.Text(L.Get("update.saveHelp"), 32, 364, 14, Muted, width - 64);
-        Button(c, new(32, 420, 200, 36), L.Get("update.back"), () => updatesPage = false);
+            else RequestUpdateDownload?.Invoke();
+        }, active: true);
+        Button(c, new(32, 350, 220, 38), L.Get("update.notes"), () => RequestUpdateNotes?.Invoke());
+        c.Text(L.Get("update.saveHelp"), 32, 410, 14, Muted, width - 64);
+        Button(c, new(32, 466, 200, 36), L.Get(LibraryVisible ? "update.back" : "library.editor"), () => updatesPage = false);
     }
 }

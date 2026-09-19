@@ -197,8 +197,11 @@ Open **Library > Settings** to adjust **All**, **Song** and **Hitsound** from 0%
 
 Open **Library → Settings → Application updates** to check for a new stable
 version, view release notes, and download it from GitHub Releases. Automatic
-startup checks are enabled by default and run at most once a day; the setting
-can be disabled. Downloads do not interrupt editing. Choose **Save and restart
+startup checks are enabled by default and run on every launch; the setting
+can be disabled. Available updates show a clickable notification in the library
+and editor. Opening the update page checks immediately unless an update is
+already available; the separate **Check for updates** button also supports
+immediate retries. Downloads do not interrupt editing. Choose **Save and restart
 to update** when ready. All unsaved difficulties are saved before restart; a
 save failure leaves the editor open. A downloaded update waits for this explicit
 action even after restarting the editor. Close other windows of the same

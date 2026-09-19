@@ -50,21 +50,24 @@ internal sealed class UpdateService : IDisposable
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
-    public bool ShouldCheck(DateTimeOffset now) => backend.IsInstalled && Preferences.AutomaticChecks
-        && Status.Phase != UpdatePhase.Ready && (Preferences.LastCheck is not { } last || now < last || now - last >= TimeSpan.FromDays(1));
+    public bool ShouldCheckOnStartup => backend.IsInstalled && Preferences.AutomaticChecks;
 
     public async Task Check(DateTimeOffset now)
     {
-        if (!backend.IsInstalled || Status.Phase == UpdatePhase.Ready || Interlocked.CompareExchange(ref busy, 1, 0) != 0) return;
+        if (!backend.IsInstalled || Interlocked.CompareExchange(ref busy, 1, 0) != 0) return;
+        var previous = Status;
         Volatile.Write(ref status, new(UpdatePhase.Checking));
         try
         {
             Preferences.LastCheck = now;
-            SavePreferences();
+            try { SavePreferences(); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException) { log(e.ToString()); }
             string? version = await backend.Check().ConfigureAwait(false);
-            Volatile.Write(ref status, version is null ? new(UpdatePhase.Current) : new(UpdatePhase.Available, version));
+            Volatile.Write(ref status, backend.PendingVersion is { } pending && (version is null || version == pending)
+                ? new(UpdatePhase.Ready, pending, 100)
+                : version is null ? new(UpdatePhase.Current) : new(UpdatePhase.Available, version));
         }
-        catch (Exception e) { log(e.ToString()); Volatile.Write(ref status, new(UpdatePhase.Failed)); }
+        catch (Exception e) { log(e.ToString()); Volatile.Write(ref status, previous.Phase == UpdatePhase.Ready ? previous : new(UpdatePhase.Failed)); }
         finally { Volatile.Write(ref busy, 0); }
     }
 

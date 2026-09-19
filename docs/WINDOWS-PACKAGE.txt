@@ -11,7 +11,7 @@ Choose your project workspace and optional osu!stable installation folder in
 Library > Settings. Read current/USER-MANUAL.md for features and keyboard shortcuts,
 or FruitsAtelier-User-Manual.pdf when included with the package.
 Use Library > Settings > Application updates to check and download updates,
-then choose Save and restart to update. Startup checks run at most once daily
+then choose Save and restart to update. Startup checks run on every launch
 and can be disabled. Your workspace and custom skins must be outside current/,
 which is replaced by updates. Preferences are kept in your application data.
 Old packages without an updater need one manual download of this portable ZIP.

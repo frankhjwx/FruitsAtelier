@@ -116,12 +116,15 @@ jobs:
           (cd release-assets && sha256sum --check *.sha256)
           cp "release-assets/FruitsAtelier-${RELEASE_TAG#v}-win-x64.zip" release-assets/FruitsAtelier-win-x64.zip
           (cd release-assets && sha256sum FruitsAtelier-win-x64.zip > FruitsAtelier-win-x64.zip.sha256)
+          notes="docs/releases/$RELEASE_TAG.md"
+          test -f "$notes" || { echo "Missing release notes: $notes"; exit 1; }
           if state=$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' 2>/dev/null); then
             test "$state" = true || { echo 'Published releases are not overwritten. Use a new version tag.'; exit 1; }
           else
             flags=()
             if [[ "$RELEASE_TAG" == *-* ]]; then flags+=(--prerelease); fi
-            gh release create "$RELEASE_TAG" --verify-tag --draft --title "FruitsAtelier $RELEASE_TAG" --generate-notes "${flags[@]}"
+            gh release create "$RELEASE_TAG" --verify-tag --draft --title "FruitsAtelier $RELEASE_TAG" --notes-file "$notes" "${flags[@]}"
           fi
+          gh release edit "$RELEASE_TAG" --notes-file "$notes"
           gh release upload "$RELEASE_TAG" release-assets/*.zip release-assets/*.sha256 release-assets/*.nupkg release-assets/releases.*.json --clobber
           gh release edit "$RELEASE_TAG" --draft=false

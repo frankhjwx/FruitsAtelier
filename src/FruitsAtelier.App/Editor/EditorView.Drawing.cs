@@ -26,7 +26,8 @@ public sealed partial class EditorView
         if (ErrorVisible) { DrawError(c); return; }
         PumpSliderBatch();
         PumpLibrary();
-        if (LibraryVisible) { DrawLibrary(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
+        if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
+        if (LibraryVisible) { DrawLibrary(c); DrawUpdateNotice(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
         float rightWidth = catchPreviewVisible ? Math.Clamp(previewWidth, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)) : 0;
         float bodyHeight = Math.Max(180, height - 204);
         rightPanel = new(width - (catchPreviewVisible ? rightWidth : 290), 84, catchPreviewVisible ? rightWidth : 290, catchPreviewVisible ? bodyHeight : 38);
@@ -57,6 +58,7 @@ public sealed partial class EditorView
             c.Text(L.Get("library.missingResources", string.Join("; ", resourceErrors)), 12, height - 140, 12, Error, width - 140);
             Button(c, new(width - 126, height - 145, 114, 25), L.Get("library.details"), () => { resourcePage = LibraryVisible = true; exportPage = false; libraryScroll = 0; });
         }
+        DrawUpdateNotice(c);
         if (menu >= 0) DrawMenu(c);
         DrawContextMenu(c);
         DrawLanguageMenu(c);

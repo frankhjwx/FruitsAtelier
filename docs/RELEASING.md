@@ -60,9 +60,8 @@ the distribution. Each publish uses a fresh staging directory under `artifacts/`
 Release logs use `%LOCALAPPDATA%/FruitsAtelier/logs`; repository builds use
 `artifacts/logs`. Use **Library → Settings → Application updates** to check, download, and
 explicitly save and restart into an update. The Windows client uses the public
-GitHub Releases source, excludes prereleases, and checks at most once per day
-on startup when automatic checks are enabled. Failed checks also consume that
-day's automatic attempt; manual checks remain available. Downloaded updates are
+GitHub Releases source, excludes prereleases, and checks on every
+startup when automatic checks are enabled. Manual checks and retries remain available. Downloaded updates are
 retained across launches but never applied implicitly. Development builds do not
 self-update. macOS packaging does not yet include an updater.
 
@@ -80,7 +79,7 @@ The homepage is not part of the update path.
 
 ## GitHub Release
 
-1. Commit and push the reviewed changes, including both release lock files.
+1. Commit and push the reviewed changes, including both release lock files and user-facing release notes in `docs/releases/vMAJOR.MINOR.PATCH.md` (use the full tag for prereleases). The workflow requires these notes and publishes them before making the release public.
 2. Tag that commit with `vMAJOR.MINOR.PATCH`, optionally followed by `-alpha.N`,
    `-beta.N`, or `-rc.N` (N starts at 1). Numeric version components must be at most
    65534. For example:
