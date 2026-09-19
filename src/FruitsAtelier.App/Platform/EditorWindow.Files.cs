@@ -13,9 +13,12 @@ internal sealed partial class EditorWindow
 
     private void ConfigureFiles()
     {
+        view.RequestPausePlayback = () => audio.Pause();
         audio.Hitsounds = hitsounds;
         view.HitsoundLookaheadMs = 250;
         view.RequestScheduleHitsound = hitsounds.Schedule;
+        view.RequestHitsound = hitsounds.PlayImmediate;
+        view.RequestPrepareTestplayAudio = () => hitsounds.PrepareLiveOutput();
         view.RequestPrepareHitsound = hitsounds.Prepare;
         view.RequestPreloadHitsounds = hitsounds.PreloadProject;
         view.PreloadProjectHitsounds();
@@ -137,7 +140,7 @@ internal sealed partial class EditorWindow
             || error is not null && error != view.AudioNotice
             || state.CanPlay && Math.Abs(view.PlayheadMs - state.PositionMs) > 1;
         if (!changed) return;
-        view.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading, error, state.FilePath);
+        view.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading, error, state.FilePath, state.PositionTimestampMs);
         Invalidate();
     }
 }

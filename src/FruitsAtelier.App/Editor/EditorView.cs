@@ -25,8 +25,10 @@ public sealed partial class EditorView
     }
     private readonly List<DifficultySession> difficulties;
     public bool HasEditorProject { get; private set; }
-    public EditorView(bool loadDemo = true)
+    private readonly TimeProvider timeProvider;
+    public EditorView(bool loadDemo = true, TimeProvider? timeProvider = null)
     {
+        this.timeProvider = timeProvider ?? TimeProvider.System;
         difficulties = BeatmapProject.FromDocuments([loadDemo ? DemoMap.Create() : new MapDocument { IsDemo = false }])
             .Difficulties.Select(d => new DifficultySession(d)).ToList();
         HasEditorProject = loadDemo;
@@ -122,6 +124,7 @@ public sealed partial class EditorView
             .Select((source, index) => (source.Id, Index: index))
             .ToDictionary(source => source.Id, source => source.Index);
         conversion = CatchStreamConverter.Convert(input, compensateTinyDroplets, editorConversionCache);
+        BuildComboColours();
         hyperdashObjects = HyperDashCalculator.GetHyperDashStarts(conversion.Objects, Document.CircleSize);
     }
 

@@ -13,6 +13,7 @@ public sealed partial class EditorView
 
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
+        if (IsTestplaying) return;
         if (ErrorVisible || DiscardConfirmationVisible)
         {
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
@@ -257,6 +258,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (IsTestplaying) return;
         mouseX = x; mouseY = y;
         if (TimeJumpVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
@@ -359,6 +361,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
+        if (IsTestplaying) return;
         if (tabPointer && button == 0)
         {
             MoveTabPointer(x); tabPointer = false;
@@ -392,6 +395,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (IsTestplaying) return;
         if (notesLocked && plot.Contains(x, y)) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (TimeJumpVisible) { timeJumpSelected = true; return; }
         if (ErrorVisible || DiscardConfirmationVisible) return;
@@ -427,6 +431,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl)
     {
+        if (IsTestplaying) return;
         if (TimeJumpVisible) return;
         if (languageMenuOpen) return;
         if (ErrorVisible)
@@ -484,6 +489,24 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (virtualKey == 27 && testplayEscapeConsumed) return;
+        if (IsTestplaying)
+        {
+            if (virtualKey == 27) { testplayEscapeConsumed = true; StopTestplay(); }
+            else if (virtualKey == 9)
+            {
+                if (!testplayTabHeld) { testplayTabHeld = true; testplay!.ToggleAutoplay(); }
+                AdvanceTestplay();
+            }
+            else
+            {
+                if (testplayDriver is null) testplay!.SetKey(virtualKey, true);
+                AdvanceTestplay();
+            }
+            return;
+        }
+        if (CapturingTestplayKey && librarySettingsOpen && !ErrorVisible && !DiscardConfirmationVisible)
+        { CaptureTestplayKey(virtualKey); return; }
         ResetTextCaret();
         if (ErrorVisible)
         {
@@ -504,6 +527,7 @@ public sealed partial class EditorView
         }
         if (ExportVisible) { ExportKey(virtualKey, ctrl); return; }
         if (LibraryVisible) { LibraryKey(virtualKey, ctrl); return; }
+        if (virtualKey == 116 && !ctrl && !shift) { StartTestplay(); return; }
         if (ctrl && !shift && virtualKey is 83 or 69 && drag == DragKind.None)
         {
             if (virtualKey == 83) RequestSave?.Invoke(); else RequestExport?.Invoke();
@@ -590,6 +614,7 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (IsTestplaying || CapturingTestplayKey) return;
         if (languageMenuOpen) return;
         ResetTextCaret();
         if (ErrorVisible || DiscardConfirmationVisible) return;
@@ -610,6 +635,9 @@ public sealed partial class EditorView
 
     public void CancelInteraction()
     {
+        testplayEscapeConsumed = false;
+        StopTestplay();
+        bindingCapture = -1;
         SetModifiers(false, false);
         if (drag == DragKind.DistanceSpacing) history.Cancel();
         tabPointer = false;

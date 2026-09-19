@@ -313,7 +313,7 @@ public sealed partial class EditorView
         c.Fill(new(0, 0, width, height), Background);
         DrawHeader(c);
         c.Text(L.Get(resourcePage ? "library.referenceErrors" : exportPage ? "library.export" : "library.title"), 109, 11, 13, Foreground, width - 535, true);
-        Button(c, new(width - 414, 6, 110, 28), L.Get("library.settings"), () => { draftWorkspace = LibrarySettings.Workspace; draftOsuRoot = LibrarySettings.OsuRoot; draftDefaultSkin = LibrarySettings.DefaultSkin ?? ""; librarySettingsOpen = !librarySettingsOpen; exportPage = resourcePage = false; }, librarySettingsOpen);
+        Button(c, new(width - 414, 6, 110, 28), L.Get("library.settings"), () => { draftWorkspace = LibrarySettings.Workspace; draftOsuRoot = LibrarySettings.OsuRoot; draftDefaultSkin = LibrarySettings.DefaultSkin ?? ""; draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey]; bindingCapture = -1; librarySettingsOpen = !librarySettingsOpen; exportPage = resourcePage = false; }, librarySettingsOpen);
         DrawLanguageButton(c, HeaderLanguageBounds);
         if (HasEditorProject) Button(c, HeaderNavigationBounds, L.Get("library.editor"), CloseLibrary);
         if (resourcePage)
@@ -340,20 +340,22 @@ public sealed partial class EditorView
             LibraryTextField(c, 0, L.Get("library.workspace"), draftWorkspace, 158);
             LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, 256);
             LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, 354);
-            Button(c, new(32, 450, 200, 38), L.Get("library.apply"), () =>
+            DrawTestplayBindings(c);
+            Button(c, new(32, 510, 200, 38), L.Get("library.apply"), () =>
             {
                 try
                 {
                     var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
+                    settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
                     if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
                     settings.Save();
-                    SaveLibraryMemory(); LibrarySettings = settings; InitializeSkin(); librarySettingsOpen = false; libraryField = -1;
+                    SaveLibraryMemory(); LibrarySettings = settings; InitializeSkin(); librarySettingsOpen = false; libraryField = -1; bindingCapture = -1;
                     libraryRatings.Clear(); libraryBrowser?.Retire(); libraryBrowser = null; libraryDatabase = null; libraryResultsReady = false;
                     LoadLibraryMemory(); StartLibraryScan();
                 }
                 catch (Exception e) { libraryError = e.Message; }
             }, enabled: scanTask is null && searchTask is null);
-            c.Text(libraryError, 32, 500, 14, Error, width - 64);
+            c.Text(libraryError, 32, 560, 14, Error, width - 64);
             return;
         }
         c.Fill(new(0, HeaderHeight, 190, height - HeaderHeight), Panel);

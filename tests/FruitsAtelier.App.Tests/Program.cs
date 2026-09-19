@@ -14,6 +14,16 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Testplay movement, combo, hyperdash and facing", TestplayTests.MovementAndJudgement),
+    ("Testplay Tab switches autoplay and returns control without seeking", TestplayTests.AutoplaySwitching),
+    ("Catch rotations, banana arrival transforms and combo colours", TestplayTests.VisualTransformsAndColours),
+    ("Testplay Escape returns to editor without repeated navigation", TestplayTests.EscapeReturnsToEditor),
+    ("Testplay caught stacks share preview effects and outlive final judgement", TestplayTests.LivePlate),
+    ("Testplay input isolation and transport lifecycle", TestplayTests.EditorLifecycle),
+    ("Testplay subframe input and interpolated audio clock", TestplayTests.InputBetweenFrames),
+    ("Missed testplay notes continue falling after judgement", TestplayTests.MissedObjectsFall),
+    ("Testplay key capture and settings persistence", TestplayTests.Bindings),
+    ("Testplay legacy combo animation and live dash trails", TestplayTests.ComboAndTrails),
     ("Stable root migration and skin selection preserve content and archive provenance", SkinSelectorTests.Run),
     ("Object timeline navigation and group movement preserve geometry and undo", ObjectTimelineTests.MoveAndNavigate),
     ("Returning to Library saves, discards or cancels before closing the editor", LibraryExitTests.Run),
@@ -801,10 +811,11 @@ sealed class Ui
     private float width = 1440, height = 900;
     public float Height => height;
     public float Width => width;
-    public EditorView View { get; } = new();
+    public EditorView View { get; }
     public RecordingCanvas Canvas { get; } = new();
-    public Ui(bool overview = true)
+    public Ui(bool overview = true, TimeProvider? timeProvider = null)
     {
+        View = new(timeProvider: timeProvider);
         View.SetSliderEditingMode(SliderEditingMode.PenTool);
         Paint();
         if (overview) ShowFixtureOverview();
@@ -911,6 +922,12 @@ sealed class RecordingCanvas : ICanvas
     private readonly Stack<Rect> clipStack = new();
     public readonly record struct Texture(string Path, Rect Bounds, float Opacity);
     public List<Texture> Images { get; } = [];
+    public List<(float Rotation, bool Additive, uint Tint)> Sprites { get; } = [];
+    public bool SpriteImage(string path, Rect destination, uint tint, Rect source, float opacity, float rotation, bool additive)
+    {
+        Sprites.Add((rotation, additive, tint));
+        return Image(path, destination, tint, source, opacity);
+    }
     public List<Label> Texts { get; } = [];
     public List<Rect> Clips { get; } = [];
     public List<Dot> Circles { get; } = [];
@@ -918,7 +935,7 @@ sealed class RecordingCanvas : ICanvas
     public List<Outline> Outlines { get; } = [];
     public List<Outline> Fills { get; } = [];
     public List<Operation> Operations { get; } = [];
-    public void Clear() { Fills.Clear(); Images.Clear(); Texts.Clear(); Clips.Clear(); Circles.Clear(); Lines.Clear(); Outlines.Clear(); Operations.Clear(); clipStack.Clear(); }
+    public void Clear() { Fills.Clear(); Images.Clear(); Sprites.Clear(); Texts.Clear(); Clips.Clear(); Circles.Clear(); Lines.Clear(); Outlines.Clear(); Operations.Clear(); clipStack.Clear(); }
     public void Fill(Rect r, uint color, float radius = 0) => Fills.Add(new(r, color));
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0) => Outlines.Add(new(r, color));
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)

@@ -79,6 +79,31 @@ dotnet run --project tests/FruitsAtelier.Audio.Tests -c Release
 
 ## Window checks
 
+The Windows `--render-check` also exercises testplay entry, movement, combo drawing,
+return, catcher mirroring and binding settings at both window sizes and all tested
+DPI values in English and Chinese. Testplay checks use silent callbacks. Shared App
+tests cover key repeat/release, focus cancellation, end conditions, judging between
+frames, custom bindings, and document isolation; `Audio.Tests --hitsound-check`
+checks live catch samples at the next output frame without opening an audio device.
+
+The App tests use an injected monotonic clock to check subframe taps, reversals,
+dash changes, repeated audio snapshots, timestamp interpolation, device stalls,
+and miss positions/opacity. Combo checks cover idle and miss fades, the delayed
+main digit change, and removal of instruction text. Live trail checks compare
+coarse and fine updates and preserve facing across reversals. Skin tests verify
+combo prefixes, overlap, density and archive extraction. The Windows report also records nonblocking testplay
+submission times and a queued Win32 key interrupting the frame wait. These hidden
+window measurements do not measure physical keyboard-to-display latency.
+The native report additionally measures synthetic messages delivered to the dedicated
+testplay input thread while the owner UI thread is blocked. It checks that held
+movement, release and catch callbacks continue without UI message processing, and
+reports median, P95 and maximum queue-to-processing time. App tests compare shared
+plate trajectories, retained snapshots, caught-only stacks and final effect expiry.
+Autoplay regressions cover Tab repeat/release, live judgement and sounds, return to
+manual movement, and session reset. Visual tests cover deterministic rotation,
+banana arrival transforms, static editor sprites, combo palette offsets, and the
+base-only additive hyperdash layer with independent overlay crop and rotation.
+
 ```bash
 ./Run-Editor-Mac.command --smoke-check
 ```

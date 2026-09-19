@@ -13,6 +13,7 @@ public sealed partial class EditorView
     private int previewDisplayMode;
     private CatchAutoPreview? previewAutoplay;
     private CatchPlatePreview? previewPlate;
+    private HashSet<(Guid SourceId, int EventIndex)> previewComboEnds = [];
     public Rect PreviewViewport { get; private set; }
     public double PreviewCatcherX { get; private set; }
     private CatchConversionResult? previewSource;
@@ -65,7 +66,7 @@ public sealed partial class EditorView
             var parents = ClipboardParents(Document).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
             var numbers = ComboNumbers();
             var tails = previewObjects.GroupBy(item => item.SourceId).ToDictionary(group => group.Key, group => group.Last());
-            var ends = new HashSet<(Guid, int)>();
+            var ends = previewComboEnds = new HashSet<(Guid, int)>();
             for (int i = 0; i < parents.Length; i++)
                 if ((i == parents.Length - 1 || numbers[parents[i + 1].Id] == 1) && tails.TryGetValue(parents[i].Id, out var tail))
                     ends.Add((tail.SourceId, tail.EventIndex));
@@ -97,11 +98,13 @@ public sealed partial class EditorView
     }
     private static readonly HashSet<(Guid SourceId, int EventIndex)> NoHyperdash = [];
     private void DrawPreviewPlate(ICanvas c, float fieldLeft, float fieldWidth, float catchY)
+        => DrawCaughtPlate(c, previewPlate!.At(playhead, PreviewCatcherX), fieldLeft, fieldWidth, catchY);
+    private void DrawCaughtPlate(ICanvas c, IEnumerable<CatchPlateSprite> sprites, float fieldLeft, float fieldWidth, float catchY)
     {
-        foreach (var sprite in previewPlate!.At(playhead, PreviewCatcherX))
+        foreach (var sprite in sprites)
             DrawCatchObject(c, sprite.Object, fieldLeft + (float)(sprite.X / 512) * fieldWidth,
                 catchY + (float)(sprite.Y / 512) * fieldWidth, fieldWidth * .5f, sprite.Opacity,
-                PreviewCircleSize, NoHyperdash);
+                PreviewCircleSize, previewHyperdash, animated: true, caught: true);
     }
     private void DrawPreviewCatcher(ICanvas c, float fieldLeft, float fieldWidth, float catchY)
     {
@@ -116,40 +119,13 @@ public sealed partial class EditorView
             var past = previewAutoplay.At(at);
             bool hyper = previewAutoplay.HyperDashingAt(at);
             if (!past.Dashing && !hyper) continue;
-            float alpha = .4f * (float)Math.Pow(1 - (playhead - at) / 800, 5);
-            DrawBody(fieldLeft + (float)(past.X / 512) * fieldWidth, catchY, fieldWidth, hyper ? hyperColour : 0xFFFFFF, alpha, true);
+            DrawCatcherTrail(c, new(at, past.X, previewAutoplay.FacingLeftAt(at), hyper, false), fieldLeft, fieldWidth, catchY);
         }
         foreach (double start in previewAutoplay.HyperStarts(playhead - 1200, playhead))
-        {
-            float progress = (float)((playhead - start) / 1200);
-            float eased = progress * progress;
-            float pastX = fieldLeft + (float)(previewAutoplay.At(start).X / 512) * fieldWidth;
-            DrawBody(pastX, catchY - 10 * eased * fieldWidth / 512, fieldWidth * (.95f + .25f * eased),
-                skin?.HyperDashAfterImageColour ?? hyperColour, 1 - progress, true);
-        }
-        DrawBody(x, catchY, fieldWidth, 0xFFFFFF, 1);
+            DrawCatcherTrail(c, new(start, previewAutoplay.At(start).X, previewAutoplay.FacingLeftAt(start), true, true), fieldLeft, fieldWidth, catchY);
+        DrawCatcherBody(c, x, catchY, fieldWidth, 0xFFFFFF, 1, false, previewAutoplay.FacingLeftAt(playhead));
         float tint = (float)previewAutoplay.HyperTintAt(playhead);
-        if (tint > .001f) DrawBody(x, catchY, fieldWidth, hyperColour, tint);
-
-        void DrawBody(float bodyX, float plateY, float drawWidth, uint color, float opacity, bool additive = false)
-        {
-            if (opacity <= 0) return;
-            if (skin?.DrawCatcher(c, bodyX, plateY, drawWidth, PreviewCircleSize, color, opacity, additive) == true) return;
-            float size = CatchSize.CatcherWidth(PreviewCircleSize) * drawWidth / 512;
-            if (color == 0xFFFFFF) color = 0xB5C9D0;
-            float plateHeight = Math.Max(2, size * .055f);
-            if (opacity == 1) c.Fill(new(bodyX - size / 2, plateY, size, plateHeight), color, 2);
-            else c.Line(bodyX - size / 2, plateY + plateHeight / 2, bodyX + size / 2, plateY + plateHeight / 2, color, plateHeight, opacity);
-            c.Circle(bodyX, plateY + size * .25f, size * .12f, color, opacity: opacity);
-            Segment(-.35f, .08f, .35f, .08f, .05f);
-            Segment(0, .37f, 0, .63f, .08f);
-            Segment(0, .43f, -.3f, .12f, .06f);
-            Segment(0, .43f, .3f, .12f, .06f);
-            Segment(0, .62f, -.15f, .88f, .07f);
-            Segment(0, .62f, .15f, .88f, .07f);
-            void Segment(float x1, float y1, float x2, float y2, float weight)
-                => c.Line(bodyX + size * x1, plateY + size * y1, bodyX + size * x2, plateY + size * y2, color, Math.Max(2, size * weight), opacity);
-        }
+        if (tint > .001f) DrawCatcherBody(c, x, catchY, fieldWidth, hyperColour, tint, false, previewAutoplay.FacingLeftAt(playhead));
     }
     private Guid legacyButtonSlider;
     private void DrawLegacyConversionButton(ICanvas c)

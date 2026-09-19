@@ -1,4 +1,11 @@
 {
+  "testplay.start": "试玩 (F5)",
+  "testplay.noNotes": "当前位置之后没有可试玩的音符。",
+  "testplay.returned": "已从试玩返回编辑器。",
+  "testplay.left": "试玩：左移",
+  "testplay.right": "试玩：右移",
+  "testplay.dash": "试玩：Dash",
+  "testplay.pressKey": "请按键（Esc 取消）",
   "ui.sv": "SV",
   "core.distanceSpacing.range": "距离间距必须在 0.1x 到 6.0x 之间。",
   "assist.spacing": "距离间距",

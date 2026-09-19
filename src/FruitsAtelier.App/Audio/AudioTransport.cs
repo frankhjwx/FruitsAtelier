@@ -8,7 +8,10 @@ using NAudio.Wave.SampleProviders;
 namespace FruitsAtelier.App.Audio;
 
 public sealed record AudioState(string? FilePath, double PositionMs, double DurationMs, bool IsPlaying,
-    bool CanPlay, bool IsLoading, string? Error);
+    bool CanPlay, bool IsLoading, string? Error)
+{
+    public double PositionTimestampMs { get; init; }
+}
 
 public sealed class AudioTransport : IDisposable
 {
@@ -327,7 +330,8 @@ public sealed class AudioTransport : IDisposable
             if (appliedSeekVersion != seekVersion) position = requestedPosition;
             if (appliedIntentVersion != intentVersion) playing = requestedPlaying;
             Volatile.Write(ref state, state with { PositionMs = position, DurationMs = duration, IsPlaying = playing,
-                CanPlay = reader is not null && output is not null, IsLoading = false, Error = null });
+                CanPlay = reader is not null && output is not null, IsLoading = false, Error = null,
+                PositionTimestampMs = System.Diagnostics.Stopwatch.GetTimestamp() * 1000d / System.Diagnostics.Stopwatch.Frequency });
         }
     }
 

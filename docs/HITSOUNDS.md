@@ -58,6 +58,12 @@ an additional per-hit output buffer. UI stalls beyond the horizon can still omit
 Pause, seek, and content changes clear the event window. Pausing rebuilds music output
 at its consumed frame, so resume uses the same position for audio and the playhead.
 
+Testplay plays only caught objects. Windows prepares a separate persistent WASAPI
+output with 10 ms requested latency for live judgements, before starting the song.
+Live voices enter its next audio callback instead of the music's 80 ms read-ahead
+buffer. The device determines the effective latency. Stop and seek clear live voices
+as well as scheduled preview events. macOS uses its existing persistent live mixer.
+
 macOS uses one persistent
 `AVAudioEngine` / `AVAudioSourceNode` mixer with 128 voices and a bounded 2,047-command queue.
 Native WAV/MP3 decoding and OGG conversion happen during preparation. The real-time callback

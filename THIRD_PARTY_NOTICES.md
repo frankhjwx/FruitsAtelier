@@ -24,10 +24,35 @@ The AR/preempt and field geometry calculations refer to ppy/osu commit `48c4800e
 All osu! references below use that same commit of [ppy/osu](https://github.com/ppy/osu/tree/48c4800e3ae4ee752452cdff83bd3787ccf3105f):
 
 - `src/FruitsAtelier.Core/Conversion`: slider events, legacy RNG and Catch stream conversion adapted from `SliderEventGenerator.cs`, `JuiceStream.cs`, `JuiceStreamPath.cs`, `SliderPath.cs`, `LegacyRulesetExtensions.cs`, `LegacyRandom.cs`, `CatchBeatmapProcessor.cs` and `CatchBeatmap.cs`. Full source paths and boundaries: [UPSTREAM.md](src/FruitsAtelier.Core/Conversion/UPSTREAM.md); MIT text retained in `LICENCE.osu.txt`.
-- `src/FruitsAtelier.Core/Gameplay`: Catch size, hyperdash, automatic preview movement and Hard Rock preview position rules from `osu.Game/Rulesets/Objects/Legacy/LegacyRulesetExtensions.cs`, `osu.Game.Rulesets.Catch/UI/Catcher.cs`, `osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapProcessor.cs` and `osu.Game/Utils/LegacyRandom.cs` and `osu.Game.Rulesets.Catch/Replays/CatchAutoGenerator.cs`; MIT text retained in `LICENSE.osu.txt`. Plate stacking and release trajectories also follow `Catcher.cs`, `CaughtObject.cs` and `CaughtDroplet.cs`. Preview difficulty multipliers follow `ModEasy.cs`, `ModHardRock.cs` and `CatchModHardRock.cs` from the same revision.
+- `src/FruitsAtelier.Core/Gameplay`: Catch size, hyperdash, automatic preview movement and Hard Rock preview position rules from `osu.Game/Rulesets/Objects/Legacy/LegacyRulesetExtensions.cs`, `osu.Game.Rulesets.Catch/UI/Catcher.cs`, `osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapProcessor.cs` and `osu.Game/Utils/LegacyRandom.cs` and `osu.Game.Rulesets.Catch/Replays/CatchAutoGenerator.cs`; MIT text retained in `LICENSE.osu.txt`. Shared preview and testplay plate stacking and release trajectories also follow `Catcher.cs`, `CaughtObject.cs` and `CaughtDroplet.cs`; combo-end catch/miss release selection follows `CatchJudgement.cs`. Preview difficulty multipliers follow `ModEasy.cs`, `ModHardRock.cs` and `CatchModHardRock.cs` from the same revision.
 - `src/FruitsAtelier.App/Skinning`: texture selection, density, crop and scale rules from legacy Catch skin pieces, `Fruit.cs`, `DrawableTinyDroplet.cs`, `LegacySkin.cs`, `LegacySkinExtensions.cs` and `LegacyCatcher.cs`. Catcher effect timing and colours also reference `Catcher.cs`, `CatcherArea.cs`, `CatcherTrail.cs` and `CatcherTrailDisplay.cs` in `osu.Game.Rulesets.Catch/UI`. Full source paths: [REFERENCE.md](src/FruitsAtelier.App/Skinning/REFERENCE.md).
 
 The following MIT notice applies to the adapted osu! source portions, not to independently licensed skin artwork.
+
+`CatchObjectVisual` adapts `osu.Game/Utils/StatelessRNG.cs` and
+`osu.Game.Rulesets.Catch/Objects/Drawables/DrawableFruit.cs`, `DrawableDroplet.cs`,
+`DrawableBanana.cs`, plus `Objects/Banana.cs` at the same pinned revision. Combo
+colour indexing follows `Objects/CatchHitObject.cs`, `IHasComboInformation.cs` and
+`LegacyBeatmapSkin.cs`; hyperdash texture blending follows `LegacyCatchHitObjectPiece.cs`.
+
+Testplay movement, catch width, hyperdash activation and catcher facing also reference
+`osu.Game.Rulesets.Catch/UI/Catcher.cs` and `CatcherArea.cs` at the pinned osu! revision.
+Editor session entry/return was compared with
+`osu.Game/Screens/Edit/GameplayTest/EditorPlayer.cs`; no osu! player runtime is bundled.
+Miss fade timing references `osu.Game.Rulesets.Catch/Objects/Drawables/DrawableCatchHitObject.cs`;
+continued falling references `osu.Game/Rulesets/UI/Scrolling/Algorithms/ConstantScrollAlgorithm.cs`.
+Both use the same pinned osu! revision.
+
+Testplay combo glyphs and animation reference
+`osu.Game.Rulesets.Catch/Skinning/Legacy/LegacyCatchComboCounter.cs`,
+`osu.Game.Rulesets.Catch/UI/CatchComboDisplay.cs`, `CatcherArea.cs`,
+`osu.Game/Skinning/LegacySpriteText.cs`, `LegacyRollingCounter.cs`, and
+`osu.Game/Graphics/UserInterface/RollingCounter.cs` at the same pinned revision.
+Live dash trails follow `CatcherTrail.cs` and `CatcherTrailDisplay.cs`.
+
+Testplay clock smoothing references `osu.Framework/Timing/InterpolatingFramedClock.cs`
+at osu!framework commit `e01524d1492885d8b00ac88b38e7963d76d7d454`. Its MIT notice is
+retained in `src/FruitsAtelier.Core/Conversion/LICENCE.osu-framework.txt`.
 
 Imported Bezier, perfect-circle and Catmull path approximation also adapts `osu.Framework/Utils/PathApproximator.cs` and `CircularArcProperties.cs` from [ppy/osu-framework commit e01524d1492885d8b00ac88b38e7963d76d7d454](https://github.com/ppy/osu-framework/tree/e01524d1492885d8b00ac88b38e7963d76d7d454). Its separate MIT notice is retained in `src/FruitsAtelier.Core/Conversion/LICENCE.osu-framework.txt`. The framework runtime is not bundled.
 

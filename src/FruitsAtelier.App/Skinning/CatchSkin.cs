@@ -24,9 +24,12 @@ public sealed class CatchSkin
     private readonly Dictionary<string, SkinTexture> textures = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<uint> comboColours = [];
     private CatchSkin? fallback;
+    private string comboPrefix = "score";
+    private float comboOverlap;
     public string FolderPath { get; }
     public string Name { get; private set; }
-    public IReadOnlyList<uint> ComboColours => comboColours;
+    private static readonly uint[] defaultComboColours = [0xFFC000, 0x00CA00, 0x127CFF, 0xF21839];
+    public IReadOnlyList<uint> ComboColours => comboColours.Count > 0 ? comboColours : fallback?.ComboColours ?? defaultComboColours;
     public uint HyperDashFruitColour { get; private set; } = 0xFF0000;
     public uint HyperDashColour { get; private set; } = 0xFF0000;
     public uint HyperDashAfterImageColour { get; private set; } = 0xFF0000;
@@ -48,6 +51,12 @@ public sealed class CatchSkin
             if (!Directory.Exists(candidate.FolderPath)) { message = L.Get("skin.folderMissing"); return false; }
             var files = Directory.EnumerateFiles(candidate.FolderPath).ToDictionary(p => Path.GetFileName(p)!, p => p, StringComparer.OrdinalIgnoreCase);
             int invalid = 0;
+            if (files.TryGetValue("skin.ini", out var configuration)) candidate.ReadConfiguration(configuration);
+            for (int digit = 0; digit <= 9; digit++)
+            {
+                LoadTexture($"{candidate.comboPrefix}-{digit}");
+                if (candidate.comboPrefix != "score") LoadTexture($"score-{digit}");
+            }
             foreach (string name in fruitNames.Concat(["drop", "bananas"]))
             {
                 LoadTexture($"fruit-{name}");
@@ -56,7 +65,6 @@ public sealed class CatchSkin
             LoadTexture("reversearrow");
             LoadTexture("fruit-catcher-idle");
             LoadTexture("fruit-catcher-idle-0");
-            if (files.TryGetValue("skin.ini", out var configuration)) candidate.ReadConfiguration(configuration);
             if (candidate.textures.Count == 0 && fallback is null && !allowEmpty) { message = L.Get("skin.noTextures"); return false; }
             skin = candidate;
             message = L.Get("skin.loaded", candidate.Name, candidate.TextureCount, invalid > 0 ? L.Get("skin.invalidImages", invalid) : "");
@@ -86,7 +94,7 @@ public sealed class CatchSkin
         if (texture is null) return null;
         return Math.Max(0, texture.PixelHeight / (float)texture.Density - 16) * .35f * CatchSize.Scale(circleSize) * 2 * fieldWidth / 512;
     }
-    public bool DrawCatcher(ICanvas canvas, float centerX, float catchY, float fieldWidth, double circleSize, uint tint = 0xFFFFFF, float opacity = 1, bool additive = false)
+    public bool DrawCatcher(ICanvas canvas, float centerX, float catchY, float fieldWidth, double circleSize, uint tint = 0xFFFFFF, float opacity = 1, bool additive = false, bool flipHorizontal = false)
     {
         foreach (var texture in Candidates("fruit-catcher-idle-0", "fruit-catcher-idle"))
         {
@@ -94,8 +102,7 @@ public sealed class CatchSkin
             float width = texture.PixelWidth / (float)texture.Density * scale;
             float height = texture.PixelHeight / (float)texture.Density * scale;
             var destination = new Rect(centerX - width / 2, catchY - 16 * scale, width, height);
-            if (additive ? canvas.AdditiveImage(texture.FilePath, destination, tint, opacity)
-                : canvas.Image(texture.FilePath, destination, tint, opacity: opacity)) return true;
+            if (canvas.CatcherImage(texture.FilePath, destination, tint, opacity, additive, flipHorizontal)) return true;
         }
         return false;
     }
@@ -120,6 +127,28 @@ public sealed class CatchSkin
             foreach (var texture in fallback.Candidates(components)) yield return texture;
     }
 
+    public bool DrawCombo(ICanvas canvas, int combo, float x, float y, float scale, uint tint, float opacity, bool additive)
+    {
+        string text = combo.ToString(CultureInfo.InvariantCulture);
+        var glyphs = text.Select(digit => ComboGlyph(digit)).ToArray();
+        if (glyphs.Any(g => g is null)) return false;
+        float width = glyphs.Sum(g => g!.PixelWidth / (float)g.Density) - comboOverlap * (glyphs.Length - 1);
+        float height = glyphs.Max(g => g!.PixelHeight / (float)g.Density);
+        float at = x - width * scale / 2;
+        foreach (var glyph in glyphs)
+        {
+            float w = glyph!.PixelWidth / (float)glyph.Density;
+            var destination = new Rect(at, y - height * scale / 2, w * scale, glyph.PixelHeight / (float)glyph.Density * scale);
+            if (additive) canvas.AdditiveImage(glyph.FilePath, destination, tint, opacity);
+            else canvas.Image(glyph.FilePath, destination, tint, opacity: opacity);
+            at += (w - comboOverlap) * scale;
+        }
+        return true;
+    }
+
+    private SkinTexture? ComboGlyph(char digit) => textures.GetValueOrDefault($"{comboPrefix}-{digit}")
+        ?? textures.GetValueOrDefault($"score-{digit}") ?? fallback?.ComboGlyph(digit);
+
     private static string Component(CatchSkinObject kind, int index) => kind switch
         {
             CatchSkinObject.Droplet or CatchSkinObject.TinyDroplet => "fruit-drop",
@@ -134,11 +163,15 @@ public sealed class CatchSkin
     }
 
     public bool Draw(ICanvas canvas, CatchSkinObject kind, int index, float centerX, float centerY,
-        float nominalFruitDiameter, uint tint = 0xFFFFFF, float opacity = 1)
+        float nominalFruitDiameter, uint tint = 0xFFFFFF, float opacity = 1, float rotation = 0, uint? hyperColour = null)
     {
         if (!float.IsFinite(nominalFruitDiameter) || nominalFruitDiameter <= 0) return false;
         string component = Component(kind, index);
         float scale = ObjectScale(kind, nominalFruitDiameter);
+        if (hyperColour is uint glow)
+            foreach (var texture in Candidates(component))
+                if (canvas.SpriteImage(texture.FilePath, Destination(texture, centerX, centerY, scale * 1.2f),
+                    glow, texture.Source, opacity * .7f, rotation, true)) break;
         bool drawn = DrawTexture(component, tint);
         drawn |= DrawTexture(component + "-overlay", 0xFFFFFF);
         return drawn;
@@ -146,7 +179,7 @@ public sealed class CatchSkin
         bool DrawTexture(string name, uint colour)
         {
             foreach (var texture in Candidates(name))
-                if (canvas.Image(texture.FilePath, Destination(texture, centerX, centerY, scale), colour, texture.Source, opacity)) return true;
+                if (canvas.SpriteImage(texture.FilePath, Destination(texture, centerX, centerY, scale), colour, texture.Source, opacity, rotation, false)) return true;
             return false;
         }
     }
@@ -194,6 +227,16 @@ public sealed class CatchSkin
             int split = line.IndexOf(':');
             if (split < 0) continue;
             string key = line[..split].Trim(), value = line[(split + 1)..].Trim();
+            if (section.Equals("Fonts", StringComparison.OrdinalIgnoreCase))
+            {
+                if (key.Equals("ComboPrefix", StringComparison.OrdinalIgnoreCase) && value.Length > 0 &&
+                    !value.Contains('/') && !value.Contains('\\') && value.IndexOfAny(Path.GetInvalidFileNameChars()) < 0)
+                    comboPrefix = value;
+                if (key.Equals("ComboOverlap", StringComparison.OrdinalIgnoreCase) &&
+                    float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float overlap) && float.IsFinite(overlap))
+                    comboOverlap = Math.Clamp(overlap, -100, 100);
+                continue;
+            }
             if (section.Equals("General", StringComparison.OrdinalIgnoreCase) && key.Equals("Name", StringComparison.OrdinalIgnoreCase))
             { if (value.Length > 0) Name = value[..Math.Min(value.Length, 120)]; continue; }
             if (!section.Equals("Colours", StringComparison.OrdinalIgnoreCase) || !TryColour(value, out uint colour)) continue;
