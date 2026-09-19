@@ -12,6 +12,19 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
     private readonly List<(float[] Samples, int Position, float Volume)> voices = new();
     private readonly List<(float[] Samples, double TimeMs, float Volume)> scheduled = new();
     private bool unavailable;
+    private IWavePlayer? liveOutput;
+    public void PrepareLiveOutput(float outputGain = 1)
+    {
+        if (liveOutput is not null || unavailable) return;
+        var output = new WasapiOut(NAudio.CoreAudioApi.AudioClientShareMode.Shared, true, 10);
+        try
+        {
+            output.Init(new NAudio.Wave.SampleProviders.SampleToWaveProvider16(this) { Volume = outputGain });
+            output.Play();
+            liveOutput = output;
+        }
+        catch { output.Dispose(); throw; }
+    }
     public WaveFormat WaveFormat { get; } = WaveFormat.CreateIeeeFloatWaveFormat(HitsoundSamples.SampleRate, 1);
     public void PreloadProject(IReadOnlyList<MapDocument> documents)
     {
@@ -35,6 +48,12 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
             if (scheduled.Count == 2048) scheduled.RemoveAt(0);
             scheduled.Add((samples, timeMs, sound.Volume));
         }
+    }
+    public void PlayImmediate(Hitsound sound)
+    {
+        if (unavailable) return;
+        // Live judgements cannot be inserted into music frames already submitted to WASAPI.
+        Queue(sound);
     }
     internal ISampleProvider MixWithMusic(ISampleProvider music, double startMs, double speed = 1) => new MusicMixer(this, music, startMs, speed);
 
@@ -136,5 +155,5 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
         return count;
     }
     public void Stop() { lock (gate) { voices.Clear(); scheduled.Clear(); } }
-    public void Dispose() { unavailable = true; Stop(); }
+    public void Dispose() { unavailable = true; liveOutput?.Dispose(); liveOutput = null; Stop(); }
 }

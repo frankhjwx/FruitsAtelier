@@ -5,6 +5,17 @@ using NAudio.Wave;
 
 static class HitsoundMixerTests
 {
+    public static async Task LiveDevice()
+    {
+        using var mixer = new HitsoundPlayer();
+        mixer.PrepareLiveOutput(outputGain: 0);
+        for (int i = 0; i < 10; i++)
+        {
+            mixer.PlayImmediate(new Hitsound(CatchObjectKind.Fruit, null, .5f));
+            await Task.Delay(20);
+            mixer.Stop();
+        }
+    }
     public static void Run()
     {
         ByteAdapterBuffers();
@@ -78,6 +89,20 @@ static class HitsoundMixerTests
             var resumed = mixer.MixWithMusic(new ConstantMusic(rate, channels), 1000);
             resumed.Read(buffer, 0, channels * 257);
             if (buffer.Take(channels * 257).Any(v => v != .1f)) throw new Exception("Canceled future hit survived a new music session");
+            mixer.PlayImmediate(sound);
+            resumed.Read(buffer, 0, channels * 257);
+            if (buffer.Take(channels * 257).Any(v => v != .1f))
+                throw new Exception("Live catch entered the read-ahead music buffer");
+            var live = new float[257];
+            mixer.Read(live, 0, live.Length);
+            for (int i = 0; i < live.Length; i++)
+                if (Math.Abs(live[i] - sample[i] * sound.Volume) > .00001f)
+                    throw new Exception("Live catch did not start at the next independent mixer frame");
+            mixer.Stop();
+            mixer.Read(live, 0, live.Length);
+            if (live.Any(v => v != 0)) throw new Exception("Canceled live catch survived in the independent mixer");
+            resumed.Read(buffer, 0, channels * 257);
+            if (buffer.Take(channels * 257).Any(v => v != .1f)) throw new Exception("Live catch survived cancellation");
         }
         Console.WriteLine("PASS Timestamped hitsounds share music frames across buffer boundaries, sample rates, channels and cancellation");
     }

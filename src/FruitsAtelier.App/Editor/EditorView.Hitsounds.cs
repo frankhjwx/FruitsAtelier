@@ -44,6 +44,10 @@ public sealed partial class EditorView
 
     private void UpdateHitsounds(double position, bool playing, string? filename)
     {
+        if (IsTestplaying)
+        {
+            return;
+        }
         if (!ReferenceEquals(hitsoundDocument, Document) || hitsoundFile != filename)
         {
             ResetHitsounds(); hitsoundDocument = Document; hitsoundFile = filename;

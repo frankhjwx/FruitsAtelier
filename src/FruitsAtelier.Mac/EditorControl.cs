@@ -13,6 +13,8 @@ public static class MacInput
     public static int VirtualKey(Key key, bool editingText = true) => key switch
     {
         >= Key.A and <= Key.Z => 65 + key - Key.A,
+        >= Key.D0 and <= Key.D9 => 48 + key - Key.D0,
+        Key.Left => 37, Key.Right => 39, Key.LeftShift or Key.RightShift => 16, Key.F5 => 116,
         Key.Back => editingText ? 8 : 46, Key.Tab => 9, Key.Enter => 13, Key.Escape => 27,
         Key.Space => 32, Key.Home => 36, Key.Delete => 46, Key.Up => 38, Key.Down => 40, Key.OemPlus => 187, Key.OemMinus => 189, _ => 0
     };
@@ -47,6 +49,8 @@ internal sealed class EditorControl : Control, IDisposable
         base.Render(context);
         using var canvas = new MacCanvas(context, images);
         View.Render(canvas, (float)Bounds.Width, (float)Bounds.Height);
+        if (View.IsTestplaying)
+            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying) InvalidateVisual(); });
     }
     internal void Refresh() { InvalidateVisual(); Changed?.Invoke(); }
     protected override void OnPointerPressed(PointerPressedEventArgs e)
@@ -95,12 +99,13 @@ internal sealed class EditorControl : Control, IDisposable
             Refresh(); return;
         }
         View.KeyDown(MacInput.VirtualKey(e.Key, View.IsEditingText), MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-        e.Handled = e.Key is Key.Tab or Key.Space or Key.Back or Key.Delete or Key.Enter or Key.Escape || MacInput.Control(e.KeyModifiers);
+        e.Handled = View.IsTestplaying || View.CapturingTestplayKey || e.Key is Key.Tab or Key.Space or Key.Back or Key.Delete or Key.Enter or Key.Escape || MacInput.Control(e.KeyModifiers);
         Refresh();
     }
     protected override void OnKeyUp(KeyEventArgs e)
     {
         base.OnKeyUp(e);
+        View.KeyUp(MacInput.VirtualKey(e.Key, View.IsEditingText));
         View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         Refresh();
     }

@@ -36,6 +36,9 @@ internal static class Mp3Timeline
         if (!encoder.SequenceEqual("LAME"u8) && !encoder.SequenceEqual("Lavf"u8) && !encoder.SequenceEqual("Lavc"u8))
             return samplesPerFrame - 528;
         int delay = frame[tag + 21] << 4 | frame[tag + 22] >> 4;
+        // Some encoders write a LAME identifier but leave gapless metadata empty.
+        // BASS retains decoder delay in that case, just as for an untagged Xing stream.
+        if (delay == 0) return samplesPerFrame - 528;
         return samplesPerFrame + delay + 1;
     }
 }

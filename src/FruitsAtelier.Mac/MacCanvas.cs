@@ -100,6 +100,21 @@ internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICa
         }
         catch (Exception e) when (e is IOException or ArgumentException or NotSupportedException) { return false; }
     }
+    public bool CatcherImage(string filePath, R destination, uint tint, float opacity, bool additive, bool flipHorizontal)
+    {
+        using var transform = context.PushTransform(flipHorizontal
+            ? new Matrix(-1, 0, 0, 1, destination.X * 2 + destination.Width, 0) : Matrix.Identity);
+        return additive ? AdditiveImage(filePath, destination, tint, opacity) : Image(filePath, destination, tint, opacity: opacity);
+    }
+    public bool SpriteImage(string filePath, R destination, uint tint, R source, float opacity, float rotation, bool additive)
+    {
+        double angle = rotation * Math.PI / 180, c = Math.Cos(angle), s = Math.Sin(angle);
+        double x = destination.X + destination.Width / 2, y = destination.Y + destination.Height / 2;
+        using var transform = context.PushTransform(new Matrix(c, s, -s, c, x - x * c + y * s, y - x * s - y * c));
+        using var blend = context.PushRenderOptions(new RenderOptions { BitmapBlendingMode = additive
+            ? Avalonia.Media.Imaging.BitmapBlendingMode.Plus : Avalonia.Media.Imaging.BitmapBlendingMode.SourceOver });
+        return Image(filePath, destination, tint, source, opacity);
+    }
     public bool AdditiveImage(string filePath, R destination, uint tint, float opacity)
     {
         using var state = context.PushRenderOptions(new RenderOptions { BitmapBlendingMode = Avalonia.Media.Imaging.BitmapBlendingMode.Plus });

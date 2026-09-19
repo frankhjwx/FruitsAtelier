@@ -44,14 +44,14 @@ static void ImportAndReuse(string root)
     {
         string archive = MakeZip(root, [(wrapper + "skin.ini", "[General]\nName: Import fixture"u8.ToArray()),
             (wrapper + "fruit-pear.png", Png()), (wrapper + "reversearrow.png", Png()),
-            (wrapper + "reversearrow@2x.png", Png()), (wrapper + "ignored.exe", "not executable"u8.ToArray())]);
+            (wrapper + "reversearrow@2x.png", Png()), (wrapper + "custom-0@2x.png", Png()), (wrapper + "ignored.exe", "not executable"u8.ToArray())]);
         string cache = Path.Combine(root, "cache");
         string folder = SkinArchive.Import(archive, cache);
         string key = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive))).ToLowerInvariant();
-        True(folder == Path.Combine(cache, "v2-" + key), "Cache is not keyed by extraction version and archive contents.");
+        True(folder == Path.Combine(cache, "v3-" + key), "Cache is not keyed by extraction version and archive contents.");
         True(CatchSkin.TryLoad(folder, out var skin, out _) && skin!.Name == "Import fixture", "Extracted skin cannot be loaded.");
         True(!File.Exists(Path.Combine(folder, "ignored.exe")), "Unselected package content was extracted.");
-        True(Directory.GetFiles(folder).Length == 5, "Unexpected files were extracted.");
+        True(Directory.GetFiles(folder).Length == 6 && File.Exists(Path.Combine(folder, "custom-0@2x.png")), "Combo glyphs were not extracted.");
         True(File.Exists(Path.Combine(folder, "reversearrow.png")) && File.Exists(Path.Combine(folder, "reversearrow@2x.png")), "Reverse arrow textures were not extracted.");
         DateTime completed = File.GetLastWriteTimeUtc(Path.Combine(folder, ".complete"));
         True(SkinArchive.Import(archive, cache) == folder, "Identical package did not reuse its cache.");
@@ -116,7 +116,7 @@ static void IncompleteCache(string root)
     string archive = MakeZip(root, [("fruit-pear.png", Png()), ("fruit-apple.png", Png())]);
     string cache = Path.Combine(root, "cache");
     string key = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive))).ToLowerInvariant();
-    string partial = Path.Combine(cache, "v2-" + key);
+    string partial = Path.Combine(cache, "v3-" + key);
     Directory.CreateDirectory(partial);
     File.WriteAllText(Path.Combine(partial, "sentinel.txt"), "preserve");
     Reject(() => SkinArchive.Import(archive, cache));

@@ -12,9 +12,11 @@ var tests = new List<(string Name, Action Run)>
     ("Each custom image falls back independently to default and then geometry", PerImageFallback),
     ("A doubled texture has the same logical size and is preferred over 1x", HighDensity),
     ("Catcher uses raw dimensions, density and the legacy plate origin", CatcherPlate),
+    ("Combo uses configured glyphs, overlap and density without a suffix", ComboFont),
     ("Reverse arrows use skin density and fall back for missing or undecodable images", ReverseArrows),
     ("Oversized artwork is centre cropped without distorting the other axis", CentreCrop),
     ("Base tint and independently sized white overlay compose at one centre", Overlay),
+    ("Hyper fruit draws only its base as a rotated additive underlay", HyperGlow),
     ("Droplets keep their aspect ratio; tiny droplets are half their size", Droplets),
     ("Banana base and overlay use the arrival scale at both viewport sizes", Bananas),
     ("Sprite bounds union cropped base and overlay with each object's scale", SpriteBounds),
@@ -60,6 +62,21 @@ void PerImageFallback()
     string empty = Fixture("fallback-empty");
     True(CatchSkin.TryLoad(empty, out var emptySkin, out _, baseline));
     True(emptySkin!.SpriteFor(CatchSkinObject.Droplet).Base is not null);
+}
+
+void ComboFont()
+{
+    string folder = Fixture("combo-font");
+    File.WriteAllText(Path.Combine(folder, "skin.ini"), "[Fonts]\nComboPrefix: custom\nComboOverlap: 3");
+    Header(folder, "custom-1@2x.png", 40, 60);
+    Header(folder, "custom-2.png", 22, 30);
+    var skin = Load(folder); var canvas = new RecordingCanvas();
+    True(skin.DrawCombo(canvas, 12, 100, 200, .8f, 0x123456, .5f, false));
+    True(canvas.Calls.Count == 2 && canvas.Calls[0].Path.EndsWith("custom-1@2x.png") && canvas.Calls[1].Path.EndsWith("custom-2.png"));
+    Rectangle(canvas.Calls[0].Destination, 84.4f, 188, 16, 24);
+    Rectangle(canvas.Calls[1].Destination, 98, 188, 17.6f, 24);
+    True(canvas.Calls.All(c => c.Source is null && c.Tint == 0x123456));
+    True(!skin.DrawCombo(canvas, 3, 100, 200, 1, 0xFFFFFF, 1, false));
 }
 
 void CatcherPlate()
@@ -280,6 +297,23 @@ void DefaultPackage()
     True(skin.SpriteFor(CatchSkinObject.Droplet).Overlay is null);
 }
 
+void HyperGlow()
+{
+    string folder = Fixture("hyper-glow");
+    Header(folder, "fruit-pear@2x.png", 400, 240);
+    Header(folder, "fruit-pear-overlay.png", 100, 90);
+    var skin = Load(folder); var canvas = new RecordingCanvas();
+    True(skin.Draw(canvas, CatchSkinObject.Fruit, 0, 100, 200, 64, 0x112233, .8f, 17, 0xFF0000));
+    True(canvas.Sprites.Count == 3);
+    var glow = canvas.Sprites[0]; var fruit = canvas.Sprites[1]; var overlay = canvas.Sprites[2];
+    True(glow.Additive && !fruit.Additive && !overlay.Additive);
+    Equal(.56, glow.Opacity); Equal(.8, fruit.Opacity);
+    Equal(fruit.Destination.Width * 1.2, glow.Destination.Width);
+    Equal(17, glow.Rotation); Equal(17, fruit.Rotation); Equal(17, overlay.Rotation);
+    Equal(0xFF0000, glow.Tint); Equal(0x112233, fruit.Tint); Equal(0xFFFFFF, overlay.Tint);
+    True(glow.Path == fruit.Path && glow.Source == fruit.Source && overlay.Path.EndsWith("overlay.png"));
+}
+
 string Fixture(string name)
 {
     string folder = Path.Combine(runDirectory, name);
@@ -324,6 +358,12 @@ static string FindRoot()
 
 sealed class RecordingCanvas : ICanvas
 {
+    public List<(string Path, Rect Destination, uint Tint, Rect Source, float Opacity, float Rotation, bool Additive)> Sprites { get; } = [];
+    public bool SpriteImage(string filePath, Rect destination, uint tint, Rect source, float opacity, float rotation, bool additive)
+    {
+        Sprites.Add((filePath, destination, tint, source, opacity, rotation, additive));
+        return Image(filePath, destination, tint, source, opacity);
+    }
     public bool AcceptImages { get; set; } = true;
     public string? RejectPath { get; set; }
     public List<(string Path, Rect Destination, uint Tint, Rect? Source)> Calls { get; } = [];

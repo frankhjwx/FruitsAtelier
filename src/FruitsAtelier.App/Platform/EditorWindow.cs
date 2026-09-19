@@ -21,6 +21,7 @@ internal sealed partial class EditorWindow : IDisposable
     private readonly Stopwatch playbackSampleTimer = new();
     private int playbackSampleFrames;
     private bool playbackSampleComplete;
+    private TestplayFramePacer? testplayPacer;
 
     public EditorWindow()
     {
@@ -90,21 +91,38 @@ internal sealed partial class EditorWindow : IDisposable
         if (renderCheck)
         {
             view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
-            Diagnostics.RenderCheck.Run(canvas, view);
+            Diagnostics.RenderCheck.Run(canvas, view, hwnd);
             Native.DestroyWindow(hwnd);
             return 0;
         }
         UpdateTitle();
+        view.RequestRunTestplay = session => new TestplayInputThread(hwnd, session, () => audio.State);
         Native.SetTimer(hwnd, 1, 16, 0);
         Native.ShowWindow(hwnd, 5);
         Native.UpdateWindow(hwnd);
-        int result;
-        while ((result = Native.GetMessage(out var msg, 0, 0, 0)) > 0)
+        using var pacer = testplayPacer = new TestplayFramePacer();
+        while (true)
         {
+            Native.Message msg;
+            if (view.IsTestplaying && !Native.IsIconic(hwnd))
+            {
+                if (!Native.PeekMessage(out msg, 0, 0, 0, 1))
+                {
+                    if (pacer.FrameDue) Invalidate();
+                    else pacer.Wait();
+                    continue;
+                }
+                if (msg.Id == 0x0012) break;
+            }
+            else
+            {
+                int result = Native.GetMessage(out msg, 0, 0, 0);
+                if (result < 0) throw new Win32Exception();
+                if (result == 0) break;
+            }
             Native.TranslateMessage(ref msg);
             Native.DispatchMessage(ref msg);
         }
-        if (result < 0) throw new Win32Exception();
         return 0;
     }
 
@@ -161,19 +179,21 @@ internal sealed partial class EditorWindow : IDisposable
                     if (canvas is not null && rect.Right > 0 && rect.Bottom > 0 && !Native.IsIconic(window))
                     {
                         PollAudio();
+                        if (view.IsTestplaying) testplayPacer?.FrameStarted();
                         renderTimer.Restart();
                         canvas.Resize(rect.Right, rect.Bottom, dpi);
+                        if (view.IsTestplaying && !canvas.TryAcquireFrame()) return 0;
                         canvas.Begin();
                         view.Render(canvas, rect.Right * 96 / dpi, rect.Bottom * 96 / dpi);
-                        canvas.End();
+                        canvas.End(lowLatency: view.IsTestplaying);
                         RecordPlaybackRate();
                         renderTimer.Stop();
                         if (++frames == 1) AppLog.Write($"First frame: {renderTimer.Elapsed.TotalMilliseconds:F2}ms");
                     }
                 }
                 finally { Native.EndPaint(window, ref paint); }
-                // Present(1) paces continuous playback paints to the display's vertical refresh.
-                if (audio.IsPlaying && !Native.IsIconic(window)) Invalidate();
+                // Testplay is paced by an input-interruptible timer, not a blocking Present(1).
+                if (audio.IsPlaying && !view.IsTestplaying && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0014: return 1; // WM_ERASEBKGND
             case 0x0113: PollAudio(); if (view.TextCaretNeedsRedraw && !Native.IsIconic(window)) Invalidate(); return 0; // WM_TIMER
@@ -238,6 +258,7 @@ internal sealed partial class EditorWindow : IDisposable
                 break;
             case 0x0101: // WM_KEYUP
             case 0x0105: // WM_SYSKEYUP
+                view.KeyUp((int)wParam);
                 view.SetModifiers(Native.Alt, Native.Shift);
                 Invalidate();
                 if ((int)wParam is 0x12 or 0x10) return 0;
@@ -288,6 +309,7 @@ internal sealed partial class EditorWindow : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        view.StopTestplay();
         if (largeBrandIcon != 0) { Native.DestroyIcon(largeBrandIcon); largeBrandIcon = 0; }
         if (smallBrandIcon != 0) { Native.DestroyIcon(smallBrandIcon); smallBrandIcon = 0; }
         hitsounds.Dispose();

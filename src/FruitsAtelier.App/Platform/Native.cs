@@ -89,6 +89,8 @@ internal static class Native
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] internal static extern nint CreateWindowEx(uint extended, string className, string title, uint style, int x, int y, int width, int height, nint parent, nint menu, nint instance, nint param);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern nint DefWindowProc(nint hwnd, uint message, nuint wParam, nint lParam);
     [DllImport("user32.dll")] internal static extern int GetMessage(out Message message, nint window, uint min, uint max);
+    [DllImport("user32.dll")] internal static extern bool PeekMessage(out Message message, nint window, uint min, uint max, uint remove);
+    [DllImport("user32.dll")] internal static extern bool PostMessage(nint window, uint message, nuint wParam, nint lParam);
     [DllImport("user32.dll")] internal static extern bool TranslateMessage(ref Message message);
     [DllImport("user32.dll")] internal static extern nint DispatchMessage(ref Message message);
     [DllImport("user32.dll")] internal static extern bool ShowWindow(nint hwnd, int command);
@@ -111,6 +113,7 @@ internal static class Native
     [DllImport("user32.dll")] internal static extern nint GetCapture();
     [DllImport("user32.dll")] internal static extern bool ReleaseCapture();
     [DllImport("user32.dll")] internal static extern nint SetFocus(nint hwnd);
+    [DllImport("user32.dll")] internal static extern nint GetForegroundWindow();
     [DllImport("user32.dll")] internal static extern bool ScreenToClient(nint hwnd, ref Point point);
     [DllImport("user32.dll")] internal static extern short GetKeyState(int key);
     [DllImport("user32.dll")] internal static extern nint SetCursor(nint cursor);

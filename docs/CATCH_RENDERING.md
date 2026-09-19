@@ -62,7 +62,84 @@ Parent start times and source order across the whole map determine RNG consumpti
 
 Hyperdash uses stably time-sorted Fruits / Droplets, excluding TinyDroplets and Bananas. It truncates each time to an integer and uses the `1000f / 60f / 4` time allowance, full catcher half-width, previous direction, and remaining movement. A negative allowance marks the current departure object. Sources: [CatchBeatmapProcessor.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapProcessor.cs) and [CatchBeatmap.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmap.cs).
 
-Ordinary objects use white base tint. Hyperdash adds a 1.2× underlay in the skin's HyperDashFruit color, falling back to HyperDash / red. Full additive glow, rotation, combo colors, and hit effects are not reproduced.
+Fruit and droplet bases use combo colours, while overlays remain white. Beatmap
+`[Colours]` takes precedence over skin colours and honours combo-skip offsets;
+skin colours advance at combo boundaries without those offsets. Nested slider
+objects inherit their parent colour. Bananas use the three deterministic yellow
+tints from `Banana.cs`. Without a palette or skin, ordinary geometric objects stay white.
+
+Hyperdash draws only the base texture as a 1.2× additive underlay at 70% opacity,
+tinted with `HyperDashFruit` (falling back to `HyperDash` / red), followed by the
+normal base and white overlay. Caught and missed objects retain the hyperdash glow.
+Windows and Mac apply the same source crop, rotation and layer order.
+
+Only right-side preview and F5 testplay apply `CatchObjectVisual` animation.
+Fruits have a deterministic angle within ±20 degrees. Droplets rotate 720 degrees
+over preempt + 2000 ms. Bananas interpolate between two angles within ±180 degrees
+and shrink from `0.6 + 1.6 * RandomSingle(3)` to the 0.6 arrival scale over preempt.
+Caught objects retain their arrival transform; missed bananas continue interpolating.
+The seed is the truncated object time and uses the pinned osu! `StatelessRNG`.
+The main editing canvas keeps zero rotation and banana arrival size.
+
+## Testplay
+
+The editor's testplay session consumes the same converted preview stream, including
+preview difficulty and Hard Rock positions. Movement uses 0.5 playfield units per
+map millisecond while walking and 1.0 while dashing, bounded to X=0..512. Opposing
+direction keys cancel. Catch judgement uses the CS-dependent catch width at each
+object's timestamp; updates split movement at those timestamps to avoid skipping
+judgements on slow frames. Hyperdash activates only after catching its departure
+object. Fruits and droplets build or break combo; bananas and tiny droplets do not.
+Only caught objects trigger testplay hitsounds; preview lookahead scheduling is
+disabled during testplay. Windows uses a separate persistent live mixer with
+10 ms requested WASAPI latency, bypassing music read-ahead. Mac submits them to
+its live hitsound mixer. First-note judgement waits for the audio device to advance.
+
+Tab toggles autoplay without seeking or resetting combo. It uses the same cached
+automatic catcher path as the preview and feeds live judgements, sounds, stacks
+and effects. Held Tab toggles once; another press restores manual control. Each
+new session starts in manual mode.
+
+Input and drawing use a continuous monotonic clock between audio samples, with
+50 ms half-life drift correction and at most 100 ms of extrapolation if the audio
+device stalls. Audio startup holds the map clock until its position advances.
+The catcher integrates each key transition before applying its new held state;
+short taps between frames are retained. See [Architecture](ARCHITECTURE.md) for
+platform frame scheduling.
+
+Live dash history samples the integrated movement every 16 ms. Ordinary and
+hyperdash trails use the 800 ms OutQuint fade; entering hyperdash adds the 1200 ms
+rising, expanding afterimage described above. Each entry retains its original
+position and facing, including when the player reverses direction.
+
+The following combo display uses legacy `ComboPrefix` / `ComboOverlap` glyphs
+(default prefix `score`), with @2x density handling and no `x` suffix. It starts
+hidden. Following `LegacyCatchComboCounter`, an increment overlays a growing,
+400 ms fading burst; the main counter changes after 250 ms and pulses. It fades
+after 1000 ms of inactivity over 300 ms. A broken combo rolls down and fades over
+400 ms. The counter follows catcher X; its vertical centre uses `CatcherArea`'s
+350-unit bottom margin with a centre origin, placing it 175 field units above
+the plate. Missing font glyphs use a numeric text fallback with the same timing.
+
+The catch interval includes both edges. A caught object disappears from the falling
+stream immediately. A missed object keeps its X and continues below the catch line
+at the same scroll speed while fading over 250 ms, following
+`DrawableCatchHitObject.UpdateHitStateTransforms` and `ConstantScrollAlgorithm` at
+the pinned osu! revision.
+
+Caught fruit and bananas enter the same half-size stack used by automatic preview;
+droplets use its immediate release animation and tiny droplets do not stack.
+The stack follows the live catcher. At a combo end, a catch releases the stack with
+the preview explosion; a miss drops it 75 units over 750 ms with InSine easing and
+fade, following `Catcher.applyDropAnimation`. Released objects retain their release
+position independently of subsequent catcher movement. Completion waits for the
+last miss and plate animation unless the music ends or the user exits first.
+
+Movement and facing reference `Catcher.cs` and `CatcherArea.cs` at the pinned osu!
+revision above. Session entry/return was compared with
+`osu.Game/Screens/Edit/GameplayTest/EditorPlayer.cs` at the same revision. Testplay
+skips prior objects and starts a fresh combo, uses no failure or results screen,
+and restores the starting playhead on exit. See [Editing controls](EDITOR_UI.md#testplay).
 
 ## Layers
 

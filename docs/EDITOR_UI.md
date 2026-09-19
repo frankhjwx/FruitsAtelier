@@ -10,6 +10,39 @@ The Details header shows read-only beatmap AR, CS, and the base SliderMultiplier
 
 During playback and seeking, the play line stays 25% above the bottom of the drawing area while content moves. Left-button marquee selection on the canvas keeps playback scrolling; the selection follows objects currently inside the screen-space box, including while the pointer is stationary. Paused navigation is free; playback or seeking resumes following.
 
+## Testplay
+
+Click **Testplay (F5)** in the transport bar or press **F5** to play from the current
+playhead. Finish any active object draft or text input first. Testplay uses the
+preview's NM/Easy/Hard Rock selection and the selected playback speed. With no
+audio loaded, a silent clock drives the notes. Earlier notes are skipped and combo
+starts at zero. A gap before future notes does not end the session.
+
+Use **Left / Right** to move and hold **Shift** to dash. Catching a hyperdash fruit
+enables its speed boost. Fruits and droplets increase combo; missing either resets
+it. Tiny droplets and bananas do not affect combo. The combo number follows the
+catcher, and its skin image faces the last movement direction in both preview and
+testplay. Dash and hyperdash leave fading catcher trails. The combo uses the skin's
+combo digits, pulses on catches and fades while idle or after a miss. Missed notes
+fall past the catcher and fade out over 250 ms.
+
+Press **Tab** during testplay to toggle autoplay. Press it again to resume manual
+movement at the current time and position. Each new testplay starts in manual mode.
+The right-side preview and testplay animate fruit rotation and banana rotation/size;
+the main editing canvas remains static. Fruit bases use beatmap combo colours when
+present, otherwise skin colours; overlays stay white.
+
+Caught fruit stacks on the catcher using the preview effects and releases at combo ends.
+The last remaining note (after miss and plate animations) or the end of the music returns to the editor. **Esc** or losing window focus also exits. Playback stops and the playhead
+returns to the position where testplay began. Testplay does not edit the map,
+selection or undo history. The playfield fits the full window while preserving its
+aspect ratio; it reserves no space for navigation controls. Release Esc before
+pressing it again to navigate from the editor to Library.
+
+In **Library → Settings**, click the left, right or dash binding and press a letter,
+digit, arrow key, Shift or Space. Esc cancels capture; choosing an already assigned
+key swaps the two bindings. **Apply** saves the bindings across restarts.
+
 ## Object timeline and playback speed
 
 Library and Editor use the same 40-DIP header, logo geometry, 28-DIP button height, and language/navigation button positions. Difficulty tabs remain below the Editor header.

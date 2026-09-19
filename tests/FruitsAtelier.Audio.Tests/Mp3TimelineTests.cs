@@ -18,7 +18,7 @@ internal static class Mp3TimelineTests
                 + ((flags & 4) != 0 ? 100 : 0) + ((flags & 8) != 0 ? 4 : 0);
             System.Text.Encoding.ASCII.GetBytes(encoder).CopyTo(frame, tag);
             frame[tag + 21] = (byte)(delay >> 4); frame[tag + 22] = (byte)((delay & 15) << 4);
-            if (Mp3Timeline.LeadingFrames(frame, mono, 1152) != 1153 + delay)
+            if (Mp3Timeline.LeadingFrames(frame, mono, 1152) != (delay == 0 ? 624 : 1153 + delay))
                 throw new Exception("MP3 origin must follow the encoded delay for each channel/header layout");
         }
         if (Mp3Timeline.LeadingFrames(new byte[512], false, 1152) != -528)

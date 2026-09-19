@@ -46,13 +46,32 @@ The canvas and object timeline share an immutable timing lookup built alongside 
 
 Drawing goes through `ICanvas`; the editor owns no device resources. During Windows playback, `WM_PAINT` requests the next frame and `Present(1)` presents it. Mac requests redraws with an approximately 16 ms timer. Each platform audio backend supplies playback position.
 
+Testplay interpolates timestamped audio samples with a monotonic clock. Key events
+advance gameplay to their processing time before changing the held actions, so a
+press and release between rendered frames still produces movement. Windows testplay
+receives Raw Input on a dedicated thread. Key messages interrupt its high-resolution
+timer immediately; held movement, judgement and live sound dispatch target 1000 Hz.
+The UI draws detached session snapshots without holding the simulation lock.
+It checks DXGI frame availability before drawing and submits with `Present(0,
+DoNotWait)` and a one-frame queue. GPU backpressure skips a draw. Mac processes key
+transitions on its UI thread and requests testplay redraws through Avalonia's
+display animation callback. Drawing frequency does not define input sampling.
+
+Preview and testplay share `EditorView.Catcher` for the catcher body, geometric
+fallback, sprite facing and trail rendering. Automatic preview and live gameplay
+provide movement history as `CatchTrail` values; sprite selection, effect timing,
+colours and scaling have one drawing implementation.
+`CatchPlate` also owns the shared caught-fruit stacking and release trajectories;
+preview builds a seekable history, while testplay feeds actual judgements and prunes
+expired effects. Both views use the same plate drawing method.
+
 See [Project Model](PROJECT_MODEL.md) for data and conversion flow, and [Catch Rendering and Conversion](CATCH_RENDERING.md) for display formulas.
 
 ## Files and resources
 
 Core handles text and project serialization. Hosts handle dialogs, archive extraction, and resource copying. Workspace OSZ import preserves complete archives as described in [Workspace](WORKSPACE.md); the legacy supported-file importer extracts supported entries. `.osk` import extracts `skin.ini` and Catch PNGs. Importers validate paths, duplicate entries, links, and extraction limits, and write temporary directories before publishing caches.
 
-Skin archives are limited to 256 MiB, selected files to 16 MiB each and 64 MiB total, and ZIP entries to 20000. Imported skin archives and extracted images are stored under `workspace/Skins`. Users configure their own default skin `.osk` file in Settings; no default skin is copied into build outputs or packages. See [Skins](../assets/skins/README.md).
+Skin archives are limited to 256 MiB, selected files to 16 MiB each and 64 MiB total, and ZIP entries to 20000. Imported skin archives and extracted images are stored under `workspace/Skins`. Extraction includes numeric font glyphs for testplay combo; the versioned cache prevents reuse of older extracts without those glyphs. Users configure their own default skin `.osk` file in Settings; no default skin is copied into build outputs or packages. See [Skins](../assets/skins/README.md).
 
 ## Audio and lifecycle
 

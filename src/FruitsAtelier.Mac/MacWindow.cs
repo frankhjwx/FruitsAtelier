@@ -18,6 +18,7 @@ internal sealed partial class MacWindow : Window
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(16) };
     private string? projectPath;
     private bool busy, allowClose;
+    private int playbackRequest;
     private FruitsAtelier.App.Editor.EditorView View => editor.View;
     public MacWindow(string? initialPath, bool smokeCheck)
     {
@@ -28,6 +29,7 @@ internal sealed partial class MacWindow : Window
             if (audio.HitsoundHostTime(time) is { } deadline) hitsounds.Schedule(sound, deadline);
         };
         View.RequestPrepareHitsound = hitsounds.Prepare;
+        View.RequestHitsound = hitsounds.Play;
         View.RequestPreloadHitsounds = hitsounds.PreloadProject;
         View.PreloadProjectHitsounds();
         View.RequestStopHitsounds = hitsounds.Stop;
@@ -83,7 +85,8 @@ internal sealed partial class MacWindow : Window
             if (path is not null) View.ImportSkin(path);
         });
         View.RequestResetDemo = () => RunFile(async () => { if (await ConfirmDiscard()) { await audio.LoadAsync(null); projectPath = null; View.LoadDocument(DemoMap.Create()); } });
-        View.RequestTogglePlayback = () => RunFile(async () => { if (audio.State.IsPlaying) audio.Pause(); else { var state = audio.State; View.StartHitsounds(state.PositionMs >= state.DurationMs - 1 ? 0 : state.PositionMs); await hitsounds.Preparation; audio.Play(); } PollAudio(); });
+        View.RequestPausePlayback = () => { playbackRequest++; audio.Pause(); };
+        View.RequestTogglePlayback = TogglePlayback;
         View.RequestPlaybackSpeed = speed => { View.ResetHitsounds(); audio.SetPlaybackSpeed(speed); View.StartHitsounds(audio.State.PositionMs); PollAudio(); };
         View.RequestSeek = time => { audio.Seek(time); PollAudio(); };
         timer.Tick += (_, _) => PollAudio();
@@ -131,6 +134,30 @@ internal sealed partial class MacWindow : Window
     private bool lastReady;
     private double lastPosition;
     private string? lastError;
+    private async void TogglePlayback()
+    {
+        if (busy) return;
+        int request = ++playbackRequest;
+        try
+        {
+            if (audio.State.IsPlaying) audio.Pause();
+            else
+            {
+                var document = View.Document;
+                var state = audio.State;
+                View.StartHitsounds(state.PositionMs >= state.DurationMs - 1 ? 0 : state.PositionMs);
+                // Keep keyboard focus while preparing audio; disabling the control exits testplay.
+                await hitsounds.Preparation;
+                if (request == playbackRequest && ReferenceEquals(document, View.Document)) audio.Play();
+            }
+            PollAudio(); editor.Refresh();
+        }
+        catch (Exception error)
+        {
+            View.StopTestplay(); MacPaths.Log(error.ToString()); View.ShowError(L.Reformat(error.Message));
+        }
+    }
+
     private async void RunFile(Func<Task> operation)
     {
         if (busy) return;

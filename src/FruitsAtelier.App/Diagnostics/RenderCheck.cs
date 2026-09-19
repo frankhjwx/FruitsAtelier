@@ -2,12 +2,145 @@ using System.Diagnostics;
 using System.Text.Json;
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
+using FruitsAtelier.App.Platform;
 using FruitsAtelier.Core;
 
 namespace FruitsAtelier.App.Diagnostics;
 
 internal static class RenderCheck
 {
+    private static object MeasureIndependentInput(nint window)
+    {
+        double now = Stopwatch.GetTimestamp() * 1000d / Stopwatch.Frequency;
+        ConvertedCatchObject Note(double time) => new(Guid.NewGuid(), 0, CatchObjectKind.Fruit, time, 256, 256, 256, 0);
+        int catches = 0, ticks = 0;
+        var session = new CatchTestplaySession(new CatchTestplay([Note(50), Note(10000)], 5, 0),
+            new CatchTestplayClock(0, 1, now, false), 0, false, false, 37, 39, 16, TimeProvider.System, 5, [],
+            _ => Interlocked.Increment(ref catches));
+        var samples = new System.Collections.Concurrent.ConcurrentQueue<double>();
+        using var input = new TestplayInputThread(window, session, () => throw new InvalidOperationException(), diagnostic: true);
+        input.CheckKeyProcessed = samples.Enqueue;
+        input.CheckTick = () => Interlocked.Increment(ref ticks);
+        // Deliberately do not pump the owner window: gameplay and sound callbacks must continue.
+        Thread.Sleep(100);
+        if (Volatile.Read(ref catches) != 1 || Volatile.Read(ref ticks) < 2)
+            throw new InvalidOperationException("Gameplay waited for the blocked UI thread.");
+        input.PostCheckKey(39, true);
+        Thread.Sleep(40);
+        input.PostCheckKey(39, false);
+        Thread.Sleep(20);
+        double stopped = session.X;
+        Thread.Sleep(20);
+        if (stopped <= 256 || Math.Abs(session.X - stopped) > .001)
+            throw new InvalidOperationException("Independent input failed movement or release.");
+        while (samples.TryDequeue(out _)) { }
+        for (int i = 0; i < 200; i++) { input.PostCheckKey(16, i % 2 == 0); Thread.Sleep(2); }
+        if (!SpinWait.SpinUntil(() => samples.Count == 200, 2000))
+            throw new InvalidOperationException("Independent input lost queued transitions.");
+        var ordered = samples.Order().ToArray();
+        return new { samples = ordered.Length, medianMs = ordered[100], p95Ms = ordered[190], maxMs = ordered[^1],
+            ticks = Volatile.Read(ref ticks), caughtDuringUiStall = catches,
+            note = "Synthetic messages to the dedicated input thread while the UI is blocked; excludes keyboard hardware and display latency." };
+    }
+    private static object MeasureTestplaySubmission(D2DCanvas canvas, EditorView view, nint window)
+    {
+        var project = view.CaptureProject();
+        var sound = view.RequestHitsound;
+        try
+        {
+            view.RequestHitsound = _ => { };
+            var map = new MapDocument();
+            map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 0 }, new Fruit { TimeMs = 60000, X = 512 }]);
+            view.LoadDocument(map); view.CloseLibrary(); view.StartTestplay();
+            using var pacer = new TestplayFramePacer();
+            pacer.FrameStarted();
+            var keyWatch = Stopwatch.StartNew();
+            if (!Native.PostMessage(window, 0x0100, (nuint)view.LibrarySettings.TestplayRightKey, 0))
+                throw new InvalidOperationException("Could not post testplay input.");
+            pacer.Wait();
+            if (!Native.PeekMessage(out var key, window, 0x0100, 0x0100, 1))
+                throw new InvalidOperationException("Frame wait consumed or lost a key event.");
+            Native.DispatchMessage(ref key);
+            double queuedKeyDispatchMs = keyWatch.Elapsed.TotalMilliseconds;
+            var frames = new List<double>();
+            var total = Stopwatch.StartNew();
+            while (frames.Count < 120 && total.Elapsed.TotalSeconds < 5)
+            {
+                if (!canvas.TryAcquireFrame()) { Thread.Sleep(1); continue; }
+                var watch = Stopwatch.StartNew();
+                canvas.Begin(); view.Render(canvas, 1440, 900); canvas.End(lowLatency: true);
+                frames.Add(watch.Elapsed.TotalMilliseconds);
+            }
+            view.KeyUp(view.LibrarySettings.TestplayRightKey);
+            if (frames.Count < 30) throw new InvalidOperationException("Insufficient low-latency frames for native check.");
+            frames.Sort();
+            return new { measuredFrames = frames.Count, queuedKeyDispatchMs,
+                medianSubmissionMs = frames[frames.Count / 2], p95SubmissionMs = frames[(int)(frames.Count * .95)],
+                note = "Hidden native window; injected Win32 key dispatch and CPU/GPU submission, not physical keyboard-to-display latency." };
+        }
+        finally { view.StopTestplay(); view.LoadProject(project); view.RequestHitsound = sound; }
+    }
+
+    private static void CheckTestplay(D2DCanvas canvas, EditorView view, int width, int height)
+    {
+        var project = view.CaptureProject();
+        var toggle = view.RequestTogglePlayback; var pause = view.RequestPausePlayback;
+        var seek = view.RequestSeek; var hitsound = view.RequestHitsound;
+        var prepare = view.RequestPrepareTestplayAudio;
+        string language = FruitsAtelier.Localization.Strings.Language;
+        try
+        {
+            view.RequestTogglePlayback = () => { }; view.RequestPausePlayback = () => { };
+            view.RequestSeek = _ => { }; view.RequestHitsound = _ => { };
+            view.RequestPrepareTestplayAudio = () => { };
+            var map = new MapDocument();
+            map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 256 }, new Fruit { TimeMs = 5000, X = 256 }]);
+            foreach (string locale in new[] { "en", "zh-CN" })
+            {
+                view.LoadDocument(map); view.CloseLibrary();
+                FruitsAtelier.Localization.Strings.SetLanguage(locale);
+                view.UpdateTransport(1000, 6000, true, false, false, null, null);
+                view.KeyDown(116, false, false);
+                view.UpdateTransport(1001, 6000, true, true, false, null, null);
+                if (!view.IsTestplaying || view.TestplayCombo != 1) throw new InvalidOperationException("Native testplay failed to start or catch fruit.");
+                view.KeyDown(9, false, false); view.KeyDown(9, false, false);
+                if (!view.TestplayAutoplay) throw new InvalidOperationException("Held Tab failed to enable autoplay once.");
+                view.KeyUp(9); view.KeyDown(9, false, false); view.KeyUp(9);
+                if (view.TestplayAutoplay) throw new InvalidOperationException("Tab failed to restore manual control.");
+                foreach (int key in new[] { view.LibrarySettings.TestplayLeftKey, view.LibrarySettings.TestplayRightKey })
+                {
+                    view.KeyDown(key, false, false);
+                    view.UpdateTransport(view.PlayheadMs + 80, 6000, true, true, false, null, null);
+                    canvas.Begin(); view.Render(canvas, width, height);
+                    string image = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png");
+                    if (!canvas.CatcherImage(image, new(20, 100, 64, 64), 0xFFFFFF, 1, false, key == view.LibrarySettings.TestplayLeftKey))
+                        throw new InvalidOperationException("Mirrored native image failed to draw.");
+                    canvas.End(lowLatency: true);
+                    view.KeyUp(key);
+                }
+                view.KeyDown(27, false, false);
+                if (view.IsTestplaying || view.PlayheadMs != 1000) throw new InvalidOperationException("Native testplay failed to return.");
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.KeyDown(27, false, false);
+                if (view.LibraryVisible) throw new InvalidOperationException("Repeated testplay Escape left the editor.");
+                view.KeyUp(27);
+                view.MarkSaved(); view.ShowLibrary();
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.PointerDown(width - 380, 20, 0, false, false); view.PointerUp(width - 380, 20, 0);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.KeyDown(27, false, false); view.CloseLibrary();
+            }
+        }
+        finally
+        {
+            view.StopTestplay(); view.LoadProject(project); view.CloseLibrary();
+            view.RequestTogglePlayback = toggle; view.RequestPausePlayback = pause;
+            view.RequestSeek = seek; view.RequestHitsound = hitsound;
+            view.RequestPrepareTestplayAudio = prepare;
+            FruitsAtelier.Localization.Strings.SetLanguage(language);
+        }
+    }
+
     private readonly record struct ProfileFrame(double TimeMs, double TransportMs, double DrawingMs, double TotalMs,
         long AllocatedBytes, int Gen0, int Gen1, int Gen2, int ImageDecodes);
     internal static void ProfileMap(D2DCanvas canvas, EditorView view, string path, float dpi, double startMs)
@@ -87,7 +220,7 @@ internal static class RenderCheck
         AppLog.Write($"Playback profile complete: {reportPath}");
     }
 
-    internal static void Run(D2DCanvas canvas, EditorView view)
+    internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
         string thumbnailPath = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png");
         var thumbnailWait = Stopwatch.StartNew();
@@ -199,7 +332,8 @@ internal static class RenderCheck
             view.PointerDown(size.Item1 - 230, 30, 0, false, false); view.PointerUp(size.Item1 - 230, 30, 0);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             view.KeyDown(27, false, false); view.LoadProject(editorProject); view.CloseLibrary();
-            cases.Add(new { dpi, widthDip = size.Item1, heightDip = size.Item2, rendered = true, previewDrawer = true, previewMods = true, reverseMarkers = true, gridSubmenu = true, errorDialog = true, exportOverlay = true, libraryNavigation = true });
+            CheckTestplay(canvas, view, size.Item1, size.Item2);
+            cases.Add(new { dpi, widthDip = size.Item1, heightDip = size.Item2, rendered = true, previewDrawer = true, previewMods = true, reverseMarkers = true, gridSubmenu = true, errorDialog = true, exportOverlay = true, libraryNavigation = true, testplay = true });
         }
         canvas.Resize(0, 0, 96);
         canvas.Resize(1440, 900, 96);
@@ -215,6 +349,8 @@ internal static class RenderCheck
             if (i >= 5) timings.Add(timer.Elapsed.TotalMilliseconds);
         }
         timings.Sort();
+        var testplaySubmission = MeasureTestplaySubmission(canvas, view, window);
+        var testplayInput = MeasureIndependentInput(window);
         var report = new
         {
             adapter = canvas.AdapterName,
@@ -222,6 +358,8 @@ internal static class RenderCheck
             note = "DPI values exercise render targets and DIP layout; not OS display-setting changes. Hidden-window timing includes EndDraw/Present and is not a visible-refresh guarantee.",
             cases, backgroundThumbnail = thumbnailReady, zeroSizeThenRestore = true, visibleFruitCount = 1000, measuredFrames = timings.Count,
             medianFrameMs = timings[timings.Count / 2], p95FrameMs = timings[(int)(timings.Count * .95)],
+            testplaySubmission,
+            testplayInput,
             modelErrors = CurveMath.Validate(view.Document)
         };
         var path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(AppLog.Path)!, "render-check.json");

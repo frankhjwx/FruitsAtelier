@@ -1,4 +1,6 @@
 using System.Numerics;
+using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 using Vortice.Direct2D1;
 using Vortice.Direct3D;
 using Vortice.Direct3D11;
@@ -16,6 +18,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     private ID3D11Device? device;
     private ID3D11DeviceContext? immediateContext;
     private IDXGISwapChain1? swapChain;
+    private SafeWaitHandle? frameReady;
     private ID2D1Factory1? factory;
     private ID2D1Device? drawingDevice;
     private ID2D1DeviceContext? context;
@@ -56,8 +59,11 @@ public sealed class D2DCanvas : ICanvas, IDisposable
                 Width = (uint)width, Height = (uint)height, Format = Format.B8G8R8A8_UNorm,
                 BufferCount = 2, BufferUsage = Usage.RenderTargetOutput,
                 SampleDescription = new SampleDescription(1, 0), SwapEffect = SwapEffect.FlipDiscard,
-                Scaling = Scaling.Stretch, AlphaMode = AlphaMode.Ignore
+                Scaling = Scaling.Stretch, AlphaMode = AlphaMode.Ignore, Flags = SwapChainFlags.FrameLatencyWaitableObject
             });
+            using var latencyChain = swapChain.QueryInterface<IDXGISwapChain2>();
+            latencyChain.MaximumFrameLatency = 1;
+            frameReady = new(latencyChain.FrameLatencyWaitableObject, ownsHandle: true);
             dxgiFactory.MakeWindowAssociation(hwnd, WindowAssociationFlags.IgnoreAltEnter);
             factory = D2D1.D2D1CreateFactory<ID2D1Factory1>(Vortice.Direct2D1.FactoryType.SingleThreaded);
             drawingDevice = factory.CreateDevice(dxgiDevice);
@@ -75,7 +81,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         // Back-buffer references must be released before DXGI can resize it.
         context!.Target = null;
         target?.Dispose(); target = null;
-        swapChain!.ResizeBuffers(2, (uint)newWidth, (uint)newHeight, Format.B8G8R8A8_UNorm, SwapChainFlags.None).CheckError();
+        swapChain!.ResizeBuffers(2, (uint)newWidth, (uint)newHeight, Format.B8G8R8A8_UNorm, SwapChainFlags.FrameLatencyWaitableObject).CheckError();
         width = newWidth; height = newHeight; dpi = newDpi;
         using var surface = swapChain.GetBuffer<IDXGISurface>(0);
         target = context.CreateBitmapFromDxgiSurface(surface,
@@ -94,11 +100,16 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         imageVersions.Clear();
     }
 
-    public void End()
+    public bool TryAcquireFrame() => frameReady is null || frameReady.IsInvalid || WaitForSingleObject(frameReady, 0) == 0;
+    [DllImport("kernel32.dll")]
+    private static extern uint WaitForSingleObject(SafeWaitHandle handle, uint milliseconds);
+
+    public void End(bool lowLatency = false)
     {
         while (clipDepth > 0) Unclip();
         context!.EndDraw().CheckError();
-        swapChain!.Present(1, PresentFlags.None).CheckError();
+        var result = swapChain!.Present(lowLatency ? 0u : 1u, lowLatency ? PresentFlags.DoNotWait : PresentFlags.None);
+        if (result != Vortice.DXGI.ResultCode.WasStillDrawing) result.CheckError();
     }
 
     private ID2D1SolidColorBrush Brush(uint color, float opacity = 1)
@@ -193,6 +204,32 @@ public sealed class D2DCanvas : ICanvas, IDisposable
             if (failedImages.Add(key)) AppLog.Write($"Skin image unavailable: {filePath}: {ex.Message}");
             return false;
         }
+    }
+
+    public bool CatcherImage(string filePath, Rect destination, uint tint, float opacity, bool additive, bool flipHorizontal)
+    {
+        var previous = context!.Transform;
+        try
+        {
+            if (flipHorizontal) context.Transform = System.Numerics.Matrix3x2.CreateScale(-1, 1,
+                new System.Numerics.Vector2(destination.X + destination.Width / 2, 0)) * previous;
+            return additive ? AdditiveImage(filePath, destination, tint, opacity) : Image(filePath, destination, tint, opacity: opacity);
+        }
+        finally { context.Transform = previous; }
+    }
+
+    public bool SpriteImage(string filePath, Rect destination, uint tint, Rect source, float opacity, float rotation, bool additive)
+    {
+        var transform = context!.Transform;
+        var blend = context.PrimitiveBlend;
+        try
+        {
+            context.Transform = Matrix3x2.CreateRotation(rotation * MathF.PI / 180,
+                new Vector2(destination.X + destination.Width / 2, destination.Y + destination.Height / 2)) * transform;
+            if (additive) context.PrimitiveBlend = PrimitiveBlend.Add;
+            return Image(filePath, destination, tint, source, opacity);
+        }
+        finally { context.Transform = transform; context.PrimitiveBlend = blend; }
     }
 
     public bool AdditiveImage(string filePath, Rect destination, uint tint, float opacity)
@@ -296,6 +333,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         drawingDevice?.Dispose(); drawingDevice = null;
         factory?.Dispose(); factory = null;
         textFactory?.Dispose(); textFactory = null;
+        frameReady?.Dispose(); frameReady = null;
         swapChain?.Dispose(); swapChain = null;
         immediateContext?.Dispose(); immediateContext = null;
         device?.Dispose(); device = null;

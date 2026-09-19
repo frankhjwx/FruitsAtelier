@@ -1,4 +1,11 @@
 {
+  "testplay.start": "Testplay (F5)",
+  "testplay.noNotes": "No notes remain at this position.",
+  "testplay.returned": "Returned from testplay.",
+  "testplay.left": "Testplay: move left",
+  "testplay.right": "Testplay: move right",
+  "testplay.dash": "Testplay: dash",
+  "testplay.pressKey": "Press a key (Esc cancels)",
   "ui.sv": "SV",
   "core.distanceSpacing.range": "Distance spacing must be between 0.1x and 6.0x.",
   "assist.spacing": "Distance Spacing",

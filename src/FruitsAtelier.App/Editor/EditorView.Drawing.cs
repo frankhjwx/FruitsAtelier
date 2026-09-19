@@ -18,6 +18,11 @@ public sealed partial class EditorView
         this.width = width;
         this.height = height;
         hits.Clear(); fields.Clear();
+        if (IsTestplaying)
+        {
+            AdvanceTestplay();
+            if (IsTestplaying) { DrawTestplay(c); return; }
+        }
         if (ErrorVisible) { DrawError(c); return; }
         PumpSliderBatch();
         PumpLibrary();
@@ -327,7 +332,7 @@ public sealed partial class EditorView
             double remaining = item.TimeMs - playhead;
             if (remaining < 0) continue;
             float y = catchY - (float)(remaining * scrollSpeed);
-            DrawCatchObject(c, item, fieldLeft + (float)(item.X / 512) * fieldWidth, y, fieldWidth, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash);
+            DrawCatchObject(c, item, fieldLeft + (float)(item.X / 512) * fieldWidth, y, fieldWidth, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true);
         }
         c.Unclip();
     }
@@ -360,6 +365,8 @@ public sealed partial class EditorView
         if (!AudioReady) c.Text(AudioNotice, 16, top + 71, 10, Gold, 192);
 
         float rateX = overview.Right - 360;
+        TestplayButtonBounds = new(220, top + 3, 128, 28);
+        Button(c, TestplayButtonBounds, L.Get("testplay.start"), StartTestplay, enabled: !AudioLoading);
         c.Text(L.Get("ui.playbackSpeed"), rateX, top + 12, 11, Muted, 104);
         foreach (double rate in new[] { .25, .5, .75, 1 })
         {

@@ -9,6 +9,7 @@ public readonly record struct CatchHyperInterval(double Start, double End);
 public sealed class CatchAutoPreview
 {
     private readonly CatchAutoFrame[] frames;
+    private readonly bool[] facingLeft;
     private readonly CatchHyperInterval[] hyperIntervals;
     private readonly (double Time, double From, double To)[] tintChanges;
     public CatchAutoPreview(IReadOnlyList<ConvertedCatchObject> objects, double circleSize)
@@ -64,6 +65,9 @@ public sealed class CatchAutoPreview
             position = item.X; time = item.TimeMs;
         }
         frames = result.OrderBy(frame => frame.TimeMs).ToArray();
+        facingLeft = new bool[frames.Length];
+        for (int i = 1; i < frames.Length; i++)
+            facingLeft[i] = frames[i].X == frames[i - 1].X ? facingLeft[i - 1] : frames[i].X < frames[i - 1].X;
         void Add(double at, double x, bool dash = false) => result.Add(new(at, Math.Clamp(x, 0, 512), dash));
     }
     public bool HyperDashingAt(double time)
@@ -103,5 +107,14 @@ public sealed class CatchAutoPreview
         var to = frames[low];
         double progress = (time - from.TimeMs) / (to.TimeMs - from.TimeMs);
         return new(time, from.X + (to.X - from.X) * progress, from.Dashing);
+    }
+
+    public bool FacingLeftAt(double time)
+    {
+        int index = UpperBound(frames.Length, i => frames[i].TimeMs, time) - 1;
+        if (index < 0) return false;
+        if (index + 1 < frames.Length && time > frames[index].TimeMs && frames[index + 1].X != frames[index].X)
+            return frames[index + 1].X < frames[index].X;
+        return facingLeft[index];
     }
 }
