@@ -114,6 +114,8 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT" || { echo 'Tag moved since the build; refusing to publish.'; exit 1; }
           (cd release-assets && sha256sum --check *.sha256)
+          cp "release-assets/FruitsAtelier-${RELEASE_TAG#v}-win-x64.zip" release-assets/FruitsAtelier-win-x64.zip
+          (cd release-assets && sha256sum FruitsAtelier-win-x64.zip > FruitsAtelier-win-x64.zip.sha256)
           if state=$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' 2>/dev/null); then
             test "$state" = true || { echo 'Published releases are not overwritten. Use a new version tag.'; exit 1; }
           else
