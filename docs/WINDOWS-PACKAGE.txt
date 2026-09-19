@@ -7,7 +7,9 @@ inside the ZIP. No .NET installation or administrator access is required.
 Requirements: Windows 10/11 x64, DirectX 11 graphics support and Windows
 Media Foundation for MP3 playback (Windows N requires the Media Feature Pack).
 
-Choose your project workspace and optional osu! Songs directory in Library.
+Choose your project workspace and optional osu!stable installation folder in
+Library > Settings. Read USER-MANUAL.md for features and keyboard shortcuts,
+or FruitsAtelier-User-Manual.pdf when included with the package.
 Update by extracting a new release to a new folder. Your workspace and saved
 preferences are separate from the application; keep them when updating.
 

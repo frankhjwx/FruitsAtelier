@@ -1,11 +1,13 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|rc)\.[1-9][0-9]*)?$')][string]$Version,
-    [string]$OutputDirectory
+    [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|rc)\.[1-9][0-9]*)?$')][string]$Version,
+    [string]$OutputDirectory,
+    [ValidateScript({ Test-Path -LiteralPath $_ -PathType Leaf })][string]$UserManual
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repo = Split-Path $PSScriptRoot -Parent
+if (!$Version) { $Version = ([xml](Get-Content -LiteralPath (Join-Path $repo 'Directory.Build.props') -Raw)).Project.PropertyGroup.Version }
 if (!$IsWindows) { throw 'Publish-Windows.ps1 requires PowerShell 7 on Windows.' }
 if (!$OutputDirectory) { $OutputDirectory = Join-Path $repo 'artifacts/releases' }
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
@@ -29,6 +31,8 @@ try {
     $manifest = [ordered]@{ version = $Version; commit = $commit; dirty = $dirty; runtimeIdentifier = 'win-x64'; sdk = $sdk }
     $manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $payload 'build-info.json') -Encoding utf8
     Copy-Item -LiteralPath (Join-Path $repo 'docs/WINDOWS-PACKAGE.txt') -Destination (Join-Path $payload 'START-HERE.txt')
+    Copy-Item -LiteralPath (Join-Path $repo 'docs/USER_MANUAL.md') -Destination (Join-Path $payload 'USER-MANUAL.md')
+    if ($UserManual) { Copy-Item -LiteralPath $UserManual -Destination (Join-Path $payload 'FruitsAtelier-User-Manual.pdf') }
     foreach ($required in @('FruitsAtelier.App.exe', 'coreclr.dll', 'hostfxr.dll', 'hostpolicy.dll', 'THIRD_PARTY_NOTICES.md')) {
         if (!(Test-Path -LiteralPath (Join-Path $payload $required))) { throw "Missing package file: $required" }
     }

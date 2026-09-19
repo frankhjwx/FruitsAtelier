@@ -33,4 +33,6 @@ Projects reference audio by path. Preserve the relative resource locations when 
 
 Supported features include multiple timing points, inherited SV, beat snapping, batch object operations, undo/redo, English and Chinese interfaces, and MP3 / OGG / WAV playback and seeking. The preview uses AR, CS, and the selected skin to display objects and hyperdash markers.
 
-Song playback supports 25%, 50%, 75%, and 100% speed while preserving pitch; hitsounds keep their original speed. Gameplay judgement, audio waveforms, video, and storyboard playback are not provided. Skin rendering is static; full rotation, hit effects, and banana scaling animations are not implemented.
+Song playback supports 25%, 50%, 75%, and 100% speed while preserving pitch; hitsounds keep their original speed. Testplay starts at the playhead and supports movement, dash, combo feedback, pause and autoplay. Preview and testplay animate fruit and banana sprites and catcher effects; the editing canvas uses static sprites. Slider-to-stream conversion retains editable geometry and exports individual fruits.
+
+Audio waveforms, timing-point creation, bookmarks, video and storyboard playback are not provided. See the [user manual](USER_MANUAL.md) for a concise feature guide and keyboard reference.

@@ -4,56 +4,46 @@
 
 [English](README.md) | **简体中文**
 
-独立的 osu!catch 谱面编辑器，支持 Windows 和 macOS。使用时间—X 画布编辑水果与 FSlider，并随音乐预览 Catch 对象。
+适用于 Windows 和 macOS 的 osu!catch 谱面编辑器。编排水果、调整滑条，并随音乐和打击音预览、试玩谱面。
 
-项目正在开发中。
+**当前版本：0.8**
 
 ## 功能
 
-- 预览播放 [Catch 打击音](docs/HITSOUNDS.md)，支持谱面自定义音效、滑条 tick 和香蕉音效。
+- **谱面曲库**：浏览、搜索 osu!stable Songs，导入外部文件夹或 `.osz` 压缩包，继续编辑已保存的工程。
+- **物件编辑**：放置水果和香蕉雨，批量选择、移动、复制、水平翻转或删除，支持撤销和重做。
+- **滑条工具**：用控制点或贝塞尔控制柄绘制、调整 FSlider，添加折返，将导入的滑条转换为 FSlider，或沿滑条路径生成水果串。
+- **吸附与音效**：支持节拍细分、水平网格和距离吸附；可设置新连击、物件打击音及滑条端点音效。
+- **音乐与预览**：播放 MP3、OGG、WAV 及打击音，支持 25%、50%、75% 和原速播放；使用皮肤及 NM、Easy、Hard Rock 设置预览谱面。
+- **试玩**：从当前位置开始接水果，支持移动、冲刺、连击反馈及自动游玩，可自定义移动按键。
+- **多难度工程**：使用标签页切换难度、查看星级、保存可编辑工程，并导出 `.osu` 或向 osu!stable 添加新难度。
+- **皮肤与语言**：支持 osu!stable 皮肤、`.osk` 导入和中英文界面。
 
-- 打开 `.osz`、v12–v14 / Mode=2 `.osu` 和 `.catchproj` 工程。
-- 编辑水果、FSlider 和香蕉雨，支持节拍吸附、多选、批量移动、剪切复制和撤销重做。
-- 将导入的 Legacy Slider 转换为可编辑的 FSlider，调整锚点、贝塞尔控制柄和行程次数。
-- 播放 MP3 / OGG / WAV，拖动时间轴定位；预览支持 AR、CS 和 Catch 皮肤。
-- 自定义 workspace，保存 `project.catchdiff` 与自动命名的各难度文件；资源只引用，仅 Export 写入 osu!stable Songs。
-- 独立曲库界面，支持原始／罗马字歌名、Artist、作者与 Tags 搜索。参见 [workspace 使用说明](docs/WORKSPACE.md)。
-- 持久引用外部文件夹，或将 OSZ 完整解压到 workspace 资源目录；重启后仍可从曲库继续使用。
-- 默认英文界面，支持切换中文并记住语言设置。
+支持读取 v12-v14 的 Catch `.osu`，导出为 v14。0.8 暂不提供视频、故事板播放及 timing point 创建。
 
-## 运行
-
-### macOS
-
-需要 .NET SDK **8.0.419** 和 Xcode Command Line Tools。在仓库目录执行以下命令可安装项目内 SDK：
-
-```bash
-bash scripts/Install-Mac-SDK.sh
-```
-
-双击 [Run-Editor-Mac.command](Run-Editor-Mac.command) 构建并启动。生成独立应用：
-
-```bash
-bash scripts/Publish-Mac.sh
-```
-
-输出为 `artifacts/macos/FruitsAtelier.app`，包含 .NET 运行时。详见 [macOS 说明](docs/MACOS.md)。
+## 开始使用
 
 ### Windows
 
-使用发行版时，从 [Releases](https://github.com/frankhjwx/FruitsAtelier/releases) 下载 Windows x64 ZIP，完整解压后双击 `FruitsAtelier.App.exe`。包内自带 .NET，无需另行安装；请保留 exe 旁的 DLL 和 assets 文件夹。
+从 [Releases](https://github.com/frankhjwx/FruitsAtelier/releases) 下载 Windows x64 ZIP，完整解压后运行 `FruitsAtelier.App.exe`。保留解压后的所有文件。包内自带 .NET，适用于支持 DirectX 11 的 Windows 10/11。
 
-从源码构建需要 .NET SDK **10.0.400**（根目录 `global.json` 指定）和 **.NET 8 运行时**。双击 [Run-Editor.cmd](Run-Editor.cmd) 构建并启动。
+在曲库的设置中选择工程目录，并按需连接 osu!stable 安装目录。导入谱面或新建工程即可开始。
 
-编译后的程序位于 `src/FruitsAtelier.App/bin/Release/net8.0-windows/FruitsAtelier.App.exe`。
+### macOS
 
-## 文档
+从源码构建需要 .NET SDK **8.0.419** 和 Xcode Command Line Tools。运行 `bash scripts/Install-Mac-SDK.sh` 安装项目内 SDK，然后打开 [Run-Editor-Mac.command](Run-Editor-Mac.command)。运行 `bash scripts/Publish-Mac.sh` 生成独立应用。详见 [macOS 指南](docs/MACOS.md)。
 
-- [编辑操作](docs/EDITOR_UI.md)
-- [功能与文件说明](docs/PRODUCT.md)
-- [构建与测试](docs/TESTING.md)
-- [Windows 打包与版本发布](docs/RELEASING.md)
-- [技术架构](docs/ARCHITECTURE.md)
-- [工程数据模型](docs/PROJECT_MODEL.md) · [Catch 绘制与转换](docs/CATCH_RENDERING.md) · [文件格式](docs/STABLE_FORMAT.md)
-- [本地化维护](docs/LOCALIZATION.md)
-- [第三方依赖与许可](THIRD_PARTY_NOTICES.md)
+## 用户手册
+
+[英文用户手册](docs/USER_MANUAL.md) 包含入门、编辑、保存、试玩和快捷键说明。
+
+保存工程可保留滑条和各难度的可编辑数据，导出则生成供 osu! 使用的 `.osu`。难度通过导出关联文件后，**Ctrl+S 也会更新关联的 `.osu`**；**Ctrl+E** 打开导出选项。
+
+## 开发
+
+Windows 源码构建使用 `global.json` 指定的 .NET SDK **10.0.400** 和 .NET 8 运行时。运行 [Run-Editor.cmd](Run-Editor.cmd) 构建并启动。
+
+- [构建与测试](docs/TESTING.md) · [打包与发布](docs/RELEASING.md)
+- [编辑操作](docs/EDITOR_UI.md) · [工程与文件](docs/WORKSPACE.md)
+- [技术架构](docs/ARCHITECTURE.md) · [工程模型](docs/PROJECT_MODEL.md) · [文件格式](docs/STABLE_FORMAT.md)
+- [本地化维护](docs/LOCALIZATION.md) · [第三方许可](THIRD_PARTY_NOTICES.md)

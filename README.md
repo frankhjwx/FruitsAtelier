@@ -4,56 +4,46 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-An independent osu!catch beatmap editor for Windows and macOS. Edit fruits and FSliders on a time–X canvas and preview Catch objects alongside the music.
+An osu!catch beatmap editor for Windows and macOS. Create patterns, reshape sliders, and try your changes with music and hitsounds.
 
-The project is under active development.
+**Current version: 0.8**
 
 ## Features
 
-- Preview [Catch hitsounds](docs/HITSOUNDS.md), including beatmap samples, slider ticks and banana sounds.
+- **Beatmap library.** Browse and search your osu!stable Songs folder, import external folders or `.osz` archives, and resume saved projects.
+- **Object editing.** Place fruits and banana showers; select, move, duplicate, flip, or delete groups of objects with undo and redo.
+- **Slider tools.** Draw and reshape FSliders with control points or Bezier handles, add reverses, convert imported sliders, and turn slider paths into fruit streams.
+- **Snapping.** Use beat subdivisions, a horizontal grid, and distance snapping to place patterns. Adjust new combos and hitsounds on objects or individual slider edges.
+- **Music and preview.** Play MP3, OGG, and WAV audio with hitsounds at 25%, 50%, 75%, or full speed. Preview Catch objects with skins and NM, Easy, or Hard Rock settings.
+- **Testplay.** Play from the current position with movement, dash, combo feedback, and optional autoplay. Movement keys are configurable.
+- **Multiple difficulties.** Switch between difficulties in tabs, view star ratings, save editable projects, and export `.osu` files or new difficulties to osu!stable.
+- **Skins and languages.** Use osu!stable skins or import `.osk` files. The interface supports English and Simplified Chinese.
 
-- Open `.osz` archives, v12–v14 / Mode=2 `.osu` beatmaps, and `.catchproj` projects.
-- Edit fruits, FSliders, and banana showers with beat snapping, multi-selection, group movement, cut/copy, and undo/redo.
-- Convert imported Legacy Sliders into editable FSliders, then adjust anchors, Bézier handles, and span counts.
-- Play MP3 / OGG / WAV audio and seek using the timeline. Preview objects with AR, CS, and Catch skins.
-- Manage projects in a configurable workspace with `project.catchdiff` and automatically named difficulty files. Resources stay referenced; only explicit export writes to osu!stable Songs.
-- Browse and search the local Catch library by original/romanised title, artist, creator and tags. [Workspace guide](docs/WORKSPACE.md).
-- Import external folders by reference, or fully extract OSZ archives into managed workspace resources; sources stay available in the library across restarts.
-- English interface by default, with a saved preference for English or Simplified Chinese.
+The editor reads Catch `.osu` files in versions 12-14 and exports version 14. Video and storyboard playback and timing-point creation are not available in 0.8.
 
-## Running
-
-### macOS
-
-Requires .NET SDK **8.0.419** and Xcode Command Line Tools. To install the SDK locally within the repository, run:
-
-```bash
-bash scripts/Install-Mac-SDK.sh
-```
-
-Double-click [Run-Editor-Mac.command](Run-Editor-Mac.command) to build and launch the editor. To create a standalone application:
-
-```bash
-bash scripts/Publish-Mac.sh
-```
-
-The output is `artifacts/macos/FruitsAtelier.app`, including the .NET runtime. See the [macOS guide](docs/MACOS.md).
+## Get started
 
 ### Windows
 
-For packaged versions, download the Windows x64 ZIP from [Releases](https://github.com/frankhjwx/FruitsAtelier/releases), extract the whole folder, and run `FruitsAtelier.App.exe`. The package includes .NET; keep its DLLs and assets alongside the exe.
+Download the Windows x64 ZIP from [Releases](https://github.com/frankhjwx/FruitsAtelier/releases), extract it, and run `FruitsAtelier.App.exe`. Keep the extracted files together. The package includes .NET and runs on Windows 10/11 with DirectX 11 support.
 
-Building from source requires .NET SDK **10.0.400** (pinned in the root `global.json`) and the **.NET 8 runtime**. Double-click [Run-Editor.cmd](Run-Editor.cmd) to build and launch the editor.
+Open **Library > Settings** to choose a project workspace and, optionally, your osu!stable installation folder. Import a beatmap or create a new project to begin.
 
-The compiled application is located at `src/FruitsAtelier.App/bin/Release/net8.0-windows/FruitsAtelier.App.exe`.
+### macOS
 
-## Documentation
+Building requires .NET SDK **8.0.419** and Xcode Command Line Tools. Run `bash scripts/Install-Mac-SDK.sh` to install the SDK locally, then open [Run-Editor-Mac.command](Run-Editor-Mac.command). Run `bash scripts/Publish-Mac.sh` to create a standalone app. See the [macOS guide](docs/MACOS.md).
 
-- [Editing controls](docs/EDITOR_UI.md)
-- [Features and files](docs/PRODUCT.md)
-- [Building and testing](docs/TESTING.md)
-- [Windows packaging and versioned releases](docs/RELEASING.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Project data model](docs/PROJECT_MODEL.md) · [Catch rendering and conversion](docs/CATCH_RENDERING.md) · [File format](docs/STABLE_FORMAT.md)
-- [Localization maintenance](docs/LOCALIZATION.md)
-- [Third-party dependencies and licenses](THIRD_PARTY_NOTICES.md)
+## User guide
+
+The [user manual](docs/USER_MANUAL.md) covers setup, editing, saving, testplay, and keyboard shortcuts.
+
+Save projects to retain editable sliders and difficulty data. Export creates `.osu` files for osu!. After linking a difficulty through export, **Ctrl+S also updates its linked `.osu`**; **Ctrl+E** opens the export choices.
+
+## Development
+
+Windows source builds use .NET SDK **10.0.400**, pinned in `global.json`, and the .NET 8 runtime. Run [Run-Editor.cmd](Run-Editor.cmd) to build and launch.
+
+- [Building and testing](docs/TESTING.md) · [Packaging and releases](docs/RELEASING.md)
+- [Editing controls](docs/EDITOR_UI.md) · [Workspace and files](docs/WORKSPACE.md)
+- [Architecture](docs/ARCHITECTURE.md) · [Project model](docs/PROJECT_MODEL.md) · [File format](docs/STABLE_FORMAT.md)
+- [Localization](docs/LOCALIZATION.md) · [Third-party licenses](THIRD_PARTY_NOTICES.md)

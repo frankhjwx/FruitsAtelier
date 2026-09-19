@@ -16,15 +16,28 @@ Windows ARM64 build, or macOS release. macOS development and packaging remain in
 From the repository root, using PowerShell 7 and the SDK pinned in `global.json`:
 
 ```powershell
-./scripts/Publish-Windows.ps1 -Version 0.1.0-alpha.1
-./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-0.1.0-alpha.1-win-x64.zip
+./scripts/Publish-Windows.ps1
+./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-0.8.0-win-x64.zip
 ```
 
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
-`.zip.sha256` checksum. The example version is for local validation, not a published
-release. `build-info.json` records the version, source commit, SDK, RID, and whether
+`.zip.sha256` checksum. The default version comes from `Directory.Build.props`
+(currently 0.8.0); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
 the local checkout had uncommitted changes. Executable version metadata uses the
 same version and commit. Release builds run from the clean tagged commit.
+
+The package includes the English [user manual source](USER_MANUAL.md). To include
+its PDF edition, install Python and ReportLab, render the manual, then pass the
+output to the packaging script:
+
+```powershell
+python -m pip install reportlab==4.4.9
+python scripts/Build-UserManual.py
+./scripts/Publish-Windows.ps1 -UserManual artifacts/releases/FruitsAtelier-User-Manual.pdf
+```
+
+The PDF is generated under `artifacts/releases` and copied to the root of the ZIP.
+Review its rendered pages after editing the manual. Keep generated PDFs out of Git.
 
 `WindowsRelease.pubxml` pins the bundled runtime version and disables trimming and
 single-file bundling so filesystem assets and reflection-dependent libraries remain
