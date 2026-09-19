@@ -3,6 +3,45 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class AudioFeedbackTests
 {
+    public static void OpeningTransport()
+    {
+        var ui = new Ui();
+        var map = new MapDocument { AudioPath = "new-song.ogg" };
+        map.Fruits.Add(new() { TimeMs = 30000 });
+        ui.View.UpdateTransport(20000, 90000, true, false, false, null, "old-song.ogg");
+        ui.LoadDocument(map);
+        Near(0, ui.View.PlayheadMs); Near(0, ui.View.AudioDurationMs);
+        Check(ui.View.AudioLoading && ui.Canvas.Texts.Any(t => t.Value == "/ --:--:---"), "first frame waits for the real audio duration");
+        ui.View.UpdateTransport(20000, 90000, true, false, false, null, "old-song.ogg");
+        Near(0, ui.View.PlayheadMs); Near(0, ui.View.AudioDurationMs);
+        ui.View.UpdateTransport(0, 0, false, false, true, null, map.AudioPath);
+        Near(0, ui.View.PlayheadMs);
+        ui.View.UpdateTransport(0, 70000, true, false, false, null, map.AudioPath); ui.Paint();
+        Near(0, ui.View.PlayheadMs); Near(70000, ui.View.AudioDurationMs);
+        Check(!ui.View.AudioLoading && !ui.Canvas.Texts.Any(t => t.Value == "/ --:--:---"), "ready audio reveals the final duration");
+
+        ui.View.LoadProject(BeatmapProject.FromDocuments([map, map.DeepClone()]));
+        ui.View.UpdateTransport(0, 70000, true, false, false, null, map.AudioPath);
+        ui.View.UpdateTransport(5000, 70000, true, false, false, null, map.AudioPath);
+        Check(ui.View.SwitchDifficulty(1), "switch to another difficulty");
+        ui.View.UpdateTransport(0, 70000, true, false, false, null, map.AudioPath);
+        Check(ui.View.SwitchDifficulty(0), "return to previous difficulty");
+        Near(5000, ui.View.PlayheadMs);
+        var seeks = new List<double>(); ui.View.RequestSeek = seeks.Add;
+        ui.View.UpdateTransport(0, 70000, true, false, false, null, map.AudioPath);
+        Near(5000, ui.View.PlayheadMs);
+        Check(seeks.SequenceEqual([5000d]), "audio resumes the retained difficulty position without a zero frame");
+        Check(!ui.View.IsDirty, "transport initialization does not edit content");
+
+        ui.LoadDocument(map);
+        ui.View.UpdateTransport(0, 0, false, false, false, "Missing audio", map.AudioPath); ui.Paint();
+        Check(!ui.View.AudioLoading && !ui.Canvas.Texts.Any(t => t.Value == "/ --:--:---"), "failed audio settles on the map duration");
+        Near(0, ui.View.PlayheadMs);
+        map.AudioPath = null; ui.LoadDocument(map);
+        Near(0, ui.View.PlayheadMs);
+        Check(!ui.View.AudioLoading, "maps without audio need no loading transition");
+    }
+
     public static void Navigation()
     {
         var ui = new Ui(); var map = new MapDocument();

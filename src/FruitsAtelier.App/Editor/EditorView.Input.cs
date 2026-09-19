@@ -114,7 +114,7 @@ public sealed partial class EditorView
                 FocusField(i); return;
             }
         if (objectTimeline.Contains(x, y)) { BeginObjectTimeline(x, y, ctrl || shift); return; }
-        if (overview.Contains(x, y) || HitsTimelineHead(x, y))
+        if (!AudioLoading && (overview.Contains(x, y) || HitsTimelineHead(x, y)))
         {
             bool grabbedHead = HitsTimelineHead(x, y);
             drag = DragKind.Timeline;
@@ -492,7 +492,7 @@ public sealed partial class EditorView
         }
         if (overview.Contains(x, y))
         {
-            SeekByWheel(-delta / 120, 2);
+            if (!AudioLoading) SeekByWheel(-delta / 120, 2);
             return;
         }
         if (!canvas.Contains(x, y)) return;

@@ -29,6 +29,7 @@ var tests = new (string Name, Action Run)[]
     ("Extended testplay key capture, persistence and gameplay", TestplayTests.ExtendedBindings),
     ("Update lifecycle, persistence and save-before-restart", UpdateTests.Lifecycle),
     ("Update settings and explicit installation controls", UpdateTests.Interface),
+    ("Opening maps initializes position and duration without transient jumps", AudioFeedbackTests.OpeningTransport),
     ("Audio volume settings, persistence and document isolation", AudioFeedbackTests.VolumeSettings),
     ("V jumps to the end and wheel navigation follows time order", AudioFeedbackTests.Navigation),
     ("Wheel surfaces step by playback beats or paused snap across timing boundaries", ViewportFeedbackTests.WheelSnapSteps),

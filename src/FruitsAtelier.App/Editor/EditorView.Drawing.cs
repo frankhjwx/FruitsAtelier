@@ -361,7 +361,7 @@ public sealed partial class EditorView
         TimeDisplayBounds = new(64, top + 22, 150, 48);
         if (TimeDisplayBounds.Contains(mouseX, mouseY)) c.Fill(TimeDisplayBounds, Surface, 4);
         c.Text(Time(playhead), 69, top + 22, 21, Foreground, 145, true);
-        c.Text("/ " + Time(TimelineDurationMs), 70, top + 50, 11, Muted, 130);
+        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), 70, top + 50, 11, Muted, 130);
         hits.Add(new(TimeDisplayBounds, OpenTimeJump, true));
         if (TimeDisplayBounds.Contains(mouseX, mouseY) && !TimeJumpVisible)
             c.Text(L.Get("timeJump.title"), 69, top - 20, 12, Foreground, 200);
@@ -377,6 +377,7 @@ public sealed partial class EditorView
             rateX += 50;
         }
         c.Fill(overview, 0x141922, 4);
+        if (AudioLoading) return;
         for (int i = 0; i <= 6; i++)
         {
             float x = overview.X + overview.Width * i / 6;
