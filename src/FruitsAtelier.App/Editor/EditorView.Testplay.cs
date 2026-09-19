@@ -200,10 +200,20 @@ public sealed partial class EditorView
     private int bindingCapture = -1;
     private int[] draftTestplayKeys = [37, 39, 16];
     public bool CapturingTestplayKey => bindingCapture >= 0 && LibraryVisible && librarySettingsOpen;
-    private static bool IsBindingKey(int key) => key is >= 65 and <= 90 or >= 48 and <= 57 or >= 37 and <= 40 or 16 or 32;
+    // Esc, Tab, F1 and F2 belong to testplay navigation; OS/media keys cannot reliably reach both hosts.
+    private static bool IsBindingKey(int key) => key is >= 65 and <= 90 or >= 48 and <= 57 or >= 33 and <= 40
+        or >= 96 and <= 111 or >= 114 and <= 135 or >= 186 and <= 192 or >= 219 and <= 223
+        or 8 or 12 or 13 or 16 or 17 or 18 or 20 or 32 or 45 or 46 or 144 or 145 or 226;
     private static string KeyName(int key) => key switch
     {
         37 => "←", 38 => "↑", 39 => "→", 40 => "↓", 16 => "Shift", 32 => "Space",
+        8 => "Backspace", 12 => "Clear", 13 => "Enter", 17 => "Ctrl", 18 => "Alt", 20 => "Caps Lock",
+        33 => "Page Up", 34 => "Page Down", 35 => "End", 36 => "Home", 45 => "Insert", 46 => "Delete",
+        >= 96 and <= 105 => $"Num {key - 96}",
+        106 => "Num *", 107 => "Num +", 108 => "Num Separator", 109 => "Num -", 110 => "Num .", 111 => "Num /",
+        >= 112 and <= 135 => $"F{key - 111}", 144 => "Num Lock", 145 => "Scroll Lock",
+        186 => ";", 187 => "=", 188 => ",", 189 => "-", 190 => ".", 191 => "/", 192 => "`",
+        219 => "[", 220 => "\\", 221 => "]", 222 => "'", 223 => "OEM 8", 226 => "OEM 102",
         _ => ((char)key).ToString()
     };
     private void DrawTestplayBindings(ICanvas c)

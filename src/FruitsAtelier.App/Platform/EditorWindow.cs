@@ -260,6 +260,11 @@ internal sealed partial class EditorWindow : IDisposable
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0104: // WM_SYSKEYDOWN: Alt changes editor snapping without opening the system menu.
                 view.SetModifiers(Native.Alt, Native.Shift);
+                if ((view.CapturingTestplayKey || view.IsTestplaying) && !((int)wParam == 115 && Native.Alt))
+                {
+                    view.KeyDown((int)wParam, Native.Control, Native.Shift);
+                    UpdateTitle(); Invalidate(); return 0;
+                }
                 if ((int)wParam == 0x12) { Invalidate(); return 0; }
                 break;
             case 0x0101: // WM_KEYUP

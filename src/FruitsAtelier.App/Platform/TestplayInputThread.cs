@@ -92,6 +92,8 @@ internal sealed class TestplayInputThread : IDisposable
                 {
                     int key = input.VirtualKey;
                     if (key is 0xA0 or 0xA1) key = 0x10;
+                    if (key is 0xA2 or 0xA3) key = 0x11;
+                    if (key is 0xA4 or 0xA5) key = 0x12;
                     bool down = (input.Flags & 1) == 0;
                     // Navigation belongs to WM_KEYDOWN on the UI thread, avoiding a second Escape after return.
                     if (key != 27 && session.UsesKey(key))

@@ -94,7 +94,7 @@ internal static class RenderCheck
         finally { view.StopTestplay(); view.LoadProject(project); view.RequestHitsound = sound; }
     }
 
-    private static void CheckTestplay(D2DCanvas canvas, EditorView view, int width, int height)
+    private static void CheckTestplay(D2DCanvas canvas, EditorView view, nint window, int width, int height)
     {
         var project = view.CaptureProject();
         var toggle = view.RequestTogglePlayback; var pause = view.RequestPausePlayback;
@@ -183,6 +183,17 @@ internal static class RenderCheck
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(width - 380, 20, 0, false, false); view.PointerUp(width - 380, 20, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                foreach (int binding in new[] { 186, 222, 219, 221, 8, 17, 18, 96, 111, 121 })
+                {
+                    view.PointerDown(40, 475, 0, false, false); view.PointerUp(40, 475, 0);
+                    if (!view.CapturingTestplayKey) throw new InvalidOperationException("Native binding capture did not open.");
+                    var down = new Native.Message { Window = window, Id = binding is 18 or 121 ? 0x0104u : 0x0100u, WParam = (nuint)binding };
+                    Native.DispatchMessage(ref down);
+                    if (view.CapturingTestplayKey) throw new InvalidOperationException($"Native key {binding} did not bind.");
+                    var up = new Native.Message { Window = window, Id = down.Id + 1, WParam = (nuint)binding };
+                    Native.DispatchMessage(ref up);
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                }
                 view.KeyDown(27, false, false); view.CloseLibrary();
             }
         }
@@ -387,7 +398,7 @@ internal static class RenderCheck
             view.PointerDown(size.Item1 - 230, 30, 0, false, false); view.PointerUp(size.Item1 - 230, 30, 0);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             view.KeyDown(27, false, false); view.LoadProject(editorProject); view.CloseLibrary();
-            CheckTestplay(canvas, view, size.Item1, size.Item2);
+            CheckTestplay(canvas, view, window, size.Item1, size.Item2);
             cases.Add(new { dpi, widthDip = size.Item1, heightDip = size.Item2, rendered = true, previewDrawer = true, previewMods = true, reverseMarkers = true, gridSubmenu = true, errorDialog = true, exportOverlay = true, libraryNavigation = true, testplay = true });
         }
         canvas.Resize(0, 0, 96);

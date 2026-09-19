@@ -7,6 +7,21 @@ if (args.Contains("--profile-hitsounds")) { await HitsoundPerformance.Run(); ret
 void Check(bool ok, string message) { if (!ok) throw new Exception(message); Console.WriteLine("PASS " + message); }
 Check(MacInput.Control(KeyModifiers.Meta) && MacInput.Control(KeyModifiers.Control) && !MacInput.Control(KeyModifiers.Shift), "Command/Ctrl are mapped without treating Shift as Ctrl");
 Check(MacInput.VirtualKey(Key.Z) == 90 && MacInput.VirtualKey(Key.Delete) == 46 && MacInput.VirtualKey(Key.Back) == 8 && MacInput.VirtualKey(Key.Back, false) == 46, "Shortcut and numeric backspace key mapping");
+Check(MacInput.VirtualKey(Key.OemSemicolon) == 186 && MacInput.VirtualKey(Key.OemQuotes) == 222 &&
+    MacInput.VirtualKey(Key.OemOpenBrackets) == 219 && MacInput.VirtualKey(Key.OemCloseBrackets) == 221,
+    "Testplay punctuation keys map to shared virtual keys");
+foreach (var (key, expected) in new (Key, int)[] {
+    (Key.OemPlus, 187), (Key.OemComma, 188), (Key.OemMinus, 189), (Key.OemPeriod, 190),
+    (Key.OemQuestion, 191), (Key.OemTilde, 192), (Key.OemPipe, 220), (Key.Oem8, 223), (Key.OemBackslash, 226),
+    (Key.Back, 8), (Key.Clear, 12), (Key.Enter, 13), (Key.LeftCtrl, 17), (Key.RightCtrl, 17),
+    (Key.LeftAlt, 18), (Key.RightAlt, 18), (Key.CapsLock, 20), (Key.PageUp, 33), (Key.PageDown, 34),
+    (Key.End, 35), (Key.Home, 36), (Key.Insert, 45), (Key.Delete, 46), (Key.Multiply, 106),
+    (Key.Add, 107), (Key.Separator, 108), (Key.Subtract, 109), (Key.Decimal, 110), (Key.Divide, 111),
+    (Key.NumLock, 144), (Key.Scroll, 145) })
+    Check(MacInput.VirtualKey(key) == expected, $"{key} maps to shared virtual key {expected}");
+for (int i = 0; i < 10; i++) Check(MacInput.VirtualKey(Key.NumPad0 + i) == 96 + i, $"NumPad{i} mapping");
+for (int i = 0; i < 24; i++) Check(MacInput.VirtualKey(Key.F1 + i) == 112 + i, $"F{i + 1} mapping");
+if (args.Contains("--input-check")) return;
 string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"));
 string directory = Path.Combine(root, "artifacts", "macos-check"); Directory.CreateDirectory(directory);
 string wav = Path.Combine(directory, "silence.wav");

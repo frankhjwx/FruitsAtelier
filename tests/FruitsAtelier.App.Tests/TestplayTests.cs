@@ -369,6 +369,64 @@ internal static class TestplayTests
         ui.View.StopTestplay();
     }
 
+    public static void ExtendedBindings()
+    {
+        (int Key, string Name)[] keys = [
+            (186, ";"), (222, "'"), (219, "["), (221, "]"), (187, "="), (188, ","), (189, "-"),
+            (190, "."), (191, "/"), (192, "`"), (220, "\\"), (223, "OEM 8"), (226, "OEM 102"),
+            (8, "Backspace"), (12, "Clear"), (13, "Enter"), (17, "Ctrl"), (18, "Alt"), (20, "Caps Lock"),
+            (33, "Page Up"), (34, "Page Down"), (35, "End"), (36, "Home"), (45, "Insert"), (46, "Delete"),
+            (106, "Num *"), (107, "Num +"), (108, "Num Separator"), (109, "Num -"), (110, "Num ."),
+            (111, "Num /"), (144, "Num Lock"), (145, "Scroll Lock")];
+        keys = keys.Concat(Enumerable.Range(96, 10).Select(k => (k, $"Num {k - 96}")))
+            .Concat(Enumerable.Range(114, 22).Select(k => (k, $"F{k - 111}"))).ToArray();
+        string folder = Path.GetFullPath("artifacts/testplay-extended-settings");
+        var ui = new Ui(); ui.View.InitializeLibrary(true, new LibrarySettings { Workspace = folder });
+        ui.Paint(); ui.ClickText(L.Get("library.settings"));
+        var draft = typeof(FruitsAtelier.App.Editor.EditorView).GetField("draftTestplayKeys",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        foreach (var (key, name) in keys)
+        {
+            for (int action = 0; action < 3; action++)
+            {
+                ui.View.PointerDown(40 + action * 220, 475, 0, false, false);
+                ui.View.PointerUp(40 + action * 220, 475, 0);
+                Check(ui.View.CapturingTestplayKey, "binding field starts capture");
+                ui.Key(key); ui.View.KeyUp(key); ui.Paint();
+                Check(!ui.View.CapturingTestplayKey && ui.Canvas.Texts.Any(t => t.Value == name && t.Y >= 460 && t.Y < 490),
+                    $"{name} captures and displays for action {action}");
+                int[] captured = (int[])draft.GetValue(ui.View)!;
+                Check(captured[action] == key && captured.Distinct().Count() == 3, "capture preserves distinct bindings");
+                var settings = new LibrarySettings { Workspace = folder, TestplayLeftKey = captured[0],
+                    TestplayRightKey = captured[1], TestplayDashKey = captured[2] };
+                string path = Path.Combine(folder, "settings.json");
+                settings.Save(path); var loaded = LibrarySettings.Load(path);
+                Check(loaded.TestplayLeftKey == captured[0] && loaded.TestplayRightKey == captured[1] &&
+                    loaded.TestplayDashKey == captured[2], "captured keys survive settings reload");
+                var clock = new ManualTime();
+                var session = new CatchTestplaySession(new CatchTestplay(
+                    [new(Guid.NewGuid(), 0, CatchObjectKind.Fruit, 10000, 256, 256, 256, 0)], 5, 0),
+                    new(0, 1, 0, false), 0, false, false, loaded.TestplayLeftKey, loaded.TestplayRightKey,
+                    loaded.TestplayDashKey, clock, 5, []);
+                if (action == 2) session.SetKey(loaded.TestplayRightKey, true);
+                session.SetKey(key, true); clock.Advance(100); session.SetKey(key, false);
+                double expected = action == 0 ? 206 : action == 1 ? 306 : 356;
+                Near(expected, session.Capture().X);
+                clock.Advance(100); session.Tick();
+                Near(expected + (action == 2 ? 50 : 0), session.Capture().X);
+            }
+        }
+        ui.View.PointerDown(40, 475, 0, false, false); ui.View.PointerUp(40, 475, 0);
+        int[] before = ((int[])draft.GetValue(ui.View)!).ToArray();
+        foreach (int key in new[] { 0, 9, 112, 113, 91, 92, 173, 255 })
+        {
+            ui.Key(key); ui.View.KeyUp(key);
+            Check(ui.View.CapturingTestplayKey && before.SequenceEqual((int[])draft.GetValue(ui.View)!),
+                "reserved and unsupported keys leave capture pending");
+        }
+        ui.Key(27); Check(!ui.View.CapturingTestplayKey, "Escape cancels capture");
+    }
+
     public static void ComboAndTrails()
     {
         var clock = new ManualTime();

@@ -1,6 +1,6 @@
 # FruitsAtelier
 
-User Manual | Version 0.8
+User Manual | Version 0.8.1
 
 ## 01 / Getting started
 
@@ -79,6 +79,8 @@ Open **Catch Preview** using the button on the right edge of the canvas. Drag th
 Press **F5** to testplay from the current position using the selected preview mod and speed. Move with **Left / Right**, and hold **Shift** to dash. Catch fruits and droplets to build combo. **Tab** toggles autoplay; **Ctrl+P** pauses or resumes.
 
 **F1 / Esc** exits to the testplay start; **F2** exits at the current position. Losing window focus also exits. Testplay does not change your objects or undo history. Change movement and dash bindings in **Library > Settings**.
+
+Bindings accept letters, digits, punctuation (including `;`, `'`, `[` and `]`), arrow and navigation keys, Backspace, Enter, Space, Shift, Ctrl, Alt, lock keys, numpad keys, and F3–F24. Esc cancels capture; Tab, F1 and F2 remain reserved for testplay controls. Windows/Command, media and other system keys are not offered. Left and right modifier keys share a binding, as do main and numpad Enter. Numpad input follows Num Lock; punctuation labels use US keyboard names. OS shortcuts and Ctrl+P retain their normal behavior.
 
 ### Difficulties and project files
 
