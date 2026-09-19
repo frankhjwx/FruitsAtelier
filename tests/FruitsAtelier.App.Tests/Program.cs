@@ -31,7 +31,7 @@ var tests = new (string Name, Action Run)[]
     ("Update settings and explicit installation controls", UpdateTests.Interface),
     ("Audio volume settings, persistence and document isolation", AudioFeedbackTests.VolumeSettings),
     ("V jumps to the end and wheel navigation follows time order", AudioFeedbackTests.Navigation),
-    ("All wheel surfaces move exactly one snap step per notch across timing boundaries", ViewportFeedbackTests.WheelSnapSteps),
+    ("Wheel surfaces step by playback beats or paused snap across timing boundaries", ViewportFeedbackTests.WheelSnapSteps),
     ("Skin hitsound priority and live selection refresh", AudioFeedbackTests.SkinSamples),
     ("Testplay legacy combo animation and live dash trails", TestplayTests.ComboAndTrails),
     ("Stable root migration and skin selection preserve content and archive provenance", SkinSelectorTests.Run),
@@ -119,6 +119,8 @@ var tests = new (string Name, Action Run)[]
     ("Wheel up reveals later time and middle drag keeps content under the pointer", WheelAndPan),
     ("Overview wheel accumulates snap steps and preserves playback and content", OverviewWheel),
     ("Object timeline selects without seeking and scales independently", ObjectTimelineTests.NavigationAndSelection),
+    ("Playing timeline marquee anchors time and retains offscreen selection", ObjectTimelineTests.PlaybackMarquee),
+    ("Beat colors and widths agree on canvas and timeline across divisors", ObjectTimelineTests.GridColors),
     ("Playback speed buttons work in both languages without editing content", ObjectTimelineTests.SpeedControls),
     ("Canvas defaults and reset use 60% zoom while enforcing minimum width", CanvasZoomTests.DefaultsAndReset),
     ("Zoom slider and wheel share scale, bounds and content isolation", CanvasZoomTests.SliderAndWheel),
@@ -166,7 +168,7 @@ var tests = new (string Name, Action Run)[]
     ("Multi-selection clipboard shortcuts and deletion preserve batch transactions", MultiSelectionTests.BatchClipboardDelete),
     ("Anchor boxes delete endpoints and remove insufficient tracks atomically", MultiSelectionTests.AnchorBoxAndEndpointDelete),
     ("Canceling object and anchor boxes restores selection without history", MultiSelectionTests.SelectionCancellation),
-    ("Playback keeps scrolling and updates selection under a stationary box", MultiSelectionTests.PlaybackBoxTransform),
+    ("Playback marquee retains its start time while the viewport scrolls", MultiSelectionTests.PlaybackBoxTransform),
     ("Language switching refreshes chrome without editing the map", LanguageTests.SwitchWithoutEditing),
     ("English batch menus and Core diagnostics use the same catalog", LanguageTests.EnglishMultiMenusAndDiagnostics)
 };
@@ -225,7 +227,7 @@ static void MultiTimingEditing()
     Near(1233.333333333333, ui.View.Document.Fruits.Single().TimeMs);
     ui.SetSnapDivisor(4); ui.ClickMap(1490, 400);
     Near(1500, ui.View.Document.Fruits.Last().TimeMs);
-    True(ui.Canvas.Lines.Any(l => l.Color == 0x845460), "The red timing boundary is absent from the painted grid.");
+    True(ui.Canvas.Lines.Any(l => l.Color == 0xEEEEEE && l.Width == 2.5f && Math.Abs(l.Y1 - (ui.Plot.Bottom - (1100 - ui.View.ViewStartMs) * ui.View.PixelsPerMs)) < .01), "The red timing boundary is absent from the painted grid.");
     ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
     True(!ui.View.IsDirty && ui.View.Document.TimingPoints.Count == 3, "Timing was changed by fruit editing.");
 }
@@ -494,7 +496,7 @@ static void OverviewWheel()
         Near(start, ui.View.PlayheadMs);
         for (int i = 0; i < 3; i++) ui.View.Wheel(x, y, -30, false);
         ui.Paint();
-        Near(start + 125, ui.View.PlayheadMs);
+        Near(start + (playing ? 500 : 125), ui.View.PlayheadMs);
         Near(ui.View.PlayheadMs, seeks.Single());
         Near(ui.View.PlayheadMs - ui.Plot.Height * 0.25 / scale, ui.View.ViewStartMs);
         ui.View.Wheel(x, y, 120, false); ui.Paint();
@@ -940,7 +942,7 @@ sealed class RecordingCanvas : ICanvas
 {
     public readonly record struct Label(string Value, float X, float Y, uint Color = 0);
     public readonly record struct Dot(float X, float Y, float Radius, bool Filled, uint Color, float Opacity = 1);
-    public readonly record struct Segment(float X1, float Y1, float X2, float Y2, uint Color, float Opacity);
+    public readonly record struct Segment(float X1, float Y1, float X2, float Y2, uint Color, float Opacity, float Width = 1);
     public readonly record struct Outline(Rect Bounds, uint Color);
     public readonly record struct Operation(int Order, Rect? Clip, Dot? Dot, Segment? Segment);
     private readonly Stack<Rect> clipStack = new();
@@ -964,7 +966,7 @@ sealed class RecordingCanvas : ICanvas
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0) => Outlines.Add(new(r, color));
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)
     {
-        var line = new Segment(x1, y1, x2, y2, color, opacity);
+        var line = new Segment(x1, y1, x2, y2, color, opacity, width);
         Lines.Add(line);
         Operations.Add(new(Operations.Count, clipStack.TryPeek(out var clip) ? clip : null, null, line));
     }

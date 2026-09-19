@@ -38,7 +38,7 @@ On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are
 
 ### Navigate and select
 
-The main canvas shows horizontal placement and note timing; later notes are higher on the screen. On the canvas and both timelines, each wheel notch moves exactly one current Snap subdivision: up to the preceding grid line and down to the following one, regardless of zoom. The canvas and playhead move together, including while paused. Middle-drag pans, and Ctrl+wheel zooms. Click empty canvas in Select mode to seek. The bottom timeline also supports seeking; click the timestamp to jump to an exact time.
+The main canvas shows horizontal placement and note timing; later notes are higher on the screen. On the canvas and both timelines, each wheel notch moves one full beat (1/1) during playback or one current Snap subdivision while paused: up to the preceding grid line and down to the following one, regardless of zoom. The canvas and playhead move together, including while paused. Middle-drag pans, and Ctrl+wheel zooms. Click empty canvas in Select mode to seek. The bottom timeline also supports seeking; click the timestamp to jump to an exact time.
 
 Select an object with **1**. Drag empty space to box-select, or Ctrl-click to toggle selection. Drag selected objects to move them together. Selecting a slider fruit or droplet selects its parent slider. The horizontal object timeline also lets you select and move objects in time.
 
@@ -72,7 +72,7 @@ Beat Snap offers 1/1 through 1/9, plus 1/12 and 1/16. Grid Snap controls horizon
 
 ### Listen and preview
 
-Press **Space** to play or pause. Playback speeds are 25%, 50%, 75% and 100%, with music pitch preserved. Hitsounds include beatmap samples and slider ticks. Editing and navigation remain available without playable audio.
+Press **Space** to play or pause. Playback speeds are 10%, 25%, 50%, 75%, 100% and 150%, with music pitch preserved. Hitsounds include beatmap samples and slider ticks. Editing and navigation remain available without playable audio.
 
 Open **Catch Preview** using the button on the right edge of the canvas. Drag the divider to resize it. Choose 4:3, 16:9 or Fit, and NM, Easy or Hard Rock. These preview settings do not change the saved beatmap. Choose an osu!stable skin or import an `.osk`; missing images fall back to the default appearance.
 
@@ -139,7 +139,7 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Z / V (also End) | First / last object start; repeat for song start / end. |
 | Left / Right | Seek one beat subdivision; Shift multiplies by four. |
 | Up / Down | Previous / next timing point. |
-| Ctrl+Up / Ctrl+Down | Faster / slower playback in 25% steps. |
+| Ctrl+Up / Ctrl+Down | Next faster / slower playback speed (10%–150%). |
 | Wheel / middle-drag | Wheel up moves the playhead and canvas earlier; down moves both later by the same relative amount. Middle-drag pans the canvas. |
 | Ctrl+wheel | Zoom the canvas, or the object timeline under the pointer. |
 | Click the current timestamp | Open Jump to time; accepts timestamps or milliseconds. |

@@ -38,7 +38,7 @@ public sealed partial class EditorView
         ClampView();
         EnsureConversion();
         UpdatePlacementHyperdash();
-        if (AudioPlaying && drag == DragKind.Marquee && !boxTimeline && dragMoved) MoveBox(mouseX, mouseY);
+        if (AudioPlaying && drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
         c.Fill(new(0, 0, width, height), Background);
         DrawChrome(c);
         DrawCanvas(c);
@@ -123,12 +123,13 @@ public sealed partial class EditorView
         {
             double time = line.TimeMs;
             var localTiming = renderedTiming.At(time);
-            double step = localTiming.BeatLengthMs / divisor;
+            double step = localTiming.BeatLengthMs / line.Subdivision;
             float y = Screen(new(time, 0)).Y;
             bool beat = line.IsBeat;
-            bool bar = Math.Abs((time - localTiming.OffsetMs) / localTiming.BeatLengthMs / localTiming.Meter - Math.Round((time - localTiming.OffsetMs) / localTiming.BeatLengthMs / localTiming.Meter)) < 0.0001;
+            bool bar = line.IsMeasure;
             if (!beat && !line.IsTimingBoundary && step * pixelsPerMs < 7) continue;
-            c.Line(playfield.X, y, playfield.Right, y, line.IsTimingBoundary ? 0x845460u : beat ? Grid : 0x222933, bar || line.IsTimingBoundary ? 1.5f : 1);
+            var style = GridStyle(line);
+            c.Line(playfield.X, y, playfield.Right, y, style.Color, style.Width, .35f);
             if (line.IsTimingBoundary || beat && (localTiming.BeatLengthMs * pixelsPerMs >= 25 || bar))
                 c.Text(Time(time), canvas.X + 3, Math.Clamp(y - 7, plot.Y, plot.Bottom - 14), 10, line.IsTimingBoundary ? Error : Muted, 64);
         }
@@ -366,11 +367,11 @@ public sealed partial class EditorView
             c.Text(L.Get("timeJump.title"), 69, top - 20, 12, Foreground, 200);
         if (!AudioReady) c.Text(AudioNotice, 16, top + 71, 10, Gold, 192);
 
-        float rateX = overview.Right - 360;
+        float rateX = overview.Right - 404;
         TestplayButtonBounds = new(220, top + 3, 128, 28);
         Button(c, TestplayButtonBounds, L.Get("testplay.start"), StartTestplay, enabled: !AudioLoading);
         c.Text(L.Get("ui.playbackSpeed"), rateX, top + 12, 11, Muted, 104);
-        foreach (double rate in new[] { .25, .5, .75, 1 })
+        foreach (double rate in PlaybackRates)
         {
             Button(c, new(rateX + 104, top + 3, 48, 28), L.Get("ui.zoomPercent", rate * 100), () => SetPlaybackSpeed(rate), PlaybackSpeed == rate);
             rateX += 50;

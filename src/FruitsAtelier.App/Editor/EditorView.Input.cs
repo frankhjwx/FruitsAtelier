@@ -511,12 +511,13 @@ public sealed partial class EditorView
 
     private void SeekByWheel(double delta, int surface)
     {
+        int stepDivisor = AudioPlaying ? 1 : divisor;
         if (double.IsNaN(wheelPlayhead) || (!AudioPlaying && wheelPlayhead != playhead)
-            || wheelDivisor != divisor || wheelSurface != surface) wheelRemainder = 0;
+            || wheelDivisor != stepDivisor || wheelSurface != surface) wheelRemainder = 0;
         double ticks = delta + wheelRemainder;
         double steps = Math.Truncate(ticks);
         wheelRemainder = ticks - steps;
-        wheelPlayhead = playhead; wheelDivisor = divisor; wheelSurface = surface;
+        wheelPlayhead = playhead; wheelDivisor = stepDivisor; wheelSurface = surface;
         if (steps == 0) return;
         var timing = new TimingMap.Lookup(Document);
         var boundaries = Document.TimingPoints.Where(t => t.Uninherited).Select(t => t.TimeMs).Distinct().Order().ToArray();
@@ -525,7 +526,7 @@ public sealed partial class EditorView
         for (double i = 0; i < Math.Abs(steps); i++)
         {
             var state = timing.At(direction < 0 ? Math.BitDecrement(target) : target);
-            double step = state.BeatLengthMs / divisor;
+            double step = state.BeatLengthMs / stepDivisor;
             double index = (target - state.OffsetMs) / step;
             double nearest = Math.Round(index);
             if (Math.Abs(state.OffsetMs + nearest * step - target) < 1e-7) index = nearest;
@@ -539,7 +540,7 @@ public sealed partial class EditorView
         }
         double nextView = viewStart + target - playhead;
         SeekTo(target);
-        wheelPlayhead = playhead; wheelDivisor = divisor; wheelSurface = surface;
+        wheelPlayhead = playhead; wheelDivisor = stepDivisor; wheelSurface = surface;
         if (surface == 0) { viewStart = nextView; pinPlayhead = false; }
     }
 

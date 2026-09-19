@@ -61,7 +61,7 @@ Check(!audio.State.IsPlaying && Math.Abs(audio.State.PositionMs - 3000) < 5, $"P
 audio.Play(); await Task.Delay(100);
 Check(audio.State.IsPlaying && audio.State.PositionMs < 1000, "Replay starts at the beginning after EOF");
 audio.Pause();
-foreach (double speed in new[] { .25, .5, .75, 1 })
+foreach (double speed in new[] { .1, .25, .5, .75, 1, 1.5 })
 {
     audio.Seek(500); audio.SetPlaybackSpeed(speed); audio.Play();
     await Task.Delay(250);

@@ -13,7 +13,6 @@ public sealed partial class EditorView
     private (Guid Id, double Start, double End, int SourceOrder, uint Color, int Spans)[] timelineSources = [];
     private Dictionary<Guid, int> timelineNumbers = [];
     private bool boxTimeline;
-    private double timelineBoxStart;
     private Guid tailId;
     private string? tailOriginalLine;
     private double tailStart, tailEnd, tailSpanDuration;
@@ -53,16 +52,24 @@ public sealed partial class EditorView
     }
     public Rect ObjectTimelineBounds => objectTimeline;
     public double ObjectTimelinePixelsPerMs => objectTimelineScale;
-    public double ObjectTimelineStartMs => boxTimeline && drag == DragKind.Marquee ? timelineBoxStart : playhead - objectTimeline.Width / objectTimelineScale / 2;
+    public double ObjectTimelineStartMs => playhead - objectTimeline.Width / objectTimelineScale / 2;
+    private static readonly double[] PlaybackRates = [.1, .25, .5, .75, 1, 1.5];
     public double PlaybackSpeed { get; private set; } = 1;
     public Action<double>? RequestPlaybackSpeed { get; set; }
 
     public void SetPlaybackSpeed(double speed)
     {
-        if (speed is not (.25 or .5 or .75 or 1) || speed == PlaybackSpeed) return;
+        if (!PlaybackRates.Contains(speed) || speed == PlaybackSpeed) return;
         PlaybackSpeed = speed;
         RequestPlaybackSpeed?.Invoke(speed);
     }
+
+    private void AdjustPlaybackSpeed(int direction)
+        => SetPlaybackSpeed(PlaybackRates[Math.Clamp(Array.IndexOf(PlaybackRates, PlaybackSpeed) + direction, 0, PlaybackRates.Length - 1)]);
+
+    private Rect TimelineObjectBounds(double start, double end)
+        => new(objectTimeline.X + (float)((start - ObjectTimelineStartMs) * objectTimelineScale) - 19,
+            objectTimeline.Y + 8, (float)((end - start) * objectTimelineScale) + 38, 38);
 
     private void DrawObjectTimeline(ICanvas c)
     {
@@ -78,9 +85,10 @@ public sealed partial class EditorView
         c.Clip(objectTimeline);
         foreach (var tick in renderedTiming!.Grid(Math.Max(0, start), Math.Max(0, end), divisor))
         {
-            if (!tick.IsBeat && !tick.IsTimingBoundary && renderedTiming.At(tick.TimeMs).BeatLengthMs / divisor * objectTimelineScale < 5) continue;
-            c.Line(X(tick.TimeMs), objectTimeline.Bottom - (tick.IsBeat ? 12 : 5), X(tick.TimeMs), objectTimeline.Bottom,
-                tick.IsTimingBoundary ? Error : tick.IsBeat ? Muted : Grid);
+            if (!tick.IsBeat && renderedTiming.At(tick.TimeMs).BeatLengthMs / tick.Subdivision * objectTimelineScale < 5) continue;
+            var style = GridStyle(tick);
+            c.Line(X(tick.TimeMs), objectTimeline.Bottom - style.Height, X(tick.TimeMs), objectTimeline.Bottom,
+                style.Color, style.Width);
         }
         if (!ReferenceEquals(timelineConversion, conversion))
         {
@@ -100,7 +108,7 @@ public sealed partial class EditorView
             if (item.End < start - 20 / objectTimelineScale || item.Start > end + 20 / objectTimelineScale) continue;
             float left = X(item.Start), right = X(item.End), cy = objectTimeline.Y + 27;
             bool selected = IsObjectSelected(item.Id);
-            var bounds = new Rect(left - 19, cy - 19, right - left + 38, 38);
+            var bounds = TimelineObjectBounds(item.Start, item.End);
             c.Fill(bounds, selected ? 0x40545Du : 0x303744u, 19);
             c.Stroke(bounds, selected ? Foreground : item.Color, selected ? 2 : 1, 19);
             c.Circle(left, cy, 19, item.Color, false);
@@ -160,9 +168,9 @@ public sealed partial class EditorView
             else if (!toggle) BeginObjectDrag(x, y, timeline: true);
             return;
         }
-        timelineBoxStart = ObjectTimelineStartMs;
         tool = Tool.Select;
         BeginBox(x, y, toggle, false);
+        boxStartTime = ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale;
         boxTimeline = true;
     }
     private void DeleteTimelineObject(float x, float y)

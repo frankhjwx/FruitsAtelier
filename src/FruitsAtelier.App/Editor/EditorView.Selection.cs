@@ -10,9 +10,10 @@ public sealed partial class EditorView
     private readonly HashSet<Guid> anchorSelection = [];
     private SelectionSnapshot? selectionBeforeBox;
     private Rect selectionBox;
+    private double boxStartTime;
     private bool boxAdds, boxAnchors;
     private bool ViewportFrozenByDrag => drag is DragKind.Objects or DragKind.BananaStart or DragKind.BananaEnd
-        || drag == DragKind.Marquee && (!AudioPlaying || boxTimeline);
+        || drag == DragKind.Marquee && !AudioPlaying;
     private sealed record SelectionSnapshot(Guid[] Objects, Guid[] Anchors, Guid Primary, Guid Track, DragKind Part);
     public IReadOnlyCollection<Guid> SelectedObjectIds => objectSelection.ToArray();
     public IReadOnlyCollection<Guid> SelectedAnchorIds => anchorSelection.ToArray();
@@ -68,6 +69,7 @@ public sealed partial class EditorView
         boxTimeline = false;
         selectionBeforeBox = new(objectSelection.ToArray(), anchorSelection.ToArray(), selection, selectedTrack, selectedPart);
         boxAdds = additive; boxAnchors = anchors;
+        boxStartTime = Transform.ToMap(x, y).TimeMs;
         selectionBox = new(x, y, 0, 0);
         BeginPointerDrag(x, y);
         drag = DragKind.Marquee;
@@ -79,12 +81,14 @@ public sealed partial class EditorView
         x = Math.Clamp(x, area.X, area.Right); y = Math.Clamp(y, area.Y, area.Bottom);
         if (Math.Abs(x - dragStartX) >= 3 || Math.Abs(y - dragStartY) >= 3) dragMoved = true;
         if (!dragMoved || selectionBeforeBox is null) return;
-        selectionBox = new(Math.Min(x, dragStartX), Math.Min(y, dragStartY), Math.Abs(x - dragStartX), Math.Abs(y - dragStartY));
+        float startX = boxTimeline ? objectTimeline.X + (float)((boxStartTime - ObjectTimelineStartMs) * objectTimelineScale) : dragStartX;
+        float startY = boxTimeline ? dragStartY : Screen(new(boxStartTime, 0)).Y;
+        selectionBox = new(Math.Min(x, startX), Math.Min(y, startY), Math.Abs(x - startX), Math.Abs(y - startY));
         if (boxTimeline)
         {
             var ids = boxAdds ? selectionBeforeBox.Objects.ToHashSet() : [];
-            foreach (var item in timelineObjects)
-                if (Intersects(item.Bounds, selectionBox)) ids.Add(item.Id);
+            foreach (var item in timelineSources)
+                if (Intersects(TimelineObjectBounds(item.Start, item.End), selectionBox)) ids.Add(item.Id);
             SelectObjects(ids);
         }
         else if (boxAnchors)
@@ -110,7 +114,7 @@ public sealed partial class EditorView
             foreach (var item in ObjectsInTimeRange(start, end))
             {
                 var bounds = CatchHitBounds(item);
-                if (Intersects(bounds, plot) && Intersects(bounds, selectionBox)) ids.Add(item.SourceId);
+                if (Intersects(bounds, selectionBox)) ids.Add(item.SourceId);
             }
             SelectObjects(ids);
         }

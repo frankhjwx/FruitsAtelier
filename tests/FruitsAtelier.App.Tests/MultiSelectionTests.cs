@@ -197,10 +197,10 @@ internal static class MultiSelectionTests
         ui.View.UpdateTransport(2500, 20000, true, true, false, null, "fixture.wav"); ui.Paint();
         Near(originalStart + 500, ui.View.ViewStartMs);
         Near(lineY, Screen(ui, 2500, 256).Y);
-        Objects(ui, map.Fruits[2].Id, map.Fruits[3].Id);
+        Objects(ui, map.Fruits.Select(f => f.Id).ToArray());
         Check(ui.View.AudioPlaying && ui.View.WantsCapture, "playback and pointer capture continue during marquee");
         ui.View.PointerUp(end.X, end.Y, 0); ui.Paint();
-        Objects(ui, map.Fruits[2].Id, map.Fruits[3].Id);
+        Objects(ui, map.Fruits.Select(f => f.Id).ToArray());
         Near(2500, ui.View.PlayheadMs);
         Check(baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty && !ui.View.WantsCapture,
             "Playback marquee edited objects or retained capture after release.");

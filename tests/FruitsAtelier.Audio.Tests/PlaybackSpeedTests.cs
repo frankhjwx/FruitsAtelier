@@ -7,7 +7,7 @@ internal static class PlaybackSpeedTests
     {
         foreach (int sampleRate in new[] { 44100, 48000 })
         foreach (int channels in new[] { 1, 2 })
-        foreach (double speed in new[] { .25, .5, .75 })
+        foreach (double speed in new[] { .1, .25, .5, .75, 1.5 })
         {
             var source = new Tone(sampleRate, channels);
             var tempo = new TempoSampleProvider(source, speed);
@@ -17,16 +17,16 @@ internal static class PlaybackSpeedTests
             while ((read = tempo.Read(buffer, 3, buffer.Length - 6)) > 0)
             {
                 result.AddRange(buffer.AsSpan(3, read).ToArray());
-                if (result.Count > sampleRate * channels * 9) throw new Exception("Tempo output did not reach EOF");
+                if (result.Count > sampleRate * channels * (2 / speed + 1)) throw new Exception("Tempo output did not reach EOF");
             }
             double duration = result.Count / (double)(sampleRate * channels);
             if (Math.Abs(duration - 2 / speed) > .002) throw new Exception($"Wrong stretched duration: {duration} at {speed}");
             for (int channel = 0; channel < channels; channel++)
             {
                 int crossings = 0;
-                for (int i = sampleRate; i < sampleRate * 2; i++)
+                for (int i = sampleRate / 4; i < sampleRate * 3 / 4; i++)
                     if (result[i * channels + channel] <= 0 && result[(i + 1) * channels + channel] > 0) crossings++;
-                if (Math.Abs(crossings - (440 + 220 * channel)) > 3)
+                if (Math.Abs(crossings * 2 - (440 + 220 * channel)) > 3)
                     throw new Exception($"Pitch changed at {speed}: {crossings} Hz");
             }
             if (buffer.Take(3).Concat(buffer.TakeLast(3)).Any(v => v != 0)) throw new Exception("Tempo overwrote the buffer boundary");
@@ -40,7 +40,7 @@ internal static class PlaybackSpeedTests
         audio.SetPlaybackSpeed(.25);
         if (!await audio.LoadAsync(file)) throw new Exception(audio.Error);
         audio.Play(); await audio.WaitForCommandsAsync();
-        foreach (double speed in new[] { .25, .5, .75, 1, .25 })
+        foreach (double speed in new[] { .1, .25, .5, .75, 1, 1.5, .1 })
         {
             double before = audio.PositionMs;
             audio.SetPlaybackSpeed(speed); await audio.WaitForCommandsAsync();

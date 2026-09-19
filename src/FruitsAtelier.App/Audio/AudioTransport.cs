@@ -132,7 +132,7 @@ public sealed class AudioTransport : IDisposable
 
     public void SetPlaybackSpeed(double speed)
     {
-        if (!double.IsFinite(speed) || speed < .25 || speed > 1) return;
+        if (!double.IsFinite(speed) || speed < .1 || speed > 1.5) return;
         lock (stateLock)
             if (disposed == 0) { requestedSpeed = speed; commands.Writer.TryWrite(new(CommandKind.Speed, loadVersion, Position: speed)); }
     }

@@ -2,6 +2,29 @@ using FruitsAtelier.Core;
 
 internal static class TimingLookupTests
 {
+    public static void SubdivisionsAndMeasures()
+    {
+        var map = new MapDocument();
+        map.TimingPoints.AddRange([
+            new() { TimeMs = 100, BeatLengthMs = 600, Meter = 3 },
+            new() { TimeMs = 900, BeatLengthMs = -50, Meter = 4, Uninherited = false },
+            new() { TimeMs = 2100, BeatLengthMs = 480, Meter = 7 }
+        ]);
+        var grid = TimingMap.Grid(map, -1700, 6000, 12).ToArray();
+        foreach (double time in new[] { -1700d, 100, 1900, 2100, 5460 })
+            if (!grid.Single(l => l.TimeMs == time).IsMeasure) throw new Exception($"Missing measure at {time}.");
+        foreach (double time in new[] { 700d, 1300, 4020 })
+            if (grid.Single(l => l.TimeMs == time).IsMeasure) throw new Exception($"Wrong meter at {time}.");
+        foreach (var (time, division) in new[] { (150d, 12), (200d, 6), (250d, 4), (300d, 3), (400d, 2), (700d, 1), (-50d, 4) })
+            if (grid.Single(l => l.TimeMs == time).Subdivision != division) throw new Exception($"Wrong reduced subdivision at {time}.");
+        foreach (int divisor in new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16 })
+        {
+            var first = TimingMap.Grid(map, 100, 700, divisor).ToArray();
+            if (first[1].Subdivision != divisor || !first[0].IsMeasure || first[^1].IsMeasure)
+                throw new Exception($"Invalid subdivision or measure for 1/{divisor}.");
+        }
+    }
+
     public static void BoundariesAndSnapshot()
     {
         var map = new MapDocument { BeatLengthMs = 700, TimingOffsetMs = -50 };
@@ -24,8 +47,8 @@ internal static class TimingLookupTests
             (2500d, new TimingState(2500, 300, 1, true, 7)) })
             if (lookup.At(time) != state) throw new Exception($"Timing boundary mismatch at {time}.");
         var grid = lookup.Grid(900, 1200, 4).ToArray();
-        if (!grid.SequenceEqual(new[] { new BeatGridLine(975, false, false), new BeatGridLine(1000, true, true),
-            new BeatGridLine(1100, false, false), new BeatGridLine(1200, false, false) }))
+        if (!grid.SequenceEqual(new[] { new BeatGridLine(975, false, false, 4), new BeatGridLine(1000, true, true, 1, true),
+            new BeatGridLine(1100, false, false, 4), new BeatGridLine(1200, false, false, 2) }))
             throw new Exception("Grid no longer resets at the red timing boundary.");
         map.TimingPoints[2].BeatLengthMs = 200;
         map.TimingPoints.Clear();

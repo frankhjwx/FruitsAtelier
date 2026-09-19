@@ -1,7 +1,7 @@
 namespace FruitsAtelier.Core;
 
 public readonly record struct TimingState(double OffsetMs, double BeatLengthMs, double SliderVelocityMultiplier, bool GenerateTicks, int Meter = 4);
-public readonly record struct BeatGridLine(double TimeMs, bool IsBeat, bool IsTimingBoundary);
+public readonly record struct BeatGridLine(double TimeMs, bool IsBeat, bool IsTimingBoundary, int Subdivision = 1, bool IsMeasure = false);
 
 public static class TimingMap
 {
@@ -98,7 +98,7 @@ public static class TimingMap
         var reds = lookup.RedTimes;
         var boundaries = reds.Where(t => t >= start && t <= end).Take(maximumLines).ToArray();
         var lines = new SortedDictionary<double, BeatGridLine>();
-        foreach (double boundary in boundaries) lines[boundary] = new(boundary, true, true);
+        foreach (double boundary in boundaries) lines[boundary] = new(boundary, true, true, 1, true);
         double[] starts = new[] { start }.Concat(boundaries.Where(t => t > start && t < end)).ToArray();
         int perSegmentBudget = Math.Max(1, (maximumLines - lines.Count) / Math.Max(1, starts.Length));
         for (int segment = 0; segment < starts.Length && lines.Count < maximumLines; segment++)
@@ -116,7 +116,12 @@ public static class TimingMap
             {
                 double time = state.OffsetMs + index * step;
                 if (time >= from && time <= end && (segment + 1 == starts.Length || time < to) && !lines.ContainsKey(time))
-                    lines[time] = new(time, index % divisor == 0, false);
+                {
+                    int remainder = (int)Math.Abs(index % divisor), denominator = divisor;
+                    while (remainder != 0) (denominator, remainder) = (remainder, denominator % remainder);
+                    lines[time] = new(time, index % divisor == 0, false, divisor / denominator,
+                        index % ((double)divisor * state.Meter) == 0);
+                }
                 double next = index + stride;
                 if (!double.IsFinite(next) || next <= index) break;
                 index = next;
