@@ -115,6 +115,18 @@ internal sealed partial class EditorWindow : IDisposable
                 if (result < 0) throw new Win32Exception();
                 if (result == 0) break;
             }
+            // IME-owned key messages lose their original key after TranslateMessage.
+            if (msg.Window == hwnd && msg.Id == 0x0100 && Native.Control && Native.Shift)
+            {
+                uint key = msg.WParam == 0xE5 ? Native.ImmGetVirtualKey(hwnd) : (uint)msg.WParam;
+                if (key == 70)
+                {
+                    view.KeyDown(70, true, true);
+                    if (!view.WantsCapture && Native.GetCapture() == hwnd) Native.ReleaseCapture();
+                    UpdateTitle(); Invalidate();
+                    continue;
+                }
+            }
             Native.TranslateMessage(ref msg);
             Native.DispatchMessage(ref msg);
         }
@@ -190,7 +202,7 @@ internal sealed partial class EditorWindow : IDisposable
                 if (audio.IsPlaying && !view.IsTestplaying && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0014: return 1; // WM_ERASEBKGND
-            case 0x0113: PollAudio(); if (view.TextCaretNeedsRedraw && !Native.IsIconic(window)) Invalidate(); return 0; // WM_TIMER
+            case 0x0113: PollAudio(); if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw) && !Native.IsIconic(window)) Invalidate(); return 0; // WM_TIMER
             case 0x0005: Invalidate(); return 0;
             case 0x02E0: // WM_DPICHANGED
                 view.CancelInteraction();

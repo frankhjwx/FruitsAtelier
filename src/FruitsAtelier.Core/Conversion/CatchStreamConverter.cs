@@ -11,6 +11,8 @@ public static class CatchStreamConverter
         var sliders = new List<GeneratedSlider>();
         var objects = new List<ConvertedCatchObject>();
         var diagnostics = new List<string>();
+        var parentStarts = new Dictionary<Guid, double>();
+        var parentOrders = new Dictionary<Guid, int>();
         bool success = true;
         if (!double.IsFinite(document.BeatLengthMs) || document.BeatLengthMs <= 0
             || !double.IsFinite(document.SliderMultiplier) || document.SliderMultiplier <= 0
@@ -29,6 +31,8 @@ public static class CatchStreamConverter
         var rng = new CatchLegacyRandom(1337);
         foreach (var source in parents)
         {
+            Guid sourceId = source.Fruit?.Id ?? source.Track?.Id ?? source.ImportedSlider?.Id ?? source.BananaShower!.Id;
+            parentStarts[sourceId] = source.TimeMs; parentOrders[sourceId] = source.SourceOrder;
             if (source.Fruit is Fruit fruit)
             {
                 if (!double.IsFinite(fruit.TimeMs) || fruit.TimeMs < 0 || fruit.TimeMs > int.MaxValue
@@ -72,6 +76,13 @@ public static class CatchStreamConverter
                 }
                 var track = source.Track!;
                 ValidateTrack(document, track);
+                if (track.StreamSnapDivisor is not null)
+                {
+                    var stream = SliderFruitStream.Convert(document, track);
+                    objects.AddRange(stream);
+                    cache?.Store(track, null, null, before, rng, null, stream);
+                    continue;
+                }
                 // Repeats share one geometric path but receive independent tiny offsets.
                 // A saved alignment preference must not prohibit their compatibility fallback.
                 bool requireCompensation = track.CompensateTinyDroplets == true && track.SpanCount == 1;
@@ -97,7 +108,9 @@ public static class CatchStreamConverter
         CatchConversionResult Finish() => new()
         {
             Sliders = sliders.ToArray(),
-            Objects = objects.OrderBy(o => o.TimeMs).ToArray(),
+            // Stream fruits are independent exported parents; ties follow their own time and source order.
+            Objects = objects.OrderBy(o => o.TimeMs).ThenBy(o => o.IsStandalone ? o.TimeMs : parentStarts[o.SourceId])
+                .ThenBy(o => parentOrders[o.SourceId]).ToArray(),
             Diagnostics = diagnostics.ToArray(),
             Success = success && (sliders.Count > 0 || objects.Count > 0 || diagnostics.Count == 0),
             MaxTickError = objects.Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet).Select(o => Math.Abs(o.X - o.TargetX)).DefaultIfEmpty().Max(),

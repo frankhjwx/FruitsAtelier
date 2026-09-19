@@ -2,13 +2,13 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. All four schemas are readable. Older applications reject the newer schemas rather than silently discarding curve geometry. The project implements stable v12–v14 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). All six schemas are readable. Older applications reject the newer schemas rather than silently discarding curve geometry. The project implements stable v12–v14 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
 
 ## Authoritative and derived data
 
 | Category | Contents | Rule |
 | --- | --- | --- |
-| Authored data | Standalone fruits, tracks, anchors, segment types, handles, span counts, timing/difficulty | Authoritative content for editing and undo |
+| Authored data | Standalone fruits, tracks, anchors, segment types, handles, span counts, stream snap, timing/difficulty | Authoritative content for editing and undo |
 | Imported context | Raw sections and object lines, source order, complete timing, sliders/bananas, resource references | Saved with the project; unedited objects retain their original representation on export |
 | Derived results | Slider geometry, SV, F/D/T/bananas, RNG, errors, hyperdash | Recomputable; never overwrite authoring intent |
 | Session state | Object/anchor selection, tool, language, snapping, viewport, transport time, skin, layers, Tiny compensation toggle, internal batch clipboard | Not beatmap content |
@@ -108,3 +108,5 @@ Hyperdash uses all Fruit / Droplet results, skipping TinyDroplets and Bananas, a
 `.osu` accepts v12–v14 / Mode=2 and emits v14 / Mode=2; see [stable File Contract](STABLE_FORMAT.md). Legacy Sliders retain original lines. FSliders encode integer time and path coordinates, preserve SpanCount, and insert/restore inherited SV as needed. Legacy-converted FSliders reuse original type/hitsound/sample fields. Span-count edits preserve surviving edge samples; new edges receive defaults and a diagnostic. Incompatible same-time SV conflicts fail explicitly. Export read-back compares the full object sequence, times, and X; quantization can introduce errors or sequence changes.
 
 Project saving and `.osu` export are independent; exporting cannot replace saving authoring intent. Video and storyboard playback are unsupported. Preserving raw section text alone does not mean its referenced assets have been packaged; workspace archive retention is described separately in [Workspace](WORKSPACE.md).
+
+`CurveTrack.StreamSnapDivisor` is null for ordinary sliders and 1–16 for slider-managed fruit streams. It participates in cloning, history, equality and conversion-cache invalidation. Stream sampling uses the head BPM and follows every repeated traversal without consuming slider RNG. Derived fruits retain the parent ID with distinct event indices and standalone gameplay semantics. They do not produce generated slider geometry or SV overrides. `.osu` export expands them into ordered hit circles; only project files retain the editable parent.

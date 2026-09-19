@@ -279,7 +279,7 @@ internal static class SliderInteractionTests
         map.DurationMs = 12000;
         var ui = Load(map);
         Guid sourceId = map.ImportedSliders.Single().Id;
-        ui.ClickMap(1500, 200); ui.Key('D', ctrl: true);
+        ui.ClickMap(1500, 200); ui.HoldMap(1000, 100); ui.ClickText(FruitsAtelier.Localization.Strings.Get("preview.convertSlider"));
         var track = ui.View.Document.Tracks.Single();
         Check(track.Id == sourceId && track.CompensateTinyDroplets == true && ui.View.Document.ImportedSliders.Count == 0,
             "Context conversion did not replace the Legacy Slider with one FSlider.");

@@ -120,6 +120,13 @@ internal static class RenderCheck
                 if (!view.TestplayAutoplay) throw new InvalidOperationException("Held Tab failed to enable autoplay once.");
                 view.KeyUp(9); view.KeyDown(9, false, false); view.KeyUp(9);
                 if (view.TestplayAutoplay) throw new InvalidOperationException("Tab failed to restore manual control.");
+                view.KeyDown(80, true, false); view.KeyUp(80);
+                double pausedTime = view.PlayheadMs;
+                view.UpdateTransport(pausedTime, 6000, true, false, false, null, null);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                if (!view.TestplayPaused || !view.IsTestplaying) throw new InvalidOperationException("Native testplay failed to pause.");
+                view.KeyDown(80, true, false); view.KeyUp(80);
+                view.UpdateTransport(pausedTime + 1, 6000, true, true, false, null, null);
                 foreach (int key in new[] { view.LibrarySettings.TestplayLeftKey, view.LibrarySettings.TestplayRightKey })
                 {
                     view.KeyDown(key, false, false);
@@ -137,6 +144,41 @@ internal static class RenderCheck
                 view.KeyDown(27, false, false);
                 if (view.LibraryVisible) throw new InvalidOperationException("Repeated testplay Escape left the editor.");
                 view.KeyUp(27);
+                view.StartTestplay();
+                view.UpdateTransport(1400, 6000, true, true, false, null, null);
+                double exitTime = view.PlayheadMs;
+                view.KeyDown(113, false, false);
+                if (view.IsTestplaying || Math.Abs(view.PlayheadMs - exitTime) > 100) throw new InvalidOperationException("Native F2 failed to retain position.");
+                var streamMap = new MapDocument();
+                var track = new CurveTrack { Kind = CurveKind.Linear };
+                track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 100 }, new Anchor { TimeMs = 2000, X = 400 }]);
+                streamMap.Tracks.Add(track);
+                view.LoadDocument(streamMap); view.CloseLibrary();
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.KeyDown(65, true, false); view.KeyDown(70, true, true);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                if (!view.StreamDialogVisible) throw new InvalidOperationException("Native stream dialog did not open.");
+                view.KeyDown(39, false, false); view.KeyDown(13, false, false);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                if (view.StreamDialogVisible || view.Document.Tracks[0].StreamSnapDivisor != 5)
+                    throw new InvalidOperationException("Native stream confirmation failed.");
+                view.UpdateTransport(1000, 6000, true, false, false, null, null);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                var field = view.PlayfieldBounds; var plot = view.CanvasPlotBounds;
+                float headX = field.X + 100f / 512 * field.Width;
+                float headY = plot.Bottom - (float)((1000 - view.ViewStartMs) * view.PixelsPerMs);
+                view.PointerDown(headX, headY, 0, false, false);
+                Thread.Sleep(350);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                if (!view.SliderHoldNeedsRedraw || view.StreamConversionBounds.Width != 0)
+                    throw new InvalidOperationException("Native slider hold did not show progress.");
+                Thread.Sleep(700);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.PointerUp(headX, headY, 0);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                if (view.StreamConversionBounds.Width == 0 || view.WantsCapture)
+                    throw new InvalidOperationException("Native slider hold did not expose actions or release capture.");
+                view.KeyDown(27, false, false);
                 view.MarkSaved(); view.ShowLibrary();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(width - 380, 20, 0, false, false); view.PointerUp(width - 380, 20, 0);

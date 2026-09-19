@@ -4,7 +4,7 @@
 
 The time–X canvas occupies the main area, read-only AR/CS/SV are at the upper right, and time navigation is at the bottom. Select objects directly on the canvas. Playfield X spans `0..512`; time increases upward. Startup opens the Library without loading a demo beatmap. Open a beatmap set to enter the editor. The window title identifies the active difficulty as `Artist - Title (Mapper) [Diffname]`; the menu row does not repeat the project title. The compact **← Library** button to the right of **Language** returns to the library. Esc first dismisses an active menu, field, dialog, or gesture; otherwise it requests a return to the library. Unsaved changes prompt for Save, Discard, or Cancel before closing the editor; Cancel or a failed save keeps the editor open. See [Workspace](WORKSPACE.md) for navigation and position memory.
 
-The Details header shows read-only beatmap AR, CS, and the base SliderMultiplier as SV. Catch Preview starts collapsed; the small button at the center of the canvas’s right edge opens it at the upper right. Drag the sidebar’s left boundary to resize it, and use the edge button to close it. NM, Easy and Hard Rock select preview-only difficulty and position rules; see [Catch rendering](CATCH_RENDERING.md). The preview uses its effective AR for falling speed. The main canvas uses the beatmap's AR timing ratio; its **Zoom** slider changes the displayed width of X=0..512 and scales object sizes and time spacing together. Zooming out shows more notes vertically without changing their coordinates, map AR, or CS. The playfield stays horizontally centered, from a minimum **256 DIP** wide to the full available width with CS0 edge padding. Percentages are relative to that available width; resizing preserves the zoom percentage except when the minimum width requires clamping. **View → Reset view** restores 100% and follows the playhead. Scroll to browse time, drag with the middle button to pan, and Ctrl+scroll to scale around the pointer's time. When paused, slider zoom preserves the viewport's center time; during playback, it preserves the play line.
+The Details header shows read-only beatmap AR, CS, and the base SliderMultiplier as SV. Catch Preview starts collapsed; the small button at the center of the canvas’s right edge opens it at the upper right. Drag the sidebar’s left boundary to resize it, and use the edge button to close it. NM, Easy and Hard Rock select preview-only difficulty and position rules; see [Catch rendering](CATCH_RENDERING.md). The preview uses its effective AR for falling speed. The main canvas uses the beatmap's AR timing ratio; its **Zoom** slider changes the displayed width of X=0..512 and scales object sizes and time spacing together. Zooming out shows more notes vertically without changing their coordinates, map AR, or CS. The playfield stays horizontally centered, from a minimum **256 DIP** wide to the full available width with CS0 edge padding. Percentages are relative to that available width; resizing preserves the zoom percentage except when the minimum width requires clamping. **Zoom defaults to 60%. View → Reset view** restores 60% and follows the playhead. Scroll to browse time, drag with the middle button to pan, and Ctrl+scroll to scale around the pointer's time. When paused, slider zoom preserves the viewport's center time; during playback, it preserves the play line.
 
 `Catch Preview` offers 4:3, 16:9 and Fit display modes. Fit uses the entire available sidebar height, revealing more future notes as the window grows vertically. Drag the sidebar divider to adjust width. Objects retain their proportions, and an automatic catcher follows playback and seeking. Mode and Resolution controls stay above the picture; 4:3 and 16:9 pictures are centred in the remaining area. Caught fruit remains on the plate. Completing a combo group scatters the stack; seeking restores the plate effects.
 
@@ -25,6 +25,8 @@ catcher, and its skin image faces the last movement direction in both preview an
 testplay. Dash and hyperdash leave fading catcher trails. The combo uses the skin's
 combo digits, pulses on catches and fades while idle or after a miss. Missed notes
 fall past the catcher and fade out over 250 ms.
+
+The upper-left corner shows **Tab** (autoplay), **Ctrl+P** (pause/resume), **F1** (exit to the testplay start), and **F2** (exit at the current position). Pausing freezes gameplay and music; resuming continues the same session.
 
 Press **Tab** during testplay to toggle autoplay. Press it again to resume manual
 movement at the current time and position. Each new testplay starts in manual mode.
@@ -63,7 +65,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 
 | Input | Action |
 | --- | --- |
-| V / F / B / N | Select / Fruit / FSlider / Banana shower |
+| 1 / 2 / 3 / 4 (also V / F / B / N) | Select / Fruit / FSlider / Banana shower |
 | Click an object in Select mode | Select the complete object; slider children belong to the parent slider |
 | Drag empty space | Box-select objects in Select mode or anchors in FSlider edit mode |
 | Ctrl+click / Ctrl+box-select | Toggle object selection / add to box selection; selected-slider point actions take priority |
@@ -74,7 +76,19 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Right-click a note / edited point | Delete an object; a straight point becomes curved, a curved point is deleted; no context menu |
 | Ctrl+L | Toggle the selected point between straight and curved |
 | Ctrl+I | Insert a control point on the curve under the pointer |
-| Ctrl+D | Convert the selected Legacy Slider to FSlider |
+| Ctrl+D | Clone selected parents one measure after the last selected start |
+| Ctrl+A | Select all objects |
+| Ctrl+H | Flip selected parents horizontally around X=256 |
+| Ctrl+Left / Right | Move selected parents by one X unit |
+| J / K | Move selected parents backward / forward by one beat subdivision |
+| Ctrl+1 / 2 / 3 / 4 | Set grid size to 4 / 8 / 16 / 32 |
+| Shift+1…9 / Ctrl+M | Set beat subdivision directly / cycle subdivisions |
+| C / Space / X | Pause or resume / pause or resume / play from song start |
+| Z / End | Jump to first / last object start; repeat to reach song start / end |
+| Left / Right (Shift for 4×) | Seek backward / forward by one beat subdivision |
+| Up / Down | Seek previous / next timing point |
+| Ctrl+Up / Down | Increase / decrease playback speed by 25%, within 25%–100% |
+| Ctrl+Shift+F | Open slider-to-stream snap confirmation |
 | Ctrl+= / Ctrl+− | Add / remove one reverse |
 | Ctrl+J | Extend the selected FSlider to the pointer |
 | Esc | Cancel an active drag, box selection, draft, or text input |
@@ -117,7 +131,7 @@ Select an FSlider and press B, or double-click its track, to edit anchors. Click
 
 With a single slider selected, left-dragging the body away from anchors moves the whole slider, and left-dragging an anchor moves that anchor. Ctrl+click at a new position inside the slider's time range inserts a curved anchor; Ctrl+click on an existing anchor makes it straight. Right-click a straight anchor to restore a curved anchor, then right-click the curved anchor to delete it. These rules apply in both editing modes, including points exposed in Select mode. In legacy mode, an interior straight anchor is a segment boundary; restoring it to curved merges it back into the control polygon. Right-click the slider body away from anchors to delete the parent. Ctrl+L also toggles the selected point, and Ctrl+I inserts on the curve under the pointer. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
 
-Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Select a Legacy Slider and hover over its objects or visible path to reveal **Convert to FSlider** beside the pointer, or press Ctrl+D. The button remains reachable while the pointer moves into it. Conversion preserves start time, total duration, and span count. It first fits a small set of straight/Bezier anchors within 0.25 playfield units, then relaxes TinyDroplet alignment or uses a linear approximation if needed to complete the conversion. Exact nested-object positions and sequences are not required to match. Invalid or unrepresentable input retains its original object with a reason.
+Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Hold the left mouse button stationary on a Legacy Slider to open its conversion actions beside the pointer. A small progress ring appears after 300 ms and fills over the next 700 ms. Moving at least 2 DIP or releasing before completion cancels the hold; ordinary selection and dragging remain available. The buttons stay open until an action, another click, a key, or focus loss dismisses them. Conversion preserves start time, total duration, and span count. It first fits a small set of straight/Bezier anchors within 0.25 playfield units, then relaxes TinyDroplet alignment or uses a linear approximation if needed to complete the conversion. Exact nested-object positions and sequences are not required to match. Invalid or unrepresentable input retains its original object with a reason.
 
 The first workspace import from Songs, an external folder, `.osu`, or `.osz` asks whether to convert sliders in all newly imported difficulties if they contain Legacy Sliders. Keeping Legacy preserves that representation. Reopening an existing project does not prompt again. Importing one difficulty into a project prompts only for that difficulty.
 
@@ -201,3 +215,11 @@ In the object timeline, a slider tail displays a horizontal resize cursor. Drag 
 ## Operation errors
 
 Recoverable file-operation errors appear inside the editor window on both the canvas and library pages. The message identifies a rejected beatmap file when parsing fails. Scroll long messages with the mouse wheel; dismiss with OK, Enter, or Esc. While the message is open, editing and library input are blocked and the current document is retained. Windows startup and rendering failures use a foreground system dialog because the editor canvas may be unavailable.
+
+## Slider fruit streams
+
+Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Slider to stream**. Long-press an FSlider to reveal **Convert to stream**; imported Legacy Sliders offer **Convert to FSlider** above **Convert to stream**. Every stream-conversion entry opens a confirmation dialog with the same snap slider and subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**. Enter confirms; Esc cancels; arrow keys change the choice.
+
+A confirmed stream remains one editable slider parent with its anchors, handles and repeats. Dragging, reshaping, cloning, saving and undo retain its stream snap. Existing streams offer **Change snapping** above **Convert back to slider** in their long-press menu. The Edit menu and Ctrl+Shift+F open Change snapping for a stream selection. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
+
+The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing V selection, Ctrl+L point conversion, Ctrl+I point insertion, Ctrl+J extension, Ctrl+Shift+S Save As, Ctrl+E export and Ctrl+wheel zoom remain editor-specific bindings; End provides last-note navigation. Timing creation, bookmarks and geometric rotation dialogs are not available.

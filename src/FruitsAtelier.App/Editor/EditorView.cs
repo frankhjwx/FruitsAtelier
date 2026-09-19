@@ -46,7 +46,7 @@ public sealed partial class EditorView
     private float width, height, mouseX = -1, mouseY = -1;
     private Rect canvas, plot, rightPanel, overview, snapSlider, zoomSlider;
     private double viewStart, pixelsPerMs = 0.09, playhead = 1500;
-    private double canvasZoom = 1;
+    private double canvasZoom = .6;
     public const float MinimumPlayfieldWidth = 256;
     public double CanvasZoom => canvasZoom;
     private CatchSkin? skin;
@@ -80,7 +80,7 @@ public sealed partial class EditorView
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
     public bool IsEditingText => TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
-    public bool WantsCapture => drag != DragKind.None || libraryPointerActive || tabPointer;
+    public bool WantsCapture => drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || SliderHoldNeedsRedraw || sliderHoldConsumed;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;
     public double PlayheadMs => playhead;
@@ -168,7 +168,7 @@ public sealed partial class EditorView
     private void ResetView()
     {
         pinPlayhead = true;
-        canvasZoom = 1;
+        canvasZoom = .6;
         viewStart = 0;
         if (Playfield.Width > 0) pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
         if (AudioPlaying) FollowPlayhead();

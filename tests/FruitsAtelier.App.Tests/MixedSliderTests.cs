@@ -48,7 +48,7 @@ internal static class MixedSliderTests
         Guid id = map.ImportedSliders.Single().Id;
         ui.LoadDocument(map); ui.Paint();
         ui.Key('V'); ui.ClickMap(1000, 160);
-        ui.Key('D', ctrl: true);
+        ui.HoldMap(1000, 160); ui.ClickText(FruitsAtelier.Localization.Strings.Get("preview.convertSlider"));
         var track = ui.View.Document.Tracks.Single();
         Check(track.Id == id && track.SpanCount == 1 && track.CompensateTinyDroplets == true
             && ui.View.Document.ImportedSliders.Count == 0, "Conversion lost the original parent identity or FSlider alignment policy.");

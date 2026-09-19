@@ -7,7 +7,7 @@ internal static class CanvasZoomTests
     public static void DefaultsAndReset()
     {
         var ui = new Ui(overview: false);
-        Near(1, ui.View.CanvasZoom);
+        Near(.6, ui.View.CanvasZoom);
         AssertScale(ui);
         if (ui.View.CanvasPlotBounds.X > 180 || ui.Canvas.Texts.Any(t => t.Value is "Objects" or "对象"))
             throw new Exception("Objects panel still occupies the canvas layout");
@@ -16,7 +16,7 @@ internal static class CanvasZoomTests
         ui.Resize(980, 620);
         if (ui.Plot.Width < EditorView.MinimumPlayfieldWidth - .001) throw new Exception("Resize bypassed minimum width");
         ui.ClickText(L.Get("ui.resetView"));
-        Near(1, ui.View.CanvasZoom);
+        Near(.6, ui.View.CanvasZoom);
         AssertScale(ui);
         if (ui.View.IsDirty) throw new Exception("View defaults changed document content");
         var map = new MapDocument { DurationMs = 30000 };

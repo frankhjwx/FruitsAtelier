@@ -14,7 +14,7 @@ public static class MacInput
     {
         >= Key.A and <= Key.Z => 65 + key - Key.A,
         >= Key.D0 and <= Key.D9 => 48 + key - Key.D0,
-        Key.Left => 37, Key.Right => 39, Key.LeftShift or Key.RightShift => 16, Key.F5 => 116,
+        Key.Left => 37, Key.Right => 39, Key.LeftShift or Key.RightShift => 16, Key.F1 => 112, Key.F2 => 113, Key.F5 => 116, Key.End => 35,
         Key.Back => editingText ? 8 : 46, Key.Tab => 9, Key.Enter => 13, Key.Escape => 27,
         Key.Space => 32, Key.Home => 36, Key.Delete => 46, Key.Up => 38, Key.Down => 40, Key.OemPlus => 187, Key.OemMinus => 189, _ => 0
     };
@@ -49,8 +49,8 @@ internal sealed class EditorControl : Control, IDisposable
         base.Render(context);
         using var canvas = new MacCanvas(context, images);
         View.Render(canvas, (float)Bounds.Width, (float)Bounds.Height);
-        if (View.IsTestplaying)
-            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying) InvalidateVisual(); });
+        if (View.IsTestplaying || View.SliderHoldNeedsRedraw)
+            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.SliderHoldNeedsRedraw) InvalidateVisual(); });
     }
     internal void Refresh() { InvalidateVisual(); Changed?.Invoke(); }
     protected override void OnPointerPressed(PointerPressedEventArgs e)

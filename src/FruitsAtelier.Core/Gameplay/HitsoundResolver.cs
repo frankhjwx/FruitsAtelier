@@ -11,8 +11,10 @@ public sealed class HitsoundResolver
     private readonly TimingPoint[] timing;
     private readonly Dictionary<Guid, double> sliderStarts;
     private readonly int defaultSet;
+    private readonly Dictionary<Guid, CurveTrack> streams;
     public HitsoundResolver(MapDocument document, IReadOnlyList<ConvertedCatchObject> objects)
     {
+        streams = document.Tracks.Where(t => t.StreamSnapDivisor is not null).ToDictionary(t => t.Id);
         lines = document.Fruits.Select(f => (f.Id, f.OriginalLine))
             .Concat(document.Tracks.Select(f => (f.Id, f.OriginalLine)))
             .Concat(document.ImportedSliders.Select(f => (f.Id, f.OriginalLine)))
@@ -59,6 +61,8 @@ public sealed class HitsoundResolver
         string? custom = null;
         if (lines.TryGetValue(item.SourceId, out string? line) && line is not null)
         {
+            if (streams.TryGetValue(item.SourceId, out var stream))
+                line = SliderFruitStream.FruitLine(stream, item.EventIndex, "0", "0");
             string[] p = line.Split(',');
             bool slider = (Number(p, 3) & 2) != 0;
             string[] sample = At(p, slider ? 10 : 5).Split(':', 5);
