@@ -14,7 +14,7 @@ An osu!catch beatmap editor for Windows and macOS. Create patterns, reshape slid
 - **Object editing.** Place fruits and banana showers; select, move, duplicate, flip, or delete groups of objects with undo and redo.
 - **Slider tools.** Draw and reshape FSliders with control points or Bezier handles, add reverses, convert imported sliders, and turn slider paths into fruit streams.
 - **Snapping.** Use beat subdivisions, a horizontal grid, and distance snapping to place patterns. Adjust new combos and hitsounds on objects or individual slider edges.
-- **Music and preview.** Play MP3, OGG, and WAV audio with hitsounds at 25%, 50%, 75%, or full speed. Preview Catch objects with skins and NM, Easy, or Hard Rock settings.
+- **Music and preview.** Play MP3, OGG, and WAV audio with hitsounds at 10%, 25%, 50%, 75%, 100%, or 150% speed. Preview Catch objects with skins and NM, Easy, or Hard Rock settings.
 - **Testplay.** Play from the current position with movement, dash, combo feedback, and optional autoplay. Movement keys are configurable.
 - **Multiple difficulties.** Switch between difficulties in tabs, view star ratings, save editable projects, and export `.osu` files or new difficulties to osu!stable.
 - **Skins and languages.** Use osu!stable skins or import `.osk` files. The interface supports English and Simplified Chinese.

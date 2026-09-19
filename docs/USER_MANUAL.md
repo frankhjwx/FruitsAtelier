@@ -21,7 +21,7 @@ On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are
 - Place fruits and banana showers; move, duplicate, flip and delete groups with undo/redo.
 - Draw FSliders with control points or Bezier handles; add reverses and create fruit streams.
 - Align patterns with beat, grid and distance snapping; edit combos and hitsounds.
-- Play music and hitsounds at full or reduced speed, preview skins and mods, and testplay with optional autoplay.
+- Play music and hitsounds at 10%–150% speed, preview skins and mods, and testplay with optional autoplay.
 - Work on several difficulties in one project, view star ratings, and export Catch beatmaps.
 
 ### Supported files
