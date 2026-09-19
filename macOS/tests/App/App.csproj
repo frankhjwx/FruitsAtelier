@@ -3,5 +3,6 @@
   <ItemGroup>
     <ProjectReference Include="../../../src/FruitsAtelier.Mac/FruitsAtelier.Mac.csproj" />
     <Compile Include="../../../tests/FruitsAtelier.App.Tests/*.cs" Link="%(Filename)%(Extension)" />
+    <Compile Include="../../../src/FruitsAtelier.App/Updates/UpdateService.cs" Link="UpdateService.cs" />
   </ItemGroup>
 </Project>

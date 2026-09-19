@@ -2,7 +2,8 @@
 
 The Windows distribution is a self-contained **win-x64 ZIP**, including the .NET
 runtime, native dependencies, editor assets, default audio, and third-party notices.
-Extract the whole ZIP and launch `FruitsAtelier.App.exe`. Windows users do not need
+Extract the whole ZIP and launch `FruitsAtelier.exe`. Keep `Update.exe` and the
+`current/` directory together. Windows users do not need
 the SDK, a separate .NET runtime, or administrator access. The executable requires
 Windows 10/11 x64 with DirectX 11 support; MP3 playback uses Windows Media Foundation.
 Windows N users need Microsoft's Media Feature Pack.
@@ -21,10 +22,13 @@ From the repository root, using PowerShell 7 and the SDK pinned in `global.json`
 ```
 
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
-`.zip.sha256` checksum. The default version comes from `Directory.Build.props`
+`.zip.sha256` checksum, plus a Velopack full `.nupkg` and
+`releases.win-x64.json` update feed. The default version comes from `Directory.Build.props`
 (currently 0.8.1); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
 the local checkout had uncommitted changes. Executable version metadata uses the
 same version and commit. Release builds run from the clean tagged commit.
+The window title displays this version beside the application name, omitting the
+source commit suffix and retaining any prerelease label.
 
 The package includes the English [user manual source](USER_MANUAL.md). To include
 its PDF edition, install Python and ReportLab, render the manual, then pass the
@@ -54,8 +58,25 @@ Local `assets/skins/default.osk` is excluded from release packages. User workspa
 Songs directories, credentials, and application preferences are never copied into
 the distribution. Each publish uses a fresh staging directory under `artifacts/`.
 Release logs use `%LOCALAPPDATA%/FruitsAtelier/logs`; repository builds use
-`artifacts/logs`. Updating means extracting a new package, retaining the user's
-separate workspace and preferences.
+`artifacts/logs`. Use **Library → Settings → Application updates** to check, download, and
+explicitly save and restart into an update. The Windows client uses the public
+GitHub Releases source, excludes prereleases, and checks at most once per day
+on startup when automatic checks are enabled. Failed checks also consume that
+day's automatic attempt; manual checks remain available. Downloaded updates are
+retained across launches but never applied implicitly. Development builds do not
+self-update. macOS packaging does not yet include an updater.
+
+Velopack SDK and CLI versions are pinned to 1.2.0 in the project and
+`.config/dotnet-tools.json`. Full update packages are used; no delta packages or
+installer are generated. `current/` is replaced during updates. Keep user projects
+and skins outside it; the application refuses an update if configured data lives
+there or another instance of the same installation is running. Preferences live
+in the existing application data directory; `updates.json` stores the automatic
+check preference and last attempt time.
+
+Existing plain ZIP installations require one manual download and extraction of
+the updater-enabled portable package. Subsequent versions update in place.
+The homepage is not part of the update path.
 
 ## GitHub Release
 
@@ -71,7 +92,7 @@ separate workspace and preferences.
 
 3. The **Windows release** workflow validates the tag, builds and tests that commit,
    publishes the ZIP, and launches its extracted exe for the package smoke check.
-4. After all checks pass, it uploads the ZIP and SHA256 to a draft GitHub Release
+4. After all checks pass, it uploads the portable ZIP, SHA256, full update package and update feed to a draft GitHub Release
    and then publishes it. Suffixed tags become prereleases. The workflow uses the
    repository `GITHUB_TOKEN`; no personal token is needed. Actions must be enabled
    and repository policy must allow the release job's `contents: write` permission.
@@ -92,3 +113,20 @@ runtime, loads native SQLite, validates embedded localization and assets, decode
 the packaged hitsounds, and exercises tempo processing and map conversion without
 producing sound. It does not certify every GPU/audio-driver combination. Verify
 window rendering and audio on a Windows machine before choosing a release tag.
+
+## Update integration check
+
+Desktop CI packages two test versions, rejects a deliberately corrupted download,
+then upgrades the older portable installation and checks the restarted version,
+bundled runtime, native dependencies, and a user file outside `current/`.
+The check uses a local file feed without network access or audio output:
+
+```powershell
+./scripts/Publish-Windows.ps1 -Version 0.0.2-alpha.1 -OutputDirectory artifacts/update-old
+./scripts/Publish-Windows.ps1 -Version 0.0.2-alpha.2 -OutputDirectory artifacts/update-new
+./scripts/Test-WindowsUpdate.ps1 -Archive artifacts/update-old/FruitsAtelier-0.0.2-alpha.1-win-x64.zip -FeedDirectory artifacts/update-new -ExpectedVersion 0.0.2-alpha.2
+```
+
+Publish the feed together with its matching packages before making a GitHub
+Release public. A release without these assets cannot serve automatic updates.
+The stable client must never point at the CI test feeds.

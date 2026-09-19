@@ -47,9 +47,10 @@ public sealed partial class EditorView
     {
         try { LibrarySettings = settings ?? LibrarySettings.Load(); }
         catch (Exception e) { libraryError = e.Message; }
+        ApplyAudioVolume();
         draftWorkspace = LibrarySettings.Workspace; draftOsuRoot = LibrarySettings.OsuRoot; draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         LibraryVisible = show;
-        librarySettingsOpen = false;
+        librarySettingsOpen = false; updatesPage = false;
         LoadLibraryMemory();
         StartLibraryScan();
     }
@@ -100,7 +101,7 @@ public sealed partial class EditorView
         hits.Clear(); fields.Clear();
         revealLibrarySelection = true;
         LibraryVisible = true; exportPage = resourcePage = false; libraryField = -1;
-        librarySettingsOpen = false;
+        librarySettingsOpen = false; updatesPage = false;
         if (libraryDatabase is null) StartLibraryScan();
         else { QueueLibrarySearch(); if (DateTime.UtcNow >= nextLibraryScan) StartLibraryScan(); }
     }
@@ -111,13 +112,13 @@ public sealed partial class EditorView
         if (AudioPlaying) RequestTogglePlayback?.Invoke();
         exportName = CurrentDifficultyName + " (FruitsAtelier)";
         exportMode = 0;
-        exportPage = true; LibraryVisible = false; librarySettingsOpen = false; libraryField = -1;
+        exportPage = true; LibraryVisible = false; librarySettingsOpen = false; updatesPage = false; libraryField = -1;
         menu = -1; contextItems.Clear(); hits.Clear(); fields.Clear();
     }
     public void CloseLibrary()
     {
         if (LibraryVisible && !exportPage) { RememberLibraryPosition(); SaveLibraryMemory(); }
-        LibraryVisible = !HasEditorProject; exportPage = resourcePage = false; librarySettingsOpen = false;
+        LibraryVisible = !HasEditorProject; exportPage = resourcePage = false; librarySettingsOpen = false; updatesPage = false;
         libraryField = -1; libraryPointerActive = false; contextItems.Clear(); languageMenuOpen = false;
     }
     public bool TryResumeLibraryProject(LibraryMap map)
@@ -200,7 +201,7 @@ public sealed partial class EditorView
         }
         CheckWorkspaceResources(); StartLibraryScan(); CloseLibrary();
     }
-    public void RefreshLibrary() { librarySettingsOpen = false; libraryRescanRequested = scanTask is { IsCompleted: false }; StartLibraryScan(); }
+    public void RefreshLibrary() { librarySettingsOpen = false; updatesPage = false; libraryRescanRequested = scanTask is { IsCompleted: false }; StartLibraryScan(); }
     private LibraryDatabase? scanningDatabase;
     private DateTime nextScanRefresh;
     private long searchedLibraryRevision = -1;
@@ -313,9 +314,10 @@ public sealed partial class EditorView
         c.Fill(new(0, 0, width, height), Background);
         DrawHeader(c);
         c.Text(L.Get(resourcePage ? "library.referenceErrors" : exportPage ? "library.export" : "library.title"), 109, 11, 13, Foreground, width - 535, true);
-        Button(c, new(width - 414, 6, 110, 28), L.Get("library.settings"), () => { draftWorkspace = LibrarySettings.Workspace; draftOsuRoot = LibrarySettings.OsuRoot; draftDefaultSkin = LibrarySettings.DefaultSkin ?? ""; draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey]; bindingCapture = -1; librarySettingsOpen = !librarySettingsOpen; exportPage = resourcePage = false; }, librarySettingsOpen);
+        Button(c, new(width - 414, 6, 110, 28), L.Get("library.settings"), () => { draftWorkspace = LibrarySettings.Workspace; draftOsuRoot = LibrarySettings.OsuRoot; draftDefaultSkin = LibrarySettings.DefaultSkin ?? ""; draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey]; bindingCapture = -1; librarySettingsOpen = !librarySettingsOpen; updatesPage = false; exportPage = resourcePage = false; }, librarySettingsOpen);
         DrawLanguageButton(c, HeaderLanguageBounds);
         if (HasEditorProject) Button(c, HeaderNavigationBounds, L.Get("library.editor"), CloseLibrary);
+        if (updatesPage) { DrawUpdates(c); return; }
         if (resourcePage)
         {
             c.Text(L.Get("library.referenceHelp"), 32, 96, 14, Muted, width - 64);
@@ -341,15 +343,18 @@ public sealed partial class EditorView
             LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, 256);
             LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, 354);
             DrawTestplayBindings(c);
-            Button(c, new(32, 510, 200, 38), L.Get("library.apply"), () =>
+            DrawVolumeControls(c);
+            DrawUpdateSettingsButton(c);
+            Button(c, new(32, 574, 200, 32), L.Get("library.apply"), () =>
             {
                 try
                 {
                     var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
                     settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
+                    settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;
                     if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
                     settings.Save();
-                    SaveLibraryMemory(); LibrarySettings = settings; InitializeSkin(); librarySettingsOpen = false; libraryField = -1; bindingCapture = -1;
+                    SaveLibraryMemory(); LibrarySettings = settings; InitializeSkin(); librarySettingsOpen = false; updatesPage = false; libraryField = -1; bindingCapture = -1;
                     libraryRatings.Clear(); libraryBrowser?.Retire(); libraryBrowser = null; libraryDatabase = null; libraryResultsReady = false;
                     LoadLibraryMemory(); StartLibraryScan();
                 }
@@ -473,6 +478,8 @@ public sealed partial class EditorView
     }
     private void LibraryKey(int key, bool ctrl)
     {
+        if (updatesPage) { if (key == 27) updatesPage = false; return; }
+        if (key == 27) FinishVolumeDrag();
         if (key == 27) { if (contextItems.Count > 0) contextItems.Clear(); else if (libraryField >= 0) libraryField = -1; else { librarySettingsOpen = resourcePage = false; } return; }
         if (key == 116) { StartLibraryScan(); return; }
         if (ctrl && key == 70) { libraryField = 2; libraryReplace = true; return; }

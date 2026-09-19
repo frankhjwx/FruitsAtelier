@@ -12,6 +12,15 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
     private readonly HashSet<string> pending = new();
     private Task preparation = Task.CompletedTask;
     private nint engine;
+    private float volume = 1;
+    public void SetVolume(float value)
+    {
+        lock (gate)
+        {
+            volume = float.IsFinite(value) ? Math.Clamp(value, 0, 1) : 1;
+            if (engine != 0) SetNativeVolume(engine, volume);
+        }
+    }
     private bool disposed;
     private int generation;
     private long bytes;
@@ -24,7 +33,7 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
     internal double LastRenderedStart { get { lock (gate) return engine == 0 ? 0 : RenderedStart(engine); } }
     public int ActiveVoices { get { lock (gate) return engine == 0 ? 0 : (int)Active(engine); } }
 
-    public void PreloadProject(IReadOnlyList<MapDocument> documents)
+    public void PreloadProject(IReadOnlyList<MapDocument> documents, IEnumerable<string>? skinFolders = null)
     {
         lock (gate)
         {
@@ -44,7 +53,7 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
                     if (Retired(version)) return;
                     document.Tracks.RemoveAll(t => t.Nodes.Count < 2);
                     var objects = CatchStreamConverter.Convert(document).Objects;
-                    var resolver = new HitsoundResolver(document, objects);
+                    var resolver = new HitsoundResolver(document, objects, skinFolders);
                     foreach (var sound in objects.SelectMany(resolver.Resolve).DistinctBy(Key))
                     {
                         if (Retired(version)) return;
@@ -90,7 +99,7 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
                 if (disposed || version != generation || sample == 0) return;
                 long size = SampleBytes(sample);
                 if (bytes + size > MemoryLimit) { MacPaths.Log("Hitsound project PCM bank exceeds 256 MiB; sample skipped: " + Key(sound)); return; }
-                if (engine == 0) { engine = Open(muted ? 1 : 0); NativePlayerCreations++; }
+                if (engine == 0) { engine = Open(muted ? 1 : 0); SetNativeVolume(engine, volume); NativePlayerCreations++; }
                 samples[Key(sound)] = sample; sample = 0; bytes += size; SampleLoads++;
                 pending.Remove(Key(sound));
             }
@@ -159,6 +168,7 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
     }
     [DllImport("FruitsAtelierAudio", EntryPoint="fa_hitsounds_rendered_start")] private static extern double RenderedStart(nint engine);
     private const string Library = "FruitsAtelierAudio";
+    [DllImport(Library, EntryPoint="fa_hitsounds_volume")] private static extern void SetNativeVolume(nint engine, float volume);
     [DllImport(Library, EntryPoint="fa_hitsounds_open")] private static extern nint Open(int muted);
     [DllImport(Library, EntryPoint="fa_hitsounds_close")] private static extern void Close(nint engine);
     [DllImport(Library, EntryPoint="fa_hitsounds_sample")] private static extern nint OpenSample([MarshalAs(UnmanagedType.LPUTF8Str)] string path);

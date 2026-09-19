@@ -26,6 +26,8 @@ internal static class SkinSelectorTests
             File.WriteAllBytes(Path.Combine(native, "fruit-pear.png"), png);
             File.WriteAllText(Path.Combine(native, "skin.ini"), "[General]\nName: Native skin");
             var ui = new Ui(false);
+            string version = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(typeof(FruitsAtelier.App.Editor.EditorView).Assembly)!.InformationalVersion.Split('+')[0];
+            Check(new FruitsAtelier.App.Editor.EditorView(loadDemo: false).WindowTitle == L.Get("window.initialTitle") + " v" + version, "Initial window title includes the application version");
             ui.View.LibrarySettings.Workspace = workspace; ui.View.LibrarySettings.OsuRoot = osu;
             ui.View.RequestSkinPreference = () => ui.View.LibrarySettings.Save(config);
             var before = ui.View.Document.DeepClone();
@@ -71,6 +73,7 @@ internal static class SkinSelectorTests
             metadata.Lines.AddRange(["Artist:Artist", "Title:Title", "Creator:Mapper", "Version:Difficulty"]);
             document.OriginalSections.Add(metadata); ui.LoadDocument(document);
             Check(ui.View.WindowTitle.Contains("Artist - Title (Mapper) [Difficulty]") && !ui.View.WindowTitle.Contains("M2"), "Window title identifies the current difficulty");
+            Check(ui.View.WindowTitle.StartsWith(L.Get("window.initialTitle") + " v" + version + " · "), "Project window title retains the application version");
             Check(!ui.Canvas.Texts.Any(t => t.Y == 11 && t.X == 286), "Header does not repeat the project title");
         }
         finally { Directory.Delete(root, true); }

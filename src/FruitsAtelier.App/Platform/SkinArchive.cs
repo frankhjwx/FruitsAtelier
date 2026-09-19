@@ -45,8 +45,8 @@ public static class SkinArchive
         if (selected.Select(e => e.Folder).Distinct(StringComparer.OrdinalIgnoreCase).Count() != 1)
             throw new InvalidDataException(L.Get("skinArchive.multipleFolders"));
 
-        // The cache version includes combo font glyphs as well as Catch sprites.
-        string destination = ChildPath(root, "v3-" + key);
+        // Version the cache when the extracted resource set changes.
+        string destination = ChildPath(root, "v4-" + key);
         if (Directory.Exists(destination))
         {
             EnsureComplete(destination, key, selected);
@@ -151,6 +151,7 @@ public static class SkinArchive
     }
 
     private static bool IsSelected(string name) => name.Equals("skin.ini", StringComparison.OrdinalIgnoreCase)
+        || FruitsAtelier.Core.HitsoundResolver.IsSkinSample(name)
         || System.Text.RegularExpressions.Regex.IsMatch(name, @"^.+-[0-9](@2x)?\.png$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
         || name.Equals("reversearrow.png", StringComparison.OrdinalIgnoreCase)
         || name.Equals("reversearrow@2x.png", StringComparison.OrdinalIgnoreCase)

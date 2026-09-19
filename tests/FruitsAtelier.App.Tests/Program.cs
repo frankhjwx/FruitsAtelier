@@ -27,6 +27,11 @@ var tests = new (string Name, Action Run)[]
     ("Missed testplay notes continue falling after judgement", TestplayTests.MissedObjectsFall),
     ("Testplay key capture and settings persistence", TestplayTests.Bindings),
     ("Extended testplay key capture, persistence and gameplay", TestplayTests.ExtendedBindings),
+    ("Update lifecycle, persistence and save-before-restart", UpdateTests.Lifecycle),
+    ("Update settings and explicit installation controls", UpdateTests.Interface),
+    ("Audio volume settings, persistence and document isolation", AudioFeedbackTests.VolumeSettings),
+    ("V jumps to the end and wheel navigation follows time order", AudioFeedbackTests.Navigation),
+    ("Skin hitsound priority and live selection refresh", AudioFeedbackTests.SkinSamples),
     ("Testplay legacy combo animation and live dash trails", TestplayTests.ComboAndTrails),
     ("Stable root migration and skin selection preserve content and archive provenance", SkinSelectorTests.Run),
     ("Object timeline navigation and group movement preserve geometry and undo", ObjectTimelineTests.MoveAndNavigate),
@@ -450,9 +455,9 @@ static void WheelAndPan()
     var ui = new Ui();
     var plot = ui.Plot;
     float x = plot.X + plot.Width / 2, y = plot.Y + plot.Height / 2;
-    ui.View.Wheel(x, y, 360, false);
+    ui.View.Wheel(x, y, -360, false);
     ui.Paint();
-    True(ui.View.ViewStartMs > 0, "Wheel up from the start did not reveal later times.");
+    True(ui.View.ViewStartMs > 0, "Wheel down from the start did not reveal later times.");
     var before = ui.PaintedFruitAtX(128);
     double start = ui.View.ViewStartMs;
     ui.View.PointerDown(x, y, 1, false, false);
@@ -483,15 +488,15 @@ static void OverviewWheel()
         float x = 700, y = ui.Canvas.Outlines.Single(s => s.Color == 0x71849A).Bounds.Y + 20;
         double start = ui.View.PlayheadMs;
         double scale = ui.View.PixelsPerMs;
-        ui.View.Wheel(x, y, 30, false); ui.Paint();
+        ui.View.Wheel(x, y, -30, false); ui.Paint();
         Near(start + 0.25 * 78 / scale, ui.View.PlayheadMs);
         Near(ui.View.PlayheadMs, seeks.Single());
         Near(ui.View.PlayheadMs - ui.Plot.Height * 0.25 / scale, ui.View.ViewStartMs);
-        ui.View.Wheel(x, y, -30, false); ui.Paint();
+        ui.View.Wheel(x, y, 30, false); ui.Paint();
         Near(start, ui.View.PlayheadMs);
         Near(scale, ui.View.PixelsPerMs);
-        ui.View.Wheel(x, y, -120000, false); ui.Paint(); Near(0, ui.View.PlayheadMs);
-        ui.View.Wheel(x, y, 120000, false); ui.Paint(); Near(ui.View.TimelineDurationMs, ui.View.PlayheadMs);
+        ui.View.Wheel(x, y, 120000, false); ui.Paint(); Near(0, ui.View.PlayheadMs);
+        ui.View.Wheel(x, y, -120000, false); ui.Paint(); Near(ui.View.TimelineDurationMs, ui.View.PlayheadMs);
         True(ui.View.AudioPlaying == playing && toggles == 0, "Overview wheel changed playback intent");
         True(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Overview wheel edited the map");
         ui.Key('Z', ctrl: true);
@@ -503,7 +508,7 @@ static void ZoomPaintedAnchor()
 {
     var ui = new Ui();
     var plot = ui.Plot;
-    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, 720, false);
+    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, -720, false);
     ui.Paint();
     True(ui.View.ViewStartMs > 1000 && ui.View.ViewStartMs < 20000, "Zoom setup reached a viewport clamp.");
     var anchor = ui.PaintedFruitAtX(160);
@@ -836,7 +841,11 @@ sealed class Ui
         View.Wheel(Plot.X, Plot.Bottom, (float)(120 * Math.Log(0.09 / View.PixelsPerMs) / Math.Log(1.16)), true);
         height = Math.Max(height, (float)(400 + 8000 * View.PixelsPerMs));
         Paint();
-        View.Wheel(Plot.X, Plot.Bottom, (float)(-View.ViewStartMs * View.PixelsPerMs / 78 * 120), false);
+        float panY = Plot.Bottom - 1;
+        float targetY = panY - (float)(View.ViewStartMs * View.PixelsPerMs);
+        View.PointerDown(Plot.X, panY, 1, false, false);
+        View.PointerMove(Plot.X, targetY, false, false);
+        View.PointerUp(Plot.X, targetY, 1);
         Paint();
     }
     public Fruit Fruit(Guid id) => View.Document.Fruits.Single(f => f.Id == id);
@@ -862,10 +871,10 @@ sealed class Ui
     public void Type(string value) { foreach (char c in value) View.TextInput(c); }
     public void SelectTrack(Guid id)
     {
-        Key('V');
+        Key('1');
         var track = View.Document.Tracks.Single(t => t.Id == id);
         ClickMap(track.Nodes[0].TimeMs, track.Nodes[0].X);
-        Key('V');
+        Key('1');
     }
     public void ClickFruit(Guid id) { var fruit = Fruit(id); ClickMap(fruit.TimeMs, fruit.X); }
     public void ClickText(string text)

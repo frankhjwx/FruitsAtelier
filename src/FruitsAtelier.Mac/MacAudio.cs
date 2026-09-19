@@ -17,6 +17,15 @@ public sealed class MacAudio : IDisposable
     private readonly bool muted;
     private double playbackDeviceStart, playbackMapStart;
     private double playbackSpeed = 1;
+    private float outputVolume = 1;
+    public void SetVolume(float value)
+    {
+        lock (gate)
+        {
+            outputVolume = float.IsFinite(value) ? Math.Clamp(value, 0, 1) : 1;
+            if (player != 0) Volume(player, muted ? 0 : outputVolume);
+        }
+    }
     public const double SchedulingLeadSeconds = .15;
     public MacAudio(bool muted = false) => this.muted = muted;
     public MacAudioState State
@@ -63,7 +72,7 @@ public sealed class MacAudio : IDisposable
                 var message = new StringBuilder(2048);
                 candidate = Open(source, message, message.Capacity);
                 if (candidate == 0) throw new InvalidDataException(message.ToString());
-                Volume(candidate, muted ? 0 : 1);
+                Volume(candidate, muted ? 0 : outputVolume);
             }, token);
             lock (gate)
             {
@@ -90,7 +99,7 @@ public sealed class MacAudio : IDisposable
                 var message = new StringBuilder(2048);
                 nint replacement = Open(cachePath ?? path!, message, message.Capacity);
                 if (replacement == 0) { error = L.Get("files.failed", message.ToString()); return; }
-                Close(player); player = replacement; Volume(player, muted ? 0 : 1); Rate(player, (float)playbackSpeed);
+                Close(player); player = replacement; Volume(player, muted ? 0 : outputVolume); Rate(player, (float)playbackSpeed);
             }
             StartPlayback();
             if (!playbackRequested) error = L.Get("mac.audioPlayFailed");

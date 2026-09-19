@@ -74,7 +74,7 @@ See [Project Model](PROJECT_MODEL.md) for data and conversion flow, and [Catch R
 
 ## Files and resources
 
-Core handles text and project serialization. Hosts handle dialogs, archive extraction, and resource copying. Workspace OSZ import preserves complete archives as described in [Workspace](WORKSPACE.md); the legacy supported-file importer extracts supported entries. `.osk` import extracts `skin.ini` and Catch PNGs. Importers validate paths, duplicate entries, links, and extraction limits, and write temporary directories before publishing caches.
+Core handles text and project serialization. Hosts handle dialogs, archive extraction, and resource copying. Workspace OSZ import preserves complete archives as described in [Workspace](WORKSPACE.md); the legacy supported-file importer extracts supported entries. `.osk` import extracts `skin.ini`, Catch PNGs and supported hitsound samples. Importers validate paths, duplicate entries, links, and extraction limits, and write temporary directories before publishing caches.
 
 Skin archives are limited to 256 MiB, selected files to 16 MiB each and 64 MiB total, and ZIP entries to 20000. Imported skin archives and extracted images are stored under `workspace/Skins`. Extraction includes numeric font glyphs for testplay combo; the versioned cache prevents reuse of older extracts without those glyphs. Users configure their own default skin `.osk` file in Settings; no default skin is copied into build outputs or packages. See [Skins](../assets/skins/README.md).
 

@@ -24,17 +24,20 @@ internal sealed partial class MacWindow : Window
     {
         audio = new(smokeCheck);
         hitsounds = new(smokeCheck);
+        View.RequestAudioVolume = (song, hit) => { audio.SetVolume(song); hitsounds.SetVolume(hit); };
+        View.RequestAudioPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
+        View.ApplyAudioVolume();
         View.RequestScheduleHitsound = (sound, time) =>
         {
             if (audio.HitsoundHostTime(time) is { } deadline) hitsounds.Schedule(sound, deadline);
         };
         View.RequestPrepareHitsound = hitsounds.Prepare;
         View.RequestHitsound = hitsounds.Play;
-        View.RequestPreloadHitsounds = hitsounds.PreloadProject;
+        View.RequestPreloadHitsounds = documents => hitsounds.PreloadProject(documents, View.HitsoundSkinFolders);
         View.PreloadProjectHitsounds();
         View.RequestStopHitsounds = hitsounds.Stop;
         Width = 1440; Height = 900; MinWidth = 980; MinHeight = 620;
-        Content = editor; Title = L.Get("window.initialTitle");
+        Content = editor; Title = View.WindowTitle;
         string icon = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "app-icon.png");
         if (File.Exists(icon)) Icon = new WindowIcon(icon);
         editor.Changed = UpdateTitle;

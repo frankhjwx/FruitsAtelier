@@ -153,3 +153,10 @@ Windows music tempo processing dynamically links **SoundTouch.Net 2.3.2**, licen
 Copyright (c) Olli Parviainen (SoundTouch) and Olaf Woudenberg (C# port, 2011–2019).
 The unmodified package corresponds to [owoudenberg/soundtouch.net commit 98e5b8fd2f8efed0ddf7c8f66b435bfb231659dc](https://github.com/owoudenberg/soundtouch.net/tree/98e5b8fd2f8efed0ddf7c8f66b435bfb231659dc); its complete corresponding source is available there.
 The library remains a separate, replaceable assembly. The license is shipped as `Audio/Licenses/SoundTouch.Net.txt`.
+
+## Windows automatic updates
+
+Velopack SDK and packaging CLI 1.2.0 ([source](https://github.com/velopack/velopack),
+revision `f2edcbcafb81da5b3c884aaea330e225ad91d8b6`) provide the Windows portable
+updater under the MIT license. The license is distributed in
+`Updates/Licenses/Velopack.txt`.

@@ -11,6 +11,7 @@ typedef struct {
     FAHit queue[FA_QUEUE], voices[FA_VOICES];
     _Atomic unsigned read, write, generation, active;
     _Atomic double lastStart, lastDuration, lastRenderedStart;
+    _Atomic float volume;
     double secondsPerTick;
     bool muted;
 } FAMix;
@@ -48,7 +49,8 @@ static void render(FAMix *mix, double time, unsigned frames, float *out) {
         for (unsigned f = first; f < end; f++) out[f] += hit.data[offset + f] * hit.volume;
     }
     atomic_store(&mix->active, active);
-    for (unsigned f = 0; f < frames; f++) out[f] = mix->muted ? 0 : fmaxf(-1, fminf(1, out[f]));
+    float volume = atomic_load(&mix->volume);
+    for (unsigned f = 0; f < frames; f++) out[f] = mix->muted ? 0 : fmaxf(-1, fminf(1, out[f] * volume));
 }
 
 @interface FAHitEngine : NSObject {
@@ -65,6 +67,7 @@ void *fa_hitsounds_open(int muted) {
     @autoreleasepool {
         FAHitEngine *owner = [FAHitEngine new]; owner->mix = calloc(1, sizeof(FAMix));
         FAMix *mix = owner->mix; mix->muted = muted > 0;
+        atomic_store(&mix->volume, 1);
         mach_timebase_info_data_t base; mach_timebase_info(&base);
         mix->secondsPerTick = (double)base.numer / base.denom / 1e9;
         if (muted < 0) return (__bridge_retained void *)owner; // Offline PCM regression.
@@ -123,6 +126,9 @@ int fa_hitsounds_schedule(void *handle, void *sample, double start, float volume
 void fa_hitsounds_stop(void *handle) {
     FAMix *mix = ((__bridge FAHitEngine *)handle)->mix;
     atomic_fetch_add(&mix->generation, 1); atomic_store(&mix->active, 0); atomic_store(&mix->lastStart, 0);
+}
+void fa_hitsounds_volume(void *handle, float volume) {
+    atomic_store(&(((__bridge FAHitEngine *)handle)->mix->volume), fmaxf(0, fminf(1, volume)));
 }
 unsigned fa_hitsounds_active(void *handle) {
     FAMix *mix = ((__bridge FAHitEngine *)handle)->mix;

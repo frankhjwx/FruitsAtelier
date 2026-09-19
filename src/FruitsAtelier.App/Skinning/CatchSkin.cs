@@ -65,7 +65,7 @@ public sealed class CatchSkin
             LoadTexture("reversearrow");
             LoadTexture("fruit-catcher-idle");
             LoadTexture("fruit-catcher-idle-0");
-            if (candidate.textures.Count == 0 && fallback is null && !allowEmpty) { message = L.Get("skin.noTextures"); return false; }
+            if (candidate.textures.Count == 0 && fallback is null && !allowEmpty && !files.Keys.Any(HitsoundResolver.IsSkinSample)) { message = L.Get("skin.noTextures"); return false; }
             skin = candidate;
             message = L.Get("skin.loaded", candidate.Name, candidate.TextureCount, invalid > 0 ? L.Get("skin.invalidImages", invalid) : "");
             return true;

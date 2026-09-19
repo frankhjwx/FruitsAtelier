@@ -4,6 +4,13 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    public string[] HitsoundSkinFolders => new[] { skin?.FolderPath, defaultSkin?.FolderPath }
+        .OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    private void RefreshSkinHitsounds()
+    {
+        ResetHitsounds(); hitsoundConversion = null;
+        PreloadProjectHitsounds();
+    }
     public Action<IReadOnlyList<MapDocument>>? RequestPreloadHitsounds { get; set; }
     public void PreloadProjectHitsounds() => RequestPreloadHitsounds?.Invoke(
         difficulties.Select(d => d.History.Document.DeepClone()).ToArray());
@@ -95,7 +102,7 @@ public sealed partial class EditorView
         if (!ReferenceEquals(current, hitsoundConversion))
         {
             hitsoundConversion = current;
-            var resolver = new HitsoundResolver(Document, current.Objects);
+            var resolver = new HitsoundResolver(Document, current.Objects, HitsoundSkinFolders);
             resolvedHitsounds = current.Objects.Select(resolver.Resolve).ToArray();
         }
         return current;

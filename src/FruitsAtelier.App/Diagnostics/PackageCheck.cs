@@ -22,6 +22,9 @@ internal static class PackageCheck
             if (!runtime.StartsWith(Path.GetFullPath(AppContext.BaseDirectory), StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("The executable is using an installed runtime instead of the packaged runtime.");
             checks.Add("Bundled .NET runtime");
+            var updater = new Updates.VelopackBackend();
+            if (!updater.IsInstalled) throw new InvalidOperationException("Portable update installation was not detected.");
+            checks.Add("Portable update installation");
             using (var database = new SqliteConnection("Data Source=:memory:"))
             {
                 database.Open();

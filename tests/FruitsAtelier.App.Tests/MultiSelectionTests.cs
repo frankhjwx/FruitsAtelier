@@ -21,7 +21,7 @@ internal static class MultiSelectionTests
         ui.ClickMap(2000, 220); Anchors(ui, track.Nodes[1].Id);
         Click(ui, 5000, 340, ctrl: true); Anchors(ui, track.Nodes[4].Id);
         Click(ui, 2000, 220, ctrl: true); Anchors(ui, track.Nodes[1].Id);
-        ui.Key('V'); Anchors(ui);
+        ui.Key('1'); Anchors(ui);
         ui.DownMap(2500, 240); ui.MoveMap(2625, 260); ui.UpMap(2625, 260);
         Objects(ui, track.Id); Anchors(ui);
         Near(1125, ui.View.Document.Tracks.Single().Nodes[0].TimeMs);
@@ -45,7 +45,7 @@ internal static class MultiSelectionTests
     public static void ObjectBoxAndParentDedup()
     {
         foreach (bool imported in new[] { false, true })
-        foreach (char tool in new[] { 'V' })
+        foreach (char tool in new[] { '1' })
         {
             var map = ObjectMap();
             Guid sourceId = map.Tracks.Single().Id;
@@ -149,7 +149,7 @@ internal static class MultiSelectionTests
         var map = ObjectMap();
         var ui = Load(map);
         var original = ui.View.Document.DeepClone();
-        ui.Key('F'); ui.ClickMap(5500, 100); ui.Key('V');
+        ui.Key('F'); ui.ClickMap(5500, 100); ui.Key('1');
         Check(ui.View.Document.Fruits.Count == map.Fruits.Count + 1, "Fixture edit was not created.");
         var withEdit = ui.View.Document.DeepClone();
         ui.ClickMap(1000, 80); Guid first = map.Fruits[0].Id;

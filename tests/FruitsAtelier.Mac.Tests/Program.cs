@@ -21,7 +21,12 @@ foreach (var (key, expected) in new (Key, int)[] {
     Check(MacInput.VirtualKey(key) == expected, $"{key} maps to shared virtual key {expected}");
 for (int i = 0; i < 10; i++) Check(MacInput.VirtualKey(Key.NumPad0 + i) == 96 + i, $"NumPad{i} mapping");
 for (int i = 0; i < 24; i++) Check(MacInput.VirtualKey(Key.F1 + i) == 112 + i, $"F{i + 1} mapping");
-if (args.Contains("--input-check")) return;
+if (args.Contains("--offline-audio-check"))
+{
+    HitsoundPerformance.OfflinePcm(FruitsAtelier.Core.HitsoundDefaults.Find(1, "hitnormal") ?? throw new Exception("Missing default sample"));
+    Console.WriteLine("PASS Native offline hitsound mixing and dynamic volume");
+}
+if (args.Contains("--input-check") || args.Contains("--offline-audio-check")) return;
 string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"));
 string directory = Path.Combine(root, "artifacts", "macos-check"); Directory.CreateDirectory(directory);
 string wav = Path.Combine(directory, "silence.wav");

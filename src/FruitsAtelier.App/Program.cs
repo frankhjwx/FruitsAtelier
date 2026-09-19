@@ -8,8 +8,10 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        Velopack.VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
         try
         {
+            if (args.Length == 3 && args[0] == "--update-package-check") return Diagnostics.UpdatePackageCheck.Run(args[1], args[2]);
             if (args.Length == 2 && args[0] == "--package-check") return Diagnostics.PackageCheck.Run(args[1]);
             if (args.Contains("--m2-check")) return Diagnostics.M2Check.Run(args.Where(p => File.Exists(p) && Path.GetExtension(p).Equals(".osz", StringComparison.OrdinalIgnoreCase)));
             L.SetLanguage(FruitsAtelier.Localization.LanguagePreference.ReadLanguage());

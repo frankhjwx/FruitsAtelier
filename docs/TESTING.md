@@ -44,7 +44,7 @@ Run on Mac from the repository root:
 
 ```bash
 bash scripts/Test-Mac.sh                      # Shared regressions and Mac input/audio checks
-bash scripts/Test-Mac.sh --skip-device-tests  # Shared regressions and Mac key mapping; skips native device checks
+bash scripts/Test-Mac.sh --skip-device-tests  # Shared regressions, Mac key mapping and offline PCM; skips native device checks
 bash scripts/Test-Mac.sh --native-only        # Mac input/audio checks only
 ```
 
@@ -188,3 +188,5 @@ report of sample-bank/index/volume boundary corrections during the first 40 seco
 Synthetic App regressions cover the inclusive 5 ms edge boundary, the slider body's
 6 ms start lookup, tick inheritance across timing changes, same-difficulty clipboard
 scope, combo reference numbers, horizontal grids, and timestamp precision.
+
+The feedback regressions cover V/End navigation, scroll direction, persistent independent volume controls, skin sample precedence and cache upgrades, and compatible versus conflicting close SV timing. Windows PCM checks verify live and scheduled hitsound gain separately from song gain; headless Mac CI exercises the native mixer with no audio device. Native window checks exercise all three volume sliders in both languages.

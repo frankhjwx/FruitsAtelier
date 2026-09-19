@@ -1,21 +1,25 @@
 using FruitsAtelier.App.Rendering;
+using System.Reflection;
 
 namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private static readonly string DisplayVersion = "v" + (typeof(EditorView).Assembly
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]
+        ?? typeof(EditorView).Assembly.GetName().Version!.ToString(3));
     public string WindowTitle
     {
         get
         {
-            if (!HasEditorProject) return FruitsAtelier.Localization.Strings.Get("window.initialTitle");
+            if (!HasEditorProject) return FruitsAtelier.Localization.Strings.Get("window.initialTitle") + " " + DisplayVersion;
             string Metadata(string key, string fallback) => FruitsAtelier.Core.OsuBeatmapReader.Setting(Document, "Metadata", key) is { Length: > 0 } value ? value : fallback;
             string artist = Metadata("ArtistUnicode", Metadata("Artist", ""));
             string title = Metadata("TitleUnicode", Metadata("Title", Document.Name));
             string mapper = Metadata("Creator", "");
             string name = (artist.Length > 0 ? artist + " - " : "") + title
                 + (mapper.Length > 0 ? " (" + mapper + ")" : "") + " [" + CurrentDifficultyName + "]";
-            return FruitsAtelier.Localization.Strings.Get("window.title", name, IsDirty ? " *" : "");
+            return FruitsAtelier.Localization.Strings.Get("window.title", name, IsDirty ? " *" : "", DisplayVersion);
         }
     }
     private const float HeaderHeight = 40;

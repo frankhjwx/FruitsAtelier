@@ -25,7 +25,7 @@ The editor reads Catch `.osu` files in versions 12-14 and exports version 14. Vi
 
 ### Windows
 
-Download the Windows x64 ZIP from [Releases](https://github.com/frankhjwx/FruitsAtelier/releases), extract it, and run `FruitsAtelier.App.exe`. Keep the extracted files together. The package includes .NET and runs on Windows 10/11 with DirectX 11 support.
+Download the Windows x64 ZIP from [Releases](https://github.com/frankhjwx/FruitsAtelier/releases), extract it, and run `FruitsAtelier.exe`. Keep the extracted files together. The package includes .NET and runs on Windows 10/11 with DirectX 11 support.
 
 Open **Library > Settings** to choose a project workspace and, optionally, your osu!stable installation folder. Import a beatmap or create a new project to begin.
 

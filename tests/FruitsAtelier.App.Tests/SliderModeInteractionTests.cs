@@ -47,7 +47,7 @@ internal static class SliderModeInteractionTests
         ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.resetView"));
         ui.Key(36);
         double centerStart = 1000 - ui.Plot.Height / 2 / ui.View.PixelsPerMs;
-        ui.View.Wheel(ui.Plot.X, ui.Plot.Bottom, (float)((centerStart - ui.View.ViewStartMs) * ui.View.PixelsPerMs / 78 * 120), false); ui.Paint();
+        ui.View.Wheel(ui.Plot.X, ui.Plot.Bottom, (float)((ui.View.ViewStartMs - centerStart) * ui.View.PixelsPerMs / 78 * 120), false); ui.Paint();
         // Zoom around the segment so its small, exact-approximation endpoint handles can be selected.
         var p = Screen(ui, 1000, 200);
         ui.View.Wheel(p.X, p.Y, 120 * 18, true); ui.Paint();
@@ -130,7 +130,7 @@ internal static class SliderModeInteractionTests
         ui.View.PointerDown(p.X, p.Y, 0, false, true); ui.View.PointerUp(p.X, p.Y, 0); ui.Paint();
         Check(SliderControlEditing.Vertices(ui.View.Document.Tracks[0]).Count == 4, "Selected slider rejected Ctrl insertion outside B mode.");
         ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Direct control edit did not undo in one step.");
-        ui.SelectTrack(ui.View.Document.Tracks[0].Id); ui.Key('V'); ui.ClickMap(1250, 240); Right(ui, 1250, 240);
+        ui.SelectTrack(ui.View.Document.Tracks[0].Id); ui.Key('1'); ui.ClickMap(1250, 240); Right(ui, 1250, 240);
         Check(ui.View.Document.Tracks[0].Nodes.Count == 2, "Selected slider rejected right-click deletion outside B mode.");
         Check(!ui.Canvas.Texts.Any(t => t.Value.Contains("Ctrl+click") || t.Value.Contains("Double-click") || t.Value.Contains("Undo restores")),
             "Instructional prose remained in the editor.");

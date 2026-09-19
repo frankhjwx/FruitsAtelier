@@ -68,7 +68,7 @@ internal sealed partial class EditorWindow : IDisposable
         Native.AdjustWindowRectExForDpi(ref rect, Native.WindowStyle, false, 0, (uint)dpi);
         int width = Math.Min(rect.Right - rect.Left, work.Right - work.Left - 32);
         int height = Math.Min(rect.Bottom - rect.Top, work.Bottom - work.Top - 32);
-        hwnd = Native.CreateWindowEx(0, className, L.Get("window.initialTitle"), Native.WindowStyle,
+        hwnd = Native.CreateWindowEx(0, className, view.WindowTitle, Native.WindowStyle,
             work.Left + (work.Right - work.Left - width) / 2, work.Top + (work.Bottom - work.Top - height) / 2,
             width, height, 0, 0, instance, 0);
         if (hwnd == 0) throw new Win32Exception();
@@ -92,6 +92,7 @@ internal sealed partial class EditorWindow : IDisposable
             Native.DestroyWindow(hwnd);
             return 0;
         }
+        ConfigureUpdates();
         UpdateTitle();
         view.RequestRunTestplay = session => new TestplayInputThread(hwnd, session, () => audio.State);
         Native.SetTimer(hwnd, 1, 16, 0);
@@ -202,7 +203,7 @@ internal sealed partial class EditorWindow : IDisposable
                 if (audio.IsPlaying && !view.IsTestplaying && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0014: return 1; // WM_ERASEBKGND
-            case 0x0113: PollAudio(); if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw) && !Native.IsIconic(window)) Invalidate(); return 0; // WM_TIMER
+            case 0x0113: PollUpdates(); PollAudio(); if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw) && !Native.IsIconic(window)) Invalidate(); return 0; // WM_TIMER
             case 0x0005: Invalidate(); return 0;
             case 0x02E0: // WM_DPICHANGED
                 view.CancelInteraction();
@@ -320,6 +321,7 @@ internal sealed partial class EditorWindow : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        updates?.Dispose();
         view.StopTestplay();
         if (largeBrandIcon != 0) { Native.DestroyIcon(largeBrandIcon); largeBrandIcon = 0; }
         if (smallBrandIcon != 0) { Native.DestroyIcon(smallBrandIcon); smallBrandIcon = 0; }

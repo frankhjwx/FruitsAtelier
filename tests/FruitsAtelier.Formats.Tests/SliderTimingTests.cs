@@ -3,6 +3,29 @@ using FruitsAtelier.Core;
 
 internal static class SliderTimingTests
 {
+    public static void CompatibleCloseTiming()
+    {
+        var document = Map();
+        AddTrack(document, 1000, 2000, 0, 400);
+        double sv = CatchStreamConverter.Convert(document, false).Sliders.Single().SliderVelocityMultiplier;
+        document.TimingPoints.Add(new() { TimeMs = 1001, BeatLengthMs = -100 / sv, Uninherited = false, Volume = 35 });
+        AddTrack(document, 1001, 2001, 0, 400);
+        AddImported(document, 1100, 100, 1);
+        var before = document.DeepClone();
+        var result = OsuBeatmapWriter.Serialize(document, false);
+        var raw = RawMap.Parse(result.Text);
+        foreach (int offset in new[] { 0, 1 })
+        {
+            Near(1000, raw.Duration(1000, offset)); Near(1000, raw.Duration(1001, offset));
+            Near(500 / sv, raw.Duration(1100, offset));
+        }
+        Check(document.ContentEquals(before) && raw.Timing.Single(p => p.Time == 1001).Fields[5] == "35",
+            "Compatible close timing must preserve metadata and source content");
+        var conflict = Map(); AddTrack(conflict, 1000, 2000, 0, 400); AddImported(conflict, 1001, 100, 1);
+        try { OsuBeatmapWriter.Serialize(conflict, false); throw new Exception("Conflicting heads should fail"); }
+        catch (InvalidDataException error)
+        { Check(error.Message.Contains("1000") && error.Message.Contains("1001"), "Conflict must identify both timestamps"); }
+    }
     public static void HighSvExportIsRejected()
     {
         var document = Map();

@@ -20,6 +20,7 @@ static class HitsoundMixerTests
     {
         ByteAdapterBuffers();
         ScheduledMusic();
+        IndependentVolume();
         using var mixer = new HitsoundPlayer();
         var buffer = new float[4096];
         var sound = new Hitsound(CatchObjectKind.Fruit, null, .5f);
@@ -49,6 +50,29 @@ static class HitsoundMixerTests
         mixer.Queue(new(CatchObjectKind.Fruit, normal, 1)); mixer.Read(buffer, 0, buffer.Length);
         if (!buffer.Any(v => Math.Abs(v) > .001)) throw new Exception("Default normal-only note emitted silent PCM");
         Console.WriteLine("PASS Hitsound PCM mixing, volume, overlap, stop, clipping and custom WAV decoding");
+    }
+
+    private static void IndependentVolume()
+    {
+        using var mixer = new HitsoundPlayer();
+        var sound = new Hitsound(CatchObjectKind.Fruit, null, .5f);
+        var reference = HitsoundSamples.Create(sound);
+        var buffer = new float[64];
+        mixer.Queue(sound); mixer.Volume = .2f; mixer.Read(buffer, 0, buffer.Length);
+        for (int i = 0; i < buffer.Length; i++)
+            if (Math.Abs(buffer[i] - reference[i] * .1f) > .00001) throw new Exception("Live gain does not scale queued voices");
+        mixer.Volume = 0; mixer.Read(buffer, 0, buffer.Length);
+        if (buffer.Any(x => x != 0)) throw new Exception("Live gain did not mute active voices");
+        mixer.Stop(); mixer.Schedule(sound, 0); mixer.Volume = .4f;
+        float songGain = 0;
+        var mixed = mixer.MixWithMusic(new PlaybackGain(new ConstantMusic(44100, 1), () => songGain), 0);
+        mixed.Read(buffer, 0, buffer.Length);
+        for (int i = 0; i < buffer.Length; i++)
+            if (Math.Abs(buffer[i] - reference[i] * .2f) > .00001) throw new Exception("Song mute incorrectly mutes scheduled hitsounds");
+        mixer.Stop(); songGain = .5f; mixer.Volume = 0;
+        mixed.Read(buffer, 0, buffer.Length);
+        if (buffer.Any(x => Math.Abs(x - .05f) > .00001)) throw new Exception("Hitsound mute or dynamic song gain changes music incorrectly");
+        Console.WriteLine("PASS Independent live, scheduled and song gain updates without clock changes");
     }
 
     private static void ScheduledMusic()

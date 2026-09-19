@@ -41,6 +41,7 @@ var tests = new (string Name, Action Run)[]
     ("A following generated head reestablishes original SV without an unused restore", SliderTimingTests.FollowingGeneratedHeadReestablishesOriginalSv),
     ("FSliders above stable's SV=10 limit are not exported", SliderTimingTests.HighSvExportIsRejected),
     ("Unsafe fractional or next-millisecond restoration is rejected atomically", SliderTimingTests.UnsafeRestorationWindowIsRejected),
+    ("Compatible close timing exports and conflicts identify their timestamps", SliderTimingTests.CompatibleCloseTiming),
     ("Fractional head restores original NaN state after the lookup window", SliderTimingTests.NaNAndFractionalHeadRestoreOriginalState),
     ("User project export durations pass an independent raw-field calculation", SliderTimingTests.UserProjectExportHasIndependentCorrectDurations),
     ("NaN inherited metadata does not cause a spurious same-time Catch SV conflict", InheritedNaN),

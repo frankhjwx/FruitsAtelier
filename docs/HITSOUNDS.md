@@ -30,15 +30,14 @@ Resources are resolved relative to the source map directory, or the audio direct
 a new document without a source map. Lookup is case-insensitive and limited to indexed
 files inside that directory, excluding symbolic links. For an enabled custom sample index,
 lookup checks `.wav`, `.ogg`, then `.mp3`; index 1 has no numeric suffix, while higher
-indices use names such as `soft-hitclap2.wav`. Index zero selects the packaged osu!
-classic default samples. Missing beatmap samples also fall back to these recordings,
+indices use names such as `soft-hitclap2.wav`. Index zero selects the current skin's unindexed samples. Missing beatmap samples fall back to the current skin, then the configured default skin, then packaged osu! classic recordings,
 including the normal layer on fruits without additional flags. Normal, soft, and drum
 each include hitnormal, hitwhistle, hitfinish, hitclap, and slidertick. Banana uses its
 separate Catch sample. Source revisions, checksums and asset licenses are in
 [Default samples](../assets/audio/osu/README.md).
 
 A synthesized emergency tone remains available for corrupt/oversized input or missing
-application assets. Imported skin audio is not currently used.
+application assets. Imported `.osk` files include supported WAV, OGG and MP3 hitnormal, hitwhistle, hitfinish, hitclap and slidertick samples for all three banks. Skin switches invalidate resolved events and preload the new sample bank across difficulties. Older imported caches are re-extracted from their stored archives when selected. Within a skin, WAV takes precedence over OGG and MP3; a selected skin always takes precedence over the fallback skin regardless of file format.
 
 Opening a project preloads the samples referenced by every difficulty, including notes far
 beyond the current playhead. The editor supplies isolated document snapshots. macOS builds
@@ -124,3 +123,7 @@ Apple mixer reference: [AVAudioSourceNode](https://developer.apple.com/documenta
 ## Playback speed
 
 Song tempo is adjustable to 25%, 50%, 75%, and 100% with pitch preserved. Windows stretches music before mixing hitsounds: event map offsets are divided by tempo to locate output frames, while each sample advances at its normal sample rate. macOS applies a music-only AVAudioUnitTimePitch and divides event offsets by tempo when scheduling the independent hitsound engine. Speed changes retain the map playhead; macOS cancels future hitsounds and reschedules against the new start time.
+
+## Volume
+
+Library settings store All, Song and Hitsound percentages independently of beatmap sample volume. Effective song gain is All × Song; effective sample gain is All × Hitsound × the resolved beatmap sample volume. Windows applies song gain before preview mixing and hitsound gain to scheduled and live voices before clipping. macOS updates its music node and an atomic native hitsound mixer gain, including queued and active voices. Changes do not restart playback or change timing. Automated device output remains muted regardless of these preferences.
