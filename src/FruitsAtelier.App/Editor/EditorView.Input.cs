@@ -24,6 +24,12 @@ public sealed partial class EditorView
         ResetTextCaret();
         mouseX = x; mouseY = y;
         if (legacyButtonSlider != Guid.Empty && !sliderConversionBounds.Contains(x, y)) legacyButtonSlider = Guid.Empty;
+        if (updatesPage)
+        {
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         if (TimeJumpVisible || StreamDialogVisible)
         {
             if (StreamDialogVisible && button == 0 && StreamSnapBounds.Contains(x, y))
@@ -268,6 +274,7 @@ public sealed partial class EditorView
         if (volumeDrag >= 0) { UpdateVolumeDrag(x); return; }
         if (IsTestplaying) return;
         mouseX = x; mouseY = y;
+        if (updatesPage) return;
         if (sliderHoldConsumed) return;
         if (SliderHoldNeedsRedraw && (Math.Abs(x - sliderHoldX) >= 2 || Math.Abs(y - sliderHoldY) >= 2)) sliderHoldId = Guid.Empty;
         if (StreamDialogVisible && streamSnapDragging) { SetStreamSnap(x); return; }
@@ -372,6 +379,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
+        if (updatesPage) return;
         if (volumeDrag >= 0 && button == 0) { UpdateVolumeDrag(x); FinishVolumeDrag(); return; }
         if (button == 0)
         {
@@ -414,6 +422,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (updatesPage) return;
         if (IsTestplaying) return;
         if (notesLocked && plot.Contains(x, y)) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (StreamDialogVisible) return;
@@ -451,6 +460,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl)
     {
+        if (updatesPage) return;
         if (IsTestplaying) return;
         if (TimeJumpVisible || StreamDialogVisible) return;
         if (languageMenuOpen) return;
@@ -585,6 +595,7 @@ public sealed partial class EditorView
             if (virtualKey is 27 or 13) AnswerDiscard(2);
             return;
         }
+        if (updatesPage) { if (virtualKey == 27) updatesPage = false; return; }
         if (StreamDialogVisible) { StreamKey(virtualKey); return; }
         if (TimeJumpVisible) { TimeJumpKey(virtualKey, ctrl); return; }
         if (SliderDialogVisible)
@@ -691,6 +702,7 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (updatesPage) return;
         if (StreamDialogVisible) return;
         if (IsTestplaying || CapturingTestplayKey) return;
         if (languageMenuOpen) return;

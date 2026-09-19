@@ -16,8 +16,8 @@ internal sealed partial class EditorWindow
         {
             updates = new(new VelopackBackend(), Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FruitsAtelier", "updates.json"), AppLog.Write);
             view.AutomaticUpdateChecks = updates.Preferences.AutomaticChecks;
-            view.RequestUpdateCheck = () => _ = updates.Check(DateTimeOffset.UtcNow);
-            view.RequestUpdateDownload = () => _ = updates.Download();
+            view.RequestUpdateCheck = () => _ = Task.Run(() => updates.Check(DateTimeOffset.UtcNow));
+            view.RequestUpdateDownload = () => _ = Task.Run(() => updates.Download());
             view.RequestUpdatePreference = () => FileOperation(() => { updates.Preferences.AutomaticChecks = view.AutomaticUpdateChecks; updates.SavePreferences(); });
             view.RequestUpdateNotes = () => FileOperation(() => Process.Start(new ProcessStartInfo(VelopackBackend.Repository + "/releases") { UseShellExecute = true }));
             view.RequestUpdateRestart = () => FileOperation(() => updates.Apply(() =>
@@ -40,7 +40,7 @@ internal sealed partial class EditorWindow
                 return true;
             }));
             PollUpdates();
-            if (updates.ShouldCheck(DateTimeOffset.UtcNow)) _ = updates.Check(DateTimeOffset.UtcNow);
+            if (updates.ShouldCheckOnStartup) view.RequestUpdateCheck();
         }
         catch (Exception e) { AppLog.Write(e.ToString()); }
     }
