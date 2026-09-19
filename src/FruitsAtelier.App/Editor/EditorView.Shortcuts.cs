@@ -17,8 +17,8 @@ public sealed partial class EditorView
             case 72: MirrorSelection(); return true;
             case 37: NudgeSelection(0, -1); return true;
             case 39: NudgeSelection(0, 1); return true;
-            case 38: SetPlaybackSpeed(Math.Min(1, PlaybackSpeed + .25)); return true;
-            case 40: SetPlaybackSpeed(Math.Max(.25, PlaybackSpeed - .25)); return true;
+            case 38: AdjustPlaybackSpeed(1); return true;
+            case 40: AdjustPlaybackSpeed(-1); return true;
             default: return false;
         }
     }

@@ -20,6 +20,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     private IDXGISwapChain1? swapChain;
     private SafeWaitHandle? frameReady;
     private bool frameAcquired;
+    private bool drawing;
     private ID2D1Factory1? factory;
     private ID2D1Device? drawingDevice;
     private ID2D1DeviceContext? context;
@@ -96,6 +97,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     public void Begin()
     {
         context!.BeginDraw();
+        drawing = true;
         context.Clear(new Color4(0.07f, 0.085f, 0.11f, 1));
         clipDepth = 0;
         imageVersions.Clear();
@@ -123,9 +125,19 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     {
         frameAcquired = false;
         while (clipDepth > 0) Unclip();
+        drawing = false;
         context!.EndDraw().CheckError();
         var result = swapChain!.Present(lowLatency ? 0u : 1u, lowLatency ? PresentFlags.DoNotWait : PresentFlags.None);
         if (result != Vortice.DXGI.ResultCode.WasStillDrawing) result.CheckError();
+    }
+
+    internal void AbortDraw()
+    {
+        if (!drawing) return;
+        drawing = false;
+        while (clipDepth > 0) Unclip();
+        // EndDraw closes the batch even on failure; an abandoned frame must not be presented.
+        context!.EndDraw();
     }
 
     private ID2D1SolidColorBrush Brush(uint color, float opacity = 1)

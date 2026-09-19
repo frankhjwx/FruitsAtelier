@@ -3,6 +3,45 @@ using FruitsAtelier.Core;
 
 internal static class ToolPaletteTests
 {
+    public static void PlacementHyperdash()
+    {
+        foreach (int key in new[] { 'F', 'B' })
+        {
+            var ui = Empty();
+            var map = new MapDocument { DurationMs = 12000 };
+            map.Fruits.Add(new() { TimeMs = 1000, X = 0 });
+            map.Fruits.Add(new() { TimeMs = 1250, X = 0 });
+            ui.LoadDocument(map); ui.Key(key);
+            var before = ui.View.Document.DeepClone();
+            ui.MoveMap(1125, 512);
+            var previous = Screen(ui, 1000, 0); var ghost = Screen(ui, 1125, 512);
+            Check(GlowAt(ui, previous.X, previous.Y, .7f), "Previous fruit did not acquire a placement hyperdash.");
+            Check(GlowAt(ui, ghost.X, ghost.Y, .42f), "Placement ghost did not show its outgoing hyperdash.");
+            ui.MoveMap(1125, 0);
+            Check(!ui.Canvas.Circles.Any(c => c.Color == 0xFF3030), "Hover movement retained a stale hyperdash.");
+            ui.MoveMap(1125, 512); ui.Key('1');
+            Check(!ui.Canvas.Circles.Any(c => c.Color == 0xFF3030), "Leaving placement retained a phantom hyperdash.");
+            Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Hover changed content or history.");
+        }
+        foreach (var mode in Enum.GetValues<SliderEditingMode>())
+        {
+            var ui = Empty();
+            var map = new MapDocument { DurationMs = 12000 };
+            map.Fruits.Add(new() { TimeMs = 1000, X = 0 });
+            map.Fruits.Add(new() { TimeMs = 1500, X = 0 });
+            ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.Key('B');
+            ui.ClickMap(1125, 480, ctrl: true); ui.MoveMap(1375, 480);
+            var previous = Screen(ui, 1000, 0); var tail = Screen(ui, 1375, 480);
+            Check(GlowAt(ui, previous.X, previous.Y, .7f), $"{mode}: Slider draft did not update its preceding hyperdash. {ui.View.StatusMessage}");
+            Check(GlowAt(ui, tail.X, tail.Y, .42f), "Slider draft tail did not preview its outgoing hyperdash.");
+            ui.Key(27);
+            Check(ui.View.Document.ContentEquals(map) && !ui.View.IsDirty, "Cancelling a slider preview changed the map.");
+        }
+    }
+
+    private static bool GlowAt(Ui ui, float x, float y, float opacity) => ui.Canvas.Circles.Any(c =>
+        c.Color == 0xFF3030 && Math.Abs(c.X - x) < 1 && Math.Abs(c.Y - y) < 1 && Math.Abs(c.Opacity - opacity) < .001);
+
     public static void PaletteAndGhost()
     {
         var ui = Empty();

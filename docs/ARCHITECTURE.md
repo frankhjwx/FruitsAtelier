@@ -46,6 +46,14 @@ The canvas and object timeline share an immutable timing lookup built alongside 
 
 Drawing goes through `ICanvas`; the editor owns no device resources. During Windows playback, `WM_PAINT` requests the next frame and `Present(1)` presents it. Mac requests redraws with an approximately 16 ms timer. Each platform audio backend supplies playback position.
 
+Windows suppresses nested paint/timer work while a frame is active or a native
+modal dialog owns input. File, folder, skin and fatal-error dialogs share this
+modal scope, and repaint resumes when the outermost dialog closes. Interrupted
+frames close their Direct2D batch without presenting. A paint failure pauses
+playback and rebuilds the renderer while retaining the document, then displays
+the error in the editor. If recovery cannot draw the error, rendering remains
+suspended while a native error dialog is shown.
+
 Testplay interpolates timestamped audio samples with a monotonic clock. Key events
 advance gameplay to their processing time before changing the held actions, so a
 press and release between rendered frames still produces movement. Windows testplay

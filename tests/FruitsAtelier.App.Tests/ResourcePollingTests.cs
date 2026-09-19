@@ -14,6 +14,11 @@ internal static class ResourcePollingTests
             File.WriteAllText(source, "source"); File.WriteAllText(audio, "audio"); File.WriteAllText(image, "image");
             var map = new MapDocument { SourcePath = source, AudioPath = audio };
             var events = new OsuSection { Name = "Events" }; events.Lines.Add("0,0,\"background.jpg\",0,0"); map.OriginalSections.Add(events);
+            events.Lines.Add("1,0,\"missing-video.avi\"");
+            events.Lines.Add("Sprite,Foreground,Centre,\"missing-sprite.png\",320,240");
+            events.Lines.Add("Sample,0,0,\"missing-storyboard.wav\",100");
+            var objects = new OsuSection { Name = "HitObjects" };
+            objects.Lines.Add("256,192,1000,1,0,0:0:0:0:missing-hit.wav"); map.OriginalSections.Add(objects);
             var project = BeatmapProject.FromDocuments([map]);
             var view = new EditorView();
             view.LoadWorkspace(new(root, new WorkspaceManifest { Name = project.Name }, project));
@@ -28,8 +33,11 @@ internal static class ResourcePollingTests
             }
             void Finish(Task task) { Check(task.Wait(TimeSpan.FromSeconds(5)), "Resource poll did not finish."); Paint(); }
             Paint(); Check(!Shows(image), "Existing background reported missing.");
-            File.Delete(image); Finish(Queue()); Check(Shows(image), "Deletion was not detected from cached references.");
+            Check(!canvas.Texts.Any(t => t.Value.Contains("missing-")), "Optional video, storyboard or sample showed a persistent error.");
+            File.Delete(image); Finish(Queue()); Check(!Shows(image), "Missing optional background must not show a persistent error.");
             File.WriteAllText(image, "restored"); Finish(Queue()); Check(!Shows(image), "Restored background remained missing.");
+            File.Delete(audio); Finish(Queue()); Check(Shows(audio), "Missing song audio was not detected from cached references.");
+            File.WriteAllText(audio, "restored"); Finish(Queue()); Check(!Shows(audio), "Restored song audio remained missing.");
 
             string oldAudio = Path.Combine(root, "old-missing.mp3"), newAudio = Path.Combine(root, "new-missing.mp3");
             view.ChangeAudioPath(oldAudio);

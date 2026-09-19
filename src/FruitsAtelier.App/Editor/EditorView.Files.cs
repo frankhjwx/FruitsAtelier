@@ -19,6 +19,7 @@ public sealed partial class EditorView
     public bool AudioLoading { get; private set; }
     public string AudioNotice { get; private set; } = L.Get("editor.audio.notLoaded");
     public double AudioDurationMs { get; private set; }
+    private bool initializeTransport;
     private const double playbackLineFromBottom = 0.25;
     private bool pinPlayhead = true;
     public double TimelineDurationMs => Math.Max(Document.DurationMs, AudioDurationMs);
@@ -70,12 +71,11 @@ public sealed partial class EditorView
         tool = Tool.Select;
         menu = -1;
         ResetView();
-        playhead = Math.Clamp(document.Fruits.Select(f => f.TimeMs)
-            .Concat(document.ImportedSliders.Select(s => s.TimeMs)).DefaultIfEmpty(0).Min() - 1000, 0, document.DurationMs);
-        viewStart = Math.Max(0, playhead - 500);
-        AudioReady = AudioPlaying = AudioLoading = false;
+        playhead = viewStart = 0;
+        AudioReady = AudioPlaying = false;
+        initializeTransport = AudioLoading = !string.IsNullOrWhiteSpace(document.AudioPath);
         AudioDurationMs = 0;
-        AudioNotice = L.Get("editor.audio.notLoaded");
+        AudioNotice = L.Get(AudioLoading ? "editor.audio.loading" : "editor.audio.notLoaded");
         pinPlayhead = true;
         StatusMessage = L.Get("editor.status.documentOpened", document.Name, document.TimingPoints.Count);
     }
@@ -163,6 +163,19 @@ public sealed partial class EditorView
 
     public void UpdateTransport(double positionMs, double durationMs, bool ready, bool playing, bool loading, string? error, string? filename, double? sampledAtMs = null)
     {
+        if (initializeTransport)
+        {
+            // A retiring audio session must not repaint the new difficulty's initial frame.
+            if (!string.Equals(filename, Document.AudioPath, StringComparison.OrdinalIgnoreCase)) return;
+            if (ready && !loading)
+            {
+                double initialPosition = Math.Clamp(playhead, 0, double.IsFinite(durationMs) ? Math.Max(0, durationMs) : 0);
+                if (Math.Abs(positionMs - initialPosition) > .01) RequestSeek?.Invoke(initialPosition);
+                positionMs = initialPosition;
+                initializeTransport = false;
+            }
+            else if (!loading) initializeTransport = false;
+        }
         transportSampleAt = sampledAtMs ?? TestplayRealtime;
         transportSamplePosition = positionMs;
         UpdateHitsounds(positionMs, ready && playing && !loading, filename);
@@ -183,6 +196,7 @@ public sealed partial class EditorView
 
     private void SeekTo(double time)
     {
+        wheelPlayhead = double.NaN;
         playhead = Math.Clamp(time, 0, TimelineDurationMs);
         FollowPlayhead();
         ResetHitsounds();

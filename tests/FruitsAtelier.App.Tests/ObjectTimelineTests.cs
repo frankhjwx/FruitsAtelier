@@ -3,6 +3,58 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class ObjectTimelineTests
 {
+    public static void GridColors()
+    {
+        var ui = new Ui(false);
+        var map = new MapDocument { DurationMs = 20000 };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 1600, Meter = 3 });
+        ui.LoadDocument(map);
+        ui.View.UpdateTransport(4800, 20000, true, false, false, null, null); ui.Paint();
+        foreach (var (divisor, color) in new[] { (1, 0xEEEEEEu), (2, 0xFF6688u), (3, 0xBB66EEu),
+            (4, 0x66AAFFu), (5, 0xEEDD66u), (6, 0xBB66EEu), (7, 0xEEDD66u),
+            (8, 0xEEDD66u), (9, 0xEEDD66u), (12, 0xAAAAAAu), (16, 0xAAAAAAu) })
+        {
+            ui.SetSnapDivisor(divisor); ui.Paint();
+            var r = ui.View.ObjectTimelineBounds;
+            var ticks = ui.Canvas.Lines.Where(l => l.X1 == l.X2 && l.Y2 == r.Bottom && l.Y1 < l.Y2).ToArray();
+            var canvas = ui.Canvas.Lines.Where(l => l.Y1 == l.Y2 && l.X1 == ui.Plot.X && l.X2 == ui.Plot.Right).ToArray();
+            if (!ticks.Any(l => l.Color == color) || !canvas.Any(l => l.Color == color))
+                throw new Exception($"Missing 1/{divisor} color on canvas or timeline.");
+            foreach (var lines in new[] { ticks, canvas })
+            {
+                if (!lines.Any(l => l.Color == 0xEEEEEE && l.Width == 2.5f)) throw new Exception("Missing measure emphasis.");
+                if (divisor % 2 == 0 && !lines.Any(l => l.Color == 0xFF6688 && l.Width == 1.5f)) throw new Exception("Missing half-beat emphasis.");
+                if (divisor % 3 == 0 && !lines.Any(l => l.Color == 0xBB66EE && l.Width == 1.5f)) throw new Exception("Missing third-beat emphasis.");
+            }
+        }
+    }
+
+    public static void PlaybackMarquee()
+    {
+        var map = new MapDocument { DurationMs = 20000 };
+        foreach (double time in new[] { 2000d, 2500, 4000, 9000 }) map.Fruits.Add(new() { TimeMs = time, X = 256 });
+        var ui = new Ui(false); ui.LoadDocument(map);
+        ui.View.UpdateTransport(2500, 20000, true, true, false, null, null); ui.Paint();
+        var r = ui.View.ObjectTimelineBounds;
+        float X(double t) => r.X + (float)((t - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+        float start = X(1700), end = X(2700);
+        ui.View.PointerDown(start, r.Y + 2, 0, false, false);
+        ui.View.PointerMove(end, r.Y + 45, false, false); ui.Paint();
+        AssertSelected(2);
+        double before = ui.View.ObjectTimelineStartMs;
+        ui.View.UpdateTransport(7500, 20000, true, true, false, null, null); ui.Paint();
+        if (Math.Abs(ui.View.ObjectTimelineStartMs - before - 5000) > .001) throw new Exception("Marquee froze the timeline.");
+        AssertSelected(3);
+        ui.View.PointerUp(end, r.Y + 45, 0); ui.Paint(); AssertSelected(3);
+        if (!map.ContentEquals(ui.View.Document) || ui.View.IsDirty || ui.View.WantsCapture)
+            throw new Exception("Marquee edited content or retained capture.");
+        void AssertSelected(int count)
+        {
+            if (!ui.View.SelectedObjectIds.ToHashSet().SetEquals(map.Fruits.Take(count).Select(f => f.Id)))
+                throw new Exception("Marquee did not retain its original timestamp and offscreen objects.");
+        }
+    }
+
     public static void MoveAndNavigate()
     {
         var map = new MapDocument { BeatLengthMs = 500, DurationMs = 10000 };
@@ -254,7 +306,7 @@ internal static class ObjectTimelineTests
         foreach (string language in new[] { "en", "zh-CN" })
         {
             L.SetLanguage(language); ui.Resize(980, 620);
-            foreach (double speed in new[] { .25, .5, .75, 1 })
+            foreach (double speed in new[] { .1, .25, .5, .75, 1, 1.5 })
             {
                 var text = ui.Canvas.Texts.Single(t => t.Value == L.Get("ui.zoomPercent", speed * 100) && t.Y > ui.Height - 120);
                 ui.Click(text.X + 2, text.Y + 2);
@@ -263,6 +315,16 @@ internal static class ObjectTimelineTests
             }
         }
         ui.View.SetPlaybackSpeed(double.NaN);
-        if (ui.View.PlaybackSpeed != 1) throw new Exception("Invalid speed was accepted");
+        if (ui.View.PlaybackSpeed != 1.5) throw new Exception("Invalid speed was accepted");
+        foreach (double expected in new[] { 1d, .75, .5, .25, .1, .1 })
+        {
+            ui.Key(40, ctrl: true);
+            if (ui.View.PlaybackSpeed != expected) throw new Exception("Slower shortcut skipped a speed or the lower limit.");
+        }
+        foreach (double expected in new[] { .25, .5, .75, 1, 1.5, 1.5 })
+        {
+            ui.Key(38, ctrl: true);
+            if (ui.View.PlaybackSpeed != expected) throw new Exception("Faster shortcut skipped a speed or the upper limit.");
+        }
     }
 }

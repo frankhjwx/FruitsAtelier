@@ -37,7 +37,8 @@ public sealed partial class EditorView
         pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
         ClampView();
         EnsureConversion();
-        if (AudioPlaying && drag == DragKind.Marquee && !boxTimeline && dragMoved) MoveBox(mouseX, mouseY);
+        UpdatePlacementHyperdash();
+        if (AudioPlaying && drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
         c.Fill(new(0, 0, width, height), Background);
         DrawChrome(c);
         DrawCanvas(c);
@@ -122,12 +123,13 @@ public sealed partial class EditorView
         {
             double time = line.TimeMs;
             var localTiming = renderedTiming.At(time);
-            double step = localTiming.BeatLengthMs / divisor;
+            double step = localTiming.BeatLengthMs / line.Subdivision;
             float y = Screen(new(time, 0)).Y;
             bool beat = line.IsBeat;
-            bool bar = Math.Abs((time - localTiming.OffsetMs) / localTiming.BeatLengthMs / localTiming.Meter - Math.Round((time - localTiming.OffsetMs) / localTiming.BeatLengthMs / localTiming.Meter)) < 0.0001;
+            bool bar = line.IsMeasure;
             if (!beat && !line.IsTimingBoundary && step * pixelsPerMs < 7) continue;
-            c.Line(playfield.X, y, playfield.Right, y, line.IsTimingBoundary ? 0x845460u : beat ? Grid : 0x222933, bar || line.IsTimingBoundary ? 1.5f : 1);
+            var style = GridStyle(line);
+            c.Line(playfield.X, y, playfield.Right, y, style.Color, style.Width, .35f);
             if (line.IsTimingBoundary || beat && (localTiming.BeatLengthMs * pixelsPerMs >= 25 || bar))
                 c.Text(Time(time), canvas.X + 3, Math.Clamp(y - 7, plot.Y, plot.Bottom - 14), 10, line.IsTimingBoundary ? Error : Muted, 64);
         }
@@ -168,7 +170,7 @@ public sealed partial class EditorView
                 && SelectedTrack is { } draftSlider && legacyDraft is { Count: > 0 }
                 && draftSlider.Nodes[^1].TimeMs > legacyDraft[^1].Point.TimeMs
                 && Math.Abs(item.TimeMs - draftSlider.Nodes[^1].TimeMs) < 1;
-            DrawCatchObject(c, item, p.X, p.Y, playfield.Width, previewTail ? .6f : 1);
+            DrawCatchObject(c, item, p.X, p.Y, playfield.Width, previewTail ? .6f : 1, hyperStarts: placementHyperdash);
             if (IsObjectSelected(item.SourceId))
                 c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * playfield.Width / 512 + 3, Accent, false, 1.5f);
         }
@@ -359,22 +361,23 @@ public sealed partial class EditorView
         TimeDisplayBounds = new(64, top + 22, 150, 48);
         if (TimeDisplayBounds.Contains(mouseX, mouseY)) c.Fill(TimeDisplayBounds, Surface, 4);
         c.Text(Time(playhead), 69, top + 22, 21, Foreground, 145, true);
-        c.Text("/ " + Time(TimelineDurationMs), 70, top + 50, 11, Muted, 130);
+        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), 70, top + 50, 11, Muted, 130);
         hits.Add(new(TimeDisplayBounds, OpenTimeJump, true));
         if (TimeDisplayBounds.Contains(mouseX, mouseY) && !TimeJumpVisible)
             c.Text(L.Get("timeJump.title"), 69, top - 20, 12, Foreground, 200);
         if (!AudioReady) c.Text(AudioNotice, 16, top + 71, 10, Gold, 192);
 
-        float rateX = overview.Right - 360;
+        float rateX = overview.Right - 404;
         TestplayButtonBounds = new(220, top + 3, 128, 28);
         Button(c, TestplayButtonBounds, L.Get("testplay.start"), StartTestplay, enabled: !AudioLoading);
         c.Text(L.Get("ui.playbackSpeed"), rateX, top + 12, 11, Muted, 104);
-        foreach (double rate in new[] { .25, .5, .75, 1 })
+        foreach (double rate in PlaybackRates)
         {
             Button(c, new(rateX + 104, top + 3, 48, 28), L.Get("ui.zoomPercent", rate * 100), () => SetPlaybackSpeed(rate), PlaybackSpeed == rate);
             rateX += 50;
         }
         c.Fill(overview, 0x141922, 4);
+        if (AudioLoading) return;
         for (int i = 0; i <= 6; i++)
         {
             float x = overview.X + overview.Width * i / 6;

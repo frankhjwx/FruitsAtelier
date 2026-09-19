@@ -199,40 +199,13 @@ public static class WorkspaceProject
     public static WorkspaceResourceReferences ResourceReferences(BeatmapProject project)
     {
         var paths = new HashSet<string>();
-        var invalid = new HashSet<string>();
         foreach (var diff in project.Difficulties)
         {
             var d = diff.Document;
             Check(d.SourcePath); Check(d.AudioPath);
-            if (d.SourcePath is null) continue;
-            foreach (string line in d.OriginalSections.Where(s => s.Name == "Events").SelectMany(s => s.Lines))
-            {
-                var parts = Csv(line);
-                if (parts.Length < 3) continue;
-                int index = parts[0] is "Sprite" or "Animation" or "Sample" ? 3 : parts[0] is "0" or "1" or "Video" ? 2 : -1;
-                if (index < 0 || parts.Length <= index) continue;
-                if (parts[0] == "Animation" && parts.Length > 6 && int.TryParse(parts[6], out int frames) && frames is > 0 and <= 10000)
-                {
-                    string name = parts[index];
-                    for (int i = 0; i < frames; i++) Reference(Path.Combine(Path.GetDirectoryName(name) ?? "", Path.GetFileNameWithoutExtension(name) + i + Path.GetExtension(name)));
-                }
-                else Reference(parts[index]);
-            }
-            foreach (string line in d.OriginalSections.Where(s => s.Name == "HitObjects").SelectMany(s => s.Lines))
-            {
-                var fields = line.Split(',');
-                if (fields.Length < 6) continue;
-                string sample = fields[^1];
-                if (sample.Count(c => c == ':') >= 4) Reference(sample.Split(':', 5)[4]);
-            }
-            void Reference(string name)
-            {
-                if (string.IsNullOrWhiteSpace(name)) return;
-                try { Check(OsuBeatmapReader.ResolveResource(d.SourcePath, name.Replace('\\', '/'))); }
-                catch (Exception e) when (e is ArgumentException or NotSupportedException) { invalid.Add(name); }
-            }
         }
-        return new(paths.ToArray(), invalid.ToArray());
+        // Optional presentation and sample assets may be intentionally absent from a beatmap download.
+        return new(paths.ToArray());
         void Check(string? path) { if (!string.IsNullOrWhiteSpace(path)) paths.Add(path); }
     }
     internal static string[] Csv(string line)

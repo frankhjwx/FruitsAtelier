@@ -6,6 +6,7 @@ var tests = new (string Name, Action Run)[]
 {
     ("Slider streams persist, sample repeats and match exported fruits", SliderStreamTests.ConversionAndPersistence),
     ("Source section snapshots detect all writes, undo and project round trips", SourceSectionTests.SnapshotsAndWrites),
+    ("Grid fractions and measure starts follow active meter changes", TimingLookupTests.SubdivisionsAndMeasures),
     ("Timing lookup preserves boundary precedence and owns its snapshot", TimingLookupTests.BoundariesAndSnapshot),
     ("Dense imported sliders share reader, validation and conversion limits", DenseImportedSliderTests.ReadAndConvert),
     ("Shared slider curves persist exact AR references and clone independently", SliderModeTests.PersistenceAndAr),

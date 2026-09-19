@@ -79,6 +79,12 @@ dotnet run --project tests/FruitsAtelier.Audio.Tests -c Release
 
 ## Window checks
 
+The Windows `--render-check` injects nested paint/timer messages, nested native-modal
+scopes, an abandoned drawing batch, and a real Direct2D wrong-state failure. It
+checks that the renderer recovers, the error can be dismissed, and map content is
+preserved. The intentional Direct2D exception is followed by a successful paint
+lifecycle entry in the diagnostic log.
+
 The Windows `--render-check` also exercises testplay entry, movement, combo drawing,
 return, catcher mirroring and binding settings at both window sizes and all tested
 DPI values in English and Chinese. Testplay checks use silent callbacks. Shared App

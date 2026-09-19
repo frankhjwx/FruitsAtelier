@@ -123,6 +123,7 @@ internal static class Native
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int MessageBox(nint hwnd, string text, string title, uint flags);
     internal static void ShowError(nint owner, string text, string title)
     {
+        using var modal = new NativeModalScope(owner);
         if (GetCapture() != 0) ReleaseCapture();
         if (owner != 0) { ShowWindow(owner, IsIconic(owner) ? 9 : 5); SetForegroundWindow(owner); }
         // Fatal startup/render failures cannot rely on the editor canvas to display their error.
