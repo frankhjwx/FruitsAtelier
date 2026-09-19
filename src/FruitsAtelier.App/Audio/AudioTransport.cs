@@ -266,11 +266,15 @@ public sealed class AudioTransport : IDisposable
     {
         ISampleProvider samples = reader!.ToSampleProvider();
         if (playbackSpeed != 1) samples = new TempoSampleProvider(samples, playbackSpeed);
+        samples = new PlaybackGain(samples, () => SongVolume);
         if (Hitsounds is not null) samples = Hitsounds.MixWithMusic(samples, basePosition, playbackSpeed);
         var pcm = new SampleToWaveProvider16(samples) { Volume = outputGain };
         long version = loadedVersion;
         return new(pcm, () => commands.Writer.TryWrite(new(CommandKind.Refresh, version)), createPlayer);
     }
+
+    private float songVolume = 1;
+    public float SongVolume { get => Volatile.Read(ref songVolume); set => Volatile.Write(ref songVolume, float.IsFinite(value) ? Math.Clamp(value, 0, 1) : 1); }
 
     private async Task ResetOutputAsync(double position, long requestedSeek = 0)
     {

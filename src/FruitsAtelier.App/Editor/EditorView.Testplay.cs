@@ -43,7 +43,7 @@ public sealed partial class EditorView
         testplayWithAudio = AudioReady;
         comboCurrent = comboPrevious = 0; comboChangedAt = double.NegativeInfinity;
         ResetHitsounds();
-        var resolver = new HitsoundResolver(Document, PreviewObjects());
+        var resolver = new HitsoundResolver(Document, PreviewObjects(), HitsoundSkinFolders);
         var sounds = PreviewObjects().ToDictionary(item => (item.SourceId, item.EventIndex), resolver.Resolve);
         foreach (var sound in sounds.Values.SelectMany(s => s).Distinct()) RequestPrepareHitsound?.Invoke(sound);
         var playSound = RequestHitsound;

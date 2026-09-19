@@ -4,11 +4,11 @@
 
 The time–X canvas occupies the main area, read-only AR/CS/SV are at the upper right, and time navigation is at the bottom. Select objects directly on the canvas. Playfield X spans `0..512`; time increases upward. Startup opens the Library without loading a demo beatmap. Open a beatmap set to enter the editor. The window title identifies the active difficulty as `Artist - Title (Mapper) [Diffname]`; the menu row does not repeat the project title. The compact **← Library** button to the right of **Language** returns to the library. Esc first dismisses an active menu, field, dialog, or gesture; otherwise it requests a return to the library. Unsaved changes prompt for Save, Discard, or Cancel before closing the editor; Cancel or a failed save keeps the editor open. See [Workspace](WORKSPACE.md) for navigation and position memory.
 
-The Details header shows read-only beatmap AR, CS, and the base SliderMultiplier as SV. Catch Preview starts collapsed; the small button at the center of the canvas’s right edge opens it at the upper right. Drag the sidebar’s left boundary to resize it, and use the edge button to close it. NM, Easy and Hard Rock select preview-only difficulty and position rules; see [Catch rendering](CATCH_RENDERING.md). The preview uses its effective AR for falling speed. The main canvas uses the beatmap's AR timing ratio; its **Zoom** slider changes the displayed width of X=0..512 and scales object sizes and time spacing together. Zooming out shows more notes vertically without changing their coordinates, map AR, or CS. The playfield stays horizontally centered, from a minimum **256 DIP** wide to the full available width with CS0 edge padding. Percentages are relative to that available width; resizing preserves the zoom percentage except when the minimum width requires clamping. **Zoom defaults to 60%. View → Reset view** restores 60% and follows the playhead. Scroll to browse time, drag with the middle button to pan, and Ctrl+scroll to scale around the pointer's time. When paused, slider zoom preserves the viewport's center time; during playback, it preserves the play line.
+The Details header shows read-only beatmap AR, CS, and the base SliderMultiplier as SV. Catch Preview starts collapsed; the small button at the center of the canvas’s right edge opens it at the upper right. Drag the sidebar’s left boundary to resize it, and use the edge button to close it. NM, Easy and Hard Rock select preview-only difficulty and position rules; see [Catch rendering](CATCH_RENDERING.md). The preview uses its effective AR for falling speed. The main canvas uses the beatmap's AR timing ratio; its **Zoom** slider changes the displayed width of X=0..512 and scales object sizes and time spacing together. Zooming out shows more notes vertically without changing their coordinates, map AR, or CS. The playfield stays horizontally centered, from a minimum **256 DIP** wide to the full available width with CS0 edge padding. Percentages are relative to that available width; resizing preserves the zoom percentage except when the minimum width requires clamping. **Zoom defaults to 60%. View → Reset view** restores 60% and follows the playhead. Scroll up to move earlier and down to move later: canvas scrolling shifts both the viewport and playhead by the same relative amount, even while paused, preserving the playback line position. At a time or viewport boundary both movements stop together. Drag with the middle button to pan, and Ctrl+scroll to scale around the pointer's time. When paused, slider zoom preserves the viewport's center time; during playback, it preserves the play line.
 
 `Catch Preview` offers 4:3, 16:9 and Fit display modes. Fit uses the entire available sidebar height, revealing more future notes as the window grows vertically. Drag the sidebar divider to adjust width. Objects retain their proportions, and an automatic catcher follows playback and seeking. Mode and Resolution controls stay above the picture; 4:3 and 16:9 pictures are centred in the remaining area. Caught fruit remains on the plate. Completing a combo group scatters the stack; seeking restores the plate effects.
 
-During playback and seeking, the play line stays 25% above the bottom of the drawing area while content moves. Left-button marquee selection on the canvas keeps playback scrolling; the selection follows objects currently inside the screen-space box, including while the pointer is stationary. Paused navigation is free; playback or seeking resumes following.
+During playback and seeking, the play line stays 25% above the bottom of the drawing area while content moves. Left-button marquee selection on the canvas keeps playback scrolling; the selection follows objects currently inside the screen-space box, including while the pointer is stationary. Paused middle-button panning is free; canvas wheel navigation preserves the current playhead-to-viewport offset, while playback and other seeking resume following.
 
 ## Testplay
 
@@ -41,8 +41,7 @@ selection or undo history. The playfield fits the full window while preserving i
 aspect ratio; it reserves no space for navigation controls. Release Esc before
 pressing it again to navigate from the editor to Library.
 
-In **Library → Settings**, click the left, right or dash binding and press a letter,
-digit, arrow key, Shift or Space. Esc cancels capture; choosing an already assigned
+In **Library → Settings**, click the left, right or dash binding and press a supported key. See the [user manual](USER_MANUAL.md#testplay) for supported keys and reserved shortcuts. Esc cancels capture; choosing an already assigned
 key swaps the two bindings. **Apply** saves the bindings across restarts.
 
 ## Object timeline and playback speed
@@ -55,6 +54,8 @@ The playback button and timestamp block are vertically centred in the transport 
 
 The transport offers **25%, 50%, 75%, and 100%** playback speed. Only song tempo changes, with pitch preserved. Hitsounds keep their original pitch and real-time duration, with trigger times mapped to the slower music clock. Changing speed preserves the map position and play/pause state. This setting does not edit or export beatmap timing.
 
+In **Library → Settings**, the All, Song and Hitsound sliders adjust volume from 0% to 100%. Changes apply immediately and persist when the slider is released. All multiplies both channels; Song and Hitsound independently control music and all preview/testplay samples. Muting does not pause playback or change the beatmap.
+
 ## Tools and selection
 
 The left palette has equally sized Select, Fruit, FSlider, and Banana buttons with transparent outer margins. The four-button group is vertically centred beside the canvas plot. The active icon is fully opaque; the other three use 45% opacity. Labels share one font size. Clicking FSlider starts placement; B also enters control editing for a selected slider. Finishing placement keeps the current tool active.
@@ -65,7 +66,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 
 | Input | Action |
 | --- | --- |
-| 1 / 2 / 3 / 4 (also V / F / B / N) | Select / Fruit / FSlider / Banana shower |
+| 1 / 2 / 3 / 4 (also F / B / N for placement) | Select / Fruit / FSlider / Banana shower |
 | Click an object in Select mode | Select the complete object; slider children belong to the parent slider |
 | Drag empty space | Box-select objects in Select mode or anchors in FSlider edit mode |
 | Ctrl+click / Ctrl+box-select | Toggle object selection / add to box selection; selected-slider point actions take priority |
@@ -84,7 +85,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Ctrl+1 / 2 / 3 / 4 | Set grid size to 4 / 8 / 16 / 32 |
 | Shift+1…9 / Ctrl+M | Set beat subdivision directly / cycle subdivisions |
 | C / Space / X | Pause or resume / pause or resume / play from song start |
-| Z / End | Jump to first / last object start; repeat to reach song start / end |
+| Z / V (also End) | Jump to first / last object start; repeat to reach song start / end |
 | Left / Right (Shift for 4×) | Seek backward / forward by one beat subdivision |
 | Up / Down | Seek previous / next timing point |
 | Ctrl+Up / Down | Increase / decrease playback speed by 25%, within 25%–100% |
@@ -222,4 +223,4 @@ Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Slider 
 
 A confirmed stream remains one editable slider parent with its anchors, handles and repeats. Dragging, reshaping, cloning, saving and undo retain its stream snap. Existing streams offer **Change snapping** above **Convert back to slider** in their long-press menu. The Edit menu and Ctrl+Shift+F open Change snapping for a stream selection. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
 
-The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing V selection, Ctrl+L point conversion, Ctrl+I point insertion, Ctrl+J extension, Ctrl+Shift+S Save As, Ctrl+E export and Ctrl+wheel zoom remain editor-specific bindings; End provides last-note navigation. Timing creation, bookmarks and geometric rotation dialogs are not available.
+The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+I point insertion, Ctrl+J extension, Ctrl+Shift+S Save As, Ctrl+E export and Ctrl+wheel zoom remain editor-specific bindings; V and End provide last-note navigation. Timing creation, bookmarks and geometric rotation dialogs are not available.

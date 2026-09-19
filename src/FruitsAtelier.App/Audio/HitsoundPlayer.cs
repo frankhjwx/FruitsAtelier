@@ -13,6 +13,8 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
     private readonly List<(float[] Samples, double TimeMs, float Volume)> scheduled = new();
     private bool unavailable;
     private IWavePlayer? liveOutput;
+    private float volume = 1;
+    public float Volume { get => Volatile.Read(ref volume); set => Volatile.Write(ref volume, float.IsFinite(value) ? Math.Clamp(value, 0, 1) : 1); }
     public void PrepareLiveOutput(float outputGain = 1)
     {
         if (liveOutput is not null || unavailable) return;
@@ -26,14 +28,14 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
         catch { output.Dispose(); throw; }
     }
     public WaveFormat WaveFormat { get; } = WaveFormat.CreateIeeeFloatWaveFormat(HitsoundSamples.SampleRate, 1);
-    public void PreloadProject(IReadOnlyList<MapDocument> documents)
+    public void PreloadProject(IReadOnlyList<MapDocument> documents, IEnumerable<string>? skinFolders = null)
     {
         Stop(); cache.Clear(); cacheBytes = 0;
         foreach (var document in documents)
         {
             document.Tracks.RemoveAll(t => t.Nodes.Count < 2);
             var objects = CatchStreamConverter.Convert(document).Objects;
-            var resolver = new HitsoundResolver(document, objects);
+            var resolver = new HitsoundResolver(document, objects, skinFolders);
             foreach (var sound in objects.SelectMany(resolver.Resolve).DistinctBy(s => s.FilePath ?? $"{s.Kind}/{s.SampleSet}/{s.Name}"))
                 Prepare(sound);
         }
@@ -79,7 +81,7 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
                         if (position >= voice.Samples.Length) break;
                         int index = (int)position;
                         float a = voice.Samples[index], b = voice.Samples[Math.Min(index + 1, voice.Samples.Length - 1)];
-                        float sample = (a + (b - a) * (float)(position - index)) * voice.Volume;
+                        float sample = (a + (b - a) * (float)(position - index)) * voice.Volume * owner.Volume;
                         for (int channel = 0; channel < channels; channel++)
                             buffer[offset + frame * channels + channel] += sample;
                     }
@@ -146,7 +148,7 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
             {
                 var voice = voices[v];
                 int length = Math.Min(count, voice.Samples.Length - voice.Position);
-                for (int i = 0; i < length; i++) buffer[offset + i] += voice.Samples[voice.Position + i] * voice.Volume;
+                for (int i = 0; i < length; i++) buffer[offset + i] += voice.Samples[voice.Position + i] * voice.Volume * Volume;
                 voice.Position += length;
                 if (voice.Position == voice.Samples.Length) voices.RemoveAt(v); else voices[v] = voice;
             }

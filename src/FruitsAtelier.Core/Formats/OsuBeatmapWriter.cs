@@ -198,8 +198,11 @@ public static class OsuBeatmapWriter
             if (!changesSv && !differsFromOriginal) continue;
             if (differsFromOriginal && document.ImportedSliders.Any(s => s.TimeMs == start))
                 throw new InvalidDataException(L.Get("core.writer.existingSv"));
-            if (changesSv && document.ImportedSliders.Any(s => s.TimeMs >= start - 1 && s.TimeMs < start))
-                throw new InvalidDataException(L.Get("core.writer.restoreInterval"));
+            var preceding = document.ImportedSliders.FirstOrDefault(s => s.TimeMs >= start - 1 && s.TimeMs < start
+                && (Math.Abs(TimingMap.At(document, s.TimeMs).SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9
+                    || !TimingMap.At(document, s.TimeMs).GenerateTicks));
+            if (changesSv && preceding is not null)
+                throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(preceding.TimeMs), Number(start)));
             var currentGroup = original.Where(t => t.TimeMs <= start).GroupBy(t => t.TimeMs).LastOrDefault();
             var template = currentGroup?.LastOrDefault(t => !t.Uninherited) ?? currentGroup?.First() ?? original[0];
             double nextBoundary = original.Where(t => t.TimeMs > start).Select(t => t.TimeMs)
@@ -211,8 +214,20 @@ public static class OsuBeatmapWriter
             bool needsRestore = differsFromOriginal && double.IsFinite(nextImported);
             // Keep the override through the next millisecond. Fractional restoration can truncate onto the head in stable.
             double restoreTime = start + 2;
-            if (nextBoundary < restoreTime || needsRestore && (restoreTime > int.MaxValue || nextImported < restoreTime))
-                throw new InvalidDataException(L.Get("core.writer.restoreInterval"));
+            // Nearby metadata or equal-SV heads are safe; only incompatible timing inside the lookup window conflicts.
+            foreach (double boundary in original.Where(t => t.TimeMs > start && t.TimeMs < restoreTime).Select(t => t.TimeMs).Distinct())
+            {
+                var state = TimingMap.At(document, boundary);
+                if (Math.Abs(state.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9
+                    || Math.Abs(state.BeatLengthMs - current.BeatLengthMs) > 1e-9 || !state.GenerateTicks)
+                    throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(boundary), Number(start)));
+            }
+            var nearHead = generated.FirstOrDefault(s => Round(s.StartTimeMs) > start && Round(s.StartTimeMs) < restoreTime
+                && Math.Abs(s.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9);
+            if (nearHead is not null)
+                throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(Round(nearHead.StartTimeMs)), Number(start)));
+            if (needsRestore && (restoreTime > int.MaxValue || nextImported < restoreTime))
+                throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(nextImported), Number(start)));
             if (changesSv)
                 OverrideInherited(emitted.TimingPoints, template, start, -100 / first.SliderVelocityMultiplier);
             if (needsRestore)

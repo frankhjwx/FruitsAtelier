@@ -38,6 +38,7 @@ public sealed partial class EditorView
                 if (sliderDialogHits[i].Bounds.Contains(x, y)) { if (sliderDialogHits[i].Enabled) sliderDialogHits[i].Action(); break; }
             return;
         }
+        if (BeginVolumeDrag(x, y, button)) return;
         if (LibraryVisible && LibraryPointerDown(x, y, button)) return;
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
@@ -262,6 +263,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (volumeDrag >= 0) { UpdateVolumeDrag(x); return; }
         if (IsTestplaying) return;
         mouseX = x; mouseY = y;
         if (sliderHoldConsumed) return;
@@ -368,6 +370,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
+        if (volumeDrag >= 0 && button == 0) { UpdateVolumeDrag(x); FinishVolumeDrag(); return; }
         if (button == 0)
         {
             sliderHoldId = Guid.Empty;
@@ -487,7 +490,7 @@ public sealed partial class EditorView
         }
         if (overview.Contains(x, y))
         {
-            SeekTo(playhead + delta / 120 * 78 / pixelsPerMs);
+            SeekTo(playhead - delta / 120 * 78 / pixelsPerMs);
             return;
         }
         if (!canvas.Contains(x, y)) return;
@@ -497,9 +500,20 @@ public sealed partial class EditorView
             ZoomCanvasAt(y, Math.Pow(1.16, delta / 120));
             StatusMessage = L.Get("editor.status.canvasZoom", canvasZoom * 100);
         }
-        else if (AudioPlaying) SeekTo(playhead + delta / 120 * 78 / pixelsPerMs);
-        else viewStart += delta / 120 * 78 / pixelsPerMs;
+        else ScrollCanvasTime(-delta / 120 * 78 / pixelsPerMs);
         ClampView();
+    }
+
+    private void ScrollCanvasTime(double delta)
+    {
+        double padding = plot.Height * playbackLineFromBottom / pixelsPerMs;
+        double minimum = Math.Max(-playhead, -padding - viewStart);
+        double maximum = Math.Min(TimelineDurationMs - playhead, TimelineDurationMs - padding - viewStart);
+        double movement = Math.Clamp(delta, minimum, Math.Max(minimum, maximum));
+        double nextView = viewStart + movement;
+        SeekTo(playhead + movement);
+        viewStart = nextView;
+        pinPlayhead = false;
     }
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
@@ -638,7 +652,6 @@ public sealed partial class EditorView
             case 76: ToggleNotesLock(); break;
             case 13: FinishCurve(); break;
             case 46: DeleteSelection(); break;
-            case 86: ChangeTool(Tool.Select); break;
             case 70: ChangeTool(Tool.Fruit); break;
             case 66: ChangeTool(Tool.Slider); break;
             case 78: ChangeTool(Tool.Banana); break;
@@ -671,6 +684,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction()
     {
+        FinishVolumeDrag();
         testplayEscapeConsumed = false;
         streamSnapDragging = false;
         sliderHoldId = legacyButtonSlider = Guid.Empty;

@@ -32,6 +32,7 @@ public sealed partial class EditorView
         skin = defaultSkin;
         if (LibrarySettings.SelectedSkin is { } selected && Directory.Exists(selected))
             LoadSkin(selected);
+        else RefreshSkinHitsounds();
     }
 
     public void ImportSkin(string archive)
@@ -52,11 +53,25 @@ public sealed partial class EditorView
 
     private void SelectSkin(string? folder)
     {
+        if (folder is not null) folder = UpgradeSkinFolder(folder);
         if (folder is null) skin = defaultSkin;
         else if (CatchSkin.TryLoad(folder, out var loaded, out string message, defaultSkin, allowEmpty: true)) skin = loaded;
         else { ShowError(message); return; }
         LibrarySettings.SelectedSkin = folder;
+        RefreshSkinHitsounds();
         RequestSkinPreference?.Invoke();
+    }
+
+    private string UpgradeSkinFolder(string folder)
+    {
+        string root = Path.Combine(LibrarySettings.Workspace, "Skins");
+        string name = Path.GetFileName(Path.TrimEndingDirectorySeparator(folder));
+        if (!name.StartsWith("v4-", StringComparison.Ordinal) && FruitsAtelier.Core.WorkspaceProject.Within(Path.Combine(root, "Imported"), folder))
+        {
+            string archive = Path.Combine(root, "Archives", name + ".osk");
+            if (File.Exists(archive)) return StoreSkinArchive(LibrarySettings.Workspace, archive).Folder;
+        }
+        return folder;
     }
 
     private void DrawSkinSelector(ICanvas c)

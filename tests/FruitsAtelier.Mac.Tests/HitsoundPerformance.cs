@@ -87,7 +87,7 @@ static class HitsoundPerformance
         public void Clip(Rect r) { }
         public void Unclip() { }
     }
-    private static void OfflinePcm(string path)
+    public static void OfflinePcm(string path)
     {
         nint mixer = Open(-1), sample = Sample(path);
         if (mixer == 0 || sample == 0) throw new Exception("Offline PCM setup failed");
@@ -96,6 +96,11 @@ static class HitsoundPerformance
             var reference = new float[4096]; var mixed = new float[4096];
             Queue(mixer, sample, 1, .5f); Render(mixer, 1, (uint)reference.Length, reference);
             if (!reference.Any(x => Math.Abs(x) > .001)) throw new Exception("Default normal sample renders silence");
+            Stop(mixer); Queue(mixer, sample, 1, .5f); Volume(mixer, .25f); Render(mixer, 1, (uint)mixed.Length, mixed);
+            for (int i = 0; i < mixed.Length; i++) if (Math.Abs(mixed[i] - reference[i] * .25f) > .0001) throw new Exception("Native gain does not affect queued PCM");
+            Volume(mixer, 0); Render(mixer, 1, (uint)mixed.Length, mixed);
+            if (mixed.Any(x => x != 0)) throw new Exception("Native volume does not mute active PCM");
+            Volume(mixer, 1);
             Stop(mixer); Queue(mixer, sample, 2, .5f); Queue(mixer, sample, 2, .5f); Render(mixer, 2, (uint)mixed.Length, mixed);
             for (int i = 0; i < mixed.Length; i++) if (Math.Abs(mixed[i] - Math.Clamp(reference[i] * 2, -1, 1)) > .0001) throw new Exception("Native PCM overlap/gain mismatch");
             Stop(mixer); Queue(mixer, sample, 2, 8); Render(mixer, 2, (uint)mixed.Length, mixed);
@@ -114,5 +119,6 @@ static class HitsoundPerformance
     [DllImport("FruitsAtelierAudio", EntryPoint="fa_hitsounds_sample_close")] static extern void SampleClose(nint handle);
     [DllImport("FruitsAtelierAudio", EntryPoint="fa_hitsounds_schedule")] static extern int Queue(nint handle, nint sample, double start, float volume);
     [DllImport("FruitsAtelierAudio", EntryPoint="fa_hitsounds_stop")] static extern void Stop(nint handle);
+    [DllImport("FruitsAtelierAudio", EntryPoint="fa_hitsounds_volume")] static extern void Volume(nint handle, float volume);
     [DllImport("FruitsAtelierAudio", EntryPoint="fa_hitsounds_render_test")] static extern void Render(nint handle, double time, uint frames, [Out] float[] output);
 }

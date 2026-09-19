@@ -47,7 +47,7 @@ internal static class MixedSliderTests
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode: 2\n[Difficulty]\nSliderMultiplier: 1\nSliderTickRate: 1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n160,192,1000,2,0,B|220:250|300:192,1,200\n");
         Guid id = map.ImportedSliders.Single().Id;
         ui.LoadDocument(map); ui.Paint();
-        ui.Key('V'); ui.ClickMap(1000, 160);
+        ui.Key('1'); ui.ClickMap(1000, 160);
         ui.HoldMap(1000, 160); ui.ClickText(FruitsAtelier.Localization.Strings.Get("preview.convertSlider"));
         var track = ui.View.Document.Tracks.Single();
         Check(track.Id == id && track.SpanCount == 1 && track.CompensateTinyDroplets == true

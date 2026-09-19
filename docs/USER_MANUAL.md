@@ -38,9 +38,9 @@ On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are
 
 ### Navigate and select
 
-The main canvas shows horizontal placement and note timing; later notes are higher on the screen. Scroll to browse time, middle-drag to pan, and Ctrl+wheel to zoom. Click empty canvas in Select mode to seek. The bottom timeline also supports seeking; click the timestamp to jump to an exact time.
+The main canvas shows horizontal placement and note timing; later notes are higher on the screen. Scroll up for earlier times and down for later times: the canvas and playhead move together by the same relative amount, including while paused. Middle-drag pans, and Ctrl+wheel zooms. Click empty canvas in Select mode to seek. The bottom timeline also supports seeking; click the timestamp to jump to an exact time.
 
-Select an object with **V / 1**. Drag empty space to box-select, or Ctrl-click to toggle selection. Drag selected objects to move them together. Selecting a slider fruit or droplet selects its parent slider. The horizontal object timeline also lets you select and move objects in time.
+Select an object with **1**. Drag empty space to box-select, or Ctrl-click to toggle selection. Drag selected objects to move them together. Selecting a slider fruit or droplet selects its parent slider. The horizontal object timeline also lets you select and move objects in time.
 
 ### Place objects
 
@@ -114,7 +114,7 @@ Shortcuts below apply while editing, outside text fields and dialogs. On macOS, 
 | Ctrl+S / Ctrl+Shift+S | Save / Save As project. |
 | Ctrl+E | Open export choices. |
 | Ctrl+Tab / Ctrl+Shift+Tab | Next / previous difficulty. |
-| V / F / B / N | Select / Fruit / FSlider / Banana tools. |
+| 1 / F / B / N | Select / Fruit / FSlider / Banana tools. |
 | 1 / 2 / 3 / 4 | The same four tools. |
 | Ctrl+A | Select all objects. |
 | Ctrl+X / Ctrl+C / Ctrl+V | Cut / copy / paste selected objects. |
@@ -134,11 +134,11 @@ Object paste works within the same difficulty session and aligns the earliest se
 | --- | --- |
 | Space / C | Play or pause. |
 | X / Home | Play from song start / seek to song start. |
-| Z / End | First / last object start; repeat for song start / end. |
+| Z / V (also End) | First / last object start; repeat for song start / end. |
 | Left / Right | Seek one beat subdivision; Shift multiplies by four. |
 | Up / Down | Previous / next timing point. |
 | Ctrl+Up / Ctrl+Down | Faster / slower playback in 25% steps. |
-| Wheel / middle-drag | Browse time / pan the canvas. |
+| Wheel / middle-drag | Wheel up moves the playhead and canvas earlier; down moves both later by the same relative amount. Middle-drag pans the canvas. |
 | Ctrl+wheel | Zoom the canvas, or the object timeline under the pointer. |
 | Click the current timestamp | Open Jump to time; accepts timestamps or milliseconds. |
 
@@ -186,3 +186,7 @@ Lock Notes prevents moving, reshaping or deleting existing objects. You can stil
 | F2 | Return to the editor at the current position. |
 
 For detailed editing behavior, see `docs/EDITOR_UI.md` in the repository. Project and resource management are described in `docs/WORKSPACE.md`.
+
+### Audio volume
+
+Open **Library > Settings** to adjust **All**, **Song** and **Hitsound** from 0% to 100%. Values apply immediately and are saved when you release the slider. All multiplies both other channels. Setting Song to 0% leaves hitsounds audible; setting Hitsound to 0% leaves the song audible. Custom skin samples apply in both preview and testplay, with beatmap custom samples taking priority.

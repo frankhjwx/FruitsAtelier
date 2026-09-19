@@ -8,11 +8,12 @@ public sealed class HitsoundResolver
     private readonly Dictionary<Guid, string?> lines;
     private readonly Dictionary<(Guid, int), int> edges = new();
     private readonly Dictionary<string, string> files = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> skinFiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly TimingPoint[] timing;
     private readonly Dictionary<Guid, double> sliderStarts;
     private readonly int defaultSet;
     private readonly Dictionary<Guid, CurveTrack> streams;
-    public HitsoundResolver(MapDocument document, IReadOnlyList<ConvertedCatchObject> objects)
+    public HitsoundResolver(MapDocument document, IReadOnlyList<ConvertedCatchObject> objects, IEnumerable<string>? skinFolders = null)
     {
         streams = document.Tracks.Where(t => t.StreamSnapDivisor is not null).ToDictionary(t => t.Id);
         lines = document.Fruits.Select(f => (f.Id, f.OriginalLine))
@@ -30,6 +31,19 @@ public sealed class HitsoundResolver
         string? set = document.OriginalSections.Where(s => s.Name == "General").SelectMany(s => s.Lines)
             .Select(l => l.Split(':', 2)).Where(p => p.Length == 2 && p[0].Trim() == "SampleSet").Select(p => p[1].Trim()).LastOrDefault();
         defaultSet = set?.ToLowerInvariant() switch { "soft" => 2, "drum" => 3, _ => 1 };
+        foreach (string folder in skinFolders ?? [])
+        {
+            try
+            {
+                if (!Directory.Exists(folder) || (File.GetAttributes(folder) & FileAttributes.ReparsePoint) != 0) continue;
+                foreach (string path in Directory.EnumerateFiles(folder, "*", new EnumerationOptions
+                    { AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = true }).Take(20000)
+                    .OrderBy(p => Path.GetExtension(p).ToLowerInvariant() switch { ".wav" => 0, ".ogg" => 1, _ => 2 }))
+                    if (IsSkinSample(Path.GetFileName(path))) skinFiles.TryAdd(Path.GetFileNameWithoutExtension(path), path);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
         string? root = Path.GetDirectoryName(document.SourcePath ?? document.AudioPath);
         if (root is not null && Directory.Exists(root))
         {
@@ -116,9 +130,13 @@ public sealed class HitsoundResolver
             if (index > 0)
                 foreach (string extension in new[] { ".wav", ".ogg", ".mp3" })
                     if (files.TryGetValue(basename + extension, out path)) break;
+            if (path is null) skinFiles.TryGetValue(prefix + "-" + name, out path);
             return new(item.Kind, path ?? HitsoundDefaults.Find(sampleSet, name), gain, name, sampleSet);
         }
     }
+    public static bool IsSkinSample(string name) => System.Text.RegularExpressions.Regex.IsMatch(name,
+        @"^(normal|soft|drum)-(hitnormal|hitwhistle|hitfinish|hitclap|slidertick)\.(wav|ogg|mp3)$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
     private static string At(string[] values, int i) => i < values.Length ? values[i] : "";
     private static int Number(string[] values, int i) => int.TryParse(At(values, i), out int result) ? result : 0;
 }

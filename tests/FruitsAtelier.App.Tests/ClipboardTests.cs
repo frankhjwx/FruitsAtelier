@@ -69,7 +69,7 @@ internal static class ClipboardTests
         var ui = new Ui();
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n3000,250,4,1,0,100,1,0\n[HitObjects]\n160,192,1000,6,2,B|220:250|300:192,2,200,2|4|8,1:2|2:3|3:4,2:3:4:70:clap.wav\n256,192,6000,12,8,6500,2:3:4:60:banana.wav\n");
         var source = map.ImportedSliders.Single(); var shower = map.BananaShowers.Single();
-        ui.LoadDocument(map); ui.Paint(); ui.Key('V'); ui.ClickMap(1000, 160);
+        ui.LoadDocument(map); ui.Paint(); ui.Key('1'); ui.ClickMap(1000, 160);
         Check(ui.View.CopySelection(), "Imported slider copy failed.");
         ui.View.UpdateTransport(4000.5, 10000, true, false, false, null, "fixture.wav");
         Check(ui.View.PasteSelection(), ui.View.StatusMessage);
@@ -82,7 +82,7 @@ internal static class ClipboardTests
         Check(output.OriginalLine!.EndsWith("2|4|8,1:2|2:3|3:4,2:3:4:70:clap.wav", StringComparison.Ordinal), "Imported paste lost edge or hit samples.");
 
         ui.View.UpdateTransport(0, 10000, true, false, false, null, "fixture.wav"); ui.Paint();
-        ui.Key('V'); ui.ClickMap(6200, 256);
+        ui.Key('1'); ui.ClickMap(6200, 256);
         Check(ui.View.CopySelection(), "Banana shower copy failed.");
         ui.View.UpdateTransport(7000.25, 10000, true, false, false, null, "fixture.wav");
         Check(ui.View.PasteSelection(), ui.View.StatusMessage);

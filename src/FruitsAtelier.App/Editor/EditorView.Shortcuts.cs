@@ -35,9 +35,9 @@ public sealed partial class EditorView
             case 90:
                 double first = ClipboardParents(Document).Select(p => p.TimeMs).DefaultIfEmpty(0).Min();
                 SeekTo(playhead <= first ? 0 : first); return true;
-            case 35:
+            case 35: case 86:
                 double last = ClipboardParents(Document).Select(p => p.TimeMs).DefaultIfEmpty(0).Max();
-                SeekTo(playhead >= last ? TimelineDurationMs : last); return true;
+                SeekTo(playhead >= last ? AudioReady && AudioDurationMs > 0 ? AudioDurationMs : TimelineDurationMs : last); return true;
             case 37: case 39:
                 SeekTo(playhead + (key == 37 ? -1 : 1) * (shift ? 4 : 1) * TimingMap.At(Document, playhead).BeatLengthMs / divisor); return true;
             case 38: case 40:

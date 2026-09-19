@@ -27,7 +27,7 @@ internal static class StreamShortcutTests
         Check(!ui.View.SliderHoldNeedsRedraw && ui.View.StreamConversionBounds.Width == 0, "early release cancels hold");
         ui.HoldMap(1500, 200, () => clock.Advance(1000));
         Check(ui.View.StreamConversionBounds.Width > 0 && !ui.View.WantsCapture && !ui.View.IsDirty, "completed hold opens actions without editing");
-        ui.Key(27); ui.Key('V');
+        ui.Key(27); ui.Key('1');
         ui.DownMap(1500, 200); ui.MoveMap(1625, 210); clock.Advance(1000); ui.Paint();
         Check(!ui.View.SliderHoldNeedsRedraw && ui.View.StreamConversionBounds.Width == 0, "drag cancels the hold");
         ui.UpMap(1625, 210); ui.Key('Z', ctrl: true);

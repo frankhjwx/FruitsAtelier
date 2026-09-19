@@ -14,7 +14,7 @@ internal static class AnchorSnapTests
         if (ui.View.AnchorSnapEnabled) throw new Exception("Anchor snap must default off.");
         void Drag(double from, double to)
         {
-            ui.Key('V'); ui.ClickMap(from, 200); ui.Key('B');
+            ui.Key('1'); ui.ClickMap(from, 200); ui.Key('B');
             ui.DownMap(from, 200); ui.MoveMap(to, 205); ui.UpMap(to, 205);
         }
         Drag(2000, 2183.25);
@@ -33,7 +33,7 @@ internal static class AnchorSnapTests
         void DragEndpoint(int index, double to, double expected)
         {
             var node = ui.Anchor(track.Nodes[index].Id);
-            ui.Key('V'); ui.ClickMap(node.TimeMs, node.X); ui.Key('B');
+            ui.Key('1'); ui.ClickMap(node.TimeMs, node.X); ui.Key('B');
             ui.DownMap(node.TimeMs, node.X); ui.MoveMap(to, node.X + 5); ui.UpMap(to, node.X + 5);
             Near(expected, ui.Anchor(node.Id).TimeMs);
             ui.Key('Z', ctrl: true);

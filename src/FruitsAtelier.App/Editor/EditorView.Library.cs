@@ -47,6 +47,7 @@ public sealed partial class EditorView
     {
         try { LibrarySettings = settings ?? LibrarySettings.Load(); }
         catch (Exception e) { libraryError = e.Message; }
+        ApplyAudioVolume();
         draftWorkspace = LibrarySettings.Workspace; draftOsuRoot = LibrarySettings.OsuRoot; draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         LibraryVisible = show;
         librarySettingsOpen = false;
@@ -341,12 +342,14 @@ public sealed partial class EditorView
             LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, 256);
             LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, 354);
             DrawTestplayBindings(c);
-            Button(c, new(32, 510, 200, 38), L.Get("library.apply"), () =>
+            DrawVolumeControls(c);
+            Button(c, new(32, 574, 200, 32), L.Get("library.apply"), () =>
             {
                 try
                 {
                     var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
                     settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
+                    settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;
                     if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
                     settings.Save();
                     SaveLibraryMemory(); LibrarySettings = settings; InitializeSkin(); librarySettingsOpen = false; libraryField = -1; bindingCapture = -1;
@@ -473,6 +476,7 @@ public sealed partial class EditorView
     }
     private void LibraryKey(int key, bool ctrl)
     {
+        if (key == 27) FinishVolumeDrag();
         if (key == 27) { if (contextItems.Count > 0) contextItems.Clear(); else if (libraryField >= 0) libraryField = -1; else { librarySettingsOpen = resourcePage = false; } return; }
         if (key == 116) { StartLibraryScan(); return; }
         if (ctrl && key == 70) { libraryField = 2; libraryReplace = true; return; }
