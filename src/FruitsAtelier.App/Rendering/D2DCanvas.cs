@@ -19,6 +19,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     private ID3D11DeviceContext? immediateContext;
     private IDXGISwapChain1? swapChain;
     private SafeWaitHandle? frameReady;
+    private bool frameAcquired;
     private ID2D1Factory1? factory;
     private ID2D1Device? drawingDevice;
     private ID2D1DeviceContext? context;
@@ -100,12 +101,27 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         imageVersions.Clear();
     }
 
-    public bool TryAcquireFrame() => frameReady is null || frameReady.IsInvalid || WaitForSingleObject(frameReady, 0) == 0;
+    public bool WaitForFrameOrInput()
+    {
+        if (frameAcquired || frameReady is null || frameReady.IsInvalid) return true;
+        uint result = MsgWaitForMultipleObjectsEx(1, [frameReady.DangerousGetHandle()], 100, 0x04FF, 0x0004);
+        if (result == uint.MaxValue) throw new System.ComponentModel.Win32Exception();
+        // The wait consumes an auto-reset signal. Preserve it for the following WM_PAINT.
+        return frameAcquired = result == 0;
+    }
+    public bool TryAcquireFrame()
+    {
+        if (frameAcquired) { frameAcquired = false; return true; }
+        return frameReady is null || frameReady.IsInvalid || WaitForSingleObject(frameReady, 0) == 0;
+    }
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint MsgWaitForMultipleObjectsEx(uint count, nint[] handles, uint milliseconds, uint wakeMask, uint flags);
     [DllImport("kernel32.dll")]
     private static extern uint WaitForSingleObject(SafeWaitHandle handle, uint milliseconds);
 
     public void End(bool lowLatency = false)
     {
+        frameAcquired = false;
         while (clipDepth > 0) Unclip();
         context!.EndDraw().CheckError();
         var result = swapChain!.Present(lowLatency ? 0u : 1u, lowLatency ? PresentFlags.DoNotWait : PresentFlags.None);

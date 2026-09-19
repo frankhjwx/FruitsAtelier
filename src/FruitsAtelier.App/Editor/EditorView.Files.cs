@@ -12,7 +12,6 @@ public sealed partial class EditorView
     public Action? RequestSave { get; set; }
     public Action? RequestSaveAs { get; set; }
     public Action? RequestExport { get; set; }
-    public Action? RequestAudio { get; set; }
     public Action? RequestTogglePlayback { get; set; }
     public Action<double>? RequestSeek { get; set; }
     public bool AudioReady { get; private set; }

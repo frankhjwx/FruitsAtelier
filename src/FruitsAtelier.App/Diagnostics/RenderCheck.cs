@@ -9,7 +9,7 @@ namespace FruitsAtelier.App.Diagnostics;
 
 internal static class RenderCheck
 {
-    private static object MeasureIndependentInput(nint window)
+    private static object MeasureIndependentInput(nint window, double updatesPerSecond)
     {
         double now = Stopwatch.GetTimestamp() * 1000d / Stopwatch.Frequency;
         ConvertedCatchObject Note(double time) => new(Guid.NewGuid(), 0, CatchObjectKind.Fruit, time, 256, 256, 256, 0);
@@ -18,9 +18,17 @@ internal static class RenderCheck
             new CatchTestplayClock(0, 1, now, false), 0, false, false, 37, 39, 16, TimeProvider.System, 5, [],
             _ => Interlocked.Increment(ref catches));
         var samples = new System.Collections.Concurrent.ConcurrentQueue<double>();
-        using var input = new TestplayInputThread(window, session, () => throw new InvalidOperationException(), diagnostic: true);
+        var intervals = new System.Collections.Concurrent.ConcurrentQueue<double>();
+        long previousTick = 0;
+        using var input = new TestplayInputThread(window, session, () => throw new InvalidOperationException(), diagnostic: true, updatesPerSecond: updatesPerSecond);
         input.CheckKeyProcessed = samples.Enqueue;
-        input.CheckTick = () => Interlocked.Increment(ref ticks);
+        input.CheckTick = () =>
+        {
+            long at = Stopwatch.GetTimestamp();
+            if (previousTick != 0) intervals.Enqueue((at - previousTick) * 1000d / Stopwatch.Frequency);
+            previousTick = at;
+            Interlocked.Increment(ref ticks);
+        };
         // Deliberately do not pump the owner window: gameplay and sound callbacks must continue.
         Thread.Sleep(100);
         if (Volatile.Read(ref catches) != 1 || Volatile.Read(ref ticks) < 2)
@@ -38,7 +46,9 @@ internal static class RenderCheck
         if (!SpinWait.SpinUntil(() => samples.Count == 200, 2000))
             throw new InvalidOperationException("Independent input lost queued transitions.");
         var ordered = samples.Order().ToArray();
-        return new { samples = ordered.Length, medianMs = ordered[100], p95Ms = ordered[190], maxMs = ordered[^1],
+        var steps = intervals.Order().ToArray();
+        return new { targetHz = updatesPerSecond, samples = ordered.Length, medianMs = ordered[100], p95Ms = ordered[190], maxMs = ordered[^1],
+            updateMedianMs = steps[steps.Length / 2], updateP95Ms = steps[(int)(steps.Length * .95)],
             ticks = Volatile.Read(ref ticks), caughtDuringUiStall = catches,
             note = "Synthetic messages to the dedicated input thread while the UI is blocked; excludes keyboard hardware and display latency." };
     }
@@ -52,12 +62,10 @@ internal static class RenderCheck
             var map = new MapDocument();
             map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 0 }, new Fruit { TimeMs = 60000, X = 512 }]);
             view.LoadDocument(map); view.CloseLibrary(); view.StartTestplay();
-            using var pacer = new TestplayFramePacer();
-            pacer.FrameStarted();
             var keyWatch = Stopwatch.StartNew();
             if (!Native.PostMessage(window, 0x0100, (nuint)view.LibrarySettings.TestplayRightKey, 0))
                 throw new InvalidOperationException("Could not post testplay input.");
-            pacer.Wait();
+            canvas.WaitForFrameOrInput();
             if (!Native.PeekMessage(out var key, window, 0x0100, 0x0100, 1))
                 throw new InvalidOperationException("Frame wait consumed or lost a key event.");
             Native.DispatchMessage(ref key);
@@ -66,7 +74,12 @@ internal static class RenderCheck
             var total = Stopwatch.StartNew();
             while (frames.Count < 120 && total.Elapsed.TotalSeconds < 5)
             {
-                if (!canvas.TryAcquireFrame()) { Thread.Sleep(1); continue; }
+                if (!canvas.TryAcquireFrame())
+                {
+                    canvas.WaitForFrameOrInput();
+                    while (Native.PeekMessage(out var pending, window, 0, 0, 1)) Native.DispatchMessage(ref pending);
+                    continue;
+                }
                 var watch = Stopwatch.StartNew();
                 canvas.Begin(); view.Render(canvas, 1440, 900); canvas.End(lowLatency: true);
                 frames.Add(watch.Elapsed.TotalMilliseconds);
@@ -350,7 +363,7 @@ internal static class RenderCheck
         }
         timings.Sort();
         var testplaySubmission = MeasureTestplaySubmission(canvas, view, window);
-        var testplayInput = MeasureIndependentInput(window);
+        var testplayInput = new { baseline = MeasureIndependentInput(window, 1000), current = MeasureIndependentInput(window, 2000) };
         var report = new
         {
             adapter = canvas.AdapterName,

@@ -77,7 +77,6 @@ public sealed partial class EditorView
     private bool replaceText = true, showTargets = true, showPreviewCurves;
 
     public Action? RequestClose { get; set; }
-    public Action? RequestResetDemo { get; set; }
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
     public bool IsEditingText => TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;

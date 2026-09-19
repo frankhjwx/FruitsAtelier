@@ -73,18 +73,11 @@ internal sealed partial class MacWindow : Window
         View.RequestSaveAs = () => RunFile(async () => { await Save(true); });
         View.RequestExport = View.ShowWorkspaceExport;
         ConfigureLibrary(initialPath is null && !smokeCheck, smokeCheck);
-        View.RequestAudio = () => RunFile(async () =>
-        {
-            if (!View.PrepareFileOperation()) return;
-            var path = await Pick(L.Get("files.audio"), ["*.mp3", "*.ogg", "*.wav"]);
-            if (path is not null) { View.ChangeAudioPath(path); await audio.LoadAsync(path); }
-        });
         View.RequestLoadSkin = () => RunFile(async () =>
         {
             View.CancelInteraction(); var path = await Pick(L.Get("files.skin"), ["*.osk"]);
             if (path is not null) View.ImportSkin(path);
         });
-        View.RequestResetDemo = () => RunFile(async () => { if (await ConfirmDiscard()) { await audio.LoadAsync(null); projectPath = null; View.LoadDocument(DemoMap.Create()); } });
         View.RequestPausePlayback = () => { playbackRequest++; audio.Pause(); };
         View.RequestTogglePlayback = TogglePlayback;
         View.RequestPlaybackSpeed = speed => { View.ResetHitsounds(); audio.SetPlaybackSpeed(speed); View.StartHitsounds(audio.State.PositionMs); PollAudio(); };

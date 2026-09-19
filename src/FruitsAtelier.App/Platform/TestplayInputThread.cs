@@ -13,6 +13,7 @@ internal sealed class TestplayInputThread : IDisposable
     private readonly CatchTestplaySession session;
     private readonly Func<AudioState> audio;
     private readonly bool diagnostic;
+    private readonly double updatesPerSecond;
     private readonly Thread thread;
     private readonly ManualResetEventSlim ready = new();
     private readonly Native.WindowProc procedure;
@@ -23,9 +24,10 @@ internal sealed class TestplayInputThread : IDisposable
     internal Action<double>? CheckKeyProcessed { get; set; }
     internal Action? CheckTick { get; set; }
 
-    public TestplayInputThread(nint owner, CatchTestplaySession session, Func<AudioState> audio, bool diagnostic = false)
+    public TestplayInputThread(nint owner, CatchTestplaySession session, Func<AudioState> audio, bool diagnostic = false, double updatesPerSecond = 2000)
     {
         this.owner = owner; this.session = session; this.audio = audio; this.diagnostic = diagnostic;
+        this.updatesPerSecond = updatesPerSecond;
         procedure = HandleMessage;
         thread = new Thread(Run) { IsBackground = true, Name = "Catch testplay input", Priority = ThreadPriority.AboveNormal };
         thread.Start();
@@ -47,7 +49,7 @@ internal sealed class TestplayInputThread : IDisposable
             var device = new RawDevice { UsagePage = 1, Usage = 6, Flags = 0x100, Target = window };
             if (!RegisterRawInputDevices([device], 1, (uint)Marshal.SizeOf<RawDevice>())) throw new Win32Exception();
             registered = true;
-            using var pacer = new TestplayFramePacer();
+            using var pacer = new TestplayFramePacer(updatesPerSecond, updatesPerSecond > 1000 ? .2 : 0);
             ready.Set();
             while (!stopping && !session.Ended)
             {

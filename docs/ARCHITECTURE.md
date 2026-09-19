@@ -50,9 +50,14 @@ Testplay interpolates timestamped audio samples with a monotonic clock. Key even
 advance gameplay to their processing time before changing the held actions, so a
 press and release between rendered frames still produces movement. Windows testplay
 receives Raw Input on a dedicated thread. Key messages interrupt its high-resolution
-timer immediately; held movement, judgement and live sound dispatch target 1000 Hz.
+timer immediately; held movement, judgement and live sound dispatch target 2000 Hz.
+The worker sleeps until 0.2 ms before each deadline, then keeps checking messages
+through the remaining bounded interval. This trades additional CPU time during
+testplay for lower timer wake-up delay; it does not change device polling rates.
 The UI draws detached session snapshots without holding the simulation lock.
-It checks DXGI frame availability before drawing and submits with `Present(0,
+DXGI frame readiness directly wakes the UI message loop instead of being polled
+on a separate frame timer. The wait also wakes for window input and preserves a
+consumed frame-ready signal for WM_PAINT. Rendering submits with `Present(0,
 DoNotWait)` and a one-frame queue. GPU backpressure skips a draw. Mac processes key
 transitions on its UI thread and requests testplay redraws through Avalonia's
 display animation callback. Drawing frequency does not define input sampling.

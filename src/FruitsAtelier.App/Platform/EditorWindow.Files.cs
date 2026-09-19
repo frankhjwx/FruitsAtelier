@@ -53,14 +53,6 @@ internal sealed partial class EditorWindow
         view.RequestSaveAs = () => FileOperation(() => SaveProject(true));
         view.RequestExport = view.ShowWorkspaceExport;
         ConfigureLibrary();
-        view.RequestAudio = () => FileOperation(() =>
-        {
-            if (!view.PrepareFileOperation()) return;
-            string? path = MapFileDialog.Select(hwnd, false, L.Get("files.audio"), MapFileDialog.AudioFilter, view.Document.AudioPath);
-            if (path is null) return;
-            view.ChangeAudioPath(path);
-            audio.Load(path);
-        });
         view.RequestTogglePlayback = () =>
         {
             if (audio.IsPlaying) { audio.Pause(); view.ResetHitsounds(); }
