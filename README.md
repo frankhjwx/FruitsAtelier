@@ -6,7 +6,7 @@
 
 An osu!catch beatmap editor for Windows and macOS. Create patterns, reshape sliders, and try your changes with music and hitsounds.
 
-**Current version: 0.8.1**
+**Current version: 0.8.2**
 
 ## Features
 

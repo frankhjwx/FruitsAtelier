@@ -1,6 +1,6 @@
 # FruitsAtelier
 
-User Manual | Version 0.8.1
+User Manual | Version 0.8.2
 
 ## 01 / Getting started
 

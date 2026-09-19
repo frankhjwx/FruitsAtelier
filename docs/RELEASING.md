@@ -18,13 +18,13 @@ From the repository root, using PowerShell 7 and the SDK pinned in `global.json`
 
 ```powershell
 ./scripts/Publish-Windows.ps1
-./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-0.8.1-win-x64.zip
+./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-0.8.2-win-x64.zip
 ```
 
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
 `.zip.sha256` checksum, plus a Velopack full `.nupkg` and
 `releases.win-x64.json` update feed. The default version comes from `Directory.Build.props`
-(currently 0.8.1); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
+(currently 0.8.2); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
 the local checkout had uncommitted changes. Executable version metadata uses the
 same version and commit. Release builds run from the clean tagged commit.
 The window title displays this version beside the application name, omitting the
