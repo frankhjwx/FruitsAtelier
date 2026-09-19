@@ -17,7 +17,8 @@ Versions 12–14 share the Catch timing, slider tick and legacy coordinate rules
 | Item | Representation |
 | --- | --- |
 | Standalone fruit | Hit circle preserving X, time, type flags, and samples |
-| Slider / fruit stream | Slider with curve type/points, span count, path length, and edge samples; the stream is derived |
+| Ordinary slider | Slider with curve type/points, span count, path length, and edge samples; the stream is derived |
+| Slider-managed fruit stream | Hit circles sampled at the saved StreamSnapDivisor; no slider or SV override |
 | Banana shower | Spinner start/end times; individual banana X positions are not serialized |
 | Time | Object times use integer milliseconds; projects retain doubles and report export rounding error |
 | Coordinates | Object and path coordinates are written as integers; generation accounts for quantization error |

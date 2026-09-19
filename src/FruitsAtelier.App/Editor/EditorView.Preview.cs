@@ -128,18 +128,73 @@ public sealed partial class EditorView
         if (tint > .001f) DrawCatcherBody(c, x, catchY, fieldWidth, hyperColour, tint, false, previewAutoplay.FacingLeftAt(playhead));
     }
     private Guid legacyButtonSlider;
+    private Guid sliderHoldId;
+    private float sliderHoldX, sliderHoldY;
+    private double sliderHoldStart;
+    private bool sliderHoldConsumed;
+    public bool SliderHoldNeedsRedraw => sliderHoldId != Guid.Empty;
+    private void BeginSliderHold(float x, float y, bool modified)
+    {
+        sliderHoldId = Guid.Empty;
+        if (modified || notesLocked || draftTrack != Guid.Empty || draftBanana != Guid.Empty || tool is not (Tool.Select or Tool.Slider)) return;
+        Guid id = HitCatchObject(x, y)?.SourceId ?? (showTargets ? HitSliderLocation(x, y)?.Id : null) ?? Guid.Empty;
+        if (!Document.Tracks.Any(t => t.Id == id) && !Document.ImportedSliders.Any(t => t.Id == id)) return;
+        if (tool == Tool.Slider && SelectedTrack?.Id != id) return;
+        sliderHoldId = id; sliderHoldX = x; sliderHoldY = y; sliderHoldStart = TestplayRealtime;
+    }
+
+    private void DrawSliderHold(ICanvas c)
+    {
+        if (!SliderHoldNeedsRedraw) return;
+        if (dragMoved || draftTrack != Guid.Empty || draftBanana != Guid.Empty)
+        { sliderHoldId = Guid.Empty; return; }
+        double elapsed = TestplayRealtime - sliderHoldStart;
+        if (elapsed < 300) return;
+        double progress = Math.Clamp((elapsed - 300) / 700, 0, 1);
+        if (progress >= 1)
+        {
+            history.Commit(); drag = DragKind.None;
+            SelectObjects([sliderHoldId]);
+            legacyButtonSlider = sliderHoldId; sliderHoldId = Guid.Empty; sliderHoldConsumed = true;
+            sliderConversionBounds = default;
+            return;
+        }
+        const float radius = 9;
+        c.Circle(sliderHoldX, sliderHoldY, radius, Surface, filled: false, width: 2);
+        for (int i = 0; i < Math.Ceiling(progress * 64); i++)
+        {
+            double a = -Math.PI / 2 + i * Math.Tau / 64;
+            double b = -Math.PI / 2 + Math.Min((i + 1) / 64d, progress) * Math.Tau;
+            c.Line(sliderHoldX + radius * (float)Math.Cos(a), sliderHoldY + radius * (float)Math.Sin(a),
+                sliderHoldX + radius * (float)Math.Cos(b), sliderHoldY + radius * (float)Math.Sin(b), Accent, 2);
+        }
+    }
+    public Rect StreamConversionBounds { get; private set; }
+    private Rect sliderConversionBounds;
     private void DrawLegacyConversionButton(ICanvas c)
     {
-        if (SelectedImportedSlider is not { } selected || drag != DragKind.None || menu >= 0 || ExportVisible || SliderDialogVisible)
-        { LegacyConversionBounds = default; legacyButtonSlider = Guid.Empty; return; }
-        bool retained = legacyButtonSlider == selected.Id && new Rect(LegacyConversionBounds.X - 16, LegacyConversionBounds.Y - 10, LegacyConversionBounds.Width + 32, LegacyConversionBounds.Height + 20).Contains(mouseX, mouseY);
-        bool hovered = !retained && plot.Contains(mouseX, mouseY)
-            && (HitCatchObject(mouseX, mouseY, selected.Id) is not null || showTargets && HitSliderLocation(mouseX, mouseY, selected.Id) is not null);
-        if (!retained && !hovered) { LegacyConversionBounds = default; legacyButtonSlider = Guid.Empty; return; }
-        if (!retained)
-            LegacyConversionBounds = new(Math.Clamp(mouseX + 10, plot.X, Math.Max(plot.X, plot.Right - 224)), Math.Clamp(mouseY - 16, plot.Y, plot.Bottom - 32), 224, 32);
-        legacyButtonSlider = selected.Id;
-        c.Fill(LegacyConversionBounds, Surface, 4);
-        Button(c, LegacyConversionBounds, L.Get("preview.convertSlider"), EditImportedSlider);
+        DrawSliderHold(c);
+        Guid id = SelectedImportedSlider?.Id ?? SelectedTrack?.Id ?? Guid.Empty;
+        bool imported = SelectedImportedSlider is not null;
+        bool stream = SelectedTrack?.StreamSnapDivisor is not null;
+        if (id == Guid.Empty || tool is not (Tool.Select or Tool.Slider) || draftTrack != Guid.Empty || drag != DragKind.None || menu >= 0 || ExportVisible || SliderDialogVisible || StreamDialogVisible || TimeJumpVisible)
+        { LegacyConversionBounds = StreamConversionBounds = default; legacyButtonSlider = Guid.Empty; return; }
+        if (legacyButtonSlider != id) { LegacyConversionBounds = StreamConversionBounds = default; return; }
+        float buttonWidth = imported ? 224 : stream ? 200 : 136;
+        float buttonHeight = imported || stream ? 68 : 32;
+        if (sliderConversionBounds.Width != buttonWidth || sliderConversionBounds.Height != buttonHeight)
+        {
+            float w = buttonWidth;
+            sliderConversionBounds = new(Math.Clamp(sliderHoldX + 24, plot.X, Math.Max(plot.X, plot.Right - w)), Math.Clamp(sliderHoldY + 24, plot.Y, plot.Bottom - buttonHeight), w, buttonHeight);
+        }
+        legacyButtonSlider = id;
+        var r = sliderConversionBounds;
+        LegacyConversionBounds = imported ? new(r.X, r.Y, 224, 32) : default;
+        StreamConversionBounds = new(r.X, imported ? r.Y + 36 : r.Y, r.Width, 32);
+        c.Fill(r, Surface, 4);
+        if (imported) Button(c, LegacyConversionBounds, L.Get("preview.convertSlider"), EditImportedSlider);
+        Button(c, StreamConversionBounds, L.Get(stream ? "stream.changeSnap" : "stream.apply"), () => { SelectObjects([id]); OpenStreamDialog(); }, enabled: !notesLocked);
+        if (stream) Button(c, new(r.X, r.Y + 36, r.Width, 32), L.Get("stream.convertBack"),
+            () => { SelectObjects([id]); ConvertStreamsBack(); }, enabled: !notesLocked);
     }
 }

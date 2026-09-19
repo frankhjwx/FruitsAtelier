@@ -14,6 +14,9 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Slider stream confirmation, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
+    ("Slider long press progress, cancellation and control-point shortcut", StreamShortcutTests.HoldAndShortcut),
+    ("Testplay pause, resume and legacy exit shortcuts", TestplayTests.PauseAndExitShortcuts),
     ("Testplay movement, combo, hyperdash and facing", TestplayTests.MovementAndJudgement),
     ("Testplay Tab switches autoplay and returns control without seeking", TestplayTests.AutoplaySwitching),
     ("Catch rotations, banana arrival transforms and combo colours", TestplayTests.VisualTransformsAndColours),
@@ -38,7 +41,7 @@ var tests = new (string Name, Action Run)[]
     ("Automatic catcher movement and seeking", PreviewSidebarTests.AutomaticCatcher),
     ("Caught stacks and combo explosions survive seeking", PreviewSidebarTests.PlateEffects),
     ("Dash and hyperdash catcher effects follow map time", PreviewSidebarTests.DashEffects),
-    ("Selected legacy slider hover offers an undoable conversion", PreviewSidebarTests.LegacyConversion),
+    ("Selected legacy slider long press offers an undoable conversion", PreviewSidebarTests.LegacyConversion),
     ("Hard Rock preview applies deterministic positions without changing source", PreviewSidebarTests.HardRock),
     ("Timeline tails adjust reverses with undo and cancellation", ObjectTimelineTests.TailReverses),
     ("Timeline reverse circles follow spans, tail edits and undo", ObjectTimelineTests.ReverseMarkers),
@@ -89,7 +92,7 @@ var tests = new (string Name, Action Run)[]
     ("Beat snap slider exposes every requested divisor through one drag control", RequestedInteractionTests.SnapDivisors),
     ("Centred controls and timestamp clipboard dialog preserve editor content", TimeJumpTests.Run),
     ("Double-click enters one Slider and other clicks leave its edit mode", RequestedInteractionTests.DoubleClickEditing),
-    ("A Legacy Slider conversion shortcut converts it to a strictly aligned FSlider", SliderInteractionTests.LegacyContextConversion),
+    ("Legacy Slider long-press buttons convert to a strictly aligned FSlider", SliderInteractionTests.LegacyContextConversion),
     ("Selected parents snap from the earliest start and keep one time and X offset", RequestedInteractionTests.MultiObjectDrag),
     ("A single Slider uses its start as the snap reference while moving", RequestedInteractionTests.SingleSliderSnap),
     ("The main canvas reserves CS0 padding while timing grid lines stay inside X=0..512", RequestedInteractionTests.PlayfieldPadding),
@@ -109,7 +112,7 @@ var tests = new (string Name, Action Run)[]
     ("Overview wheel seeks continuously, follows the clock and preserves playback and content", OverviewWheel),
     ("Object timeline selects without seeking and scales independently", ObjectTimelineTests.NavigationAndSelection),
     ("Playback speed buttons work in both languages without editing content", ObjectTimelineTests.SpeedControls),
-    ("Canvas layout and reset enforce full width and the minimum size", CanvasZoomTests.DefaultsAndReset),
+    ("Canvas defaults and reset use 60% zoom while enforcing minimum width", CanvasZoomTests.DefaultsAndReset),
     ("Zoom slider and wheel share scale, bounds and content isolation", CanvasZoomTests.SliderAndWheel),
     ("Zoom slider fits both languages and preserves playback following", CanvasZoomTests.PlaybackAndLanguages),
     ("Control-wheel keeps pointer time fixed while scaling object positions", ZoomPaintedAnchor),
@@ -882,6 +885,12 @@ sealed class Ui
     public void DownMap(double time, double x)
     {
         var p = Screen(time, x); View.PointerDown(p.X, p.Y, 0, false, false); Paint();
+    }
+    public void HoldMap(double time, double x, Action? advance = null)
+    {
+        DownMap(time, x);
+        if (advance is null) Thread.Sleep(1050); else advance();
+        Paint(); UpMap(time, x);
     }
     public void MoveMap(double time, double x)
     {

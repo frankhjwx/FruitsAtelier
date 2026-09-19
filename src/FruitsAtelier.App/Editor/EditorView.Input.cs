@@ -22,8 +22,11 @@ public sealed partial class EditorView
         }
         ResetTextCaret();
         mouseX = x; mouseY = y;
-        if (TimeJumpVisible)
+        if (legacyButtonSlider != Guid.Empty && !sliderConversionBounds.Contains(x, y)) legacyButtonSlider = Guid.Empty;
+        if (TimeJumpVisible || StreamDialogVisible)
         {
+            if (StreamDialogVisible && button == 0 && StreamSnapBounds.Contains(x, y))
+            { streamSnapDragging = true; SetStreamSnap(x); return; }
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
@@ -120,6 +123,7 @@ public sealed partial class EditorView
             return;
         }
         if (!plot.Contains(x, y)) return;
+        BeginSliderHold(x, y, ctrl || shift);
         if (notesLocked && tool != Tool.Fruit && draftTrack == Guid.Empty && draftBanana == Guid.Empty)
         {
             if (HitCatchObject(x, y) is { } lockedHit) { PickObject(lockedHit.SourceId, ctrl); PickSoundEdge(lockedHit); return; }
@@ -260,7 +264,10 @@ public sealed partial class EditorView
     {
         if (IsTestplaying) return;
         mouseX = x; mouseY = y;
-        if (TimeJumpVisible) return;
+        if (sliderHoldConsumed) return;
+        if (SliderHoldNeedsRedraw && (Math.Abs(x - sliderHoldX) >= 2 || Math.Abs(y - sliderHoldY) >= 2)) sliderHoldId = Guid.Empty;
+        if (StreamDialogVisible && streamSnapDragging) { SetStreamSnap(x); return; }
+        if (TimeJumpVisible || StreamDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (ExportVisible || languageMenuOpen) return;
@@ -361,6 +368,11 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
+        if (button == 0)
+        {
+            sliderHoldId = Guid.Empty;
+            if (sliderHoldConsumed) { sliderHoldConsumed = false; return; }
+        }
         if (IsTestplaying) return;
         if (tabPointer && button == 0)
         {
@@ -368,7 +380,9 @@ public sealed partial class EditorView
             if (!tabMoved) SwitchDifficulty(tabPressed);
             return;
         }
-        if (TimeJumpVisible) return;
+        if (StreamDialogVisible && streamSnapDragging && button == 0)
+        { SetStreamSnap(x); streamSnapDragging = false; return; }
+        if (TimeJumpVisible || StreamDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
@@ -397,6 +411,7 @@ public sealed partial class EditorView
     {
         if (IsTestplaying) return;
         if (notesLocked && plot.Contains(x, y)) { PointerDown(x, y, 0, shift, ctrl); return; }
+        if (StreamDialogVisible) return;
         if (TimeJumpVisible) { timeJumpSelected = true; return; }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
@@ -432,7 +447,7 @@ public sealed partial class EditorView
     public void Wheel(float x, float y, float delta, bool ctrl)
     {
         if (IsTestplaying) return;
-        if (TimeJumpVisible) return;
+        if (TimeJumpVisible || StreamDialogVisible) return;
         if (languageMenuOpen) return;
         if (ErrorVisible)
         {
@@ -489,10 +504,19 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (virtualKey == 27 && legacyButtonSlider != Guid.Empty)
+        { legacyButtonSlider = Guid.Empty; return; }
+        sliderHoldId = legacyButtonSlider = Guid.Empty;
         if (virtualKey == 27 && testplayEscapeConsumed) return;
         if (IsTestplaying)
         {
             if (virtualKey == 27) { testplayEscapeConsumed = true; StopTestplay(); }
+            else if (virtualKey == 112) StopTestplay();
+            else if (virtualKey == 113) { AdvanceTestplay(); StopTestplay(atCurrentPosition: true); }
+            else if (ctrl && virtualKey == 80)
+            {
+                if (!testplayPauseHeld) { testplayPauseHeld = true; ToggleTestplayPause(); }
+            }
             else if (virtualKey == 9)
             {
                 if (!testplayTabHeld) { testplayTabHeld = true; testplay!.ToggleAutoplay(); }
@@ -518,6 +542,7 @@ public sealed partial class EditorView
             if (virtualKey is 27 or 13) AnswerDiscard(2);
             return;
         }
+        if (StreamDialogVisible) { StreamKey(virtualKey); return; }
         if (TimeJumpVisible) { TimeJumpKey(virtualKey, ctrl); return; }
         if (SliderDialogVisible)
         {
@@ -538,6 +563,15 @@ public sealed partial class EditorView
             if (virtualKey == 27) languageMenuOpen = false;
             else if (virtualKey is 38 or 40) languageSelection = (languageSelection + (virtualKey == 38 ? L.AvailableLanguages.Count - 1 : 1)) % L.AvailableLanguages.Count;
             else if (virtualKey == 13) SelectLanguage(L.AvailableLanguages[languageSelection]);
+            return;
+        }
+        if (ctrl && shift && virtualKey == 70)
+        {
+            if (!dragMoved && draftTrack == Guid.Empty && draftBanana == Guid.Empty
+                && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.LegacyControl)
+            { history.Commit(); drag = DragKind.None; sliderHoldConsumed = false; }
+            if (editField >= 0 && !CommitField()) return;
+            OpenStreamDialog();
             return;
         }
         if (editField >= 0)
@@ -570,6 +604,7 @@ public sealed partial class EditorView
         {
             if (drag != DragKind.None) return;
             contextItems.Clear();
+            if (ClipboardInteractionReady && HandleLegacyShortcut(virtualKey, shift)) return;
             if (virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (virtualKey == 89) Redo();
             else if (virtualKey == 9) SwitchDifficulty((activeDifficulty + (shift ? difficulties.Count - 1 : 1)) % difficulties.Count);
@@ -583,7 +618,6 @@ public sealed partial class EditorView
             else if (virtualKey == 71) ReverseSelectedPath();
             else if (virtualKey == 76) TogglePointCurve();
             else if (virtualKey == 73 && plot.Contains(mouseX, mouseY) && HitSliderLocation(mouseX, mouseY) is { } location) InsertControlPoint(location);
-            else if (virtualKey == 68) EditImportedSlider();
             else if (virtualKey == 187 && SelectedTrack is { } addReverse) ChangeReverseCount(addReverse.Id, 1);
             else if (virtualKey == 189 && SelectedTrack is { } removeReverse) ChangeReverseCount(removeReverse.Id, -1);
             else if (virtualKey == 74 && plot.Contains(mouseX, mouseY) && SelectedTrack is { } extend) ExtendSlider(extend.Id, MapAt(mouseX, mouseY, true));
@@ -591,6 +625,7 @@ public sealed partial class EditorView
         }
         if (drag != DragKind.None) return;
         contextItems.Clear();
+        if (draftTrack == Guid.Empty && draftBanana == Guid.Empty && HandleLegacyKey(virtualKey, shift)) return;
         switch (virtualKey)
         {
             case 71: gridSize = gridSize == 32 ? 4 : gridSize * 2; break;
@@ -614,6 +649,7 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (StreamDialogVisible) return;
         if (IsTestplaying || CapturingTestplayKey) return;
         if (languageMenuOpen) return;
         ResetTextCaret();
@@ -636,6 +672,9 @@ public sealed partial class EditorView
     public void CancelInteraction()
     {
         testplayEscapeConsumed = false;
+        streamSnapDragging = false;
+        sliderHoldId = legacyButtonSlider = Guid.Empty;
+        sliderHoldConsumed = false;
         StopTestplay();
         bindingCapture = -1;
         SetModifiers(false, false);

@@ -167,9 +167,9 @@ internal static class PreviewSidebarTests
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n160,192,1000,2,0,L|300:192,1,140\n");
         ui.LoadDocument(map);
         Check(ui.View.LegacyConversionBounds.Width == 0, "unselected slider has no conversion button");
-        ui.ClickMap(1000, 160);
+        ui.HoldMap(1000, 160);
         var button = ui.View.LegacyConversionBounds;
-        Check(button.Width > 0, "selected hovered legacy slider offers conversion");
+        Check(button.Width > 0, "long-pressed legacy slider offers conversion");
         ui.View.PointerMove(button.Right - 10, button.Y + 15, false, false); ui.Paint();
         Check(ui.View.LegacyConversionBounds == button, "button stays reachable while moving into it");
         ui.Click(button.Right - 10, button.Y + 15);

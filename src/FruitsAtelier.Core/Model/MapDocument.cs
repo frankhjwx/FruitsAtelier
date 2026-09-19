@@ -57,6 +57,8 @@ public sealed class CurveTrack
     public int SpanCount { get; set; } = 1;
     public string? OriginalLine { get; set; }
     public bool? CompensateTinyDroplets { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public int? StreamSnapDivisor { get; set; }
 }
 
 public sealed class TimingPoint
@@ -175,7 +177,8 @@ public sealed partial class MapDocument
         {
             var a = Tracks[i]; var b = other.Tracks[i];
             if (a.Id != b.Id || a.Name != b.Name || a.Kind != b.Kind || a.SourceOrder != b.SourceOrder || a.Nodes.Count != b.Nodes.Count
-                || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets) return false;
+                || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets
+                || a.StreamSnapDivisor != b.StreamSnapDivisor) return false;
             for (int j = 0; j < a.Nodes.Count; j++)
             {
                 var an = a.Nodes[j]; var bn = b.Nodes[j];

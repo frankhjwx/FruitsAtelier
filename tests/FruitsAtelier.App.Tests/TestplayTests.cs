@@ -3,6 +3,38 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class TestplayTests
 {
+    public static void PauseAndExitShortcuts()
+    {
+        var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
+        var map = new MapDocument(); map.Fruits.Add(new Fruit { TimeMs = 10000, X = 256 });
+        ui.LoadDocument(map); ui.Key(36); var before = ui.View.Document.DeepClone();
+        ui.View.StartTestplay(); clock.Advance(500); ui.Paint();
+        ui.Key('P', ctrl: true); ui.Key('P', ctrl: true);
+        Check(ui.View.TestplayPaused, "held pause toggles only once");
+        clock.Advance(2000); ui.Key(39); ui.Paint();
+        Near(500, ui.View.PlayheadMs); Near(256, ui.View.TestplayCatcherX);
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.paused")), "pause state appears with shortcuts");
+        ui.View.KeyUp('P'); ui.Key('P', ctrl: true); ui.View.KeyUp('P');
+        clock.Advance(100); ui.Paint(); Near(600, ui.View.PlayheadMs);
+        ui.Key(113); Check(!ui.View.IsTestplaying, "F2 exits"); Near(600, ui.View.PlayheadMs);
+        ui.View.StartTestplay(); clock.Advance(250); ui.Paint(); ui.Key(112);
+        Near(600, ui.View.PlayheadMs); Check(!ui.View.IsTestplaying && ui.View.Document.ContentEquals(before), "F1 returns to testplay start without edits");
+
+        double now = clock.GetTimestamp() * 1000d / clock.TimestampFrequency;
+        var objects = CatchStreamConverter.Convert(map).Objects;
+        var session = new CatchTestplaySession(new CatchTestplay(objects, 5, 0), new CatchTestplayClock(0, 1, now, false),
+            0, true, true, 37, 39, 16, clock, 5, []);
+        session.TogglePause(); clock.Advance(1000);
+        session.UpdateAudio(40, now, 20000, true, false, false, false);
+        Check(!session.Ended && session.Paused, "audio pause does not end testplay");
+        session.TogglePause(); session.UpdateAudio(40, now, 20000, true, false, false, false);
+        Check(!session.Ended, "resume waits for asynchronous audio start");
+        now = clock.GetTimestamp() * 1000d / clock.TimestampFrequency;
+        session.UpdateAudio(50, now, 20000, true, true, false, false);
+        clock.Advance(20); session.Tick();
+        Check(!session.Ended && session.Capture().TimeMs >= 50 && session.Capture().TimeMs < 100, "audio resume does not include paused wall time");
+    }
+
     public static void AutoplaySwitching()
     {
         var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
@@ -82,7 +114,7 @@ internal static class TestplayTests
         ui.Resize(1440, 900);
         ui.View.StartTestplay();
         ui.Paint();
-        Check(ui.Canvas.Texts.Count == 0, "testplay has no exit button or instruction text");
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.hintQuickExit")), "testplay shows legacy shortcuts");
         var stage = ui.Canvas.Clips.Last();
         Check(stage.Y == 0 && stage.Height == 900, "landscape testplay uses full available height");
         ui.View.PointerDown(1340, 24, 0, false, false); ui.View.PointerUp(1340, 24, 0);
@@ -345,19 +377,19 @@ internal static class TestplayTests
         map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 256 }, new Fruit { TimeMs = 3000, X = 256 },
             new Fruit { TimeMs = 4000, X = 0 }, new Fruit { TimeMs = 10000, X = 256 }]);
         ui.LoadDocument(map); ui.View.StartTestplay(); ui.Paint();
-        Check(ui.Canvas.Texts.Count == 0, "testplay starts without combo or instruction text");
+        Check(ui.Canvas.Texts.All(t => !int.TryParse(t.Value, out _)), "testplay starts without a combo counter");
         clock.Advance(1000); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value == "1") && ui.Canvas.Texts.All(t => !t.Value.EndsWith('x')), "legacy combo uses digits without a multiplier suffix");
         clock.Advance(400); ui.Paint();
         Check(ui.Canvas.Texts.Count(t => t.Value == "1") == 1, "burst fades while main counter remains");
         clock.Advance(901); ui.Paint();
-        Check(ui.Canvas.Texts.Count == 0, "idle combo fades after 1300 ms");
+        Check(ui.Canvas.Texts.All(t => !int.TryParse(t.Value, out _)), "idle combo fades after 1300 ms");
         clock.Advance(699); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value == "1") && ui.Canvas.Texts.Any(t => t.Value == "2"), "new burst overlays previous counter for first 250 ms");
         clock.Advance(1000); ui.Paint();
         Check(ui.View.TestplayCombo == 0 && ui.Canvas.Texts.Any(t => t.Value == "2"), "miss begins rolling down from the previous combo");
         clock.Advance(401); ui.Paint();
-        Check(ui.Canvas.Texts.Count == 0, "broken combo fades after 400 ms");
+        Check(ui.Canvas.Texts.All(t => !int.TryParse(t.Value, out _)), "broken combo fades after 400 ms");
 
         ConvertedCatchObject Note(double time, double x) => new(Guid.NewGuid(), 0, CatchObjectKind.Fruit, time, x, x, x, 0);
         var game = new CatchTestplay([Note(100, 306), Note(200, 506), Note(5000, 0)], 5, 0);

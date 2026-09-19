@@ -17,7 +17,7 @@ public static class CatchPreviewMods
             .Concat(document.ImportedSliders.Select(item => (item.Id, item.SourceOrder)))
             .Concat(document.BananaShowers.Select(item => (item.Id, item.SourceOrder))).ToDictionary(item => item.Id, item => item.SourceOrder);
         var result = new List<ConvertedCatchObject>(conversion.Objects.Count);
-        foreach (var group in conversion.Objects.GroupBy(item => item.SourceId).OrderBy(group => group.Min(item => item.TimeMs)).ThenBy(group => order.GetValueOrDefault(group.Key)))
+        foreach (var group in conversion.Objects.GroupBy(item => (item.SourceId, Event: item.IsStandalone ? item.EventIndex : -1)).OrderBy(group => group.Min(item => item.TimeMs)).ThenBy(group => order.GetValueOrDefault(group.Key.SourceId)))
         {
             var first = group.First();
             if (first.IsStandalone)
@@ -45,9 +45,9 @@ public static class CatchPreviewMods
                 result.Add(first with { X = x, RandomOffset = x - first.PathX });
                 continue;
             }
-            if (paths.TryGetValue(group.Key, out var slider))
+            if (paths.TryGetValue(group.Key.SourceId, out var slider))
             {
-                previous = imported.TryGetValue(group.Key, out var original) && original.ControlPoints.Count > 0
+                previous = imported.TryGetValue(group.Key.SourceId, out var original) && original.ControlPoints.Count > 0
                     ? (float)original.ControlPoints[^1].X : (float)slider.Path[^1].X;
                 previousTime = slider.StartTimeMs;
             }

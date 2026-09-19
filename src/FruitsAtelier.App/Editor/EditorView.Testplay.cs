@@ -11,6 +11,8 @@ public sealed partial class EditorView
     private IDisposable? testplayDriver;
     private bool testplayEscapeConsumed;
     private bool testplayTabHeld;
+    private bool testplayPauseHeld;
+    public bool TestplayPaused => testplay?.Paused ?? false;
     public bool TestplayAutoplay => testplay?.Autoplay ?? false;
     private double TestplayRealtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
     private double testplayStart;
@@ -27,7 +29,7 @@ public sealed partial class EditorView
     public void StartTestplay()
     {
         if (IsTestplaying || !HasEditorProject || LibraryVisible || ExportVisible || ErrorVisible ||
-            DiscardConfirmationVisible || SliderDialogVisible || TimeJumpVisible || IsEditingText ||
+            DiscardConfirmationVisible || SliderDialogVisible || TimeJumpVisible || StreamDialogVisible || IsEditingText ||
             drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty || AudioLoading) return;
         EnsureConversion();
         var session = new CatchTestplay(PreviewObjects(), PreviewCircleSize, playhead);
@@ -37,6 +39,7 @@ public sealed partial class EditorView
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
         testplayStart = playhead;
         testplayTabHeld = false;
+        testplayPauseHeld = false;
         testplayWithAudio = AudioReady;
         comboCurrent = comboPrevious = 0; comboChangedAt = double.NegativeInfinity;
         ResetHitsounds();
@@ -57,9 +60,10 @@ public sealed partial class EditorView
         catch { StopTestplay(); throw; }
     }
 
-    public void StopTestplay()
+    public void StopTestplay(bool atCurrentPosition = false)
     {
         if (!IsTestplaying) return;
+        double returnTime = atCurrentPosition ? testplay!.Capture().TimeMs : testplayStart;
         testplay!.Cancel();
         testplayDriver?.Dispose(); testplayDriver = null;
         testplay = null; testplayFrame = null;
@@ -68,8 +72,20 @@ public sealed partial class EditorView
             if (RequestPausePlayback is not null) RequestPausePlayback();
             else if (AudioPlaying) RequestTogglePlayback?.Invoke();
         }
-        SeekTo(testplayStart);
+        SeekTo(returnTime);
         StatusMessage = L.Get("testplay.returned");
+    }
+
+    private void ToggleTestplayPause()
+    {
+        if (testplay is null) return;
+        double time = testplay.TogglePause();
+        if (testplayWithAudio)
+        {
+            if (testplay.Paused) RequestPausePlayback?.Invoke();
+            else { RequestSeek?.Invoke(time); RequestTogglePlayback?.Invoke(); }
+        }
+        AdvanceTestplay();
     }
 
     private void AdvanceTestplay()
@@ -97,6 +113,7 @@ public sealed partial class EditorView
     {
         if (virtualKey == 27) testplayEscapeConsumed = false;
         if (virtualKey == 9) testplayTabHeld = false;
+        if (virtualKey == 80) testplayPauseHeld = false;
         if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
         if (IsTestplaying) AdvanceTestplay();
     }
@@ -132,7 +149,10 @@ public sealed partial class EditorView
         DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
         DrawTestplayCombo(c, x, catchY - 175 * fieldWidth / 512, fieldWidth / 512);
         c.Unclip();
-
+        string[] hints = ["testplay.hintAutoplay", "testplay.hintPause", "testplay.hintQuickExit", "testplay.hintCurrentExit"];
+        for (int i = 0; i < hints.Length; i++)
+            c.Text(L.Get(hints[i]), 12, 12 + i * 20, 13, 0xD6E5B5, Math.Max(100, width - 24));
+        if (TestplayPaused) c.Text(L.Get("testplay.paused"), 12, 98, 15, Accent, 250, true);
     }
 
     // ppy/osu 48c4800e: LegacyCatchComboCounter, LegacyRollingCounter and CatcherArea.

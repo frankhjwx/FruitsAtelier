@@ -12,6 +12,12 @@ public sealed class CatchTestplayClock(double start, double rate, double realtim
     private bool running = !waitForAudio;
     public bool IsRunning => running;
 
+    public void Restart(double position, double now, bool waitForAudio)
+    {
+        anchorTime = lastTime = position; anchorRealtime = now; correction = 0;
+        lastAudioTime = position; audioLimit = double.PositiveInfinity; running = !waitForAudio;
+    }
+
     public double At(double now)
     {
         double elapsed = Math.Max(0, now - anchorRealtime);

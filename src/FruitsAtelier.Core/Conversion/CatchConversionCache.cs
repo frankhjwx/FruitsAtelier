@@ -45,7 +45,8 @@ public sealed class CatchConversionCache
     private static bool Equal(CurveTrack a, CurveTrack b)
     {
         if (a.Id != b.Id || a.Kind != b.Kind || a.Name != b.Name || a.SourceOrder != b.SourceOrder || a.SpanCount != b.SpanCount
-            || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets || a.Nodes.Count != b.Nodes.Count) return false;
+            || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets || a.Nodes.Count != b.Nodes.Count
+            || a.StreamSnapDivisor != b.StreamSnapDivisor) return false;
         for (int i = 0; i < a.Nodes.Count; i++)
         {
             var x = a.Nodes[i]; var y = b.Nodes[i];

@@ -20,6 +20,9 @@ public sealed class CatchTestplaySession
     private readonly HashSet<(Guid SourceId, int EventIndex)> comboEnds;
     private bool audioStarted, ended;
     private bool autoplay;
+    private bool paused, awaitingResume;
+    private double resumeRequestedAt;
+    public bool Paused { get { lock (gate) return paused; } }
     public bool Autoplay { get { lock (gate) return autoplay; } }
     private Exception? error;
     private double time;
@@ -48,6 +51,13 @@ public sealed class CatchTestplaySession
         lock (gate)
         {
             if (ended || !WithAudio) return;
+            if (paused) return;
+            if (awaitingResume)
+            {
+                if (failed || !ready && !loading) { ended = true; keys.Clear(); return; }
+                if (!playing || sampledAt < resumeRequestedAt) return;
+                awaitingResume = false;
+            }
             audioStarted |= playing;
             if (!ready || failed || audioStarted && !playing && !loading || duration > 0 && position >= duration)
             { ended = true; keys.Clear(); return; }
@@ -57,6 +67,22 @@ public sealed class CatchTestplaySession
     }
 
     public void Tick() { lock (gate) Advance(); }
+    public double TogglePause()
+    {
+        lock (gate)
+        {
+            Advance();
+            if (ended) return time;
+            paused = !paused; keys.Clear();
+            if (!paused)
+            {
+                awaitingResume = WithAudio;
+                resumeRequestedAt = Realtime;
+                clock.Restart(time, resumeRequestedAt, WithAudio);
+            }
+            return time;
+        }
+    }
     public void ToggleAutoplay()
     {
         lock (gate)
@@ -70,7 +96,7 @@ public sealed class CatchTestplaySession
         if (!UsesKey(key)) return;
         lock (gate)
         {
-            if (ended) return;
+            if (ended || paused || awaitingResume) return;
             Advance();
             if (down) keys.Add(key); else keys.Remove(key);
         }
@@ -81,7 +107,7 @@ public sealed class CatchTestplaySession
     }
     private void Advance()
     {
-        if (ended || WithAudio && !audioStarted || !clock.IsRunning) return;
+        if (ended || paused || awaitingResume || WithAudio && !audioStarted || !clock.IsRunning) return;
         time = clock.At(Realtime);
         game.Advance(time, keys.Contains(left), keys.Contains(right), keys.Contains(dash), autoplay);
         plate.Prune(time);

@@ -16,6 +16,9 @@ public static class DistanceSnap
                 new(s.StartTimeMs, s.Path[0].X),
                 new(s.StartTimeMs + s.DurationMs, s.SpanCount % 2 == 0 ? s.Path[0].X : s.Path[^1].X),
                 s.Velocity, sliderOrders.GetValueOrDefault(s.SourceId))))
+            .Concat(document.Tracks.Where(t => t.StreamSnapDivisor is not null && t.Nodes.Count >= 2).Select(t => new Reference(t.Id,
+                new(t.Nodes[0].TimeMs, t.Nodes[0].X), new(CurveMath.EndTimeMs(t), CurveMath.PositionAtTime(t, CurveMath.EndTimeMs(t))),
+                100 * document.SliderMultiplier / timing.At(t.Nodes[0].TimeMs).BeatLengthMs, t.SourceOrder)))
             .OrderBy(r => r.Start.TimeMs).ThenBy(r => r.Order).ToArray();
     }
 

@@ -33,10 +33,17 @@ public static class OsuBeatmapWriter
         var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets);
         if (!converted.Success) throw new InvalidDataException(L.Get("core.writer.incompletePrefix") + string.Join(L.Get("core.diagnostics.separator"), converted.Diagnostics));
         var generated = converted.Sliders.Where(s => document.Tracks.Any(t => t.Id == s.SourceId)).ToArray();
-        if (generated.Length != document.Tracks.Count) throw new InvalidDataException(L.Get("core.writer.sliderCount"));
+        if (generated.Length != document.Tracks.Count(t => t.StreamSnapDivisor is null)) throw new InvalidDataException(L.Get("core.writer.sliderCount"));
         var diagnostics = converted.Diagnostics.ToList();
         double maxTime = 0, maxCoordinate = 0;
         var lines = new List<(double Time, int Order, Guid SourceId, string Text)>();
+        var streamIds = document.Tracks.Where(t => t.StreamSnapDivisor is not null).ToDictionary(t => t.Id);
+        foreach (var item in converted.Objects.Where(o => streamIds.ContainsKey(o.SourceId)))
+        {
+            var track = streamIds[item.SourceId];
+            lines.Add((item.TimeMs, track.SourceOrder, track.Id,
+                SliderFruitStream.FruitLine(track, item.EventIndex, Coordinate(item.X), Time(item.TimeMs))));
+        }
         foreach (var fruit in document.Fruits)
         {
             string[] p = fruit.OriginalLine?.Split(',') ?? ["0", "192", "0", "1", "0", "0:0:0:0:"];
@@ -136,7 +143,8 @@ public static class OsuBeatmapWriter
             .ToDictionary(p => p.Id, p => orderedLines[p.SourceOrder].SourceId);
         bool matches = converted.Objects.Count == reconverted.Objects.Count
             && converted.Objects.Zip(reconverted.Objects).All(p => p.First.Kind == p.Second.Kind
-                && p.First.SourceId == sourceIds[p.Second.SourceId] && p.First.EventIndex == p.Second.EventIndex);
+                && p.First.SourceId == sourceIds[p.Second.SourceId]
+                && (streamIds.ContainsKey(p.First.SourceId) || p.First.EventIndex == p.Second.EventIndex));
         double timeError = 0, xError = 0;
         if (matches)
         {
