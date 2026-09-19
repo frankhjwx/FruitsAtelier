@@ -144,7 +144,7 @@ internal static class SliderTimingTests
         foreach (double boundary in new[] { 1000.5, 1001.0, 1001.75 })
         {
             var document = Map();
-            document.TimingPoints.Add(new() { TimeMs = boundary, BeatLengthMs = -80, Uninherited = false, SourceOrder = 1 });
+            document.TimingPoints.Add(new() { TimeMs = boundary, BeatLengthMs = 250, Uninherited = true, SourceOrder = 1 });
             AddTrack(document, 1000, 2000, 0, 400);
             var before = document.DeepClone();
             Throws(() => OsuBeatmapWriter.Serialize(document, false));
@@ -160,6 +160,80 @@ internal static class SliderTimingTests
         Throws(() => OsuBeatmapWriter.Serialize(precedingSlider, false));
     }
 
+    public static void CloseSvBoundaryPreservesTimingAndSamples()
+    {
+        foreach (double boundary in new[] { 1000.5, 1001.0, 1001.75 })
+        foreach (double restoredBeatLength in new[] { -80.0, double.NaN })
+        {
+            var document = Map();
+            document.TimingPoints.Add(new() { TimeMs = boundary, BeatLengthMs = restoredBeatLength,
+                Uninherited = false, SourceOrder = 1, SampleSet = 3, SampleIndex = 7, Volume = 35, Effects = 1 });
+            AddTrack(document, 1000, 2000, 0, 400);
+            AddImported(document, 1100, 100, 1);
+            var before = document.DeepClone();
+            var result = OsuBeatmapWriter.Serialize(document, false);
+            var raw = RawMap.Parse(result.Text);
+            Near(1000, raw.Duration(1000, 0)); Near(1000, raw.Duration(1000, 1));
+            Near(double.IsNaN(restoredBeatLength) ? 500 : 400, raw.Duration(1100, 0));
+            Near(double.IsNaN(restoredBeatLength) ? 500 : 400, raw.Duration(1100, 1));
+            var metadata = raw.Timing.Single(p => p.Time == boundary);
+            Check(metadata.Fields[3] == "3" && metadata.Fields[4] == "7" && metadata.Fields[5] == "35"
+                && metadata.Fields[7] == "1", "Close SV normalization moved or changed sample/effect metadata.");
+            var restore = raw.Timing.Single(p => p.Time == 1002);
+            Check(restore.BeatLength.Equals(restoredBeatLength), "Restore must use the state after the nearby boundary.");
+            Check(result.ObjectSequenceMatches && document.ContentEquals(before), "Normalization changed Catch objects or source content.");
+        }
+    }
+
+    public static void CloseSvBoundaryHandlesAdjacentHeads()
+    {
+        var document = Map();
+        document.TimingPoints.Add(new() { TimeMs = 1001, BeatLengthMs = -80, Uninherited = false });
+        document.TimingPoints.Add(new() { TimeMs = 1002, BeatLengthMs = -50, Uninherited = false, Volume = 25 });
+        AddTrack(document, 1000, 2000, 0, 400);
+        AddTrack(document, 1001, 2001, 0, 400);
+        AddImported(document, 1003, 100, 1);
+        var raw = RawMap.Parse(OsuBeatmapWriter.Serialize(document, false).Text);
+        foreach (int offset in new[] { 0, 1 })
+        {
+            Near(1000, raw.Duration(1000, offset)); Near(1000, raw.Duration(1001, offset));
+            Near(250, raw.Duration(1003, offset));
+        }
+        Check(raw.Timing.Single(p => p.Time == 1002).Fields[5] == "25", "Chained window lost metadata.");
+        var conflict = Map();
+        conflict.TimingPoints.Add(new() { TimeMs = 1001, BeatLengthMs = -80, Uninherited = false });
+        AddTrack(conflict, 1000, 2000, 0, 400);
+        AddImported(conflict, 1001, 100, 1);
+        Throws(() => OsuBeatmapWriter.Serialize(conflict, false));
+        var generatedConflict = Map();
+        AddTrack(generatedConflict, 1000, 2000, 0, 400);
+        AddTrack(generatedConflict, 1001, 1501, 0, 400);
+        Throws(() => OsuBeatmapWriter.Serialize(generatedConflict, false));
+    }
+
+    public static void CloseSvBoundaryRespectsNaturalRestoration()
+    {
+        var document = Map();
+        document.TimingPoints.Add(new() { TimeMs = 1001, BeatLengthMs = -80, Uninherited = false });
+        document.TimingPoints.Add(new() { TimeMs = 1002, BeatLengthMs = -25, Uninherited = false, Volume = 75 });
+        // This head already uses the original SV; the following boundary still needs normalization.
+        AddTrack(document, 1000, 2000, 100, 100);
+        AddImported(document, 1100, 100, 1);
+        var raw = RawMap.Parse(OsuBeatmapWriter.Serialize(document, false).Text);
+        Near(1000, raw.Duration(1000, 0)); Near(1000, raw.Duration(1000, 1));
+        Near(125, raw.Duration(1100, 0)); Near(125, raw.Duration(1100, 1));
+        var natural = raw.Timing.Single(p => p.Time == 1002);
+        Check(natural.BeatLength == -25 && natural.Fields[5] == "75", "Normalization overwrote a natural restoration.");
+
+        var conflict = Map();
+        conflict.TimingPoints.Add(new() { TimeMs = 1000.5, BeatLengthMs = -80, Uninherited = false });
+        AddTrack(conflict, 1000, 2000, 100, 100);
+        AddImported(conflict, 999, 100, 1);
+        var before = conflict.DeepClone();
+        Throws(() => OsuBeatmapWriter.Serialize(conflict, false));
+        Check(conflict.ContentEquals(before), "Rejected boundary normalization changed the source.");
+    }
+
     public static void NaNAndFractionalHeadRestoreOriginalState()
     {
         var document = Map();
@@ -172,6 +246,17 @@ internal static class SliderTimingTests
         Check(double.IsNaN(restored.BeatLength) && !restored.Red, "Original NaN state was not restored.");
         Near(1, raw.State(1002).Sv);
         Near(500, raw.Duration(1200, 0)); Near(500, raw.Duration(1200, 1));
+
+        var sharedHead = Map();
+        sharedHead.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = double.NaN, Uninherited = false });
+        AddTrack(sharedHead, 1000, 2000, 0, 400);
+        AddTrack(sharedHead, 1100, 2100, 100, 100);
+        AddImported(sharedHead, 1100, 100, 1);
+        sharedHead.Tracks[1].SourceOrder = 1;
+        sharedHead.ImportedSliders[0].SourceOrder = 2;
+        var shared = OsuBeatmapWriter.Serialize(sharedHead, false);
+        Check(!TimingMap.At(shared.ReadBack, 1100).GenerateTicks, "A compatible shared head replaced original NaN metadata.");
+        Check(shared.ObjectSequenceMatches, "Restoring NaN at a shared head changed Catch objects.");
     }
 
     public static void UserProjectExportHasIndependentCorrectDurations()
