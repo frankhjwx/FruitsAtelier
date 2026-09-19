@@ -536,7 +536,7 @@
   "window.operationFailed": "The operation failed. Your editing data remains in memory.\n{0}\n\nSee artifacts/logs/editor.log for details.",
   "window.skinFailed": "Failed to load skin: {0}",
   "window.startFailed": "The editor could not start:\n{0}\n\nDetails: {1}",
-  "window.title": "FruitsAtelier · {0}{1}",
+  "window.title": "FruitsAtelier {2} · {0}{1}",
   "window.unsavedTitle": "Unsaved changes",
   "window.unsavedPrompt": "Save the project before continuing?",
   "mac.save": "Save",

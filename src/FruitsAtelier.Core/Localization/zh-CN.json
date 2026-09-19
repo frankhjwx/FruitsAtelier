@@ -536,7 +536,7 @@
   "window.operationFailed": "操作失败，编辑数据仍保留在内存中。\n{0}\n\n详情见 artifacts/logs/editor.log。",
   "window.skinFailed": "加载皮肤失败：{0}",
   "window.startFailed": "无法启动编辑器：\n{0}\n\n详情：{1}",
-  "window.title": "水果工坊 · {0}{1}",
+  "window.title": "水果工坊 {2} · {0}{1}",
   "window.unsavedTitle": "尚未保存的修改",
   "window.unsavedPrompt": "是否保存工程后继续？",
   "mac.save": "保存",

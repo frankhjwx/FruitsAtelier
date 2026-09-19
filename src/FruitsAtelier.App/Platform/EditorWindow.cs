@@ -68,7 +68,7 @@ internal sealed partial class EditorWindow : IDisposable
         Native.AdjustWindowRectExForDpi(ref rect, Native.WindowStyle, false, 0, (uint)dpi);
         int width = Math.Min(rect.Right - rect.Left, work.Right - work.Left - 32);
         int height = Math.Min(rect.Bottom - rect.Top, work.Bottom - work.Top - 32);
-        hwnd = Native.CreateWindowEx(0, className, L.Get("window.initialTitle"), Native.WindowStyle,
+        hwnd = Native.CreateWindowEx(0, className, view.WindowTitle, Native.WindowStyle,
             work.Left + (work.Right - work.Left - width) / 2, work.Top + (work.Bottom - work.Top - height) / 2,
             width, height, 0, 0, instance, 0);
         if (hwnd == 0) throw new Win32Exception();

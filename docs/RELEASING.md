@@ -25,6 +25,8 @@ The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
 (currently 0.8.1); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
 the local checkout had uncommitted changes. Executable version metadata uses the
 same version and commit. Release builds run from the clean tagged commit.
+The window title displays this version beside the application name, omitting the
+source commit suffix and retaining any prerelease label.
 
 The package includes the English [user manual source](USER_MANUAL.md). To include
 its PDF edition, install Python and ReportLab, render the manual, then pass the
