@@ -10,7 +10,7 @@ $repo = Split-Path $PSScriptRoot -Parent
 $root = Join-Path $repo "artifacts/update-check/用户 Upgrade $([Guid]::NewGuid().ToString('N'))"
 $install = Join-Path $root 'application'
 Expand-Archive -LiteralPath $Archive -DestinationPath $install
-$exe = Join-Path $install 'current/FruitsAtelier.App.exe'
+$exe = Join-Path $install 'FruitsAtelier.exe'
 $original = Get-Content -LiteralPath (Join-Path $install 'current/build-info.json') -Raw | ConvertFrom-Json
 $sentinel = Join-Path $install 'preserved-user-file.txt'
 'preserve me' | Set-Content -LiteralPath $sentinel

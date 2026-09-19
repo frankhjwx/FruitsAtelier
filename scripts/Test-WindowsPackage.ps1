@@ -10,10 +10,10 @@ if ((Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash -ne $expectedHas
 $destination = Join-Path $repo "artifacts/package-check/用户 Release $([Guid]::NewGuid().ToString('N'))"
 Expand-Archive -LiteralPath $Archive -DestinationPath $destination
 $current = Join-Path $destination 'current'
-foreach ($required in @('Update.exe', 'current/sq.version', 'current/FruitsAtelier.App.exe')) {
+foreach ($required in @('FruitsAtelier.exe', 'Update.exe', '.portable', 'current/sq.version', 'current/FruitsAtelier.App.exe')) {
     if (!(Test-Path -LiteralPath (Join-Path $destination $required))) { throw "Portable updater file missing: $required" }
 }
-$exe = Join-Path $current 'FruitsAtelier.App.exe'
+$exe = Join-Path $destination 'FruitsAtelier.exe'
 $report = Join-Path $destination 'package-check.json'
 $processInfo = [Diagnostics.ProcessStartInfo]::new($exe)
 $processInfo.UseShellExecute = $false
@@ -27,6 +27,8 @@ $processInfo.Environment['DOTNET_MULTILEVEL_LOOKUP'] = '0'
 $process = [Diagnostics.Process]::Start($processInfo)
 try {
     if (!$process.WaitForExit(120000)) { $process.Kill(); throw 'Packaged executable timed out.' }
+    $deadline = [DateTime]::UtcNow.AddSeconds(120)
+    while (!(Test-Path -LiteralPath $report) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 250 }
     if (!(Test-Path -LiteralPath $report)) { throw "No package report; exit code $($process.ExitCode)." }
     $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
     if ($process.ExitCode -ne 0 -or !$result.success) { throw "Package check failed: $($result.error)" }
