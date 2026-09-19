@@ -183,6 +183,7 @@ public sealed partial class EditorView
 
     private void SeekTo(double time)
     {
+        wheelPlayhead = double.NaN;
         playhead = Math.Clamp(time, 0, TimelineDurationMs);
         FollowPlayhead();
         ResetHitsounds();

@@ -53,6 +53,59 @@ public sealed partial class EditorView
     private int gridSize = 4;
     private double SnapX(double x) => EffectiveGridSnap ? Math.Round(x / gridSize, MidpointRounding.AwayFromZero) * gridSize : x;
 
+    private readonly Guid placementId = Guid.NewGuid();
+    private readonly CatchConversionCache placementConversionCache = new();
+    private CatchConversionResult? placementSource;
+    private MapPoint? cachedPlacementPoint;
+    private Tool cachedPlacementTool;
+    private bool placementCtrl, cachedPlacementCtrl;
+    private ConvertedCatchObject? placementGhost;
+    private HashSet<(Guid SourceId, int EventIndex)> placementHyperdash = [];
+
+    private void UpdatePlacementHyperdash()
+    {
+        var point = PlacementGhostPoint();
+        if (point is null)
+        {
+            cachedPlacementPoint = null; placementGhost = null;
+            placementHyperdash = hyperdashObjects;
+            return;
+        }
+        if (ReferenceEquals(placementSource, conversion) && point == cachedPlacementPoint
+            && cachedPlacementTool == tool && cachedPlacementCtrl == placementCtrl) return;
+        placementSource = conversion; cachedPlacementPoint = point;
+        cachedPlacementTool = tool; cachedPlacementCtrl = placementCtrl;
+        placementGhost = null; placementHyperdash = hyperdashObjects;
+        // Conversion reads its inputs; clone only the track whose uncommitted endpoint needs editing.
+        var candidate = new MapDocument
+        {
+            DurationMs = Math.Max(Document.DurationMs, point.Value.TimeMs), BeatLengthMs = Document.BeatLengthMs,
+            TimingOffsetMs = Document.TimingOffsetMs, ApproachRate = Document.ApproachRate,
+            SliderMultiplier = Document.SliderMultiplier, SliderTickRate = Document.SliderTickRate
+        };
+        candidate.Fruits.AddRange(Document.Fruits);
+        candidate.ImportedSliders.AddRange(Document.ImportedSliders);
+        candidate.BananaShowers.AddRange(Document.BananaShowers);
+        candidate.TimingPoints.AddRange(Document.TimingPoints);
+        var draftDocument = new MapDocument();
+        draftDocument.Tracks.AddRange(Document.Tracks.Where(t => t.Id == draftTrack));
+        var draftCopy = draftDocument.DeepClone().Tracks.SingleOrDefault();
+        candidate.Tracks.AddRange(Document.Tracks.Select(t => t.Id == draftTrack ? draftCopy! : t));
+        Guid source = placementId;
+        if (tool == Tool.Slider && draftTrack != Guid.Empty && !LegacyMode)
+        {
+            var track = candidate.Tracks.Single(t => t.Id == draftTrack);
+            if (AppendDraftAnchor(track, point.Value, placementCtrl) is null) return;
+            source = track.Id;
+        }
+        else candidate.Fruits.Add(new Fruit { Id = placementId, TimeMs = point.Value.TimeMs, X = point.Value.X });
+        candidate.Tracks.RemoveAll(t => t.Nodes.Count < 2);
+        var preview = CatchStreamConverter.Convert(candidate, compensateTinyDroplets, placementConversionCache);
+        if (!preview.Success) return;
+        placementGhost = preview.Objects.LastOrDefault(o => o.SourceId == source && o.Kind == CatchObjectKind.Fruit);
+        placementHyperdash = HyperDashCalculator.GetHyperDashStarts(preview.Objects, Document.CircleSize);
+    }
+
     private MapPoint? PlacementGhostPoint()
     {
         if (tool is not (Tool.Fruit or Tool.Slider) || !plot.Contains(mouseX, mouseY) || drag != DragKind.None
@@ -70,8 +123,13 @@ public sealed partial class EditorView
         if (PlacementGhostPoint() is not { } point) return;
         var p = Screen(point);
         float diameter = CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512;
-        if (skin is null || !skin.Draw(c, CatchSkinObject.Fruit, 0, p.X, p.Y, diameter, opacity: .6f))
+        bool hyper = placementGhost is { } ghost && placementHyperdash.Contains((ghost.SourceId, ghost.EventIndex));
+        uint? glow = hyper ? skin?.HyperDashFruitColour ?? 0xFF3030u : null;
+        if (skin is null || !skin.Draw(c, CatchSkinObject.Fruit, 0, p.X, p.Y, diameter, opacity: .6f, hyperColour: glow))
+        {
+            if (glow is uint colour) c.Circle(p.X, p.Y, diameter * .6f, colour, opacity: .42f);
             c.Circle(p.X, p.Y, diameter / 2, Foreground, opacity: .6f);
+        }
         c.Line(Playfield.X, p.Y, Playfield.Right, p.Y, Gold, opacity: .4f);
         if (tool == Tool.Fruit && nextFruitNewCombo)
             c.Text(L.Get("tools.newCombo"), p.X + diameter / 2 + 6, p.Y - 8, 11, Gold, 120);

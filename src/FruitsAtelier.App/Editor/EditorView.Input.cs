@@ -13,6 +13,7 @@ public sealed partial class EditorView
 
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
+        placementCtrl = ctrl;
         if (IsTestplaying) return;
         if (ErrorVisible || DiscardConfirmationVisible)
         {
@@ -263,6 +264,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        placementCtrl = ctrl;
         if (volumeDrag >= 0) { UpdateVolumeDrag(x); return; }
         if (IsTestplaying) return;
         mouseX = x; mouseY = y;
@@ -485,12 +487,12 @@ public sealed partial class EditorView
         if (objectTimeline.Contains(x, y))
         {
             if (ctrl) ZoomObjectTimeline(Math.Pow(1.25, delta / 120));
-            else SeekTo(playhead - delta / 120 * TimingMap.At(Document, playhead).BeatLengthMs / divisor);
+            else SeekByWheel(-delta / 120, 1);
             return;
         }
         if (overview.Contains(x, y))
         {
-            SeekTo(playhead - delta / 120 * 78 / pixelsPerMs);
+            SeekByWheel(-delta / 120, 2);
             return;
         }
         if (!canvas.Contains(x, y)) return;
@@ -500,24 +502,50 @@ public sealed partial class EditorView
             ZoomCanvasAt(y, Math.Pow(1.16, delta / 120));
             StatusMessage = L.Get("editor.status.canvasZoom", canvasZoom * 100);
         }
-        else ScrollCanvasTime(-delta / 120 * 78 / pixelsPerMs);
+        else SeekByWheel(-delta / 120, 0);
         ClampView();
     }
 
-    private void ScrollCanvasTime(double delta)
+    private double wheelRemainder, wheelPlayhead = double.NaN;
+    private int wheelDivisor, wheelSurface = -1;
+
+    private void SeekByWheel(double delta, int surface)
     {
-        double padding = plot.Height * playbackLineFromBottom / pixelsPerMs;
-        double minimum = Math.Max(-playhead, -padding - viewStart);
-        double maximum = Math.Min(TimelineDurationMs - playhead, TimelineDurationMs - padding - viewStart);
-        double movement = Math.Clamp(delta, minimum, Math.Max(minimum, maximum));
-        double nextView = viewStart + movement;
-        SeekTo(playhead + movement);
-        viewStart = nextView;
-        pinPlayhead = false;
+        if (double.IsNaN(wheelPlayhead) || (!AudioPlaying && wheelPlayhead != playhead)
+            || wheelDivisor != divisor || wheelSurface != surface) wheelRemainder = 0;
+        double ticks = delta + wheelRemainder;
+        double steps = Math.Truncate(ticks);
+        wheelRemainder = ticks - steps;
+        wheelPlayhead = playhead; wheelDivisor = divisor; wheelSurface = surface;
+        if (steps == 0) return;
+        var timing = new TimingMap.Lookup(Document);
+        var boundaries = Document.TimingPoints.Where(t => t.Uninherited).Select(t => t.TimeMs).Distinct().Order().ToArray();
+        double target = playhead;
+        int direction = Math.Sign(steps);
+        for (double i = 0; i < Math.Abs(steps); i++)
+        {
+            var state = timing.At(direction < 0 ? Math.BitDecrement(target) : target);
+            double step = state.BeatLengthMs / divisor;
+            double index = (target - state.OffsetMs) / step;
+            double nearest = Math.Round(index);
+            if (Math.Abs(state.OffsetMs + nearest * step - target) < 1e-7) index = nearest;
+            double next = state.OffsetMs + (direction > 0 ? Math.Floor(index) + 1 : Math.Ceiling(index) - 1) * step;
+            // Red timing boundaries are grid lines even when the preceding beat is incomplete.
+            next = direction > 0
+                ? Math.Min(next, boundaries.FirstOrDefault(t => t > target + 1e-7, double.PositiveInfinity))
+                : Math.Max(next, boundaries.LastOrDefault(t => t < target - 1e-7, double.NegativeInfinity));
+            target = Math.Clamp(next, 0, TimelineDurationMs);
+            if (target == 0 || target == TimelineDurationMs) { wheelRemainder = 0; break; }
+        }
+        double nextView = viewStart + target - playhead;
+        SeekTo(target);
+        wheelPlayhead = playhead; wheelDivisor = divisor; wheelSurface = surface;
+        if (surface == 0) { viewStart = nextView; pinPlayhead = false; }
     }
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        placementCtrl = ctrl;
         if (virtualKey == 27 && legacyButtonSlider != Guid.Empty)
         { legacyButtonSlider = Guid.Empty; return; }
         sliderHoldId = legacyButtonSlider = Guid.Empty;
@@ -735,18 +763,31 @@ public sealed partial class EditorView
         else track = Document.Tracks.First(t => t.Id == draftTrack);
         if (track.Nodes.Count > 0 && Near(Point(track.Nodes[^1]), x, y, 8))
         { track.Nodes[^1].HandleOut = default; return; }
+        var node = AppendDraftAnchor(track, p, straight);
+        if (node is null) { StatusMessage = L.Get("editor.error.anchorMustBeLater"); return; }
+        if (track.Nodes.Count == 1) ApplyPlacementFlags(track.Id);
+        Document.DurationMs = Math.Max(Document.DurationMs, p.TimeMs);
+        Select(node.Id, track.Id);
+        draftStraight = straight;
+        drag = straight ? DragKind.None : DragKind.DraftHandle;
+        BeginPointerDrag(x, y);
+        dragOffset = new(0, 0);
+        StatusMessage = "";
+    }
+
+    private Anchor? AppendDraftAnchor(CurveTrack track, MapPoint p, bool straight)
+    {
         var node = new Anchor { TimeMs = p.TimeMs, X = p.X };
         if (track.Nodes.Count > 0)
         {
             var previous = track.Nodes[^1];
             double dt = p.TimeMs - previous.TimeMs;
             if (dt < 0.001 || previous.TimeMs + previous.HandleOut.TimeMs > p.TimeMs)
-            { StatusMessage = L.Get("editor.error.anchorMustBeLater"); return; }
+                return null;
             if (straight) { previous.HandleOut = default; node.HandleIn = default; }
             previous.OutgoingKind = straight || previous.HandleOut == default ? CurveKind.Linear : CurveKind.Bezier;
         }
         track.Nodes.Add(node);
-        if (track.Nodes.Count == 1) ApplyPlacementFlags(track.Id);
         if (!straight && track.Nodes.Count > 1)
         {
             var previous = track.Nodes[^2];
@@ -757,13 +798,7 @@ public sealed partial class EditorView
             }
             else CurvePointEditing.SetCurved(track, previous.Id, true);
         }
-        Document.DurationMs = Math.Max(Document.DurationMs, p.TimeMs);
-        Select(node.Id, track.Id);
-        draftStraight = straight;
-        drag = straight ? DragKind.None : DragKind.DraftHandle;
-        BeginPointerDrag(x, y);
-        dragOffset = new(0, 0);
-        StatusMessage = "";
+        return node;
     }
 
     private void StartBanana(float x, float y)

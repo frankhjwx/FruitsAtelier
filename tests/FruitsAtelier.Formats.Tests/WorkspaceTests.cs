@@ -68,8 +68,16 @@ internal static class WorkspaceTests
             File.WriteAllText(Path.Combine(set, "image,comma.png"), "image");
             File.WriteAllText(Path.Combine(set, "frame0.png"), "frame");
             var referenceErrors = WorkspaceProject.MissingResources(project);
-            Check(referenceErrors.Count == 1 && referenceErrors[0].EndsWith("frame1.png"), "quoted resources and actual animation frames");
-            events.Lines.RemoveRange(events.Lines.Count - 2, 2);
+            Check(referenceErrors.Count == 0, "missing optional animation frames must not block editing or export");
+            events.Lines.Add("Video,0,\"missing-video.avi\"");
+            events.Lines.Add("Sample,0,0,\"missing-sample.wav\",100");
+            events.Lines.Add("0,0,\"missing-background.jpg\",0,0");
+            Check(WorkspaceProject.MissingResources(project).Count == 0, "optional assets must not appear as missing project references");
+            var optionalExport = WorkspaceExport.Plan(session, project.Difficulties[0], songs, false, "Without optional assets", true);
+            WorkspaceExport.Commit(session, optionalExport, updateAssociation: false);
+            Check(File.ReadAllText(optionalExport.Target).Contains("missing-video.avi"), "export must retain optional event references");
+            File.Delete(optionalExport.Target);
+            events.Lines.RemoveRange(events.Lines.Count - 5, 5);
             File.Delete(document.AudioPath!);
             Check(WorkspaceProject.MissingResources(project).Contains(document.AudioPath!), "missing reference reported");
             WorkspaceProject.Save(session, project);

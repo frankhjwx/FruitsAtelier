@@ -2,9 +2,9 @@ namespace FruitsAtelier.Core;
 
 public sealed class WorkspaceResourceReferences
 {
-    private readonly string[] paths, invalid;
-    internal WorkspaceResourceReferences(string[] paths, string[] invalid) { this.paths = paths; this.invalid = invalid; }
+    private readonly string[] paths;
+    internal WorkspaceResourceReferences(string[] paths) { this.paths = paths; }
 
     public IReadOnlyList<string> FindMissing()
-        => invalid.Concat(paths.Where(path => !File.Exists(path))).Distinct().ToArray();
+        => paths.Where(path => !File.Exists(path)).ToArray();
 }

@@ -38,7 +38,7 @@ On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are
 
 ### Navigate and select
 
-The main canvas shows horizontal placement and note timing; later notes are higher on the screen. Scroll up for earlier times and down for later times: the canvas and playhead move together by the same relative amount, including while paused. Middle-drag pans, and Ctrl+wheel zooms. Click empty canvas in Select mode to seek. The bottom timeline also supports seeking; click the timestamp to jump to an exact time.
+The main canvas shows horizontal placement and note timing; later notes are higher on the screen. On the canvas and both timelines, each wheel notch moves exactly one current Snap subdivision: up to the preceding grid line and down to the following one, regardless of zoom. The canvas and playhead move together, including while paused. Middle-drag pans, and Ctrl+wheel zooms. Click empty canvas in Select mode to seek. The bottom timeline also supports seeking; click the timestamp to jump to an exact time.
 
 Select an object with **1**. Drag empty space to box-select, or Ctrl-click to toggle selection. Drag selected objects to move them together. Selecting a slider fruit or droplet selects its parent slider. The horizontal object timeline also lets you select and move objects in time.
 
@@ -49,6 +49,8 @@ Select an object with **1**. Drag empty space to box-select, or Ctrl-click to to
 | Fruit: F / 2 | Left-click to place a fruit at the current snap position. |
 | FSlider: B / 3 | Click a start, then add points. Right-click away from placed points or press Enter to finish. Esc cancels. |
 | Banana shower: N / 4 | Left-click the start, then right-click at a later time to finish. Drag its body to move it, or its ends to resize it. |
+
+Fruit and slider placement previews show hyperdash markers before you confirm placement, including changes to the preceding object. Moving the pointer updates the markers; cancelling placement removes the temporary preview.
 
 ### Shape sliders
 

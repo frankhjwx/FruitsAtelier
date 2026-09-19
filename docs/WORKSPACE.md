@@ -62,7 +62,7 @@ The database's maps/projects/project_sources tables are rebuildable indexes. The
 
 ## Resource errors
 
-Opening a project and refreshing the editor check source `.osu` files, audio, Events resource references (including animation frames), and custom object samples. Missing resources produce a red editor error bar; **View details** shows full paths. Editing and saving remain available, but exporting into Songs with missing resources fails. Standalone `.osu` export remains available. Restoring the original path clears the error; audio can also be replaced from the File menu.
+Opening a project and refreshing the editor check source `.osu` files and song audio. Missing required references produce a red editor error bar; **View details** shows full paths. Editing and saving remain available, but exporting into Songs with missing required references fails. Standalone `.osu` export remains available. Restoring the original path clears the error; audio can also be replaced from the File menu. Videos, backgrounds, storyboard sprites and animation frames, and custom samples are optional: missing files do not produce a persistent error or block export. Their original references remain in the project and exported `.osu`.
 
 ## Explicit export
 

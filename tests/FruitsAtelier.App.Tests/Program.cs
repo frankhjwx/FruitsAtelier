@@ -31,6 +31,7 @@ var tests = new (string Name, Action Run)[]
     ("Update settings and explicit installation controls", UpdateTests.Interface),
     ("Audio volume settings, persistence and document isolation", AudioFeedbackTests.VolumeSettings),
     ("V jumps to the end and wheel navigation follows time order", AudioFeedbackTests.Navigation),
+    ("All wheel surfaces move exactly one snap step per notch across timing boundaries", ViewportFeedbackTests.WheelSnapSteps),
     ("Skin hitsound priority and live selection refresh", AudioFeedbackTests.SkinSamples),
     ("Testplay legacy combo animation and live dash trails", TestplayTests.ComboAndTrails),
     ("Stable root migration and skin selection preserve content and archive provenance", SkinSelectorTests.Run),
@@ -63,6 +64,7 @@ var tests = new (string Name, Action Run)[]
     ("Timeline layout, centered numbers, box selection and deletion", ObjectTimelineTests.BoxAndDelete),
     ("Slider drafts draw one endpoint fruit", ToolPaletteTests.NoDuplicateDraftGhost),
     ("Tool palette is exclusive and placement ghosts snap at 60% opacity", ToolPaletteTests.PaletteAndGhost),
+    ("Fruit and both slider modes preview incoming and outgoing hyperdash without committing", ToolPaletteTests.PlacementHyperdash),
     ("Fruit New combo survives project/osu round-trips and undo", ToolPaletteTests.FruitCombo),
     ("Both slider modes support straight placement and draft point removal", ToolPaletteTests.DraftRemovalAndStraight),
     ("Repeated points, whole-slider deletion and banana completion", ToolPaletteTests.RepeatedPointAndWholeDelete),
@@ -115,7 +117,7 @@ var tests = new (string Name, Action Run)[]
     ("Painted fruit, time ruler and playhead share an upward time axis", UpwardPainting),
     ("Select blank clicks seek while objects and box drags preserve time", UpwardClickTime),
     ("Wheel up reveals later time and middle drag keeps content under the pointer", WheelAndPan),
-    ("Overview wheel seeks continuously, follows the clock and preserves playback and content", OverviewWheel),
+    ("Overview wheel accumulates snap steps and preserves playback and content", OverviewWheel),
     ("Object timeline selects without seeking and scales independently", ObjectTimelineTests.NavigationAndSelection),
     ("Playback speed buttons work in both languages without editing content", ObjectTimelineTests.SpeedControls),
     ("Canvas defaults and reset use 60% zoom while enforcing minimum width", CanvasZoomTests.DefaultsAndReset),
@@ -489,10 +491,13 @@ static void OverviewWheel()
         double start = ui.View.PlayheadMs;
         double scale = ui.View.PixelsPerMs;
         ui.View.Wheel(x, y, -30, false); ui.Paint();
-        Near(start + 0.25 * 78 / scale, ui.View.PlayheadMs);
+        Near(start, ui.View.PlayheadMs);
+        for (int i = 0; i < 3; i++) ui.View.Wheel(x, y, -30, false);
+        ui.Paint();
+        Near(start + 125, ui.View.PlayheadMs);
         Near(ui.View.PlayheadMs, seeks.Single());
         Near(ui.View.PlayheadMs - ui.Plot.Height * 0.25 / scale, ui.View.ViewStartMs);
-        ui.View.Wheel(x, y, 30, false); ui.Paint();
+        ui.View.Wheel(x, y, 120, false); ui.Paint();
         Near(start, ui.View.PlayheadMs);
         Near(scale, ui.View.PixelsPerMs);
         ui.View.Wheel(x, y, 120000, false); ui.Paint(); Near(0, ui.View.PlayheadMs);
@@ -508,7 +513,7 @@ static void ZoomPaintedAnchor()
 {
     var ui = new Ui();
     var plot = ui.Plot;
-    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, -720, false);
+    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, -1440, false);
     ui.Paint();
     True(ui.View.ViewStartMs > 1000 && ui.View.ViewStartMs < 20000, "Zoom setup reached a viewport clamp.");
     var anchor = ui.PaintedFruitAtX(160);

@@ -31,9 +31,9 @@ internal static class AudioFeedbackTests
         double offset = ui.View.PlayheadMs - ui.View.ViewStartMs, start = ui.View.PlayheadMs;
         var seeks = new List<double>(); ui.View.RequestSeek = seeks.Add;
         for (int i = 0; i < 4; i++) { ui.View.Wheel(x, y, 30, false); ui.Paint(); }
-        Near(start - 78 / ui.View.PixelsPerMs, ui.View.PlayheadMs);
+        Near(start - TimingMap.At(map, start).BeatLengthMs / ui.View.SnapDivisor, ui.View.PlayheadMs);
         Near(offset, ui.View.PlayheadMs - ui.View.ViewStartMs);
-        Check(seeks.Count == 4, "each fractional wheel event seeks the audio transport");
+        Check(seeks.Count == 1, "fractional wheel input accumulates into one snap step");
         ui.View.Wheel(x, y, 120000, false); ui.Paint();
         double boundaryHead = ui.View.PlayheadMs, boundaryView = ui.View.ViewStartMs;
         ui.View.Wheel(x, y, 120, false); ui.Paint();
