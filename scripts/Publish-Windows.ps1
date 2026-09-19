@@ -37,8 +37,19 @@ try {
         if (!(Test-Path -LiteralPath (Join-Path $payload $required))) { throw "Missing package file: $required" }
     }
     if (Test-Path -LiteralPath (Join-Path $payload 'assets/skins/default.osk')) { throw 'Local private skin must not be distributed.' }
+    & dotnet tool restore
+    if ($LASTEXITCODE -ne 0) { throw 'Pinned Velopack tool restore failed.' }
+    $updates = Join-Path $staging 'updates'
+    & dotnet tool run vpk -- pack --packId FruitsAtelier --packVersion $Version --packDir $payload `
+        --mainExe FruitsAtelier.App.exe --packTitle FruitsAtelier --runtime win-x64 --channel win-x64 `
+        --icon (Join-Path $repo 'assets/branding/app-icon.ico') --noInst --delta None `
+        --outputDir $updates --yes --skip-updates
+    if ($LASTEXITCODE -ne 0) { throw 'Portable updater packaging failed.' }
+    $portable = @(Get-ChildItem -LiteralPath $updates -Filter '*Portable.zip')
+    if ($portable.Count -ne 1) { throw 'Expected one portable update package.' }
     $archive = Join-Path $OutputDirectory "$package.zip"
-    Compress-Archive -LiteralPath $payload -DestinationPath $archive -CompressionLevel Optimal -Force
+    Copy-Item -LiteralPath $portable[0].FullName -Destination $archive
+    Get-ChildItem -LiteralPath $updates -File | Where-Object { $_.Extension -in '.nupkg', '.json' } | Copy-Item -Destination $OutputDirectory
     $digest = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
     "$digest  $package.zip" | Set-Content -LiteralPath "$archive.sha256" -Encoding ascii
     Write-Host "Package: $archive"

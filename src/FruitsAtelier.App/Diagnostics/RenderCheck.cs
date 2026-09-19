@@ -101,6 +101,8 @@ internal static class RenderCheck
         var seek = view.RequestSeek; var hitsound = view.RequestHitsound;
         var prepare = view.RequestPrepareTestplayAudio;
         var volumePreference = view.RequestAudioPreference;
+        var updateCheck = view.RequestUpdateCheck;
+        var updateStatus = view.UpdateStatus;
         int[] volumes = [view.LibrarySettings.MasterVolume, view.LibrarySettings.SongVolume, view.LibrarySettings.HitsoundVolume];
         string language = FruitsAtelier.Localization.Strings.Language;
         try
@@ -109,6 +111,7 @@ internal static class RenderCheck
             view.RequestSeek = _ => { }; view.RequestHitsound = _ => { };
             view.RequestPrepareTestplayAudio = () => { };
             view.RequestAudioPreference = () => { };
+            view.RequestUpdateCheck = () => { };
             var map = new MapDocument();
             map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 256 }, new Fruit { TimeMs = 5000, X = 256 }]);
             foreach (string locale in new[] { "en", "zh-CN" })
@@ -209,6 +212,13 @@ internal static class RenderCheck
                 }
                 if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
                     throw new InvalidOperationException("Native volume controls did not update percentages.");
+                view.PointerDown(280, 590, 0, false, false); view.PointerUp(280, 590, 0);
+                foreach (var phase in new[] { UpdatePhase.Unsupported, UpdatePhase.Checking, UpdatePhase.Available, UpdatePhase.Downloading, UpdatePhase.Ready, UpdatePhase.Failed })
+                {
+                    view.UpdateStatus = new(phase, "0.8.2", 42);
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                }
+                view.KeyDown(27, false, false);
                 view.KeyDown(27, false, false); view.CloseLibrary();
             }
         }
@@ -219,6 +229,8 @@ internal static class RenderCheck
             view.RequestSeek = seek; view.RequestHitsound = hitsound;
             view.RequestPrepareTestplayAudio = prepare;
             view.RequestAudioPreference = volumePreference;
+            view.RequestUpdateCheck = updateCheck;
+            view.UpdateStatus = updateStatus;
             view.LibrarySettings.MasterVolume = volumes[0]; view.LibrarySettings.SongVolume = volumes[1]; view.LibrarySettings.HitsoundVolume = volumes[2];
             view.ApplyAudioVolume();
             FruitsAtelier.Localization.Strings.SetLanguage(language);

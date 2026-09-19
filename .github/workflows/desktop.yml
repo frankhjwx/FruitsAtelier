@@ -33,8 +33,12 @@ jobs:
           global-json-file: global.json
       - name: Build and check the distributable Windows package
         run: |
-          ../scripts/Publish-Windows.ps1 -Version 0.0.0-alpha.1
-          ../scripts/Test-WindowsPackage.ps1 -Archive ../artifacts/releases/FruitsAtelier-0.0.0-alpha.1-win-x64.zip
+          ../scripts/Publish-Windows.ps1 -Version 0.0.2-alpha.1
+          ../scripts/Test-WindowsPackage.ps1 -Archive ../artifacts/releases/FruitsAtelier-0.0.2-alpha.1-win-x64.zip
+      - name: Verify portable upgrade and corrupt download rejection
+        run: |
+          ../scripts/Publish-Windows.ps1 -Version 0.0.2-alpha.2 -OutputDirectory ../artifacts/update-feed
+          ../scripts/Test-WindowsUpdate.ps1 -Archive ../artifacts/releases/FruitsAtelier-0.0.2-alpha.1-win-x64.zip -FeedDirectory ../artifacts/update-feed -ExpectedVersion 0.0.2-alpha.2
   macos:
     runs-on: macos-14
     steps:

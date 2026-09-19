@@ -31,7 +31,7 @@ public sealed partial class EditorView
 
     private bool BeginVolumeDrag(float x, float y, int button)
     {
-        if (!LibraryVisible || !librarySettingsOpen || button != 0) return false;
+        if (!LibraryVisible || !librarySettingsOpen || updatesPage || button != 0) return false;
         for (int i = 0; i < 3; i++)
             if (VolumeSliderBounds(i).Contains(x, y))
             { volumeDrag = i; libraryField = bindingCapture = -1; UpdateVolumeDrag(x); return true; }

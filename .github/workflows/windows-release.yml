@@ -79,6 +79,8 @@ jobs:
           path: |
             artifacts/releases/*.zip
             artifacts/releases/*.sha256
+            artifacts/releases/*.nupkg
+            artifacts/releases/releases.*.json
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
@@ -119,5 +121,5 @@ jobs:
             if [[ "$RELEASE_TAG" == *-* ]]; then flags+=(--prerelease); fi
             gh release create "$RELEASE_TAG" --verify-tag --draft --title "FruitsAtelier $RELEASE_TAG" --generate-notes "${flags[@]}"
           fi
-          gh release upload "$RELEASE_TAG" release-assets/*.zip release-assets/*.sha256 --clobber
+          gh release upload "$RELEASE_TAG" release-assets/*.zip release-assets/*.sha256 release-assets/*.nupkg release-assets/releases.*.json --clobber
           gh release edit "$RELEASE_TAG" --draft=false

@@ -25,7 +25,7 @@
 
 ### Windows
 
-从 [Releases](https://github.com/frankhjwx/FruitsAtelier/releases) 下载 Windows x64 ZIP，完整解压后运行 `FruitsAtelier.App.exe`。保留解压后的所有文件。包内自带 .NET，适用于支持 DirectX 11 的 Windows 10/11。
+从 [Releases](https://github.com/frankhjwx/FruitsAtelier/releases) 下载 Windows x64 ZIP，完整解压后运行 `FruitsAtelier.exe`。保留解压后的所有文件。包内自带 .NET，适用于支持 DirectX 11 的 Windows 10/11。
 
 在曲库的设置中选择工程目录，并按需连接 osu!stable 安装目录。导入谱面或新建工程即可开始。
 

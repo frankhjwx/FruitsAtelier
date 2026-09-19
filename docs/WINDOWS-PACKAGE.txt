@@ -1,22 +1,25 @@
 FruitsAtelier for Windows x64
 
-Extract the entire ZIP to a folder, then double-click FruitsAtelier.App.exe.
-Keep the DLL files and assets folder beside the executable. Do not run it
+Extract the entire ZIP to a folder, then double-click FruitsAtelier.exe.
+Keep Update.exe and the current folder beside the launcher. Do not run it
 inside the ZIP. No .NET installation or administrator access is required.
 
 Requirements: Windows 10/11 x64, DirectX 11 graphics support and Windows
 Media Foundation for MP3 playback (Windows N requires the Media Feature Pack).
 
 Choose your project workspace and optional osu!stable installation folder in
-Library > Settings. Read USER-MANUAL.md for features and keyboard shortcuts,
+Library > Settings. Read current/USER-MANUAL.md for features and keyboard shortcuts,
 or FruitsAtelier-User-Manual.pdf when included with the package.
-Update by extracting a new release to a new folder. Your workspace and saved
-preferences are separate from the application; keep them when updating.
+Use Library > Settings > Application updates to check and download updates,
+then choose Save and restart to update. Startup checks run at most once daily
+and can be disabled. Your workspace and custom skins must be outside current/,
+which is replaced by updates. Preferences are kept in your application data.
+Old packages without an updater need one manual download of this portable ZIP.
 
 This build is unsigned. Windows may show an unknown-publisher warning.
 Download from https://github.com/frankhjwx/FruitsAtelier/releases and compare
 the ZIP's SHA256 with the accompanying .sha256 file when verifying a download.
 
-Version and source commit: build-info.json
-Dependencies and licenses: THIRD_PARTY_NOTICES.md and the Licenses folders
+Version and source commit: current/build-info.json
+Dependencies and licenses: current/THIRD_PARTY_NOTICES.md and its license folders
 Logs: %LOCALAPPDATA%\FruitsAtelier\logs\editor.log

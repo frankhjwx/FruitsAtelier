@@ -190,3 +190,15 @@ For detailed editing behavior, see `docs/EDITOR_UI.md` in the repository. Projec
 ### Audio volume
 
 Open **Library > Settings** to adjust **All**, **Song** and **Hitsound** from 0% to 100%. Values apply immediately and are saved when you release the slider. All multiplies both other channels. Setting Song to 0% leaves hitsounds audible; setting Hitsound to 0% leaves the song audible. Custom skin samples apply in both preview and testplay, with beatmap custom samples taking priority.
+
+### Application updates (Windows)
+
+Open **Library → Settings → Application updates** to check for a new stable
+version, view release notes, and download it from GitHub Releases. Automatic
+startup checks are enabled by default and run at most once a day; the setting
+can be disabled. Downloads do not interrupt editing. Choose **Save and restart
+to update** when ready. All unsaved difficulties are saved before restart; a
+save failure leaves the editor open. A downloaded update waits for this explicit
+action even after restarting the editor. Close other windows of the same
+installation first. Keep projects and custom skins outside the program
+`current/` folder, which is replaced during updates.

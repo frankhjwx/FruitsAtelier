@@ -27,6 +27,8 @@ var tests = new (string Name, Action Run)[]
     ("Missed testplay notes continue falling after judgement", TestplayTests.MissedObjectsFall),
     ("Testplay key capture and settings persistence", TestplayTests.Bindings),
     ("Extended testplay key capture, persistence and gameplay", TestplayTests.ExtendedBindings),
+    ("Update lifecycle, persistence and save-before-restart", UpdateTests.Lifecycle),
+    ("Update settings and explicit installation controls", UpdateTests.Interface),
     ("Audio volume settings, persistence and document isolation", AudioFeedbackTests.VolumeSettings),
     ("V jumps to the end and wheel navigation follows time order", AudioFeedbackTests.Navigation),
     ("Skin hitsound priority and live selection refresh", AudioFeedbackTests.SkinSamples),
