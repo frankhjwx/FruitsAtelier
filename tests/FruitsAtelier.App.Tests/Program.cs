@@ -26,6 +26,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay subframe input and interpolated audio clock", TestplayTests.InputBetweenFrames),
     ("Missed testplay notes continue falling after judgement", TestplayTests.MissedObjectsFall),
     ("Testplay key capture and settings persistence", TestplayTests.Bindings),
+    ("Extended testplay key capture, persistence and gameplay", TestplayTests.ExtendedBindings),
     ("Testplay legacy combo animation and live dash trails", TestplayTests.ComboAndTrails),
     ("Stable root migration and skin selection preserve content and archive provenance", SkinSelectorTests.Run),
     ("Object timeline navigation and group movement preserve geometry and undo", ObjectTimelineTests.MoveAndNavigate),

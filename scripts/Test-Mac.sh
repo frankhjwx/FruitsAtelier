@@ -11,6 +11,7 @@ if [[ "${1:-}" != --native-only ]]; then
     done
 fi
 if [[ "${1:-}" == --skip-device-tests ]]; then
+    "$FA_DOTNET" run --project "$FA_ROOT/tests/FruitsAtelier.Mac.Tests" -c Release -- --input-check
     echo 'SKIP Mac native device tests (explicitly excluded on headless CI)'
 else
     "$FA_DOTNET" run --project "$FA_ROOT/tests/FruitsAtelier.Mac.Tests" -c Release

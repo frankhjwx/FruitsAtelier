@@ -14,8 +14,17 @@ public static class MacInput
     {
         >= Key.A and <= Key.Z => 65 + key - Key.A,
         >= Key.D0 and <= Key.D9 => 48 + key - Key.D0,
-        Key.Left => 37, Key.Right => 39, Key.LeftShift or Key.RightShift => 16, Key.F1 => 112, Key.F2 => 113, Key.F5 => 116, Key.End => 35,
+        >= Key.NumPad0 and <= Key.NumPad9 => 96 + key - Key.NumPad0,
+        >= Key.F1 and <= Key.F24 => 112 + key - Key.F1,
+        Key.Left => 37, Key.Right => 39, Key.LeftShift or Key.RightShift => 16, Key.End => 35,
+        Key.LeftCtrl or Key.RightCtrl => 17, Key.LeftAlt or Key.RightAlt => 18,
+        Key.CapsLock => 20, Key.Clear => 12, Key.PageUp => 33, Key.PageDown => 34, Key.Insert => 45,
+        Key.Multiply => 106, Key.Add => 107, Key.Separator => 108, Key.Subtract => 109, Key.Decimal => 110, Key.Divide => 111,
+        Key.NumLock => 144, Key.Scroll => 145,
         Key.Back => editingText ? 8 : 46, Key.Tab => 9, Key.Enter => 13, Key.Escape => 27,
+        Key.OemSemicolon => 186, Key.OemOpenBrackets => 219, Key.OemCloseBrackets => 221, Key.OemQuotes => 222,
+        Key.OemComma => 188, Key.OemPeriod => 190, Key.OemQuestion => 191, Key.OemTilde => 192,
+        Key.OemPipe => 220, Key.Oem8 => 223, Key.OemBackslash => 226,
         Key.Space => 32, Key.Home => 36, Key.Delete => 46, Key.Up => 38, Key.Down => 40, Key.OemPlus => 187, Key.OemMinus => 189, _ => 0
     };
 }
@@ -98,14 +107,14 @@ internal sealed class EditorControl : Control, IDisposable
             }
             Refresh(); return;
         }
-        View.KeyDown(MacInput.VirtualKey(e.Key, View.IsEditingText), MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+        View.KeyDown(MacInput.VirtualKey(e.Key, View.IsEditingText || View.CapturingTestplayKey || View.IsTestplaying), MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         e.Handled = View.IsTestplaying || View.CapturingTestplayKey || e.Key is Key.Tab or Key.Space or Key.Back or Key.Delete or Key.Enter or Key.Escape || MacInput.Control(e.KeyModifiers);
         Refresh();
     }
     protected override void OnKeyUp(KeyEventArgs e)
     {
         base.OnKeyUp(e);
-        View.KeyUp(MacInput.VirtualKey(e.Key, View.IsEditingText));
+        View.KeyUp(MacInput.VirtualKey(e.Key, View.IsEditingText || View.CapturingTestplayKey || View.IsTestplaying));
         View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         Refresh();
     }
