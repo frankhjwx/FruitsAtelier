@@ -707,6 +707,5 @@
   "movement.next": "后一对象 · {0}",
   "movement.walk": "Walk",
   "movement.dash": "Dash",
-  "movement.hyperdash": "HDash",
-  "movement.legend": "Walk / Dash / HDash · Walk 按中心起步估算"
+  "movement.hyperdash": "HDash"
 }

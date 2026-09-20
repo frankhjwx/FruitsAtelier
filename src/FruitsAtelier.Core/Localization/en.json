@@ -707,6 +707,5 @@
   "movement.next": "Next · {0}",
   "movement.walk": "Walk",
   "movement.dash": "Dash",
-  "movement.hyperdash": "HDash",
-  "movement.legend": "Walk / Dash / HDash · Walk estimated from centre"
+  "movement.hyperdash": "HDash"
 }

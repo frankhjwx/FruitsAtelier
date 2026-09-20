@@ -50,11 +50,11 @@ public sealed partial class EditorView
             movementStates[indices[last]].Movement);
 
         float panelWidth = Math.Min(340, plot.Width - 12);
-        if (panelWidth < 180 || plot.Height < 112) return;
+        if (panelWidth < 180 || plot.Height < 90) return;
         var r = new Rect(Math.Clamp(Playfield.X + Playfield.Width / 2 - panelWidth / 2, plot.X + 6, plot.Right - panelWidth - 6),
-            plot.Bottom - 100, panelWidth, 92);
+            plot.Bottom - 78, panelWidth, 70);
         MovementOverlayBounds = r;
-        c.Fill(r, 0x171C24, 8, .78f);
+        c.Fill(r, 0x171C24, 8, .39f);
         c.Stroke(r, 0x424D5C, 1, 8);
         c.Text(L.Get("movement.previous", Label(MovementReadout.Previous)), r.X + 12, r.Y + 8, 12, Foreground, (r.Width - 24) / 2);
         string next = L.Get("movement.next", Label(MovementReadout.Next));
@@ -74,12 +74,10 @@ public sealed partial class EditorView
             c.Line(x, y - 1, x, y + 9, Foreground, 1.5f);
         }
         else c.Fill(new(left, y, length, 7), Grid, 3);
-        string legend = L.Get("movement.legend");
-        c.Text(legend, left, r.Y + 47, 10, Muted, length);
 
-        c.Text(L.Get("assist.previous", Ratio(DistanceReadout.Previous)), left, r.Y + 69, 11, Muted, length / 2);
+        c.Text(L.Get("assist.previous", Ratio(DistanceReadout.Previous)), left, r.Y + 47, 11, Muted, length / 2);
         string nextRatio = L.Get("assist.next", Ratio(DistanceReadout.Next));
-        c.Text(nextRatio, r.Right - 12 - c.MeasureText(nextRatio, 11), r.Y + 69, 11, Muted, length / 2);
+        c.Text(nextRatio, r.Right - 12 - c.MeasureText(nextRatio, 11), r.Y + 47, 11, Muted, length / 2);
 
         static string Ratio(double? value) => value is { } number ? L.Get("assist.ratio", number) : "—";
         static string Label(CatchMovementRange? range) => range is { } value
