@@ -14,6 +14,11 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Workspace-only saves persist before optional Songs export", WorkspaceSaveTests.Run),
+    ("Library archive drops preserve Songs and report source/export presence", LibraryImportTests.Run),
+    ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
+    ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
+    ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
     ("Slider stream confirmation, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
     ("Slider long press progress, cancellation and control-point shortcut", StreamShortcutTests.HoldAndShortcut),
     ("Testplay pause, resume and legacy exit shortcuts", TestplayTests.PauseAndExitShortcuts),
@@ -38,6 +43,11 @@ var tests = new (string Name, Action Run)[]
     ("Stable root migration and skin selection preserve content and archive provenance", SkinSelectorTests.Run),
     ("Object timeline navigation and group movement preserve geometry and undo", ObjectTimelineTests.MoveAndNavigate),
     ("Returning to Library saves, discards or cancels before closing the editor", LibraryExitTests.Run),
+    ("DS numeric fields use base SV, preserve direction and support undo", DistanceEditingTests.NumericFields),
+    ("DS edits selected slider heads, tails and droplets", DistanceEditingTests.SliderPoints),
+    ("Movement DS labels use base SV and avoid collisions", DistanceEditingTests.Labels),
+    ("Movement Analysis toggles all four connection colours without editing content", AssistToolsTests.MovementAnalysis),
+    ("Floating movement panel follows placement, selection, dragging and language", AssistToolsTests.MovementOverlay),
     ("Distance spacing placement, persistence, Alt and undo", AssistToolsTests.SpacingAndPlacement),
     ("Distance readouts, slider tails, base SV and layout", AssistToolsTests.DistanceRules),
     ("Distance snapping moves selected groups by a shared offset", AssistToolsTests.GroupDistanceDrag),
@@ -267,10 +277,9 @@ static void FileCommands()
     var calls = new List<string>();
     ui.View.RequestOpen = () => calls.Add("open");
     ui.View.RequestSave = () => calls.Add("save");
-    ui.View.RequestSaveAs = () => calls.Add("saveAs");
     ui.View.RequestExport = () => calls.Add("export");
     ui.Key('O', ctrl: true); ui.Key('S', ctrl: true); ui.Key('S', ctrl: true, shift: true); ui.Key('E', ctrl: true);
-    True(calls.SequenceEqual(new[] { "open", "save", "saveAs", "export" }), "A file shortcut did not invoke its host callback.");
+    True(calls.SequenceEqual(new[] { "open", "save", "export" }), "A file shortcut did not invoke its host callback.");
     True(!ui.View.IsDirty, "File commands changed content without a host action.");
 }
 
@@ -642,11 +651,11 @@ static void MainCurveVisibility()
     var previewObjects = ObjectCircles(ui, preview: true);
     True(curves.Length > 0, "Main target curves are not visible by default.");
     AssertObjectKinds(ui, objects, ui.Plot.Width);
-    ui.ClickText("隐藏曲线");
+    ui.ClickText("滑条路径");
     True(!CurveCommands(ui, preview: false).Any(), "Main target lines remained after hiding curves.");
     True(ObjectCircles(ui, preview: false).SequenceEqual(objects), "Hiding curves changed the main converted object sequence.");
     True(ObjectCircles(ui, preview: true).SequenceEqual(previewObjects), "The main curve toggle changed preview objects.");
-    ui.ClickText("显示曲线");
+    ui.ClickText("滑条路径");
     True(CurveCommands(ui, preview: false).Select(c => c.Segment!.Value).SequenceEqual(curves), "Showing curves did not restore the target geometry.");
     True(ObjectCircles(ui, preview: false).SequenceEqual(objects), "Restoring curves changed converted objects.");
     True(Snapshot(ui) == original && !ui.View.IsDirty, "Curve visibility mutated the document or history.");
@@ -663,12 +672,12 @@ static void PreviewCurveLayers()
     True(curves.Length > 0, "The preview debug toggle did not show target curves.");
     True(ObjectCircles(ui, preview: true).SequenceEqual(objects), "Enabling debug curves changed preview objects.");
     AssertPreviewDrawOrder(ui);
-    ui.ClickText("隐藏曲线");
+    ui.ClickText("滑条路径");
     True(!CurveCommands(ui, preview: false).Any(), "The main curve toggle did not hide the main layer.");
     True(CurveCommands(ui, preview: true).Select(c => c.Segment!.Value).SequenceEqual(curves), "Main visibility incorrectly changed the preview debug flag.");
     True(ObjectCircles(ui, preview: true).SequenceEqual(objects), "Main visibility changed the preview object sequence.");
     AssertPreviewDrawOrder(ui);
-    ui.ClickText("显示曲线");
+    ui.ClickText("滑条路径");
     ui.ClickText("调试曲线");
     True(!CurveCommands(ui, preview: true).Any(), "Preview debug curves did not hide again.");
     True(CurveCommands(ui, preview: false).Any(), "Disabling preview curves also hid the main target layer.");
@@ -733,7 +742,7 @@ static void MainCurveSelectionOpacity()
     True(ObjectCircles(ui, preview: false).SequenceEqual(objects), "Curve selection changed the converted objects.");
     AssertMainDrawOrder();
     AssertPreviewLayer();
-    ui.DownMap(100, 500); ui.MoveMap(300, 480); ui.UpMap(300, 480);
+    ui.DownMap(100, 0); ui.MoveMap(300, 20); ui.UpMap(300, 20);
     foreach (var command in CurveCommands(ui, preview: false)) Near(0.5, command.Segment!.Value.Opacity);
     AssertMainDrawOrder();
     AssertPreviewLayer();
@@ -963,7 +972,7 @@ sealed class RecordingCanvas : ICanvas
     public List<Outline> Fills { get; } = [];
     public List<Operation> Operations { get; } = [];
     public void Clear() { Fills.Clear(); Images.Clear(); Sprites.Clear(); Texts.Clear(); Clips.Clear(); Circles.Clear(); Lines.Clear(); Outlines.Clear(); Operations.Clear(); clipStack.Clear(); }
-    public void Fill(Rect r, uint color, float radius = 0) => Fills.Add(new(r, color));
+    public void Fill(Rect r, uint color, float radius = 0, float opacity = 1) => Fills.Add(new(r, color));
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0) => Outlines.Add(new(r, color));
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)
     {

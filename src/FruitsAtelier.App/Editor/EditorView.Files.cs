@@ -10,7 +10,6 @@ public sealed partial class EditorView
     public Action? RequestImportDifficulty { get; set; }
     public Action? RequestDifficultyChanged { get; set; }
     public Action? RequestSave { get; set; }
-    public Action? RequestSaveAs { get; set; }
     public Action? RequestExport { get; set; }
     public Action? RequestTogglePlayback { get; set; }
     public Action<double>? RequestSeek { get; set; }
@@ -39,6 +38,7 @@ public sealed partial class EditorView
         project.Validate();
         TimeJumpVisible = false;
         StreamDialogVisible = false;
+        CloseVolumeDialog();
         HasEditorProject = true;
         var retiredCancellation = sliderBatchCancellation;
         retiredCancellation?.Cancel();

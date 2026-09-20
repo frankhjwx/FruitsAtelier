@@ -23,6 +23,13 @@ public sealed partial class EditorView
         }
         ResetTextCaret();
         mouseX = x; mouseY = y;
+        if (VolumeDialogVisible)
+        {
+            if (BeginVolumeDrag(x, y, button)) return;
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         if (legacyButtonSlider != Guid.Empty && !sliderConversionBounds.Contains(x, y)) legacyButtonSlider = Guid.Empty;
         if (updatesPage)
         {
@@ -45,10 +52,10 @@ public sealed partial class EditorView
                 if (sliderDialogHits[i].Bounds.Contains(x, y)) { if (sliderDialogHits[i].Enabled) sliderDialogHits[i].Action(); break; }
             return;
         }
-        if (BeginVolumeDrag(x, y, button)) return;
         if (LibraryVisible && LibraryPointerDown(x, y, button)) return;
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
+        if (menu < 0 && contextItems.Count == 0 && DistancePointerDown(x, y, button, shift)) return;
         if (button == 2 && DifficultyTabContext(x, y)) return;
         if (menu >= 0 && button != 0) { menu = -1; return; }
         if (button == 2)
@@ -270,6 +277,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (distanceDragging) { UpdateDistanceSlider(x, shift); return; }
         placementCtrl = ctrl;
         if (volumeDrag >= 0) { UpdateVolumeDrag(x); return; }
         if (IsTestplaying) return;
@@ -278,7 +286,7 @@ public sealed partial class EditorView
         if (sliderHoldConsumed) return;
         if (SliderHoldNeedsRedraw && (Math.Abs(x - sliderHoldX) >= 2 || Math.Abs(y - sliderHoldY) >= 2)) sliderHoldId = Guid.Empty;
         if (StreamDialogVisible && streamSnapDragging) { SetStreamSnap(x); return; }
-        if (TimeJumpVisible || StreamDialogVisible) return;
+        if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (ExportVisible || languageMenuOpen) return;
@@ -379,6 +387,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
+        if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
         if (updatesPage) return;
         if (volumeDrag >= 0 && button == 0) { UpdateVolumeDrag(x); FinishVolumeDrag(); return; }
         if (button == 0)
@@ -395,7 +404,7 @@ public sealed partial class EditorView
         }
         if (StreamDialogVisible && streamSnapDragging && button == 0)
         { SetStreamSnap(x); streamSnapDragging = false; return; }
-        if (TimeJumpVisible || StreamDialogVisible) return;
+        if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
@@ -422,10 +431,11 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (DistanceEditing) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (updatesPage) return;
         if (IsTestplaying) return;
         if (notesLocked && plot.Contains(x, y)) { PointerDown(x, y, 0, shift, ctrl); return; }
-        if (StreamDialogVisible) return;
+        if (StreamDialogVisible || VolumeDialogVisible) return;
         if (TimeJumpVisible) { timeJumpSelected = true; return; }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
@@ -462,7 +472,7 @@ public sealed partial class EditorView
     {
         if (updatesPage) return;
         if (IsTestplaying) return;
-        if (TimeJumpVisible || StreamDialogVisible) return;
+        if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible) return;
         if (languageMenuOpen) return;
         if (ErrorVisible)
         {
@@ -556,6 +566,7 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (DistanceKeyDown(virtualKey, ctrl)) return;
         placementCtrl = ctrl;
         if (virtualKey == 27 && legacyButtonSlider != Guid.Empty)
         { legacyButtonSlider = Guid.Empty; return; }
@@ -596,6 +607,7 @@ public sealed partial class EditorView
             return;
         }
         if (updatesPage) { if (virtualKey == 27) updatesPage = false; return; }
+        if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey); return; }
         if (TimeJumpVisible) { TimeJumpKey(virtualKey, ctrl); return; }
         if (SliderDialogVisible)
@@ -663,7 +675,7 @@ public sealed partial class EditorView
             else if (virtualKey == 89) Redo();
             else if (virtualKey == 9) SwitchDifficulty((activeDifficulty + (shift ? difficulties.Count - 1 : 1)) % difficulties.Count);
             else if (virtualKey == 79) RequestOpen?.Invoke();
-            else if (virtualKey == 83) { if (shift) RequestSaveAs?.Invoke(); else RequestSave?.Invoke(); }
+            else if (virtualKey == 83 && !shift) RequestSave?.Invoke();
             else if (virtualKey == 69) RequestExport?.Invoke();
             else if (virtualKey == 67) CopySelection();
             else if (virtualKey == 88) CutSelection();
@@ -702,8 +714,9 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (DistanceEditing) { DistanceTextInput(value); return; }
         if (updatesPage) return;
-        if (StreamDialogVisible) return;
+        if (StreamDialogVisible || VolumeDialogVisible) return;
         if (IsTestplaying || CapturingTestplayKey) return;
         if (languageMenuOpen) return;
         ResetTextCaret();
@@ -725,6 +738,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction()
     {
+        FinishDistanceEdit(true);
         FinishVolumeDrag();
         testplayEscapeConsumed = false;
         streamSnapDragging = false;

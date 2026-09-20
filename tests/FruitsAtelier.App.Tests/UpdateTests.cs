@@ -88,11 +88,11 @@ internal static class UpdateTests
         ui.View.UpdateStatus = new(UpdatePhase.Available, "0.8.2"); ui.Paint(); Click("update.download");
         Check(download == 1, "Download action");
         ui.View.UpdateStatus = new(UpdatePhase.Downloading, "0.8.2", 42); ui.Paint();
-        ui.Click(50, 310); Check(check == 2 && restart == 0, "Installing is unavailable during download");
+        ui.Click(260, 310); Check(check == 2 && restart == 0, "Installing is unavailable during download");
         ui.View.UpdateStatus = new(UpdatePhase.Ready, "0.8.2"); ui.Paint(); Click("update.restart");
         Check(restart == 1, "Restart requires explicit action");
         Click("update.automaticOn"); Check(!ui.View.AutomaticUpdateChecks && preference == 1, "Preference toggles and persists");
-        ui.Key(27); ui.Paint(); Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("library.apply")), "Escape returns to settings");
+        ui.Key(27); ui.Paint(); Check(ui.View.LibraryVisible && !ui.Canvas.Texts.Any(t => t.Value == L.Get("library.apply")), "Escape returns to library");
         ui.View.UpdateStatus = new(UpdatePhase.Available, "0.8.2"); ui.Paint();
         var notice = ui.Canvas.Texts.Single(t => t.Value == L.Get("update.noticeButton", "0.8.2"));
         ui.Click(notice.X + 2, notice.Y + 2); ui.Paint();

@@ -189,9 +189,11 @@ internal static class RenderCheck
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(width - 380, 20, 0, false, false); view.PointerUp(width - 380, 20, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.PointerDown(40, 190, 0, false, false); view.PointerUp(40, 190, 0);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 foreach (int binding in new[] { 186, 222, 219, 221, 8, 17, 18, 96, 111, 121 })
                 {
-                    view.PointerDown(40, 475, 0, false, false); view.PointerUp(40, 475, 0);
+                    view.PointerDown(254, 200, 0, false, false); view.PointerUp(254, 200, 0);
                     if (!view.CapturingTestplayKey) throw new InvalidOperationException("Native binding capture did not open.");
                     var down = new Native.Message { Window = window, Id = binding is 18 or 121 ? 0x0104u : 0x0100u, WParam = (nuint)binding };
                     Native.DispatchMessage(ref down);
@@ -200,6 +202,10 @@ internal static class RenderCheck
                     Native.DispatchMessage(ref up);
                     canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 }
+                view.KeyDown(27, false, false); view.LoadProject(project); view.CloseLibrary();
+                view.OpenVolumeDialog();
+                if (!view.VolumeDialogVisible) throw new InvalidOperationException("Native volume dialog did not open.");
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 for (int channel = 0; channel < 3; channel++)
                 {
                     var bounds = view.VolumeSliderBounds(channel);
@@ -212,7 +218,11 @@ internal static class RenderCheck
                 }
                 if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
                     throw new InvalidOperationException("Native volume controls did not update percentages.");
-                view.PointerDown(280, 590, 0, false, false); view.PointerUp(280, 590, 0);
+                view.KeyDown(27, false, false);
+                if (view.VolumeDialogVisible) throw new InvalidOperationException("Native volume dialog did not close.");
+                view.OpenSettings();
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.PointerDown(40, 240, 0, false, false); view.PointerUp(40, 240, 0);
                 foreach (var phase in new[] { UpdatePhase.Unsupported, UpdatePhase.Checking, UpdatePhase.Available, UpdatePhase.Downloading, UpdatePhase.Ready, UpdatePhase.Failed })
                 {
                     view.UpdateStatus = new(phase, "0.8.2", 42);
@@ -316,8 +326,79 @@ internal static class RenderCheck
         AppLog.Write($"Playback profile complete: {reportPath}");
     }
 
+    private static void CheckDistanceFields(D2DCanvas canvas, EditorView view)
+    {
+        var original = view.CaptureProject();
+        string language = FruitsAtelier.Localization.Strings.Language;
+        try
+        {
+            foreach (string current in FruitsAtelier.Localization.Strings.AvailableLanguages)
+            {
+                FruitsAtelier.Localization.Strings.SetLanguage(current);
+                var map = new MapDocument { DurationMs = 10000, SliderMultiplier = 1.4, IsDemo = false };
+                map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 100 }, new Fruit { TimeMs = 1500, X = 240 }]);
+                view.LoadDocument(map); view.CloseLibrary();
+                canvas.Resize(1440, 900, 96);
+                Paint();
+                view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom, -2400, true);
+                Paint();
+                var field = view.PlayfieldBounds;
+                float x = field.X + 240f / 512 * field.Width;
+                float y = view.CanvasPlotBounds.Bottom - (float)((1500 - view.ViewStartMs) * view.PixelsPerMs);
+                view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint();
+                var input = view.PreviousDistanceFieldBounds ?? throw new InvalidOperationException("DS input missing.");
+                view.PointerDown(input.X + 8, input.Y + 8, 0, false, false);
+                view.PointerUp(input.X + 8, input.Y + 8, 0); Paint();
+                view.TextInput('0'); view.TextInput('.'); view.TextInput('5'); Paint();
+                if (Math.Abs(view.Document.Fruits[1].X - 170) > .001) throw new InvalidOperationException("DS preview did not move fruit before confirmation.");
+                view.KeyDown(13, false, false); Paint();
+                if (Math.Abs(view.Document.Fruits[1].X - 170) > .001) throw new InvalidOperationException("DS input did not move fruit.");
+                view.KeyDown('Z', true, false); Paint();
+                if (Math.Abs(view.Document.Fruits[1].X - 240) > .001) throw new InvalidOperationException("DS input undo failed.");
+            }
+        }
+        finally
+        {
+            FruitsAtelier.Localization.Strings.SetLanguage(language);
+            view.LoadProject(original); view.CloseLibrary();
+        }
+        void Paint() { canvas.Begin(); view.Render(canvas, 1440, 900); canvas.End(); }
+    }
+
+    private static void CheckWorkspaceSave(D2DCanvas canvas, EditorView view)
+    {
+        var original = view.CaptureProject();
+        string songs = view.LibrarySettings.Songs, language = FruitsAtelier.Localization.Strings.Language;
+        try
+        {
+            view.LibrarySettings.Songs = Path.GetFullPath("artifacts/render-save-songs");
+            foreach (string locale in new[] { "en", "zh-CN" })
+            foreach (var size in new[] { (980, 620), (1440, 900) })
+            {
+                FruitsAtelier.Localization.Strings.SetLanguage(locale);
+                view.NewProject(); view.CloseLibrary(); view.SaveCurrentDifficulty();
+                if (!view.DiscardConfirmationVisible || view.IsDirty || view.WorkspaceSession is null)
+                    throw new InvalidOperationException("Workspace save did not precede the Songs export offer.");
+                canvas.Resize(size.Item1, size.Item2, 96);
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+                view.KeyDown(27, false, false);
+                if (view.ExportVisible || view.DiscardConfirmationVisible)
+                    throw new InvalidOperationException("Dismissing the Songs offer did not finish the workspace save.");
+            }
+        }
+        finally
+        {
+            view.LibrarySettings.Songs = songs;
+            FruitsAtelier.Localization.Strings.SetLanguage(language);
+            view.LoadProject(original); view.CloseLibrary();
+        }
+    }
+
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        CheckWorkspaceSave(canvas, view);
+        LibraryDropCheck.Run(view, window);
+        CheckDistanceFields(canvas, view);
         string thumbnailPath = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png");
         var thumbnailWait = Stopwatch.StartNew();
         bool thumbnailReady = false;
@@ -337,6 +418,15 @@ internal static class RenderCheck
         {
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            if (!view.MovementAnalysisEnabled)
+            {
+                view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0);
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+                view.PointerDown(235, 329, 0, false, false);
+                view.PointerUp(235, 329, 0);
+                if (!view.MovementAnalysisEnabled) throw new InvalidOperationException("Movement analysis menu did not enable connections.");
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            }
             view.SetModifiers(true, false);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             var spacing = view.SnapSliderBounds;

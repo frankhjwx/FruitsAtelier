@@ -139,11 +139,11 @@ public sealed partial class EditorView
         }
         nextResourceCheck = DateTime.UtcNow.AddSeconds(3);
     }
-    public bool SaveWorkspace(bool copy = false)
+    public bool SaveWorkspace()
     {
         if (!PrepareFileOperation()) return false;
         var project = CaptureProject();
-        if (WorkspaceSession is null || copy) WorkspaceSession = WorkspaceProject.Create(LibrarySettings.Workspace, project, LibrarySettings.Songs);
+        if (WorkspaceSession is null) WorkspaceSession = WorkspaceProject.Create(LibrarySettings.Workspace, project, LibrarySettings.Songs);
         else WorkspaceProject.Save(WorkspaceSession, project);
         MarkSaved(); CheckWorkspaceResources();
         libraryProjectsNeedReindex = true; QueueLibrarySearch();
@@ -152,9 +152,20 @@ public sealed partial class EditorView
     }
     public bool CurrentDifficultyHasExport => WorkspaceSession?.Manifest.Difficulties
         .Any(d => d.Id == difficulties[activeDifficulty].Id && d.ExportTarget is not null && d.ExportHash is not null) == true;
+    public bool ProjectInSongs => !string.IsNullOrWhiteSpace(LibrarySettings.Songs) && (WorkspaceSession is { } session
+        ? WorkspaceProject.HasExistingSongsFile(session.Manifest, LibrarySettings.Songs)
+        : Document.SourcePath is { } path && WorkspaceProject.Within(LibrarySettings.Songs, path) && File.Exists(path));
     public void SaveCurrentDifficulty()
     {
-        if (!PrepareFileOperation()) return;
+        if (DiscardConfirmationVisible || ExportVisible || !PrepareFileOperation()) return;
+        if (string.IsNullOrWhiteSpace(LibrarySettings.Songs)) { SaveWorkspace(); return; }
+        if (!ProjectInSongs)
+        {
+            if (!SaveWorkspace()) return;
+            ShowDiscardConfirmation(answer => { if (answer == 6) ShowWorkspaceExport(); });
+            offerSongsExport = true;
+            return;
+        }
         var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id);
         if (CurrentDifficultyHasExport)
             RequestWorkspaceExport?.Invoke(true, CurrentDifficultyName);
@@ -312,9 +323,10 @@ public sealed partial class EditorView
         libraryCards.Clear();
         libraryScrollTrack = libraryDiffTrack = default;
         c.Fill(new(0, 0, width, height), Background);
+        if (librarySettingsOpen) { DrawSettings(c); return; }
         DrawHeader(c);
         c.Text(L.Get(resourcePage ? "library.referenceErrors" : exportPage ? "library.export" : "library.title"), 109, 11, 13, Foreground, width - 535, true);
-        Button(c, new(width - 414, 6, 110, 28), L.Get("library.settings"), () => { draftWorkspace = LibrarySettings.Workspace; draftOsuRoot = LibrarySettings.OsuRoot; draftDefaultSkin = LibrarySettings.DefaultSkin ?? ""; draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey]; bindingCapture = -1; librarySettingsOpen = !librarySettingsOpen; updatesPage = false; exportPage = resourcePage = false; }, librarySettingsOpen);
+        Button(c, new(width - 414, 6, 110, 28), L.Get("library.settings"), OpenSettings);
         DrawLanguageButton(c, HeaderLanguageBounds);
         if (HasEditorProject) Button(c, HeaderNavigationBounds, L.Get("library.editor"), CloseLibrary);
         if (updatesPage) { DrawUpdates(c); return; }
@@ -336,38 +348,12 @@ public sealed partial class EditorView
             }
             c.Unclip(); return;
         }
-        if (librarySettingsOpen)
-        {
-            c.Text(L.Get("library.settingsDescription"), 32, 98, 15, Muted, width - 64);
-            LibraryTextField(c, 0, L.Get("library.workspace"), draftWorkspace, 158);
-            LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, 256);
-            LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, 354);
-            DrawTestplayBindings(c);
-            DrawVolumeControls(c);
-            DrawUpdateSettingsButton(c);
-            Button(c, new(32, 574, 200, 32), L.Get("library.apply"), () =>
-            {
-                try
-                {
-                    var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
-                    settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
-                    settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;
-                    if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
-                    settings.Save();
-                    SaveLibraryMemory(); LibrarySettings = settings; InitializeSkin(); librarySettingsOpen = false; updatesPage = false; libraryField = -1; bindingCapture = -1;
-                    libraryRatings.Clear(); libraryBrowser?.Retire(); libraryBrowser = null; libraryDatabase = null; libraryResultsReady = false;
-                    LoadLibraryMemory(); StartLibraryScan();
-                }
-                catch (Exception e) { libraryError = e.Message; }
-            }, enabled: scanTask is null && searchTask is null);
-            c.Text(libraryError, 32, 560, 14, Error, width - 64);
-            return;
-        }
         c.Fill(new(0, HeaderHeight, 190, height - HeaderHeight), Panel);
         Button(c, new(16, 88, 158, 36), L.Get("library.all"), () => SwitchLibraryCategory(false), !libraryProjectsOnly);
         Button(c, new(16, 134, 158, 36), L.Get("library.projects"), () => SwitchLibraryCategory(true), libraryProjectsOnly);
         var noticeLines = libraryNotice.Split('\n');
         for (int i = 0; i < noticeLines.Length; i++) c.Text(noticeLines[i], 16, height - 96 + i * 19, 12, Muted, 158);
+        if (SkinName is { } skinName) c.Text(L.Get("skin.selector", skinName), 16, height - 126, 12, Muted, 158);
         float listWidth = width - 558;
         var queryRect = new Rect(214, 84, width - 238, 40);
         c.Fill(queryRect, Surface, 6); c.Stroke(queryRect, libraryField == 2 ? Accent : Grid, radius: 6);
@@ -399,14 +385,28 @@ public sealed partial class EditorView
             var map = group.Map;
             libraryCards.Add((new(rect.X, Math.Max(rect.Y, libraryListBounds.Y), rect.Width,
                 Math.Max(0, Math.Min(rect.Bottom, libraryListBounds.Bottom) - Math.Max(rect.Y, libraryListBounds.Y))), map));
-            c.Fill(rect, selectedLibraryGroup == group.Key ? 0x304445u : Surface, 6);
+            bool outsideSongs = group.InSongs == false;
+            bool selected = selectedLibraryGroup == group.Key;
+            uint cardColour = outsideSongs ? 0x303449u : selected ? 0x304445u : Surface;
+            c.Fill(rect, cardColour, 6);
+            if (outsideSongs && selected) c.Stroke(rect, Accent, 2, 6);
             c.Clip(rect);
             if (map.Background.Length > 0) c.Thumbnail(map.Background, new(224, y + 9, 76, 60));
-            string title = string.IsNullOrWhiteSpace(map.TitleUnicode) ? map.Title : map.TitleUnicode;
+            string title = DisplayMetadata(map.Title, map.TitleUnicode);
             c.Text(title, 314, y + 10, 16, Foreground, listWidth - 116, true);
-            string artist = map.ArtistUnicode.Length > 0 ? map.ArtistUnicode : map.Artist;
+            string artist = DisplayMetadata(map.Artist, map.ArtistUnicode);
             c.Text(map.Creator.Length > 0 ? L.Get("library.artistMapper", artist, map.Creator) : artist, 314, y + 33, 12, Muted, listWidth - 116);
-            c.Text(L.Get(libraryProjectsOnly ? "library.projectCount" : "library.diffCount", group.Count), 314, y + 53, 11, Accent, listWidth - 116);
+            float countWidth = listWidth - 116;
+            if (outsideSongs)
+            {
+                string presence = L.Get("library.notInSongs");
+                float badgeWidth = c.MeasureText(presence, 11) + 16;
+                var badge = new Rect(rect.Right - badgeWidth - 12, y + 49, badgeWidth, 22);
+                c.Fill(badge, 0x41465Fu, 4);
+                c.Text(presence, badge.X + 8, y + 53, 11, Foreground, badgeWidth - 16);
+                countWidth = Math.Max(0, badge.X - 324);
+            }
+            c.Text(L.Get(libraryProjectsOnly ? "library.projectCount" : "library.diffCount", group.Count), 314, y + 53, 11, Accent, countWidth);
             c.Unclip();
         }
         c.Unclip();
@@ -414,14 +414,15 @@ public sealed partial class EditorView
         DrawLibraryDetails(c, width - 320);
         if (LibrarySetCount == 0) c.Text(L.Get(string.IsNullOrWhiteSpace(LibrarySettings.Songs) && !libraryProjectsOnly ? "library.unboundEmpty" : "library.empty"), 226, 204, 15, Muted, listWidth - 24);
         if (libraryError.Length > 0) c.Text(libraryError.Replace('\n', ' '), 214, height - 34, 12, Error, width - 238);
+        else c.Text(L.Get("library.dropHint"), 214, height - 34, 12, Muted, width - 238);
     }
     private void DrawLibraryDetails(ICanvas c, float x)
     {
         var group = libraryBrowser?.Selected;
         if (group is null) return;
         var map = group.Map;
-        c.Text(map.Title, x, 170, 15, Foreground, 288, true);
-        c.Text(map.Artist + " · " + map.Creator, x, 201, 12, Muted, 288);
+        c.Text(DisplayMetadata(map.Title, map.TitleUnicode), x, 170, 15, Foreground, 288, true);
+        c.Text(DisplayMetadata(map.Artist, map.ArtistUnicode) + " · " + map.Creator, x, 201, 12, Muted, 288);
         c.Text(map.Tags, x, 228, 12, Muted, 288);
         c.Text(map.Directory, x, 250, 11, Muted, 288);
         Button(c, new(x, 272, 288, 38), L.Get(map.ProjectPath is null ? "library.start" : "library.continue"), () => OpenSelectedLibraryMap(map));
@@ -458,10 +459,11 @@ public sealed partial class EditorView
     }
     private void LibraryTextField(ICanvas c, int index, string label, string value, float y)
     {
-        c.Text(label, 32, y, 14, Foreground, width - 64, true);
-        var rect = new Rect(32, y + 28, width - (index < 2 || index == 4 ? 216 : 64), 42);
+        float x = librarySettingsOpen ? SettingsContentX : 32;
+        c.Text(label, x, y, 14, Foreground, width - x - 32, true);
+        var rect = new Rect(x, y + 28, width - x - (index < 2 || index == 4 ? 184 : 32), 42);
         c.Fill(rect, Surface, 5); c.Stroke(rect, libraryField == index ? Accent : Grid, radius: 5);
-        DrawInputText(c, new(44, y + 40, rect.Width - 24, 20), value, 14, libraryField == index, libraryReplace);
+        DrawInputText(c, new(x + 12, y + 40, rect.Width - 24, 20), value, 14, libraryField == index, libraryReplace);
         hits.Add(new(rect, () => { libraryField = index; libraryReplace = false; }, true));
         if (index == 4) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestDefaultSkinArchive?.Invoke());
         if (index < 2) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestLibraryFolder?.Invoke(index == 0));
@@ -480,9 +482,9 @@ public sealed partial class EditorView
     {
         if (updatesPage) { if (key == 27) updatesPage = false; return; }
         if (key == 27) FinishVolumeDrag();
-        if (key == 27) { if (contextItems.Count > 0) contextItems.Clear(); else if (libraryField >= 0) libraryField = -1; else { librarySettingsOpen = resourcePage = false; } return; }
+        if (key == 27) { if (contextItems.Count > 0) contextItems.Clear(); else if (libraryField >= 0) libraryField = -1; else if (librarySettingsOpen) CloseSettings(); else resourcePage = false; return; }
         if (key == 116) { StartLibraryScan(); return; }
-        if (ctrl && key == 70) { libraryField = 2; libraryReplace = true; return; }
+        if (!librarySettingsOpen && ctrl && key == 70) { libraryField = 2; libraryReplace = true; return; }
         if (key == 13 && libraryField < 0 && !librarySettingsOpen && !resourcePage && libraryBrowser?.Selected?.Map is { } map)
         { OpenSelectedLibraryMap(map); return; }
         if (libraryField < 0) return;

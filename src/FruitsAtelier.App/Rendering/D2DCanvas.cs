@@ -153,11 +153,11 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     }
 
     private static DRect Convert(Rect r) => new(r.X, r.Y, Math.Max(0, r.Width), Math.Max(0, r.Height));
-    public void Fill(Rect r, uint color, float radius = 0)
+    public void Fill(Rect r, uint color, float radius = 0, float opacity = 1)
     {
         if (r.Width <= 0 || r.Height <= 0) return;
-        if (radius > 0) context!.FillRoundedRectangle(new RoundedRectangle(new System.Drawing.RectangleF(r.X, r.Y, r.Width, r.Height), radius, radius), Brush(color));
-        else context!.FillRectangle(Convert(r), Brush(color));
+        if (radius > 0) context!.FillRoundedRectangle(new RoundedRectangle(new System.Drawing.RectangleF(r.X, r.Y, r.Width, r.Height), radius, radius), Brush(color, opacity));
+        else context!.FillRectangle(Convert(r), Brush(color, opacity));
     }
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0)
     {

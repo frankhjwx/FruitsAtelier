@@ -72,6 +72,7 @@ internal sealed partial class EditorWindow : IDisposable
             work.Left + (work.Right - work.Left - width) / 2, work.Top + (work.Bottom - work.Top - height) / 2,
             width, height, 0, 0, instance, 0);
         if (hwnd == 0) throw new Win32Exception();
+        Native.DragAcceptFiles(hwnd, true);
         dpi = Native.GetDpiForWindow(hwnd);
         int dark = 1;
         Native.DwmSetWindowAttribute(hwnd, 20, ref dark, 4);
@@ -142,7 +143,7 @@ internal sealed partial class EditorWindow : IDisposable
         if (!view.IsDirty) { FileOperation(continuation); return; }
         view.ShowDiscardConfirmation(answer => FileOperation(() =>
         {
-            if (answer == 7 || answer == 6 && SaveProject(false)) continuation();
+            if (answer == 7 || answer == 6 && SaveProject()) continuation();
         }));
         Invalidate();
     }
@@ -206,6 +207,10 @@ internal sealed partial class EditorWindow : IDisposable
         float y = (short)(((long)lParam >> 16) & 0xFFFF) * 96f / dpi;
         switch (message)
         {
+            case 0x0233: // WM_DROPFILES
+                var dropped = Native.TakeDroppedFiles((nint)wParam);
+                if (!NativeModalScope.Active) FileOperation(() => view.DropLibraryFiles(dropped));
+                return 0;
             case 0x000F: // WM_PAINT
                 Native.BeginPaint(window, out var paint);
                 bool ownsPaint = false;

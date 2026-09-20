@@ -62,7 +62,11 @@ internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICa
     private readonly Stack<DrawingContext.PushedState> clips = [];
     private static Avalonia.Rect Convert(R r) => new(r.X, r.Y, Math.Max(0, r.Width), Math.Max(0, r.Height));
     private static SolidColorBrush Brush(uint c) => new(Color.FromRgb((byte)(c >> 16), (byte)(c >> 8), (byte)c));
-    public void Fill(R r, uint color, float radius = 0) => context.DrawRectangle(Brush(color), null, Convert(r), radius, radius);
+    public void Fill(R r, uint color, float radius = 0, float opacity = 1)
+    {
+        using var state = context.PushOpacity(opacity);
+        context.DrawRectangle(Brush(color), null, Convert(r), radius, radius);
+    }
     public void Stroke(R r, uint color, float width = 1, float radius = 0) => context.DrawRectangle(null, new Pen(Brush(color), width), Convert(r), radius, radius);
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)
     {

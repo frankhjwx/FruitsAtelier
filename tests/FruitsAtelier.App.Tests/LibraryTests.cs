@@ -72,9 +72,9 @@ internal static class LibraryTests
         Check(view.SaveWorkspace(), "new project saves without Songs");
         string directory = view.WorkspaceSession!.Directory;
         Check(WorkspaceProject.Open(directory).Manifest.SongsRoot is null, "unbound manifest has no invented path");
-        Check(view.SaveWorkspace(true) && view.WorkspaceSession!.Directory != directory, "save as without Songs");
+        Check(view.SaveWorkspace() && view.WorkspaceSession!.Directory == directory, "repeated save keeps the same workspace project");
         var db = new LibraryDatabase(workspace, ""); db.Scan();
-        Check(db.Search("", true).Count == 2, "unbound project library remains available");
+        Check(db.Search("", true).Count == 1, "unbound project library remains available");
         for (int i = 0; i < 3; i++)
         {
             view.ShowLibrary(); canvas.Clear(); view.Render(canvas, 980, 620);

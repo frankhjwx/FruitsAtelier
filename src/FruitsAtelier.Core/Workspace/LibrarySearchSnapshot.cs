@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace FruitsAtelier.Core;
 
-public sealed record LibrarySetRow(int Index, string Key, LibraryMap Map, int Count);
+public sealed record LibrarySetRow(int Index, string Key, LibraryMap Map, int Count, bool? InSongs = null);
 
 // A disk-backed result index keeps random scrolling independent of library size.
 // Callers serialize access on a worker; no query or disposal belongs on the UI thread.
@@ -12,10 +12,12 @@ public sealed class LibrarySearchSnapshot : IDisposable
     private readonly SqliteConnection db;
     private readonly string catalogPath;
     private readonly bool projectsOnly;
+    private readonly string songs;
     public int Count { get; }
     internal LibrarySearchSnapshot(SqliteConnection connection, string songs, string query, bool projectsOnly)
     {
         this.projectsOnly = projectsOnly;
+        this.songs = songs;
         catalogPath = connection.DataSource;
         connection.Dispose();
         db = new SqliteConnection("Data Source=:memory:;Pooling=False");
@@ -77,12 +79,20 @@ public sealed class LibrarySearchSnapshot : IDisposable
             var map = reader.IsDBNull(6) ? new LibraryMap(reader.GetString(2), reader.GetString(1), reader.GetString(3), "", "", "", "", "", "", "", "", "", project)
                 : JsonSerializer.Deserialize<LibraryMap>(reader.GetString(6))! with { ProjectPath = project };
             int difficultyCount = reader.GetInt32(5);
-            if (projectsOnly && project is not null)
-                lock (WorkspaceProject.Gate) difficultyCount = WorkspaceProject.ReadManifest(project).Difficulties.Count;
-            rows.Add(new(reader.GetInt32(0), reader.GetString(1), map, difficultyCount));
+            WorkspaceManifest? manifest = null;
+            if (project is not null)
+                lock (WorkspaceProject.Gate) manifest = WorkspaceProject.ReadManifest(project);
+            if (projectsOnly && manifest is not null) difficultyCount = manifest.Difficulties.Count;
+            bool? inSongs = string.IsNullOrWhiteSpace(songs) ? null
+                : manifest is not null
+                    ? WorkspaceProject.HasExistingSongsFile(manifest, songs)
+                    : ExistsInSongs(map.Path);
+            rows.Add(new(reader.GetInt32(0), reader.GetString(1), map, difficultyCount, inSongs));
         }
         return rows;
     }
+    private bool ExistsInSongs(string? path)
+        => path is not null && WorkspaceProject.Within(songs, path) && File.Exists(path);
     public IReadOnlyList<LibraryMap> Difficulties(LibrarySetRow set, int start, int count = 64)
     {
         using var attachment = Attach();

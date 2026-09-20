@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using FruitsAtelier.App.Editor;
 
 namespace FruitsAtelier.Mac;
@@ -36,6 +37,18 @@ internal sealed class EditorControl : Control, IDisposable
     public EditorControl()
     {
         Focusable = true; ClipToBounds = true;
+        DragDrop.SetAllowDrop(this, true);
+        DragDrop.AddDragOverHandler(this, (_, e) =>
+        {
+            e.DragEffects = View.CanDropLibraryFiles && DroppedPaths(e).Any(EditorView.IsLibraryArchive)
+                ? DragDropEffects.Copy : DragDropEffects.None;
+            e.Handled = true;
+        });
+        DragDrop.AddDropHandler(this, (_, e) =>
+        {
+            View.DropLibraryFiles(DroppedPaths(e));
+            e.Handled = true; Refresh();
+        });
         View.RequestPasteTime = async () =>
         {
             int session = View.TimeJumpSession;
@@ -61,6 +74,9 @@ internal sealed class EditorControl : Control, IDisposable
         if (View.IsTestplaying || View.SliderHoldNeedsRedraw)
             TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.SliderHoldNeedsRedraw) InvalidateVisual(); });
     }
+    private static IEnumerable<string> DroppedPaths(DragEventArgs e)
+        => e.DataTransfer.TryGetFiles()?.OfType<IStorageFile>().Select(f => f.TryGetLocalPath()).OfType<string>() ?? [];
+
     internal void Refresh() { InvalidateVisual(); Changed?.Invoke(); }
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {

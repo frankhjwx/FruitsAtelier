@@ -60,6 +60,7 @@ public sealed partial class EditorView
     private Tool cachedPlacementTool;
     private bool placementCtrl, cachedPlacementCtrl;
     private ConvertedCatchObject? placementGhost;
+    private IReadOnlyList<ConvertedCatchObject>? placementMovementObjects;
     private HashSet<(Guid SourceId, int EventIndex)> placementHyperdash = [];
 
     private void UpdatePlacementHyperdash()
@@ -67,7 +68,7 @@ public sealed partial class EditorView
         var point = PlacementGhostPoint();
         if (point is null)
         {
-            cachedPlacementPoint = null; placementGhost = null;
+            cachedPlacementPoint = null; placementGhost = null; placementMovementObjects = null;
             placementHyperdash = hyperdashObjects;
             return;
         }
@@ -75,7 +76,7 @@ public sealed partial class EditorView
             && cachedPlacementTool == tool && cachedPlacementCtrl == placementCtrl) return;
         placementSource = conversion; cachedPlacementPoint = point;
         cachedPlacementTool = tool; cachedPlacementCtrl = placementCtrl;
-        placementGhost = null; placementHyperdash = hyperdashObjects;
+        placementGhost = null; placementMovementObjects = null; placementHyperdash = hyperdashObjects;
         // Conversion reads its inputs; clone only the track whose uncommitted endpoint needs editing.
         var candidate = new MapDocument
         {
@@ -102,6 +103,7 @@ public sealed partial class EditorView
         candidate.Tracks.RemoveAll(t => t.Nodes.Count < 2);
         var preview = CatchStreamConverter.Convert(candidate, compensateTinyDroplets, placementConversionCache);
         if (!preview.Success) return;
+        placementMovementObjects = preview.Objects;
         placementGhost = preview.Objects.LastOrDefault(o => o.SourceId == source && o.Kind == CatchObjectKind.Fruit);
         placementHyperdash = HyperDashCalculator.GetHyperDashStarts(preview.Objects, Document.CircleSize);
     }

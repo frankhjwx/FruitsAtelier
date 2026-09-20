@@ -4,6 +4,7 @@ var tests = new (string Name, Action Run)[]
 {
     ("Catch stars match 21 official algorithm fixtures", CatchDifficultyTests.OfficialValues),
     ("Catch star calculation respects object participation and input boundaries", CatchDifficultyTests.Participation),
+    ("Movement ranges distinguish standing, walking, dash, hyperdash and zero-time gaps", MovementRanges),
     ("CS scales nominal fruit, default droplets and catcher independently", Sizes),
     ("Static bananas use the arrival scale across the CS range", BananaSizes),
     ("Hyperdash uses full catcher width and marks the departure object", Departure),
@@ -27,6 +28,34 @@ foreach (var test in tests)
 }
 Console.WriteLine($"{tests.Length - failures}/{tests.Length} gameplay tests passed.");
 return failures == 0 ? 0 : 1;
+
+static void MovementRanges()
+{
+    foreach (var (distance, mode) in new[] { (0d, CatchMovementMode.Stand), (42.7d, CatchMovementMode.Stand), (42.701d, CatchMovementMode.Walk), (80d, CatchMovementMode.Walk), (120d, CatchMovementMode.Dash), (160d, CatchMovementMode.HyperDash) })
+    {
+        var range = HyperDashCalculator.Calculate([Obj(0, 0), Obj(100, distance)], 5)[0].Movement!.Value;
+        True(range.Mode == mode, "Wrong movement classification");
+        Near(92.7, range.WalkLimit);
+        Near(100 - 1000f / 60f / 4 + 53.375, range.DashLimit);
+    }
+    True(HyperDashCalculator.Calculate([Obj(100, 0), Obj(100, 200)], 5)[0].Movement is null, "Zero-time interval must be unavailable");
+    foreach (double cs in new[] { 0d, 5d, 10d })
+    foreach (double time in new[] { 1d, 100d, 1000d })
+    foreach (int direction in new[] { -1, 1 })
+    {
+        double range = CatchSize.CatchWidth(cs) / 2;
+        var standing = HyperDashCalculator.Calculate([Obj(0, 256), Obj(time, 256 + direction * (range - .001))], cs)[0].Movement!.Value;
+        True(standing.Mode == CatchMovementMode.Stand, "Stand must depend on CS width, not time or direction");
+        Near(range, standing.StandLimit);
+        var moving = HyperDashCalculator.Calculate([Obj(0, 256), Obj(time, 256 + direction * (range + .001))], cs)[0].Movement!.Value;
+        True(moving.Mode != CatchMovementMode.Stand, "Stand included a target outside catching range");
+    }
+    var tight = HyperDashCalculator.Calculate([Obj(0, 0), Obj(100, 149), Obj(101, 160)], 5);
+    True(tight[1].IsHyperDash && tight[1].Movement!.Value.Mode == CatchMovementMode.Stand,
+        "Centre-start Stand must take precedence without changing official red flags");
+    var prefix = HyperDashCalculator.Calculate([Obj(0, 0), Obj(100, 140), Obj(200, 246)], 5);
+    True(prefix[1].Movement!.Value.Mode == CatchMovementMode.HyperDash, "Movement lost preceding excess context");
+}
 
 static void Sizes()
 {

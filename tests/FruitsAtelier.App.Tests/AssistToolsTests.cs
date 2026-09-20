@@ -12,6 +12,84 @@ internal static class AssistToolsTests
         map.Fruits.Add(new Fruit { TimeMs = 2000, X = 310 });
         return map;
     }
+    public static void MovementAnalysis()
+    {
+        var ui = new Ui();
+        var map = new MapDocument { DurationMs = 10000, CircleSize = 5, IsDemo = false };
+        foreach (var (time, x) in new[] { (1000, 100), (1125, 120), (1250, 220), (1375, 370), (1500, 70) })
+            map.Fruits.Add(new Fruit { TimeMs = time, X = x });
+        ui.LoadDocument(map);
+        var original = ui.View.Document.DeepClone();
+        Check(!ui.View.MovementAnalysisEnabled, "Analysis must start disabled");
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            Strings.SetLanguage(language); ui.Paint();
+            ui.ClickText(Strings.Get("movement.analysis"));
+            Check(ui.View.MovementAnalysisEnabled, "Canvas toolbar did not enable analysis");
+            foreach (uint color in new uint[] { 0xC0C0C0, 0x63B99D, 0xD6B365, 0xCE7683 })
+                Check(ui.Canvas.Lines.Any(l => l.Color == color && l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001), "Missing movement connection colour");
+            ui.ClickText(Strings.Get("movement.analysis"));
+            Check(!ui.View.MovementAnalysisEnabled, "Canvas toolbar did not disable analysis");
+            Check(!ui.Canvas.Lines.Any(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001), "Disabled analysis retained lines");
+            Check(original.ContentEquals(ui.View.Document), "Display toggle edited content");
+        }
+        ui = new Ui(); ui.LoadDocument(map); ui.ClickText(Strings.Get("movement.analysis"));
+        int ordinaryConnections = ui.Canvas.Lines.Count(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001);
+        ui.View.Document.BananaShowers.Add(new BananaShower { TimeMs = 1260, EndTimeMs = 1360 }); ui.Paint();
+        Check(ui.Canvas.Lines.Count(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001) == ordinaryConnections - 1,
+            "Analysis connected fruits across a banana shower");
+        ui.View.Document.BananaShowers.Clear(); ui.Paint();
+        Check(ui.Canvas.Lines.Count(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001) == ordinaryConnections,
+            "Removing a shower did not restore its connection");
+        ui = new Ui(); ui.LoadDocument(DemoMap.Create());
+        ui.ClickText(Strings.Get("movement.analysis"));
+        var curves = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasPlotBounds && o.Segment is { Color: 0xAB9DF2 }).ToArray();
+        var connections = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasPlotBounds && o.Segment is { Width: 4, Opacity: .65f }).ToArray();
+        Check(curves.Length > 0 && connections.Length > 0 && curves.Max(o => o.Order) < connections.Min(o => o.Order),
+            "Movement connections must draw above curves");
+        Strings.SetLanguage("en");
+    }
+
+    public static void MovementOverlay()
+    {
+        var ui = new Ui(); var map = Map();
+        ui.LoadDocument(map);
+        var original = ui.View.Document.DeepClone();
+        var plot = ui.Plot;
+        ui.Key('F'); ui.MoveMap(1500, 240);
+        Check(ui.View.MovementReadout.Previous?.Mode == CatchMovementMode.Walk, "Placement did not show incoming walk");
+        Check(ui.View.MovementOverlayBounds is not null, "Placement panel missing");
+        Check(ui.Plot == plot, "Overlay resized the playfield");
+        Check(original.ContentEquals(ui.View.Document), "Hover changed content");
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            Strings.SetLanguage(language); ui.MoveMap(1500, 120);
+            Check(ui.View.MovementReadout.Previous?.Mode == CatchMovementMode.Stand, "Placement did not show Stand");
+            Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("movement.previous", "Stand")), "Stand label missing");
+            Check(ui.Canvas.Fills.Any(f => f.Color == 0xC0C0C0 && f.Bounds.Width > 0), "Stand segment missing");
+            ui.MoveMap(1500, 300);
+            Check(ui.View.MovementReadout.Next?.Mode == CatchMovementMode.Stand, "Outgoing Stand missing");
+        }
+        ui.Key('1'); ui.ClickMap(2000, 310);
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            Strings.SetLanguage(language); ui.Resize(980, 620);
+            var panel = ui.View.MovementOverlayBounds!.Value;
+            Check(panel.Bottom < ui.View.CanvasPlotBounds.Bottom && panel.X >= ui.View.CanvasPlotBounds.X, "Panel escaped canvas");
+            Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("movement.previous", "Walk")), "Localized movement label missing");
+        }
+        ui = new Ui(); ui.LoadDocument(Map()); original = ui.View.Document.DeepClone(); ui.Key('F'); ui.MoveMap(1500, 240);
+        ui.View.PointerMove(10, 10, false, false); ui.Paint();
+        Check(ui.View.MovementOverlayBounds is null, "Hidden ghost retained panel");
+        ui.Key('1'); ui.ClickMap(2000, 310);
+        Check(ui.View.MovementReadout.Previous is not null && ui.View.MovementReadout.Next is null, "Selected fruit neighbours are wrong");
+        ui.DownMap(2000, 310); ui.MoveMap(1125, 480); ui.UpMap(1125, 480);
+        Check(ui.View.MovementReadout.Previous?.Mode == CatchMovementMode.HyperDash, "Dragged fruit did not update movement");
+        ui.Key('Z', ctrl: true);
+        Check(original.ContentEquals(ui.View.Document), "Drag undo did not restore document");
+        Strings.SetLanguage("en");
+    }
+
     public static void SpacingAndPlacement()
     {
         var ui = new Ui(); ui.LoadDocument(Map()); ui.Key('F');

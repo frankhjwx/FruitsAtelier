@@ -14,8 +14,9 @@ public sealed partial class EditorView
         {
             if (!HasEditorProject) return FruitsAtelier.Localization.Strings.Get("window.initialTitle") + " " + DisplayVersion;
             string Metadata(string key, string fallback) => FruitsAtelier.Core.OsuBeatmapReader.Setting(Document, "Metadata", key) is { Length: > 0 } value ? value : fallback;
-            string artist = Metadata("ArtistUnicode", Metadata("Artist", ""));
-            string title = Metadata("TitleUnicode", Metadata("Title", Document.Name));
+            string artist = DisplayMetadata(Metadata("Artist", ""), Metadata("ArtistUnicode", ""));
+            string title = DisplayMetadata(Metadata("Title", ""), Metadata("TitleUnicode", ""));
+            if (string.IsNullOrWhiteSpace(title)) title = Document.Name;
             string mapper = Metadata("Creator", "");
             string name = (artist.Length > 0 ? artist + " - " : "") + title
                 + (mapper.Length > 0 ? " (" + mapper + ")" : "") + " [" + CurrentDifficultyName + "]";
@@ -23,6 +24,10 @@ public sealed partial class EditorView
         }
     }
     private const float HeaderHeight = 40;
+    private string DisplayMetadata(string romanised, string unicode)
+        => LibrarySettings.RomanisedMetadata
+            ? (string.IsNullOrWhiteSpace(romanised) ? unicode : romanised)
+            : (string.IsNullOrWhiteSpace(unicode) ? romanised : unicode);
     private Rect HeaderLanguageBounds => new(width - 298, 6, 198, 28);
     private Rect HeaderNavigationBounds => new(width - 94, 6, 82, 28);
 

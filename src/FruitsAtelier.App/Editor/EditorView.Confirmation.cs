@@ -6,12 +6,14 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private Action<int>? discardConfirmation;
+    private bool offerSongsExport;
     private IReadOnlyList<FruitsAtelier.Core.LibraryMap>? additionalDifficulties;
     public bool DiscardConfirmationVisible => discardConfirmation is not null;
 
     public void ShowDiscardConfirmation(Action<int> answer)
     {
         if (DiscardConfirmationVisible) return;
+        offerSongsExport = false;
         additionalDifficulties = null;
         CancelInteraction(); menu = -1; contextItems.Clear();
         discardConfirmation = answer;
@@ -22,6 +24,7 @@ public sealed partial class EditorView
     {
         var callback = discardConfirmation;
         discardConfirmation = null;
+        offerSongsExport = false;
         additionalDifficulties = null;
         hits.Clear();
         callback?.Invoke(answer);
@@ -31,6 +34,18 @@ public sealed partial class EditorView
     {
         if (!DiscardConfirmationVisible) return;
         hits.Clear(); fields.Clear();
+        if (offerSongsExport)
+        {
+            float left = (width - 600) / 2, top = (height - 210) / 2;
+            c.Fill(new(left, top, 600, 210), Panel, 8);
+            c.Stroke(new(left, top, 600, 210), Accent, 2, 8);
+            c.Text(L.Get("library.savedWorkspaceTitle"), left + 24, top + 24, 20, Foreground, 552, true);
+            c.Text(L.Get("library.offerSongsExport"), left + 24, top + 68, 14, Foreground, 552);
+            c.Text(L.Get("library.offerSongsExportHelp"), left + 24, top + 94, 14, Muted, 552);
+            Button(c, new(left + 24, top + 146, 264, 40), L.Get("library.workspaceOnly"), () => AnswerDiscard(2));
+            Button(c, new(left + 312, top + 146, 264, 40), L.Get("library.exportToSongs"), () => AnswerDiscard(6), true);
+            return;
+        }
         if (additionalDifficulties is { } additions)
         {
             float boxHeight = 154 + Math.Min(8, additions.Count) * 24;

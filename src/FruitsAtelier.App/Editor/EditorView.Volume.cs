@@ -8,8 +8,37 @@ public sealed partial class EditorView
     public Action<float, float>? RequestAudioVolume { get; set; }
     public Action? RequestAudioPreference { get; set; }
     private int volumeDrag = -1;
+    public bool VolumeDialogVisible { get; private set; }
+    private Rect VolumeDialogBounds => new((width - Math.Min(540, width - 32)) / 2, (height - 260) / 2, Math.Min(540, width - 32), 260);
     public Rect VolumeSliderBounds(int channel)
-        => new(32 + channel * Math.Min(220, (width - 64) / 3), 535, Math.Min(220, (width - 64) / 3) - 24, 24);
+        => new(VolumeDialogBounds.X + 24, VolumeDialogBounds.Y + 84 + channel * 64, VolumeDialogBounds.Width - 48, 24);
+
+    internal void OpenVolumeDialog()
+    {
+        if (LibraryVisible || IsTestplaying || !PrepareFileOperation()) return;
+        menu = -1; contextItems.Clear(); languageMenuOpen = false;
+        VolumeDialogVisible = true;
+        hits.Clear(); fields.Clear();
+    }
+
+    private void CloseVolumeDialog()
+    {
+        FinishVolumeDrag();
+        VolumeDialogVisible = false;
+        hits.Clear();
+    }
+
+    private void DrawVolumeDialog(ICanvas c)
+    {
+        if (!VolumeDialogVisible) return;
+        hits.Clear(); fields.Clear();
+        var r = VolumeDialogBounds;
+        c.Fill(new(r.X + 4, r.Y + 5, r.Width, r.Height), 0x11151B, 8);
+        c.Fill(r, Panel, 8); c.Stroke(r, Grid, radius: 8);
+        c.Text(L.Get("volume.title"), r.X + 24, r.Y + 17, 16, Foreground, r.Width - 130, true);
+        Button(c, new(r.Right - 92, r.Y + 10, 76, 30), L.Get("ui.close"), CloseVolumeDialog);
+        DrawVolumeControls(c);
+    }
 
     public void ApplyAudioVolume() => RequestAudioVolume?.Invoke(
         LibrarySettings.MasterVolume * LibrarySettings.SongVolume / 10000f,
@@ -22,7 +51,7 @@ public sealed partial class EditorView
         for (int i = 0; i < 3; i++)
         {
             var rect = VolumeSliderBounds(i);
-            c.Text(L.Get(labels[i]) + "  " + L.Get("ui.zoomPercent", values[i]), rect.X, 510, 12, Foreground, rect.Width);
+            c.Text(L.Get(labels[i]) + "  " + L.Get("ui.zoomPercent", values[i]), rect.X, rect.Y - 26, 12, Foreground, rect.Width);
             c.Fill(new(rect.X, rect.Y + 10, rect.Width, 4), Grid, 2);
             c.Fill(new(rect.X, rect.Y + 10, rect.Width * values[i] / 100, 4), Accent, 2);
             c.Circle(rect.X + rect.Width * values[i] / 100, rect.Y + 12, 6, Accent);
@@ -31,7 +60,7 @@ public sealed partial class EditorView
 
     private bool BeginVolumeDrag(float x, float y, int button)
     {
-        if (!LibraryVisible || !librarySettingsOpen || updatesPage || button != 0) return false;
+        if (!VolumeDialogVisible || button != 0) return false;
         for (int i = 0; i < 3; i++)
             if (VolumeSliderBounds(i).Contains(x, y))
             { volumeDrag = i; libraryField = bindingCapture = -1; UpdateVolumeDrag(x); return true; }
