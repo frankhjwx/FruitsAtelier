@@ -21,6 +21,14 @@ internal static class CanvasSeekSnapTests
             Near(expected, lastSeek);
         }
         if (ui.View.IsDirty) throw new Exception("Snapped navigation edited the beatmap.");
+        ui.View.UpdateTransport(2000, 10000, true, true, false, null, "fixture.wav"); ui.Paint();
+        lastSeek = -1;
+        ui.ClickMap(2500, 480);
+        Near(2000, ui.View.PlayheadMs); Near(-1, lastSeek);
+        if (!ui.View.AudioPlaying || ui.View.IsDirty) throw new Exception("Blank canvas click interrupted playback or edited content.");
+        ui.View.UpdateTransport(2100, 10000, true, false, false, null, "fixture.wav"); ui.Paint();
+        ui.ClickMap(2217, 480);
+        Near(2200, lastSeek);
     }
 
     public static void FreeMode()

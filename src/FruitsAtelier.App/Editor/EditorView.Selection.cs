@@ -136,7 +136,7 @@ public sealed partial class EditorView
                 tool = Tool.Select;
                 Select(Guid.Empty);
             }
-            else { Select(Guid.Empty); if (!timelineClick && tool == Tool.Select) SeekTo(clickTime); }
+            else { Select(Guid.Empty); if (!timelineClick && tool == Tool.Select && !AudioPlaying) SeekTo(clickTime); }
         }
         if (AudioPlaying || pinPlayhead) FollowPlayhead();
     }

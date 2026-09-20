@@ -33,7 +33,7 @@ internal static class SliderSelectionTests
             ui.View.Document.Fruits.Add(new() { TimeMs = item.TimeMs, X = item.X + 50 });
             ui.View.MarkSaved();
             ui.Paint();
-            if (hidden) ui.ClickText("隐藏曲线");
+            if (hidden) ui.ClickText("滑条路径曲线");
             item = ui.View.Conversion.Objects.First(o => o.SourceId == source && o.Kind == kind);
             var p = ui.Plot;
             float x = p.X + (float)(item.X / 512) * p.Width;

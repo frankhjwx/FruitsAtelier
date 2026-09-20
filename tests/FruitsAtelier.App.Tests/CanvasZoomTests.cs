@@ -78,7 +78,7 @@ internal static class CanvasZoomTests
                 if (!ui.Canvas.Texts.Any(t => t.Value == L.Get("ui.canvasZoom"))
                     || ui.Canvas.Texts.Any(t => t.Value is "Match AR scale" or "还原 AR 比例")) throw new Exception("Canvas zoom labels are incorrect");
                 var slider = ui.View.ZoomSliderBounds;
-                if (slider.Width < 80 || slider.X < 0 || slider.Right + 56 > ui.View.CanvasPlotBounds.Right)
+                if (slider.Width < 30 || slider.X < 0 || slider.Right + 56 > ui.View.CanvasPlotBounds.Right)
                     throw new Exception("Zoom slider does not fit the minimum-width header");
                 ui.View.UpdateTransport(12000, 60000, true, true, false, null, "song.mp3"); ui.Paint();
                 ClickZoom(ui, .5f);

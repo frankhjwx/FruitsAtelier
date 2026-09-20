@@ -91,13 +91,13 @@ public sealed partial class EditorView
         float toolbarRight = rightPanel.X;
         c.Fill(new(0, canvas.Y, toolbarRight, 38), 0x1C2129);
         c.Text(L.Get("ui.canvasZoom"), 16, canvas.Y + 13, 11, Muted, 48);
-        zoomSlider = new(74, canvas.Y + 4, Math.Max(30, toolbarRight - 610), 29);
+        zoomSlider = new(74, canvas.Y + 4, Math.Max(30, toolbarRight - 659), 29);
         float zoomX = zoomSlider.X + (float)(1 - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (1 - MinimumCanvasZoom) : 1) * zoomSlider.Width;
         c.Line(zoomSlider.X, canvas.Y + 19, zoomSlider.Right, canvas.Y + 19, Grid, 3);
         c.Line(zoomSlider.X, canvas.Y + 19, zoomX, canvas.Y + 19, Accent, 3);
         c.Circle(zoomX, canvas.Y + 19, 6, Accent);
         c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + 8, canvas.Y + 13, 11, Foreground, 48);
-        Button(c, new(toolbarRight - 472, canvas.Y + 4, 101, 29), showTargets ? L.Get("ui.hideCurves") : L.Get("ui.showCurves"), () => showTargets = !showTargets);
+        Button(c, new(toolbarRight - 521, canvas.Y + 4, 150, 29), L.Get("ui.sliderPathCurves"), () => showTargets = !showTargets, showTargets);
         Button(c, new(toolbarRight - 365, canvas.Y + 4, 125, 29), L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, movementAnalysis);
         float snapLeft = toolbarRight - 158;
         c.Text(L.Get(DistanceSpacingVisible ? "assist.spacing" : "ui.snap"), DistanceSpacingVisible ? snapLeft - 76 : snapLeft, canvas.Y + 13, 11, Muted, DistanceSpacingVisible ? 114 : 40);
@@ -489,7 +489,7 @@ public sealed partial class EditorView
             Item(L.Get("ui.gridSnap"), () => gridSnap = !gridSnap, active: gridSnap);
             Item(L.Get("ui.anchorSnap"), () => anchorSnap = !anchorSnap, active: anchorSnap);
             Item(L.Get("ui.resetView"), ResetView);
-            Item(showTargets ? L.Get("ui.targetsOn") : L.Get("ui.targetsOff"), () => showTargets = !showTargets);
+            Item(L.Get("ui.sliderPathCurves"), () => showTargets = !showTargets, active: showTargets);
             Item(showPreviewCurves ? L.Get("ui.previewCurvesOn") : L.Get("ui.previewCurvesOff"), () => showPreviewCurves = !showPreviewCurves);
             Item(L.Get("ui.follow"), FollowPlayhead);
             Item(L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, active: movementAnalysis);

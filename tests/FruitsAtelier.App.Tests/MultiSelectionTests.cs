@@ -62,7 +62,7 @@ internal static class MultiSelectionTests
             var covered = ui.View.Conversion.Objects.Where(o => o.SourceId == sourceId && o.TimeMs >= 1400 && o.TimeMs <= 2600).ToArray();
             Check(covered.Length > 1 && covered.Any(o => o.Kind == CatchObjectKind.Droplet)
                 && covered.Any(o => o.Kind == CatchObjectKind.TinyDroplet), "Fixture lacks multiple nested objects inside the box.");
-            ui.ClickText("隐藏曲线");
+            ui.ClickText("滑条路径曲线");
             ui.Key(tool); ui.ClickMap(1000, 80);
             Box(ui, 1400, 200, 2600, 320, ctrl: true);
             Objects(ui, firstFruit, sourceId); Anchors(ui);
