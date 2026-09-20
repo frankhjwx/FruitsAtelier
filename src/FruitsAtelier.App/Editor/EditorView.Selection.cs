@@ -108,7 +108,7 @@ public sealed partial class EditorView
         boxScrollTimestamp = now;
         if (!MarqueeScrollNeedsRedraw || elapsed == 0) return;
         double scale = boxTimeline ? objectTimelineScale : pixelsPerMs;
-        ScrollBoxTo(playhead + BoxScrollDirection * 100 * elapsed / scale);
+        ScrollBoxTo(playhead + BoxScrollDirection * 400 * elapsed / scale);
     }
 
     private void ScrollBoxTo(double time)

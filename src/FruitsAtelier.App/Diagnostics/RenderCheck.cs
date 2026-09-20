@@ -506,7 +506,7 @@ internal static class RenderCheck
             double beforeScroll = view.PlayheadMs;
             Thread.Sleep(25);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
-            if (view.PlayheadMs <= beforeScroll || view.PlayheadMs - beforeScroll > 5 / view.PixelsPerMs + .001)
+            if (view.PlayheadMs <= beforeScroll || view.PlayheadMs - beforeScroll > 20 / view.PixelsPerMs + .001)
                 throw new InvalidOperationException("Marquee edge scroll speed is invalid.");
             view.PointerUp(plot.Right - 12, plot.Y, 0);
             if (view.MarqueeScrollNeedsRedraw) throw new InvalidOperationException("Marquee edge scroll continued after release.");
