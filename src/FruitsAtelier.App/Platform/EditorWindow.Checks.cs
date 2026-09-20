@@ -1,7 +1,67 @@
+using FruitsAtelier.App.Editor;
+using FruitsAtelier.App.Updates;
+
 namespace FruitsAtelier.App.Platform;
 
 internal sealed partial class EditorWindow
 {
+    private void CheckUpdateRefresh()
+    {
+        var previousService = updates;
+        var previousStatus = view.UpdateStatus;
+        var previousPolledStatus = lastUpdateStatus;
+        var backend = new RefreshCheckBackend();
+        using var service = new UpdateService(backend,
+            Path.Combine(Artifacts, "update-refresh-check", Guid.NewGuid().ToString("N"), "updates.json"),
+            message => throw new InvalidOperationException(message));
+        try
+        {
+            updates = service;
+            lastUpdateStatus = null;
+            var check = service.Check(DateTimeOffset.UtcNow);
+            PaintAndVerify(new(UpdatePhase.Checking));
+            backend.CheckResult.SetResult("0.8.3");
+            check.GetAwaiter().GetResult();
+            PaintAndVerify(new(UpdatePhase.Available, "0.8.3"));
+            var download = service.Download();
+            PaintAndVerify(new(UpdatePhase.Downloading, "0.8.3", 42));
+            backend.DownloadResult.SetResult();
+            download.GetAwaiter().GetResult();
+            PaintAndVerify(new(UpdatePhase.Ready, "0.8.3", 100));
+            AppLog.Write("Update refresh check passed: checking, available, download progress and restart readiness without timer messages.");
+        }
+        finally
+        {
+            updates = previousService;
+            view.UpdateStatus = previousStatus;
+            lastUpdateStatus = previousPolledStatus;
+        }
+
+        void PaintAndVerify(UpdateStatus expected)
+        {
+            // Only paint messages run: a busy render loop need not dispatch WM_TIMER.
+            int before = frames;
+            WndProc(hwnd, 0x000F, 0, 0);
+            if (frames != before + 1 || view.UpdateStatus != expected)
+                throw new InvalidOperationException($"Paint did not refresh update status to {expected}.");
+        }
+    }
+
+    private sealed class RefreshCheckBackend : IUpdateBackend
+    {
+        internal readonly TaskCompletionSource<string?> CheckResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal readonly TaskCompletionSource DownloadResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public bool IsInstalled => true;
+        public string? PendingVersion => null;
+        public Task<string?> Check() => CheckResult.Task;
+        public Task Download(Action<int> progress, CancellationToken cancellation)
+        {
+            progress(42);
+            return DownloadResult.Task;
+        }
+        public void Apply() => throw new InvalidOperationException("The refresh check must not restart the application.");
+    }
+
     private void CheckPaintLifecycle()
     {
         var document = view.Document.DeepClone();

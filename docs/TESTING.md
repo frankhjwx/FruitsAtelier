@@ -85,6 +85,10 @@ checks that the renderer recovers, the error can be dismissed, and map content i
 preserved. The intentional Direct2D exception is followed by a successful paint
 lifecycle entry in the diagnostic log.
 
+It also advances a fake update backend through checking, availability, download
+progress, and restart readiness while dispatching only paint messages. Update
+status must reach the view even when continuous rendering delays `WM_TIMER`.
+
 The Windows `--render-check` also exercises testplay entry, movement, combo drawing,
 return, catcher mirroring and binding settings at both window sizes and all tested
 DPI values in English and Chinese. Testplay checks use silent callbacks. Shared App
