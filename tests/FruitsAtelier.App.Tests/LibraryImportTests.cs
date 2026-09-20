@@ -69,10 +69,9 @@ static class LibraryImportTests
             if (!view.LibraryLoading && view.LibrarySetTotal >= 2) break;
             Thread.Sleep(10);
         }
-        Check(canvas.Texts.Any(t => t.Value == L.Get("library.inSongs"))
-            && canvas.Texts.Any(t => t.Value == L.Get("library.notInSongs"))
+        Check(canvas.Texts.Count(t => t.Value == L.Get("library.notInSongs")) == 1
             && canvas.Fills.Any(f => f.Bounds.Height == 78 && f.Color == 0x303449),
-            "Mixed library shows distinct presence labels and workspace-only backgrounds");
+            "Only the set outside Songs has a presence badge and special background");
         string export = Path.Combine(settings.Songs, "export", "map.osu");
         Directory.CreateDirectory(Path.GetDirectoryName(export)!); File.WriteAllText(export, Map);
         imported.Manifest.Difficulties[0].ExportTarget = export;
@@ -108,8 +107,8 @@ static class LibraryImportTests
             Thread.Sleep(10);
         }
         Check(ui.Canvas.Texts.Count(t => t.Value == "Romanised title") == 2, "Romanised title appears in card and details");
-        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("library.inSongs")), "Presence badge is visible");
-        Check(ui.Canvas.Fills.Any(f => f.Bounds.Height == 78 && f.Color == 0x243D36), "Songs cards use a distinct background");
+        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("library.notInSongs")), "Songs cards have no presence badge");
+        Check(ui.Canvas.Fills.Any(f => f.Bounds.Height == 78 && f.Color == 0x304445), "Selected Songs card uses the standard selection background");
         settings.RomanisedMetadata = false; ui.Paint();
         Check(ui.Canvas.Texts.Count(t => t.Value == "原始标题") == 2
             && ui.Canvas.Texts.Any(t => t.Value == "原始作者 // Mapper"), "Unicode setting updates card and details");

@@ -374,21 +374,28 @@ public sealed partial class EditorView
             var map = group.Map;
             libraryCards.Add((new(rect.X, Math.Max(rect.Y, libraryListBounds.Y), rect.Width,
                 Math.Max(0, Math.Min(rect.Bottom, libraryListBounds.Bottom) - Math.Max(rect.Y, libraryListBounds.Y))), map));
-            uint cardColour = group.InSongs switch { true => 0x243D36u, false => 0x303449u, _ => Surface };
+            bool outsideSongs = group.InSongs == false;
+            bool selected = selectedLibraryGroup == group.Key;
+            uint cardColour = outsideSongs ? 0x303449u : selected ? 0x304445u : Surface;
             c.Fill(rect, cardColour, 6);
-            if (selectedLibraryGroup == group.Key) c.Stroke(rect, Accent, 2, 6);
+            if (outsideSongs && selected) c.Stroke(rect, Accent, 2, 6);
             c.Clip(rect);
             if (map.Background.Length > 0) c.Thumbnail(map.Background, new(224, y + 9, 76, 60));
             string title = DisplayMetadata(map.Title, map.TitleUnicode);
             c.Text(title, 314, y + 10, 16, Foreground, listWidth - 116, true);
             string artist = DisplayMetadata(map.Artist, map.ArtistUnicode);
             c.Text(map.Creator.Length > 0 ? L.Get("library.artistMapper", artist, map.Creator) : artist, 314, y + 33, 12, Muted, listWidth - 116);
-            string presence = L.Get(group.InSongs switch { true => "library.inSongs", false => "library.notInSongs", _ => "library.songsUnconfigured" });
-            float badgeWidth = c.MeasureText(presence, 11) + 16;
-            var badge = new Rect(rect.Right - badgeWidth - 12, y + 49, badgeWidth, 22);
-            c.Fill(badge, group.InSongs == true ? 0x305B49u : 0x41465Fu, 4);
-            c.Text(presence, badge.X + 8, y + 53, 11, Foreground, badgeWidth - 16);
-            c.Text(L.Get(libraryProjectsOnly ? "library.projectCount" : "library.diffCount", group.Count), 314, y + 53, 11, Accent, Math.Max(0, badge.X - 324));
+            float countWidth = listWidth - 116;
+            if (outsideSongs)
+            {
+                string presence = L.Get("library.notInSongs");
+                float badgeWidth = c.MeasureText(presence, 11) + 16;
+                var badge = new Rect(rect.Right - badgeWidth - 12, y + 49, badgeWidth, 22);
+                c.Fill(badge, 0x41465Fu, 4);
+                c.Text(presence, badge.X + 8, y + 53, 11, Foreground, badgeWidth - 16);
+                countWidth = Math.Max(0, badge.X - 324);
+            }
+            c.Text(L.Get(libraryProjectsOnly ? "library.projectCount" : "library.diffCount", group.Count), 314, y + 53, 11, Accent, countWidth);
             c.Unclip();
         }
         c.Unclip();

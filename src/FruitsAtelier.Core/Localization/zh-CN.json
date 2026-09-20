@@ -723,9 +723,7 @@
   "settings.audio": "音频",
   "settings.testplay": "试玩按键",
   "settings.immediate": "音量修改会立即保存。",
-  "library.inSongs": "已在 osu! Songs 中",
   "library.notInSongs": "未在 osu! Songs 中",
-  "library.songsUnconfigured": "未配置 Songs",
   "library.dropHint": "将 .osz 谱面或 .osk 皮肤拖到此处，导入工作区。",
   "settings.romanisedOn": "Artist / Title 罗马字显示：开",
   "settings.romanisedOff": "Artist / Title 罗马字显示：关"
