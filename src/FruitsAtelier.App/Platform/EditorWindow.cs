@@ -90,6 +90,7 @@ internal sealed partial class EditorWindow : IDisposable
         {
             view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
             CheckPaintLifecycle();
+            CheckUpdateRefresh();
             Diagnostics.RenderCheck.Run(canvas, view, hwnd);
             Native.DestroyWindow(hwnd);
             return 0;
@@ -221,7 +222,8 @@ internal sealed partial class EditorWindow : IDisposable
                     Native.GetClientRect(window, out var rect);
                     if (canvas is not null && rect.Right > 0 && rect.Bottom > 0 && !Native.IsIconic(window))
                     {
-                        PollAudio();
+                        // Continuous repainting can starve WM_TIMER, including update status polling.
+                        PollUpdates(); PollAudio();
                         renderTimer.Restart();
                         canvas.Resize(rect.Right, rect.Bottom, dpi);
                         if (view.IsTestplaying && !canvas.TryAcquireFrame()) return 0;
