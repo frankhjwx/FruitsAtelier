@@ -722,5 +722,11 @@
   "settings.appearance": "Appearance",
   "settings.audio": "Audio",
   "settings.testplay": "Testplay keys",
-  "settings.immediate": "Volume changes are saved immediately."
+  "settings.immediate": "Volume changes are saved immediately.",
+  "library.inSongs": "In osu! Songs",
+  "library.notInSongs": "Not in osu! Songs",
+  "library.songsUnconfigured": "Songs not configured",
+  "library.dropHint": "Drop .osz beatmaps or .osk skins here to import into your workspace.",
+  "settings.romanisedOn": "Romanised artist / title: On",
+  "settings.romanisedOff": "Romanised artist / title: Off"
 }

@@ -12,6 +12,7 @@ public sealed class LibrarySettings
     public string OsuRoot { get => osuRoot; set { osuRoot = value; legacySongs = ""; } }
     public string? SelectedSkin { get; set; }
     public string? DefaultSkin { get; set; }
+    public bool RomanisedMetadata { get; set; } = true;
     public int TestplayLeftKey { get; set; } = 37;
     public int TestplayRightKey { get; set; } = 39;
     public int TestplayDashKey { get; set; } = 16;

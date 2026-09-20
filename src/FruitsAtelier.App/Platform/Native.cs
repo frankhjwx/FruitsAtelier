@@ -4,6 +4,28 @@ namespace FruitsAtelier.App.Platform;
 
 internal static class Native
 {
+    [DllImport("shell32.dll")] internal static extern void DragAcceptFiles(nint window, bool accept);
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)] private static extern uint DragQueryFile(nint drop, uint index, System.Text.StringBuilder? path, uint capacity);
+    [DllImport("shell32.dll")] private static extern void DragFinish(nint drop);
+
+    internal static string[] TakeDroppedFiles(nint drop)
+    {
+        try
+        {
+            uint count = DragQueryFile(drop, uint.MaxValue, null, 0);
+            var paths = new string[count];
+            for (uint i = 0; i < count; i++)
+            {
+                uint length = DragQueryFile(drop, i, null, 0);
+                var path = new System.Text.StringBuilder(checked((int)length + 1));
+                DragQueryFile(drop, i, path, (uint)path.Capacity);
+                paths[i] = path.ToString();
+            }
+            return paths;
+        }
+        finally { DragFinish(drop); }
+    }
+
     internal const uint WindowStyle = 0x00CF0000;
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     internal delegate nint WindowProc(nint hwnd, uint message, nuint wParam, nint lParam);

@@ -49,6 +49,15 @@ internal sealed partial class MacWindow
     }
     private void ConfigureLibrary(bool show, bool smokeCheck)
     {
+        View.RequestLibraryDrop = paths => RunFile(async () =>
+        {
+            foreach (string skin in paths.Where(p => Path.GetExtension(p).Equals(".osk", StringComparison.OrdinalIgnoreCase)))
+                View.ImportSkin(skin);
+            var maps = paths.Where(p => Path.GetExtension(p).Equals(".osz", StringComparison.OrdinalIgnoreCase)).ToArray();
+            foreach (string map in maps.SkipLast(1))
+                await Task.Run(() => LibraryOperations.ImportPath(map, View.LibrarySettings));
+            if (maps.Length > 0) await OpenPath(maps[^1]);
+        });
         View.RequestSkinPreference = () => View.LibrarySettings.Save();
         View.RequestDefaultSkinArchive = () => RunFile(async () =>
         {

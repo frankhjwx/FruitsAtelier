@@ -6,6 +6,14 @@ internal sealed partial class EditorWindow
 {
     private void ConfigureLibrary()
     {
+        view.RequestLibraryDrop = paths => FileOperation(() =>
+        {
+            foreach (string skin in paths.Where(p => Path.GetExtension(p).Equals(".osk", StringComparison.OrdinalIgnoreCase)))
+                view.ImportSkin(skin);
+            var maps = paths.Where(p => Path.GetExtension(p).Equals(".osz", StringComparison.OrdinalIgnoreCase)).ToArray();
+            foreach (string map in maps.SkipLast(1)) LibraryOperations.ImportPath(map, view.LibrarySettings);
+            if (maps.Length > 0) OpenPath(maps[^1]);
+        });
         view.RequestSkinPreference = () => view.LibrarySettings.Save();
         view.RequestDefaultSkinArchive = () => FileOperation(() =>
         {

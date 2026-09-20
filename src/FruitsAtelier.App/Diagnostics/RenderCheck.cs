@@ -361,6 +361,7 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        LibraryDropCheck.Run(view, window);
         CheckDistanceFields(canvas, view);
         string thumbnailPath = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png");
         var thumbnailWait = Stopwatch.StartNew();

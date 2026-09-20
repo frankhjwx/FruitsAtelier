@@ -9,6 +9,7 @@ public sealed partial class EditorView
     private enum SettingsCategory { Workspace, Appearance, Audio, Testplay, Updates }
     private SettingsCategory settingsCategory;
     private bool settingsFromLibrary;
+    private bool draftRomanisedMetadata;
     private const float SettingsContentX = 246;
 
     public void OpenSettings()
@@ -19,6 +20,7 @@ public sealed partial class EditorView
         draftWorkspace = LibrarySettings.Workspace;
         draftOsuRoot = LibrarySettings.OsuRoot;
         draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
+        draftRomanisedMetadata = LibrarySettings.RomanisedMetadata;
         draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
         settingsCategory = SettingsCategory.Workspace;
         LibraryVisible = librarySettingsOpen = true;
@@ -70,6 +72,9 @@ public sealed partial class EditorView
                 break;
             case SettingsCategory.Appearance:
                 LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, 160);
+                Button(c, new(SettingsContentX, 270, Math.Min(520, width - SettingsContentX - 32), 38),
+                    L.Get(draftRomanisedMetadata ? "settings.romanisedOn" : "settings.romanisedOff"),
+                    () => draftRomanisedMetadata = !draftRomanisedMetadata, draftRomanisedMetadata);
                 break;
             case SettingsCategory.Audio:
                 DrawVolumeControls(c);
@@ -94,6 +99,7 @@ public sealed partial class EditorView
         {
             var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
+            settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
             bool rootsChanged = settings.Workspace != LibrarySettings.Workspace || settings.OsuRoot != LibrarySettings.OsuRoot;

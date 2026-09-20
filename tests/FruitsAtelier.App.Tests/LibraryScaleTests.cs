@@ -40,7 +40,7 @@ internal static class LibraryScaleTests
             WaitFor(() => view.LibrarySetTotal == 140);
             Check(canvas.Texts.Any(text => text.Value == "Artist // Mapper"), "library displays mapper beside artist");
             view.PointerDown(647, 577, 0, false, false); view.PointerUp(647, 577, 0);
-            WaitFor(() => canvas.Texts.Any(text => text.Value == "原始 139"));
+            WaitFor(() => canvas.Texts.Any(text => text.Value == "Song 139"));
             Check(view.LibraryCachedRows <= 512, "bounded UI pages");
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
