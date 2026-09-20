@@ -41,7 +41,7 @@ var tests = new (string Name, Action Run)[]
     ("DS numeric fields use base SV, preserve direction and support undo", DistanceEditingTests.NumericFields),
     ("DS edits selected slider heads, tails and droplets", DistanceEditingTests.SliderPoints),
     ("Movement DS labels use base SV and avoid collisions", DistanceEditingTests.Labels),
-    ("Movement analysis toggles all four connection colours without editing content", AssistToolsTests.MovementAnalysis),
+    ("Movement Analysis toggles all four connection colours without editing content", AssistToolsTests.MovementAnalysis),
     ("Floating movement panel follows placement, selection, dragging and language", AssistToolsTests.MovementOverlay),
     ("Distance spacing placement, persistence, Alt and undo", AssistToolsTests.SpacingAndPlacement),
     ("Distance readouts, slider tails, base SV and layout", AssistToolsTests.DistanceRules),
@@ -647,11 +647,11 @@ static void MainCurveVisibility()
     var previewObjects = ObjectCircles(ui, preview: true);
     True(curves.Length > 0, "Main target curves are not visible by default.");
     AssertObjectKinds(ui, objects, ui.Plot.Width);
-    ui.ClickText("滑条路径曲线");
+    ui.ClickText("滑条路径");
     True(!CurveCommands(ui, preview: false).Any(), "Main target lines remained after hiding curves.");
     True(ObjectCircles(ui, preview: false).SequenceEqual(objects), "Hiding curves changed the main converted object sequence.");
     True(ObjectCircles(ui, preview: true).SequenceEqual(previewObjects), "The main curve toggle changed preview objects.");
-    ui.ClickText("滑条路径曲线");
+    ui.ClickText("滑条路径");
     True(CurveCommands(ui, preview: false).Select(c => c.Segment!.Value).SequenceEqual(curves), "Showing curves did not restore the target geometry.");
     True(ObjectCircles(ui, preview: false).SequenceEqual(objects), "Restoring curves changed converted objects.");
     True(Snapshot(ui) == original && !ui.View.IsDirty, "Curve visibility mutated the document or history.");
@@ -668,12 +668,12 @@ static void PreviewCurveLayers()
     True(curves.Length > 0, "The preview debug toggle did not show target curves.");
     True(ObjectCircles(ui, preview: true).SequenceEqual(objects), "Enabling debug curves changed preview objects.");
     AssertPreviewDrawOrder(ui);
-    ui.ClickText("滑条路径曲线");
+    ui.ClickText("滑条路径");
     True(!CurveCommands(ui, preview: false).Any(), "The main curve toggle did not hide the main layer.");
     True(CurveCommands(ui, preview: true).Select(c => c.Segment!.Value).SequenceEqual(curves), "Main visibility incorrectly changed the preview debug flag.");
     True(ObjectCircles(ui, preview: true).SequenceEqual(objects), "Main visibility changed the preview object sequence.");
     AssertPreviewDrawOrder(ui);
-    ui.ClickText("滑条路径曲线");
+    ui.ClickText("滑条路径");
     ui.ClickText("调试曲线");
     True(!CurveCommands(ui, preview: true).Any(), "Preview debug curves did not hide again.");
     True(CurveCommands(ui, preview: false).Any(), "Disabling preview curves also hid the main target layer.");
