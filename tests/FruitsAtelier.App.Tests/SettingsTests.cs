@@ -5,7 +5,7 @@ static class SettingsTests
 {
     public static void ApplyState()
     {
-        string root = Path.Combine(Path.GetTempPath(), "FruitsAtelier-settings-" + Guid.NewGuid());
+        string root = Path.GetFullPath(Path.Combine("artifacts", "tests", "settings-" + Guid.NewGuid()));
         try
         {
             foreach (bool fromLibrary in new[] { false, true })
