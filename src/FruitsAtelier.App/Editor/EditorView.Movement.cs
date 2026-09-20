@@ -31,7 +31,7 @@ public sealed partial class EditorView
 
     private static uint MovementColour(CatchMovementMode mode) => mode switch
     {
-        CatchMovementMode.Stand => 0xA8DCC5,
+        CatchMovementMode.Stand => 0xC0C0C0,
         CatchMovementMode.Walk => 0x63B99D,
         CatchMovementMode.Dash => 0xD6B365,
         _ => 0xCE7683
@@ -57,12 +57,13 @@ public sealed partial class EditorView
             var to = objects[movementIndices[i]];
             if (from.TimeMs > endTime) break;
             if (movementStates[departure].Movement is not { } movement) continue;
+            if (Document.BananaShowers.Any(shower => shower.TimeMs <= to.TimeMs && shower.EndTimeMs >= from.TimeMs)) continue;
             // Clip in map time so long connections keep their slope without oversized screen coordinates.
             double start = Math.Max(viewStart, from.TimeMs), end = Math.Min(endTime, to.TimeMs);
             double XAt(double time) => from.X + (to.X - from.X) * ((time - from.TimeMs) / (to.TimeMs - from.TimeMs));
             var a = Screen(new(start, XAt(start)));
             var b = Screen(new(end, XAt(end)));
-            c.Line(a.X, a.Y, b.X, b.Y, MovementColour(movement.Mode), 2, .65f);
+            c.Line(a.X, a.Y, b.X, b.Y, MovementColour(movement.Mode), 4, .65f);
         }
     }
 

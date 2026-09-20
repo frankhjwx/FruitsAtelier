@@ -90,13 +90,14 @@ public sealed partial class EditorView
         float toolbarRight = rightPanel.X;
         c.Fill(new(0, canvas.Y, toolbarRight, 38), 0x1C2129);
         c.Text(L.Get("ui.canvasZoom"), 16, canvas.Y + 13, 11, Muted, 48);
-        zoomSlider = new(74, canvas.Y + 4, Math.Max(30, toolbarRight - 590), 29);
+        zoomSlider = new(74, canvas.Y + 4, Math.Max(30, toolbarRight - 610), 29);
         float zoomX = zoomSlider.X + (float)(1 - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (1 - MinimumCanvasZoom) : 1) * zoomSlider.Width;
         c.Line(zoomSlider.X, canvas.Y + 19, zoomSlider.Right, canvas.Y + 19, Grid, 3);
         c.Line(zoomSlider.X, canvas.Y + 19, zoomX, canvas.Y + 19, Accent, 3);
         c.Circle(zoomX, canvas.Y + 19, 6, Accent);
         c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + 8, canvas.Y + 13, 11, Foreground, 48);
-        Button(c, new(toolbarRight - 390, canvas.Y + 4, 101, 29), showTargets ? L.Get("ui.hideCurves") : L.Get("ui.showCurves"), () => showTargets = !showTargets);
+        Button(c, new(toolbarRight - 472, canvas.Y + 4, 101, 29), showTargets ? L.Get("ui.hideCurves") : L.Get("ui.showCurves"), () => showTargets = !showTargets);
+        Button(c, new(toolbarRight - 365, canvas.Y + 4, 125, 29), L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, movementAnalysis);
         float snapLeft = toolbarRight - 158;
         c.Text(L.Get(DistanceSpacingVisible ? "assist.spacing" : "ui.snap"), DistanceSpacingVisible ? snapLeft - 76 : snapLeft, canvas.Y + 13, 11, Muted, DistanceSpacingVisible ? 114 : 40);
         snapSlider = new(snapLeft + 40, canvas.Y + 4, 106, 29);
@@ -163,21 +164,7 @@ public sealed partial class EditorView
             c.Line(playfield.X, startY, playfield.Right, startY, Gold, 2);
             c.Line(playfield.X, cursorY, playfield.Right, cursorY, Gold, 1);
         }
-        DrawMovementConnections(c);
-        double margin = CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512 * 1.5 / pixelsPerMs;
-        foreach (var item in ObjectsInTimeRange(viewStart - margin, viewStart + plot.Height / pixelsPerMs + margin))
-        {
-            var p = Screen(new(item.TimeMs, item.X));
-            float radius = (float)(CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512);
-            if (p.Y < plot.Y - radius * 1.5f || p.Y > plot.Bottom + radius * 1.5f) continue;
-            bool previewTail = LegacyMode && legacyPreviewValid && item.SourceId == draftTrack
-                && SelectedTrack is { } draftSlider && legacyDraft is { Count: > 0 }
-                && draftSlider.Nodes[^1].TimeMs > legacyDraft[^1].Point.TimeMs
-                && Math.Abs(item.TimeMs - draftSlider.Nodes[^1].TimeMs) < 1;
-            DrawCatchObject(c, item, p.X, p.Y, playfield.Width, previewTail ? .6f : 1, hyperStarts: placementHyperdash);
-            if (IsObjectSelected(item.SourceId))
-                c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * playfield.Width / 512 + 3, Accent, false, 1.5f);
-        }
+        if (!movementAnalysis) DrawCanvasCatchObjects(c);
         if (showTargets)
         {
             DrawImportedCurves(c, playfield.X, playfield.Width, plot.Bottom, viewStart, pixelsPerMs,
@@ -241,11 +228,35 @@ public sealed partial class EditorView
                 }
             }
         }
+        if (movementAnalysis)
+        {
+            DrawMovementConnections(c);
+            DrawCanvasCatchObjects(c);
+        }
         DrawPlacementGhost(c);
         float headY = Screen(new(playhead, 0)).Y;
         c.Line(plot.X, headY, plot.Right, headY, Gold, 1.5f);
         c.Fill(new(plot.X, headY - 3, 5, 6), Gold);
         c.Unclip();
+    }
+
+    private void DrawCanvasCatchObjects(ICanvas c)
+    {
+        var playfield = Playfield;
+        double margin = CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512 * 1.5 / pixelsPerMs;
+        foreach (var item in ObjectsInTimeRange(viewStart - margin, viewStart + plot.Height / pixelsPerMs + margin))
+        {
+            var p = Screen(new(item.TimeMs, item.X));
+            float radius = (float)(CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512);
+            if (p.Y < plot.Y - radius * 1.5f || p.Y > plot.Bottom + radius * 1.5f) continue;
+            bool previewTail = LegacyMode && legacyPreviewValid && item.SourceId == draftTrack
+                && SelectedTrack is { } draftSlider && legacyDraft is { Count: > 0 }
+                && draftSlider.Nodes[^1].TimeMs > legacyDraft[^1].Point.TimeMs
+                && Math.Abs(item.TimeMs - draftSlider.Nodes[^1].TimeMs) < 1;
+            DrawCatchObject(c, item, p.X, p.Y, playfield.Width, previewTail ? .6f : 1, hyperStarts: placementHyperdash);
+            if (IsObjectSelected(item.SourceId))
+                c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * playfield.Width / 512 + 3, Accent, false, 1.5f);
+        }
     }
 
     private void DrawInspector(ICanvas c)

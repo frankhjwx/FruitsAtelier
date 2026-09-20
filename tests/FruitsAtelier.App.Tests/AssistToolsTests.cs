@@ -24,15 +24,29 @@ internal static class AssistToolsTests
         foreach (string language in new[] { "en", "zh-CN" })
         {
             Strings.SetLanguage(language); ui.Paint();
-            ui.ClickText(Strings.Get("ui.view")); ui.ClickText(Strings.Get("movement.analysis"));
-            Check(ui.View.MovementAnalysisEnabled, "View menu did not enable analysis");
-            foreach (uint color in new uint[] { 0xA8DCC5, 0x63B99D, 0xD6B365, 0xCE7683 })
-                Check(ui.Canvas.Lines.Any(l => l.Color == color && l.Width == 2 && Math.Abs(l.Opacity - .65f) < .001), "Missing movement connection colour");
-            ui.ClickText(Strings.Get("ui.view")); ui.ClickText(Strings.Get("movement.analysis"));
-            Check(!ui.View.MovementAnalysisEnabled, "View menu did not disable analysis");
-            Check(!ui.Canvas.Lines.Any(l => l.Width == 2 && Math.Abs(l.Opacity - .65f) < .001), "Disabled analysis retained lines");
+            ui.ClickText(Strings.Get("movement.analysis"));
+            Check(ui.View.MovementAnalysisEnabled, "Canvas toolbar did not enable analysis");
+            foreach (uint color in new uint[] { 0xC0C0C0, 0x63B99D, 0xD6B365, 0xCE7683 })
+                Check(ui.Canvas.Lines.Any(l => l.Color == color && l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001), "Missing movement connection colour");
+            ui.ClickText(Strings.Get("movement.analysis"));
+            Check(!ui.View.MovementAnalysisEnabled, "Canvas toolbar did not disable analysis");
+            Check(!ui.Canvas.Lines.Any(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001), "Disabled analysis retained lines");
             Check(original.ContentEquals(ui.View.Document), "Display toggle edited content");
         }
+        ui = new Ui(); ui.LoadDocument(map); ui.ClickText(Strings.Get("movement.analysis"));
+        int ordinaryConnections = ui.Canvas.Lines.Count(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001);
+        ui.View.Document.BananaShowers.Add(new BananaShower { TimeMs = 1260, EndTimeMs = 1360 }); ui.Paint();
+        Check(ui.Canvas.Lines.Count(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001) == ordinaryConnections - 1,
+            "Analysis connected fruits across a banana shower");
+        ui.View.Document.BananaShowers.Clear(); ui.Paint();
+        Check(ui.Canvas.Lines.Count(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001) == ordinaryConnections,
+            "Removing a shower did not restore its connection");
+        ui = new Ui(); ui.LoadDocument(DemoMap.Create());
+        ui.ClickText(Strings.Get("movement.analysis"));
+        var curves = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasPlotBounds && o.Segment is { Color: 0xAB9DF2 }).ToArray();
+        var connections = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasPlotBounds && o.Segment is { Width: 4, Opacity: .65f }).ToArray();
+        Check(curves.Length > 0 && connections.Length > 0 && curves.Max(o => o.Order) < connections.Min(o => o.Order),
+            "Movement connections must draw above curves");
         Strings.SetLanguage("en");
     }
 
@@ -52,7 +66,7 @@ internal static class AssistToolsTests
             Strings.SetLanguage(language); ui.MoveMap(1500, 120);
             Check(ui.View.MovementReadout.Previous?.Mode == CatchMovementMode.Stand, "Placement did not show Stand");
             Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("movement.previous", "Stand")), "Stand label missing");
-            Check(ui.Canvas.Fills.Any(f => f.Color == 0xA8DCC5 && f.Bounds.Width > 0), "Stand segment missing");
+            Check(ui.Canvas.Fills.Any(f => f.Color == 0xC0C0C0 && f.Bounds.Width > 0), "Stand segment missing");
             ui.MoveMap(1500, 300);
             Check(ui.View.MovementReadout.Next?.Mode == CatchMovementMode.Stand, "Outgoing Stand missing");
         }
