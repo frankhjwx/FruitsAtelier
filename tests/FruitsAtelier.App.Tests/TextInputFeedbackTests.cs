@@ -30,7 +30,7 @@ internal static class TextInputFeedbackTests
             view.SetTextInputFocus(false); Paint();
             Check(!Caret() && !view.TextCaretNeedsRedraw, "An unfocused window must not blink");
             view.NewProject(); view.CloseLibrary(); view.SetTextInputFocus(true); Paint();
-            foreach (var (menu, last) in new[] { ("ui.file", "ui.exitMenu"), ("ui.view", "ui.follow"), ("ui.edit", "sliderBatch.menu") })
+            foreach (var (menu, last) in new[] { ("ui.file", "ui.exitMenu"), ("ui.view", "movement.analysis"), ("ui.edit", "sliderBatch.menu") })
             {
                 var label = canvas.Texts.Single(t => t.Value == L.Get(menu));
                 view.PointerDown(label.X + 2, label.Y + 2, 0, false, false); view.PointerUp(label.X + 2, label.Y + 2, 0); Paint();

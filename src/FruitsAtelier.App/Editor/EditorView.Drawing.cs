@@ -163,6 +163,7 @@ public sealed partial class EditorView
             c.Line(playfield.X, startY, playfield.Right, startY, Gold, 2);
             c.Line(playfield.X, cursorY, playfield.Right, cursorY, Gold, 1);
         }
+        DrawMovementConnections(c);
         double margin = CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512 * 1.5 / pixelsPerMs;
         foreach (var item in ObjectsInTimeRange(viewStart - margin, viewStart + plot.Height / pixelsPerMs + margin))
         {
@@ -477,6 +478,7 @@ public sealed partial class EditorView
             Item(showTargets ? L.Get("ui.targetsOn") : L.Get("ui.targetsOff"), () => showTargets = !showTargets);
             Item(showPreviewCurves ? L.Get("ui.previewCurvesOn") : L.Get("ui.previewCurvesOff"), () => showPreviewCurves = !showPreviewCurves);
             Item(L.Get("ui.follow"), FollowPlayhead);
+            Item(L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, active: movementAnalysis);
         }
         float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : 109 + menu * 53;
         float top = menu == 3 ? difficultyAddButton.Bottom + 4 : 38;

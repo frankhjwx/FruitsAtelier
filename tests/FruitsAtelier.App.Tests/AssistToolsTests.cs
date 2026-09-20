@@ -12,6 +12,30 @@ internal static class AssistToolsTests
         map.Fruits.Add(new Fruit { TimeMs = 2000, X = 310 });
         return map;
     }
+    public static void MovementAnalysis()
+    {
+        var ui = new Ui();
+        var map = new MapDocument { DurationMs = 10000, CircleSize = 5, IsDemo = false };
+        foreach (var (time, x) in new[] { (1000, 100), (1125, 120), (1250, 220), (1375, 370), (1500, 70) })
+            map.Fruits.Add(new Fruit { TimeMs = time, X = x });
+        ui.LoadDocument(map);
+        var original = ui.View.Document.DeepClone();
+        Check(!ui.View.MovementAnalysisEnabled, "Analysis must start disabled");
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            Strings.SetLanguage(language); ui.Paint();
+            ui.ClickText(Strings.Get("ui.view")); ui.ClickText(Strings.Get("movement.analysis"));
+            Check(ui.View.MovementAnalysisEnabled, "View menu did not enable analysis");
+            foreach (uint color in new uint[] { 0xA8DCC5, 0x63B99D, 0xD6B365, 0xCE7683 })
+                Check(ui.Canvas.Lines.Any(l => l.Color == color && l.Width == 2 && Math.Abs(l.Opacity - .65f) < .001), "Missing movement connection colour");
+            ui.ClickText(Strings.Get("ui.view")); ui.ClickText(Strings.Get("movement.analysis"));
+            Check(!ui.View.MovementAnalysisEnabled, "View menu did not disable analysis");
+            Check(!ui.Canvas.Lines.Any(l => l.Width == 2 && Math.Abs(l.Opacity - .65f) < .001), "Disabled analysis retained lines");
+            Check(original.ContentEquals(ui.View.Document), "Display toggle edited content");
+        }
+        Strings.SetLanguage("en");
+    }
+
     public static void MovementOverlay()
     {
         var ui = new Ui(); var map = Map();

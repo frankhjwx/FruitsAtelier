@@ -705,6 +705,7 @@
   "update.dataInsideApp": "请先将工作区和自定义皮肤文件移到程序 current 文件夹之外，再进行更新。",
   "movement.previous": "前一对象 · {0}",
   "movement.next": "后一对象 · {0}",
+  "movement.analysis": "移动分析",
   "movement.stand": "Stand",
   "movement.walk": "Walk",
   "movement.dash": "Dash",

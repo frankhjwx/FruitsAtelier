@@ -38,6 +38,7 @@ var tests = new (string Name, Action Run)[]
     ("Stable root migration and skin selection preserve content and archive provenance", SkinSelectorTests.Run),
     ("Object timeline navigation and group movement preserve geometry and undo", ObjectTimelineTests.MoveAndNavigate),
     ("Returning to Library saves, discards or cancels before closing the editor", LibraryExitTests.Run),
+    ("Movement analysis toggles all four connection colours without editing content", AssistToolsTests.MovementAnalysis),
     ("Floating movement panel follows placement, selection, dragging and language", AssistToolsTests.MovementOverlay),
     ("Distance spacing placement, persistence, Alt and undo", AssistToolsTests.SpacingAndPlacement),
     ("Distance readouts, slider tails, base SV and layout", AssistToolsTests.DistanceRules),

@@ -337,6 +337,15 @@ internal static class RenderCheck
         {
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            if (!view.MovementAnalysisEnabled)
+            {
+                view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0);
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+                view.PointerDown(235, 295, 0, false, false);
+                view.PointerUp(235, 295, 0);
+                if (!view.MovementAnalysisEnabled) throw new InvalidOperationException("Movement analysis menu did not enable connections.");
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            }
             view.SetModifiers(true, false);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             var spacing = view.SnapSliderBounds;

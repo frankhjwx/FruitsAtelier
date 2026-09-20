@@ -13,6 +13,59 @@ public sealed partial class EditorView
     public Rect? MovementOverlayBounds { get; private set; }
     public (CatchMovementRange? Previous, CatchMovementRange? Next) MovementReadout { get; private set; }
 
+    private bool movementAnalysis;
+    public bool MovementAnalysisEnabled => movementAnalysis;
+
+    private void EnsureMovementStates(IReadOnlyList<ConvertedCatchObject> objects)
+    {
+        if (!ReferenceEquals(movementSource, objects) || movementCircleSize != Document.CircleSize)
+        {
+            movementSource = objects;
+            movementCircleSize = Document.CircleSize;
+            movementStates = HyperDashCalculator.Calculate(objects, movementCircleSize);
+            movementIndices = Enumerable.Range(0, objects.Count)
+                .Where(i => objects[i].Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet)
+                .OrderBy(i => objects[i].TimeMs).ToArray();
+        }
+    }
+
+    private static uint MovementColour(CatchMovementMode mode) => mode switch
+    {
+        CatchMovementMode.Stand => 0xA8DCC5,
+        CatchMovementMode.Walk => 0x63B99D,
+        CatchMovementMode.Dash => 0xD6B365,
+        _ => 0xCE7683
+    };
+
+    private void DrawMovementConnections(ICanvas c)
+    {
+        if (!movementAnalysis) return;
+        var objects = placementMovementObjects ?? conversion!.Objects;
+        EnsureMovementStates(objects);
+        double endTime = viewStart + plot.Height / pixelsPerMs;
+        int low = 1, high = movementIndices.Length;
+        while (low < high)
+        {
+            int middle = low + (high - low) / 2;
+            if (objects[movementIndices[middle]].TimeMs < viewStart) low = middle + 1;
+            else high = middle;
+        }
+        for (int i = low; i < movementIndices.Length; i++)
+        {
+            int departure = movementIndices[i - 1];
+            var from = objects[departure];
+            var to = objects[movementIndices[i]];
+            if (from.TimeMs > endTime) break;
+            if (movementStates[departure].Movement is not { } movement) continue;
+            // Clip in map time so long connections keep their slope without oversized screen coordinates.
+            double start = Math.Max(viewStart, from.TimeMs), end = Math.Min(endTime, to.TimeMs);
+            double XAt(double time) => from.X + (to.X - from.X) * ((time - from.TimeMs) / (to.TimeMs - from.TimeMs));
+            var a = Screen(new(start, XAt(start)));
+            var b = Screen(new(end, XAt(end)));
+            c.Line(a.X, a.Y, b.X, b.Y, MovementColour(movement.Mode), 2, .65f);
+        }
+    }
+
     private void DrawMovementOverlay(ICanvas c)
     {
         MovementOverlayBounds = null;
@@ -32,15 +85,7 @@ public sealed partial class EditorView
             if (ids.Length != 1 || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
             source = ids[0];
         }
-        if (!ReferenceEquals(movementSource, objects) || movementCircleSize != Document.CircleSize)
-        {
-            movementSource = objects;
-            movementCircleSize = Document.CircleSize;
-            movementStates = HyperDashCalculator.Calculate(objects, movementCircleSize);
-            movementIndices = Enumerable.Range(0, objects.Count)
-                .Where(i => objects[i].Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet)
-                .OrderBy(i => objects[i].TimeMs).ToArray();
-        }
+        EnsureMovementStates(objects);
         var indices = movementIndices;
         int first = Array.FindIndex(indices, i => objects[i].SourceId == source
             && (!placement || objects[i].EventIndex == placementGhost!.EventIndex));
@@ -68,10 +113,10 @@ public sealed partial class EditorView
             float stand = (float)(value.StandLimit / extent) * length;
             float walk = (float)(Math.Max(value.StandLimit, value.WalkLimit) / extent) * length;
             float dash = (float)(dashLimit / extent) * length;
-            c.Fill(new(left, y, stand, 7), 0xA8DCC5);
-            c.Fill(new(left + stand, y, walk - stand, 7), 0x63B99D);
-            c.Fill(new(left + walk, y, dash - walk, 7), 0xD6B365);
-            c.Fill(new(left + dash, y, length - dash, 7), 0xCE7683);
+            c.Fill(new(left, y, stand, 7), MovementColour(CatchMovementMode.Stand));
+            c.Fill(new(left + stand, y, walk - stand, 7), MovementColour(CatchMovementMode.Walk));
+            c.Fill(new(left + walk, y, dash - walk, 7), MovementColour(CatchMovementMode.Dash));
+            c.Fill(new(left + dash, y, length - dash, 7), MovementColour(CatchMovementMode.HyperDash));
             float x = left + (float)Math.Clamp(value.Distance / extent, 0, 1) * length;
             c.Line(x - 4, y - 6, x, y - 2, Foreground, 2);
             c.Line(x + 4, y - 6, x, y - 2, Foreground, 2);
