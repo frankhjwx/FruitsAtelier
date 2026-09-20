@@ -62,10 +62,14 @@ public sealed partial class EditorView
         float left = r.X + 12, length = r.Width - 24, y = r.Y + 33;
         if (MovementReadout.Previous is { } value)
         {
-            double extent = Math.Max(1, value.DashLimit * 1.5);
-            float walk = (float)(value.WalkLimit / extent) * length;
-            float dash = (float)(value.DashLimit / extent) * length;
-            c.Fill(new(left, y, walk, 7), 0x63B99D, 0);
+            // A centre-start Stand can remain possible even when prefix context marks a hyperdash.
+            double dashLimit = Math.Max(value.StandLimit, value.DashLimit);
+            double extent = Math.Max(1, dashLimit * 1.5);
+            float stand = (float)(value.StandLimit / extent) * length;
+            float walk = (float)(Math.Max(value.StandLimit, value.WalkLimit) / extent) * length;
+            float dash = (float)(dashLimit / extent) * length;
+            c.Fill(new(left, y, stand, 7), 0xA8DCC5);
+            c.Fill(new(left + stand, y, walk - stand, 7), 0x63B99D);
             c.Fill(new(left + walk, y, dash - walk, 7), 0xD6B365);
             c.Fill(new(left + dash, y, length - dash, 7), 0xCE7683);
             float x = left + (float)Math.Clamp(value.Distance / extent, 0, 1) * length;
@@ -81,7 +85,7 @@ public sealed partial class EditorView
 
         static string Ratio(double? value) => value is { } number ? L.Get("assist.ratio", number) : "—";
         static string Label(CatchMovementRange? range) => range is { } value
-            ? L.Get(value.Mode switch { CatchMovementMode.Walk => "movement.walk", CatchMovementMode.Dash => "movement.dash", _ => "movement.hyperdash" })
+            ? L.Get(value.Mode switch { CatchMovementMode.Stand => "movement.stand", CatchMovementMode.Walk => "movement.walk", CatchMovementMode.Dash => "movement.dash", _ => "movement.hyperdash" })
             : "—";
     }
 }

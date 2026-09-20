@@ -10,9 +10,9 @@ public readonly record struct HyperDashState(int? TargetIndex, float DistanceToH
     public CatchMovementRange? Movement { get; init; }
 }
 
-public enum CatchMovementMode { Walk, Dash, HyperDash }
+public enum CatchMovementMode { Walk, Dash, HyperDash, Stand }
 
-public readonly record struct CatchMovementRange(double Distance, double WalkLimit, double DashLimit, CatchMovementMode Mode);
+public readonly record struct CatchMovementRange(double Distance, double StandLimit, double WalkLimit, double DashLimit, CatchMovementMode Mode);
 
 public static class HyperDashCalculator
 {
@@ -29,7 +29,8 @@ public static class HyperDashCalculator
     public static HyperDashState[] Calculate(IReadOnlyList<ConvertedCatchObject> objects, double circleSize)
     {
         ArgumentNullException.ThrowIfNull(objects);
-        double halfCatcherWidth = CatchSize.CatchWidth(circleSize) / 2;
+        double standLimit = CatchSize.CatchWidth(circleSize) / 2;
+        double halfCatcherWidth = standLimit;
         // Stable tests hyperdash against the full catcher width, not its narrower catching margin.
         halfCatcherWidth /= CatchSize.AllowedCatchRange;
         var states = new HyperDashState[objects.Count];
@@ -73,13 +74,13 @@ public static class HyperDashCalculator
             }
             if (next.TimeMs > current.TimeMs)
             {
-                double distance = Math.Abs(nextX - currentX);
-                double dashLimit = Math.Max(0, distance + timeToNext - distanceToNext);
+                double distance = Math.Abs(Math.Clamp(next.X, 0, 512) - Math.Clamp(current.X, 0, 512));
+                double dashLimit = Math.Max(0, Math.Abs(nextX - currentX) + timeToNext - distanceToNext);
                 // Walking is estimated from the departure centre to the target's catching edge.
                 // Hyperdash still uses the full-sequence official threshold above.
-                double walkLimit = Math.Min(dashLimit, (next.TimeMs - current.TimeMs) * .5 + CatchSize.CatchWidth(circleSize) / 2);
-                states[currentIndex] = states[currentIndex] with { Movement = new(distance, walkLimit, dashLimit,
-                    states[currentIndex].IsHyperDash ? CatchMovementMode.HyperDash
+                double walkLimit = Math.Min(dashLimit, (next.TimeMs - current.TimeMs) * .5 + standLimit);
+                states[currentIndex] = states[currentIndex] with { Movement = new(distance, standLimit, walkLimit, dashLimit,
+                    distance <= standLimit ? CatchMovementMode.Stand : states[currentIndex].IsHyperDash ? CatchMovementMode.HyperDash
                         : distance <= walkLimit ? CatchMovementMode.Walk : CatchMovementMode.Dash) };
             }
             lastDirection = direction;

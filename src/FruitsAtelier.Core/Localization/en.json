@@ -705,6 +705,7 @@
   "update.dataInsideApp": "Move your workspace and custom skin files outside the application current folder before updating.",
   "movement.previous": "Prev · {0}",
   "movement.next": "Next · {0}",
+  "movement.stand": "Stand",
   "movement.walk": "Walk",
   "movement.dash": "Dash",
   "movement.hyperdash": "HDash"

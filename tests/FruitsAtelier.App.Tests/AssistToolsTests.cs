@@ -23,6 +23,15 @@ internal static class AssistToolsTests
         Check(ui.View.MovementOverlayBounds is not null, "Placement panel missing");
         Check(ui.Plot == plot, "Overlay resized the playfield");
         Check(original.ContentEquals(ui.View.Document), "Hover changed content");
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            Strings.SetLanguage(language); ui.MoveMap(1500, 120);
+            Check(ui.View.MovementReadout.Previous?.Mode == CatchMovementMode.Stand, "Placement did not show Stand");
+            Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("movement.previous", "Stand")), "Stand label missing");
+            Check(ui.Canvas.Fills.Any(f => f.Color == 0xA8DCC5 && f.Bounds.Width > 0), "Stand segment missing");
+            ui.MoveMap(1500, 300);
+            Check(ui.View.MovementReadout.Next?.Mode == CatchMovementMode.Stand, "Outgoing Stand missing");
+        }
         ui.Key('1'); ui.ClickMap(2000, 310);
         foreach (string language in new[] { "en", "zh-CN" })
         {
