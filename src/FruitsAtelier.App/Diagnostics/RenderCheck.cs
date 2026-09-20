@@ -359,8 +359,38 @@ internal static class RenderCheck
         void Paint() { canvas.Begin(); view.Render(canvas, 1440, 900); canvas.End(); }
     }
 
+    private static void CheckWorkspaceSave(D2DCanvas canvas, EditorView view)
+    {
+        var original = view.CaptureProject();
+        string songs = view.LibrarySettings.Songs, language = FruitsAtelier.Localization.Strings.Language;
+        try
+        {
+            view.LibrarySettings.Songs = Path.GetFullPath("artifacts/render-save-songs");
+            foreach (string locale in new[] { "en", "zh-CN" })
+            foreach (var size in new[] { (980, 620), (1440, 900) })
+            {
+                FruitsAtelier.Localization.Strings.SetLanguage(locale);
+                view.NewProject(); view.CloseLibrary(); view.SaveCurrentDifficulty();
+                if (!view.DiscardConfirmationVisible || view.IsDirty || view.WorkspaceSession is null)
+                    throw new InvalidOperationException("Workspace save did not precede the Songs export offer.");
+                canvas.Resize(size.Item1, size.Item2, 96);
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+                view.KeyDown(27, false, false);
+                if (view.ExportVisible || view.DiscardConfirmationVisible)
+                    throw new InvalidOperationException("Dismissing the Songs offer did not finish the workspace save.");
+            }
+        }
+        finally
+        {
+            view.LibrarySettings.Songs = songs;
+            FruitsAtelier.Localization.Strings.SetLanguage(language);
+            view.LoadProject(original); view.CloseLibrary();
+        }
+    }
+
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        CheckWorkspaceSave(canvas, view);
         LibraryDropCheck.Run(view, window);
         CheckDistanceFields(canvas, view);
         string thumbnailPath = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png");

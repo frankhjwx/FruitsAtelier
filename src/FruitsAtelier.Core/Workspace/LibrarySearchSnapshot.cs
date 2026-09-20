@@ -85,7 +85,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
             if (projectsOnly && manifest is not null) difficultyCount = manifest.Difficulties.Count;
             bool? inSongs = string.IsNullOrWhiteSpace(songs) ? null
                 : manifest is not null
-                    ? manifest.Difficulties.Any(d => ExistsInSongs(d.Source) || ExistsInSongs(d.ExportTarget))
+                    ? WorkspaceProject.HasExistingSongsFile(manifest, songs)
                     : ExistsInSongs(map.Path);
             rows.Add(new(reader.GetInt32(0), reader.GetString(1), map, difficultyCount, inSongs));
         }

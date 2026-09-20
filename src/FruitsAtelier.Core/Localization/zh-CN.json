@@ -483,7 +483,6 @@
   "ui.redo": "重做",
   "ui.redoMenu": "重做                       Ctrl + Y",
   "ui.resetView": "重置视图",
-  "ui.saveAsMenu": "工程另存为        Ctrl + Shift + S",
   "ui.saveMenu": "保存工程                    Ctrl + S",
   "ui.seconds": "{0:0.#} 秒",
   "ui.selectHint": "点击 fruit、主节点或左侧列表",
@@ -726,5 +725,10 @@
   "library.notInSongs": "未在 osu! Songs 中",
   "library.dropHint": "将 .osz 谱面或 .osk 皮肤拖到此处，导入工作区。",
   "settings.romanisedOn": "Artist / Title 罗马字显示：开",
-  "settings.romanisedOff": "Artist / Title 罗马字显示：关"
+  "settings.romanisedOff": "Artist / Title 罗马字显示：关",
+  "library.savedWorkspaceTitle": "工作区项目已保存",
+  "library.offerSongsExport": "是否也将当前难度导出到 osu! Songs？",
+  "library.offerSongsExportHelp": "也可以只保存在工作区。",
+  "library.workspaceOnly": "仅保存在工作区",
+  "library.exportToSongs": "导出到 osu! Songs…"
 }

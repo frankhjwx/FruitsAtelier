@@ -668,7 +668,7 @@ public sealed partial class EditorView
             else if (virtualKey == 89) Redo();
             else if (virtualKey == 9) SwitchDifficulty((activeDifficulty + (shift ? difficulties.Count - 1 : 1)) % difficulties.Count);
             else if (virtualKey == 79) RequestOpen?.Invoke();
-            else if (virtualKey == 83) { if (shift) RequestSaveAs?.Invoke(); else RequestSave?.Invoke(); }
+            else if (virtualKey == 83 && !shift) RequestSave?.Invoke();
             else if (virtualKey == 69) RequestExport?.Invoke();
             else if (virtualKey == 67) CopySelection();
             else if (virtualKey == 88) CutSelection();

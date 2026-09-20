@@ -53,6 +53,12 @@ public static class WorkspaceProject
         => SafeName($"{Metadata(document, "Artist")} - {Metadata(document, "Title", document.Name)} ({Metadata(document, "Creator")}) [{difficulty}]") + extension;
     private static string Metadata(MapDocument d, string key, string fallback = "Unknown") => OsuBeatmapReader.Setting(d, "Metadata", key) is { Length: > 0 } v ? v : fallback;
     public static string Hash(string path) { using var file = System.IO.File.OpenRead(path); return Convert.ToHexString(SHA256.HashData(file)); }
+    public static bool HasExistingSongsFile(WorkspaceManifest manifest, string songs)
+    {
+        if (string.IsNullOrWhiteSpace(songs)) return false;
+        return manifest.Difficulties.Any(d => Exists(d.Source) || Exists(d.ExportTarget));
+        bool Exists(string? path) => path is not null && Within(songs, path) && File.Exists(path);
+    }
     public static bool Within(string root, string path)
     {
         string fullRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));

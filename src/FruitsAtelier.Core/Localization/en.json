@@ -483,7 +483,6 @@
   "ui.redo": "Redo",
   "ui.redoMenu": "Redo                          Ctrl + Y",
   "ui.resetView": "Reset view",
-  "ui.saveAsMenu": "Save project as      Ctrl + Shift + S",
   "ui.saveMenu": "Save project                  Ctrl + S",
   "ui.seconds": "{0:0.#} s",
   "ui.selectHint": "Click a fruit, path or object list",
@@ -726,5 +725,10 @@
   "library.notInSongs": "Not in osu! Songs",
   "library.dropHint": "Drop .osz beatmaps or .osk skins here to import into your workspace.",
   "settings.romanisedOn": "Romanised artist / title: On",
-  "settings.romanisedOff": "Romanised artist / title: Off"
+  "settings.romanisedOff": "Romanised artist / title: Off",
+  "library.savedWorkspaceTitle": "Workspace project saved",
+  "library.offerSongsExport": "Also export the current difficulty to osu! Songs?",
+  "library.offerSongsExportHelp": "You can keep this project in the workspace only.",
+  "library.workspaceOnly": "Keep in workspace",
+  "library.exportToSongs": "Export to osu! Songs…"
 }

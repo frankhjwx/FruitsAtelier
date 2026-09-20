@@ -6,9 +6,9 @@ Creating a new difficulty in osu! saves the current edits into a new workspace d
 
 Right-click an editor difficulty tab to open its source `.osu`, saved `.catchdiff`, or containing folder. Files open in a text editor; unavailable files are disabled. For workspace difficulties, the folder action opens the workspace directory. **Open osu! Songs folder** opens the difficulty's source beatmap directory, falling back to its export directory when no source is linked.
 
-The application opens in the Library and supports osu!stable's Songs directory. Choose a workspace and the osu!stable installation root in **Settings**. The editor derives `Songs` and `Skins` from that root; existing settings pointing to a `Songs` folder migrate to its parent. Songs is optional and may be configured later; startup and entering the library do not automatically open Settings. When configured, Songs and the workspace must be separate directories. Creating, saving, saving as, and opening workspace projects, including **My Projects**, work without Songs. Scanning Songs and exporting into Songs require it; standalone `.osu` export does not. Settings are stored in `FruitsAtelier/library.json` under the system application-data directory, independently of the launch directory.
+The application opens in the Library and supports osu!stable's Songs directory. Choose a workspace and the osu!stable installation root in **Settings**. The editor derives `Songs` and `Skins` from that root; existing settings pointing to a `Songs` folder migrate to its parent. Songs is optional and may be configured later; startup and entering the library do not automatically open Settings. When configured, Songs and the workspace must be separate directories. Creating, saving, and opening workspace projects, including **My Projects**, work without Songs. Scanning Songs and exporting into Songs require it; standalone `.osu` export does not. Settings are stored in `FruitsAtelier/library.json` under the system application-data directory, independently of the launch directory.
 
-Saving an imported difficulty with no export record opens the export choices before writing its edits. Once a difficulty has been exported to Songs, including an overwrite or a newly created difficulty, Save / Ctrl+S updates its linked `.osu` directly. Ctrl+E always opens the manual export panel. Export associations persist in the workspace manifest.
+For a project with no existing associated source or export file in the configured Songs directory, File → Save / Ctrl+S first saves the workspace project, then offers to export the current difficulty to Songs. **Keep in workspace**, Esc, or cancelling the subsequent export panel leaves the workspace save intact and does not write to Songs. Without a configured Songs directory, Save writes only the workspace project. For projects already present in Songs, an imported difficulty with no export record opens the export choices before writing its edits. Once a difficulty has been exported to Songs, including an overwrite or a newly created difficulty, Save / Ctrl+S updates its linked `.osu` directly. Ctrl+E always opens the manual export panel. Export associations persist in the workspace manifest.
 
 ## File structure
 
@@ -32,7 +32,7 @@ Workspace/
 
 Saving first creates a complete temporary project directory, then publishes it by renaming directories. An interrupted save can recover from the retained `.previous` directory; the manifest and difficulty files never combine different save versions. Resource paths are recorded relative to the final project location. Saving does not copy resources: external directories stay in place, and complete OSZ contents remain separately in `Resources`, unaffected by project snapshot saves.
 
-Older `.catchproj` files still open; the next save writes a workspace project. Save As creates an independent project copy in the current workspace.
+Older `.catchproj` files still open; the next save writes a workspace project.
 
 ## Importing external resources
 
@@ -68,7 +68,7 @@ Opening a project and refreshing the editor check source `.osu` files and song a
 
 ## Explicit export
 
-Adding difficulties, browsing, and searching do not write to Songs. Save from the File menu or Ctrl/Cmd+S updates the linked Songs file for an already exported difficulty; an imported difficulty without an export record opens the export choices first. Export or Ctrl/Cmd+E always opens the overlay directly. The map editor stays visible underneath, with canvas input blocked until Cancel or Esc dismisses the overlay. Save As creates a project copy only when its source directories are not already associated with a workspace project. A source directory can belong to only one newly created project; attempts to create another report the existing project path.
+Adding difficulties, browsing, and searching do not write to Songs. Save from the File menu or Ctrl/Cmd+S follows the save behavior described above, including the optional Songs export after saving a workspace-only project. Export or Ctrl/Cmd+E always opens the overlay directly. The map editor stays visible underneath, with canvas input blocked until Cancel or Esc dismisses the overlay. A source directory can belong to only one newly created project; attempts to create another report the existing project path.
 
 Select an export mode, edit its fields, then use the single action button. New difficulty is selected initially. Up/Down changes the mode, Tab focuses the name field where applicable, and Enter activates the action when the name field is not focused. Repeating the save shortcut inside the overlay preserves the current input.
 

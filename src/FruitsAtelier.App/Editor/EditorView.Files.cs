@@ -10,7 +10,6 @@ public sealed partial class EditorView
     public Action? RequestImportDifficulty { get; set; }
     public Action? RequestDifficultyChanged { get; set; }
     public Action? RequestSave { get; set; }
-    public Action? RequestSaveAs { get; set; }
     public Action? RequestExport { get; set; }
     public Action? RequestTogglePlayback { get; set; }
     public Action<double>? RequestSeek { get; set; }

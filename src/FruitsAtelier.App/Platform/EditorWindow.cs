@@ -143,7 +143,7 @@ internal sealed partial class EditorWindow : IDisposable
         if (!view.IsDirty) { FileOperation(continuation); return; }
         view.ShowDiscardConfirmation(answer => FileOperation(() =>
         {
-            if (answer == 7 || answer == 6 && SaveProject(false)) continuation();
+            if (answer == 7 || answer == 6 && SaveProject()) continuation();
         }));
         Invalidate();
     }

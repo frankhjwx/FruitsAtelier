@@ -94,8 +94,7 @@ The workspace contains a `project.catchdiff` manifest and separate `.catchdiff` 
 
 | Action | Result |
 | --- | --- |
-| Ctrl+S: Save | Saves the project's editable difficulty data. An imported difficulty's first save opens export choices. After linking through export to Songs, Save also updates its linked `.osu`. |
-| Ctrl+Shift+S: Save As | Creates an independent project copy in the workspace. |
+| Ctrl+S: Save | Saves the project's editable difficulty data. Workspace-only projects offer an optional Songs export after saving; choosing to keep the project in the workspace completes the save. For projects already in Songs, an imported difficulty’s first save opens export choices, and subsequent saves update its linked `.osu`. |
 | Ctrl+E: Export | Opens choices for the active difficulty: a standalone `.osu`, overwriting an associated difficulty, or creating a new difficulty in Songs. |
 
 Exporting a new difficulty to Songs saves your edits in a new workspace difficulty and activates it. The original difficulty keeps its last saved content. Exported `.osu` files do not preserve all editor-specific controls, so keep the workspace project for further editing.
@@ -113,7 +112,7 @@ Shortcuts below apply while editing, outside text fields and dialogs. On macOS, 
 | Keys | Action |
 | --- | --- |
 | Ctrl+O | Open a beatmap, OSZ or older project. |
-| Ctrl+S / Ctrl+Shift+S | Save / Save As project. |
+| Ctrl+S | Save project. |
 | Ctrl+E | Open export choices. |
 | Ctrl+Tab / Ctrl+Shift+Tab | Next / previous difficulty. |
 | 1 / F / B / N | Select / Fruit / FSlider / Banana tools. |

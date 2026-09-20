@@ -70,10 +70,9 @@ internal sealed partial class MacWindow : Window
         });
         View.RequestSave = () =>
         {
-            if (View.CurrentDifficultyHasExport) View.RequestWorkspaceExport?.Invoke(true, View.CurrentDifficultyName);
+            if (View.CurrentDifficultyHasExport && View.ProjectInSongs) View.RequestWorkspaceExport?.Invoke(true, View.CurrentDifficultyName);
             else RunFile(() => { View.SaveCurrentDifficulty(); return Task.CompletedTask; });
         };
-        View.RequestSaveAs = () => RunFile(async () => { await Save(true); });
         View.RequestExport = View.ShowWorkspaceExport;
         ConfigureLibrary(initialPath is null && !smokeCheck, smokeCheck);
         View.RequestLoadSkin = () => RunFile(async () =>
@@ -167,7 +166,7 @@ internal sealed partial class MacWindow : Window
         if (!View.PrepareFileOperation()) return false;
         if (!View.IsDirty) return true;
         int answer = await Message(L.Get("app.name"), L.Get("window.confirmDiscard"), true);
-        return answer == 2 || answer == 1 && await Save(false);
+        return answer == 2 || answer == 1 && await Save();
     }
     private async Task<int> Message(string title, string text, bool confirm = false)
     {
@@ -211,11 +210,11 @@ internal sealed partial class MacWindow : Window
         PollAudio();
     }
 
-    private async Task<bool> Save(bool saveAs)
+    private async Task<bool> Save()
     {
         if (!View.PrepareFileOperation()) return false;
         await Task.CompletedTask;
-        return View.SaveWorkspace(saveAs);
+        return View.SaveWorkspace();
     }
 
     private static string SafeName(string name) => string.IsNullOrWhiteSpace(name) ? L.Get("files.untitled") : new string(name.Where(c => !Path.GetInvalidFileNameChars().Contains(c) && c != ':').Take(100).ToArray());

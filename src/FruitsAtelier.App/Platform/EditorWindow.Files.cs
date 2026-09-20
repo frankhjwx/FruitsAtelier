@@ -53,7 +53,6 @@ internal sealed partial class EditorWindow
             if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) { audio.Load(view.Document.AudioPath); audio.Seek(view.PlayheadMs); }
         };
         view.RequestSave = () => FileOperation(view.SaveCurrentDifficulty);
-        view.RequestSaveAs = () => FileOperation(() => SaveProject(true));
         view.RequestExport = view.ShowWorkspaceExport;
         ConfigureLibrary();
         view.RequestTogglePlayback = () =>
@@ -102,10 +101,10 @@ internal sealed partial class EditorWindow
         AppLog.Write($"Opened project: {path}; difficulties={session.Project.Difficulties.Count}");
     }
 
-    private bool SaveProject(bool saveAs)
+    private bool SaveProject()
     {
         if (!view.PrepareFileOperation()) return false;
-        return view.SaveWorkspace(saveAs);
+        return view.SaveWorkspace();
     }
 
     internal static void CopyResources(MapDocument document, string destinationDirectory, MapDocument exportedDocument)

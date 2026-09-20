@@ -139,11 +139,11 @@ public sealed partial class EditorView
         }
         nextResourceCheck = DateTime.UtcNow.AddSeconds(3);
     }
-    public bool SaveWorkspace(bool copy = false)
+    public bool SaveWorkspace()
     {
         if (!PrepareFileOperation()) return false;
         var project = CaptureProject();
-        if (WorkspaceSession is null || copy) WorkspaceSession = WorkspaceProject.Create(LibrarySettings.Workspace, project, LibrarySettings.Songs);
+        if (WorkspaceSession is null) WorkspaceSession = WorkspaceProject.Create(LibrarySettings.Workspace, project, LibrarySettings.Songs);
         else WorkspaceProject.Save(WorkspaceSession, project);
         MarkSaved(); CheckWorkspaceResources();
         libraryProjectsNeedReindex = true; QueueLibrarySearch();
@@ -152,9 +152,20 @@ public sealed partial class EditorView
     }
     public bool CurrentDifficultyHasExport => WorkspaceSession?.Manifest.Difficulties
         .Any(d => d.Id == difficulties[activeDifficulty].Id && d.ExportTarget is not null && d.ExportHash is not null) == true;
+    public bool ProjectInSongs => !string.IsNullOrWhiteSpace(LibrarySettings.Songs) && (WorkspaceSession is { } session
+        ? WorkspaceProject.HasExistingSongsFile(session.Manifest, LibrarySettings.Songs)
+        : Document.SourcePath is { } path && WorkspaceProject.Within(LibrarySettings.Songs, path) && File.Exists(path));
     public void SaveCurrentDifficulty()
     {
-        if (!PrepareFileOperation()) return;
+        if (DiscardConfirmationVisible || ExportVisible || !PrepareFileOperation()) return;
+        if (string.IsNullOrWhiteSpace(LibrarySettings.Songs)) { SaveWorkspace(); return; }
+        if (!ProjectInSongs)
+        {
+            if (!SaveWorkspace()) return;
+            ShowDiscardConfirmation(answer => { if (answer == 6) ShowWorkspaceExport(); });
+            offerSongsExport = true;
+            return;
+        }
         var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id);
         if (CurrentDifficultyHasExport)
             RequestWorkspaceExport?.Invoke(true, CurrentDifficultyName);

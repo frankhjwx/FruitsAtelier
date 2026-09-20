@@ -14,6 +14,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Workspace-only saves persist before optional Songs export", WorkspaceSaveTests.Run),
     ("Library archive drops preserve Songs and report source/export presence", LibraryImportTests.Run),
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
@@ -275,10 +276,9 @@ static void FileCommands()
     var calls = new List<string>();
     ui.View.RequestOpen = () => calls.Add("open");
     ui.View.RequestSave = () => calls.Add("save");
-    ui.View.RequestSaveAs = () => calls.Add("saveAs");
     ui.View.RequestExport = () => calls.Add("export");
     ui.Key('O', ctrl: true); ui.Key('S', ctrl: true); ui.Key('S', ctrl: true, shift: true); ui.Key('E', ctrl: true);
-    True(calls.SequenceEqual(new[] { "open", "save", "saveAs", "export" }), "A file shortcut did not invoke its host callback.");
+    True(calls.SequenceEqual(new[] { "open", "save", "export" }), "A file shortcut did not invoke its host callback.");
     True(!ui.View.IsDirty, "File commands changed content without a host action.");
 }
 

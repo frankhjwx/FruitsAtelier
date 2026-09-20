@@ -34,7 +34,7 @@ internal sealed partial class EditorWindow
                     view.LibrarySettings.DefaultSkin, view.WorkspaceSession?.Directory })
                     if (!string.IsNullOrWhiteSpace(path) && (Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar).StartsWith(application, StringComparison.OrdinalIgnoreCase))
                     { view.ShowError(L.Get("update.dataInsideApp")); return false; }
-                if (view.HasEditorProject && view.IsDirty && !SaveProject(false)) return false;
+                if (view.HasEditorProject && view.IsDirty && !SaveProject()) return false;
                 view.SaveLibraryMemory();
                 audio.Pause();
                 return true;

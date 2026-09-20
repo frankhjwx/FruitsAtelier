@@ -191,7 +191,7 @@ With N, left-click to set the start, then right-click at a later time to finish.
 | Input | Action |
 | --- | --- |
 | Ctrl+O | Open `.osz` / `.osu` / `.catchproj` |
-| Ctrl+S / Ctrl+Shift+S | Save current difficulty (export choices on first imported save) / Save As project |
+| Ctrl+S | Save current difficulty; workspace-only projects offer an optional Songs export after saving |
 | Ctrl+E | Export `.osu` |
 | Space | Play / pause |
 | Click, drag, or scroll the bottom timeline | Seek while preserving play/pause state |
@@ -243,4 +243,4 @@ Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Slider 
 
 A confirmed stream remains one editable slider parent with its anchors, handles and repeats. Dragging, reshaping, cloning, saving and undo retain its stream snap. Existing streams offer **Change snapping** above **Convert back to slider** in their long-press menu. The Edit menu and Ctrl+Shift+F open Change snapping for a stream selection. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
 
-The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+I point insertion, Ctrl+J extension, Ctrl+Shift+S Save As, Ctrl+E export and Ctrl+wheel zoom remain editor-specific bindings; V and End provide last-note navigation. Timing creation, bookmarks and geometric rotation dialogs are not available.
+The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+I point insertion, Ctrl+J extension, Ctrl+E export and Ctrl+wheel zoom remain editor-specific bindings; V and End provide last-note navigation. Timing creation, bookmarks and geometric rotation dialogs are not available.

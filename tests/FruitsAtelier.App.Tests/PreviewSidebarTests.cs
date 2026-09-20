@@ -157,7 +157,7 @@ internal static class PreviewSidebarTests
         Check(ui.Canvas.Texts.Single(text => text.Value == L.Get("library.back")).X > ui.Canvas.Texts.Single(text => text.Value == language).X, "Library is right of Language");
         ui.ClickText(L.Get("ui.file"));
         var shortcuts = ui.Canvas.Texts.Where(text => text.Value.StartsWith("Ctrl +", StringComparison.Ordinal)).ToArray();
-        Check(shortcuts.Length >= 4, "menu shortcuts are separate labels");
+        Check(shortcuts.Length >= 3, "menu shortcuts are separate labels");
         var edges = shortcuts.Select(text => text.X + ((ICanvas)ui.Canvas).MeasureText(text.Value, 12)).ToArray();
         Check(edges.Max() - edges.Min() < .01, "shortcut right edges align");
     }
