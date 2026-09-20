@@ -46,7 +46,8 @@ internal static class MarqueeScrollTests
             before = ui.View.PlayheadMs;
             for (int elapsed = 0; elapsed < 1000; elapsed += frameMs) { clock.Advance(frameMs); ui.Paint(); }
             double scale = timeline ? ui.View.ObjectTimelinePixelsPerMs : ui.View.PixelsPerMs;
-            Near(400 / scale, ui.View.PlayheadMs - before);
+            double speed = timeline ? 600 : 1200;
+            Near(speed / scale, ui.View.PlayheadMs - before);
             Check(ui.View.SelectedObjectIds.Contains(map.Fruits[0].Id)
                 && ui.View.SelectedObjectIds.Contains(map.Fruits[1].Id), "Scrolling lost the anchored selection range");
 
@@ -59,7 +60,7 @@ internal static class MarqueeScrollTests
             float backwardY = timeline ? endY : area.Bottom;
             ui.View.PointerMove(backwardX, backwardY, false, false); ui.Paint();
             for (int elapsed = 0; elapsed < 1000; elapsed += frameMs) { clock.Advance(frameMs); ui.Paint(); }
-            Near(-400 / scale, ui.View.PlayheadMs - before);
+            Near(-speed / scale, ui.View.PlayheadMs - before);
             ui.View.Wheel(timeline ? area.X + 1 : endX, timeline ? endY : area.Bottom - 1, 120 * 1000, false); ui.Paint();
             Near(0, ui.View.PlayheadMs);
             Check(!ui.View.MarqueeScrollNeedsRedraw, "Scrolling did not stop at the map start");
