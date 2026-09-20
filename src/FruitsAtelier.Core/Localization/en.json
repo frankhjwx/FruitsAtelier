@@ -702,5 +702,11 @@
   "update.back": "Back to settings",
   "update.notice": "Version v{0} is available. Open Library → Settings → Application updates.",
   "update.otherInstance": "Close other windows of this application before updating.",
-  "update.dataInsideApp": "Move your workspace and custom skin files outside the application current folder before updating."
+  "update.dataInsideApp": "Move your workspace and custom skin files outside the application current folder before updating.",
+  "movement.previous": "Prev · {0}",
+  "movement.next": "Next · {0}",
+  "movement.walk": "Walk",
+  "movement.dash": "Dash",
+  "movement.hyperdash": "HDash",
+  "movement.legend": "Walk / Dash / HDash · Walk estimated from centre"
 }

@@ -50,6 +50,7 @@ public sealed partial class EditorView
         DrawSelectionBox(c);
         DrawPreviewSidebar(c);
         DrawLegacyConversionButton(c);
+        DrawMovementOverlay(c);
         DrawTransport(c);
         DrawStatus(c);
         if (resourceErrors.Count > 0)

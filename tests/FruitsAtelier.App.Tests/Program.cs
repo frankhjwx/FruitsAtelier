@@ -38,6 +38,7 @@ var tests = new (string Name, Action Run)[]
     ("Stable root migration and skin selection preserve content and archive provenance", SkinSelectorTests.Run),
     ("Object timeline navigation and group movement preserve geometry and undo", ObjectTimelineTests.MoveAndNavigate),
     ("Returning to Library saves, discards or cancels before closing the editor", LibraryExitTests.Run),
+    ("Floating movement panel follows placement, selection, dragging and language", AssistToolsTests.MovementOverlay),
     ("Distance spacing placement, persistence, Alt and undo", AssistToolsTests.SpacingAndPlacement),
     ("Distance readouts, slider tails, base SV and layout", AssistToolsTests.DistanceRules),
     ("Distance snapping moves selected groups by a shared offset", AssistToolsTests.GroupDistanceDrag),
@@ -963,7 +964,7 @@ sealed class RecordingCanvas : ICanvas
     public List<Outline> Fills { get; } = [];
     public List<Operation> Operations { get; } = [];
     public void Clear() { Fills.Clear(); Images.Clear(); Sprites.Clear(); Texts.Clear(); Clips.Clear(); Circles.Clear(); Lines.Clear(); Outlines.Clear(); Operations.Clear(); clipStack.Clear(); }
-    public void Fill(Rect r, uint color, float radius = 0) => Fills.Add(new(r, color));
+    public void Fill(Rect r, uint color, float radius = 0, float opacity = 1) => Fills.Add(new(r, color));
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0) => Outlines.Add(new(r, color));
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)
     {

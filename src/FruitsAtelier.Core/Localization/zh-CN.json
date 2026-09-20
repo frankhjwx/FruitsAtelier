@@ -702,5 +702,11 @@
   "update.back": "返回设置",
   "update.notice": "发现版本 v{0}，请前往谱面库 → 设置 → 应用更新。",
   "update.otherInstance": "请先关闭此应用的其他窗口，再进行更新。",
-  "update.dataInsideApp": "请先将工作区和自定义皮肤文件移到程序 current 文件夹之外，再进行更新。"
+  "update.dataInsideApp": "请先将工作区和自定义皮肤文件移到程序 current 文件夹之外，再进行更新。",
+  "movement.previous": "前一对象 · {0}",
+  "movement.next": "后一对象 · {0}",
+  "movement.walk": "Walk",
+  "movement.dash": "Dash",
+  "movement.hyperdash": "HDash",
+  "movement.legend": "Walk / Dash / HDash · Walk 按中心起步估算"
 }

@@ -9,7 +9,7 @@ public readonly record struct Rect(float X, float Y, float Width, float Height)
 
 public interface ICanvas
 {
-    void Fill(Rect r, uint color, float radius = 0);
+    void Fill(Rect r, uint color, float radius = 0, float opacity = 1);
     void Stroke(Rect r, uint color, float width = 1, float radius = 0);
     void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1);
     void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1, float opacity = 1);

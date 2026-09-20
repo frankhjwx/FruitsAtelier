@@ -228,10 +228,6 @@ public sealed partial class EditorView
         var next = distanceReferences.FirstOrDefault(r => r.Id != draftTrack && !ids.Contains(r.Id) && r.Start.TimeMs >= end.TimeMs);
         DistanceReadout = (previous is null ? null : DistanceSnap.Ratio(previous.End, point, previous.Velocity),
             next is null ? null : DistanceSnap.Ratio(end, next.Start, velocity));
-        var r = new Rect(plot.X + 6, plot.Bottom - 57, 154, 51);
-        c.Fill(r, Panel, 4);
-        c.Text(L.Get("assist.previous", Format(DistanceReadout.Previous)), r.X + 8, r.Y + 9, 12, Gold, 140);
-        c.Text(L.Get("assist.next", Format(DistanceReadout.Next)), r.X + 8, r.Y + 29, 12, Gold, 140);
-        static string Format(double? value) => value is { } number ? L.Get("assist.ratio", number) : "—";
+
     }
 }

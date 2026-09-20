@@ -7,7 +7,12 @@ namespace FruitsAtelier.Core;
 public readonly record struct HyperDashState(int? TargetIndex, float DistanceToHyperDash)
 {
     public bool IsHyperDash => TargetIndex.HasValue;
+    public CatchMovementRange? Movement { get; init; }
 }
+
+public enum CatchMovementMode { Walk, Dash, HyperDash }
+
+public readonly record struct CatchMovementRange(double Distance, double WalkLimit, double DashLimit, CatchMovementMode Mode);
 
 public static class HyperDashCalculator
 {
@@ -65,6 +70,17 @@ public static class HyperDashCalculator
             {
                 states[currentIndex] = new(null, distanceToHyper);
                 lastExcess = Math.Clamp(distanceToHyper, 0, halfCatcherWidth);
+            }
+            if (next.TimeMs > current.TimeMs)
+            {
+                double distance = Math.Abs(nextX - currentX);
+                double dashLimit = Math.Max(0, distance + timeToNext - distanceToNext);
+                // Walking is estimated from the departure centre to the target's catching edge.
+                // Hyperdash still uses the full-sequence official threshold above.
+                double walkLimit = Math.Min(dashLimit, (next.TimeMs - current.TimeMs) * .5 + CatchSize.CatchWidth(circleSize) / 2);
+                states[currentIndex] = states[currentIndex] with { Movement = new(distance, walkLimit, dashLimit,
+                    states[currentIndex].IsHyperDash ? CatchMovementMode.HyperDash
+                        : distance <= walkLimit ? CatchMovementMode.Walk : CatchMovementMode.Dash) };
             }
             lastDirection = direction;
         }

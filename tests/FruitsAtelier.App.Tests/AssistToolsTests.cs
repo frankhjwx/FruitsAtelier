@@ -12,6 +12,37 @@ internal static class AssistToolsTests
         map.Fruits.Add(new Fruit { TimeMs = 2000, X = 310 });
         return map;
     }
+    public static void MovementOverlay()
+    {
+        var ui = new Ui(); var map = Map();
+        ui.LoadDocument(map);
+        var original = ui.View.Document.DeepClone();
+        var plot = ui.Plot;
+        ui.Key('F'); ui.MoveMap(1500, 240);
+        Check(ui.View.MovementReadout.Previous?.Mode == CatchMovementMode.Walk, "Placement did not show incoming walk");
+        Check(ui.View.MovementOverlayBounds is not null, "Placement panel missing");
+        Check(ui.Plot == plot, "Overlay resized the playfield");
+        Check(original.ContentEquals(ui.View.Document), "Hover changed content");
+        ui.Key('1'); ui.ClickMap(2000, 310);
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            Strings.SetLanguage(language); ui.Resize(980, 620);
+            var panel = ui.View.MovementOverlayBounds!.Value;
+            Check(panel.Bottom < ui.View.CanvasPlotBounds.Bottom && panel.X >= ui.View.CanvasPlotBounds.X, "Panel escaped canvas");
+            Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("movement.previous", "Walk")), "Localized movement label missing");
+        }
+        ui = new Ui(); ui.LoadDocument(Map()); original = ui.View.Document.DeepClone(); ui.Key('F'); ui.MoveMap(1500, 240);
+        ui.View.PointerMove(10, 10, false, false); ui.Paint();
+        Check(ui.View.MovementOverlayBounds is null, "Hidden ghost retained panel");
+        ui.Key('1'); ui.ClickMap(2000, 310);
+        Check(ui.View.MovementReadout.Previous is not null && ui.View.MovementReadout.Next is null, "Selected fruit neighbours are wrong");
+        ui.DownMap(2000, 310); ui.MoveMap(1125, 480); ui.UpMap(1125, 480);
+        Check(ui.View.MovementReadout.Previous?.Mode == CatchMovementMode.HyperDash, "Dragged fruit did not update movement");
+        ui.Key('Z', ctrl: true);
+        Check(original.ContentEquals(ui.View.Document), "Drag undo did not restore document");
+        Strings.SetLanguage("en");
+    }
+
     public static void SpacingAndPlacement()
     {
         var ui = new Ui(); ui.LoadDocument(Map()); ui.Key('F');
