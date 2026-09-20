@@ -709,5 +709,14 @@
   "movement.stand": "Stand",
   "movement.walk": "Walk",
   "movement.dash": "Dash",
-  "movement.hyperdash": "HDash"
+  "movement.hyperdash": "HDash",
+  "distance.previousField": "Previous DS",
+  "distance.nextField": "Next DS",
+  "distance.nonnegative": "DS must be zero or positive.",
+  "distance.interval": "DS requires a positive time interval.",
+  "distance.direction": "Aligned objects have no existing direction.",
+  "distance.outside": "This DS places the object outside the playfield.",
+  "distance.unsupported": "Select a fruit or droplet to edit DS.",
+  "distance.sharedRepeat": "These repeats share the same curve position.",
+  "distance.unreachable": "The slider cannot reach this DS at the same time."
 }

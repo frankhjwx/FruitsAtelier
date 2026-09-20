@@ -18,6 +18,7 @@ public sealed partial class EditorView
         this.width = width;
         this.height = height;
         hits.Clear(); fields.Clear();
+        distanceLabelBounds.Clear(); PreviousDistanceFieldBounds = NextDistanceFieldBounds = null;
         if (IsTestplaying)
         {
             AdvanceTestplay();
@@ -232,6 +233,7 @@ public sealed partial class EditorView
         {
             DrawMovementConnections(c);
             DrawCanvasCatchObjects(c);
+            DrawMovementDistanceLabels(c);
         }
         DrawPlacementGhost(c);
         float headY = Screen(new(playhead, 0)).Y;

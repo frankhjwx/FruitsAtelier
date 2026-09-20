@@ -70,6 +70,7 @@ public sealed partial class EditorView
 
     private void PickSoundEdge(ConvertedCatchObject item)
     {
+        distanceObject = item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet ? (item.SourceId, item.EventIndex) : null;
         soundEdge = null;
         if (item.Kind != CatchObjectKind.Fruit || item.IsStandalone) return;
         int edge = conversion!.Objects.Where(o => o.SourceId == item.SourceId && o.Kind == CatchObjectKind.Fruit)
@@ -205,6 +206,15 @@ public sealed partial class EditorView
     private void DrawDistanceReadout(ICanvas c)
     {
         DistanceReadout = (null, null);
+        bool placement = PlacementGhostPoint() is not null;
+        var target = placement ? placementGhost : SelectedDistanceObject();
+        if (target is not null)
+        {
+            var neighbours = DistanceNeighbours(target, placement ? placementMovementObjects : null);
+            DistanceReadout = (neighbours.Previous is { } prev ? BaseDistanceRatio(prev, target) : null,
+                neighbours.Next is { } nextObject ? BaseDistanceRatio(target, nextObject) : null);
+            return;
+        }
         var ids = FlagTargets().ToHashSet();
         EnsureDistanceReferences();
         MapPoint point, end;
@@ -215,18 +225,17 @@ public sealed partial class EditorView
             point = end = ghost;
             var timing = TimingMap.At(Document, point.TimeMs);
             velocity = 100 * Document.SliderMultiplier / timing.BeatLengthMs;
-            if (tool == Tool.Slider) velocity *= timing.SliderVelocityMultiplier;
         }
         else
         {
             if (ids.Count != 1 || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
             var selected = distanceReferences.FirstOrDefault(r => ids.Contains(r.Id));
             if (selected is null) return;
-            point = selected.Start; end = selected.End; velocity = selected.Velocity;
+            point = selected.Start; end = selected.End; velocity = BaseDistanceVelocity(end.TimeMs);
         }
         var previous = PreviousReference(point.TimeMs, ids);
         var next = distanceReferences.FirstOrDefault(r => r.Id != draftTrack && !ids.Contains(r.Id) && r.Start.TimeMs >= end.TimeMs);
-        DistanceReadout = (previous is null ? null : DistanceSnap.Ratio(previous.End, point, previous.Velocity),
+        DistanceReadout = (previous is null ? null : DistanceSnap.Ratio(previous.End, point, BaseDistanceVelocity(previous.End.TimeMs)),
             next is null ? null : DistanceSnap.Ratio(end, next.Start, velocity));
 
     }

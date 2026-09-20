@@ -316,8 +316,47 @@ internal static class RenderCheck
         AppLog.Write($"Playback profile complete: {reportPath}");
     }
 
+    private static void CheckDistanceFields(D2DCanvas canvas, EditorView view)
+    {
+        var original = view.CaptureProject();
+        string language = FruitsAtelier.Localization.Strings.Language;
+        try
+        {
+            foreach (string current in FruitsAtelier.Localization.Strings.AvailableLanguages)
+            {
+                FruitsAtelier.Localization.Strings.SetLanguage(current);
+                var map = new MapDocument { DurationMs = 10000, SliderMultiplier = 1.4, IsDemo = false };
+                map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 100 }, new Fruit { TimeMs = 1500, X = 240 }]);
+                view.LoadDocument(map); view.CloseLibrary();
+                canvas.Resize(1440, 900, 96);
+                Paint();
+                view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom, -2400, true);
+                Paint();
+                var field = view.PlayfieldBounds;
+                float x = field.X + 240f / 512 * field.Width;
+                float y = view.CanvasPlotBounds.Bottom - (float)((1500 - view.ViewStartMs) * view.PixelsPerMs);
+                view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint();
+                var input = view.PreviousDistanceFieldBounds ?? throw new InvalidOperationException("DS input missing.");
+                view.PointerDown(input.X + 8, input.Y + 8, 0, false, false);
+                view.PointerUp(input.X + 8, input.Y + 8, 0); Paint();
+                view.TextInput('0'); view.TextInput('.'); view.TextInput('5'); Paint();
+                view.KeyDown(13, false, false); Paint();
+                if (Math.Abs(view.Document.Fruits[1].X - 170) > .001) throw new InvalidOperationException("DS input did not move fruit.");
+                view.KeyDown('Z', true, false); Paint();
+                if (Math.Abs(view.Document.Fruits[1].X - 240) > .001) throw new InvalidOperationException("DS input undo failed.");
+            }
+        }
+        finally
+        {
+            FruitsAtelier.Localization.Strings.SetLanguage(language);
+            view.LoadProject(original); view.CloseLibrary();
+        }
+        void Paint() { canvas.Begin(); view.Render(canvas, 1440, 900); canvas.End(); }
+    }
+
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        CheckDistanceFields(canvas, view);
         string thumbnailPath = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png");
         var thumbnailWait = Stopwatch.StartNew();
         bool thumbnailReady = false;

@@ -22,6 +22,9 @@ public static class DistanceSnap
             .OrderBy(r => r.Start.TimeMs).ThenBy(r => r.Order).ToArray();
     }
 
+    public static double BaseVelocity(MapDocument document, double time)
+        => 100 * document.SliderMultiplier / TimingMap.At(document, time).BeatLengthMs;
+
     public static double? Ratio(MapPoint from, MapPoint to, double velocity)
     {
         double distance = (to.TimeMs - from.TimeMs) * velocity;

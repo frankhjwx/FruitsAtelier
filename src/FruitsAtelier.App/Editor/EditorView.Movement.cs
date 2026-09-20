@@ -37,12 +37,8 @@ public sealed partial class EditorView
         _ => 0xCE7683
     };
 
-    private void DrawMovementConnections(ICanvas c)
+    private int FirstVisibleMovement(IReadOnlyList<ConvertedCatchObject> objects)
     {
-        if (!movementAnalysis) return;
-        var objects = placementMovementObjects ?? conversion!.Objects;
-        EnsureMovementStates(objects);
-        double endTime = viewStart + plot.Height / pixelsPerMs;
         int low = 1, high = movementIndices.Length;
         while (low < high)
         {
@@ -50,7 +46,16 @@ public sealed partial class EditorView
             if (objects[movementIndices[middle]].TimeMs < viewStart) low = middle + 1;
             else high = middle;
         }
-        for (int i = low; i < movementIndices.Length; i++)
+        return low;
+    }
+
+    private void DrawMovementConnections(ICanvas c)
+    {
+        if (!movementAnalysis) return;
+        var objects = placementMovementObjects ?? conversion!.Objects;
+        EnsureMovementStates(objects);
+        double endTime = viewStart + plot.Height / pixelsPerMs;
+        for (int i = FirstVisibleMovement(objects); i < movementIndices.Length; i++)
         {
             int departure = movementIndices[i - 1];
             var from = objects[departure];
@@ -88,10 +93,11 @@ public sealed partial class EditorView
         }
         EnsureMovementStates(objects);
         var indices = movementIndices;
+        var selectedObject = placement ? placementGhost : SelectedDistanceObject();
         int first = Array.FindIndex(indices, i => objects[i].SourceId == source
-            && (!placement || objects[i].EventIndex == placementGhost!.EventIndex));
+            && (selectedObject is null || objects[i].EventIndex == selectedObject.EventIndex));
         if (first < 0) return;
-        int last = placement ? first : Array.FindLastIndex(indices, i => objects[i].SourceId == source);
+        int last = selectedObject is not null ? first : Array.FindLastIndex(indices, i => objects[i].SourceId == source);
         MovementReadout = (first > 0 ? movementStates[indices[first - 1]].Movement : null,
             movementStates[indices[last]].Movement);
 
@@ -125,11 +131,8 @@ public sealed partial class EditorView
         }
         else c.Fill(new(left, y, length, 7), Grid, 3);
 
-        c.Text(L.Get("assist.previous", Ratio(DistanceReadout.Previous)), left, r.Y + 47, 11, Muted, length / 2);
-        string nextRatio = L.Get("assist.next", Ratio(DistanceReadout.Next));
-        c.Text(nextRatio, r.Right - 12 - c.MeasureText(nextRatio, 11), r.Y + 47, 11, Muted, length / 2);
+        DrawDistanceFields(c, r);
 
-        static string Ratio(double? value) => value is { } number ? L.Get("assist.ratio", number) : "—";
         static string Label(CatchMovementRange? range) => range is { } value
             ? L.Get(value.Mode switch { CatchMovementMode.Stand => "movement.stand", CatchMovementMode.Walk => "movement.walk", CatchMovementMode.Dash => "movement.dash", _ => "movement.hyperdash" })
             : "—";

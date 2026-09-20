@@ -38,6 +38,9 @@ var tests = new (string Name, Action Run)[]
     ("Stable root migration and skin selection preserve content and archive provenance", SkinSelectorTests.Run),
     ("Object timeline navigation and group movement preserve geometry and undo", ObjectTimelineTests.MoveAndNavigate),
     ("Returning to Library saves, discards or cancels before closing the editor", LibraryExitTests.Run),
+    ("DS numeric fields use base SV, preserve direction and support undo", DistanceEditingTests.NumericFields),
+    ("DS edits selected slider heads, tails and droplets", DistanceEditingTests.SliderPoints),
+    ("Movement DS labels use base SV and avoid collisions", DistanceEditingTests.Labels),
     ("Movement analysis toggles all four connection colours without editing content", AssistToolsTests.MovementAnalysis),
     ("Floating movement panel follows placement, selection, dragging and language", AssistToolsTests.MovementOverlay),
     ("Distance spacing placement, persistence, Alt and undo", AssistToolsTests.SpacingAndPlacement),
@@ -735,7 +738,7 @@ static void MainCurveSelectionOpacity()
     True(ObjectCircles(ui, preview: false).SequenceEqual(objects), "Curve selection changed the converted objects.");
     AssertMainDrawOrder();
     AssertPreviewLayer();
-    ui.DownMap(100, 500); ui.MoveMap(300, 480); ui.UpMap(300, 480);
+    ui.DownMap(100, 0); ui.MoveMap(300, 20); ui.UpMap(300, 20);
     foreach (var command in CurveCommands(ui, preview: false)) Near(0.5, command.Segment!.Value.Opacity);
     AssertMainDrawOrder();
     AssertPreviewLayer();

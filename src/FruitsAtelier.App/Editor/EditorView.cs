@@ -231,7 +231,7 @@ public sealed partial class EditorView
 
     private void Select(Guid id, Guid track = default)
     {
-        soundEdge = null;
+        soundEdge = null; distanceObject = null;
         objectSelection.Clear(); anchorSelection.Clear();
         if (Document.Tracks.FirstOrDefault(t => t.Id == track)?.Nodes.Any(n => n.Id == id) == true)
             anchorSelection.Add(id);

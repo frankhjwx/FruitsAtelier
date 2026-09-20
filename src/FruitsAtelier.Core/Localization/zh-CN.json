@@ -709,5 +709,14 @@
   "movement.stand": "Stand",
   "movement.walk": "Walk",
   "movement.dash": "Dash",
-  "movement.hyperdash": "HDash"
+  "movement.hyperdash": "HDash",
+  "distance.previousField": "前一对象 DS",
+  "distance.nextField": "后一对象 DS",
+  "distance.nonnegative": "DS 必须为零或正数。",
+  "distance.interval": "DS 需要大于零的时间间隔。",
+  "distance.direction": "对象水平重合，没有可沿用的方向。",
+  "distance.outside": "此 DS 会使对象超出场地。",
+  "distance.unsupported": "请选择 fruit 或 droplet 编辑 DS。",
+  "distance.sharedRepeat": "这两个折返对象共用同一曲线位置。",
+  "distance.unreachable": "此 slider 无法在保持时间的情况下达到该 DS。"
 }
