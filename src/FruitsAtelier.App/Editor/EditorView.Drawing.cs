@@ -28,7 +28,7 @@ public sealed partial class EditorView
         PumpSliderBatch();
         PumpLibrary();
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
-        if (LibraryVisible) { DrawLibrary(c); DrawUpdateNotice(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
+        if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
         float rightWidth = catchPreviewVisible ? Math.Clamp(previewWidth, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)) : 0;
         float bodyHeight = Math.Max(180, height - 204);
         rightPanel = new(width - (catchPreviewVisible ? rightWidth : 290), 84, catchPreviewVisible ? rightWidth : 290, catchPreviewVisible ? bodyHeight : 38);
@@ -79,6 +79,7 @@ public sealed partial class EditorView
         Button(c, new(109, 6, 50, 28), L.Get("ui.file"), () => menu = menu == 0 ? -1 : 0, menu == 0);
         Button(c, new(162, 6, 50, 28), L.Get("ui.edit"), () => menu = menu == 1 ? -1 : 1, menu == 1);
         Button(c, new(215, 6, 50, 28), L.Get("ui.view"), () => { gridLevelMenuOpen = false; menu = menu == 2 ? -1 : 2; }, menu == 2);
+        Button(c, new(268, 6, 94, 28), L.Get("library.settings"), OpenSettings);
         DrawDifficultyTabs(c);
         DrawLanguageButton(c, HeaderLanguageBounds);
         DrawSkinSelector(c);

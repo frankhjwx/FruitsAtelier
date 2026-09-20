@@ -581,7 +581,7 @@
   "skin.imported": "已导入",
   "skin.previousPage": "← 上一页皮肤",
   "skin.nextPage": "更多皮肤 →",
-  "library.apply": "应用并扫描",
+  "library.apply": "应用",
   "library.all": "全部歌曲",
   "library.projects": "我的工程",
   "library.refresh": "刷新",
@@ -717,5 +717,10 @@
   "distance.outside": "此 DS 会使对象超出场地。",
   "distance.unsupported": "请选择 fruit 或 droplet 编辑 DS。",
   "distance.sharedRepeat": "这两个折返对象共用同一曲线位置。",
-  "distance.unreachable": "此 slider 无法在保持时间的情况下达到该 DS。"
+  "distance.unreachable": "此 slider 无法在保持时间的情况下达到该 DS。",
+  "settings.workspace": "工作区",
+  "settings.appearance": "外观",
+  "settings.audio": "音频",
+  "settings.testplay": "试玩按键",
+  "settings.immediate": "音量修改会立即保存。"
 }

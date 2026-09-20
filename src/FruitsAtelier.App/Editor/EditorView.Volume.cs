@@ -9,7 +9,7 @@ public sealed partial class EditorView
     public Action? RequestAudioPreference { get; set; }
     private int volumeDrag = -1;
     public Rect VolumeSliderBounds(int channel)
-        => new(32 + channel * Math.Min(220, (width - 64) / 3), 535, Math.Min(220, (width - 64) / 3) - 24, 24);
+        => new(SettingsContentX, 188 + channel * 80, Math.Min(480, width - SettingsContentX - 48), 24);
 
     public void ApplyAudioVolume() => RequestAudioVolume?.Invoke(
         LibrarySettings.MasterVolume * LibrarySettings.SongVolume / 10000f,
@@ -22,7 +22,7 @@ public sealed partial class EditorView
         for (int i = 0; i < 3; i++)
         {
             var rect = VolumeSliderBounds(i);
-            c.Text(L.Get(labels[i]) + "  " + L.Get("ui.zoomPercent", values[i]), rect.X, 510, 12, Foreground, rect.Width);
+            c.Text(L.Get(labels[i]) + "  " + L.Get("ui.zoomPercent", values[i]), rect.X, rect.Y - 26, 12, Foreground, rect.Width);
             c.Fill(new(rect.X, rect.Y + 10, rect.Width, 4), Grid, 2);
             c.Fill(new(rect.X, rect.Y + 10, rect.Width * values[i] / 100, 4), Accent, 2);
             c.Circle(rect.X + rect.Width * values[i] / 100, rect.Y + 12, 6, Accent);
@@ -31,7 +31,7 @@ public sealed partial class EditorView
 
     private bool BeginVolumeDrag(float x, float y, int button)
     {
-        if (!LibraryVisible || !librarySettingsOpen || updatesPage || button != 0) return false;
+        if (!LibraryVisible || !librarySettingsOpen || settingsCategory != SettingsCategory.Audio || updatesPage || button != 0) return false;
         for (int i = 0; i < 3; i++)
             if (VolumeSliderBounds(i).Contains(x, y))
             { volumeDrag = i; libraryField = bindingCapture = -1; UpdateVolumeDrag(x); return true; }

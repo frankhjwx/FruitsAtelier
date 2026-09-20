@@ -10,6 +10,10 @@ The Details header shows read-only beatmap AR, CS, and the base SliderMultiplier
 
 During playback and seeking, the play line stays 25% above the bottom of the drawing area while content moves. Left-button marquee selection on the canvas and object timeline keeps playback scrolling. The start stays anchored to its original map time while the other end follows the pointer, so the box grows during playback even with a stationary pointer. Objects inside the time range remain selected after they move outside the viewport. Paused middle-button panning is free; canvas wheel navigation preserves the current playhead-to-viewport offset, while playback and other seeking resume following.
 
+## Settings
+
+The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Audio, Testplay keys, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** saves them and returns to the originating screen; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Volume and update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport.
+
 ## Testplay
 
 Click **Testplay (F5)** in the transport bar or press **F5** to play from the current

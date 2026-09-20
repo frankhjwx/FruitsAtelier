@@ -189,9 +189,11 @@ internal static class RenderCheck
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(width - 380, 20, 0, false, false); view.PointerUp(width - 380, 20, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.PointerDown(40, 240, 0, false, false); view.PointerUp(40, 240, 0);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 foreach (int binding in new[] { 186, 222, 219, 221, 8, 17, 18, 96, 111, 121 })
                 {
-                    view.PointerDown(40, 475, 0, false, false); view.PointerUp(40, 475, 0);
+                    view.PointerDown(254, 200, 0, false, false); view.PointerUp(254, 200, 0);
                     if (!view.CapturingTestplayKey) throw new InvalidOperationException("Native binding capture did not open.");
                     var down = new Native.Message { Window = window, Id = binding is 18 or 121 ? 0x0104u : 0x0100u, WParam = (nuint)binding };
                     Native.DispatchMessage(ref down);
@@ -200,6 +202,8 @@ internal static class RenderCheck
                     Native.DispatchMessage(ref up);
                     canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 }
+                view.PointerDown(40, 190, 0, false, false); view.PointerUp(40, 190, 0);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 for (int channel = 0; channel < 3; channel++)
                 {
                     var bounds = view.VolumeSliderBounds(channel);
@@ -212,7 +216,7 @@ internal static class RenderCheck
                 }
                 if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
                     throw new InvalidOperationException("Native volume controls did not update percentages.");
-                view.PointerDown(280, 590, 0, false, false); view.PointerUp(280, 590, 0);
+                view.PointerDown(40, 286, 0, false, false); view.PointerUp(40, 286, 0);
                 foreach (var phase in new[] { UpdatePhase.Unsupported, UpdatePhase.Checking, UpdatePhase.Available, UpdatePhase.Downloading, UpdatePhase.Ready, UpdatePhase.Failed })
                 {
                     view.UpdateStatus = new(phase, "0.8.2", 42);

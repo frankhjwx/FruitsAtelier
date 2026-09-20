@@ -581,7 +581,7 @@
   "skin.imported": "Imported",
   "skin.previousPage": "← Previous skins",
   "skin.nextPage": "More skins →",
-  "library.apply": "Apply and scan",
+  "library.apply": "Apply",
   "library.all": "All songs",
   "library.projects": "My projects",
   "library.refresh": "Refresh",
@@ -717,5 +717,10 @@
   "distance.outside": "This DS places the object outside the playfield.",
   "distance.unsupported": "Select a fruit or droplet to edit DS.",
   "distance.sharedRepeat": "These repeats share the same curve position.",
-  "distance.unreachable": "The slider cannot reach this DS at the same time."
+  "distance.unreachable": "The slider cannot reach this DS at the same time.",
+  "settings.workspace": "Workspace",
+  "settings.appearance": "Appearance",
+  "settings.audio": "Audio",
+  "settings.testplay": "Testplay keys",
+  "settings.immediate": "Volume changes are saved immediately."
 }

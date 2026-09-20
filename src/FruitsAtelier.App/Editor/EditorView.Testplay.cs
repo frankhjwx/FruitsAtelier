@@ -220,12 +220,12 @@ public sealed partial class EditorView
     private void DrawTestplayBindings(ICanvas c)
     {
         string[] labels = ["testplay.left", "testplay.right", "testplay.dash"];
-        float cell = Math.Min(220, (width - 64) / 3);
+        float cell = Math.Min(220, (width - SettingsContentX - 32) / 3);
         for (int i = 0; i < 3; i++)
         {
             int action = i;
-            c.Text(L.Get(labels[i]), 32 + i * cell, 438, 12, Muted, cell - 8);
-            Button(c, new(32 + i * cell, 460, cell - 12, 30), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
+            c.Text(L.Get(labels[i]), SettingsContentX + i * cell, 160, 12, Muted, cell - 8);
+            Button(c, new(SettingsContentX + i * cell, 188, cell - 12, 30), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
                 () => { libraryField = -1; bindingCapture = action; }, bindingCapture == i);
         }
     }

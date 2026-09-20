@@ -89,7 +89,7 @@ internal static class AudioFeedbackTests
         float song = -1, hit = -1; int saves = 0;
         ui.View.RequestAudioVolume = (s, h) => { song = s; hit = h; };
         ui.View.RequestAudioPreference = () => { settings.Save(Path.Combine(folder, "settings.json")); saves++; };
-        ui.View.InitializeLibrary(true, settings); ui.Paint(); ui.ClickText(L.Get("library.settings"));
+        ui.View.InitializeLibrary(true, settings); ui.Paint(); ui.ClickText(L.Get("library.settings")); ui.ClickText(L.Get("settings.audio"));
         Near(1, song); Near(1, hit);
         Set(0, 50); Set(1, 40); Set(2, 20);
         Near(.2, song); Near(.1, hit);
