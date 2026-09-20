@@ -189,7 +189,7 @@ internal static class RenderCheck
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(width - 380, 20, 0, false, false); view.PointerUp(width - 380, 20, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
-                view.PointerDown(40, 240, 0, false, false); view.PointerUp(40, 240, 0);
+                view.PointerDown(40, 190, 0, false, false); view.PointerUp(40, 190, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 foreach (int binding in new[] { 186, 222, 219, 221, 8, 17, 18, 96, 111, 121 })
                 {
@@ -202,7 +202,9 @@ internal static class RenderCheck
                     Native.DispatchMessage(ref up);
                     canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 }
-                view.PointerDown(40, 190, 0, false, false); view.PointerUp(40, 190, 0);
+                view.KeyDown(27, false, false); view.LoadProject(project); view.CloseLibrary();
+                view.OpenVolumeDialog();
+                if (!view.VolumeDialogVisible) throw new InvalidOperationException("Native volume dialog did not open.");
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 for (int channel = 0; channel < 3; channel++)
                 {
@@ -216,7 +218,11 @@ internal static class RenderCheck
                 }
                 if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
                     throw new InvalidOperationException("Native volume controls did not update percentages.");
-                view.PointerDown(40, 286, 0, false, false); view.PointerUp(40, 286, 0);
+                view.KeyDown(27, false, false);
+                if (view.VolumeDialogVisible) throw new InvalidOperationException("Native volume dialog did not close.");
+                view.OpenSettings();
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.PointerDown(40, 240, 0, false, false); view.PointerUp(40, 240, 0);
                 foreach (var phase in new[] { UpdatePhase.Unsupported, UpdatePhase.Checking, UpdatePhase.Available, UpdatePhase.Downloading, UpdatePhase.Ready, UpdatePhase.Failed })
                 {
                     view.UpdateStatus = new(phase, "0.8.2", 42);
@@ -416,8 +422,8 @@ internal static class RenderCheck
             {
                 view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0);
                 canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
-                view.PointerDown(235, 295, 0, false, false);
-                view.PointerUp(235, 295, 0);
+                view.PointerDown(235, 329, 0, false, false);
+                view.PointerUp(235, 329, 0);
                 if (!view.MovementAnalysisEnabled) throw new InvalidOperationException("Movement analysis menu did not enable connections.");
                 canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             }

@@ -6,7 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { Workspace, Appearance, Audio, Testplay, Updates }
+    private enum SettingsCategory { Workspace, Appearance, Testplay, Updates }
     private SettingsCategory settingsCategory;
     private bool settingsFromLibrary;
     private bool draftRomanisedMetadata;
@@ -61,11 +61,11 @@ public sealed partial class EditorView
         DrawLanguageButton(c, HeaderLanguageBounds);
         Button(c, HeaderNavigationBounds, L.Get(settingsFromLibrary ? "library.back" : "library.editor"), CloseSettings);
         c.Fill(new(0, HeaderHeight, 214, height - HeaderHeight), Panel);
-        string[] categories = ["settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "update.title"];
+        string[] categories = ["settings.workspace", "settings.appearance", "settings.testplay", "update.title"];
         for (int i = 0; i < categories.Length; i++)
         {
-            if (i == 4 && RequestUpdateCheck is null) continue;
             var category = (SettingsCategory)i;
+            if (category == SettingsCategory.Updates && RequestUpdateCheck is null) continue;
             Button(c, new(16, 78 + i * 48, 182, 38), L.Get(categories[i]), () =>
             {
                 FinishVolumeDrag(); libraryField = bindingCapture = -1;
@@ -88,10 +88,6 @@ public sealed partial class EditorView
                 Button(c, new(SettingsContentX, 270, Math.Min(520, width - SettingsContentX - 32), 38),
                     L.Get(draftRomanisedMetadata ? "settings.romanisedOn" : "settings.romanisedOff"),
                     () => draftRomanisedMetadata = !draftRomanisedMetadata, draftRomanisedMetadata);
-                break;
-            case SettingsCategory.Audio:
-                DrawVolumeControls(c);
-                c.Text(L.Get("settings.immediate"), SettingsContentX, 420, 14, Muted, width - SettingsContentX - 32);
                 break;
             case SettingsCategory.Testplay:
                 DrawTestplayBindings(c);

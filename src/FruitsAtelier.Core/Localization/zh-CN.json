@@ -1,4 +1,6 @@
 {
+  "volume.title": "音量",
+  "ui.close": "关闭",
   "volume.all": "总音量",
   "volume.song": "歌曲",
   "volume.hitsound": "打击音",

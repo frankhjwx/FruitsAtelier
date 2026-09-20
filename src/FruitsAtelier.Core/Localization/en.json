@@ -1,4 +1,6 @@
 {
+  "volume.title": "Volume",
+  "ui.close": "Close",
   "volume.all": "All",
   "volume.song": "Song",
   "volume.hitsound": "Hitsound",

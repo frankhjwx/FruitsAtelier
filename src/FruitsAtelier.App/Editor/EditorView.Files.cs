@@ -38,6 +38,7 @@ public sealed partial class EditorView
         project.Validate();
         TimeJumpVisible = false;
         StreamDialogVisible = false;
+        CloseVolumeDialog();
         HasEditorProject = true;
         var retiredCancellation = sliderBatchCancellation;
         retiredCancellation?.Cancel();

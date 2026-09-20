@@ -12,7 +12,7 @@ During playback and seeking, the play line stays 25% above the bottom of the dra
 
 ## Settings
 
-The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Audio, Testplay keys, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** is enabled only while unapplied changes exist. It saves them, stays in the current settings category, and becomes disabled again; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Volume and update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport. **Appearance → Romanised artist / title** defaults to On and controls Library cards, Library details, and the editor window title. Off prefers the Unicode metadata; either mode falls back to the other spelling when its preferred field is empty. Apply persists the preference without changing beatmap data, filenames, or search matching.
+The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Testplay keys, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** is enabled only while unapplied changes exist. It saves them, stays in the current settings category, and becomes disabled again; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport. **Appearance → Romanised artist / title** defaults to On and controls Library cards, Library details, and the editor window title. Off prefers the Unicode metadata; either mode falls back to the other spelling when its preferred field is empty. Apply persists the preference without changing beatmap data, filenames, or search matching.
 
 ## Testplay
 
@@ -62,7 +62,7 @@ The playback button and timestamp block are vertically centred in the transport 
 
 The transport offers **10%, 25%, 50%, 75%, 100%, and 150%** playback speed. Only song tempo changes, with pitch preserved. Hitsounds keep their original pitch and real-time duration, with trigger times mapped to the music clock. Changing speed preserves the map position and play/pause state. This setting does not edit or export beatmap timing.
 
-In **Library → Settings**, the All, Song and Hitsound sliders adjust volume from 0% to 100%. Changes apply immediately and persist when the slider is released. All multiplies both channels; Song and Hitsound independently control music and all preview/testplay samples. Muting does not pause playback or change the beatmap.
+In the editor, **View → Volume** opens a compact dialog with All, Song and Hitsound sliders from 0% to 100%. The dialog leaves playback running and closes with its Close button or Esc. Changes apply immediately and persist when the slider is released. All multiplies both channels; Song and Hitsound independently control music and all preview/testplay samples. Muting does not pause playback or change the beatmap.
 
 ## Tools and selection
 

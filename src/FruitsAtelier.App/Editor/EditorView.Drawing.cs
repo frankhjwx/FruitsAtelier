@@ -68,6 +68,7 @@ public sealed partial class EditorView
         DrawExportOverlay(c);
         DrawTimeJump(c);
         DrawStreamDialog(c);
+        DrawVolumeDialog(c);
         DrawDiscardConfirmation(c);
         DrawDifficultyTooltip(c);
     }
@@ -489,6 +490,7 @@ public sealed partial class EditorView
             Item(L.Get("ui.gridSnap"), () => gridSnap = !gridSnap, active: gridSnap);
             Item(L.Get("ui.anchorSnap"), () => anchorSnap = !anchorSnap, active: anchorSnap);
             Item(L.Get("ui.resetView"), ResetView);
+            Item(L.Get("volume.title"), OpenVolumeDialog);
             Item(L.Get("ui.sliderPathCurves"), () => showTargets = !showTargets, active: showTargets);
             Item(showPreviewCurves ? L.Get("ui.previewCurvesOn") : L.Get("ui.previewCurvesOff"), () => showPreviewCurves = !showPreviewCurves);
             Item(L.Get("ui.follow"), FollowPlayhead);
