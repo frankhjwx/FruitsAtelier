@@ -157,6 +157,32 @@ internal static class DistanceEditingTests
         ui.LoadDocument(dense); ui.Paint();
         if (!ui.View.MovementAnalysisEnabled) ui.ClickText(Strings.Get("movement.analysis"));
         Check(ui.View.DistanceLabelBounds.Count < 99, "Dense connections did not suppress colliding labels");
+        PlaybackLabelStability();
+    }
+
+    private static void PlaybackLabelStability()
+    {
+        var map = Fruits(); map.Fruits.Clear();
+        for (int i = 0; i < 50; i++) map.Fruits.Add(new Fruit { TimeMs = 1000 + i * 40, X = 256 });
+        var ui = new Ui(); ui.LoadDocument(map); ui.ClickText(Strings.Get("movement.analysis"));
+        var visibility = new Dictionary<int, bool>();
+        for (int frame = 0; frame < 100; frame++)
+        {
+            double start = 800 + frame * 13;
+            double playhead = start + ui.View.CanvasPlotBounds.Height * .25 / ui.View.PixelsPerMs;
+            ui.View.UpdateTransport(playhead, 10000, true, true, false, null, "fixture.wav"); ui.Paint();
+            var plot = ui.View.CanvasPlotBounds;
+            var visible = ui.View.DistanceLabelBounds.Select(r => (int)Math.Round(ui.View.ViewStartMs + (plot.Bottom - r.Y - 9) / ui.View.PixelsPerMs)).ToHashSet();
+            foreach (int time in Enumerable.Range(0, 49).Select(i => 1020 + i * 40))
+            {
+                double y = plot.Bottom - (time - ui.View.ViewStartMs) * ui.View.PixelsPerMs;
+                if (y < plot.Y + 30 || y > plot.Bottom - 30) continue;
+                bool shown = visible.Contains(time);
+                if (visibility.TryGetValue(time, out bool before)) Check(before == shown, $"DS label at {time} flickered during playback");
+                visibility[time] = shown;
+            }
+        }
+        Check(visibility.Values.Any(v => v) && visibility.Values.Any(v => !v), "Playback fixture did not exercise collision suppression");
     }
 
     private static void CheckTickHighlight(Ui ui, ConvertedCatchObject tick)

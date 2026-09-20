@@ -205,11 +205,47 @@ public sealed partial class EditorView
         c.Circle(p.X, p.Y, radius + 7, Foreground, false, 2.5f);
     }
 
+    private sealed record DistanceLabel(double Time, float X, float Width, string Text);
+    private readonly List<DistanceLabel> distanceLayout = [];
+    private IReadOnlyList<ConvertedCatchObject>? distanceLayoutSource;
+    private TimingMap.Lookup? distanceLayoutTiming;
+    private double distanceLayoutScale, distanceLayoutWidth, distanceLayoutSv;
+    private string distanceLayoutLanguage = "";
+
+    private void EnsureDistanceLabelLayout(ICanvas c, IReadOnlyList<ConvertedCatchObject> objects)
+    {
+        if (ReferenceEquals(distanceLayoutSource, objects) && ReferenceEquals(distanceLayoutTiming, renderedTiming)
+            && distanceLayoutScale == pixelsPerMs && distanceLayoutWidth == Playfield.Width
+            && distanceLayoutSv == Document.SliderMultiplier && distanceLayoutLanguage == L.Language) return;
+        distanceLayoutSource = objects; distanceLayoutTiming = renderedTiming;
+        distanceLayoutScale = pixelsPerMs; distanceLayoutWidth = Playfield.Width;
+        distanceLayoutSv = Document.SliderMultiplier; distanceLayoutLanguage = L.Language;
+        distanceLayout.Clear();
+        var nearby = new List<DistanceLabel>();
+        // Choose labels in map order, including offscreen predecessors, so scrolling cannot change priority.
+        for (int i = 1; i < movementIndices.Length; i++)
+        {
+            var from = objects[movementIndices[i - 1]];
+            var to = objects[movementIndices[i]];
+            if (to.TimeMs - from.TimeMs <= 37.5
+                || Document.BananaShowers.Any(s => s.TimeMs <= to.TimeMs && s.EndTimeMs >= from.TimeMs)) continue;
+            if (BaseDistanceRatio(from, to) is not { } ratio) continue;
+            string text = L.Get("assist.ratio", ratio);
+            var label = new DistanceLabel((from.TimeMs + to.TimeMs) / 2,
+                (float)((from.X + to.X) / 2 / 512 * Playfield.Width) + 8, c.MeasureText(text, 11) + 8, text);
+            nearby.RemoveAll(other => (label.Time - other.Time) * pixelsPerMs > 21);
+            if (nearby.Any(other => label.X <= other.X + other.Width + 3 && label.X + label.Width >= other.X - 3)) continue;
+            nearby.Add(label);
+            distanceLayout.Add(label);
+        }
+    }
+
     private void DrawMovementDistanceLabels(ICanvas c)
     {
         if (!movementAnalysis) return;
         var objects = placementMovementObjects ?? conversion!.Objects;
         EnsureMovementStates(objects);
+        EnsureDistanceLabelLayout(c, objects);
         double endTime = viewStart + plot.Height / pixelsPerMs;
         var occupied = new List<Rect>();
         if (PlacementGhostPoint() is not null || FlagTargets().Length == 1)
@@ -219,24 +255,22 @@ public sealed partial class EditorView
                 plot.Bottom - 78, panelWidth, 70));
         }
         foreach (var shower in Document.BananaShowers) occupied.Add(BananaRectangle(shower));
-        for (int i = FirstVisibleMovement(objects); i < movementIndices.Length; i++)
+        int low = 0, high = distanceLayout.Count;
+        while (low < high)
         {
-            var from = objects[movementIndices[i - 1]];
-            var to = objects[movementIndices[i]];
-            if (from.TimeMs > endTime) break;
-            // A 1/8 beat at 200 BPM is 37.5 ms; sprite bounds overstate crowding because of padding and glow.
-            if (to.TimeMs < viewStart || to.TimeMs - from.TimeMs <= 37.5
-                || Document.BananaShowers.Any(s => s.TimeMs <= to.TimeMs && s.EndTimeMs >= from.TimeMs)) continue;
-            if (BaseDistanceRatio(from, to) is not { } ratio) continue;
-            string label = L.Get("assist.ratio", ratio);
-            float width = c.MeasureText(label, 11) + 8;
-            var p = Screen(new((from.TimeMs + to.TimeMs) / 2, (from.X + to.X) / 2));
-            var bounds = new Rect(p.X + 8, p.Y - 9, width, 18);
+            int mid = low + (high - low) / 2;
+            if (distanceLayout[mid].Time < viewStart) low = mid + 1; else high = mid;
+        }
+        for (int i = low; i < distanceLayout.Count; i++)
+        {
+            var label = distanceLayout[i];
+            if (label.Time > endTime) break;
+            var bounds = new Rect(Playfield.X + label.X,
+                plot.Bottom - (float)((label.Time - viewStart) * pixelsPerMs) - 9, label.Width, 18);
             if (bounds.X < plot.X || bounds.Right > plot.Right || bounds.Y < plot.Y || bounds.Bottom > plot.Bottom
                 || occupied.Any(r => Intersects(r, bounds))) continue;
             c.Fill(bounds, Background, 3, .8f);
-            c.Text(label, bounds.X + 4, bounds.Y + 2, 11, Foreground, width - 8);
-            occupied.Add(new(bounds.X - 3, bounds.Y - 3, bounds.Width + 6, bounds.Height + 6));
+            c.Text(label.Text, bounds.X + 4, bounds.Y + 2, 11, Foreground, label.Width - 8);
             distanceLabelBounds.Add(bounds);
         }
     }
