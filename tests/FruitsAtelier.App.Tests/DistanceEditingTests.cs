@@ -122,6 +122,18 @@ internal static class DistanceEditingTests
         var labelAfter = ui.View.DistanceLabelBounds.Single();
         Near(labelBefore.X, labelAfter.X);
         Near(labelBefore.Y + 2000 * ui.View.PixelsPerMs, labelAfter.Y);
+        var shortGap = Fruits(); shortGap.Fruits.Clear();
+        shortGap.Fruits.AddRange([new Fruit { TimeMs = 100, X = 256 }, new Fruit { TimeMs = 175, X = 256 }]);
+        ui.LoadDocument(shortGap); ui.Paint();
+        plot = ui.View.CanvasPlotBounds;
+        ui.View.Wheel(plot.X, plot.Bottom, 2400, true); ui.Paint();
+        Check(ui.View.DistanceLabelBounds.Count == 1, "Short isolated connection was hidden at high zoom");
+        shortGap.Fruits[1].TimeMs = 137.5;
+        ui.LoadDocument(shortGap); ui.Paint();
+        Check(ui.View.DistanceLabelBounds.Count == 0, "200 BPM eighth-beat interval was labelled");
+        shortGap.Fruits[1].TimeMs = 138;
+        ui.LoadDocument(shortGap); ui.Paint();
+        Check(ui.View.DistanceLabelBounds.Count == 1, "Interval above the dense timing cutoff was hidden");
         var dense = Fruits(); dense.Fruits.Clear();
         for (int i = 0; i < 100; i++) dense.Fruits.Add(new Fruit { TimeMs = 1000 + i * 3, X = 256 });
         ui.LoadDocument(dense); ui.Paint();

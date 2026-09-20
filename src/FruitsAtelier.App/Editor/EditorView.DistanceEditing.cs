@@ -192,19 +192,7 @@ public sealed partial class EditorView
         var objects = placementMovementObjects ?? conversion!.Objects;
         EnsureMovementStates(objects);
         double endTime = viewStart + plot.Height / pixelsPerMs;
-        double margin = Math.Max(200, CatchSize.FruitRadius(Document.CircleSize) * Playfield.Width / 512 * 4 / pixelsPerMs);
-        int low = 0, high = objects.Count;
-        while (low < high)
-        {
-            int mid = low + (high - low) / 2;
-            if (objects[mid].TimeMs < viewStart - margin) low = mid + 1; else high = mid;
-        }
         var occupied = new List<Rect>();
-        for (int i = low; i < objects.Count && objects[i].TimeMs <= endTime + margin; i++)
-        {
-            var bounds = CatchHitBounds(objects[i]);
-            if (Intersects(bounds, plot)) occupied.Add(bounds);
-        }
         if (PlacementGhostPoint() is not null || FlagTargets().Length == 1)
         {
             float panelWidth = Math.Min(340, plot.Width - 12);
@@ -217,7 +205,8 @@ public sealed partial class EditorView
             var from = objects[movementIndices[i - 1]];
             var to = objects[movementIndices[i]];
             if (from.TimeMs > endTime) break;
-            if (to.TimeMs < viewStart || from.TimeMs >= to.TimeMs
+            // A 1/8 beat at 200 BPM is 37.5 ms; sprite bounds overstate crowding because of padding and glow.
+            if (to.TimeMs < viewStart || to.TimeMs - from.TimeMs <= 37.5
                 || Document.BananaShowers.Any(s => s.TimeMs <= to.TimeMs && s.EndTimeMs >= from.TimeMs)) continue;
             if (BaseDistanceRatio(from, to) is not { } ratio) continue;
             string label = L.Get("assist.ratio", ratio);
