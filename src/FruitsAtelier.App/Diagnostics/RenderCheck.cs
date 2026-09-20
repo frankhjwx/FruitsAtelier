@@ -355,6 +355,16 @@ internal static class RenderCheck
                 if (Math.Abs(view.Document.Fruits[1].X - 170) > .001) throw new InvalidOperationException("DS input did not move fruit.");
                 view.KeyDown('Z', true, false); Paint();
                 if (Math.Abs(view.Document.Fruits[1].X - 240) > .001) throw new InvalidOperationException("DS input undo failed.");
+                view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint();
+                input = view.XCoordinateFieldBounds ?? throw new InvalidOperationException("X input missing.");
+                view.PointerDown(input.X + 8, input.Y + 8, 0, false, false);
+                view.PointerUp(input.X + 8, input.Y + 8, 0); Paint();
+                view.TextInput('6'); view.TextInput('0'); view.TextInput('0'); Paint();
+                if (view.DistanceSliderBounds is not null || Math.Abs(view.Document.Fruits[1].X - 512) > .001)
+                    throw new InvalidOperationException("X input did not clamp without a slider.");
+                view.KeyDown(13, false, false); Paint();
+                view.KeyDown('Z', true, false); Paint();
+                if (Math.Abs(view.Document.Fruits[1].X - 240) > .001) throw new InvalidOperationException("X input undo failed.");
             }
         }
         finally

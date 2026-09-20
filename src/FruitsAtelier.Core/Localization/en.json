@@ -711,6 +711,8 @@
   "movement.dash": "Dash",
   "movement.hyperdash": "HDash",
   "distance.previousField": "Previous DS",
+  "coordinate.x": "X coordinate",
+  "coordinate.unreachable": "The slider cannot reach this X coordinate at the same time.",
   "distance.nextField": "Next DS",
   "distance.nonnegative": "DS must be zero or positive.",
   "distance.interval": "DS requires a positive time interval.",

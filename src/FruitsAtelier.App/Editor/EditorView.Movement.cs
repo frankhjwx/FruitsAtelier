@@ -102,9 +102,9 @@ public sealed partial class EditorView
             movementStates[indices[last]].Movement);
 
         float panelWidth = Math.Min(340, plot.Width - 12);
-        if (panelWidth < 180 || plot.Height < 90) return;
+        if (panelWidth < 180 || plot.Height < 118) return;
         var r = new Rect(Math.Clamp(Playfield.X + Playfield.Width / 2 - panelWidth / 2, plot.X + 6, plot.Right - panelWidth - 6),
-            plot.Bottom - 78, panelWidth, 70);
+            plot.Bottom - 106, panelWidth, 98);
         MovementOverlayBounds = r;
         c.Fill(r, 0x171C24, 8, .39f);
         c.Stroke(r, 0x424D5C, 1, 8);

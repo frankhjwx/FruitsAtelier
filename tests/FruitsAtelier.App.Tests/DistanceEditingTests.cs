@@ -67,6 +67,49 @@ internal static class DistanceEditingTests
         ui.Key('L'); Check(ui.View.PreviousDistanceFieldBounds is null, "Locked note still exposes DS editing");
     }
 
+    public static void XCoordinate()
+    {
+        foreach (string language in Strings.AvailableLanguages)
+        {
+            Strings.SetLanguage(language);
+            var ui = new Ui(); ui.LoadDocument(Fruits()); ui.ClickMap(1000, 100);
+            var original = ui.View.Document.DeepClone();
+            Check(ui.View.PreviousDistanceFieldBounds is null, "First fruit unexpectedly has previous DS");
+            EditX("256.25");
+            Near(256.25, ui.View.Document.Fruits[0].X);
+            Near(1000, ui.View.Document.Fruits[0].TimeMs);
+            Check(ui.View.DistanceSliderBounds is null, "X editing exposed a slider");
+            ui.Key(13); ui.Key('Z', ctrl: true);
+            Check(original.ContentEquals(ui.View.Document), "X undo changed other content");
+            ui.Key('Y', ctrl: true); Near(256.25, ui.View.Document.Fruits[0].X);
+            ui.ClickMap(1000, 256.25);
+            EditX("999"); Near(512, ui.View.Document.Fruits[0].X); ui.Key(13);
+            EditX("-10"); Near(0, ui.View.Document.Fruits[0].X); ui.Key(27);
+            Near(512, ui.View.Document.Fruits[0].X);
+            EditX("-10"); ui.Key(13); Near(0, ui.View.Document.Fruits[0].X);
+            EditX("."); ui.Key(13);
+            Check(ui.View.IsEditingText, "Invalid X silently committed"); ui.Key(27);
+            Near(0, ui.View.Document.Fruits[0].X);
+            EditX("123"); ui.View.CancelInteraction(); ui.Paint(); Near(0, ui.View.Document.Fruits[0].X);
+            EditX("200"); ui.Key('Z', ctrl: true); Near(0, ui.View.Document.Fruits[0].X);
+            ui.Key('Y', ctrl: true); Near(200, ui.View.Document.Fruits[0].X);
+            ui.ClickMap(1500, 240);
+            EditX("300");
+            var ds = ui.View.PreviousDistanceFieldBounds!.Value;
+            ui.Click(ds.X + 8, ds.Y + 8); ui.Type(".5"); ui.Paint();
+            Near(270, ui.View.Document.Fruits[1].X);
+            EditX("320"); ui.Key(13); Near(320, ui.View.Document.Fruits[1].X);
+            ui.Key('L'); Check(ui.View.XCoordinateFieldBounds is null, "Locked note exposes X editing");
+
+            void EditX(string text)
+            {
+                var field = ui.View.XCoordinateFieldBounds ?? throw new Exception("X field missing");
+                ui.Click(field.X + 8, field.Y + 8); ui.Type(text); ui.Paint();
+            }
+        }
+        Strings.SetLanguage("en");
+    }
+
     public static void SliderPoints()
     {
         foreach (bool imported in new[] { false, true })
@@ -116,6 +159,14 @@ internal static class DistanceEditingTests
                 CheckTickHighlight(ui, moved);
             }
             ui.Key('Z', ctrl: true); Check(original.ContentEquals(ui.View.Document), "Slider DS undo lost source geometry");
+            ui.ClickMap(target.TimeMs, target.X);
+            var xField = ui.View.XCoordinateFieldBounds!.Value;
+            ui.Click(xField.X + 8, xField.Y + 8);
+            ui.Type((target.X + 5).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)); ui.Key(13);
+            Check(!ui.View.IsEditingText, $"{imported}/{point} X edit was rejected");
+            var xMoved = CatchStreamConverter.Convert(ui.View.Document).Objects.Single(o => o.SourceId == source && o.Kind == target.Kind && Math.Abs(o.TimeMs - target.TimeMs) < .001);
+            Near(Math.Round(target.X + 5, 2), xMoved.X);
+            ui.Key('Z', ctrl: true); Check(original.ContentEquals(ui.View.Document), "Slider X undo lost source geometry");
         }
     }
 

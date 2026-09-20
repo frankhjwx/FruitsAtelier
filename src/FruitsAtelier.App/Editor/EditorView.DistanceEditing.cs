@@ -11,6 +11,7 @@ public sealed partial class EditorView
     public IReadOnlyList<Rect> DistanceLabelBounds => distanceLabelBounds;
     public Rect? PreviousDistanceFieldBounds { get; private set; }
     public Rect? NextDistanceFieldBounds { get; private set; }
+    public Rect? XCoordinateFieldBounds { get; private set; }
 
     private double BaseDistanceVelocity(double time) => 100 * Document.SliderMultiplier / renderedTiming!.At(time).BeatLengthMs;
     private double? BaseDistanceRatio(ConvertedCatchObject from, ConvertedCatchObject to)
@@ -36,6 +37,8 @@ public sealed partial class EditorView
 
     private ConvertedCatchObject? distanceEditTarget, distanceEditReference;
     private bool distanceDragging;
+    private bool editingXCoordinate;
+    private string DistanceEditLabel => L.Get(editingXCoordinate ? "coordinate.x" : "distance.previousField");
     private double distanceValue, distanceMaximum;
     public Rect? DistanceSliderBounds { get; private set; }
     private bool DistanceEditing => distanceEditTarget is not null;
@@ -47,8 +50,21 @@ public sealed partial class EditorView
         var previous = target is not null ? DistanceNeighbours(target).Previous : null;
         bool editable = target is not null && previous is not null && DistanceReadout.Previous.HasValue && !notesLocked && drag == DragKind.None;
         NextDistanceFieldBounds = null;
-        PreviousDistanceFieldBounds = editable ? panel : null;
-        if (DistanceEditing)
+        PreviousDistanceFieldBounds = editable ? new(panel.X, panel.Y, panel.Width, 70) : null;
+        var coordinateInput = new Rect(panel.Right - 88, panel.Y + 72, 76, 22);
+        XCoordinateFieldBounds = target is not null && !notesLocked && drag == DragKind.None ? coordinateInput : null;
+        c.Text(L.Get("coordinate.x"), panel.X + 12, panel.Y + 75, 11, Foreground, panel.Width - 112);
+        c.Fill(coordinateInput, Panel, 3);
+        c.Stroke(coordinateInput, editingXCoordinate && fieldError.Length > 0 ? Error : editingXCoordinate ? Accent : Grid, 1, 3);
+        if (DistanceEditing && editingXCoordinate)
+            DrawInputText(c, new(coordinateInput.X + 5, coordinateInput.Y + 3, coordinateInput.Width - 10, 16), editBuffer, 11, true, replaceText);
+        else
+        {
+            double? coordinate = PlacementGhostPoint()?.X ?? target?.X;
+            c.Text(coordinate?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) ?? "—",
+                coordinateInput.X + 5, coordinateInput.Y + 3, 11, XCoordinateFieldBounds.HasValue ? Foreground : Muted, coordinateInput.Width - 10);
+        }
+        if (DistanceEditing && !editingXCoordinate)
         {
             var slider = new Rect(panel.X + 12, panel.Y + 44, panel.Width - 112, 22);
             var input = new Rect(panel.Right - 88, panel.Y + 44, 76, 22);
@@ -77,9 +93,11 @@ public sealed partial class EditorView
 
     private bool DistancePointerDown(float x, float y, int button, bool shift)
     {
+        bool coordinateHit = XCoordinateFieldBounds is { } coordinate && coordinate.Contains(x, y);
         if (DistanceEditing)
         {
-            if (MovementOverlayBounds is { } panel && panel.Contains(x, y))
+            if (MovementOverlayBounds is { } panel && panel.Contains(x, y)
+                && (editingXCoordinate ? coordinateHit : !coordinateHit))
             {
                 if (button == 0 && DistanceSliderBounds is { } slider && slider.Contains(x, y))
                 { distanceDragging = true; UpdateDistanceSlider(x, shift); }
@@ -88,17 +106,26 @@ public sealed partial class EditorView
             }
             if (!FinishDistanceEdit(false)) return true;
         }
-        if (button != 0 || PreviousDistanceFieldBounds is not { } bounds || !bounds.Contains(x, y)) return false;
+        if (button != 0 || !coordinateHit && (PreviousDistanceFieldBounds is not { } bounds || !bounds.Contains(x, y))) return false;
         if (editField >= 0 && !CommitField()) return true;
         distanceEditTarget = SelectedDistanceObject();
-        distanceEditReference = DistanceNeighbours(distanceEditTarget!).Previous;
-        distanceValue = DistanceReadout.Previous!.Value;
-        double unit = (distanceEditTarget!.TimeMs - distanceEditReference!.TimeMs) * BaseDistanceVelocity(distanceEditReference.TimeMs);
-        int direction = Math.Sign(distanceEditTarget.X - distanceEditReference.X);
-        distanceMaximum = direction == 0 ? 0 : (direction > 0 ? 512 - distanceEditReference.X : distanceEditReference.X) / unit;
+        editingXCoordinate = coordinateHit;
+        if (editingXCoordinate)
+        {
+            distanceEditReference = null;
+            distanceValue = distanceEditTarget!.X;
+        }
+        else
+        {
+            distanceEditReference = DistanceNeighbours(distanceEditTarget!).Previous;
+            distanceValue = DistanceReadout.Previous!.Value;
+            double unit = (distanceEditTarget!.TimeMs - distanceEditReference!.TimeMs) * BaseDistanceVelocity(distanceEditReference.TimeMs);
+            int direction = Math.Sign(distanceEditTarget.X - distanceEditReference.X);
+            distanceMaximum = direction == 0 ? 0 : (direction > 0 ? 512 - distanceEditReference.X : distanceEditReference.X) / unit;
+        }
         editBuffer = distanceValue.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
         replaceText = true; fieldError = "";
-        history.Begin(L.Get("editor.command.changeField", L.Get("distance.previousField")));
+        history.Begin(L.Get("editor.command.changeField", DistanceEditLabel));
         return true;
     }
 
@@ -106,17 +133,17 @@ public sealed partial class EditorView
     {
         // Rebuild each preview from the original geometry and direction, including after passing through zero.
         history.Cancel();
-        history.Begin(L.Get("editor.command.changeField", L.Get("distance.previousField")));
+        history.Begin(L.Get("editor.command.changeField", DistanceEditLabel));
         try
         {
-            ApplyDistanceRatio(distanceEditTarget!, distanceEditReference!, false, value);
+            ApplyPositionPreview(value);
             distanceValue = value; fieldError = "";
         }
         catch (ArgumentException error)
         {
             history.Cancel();
-            history.Begin(L.Get("editor.command.changeField", L.Get("distance.previousField")));
-            ApplyDistanceRatio(distanceEditTarget!, distanceEditReference!, false, distanceValue);
+            history.Begin(L.Get("editor.command.changeField", DistanceEditLabel));
+            ApplyPositionPreview(distanceValue);
             fieldError = error.Message;
         }
     }
@@ -152,6 +179,7 @@ public sealed partial class EditorView
         }
         else history.Commit();
         distanceEditTarget = distanceEditReference = null;
+        editingXCoordinate = false;
         distanceDragging = false; fieldError = "";
         return true;
     }
@@ -187,9 +215,14 @@ public sealed partial class EditorView
         editBuffer = next; replaceText = false; PreviewDistanceText();
     }
 
-    private void ApplyDistanceRatio(ConvertedCatchObject target, ConvertedCatchObject reference, bool next, double value)
+    private void ApplyPositionPreview(double value)
     {
-        try { DistanceSpacingEditing.Apply(Document, target, reference, next, value, compensateTinyDroplets); }
+        var target = distanceEditTarget!;
+        try
+        {
+            if (editingXCoordinate) DistanceSpacingEditing.ApplyX(Document, target, value, compensateTinyDroplets);
+            else DistanceSpacingEditing.Apply(Document, target, distanceEditReference!, false, value, compensateTinyDroplets);
+        }
         catch (InvalidOperationException error) { throw new ArgumentException(error.Message, error); }
         EnsureConversion();
         var updated = conversion!.Objects.FirstOrDefault(o => o.SourceId == target.SourceId && o.Kind == target.Kind && Math.Abs(o.TimeMs - target.TimeMs) < .001);
@@ -252,7 +285,7 @@ public sealed partial class EditorView
         {
             float panelWidth = Math.Min(340, plot.Width - 12);
             occupied.Add(new(Math.Clamp(Playfield.X + Playfield.Width / 2 - panelWidth / 2, plot.X + 6, plot.Right - panelWidth - 6),
-                plot.Bottom - 78, panelWidth, 70));
+                plot.Bottom - 106, panelWidth, 98));
         }
         foreach (var shower in Document.BananaShowers) occupied.Add(BananaRectangle(shower));
         int low = 0, high = distanceLayout.Count;

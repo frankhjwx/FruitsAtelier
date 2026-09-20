@@ -18,7 +18,7 @@ public sealed partial class EditorView
         this.width = width;
         this.height = height;
         hits.Clear(); fields.Clear();
-        distanceLabelBounds.Clear(); PreviousDistanceFieldBounds = NextDistanceFieldBounds = null;
+        distanceLabelBounds.Clear(); PreviousDistanceFieldBounds = NextDistanceFieldBounds = XCoordinateFieldBounds = null;
         if (IsTestplaying)
         {
             AdvanceTestplay();

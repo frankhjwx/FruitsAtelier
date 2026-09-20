@@ -711,6 +711,8 @@
   "movement.dash": "Dash",
   "movement.hyperdash": "HDash",
   "distance.previousField": "前一对象 DS",
+  "coordinate.x": "X 坐标",
+  "coordinate.unreachable": "此 slider 无法在保持时间的情况下达到该 X 坐标。",
   "distance.nextField": "后一对象 DS",
   "distance.nonnegative": "DS 必须为零或正数。",
   "distance.interval": "DS 需要大于零的时间间隔。",

@@ -44,6 +44,7 @@ var tests = new (string Name, Action Run)[]
     ("Object timeline navigation and group movement preserve geometry and undo", ObjectTimelineTests.MoveAndNavigate),
     ("Returning to Library saves, discards or cancels before closing the editor", LibraryExitTests.Run),
     ("DS numeric fields use base SV, preserve direction and support undo", DistanceEditingTests.NumericFields),
+    ("X coordinate input clamps, previews and supports undo", DistanceEditingTests.XCoordinate),
     ("DS edits selected slider heads, tails and droplets", DistanceEditingTests.SliderPoints),
     ("Movement DS labels use base SV and avoid collisions", DistanceEditingTests.Labels),
     ("Movement Analysis toggles all four connection colours without editing content", AssistToolsTests.MovementAnalysis),
