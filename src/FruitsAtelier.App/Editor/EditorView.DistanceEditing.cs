@@ -75,14 +75,14 @@ public sealed partial class EditorView
         }
     }
 
-    private bool DistancePointerDown(float x, float y, int button)
+    private bool DistancePointerDown(float x, float y, int button, bool shift)
     {
         if (DistanceEditing)
         {
             if (MovementOverlayBounds is { } panel && panel.Contains(x, y))
             {
                 if (button == 0 && DistanceSliderBounds is { } slider && slider.Contains(x, y))
-                { distanceDragging = true; UpdateDistanceSlider(x); }
+                { distanceDragging = true; UpdateDistanceSlider(x, shift); }
                 else if (button == 0) { replaceText = true; ResetTextCaret(); }
                 return true;
             }
@@ -121,11 +121,13 @@ public sealed partial class EditorView
         }
     }
 
-    private void UpdateDistanceSlider(float x)
+    private void UpdateDistanceSlider(float x, bool fine)
     {
         if (DistanceSliderBounds is not { } slider) return;
-        double value = Math.Min(Math.Floor(distanceMaximum * 10) / 10,
-            Math.Round(Math.Clamp((x - slider.X) / slider.Width, 0, 1) * distanceMaximum, 1, MidpointRounding.AwayFromZero));
+        int decimals = fine ? 2 : 1;
+        double scale = fine ? 100 : 10;
+        double value = Math.Min(Math.Floor(distanceMaximum * scale) / scale,
+            Math.Round(Math.Clamp((x - slider.X) / slider.Width, 0, 1) * distanceMaximum, decimals, MidpointRounding.AwayFromZero));
         PreviewDistance(value);
         editBuffer = distanceValue.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
         replaceText = true;
@@ -184,6 +186,15 @@ public sealed partial class EditorView
         EnsureConversion();
         var updated = conversion!.Objects.FirstOrDefault(o => o.SourceId == target.SourceId && o.Kind == target.Kind && Math.Abs(o.TimeMs - target.TimeMs) < .001);
         if (updated is not null) distanceObject = (updated.SourceId, updated.EventIndex);
+    }
+
+    private void DrawSelectedDistanceTick(ICanvas c)
+    {
+        if (SelectedDistanceObject() is not { Kind: CatchObjectKind.Droplet } tick) return;
+        var p = Screen(new(tick.TimeMs, tick.X));
+        float radius = Math.Max(6, ObjectRadius(tick.Kind) * Playfield.Width / 512);
+        c.Circle(p.X, p.Y, radius + 3, Accent, false, 2);
+        c.Circle(p.X, p.Y, radius + 7, Foreground, false, 2.5f);
     }
 
     private void DrawMovementDistanceLabels(ICanvas c)

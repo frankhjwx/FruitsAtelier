@@ -235,6 +235,7 @@ public sealed partial class EditorView
             DrawCanvasCatchObjects(c);
             DrawMovementDistanceLabels(c);
         }
+        DrawSelectedDistanceTick(c);
         DrawPlacementGhost(c);
         float headY = Screen(new(playhead, 0)).Y;
         c.Line(plot.X, headY, plot.Right, headY, Gold, 1.5f);

@@ -43,7 +43,13 @@ internal static class DistanceEditingTests
         var ratio = ui.View.DistanceReadout.Previous!.Value;
         Near(Math.Round(ratio, 1), ratio);
         Check(ui.View.Document.Fruits[1].X > 100, "Slider lost original direction after zero");
+        ui.View.SetModifiers(false, true);
+        ui.View.PointerMove(slider.X + slider.Width * .46f, slider.Y + 10, true, false); ui.Paint();
+        ratio = ui.View.DistanceReadout.Previous!.Value;
+        Near(1.35, ratio);
         ui.View.PointerUp(slider.X + slider.Width * .46f, slider.Y + 10, 0); ui.Paint();
+        Near(1.35, ui.View.DistanceReadout.Previous!.Value);
+        ui.View.SetModifiers(false, false);
         Check(ui.Canvas.Texts.Any(t => t.Value == ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)), "DS input is not formatted to two decimals");
         ui.Key(13); ui.Key('Z', ctrl: true); Near(170, ui.View.Document.Fruits[1].X);
         ui.ClickMap(1500, 170); ui.Click(panel.X + 8, panel.Y + 8); ui.Type(".8"); ui.Paint();
@@ -89,6 +95,7 @@ internal static class DistanceEditingTests
             double ratio = DistanceSnap.Ratio(new(reference.TimeMs, reference.X), new(target.TimeMs, target.X), DistanceSnap.BaseVelocity(map, reference.TimeMs))!.Value * .9;
             var ui = new Ui(); ui.LoadDocument(map); ui.ClickMap(target.TimeMs, target.X);
             var original = ui.View.Document.DeepClone();
+            if (point == "droplet") CheckTickHighlight(ui, target);
             Check(ui.View.PreviousDistanceFieldBounds is not null, $"{point} was not individually selected");
             ratio = Math.Round(ratio, 2);
             Input(ui, false, ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
@@ -97,6 +104,12 @@ internal static class DistanceEditingTests
             var moved = result.Objects.Single(o => o.SourceId == source && o.Kind == target.Kind && Math.Abs(o.TimeMs - target.TimeMs) < .001);
             Near(reference.X + Math.Sign(target.X - reference.X) * (target.TimeMs - reference.TimeMs) * DistanceSnap.BaseVelocity(map, reference.TimeMs) * ratio, moved.X);
             Near(ratio, ui.View.DistanceReadout.Previous!.Value);
+            if (point == "droplet")
+            {
+                CheckTickHighlight(ui, moved);
+                ui.ClickText(Strings.Get("movement.analysis"));
+                CheckTickHighlight(ui, moved);
+            }
             ui.Key('Z', ctrl: true); Check(original.ContentEquals(ui.View.Document), "Slider DS undo lost source geometry");
         }
     }
@@ -139,6 +152,14 @@ internal static class DistanceEditingTests
         ui.LoadDocument(dense); ui.Paint();
         if (!ui.View.MovementAnalysisEnabled) ui.ClickText(Strings.Get("movement.analysis"));
         Check(ui.View.DistanceLabelBounds.Count < 99, "Dense connections did not suppress colliding labels");
+    }
+
+    private static void CheckTickHighlight(Ui ui, ConvertedCatchObject tick)
+    {
+        var rings = ui.Canvas.Circles.Where(c => !c.Filled && c.Color == 0xE7EBF2).ToArray();
+        Check(rings.Length == 1, "Selected tick should have one distinct outer ring");
+        Near(ui.View.PlayfieldBounds.X + tick.X / 512 * ui.View.PlayfieldBounds.Width, rings[0].X);
+        Near(ui.View.CanvasPlotBounds.Bottom - (tick.TimeMs - ui.View.ViewStartMs) * ui.View.PixelsPerMs, rings[0].Y);
     }
 
     private static void Input(Ui ui, bool next, string value)

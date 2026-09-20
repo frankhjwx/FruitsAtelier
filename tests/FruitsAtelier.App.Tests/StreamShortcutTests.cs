@@ -19,10 +19,10 @@ internal static class StreamShortcutTests
         map.Tracks.Add(track); ui.LoadDocument(map);
         ui.MoveMap(1500, 200); Check(ui.View.StreamConversionBounds.Width == 0, "hover never opens actions");
         ui.DownMap(1500, 200); clock.Advance(299); ui.Paint();
-        Check(!ui.Canvas.Circles.Any(c => !c.Filled && c.Radius == 9), "first 300 ms have no progress circle");
+        Check(!ui.Canvas.Circles.Any(c => !c.Filled && c.Radius == 9 && c.Color == 0x282F3A), "first 300 ms have no progress circle");
         clock.Advance(351); ui.Paint();
         Check(ui.View.SliderHoldNeedsRedraw && ui.View.StreamConversionBounds.Width == 0
-            && ui.Canvas.Circles.Any(c => !c.Filled && c.Radius == 9), "hold paints a small progress ring after the delay");
+            && ui.Canvas.Circles.Any(c => !c.Filled && c.Radius == 9 && c.Color == 0x282F3A), "hold paints a small progress ring after the delay");
         ui.UpMap(1500, 200); clock.Advance(1000); ui.Paint();
         Check(!ui.View.SliderHoldNeedsRedraw && ui.View.StreamConversionBounds.Width == 0, "early release cancels hold");
         ui.HoldMap(1500, 200, () => clock.Advance(1000));
