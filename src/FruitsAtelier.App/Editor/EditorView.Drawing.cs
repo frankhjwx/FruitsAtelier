@@ -39,8 +39,9 @@ public sealed partial class EditorView
         pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
         ClampView();
         EnsureConversion();
+        AdvanceBoxScroll();
         UpdatePlacementHyperdash();
-        if (AudioPlaying && drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
+        if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
         c.Fill(new(0, 0, width, height), Background);
         DrawChrome(c);
         DrawCanvas(c);

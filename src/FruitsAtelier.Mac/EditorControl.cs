@@ -71,8 +71,8 @@ internal sealed class EditorControl : Control, IDisposable
         base.Render(context);
         using var canvas = new MacCanvas(context, images);
         View.Render(canvas, (float)Bounds.Width, (float)Bounds.Height);
-        if (View.IsTestplaying || View.SliderHoldNeedsRedraw)
-            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.SliderHoldNeedsRedraw) InvalidateVisual(); });
+        if (View.IsTestplaying || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw)
+            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw) InvalidateVisual(); });
     }
     private static IEnumerable<string> DroppedPaths(DragEventArgs e)
         => e.DataTransfer.TryGetFiles()?.OfType<IStorageFile>().Select(f => f.TryGetLocalPath()).OfType<string>() ?? [];

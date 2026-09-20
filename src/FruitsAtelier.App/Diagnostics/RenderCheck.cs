@@ -492,12 +492,24 @@ internal static class RenderCheck
             var plot = view.CanvasPlotBounds;
             double startMs = view.ViewStartMs;
             view.PointerDown(plot.X + 4, plot.Y + 10, 0, false, false);
-            view.PointerMove(plot.Right - 12, plot.Bottom - 12, false, false);
+            view.PointerMove(plot.Right - 12, plot.Bottom - 40, false, false);
             view.UpdateTransport(10100, 15000, true, true, false, null, null);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             if (Math.Abs(view.ViewStartMs - startMs - 100) > .001 || !view.AudioPlaying)
                 throw new InvalidOperationException("Canvas marquee stopped following playback.");
-            view.PointerUp(plot.Right - 12, plot.Bottom - 12, 0);
+            view.Wheel(plot.Right - 12, plot.Bottom - 40, -120, false);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            if (Math.Abs(view.PlayheadMs - 10500) > .001 || !view.WantsCapture)
+                throw new InvalidOperationException("Marquee wheel navigation failed.");
+            view.PointerMove(plot.Right - 12, plot.Y, false, false);
+            if (!view.MarqueeScrollNeedsRedraw) throw new InvalidOperationException("Marquee edge did not request redraw.");
+            double beforeScroll = view.PlayheadMs;
+            Thread.Sleep(25);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            if (view.PlayheadMs <= beforeScroll || view.PlayheadMs - beforeScroll > 5 / view.PixelsPerMs + .001)
+                throw new InvalidOperationException("Marquee edge scroll speed is invalid.");
+            view.PointerUp(plot.Right - 12, plot.Y, 0);
+            if (view.MarqueeScrollNeedsRedraw) throw new InvalidOperationException("Marquee edge scroll continued after release.");
             view.UpdateTransport(10100, 15000, true, false, false, null, null);
             view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();

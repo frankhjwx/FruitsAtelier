@@ -253,7 +253,7 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0113: // WM_TIMER
                 if (painting || failed || NativeModalScope.Active) return 0;
                 PollUpdates(); PollAudio();
-                if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
+                if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0005: Invalidate(); return 0;
             case 0x02E0: // WM_DPICHANGED

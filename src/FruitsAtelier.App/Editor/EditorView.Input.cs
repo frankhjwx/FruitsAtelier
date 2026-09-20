@@ -489,6 +489,16 @@ public sealed partial class EditorView
             else libraryScroll = Math.Clamp(libraryScroll - delta / 120 * 3, 0, LibraryMaxScroll);
             RememberLibraryPosition(); return;
         }
+        if (drag == DragKind.Marquee)
+        {
+            if (!ctrl && (canvas.Contains(x, y) || objectTimeline.Contains(x, y)))
+            {
+                mouseX = x; mouseY = y;
+                SeekByWheel(-delta / 120, boxTimeline ? 1 : 0);
+                MoveBox(x, y);
+            }
+            return;
+        }
         if (drag != DragKind.None) return;
         if (contextItems.Count > 0) { contextItems.Clear(); return; }
         if (altHeld && (canvas.Contains(x, y) || snapSlider.Contains(x, y))) { AdjustDistanceSpacing(delta); return; }
@@ -559,9 +569,10 @@ public sealed partial class EditorView
             if (target == 0 || target == TimelineDurationMs) { wheelRemainder = 0; break; }
         }
         double nextView = viewStart + target - playhead;
-        SeekTo(target);
+        if (drag == DragKind.Marquee) ScrollBoxTo(target);
+        else SeekTo(target);
         wheelPlayhead = playhead; wheelDivisor = stepDivisor; wheelSurface = surface;
-        if (surface == 0) { viewStart = nextView; pinPlayhead = false; }
+        if (surface == 0 && drag != DragKind.Marquee) { viewStart = nextView; pinPlayhead = false; }
     }
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)

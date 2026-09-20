@@ -12,6 +12,29 @@ public sealed partial class EditorView
     private Rect selectionBox;
     private double boxStartTime;
     private bool boxAdds, boxAnchors;
+    private long boxScrollTimestamp;
+    private double BoxScrollDirection
+    {
+        get
+        {
+            if (drag != DragKind.Marquee || !dragMoved) return 0;
+            var area = boxTimeline ? objectTimeline : plot;
+            double position = boxTimeline ? mouseX : mouseY;
+            double start = boxTimeline ? area.X : area.Y, end = boxTimeline ? area.Right : area.Bottom;
+            const double edge = 24;
+            double direction = position < start + edge ? -Math.Clamp((start + edge - position) / edge, 0, 1)
+                : position > end - edge ? Math.Clamp((position - end + edge) / edge, 0, 1) : 0;
+            return boxTimeline ? direction : -direction;
+        }
+    }
+    public bool MarqueeScrollNeedsRedraw
+    {
+        get
+        {
+            double direction = BoxScrollDirection;
+            return direction > 0 && playhead < TimelineDurationMs || direction < 0 && playhead > 0;
+        }
+    }
     private bool ViewportFrozenByDrag => drag is DragKind.Objects or DragKind.BananaStart or DragKind.BananaEnd
         || drag == DragKind.Marquee && !AudioPlaying;
     private sealed record SelectionSnapshot(Guid[] Objects, Guid[] Anchors, Guid Primary, Guid Track, DragKind Part);
@@ -72,7 +95,31 @@ public sealed partial class EditorView
         boxStartTime = Transform.ToMap(x, y).TimeMs;
         selectionBox = new(x, y, 0, 0);
         BeginPointerDrag(x, y);
+        boxScrollTimestamp = timeProvider.GetTimestamp();
         drag = DragKind.Marquee;
+    }
+
+    private void AdvanceBoxScroll()
+    {
+        if (drag != DragKind.Marquee) return;
+        long now = timeProvider.GetTimestamp();
+        // Bound catch-up after a slow frame and keep speed independent of redraw frequency.
+        double elapsed = Math.Clamp(timeProvider.GetElapsedTime(boxScrollTimestamp, now).TotalSeconds, 0, .05);
+        boxScrollTimestamp = now;
+        if (!MarqueeScrollNeedsRedraw || elapsed == 0) return;
+        double scale = boxTimeline ? objectTimelineScale : pixelsPerMs;
+        ScrollBoxTo(playhead + BoxScrollDirection * 100 * elapsed / scale);
+    }
+
+    private void ScrollBoxTo(double time)
+    {
+        double target = Math.Clamp(time, 0, TimelineDurationMs);
+        double nextView = viewStart + target - playhead;
+        SeekTo(target);
+        double padding = plot.Height * playbackLineFromBottom / pixelsPerMs;
+        viewStart = Math.Clamp(nextView, -padding, Math.Max(-padding, TimelineDurationMs - padding));
+        pinPlayhead = false;
+        dragMoved = true;
     }
 
     private void MoveBox(float x, float y)

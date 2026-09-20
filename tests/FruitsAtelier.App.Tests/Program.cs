@@ -181,6 +181,7 @@ var tests = new (string Name, Action Run)[]
     ("Anchor boxes delete endpoints and remove insufficient tracks atomically", MultiSelectionTests.AnchorBoxAndEndpointDelete),
     ("Canceling object and anchor boxes restores selection without history", MultiSelectionTests.SelectionCancellation),
     ("Playback marquee retains its start time while the viewport scrolls", MultiSelectionTests.PlaybackBoxTransform),
+    ("Marquee wheel and edge scrolling preserve selection and bound speed", MarqueeScrollTests.WheelAndEdges),
     ("Language switching refreshes chrome without editing the map", LanguageTests.SwitchWithoutEditing),
     ("English batch menus and Core diagnostics use the same catalog", LanguageTests.EnglishMultiMenusAndDiagnostics)
 };
