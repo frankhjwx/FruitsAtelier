@@ -50,39 +50,41 @@ public sealed partial class EditorView
         var previous = target is not null ? DistanceNeighbours(target).Previous : null;
         bool editable = target is not null && previous is not null && DistanceReadout.Previous.HasValue && !notesLocked && drag == DragKind.None;
         NextDistanceFieldBounds = null;
-        PreviousDistanceFieldBounds = editable ? new(panel.X, panel.Y, panel.Width, 70) : null;
-        var coordinateInput = new Rect(panel.Right - 88, panel.Y + 72, 76, 22);
+        PreviousDistanceFieldBounds = editable ? new(panel.X, panel.Y, panel.Width, 56) : null;
+        var coordinateInput = new Rect(panel.Right - 74, panel.Y + 58, 64, 20);
         XCoordinateFieldBounds = target is not null && !notesLocked && drag == DragKind.None ? coordinateInput : null;
-        c.Text(L.Get("coordinate.x"), panel.X + 12, panel.Y + 75, 11, Foreground, panel.Width - 112);
+        c.Text(L.Get("coordinate.x"), panel.X + 10, panel.Y + 60, MovementPanelFontSize, Muted, panel.Width - 94);
         c.Fill(coordinateInput, Panel, 3);
         c.Stroke(coordinateInput, editingXCoordinate && fieldError.Length > 0 ? Error : editingXCoordinate ? Accent : Grid, 1, 3);
         if (DistanceEditing && editingXCoordinate)
-            DrawInputText(c, new(coordinateInput.X + 5, coordinateInput.Y + 3, coordinateInput.Width - 10, 16), editBuffer, 11, true, replaceText);
+            DrawInputText(c, new(coordinateInput.X + 5, coordinateInput.Y + 2, coordinateInput.Width - 10, 16), editBuffer, MovementPanelFontSize, true, replaceText);
         else
         {
             double? coordinate = PlacementGhostPoint()?.X ?? target?.X;
-            c.Text(coordinate?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) ?? "—",
-                coordinateInput.X + 5, coordinateInput.Y + 3, 11, XCoordinateFieldBounds.HasValue ? Foreground : Muted, coordinateInput.Width - 10);
+            c.Text(coordinate?.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "—",
+                coordinateInput.X + 5, coordinateInput.Y + 2, MovementPanelFontSize, XCoordinateFieldBounds.HasValue ? Foreground : Muted, coordinateInput.Width - 10);
         }
         if (DistanceEditing && !editingXCoordinate)
         {
-            var slider = new Rect(panel.X + 12, panel.Y + 44, panel.Width - 112, 22);
-            var input = new Rect(panel.Right - 88, panel.Y + 44, 76, 22);
+            var slider = new Rect(panel.X + 10, panel.Y + 36, panel.Width - 94, 20);
+            var input = new Rect(panel.Right - 74, panel.Y + 36, 64, 20);
             DistanceSliderBounds = slider;
             PreviousDistanceFieldBounds = input;
-            float y = slider.Y + 11;
+            float y = slider.Y + 10;
             c.Line(slider.X, y, slider.Right, y, Grid, 4);
             float x = slider.X + (float)(distanceMaximum > 0 ? distanceValue / distanceMaximum : 0) * slider.Width;
             c.Line(slider.X, y, x, y, Accent, 4);
             c.Fill(new(x - 5, y - 7, 10, 14), Accent, 5);
             c.Fill(input, Panel, 3);
             c.Stroke(input, fieldError.Length > 0 ? Error : Accent, 1, 3);
-            DrawInputText(c, new(input.X + 5, input.Y + 3, input.Width - 10, 16), editBuffer, 11, true, replaceText);
+            DrawInputText(c, new(input.X + 5, input.Y + 2, input.Width - 10, 16), editBuffer, MovementPanelFontSize, true, replaceText);
         }
         else
         {
-            c.Text(L.Get("assist.previous", DistanceReadout.Previous is { } p ? L.Get("assist.ratio", p) : "—"), panel.X + 12, panel.Y + 47, 11, Foreground, panel.Width / 2 - 16);
-            c.Text(L.Get("assist.next", DistanceReadout.Next is { } n ? L.Get("assist.ratio", n) : "—"), panel.X + panel.Width / 2 + 4, panel.Y + 47, 11, Muted, panel.Width / 2 - 16);
+            c.Text(L.Get("assist.previous", DistanceReadout.Previous is { } p ? L.Get("assist.ratio", p) : "—"), panel.X + 10, panel.Y + 38, MovementPanelFontSize, Muted, panel.Width / 2 - 14);
+            string next = L.Get("assist.next", DistanceReadout.Next is { } n ? L.Get("assist.ratio", n) : "—");
+            float nextWidth = Math.Min(c.MeasureText(next, MovementPanelFontSize), panel.Width / 2 - 14);
+            c.Text(next, panel.Right - 10 - nextWidth, panel.Y + 38, MovementPanelFontSize, Muted, nextWidth);
         }
         if (DistanceEditing && fieldError.Length > 0)
         {
@@ -123,7 +125,7 @@ public sealed partial class EditorView
             int direction = Math.Sign(distanceEditTarget.X - distanceEditReference.X);
             distanceMaximum = direction == 0 ? 0 : (direction > 0 ? 512 - distanceEditReference.X : distanceEditReference.X) / unit;
         }
-        editBuffer = distanceValue.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        editBuffer = distanceValue.ToString(editingXCoordinate ? "0" : "0.00", System.Globalization.CultureInfo.InvariantCulture);
         replaceText = true; fieldError = "";
         history.Begin(L.Get("editor.command.changeField", DistanceEditLabel));
         return true;
@@ -163,7 +165,8 @@ public sealed partial class EditorView
     private void PreviewDistanceText()
     {
         ResetTextCaret();
-        if (double.TryParse(editBuffer, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value) && double.IsFinite(value))
+        var style = editingXCoordinate ? System.Globalization.NumberStyles.Integer : System.Globalization.NumberStyles.Float;
+        if (double.TryParse(editBuffer, style, System.Globalization.CultureInfo.InvariantCulture, out double value) && double.IsFinite(value))
             PreviewDistance(value);
         else fieldError = L.Get("editor.error.finiteNumberRequired");
     }
@@ -208,7 +211,7 @@ public sealed partial class EditorView
 
     private void DistanceTextInput(char value)
     {
-        if (!(char.IsAsciiDigit(value) || value is '.' or '-')) return;
+        if (!(char.IsAsciiDigit(value) || value == '-' || !editingXCoordinate && value == '.')) return;
         string next = replaceText ? value.ToString() : editBuffer + value;
         int dot = next.IndexOf('.');
         if (dot >= 0 && next.Length - dot - 1 > 2) return;
@@ -283,9 +286,9 @@ public sealed partial class EditorView
         var occupied = new List<Rect>();
         if (PlacementGhostPoint() is not null || FlagTargets().Length == 1)
         {
-            float panelWidth = Math.Min(340, plot.Width - 12);
+            float panelWidth = Math.Min(MovementPanelWidth, plot.Width - 12);
             occupied.Add(new(Math.Clamp(Playfield.X + Playfield.Width / 2 - panelWidth / 2, plot.X + 6, plot.Right - panelWidth - 6),
-                plot.Bottom - 106, panelWidth, 98));
+                plot.Bottom - MovementPanelHeight - 8, panelWidth, MovementPanelHeight));
         }
         foreach (var shower in Document.BananaShowers) occupied.Add(BananaRectangle(shower));
         int low = 0, high = distanceLayout.Count;

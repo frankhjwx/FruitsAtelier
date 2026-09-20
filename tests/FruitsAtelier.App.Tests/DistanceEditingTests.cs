@@ -72,22 +72,28 @@ internal static class DistanceEditingTests
         foreach (string language in Strings.AvailableLanguages)
         {
             Strings.SetLanguage(language);
-            var ui = new Ui(); ui.LoadDocument(Fruits()); ui.ClickMap(1000, 100);
+            var map = Fruits(); map.Fruits[0].X = 100.25;
+            var ui = new Ui(); ui.LoadDocument(map); ui.ClickMap(1000, 100.25);
             var original = ui.View.Document.DeepClone();
+            var initialField = ui.View.XCoordinateFieldBounds!.Value;
+            ui.Click(initialField.X + 8, initialField.Y + 8); ui.Key(13);
+            Check(original.ContentEquals(ui.View.Document), "Focusing X rounded existing geometry");
             Check(ui.View.PreviousDistanceFieldBounds is null, "First fruit unexpectedly has previous DS");
-            EditX("256.25");
-            Near(256.25, ui.View.Document.Fruits[0].X);
+            EditX("256");
+            Near(256, ui.View.Document.Fruits[0].X);
+            ui.Type("."); ui.Paint(); Near(256, ui.View.Document.Fruits[0].X);
+            Check(ui.Canvas.Texts.Any(t => t.Value == "256" && t.X > initialField.X && t.Y > initialField.Y), "X input accepted a decimal point");
             Near(1000, ui.View.Document.Fruits[0].TimeMs);
             Check(ui.View.DistanceSliderBounds is null, "X editing exposed a slider");
             ui.Key(13); ui.Key('Z', ctrl: true);
             Check(original.ContentEquals(ui.View.Document), "X undo changed other content");
-            ui.Key('Y', ctrl: true); Near(256.25, ui.View.Document.Fruits[0].X);
-            ui.ClickMap(1000, 256.25);
+            ui.Key('Y', ctrl: true); Near(256, ui.View.Document.Fruits[0].X);
+            ui.ClickMap(1000, 256);
             EditX("999"); Near(512, ui.View.Document.Fruits[0].X); ui.Key(13);
             EditX("-10"); Near(0, ui.View.Document.Fruits[0].X); ui.Key(27);
             Near(512, ui.View.Document.Fruits[0].X);
             EditX("-10"); ui.Key(13); Near(0, ui.View.Document.Fruits[0].X);
-            EditX("."); ui.Key(13);
+            EditX("-"); ui.Key(13);
             Check(ui.View.IsEditingText, "Invalid X silently committed"); ui.Key(27);
             Near(0, ui.View.Document.Fruits[0].X);
             EditX("123"); ui.View.CancelInteraction(); ui.Paint(); Near(0, ui.View.Document.Fruits[0].X);
@@ -162,10 +168,10 @@ internal static class DistanceEditingTests
             ui.ClickMap(target.TimeMs, target.X);
             var xField = ui.View.XCoordinateFieldBounds!.Value;
             ui.Click(xField.X + 8, xField.Y + 8);
-            ui.Type((target.X + 5).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)); ui.Key(13);
+            ui.Type((target.X + 5).ToString("0", System.Globalization.CultureInfo.InvariantCulture)); ui.Key(13);
             Check(!ui.View.IsEditingText, $"{imported}/{point} X edit was rejected");
             var xMoved = CatchStreamConverter.Convert(ui.View.Document).Objects.Single(o => o.SourceId == source && o.Kind == target.Kind && Math.Abs(o.TimeMs - target.TimeMs) < .001);
-            Near(Math.Round(target.X + 5, 2), xMoved.X);
+            Near(Math.Round(target.X + 5, 0, MidpointRounding.AwayFromZero), xMoved.X);
             ui.Key('Z', ctrl: true); Check(original.ContentEquals(ui.View.Document), "Slider X undo lost source geometry");
         }
     }

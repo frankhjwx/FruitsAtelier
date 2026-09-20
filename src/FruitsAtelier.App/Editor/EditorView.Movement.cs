@@ -6,6 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private const float MovementPanelWidth = 300, MovementPanelHeight = 84, MovementPanelFontSize = 11;
     private IReadOnlyList<ConvertedCatchObject>? movementSource;
     private HyperDashState[] movementStates = [];
     private int[] movementIndices = [];
@@ -101,17 +102,18 @@ public sealed partial class EditorView
         MovementReadout = (first > 0 ? movementStates[indices[first - 1]].Movement : null,
             movementStates[indices[last]].Movement);
 
-        float panelWidth = Math.Min(340, plot.Width - 12);
-        if (panelWidth < 180 || plot.Height < 118) return;
+        float panelWidth = Math.Min(MovementPanelWidth, plot.Width - 12);
+        if (panelWidth < 180 || plot.Height < MovementPanelHeight + 20) return;
         var r = new Rect(Math.Clamp(Playfield.X + Playfield.Width / 2 - panelWidth / 2, plot.X + 6, plot.Right - panelWidth - 6),
-            plot.Bottom - 106, panelWidth, 98);
+            plot.Bottom - MovementPanelHeight - 8, panelWidth, MovementPanelHeight);
         MovementOverlayBounds = r;
-        c.Fill(r, 0x171C24, 8, .39f);
-        c.Stroke(r, 0x424D5C, 1, 8);
-        c.Text(L.Get("movement.previous", Label(MovementReadout.Previous)), r.X + 12, r.Y + 8, 12, Foreground, (r.Width - 24) / 2);
+        c.Fill(r, 0x171C24, 6, .82f);
+        c.Stroke(r, 0x424D5C, 1, 6);
+        c.Text(L.Get("movement.previous", Label(MovementReadout.Previous)), r.X + 10, r.Y + 7, MovementPanelFontSize, Foreground, r.Width / 2 - 14);
         string next = L.Get("movement.next", Label(MovementReadout.Next));
-        c.Text(next, r.Right - 12 - c.MeasureText(next, 12), r.Y + 8, 12, Muted, (r.Width - 24) / 2);
-        float left = r.X + 12, length = r.Width - 24, y = r.Y + 33;
+        float nextWidth = Math.Min(c.MeasureText(next, MovementPanelFontSize), r.Width / 2 - 14);
+        c.Text(next, r.Right - 10 - nextWidth, r.Y + 7, MovementPanelFontSize, Foreground, nextWidth);
+        float left = r.X + 10, length = r.Width - 20, y = r.Y + 27;
         if (MovementReadout.Previous is { } value)
         {
             // A centre-start Stand can remain possible even when prefix context marks a hyperdash.
@@ -120,16 +122,16 @@ public sealed partial class EditorView
             float stand = (float)(value.StandLimit / extent) * length;
             float walk = (float)(Math.Max(value.StandLimit, value.WalkLimit) / extent) * length;
             float dash = (float)(dashLimit / extent) * length;
-            c.Fill(new(left, y, stand, 7), MovementColour(CatchMovementMode.Stand));
-            c.Fill(new(left + stand, y, walk - stand, 7), MovementColour(CatchMovementMode.Walk));
-            c.Fill(new(left + walk, y, dash - walk, 7), MovementColour(CatchMovementMode.Dash));
-            c.Fill(new(left + dash, y, length - dash, 7), MovementColour(CatchMovementMode.HyperDash));
+            c.Fill(new(left, y, stand, 5), MovementColour(CatchMovementMode.Stand));
+            c.Fill(new(left + stand, y, walk - stand, 5), MovementColour(CatchMovementMode.Walk));
+            c.Fill(new(left + walk, y, dash - walk, 5), MovementColour(CatchMovementMode.Dash));
+            c.Fill(new(left + dash, y, length - dash, 5), MovementColour(CatchMovementMode.HyperDash));
             float x = left + (float)Math.Clamp(value.Distance / extent, 0, 1) * length;
             c.Line(x - 4, y - 6, x, y - 2, Foreground, 2);
             c.Line(x + 4, y - 6, x, y - 2, Foreground, 2);
-            c.Line(x, y - 1, x, y + 9, Foreground, 1.5f);
+            c.Line(x, y - 1, x, y + 7, Foreground, 1.5f);
         }
-        else c.Fill(new(left, y, length, 7), Grid, 3);
+        else c.Fill(new(left, y, length, 5), Grid, 2);
 
         DrawDistanceFields(c, r);
 
