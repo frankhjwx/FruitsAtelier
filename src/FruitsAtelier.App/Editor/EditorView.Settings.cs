@@ -17,11 +17,7 @@ public sealed partial class EditorView
         if (librarySettingsOpen || IsTestplaying || !PrepareFileOperation()) return;
         settingsFromLibrary = LibraryVisible;
         if (AudioPlaying) RequestTogglePlayback?.Invoke();
-        draftWorkspace = LibrarySettings.Workspace;
-        draftOsuRoot = LibrarySettings.OsuRoot;
-        draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
-        draftRomanisedMetadata = LibrarySettings.RomanisedMetadata;
-        draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
+        ResetSettingsDrafts();
         settingsCategory = SettingsCategory.Workspace;
         LibraryVisible = librarySettingsOpen = true;
         updatesPage = exportPage = resourcePage = false;
@@ -30,6 +26,23 @@ public sealed partial class EditorView
         languageMenuOpen = false;
         contextItems.Clear(); hits.Clear(); fields.Clear();
     }
+
+    private void ResetSettingsDrafts()
+    {
+        draftWorkspace = LibrarySettings.Workspace;
+        draftOsuRoot = LibrarySettings.OsuRoot;
+        draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
+        draftRomanisedMetadata = LibrarySettings.RomanisedMetadata;
+        draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
+    }
+
+    private bool SettingsChanged => draftWorkspace != LibrarySettings.Workspace ||
+        draftOsuRoot != LibrarySettings.OsuRoot ||
+        draftDefaultSkin != (LibrarySettings.DefaultSkin ?? "") ||
+        draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
+        draftTestplayKeys[0] != LibrarySettings.TestplayLeftKey ||
+        draftTestplayKeys[1] != LibrarySettings.TestplayRightKey ||
+        draftTestplayKeys[2] != LibrarySettings.TestplayDashKey;
 
     private void CloseSettings()
     {
@@ -89,12 +102,14 @@ public sealed partial class EditorView
         }
         c.Line(230, height - 86, width - 24, height - 86, Grid);
         c.Text(libraryError, SettingsContentX, height - 116, 13, Error, width - SettingsContentX - 32);
-        Button(c, new(SettingsContentX, height - 64, 200, 38), L.Get("library.apply"), ApplySettings,
-            active: true, enabled: scanTask is null && searchTask is null);
+        bool canApply = SettingsChanged && scanTask is null && searchTask is null;
+        Button(c, new(SettingsContentX, height - 64, 200, 38), L.Get("library.apply"), () => ApplySettings(),
+            active: canApply, enabled: canApply);
     }
 
-    private void ApplySettings()
+    internal void ApplySettings(string? settingsPath = null)
     {
+        if (!SettingsChanged) return;
         try
         {
             var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
@@ -103,8 +118,12 @@ public sealed partial class EditorView
             settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
             bool rootsChanged = settings.Workspace != LibrarySettings.Workspace || settings.OsuRoot != LibrarySettings.OsuRoot;
-            settings.Save();
-            SaveLibraryMemory(); LibrarySettings = settings; InitializeSkin(); CloseSettings();
+            settings.Save(settingsPath);
+            SaveLibraryMemory(); LibrarySettings = settings;
+            ResetSettingsDrafts();
+            libraryField = bindingCapture = -1;
+            libraryError = "";
+            InitializeSkin();
             if (!rootsChanged) return;
             libraryRatings.Clear(); libraryBrowser?.Retire(); libraryBrowser = null; libraryDatabase = null; libraryResultsReady = false;
             LoadLibraryMemory(); StartLibraryScan();

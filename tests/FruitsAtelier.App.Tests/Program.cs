@@ -18,6 +18,7 @@ var tests = new (string Name, Action Run)[]
     ("Library archive drops preserve Songs and report source/export presence", LibraryImportTests.Run),
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
+    ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
     ("Slider stream confirmation, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
     ("Slider long press progress, cancellation and control-point shortcut", StreamShortcutTests.HoldAndShortcut),
     ("Testplay pause, resume and legacy exit shortcuts", TestplayTests.PauseAndExitShortcuts),
