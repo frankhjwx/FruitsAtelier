@@ -159,7 +159,15 @@ public sealed partial class EditorView
     private bool DistanceKeyDown(int key, bool ctrl)
     {
         if (!DistanceEditing) return false;
-        if (key == 27) FinishDistanceEdit(true);
+        if (ctrl && key == 90 && !shiftHeld)
+        {
+            bool changed = SelectedDistanceObject() is { } current && Math.Abs(current.X - distanceEditTarget!.X) > .00001;
+            // Keep the last valid preview redoable; an untouched field must not undo earlier edits.
+            fieldError = "";
+            FinishDistanceEdit(!changed);
+            if (changed) Undo();
+        }
+        else if (key == 27) FinishDistanceEdit(true);
         else if (key is 13 or 9) FinishDistanceEdit(false);
         else if (ctrl && key == 65) replaceText = true;
         else if (key is 8 or 46)

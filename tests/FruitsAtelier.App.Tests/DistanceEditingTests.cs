@@ -51,7 +51,12 @@ internal static class DistanceEditingTests
         Near(1.35, ui.View.DistanceReadout.Previous!.Value);
         ui.View.SetModifiers(false, false);
         Check(ui.Canvas.Texts.Any(t => t.Value == ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)), "DS input is not formatted to two decimals");
-        ui.Key(13); ui.Key('Z', ctrl: true); Near(170, ui.View.Document.Fruits[1].X);
+        ui.Key('Z', ctrl: true); Near(170, ui.View.Document.Fruits[1].X);
+        Check(!ui.View.IsEditingText, "Immediate DS undo left the input active");
+        ui.Key('Y', ctrl: true); Near(289, ui.View.Document.Fruits[1].X);
+        ui.Key('Z', ctrl: true); Near(170, ui.View.Document.Fruits[1].X);
+        ui.ClickMap(1500, 170); ui.Click(panel.X + 8, panel.Y + 8);
+        ui.Key('Z', ctrl: true); Near(170, ui.View.Document.Fruits[1].X);
         ui.ClickMap(1500, 170); ui.Click(panel.X + 8, panel.Y + 8); ui.Type(".8"); ui.Paint();
         Near(212, ui.View.Document.Fruits[1].X);
         ui.View.CancelInteraction(); ui.Paint(); Near(170, ui.View.Document.Fruits[1].X);
