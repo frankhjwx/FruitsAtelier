@@ -340,6 +340,7 @@ internal static class RenderCheck
                 view.PointerDown(input.X + 8, input.Y + 8, 0, false, false);
                 view.PointerUp(input.X + 8, input.Y + 8, 0); Paint();
                 view.TextInput('0'); view.TextInput('.'); view.TextInput('5'); Paint();
+                if (Math.Abs(view.Document.Fruits[1].X - 170) > .001) throw new InvalidOperationException("DS preview did not move fruit before confirmation.");
                 view.KeyDown(13, false, false); Paint();
                 if (Math.Abs(view.Document.Fruits[1].X - 170) > .001) throw new InvalidOperationException("DS input did not move fruit.");
                 view.KeyDown('Z', true, false); Paint();

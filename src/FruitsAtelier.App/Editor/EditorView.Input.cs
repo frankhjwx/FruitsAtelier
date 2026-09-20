@@ -49,6 +49,7 @@ public sealed partial class EditorView
         if (LibraryVisible && LibraryPointerDown(x, y, button)) return;
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
+        if (menu < 0 && contextItems.Count == 0 && DistancePointerDown(x, y, button)) return;
         if (button == 2 && DifficultyTabContext(x, y)) return;
         if (menu >= 0 && button != 0) { menu = -1; return; }
         if (button == 2)
@@ -270,6 +271,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (distanceDragging) { UpdateDistanceSlider(x); return; }
         placementCtrl = ctrl;
         if (volumeDrag >= 0) { UpdateVolumeDrag(x); return; }
         if (IsTestplaying) return;
@@ -379,6 +381,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
+        if (distanceDragging && button == 0) { UpdateDistanceSlider(x); distanceDragging = false; return; }
         if (updatesPage) return;
         if (volumeDrag >= 0 && button == 0) { UpdateVolumeDrag(x); FinishVolumeDrag(); return; }
         if (button == 0)
@@ -422,6 +425,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (DistanceEditing) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (updatesPage) return;
         if (IsTestplaying) return;
         if (notesLocked && plot.Contains(x, y)) { PointerDown(x, y, 0, shift, ctrl); return; }
@@ -556,6 +560,7 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (DistanceKeyDown(virtualKey, ctrl)) return;
         placementCtrl = ctrl;
         if (virtualKey == 27 && legacyButtonSlider != Guid.Empty)
         { legacyButtonSlider = Guid.Empty; return; }
@@ -702,6 +707,7 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (DistanceEditing) { DistanceTextInput(value); return; }
         if (updatesPage) return;
         if (StreamDialogVisible) return;
         if (IsTestplaying || CapturingTestplayKey) return;
@@ -725,6 +731,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction()
     {
+        FinishDistanceEdit(true);
         FinishVolumeDrag();
         testplayEscapeConsumed = false;
         streamSnapDragging = false;

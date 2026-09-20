@@ -24,12 +24,35 @@ internal static class DistanceEditingTests
         Near(1500, ui.View.Document.Fruits[1].TimeMs);
         ui.Key('Z', ctrl: true); Check(original.ContentEquals(ui.View.Document), "DS undo changed other content");
         ui.Key('Y', ctrl: true); Near(170, ui.View.Document.Fruits[1].X); ui.ClickMap(1500, 170);
-        Input(ui, true, ".5"); Near(310, ui.View.Document.Fruits[1].X);
-        Input(ui, false, "4"); Near(310, ui.View.Document.Fruits[1].X);
+        Check(ui.View.NextDistanceFieldBounds is null, "Next DS remains editable");
+        var panel = ui.View.MovementOverlayBounds!.Value;
+        ui.Click(panel.Right - 8, panel.Y + 8);
+        Check(ui.View.IsEditingText, "Whole panel did not start editing");
+        ui.View.PointerDoubleClick(panel.Right - 8, panel.Y + 8, false, false); ui.Paint();
+        ui.Type(".75"); ui.Paint(); Near(205, ui.View.Document.Fruits[1].X);
+        Near(.75, ui.View.DistanceReadout.Previous!.Value);
+        ui.Key(27); Near(170, ui.View.Document.Fruits[1].X);
+        Input(ui, false, "4"); Near(170, ui.View.Document.Fruits[1].X);
         Check(ui.View.IsEditingText, "Out-of-bounds DS silently committed"); ui.Key(27);
-        Input(ui, false, "-1"); Near(310, ui.View.Document.Fruits[1].X); ui.Key(27);
-        var field = ui.View.PreviousDistanceFieldBounds!.Value;
-        ui.Click(field.X + 8, field.Y + 8); ui.Type(".8"); ui.Key(27); Near(310, ui.View.Document.Fruits[1].X);
+        Input(ui, false, "-1"); Near(170, ui.View.Document.Fruits[1].X); ui.Key(27);
+        ui.Click(panel.X + 8, panel.Y + 8);
+        var slider = ui.View.DistanceSliderBounds!.Value;
+        ui.View.PointerDown(slider.X, slider.Y + 10, 0, false, false); ui.Paint();
+        Near(100, ui.View.Document.Fruits[1].X);
+        ui.View.PointerMove(slider.X + slider.Width * .46f, slider.Y + 10, false, false); ui.Paint();
+        var ratio = ui.View.DistanceReadout.Previous!.Value;
+        Near(Math.Round(ratio, 1), ratio);
+        Check(ui.View.Document.Fruits[1].X > 100, "Slider lost original direction after zero");
+        ui.View.PointerUp(slider.X + slider.Width * .46f, slider.Y + 10, 0); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)), "DS input is not formatted to two decimals");
+        ui.Key(13); ui.Key('Z', ctrl: true); Near(170, ui.View.Document.Fruits[1].X);
+        ui.ClickMap(1500, 170); ui.Click(panel.X + 8, panel.Y + 8); ui.Type(".8"); ui.Paint();
+        Near(212, ui.View.Document.Fruits[1].X);
+        ui.View.CancelInteraction(); ui.Paint(); Near(170, ui.View.Document.Fruits[1].X);
+        ui.Click(panel.X + 8, panel.Y + 8); ui.Type(".9"); ui.Paint();
+        ui.ClickMap(2200, 100); Near(226, ui.View.Document.Fruits[1].X);
+        ui.Key('Z', ctrl: true); Near(170, ui.View.Document.Fruits[1].X);
+        ui.ClickMap(1500, 170);
         ui.Key('L'); Check(ui.View.PreviousDistanceFieldBounds is null, "Locked note still exposes DS editing");
     }
 
@@ -67,11 +90,12 @@ internal static class DistanceEditingTests
             var ui = new Ui(); ui.LoadDocument(map); ui.ClickMap(target.TimeMs, target.X);
             var original = ui.View.Document.DeepClone();
             Check(ui.View.PreviousDistanceFieldBounds is not null, $"{point} was not individually selected");
-            Input(ui, false, ratio.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+            ratio = Math.Round(ratio, 2);
+            Input(ui, false, ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture));
             Check(!ui.View.IsEditingText, $"{imported}/{point} DS was rejected");
             var result = CatchStreamConverter.Convert(ui.View.Document);
             var moved = result.Objects.Single(o => o.SourceId == source && o.Kind == target.Kind && Math.Abs(o.TimeMs - target.TimeMs) < .001);
-            Near(reference.X + (target.X - reference.X) * .9, moved.X);
+            Near(reference.X + Math.Sign(target.X - reference.X) * (target.TimeMs - reference.TimeMs) * DistanceSnap.BaseVelocity(map, reference.TimeMs) * ratio, moved.X);
             Near(ratio, ui.View.DistanceReadout.Previous!.Value);
             ui.Key('Z', ctrl: true); Check(original.ContentEquals(ui.View.Document), "Slider DS undo lost source geometry");
         }
@@ -86,6 +110,18 @@ internal static class DistanceEditingTests
         for (int i = 0; i < bounds.Length; i++)
         for (int j = i + 1; j < bounds.Length; j++)
             Check(bounds[i].Right < bounds[j].X || bounds[j].Right < bounds[i].X || bounds[i].Bottom < bounds[j].Y || bounds[j].Bottom < bounds[i].Y, "DS labels overlap");
+        var longGap = Fruits(); longGap.Fruits.Clear();
+        longGap.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 100 }, new Fruit { TimeMs = 5000, X = 400 }]);
+        ui.LoadDocument(longGap); ui.Paint();
+        var labelBefore = ui.View.DistanceLabelBounds.Single();
+        var plot = ui.View.CanvasPlotBounds;
+        float panX = plot.X + 4, panY = plot.Y + 10;
+        ui.View.PointerDown(panX, panY, 1, false, false);
+        ui.View.PointerMove(panX, panY + (float)(2000 * ui.View.PixelsPerMs), false, false);
+        ui.View.PointerUp(panX, panY + (float)(2000 * ui.View.PixelsPerMs), 1); ui.Paint();
+        var labelAfter = ui.View.DistanceLabelBounds.Single();
+        Near(labelBefore.X, labelAfter.X);
+        Near(labelBefore.Y + 2000 * ui.View.PixelsPerMs, labelAfter.Y);
         var dense = Fruits(); dense.Fruits.Clear();
         for (int i = 0; i < 100; i++) dense.Fruits.Add(new Fruit { TimeMs = 1000 + i * 3, X = 256 });
         ui.LoadDocument(dense); ui.Paint();
