@@ -83,6 +83,12 @@ and continued loading when the diagnostic destination cannot be written. It uses
 an injected output and does not play sound. To capture real-device lifecycle
 checks, set `FRUITSATELIER_AUDIO_DIAGNOSTICS=1` before running `--lifecycle-check`.
 
+`Audio.Tests --device-diagnostic-check` runs the three diagnostic profiles against
+the default device with muted output and checks actual buffer telemetry and saved
+PCM. `--diagnostic-check` also checks byte-exact bounded WAV capture and tempo
+settings. `--speed-check` checks pitch, duration and sustained-tone continuity for
+both tempo profiles. The capture never records the microphone or system audio.
+
 `Audio.Tests --pause-check` checks pause/resume PCM alignment with a blocked
 in-flight clock read, seek/pause ordering and rapid resume, plus real-device WAV
 pause, seek and EOF replay. The paused position remains at the request snapshot

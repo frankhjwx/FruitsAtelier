@@ -23,6 +23,26 @@ RMS and longest near-silent run before gain and hitsound mixing. Silence may be
 present in the source or EOF flush; these counters alone do not prove an underrun.
 The measurements are enabled only for diagnostic capture.
 
+Diagnostic mode uses `DiagnosticWasapiOut`, adapted from NAudio 2.2.1
+`NAudio.Wasapi/WasapiOut.cs` at commit
+`b5d5ff83fd378f046398891fe5cd99426ce44732`. It retains the upstream playback
+algorithm and adds counters for event waits, buffer padding, submitted frames,
+and refill/wakeup durations. Configuration records report actual buffer frames,
+stream latency and endpoint format. Zero padding alone does not prove an audible
+underrun. The MIT notice remains in `Licenses/NAudio.txt`.
+
+Diagnostic-only environment options select `FRUITSATELIER_AUDIO_TEMPO=short-window`
+(quick seek, 30 ms sequence, 4 ms overlap), `FRUITSATELIER_AUDIO_BUFFER=160`, and
+`FRUITSATELIER_AUDIO_CAPTURE=1`. These options are ignored when diagnostics are
+disabled. The short-window parameters reference `TrackBass.cs` at osu!framework
+commit `94724b4385479b2e00bb347c9201ce9d9d13f594`; no BASS code is bundled.
+The diagnostic publisher supplies separate launchers for the default, short-window
+and larger-buffer comparisons. PCM capture preserves output bytes and stores at
+most four 20-second clips per transport at speeds up to 25%, after gain and
+scheduled mixing. Capture uses fixed memory and background WAV writes; playback
+and capture failures are isolated. Separate live testplay sounds are not captured.
+The device must stop before a partial clip is finalized.
+
 `AudioTransport` queues load, play, pause, seek and speed operations on one worker. The UI reads its immutable `State` snapshot; it does not call the decoder or output device. `LoadAsync` and `WaitForCommandsAsync` allow callers to await applied operations. `CanPlay` stays true while a loaded device is paused.
 
 The output uses event-driven shared-mode `WasapiOut` with the system default device and 80 ms requested latency. MP3 decoding uses Windows Media Foundation; OGG Vorbis uses NVorbis; WAV uses NAudio's WAV reader. All streams are converted to 16-bit PCM before output. This version accepts mono and stereo audio.

@@ -17,6 +17,11 @@ if ($diagnosticMarker -ne $diagnosticsEnabled) { throw 'Audio diagnostic marker 
 if ($diagnosticsEnabled -and !(Test-Path -LiteralPath (Join-Path $current 'AUDIO-DIAGNOSTICS.txt'))) {
     throw 'Audio diagnostic capture instructions are missing.'
 }
+foreach ($launcher in @('A-default.cmd', 'B-short-window.cmd', 'C-buffer-160.cmd')) {
+    if ((Test-Path -LiteralPath (Join-Path $current $launcher)) -ne $diagnosticsEnabled) {
+        throw "Diagnostic launcher does not match package type: $launcher"
+    }
+}
 foreach ($required in @('FruitsAtelier.exe', 'Update.exe', '.portable', 'current/sq.version', 'current/FruitsAtelier.App.exe')) {
     if (!(Test-Path -LiteralPath (Join-Path $destination $required))) { throw "Portable updater file missing: $required" }
 }

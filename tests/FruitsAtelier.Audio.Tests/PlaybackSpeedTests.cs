@@ -5,12 +5,13 @@ internal static class PlaybackSpeedTests
 {
     public static void PitchAndDuration()
     {
+        foreach (string profile in new[] { "default", "short-window" })
         foreach (int sampleRate in new[] { 44100, 48000 })
         foreach (int channels in new[] { 1, 2 })
         foreach (double speed in new[] { .1, .25, .5, .75, 1.5 })
         {
             var source = new Tone(sampleRate, channels);
-            var tempo = new TempoSampleProvider(source, speed);
+            var tempo = new TempoSampleProvider(source, speed, profile: profile);
             var result = new List<float>();
             float[] buffer = new float[257 * channels + 6];
             int read;

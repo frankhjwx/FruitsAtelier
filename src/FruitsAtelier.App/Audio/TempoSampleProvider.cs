@@ -15,11 +15,19 @@ internal sealed class TempoSampleProvider : ISampleProvider
     private int silentFrames, longestSilentFrames;
     public WaveFormat WaveFormat => source.WaveFormat;
 
-    public TempoSampleProvider(ISampleProvider source, double speed, bool diagnostics = false)
+    private readonly string profile;
+    public TempoSampleProvider(ISampleProvider source, double speed, bool diagnostics = false, string profile = "default")
     {
         this.source = source;
         this.diagnostics = diagnostics;
+        this.profile = profile;
         processor = new() { SampleRate = source.WaveFormat.SampleRate, Channels = source.WaveFormat.Channels, Tempo = speed };
+        if (profile == "short-window")
+        {
+            processor.SetSetting(SettingId.UseQuickSeek, 1);
+            processor.SetSetting(SettingId.SequenceDurationMs, 30);
+            processor.SetSetting(SettingId.OverlapDurationMs, 4);
+        }
         input = new float[2048 * source.WaveFormat.Channels];
     }
 
@@ -70,7 +78,11 @@ internal sealed class TempoSampleProvider : ISampleProvider
         return written;
     }
 
-    internal object Snapshot() => new { inputFrames, outputFrames, sourceReads, maximumSourceReadMs,
+    internal object Snapshot() => new { profile,
+        quickSeek = processor.GetSetting(SettingId.UseQuickSeek),
+        sequenceMs = processor.GetSetting(SettingId.SequenceDurationMs),
+        overlapMs = processor.GetSetting(SettingId.OverlapDurationMs),
+        inputFrames, outputFrames, sourceReads, maximumSourceReadMs,
         maximumProcessingMs, maximumCallMs, lastRms, longestSilenceMs = longestSilentFrames * 1000d / WaveFormat.SampleRate,
         sourceEnded = ended };
 }
