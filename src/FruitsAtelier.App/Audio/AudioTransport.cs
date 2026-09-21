@@ -164,8 +164,11 @@ public sealed class AudioTransport : IDisposable
         {
             if (disposed != 0) return;
             requestedPlaying = false;
+            requestedPosition = state.PositionMs;
+            long positionVersion = ++seekVersion;
             Volatile.Write(ref state, state with { IsPlaying = false });
-            Enqueue(new(CommandKind.Pause, loadVersion, IntentVersion: ++intentVersion));
+            Enqueue(new(CommandKind.Pause, loadVersion, Position: requestedPosition,
+                SeekVersion: positionVersion, IntentVersion: ++intentVersion));
         }
     }
 
@@ -239,9 +242,9 @@ public sealed class AudioTransport : IDisposable
                             case CommandKind.Pause:
                                 playIntent = false;
                                 // WasapiOut.Pause leaves submitted buffers and the device clock running.
-                                // Rebuild from the consumed position, not the decoder's read-ahead position.
-                                if (output is { Started: true } && reader is not null)
-                                    await ResetOutputAsync(output.Stopped.Task.IsCompleted ? duration : DevicePosition());
+                                // The request owns the pause point; the device can advance while this command waits.
+                                if (reader is not null)
+                                    await ResetOutputAsync(command.Position, command.SeekVersion);
                                 Interlocked.Exchange(ref appliedIntentVersion, command.IntentVersion);
                                 break;
                             case CommandKind.Speed:
@@ -412,7 +415,7 @@ public sealed class AudioTransport : IDisposable
         lock (stateLock)
         {
             if (loadedVersion != loadVersion || disposed != 0) return;
-            // A queued seek owns the displayed location until its decoder and device reset have finished.
+            // A queued seek or pause owns the displayed location until its output reset has finished.
             if (appliedSeekVersion != seekVersion) position = requestedPosition;
             if (appliedIntentVersion != intentVersion) playing = requestedPlaying;
             Volatile.Write(ref state, state with { PositionMs = position, DurationMs = duration, IsPlaying = playing,

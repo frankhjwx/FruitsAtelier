@@ -50,6 +50,8 @@ if (args.Contains("--speed-check")) tests = tests.Take(4).ToArray();
 if (args.Contains("--testplay-check")) tests = tests.Take(5).ToArray();
 if (args.Contains("--lifecycle-check")) tests = tests.Where(test => test.Run == (Func<Task>)RepeatedLifecycle).ToArray();
 if (args.Contains("--recovery-check")) tests = tests.TakeLast(3).ToArray();
+if (args.Contains("--pause-check")) tests = tests.Where(test => test.Name.StartsWith("Pause and resume")
+    || test.Run == (Func<Task>)WavePlayback || test.Run == (Func<Task>)PlayingSeek || test.Run == (Func<Task>)EndAndReplay).ToArray();
 int passed = 0;
 foreach (var (name, test) in tests)
 {

@@ -6,6 +6,7 @@ internal static class PausePositionTests
 {
     public static async Task Run(string file)
     {
+        await PendingPause(file);
         var players = new List<BufferedPlayer>();
         using var audio = new AudioTransport(1, () => { var player = new BufferedPlayer(); players.Add(player); return player; });
         if (!await audio.LoadAsync(file)) throw new Exception(audio.Error);
@@ -31,10 +32,52 @@ internal static class PausePositionTests
         }
     }
 
+    private static async Task PendingPause(string file)
+    {
+        foreach (string scenario in new[] { "pause", "seek-pause", "pause-seek", "pause-play", "pause-pause" })
+        {
+            var players = new List<BufferedPlayer>();
+            using var audio = new AudioTransport(1, () => { var player = new BufferedPlayer(); players.Add(player); return player; });
+            if (!await audio.LoadAsync(file)) throw new Exception(audio.Error);
+            audio.Play(); await audio.WaitForCommandsAsync();
+            var active = players[^1];
+            active.Advance(200); await audio.WaitForCommandsAsync();
+            double expected = audio.PositionMs;
+            var entered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var release = new ManualResetEventSlim();
+            active.BeforeGetPosition = () => { entered.TrySetResult(true); release.Wait(); };
+            Task inFlight = audio.WaitForCommandsAsync();
+            try
+            {
+                await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                if (scenario == "seek-pause") { audio.Seek(1000); expected = 1000; }
+                audio.Pause();
+                if (scenario == "pause-seek") { audio.Seek(1200); expected = 1200; }
+                if (scenario == "pause-play") audio.Play();
+                if (scenario == "pause-pause") audio.Pause();
+                active.Advance(50);
+                if (audio.PositionMs != expected) throw new Exception($"{scenario}: pending pause moved the playhead.");
+            }
+            finally { release.Set(); }
+            await inFlight;
+            await audio.WaitForCommandsAsync();
+            if (Math.Abs(audio.PositionMs - expected) > 1000d / 44100)
+                throw new Exception($"{scenario}: a stale clock replaced the requested position ({audio.PositionMs} vs {expected}).");
+            if (audio.IsPlaying != (scenario == "pause-play")) throw new Exception($"{scenario}: latest play intent was lost.");
+            audio.Play(); await audio.WaitForCommandsAsync();
+            using var reader = new WaveFileReader(file);
+            reader.CurrentTime = TimeSpan.FromMilliseconds(expected);
+            var pcm = new byte[players[^1].FirstBuffer.Length];
+            new SampleToWaveProvider16(reader.ToSampleProvider()).Read(pcm, 0, pcm.Length);
+            if (!players[^1].FirstBuffer.SequenceEqual(pcm)) throw new Exception($"{scenario}: resumed PCM starts at the wrong frame.");
+        }
+    }
+
     internal sealed class BufferedPlayer : IWavePlayer, IWavePosition
     {
         private IWaveProvider source = null!;
         private long position;
+        public Action? BeforeGetPosition;
         public byte[] FirstBuffer { get; private set; } = [];
         public WaveFormat OutputWaveFormat => source.WaveFormat;
         public PlaybackState PlaybackState { get; private set; }
@@ -58,7 +101,7 @@ internal static class PausePositionTests
         }
         public void Pause() { PlaybackState = PlaybackState.Paused; position += FirstBuffer.Length; }
         public void Stop() { PlaybackState = PlaybackState.Stopped; position = 0; PlaybackStopped?.Invoke(this, new()); }
-        public long GetPosition() => position;
+        public long GetPosition() { Interlocked.Exchange(ref BeforeGetPosition, null)?.Invoke(); return position; }
         public void Dispose() { }
     }
 }

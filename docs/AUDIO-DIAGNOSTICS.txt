@@ -7,6 +7,8 @@ FruitsAtelier - Windows audio diagnostics
    If needed, also reproduce with your usual speed and pause timing.
 5. Note whether music continues after pause, whether the timeline jumps forward,
    and whether the delay grows. A recording with both the timeline and sound helps.
+   For first-play delay, distinguish a delay before sound starts from music staying
+   behind the timeline or hitsounds throughout playback.
 6. Close the application so the logs finish writing.
 7. Paste this path into the Windows Explorer address bar:
    %LOCALAPPDATA%\FruitsAtelier\logs
@@ -24,7 +26,7 @@ Old logs remain available until you delete them.
 
 Logging writes through a bounded background queue. A logClosed record reports any
 dropped entries. A sizeLimitReached record means the file reached its limit; restart
-the application for a fresh capture. This build keeps existing playback behavior.
+the application for a fresh capture.
 
 To disable diagnostic logging, close the app and remove
 current\audio-diagnostics.enabled from this extracted package.
