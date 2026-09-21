@@ -18,7 +18,7 @@ The automatic catcher follows converted objects using cached replay frames and b
 
 The main canvas uses the same timing formula with its zoomed playfield width. The Zoom slider and Ctrl+scroll scale that width, object sizes, and time spacing together, from 256 DIP to the available width with edge padding. Reset view restores full width. These view changes preserve map coordinates and beatmap AR/CS.
 
-The main play line is `plotBottom − plotHeight × 0.25`. Playback, seek, view reset, and resize retain that placement. Empty space is allowed before/after beatmap boundaries; paused navigation permits manual panning. Bottom navigation moves continuously.
+The main play line is `plotBottom − plotHeight × playbackLineFromBottom`. The session value defaults to 0.25 and is clamped to 0.05–0.95 by the paused handle drag described in [Editing Controls](EDITOR_UI.md#workspace). Playback, seek, view reset, and resize retain that placement. Empty space is allowed before/after beatmap boundaries; paused navigation permits manual panning. Bottom navigation moves continuously.
 
 Pinned sources: [CatchPlayfieldAdjustmentContainer.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/UI/CatchPlayfieldAdjustmentContainer.cs), [CatchHitObject.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Objects/CatchHitObject.cs), and [IBeatmapDifficultyInfo.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/IBeatmapDifficultyInfo.cs).
 

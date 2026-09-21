@@ -13,7 +13,7 @@ public sealed partial class EditorView
         {
             revealDifficultyTabs = true;
             if (drag == DragKind.Marquee) CancelBox();
-            else if (drag == DragKind.Timeline) CancelInteraction();
+            else if (drag is DragKind.Timeline or DragKind.PlaybackLine) CancelInteraction();
         }
         this.width = width;
         this.height = height;

@@ -101,6 +101,7 @@ public sealed partial class EditorView
             if (y >= 39) return;
         }
         if (catchPreviewVisible && PreviewResizeBounds.Contains(x, y)) { drag = DragKind.PreviewResize; return; }
+        if (BeginPlaybackLineDrag(x, y)) return;
         if (zoomSlider.Contains(x, y))
         {
             SetCanvasZoom(x);
@@ -299,6 +300,7 @@ public sealed partial class EditorView
             if (LegacyMode && draftTrack != Guid.Empty) UpdateLegacyPreview(x, y);
             return;
         }
+        if (drag == DragKind.PlaybackLine) { MovePlaybackLine(y); return; }
         if (drag == DragKind.CanvasZoom) { SetCanvasZoom(x); return; }
         if (drag == DragKind.SnapDivisor) { SetSnapDivisor(x); return; }
         if (drag == DragKind.Marquee) { MoveBox(x, y); return; }
@@ -756,6 +758,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction()
     {
+        CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
         FinishDistanceEdit(true);
         FinishVolumeDrag();

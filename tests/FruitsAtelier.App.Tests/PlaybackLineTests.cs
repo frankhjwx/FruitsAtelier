@@ -1,0 +1,50 @@
+using FruitsAtelier.Core;
+
+internal static class PlaybackLineTests
+{
+    public static void Run()
+    {
+        var ui = new Ui(overview: false);
+        ui.View.LoadDocument(new MapDocument { DurationMs = 10000, IsDemo = false });
+        ui.View.UpdateTransport(0, 10000, true, false, false, null, "fixture.wav");
+        ui.View.UpdateTransport(3000, 10000, true, false, false, null, "fixture.wav");
+        ui.Paint();
+        var original = ui.View.Document.DeepClone();
+        int seeks = 0;
+        ui.View.RequestSeek = _ => seeks++;
+        double Y(double time) => ui.Plot.Bottom - (time - ui.View.ViewStartMs) * ui.View.PixelsPerMs;
+        void Near(double expected, double actual)
+        { if (Math.Abs(expected - actual) > .002) throw new Exception($"Expected {expected}, got {actual}"); }
+        void Height(double fraction) => Near(ui.Plot.Y + ui.Plot.Height * fraction, Y(ui.View.PlayheadMs));
+        void Begin()
+        {
+            var handle = ui.View.PlaybackLineHandleBounds;
+            ui.View.PointerDown(ui.View.CanvasPlotBounds.X + 2, handle.Y + 8, 0, false, false);
+        }
+        void Move(float y) { ui.View.PointerMove(ui.View.CanvasPlotBounds.X + 2, y, false, false); ui.Paint(); }
+        void End(float y) { ui.View.PointerUp(ui.View.CanvasPlotBounds.X + 2, y, 0); ui.Paint(); }
+        Height(.75);
+        double noteBefore = Y(3500), lineBefore = Y(3000);
+        Begin();
+        if (!ui.View.WantsCapture) throw new Exception("Handle did not capture pointer");
+        float middle = ui.Plot.Y + ui.Plot.Height * .5f;
+        Move(middle); Height(.5); Near(3000, ui.View.PlayheadMs);
+        Near(Y(3000) - lineBefore, Y(3500) - noteBefore);
+        End(middle);
+        Begin(); Move(ui.Plot.Y - 100); Height(.05); End(ui.Plot.Y - 100);
+        Begin(); Move(ui.Plot.Bottom + 100); Height(.95); End(ui.Plot.Bottom + 100);
+        Begin(); Move(middle); ui.Key(27); Height(.95);
+        Begin(); Move(middle); ui.View.CancelInteraction(); ui.Paint(); Height(.95);
+        ui.Resize(980, 620); Height(.95);
+        ui.View.UpdateTransport(3500, 10000, true, true, false, null, "fixture.wav"); ui.Paint(); Height(.95);
+        Begin();
+        if (ui.View.WantsCapture) throw new Exception("Playing handle accepted drag");
+        Move(ui.Plot.Y); End(ui.Plot.Y); Height(.95); Near(3500, ui.View.PlayheadMs);
+        ui.View.UpdateTransport(4000, 10000, true, false, false, null, "fixture.wav"); ui.Paint();
+        Begin(); Move(ui.Plot.Y + ui.Plot.Height * .3f);
+        ui.View.UpdateTransport(4100, 10000, true, true, false, null, "fixture.wav"); ui.Paint(); Height(.95);
+        if (ui.View.WantsCapture) throw new Exception("Playback start retained handle capture");
+        ui.View.Wheel(ui.Plot.X + 30, ui.Plot.Y + 30, 120, true); ui.Paint(); Height(.95);
+        if (seeks != 0 || !original.ContentEquals(ui.View.Document)) throw new Exception("Handle drag sought time or edited map content");
+    }
+}
