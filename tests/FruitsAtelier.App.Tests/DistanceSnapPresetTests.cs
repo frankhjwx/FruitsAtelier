@@ -212,6 +212,8 @@ internal static class DistanceSnapPresetTests
         ui.ClickText(Strings.Get("ds.reset"));
         Check(ui.View.DistanceSnapPreviewFruits.Count == 0 && ui.View.DistanceSnapPointerBounds.Count == 1,
             "Reset did not clear only the preview fruits.");
+        ui.Click(X(256), Y(4));
+        Check(ui.View.DistanceSnapPreviewFruits.Single().TimeMs == 4, "Closing beat line did not accept a fruit at beat four.");
         Check(ui.View.Document.Fruits.Count == 0, "Preview readouts modified the map.");
     }
 }

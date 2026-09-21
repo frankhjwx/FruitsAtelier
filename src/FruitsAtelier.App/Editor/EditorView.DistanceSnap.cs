@@ -153,7 +153,7 @@ public sealed partial class EditorView
         MapPoint? candidate = r.Contains(mouseX, mouseY) && dsSliderDrag < 0 && !dsSnapDragging
             ? DistanceSnapPreviewCandidate(mouseX, mouseY) : null;
         float radius = Math.Clamp((float)(CatchSize.CatchWidth(Document.CircleSize) / 2 / 512 * (r.Width - 20)), 3, 12);
-        var hyperdashStarts = DrawDistanceSnapPreviewConnections(c, candidate, out var labels);
+        var hyperdashStarts = DrawDistanceSnapPreviewConnections(c, candidate, radius, out var labels);
         foreach (var fruit in dsPreviewFruits)
             c.Circle(DistanceSnapPreviewX(fruit.X), DistanceSnapPreviewY(fruit.TimeMs), radius, hyperdashStarts.Contains(fruit) ? 0xFF5555 : Accent);
         if (candidate is { } ghost)
@@ -170,13 +170,14 @@ public sealed partial class EditorView
         c.Unclip();
     }
 
-    private HashSet<MapPoint> DrawDistanceSnapPreviewConnections(ICanvas c, MapPoint? candidate,
+    private HashSet<MapPoint> DrawDistanceSnapPreviewConnections(ICanvas c, MapPoint? candidate, float radius,
         out List<(Rect Bounds, string Text, uint Color, uint Border)> labels)
     {
         labels = [];
         var fruits = dsPreviewFruits.ToList();
         if (candidate is { } ghost && !fruits.Contains(ghost)) fruits.Add(ghost);
         var ordered = fruits.OrderBy(f => f.TimeMs).ToArray();
+        var notePositions = ordered.Select(f => (X: DistanceSnapPreviewX(f.X), Y: DistanceSnapPreviewY(f.TimeMs))).ToArray();
         var objects = ordered.Select((f, i) => new ConvertedCatchObject(Guid.Empty, i, CatchObjectKind.Fruit,
             f.TimeMs * 60000 / dsBpm, f.X, f.X, f.X, 0)).ToArray();
         var states = HyperDashCalculator.Calculate(objects, Document.CircleSize);
@@ -191,11 +192,34 @@ public sealed partial class EditorView
             double? ratio = DistanceSnap.Ratio(from, to, 100 * Document.SliderMultiplier);
             string label = ratio is { } value ? L.Get("ds.previewRatio", value) : L.Get("ds.previewUndefined");
             float labelWidth = c.MeasureText(label, 11) + 12;
-            float x = Math.Clamp((x1 + x2 - labelWidth) / 2, r.X + 2, r.Right - labelWidth - 2);
-            float y = Math.Clamp((y1 + y2) / 2 - 10, r.Y + 2, r.Bottom - 22);
+            Rect bounds = default;
+            int bestScore = int.MaxValue;
+            foreach (float offset in new[] { 0f, -24, 24, -48, 48 })
+            {
+                foreach (int side in new[] { 1, -1 })
+                {
+                    float x = (x1 + x2) / 2 + (side > 0 ? radius + 8 : -radius - 8 - labelWidth);
+                    float y = (y1 + y2) / 2 - 10 + offset;
+                    var box = new Rect(Math.Clamp(x, r.X + 2, r.Right - labelWidth - 2),
+                        Math.Clamp(y, r.Y + 2, r.Bottom - 22), labelWidth, 20);
+                    int score = 0;
+                    foreach (var note in notePositions)
+                    {
+                        float dx = note.X - Math.Clamp(note.X, box.X, box.Right);
+                        float dy = note.Y - Math.Clamp(note.Y, box.Y, box.Bottom);
+                        if (dx * dx + dy * dy < (radius + 4) * (radius + 4)) score += 100;
+                    }
+                    foreach (var placed in labels)
+                        if (box.X < placed.Bounds.Right + 4 && box.Right + 4 > placed.Bounds.X
+                            && box.Y < placed.Bounds.Bottom + 4 && box.Bottom + 4 > placed.Bounds.Y) score += 10;
+                    if (score < bestScore) { bounds = box; bestScore = score; }
+                    if (bestScore == 0) break;
+                }
+                if (bestScore == 0) break;
+            }
             bool available = ratio is not { } actual || Math.Abs(actual) < .000001
                 || dsDraft.Any(preset => Math.Abs(actual - preset) < .000001);
-            labels.Add((new(x, y, labelWidth, 20), label, available ? Foreground : 0xFF5555,
+            labels.Add((bounds, label, available ? Foreground : 0xFF5555,
                 ratio is { } borderRatio ? DistanceSnapColor(borderRatio) : Muted));
         }
         return hyperdashStarts;
@@ -207,7 +231,7 @@ public sealed partial class EditorView
     private MapPoint DistanceSnapPreviewCandidate(float x, float y)
     {
         var r = DistanceSnapPreviewBounds;
-        double beat = Math.Clamp(Math.Floor((r.Bottom - 12 - y) / (r.Height - 24) * 4 * dsSnap + .5), 0, 4 * dsSnap - 1) / dsSnap;
+        double beat = Math.Clamp(Math.Floor((r.Bottom - 12 - y) / (r.Height - 24) * 4 * dsSnap + .5), 0, 4 * dsSnap) / dsSnap;
         double px = Math.Clamp((x - r.X - 10) / (r.Width - 20) * 512, 0, 512);
         var point = new MapPoint(beat, px);
         var previous = dsPreviewFruits.Where(f => f.TimeMs < beat).OrderByDescending(f => f.TimeMs).ThenBy(f => Math.Abs(f.X - px)).ToArray();
