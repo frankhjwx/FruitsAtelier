@@ -33,8 +33,6 @@
   "testplay.pressKey": "Press a key (Esc cancels)",
   "ui.sv": "SV",
   "core.distanceSpacing.range": "Distance spacing must be between 0.1x and 6.0x.",
-  "assist.spacing": "Distance Spacing",
-  "assist.spacingChange": "Change distance spacing",
   "assist.comboChange": "Change New combo",
   "assist.soundChange": "Change hitsounds",
   "assist.whistle": "Whistle",
@@ -53,7 +51,7 @@
   "assist.hint.2": "Toggle Finish (E)",
   "assist.hint.3": "Toggle Clap (R)",
   "assist.hint.4": "Grid Snap (T); hold Shift to invert",
-  "assist.hint.5": "Distance Snap (Y); Alt + wheel adjusts spacing",
+  "assist.hint.5": "Distance Snap (Y); hold Alt to temporarily invert",
   "assist.hint.6": "Lock positions and timestamps (L)",
 
   "library.additionalTitle": "New difficulties found: {0}",

@@ -33,8 +33,6 @@
   "testplay.pressKey": "请按键（Esc 取消）",
   "ui.sv": "SV",
   "core.distanceSpacing.range": "距离间距必须在 0.1x 到 6.0x 之间。",
-  "assist.spacing": "距离间距",
-  "assist.spacingChange": "修改距离间距",
   "assist.comboChange": "修改新 Combo",
   "assist.soundChange": "修改音效",
   "assist.whistle": "哨声",
@@ -53,7 +51,7 @@
   "assist.hint.2": "切换镲声（E）",
   "assist.hint.3": "切换拍手（R）",
   "assist.hint.4": "网格吸附（T）；按住 Shift 临时反转",
-  "assist.hint.5": "距离吸附（Y）；Alt＋滚轮调整间距",
+  "assist.hint.5": "距离吸附（Y）；按住 Alt 临时切换",
   "assist.hint.6": "锁定位置与时间（L）",
 
   "library.additionalTitle": "发现 {0} 个新增难度",

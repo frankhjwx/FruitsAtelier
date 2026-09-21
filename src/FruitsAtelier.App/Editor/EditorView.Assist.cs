@@ -16,7 +16,6 @@ public sealed partial class EditorView
     private float assistScroll, assistScrollLimit;
     public IReadOnlyList<Rect> AssistButtonBounds => assistButtons;
     public bool DistanceSnapEnabled => distanceSnap ^ altHeld;
-    public bool DistanceSpacingVisible => altHeld || drag == DragKind.DistanceSpacing;
     public bool NotesLocked => notesLocked;
     private bool EffectiveGridSnap => gridSnap ^ (shiftHeld && !altHeld);
     public (double? Previous, double? Next) DistanceReadout { get; private set; }
@@ -50,19 +49,6 @@ public sealed partial class EditorView
     {
         var point = SnapDistance(MapAt(x, y, true));
         return point with { X = Math.Clamp(SnapX(point.X), 0, 512) };
-    }
-
-    private void SetDistanceSpacing(float x)
-    {
-        double fraction = Math.Clamp((x - snapSlider.X - 7) / (snapSlider.Width - 38), 0, 1);
-        Document.DistanceSpacing = Math.Clamp(Math.Round(.1 + fraction * 5.9, shiftHeld ? 2 : 1), .1, 6);
-    }
-
-    private void AdjustDistanceSpacing(float delta)
-    {
-        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
-        double value = Math.Clamp(Math.Round(Document.DistanceSpacing + delta / 120 * (shiftHeld ? .01 : .1), 2), .1, 6);
-        Edit(L.Get("assist.spacingChange"), () => Document.DistanceSpacing = value);
     }
 
     private Guid[] FlagTargets() => objectSelection.Count > 0 ? objectSelection.ToArray()
@@ -226,8 +212,7 @@ public sealed partial class EditorView
         {
             ids.Clear();
             point = end = ghost;
-            var timing = TimingMap.At(Document, point.TimeMs);
-            velocity = 100 * Document.SliderMultiplier / timing.BeatLengthMs;
+            velocity = BaseDistanceVelocity(point.TimeMs);
         }
         else
         {

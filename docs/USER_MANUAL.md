@@ -66,7 +66,7 @@ Hold the mouse button on an imported slider until its actions appear, then choos
 
 Select sliders and press **Ctrl+Shift+F**, choose a beat subdivision, and confirm to create a fruit stream. It remains an editable slider shape in the project and exports as individual fruits. Hold on a stream to change snapping or convert it back to a slider.
 
-Beat Snap offers 1/1 through 1/9, plus 1/12 and 1/16. Grid Snap controls horizontal placement. Distance Snap spaces objects relative to the previous object; hold Alt to adjust its spacing multiplier. New Combo and Whistle/Finish/Clap are available on the right toolbar. Selecting a slider edge lets you edit that edge's hitsound.
+Beat Snap offers 1/1 through 1/9, plus 1/12 and 1/16. Grid Snap controls horizontal placement. Distance Snap spaces objects relative to the previous object; use Configure DS… to edit its multipliers, or hold Alt to temporarily invert snapping. New Combo and Whistle/Finish/Clap are available on the right toolbar. Selecting a slider edge lets you edit that edge's hitsound.
 
 ## 03 / Preview, testplay and saving
 
@@ -166,13 +166,12 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Ctrl+1 / 2 / 3 / 4 | Set horizontal grid size to 4 / 8 / 16 / 32. |
 | G / T | Cycle grid size / toggle Grid Snap. |
 | Y | Toggle Distance Snap. |
-| Alt+wheel | Adjust distance spacing by 0.1x; add Shift for 0.01x. |
 | Hold Alt / hold Shift | Temporarily invert Distance Snap / Grid Snap. |
 | Q | Toggle New Combo. |
 | W / E / R | Toggle Whistle / Finish / Clap hitsounds. |
 | L | Toggle Lock Notes. |
 
-Lock Notes prevents moving, reshaping or deleting existing objects. You can still select, play, add objects, edit flags and use undo/redo. Shift does not invert Grid Snap while Alt is adjusting distance spacing.
+Lock Notes prevents moving, reshaping or deleting existing objects. You can still select, play, add objects, edit flags and use undo/redo. Shift does not invert Grid Snap while Alt is held.
 
 ### Testplay
 

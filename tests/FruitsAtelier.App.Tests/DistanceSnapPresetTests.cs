@@ -39,6 +39,7 @@ internal static class DistanceSnapPresetTests
             Strings.SetLanguage(language);
             var ui = new Ui();
             var map = new MapDocument { DurationMs = 10000, IsDemo = false };
+            map.TimingPoints.Add(new TimingPoint { TimeMs = 0, BeatLengthMs = -25, Uninherited = false });
             map.Fruits.Add(new Fruit { TimeMs = 1000, X = 256 });
             ui.LoadDocument(map);
             var baseline = ui.View.Document.DeepClone();

@@ -104,13 +104,13 @@ public sealed partial class EditorView
         Button(c, new(toolbarRight - 521, canvas.Y + 4, 150, 29), L.Get("ui.sliderPathCurves"), () => showTargets = !showTargets, showTargets);
         Button(c, new(toolbarRight - 365, canvas.Y + 4, 125, 29), L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, movementAnalysis);
         float snapLeft = toolbarRight - 158;
-        c.Text(L.Get(DistanceSpacingVisible ? "assist.spacing" : "ui.snap"), DistanceSpacingVisible ? snapLeft - 76 : snapLeft, canvas.Y + 13, 11, Muted, DistanceSpacingVisible ? 114 : 40);
+        c.Text(L.Get("ui.snap"), snapLeft, canvas.Y + 13, 11, Muted, 40);
         snapSlider = new(snapLeft + 40, canvas.Y + 4, 106, 29);
         float sliderStart = snapSlider.X + 7, sliderEnd = snapSlider.Right - 31;
-        float snapX = sliderStart + (DistanceSpacingVisible ? (float)((Document.DistanceSpacing - .1) / 5.9) : Array.IndexOf(SnapDivisors, divisor) / (float)(SnapDivisors.Length - 1)) * (sliderEnd - sliderStart);
+        float snapX = sliderStart + (Array.IndexOf(SnapDivisors, divisor) / (float)(SnapDivisors.Length - 1)) * (sliderEnd - sliderStart);
         c.Line(sliderStart, canvas.Y + 19, sliderEnd, canvas.Y + 19, Accent, 2);
         c.Circle(snapX, canvas.Y + 19, 6, Accent);
-        c.Text(DistanceSpacingVisible ? L.Get("assist.ratio", Document.DistanceSpacing) : L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, canvas.Y + 13, 10, Foreground, 40);
+        c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, canvas.Y + 13, 10, Foreground, 40);
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
         c.Text(L.Get("ui.timeAxis"), canvas.X + 11, canvas.Y + 120, 10, Muted, 43);
         DrawObjectTimeline(c);

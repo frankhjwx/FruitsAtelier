@@ -109,14 +109,7 @@ public sealed partial class EditorView
         }
         if (snapSlider.Contains(x, y))
         {
-            if (DistanceSpacingVisible)
-            {
-                if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
-                history.Begin(L.Get("assist.spacingChange"));
-                SetDistanceSpacing(x);
-                drag = DragKind.DistanceSpacing;
-            }
-            else { SetSnapDivisor(x); drag = DragKind.SnapDivisor; }
+            SetSnapDivisor(x); drag = DragKind.SnapDivisor;
             BeginPointerDrag(x, y);
             return;
         }
@@ -308,7 +301,6 @@ public sealed partial class EditorView
         }
         if (drag == DragKind.CanvasZoom) { SetCanvasZoom(x); return; }
         if (drag == DragKind.SnapDivisor) { SetSnapDivisor(x); return; }
-        if (drag == DragKind.DistanceSpacing) { SetDistanceSpacing(x); return; }
         if (drag == DragKind.Marquee) { MoveBox(x, y); return; }
         if (drag == DragKind.Pan)
         {
@@ -421,7 +413,7 @@ public sealed partial class EditorView
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
         PointerMove(x, y, false, false);
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
-        if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail or DragKind.DistanceSpacing) history.Commit();
+        if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail) history.Commit();
         if (draftTrack != Guid.Empty && drag == DragKind.Anchor && !dragMoved
             && SelectedTrack is { } draft && SelectedAnchor == draft.Nodes[^1])
         {
@@ -515,7 +507,6 @@ public sealed partial class EditorView
         }
         if (drag != DragKind.None) return;
         if (contextItems.Count > 0) { contextItems.Clear(); return; }
-        if (altHeld && (canvas.Contains(x, y) || snapSlider.Contains(x, y))) { AdjustDistanceSpacing(delta); return; }
         if (assistPalette.Contains(x, y)) { assistScroll = Math.Clamp(assistScroll - delta / 120 * 64, 0, assistScrollLimit); return; }
         if (difficultyTabStrip.Contains(x, y))
         {
@@ -775,7 +766,6 @@ public sealed partial class EditorView
         StopTestplay();
         bindingCapture = -1;
         SetModifiers(false, false);
-        if (drag == DragKind.DistanceSpacing) history.Cancel();
         tabPointer = false;
         if (libraryPointerActive) { libraryPointerActive = false; libraryPressedMap = null; RememberLibraryPosition(); }
         if (drag == DragKind.Marquee) { CancelBox(); contextItems.Clear(); return; }

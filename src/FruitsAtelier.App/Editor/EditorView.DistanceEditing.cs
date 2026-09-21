@@ -15,7 +15,7 @@ public sealed partial class EditorView
     private Rect? XCoordinateRowBounds => MovementOverlayBounds is { } panel
         ? new(panel.X, panel.Y + 56, panel.Width, panel.Height - 56) : null;
 
-    private double BaseDistanceVelocity(double time) => 100 * Document.SliderMultiplier / renderedTiming!.At(time).BeatLengthMs;
+    private double BaseDistanceVelocity(double time) => DistanceSnap.BaseVelocity(Document, time, renderedTiming);
     private double? BaseDistanceRatio(ConvertedCatchObject from, ConvertedCatchObject to)
         => DistanceSnap.Ratio(new(from.TimeMs, from.X), new(to.TimeMs, to.X), BaseDistanceVelocity(from.TimeMs));
 
