@@ -37,7 +37,6 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Cancelling MP3 decode releases its runtime lease and allows a later load", DecodeCancellation),
     ("Repeated play/pause and seek retain a usable output session", RepeatedLifecycle),
     ("Audio diagnostics preserve playback and identify unsupported hitsounds", () => AudioDiagnosticTests.Run(wave, directory)),
-    ("Diagnostic profiles capture silent device output and actual buffer telemetry", () => AudioDiagnosticTests.Device(wave, directory)),
     ("Delayed stop callbacks retire safely and seek recovers without changing play intent", () => OutputRecoveryTests.DelayedStop(wave)),
     ("Repeated output failure stays unavailable until an explicit reload", () => OutputRecoveryTests.RepeatedFailure(wave)),
     ("EOF replay does not reuse an output waiting for its stopped callback", () => OutputRecoveryTests.EndBeforeCallback(wave))
@@ -47,7 +46,6 @@ if (args.Contains("--diagnostic-check"))
     await AudioDiagnosticTests.Run(wave, directory);
     return 0;
 }
-if (args.Contains("--device-diagnostic-check")) { await AudioDiagnosticTests.Device(wave, directory); return 0; }
 if (args.Contains("--speed-check")) tests = tests.Take(4).ToArray();
 if (args.Contains("--testplay-check")) tests = tests.Take(5).ToArray();
 if (args.Contains("--lifecycle-check")) tests = tests.Where(test => test.Run == (Func<Task>)RepeatedLifecycle).ToArray();

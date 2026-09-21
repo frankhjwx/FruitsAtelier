@@ -17,16 +17,11 @@ Source and notices: [Vortice.Windows](https://github.com/amerkoleci/Vortice.Wind
 
 The editor owns its models, curve editing and transactions. Catch conversion and gameplay calculations adapt MIT-licensed osu!lazer algorithms; the original osu!framework host and drawable classes are not bundled.
 
-## Diagnostic audio output
-
-The diagnostic-only Windows output `Audio/DiagnosticWasapiOut.cs` adapts
-`NAudio.Wasapi/WasapiOut.cs` from NAudio 2.2.1, commit
-`b5d5ff83fd378f046398891fe5cd99426ce44732`, under the MIT license retained in
-`Audio/Licenses/NAudio.txt`. It adds buffer and scheduling telemetry. The optional
-short-window tempo profile references parameters in osu!framework `TrackBass.cs`
-at commit `94724b4385479b2e00bb347c9201ce9d9d13f594`; BASS is not bundled.
-
 ## Catch algorithms and display calculations
+
+Low-speed audio parameters reference `osu.Framework/Audio/Track/TrackBass.cs`
+from osu!framework commit `94724b4385479b2e00bb347c9201ce9d9d13f594`. The Windows
+implementation uses SoundTouch.Net; BASS and osu!framework are not bundled.
 
 The AR/preempt and field geometry calculations refer to ppy/osu commit `48c4800e3ae4ee752452cdff83bd3787ccf3105f`: `osu.Game.Rulesets.Catch/Objects/CatchHitObject.cs`, `osu.Game/Beatmaps/IBeatmapDifficultyInfo.cs`, and `osu.Game.Rulesets.Catch/UI/CatchPlayfieldAdjustmentContainer.cs`. The original framework and UI classes are not bundled. See docs/CATCH_RENDERING.md for calculation boundaries.
 

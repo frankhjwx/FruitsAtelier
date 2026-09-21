@@ -36,24 +36,6 @@ try {
     if ($AudioDiagnostics) {
         'Audio diagnostic logging enabled.' | Set-Content -LiteralPath (Join-Path $payload 'audio-diagnostics.enabled') -Encoding ascii
         Copy-Item -LiteralPath (Join-Path $repo 'docs/AUDIO-DIAGNOSTICS.txt') -Destination (Join-Path $payload 'AUDIO-DIAGNOSTICS.txt')
-        foreach ($profile in @(
-            @{ Name = 'A-default'; Tempo = 'default'; Buffer = '80' },
-            @{ Name = 'B-short-window'; Tempo = 'short-window'; Buffer = '80' },
-            @{ Name = 'C-buffer-160'; Tempo = 'default'; Buffer = '160' })) {
-            @"
-@echo off
-setlocal
-set FRUITSATELIER_AUDIO_DIAGNOSTICS=1
-set FRUITSATELIER_AUDIO_CAPTURE=1
-set FRUITSATELIER_AUDIO_TEMPO=$($profile.Tempo)
-set FRUITSATELIER_AUDIO_BUFFER=$($profile.Buffer)
-echo Audio diagnostic profile: $($profile.Name). Close other instances before continuing.
-echo Captures up to four 20-second music/hitsound WAV clips at 25%% or slower.
-pause
-start "" /wait "%~dp0FruitsAtelier.App.exe"
-endlocal
-"@ | Set-Content -LiteralPath (Join-Path $payload "$($profile.Name).cmd") -Encoding ascii
-        }
     }
     if (!$AudioDiagnostics -and (Test-Path -LiteralPath (Join-Path $payload 'audio-diagnostics.enabled'))) {
         throw 'A normal release must not contain the audio diagnostic enabling marker.'

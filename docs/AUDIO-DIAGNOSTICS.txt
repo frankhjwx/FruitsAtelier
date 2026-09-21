@@ -1,51 +1,38 @@
-FruitsAtelier - Windows low-speed audio diagnostics
+FruitsAtelier - Windows audio diagnostics
 
 1. Extract the entire ZIP into a new folder. Close other FruitsAtelier instances.
-2. Open the extracted current folder and double-click A-default.cmd.
-   The script announces that music/hitsound WAV clips will be saved. Press a key.
-3. Open the map that reproduces the problem. Play a known section at 25% for
-   15-20 seconds, then repeat the same source section at 10% for 15-20 seconds.
-   Stay away from the end of the music file. Avoid extra seeks/pauses during
-   each capture. Note which speed stutters and whether music and hitsounds do.
-4. Close the application completely. Repeat step 3 with B-short-window.cmd,
-   then close it and repeat with C-buffer-160.cmd. Keep the output device,
-   map, source start position, volumes and Windows sound settings unchanged.
-
-A-default:      Default SoundTouch settings, requested output buffer 80 ms.
-B-short-window: Quick search enabled, sequence 30 ms, overlap 4 ms, buffer 80 ms.
-C-buffer-160:   Default SoundTouch settings, requested output buffer 160 ms.
-
-B compares parameters used by osu!framework, using our existing SoundTouch.Net
-library. It does not switch to BASS or reproduce the entire lazer audio engine.
-C requests a larger buffer; the log reports the actual device buffer separately.
-
-5. Paste this path into the Windows Explorer address bar:
+2. Launch FruitsAtelier.exe. This package enables diagnostic logging automatically.
+3. Open a map that reproduces the problem. Start at 100% playback speed.
+4. Play for 5 seconds, pause for 2 seconds, then resume. Repeat 5 times.
+   If needed, also reproduce with your usual speed and pause timing.
+5. Note whether music continues after pause, whether the timeline jumps forward,
+   and whether the delay grows. A recording with both the timeline and sound helps.
+   For first-play delay, distinguish a delay before sound starts from music staying
+   behind the timeline or hitsounds throughout playback.
+   For low-speed interruptions, play the same section at 100%, 50%, 25%, and 10%
+   for at least 10 seconds each. Note when music and/or hitsounds cut out, and
+   include a recording if possible. Stay away from the end of the music file.
+6. Close the application so the logs finish writing.
+7. Paste this path into the Windows Explorer address bar:
    %LOCALAPPDATA%\FruitsAtelier\logs
-6. Send the new audio-*.jsonl AND audio-*-session-*.wav files from these runs,
-   plus editor.log if present. Include a short A/B/C result and your device
-   connection (wired, USB, Bluetooth, HDMI). Close the app before collecting.
+8. Send the audio-*.jsonl files created during this test, plus editor.log if present.
+   Include your Windows version, output device/connection (Bluetooth, USB, wired,
+   HDMI), playback speed, and the map/music that reproduced the problem.
+   If a hitsoundDecodeFailed entry appears, include the named sample and skin name.
 
-WAV capture includes music and scheduled preview hitsounds at their current
-volumes, immediately before output. It does not record the microphone, other
-applications, Windows effects, physical speaker output or separate live testplay
-hitsounds. Capture starts with the first supplied PCM at 25% or below. Each
-transport saves at most four clips, at most 20 seconds of output audio each.
-Pause/seek ends the current clip. Restart the app to reset the capture budget.
-Clip filenames identify their log and output session; JSON records include the
-source start position, playback speed and selected profile. Audio is buffered
-in bounded memory and written on a background task. Nothing uploads automatically.
+Diagnostics include application/runtime versions, default output device names and
+formats, playback commands, clock positions, startup reads, first device progress,
+read timing/counters, UI update gaps, and hitsound filenames and decode failures.
+These timings do not measure when sound physically reaches your ears.
+Detailed audio logs omit full source paths and audio contents;
+the existing editor.log may include paths in exception messages. Nothing uploads
+automatically. Each audio log is capped at 16 MiB; a new run creates fresh files.
+Old logs remain available until you delete them.
 
-Launching FruitsAtelier.exe normally enables detailed logs in this package but
-does not enable WAV capture or change the default tempo/buffer settings.
-To disable diagnostics entirely, close the app and remove
-current\audio-diagnostics.enabled, then launch normally, not through the scripts.
-Normal release packages do not include this marker or the diagnostic scripts.
+Logging writes through a bounded background queue. A logClosed record reports any
+dropped entries. A sizeLimitReached record means the file reached its limit; restart
+the application for a fresh capture.
 
-Logs include runtime/version, endpoint names/formats, commands, clock positions,
-UI gaps, tempo settings/timing/signal levels, actual device buffer configuration,
-remaining-buffer observations, submission counts, maximum refill/wakeup time and
-event-wait timeouts. Empty-buffer observations are a warning signal, not proof of
-an audible dropout. Startup timing does not measure acoustic latency. Detailed
-logs omit full source paths; editor.log can include paths in errors.
-Each JSONL file is limited to 16 MiB and records dropped entries at logClosed.
-Old logs/clips remain until deleted. Repository builds use artifacts\logs.
+To disable diagnostic logging, close the app and remove
+current\audio-diagnostics.enabled from this extracted package.
+Repository builds write to artifacts\logs instead of the path above.

@@ -1,17 +1,26 @@
 using FruitsAtelier.App.Audio;
 using NAudio.Wave;
+using SoundTouch;
+using System.Text.Json;
 
 internal static class PlaybackSpeedTests
 {
     public static void PitchAndDuration()
     {
-        foreach (string profile in new[] { "default", "short-window" })
         foreach (int sampleRate in new[] { 44100, 48000 })
         foreach (int channels in new[] { 1, 2 })
-        foreach (double speed in new[] { .1, .25, .5, .75, 1.5 })
+        foreach (double speed in new[] { .1, .25, .2501, .5, .75, 1.5 })
         {
             var source = new Tone(sampleRate, channels);
-            var tempo = new TempoSampleProvider(source, speed, profile: profile);
+            var tempo = new TempoSampleProvider(source, speed);
+            var settings = JsonSerializer.SerializeToElement(tempo.Snapshot());
+            var defaults = new SoundTouchProcessor { SampleRate = sampleRate, Channels = channels, Tempo = speed };
+            foreach (var (name, setting, lowSpeedValue) in new[] {
+                ("quickSeek", SettingId.UseQuickSeek, 1),
+                ("sequenceMs", SettingId.SequenceDurationMs, 30),
+                ("overlapMs", SettingId.OverlapDurationMs, 4) })
+                if (settings.GetProperty(name).GetInt32() != (speed <= .25 ? lowSpeedValue : defaults.GetSetting(setting)))
+                    throw new Exception($"Incorrect tempo setting {name} at speed {speed}");
             var result = new List<float>();
             float[] buffer = new float[257 * channels + 6];
             int read;

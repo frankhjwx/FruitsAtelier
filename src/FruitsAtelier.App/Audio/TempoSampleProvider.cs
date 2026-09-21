@@ -15,14 +15,13 @@ internal sealed class TempoSampleProvider : ISampleProvider
     private int silentFrames, longestSilentFrames;
     public WaveFormat WaveFormat => source.WaveFormat;
 
-    private readonly string profile;
-    public TempoSampleProvider(ISampleProvider source, double speed, bool diagnostics = false, string profile = "default")
+    public TempoSampleProvider(ISampleProvider source, double speed, bool diagnostics = false)
     {
         this.source = source;
         this.diagnostics = diagnostics;
-        this.profile = profile;
         processor = new() { SampleRate = source.WaveFormat.SampleRate, Channels = source.WaveFormat.Channels, Tempo = speed };
-        if (profile == "short-window")
+        // Shorter overlapping sequences reduce the choppy texture at extreme slowdown.
+        if (speed <= .25)
         {
             processor.SetSetting(SettingId.UseQuickSeek, 1);
             processor.SetSetting(SettingId.SequenceDurationMs, 30);
@@ -78,7 +77,7 @@ internal sealed class TempoSampleProvider : ISampleProvider
         return written;
     }
 
-    internal object Snapshot() => new { profile,
+    internal object Snapshot() => new {
         quickSeek = processor.GetSetting(SettingId.UseQuickSeek),
         sequenceMs = processor.GetSetting(SettingId.SequenceDurationMs),
         overlapMs = processor.GetSetting(SettingId.OverlapDurationMs),

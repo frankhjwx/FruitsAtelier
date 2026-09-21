@@ -35,15 +35,12 @@ public sealed class AudioTransport : IDisposable
         public bool ProgressRecorded { get; set; }
         public DiagnosticWaveProvider? Probe { get; }
         public TempoSampleProvider? Tempo { get; }
-        private readonly DiagnosticPcmCapture? capture;
         public Exception? Error { get; private set; }
         public OutputSession(IWaveProvider source, Action wake, Func<IWavePlayer> createPlayer, AudioDiagnosticLog diagnostics,
-            TempoSampleProvider? tempo, AudioDiagnosticOptions options, Func<bool> claimCapture, double position, double speed)
+            TempoSampleProvider? tempo)
         {
             Tempo = tempo;
             Player = createPlayer();
-            if (diagnostics.Enabled && options.CapturePcm && speed <= .25)
-                source = capture = new DiagnosticPcmCapture(source, diagnostics, Id, claimCapture, position, speed, options.TempoProfile);
             if (diagnostics.Enabled) source = Probe = new DiagnosticWaveProvider(source, diagnostics, Id);
             Player.PlaybackStopped += (_, e) =>
             {
@@ -52,18 +49,10 @@ public sealed class AudioTransport : IDisposable
                     errorType = e.Exception?.GetType().FullName, hresult = e.Exception?.HResult });
                 Stopped.TrySetResult(true); wake();
             };
-            try
-            {
-                Player.Init(source);
-                if (Player is DiagnosticWasapiOut device)
-                {
-                    try { diagnostics.Write("deviceConfiguration", new { session = Id, configuration = device.Configuration }); }
-                    catch (Exception ex) { diagnostics.Write("deviceConfigurationFailed", new { session = Id, type = ex.GetType().Name, ex.HResult }); }
-                }
-            }
-            catch { Player.Dispose(); capture?.Dispose(); throw; }
+            try { Player.Init(source); }
+            catch { Player.Dispose(); throw; }
         }
-        public void Dispose() { Player.Dispose(); capture?.Dispose(); }
+        public void Dispose() => Player.Dispose();
     }
 
     private readonly object stateLock = new();
@@ -71,8 +60,6 @@ public sealed class AudioTransport : IDisposable
     private readonly CancellationTokenSource cancellation = new();
     private readonly Task worker;
     private readonly AudioDiagnosticLog diagnostics;
-    private readonly AudioDiagnosticOptions diagnosticOptions;
-    private int capturesClaimed;
     private double nextDiagnosticMs, nextPresentationMs, lastPresentationMs, maximumPresentationGapMs;
     private readonly Func<IWavePlayer> createPlayer;
     private readonly float outputGain;
@@ -97,12 +84,8 @@ public sealed class AudioTransport : IDisposable
         string? diagnosticDirectory = null)
     {
         diagnostics = new AudioDiagnosticLog(diagnosticDirectory);
-        diagnosticOptions = AudioDiagnosticOptions.Read(diagnostics.Enabled);
-        if (diagnostics.Enabled) diagnostics.Write("diagnosticOptions", diagnosticOptions);
         this.outputGain = outputGain;
-        this.createPlayer = createPlayer ?? (() => diagnostics.Enabled
-            ? new DiagnosticWasapiOut(AudioClientShareMode.Shared, true, diagnosticOptions.LatencyMs)
-            : new WasapiOut(AudioClientShareMode.Shared, true, 80));
+        this.createPlayer = createPlayer ?? (() => new WasapiOut(AudioClientShareMode.Shared, true, 80));
         this.stopTimeout = stopTimeout ?? TimeSpan.FromSeconds(3);
         worker = Task.Run(WorkAsync);
     }
@@ -131,7 +114,6 @@ public sealed class AudioTransport : IDisposable
         {
             diagnostics.Write(kind, new { detail, session = output?.Id, basePositionMs = basePosition,
                 devicePositionBytes = output?.PositionBytes, bytesPerSecond = output?.Player.OutputWaveFormat.AverageBytesPerSecond,
-                deviceBuffer = (output?.Player as DiagnosticWasapiOut)?.Snapshot(),
                 readerPositionMs = reader?.CurrentTime.TotalMilliseconds, publishedPositionMs = State.PositionMs,
                 publishedPlaying = State.IsPlaying, playIntent, playbackSpeed, loadVersion = loadedVersion,
                 appliedIntentVersion, requestedIntentVersion = Interlocked.Read(ref intentVersion),
@@ -367,16 +349,15 @@ public sealed class AudioTransport : IDisposable
     {
         ISampleProvider samples = reader!.ToSampleProvider();
         TempoSampleProvider? tempo = null;
-        if (playbackSpeed != 1) samples = tempo = new TempoSampleProvider(samples, playbackSpeed, diagnostics.Enabled, diagnosticOptions.TempoProfile);
+        if (playbackSpeed != 1) samples = tempo = new TempoSampleProvider(samples, playbackSpeed, diagnostics.Enabled);
         samples = new PlaybackGain(samples, () => SongVolume);
         if (Hitsounds is not null) samples = Hitsounds.MixWithMusic(samples, basePosition, playbackSpeed);
         var pcm = new SampleToWaveProvider16(samples) { Volume = outputGain };
         long version = loadedVersion;
-        var session = new OutputSession(pcm, () => commands.Writer.TryWrite(new(CommandKind.Refresh, version)), createPlayer, diagnostics, tempo,
-            diagnosticOptions, () => Interlocked.Increment(ref capturesClaimed) <= 4, basePosition, playbackSpeed);
+        var session = new OutputSession(pcm, () => commands.Writer.TryWrite(new(CommandKind.Refresh, version)), createPlayer, diagnostics, tempo);
         if (diagnostics.Enabled) diagnostics.Write("outputCreated", new { session = session.Id,
             backend = session.Player.GetType().Name, outputFormat = session.Player.OutputWaveFormat.ToString(),
-            sourceFormat = pcm.WaveFormat.ToString(), requestedLatencyMs = session.Player is WasapiOut or DiagnosticWasapiOut ? diagnosticOptions.LatencyMs : (int?)null,
+            sourceFormat = pcm.WaveFormat.ToString(), requestedLatencyMs = session.Player is WasapiOut ? 80 : (int?)null,
             basePositionMs = basePosition, playbackSpeed });
         return session;
     }
