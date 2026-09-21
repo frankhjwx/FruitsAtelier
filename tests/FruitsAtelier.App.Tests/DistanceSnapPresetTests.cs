@@ -102,6 +102,8 @@ internal static class DistanceSnapPresetTests
             ui.Click(FruitX(100 + expected * unit), FruitY(.25));
             var fruits = ui.View.DistanceSnapPreviewFruits;
             Check(fruits.Count == 2 && Math.Abs(fruits[1].X - fruits[0].X - expected * unit) < .001 && fruits[1].TimeMs == .25, "Preview fruit placement did not snap to the custom DS and beat.");
+            Check(!ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", expected)), "Show DS should default to off.");
+            ui.ClickText(Strings.Get("ds.showValues"));
             Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", expected)), "Adjacent preview fruits do not show actual DS.");
             ui.Click(FruitX(fruits[1].X + 1), FruitY(.5));
             Check(Math.Abs(fruits[2].X - fruits[1].X) < .001, "Preview omitted implicit zero DS.");
@@ -185,6 +187,7 @@ internal static class DistanceSnapPresetTests
         map.TimingPoints.Add(new TimingPoint { TimeMs = 0, BeatLengthMs = 500, Uninherited = true });
         map.DistanceSnapRatios.Add(12);
         ui.LoadDocument(map); ui.SetSnapDivisor(4); ui.View.OpenDistanceSnapDialog(); ui.Paint();
+        ui.ClickText(Strings.Get("ds.showValues"));
         var r = ui.View.DistanceSnapPreviewBounds;
         float X(double x) => r.X + 10 + (float)(x / 512) * (r.Width - 20);
         float Y(double beat) => r.Bottom - 12 - (float)(beat / 4) * (r.Height - 24);

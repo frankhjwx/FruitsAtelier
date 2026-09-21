@@ -8,7 +8,7 @@ public sealed partial class EditorView
 {
     public bool DistanceSnapDialogVisible { get; private set; }
     private bool distanceSnapFlyout, dsSliderShift, dsSnapDragging;
-    private bool dsShowValues = true;
+    private bool dsShowValues;
     private List<double> dsDraft = [];
     private int dsSliderDrag = -1, dsSnapDragStart;
     private double dsDragStart;
