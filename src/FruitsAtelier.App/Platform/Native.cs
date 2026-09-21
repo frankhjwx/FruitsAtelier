@@ -124,7 +124,10 @@ internal static class Native
     [DllImport("user32.dll")] internal static extern bool DestroyWindow(nint hwnd);
     [DllImport("user32.dll")] internal static extern void PostQuitMessage(int exitCode);
     [DllImport("user32.dll")] internal static extern bool GetClientRect(nint hwnd, out Rectangle rect);
+    [DllImport("user32.dll")] internal static extern bool GetWindowRect(nint hwnd, out Rectangle rect);
     [DllImport("user32.dll")] internal static extern bool InvalidateRect(nint hwnd, nint rect, bool erase);
+    [DllImport("user32.dll")] internal static extern bool ValidateRect(nint hwnd, nint rect);
+    [DllImport("user32.dll")] internal static extern bool GetUpdateRect(nint hwnd, out Rectangle rect, bool erase);
     [DllImport("user32.dll")] internal static extern nint BeginPaint(nint hwnd, out Paint paint);
     [DllImport("user32.dll")] internal static extern bool EndPaint(nint hwnd, ref Paint paint);
     [DllImport("user32.dll")] internal static extern uint GetDpiForWindow(nint hwnd);

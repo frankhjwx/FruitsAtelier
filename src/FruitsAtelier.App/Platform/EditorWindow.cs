@@ -208,6 +208,9 @@ internal sealed partial class EditorWindow : IDisposable
         float y = (short)(((long)lParam >> 16) & 0xFFFF) * 96f / dpi;
         switch (message)
         {
+            case updateStatusChangedMessage:
+                Invalidate();
+                return 0;
             case 0x0233: // WM_DROPFILES
                 var dropped = Native.TakeDroppedFiles((nint)wParam);
                 if (!NativeModalScope.Active) FileOperation(() => view.DropLibraryFiles(dropped));

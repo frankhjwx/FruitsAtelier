@@ -9,12 +9,19 @@ internal sealed partial class EditorWindow
 {
     private UpdateService? updates;
     private UpdateStatus? lastUpdateStatus;
+    private const uint updateStatusChangedMessage = 0x8002;
+
+    private void NotifyUpdateStatusChanged()
+    {
+        // Worker callbacks only wake the owner; view state belongs to the UI thread.
+        Native.PostMessage(hwnd, updateStatusChangedMessage, 0, 0);
+    }
 
     private void ConfigureUpdates()
     {
         try
         {
-            updates = new(new VelopackBackend(), Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FruitsAtelier", "updates.json"), AppLog.Write);
+            updates = new(new VelopackBackend(), Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FruitsAtelier", "updates.json"), AppLog.Write, NotifyUpdateStatusChanged);
             view.AutomaticUpdateChecks = updates.Preferences.AutomaticChecks;
             view.RequestUpdateCheck = () => _ = Task.Run(() => updates.Check(DateTimeOffset.UtcNow));
             view.RequestUpdateDownload = () => _ = Task.Run(() => updates.Download());
@@ -47,8 +54,9 @@ internal sealed partial class EditorWindow
 
     private void PollUpdates()
     {
-        if (updates is null || updates.Status == lastUpdateStatus) return;
-        lastUpdateStatus = updates.Status;
+        var status = updates?.Status;
+        if (status is null || status == lastUpdateStatus) return;
+        lastUpdateStatus = status;
         view.UpdateStatus = lastUpdateStatus;
         if (lastUpdateStatus.Phase is UpdatePhase.Available or UpdatePhase.Ready)
             view.SetNotice(L.Get("update.notice", lastUpdateStatus.Version));
