@@ -23,6 +23,18 @@ internal static class PlaybackSpeedTests
             if (Math.Abs(duration - 2 / speed) > .002) throw new Exception($"Wrong stretched duration: {duration} at {speed}");
             for (int channel = 0; channel < channels; channel++)
             {
+                double minimumRms = double.MaxValue;
+                int window = sampleRate / 50;
+                // Keep this continuity check in the sustained middle of the tone, before EOF flushing.
+                for (int first = sampleRate / 4; first + window < result.Count / channels / 2; first += window)
+                {
+                    double energy = 0;
+                    for (int frame = first; frame < first + window; frame++)
+                        energy += result[frame * channels + channel] * result[frame * channels + channel];
+                    double rms = Math.Sqrt(energy / window);
+                    minimumRms = Math.Min(minimumRms, rms);
+                }
+                if (minimumRms < .05) throw new Exception($"Continuous tone has a dropout at {speed}, {sampleRate} Hz, channel {channel}: RMS {minimumRms}");
                 int crossings = 0;
                 for (int i = sampleRate / 4; i < sampleRate * 3 / 4; i++)
                     if (result[i * channels + channel] <= 0 && result[(i + 1) * channels + channel] > 0) crossings++;

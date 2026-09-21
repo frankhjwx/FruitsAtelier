@@ -17,6 +17,12 @@ maximum update gap since the previous logged sample. Source duration describes
 data supplied to the output, not audible playback; short reads may indicate EOF.
 First device progress is sampled by the worker and cannot measure acoustic latency.
 
+At non-default speeds, snapshots also report source-read and tempo-processing
+durations separately, input/output frame totals, source EOF, and the last output
+RMS and longest near-silent run before gain and hitsound mixing. Silence may be
+present in the source or EOF flush; these counters alone do not prove an underrun.
+The measurements are enabled only for diagnostic capture.
+
 `AudioTransport` queues load, play, pause, seek and speed operations on one worker. The UI reads its immutable `State` snapshot; it does not call the decoder or output device. `LoadAsync` and `WaitForCommandsAsync` allow callers to await applied operations. `CanPlay` stays true while a loaded device is paused.
 
 The output uses event-driven shared-mode `WasapiOut` with the system default device and 80 ms requested latency. MP3 decoding uses Windows Media Foundation; OGG Vorbis uses NVorbis; WAV uses NAudio's WAV reader. All streams are converted to 16-bit PCM before output. This version accepts mono and stereo audio.

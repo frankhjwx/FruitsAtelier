@@ -15,6 +15,7 @@ internal static class AudioDiagnosticTests
         }, diagnosticDirectory: capture))
         {
             if (!await audio.LoadAsync(wave)) throw new Exception(audio.Error);
+            audio.SetPlaybackSpeed(.25); await audio.WaitForCommandsAsync();
             for (int i = 0; i < 5; i++)
             {
                 audio.Play(); await audio.WaitForCommandsAsync();
@@ -48,6 +49,12 @@ internal static class AudioDiagnosticTests
                 throw new Exception("Read counters do not distinguish consumed audio from buffered audio.");
         }
         if (records[^1].GetProperty("dropped").GetInt64() != 0) throw new Exception("Diagnostic events were dropped.");
+        var tempo = records.Where(r => r.GetProperty("kind").GetString() == "commandEnd")
+            .Select(r => r.GetProperty("data").GetProperty("tempo"))
+            .Where(t => t.ValueKind == JsonValueKind.Object && t.GetProperty("outputFrames").GetInt64() > 0).ToArray();
+        if (tempo.Length == 0 || !tempo.Any(t => t.GetProperty("lastRms").GetDouble() > .001
+            && t.GetProperty("inputFrames").GetInt64() > 0 && t.GetProperty("maximumProcessingMs").GetDouble() >= 0))
+            throw new Exception("Low-speed diagnostics did not capture frames, processing time and pre-gain signal level.");
         if (File.ReadAllText(transportLog).Contains(wave.Replace("\\", "\\\\"))) throw new Exception("Diagnostic log contains the full source path.");
 
         string unsupported = Path.Combine(capture, "unsupported-alaw.wav");

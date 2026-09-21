@@ -9,6 +9,9 @@ FruitsAtelier - Windows audio diagnostics
    and whether the delay grows. A recording with both the timeline and sound helps.
    For first-play delay, distinguish a delay before sound starts from music staying
    behind the timeline or hitsounds throughout playback.
+   For low-speed interruptions, play the same section at 100%, 50%, 25%, and 10%
+   for at least 10 seconds each. Note when music and/or hitsounds cut out, and
+   include a recording if possible. Stay away from the end of the music file.
 6. Close the application so the logs finish writing.
 7. Paste this path into the Windows Explorer address bar:
    %LOCALAPPDATA%\FruitsAtelier\logs

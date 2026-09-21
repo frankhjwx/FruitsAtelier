@@ -34,9 +34,12 @@ public sealed class AudioTransport : IDisposable
         public double PlayBeganMs { get; set; }
         public bool ProgressRecorded { get; set; }
         public DiagnosticWaveProvider? Probe { get; }
+        public TempoSampleProvider? Tempo { get; }
         public Exception? Error { get; private set; }
-        public OutputSession(IWaveProvider source, Action wake, Func<IWavePlayer> createPlayer, AudioDiagnosticLog diagnostics)
+        public OutputSession(IWaveProvider source, Action wake, Func<IWavePlayer> createPlayer, AudioDiagnosticLog diagnostics,
+            TempoSampleProvider? tempo)
         {
+            Tempo = tempo;
             Player = createPlayer();
             if (diagnostics.Enabled) source = Probe = new DiagnosticWaveProvider(source, diagnostics, Id);
             Player.PlaybackStopped += (_, e) =>
@@ -116,7 +119,8 @@ public sealed class AudioTransport : IDisposable
                 appliedIntentVersion, requestedIntentVersion = Interlocked.Read(ref intentVersion),
                 appliedSeekVersion, requestedSeekVersion = Interlocked.Read(ref seekVersion),
                 outputState = output?.Player.PlaybackState.ToString(), started = output?.Started,
-                stopCallback = output?.Stopped.Task.IsCompleted, sourceReads = output?.Probe?.Snapshot() });
+                stopCallback = output?.Stopped.Task.IsCompleted, sourceReads = output?.Probe?.Snapshot(),
+                tempo = diagnostics.Enabled ? output?.Tempo?.Snapshot() : null });
         }
         catch (Exception ex) { diagnostics.Write("snapshotFailed", new { kind, type = ex.GetType().FullName, ex.HResult }); }
     }
@@ -344,12 +348,13 @@ public sealed class AudioTransport : IDisposable
     private OutputSession CreateOutput()
     {
         ISampleProvider samples = reader!.ToSampleProvider();
-        if (playbackSpeed != 1) samples = new TempoSampleProvider(samples, playbackSpeed);
+        TempoSampleProvider? tempo = null;
+        if (playbackSpeed != 1) samples = tempo = new TempoSampleProvider(samples, playbackSpeed, diagnostics.Enabled);
         samples = new PlaybackGain(samples, () => SongVolume);
         if (Hitsounds is not null) samples = Hitsounds.MixWithMusic(samples, basePosition, playbackSpeed);
         var pcm = new SampleToWaveProvider16(samples) { Volume = outputGain };
         long version = loadedVersion;
-        var session = new OutputSession(pcm, () => commands.Writer.TryWrite(new(CommandKind.Refresh, version)), createPlayer, diagnostics);
+        var session = new OutputSession(pcm, () => commands.Writer.TryWrite(new(CommandKind.Refresh, version)), createPlayer, diagnostics, tempo);
         if (diagnostics.Enabled) diagnostics.Write("outputCreated", new { session = session.Id,
             backend = session.Player.GetType().Name, outputFormat = session.Player.OutputWaveFormat.ToString(),
             sourceFormat = pcm.WaveFormat.ToString(), requestedLatencyMs = session.Player is WasapiOut ? 80 : (int?)null,
