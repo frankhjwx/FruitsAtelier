@@ -738,8 +738,10 @@
   "ds.title": "Distance Snap 配置",
   "ds.presets": "DS（{0}/{1}）",
   "ds.add": "+ 添加",
-  "ds.remove": "删除",
-  "ds.invalid": "请输入大于 0 的 DS 数值。",
   "ds.ratio": "{0:0.##}x",
+  "ds.bpm": "{0:0.##} BPM",
+  "ds.snap": "Snap 1/{0}",
+  "ds.invalidBpm": "请输入 1 到 1000 之间的 BPM。",
+  "ds.invalidSnap": "Snap：1、2、3、4、5、6、7、8、9、12 或 16。",
   "core.distanceSnap.range": "Distance Snap 最多可配置八个有限的正倍率。"
 }

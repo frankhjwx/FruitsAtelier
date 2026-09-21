@@ -738,8 +738,10 @@
   "ds.title": "Distance Snap configuration",
   "ds.presets": "DS ({0}/{1})",
   "ds.add": "+ Add",
-  "ds.remove": "Remove",
-  "ds.invalid": "Enter a positive DS value.",
   "ds.ratio": "{0:0.##}x",
+  "ds.bpm": "{0:0.##} BPM",
+  "ds.snap": "Snap 1/{0}",
+  "ds.invalidBpm": "Enter a BPM from 1 to 1000.",
+  "ds.invalidSnap": "Snap: 1, 2, 3, 4, 5, 6, 7, 8, 9, 12 or 16.",
   "core.distanceSnap.range": "Distance Snap requires at most eight finite positive multipliers."
 }

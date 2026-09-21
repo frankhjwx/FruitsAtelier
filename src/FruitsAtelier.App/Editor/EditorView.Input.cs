@@ -26,8 +26,7 @@ public sealed partial class EditorView
         if (DistanceSnapDialogVisible)
         {
             dsSliderShift = shift;
-            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
-                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            DistanceSnapPointerDown(x, y, button);
             return;
         }
         if (VolumeDialogVisible)
@@ -475,7 +474,6 @@ public sealed partial class EditorView
     {
         if (DistanceSnapDialogVisible)
         {
-            if (dsSliderDrag < 0 && dsList.Contains(x, y)) dsScroll = Math.Clamp(dsScroll - delta / 120 * 46, 0, Math.Max(0, dsDraft.Count * 46 - dsList.Height));
             return;
         }
         if (updatesPage) return;
