@@ -42,7 +42,7 @@ public sealed partial class EditorView
         distanceOutside = false;
         if (!DistanceSnapEnabled) return point;
         EnsureDistanceReferences();
-        return DistanceSnap.SnapMultiple(point, PreviousReference(point.TimeMs, excluded), Document.DistanceSnapRatios, Document.DistanceSpacing, out distanceOutside);
+        return DistanceSnap.SnapMultiple(point, PreviousReference(point.TimeMs, excluded), Document.DistanceSnapRatios, out distanceOutside);
     }
 
     private MapPoint PlacementPoint(float x, float y)

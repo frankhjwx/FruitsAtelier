@@ -84,7 +84,7 @@ public sealed partial class EditorView
         c.Line(split, r.Y + 56, split, r.Bottom - 64, Grid);
         var left = new Rect(r.X, r.Y + 62, split - r.X - 84, r.Height - 76);
         DrawDistanceSnapReference(c, left);
-        Button(c, new(split - 82, left.Y + 54, 72, 30), L.Get("ds.add"), AddDistanceSnapPreset,
+        Button(c, new(split - 82, left.Y + 54, 72, 30), L.Get("ds.add"), () => AddDistanceSnapPreset(0),
             enabled: dsDraft.Count < DistanceSnap.MaximumPresets);
         c.Text(L.Get("ds.presets", dsDraft.Count, DistanceSnap.MaximumPresets), r.X + 20, r.Y + 232, 12, Foreground);
         float textX = r.X + 20, textY = r.Y + 268;
@@ -128,11 +128,10 @@ public sealed partial class EditorView
 
     }
 
-    private void AddDistanceSnapPreset()
+    private void AddDistanceSnapPreset(double ratio)
     {
         if (dsDraft.Count >= DistanceSnap.MaximumPresets) return;
-        var limits = DistanceSnapLimits();
-        dsDraft.Add(Math.Max(.01, Math.Round((limits[1] + limits[2]) / 2, 2, MidpointRounding.AwayFromZero)));
+        dsDraft.Add(ratio);
     }
 
     private void DrawDistanceSnapPreview(ICanvas c)
@@ -188,8 +187,7 @@ public sealed partial class EditorView
             float y = Math.Clamp((y1 + y2) / 2 - 6, r.Y + 2, r.Bottom - 16);
             c.Fill(new(x - 2, y - 1, labelWidth + 4, 15), Background, 2, .9f);
             bool available = ratio is not { } actual || Math.Abs(actual) < .000001
-                || (dsDraft.Count == 0 ? Math.Abs(actual - Document.DistanceSpacing) < .000001
-                    : dsDraft.Any(preset => Math.Abs(actual - preset) < .000001));
+                || dsDraft.Any(preset => Math.Abs(actual - preset) < .000001);
             c.Text(label, x, y, 10, available ? Foreground : 0xFF5555);
         }
         return hyperdashStarts;
@@ -207,7 +205,7 @@ public sealed partial class EditorView
         var previous = dsPreviewFruits.Where(f => f.TimeMs < beat).OrderByDescending(f => f.TimeMs).ThenBy(f => Math.Abs(f.X - px)).ToArray();
         // Preview time is measured in beats, so the matching velocity is distance per beat.
         DistanceSnap.Reference? reference = previous.Length == 0 ? null : new(Guid.Empty, previous[0], previous[0], 100 * Document.SliderMultiplier, 0);
-        return DistanceSnap.SnapMultiple(point, reference, dsDraft, Document.DistanceSpacing, out _);
+        return DistanceSnap.SnapMultiple(point, reference, dsDraft, out _);
     }
 
     private void DistanceSnapPointerDown(float x, float y, int button)
@@ -264,11 +262,16 @@ public sealed partial class EditorView
 
     private void UpdateDistanceSnapSlider(float x, bool shift)
     {
-        double position = Math.Clamp((x - dsDragBounds.X) / dsDragBounds.Width, 0, 1) * 4;
-        int segment = Math.Min(3, (int)position);
-        double ratio = dsDragLimits[segment] + (dsDragLimits[segment + 1] - dsDragLimits[segment]) * (position - segment);
         dsDragX = x; dsSliderShift = shift;
-        dsDraft[dsSliderDrag] = Math.Max(shift ? .01 : .1, Math.Round(ratio, shift ? 2 : 1, MidpointRounding.AwayFromZero));
+        dsDraft[dsSliderDrag] = DistanceSnapRatioAt(x, dsDragBounds, dsDragLimits, shift);
+    }
+
+    private static double DistanceSnapRatioAt(float x, Rect bounds, double[] limits, bool shift)
+    {
+        double position = Math.Clamp((x - bounds.X) / bounds.Width, 0, 1) * 4;
+        int segment = Math.Min(3, (int)position);
+        double ratio = limits[segment] + (limits[segment + 1] - limits[segment]) * (position - segment);
+        return Math.Max(0, Math.Round(ratio, shift ? 2 : 1, MidpointRounding.AwayFromZero));
     }
 
     private void CancelDistanceSnapDrag()
@@ -301,7 +304,9 @@ public sealed partial class EditorView
         string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
         float segment = (r.Width - 40) / 4;
         DistanceSnapTrackBounds = new(r.X + 20, r.Y + 37, r.Width - 40, 20);
-        hits.Add(new(DistanceSnapTrackBounds, AddDistanceSnapPreset, dsDraft.Count < DistanceSnap.MaximumPresets));
+        hits.Add(new(DistanceSnapTrackBounds,
+            () => AddDistanceSnapPreset(DistanceSnapRatioAt(mouseX, DistanceSnapTrackBounds, DistanceSnapLimits(), dsSliderShift)),
+            dsDraft.Count < DistanceSnap.MaximumPresets));
         var labels = new List<Rect>();
         for (int i = 0; i < dsDraft.Count; i++)
         {

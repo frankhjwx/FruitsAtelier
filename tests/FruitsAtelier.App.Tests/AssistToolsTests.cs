@@ -8,6 +8,7 @@ internal static class AssistToolsTests
     private static MapDocument Map()
     {
         var map = new MapDocument { DurationMs = 10000, SliderMultiplier = 1.4, IsDemo = false };
+        map.DistanceSnapRatios.Add(1);
         map.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 });
         map.Fruits.Add(new Fruit { TimeMs = 2000, X = 310 });
         return map;

@@ -7,24 +7,27 @@ internal static class DistanceSnapPresetTests
     public static void Snapping()
     {
         var reference = new DistanceSnap.Reference(Guid.NewGuid(), new(1000, 256), new(1000, 256), .28, 0);
-        double[] presets = [1, 2, 4, 7.25];
+        double[] presets = [0, 1, 2, 4, 7.25];
         foreach (var (mouse, expected) in new[] { (260d, 256d), (290d, 291d), (330d, 326d), (399d, 396d), (220d, 221d), (115d, 116d), (2d, 2.25d) })
         {
-            var point = DistanceSnap.SnapMultiple(new(1125, mouse), reference, presets, 1, out bool outside);
+            var point = DistanceSnap.SnapMultiple(new(1125, mouse), reference, presets, out bool outside);
             Check(Math.Abs(point.X - expected) < .001 && !outside, "Nearest DS or implicit zero was not selected.");
         }
         var edge = reference with { Start = new(1000, 500), End = new(1000, 500) };
-        Check(DistanceSnap.SnapMultiple(new(1125, 480), edge, presets, 1, out _).X == 465, "Invalid right candidates hid a valid left candidate.");
-        Check(DistanceSnap.SnapMultiple(new(5000, 200), reference, presets, 1, out bool invalid).X == 256 && !invalid,
+        Check(DistanceSnap.SnapMultiple(new(1125, 480), edge, presets, out _).X == 465, "Invalid right candidates hid a valid left candidate.");
+        Check(DistanceSnap.SnapMultiple(new(5000, 200), reference, presets, out bool invalid).X == 256 && !invalid,
             "Zero DS did not remain available when every nonzero distance exceeded the field.");
-        Check(DistanceSnap.SnapMultiple(new(1125, 260), reference, [], 1, out _).X == 256, "Empty list omitted zero DS.");
-        Check(DistanceSnap.SnapMultiple(new(1125, 290), reference, [], 1, out _).X == 291, "Empty list omitted legacy spacing.");
-        Check(DistanceSnap.SnapMultiple(new(1000, 290), reference, presets, 1, out _).X == 290, "Simultaneous notes were snapped.");
+        Check(DistanceSnap.SnapMultiple(new(1125, 260), reference, [], out _).X == 256, "Empty list omitted zero DS.");
+        Check(DistanceSnap.SnapMultiple(new(1125, 290), reference, [], out _).X == 256, "Empty list included a hidden nonzero spacing.");
+        Check(DistanceSnap.SnapMultiple(new(1000, 290), reference, presets, out _).X == 290, "Simultaneous notes were snapped.");
         var map = new MapDocument(); map.DistanceSnapRatios.AddRange(presets);
         var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(map));
         Check(restored.DistanceSnapRatios.SequenceEqual(presets), "Map DS values did not survive project persistence.");
         var clone = map.DeepClone(); clone.DistanceSnapRatios[0] = .25;
-        Check(map.DistanceSnapRatios[0] == 1 && !map.ContentEquals(clone), "Map snapshots share DS values or ignore changes.");
+        Check(map.DistanceSnapRatios[0] == 0 && !map.ContentEquals(clone), "Map snapshots share DS values or ignore changes.");
+        clone.DistanceSnapRatios[0] = -.1;
+        try { ProjectSerializer.Serialize(clone); throw new Exception("Negative DS was accepted."); }
+        catch (InvalidDataException) { }
         Check(ProjectSerializer.Read("{\"SchemaVersion\":1,\"Document\":{}}").DistanceSnapRatios.Count == 0, "Old maps did not default to an empty list.");
         map.DistanceSnapRatios.AddRange([1, 1, 1, 1, 1]);
         try { ProjectSerializer.Serialize(map); throw new Exception("More than eight DS values were saved."); }
@@ -38,7 +41,7 @@ internal static class DistanceSnapPresetTests
         {
             Strings.SetLanguage(language);
             var ui = new Ui();
-            var map = new MapDocument { DurationMs = 10000, IsDemo = false };
+            var map = new MapDocument { DurationMs = 10000, IsDemo = false, DistanceSpacing = .4 };
             map.Fruits.Add(new Fruit { TimeMs = 1000, X = 256 });
             ui.LoadDocument(map); ui.SetSnapDivisor(4);
             var baseline = ui.View.Document.DeepClone();
@@ -56,22 +59,27 @@ internal static class DistanceSnapPresetTests
             Check(!ui.View.IsEditingText, "Preview settings entered input mode without a click.");
             var preview = ui.View.DistanceSnapPreviewBounds;
             Check(ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2) == 17, "Quarter snap did not show sixteen intervals and the closing line.");
+            ui.Click(preview.X + 50, preview.Bottom - 12);
+            ui.Click(preview.X + 140, preview.Bottom - 12 - (preview.Height - 24) / 16);
+            Check(ui.View.DistanceSnapPreviewFruits.Count == 2
+                && ui.View.DistanceSnapPreviewFruits[0].X == ui.View.DistanceSnapPreviewFruits[1].X,
+                "Empty configuration used the hidden legacy DistanceSpacing.");
+            ui.ClickText(Strings.Get("ds.reset"));
             ui.Key('F'); ui.Key('Y'); ui.Key(116);
             Check(baseline.ContentEquals(ui.View.Document) && !ui.View.IsTestplaying, "Modal input escaped to editor.");
             var emptyTrack = ui.View.DistanceSnapTrackBounds;
             ui.Click(emptyTrack.X + emptyTrack.Width * .8f, emptyTrack.Y + 8);
             var addedPointer = ui.View.DistanceSnapPointerBounds.Single();
-            Check(Math.Abs(addedPointer.X + 8 - (emptyTrack.X + emptyTrack.Width * .375f)) < 2,
-                "Clicking the empty pointer row did not behave like Add.");
+            Check(Math.Abs(addedPointer.X + 8 - (emptyTrack.X + emptyTrack.Width * .8f)) < 3,
+                "Clicking the empty pointer row did not add at the clicked position.");
             ui.View.PointerDown(addedPointer.X + 8, addedPointer.Y + 8, 2, false, false); ui.Paint();
             ui.ClickText(Strings.Get("ds.add"));
             var track = ui.View.DistanceSnapTrackBounds;
             var pointer = ui.View.DistanceSnapPointerBounds.Single();
-            double midpoint = Math.Round((range.StandLimit + range.WalkLimit) / 2 / unit, 2, MidpointRounding.AwayFromZero);
-            Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.ratio", midpoint)), "Add did not create the Walk midpoint.");
-            Check(Math.Abs(pointer.X + 8 - (track.X + track.Width * .375f)) < 2, "New pointer was not in the middle of Walk.");
-            Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.ratio", midpoint) && t.Y < pointer.Y), "Arrow value is missing above the pointer.");
-            Check(ui.Canvas.Outlines.Any(o => o.Color == 0x63B99D && o.Bounds.Y > track.Y + 100), "Walk value does not have its interval colour border.");
+            Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.ratio", 0)), "Add did not create zero DS.");
+            Check(Math.Abs(pointer.X + 8 - track.X) < .01, "New pointer was not at zero.");
+            Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.ratio", 0) && t.Y < pointer.Y), "Arrow value is missing above the pointer.");
+            Check(ui.Canvas.Outlines.Any(o => o.Color == 0xC0C0C0 && o.Bounds.Y > track.Y + 100), "Zero value does not have the Stand border.");
             Drag(.625f, false);
             double expected = Math.Round((range.WalkLimit + range.DashLimit) / 2 / unit, 1, MidpointRounding.AwayFromZero);
             Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.ratio", expected)), "Pointer drag did not snap to tenths.");
