@@ -11,11 +11,7 @@ internal sealed class AudioDiagnosticLog : IDisposable
 {
     private const long MaximumBytes = 16 * 1024 * 1024;
     private sealed record Entry(DateTimeOffset Utc, double MonotonicMs, int Thread, string Kind, object Data);
-    private readonly Channel<Entry> entries = Channel.CreateBounded<Entry>(new BoundedChannelOptions(2048)
-    {
-        SingleReader = true,
-        FullMode = BoundedChannelFullMode.Wait
-    });
+    private readonly Channel<Entry>? entries;
     private readonly Task writer;
     private long dropped;
     public bool Enabled { get; }
@@ -26,6 +22,11 @@ internal sealed class AudioDiagnosticLog : IDisposable
         Enabled = directory is not null || Environment.GetEnvironmentVariable("FRUITSATELIER_AUDIO_DIAGNOSTICS") == "1"
             || File.Exists(Path.Combine(AppContext.BaseDirectory, "audio-diagnostics.enabled"));
         if (!Enabled) { writer = Task.CompletedTask; return; }
+        entries = Channel.CreateBounded<Entry>(new BoundedChannelOptions(2048)
+        {
+            SingleReader = true,
+            FullMode = BoundedChannelFullMode.Wait
+        });
         if (directory is null)
         {
             var root = new DirectoryInfo(AppContext.BaseDirectory);
@@ -47,7 +48,7 @@ internal sealed class AudioDiagnosticLog : IDisposable
     public void Write(string kind, object data)
     {
         if (!Enabled) return;
-        if (!entries.Writer.TryWrite(Capture(kind, data))) Interlocked.Increment(ref dropped);
+        if (!entries!.Writer.TryWrite(Capture(kind, data))) Interlocked.Increment(ref dropped);
     }
 
     private static Entry Capture(string kind, object data) => new(DateTimeOffset.UtcNow, NowMs,
@@ -84,7 +85,7 @@ internal sealed class AudioDiagnosticLog : IDisposable
                 }
             }
             catch (Exception ex) { await text.WriteLineAsync(Serialize("endpointQueryFailed", new { type = ex.GetType().Name, ex.HResult })); }
-            await foreach (var entry in entries.Reader.ReadAllAsync())
+            await foreach (var entry in entries!.Reader.ReadAllAsync())
             {
                 if (stream.Position >= MaximumBytes)
                 {
@@ -98,13 +99,13 @@ internal sealed class AudioDiagnosticLog : IDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
-            entries.Writer.TryComplete();
+            entries!.Writer.TryComplete();
         }
     }
 
     public void Dispose()
     {
-        entries.Writer.TryComplete();
+        entries?.Writer.TryComplete();
         writer.GetAwaiter().GetResult();
     }
 }

@@ -29,13 +29,16 @@ try {
         -o $payload -p:PublishProfile=WindowsRelease -p:NuGetLockFilePath=packages.win-x64.lock.json -p:RestoreLockedMode=true `
         "-p:Version=$Version" "-p:FileVersion=$numericVersion.0" "-p:AssemblyVersion=$numericVersion.0" "-p:SourceRevisionId=$commit"
     if ($LASTEXITCODE -ne 0) { throw 'Windows publish failed.' }
-    $manifest = [ordered]@{ version = $Version; commit = $commit; dirty = $dirty; runtimeIdentifier = 'win-x64'; sdk = $sdk }
+    $manifest = [ordered]@{ version = $Version; commit = $commit; dirty = $dirty; runtimeIdentifier = 'win-x64'; sdk = $sdk; audioDiagnostics = $AudioDiagnostics.IsPresent }
     $manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $payload 'build-info.json') -Encoding utf8
     Copy-Item -LiteralPath (Join-Path $repo 'docs/WINDOWS-PACKAGE.txt') -Destination (Join-Path $payload 'START-HERE.txt')
     Copy-Item -LiteralPath (Join-Path $repo 'docs/USER_MANUAL.md') -Destination (Join-Path $payload 'USER-MANUAL.md')
     if ($AudioDiagnostics) {
         'Audio diagnostic logging enabled.' | Set-Content -LiteralPath (Join-Path $payload 'audio-diagnostics.enabled') -Encoding ascii
         Copy-Item -LiteralPath (Join-Path $repo 'docs/AUDIO-DIAGNOSTICS.txt') -Destination (Join-Path $payload 'AUDIO-DIAGNOSTICS.txt')
+    }
+    if (!$AudioDiagnostics -and (Test-Path -LiteralPath (Join-Path $payload 'audio-diagnostics.enabled'))) {
+        throw 'A normal release must not contain the audio diagnostic enabling marker.'
     }
     if ($UserManual) { Copy-Item -LiteralPath $UserManual -Destination (Join-Path $payload 'FruitsAtelier-User-Manual.pdf') }
     foreach ($required in @('FruitsAtelier.App.exe', 'coreclr.dll', 'hostfxr.dll', 'hostpolicy.dll', 'THIRD_PARTY_NOTICES.md')) {
