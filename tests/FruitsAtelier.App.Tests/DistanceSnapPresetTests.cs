@@ -58,6 +58,12 @@ internal static class DistanceSnapPresetTests
             Check(ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2) == 17, "Quarter snap did not show sixteen intervals and the closing line.");
             ui.Key('F'); ui.Key('Y'); ui.Key(116);
             Check(baseline.ContentEquals(ui.View.Document) && !ui.View.IsTestplaying, "Modal input escaped to editor.");
+            var emptyTrack = ui.View.DistanceSnapTrackBounds;
+            ui.Click(emptyTrack.X + emptyTrack.Width * .8f, emptyTrack.Y + 8);
+            var addedPointer = ui.View.DistanceSnapPointerBounds.Single();
+            Check(Math.Abs(addedPointer.X + 8 - (emptyTrack.X + emptyTrack.Width * .375f)) < 2,
+                "Clicking the empty pointer row did not behave like Add.");
+            ui.View.PointerDown(addedPointer.X + 8, addedPointer.Y + 8, 2, false, false); ui.Paint();
             ui.ClickText(Strings.Get("ds.add"));
             var track = ui.View.DistanceSnapTrackBounds;
             var pointer = ui.View.DistanceSnapPointerBounds.Single();
@@ -88,8 +94,10 @@ internal static class DistanceSnapPresetTests
             ui.Click(FruitX(100 + expected * unit), FruitY(.25));
             var fruits = ui.View.DistanceSnapPreviewFruits;
             Check(fruits.Count == 2 && Math.Abs(fruits[1].X - fruits[0].X - expected * unit) < .001 && fruits[1].TimeMs == .25, "Preview fruit placement did not snap to the custom DS and beat.");
+            Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", expected)), "Adjacent preview fruits do not show actual DS.");
             ui.Click(FruitX(fruits[1].X + 1), FruitY(.5));
             Check(Math.Abs(fruits[2].X - fruits[1].X) < .001, "Preview omitted implicit zero DS.");
+            Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", 0)), "Zero DS is missing from the preview readout.");
             ui.View.PointerDown(FruitX(fruits[2].X), FruitY(.5), 2, false, false); ui.Paint();
             Check(fruits.Count == 2, "Right click did not remove a preview fruit.");
             ui.View.PointerDown(preview.X + 40, preview.Y + 40, 1, false, false);
@@ -120,6 +128,8 @@ internal static class DistanceSnapPresetTests
 
             for (int i = 1; i < 9; i++) ui.ClickText(Strings.Get("ds.add"));
             Check(ui.View.DistanceSnapPointerBounds.Count == 8, "Preset cap failed.");
+            ui.Click(track.X + track.Width * .95f, track.Y + 8);
+            Check(ui.View.DistanceSnapPointerBounds.Count == 8, "Empty-row click exceeded the preset cap.");
             var arrowLabels = ui.Canvas.Texts.Where(t => t.Y < track.Y && t.Y > track.Y - 130 && t.Value.EndsWith("x", StringComparison.Ordinal)).ToArray();
             Check(arrowLabels.Length == 8, "Not all eight arrows have value labels.");
             pointer = ui.View.DistanceSnapPointerBounds.Last();
@@ -145,6 +155,7 @@ internal static class DistanceSnapPresetTests
             Check(ui.View.DistanceSnapPointerBounds.Count == 0, "Unconfigured map inherited another map's DS list.");
             ui.Key(27); Check(ui.View.SwitchDifficulty(0), "Could not return to configured difficulty.");
             Check(ui.View.Document.DistanceSnapRatios.SequenceEqual(saved.DistanceSnapRatios), "Map switch lost DS configuration.");
+            PreviewReadouts();
 
             void Drag(float fraction, bool shift)
             {
@@ -157,5 +168,42 @@ internal static class DistanceSnapPresetTests
             }
         }
         Strings.SetLanguage("en");
+    }
+
+    private static void PreviewReadouts()
+    {
+        var ui = new Ui();
+        var map = new MapDocument { SliderMultiplier = 1, IsDemo = false };
+        map.TimingPoints.Add(new TimingPoint { TimeMs = 0, BeatLengthMs = 500, Uninherited = true });
+        map.DistanceSnapRatios.Add(12);
+        ui.LoadDocument(map); ui.SetSnapDivisor(4); ui.View.OpenDistanceSnapDialog(); ui.Paint();
+        var r = ui.View.DistanceSnapPreviewBounds;
+        float X(double x) => r.X + 10 + (float)(x / 512) * (r.Width - 20);
+        float Y(double beat) => r.Bottom - 12 - (float)(beat / 4) * (r.Height - 24);
+        ui.Click(X(80), Y(0));
+        ui.View.PointerMove(X(380), Y(.25), false, false); ui.Paint();
+        Check(ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF5555 && Math.Abs(c.X - X(80)) < .01), "Prospective HDash did not colour its departure fruit red.");
+        ui.Click(X(380), Y(.25));
+        ui.View.PointerMove(r.X - 20, r.Y, false, false); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", 12)), "HDash connection omitted its actual DS.");
+        Check(ui.Canvas.Circles.Count(c => c.Filled && c.Color == 0xFF5555 && r.Contains(c.X, c.Y)) == 1, "HDash did not mark only the departure fruit.");
+        var pointer = ui.View.DistanceSnapPointerBounds.Single();
+        var track = ui.View.DistanceSnapTrackBounds;
+        ui.View.PointerDown(pointer.X + 8, pointer.Y + 8, 0, false, false);
+        ui.View.PointerMove(track.X + track.Width * .375f, track.Y + 8, false, false); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", 12) && t.Color == 0xFF5555), "Old preview DS was not red after its preset changed.");
+        ui.Key(27); ui.View.PointerUp(track.X, track.Y + 8, 0); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", 12) && t.Color != 0xFF5555), "Restored DS remained red.");
+        ui.Click(X(80), Y(.25));
+        Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewUndefined")), "Simultaneous fruits displayed a finite DS.");
+        ui.View.PointerDown(X(80), Y(.25), 2, false, false);
+        ui.View.PointerMove(r.X - 20, r.Y, false, false); ui.Paint();
+        ui.View.PointerDown(X(380), Y(.25), 2, false, false);
+        ui.View.PointerMove(r.X - 20, r.Y, false, false); ui.Paint();
+        Check(!ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF5555 && r.Contains(c.X, c.Y)), "Deleted target left a stale HDash colour.");
+        ui.ClickText(Strings.Get("ds.reset"));
+        Check(ui.View.DistanceSnapPreviewFruits.Count == 0 && ui.View.DistanceSnapPointerBounds.Count == 1,
+            "Reset did not clear only the preview fruits.");
+        Check(ui.View.Document.Fruits.Count == 0, "Preview readouts modified the map.");
     }
 }

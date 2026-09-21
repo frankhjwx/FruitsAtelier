@@ -739,5 +739,8 @@
   "ds.presets": "DS（{0}/{1}）",
   "ds.add": "+ 添加",
   "ds.ratio": "{0:0.##}x",
+  "ds.previewRatio": "DS {0:0.##}x",
+  "ds.previewUndefined": "DS —",
+  "ds.reset": "重置",
   "core.distanceSnap.range": "Distance Snap 最多可配置八个有限的正倍率。"
 }

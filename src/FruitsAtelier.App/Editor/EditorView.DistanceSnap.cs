@@ -82,16 +82,12 @@ public sealed partial class EditorView
         c.Text(L.Get("ds.title"), r.X + 20, r.Y + 18, 16, Foreground, r.Width - 40, true);
         float split = r.X + r.Width * .62f;
         c.Line(split, r.Y + 56, split, r.Bottom - 64, Grid);
-        var left = new Rect(r.X, r.Y + 112, split - r.X - 84, r.Height - 76);
+        var left = new Rect(r.X, r.Y + 62, split - r.X - 84, r.Height - 76);
         DrawDistanceSnapReference(c, left);
-        Button(c, new(split - 82, left.Y + 54, 72, 30), L.Get("ds.add"), () =>
-        {
-            if (dsDraft.Count >= DistanceSnap.MaximumPresets) return;
-            var limits = DistanceSnapLimits();
-            dsDraft.Add(Math.Max(.01, Math.Round((limits[1] + limits[2]) / 2, 2, MidpointRounding.AwayFromZero)));
-        }, enabled: dsDraft.Count < DistanceSnap.MaximumPresets);
-        c.Text(L.Get("ds.presets", dsDraft.Count, DistanceSnap.MaximumPresets), r.X + 20, r.Y + 282, 12, Foreground);
-        float textX = r.X + 20, textY = r.Y + 318;
+        Button(c, new(split - 82, left.Y + 54, 72, 30), L.Get("ds.add"), AddDistanceSnapPreset,
+            enabled: dsDraft.Count < DistanceSnap.MaximumPresets);
+        c.Text(L.Get("ds.presets", dsDraft.Count, DistanceSnap.MaximumPresets), r.X + 20, r.Y + 232, 12, Foreground);
+        float textX = r.X + 20, textY = r.Y + 268;
         foreach (var entry in dsDraft.Select((value, index) => (value, index)).OrderBy(entry => entry.value))
         {
             string label = L.Get("ds.ratio", entry.value);
@@ -105,7 +101,7 @@ public sealed partial class EditorView
             textX += labelWidth + 8;
         }
         c.Text(L.Get("ui.snap"), split + 22, r.Y + 69, 11, Muted, 40);
-        DistanceSnapSubdivisionBounds = new(split + 62, r.Y + 60, r.Right - split - 78, 29);
+        DistanceSnapSubdivisionBounds = new(split + 62, r.Y + 60, r.Right - split - 150, 29);
         var snapBounds = DistanceSnapSubdivisionBounds;
         float snapStart = snapBounds.X + 7, snapEnd = snapBounds.Right - 31;
         float snapX = snapStart + Array.IndexOf(SnapDivisors, dsSnap) / (float)(SnapDivisors.Length - 1) * (snapEnd - snapStart);
@@ -117,6 +113,7 @@ public sealed partial class EditorView
             dsSnapDragStart = dsSnap; dsSnapDragging = true;
             SetDistanceSnapSubdivision(mouseX);
         }, true));
+        Button(c, new(r.Right - 80, r.Y + 60, 64, 29), L.Get("ds.reset"), dsPreviewFruits.Clear);
         DistanceSnapPreviewBounds = new(split + 16, r.Y + 108, r.Right - split - 32, r.Height - 180);
         DrawDistanceSnapPreview(c);
         Button(c, new(r.Right - 196, r.Bottom - 44, 80, 30), L.Get("mac.cancel"), CloseDistanceSnapDialog);
@@ -129,6 +126,13 @@ public sealed partial class EditorView
             })) CloseDistanceSnapDialog();
         });
 
+    }
+
+    private void AddDistanceSnapPreset()
+    {
+        if (dsDraft.Count >= DistanceSnap.MaximumPresets) return;
+        var limits = DistanceSnapLimits();
+        dsDraft.Add(Math.Max(.01, Math.Round((limits[1] + limits[2]) / 2, 2, MidpointRounding.AwayFromZero)));
     }
 
     private void DrawDistanceSnapPreview(ICanvas c)
@@ -147,15 +151,48 @@ public sealed partial class EditorView
             float y = DistanceSnapPreviewY(i / (double)dsSnap);
             c.Line(r.X, y, r.Right, y, style.Color, style.Width, .5f);
         }
+        MapPoint? candidate = r.Contains(mouseX, mouseY) && dsSliderDrag < 0 && !dsSnapDragging
+            ? DistanceSnapPreviewCandidate(mouseX, mouseY) : null;
+        var hyperdashStarts = DrawDistanceSnapPreviewConnections(c, candidate);
         float radius = Math.Clamp((float)(CatchSize.CatchWidth(Document.CircleSize) / 2 / 512 * (r.Width - 20)), 3, 12);
         foreach (var fruit in dsPreviewFruits)
-            c.Circle(DistanceSnapPreviewX(fruit.X), DistanceSnapPreviewY(fruit.TimeMs), radius, Accent);
-        if (r.Contains(mouseX, mouseY) && dsSliderDrag < 0 && !dsSnapDragging)
+            c.Circle(DistanceSnapPreviewX(fruit.X), DistanceSnapPreviewY(fruit.TimeMs), radius, hyperdashStarts.Contains(fruit) ? 0xFF5555 : Accent);
+        if (candidate is { } ghost)
         {
-            var candidate = DistanceSnapPreviewCandidate(mouseX, mouseY);
-            c.Circle(DistanceSnapPreviewX(candidate.X), DistanceSnapPreviewY(candidate.TimeMs), radius, Foreground, false, 1.5f, .7f);
+            c.Circle(DistanceSnapPreviewX(ghost.X), DistanceSnapPreviewY(ghost.TimeMs), radius,
+                hyperdashStarts.Contains(ghost) ? 0xFF5555 : Foreground, false, 1.5f, .7f);
         }
         c.Unclip();
+    }
+
+    private HashSet<MapPoint> DrawDistanceSnapPreviewConnections(ICanvas c, MapPoint? candidate)
+    {
+        var fruits = dsPreviewFruits.ToList();
+        if (candidate is { } ghost && !fruits.Contains(ghost)) fruits.Add(ghost);
+        var ordered = fruits.OrderBy(f => f.TimeMs).ToArray();
+        var objects = ordered.Select((f, i) => new ConvertedCatchObject(Guid.Empty, i, CatchObjectKind.Fruit,
+            f.TimeMs * 60000 / dsBpm, f.X, f.X, f.X, 0)).ToArray();
+        var states = HyperDashCalculator.Calculate(objects, Document.CircleSize);
+        var hyperdashStarts = ordered.Where((_, i) => states[i].IsHyperDash).ToHashSet();
+        var r = DistanceSnapPreviewBounds;
+        for (int i = 0; i + 1 < ordered.Length; i++)
+        {
+            var from = ordered[i]; var to = ordered[i + 1];
+            float x1 = DistanceSnapPreviewX(from.X), y1 = DistanceSnapPreviewY(from.TimeMs);
+            float x2 = DistanceSnapPreviewX(to.X), y2 = DistanceSnapPreviewY(to.TimeMs);
+            c.Line(x1, y1, x2, y2, Muted, 1, .6f);
+            double? ratio = DistanceSnap.Ratio(from, to, 100 * Document.SliderMultiplier);
+            string label = ratio is { } value ? L.Get("ds.previewRatio", value) : L.Get("ds.previewUndefined");
+            float labelWidth = c.MeasureText(label, 10);
+            float x = Math.Clamp((x1 + x2) / 2 + (i % 2 == 0 ? 8 : -labelWidth - 8), r.X + 4, r.Right - labelWidth - 4);
+            float y = Math.Clamp((y1 + y2) / 2 - 6, r.Y + 2, r.Bottom - 16);
+            c.Fill(new(x - 2, y - 1, labelWidth + 4, 15), Background, 2, .9f);
+            bool available = ratio is not { } actual || Math.Abs(actual) < .000001
+                || (dsDraft.Count == 0 ? Math.Abs(actual - Document.DistanceSpacing) < .000001
+                    : dsDraft.Any(preset => Math.Abs(actual - preset) < .000001));
+            c.Text(label, x, y, 10, available ? Foreground : 0xFF5555);
+        }
+        return hyperdashStarts;
     }
 
     private float DistanceSnapPreviewX(double x) => DistanceSnapPreviewBounds.X + 10 + (float)(x / 512) * (DistanceSnapPreviewBounds.Width - 20);
@@ -264,6 +301,7 @@ public sealed partial class EditorView
         string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
         float segment = (r.Width - 40) / 4;
         DistanceSnapTrackBounds = new(r.X + 20, r.Y + 37, r.Width - 40, 20);
+        hits.Add(new(DistanceSnapTrackBounds, AddDistanceSnapPreset, dsDraft.Count < DistanceSnap.MaximumPresets));
         var labels = new List<Rect>();
         for (int i = 0; i < dsDraft.Count; i++)
         {
@@ -272,8 +310,11 @@ public sealed partial class EditorView
             string value = L.Get("ds.ratio", dsDraft[i]);
             float labelWidth = c.MeasureText(value, 11);
             var label = new Rect(Math.Clamp(pointer - labelWidth / 2, r.X + 20, r.Right - 20 - labelWidth), r.Y + 22, labelWidth, 13);
-            while (labels.Any(other => label.X < other.Right + 6 && label.Right + 6 > other.X && label.Y < other.Bottom && label.Bottom > other.Y))
-                label = label with { Y = label.Y - 14 };
+            var candidates = new[] { label.X }.Concat(Enumerable.Range(0, (int)((r.Width - 40) / (labelWidth + 6)))
+                .Select(column => r.X + 20 + column * (labelWidth + 6)));
+            label = candidates.SelectMany(x => Enumerable.Range(0, 4).Select(row => new Rect(x, r.Y + 22 - row * 14, labelWidth, 13)))
+                .First(candidate => !labels.Any(other => candidate.X < other.Right + 6 && candidate.Right + 6 > other.X
+                    && candidate.Y < other.Bottom && candidate.Bottom > other.Y));
             labels.Add(label);
             c.Text(value, label.X, label.Y, 11, color);
             c.Line(pointer, r.Y + 41, pointer, r.Y + 51, color, 2);
