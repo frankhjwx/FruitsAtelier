@@ -277,6 +277,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
         if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x, shift); return; }
         if (distanceDragging) { UpdateDistanceSlider(x, shift); return; }
         placementCtrl = ctrl;
@@ -390,6 +391,7 @@ public sealed partial class EditorView
     {
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
         if (updatesPage) return;
+        if (dsSnapDragging && button == 0) { SetDistanceSnapSubdivision(x); dsSnapDragging = false; return; }
         if (dsSliderDrag >= 0 && button == 0) { UpdateDistanceSnapSlider(x, dsSliderShift); dsSliderDrag = -1; return; }
         if (volumeDrag >= 0 && button == 0) { UpdateVolumeDrag(x); FinishVolumeDrag(); return; }
         if (button == 0)
@@ -731,7 +733,7 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
-        if (DistanceSnapDialogVisible) { DistanceSnapText(value); return; }
+        if (DistanceSnapDialogVisible) return;
         if (DistanceEditing) { DistanceTextInput(value); return; }
         if (updatesPage) return;
         if (StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
