@@ -42,7 +42,7 @@ public sealed partial class EditorView
         distanceOutside = false;
         if (!DistanceSnapEnabled) return point;
         EnsureDistanceReferences();
-        return DistanceSnap.Snap(point, PreviousReference(point.TimeMs, excluded), Document.DistanceSpacing, out distanceOutside);
+        return DistanceSnap.SnapMultiple(point, PreviousReference(point.TimeMs, excluded), LibrarySettings.DistanceSnapPresets, Document.DistanceSpacing, out distanceOutside);
     }
 
     private MapPoint PlacementPoint(float x, float y)
@@ -187,7 +187,8 @@ public sealed partial class EditorView
             float thumbHeight = plot.Height * plot.Height / (7 * size);
             c.Fill(new(assistPalette.Right + 2, plot.Y + (plot.Height - thumbHeight) * assistScroll / assistScrollLimit, 3, thumbHeight), Muted, 1);
         }
-        if (hovered >= 0)
+        DrawDistanceSnapFlyout(c);
+        if (hovered >= 0 && hovered != 5)
         {
             string tip = hovered is >= 1 and <= 3 && !placement && soundEdge is { } edge && ids.Length == 1
                 ? L.Get("assist.edge", edge.Edge + 1) : L.Get(hints[hovered]);

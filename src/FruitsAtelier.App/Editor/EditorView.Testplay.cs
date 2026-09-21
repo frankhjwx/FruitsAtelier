@@ -29,7 +29,7 @@ public sealed partial class EditorView
     public void StartTestplay()
     {
         if (IsTestplaying || !HasEditorProject || LibraryVisible || ExportVisible || ErrorVisible ||
-            DiscardConfirmationVisible || SliderDialogVisible || TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible || IsEditingText ||
+            DiscardConfirmationVisible || SliderDialogVisible || TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
             drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty || AudioLoading) return;
         EnsureConversion();
         var session = new CatchTestplay(PreviewObjects(), PreviewCircleSize, playhead);

@@ -213,7 +213,7 @@ internal static class AssistToolsTests
         ui.ClickMap(1000, 100); ui.ClickMap(2000, 310, ctrl: true);
         ui.Key('Y');
         var before = ui.View.Document.DeepClone();
-        ui.DownMap(1000, 100); ui.MoveMap(1250, 180); ui.UpMap(1250, 180);
+        ui.DownMap(1000, 100); ui.MoveMap(1250, 250); ui.UpMap(1250, 250);
         Near(290, ui.Fruit(map.Fruits[0].Id).X); Near(500, ui.Fruit(map.Fruits[1].Id).X);
         Near(1250, ui.Fruit(map.Fruits[0].Id).TimeMs); Near(2250, ui.Fruit(map.Fruits[1].Id).TimeMs);
         ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Distance group movement did not undo atomically");

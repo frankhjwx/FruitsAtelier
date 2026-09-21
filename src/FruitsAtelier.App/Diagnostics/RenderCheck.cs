@@ -220,6 +220,16 @@ internal static class RenderCheck
                     throw new InvalidOperationException("Native volume controls did not update percentages.");
                 view.KeyDown(27, false, false);
                 if (view.VolumeDialogVisible) throw new InvalidOperationException("Native volume dialog did not close.");
+                view.OpenDistanceSnapDialog();
+                if (!view.DistanceSnapDialogVisible) throw new InvalidOperationException("Native distance snap dialog did not open.");
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                var dsDocument = view.Document.DeepClone();
+                view.KeyDown(70, false, false); view.KeyDown(116, false, false);
+                view.Wheel(width / 2, height / 2, -120, false);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.KeyDown(27, false, false);
+                if (view.DistanceSnapDialogVisible || view.IsTestplaying || !dsDocument.ContentEquals(view.Document))
+                    throw new InvalidOperationException("Native distance snap modal did not isolate input or close.");
                 view.OpenSettings();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(40, 240, 0, false, false); view.PointerUp(40, 240, 0);

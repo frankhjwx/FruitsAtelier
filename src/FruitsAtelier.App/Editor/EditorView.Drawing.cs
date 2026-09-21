@@ -70,6 +70,7 @@ public sealed partial class EditorView
         DrawTimeJump(c);
         DrawStreamDialog(c);
         DrawVolumeDialog(c);
+        DrawDistanceSnapDialog(c);
         DrawDiscardConfirmation(c);
         DrawDifficultyTooltip(c);
     }

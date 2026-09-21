@@ -85,6 +85,8 @@ var tests = new (string Name, Action Run)[]
     ("Legacy insertion, deletion and double-click segmentation are undoable", SliderModeInteractionTests.InsertDeleteAndBoundary),
     ("Lazer placement and selected-slider controls avoid extra mode transitions", SliderModeInteractionTests.LazerPlacementAndSelection),
     ("FSlider hover offers both editing modes without changing content", SliderModeInteractionTests.GlobalModeMenu),
+    ("Multiple distance snaps include zero and persist editor preferences", DistanceSnapPresetTests.Snapping),
+    ("Distance snap configuration supports modal editing and eight presets", DistanceSnapPresetTests.Dialog),
     ("Anchor dragging defaults to free time with independent opt-in snapping", AnchorSnapTests.Dragging),
     ("Catch hitsound samples and playback boundaries", HitsoundTests.Run),
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),

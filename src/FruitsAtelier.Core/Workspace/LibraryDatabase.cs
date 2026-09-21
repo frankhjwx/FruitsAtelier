@@ -13,6 +13,14 @@ public sealed class LibrarySettings
     public string? SelectedSkin { get; set; }
     public string? DefaultSkin { get; set; }
     public bool RomanisedMetadata { get; set; } = true;
+    private List<DistanceSnap.Preset> distanceSnapPresets = [];
+    public List<DistanceSnap.Preset> DistanceSnapPresets
+    {
+        get => distanceSnapPresets;
+        set => distanceSnapPresets = (value ?? []).Where(p => p is not null && double.IsFinite(p.Ratio)
+            && p.Ratio > 0).Take(DistanceSnap.MaximumPresets)
+            .Select(p => p with { Name = (p.Name ?? "")[..Math.Min(40, (p.Name ?? "").Length)] }).ToList();
+    }
     public int TestplayLeftKey { get; set; } = 37;
     public int TestplayRightKey { get; set; } = 39;
     public int TestplayDashKey { get; set; } = 16;

@@ -39,6 +39,7 @@ public sealed partial class EditorView
         TimeJumpVisible = false;
         StreamDialogVisible = false;
         CloseVolumeDialog();
+        CloseDistanceSnapDialog();
         HasEditorProject = true;
         var retiredCancellation = sliderBatchCancellation;
         retiredCancellation?.Cancel();
@@ -148,6 +149,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
+        if (DistanceSnapDialogVisible) return false;
         if (SliderDialogVisible || ErrorVisible) return false;
         if (draftBanana != Guid.Empty)
         {

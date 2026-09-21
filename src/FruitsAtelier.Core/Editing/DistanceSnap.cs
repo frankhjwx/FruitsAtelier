@@ -3,6 +3,28 @@ namespace FruitsAtelier.Core;
 /// <summary>Distance spacing in playfield X units, independent of viewport scale.</summary>
 public static class DistanceSnap
 {
+    public const int MaximumPresets = 8;
+    public sealed record Preset(string Name, double Ratio);
+
+    public static MapPoint SnapMultiple(MapPoint point, Reference? previous, IReadOnlyList<Preset> presets, double fallback, out bool outside)
+    {
+        outside = false;
+        if (previous is null || point.TimeMs <= previous.End.TimeMs) return point;
+        double nearest = previous.End.X is >= 0 and <= 512 ? Math.Abs(point.X - previous.End.X) : double.PositiveInfinity;
+        var result = double.IsFinite(nearest) ? point with { X = previous.End.X } : point;
+        IEnumerable<Preset> choices = presets.Count == 0 ? [new("", fallback)] : presets.Take(MaximumPresets);
+        foreach (var preset in choices)
+        {
+            if (!double.IsFinite(preset.Ratio) || preset.Ratio <= 0) continue;
+            double distance = (point.TimeMs - previous.End.TimeMs) * previous.Velocity * preset.Ratio;
+            foreach (double x in new[] { previous.End.X - distance, previous.End.X + distance })
+                if (x is >= 0 and <= 512 && Math.Abs(point.X - x) < nearest)
+                { nearest = Math.Abs(point.X - x); result = point with { X = x }; }
+        }
+        outside = double.IsPositiveInfinity(nearest);
+        return result;
+    }
+
     public sealed record Reference(Guid Id, MapPoint Start, MapPoint End, double Velocity, int Order);
 
     public static Reference[] References(MapDocument document, CatchConversionResult conversion)
