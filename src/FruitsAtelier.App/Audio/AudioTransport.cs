@@ -31,10 +31,14 @@ public sealed class AudioTransport : IDisposable
         public long PositionBytes => ((IWavePosition)Player).GetPosition();
         public TaskCompletionSource<bool> Stopped { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool Started { get; set; }
+        public double PlayBeganMs { get; set; }
+        public bool ProgressRecorded { get; set; }
+        public DiagnosticWaveProvider? Probe { get; }
         public Exception? Error { get; private set; }
         public OutputSession(IWaveProvider source, Action wake, Func<IWavePlayer> createPlayer, AudioDiagnosticLog diagnostics)
         {
             Player = createPlayer();
+            if (diagnostics.Enabled) source = Probe = new DiagnosticWaveProvider(source, diagnostics, Id);
             Player.PlaybackStopped += (_, e) =>
             {
                 Error = e.Exception;
@@ -53,7 +57,7 @@ public sealed class AudioTransport : IDisposable
     private readonly CancellationTokenSource cancellation = new();
     private readonly Task worker;
     private readonly AudioDiagnosticLog diagnostics;
-    private double nextDiagnosticMs, nextPresentationMs;
+    private double nextDiagnosticMs, nextPresentationMs, lastPresentationMs, maximumPresentationGapMs;
     private readonly Func<IWavePlayer> createPlayer;
     private readonly float outputGain;
     internal HitsoundPlayer? Hitsounds { get; set; }
@@ -112,7 +116,7 @@ public sealed class AudioTransport : IDisposable
                 appliedIntentVersion, requestedIntentVersion = Interlocked.Read(ref intentVersion),
                 appliedSeekVersion, requestedSeekVersion = Interlocked.Read(ref seekVersion),
                 outputState = output?.Player.PlaybackState.ToString(), started = output?.Started,
-                stopCallback = output?.Stopped.Task.IsCompleted });
+                stopCallback = output?.Stopped.Task.IsCompleted, sourceReads = output?.Probe?.Snapshot() });
         }
         catch (Exception ex) { diagnostics.Write("snapshotFailed", new { kind, type = ex.GetType().FullName, ex.HResult }); }
     }
@@ -121,11 +125,16 @@ public sealed class AudioTransport : IDisposable
     {
         if (!diagnostics.Enabled) return;
         double now = AudioDiagnosticLog.NowMs;
+        if (previousPlaying && lastPresentationMs != 0)
+            maximumPresentationGapMs = Math.Max(maximumPresentationGapMs, now - lastPresentationMs);
+        lastPresentationMs = now;
         if (previousPlaying == presented.IsPlaying && now < nextPresentationMs
             && (presented.IsPlaying || Math.Abs(previousPositionMs - presented.PositionMs) < 0.01)) return;
         nextPresentationMs = now + 250;
         diagnostics.Write("presentation", new { previousPositionMs, previousPlaying, positionMs = presented.PositionMs,
-            playing = presented.IsPlaying, snapshotAgeMs = now - presented.PositionTimestampMs });
+            playing = presented.IsPlaying, snapshotAgeMs = now - presented.PositionTimestampMs,
+            maximumUpdateGapMs = maximumPresentationGapMs });
+        maximumPresentationGapMs = 0;
     }
 
     public void Load(string path) => _ = LoadAsync(path);
@@ -382,6 +391,7 @@ public sealed class AudioTransport : IDisposable
         if (output is null || output.Started) return;
         if (basePosition >= duration - 0.5) { playIntent = false; return; }
         TraceSnapshot("playBegin");
+        output.PlayBeganMs = AudioDiagnosticLog.NowMs;
         output.Player.Play();
         output.Started = true;
         TraceSnapshot("playEnd");
@@ -407,8 +417,19 @@ public sealed class AudioTransport : IDisposable
         }
     }
 
-    private double DevicePosition() => Math.Clamp(basePosition
-        + output!.PositionBytes * 1000.0 * playbackSpeed / output.Player.OutputWaveFormat.AverageBytesPerSecond, 0, duration);
+    private double DevicePosition()
+    {
+        long bytes = output!.PositionBytes;
+        double deviceMs = bytes * 1000d / output.Player.OutputWaveFormat.AverageBytesPerSecond;
+        if (diagnostics.Enabled && output.Started && !output.ProgressRecorded && bytes > 0)
+        {
+            output.ProgressRecorded = true;
+            diagnostics.Write("firstDeviceProgress", new { session = output.Id,
+                sincePlayMs = AudioDiagnosticLog.NowMs - output.PlayBeganMs, deviceMs,
+                basePositionMs = basePosition, playbackSpeed, sourceReads = output.Probe?.Snapshot() });
+        }
+        return Math.Clamp(basePosition + deviceMs * playbackSpeed, 0, duration);
+    }
 
     private void Publish(double position, bool playing)
     {

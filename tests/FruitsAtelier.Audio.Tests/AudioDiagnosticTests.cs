@@ -35,8 +35,18 @@ internal static class AudioDiagnosticTests
             if (!ended.Any(r => r.GetProperty("data").GetProperty("detail").GetProperty("Id").GetInt64() == id))
                 throw new Exception("Diagnostic command has no matching completion.");
         }
-        foreach (string kind in new[] { "environment", "commandBegin", "stopBegin", "stopEnd", "resetEnd", "presentation", "clock", "logClosed" })
+        foreach (string kind in new[] { "environment", "commandBegin", "stopBegin", "stopEnd", "resetEnd", "presentation", "clock", "sourceRead", "firstDeviceProgress", "logClosed" })
             if (!records.Any(r => r.GetProperty("kind").GetString() == kind)) throw new Exception("Missing diagnostic event: " + kind);
+        var progress = records.Where(r => r.GetProperty("kind").GetString() == "firstDeviceProgress").ToArray();
+        if (progress.Length != 5 || progress.Select(r => r.GetProperty("data").GetProperty("session").GetInt64()).Distinct().Count() != 5)
+            throw new Exception("First device progress must be recorded once per playing session.");
+        foreach (var entry in progress)
+        {
+            var data = entry.GetProperty("data");
+            if (Math.Abs(data.GetProperty("deviceMs").GetDouble() - 200) > 0.001
+                || Math.Abs(data.GetProperty("sourceReads").GetProperty("providedMs").GetDouble() - 280) > 0.001)
+                throw new Exception("Read counters do not distinguish consumed audio from buffered audio.");
+        }
         if (records[^1].GetProperty("dropped").GetInt64() != 0) throw new Exception("Diagnostic events were dropped.");
         if (File.ReadAllText(transportLog).Contains(wave.Replace("\\", "\\\\"))) throw new Exception("Diagnostic log contains the full source path.");
 

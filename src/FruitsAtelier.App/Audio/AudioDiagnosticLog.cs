@@ -10,7 +10,8 @@ namespace FruitsAtelier.App.Audio;
 internal sealed class AudioDiagnosticLog : IDisposable
 {
     private const long MaximumBytes = 16 * 1024 * 1024;
-    private readonly Channel<string> entries = Channel.CreateBounded<string>(new BoundedChannelOptions(2048)
+    private sealed record Entry(DateTimeOffset Utc, double MonotonicMs, int Thread, string Kind, object Data);
+    private readonly Channel<Entry> entries = Channel.CreateBounded<Entry>(new BoundedChannelOptions(2048)
     {
         SingleReader = true,
         FullMode = BoundedChannelFullMode.Wait
@@ -46,13 +47,18 @@ internal sealed class AudioDiagnosticLog : IDisposable
     public void Write(string kind, object data)
     {
         if (!Enabled) return;
-        if (!entries.Writer.TryWrite(Serialize(kind, data))) Interlocked.Increment(ref dropped);
+        if (!entries.Writer.TryWrite(Capture(kind, data))) Interlocked.Increment(ref dropped);
     }
 
-    private static string Serialize(string kind, object data) => JsonSerializer.Serialize(new
+    private static Entry Capture(string kind, object data) => new(DateTimeOffset.UtcNow, NowMs,
+        Environment.CurrentManagedThreadId, kind, data);
+
+    private static string Serialize(string kind, object data) => Serialize(Capture(kind, data));
+
+    private static string Serialize(Entry entry) => JsonSerializer.Serialize(new
     {
-        utc = DateTimeOffset.UtcNow, monotonicMs = NowMs,
-        thread = Environment.CurrentManagedThreadId, kind, data
+        utc = entry.Utc, monotonicMs = entry.MonotonicMs,
+        thread = entry.Thread, kind = entry.Kind, data = entry.Data
     });
 
     internal static double NowMs => Stopwatch.GetTimestamp() * 1000d / Stopwatch.Frequency;
@@ -78,7 +84,7 @@ internal sealed class AudioDiagnosticLog : IDisposable
                 }
             }
             catch (Exception ex) { await text.WriteLineAsync(Serialize("endpointQueryFailed", new { type = ex.GetType().Name, ex.HResult })); }
-            await foreach (string line in entries.Reader.ReadAllAsync())
+            await foreach (var entry in entries.Reader.ReadAllAsync())
             {
                 if (stream.Position >= MaximumBytes)
                 {
@@ -86,7 +92,7 @@ internal sealed class AudioDiagnosticLog : IDisposable
                     entries.Writer.TryComplete();
                     return;
                 }
-                await text.WriteLineAsync(line);
+                await text.WriteLineAsync(Serialize(entry));
             }
             await text.WriteLineAsync(JsonSerializer.Serialize(new { kind = "logClosed", dropped = Interlocked.Read(ref dropped) }));
         }

@@ -18,8 +18,10 @@ FruitsAtelier - Windows audio diagnostics
    If a hitsoundDecodeFailed entry appears, include the named sample and skin name.
 
 Diagnostics include application/runtime versions, default output device names and
-formats, playback commands, clock positions, UI updates, and hitsound filenames and
-decode failures. Detailed audio logs omit full source paths and audio contents;
+formats, playback commands, clock positions, startup reads, first device progress,
+read timing/counters, UI update gaps, and hitsound filenames and decode failures.
+These timings do not measure when sound physically reaches your ears.
+Detailed audio logs omit full source paths and audio contents;
 the existing editor.log may include paths in exception messages. Nothing uploads
 automatically. Each audio log is capped at 16 MiB; a new run creates fresh files.
 Old logs remain available until you delete them.
