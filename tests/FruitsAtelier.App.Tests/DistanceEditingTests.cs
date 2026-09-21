@@ -76,6 +76,19 @@ internal static class DistanceEditingTests
             var ui = new Ui(); ui.LoadDocument(map); ui.ClickMap(1000, 100.25);
             var original = ui.View.Document.DeepClone();
             var initialField = ui.View.XCoordinateFieldBounds!.Value;
+            double playhead = ui.View.PlayheadMs;
+            Check(ui.Canvas.Texts.Any(t => t.Value == "X: 100"), "Idle X readout is missing");
+            Check(!ui.Canvas.Outlines.Any(o => o.Bounds.Y >= initialField.Y && o.Bounds.Bottom <= initialField.Bottom), "Idle X row displays an input border");
+            foreach (float offset in new[] { 8f, initialField.Width / 2, initialField.Width - 8 })
+            {
+                ui.Click(initialField.X + offset, initialField.Y + 8);
+                Check(ui.View.IsEditingText && !ui.View.WantsCapture, "X row click fell through to the canvas");
+                Near(playhead, ui.View.PlayheadMs);
+                ui.Click(initialField.X + offset, initialField.Y + 8);
+                Near(playhead, ui.View.PlayheadMs);
+                ui.Key(27);
+                Check(ui.Canvas.Texts.Any(t => t.Value == "X: 100"), "Closing X input did not restore the readout");
+            }
             ui.Click(initialField.X + 8, initialField.Y + 8); ui.Key(13);
             Check(original.ContentEquals(ui.View.Document), "Focusing X rounded existing geometry");
             Check(ui.View.PreviousDistanceFieldBounds is null, "First fruit unexpectedly has previous DS");
@@ -106,6 +119,10 @@ internal static class DistanceEditingTests
             Near(270, ui.View.Document.Fruits[1].X);
             EditX("320"); ui.Key(13); Near(320, ui.View.Document.Fruits[1].X);
             ui.Key('L'); Check(ui.View.XCoordinateFieldBounds is null, "Locked note exposes X editing");
+            playhead = ui.View.PlayheadMs;
+            ui.Click(initialField.X + 10, initialField.Y + 8);
+            Near(playhead, ui.View.PlayheadMs);
+            Check(!ui.View.IsEditingText && !ui.View.WantsCapture, "Locked X row passed the click to the canvas");
 
             void EditX(string text)
             {

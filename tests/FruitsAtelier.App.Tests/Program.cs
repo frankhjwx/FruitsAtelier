@@ -744,7 +744,10 @@ static void MainCurveSelectionOpacity()
     True(ObjectCircles(ui, preview: false).SequenceEqual(objects), "Curve selection changed the converted objects.");
     AssertMainDrawOrder();
     AssertPreviewLayer();
-    ui.DownMap(100, 0); ui.MoveMap(300, 20); ui.UpMap(300, 20);
+    var blank = ui.View.CanvasPlotBounds;
+    ui.View.PointerDown(blank.X + 2, blank.Y + 40, 0, false, false);
+    ui.View.PointerMove(blank.X + 12, blank.Y + 50, false, false);
+    ui.View.PointerUp(blank.X + 12, blank.Y + 50, 0); ui.Paint();
     foreach (var command in CurveCommands(ui, preview: false)) Near(0.5, command.Segment!.Value.Opacity);
     AssertMainDrawOrder();
     AssertPreviewLayer();

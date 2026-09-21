@@ -12,6 +12,8 @@ public sealed partial class EditorView
     public Rect? PreviousDistanceFieldBounds { get; private set; }
     public Rect? NextDistanceFieldBounds { get; private set; }
     public Rect? XCoordinateFieldBounds { get; private set; }
+    private Rect? XCoordinateRowBounds => MovementOverlayBounds is { } panel
+        ? new(panel.X, panel.Y + 56, panel.Width, panel.Height - 56) : null;
 
     private double BaseDistanceVelocity(double time) => 100 * Document.SliderMultiplier / renderedTiming!.At(time).BeatLengthMs;
     private double? BaseDistanceRatio(ConvertedCatchObject from, ConvertedCatchObject to)
@@ -52,17 +54,20 @@ public sealed partial class EditorView
         NextDistanceFieldBounds = null;
         PreviousDistanceFieldBounds = editable ? new(panel.X, panel.Y, panel.Width, 56) : null;
         var coordinateInput = new Rect(panel.Right - 74, panel.Y + 58, 64, 20);
-        XCoordinateFieldBounds = target is not null && !notesLocked && drag == DragKind.None ? coordinateInput : null;
-        c.Text(L.Get("coordinate.x"), panel.X + 10, panel.Y + 60, MovementPanelFontSize, Muted, panel.Width - 94);
-        c.Fill(coordinateInput, Panel, 3);
-        c.Stroke(coordinateInput, editingXCoordinate && fieldError.Length > 0 ? Error : editingXCoordinate ? Accent : Grid, 1, 3);
+        XCoordinateFieldBounds = target is not null && !notesLocked && drag == DragKind.None
+            ? editingXCoordinate ? coordinateInput : XCoordinateRowBounds : null;
         if (DistanceEditing && editingXCoordinate)
+        {
+            c.Text(L.Get("coordinate.x"), panel.X + 10, panel.Y + 60, MovementPanelFontSize, Muted, panel.Width - 94);
+            c.Fill(coordinateInput, Panel, 3);
+            c.Stroke(coordinateInput, fieldError.Length > 0 ? Error : Accent, 1, 3);
             DrawInputText(c, new(coordinateInput.X + 5, coordinateInput.Y + 2, coordinateInput.Width - 10, 16), editBuffer, MovementPanelFontSize, true, replaceText);
+        }
         else
         {
             double? coordinate = PlacementGhostPoint()?.X ?? target?.X;
-            c.Text(coordinate?.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "—",
-                coordinateInput.X + 5, coordinateInput.Y + 2, MovementPanelFontSize, XCoordinateFieldBounds.HasValue ? Foreground : Muted, coordinateInput.Width - 10);
+            c.Text(L.Get("coordinate.readout", coordinate?.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "—"),
+                panel.X + 10, panel.Y + 60, MovementPanelFontSize, Muted, panel.Width - 20);
         }
         if (DistanceEditing && !editingXCoordinate)
         {
@@ -95,11 +100,12 @@ public sealed partial class EditorView
 
     private bool DistancePointerDown(float x, float y, int button, bool shift)
     {
-        bool coordinateHit = XCoordinateFieldBounds is { } coordinate && coordinate.Contains(x, y);
+        bool coordinateRowHit = XCoordinateRowBounds is { } row && row.Contains(x, y);
+        bool coordinateHit = coordinateRowHit && XCoordinateFieldBounds.HasValue;
         if (DistanceEditing)
         {
             if (MovementOverlayBounds is { } panel && panel.Contains(x, y)
-                && (editingXCoordinate ? coordinateHit : !coordinateHit))
+                && (editingXCoordinate ? coordinateRowHit : !coordinateRowHit))
             {
                 if (button == 0 && DistanceSliderBounds is { } slider && slider.Contains(x, y))
                 { distanceDragging = true; UpdateDistanceSlider(x, shift); }
@@ -108,7 +114,7 @@ public sealed partial class EditorView
             }
             if (!FinishDistanceEdit(false)) return true;
         }
-        if (button != 0 || !coordinateHit && (PreviousDistanceFieldBounds is not { } bounds || !bounds.Contains(x, y))) return false;
+        if (button != 0 || !coordinateHit && (PreviousDistanceFieldBounds is not { } bounds || !bounds.Contains(x, y))) return coordinateRowHit;
         if (editField >= 0 && !CommitField()) return true;
         distanceEditTarget = SelectedDistanceObject();
         editingXCoordinate = coordinateHit;
