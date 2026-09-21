@@ -19,6 +19,10 @@ The editor owns its models, curve editing and transactions. Catch conversion and
 
 ## Catch algorithms and display calculations
 
+Low-speed audio parameters reference `osu.Framework/Audio/Track/TrackBass.cs`
+from osu!framework commit `94724b4385479b2e00bb347c9201ce9d9d13f594`. The Windows
+implementation uses SoundTouch.Net; BASS and osu!framework are not bundled.
+
 The AR/preempt and field geometry calculations refer to ppy/osu commit `48c4800e3ae4ee752452cdff83bd3787ccf3105f`: `osu.Game.Rulesets.Catch/Objects/CatchHitObject.cs`, `osu.Game/Beatmaps/IBeatmapDifficultyInfo.cs`, and `osu.Game.Rulesets.Catch/UI/CatchPlayfieldAdjustmentContainer.cs`. The original framework and UI classes are not bundled. See docs/CATCH_RENDERING.md for calculation boundaries.
 
 All osu! references below use that same commit of [ppy/osu](https://github.com/ppy/osu/tree/48c4800e3ae4ee752452cdff83bd3787ccf3105f):

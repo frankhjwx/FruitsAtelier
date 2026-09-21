@@ -19,7 +19,7 @@ public sealed partial class EditorView
     public string AudioNotice { get; private set; } = L.Get("editor.audio.notLoaded");
     public double AudioDurationMs { get; private set; }
     private bool initializeTransport;
-    private const double playbackLineFromBottom = 0.25;
+    private double playbackLineFromBottom = 0.25;
     private bool pinPlayhead = true;
     public double TimelineDurationMs => Math.Max(Document.DurationMs, AudioDurationMs);
     private double EditableDurationMs => Math.Min(int.MaxValue, AudioReady ? TimelineDurationMs : Document.DurationMs);
@@ -39,6 +39,7 @@ public sealed partial class EditorView
         TimeJumpVisible = false;
         StreamDialogVisible = false;
         CloseVolumeDialog();
+        CloseDistanceSnapDialog();
         HasEditorProject = true;
         var retiredCancellation = sliderBatchCancellation;
         retiredCancellation?.Cancel();
@@ -148,6 +149,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
+        if (DistanceSnapDialogVisible) return false;
         if (SliderDialogVisible || ErrorVisible) return false;
         if (draftBanana != Guid.Empty)
         {
@@ -179,6 +181,7 @@ public sealed partial class EditorView
         transportSampleAt = sampledAtMs ?? TestplayRealtime;
         transportSamplePosition = positionMs;
         UpdateHitsounds(positionMs, ready && playing && !loading, filename);
+        if (playing && drag == DragKind.PlaybackLine) CancelPlaybackLineDrag();
         bool wasReady = AudioReady;
         AudioReady = ready; AudioPlaying = playing; AudioLoading = loading;
         AudioDurationMs = double.IsFinite(durationMs) ? Math.Max(0, durationMs) : 0;

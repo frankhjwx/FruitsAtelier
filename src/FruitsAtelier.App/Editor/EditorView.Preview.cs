@@ -177,7 +177,7 @@ public sealed partial class EditorView
         Guid id = SelectedImportedSlider?.Id ?? SelectedTrack?.Id ?? Guid.Empty;
         bool imported = SelectedImportedSlider is not null;
         bool stream = SelectedTrack?.StreamSnapDivisor is not null;
-        if (id == Guid.Empty || tool is not (Tool.Select or Tool.Slider) || draftTrack != Guid.Empty || drag != DragKind.None || menu >= 0 || ExportVisible || SliderDialogVisible || StreamDialogVisible || TimeJumpVisible)
+        if (id == Guid.Empty || tool is not (Tool.Select or Tool.Slider) || draftTrack != Guid.Empty || drag != DragKind.None || menu >= 0 || ExportVisible || SliderDialogVisible || StreamDialogVisible || TimeJumpVisible || DistanceSnapDialogVisible)
         { LegacyConversionBounds = StreamConversionBounds = default; legacyButtonSlider = Guid.Empty; return; }
         if (legacyButtonSlider != id) { LegacyConversionBounds = StreamConversionBounds = default; return; }
         float buttonWidth = imported ? 224 : stream ? 200 : 136;

@@ -160,6 +160,8 @@ public static class OsuBeatmapReader
 
     public static void Validate(MapDocument document)
     {
+        if (document.DistanceSnapRatios.Count > DistanceSnap.MaximumPresets || document.DistanceSnapRatios.Any(r => !double.IsFinite(r) || r < 0))
+            throw new InvalidDataException(L.Get("core.distanceSnap.range"));
         if (!double.IsFinite(document.DistanceSpacing) || document.DistanceSpacing is < .1 or > 6)
             throw new InvalidDataException(L.Get("core.distanceSpacing.range"));
         if (!double.IsFinite(document.DurationMs) || document.DurationMs <= 0 || document.DurationMs > int.MaxValue)

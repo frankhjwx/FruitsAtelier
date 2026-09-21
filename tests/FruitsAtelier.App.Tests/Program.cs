@@ -14,6 +14,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
     ("Workspace-only saves persist before optional Songs export", WorkspaceSaveTests.Run),
     ("Library archive drops preserve Songs and report source/export presence", LibraryImportTests.Run),
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
@@ -44,6 +45,7 @@ var tests = new (string Name, Action Run)[]
     ("Object timeline navigation and group movement preserve geometry and undo", ObjectTimelineTests.MoveAndNavigate),
     ("Returning to Library saves, discards or cancels before closing the editor", LibraryExitTests.Run),
     ("DS numeric fields use base SV, preserve direction and support undo", DistanceEditingTests.NumericFields),
+    ("X coordinate input clamps, previews and supports undo", DistanceEditingTests.XCoordinate),
     ("DS edits selected slider heads, tails and droplets", DistanceEditingTests.SliderPoints),
     ("Movement DS labels use base SV and avoid collisions", DistanceEditingTests.Labels),
     ("Movement Analysis toggles all four connection colours without editing content", AssistToolsTests.MovementAnalysis),
@@ -84,6 +86,8 @@ var tests = new (string Name, Action Run)[]
     ("Legacy insertion, deletion and double-click segmentation are undoable", SliderModeInteractionTests.InsertDeleteAndBoundary),
     ("Lazer placement and selected-slider controls avoid extra mode transitions", SliderModeInteractionTests.LazerPlacementAndSelection),
     ("FSlider hover offers both editing modes without changing content", SliderModeInteractionTests.GlobalModeMenu),
+    ("Multiple distance snaps include zero and persist per-map configuration", DistanceSnapPresetTests.Snapping),
+    ("Distance snap configuration supports modal editing and eight presets", DistanceSnapPresetTests.Dialog),
     ("Anchor dragging defaults to free time with independent opt-in snapping", AnchorSnapTests.Dragging),
     ("Catch hitsound samples and playback boundaries", HitsoundTests.Run),
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),
@@ -180,6 +184,7 @@ var tests = new (string Name, Action Run)[]
     ("Anchor boxes delete endpoints and remove insufficient tracks atomically", MultiSelectionTests.AnchorBoxAndEndpointDelete),
     ("Canceling object and anchor boxes restores selection without history", MultiSelectionTests.SelectionCancellation),
     ("Playback marquee retains its start time while the viewport scrolls", MultiSelectionTests.PlaybackBoxTransform),
+    ("Marquee wheel and edge scrolling preserve selection and bound speed", MarqueeScrollTests.WheelAndEdges),
     ("Language switching refreshes chrome without editing the map", LanguageTests.SwitchWithoutEditing),
     ("English batch menus and Core diagnostics use the same catalog", LanguageTests.EnglishMultiMenusAndDiagnostics)
 };
@@ -742,7 +747,10 @@ static void MainCurveSelectionOpacity()
     True(ObjectCircles(ui, preview: false).SequenceEqual(objects), "Curve selection changed the converted objects.");
     AssertMainDrawOrder();
     AssertPreviewLayer();
-    ui.DownMap(100, 0); ui.MoveMap(300, 20); ui.UpMap(300, 20);
+    var blank = ui.View.CanvasPlotBounds;
+    ui.View.PointerDown(blank.X + 2, blank.Y + 40, 0, false, false);
+    ui.View.PointerMove(blank.X + 12, blank.Y + 50, false, false);
+    ui.View.PointerUp(blank.X + 12, blank.Y + 50, 0); ui.Paint();
     foreach (var command in CurveCommands(ui, preview: false)) Near(0.5, command.Segment!.Value.Opacity);
     AssertMainDrawOrder();
     AssertPreviewLayer();

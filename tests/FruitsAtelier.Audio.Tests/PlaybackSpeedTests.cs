@@ -1,5 +1,7 @@
 using FruitsAtelier.App.Audio;
 using NAudio.Wave;
+using SoundTouch;
+using System.Text.Json;
 
 internal static class PlaybackSpeedTests
 {
@@ -7,10 +9,18 @@ internal static class PlaybackSpeedTests
     {
         foreach (int sampleRate in new[] { 44100, 48000 })
         foreach (int channels in new[] { 1, 2 })
-        foreach (double speed in new[] { .1, .25, .5, .75, 1.5 })
+        foreach (double speed in new[] { .1, .25, .2501, .5, .75, 1.5 })
         {
             var source = new Tone(sampleRate, channels);
             var tempo = new TempoSampleProvider(source, speed);
+            var settings = JsonSerializer.SerializeToElement(tempo.Snapshot());
+            var defaults = new SoundTouchProcessor { SampleRate = sampleRate, Channels = channels, Tempo = speed };
+            foreach (var (name, setting, lowSpeedValue) in new[] {
+                ("quickSeek", SettingId.UseQuickSeek, 1),
+                ("sequenceMs", SettingId.SequenceDurationMs, 30),
+                ("overlapMs", SettingId.OverlapDurationMs, 4) })
+                if (settings.GetProperty(name).GetInt32() != (speed <= .25 ? lowSpeedValue : defaults.GetSetting(setting)))
+                    throw new Exception($"Incorrect tempo setting {name} at speed {speed}");
             var result = new List<float>();
             float[] buffer = new float[257 * channels + 6];
             int read;
@@ -23,6 +33,18 @@ internal static class PlaybackSpeedTests
             if (Math.Abs(duration - 2 / speed) > .002) throw new Exception($"Wrong stretched duration: {duration} at {speed}");
             for (int channel = 0; channel < channels; channel++)
             {
+                double minimumRms = double.MaxValue;
+                int window = sampleRate / 50;
+                // Keep this continuity check in the sustained middle of the tone, before EOF flushing.
+                for (int first = sampleRate / 4; first + window < result.Count / channels / 2; first += window)
+                {
+                    double energy = 0;
+                    for (int frame = first; frame < first + window; frame++)
+                        energy += result[frame * channels + channel] * result[frame * channels + channel];
+                    double rms = Math.Sqrt(energy / window);
+                    minimumRms = Math.Min(minimumRms, rms);
+                }
+                if (minimumRms < .05) throw new Exception($"Continuous tone has a dropout at {speed}, {sampleRate} Hz, channel {channel}: RMS {minimumRms}");
                 int crossings = 0;
                 for (int i = sampleRate / 4; i < sampleRate * 3 / 4; i++)
                     if (result[i * channels + channel] <= 0 && result[(i + 1) * channels + channel] > 0) crossings++;

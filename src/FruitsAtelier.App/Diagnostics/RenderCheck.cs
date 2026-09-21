@@ -220,6 +220,31 @@ internal static class RenderCheck
                     throw new InvalidOperationException("Native volume controls did not update percentages.");
                 view.KeyDown(27, false, false);
                 if (view.VolumeDialogVisible) throw new InvalidOperationException("Native volume dialog did not close.");
+                var dsRatios = view.Document.DistanceSnapRatios.ToArray();
+                view.Document.DistanceSnapRatios.Clear();
+                view.Document.DistanceSnapRatios.AddRange([.75, 1.25, 2.5]);
+                view.OpenDistanceSnapDialog();
+                if (!view.DistanceSnapDialogVisible) throw new InvalidOperationException("Native distance snap dialog did not open.");
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                var dsDocument = view.Document.DeepClone();
+                var dsPointer = view.DistanceSnapPointerBounds[0];
+                var dsSlider = view.DistanceSnapTrackBounds;
+                view.PointerDown(dsPointer.X + 8, dsPointer.Y + 8, 0, false, false);
+                view.PointerMove(dsSlider.X + dsSlider.Width * .7f, dsSlider.Y + 16, true, false);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.PointerUp(dsSlider.X + dsSlider.Width * .7f, dsSlider.Y + 16, 0);
+                var dsPreview = view.DistanceSnapPreviewBounds;
+                view.PointerDown(dsPreview.X + 40, dsPreview.Bottom - 12, 0, false, false);
+                view.PointerUp(dsPreview.X + 40, dsPreview.Bottom - 12, 0);
+                view.PointerDown(dsPreview.X + 70, dsPreview.Bottom - 40, 0, false, false);
+                view.PointerUp(dsPreview.X + 70, dsPreview.Bottom - 40, 0);
+                view.KeyDown(70, false, false); view.KeyDown(116, false, false);
+                view.Wheel(width / 2, height / 2, -120, false);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.KeyDown(27, false, false);
+                if (view.DistanceSnapDialogVisible || view.IsTestplaying || !dsDocument.ContentEquals(view.Document))
+                    throw new InvalidOperationException("Native distance snap modal did not isolate input or close.");
+                view.Document.DistanceSnapRatios.Clear(); view.Document.DistanceSnapRatios.AddRange(dsRatios);
                 view.OpenSettings();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(40, 240, 0, false, false); view.PointerUp(40, 240, 0);
@@ -355,6 +380,19 @@ internal static class RenderCheck
                 if (Math.Abs(view.Document.Fruits[1].X - 170) > .001) throw new InvalidOperationException("DS input did not move fruit.");
                 view.KeyDown('Z', true, false); Paint();
                 if (Math.Abs(view.Document.Fruits[1].X - 240) > .001) throw new InvalidOperationException("DS input undo failed.");
+                view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint();
+                input = view.XCoordinateFieldBounds ?? throw new InvalidOperationException("X input missing.");
+                double xEditPlayhead = view.PlayheadMs;
+                view.PointerDown(input.X + 8, input.Y + 8, 0, false, false);
+                view.PointerUp(input.X + 8, input.Y + 8, 0); Paint();
+                if (!view.IsEditingText || view.WantsCapture || view.PlayheadMs != xEditPlayhead)
+                    throw new InvalidOperationException("X row click reached the canvas.");
+                view.TextInput('6'); view.TextInput('0'); view.TextInput('0'); Paint();
+                if (view.DistanceSliderBounds is not null || Math.Abs(view.Document.Fruits[1].X - 512) > .001)
+                    throw new InvalidOperationException("X input did not clamp without a slider.");
+                view.KeyDown(13, false, false); Paint();
+                view.KeyDown('Z', true, false); Paint();
+                if (Math.Abs(view.Document.Fruits[1].X - 240) > .001) throw new InvalidOperationException("X input undo failed.");
             }
         }
         finally
@@ -482,12 +520,24 @@ internal static class RenderCheck
             var plot = view.CanvasPlotBounds;
             double startMs = view.ViewStartMs;
             view.PointerDown(plot.X + 4, plot.Y + 10, 0, false, false);
-            view.PointerMove(plot.Right - 12, plot.Bottom - 12, false, false);
+            view.PointerMove(plot.Right - 12, plot.Bottom - 40, false, false);
             view.UpdateTransport(10100, 15000, true, true, false, null, null);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             if (Math.Abs(view.ViewStartMs - startMs - 100) > .001 || !view.AudioPlaying)
                 throw new InvalidOperationException("Canvas marquee stopped following playback.");
-            view.PointerUp(plot.Right - 12, plot.Bottom - 12, 0);
+            view.Wheel(plot.Right - 12, plot.Bottom - 40, -120, false);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            if (Math.Abs(view.PlayheadMs - 10500) > .001 || !view.WantsCapture)
+                throw new InvalidOperationException("Marquee wheel navigation failed.");
+            view.PointerMove(plot.Right - 12, plot.Y, false, false);
+            if (!view.MarqueeScrollNeedsRedraw) throw new InvalidOperationException("Marquee edge did not request redraw.");
+            double beforeScroll = view.PlayheadMs;
+            Thread.Sleep(25);
+            canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            if (view.PlayheadMs <= beforeScroll || view.PlayheadMs - beforeScroll > 60 / view.PixelsPerMs + .001)
+                throw new InvalidOperationException("Marquee edge scroll speed is invalid.");
+            view.PointerUp(plot.Right - 12, plot.Y, 0);
+            if (view.MarqueeScrollNeedsRedraw) throw new InvalidOperationException("Marquee edge scroll continued after release.");
             view.UpdateTransport(10100, 15000, true, false, false, null, null);
             view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();

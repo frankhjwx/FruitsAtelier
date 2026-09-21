@@ -30,6 +30,19 @@ same version and commit. Release builds run from the clean tagged commit.
 The window title displays this version beside the application name, omitting the
 source commit suffix and retaining any prerelease label.
 
+For a Windows audio diagnostic package, pass `-AudioDiagnostics` and a separate
+output directory, for example `-Version 0.8.3-beta.1` with
+`-OutputDirectory artifacts/audio-diagnostic-release`. The package includes an
+enabling marker and [capture instructions](AUDIO-DIAGNOSTICS.txt). This creates
+local package artifacts; it does not publish a GitHub release.
+
+Normal packages and the GitHub release workflow omit `-AudioDiagnostics`, so
+detailed audio logging is off by default. The manifest records `audioDiagnostics`,
+and the package check verifies that it matches the enabling marker. A disabled
+logger creates no diagnostic file, queue, background writer, or PCM probe. Normal
+error logging remains available. Explicit diagnostic capture can still be enabled
+as described in the [audio reference](../src/FruitsAtelier.App/Audio/REFERENCE.md).
+
 The package includes the English [user manual source](USER_MANUAL.md). To include
 its PDF edition, install Python and ReportLab, render the manual, then pass the
 output to the packaging script:

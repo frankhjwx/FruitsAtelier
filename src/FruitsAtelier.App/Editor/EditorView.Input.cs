@@ -23,6 +23,12 @@ public sealed partial class EditorView
         }
         ResetTextCaret();
         mouseX = x; mouseY = y;
+        if (DistanceSnapDialogVisible)
+        {
+            dsSliderShift = shift;
+            DistanceSnapPointerDown(x, y, button);
+            return;
+        }
         if (VolumeDialogVisible)
         {
             if (BeginVolumeDrag(x, y, button)) return;
@@ -94,6 +100,7 @@ public sealed partial class EditorView
             if (y >= 39) return;
         }
         if (catchPreviewVisible && PreviewResizeBounds.Contains(x, y)) { drag = DragKind.PreviewResize; return; }
+        if (BeginPlaybackLineDrag(x, y)) return;
         if (zoomSlider.Contains(x, y))
         {
             SetCanvasZoom(x);
@@ -102,14 +109,7 @@ public sealed partial class EditorView
         }
         if (snapSlider.Contains(x, y))
         {
-            if (DistanceSpacingVisible)
-            {
-                if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
-                history.Begin(L.Get("assist.spacingChange"));
-                SetDistanceSpacing(x);
-                drag = DragKind.DistanceSpacing;
-            }
-            else { SetSnapDivisor(x); drag = DragKind.SnapDivisor; }
+            SetSnapDivisor(x); drag = DragKind.SnapDivisor;
             BeginPointerDrag(x, y);
             return;
         }
@@ -277,6 +277,8 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
+        if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x, shift); return; }
         if (distanceDragging) { UpdateDistanceSlider(x, shift); return; }
         placementCtrl = ctrl;
         if (volumeDrag >= 0) { UpdateVolumeDrag(x); return; }
@@ -286,7 +288,7 @@ public sealed partial class EditorView
         if (sliderHoldConsumed) return;
         if (SliderHoldNeedsRedraw && (Math.Abs(x - sliderHoldX) >= 2 || Math.Abs(y - sliderHoldY) >= 2)) sliderHoldId = Guid.Empty;
         if (StreamDialogVisible && streamSnapDragging) { SetStreamSnap(x); return; }
-        if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible) return;
+        if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (ExportVisible || languageMenuOpen) return;
@@ -298,9 +300,9 @@ public sealed partial class EditorView
             if (LegacyMode && draftTrack != Guid.Empty) UpdateLegacyPreview(x, y);
             return;
         }
+        if (drag == DragKind.PlaybackLine) { MovePlaybackLine(y); return; }
         if (drag == DragKind.CanvasZoom) { SetCanvasZoom(x); return; }
         if (drag == DragKind.SnapDivisor) { SetSnapDivisor(x); return; }
-        if (drag == DragKind.DistanceSpacing) { SetDistanceSpacing(x); return; }
         if (drag == DragKind.Marquee) { MoveBox(x, y); return; }
         if (drag == DragKind.Pan)
         {
@@ -389,6 +391,8 @@ public sealed partial class EditorView
     {
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
         if (updatesPage) return;
+        if (dsSnapDragging && button == 0) { SetDistanceSnapSubdivision(x); dsSnapDragging = false; return; }
+        if (dsSliderDrag >= 0 && button == 0) { UpdateDistanceSnapSlider(x, dsSliderShift); dsSliderDrag = -1; return; }
         if (volumeDrag >= 0 && button == 0) { UpdateVolumeDrag(x); FinishVolumeDrag(); return; }
         if (button == 0)
         {
@@ -404,7 +408,7 @@ public sealed partial class EditorView
         }
         if (StreamDialogVisible && streamSnapDragging && button == 0)
         { SetStreamSnap(x); streamSnapDragging = false; return; }
-        if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible) return;
+        if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
@@ -412,7 +416,7 @@ public sealed partial class EditorView
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
         PointerMove(x, y, false, false);
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
-        if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail or DragKind.DistanceSpacing) history.Commit();
+        if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail) history.Commit();
         if (draftTrack != Guid.Empty && drag == DragKind.Anchor && !dragMoved
             && SelectedTrack is { } draft && SelectedAnchor == draft.Nodes[^1])
         {
@@ -435,7 +439,7 @@ public sealed partial class EditorView
         if (updatesPage) return;
         if (IsTestplaying) return;
         if (notesLocked && plot.Contains(x, y)) { PointerDown(x, y, 0, shift, ctrl); return; }
-        if (StreamDialogVisible || VolumeDialogVisible) return;
+        if (StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (TimeJumpVisible) { timeJumpSelected = true; return; }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
@@ -470,9 +474,13 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl)
     {
+        if (DistanceSnapDialogVisible)
+        {
+            return;
+        }
         if (updatesPage) return;
         if (IsTestplaying) return;
-        if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible) return;
+        if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (languageMenuOpen) return;
         if (ErrorVisible)
         {
@@ -489,9 +497,18 @@ public sealed partial class EditorView
             else libraryScroll = Math.Clamp(libraryScroll - delta / 120 * 3, 0, LibraryMaxScroll);
             RememberLibraryPosition(); return;
         }
+        if (drag == DragKind.Marquee)
+        {
+            if (!ctrl && (canvas.Contains(x, y) || objectTimeline.Contains(x, y)))
+            {
+                mouseX = x; mouseY = y;
+                SeekByWheel(-delta / 120, boxTimeline ? 1 : 0);
+                MoveBox(x, y);
+            }
+            return;
+        }
         if (drag != DragKind.None) return;
         if (contextItems.Count > 0) { contextItems.Clear(); return; }
-        if (altHeld && (canvas.Contains(x, y) || snapSlider.Contains(x, y))) { AdjustDistanceSpacing(delta); return; }
         if (assistPalette.Contains(x, y)) { assistScroll = Math.Clamp(assistScroll - delta / 120 * 64, 0, assistScrollLimit); return; }
         if (difficultyTabStrip.Contains(x, y))
         {
@@ -559,9 +576,10 @@ public sealed partial class EditorView
             if (target == 0 || target == TimelineDurationMs) { wheelRemainder = 0; break; }
         }
         double nextView = viewStart + target - playhead;
-        SeekTo(target);
+        if (drag == DragKind.Marquee) ScrollBoxTo(target);
+        else SeekTo(target);
         wheelPlayhead = playhead; wheelDivisor = stepDivisor; wheelSurface = surface;
-        if (surface == 0) { viewStart = nextView; pinPlayhead = false; }
+        if (surface == 0 && drag != DragKind.Marquee) { viewStart = nextView; pinPlayhead = false; }
     }
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
@@ -607,6 +625,7 @@ public sealed partial class EditorView
             return;
         }
         if (updatesPage) { if (virtualKey == 27) updatesPage = false; return; }
+        if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl, shift); return; }
         if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey); return; }
         if (TimeJumpVisible) { TimeJumpKey(virtualKey, ctrl); return; }
@@ -714,9 +733,10 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (DistanceSnapDialogVisible) return;
         if (DistanceEditing) { DistanceTextInput(value); return; }
         if (updatesPage) return;
-        if (StreamDialogVisible || VolumeDialogVisible) return;
+        if (StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (IsTestplaying || CapturingTestplayKey) return;
         if (languageMenuOpen) return;
         ResetTextCaret();
@@ -738,6 +758,8 @@ public sealed partial class EditorView
 
     public void CancelInteraction()
     {
+        CancelPlaybackLineDrag();
+        CancelDistanceSnapDrag();
         FinishDistanceEdit(true);
         FinishVolumeDrag();
         testplayEscapeConsumed = false;
@@ -747,7 +769,6 @@ public sealed partial class EditorView
         StopTestplay();
         bindingCapture = -1;
         SetModifiers(false, false);
-        if (drag == DragKind.DistanceSpacing) history.Cancel();
         tabPointer = false;
         if (libraryPointerActive) { libraryPointerActive = false; libraryPressedMap = null; RememberLibraryPosition(); }
         if (drag == DragKind.Marquee) { CancelBox(); contextItems.Clear(); return; }

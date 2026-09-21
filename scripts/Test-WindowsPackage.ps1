@@ -10,6 +10,13 @@ if ((Get-FileHash -LiteralPath $Archive -Algorithm SHA256).Hash -ne $expectedHas
 $destination = Join-Path $repo "artifacts/package-check/用户 Release $([Guid]::NewGuid().ToString('N'))"
 Expand-Archive -LiteralPath $Archive -DestinationPath $destination
 $current = Join-Path $destination 'current'
+$manifest = Get-Content -LiteralPath (Join-Path $current 'build-info.json') -Raw | ConvertFrom-Json
+$diagnosticsEnabled = $manifest.PSObject.Properties.Name -contains 'audioDiagnostics' -and [bool]$manifest.audioDiagnostics
+$diagnosticMarker = Test-Path -LiteralPath (Join-Path $current 'audio-diagnostics.enabled')
+if ($diagnosticMarker -ne $diagnosticsEnabled) { throw 'Audio diagnostic marker does not match the package manifest.' }
+if ($diagnosticsEnabled -and !(Test-Path -LiteralPath (Join-Path $current 'AUDIO-DIAGNOSTICS.txt'))) {
+    throw 'Audio diagnostic capture instructions are missing.'
+}
 foreach ($required in @('FruitsAtelier.exe', 'Update.exe', '.portable', 'current/sq.version', 'current/FruitsAtelier.App.exe')) {
     if (!(Test-Path -LiteralPath (Join-Path $destination $required))) { throw "Portable updater file missing: $required" }
 }
@@ -32,7 +39,6 @@ try {
     if (!(Test-Path -LiteralPath $report)) { throw "No package report; exit code $($process.ExitCode)." }
     $result = Get-Content -LiteralPath $report -Raw | ConvertFrom-Json
     if ($process.ExitCode -ne 0 -or !$result.success) { throw "Package check failed: $($result.error)" }
-    $manifest = Get-Content -LiteralPath (Join-Path $current 'build-info.json') -Raw | ConvertFrom-Json
     if ($result.architecture -ne 'X64' -or $result.version -ne "$($manifest.version)+$($manifest.commit)") { throw 'Package version, source commit or architecture mismatch.' }
     Write-Host "PASS: $($result.checks -join ', ')"
     Write-Host "Report: $report"

@@ -16,6 +16,18 @@ public static class DistanceSpacingEditing
         if (direction == 0 && distance > 0) throw new ArgumentException(L.Get("distance.direction"));
         double x = reference.X + direction * distance;
         if (!double.IsFinite(x) || x is < 0 or > 512) throw new ArgumentException(L.Get("distance.outside"));
+        ApplyPosition(document, target, reference, x, compensateTinyDroplets);
+    }
+
+    public static void ApplyX(MapDocument document, ConvertedCatchObject target, double x, bool compensateTinyDroplets)
+    {
+        if (!double.IsFinite(x)) throw new ArgumentException(L.Get("editor.error.finiteNumberRequired"));
+        ApplyPosition(document, target, null, Math.Clamp(x, 0, 512), compensateTinyDroplets);
+    }
+
+    private static void ApplyPosition(MapDocument document, ConvertedCatchObject target, ConvertedCatchObject? reference,
+        double x, bool compensateTinyDroplets)
+    {
         if (Math.Abs(x - target.X) < .00001) return;
         if (document.Fruits.FirstOrDefault(f => f.Id == target.SourceId) is { } fruit)
         {
@@ -27,7 +39,7 @@ public static class DistanceSpacingEditing
         var track = document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
             ?? ImportedSliderEditing.ConvertToTrack(document, target.SourceId).Track;
         double time = CurveMath.FirstSpanTime(track, target.TimeMs);
-        if (reference.SourceId == target.SourceId)
+        if (reference is not null && reference.SourceId == target.SourceId)
         {
             double referenceTime = CurveMath.FirstSpanTime(track, reference.TimeMs);
             if (Math.Abs(referenceTime - time) < CurveMath.MinimumAnchorSpacingMs)
@@ -41,9 +53,10 @@ public static class DistanceSpacingEditing
             throw new ArgumentException(failure);
         var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets);
         var moved = converted.Objects.FirstOrDefault(o => o.SourceId == target.SourceId && o.Kind == target.Kind && Math.Abs(o.TimeMs - target.TimeMs) < .001);
-        var fixedObject = converted.Objects.FirstOrDefault(o => o.SourceId == reference.SourceId && o.Kind == reference.Kind && Math.Abs(o.TimeMs - reference.TimeMs) < .001);
-        if (!converted.Success || moved is null || fixedObject is null || Math.Abs(moved.X - x) > .001 || Math.Abs(fixedObject.X - reference.X) > .001)
-            throw new ArgumentException(L.Get("distance.unreachable"));
+        var fixedObject = reference is null ? null : converted.Objects.FirstOrDefault(o => o.SourceId == reference.SourceId && o.Kind == reference.Kind && Math.Abs(o.TimeMs - reference.TimeMs) < .001);
+        if (!converted.Success || moved is null || Math.Abs(moved.X - x) > .001
+            || reference is not null && (fixedObject is null || Math.Abs(fixedObject.X - reference.X) > .001))
+            throw new ArgumentException(L.Get(reference is null ? "coordinate.unreachable" : "distance.unreachable"));
     }
 
     private static Anchor AnchorAt(CurveTrack track, double time)

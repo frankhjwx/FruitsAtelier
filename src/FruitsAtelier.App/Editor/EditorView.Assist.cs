@@ -16,7 +16,6 @@ public sealed partial class EditorView
     private float assistScroll, assistScrollLimit;
     public IReadOnlyList<Rect> AssistButtonBounds => assistButtons;
     public bool DistanceSnapEnabled => distanceSnap ^ altHeld;
-    public bool DistanceSpacingVisible => altHeld || drag == DragKind.DistanceSpacing;
     public bool NotesLocked => notesLocked;
     private bool EffectiveGridSnap => gridSnap ^ (shiftHeld && !altHeld);
     public (double? Previous, double? Next) DistanceReadout { get; private set; }
@@ -24,6 +23,7 @@ public sealed partial class EditorView
     public void SetModifiers(bool alt, bool shift)
     {
         altHeld = alt; shiftHeld = shift;
+        if (dsSliderDrag >= 0) UpdateDistanceSnapSlider(dsDragX, shift);
     }
 
     private void EnsureDistanceReferences()
@@ -42,26 +42,13 @@ public sealed partial class EditorView
         distanceOutside = false;
         if (!DistanceSnapEnabled) return point;
         EnsureDistanceReferences();
-        return DistanceSnap.Snap(point, PreviousReference(point.TimeMs, excluded), Document.DistanceSpacing, out distanceOutside);
+        return DistanceSnap.SnapMultiple(point, PreviousReference(point.TimeMs, excluded), Document.DistanceSnapRatios, out distanceOutside);
     }
 
     private MapPoint PlacementPoint(float x, float y)
     {
         var point = SnapDistance(MapAt(x, y, true));
         return point with { X = Math.Clamp(SnapX(point.X), 0, 512) };
-    }
-
-    private void SetDistanceSpacing(float x)
-    {
-        double fraction = Math.Clamp((x - snapSlider.X - 7) / (snapSlider.Width - 38), 0, 1);
-        Document.DistanceSpacing = Math.Clamp(Math.Round(.1 + fraction * 5.9, shiftHeld ? 2 : 1), .1, 6);
-    }
-
-    private void AdjustDistanceSpacing(float delta)
-    {
-        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
-        double value = Math.Clamp(Math.Round(Document.DistanceSpacing + delta / 120 * (shiftHeld ? .01 : .1), 2), .1, 6);
-        Edit(L.Get("assist.spacingChange"), () => Document.DistanceSpacing = value);
     }
 
     private Guid[] FlagTargets() => objectSelection.Count > 0 ? objectSelection.ToArray()
@@ -125,6 +112,7 @@ public sealed partial class EditorView
             foreach (var s in map.ImportedSliders) s.OriginalLine = null;
             foreach (var s in map.BananaShowers) s.OriginalLine = null;
         }
+        b.DistanceSnapRatios.Clear(); b.DistanceSnapRatios.AddRange(a.DistanceSnapRatios);
         b.DistanceSpacing = a.DistanceSpacing; b.DurationMs = a.DurationMs;
         return a.ContentEquals(b);
     }
@@ -187,7 +175,8 @@ public sealed partial class EditorView
             float thumbHeight = plot.Height * plot.Height / (7 * size);
             c.Fill(new(assistPalette.Right + 2, plot.Y + (plot.Height - thumbHeight) * assistScroll / assistScrollLimit, 3, thumbHeight), Muted, 1);
         }
-        if (hovered >= 0)
+        DrawDistanceSnapFlyout(c);
+        if (hovered >= 0 && hovered != 5)
         {
             string tip = hovered is >= 1 and <= 3 && !placement && soundEdge is { } edge && ids.Length == 1
                 ? L.Get("assist.edge", edge.Edge + 1) : L.Get(hints[hovered]);
@@ -223,8 +212,7 @@ public sealed partial class EditorView
         {
             ids.Clear();
             point = end = ghost;
-            var timing = TimingMap.At(Document, point.TimeMs);
-            velocity = 100 * Document.SliderMultiplier / timing.BeatLengthMs;
+            velocity = BaseDistanceVelocity(point.TimeMs);
         }
         else
         {

@@ -77,6 +77,17 @@ Automated device tests output silent PCM; sample comparisons happen before mutin
 dotnet run --project tests/FruitsAtelier.Audio.Tests -c Release
 ```
 
+`Audio.Tests --diagnostic-check` validates command/event correlation, repeated
+pause positions with logging enabled, unsupported hitsound format identification,
+and continued loading when the diagnostic destination cannot be written. It uses
+an injected output and does not play sound. To capture real-device lifecycle
+checks, set `FRUITSATELIER_AUDIO_DIAGNOSTICS=1` before running `--lifecycle-check`.
+
+`Audio.Tests --pause-check` checks pause/resume PCM alignment with a blocked
+in-flight clock read, seek/pause ordering and rapid resume, plus real-device WAV
+pause, seek and EOF replay. The paused position remains at the request snapshot
+even when the device advances before the worker handles it.
+
 ## Window checks
 
 The Windows `--render-check` injects nested paint/timer messages, nested native-modal

@@ -1,5 +1,35 @@
 # Audio transport
 
+Windows audio diagnostics are opt-in through `audio-diagnostics.enabled` beside
+the application binary or `FRUITSATELIER_AUDIO_DIAGNOSTICS=1`. Each transport and
+hitsound bank writes its own timestamped JSONL file using a bounded background
+queue, with a 16 MiB file limit. Logs include default endpoint metadata, command
+queue and execution timing, output session lifecycle, source/device/published
+positions, UI presentation, and hitsound decoder formats and failures. Clock and
+playing UI samples are limited to four per second; state transitions remain
+event-driven. Diagnostic reads do not change playback position. See the
+[capture instructions](../../../docs/AUDIO-DIAGNOSTICS.txt) for collection.
+
+Each output session records its first three source reads and the first observed
+nonzero device position. Periodic snapshots include supplied PCM duration, read
+counts, short reads, maximum read duration and interval. UI samples include the
+maximum update gap since the previous logged sample. Source duration describes
+data supplied to the output, not audible playback; short reads may indicate EOF.
+First device progress is sampled by the worker and cannot measure acoustic latency.
+
+At non-default speeds, snapshots also report source-read and tempo-processing
+durations separately, input/output frame totals, source EOF, and the last output
+RMS and longest near-silent run before gain and hitsound mixing. Silence may be
+present in the source or EOF flush; these counters alone do not prove an underrun.
+The measurements are enabled only for diagnostic capture.
+
+At playback speeds of 25% and below, SoundTouch uses quick seek, a 30 ms sequence
+and 4 ms overlap to reduce choppy low-speed playback. Higher speeds retain the
+library defaults. These parameters reference `osu.Framework/Audio/Track/TrackBass.cs`
+at osu!framework commit `94724b4385479b2e00bb347c9201ce9d9d13f594`; BASS is not
+bundled. Output continues to request an 80 ms shared-mode WASAPI buffer. Runtime
+PCM recording and environment-based tempo/buffer overrides are not provided.
+
 `AudioTransport` queues load, play, pause, seek and speed operations on one worker. The UI reads its immutable `State` snapshot; it does not call the decoder or output device. `LoadAsync` and `WaitForCommandsAsync` allow callers to await applied operations. `CanPlay` stays true while a loaded device is paused.
 
 The output uses event-driven shared-mode `WasapiOut` with the system default device and 80 ms requested latency. MP3 decoding uses Windows Media Foundation; OGG Vorbis uses NVorbis; WAV uses NAudio's WAV reader. All streams are converted to 16-bit PCM before output. This version accepts mono and stereo audio.
@@ -12,7 +42,7 @@ Silent waveform comparisons against the user's local osu! BASS decoder (with its
 
 This is necessary because [Media Foundation's SetCurrentPosition does not guarantee an exact seek](https://learn.microsoft.com/en-us/windows/win32/api/mfreadwrite/nf-mfreadwrite-imfsourcereader-setcurrentposition), while NAudio's reader reports the requested byte position before reading the returned samples. The cache establishes one continuous decoded timeline for playback, seek and duration.
 
-While playing, `PositionMs` is the seek base plus the WASAPI device position converted through the output format's bytes per second and multiplied by playback speed. Source-reader position is not a playback clock because its buffered reads run ahead of the device. Pending seek requests immediately own the displayed position until applied. A seek stops the old output, waits for its playback thread, discards queued buffers, seeks the decoder and opens fresh output buffers. Playing seeks resume; paused seeks remain paused. Pause captures the consumed device position and rebuilds output at that frame; the decoder's read-ahead position does not become the resume position. Superseded queued seeks are skipped. EOF reports the duration and replay starts at zero.
+While playing, `PositionMs` is the seek base plus the WASAPI device position converted through the output format's bytes per second and multiplied by playback speed. Source-reader position is not a playback clock because its buffered reads run ahead of the device. Pending seek requests immediately own the displayed position until applied. A seek stops the old output, waits for its playback thread, discards queued buffers, seeks the decoder and opens fresh output buffers. Playing seeks resume; paused seeks remain paused. Pause captures the published position when requested and holds it while the worker stops and rebuilds output at that source frame. In-flight clock samples cannot move this pause point; a later seek still takes precedence. Resume uses the same frame, within source sample rounding. Superseded queued seeks are skipped. EOF reports the duration and replay starts at zero.
 
 The default output is event-driven shared-mode `WasapiOut`; its stop operation joins the playback thread before the session is disposed. Its `Pause()` only suspends filling buffers, so the transport uses stop/rebuild to prevent buffered data and the device clock from advancing during a pause. An ended session is rebuilt from zero. The transport still treats `PlaybackStopped` as the ownership boundary for injected or alternative players: if their callback exceeds three seconds, the session and reader are detached from the active clock and disposed only after the callback. A second timeout retains an unavailable/error state until an explicit reload. Retired resources remain allocated if an alternative driver never completes the callback; diagnostics record the session, playback state and thread-pool counters.
 
