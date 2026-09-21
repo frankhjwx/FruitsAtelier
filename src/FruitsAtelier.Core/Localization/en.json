@@ -742,5 +742,6 @@
   "ds.previewRatio": "DS {0:0.##}x",
   "ds.previewUndefined": "DS —",
   "ds.reset": "Reset",
+  "ds.showValues": "Show DS",
   "core.distanceSnap.range": "Distance Snap requires at most eight finite non-negative multipliers."
 }

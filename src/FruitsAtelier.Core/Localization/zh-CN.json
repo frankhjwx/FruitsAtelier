@@ -742,5 +742,6 @@
   "ds.previewRatio": "DS {0:0.##}x",
   "ds.previewUndefined": "DS —",
   "ds.reset": "重置",
+  "ds.showValues": "显示 DS",
   "core.distanceSnap.range": "Distance Snap 最多可配置八个有限的非负倍率。"
 }

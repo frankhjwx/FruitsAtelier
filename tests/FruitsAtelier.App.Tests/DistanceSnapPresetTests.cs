@@ -195,6 +195,12 @@ internal static class DistanceSnapPresetTests
         ui.View.PointerMove(r.X - 20, r.Y, false, false); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", 12)), "HDash connection omitted its actual DS.");
         Check(ui.Canvas.Circles.Count(c => c.Filled && c.Color == 0xFF5555 && r.Contains(c.X, c.Y)) == 1, "HDash did not mark only the departure fruit.");
+        ui.ClickText(Strings.Get("ds.showValues"));
+        Check(!ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", 12))
+            && ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF5555 && r.Contains(c.X, c.Y))
+            && ui.View.DistanceSnapPreviewFruits.Count == 2, "Hiding DS labels changed preview fruits or HDash markings.");
+        ui.ClickText(Strings.Get("ds.showValues"));
+        Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", 12)), "Show DS did not restore the labels.");
         var pointer = ui.View.DistanceSnapPointerBounds.Single();
         var track = ui.View.DistanceSnapTrackBounds;
         ui.View.PointerDown(pointer.X + 8, pointer.Y + 8, 0, false, false);
