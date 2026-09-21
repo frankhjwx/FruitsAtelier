@@ -738,16 +738,10 @@
   "library.exportToSongs": "导出到 osu! Songs…",
   "ds.configure": "配置 DS…",
   "ds.title": "Distance Snap 配置",
-  "ds.presets": "配置（{0}/{1}）· 名称 / DS",
+  "ds.presets": "DS（{0}/{1}）",
   "ds.add": "+ 添加",
   "ds.remove": "删除",
-  "ds.defaultName": "DS {0}",
-  "ds.invalid": "请输入大于 0 的有限 DS 数值，0 DS 已自动包含。",
-  "ds.empty": "暂无配置，添加后可同时吸附到多个距离。",
-  "ds.reference": "{0:0.##} BPM · Snap 1/{1} · CS {2:0.##} · {3:0.##} ms",
-  "ds.referenceHint": "参考：catcher 从前一颗 note 中心静止出发。",
-  "ds.midpoint": "中间值：{0}",
-  "ds.rangeHint": "刻度为切换状态的 DS；中间值按 512 内距离计算，— 表示无此区间。",
-  "ds.zeroHint": "0 DS 始终参与吸附且不占名额；列表为空时使用当前单倍率。",
-  "ds.ratio": "{0:G}x"
+  "ds.invalid": "请输入大于 0 的 DS 数值。",
+  "ds.ratio": "{0:G}x",
+  "core.distanceSnap.range": "Distance Snap 最多可配置八个有限的正倍率。"
 }

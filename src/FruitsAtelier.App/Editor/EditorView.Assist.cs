@@ -42,7 +42,7 @@ public sealed partial class EditorView
         distanceOutside = false;
         if (!DistanceSnapEnabled) return point;
         EnsureDistanceReferences();
-        return DistanceSnap.SnapMultiple(point, PreviousReference(point.TimeMs, excluded), LibrarySettings.DistanceSnapPresets, Document.DistanceSpacing, out distanceOutside);
+        return DistanceSnap.SnapMultiple(point, PreviousReference(point.TimeMs, excluded), Document.DistanceSnapRatios, Document.DistanceSpacing, out distanceOutside);
     }
 
     private MapPoint PlacementPoint(float x, float y)
@@ -125,6 +125,7 @@ public sealed partial class EditorView
             foreach (var s in map.ImportedSliders) s.OriginalLine = null;
             foreach (var s in map.BananaShowers) s.OriginalLine = null;
         }
+        b.DistanceSnapRatios.Clear(); b.DistanceSnapRatios.AddRange(a.DistanceSnapRatios);
         b.DistanceSpacing = a.DistanceSpacing; b.DurationMs = a.DurationMs;
         return a.ContentEquals(b);
     }

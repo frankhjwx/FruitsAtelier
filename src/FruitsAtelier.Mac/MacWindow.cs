@@ -25,7 +25,6 @@ internal sealed partial class MacWindow : Window
         audio = new(smokeCheck);
         hitsounds = new(smokeCheck);
         View.RequestAudioVolume = (song, hit) => { audio.SetVolume(song); hitsounds.SetVolume(hit); };
-        View.RequestDistanceSnapPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
         View.RequestAudioPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
         View.ApplyAudioVolume();
         View.RequestScheduleHitsound = (sound, time) =>

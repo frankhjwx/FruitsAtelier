@@ -738,16 +738,10 @@
   "library.exportToSongs": "Export to osu! Songs…",
   "ds.configure": "Configure DS…",
   "ds.title": "Distance Snap configuration",
-  "ds.presets": "Presets ({0}/{1}) · Name / DS",
+  "ds.presets": "DS ({0}/{1})",
   "ds.add": "+ Add",
   "ds.remove": "Remove",
-  "ds.defaultName": "DS {0}",
-  "ds.invalid": "Enter a finite DS value greater than 0. Zero DS is included automatically.",
-  "ds.empty": "No presets. Add one to enable multiple snap distances.",
-  "ds.reference": "{0:0.##} BPM · Snap 1/{1} · CS {2:0.##} · {3:0.##} ms",
-  "ds.referenceHint": "Reference: catcher starts at the departure note centre.",
-  "ds.midpoint": "Mid: {0}",
-  "ds.rangeHint": "Markers: transition DS. Midpoints use distances up to 512; — means unreachable.",
-  "ds.zeroHint": "0 DS is always active and does not use a slot. Empty list: current single DS.",
-  "ds.ratio": "{0:G}x"
+  "ds.invalid": "Enter a positive DS value.",
+  "ds.ratio": "{0:G}x",
+  "core.distanceSnap.range": "Distance Snap requires at most eight finite positive multipliers."
 }

@@ -7,11 +7,16 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    public Action? RequestDistanceSnapPreference { get; set; }
     public bool DistanceSnapDialogVisible { get; private set; }
     private bool distanceSnapFlyout, dsReplace;
-    private List<DistanceSnap.Preset> dsDraft = [];
-    private int dsField = -1;
+    private List<double> dsDraft = [];
+    private int dsField = -1, dsSliderDrag = -1;
+    private double dsDragStart;
+    private Rect dsDragBounds;
+    private double[] dsDragLimits = [];
+    private readonly List<Rect> dsSliders = [];
+    internal IReadOnlyList<Rect> DistanceSnapSliderBounds => dsSliders;
+    private static readonly uint[] DsColors = [0xC0C0C0, 0x63B99D, 0xD6B365, 0xCE7683];
     private string dsBuffer = "", dsError = "";
     private float dsScroll;
     private Rect dsList;
@@ -35,7 +40,7 @@ public sealed partial class EditorView
     {
         if (LibraryVisible || IsTestplaying || !PrepareFileOperation()) return;
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
-        dsDraft = LibrarySettings.DistanceSnapPresets.ToList();
+        dsDraft = Document.DistanceSnapRatios.ToList();
         dsField = -1; dsBuffer = dsError = ""; dsScroll = 0;
         DistanceSnapDialogVisible = true;
         hits.Clear(); fields.Clear();
@@ -43,22 +48,17 @@ public sealed partial class EditorView
 
     private void CloseDistanceSnapDialog()
     {
-        DistanceSnapDialogVisible = false; dsField = -1;
+        DistanceSnapDialogVisible = false; dsField = dsSliderDrag = -1;
         hits.Clear(); fields.Clear();
     }
 
     private bool CommitDistanceSnapField()
     {
         if (dsField < 0) return true;
-        int index = dsField / 2;
-        if (dsField % 2 == 0) dsDraft[index] = dsDraft[index] with { Name = dsBuffer.Trim() };
-        else
-        {
-            if (!double.TryParse(dsBuffer, NumberStyles.Float, CultureInfo.InvariantCulture, out double ratio)
-                || !double.IsFinite(ratio) || ratio <= 0)
-            { dsError = L.Get("ds.invalid"); return false; }
-            dsDraft[index] = dsDraft[index] with { Ratio = ratio };
-        }
+        if (!double.TryParse(dsBuffer, NumberStyles.Float, CultureInfo.InvariantCulture, out double ratio)
+            || !double.IsFinite(ratio) || ratio <= 0)
+        { dsError = L.Get("ds.invalid"); return false; }
+        dsDraft[dsField] = ratio;
         dsField = -1; dsError = "";
         return true;
     }
@@ -67,30 +67,40 @@ public sealed partial class EditorView
     {
         if (!CommitDistanceSnapField()) return;
         dsField = field; dsReplace = true;
-        var preset = dsDraft[field / 2];
-        dsBuffer = field % 2 == 0 ? preset.Name : preset.Ratio.ToString("G", CultureInfo.InvariantCulture);
+        dsBuffer = dsDraft[field].ToString("G", CultureInfo.InvariantCulture);
     }
 
-    private void DistanceSnapKey(int key, bool ctrl)
+    private void DistanceSnapKey(int key, bool ctrl, bool shift)
     {
         if (key == 27)
         {
-            if (dsField >= 0) { dsField = -1; dsError = ""; }
+            if (dsSliderDrag >= 0) CancelDistanceSnapDrag();
+            else if (dsField >= 0) { dsField = -1; dsError = ""; }
             else CloseDistanceSnapDialog();
+        }
+        else if (key == 9 && dsSliderDrag < 0 && dsDraft.Count > 0)
+        {
+            int next = dsField < 0 ? (shift ? dsDraft.Count - 1 : 0)
+                : (dsField + (shift ? dsDraft.Count - 1 : 1)) % dsDraft.Count;
+            if (!CommitDistanceSnapField()) return;
+            EditDistanceSnapField(next);
+            float top = next * 46;
+            if (top < dsScroll) dsScroll = top;
+            else if (top + 46 > dsScroll + dsList.Height) dsScroll = top + 46 - dsList.Height;
         }
         else if (dsField >= 0)
         {
             if (ctrl && key == 65) dsReplace = true;
             else if (key is 8 or 46) { dsBuffer = dsReplace || key == 46 ? "" : dsBuffer[..Math.Max(0, dsBuffer.Length - 1)]; dsReplace = false; }
-            else if (key is 13 or 9) CommitDistanceSnapField();
+            else if (key == 13) CommitDistanceSnapField();
         }
     }
 
     private void DistanceSnapText(char value)
     {
         if (dsField < 0 || char.IsControl(value)) return;
-        if (dsField % 2 == 1 && !char.IsAsciiDigit(value) && value != '.') return;
-        if (!dsReplace && dsBuffer.Length >= (dsField % 2 == 0 ? 40 : 16)) return;
+        if (!char.IsAsciiDigit(value) && value != '.') return;
+        if (!dsReplace && dsBuffer.Length >= 16) return;
         ResetTextCaret();
         dsBuffer = (dsReplace ? "" : dsBuffer) + value; dsReplace = false; dsError = "";
     }
@@ -98,36 +108,45 @@ public sealed partial class EditorView
     private void DrawDistanceSnapDialog(ICanvas c)
     {
         if (!DistanceSnapDialogVisible) return;
-        hits.Clear(); fields.Clear();
+        hits.Clear(); fields.Clear(); dsSliders.Clear();
         var r = DistanceSnapDialogBounds;
         c.Fill(new(0, 84, width, Math.Max(0, height - 84)), Background, opacity: .65f);
         c.Fill(r, Panel, 8); c.Stroke(r, Grid, radius: 8);
         c.Text(L.Get("ds.title"), r.X + 20, r.Y + 18, 16, Foreground, r.Width - 40, true);
         DrawDistanceSnapReference(c, r);
-        c.Text(L.Get("ds.zeroHint"), r.X + 20, r.Y + 205, 10, Muted, r.Width - 40);
-        c.Text(L.Get("ds.presets", dsDraft.Count, DistanceSnap.MaximumPresets), r.X + 20, r.Y + 236, 12, Foreground, r.Width - 150);
-        Button(c, new(r.Right - 116, r.Y + 226, 96, 30), L.Get("ds.add"), () =>
+        c.Text(L.Get("ds.presets", dsDraft.Count, DistanceSnap.MaximumPresets), r.X + 20, r.Y + 164, 12, Foreground, r.Width - 150);
+        Button(c, new(r.Right - 116, r.Y + 154, 96, 30), L.Get("ds.add"), () =>
         {
             if (!CommitDistanceSnapField() || dsDraft.Count >= DistanceSnap.MaximumPresets) return;
-            dsDraft.Add(new(L.Get("ds.defaultName", dsDraft.Count + 1), Document.DistanceSpacing));
+            dsDraft.Add(Document.DistanceSpacing);
             dsScroll = Math.Max(0, dsDraft.Count * 46 - dsList.Height);
         }, enabled: dsDraft.Count < DistanceSnap.MaximumPresets);
-        dsList = new(r.X + 20, r.Y + 266, r.Width - 40, Math.Max(30, r.Height - 342));
+        dsList = new(r.X + 20, r.Y + 194, r.Width - 40, Math.Max(30, r.Height - 270));
         dsScroll = Math.Clamp(dsScroll, 0, Math.Max(0, dsDraft.Count * 46 - dsList.Height));
         c.Fill(dsList, Background, 4);
-        if (dsDraft.Count == 0) c.Text(L.Get("ds.empty"), dsList.X + 12, dsList.Y + 16, 12, Muted, dsList.Width - 24);
         c.Clip(dsList);
         for (int i = 0; i < dsDraft.Count; i++)
         {
             int row = i;
             float y = dsList.Y + i * 46 - dsScroll;
-            DrawField(new(dsList.X + 8, y + 6, dsList.Width - 186, 32), i * 2, dsDraft[i].Name);
-            DrawField(new(dsList.Right - 170, y + 6, 88, 32), i * 2 + 1, L.Get("ds.ratio", dsDraft[i].Ratio));
+            var slider = new Rect(dsList.X + 14, y + 6, dsList.Width - 198, 32);
+            dsSliders.Add(slider);
+            DrawDistanceSnapSlider(c, slider, dsDraft[i]);
+            int sliderHit = hits.Count;
+            hits.Add(new(slider, () =>
+            {
+                if (!CommitDistanceSnapField()) return;
+                dsSliderDrag = row; dsDragStart = dsDraft[row];
+                dsDragBounds = slider; dsDragLimits = DistanceSnapLimits();
+                UpdateDistanceSnapSlider(mouseX);
+            }, true));
+            ClipHits(sliderHit);
+            DrawField(new(dsList.Right - 170, y + 6, 88, 32), i, L.Get("ds.ratio", dsDraft[i]));
             var remove = new Rect(dsList.Right - 74, y + 6, 66, 32);
             int before = hits.Count;
             Button(c, remove, L.Get("ds.remove"), () =>
             {
-                if (dsField / 2 == row && dsField >= 0) { dsField = -1; dsError = ""; }
+                if (dsField == row) { dsField = -1; dsError = ""; }
                 else if (!CommitDistanceSnapField()) return;
                 dsDraft.RemoveAt(row);
             });
@@ -144,9 +163,11 @@ public sealed partial class EditorView
         Button(c, new(r.Right - 108, r.Bottom - 44, 88, 30), L.Get("library.apply"), () =>
         {
             if (!CommitDistanceSnapField()) return;
-            LibrarySettings.DistanceSnapPresets = dsDraft.ToList();
-            RequestDistanceSnapPreference?.Invoke();
-            CloseDistanceSnapDialog();
+            if (Edit(L.Get("ds.title"), () =>
+            {
+                Document.DistanceSnapRatios.Clear();
+                Document.DistanceSnapRatios.AddRange(dsDraft);
+            })) CloseDistanceSnapDialog();
         });
 
         void DrawField(Rect bounds, int field, string value)
@@ -170,37 +191,72 @@ public sealed partial class EditorView
         }
     }
 
-    private void DrawDistanceSnapReference(ICanvas c, Rect r)
+    private double[] DistanceSnapLimits()
     {
-        double beat = TimingMap.At(Document, playhead).BeatLengthMs;
-        double duration = beat / divisor;
+        double duration = TimingMap.At(Document, playhead).BeatLengthMs / divisor;
         double unit = duration * DistanceSnap.BaseVelocity(Document, playhead);
         double stand = CatchSize.CatchWidth(Document.CircleSize) / 2;
         // A fresh departure has the full catcher allowance; preceding movement is deliberately excluded.
         double dash = Math.Max(stand, (int)(playhead + duration) - (int)playhead - 1000f / 60f / 4
             + CatchSize.CatcherWidth(Document.CircleSize) / 2);
         double walk = Math.Min(dash, stand + duration * .5);
-        double[] limits = [0, stand, walk, dash, Math.Max(512, dash)];
+        return [0, stand / unit, walk / unit, dash / unit, Math.Max(512, dash) / unit];
+    }
+
+    private void UpdateDistanceSnapSlider(float x)
+    {
+        double position = Math.Clamp((x - dsDragBounds.X) / dsDragBounds.Width, 0, 1) * 4;
+        int segment = Math.Min(3, (int)position);
+        double ratio = dsDragLimits[segment] + (dsDragLimits[segment + 1] - dsDragLimits[segment]) * (position - segment);
+        dsDraft[dsSliderDrag] = Math.Max(.001, Math.Round(ratio, 3));
+    }
+
+    private void CancelDistanceSnapDrag()
+    {
+        if (dsSliderDrag < 0) return;
+        dsDraft[dsSliderDrag] = dsDragStart;
+        dsSliderDrag = -1;
+    }
+
+    private void DrawDistanceSnapSlider(ICanvas c, Rect slider, double ratio)
+    {
+        var limits = dsSliderDrag >= 0 ? dsDragLimits : DistanceSnapLimits();
+        for (int i = 0; i < 4; i++)
+            c.Fill(new(slider.X + slider.Width * i / 4, slider.Y + 12, slider.Width / 4, 8), DsColors[i]);
+        double position = 4;
+        for (int i = 0; i < 4; i++)
+            if (ratio <= limits[i + 1] && limits[i + 1] > limits[i])
+            { position = i + Math.Clamp((ratio - limits[i]) / (limits[i + 1] - limits[i]), 0, 1); break; }
+        float x = slider.X + (float)(position / 4) * slider.Width;
+        c.Circle(x, slider.Y + 16, 7, Foreground);
+        c.Circle(x, slider.Y + 16, 7, Panel, filled: false, width: 2);
+    }
+
+    private void DrawDistanceSnapReference(ICanvas c, Rect r)
+    {
+        double[] limits = DistanceSnapLimits();
         string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
-        uint[] colors = [0xC0C0C0, 0x63B99D, 0xD6B365, 0xCE7683];
-        c.Text(L.Get("ds.reference", 60000 / beat, divisor, Document.CircleSize, duration), r.X + 20, r.Y + 48, 11, Muted, r.Width - 40);
-        c.Text(L.Get("ds.referenceHint"), r.X + 20, r.Y + 69, 11, Muted, r.Width - 40);
         float segment = (r.Width - 40) / 4;
         for (int i = 0; i < 4; i++)
         {
             float x = r.X + 20 + i * segment;
-            c.Fill(new(x, r.Y + 101, segment - 2, 25), colors[i], 3);
-            c.Text(L.Get(names[i]), x + 6, r.Y + 107, 11, Background, segment - 12, true);
-            string mid = limits[i] >= 512 ? "—" : L.Get("assist.ratio", (limits[i] + Math.Min(512, limits[i + 1])) / 2 / unit);
-            c.Text(L.Get("ds.midpoint", mid), x, r.Y + 137, 11, Foreground, segment - 4);
+            c.Fill(new(x, r.Y + 56, segment - 2, 25), DsColors[i], 3);
+            c.Text(L.Get(names[i]), x + 6, r.Y + 62, 11, Background, segment - 12, true);
             if (i < 3)
             {
-                string boundary = L.Get("assist.ratio", limits[i + 1] / unit);
-                float center = x + segment;
-                c.Line(center - 1, r.Y + 123, center - 1, r.Y + 132, colors[i]);
-                c.Text(boundary, center - c.MeasureText(boundary, 11) / 2, r.Y + 160, 11, Foreground, segment);
+                double maximum = 512 / (TimingMap.At(Document, playhead).BeatLengthMs / divisor * DistanceSnap.BaseVelocity(Document, playhead));
+                string mid = limits[i] >= maximum ? "—" : L.Get("assist.ratio", (limits[i] + Math.Min(maximum, limits[i + 1])) / 2);
+                float center = x + segment / 2;
+                c.Line(center, r.Y + 81, center, r.Y + 93, DsColors[i]);
+                c.Text(mid, center - c.MeasureText(mid, 11) / 2, r.Y + 98, 11, Foreground, segment);
+            }
+            if (i < 3)
+            {
+                string boundary = L.Get("assist.ratio", limits[i + 1]);
+                float edge = x + segment - 1;
+                c.Line(edge, r.Y + 81, edge, r.Y + 119, DsColors[i]);
+                c.Text(boundary, edge - c.MeasureText(boundary, 11) / 2, r.Y + 124, 11, Foreground, segment);
             }
         }
-        c.Text(L.Get("ds.rangeHint"), r.X + 20, r.Y + 184, 10, Muted, r.Width - 40);
     }
 }

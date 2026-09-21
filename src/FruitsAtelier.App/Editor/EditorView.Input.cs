@@ -283,6 +283,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x); return; }
         if (distanceDragging) { UpdateDistanceSlider(x, shift); return; }
         placementCtrl = ctrl;
         if (volumeDrag >= 0) { UpdateVolumeDrag(x); return; }
@@ -395,6 +396,7 @@ public sealed partial class EditorView
     {
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
         if (updatesPage) return;
+        if (dsSliderDrag >= 0 && button == 0) { UpdateDistanceSnapSlider(x); dsSliderDrag = -1; return; }
         if (volumeDrag >= 0 && button == 0) { UpdateVolumeDrag(x); FinishVolumeDrag(); return; }
         if (button == 0)
         {
@@ -478,7 +480,7 @@ public sealed partial class EditorView
     {
         if (DistanceSnapDialogVisible)
         {
-            if (dsList.Contains(x, y)) dsScroll = Math.Clamp(dsScroll - delta / 120 * 46, 0, Math.Max(0, dsDraft.Count * 46 - dsList.Height));
+            if (dsSliderDrag < 0 && dsList.Contains(x, y)) dsScroll = Math.Clamp(dsScroll - delta / 120 * 46, 0, Math.Max(0, dsDraft.Count * 46 - dsList.Height));
             return;
         }
         if (updatesPage) return;
@@ -629,7 +631,7 @@ public sealed partial class EditorView
             return;
         }
         if (updatesPage) { if (virtualKey == 27) updatesPage = false; return; }
-        if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl); return; }
+        if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl, shift); return; }
         if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey); return; }
         if (TimeJumpVisible) { TimeJumpKey(virtualKey, ctrl); return; }
@@ -762,6 +764,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction()
     {
+        CancelDistanceSnapDrag();
         FinishDistanceEdit(true);
         FinishVolumeDrag();
         testplayEscapeConsumed = false;
