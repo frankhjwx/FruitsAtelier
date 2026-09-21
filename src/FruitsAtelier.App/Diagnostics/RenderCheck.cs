@@ -220,16 +220,25 @@ internal static class RenderCheck
                     throw new InvalidOperationException("Native volume controls did not update percentages.");
                 view.KeyDown(27, false, false);
                 if (view.VolumeDialogVisible) throw new InvalidOperationException("Native volume dialog did not close.");
+                var dsRatios = view.Document.DistanceSnapRatios.ToArray();
+                view.Document.DistanceSnapRatios.Clear();
+                view.Document.DistanceSnapRatios.AddRange([.75, 1.25, 2.5]);
                 view.OpenDistanceSnapDialog();
                 if (!view.DistanceSnapDialogVisible) throw new InvalidOperationException("Native distance snap dialog did not open.");
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 var dsDocument = view.Document.DeepClone();
+                var dsSlider = view.DistanceSnapSliderBounds[0];
+                view.PointerDown(dsSlider.X + dsSlider.Width * .6f, dsSlider.Y + 16, 0, false, false);
+                view.PointerMove(dsSlider.X + dsSlider.Width * .7f, dsSlider.Y + 16, true, false);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.PointerUp(dsSlider.X + dsSlider.Width * .7f, dsSlider.Y + 16, 0);
                 view.KeyDown(70, false, false); view.KeyDown(116, false, false);
                 view.Wheel(width / 2, height / 2, -120, false);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.KeyDown(27, false, false);
                 if (view.DistanceSnapDialogVisible || view.IsTestplaying || !dsDocument.ContentEquals(view.Document))
                     throw new InvalidOperationException("Native distance snap modal did not isolate input or close.");
+                view.Document.DistanceSnapRatios.Clear(); view.Document.DistanceSnapRatios.AddRange(dsRatios);
                 view.OpenSettings();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(40, 240, 0, false, false); view.PointerUp(40, 240, 0);

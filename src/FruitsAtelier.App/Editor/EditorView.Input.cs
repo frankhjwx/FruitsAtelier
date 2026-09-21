@@ -25,6 +25,7 @@ public sealed partial class EditorView
         mouseX = x; mouseY = y;
         if (DistanceSnapDialogVisible)
         {
+            dsSliderShift = shift;
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
@@ -283,7 +284,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
-        if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x); return; }
+        if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x, shift); return; }
         if (distanceDragging) { UpdateDistanceSlider(x, shift); return; }
         placementCtrl = ctrl;
         if (volumeDrag >= 0) { UpdateVolumeDrag(x); return; }
@@ -396,7 +397,7 @@ public sealed partial class EditorView
     {
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
         if (updatesPage) return;
-        if (dsSliderDrag >= 0 && button == 0) { UpdateDistanceSnapSlider(x); dsSliderDrag = -1; return; }
+        if (dsSliderDrag >= 0 && button == 0) { UpdateDistanceSnapSlider(x, dsSliderShift); dsSliderDrag = -1; return; }
         if (volumeDrag >= 0 && button == 0) { UpdateVolumeDrag(x); FinishVolumeDrag(); return; }
         if (button == 0)
         {

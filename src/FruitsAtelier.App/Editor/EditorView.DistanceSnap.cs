@@ -8,7 +8,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     public bool DistanceSnapDialogVisible { get; private set; }
-    private bool distanceSnapFlyout, dsReplace;
+    private bool distanceSnapFlyout, dsReplace, dsSliderShift;
     private List<double> dsDraft = [];
     private int dsField = -1, dsSliderDrag = -1;
     private double dsDragStart;
@@ -18,7 +18,7 @@ public sealed partial class EditorView
     internal IReadOnlyList<Rect> DistanceSnapSliderBounds => dsSliders;
     private static readonly uint[] DsColors = [0xC0C0C0, 0x63B99D, 0xD6B365, 0xCE7683];
     private string dsBuffer = "", dsError = "";
-    private float dsScroll;
+    private float dsScroll, dsDragX;
     private Rect dsList;
     private Rect DistanceSnapDialogBounds => new((width - Math.Min(640, width - 32)) / 2,
         (height - Math.Min(570, height - 32)) / 2, Math.Min(640, width - 32), Math.Min(570, height - 32));
@@ -58,7 +58,7 @@ public sealed partial class EditorView
         if (!double.TryParse(dsBuffer, NumberStyles.Float, CultureInfo.InvariantCulture, out double ratio)
             || !double.IsFinite(ratio) || ratio <= 0)
         { dsError = L.Get("ds.invalid"); return false; }
-        dsDraft[dsField] = ratio;
+        dsDraft[dsField] = Math.Round(ratio, 2, MidpointRounding.AwayFromZero);
         dsField = -1; dsError = "";
         return true;
     }
@@ -67,7 +67,7 @@ public sealed partial class EditorView
     {
         if (!CommitDistanceSnapField()) return;
         dsField = field; dsReplace = true;
-        dsBuffer = dsDraft[field].ToString("G", CultureInfo.InvariantCulture);
+        dsBuffer = dsDraft[field].ToString("0.##", CultureInfo.InvariantCulture);
     }
 
     private void DistanceSnapKey(int key, bool ctrl, bool shift)
@@ -101,8 +101,11 @@ public sealed partial class EditorView
         if (dsField < 0 || char.IsControl(value)) return;
         if (!char.IsAsciiDigit(value) && value != '.') return;
         if (!dsReplace && dsBuffer.Length >= 16) return;
+        string current = dsReplace ? "" : dsBuffer;
+        int dot = current.IndexOf('.');
+        if (value == '.' && dot >= 0 || char.IsAsciiDigit(value) && dot >= 0 && current.Length - dot > 2) return;
         ResetTextCaret();
-        dsBuffer = (dsReplace ? "" : dsBuffer) + value; dsReplace = false; dsError = "";
+        dsBuffer = current + value; dsReplace = false; dsError = "";
     }
 
     private void DrawDistanceSnapDialog(ICanvas c)
@@ -131,14 +134,14 @@ public sealed partial class EditorView
             float y = dsList.Y + i * 46 - dsScroll;
             var slider = new Rect(dsList.X + 14, y + 6, dsList.Width - 198, 32);
             dsSliders.Add(slider);
-            DrawDistanceSnapSlider(c, slider, dsDraft[i]);
+            DrawDistanceSnapSlider(c, slider, DistanceSnapDraftValue(i));
             int sliderHit = hits.Count;
             hits.Add(new(slider, () =>
             {
                 if (!CommitDistanceSnapField()) return;
                 dsSliderDrag = row; dsDragStart = dsDraft[row];
                 dsDragBounds = slider; dsDragLimits = DistanceSnapLimits();
-                UpdateDistanceSnapSlider(mouseX);
+                UpdateDistanceSnapSlider(mouseX, dsSliderShift);
             }, true));
             ClipHits(sliderHit);
             DrawField(new(dsList.Right - 170, y + 6, 88, 32), i, L.Get("ds.ratio", dsDraft[i]));
@@ -203,12 +206,13 @@ public sealed partial class EditorView
         return [0, stand / unit, walk / unit, dash / unit, Math.Max(512, dash) / unit];
     }
 
-    private void UpdateDistanceSnapSlider(float x)
+    private void UpdateDistanceSnapSlider(float x, bool shift)
     {
         double position = Math.Clamp((x - dsDragBounds.X) / dsDragBounds.Width, 0, 1) * 4;
         int segment = Math.Min(3, (int)position);
         double ratio = dsDragLimits[segment] + (dsDragLimits[segment + 1] - dsDragLimits[segment]) * (position - segment);
-        dsDraft[dsSliderDrag] = Math.Max(.001, Math.Round(ratio, 3));
+        dsDragX = x; dsSliderShift = shift;
+        dsDraft[dsSliderDrag] = Math.Max(shift ? .01 : .1, Math.Round(ratio, shift ? 2 : 1, MidpointRounding.AwayFromZero));
     }
 
     private void CancelDistanceSnapDrag()
@@ -223,20 +227,37 @@ public sealed partial class EditorView
         var limits = dsSliderDrag >= 0 ? dsDragLimits : DistanceSnapLimits();
         for (int i = 0; i < 4; i++)
             c.Fill(new(slider.X + slider.Width * i / 4, slider.Y + 12, slider.Width / 4, 8), DsColors[i]);
-        double position = 4;
+        float x = slider.X + DistanceSnapFraction(ratio, limits) * slider.Width;
+        c.Line(x, slider.Y + 5, x, slider.Y + 27, Panel, 5);
+        c.Line(x, slider.Y + 5, x, slider.Y + 27, Foreground, 2);
+    }
+
+    private double DistanceSnapDraftValue(int index)
+        => dsField == index && double.TryParse(dsBuffer, NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
+            && double.IsFinite(value) && value > 0 ? value : dsDraft[index];
+
+    private static float DistanceSnapFraction(double ratio, double[] limits)
+    {
         for (int i = 0; i < 4; i++)
             if (ratio <= limits[i + 1] && limits[i + 1] > limits[i])
-            { position = i + Math.Clamp((ratio - limits[i]) / (limits[i + 1] - limits[i]), 0, 1); break; }
-        float x = slider.X + (float)(position / 4) * slider.Width;
-        c.Circle(x, slider.Y + 16, 7, Foreground);
-        c.Circle(x, slider.Y + 16, 7, Panel, filled: false, width: 2);
+                return (float)((i + Math.Clamp((ratio - limits[i]) / (limits[i + 1] - limits[i]), 0, 1)) / 4);
+        return 1;
     }
 
     private void DrawDistanceSnapReference(ICanvas c, Rect r)
     {
-        double[] limits = DistanceSnapLimits();
+        double[] limits = dsSliderDrag >= 0 ? dsDragLimits : DistanceSnapLimits();
         string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
         float segment = (r.Width - 40) / 4;
+        for (int i = 0; i < dsDraft.Count; i++)
+        {
+            float pointer = r.X + 20 + DistanceSnapFraction(DistanceSnapDraftValue(i), limits) * (r.Width - 40);
+            uint color = i == dsSliderDrag || i == dsField ? Accent : Foreground;
+            c.Line(pointer, r.Y + 41, pointer, r.Y + 51, color, 2);
+            c.Line(pointer - 4, r.Y + 48, pointer, r.Y + 53, color, 2);
+            c.Line(pointer + 4, r.Y + 48, pointer, r.Y + 53, color, 2);
+        }
+
         for (int i = 0; i < 4; i++)
         {
             float x = r.X + 20 + i * segment;

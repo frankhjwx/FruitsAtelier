@@ -742,6 +742,6 @@
   "ds.add": "+ 添加",
   "ds.remove": "删除",
   "ds.invalid": "请输入大于 0 的 DS 数值。",
-  "ds.ratio": "{0:G}x",
+  "ds.ratio": "{0:0.##}x",
   "core.distanceSnap.range": "Distance Snap 最多可配置八个有限的正倍率。"
 }

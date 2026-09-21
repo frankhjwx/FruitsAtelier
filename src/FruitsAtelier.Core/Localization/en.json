@@ -742,6 +742,6 @@
   "ds.add": "+ Add",
   "ds.remove": "Remove",
   "ds.invalid": "Enter a positive DS value.",
-  "ds.ratio": "{0:G}x",
+  "ds.ratio": "{0:0.##}x",
   "core.distanceSnap.range": "Distance Snap requires at most eight finite positive multipliers."
 }
