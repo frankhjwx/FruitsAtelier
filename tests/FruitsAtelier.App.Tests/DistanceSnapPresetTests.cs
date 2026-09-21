@@ -78,6 +78,27 @@ internal static class DistanceSnapPresetTests
             var pointer = ui.Canvas.Lines.Single(l => l.X1 == l.X2 && l.Y1 == pointerY && l.Y2 == pointerY + 10);
             Check(Math.Abs((pointer.X1 - barLeft) / 600 - (handle.X1 - slider.X) / slider.Width) < .001,
                 "Reference pointer and slider handle disagree.");
+            ui.View.PointerDown(pointer.X1, pointerY + 5, 0, false, false);
+            Check(ui.View.WantsCapture, "Reference pointer did not capture dragging.");
+            ui.View.PointerMove(barLeft + 600 * .375f, pointerY + 5, false, false); ui.Paint();
+            double pointerRatio = Math.Round((range.StandLimit + range.WalkLimit) / 2 / unit, 1, MidpointRounding.AwayFromZero);
+            Check(ui.Canvas.Texts.Any(t => t.Y == slider.Y + 9 && t.Value == Strings.Get("ds.ratio", pointerRatio)),
+                "Reference drag did not update its DS row in tenths.");
+            ui.View.PointerMove(barLeft + 600 * .375f, pointerY + 5, true, false); ui.Paint();
+            pointerRatio = Math.Round((range.StandLimit + range.WalkLimit) / 2 / unit, 2, MidpointRounding.AwayFromZero);
+            Check(ui.Canvas.Texts.Any(t => t.Y == slider.Y + 9 && t.Value == Strings.Get("ds.ratio", pointerRatio)),
+                "Reference drag ignored Shift precision.");
+            ui.Key(27);
+            Check(!ui.View.WantsCapture && ui.View.DistanceSnapDialogVisible, "Escape did not cancel just the reference drag.");
+            ui.View.PointerUp(barLeft + 600 * .375f, pointerY + 5, 0); ui.Paint();
+            Check(ui.Canvas.Texts.Any(t => t.Y == slider.Y + 9 && t.Value == Strings.Get("ds.ratio", expected)),
+                "Cancelled reference drag changed the DS value.");
+            pointer = ui.Canvas.Lines.Single(l => l.X1 == l.X2 && l.Y1 == pointerY && l.Y2 == pointerY + 10);
+            ui.View.PointerDown(pointer.X1, pointerY + 5, 0, true, false);
+            ui.View.PointerMove(barLeft + 600 * .375f, pointerY + 5, true, false);
+            ui.View.PointerUp(barLeft + 600 * .375f, pointerY + 5, 0); ui.Paint();
+            expected = pointerRatio;
+            Check(!ui.View.WantsCapture, "Reference drag did not release capture.");
             ui.View.PointerDown(sliderX, slider.Y + 16, 0, false, false);
             ui.View.CancelInteraction(); ui.Paint();
             Check(ui.Canvas.Texts.Any(t => t.Y == slider.Y + 9 && t.Value == Strings.Get("ds.ratio", expected)), "Cancelled drag did not restore value.");

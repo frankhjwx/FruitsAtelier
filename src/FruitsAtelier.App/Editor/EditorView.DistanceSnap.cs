@@ -136,13 +136,7 @@ public sealed partial class EditorView
             dsSliders.Add(slider);
             DrawDistanceSnapSlider(c, slider, DistanceSnapDraftValue(i));
             int sliderHit = hits.Count;
-            hits.Add(new(slider, () =>
-            {
-                if (!CommitDistanceSnapField()) return;
-                dsSliderDrag = row; dsDragStart = dsDraft[row];
-                dsDragBounds = slider; dsDragLimits = DistanceSnapLimits();
-                UpdateDistanceSnapSlider(mouseX, dsSliderShift);
-            }, true));
+            hits.Add(new(slider, () => BeginDistanceSnapDrag(row, slider), true));
             ClipHits(sliderHit);
             DrawField(new(dsList.Right - 170, y + 6, 88, 32), i, L.Get("ds.ratio", dsDraft[i]));
             var remove = new Rect(dsList.Right - 74, y + 6, 66, 32);
@@ -206,6 +200,17 @@ public sealed partial class EditorView
         return [0, stand / unit, walk / unit, dash / unit, Math.Max(512, dash) / unit];
     }
 
+    private void BeginDistanceSnapDrag(int row, Rect bounds)
+    {
+        if (!CommitDistanceSnapField()) return;
+        dsSliderDrag = row; dsDragStart = dsDraft[row];
+        dsDragBounds = bounds; dsDragLimits = DistanceSnapLimits();
+        float top = row * 46;
+        if (top < dsScroll) dsScroll = top;
+        else if (top + 46 > dsScroll + dsList.Height) dsScroll = top + 46 - dsList.Height;
+        UpdateDistanceSnapSlider(mouseX, dsSliderShift);
+    }
+
     private void UpdateDistanceSnapSlider(float x, bool shift)
     {
         double position = Math.Clamp((x - dsDragBounds.X) / dsDragBounds.Width, 0, 1) * 4;
@@ -256,6 +261,9 @@ public sealed partial class EditorView
             c.Line(pointer, r.Y + 41, pointer, r.Y + 51, color, 2);
             c.Line(pointer - 4, r.Y + 48, pointer, r.Y + 53, color, 2);
             c.Line(pointer + 4, r.Y + 48, pointer, r.Y + 53, color, 2);
+            int row = i;
+            hits.Add(new(new(pointer - 8, r.Y + 37, 16, 20),
+                () => BeginDistanceSnapDrag(row, new(r.X + 20, r.Y + 37, r.Width - 40, 20)), true));
         }
 
         for (int i = 0; i < 4; i++)
