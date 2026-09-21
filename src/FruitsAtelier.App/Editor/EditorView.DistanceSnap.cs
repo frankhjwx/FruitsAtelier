@@ -153,7 +153,7 @@ public sealed partial class EditorView
         MapPoint? candidate = r.Contains(mouseX, mouseY) && dsSliderDrag < 0 && !dsSnapDragging
             ? DistanceSnapPreviewCandidate(mouseX, mouseY) : null;
         float radius = Math.Clamp((float)(CatchSize.CatchWidth(Document.CircleSize) / 2 / 512 * (r.Width - 20)), 3, 12);
-        var hyperdashStarts = DrawDistanceSnapPreviewConnections(c, candidate, radius, out var labels);
+        var hyperdashStarts = DrawDistanceSnapPreviewConnections(c, candidate, out var labels);
         foreach (var fruit in dsPreviewFruits)
             c.Circle(DistanceSnapPreviewX(fruit.X), DistanceSnapPreviewY(fruit.TimeMs), radius, hyperdashStarts.Contains(fruit) ? 0xFF5555 : Accent);
         if (candidate is { } ghost)
@@ -170,7 +170,7 @@ public sealed partial class EditorView
         c.Unclip();
     }
 
-    private HashSet<MapPoint> DrawDistanceSnapPreviewConnections(ICanvas c, MapPoint? candidate, float radius,
+    private HashSet<MapPoint> DrawDistanceSnapPreviewConnections(ICanvas c, MapPoint? candidate,
         out List<(Rect Bounds, string Text, uint Color, uint Border)> labels)
     {
         labels = [];
@@ -191,8 +191,8 @@ public sealed partial class EditorView
             double? ratio = DistanceSnap.Ratio(from, to, 100 * Document.SliderMultiplier);
             string label = ratio is { } value ? L.Get("ds.previewRatio", value) : L.Get("ds.previewUndefined");
             float labelWidth = c.MeasureText(label, 11) + 12;
-            float x = Math.Clamp(x2 - labelWidth / 2, r.X + 2, r.Right - labelWidth - 2);
-            float y = Math.Clamp(y2 - radius - 24, r.Y + 2, r.Bottom - 22);
+            float x = Math.Clamp((x1 + x2 - labelWidth) / 2, r.X + 2, r.Right - labelWidth - 2);
+            float y = Math.Clamp((y1 + y2) / 2 - 10, r.Y + 2, r.Bottom - 22);
             bool available = ratio is not { } actual || Math.Abs(actual) < .000001
                 || dsDraft.Any(preset => Math.Abs(actual - preset) < .000001);
             labels.Add((new(x, y, labelWidth, 20), label, available ? Foreground : 0xFF5555,
