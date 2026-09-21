@@ -2,7 +2,8 @@
 param(
     [ValidatePattern('^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|rc)\.[1-9][0-9]*)?$')][string]$Version,
     [string]$OutputDirectory,
-    [ValidateScript({ Test-Path -LiteralPath $_ -PathType Leaf })][string]$UserManual
+    [ValidateScript({ Test-Path -LiteralPath $_ -PathType Leaf })][string]$UserManual,
+    [switch]$AudioDiagnostics
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -32,6 +33,10 @@ try {
     $manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $payload 'build-info.json') -Encoding utf8
     Copy-Item -LiteralPath (Join-Path $repo 'docs/WINDOWS-PACKAGE.txt') -Destination (Join-Path $payload 'START-HERE.txt')
     Copy-Item -LiteralPath (Join-Path $repo 'docs/USER_MANUAL.md') -Destination (Join-Path $payload 'USER-MANUAL.md')
+    if ($AudioDiagnostics) {
+        'Audio diagnostic logging enabled.' | Set-Content -LiteralPath (Join-Path $payload 'audio-diagnostics.enabled') -Encoding ascii
+        Copy-Item -LiteralPath (Join-Path $repo 'docs/AUDIO-DIAGNOSTICS.txt') -Destination (Join-Path $payload 'AUDIO-DIAGNOSTICS.txt')
+    }
     if ($UserManual) { Copy-Item -LiteralPath $UserManual -Destination (Join-Path $payload 'FruitsAtelier-User-Manual.pdf') }
     foreach ($required in @('FruitsAtelier.App.exe', 'coreclr.dll', 'hostfxr.dll', 'hostpolicy.dll', 'THIRD_PARTY_NOTICES.md')) {
         if (!(Test-Path -LiteralPath (Join-Path $payload $required))) { throw "Missing package file: $required" }

@@ -134,6 +134,7 @@ internal sealed partial class EditorWindow
             || error is not null && error != view.AudioNotice
             || state.CanPlay && Math.Abs(view.PlayheadMs - state.PositionMs) > 1;
         if (!changed) return;
+        audio.TracePresentation(view.PlayheadMs, view.AudioPlaying, state);
         view.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading, error, state.FilePath, state.PositionTimestampMs);
         Invalidate();
     }

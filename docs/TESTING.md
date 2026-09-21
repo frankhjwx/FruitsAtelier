@@ -77,6 +77,12 @@ Automated device tests output silent PCM; sample comparisons happen before mutin
 dotnet run --project tests/FruitsAtelier.Audio.Tests -c Release
 ```
 
+`Audio.Tests --diagnostic-check` validates command/event correlation, repeated
+pause positions with logging enabled, unsupported hitsound format identification,
+and continued loading when the diagnostic destination cannot be written. It uses
+an injected output and does not play sound. To capture real-device lifecycle
+checks, set `FRUITSATELIER_AUDIO_DIAGNOSTICS=1` before running `--lifecycle-check`.
+
 ## Window checks
 
 The Windows `--render-check` injects nested paint/timer messages, nested native-modal

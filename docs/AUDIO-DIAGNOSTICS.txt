@@ -1,0 +1,31 @@
+FruitsAtelier - Windows audio diagnostics
+
+1. Extract the entire ZIP into a new folder. Close other FruitsAtelier instances.
+2. Launch FruitsAtelier.exe. This package enables diagnostic logging automatically.
+3. Open a map that reproduces the problem. Start at 100% playback speed.
+4. Play for 5 seconds, pause for 2 seconds, then resume. Repeat 5 times.
+   If needed, also reproduce with your usual speed and pause timing.
+5. Note whether music continues after pause, whether the timeline jumps forward,
+   and whether the delay grows. A recording with both the timeline and sound helps.
+6. Close the application so the logs finish writing.
+7. Paste this path into the Windows Explorer address bar:
+   %LOCALAPPDATA%\FruitsAtelier\logs
+8. Send the audio-*.jsonl files created during this test, plus editor.log if present.
+   Include your Windows version, output device/connection (Bluetooth, USB, wired,
+   HDMI), playback speed, and the map/music that reproduced the problem.
+   If a hitsoundDecodeFailed entry appears, include the named sample and skin name.
+
+Diagnostics include application/runtime versions, default output device names and
+formats, playback commands, clock positions, UI updates, and hitsound filenames and
+decode failures. Detailed audio logs omit full source paths and audio contents;
+the existing editor.log may include paths in exception messages. Nothing uploads
+automatically. Each audio log is capped at 16 MiB; a new run creates fresh files.
+Old logs remain available until you delete them.
+
+Logging writes through a bounded background queue. A logClosed record reports any
+dropped entries. A sizeLimitReached record means the file reached its limit; restart
+the application for a fresh capture. This build keeps existing playback behavior.
+
+To disable diagnostic logging, close the app and remove
+current\audio-diagnostics.enabled from this extracted package.
+Repository builds write to artifacts\logs instead of the path above.

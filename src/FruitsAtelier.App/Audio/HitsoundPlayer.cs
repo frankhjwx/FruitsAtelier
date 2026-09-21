@@ -4,8 +4,9 @@ using NAudio.Wave;
 namespace FruitsAtelier.App.Audio;
 
 /// <summary>A bounded polyphonic mixer, independent of the music transport clock.</summary>
-internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvider, IDisposable
+internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnosticDirectory = null) : ISampleProvider, IDisposable
 {
+    private readonly AudioDiagnosticLog diagnostics = new(diagnosticDirectory);
     private readonly object gate = new();
     private readonly Dictionary<string, float[]> cache = new();
     private long cacheBytes;
@@ -108,6 +109,8 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
         float[] samples = HitsoundSamples.Create(sound);
         if (sound.FilePath is not null)
         {
+            double beganMs = AudioDiagnosticLog.NowMs;
+            string? sourceFormat = null, decoder = null;
             try
             {
                 if (new FileInfo(sound.FilePath).Length <= 16 * 1024 * 1024)
@@ -118,6 +121,12 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
                         ".wav" => new WaveFileReader(sound.FilePath),
                         _ => new MediaFoundationReader(sound.FilePath)
                     };
+                    sourceFormat = reader.WaveFormat.ToString();
+                    decoder = reader.GetType().Name;
+                    if (diagnostics.Enabled) diagnostics.Write("hitsoundDecodeBegin", new { fileName = Path.GetFileName(sound.FilePath),
+                        decoder, sourceFormat, encoding = reader.WaveFormat.Encoding.ToString(),
+                        bitsPerSample = reader.WaveFormat.BitsPerSample, channels = reader.WaveFormat.Channels,
+                        sampleRate = reader.WaveFormat.SampleRate });
                     ISampleProvider source = reader.ToSampleProvider();
                     if (source.WaveFormat.Channels == 2) source = new NAudio.Wave.SampleProviders.StereoToMonoSampleProvider(source);
                     if (source.WaveFormat.Channels != 1) throw new InvalidDataException("Hitsound must be mono or stereo.");
@@ -130,9 +139,17 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
                         decoded.AddRange(buffer.Take(count));
                     }
                     samples = decoded.ToArray();
+                    if (diagnostics.Enabled) diagnostics.Write("hitsoundDecoded", new { fileName = Path.GetFileName(sound.FilePath),
+                        samples = samples.Length, elapsedMs = AudioDiagnosticLog.NowMs - beganMs });
                 }
             }
-            catch (Exception ex) { log?.Invoke(ex.ToString()); }
+            catch (Exception ex)
+            {
+                if (diagnostics.Enabled) diagnostics.Write("hitsoundDecodeFailed", new { fileName = Path.GetFileName(sound.FilePath),
+                    decoder, sourceFormat, errorType = ex.GetType().FullName, ex.HResult, ex.StackTrace,
+                    fallback = "generatedSample", elapsedMs = AudioDiagnosticLog.NowMs - beganMs });
+                log?.Invoke(ex.ToString());
+            }
         }
         if (cacheBytes + samples.LongLength * 4 > 256 * 1024 * 1024) { log?.Invoke("Hitsound project PCM bank exceeds 256 MiB; sample skipped: " + key); samples = []; }
         cache[key] = samples; cacheBytes += samples.LongLength * 4;
@@ -157,5 +174,10 @@ internal sealed class HitsoundPlayer(Action<string>? log = null) : ISampleProvid
         return count;
     }
     public void Stop() { lock (gate) { voices.Clear(); scheduled.Clear(); } }
-    public void Dispose() { unavailable = true; liveOutput?.Dispose(); liveOutput = null; Stop(); }
+    public void Dispose()
+    {
+        unavailable = true;
+        try { liveOutput?.Dispose(); liveOutput = null; Stop(); }
+        finally { diagnostics.Dispose(); }
+    }
 }

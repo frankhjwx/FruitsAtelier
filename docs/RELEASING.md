@@ -30,6 +30,12 @@ same version and commit. Release builds run from the clean tagged commit.
 The window title displays this version beside the application name, omitting the
 source commit suffix and retaining any prerelease label.
 
+For a Windows audio diagnostic package, pass `-AudioDiagnostics` and a separate
+output directory, for example `-Version 0.8.3-beta.1` with
+`-OutputDirectory artifacts/audio-diagnostic-release`. The package includes an
+enabling marker and [capture instructions](AUDIO-DIAGNOSTICS.txt). This creates
+local package artifacts; it does not publish a GitHub release.
+
 The package includes the English [user manual source](USER_MANUAL.md). To include
 its PDF edition, install Python and ReportLab, render the manual, then pass the
 output to the packaging script:

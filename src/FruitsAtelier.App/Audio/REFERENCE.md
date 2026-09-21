@@ -1,5 +1,15 @@
 # Audio transport
 
+Windows audio diagnostics are opt-in through `audio-diagnostics.enabled` beside
+the application binary or `FRUITSATELIER_AUDIO_DIAGNOSTICS=1`. Each transport and
+hitsound bank writes its own timestamped JSONL file using a bounded background
+queue, with a 16 MiB file limit. Logs include default endpoint metadata, command
+queue and execution timing, output session lifecycle, source/device/published
+positions, UI presentation, and hitsound decoder formats and failures. Clock and
+playing UI samples are limited to four per second; state transitions remain
+event-driven. Diagnostic reads do not change playback position. See the
+[capture instructions](../../../docs/AUDIO-DIAGNOSTICS.txt) for collection.
+
 `AudioTransport` queues load, play, pause, seek and speed operations on one worker. The UI reads its immutable `State` snapshot; it does not call the decoder or output device. `LoadAsync` and `WaitForCommandsAsync` allow callers to await applied operations. `CanPlay` stays true while a loaded device is paused.
 
 The output uses event-driven shared-mode `WasapiOut` with the system default device and 80 ms requested latency. MP3 decoding uses Windows Media Foundation; OGG Vorbis uses NVorbis; WAV uses NAudio's WAV reader. All streams are converted to 16-bit PCM before output. This version accepts mono and stereo audio.
