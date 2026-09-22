@@ -10,6 +10,34 @@ The Details header shows read-only beatmap AR, CS, and the base SliderMultiplier
 
 During playback and seeking, the play line stays at its configured height, initially 25% above the bottom of the drawing area. While paused, drag its leftmost yellow handle vertically to set that height between 5% and 95% of the drawing area. The current time stays unchanged and canvas content scrolls with the line. Playback disables handle dragging and uses the chosen height. The height is saved as a global view preference when the drag finishes and restored after restarting the editor. It is retained across resizing and difficulty switches without editing map content or undo history. Esc or lost capture cancels a drag. Left-button marquee selection on the canvas and object timeline keeps playback scrolling and accepts wheel navigation while held. The start stays anchored to its original map time while the other end follows the pointer, so the box grows during scrolling even with a stationary pointer. Within 24 DIP of the canvas's top/bottom edge or the object timeline's left/right edge, a dragged selection automatically scrolls toward that edge, gradually increasing to 1200 DIP per second on the canvas or 600 DIP per second on the object timeline. Moving back inside, releasing the button, cancelling, or reaching the map boundary stops automatic scrolling. Objects inside the time range remain selected after they move outside the viewport. Paused middle-button panning is free; canvas wheel navigation preserves the current playhead-to-viewport offset, while playback and other seeking resume following.
 
+## Song Setup
+
+The **Song Setup** button immediately left of Skin opens a modal with General,
+Difficulty, Colors and Design tabs. **OK** applies the draft in one undo step;
+Cancel or Esc discards it. Playback pauses when opening the dialog. Editor
+shortcuts, seeking and object input are blocked until it closes.
+
+General edits artist, title, creator, source and tags across every difficulty in
+the project. Non-ASCII artist/title text enables a separate romanised field;
+ASCII text supplies both forms. Difficulty Name belongs only to the current
+difficulty. Undo/redo in the difficulty where the change was made also restores
+the affected shared fields in the other difficulties, retaining their independent
+object histories. Unedited fields and source settings are preserved.
+
+Difficulty edits the current difficulty's HP, CS, AR and OD from 0 to 10. Drag a
+slider in whole steps, hold Shift for 0.1 steps, or type a decimal value. Colors
+edits that difficulty's custom combo palette using a saturation/value palette,
+hue strip and six-digit HEX input. Add up to eight colors, select a swatch to edit
+it, or remove a selected color while retaining at least one. Disabling custom
+colors removes the beatmap combo overrides, allowing the normal skin fallback.
+The canvas, preview and testplay use the confirmed palette.
+
+Design stores countdown speed (off, normal, half or double), a non-negative
+countdown offset in beats, widescreen storyboard support, letterboxing in breaks
+and the flashing-light warning. These options are preserved in project saves and
+`.osu` exports; the editor does not render countdown or storyboard effects.
+Audio, Advanced and preferred-skin controls are not part of Song Setup.
+
 ## Settings
 
 The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Testplay keys, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** is enabled only while unapplied changes exist. It saves them, stays in the current settings category, and becomes disabled again; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport. **Appearance → Romanised artist / title** defaults to On and controls Library cards, Library details, and the editor window title. Off prefers the Unicode metadata; either mode falls back to the other spelling when its preferred field is empty. Apply persists the preference without changing beatmap data, filenames, or search matching.

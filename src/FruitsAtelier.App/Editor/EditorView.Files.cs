@@ -36,6 +36,7 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        CloseSongSetup();
         TimeJumpVisible = false;
         StreamDialogVisible = false;
         CloseVolumeDialog();
@@ -149,7 +150,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
-        if (DistanceSnapDialogVisible) return false;
+        if (SongSetupVisible || DistanceSnapDialogVisible) return false;
         if (SliderDialogVisible || ErrorVisible) return false;
         if (draftBanana != Guid.Empty)
         {

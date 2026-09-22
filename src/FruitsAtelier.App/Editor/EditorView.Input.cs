@@ -23,6 +23,7 @@ public sealed partial class EditorView
         }
         ResetTextCaret();
         mouseX = x; mouseY = y;
+        if (SongSetupVisible) { SongSetupPointerDown(x, y, button, shift); return; }
         if (DistanceSnapDialogVisible)
         {
             dsSliderShift = shift;
@@ -278,6 +279,7 @@ public sealed partial class EditorView
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
         if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
+        if (SongSetupVisible) { mouseX = x; mouseY = y; MoveSongSetup(x, y, shift); return; }
         if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x, shift); return; }
         if (distanceDragging) { UpdateDistanceSlider(x, shift); return; }
         placementCtrl = ctrl;
@@ -389,6 +391,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
+        if (SongSetupVisible) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
         if (updatesPage) return;
         if (dsSnapDragging && button == 0) { SetDistanceSnapSubdivision(x); dsSnapDragging = false; return; }
@@ -436,6 +439,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (SongSetupVisible) return;
         if (DistanceEditing) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (updatesPage) return;
         if (IsTestplaying) return;
@@ -475,6 +479,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl)
     {
+        if (SongSetupVisible) return;
         if (DistanceSnapDialogVisible)
         {
             return;
@@ -626,6 +631,7 @@ public sealed partial class EditorView
             return;
         }
         if (updatesPage) { if (virtualKey == 27) updatesPage = false; return; }
+        if (SongSetupVisible) { SongSetupKey(virtualKey, ctrl, shift); return; }
         if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl, shift); return; }
         if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey); return; }
@@ -734,6 +740,7 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (SongSetupVisible) { if (!char.IsControl(value)) PasteSongSetupText(value.ToString(), SongSetupInputSession); return; }
         if (DistanceSnapDialogVisible) return;
         if (DistanceEditing) { DistanceTextInput(value); return; }
         if (updatesPage) return;
@@ -759,6 +766,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction()
     {
+        songDrag = -1;
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
         FinishDistanceEdit(true);

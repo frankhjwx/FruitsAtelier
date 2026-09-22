@@ -71,6 +71,7 @@ public sealed partial class EditorView
         DrawStreamDialog(c);
         DrawVolumeDialog(c);
         DrawDistanceSnapDialog(c);
+        DrawSongSetup(c);
         DrawDiscardConfirmation(c);
         DrawDifficultyTooltip(c);
     }
@@ -84,6 +85,7 @@ public sealed partial class EditorView
         Button(c, new(215, 6, 50, 28), L.Get("ui.view"), () => { gridLevelMenuOpen = false; menu = menu == 2 ? -1 : 2; }, menu == 2);
         Button(c, new(268, 6, 94, 28), L.Get("library.settings"), OpenSettings);
         DrawDifficultyTabs(c);
+        Button(c, SongSetupButtonBounds, L.Get("song.title"), OpenSongSetup);
         DrawSkinSelector(c);
         Button(c, HeaderNavigationBounds, L.Get("library.back"), ShowLibrary);
         c.Line(0, 83, width, 83, Grid);

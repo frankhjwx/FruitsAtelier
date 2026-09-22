@@ -28,6 +28,7 @@ internal sealed partial class EditorWindow : IDisposable
         ConfigureFiles();
         view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
         view.RequestPasteTime = () => view.PasteTimeJumpText(Native.ReadClipboardText(hwnd), view.TimeJumpSession);
+        view.RequestPasteSongSetup = () => view.PasteSongSetupText(Native.ReadClipboardText(hwnd), view.SongSetupInputSession);
         view.RequestClose = Close;
         view.RequestLoadSkin = () =>
         {

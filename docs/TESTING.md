@@ -213,3 +213,8 @@ Synthetic App regressions cover the inclusive 5 ms edge boundary, the slider bod
 scope, combo reference numbers, horizontal grids, and timestamp precision.
 
 The feedback regressions cover V/End navigation, scroll direction, persistent independent volume controls, skin sample precedence and cache upgrades, and compatible versus conflicting close SV timing. Windows PCM checks verify live and scheduled hitsound gain separately from song gain; headless Mac CI exercises the native mixer with no audio device. Native window checks exercise all three volume sliders in both languages.
+
+Song Setup regressions cover shared metadata, independent difficulty settings,
+romanised fields, modal isolation, cancellation, undo/redo, palette HEX input and
+project/`.osu` persistence. Native window checks open all four tabs in both
+languages at each supported test size and DPI and exercise the color picker.

@@ -19,6 +19,13 @@ The authoring model persists as UTF-8 JSON. Documents containing exact control c
 
 The editor maintains an independent `EditorHistory` per difficulty and accesses `Document` through the current difficulty. Undo affects only that difficulty; saving updates every history baseline. Adding a difficulty changes project structure rather than a difficulty's object undo stack and keeps the project dirty until saved. The active difficulty, tab scroll position, playhead, and viewport are session state and are not persisted. Opening selects the first difficulty; switching does not create content history. The project container does not force imported `.osu` difficulties to share audio or timing, avoiding overwriting source content.
 
+Song Setup stores metadata, HP/OD, combo colors and Design options in the existing
+raw sections; AR/CS remain the authoritative model properties. No project schema
+change is needed. Shared metadata edits propagate only the changed keys to the
+other difficulty histories. Their saved baselines remain intact for dirty checks,
+and their local undo snapshots retain the shared values. The initiating undo
+transaction restores each difficulty's own previous shared values.
+
 ## Concrete model
 
 Raw section lines retain independent mutable storage in document snapshots. Unchanged clones share a non-persisted equality identity, so repeated dirty, conversion and difficulty checks do not scan entire storyboards. Every line mutation invalidates that identity; different identities fall back to content comparison. Project JSON still stores section lines as string arrays.

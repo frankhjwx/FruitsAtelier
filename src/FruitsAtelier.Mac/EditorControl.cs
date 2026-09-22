@@ -49,6 +49,17 @@ internal sealed class EditorControl : Control, IDisposable
             View.DropLibraryFiles(DroppedPaths(e));
             e.Handled = true; Refresh();
         });
+        View.RequestPasteSongSetup = async () =>
+        {
+            int session = View.SongSetupInputSession;
+            try
+            {
+                if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+                    View.PasteSongSetupText(await clipboard.TryGetTextAsync() ?? "", session);
+            }
+            catch (Exception error) { View.SetNotice(error.Message); }
+            Refresh();
+        };
         View.RequestPasteTime = async () =>
         {
             int session = View.TimeJumpSession;

@@ -14,7 +14,7 @@ public sealed partial class EditorView
     private sealed class DifficultySession(ProjectDifficulty difficulty)
     {
         public Guid Id { get; } = difficulty.Id;
-        public string Name { get; } = difficulty.Name;
+        public string Name => OsuBeatmapReader.Setting(History.Document, "Metadata", "Version") ?? difficulty.Name;
         public EditorHistory History { get; } = new(difficulty.Document);
         public double Playhead, ViewStart;
         public MapDocument? RatingSnapshot;
@@ -79,8 +79,8 @@ public sealed partial class EditorView
     public Action? RequestClose { get; set; }
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
-    public bool IsEditingText => DistanceEditing || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
-    public bool WantsCapture => dsSnapDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || SliderHoldNeedsRedraw || sliderHoldConsumed;
+    public bool IsEditingText => SongSetupVisible && songField.Length > 0 || DistanceEditing || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
+    public bool WantsCapture => songDrag >= 0 || dsSnapDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || SliderHoldNeedsRedraw || sliderHoldConsumed;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;
     public double PlayheadMs => playhead;
@@ -288,9 +288,9 @@ public sealed partial class EditorView
         StatusMessage = L.Get("editor.status.redone");
     }
 
-    private bool Edit(string label, Action change)
+    private bool Edit(string label, Action change, Action<bool, MapDocument, MapDocument>? restoreRelated = null)
     {
-        history.Begin(label);
+        history.Begin(label, restoreRelated);
         try
         {
             var before = notesLocked ? Document.DeepClone() : null;

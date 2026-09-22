@@ -8,7 +8,7 @@ public sealed partial class EditorView
     private bool textInputFocused = true, paintedCaret;
     private bool CaretVisible => textInputFocused && (Environment.TickCount64 - caretEpoch) % 1000 < 500;
     public bool TextCaretNeedsRedraw => IsEditingText && textInputFocused
-        && (!(TimeJumpVisible ? timeJumpSelected : LibraryTextFocused ? libraryReplace : replaceText) || (TimeJumpVisible ? timeJumpText : LibraryTextFocused ? LibraryFieldValue : editBuffer).Length == 0)
+        && (!(SongSetupVisible ? songSelectAll : TimeJumpVisible ? timeJumpSelected : LibraryTextFocused ? libraryReplace : replaceText) || (SongSetupVisible ? songValues.GetValueOrDefault(songField, "") : TimeJumpVisible ? timeJumpText : LibraryTextFocused ? LibraryFieldValue : editBuffer).Length == 0)
         && paintedCaret != CaretVisible;
 
     public void SetTextInputFocus(bool focused)
