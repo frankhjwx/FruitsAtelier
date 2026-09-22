@@ -327,8 +327,7 @@ public sealed partial class EditorView
         if (librarySettingsOpen) { DrawSettings(c); return; }
         DrawHeader(c);
         c.Text(L.Get(resourcePage ? "library.referenceErrors" : exportPage ? "library.export" : "library.title"), 109, 11, 13, Foreground, width - 535, true);
-        Button(c, new(width - 414, 6, 110, 28), L.Get("library.settings"), OpenSettings);
-        DrawLanguageButton(c, HeaderLanguageBounds);
+        Button(c, new(HeaderNavigationBounds.X - 116, 6, 110, 28), L.Get("library.settings"), OpenSettings);
         if (HasEditorProject) Button(c, HeaderNavigationBounds, L.Get("library.editor"), CloseLibrary);
         if (updatesPage) { DrawUpdates(c); return; }
         if (resourcePage)

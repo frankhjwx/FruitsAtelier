@@ -11,7 +11,7 @@ FruitsAtelier is an osu!catch beatmap editor for Windows and macOS. Use it to ed
 1. On Windows, extract the entire release ZIP and open `FruitsAtelier.App.exe`. Keep the DLLs and assets beside it. No separate .NET installation is needed. Windows 10/11 x64 and DirectX 11 are required; Windows N needs the Media Feature Pack for MP3 playback.
 2. In **Library > Settings**, choose a workspace for your projects. You may also select your osu!stable installation folder to use its Songs and Skins folders. Keep the workspace separate from Songs.
 3. Right-click the library to import a folder or a beatmap/OSZ, or choose **New project**. Double-click a library entry to start or continue editing.
-4. Use the Language and Skin controls to set up the display. Testplay movement keys can be changed in Settings.
+4. Choose the interface language in **Settings → Appearance** and use the top-bar Skin control to set up the display. Testplay movement keys can be changed in Settings.
 
 On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are in the repository's macOS guide. Command can be used in place of Ctrl for editor shortcuts.
 

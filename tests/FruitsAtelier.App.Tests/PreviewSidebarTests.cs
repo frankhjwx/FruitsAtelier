@@ -153,8 +153,7 @@ internal static class PreviewSidebarTests
         var toggle = ui.View.PreviewToggleBounds; ui.Click(toggle.X + 10, toggle.Y + 10);
         Near(closedWidth, ui.View.CanvasPlotBounds.Width);
         Check(ui.View.Document.ContentEquals(baseline) && !ui.View.IsDirty, "preview controls preserve content and history");
-        string language = L.Get("ui.languageButton", System.Globalization.CultureInfo.GetCultureInfo(L.Language).NativeName) + " ▾";
-        Check(ui.Canvas.Texts.Single(text => text.Value == L.Get("library.back")).X > ui.Canvas.Texts.Single(text => text.Value == language).X, "Library is right of Language");
+        Check(ui.Canvas.Texts.Single(text => text.Value == L.Get("library.back")).X > ui.View.SkinSelectorBounds.Right, "Library is right of the skin selector");
         ui.ClickText(L.Get("ui.file"));
         var shortcuts = ui.Canvas.Texts.Where(text => text.Value.StartsWith("Ctrl +", StringComparison.Ordinal)).ToArray();
         Check(shortcuts.Length >= 3, "menu shortcuts are separate labels");

@@ -28,7 +28,6 @@ public sealed partial class EditorView
         => LibrarySettings.RomanisedMetadata
             ? (string.IsNullOrWhiteSpace(romanised) ? unicode : romanised)
             : (string.IsNullOrWhiteSpace(unicode) ? romanised : unicode);
-    private Rect HeaderLanguageBounds => new(width - 298, 6, 198, 28);
     private Rect HeaderNavigationBounds => new(width - 94, 6, 82, 28);
 
     private void DrawHeader(ICanvas c)

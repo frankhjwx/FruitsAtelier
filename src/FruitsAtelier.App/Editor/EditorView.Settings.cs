@@ -58,7 +58,6 @@ public sealed partial class EditorView
     {
         DrawHeader(c);
         c.Text(L.Get("library.settings"), 109, 11, 13, Foreground, 200, true);
-        DrawLanguageButton(c, HeaderLanguageBounds);
         Button(c, HeaderNavigationBounds, L.Get(settingsFromLibrary ? "library.back" : "library.editor"), CloseSettings);
         c.Fill(new(0, HeaderHeight, 214, height - HeaderHeight), Panel);
         string[] categories = ["settings.workspace", "settings.appearance", "settings.testplay", "update.title"];
@@ -88,6 +87,7 @@ public sealed partial class EditorView
                 Button(c, new(SettingsContentX, 270, Math.Min(520, width - SettingsContentX - 32), 38),
                     L.Get(draftRomanisedMetadata ? "settings.romanisedOn" : "settings.romanisedOff"),
                     () => draftRomanisedMetadata = !draftRomanisedMetadata, draftRomanisedMetadata);
+                DrawLanguageButton(c, new(SettingsContentX, 330, 280, 38));
                 break;
             case SettingsCategory.Testplay:
                 DrawTestplayBindings(c);
@@ -112,6 +112,7 @@ public sealed partial class EditorView
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
             settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;
+            settings.PlaybackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
             bool rootsChanged = settings.Workspace != LibrarySettings.Workspace || settings.OsuRoot != LibrarySettings.OsuRoot;
             settings.Save(settingsPath);

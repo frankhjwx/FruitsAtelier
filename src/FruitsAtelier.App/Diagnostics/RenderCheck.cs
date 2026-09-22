@@ -187,7 +187,7 @@ internal static class RenderCheck
                 view.KeyDown(27, false, false);
                 view.MarkSaved(); view.ShowLibrary();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
-                view.PointerDown(width - 380, 20, 0, false, false); view.PointerUp(width - 380, 20, 0);
+                view.PointerDown(width - 160, 20, 0, false, false); view.PointerUp(width - 160, 20, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(40, 190, 0, false, false); view.PointerUp(40, 190, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();

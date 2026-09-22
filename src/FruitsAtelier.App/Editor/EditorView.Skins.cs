@@ -8,7 +8,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     public Action? RequestSkinPreference { get; set; }
-    public Rect SkinSelectorBounds => new(HeaderLanguageBounds.X - 206, 6, 200, 28);
+    public Rect SkinSelectorBounds => new(HeaderNavigationBounds.X - 206, 6, 200, 28);
     public Action? RequestDefaultSkinArchive { get; set; }
     public void SetDefaultSkinArchive(string archive) => draftDefaultSkin = archive;
     private CatchSkin? defaultSkin;
