@@ -85,7 +85,7 @@ public sealed class AudioTransport : IDisposable
     {
         diagnostics = new AudioDiagnosticLog(diagnosticDirectory);
         this.outputGain = outputGain;
-        this.createPlayer = createPlayer ?? (() => new WasapiOut(AudioClientShareMode.Shared, true, 80));
+        this.createPlayer = createPlayer ?? (() => new WasapiOut(AudioClientShareMode.Shared, true, 10));
         this.stopTimeout = stopTimeout ?? TimeSpan.FromSeconds(3);
         worker = Task.Run(WorkAsync);
     }
@@ -357,7 +357,7 @@ public sealed class AudioTransport : IDisposable
         var session = new OutputSession(pcm, () => commands.Writer.TryWrite(new(CommandKind.Refresh, version)), createPlayer, diagnostics, tempo);
         if (diagnostics.Enabled) diagnostics.Write("outputCreated", new { session = session.Id,
             backend = session.Player.GetType().Name, outputFormat = session.Player.OutputWaveFormat.ToString(),
-            sourceFormat = pcm.WaveFormat.ToString(), requestedLatencyMs = session.Player is WasapiOut ? 80 : (int?)null,
+            sourceFormat = pcm.WaveFormat.ToString(), requestedLatencyMs = session.Player is WasapiOut ? 10 : (int?)null,
             basePositionMs = basePosition, playbackSpeed });
         return session;
     }

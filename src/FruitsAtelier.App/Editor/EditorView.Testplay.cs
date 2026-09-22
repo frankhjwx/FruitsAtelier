@@ -23,7 +23,6 @@ public sealed partial class EditorView
     public double TestplayCatcherX => testplay?.X ?? 256;
     public Rect TestplayButtonBounds { get; private set; }
     public Action? RequestPausePlayback { get; set; }
-    public Action? RequestPrepareTestplayAudio { get; set; }
     public Func<CatchTestplaySession, IDisposable>? RequestRunTestplay { get; set; }
 
     public void StartTestplay()
@@ -35,7 +34,6 @@ public sealed partial class EditorView
         var session = new CatchTestplay(PreviewObjects(), PreviewCircleSize, playhead);
         if (session.Finished || AudioReady && playhead >= AudioDurationMs)
         { StatusMessage = L.Get("testplay.noNotes"); return; }
-        if (AudioReady) RequestPrepareTestplayAudio?.Invoke();
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
         testplayStart = playhead;
         testplayTabHeld = false;

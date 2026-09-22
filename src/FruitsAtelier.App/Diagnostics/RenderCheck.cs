@@ -143,7 +143,6 @@ internal static class RenderCheck
         var project = view.CaptureProject();
         var toggle = view.RequestTogglePlayback; var pause = view.RequestPausePlayback;
         var seek = view.RequestSeek; var hitsound = view.RequestHitsound;
-        var prepare = view.RequestPrepareTestplayAudio;
         var volumePreference = view.RequestAudioPreference;
         var updateCheck = view.RequestUpdateCheck;
         var updateStatus = view.UpdateStatus;
@@ -153,7 +152,6 @@ internal static class RenderCheck
         {
             view.RequestTogglePlayback = () => { }; view.RequestPausePlayback = () => { };
             view.RequestSeek = _ => { }; view.RequestHitsound = _ => { };
-            view.RequestPrepareTestplayAudio = () => { };
             view.RequestAudioPreference = () => { };
             view.RequestUpdateCheck = () => { };
             var map = new MapDocument();
@@ -306,7 +304,6 @@ internal static class RenderCheck
             view.StopTestplay(); view.LoadProject(project); view.CloseLibrary();
             view.RequestTogglePlayback = toggle; view.RequestPausePlayback = pause;
             view.RequestSeek = seek; view.RequestHitsound = hitsound;
-            view.RequestPrepareTestplayAudio = prepare;
             view.RequestAudioPreference = volumePreference;
             view.RequestUpdateCheck = updateCheck;
             view.UpdateStatus = updateStatus;

@@ -22,7 +22,6 @@ internal sealed partial class EditorWindow
         view.HitsoundLookaheadMs = 250;
         view.RequestScheduleHitsound = hitsounds.Schedule;
         view.RequestHitsound = hitsounds.PlayImmediate;
-        view.RequestPrepareTestplayAudio = () => hitsounds.PrepareLiveOutput();
         view.RequestPrepareHitsound = hitsounds.Prepare;
         view.RequestPreloadHitsounds = documents => hitsounds.PreloadProject(documents, view.HitsoundSkinFolders);
         view.PreloadProjectHitsounds();

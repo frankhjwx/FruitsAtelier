@@ -91,9 +91,9 @@ object's timestamp; updates split movement at those timestamps to avoid skipping
 judgements on slow frames. Hyperdash activates only after catching its departure
 object. Fruits and droplets build or break combo; bananas and tiny droplets do not.
 Only caught objects trigger testplay hitsounds; preview lookahead scheduling is
-disabled during testplay. Windows uses a separate persistent live mixer with
-10 ms requested WASAPI latency, bypassing music read-ahead. Mac submits them to
-its live hitsound mixer. First-note judgement waits for the audio device to advance.
+disabled during testplay. Windows mixes live hitsounds into the music output's
+next callback with 10 ms requested WASAPI latency. Mac submits them to its live
+hitsound mixer. First-note judgement waits for the audio device to advance.
 
 Tab toggles autoplay without seeking or resetting combo. It uses the same cached
 automatic catcher path as the preview and feeds live judgements, sounds, stacks

@@ -27,12 +27,12 @@ At playback speeds of 25% and below, SoundTouch uses quick seek, a 30 ms sequenc
 and 4 ms overlap to reduce choppy low-speed playback. Higher speeds retain the
 library defaults. These parameters reference `osu.Framework/Audio/Track/TrackBass.cs`
 at osu!framework commit `94724b4385479b2e00bb347c9201ce9d9d13f594`; BASS is not
-bundled. Output continues to request an 80 ms shared-mode WASAPI buffer. Runtime
+bundled. Output requests a 10 ms shared-mode WASAPI buffer. Runtime
 PCM recording and environment-based tempo/buffer overrides are not provided.
 
 `AudioTransport` queues load, play, pause, seek and speed operations on one worker. The UI reads its immutable `State` snapshot; it does not call the decoder or output device. `LoadAsync` and `WaitForCommandsAsync` allow callers to await applied operations. `CanPlay` stays true while a loaded device is paused.
 
-The output uses event-driven shared-mode `WasapiOut` with the system default device and 80 ms requested latency. MP3 decoding uses Windows Media Foundation; OGG Vorbis uses NVorbis; WAV uses NAudio's WAV reader. All streams are converted to 16-bit PCM before output. This version accepts mono and stereo audio.
+The output uses event-driven shared-mode `WasapiOut` with the system default device and 10 ms requested latency. MP3 decoding uses Windows Media Foundation; OGG Vorbis uses NVorbis; WAV uses NAudio's WAV reader. All streams are converted to 16-bit PCM before output. This version accepts mono and stereo audio.
 
 MP3 loading continuously decodes into a PCM cache before reporting ready. The cache uses 64 KiB chunks, a 512 MiB decoded-data limit, and cancellation checks between reads when another load supersedes it or the transport is disposed. A five-minute 44.1 kHz stereo track needs about 50 MiB. Seeking selects a complete frame; a fractional request rounds down by less than one sample frame. Cached PCM is released when the reader is disposed.
 
@@ -70,4 +70,4 @@ dotnet run --project tests/FruitsAtelier.Audio.Tests -c Release
 
 With external MP3 fixtures, the tests compare PCM at forward, backward, zero and end-of-file seeks against a continuous decode, including the first returned sample. They also compare the real device clock against elapsed time across playback, verify frame-aligned paused seeks, and check cancellation and recovery.
 
-FFmpeg is a test-fixture tool only; the application does not require it. The worker samples the device clock every 10 ms while playing; snapshots are not extrapolated between samples. Requested output buffering remains 80 ms. Test commands and fixture requirements are in [Testing](../../../docs/TESTING.md).
+FFmpeg is a test-fixture tool only; the application does not require it. The worker samples the device clock every 10 ms while playing; snapshots are not extrapolated between samples. Requested output buffering is 10 ms. Test commands and fixture requirements are in [Testing](../../../docs/TESTING.md).
