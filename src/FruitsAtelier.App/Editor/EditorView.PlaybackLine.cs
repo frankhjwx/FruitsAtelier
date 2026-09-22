@@ -4,6 +4,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    public Action? RequestViewPreference { get; set; }
     private double playbackLineDragRatio, playbackLineDragViewStart;
     private bool playbackLineDragPinned;
     private float playbackLineGrabOffset;
@@ -26,6 +27,14 @@ public sealed partial class EditorView
         if (AudioPlaying) { CancelPlaybackLineDrag(); return; }
         playbackLineFromBottom = Math.Clamp((plot.Bottom - y + playbackLineGrabOffset) / plot.Height, .05, .95);
         FollowPlayhead();
+    }
+
+    private void FinishPlaybackLineDrag()
+    {
+        drag = DragKind.None;
+        if (LibrarySettings.PlaybackLineFromBottom == playbackLineFromBottom) return;
+        LibrarySettings.PlaybackLineFromBottom = playbackLineFromBottom;
+        RequestViewPreference?.Invoke();
     }
 
     private void CancelPlaybackLineDrag()

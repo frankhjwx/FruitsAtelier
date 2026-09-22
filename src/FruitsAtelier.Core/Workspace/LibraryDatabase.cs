@@ -13,6 +13,12 @@ public sealed class LibrarySettings
     public string? SelectedSkin { get; set; }
     public string? DefaultSkin { get; set; }
     public bool RomanisedMetadata { get; set; } = true;
+    private double playbackLineFromBottom = .25;
+    public double PlaybackLineFromBottom
+    {
+        get => playbackLineFromBottom;
+        set => playbackLineFromBottom = double.IsFinite(value) ? Math.Clamp(value, .05, .95) : .25;
+    }
     public int TestplayLeftKey { get; set; } = 37;
     public int TestplayRightKey { get; set; } = 39;
     public int TestplayDashKey { get; set; } = 16;

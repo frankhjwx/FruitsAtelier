@@ -17,6 +17,7 @@ internal sealed partial class EditorWindow
         audio.Hitsounds = hitsounds;
         view.RequestAudioVolume = (song, hit) => { audio.SongVolume = song; hitsounds.Volume = hit; };
         view.RequestAudioPreference = () => FileOperation(() => view.LibrarySettings.Save());
+        view.RequestViewPreference = () => FileOperation(() => view.LibrarySettings.Save());
         view.ApplyAudioVolume();
         view.HitsoundLookaheadMs = 250;
         view.RequestScheduleHitsound = hitsounds.Schedule;
