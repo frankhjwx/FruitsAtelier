@@ -38,7 +38,7 @@ internal sealed partial class MacWindow : Window
         View.PreloadProjectHitsounds();
         View.RequestStopHitsounds = hitsounds.Stop;
         Width = 1440; Height = 900; MinWidth = 980; MinHeight = 620;
-        Content = CreateEditorSurface(); Title = View.WindowTitle;
+        Content = editor; Title = View.WindowTitle;
         string icon = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "app-icon.png");
         if (File.Exists(icon)) Icon = new WindowIcon(icon);
         editor.Changed = UpdateTitle;

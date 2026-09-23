@@ -92,7 +92,6 @@ internal sealed partial class EditorWindow : IDisposable
             view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
             CheckPaintLifecycle();
             CheckUpdateRefresh();
-            CheckNativeText();
             Diagnostics.RenderCheck.Run(canvas, view, hwnd);
             Native.DestroyWindow(hwnd);
             return 0;
@@ -122,21 +121,6 @@ internal sealed partial class EditorWindow : IDisposable
                 if (result == 0) break;
             }
             // IME-owned key messages lose their original key after TranslateMessage.
-            if (msg.Window == nativeText && msg.Id == 0x0100)
-            {
-                int key = (int)msg.WParam;
-                if (key is 9 or 13 or 27)
-                {
-                    view.KeyDown(key, Native.Control, Native.Shift);
-                    Invalidate();
-                    continue;
-                }
-                if (key == 65 && Native.Control)
-                {
-                    Native.SendMessage(nativeText, 0x00B1, 0, -1);
-                    continue;
-                }
-            }
             if (msg.Window == hwnd && msg.Id == 0x0100 && Native.Control && Native.Shift)
             {
                 uint key = msg.WParam == 0xE5 ? Native.ImmGetVirtualKey(hwnd) : (uint)msg.WParam;
@@ -267,18 +251,8 @@ internal sealed partial class EditorWindow : IDisposable
                     if (ownsPaint) painting = false;
                 }
                 // DXGI readiness wakes testplay drawing; window messages can interrupt that wait.
-                if (ownsPaint) SyncNativeText();
                 if (audio.IsPlaying && !view.IsTestplaying && !Native.IsIconic(window)) Invalidate();
                 return 0;
-            case 0x0111: if (HandleNativeTextCommand(wParam, lParam)) return 0; break; // WM_COMMAND
-            case 0x0133: // WM_CTLCOLOREDIT
-                if (lParam == nativeText && nativeTextBrush != 0)
-                {
-                    Native.SetTextColor((nint)wParam, 0xF2EBE7);
-                    Native.SetBkColor((nint)wParam, 0x3A2F28);
-                    return nativeTextBrush;
-                }
-                break;
             case 0x0014: return 1; // WM_ERASEBKGND
             case 0x0113: // WM_TIMER
                 if (painting || failed || NativeModalScope.Active) return 0;
@@ -304,7 +278,6 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0207:
                 view.SetModifiers(Native.Alt, Native.Shift);
                 Native.SetFocus(window);
-                if (message == 0x0201) nativeTextClick = (x, y);
                 view.PointerDown(x, y, message == 0x0207 ? 1 : message == 0x0204 ? 2 : 0, Native.Shift, Native.Control);
                 if (view.WantsCapture) Native.SetCapture(window);
                 UpdateTitle(); Invalidate(); return 0;
@@ -362,7 +335,6 @@ internal sealed partial class EditorWindow : IDisposable
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0007: view.SetTextInputFocus(true); Invalidate(); return 0; // WM_SETFOCUS
             case 0x0008: // WM_KILLFOCUS
-                if (lParam == nativeText) return 0;
                 view.SetTextInputFocus(false);
                 goto case 0x001F;
             case 0x001F: // WM_CANCELMODE
@@ -373,7 +345,7 @@ internal sealed partial class EditorWindow : IDisposable
                 if (view.WantsCapture) view.CancelInteraction();
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0010: Close(); return 0;
-            case 0x0002: Native.KillTimer(window, 1); DisposeNativeText(); Native.PostQuitMessage(0); return 0;
+            case 0x0002: Native.KillTimer(window, 1); Native.PostQuitMessage(0); return 0;
         }
         return Native.DefWindowProc(window, message, wParam, lParam);
     }
@@ -409,7 +381,6 @@ internal sealed partial class EditorWindow : IDisposable
         if (largeBrandIcon != 0) { Native.DestroyIcon(largeBrandIcon); largeBrandIcon = 0; }
         if (smallBrandIcon != 0) { Native.DestroyIcon(smallBrandIcon); smallBrandIcon = 0; }
         hitsounds.Dispose();
-        DisposeNativeText();
         audio.Dispose();
         canvas?.Dispose();
         AppLog.Write($"Window closed. Frames={frames}");

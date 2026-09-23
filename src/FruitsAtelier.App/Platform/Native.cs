@@ -139,7 +139,6 @@ internal static class Native
     [DllImport("user32.dll")] internal static extern nint GetCapture();
     [DllImport("user32.dll")] internal static extern bool ReleaseCapture();
     [DllImport("user32.dll")] internal static extern nint SetFocus(nint hwnd);
-    [DllImport("user32.dll")] internal static extern nint GetFocus();
     [DllImport("user32.dll")] internal static extern nint GetForegroundWindow();
     [DllImport("user32.dll")] internal static extern bool ScreenToClient(nint hwnd, ref Point point);
     [DllImport("user32.dll")] internal static extern short GetKeyState(int key);
@@ -156,16 +155,6 @@ internal static class Native
         MessageBox(owner, text, title, 0x00050010); // MB_SETFOREGROUND | MB_TOPMOST | MB_ICONERROR
     }
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern bool SetWindowText(nint hwnd, string text);
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern int GetWindowText(nint hwnd, System.Text.StringBuilder text, int capacity);
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern int GetWindowTextLength(nint hwnd);
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern nint SendMessage(nint hwnd, uint message, nuint wParam, nint lParam);
-    [DllImport("gdi32.dll")] internal static extern nint CreateSolidBrush(uint color);
-    [DllImport("gdi32.dll")] internal static extern bool DeleteObject(nint handle);
-    [DllImport("gdi32.dll")] internal static extern uint SetTextColor(nint dc, uint color);
-    [DllImport("gdi32.dll")] internal static extern uint SetBkColor(nint dc, uint color);
-    [DllImport("gdi32.dll", CharSet = CharSet.Unicode)] internal static extern nint CreateFont(int height, int width, int escapement, int orientation,
-        int weight, uint italic, uint underline, uint strikeout, uint charset, uint outputPrecision,
-        uint clipPrecision, uint quality, uint pitchAndFamily, string faceName);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] internal static extern nint GetModuleHandle(string? module);
     [DllImport("dwmapi.dll")] internal static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
     internal static bool Control => GetKeyState(0x11) < 0;

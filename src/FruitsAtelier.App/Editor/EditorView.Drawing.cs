@@ -8,7 +8,6 @@ public sealed partial class EditorView
 {
     public void Render(ICanvas c, float width, float height)
     {
-        ActiveTextField = null;
         RefreshLanguage();
         if (this.width != width || this.height != height)
         {

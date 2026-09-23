@@ -40,13 +40,6 @@ See [Building and Testing](TESTING.md) for SDK selection and build commands, and
 
 Hosts map input to DIP coordinates before passing it to `EditorView`. Content changes commit through `EditorHistory` transactions; a drag, batch operation, or curve draft becomes one undo step. Selection and viewport are separate session state.
 
-`EditorView` describes the focused text field by identity, bounds and draft value.
-Windows places one Win32 `EDIT` child over that field; macOS places one Avalonia
-`TextBox` over it. The host returns edited text through the shared field setter,
-which retains each field's validation and draft lifecycle. Selection, caret,
-clipboard operations and input-method composition remain with the platform
-control. Inactive fields stay in the editor's normal drawing path.
-
 The conversion cache compares document snapshots and Tiny compensation settings. Changes trigger synchronous conversion of the full document before viewport culling. Language changes rebuild diagnostic caches. Both views share the conversion result; RNG and hyperdash use the complete object sequence.
 
 The canvas and object timeline share an immutable timing lookup built alongside the conversion snapshot. It sorts timing groups once and uses binary search for local BPM, meter and SV. Playback reuses it; content changes, undo and document replacement rebuild it. Grid drawing must not rebuild timing groups for each visible tick.

@@ -104,12 +104,9 @@ without timer messages, input, resizing or minimizing.
 
 The Windows `--render-check` also exercises testplay entry, movement, combo drawing,
 return, catcher mirroring and binding settings at both window sizes and all tested
-DPI values in English and Chinese. Testplay checks use silent callbacks. The same
-check activates the Win32 text control and verifies click caret placement, partial
-selection, Delete, Unicode editing and delivery to the Song Setup draft. Shared
-App tests cover draft text values, key repeat/release, focus cancellation, end
-conditions, judging between frames, custom bindings, and document isolation.
-Extended binding checks cover capture,
+DPI values in English and Chinese. Testplay checks use silent callbacks. Shared App
+tests cover key repeat/release, focus cancellation, end conditions, judging between
+frames, custom bindings, and document isolation. Extended binding checks cover capture,
 key labels, settings reload, movement/dash press and release, and reserved keys;
 Mac key mappings also run without an audio device. `Audio.Tests --hitsound-check`
 checks timestamped samples against music frames and preserves late catch attacks
