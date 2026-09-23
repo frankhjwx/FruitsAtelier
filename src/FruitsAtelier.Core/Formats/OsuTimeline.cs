@@ -44,6 +44,11 @@ public static class OsuTimeline
         return true;
     }
 
+    public static void ClearBookmarks(MapDocument document)
+    {
+        if (Bookmarks(document).Count > 0) SongSetup.Set(document, "Editor", "Bookmarks", null);
+    }
+
     public static void AddBreak(MapDocument document, int start, int end)
     {
         if (start < 0 || end <= start) throw new ArgumentOutOfRangeException(nameof(end));

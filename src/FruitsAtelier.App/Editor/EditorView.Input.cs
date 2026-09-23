@@ -752,6 +752,12 @@ public sealed partial class EditorView
                 });
                 return;
             }
+            if (virtualKey is 37 or 39)
+            {
+                if (shift) NudgeSelection(0, virtualKey == 37 ? -1 : 1);
+                else SeekBookmark(virtualKey == 39);
+                return;
+            }
             if (ClipboardInteractionReady && HandleLegacyShortcut(virtualKey, shift)) return;
             if (virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (virtualKey == 89) Redo();

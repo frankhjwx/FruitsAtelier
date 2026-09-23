@@ -25,6 +25,9 @@ internal static class TimelineMetadataTests
         Check(OsuTimeline.Bookmarks(restored).SequenceEqual([100, 500]) && OsuTimeline.Breaks(restored).SequenceEqual([new BreakPeriod(3000, 4000)]), "Timeline project round trip failed");
         var exported = OsuBeatmapWriter.Serialize(restored).ReadBack;
         Check(OsuTimeline.Bookmarks(exported).SequenceEqual([100, 500]) && OsuTimeline.Breaks(exported).SequenceEqual([new BreakPeriod(3000, 4000)]), "Timeline osu export round trip failed");
+        OsuTimeline.ClearBookmarks(exported);
+        Check(OsuTimeline.Bookmarks(exported).Count == 0 && OsuBeatmapReader.Setting(exported, "Editor", "Bookmarks") is null,
+            "Reset bookmarks did not remove the Editor setting");
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

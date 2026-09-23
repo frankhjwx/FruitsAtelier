@@ -38,7 +38,7 @@ On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are
 
 ### Navigate and select
 
-The main canvas shows horizontal placement and note timing; later notes are higher on the screen. On the canvas and both timelines, each wheel notch moves one full beat (1/1) during playback or one current Snap subdivision while paused: up to the preceding grid line and down to the following one, regardless of zoom. The canvas and playhead move together, including while paused. Middle-drag pans, and Ctrl+wheel zooms. Click empty canvas in Select mode to seek. The bottom timeline also supports seeking; click the timestamp to jump to an exact time.
+The main canvas shows horizontal placement and note timing; later notes are higher on the screen. On the canvas and both timelines, each wheel notch moves one full beat (1/1) during playback or one current Snap subdivision while paused: up to the preceding grid line and down to the following one, regardless of zoom. The canvas and playhead move together, including while paused. Middle-drag pans, and Ctrl+wheel zooms. Click empty canvas in Select mode to seek. The bottom timeline also supports seeking; click the timestamp to jump to an exact time. Hover over it to reveal the fixed bookmark toolbar: add or remove a bookmark at the playhead, seek to the previous or next bookmark, or reset all bookmarks. Bookmark edits can be undone.
 
 Select an object with **1**. Drag empty space to box-select, or Ctrl-click to toggle selection. Drag selected objects to move them together. Selecting a slider fruit or droplet selects its parent slider. The horizontal object timeline also lets you select and move objects in time.
 
@@ -101,7 +101,7 @@ Exporting a new difficulty to Songs saves your edits in a new workspace difficul
 
 Use **Library** or Esc to return to the library. Unsaved work prompts for Save, Discard or Cancel. Missing-resource messages indicate that a referenced file needs to be restored or relinked.
 
-Version 0.8 does not provide timing-point creation, bookmarks, video or storyboard playback. Imported timing and slider velocity are supported. Testplay is for checking patterns; star ratings and exported behavior may differ between osu! versions.
+Version 0.8 does not provide timing-point creation, video or storyboard playback. Imported timing and slider velocity are supported. Testplay is for checking patterns; star ratings and exported behavior may differ between osu! versions.
 
 ## 04 / Keyboard reference
 
@@ -123,7 +123,8 @@ Shortcuts below apply while editing, outside text fields and dialogs. On macOS, 
 | Delete | Delete selected objects or edited points. |
 | Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z | Undo / redo / redo. |
 | Ctrl+H | Flip selected objects horizontally. |
-| Ctrl+Left / Ctrl+Right | Move selected objects one horizontal unit. |
+| Ctrl+Left / Ctrl+Right | Seek to the previous / next bookmark. |
+| Ctrl+Shift+Left / Ctrl+Shift+Right | Move selected objects one horizontal unit. |
 | J / K | Move selection back / forward one beat subdivision. |
 | Esc | Cancel the current action; otherwise return to Library. |
 

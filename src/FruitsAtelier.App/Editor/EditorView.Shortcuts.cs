@@ -15,8 +15,6 @@ public sealed partial class EditorView
             case 77: divisor = SnapDivisors[(Array.IndexOf(SnapDivisors, divisor) + 1) % SnapDivisors.Length]; return true;
             case 68: CloneSelection(); return true;
             case 72: MirrorSelection(); return true;
-            case 37: NudgeSelection(0, -1); return true;
-            case 39: NudgeSelection(0, 1); return true;
             case 38: AdjustPlaybackSpeed(1); return true;
             case 40: AdjustPlaybackSpeed(-1); return true;
             default: return false;

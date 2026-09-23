@@ -91,7 +91,7 @@ key swaps the two bindings. **Apply** saves the bindings across restarts.
 
 ## Object timeline and playback speed
 
-The bottom overview shows red and green timing points above a white center line, continuous yellow kiai intervals and white break intervals centered on that line, and blue bookmarks extending down from it. Timing points and bookmarks render behind the center line; break and kiai intervals render above it. These markers and intervals use 75% opacity. Click or drag to seek. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Ctrl+B adds a bookmark at the playhead, and Ctrl+Shift+B removes the nearest bookmark within two seconds. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
+The bottom overview shows red and green timing points above a white center line, continuous yellow kiai intervals and white break intervals centered on that line, and blue bookmarks extending down from it. The center line is behind the break and kiai intervals, which are behind timing points and bookmarks. These timeline marks use 50% opacity. Hovering over the overview reveals a fixed bookmark toolbar at its left edge with Add, Remove, Previous, Next, and Reset actions. The toolbar uses an ImageGen-created background texture and remains fully legible. Ctrl+B adds a bookmark at the playhead; Ctrl+Shift+B removes the nearest bookmark within two seconds. Ctrl+Left/Right seeks to the previous/next bookmark; Ctrl+Shift+Left/Right moves selected objects one X unit. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
 
 Newly opened maps start at 0 ms from their first frame. While audio loads, the total duration displays a placeholder and the overview waits for the final range before becoming interactive. If audio is unavailable, the overview uses the map duration. Switching back to an open difficulty retains its playhead and resumes the audio at that position when loading completes.
 
@@ -131,7 +131,8 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Ctrl+D | Clone selected parents one measure after the last selected start |
 | Ctrl+A | Select all objects |
 | Ctrl+H | Flip selected parents horizontally around X=256 |
-| Ctrl+Left / Right | Move selected parents by one X unit |
+| Ctrl+Left / Right | Seek to the previous / next bookmark |
+| Ctrl+Shift+Left / Right | Move selected parents by one X unit |
 | J / K | Move selected parents backward / forward by one beat subdivision |
 | Ctrl+1 / 2 / 3 / 4 | Set grid size to 4 / 8 / 16 / 32 |
 | Shift+1…9 / Ctrl+M | Set beat subdivision directly / cycle subdivisions |
