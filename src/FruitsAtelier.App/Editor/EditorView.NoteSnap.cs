@@ -22,20 +22,10 @@ public sealed partial class EditorView
     private void ShowNoteBeatPosition(ConvertedCatchObject note)
     {
         var timing = TimingMap.At(Document, note.TimeMs);
-        bool Fits(double time, int candidate) => Math.Abs(TimingMap.Snap(Document, time, candidate) - time) <= 2;
-        int matched = SnapDivisors.FirstOrDefault(candidate => Fits(note.TimeMs, candidate));
-        if (matched != 0)
-        {
-            foreach (var neighbor in Document.Fruits.Where(f => f.Id != note.SourceId
-                         && Math.Abs(f.TimeMs - note.TimeMs) <= timing.BeatLengthMs / 2)
-                     .OrderBy(f => Math.Abs(f.TimeMs - note.TimeMs)))
-            {
-                var neighborTiming = TimingMap.At(Document, neighbor.TimeMs);
-                if (neighborTiming.OffsetMs != timing.OffsetMs || neighborTiming.BeatLengthMs != timing.BeatLengthMs) continue;
-                int shared = SnapDivisors.FirstOrDefault(candidate => Fits(note.TimeMs, candidate) && Fits(neighbor.TimeMs, candidate));
-                if (shared != 0) { matched = shared; break; }
-            }
-        }
+        int matched = 0;
+        foreach (int candidate in SnapDivisors)
+            if (Math.Abs(TimingMap.Snap(Document, note.TimeMs, candidate) - note.TimeMs) <= .5)
+            { matched = candidate; break; }
         if (matched == 0)
         {
             RestoreTemporarySnap();
