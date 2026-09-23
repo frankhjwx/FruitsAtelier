@@ -27,7 +27,7 @@ internal static class DistanceSnapPresetTests
         Check(ui.Canvas.Fills.Any(f => f.Color == 0xC0C0C0 && f.Bounds.Y == track.Y + 3
             && Math.Abs(f.Bounds.Right - expectedBoundaryX) < 1),
             "The base DPB bar should use the same four equal movement regions as the preset bar.");
-        Check(ui.Canvas.Fills.Any(f => f.Color == 0xFF0000 && f.Bounds.Y == track.Y + 3
+        Check(ui.Canvas.Fills.Any(f => f.Color == 0xCE7683 && f.Bounds.Y == track.Y + 3
             && Math.Abs(f.Bounds.X - (track.X + track.Width * .75f)) < 1)
             && ui.Canvas.Lines.Any(l => Math.Abs(l.X1 - X(80)) < 1 && l.Y1 == track.Y - 4),
             "The HDash region and 1.0x marker should use the preset bar's distance scale.");

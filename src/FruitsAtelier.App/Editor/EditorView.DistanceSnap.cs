@@ -32,8 +32,13 @@ public sealed partial class EditorView
     private readonly List<MapPoint> dsPreviewFruits = [];
     private double dsBpm, dsReferenceTime;
     private int dsSnap;
-    private static readonly uint[] DsColors = [0xC0C0C0, 0x63B99D, 0xD6B365];
-    private uint DsColor(int index) => index == 3 ? HyperDashColour : DsColors[index];
+    private uint DsColor(int index) => MovementColour(index switch
+    {
+        0 => CatchMovementMode.Stand,
+        1 => CatchMovementMode.Walk,
+        2 => CatchMovementMode.Dash,
+        _ => CatchMovementMode.HyperDash
+    });
     internal Rect DistanceSnapSubdivisionBounds { get; private set; }
     private float dsDragX;
     private Rect DistanceSnapDialogBounds => new((width - Math.Min(1040, width - 32)) / 2,

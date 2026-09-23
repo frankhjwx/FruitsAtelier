@@ -483,7 +483,7 @@ public sealed partial class EditorView
     public Action? RequestPasteLibrary { get; set; }
     private bool SelectLibraryInputAt(float x, float y)
     {
-        foreach (int index in (ExportVisible ? new[] { 3 } : librarySettingsOpen ? new[] { 0, 1, 4 } : new[] { 2 }))
+        foreach (int index in (ExportVisible ? new[] { 3 } : librarySettingsOpen ? settingsColourIndex >= 0 ? new[] { 5 } : new[] { 0, 1, 4 } : new[] { 2 }))
         {
             string key = "library:" + index;
             if (!textLayouts.TryGetValue(key, out var layout)) continue;
@@ -505,6 +505,7 @@ public sealed partial class EditorView
     private void LibraryKey(int key, bool ctrl, bool shift)
     {
         if (updatesPage) { if (key == 27) updatesPage = false; return; }
+        if (key == 27 && settingsColourIndex >= 0) { settingsColourIndex = -1; libraryField = -1; return; }
         if (key == 27) FinishVolumeDrag();
         if (key == 27) { if (contextItems.Count > 0) contextItems.Clear(); else if (libraryField >= 0) libraryField = -1; else if (librarySettingsOpen) CloseSettings(); else resourcePage = false; return; }
         if (key == 116) { StartLibraryScan(); return; }
@@ -512,6 +513,11 @@ public sealed partial class EditorView
         if (key == 13 && libraryField < 0 && !librarySettingsOpen && !resourcePage && libraryBrowser?.Selected?.Map is { } map)
         { OpenSelectedLibraryMap(map); return; }
         if (libraryField < 0) return;
+        if (key == 13 && libraryField == 5)
+        {
+            if (CommitIndicatorColourHex()) { settingsColourIndex = -1; libraryField = -1; }
+            return;
+        }
         if (ctrl && key == 86) { RequestPasteLibrary?.Invoke(); return; }
         string value = LibraryFieldValue;
         if (InputKey("library:" + libraryField, ref value, key, ctrl, shift, 4096)) LibraryFieldValue = value;
@@ -519,7 +525,7 @@ public sealed partial class EditorView
     }
     private string LibraryFieldValue
     {
-        get => libraryField switch { 0 => draftWorkspace, 1 => draftOsuRoot, 2 => libraryQuery, 3 => exportName, 4 => draftDefaultSkin, _ => "" };
-        set { switch (libraryField) { case 0: draftWorkspace = value; break; case 1: draftOsuRoot = value; break; case 2: libraryQuery = value; libraryScroll = 0; libraryResultsReady = false; QueueLibrarySearch(); RememberLibraryPosition(); break; case 3: exportName = value; break; case 4: draftDefaultSkin = value; break; } }
+        get => libraryField switch { 0 => draftWorkspace, 1 => draftOsuRoot, 2 => libraryQuery, 3 => exportName, 4 => draftDefaultSkin, 5 => settingsColourHex, _ => "" };
+        set { switch (libraryField) { case 0: draftWorkspace = value; break; case 1: draftOsuRoot = value; break; case 2: libraryQuery = value; libraryScroll = 0; libraryResultsReady = false; QueueLibrarySearch(); RememberLibraryPosition(); break; case 3: exportName = value; break; case 4: draftDefaultSkin = value; break; case 5: settingsColourHex = value; settingsColourError = ""; break; } }
     }
 }

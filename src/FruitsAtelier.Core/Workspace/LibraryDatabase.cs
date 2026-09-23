@@ -7,12 +7,20 @@ namespace FruitsAtelier.Core;
 
 public sealed class LibrarySettings
 {
+    public const uint DefaultStandIndicatorColour = 0xC0C0C0;
+    public const uint DefaultWalkIndicatorColour = 0x63B99D;
+    public const uint DefaultDashIndicatorColour = 0xD6B365;
+    public const uint DefaultHyperDashIndicatorColour = 0xCE7683;
     public string Workspace { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "FruitsAtelier Workspace");
     private string osuRoot = "", legacySongs = "";
     public string OsuRoot { get => osuRoot; set { osuRoot = value; legacySongs = ""; } }
     public string? SelectedSkin { get; set; }
     public string? DefaultSkin { get; set; }
     public bool RomanisedMetadata { get; set; } = true;
+    public uint StandIndicatorColour { get; set; } = DefaultStandIndicatorColour;
+    public uint WalkIndicatorColour { get; set; } = DefaultWalkIndicatorColour;
+    public uint DashIndicatorColour { get; set; } = DefaultDashIndicatorColour;
+    public uint HyperDashIndicatorColour { get; set; } = DefaultHyperDashIndicatorColour;
     private double playbackLineFromBottom = .25;
     public double PlaybackLineFromBottom
     {

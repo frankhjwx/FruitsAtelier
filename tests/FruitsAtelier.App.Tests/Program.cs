@@ -21,6 +21,7 @@ var tests = new (string Name, Action Run)[]
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
+    ("Appearance indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
     ("Slider stream confirmation, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
     ("Slider long press progress, cancellation and control-point shortcut", StreamShortcutTests.HoldAndShortcut),
     ("Testplay pause, resume and legacy exit shortcuts", TestplayTests.PauseAndExitShortcuts),
