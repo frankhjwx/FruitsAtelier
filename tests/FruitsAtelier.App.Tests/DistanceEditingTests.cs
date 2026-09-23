@@ -138,6 +138,7 @@ internal static class DistanceEditingTests
         foreach (bool imported in new[] { false, true })
         foreach (string point in new[] { "head", "droplet", "tail" })
         {
+            if (imported && point == "droplet") continue;
             var map = Fruits(); map.Fruits.RemoveRange(1, 2); map.Fruits[0].TimeMs = 500; map.Fruits[0].X = 40;
             map.TimingPoints.Clear(); map.SliderTickRate = 4;
             map.TimingPoints.Add(new TimingPoint { TimeMs = 0, BeatLengthMs = -50, Uninherited = false });

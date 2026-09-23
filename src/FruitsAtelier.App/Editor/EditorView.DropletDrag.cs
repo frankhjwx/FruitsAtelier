@@ -12,9 +12,10 @@ public sealed partial class EditorView
     {
         StatusMessage = L.Get("editor.status.dropletReady", Time(target.TimeMs));
         if (notesLocked) return;
+        history.Begin(L.Get("editor.command.changeField", L.Get("coordinate.x")));
         dropletDragTarget = target;
         dropletDragX = target.X;
-        history.Begin(L.Get("editor.command.changeField", L.Get("coordinate.x")));
+        distanceObject = (target.SourceId, target.EventIndex);
         drag = DragKind.Droplet;
         BeginPointerDrag(x, y);
     }
@@ -24,24 +25,41 @@ public sealed partial class EditorView
         if (dropletDragTarget is not { } target) return;
         double wantedX = Math.Clamp(target.X + (x - dragStartX) / Playfield.Width * 512, 0, 512);
         if (Math.Abs(wantedX - dropletDragX) < .00001) return;
+        double acceptedX = dropletDragX;
+        if (!TryDropletPosition(target, wantedX))
+        {
+            double blockedX = wantedX;
+            for (int i = 0; i < 12 && Math.Abs(blockedX - acceptedX) > .001; i++)
+            {
+                double middle = (acceptedX + blockedX) / 2;
+                if (TryDropletPosition(target, middle)) acceptedX = middle;
+                else blockedX = middle;
+            }
+            TryDropletPosition(target, acceptedX);
+        }
+        else acceptedX = wantedX;
+        dropletDragX = acceptedX;
+        StatusMessage = L.Get("editor.status.dropletPosition", Time(target.TimeMs), Number(acceptedX));
+        EnsureConversion();
+        if (conversion!.Objects.FirstOrDefault(item => item.SourceId == target.SourceId
+            && item.EventIndex == target.EventIndex) is { } updated)
+            distanceObject = (updated.SourceId, updated.EventIndex);
+    }
+
+    private bool TryDropletPosition(ConvertedCatchObject target, double x)
+    {
         history.Cancel();
         history.Begin(L.Get("editor.command.changeField", L.Get("coordinate.x")));
         try
         {
-            DistanceSpacingEditing.ApplyX(Document, target, wantedX, compensateTinyDroplets);
-            dropletDragX = wantedX;
-            StatusMessage = L.Get("editor.status.dropletPosition", Time(target.TimeMs), Number(wantedX));
+            DistanceSpacingEditing.ApplyIsolatedX(Document, target, x, compensateTinyDroplets);
+            return true;
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or InvalidDataException)
         {
             history.Cancel();
             history.Begin(L.Get("editor.command.changeField", L.Get("coordinate.x")));
-            DistanceSpacingEditing.ApplyX(Document, target, dropletDragX, compensateTinyDroplets);
-            StatusMessage = error.Message;
+            return false;
         }
-        EnsureConversion();
-        if (conversion!.Objects.FirstOrDefault(item => item.SourceId == target.SourceId
-            && item.Kind == target.Kind && Math.Abs(item.TimeMs - target.TimeMs) < .001) is { } updated)
-            distanceObject = (updated.SourceId, updated.EventIndex);
     }
 }

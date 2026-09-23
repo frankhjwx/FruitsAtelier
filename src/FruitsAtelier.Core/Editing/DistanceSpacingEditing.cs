@@ -25,6 +25,53 @@ public static class DistanceSpacingEditing
         ApplyPosition(document, target, null, Math.Clamp(x, 0, 512), compensateTinyDroplets);
     }
 
+    // Isolate a drag between its adjacent converted events; existing handles need not keep those events fixed.
+    public static void ApplyIsolatedX(MapDocument document, ConvertedCatchObject target, double x, bool compensateTinyDroplets)
+    {
+        if (!double.IsFinite(x)) throw new ArgumentException(L.Get("editor.error.finiteNumberRequired"));
+        x = Math.Clamp(x, 0, 512);
+        if (Math.Abs(x - target.X) < .00001) return;
+        if (target.Kind is not (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet))
+            throw new ArgumentException(L.Get("distance.unsupported"));
+
+        var track = document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
+            ?? throw new ArgumentException(L.Get("distance.unsupported"));
+        var before = CatchStreamConverter.Convert(document, compensateTinyDroplets);
+        if (!before.Success) throw new ArgumentException(L.Get("coordinate.unreachable"));
+        var siblings = before.Objects.Where(o => o.SourceId == target.SourceId).ToArray();
+        var selected = siblings.FirstOrDefault(o => o.EventIndex == target.EventIndex);
+        if (selected is null) throw new ArgumentException(L.Get("coordinate.unreachable"));
+        double time = CurveMath.FirstSpanTime(track, selected.TimeMs);
+        var times = siblings.Select(o => CurveMath.FirstSpanTime(track, o.TimeMs))
+            .Distinct().OrderBy(t => t).ToArray();
+        double? previous = times.Where(t => t < time - CurveMath.MinimumAnchorSpacingMs).Select(t => (double?)t).LastOrDefault();
+        double? next = times.Where(t => t > time + CurveMath.MinimumAnchorSpacingMs).Select(t => (double?)t).FirstOrDefault();
+        if (previous is null || next is null)
+            throw new ArgumentException(L.Get("coordinate.unreachable"));
+
+        var left = AnchorAt(track, previous.Value);
+        var right = AnchorAt(track, next.Value);
+        var anchor = AnchorAt(track, time);
+        int index = track.Nodes.IndexOf(anchor);
+        if (index <= 0 || index >= track.Nodes.Count - 1 || track.Nodes[index - 1] != left || track.Nodes[index + 1] != right)
+            throw new ArgumentException(L.Get("coordinate.unreachable"));
+        left.OutgoingCurve = null; left.OutgoingKind = CurveKind.Linear; left.HandleOut = default;
+        anchor.HandleIn = default; anchor.OutgoingCurve = null; anchor.OutgoingKind = CurveKind.Linear; anchor.HandleOut = default;
+        right.HandleIn = default;
+        double pathX = selected.Kind == CatchObjectKind.TinyDroplet && Math.Abs(selected.X - selected.TargetX) > .001
+            ? x - selected.RandomOffset : x;
+        if (pathX is < 0 or > 512 || !CurveMath.TryMoveAnchor(track, anchor.Id, time, pathX, out _))
+            throw new ArgumentException(L.Get("coordinate.unreachable"));
+
+        var after = CatchStreamConverter.Convert(document, compensateTinyDroplets);
+        if (!after.Success) throw new ArgumentException(L.Get("coordinate.unreachable"));
+        var updated = after.Objects.Where(o => o.SourceId == target.SourceId).ToDictionary(o => o.EventIndex);
+        if (updated.Count != siblings.Length || siblings.Any(o => !updated.TryGetValue(o.EventIndex, out var current)
+            || current.Kind != o.Kind || Math.Abs(current.TimeMs - o.TimeMs) > .001
+            || Math.Abs(current.X - (o.EventIndex == target.EventIndex ? x : o.X)) > .001))
+            throw new ArgumentException(L.Get("coordinate.unreachable"));
+    }
+
     private static void ApplyPosition(MapDocument document, ConvertedCatchObject target, ConvertedCatchObject? reference,
         double x, bool compensateTinyDroplets)
     {

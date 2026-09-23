@@ -247,14 +247,15 @@ public sealed partial class EditorView
         if (!sliderPathOverBanana && hitObject is not null)
         {
             bool parentSelected = objectSelection.Count == 1 && objectSelection.Contains(hitObject.SourceId);
+            bool editableChild = Document.Tracks.Any(t => t.Id == hitObject.SourceId);
             PickObject(hitObject.SourceId, ctrl);
-            if (hitObject.Kind is CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet && !parentSelected)
+            if (hitObject.Kind is CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet && (!parentSelected || !editableChild))
                 distanceObject = null;
             else PickSoundEdge(hitObject);
             if (ctrl) return;
             if (!hitObject.IsStandalone)
             {
-                if (parentSelected && hitObject.Kind is (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet))
+                if (parentSelected && editableChild && hitObject.Kind is (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet))
                 {
                     BeginDropletDrag(hitObject, x, y);
                     return;
