@@ -16,6 +16,7 @@ public sealed class OsuWriteResult
     public bool ObjectSequenceMatches { get; init; }
     public IReadOnlyList<ConvertedCatchObject> PlayableObjects { get; init; } = [];
     public IReadOnlyList<ConvertedCatchObject> PlayableHardRockObjects { get; init; } = [];
+    public IReadOnlyDictionary<Guid, double> PlayableEndTimes { get; init; } = new Dictionary<Guid, double>();
 }
 
 public static class OsuBeatmapWriter
@@ -189,12 +190,19 @@ public static class OsuBeatmapWriter
                     };
                 }).ToArray()
             : [];
+        var playableEndTimes = matches
+            ? readBack.Fruits.Select(f => (SourceId: sourceIds[f.Id], EndTimeMs: f.TimeMs))
+                .Concat(readBack.ImportedSliders.Select(s => (SourceId: sourceIds[s.Id], EndTimeMs: ImportedSliderConverter.EndTimeMs(readBack, s))))
+                .Concat(readBack.BananaShowers.Select(s => (SourceId: sourceIds[s.Id], EndTimeMs: s.EndTimeMs)))
+                .GroupBy(item => item.SourceId).ToDictionary(group => group.Key, group => group.Max(item => item.EndTimeMs))
+            : [];
         return new OsuWriteResult
         {
             Text = serialized, ReadBack = readBack, Diagnostics = diagnostics,
             MaxTimeQuantizationMs = maxTime, MaxCoordinateQuantization = maxCoordinate,
             MaxConvertedTimeErrorMs = timeError, MaxConvertedXError = xError, ObjectSequenceMatches = matches,
-            PlayableObjects = playableObjects, PlayableHardRockObjects = playableHardRockObjects
+            PlayableObjects = playableObjects, PlayableHardRockObjects = playableHardRockObjects,
+            PlayableEndTimes = playableEndTimes
         };
 
         string Coordinate(double value) { double rounded = Round(value); maxCoordinate = Math.Max(maxCoordinate, Math.Abs(rounded - value)); return Number(rounded); }

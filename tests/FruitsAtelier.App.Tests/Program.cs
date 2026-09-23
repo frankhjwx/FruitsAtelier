@@ -40,6 +40,7 @@ var tests = new (string Name, Action Run)[]
     ("Opening maps initializes position and duration without transient jumps", AudioFeedbackTests.OpeningTransport),
     ("Audio volume settings, persistence and document isolation", AudioFeedbackTests.VolumeSettings),
     ("V jumps to the end and wheel navigation follows time order", AudioFeedbackTests.Navigation),
+    ("V and End jump to the final object's end", AudioFeedbackTests.LastObjectEndNavigation),
     ("Wheel surfaces step by playback beats or paused snap across timing boundaries", ViewportFeedbackTests.WheelSnapSteps),
     ("Skin hitsound priority and live selection refresh", AudioFeedbackTests.SkinSamples),
     ("Testplay legacy combo animation and live dash trails", TestplayTests.ComboAndTrails),

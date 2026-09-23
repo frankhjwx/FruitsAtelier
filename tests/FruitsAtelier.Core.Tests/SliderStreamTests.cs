@@ -24,6 +24,8 @@ internal static class SliderStreamTests
         Check(ProjectSerializer.ReadProject(ProjectSerializer.Serialize(project)).Difficulties[0].Document.ContentEquals(map), "multi difficulty persistence");
         var output = OsuBeatmapWriter.Serialize(map);
         Check(output.ObjectSequenceMatches && output.ReadBack.ImportedSliders.Count == 0 && output.ReadBack.Fruits.Count == 10, "export emits circles and preserves interleaved order");
+        Check(output.PlayableEndTimes[track.Id] == output.PlayableObjects.Where(o => o.SourceId == track.Id).Max(o => o.TimeMs),
+            "stream end follows the last emitted osu fruit");
         var readObjects = CatchStreamConverter.Convert(output.ReadBack);
         var hr = CatchPreviewMods.HardRock(map, converted);
         var readHr = CatchPreviewMods.HardRock(output.ReadBack, readObjects);

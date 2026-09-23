@@ -80,6 +80,45 @@ internal static class AudioFeedbackTests
         Near(offset, ui.View.PlayheadMs - ui.View.ViewStartMs);
         Check(!ui.View.IsDirty && ui.View.Document.ContentEquals(map), "navigation leaves content unchanged");
     }
+
+    public static void LastObjectEndNavigation()
+    {
+        var ui = new Ui(false);
+        var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
+        map.Fruits.Add(new Fruit { TimeMs = 1000 });
+        var track = new CurveTrack { Kind = CurveKind.Linear, SpanCount = 3, SourceOrder = 1 };
+        track.Nodes.AddRange([new Anchor { TimeMs = 5000, X = 100 }, new Anchor { TimeMs = 5500, X = 300 }]);
+        map.Tracks.Add(track);
+        ui.LoadDocument(map);
+        ui.View.UpdateTransport(0, 10000, true, false, false, null, null);
+        ui.Key('V'); Near(6500, ui.View.PlayheadMs);
+        ui.Key('V'); Near(10000, ui.View.PlayheadMs);
+        ui.View.UpdateTransport(0, 10000, true, false, false, null, null);
+        ui.Key(35); Near(6500, ui.View.PlayheadMs);
+
+        track.Nodes[0].TimeMs = 5000.4;
+        track.Nodes[1].TimeMs = 5500.4;
+        ui.LoadDocument(map);
+        ui.View.UpdateTransport(0, 10000, true, false, false, null, null);
+        double exportedEnd = OsuBeatmapWriter.Serialize(map).PlayableEndTimes[track.Id];
+        Check(Math.Abs(exportedEnd - CurveMath.EndTimeMs(track)) > .01, "Fixture must exercise osu time quantization");
+        ui.Key('V'); Near(exportedEnd, ui.View.PlayheadMs);
+
+        map.Tracks.Clear();
+        var imported = new ImportedSlider { TimeMs = 5000, X = 100, Y = 192, PathType = 'L', PixelLength = 140, SpanCount = 2, SourceOrder = 1 };
+        imported.ControlPoints.AddRange([new(100, 192), new(240, 192)]);
+        map.ImportedSliders.Add(imported);
+        ui.LoadDocument(map);
+        ui.View.UpdateTransport(0, 10000, true, false, false, null, null);
+        ui.Key('V'); Near(ImportedSliderConverter.EndTimeMs(map, imported), ui.View.PlayheadMs);
+
+        map.ImportedSliders.Clear();
+        map.BananaShowers.Add(new BananaShower { TimeMs = 5000, EndTimeMs = 6200, SourceOrder = 1 });
+        ui.LoadDocument(map);
+        ui.View.UpdateTransport(0, 10000, true, false, false, null, null);
+        ui.Key('V'); Near(6200, ui.View.PlayheadMs);
+    }
+
     public static void VolumeSettings()
     {
         string folder = Path.GetFullPath("artifacts/tests/volume-settings");

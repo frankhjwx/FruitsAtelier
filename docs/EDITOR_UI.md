@@ -134,7 +134,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Ctrl+1 / 2 / 3 / 4 | Set grid size to 4 / 8 / 16 / 32 |
 | Shift+1…9 / Ctrl+M | Set beat subdivision directly / cycle subdivisions |
 | C / Space / X | Pause or resume / pause or resume / play from song start |
-| Z / V (also End) | Jump to first / last object start; repeat to reach song start / end |
+| Z / V (also End) | Jump to the first object's start / last object's end; repeat to reach song start / end |
 | Left / Right (Shift for 4×) | Seek backward / forward by one beat subdivision |
 | Up / Down | Seek previous / next timing point |
 | Ctrl+Up / Down | Select the next faster / slower playback speed, within 10%–150% |
