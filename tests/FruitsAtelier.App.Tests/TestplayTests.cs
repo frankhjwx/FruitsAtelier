@@ -249,7 +249,9 @@ internal static class TestplayTests
         Transport(1000, 6000, true, true, false, null, null);
         Check(ui.View.TestplayCombo == 0 && sounds == 0, "pending play intent must not judge the first note before the device advances");
         Transport(1000.001, 6000, true, true, false, null, null);
-        Check(ui.View.TestplayCombo == 1 && sounds == 0 && scheduled > 0, "live catches schedule only judged hitsounds");
+        Check(ui.View.TestplayCombo == 1 && (OperatingSystem.IsWindows()
+            ? sounds == 0 && scheduled > 0
+            : sounds > 0 && scheduled == 0), "live catches use the platform hitsound callback");
         ui.Key(39); ui.Key(39);
         Transport(1100, 6000, true, true, false, null, null); Near(306, ui.View.TestplayCatcherX);
         ui.View.KeyUp(39);
