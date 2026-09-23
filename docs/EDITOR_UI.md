@@ -12,6 +12,16 @@ During playback and seeking, the play line stays at its configured height, initi
 
 ## Song Setup
 
+Editor text fields share one caret and selection model, including Song Setup,
+Library search, settings paths, export names, time jump and numeric inputs.
+Clicking places a blinking caret without selecting text; dragging selects a range,
+and double-clicking selects the entire field. Ctrl+A (Command+A on macOS) also
+selects all. Left/Right, Home and End move the caret; Shift extends the selection.
+Backspace and Delete remove the selected range or one adjacent character.
+Copy, cut and paste operate on the selected range and caret position. Keyboard
+focus changes can request select-all explicitly, such as Tab between Song Setup
+fields.
+
 The **Song Setup** button immediately left of Skin opens a modal with General,
 Difficulty, Colors and Design tabs. **OK** applies the draft in one undo step;
 Cancel or Esc discards it. Playback pauses when opening the dialog. Editor

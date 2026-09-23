@@ -85,7 +85,7 @@ internal static class SongSetupTests
 
     private static void Set(Ui ui, string key, string value)
     {
-        var box = ui.View.SongSetupFieldBounds[key]; ui.Click(box.X + 5, box.Y + 5);
+        var box = ui.View.SongSetupFieldBounds[key]; ui.Click(box.X + 5, box.Y + 5); ui.Key('A', ctrl: true);
         ui.View.PasteSongSetupText(value, ui.View.SongSetupInputSession); ui.Paint();
     }
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

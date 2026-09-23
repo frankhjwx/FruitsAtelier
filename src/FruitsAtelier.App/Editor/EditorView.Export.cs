@@ -29,17 +29,17 @@ public sealed partial class EditorView
         hits.Clear();
     }
 
-    private void ExportKey(int key, bool ctrl)
+    private void ExportKey(int key, bool ctrl, bool shift)
     {
         if (key == 27) { CloseLibrary(); hits.Clear(); return; }
         if (ctrl && key is 83 or 69) return;
         if (key == 9)
         {
-            if (exportMode != 1 && libraryField < 0) { libraryField = 3; libraryReplace = true; }
+            if (exportMode != 1 && libraryField < 0) { libraryField = 3; FocusInput("library:3", exportName, 0, selectAll: true); }
             else libraryField = -1;
             return;
         }
-        if (libraryField == 3) { LibraryKey(key, ctrl); return; }
+        if (libraryField == 3) { LibraryKey(key, ctrl, shift); return; }
         if (key is 38 or 40) { SelectExportMode((exportMode + (key == 38 ? 2 : 1)) % 3); return; }
         if (key == 13) SubmitExport();
     }
@@ -72,8 +72,8 @@ public sealed partial class EditorView
             c.Text(L.Get("library.newDifficultyName"), x + 24, detailY, 14, Foreground, inner);
             var field = new Rect(x + 24, detailY + 26, inner, 40);
             c.Fill(field, Surface, 5); c.Stroke(field, libraryField == 3 ? Accent : Grid, radius: 5);
-            DrawInputText(c, new(field.X + 12, field.Y + 12, field.Width - 24, 20), exportName, 14, libraryField == 3, libraryReplace);
-            hits.Add(new(field, () => { libraryField = 3; libraryReplace = false; }, true));
+            DrawInputText(c, new(field.X + 12, field.Y + 12, field.Width - 24, 20), exportName, 14, libraryField == 3, "library:3");
+            hits.Add(new(field, () => { libraryField = 3; FocusInput("library:3", exportName, mouseX); }, true));
             detailY += 84;
         }
         if (exportMode != 2)

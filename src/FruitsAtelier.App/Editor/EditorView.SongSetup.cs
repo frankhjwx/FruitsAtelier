@@ -12,7 +12,7 @@ public sealed partial class EditorView
     public int SongSetupInputSession { get; private set; }
     private int songTab, songColour, songDrag = -1;
     private string songField = "", songError = "";
-    private bool songSelectAll, songCustomColours;
+    private bool songCustomColours;
     private double songHue, songSaturation, songValue;
     private readonly Dictionary<string, string> songValues = [];
     private readonly Dictionary<string, string> songInitial = [];
@@ -138,8 +138,9 @@ public sealed partial class EditorView
         bool enabled = SongFieldEnabled(key), focused = enabled && songField == key;
         c.Fill(box, enabled ? Surface : Background, 4); c.Stroke(box, focused ? Accent : Grid, radius: 4);
         string value = !enabled && key is "Artist" or "Title" ? songValues[key + "Unicode"] : songValues[key];
-        DrawInputText(c, new(box.X + 9, box.Y + 7, box.Width - 18, 20), value, 13, focused, songSelectAll);
-        hits.Add(new(box, () => { songField = key; songSelectAll = true; SongSetupInputSession++; ResetTextCaret(); }, enabled));
+        string inputKey = "song:" + key;
+        DrawInputText(c, new(box.X + 9, box.Y + 7, box.Width - 18, 20), value, 13, focused, inputKey);
+        hits.Add(new(box, () => { songField = key; SongSetupInputSession++; FocusInput(inputKey, value, mouseX); }, enabled));
     }
 
     private void ApplySongSetup()
@@ -239,25 +240,15 @@ public sealed partial class EditorView
             {
                 int index = Array.IndexOf(keys, songField);
                 songField = keys[index < 0 ? shift ? keys.Length - 1 : 0 : (index + (shift ? keys.Length - 1 : 1)) % keys.Length];
-                songSelectAll = true; SongSetupInputSession++;
+                FocusInput("song:" + songField, songValues[songField], 0, selectAll: true); SongSetupInputSession++;
             }
             return;
         }
         if (songField.Length == 0 || !SongFieldEnabled(songField)) return;
-        if (ctrl)
-        {
-            if (key == 65) songSelectAll = true;
-            else if (key == 67) RequestCopyText?.Invoke(songValues[songField]);
-            else if (key == 88) { RequestCopyText?.Invoke(songValues[songField]); songValues[songField] = ""; }
-            else if (key == 86) RequestPasteSongSetup?.Invoke();
-            return;
-        }
-        if (key is 8 or 46)
-        {
-            string value = songValues[songField];
-            songValues[songField] = songSelectAll || key == 46 || value.Length == 0 ? "" : value[..^1];
-            songSelectAll = false; songError = "";
-        }
+        if (ctrl && key == 86) { RequestPasteSongSetup?.Invoke(); return; }
+        string value = songValues[songField];
+        if (InputKey("song:" + songField, ref value, key, ctrl, shift, 4096))
+        { songValues[songField] = value; songError = ""; }
     }
 
     public void PasteSongSetupText(string text, int session)
@@ -265,9 +256,8 @@ public sealed partial class EditorView
         if (!SongSetupVisible || ErrorVisible || DiscardConfirmationVisible || session != SongSetupInputSession
             || songField.Length == 0 || !SongFieldEnabled(songField)) return;
         text = new string(text.Where(c => !char.IsControl(c)).ToArray());
-        string value = (songSelectAll ? "" : songValues[songField]) + text;
-        if (value.Length > 4096) return;
-        songValues[songField] = value; songSelectAll = false; songError = ""; ResetTextCaret();
+        string value = InsertInput("song:" + songField, songValues[songField], text, 4096);
+        songValues[songField] = value; songError = "";
         if (songField == "Hex" && value.TrimStart('#').Length == 6) CommitSongHex();
     }
 }

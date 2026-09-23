@@ -1,4 +1,5 @@
 using FruitsAtelier.App.Editor;
+using FruitsAtelier.App.Rendering;
 using L = FruitsAtelier.Localization.Strings;
 
 internal static class TextInputFeedbackTests
@@ -27,6 +28,32 @@ internal static class TextInputFeedbackTests
             Check(!Caret(), "Selected text should not have an end caret");
             view.TextInput('x'); Paint();
             Check(canvas.Texts.Any(t => t.Value == "x") && Caret(), "Typing replaces the selected text and resets blinking");
+            view.KeyDown(65, true, false); view.PasteLibraryText("abcdef"); Paint();
+            float glyph = ((ICanvas)canvas).MeasureText("a", 14);
+            float start = 226 + glyph, end = 226 + glyph * 3;
+            view.PointerDown(start, 100, 0, false, false);
+            view.PointerMove(end, 100, false, false);
+            view.PointerUp(end, 100, 0); Paint();
+            Check(canvas.Fills.Any(f => f.Color == 0x365D77 && f.Bounds.Width > 0), "Mouse drag selects part of the text");
+            string copied = "";
+            view.RequestCopyText = text => copied = text;
+            view.KeyDown(67, true, false);
+            Check(copied == "bc", "Copy uses only the dragged selection");
+            view.KeyDown(88, true, false); Paint();
+            Check(canvas.Texts.Any(t => t.Value == "adef"), "Cut removes only the dragged selection");
+            view.RequestPasteLibrary = () => view.PasteLibraryText(copied);
+            view.KeyDown(86, true, false); Paint();
+            Check(canvas.Texts.Any(t => t.Value == "abcdef"), "Paste inserts at the caret");
+            view.KeyDown(46, false, false); Paint();
+            Check(canvas.Texts.Any(t => t.Value == "abcef"), "Delete removes the character after the caret");
+            view.PointerDoubleClick(250, 100, false, false); view.TextInput('z'); Paint();
+            Check(canvas.Texts.Any(t => t.Value == "z"), "Double-click selects all text");
+            view.PasteLibraryText("abc"); Paint();
+            view.PointerDown(226 + glyph, 100, 0, false, false);
+            view.PointerUp(226 + glyph, 100, 0); view.TextInput('Q'); Paint();
+            Check(canvas.Texts.Any(t => t.Value == "zQabc"), "Single-click places the caret without selecting all");
+            view.KeyDown(8, false, false); Paint();
+            Check(canvas.Texts.Any(t => t.Value == "zabc"), "Backspace removes the character before the caret");
             view.SetTextInputFocus(false); Paint();
             Check(!Caret() && !view.TextCaretNeedsRedraw, "An unfocused window must not blink");
             view.NewProject(); view.CloseLibrary(); view.SetTextInputFocus(true); Paint();

@@ -415,6 +415,7 @@ internal static class RenderCheck
                 var input = view.PreviousDistanceFieldBounds ?? throw new InvalidOperationException("DS input missing.");
                 view.PointerDown(input.X + 8, input.Y + 8, 0, false, false);
                 view.PointerUp(input.X + 8, input.Y + 8, 0); Paint();
+                view.KeyDown('A', true, false);
                 view.TextInput('0'); view.TextInput('.'); view.TextInput('5'); Paint();
                 if (Math.Abs(view.Document.Fruits[1].X - 170) > .001) throw new InvalidOperationException("DS preview did not move fruit before confirmation.");
                 view.KeyDown(13, false, false); Paint();
@@ -428,6 +429,7 @@ internal static class RenderCheck
                 view.PointerUp(input.X + 8, input.Y + 8, 0); Paint();
                 if (!view.IsEditingText || view.WantsCapture || view.PlayheadMs != xEditPlayhead)
                     throw new InvalidOperationException("X row click reached the canvas.");
+                view.KeyDown('A', true, false);
                 view.TextInput('6'); view.TextInput('0'); view.TextInput('0'); Paint();
                 if (view.DistanceSliderBounds is not null || Math.Abs(view.Document.Fruits[1].X - 512) > .001)
                     throw new InvalidOperationException("X input did not clamp without a slider.");

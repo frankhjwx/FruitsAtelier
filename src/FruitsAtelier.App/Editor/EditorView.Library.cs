@@ -34,7 +34,7 @@ public sealed partial class EditorView
     private readonly List<(Rect Bounds, LibraryMap Map)> libraryCards = [];
     private Dictionary<string, double?> libraryRatings = [];
     private string? selectedLibraryGroup;
-    private bool librarySettingsOpen, libraryProjectsOnly, libraryReplace, exportPage, resourcePage;
+    private bool librarySettingsOpen, libraryProjectsOnly, exportPage, resourcePage;
     private int libraryField = -1, libraryDiffScroll;
     private float libraryScroll;
     private string exportName = "";
@@ -357,10 +357,10 @@ public sealed partial class EditorView
         float listWidth = width - 558;
         var queryRect = new Rect(214, 84, width - 238, 40);
         c.Fill(queryRect, Surface, 6); c.Stroke(queryRect, libraryField == 2 ? Accent : Grid, radius: 6);
+        DrawInputText(c, new(226, 95, queryRect.Width - 24, 20), libraryQuery, 14, libraryField == 2, "library:2");
         if (libraryQuery.Length == 0 && libraryField != 2)
             c.Text(L.Get("library.search"), 226, 95, 14, Muted, queryRect.Width - 24);
-        else DrawInputText(c, new(226, 95, queryRect.Width - 24, 20), libraryQuery, 14, libraryField == 2, libraryReplace);
-        hits.Add(new(queryRect, () => { libraryField = 2; libraryReplace = false; }, true));
+        hits.Add(new(queryRect, () => { libraryField = 2; FocusInput("library:2", libraryQuery, mouseX); }, true));
         c.Text(L.Get("library.results", LibrarySetCount), 214, 140, 12, Muted, listWidth);
         libraryListBounds = new(214, 170, listWidth, Math.Max(86, height - 212));
         if (revealLibrarySelection && LibrarySetCount > 0)
@@ -463,35 +463,50 @@ public sealed partial class EditorView
         c.Text(label, x, y, 14, Foreground, width - x - 32, true);
         var rect = new Rect(x, y + 28, width - x - (index < 2 || index == 4 ? 184 : 32), 42);
         c.Fill(rect, Surface, 5); c.Stroke(rect, libraryField == index ? Accent : Grid, radius: 5);
-        DrawInputText(c, new(x + 12, y + 40, rect.Width - 24, 20), value, 14, libraryField == index, libraryReplace);
-        hits.Add(new(rect, () => { libraryField = index; libraryReplace = false; }, true));
+        string inputKey = "library:" + index;
+        DrawInputText(c, new(x + 12, y + 40, rect.Width - 24, 20), value, 14, libraryField == index, inputKey);
+        hits.Add(new(rect, () => { libraryField = index; FocusInput(inputKey, value, mouseX); }, true));
         if (index == 4) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestDefaultSkinArchive?.Invoke());
         if (index < 2) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestLibraryFolder?.Invoke(index == 0));
     }
     public bool LibraryLoading => scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
     public bool LibraryTextFocused => (LibraryVisible || ExportVisible) && libraryField >= 0 && !ErrorVisible && !DiscardConfirmationVisible;
-    public void PasteLibraryText(string text)
+    public int LibraryInputField => LibraryTextFocused ? libraryField : -1;
+    public Action? RequestPasteLibrary { get; set; }
+    private bool SelectLibraryInputAt(float x, float y)
     {
-        if (!LibraryTextFocused) return;
+        foreach (int index in (ExportVisible ? new[] { 3 } : librarySettingsOpen ? new[] { 0, 1, 4 } : new[] { 2 }))
+        {
+            string key = "library:" + index;
+            if (!textLayouts.TryGetValue(key, out var layout)) continue;
+            var bounds = layout.Content;
+            if (x < bounds.X - 12 || x > bounds.Right + 12 || y < bounds.Y - 12 || y > bounds.Bottom + 12) continue;
+            libraryField = index;
+            SelectInput(key, LibraryFieldValue);
+            return true;
+        }
+        return false;
+    }
+    public void PasteLibraryText(string text, int expectedField = -1)
+    {
+        if (!LibraryTextFocused || expectedField >= 0 && libraryField != expectedField) return;
         ResetTextCaret();
         string value = new(text.Where(c => !char.IsControl(c)).ToArray());
-        LibraryFieldValue = new string(((libraryReplace ? "" : LibraryFieldValue) + value).Take(4096).ToArray());
-        libraryReplace = false;
+        LibraryFieldValue = InsertInput("library:" + libraryField, LibraryFieldValue, value, 4096);
     }
-    private void LibraryKey(int key, bool ctrl)
+    private void LibraryKey(int key, bool ctrl, bool shift)
     {
         if (updatesPage) { if (key == 27) updatesPage = false; return; }
         if (key == 27) FinishVolumeDrag();
         if (key == 27) { if (contextItems.Count > 0) contextItems.Clear(); else if (libraryField >= 0) libraryField = -1; else if (librarySettingsOpen) CloseSettings(); else resourcePage = false; return; }
         if (key == 116) { StartLibraryScan(); return; }
-        if (!librarySettingsOpen && ctrl && key == 70) { libraryField = 2; libraryReplace = true; return; }
+        if (!librarySettingsOpen && ctrl && key == 70) { libraryField = 2; SelectInput("library:2", libraryQuery); return; }
         if (key == 13 && libraryField < 0 && !librarySettingsOpen && !resourcePage && libraryBrowser?.Selected?.Map is { } map)
         { OpenSelectedLibraryMap(map); return; }
         if (libraryField < 0) return;
-        if (ctrl && key == 65) { libraryReplace = true; return; }
+        if (ctrl && key == 86) { RequestPasteLibrary?.Invoke(); return; }
         string value = LibraryFieldValue;
-        if (key == 8) { var positions = System.Globalization.StringInfo.ParseCombiningCharacters(value); LibraryFieldValue = libraryReplace || positions.Length == 0 ? "" : value[..positions[^1]]; libraryReplace = false; }
-        if (key == 46) { LibraryFieldValue = ""; libraryReplace = false; }
+        if (InputKey("library:" + libraryField, ref value, key, ctrl, shift, 4096)) LibraryFieldValue = value;
         if (key == 13) libraryField = -1;
     }
     private string LibraryFieldValue

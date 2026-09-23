@@ -580,7 +580,7 @@ public sealed partial class EditorView
         bool timestamp = label == L.Get("ui.timeField") || label == L.Get("ui.startTimeField") || label == L.Get("ui.endTimeField");
         c.Fill(r, focused ? 0x273638u : 0x151B24u, 3);
         c.Stroke(r, focused ? (fieldError.Length > 0 ? Error : Accent) : r.Contains(mouseX, mouseY) ? 0x67758B : Grid, 1, 3);
-        DrawInputText(c, new(r.X + 9, r.Y + 7, r.Width - 18, 18), focused ? editBuffer : timestamp ? Time(value) : Number(value), 12, focused, replaceText);
+        DrawInputText(c, new(r.X + 9, r.Y + 7, r.Width - 18, 18), focused ? editBuffer : timestamp ? Time(value) : Number(value), 12, focused, "numeric:" + index);
         fields.Add(new(r, label, value, apply, timestamp));
         y += 37;
     }

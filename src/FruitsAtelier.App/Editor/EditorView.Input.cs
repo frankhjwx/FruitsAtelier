@@ -125,7 +125,7 @@ public sealed partial class EditorView
             if (fields[i].Bounds.Contains(x, y))
             {
                 if (draftTrack != Guid.Empty) { StatusMessage = L.Get("editor.status.finishBeforeNumericEdit"); return; }
-                FocusField(i); return;
+                FocusField(i); FocusInput("numeric:" + i, editBuffer, x); return;
             }
         if (objectTimeline.Contains(x, y)) { BeginObjectTimeline(x, y, ctrl || shift); return; }
         if (!AudioLoading && (overview.Contains(x, y) || HitsTimelineHead(x, y)))
@@ -278,6 +278,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (textSelecting) { MoveInputSelection(x); return; }
         if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
         if (SongSetupVisible) { mouseX = x; mouseY = y; MoveSongSetup(x, y, shift); return; }
         if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x, shift); return; }
@@ -391,6 +392,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
+        if (textSelecting && button == 0) { MoveInputSelection(x); textSelecting = false; return; }
         if (SongSetupVisible) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
         if (updatesPage) return;
@@ -439,17 +441,33 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
-        if (SongSetupVisible) return;
-        if (DistanceEditing) { PointerDown(x, y, 0, shift, ctrl); return; }
+        if (SongSetupVisible)
+        {
+            foreach (var pair in songFieldBounds)
+                if (pair.Value.Contains(x, y) && SongFieldEnabled(pair.Key))
+                { songField = pair.Key; SelectInput("song:" + pair.Key, songValues[pair.Key]); return; }
+            return;
+        }
+        if (DistanceEditing)
+        {
+            if (textLayouts.TryGetValue("distance", out var layout) && layout.Content.Contains(x, y))
+                SelectInput("distance", editBuffer);
+            else PointerDown(x, y, 0, shift, ctrl);
+            return;
+        }
         if (updatesPage) return;
         if (IsTestplaying) return;
         if (notesLocked && plot.Contains(x, y)) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
-        if (TimeJumpVisible) { timeJumpSelected = true; return; }
+        if (TimeJumpVisible) { if (TimeJumpInputBounds.Contains(x, y)) SelectInput("time", timeJumpText); return; }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
+        if ((ExportVisible || LibraryVisible) && SelectLibraryInputAt(x, y)) return;
         if (ExportVisible) return;
         if (LibraryVisible) { if (!libraryPointerMoved && contextItems.Count == 0 && !languageMenuOpen) OpenLibraryCard(x, y); return; }
+        for (int i = 0; i < fields.Count; i++)
+            if (fields[i].Bounds.Contains(x, y))
+            { FocusField(i); SelectInput("numeric:" + i, editBuffer); return; }
         if (ctrl || tool == Tool.Fruit) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (!LegacyMode && draftTrack != Guid.Empty && SelectedTrack is { } draft && Near(Point(draft.Nodes[^1]), x, y, 8))
         { draft.Nodes[^1].HandleOut = default; draftStraight = true; return; }
@@ -590,7 +608,7 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
-        if (DistanceKeyDown(virtualKey, ctrl)) return;
+        if (DistanceKeyDown(virtualKey, ctrl, shift)) return;
         placementCtrl = ctrl;
         if (virtualKey == 27 && legacyButtonSlider != Guid.Empty)
         { legacyButtonSlider = Guid.Empty; return; }
@@ -635,15 +653,15 @@ public sealed partial class EditorView
         if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl, shift); return; }
         if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey); return; }
-        if (TimeJumpVisible) { TimeJumpKey(virtualKey, ctrl); return; }
+        if (TimeJumpVisible) { TimeJumpKey(virtualKey, ctrl, shift); return; }
         if (SliderDialogVisible)
         {
             if (virtualKey == 27)
             { if (SliderImportPromptVisible) AnswerSliderImport(false); else if (SliderConversionBusy) CancelSliderConversion(); else sliderBatchErrors = []; }
             return;
         }
-        if (ExportVisible) { ExportKey(virtualKey, ctrl); return; }
-        if (LibraryVisible) { LibraryKey(virtualKey, ctrl); return; }
+        if (ExportVisible) { ExportKey(virtualKey, ctrl, shift); return; }
+        if (LibraryVisible) { LibraryKey(virtualKey, ctrl, shift); return; }
         if (virtualKey == 116 && !ctrl && !shift) { StartTestplay(); return; }
         if (ctrl && !shift && virtualKey is 83 or 69 && drag == DragKind.None)
         {
@@ -669,7 +687,7 @@ public sealed partial class EditorView
         if (editField >= 0)
         {
             if (virtualKey == 27) { editField = -1; fieldError = ""; return; }
-            if (ctrl && virtualKey == 65) { replaceText = true; return; }
+            if (ctrl && virtualKey == 65) { SelectInput("numeric:" + editField, editBuffer); return; }
             if (virtualKey is 13 or 9)
             {
                 int current = editField;
@@ -677,11 +695,8 @@ public sealed partial class EditorView
                     FocusField((current + (shift ? fields.Count - 1 : 1)) % fields.Count);
                 return;
             }
-            if (virtualKey == 8)
-            {
-                editBuffer = replaceText || editBuffer.Length == 0 ? "" : editBuffer[..^1]; replaceText = false;
-            }
-            else if (virtualKey == 46) { editBuffer = ""; replaceText = false; }
+            InputKey("numeric:" + editField, ref editBuffer, virtualKey, ctrl, shift, 30, RequestPasteField);
+            replaceText = false;
             return;
         }
         if (virtualKey == 27)
@@ -751,21 +766,21 @@ public sealed partial class EditorView
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (TimeJumpVisible)
         {
-            if (!char.IsControl(value) && (timeJumpSelected || timeJumpText.Length < 128))
-            { timeJumpText = (timeJumpSelected ? "" : timeJumpText) + value; timeJumpSelected = false; timeJumpError = ""; }
+            if (!char.IsControl(value)) { timeJumpText = InsertInput("time", timeJumpText, value.ToString(), 128); timeJumpError = ""; }
             return;
         }
         if (SliderDialogVisible) return;
-        if (LibraryVisible || ExportVisible) { if (libraryField >= 0 && !char.IsControl(value) && LibraryFieldValue.Length < 4096) { LibraryFieldValue = (libraryReplace ? "" : LibraryFieldValue) + value; libraryReplace = false; } return; }
+        if (LibraryVisible || ExportVisible) { if (libraryField >= 0 && !char.IsControl(value)) LibraryFieldValue = InsertInput("library:" + libraryField, LibraryFieldValue, value.ToString(), 4096); return; }
         if (editField < 0 || char.IsControl(value)) return;
         if (!(char.IsAsciiDigit(value) || value is '.' or '-' or '+' or 'e' or 'E' || value == ':' && fields[editField].Timestamp)) return;
-        if (replaceText) { editBuffer = ""; replaceText = false; }
-        if (editBuffer.Length < 30) editBuffer += value;
+        editBuffer = InsertInput("numeric:" + editField, editBuffer, value.ToString(), 30);
+        replaceText = false;
         fieldError = "";
     }
 
     public void CancelInteraction()
     {
+        textSelecting = false;
         songDrag = -1;
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
@@ -941,6 +956,7 @@ public sealed partial class EditorView
         editBuffer = fields[index].Timestamp ? Time(fields[index].Value) : fields[index].Value.ToString("G17", CultureInfo.InvariantCulture);
         fieldError = "";
         replaceText = true;
+        SelectInput("numeric:" + index, editBuffer);
     }
 
     private bool CommitField()
