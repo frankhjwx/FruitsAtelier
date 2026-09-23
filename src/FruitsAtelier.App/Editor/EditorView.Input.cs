@@ -104,7 +104,9 @@ public sealed partial class EditorView
                     if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); return; }
                 return;
             }
-            bool sameHeader = menu < 3 && new FruitsAtelier.App.Rendering.Rect(109 + menu * 53, 6, 50, 28).Contains(x, y);
+            bool sameHeader = menu == 4
+                ? new FruitsAtelier.App.Rendering.Rect(268, 6, 70, 28).Contains(x, y)
+                : menu < 3 && new FruitsAtelier.App.Rendering.Rect(109 + menu * 53, 6, 50, 28).Contains(x, y);
             menu = -1;
             if (sameHeader) return;
             if (y >= 39) return;
@@ -136,7 +138,11 @@ public sealed partial class EditorView
                 if (draftTrack != Guid.Empty) { StatusMessage = L.Get("editor.status.finishBeforeNumericEdit"); return; }
                 FocusField(i); FocusInput("numeric:" + i, editBuffer, x); return;
             }
-        if (objectTimeline.Contains(x, y)) { BeginObjectTimeline(x, y, ctrl || shift); return; }
+        if (objectTimeline.Contains(x, y))
+        {
+            if (!ctrl && !shift && BeginBreakEdge(x, y)) return;
+            BeginObjectTimeline(x, y, ctrl || shift); return;
+        }
         if (!AudioLoading && (overview.Contains(x, y) || HitsTimelineHead(x, y)))
         {
             if (overview.Contains(x, y) && ctrl)
@@ -338,6 +344,7 @@ public sealed partial class EditorView
             return;
         }
         if (drag == DragKind.Timeline) { NavigateTime(x); return; }
+        if (drag == DragKind.BreakEdge) { MoveBreakEdge(x); return; }
         if (!dragMoved)
         {
             if (MathF.Abs(x - dragStartX) < 2 && MathF.Abs(y - dragStartY) < 2) return;
@@ -448,6 +455,12 @@ public sealed partial class EditorView
             if (Math.Abs(end - breakStartMs) >= 1)
                 Edit(L.Get("timeline.addBreak"), () => OsuTimeline.AddBreak(Document, Math.Min(end, breakStartMs), Math.Max(end, breakStartMs)));
             drag = DragKind.None;
+            return;
+        }
+        if (drag == DragKind.BreakEdge)
+        {
+            MoveBreakEdge(x);
+            FinishBreakEdge();
             return;
         }
         PointerMove(x, y, false, false);
@@ -653,6 +666,23 @@ public sealed partial class EditorView
             else if (ctrl && virtualKey == 80)
             {
                 if (!testplayPauseHeld) { testplayPauseHeld = true; ToggleTestplayPause(); }
+            }
+            else if (ctrl && virtualKey == 66)
+            {
+                if (!testplayBookmarkHeld)
+                {
+                    testplayBookmarkHeld = true;
+                    AdvanceTestplay();
+                    if (IsTestplaying)
+                    {
+                        int time = (int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue);
+                        Edit(L.Get("timeline.bookmark"), () =>
+                        {
+                            if (shift) OsuTimeline.RemoveNearestBookmark(Document, time);
+                            else OsuTimeline.AddBookmark(Document, time);
+                        });
+                    }
+                }
             }
             else if (virtualKey == 9)
             {

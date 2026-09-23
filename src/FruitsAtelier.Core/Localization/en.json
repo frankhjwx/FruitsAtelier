@@ -1,6 +1,10 @@
 {
   "timeline.addBreak": "Add break",
   "timeline.removeBreak": "Remove break",
+  "timeline.breakLabel": "Break",
+  "timeline.timingMenu": "Timing",
+  "timeline.setPreviewPoint": "Set Current Position as Preview Point",
+  "timeline.insertBreak": "Insert Break Time",
   "timeline.bookmark": "Toggle bookmark",
   "timeline.bookmark.add": "Add bookmark",
   "timeline.bookmark.remove": "Remove bookmark",

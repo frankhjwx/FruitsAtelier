@@ -32,9 +32,9 @@ public sealed partial class EditorView
                     c.Fill(new(cx - 9, cy - 9, 18, 18), ink);
                     break;
                 case 3:
-                    c.Fill(new(cx - 10, cy - 8, 15, 16), ink, 2);
-                    for (int row = -6; row <= 6; row++)
-                        c.Line(cx + 5, cy + row, cx + 11 - Math.Abs(row) / 2f, cy + row, ink, 1.2f);
+                    c.Fill(new(cx - 13, cy - 10, 20, 20), ink, 3);
+                    for (int row = -8; row <= 8; row++)
+                        c.Line(cx + 7, cy + row, cx + 14 - Math.Abs(row) * 5f / 8, cy + row, ink, 1.2f);
                     break;
             }
             hits.Add(new(r, actions[i], enabled[i]));

@@ -6,7 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private Rect BookmarkToolbarBounds => new(overview.X, overview.Y - 34, 246, 34);
+    private Rect BookmarkToolbarBounds => new(overview.X + 8, overview.Y - 39, 246, 34);
 
     private void SeekBookmark(bool next)
     {
@@ -20,9 +20,12 @@ public sealed partial class EditorView
     private void DrawBookmarkToolbar(ICanvas c)
     {
         var panel = BookmarkToolbarBounds;
-        if (drag != DragKind.None || !(overview.Contains(mouseX, mouseY) || panel.Contains(mouseX, mouseY)) || overview.Width < 260) return;
+        var bridge = new Rect(overview.X, panel.Bottom, overview.Width, overview.Y - panel.Bottom);
+        if (!(overview.Contains(mouseX, mouseY) || panel.Contains(mouseX, mouseY)
+            || bridge.Contains(mouseX, mouseY)) || overview.Width < 260) return;
         string texture = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
-        if (!c.Image(texture, panel, source: new(30, 210, 2110, 280))) c.Fill(panel, 0x1D2732, 6);
+        c.Fill(panel, 0x1D2732, 6);
+        c.Image(texture, panel, source: new(40, 225, 2090, 224));
         var bookmarks = OsuTimeline.Bookmarks(Document);
         int current = (int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue);
         bool[] enabled = [!bookmarks.Contains(current), bookmarks.Any(t => Math.Abs((long)t - current) < 2000),
@@ -37,12 +40,12 @@ public sealed partial class EditorView
         int hovered = -1;
         for (int i = 0; i < 5; i++)
         {
-            var r = i < 4 ? new Rect(panel.X + 6 + i * 36, panel.Y + 2, 30, 30)
-                : new Rect(panel.X + 150, panel.Y + 2, 90, 30);
+            var r = i < 4 ? new Rect(panel.X + 6 + i * 36, panel.Y + 5, 30, 24)
+                : new Rect(panel.X + 150, panel.Y + 5, 90, 24);
             bool hover = r.Contains(mouseX, mouseY);
             c.Fill(r, hover ? 0x405065u : 0x19232Du, 4);
             uint ink = enabled[i] ? 0xF1F4F8u : 0x738191u;
-            float cx = r.X + (i == 4 ? 17 : r.Width / 2), cy = r.Y + r.Height / 2;
+            float cx = r.X + r.Width / 2, cy = r.Y + r.Height / 2;
             if (i is 0 or 1)
             {
                 c.Circle(cx, cy, 9, ink);
@@ -63,9 +66,14 @@ public sealed partial class EditorView
             }
             else
             {
+                string label = L.Get("timeline.bookmark.resetLabel");
+                float labelWidth = c.MeasureText(label, 12, true);
+                float groupLeft = r.X + (r.Width - (18 + 6 + labelWidth)) / 2;
+                cx = groupLeft + 9;
                 c.Line(cx - 6, cy - 6, cx + 6, cy + 6, ink, 3);
                 c.Line(cx + 6, cy - 6, cx - 6, cy + 6, ink, 3);
-                c.Text(L.Get("timeline.bookmark.resetLabel"), r.X + 31, r.Y + 8, 12, ink, 55, true);
+                float textX = groupLeft + 24;
+                c.Text(label, textX, r.Y + 3, 12, ink, r.Right - textX - 4, true);
             }
             hits.Add(new(r, actions[i], true));
             if (hover) hovered = i;

@@ -12,6 +12,7 @@ public sealed partial class EditorView
     private bool testplayEscapeConsumed;
     private bool testplayTabHeld;
     private bool testplayPauseHeld;
+    private bool testplayBookmarkHeld;
     public bool TestplayPaused => testplay?.Paused ?? false;
     public bool TestplayAutoplay => testplay?.Autoplay ?? false;
     private double TestplayRealtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
@@ -38,6 +39,7 @@ public sealed partial class EditorView
         testplayStart = playhead;
         testplayTabHeld = false;
         testplayPauseHeld = false;
+        testplayBookmarkHeld = false;
         testplayWithAudio = AudioReady;
         comboCurrent = comboPrevious = 0; comboChangedAt = double.NegativeInfinity;
         ResetHitsounds();
@@ -75,6 +77,7 @@ public sealed partial class EditorView
         testplay!.Cancel();
         testplayDriver?.Dispose(); testplayDriver = null;
         testplay = null; testplayFrame = null;
+        testplayBookmarkHeld = false;
         if (testplayWithAudio)
         {
             if (RequestPausePlayback is not null) RequestPausePlayback();
@@ -123,6 +126,7 @@ public sealed partial class EditorView
         if (virtualKey == 27) testplayEscapeConsumed = false;
         if (virtualKey == 9) testplayTabHeld = false;
         if (virtualKey == 80) testplayPauseHeld = false;
+        if (virtualKey == 66) testplayBookmarkHeld = false;
         if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
         if (IsTestplaying) AdvanceTestplay();
     }

@@ -6,6 +6,12 @@ public readonly record struct BreakPeriod(int StartMs, int EndMs);
 
 public static class OsuTimeline
 {
+    public static int? PreviewTime(MapDocument document)
+    {
+        string? value = OsuBeatmapReader.Setting(document, "General", "PreviewTime");
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int time) && time >= 0 ? time : null;
+    }
+
     public static IReadOnlyList<BreakPeriod> Breaks(MapDocument document) => document.OriginalSections
         .Where(s => s.Name == "Events").SelectMany(s => s.Lines)
         .Select(ParseBreak).Where(b => b is not null).Select(b => b!.Value)
@@ -62,6 +68,26 @@ public static class OsuTimeline
         foreach (var section in document.OriginalSections.Where(s => s.Name == "Events"))
             for (int i = 0; i < section.Lines.Count; i++)
                 if (ParseBreak(section.Lines[i]) == period) { section.Lines.RemoveAt(i); return true; }
+        return false;
+    }
+
+    public static bool ReplaceBreak(MapDocument document, BreakPeriod period, BreakPeriod replacement)
+    {
+        if (replacement.StartMs < 0 || replacement.EndMs <= replacement.StartMs)
+            throw new ArgumentOutOfRangeException(nameof(replacement));
+        foreach (var section in document.OriginalSections.Where(s => s.Name == "Events"))
+            for (int i = 0; i < section.Lines.Count; i++)
+            {
+                string line = section.Lines[i];
+                if (ParseBreak(line) != period) continue;
+                int comment = line.IndexOf("//", StringComparison.Ordinal);
+                string suffix = comment < 0 ? "" : line[comment..];
+                var fields = (comment < 0 ? line : line[..comment]).Split(',');
+                fields[1] = replacement.StartMs.ToString(CultureInfo.InvariantCulture);
+                fields[2] = replacement.EndMs.ToString(CultureInfo.InvariantCulture);
+                section.Lines[i] = string.Join(',', fields) + suffix;
+                return true;
+            }
         return false;
     }
 

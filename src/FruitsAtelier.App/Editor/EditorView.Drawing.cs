@@ -83,7 +83,8 @@ public sealed partial class EditorView
         Button(c, new(109, 6, 50, 28), L.Get("ui.file"), () => menu = menu == 0 ? -1 : 0, menu == 0);
         Button(c, new(162, 6, 50, 28), L.Get("ui.edit"), () => menu = menu == 1 ? -1 : 1, menu == 1);
         Button(c, new(215, 6, 50, 28), L.Get("ui.view"), () => { gridLevelMenuOpen = false; menu = menu == 2 ? -1 : 2; }, menu == 2);
-        Button(c, new(268, 6, 94, 28), L.Get("library.settings"), OpenSettings);
+        Button(c, new(268, 6, 70, 28), L.Get("timeline.timingMenu"), () => menu = menu == 4 ? -1 : 4, menu == 4);
+        Button(c, new(341, 6, 94, 28), L.Get("library.settings"), OpenSettings);
         DrawDifficultyTabs(c);
         Button(c, SongSetupButtonBounds, L.Get("song.title"), OpenSongSetup);
         DrawSkinSelector(c);
@@ -96,15 +97,29 @@ public sealed partial class EditorView
         float toolbarRight = rightPanel.X;
         c.Fill(new(0, canvas.Y, toolbarRight, 38), 0x1C2129);
         c.Text(L.Get("ui.canvasZoom"), 16, canvas.Y + 13, 11, Muted, 48);
-        zoomSlider = new(74, canvas.Y + 4, Math.Max(30, toolbarRight - 659), 29);
+        float snapLeft = toolbarRight - 158;
+        bool compactToolbar = toolbarRight < 900;
+        float breakWidth = compactToolbar ? 115 : 140;
+        float breakX = snapLeft - breakWidth - 5;
+        float movementX = breakX - 130;
+        float pathWidth = compactToolbar ? 100 : 150;
+        float pathX = movementX - pathWidth - 5;
+        zoomSlider = new(74, canvas.Y + 4, Math.Max(30, pathX - 130), 29);
         float zoomX = zoomSlider.X + (float)(1 - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (1 - MinimumCanvasZoom) : 1) * zoomSlider.Width;
         c.Line(zoomSlider.X, canvas.Y + 19, zoomSlider.Right, canvas.Y + 19, Grid, 3);
         c.Line(zoomSlider.X, canvas.Y + 19, zoomX, canvas.Y + 19, Accent, 3);
         c.Circle(zoomX, canvas.Y + 19, 6, Accent);
         c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + 8, canvas.Y + 13, 11, Foreground, 48);
-        Button(c, new(toolbarRight - 521, canvas.Y + 4, 150, 29), L.Get("ui.sliderPathCurves"), () => showTargets = !showTargets, showTargets);
-        Button(c, new(toolbarRight - 365, canvas.Y + 4, 125, 29), L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, movementAnalysis);
-        float snapLeft = toolbarRight - 158;
+        Button(c, new(pathX, canvas.Y + 4, pathWidth, 29), L.Get("ui.sliderPathCurves"), () => showTargets = !showTargets, showTargets);
+        Button(c, new(movementX, canvas.Y + 4, 125, 29), L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, movementAnalysis);
+        DrawObjectTimeline(c);
+        var breakButton = new Rect(breakX, canvas.Y + 4, breakWidth, 29);
+        bool canInsertBreak = InsertBreakCandidate() is not null;
+        if (breakButton.Contains(mouseX, mouseY) && canInsertBreak) c.Fill(breakButton, 0x35455A, 4);
+        string breakLabel = L.Get("timeline.insertBreak");
+        c.Text(breakLabel, breakButton.X + (breakButton.Width - c.MeasureText(breakLabel, 10)) / 2,
+            breakButton.Y + 9, 10, canInsertBreak ? Foreground : Muted, breakButton.Width - 6);
+        hits.Add(new(breakButton, InsertBreakAtPlayhead, canInsertBreak));
         c.Text(L.Get("ui.snap"), snapLeft, canvas.Y + 13, 11, Muted, 40);
         snapSlider = new(snapLeft + 40, canvas.Y + 4, 106, 29);
         float sliderStart = snapSlider.X + 7, sliderEnd = snapSlider.Right - 31;
@@ -114,7 +129,6 @@ public sealed partial class EditorView
         c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, canvas.Y + 13, 10, Foreground, 40);
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
         c.Text(L.Get("ui.timeAxis"), canvas.X + 11, canvas.Y + 120, 10, Muted, 43);
-        DrawObjectTimeline(c);
         var playfield = Playfield;
         for (int x = 0; x <= 512; x += 128)
         {
@@ -127,8 +141,26 @@ public sealed partial class EditorView
             {
                 float sx = Screen(new(0, x)).X;
                 c.Line(sx, plot.Y, sx, plot.Bottom, 0x262D37);
-            }
+        }
         c.Clip(new(canvas.X, plot.Y, canvas.Width, plot.Height));
+        double axisStart = viewStart, axisEnd = viewStart + plot.Height / pixelsPerMs;
+        var canvasBreaks = DisplayedBreaks();
+        for (int i = 0; i < canvasBreaks.Length; i++)
+        {
+            var period = canvasBreaks[i];
+            var limits = BreakTransitionLimits(canvasBreaks, i);
+            AxisBand(limits.Before, period.StartMs, 0xF1F1F1, .16f);
+            AxisBand(period.EndMs, limits.After, 0xA7CFA1, .20f);
+            AxisBand(period.StartMs, period.EndMs, 0x858585, .45f);
+        }
+        void AxisBand(double from, double to, uint color, float opacity)
+        {
+            double a = Math.Max(axisStart, from), b = Math.Min(axisEnd, to);
+            if (b <= a) return;
+            float upper = Screen(new(b, 0)).Y, lower = Screen(new(a, 0)).Y;
+            var bounds = new Rect(canvas.X, upper, plot.X - canvas.X, lower - upper);
+            c.Fill(bounds, color, 0, opacity);
+        }
         foreach (var line in renderedTiming!.Grid(viewStart, viewStart + plot.Height / pixelsPerMs, divisor))
         {
             double time = line.TimeMs;
@@ -368,10 +400,13 @@ public sealed partial class EditorView
         float top = height - 120;
         c.Fill(new(0, top, width, 92), 0x20252E);
         c.Line(0, top, width, top, Grid);
-        TimeDisplayBounds = new(16, top + 3, 188, 36);
+        TimeDisplayBounds = new(16, top + 7, 188, 27);
         if (TimeDisplayBounds.Contains(mouseX, mouseY)) c.Fill(TimeDisplayBounds, Surface, 4);
-        c.Text(Time(playhead), 20, top + 2, 18, Foreground, 180, true);
-        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), 20, top + 24, 10, Muted, 180);
+        string currentTime = Time(playhead);
+        c.Text(currentTime, 20, top + 10, 17, Foreground, 102, true);
+        const float durationX = 125;
+        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), durationX, top + 14, 11, Muted,
+            Math.Max(0, TimeDisplayBounds.Right - durationX));
         hits.Add(new(TimeDisplayBounds, OpenTimeJump, true));
         if (TimeDisplayBounds.Contains(mouseX, mouseY) && !TimeJumpVisible)
             c.Text(L.Get("timeJump.title"), 20, top - 20, 12, Foreground, 200);
@@ -400,12 +435,12 @@ public sealed partial class EditorView
             if (active && kiaiStart is null) kiaiStart = group.Key;
             else if (!active && kiaiStart is double start)
             {
-                DrawSpan(start, group.Key, 0xB5640B);
+                DrawSpan(start, group.Key, 0xD89532);
                 kiaiStart = null;
             }
         }
-        if (kiaiStart is double finalStart) DrawSpan(finalStart, TimelineDurationMs, 0xB5640B);
-        foreach (var period in OsuTimeline.Breaks(Document))
+        if (kiaiStart is double finalStart) DrawSpan(finalStart, TimelineDurationMs, 0xD89532);
+        foreach (var period in DisplayedBreaks())
             DrawSpan(period.StartMs, period.EndMs, 0xBCB1AE);
         if (drag == DragKind.Break)
         {
@@ -422,12 +457,17 @@ public sealed partial class EditorView
             var point = timing[i];
             if (point.TimeMs < 0 || point.TimeMs > TimelineDurationMs) continue;
             float x = TimelineX(point.TimeMs);
-            c.Line(x, overview.Y + 2, x, overview.Y + 18, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
+            c.Line(x, overview.Y + 2, x, overview.Y + 20, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
         }
         foreach (int bookmark in OsuTimeline.Bookmarks(Document))
         {
             float x = TimelineX(bookmark);
             c.Line(x, overview.Y + 20, x, overview.Bottom - 1, 0x4B9EF5, 1, timelineMarkerOpacity);
+        }
+        if (OsuTimeline.PreviewTime(Document) is int previewTime && previewTime <= TimelineDurationMs)
+        {
+            float x = TimelineX(previewTime);
+            c.Line(x, overview.Y - 3, x, overview.Bottom + 2, 0xFFD34A, 2, timelineMarkerOpacity);
         }
         double visibleStart = Math.Clamp(viewStart, 0, TimelineDurationMs);
         double visibleEnd = Math.Clamp(viewStart + plot.Height / pixelsPerMs, visibleStart, TimelineDurationMs);
@@ -483,6 +523,10 @@ public sealed partial class EditorView
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
         }
+        else if (menu == 4)
+            Item(L.Get("timeline.setPreviewPoint"), () => Edit(L.Get("timeline.setPreviewPoint"), () =>
+                SongSetup.Set(Document, "General", "PreviewTime",
+                    ((int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue)).ToString(System.Globalization.CultureInfo.InvariantCulture))));
         else
         {
             Item(L.Get("ui.gridLevel", L.Get("ui.grid" + gridSize)), () => gridLevelMenuOpen = true);
@@ -495,7 +539,7 @@ public sealed partial class EditorView
             Item(L.Get("ui.follow"), FollowPlayhead);
             Item(L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, active: movementAnalysis);
         }
-        float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : 109 + menu * 53;
+        float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : menu == 4 ? 268 : 109 + menu * 53;
         float top = menu == 3 ? difficultyAddButton.Bottom + 4 : 38;
         MenuBounds = new(x, top, 282, 14 + items.Count * 34 - 3);
         var rect = MenuBounds;

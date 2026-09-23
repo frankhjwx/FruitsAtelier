@@ -3,6 +3,29 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class TestplayTests
 {
+    public static void BookmarksDuringTestplay()
+    {
+        var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
+        var map = new MapDocument { DurationMs = 12000 };
+        map.Fruits.Add(new Fruit { TimeMs = 10000, X = 256 });
+        ui.LoadDocument(map);
+        ui.View.StartTestplay();
+        clock.Advance(500); ui.Paint();
+        ui.Key('B', ctrl: true);
+        Check(ui.View.IsTestplaying && OsuTimeline.Bookmarks(ui.View.Document).SequenceEqual([500]),
+            "Ctrl+B must add a bookmark at the live testplay position");
+        ui.Key('B', ctrl: true);
+        Check(OsuTimeline.Bookmarks(ui.View.Document).Count == 1, "Held Ctrl+B repeated the bookmark edit");
+        ui.View.KeyUp('B');
+        ui.Key('B', ctrl: true, shift: true);
+        Check(ui.View.IsTestplaying && OsuTimeline.Bookmarks(ui.View.Document).Count == 0,
+            "Ctrl+Shift+B must remove the nearby bookmark during testplay");
+        ui.View.KeyUp('B');
+        ui.View.StopTestplay();
+        ui.Key(90, ctrl: true);
+        Check(OsuTimeline.Bookmarks(ui.View.Document).SequenceEqual([500]), "Testplay bookmark removal did not undo");
+    }
+
     public static void PauseAndExitShortcuts()
     {
         var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);

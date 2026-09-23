@@ -1,6 +1,10 @@
 {
   "timeline.addBreak": "添加休息段",
   "timeline.removeBreak": "删除休息段",
+  "timeline.breakLabel": "休息",
+  "timeline.timingMenu": "时间点",
+  "timeline.setPreviewPoint": "将当前位置设为预览时间点",
+  "timeline.insertBreak": "插入休息时间",
   "timeline.bookmark": "切换书签",
   "timeline.bookmark.add": "添加书签",
   "timeline.bookmark.remove": "删除书签",

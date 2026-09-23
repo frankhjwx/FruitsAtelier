@@ -29,6 +29,7 @@ public sealed class CatchSkin
     public string FolderPath { get; }
     public string Name { get; private set; }
     private static readonly uint[] defaultComboColours = [0xFFC000, 0x00CA00, 0x127CFF, 0xF21839];
+    public static IReadOnlyList<uint> DefaultComboColours => defaultComboColours;
     public IReadOnlyList<uint> ComboColours => comboColours.Count > 0 ? comboColours : fallback?.ComboColours ?? defaultComboColours;
     public uint HyperDashFruitColour { get; private set; } = 0xFF0000;
     public uint HyperDashColour { get; private set; } = 0xFF0000;
