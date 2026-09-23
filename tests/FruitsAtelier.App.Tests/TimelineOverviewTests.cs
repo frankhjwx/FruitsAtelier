@@ -6,7 +6,9 @@ internal static class TimelineOverviewTests
     {
         var map = new MapDocument { DurationMs = 5000, IsDemo = false };
         map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, Effects = 1 });
+        map.TimingPoints.Add(new() { TimeMs = 500, BeatLengthMs = -100, Uninherited = false, Effects = 1 });
         map.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = -100, Uninherited = false, Effects = 0 });
+        map.Fruits.Add(new() { TimeMs = 750, X = 100 });
         OsuTimeline.AddBreak(map, 1500, 2000);
         OsuTimeline.ToggleBookmark(map, 2500);
         var ui = new Ui(overview: false);
@@ -14,10 +16,15 @@ internal static class TimelineOverviewTests
         var area = ui.Canvas.Fills.Single(f => f.Color == 0x141922).Bounds;
         Check(ui.Canvas.Lines.Any(l => l.Color == 0xEC4545 && l.Y1 == area.Y + 2), "Red timing point missing");
         Check(ui.Canvas.Lines.Any(l => l.Color == 0x73B92F && l.Y1 == area.Y + 2), "Green timing point missing");
-        Check(ui.Canvas.Fills.Any(f => f.Color == 0xD7AE42 && f.Bounds.Y == area.Y + 21), "Kiai span missing");
-        Check(ui.Canvas.Fills.Any(f => f.Color == 0xF2F4F7 && f.Bounds.Y == area.Y + 21), "Break span missing");
-        Check(ui.Canvas.Lines.Any(l => l.Color == 0x4B9EF5 && l.Y1 == area.Y + 31), "Bookmark missing");
         float X(double time) => area.X + (float)(time / ui.View.TimelineDurationMs) * area.Width;
+        var kiai = ui.Canvas.Fills.Where(f => f.Color == 0xD7AE42).ToArray();
+        Check(kiai.Length == 1 && Math.Abs(kiai[0].Bounds.X - X(0)) < .01f
+            && Math.Abs(kiai[0].Bounds.Right - X(1000)) < .01f
+            && kiai[0].Bounds.Y < area.Y + 20 && kiai[0].Bounds.Bottom > area.Y + 20,
+            "Kiai must span the complete timing interval across notes and timing points");
+        Check(ui.Canvas.Fills.Any(f => f.Color == 0xF2F4F7 && f.Bounds.Y < area.Y + 20 && f.Bounds.Bottom > area.Y + 20),
+            "Break span must straddle the timeline");
+        Check(ui.Canvas.Lines.Any(l => l.Color == 0x4B9EF5 && l.Y1 == area.Y + 20), "Bookmark must join the timeline");
         ui.View.PointerDown(X(2500), area.Y + 34, 0, false, true);
         ui.View.PointerUp(X(2500), area.Y + 34, 0);
         Check(OsuTimeline.Bookmarks(ui.View.Document).Count == 0, "Ctrl-click did not remove bookmark");

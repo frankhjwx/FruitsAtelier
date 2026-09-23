@@ -410,29 +410,37 @@ public sealed partial class EditorView
             float x = TimelineX(point.TimeMs);
             c.Line(x, overview.Y + 2, x, overview.Y + 18, point.Uninherited ? 0xEC4545u : 0x73B92Fu);
         }
-        for (int i = 0; i < timing.Length; i++)
+        const float spanHeight = 12;
+        float spanY = overview.Y + 20 - spanHeight / 2;
+        double? kiaiStart = null;
+        foreach (var group in timing.GroupBy(p => p.TimeMs))
         {
-            var point = timing[i];
-            if ((point.Effects & 1) == 0) continue;
-            double end = i + 1 < timing.Length ? timing[i + 1].TimeMs : TimelineDurationMs;
-            float x1 = TimelineX(point.TimeMs), x2 = TimelineX(end);
-            if (x2 > x1) c.Fill(new(x1, overview.Y + 21, x2 - x1, 10), 0xD7AE42);
+            bool active = (group.Last().Effects & 1) != 0;
+            if (active && kiaiStart is null) kiaiStart = group.Key;
+            else if (!active && kiaiStart is double start)
+            {
+                DrawSpan(start, group.Key, 0xD7AE42);
+                kiaiStart = null;
+            }
         }
+        if (kiaiStart is double finalStart) DrawSpan(finalStart, TimelineDurationMs, 0xD7AE42);
         foreach (var period in OsuTimeline.Breaks(Document))
-        {
-            float x1 = TimelineX(period.StartMs), x2 = TimelineX(period.EndMs);
-            if (x2 > x1) c.Fill(new(x1, overview.Y + 21, x2 - x1, 10), 0xF2F4F7);
-        }
+            DrawSpan(period.StartMs, period.EndMs, 0xF2F4F7);
         if (drag == DragKind.Break)
         {
             float x1 = TimelineX(breakStartMs), x2 = Math.Clamp(mouseX, overview.X, overview.Right);
-            c.Fill(new(Math.Min(x1, x2), overview.Y + 21, Math.Abs(x2 - x1), 10), 0xF2F4F7);
+            c.Fill(new(Math.Min(x1, x2), spanY, Math.Abs(x2 - x1), spanHeight), 0xF2F4F7);
+        }
+        void DrawSpan(double start, double end, uint color)
+        {
+            float x1 = TimelineX(start), x2 = TimelineX(end);
+            if (x2 > x1) c.Fill(new(x1, spanY, x2 - x1, spanHeight), color);
         }
         c.Line(overview.X, overview.Y + 20, overview.Right, overview.Y + 20, 0xF2F4F7);
         foreach (int bookmark in OsuTimeline.Bookmarks(Document))
         {
             float x = TimelineX(bookmark);
-            c.Line(x, overview.Y + 31, x, overview.Bottom - 1, 0x4B9EF5);
+            c.Line(x, overview.Y + 20, x, overview.Bottom - 1, 0x4B9EF5);
         }
         double visibleStart = Math.Clamp(viewStart, 0, TimelineDurationMs);
         double visibleEnd = Math.Clamp(viewStart + plot.Height / pixelsPerMs, visibleStart, TimelineDurationMs);
