@@ -40,7 +40,7 @@ See [Building and Testing](TESTING.md) for SDK selection and build commands, and
 
 Hosts map input to DIP coordinates before passing it to `EditorView`. Content changes commit through `EditorHistory` transactions; a drag, batch operation, or curve draft becomes one undo step. Selection and viewport are separate session state.
 
-The conversion cache compares document snapshots and Tiny compensation settings. Changes trigger synchronous conversion of the full document before viewport culling. Language changes rebuild diagnostic caches. Both views share the conversion result; RNG and hyperdash use the complete object sequence.
+The conversion cache compares document snapshots and Tiny compensation settings. Changes trigger synchronous conversion of the full document before viewport culling. The editor also caches the exported osu read-back events for gameplay displays; their times and coordinates reflect file quantization while mapped source identities retain editing links. Language changes rebuild diagnostic caches. RNG and hyperdash use the complete playable object sequence.
 
 The canvas and object timeline share an immutable timing lookup built alongside the conversion snapshot. It sorts timing groups once and uses binary search for local BPM, meter and SV. Playback reuses it; content changes, undo and document replacement rebuild it. Grid drawing must not rebuild timing groups for each visible tick.
 
@@ -112,6 +112,9 @@ The object timeline caches its ordered source intervals against the conversion r
 Imported slider ends reuse converted durations, so repainting does not rebuild every
 slider's geometry and timing state. Content changes invalidate these intervals along
 with conversion; scrolling, playback and selection reuse them.
+Break intervals are parsed from source Events once per conversion snapshot and reused
+by the canvas, object timeline, and transport. This avoids scanning storyboard-heavy
+Events sections on every frame while preserving edits and undo through conversion invalidation.
 Hit testing rejects distant curve segments before sampling them. Editing snapshots
 copy existing identities without generating replacement IDs, and group dragging uses
 direct target lookup. Undo/redo still retains independent document snapshots.

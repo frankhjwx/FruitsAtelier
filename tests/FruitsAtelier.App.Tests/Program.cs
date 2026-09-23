@@ -14,6 +14,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
     ("Workspace-only saves persist before optional Songs export", WorkspaceSaveTests.Run),
     ("Library archive drops preserve Songs and report source/export presence", LibraryImportTests.Run),
@@ -23,12 +24,14 @@ var tests = new (string Name, Action Run)[]
     ("Slider stream confirmation, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
     ("Slider long press progress, cancellation and control-point shortcut", StreamShortcutTests.HoldAndShortcut),
     ("Testplay pause, resume and legacy exit shortcuts", TestplayTests.PauseAndExitShortcuts),
+    ("Testplay bookmark shortcuts edit at the live position", TestplayTests.BookmarksDuringTestplay),
     ("Testplay movement, combo, hyperdash and facing", TestplayTests.MovementAndJudgement),
     ("Testplay Tab switches autoplay and returns control without seeking", TestplayTests.AutoplaySwitching),
     ("Catch rotations, banana arrival transforms and combo colours", TestplayTests.VisualTransformsAndColours),
     ("Testplay Escape returns to editor without repeated navigation", TestplayTests.EscapeReturnsToEditor),
     ("Testplay caught stacks share preview effects and outlive final judgement", TestplayTests.LivePlate),
     ("Testplay input isolation and transport lifecycle", TestplayTests.EditorLifecycle),
+    ("Testplay compensates output buffer lead without shifting resume", TestplayTests.OutputBufferLead),
     ("Testplay subframe input and interpolated audio clock", TestplayTests.InputBetweenFrames),
     ("Missed testplay notes continue falling after judgement", TestplayTests.MissedObjectsFall),
     ("Testplay key capture and settings persistence", TestplayTests.Bindings),
@@ -38,6 +41,7 @@ var tests = new (string Name, Action Run)[]
     ("Opening maps initializes position and duration without transient jumps", AudioFeedbackTests.OpeningTransport),
     ("Audio volume settings, persistence and document isolation", AudioFeedbackTests.VolumeSettings),
     ("V jumps to the end and wheel navigation follows time order", AudioFeedbackTests.Navigation),
+    ("V and End jump to the final object's end", AudioFeedbackTests.LastObjectEndNavigation),
     ("Wheel surfaces step by playback beats or paused snap across timing boundaries", ViewportFeedbackTests.WheelSnapSteps),
     ("Skin hitsound priority and live selection refresh", AudioFeedbackTests.SkinSamples),
     ("Testplay legacy combo animation and live dash trails", TestplayTests.ComboAndTrails),
@@ -87,9 +91,23 @@ var tests = new (string Name, Action Run)[]
     ("Lazer placement and selected-slider controls avoid extra mode transitions", SliderModeInteractionTests.LazerPlacementAndSelection),
     ("FSlider hover offers both editing modes without changing content", SliderModeInteractionTests.GlobalModeMenu),
     ("Multiple distance snaps include zero and persist per-map configuration", DistanceSnapPresetTests.Snapping),
+    ("Distance per beat uses grid drag, numeric entry, export and undo", DistanceSnapPresetTests.BaseDistance),
+    ("Editor DPB preserves existing slider playback and imported multiplier", DistanceSnapPresetTests.ExistingSliderPreservation),
+    ("DPB input and bar use the reference distance range", DistanceSnapPresetTests.DynamicBaseRange),
+    ("DPB changes preserve preset pixel distances", DistanceSnapPresetTests.PresetDistancePreservation),
     ("Distance snap configuration supports modal editing and eight presets", DistanceSnapPresetTests.Dialog),
     ("Anchor dragging defaults to free time with independent opt-in snapping", AnchorSnapTests.Dragging),
     ("Catch hitsound samples and playback boundaries", HitsoundTests.Run),
+    ("Bottom timeline draws timing, break, kiai and bookmark edits", TimelineOverviewTests.Run),
+    ("Upper and canvas timelines show break, timing and preview markers", TimelineOverviewTests.DetailMarkers),
+    ("Upper timeline notes follow combo colours and New Combo boundaries", TimelineOverviewTests.ComboColours),
+    ("Kiai indicator pulses on full beats and follows timing edits", TimelineOverviewTests.KiaiPulse),
+    ("Storyboard-heavy maps reuse break intervals during repaint", TimelineOverviewTests.StoryboardBreakRendering),
+    ("Upper timeline stacks preserve white rings and lift selected notes", TimelineOverviewTests.StackAndSelection),
+    ("Timing menu sets an undoable preview point", TimelineOverviewTests.PreviewPointMenu),
+    ("Snap toolbar inserts an undoable break between objects", TimelineOverviewTests.InsertBreakButton),
+    ("Upper timeline break edges drag, preview, cancel and remove short breaks", TimelineOverviewTests.BreakEdgeEditing),
+    ("Bottom transport controls play, pause, stop and test", TimelineOverviewTests.TransportControls),
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),
     ("Fresh process defaults to English", () => { if (startupLanguage != "en") throw new Exception("Default language must be English"); }),
     ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),
@@ -963,6 +981,7 @@ sealed class RecordingCanvas : ICanvas
     public readonly record struct Segment(float X1, float Y1, float X2, float Y2, uint Color, float Opacity, float Width = 1);
     public readonly record struct Outline(Rect Bounds, uint Color);
     public readonly record struct Operation(int Order, Rect? Clip, Dot? Dot, Segment? Segment);
+    public readonly record struct PaintCall(uint Color, float Opacity, Rect? FillBounds = null, Segment? Line = null);
     private readonly Stack<Rect> clipStack = new();
     public readonly record struct Texture(string Path, Rect Bounds, float Opacity);
     public List<Texture> Images { get; } = [];
@@ -979,13 +998,16 @@ sealed class RecordingCanvas : ICanvas
     public List<Outline> Outlines { get; } = [];
     public List<Outline> Fills { get; } = [];
     public List<Operation> Operations { get; } = [];
-    public void Clear() { Fills.Clear(); Images.Clear(); Sprites.Clear(); Texts.Clear(); Clips.Clear(); Circles.Clear(); Lines.Clear(); Outlines.Clear(); Operations.Clear(); clipStack.Clear(); }
-    public void Fill(Rect r, uint color, float radius = 0, float opacity = 1) => Fills.Add(new(r, color));
+    public List<PaintCall> PaintCalls { get; } = [];
+    public void Clear() { Fills.Clear(); Images.Clear(); Sprites.Clear(); Texts.Clear(); Clips.Clear(); Circles.Clear(); Lines.Clear(); Outlines.Clear(); Operations.Clear(); PaintCalls.Clear(); clipStack.Clear(); }
+    public void Fill(Rect r, uint color, float radius = 0, float opacity = 1)
+    { Fills.Add(new(r, color)); PaintCalls.Add(new(color, opacity, FillBounds: r)); }
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0) => Outlines.Add(new(r, color));
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)
     {
         var line = new Segment(x1, y1, x2, y2, color, opacity, width);
         Lines.Add(line);
+        PaintCalls.Add(new(color, opacity, Line: line));
         Operations.Add(new(Operations.Count, clipStack.TryPeek(out var clip) ? clip : null, null, line));
     }
     public void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1, float opacity = 1)

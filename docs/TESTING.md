@@ -97,8 +97,10 @@ preserved. The intentional Direct2D exception is followed by a successful paint
 lifecycle entry in the diagnostic log.
 
 It also advances a fake update backend through checking, availability, download
-progress, and restart readiness while dispatching only paint messages. Update
-status must reach the view even when continuous rendering delays `WM_TIMER`.
+progress, restart readiness, current-version and failure states. Checks cover both
+paint polling and posted status notifications from an idle window with no pending
+paint region. Notifications must invalidate the window and render the new status
+without timer messages, input, resizing or minimizing.
 
 The Windows `--render-check` also exercises testplay entry, movement, combo drawing,
 return, catcher mirroring and binding settings at both window sizes and all tested
@@ -107,7 +109,8 @@ tests cover key repeat/release, focus cancellation, end conditions, judging betw
 frames, custom bindings, and document isolation. Extended binding checks cover capture,
 key labels, settings reload, movement/dash press and release, and reserved keys;
 Mac key mappings also run without an audio device. `Audio.Tests --hitsound-check`
-checks live catch samples at the next output frame without opening an audio device.
+checks timestamped samples against music frames and preserves late catch attacks
+without opening an audio device.
 
 The App tests use an injected monotonic clock to check subframe taps, reversals,
 dash changes, repeated audio snapshots, timestamp interpolation, device stalls,
@@ -211,3 +214,8 @@ Synthetic App regressions cover the inclusive 5 ms edge boundary, the slider bod
 scope, combo reference numbers, horizontal grids, and timestamp precision.
 
 The feedback regressions cover V/End navigation, scroll direction, persistent independent volume controls, skin sample precedence and cache upgrades, and compatible versus conflicting close SV timing. Windows PCM checks verify live and scheduled hitsound gain separately from song gain; headless Mac CI exercises the native mixer with no audio device. Native window checks exercise all three volume sliders in both languages.
+
+Song Setup regressions cover shared metadata, independent difficulty settings,
+romanised fields, modal isolation, cancellation, undo/redo, palette HEX input and
+project/`.osu` persistence. Native window checks open all four tabs in both
+languages at each supported test size and DPI and exercise the color picker.

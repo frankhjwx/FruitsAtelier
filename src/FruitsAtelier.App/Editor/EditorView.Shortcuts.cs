@@ -15,8 +15,6 @@ public sealed partial class EditorView
             case 77: divisor = SnapDivisors[(Array.IndexOf(SnapDivisors, divisor) + 1) % SnapDivisors.Length]; return true;
             case 68: CloneSelection(); return true;
             case 72: MirrorSelection(); return true;
-            case 37: NudgeSelection(0, -1); return true;
-            case 39: NudgeSelection(0, 1); return true;
             case 38: AdjustPlaybackSpeed(1); return true;
             case 40: AdjustPlaybackSpeed(-1); return true;
             default: return false;
@@ -36,7 +34,7 @@ public sealed partial class EditorView
                 double first = ClipboardParents(Document).Select(p => p.TimeMs).DefaultIfEmpty(0).Min();
                 SeekTo(playhead <= first ? 0 : first); return true;
             case 35: case 86:
-                double last = ClipboardParents(Document).Select(p => p.TimeMs).DefaultIfEmpty(0).Max();
+                double last = LastObjectEndMs();
                 SeekTo(playhead >= last ? AudioReady && AudioDurationMs > 0 ? AudioDurationMs : TimelineDurationMs : last); return true;
             case 37: case 39:
                 SeekTo(playhead + (key == 37 ? -1 : 1) * (shift ? 4 : 1) * TimingMap.At(Document, playhead).BeatLengthMs / divisor); return true;
@@ -49,6 +47,22 @@ public sealed partial class EditorView
                 NudgeSelection((key == 74 ? -1 : 1) * TimingMap.At(Document, time).BeatLengthMs / divisor, 0); return true;
             default: return false;
         }
+    }
+
+    private double LastObjectEndMs()
+    {
+        var last = ClipboardParents(Document).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).LastOrDefault();
+        if (last.Id == Guid.Empty) return 0;
+        EnsureConversion();
+        if (playableExport?.PlayableEndTimes.TryGetValue(last.Id, out double playableEnd) == true)
+            return playableEnd;
+        if (Document.Tracks.FirstOrDefault(t => t.Id == last.Id) is { Nodes.Count: > 0 } track)
+            return CurveMath.EndTimeMs(track);
+        if (Document.ImportedSliders.FirstOrDefault(s => s.Id == last.Id) is { } slider)
+            return ImportedSliderConverter.EndTimeMs(Document, slider);
+        if (Document.BananaShowers.FirstOrDefault(s => s.Id == last.Id) is { } shower)
+            return shower.EndTimeMs;
+        return last.TimeMs;
     }
 
     private void CloneSelection()

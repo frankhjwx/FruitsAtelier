@@ -82,7 +82,7 @@ public sealed partial class EditorView
         {
             DurationMs = Math.Max(Document.DurationMs, point.Value.TimeMs), BeatLengthMs = Document.BeatLengthMs,
             TimingOffsetMs = Document.TimingOffsetMs, ApproachRate = Document.ApproachRate,
-            SliderMultiplier = Document.SliderMultiplier, SliderTickRate = Document.SliderTickRate
+            CircleSize = Document.CircleSize, SliderMultiplier = Document.SliderMultiplier, SliderTickRate = Document.SliderTickRate
         };
         candidate.Fruits.AddRange(Document.Fruits);
         candidate.ImportedSliders.AddRange(Document.ImportedSliders);
@@ -103,9 +103,16 @@ public sealed partial class EditorView
         candidate.Tracks.RemoveAll(t => t.Nodes.Count < 2);
         var preview = CatchStreamConverter.Convert(candidate, compensateTinyDroplets, placementConversionCache);
         if (!preview.Success) return;
-        placementMovementObjects = preview.Objects;
-        placementGhost = preview.Objects.LastOrDefault(o => o.SourceId == source && o.Kind == CatchObjectKind.Fruit);
-        placementHyperdash = HyperDashCalculator.GetHyperDashStarts(preview.Objects, Document.CircleSize);
+        IReadOnlyList<ConvertedCatchObject> objects = preview.Objects;
+        try
+        {
+            var exported = OsuBeatmapWriter.Serialize(candidate, compensateTinyDroplets);
+            if (exported.ObjectSequenceMatches) objects = exported.PlayableObjects;
+        }
+        catch (InvalidDataException) { }
+        placementMovementObjects = objects;
+        placementGhost = objects.LastOrDefault(o => o.SourceId == source && o.Kind == CatchObjectKind.Fruit);
+        placementHyperdash = HyperDashCalculator.GetHyperDashStarts(objects, Document.CircleSize);
     }
 
     private MapPoint? PlacementGhostPoint()

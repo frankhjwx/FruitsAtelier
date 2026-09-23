@@ -29,7 +29,7 @@ internal static class DistanceEditingTests
         ui.Click(panel.Right - 8, panel.Y + 8);
         Check(ui.View.IsEditingText, "Whole panel did not start editing");
         ui.View.PointerDoubleClick(panel.Right - 8, panel.Y + 8, false, false); ui.Paint();
-        ui.Type(".75"); ui.Paint(); Near(205, ui.View.Document.Fruits[1].X);
+        ui.Key('A', ctrl: true); ui.Type(".75"); ui.Paint(); Near(205, ui.View.Document.Fruits[1].X);
         Near(.75, ui.View.DistanceReadout.Previous!.Value);
         ui.Key(27); Near(170, ui.View.Document.Fruits[1].X);
         Input(ui, false, "4"); Near(170, ui.View.Document.Fruits[1].X);
@@ -57,10 +57,10 @@ internal static class DistanceEditingTests
         ui.Key('Z', ctrl: true); Near(170, ui.View.Document.Fruits[1].X);
         ui.ClickMap(1500, 170); ui.Click(panel.X + 8, panel.Y + 8);
         ui.Key('Z', ctrl: true); Near(170, ui.View.Document.Fruits[1].X);
-        ui.ClickMap(1500, 170); ui.Click(panel.X + 8, panel.Y + 8); ui.Type(".8"); ui.Paint();
+        ui.ClickMap(1500, 170); ui.Click(panel.X + 8, panel.Y + 8); ui.Key('A', ctrl: true); ui.Type(".8"); ui.Paint();
         Near(212, ui.View.Document.Fruits[1].X);
         ui.View.CancelInteraction(); ui.Paint(); Near(170, ui.View.Document.Fruits[1].X);
-        ui.Click(panel.X + 8, panel.Y + 8); ui.Type(".9"); ui.Paint();
+        ui.Click(panel.X + 8, panel.Y + 8); ui.Key('A', ctrl: true); ui.Type(".9"); ui.Paint();
         ui.ClickMap(2200, 100); Near(226, ui.View.Document.Fruits[1].X);
         ui.Key('Z', ctrl: true); Near(170, ui.View.Document.Fruits[1].X);
         ui.ClickMap(1500, 170);
@@ -115,7 +115,7 @@ internal static class DistanceEditingTests
             ui.ClickMap(1500, 240);
             EditX("300");
             var ds = ui.View.PreviousDistanceFieldBounds!.Value;
-            ui.Click(ds.X + 8, ds.Y + 8); ui.Type(".5"); ui.Paint();
+            ui.Click(ds.X + 8, ds.Y + 8); ui.Key('A', ctrl: true); ui.Type(".5"); ui.Paint();
             Near(270, ui.View.Document.Fruits[1].X);
             EditX("320"); ui.Key(13); Near(320, ui.View.Document.Fruits[1].X);
             ui.Key('L'); Check(ui.View.XCoordinateFieldBounds is null, "Locked note exposes X editing");
@@ -127,7 +127,7 @@ internal static class DistanceEditingTests
             void EditX(string text)
             {
                 var field = ui.View.XCoordinateFieldBounds ?? throw new Exception("X field missing");
-                ui.Click(field.X + 8, field.Y + 8); ui.Type(text); ui.Paint();
+                ui.Click(field.X + 8, field.Y + 8); ui.Key('A', ctrl: true); ui.Type(text); ui.Paint();
             }
         }
         Strings.SetLanguage("en");
@@ -185,7 +185,7 @@ internal static class DistanceEditingTests
             ui.ClickMap(target.TimeMs, target.X);
             var xField = ui.View.XCoordinateFieldBounds!.Value;
             ui.Click(xField.X + 8, xField.Y + 8);
-            ui.Type((target.X + 5).ToString("0", System.Globalization.CultureInfo.InvariantCulture)); ui.Key(13);
+            ui.Key('A', ctrl: true); ui.Type((target.X + 5).ToString("0", System.Globalization.CultureInfo.InvariantCulture)); ui.Key(13);
             Check(!ui.View.IsEditingText, $"{imported}/{point} X edit was rejected");
             var xMoved = CatchStreamConverter.Convert(ui.View.Document).Objects.Single(o => o.SourceId == source && o.Kind == target.Kind && Math.Abs(o.TimeMs - target.TimeMs) < .001);
             Near(Math.Round(target.X + 5, 0, MidpointRounding.AwayFromZero), xMoved.X);
@@ -270,6 +270,6 @@ internal static class DistanceEditingTests
     private static void Input(Ui ui, bool next, string value)
     {
         var field = (next ? ui.View.NextDistanceFieldBounds : ui.View.PreviousDistanceFieldBounds)!.Value;
-        ui.Click(field.X + 8, field.Y + 8); ui.Type(value); ui.Key(13);
+        ui.Click(field.X + 8, field.Y + 8); ui.Key('A', ctrl: true); ui.Type(value); ui.Key(13);
     }
 }

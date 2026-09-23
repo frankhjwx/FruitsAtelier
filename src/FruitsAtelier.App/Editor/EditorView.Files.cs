@@ -36,6 +36,7 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        CloseSongSetup();
         TimeJumpVisible = false;
         StreamDialogVisible = false;
         CloseVolumeDialog();
@@ -149,7 +150,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
-        if (DistanceSnapDialogVisible) return false;
+        if (SongSetupVisible || DistanceSnapDialogVisible) return false;
         if (SliderDialogVisible || ErrorVisible) return false;
         if (draftBanana != Guid.Empty)
         {
@@ -163,7 +164,8 @@ public sealed partial class EditorView
         return true;
     }
 
-    public void UpdateTransport(double positionMs, double durationMs, bool ready, bool playing, bool loading, string? error, string? filename, double? sampledAtMs = null)
+    public void UpdateTransport(double positionMs, double durationMs, bool ready, bool playing, bool loading,
+        string? error, string? filename, double? sampledAtMs = null, double outputBufferAheadMs = 0)
     {
         if (initializeTransport)
         {
@@ -180,6 +182,7 @@ public sealed partial class EditorView
         }
         transportSampleAt = sampledAtMs ?? TestplayRealtime;
         transportSamplePosition = positionMs;
+        transportSampleLeadMs = outputBufferAheadMs;
         UpdateHitsounds(positionMs, ready && playing && !loading, filename);
         if (playing && drag == DragKind.PlaybackLine) CancelPlaybackLineDrag();
         bool wasReady = AudioReady;
@@ -192,7 +195,8 @@ public sealed partial class EditorView
         if (IsTestplaying && testplayWithAudio)
         {
             if (testplayDriver is null)
-                testplay!.UpdateAudio(positionMs, transportSampleAt, AudioDurationMs, ready, playing, loading, error is not null);
+                testplay!.UpdateAudio(positionMs, transportSampleAt, AudioDurationMs, ready, playing, loading,
+                    error is not null, outputBufferAheadMs);
             AdvanceTestplay();
         }
     }

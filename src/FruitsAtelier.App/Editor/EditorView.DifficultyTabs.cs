@@ -142,7 +142,10 @@ public sealed partial class EditorView
                     {
                         cancellation.ThrowIfCancellationRequested();
                         var converted = CatchStreamConverter.Convert(snapshot, compensation);
-                        return converted.Success ? CatchDifficultyCalculator.Calculate(converted.Objects, snapshot.CircleSize).StarRating : (double?)null;
+                        if (!converted.Success) return (double?)null;
+                        var exported = OsuBeatmapWriter.Serialize(snapshot, compensation);
+                        var objects = exported.ObjectSequenceMatches ? exported.PlayableObjects : converted.Objects;
+                        return (double?)CatchDifficultyCalculator.Calculate(objects, snapshot.CircleSize).StarRating;
                     }
                     finally { ratingWorkers.Release(); }
                 }

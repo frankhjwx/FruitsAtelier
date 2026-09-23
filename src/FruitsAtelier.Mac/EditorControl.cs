@@ -49,6 +49,17 @@ internal sealed class EditorControl : Control, IDisposable
             View.DropLibraryFiles(DroppedPaths(e));
             e.Handled = true; Refresh();
         });
+        View.RequestPasteSongSetup = async () =>
+        {
+            int session = View.SongSetupInputSession;
+            try
+            {
+                if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+                    View.PasteSongSetupText(await clipboard.TryGetTextAsync() ?? "", session);
+            }
+            catch (Exception error) { View.SetNotice(error.Message); }
+            Refresh();
+        };
         View.RequestPasteTime = async () =>
         {
             int session = View.TimeJumpSession;
@@ -56,6 +67,28 @@ internal sealed class EditorControl : Control, IDisposable
             {
                 if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
                     View.PasteTimeJumpText(await clipboard.TryGetTextAsync() ?? "", session);
+            }
+            catch (Exception error) { View.SetNotice(error.Message); }
+            Refresh();
+        };
+        View.RequestPasteLibrary = async () =>
+        {
+            int field = View.LibraryInputField;
+            try
+            {
+                if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+                    View.PasteLibraryText(await clipboard.TryGetTextAsync() ?? "", field);
+            }
+            catch (Exception error) { View.SetNotice(error.Message); }
+            Refresh();
+        };
+        View.RequestPasteField = async () =>
+        {
+            string field = View.ActiveTextInputField;
+            try
+            {
+                if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+                    View.PasteFieldText(await clipboard.TryGetTextAsync() ?? "", field);
             }
             catch (Exception error) { View.SetNotice(error.Message); }
             Refresh();
@@ -110,19 +143,9 @@ internal sealed class EditorControl : Control, IDisposable
         var p = e.GetPosition(this); View.Wheel((float)p.X, (float)p.Y, (float)e.Delta.Y * 120, MacInput.Control(e.KeyModifiers));
         e.Handled = true; Refresh();
     }
-    protected override async void OnKeyDown(KeyEventArgs e)
+    protected override void OnKeyDown(KeyEventArgs e)
     {
         View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-        if (e.Key == Key.V && MacInput.Control(e.KeyModifiers) && View.LibraryTextFocused && !View.ErrorVisible && !View.DiscardConfirmationVisible)
-        {
-            e.Handled = true;
-            if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
-            {
-                try { View.PasteLibraryText(await clipboard.TryGetTextAsync() ?? ""); }
-                catch (Exception error) { View.SetNotice(error.Message); }
-            }
-            Refresh(); return;
-        }
         View.KeyDown(MacInput.VirtualKey(e.Key, View.IsEditingText || View.CapturingTestplayKey || View.IsTestplaying), MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         e.Handled = View.IsTestplaying || View.CapturingTestplayKey || e.Key is Key.Tab or Key.Space or Key.Back or Key.Delete or Key.Enter or Key.Escape || MacInput.Control(e.KeyModifiers);
         Refresh();

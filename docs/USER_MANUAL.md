@@ -11,7 +11,7 @@ FruitsAtelier is an osu!catch beatmap editor for Windows and macOS. Use it to ed
 1. On Windows, extract the entire release ZIP and open `FruitsAtelier.App.exe`. Keep the DLLs and assets beside it. No separate .NET installation is needed. Windows 10/11 x64 and DirectX 11 are required; Windows N needs the Media Feature Pack for MP3 playback.
 2. In **Library > Settings**, choose a workspace for your projects. You may also select your osu!stable installation folder to use its Songs and Skins folders. Keep the workspace separate from Songs.
 3. Right-click the library to import a folder or a beatmap/OSZ, or choose **New project**. Double-click a library entry to start or continue editing.
-4. Use the Language and Skin controls to set up the display. Testplay movement keys can be changed in Settings.
+4. Choose the interface language in **Settings → Appearance** and use the top-bar Skin control to set up the display. Testplay movement keys can be changed in Settings.
 
 On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are in the repository's macOS guide. Command can be used in place of Ctrl for editor shortcuts.
 
@@ -38,7 +38,14 @@ On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are
 
 ### Navigate and select
 
-The main canvas shows horizontal placement and note timing; later notes are higher on the screen. On the canvas and both timelines, each wheel notch moves one full beat (1/1) during playback or one current Snap subdivision while paused: up to the preceding grid line and down to the following one, regardless of zoom. The canvas and playhead move together, including while paused. Middle-drag pans, and Ctrl+wheel zooms. Click empty canvas in Select mode to seek. The bottom timeline also supports seeking; click the timestamp to jump to an exact time.
+The main canvas shows horizontal placement and note timing; later notes are higher on the screen. On the canvas and both timelines, each wheel notch moves one full beat (1/1) during playback or one current Snap subdivision while paused: up to the preceding grid line and down to the following one, regardless of zoom. The canvas and playhead move together, including while paused. Middle-drag pans, and Ctrl+wheel zooms. Click empty canvas in Select mode to seek. The bottom timeline also supports seeking; click the timestamp above its left-side Play, Pause, Stop, and Testplay controls to jump to an exact time. Stop pauses playback and returns to the start. Hover over the timeline to reveal the fixed bookmark toolbar above it: add or remove a bookmark at the playhead, seek to the previous or next bookmark, or reset all bookmarks. Bookmark edits can be undone.
+
+The Timing menu can set the current position as the song preview point. A long yellow line marks it on the bottom timeline. Red and green timing marks appear on the upper object timeline, while shaded break intervals appear there and on the canvas's left time axis. To insert a break, place the playhead between two objects with enough space and click **Insert Break Time** next to Movement Analysis. Undo removes the inserted break.
+When the playhead is inside kiai time, a small Kiai badge appears in the upper-left of the editing plot. It brightens on each full beat and fades until the next beat.
+
+Break shading on the upper timeline extends lightly to the notes before and after the stored break. Drag either edge of its darker center to adjust the range; with Snap on, the edge follows the current beat subdivision. Shortening it below 400 ms removes it; Esc cancels a drag, and Undo restores the previous range.
+
+During Testplay, Ctrl+B adds a bookmark at the current time and Ctrl+Shift+B removes a nearby bookmark. Both actions remain undoable after returning to the editor.
 
 Select an object with **1**. Drag empty space to box-select, or Ctrl-click to toggle selection. Drag selected objects to move them together. Selecting a slider fruit or droplet selects its parent slider. The horizontal object timeline also lets you select and move objects in time.
 
@@ -79,6 +86,7 @@ Open **Catch Preview** using the button on the right edge of the canvas. Drag th
 ### Try the map
 
 Press **F5** to testplay from the current position using the selected preview mod and speed. Move with **Left / Right**, and hold **Shift** to dash. Catch fruits and droplets to build combo. **Tab** toggles autoplay; **Ctrl+P** pauses or resumes.
+Press **Ctrl+B** during testplay to add a bookmark at the current position. The shortcut appears with the other testplay controls in the upper-left corner.
 
 **F1 / Esc** exits to the testplay start; **F2** exits at the current position. Losing window focus also exits. Testplay does not change your objects or undo history. Change movement and dash bindings in **Library > Settings**.
 
@@ -101,7 +109,7 @@ Exporting a new difficulty to Songs saves your edits in a new workspace difficul
 
 Use **Library** or Esc to return to the library. Unsaved work prompts for Save, Discard or Cancel. Missing-resource messages indicate that a referenced file needs to be restored or relinked.
 
-Version 0.8 does not provide timing-point creation, bookmarks, video or storyboard playback. Imported timing and slider velocity are supported. Testplay is for checking patterns; star ratings and exported behavior may differ between osu! versions.
+Version 0.8 does not provide timing-point creation, video or storyboard playback. Imported timing and slider velocity are supported. Testplay is for checking patterns; star ratings and exported behavior may differ between osu! versions.
 
 ## 04 / Keyboard reference
 
@@ -123,7 +131,8 @@ Shortcuts below apply while editing, outside text fields and dialogs. On macOS, 
 | Delete | Delete selected objects or edited points. |
 | Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z | Undo / redo / redo. |
 | Ctrl+H | Flip selected objects horizontally. |
-| Ctrl+Left / Ctrl+Right | Move selected objects one horizontal unit. |
+| Ctrl+Left / Ctrl+Right | Seek to the previous / next bookmark. |
+| Ctrl+Shift+Left / Ctrl+Shift+Right | Move selected objects one horizontal unit. |
 | J / K | Move selection back / forward one beat subdivision. |
 | Esc | Cancel the current action; otherwise return to Library. |
 
@@ -135,7 +144,7 @@ Object paste works within the same difficulty session and aligns the earliest se
 | --- | --- |
 | Space / C | Play or pause. |
 | X / Home | Play from song start / seek to song start. |
-| Z / V (also End) | First / last object start; repeat for song start / end. |
+| Z / V (also End) | First object's start / last object's end; repeat for song start / end. |
 | Left / Right | Seek one beat subdivision; Shift multiplies by four. |
 | Up / Down | Previous / next timing point. |
 | Ctrl+Up / Ctrl+Down | Next faster / slower playback speed (10%–150%). |
@@ -182,6 +191,7 @@ Lock Notes prevents moving, reshaping or deleting existing objects. You can stil
 | Shift | Dash (default binding). |
 | Tab | Toggle autoplay. |
 | Ctrl+P | Pause / resume testplay. |
+| Ctrl+B | Add a bookmark at the current position. |
 | F1 / Esc | Return to the editor at the testplay start. |
 | F2 | Return to the editor at the current position. |
 

@@ -13,8 +13,12 @@ internal static class PausePositionTests
         foreach (int delay in new[] { 0, 100, 400 })
         {
             audio.Play(); await audio.WaitForCommandsAsync();
+            if (Math.Abs(audio.State.OutputBufferAheadMs - 80) > 1)
+                throw new Exception("Output lead did not track PCM submitted ahead of the device clock");
             players[^1].Advance(200);
             await audio.WaitForCommandsAsync();
+            if (Math.Abs(audio.State.OutputBufferAheadMs - 80) > 1)
+                throw new Exception("Output lead changed when submitted PCM and the device clock advanced together");
             double before = audio.PositionMs;
             audio.Pause(); await audio.WaitForCommandsAsync();
             double paused = audio.PositionMs;

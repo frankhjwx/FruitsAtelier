@@ -36,5 +36,6 @@
   </Target>
   <ItemGroup>
     <Content Include="../../assets/icons/assist/*.png" Link="assets/icons/assist/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../assets/icons/bookmarks/*.png" Link="assets/icons/bookmarks/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

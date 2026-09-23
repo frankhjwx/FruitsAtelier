@@ -5,7 +5,9 @@ if (args.Length == 2 && args[0] == "--slider-corpus") return ImportedSliderCorpu
 var tests = new (string Name, Action Run)[]
 {
     ("Slider streams persist, sample repeats and match exported fruits", SliderStreamTests.ConversionAndPersistence),
+    ("Exported milliseconds and coordinates determine hyperdash", SliderStreamTests.ExportedMillisecondsDriveHyperdash),
     ("Source section snapshots detect all writes, undo and project round trips", SourceSectionTests.SnapshotsAndWrites),
+    ("Breaks and bookmarks edit source sections and survive history", TimelineMetadataTests.Run),
     ("Grid fractions and measure starts follow active meter changes", TimingLookupTests.SubdivisionsAndMeasures),
     ("Timing lookup preserves boundary precedence and owns its snapshot", TimingLookupTests.BoundariesAndSnapshot),
     ("Dense imported sliders share reader, validation and conversion limits", DenseImportedSliderTests.ReadAndConvert),

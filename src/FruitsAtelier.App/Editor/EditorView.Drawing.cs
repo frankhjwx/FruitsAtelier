@@ -6,6 +6,22 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private (double TimeMs, bool Active)[] kiaiTransitions = [];
+
+    private void RefreshKiaiTransitions()
+    {
+        var transitions = new List<(double TimeMs, bool Active)>();
+        bool active = false;
+        foreach (var group in Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).GroupBy(p => p.TimeMs))
+        {
+            bool next = (group.Last().Effects & 1) != 0;
+            if (next == active) continue;
+            transitions.Add((group.Key, next));
+            active = next;
+        }
+        kiaiTransitions = transitions.ToArray();
+    }
+
     public void Render(ICanvas c, float width, float height)
     {
         RefreshLanguage();
@@ -53,6 +69,7 @@ public sealed partial class EditorView
         DrawPreviewSidebar(c);
         DrawLegacyConversionButton(c);
         DrawMovementOverlay(c);
+        DrawKiaiBadge(c);
         DrawTransport(c);
         DrawStatus(c);
         if (resourceErrors.Count > 0)
@@ -71,6 +88,7 @@ public sealed partial class EditorView
         DrawStreamDialog(c);
         DrawVolumeDialog(c);
         DrawDistanceSnapDialog(c);
+        DrawSongSetup(c);
         DrawDiscardConfirmation(c);
         DrawDifficultyTooltip(c);
     }
@@ -82,9 +100,10 @@ public sealed partial class EditorView
         Button(c, new(109, 6, 50, 28), L.Get("ui.file"), () => menu = menu == 0 ? -1 : 0, menu == 0);
         Button(c, new(162, 6, 50, 28), L.Get("ui.edit"), () => menu = menu == 1 ? -1 : 1, menu == 1);
         Button(c, new(215, 6, 50, 28), L.Get("ui.view"), () => { gridLevelMenuOpen = false; menu = menu == 2 ? -1 : 2; }, menu == 2);
-        Button(c, new(268, 6, 94, 28), L.Get("library.settings"), OpenSettings);
+        Button(c, new(268, 6, 70, 28), L.Get("timeline.timingMenu"), () => menu = menu == 4 ? -1 : 4, menu == 4);
+        Button(c, new(341, 6, 94, 28), L.Get("library.settings"), OpenSettings);
         DrawDifficultyTabs(c);
-        DrawLanguageButton(c, HeaderLanguageBounds);
+        Button(c, SongSetupButtonBounds, L.Get("song.title"), OpenSongSetup);
         DrawSkinSelector(c);
         Button(c, HeaderNavigationBounds, L.Get("library.back"), ShowLibrary);
         c.Line(0, 83, width, 83, Grid);
@@ -95,15 +114,29 @@ public sealed partial class EditorView
         float toolbarRight = rightPanel.X;
         c.Fill(new(0, canvas.Y, toolbarRight, 38), 0x1C2129);
         c.Text(L.Get("ui.canvasZoom"), 16, canvas.Y + 13, 11, Muted, 48);
-        zoomSlider = new(74, canvas.Y + 4, Math.Max(30, toolbarRight - 659), 29);
+        float snapLeft = toolbarRight - 158;
+        bool compactToolbar = toolbarRight < 900;
+        float breakWidth = compactToolbar ? 115 : 140;
+        float breakX = snapLeft - breakWidth - 5;
+        float movementX = breakX - 130;
+        float pathWidth = compactToolbar ? 100 : 150;
+        float pathX = movementX - pathWidth - 5;
+        zoomSlider = new(74, canvas.Y + 4, Math.Max(30, pathX - 130), 29);
         float zoomX = zoomSlider.X + (float)(1 - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (1 - MinimumCanvasZoom) : 1) * zoomSlider.Width;
         c.Line(zoomSlider.X, canvas.Y + 19, zoomSlider.Right, canvas.Y + 19, Grid, 3);
         c.Line(zoomSlider.X, canvas.Y + 19, zoomX, canvas.Y + 19, Accent, 3);
         c.Circle(zoomX, canvas.Y + 19, 6, Accent);
         c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + 8, canvas.Y + 13, 11, Foreground, 48);
-        Button(c, new(toolbarRight - 521, canvas.Y + 4, 150, 29), L.Get("ui.sliderPathCurves"), () => showTargets = !showTargets, showTargets);
-        Button(c, new(toolbarRight - 365, canvas.Y + 4, 125, 29), L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, movementAnalysis);
-        float snapLeft = toolbarRight - 158;
+        Button(c, new(pathX, canvas.Y + 4, pathWidth, 29), L.Get("ui.sliderPathCurves"), () => showTargets = !showTargets, showTargets);
+        Button(c, new(movementX, canvas.Y + 4, 125, 29), L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, movementAnalysis);
+        DrawObjectTimeline(c);
+        var breakButton = new Rect(breakX, canvas.Y + 4, breakWidth, 29);
+        bool canInsertBreak = InsertBreakCandidate() is not null;
+        if (breakButton.Contains(mouseX, mouseY) && canInsertBreak) c.Fill(breakButton, 0x35455A, 4);
+        string breakLabel = L.Get("timeline.insertBreak");
+        c.Text(breakLabel, breakButton.X + (breakButton.Width - c.MeasureText(breakLabel, 12)) / 2,
+            breakButton.Y + (breakButton.Height - 16) / 2, 12, canInsertBreak ? Foreground : Muted, breakButton.Width - 6);
+        hits.Add(new(breakButton, InsertBreakAtPlayhead, canInsertBreak));
         c.Text(L.Get("ui.snap"), snapLeft, canvas.Y + 13, 11, Muted, 40);
         snapSlider = new(snapLeft + 40, canvas.Y + 4, 106, 29);
         float sliderStart = snapSlider.X + 7, sliderEnd = snapSlider.Right - 31;
@@ -113,7 +146,6 @@ public sealed partial class EditorView
         c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, canvas.Y + 13, 10, Foreground, 40);
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
         c.Text(L.Get("ui.timeAxis"), canvas.X + 11, canvas.Y + 120, 10, Muted, 43);
-        DrawObjectTimeline(c);
         var playfield = Playfield;
         for (int x = 0; x <= 512; x += 128)
         {
@@ -126,8 +158,26 @@ public sealed partial class EditorView
             {
                 float sx = Screen(new(0, x)).X;
                 c.Line(sx, plot.Y, sx, plot.Bottom, 0x262D37);
-            }
+        }
         c.Clip(new(canvas.X, plot.Y, canvas.Width, plot.Height));
+        double axisStart = viewStart, axisEnd = viewStart + plot.Height / pixelsPerMs;
+        var canvasBreaks = DisplayedBreaks();
+        for (int i = 0; i < canvasBreaks.Length; i++)
+        {
+            var period = canvasBreaks[i];
+            var limits = BreakTransitionLimits(canvasBreaks, i);
+            AxisBand(limits.Before, period.StartMs, 0xF1F1F1, .16f);
+            AxisBand(period.EndMs, limits.After, 0xA7CFA1, .20f);
+            AxisBand(period.StartMs, period.EndMs, 0x858585, .45f);
+        }
+        void AxisBand(double from, double to, uint color, float opacity)
+        {
+            double a = Math.Max(axisStart, from), b = Math.Min(axisEnd, to);
+            if (b <= a) return;
+            float upper = Screen(new(b, 0)).Y, lower = Screen(new(a, 0)).Y;
+            var bounds = new Rect(canvas.X, upper, plot.X - canvas.X, lower - upper);
+            c.Fill(bounds, color, 0, opacity);
+        }
         foreach (var line in renderedTiming!.Grid(viewStart, viewStart + plot.Height / pixelsPerMs, divisor))
         {
             double time = line.TimeMs;
@@ -270,10 +320,15 @@ public sealed partial class EditorView
     {
         c.Fill(rightPanel, Panel);
         c.Line(rightPanel.X, rightPanel.Y, rightPanel.X, rightPanel.Bottom, Grid);
-        float x = rightPanel.X + 16, w = rightPanel.Width - 32;
-        c.Text(L.Get("ui.properties"), x, rightPanel.Y + 15, 12, Foreground, 48, true);
-        c.Text($"{L.Get("ui.ar")} {Number(Document.ApproachRate)}   {L.Get("ui.cs")} {Number(Document.CircleSize)}   {L.Get("ui.sv")} {Number(Document.SliderMultiplier)}",
-            x + 56, rightPanel.Y + 15, 12, Muted, w - 56);
+        c.Line(rightPanel.X, rightPanel.Y + 38, rightPanel.Right, rightPanel.Y + 38, Grid);
+        float x = rightPanel.X + 16;
+        float rowY = rightPanel.Y + 11;
+        c.Text(L.Get("ui.properties"), x, rowY, 12, Foreground, 90, true);
+        float statX = x + 84;
+        c.Text($"{L.Get("ui.ar")} {Number(Document.ApproachRate)}", statX, rowY, 12, Muted, 48);
+        c.Text($"{L.Get("ui.cs")} {Number(Document.CircleSize)}", statX + 50, rowY, 12, Muted, 48);
+        c.Text($"{L.Get("ui.dpb")} {Number(Document.DistancePerBeat)}px", statX + 100, rowY, 12, Muted,
+            Math.Max(0, rightPanel.Right - statX - 108));
     }
 
     private (CurveTrack Track, Anchor Node) ResolveAnchor(Guid trackId, Guid nodeId)
@@ -300,7 +355,6 @@ public sealed partial class EditorView
 
     private void DrawPreview(ICanvas c, Rect r)
     {
-        c.Line(r.X, r.Y - 12, r.Right, r.Y - 12, Grid);
         c.Text(L.Get("ui.preview"), r.X, r.Y, 13, Foreground, r.Width, true);
         Button(c, new(r.Right - 92, r.Y - 5, 92, 27), L.Get("ui.debugCurves"), () => showPreviewCurves = !showPreviewCurves, showPreviewCurves);
         c.Text(L.Get("ui.previewStats", Number(PreviewApproachRate), Number(PreviewCircleSize), PreviewModName), r.X, r.Y + 23, 10, Foreground, r.Width);
@@ -362,36 +416,58 @@ public sealed partial class EditorView
         c.Unclip();
     }
 
+    private void DrawKiaiBadge(ICanvas c)
+    {
+        int low = 0, high = kiaiTransitions.Length;
+        while (low < high)
+        {
+            int middle = low + (high - low) / 2;
+            if (kiaiTransitions[middle].TimeMs <= playhead) low = middle + 1; else high = middle;
+        }
+        int index = low - 1;
+        if (index < 0 || !kiaiTransitions[index].Active) return;
+
+        var timing = renderedTiming!.At(playhead);
+        double beatLength = timing.BeatLengthMs;
+        if (!double.IsFinite(beatLength) || beatLength <= 0) return;
+        double beatStart = timing.OffsetMs + Math.Floor((playhead - timing.OffsetMs) / beatLength) * beatLength;
+        double lastPulse = Math.Max(kiaiTransitions[index].TimeMs, beatStart);
+        float phase = (float)Math.Clamp((playhead - lastPulse) / beatLength, 0, 1);
+        float pulse = (1 - phase) * (1 - phase);
+        var badge = new Rect(plot.X + 10, plot.Y + 10, 88, 28);
+        c.Fill(badge, 0x182430, 14, .92f);
+        c.Fill(badge, 0xD89532, 14, .08f + .29f * pulse);
+        c.Stroke(badge, Blend(0xF5BB62, 0x526070, .3f + .7f * pulse), 1.3f, 14);
+        c.Circle(badge.X + 15, badge.Y + 14, 4, 0xFFD174, true, 1, .45f + .55f * pulse);
+        c.Text(L.Get("timeline.kiaiIndicator"), badge.X + 27, badge.Y + 5, 13,
+            Blend(0xFFF0D4, 0xA1A9AC, .35f + .65f * pulse), badge.Width - 31);
+
+        static uint Blend(uint bright, uint dim, float amount)
+        {
+            uint Channel(int shift) => (uint)(((bright >> shift) & 255) * amount + ((dim >> shift) & 255) * (1 - amount));
+            return Channel(16) << 16 | Channel(8) << 8 | Channel(0);
+        }
+    }
+
     private void DrawTransport(ICanvas c)
     {
         float top = height - 120;
         c.Fill(new(0, top, width, 92), 0x20252E);
         c.Line(0, top, width, top, Grid);
-        var transport = new Rect(16, top + 28, 40, 36);
-        c.Fill(transport, AudioPlaying ? 0x344A50u : Surface, 5);
-        c.Stroke(transport, AudioReady ? Accent : Muted, 1.5f, 5);
-        float cx = transport.X + transport.Width / 2, cy = transport.Y + transport.Height / 2;
-        uint icon = AudioReady ? Foreground : Muted;
-        if (AudioPlaying)
-        {
-            c.Fill(new(cx - 7, cy - 8, 5, 16), icon);
-            c.Fill(new(cx + 2, cy - 8, 5, 16), icon);
-        }
-        else for (int i = 0; i < 13; i++)
-            c.Line(cx - 5 + i, cy - 8 + i * 8f / 12, cx - 5 + i, cy + 8 - i * 8f / 12, icon);
-        hits.Add(new(transport, TogglePlayback, AudioReady));
-        TimeDisplayBounds = new(64, top + 22, 150, 48);
+        TimeDisplayBounds = new(16, top + 7, 188, 27);
         if (TimeDisplayBounds.Contains(mouseX, mouseY)) c.Fill(TimeDisplayBounds, Surface, 4);
-        c.Text(Time(playhead), 69, top + 22, 21, Foreground, 145, true);
-        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), 70, top + 50, 11, Muted, 130);
+        string currentTime = Time(playhead);
+        c.Text(currentTime, 20, top + 10, 17, Foreground, 102, true);
+        const float durationX = 125;
+        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), durationX, top + 14, 11, Muted,
+            Math.Max(0, TimeDisplayBounds.Right - durationX));
         hits.Add(new(TimeDisplayBounds, OpenTimeJump, true));
         if (TimeDisplayBounds.Contains(mouseX, mouseY) && !TimeJumpVisible)
-            c.Text(L.Get("timeJump.title"), 69, top - 20, 12, Foreground, 200);
-        if (!AudioReady) c.Text(AudioNotice, 16, top + 71, 10, Gold, 192);
+            c.Text(L.Get("timeJump.title"), 20, top - 20, 12, Foreground, 200);
+        if (!AudioReady) c.Text(AudioNotice, 16, top + 79, 10, Gold, 192);
 
         float rateX = overview.Right - 404;
-        TestplayButtonBounds = new(220, top + 3, 128, 28);
-        Button(c, TestplayButtonBounds, L.Get("testplay.start"), StartTestplay, enabled: !AudioLoading);
+        DrawTransportControls(c);
         c.Text(L.Get("ui.playbackSpeed"), rateX, top + 12, 11, Muted, 104);
         foreach (double rate in PlaybackRates)
         {
@@ -400,38 +476,51 @@ public sealed partial class EditorView
         }
         c.Fill(overview, 0x141922, 4);
         if (AudioLoading) return;
-        for (int i = 0; i <= 6; i++)
+        const float timelineMarkerOpacity = .8f;
+        float TimelineX(double time) => overview.X + (float)(Math.Clamp(time, 0, TimelineDurationMs) / TimelineDurationMs) * overview.Width;
+        var timing = Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
+        c.Line(overview.X, overview.Y + 20, overview.Right, overview.Y + 20, 0xA0A0A0, 1, timelineMarkerOpacity);
+        const float spanHeight = 12;
+        float spanY = overview.Y + 20 - spanHeight / 2;
+        double? kiaiStart = null;
+        foreach (var transition in kiaiTransitions)
         {
-            float x = overview.X + overview.Width * i / 6;
-            c.Line(x, overview.Y + 2, x, overview.Bottom, 0x2B3442);
-        }
-        if (showTargets)
-            foreach (var track in Document.Tracks)
-                if (track.Nodes.Count >= 2)
-                {
-                    float start = overview.X + (float)(track.Nodes[0].TimeMs / TimelineDurationMs) * overview.Width;
-                    float end = overview.X + (float)(CurveMath.EndTimeMs(track) / TimelineDurationMs) * overview.Width;
-                    c.Fill(new(start, overview.Y + 9, Math.Max(2, end - start), 6), track.Kind == CurveKind.Bezier ? Purple : Accent, 2);
-                }
-        // The overview is a pixel-sized summary. Preserve hyperdash markers when events overlap.
-        int lastPixel = int.MinValue;
-        bool hyper = false;
-        foreach (var item in conversion!.Objects)
-        {
-            if (item.Kind == CatchObjectKind.TinyDroplet) continue;
-            int pixel = (int)Math.Round(item.TimeMs / TimelineDurationMs * overview.Width);
-            if (pixel != lastPixel)
+            if (transition.Active && kiaiStart is null) kiaiStart = transition.TimeMs;
+            else if (!transition.Active && kiaiStart is double start)
             {
-                FlushMarker(); lastPixel = pixel; hyper = false;
+                DrawSpan(start, transition.TimeMs, 0xD89532);
+                kiaiStart = null;
             }
-            hyper |= hyperdashObjects.Contains((item.SourceId, item.EventIndex));
         }
-        FlushMarker();
-        void FlushMarker()
+        if (kiaiStart is double finalStart) DrawSpan(finalStart, TimelineDurationMs, 0xD89532);
+        foreach (var period in DisplayedBreaks())
+            DrawSpan(period.StartMs, period.EndMs, 0xBCB1AE);
+        if (drag == DragKind.Break)
         {
-            if (lastPixel == int.MinValue) return;
-            float x = overview.X + lastPixel;
-            c.Line(x, overview.Y + 23, x, overview.Y + 32, hyper ? Error : Foreground, 2);
+            float x1 = TimelineX(breakStartMs), x2 = Math.Clamp(mouseX, overview.X, overview.Right);
+            c.Fill(new(Math.Min(x1, x2), spanY, Math.Abs(x2 - x1), spanHeight), 0xBCB1AE, 0, timelineMarkerOpacity);
+        }
+        void DrawSpan(double start, double end, uint color)
+        {
+            float x1 = TimelineX(start), x2 = TimelineX(end);
+            if (x2 > x1) c.Fill(new(x1, spanY, x2 - x1, spanHeight), color, 0, timelineMarkerOpacity);
+        }
+        for (int i = 0; i < timing.Length; i++)
+        {
+            var point = timing[i];
+            if (point.TimeMs < 0 || point.TimeMs > TimelineDurationMs) continue;
+            float x = TimelineX(point.TimeMs);
+            c.Line(x, overview.Y + 2, x, overview.Y + 20, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
+        }
+        foreach (int bookmark in OsuTimeline.Bookmarks(Document))
+        {
+            float x = TimelineX(bookmark);
+            c.Line(x, overview.Y + 20, x, overview.Bottom - 1, 0x4B9EF5, 1, timelineMarkerOpacity);
+        }
+        if (OsuTimeline.PreviewTime(Document) is int previewTime && previewTime <= TimelineDurationMs)
+        {
+            float x = TimelineX(previewTime);
+            c.Line(x, overview.Y - 3, x, overview.Bottom + 2, 0xFFD34A, 2, timelineMarkerOpacity);
         }
         double visibleStart = Math.Clamp(viewStart, 0, TimelineDurationMs);
         double visibleEnd = Math.Clamp(viewStart + plot.Height / pixelsPerMs, visibleStart, TimelineDurationMs);
@@ -439,8 +528,9 @@ public sealed partial class EditorView
         float viewWidth = (float)((visibleEnd - visibleStart) / TimelineDurationMs) * overview.Width;
         c.Stroke(new(viewX, overview.Y + 1, viewWidth, overview.Height - 2), 0x71849A, 1, 3);
         float headX = TimelineHeadX;
-        c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, Gold, 2);
-        Diamond(c, headX, overview.Y - 2, 4, Gold);
+        c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, 0xFFFFFF, 2);
+        c.Fill(new(headX - 2, overview.Y - 5, 4, 6), 0xFFFFFF);
+        DrawBookmarkToolbar(c);
     }
 
     private void DrawStatus(ICanvas c)
@@ -486,6 +576,10 @@ public sealed partial class EditorView
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
         }
+        else if (menu == 4)
+            Item(L.Get("timeline.setPreviewPoint"), () => Edit(L.Get("timeline.setPreviewPoint"), () =>
+                SongSetup.Set(Document, "General", "PreviewTime",
+                    ((int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue)).ToString(System.Globalization.CultureInfo.InvariantCulture))));
         else
         {
             Item(L.Get("ui.gridLevel", L.Get("ui.grid" + gridSize)), () => gridLevelMenuOpen = true);
@@ -498,7 +592,7 @@ public sealed partial class EditorView
             Item(L.Get("ui.follow"), FollowPlayhead);
             Item(L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, active: movementAnalysis);
         }
-        float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : 109 + menu * 53;
+        float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : menu == 4 ? 268 : 109 + menu * 53;
         float top = menu == 3 ? difficultyAddButton.Bottom + 4 : 38;
         MenuBounds = new(x, top, 282, 14 + items.Count * 34 - 3);
         var rect = MenuBounds;
@@ -564,6 +658,16 @@ public sealed partial class EditorView
         hits.Add(new(r, action, enabled));
     }
 
+    private void ToggleSwitch(ICanvas c, Rect r, string label, bool value, Action action)
+    {
+        if (r.Contains(mouseX, mouseY)) c.Fill(r, 0x303A46, 5);
+        c.Text(label, r.X + 10, r.Y + (r.Height - 17) / 2, 13, Foreground, r.Width - 82);
+        var track = new Rect(r.Right - 58, r.Y + (r.Height - 24) / 2, 46, 24);
+        c.Fill(track, value ? 0x417D77u : 0x46515Fu, 12);
+        c.Circle(track.X + (value ? 34 : 12), track.Y + 12, 9, 0xF0F3F6);
+        hits.Add(new(r, action, true));
+    }
+
     private static void Badge(ICanvas c, Rect r, string label, uint color)
     {
         c.Fill(r, 0x2B323B, 4);
@@ -579,7 +683,7 @@ public sealed partial class EditorView
         bool timestamp = label == L.Get("ui.timeField") || label == L.Get("ui.startTimeField") || label == L.Get("ui.endTimeField");
         c.Fill(r, focused ? 0x273638u : 0x151B24u, 3);
         c.Stroke(r, focused ? (fieldError.Length > 0 ? Error : Accent) : r.Contains(mouseX, mouseY) ? 0x67758B : Grid, 1, 3);
-        DrawInputText(c, new(r.X + 9, r.Y + 7, r.Width - 18, 18), focused ? editBuffer : timestamp ? Time(value) : Number(value), 12, focused, replaceText);
+        DrawInputText(c, new(r.X + 9, r.Y + 7, r.Width - 18, 18), focused ? editBuffer : timestamp ? Time(value) : Number(value), 12, focused, "numeric:" + index);
         fields.Add(new(r, label, value, apply, timestamp));
         y += 37;
     }

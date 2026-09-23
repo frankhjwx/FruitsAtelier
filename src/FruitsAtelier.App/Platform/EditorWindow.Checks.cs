@@ -7,17 +7,31 @@ internal sealed partial class EditorWindow
 {
     private void CheckUpdateRefresh()
     {
+        CheckUpdateRefresh(false);
+        CheckUpdateRefresh(true);
+    }
+
+    private void CheckUpdateRefresh(bool postedNotifications)
+    {
         var previousService = updates;
         var previousStatus = view.UpdateStatus;
         var previousPolledStatus = lastUpdateStatus;
+        Native.GetWindowRect(hwnd, out var originalBounds);
         var backend = new RefreshCheckBackend();
         using var service = new UpdateService(backend,
             Path.Combine(Artifacts, "update-refresh-check", Guid.NewGuid().ToString("N"), "updates.json"),
-            message => throw new InvalidOperationException(message));
+            AppLog.Write, postedNotifications ? NotifyUpdateStatusChanged : null);
         try
         {
             updates = service;
             lastUpdateStatus = null;
+            if (postedNotifications)
+            {
+                // Hidden windows have no paint region. Exercise a visible, off-screen owner without taking focus.
+                Native.SetWindowPos(hwnd, 0, -32000, -32000, 0, 0, 0x0001 | 0x0004 | 0x0010);
+                Native.ShowWindow(hwnd, 4);
+            }
+            Native.ValidateRect(hwnd, 0);
             var check = service.Check(DateTimeOffset.UtcNow);
             PaintAndVerify(new(UpdatePhase.Checking));
             backend.CheckResult.SetResult("0.8.3");
@@ -28,10 +42,27 @@ internal sealed partial class EditorWindow
             backend.DownloadResult.SetResult();
             download.GetAwaiter().GetResult();
             PaintAndVerify(new(UpdatePhase.Ready, "0.8.3", 100));
-            AppLog.Write("Update refresh check passed: checking, available, download progress and restart readiness without timer messages.");
+            backend.CheckResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            check = service.Check(DateTimeOffset.UtcNow);
+            PaintAndVerify(new(UpdatePhase.Checking));
+            backend.CheckResult.SetResult(null);
+            check.GetAwaiter().GetResult();
+            PaintAndVerify(new(UpdatePhase.Current));
+            backend.CheckResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            check = service.Check(DateTimeOffset.UtcNow);
+            PaintAndVerify(new(UpdatePhase.Checking));
+            backend.CheckResult.SetException(new IOException("Injected update check failure."));
+            check.GetAwaiter().GetResult();
+            PaintAndVerify(new(UpdatePhase.Failed));
+            AppLog.Write($"Update refresh check passed: all check/download states via {(postedNotifications ? "posted wakeups from an idle window" : "paint polling")} without timer messages.");
         }
         finally
         {
+            if (postedNotifications)
+            {
+                Native.ShowWindow(hwnd, 0);
+                Native.SetWindowPos(hwnd, 0, originalBounds.Left, originalBounds.Top, 0, 0, 0x0001 | 0x0004 | 0x0010);
+            }
             updates = previousService;
             view.UpdateStatus = previousStatus;
             lastUpdateStatus = previousPolledStatus;
@@ -39,17 +70,31 @@ internal sealed partial class EditorWindow
 
         void PaintAndVerify(UpdateStatus expected)
         {
-            // Only paint messages run: a busy render loop need not dispatch WM_TIMER.
             int before = frames;
-            WndProc(hwnd, 0x000F, 0, 0);
+            if (postedNotifications)
+            {
+                if (Native.GetUpdateRect(hwnd, out _, false))
+                    throw new InvalidOperationException("Update check did not start with an idle paint region.");
+                int notifications = 0;
+                while (Native.PeekMessage(out var message, hwnd, updateStatusChangedMessage, updateStatusChangedMessage, 1))
+                {
+                    Native.DispatchMessage(ref message);
+                    notifications++;
+                }
+                if (notifications == 0 || !Native.GetUpdateRect(hwnd, out _, false))
+                    throw new InvalidOperationException($"Background update did not request a repaint for {expected}.");
+                Native.UpdateWindow(hwnd);
+            }
+            else WndProc(hwnd, 0x000F, 0, 0);
             if (frames != before + 1 || view.UpdateStatus != expected)
                 throw new InvalidOperationException($"Paint did not refresh update status to {expected}.");
+            Native.ValidateRect(hwnd, 0);
         }
     }
 
     private sealed class RefreshCheckBackend : IUpdateBackend
     {
-        internal readonly TaskCompletionSource<string?> CheckResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource<string?> CheckResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal readonly TaskCompletionSource DownloadResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool IsInstalled => true;
         public string? PendingVersion => null;

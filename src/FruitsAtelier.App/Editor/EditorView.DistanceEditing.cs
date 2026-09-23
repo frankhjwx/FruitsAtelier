@@ -61,7 +61,7 @@ public sealed partial class EditorView
             c.Text(L.Get("coordinate.x"), panel.X + 10, panel.Y + 60, MovementPanelFontSize, Muted, panel.Width - 94);
             c.Fill(coordinateInput, Panel, 3);
             c.Stroke(coordinateInput, fieldError.Length > 0 ? Error : Accent, 1, 3);
-            DrawInputText(c, new(coordinateInput.X + 5, coordinateInput.Y + 2, coordinateInput.Width - 10, 16), editBuffer, MovementPanelFontSize, true, replaceText);
+            DrawInputText(c, new(coordinateInput.X + 5, coordinateInput.Y + 2, coordinateInput.Width - 10, 16), editBuffer, MovementPanelFontSize, true, "distance");
         }
         else
         {
@@ -82,7 +82,7 @@ public sealed partial class EditorView
             c.Fill(new(x - 5, y - 7, 10, 14), Accent, 5);
             c.Fill(input, Panel, 3);
             c.Stroke(input, fieldError.Length > 0 ? Error : Accent, 1, 3);
-            DrawInputText(c, new(input.X + 5, input.Y + 2, input.Width - 10, 16), editBuffer, MovementPanelFontSize, true, replaceText);
+            DrawInputText(c, new(input.X + 5, input.Y + 2, input.Width - 10, 16), editBuffer, MovementPanelFontSize, true, "distance");
         }
         else
         {
@@ -109,7 +109,8 @@ public sealed partial class EditorView
             {
                 if (button == 0 && DistanceSliderBounds is { } slider && slider.Contains(x, y))
                 { distanceDragging = true; UpdateDistanceSlider(x, shift); }
-                else if (button == 0) { replaceText = true; ResetTextCaret(); }
+                else if (button == 0 && textLayouts.ContainsKey("distance"))
+                    FocusInput("distance", editBuffer, x);
                 return true;
             }
             if (!FinishDistanceEdit(false)) return true;
@@ -132,7 +133,9 @@ public sealed partial class EditorView
             distanceMaximum = direction == 0 ? 0 : (direction > 0 ? 512 - distanceEditReference.X : distanceEditReference.X) / unit;
         }
         editBuffer = distanceValue.ToString(editingXCoordinate ? "0" : "0.00", System.Globalization.CultureInfo.InvariantCulture);
-        replaceText = true; fieldError = "";
+        replaceText = false; fieldError = "";
+        textEditor.Field = "";
+        textEditor.Focus("distance", editBuffer, editBuffer.Length);
         history.Begin(L.Get("editor.command.changeField", DistanceEditLabel));
         return true;
     }
@@ -166,6 +169,7 @@ public sealed partial class EditorView
         PreviewDistance(value);
         editBuffer = distanceValue.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
         replaceText = true;
+        textEditor.Focus("distance", editBuffer, editBuffer.Length);
     }
 
     private void PreviewDistanceText()
@@ -193,7 +197,7 @@ public sealed partial class EditorView
         return true;
     }
 
-    private bool DistanceKeyDown(int key, bool ctrl)
+    private bool DistanceKeyDown(int key, bool ctrl, bool shift)
     {
         if (!DistanceEditing) return false;
         if (ctrl && key == 90 && !shiftHeld)
@@ -206,11 +210,10 @@ public sealed partial class EditorView
         }
         else if (key == 27) FinishDistanceEdit(true);
         else if (key is 13 or 9) FinishDistanceEdit(false);
-        else if (ctrl && key == 65) replaceText = true;
-        else if (key is 8 or 46)
+        else
         {
-            editBuffer = replaceText || key == 46 ? "" : editBuffer.Length > 0 ? editBuffer[..^1] : "";
-            replaceText = false; PreviewDistanceText();
+            if (InputKey("distance", ref editBuffer, key, ctrl, shift, 30, RequestPasteField))
+            { replaceText = false; PreviewDistanceText(); }
         }
         return true;
     }
@@ -218,7 +221,7 @@ public sealed partial class EditorView
     private void DistanceTextInput(char value)
     {
         if (!(char.IsAsciiDigit(value) || value == '-' || !editingXCoordinate && value == '.')) return;
-        string next = replaceText ? value.ToString() : editBuffer + value;
+        string next = InsertInput("distance", editBuffer, value.ToString(), 30);
         int dot = next.IndexOf('.');
         if (dot >= 0 && next.Length - dot - 1 > 2) return;
         editBuffer = next; replaceText = false; PreviewDistanceText();
@@ -251,17 +254,17 @@ public sealed partial class EditorView
     private readonly List<DistanceLabel> distanceLayout = [];
     private IReadOnlyList<ConvertedCatchObject>? distanceLayoutSource;
     private TimingMap.Lookup? distanceLayoutTiming;
-    private double distanceLayoutScale, distanceLayoutWidth, distanceLayoutSv;
+    private double distanceLayoutScale, distanceLayoutWidth, distanceLayoutDpb;
     private string distanceLayoutLanguage = "";
 
     private void EnsureDistanceLabelLayout(ICanvas c, IReadOnlyList<ConvertedCatchObject> objects)
     {
         if (ReferenceEquals(distanceLayoutSource, objects) && ReferenceEquals(distanceLayoutTiming, renderedTiming)
             && distanceLayoutScale == pixelsPerMs && distanceLayoutWidth == Playfield.Width
-            && distanceLayoutSv == Document.SliderMultiplier && distanceLayoutLanguage == L.Language) return;
+            && distanceLayoutDpb == Document.DistancePerBeat && distanceLayoutLanguage == L.Language) return;
         distanceLayoutSource = objects; distanceLayoutTiming = renderedTiming;
         distanceLayoutScale = pixelsPerMs; distanceLayoutWidth = Playfield.Width;
-        distanceLayoutSv = Document.SliderMultiplier; distanceLayoutLanguage = L.Language;
+        distanceLayoutDpb = Document.DistancePerBeat; distanceLayoutLanguage = L.Language;
         distanceLayout.Clear();
         var nearby = new List<DistanceLabel>();
         // Choose labels in map order, including offscreen predecessors, so scrolling cannot change priority.
@@ -307,6 +310,7 @@ public sealed partial class EditorView
         {
             var label = distanceLayout[i];
             if (label.Time > endTime) break;
+            if (breakPeriods.Any(period => label.Time >= period.StartMs && label.Time <= period.EndMs)) continue;
             var bounds = new Rect(Playfield.X + label.X,
                 plot.Bottom - (float)((label.Time - viewStart) * pixelsPerMs) - 9, label.Width, 18);
             if (bounds.X < plot.X || bounds.Right > plot.Right || bounds.Y < plot.Y || bounds.Bottom > plot.Bottom

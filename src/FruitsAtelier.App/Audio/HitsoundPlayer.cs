@@ -3,31 +3,25 @@ using NAudio.Wave;
 
 namespace FruitsAtelier.App.Audio;
 
-/// <summary>A bounded polyphonic mixer, independent of the music transport clock.</summary>
+/// <summary>A bounded polyphonic mixer for the music output.</summary>
 internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnosticDirectory = null) : ISampleProvider, IDisposable
 {
     private readonly AudioDiagnosticLog diagnostics = new(diagnosticDirectory);
     private readonly object gate = new();
     private readonly Dictionary<string, float[]> cache = new();
     private long cacheBytes;
-    private readonly List<(float[] Samples, int Position, float Volume)> voices = new();
-    private readonly List<(float[] Samples, double TimeMs, float Volume)> scheduled = new();
+    private readonly List<(float[] Samples, double Position, float Volume)> voices = new();
+    private sealed class ScheduledVoice(float[] samples, double timeMs, float volume)
+    {
+        public float[] Samples { get; } = samples;
+        public double TimeMs { get; } = timeMs;
+        public float Volume { get; } = volume;
+        public long? StartFrame { get; set; }
+    }
+    private readonly List<ScheduledVoice> scheduled = new();
     private bool unavailable;
-    private IWavePlayer? liveOutput;
     private float volume = 1;
     public float Volume { get => Volatile.Read(ref volume); set => Volatile.Write(ref volume, float.IsFinite(value) ? Math.Clamp(value, 0, 1) : 1); }
-    public void PrepareLiveOutput(float outputGain = 1)
-    {
-        if (liveOutput is not null || unavailable) return;
-        var output = new WasapiOut(NAudio.CoreAudioApi.AudioClientShareMode.Shared, true, 10);
-        try
-        {
-            output.Init(new NAudio.Wave.SampleProviders.SampleToWaveProvider16(this) { Volume = outputGain });
-            output.Play();
-            liveOutput = output;
-        }
-        catch { output.Dispose(); throw; }
-    }
     public WaveFormat WaveFormat { get; } = WaveFormat.CreateIeeeFloatWaveFormat(HitsoundSamples.SampleRate, 1);
     public void PreloadProject(IReadOnlyList<MapDocument> documents, IEnumerable<string>? skinFolders = null)
     {
@@ -49,13 +43,12 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
         lock (gate)
         {
             if (scheduled.Count == 2048) scheduled.RemoveAt(0);
-            scheduled.Add((samples, timeMs, sound.Volume));
+            scheduled.Add(new(samples, timeMs, sound.Volume));
         }
     }
     public void PlayImmediate(Hitsound sound)
     {
         if (unavailable) return;
-        // Live judgements cannot be inserted into music frames already submitted to WASAPI.
         Queue(sound);
     }
     internal ISampleProvider MixWithMusic(ISampleProvider music, double startMs, double speed = 1) => new MusicMixer(this, music, startMs, speed);
@@ -69,12 +62,31 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
             int read = music.Read(buffer, offset, count);
             int channels = WaveFormat.Channels, rate = WaveFormat.SampleRate;
             int frames = read / channels;
+            double liveStep = (double)HitsoundSamples.SampleRate / rate;
             lock (owner.gate)
             {
+                for (int v = owner.voices.Count - 1; v >= 0; v--)
+                {
+                    var voice = owner.voices[v];
+                    for (int frame = 0; frame < frames; frame++)
+                    {
+                        double position = voice.Position + frame * liveStep;
+                        if (position >= voice.Samples.Length) break;
+                        int index = (int)position;
+                        float a = voice.Samples[index], b = voice.Samples[Math.Min(index + 1, voice.Samples.Length - 1)];
+                        float sample = (a + (b - a) * (float)(position - index)) * voice.Volume * owner.Volume;
+                        for (int channel = 0; channel < channels; channel++)
+                            buffer[offset + frame * channels + channel] += sample;
+                    }
+                    voice.Position += frames * liveStep;
+                    if (voice.Position >= voice.Samples.Length) owner.voices.RemoveAt(v); else owner.voices[v] = voice;
+                }
                 for (int v = owner.scheduled.Count - 1; v >= 0; v--)
                 {
                     var voice = owner.scheduled[v];
-                    long firstFrame = (long)Math.Round((voice.TimeMs - startMs) * rate / (1000 * speed));
+                    // A late catch begins at the next writable frame with its attack intact.
+                    long firstFrame = voice.StartFrame ??= Math.Max(framesRead,
+                        (long)Math.Round((voice.TimeMs - startMs) * rate / (1000 * speed)));
                     int begin = (int)Math.Clamp(firstFrame - framesRead, 0, frames);
                     for (int frame = begin; frame < frames; frame++)
                     {
@@ -86,6 +98,8 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
                         for (int channel = 0; channel < channels; channel++)
                             buffer[offset + frame * channels + channel] += sample;
                     }
+                    if ((framesRead + frames - firstFrame) * (double)HitsoundSamples.SampleRate / rate >= voice.Samples.Length)
+                        owner.scheduled.RemoveAt(v);
                 }
             }
             framesRead += frames;
@@ -164,10 +178,10 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
             for (int v = voices.Count - 1; v >= 0; v--)
             {
                 var voice = voices[v];
-                int length = Math.Min(count, voice.Samples.Length - voice.Position);
-                for (int i = 0; i < length; i++) buffer[offset + i] += voice.Samples[voice.Position + i] * voice.Volume * Volume;
+                int length = Math.Min(count, voice.Samples.Length - (int)voice.Position);
+                for (int i = 0; i < length; i++) buffer[offset + i] += voice.Samples[(int)voice.Position + i] * voice.Volume * Volume;
                 voice.Position += length;
-                if (voice.Position == voice.Samples.Length) voices.RemoveAt(v); else voices[v] = voice;
+                if (voice.Position >= voice.Samples.Length) voices.RemoveAt(v); else voices[v] = voice;
             }
         }
         for (int i = offset; i < offset + count; i++) buffer[i] = Math.Clamp(buffer[i], -1, 1);
@@ -177,7 +191,7 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
     public void Dispose()
     {
         unavailable = true;
-        try { liveOutput?.Dispose(); liveOutput = null; Stop(); }
+        try { Stop(); }
         finally { diagnostics.Dispose(); }
     }
 }

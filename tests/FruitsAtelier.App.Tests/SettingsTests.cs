@@ -12,6 +12,7 @@ static class SettingsTests
             {
                 var ui = new Ui(false);
                 ui.View.LibrarySettings.Workspace = root;
+                ui.View.LibrarySettings.PlaybackLineFromBottom = .6;
                 if (fromLibrary)
                 {
                     ui.View.ShowLibrary();
@@ -33,6 +34,7 @@ static class SettingsTests
                 string path = Path.Combine(root, "settings.json");
                 ui.View.ApplySettings(path); ui.Paint();
                 Check(!LibrarySettings.Load(path).RomanisedMetadata, "Apply persists preference");
+                Check(LibrarySettings.Load(path).PlaybackLineFromBottom == .6, "Apply preserves playback line height");
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.romanisedOff")) &&
                     ApplyColor() == disabled, "Apply stays in category and resets dirty state");
                 ui.ClickText(L.Get("settings.testplay"));

@@ -87,7 +87,7 @@ internal static class LibraryTests
         Click(view, canvas, L.Get("library.exportCreate"));
         Check(!exported, "unbound export is disabled");
         view.ShowLibrary(); canvas.Clear(); view.Render(canvas, 980, 620);
-        view.PointerDown(620, 30, 0, false, false); canvas.Clear(); view.Render(canvas, 980, 620);
+        Click(view, canvas, L.Get("library.settings"));
         Check(canvas.Texts.Any(t => t.Value == L.Get("library.apply")), "settings remain manually accessible");
         string songs = Path.Combine(root, "Later Songs"); Directory.CreateDirectory(songs);
         settings.Songs = songs; settings.Save(config);

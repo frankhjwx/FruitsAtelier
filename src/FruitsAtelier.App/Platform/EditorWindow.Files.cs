@@ -17,11 +17,11 @@ internal sealed partial class EditorWindow
         audio.Hitsounds = hitsounds;
         view.RequestAudioVolume = (song, hit) => { audio.SongVolume = song; hitsounds.Volume = hit; };
         view.RequestAudioPreference = () => FileOperation(() => view.LibrarySettings.Save());
+        view.RequestViewPreference = () => FileOperation(() => view.LibrarySettings.Save());
         view.ApplyAudioVolume();
         view.HitsoundLookaheadMs = 250;
         view.RequestScheduleHitsound = hitsounds.Schedule;
         view.RequestHitsound = hitsounds.PlayImmediate;
-        view.RequestPrepareTestplayAudio = () => hitsounds.PrepareLiveOutput();
         view.RequestPrepareHitsound = hitsounds.Prepare;
         view.RequestPreloadHitsounds = documents => hitsounds.PreloadProject(documents, view.HitsoundSkinFolders);
         view.PreloadProjectHitsounds();
@@ -135,7 +135,8 @@ internal sealed partial class EditorWindow
             || state.CanPlay && Math.Abs(view.PlayheadMs - state.PositionMs) > 1;
         if (!changed) return;
         audio.TracePresentation(view.PlayheadMs, view.AudioPlaying, state);
-        view.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading, error, state.FilePath, state.PositionTimestampMs);
+        view.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading,
+            error, state.FilePath, state.PositionTimestampMs, state.OutputBufferAheadMs);
         Invalidate();
     }
 }

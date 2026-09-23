@@ -119,7 +119,7 @@ internal sealed class TestplayInputThread : IDisposable
         if (!session.WithAudio) return;
         var state = audio();
         session.UpdateAudio(state.PositionMs, state.PositionTimestampMs, state.DurationMs, state.CanPlay,
-            state.IsPlaying, state.IsLoading, state.Error is not null);
+            state.IsPlaying, state.IsLoading, state.Error is not null, state.OutputBufferAheadMs);
     }
     internal void PostCheckKey(int key, bool down)
     {

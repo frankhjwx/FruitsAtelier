@@ -67,7 +67,7 @@ public sealed class HitsoundResolver
             ? start + 6 : item.TimeMs + 5;
         int low = 0, high = timing.Length;
         while (low < high) { int mid = (low + high) / 2; if (timing[mid].TimeMs <= sampleTime) low = mid + 1; else high = mid; }
-        var point = low > 0 ? timing[low - 1] : null;
+        var point = low > 0 ? timing[low - 1] : timing.FirstOrDefault(p => p.Uninherited) ?? timing.FirstOrDefault();
         int bank = point?.SampleSet is >= 1 and <= 3 ? point.SampleSet : defaultSet;
         int index = point?.SampleIndex ?? 0;
         int volume = point?.Volume ?? 100;

@@ -28,6 +28,9 @@ internal sealed partial class EditorWindow : IDisposable
         ConfigureFiles();
         view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
         view.RequestPasteTime = () => view.PasteTimeJumpText(Native.ReadClipboardText(hwnd), view.TimeJumpSession);
+        view.RequestPasteSongSetup = () => view.PasteSongSetupText(Native.ReadClipboardText(hwnd), view.SongSetupInputSession);
+        view.RequestPasteLibrary = () => view.PasteLibraryText(Native.ReadClipboardText(hwnd));
+        view.RequestPasteField = () => view.PasteFieldText(Native.ReadClipboardText(hwnd));
         view.RequestClose = Close;
         view.RequestLoadSkin = () =>
         {
@@ -208,6 +211,9 @@ internal sealed partial class EditorWindow : IDisposable
         float y = (short)(((long)lParam >> 16) & 0xFFFF) * 96f / dpi;
         switch (message)
         {
+            case updateStatusChangedMessage:
+                Invalidate();
+                return 0;
             case 0x0233: // WM_DROPFILES
                 var dropped = Native.TakeDroppedFiles((nint)wParam);
                 if (!NativeModalScope.Active) FileOperation(() => view.DropLibraryFiles(dropped));
@@ -305,8 +311,6 @@ internal sealed partial class EditorWindow : IDisposable
                 Invalidate(); return 0;
             case 0x0100:
                 view.SetModifiers(Native.Alt, Native.Shift);
-                if ((int)wParam == 86 && Native.Control && view.LibraryTextFocused && !view.DiscardConfirmationVisible && !view.ErrorVisible)
-                { view.PasteLibraryText(Native.ReadClipboardText(window)); Invalidate(); return 0; }
                 view.KeyDown((int)wParam, Native.Control, Native.Shift);
                 if (!view.WantsCapture && Native.GetCapture() == window) Native.ReleaseCapture();
                 UpdateTitle(); Invalidate(); return 0;

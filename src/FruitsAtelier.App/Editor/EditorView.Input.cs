@@ -7,6 +7,8 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private double timelineMsPerDip;
+    private int breakStartMs;
+    private int OverviewTime(float x) => (int)Math.Clamp(Math.Round((x - overview.X) / overview.Width * TimelineDurationMs), 0, int.MaxValue);
     private float TimelineHeadX => overview.X + (float)(playhead / TimelineDurationMs) * overview.Width;
     private bool HitsTimelineHead(float x, float y) => Math.Abs(x - TimelineHeadX) <= 6
         && y >= overview.Y - 7 && y <= overview.Bottom + 2;
@@ -23,6 +25,7 @@ public sealed partial class EditorView
         }
         ResetTextCaret();
         mouseX = x; mouseY = y;
+        if (SongSetupVisible) { SongSetupPointerDown(x, y, button, shift); return; }
         if (DistanceSnapDialogVisible)
         {
             dsSliderShift = shift;
@@ -68,6 +71,13 @@ public sealed partial class EditorView
         {
             if (editField >= 0 && !CommitField()) return;
             contextItems.Clear(); menu = -1;
+            if (overview.Contains(x, y))
+            {
+                int time = OverviewTime(x);
+                var period = OsuTimeline.Breaks(Document).FirstOrDefault(b => time >= b.StartMs && time <= b.EndMs);
+                if (period.EndMs > period.StartMs) Edit(L.Get("timeline.removeBreak"), () => OsuTimeline.RemoveBreak(Document, period));
+                return;
+            }
             if (objectTimeline.Contains(x, y)) DeleteTimelineObject(x, y);
             else RightClickCanvas(x, y);
             return;
@@ -94,7 +104,9 @@ public sealed partial class EditorView
                     if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); return; }
                 return;
             }
-            bool sameHeader = menu < 3 && new FruitsAtelier.App.Rendering.Rect(109 + menu * 53, 6, 50, 28).Contains(x, y);
+            bool sameHeader = menu == 4
+                ? new FruitsAtelier.App.Rendering.Rect(268, 6, 70, 28).Contains(x, y)
+                : menu < 3 && new FruitsAtelier.App.Rendering.Rect(109 + menu * 53, 6, 50, 28).Contains(x, y);
             menu = -1;
             if (sameHeader) return;
             if (y >= 39) return;
@@ -124,11 +136,29 @@ public sealed partial class EditorView
             if (fields[i].Bounds.Contains(x, y))
             {
                 if (draftTrack != Guid.Empty) { StatusMessage = L.Get("editor.status.finishBeforeNumericEdit"); return; }
-                FocusField(i); return;
+                FocusField(i); FocusInput("numeric:" + i, editBuffer, x); return;
             }
-        if (objectTimeline.Contains(x, y)) { BeginObjectTimeline(x, y, ctrl || shift); return; }
+        if (objectTimeline.Contains(x, y))
+        {
+            if (!ctrl && !shift && BeginBreakEdge(x, y)) return;
+            BeginObjectTimeline(x, y, ctrl || shift); return;
+        }
         if (!AudioLoading && (overview.Contains(x, y) || HitsTimelineHead(x, y)))
         {
+            if (overview.Contains(x, y) && ctrl)
+            {
+                int time = OverviewTime(x);
+                int nearest = OsuTimeline.Bookmarks(Document).Where(t => Math.Abs(t - time) * overview.Width / TimelineDurationMs <= 5)
+                    .OrderBy(t => Math.Abs(t - time)).DefaultIfEmpty(-1).First();
+                Edit(L.Get("timeline.bookmark"), () => OsuTimeline.ToggleBookmark(Document, nearest >= 0 ? nearest : time));
+                return;
+            }
+            if (overview.Contains(x, y) && shift)
+            {
+                breakStartMs = OverviewTime(x);
+                drag = DragKind.Break;
+                return;
+            }
             bool grabbedHead = HitsTimelineHead(x, y);
             drag = DragKind.Timeline;
             dragStartX = x;
@@ -277,7 +307,10 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (textSelecting) { MoveInputSelection(x); return; }
         if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
+        if (dsBaseDragging) { UpdateDistanceBase(x); return; }
+        if (SongSetupVisible) { mouseX = x; mouseY = y; MoveSongSetup(x, y, shift); return; }
         if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x, shift); return; }
         if (distanceDragging) { UpdateDistanceSlider(x, shift); return; }
         placementCtrl = ctrl;
@@ -312,6 +345,7 @@ public sealed partial class EditorView
             return;
         }
         if (drag == DragKind.Timeline) { NavigateTime(x); return; }
+        if (drag == DragKind.BreakEdge) { MoveBreakEdge(x); return; }
         if (!dragMoved)
         {
             if (MathF.Abs(x - dragStartX) < 2 && MathF.Abs(y - dragStartY) < 2) return;
@@ -389,9 +423,12 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
+        if (textSelecting && button == 0) { MoveInputSelection(x); textSelecting = false; return; }
+        if (SongSetupVisible) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
         if (updatesPage) return;
         if (dsSnapDragging && button == 0) { SetDistanceSnapSubdivision(x); dsSnapDragging = false; return; }
+        if (dsBaseDragging && button == 0) { UpdateDistanceBase(x); dsBaseDragging = false; return; }
         if (dsSliderDrag >= 0 && button == 0) { UpdateDistanceSnapSlider(x, dsSliderShift); dsSliderDrag = -1; return; }
         if (volumeDrag >= 0 && button == 0) { UpdateVolumeDrag(x); FinishVolumeDrag(); return; }
         if (button == 0)
@@ -414,7 +451,22 @@ public sealed partial class EditorView
         if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
         if (ExportVisible) return;
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
+        if (drag == DragKind.Break)
+        {
+            int end = OverviewTime(x);
+            if (Math.Abs(end - breakStartMs) >= 1)
+                Edit(L.Get("timeline.addBreak"), () => OsuTimeline.AddBreak(Document, Math.Min(end, breakStartMs), Math.Max(end, breakStartMs)));
+            drag = DragKind.None;
+            return;
+        }
+        if (drag == DragKind.BreakEdge)
+        {
+            MoveBreakEdge(x);
+            FinishBreakEdge();
+            return;
+        }
         PointerMove(x, y, false, false);
+        if (drag == DragKind.PlaybackLine) { FinishPlaybackLineDrag(); return; }
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
         if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail) history.Commit();
         if (draftTrack != Guid.Empty && drag == DragKind.Anchor && !dragMoved
@@ -435,16 +487,33 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
-        if (DistanceEditing) { PointerDown(x, y, 0, shift, ctrl); return; }
+        if (SongSetupVisible)
+        {
+            foreach (var pair in songFieldBounds)
+                if (pair.Value.Contains(x, y) && SongFieldEnabled(pair.Key))
+                { songField = pair.Key; SelectInput("song:" + pair.Key, songValues[pair.Key]); return; }
+            return;
+        }
+        if (DistanceEditing)
+        {
+            if (textLayouts.TryGetValue("distance", out var layout) && layout.Content.Contains(x, y))
+                SelectInput("distance", editBuffer);
+            else PointerDown(x, y, 0, shift, ctrl);
+            return;
+        }
         if (updatesPage) return;
         if (IsTestplaying) return;
         if (notesLocked && plot.Contains(x, y)) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
-        if (TimeJumpVisible) { timeJumpSelected = true; return; }
+        if (TimeJumpVisible) { if (TimeJumpInputBounds.Contains(x, y)) SelectInput("time", timeJumpText); return; }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
+        if ((ExportVisible || LibraryVisible) && SelectLibraryInputAt(x, y)) return;
         if (ExportVisible) return;
         if (LibraryVisible) { if (!libraryPointerMoved && contextItems.Count == 0 && !languageMenuOpen) OpenLibraryCard(x, y); return; }
+        for (int i = 0; i < fields.Count; i++)
+            if (fields[i].Bounds.Contains(x, y))
+            { FocusField(i); SelectInput("numeric:" + i, editBuffer); return; }
         if (ctrl || tool == Tool.Fruit) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (!LegacyMode && draftTrack != Guid.Empty && SelectedTrack is { } draft && Near(Point(draft.Nodes[^1]), x, y, 8))
         { draft.Nodes[^1].HandleOut = default; draftStraight = true; return; }
@@ -474,6 +543,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl)
     {
+        if (SongSetupVisible) return;
         if (DistanceSnapDialogVisible)
         {
             return;
@@ -584,7 +654,7 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
-        if (DistanceKeyDown(virtualKey, ctrl)) return;
+        if (DistanceKeyDown(virtualKey, ctrl, shift)) return;
         placementCtrl = ctrl;
         if (virtualKey == 27 && legacyButtonSlider != Guid.Empty)
         { legacyButtonSlider = Guid.Empty; return; }
@@ -598,6 +668,23 @@ public sealed partial class EditorView
             else if (ctrl && virtualKey == 80)
             {
                 if (!testplayPauseHeld) { testplayPauseHeld = true; ToggleTestplayPause(); }
+            }
+            else if (ctrl && virtualKey == 66)
+            {
+                if (!testplayBookmarkHeld)
+                {
+                    testplayBookmarkHeld = true;
+                    AdvanceTestplay();
+                    if (IsTestplaying)
+                    {
+                        int time = (int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue);
+                        Edit(L.Get("timeline.bookmark"), () =>
+                        {
+                            if (shift) OsuTimeline.RemoveNearestBookmark(Document, time);
+                            else OsuTimeline.AddBookmark(Document, time);
+                        });
+                    }
+                }
             }
             else if (virtualKey == 9)
             {
@@ -625,18 +712,19 @@ public sealed partial class EditorView
             return;
         }
         if (updatesPage) { if (virtualKey == 27) updatesPage = false; return; }
+        if (SongSetupVisible) { SongSetupKey(virtualKey, ctrl, shift); return; }
         if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl, shift); return; }
         if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey); return; }
-        if (TimeJumpVisible) { TimeJumpKey(virtualKey, ctrl); return; }
+        if (TimeJumpVisible) { TimeJumpKey(virtualKey, ctrl, shift); return; }
         if (SliderDialogVisible)
         {
             if (virtualKey == 27)
             { if (SliderImportPromptVisible) AnswerSliderImport(false); else if (SliderConversionBusy) CancelSliderConversion(); else sliderBatchErrors = []; }
             return;
         }
-        if (ExportVisible) { ExportKey(virtualKey, ctrl); return; }
-        if (LibraryVisible) { LibraryKey(virtualKey, ctrl); return; }
+        if (ExportVisible) { ExportKey(virtualKey, ctrl, shift); return; }
+        if (LibraryVisible) { LibraryKey(virtualKey, ctrl, shift); return; }
         if (virtualKey == 116 && !ctrl && !shift) { StartTestplay(); return; }
         if (ctrl && !shift && virtualKey is 83 or 69 && drag == DragKind.None)
         {
@@ -662,7 +750,7 @@ public sealed partial class EditorView
         if (editField >= 0)
         {
             if (virtualKey == 27) { editField = -1; fieldError = ""; return; }
-            if (ctrl && virtualKey == 65) { replaceText = true; return; }
+            if (ctrl && virtualKey == 65) { SelectInput("numeric:" + editField, editBuffer); return; }
             if (virtualKey is 13 or 9)
             {
                 int current = editField;
@@ -670,11 +758,8 @@ public sealed partial class EditorView
                     FocusField((current + (shift ? fields.Count - 1 : 1)) % fields.Count);
                 return;
             }
-            if (virtualKey == 8)
-            {
-                editBuffer = replaceText || editBuffer.Length == 0 ? "" : editBuffer[..^1]; replaceText = false;
-            }
-            else if (virtualKey == 46) { editBuffer = ""; replaceText = false; }
+            InputKey("numeric:" + editField, ref editBuffer, virtualKey, ctrl, shift, 30, RequestPasteField);
+            replaceText = false;
             return;
         }
         if (virtualKey == 27)
@@ -689,6 +774,22 @@ public sealed partial class EditorView
         {
             if (drag != DragKind.None) return;
             contextItems.Clear();
+            if (virtualKey == 66)
+            {
+                int time = (int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue);
+                Edit(L.Get("timeline.bookmark"), () =>
+                {
+                    if (shift) OsuTimeline.RemoveNearestBookmark(Document, time);
+                    else OsuTimeline.AddBookmark(Document, time);
+                });
+                return;
+            }
+            if (virtualKey is 37 or 39)
+            {
+                if (shift) NudgeSelection(0, virtualKey == 37 ? -1 : 1);
+                else SeekBookmark(virtualKey == 39);
+                return;
+            }
             if (ClipboardInteractionReady && HandleLegacyShortcut(virtualKey, shift)) return;
             if (virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (virtualKey == 89) Redo();
@@ -733,7 +834,13 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
-        if (DistanceSnapDialogVisible) return;
+        if (SongSetupVisible) { if (!char.IsControl(value)) PasteSongSetupText(value.ToString(), SongSetupInputSession); return; }
+        if (DistanceSnapDialogVisible)
+        {
+            if (dsBaseFocused && (char.IsAsciiDigit(value) || value == '.'))
+                SetDistanceBaseText(InsertInput("ds:base", dsBaseText, value.ToString(), 16));
+            return;
+        }
         if (DistanceEditing) { DistanceTextInput(value); return; }
         if (updatesPage) return;
         if (StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
@@ -743,21 +850,22 @@ public sealed partial class EditorView
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (TimeJumpVisible)
         {
-            if (!char.IsControl(value) && (timeJumpSelected || timeJumpText.Length < 128))
-            { timeJumpText = (timeJumpSelected ? "" : timeJumpText) + value; timeJumpSelected = false; timeJumpError = ""; }
+            if (!char.IsControl(value)) { timeJumpText = InsertInput("time", timeJumpText, value.ToString(), 128); timeJumpError = ""; }
             return;
         }
         if (SliderDialogVisible) return;
-        if (LibraryVisible || ExportVisible) { if (libraryField >= 0 && !char.IsControl(value) && LibraryFieldValue.Length < 4096) { LibraryFieldValue = (libraryReplace ? "" : LibraryFieldValue) + value; libraryReplace = false; } return; }
+        if (LibraryVisible || ExportVisible) { if (libraryField >= 0 && !char.IsControl(value)) LibraryFieldValue = InsertInput("library:" + libraryField, LibraryFieldValue, value.ToString(), 4096); return; }
         if (editField < 0 || char.IsControl(value)) return;
         if (!(char.IsAsciiDigit(value) || value is '.' or '-' or '+' or 'e' or 'E' || value == ':' && fields[editField].Timestamp)) return;
-        if (replaceText) { editBuffer = ""; replaceText = false; }
-        if (editBuffer.Length < 30) editBuffer += value;
+        editBuffer = InsertInput("numeric:" + editField, editBuffer, value.ToString(), 30);
+        replaceText = false;
         fieldError = "";
     }
 
     public void CancelInteraction()
     {
+        textSelecting = false;
+        songDrag = -1;
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
         FinishDistanceEdit(true);
@@ -932,6 +1040,7 @@ public sealed partial class EditorView
         editBuffer = fields[index].Timestamp ? Time(fields[index].Value) : fields[index].Value.ToString("G17", CultureInfo.InvariantCulture);
         fieldError = "";
         replaceText = true;
+        SelectInput("numeric:" + index, editBuffer);
     }
 
     private bool CommitField()

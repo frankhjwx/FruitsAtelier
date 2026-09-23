@@ -22,7 +22,6 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Tempo preserves pitch, stereo and exact output duration", () => { PlaybackSpeedTests.PitchAndDuration(); return Task.CompletedTask; }),
     ("Speed changes preserve map position, pause and seek", () => PlaybackSpeedTests.Clock(wave)),
     ("Hitsound PCM mix, volume and stop", () => { HitsoundMixerTests.Run(); return Task.CompletedTask; }),
-    ("Live testplay hitsounds use persistent silent device output", HitsoundMixerTests.LiveDevice),
     ("Pause and resume preserve the playhead and first PCM frame despite read-ahead", () => PausePositionTests.Run(wave)),
     ("WAV real output drives the clock; pause and paused seek stay stopped", WavePlayback),
     ("Playing seeks preserve playback and latest rapid seek wins", PlayingSeek),

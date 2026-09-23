@@ -9,6 +9,50 @@ namespace FruitsAtelier.App.Diagnostics;
 
 internal static class RenderCheck
 {
+    private static void CheckSongSetup(D2DCanvas canvas, EditorView view, int width, int height)
+    {
+        string language = FruitsAtelier.Localization.Strings.Language;
+        var before = view.Document.DeepClone();
+        try
+        {
+            foreach (string locale in new[] { "en", "zh-CN" })
+            {
+                FruitsAtelier.Localization.Strings.SetLanguage(locale);
+                void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
+                void Click(float x, float y) { view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint(); }
+                Paint();
+                var button = view.SongSetupButtonBounds;
+                Click(button.X + 10, button.Y + 10);
+                if (!view.SongSetupVisible) throw new InvalidOperationException("Song Setup did not open from the header.");
+                var dialog = view.SongSetupBounds;
+                for (int tab = 0; tab < 4; tab++)
+                {
+                    Click(dialog.X + 32 + tab * 140, dialog.Y + 65);
+                    foreach (var field in view.SongSetupFieldBounds.Values)
+                        if (field.X < dialog.X || field.Right > dialog.Right || field.Bottom > dialog.Bottom - 60)
+                            throw new InvalidOperationException("Song Setup field exceeds its dialog bounds.");
+                    if (tab == 2)
+                    {
+                        Click(dialog.X + 32, dialog.Y + 124);
+                        view.PointerDown(dialog.X + 450, dialog.Y + 220, 0, false, false);
+                        view.PointerMove(dialog.X + 550, dialog.Y + 270, false, false);
+                        Paint();
+                        view.PointerUp(dialog.X + 550, dialog.Y + 270, 0);
+                        if (view.WantsCapture) throw new InvalidOperationException("Color picker retained pointer capture.");
+                    }
+                }
+                view.KeyDown(27, false, false); Paint();
+                if (view.SongSetupVisible || !before.ContentEquals(view.Document))
+                    throw new InvalidOperationException("Cancelling Song Setup changed map content.");
+            }
+        }
+        finally
+        {
+            FruitsAtelier.Localization.Strings.SetLanguage(language);
+            canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+        }
+    }
+
     private static object MeasureIndependentInput(nint window, double updatesPerSecond)
     {
         double now = Stopwatch.GetTimestamp() * 1000d / Stopwatch.Frequency;
@@ -99,7 +143,6 @@ internal static class RenderCheck
         var project = view.CaptureProject();
         var toggle = view.RequestTogglePlayback; var pause = view.RequestPausePlayback;
         var seek = view.RequestSeek; var hitsound = view.RequestHitsound;
-        var prepare = view.RequestPrepareTestplayAudio;
         var volumePreference = view.RequestAudioPreference;
         var updateCheck = view.RequestUpdateCheck;
         var updateStatus = view.UpdateStatus;
@@ -109,7 +152,6 @@ internal static class RenderCheck
         {
             view.RequestTogglePlayback = () => { }; view.RequestPausePlayback = () => { };
             view.RequestSeek = _ => { }; view.RequestHitsound = _ => { };
-            view.RequestPrepareTestplayAudio = () => { };
             view.RequestAudioPreference = () => { };
             view.RequestUpdateCheck = () => { };
             var map = new MapDocument();
@@ -187,7 +229,7 @@ internal static class RenderCheck
                 view.KeyDown(27, false, false);
                 view.MarkSaved(); view.ShowLibrary();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
-                view.PointerDown(width - 380, 20, 0, false, false); view.PointerUp(width - 380, 20, 0);
+                view.PointerDown(width - 160, 20, 0, false, false); view.PointerUp(width - 160, 20, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(40, 190, 0, false, false); view.PointerUp(40, 190, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
@@ -262,7 +304,6 @@ internal static class RenderCheck
             view.StopTestplay(); view.LoadProject(project); view.CloseLibrary();
             view.RequestTogglePlayback = toggle; view.RequestPausePlayback = pause;
             view.RequestSeek = seek; view.RequestHitsound = hitsound;
-            view.RequestPrepareTestplayAudio = prepare;
             view.RequestAudioPreference = volumePreference;
             view.RequestUpdateCheck = updateCheck;
             view.UpdateStatus = updateStatus;
@@ -374,6 +415,7 @@ internal static class RenderCheck
                 var input = view.PreviousDistanceFieldBounds ?? throw new InvalidOperationException("DS input missing.");
                 view.PointerDown(input.X + 8, input.Y + 8, 0, false, false);
                 view.PointerUp(input.X + 8, input.Y + 8, 0); Paint();
+                view.KeyDown('A', true, false);
                 view.TextInput('0'); view.TextInput('.'); view.TextInput('5'); Paint();
                 if (Math.Abs(view.Document.Fruits[1].X - 170) > .001) throw new InvalidOperationException("DS preview did not move fruit before confirmation.");
                 view.KeyDown(13, false, false); Paint();
@@ -387,6 +429,7 @@ internal static class RenderCheck
                 view.PointerUp(input.X + 8, input.Y + 8, 0); Paint();
                 if (!view.IsEditingText || view.WantsCapture || view.PlayheadMs != xEditPlayhead)
                     throw new InvalidOperationException("X row click reached the canvas.");
+                view.KeyDown('A', true, false);
                 view.TextInput('6'); view.TextInput('0'); view.TextInput('0'); Paint();
                 if (view.DistanceSliderBounds is not null || Math.Abs(view.Document.Fruits[1].X - 512) > .001)
                     throw new InvalidOperationException("X input did not clamp without a slider.");
@@ -456,6 +499,7 @@ internal static class RenderCheck
         {
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            CheckSongSetup(canvas, view, size.Item1, size.Item2);
             if (!view.MovementAnalysisEnabled)
             {
                 view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0);

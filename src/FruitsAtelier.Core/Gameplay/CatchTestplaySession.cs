@@ -9,6 +9,9 @@ public sealed record CatchTestplayFrame(double TimeMs, double X, int Combo, bool
 /// <summary>Serialises gameplay mutations; drawing consumes a detached snapshot without holding the lock.</summary>
 public sealed class CatchTestplaySession
 {
+    // Allow for a stale transport poll and the next output callback after the measured PCM lead.
+    public static double LiveHitsoundLead(double bufferedAheadMs, double rate) => bufferedAheadMs > 0
+        ? Math.Clamp(bufferedAheadMs, 0, 100 * rate) + 25 * rate : 0;
     private readonly object gate = new();
     private readonly CatchTestplay game;
     private readonly CatchTestplayClock clock;
@@ -22,6 +25,10 @@ public sealed class CatchTestplaySession
     private bool autoplay;
     private bool paused, awaitingResume;
     private double resumeRequestedAt;
+    private readonly double startPosition;
+    private bool waitingForDeviceProgress;
+    private double resumePosition;
+    private double outputLead;
     public bool Paused { get { lock (gate) return paused; } }
     public bool Autoplay { get { lock (gate) return autoplay; } }
     private Exception? error;
@@ -30,6 +37,7 @@ public sealed class CatchTestplaySession
     public bool Ended { get { lock (gate) return ended; } }
     public double X { get { lock (gate) return game.X; } }
     public int Combo { get { lock (gate) return game.Combo; } }
+    public double TransportPosition { get { lock (gate) return WithAudio ? Math.Max(0, time - outputLead) : time; } }
     public bool UsesKey(int key) => key == left || key == right || key == dash;
     private double Realtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
 
@@ -37,8 +45,9 @@ public sealed class CatchTestplaySession
         bool audioPlaying, int left, int right, int dash, TimeProvider timeProvider, double circleSize,
         HashSet<(Guid SourceId, int EventIndex)> comboEnds, Action<ConvertedCatchObject>? caught = null)
     {
-        this.game = game; this.clock = clock; time = start; WithAudio = withAudio;
+        this.game = game; this.clock = clock; time = start; startPosition = start; WithAudio = withAudio;
         audioStarted = audioPlaying; this.left = left; this.right = right; this.dash = dash;
+        waitingForDeviceProgress = withAudio && !audioPlaying;
         this.timeProvider = timeProvider; this.comboEnds = comboEnds;
         plate = new(circleSize);
         game.Caught = caught;
@@ -46,7 +55,8 @@ public sealed class CatchTestplaySession
         game.Judged = (item, x, hit) => plate.Judge(item, x, hit, this.comboEnds.Contains((item.SourceId, item.EventIndex)));
     }
 
-    public void UpdateAudio(double position, double sampledAt, double duration, bool ready, bool playing, bool loading, bool failed)
+    public void UpdateAudio(double position, double sampledAt, double duration, bool ready, bool playing,
+        bool loading, bool failed, double outputBufferAheadMs = 0)
     {
         lock (gate)
         {
@@ -56,12 +66,22 @@ public sealed class CatchTestplaySession
             {
                 if (failed || !ready && !loading) { ended = true; keys.Clear(); return; }
                 if (!playing || sampledAt < resumeRequestedAt) return;
+                if (position <= resumePosition) return;
                 awaitingResume = false;
             }
             audioStarted |= playing;
             if (!ready || failed || audioStarted && !playing && !loading || duration > 0 && position >= duration)
             { ended = true; keys.Clear(); return; }
-            if (playing) clock.Synchronize(position, sampledAt, Realtime);
+            if (waitingForDeviceProgress)
+            {
+                if (!playing || position <= startPosition) return;
+                waitingForDeviceProgress = false;
+            }
+            if (playing)
+            {
+                outputLead = LiveHitsoundLead(outputBufferAheadMs, clock.Rate);
+                clock.Synchronize(position + outputLead, sampledAt, Realtime);
+            }
             Advance();
         }
     }
@@ -78,9 +98,10 @@ public sealed class CatchTestplaySession
             {
                 awaitingResume = WithAudio;
                 resumeRequestedAt = Realtime;
+                resumePosition = WithAudio ? Math.Max(0, time - outputLead) : time;
                 clock.Restart(time, resumeRequestedAt, WithAudio);
             }
-            return time;
+            return WithAudio ? Math.Max(0, time - outputLead) : time;
         }
     }
     public void ToggleAutoplay()

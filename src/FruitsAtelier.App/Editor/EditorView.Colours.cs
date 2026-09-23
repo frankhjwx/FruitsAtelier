@@ -1,4 +1,5 @@
 using FruitsAtelier.Core;
+using FruitsAtelier.App.Skinning;
 
 namespace FruitsAtelier.App.Editor;
 
@@ -44,9 +45,15 @@ public sealed partial class EditorView
     private uint ObjectColour(ConvertedCatchObject item)
     {
         if (item.Kind == CatchObjectKind.Banana) return CatchObjectVisual.BananaColour(item.TimeMs);
-        var indices = comboIndices.GetValueOrDefault(item.SourceId);
+        return ComboColour(item.SourceId);
+    }
+
+    private uint ComboColour(Guid sourceId, bool useFallbackPalette = false)
+    {
+        var indices = comboIndices.GetValueOrDefault(sourceId);
         if (beatmapColours.Length > 0) return beatmapColours[indices.Beatmap % beatmapColours.Length];
         var colours = skin?.ComboColours;
-        return colours is { Count: > 0 } ? colours[indices.Skin % colours.Count] : 0xFFFFFF;
+        if (colours is { Count: > 0 }) return colours[indices.Skin % colours.Count];
+        return useFallbackPalette ? CatchSkin.DefaultComboColours[indices.Skin % CatchSkin.DefaultComboColours.Count] : 0xFFFFFF;
     }
 }

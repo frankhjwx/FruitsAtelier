@@ -8,7 +8,7 @@ internal static class TimelineDragTests
             const double original = 12345.678, duration = 180000;
             ui.View.UpdateTransport(original, duration, true, false, false, null, "song.mp3");
             ui.Paint();
-            var head = ui.Canvas.Lines.Single(l => l.Color == 0xF2C66D && l.X1 == l.X2 && l.Y1 > ui.Plot.Bottom);
+            var head = ui.Canvas.Lines.Single(l => l.Color == 0xFFFFFF && l.X1 == l.X2 && l.Y1 > ui.Plot.Bottom);
             float start = head.X1 + grabOffset, y = grabOffset == 0 ? head.Y1 + 1 : head.Y1 + 12;
             int seeks = 0;
             ui.View.RequestSeek = _ => seeks++;
