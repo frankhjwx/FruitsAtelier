@@ -41,6 +41,10 @@ internal static class SongSetupTests
                 Set(ui, "TitleUnicode", "歌曲"); Set(ui, "Title", "Song Romanised");
                 Set(ui, "Creator", "Mapper"); Set(ui, "Source", "Source"); Set(ui, "Tags", "tag one"); Set(ui, "Version", "Normal");
                 ui.ClickText(L.Get("song.difficulty"));
+                var difficultyTrack = ui.View.SongSetupBounds;
+                Check(ui.Canvas.Lines.Count(line => line.X1 == line.X2 && Math.Abs(line.Y2 - line.Y1) == 8
+                    && line.X1 >= difficultyTrack.X + 240 && line.X1 <= difficultyTrack.Right - 138) == 44,
+                    "Difficulty sliders need fine integer tick marks without labels");
                 Set(ui, "HPDrainRate", "6.2"); Set(ui, "CircleSize", "4.5"); Set(ui, "ApproachRate", "9.3"); Set(ui, "OverallDifficulty", "7.1");
                 ui.ClickText(L.Get("song.colours")); ui.ClickText(L.Get("song.customColours"));
                 Set(ui, "Hex", "#123ABC"); ui.ClickText(L.Get("song.addColour")); Set(ui, "Hex", "#FA1234");

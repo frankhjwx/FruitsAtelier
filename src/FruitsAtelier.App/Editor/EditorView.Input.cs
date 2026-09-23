@@ -309,6 +309,7 @@ public sealed partial class EditorView
     {
         if (textSelecting) { MoveInputSelection(x); return; }
         if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
+        if (dsBaseDragging) { UpdateDistanceBase(x); return; }
         if (SongSetupVisible) { mouseX = x; mouseY = y; MoveSongSetup(x, y, shift); return; }
         if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x, shift); return; }
         if (distanceDragging) { UpdateDistanceSlider(x, shift); return; }
@@ -427,6 +428,7 @@ public sealed partial class EditorView
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
         if (updatesPage) return;
         if (dsSnapDragging && button == 0) { SetDistanceSnapSubdivision(x); dsSnapDragging = false; return; }
+        if (dsBaseDragging && button == 0) { UpdateDistanceBase(x); dsBaseDragging = false; return; }
         if (dsSliderDrag >= 0 && button == 0) { UpdateDistanceSnapSlider(x, dsSliderShift); dsSliderDrag = -1; return; }
         if (volumeDrag >= 0 && button == 0) { UpdateVolumeDrag(x); FinishVolumeDrag(); return; }
         if (button == 0)
@@ -833,7 +835,12 @@ public sealed partial class EditorView
     public void TextInput(char value)
     {
         if (SongSetupVisible) { if (!char.IsControl(value)) PasteSongSetupText(value.ToString(), SongSetupInputSession); return; }
-        if (DistanceSnapDialogVisible) return;
+        if (DistanceSnapDialogVisible)
+        {
+            if (dsBaseFocused && (char.IsAsciiDigit(value) || value == '.'))
+                SetDistanceBaseText(InsertInput("ds:base", dsBaseText, value.ToString(), 16));
+            return;
+        }
         if (DistanceEditing) { DistanceTextInput(value); return; }
         if (updatesPage) return;
         if (StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;

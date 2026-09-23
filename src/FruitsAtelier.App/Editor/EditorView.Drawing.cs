@@ -320,13 +320,15 @@ public sealed partial class EditorView
     {
         c.Fill(rightPanel, Panel);
         c.Line(rightPanel.X, rightPanel.Y, rightPanel.X, rightPanel.Bottom, Grid);
-        float x = rightPanel.X + 16, w = rightPanel.Width - 32;
-        float rowY = rightPanel.Y + 15;
+        c.Line(rightPanel.X, rightPanel.Y + 38, rightPanel.Right, rightPanel.Y + 38, Grid);
+        float x = rightPanel.X + 16;
+        float rowY = rightPanel.Y + 11;
         c.Text(L.Get("ui.properties"), x, rowY, 12, Foreground, 90, true);
-        float statX = x + 96;
+        float statX = x + 84;
         c.Text($"{L.Get("ui.ar")} {Number(Document.ApproachRate)}", statX, rowY, 12, Muted, 48);
-        c.Text($"{L.Get("ui.cs")} {Number(Document.CircleSize)}", statX + 52, rowY, 12, Muted, 48);
-        c.Text($"{L.Get("ui.sv")} {Number(Document.SliderMultiplier)}", statX + 104, rowY, 12, Muted, Math.Max(0, w - 200));
+        c.Text($"{L.Get("ui.cs")} {Number(Document.CircleSize)}", statX + 50, rowY, 12, Muted, 48);
+        c.Text($"{L.Get("ui.dpb")} {Number(Document.SliderMultiplier * 100)}px", statX + 100, rowY, 12, Muted,
+            Math.Max(0, rightPanel.Right - statX - 108));
     }
 
     private (CurveTrack Track, Anchor Node) ResolveAnchor(Guid trackId, Guid nodeId)
@@ -353,7 +355,6 @@ public sealed partial class EditorView
 
     private void DrawPreview(ICanvas c, Rect r)
     {
-        c.Line(r.X, r.Y - 12, r.Right, r.Y - 12, Grid);
         c.Text(L.Get("ui.preview"), r.X, r.Y, 13, Foreground, r.Width, true);
         Button(c, new(r.Right - 92, r.Y - 5, 92, 27), L.Get("ui.debugCurves"), () => showPreviewCurves = !showPreviewCurves, showPreviewCurves);
         c.Text(L.Get("ui.previewStats", Number(PreviewApproachRate), Number(PreviewCircleSize), PreviewModName), r.X, r.Y + 23, 10, Foreground, r.Width);

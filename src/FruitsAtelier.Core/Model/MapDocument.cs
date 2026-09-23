@@ -133,7 +133,7 @@ public sealed partial class MapDocument
     public double TimingOffsetMs { get; set; }
     public double ApproachRate { get; set; } = 8;
     public double CircleSize { get; set; } = 5;
-    public double SliderMultiplier { get; set; } = 1.4;
+    public double SliderMultiplier { get; set; } = 1.92;
     public double SliderTickRate { get; set; } = 1;
     public double DistanceSpacing { get; set; } = 1;
     public List<double> DistanceSnapRatios { get; } = new();

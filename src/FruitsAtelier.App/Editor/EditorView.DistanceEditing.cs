@@ -310,6 +310,7 @@ public sealed partial class EditorView
         {
             var label = distanceLayout[i];
             if (label.Time > endTime) break;
+            if (breakPeriods.Any(period => label.Time >= period.StartMs && label.Time <= period.EndMs)) continue;
             var bounds = new Rect(Playfield.X + label.X,
                 plot.Bottom - (float)((label.Time - viewStart) * pixelsPerMs) - 9, label.Width, 18);
             if (bounds.X < plot.X || bounds.Right > plot.Right || bounds.Y < plot.Y || bounds.Bottom > plot.Bottom

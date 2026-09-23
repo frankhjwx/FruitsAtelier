@@ -66,10 +66,26 @@ public sealed partial class EditorView
             if (Document.BananaShowers.Any(shower => shower.TimeMs <= to.TimeMs && shower.EndTimeMs >= from.TimeMs)) continue;
             // Clip in map time so long connections keep their slope without oversized screen coordinates.
             double start = Math.Max(viewStart, from.TimeMs), end = Math.Min(endTime, to.TimeMs);
+            if (end <= start) continue;
             double XAt(double time) => from.X + (to.X - from.X) * ((time - from.TimeMs) / (to.TimeMs - from.TimeMs));
-            var a = Screen(new(start, XAt(start)));
-            var b = Screen(new(end, XAt(end)));
-            c.Line(a.X, a.Y, b.X, b.Y, MovementColour(movement.Mode), 4, .65f);
+            double cursor = start;
+            foreach (var period in breakPeriods)
+            {
+                if (period.EndMs <= cursor) continue;
+                if (period.StartMs >= end) break;
+                Segment(cursor, Math.Min(end, period.StartMs));
+                cursor = Math.Max(cursor, period.EndMs);
+                if (cursor >= end) break;
+            }
+            Segment(cursor, end);
+
+            void Segment(double first, double last)
+            {
+                if (last <= first) return;
+                var a = Screen(new(first, XAt(first)));
+                var b = Screen(new(last, XAt(last)));
+                c.Line(a.X, a.Y, b.X, b.Y, MovementColour(movement.Mode), 4, .65f);
+            }
         }
     }
 

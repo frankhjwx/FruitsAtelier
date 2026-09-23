@@ -71,7 +71,12 @@ public sealed partial class EditorView
     public void PasteFieldText(string text, string? expectedField = null)
     {
         if (expectedField is not null && textEditor.Field != expectedField) return;
-        if (DistanceEditing)
+        if (DistanceSnapDialogVisible && dsBaseFocused)
+        {
+            string filtered = new(text.Where(value => char.IsAsciiDigit(value) || value == '.').ToArray());
+            SetDistanceBaseText(InsertInput("ds:base", dsBaseText, filtered, 16));
+        }
+        else if (DistanceEditing)
         {
             string filtered = new(text.Where(value => char.IsAsciiDigit(value) || value == '-' || !editingXCoordinate && value == '.').ToArray());
             string next = InsertInput("distance", editBuffer, filtered, 30);
@@ -120,6 +125,7 @@ public sealed partial class EditorView
         {
             "time" => timeJumpText,
             "distance" => editBuffer,
+            "ds:base" => dsBaseText,
             _ when key.StartsWith("song:") => songValues.GetValueOrDefault(key[5..], ""),
             _ when key.StartsWith("library:") => LibraryFieldValue,
             _ when key.StartsWith("numeric:") => editBuffer,

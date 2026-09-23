@@ -4,6 +4,60 @@ using FruitsAtelier.Localization;
 internal static class DistanceSnapPresetTests
 {
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
+    public static void BaseDistance()
+    {
+        Check(new MapDocument().SliderMultiplier * 100 == 192, "New maps should start at 192 px per beat.");
+        var imported = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n256,192,1000,1,0,0:0:0:0:\n");
+        var ui = new Ui(false);
+        ui.LoadDocument(imported);
+        Check(ui.Canvas.Texts.Any(t => t.Value.Contains("DPB 140px")), "Imported base distance should reflect its stored multiplier.");
+        ui.Key('G'); ui.Key('G'); ui.Key('T');
+        ui.View.OpenDistanceSnapDialog(); ui.Paint();
+        var track = ui.View.DistanceSnapBaseTrackBounds;
+        float X(double px) => track.X + (float)((px - 1) / 511) * track.Width;
+        float x = X(77);
+        ui.View.PointerDown(x, track.Y + 12, 0, false, false);
+        ui.View.PointerMove(x, track.Y + 12, false, false);
+        ui.View.PointerUp(x, track.Y + 12, 0); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == "80") && imported.SliderMultiplier == 1.4,
+            "Grid Snap drag should use the selected 16 px step without editing the map before Apply.");
+        double standBoundary = CatchSize.CatchWidth(imported.CircleSize) / 2 * ui.View.SnapDivisor;
+        float expectedBoundaryX = track.X + (float)((standBoundary - 1) / 511) * track.Width;
+        Check(ui.Canvas.Fills.Any(f => f.Color == 0xC0C0C0 && f.Bounds.Y == track.Y + 3
+            && Math.Abs(f.Bounds.Right - expectedBoundaryX) < 1),
+            "The base DPB color boundary should use the same movement limit as the preset bar.");
+        var level = ui.Canvas.Texts.First(t => t.Value == "32 px" && t.Y > track.Y + 110 && t.Y < track.Y + 145);
+        ui.Click(level.X + 4, level.Y + 5); ui.Paint();
+        ui.View.PointerDown(x, track.Y + 12, 0, false, false);
+        ui.View.PointerUp(x, track.Y + 12, 0); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == "64"), "Changing Grid Level in the dialog did not update DPB dragging.");
+        var toggle = ui.Canvas.Texts.First(t => t.Value == Strings.Get("ui.gridSnap") && t.Y > track.Y + 70 && t.Y < track.Y + 110);
+        ui.Click(toggle.X + 4, toggle.Y + 5); ui.Paint();
+        Check(ui.View.EditorGridSettings == (true, 16), "Dialog Grid Snap settings changed the editor grid.");
+        ui.View.PointerDown(x, track.Y + 12, 0, false, false);
+        ui.View.PointerUp(x, track.Y + 12, 0); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == "77"), "Disabling Grid Snap in the dialog did not update DPB dragging.");
+        var field = ui.View.DistanceSnapBaseFieldBounds;
+        ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
+        ui.View.PasteFieldText("0"); ui.Paint();
+        ui.ClickText(Strings.Get("library.apply"));
+        Check(ui.View.DistanceSnapDialogVisible && ui.View.Document.SliderMultiplier == 1.4,
+            "Out-of-range manual DPB must not apply.");
+        ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
+        ui.View.PasteFieldText("73.25"); ui.Paint();
+        ui.ClickText(Strings.Get("library.apply"));
+        Check(!ui.View.DistanceSnapDialogVisible && Math.Abs(ui.View.Document.SliderMultiplier - .7325) < .000001,
+            "Manual DPB should set the underlying osu multiplier in one transaction.");
+        Check(Math.Abs(ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document)).SliderMultiplier - .7325) < .000001,
+            "Project save lost DPB.");
+        Check(Math.Abs(OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack.SliderMultiplier - .7325) < .000001,
+            "osu export lost DPB conversion.");
+        ui.Key('Z', ctrl: true);
+        Check(Math.Abs(ui.View.Document.SliderMultiplier - 1.4) < .000001, "DPB Apply did not undo.");
+        ui.Key('Y', ctrl: true);
+        Check(Math.Abs(ui.View.Document.SliderMultiplier - .7325) < .000001, "DPB Apply did not redo.");
+    }
+
     public static void Snapping()
     {
         var reference = new DistanceSnap.Reference(Guid.NewGuid(), new(1000, 256), new(1000, 256), .28, 0);
@@ -140,7 +194,8 @@ internal static class DistanceSnapPresetTests
             Check(ui.View.DistanceSnapPointerBounds.Count == 8, "Preset cap failed.");
             ui.Click(track.X + track.Width * .95f, track.Y + 8);
             Check(ui.View.DistanceSnapPointerBounds.Count == 8, "Empty-row click exceeded the preset cap.");
-            var arrowLabels = ui.Canvas.Texts.Where(t => t.Y < track.Y && t.Y > track.Y - 130 && t.Value.EndsWith("x", StringComparison.Ordinal)).ToArray();
+            var arrowLabels = ui.Canvas.Texts.Where(t => t.Y < track.Y && t.Y > track.Y - 70
+                && t.Value.Length > 1 && char.IsAsciiDigit(t.Value[0]) && t.Value.EndsWith("x", StringComparison.Ordinal)).ToArray();
             Check(arrowLabels.Length == 8, "Not all eight arrows have value labels.");
             pointer = ui.View.DistanceSnapPointerBounds.Last();
             ui.View.PointerDown(pointer.X + 8, pointer.Y + 8, 2, false, false); ui.Paint();

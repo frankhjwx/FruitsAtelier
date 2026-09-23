@@ -102,6 +102,11 @@ public sealed partial class EditorView
                 var track = new Rect(r.X + 240, y + 9, r.Width - 378, 20);
                 double.TryParse(songValues[key], NumberStyles.Float, CultureInfo.InvariantCulture, out double value);
                 c.Line(track.X, track.Y + 10, track.Right, track.Y + 10, Grid, 4);
+                for (int step = 0; step <= 10; step++)
+                {
+                    float tickX = track.X + step * track.Width / 10;
+                    c.Line(tickX, track.Y + 6, tickX, track.Y + 14, Muted, 1);
+                }
                 c.Circle(track.X + (float)Math.Clamp(value / 10, 0, 1) * track.Width, track.Y + 10, 7, Accent);
                 songSliders.Add((track, key));
             }

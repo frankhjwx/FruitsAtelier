@@ -42,6 +42,17 @@ internal static class AssistToolsTests
         ui.View.Document.BananaShowers.Clear(); ui.Paint();
         Check(ui.Canvas.Lines.Count(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001) == ordinaryConnections,
             "Removing a shower did not restore its connection");
+        var breakMap = new MapDocument { DurationMs = 5000, IsDemo = false };
+        breakMap.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 100 }, new Fruit { TimeMs = 2000, X = 300 }]);
+        OsuTimeline.AddBreak(breakMap, 1250, 1750);
+        ui = new Ui(); ui.LoadDocument(breakMap); ui.ClickText(Strings.Get("movement.analysis"));
+        var split = ui.Canvas.Lines.Where(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001).ToArray();
+        float Y(double time) => ui.Plot.Bottom - (float)((time - ui.View.ViewStartMs) * ui.View.PixelsPerMs);
+        Check(split.Length == 2 && split.Any(line => Math.Abs(line.Y2 - Y(1250)) < .01f)
+            && split.Any(line => Math.Abs(line.Y1 - Y(1750)) < .01f),
+            "Movement Analysis must leave a gap inside break time while keeping both outside segments.");
+        Check(!ui.Canvas.Texts.Any(t => t.Value.EndsWith("x") && t.Y > Y(1750) && t.Y < Y(1250)),
+            "Movement Analysis displayed a distance label inside break time.");
         ui = new Ui(); ui.LoadDocument(DemoMap.Create());
         ui.ClickText(Strings.Get("movement.analysis"));
         var curves = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasPlotBounds && o.Segment is { Color: 0xAB9DF2 }).ToArray();
@@ -172,7 +183,7 @@ internal static class AssistToolsTests
         Near(.75, ui.View.DistanceReadout.Previous!.Value);
         double ratio = ui.View.DistanceReadout.Previous.Value;
         ui.View.Wheel(ui.Plot.X, ui.Plot.Y + 50, 120, true); ui.Paint(); Near(ratio, ui.View.DistanceReadout.Previous!.Value);
-        Check(ui.Canvas.Texts.Any(t => t.Value.Contains("SV 1.4")), "Details must show base SV");
+        Check(ui.Canvas.Texts.Any(t => t.Value.Contains("DPB 140px")), "Details must show base DPB");
         foreach (string language in new[] { "en", "zh-CN" })
         {
             Strings.SetLanguage(language); ui.Resize(980, 620);
