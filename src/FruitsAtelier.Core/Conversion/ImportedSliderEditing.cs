@@ -9,11 +9,11 @@ public static class ImportedSliderEditing
 {
     public const double ApproximationTolerance = ImportedCurveFitter.Tolerance;
 
-    public static ImportedSliderEditResult ConvertToTrack(MapDocument document, Guid sliderId)
+    public static ImportedSliderEditResult ConvertToTrack(MapDocument document, Guid sliderId, CatchConversionCache? cache = null)
     {
         if (!document.ImportedSliders.Any(s => s.Id == sliderId))
             throw new ArgumentException(L.Get("core.importEditing.notFound"), nameof(sliderId));
-        var result = Convert(document, [sliderId]);
+        var result = Convert(document, [sliderId], cache: cache);
         if (result.Tracks.Count == 0) throw new InvalidOperationException(result.Failures[0].Reason);
         return new(result.Tracks[0], []);
     }
@@ -21,7 +21,7 @@ public static class ImportedSliderEditing
     public static SliderBatchConversionResult ConvertAll(MapDocument document, CancellationToken cancellation = default)
         => Convert(document, document.ImportedSliders.Select(s => s.Id).ToArray(), cancellation);
 
-    private static SliderBatchConversionResult Convert(MapDocument document, IReadOnlyCollection<Guid> ids, CancellationToken cancellation = default)
+    private static SliderBatchConversionResult Convert(MapDocument document, IReadOnlyCollection<Guid> ids, CancellationToken cancellation = default, CatchConversionCache? cache = null)
     {
         ArgumentNullException.ThrowIfNull(document);
         var wanted = ids.ToHashSet();
@@ -63,7 +63,7 @@ public static class ImportedSliderEditing
         if (candidates.Count == 0) return new([], failures);
         cancellation.ThrowIfCancellationRequested();
         var candidate = document.DeepClone();
-        var cache = new CatchConversionCache();
+        cache ??= new CatchConversionCache();
         while (candidates.Count > 0)
         {
             cancellation.ThrowIfCancellationRequested();

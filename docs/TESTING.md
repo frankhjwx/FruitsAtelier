@@ -160,6 +160,12 @@ Performance results depend on hardware and runtime warm-up; compare the same fix
 and environment. Functional tests compare cached conversion against full conversion
 after edits to geometry, timing, repeats, source ordering, and RNG-consuming objects.
 
+For slider endpoint dragging, run the App test executable with
+`--slider-drag-performance <path.osu>`. This read-only benchmark alternates horizontal
+movement of an imported slider's head and tail, reporting pointer-path CPU time,
+counting-canvas rendering time, and current-thread allocations separately. It invokes
+the selected-object drag path directly and excludes native input dispatch and GPU work.
+
 ## Playback rendering profile
 
 For a read-only CPU profile of an existing `.osu` file, run the App test executable with `--map-performance <path>`. It measures playback around 89 seconds at 32% Zoom and 1/16 Snap, reporting render median/p95, allocation per frame, rendering phases, and transport/hitsound scheduling with silent callbacks. The counting canvas excludes GPU and device submission.

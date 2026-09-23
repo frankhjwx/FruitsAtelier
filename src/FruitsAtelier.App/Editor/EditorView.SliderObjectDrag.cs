@@ -7,6 +7,8 @@ public sealed partial class EditorView
 {
     private ConvertedCatchObject? sliderObjectDragTarget;
     private double sliderObjectDragX;
+    private MapDocument? sliderObjectDragSource, sliderObjectDragShape;
+    private int sliderObjectTrackIndex, sliderObjectImportIndex;
 
     private bool TryBeginSelectedSliderObjectDrag(float x, float y)
     {
@@ -34,6 +36,12 @@ public sealed partial class EditorView
         history.Begin(L.Get("editor.command.changeField", L.Get("coordinate.x")));
         sliderObjectDragTarget = target;
         sliderObjectDragX = target.X;
+        sliderObjectTrackIndex = Document.Tracks.FindIndex(t => t.Id == target.SourceId);
+        sliderObjectImportIndex = Document.ImportedSliders.FindIndex(t => t.Id == target.SourceId);
+        sliderObjectDragSource = new MapDocument();
+        if (sliderObjectTrackIndex >= 0) sliderObjectDragSource.Tracks.Add(Document.Tracks[sliderObjectTrackIndex]);
+        if (sliderObjectImportIndex >= 0) sliderObjectDragSource.ImportedSliders.Add(Document.ImportedSliders[sliderObjectImportIndex]);
+        sliderObjectDragShape = null;
         distanceObject = (target.SourceId, target.EventIndex);
         drag = DragKind.SliderObject;
         BeginPointerDrag(x, y);
@@ -69,20 +77,44 @@ public sealed partial class EditorView
 
     private bool TrySliderObjectPosition(ConvertedCatchObject target, double x)
     {
-        history.Cancel();
-        history.Begin(L.Get("editor.command.changeField", L.Get("coordinate.x")));
         try
         {
+            if (Math.Abs(x - target.X) < .00001)
+            {
+                RestoreSliderObjectSource(sliderObjectDragSource!);
+                return true;
+            }
+            if (sliderObjectDragShape is null)
+            {
+                RestoreSliderObjectSource(sliderObjectDragSource!);
+                var track = Document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
+                    ?? ImportedSliderEditing.ConvertToTrack(Document, target.SourceId, editorConversionCache).Track;
+                sliderObjectDragShape = new MapDocument();
+                sliderObjectDragShape.Tracks.Add(track);
+            }
+            // Every candidate starts from the same fitted shape; only this source needs a copy.
+            RestoreSliderObjectSource(sliderObjectDragShape);
             if (target.Kind == CatchObjectKind.Fruit)
-                DistanceSpacingEditing.ApplyX(Document, target, x, compensateTinyDroplets);
-            else DistanceSpacingEditing.ApplyIsolatedX(Document, target, x, compensateTinyDroplets);
+                DistanceSpacingEditing.ApplyX(Document, target, x, compensateTinyDroplets, editorConversionCache);
+            else DistanceSpacingEditing.ApplyIsolatedX(Document, target, x, compensateTinyDroplets, editorConversionCache);
             return true;
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or InvalidDataException)
         {
-            history.Cancel();
-            history.Begin(L.Get("editor.command.changeField", L.Get("coordinate.x")));
+            RestoreSliderObjectSource(sliderObjectDragSource!);
             return false;
         }
+    }
+
+    private void RestoreSliderObjectSource(MapDocument source)
+    {
+        Guid id = sliderObjectDragTarget!.SourceId;
+        Document.Tracks.RemoveAll(t => t.Id == id);
+        Document.ImportedSliders.RemoveAll(t => t.Id == id);
+        var copy = source.DeepClone();
+        if (copy.Tracks.Count > 0)
+            Document.Tracks.Insert(sliderObjectTrackIndex >= 0 ? sliderObjectTrackIndex : Document.Tracks.Count, copy.Tracks[0]);
+        if (copy.ImportedSliders.Count > 0)
+            Document.ImportedSliders.Insert(sliderObjectImportIndex, copy.ImportedSliders[0]);
     }
 }

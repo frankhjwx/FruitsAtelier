@@ -9,6 +9,7 @@ FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
 if (args.Length > 0 && args[0] == "--benchmark-library") return LibraryScaleTests.Benchmark(args.Length > 1 ? args[1] : null);
 if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
+if (args.Length == 2 && args[0] == "--slider-drag-performance") return EditorPerformance.RunSliderDrag(args[1]);
 
 if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.InspectMap(args[1]);
 
@@ -140,6 +141,7 @@ var tests = new (string Name, Action Run)[]
     ("Long press reports note beat position and temporarily uses its snap", NoteSnapTests.InspectBeatPosition),
     ("Note hold activates at 300 ms, cancels and continues directly into dragging", NoteSnapTests.HoldTimingAndDragging),
     ("Slider edges drag independently and slider objects follow Grid Snap", NoteSnapTests.SliderObjectDragging),
+    ("Slider drag candidates preserve unrelated sources and restore their baseline", NoteSnapTests.SliderDragBaseline),
     ("Slider edges highlight and inspect snap while matching current grids stay unchanged", NoteSnapTests.SliderEdgesAndCurrentSnap),
     ("Slider droplets select on the second click and drag locally", DropletDragTests.SelectAndMove),
     ("Dragging a curved slider droplet preserves its neighbouring events", DropletDragTests.CurvedNeighbors),

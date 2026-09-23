@@ -60,6 +60,7 @@ public sealed partial class EditorView
     private OsuWriteResult? playableExport;
     private IReadOnlyList<ConvertedCatchObject> playableObjects = [];
     private bool convertedWithCompensation;
+    private bool sliderObjectPreview;
     private HashSet<(Guid SourceId, int EventIndex)> hyperdashObjects = [];
     private Dictionary<Guid, int> skinIndices = [];
     private Guid selection, selectedTrack, draftTrack, draftBanana;
@@ -112,7 +113,8 @@ public sealed partial class EditorView
     private void EnsureConversion()
     {
         if (convertedSnapshot is not null && convertedSnapshot.ContentEquals(Document)
-            && convertedWithCompensation == compensateTinyDroplets) return;
+            && convertedWithCompensation == compensateTinyDroplets
+            && (!sliderObjectPreview || drag == DragKind.SliderObject)) return;
         convertedSnapshot = Document.DeepClone();
         renderedTiming = new TimingMap.Lookup(Document);
         convertedWithCompensation = compensateTinyDroplets;
@@ -132,7 +134,9 @@ public sealed partial class EditorView
         conversion = CatchStreamConverter.Convert(input, compensateTinyDroplets, editorConversionCache);
         playableExport = null;
         playableObjects = conversion.Objects;
-        if (conversion.Success)
+        // While dragging, use the validated conversion; refresh export quantization on release/cancel.
+        sliderObjectPreview = drag == DragKind.SliderObject;
+        if (conversion.Success && !sliderObjectPreview)
         {
             try
             {

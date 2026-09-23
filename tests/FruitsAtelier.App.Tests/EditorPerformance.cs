@@ -5,6 +5,36 @@ using FruitsAtelier.Core;
 
 internal static class EditorPerformance
 {
+    public static int RunSliderDrag(string path)
+    {
+        var document = OsuBeatmapReader.ReadFile(path);
+        Console.WriteLine($"Slider drag CPU benchmark: sliders={document.ImportedSliders.Count}, fruits={document.Fruits.Count}");
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var begin = typeof(EditorView).GetMethod("BeginSliderObjectDrag", flags)!;
+        var move = typeof(EditorView).GetMethod("MoveSliderObject", flags)!;
+        foreach (bool tail in new[] { false, true })
+        {
+            var view = new EditorView(false); view.LoadDocument(document);
+            var canvas = new CountCanvas(); view.Render(canvas, 1440, 900);
+            var source = document.ImportedSliders.First(s => s.TimeMs >= 30000 && s.SpanCount == 1);
+            var edges = view.Conversion.Objects.Where(o => o.SourceId == source.Id && o.Kind == CatchObjectKind.Fruit).ToArray();
+            var target = tail ? edges[^1] : edges[0];
+            Console.WriteLine($"{(tail ? "Tail" : "Head")} at {target.TimeMs:F2} ms, x={target.X:F2}");
+            begin.Invoke(view, [target, 500f, 500f]);
+            for (int i = 0; i < 8; i++)
+            {
+                long bytes = GC.GetAllocatedBytesForCurrentThread();
+                var watch = Stopwatch.StartNew();
+                move.Invoke(view, [500f + (i % 2 == 0 ? 6 : -6)]);
+                double moveMs = watch.Elapsed.TotalMilliseconds;
+                watch.Restart(); view.Render(canvas, 1440, 900);
+                Console.WriteLine($"  move={moveMs:F2} ms, render={watch.Elapsed.TotalMilliseconds:F2} ms, allocated={(GC.GetAllocatedBytesForCurrentThread() - bytes) / 1024} KiB");
+            }
+            view.CancelInteraction(); view.NewProject();
+        }
+        return 0;
+    }
+
     public static int RunMap(string path)
     {
         var watch = Stopwatch.StartNew();

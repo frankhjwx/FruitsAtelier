@@ -99,6 +99,57 @@ internal static class NoteSnapTests
         }
     }
 
+    public static void SliderDragBaseline()
+    {
+        foreach (bool imported in new[] { false, true })
+        foreach (bool tail in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 1000, SliderMultiplier = 1, IsDemo = false };
+            var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'L', PixelLength = 100 };
+            slider.ControlPoints.AddRange([new(120, 192), new(120, 292)]);
+            map.ImportedSliders.Add(slider);
+            if (!imported) ImportedSliderEditing.ConvertToTrack(map, slider.Id);
+            map.Fruits.Add(new Fruit { TimeMs = 7000, X = 100 });
+            var other = new CurveTrack { Kind = CurveKind.Linear };
+            other.Nodes.AddRange([new Anchor { TimeMs = 8000, X = 100 }, new Anchor { TimeMs = 9000, X = 150 }]);
+            map.Tracks.Add(other);
+            var target = OsuBeatmapWriter.Serialize(map).PlayableObjects
+                .Where(o => o.SourceId == slider.Id && o.Kind == CatchObjectKind.Fruit).ElementAt(tail ? 1 : 0);
+            double originalX = CatchStreamConverter.Convert(map).Objects.Single(o => o.SourceId == target.SourceId && o.EventIndex == target.EventIndex).X;
+            var ui = new Ui(timeProvider: clock); ui.LoadDocument(map);
+            ui.ClickMap(target.TimeMs, target.X); ui.DownMap(target.TimeMs, target.X);
+            var document = ui.View.Document;
+            var untouched = document.Tracks.Single(t => t.Id == other.Id);
+            foreach (double offset in new[] { 20d, -20, 392, 30, 0 })
+            {
+                ui.MoveMap(target.TimeMs, target.X + offset);
+                Check(ReferenceEquals(document, ui.View.Document) && ReferenceEquals(untouched, ui.View.Document.Tracks.Single(t => t.Id == other.Id)),
+                    "A slider candidate copied or replaced unrelated map content.");
+                var actual = CatchStreamConverter.Convert(ui.View.Document);
+                Check(actual.Success && actual.Objects.SequenceEqual(ui.View.Conversion.Objects),
+                    "Cached slider preview differs from a fresh full-map conversion.");
+                if (Math.Abs(offset) <= 30)
+                {
+                    var moved = actual.Objects.Single(o => o.SourceId == target.SourceId && o.EventIndex == target.EventIndex);
+                    double expected = offset == 0 ? originalX : target.X + offset;
+                    Check(Math.Abs(moved.X - expected) < .001, $"Slider candidate: imported={imported}, tail={tail}, offset={offset}, actual={moved.X}, expected={expected}; {ui.View.StatusMessage}");
+                }
+            }
+            ui.UpMap(target.TimeMs, target.X);
+            Check(map.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Returning to the drag origin retained a fitted replacement or changed source order.");
+            ui.DownMap(target.TimeMs, target.X); ui.MoveMap(target.TimeMs, target.X + 20);
+            ui.View.CancelInteraction(); ui.Paint();
+            Check(map.ContentEquals(ui.View.Document), "Cancelling a cached drag did not restore the original source.");
+            ui.DownMap(target.TimeMs, target.X); ui.MoveMap(target.TimeMs, target.X + 20); ui.UpMap(target.TimeMs, target.X + 20);
+            var exported = (OsuWriteResult?)typeof(FruitsAtelier.App.Editor.EditorView)
+                .GetField("playableExport", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View);
+            Check(exported is not null && exported.PlayableObjects.SequenceEqual(OsuBeatmapWriter.Serialize(ui.View.Document).PlayableObjects),
+                "Releasing a slider drag did not restore export-quantized playback.");
+            ui.Key('Z', ctrl: true);
+            Check(map.ContentEquals(ui.View.Document), "Cached drag did not undo in one step.");
+        }
+    }
+
     private static void Inspect(Ui ui, float x, float y)
     {
         ui.View.PointerDown(x, y, 0, false, false);

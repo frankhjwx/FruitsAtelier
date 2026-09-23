@@ -105,6 +105,12 @@ restore the outgoing RNG state, so a change to an earlier parent invalidates dow
 results wherever the random sequence changes. Failed conversions are not cached.
 The normal converter remains available without a cache for export and independent checks.
 
+Dragging a slider fruit or droplet keeps one history transaction and restores only that
+source between candidate positions. Imported sliders are fitted once per drag, and
+candidate validation shares the editor conversion cache. During this drag, rendering
+uses the validated conversion; export quantization and read-back are refreshed after
+release or cancellation.
+
 Canvas and preview rendering select the visible interval from time-sorted catch objects
 by binary search. Offscreen anchors
 are culled, and timeline events share pixel-sized markers (hyperdash takes precedence).

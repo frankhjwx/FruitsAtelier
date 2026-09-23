@@ -491,7 +491,11 @@ public sealed partial class EditorView
         if (drag == DragKind.PlaybackLine) { FinishPlaybackLineDrag(); return; }
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
         if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail) history.Commit();
-        if (drag == DragKind.SliderObject) sliderObjectDragTarget = null;
+        if (drag == DragKind.SliderObject)
+        {
+            sliderObjectDragTarget = null;
+            sliderObjectDragSource = sliderObjectDragShape = null;
+        }
         if (draftTrack != Guid.Empty && drag == DragKind.Anchor && !dragMoved
             && SelectedTrack is { } draft && SelectedAnchor == draft.Nodes[^1])
         {
@@ -911,6 +915,7 @@ public sealed partial class EditorView
         }
         drag = DragKind.None;
         sliderObjectDragTarget = null;
+        sliderObjectDragSource = sliderObjectDragShape = null;
         objectDragStart = null;
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         objectDragPrepared = false;
