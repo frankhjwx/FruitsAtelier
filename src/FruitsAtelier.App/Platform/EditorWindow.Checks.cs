@@ -1,10 +1,67 @@
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Updates;
+using System.Runtime.InteropServices;
 
 namespace FruitsAtelier.App.Platform;
 
 internal sealed partial class EditorWindow
 {
+    private void CheckNativeText()
+    {
+        Native.GetWindowRect(hwnd, out var originalBounds);
+        Native.SetWindowPos(hwnd, 0, -32000, -32000, 0, 0, 0x0001 | 0x0004 | 0x0010);
+        Native.ShowWindow(hwnd, 4);
+        view.OpenSongSetup();
+        WndProc(hwnd, 0x000F, 0, 0);
+        if (!view.SongSetupVisible || !view.SongSetupFieldBounds.TryGetValue("TitleUnicode", out var field))
+            throw new InvalidOperationException("Song Setup did not expose its editable field.");
+        int x = (int)Math.Round((field.X + 40) * dpi / 96), y = (int)Math.Round((field.Y + 5) * dpi / 96);
+        WndProc(hwnd, 0x0201, 1, (nint)((y << 16) | x));
+        WndProc(hwnd, 0x0202, 0, (nint)((y << 16) | x));
+        WndProc(hwnd, 0x000F, 0, 0);
+        if (nativeText == 0 || nativeTextKey != "song:TitleUnicode")
+            throw new InvalidOperationException("Song Setup did not activate the native text control.");
+        nint selection = Native.SendMessage(nativeText, 0x00B0, 0, 0);
+        if ((selection.ToInt64() & 0xFFFF) == 0 && ((selection.ToInt64() >> 16) & 0xFFFF) == ReadNativeText().Length)
+            throw new InvalidOperationException("Clicking a text field still selects all text.");
+        void Replace(string value)
+        {
+            nint characters = Marshal.StringToHGlobalUni(value);
+            try { Native.SendMessage(nativeText, 0x00C2, 1, characters); } // EM_REPLACESEL
+            finally { Marshal.FreeHGlobal(characters); }
+        }
+        void Delete()
+        {
+            string before = ReadNativeText();
+            Native.SendMessage(nativeText, 0x0100, 46, 0); // WM_KEYDOWN / VK_DELETE
+            if (ReadNativeText() == before) Native.SendMessage(nativeText, 0x0102, 0x7F, 0); // WM_CHAR / DEL
+        }
+        Native.SendMessage(nativeText, 0x00B1, 0, -1);
+        Replace("abcdef");
+        Native.SendMessage(nativeText, 0x00B1, 2, 4);
+        Delete(); // Delete selected text.
+        if (ReadNativeText() != "abef") throw new InvalidOperationException("Delete did not remove the selected text.");
+        Native.SendMessage(nativeText, 0x00B1, 2, 2);
+        Delete(); // Delete the character after the caret.
+        if (ReadNativeText() != "abf") throw new InvalidOperationException($"Delete did not remove the following character: '{ReadNativeText()}'.");
+        Native.SendMessage(nativeText, 0x00B1, 1, 2);
+        Replace("XY");
+        if (ReadNativeText() != "aXYf") throw new InvalidOperationException("Partial selection replacement failed.");
+        Native.SendMessage(nativeText, 0x00B1, 0, -1);
+        Replace("极彩色");
+        if (ReadNativeText() != "极彩色") throw new InvalidOperationException("Unicode text did not survive native editing.");
+        WndProc(hwnd, 0x000F, 0, 0);
+        if (view.ActiveTextField?.Text != "极彩色")
+            throw new InvalidOperationException("Native text changes did not reach the Song Setup draft.");
+        view.KeyDown(27, false, false);
+        WndProc(hwnd, 0x000F, 0, 0);
+        if (view.SongSetupVisible || nativeTextKey is not null)
+            throw new InvalidOperationException("Closing Song Setup retained the native text control.");
+        Native.ShowWindow(hwnd, 0);
+        Native.SetWindowPos(hwnd, 0, originalBounds.Left, originalBounds.Top, 0, 0, 0x0001 | 0x0004 | 0x0010);
+        AppLog.Write("Native text check passed: click caret, partial selection, Delete, replacement and Unicode.");
+    }
+
     private void CheckUpdateRefresh()
     {
         CheckUpdateRefresh(false);

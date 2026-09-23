@@ -235,7 +235,7 @@ With N, left-click to set the start, then right-click at a later time to finish.
 
 The File menu can replace MP3 / OGG / WAV audio. Manual seeking and editing remain available without playable audio. Save the editor project to retain editable data; further changes after `.osu` export still require a project save.
 
-Text inputs show a blinking caret at the end of the text and highlight the full selection after Ctrl+A (Command+A on macOS). Typing replaces the selection; library fields also support pasting text. Long focused text scrolls horizontally to keep its end visible.
+Text fields use the platform text control while focused: Win32 `EDIT` on Windows and Avalonia `TextBox` on macOS. A click places a blinking caret; dragging or Shift+arrow selects a range. Backspace and Delete remove the selected range or the character before or after the caret. Ctrl+A/C/X/V (Command on macOS) select, copy, cut and paste, including partial selections. Long text scrolls horizontally with the caret. Song Setup, time jump, Library and Settings fields, export names, inspector values and distance inputs share this behavior; their existing validation and commit rules still apply.
 
 ## Display settings
 

@@ -34,6 +34,9 @@ internal sealed class EditorControl : Control, IDisposable
     internal EditorView View { get; } = new(loadDemo: false);
     private readonly ImageCache images = new();
     internal Action? Changed;
+    internal Action<NativeTextField?>? TextFieldRendered;
+    internal Action<Point>? TextFieldPointerPressed;
+    internal bool NativeTextActive;
     public EditorControl()
     {
         Focusable = true; ClipToBounds = true;
@@ -82,6 +85,7 @@ internal sealed class EditorControl : Control, IDisposable
         base.Render(context);
         using var canvas = new MacCanvas(context, images);
         View.Render(canvas, (float)Bounds.Width, (float)Bounds.Height);
+        TextFieldRendered?.Invoke(View.ActiveTextField);
         if (View.IsTestplaying || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw)
             TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw) InvalidateVisual(); });
     }
@@ -93,6 +97,7 @@ internal sealed class EditorControl : Control, IDisposable
     {
         View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         Focus(); var p = e.GetPosition(this); var state = e.GetCurrentPoint(this).Properties;
+        TextFieldPointerPressed?.Invoke(p);
         int button = state.IsRightButtonPressed ? 2 : state.IsMiddleButtonPressed ? 1 : 0;
         if (e.ClickCount == 2 && button == 0) View.PointerDoubleClick((float)p.X, (float)p.Y, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
         else View.PointerDown((float)p.X, (float)p.Y, button, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
@@ -151,6 +156,11 @@ internal sealed class EditorControl : Control, IDisposable
         e.Handled = true; Refresh();
     }
     protected override void OnGotFocus(GotFocusEventArgs e) { base.OnGotFocus(e); View.SetTextInputFocus(true); Refresh(); }
-    protected override void OnLostFocus(Avalonia.Interactivity.RoutedEventArgs e) { base.OnLostFocus(e); View.SetTextInputFocus(false); View.CancelInteraction(); Refresh(); }
+    protected override void OnLostFocus(Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        base.OnLostFocus(e);
+        if (NativeTextActive) return;
+        View.SetTextInputFocus(false); View.CancelInteraction(); Refresh();
+    }
     public void Dispose() => images.Dispose();
 }
