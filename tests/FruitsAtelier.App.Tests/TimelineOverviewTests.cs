@@ -25,6 +25,18 @@ internal static class TimelineOverviewTests
         Check(ui.Canvas.Fills.Any(f => f.Color == 0xF2F4F7 && f.Bounds.Y < area.Y + 20 && f.Bounds.Bottom > area.Y + 20),
             "Break span must straddle the timeline");
         Check(ui.Canvas.Lines.Any(l => l.Color == 0x4B9EF5 && l.Y1 == area.Y + 20), "Bookmark must join the timeline");
+        var calls = ui.Canvas.PaintCalls;
+        int red = calls.FindIndex(c => c.Line is { Color: 0xEC4545, Y1: var y } && y == area.Y + 2);
+        int green = calls.FindIndex(c => c.Line is { Color: 0x73B92F, Y1: var y } && y == area.Y + 2);
+        int bookmark = calls.FindIndex(c => c.Line is { Color: 0x4B9EF5, Y1: var y } && y == area.Y + 20);
+        int center = calls.FindIndex(c => c.Line is { Color: 0xF2F4F7, Y1: var y, Y2: var y2 } && y == area.Y + 20 && y2 == y);
+        int kiaiFill = calls.FindIndex(c => c.Color == 0xD7AE42 && c.FillBounds is not null);
+        int breakFill = calls.FindIndex(c => c.Color == 0xF2F4F7 && c.FillBounds is { Y: var y } && y < area.Y + 20);
+        Check(red >= 0 && green >= 0 && bookmark >= 0 && center >= 0 && kiaiFill >= 0 && breakFill >= 0
+            && red < center && green < center && bookmark < center && center < kiaiFill && center < breakFill,
+            "Timeline layers are out of order");
+        Check(new[] { red, green, bookmark, center, kiaiFill, breakFill }.All(i => calls[i].Opacity == .75f),
+            "Timeline markers must use 75% opacity");
         ui.View.PointerDown(X(2500), area.Y + 34, 0, false, true);
         ui.View.PointerUp(X(2500), area.Y + 34, 0);
         Check(OsuTimeline.Bookmarks(ui.View.Document).Count == 0, "Ctrl-click did not remove bookmark");

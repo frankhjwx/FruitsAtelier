@@ -967,6 +967,7 @@ sealed class RecordingCanvas : ICanvas
     public readonly record struct Segment(float X1, float Y1, float X2, float Y2, uint Color, float Opacity, float Width = 1);
     public readonly record struct Outline(Rect Bounds, uint Color);
     public readonly record struct Operation(int Order, Rect? Clip, Dot? Dot, Segment? Segment);
+    public readonly record struct PaintCall(uint Color, float Opacity, Rect? FillBounds = null, Segment? Line = null);
     private readonly Stack<Rect> clipStack = new();
     public readonly record struct Texture(string Path, Rect Bounds, float Opacity);
     public List<Texture> Images { get; } = [];
@@ -983,13 +984,16 @@ sealed class RecordingCanvas : ICanvas
     public List<Outline> Outlines { get; } = [];
     public List<Outline> Fills { get; } = [];
     public List<Operation> Operations { get; } = [];
-    public void Clear() { Fills.Clear(); Images.Clear(); Sprites.Clear(); Texts.Clear(); Clips.Clear(); Circles.Clear(); Lines.Clear(); Outlines.Clear(); Operations.Clear(); clipStack.Clear(); }
-    public void Fill(Rect r, uint color, float radius = 0, float opacity = 1) => Fills.Add(new(r, color));
+    public List<PaintCall> PaintCalls { get; } = [];
+    public void Clear() { Fills.Clear(); Images.Clear(); Sprites.Clear(); Texts.Clear(); Clips.Clear(); Circles.Clear(); Lines.Clear(); Outlines.Clear(); Operations.Clear(); PaintCalls.Clear(); clipStack.Clear(); }
+    public void Fill(Rect r, uint color, float radius = 0, float opacity = 1)
+    { Fills.Add(new(r, color)); PaintCalls.Add(new(color, opacity, FillBounds: r)); }
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0) => Outlines.Add(new(r, color));
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)
     {
         var line = new Segment(x1, y1, x2, y2, color, opacity, width);
         Lines.Add(line);
+        PaintCalls.Add(new(color, opacity, Line: line));
         Operations.Add(new(Operations.Count, clipStack.TryPeek(out var clip) ? clip : null, null, line));
     }
     public void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1, float opacity = 1)
