@@ -80,21 +80,13 @@ public sealed partial class EditorView
             if (from.TimeMs > endTime) break;
             if (movementStates[departure].Movement is not { } movement) continue;
             if (Document.BananaShowers.Any(shower => shower.TimeMs <= to.TimeMs && shower.EndTimeMs >= from.TimeMs)
-                || KiaiOverlaps(from.TimeMs, to.TimeMs)) continue;
+                || KiaiOverlaps(from.TimeMs, to.TimeMs)
+                || breakPeriods.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
             // Clip in map time so long connections keep their slope without oversized screen coordinates.
             double start = Math.Max(viewStart, from.TimeMs), end = Math.Min(endTime, to.TimeMs);
             if (end <= start) continue;
             double XAt(double time) => from.X + (to.X - from.X) * ((time - from.TimeMs) / (to.TimeMs - from.TimeMs));
-            double cursor = start;
-            foreach (var period in breakPeriods)
-            {
-                if (period.EndMs <= cursor) continue;
-                if (period.StartMs >= end) break;
-                Segment(cursor, Math.Min(end, period.StartMs));
-                cursor = Math.Max(cursor, period.EndMs);
-                if (cursor >= end) break;
-            }
-            Segment(cursor, end);
+            Segment(start, end);
 
             void Segment(double first, double last)
             {

@@ -46,13 +46,9 @@ internal static class AssistToolsTests
         breakMap.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 100 }, new Fruit { TimeMs = 2000, X = 300 }]);
         OsuTimeline.AddBreak(breakMap, 1250, 1750);
         ui = new Ui(); ui.LoadDocument(breakMap); ui.ClickText(Strings.Get("movement.analysis"));
-        var split = ui.Canvas.Lines.Where(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001).ToArray();
-        float Y(double time) => ui.Plot.Bottom - (float)((time - ui.View.ViewStartMs) * ui.View.PixelsPerMs);
-        Check(split.Length == 2 && split.Any(line => Math.Abs(line.Y2 - Y(1250)) < .01f)
-            && split.Any(line => Math.Abs(line.Y1 - Y(1750)) < .01f),
-            "Movement Analysis must leave a gap inside break time while keeping both outside segments.");
-        Check(!ui.Canvas.Texts.Any(t => t.Value.EndsWith("x") && t.Y > Y(1750) && t.Y < Y(1250)),
-            "Movement Analysis displayed a distance label inside break time.");
+        Check(!ui.Canvas.Lines.Any(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001)
+            && ui.View.DistanceLabelBounds.Count == 0,
+            "Movement Analysis retained part of a connection spanning a break.");
         var kiaiMap = new MapDocument { DurationMs = 5000, IsDemo = false };
         kiaiMap.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 100 }, new Fruit { TimeMs = 2000, X = 300 }]);
         kiaiMap.TimingPoints.Add(new TimingPoint { TimeMs = 0, BeatLengthMs = 500, Uninherited = true });
