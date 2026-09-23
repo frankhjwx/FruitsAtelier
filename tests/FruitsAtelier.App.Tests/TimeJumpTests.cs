@@ -14,7 +14,7 @@ internal static class TimeJumpTests
             ui.Resize(size.Item1, size.Item2);
             var buttons = ui.View.ToolButtonBounds;
             Near(ui.View.CanvasPlotBounds.Y + ui.View.CanvasPlotBounds.Height / 2, (buttons[0].Y + buttons[^1].Bottom) / 2);
-            Near(ui.Height - 120 + 46, ui.View.TimeDisplayBounds.Y + ui.View.TimeDisplayBounds.Height / 2);
+            Near(ui.Height - 120 + 21, ui.View.TimeDisplayBounds.Y + ui.View.TimeDisplayBounds.Height / 2);
         }
         string copied = "", clipboard = "03:03:311 (2,3) - "; double? seek = null;
         ui.View.RequestCopyText = text => copied = text;

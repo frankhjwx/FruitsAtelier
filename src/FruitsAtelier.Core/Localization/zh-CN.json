@@ -37,6 +37,9 @@
   "testplay.paused": "已暂停",
 
   "testplay.start": "试玩 (F5)",
+  "timeline.transport.play": "播放",
+  "timeline.transport.pause": "暂停",
+  "timeline.transport.stop": "停止并返回开头",
   "testplay.noNotes": "当前位置之后没有可试玩的音符。",
   "testplay.returned": "已从试玩返回编辑器。",
   "testplay.left": "试玩：左移",

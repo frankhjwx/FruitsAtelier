@@ -94,6 +94,7 @@ var tests = new (string Name, Action Run)[]
     ("Anchor dragging defaults to free time with independent opt-in snapping", AnchorSnapTests.Dragging),
     ("Catch hitsound samples and playback boundaries", HitsoundTests.Run),
     ("Bottom timeline draws timing, break, kiai and bookmark edits", TimelineOverviewTests.Run),
+    ("Bottom transport controls play, pause, stop and test", TimelineOverviewTests.TransportControls),
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),
     ("Fresh process defaults to English", () => { if (startupLanguage != "en") throw new Exception("Default language must be English"); }),
     ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),

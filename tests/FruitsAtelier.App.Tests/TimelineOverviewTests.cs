@@ -2,6 +2,36 @@ using FruitsAtelier.Core;
 
 internal static class TimelineOverviewTests
 {
+    public static void TransportControls()
+    {
+        var map = new MapDocument { DurationMs = 5000, IsDemo = false, AudioPath = "fixture.wav" };
+        map.Fruits.Add(new() { TimeMs = 750, X = 100 });
+        var ui = new Ui(overview: false);
+        ui.LoadDocument(map);
+        ui.View.UpdateTransport(1000, 5000, true, false, false, null, map.AudioPath); ui.Paint();
+        var area = ui.Canvas.Fills.Single(f => f.Color == 0x141922).Bounds;
+        var test = ui.View.TestplayButtonBounds;
+        Check(test.Right < area.X && test.Y >= area.Y && test.Bottom <= area.Bottom, "Transport controls must sit left of the timeline");
+        Check(ui.View.TimeDisplayBounds.Bottom < test.Y, "Time display must sit above transport controls");
+        Check(!ui.Canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("testplay.start")), "Old Testplay button remains above the timeline");
+        int toggles = 0, pauses = 0; double? seek = null;
+        ui.View.RequestTogglePlayback = () => toggles++;
+        ui.View.RequestPausePlayback = () => pauses++;
+        ui.View.RequestSeek = time => seek = time;
+        float y = test.Y + test.Height / 2;
+        ui.Click(test.X - 147 + 21, y);
+        Check(toggles == 1, "Play control did not start playback");
+        ui.View.UpdateTransport(1200, 5000, true, true, false, null, map.AudioPath); ui.Paint();
+        ui.Click(test.X - 98 + 21, y);
+        Check(pauses == 1, "Pause control did not pause playback");
+        ui.Click(test.X - 49 + 21, y);
+        Check(pauses == 2 && seek == 0 && ui.View.PlayheadMs == 0, "Stop control did not pause and seek to the start");
+        ui.View.UpdateTransport(0, 5000, true, false, false, null, map.AudioPath); ui.Paint();
+        ui.Click(test.X + 21, y);
+        Check(ui.View.IsTestplaying, "Test control did not enter testplay");
+        ui.View.StopTestplay();
+    }
+
     public static void Run()
     {
         var map = new MapDocument { DurationMs = 5000, IsDemo = false };
@@ -14,30 +44,30 @@ internal static class TimelineOverviewTests
         var ui = new Ui(overview: false);
         ui.LoadDocument(map);
         var area = ui.Canvas.Fills.Single(f => f.Color == 0x141922).Bounds;
-        Check(ui.Canvas.Lines.Any(l => l.Color == 0xEC4545 && l.Y1 == area.Y + 2), "Red timing point missing");
-        Check(ui.Canvas.Lines.Any(l => l.Color == 0x73B92F && l.Y1 == area.Y + 2), "Green timing point missing");
+        Check(ui.Canvas.Lines.Any(l => l.Color == 0xEA2222 && l.Y1 == area.Y + 2), "Red timing point missing");
+        Check(ui.Canvas.Lines.Any(l => l.Color == 0x7BC600 && l.Y1 == area.Y + 2), "Green timing point missing");
         float X(double time) => area.X + (float)(time / ui.View.TimelineDurationMs) * area.Width;
-        var kiai = ui.Canvas.Fills.Where(f => f.Color == 0xD7AE42).ToArray();
+        var kiai = ui.Canvas.Fills.Where(f => f.Color == 0xB5640B).ToArray();
         Check(kiai.Length == 1 && Math.Abs(kiai[0].Bounds.X - X(0)) < .01f
             && Math.Abs(kiai[0].Bounds.Right - X(1000)) < .01f
             && kiai[0].Bounds.Y < area.Y + 20 && kiai[0].Bounds.Bottom > area.Y + 20,
             "Kiai must span the complete timing interval across notes and timing points");
-        Check(ui.Canvas.Fills.Any(f => f.Color == 0xF2F4F7 && f.Bounds.Y < area.Y + 20 && f.Bounds.Bottom > area.Y + 20),
+        Check(ui.Canvas.Fills.Any(f => f.Color == 0xBCB1AE && f.Bounds.Y < area.Y + 20 && f.Bounds.Bottom > area.Y + 20),
             "Break span must straddle the timeline");
         Check(ui.Canvas.Lines.Any(l => l.Color == 0x4B9EF5 && l.Y1 == area.Y + 20), "Bookmark must join the timeline");
         var calls = ui.Canvas.PaintCalls;
-        int red = calls.FindIndex(c => c.Line is { Color: 0xEC4545, Y1: var y } && y == area.Y + 2);
-        int green = calls.FindIndex(c => c.Line is { Color: 0x73B92F, Y1: var y } && y == area.Y + 2);
+        int red = calls.FindIndex(c => c.Line is { Color: 0xEA2222, Y1: var y } && y == area.Y + 2);
+        int green = calls.FindIndex(c => c.Line is { Color: 0x7BC600, Y1: var y } && y == area.Y + 2);
         int bookmark = calls.FindIndex(c => c.Line is { Color: 0x4B9EF5, Y1: var y } && y == area.Y + 20);
-        int center = calls.FindIndex(c => c.Line is { Color: 0xF2F4F7, Y1: var y, Y2: var y2 } && y == area.Y + 20 && y2 == y);
-        int kiaiFill = calls.FindIndex(c => c.Color == 0xD7AE42 && c.FillBounds is not null);
-        int breakFill = calls.FindIndex(c => c.Color == 0xF2F4F7 && c.FillBounds is { Y: var y } && y < area.Y + 20);
+        int center = calls.FindIndex(c => c.Line is { Color: 0xA0A0A0, Y1: var y, Y2: var y2 } && y == area.Y + 20 && y2 == y);
+        int kiaiFill = calls.FindIndex(c => c.Color == 0xB5640B && c.FillBounds is not null);
+        int breakFill = calls.FindIndex(c => c.Color == 0xBCB1AE && c.FillBounds is { Y: var y } && y < area.Y + 20);
         Check(red >= 0 && green >= 0 && bookmark >= 0 && center >= 0 && kiaiFill >= 0 && breakFill >= 0
             && center < kiaiFill && center < breakFill && kiaiFill < red && breakFill < red
             && kiaiFill < green && breakFill < green && kiaiFill < bookmark && breakFill < bookmark,
             "Timeline layers are out of order");
-        Check(new[] { red, green, bookmark, center, kiaiFill, breakFill }.All(i => calls[i].Opacity == .5f),
-            "Timeline markers must use 50% opacity");
+        Check(new[] { red, green, bookmark, center, kiaiFill, breakFill }.All(i => calls[i].Opacity == .8f),
+            "Timeline markers must use 80% opacity");
         ui.View.PointerDown(X(2500), area.Y + 34, 0, false, true);
         ui.View.PointerUp(X(2500), area.Y + 34, 0);
         Check(OsuTimeline.Bookmarks(ui.View.Document).Count == 0, "Ctrl-click did not remove bookmark");
@@ -60,7 +90,9 @@ internal static class TimelineOverviewTests
         {
             ui.View.PointerMove(area.X + 20, area.Y + 10, false, false); ui.Paint();
             var first = ui.Canvas.Images.Single(i => i.Path.EndsWith("toolbar-panel.png", StringComparison.Ordinal)).Bounds;
+            Check(first.Bottom <= area.Y, "Bookmark toolbar overlaps the editable timeline");
             Check(File.Exists(ui.Canvas.Images.Single(i => i.Bounds == first).Path), "Generated toolbar asset was not packaged");
+            ui.View.PointerMove(first.X + 21, first.Y + 17, false, false); ui.Paint();
             Check(ui.Canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("timeline.bookmark.addHint")), "Bookmark tooltip missing");
             ui.View.PointerMove(area.Right - 10, area.Y + 10, false, false); ui.Paint();
             var second = ui.Canvas.Images.Single(i => i.Path.EndsWith("toolbar-panel.png", StringComparison.Ordinal)).Bounds;
@@ -92,7 +124,7 @@ internal static class TimelineOverviewTests
             Check(OsuTimeline.Bookmarks(ui.View.Document).Count == 0, "Reset button failed");
             ui.Key(90, ctrl: true);
             Check(OsuTimeline.Bookmarks(ui.View.Document).Count == 2, "Reset did not undo");
-            ui.View.PointerMove(area.X + 20, area.Y - 10, false, false); ui.Paint();
+            ui.View.PointerMove(area.X + 20, area.Y - 45, false, false); ui.Paint();
             Check(!ui.Canvas.Images.Any(i => i.Path.EndsWith("toolbar-panel.png", StringComparison.Ordinal)), "Toolbar stayed visible after mouse exit");
         }
     }

@@ -368,31 +368,17 @@ public sealed partial class EditorView
         float top = height - 120;
         c.Fill(new(0, top, width, 92), 0x20252E);
         c.Line(0, top, width, top, Grid);
-        var transport = new Rect(16, top + 28, 40, 36);
-        c.Fill(transport, AudioPlaying ? 0x344A50u : Surface, 5);
-        c.Stroke(transport, AudioReady ? Accent : Muted, 1.5f, 5);
-        float cx = transport.X + transport.Width / 2, cy = transport.Y + transport.Height / 2;
-        uint icon = AudioReady ? Foreground : Muted;
-        if (AudioPlaying)
-        {
-            c.Fill(new(cx - 7, cy - 8, 5, 16), icon);
-            c.Fill(new(cx + 2, cy - 8, 5, 16), icon);
-        }
-        else for (int i = 0; i < 13; i++)
-            c.Line(cx - 5 + i, cy - 8 + i * 8f / 12, cx - 5 + i, cy + 8 - i * 8f / 12, icon);
-        hits.Add(new(transport, TogglePlayback, AudioReady));
-        TimeDisplayBounds = new(64, top + 22, 150, 48);
+        TimeDisplayBounds = new(16, top + 3, 188, 36);
         if (TimeDisplayBounds.Contains(mouseX, mouseY)) c.Fill(TimeDisplayBounds, Surface, 4);
-        c.Text(Time(playhead), 69, top + 22, 21, Foreground, 145, true);
-        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), 70, top + 50, 11, Muted, 130);
+        c.Text(Time(playhead), 20, top + 2, 18, Foreground, 180, true);
+        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), 20, top + 24, 10, Muted, 180);
         hits.Add(new(TimeDisplayBounds, OpenTimeJump, true));
         if (TimeDisplayBounds.Contains(mouseX, mouseY) && !TimeJumpVisible)
-            c.Text(L.Get("timeJump.title"), 69, top - 20, 12, Foreground, 200);
-        if (!AudioReady) c.Text(AudioNotice, 16, top + 71, 10, Gold, 192);
+            c.Text(L.Get("timeJump.title"), 20, top - 20, 12, Foreground, 200);
+        if (!AudioReady) c.Text(AudioNotice, 16, top + 79, 10, Gold, 192);
 
         float rateX = overview.Right - 404;
-        TestplayButtonBounds = new(220, top + 3, 128, 28);
-        Button(c, TestplayButtonBounds, L.Get("testplay.start"), StartTestplay, enabled: !AudioLoading);
+        DrawTransportControls(c);
         c.Text(L.Get("ui.playbackSpeed"), rateX, top + 12, 11, Muted, 104);
         foreach (double rate in PlaybackRates)
         {
@@ -401,10 +387,10 @@ public sealed partial class EditorView
         }
         c.Fill(overview, 0x141922, 4);
         if (AudioLoading) return;
-        const float timelineMarkerOpacity = .5f;
+        const float timelineMarkerOpacity = .8f;
         float TimelineX(double time) => overview.X + (float)(Math.Clamp(time, 0, TimelineDurationMs) / TimelineDurationMs) * overview.Width;
         var timing = Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
-        c.Line(overview.X, overview.Y + 20, overview.Right, overview.Y + 20, 0xF2F4F7, 1, timelineMarkerOpacity);
+        c.Line(overview.X, overview.Y + 20, overview.Right, overview.Y + 20, 0xA0A0A0, 1, timelineMarkerOpacity);
         const float spanHeight = 12;
         float spanY = overview.Y + 20 - spanHeight / 2;
         double? kiaiStart = null;
@@ -414,17 +400,17 @@ public sealed partial class EditorView
             if (active && kiaiStart is null) kiaiStart = group.Key;
             else if (!active && kiaiStart is double start)
             {
-                DrawSpan(start, group.Key, 0xD7AE42);
+                DrawSpan(start, group.Key, 0xB5640B);
                 kiaiStart = null;
             }
         }
-        if (kiaiStart is double finalStart) DrawSpan(finalStart, TimelineDurationMs, 0xD7AE42);
+        if (kiaiStart is double finalStart) DrawSpan(finalStart, TimelineDurationMs, 0xB5640B);
         foreach (var period in OsuTimeline.Breaks(Document))
-            DrawSpan(period.StartMs, period.EndMs, 0xF2F4F7);
+            DrawSpan(period.StartMs, period.EndMs, 0xBCB1AE);
         if (drag == DragKind.Break)
         {
             float x1 = TimelineX(breakStartMs), x2 = Math.Clamp(mouseX, overview.X, overview.Right);
-            c.Fill(new(Math.Min(x1, x2), spanY, Math.Abs(x2 - x1), spanHeight), 0xF2F4F7, 0, timelineMarkerOpacity);
+            c.Fill(new(Math.Min(x1, x2), spanY, Math.Abs(x2 - x1), spanHeight), 0xBCB1AE, 0, timelineMarkerOpacity);
         }
         void DrawSpan(double start, double end, uint color)
         {
@@ -436,7 +422,7 @@ public sealed partial class EditorView
             var point = timing[i];
             if (point.TimeMs < 0 || point.TimeMs > TimelineDurationMs) continue;
             float x = TimelineX(point.TimeMs);
-            c.Line(x, overview.Y + 2, x, overview.Y + 18, point.Uninherited ? 0xEC4545u : 0x73B92Fu, 1, timelineMarkerOpacity);
+            c.Line(x, overview.Y + 2, x, overview.Y + 18, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
         }
         foreach (int bookmark in OsuTimeline.Bookmarks(Document))
         {

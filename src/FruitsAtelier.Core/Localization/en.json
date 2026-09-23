@@ -37,6 +37,9 @@
   "testplay.paused": "Paused",
 
   "testplay.start": "Testplay (F5)",
+  "timeline.transport.play": "Play",
+  "timeline.transport.pause": "Pause",
+  "timeline.transport.stop": "Stop and return to start",
   "testplay.noNotes": "No notes remain at this position.",
   "testplay.returned": "Returned from testplay.",
   "testplay.left": "Testplay: move left",

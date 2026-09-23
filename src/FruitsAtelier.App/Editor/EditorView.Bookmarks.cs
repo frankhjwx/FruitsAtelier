@@ -6,7 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private Rect BookmarkToolbarBounds => new(overview.X + 8, overview.Y + 3, 246, 34);
+    private Rect BookmarkToolbarBounds => new(overview.X, overview.Y - 34, 246, 34);
 
     private void SeekBookmark(bool next)
     {
@@ -19,8 +19,8 @@ public sealed partial class EditorView
 
     private void DrawBookmarkToolbar(ICanvas c)
     {
-        if (drag != DragKind.None || !overview.Contains(mouseX, mouseY) || overview.Width < 260) return;
         var panel = BookmarkToolbarBounds;
+        if (drag != DragKind.None || !(overview.Contains(mouseX, mouseY) || panel.Contains(mouseX, mouseY)) || overview.Width < 260) return;
         string texture = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
         if (!c.Image(texture, panel, source: new(30, 210, 2110, 280))) c.Fill(panel, 0x1D2732, 6);
         var bookmarks = OsuTimeline.Bookmarks(Document);
@@ -75,7 +75,7 @@ public sealed partial class EditorView
             string hint = L.Get(hints[hovered]);
             float w = Math.Min(360, c.MeasureText(hint, 11) + 16);
             float x = Math.Clamp(mouseX - w / 2, overview.X, overview.Right - w);
-            float y = overview.Y - 27;
+            float y = panel.Y - 27;
             c.Fill(new(x, y, w, 23), 0x111923, 4);
             c.Text(hint, x + 8, y + 5, 11, Foreground, w - 16);
         }
