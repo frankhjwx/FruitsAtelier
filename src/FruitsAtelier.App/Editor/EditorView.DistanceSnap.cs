@@ -211,11 +211,12 @@ public sealed partial class EditorView
         c.Fill(switchTrack, dsGridSnap ? 0x417D77u : 0x46515Fu, 12);
         c.Circle(switchTrack.X + (dsGridSnap ? 34 : 12), switchTrack.Y + 12, 9, 0xF0F3F6);
         hits.Add(new(gridRow, () => dsGridSnap = !dsGridSnap, true));
-        c.Text(L.Get("ui.gridLevel", L.Get("ui.grid" + dsGridSize)), r.X + 4, r.Y + 161, 12, Foreground, 126);
+        c.Text(L.Get("ui.gridLevel", L.Get("ui.grid" + dsGridSize)), r.X + 4, r.Y + 161, 12, dsGridSnap ? Foreground : Muted, 126);
         for (int i = 0; i < 4; i++)
         {
             int size = 4 << i;
-            Button(c, new(r.X + 136 + i * 70, r.Y + 153, 64, 28), $"{size} px", () => dsGridSize = size, size == dsGridSize);
+            Button(c, new(r.X + 136 + i * 70, r.Y + 153, 64, 28), $"{size} px", () => dsGridSize = size,
+                active: dsGridSnap && size == dsGridSize, enabled: dsGridSnap);
         }
     }
 

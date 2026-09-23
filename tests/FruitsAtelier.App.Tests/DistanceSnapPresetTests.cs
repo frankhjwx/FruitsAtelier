@@ -28,12 +28,20 @@ internal static class DistanceSnapPresetTests
             "The base DPB color boundary should use the same movement limit as the preset bar.");
         var level = ui.Canvas.Texts.First(t => t.Value == "32 px" && t.Y > track.Y + 110 && t.Y < track.Y + 145);
         ui.Click(level.X + 4, level.Y + 5); ui.Paint();
+        uint enabledLevelColor = ui.Canvas.Texts.First(t => t.Value == Strings.Get("ui.gridLevel", Strings.Get("ui.grid32"))).Color;
         ui.View.PointerDown(x, track.Y + 12, 0, false, false);
         ui.View.PointerUp(x, track.Y + 12, 0); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value == "64"), "Changing Grid Level in the dialog did not update DPB dragging.");
         var toggle = ui.Canvas.Texts.First(t => t.Value == Strings.Get("ui.gridSnap") && t.Y > track.Y + 70 && t.Y < track.Y + 110);
         ui.Click(toggle.X + 4, toggle.Y + 5); ui.Paint();
         Check(ui.View.EditorGridSettings == (true, 16), "Dialog Grid Snap settings changed the editor grid.");
+        var disabledLevel = ui.Canvas.Texts.First(t => t.Value == Strings.Get("ui.gridLevel", Strings.Get("ui.grid32")));
+        Check(disabledLevel.Color != enabledLevelColor, "Grid Level label should dim when dialog Grid Snap is off.");
+        var disabledChoice = ui.Canvas.Texts.First(t => t.Value == "4 px" && t.Y > track.Y + 110 && t.Y < track.Y + 145);
+        Check(disabledChoice.Color == 0x5B6777, "Grid Level choices should dim when dialog Grid Snap is off.");
+        ui.Click(disabledChoice.X + 4, disabledChoice.Y + 5); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ui.gridLevel", Strings.Get("ui.grid32"))),
+            "A disabled Grid Level choice changed the dialog setting.");
         ui.View.PointerDown(x, track.Y + 12, 0, false, false);
         ui.View.PointerUp(x, track.Y + 12, 0); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value == "77"), "Disabling Grid Snap in the dialog did not update DPB dragging.");
