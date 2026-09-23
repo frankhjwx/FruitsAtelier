@@ -1,4 +1,5 @@
 using L = FruitsAtelier.Localization.Strings;
+using System.Text.Json.Serialization;
 
 namespace FruitsAtelier.Core;
 
@@ -134,6 +135,10 @@ public sealed partial class MapDocument
     public double ApproachRate { get; set; } = 8;
     public double CircleSize { get; set; } = 5;
     public double SliderMultiplier { get; set; } = 1.92;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? DistancePerBeatOverride { get; set; }
+    [JsonIgnore]
+    public double DistancePerBeat => DistancePerBeatOverride ?? 100 * SliderMultiplier;
     public double SliderTickRate { get; set; } = 1;
     public double DistanceSpacing { get; set; } = 1;
     public List<double> DistanceSnapRatios { get; } = new();
@@ -149,7 +154,8 @@ public sealed partial class MapDocument
         {
             Name = Name, DurationMs = DurationMs,
             BeatLengthMs = BeatLengthMs, TimingOffsetMs = TimingOffsetMs, ApproachRate = ApproachRate,
-            CircleSize = CircleSize, SliderMultiplier = SliderMultiplier, SliderTickRate = SliderTickRate, DistanceSpacing = DistanceSpacing
+            CircleSize = CircleSize, SliderMultiplier = SliderMultiplier, DistancePerBeatOverride = DistancePerBeatOverride,
+            SliderTickRate = SliderTickRate, DistanceSpacing = DistanceSpacing
         };
         copy.DistanceSnapRatios.AddRange(DistanceSnapRatios);
         copy.Fruits.AddRange(Fruits.Select(f => f.DeepClone()));
@@ -165,7 +171,8 @@ public sealed partial class MapDocument
     {
         if (Name != other.Name || DurationMs != other.DurationMs || BeatLengthMs != other.BeatLengthMs
             || TimingOffsetMs != other.TimingOffsetMs || ApproachRate != other.ApproachRate
-            || CircleSize != other.CircleSize || SliderMultiplier != other.SliderMultiplier || SliderTickRate != other.SliderTickRate
+            || CircleSize != other.CircleSize || SliderMultiplier != other.SliderMultiplier
+            || DistancePerBeatOverride != other.DistancePerBeatOverride || SliderTickRate != other.SliderTickRate
             || !DistanceSnapRatios.SequenceEqual(other.DistanceSnapRatios)
             || DistanceSpacing != other.DistanceSpacing || Fruits.Count != other.Fruits.Count || Tracks.Count != other.Tracks.Count
             || TimingPoints.Count != other.TimingPoints.Count || ImportedSliders.Count != other.ImportedSliders.Count

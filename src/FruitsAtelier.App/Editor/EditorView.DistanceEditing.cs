@@ -254,17 +254,17 @@ public sealed partial class EditorView
     private readonly List<DistanceLabel> distanceLayout = [];
     private IReadOnlyList<ConvertedCatchObject>? distanceLayoutSource;
     private TimingMap.Lookup? distanceLayoutTiming;
-    private double distanceLayoutScale, distanceLayoutWidth, distanceLayoutSv;
+    private double distanceLayoutScale, distanceLayoutWidth, distanceLayoutDpb;
     private string distanceLayoutLanguage = "";
 
     private void EnsureDistanceLabelLayout(ICanvas c, IReadOnlyList<ConvertedCatchObject> objects)
     {
         if (ReferenceEquals(distanceLayoutSource, objects) && ReferenceEquals(distanceLayoutTiming, renderedTiming)
             && distanceLayoutScale == pixelsPerMs && distanceLayoutWidth == Playfield.Width
-            && distanceLayoutSv == Document.SliderMultiplier && distanceLayoutLanguage == L.Language) return;
+            && distanceLayoutDpb == Document.DistancePerBeat && distanceLayoutLanguage == L.Language) return;
         distanceLayoutSource = objects; distanceLayoutTiming = renderedTiming;
         distanceLayoutScale = pixelsPerMs; distanceLayoutWidth = Playfield.Width;
-        distanceLayoutSv = Document.SliderMultiplier; distanceLayoutLanguage = L.Language;
+        distanceLayoutDpb = Document.DistancePerBeat; distanceLayoutLanguage = L.Language;
         distanceLayout.Clear();
         var nearby = new List<DistanceLabel>();
         // Choose labels in map order, including offscreen predecessors, so scrolling cannot change priority.

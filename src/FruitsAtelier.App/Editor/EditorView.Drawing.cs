@@ -327,7 +327,7 @@ public sealed partial class EditorView
         float statX = x + 84;
         c.Text($"{L.Get("ui.ar")} {Number(Document.ApproachRate)}", statX, rowY, 12, Muted, 48);
         c.Text($"{L.Get("ui.cs")} {Number(Document.CircleSize)}", statX + 50, rowY, 12, Muted, 48);
-        c.Text($"{L.Get("ui.dpb")} {Number(Document.SliderMultiplier * 100)}px", statX + 100, rowY, 12, Muted,
+        c.Text($"{L.Get("ui.dpb")} {Number(Document.DistancePerBeat)}px", statX + 100, rowY, 12, Muted,
             Math.Max(0, rightPanel.Right - statX - 108));
     }
 

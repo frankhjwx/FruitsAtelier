@@ -176,6 +176,8 @@ public static class OsuBeatmapReader
         if (!double.IsFinite(document.SliderMultiplier) || document.SliderMultiplier <= 0
             || !double.IsFinite(document.SliderTickRate) || document.SliderTickRate <= 0)
             throw new InvalidDataException(L.Get("core.reader.sliderSettings"));
+        if (document.DistancePerBeatOverride is { } dpb && (!double.IsFinite(dpb) || dpb < 32))
+            throw new InvalidDataException(L.Get("core.dpb.range"));
         var ids = new HashSet<Guid>();
         foreach (var fruit in document.Fruits) { Id(fruit.Id); Time(fruit.TimeMs); X(fruit.X); }
         foreach (var track in document.Tracks)

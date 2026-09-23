@@ -43,7 +43,7 @@ public static class DistanceSnap
     }
 
     public static double BaseVelocity(MapDocument document, double time, TimingMap.Lookup? timing = null)
-        => 100 * document.SliderMultiplier / (timing?.At(time) ?? TimingMap.At(document, time)).BeatLengthMs;
+        => document.DistancePerBeat / (timing?.At(time) ?? TimingMap.At(document, time)).BeatLengthMs;
 
     public static double? Ratio(MapPoint from, MapPoint to, double velocity)
     {

@@ -6,7 +6,8 @@ internal static class DistanceSnapPresetTests
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
     public static void BaseDistance()
     {
-        Check(new MapDocument().SliderMultiplier * 100 == 192, "New maps should start at 192 px per beat.");
+        Check(new MapDocument().SliderMultiplier == 1.92 && new MapDocument().DistancePerBeat == 192,
+            "New maps should start at 192 px per beat with a 1.92 slider multiplier.");
         var imported = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n256,192,1000,1,0,0:0:0:0:\n");
         var ui = new Ui(false);
         ui.LoadDocument(imported);
@@ -14,18 +15,22 @@ internal static class DistanceSnapPresetTests
         ui.Key('G'); ui.Key('G'); ui.Key('T');
         ui.View.OpenDistanceSnapDialog(); ui.Paint();
         var track = ui.View.DistanceSnapBaseTrackBounds;
-        float X(double px) => track.X + (float)((px - 1) / 511) * track.Width;
+        double standBoundary = CatchSize.CatchWidth(imported.CircleSize) / 2 * ui.View.SnapDivisor;
+        float X(double px) => track.X + (float)(px / standBoundary) * track.Width / 4;
         float x = X(77);
         ui.View.PointerDown(x, track.Y + 12, 0, false, false);
         ui.View.PointerMove(x, track.Y + 12, false, false);
         ui.View.PointerUp(x, track.Y + 12, 0); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value == "80") && imported.SliderMultiplier == 1.4,
             "Grid Snap drag should use the selected 16 px step without editing the map before Apply.");
-        double standBoundary = CatchSize.CatchWidth(imported.CircleSize) / 2 * ui.View.SnapDivisor;
-        float expectedBoundaryX = track.X + (float)((standBoundary - 1) / 511) * track.Width;
+        float expectedBoundaryX = track.X + track.Width / 4 - 2;
         Check(ui.Canvas.Fills.Any(f => f.Color == 0xC0C0C0 && f.Bounds.Y == track.Y + 3
             && Math.Abs(f.Bounds.Right - expectedBoundaryX) < 1),
-            "The base DPB color boundary should use the same movement limit as the preset bar.");
+            "The base DPB bar should use the same four equal movement regions as the preset bar.");
+        Check(ui.Canvas.Fills.Any(f => f.Color == 0xCE7683 && f.Bounds.Y == track.Y + 3
+            && Math.Abs(f.Bounds.X - (track.X + track.Width * .75f)) < 1)
+            && ui.Canvas.Lines.Any(l => Math.Abs(l.X1 - X(80)) < 1 && l.Y1 == track.Y - 4),
+            "The HDash region and 1.0x marker should use the preset bar's distance scale.");
         var level = ui.Canvas.Texts.First(t => t.Value == "32 px" && t.Y > track.Y + 110 && t.Y < track.Y + 145);
         ui.Click(level.X + 4, level.Y + 5); ui.Paint();
         uint enabledLevelColor = ui.Canvas.Texts.First(t => t.Value == Strings.Get("ui.gridLevel", Strings.Get("ui.grid32"))).Color;
@@ -54,16 +59,134 @@ internal static class DistanceSnapPresetTests
         ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
         ui.View.PasteFieldText("73.25"); ui.Paint();
         ui.ClickText(Strings.Get("library.apply"));
-        Check(!ui.View.DistanceSnapDialogVisible && Math.Abs(ui.View.Document.SliderMultiplier - .7325) < .000001,
-            "Manual DPB should set the underlying osu multiplier in one transaction.");
-        Check(Math.Abs(ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document)).SliderMultiplier - .7325) < .000001,
+        Check(!ui.View.DistanceSnapDialogVisible && Math.Abs(ui.View.Document.DistancePerBeat - 73.25) < .000001
+            && ui.View.Document.SliderMultiplier == 1.4,
+            "Manual DPB should change the editor base distance without changing the imported slider multiplier.");
+        Check(Math.Abs(ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document)).DistancePerBeat - 73.25) < .000001,
             "Project save lost DPB.");
-        Check(Math.Abs(OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack.SliderMultiplier - .7325) < .000001,
-            "osu export lost DPB conversion.");
+        Check(Math.Abs(OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack.SliderMultiplier - 1.4) < .000001,
+            "osu export changed the imported slider multiplier.");
         ui.Key('Z', ctrl: true);
-        Check(Math.Abs(ui.View.Document.SliderMultiplier - 1.4) < .000001, "DPB Apply did not undo.");
+        Check(Math.Abs(ui.View.Document.DistancePerBeat - 140) < .000001, "DPB Apply did not undo.");
         ui.Key('Y', ctrl: true);
-        Check(Math.Abs(ui.View.Document.SliderMultiplier - .7325) < .000001, "DPB Apply did not redo.");
+        Check(Math.Abs(ui.View.Document.DistancePerBeat - 73.25) < .000001, "DPB Apply did not redo.");
+    }
+
+    public static void ExistingSliderPreservation()
+    {
+        const string source = "osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n0,-11.1111111111111,4,1,0,100,0,0\n[HitObjects]\n100,192,1000,2,0,L|240:192,1,140\n";
+        var imported = OsuBeatmapReader.Read(source);
+        var before = CatchStreamConverter.Convert(imported);
+        Check(before.Success && imported.DistancePerBeat == 140, "Imported slider or its original DPB did not load.");
+        var ui = new Ui(false);
+        ui.LoadDocument(imported);
+        ui.View.OpenDistanceSnapDialog(); ui.Paint();
+        var field = ui.View.DistanceSnapBaseFieldBounds;
+        ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
+        ui.View.PasteFieldText("32"); ui.Paint();
+        ui.ClickText(Strings.Get("library.apply"));
+        Check(ui.View.Document.DistancePerBeat == 32 && ui.View.Document.SliderMultiplier == 1.4,
+            "Editing DPB changed the imported slider multiplier.");
+        var after = CatchStreamConverter.Convert(ui.View.Document);
+        Check(after.Success && before.Sliders.Single().DurationMs == after.Sliders.Single().DurationMs
+            && before.Objects.Select(o => (o.Kind, o.TimeMs, o.X)).SequenceEqual(after.Objects.Select(o => (o.Kind, o.TimeMs, o.X))),
+            "Editing DPB changed the imported slider's playable objects.");
+        Check(Math.Abs(DistanceSnap.BaseVelocity(ui.View.Document, 1000) - .064) < 1e-9,
+            "Distance Snap did not use the independent DPB.");
+        var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document));
+        Check(restored.DistancePerBeat == 32 && restored.SliderMultiplier == 1.4,
+            "Project persistence mixed editor DPB with the slider multiplier.");
+        var exported = OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack;
+        Check(exported.SliderMultiplier == 1.4
+            && CatchStreamConverter.Convert(exported).Objects.Select(o => (o.Kind, o.TimeMs, o.X))
+                .SequenceEqual(before.Objects.Select(o => (o.Kind, o.TimeMs, o.X))),
+            "osu export changed an existing slider after editing DPB.");
+        Check(ProjectSerializer.Read("{\"SchemaVersion\":1,\"Document\":{\"SliderMultiplier\":1.4}}")
+            .DistancePerBeat == 140, "Older projects should derive DPB from their stored slider multiplier.");
+        var authored = new MapDocument { IsDemo = false };
+        var track = new CurveTrack { Kind = CurveKind.Linear };
+        track.Nodes.Add(new Anchor { TimeMs = 1000, X = 100 });
+        track.Nodes.Add(new Anchor { TimeMs = 2000, X = 300 });
+        authored.Tracks.Add(track);
+        var authoredBefore = CatchStreamConverter.Convert(authored);
+        authored.DistancePerBeatOverride = 32;
+        var authoredAfter = CatchStreamConverter.Convert(authored);
+        Check(authoredBefore.Success && authoredAfter.Success
+            && authoredBefore.Sliders.Single().Velocity == authoredAfter.Sliders.Single().Velocity
+            && authoredBefore.Objects.Select(o => (o.Kind, o.TimeMs, o.X))
+                .SequenceEqual(authoredAfter.Objects.Select(o => (o.Kind, o.TimeMs, o.X))),
+            "Editing DPB changed an authored FSlider.");
+        var precise = new Ui(false);
+        precise.LoadDocument(OsuBeatmapReader.Read(source.Replace("SliderMultiplier:1.4", "SliderMultiplier:1.23456789")));
+        precise.View.OpenDistanceSnapDialog(); precise.Paint();
+        precise.ClickText(Strings.Get("ds.add"));
+        precise.ClickText(Strings.Get("library.apply"));
+        Check(precise.View.Document.DistancePerBeatOverride is null
+            && Math.Abs(precise.View.Document.DistancePerBeat - 123.456789) < 1e-9,
+            "Editing only DS presets rounded or overwrote the imported DPB baseline.");
+    }
+
+    public static void DynamicBaseRange()
+    {
+        var ui = new Ui(false);
+        ui.LoadDocument(new MapDocument { IsDemo = false });
+        ui.View.OpenDistanceSnapDialog(); ui.Paint();
+        Check(ui.View.SnapDivisor == 4, "Unexpected default reference Snap.");
+        Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.baseRange", "2048")),
+            "The current DPB range should be visible beside the input.");
+        var field = ui.View.DistanceSnapBaseFieldBounds;
+        ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
+        ui.View.PasteFieldText("2048"); ui.Paint();
+        ui.ClickText(Strings.Get("library.apply"));
+        Check(!ui.View.DistanceSnapDialogVisible && ui.View.Document.DistancePerBeat == 2048,
+            "The DPB field should accept the reference bar's upper limit beyond 512 px.");
+        ui.View.OpenDistanceSnapDialog(); ui.Paint();
+        ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
+        ui.View.PasteFieldText("2049"); ui.Paint();
+        ui.ClickText(Strings.Get("library.apply"));
+        Check(ui.View.DistanceSnapDialogVisible && ui.View.Document.DistancePerBeat == 2048,
+            "The DPB field accepted a value beyond the reference bar.");
+        var track = ui.View.DistanceSnapBaseTrackBounds;
+        ui.View.PointerDown(track.X, track.Y + 12, 0, false, false);
+        ui.View.PointerUp(track.X, track.Y + 12, 0); ui.Paint();
+        ui.ClickText(Strings.Get("library.apply"));
+        Check(ui.View.Document.DistancePerBeat == 32, "The DPB bar should stop at its 32 px minimum.");
+        var slow = new Ui(false);
+        slow.LoadDocument(new MapDocument { IsDemo = false, BeatLengthMs = 4000 });
+        slow.View.OpenDistanceSnapDialog(); slow.Paint();
+        var slowTrack = slow.View.DistanceSnapBaseTrackBounds;
+        slow.View.PointerDown(slowTrack.Right - 1, slowTrack.Y + 12, 0, false, false);
+        slow.View.PointerUp(slowTrack.Right - 1, slowTrack.Y + 12, 0); slow.Paint();
+        Check(slow.Canvas.Lines.Any(l => Math.Abs(l.X1 - slowTrack.Right) < 2 && l.Y1 == slowTrack.Y - 4),
+            "The upper bar should retain a usable HDash region when Dash exceeds 512 px.");
+        slow.ClickText(Strings.Get("library.apply"));
+        Check(slow.View.Document.DistancePerBeat > 512,
+            "The upper bar should accept DPB values beyond a playfield width on slow maps.");
+    }
+
+    public static void PresetDistancePreservation()
+    {
+        var map = new MapDocument { IsDemo = false };
+        map.DistanceSnapRatios.AddRange([.75, 1.5]);
+        var ui = new Ui(false);
+        ui.LoadDocument(map);
+        ui.View.OpenDistanceSnapDialog(); ui.Paint();
+        var track = ui.View.DistanceSnapBaseTrackBounds;
+        ui.View.PointerDown(track.Right - 5, track.Y + 12, 0, false, false);
+        ui.View.PointerMove(track.Right - 2, track.Y + 12, false, false);
+        ui.Key(27); ui.View.PointerUp(track.Right - 2, track.Y + 12, 0); ui.Paint();
+        var field = ui.View.DistanceSnapBaseFieldBounds;
+        ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
+        ui.View.PasteFieldText("96"); ui.Paint();
+        ui.ClickText(Strings.Get("library.apply"));
+        Check(ui.View.Document.DistancePerBeat == 96
+            && ui.View.Document.DistanceSnapRatios.SequenceEqual([1.5, 3.0])
+            && ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document)).DistanceSnapRatios.SequenceEqual([1.5, 3.0]),
+            "Changing DPB should store rescaled preset multipliers and preserve their pixel distances.");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.DistancePerBeat == 192
+            && ui.View.Document.DistanceSnapRatios.SequenceEqual([.75, 1.5]),
+            "Undo should restore DPB and its preset multipliers together.");
     }
 
     public static void Snapping()

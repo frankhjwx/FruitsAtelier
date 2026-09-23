@@ -7,7 +7,7 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 - Accept v12, v13 and v14 / Mode=2; export v14. The reader rejects other format versions and unsupported object types.
 - Preserve General, Editor, Metadata, Difficulty, Events, TimingPoints, Colours, HitObjects, and audio/sample references.
 - Import/export `[Editor] DistanceSpacing` as the per-difficulty spacing multiplier.
-- Display `[Difficulty] SliderMultiplier` as DPB = 100 × SliderMultiplier in the editor; export converts it back to the standard field.
+- New projects start with `[Difficulty] SliderMultiplier` 1.92 and editor DPB 192 px. Imported maps initially derive DPB as 100 × their stored SliderMultiplier. Subsequent DPB edits belong to the `.catchproj` editor configuration; `.osu` export retains SliderMultiplier and slider playback unchanged.
 - Read and edit `[Editor] Bookmarks` and `[Events]` break periods as difficulty-local timeline content. Unrelated event lines retain their source text and order.
 - Preserve raw section text and unedited object lines; unsupported object types are errors.
 - Save authored anchors, Bezier handles, and editing constraints in the editor project, rather than custom `.osu` object fields.

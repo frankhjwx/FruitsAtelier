@@ -16,7 +16,10 @@ public sealed partial class EditorView
     private int dsSliderDrag = -1, dsSnapDragStart;
     private double dsDragStart;
     private double dsBaseDraft, dsBaseDragStart;
-    private string dsBaseText = "", dsBaseDragText = "";
+    private double dsBaseOpeningValue;
+    private bool dsBaseEdited, dsBaseDragEdited;
+    private string dsBaseText = "", dsBaseDragText = "", dsBaseOpeningText = "";
+    private List<double> dsBaseDragPresets = [];
     private Rect dsDragBounds;
     private double[] dsDragLimits = [];
     private readonly List<Rect> dsPointers = [];
@@ -53,8 +56,10 @@ public sealed partial class EditorView
         if (LibraryVisible || IsTestplaying || !PrepareFileOperation()) return;
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
         dsDraft = Document.DistanceSnapRatios.ToList();
-        dsBaseDraft = Document.SliderMultiplier * 100;
-        dsBaseText = dsBaseDraft.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        dsBaseDraft = Document.DistancePerBeat;
+        dsBaseOpeningValue = dsBaseDraft;
+        dsBaseText = dsBaseOpeningText = dsBaseDraft.ToString("0.##########", System.Globalization.CultureInfo.InvariantCulture);
+        dsBaseEdited = false;
         if (!dsGridInitialized) { dsGridSnap = gridSnap; dsGridSize = gridSize; dsGridInitialized = true; }
         dsSliderDrag = -1; dsSnapDragging = dsBaseDragging = dsBaseFocused = false;
         dsBpm = 60000 / TimingMap.At(Document, playhead).BeatLengthMs;
@@ -140,37 +145,58 @@ public sealed partial class EditorView
         DistanceSnapPreviewBounds = new(split + 16, r.Y + 108, r.Right - split - 32, r.Height - 180);
         DrawDistanceSnapPreview(c);
         Button(c, new(r.Right - 196, r.Bottom - 44, 80, 30), L.Get("mac.cancel"), CloseDistanceSnapDialog);
-        bool validBase = DistanceBaseValue(dsBaseText) is not null;
+        double? editedBase = DistanceBaseValue(dsBaseText);
+        bool validBase = !dsBaseEdited || editedBase is not null;
         Button(c, new(r.Right - 108, r.Bottom - 44, 88, 30), L.Get("library.apply"), () =>
         {
             if (Edit(L.Get("ds.title"), () =>
             {
                 Document.DistanceSnapRatios.Clear();
                 Document.DistanceSnapRatios.AddRange(dsDraft.Order());
-                Document.SliderMultiplier = dsBaseDraft / 100;
+                if (dsBaseEdited && editedBase is { } dpb && dpb != Document.DistancePerBeat)
+                    Document.DistancePerBeatOverride = dpb;
             })) CloseDistanceSnapDialog();
         }, enabled: validBase);
 
     }
 
-    private static double? DistanceBaseValue(string text)
+    private double DistanceBaseMaximum() => DistanceSnapLimits()[4] * dsBaseDraft;
+
+    private double? DistanceBaseValue(string text)
         => double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value)
-            && double.IsFinite(value) && value is >= 1 and <= 512 ? value : null;
+            && double.IsFinite(value) && value >= 32 && value <= DistanceBaseMaximum() ? value : null;
 
     private void SetDistanceBaseText(string text)
     {
         dsBaseText = text;
-        if (DistanceBaseValue(text) is { } value) dsBaseDraft = value;
+        dsBaseEdited = text != dsBaseOpeningText;
+        if (!dsBaseEdited) SetDistanceBaseDraft(dsBaseOpeningValue);
+        else if (DistanceBaseValue(text) is { } value) SetDistanceBaseDraft(value);
+    }
+
+    private void SetDistanceBaseDraft(double value)
+    {
+        if (value == dsBaseDraft) return;
+        double scale = dsBaseDraft / value;
+        for (int i = 0; i < dsDraft.Count; i++) dsDraft[i] *= scale;
+        dsBaseDraft = value;
     }
 
     private void UpdateDistanceBase(float x)
     {
         var track = DistanceSnapBaseTrackBounds;
-        double value = 1 + Math.Clamp((x - track.X) / track.Width, 0, 1) * 511;
-        value = dsGridSnap ? Math.Clamp(Math.Round(value / dsGridSize, MidpointRounding.AwayFromZero) * dsGridSize, dsGridSize, 512)
+        double[] limits = DistanceSnapLimits();
+        double position = Math.Clamp((x - track.X) / track.Width, 0, 1) * 4;
+        int segment = Math.Min(3, (int)position);
+        double ratio = limits[segment] + (limits[segment + 1] - limits[segment]) * (position - segment);
+        double maximum = DistanceBaseMaximum();
+        double value = Math.Clamp(ratio * dsBaseDraft, 32, maximum);
+        value = dsGridSnap ? Math.Clamp(Math.Round(value / dsGridSize, MidpointRounding.AwayFromZero) * dsGridSize,
+                32, Math.Floor(maximum / dsGridSize) * dsGridSize)
             : Math.Round(value, MidpointRounding.AwayFromZero);
-        dsBaseDraft = value;
         dsBaseText = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        dsBaseEdited = dsBaseText != dsBaseOpeningText;
+        SetDistanceBaseDraft(dsBaseEdited ? value : dsBaseOpeningValue);
     }
 
     private void DrawDistanceBase(ICanvas c, Rect r)
@@ -180,21 +206,21 @@ public sealed partial class EditorView
         var track = DistanceSnapBaseTrackBounds;
         double[] limits = DistanceSnapLimits();
         string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
-        float Position(double dpb) => track.X + (float)Math.Clamp((dpb - 1) / 511, 0, 1) * track.Width;
+        float segmentWidth = track.Width / 4;
         for (int i = 0; i < 4; i++)
         {
-            float start = Position(limits[i] * dsBaseDraft);
-            float end = i == 3 ? track.Right : Position(limits[i + 1] * dsBaseDraft);
-            if (end <= start) continue;
-            c.Fill(new(start, track.Y + 3, end - start, 18), DsColors[i], 2);
-            if (end - start >= 52) c.Text(L.Get(names[i]), start + 5, track.Y + 6, 10, Background, end - start - 10, true);
+            float start = track.X + i * segmentWidth;
+            c.Fill(new(start, track.Y + 3, segmentWidth - 2, 18), DsColors[i], 2);
+            c.Text(L.Get(names[i]), start + 5, track.Y + 6, 10, Background, segmentWidth - 10, true);
         }
-        float marker = Position(dsBaseDraft);
+        float marker = track.X + DistanceSnapFraction(1, limits) * track.Width;
         c.Line(marker, track.Y - 4, marker, track.Bottom + 4, Foreground, 2);
         hits.Add(new(track, () =>
         {
             dsBaseFocused = false; dsBaseDragging = true;
             dsBaseDragStart = dsBaseDraft; dsBaseDragText = dsBaseText;
+            dsBaseDragEdited = dsBaseEdited;
+            dsBaseDragPresets = dsDraft.ToList();
             UpdateDistanceBase(mouseX);
         }, true));
         c.Text(L.Get("ui.dpb"), r.X + 4, r.Y + 87, 12, Foreground, 48);
@@ -205,6 +231,8 @@ public sealed partial class EditorView
         DrawInputText(c, new(field.X + 9, field.Y + 5, field.Width - 18, 20), dsBaseText, 13, dsBaseFocused, "ds:base");
         hits.Add(new(field, () => { dsBaseFocused = true; FocusInput("ds:base", dsBaseText, mouseX); }, true));
         c.Text("px", field.Right + 8, field.Y + 8, 12, Muted, 26);
+        c.Text(L.Get("ds.baseRange", Number(DistanceBaseMaximum())), field.Right + 44, field.Y + 8,
+            11, Muted, r.Right - field.Right - 48);
         var gridRow = new Rect(r.X + 4, r.Y + 116, r.Width - 8, 32);
         c.Text(L.Get("ui.gridSnap"), gridRow.X, gridRow.Y + 8, 12, Foreground, 126);
         var switchTrack = new Rect(r.X + 136, gridRow.Y + 4, 46, 24);
@@ -353,7 +381,9 @@ public sealed partial class EditorView
         double dash = Math.Max(stand, (int)(dsReferenceTime + duration) - (int)dsReferenceTime - 1000f / 60f / 4
             + CatchSize.CatcherWidth(Document.CircleSize) / 2);
         double walk = Math.Min(dash, stand + duration * .5);
-        return [0, stand / unit, walk / unit, dash / unit, Math.Max(512, dash) / unit];
+        // HDash has no finite threshold; extend the final band past Dash even when Dash exceeds the playfield width.
+        double maximum = Math.Ceiling(Math.Max(512, dash + Math.Max(stand, dash - walk)));
+        return [0, stand / unit, walk / unit, dash / unit, maximum / unit];
     }
 
     private void BeginDistanceSnapDrag(int row, Rect bounds)
@@ -380,7 +410,12 @@ public sealed partial class EditorView
     private void CancelDistanceSnapDrag()
     {
         if (dsSnapDragging) { dsSnap = dsSnapDragStart; dsSnapDragging = false; }
-        if (dsBaseDragging) { dsBaseDraft = dsBaseDragStart; dsBaseText = dsBaseDragText; dsBaseDragging = false; }
+        if (dsBaseDragging)
+        {
+            dsBaseDraft = dsBaseDragStart; dsBaseText = dsBaseDragText;
+            dsBaseEdited = dsBaseDragEdited;
+            dsDraft = dsBaseDragPresets; dsBaseDragging = false;
+        }
         if (dsSliderDrag < 0) return;
         dsDraft[dsSliderDrag] = dsDragStart;
         dsSliderDrag = -1;
