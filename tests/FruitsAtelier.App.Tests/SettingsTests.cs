@@ -19,6 +19,21 @@ static class SettingsTests
             Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.indicatorColours")), "Appearance omitted indicator colours.");
             string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
             string[] hexes = ["#112233", "#445566", "#778899", "#AABBCC"];
+            string originalStand = $"#{ui.View.LibrarySettings.StandIndicatorColour:X6}";
+            ui.ClickText(L.Get(names[0]));
+            var cancelHex = ui.Canvas.Texts.Last(t => t.Value == L.Get("settings.indicatorHex"));
+            Check(ui.Canvas.Fills.Any(f => f.Color == ui.View.LibrarySettings.StandIndicatorColour
+                && Math.Abs(f.Bounds.X - (cancelHex.X - 48)) < .1f
+                && Math.Abs(f.Bounds.Y - (cancelHex.Y + 20)) < .1f),
+                "Selected-colour preview was not beside the HEX field.");
+            ui.Click(cancelHex.X + 400, cancelHex.Y - 262);
+            Check(ui.Canvas.Texts.Last(t => t.Value.StartsWith('#')).Value != originalStand,
+                "Colour picker did not update its draft before Cancel.");
+            ui.ClickText(L.Get("settings.indicatorCancel"));
+            ui.ClickText(L.Get(names[0]));
+            Check(ui.Canvas.Texts.Last(t => t.Value.StartsWith('#')).Value == originalStand,
+                "Cancel did not restore the colour from before the picker opened.");
+            ui.Key(27);
             for (int i = 0; i < names.Length; i++)
             {
                 ui.ClickText(L.Get(names[i]));

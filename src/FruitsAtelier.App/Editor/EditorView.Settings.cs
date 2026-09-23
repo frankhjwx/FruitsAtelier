@@ -13,6 +13,7 @@ public sealed partial class EditorView
     private bool draftRomanisedMetadata;
     private readonly uint[] draftIndicatorColours = new uint[4];
     private int settingsColourIndex = -1;
+    private uint settingsColourOriginal;
     private string settingsColourHex = "", settingsColourError = "";
     private double settingsHue, settingsSaturation, settingsValue;
     private Rect settingsPalette, settingsHueTrack;
@@ -180,9 +181,18 @@ public sealed partial class EditorView
     private void OpenIndicatorColourPicker(int index)
     {
         settingsColourIndex = index;
+        settingsColourOriginal = draftIndicatorColours[index];
         settingsColourHex = $"#{draftIndicatorColours[index]:X6}";
         settingsColourError = "";
         (settingsHue, settingsSaturation, settingsValue) = ColourToHsv(draftIndicatorColours[index], settingsHue);
+        libraryField = -1;
+    }
+
+    private void CancelIndicatorColourPicker()
+    {
+        draftIndicatorColours[settingsColourIndex] = settingsColourOriginal;
+        settingsColourIndex = -1;
+        settingsColourDrag = 0;
         libraryField = -1;
     }
 
@@ -239,8 +249,6 @@ public sealed partial class EditorView
         c.Fill(dialog, Panel, 8); c.Stroke(dialog, Grid, radius: 8);
         string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
         c.Text(L.Get(names[settingsColourIndex]), dialog.X + 20, dialog.Y + 17, 18, Foreground, 300, true);
-        var preview = new Rect(dialog.Right - 55, dialog.Y + 15, 30, 30);
-        c.Fill(preview, draftIndicatorColours[settingsColourIndex], 4); c.Stroke(preview, Grid, radius: 4);
         settingsPalette = new(dialog.X + 20, dialog.Y + 58, dialog.Width - 40, 216);
         for (int row = 0; row < 24; row++)
         for (int col = 0; col < 40; col++)
@@ -254,13 +262,16 @@ public sealed partial class EditorView
                 settingsHueTrack.Width / 60 + .5f, 22), SongHsv(i * 6, 1, 1));
         float hueX = settingsHueTrack.X + (float)(settingsHue / 360) * settingsHueTrack.Width;
         c.Stroke(new(hueX - 3, settingsHueTrack.Y - 2, 6, 26), Foreground, 2);
-        c.Text(L.Get("settings.indicatorHex"), dialog.X + 20, dialog.Y + 330, 13, Foreground, 120);
-        var hexField = new Rect(dialog.X + 20, dialog.Y + 350, 170, 38);
+        c.Text(L.Get("settings.indicatorHex"), dialog.X + 68, dialog.Y + 330, 13, Foreground, 120);
+        var preview = new Rect(dialog.X + 20, dialog.Y + 350, 38, 38);
+        c.Fill(preview, draftIndicatorColours[settingsColourIndex], 4); c.Stroke(preview, Grid, radius: 4);
+        var hexField = new Rect(dialog.X + 68, dialog.Y + 350, 170, 38);
         c.Fill(hexField, Surface, 4); c.Stroke(hexField, libraryField == 5 ? Accent : Grid, radius: 4);
         DrawInputText(c, new(hexField.X + 10, hexField.Y + 10, hexField.Width - 20, 18),
             settingsColourHex, 14, libraryField == 5, "library:5");
         hits.Add(new(hexField, () => { libraryField = 5; FocusInput("library:5", settingsColourHex, mouseX); }, true));
-        c.Text(settingsColourError, dialog.X + 20, dialog.Y + 397, 12, Error, dialog.Width - 40);
+        c.Text(settingsColourError, dialog.X + 20, dialog.Y + 397, 12, Error, 230);
+        Button(c, new(dialog.Right - 276, dialog.Bottom - 55, 120, 34), L.Get("settings.indicatorCancel"), CancelIndicatorColourPicker);
         Button(c, new(dialog.Right - 144, dialog.Bottom - 55, 120, 34), L.Get("settings.indicatorDone"), () =>
         {
             if (!CommitIndicatorColourHex()) return;

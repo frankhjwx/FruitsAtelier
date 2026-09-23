@@ -759,6 +759,7 @@
   "settings.indicatorReset": "Reset colours",
   "settings.indicatorHex": "HEX colour",
   "settings.indicatorDone": "Done",
+  "settings.indicatorCancel": "Cancel",
   "library.savedWorkspaceTitle": "Workspace project saved",
   "library.offerSongsExport": "Also export the current difficulty to osu! Songs?",
   "library.offerSongsExportHelp": "You can keep this project in the workspace only.",

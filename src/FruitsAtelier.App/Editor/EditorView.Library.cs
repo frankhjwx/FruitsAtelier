@@ -505,7 +505,7 @@ public sealed partial class EditorView
     private void LibraryKey(int key, bool ctrl, bool shift)
     {
         if (updatesPage) { if (key == 27) updatesPage = false; return; }
-        if (key == 27 && settingsColourIndex >= 0) { settingsColourIndex = -1; libraryField = -1; return; }
+        if (key == 27 && settingsColourIndex >= 0) { CancelIndicatorColourPicker(); return; }
         if (key == 27) FinishVolumeDrag();
         if (key == 27) { if (contextItems.Count > 0) contextItems.Clear(); else if (libraryField >= 0) libraryField = -1; else if (librarySettingsOpen) CloseSettings(); else resourcePage = false; return; }
         if (key == 116) { StartLibraryScan(); return; }
