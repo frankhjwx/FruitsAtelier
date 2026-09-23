@@ -246,11 +246,19 @@ public sealed partial class EditorView
         bool sliderPathOverBanana = hitObject?.Kind == CatchObjectKind.Banana && showTargets && HitSliderLocation(x, y) is not null;
         if (!sliderPathOverBanana && hitObject is not null)
         {
+            bool parentSelected = objectSelection.Count == 1 && objectSelection.Contains(hitObject.SourceId);
             PickObject(hitObject.SourceId, ctrl);
-            PickSoundEdge(hitObject);
+            if (hitObject.Kind is CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet && !parentSelected)
+                distanceObject = null;
+            else PickSoundEdge(hitObject);
             if (ctrl) return;
             if (!hitObject.IsStandalone)
             {
+                if (parentSelected && hitObject.Kind is (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet))
+                {
+                    BeginDropletDrag(hitObject, x, y);
+                    return;
+                }
                 StatusMessage = L.Get("editor.status.parentSelected", hitObject.Kind == CatchObjectKind.Banana ? L.Get("editor.object.bananaShower") : L.Get("editor.object.sliderWithSpace"), Time(hitObject.TimeMs));
                 BeginObjectDrag(x, y);
                 return;
@@ -354,6 +362,7 @@ public sealed partial class EditorView
         if (drag == DragKind.TimelineTail) { MoveTimelineTail(x); return; }
         if (drag == DragKind.LegacyControl) { MoveLegacyPoints(x, y); return; }
         if (drag == DragKind.Objects) { MoveSelectedObjects(x, y); return; }
+        if (drag == DragKind.Droplet) { MoveDroplet(x); return; }
         if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y); return; }
         var raw = Transform.ToMap(x, y) - dragOffset;
         var p = new MapPoint(Math.Clamp(raw.TimeMs, 0, EditableDurationMs), Math.Clamp(SnapX(raw.X), 0, 512));
@@ -468,7 +477,8 @@ public sealed partial class EditorView
         PointerMove(x, y, false, false);
         if (drag == DragKind.PlaybackLine) { FinishPlaybackLineDrag(); return; }
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
-        if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail) history.Commit();
+        if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.Droplet or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail) history.Commit();
+        if (drag == DragKind.Droplet) dropletDragTarget = null;
         if (draftTrack != Guid.Empty && drag == DragKind.Anchor && !dragMoved
             && SelectedTrack is { } draft && SelectedAnchor == draft.Nodes[^1])
         {
@@ -747,7 +757,7 @@ public sealed partial class EditorView
         if (ctrl && shift && virtualKey == 70)
         {
             if (!dragMoved && draftTrack == Guid.Empty && draftBanana == Guid.Empty
-                && drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.LegacyControl)
+                && drag is DragKind.Objects or DragKind.Droplet or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.LegacyControl)
             { history.Commit(); drag = DragKind.None; sliderHoldConsumed = false; }
             if (editField >= 0 && !CommitField()) return;
             OpenStreamDialog();
@@ -886,13 +896,14 @@ public sealed partial class EditorView
         tabPointer = false;
         if (libraryPointerActive) { libraryPointerActive = false; libraryPressedMap = null; RememberLibraryPosition(); }
         if (drag == DragKind.Marquee) { CancelBox(); contextItems.Clear(); return; }
-        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
+        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Droplet or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
         {
             history.Cancel();
             if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) Select(Guid.Empty);
             StatusMessage = L.Get("editor.status.editCancelled");
         }
         drag = DragKind.None;
+        dropletDragTarget = null;
         objectDragStart = null;
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         objectDragPrepared = false;

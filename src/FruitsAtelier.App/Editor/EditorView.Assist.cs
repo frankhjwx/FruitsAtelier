@@ -57,7 +57,8 @@ public sealed partial class EditorView
 
     private void PickSoundEdge(ConvertedCatchObject item)
     {
-        distanceObject = item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet ? (item.SourceId, item.EventIndex) : null;
+        distanceObject = item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet
+            ? (item.SourceId, item.EventIndex) : null;
         soundEdge = null;
         if (item.Kind != CatchObjectKind.Fruit || item.IsStandalone) return;
         int edge = conversion!.Objects.Where(o => o.SourceId == item.SourceId && o.Kind == CatchObjectKind.Fruit)

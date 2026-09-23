@@ -35,7 +35,7 @@ public sealed partial class EditorView
             return direction > 0 && playhead < TimelineDurationMs || direction < 0 && playhead > 0;
         }
     }
-    private bool ViewportFrozenByDrag => drag is DragKind.Objects or DragKind.BananaStart or DragKind.BananaEnd
+    private bool ViewportFrozenByDrag => drag is DragKind.Objects or DragKind.Droplet or DragKind.BananaStart or DragKind.BananaEnd
         || drag == DragKind.Marquee && !AudioPlaying;
     private sealed record SelectionSnapshot(Guid[] Objects, Guid[] Anchors, Guid Primary, Guid Track, DragKind Part);
     public IReadOnlyCollection<Guid> SelectedObjectIds => objectSelection.ToArray();

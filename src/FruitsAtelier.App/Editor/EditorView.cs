@@ -149,7 +149,7 @@ public sealed partial class EditorView
     }
 
     private enum Tool { Select, Fruit, Slider, Banana }
-    private enum DragKind { None, PlaybackLine, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Break, BreakEdge, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail, PreviewResize }
+    private enum DragKind { None, PlaybackLine, Objects, Droplet, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Break, BreakEdge, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail, PreviewResize }
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
     private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp);
     private float FullPlayfieldWidth => plot.Width * 512 / (512 + PlayfieldPadding * 2);
@@ -290,7 +290,7 @@ public sealed partial class EditorView
 
     private void Undo()
     {
-        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.Marquee)
+        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Droplet or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.Marquee)
         { CancelInteraction(); return; }
         CancelInteraction();
         history.Undo();
@@ -300,7 +300,7 @@ public sealed partial class EditorView
 
     private void Redo()
     {
-        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.Marquee)
+        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Droplet or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.Marquee)
         { CancelInteraction(); return; }
         CancelInteraction();
         history.Redo();

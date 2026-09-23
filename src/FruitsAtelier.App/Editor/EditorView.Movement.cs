@@ -122,10 +122,13 @@ public sealed partial class EditorView
         var selectedObject = placement ? placementGhost : SelectedDistanceObject();
         int first = Array.FindIndex(indices, i => objects[i].SourceId == source
             && (selectedObject is null || objects[i].EventIndex == selectedObject.EventIndex));
+        if (first < 0 && selectedObject?.Kind == CatchObjectKind.TinyDroplet)
+            first = Array.FindIndex(indices, i => objects[i].SourceId == source);
         if (first < 0) return;
         int last = selectedObject is not null ? first : Array.FindLastIndex(indices, i => objects[i].SourceId == source);
-        MovementReadout = (first > 0 ? movementStates[indices[first - 1]].Movement : null,
-            movementStates[indices[last]].Movement);
+        if (selectedObject?.Kind != CatchObjectKind.TinyDroplet)
+            MovementReadout = (first > 0 ? movementStates[indices[first - 1]].Movement : null,
+                movementStates[indices[last]].Movement);
 
         float panelWidth = Math.Min(MovementPanelWidth, plot.Width - 12);
         if (panelWidth < 180 || plot.Height < MovementPanelHeight + 20) return;

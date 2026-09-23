@@ -34,7 +34,7 @@ public static class DistanceSpacingEditing
             fruit.X = x;
             return;
         }
-        if (target.Kind is not (CatchObjectKind.Fruit or CatchObjectKind.Droplet))
+        if (target.Kind is not (CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet))
             throw new ArgumentException(L.Get("distance.unsupported"));
         var track = document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
             ?? ImportedSliderEditing.ConvertToTrack(document, target.SourceId).Track;
@@ -49,7 +49,11 @@ public static class DistanceSpacingEditing
                 throw new ArgumentException(error);
         }
         var anchor = AnchorAt(track, time);
-        if (!CurveMath.TryMoveAnchor(track, anchor.Id, anchor.TimeMs, x, out string failure))
+        // Compensated tiny droplets follow the authored curve; uncompensated ones retain their random offset.
+        double pathX = target.Kind == CatchObjectKind.TinyDroplet && Math.Abs(target.X - target.TargetX) > .001
+            ? x - target.RandomOffset : x;
+        if (pathX is < 0 or > 512) throw new ArgumentException(L.Get("distance.outside"));
+        if (!CurveMath.TryMoveAnchor(track, anchor.Id, anchor.TimeMs, pathX, out string failure))
             throw new ArgumentException(failure);
         var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets);
         var moved = converted.Objects.FirstOrDefault(o => o.SourceId == target.SourceId && o.Kind == target.Kind && Math.Abs(o.TimeMs - target.TimeMs) < .001);

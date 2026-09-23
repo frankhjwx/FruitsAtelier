@@ -138,6 +138,7 @@ internal static class ToolPaletteTests
             ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.SelectTrack(track.Id);
             var original = ui.View.Document.DeepClone();
             double bodyX = CurveMath.PositionAtTime(track, 2000);
+            ui.ClickMap(800, 400);
             ui.DownMap(2000, bodyX); ui.MoveMap(2125, bodyX + 20); ui.UpMap(2125, bodyX + 20);
             for (int i = 0; i < 3; i++)
             {
