@@ -174,8 +174,14 @@ the published artifacts.
    SHA256, fixed-name ZIP and SHA256, full `.nupkg`, and
    `releases.win-x64.json`. Compare the ZIP checksum and confirm a public download
    succeeds. Confirm the packaged `build-info.json` records `$releaseCommit` and
-   the intended version. The update feed and matching package must be available
-   before considering the release complete. Fetch again and verify
+   the intended version. Verify anonymous access to
+   `https://api.github.com/repos/frankhjwx/FruitsAtelier/releases?per_page=10&page=1`:
+   the published release's embedded `assets` list must include
+   `releases.win-x64.json` and its matching full `.nupkg`. Checking the separate
+   `/releases/<id>/assets` endpoint or direct download URLs alone is insufficient;
+   Velopack skips releases whose embedded asset list lacks the update feed.
+   Confirm an older stable installation discovers the new version before
+   announcing in-app update availability. Fetch again and verify
    `git merge-base --is-ancestor origin/main origin/dev` succeeds; if `main`
    advanced, repeat the synchronization before handing off on `dev`.
 
