@@ -143,6 +143,7 @@ public sealed partial class EditorView
             catch (InvalidDataException) { } // Draft content may be convertible before it is exportable.
         }
         BuildComboColours();
+        RefreshKiaiTransitions();
         hyperdashObjects = HyperDashCalculator.GetHyperDashStarts(playableObjects, Document.CircleSize);
     }
 

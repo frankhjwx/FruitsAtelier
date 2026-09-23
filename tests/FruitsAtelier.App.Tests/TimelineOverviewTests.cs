@@ -2,6 +2,34 @@ using FruitsAtelier.Core;
 
 internal static class TimelineOverviewTests
 {
+    public static void KiaiPulse()
+    {
+        var map = new MapDocument { DurationMs = 3000, IsDemo = false };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, Effects = 0 });
+        map.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = 500, Effects = 1 });
+        map.TimingPoints.Add(new() { TimeMs = 2000, BeatLengthMs = 500, Effects = 0 });
+        map.Fruits.Add(new() { TimeMs = 2500, X = 256 });
+        var ui = new Ui(overview: false);
+        ui.LoadDocument(map);
+        float? PulseAt(double time)
+        {
+            ui.View.UpdateTransport(time, 3000, true, false, false, null, null); ui.Paint();
+            var plot = ui.View.CanvasPlotBounds;
+            return ui.Canvas.PaintCalls.Where(call => call.Color == 0xD89532 && call.FillBounds is { } bounds
+                    && bounds.X == plot.X + 10 && bounds.Y == plot.Y + 10 && bounds.Width == 88)
+                .Select(call => (float?)call.Opacity).SingleOrDefault();
+        }
+        Check(PulseAt(999) is null, "Kiai indicator appeared before the interval");
+        float first = PulseAt(1000) ?? throw new Exception("Kiai indicator missing at interval start");
+        float faded = PulseAt(1250) ?? throw new Exception("Kiai indicator disappeared between beats");
+        float next = PulseAt(1500) ?? throw new Exception("Kiai indicator missing at the next full beat");
+        Check(first > faded && next > faded && Math.Abs(first - next) < .001f,
+            "Kiai indicator must pulse each full beat and fade between beats");
+        Check(PulseAt(2000) is null, "Kiai indicator remained after the interval");
+        ui.View.Document.TimingPoints[2].Effects = 1;
+        Check(PulseAt(2000) is not null, "Changing Kiai timing did not refresh the indicator");
+    }
+
     public static void ComboColours()
     {
         var map = new MapDocument { DurationMs = 3000, IsDemo = false };
@@ -219,7 +247,8 @@ internal static class TimelineOverviewTests
         Check(ui.Canvas.Lines.Any(l => l.Color == 0xEA2222 && l.Y1 == area.Y + 2), "Red timing point missing");
         Check(ui.Canvas.Lines.Any(l => l.Color == 0x7BC600 && l.Y1 == area.Y + 2), "Green timing point missing");
         float X(double time) => area.X + (float)(time / ui.View.TimelineDurationMs) * area.Width;
-        var kiai = ui.Canvas.Fills.Where(f => f.Color == 0xD89532).ToArray();
+        var kiai = ui.Canvas.Fills.Where(f => f.Color == 0xD89532 && f.Bounds.Y < area.Y + 20
+            && f.Bounds.Bottom > area.Y + 20).ToArray();
         Check(kiai.Length == 1 && Math.Abs(kiai[0].Bounds.X - X(0)) < .01f
             && Math.Abs(kiai[0].Bounds.Right - X(1000)) < .01f
             && kiai[0].Bounds.Y < area.Y + 20 && kiai[0].Bounds.Bottom > area.Y + 20,
@@ -232,7 +261,8 @@ internal static class TimelineOverviewTests
         int green = calls.FindIndex(c => c.Line is { Color: 0x7BC600, Y1: var y } && y == area.Y + 2);
         int bookmark = calls.FindIndex(c => c.Line is { Color: 0x4B9EF5, Y1: var y } && y == area.Y + 20);
         int center = calls.FindIndex(c => c.Line is { Color: 0xA0A0A0, Y1: var y, Y2: var y2 } && y == area.Y + 20 && y2 == y);
-        int kiaiFill = calls.FindIndex(c => c.Color == 0xD89532 && c.FillBounds is not null);
+        int kiaiFill = calls.FindIndex(c => c.Color == 0xD89532 && c.FillBounds is { Y: var y }
+            && y < area.Y + 20 && c.FillBounds.Value.Bottom > area.Y + 20);
         int breakFill = calls.FindIndex(c => c.Color == 0xBCB1AE && c.FillBounds is { Y: var y } && y < area.Y + 20);
         Check(red >= 0 && green >= 0 && bookmark >= 0 && center >= 0 && kiaiFill >= 0 && breakFill >= 0
             && center < kiaiFill && center < breakFill && kiaiFill < red && breakFill < red

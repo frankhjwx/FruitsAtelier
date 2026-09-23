@@ -71,7 +71,7 @@ testplay. Dash and hyperdash leave fading catcher trails. The combo uses the ski
 combo digits, pulses on catches and fades while idle or after a miss. Missed notes
 fall past the catcher and fade out over 250 ms.
 
-The upper-left corner shows **Tab** (autoplay), **Ctrl+P** (pause/resume), **F1** (exit to the testplay start), and **F2** (exit at the current position). Pausing freezes gameplay and music; resuming continues the same session.
+The upper-left corner shows **Tab** (autoplay), **Ctrl+P** (pause/resume), **Ctrl+B** (add a bookmark), **F1** (exit to the testplay start), and **F2** (exit at the current position). Pausing freezes gameplay and music; resuming continues the same session.
 
 Press **Tab** during testplay to toggle autoplay. Press it again to resume manual
 movement at the current time and position. Each new testplay starts in manual mode.
@@ -81,8 +81,7 @@ present, otherwise skin colours; overlays stay white.
 
 Caught fruit stacks on the catcher using the preview effects and releases at combo ends.
 The last remaining note (after miss and plate animations) or the end of the music returns to the editor. **Esc** or losing window focus also exits. Playback stops and the playhead
-returns to the position where testplay began. Testplay does not edit the map,
-selection or undo history. The playfield fits the full window while preserving its
+returns to the position where testplay began. Gameplay does not change hit objects or selection; bookmark shortcuts update metadata through undo history. The playfield fits the full window while preserving its
 aspect ratio; it reserves no space for navigation controls. Release Esc before
 pressing it again to navigate from the editor to Library.
 
@@ -94,6 +93,8 @@ key swaps the two bindings. **Apply** saves the bindings across restarts.
 The bottom overview shows red and green timing points above a white center line, continuous yellow kiai intervals and white break intervals centered on that line, and blue bookmarks extending down from it. The center line is behind the break and kiai intervals, which are behind timing points and bookmarks. These timeline marks use 80% opacity and colors tuned against osu!legacy. Hovering over the overview reveals a fixed bookmark toolbar above its left edge with Add, Remove, Previous, Next, and Reset actions. The toolbar stays visible while moving from the overview to its controls, and its tooltip appears above it. The toolbar uses an ImageGen-created background texture. The time display and separate Play, Pause, Stop, and Testplay controls sit to the left of the overview; Stop pauses audio and seeks to the start. Ctrl+B adds a bookmark at the playhead; Ctrl+Shift+B removes the nearest bookmark within two seconds. Ctrl+Left/Right seeks to the previous/next bookmark; Ctrl+Shift+Left/Right moves selected objects one X unit. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
 
 The overview draws `[General] PreviewTime` as a full-height yellow marker when it is nonnegative. Red and green timing points meet the center line, and bookmark markers start on it. The horizontal object timeline also shows red and green timing points. Break intervals are clipped to each visible range and shaded across the full height or width of the object timeline and canvas left time axis. The Break label appears only on the object timeline; the canvas left axis shows break bands without timing or bookmark markers. The kiai fill uses a lighter orange. The Timing menu sets the preview point at the rounded playhead time through undo history. Insert Break Time sits between Movement Analysis and Snap; it inserts an undoable interval between the surrounding source objects, starting 200 ms after the previous object ends and ending when the next object's AR approach begins, if at least 400 ms remains and no break overlaps it. The Snap slider remains on one row. The time display uses a fixed position for the duration so changing digits do not move it. The bookmark toolbar is left aligned and vertically centered in the strip above the overview; its buttons are inset from the panel edge and remain visible while the pointer is held over the overview.
+
+During a kiai interval, a small badge appears at the upper-left of the editing plot. It brightens at the interval start and on every full beat from the active red timing point, then fades through the beat. Its pulse follows map time, including seeking and timing edits.
 
 In the object timeline and canvas left time axis, each break has a grey core and lighter white and green transition regions extending to the adjacent source objects, without changing the stored break timestamps. Hovering a core edge in the object timeline shows a horizontal resize cursor. Dragging that edge snaps to the current beat subdivision when Snap is on and previews the new range; releasing commits one undoable edit, releasing with less than 400 ms remaining removes the break, and Esc cancels the preview.
 

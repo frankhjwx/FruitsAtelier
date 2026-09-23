@@ -41,6 +41,7 @@ On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are
 The main canvas shows horizontal placement and note timing; later notes are higher on the screen. On the canvas and both timelines, each wheel notch moves one full beat (1/1) during playback or one current Snap subdivision while paused: up to the preceding grid line and down to the following one, regardless of zoom. The canvas and playhead move together, including while paused. Middle-drag pans, and Ctrl+wheel zooms. Click empty canvas in Select mode to seek. The bottom timeline also supports seeking; click the timestamp above its left-side Play, Pause, Stop, and Testplay controls to jump to an exact time. Stop pauses playback and returns to the start. Hover over the timeline to reveal the fixed bookmark toolbar above it: add or remove a bookmark at the playhead, seek to the previous or next bookmark, or reset all bookmarks. Bookmark edits can be undone.
 
 The Timing menu can set the current position as the song preview point. A long yellow line marks it on the bottom timeline. Red and green timing marks appear on the upper object timeline, while shaded break intervals appear there and on the canvas's left time axis. To insert a break, place the playhead between two objects with enough space and click **Insert Break Time** next to Movement Analysis. Undo removes the inserted break.
+When the playhead is inside kiai time, a small Kiai badge appears in the upper-left of the editing plot. It brightens on each full beat and fades until the next beat.
 
 Break shading on the upper timeline extends lightly to the notes before and after the stored break. Drag either edge of its darker center to adjust the range; with Snap on, the edge follows the current beat subdivision. Shortening it below 400 ms removes it; Esc cancels a drag, and Undo restores the previous range.
 
@@ -85,6 +86,7 @@ Open **Catch Preview** using the button on the right edge of the canvas. Drag th
 ### Try the map
 
 Press **F5** to testplay from the current position using the selected preview mod and speed. Move with **Left / Right**, and hold **Shift** to dash. Catch fruits and droplets to build combo. **Tab** toggles autoplay; **Ctrl+P** pauses or resumes.
+Press **Ctrl+B** during testplay to add a bookmark at the current position. The shortcut appears with the other testplay controls in the upper-left corner.
 
 **F1 / Esc** exits to the testplay start; **F2** exits at the current position. Losing window focus also exits. Testplay does not change your objects or undo history. Change movement and dash bindings in **Library > Settings**.
 
@@ -189,6 +191,7 @@ Lock Notes prevents moving, reshaping or deleting existing objects. You can stil
 | Shift | Dash (default binding). |
 | Tab | Toggle autoplay. |
 | Ctrl+P | Pause / resume testplay. |
+| Ctrl+B | Add a bookmark at the current position. |
 | F1 / Esc | Return to the editor at the testplay start. |
 | F2 | Return to the editor at the current position. |
 

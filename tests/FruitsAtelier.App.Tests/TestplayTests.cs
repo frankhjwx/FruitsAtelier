@@ -37,6 +37,9 @@ internal static class TestplayTests
         clock.Advance(2000); ui.Key(39); ui.Paint();
         Near(500, ui.View.PlayheadMs); Near(256, ui.View.TestplayCatcherX);
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.paused")), "pause state appears with shortcuts");
+        var bookmarkHint = ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.hintBookmark"));
+        Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.paused")).Y >= bookmarkHint.Y + 20,
+            "Testplay bookmark shortcut and pause state should have separate rows");
         ui.View.KeyUp('P'); ui.Key('P', ctrl: true); ui.View.KeyUp('P');
         clock.Advance(100); ui.Paint(); Near(600, ui.View.PlayheadMs);
         ui.Key(113); Check(!ui.View.IsTestplaying, "F2 exits"); Near(600, ui.View.PlayheadMs);

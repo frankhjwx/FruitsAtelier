@@ -162,10 +162,10 @@ public sealed partial class EditorView
         DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
         DrawTestplayCombo(c, x, catchY - 175 * fieldWidth / 512, fieldWidth / 512);
         c.Unclip();
-        string[] hints = ["testplay.hintAutoplay", "testplay.hintPause", "testplay.hintQuickExit", "testplay.hintCurrentExit"];
+        string[] hints = ["testplay.hintAutoplay", "testplay.hintPause", "testplay.hintBookmark", "testplay.hintQuickExit", "testplay.hintCurrentExit"];
         for (int i = 0; i < hints.Length; i++)
             c.Text(L.Get(hints[i]), 12, 12 + i * 20, 13, 0xD6E5B5, Math.Max(100, width - 24));
-        if (TestplayPaused) c.Text(L.Get("testplay.paused"), 12, 98, 15, Accent, 250, true);
+        if (TestplayPaused) c.Text(L.Get("testplay.paused"), 12, 118, 15, Accent, 250, true);
     }
 
     // ppy/osu 48c4800e: LegacyCatchComboCounter, LegacyRollingCounter and CatcherArea.

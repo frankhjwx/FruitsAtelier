@@ -6,6 +6,12 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private (double TimeMs, bool Active)[] kiaiTransitions = [];
+
+    private void RefreshKiaiTransitions()
+        => kiaiTransitions = Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder)
+            .GroupBy(p => p.TimeMs).Select(group => (group.Key, (group.Last().Effects & 1) != 0)).ToArray();
+
     public void Render(ICanvas c, float width, float height)
     {
         RefreshLanguage();
@@ -53,6 +59,7 @@ public sealed partial class EditorView
         DrawPreviewSidebar(c);
         DrawLegacyConversionButton(c);
         DrawMovementOverlay(c);
+        DrawKiaiBadge(c);
         DrawTransport(c);
         DrawStatus(c);
         if (resourceErrors.Count > 0)
@@ -398,6 +405,39 @@ public sealed partial class EditorView
         c.Unclip();
     }
 
+    private void DrawKiaiBadge(ICanvas c)
+    {
+        int low = 0, high = kiaiTransitions.Length;
+        while (low < high)
+        {
+            int middle = low + (high - low) / 2;
+            if (kiaiTransitions[middle].TimeMs <= playhead) low = middle + 1; else high = middle;
+        }
+        int index = low - 1;
+        if (index < 0 || !kiaiTransitions[index].Active) return;
+
+        var timing = renderedTiming!.At(playhead);
+        double beatLength = timing.BeatLengthMs;
+        if (!double.IsFinite(beatLength) || beatLength <= 0) return;
+        double beatStart = timing.OffsetMs + Math.Floor((playhead - timing.OffsetMs) / beatLength) * beatLength;
+        double lastPulse = Math.Max(kiaiTransitions[index].TimeMs, beatStart);
+        float phase = (float)Math.Clamp((playhead - lastPulse) / beatLength, 0, 1);
+        float pulse = (1 - phase) * (1 - phase);
+        var badge = new Rect(plot.X + 10, plot.Y + 10, 88, 28);
+        c.Fill(badge, 0x182430, 14, .92f);
+        c.Fill(badge, 0xD89532, 14, .08f + .29f * pulse);
+        c.Stroke(badge, Blend(0xF5BB62, 0x526070, .3f + .7f * pulse), 1.3f, 14);
+        c.Circle(badge.X + 15, badge.Y + 14, 4, 0xFFD174, true, 1, .45f + .55f * pulse);
+        c.Text(L.Get("timeline.kiaiIndicator"), badge.X + 27, badge.Y + 5, 13,
+            Blend(0xFFF0D4, 0xA1A9AC, .35f + .65f * pulse), badge.Width - 31);
+
+        static uint Blend(uint bright, uint dim, float amount)
+        {
+            uint Channel(int shift) => (uint)(((bright >> shift) & 255) * amount + ((dim >> shift) & 255) * (1 - amount));
+            return Channel(16) << 16 | Channel(8) << 8 | Channel(0);
+        }
+    }
+
     private void DrawTransport(ICanvas c)
     {
         float top = height - 120;
@@ -432,13 +472,12 @@ public sealed partial class EditorView
         const float spanHeight = 12;
         float spanY = overview.Y + 20 - spanHeight / 2;
         double? kiaiStart = null;
-        foreach (var group in timing.GroupBy(p => p.TimeMs))
+        foreach (var transition in kiaiTransitions)
         {
-            bool active = (group.Last().Effects & 1) != 0;
-            if (active && kiaiStart is null) kiaiStart = group.Key;
-            else if (!active && kiaiStart is double start)
+            if (transition.Active && kiaiStart is null) kiaiStart = transition.TimeMs;
+            else if (!transition.Active && kiaiStart is double start)
             {
-                DrawSpan(start, group.Key, 0xD89532);
+                DrawSpan(start, transition.TimeMs, 0xD89532);
                 kiaiStart = null;
             }
         }
