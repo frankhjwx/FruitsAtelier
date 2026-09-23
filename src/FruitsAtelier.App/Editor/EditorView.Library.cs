@@ -450,7 +450,15 @@ public sealed partial class EditorView
                 var result = new Dictionary<string, double?>();
                 foreach (var entry in pending)
                 {
-                    try { var d = entry.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase) ? ProjectSerializer.ReadFile(entry.Path) : OsuBeatmapReader.ReadFile(entry.Path); var converted = CatchStreamConverter.Convert(d); result[entry.Path] = converted.Success ? CatchDifficultyCalculator.Calculate(converted.Objects, d.CircleSize).StarRating : null; }
+                    try
+                    {
+                        bool project = entry.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase);
+                        var d = project ? ProjectSerializer.ReadFile(entry.Path) : OsuBeatmapReader.ReadFile(entry.Path);
+                        var converted = CatchStreamConverter.Convert(d);
+                        var exported = project && converted.Success ? OsuBeatmapWriter.Serialize(d) : null;
+                        var objects = exported is { ObjectSequenceMatches: true } ? exported.PlayableObjects : converted.Objects;
+                        result[entry.Path] = converted.Success ? CatchDifficultyCalculator.Calculate(objects, d.CircleSize).StarRating : null;
+                    }
                     catch (Exception) { result[entry.Path] = null; }
                 }
                 return result;

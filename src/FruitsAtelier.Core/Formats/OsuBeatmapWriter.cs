@@ -14,6 +14,8 @@ public sealed class OsuWriteResult
     public double MaxConvertedTimeErrorMs { get; init; }
     public double MaxConvertedXError { get; init; }
     public bool ObjectSequenceMatches { get; init; }
+    public IReadOnlyList<ConvertedCatchObject> PlayableObjects { get; init; } = [];
+    public IReadOnlyList<ConvertedCatchObject> PlayableHardRockObjects { get; init; } = [];
 }
 
 public static class OsuBeatmapWriter
@@ -163,11 +165,36 @@ public static class OsuBeatmapWriter
         if (matches) diagnostics.Add(L.Get("core.writer.readBackError", Number(timeError), Number(xError)));
         if (document.AudioPath is not null || document.OriginalSections.Any(s => s.Name == "Events" && s.Lines.Any(l => OsuBeatmapReader.IsDataLine(l.Trim()))))
             diagnostics.Add(L.Get("core.writer.resources"));
+        var playableObjects = matches
+            ? converted.Objects.Zip(reconverted.Objects).Select(pair => pair.Second with
+            {
+                SourceId = pair.First.SourceId,
+                EventIndex = pair.First.EventIndex,
+                IsStandalone = pair.First.IsStandalone
+            }).ToArray()
+            : [];
+        var playableIds = matches
+            ? reconverted.Objects.Zip(converted.Objects).ToDictionary(pair => (pair.First.SourceId, pair.First.EventIndex), pair => (pair.Second.SourceId, pair.Second.EventIndex, pair.Second.IsStandalone))
+            : [];
+        var playableHardRockObjects = matches
+            ? CatchPreviewMods.HardRock(readBack, reconverted)
+                .Select(item =>
+                {
+                    var identity = playableIds[(item.SourceId, item.EventIndex)];
+                    return item with
+                    {
+                        SourceId = identity.SourceId,
+                        EventIndex = identity.EventIndex,
+                        IsStandalone = identity.IsStandalone
+                    };
+                }).ToArray()
+            : [];
         return new OsuWriteResult
         {
             Text = serialized, ReadBack = readBack, Diagnostics = diagnostics,
             MaxTimeQuantizationMs = maxTime, MaxCoordinateQuantization = maxCoordinate,
-            MaxConvertedTimeErrorMs = timeError, MaxConvertedXError = xError, ObjectSequenceMatches = matches
+            MaxConvertedTimeErrorMs = timeError, MaxConvertedXError = xError, ObjectSequenceMatches = matches,
+            PlayableObjects = playableObjects, PlayableHardRockObjects = playableHardRockObjects
         };
 
         string Coordinate(double value) { double rounded = Round(value); maxCoordinate = Math.Max(maxCoordinate, Math.Abs(rounded - value)); return Number(rounded); }

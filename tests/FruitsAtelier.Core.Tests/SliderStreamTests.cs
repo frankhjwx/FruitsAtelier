@@ -48,5 +48,24 @@ internal static class SliderStreamTests
         Check(OsuBeatmapWriter.Serialize(map).ObjectSequenceMatches, "same-time independent fruit order matches export");
     }
 
+    public static void ExportedMillisecondsDriveHyperdash()
+    {
+        var map = new MapDocument { CircleSize = 4, DurationMs = 12000 };
+        var first = new Fruit { TimeMs = 11013.936, X = 459.766 };
+        var second = new Fruit { TimeMs = 11099.251, X = 317.958, SourceOrder = 1 };
+        map.Fruits.AddRange([first, second]);
+        var precise = CatchStreamConverter.Convert(map);
+        var exported = OsuBeatmapWriter.Serialize(map);
+        Check(exported.ObjectSequenceMatches, "export preserves gameplay object identity");
+        Check(exported.PlayableObjects.Select(o => o.TimeMs).SequenceEqual([11014d, 11099d]), "playable times match osu file milliseconds");
+        Check(exported.PlayableObjects.Select(o => o.X).SequenceEqual([460d, 318d]), "playable coordinates match osu file integers");
+        Check(!HyperDashCalculator.Calculate(precise.Objects, map.CircleSize)[0].IsHyperDash,
+            "precise editing coordinates stay below this hyperdash threshold");
+        Check(HyperDashCalculator.Calculate(exported.PlayableObjects, map.CircleSize)[0].IsHyperDash,
+            "the exported osu event crosses the hyperdash threshold");
+        Check(exported.PlayableObjects[0].SourceId == first.Id && exported.PlayableObjects[1].SourceId == second.Id,
+            "playable events retain editor identities");
+    }
+
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
 }

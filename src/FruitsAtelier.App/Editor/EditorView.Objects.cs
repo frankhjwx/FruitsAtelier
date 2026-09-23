@@ -73,7 +73,7 @@ public sealed partial class EditorView
     // Conversion output is time-sorted; work scales with the visible time window.
     private IEnumerable<ConvertedCatchObject> ObjectsInTimeRange(double start, double end)
     {
-        var objects = conversion!.Objects;
+        var objects = playableObjects;
         int low = 0, high = objects.Count;
         while (low < high)
         {

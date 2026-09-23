@@ -53,7 +53,7 @@ public sealed partial class EditorView
     private void DrawMovementConnections(ICanvas c)
     {
         if (!movementAnalysis) return;
-        var objects = placementMovementObjects ?? conversion!.Objects;
+        var objects = placementMovementObjects ?? playableObjects;
         EnsureMovementStates(objects);
         double endTime = viewStart + plot.Height / pixelsPerMs;
         for (int i = FirstVisibleMovement(objects); i < movementIndices.Length; i++)
@@ -77,7 +77,7 @@ public sealed partial class EditorView
     {
         MovementOverlayBounds = null;
         MovementReadout = (null, null);
-        IReadOnlyList<ConvertedCatchObject> objects = conversion!.Objects;
+        IReadOnlyList<ConvertedCatchObject> objects = playableObjects;
         Guid source;
         bool placement = PlacementGhostPoint() is not null;
         if (placement)

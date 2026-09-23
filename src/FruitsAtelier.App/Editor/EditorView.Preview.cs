@@ -60,7 +60,9 @@ public sealed partial class EditorView
         if (!ReferenceEquals(previewSource, conversion) || cachedPreviewMod != previewMod)
         {
             previewSource = conversion; cachedPreviewMod = previewMod;
-            previewObjects = previewMod == 2 ? CatchPreviewMods.HardRock(Document, conversion!) : conversion!.Objects;
+            previewObjects = previewMod == 2
+                ? playableExport?.PlayableHardRockObjects ?? CatchPreviewMods.HardRock(Document, conversion!)
+                : playableObjects;
             previewHyperdash = HyperDashCalculator.GetHyperDashStarts(previewObjects, PreviewCircleSize);
             previewAutoplay = new(previewObjects, PreviewCircleSize);
             var parents = ClipboardParents(Document).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();

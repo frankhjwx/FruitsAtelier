@@ -2,7 +2,7 @@
 
 Both views use actual conversion results, AR fall scaling, CS sizes, and skin rendering, with multiple timing points, standalone fruits, imported L/B/P/C sliders, mixed linear/Bezier tracks with repeats, and banana showers. The canvas uses the map's original settings. Catch Preview is a collapsed-by-default, resizable right sidebar with mutually exclusive NM, Easy and Hard Rock modes. The real audio transport drives current time; without audio, explicitly indicated manual positioning remains available.
 
-Easy multiplies AR and CS by 0.5. Hard Rock multiplies AR by 1.4 and CS by 1.3, capped at 10. Hard Rock's preview replays complete-parent RNG ordering, including standalone-fruit offsets, slider droplet draws and banana draws, against the existing converted geometry. Each mode recalculates hyperdash indicators with its effective CS. Preview results are cached by conversion result and mode, and only the current time window is drawn. These controls do not edit, save or export modified beatmap settings. Debug curves continue to show the authored paths.
+Easy multiplies AR and CS by 0.5. Hard Rock multiplies AR by 1.4 and CS by 1.3, capped at 10. Hard Rock's preview replays complete-parent RNG ordering, including standalone-fruit offsets, slider droplet draws and banana draws, against the exported osu read-back geometry. Each mode recalculates hyperdash indicators with its effective CS. Preview results are cached by conversion result and mode, and only the current time window is drawn. These controls do not edit, save or export modified beatmap settings. Debug curves continue to show the authored paths.
 
 ## AR and center positions
 

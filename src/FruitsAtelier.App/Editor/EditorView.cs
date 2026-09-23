@@ -54,6 +54,8 @@ public sealed partial class EditorView
     private MapDocument? convertedSnapshot;
     private CatchConversionCache editorConversionCache = new();
     private CatchConversionResult? conversion;
+    private OsuWriteResult? playableExport;
+    private IReadOnlyList<ConvertedCatchObject> playableObjects = [];
     private bool convertedWithCompensation;
     private HashSet<(Guid SourceId, int EventIndex)> hyperdashObjects = [];
     private Dictionary<Guid, int> skinIndices = [];
@@ -125,8 +127,23 @@ public sealed partial class EditorView
             .Select((source, index) => (source.Id, Index: index))
             .ToDictionary(source => source.Id, source => source.Index);
         conversion = CatchStreamConverter.Convert(input, compensateTinyDroplets, editorConversionCache);
+        playableExport = null;
+        playableObjects = conversion.Objects;
+        if (conversion.Success)
+        {
+            try
+            {
+                var exported = OsuBeatmapWriter.Serialize(input, compensateTinyDroplets);
+                if (exported.ObjectSequenceMatches)
+                {
+                    playableExport = exported;
+                    playableObjects = exported.PlayableObjects;
+                }
+            }
+            catch (InvalidDataException) { } // Draft content may be convertible before it is exportable.
+        }
         BuildComboColours();
-        hyperdashObjects = HyperDashCalculator.GetHyperDashStarts(conversion.Objects, Document.CircleSize);
+        hyperdashObjects = HyperDashCalculator.GetHyperDashStarts(playableObjects, Document.CircleSize);
     }
 
     private enum Tool { Select, Fruit, Slider, Banana }
