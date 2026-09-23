@@ -20,8 +20,8 @@ internal static class HyperDashSkinTests
         var ui = new Ui(); ui.LoadDocument(map); ui.View.LoadSkin(folder); ui.Paint();
         Check(ui.Canvas.Circles.Any(c => c.Color == fruitColour), "HDash fruit ignored HyperDashFruit.");
         ui.ClickText(FruitsAtelier.Localization.Strings.Get("movement.analysis"));
-        Check(ui.Canvas.Lines.Any(l => l.Color == hyperColour && l.Width == 4),
-            "Movement Analysis ignored HyperDash.");
+        Check(ui.Canvas.Lines.Any(l => l.Color == 0xCE7683 && l.Width == 4),
+            "Movement Analysis changed the HDash indicator colour.");
         ui.OpenPreview();
         ui.View.UpdateTransport(1050, 3000, true, false, false, null, null); ui.Paint();
         Check(ui.Canvas.Circles.Any(c => c.Color == hyperColour), "HDash catcher ignored HyperDash.");
