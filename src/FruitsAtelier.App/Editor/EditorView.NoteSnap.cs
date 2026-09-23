@@ -24,6 +24,7 @@ public sealed partial class EditorView
         var timing = TimingMap.At(Document, note.TimeMs);
         int matched = 0;
         double closestDistance = double.MaxValue;
+        double currentDistance = double.MaxValue;
         foreach (int candidate in SnapDivisors)
         {
             double beatLength = timing.BeatLengthMs / candidate;
@@ -31,6 +32,7 @@ public sealed partial class EditorView
             double snappedTime = timing.OffsetMs + beats * beatLength;
             if (snappedTime < 0) snappedTime += beatLength;
             double distance = Math.Abs(note.TimeMs - snappedTime);
+            if (candidate == divisor) currentDistance = distance;
             // Equal-distance grids retain the smaller divisor despite floating-point roundoff.
             if (closestDistance - 1e-7 > distance)
             {
@@ -38,6 +40,7 @@ public sealed partial class EditorView
                 closestDistance = distance;
             }
         }
+        if (snap && currentDistance <= 2) return;
         if (closestDistance > 2)
         {
             RestoreTemporarySnap();

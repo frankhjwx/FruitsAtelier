@@ -243,7 +243,7 @@ public sealed partial class EditorView
 
     private void DrawSelectedDistanceTick(ICanvas c)
     {
-        if (SelectedDistanceObject() is not { Kind: CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet } tick) return;
+        if (SelectedDistanceObject() is not { IsStandalone: false, Kind: CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet } tick) return;
         var p = Screen(new(tick.TimeMs, tick.X));
         float radius = Math.Max(6, ObjectRadius(tick.Kind) * Playfield.Width / 512);
         c.Circle(p.X, p.Y, radius + 3, Accent, false, 2);

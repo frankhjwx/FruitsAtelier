@@ -166,7 +166,7 @@ internal static class DistanceEditingTests
             var reference = objects[Array.IndexOf(objects, target) - 1];
             double ratio = DistanceSnap.Ratio(new(reference.TimeMs, reference.X), new(target.TimeMs, target.X), DistanceSnap.BaseVelocity(map, reference.TimeMs))!.Value * .9;
             var ui = new Ui(); ui.LoadDocument(map); ui.ClickMap(target.TimeMs, target.X);
-            if (point == "droplet") ui.ClickMap(target.TimeMs, target.X);
+            ui.ClickMap(target.TimeMs, target.X);
             var original = ui.View.Document.DeepClone();
             if (point == "droplet") CheckTickHighlight(ui, target);
             Check(ui.View.PreviousDistanceFieldBounds is not null, $"{point} was not individually selected");
@@ -185,7 +185,7 @@ internal static class DistanceEditingTests
             }
             ui.Key('Z', ctrl: true); Check(original.ContentEquals(ui.View.Document), "Slider DS undo lost source geometry");
             ui.ClickMap(target.TimeMs, target.X);
-            if (point == "droplet") ui.ClickMap(target.TimeMs, target.X);
+            ui.ClickMap(target.TimeMs, target.X);
             var xField = ui.View.XCoordinateFieldBounds!.Value;
             ui.Click(xField.X + 8, xField.Y + 8);
             ui.Key('A', ctrl: true); ui.Type((target.X + 5).ToString("0", System.Globalization.CultureInfo.InvariantCulture)); ui.Key(13);

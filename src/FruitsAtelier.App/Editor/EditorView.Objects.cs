@@ -168,6 +168,7 @@ public sealed partial class EditorView
     {
         if (notesLocked) return;
         if (objectSelection.Count == 0) return;
+        if (SelectedDistanceObject() is { IsStandalone: false }) { distanceObject = null; soundEdge = null; }
         bool movesOneFruit = objectSelection.Count == 1 && Document.Fruits.Any(item => objectSelection.Contains(item.Id));
         history.Begin(L.Get(movesOneFruit ? "editor.command.moveFruit" : "editor.command.moveObjects"));
         objectDragStart = Document.DeepClone();

@@ -249,7 +249,7 @@ internal static class AssistToolsTests
     {
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,2,0,L|240:192,2,140,2|4|8,1:2|2:3|3:1,2:3:7:60:\n");
         var ui = new Ui(); ui.LoadDocument(map); var id = map.ImportedSliders.Single().Id;
-        ui.ClickMap(1000, 100); ui.Key('R');
+        ui.ClickMap(1000, 100); ui.ClickMap(1000, 100); ui.Key('R');
         Check(ObjectFlags.Sounds(ui.View.Document, id).SequenceEqual(new[] { 10, 4, 8 }), "Head click changed other edges");
         Check(ui.View.Document.ImportedSliders.Single().OriginalLine!.EndsWith("1:2|2:3|3:1,2:3:7:60:"), "Sample banks were overwritten");
         var output = OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack;
