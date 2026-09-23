@@ -514,6 +514,12 @@ public sealed partial class EditorView
         for (int i = 0; i < fields.Count; i++)
             if (fields[i].Bounds.Contains(x, y))
             { FocusField(i); SelectInput("numeric:" + i, editBuffer); return; }
+        if (!ctrl && plot.Contains(x, y) && HitCatchObject(x, y) is { IsStandalone: true, Kind: CatchObjectKind.Fruit } note)
+        {
+            SelectObjects([note.SourceId], note.SourceId);
+            ShowNoteBeatPosition(note);
+            return;
+        }
         if (ctrl || tool == Tool.Fruit) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (!LegacyMode && draftTrack != Guid.Empty && SelectedTrack is { } draft && Near(Point(draft.Nodes[^1]), x, y, 8))
         { draft.Nodes[^1].HandleOut = default; draftStraight = true; return; }
@@ -1021,6 +1027,7 @@ public sealed partial class EditorView
 
     private void SetSnapDivisor(float x)
     {
+        ForgetTemporarySnap();
         float left = snapSlider.X + 7, right = snapSlider.Right - 31;
         int index = (int)MathF.Round(Math.Clamp((x - left) / (right - left), 0, 1) * (SnapDivisors.Length - 1));
         divisor = SnapDivisors[index];

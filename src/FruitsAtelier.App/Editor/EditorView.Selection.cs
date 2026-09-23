@@ -46,6 +46,7 @@ public sealed partial class EditorView
     {
         soundEdge = null; distanceObject = null;
         var selected = ids.Distinct().ToArray();
+        if (temporarySnapSource != Guid.Empty && (selected.Length != 1 || selected[0] != temporarySnapSource)) RestoreTemporarySnap();
         objectSelection.Clear(); objectSelection.UnionWith(selected);
         anchorSelection.Clear();
         selection = objectSelection.Contains(primary) ? primary : selected.FirstOrDefault();
@@ -56,6 +57,7 @@ public sealed partial class EditorView
 
     private void SelectAnchors(CurveTrack track, IEnumerable<Guid> ids, Guid primary = default)
     {
+        RestoreTemporarySnap();
         soundEdge = null; distanceObject = null;
         var validIds = LegacyMode ? SliderControlEditing.Vertices(track).Select(v => v.Id).ToHashSet() : track.Nodes.Select(n => n.Id).ToHashSet();
         var selected = ids.Where(validIds.Contains).Distinct().ToArray();

@@ -250,6 +250,7 @@ public sealed partial class EditorView
 
     private void Select(Guid id, Guid track = default)
     {
+        if (id != temporarySnapSource || track != Guid.Empty) RestoreTemporarySnap();
         soundEdge = null; distanceObject = null;
         objectSelection.Clear(); anchorSelection.Clear();
         if (Document.Tracks.FirstOrDefault(t => t.Id == track)?.Nodes.Any(n => n.Id == id) == true)

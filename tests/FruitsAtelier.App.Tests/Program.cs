@@ -136,6 +136,7 @@ var tests = new (string Name, Action Run)[]
     ("Beat snap slider exposes every requested divisor through one drag control", RequestedInteractionTests.SnapDivisors),
     ("Centred controls and timestamp clipboard dialog preserve editor content", TimeJumpTests.Run),
     ("Double-click enters one Slider and other clicks leave its edit mode", RequestedInteractionTests.DoubleClickEditing),
+    ("Double-click reports note beat position and temporarily uses its snap", NoteSnapTests.DoubleClickBeatPosition),
     ("Legacy Slider long-press buttons convert to a strictly aligned FSlider", SliderInteractionTests.LegacyContextConversion),
     ("Selected parents snap from the earliest start and keep one time and X offset", RequestedInteractionTests.MultiObjectDrag),
     ("A single Slider uses its start as the snap reference while moving", RequestedInteractionTests.SingleSliderSnap),
@@ -938,6 +939,7 @@ sealed class Ui
     }
     public void SetField(string label, string value) { FocusField(label); Type(value); Key(13); }
     public void ClickMap(double time, double x, bool ctrl = false) { var p = Screen(time, x); View.PointerDown(p.X, p.Y, 0, false, ctrl); Paint(); View.PointerUp(p.X, p.Y, 0); Paint(); }
+    public (float X, float Y) ScreenAt(double time, double x) => Screen(time, x);
     public void DownMap(double time, double x)
     {
         var p = Screen(time, x); View.PointerDown(p.X, p.Y, 0, false, false); Paint();

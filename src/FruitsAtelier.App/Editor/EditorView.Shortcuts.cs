@@ -12,7 +12,7 @@ public sealed partial class EditorView
         {
             case 65: SelectObjects(ClipboardParents(Document).Select(p => p.Id)); return true;
             case >= 49 and <= 52: gridSize = 4 << (key - 49); return true;
-            case 77: divisor = SnapDivisors[(Array.IndexOf(SnapDivisors, divisor) + 1) % SnapDivisors.Length]; return true;
+            case 77: ForgetTemporarySnap(); divisor = SnapDivisors[(Array.IndexOf(SnapDivisors, divisor) + 1) % SnapDivisors.Length]; return true;
             case 68: CloneSelection(); return true;
             case 72: MirrorSelection(); return true;
             case 38: AdjustPlaybackSpeed(1); return true;
@@ -23,7 +23,7 @@ public sealed partial class EditorView
 
     private bool HandleLegacyKey(int key, bool shift)
     {
-        if (shift && key is >= 49 and <= 57) { divisor = key - 48; return true; }
+        if (shift && key is >= 49 and <= 57) { ForgetTemporarySnap(); divisor = key - 48; return true; }
         if (!shift && key is >= 49 and <= 52)
         { ChangeTool(key switch { 49 => Tool.Select, 50 => Tool.Fruit, 51 => Tool.Slider, _ => Tool.Banana }); return true; }
         switch (key)

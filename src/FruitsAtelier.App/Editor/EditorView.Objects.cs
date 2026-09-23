@@ -242,7 +242,7 @@ public sealed partial class EditorView
             IncludeTime(ImportedSliderConverter.EndTimeMs(objectDragStart, slider));
         }
 
-        if (snap && double.IsFinite(minTime))
+        if (snap && double.IsFinite(minTime) && Math.Abs(deltaTime) > .001)
             deltaTime = TimingMap.Snap(Document, minTime + deltaTime, divisor) - minTime;
         if (double.IsFinite(minTime)) deltaTime = Math.Clamp(deltaTime, -minTime, EditableDurationMs - maxTime);
         else deltaTime = 0;
