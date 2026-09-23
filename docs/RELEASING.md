@@ -92,9 +92,13 @@ The homepage is not part of the update path.
 
 ## GitHub Release
 
-The release source is the **remote `main` merge commit**. `main` is protected and
-requires a pull request. Follow this order; a package built locally from `dev` is
-only a preflight check and is not a release artifact.
+The release source is the **merge commit of the release PR on `main`**. Development
+continues on `dev`; merge `main` back into `dev` after each release PR so `dev`
+contains the published history. Use a merge commit for `dev` → `main` PRs to retain
+the shared ancestry. `main` requires a PR and passing `windows` and `macos` checks
+against an up-to-date base. Do not bypass protection or force-push either branch.
+A package built locally from `dev` is a preflight check; the tag workflow builds
+the published artifacts.
 
 1. On `dev`, commit and push the reviewed changes. Set `Directory.Build.props` to
    the release version, update the version shown in both READMEs and this guide,
@@ -104,43 +108,76 @@ only a preflight check and is not a release artifact.
    regression** on `dev` to pass on Windows and macOS. Fix failures on `dev` and
    wait for the new commit's checks; an earlier passing run does not validate a
    later commit.
-2. Open a `dev` → `main` pull request. Wait for the pull request's own required
-   checks, then merge it through GitHub. Do not force-push or bypass `main` branch
-   protection. Fetch the merged `main` and verify its commit contains `dev`:
+2. Open a `dev` → `main` pull request. If `dev` is behind `main`, merge
+   `origin/main` into `dev` and push before completing the PR. Wait for the PR's
+   required checks on its final revision, then merge it through GitHub using
+   **Create a merge commit**. Record the PR's final head SHA and resulting merge
+   SHA. Use those recorded commits for release verification, since `dev` may
+   advance after the PR merges.
 
-   ```bash
+3. Fetch and verify the release commit, then synchronize `dev`. The following
+   PowerShell commands require a clean working tree. Replace the two placeholders
+   with the full SHAs from the merged PR:
+
+   ```powershell
+   $releaseHead = '<final PR head SHA>'
+   $releaseCommit = '<PR merge SHA>'
    git fetch origin --prune --tags
-   git merge-base --is-ancestor origin/dev origin/main
+   if ($LASTEXITCODE -ne 0) { throw 'Fetch failed.' }
+   git merge-base --is-ancestor $releaseHead $releaseCommit
+   if ($LASTEXITCODE -ne 0) { throw 'Release commit does not contain the reviewed PR head.' }
+   git merge-base --is-ancestor $releaseCommit origin/main
+   if ($LASTEXITCODE -ne 0) { throw 'Release commit is not on remote main.' }
+   git switch dev
+   if ($LASTEXITCODE -ne 0) { throw 'Cannot switch to dev.' }
+   git merge --ff-only origin/dev
+   if ($LASTEXITCODE -ne 0) { throw 'Resolve local dev divergence before continuing.' }
+   git merge --no-edit origin/main
+   if ($LASTEXITCODE -ne 0) { throw 'Resolve and commit the merge before continuing.' }
+   git push origin dev
+   if ($LASTEXITCODE -ne 0) { throw 'Dev synchronization was not pushed.' }
+   git merge-base --is-ancestor origin/main origin/dev
+   if ($LASTEXITCODE -ne 0) { throw 'Remote dev is still behind the fetched main.' }
    ```
 
-3. Create the annotated `vMAJOR.MINOR.PATCH` tag from that fetched `main` commit,
+   When `dev` has no additional commits, this synchronization is a fast-forward;
+   otherwise it creates a merge commit preserving the newer development work.
+
+4. Create the annotated `vMAJOR.MINOR.PATCH` tag at `$releaseCommit`,
    optionally followed by `-alpha.N`, `-beta.N`, or `-rc.N` (N starts at 1). Numeric
-   version components must be at most 65534. Check that the tag does not already
-   exist and that it resolves to `origin/main` before pushing it:
+   version components must be at most 65534. Confirm that the version in
+   `Directory.Build.props` and `docs/releases/<tag>.md` at that commit match the
+   intended release. In the same PowerShell session, replace the tag placeholder:
 
-   ```bash
-   git switch main
-   git pull --ff-only origin main
-   git tag --list v0.1.0  # must return no tag
-   git tag -a v0.1.0 -m "FruitsAtelier v0.1.0"
-   git rev-parse 'v0.1.0^{commit}'  # must match origin/main below
-   git rev-parse origin/main
-   git push origin v0.1.0
+   ```powershell
+   $tag = 'v<MAJOR.MINOR.PATCH>'
+   if (git tag --list $tag) { throw 'Tag already exists; do not replace it.' }
+   git tag -a $tag $releaseCommit -m "FruitsAtelier $tag"
+   if ($LASTEXITCODE -ne 0) { throw 'Tag creation failed.' }
+   $tagCommit = git rev-parse "refs/tags/$tag^{commit}"
+   if ($LASTEXITCODE -ne 0 -or $tagCommit -ne $releaseCommit) { throw 'Tag points to the wrong commit.' }
+   git push origin "refs/tags/$tag"
+   if ($LASTEXITCODE -ne 0) { throw 'Tag push failed.' }
    ```
 
-4. Wait for the tag-triggered **Windows release** workflow. It validates the tag,
+   Keep the tag on the recorded release commit even if either branch advances.
+   The workflow checks tag syntax and identity; it does not enforce `main`
+   ancestry or PR approval. These checks are the release maintainer's responsibility.
+
+5. Wait for the tag-triggered **Windows release** workflow. It validates the tag,
    builds and tests that exact commit, packages the self-contained ZIP, runs the
    extracted executable, checks its bundled runtime, and publishes a GitHub
    Release. Suffixed tags become prereleases. The workflow uses the repository
    `GITHUB_TOKEN`; no personal token is needed. Actions must be enabled and
    repository policy must allow the release job's `contents: write` permission.
-5. Verify the published Release is not a draft and contains the versioned ZIP and
+6. Verify the published Release is not a draft and contains the versioned ZIP and
    SHA256, fixed-name ZIP and SHA256, full `.nupkg`, and
    `releases.win-x64.json`. Compare the ZIP checksum and confirm a public download
-   succeeds. The Release's top-level API response can briefly omit assets after
-   publication; check its `/assets` endpoint and the public download URL before
-   treating that as a failed upload. The update feed and matching package must be
-   available before considering the release complete.
+   succeeds. Confirm the packaged `build-info.json` records `$releaseCommit` and
+   the intended version. The update feed and matching package must be available
+   before considering the release complete. Fetch again and verify
+   `git merge-base --is-ancestor origin/main origin/dev` succeeds; if `main`
+   advanced, repeat the synchronization before handing off on `dev`.
 
 The manual **Run workflow** entry builds an existing tag and stores downloadable
 Actions artifacts without publishing a GitHub Release. The normal desktop regression
