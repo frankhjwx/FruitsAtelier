@@ -11,6 +11,7 @@ public sealed partial class EditorView
     public Action? RequestPasteSongSetup { get; set; }
     public int SongSetupInputSession { get; private set; }
     private int songTab, songColour, songDrag = -1;
+    private bool songCountdownOpen;
     private string songField = "", songError = "";
     private bool songCustomColours;
     private double songHue, songSaturation, songValue;
@@ -23,6 +24,7 @@ public sealed partial class EditorView
     private static readonly string[] SongMetadata = ["ArtistUnicode", "Artist", "TitleUnicode", "Title", "Creator", "Version", "Source", "Tags"];
     private static readonly string[] SongDifficulty = ["HPDrainRate", "CircleSize", "ApproachRate", "OverallDifficulty"];
     private static readonly string[] SongDesign = ["Countdown", "CountdownOffset", "WidescreenStoryboard", "LetterboxInBreaks", "EpilepsyWarning"];
+    private static readonly string[] SongCountdownSpeeds = ["song.countdownOff", "song.countdownNormal", "song.countdownHalf", "song.countdownDouble"];
     internal Rect SongSetupButtonBounds => new(SkinSelectorBounds.X - 126, 6, 120, 28);
     internal Rect SongSetupBounds => new((width - Math.Min(840, width - 32)) / 2,
         (height - Math.Min(580, height - 32)) / 2, Math.Min(840, width - 32), Math.Min(580, height - 32));
@@ -34,7 +36,7 @@ public sealed partial class EditorView
         if (AudioPlaying) RequestPausePlayback?.Invoke();
         menu = -1; languageMenuOpen = false; contextItems.Clear();
         songValues.Clear(); songInitial.Clear(); songField = songError = "";
-        songTab = songColour = 0; songDrag = -1; SongSetupInputSession++;
+        songTab = songColour = 0; songDrag = -1; songCountdownOpen = false; SongSetupInputSession++;
         foreach (string key in SongMetadata) songValues[key] = SongSetup.Get(Document, "Metadata", key);
         songValues["ArtistUnicode"] = SongSetup.Get(Document, "Metadata", "ArtistUnicode", songValues["Artist"]);
         if (string.IsNullOrWhiteSpace(songValues["ArtistUnicode"])) songValues["ArtistUnicode"] = songValues["Artist"];
@@ -56,7 +58,7 @@ public sealed partial class EditorView
 
     private void CloseSongSetup()
     {
-        SongSetupVisible = false; songField = ""; songDrag = -1; SongSetupInputSession++;
+        SongSetupVisible = false; songField = ""; songDrag = -1; songCountdownOpen = false; SongSetupInputSession++;
         hits.Clear(); fields.Clear();
     }
 
@@ -84,20 +86,18 @@ public sealed partial class EditorView
         {
             int tab = i;
             Button(c, new(r.X + 22 + i * 140, r.Y + 52, 132, 32), L.Get(tabs[i]), () =>
-            { songTab = tab; songField = ""; songError = ""; SongSetupInputSession++; }, songTab == i);
+            { songTab = tab; songField = ""; songError = ""; songCountdownOpen = false; SongSetupInputSession++; }, songTab == i);
         }
         c.Line(r.X + 22, r.Y + 96, r.Right - 22, r.Y + 96, Grid);
         if (songTab == 0)
         {
-            c.Text(L.Get("song.shared"), r.X + 22, r.Y + 107, 12, Muted, r.Width - 44);
-            for (int i = 0; i < SongMetadata.Length; i++) SongTextField(c, SongMetadata[i], r.Y + 133 + i * 40);
+            for (int i = 0; i < SongMetadata.Length; i++) SongTextField(c, SongMetadata[i], r.Y + 112 + i * 40);
         }
         else if (songTab == 1)
         {
-            c.Text(L.Get("song.currentDiff"), r.X + 22, r.Y + 110, 13, Muted, r.Width - 44);
             for (int i = 0; i < SongDifficulty.Length; i++)
             {
-                string key = SongDifficulty[i]; float y = r.Y + 155 + i * 76;
+                string key = SongDifficulty[i]; float y = r.Y + 132 + i * 76;
                 SongTextField(c, key, y, compact: true);
                 var track = new Rect(r.X + 240, y + 9, r.Width - 378, 20);
                 double.TryParse(songValues[key], NumberStyles.Float, CultureInfo.InvariantCulture, out double value);
@@ -105,22 +105,35 @@ public sealed partial class EditorView
                 c.Circle(track.X + (float)Math.Clamp(value / 10, 0, 1) * track.Width, track.Y + 10, 7, Accent);
                 songSliders.Add((track, key));
             }
-            c.Text(L.Get("song.precision"), r.X + 22, r.Y + 468, 12, Muted, r.Width - 44);
         }
         else if (songTab == 2) DrawSongColours(c, r);
         else
         {
-            c.Text(L.Get("song.designHint"), r.X + 22, r.Y + 111, 12, Muted, r.Width - 44);
-            string[] speeds = ["song.countdownOff", "song.countdownNormal", "song.countdownHalf", "song.countdownDouble"];
             int.TryParse(songValues["Countdown"], out int countdown);
-            Button(c, new(r.X + 22, r.Y + 148, r.Width - 44, 36), L.Get(speeds[Math.Clamp(countdown, 0, 3)]), () =>
-                songValues["Countdown"] = ((countdown + 1) % 4).ToString(CultureInfo.InvariantCulture));
-            SongTextField(c, "CountdownOffset", r.Y + 203);
+            var selector = new Rect(r.X + 22, r.Y + 120, r.Width - 44, 36);
+            c.Fill(selector, Surface, 4); c.Stroke(selector, songCountdownOpen ? Accent : Grid, radius: 4);
+            c.Text(L.Get(SongCountdownSpeeds[Math.Clamp(countdown, 0, SongCountdownSpeeds.Length - 1)]),
+                selector.X + 10, selector.Y + 9, 13, Foreground, selector.Width - 50);
+            c.Text("▾", selector.Right - 27, selector.Y + 8, 14, Foreground, 18);
+            hits.Add(new(selector, () => { songField = ""; songCountdownOpen = !songCountdownOpen; }, true));
+            SongTextField(c, "CountdownOffset", r.Y + 176);
             for (int i = 2; i < SongDesign.Length; i++)
             {
                 string key = SongDesign[i]; bool enabled = songValues[key] == "1";
-                Button(c, new(r.X + 22, r.Y + 264 + (i - 2) * 56, r.Width - 44, 38),
-                    (enabled ? "✓ " : "□ ") + L.Get($"song.{key}"), () => songValues[key] = enabled ? "0" : "1", enabled);
+                ToggleSwitch(c, new(r.X + 22, r.Y + 238 + (i - 2) * 56, r.Width - 44, 38),
+                    L.Get($"song.{key}"), enabled, () => songValues[key] = enabled ? "0" : "1");
+            }
+            if (songCountdownOpen)
+            {
+                var menu = new Rect(selector.X, selector.Bottom + 2, selector.Width, 12 + SongCountdownSpeeds.Length * 32);
+                c.Fill(new(menu.X + 3, menu.Y + 4, menu.Width, menu.Height), 0x11151B, 5);
+                c.Fill(menu, Surface, 5); c.Stroke(menu, Grid, 1, 5);
+                for (int i = 0; i < SongCountdownSpeeds.Length; i++)
+                {
+                    var row = new Rect(menu.X + 6, menu.Y + 6 + i * 32, menu.Width - 12, 30);
+                    if (row.Contains(mouseX, mouseY)) c.Fill(row, 0x343E4D, 4);
+                    c.Text(L.Get(SongCountdownSpeeds[i]), row.X + 9, row.Y + 7, 12, i == countdown ? Accent : Foreground, row.Width - 18);
+                }
             }
         }
         c.Text(songError, r.X + 22, r.Bottom - 84, 12, Error, r.Width - 44);
@@ -136,10 +149,11 @@ public sealed partial class EditorView
         var box = new Rect(compact ? r.Right - 116 : r.X + 240, y, compact ? 94 : r.Width - 262, 32);
         songFieldBounds[key] = box;
         bool enabled = SongFieldEnabled(key), focused = enabled && songField == key;
-        c.Fill(box, enabled ? Surface : Background, 4); c.Stroke(box, focused ? Accent : Grid, radius: 4);
+        if (enabled) { c.Fill(box, Surface, 4); c.Stroke(box, focused ? Accent : Grid, radius: 4); }
         string value = !enabled && key is "Artist" or "Title" ? songValues[key + "Unicode"] : songValues[key];
         string inputKey = "song:" + key;
-        DrawInputText(c, new(box.X + 9, box.Y + 7, box.Width - 18, 20), value, 13, focused, inputKey);
+        if (enabled) DrawInputText(c, new(box.X + 9, box.Y + 7, box.Width - 18, 20), value, 13, focused, inputKey);
+        else c.Text(value, box.X + 9, box.Y + 7, 13, 0xB8C2CE, box.Width - 18);
         hits.Add(new(box, () => { songField = key; SongSetupInputSession++; FocusInput(inputKey, value, mouseX); }, enabled));
     }
 
@@ -200,6 +214,19 @@ public sealed partial class EditorView
     private void SongSetupPointerDown(float x, float y, int button, bool shift)
     {
         if (button != 0) return;
+        if (songCountdownOpen)
+        {
+            var selector = new Rect(SongSetupBounds.X + 22, SongSetupBounds.Y + 120, SongSetupBounds.Width - 44, 36);
+            var menu = new Rect(selector.X, selector.Bottom + 2, selector.Width, 12 + SongCountdownSpeeds.Length * 32);
+            if (menu.Contains(x, y))
+            {
+                for (int i = 0; i < SongCountdownSpeeds.Length; i++)
+                    if (new Rect(menu.X + 6, menu.Y + 6 + i * 32, menu.Width - 12, 30).Contains(x, y))
+                    { songValues["Countdown"] = i.ToString(CultureInfo.InvariantCulture); songCountdownOpen = false; return; }
+                return;
+            }
+            if (!selector.Contains(x, y)) { songCountdownOpen = false; return; }
+        }
         if (songTab == 2 && songCustomColours && (songPalette.Contains(x, y) || songHueTrack.Contains(x, y)))
         { songField = ""; songDrag = songPalette.Contains(x, y) ? 4 : 5; MoveSongSetup(x, y, shift); return; }
         for (int i = 0; i < songSliders.Count; i++)
@@ -231,10 +258,11 @@ public sealed partial class EditorView
 
     private void SongSetupKey(int key, bool ctrl, bool shift)
     {
-        if (key == 27) { CloseSongSetup(); return; }
+        if (key == 27) { if (songCountdownOpen) songCountdownOpen = false; else CloseSongSetup(); return; }
         if (key == 13) { ApplySongSetup(); return; }
         if (key == 9)
         {
+            songCountdownOpen = false;
             var keys = songFieldBounds.Keys.Where(SongFieldEnabled).ToArray();
             if (keys.Length > 0)
             {

@@ -22,6 +22,12 @@ internal static class SongSetupTests
                 var ui = new Ui(false); ui.Resize(980, 620);
                 ui.View.LoadProject(BeatmapProject.FromDocuments([map, second])); ui.Paint();
                 ui.ClickText(L.Get("song.title"));
+                var romanised = ui.View.SongSetupFieldBounds["Artist"];
+                Check(!ui.Canvas.Outlines.Any(outline => outline.Bounds == romanised)
+                    && ui.Canvas.Texts.Any(text => text.Value == "Artist" && text.Color == 0xB8C2CE),
+                    "Read-only romanised metadata has no input border and uses muted text");
+                ui.Click(romanised.X + 5, romanised.Y + 5);
+                Check(!ui.View.IsEditingText, "Read-only romanised metadata cannot receive input focus");
                 ui.Key('F'); ui.Key(116); ui.Key('S', ctrl: true);
                 Check(ui.View.SongSetupVisible && !ui.View.IsTestplaying && ui.View.Document.ContentEquals(map), "Modal isolates editor input");
                 ui.ClickText(L.Get("song.ok"));
@@ -39,11 +45,14 @@ internal static class SongSetupTests
                 ui.ClickText(L.Get("song.colours")); ui.ClickText(L.Get("song.customColours"));
                 Set(ui, "Hex", "#123ABC"); ui.ClickText(L.Get("song.addColour")); Set(ui, "Hex", "#FA1234");
                 ui.ClickText(L.Get("song.design")); ui.ClickText(L.Get("song.countdownOff"));
-                Set(ui, "CountdownOffset", "3"); ui.ClickText("□ " + L.Get("song.WidescreenStoryboard"));
-                ui.ClickText("□ " + L.Get("song.LetterboxInBreaks")); ui.ClickText("□ " + L.Get("song.EpilepsyWarning"));
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("song.countdownHalf")), "Countdown opens a choice list");
+                ui.ClickText(L.Get("song.countdownHalf"));
+                Set(ui, "CountdownOffset", "3"); ui.ClickText(L.Get("song.WidescreenStoryboard"));
+                ui.ClickText(L.Get("song.LetterboxInBreaks")); ui.ClickText(L.Get("song.EpilepsyWarning"));
                 ui.ClickText(L.Get("song.ok"));
                 Check(!ui.View.SongSetupVisible && ui.View.IsDirty && ui.View.CurrentDifficultyName == "Normal", "Confirm changes and difficulty name");
                 var edited = ui.View.Document.DeepClone();
+                Check(SongSetup.Get(edited, "General", "Countdown") == "2", "Countdown changes only after choosing a menu item");
                 Check(edited.ApproachRate == 9.3 && edited.CircleSize == 4.5, "Difficulty updates model");
                 Check(SongSetup.Colours(edited).SequenceEqual(new uint[] { 0x123ABC, 0x00CA00, 0x127CFF, 0xF21839, 0xFA1234 }), "HEX and added colours commit");
                 var exported = OsuBeatmapWriter.Serialize(edited).ReadBack;

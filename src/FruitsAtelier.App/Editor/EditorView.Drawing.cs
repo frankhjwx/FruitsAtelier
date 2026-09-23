@@ -565,6 +565,16 @@ public sealed partial class EditorView
         hits.Add(new(r, action, enabled));
     }
 
+    private void ToggleSwitch(ICanvas c, Rect r, string label, bool value, Action action)
+    {
+        if (r.Contains(mouseX, mouseY)) c.Fill(r, 0x303A46, 5);
+        c.Text(label, r.X + 10, r.Y + (r.Height - 17) / 2, 13, Foreground, r.Width - 82);
+        var track = new Rect(r.Right - 58, r.Y + (r.Height - 24) / 2, 46, 24);
+        c.Fill(track, value ? 0x417D77u : 0x46515Fu, 12);
+        c.Circle(track.X + (value ? 34 : 12), track.Y + 12, 9, 0xF0F3F6);
+        hits.Add(new(r, action, true));
+    }
+
     private static void Badge(ICanvas c, Rect r, string label, uint color)
     {
         c.Fill(r, 0x2B323B, 4);

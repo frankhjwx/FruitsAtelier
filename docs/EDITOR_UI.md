@@ -29,10 +29,12 @@ shortcuts, seeking and object input are blocked until it closes.
 
 General edits artist, title, creator, source and tags across every difficulty in
 the project. Non-ASCII artist/title text enables a separate romanised field;
-ASCII text supplies both forms. Difficulty Name belongs only to the current
-difficulty. Undo/redo in the difficulty where the change was made also restores
-the affected shared fields in the other difficulties, retaining their independent
-object histories. Unedited fields and source settings are preserved.
+ASCII text supplies both forms; the romanised value appears as unframed,
+read-only text until a separate spelling is needed. Difficulty Name belongs only
+to the current difficulty. Undo/redo in the difficulty where the change was made
+also restores the affected shared fields in the other difficulties, retaining
+their independent object histories. Unedited fields and source settings are
+preserved.
 
 Difficulty edits the current difficulty's HP, CS, AR and OD from 0 to 10. Drag a
 slider in whole steps, hold Shift for 0.1 steps, or type a decimal value. Colors
@@ -42,9 +44,10 @@ it, or remove a selected color while retaining at least one. Disabling custom
 colors removes the beatmap combo overrides, allowing the normal skin fallback.
 The canvas, preview and testplay use the confirmed palette.
 
-Design stores countdown speed (off, normal, half or double), a non-negative
-countdown offset in beats, widescreen storyboard support, letterboxing in breaks
-and the flashing-light warning. These options are preserved in project saves and
+Design selects countdown speed (off, normal, half or double) from a dropdown and
+stores a non-negative countdown offset in beats. Switches control widescreen
+storyboard support, letterboxing in breaks and the flashing-light warning. These
+options are preserved in project saves and
 `.osu` exports; the editor does not render countdown or storyboard effects.
 Audio, Advanced and preferred-skin controls are not part of Song Setup.
 
