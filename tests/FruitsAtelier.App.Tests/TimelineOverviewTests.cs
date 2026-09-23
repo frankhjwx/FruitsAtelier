@@ -7,6 +7,7 @@ internal static class TimelineOverviewTests
         var map = new MapDocument { DurationMs = 3000, IsDemo = false };
         map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, Effects = 0 });
         map.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = 500, Effects = 1 });
+        map.TimingPoints.Add(new() { TimeMs = 1250, BeatLengthMs = -100, Uninherited = false, Effects = 1 });
         map.TimingPoints.Add(new() { TimeMs = 2000, BeatLengthMs = 500, Effects = 0 });
         map.Fruits.Add(new() { TimeMs = 2500, X = 256 });
         var ui = new Ui(overview: false);
@@ -26,8 +27,27 @@ internal static class TimelineOverviewTests
         Check(first > faded && next > faded && Math.Abs(first - next) < .001f,
             "Kiai indicator must pulse each full beat and fade between beats");
         Check(PulseAt(2000) is null, "Kiai indicator remained after the interval");
-        ui.View.Document.TimingPoints[2].Effects = 1;
+        ui.View.Document.TimingPoints[3].Effects = 1;
         Check(PulseAt(2000) is not null, "Changing Kiai timing did not refresh the indicator");
+    }
+
+    public static void StoryboardBreakRendering()
+    {
+        var map = new MapDocument { DurationMs = 5000, IsDemo = false };
+        map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500 });
+        map.Fruits.Add(new() { TimeMs = 1000, X = 256 });
+        var events = new OsuSection { Name = "Events" };
+        events.Lines.AddRange(Enumerable.Range(0, 25000).Select(i => $"Sprite,Foreground,Centre,bg{i}.png,320,240"));
+        map.OriginalSections.Add(events);
+        OsuTimeline.AddBreak(map, 1500, 3000);
+        var ui = new Ui(overview: false);
+        ui.LoadDocument(map);
+        ui.View.UpdateTransport(2000, 5000, false, false, false, null, null);
+        ui.Paint();
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        ui.Paint();
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+        Check(allocated < 1_000_000, $"Repainting a storyboard-heavy map allocated {allocated} bytes");
     }
 
     public static void ComboColours()

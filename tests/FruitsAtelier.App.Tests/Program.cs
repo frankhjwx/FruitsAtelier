@@ -98,6 +98,7 @@ var tests = new (string Name, Action Run)[]
     ("Upper and canvas timelines show break, timing and preview markers", TimelineOverviewTests.DetailMarkers),
     ("Upper timeline notes follow combo colours and New Combo boundaries", TimelineOverviewTests.ComboColours),
     ("Kiai indicator pulses on full beats and follows timing edits", TimelineOverviewTests.KiaiPulse),
+    ("Storyboard-heavy maps reuse break intervals during repaint", TimelineOverviewTests.StoryboardBreakRendering),
     ("Upper timeline stacks preserve white rings and lift selected notes", TimelineOverviewTests.StackAndSelection),
     ("Timing menu sets an undoable preview point", TimelineOverviewTests.PreviewPointMenu),
     ("Snap toolbar inserts an undoable break between objects", TimelineOverviewTests.InsertBreakButton),

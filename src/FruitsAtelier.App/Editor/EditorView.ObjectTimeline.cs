@@ -20,6 +20,7 @@ public sealed partial class EditorView
     private int breakEditIndex;
     private bool breakEditStart;
     private BreakPeriod breakEditOriginal, breakEditPreview;
+    private BreakPeriod[] breakPeriods = [];
     private bool IsTimelineTail((Guid Id, double Time, Rect Bounds) item, float x, float y)
         => item.Bounds.Contains(x, y) && Math.Abs(x - (item.Bounds.Right - 19)) <= 10
         && (Document.Tracks.Any(t => t.Id == item.Id && t.Nodes.Count > 1)
@@ -71,7 +72,7 @@ public sealed partial class EditorView
         double previousEnd = timelineEnds[previous], nextStart = timelineStarts[next];
         int start = (int)Math.Clamp(Math.Ceiling(previousEnd + 200), 0, int.MaxValue);
         int end = (int)Math.Clamp(Math.Floor(nextStart - CatchScrollTiming.PreemptMs(Document.ApproachRate)), 0, int.MaxValue);
-        if (end - (long)start < 400 || OsuTimeline.Breaks(Document).Any(period => period.StartMs < end && period.EndMs > start)) return null;
+        if (end - (long)start < 400 || breakPeriods.Any(period => period.StartMs < end && period.EndMs > start)) return null;
         return new(start, end);
     }
 
@@ -83,8 +84,9 @@ public sealed partial class EditorView
 
     private BreakPeriod[] DisplayedBreaks()
     {
-        var periods = OsuTimeline.Breaks(Document).ToArray();
-        if (drag == DragKind.BreakEdge && breakEditIndex < periods.Length) periods[breakEditIndex] = breakEditPreview;
+        if (drag != DragKind.BreakEdge || breakEditIndex >= breakPeriods.Length) return breakPeriods;
+        var periods = (BreakPeriod[])breakPeriods.Clone();
+        periods[breakEditIndex] = breakEditPreview;
         return periods;
     }
 
@@ -131,11 +133,11 @@ public sealed partial class EditorView
     private (int Index, bool Start)? BreakEdgeAt(float x, float y)
     {
         if (!objectTimeline.Contains(x, y)) return null;
-        var periods = OsuTimeline.Breaks(Document);
+        var periods = breakPeriods;
         double first = ObjectTimelineStartMs;
         float best = 7;
         (int, bool)? found = null;
-        for (int i = 0; i < periods.Count; i++)
+        for (int i = 0; i < periods.Length; i++)
         {
             float startX = objectTimeline.X + (float)((periods[i].StartMs - first) * objectTimelineScale);
             float endX = objectTimeline.X + (float)((periods[i].EndMs - first) * objectTimelineScale);
@@ -151,7 +153,7 @@ public sealed partial class EditorView
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || BreakEdgeAt(x, y) is not { } edge) return false;
         breakEditIndex = edge.Index;
         breakEditStart = edge.Start;
-        breakEditOriginal = OsuTimeline.Breaks(Document)[edge.Index];
+        breakEditOriginal = breakPeriods[edge.Index];
         breakEditPreview = breakEditOriginal;
         drag = DragKind.BreakEdge;
         BeginPointerDrag(x, y);
@@ -160,7 +162,7 @@ public sealed partial class EditorView
 
     private void MoveBreakEdge(float x)
     {
-        var periods = OsuTimeline.Breaks(Document);
+        var periods = breakPeriods;
         var neighbors = BreakNeighborTimes(breakEditOriginal);
         double raw = ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale;
         int target = (int)Math.Clamp(Math.Round(snap ? TimingMap.Snap(Document, raw, divisor) : raw), 0, int.MaxValue);
@@ -173,7 +175,7 @@ public sealed partial class EditorView
         else
         {
             int maximum = (int)Math.Clamp(Math.Floor(neighbors.NextStart ?? TimelineDurationMs), breakEditOriginal.StartMs, int.MaxValue);
-            if (breakEditIndex + 1 < periods.Count) maximum = Math.Min(maximum, periods[breakEditIndex + 1].StartMs);
+            if (breakEditIndex + 1 < periods.Length) maximum = Math.Min(maximum, periods[breakEditIndex + 1].StartMs);
             breakEditPreview = breakEditOriginal with { EndMs = Math.Clamp(target, breakEditOriginal.StartMs, Math.Max(maximum, breakEditOriginal.StartMs)) };
         }
     }

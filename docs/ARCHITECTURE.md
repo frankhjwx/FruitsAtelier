@@ -112,6 +112,9 @@ The object timeline caches its ordered source intervals against the conversion r
 Imported slider ends reuse converted durations, so repainting does not rebuild every
 slider's geometry and timing state. Content changes invalidate these intervals along
 with conversion; scrolling, playback and selection reuse them.
+Break intervals are parsed from source Events once per conversion snapshot and reused
+by the canvas, object timeline, and transport. This avoids scanning storyboard-heavy
+Events sections on every frame while preserving edits and undo through conversion invalidation.
 Hit testing rejects distant curve segments before sampling them. Editing snapshots
 copy existing identities without generating replacement IDs, and group dragging uses
 direct target lookup. Undo/redo still retains independent document snapshots.

@@ -9,8 +9,18 @@ public sealed partial class EditorView
     private (double TimeMs, bool Active)[] kiaiTransitions = [];
 
     private void RefreshKiaiTransitions()
-        => kiaiTransitions = Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder)
-            .GroupBy(p => p.TimeMs).Select(group => (group.Key, (group.Last().Effects & 1) != 0)).ToArray();
+    {
+        var transitions = new List<(double TimeMs, bool Active)>();
+        bool active = false;
+        foreach (var group in Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).GroupBy(p => p.TimeMs))
+        {
+            bool next = (group.Last().Effects & 1) != 0;
+            if (next == active) continue;
+            transitions.Add((group.Key, next));
+            active = next;
+        }
+        kiaiTransitions = transitions.ToArray();
+    }
 
     public void Render(ICanvas c, float width, float height)
     {
