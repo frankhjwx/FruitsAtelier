@@ -20,6 +20,11 @@ static class HitsoundTests
             var sounds = resolver.Resolve(item);
             Require(sounds.Count == 2 && sounds[0].FilePath == Path.Combine(root, "soft-hitnormal2.wav") && sounds[1].FilePath == Path.Combine(root, "drum-hitclap2.ogg"), "Timing bank/index and addition bank select map samples");
             Require(sounds.All(s => Math.Abs(s.Volume - .4) < .001), "Timing volume is inherited");
+            document.TimingPoints[0].TimeMs = 1000;
+            resolver = new(document, new[] { item }); sounds = resolver.Resolve(item);
+            Require(sounds[0].SampleSet == 2 && sounds.All(s => Math.Abs(s.Volume - .4) < .001),
+                "Notes before the first red point inherit its sample bank and volume");
+            document.TimingPoints[0].TimeMs = 0;
             fruit.OriginalLine = "100,192,100,1,14,1:3:0:75:custom.wav";
             resolver = new(document, new[] { item }); sounds = resolver.Resolve(item);
             Require(sounds.Count == 4 && sounds[0].FilePath == Path.Combine(root, "Custom.wav") && sounds.All(s => s.Volume == .75f), "Case-insensitive custom sample replaces normal while retaining additions and explicit volume");
