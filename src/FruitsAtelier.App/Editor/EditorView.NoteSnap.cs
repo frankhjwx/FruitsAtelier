@@ -53,6 +53,7 @@ public sealed partial class EditorView
             savedSnapEnabled = snap;
         }
         temporarySnapSource = note.SourceId;
+        matched = matched switch { 1 or 2 => 4, 3 => 6, _ => matched };
         divisor = matched;
         snap = true;
         int step = (int)Math.Round((note.TimeMs - timing.OffsetMs) / (timing.BeatLengthMs / matched), MidpointRounding.AwayFromZero);

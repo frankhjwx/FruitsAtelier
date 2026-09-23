@@ -207,9 +207,23 @@ internal static class NoteSnapTests
             Check(ui.View.SnapDivisor == 8, "Leaving selection reverted a manually chosen snap.");
             Check(original.ContentEquals(ui.View.Document), "Beat-position inspection edited map content.");
 
+            foreach (var (time, current, expected, numerator, denominator) in new[]
+                     { (1500d, 3, 4, 1, 2), (1333d, 4, 6, 1, 3), (1125d, 4, 8, 1, 8) })
+            {
+                var minimum = new MapDocument { DurationMs = 4000, BeatLengthMs = 1000, IsDemo = false };
+                minimum.Fruits.Add(new Fruit { TimeMs = time, X = 250 });
+                ui.LoadDocument(minimum); ui.SetSnapDivisor(current);
+                point = ui.ScreenAt(time, 250); Inspect(ui, point.X, point.Y);
+                Check(ui.View.SnapDivisor == expected && ui.View.StatusMessage == Strings.Get(
+                    "editor.status.noteBeatPosition", numerator, denominator, TimeSpan.FromMilliseconds(time).ToString(@"mm\:ss\:fff"), expected),
+                    "Automatic snap did not respect the quarter/sixth minimum while preserving the beat fraction.");
+                ui.ClickMap(3000, 450);
+                Check(ui.View.SnapDivisor == current, "Leaving the note did not restore the manually chosen snap.");
+            }
+
             foreach (var (time, x, expectedDivisor, numerator, denominator) in new[]
-                     { (3670d, 208d, 3, 2, 3), (3726d, 176d, 6, 5, 6),
-                       (47669d, 287d, 3, 2, 3), (47725d, 262d, 6, 5, 6) })
+                     { (3670d, 208d, 6, 2, 3), (3726d, 176d, 6, 5, 6),
+                       (47669d, 287d, 6, 2, 3), (47725d, 262d, 6, 5, 6) })
             {
                 var ra = new MapDocument { DurationMs = 50000, IsDemo = false };
                 ra.TimingPoints.Add(new TimingPoint { TimeMs = 115, BeatLengthMs = 333.333333333333, Uninherited = true });
