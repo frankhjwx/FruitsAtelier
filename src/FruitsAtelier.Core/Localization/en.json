@@ -1,4 +1,7 @@
 {
+  "timeline.addBreak": "Add break",
+  "timeline.removeBreak": "Remove break",
+  "timeline.bookmark": "Toggle bookmark",
   "volume.title": "Volume",
   "ui.close": "Close",
   "volume.all": "All",

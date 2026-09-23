@@ -400,9 +400,9 @@ internal static class SliderInteractionTests
 
     private static void Navigate(Ui ui, double time)
     {
-        var markers = ui.Canvas.Lines.Where(l => l.Color == 0x2B3442 && l.X1 == l.X2).ToArray();
-        float left = markers.Min(l => l.X1), right = markers.Max(l => l.X1);
-        ui.Click(left + (float)(time / ui.View.TimelineDurationMs) * (right - left), (markers[0].Y1 + markers[0].Y2) / 2);
+        var overview = ui.Canvas.Outlines.Single(o => o.Color == 0x71849A).Bounds;
+        float width = ui.Canvas.Fills.Single(f => f.Color == 0x141922 && f.Bounds.Y == overview.Y - 1).Bounds.Width;
+        ui.Click(overview.X + (float)(time / ui.View.TimelineDurationMs) * width, overview.Y + 20);
     }
 
     private static void Valid(Ui ui) => Check(CurveMath.Validate(ui.View.Document).Count == 0,

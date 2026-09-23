@@ -401,38 +401,38 @@ public sealed partial class EditorView
         }
         c.Fill(overview, 0x141922, 4);
         if (AudioLoading) return;
-        for (int i = 0; i <= 6; i++)
+        float TimelineX(double time) => overview.X + (float)(Math.Clamp(time, 0, TimelineDurationMs) / TimelineDurationMs) * overview.Width;
+        var timing = Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
+        for (int i = 0; i < timing.Length; i++)
         {
-            float x = overview.X + overview.Width * i / 6;
-            c.Line(x, overview.Y + 2, x, overview.Bottom, 0x2B3442);
+            var point = timing[i];
+            if (point.TimeMs < 0 || point.TimeMs > TimelineDurationMs) continue;
+            float x = TimelineX(point.TimeMs);
+            c.Line(x, overview.Y + 2, x, overview.Y + 18, point.Uninherited ? 0xEC4545u : 0x73B92Fu);
         }
-        if (showTargets)
-            foreach (var track in Document.Tracks)
-                if (track.Nodes.Count >= 2)
-                {
-                    float start = overview.X + (float)(track.Nodes[0].TimeMs / TimelineDurationMs) * overview.Width;
-                    float end = overview.X + (float)(CurveMath.EndTimeMs(track) / TimelineDurationMs) * overview.Width;
-                    c.Fill(new(start, overview.Y + 9, Math.Max(2, end - start), 6), track.Kind == CurveKind.Bezier ? Purple : Accent, 2);
-                }
-        // The overview is a pixel-sized summary. Preserve hyperdash markers when events overlap.
-        int lastPixel = int.MinValue;
-        bool hyper = false;
-        foreach (var item in conversion!.Objects)
+        for (int i = 0; i < timing.Length; i++)
         {
-            if (item.Kind == CatchObjectKind.TinyDroplet) continue;
-            int pixel = (int)Math.Round(item.TimeMs / TimelineDurationMs * overview.Width);
-            if (pixel != lastPixel)
-            {
-                FlushMarker(); lastPixel = pixel; hyper = false;
-            }
-            hyper |= hyperdashObjects.Contains((item.SourceId, item.EventIndex));
+            var point = timing[i];
+            if ((point.Effects & 1) == 0) continue;
+            double end = i + 1 < timing.Length ? timing[i + 1].TimeMs : TimelineDurationMs;
+            float x1 = TimelineX(point.TimeMs), x2 = TimelineX(end);
+            if (x2 > x1) c.Fill(new(x1, overview.Y + 21, x2 - x1, 10), 0xD7AE42);
         }
-        FlushMarker();
-        void FlushMarker()
+        foreach (var period in OsuTimeline.Breaks(Document))
         {
-            if (lastPixel == int.MinValue) return;
-            float x = overview.X + lastPixel;
-            c.Line(x, overview.Y + 23, x, overview.Y + 32, hyper ? Error : Foreground, 2);
+            float x1 = TimelineX(period.StartMs), x2 = TimelineX(period.EndMs);
+            if (x2 > x1) c.Fill(new(x1, overview.Y + 21, x2 - x1, 10), 0xF2F4F7);
+        }
+        if (drag == DragKind.Break)
+        {
+            float x1 = TimelineX(breakStartMs), x2 = Math.Clamp(mouseX, overview.X, overview.Right);
+            c.Fill(new(Math.Min(x1, x2), overview.Y + 21, Math.Abs(x2 - x1), 10), 0xF2F4F7);
+        }
+        c.Line(overview.X, overview.Y + 20, overview.Right, overview.Y + 20, 0xF2F4F7);
+        foreach (int bookmark in OsuTimeline.Bookmarks(Document))
+        {
+            float x = TimelineX(bookmark);
+            c.Line(x, overview.Y + 31, x, overview.Bottom - 1, 0x4B9EF5);
         }
         double visibleStart = Math.Clamp(viewStart, 0, TimelineDurationMs);
         double visibleEnd = Math.Clamp(viewStart + plot.Height / pixelsPerMs, visibleStart, TimelineDurationMs);
@@ -440,8 +440,8 @@ public sealed partial class EditorView
         float viewWidth = (float)((visibleEnd - visibleStart) / TimelineDurationMs) * overview.Width;
         c.Stroke(new(viewX, overview.Y + 1, viewWidth, overview.Height - 2), 0x71849A, 1, 3);
         float headX = TimelineHeadX;
-        c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, Gold, 2);
-        Diamond(c, headX, overview.Y - 2, 4, Gold);
+        c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, 0xFFFFFF, 2);
+        c.Fill(new(headX - 2, overview.Y - 5, 4, 6), 0xFFFFFF);
     }
 
     private void DrawStatus(ICanvas c)

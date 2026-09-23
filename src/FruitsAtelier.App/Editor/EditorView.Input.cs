@@ -7,6 +7,8 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private double timelineMsPerDip;
+    private int breakStartMs;
+    private int OverviewTime(float x) => (int)Math.Clamp(Math.Round((x - overview.X) / overview.Width * TimelineDurationMs), 0, int.MaxValue);
     private float TimelineHeadX => overview.X + (float)(playhead / TimelineDurationMs) * overview.Width;
     private bool HitsTimelineHead(float x, float y) => Math.Abs(x - TimelineHeadX) <= 6
         && y >= overview.Y - 7 && y <= overview.Bottom + 2;
@@ -69,6 +71,13 @@ public sealed partial class EditorView
         {
             if (editField >= 0 && !CommitField()) return;
             contextItems.Clear(); menu = -1;
+            if (overview.Contains(x, y))
+            {
+                int time = OverviewTime(x);
+                var period = OsuTimeline.Breaks(Document).FirstOrDefault(b => time >= b.StartMs && time <= b.EndMs);
+                if (period.EndMs > period.StartMs) Edit(L.Get("timeline.removeBreak"), () => OsuTimeline.RemoveBreak(Document, period));
+                return;
+            }
             if (objectTimeline.Contains(x, y)) DeleteTimelineObject(x, y);
             else RightClickCanvas(x, y);
             return;
@@ -130,6 +139,20 @@ public sealed partial class EditorView
         if (objectTimeline.Contains(x, y)) { BeginObjectTimeline(x, y, ctrl || shift); return; }
         if (!AudioLoading && (overview.Contains(x, y) || HitsTimelineHead(x, y)))
         {
+            if (overview.Contains(x, y) && ctrl)
+            {
+                int time = OverviewTime(x);
+                int nearest = OsuTimeline.Bookmarks(Document).Where(t => Math.Abs(t - time) * overview.Width / TimelineDurationMs <= 5)
+                    .OrderBy(t => Math.Abs(t - time)).DefaultIfEmpty(-1).First();
+                Edit(L.Get("timeline.bookmark"), () => OsuTimeline.ToggleBookmark(Document, nearest >= 0 ? nearest : time));
+                return;
+            }
+            if (overview.Contains(x, y) && shift)
+            {
+                breakStartMs = OverviewTime(x);
+                drag = DragKind.Break;
+                return;
+            }
             bool grabbedHead = HitsTimelineHead(x, y);
             drag = DragKind.Timeline;
             dragStartX = x;
@@ -419,6 +442,14 @@ public sealed partial class EditorView
         if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
         if (ExportVisible) return;
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
+        if (drag == DragKind.Break)
+        {
+            int end = OverviewTime(x);
+            if (Math.Abs(end - breakStartMs) >= 1)
+                Edit(L.Get("timeline.addBreak"), () => OsuTimeline.AddBreak(Document, Math.Min(end, breakStartMs), Math.Max(end, breakStartMs)));
+            drag = DragKind.None;
+            return;
+        }
         PointerMove(x, y, false, false);
         if (drag == DragKind.PlaybackLine) { FinishPlaybackLineDrag(); return; }
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
@@ -711,6 +742,16 @@ public sealed partial class EditorView
         {
             if (drag != DragKind.None) return;
             contextItems.Clear();
+            if (virtualKey == 66)
+            {
+                int time = (int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue);
+                Edit(L.Get("timeline.bookmark"), () =>
+                {
+                    if (shift) OsuTimeline.RemoveNearestBookmark(Document, time);
+                    else OsuTimeline.AddBookmark(Document, time);
+                });
+                return;
+            }
             if (ClipboardInteractionReady && HandleLegacyShortcut(virtualKey, shift)) return;
             if (virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (virtualKey == 89) Redo();

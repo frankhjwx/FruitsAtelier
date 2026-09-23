@@ -82,6 +82,8 @@ public static class OsuBeatmapReader
         double last = document.Fruits.Select(f => f.TimeMs)
             .Concat(document.BananaShowers.Select(s => s.EndTimeMs))
             .Concat(document.ImportedSliders.Select(s => s.TimeMs + ImportedSliderConverter.DurationMs(document, s)))
+            .Concat(OsuTimeline.Breaks(document).Select(b => (double)b.EndMs))
+            .Concat(OsuTimeline.Bookmarks(document).Select(b => (double)b))
             .DefaultIfEmpty(0).Max();
         if (!double.IsFinite(last) || last > int.MaxValue) throw new InvalidDataException(L.Get("core.reader.endRange"));
         document.DurationMs = Math.Min(int.MaxValue, Math.Max(1000, last + 2000));

@@ -91,6 +91,8 @@ key swaps the two bindings. **Apply** saves the bindings across restarts.
 
 ## Object timeline and playback speed
 
+The bottom overview shows red and green timing points above a white center line, white break spans and yellow kiai spans on the center row, and blue bookmarks below. Click or drag to seek. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Ctrl+B adds a bookmark at the playhead, and Ctrl+Shift+B removes the nearest bookmark within two seconds. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
+
 Newly opened maps start at 0 ms from their first frame. While audio loads, the total duration displays a placeholder and the overview waits for the final range before becoming interactive. If audio is unavailable, the overview uses the map duration. Switching back to an open difficulty retains its playhead and resumes the audio at that position when loading completes.
 
 Library and Editor use the same 40-DIP header, logo geometry, 28-DIP button height, and navigation button positions. Difficulty tabs remain below the Editor header.

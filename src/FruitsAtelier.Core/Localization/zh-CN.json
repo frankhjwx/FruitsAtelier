@@ -1,4 +1,7 @@
 {
+  "timeline.addBreak": "添加休息段",
+  "timeline.removeBreak": "删除休息段",
+  "timeline.bookmark": "切换书签",
   "volume.title": "音量",
   "ui.close": "关闭",
   "volume.all": "总音量",
