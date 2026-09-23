@@ -14,6 +14,9 @@ public sealed partial class EditorView
     private readonly uint[] draftIndicatorColours = new uint[4];
     private int settingsColourIndex = -1;
     private string settingsColourHex = "", settingsColourError = "";
+    private double settingsHue, settingsSaturation, settingsValue;
+    private Rect settingsPalette, settingsHueTrack;
+    private int settingsColourDrag;
     private const float SettingsContentX = 246;
 
     public void OpenSettings()
@@ -41,7 +44,7 @@ public sealed partial class EditorView
         draftIndicatorColours[1] = LibrarySettings.WalkIndicatorColour;
         draftIndicatorColours[2] = LibrarySettings.DashIndicatorColour;
         draftIndicatorColours[3] = LibrarySettings.HyperDashIndicatorColour;
-        settingsColourIndex = -1; settingsColourHex = settingsColourError = "";
+        settingsColourIndex = -1; settingsColourDrag = 0; settingsColourHex = settingsColourError = "";
         draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
     }
 
@@ -63,6 +66,7 @@ public sealed partial class EditorView
         LibraryVisible = settingsFromLibrary;
         librarySettingsOpen = false;
         settingsColourIndex = -1;
+        settingsColourDrag = 0;
         libraryField = bindingCapture = -1;
         languageMenuOpen = false;
         contextItems.Clear(); hits.Clear();
@@ -178,6 +182,7 @@ public sealed partial class EditorView
         settingsColourIndex = index;
         settingsColourHex = $"#{draftIndicatorColours[index]:X6}";
         settingsColourError = "";
+        (settingsHue, settingsSaturation, settingsValue) = ColourToHsv(draftIndicatorColours[index], settingsHue);
         libraryField = -1;
     }
 
@@ -186,7 +191,34 @@ public sealed partial class EditorView
         draftIndicatorColours[settingsColourIndex] = colour;
         settingsColourHex = $"#{colour:X6}";
         settingsColourError = "";
+        (settingsHue, settingsSaturation, settingsValue) = ColourToHsv(colour, settingsHue);
         libraryField = -1;
+    }
+
+    private bool BeginIndicatorColourDrag(float x, float y, int button)
+    {
+        if (settingsColourIndex < 0 || button != 0) return false;
+        settingsColourDrag = settingsPalette.Contains(x, y) ? 1 : settingsHueTrack.Contains(x, y) ? 2 : 0;
+        if (settingsColourDrag == 0) return false;
+        libraryField = -1;
+        UpdateIndicatorColourDrag(x, y);
+        return true;
+    }
+
+    private void UpdateIndicatorColourDrag(float x, float y)
+    {
+        if (settingsColourDrag == 1)
+        {
+            settingsSaturation = Math.Clamp((x - settingsPalette.X) / settingsPalette.Width, 0, 1);
+            settingsValue = 1 - Math.Clamp((y - settingsPalette.Y) / settingsPalette.Height, 0, 1);
+        }
+        else if (settingsColourDrag == 2)
+            settingsHue = Math.Clamp((x - settingsHueTrack.X) / settingsHueTrack.Width, 0, .999999) * 360;
+        else return;
+        uint colour = SongHsv(settingsHue, settingsSaturation, settingsValue);
+        draftIndicatorColours[settingsColourIndex] = colour;
+        settingsColourHex = $"#{colour:X6}";
+        settingsColourError = "";
     }
 
     private bool CommitIndicatorColourHex()
@@ -203,29 +235,32 @@ public sealed partial class EditorView
         var screen = new Rect(0, 0, width, height);
         c.Fill(screen, 0x000000, opacity: .72f);
         hits.Add(new(screen, () => { }, true));
-        var dialog = new Rect((width - 468) / 2, (height - 350) / 2, 468, 350);
+        var dialog = new Rect((width - 560) / 2, (height - 430) / 2, 560, 430);
         c.Fill(dialog, Panel, 8); c.Stroke(dialog, Grid, radius: 8);
         string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
         c.Text(L.Get(names[settingsColourIndex]), dialog.X + 20, dialog.Y + 17, 18, Foreground, 300, true);
         var preview = new Rect(dialog.Right - 55, dialog.Y + 15, 30, 30);
         c.Fill(preview, draftIndicatorColours[settingsColourIndex], 4); c.Stroke(preview, Grid, radius: 4);
-        float cell = 21;
-        for (int row = 0; row < 7; row++)
-        for (int col = 0; col < 18; col++)
-        {
-            uint colour = row == 6 ? (uint)(Math.Round(col * 255d / 17) * 0x010101)
-                : SongHsv(col * 20, (6 - row) / 6d, 1);
-            var box = new Rect(dialog.X + 20 + col * (cell + 2), dialog.Y + 58 + row * (cell + 2), cell, cell);
-            c.Fill(box, colour, 2);
-            hits.Add(new(box, () => SetIndicatorColour(colour), true));
-        }
-        c.Text(L.Get("settings.indicatorHex"), dialog.X + 20, dialog.Y + 232, 13, Foreground, 120);
-        var hexField = new Rect(dialog.X + 20, dialog.Y + 253, 170, 38);
+        settingsPalette = new(dialog.X + 20, dialog.Y + 58, dialog.Width - 40, 216);
+        for (int row = 0; row < 24; row++)
+        for (int col = 0; col < 40; col++)
+            c.Fill(new(settingsPalette.X + col * settingsPalette.Width / 40, settingsPalette.Y + row * 9,
+                settingsPalette.Width / 40 + .5f, 9.5f), SongHsv(settingsHue, col / 39d, 1 - row / 23d));
+        c.Circle(settingsPalette.X + (float)settingsSaturation * settingsPalette.Width,
+            settingsPalette.Y + (float)(1 - settingsValue) * settingsPalette.Height, 5, Foreground, false, 2);
+        settingsHueTrack = new(settingsPalette.X, settingsPalette.Bottom + 14, settingsPalette.Width, 22);
+        for (int i = 0; i < 60; i++)
+            c.Fill(new(settingsHueTrack.X + i * settingsHueTrack.Width / 60, settingsHueTrack.Y,
+                settingsHueTrack.Width / 60 + .5f, 22), SongHsv(i * 6, 1, 1));
+        float hueX = settingsHueTrack.X + (float)(settingsHue / 360) * settingsHueTrack.Width;
+        c.Stroke(new(hueX - 3, settingsHueTrack.Y - 2, 6, 26), Foreground, 2);
+        c.Text(L.Get("settings.indicatorHex"), dialog.X + 20, dialog.Y + 330, 13, Foreground, 120);
+        var hexField = new Rect(dialog.X + 20, dialog.Y + 350, 170, 38);
         c.Fill(hexField, Surface, 4); c.Stroke(hexField, libraryField == 5 ? Accent : Grid, radius: 4);
         DrawInputText(c, new(hexField.X + 10, hexField.Y + 10, hexField.Width - 20, 18),
             settingsColourHex, 14, libraryField == 5, "library:5");
         hits.Add(new(hexField, () => { libraryField = 5; FocusInput("library:5", settingsColourHex, mouseX); }, true));
-        c.Text(settingsColourError, dialog.X + 20, dialog.Y + 297, 12, Error, dialog.Width - 40);
+        c.Text(settingsColourError, dialog.X + 20, dialog.Y + 397, 12, Error, dialog.Width - 40);
         Button(c, new(dialog.Right - 144, dialog.Bottom - 55, 120, 34), L.Get("settings.indicatorDone"), () =>
         {
             if (!CommitIndicatorColourHex()) return;

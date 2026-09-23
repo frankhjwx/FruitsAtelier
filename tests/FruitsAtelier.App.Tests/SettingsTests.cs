@@ -25,8 +25,20 @@ static class SettingsTests
                 var hexLabel = ui.Canvas.Texts.Last(t => t.Value == L.Get("settings.indicatorHex"));
                 if (i == 0)
                 {
-                    ui.Click(hexLabel.X + 10, hexLabel.Y - 165);
-                    Check(ui.Canvas.Texts.Any(t => t.Value == "#FF0000"), "Palette did not select its red swatch.");
+                    string before = ui.Canvas.Texts.Last(t => t.Value.StartsWith('#')).Value;
+                    float paletteX = hexLabel.X + 400, paletteY = hexLabel.Y - 262;
+                    ui.View.PointerDown(paletteX, paletteY, 0, false, false);
+                    ui.View.PointerMove(paletteX - 100, paletteY + 100, false, false);
+                    ui.View.PointerUp(paletteX - 100, paletteY + 100, 0); ui.Paint();
+                    string afterPalette = ui.Canvas.Texts.Last(t => t.Value.StartsWith('#')).Value;
+                    Check(afterPalette != before,
+                        "Saturation/value drag did not update the indicator colour.");
+                    float hueY = hexLabel.Y - 31;
+                    ui.View.PointerDown(hexLabel.X + 10, hueY, 0, false, false);
+                    ui.View.PointerMove(hexLabel.X + 350, hueY, false, false);
+                    ui.View.PointerUp(hexLabel.X + 350, hueY, 0); ui.Paint();
+                    Check(ui.Canvas.Texts.Last(t => t.Value.StartsWith('#')).Value != afterPalette,
+                        "Hue drag did not update the indicator colour.");
                 }
                 ui.Click(hexLabel.X + 30, hexLabel.Y + 32);
                 ui.Key('A', ctrl: true); ui.Type(hexes[i]); ui.Key(13);

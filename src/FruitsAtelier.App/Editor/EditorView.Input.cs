@@ -55,6 +55,7 @@ public sealed partial class EditorView
             return;
         }
         if (LanguagePointerDown(x, y, button)) return;
+        if (BeginIndicatorColourDrag(x, y, button)) return;
         if (SliderDialogVisible)
         {
             if (button == 0) for (int i = sliderDialogHits.Count - 1; i >= 0; i--)
@@ -327,6 +328,7 @@ public sealed partial class EditorView
         if (volumeDrag >= 0) { UpdateVolumeDrag(x); return; }
         if (IsTestplaying) return;
         mouseX = x; mouseY = y;
+        if (settingsColourDrag != 0) { UpdateIndicatorColourDrag(x, y); return; }
         if (updatesPage) return;
         if (sliderHoldConsumed) return;
         if (SliderHoldNeedsRedraw && (Math.Abs(x - sliderHoldX) >= 2 || Math.Abs(y - sliderHoldY) >= 2)) sliderHoldId = Guid.Empty;
@@ -434,6 +436,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button)
     {
+        if (settingsColourDrag != 0 && button == 0) { UpdateIndicatorColourDrag(x, y); settingsColourDrag = 0; return; }
         if (textSelecting && button == 0) { MoveInputSelection(x); textSelecting = false; return; }
         if (SongSetupVisible) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
