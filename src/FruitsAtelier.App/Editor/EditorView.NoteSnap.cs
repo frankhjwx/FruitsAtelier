@@ -22,7 +22,7 @@ public sealed partial class EditorView
     private void ShowNoteBeatPosition(ConvertedCatchObject note)
     {
         var timing = TimingMap.At(Document, note.TimeMs);
-        bool Fits(double time, int candidate) => Math.Abs(TimingMap.Snap(Document, time, candidate) - time) <= 1;
+        bool Fits(double time, int candidate) => Math.Abs(TimingMap.Snap(Document, time, candidate) - time) <= 2;
         int matched = SnapDivisors.FirstOrDefault(candidate => Fits(note.TimeMs, candidate));
         if (matched != 0)
         {
