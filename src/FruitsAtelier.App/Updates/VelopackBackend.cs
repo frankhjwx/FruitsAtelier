@@ -6,10 +6,11 @@ namespace FruitsAtelier.App.Updates;
 internal sealed class VelopackBackend : IUpdateBackend
 {
     public const string Repository = "https://github.com/frankhjwx/FruitsAtelier";
+    internal const string Channel = "win-x64";
     private readonly UpdateManager manager;
     private UpdateInfo? update;
-    public VelopackBackend() : this(new GithubSource(Repository, null, false)) { }
-    internal VelopackBackend(IUpdateSource source) => manager = new(source, new UpdateOptions { ExplicitChannel = "win-x64" });
+    public VelopackBackend() : this(new GithubReleaseSource(Repository, Channel)) { }
+    internal VelopackBackend(IUpdateSource source) => manager = new(source, new UpdateOptions { ExplicitChannel = Channel });
     public bool IsInstalled => manager.IsInstalled;
     public string? PendingVersion => manager.UpdatePendingRestart?.Version.ToString();
     public async Task<string?> Check()

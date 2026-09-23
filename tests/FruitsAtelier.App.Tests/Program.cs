@@ -37,6 +37,9 @@ var tests = new (string Name, Action Run)[]
     ("Testplay key capture and settings persistence", TestplayTests.Bindings),
     ("Extended testplay key capture, persistence and gameplay", TestplayTests.ExtendedBindings),
     ("Update lifecycle, persistence and save-before-restart", UpdateTests.Lifecycle),
+#if WINDOWS
+    ("GitHub update discovery recovers omitted assets and preserves download metadata", GithubReleaseSourceTests.Run),
+#endif
     ("Update settings and explicit installation controls", UpdateTests.Interface),
     ("Opening maps initializes position and duration without transient jumps", AudioFeedbackTests.OpeningTransport),
     ("Audio volume settings, persistence and document isolation", AudioFeedbackTests.VolumeSettings),

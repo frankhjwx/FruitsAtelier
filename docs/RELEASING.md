@@ -78,6 +78,13 @@ startup when automatic checks are enabled. Manual checks and retries remain avai
 retained across launches but never applied implicitly. Development builds do not
 self-update. macOS packaging does not yet include an updater.
 
+When a stable release's list entry lacks the Windows feed or full package, the
+client fetches that release by its numeric ID before looking for updates. The
+resolved assets are also used for package downloads. A failed lookup or an empty
+or incomplete update asset set reports a failed check, rather than claiming the
+installed version is current. Releases containing only legacy ZIPs or other
+platforms' assets remain outside the Windows update feed.
+
 Velopack SDK and CLI versions are pinned to 1.2.0 in the project and
 `.config/dotnet-tools.json`. Full update packages are used; no delta packages or
 installer are generated. `current/` is replaced during updates. Keep user projects
