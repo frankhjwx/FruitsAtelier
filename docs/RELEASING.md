@@ -92,22 +92,55 @@ The homepage is not part of the update path.
 
 ## GitHub Release
 
-1. Commit and push the reviewed changes, including both release lock files and user-facing release notes in `docs/releases/vMAJOR.MINOR.PATCH.md` (use the full tag for prereleases). The workflow requires these notes and publishes them before making the release public.
-2. Tag that commit with `vMAJOR.MINOR.PATCH`, optionally followed by `-alpha.N`,
-   `-beta.N`, or `-rc.N` (N starts at 1). Numeric version components must be at most
-   65534. For example:
+The release source is the **remote `main` merge commit**. `main` is protected and
+requires a pull request. Follow this order; a package built locally from `dev` is
+only a preflight check and is not a release artifact.
+
+1. On `dev`, commit and push the reviewed changes. Set `Directory.Build.props` to
+   the release version, update the version shown in both READMEs and this guide,
+   and add user-facing notes at `docs/releases/vMAJOR.MINOR.PATCH.md` (use the full
+   tag for prereleases). Keep both release lock files committed. Run the relevant
+   checks in [Building and Testing](TESTING.md), and wait for the **Desktop
+   regression** on `dev` to pass on Windows and macOS. Fix failures on `dev` and
+   wait for the new commit's checks; an earlier passing run does not validate a
+   later commit.
+2. Open a `dev` → `main` pull request. Wait for the pull request's own required
+   checks, then merge it through GitHub. Do not force-push or bypass `main` branch
+   protection. Fetch the merged `main` and verify its commit contains `dev`:
 
    ```bash
-   git tag -a v0.1.0 -m "FruitsAtelier 0.1.0"
+   git fetch origin --prune --tags
+   git merge-base --is-ancestor origin/dev origin/main
+   ```
+
+3. Create the annotated `vMAJOR.MINOR.PATCH` tag from that fetched `main` commit,
+   optionally followed by `-alpha.N`, `-beta.N`, or `-rc.N` (N starts at 1). Numeric
+   version components must be at most 65534. Check that the tag does not already
+   exist and that it resolves to `origin/main` before pushing it:
+
+   ```bash
+   git switch main
+   git pull --ff-only origin main
+   git tag --list v0.1.0  # must return no tag
+   git tag -a v0.1.0 -m "FruitsAtelier v0.1.0"
+   git rev-parse 'v0.1.0^{commit}'  # must match origin/main below
+   git rev-parse origin/main
    git push origin v0.1.0
    ```
 
-3. The **Windows release** workflow validates the tag, builds and tests that commit,
-   publishes the ZIP, and launches its extracted exe for the package smoke check.
-4. After all checks pass, it uploads the portable ZIP, SHA256, full update package and update feed to a draft GitHub Release
-   and then publishes it. Suffixed tags become prereleases. The workflow uses the
-   repository `GITHUB_TOKEN`; no personal token is needed. Actions must be enabled
-   and repository policy must allow the release job's `contents: write` permission.
+4. Wait for the tag-triggered **Windows release** workflow. It validates the tag,
+   builds and tests that exact commit, packages the self-contained ZIP, runs the
+   extracted executable, checks its bundled runtime, and publishes a GitHub
+   Release. Suffixed tags become prereleases. The workflow uses the repository
+   `GITHUB_TOKEN`; no personal token is needed. Actions must be enabled and
+   repository policy must allow the release job's `contents: write` permission.
+5. Verify the published Release is not a draft and contains the versioned ZIP and
+   SHA256, fixed-name ZIP and SHA256, full `.nupkg`, and
+   `releases.win-x64.json`. Compare the ZIP checksum and confirm a public download
+   succeeds. The Release's top-level API response can briefly omit assets after
+   publication; check its `/assets` endpoint and the public download URL before
+   treating that as a failed upload. The update feed and matching package must be
+   available before considering the release complete.
 
 The manual **Run workflow** entry builds an existing tag and stores downloadable
 Actions artifacts without publishing a GitHub Release. The normal desktop regression
