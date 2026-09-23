@@ -27,7 +27,7 @@ internal static class AssistToolsTests
             Strings.SetLanguage(language); ui.Paint();
             ui.ClickText(Strings.Get("movement.analysis"));
             Check(ui.View.MovementAnalysisEnabled, "Canvas toolbar did not enable analysis");
-            foreach (uint color in new uint[] { 0xC0C0C0, 0x63B99D, 0xD6B365, 0xCE7683 })
+            foreach (uint color in new uint[] { 0xC0C0C0, 0x63B99D, 0xD6B365, 0xFF0000 })
                 Check(ui.Canvas.Lines.Any(l => l.Color == color && l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001), "Missing movement connection colour");
             ui.ClickText(Strings.Get("movement.analysis"));
             Check(!ui.View.MovementAnalysisEnabled, "Canvas toolbar did not disable analysis");

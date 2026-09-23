@@ -133,7 +133,7 @@ public sealed partial class EditorView
         var p = Screen(point);
         float diameter = CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512;
         bool hyper = placementGhost is { } ghost && placementHyperdash.Contains((ghost.SourceId, ghost.EventIndex));
-        uint? glow = hyper ? skin?.HyperDashFruitColour ?? 0xFF3030u : null;
+        uint? glow = hyper ? HyperDashFruitColour : null;
         if (skin is null || !skin.Draw(c, CatchSkinObject.Fruit, 0, p.X, p.Y, diameter, opacity: .6f, hyperColour: glow))
         {
             if (glow is uint colour) c.Circle(p.X, p.Y, diameter * .6f, colour, opacity: .42f);

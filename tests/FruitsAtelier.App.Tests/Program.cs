@@ -138,6 +138,7 @@ var tests = new (string Name, Action Run)[]
     ("Double-click enters one Slider and other clicks leave its edit mode", RequestedInteractionTests.DoubleClickEditing),
     ("Double-click reports note beat position and temporarily uses its snap", NoteSnapTests.DoubleClickBeatPosition),
     ("Slider droplets select on the second click and drag locally", DropletDragTests.SelectAndMove),
+    ("HDash fruit, catcher and afterimage use separate skin colours", HyperDashSkinTests.ThreeColours),
     ("Legacy Slider long-press buttons convert to a strictly aligned FSlider", SliderInteractionTests.LegacyContextConversion),
     ("Selected parents snap from the earliest start and keep one time and X offset", RequestedInteractionTests.MultiObjectDrag),
     ("A single Slider uses its start as the snap reference while moving", RequestedInteractionTests.SingleSliderSnap),

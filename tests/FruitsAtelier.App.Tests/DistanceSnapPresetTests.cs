@@ -27,7 +27,7 @@ internal static class DistanceSnapPresetTests
         Check(ui.Canvas.Fills.Any(f => f.Color == 0xC0C0C0 && f.Bounds.Y == track.Y + 3
             && Math.Abs(f.Bounds.Right - expectedBoundaryX) < 1),
             "The base DPB bar should use the same four equal movement regions as the preset bar.");
-        Check(ui.Canvas.Fills.Any(f => f.Color == 0xCE7683 && f.Bounds.Y == track.Y + 3
+        Check(ui.Canvas.Fills.Any(f => f.Color == 0xFF0000 && f.Bounds.Y == track.Y + 3
             && Math.Abs(f.Bounds.X - (track.X + track.Width * .75f)) < 1)
             && ui.Canvas.Lines.Any(l => Math.Abs(l.X1 - X(80)) < 1 && l.Y1 == track.Y - 4),
             "The HDash region and 1.0x marker should use the preset bar's distance scale.");
@@ -379,14 +379,14 @@ internal static class DistanceSnapPresetTests
         float Y(double beat) => r.Bottom - 12 - (float)(beat / 4) * (r.Height - 24);
         ui.Click(X(80), Y(0));
         ui.View.PointerMove(X(380), Y(.25), false, false); ui.Paint();
-        Check(ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF5555 && Math.Abs(c.X - X(80)) < .01), "Prospective HDash did not colour its departure fruit red.");
+        Check(ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF0000 && Math.Abs(c.X - X(80)) < .01), "Prospective HDash did not use its departure fruit colour.");
         ui.Click(X(380), Y(.25));
         ui.View.PointerMove(r.X - 20, r.Y, false, false); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", 12)), "HDash connection omitted its actual DS.");
-        Check(ui.Canvas.Circles.Count(c => c.Filled && c.Color == 0xFF5555 && r.Contains(c.X, c.Y)) == 1, "HDash did not mark only the departure fruit.");
+        Check(ui.Canvas.Circles.Count(c => c.Filled && c.Color == 0xFF0000 && r.Contains(c.X, c.Y)) == 1, "HDash did not mark only the departure fruit.");
         ui.ClickText(Strings.Get("ds.showValues"));
         Check(!ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", 12))
-            && ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF5555 && r.Contains(c.X, c.Y))
+            && ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF0000 && r.Contains(c.X, c.Y))
             && ui.View.DistanceSnapPreviewFruits.Count == 2, "Hiding DS labels changed preview fruits or HDash markings.");
         ui.ClickText(Strings.Get("ds.showValues"));
         Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", 12)), "Show DS did not restore the labels.");
@@ -403,7 +403,7 @@ internal static class DistanceSnapPresetTests
         ui.View.PointerMove(r.X - 20, r.Y, false, false); ui.Paint();
         ui.View.PointerDown(X(380), Y(.25), 2, false, false);
         ui.View.PointerMove(r.X - 20, r.Y, false, false); ui.Paint();
-        Check(!ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF5555 && r.Contains(c.X, c.Y)), "Deleted target left a stale HDash colour.");
+        Check(!ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF0000 && r.Contains(c.X, c.Y)), "Deleted target left a stale HDash colour.");
         ui.ClickText(Strings.Get("ds.reset"));
         Check(ui.View.DistanceSnapPreviewFruits.Count == 0 && ui.View.DistanceSnapPointerBounds.Count == 1,
             "Reset did not clear only the preview fruits.");

@@ -114,7 +114,7 @@ public sealed partial class EditorView
         var frame = previewAutoplay!.At(playhead);
         PreviewCatcherX = frame.X;
         float x = fieldLeft + (float)(frame.X / 512) * fieldWidth;
-        uint hyperColour = skin?.HyperDashColour ?? 0xFF0000;
+        uint hyperColour = HyperDashColour;
         // Sample map time, not render history, so pause, seek and playback speed produce identical trails.
         for (double at = Math.Max(0, Math.Ceiling((playhead - 800) / 16) * 16); at <= playhead; at += 16)
         {

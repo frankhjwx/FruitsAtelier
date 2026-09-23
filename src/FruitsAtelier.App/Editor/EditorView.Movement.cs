@@ -30,12 +30,12 @@ public sealed partial class EditorView
         }
     }
 
-    private static uint MovementColour(CatchMovementMode mode) => mode switch
+    private uint MovementColour(CatchMovementMode mode) => mode switch
     {
         CatchMovementMode.Stand => 0xC0C0C0,
         CatchMovementMode.Walk => 0x63B99D,
         CatchMovementMode.Dash => 0xD6B365,
-        _ => 0xCE7683
+        _ => HyperDashColour
     };
 
     private int FirstVisibleMovement(IReadOnlyList<ConvertedCatchObject> objects)

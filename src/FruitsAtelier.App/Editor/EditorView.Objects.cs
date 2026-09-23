@@ -16,7 +16,7 @@ public sealed partial class EditorView
         diameter *= visual.Scale;
         uint colour = ObjectColour(item);
         bool hyper = (hyperStarts ?? hyperdashObjects).Contains((item.SourceId, item.EventIndex));
-        uint hyperColour = skin?.HyperDashFruitColour ?? 0xFF3030;
+        uint hyperColour = HyperDashFruitColour;
         var kind = SkinObjectKind(item.Kind);
         if (skin is not null)
         {

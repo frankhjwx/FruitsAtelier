@@ -18,9 +18,9 @@ internal static class ToolPaletteTests
             Check(GlowAt(ui, previous.X, previous.Y, .7f), "Previous fruit did not acquire a placement hyperdash.");
             Check(GlowAt(ui, ghost.X, ghost.Y, .42f), "Placement ghost did not show its outgoing hyperdash.");
             ui.MoveMap(1125, 0);
-            Check(!ui.Canvas.Circles.Any(c => c.Color == 0xFF3030), "Hover movement retained a stale hyperdash.");
+            Check(!ui.Canvas.Circles.Any(c => c.Color == 0xFF0000), "Hover movement retained a stale hyperdash.");
             ui.MoveMap(1125, 512); ui.Key('1');
-            Check(!ui.Canvas.Circles.Any(c => c.Color == 0xFF3030), "Leaving placement retained a phantom hyperdash.");
+            Check(!ui.Canvas.Circles.Any(c => c.Color == 0xFF0000), "Leaving placement retained a phantom hyperdash.");
             Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Hover changed content or history.");
         }
         foreach (var mode in Enum.GetValues<SliderEditingMode>())
@@ -40,7 +40,7 @@ internal static class ToolPaletteTests
     }
 
     private static bool GlowAt(Ui ui, float x, float y, float opacity) => ui.Canvas.Circles.Any(c =>
-        c.Color == 0xFF3030 && Math.Abs(c.X - x) < 1 && Math.Abs(c.Y - y) < 1 && Math.Abs(c.Opacity - opacity) < .001);
+        c.Color == 0xFF0000 && Math.Abs(c.X - x) < 1 && Math.Abs(c.Y - y) < 1 && Math.Abs(c.Opacity - opacity) < .001);
 
     public static void PaletteAndGhost()
     {

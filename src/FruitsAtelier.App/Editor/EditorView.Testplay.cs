@@ -155,7 +155,7 @@ public sealed partial class EditorView
                 (float)Math.Clamp(1 - (playhead - item.TimeMs) / CatchTestplay.MissLifetimeMs, 0, 1),
                 circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true);
         float x = left + (float)frame.X * fieldWidth / 512;
-        uint tint = frame.HyperDashing ? skin?.HyperDashColour ?? 0xFF0000 : 0xFFFFFF;
+        uint tint = frame.HyperDashing ? HyperDashColour : 0xFFFFFF;
         foreach (var trail in frame.Trails)
             DrawCatcherTrail(c, trail, left, fieldWidth, catchY);
         DrawCatcherBody(c, x, catchY, fieldWidth, tint, 1, false, frame.FacingLeft);

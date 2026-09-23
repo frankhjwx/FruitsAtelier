@@ -50,6 +50,9 @@ public sealed partial class EditorView
     public const float MinimumPlayfieldWidth = 256;
     public double CanvasZoom => canvasZoom;
     private CatchSkin? skin;
+    private uint HyperDashFruitColour => skin?.HyperDashFruitColour ?? 0xFF0000;
+    private uint HyperDashColour => skin?.HyperDashColour ?? 0xFF0000;
+    private uint HyperDashAfterImageColour => skin?.HyperDashAfterImageColour ?? HyperDashColour;
     private bool compensateTinyDroplets = true;
     private MapDocument? convertedSnapshot;
     private CatchConversionCache editorConversionCache = new();
