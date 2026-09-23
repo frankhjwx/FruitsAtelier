@@ -50,6 +50,22 @@ public sealed partial class EditorView
         return low;
     }
 
+    private bool KiaiOverlaps(double from, double to)
+    {
+        double? start = null;
+        foreach (var transition in kiaiTransitions)
+        {
+            if (transition.TimeMs > to) break;
+            if (transition.Active) start = transition.TimeMs;
+            else if (start is double activeStart)
+            {
+                if (activeStart <= to && transition.TimeMs >= from) return true;
+                start = null;
+            }
+        }
+        return start is double openStart && openStart <= to;
+    }
+
     private void DrawMovementConnections(ICanvas c)
     {
         if (!movementAnalysis) return;
@@ -63,7 +79,8 @@ public sealed partial class EditorView
             var to = objects[movementIndices[i]];
             if (from.TimeMs > endTime) break;
             if (movementStates[departure].Movement is not { } movement) continue;
-            if (Document.BananaShowers.Any(shower => shower.TimeMs <= to.TimeMs && shower.EndTimeMs >= from.TimeMs)) continue;
+            if (Document.BananaShowers.Any(shower => shower.TimeMs <= to.TimeMs && shower.EndTimeMs >= from.TimeMs)
+                || KiaiOverlaps(from.TimeMs, to.TimeMs)) continue;
             // Clip in map time so long connections keep their slope without oversized screen coordinates.
             double start = Math.Max(viewStart, from.TimeMs), end = Math.Min(endTime, to.TimeMs);
             if (end <= start) continue;

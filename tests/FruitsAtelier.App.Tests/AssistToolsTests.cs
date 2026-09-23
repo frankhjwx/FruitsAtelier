@@ -53,6 +53,20 @@ internal static class AssistToolsTests
             "Movement Analysis must leave a gap inside break time while keeping both outside segments.");
         Check(!ui.Canvas.Texts.Any(t => t.Value.EndsWith("x") && t.Y > Y(1750) && t.Y < Y(1250)),
             "Movement Analysis displayed a distance label inside break time.");
+        var kiaiMap = new MapDocument { DurationMs = 5000, IsDemo = false };
+        kiaiMap.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 100 }, new Fruit { TimeMs = 2000, X = 300 }]);
+        kiaiMap.TimingPoints.Add(new TimingPoint { TimeMs = 0, BeatLengthMs = 500, Uninherited = true });
+        kiaiMap.TimingPoints.Add(new TimingPoint { TimeMs = 1250, BeatLengthMs = 500, Uninherited = true, Effects = 1 });
+        kiaiMap.TimingPoints.Add(new TimingPoint { TimeMs = 1750, BeatLengthMs = 500, Uninherited = true });
+        ui = new Ui(); ui.LoadDocument(kiaiMap); ui.ClickText(Strings.Get("movement.analysis"));
+        Check(!ui.Canvas.Lines.Any(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001)
+            && ui.View.DistanceLabelBounds.Count == 0,
+            "Kiai between two fruits retained a connection or DS label.");
+        kiaiMap.TimingPoints.RemoveRange(1, 2);
+        ui.LoadDocument(kiaiMap); ui.Paint();
+        Check(ui.Canvas.Lines.Any(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001)
+            && ui.View.DistanceLabelBounds.Count == 1,
+            "Removing kiai did not restore the connection and DS label.");
         ui = new Ui(); ui.LoadDocument(DemoMap.Create());
         ui.ClickText(Strings.Get("movement.analysis"));
         var curves = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasPlotBounds && o.Segment is { Color: 0xAB9DF2 }).ToArray();
