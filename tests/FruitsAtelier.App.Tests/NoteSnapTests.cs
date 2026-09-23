@@ -42,6 +42,18 @@ internal static class NoteSnapTests
             ui.ClickMap(3000, 450);
             Check(ui.View.SnapDivisor == 8, "Leaving selection reverted a manually chosen snap.");
             Check(original.ContentEquals(ui.View.Document), "Beat-position inspection edited map content.");
+
+            var ra = new MapDocument { DurationMs = 5000, IsDemo = false };
+            ra.TimingPoints.Add(new TimingPoint { TimeMs = 115, BeatLengthMs = 333.333333333333, Uninherited = true });
+            ra.Fruits.AddRange([new Fruit { TimeMs = 3670, X = 208 }, new Fruit { TimeMs = 3726, X = 176 }]);
+            ui.LoadDocument(ra);
+            foreach (var (time, x, numerator, denominator) in new[] { (3670d, 208d, 2, 3), (3726d, 176d, 5, 6) })
+            {
+                point = ui.ScreenAt(time, x);
+                ui.View.PointerDoubleClick(point.X, point.Y, false, false); ui.Paint();
+                Check(ui.View.SnapDivisor == 6 && ui.View.StatusMessage == Strings.Get("editor.status.noteBeatPosition", numerator, denominator, TimeSpan.FromMilliseconds(time).ToString(@"mm\:ss\:fff"), 6),
+                    $"Force of Ra note at {time} ms did not identify the adjacent 1/6 pattern.");
+            }
         }
         Strings.SetLanguage("en");
     }
