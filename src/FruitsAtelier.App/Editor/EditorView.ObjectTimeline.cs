@@ -258,18 +258,39 @@ public sealed partial class EditorView
             c.Line(X(tick.TimeMs), objectTimeline.Bottom - style.Height, X(tick.TimeMs), objectTimeline.Bottom,
                 style.Color, style.Width);
         }
-        foreach (var item in timelineSources)
+        var visibleItems = timelineSources.Where(item => item.End >= start - 20 / objectTimelineScale
+            && item.Start <= end + 20 / objectTimelineScale).ToArray();
+        foreach (var item in visibleItems)
+            timelineObjects.Add((item.Id, item.Start, TimelineObjectBounds(item.Start, item.End)));
+        for (int selectedPass = 0; selectedPass < 2; selectedPass++)
+            for (int i = 0; i < visibleItems.Length; i++)
+                if (IsObjectSelected(visibleItems[i].Id) == (selectedPass == 1)) DrawBody(i);
+        for (int selectedPass = 0; selectedPass < 2; selectedPass++)
+            for (int i = 0; i < visibleItems.Length; i++)
+                if (IsObjectSelected(visibleItems[i].Id) == (selectedPass == 1)) DrawMarkers(i);
+
+        void DrawBody(int index)
         {
-            int number = timelineNumbers[item.Id];
-            if (item.End < start - 20 / objectTimelineScale || item.Start > end + 20 / objectTimelineScale) continue;
-            float left = X(item.Start), right = X(item.End), cy = objectTimeline.Y + 27;
+            var item = visibleItems[index];
             bool selected = IsObjectSelected(item.Id);
             uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true);
-            var bounds = TimelineObjectBounds(item.Start, item.End);
-            c.Fill(bounds, color, 19, selected ? .9f : .78f);
-            c.Stroke(bounds, selected ? Foreground : color, selected ? 2 : 1, 19);
-            c.Circle(left, cy, 19, color, false);
-            if (right > left + 1) c.Circle(right, cy, 19, color, false);
+            var bounds = timelineObjects[index].Bounds;
+            c.Fill(bounds, color, 19, selected ? .94f : .78f);
+            c.Stroke(bounds, selected ? 0x2866C6u : 0xFFFFFFu, selected ? 2 : 1.5f, 19);
+        }
+
+        void DrawMarkers(int index)
+        {
+            var item = visibleItems[index];
+            bool selected = IsObjectSelected(item.Id);
+            float left = X(item.Start), right = X(item.End), cy = objectTimeline.Y + 27;
+            void Ring(float ringX)
+            {
+                if (selected) c.Circle(ringX, cy, 21, 0x2866C6, false, 2);
+                c.Circle(ringX, cy, 19, selected ? 0xFFA600u : 0xFFFFFFu, false, selected ? 3 : 1.5f);
+            }
+            Ring(left);
+            if (right > left + 1) Ring(right);
             if (item.Spans > 1 && item.End > item.Start)
             {
                 double spanDuration = (item.End - item.Start) / item.Spans;
@@ -278,7 +299,7 @@ public sealed partial class EditorView
                 for (int span = first; span <= last; span++)
                 {
                     float repeatX = X(item.Start + span * spanDuration);
-                    c.Circle(repeatX, cy, 19, Foreground, false);
+                    Ring(repeatX);
                     if (skin is null || !skin.DrawReverseArrow(c, repeatX, cy, 38))
                     {
                         c.Line(repeatX - 8, cy, repeatX + 4, cy, Foreground, 5);
@@ -287,9 +308,8 @@ public sealed partial class EditorView
                     }
                 }
             }
-            string label = number.ToString();
+            string label = timelineNumbers[item.Id].ToString();
             c.Text(label, left - c.MeasureText(label, 13) / 2, cy - 8, 13, Foreground, 38);
-            timelineObjects.Add((item.Id, item.Start, bounds));
         }
         foreach (var period in breaks)
         {

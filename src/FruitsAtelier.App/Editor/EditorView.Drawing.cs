@@ -117,8 +117,8 @@ public sealed partial class EditorView
         bool canInsertBreak = InsertBreakCandidate() is not null;
         if (breakButton.Contains(mouseX, mouseY) && canInsertBreak) c.Fill(breakButton, 0x35455A, 4);
         string breakLabel = L.Get("timeline.insertBreak");
-        c.Text(breakLabel, breakButton.X + (breakButton.Width - c.MeasureText(breakLabel, 10)) / 2,
-            breakButton.Y + 9, 10, canInsertBreak ? Foreground : Muted, breakButton.Width - 6);
+        c.Text(breakLabel, breakButton.X + (breakButton.Width - c.MeasureText(breakLabel, 12)) / 2,
+            breakButton.Y + (breakButton.Height - 16) / 2, 12, canInsertBreak ? Foreground : Muted, breakButton.Width - 6);
         hits.Add(new(breakButton, InsertBreakAtPlayhead, canInsertBreak));
         c.Text(L.Get("ui.snap"), snapLeft, canvas.Y + 13, 11, Muted, 40);
         snapSlider = new(snapLeft + 40, canvas.Y + 4, 106, 29);
@@ -304,9 +304,12 @@ public sealed partial class EditorView
         c.Fill(rightPanel, Panel);
         c.Line(rightPanel.X, rightPanel.Y, rightPanel.X, rightPanel.Bottom, Grid);
         float x = rightPanel.X + 16, w = rightPanel.Width - 32;
-        c.Text(L.Get("ui.properties"), x, rightPanel.Y + 15, 12, Foreground, 48, true);
-        c.Text($"{L.Get("ui.ar")} {Number(Document.ApproachRate)}   {L.Get("ui.cs")} {Number(Document.CircleSize)}   {L.Get("ui.sv")} {Number(Document.SliderMultiplier)}",
-            x + 56, rightPanel.Y + 15, 12, Muted, w - 56);
+        float rowY = rightPanel.Y + 15;
+        c.Text(L.Get("ui.properties"), x, rowY, 12, Foreground, 90, true);
+        float statX = x + 96;
+        c.Text($"{L.Get("ui.ar")} {Number(Document.ApproachRate)}", statX, rowY, 12, Muted, 48);
+        c.Text($"{L.Get("ui.cs")} {Number(Document.CircleSize)}", statX + 52, rowY, 12, Muted, 48);
+        c.Text($"{L.Get("ui.sv")} {Number(Document.SliderMultiplier)}", statX + 104, rowY, 12, Muted, Math.Max(0, w - 200));
     }
 
     private (CurveTrack Track, Anchor Node) ResolveAnchor(Guid trackId, Guid nodeId)

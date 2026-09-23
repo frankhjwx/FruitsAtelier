@@ -13,12 +13,37 @@ internal static class TimelineOverviewTests
         ui.View.UpdateTransport(1500, 3000, true, false, false, null, null); ui.Paint();
         var timeline = ui.View.ObjectTimelineBounds;
         float X(double time) => timeline.X + (float)((time - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
-        uint Color(double time) => ui.Canvas.Circles.Single(c => c.Radius == 19 && c.Y == timeline.Y + 27
-            && Math.Abs(c.X - X(time)) < .01f).Color;
+        uint Color(double time) => ui.Canvas.Fills.Single(f => f.Bounds.Y == timeline.Y + 8
+            && Math.Abs(f.Bounds.X - (X(time) - 19)) < .01f).Color;
+        uint firstColor = Color(1000);
         Check(Color(1000) == Color(1500) && Color(1500) != Color(2000),
             "Object timeline must use one combo colour until New Combo");
-        Check(ui.Canvas.Fills.Any(f => f.Color == Color(1000) && Math.Abs(f.Bounds.X - (X(1000) - 19)) < .01f),
-            "Object timeline note fill must use its combo colour");
+        Check(ui.Canvas.Circles.Count(c => c.Radius == 19 && c.Color == 0xFFFFFF
+            && c.Y == timeline.Y + 27) == 3, "Unselected timeline circles need white borders");
+        ui.Click(X(1000), timeline.Y + 27); ui.Paint();
+        Check(ui.Canvas.Fills.Any(f => f.Color == firstColor && f.Bounds.Y == timeline.Y + 8
+            && Math.Abs(f.Bounds.X - (X(1000) - 19)) < .01f), "Selection must retain the combo fill");
+        Check(ui.Canvas.Circles.Any(c => c.Radius == 19 && c.Color == 0xFFA600
+            && Math.Abs(c.X - X(1000)) < .01f), "Selected timeline note needs an orange ring");
+    }
+
+    public static void StackAndSelection()
+    {
+        var map = new MapDocument { DurationMs = 3000, IsDemo = false };
+        map.Fruits.Add(new() { TimeMs = 1000, X = 100, SourceOrder = 0 });
+        map.Fruits.Add(new() { TimeMs = 1000, X = 200, SourceOrder = 1 });
+        var ui = new Ui(overview: false);
+        ui.LoadDocument(map);
+        ui.View.UpdateTransport(1000, 3000, true, false, false, null, null); ui.Paint();
+        var timeline = ui.View.ObjectTimelineBounds;
+        float x = timeline.X + (float)((1000 - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+        float y = timeline.Y + 27;
+        Check(ui.Canvas.Circles.Count(c => c.Radius == 19 && c.X == x && c.Y == y && c.Color == 0xFFFFFF) == 2,
+            "Stacked objects must retain both white circle outlines");
+        ui.Click(x, y); ui.Paint();
+        var rings = ui.Canvas.Circles.Where(c => c.Radius == 19 && c.X == x && c.Y == y).ToArray();
+        Check(rings.Length == 2 && rings[0].Color == 0xFFFFFF && rings[1].Color == 0xFFA600,
+            "Selected stacked object must render above the other circle");
     }
 
     public static void BreakEdgeEditing()

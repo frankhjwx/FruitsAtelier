@@ -97,7 +97,7 @@ The overview draws `[General] PreviewTime` as a full-height yellow marker when i
 
 In the object timeline and canvas left time axis, each break has a grey core and lighter white and green transition regions extending to the adjacent source objects, without changing the stored break timestamps. Hovering a core edge in the object timeline shows a horizontal resize cursor. Dragging that edge snaps to the current beat subdivision when Snap is on and previews the new range; releasing commits one undoable edit, releasing with less than 400 ms remaining removes the break, and Esc cancels the preview.
 
-Fruit and slider shapes on the upper object timeline use the same beatmap or skin combo colour as the preview throughout each New Combo group. Banana showers remain gold. Timing point markers use the same time-to-X coordinate as note centers.
+Fruit and slider shapes on the upper object timeline use the same beatmap or skin combo colour as the preview throughout each New Combo group. Banana showers remain gold. Unselected heads, tails, and reverse boundaries have white rings. Object bodies draw before those rings so overlapping objects retain their outlines and reverse arrows. Selected objects draw above the stack with their combo fill, orange rings, and blue outer rings. Timing point markers use the same time-to-X coordinate as note centers. Insert Break Time uses the same text size as Movement Analysis; the Details header places AR, CS, and SV in fixed columns on one baseline.
 
 In testplay, Ctrl+B adds a bookmark at the live testplay time and Ctrl+Shift+B removes the nearest bookmark within two seconds. These commands enter undo history and consume the B key before gameplay input.
 
