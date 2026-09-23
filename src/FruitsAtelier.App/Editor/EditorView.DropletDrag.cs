@@ -8,6 +8,23 @@ public sealed partial class EditorView
     private ConvertedCatchObject? dropletDragTarget;
     private double dropletDragX;
 
+    private bool TryBeginSelectedDropletDrag(float x, float y)
+    {
+        if (tool != Tool.Select || objectSelection.Count != 1 || SelectedTrack is not { } track
+            || HitCatchObject(x, y) is not { Kind: CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet } target
+            || target.SourceId != track.Id) return false;
+        if (showTargets && distanceObject != (target.SourceId, target.EventIndex))
+        {
+            double distance = PointerDistance(new(target.TimeMs, target.X), x, y);
+            var controls = LegacyMode ? SliderControlEditing.Vertices(track).Select(v => v.Point) : track.Nodes.Select(Point);
+            // Nearby fitted controls must not steal a click closer to the visible droplet.
+            if (controls.Any(p => Near(p, x, y, 9) && PointerDistance(p, x, y) <= distance + .01)) return false;
+        }
+        PickSoundEdge(target);
+        BeginDropletDrag(target, x, y);
+        return true;
+    }
+
     private void BeginDropletDrag(ConvertedCatchObject target, float x, float y)
     {
         StatusMessage = L.Get("editor.status.dropletReady", Time(target.TimeMs));

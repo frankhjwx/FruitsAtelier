@@ -185,6 +185,7 @@ public sealed partial class EditorView
         if (ctrl && StraightenHitPoint(x, y)) return;
         if (ctrl && tool == Tool.Select && SelectedTrack is { } parent && HitCatchObject(x, y) is { } other && other.SourceId != parent.Id)
         { PickObject(other.SourceId, true); return; }
+        if (!ctrl && TryBeginSelectedDropletDrag(x, y)) return;
         if (LegacyMode && HandleLegacyPointerDown(x, y, button, ctrl)) return;
         if (!LegacyMode && showTargets && ctrl && tool is Tool.Select or Tool.Slider
             && draftTrack == Guid.Empty && objectSelection.Count <= 1 && SelectedTrack is { } insertTrack)

@@ -41,8 +41,16 @@ public static class DistanceSpacingEditing
         var siblings = before.Objects.Where(o => o.SourceId == target.SourceId).ToArray();
         var selected = siblings.FirstOrDefault(o => o.EventIndex == target.EventIndex);
         if (selected is null) throw new ArgumentException(L.Get("coordinate.unreachable"));
-        double time = CurveMath.FirstSpanTime(track, selected.TimeMs);
-        var times = siblings.Select(o => CurveMath.FirstSpanTime(track, o.TimeMs))
+        var slider = before.Sliders.Single(s => s.SourceId == track.Id);
+        double start = track.Nodes[0].TimeMs, duration = track.Nodes[^1].TimeMs - start;
+        var nested = LegacyCatchRules.CreateNested(start, duration, slider.Velocity,
+            slider.TickDistance, slider.Length, track.SpanCount);
+        // Uncompensated tiny droplets sample path progress, which differs from their rounded event time.
+        double SampleTime(ConvertedCatchObject item) => item.Kind == CatchObjectKind.TinyDroplet && !slider.TinyCompensationApplied
+            ? start + nested[item.EventIndex].Progress * duration
+            : CurveMath.FirstSpanTime(track, item.TimeMs);
+        double time = SampleTime(selected);
+        var times = siblings.Select(SampleTime)
             .Distinct().OrderBy(t => t).ToArray();
         double? previous = times.Where(t => t < time - CurveMath.MinimumAnchorSpacingMs).Select(t => (double?)t).LastOrDefault();
         double? next = times.Where(t => t > time + CurveMath.MinimumAnchorSpacingMs).Select(t => (double?)t).FirstOrDefault();
@@ -52,13 +60,14 @@ public static class DistanceSpacingEditing
         var left = AnchorAt(track, previous.Value);
         var right = AnchorAt(track, next.Value);
         var anchor = AnchorAt(track, time);
+        track.Nodes.RemoveAll(n => n != anchor && n.TimeMs > left.TimeMs && n.TimeMs < right.TimeMs);
         int index = track.Nodes.IndexOf(anchor);
         if (index <= 0 || index >= track.Nodes.Count - 1 || track.Nodes[index - 1] != left || track.Nodes[index + 1] != right)
             throw new ArgumentException(L.Get("coordinate.unreachable"));
         left.OutgoingCurve = null; left.OutgoingKind = CurveKind.Linear; left.HandleOut = default;
         anchor.HandleIn = default; anchor.OutgoingCurve = null; anchor.OutgoingKind = CurveKind.Linear; anchor.HandleOut = default;
         right.HandleIn = default;
-        double pathX = selected.Kind == CatchObjectKind.TinyDroplet && Math.Abs(selected.X - selected.TargetX) > .001
+        double pathX = selected.Kind == CatchObjectKind.TinyDroplet && !slider.TinyCompensationApplied
             ? x - selected.RandomOffset : x;
         if (pathX is < 0 or > 512 || !CurveMath.TryMoveAnchor(track, anchor.Id, time, pathX, out _))
             throw new ArgumentException(L.Get("coordinate.unreachable"));

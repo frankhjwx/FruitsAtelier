@@ -2,6 +2,76 @@ using FruitsAtelier.Core;
 
 internal static class DropletDragTests
 {
+    public static void DefaultModeDrag()
+    {
+        foreach (var kind in new[] { CatchObjectKind.Droplet, CatchObjectKind.TinyDroplet })
+        {
+            var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 60000.0 / 180, IsDemo = false };
+            var track = new CurveTrack { Kind = CurveKind.Linear };
+            track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 120 }, new Anchor { TimeMs = 3000, X = 320 }]);
+            map.Tracks.Add(track);
+            var ui = new Ui(); ui.LoadDocument(map);
+            ui.View.SetSliderEditingMode(FruitsAtelier.App.Editor.SliderEditingMode.OsuLegacy);
+            ui.Paint();
+            var original = ui.View.Document.DeepClone();
+            var target = OsuBeatmapWriter.Serialize(map).PlayableObjects.First(o => o.Kind == kind);
+            ui.ClickMap(target.TimeMs, target.X);
+            ui.DownMap(target.TimeMs, target.X);
+            ui.MoveMap(target.TimeMs, target.X + 10);
+            ui.MoveMap(target.TimeMs, target.X + 20);
+            ui.UpMap(target.TimeMs, target.X + 20);
+            var moved = OsuBeatmapWriter.Serialize(ui.View.Document).PlayableObjects.Single(o => o.EventIndex == target.EventIndex);
+            Check(Math.Abs(moved.X - target.X - 20) < 1,
+                $"Default-mode {kind} drag stopped at {moved.X}, started at {target.X}: {ui.View.StatusMessage}");
+            ui.Key('Z', ctrl: true);
+            Check(original.ContentEquals(ui.View.Document), "Default-mode drag did not undo in one step.");
+        }
+    }
+
+    public static void DragAfterLegacyConversion()
+    {
+        var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 60000.0 / 183, IsDemo = false };
+        var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'B', PixelLength = 420 };
+        slider.ControlPoints.AddRange([new(120, 192), new(400, 100), new(200, 300), new(320, 192)]);
+        map.ImportedSliders.Add(slider);
+        ImportedSliderEditing.ConvertToTrack(map, slider.Id);
+        var baseline = CatchStreamConverter.Convert(map);
+        Check(baseline.Success, "Converted legacy fixture is invalid.");
+        var displayed = OsuBeatmapWriter.Serialize(map).PlayableObjects;
+        foreach (var mode in Enum.GetValues<FruitsAtelier.App.Editor.SliderEditingMode>())
+        foreach (var kind in new[] { CatchObjectKind.Droplet, CatchObjectKind.TinyDroplet })
+        foreach (var target in displayed.Where(o => o.Kind == kind))
+        {
+            var ui = new Ui(); ui.LoadDocument(map);
+            ui.View.SetSliderEditingMode(mode);
+            ui.Paint();
+            ui.ClickMap(target.TimeMs, target.X);
+            ui.DownMap(target.TimeMs, target.X);
+            ui.MoveMap(target.TimeMs, target.X + 5);
+            ui.MoveMap(target.TimeMs, target.X + 10);
+            ui.UpMap(target.TimeMs, target.X + 10);
+            var after = CatchStreamConverter.Convert(ui.View.Document);
+            Check(after.Success, "Converted slider drag became invalid.");
+            foreach (var old in baseline.Objects)
+            {
+                var current = after.Objects.Single(o => o.EventIndex == old.EventIndex);
+                double expected = old.EventIndex == target.EventIndex ? target.X + 10 : old.X;
+                Check(Math.Abs(current.X - expected) < .01 && Math.Abs(current.TimeMs - old.TimeMs) < .001,
+                    $"Converted {kind} #{target.EventIndex}: event {old.EventIndex} expected {expected}, got {current.X}; {ui.View.StatusMessage}");
+            }
+            var moved = OsuBeatmapWriter.Serialize(ui.View.Document).PlayableObjects.Single(o => o.EventIndex == target.EventIndex);
+            ui.DownMap(moved.TimeMs, moved.X);
+            ui.MoveMap(moved.TimeMs, moved.X - 5);
+            Check(ui.View.SelectedAnchorIds.Count == 0, "Dragging the same droplet again selected its new anchor.");
+            ui.Key(27);
+            ui.UpMap(moved.TimeMs, moved.X - 5);
+            Check(CatchStreamConverter.Convert(ui.View.Document).Objects.SequenceEqual(after.Objects),
+                "Cancelling a second drag changed the accepted droplet position.");
+            ui.Key('Z', ctrl: true);
+            Check(map.ContentEquals(ui.View.Document), "Converted slider drag did not undo.");
+        }
+    }
+
     private static void Check(bool condition, string message)
     {
         if (!condition) throw new Exception(message);
@@ -115,5 +185,35 @@ internal static class DropletDragTests
         var editor = new Ui(); editor.LoadDocument(map);
         editor.ClickMap(target.TimeMs, target.X); editor.ClickMap(target.TimeMs, target.X);
         Check(editor.View.XCoordinateFieldBounds is not null, "Converted FSlider droplet could not be selected.");
+    }
+
+    public static void ConvertedAndDenseCurves()
+    {
+        foreach (bool compensated in new[] { true, false })
+        foreach (bool dense in new[] { false, true })
+        foreach (var kind in new[] { CatchObjectKind.Droplet, CatchObjectKind.TinyDroplet })
+        {
+            var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 60000.0 / 183, IsDemo = false };
+            var track = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = compensated };
+            track.Nodes.Add(new Anchor { TimeMs = 1000, X = 120 });
+            if (dense)
+                for (int i = 1; i < 100; i++)
+                    track.Nodes.Add(new Anchor { TimeMs = 1000 + i * 20, X = 120 + i * 2 });
+            track.Nodes.Add(new Anchor { TimeMs = 3000, X = 320 });
+            map.Tracks.Add(track);
+            var before = CatchStreamConverter.Convert(map);
+            Check(before.Success, "Drag fixture did not convert.");
+            var target = before.Objects.First(o => o.Kind == kind);
+            try { DistanceSpacingEditing.ApplyIsolatedX(map, target, target.X + 5, true); }
+            catch (Exception error) { throw new Exception($"Cannot drag {kind}, compensated={compensated}, dense={dense}", error); }
+            var after = CatchStreamConverter.Convert(map);
+            Check(after.Success, "Dragged fixture did not convert.");
+            foreach (var old in before.Objects)
+            {
+                var current = after.Objects.Single(o => o.EventIndex == old.EventIndex);
+                Check(Math.Abs(current.X - old.X - (old.EventIndex == target.EventIndex ? 5 : 0)) < .001,
+                    $"Drag displaced event {old.EventIndex}, compensated={compensated}, dense={dense}.");
+            }
+        }
     }
 }
