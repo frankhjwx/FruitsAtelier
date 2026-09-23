@@ -23,10 +23,22 @@ public sealed partial class EditorView
     {
         var timing = TimingMap.At(Document, note.TimeMs);
         int matched = 0;
+        double closestDistance = double.MaxValue;
         foreach (int candidate in SnapDivisors)
-            if (Math.Abs(TimingMap.Snap(Document, note.TimeMs, candidate) - note.TimeMs) <= .5)
-            { matched = candidate; break; }
-        if (matched == 0)
+        {
+            double beatLength = timing.BeatLengthMs / candidate;
+            double beats = Math.Round((Math.Max(note.TimeMs, 0) - timing.OffsetMs) / beatLength, MidpointRounding.AwayFromZero);
+            double snappedTime = timing.OffsetMs + beats * beatLength;
+            if (snappedTime < 0) snappedTime += beatLength;
+            double distance = Math.Abs(note.TimeMs - snappedTime);
+            // Equal-distance grids retain the smaller divisor despite floating-point roundoff.
+            if (closestDistance - 1e-7 > distance)
+            {
+                matched = candidate;
+                closestDistance = distance;
+            }
+        }
+        if (closestDistance > 2)
         {
             RestoreTemporarySnap();
             StatusMessage = L.Get("editor.status.noteOffGrid", Time(note.TimeMs));
@@ -40,7 +52,7 @@ public sealed partial class EditorView
         temporarySnapSource = note.SourceId;
         divisor = matched;
         snap = true;
-        int step = (int)Math.Round((note.TimeMs - timing.OffsetMs) / timing.BeatLengthMs * matched);
+        int step = (int)Math.Round((note.TimeMs - timing.OffsetMs) / (timing.BeatLengthMs / matched), MidpointRounding.AwayFromZero);
         int numerator = ((step % matched) + matched) % matched;
         int denominator = matched;
         int gcd = GreatestCommonDivisor(numerator, denominator);

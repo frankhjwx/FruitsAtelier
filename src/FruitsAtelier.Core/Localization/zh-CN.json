@@ -365,7 +365,7 @@
   "editor.status.handleAdjusted": "已调整控制柄 · 曲线与生成对象即时更新",
   "editor.status.importedSliderEditable": "已转换为 FSlider · TinyDroplet 贴合轨迹，控制点可编辑",
   "editor.status.needTwoAnchors": "至少需要两个锚点；继续向上点击，或 Esc 取消",
-  "editor.status.noteBeatPosition": "拍内位置 {0}/{1} · {2} · 临时吸附 1/{3}",
+  "editor.status.noteBeatPosition": "最近拍位 {0}/{1} · {2} · 临时吸附 1/{3}",
   "editor.status.noteOffGrid": "未对齐网格 · {0}",
   "editor.status.objectsCopied": "已复制 {0} 个对象 · 粘贴时最早起点位于播放头",
   "editor.status.objectsCut": "已剪切 {0} 个对象 · Ctrl + Z 撤销",

@@ -365,7 +365,7 @@
   "editor.status.handleAdjusted": "Handles adjusted · Curve and generated objects update immediately",
   "editor.status.importedSliderEditable": "Converted to FSlider · TinyDroplets align to its path; control points are editable",
   "editor.status.needTwoAnchors": "At least two anchors are required; keep clicking upward, or press Esc to cancel",
-  "editor.status.noteBeatPosition": "Beat {0}/{1} · {2} · temporary Snap 1/{3}",
+  "editor.status.noteBeatPosition": "Nearest beat {0}/{1} · {2} · temporary Snap 1/{3}",
   "editor.status.noteOffGrid": "Off-grid · {0}",
   "editor.status.objectsCopied": "Copied {0} objects · Paste aligns the earliest start to the playhead",
   "editor.status.objectsCut": "Cut {0} objects · Ctrl + Z to undo",
