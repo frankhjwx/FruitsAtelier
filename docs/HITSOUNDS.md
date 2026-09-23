@@ -57,11 +57,12 @@ an additional per-hit output buffer. UI stalls beyond the horizon can still omit
 Pause, seek, and content changes clear the event window. Pausing rebuilds music output
 at its consumed frame, so resume uses the same position for audio and the playhead.
 
-Testplay plays only caught objects. Windows mixes live judgements into the next
-music callback on the same 10 ms requested-latency WASAPI output. Music and live
-hitsounds share the device buffer and clock. The device determines effective
-latency. Stop and seek clear live voices as well as scheduled preview events.
-macOS uses its existing persistent live mixer.
+Testplay plays only caught objects. Windows measures submitted PCM ahead of the
+device clock and advances catch judgement by that lead plus 25 ms of output time.
+Each caught sample is placed at its original map timestamp in the music stream.
+A late catch starts its full sample at the next writable frame. The 10 ms WASAPI
+latency is a request; the actual buffer lead varies by device. Stop and seek clear
+testplay and preview events. macOS uses its existing persistent live mixer.
 
 macOS uses one persistent
 `AVAudioEngine` / `AVAudioSourceNode` mixer with 128 voices and a bounded 2,047-command queue.

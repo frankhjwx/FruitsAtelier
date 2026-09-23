@@ -109,7 +109,8 @@ tests cover key repeat/release, focus cancellation, end conditions, judging betw
 frames, custom bindings, and document isolation. Extended binding checks cover capture,
 key labels, settings reload, movement/dash press and release, and reserved keys;
 Mac key mappings also run without an audio device. `Audio.Tests --hitsound-check`
-checks live catch samples in the next music output frame without opening an audio device.
+checks timestamped samples against music frames and preserves late catch attacks
+without opening an audio device.
 
 The App tests use an injected monotonic clock to check subframe taps, reversals,
 dash changes, repeated audio snapshots, timestamp interpolation, device stalls,

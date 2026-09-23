@@ -30,6 +30,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay Escape returns to editor without repeated navigation", TestplayTests.EscapeReturnsToEditor),
     ("Testplay caught stacks share preview effects and outlive final judgement", TestplayTests.LivePlate),
     ("Testplay input isolation and transport lifecycle", TestplayTests.EditorLifecycle),
+    ("Testplay compensates output buffer lead without shifting resume", TestplayTests.OutputBufferLead),
     ("Testplay subframe input and interpolated audio clock", TestplayTests.InputBetweenFrames),
     ("Missed testplay notes continue falling after judgement", TestplayTests.MissedObjectsFall),
     ("Testplay key capture and settings persistence", TestplayTests.Bindings),

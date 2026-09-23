@@ -102,6 +102,18 @@ static class HitsoundMixerTests
             var resumed = mixer.MixWithMusic(new ConstantMusic(rate, channels), 1000);
             resumed.Read(buffer, 0, channels * 257);
             if (buffer.Take(channels * 257).Any(v => v != .1f)) throw new Exception("Canceled future hit survived a new music session");
+            mixer.Schedule(sound, 999);
+            resumed.Read(buffer, 0, channels * 257);
+            for (int i = 0; i < 257; i++)
+            {
+                double position = i * 44100d / rate;
+                int index = (int)position;
+                float attack = (sample[index] + (sample[Math.Min(index + 1, sample.Length - 1)] - sample[index]) * (float)(position - index)) * sound.Volume;
+                for (int c = 0; c < channels; c++)
+                    if (Math.Abs(buffer[i * channels + c] - (.1f + attack)) > .00001f)
+                        throw new Exception("Late catch lost the beginning of its sample");
+            }
+            mixer.Stop();
             mixer.PlayImmediate(sound);
             resumed.Read(buffer, 0, channels * 257);
             for (int i = 0; i < 257; i++)

@@ -6,6 +6,7 @@ namespace FruitsAtelier.Core;
 /// <summary>A monotonic game clock interpolated between audio position samples.</summary>
 public sealed class CatchTestplayClock(double start, double rate, double realtime, bool waitForAudio)
 {
+    public double Rate => rate;
     private double anchorTime = start, anchorRealtime = realtime, correction, lastTime = start;
     private double lastAudioTime = start;
     private double audioLimit = double.PositiveInfinity;

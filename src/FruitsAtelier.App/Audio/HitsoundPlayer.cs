@@ -11,7 +11,14 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
     private readonly Dictionary<string, float[]> cache = new();
     private long cacheBytes;
     private readonly List<(float[] Samples, double Position, float Volume)> voices = new();
-    private readonly List<(float[] Samples, double TimeMs, float Volume)> scheduled = new();
+    private sealed class ScheduledVoice(float[] samples, double timeMs, float volume)
+    {
+        public float[] Samples { get; } = samples;
+        public double TimeMs { get; } = timeMs;
+        public float Volume { get; } = volume;
+        public long? StartFrame { get; set; }
+    }
+    private readonly List<ScheduledVoice> scheduled = new();
     private bool unavailable;
     private float volume = 1;
     public float Volume { get => Volatile.Read(ref volume); set => Volatile.Write(ref volume, float.IsFinite(value) ? Math.Clamp(value, 0, 1) : 1); }
@@ -36,7 +43,7 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
         lock (gate)
         {
             if (scheduled.Count == 2048) scheduled.RemoveAt(0);
-            scheduled.Add((samples, timeMs, sound.Volume));
+            scheduled.Add(new(samples, timeMs, sound.Volume));
         }
     }
     public void PlayImmediate(Hitsound sound)
@@ -77,7 +84,9 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
                 for (int v = owner.scheduled.Count - 1; v >= 0; v--)
                 {
                     var voice = owner.scheduled[v];
-                    long firstFrame = (long)Math.Round((voice.TimeMs - startMs) * rate / (1000 * speed));
+                    // A late catch begins at the next writable frame with its attack intact.
+                    long firstFrame = voice.StartFrame ??= Math.Max(framesRead,
+                        (long)Math.Round((voice.TimeMs - startMs) * rate / (1000 * speed)));
                     int begin = (int)Math.Clamp(firstFrame - framesRead, 0, frames);
                     for (int frame = begin; frame < frames; frame++)
                     {
@@ -89,6 +98,8 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
                         for (int channel = 0; channel < channels; channel++)
                             buffer[offset + frame * channels + channel] += sample;
                     }
+                    if ((framesRead + frames - firstFrame) * (double)HitsoundSamples.SampleRate / rate >= voice.Samples.Length)
+                        owner.scheduled.RemoveAt(v);
                 }
             }
             framesRead += frames;

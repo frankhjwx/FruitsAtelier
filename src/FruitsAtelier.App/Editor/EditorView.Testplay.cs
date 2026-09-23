@@ -17,7 +17,7 @@ public sealed partial class EditorView
     private double TestplayRealtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
     private double testplayStart;
     private bool testplayWithAudio;
-    private double transportSampleAt, transportSamplePosition;
+    private double transportSampleAt, transportSamplePosition, transportSampleLeadMs;
     public bool IsTestplaying => testplay is not null;
     public int TestplayCombo => testplay?.Combo ?? 0;
     public double TestplayCatcherX => testplay?.X ?? 256;
@@ -45,13 +45,23 @@ public sealed partial class EditorView
         var sounds = PreviewObjects().ToDictionary(item => (item.SourceId, item.EventIndex), resolver.Resolve);
         foreach (var sound in sounds.Values.SelectMany(s => s).Distinct()) RequestPrepareHitsound?.Invoke(sound);
         var playSound = RequestHitsound;
+        var scheduleSound = OperatingSystem.IsWindows() && AudioReady ? RequestScheduleHitsound : null;
         double now = TestplayRealtime;
-        double clockStart = AudioPlaying ? Math.Min(AudioDurationMs, transportSamplePosition + Math.Max(0, now - transportSampleAt) * PlaybackSpeed) : playhead;
+        double clockStart = AudioPlaying ? Math.Min(AudioDurationMs,
+            transportSamplePosition + Math.Max(0, now - transportSampleAt) * PlaybackSpeed
+            + CatchTestplaySession.LiveHitsoundLead(transportSampleLeadMs, PlaybackSpeed)) : playhead;
         var clock = new CatchTestplayClock(clockStart, PlaybackSpeed, now, AudioReady && !AudioPlaying);
         if (AudioReady) clock.Synchronize(clockStart, now, now);
         testplay = new(session, clock, playhead, AudioReady, AudioPlaying, LibrarySettings.TestplayLeftKey,
             LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey, timeProvider, PreviewCircleSize, previewComboEnds,
-            item => { foreach (var sound in sounds[(item.SourceId, item.EventIndex)]) playSound?.Invoke(sound); });
+            item =>
+            {
+                foreach (var sound in sounds[(item.SourceId, item.EventIndex)])
+                {
+                    if (scheduleSound is not null) scheduleSound(sound, item.TimeMs);
+                    else playSound?.Invoke(sound);
+                }
+            });
         testplayFrame = testplay.Capture();
         if (AudioReady && !AudioPlaying) { RequestSeek?.Invoke(playhead); RequestTogglePlayback?.Invoke(); }
         try { if (testplay is not null) testplayDriver = RequestRunTestplay?.Invoke(testplay); }
@@ -61,7 +71,7 @@ public sealed partial class EditorView
     public void StopTestplay(bool atCurrentPosition = false)
     {
         if (!IsTestplaying) return;
-        double returnTime = atCurrentPosition ? testplay!.Capture().TimeMs : testplayStart;
+        double returnTime = atCurrentPosition ? testplay!.TransportPosition : testplayStart;
         testplay!.Cancel();
         testplayDriver?.Dispose(); testplayDriver = null;
         testplay = null; testplayFrame = null;

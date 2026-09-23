@@ -223,7 +223,7 @@ internal static class TestplayTests
         Transport(1000, 6000, true, true, false, null, null);
         Check(ui.View.TestplayCombo == 0 && sounds == 0, "pending play intent must not judge the first note before the device advances");
         Transport(1000.001, 6000, true, true, false, null, null);
-        Check(ui.View.TestplayCombo == 1 && sounds > 0 && scheduled == 0, "live catches produce sound without autoplay scheduling");
+        Check(ui.View.TestplayCombo == 1 && sounds == 0 && scheduled > 0, "live catches schedule only judged hitsounds");
         ui.Key(39); ui.Key(39);
         Transport(1100, 6000, true, true, false, null, null); Near(306, ui.View.TestplayCatcherX);
         ui.View.KeyUp(39);
@@ -258,6 +258,33 @@ internal static class TestplayTests
         clock.Advance(25); ui.Paint();
         Check(ui.View.PlayheadMs > 0 && ui.View.IsTestplaying, "silent clock advances through gaps");
         ui.View.StopTestplay(); Near(0, ui.View.PlayheadMs);
+    }
+
+    public static void OutputBufferLead()
+    {
+        var clock = new ManualTime();
+        var note = new ConvertedCatchObject(Guid.NewGuid(), 0, CatchObjectKind.Fruit,
+            1025, 256, 256, 256, 0);
+        var later = note with { SourceId = Guid.NewGuid(), TimeMs = 1500 };
+        int caught = 0;
+        var session = new CatchTestplaySession(new CatchTestplay([note, later], 5, 950),
+            new CatchTestplayClock(950, 1, 0, false), 950, true, true,
+            37, 39, 16, clock, 5, [], _ => caught++);
+        session.UpdateAudio(950, 0, 2000, true, true, false, false, 40);
+        clock.Advance(10);
+        session.UpdateAudio(960, 10, 2000, true, true, false, false, 40);
+        Check(caught == 1 && session.Capture().TimeMs >= 1025,
+            "testplay judges ahead by the measured output buffer lead");
+        Near(960, session.TransportPosition);
+        Near(960, session.TogglePause());
+        clock.Advance(1000);
+        session.TogglePause();
+        session.UpdateAudio(960, 1010, 2000, true, true, false, false, 40);
+        Check(session.Capture().TimeMs < 1035, "resume waits for the device to move beyond its seek position");
+        clock.Advance(10);
+        session.UpdateAudio(970, 1020, 2000, true, true, false, false, 40);
+        Check(session.Capture().TimeMs >= 1035 && session.Capture().TimeMs < 1045,
+            "resume applies the output lead once");
     }
 
     public static void InputBetweenFrames()

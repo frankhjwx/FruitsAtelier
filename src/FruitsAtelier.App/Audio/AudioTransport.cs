@@ -11,6 +11,7 @@ public sealed record AudioState(string? FilePath, double PositionMs, double Dura
     bool CanPlay, bool IsLoading, string? Error)
 {
     public double PositionTimestampMs { get; init; }
+    public double OutputBufferAheadMs { get; init; }
 }
 
 public sealed class AudioTransport : IDisposable
@@ -35,11 +36,13 @@ public sealed class AudioTransport : IDisposable
         public bool ProgressRecorded { get; set; }
         public DiagnosticWaveProvider? Probe { get; }
         public TempoSampleProvider? Tempo { get; }
+        public TrackedSampleProvider? Buffered { get; }
         public Exception? Error { get; private set; }
         public OutputSession(IWaveProvider source, Action wake, Func<IWavePlayer> createPlayer, AudioDiagnosticLog diagnostics,
-            TempoSampleProvider? tempo)
+            TempoSampleProvider? tempo, TrackedSampleProvider? buffered)
         {
             Tempo = tempo;
+            Buffered = buffered;
             Player = createPlayer();
             if (diagnostics.Enabled) source = Probe = new DiagnosticWaveProvider(source, diagnostics, Id);
             Player.PlaybackStopped += (_, e) =>
@@ -53,6 +56,19 @@ public sealed class AudioTransport : IDisposable
             catch { Player.Dispose(); throw; }
         }
         public void Dispose() => Player.Dispose();
+    }
+
+    private sealed class TrackedSampleProvider(ISampleProvider source, double startMs, double speed) : ISampleProvider
+    {
+        private long framesRead;
+        public WaveFormat WaveFormat => source.WaveFormat;
+        public double ReadThroughMs => startMs + Volatile.Read(ref framesRead) * 1000d * speed / WaveFormat.SampleRate;
+        public int Read(float[] buffer, int offset, int count)
+        {
+            int read = source.Read(buffer, offset, count);
+            Interlocked.Add(ref framesRead, read / WaveFormat.Channels);
+            return read;
+        }
     }
 
     private readonly object stateLock = new();
@@ -352,9 +368,10 @@ public sealed class AudioTransport : IDisposable
         if (playbackSpeed != 1) samples = tempo = new TempoSampleProvider(samples, playbackSpeed, diagnostics.Enabled);
         samples = new PlaybackGain(samples, () => SongVolume);
         if (Hitsounds is not null) samples = Hitsounds.MixWithMusic(samples, basePosition, playbackSpeed);
-        var pcm = new SampleToWaveProvider16(samples) { Volume = outputGain };
+        var buffered = new TrackedSampleProvider(samples, basePosition, playbackSpeed);
+        var pcm = new SampleToWaveProvider16(buffered) { Volume = outputGain };
         long version = loadedVersion;
-        var session = new OutputSession(pcm, () => commands.Writer.TryWrite(new(CommandKind.Refresh, version)), createPlayer, diagnostics, tempo);
+        var session = new OutputSession(pcm, () => commands.Writer.TryWrite(new(CommandKind.Refresh, version)), createPlayer, diagnostics, tempo, buffered);
         if (diagnostics.Enabled) diagnostics.Write("outputCreated", new { session = session.Id,
             backend = session.Player.GetType().Name, outputFormat = session.Player.OutputWaveFormat.ToString(),
             sourceFormat = pcm.WaveFormat.ToString(), requestedLatencyMs = session.Player is WasapiOut ? 10 : (int?)null,
@@ -442,10 +459,13 @@ public sealed class AudioTransport : IDisposable
         {
             if (loadedVersion != loadVersion || disposed != 0) return;
             // A queued seek or pause owns the displayed location until its output reset has finished.
+            bool outputMatchesIntent = appliedSeekVersion == seekVersion && appliedIntentVersion == intentVersion;
             if (appliedSeekVersion != seekVersion) position = requestedPosition;
             if (appliedIntentVersion != intentVersion) playing = requestedPlaying;
             Volatile.Write(ref state, state with { PositionMs = position, DurationMs = duration, IsPlaying = playing,
                 CanPlay = reader is not null && output is not null, IsLoading = false, Error = null,
+                OutputBufferAheadMs = outputMatchesIntent && playing && output?.Buffered is { } buffered
+                    ? Math.Max(0, buffered.ReadThroughMs - position) : 0,
                 PositionTimestampMs = System.Diagnostics.Stopwatch.GetTimestamp() * 1000d / System.Diagnostics.Stopwatch.Frequency });
         }
     }
