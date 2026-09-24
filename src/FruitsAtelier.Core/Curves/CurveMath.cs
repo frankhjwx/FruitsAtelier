@@ -207,7 +207,7 @@ public static class CurveMath
             if (node.OutgoingKind is CurveKind kind && !Enum.IsDefined(kind)) errors.Add(L.Get("core.curves.segmentKind"));
             bool usesIn = i > 0 && track.Nodes[i - 1].OutgoingCurve is null && SegmentKind(track, i - 1) == CurveKind.Bezier;
             bool usesOut = i + 1 < track.Nodes.Count && node.OutgoingCurve is null && SegmentKind(track, i) == CurveKind.Bezier;
-            if (!ValidHandle(node, node.HandleIn, incoming: true, usesIn) || !ValidHandle(node, node.HandleOut, incoming: false, usesOut))
+            if (!ValidHandle(node, node.HandleIn, usesIn) || !ValidHandle(node, node.HandleOut, usesOut))
                 errors.Add(L.Get("core.curves.handleRange"));
         }
         for (int i = 0; i + 1 < track.Nodes.Count; i++)
@@ -215,18 +215,19 @@ public static class CurveMath
             var a = track.Nodes[i]; var b = track.Nodes[i + 1];
             if (b.TimeMs <= a.TimeMs || b.TimeMs < a.TimeMs + MinimumAnchorSpacingMs) errors.Add(L.Get("core.curves.anchorSpacing"));
             if (a.OutgoingCurve is not null && ControlCurveMath.Validate(track, i) is { } curveError) errors.Add(curveError);
-            if (a.OutgoingCurve is null && SegmentKind(track, i) == CurveKind.Bezier && a.TimeMs + a.HandleOut.TimeMs > b.TimeMs + b.HandleIn.TimeMs)
+            if (a.OutgoingCurve is null && SegmentKind(track, i) == CurveKind.Bezier
+                && !ControlCurveMath.HasForwardTimeBranch(ControlCurveMath.Points(track, i)))
                 errors.Add(L.Get("core.curves.handleOrder"));
         }
         if (track.Nodes.LastOrDefault()?.OutgoingCurve is not null) errors.Add(L.Get("core.controlCurve.invalid"));
         return errors;
     }
 
-    private static bool ValidHandle(Anchor node, MapPoint handle, bool incoming, bool active)
+    private static bool ValidHandle(Anchor node, MapPoint handle, bool active)
     {
         double controlX = node.X + handle.X;
         return double.IsFinite(handle.TimeMs) && double.IsFinite(handle.X) && double.IsFinite(node.TimeMs + handle.TimeMs)
-            && (incoming ? handle.TimeMs <= 0 : handle.TimeMs >= 0) && (!active || controlX >= 0 && controlX <= 512);
+            && (!active || controlX >= 0 && controlX <= 512);
     }
 
     private static bool IsPositionValid(double time, double x) => double.IsFinite(time) && time >= 0 && double.IsFinite(x) && x >= 0 && x <= 512;

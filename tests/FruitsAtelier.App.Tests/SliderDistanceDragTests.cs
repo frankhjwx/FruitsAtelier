@@ -3,6 +3,32 @@ using FruitsAtelier.Core;
 
 internal static class SliderDistanceDragTests
 {
+    public static void ControlOverhangs()
+    {
+        foreach (var mode in Enum.GetValues<SliderEditingMode>())
+        foreach (bool ds in new[] { false, true })
+        foreach (bool incoming in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 5000 };
+            map.DistanceSnapRatios.Add(2);
+            var track = new CurveTrack { Kind = CurveKind.Bezier, CompensateTinyDroplets = false };
+            track.Nodes.Add(new() { TimeMs = 1000, X = 200, HandleOut = new(200, 60) });
+            track.Nodes.Add(new() { TimeMs = 2000, X = 240, HandleIn = new(-200, 60) });
+            map.Tracks.Add(track);
+            var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode);
+            ui.SelectTrack(track.Id); ui.Key('B');
+            if (ds) ui.Key('Y');
+            double x = incoming ? 300 : 260, from = incoming ? 1800 : 1200, to = incoming ? 2200 : 800;
+            ui.DownMap(from, x); ui.MoveMap(to, x); ui.UpMap(to, x);
+            var points = ControlCurveMath.Points(ui.View.Document.Tracks.Single(), 0);
+            Check(Math.Abs(points[incoming ? ^2 : 1].TimeMs - to) < 1,
+                $"Control could not cross endpoint: {mode}, DS={ds}, incoming={incoming}. {ui.View.StatusMessage}");
+            Check(CatchStreamConverter.Convert(ui.View.Document).Success, "Dragged overhang failed conversion.");
+            ui.Key('Z', ctrl: true);
+            Check(map.ContentEquals(ui.View.Document), "Overhang undo lost source geometry.");
+        }
+    }
+
     public static void FractionalFoldedTail()
     {
         foreach (bool ds in new[] { false, true })

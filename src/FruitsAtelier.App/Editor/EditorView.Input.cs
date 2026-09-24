@@ -415,7 +415,7 @@ public sealed partial class EditorView
             else if (drag == DragKind.DraftHandle)
             {
                 var cursor = MapAt(x, y, false);
-                double dt = Math.Max(0, cursor.TimeMs - node.TimeMs);
+                double dt = cursor.TimeMs - node.TimeMs;
                 double dx = Math.Clamp(cursor.X - node.X, -node.X, 512 - node.X);
                 bool SetDraftHandle(double offset)
                 {
@@ -426,8 +426,7 @@ public sealed partial class EditorView
                         if (track.Nodes.Count > 1)
                         {
                             var previous = track.Nodes[^2];
-                            double maxIncoming = current.TimeMs - previous.TimeMs - previous.HandleOut.TimeMs;
-                            current.HandleIn = new(-Math.Min(dt, maxIncoming), Math.Clamp(-offset, -current.X, 512 - current.X));
+                            current.HandleIn = new(-dt, Math.Clamp(-offset, -current.X, 512 - current.X));
                             previous.OutgoingKind = previous.HandleOut != default || current.HandleIn != default ? CurveKind.Bezier : CurveKind.Linear;
                         }
                         return true;
@@ -452,7 +451,7 @@ public sealed partial class EditorView
                 var start = incoming ? node.HandleIn : node.HandleOut;
                 var cursor = Transform.ToMap(x, y) - dragOffset;
                 var desired = cursor - Point(node);
-                desired = new(incoming ? Math.Min(0, desired.TimeMs) : Math.Max(0, desired.TimeMs), Math.Clamp(desired.X, -node.X, 512 - node.X));
+                desired = new(desired.TimeMs, Math.Clamp(desired.X, -node.X, 512 - node.X));
                 bool TryHandle(MapPoint value) => TryDistanceShape(track, () =>
                     CurveMath.TryMoveHandle(track, node.Id, incoming, value, out _));
                 if (DistanceSnapEnabled)
@@ -1017,7 +1016,7 @@ public sealed partial class EditorView
         {
             var previous = track.Nodes[^1];
             double dt = p.TimeMs - previous.TimeMs;
-            if (dt < 0.001 || previous.TimeMs + previous.HandleOut.TimeMs > p.TimeMs)
+            if (dt < 0.001)
                 return null;
             if (straight) { previous.HandleOut = default; node.HandleIn = default; }
             previous.OutgoingKind = straight || previous.HandleOut == default ? CurveKind.Linear : CurveKind.Bezier;

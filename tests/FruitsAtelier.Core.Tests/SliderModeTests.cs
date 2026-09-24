@@ -2,6 +2,49 @@ using FruitsAtelier.Core;
 
 internal static class SliderModeTests
 {
+    public static void EndpointOverhangs()
+    {
+        foreach (bool explicitControls in new[] { false, true })
+        foreach (bool start in new[] { false, true })
+        foreach (bool end in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 5000 };
+            var track = new CurveTrack { Kind = CurveKind.Bezier, CompensateTinyDroplets = false };
+            track.Nodes.Add(new() { TimeMs = 1000, X = 200, HandleOut = new(start ? -200 : 200, 20) });
+            track.Nodes.Add(new() { TimeMs = 2000, X = 240, HandleIn = new(end ? 200 : -200, -20) });
+            if (explicitControls)
+            {
+                track.Nodes[0].OutgoingCurve = new() { Kind = ControlCurveKind.Bezier };
+                track.Nodes[0].OutgoingCurve!.Controls.Add(new() { Offset = track.Nodes[0].HandleOut });
+                track.Nodes[0].OutgoingCurve!.Controls.Add(new() { Offset = new(1000 + track.Nodes[1].HandleIn.TimeMs, 20) });
+            }
+            map.Tracks.Add(track);
+            Check(CurveMath.Validate(map).Count == 0, "Valid endpoint overhang rejected.");
+            var points = ControlCurveMath.Points(track, 0);
+            for (int i = 1; i < 1000; i++)
+            {
+                var point = ControlCurveMath.Bezier(points, i / 1000.0);
+                if (point.TimeMs > 1000 && point.TimeMs < 2000)
+                    Near(point.X, CurveMath.PositionAtTime(track, point.TimeMs), 1e-7);
+            }
+            var result = CatchStreamConverter.Convert(map);
+            Check(result.Success && result.Objects.All(o => o.TimeMs >= 1000 && o.TimeMs <= 2000 && o.X is >= 0 and <= 512),
+                "Overhang produced invalid catch events.");
+            Check(ProjectSerializer.Read(ProjectSerializer.Serialize(map)).ContentEquals(map), "Overhang did not persist.");
+            Check(OsuBeatmapWriter.Serialize(map).ReadBack.ImportedSliders.Count == 1, "Overhang did not export.");
+            if (explicitControls)
+            {
+                var before = map.DeepClone().Tracks[0];
+                ControlCurveEditing.ConvertToPen(track, 0);
+                for (int i = 0; i <= 100; i++) Near(CurveMath.PositionAtTime(before, 1000 + 10 * i), CurveMath.PositionAtTime(track, 1000 + 10 * i));
+            }
+            track.Nodes[0].HandleOut = new(2000, 20);
+            track.Nodes[1].HandleIn = new(-2000, -20);
+            Check(CurveMath.Validate(map).Count > 0 && !CatchStreamConverter.Convert(map).Success,
+                "Ambiguous interior time reversal generated a slider.");
+        }
+    }
+
     internal static MapDocument ArcMap()
     {
         var map = new MapDocument { DurationMs = 8000, ApproachRate = 8 };

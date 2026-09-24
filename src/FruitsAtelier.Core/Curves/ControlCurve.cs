@@ -101,9 +101,10 @@ public static class ControlCurveMath
         {
             if (!double.IsFinite(points[i].TimeMs) || !double.IsFinite(points[i].X) || points[i].X is < 0 or > 512)
                 return L.Get("core.curves.handleRange");
-            if (i > 0 && points[i].TimeMs < points[i - 1].TimeMs) return L.Get("core.curves.handleOrder");
         }
-        if (curve.Kind != ControlCurveKind.CircularArc || !TryArc(points, curve.ReferenceScale, out var arc)) return null;
+        if (curve.Kind != ControlCurveKind.CircularArc)
+            return HasForwardTimeBranch(points) ? null : L.Get("core.curves.handleOrder");
+        if (!TryArc(points, curve.ReferenceScale, out var arc)) return null;
         // Check endpoints and every coordinate extremum, not just a rendered sample grid.
         double lo = Math.Min(arc.Angle, arc.Angle + arc.Sweep), hi = Math.Max(arc.Angle, arc.Angle + arc.Sweep);
         var angles = new List<double> { lo, hi };
@@ -115,5 +116,37 @@ public static class ControlCurveMath
                 return L.Get("core.controlCurve.monotone");
         }
         return null;
+    }
+
+    internal static bool HasForwardTimeBranch(IReadOnlyList<MapPoint> points)
+    {
+        double start = points[0].TimeMs, duration = points[^1].TimeMs - start;
+        if (!double.IsFinite(duration) || duration <= 0) return false;
+        var times = points.Select(point => (point.TimeMs - start) / duration).ToArray();
+        if (times.Any(value => !double.IsFinite(value))) return false;
+        int budget = 8192;
+        return Check(times, 0);
+
+        bool Check(double[] controls, int depth)
+        {
+            // Bernstein bounds certify that a reversal is wholly outside the authored
+            // interval, or that time is increasing. Subdivision resolves mixed bounds.
+            if (controls.Max() <= 1e-10 || controls.Min() >= 1 - 1e-10) return true;
+            bool increasing = true;
+            for (int i = 1; i < controls.Length; i++)
+                increasing &= controls[i] >= controls[i - 1] - 1e-12;
+            if (increasing) return true;
+            if (depth >= 40 || --budget <= 0) return false;
+            var work = (double[])controls.Clone();
+            var left = new double[work.Length]; var right = new double[work.Length];
+            left[0] = work[0]; right[^1] = work[^1];
+            for (int count = work.Length - 1; count > 0; count--)
+            {
+                for (int i = 0; i < count; i++) work[i] = (work[i] + work[i + 1]) / 2;
+                left[work.Length - count] = work[0]; right[count - 1] = work[count - 1];
+            }
+            if (left[^1] > 1e-10 && left[^1] < 1 - 1e-10 && right[1] < left[^2] - 1e-12) return false;
+            return Check(left, depth + 1) && Check(right, depth + 1);
+        }
     }
 }
