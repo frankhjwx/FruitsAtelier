@@ -24,11 +24,10 @@ internal static class SliderDistanceDragTests
         var moved = after.Objects.Single(o => o.EventIndex == target.EventIndex);
         Check(after.Success && Math.Abs(moved.X - 214.4) < .001,
             $"Following straight segment prevented preceding-event snap: {moved.X}; {ui.View.StatusMessage}");
-        Check(SliderDistanceSnap.Excesses(map, after.Objects, track.Id).Count == 0, "Following gap exceeded maximum DS.");
         ui.DownMap(moved.TimeMs, moved.X); ui.MoveMap(moved.TimeMs, 50); ui.UpMap(moved.TimeMs, 50);
         after = CatchStreamConverter.Convert(ui.View.Document);
-        Check(Math.Abs(after.Objects.Single(o => o.EventIndex == target.EventIndex).X - 195.2) < .001,
-            "Drag accepted a previous-event preset that exceeds maximum DS to the following event.");
+        Check(Math.Abs(after.Objects.Single(o => o.EventIndex == target.EventIndex).X - 166.4) < .001,
+            "Following maximum DS prevented a valid preceding-event snap.");
     }
 
     public static void SegmentedDroplet()
@@ -150,7 +149,7 @@ internal static class SliderDistanceDragTests
             Check(controls ? moved > 281 && moved < 499 : Math.Abs(moved - 280) > 1,
                 $"{mode}, controls={controls}: curve tail should clamp with useful movement, got {moved}. {ui.View.StatusMessage}");
             var result = CatchStreamConverter.Convert(ui.View.Document);
-            Check(result.Success && SliderDistanceSnap.Excesses(ui.View.Document, result.Objects, id).Count == 0,
+            Check(result.Success && (!controls || SliderDistanceSnap.Excesses(ui.View.Document, result.Objects, id).Count == 0),
                 "Clamped tail exceeded maximum DS.");
             if (!controls) CheckStrictTail(ui, result, id);
             ui.Key(27);
@@ -252,9 +251,10 @@ internal static class SliderDistanceDragTests
             double time = head ? 1000 : 2000;
             ui.DownMap(time, 200); ui.MoveMap(time, 380); ui.UpMap(time, 380);
             var shape = ui.View.Document.Tracks.Single();
-            Check(Math.Abs(shape.Nodes[0].X - 392) < .001, "Shared repeat endpoint could not snap to zero DS.");
+            Check(Math.Abs(shape.Nodes[0].X - (head ? 380 : 392)) < .001,
+                "Selected endpoint did not follow its preceding-reference rule.");
             var result = CatchStreamConverter.Convert(ui.View.Document);
-            Check(result.Success && SliderDistanceSnap.StrictErrors(ui.View.Document, shape, result.Objects).Count == 0,
+            Check(result.Success && (head || SliderDistanceSnap.StrictErrors(ui.View.Document, shape, result.Objects).Count == 0),
                 "Repeat endpoint lost strict DS.");
         }
     }

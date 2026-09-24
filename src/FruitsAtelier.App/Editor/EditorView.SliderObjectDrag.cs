@@ -10,9 +10,7 @@ public sealed partial class EditorView
     private double sliderObjectPointerOriginX;
     private MapDocument? sliderObjectDragSource, sliderObjectDragShape;
     private int sliderObjectTrackIndex, sliderObjectImportIndex;
-    private IReadOnlyDictionary<(int From, int To), double>? sliderObjectDragBaseline;
-    private IReadOnlyDictionary<(int From, int To), double>? sliderObjectDragStrictBaseline;
-    private ConvertedCatchObject? sliderObjectDragPrevious, sliderObjectDragNext;
+    private ConvertedCatchObject? sliderObjectDragPrevious;
 
     private bool TryBeginSelectedSliderObjectDrag(float x, float y)
     {
@@ -53,16 +51,12 @@ public sealed partial class EditorView
         if (sliderObjectImportIndex >= 0) sliderObjectDragSource.ImportedSliders.Add(Document.ImportedSliders[sliderObjectImportIndex]);
         sliderObjectDragShape = null;
         EnsureConversion();
-        sliderObjectDragBaseline = SliderDistanceSnap.Excesses(Document, conversion!.Objects, target.SourceId);
-        sliderObjectDragStrictBaseline = sliderObjectTrackIndex < 0 ? null
-            : SliderDistanceSnap.StrictErrors(Document, Document.Tracks[sliderObjectTrackIndex], conversion.Objects);
-        var large = conversion.Objects.Where(item => item.SourceId == target.SourceId
+        var large = conversion!.Objects.Where(item => item.SourceId == target.SourceId
             && (item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet
                 || target.Kind == CatchObjectKind.TinyDroplet && item.Kind == CatchObjectKind.TinyDroplet))
             .OrderBy(item => item.TimeMs).ThenBy(item => item.EventIndex).ToArray();
         int eventPosition = Array.FindIndex(large, item => item.EventIndex == target.EventIndex);
         sliderObjectDragPrevious = eventPosition > 0 ? large[eventPosition - 1] : null;
-        sliderObjectDragNext = eventPosition >= 0 && eventPosition + 1 < large.Length ? large[eventPosition + 1] : null;
         distanceObject = (target.SourceId, target.EventIndex);
         drag = DragKind.SliderObject;
         BeginPointerDrag(x, y);
@@ -83,7 +77,7 @@ public sealed partial class EditorView
             return;
         }
         double rawX = Math.Clamp(sliderObjectPointerOriginX + (x - dragStartX) / Playfield.Width * 512, 0, 512);
-        bool strict = DistanceSnapEnabled;
+        bool strict = DistanceSnapEnabled && sliderObjectDragPrevious is not null;
         double wantedX = strict ? rawX : Math.Clamp(SnapX(rawX), 0, 512);
         if (strict)
         {
@@ -149,15 +143,7 @@ public sealed partial class EditorView
             if (DistanceSnapEnabled)
             {
                 var result = CatchStreamConverter.Convert(Document, compensateTinyDroplets, editorConversionCache);
-                if (!StrictSliderObjectResult(target, result)
-                    || !SliderDistanceSnap.Allows(sliderObjectDragBaseline!,
-                        SliderDistanceSnap.Excesses(Document, result.Objects, target.SourceId))
-                    || sliderObjectDragStrictBaseline is not null
-                        && Document.Tracks.FirstOrDefault(track => track.Id == target.SourceId) is { } currentTrack
-                        && !SliderDistanceSnap.Allows(sliderObjectDragStrictBaseline,
-                            SliderDistanceSnap.StrictErrors(Document, currentTrack, result.Objects)
-                                .Where(pair => target.Kind != CatchObjectKind.Droplet || pair.Key.From != target.EventIndex)
-                                .ToDictionary(pair => pair.Key, pair => pair.Value)))
+                if (!StrictSliderObjectResult(target, result))
                     throw new InvalidOperationException(L.Get("editor.error.sliderDistanceSnap"));
             }
             return true;
@@ -181,7 +167,7 @@ public sealed partial class EditorView
 
     private IEnumerable<double> SliderObjectDistanceCandidates(ConvertedCatchObject target, double wantedX)
     {
-        var reference = sliderObjectDragPrevious ?? sliderObjectDragNext;
+        var reference = sliderObjectDragPrevious;
         if (reference is null) return [];
         if (target.Kind is CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet)
             return StraightSliderCandidates(new(target.TimeMs, wantedX), new(reference.TimeMs, reference.X))
@@ -219,12 +205,7 @@ public sealed partial class EditorView
                 DistanceSnap.BaseVelocity(Document, from.TimeMs));
             return ratio is null || SliderDistanceSnap.MatchesPreset(Document, ratio.Value);
         }
-        // An isolated droplet snaps to its preceding reference. Requiring another
-        // exact preset to the fixed following event can leave no movable position.
-        // The maximum-distance and conversion checks still constrain that side.
-        return target.Kind is CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet
-            ? Pair(sliderObjectDragPrevious ?? sliderObjectDragNext)
-            : Pair(sliderObjectDragPrevious) && Pair(sliderObjectDragNext);
+        return Pair(sliderObjectDragPrevious);
     }
 
     private void RestoreSliderObjectSource(MapDocument source)

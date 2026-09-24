@@ -533,7 +533,7 @@ public sealed partial class EditorView
         {
             sliderObjectDragTarget = null;
             sliderObjectDragSource = sliderObjectDragShape = null;
-            sliderObjectDragBaseline = sliderObjectDragStrictBaseline = null;
+            sliderObjectDragPrevious = null;
         }
         if (draftTrack != Guid.Empty && drag == DragKind.Anchor && !dragMoved
             && SelectedTrack is { } draft && SelectedAnchor == draft.Nodes[^1])
@@ -956,7 +956,7 @@ public sealed partial class EditorView
         drag = DragKind.None;
         sliderObjectDragTarget = null;
         sliderObjectDragSource = sliderObjectDragShape = null;
-        sliderObjectDragBaseline = sliderObjectDragStrictBaseline = null;
+        sliderObjectDragPrevious = null;
         objectDragStart = null;
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         objectDragPrepared = false;
