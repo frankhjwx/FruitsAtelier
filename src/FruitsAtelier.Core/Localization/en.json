@@ -92,6 +92,7 @@
   "tools.fslider": "FSlider",
   "tools.banana": "Banana",
   "tools.newCombo": "New combo",
+  "canvas.newCombo": "New Combo",
   "tools.newComboOn": "Next fruit starts a new combo",
   "tools.newComboOff": "Next fruit continues the combo",
 

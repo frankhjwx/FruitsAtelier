@@ -93,6 +93,42 @@ internal static class ToolPaletteTests
         Check(ui.View.NextFruitNewCombo && ui.View.Document.Fruits.Count == 2, "Playing right-click should arm a combo without deleting.");
     }
 
+    public static void ComboLabels()
+    {
+        var map = new MapDocument { DurationMs = 12000 };
+        var left = new Fruit { TimeMs = 1000, X = 0 };
+        var right = new Fruit { TimeMs = 1000, X = 512 };
+        map.Fruits.AddRange([left, right, new Fruit { TimeMs = 1250, X = 256 }]);
+        ObjectFlags.SetNewCombo(map, left.Id, true);
+        ObjectFlags.SetNewCombo(map, right.Id, true);
+        var ui = new Ui(); ui.LoadDocument(map);
+        var plot = ui.View.CanvasPlotBounds;
+        ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, 120000, true);
+        ui.View.UpdateTransport(1000, 12000, true, true, false, null, null);
+        ui.View.UpdateTransport(1000, 12000, true, true, false, null, null);
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            FruitsAtelier.Localization.Strings.SetLanguage(language); ui.Paint();
+            string label = FruitsAtelier.Localization.Strings.Get("canvas.newCombo");
+            var labels = ui.Canvas.Texts.Where(t => t.Value == label && t.Color == 0xF2C66D).OrderBy(t => t.X).ToArray();
+            Check(labels.Length == 2, "Canvas must label only fruits with New Combo.");
+            float middle = ui.View.PlayfieldBounds.X + ui.View.PlayfieldBounds.Width / 2;
+            Check(labels[0].X >= plot.X && labels[0].X < middle
+                && labels[1].X > middle && labels[1].X < plot.Right,
+                "New Combo labels were not placed beside their fruits inside the canvas.");
+        }
+        FruitsAtelier.Localization.Strings.SetLanguage("en");
+
+        var slider = new ImportedSlider { TimeMs = 1000, X = 256, Y = 192, PathType = 'L', PixelLength = 200 };
+        slider.ControlPoints.Add(new(256, 192)); slider.ControlPoints.Add(new(400, 192));
+        var sliderMap = new MapDocument { DurationMs = 12000 };
+        sliderMap.ImportedSliders.Add(slider);
+        ObjectFlags.SetNewCombo(sliderMap, slider.Id, true);
+        ui.LoadDocument(sliderMap);
+        Check(ui.Canvas.Texts.Count(t => t.Value == "New Combo" && t.Color == 0xF2C66D) == 1,
+            "Slider New Combo must label its head once.");
+    }
+
     public static void DraftRemovalAndStraight()
     {
         foreach (var mode in Enum.GetValues<SliderEditingMode>())
