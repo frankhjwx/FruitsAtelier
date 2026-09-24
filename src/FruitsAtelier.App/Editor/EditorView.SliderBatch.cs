@@ -9,10 +9,12 @@ public sealed partial class EditorView
     private Task<SliderBatchItem[]>? sliderBatchTask;
     private CancellationTokenSource? sliderBatchCancellation;
     private int[] sliderImportTargets = [];
+    private Guid sliderSingleTarget;
+    private bool sliderDerandomizeDroplets = true;
     private string[] sliderBatchErrors = [];
     private int sliderErrorPage;
     private readonly List<HitArea> sliderDialogHits = [];
-    public bool SliderImportPromptVisible => sliderImportTargets.Length > 0;
+    public bool SliderImportPromptVisible => sliderImportTargets.Length > 0 || sliderSingleTarget != Guid.Empty;
     public bool SliderConversionBusy => sliderBatchTask is not null;
     private bool SliderDialogVisible => SliderImportPromptVisible || SliderConversionBusy || sliderBatchErrors.Length > 0;
 
@@ -21,16 +23,30 @@ public sealed partial class EditorView
         sliderDialogHits.Clear();
         sliderImportTargets = (allDifficulties ? Enumerable.Range(0, difficulties.Count) : new[] { activeDifficulty })
             .Where(i => difficulties[i].History.Document.ImportedSliders.Count > 0).ToArray();
+        sliderDerandomizeDroplets = Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets;
     }
     public void AnswerSliderImport(bool convert)
     {
         sliderDialogHits.Clear();
         var targets = sliderImportTargets; sliderImportTargets = [];
-        if (convert) StartSliderBatch(targets);
+        var single = sliderSingleTarget; sliderSingleTarget = Guid.Empty;
+        if (!convert) return;
+        if (single != Guid.Empty) ConvertSelectedImportedSlider(single, sliderDerandomizeDroplets);
+        else StartSliderBatch(targets, sliderDerandomizeDroplets);
     }
-    public void ConvertAllSliders() => StartSliderBatch([activeDifficulty]);
+    public void ConvertAllSliders()
+    {
+        if (notesLocked) { StatusMessage = L.Get("assist.locked"); return; }
+        if (!PrepareFileOperation()) return;
+        OfferSliderConversion(false);
+    }
+    private void OfferSingleSliderConversion(Guid id)
+    {
+        sliderSingleTarget = id;
+        sliderDerandomizeDroplets = Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets;
+    }
     public void CancelSliderConversion() => sliderBatchCancellation?.Cancel();
-    private void StartSliderBatch(int[] targets)
+    private void StartSliderBatch(int[] targets, bool derandomizeDroplets)
     {
         if (notesLocked) { StatusMessage = L.Get("assist.locked"); return; }
         if (SliderDialogVisible || !PrepareFileOperation()) return;
@@ -44,7 +60,7 @@ public sealed partial class EditorView
         {
             token.ThrowIfCancellationRequested();
             var edited = input.Before.DeepClone();
-            return new SliderBatchItem(input.Session, input.Before, ImportedSliderEditing.ConvertAll(edited, token));
+            return new SliderBatchItem(input.Session, input.Before, ImportedSliderEditing.ConvertAll(edited, token, derandomizeDroplets));
         }).ToArray(), token);
     }
     private void PumpSliderBatch()
@@ -64,6 +80,7 @@ public sealed partial class EditorView
             if (result.Result.Tracks.Count == 0) continue;
             var history = result.Session.History;
             history.Begin(L.Get("sliderBatch.command"));
+            history.Document.DerandomizeDroplets = sliderDerandomizeDroplets;
             var ids = result.Result.Tracks.Select(t => t.Id).ToHashSet();
             history.Document.ImportedSliders.RemoveAll(s => ids.Contains(s.Id));
             history.Document.Tracks.AddRange(result.Result.Tracks); history.Commit(); count += ids.Count;
@@ -84,9 +101,12 @@ public sealed partial class EditorView
         if (SliderImportPromptVisible)
         {
             int count = sliderImportTargets.Sum(i => difficulties[i].History.Document.ImportedSliders.Count);
-            c.Text(L.Get("sliderBatch.prompt", count, sliderImportTargets.Length), rect.X + 22, rect.Y + 65, 14, Foreground, rect.Width - 44);
+            c.Text(sliderSingleTarget != Guid.Empty ? L.Get("sliderBatch.singlePrompt") : L.Get("sliderBatch.prompt", count, sliderImportTargets.Length), rect.X + 22, rect.Y + 65, 14, Foreground, rect.Width - 44);
             c.Text(L.Get("sliderBatch.help"), rect.X + 22, rect.Y + 104, 12, Muted, rect.Width - 44);
-            c.Text(L.Get("sliderBatch.later"), rect.X + 22, rect.Y + 136, 12, Muted, rect.Width - 44);
+            Button(c, new(rect.X + 22, rect.Y + 145, rect.Width - 44, 36),
+                L.Get(sliderDerandomizeDroplets ? "sliderBatch.derandomizeOn" : "sliderBatch.derandomizeOff"),
+                () => sliderDerandomizeDroplets = !sliderDerandomizeDroplets, sliderDerandomizeDroplets);
+            c.Text(L.Get("sliderBatch.later"), rect.X + 22, rect.Y + 195, 12, Muted, rect.Width - 44);
             Button(c, new(rect.Right - 330, rect.Bottom - 58, 144, 36), L.Get("sliderBatch.keep"), () => AnswerSliderImport(false));
             Button(c, new(rect.Right - 174, rect.Bottom - 58, 152, 36), L.Get("sliderBatch.convert"), () => AnswerSliderImport(true), true);
         }

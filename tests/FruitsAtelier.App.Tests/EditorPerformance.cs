@@ -5,6 +5,36 @@ using FruitsAtelier.Core;
 
 internal static class EditorPerformance
 {
+    public static int RunAnchorDrag(string path)
+    {
+        var document = ProjectSerializer.ReadFile(path);
+        if (document.Tracks.Count == 0) ImportedSliderEditing.ConvertAll(document, derandomizeDroplets: false);
+        var view = new EditorView(false); view.LoadDocument(document);
+        var canvas = new CountCanvas(); view.Render(canvas, 1440, 900);
+        var track = view.Document.Tracks.First(t => t.Nodes.Count > 2 && t.SpanCount == 1);
+        var node = track.Nodes[1];
+        var before = view.Document.DeepClone();
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var kind = typeof(EditorView).GetNestedType("DragKind", System.Reflection.BindingFlags.NonPublic)!;
+        typeof(EditorView).GetMethod("BeginNodeDrag", flags)!.Invoke(view,
+            [track, node, Enum.Parse(kind, "Anchor"), 500f, 500f]);
+        var samples = new List<double>();
+        for (int i = 0; i < 24; i++)
+        {
+            var watch = Stopwatch.StartNew();
+            view.PointerMove(500f + (i % 2 == 0 ? 6 : -6), 500f, false, false);
+            view.Render(canvas, 1440, 900);
+            if (i >= 4) samples.Add(watch.Elapsed.TotalMilliseconds);
+        }
+        if (view.Document.ContentEquals(before)) throw new Exception("Benchmark did not move the anchor.");
+        samples.Sort();
+        Console.WriteLine($"Anchor drag CPU: tracks={document.Tracks.Count}, nodes={document.Tracks.Sum(t => t.Nodes.Count)}, median={samples[10]:F2} ms, p95={samples[18]:F2} ms");
+        view.CancelInteraction(); view.Render(canvas, 1440, 900);
+        if (!view.Document.ContentEquals(before)) throw new Exception("Cancelled anchor drag changed content.");
+        view.NewProject();
+        return 0;
+    }
+
     public static int RunSliderDrag(string path)
     {
         var document = OsuBeatmapReader.ReadFile(path);

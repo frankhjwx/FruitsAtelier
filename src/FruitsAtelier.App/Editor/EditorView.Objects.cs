@@ -190,7 +190,7 @@ public sealed partial class EditorView
             try
             {
                 foreach (Guid id in objectSelection.Where(id => !objectDragTimeline && Document.ImportedSliders.Any(slider => slider.Id == id)).ToArray())
-                    ImportedSliderEditing.ConvertToTrack(Document, id);
+                    ConvertImportedSlider(id);
                 objectDragStart = Document.DeepClone();
                 dragFruits = Document.Fruits.ToDictionary(item => item.Id);
                 dragTracks = Document.Tracks.ToDictionary(item => item.Id);

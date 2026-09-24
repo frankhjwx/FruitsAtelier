@@ -88,7 +88,7 @@ public sealed partial class EditorView
             {
                 RestoreSliderObjectSource(sliderObjectDragSource!);
                 var track = Document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
-                    ?? ImportedSliderEditing.ConvertToTrack(Document, target.SourceId, editorConversionCache).Track;
+                    ?? ConvertImportedSlider(target.SourceId, editorConversionCache).Track;
                 sliderObjectDragShape = new MapDocument();
                 sliderObjectDragShape.Tracks.Add(track);
             }

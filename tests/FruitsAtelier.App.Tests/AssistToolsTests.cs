@@ -264,6 +264,8 @@ internal static class AssistToolsTests
         Check(before.ContentEquals(ui.View.Document), "Lock allowed reverse edit");
         ui.View.ConvertAllSliders(); Check(!ui.View.SliderConversionBusy, "Lock allowed batch geometry conversion");
         ui.Key('L'); ui.MoveMap(1000, 100); ui.HoldMap(1000, 100); ui.ClickText(FruitsAtelier.Localization.Strings.Get("preview.convertSlider"));
+        Check(ui.View.SliderImportPromptVisible, "First single-slider conversion did not offer droplet options.");
+        ui.ClickText(FruitsAtelier.Localization.Strings.Get("sliderBatch.convert"));
         Check(ui.View.Document.Tracks.Count == 1, "Cannot convert sound-edited slider");
         var fs = OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack;
         Check(ObjectFlags.Sounds(fs, fs.ImportedSliders.Single().Id).SequenceEqual(new[] { 2, 6, 10 }), "FSlider export lost edge flags");

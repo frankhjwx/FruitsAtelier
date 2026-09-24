@@ -107,9 +107,9 @@ The normal converter remains available without a cache for export and independen
 
 Dragging a slider fruit or droplet keeps one history transaction and restores only that
 source between candidate positions. Imported sliders are fitted once per drag, and
-candidate validation shares the editor conversion cache. During this drag, rendering
-uses the validated conversion; export quantization and read-back are refreshed after
-release or cancellation.
+candidate validation shares the editor conversion cache. During content drags, including
+anchors, handles, and legacy controls, rendering uses the current conversion; export
+quantization and read-back are refreshed after release or cancellation.
 
 Canvas and preview rendering select the visible interval from time-sorted catch objects
 by binary search. Offscreen anchors

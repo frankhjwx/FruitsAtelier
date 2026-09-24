@@ -89,7 +89,7 @@ public sealed partial class EditorView
         {
             if (x != 0)
                 foreach (var id in Document.ImportedSliders.Where(s => ids.Contains(s.Id)).Select(s => s.Id).ToArray())
-                    ImportedSliderEditing.ConvertToTrack(Document, id);
+                    ConvertImportedSlider(id);
             foreach (var fruit in Document.Fruits.Where(f => ids.Contains(f.Id))) { fruit.TimeMs += time; fruit.X += x; }
             foreach (var track in Document.Tracks.Where(t => ids.Contains(t.Id)))
                 foreach (var node in track.Nodes) { node.TimeMs += time; node.X += x; }
@@ -112,7 +112,7 @@ public sealed partial class EditorView
         Edit(L.Get("shortcut.mirror"), () =>
         {
             foreach (var id in Document.ImportedSliders.Where(s => ids.Contains(s.Id)).Select(s => s.Id).ToArray())
-                ImportedSliderEditing.ConvertToTrack(Document, id);
+                ConvertImportedSlider(id);
             foreach (var fruit in Document.Fruits.Where(f => ids.Contains(f.Id))) fruit.X = 512 - fruit.X;
             foreach (var track in Document.Tracks.Where(t => ids.Contains(t.Id)))
                 foreach (var node in track.Nodes)

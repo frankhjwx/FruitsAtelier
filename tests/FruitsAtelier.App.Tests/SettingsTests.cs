@@ -123,6 +123,12 @@ static class SettingsTests
                 Check(LibrarySettings.Load(path).PlaybackLineFromBottom == .6, "Apply preserves playback line height");
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.romanisedOff")) &&
                     ApplyColor() == disabled, "Apply stays in category and resets dirty state");
+                ui.ClickText(L.Get("settings.general"));
+                ui.ClickText(L.Get("settings.derandomizeOn"));
+                Check(ApplyColor() != disabled, "Droplet default change did not enable Apply");
+                ui.View.ApplySettings(path); ui.Paint();
+                Check(!LibrarySettings.Load(path).DerandomizeDroplets && ApplyColor() == disabled,
+                    "General droplet default did not persist");
                 ui.ClickText(L.Get("settings.testplay"));
                 ui.ClickText("Shift"); ui.Key(65);
                 Check(ApplyColor() != disabled, "Binding change enables Apply");

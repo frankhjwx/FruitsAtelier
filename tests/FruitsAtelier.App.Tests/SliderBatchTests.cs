@@ -27,15 +27,22 @@ internal static class SliderBatchTests
         Click(L.Get("sliderBatch.keep")); Check(!view.SliderImportPromptVisible && !view.IsDirty, "Declining changed content.");
         view.PointerDown(180, 18, 0, false, false); Render();
         Check(canvas.Texts.Any(t => t.Value == L.Get("sliderBatch.menu")), "Edit menu is missing batch conversion.");
-        Click(L.Get("sliderBatch.menu")); Wait();
+        Click(L.Get("sliderBatch.menu")); Check(view.SliderImportPromptVisible, "Batch menu did not ask for conversion options.");
+        Click(L.Get("sliderBatch.derandomizeOn"));
+        Check(canvas.Texts.Any(t => t.Value == L.Get("sliderBatch.derandomizeOff")), "Droplet option did not toggle.");
+        Click(L.Get("sliderBatch.convert")); Wait();
         Check(view.Document.Tracks.Count == 1 && view.Document.ImportedSliders.Count == 0 && view.IsDirty, "Menu failed to convert current difficulty.");
+        Check(view.Document.DerandomizeDroplets == false && view.Document.Tracks.Single().CompensateTinyDroplets == true,
+            "Batch choice was not saved on the map or applied to its slider.");
+        Check(ProjectSerializer.Read(ProjectSerializer.Serialize(view.Document)).DerandomizeDroplets == false,
+            "The map's droplet choice did not survive project serialization.");
         view.SwitchDifficulty(1); Check(view.Document.ImportedSliders.Count == 1, "Menu modified another difficulty.");
         view.SwitchDifficulty(0); view.KeyDown(90, true, false); Check(!view.IsDirty && view.Document.ImportedSliders.Count == 1, "Batch conversion is not one undo step.");
         view.OfferSliderConversion(true); view.AnswerSliderImport(true); Wait();
         Check(view.CaptureProject().Difficulties.All(d => d.Document.ImportedSliders.Count == 0), "First-import conversion did not include every difficulty.");
-        view.LoadDocument(Fixture()); view.ConvertAllSliders(); view.CancelSliderConversion(); Wait();
+        view.LoadDocument(Fixture()); view.ConvertAllSliders(); view.AnswerSliderImport(true); view.CancelSliderConversion(); Wait();
         Check(view.Document.ImportedSliders.Count == 1 && !view.IsDirty, "Cancelled batch applied changes.");
-        view.ConvertAllSliders(); view.NewProject(); Render(); Thread.Sleep(20); Render();
+        view.ConvertAllSliders(); view.AnswerSliderImport(true); view.NewProject(); Render(); Thread.Sleep(20); Render();
         Check(view.Document.Tracks.Count == 0 && !view.IsDirty, "Old batch changed a replacement project.");
 
         view.NewProject(); Check(view.AddDifficulty(Fixture()) && view.SliderImportPromptVisible, "Importing a difficulty did not offer conversion.");
@@ -44,7 +51,7 @@ internal static class SliderBatchTests
         var mixed = Fixture(); mixed.SliderMultiplier = 5; mixed.SliderTickRate = 2;
         var repeated = new ImportedSlider { TimeMs = 3000, X = 100, Y = 100, PathType = 'L', PixelLength = 300, SpanCount = 3 };
         repeated.ControlPoints.AddRange([new(100, 100), new(300, 100)]); mixed.ImportedSliders.Add(repeated);
-        view.LoadDocument(mixed); view.ConvertAllSliders(); Wait();
+        view.LoadDocument(mixed); view.ConvertAllSliders(); view.AnswerSliderImport(true); Wait();
         Check(view.Document.Tracks.Count == 2 && view.Document.ImportedSliders.Count == 0, "Batch must convert all valid sliders, including conflicting repeats.");
         Check(view.PrepareFileOperation(), "Successful approximate conversion should not show a failure dialog.");
         view.KeyDown(90, true, false);

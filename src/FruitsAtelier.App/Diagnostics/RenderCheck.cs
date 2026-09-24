@@ -231,7 +231,7 @@ internal static class RenderCheck
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(width - 160, 20, 0, false, false); view.PointerUp(width - 160, 20, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
-                view.PointerDown(40, 190, 0, false, false); view.PointerUp(40, 190, 0);
+                view.PointerDown(40, 238, 0, false, false); view.PointerUp(40, 238, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 foreach (int binding in new[] { 186, 222, 219, 221, 8, 17, 18, 96, 111, 121 })
                 {
@@ -289,7 +289,7 @@ internal static class RenderCheck
                 view.Document.DistanceSnapRatios.Clear(); view.Document.DistanceSnapRatios.AddRange(dsRatios);
                 view.OpenSettings();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
-                view.PointerDown(40, 240, 0, false, false); view.PointerUp(40, 240, 0);
+                view.PointerDown(40, 286, 0, false, false); view.PointerUp(40, 286, 0);
                 foreach (var phase in new[] { UpdatePhase.Unsupported, UpdatePhase.Checking, UpdatePhase.Available, UpdatePhase.Downloading, UpdatePhase.Ready, UpdatePhase.Failed })
                 {
                     view.UpdateStatus = new(phase, "0.8.2", 42);

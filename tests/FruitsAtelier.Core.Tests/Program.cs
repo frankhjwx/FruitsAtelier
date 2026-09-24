@@ -1,6 +1,11 @@
 using FruitsAtelier.Core;
 
 if (args.Length == 2 && args[0] == "--slider-corpus") return ImportedSliderCorpus.Run(args[1]);
+if (args.Length == 2 && args[0] == "--preserve-slider-positions")
+{
+    try { return EditableSliderTests.VerifyPreservedMap(args[1]); }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 
 var tests = new (string Name, Action Run)[]
 {

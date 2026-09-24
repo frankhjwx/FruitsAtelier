@@ -60,7 +60,7 @@ public sealed partial class EditorView
     private OsuWriteResult? playableExport;
     private IReadOnlyList<ConvertedCatchObject> playableObjects = [];
     private bool convertedWithCompensation;
-    private bool sliderObjectPreview;
+    private bool contentDragPreview;
     private HashSet<(Guid SourceId, int EventIndex)> hyperdashObjects = [];
     private Dictionary<Guid, int> skinIndices = [];
     private Guid selection, selectedTrack, draftTrack, draftBanana;
@@ -110,11 +110,15 @@ public sealed partial class EditorView
     }
 
     private TimingMap.Lookup? renderedTiming;
+    private bool IsContentDrag => drag is DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn
+        or DragKind.HandleOut or DragKind.DraftHandle or DragKind.LegacyControl or DragKind.Objects
+        or DragKind.BananaStart or DragKind.BananaEnd or DragKind.TimelineTail;
+
     private void EnsureConversion()
     {
         if (convertedSnapshot is not null && convertedSnapshot.ContentEquals(Document)
             && convertedWithCompensation == compensateTinyDroplets
-            && (!sliderObjectPreview || drag == DragKind.SliderObject)) return;
+            && (!contentDragPreview || IsContentDrag)) return;
         convertedSnapshot = Document.DeepClone();
         renderedTiming = new TimingMap.Lookup(Document);
         convertedWithCompensation = compensateTinyDroplets;
@@ -135,8 +139,8 @@ public sealed partial class EditorView
         playableExport = null;
         playableObjects = conversion.Objects;
         // While dragging, use the validated conversion; refresh export quantization on release/cancel.
-        sliderObjectPreview = drag == DragKind.SliderObject;
-        if (conversion.Success && !sliderObjectPreview)
+        contentDragPreview = IsContentDrag;
+        if (conversion.Success && !contentDragPreview)
         {
             try
             {
@@ -321,9 +325,12 @@ public sealed partial class EditorView
         try
         {
             var before = notesLocked ? Document.DeepClone() : null;
+            int importedBefore = Document.ImportedSliders.Count;
             change();
             if (before is not null && !PositionsEqual(before, Document))
             { history.Cancel(); StatusMessage = L.Get("assist.locked"); return false; }
+            if (Document.DerandomizeDroplets is null && Document.ImportedSliders.Count < importedBefore)
+                Document.DerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
             history.Commit(); return true;
         }
         catch (ArgumentException ex) { history.Cancel(); StatusMessage = fieldError = ex.Message; }

@@ -7,10 +7,11 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { Workspace, Appearance, Testplay, Updates }
+    private enum SettingsCategory { General, Workspace, Appearance, Testplay, Updates }
     private SettingsCategory settingsCategory;
     private bool settingsFromLibrary;
     private bool draftRomanisedMetadata;
+    private bool draftDerandomizeDroplets;
     private readonly uint[] draftIndicatorColours = new uint[4];
     private int settingsColourIndex = -1;
     private uint settingsColourOriginal;
@@ -26,7 +27,7 @@ public sealed partial class EditorView
         settingsFromLibrary = LibraryVisible;
         if (AudioPlaying) RequestTogglePlayback?.Invoke();
         ResetSettingsDrafts();
-        settingsCategory = SettingsCategory.Workspace;
+        settingsCategory = SettingsCategory.General;
         LibraryVisible = librarySettingsOpen = true;
         updatesPage = exportPage = resourcePage = false;
         libraryField = bindingCapture = menu = -1;
@@ -41,6 +42,7 @@ public sealed partial class EditorView
         draftOsuRoot = LibrarySettings.OsuRoot;
         draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         draftRomanisedMetadata = LibrarySettings.RomanisedMetadata;
+        draftDerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
         draftIndicatorColours[0] = LibrarySettings.StandIndicatorColour;
         draftIndicatorColours[1] = LibrarySettings.WalkIndicatorColour;
         draftIndicatorColours[2] = LibrarySettings.DashIndicatorColour;
@@ -53,6 +55,7 @@ public sealed partial class EditorView
         draftOsuRoot != LibrarySettings.OsuRoot ||
         draftDefaultSkin != (LibrarySettings.DefaultSkin ?? "") ||
         draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
+        draftDerandomizeDroplets != LibrarySettings.DerandomizeDroplets ||
         draftIndicatorColours[0] != LibrarySettings.StandIndicatorColour ||
         draftIndicatorColours[1] != LibrarySettings.WalkIndicatorColour ||
         draftIndicatorColours[2] != LibrarySettings.DashIndicatorColour ||
@@ -79,7 +82,7 @@ public sealed partial class EditorView
         c.Text(L.Get("library.settings"), 109, 11, 13, Foreground, 200, true);
         Button(c, HeaderNavigationBounds, L.Get(settingsFromLibrary ? "library.back" : "library.editor"), CloseSettings);
         c.Fill(new(0, HeaderHeight, 214, height - HeaderHeight), Panel);
-        string[] categories = ["settings.workspace", "settings.appearance", "settings.testplay", "update.title"];
+        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.testplay", "update.title"];
         for (int i = 0; i < categories.Length; i++)
         {
             var category = (SettingsCategory)i;
@@ -96,6 +99,11 @@ public sealed partial class EditorView
             c.Text(L.Get(categories[(int)settingsCategory]), SettingsContentX, 82, 24, Foreground, width - SettingsContentX - 32, true);
         switch (settingsCategory)
         {
+            case SettingsCategory.General:
+                Button(c, new(SettingsContentX, 144, Math.Min(520, width - SettingsContentX - 32), 38),
+                    L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
+                    () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
+                break;
             case SettingsCategory.Workspace:
                 c.Text(L.Get("library.settingsDescription"), SettingsContentX, 128, 14, Muted, width - SettingsContentX - 32);
                 LibraryTextField(c, 0, L.Get("library.workspace"), draftWorkspace, 180);
@@ -132,6 +140,7 @@ public sealed partial class EditorView
             var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
             settings.RomanisedMetadata = draftRomanisedMetadata;
+            settings.DerandomizeDroplets = draftDerandomizeDroplets;
             settings.StandIndicatorColour = draftIndicatorColours[0]; settings.WalkIndicatorColour = draftIndicatorColours[1];
             settings.DashIndicatorColour = draftIndicatorColours[2]; settings.HyperDashIndicatorColour = draftIndicatorColours[3];
             settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;

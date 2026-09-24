@@ -1,4 +1,5 @@
 using FruitsAtelier.Core;
+using FruitsAtelier.App.Editor;
 
 internal static class SliderInteractionTests
 {
@@ -52,7 +53,10 @@ internal static class SliderInteractionTests
         ui.ClickMap(3000, 350);
         Check(DotAt(ui, 3000, 350, 3, 0xE7EBF2), "Selected control point has no visible center highlight.");
         Check(saved.ContentEquals(ui.View.Document), "Point selection changed curve content.");
-        ui.DownMap(3000, 350); ui.MoveMap(3125, 330); ui.UpMap(3125, 330);
+        ui.DownMap(3000, 350); ui.MoveMap(3125, 330);
+        CheckDragPreview(ui, true);
+        ui.UpMap(3125, 330);
+        CheckDragPreview(ui, false);
         Near(3125, ui.Anchor(nodeId).TimeMs); Near(330, ui.Anchor(nodeId).X);
         ui.Key('Z', ctrl: true);
         Check(saved.ContentEquals(ui.View.Document), "Point drag did not undo completely.");
@@ -65,12 +69,14 @@ internal static class SliderInteractionTests
             "The unselected outgoing handle was not drawn.");
         ui.DownMap(3250, 320);
         Check(DotAt(ui, 3250, 320, 6, 0xE7EBF2), "The pressed handle is not visibly selected.");
-        ui.MoveMap(3375, 340); ui.UpMap(3375, 340);
+        ui.MoveMap(3375, 340); CheckDragPreview(ui, true);
+        ui.UpMap(3375, 340); CheckDragPreview(ui, false);
         Near(375, ui.Anchor(nodeId).HandleOut.TimeMs); Near(-10, ui.Anchor(nodeId).HandleOut.X);
         ui.Key('Z', ctrl: true);
         Check(saved.ContentEquals(ui.View.Document), "Handle drag did not undo completely.");
         ui.ClickMap(3000, 350);
         ui.DownMap(3250, 320); ui.MoveMap(3375, 340); ui.Key(27); ui.UpMap(3375, 340);
+        CheckDragPreview(ui, false);
         Check(saved.ContentEquals(ui.View.Document) && !ui.View.WantsCapture, "Escape retained a partial handle edit.");
         Valid(ui);
     }
@@ -280,6 +286,8 @@ internal static class SliderInteractionTests
         var ui = Load(map);
         Guid sourceId = map.ImportedSliders.Single().Id;
         ui.ClickMap(1500, 200); ui.HoldMap(1000, 100); ui.ClickText(FruitsAtelier.Localization.Strings.Get("preview.convertSlider"));
+        Check(ui.View.SliderImportPromptVisible, "First conversion did not offer droplet options.");
+        ui.ClickText(FruitsAtelier.Localization.Strings.Get("sliderBatch.convert"));
         var track = ui.View.Document.Tracks.Single();
         Check(track.Id == sourceId && track.CompensateTinyDroplets == true && ui.View.Document.ImportedSliders.Count == 0,
             "Context conversion did not replace the Legacy Slider with one FSlider.");
@@ -344,6 +352,13 @@ internal static class SliderInteractionTests
         Check(output.ReadBack.ImportedSliders.Single().SpanCount == 2, "Export lost reverse count.");
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.ContentEquals(before), "Extension undo changed existing curve or reverses.");
+    }
+
+    private static void CheckDragPreview(Ui ui, bool active)
+    {
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var export = typeof(EditorView).GetField("playableExport", flags)!.GetValue(ui.View);
+        Check((export is null) == active, "Drag must defer export read-back and refresh it on release or cancellation.");
     }
 
     private static MapDocument CurveMap()

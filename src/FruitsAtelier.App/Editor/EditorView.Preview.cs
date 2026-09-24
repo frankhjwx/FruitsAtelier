@@ -213,7 +213,7 @@ public sealed partial class EditorView
         LegacyConversionBounds = imported ? new(r.X, r.Y, 224, 32) : default;
         StreamConversionBounds = new(r.X, imported ? r.Y + 36 : r.Y, r.Width, 32);
         c.Fill(r, Surface, 4);
-        if (imported) Button(c, LegacyConversionBounds, L.Get("preview.convertSlider"), EditImportedSlider);
+        if (imported) Button(c, LegacyConversionBounds, L.Get("preview.convertSlider"), () => EditImportedSlider(id));
         Button(c, StreamConversionBounds, L.Get(stream ? "stream.changeSnap" : "stream.apply"), () => { SelectObjects([id]); OpenStreamDialog(); }, enabled: !notesLocked);
         if (stream) Button(c, new(r.X, r.Y + 36, r.Width, 32), L.Get("stream.convertBack"),
             () => { SelectObjects([id]); ConvertStreamsBack(); }, enabled: !notesLocked);

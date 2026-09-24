@@ -166,6 +166,14 @@ movement of an imported slider's head and tail, reporting pointer-path CPU time,
 counting-canvas rendering time, and current-thread allocations separately. It invokes
 the selected-object drag path directly and excludes native input dispatch and GPU work.
 
+The App test executable also accepts `--anchor-drag-performance <path.catchdiff>`
+for a read-only benchmark of anchor pointer handling plus counting-canvas rendering.
+It reports median/P95 CPU time after warm-up and verifies cancellation restores content.
+The Core test executable accepts `--preserve-slider-positions <path.osu|path.catchdiff>`
+to verify conversion with derandomization disabled, checking full-map event positions,
+FSlider path alignment, project persistence, and export. Incompatible sliders remain
+Legacy and are reported. Neither command saves the supplied map.
+
 ## Playback rendering profile
 
 For a read-only CPU profile of an existing `.osu` file, run the App test executable with `--map-performance <path>`. It measures playback around 89 seconds at 32% Zoom and 1/16 Snap, reporting render median/p95, allocation per frame, rendering phases, and transport/hitsound scheduling with silent callbacks. The counting canvas excludes GPU and device submission.

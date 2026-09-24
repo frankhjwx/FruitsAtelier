@@ -10,6 +10,11 @@ if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
 if (args.Length > 0 && args[0] == "--benchmark-library") return LibraryScaleTests.Benchmark(args.Length > 1 ? args[1] : null);
 if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
 if (args.Length == 2 && args[0] == "--slider-drag-performance") return EditorPerformance.RunSliderDrag(args[1]);
+if (args.Length == 2 && args[0] == "--anchor-drag-performance")
+{
+    try { return EditorPerformance.RunAnchorDrag(args[1]); }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 
 if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.InspectMap(args[1]);
 

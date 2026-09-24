@@ -63,7 +63,7 @@ public sealed partial class EditorView
             CurveTrack? target = null;
             if (Edit(L.Get("editor.command.insertPoint"), () =>
             {
-                target = Document.Tracks.FirstOrDefault(t => t.Id == location.Id) ?? ImportedSliderEditing.ConvertToTrack(Document, location.Id).Track;
+                target = Document.Tracks.FirstOrDefault(t => t.Id == location.Id) ?? ConvertImportedSlider(location.Id).Track;
                 int index = target.Nodes.FindIndex(n => n.TimeMs > location.FirstSpanTimeMs) - 1;
                 if (index < 0) throw new ArgumentException(L.Get("editor.error.insertBetweenPoints"));
                 insertedId = SliderControlEditing.Insert(target, index, new(location.FirstSpanTimeMs, CurveMath.PositionAtTime(target, location.FirstSpanTimeMs)), ControlCurveMath.ReferenceScale(Document.ApproachRate));
@@ -74,7 +74,7 @@ public sealed partial class EditorView
         if (!Edit(L.Get("editor.command.insertPoint"), () =>
         {
             var track = Document.Tracks.FirstOrDefault(t => t.Id == location.Id)
-                ?? ImportedSliderEditing.ConvertToTrack(Document, location.Id).Track;
+                ?? ConvertImportedSlider(location.Id).Track;
             int segment = track.Nodes.FindIndex(n => n.TimeMs > location.FirstSpanTimeMs) - 1;
             if (segment < 0 || segment >= track.Nodes.Count - 1) throw new ArgumentException(L.Get("editor.error.insertBetweenPoints"));
             double low = 0, high = 1;
