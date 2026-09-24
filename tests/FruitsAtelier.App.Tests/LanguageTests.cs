@@ -8,7 +8,7 @@ internal static class LanguageTests
         Check(!ui.Canvas.Texts.Any(t => t.Value.StartsWith("Language:", StringComparison.Ordinal)), "Language control is absent from the editor header");
         ui.ClickText(Strings.Get("library.settings"));
         ui.ClickText(Strings.Get("settings.appearance"));
-        ui.ClickText(Strings.Get("ui.languageButton", System.Globalization.CultureInfo.GetCultureInfo(Strings.Language).NativeName) + " ▾");
+        ui.ClickText(System.Globalization.CultureInfo.GetCultureInfo(Strings.Language).NativeName + " ▾");
         ui.ClickText(System.Globalization.CultureInfo.GetCultureInfo(code).NativeName);
         ui.ClickText(Strings.Get("library.editor"));
     }

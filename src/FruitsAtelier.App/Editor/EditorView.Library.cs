@@ -468,14 +468,15 @@ public sealed partial class EditorView
     private void LibraryTextField(ICanvas c, int index, string label, string value, float y)
     {
         float x = librarySettingsOpen ? SettingsContentX : 32;
-        c.Text(label, x, y, 14, Foreground, width - x - 32, true);
+        float textSize = librarySettingsOpen ? SettingsTextSize : 14;
+        c.Text(label, x, y, textSize, Foreground, width - x - 32, true);
         var rect = new Rect(x, y + 28, width - x - (index < 2 || index == 4 ? 184 : 32), 42);
         c.Fill(rect, Surface, 5); c.Stroke(rect, libraryField == index ? Accent : Grid, radius: 5);
         string inputKey = "library:" + index;
-        DrawInputText(c, new(x + 12, y + 40, rect.Width - 24, 20), value, 14, libraryField == index, inputKey);
+        DrawInputText(c, new(x + 12, y + 40, rect.Width - 24, 20), value, textSize, libraryField == index, inputKey);
         hits.Add(new(rect, () => { libraryField = index; FocusInput(inputKey, value, mouseX); }, true));
-        if (index == 4) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestDefaultSkinArchive?.Invoke());
-        if (index < 2) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestLibraryFolder?.Invoke(index == 0));
+        if (index == 4) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestDefaultSkinArchive?.Invoke(), fontSize: textSize);
+        if (index < 2) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestLibraryFolder?.Invoke(index == 0), fontSize: textSize);
     }
     public bool LibraryLoading => scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
     public bool LibraryTextFocused => (LibraryVisible || ExportVisible) && libraryField >= 0 && !ErrorVisible && !DiscardConfirmationVisible;

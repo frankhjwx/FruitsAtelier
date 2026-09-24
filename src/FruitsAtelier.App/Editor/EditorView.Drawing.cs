@@ -638,8 +638,9 @@ public sealed partial class EditorView
             => items.Add((label, action, enabled, active));
     }
 
-    private void Button(ICanvas c, Rect r, string label, Action action, bool active = false, bool enabled = true)
+    private void Button(ICanvas c, Rect r, string label, Action action, bool active = false, bool enabled = true, float fontSize = 12, bool? bold = null)
     {
+        bool textBold = bold ?? active;
         bool hover = enabled && r.Contains(mouseX, mouseY);
         if (hover) c.Fill(r, active ? 0x3A6260u : 0x3D495Au, 4);
         else if (active) c.Fill(r, 0x31494B, 4);
@@ -650,11 +651,11 @@ public sealed partial class EditorView
         if (shortcut >= 0)
         {
             string key = label[(shortcut + 2)..].Trim();
-            float keyWidth = c.MeasureText(key, 12, active);
-            c.Text(label[..shortcut], r.X + 9, r.Y + (r.Height - 16) / 2, 12, color, Math.Max(0, r.Width - keyWidth - 36), active);
-            c.Text(key, r.Right - 9 - keyWidth, r.Y + (r.Height - 16) / 2, 12, color, keyWidth + 1, active);
+            float keyWidth = c.MeasureText(key, fontSize, textBold);
+            c.Text(label[..shortcut], r.X + 9, r.Y + (r.Height - fontSize - 4) / 2, fontSize, color, Math.Max(0, r.Width - keyWidth - 36), textBold);
+            c.Text(key, r.Right - 9 - keyWidth, r.Y + (r.Height - fontSize - 4) / 2, fontSize, color, keyWidth + 1, textBold);
         }
-        else c.Text(label, r.X + 9, r.Y + (r.Height - 16) / 2, 12, color, r.Width - 15, active);
+        else c.Text(label, r.X + 9, r.Y + (r.Height - fontSize - 4) / 2, fontSize, color, r.Width - 15, textBold);
         hits.Add(new(r, action, enabled));
     }
 

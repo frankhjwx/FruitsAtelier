@@ -20,6 +20,10 @@ public sealed partial class EditorView
     private Rect settingsPalette, settingsHueTrack;
     private int settingsColourDrag;
     private const float SettingsContentX = 246;
+    private const float SettingsTextSize = 13;
+
+    private void SettingsButton(ICanvas c, Rect bounds, string label, Action action, bool active = false, bool enabled = true)
+        => Button(c, bounds, label, action, active, enabled, SettingsTextSize, bold: false);
 
     public void OpenSettings()
     {
@@ -80,7 +84,7 @@ public sealed partial class EditorView
     {
         DrawHeader(c);
         c.Text(L.Get("library.settings"), 109, 11, 13, Foreground, 200, true);
-        Button(c, HeaderNavigationBounds, L.Get(settingsFromLibrary ? "library.back" : "library.editor"), CloseSettings);
+        SettingsButton(c, HeaderNavigationBounds, L.Get(settingsFromLibrary ? "library.back" : "library.editor"), CloseSettings);
         c.Fill(new(0, HeaderHeight, 214, height - HeaderHeight), Panel);
         string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.testplay", "update.title"];
         for (int i = 0; i < categories.Length; i++)
@@ -93,28 +97,35 @@ public sealed partial class EditorView
                 settingsCategory = category;
                 if (category == SettingsCategory.Updates && UpdateStatus.Phase is UpdatePhase.Idle or UpdatePhase.Current or UpdatePhase.Failed)
                     RequestUpdateCheck?.Invoke();
-            }, settingsCategory == category);
+            }, settingsCategory == category, fontSize: SettingsTextSize);
         }
-        if (settingsCategory != SettingsCategory.Updates)
-            c.Text(L.Get(categories[(int)settingsCategory]), SettingsContentX, 82, 24, Foreground, width - SettingsContentX - 32, true);
+        c.Text(L.Get(categories[(int)settingsCategory]), SettingsContentX, 82, 24, Foreground, width - SettingsContentX - 32, true);
         switch (settingsCategory)
         {
             case SettingsCategory.General:
-                Button(c, new(SettingsContentX, 144, Math.Min(520, width - SettingsContentX - 32), 38),
+                SettingsButton(c, new(SettingsContentX, 144, Math.Min(520, width - SettingsContentX - 32), 38),
                     L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
                     () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
                 break;
             case SettingsCategory.Workspace:
-                c.Text(L.Get("library.settingsDescription"), SettingsContentX, 128, 14, Muted, width - SettingsContentX - 32);
+                c.Text(L.Get("library.settingsDescription"), SettingsContentX, 128, SettingsTextSize, Muted, width - SettingsContentX - 32);
                 LibraryTextField(c, 0, L.Get("library.workspace"), draftWorkspace, 180);
                 LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, 284);
                 break;
             case SettingsCategory.Appearance:
                 LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, 160);
-                Button(c, new(SettingsContentX, 270, Math.Min(520, width - SettingsContentX - 32), 38),
+                float rowWidth = Math.Min(520, width - SettingsContentX - 32);
+                float labelWidth = Math.Min(240, rowWidth / 2);
+                float controlX = SettingsContentX + labelWidth + 16;
+                float controlWidth = rowWidth - labelWidth - 16;
+                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, 264.5f, SettingsTextSize, Foreground, labelWidth, true);
+                var romanisedBounds = new Rect(controlX, 254, controlWidth, 38);
+                c.Fill(romanisedBounds, Surface, 4); c.Stroke(romanisedBounds, Grid, radius: 4);
+                SettingsButton(c, romanisedBounds,
                     L.Get(draftRomanisedMetadata ? "settings.romanisedOn" : "settings.romanisedOff"),
                     () => draftRomanisedMetadata = !draftRomanisedMetadata, draftRomanisedMetadata);
-                DrawLanguageButton(c, new(SettingsContentX, 330, 280, 38));
+                c.Text(L.Get("ui.language"), SettingsContentX, 326.5f, SettingsTextSize, Foreground, labelWidth, true);
+                DrawLanguageButton(c, new(controlX, 316, controlWidth, 38));
                 DrawIndicatorColours(c);
                 break;
             case SettingsCategory.Testplay:
@@ -127,7 +138,7 @@ public sealed partial class EditorView
         c.Line(230, height - 86, width - 24, height - 86, Grid);
         c.Text(libraryError, SettingsContentX, height - 116, 13, Error, width - SettingsContentX - 32);
         bool canApply = SettingsChanged && scanTask is null && searchTask is null;
-        Button(c, new(SettingsContentX, height - 64, 200, 38), L.Get("library.apply"), () => ApplySettings(),
+        SettingsButton(c, new(SettingsContentX, height - 64, 200, 38), L.Get("library.apply"), () => ApplySettings(),
             active: canApply, enabled: canApply);
         if (settingsColourIndex >= 0) DrawIndicatorColourPicker(c);
     }
@@ -164,7 +175,7 @@ public sealed partial class EditorView
     {
         float available = width - SettingsContentX - 32;
         float cellWidth = (available - 12) / 2;
-        c.Text(L.Get("settings.indicatorColours"), SettingsContentX, 380, 13, Foreground, available - 190, true);
+        c.Text(L.Get("settings.indicatorColours"), SettingsContentX, 380, SettingsTextSize, Foreground, available - 190, true);
         string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
         for (int i = 0; i < 4; i++)
         {
@@ -174,11 +185,11 @@ public sealed partial class EditorView
             c.Stroke(bounds, Grid, radius: 4);
             var swatch = new Rect(bounds.X + 7, bounds.Y + 7, 20, 20);
             c.Fill(swatch, draftIndicatorColours[i], 3); c.Stroke(swatch, Grid, radius: 3);
-            c.Text(L.Get(names[i]), bounds.X + 36, bounds.Y + 9, 12, Foreground, cellWidth - 116, true);
-            c.Text($"#{draftIndicatorColours[i]:X6}", bounds.Right - 82, bounds.Y + 9, 12, Muted, 76);
+            c.Text(L.Get(names[i]), bounds.X + 36, bounds.Y + 8, SettingsTextSize, Foreground, cellWidth - 116);
+            c.Text($"#{draftIndicatorColours[i]:X6}", bounds.Right - 82, bounds.Y + 8, SettingsTextSize, Muted, 76);
             hits.Add(new(bounds, () => OpenIndicatorColourPicker(index), true));
         }
-        Button(c, new(SettingsContentX + available - 174, 374, 174, 30), L.Get("settings.indicatorReset"), () =>
+        SettingsButton(c, new(SettingsContentX + available - 174, 374, 174, 30), L.Get("settings.indicatorReset"), () =>
         {
             draftIndicatorColours[0] = FruitsAtelier.Core.LibrarySettings.DefaultStandIndicatorColour;
             draftIndicatorColours[1] = FruitsAtelier.Core.LibrarySettings.DefaultWalkIndicatorColour;
@@ -277,11 +288,11 @@ public sealed partial class EditorView
         var hexField = new Rect(dialog.X + 68, dialog.Y + 350, 170, 38);
         c.Fill(hexField, Surface, 4); c.Stroke(hexField, libraryField == 5 ? Accent : Grid, radius: 4);
         DrawInputText(c, new(hexField.X + 10, hexField.Y + 10, hexField.Width - 20, 18),
-            settingsColourHex, 14, libraryField == 5, "library:5");
+            settingsColourHex, SettingsTextSize, libraryField == 5, "library:5");
         hits.Add(new(hexField, () => { libraryField = 5; FocusInput("library:5", settingsColourHex, mouseX); }, true));
         c.Text(settingsColourError, dialog.X + 20, dialog.Y + 397, 12, Error, 230);
-        Button(c, new(dialog.Right - 276, dialog.Bottom - 55, 120, 34), L.Get("settings.indicatorCancel"), CancelIndicatorColourPicker);
-        Button(c, new(dialog.Right - 144, dialog.Bottom - 55, 120, 34), L.Get("settings.indicatorDone"), () =>
+        SettingsButton(c, new(dialog.Right - 276, dialog.Bottom - 55, 120, 34), L.Get("settings.indicatorCancel"), CancelIndicatorColourPicker);
+        SettingsButton(c, new(dialog.Right - 144, dialog.Bottom - 55, 120, 34), L.Get("settings.indicatorDone"), () =>
         {
             if (!CommitIndicatorColourHex()) return;
             settingsColourIndex = -1; libraryField = -1;

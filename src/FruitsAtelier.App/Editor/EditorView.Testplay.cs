@@ -236,8 +236,8 @@ public sealed partial class EditorView
         for (int i = 0; i < 3; i++)
         {
             int action = i;
-            c.Text(L.Get(labels[i]), SettingsContentX + i * cell, 160, 12, Muted, cell - 8);
-            Button(c, new(SettingsContentX + i * cell, 188, cell - 12, 30), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
+            c.Text(L.Get(labels[i]), SettingsContentX + i * cell, 160, SettingsTextSize, Foreground, cell - 8, true);
+            SettingsButton(c, new(SettingsContentX + i * cell, 188, cell - 12, 42), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
                 () => { libraryField = -1; bindingCapture = action; }, bindingCapture == i);
         }
     }
