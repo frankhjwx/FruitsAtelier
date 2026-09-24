@@ -85,7 +85,7 @@ var tests = new (string Name, Action Run)[]
     ("Text inputs blink, highlight selection and menus fit their rows", TextInputFeedbackTests.Run),
     ("Legacy clipboard and horizontal grid preserve pattern scope", LegacyAlignmentTests.ClipboardAndGrid),
     ("Legacy timestamps and read-only details preserve precision", LegacyAlignmentTests.TimestampAndReadOnly),
-    ("Legacy samples use edge leniency and slider-start tick samples", LegacyAlignmentTests.Samples),
+    ("Legacy samples use event timing and edge leniency", LegacyAlignmentTests.Samples),
     ("Cached timeline durations follow timing, repeat and document changes", ObjectTimelineTests.CachedDurationsFollowEdits),
     ("Selected-slider body drag, point drag and two-stage right-click follow the same rules in both modes", ToolPaletteTests.SelectedSliderControls),
     ("Timeline layout, centered numbers, box selection and deletion", ObjectTimelineTests.BoxAndDelete),

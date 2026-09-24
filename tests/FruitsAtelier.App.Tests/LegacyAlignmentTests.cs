@@ -65,10 +65,10 @@ internal static class LegacyAlignmentTests
         Check(resolver.Resolve(edge).Single().SampleSet == 2, "Edge sample applies the inclusive 5 ms boundary");
         Check(resolver.Resolve(edge with { TimeMs = 994.999 }).Single().SampleSet == 1, "Boundary does not extend beyond 5 ms");
         var tick = resolver.Resolve(edge with { Kind = CatchObjectKind.Droplet, TimeMs = 1100 }).Single();
-        Check(tick.SampleSet == 1 && tick.Volume == .8f, "Ticks retain the slider start bank and volume across timing changes");
+        Check(tick.SampleSet == 2 && tick.Volume == .4f, "Ticks use timing at their own event time");
         slider.TimeMs = 994;
         resolver = new(map, [edge]);
-        Check(resolver.Resolve(edge with { Kind = CatchObjectKind.Droplet }).Single().SampleSet == 2, "Slider body uses 6 ms sample leniency");
+        Check(resolver.Resolve(edge with { Kind = CatchObjectKind.Droplet }).Single().SampleSet == 2, "Ticks use 5 ms sample leniency");
     }
 
     public static int InspectMap(string path)
@@ -80,8 +80,7 @@ internal static class LegacyAlignmentTests
         int changed = 0, checkedEvents = 0;
         foreach (var item in converted.Objects.Where(o => o.TimeMs < 40000 && o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet))
         {
-            double lookup = item.Kind == CatchObjectKind.Droplet
-                ? map.ImportedSliders.Single(s => s.Id == item.SourceId).TimeMs + 6 : item.TimeMs + 5;
+            double lookup = item.TimeMs + 5;
             var old = map.TimingPoints.LastOrDefault(p => p.TimeMs <= item.TimeMs);
             var expected = map.TimingPoints.LastOrDefault(p => p.TimeMs <= lookup);
             var samples = resolver.Resolve(item);

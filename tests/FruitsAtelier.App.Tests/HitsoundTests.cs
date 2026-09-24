@@ -9,7 +9,7 @@ static class HitsoundTests
         Directory.CreateDirectory(root);
         try
         {
-            foreach (string name in new[] { "soft-hitnormal2.wav", "drum-hitclap2.ogg", "normal-slidertick2.wav", "Custom.wav" })
+            foreach (string name in new[] { "soft-hitnormal2.wav", "drum-hitclap2.ogg", "normal-slidertick2.wav", "soft-slidertick10.wav", "Custom.wav" })
                 File.WriteAllBytes(Path.Combine(root, name), HitsoundSamples.CreateWave(CatchObjectKind.Fruit));
             var document = new MapDocument { SourcePath = Path.Combine(root, "map.osu"), IsDemo = false };
             document.TimingPoints.Add(new() { TimeMs = 0, SampleSet = 2, SampleIndex = 2, Volume = 40 });
@@ -47,6 +47,15 @@ static class HitsoundTests
             Require(resolver.Resolve(events[1]).Single().Name == "slidertick", "Slider ticks use slidertick");
             Require(resolver.Resolve(events[2])[1].Name == "hitclap" && resolver.Resolve(events[2])[1].SampleSet == 3, "Repeat edge uses its own flags and addition bank");
             Require(resolver.Resolve(events[3])[1].Name == "hitfinish", "Tail uses final edge samples");
+            document.TimingPoints.Add(new() { TimeMs = 27561, SampleSet = 2, SampleIndex = 10, Volume = 30 });
+            document.TimingPoints.Add(new() { TimeMs = 27649, SampleSet = 2, SampleIndex = 1, Volume = 30 });
+            var switchedTick = events[1] with { TimeMs = 27560.47 };
+            resolver = new(document, events);
+            var switchedSample = resolver.Resolve(switchedTick).Single();
+            Require(switchedSample.FilePath == Path.Combine(root, "soft-slidertick10.wav") && switchedSample.Volume == .3f,
+                "A timing point inside a slider changes the tick's custom sample index and volume");
+            Require(resolver.Resolve(switchedTick with { TimeMs = 27650 }).Single().FilePath != switchedSample.FilePath,
+                "Later ticks use the next timing point's sample index");
             document.TimingPoints.Add(new() { TimeMs = 500, Volume = 0 });
             resolver = new(document, events);
             Require(resolver.Resolve(events[3]).Count == 0, "Zero timing volume mutes samples");
