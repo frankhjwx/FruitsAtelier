@@ -6,6 +6,53 @@ public readonly record struct BreakPeriod(int StartMs, int EndMs);
 
 public static class OsuTimeline
 {
+    internal static void ReconcileBreaks(MapDocument before, MapDocument document)
+    {
+        var periods = Breaks(document);
+        if (periods.Count == 0) return;
+        var previous = ObjectIntervals(before);
+        var current = ObjectIntervals(document);
+        var changed = current.Where(pair => !previous.TryGetValue(pair.Key, out var old) || old != pair.Value)
+            .Select(pair => pair.Value).ToArray();
+        if (changed.Length == 0) return;
+        double preempt = CatchScrollTiming.PreemptMs(document.ApproachRate);
+        var occupied = current.Values.OrderBy(interval => interval.Start).ToArray();
+        foreach (var period in periods)
+        {
+            if (!changed.Any(interval => interval.Start - preempt < period.EndMs && interval.End + 200 > period.StartMs)) continue;
+            var remaining = new List<BreakPeriod>();
+            int start = period.StartMs;
+            foreach (var interval in occupied)
+            {
+                int beforeNote = (int)Math.Clamp(Math.Floor(interval.Start - preempt), 0, int.MaxValue);
+                int afterNote = (int)Math.Clamp(Math.Ceiling(interval.End + 200), 0, int.MaxValue);
+                if (afterNote <= start) continue;
+                if (beforeNote >= period.EndMs) break;
+                int end = Math.Min(beforeNote, period.EndMs);
+                if ((long)end - start >= 400) remaining.Add(new(start, end));
+                start = Math.Max(start, afterNote);
+                if (start >= period.EndMs) break;
+            }
+            if ((long)period.EndMs - start >= 400) remaining.Add(new(start, period.EndMs));
+            if (remaining.Count == 1 && remaining[0] == period) continue;
+            if (remaining.Count == 0) RemoveBreak(document, period);
+            else
+            {
+                ReplaceBreak(document, period, remaining[0]);
+                foreach (var part in remaining.Skip(1)) AddBreak(document, part.StartMs, part.EndMs);
+            }
+        }
+    }
+
+    private static Dictionary<Guid, (double Start, double End)> ObjectIntervals(MapDocument document)
+        => document.Fruits.Select(item => (item.Id, Start: item.TimeMs, End: item.TimeMs))
+            .Concat(document.Tracks.Where(track => track.Nodes.Count >= 2)
+                .Select(track => (track.Id, Start: track.Nodes[0].TimeMs, End: CurveMath.EndTimeMs(track))))
+            .Concat(document.ImportedSliders.Select(slider => (slider.Id, Start: slider.TimeMs,
+                End: ImportedSliderConverter.EndTimeMs(document, slider))))
+            .Concat(document.BananaShowers.Select(shower => (shower.Id, Start: shower.TimeMs, End: shower.EndTimeMs)))
+            .ToDictionary(item => item.Id, item => (item.Start, item.End));
+
     public static int? PreviewTime(MapDocument document)
     {
         string? value = OsuBeatmapReader.Setting(document, "General", "PreviewTime");

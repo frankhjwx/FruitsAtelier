@@ -3,6 +3,33 @@ using FruitsAtelier.Core;
 
 internal static class SliderDistanceDragTests
 {
+    public static void FractionalFoldedTail()
+    {
+        foreach (bool ds in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 458.015267175573,
+                TimingOffsetMs = -185109, SliderMultiplier = 3.59999990463257, SliderTickRate = 2 };
+            map.DistanceSnapRatios.AddRange([.2, .6, 1.4]);
+            var track = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = true };
+            track.Nodes.AddRange([
+                new Anchor { TimeMs = 1188.7099236643, X = 216.40395027797723 },
+                new Anchor { TimeMs = 1285.2099236643, X = 360.5540771484375 },
+                new Anchor { TimeMs = 1417.7175572521, X = 147.5218814438465 }]);
+            map.Tracks.Add(track);
+            var ui = new Ui(); ui.LoadDocument(map); ui.SelectTrack(track.Id);
+            if (ds) ui.Key('Y');
+            var displayed = OsuBeatmapWriter.Serialize(map).PlayableObjects.Last(o => o.Kind == CatchObjectKind.Fruit);
+            ui.DownMap(displayed.TimeMs, displayed.X);
+            ui.MoveMap(displayed.TimeMs, 280); ui.UpMap(displayed.TimeMs, 280);
+            var moved = ui.View.Document.Tracks.Single().Nodes[^1];
+            Check(Math.Abs(moved.X - track.Nodes[^1].X) > 10,
+                $"Fractional folded tail stayed stuck (DS={ds}): {moved.X}; {ui.View.StatusMessage}");
+            Check(Math.Abs(moved.TimeMs - track.Nodes[^1].TimeMs) < 1e-6, "Displayed tail quantization changed authored time.");
+            if (ds) CheckStrictTail(ui, CatchStreamConverter.Convert(ui.View.Document), track.Id);
+            ui.Key('Z', ctrl: true);
+            Check(map.ContentEquals(ui.View.Document), "Fractional tail undo did not restore the authored geometry.");
+        }
+    }
     public static void SelectedTail()
     {
         foreach (var mode in Enum.GetValues<SliderEditingMode>())

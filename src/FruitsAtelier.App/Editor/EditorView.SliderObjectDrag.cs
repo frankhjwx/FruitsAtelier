@@ -7,6 +7,7 @@ public sealed partial class EditorView
 {
     private ConvertedCatchObject? sliderObjectDragTarget;
     private double sliderObjectDragX;
+    private double sliderObjectPointerOriginX;
     private MapDocument? sliderObjectDragSource, sliderObjectDragShape;
     private int sliderObjectTrackIndex, sliderObjectImportIndex;
     private IReadOnlyDictionary<(int From, int To), double>? sliderObjectDragBaseline;
@@ -34,6 +35,12 @@ public sealed partial class EditorView
 
     private void BeginSliderObjectDrag(ConvertedCatchObject target, float x, float y)
     {
+        sliderObjectPointerOriginX = target.X;
+        EnsureConversion();
+        // Hit testing uses exported coordinates. Editing needs the authored event's
+        // exact time and X, particularly when a fractional tail rounds past its anchor.
+        target = conversion!.Objects.FirstOrDefault(item => item.SourceId == target.SourceId
+            && item.EventIndex == target.EventIndex && item.Kind == target.Kind) ?? target;
         StatusMessage = L.Get("editor.status.sliderObjectReady", Time(target.TimeMs));
         if (notesLocked) return;
         history.Begin(L.Get("editor.command.changeField", L.Get("coordinate.x")));
@@ -64,8 +71,18 @@ public sealed partial class EditorView
     private void MoveSliderObject(float x)
     {
         if (sliderObjectDragTarget is not { } target) return;
-        if (Math.Abs(x - dragStartX) < .001 && Math.Abs(sliderObjectDragX - target.X) < .00001) return;
-        double rawX = Math.Clamp(target.X + (x - dragStartX) / Playfield.Width * 512, 0, 512);
+        if (Math.Abs(x - dragStartX) < .001)
+        {
+            if (Math.Abs(sliderObjectDragX - target.X) >= .00001)
+            {
+                RestoreSliderObjectSource(sliderObjectDragSource!);
+                sliderObjectDragX = target.X;
+                EnsureConversion();
+                StatusMessage = L.Get("editor.status.sliderObjectPosition", Time(target.TimeMs), Number(target.X));
+            }
+            return;
+        }
+        double rawX = Math.Clamp(sliderObjectPointerOriginX + (x - dragStartX) / Playfield.Width * 512, 0, 512);
         bool strict = DistanceSnapEnabled;
         double wantedX = strict ? rawX : Math.Clamp(SnapX(rawX), 0, 512);
         if (strict)
