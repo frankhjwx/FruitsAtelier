@@ -13,7 +13,7 @@ internal static class HyperDashSkinTests
         string folder = Path.GetFullPath("artifacts/tests/hdash-colours");
         Directory.CreateDirectory(folder);
         File.WriteAllText(Path.Combine(folder, "skin.ini"),
-            "[Colours]\nHyperDash: 12,34,56\nHyperDashFruit: 78,90,123\nHyperDashAfterImage: 134,156,178\n");
+            "[CatchTheBeat]\nHyperDash: 12,34,56\nHyperDashFruit: 78,90,123\nHyperDashAfterImage: 134,156,178\n");
         var map = new MapDocument { DurationMs = 3000, CircleSize = 5, IsDemo = false };
         map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 40 }, new Fruit { TimeMs = 1100, X = 470 }]);
         map.DistanceSnapRatios.Add(8);

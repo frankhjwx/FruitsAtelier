@@ -240,11 +240,15 @@ public sealed class CatchSkin
             }
             if (section.Equals("General", StringComparison.OrdinalIgnoreCase) && key.Equals("Name", StringComparison.OrdinalIgnoreCase))
             { if (value.Length > 0) Name = value[..Math.Min(value.Length, 120)]; continue; }
-            if (!section.Equals("Colours", StringComparison.OrdinalIgnoreCase) || !TryColour(value, out uint colour)) continue;
-            if (key.Equals("HyperDashFruit", StringComparison.OrdinalIgnoreCase)) hyperFruit = colour;
-            else if (key.Equals("HyperDash", StringComparison.OrdinalIgnoreCase)) hyper = colour;
-            else if (key.Equals("HyperDashAfterImage", StringComparison.OrdinalIgnoreCase)) hyperAfterImage = colour;
-            else if (key.StartsWith("Combo", StringComparison.OrdinalIgnoreCase)
+            if (!TryColour(value, out uint colour)) continue;
+            if (section.Equals("CatchTheBeat", StringComparison.OrdinalIgnoreCase))
+            {
+                if (key.Equals("HyperDashFruit", StringComparison.OrdinalIgnoreCase)) hyperFruit = colour;
+                else if (key.Equals("HyperDash", StringComparison.OrdinalIgnoreCase)) hyper = colour;
+                else if (key.Equals("HyperDashAfterImage", StringComparison.OrdinalIgnoreCase)) hyperAfterImage = colour;
+                continue;
+            }
+            if (section.Equals("Colours", StringComparison.OrdinalIgnoreCase) && key.StartsWith("Combo", StringComparison.OrdinalIgnoreCase)
                 && int.TryParse(key.AsSpan(5), NumberStyles.None, CultureInfo.InvariantCulture, out int index) && index is >= 1 and <= 8)
                 combos[index] = colour;
         }

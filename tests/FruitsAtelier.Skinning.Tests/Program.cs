@@ -83,7 +83,7 @@ void CatcherPlate()
 {
     string folder = Fixture("catcher-plate");
     Header(folder, "fruit-catcher-idle-0@2x.png", 600, 400);
-    File.WriteAllText(Path.Combine(folder, "skin.ini"), "[Colours]\nHyperDash: 10,20,30\nHyperDashAfterImage: 40,50,60\nHyperDashFruit: 70,80,90\n");
+    File.WriteAllText(Path.Combine(folder, "skin.ini"), "[CatchTheBeat]\nHyperDash: 10,20,30\nHyperDashAfterImage: 40,50,60\nHyperDashFruit: 70,80,90\n");
     var skin = Load(folder);
     Equal(0x0A141E, skin.HyperDashColour);
     Equal(0x28323C, skin.HyperDashAfterImageColour);
@@ -226,7 +226,7 @@ void Colours()
 {
     string folder = Fixture("colours");
     Header(folder, "fruit-pear.png", 128, 128);
-    File.WriteAllText(Path.Combine(folder, "skin.ini"), "[General]\nName: Fixture skin\n[Colours]\nCombo2: 1,2,3\nCombo1: 255,255,255\nCombo3: 256,0,0\nHyperDash: 1,2,3\nHyperDashFruit: 210,20,40\n");
+    File.WriteAllText(Path.Combine(folder, "skin.ini"), "[General]\nName: Fixture skin\n[Colours]\nCombo2: 1,2,3\nCombo1: 255,255,255\nCombo3: 256,0,0\n[CatchTheBeat]\nHyperDash: 1,2,3\nHyperDashFruit: 210,20,40\n");
     var skin = Load(folder);
     True(skin.Name == "Fixture skin");
     Equal(2, skin.ComboColours.Count);
@@ -236,10 +236,15 @@ void Colours()
     var canvas = new RecordingCanvas();
     True(skin.Draw(canvas, CatchSkinObject.Fruit, 0, 0, 0, 64));
     Equal(0xFFFFFF, canvas.Calls.Single().Tint);
-    File.WriteAllText(Path.Combine(folder, "skin.ini"), "[Colours]\nHyperDash: 100,50,25\n");
+    File.WriteAllText(Path.Combine(folder, "skin.ini"), "[CatchTheBeat]\nHyperDash: 100,50,25\n");
     Equal(0x643219, Load(folder).HyperDashFruitColour);
-    File.WriteAllText(Path.Combine(folder, "skin.ini"), "[Colours]\n");
+    File.WriteAllText(Path.Combine(folder, "skin.ini"), "[Colours]\nHyperDash: 1,2,3\n");
     Equal(0xFF0000, Load(folder).HyperDashFruitColour);
+    File.WriteAllText(Path.Combine(folder, "skin.ini"), "[CatchTheBeat]\nHyperDash: 100,50,25\nHyperDashAfterImage: 4,5,6\n");
+    var fallback = Load(folder);
+    Equal(0x643219, fallback.HyperDashColour);
+    Equal(0x643219, fallback.HyperDashFruitColour);
+    Equal(0x040506, fallback.HyperDashAfterImageColour);
 }
 
 void InvalidMetadata()
