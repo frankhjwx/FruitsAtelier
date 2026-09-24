@@ -313,6 +313,7 @@
   "editor.command.splitCurve": "Split curve",
   "editor.diagnostics.separator": "; ",
   "editor.error.anchorMustBeLater": "The new anchor must be later than the previous anchor and its outgoing handle; keep drawing upward",
+  "editor.error.sliderDistanceSnap": "No slider position satisfies the configured distance snaps",
   "editor.error.bananaEndAfterStart": "The banana shower must end after its start; right-click at a later time",
   "editor.error.clipboardEmpty": "The internal clipboard has no objects",
   "editor.error.clipboardInvalid": "The internal clipboard contains invalid objects.",

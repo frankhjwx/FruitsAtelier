@@ -370,7 +370,7 @@ public sealed partial class EditorView
         drag = DragKind.None;
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         tool = Tool.Slider;
-        Select(Guid.Empty);
+        SelectAnchors(track, []);
         StatusMessage = L.Get("editor.status.sliderFinished");
     }
 

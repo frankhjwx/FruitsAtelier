@@ -49,7 +49,7 @@ public sealed class CurveTrack
     public CurveKind Kind { get; set; } = CurveKind.Bezier;
     public int SourceOrder { get; set; } = int.MaxValue;
     public List<Anchor> Nodes { get; private set; } = new();
-    internal CurveTrack DeepClone()
+    public CurveTrack DeepClone()
     {
         var copy = (CurveTrack)MemberwiseClone();
         copy.Nodes = Nodes.Select(n => n.DeepClone()).ToList();

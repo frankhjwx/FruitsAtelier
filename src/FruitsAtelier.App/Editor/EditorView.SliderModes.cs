@@ -82,7 +82,9 @@ public sealed partial class EditorView
 
     private void PlaceLegacyPoint(float x, float y, bool straight = false)
     {
-        var point = PlacementPoint(x, y);
+        var point = draftTrack != Guid.Empty && DistanceSnapEnabled
+            ? MapAt(x, y, true) with { X = Math.Clamp(SnapX(MapAt(x, y, true).X), 0, 512) }
+            : PlacementPoint(x, y);
         if (draftTrack == Guid.Empty)
         {
             history.Begin(L.Get("editor.command.drawTrack"));
@@ -119,7 +121,9 @@ public sealed partial class EditorView
     private bool UpdateLegacyPreview(float x, float y, bool straight = false)
     {
         if (legacyDraft is not { Count: > 0 } || SelectedTrack is not { } track || !plot.Contains(x, y)) return false;
-        var point = PlacementPoint(x, y);
+        var point = DistanceSnapEnabled
+            ? MapAt(x, y, true) with { X = Math.Clamp(SnapX(MapAt(x, y, true).X), 0, 512) }
+            : PlacementPoint(x, y);
         var candidate = legacyDraft.ToList();
         if (Near(candidate[^1].Point, x, y, 8) || point == candidate[^1].Point)
         {
@@ -142,11 +146,22 @@ public sealed partial class EditorView
         candidate[start] = candidate[start] with { Type = straight ? SliderCurveType.Linear : SliderControlEditing.AutomaticType(candidate.Count - start) };
         try
         {
-            SliderControlEditing.Apply(track, candidate, allowArcFallback: true);
-            Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
-            legacyPreviewVertices = candidate;
-            legacyPreviewValid = true;
-            return true;
+            var points = !DistanceSnapEnabled ? new[] { candidate[^1].Point }
+                : candidate[start].Type == SliderCurveType.Linear
+                    ? StraightSliderCandidates(candidate[^1].Point, candidate[^2].Point)
+                : CurvedSliderCandidates(candidate[^1].Point, candidate[^2].Point.X);
+            foreach (var position in points)
+            {
+                candidate[^1] = candidate[^1] with { Point = position };
+                if (!TryDistanceShape(track, () =>
+                    { SliderControlEditing.Apply(track, candidate, allowArcFallback: true); return true; })) continue;
+                Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
+                legacyPreviewVertices = candidate;
+                legacyPreviewValid = true;
+                return true;
+            }
+            StatusMessage = L.Get("editor.error.sliderDistanceSnap");
+            return legacyPreviewValid = false;
         }
         catch (ArgumentException ex) { StatusMessage = ex.Message; return legacyPreviewValid = false; }
     }
@@ -215,10 +230,37 @@ public sealed partial class EditorView
         bool Try(MapPoint offset)
         {
             var candidate = legacyDragStart.Select(v => anchorSelection.Contains(v.Id) ? v with { Point = v.Point + offset } : v).ToList();
-            try { SliderControlEditing.Apply(track, candidate, allowArcFallback: true); return true; }
+            try { return TryDistanceShape(track, () =>
+                { SliderControlEditing.Apply(track, candidate, allowArcFallback: true); return true; }); }
             catch (ArgumentException ex) { StatusMessage = ex.Message; return false; }
         }
-        if (!Try(delta))
+        int selectedEndpoint = anchorSelection.Count == 1
+            ? anchorSelection.Contains(legacyDragStart[0].Id) ? 0
+                : anchorSelection.Contains(legacyDragStart[^1].Id) ? legacyDragStart.Count - 1 : -1
+            : -1;
+        int adjacent = selectedEndpoint == 0 ? 1 : selectedEndpoint - 1;
+        bool straightEndpoint = DistanceSnapEnabled && selectedEndpoint >= 0 && adjacent >= 0
+            && adjacent < legacyDragStart.Count
+            && (selectedEndpoint == 0 ? legacyDragStart[0].Type : legacyDragStart[adjacent].Type) == SliderCurveType.Linear;
+        if (straightEndpoint)
+        {
+            var original = legacyDragStart[selectedEndpoint].Point;
+            var wanted = original + delta;
+            bool accepted = false;
+            foreach (var position in StraightSliderCandidates(wanted, legacyDragStart[adjacent].Point))
+                if (Try(position - original)) { accepted = true; break; }
+            if (!accepted) StatusMessage = L.Get("editor.error.sliderDistanceSnap");
+        }
+        else if (DistanceSnapEnabled)
+        {
+            var current = SliderControlEditing.Vertices(track).First(v => v.Id == legacyDragStart
+                .First(v => anchorSelection.Contains(v.Id)).Id);
+            var initial = legacyDragStart.First(v => v.Id == current.Id);
+            double acceptedX = current.Point.X - initial.Point.X;
+            bool accepted = ClampDistanceDrag(delta, acceptedX, Try);
+            if (!accepted) StatusMessage = L.Get("editor.error.sliderDistanceSnap");
+        }
+        else if (!Try(delta))
         {
             if (endpoint && snapped) Try(new(0, delta.X));
             else ClampMove(default, delta, Try);

@@ -313,6 +313,7 @@
   "editor.command.splitCurve": "曲线分割插点",
   "editor.diagnostics.separator": "；",
   "editor.error.anchorMustBeLater": "新锚点时间须晚于上一锚点及其出控制柄；请继续向上绘制",
+  "editor.error.sliderDistanceSnap": "没有符合当前距离吸附设置的滑条位置",
   "editor.error.bananaEndAfterStart": "香蕉雨结束时间必须晚于开始时间；请在更晚的位置右键完成",
   "editor.error.clipboardEmpty": "内部剪贴板没有对象",
   "editor.error.clipboardInvalid": "内部剪贴板对象无效。",
