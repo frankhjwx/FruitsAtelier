@@ -13,6 +13,9 @@ public sealed partial class EditorView
     public Action<bool>? RequestLibraryFolder { get; set; }
     public Action<bool>? RequestLibraryImport { get; set; }
     public Action<LibraryMap>? RequestLibraryOpen { get; set; }
+    public Action<LibraryMap>? RequestLibraryOszExport { get; set; }
+    public Action<LibraryMap>? RequestLibraryDelete { get; set; }
+    public Action? RequestOszExport { get; set; }
     public Action<string>? RequestOsuExport { get; set; }
     public Action<bool, string>? RequestWorkspaceExport { get; set; }
     private LibraryDatabase? libraryDatabase;

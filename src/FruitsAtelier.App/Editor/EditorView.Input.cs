@@ -928,7 +928,7 @@ public sealed partial class EditorView
         fieldError = "";
     }
 
-    public void CancelInteraction()
+    public void CancelInteraction(bool preserveTestplay = false)
     {
         pendingImplicitSliderConversions.Clear();
         textSelecting = false;
@@ -941,7 +941,8 @@ public sealed partial class EditorView
         streamSnapDragging = false;
         sliderHoldId = legacyButtonSlider = Guid.Empty; noteHoldTarget = null;
         sliderHoldConsumed = false;
-        StopTestplay();
+        if (preserveTestplay) testplay?.ReleaseKeys();
+        else StopTestplay();
         bindingCapture = -1;
         SetModifiers(false, false);
         tabPointer = false;

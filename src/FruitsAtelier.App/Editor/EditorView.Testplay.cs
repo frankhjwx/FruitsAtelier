@@ -13,6 +13,8 @@ public sealed partial class EditorView
     private bool testplayTabHeld;
     private bool testplayPauseHeld;
     private bool testplayBookmarkHeld;
+    private string? testplayAutoNotice;
+    private double testplayAutoNoticeAt;
     public bool TestplayPaused => testplay?.Paused ?? false;
     public bool TestplayAutoplay => testplay?.Autoplay ?? false;
     private double TestplayRealtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
@@ -40,6 +42,7 @@ public sealed partial class EditorView
         testplayTabHeld = false;
         testplayPauseHeld = false;
         testplayBookmarkHeld = false;
+        testplayAutoNotice = null;
         testplayWithAudio = AudioReady;
         comboCurrent = comboPrevious = 0; comboChangedAt = double.NegativeInfinity;
         ResetHitsounds();
@@ -77,6 +80,7 @@ public sealed partial class EditorView
         testplay!.Cancel();
         testplayDriver?.Dispose(); testplayDriver = null;
         testplay = null; testplayFrame = null;
+        testplayAutoNotice = null;
         testplayBookmarkHeld = false;
         if (testplayWithAudio)
         {
@@ -103,7 +107,13 @@ public sealed partial class EditorView
     {
         if (testplay is null) return;
         if (testplayDriver is null) testplay.Tick();
+        bool wasAutoplay = testplayFrame?.Autoplay ?? false;
         testplayFrame = testplay.Capture();
+        if (wasAutoplay != testplayFrame.Autoplay)
+        {
+            testplayAutoNotice = L.Get(testplayFrame.Autoplay ? "testplay.autoplayEntered" : "testplay.autoplayExited");
+            testplayAutoNoticeAt = TestplayRealtime;
+        }
         playhead = testplayFrame.TimeMs;
         foreach (var change in testplayFrame.ComboChanges)
         {
@@ -166,6 +176,18 @@ public sealed partial class EditorView
         for (int i = 0; i < hints.Length; i++)
             c.Text(L.Get(hints[i]), 12, 12 + i * 20, 13, 0xD6E5B5, Math.Max(100, width - 24));
         if (TestplayPaused) c.Text(L.Get("testplay.paused"), 12, 118, 15, Accent, 250, true);
+        if (testplayAutoNotice is { } notice)
+        {
+            double age = TestplayRealtime - testplayAutoNoticeAt;
+            float opacity = (float)Math.Clamp(Math.Min(age / 180, (1300 - age) / 300), 0, 1);
+            if (opacity > 0)
+            {
+                var bar = new Rect(stage.X, height / 2f - 30, stage.Width, 60);
+                c.Fill(bar, 0x101820, opacity: .72f * opacity);
+                uint textColour = (uint)(0xE6F2FF * opacity + 0x101820 * (1 - opacity));
+                c.Text(notice, width / 2f - c.MeasureText(notice, 20) / 2, bar.Y + 18, 20, textColour, stage.Width, true);
+            }
+        }
     }
 
     // ppy/osu 48c4800e: LegacyCatchComboCounter, LegacyRollingCounter and CatcherArea.

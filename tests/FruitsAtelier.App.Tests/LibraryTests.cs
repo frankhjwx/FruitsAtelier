@@ -11,6 +11,7 @@ internal static class LibraryTests
         try
         {
             StandaloneExport(root);
+            ArchiveAndDelete(root);
             ExportOverlay();
             OptionalSongs(root);
             var view = new EditorView(); view.NewProject();
@@ -34,7 +35,14 @@ internal static class LibraryTests
             Check(Directory.GetFiles(songs).Length == 0, "navigation and saving never write Songs");
             WaitForLibrary(view);
         }
-        finally { Directory.Delete(root, true); }
+        finally
+        {
+            for (int attempt = 0; ; attempt++)
+            {
+                try { Directory.Delete(root, true); break; }
+                catch (IOException) when (attempt < 20) { Thread.Sleep(50); }
+            }
+        }
     }
     private static void StandaloneExport(string root)
     {
@@ -58,6 +66,48 @@ internal static class LibraryTests
         Check(OsuBeatmapReader.Setting(read, "Metadata", "BeatmapID") == "0", "standalone resets beatmap ID");
         Check(view.Document.ContentEquals(before.Difficulties[0].Document), "standalone export leaves document unchanged");
         Check(Directory.GetFiles(root).Length == 1, "standalone exports only one file");
+    }
+    private static void ArchiveAndDelete(string root)
+    {
+        string songs = Path.Combine(root, "Archive Songs"); Directory.CreateDirectory(songs);
+        var view = new EditorView(); view.NewProject();
+        string workspace = Path.Combine(root, "Archive workspace");
+        var project = view.CaptureProject();
+        string archive = Path.Combine(root, "standalone.osz");
+        FruitsAtelier.App.Platform.LibraryOperations.ExportOsz(project, archive, false);
+        using (var zip = System.IO.Compression.ZipFile.OpenRead(archive))
+            Check(zip.Entries.Count(e => e.FullName.EndsWith(".osu")) == project.Difficulties.Count,
+                "OSZ contains every project difficulty");
+        string sourceFolder = Path.Combine(root, "External set"); Directory.CreateDirectory(sourceFolder);
+        string first = Path.Combine(sourceFolder, "first.osu");
+        OsuBeatmapWriter.WriteFile(project.Difficulties[0].Document, first);
+        OsuBeatmapWriter.WriteFile(FruitsAtelier.App.Platform.LibraryOperations.StandaloneExportDocument(project.Difficulties[0], "Extra"),
+            Path.Combine(sourceFolder, "extra.osu"));
+        File.WriteAllText(Path.Combine(sourceFolder, "storyboard.osb"), "[Events]");
+        File.WriteAllBytes(Path.Combine(sourceFolder, "clip.mp4"), [1, 2, 3]);
+        var map = LibraryDatabase.ReadMetadata(first)!;
+        string libraryArchive = Path.Combine(root, "library.osz");
+        FruitsAtelier.App.Platform.LibraryOperations.ExportOsz(
+            FruitsAtelier.App.Platform.LibraryOperations.ExportProject(map), libraryArchive, false);
+        using (var zip = System.IO.Compression.ZipFile.OpenRead(libraryArchive))
+            Check(zip.Entries.Count(e => e.FullName.EndsWith(".osu")) == 2
+                && zip.Entries.Any(e => e.FullName == "storyboard.osb")
+                && zip.Entries.Any(e => e.FullName == "clip.mp4"),
+                "library OSZ includes all Catch difficulties and optional resources");
+        var session = WorkspaceProject.Create(workspace, project, songs);
+        FruitsAtelier.App.Platform.LibraryOperations.DeleteProject(session.Directory,
+            new LibrarySettings { Workspace = workspace, Songs = songs });
+        Check(!Directory.Exists(session.Directory), "workspace-only project can be deleted");
+        string source = Path.Combine(songs, "retained.osu");
+        OsuBeatmapWriter.WriteFile(project.Difficulties[0].Document, source);
+        var linked = WorkspaceProject.Create(workspace,
+            BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(source)]), songs);
+        bool rejected = false;
+        try { FruitsAtelier.App.Platform.LibraryOperations.DeleteProject(linked.Directory,
+            new LibrarySettings { Workspace = workspace, Songs = songs }); }
+        catch (IOException) { rejected = true; }
+        Check(rejected && Directory.Exists(linked.Directory) && File.Exists(source),
+            "deletion protects projects linked to existing Songs files");
     }
     private static void OptionalSongs(string root)
     {

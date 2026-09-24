@@ -80,14 +80,17 @@ fall past the catcher and fade out over 250 ms.
 
 The upper-left corner shows **Tab** (autoplay), **Ctrl+P** (pause/resume), **Ctrl+B** (add a bookmark), **F1** (exit to the testplay start), and **F2** (exit at the current position). Pausing freezes gameplay and music; resuming continues the same session.
 
-Press **Tab** during testplay to toggle autoplay. Press it again to resume manual
-movement at the current time and position. Each new testplay starts in manual mode.
+Press **Tab** during testplay to toggle autoplay. Pressing a bound left, right, or dash key
+also returns to manual control. A centered fading banner announces either change.
+Each new testplay starts in manual mode. Losing window focus releases held keys while
+testplay and its music continue.
+
 The right-side preview and testplay animate fruit rotation and banana rotation/size;
 the main editing canvas remains static. Fruit bases use beatmap combo colours when
 present, otherwise skin colours; overlays stay white.
 
 Caught fruit stacks on the catcher using the preview effects and releases at combo ends.
-The last remaining note (after miss and plate animations) or the end of the music returns to the editor. **Esc** or losing window focus also exits. Playback stops and the playhead
+The last remaining note (after miss and plate animations) or the end of the music returns to the editor. **Esc** also exits. Playback stops and the playhead
 returns to the position where testplay began. Gameplay does not change hit objects or selection; bookmark shortcuts update metadata through undo history. The playfield fits the full window while preserving its
 aspect ratio; it reserves no space for navigation controls. Release Esc before
 pressing it again to navigate from the editor to Library.

@@ -52,6 +52,32 @@ internal sealed partial class EditorWindow
                 ResetAudio(); if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath);
             });
         });
+        view.RequestLibraryDelete = map =>
+        {
+            if (map.ProjectPath is not { } project) return;
+            view.ShowDeleteProjectConfirmation(confirmed =>
+            {
+                if (!confirmed) return;
+                FileOperation(() => { LibraryOperations.DeleteProject(project, view.LibrarySettings); view.RefreshLibrary(); });
+            });
+        };
+        view.RequestLibraryOszExport = map => FileOperation(() =>
+        {
+            string filename = WorkspaceProject.SafeName(map.Artist + " - " + map.Title) + ".osz";
+            var path = MapFileDialog.Select(hwnd, true, L.Get("library.exportOsz"), MapFileDialog.OszFilter, filename, "osz");
+            if (path is null) return;
+            LibraryOperations.ExportOsz(LibraryOperations.ExportProject(map), path, view.CompensateTinyDroplets);
+            view.SetNotice(L.Get("library.exported", path));
+        });
+        view.RequestOszExport = () => FileOperation(() =>
+        {
+            var project = view.CaptureProject();
+            string filename = WorkspaceProject.SafeName(project.Name) + ".osz";
+            var path = MapFileDialog.Select(hwnd, true, L.Get("library.exportOsz"), MapFileDialog.OszFilter, filename, "osz");
+            if (path is null) return;
+            LibraryOperations.ExportOsz(project, path, view.CompensateTinyDroplets);
+            view.SetNotice(L.Get("library.exported", path));
+        });
         view.RequestOsuExport = name => FileOperation(() =>
         {
             var project = view.CaptureProject();

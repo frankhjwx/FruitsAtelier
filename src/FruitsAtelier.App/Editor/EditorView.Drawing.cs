@@ -567,6 +567,7 @@ public sealed partial class EditorView
             Item(L.Get("ui.openMenu"), () => RequestOpen?.Invoke());
             Item(L.Get("ui.saveMenu"), () => RequestSave?.Invoke());
             Item(L.Get("ui.exportMenu"), () => RequestExport?.Invoke());
+            Item(L.Get("library.exportOsz"), () => RequestOszExport?.Invoke());
             Item(L.Get("ui.exitMenu"), () => RequestClose?.Invoke());
         }
         else if (menu == 3)

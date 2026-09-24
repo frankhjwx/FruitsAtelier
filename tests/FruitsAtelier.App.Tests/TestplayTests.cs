@@ -73,12 +73,18 @@ internal static class TestplayTests
         clock.Advance(500); ui.Paint();
         ui.Key(9); ui.Key(9);
         Check(ui.View.TestplayAutoplay && ui.View.PlayheadMs == 500, "Tab enables autoplay once without seeking");
-        ui.View.KeyDown(39, false, false); ui.View.KeyUp(39);
-        clock.Advance(600); ui.Paint();
+        clock.Advance(100); ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.autoplayEntered")), "entering autoplay shows the centered notice");
+        clock.Advance(500); ui.Paint();
         Check(ui.View.TestplayCombo == 2 && sounds > 0, "autoplay catches distant notes and dispatches live sounds");
         Near(512, ui.View.TestplayCatcherX);
-        ui.View.KeyUp(9); ui.Key(9); ui.View.KeyUp(9);
-        Check(!ui.View.TestplayAutoplay, "a fresh Tab returns to manual control");
+        ui.Key(39); clock.Advance(100); ui.Paint();
+        Check(!ui.View.TestplayAutoplay && ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.autoplayExited")),
+            "movement exits autoplay and shows the exit notice");
+        ui.View.KeyUp(39);
+        ui.View.CancelInteraction(preserveTestplay: true);
+        Check(ui.View.IsTestplaying, "focus loss keeps testplay running");
+        ui.View.KeyUp(9);
         double before = ui.View.TestplayCatcherX;
         clock.Advance(10); ui.Paint(); Near(before, ui.View.TestplayCatcherX);
         ui.Key(37); clock.Advance(20); ui.View.KeyUp(37);

@@ -99,7 +99,11 @@ public sealed partial class EditorView
     public Rect ZoomSliderBounds => zoomSlider;
     public string ActiveTool => tool.ToString();
     public string StatusMessage { get; private set; } = L.Get("editor.status.demoLoaded");
-    public void SetNotice(string notice) => StatusMessage = notice;
+    public void SetNotice(string notice)
+    {
+        StatusMessage = notice;
+        if (LibraryVisible) libraryNotice = notice;
+    }
 
     public void LoadSkin(string folder)
     {

@@ -119,9 +119,15 @@ public sealed class CatchTestplaySession
         {
             if (ended || paused || awaitingResume) return;
             Advance();
-            if (down) keys.Add(key); else keys.Remove(key);
+            if (down)
+            {
+                autoplay = false;
+                keys.Add(key);
+            }
+            else keys.Remove(key);
         }
     }
+    public void ReleaseKeys() { lock (gate) keys.Clear(); }
     public void Cancel(Exception? failure = null)
     {
         lock (gate) { ended = true; keys.Clear(); error = failure; }

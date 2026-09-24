@@ -125,6 +125,15 @@ public sealed partial class EditorView
                 contextItems.Add(new(L.Get(project is null ? "library.start" : "library.continue"), () => OpenSelectedLibraryMap(map)));
                 contextItems.Add(new(L.Get("library.openProjectFolder"), () => RequestOpenExternalPath?.Invoke(project!), Directory.Exists(project)));
                 contextItems.Add(new(L.Get("project.openSongsFolder"), () => RequestOpenExternalPath?.Invoke(songsFolder!), Directory.Exists(songsFolder)));
+                contextItems.Add(new(L.Get("library.exportOsz"), () => RequestLibraryOszExport?.Invoke(map)));
+                if (project is not null)
+                {
+                    bool canDelete = false;
+                    try { canDelete = !WorkspaceProject.HasExistingSongsFile(WorkspaceProject.ReadManifest(project), LibrarySettings.Songs); }
+                    catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException)
+                    { libraryNotice = L.Reformat(error.Message); }
+                    contextItems.Add(new(L.Get("library.deleteProject"), () => RequestLibraryDelete?.Invoke(map), canDelete));
+                }
             }
             contextItems.Add(new(L.Get("library.new"), () => RequestNewProject?.Invoke()));
             contextItems.Add(new(L.Get("library.importFolder"), () => RequestLibraryImport?.Invoke(true)));

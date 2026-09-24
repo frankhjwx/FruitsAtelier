@@ -102,8 +102,8 @@ its live hitsound mixer. First-note judgement waits for the audio device to adva
 
 Tab toggles autoplay without seeking or resetting combo. It uses the same cached
 automatic catcher path as the preview and feeds live judgements, sounds, stacks
-and effects. Held Tab toggles once; another press restores manual control. Each
-new session starts in manual mode.
+and effects. Held Tab toggles once; another press or a movement/dash key restores
+manual control. Each new session starts in manual mode.
 
 Input and drawing use a continuous monotonic clock between audio samples, with
 50 ms half-life drift correction and at most 100 ms of extrapolation if the audio
