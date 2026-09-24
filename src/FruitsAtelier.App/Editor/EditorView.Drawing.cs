@@ -300,7 +300,7 @@ public sealed partial class EditorView
     private void DrawCanvasCatchObjects(ICanvas c)
     {
         var playfield = Playfield;
-        string? comboLabel = null;
+        const string comboLabel = "NC";
         float comboLabelWidth = 0;
         double margin = CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512 * 1.5 / pixelsPerMs;
         foreach (var item in ObjectsInTimeRange(viewStart - margin, viewStart + plot.Height / pixelsPerMs + margin))
@@ -317,11 +317,8 @@ public sealed partial class EditorView
                 c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * playfield.Width / 512 + 3, Accent, false, 1.5f);
             if (item.Kind == CatchObjectKind.Fruit && item.EventIndex == 0 && newComboSources.Contains(item.SourceId))
             {
-                if (comboLabel is null)
-                {
-                    comboLabel = L.Get("canvas.newCombo");
+                if (comboLabelWidth == 0)
                     comboLabelWidth = c.MeasureText(comboLabel, 11);
-                }
                 float right = p.X + radius + 6;
                 float left = p.X - radius - 6 - comboLabelWidth;
                 float x = right + comboLabelWidth <= plot.Right || left < plot.X ? right : left;

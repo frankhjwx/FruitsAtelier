@@ -74,7 +74,16 @@ public sealed partial class EditorView
         var ids = FlagTargets();
         if (tool == Tool.Fruit || ids.Length == 0) { nextFruitNewCombo = !nextFruitNewCombo; return; }
         bool enabled = !ids.All(id => ObjectFlags.NewCombo(Document, id));
-        Edit(L.Get("assist.comboChange"), () => { foreach (var id in ids) ObjectFlags.SetNewCombo(Document, id, enabled); });
+        bool conversionCurrent = conversion is not null && convertedSnapshot is not null
+            && convertedSnapshot.ContentEquals(Document) && convertedWithCompensation == compensateTinyDroplets
+            && !contentDragPreview;
+        if (Edit(L.Get("assist.comboChange"), () => { foreach (var id in ids) ObjectFlags.SetNewCombo(Document, id, enabled); })
+            && conversionCurrent)
+        {
+            // The flag changes combo grouping but not the converted catch object stream.
+            convertedSnapshot = Document.DeepClone();
+            BuildComboColours();
+        }
     }
 
     private void ToggleSound(int flag)

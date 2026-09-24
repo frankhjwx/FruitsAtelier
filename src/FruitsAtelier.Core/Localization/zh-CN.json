@@ -92,7 +92,6 @@
   "tools.fslider": "FSlider",
   "tools.banana": "Banana",
   "tools.newCombo": "新连击",
-  "canvas.newCombo": "新连击",
   "tools.newComboOn": "下一颗水果开始新连击",
   "tools.newComboOff": "下一颗水果延续当前连击",
 

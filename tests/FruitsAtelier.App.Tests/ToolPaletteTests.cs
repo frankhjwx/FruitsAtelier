@@ -75,6 +75,7 @@ internal static class ToolPaletteTests
         var ui = Empty(); ui.Key('F');
         Right(ui, 1234, 230);
         Check(ui.View.NextFruitNewCombo && !ui.View.IsDirty, "Arming New combo modified the document.");
+        Check(ui.Canvas.Texts.Any(t => t.Value == "NC" && t.Color == 0xF2C66D), "New Combo placement preview did not show NC.");
         ui.ClickMap(1234, 230);
         var fruit = ui.View.Document.Fruits.Single(); Near(1250, fruit.TimeMs);
         Check(!ui.View.NextFruitNewCombo && Combo(fruit), "Placed fruit lost its New combo flag.");
@@ -109,15 +110,28 @@ internal static class ToolPaletteTests
         foreach (string language in new[] { "en", "zh-CN" })
         {
             FruitsAtelier.Localization.Strings.SetLanguage(language); ui.Paint();
-            string label = FruitsAtelier.Localization.Strings.Get("canvas.newCombo");
-            var labels = ui.Canvas.Texts.Where(t => t.Value == label && t.Color == 0xF2C66D).OrderBy(t => t.X).ToArray();
-            Check(labels.Length == 2, "Canvas must label only fruits with New Combo.");
+            var labels = ui.Canvas.Texts.Where(t => t.Value == "NC" && t.Color == 0xF2C66D).OrderBy(t => t.X).ToArray();
+            Check(labels.Length == 2, "Canvas must label only New Combo fruits with NC in every language.");
             float middle = ui.View.PlayfieldBounds.X + ui.View.PlayfieldBounds.Width / 2;
             Check(labels[0].X >= plot.X && labels[0].X < middle
                 && labels[1].X > middle && labels[1].X < plot.Right,
-                "New Combo labels were not placed beside their fruits inside the canvas.");
+                "NC labels were not placed beside their fruits inside the canvas.");
         }
         FruitsAtelier.Localization.Strings.SetLanguage("en");
+
+        ui.Key('1'); ui.ClickFruit(map.Fruits[2].Id);
+        var conversion = ui.View.Conversion;
+        ui.Key('Q');
+        Check(ReferenceEquals(conversion, ui.View.Conversion), "Toggling New Combo rebuilt the catch object stream.");
+        Check(ui.Canvas.Texts.Count(t => t.Value == "NC" && t.Color == 0xF2C66D) == 3,
+            "Toggling New Combo did not show NC immediately.");
+        ui.Key('Q');
+        Check(ReferenceEquals(conversion, ui.View.Conversion)
+            && ui.Canvas.Texts.Count(t => t.Value == "NC" && t.Color == 0xF2C66D) == 2,
+            "Removing New Combo rebuilt the stream or retained NC.");
+        ui.Key('Z', ctrl: true);
+        Check(ui.Canvas.Texts.Count(t => t.Value == "NC" && t.Color == 0xF2C66D) == 3,
+            "Undo did not restore the NC label.");
 
         var slider = new ImportedSlider { TimeMs = 1000, X = 256, Y = 192, PathType = 'L', PixelLength = 200 };
         slider.ControlPoints.Add(new(256, 192)); slider.ControlPoints.Add(new(400, 192));
@@ -125,8 +139,8 @@ internal static class ToolPaletteTests
         sliderMap.ImportedSliders.Add(slider);
         ObjectFlags.SetNewCombo(sliderMap, slider.Id, true);
         ui.LoadDocument(sliderMap);
-        Check(ui.Canvas.Texts.Count(t => t.Value == "New Combo" && t.Color == 0xF2C66D) == 1,
-            "Slider New Combo must label its head once.");
+        Check(ui.Canvas.Texts.Count(t => t.Value == "NC" && t.Color == 0xF2C66D) == 1,
+            "Slider New Combo must label its head with NC once.");
     }
 
     public static void DraftRemovalAndStraight()
