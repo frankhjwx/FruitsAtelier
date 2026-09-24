@@ -55,14 +55,14 @@ internal static class AssistToolsTests
         kiaiMap.TimingPoints.Add(new TimingPoint { TimeMs = 1250, BeatLengthMs = 500, Uninherited = true, Effects = 1 });
         kiaiMap.TimingPoints.Add(new TimingPoint { TimeMs = 1750, BeatLengthMs = 500, Uninherited = true });
         ui = new Ui(); ui.LoadDocument(kiaiMap); ui.ClickText(Strings.Get("movement.analysis"));
-        Check(!ui.Canvas.Lines.Any(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001)
-            && ui.View.DistanceLabelBounds.Count == 0,
-            "Kiai between two fruits retained a connection or DS label.");
+        Check(ui.Canvas.Lines.Any(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001)
+            && ui.View.DistanceLabelBounds.Count == 1,
+            "Kiai between two fruits hid their connection or DS label.");
         kiaiMap.TimingPoints.RemoveRange(1, 2);
         ui.LoadDocument(kiaiMap); ui.Paint();
         Check(ui.Canvas.Lines.Any(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001)
             && ui.View.DistanceLabelBounds.Count == 1,
-            "Removing kiai did not restore the connection and DS label.");
+            "Movement connection or DS label disappeared outside kiai.");
         ui = new Ui(); ui.LoadDocument(DemoMap.Create());
         ui.ClickText(Strings.Get("movement.analysis"));
         var curves = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasPlotBounds && o.Segment is { Color: 0xAB9DF2 }).ToArray();

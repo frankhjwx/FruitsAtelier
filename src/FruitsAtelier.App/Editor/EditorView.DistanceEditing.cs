@@ -274,7 +274,6 @@ public sealed partial class EditorView
             var to = objects[movementIndices[i]];
             if (to.TimeMs - from.TimeMs <= 37.5
                 || Document.BananaShowers.Any(s => s.TimeMs <= to.TimeMs && s.EndTimeMs >= from.TimeMs)
-                || KiaiOverlaps(from.TimeMs, to.TimeMs)
                 || breakPeriods.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
             if (BaseDistanceRatio(from, to) is not { } ratio) continue;
             string text = L.Get("assist.ratio", ratio);
