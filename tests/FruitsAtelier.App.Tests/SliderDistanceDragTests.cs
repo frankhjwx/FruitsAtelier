@@ -3,6 +3,69 @@ using FruitsAtelier.Core;
 
 internal static class SliderDistanceDragTests
 {
+    public static void DropletOutgoingSpacing()
+    {
+        var map = new MapDocument { DurationMs = 5000, SliderTickRate = 8 };
+        map.DistanceSnapRatios.AddRange([.2, .6, 1.4]);
+        var track = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = true };
+        track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 200 },
+            new Anchor { TimeMs = 1062.5, X = 210 }, new Anchor { TimeMs = 1125, X = 225 }]);
+        map.Tracks.Add(track);
+        var before = CatchStreamConverter.Convert(map);
+        var target = before.Objects.Single(o => o.Kind == CatchObjectKind.Droplet);
+        var ui = new Ui(); ui.LoadDocument(map); ui.SelectTrack(track.Id); ui.Key('Y');
+        // Closely spaced events need a larger viewport scale for unambiguous hit testing.
+        ui.Resize(1440, 2400);
+        ui.View.Wheel(ui.Plot.X, ui.Plot.Bottom, 120 * 15, true); ui.Paint();
+        ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
+        ui.ClickMap(target.TimeMs, target.X);
+        ui.DownMap(target.TimeMs, target.X); ui.MoveMap(target.TimeMs, 215); ui.UpMap(target.TimeMs, 215);
+        var after = CatchStreamConverter.Convert(ui.View.Document);
+        var moved = after.Objects.Single(o => o.EventIndex == target.EventIndex);
+        Check(after.Success && Math.Abs(moved.X - 214.4) < .001,
+            $"Following straight segment prevented preceding-event snap: {moved.X}; {ui.View.StatusMessage}");
+        Check(SliderDistanceSnap.Excesses(map, after.Objects, track.Id).Count == 0, "Following gap exceeded maximum DS.");
+        ui.DownMap(moved.TimeMs, moved.X); ui.MoveMap(moved.TimeMs, 50); ui.UpMap(moved.TimeMs, 50);
+        after = CatchStreamConverter.Convert(ui.View.Document);
+        Check(Math.Abs(after.Objects.Single(o => o.EventIndex == target.EventIndex).X - 195.2) < .001,
+            "Drag accepted a previous-event preset that exceeds maximum DS to the following event.");
+    }
+
+    public static void SegmentedDroplet()
+    {
+        var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 458.015267175573,
+            TimingOffsetMs = -185109, SliderMultiplier = 3.59999990463257, SliderTickRate = 2 };
+        map.DistanceSnapRatios.AddRange([.2, .6, 1.4]);
+        var track = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = true };
+        double[] times = [845.19847328262, 902.44847328262, 959.69847328262, 1016.94847328262,
+            1074.20610687038, 1131.4561068704, 1188.7061068704, 1245.9561068704, 1303.2137404582, 1417.7175572521];
+        double[] positions = [171.0263961846318, 234.02429603620365, 243.02399175377687, 252.02368657799562,
+            183.59120467790223, 246.5891001133521, 245.43899131731197, 252.6513828929663, 301.0438374598856, 320.2513155679774];
+        for (int i = 0; i < times.Length; i++) track.Nodes.Add(new() { TimeMs = times[i], X = positions[i] });
+        track.Nodes[^2].OutgoingKind = CurveKind.Bezier;
+        track.Nodes[^2].HandleOut = new(34.90816775755957, 6.1512222750441765);
+        track.Nodes[^1].HandleIn = new(-41.514074097562116, -6.645059076611005);
+        map.Tracks.Add(track);
+        var before = CatchStreamConverter.Convert(map);
+        var target = before.Objects.First(o => o.Kind == CatchObjectKind.Droplet);
+        var displayed = OsuBeatmapWriter.Serialize(map).PlayableObjects.Single(o => o.EventIndex == target.EventIndex);
+        var ui = new Ui(); ui.LoadDocument(map); ui.SelectTrack(track.Id); ui.Key('Y');
+        ui.ClickMap(displayed.TimeMs, displayed.X);
+        ui.DownMap(displayed.TimeMs, displayed.X); ui.MoveMap(displayed.TimeMs, 210); ui.UpMap(displayed.TimeMs, 210);
+        var after = CatchStreamConverter.Convert(ui.View.Document);
+        var moved = after.Objects.Single(o => o.EventIndex == target.EventIndex);
+        Check(after.Success && Math.Abs(moved.X - target.X) > 10,
+            $"Segmented droplet stayed stuck at {moved.X}: {ui.View.StatusMessage}");
+        double ratio = Math.Abs(moved.X - before.Objects[0].X)
+            / ((moved.TimeMs - before.Objects[0].TimeMs) * DistanceSnap.BaseVelocity(map, before.Objects[0].TimeMs));
+        Check(SliderDistanceSnap.MatchesPreset(map, ratio), "Droplet did not snap to previous large event.");
+        foreach (var old in before.Objects.Where(o => o.EventIndex != target.EventIndex))
+            Check(Math.Abs(after.Objects.Single(o => o.EventIndex == old.EventIndex).X - old.X) < .001,
+                "Droplet drag moved an unselected event.");
+        ui.Key('Z', ctrl: true);
+        Check(map.ContentEquals(ui.View.Document), "Segmented droplet undo lost source geometry.");
+    }
+
     public static void ControlOverhangs()
     {
         foreach (var mode in Enum.GetValues<SliderEditingMode>())

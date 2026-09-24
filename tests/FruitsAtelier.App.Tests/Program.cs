@@ -103,6 +103,8 @@ var tests = new (string Name, Action Run)[]
     ("FSlider hover offers both editing modes without changing content", SliderModeInteractionTests.GlobalModeMenu),
     ("Multiple distance snaps include zero and persist per-map configuration", DistanceSnapPresetTests.Snapping),
     ("Slider large droplets follow distance snap while drawing", DistanceSnapPresetTests.SliderEvents),
+    ("Segmented droplets snap without requiring matching presets on both sides", SliderDistanceDragTests.SegmentedDroplet),
+    ("Droplet outgoing straight spacing retains the maximum DS constraint", SliderDistanceDragTests.DropletOutgoingSpacing),
     ("Curve controls cross endpoint heights with and without DS", SliderDistanceDragTests.ControlOverhangs),
     ("Selected slider tails snap across the full DS range", SliderDistanceDragTests.SelectedTail),
     ("Curved slider tails clamp in both editing modes", SliderDistanceDragTests.CurvedTail),

@@ -155,7 +155,9 @@ public sealed partial class EditorView
                     || sliderObjectDragStrictBaseline is not null
                         && Document.Tracks.FirstOrDefault(track => track.Id == target.SourceId) is { } currentTrack
                         && !SliderDistanceSnap.Allows(sliderObjectDragStrictBaseline,
-                            SliderDistanceSnap.StrictErrors(Document, currentTrack, result.Objects)))
+                            SliderDistanceSnap.StrictErrors(Document, currentTrack, result.Objects)
+                                .Where(pair => target.Kind != CatchObjectKind.Droplet || pair.Key.From != target.EventIndex)
+                                .ToDictionary(pair => pair.Key, pair => pair.Value)))
                     throw new InvalidOperationException(L.Get("editor.error.sliderDistanceSnap"));
             }
             return true;
@@ -217,7 +219,10 @@ public sealed partial class EditorView
                 DistanceSnap.BaseVelocity(Document, from.TimeMs));
             return ratio is null || SliderDistanceSnap.MatchesPreset(Document, ratio.Value);
         }
-        return target.Kind == CatchObjectKind.TinyDroplet
+        // An isolated droplet snaps to its preceding reference. Requiring another
+        // exact preset to the fixed following event can leave no movable position.
+        // The maximum-distance and conversion checks still constrain that side.
+        return target.Kind is CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet
             ? Pair(sliderObjectDragPrevious ?? sliderObjectDragNext)
             : Pair(sliderObjectDragPrevious) && Pair(sliderObjectDragNext);
     }
