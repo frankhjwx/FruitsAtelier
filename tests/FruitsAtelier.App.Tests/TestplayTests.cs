@@ -413,7 +413,8 @@ internal static class TestplayTests
         var clock = new ManualTime();
         var ui = new Ui(timeProvider: clock);
         string folder = Path.GetFullPath("artifacts/testplay-settings");
-        var settings = new LibrarySettings { Workspace = folder, TestplayLeftKey = 65, TestplayRightKey = 68, TestplayDashKey = 32 };
+        var settings = new LibrarySettings { Workspace = folder, TestplayLeftKey = 65, TestplayRightKey = 68,
+            TestplayDashKey = 32, TestplayStartupDelaySeconds = 0 };
         string path = Path.Combine(folder, "settings.json");
         settings.Save(path); var loaded = LibrarySettings.Load(path);
         Check(loaded.TestplayLeftKey == 65 && loaded.TestplayRightKey == 68 && loaded.TestplayDashKey == 32, "bindings persist");

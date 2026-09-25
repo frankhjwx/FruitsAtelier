@@ -12,6 +12,7 @@ public sealed partial class EditorView
     private bool settingsFromLibrary;
     private bool draftRomanisedMetadata;
     private bool draftDerandomizeDroplets;
+    private int draftTestplayStartupDelaySeconds;
     private readonly uint[] draftIndicatorColours = new uint[4];
     private int settingsColourIndex = -1;
     private uint settingsColourOriginal;
@@ -53,6 +54,7 @@ public sealed partial class EditorView
         draftIndicatorColours[3] = LibrarySettings.HyperDashIndicatorColour;
         settingsColourIndex = -1; settingsColourDrag = 0; settingsColourHex = settingsColourError = "";
         draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
+        draftTestplayStartupDelaySeconds = LibrarySettings.TestplayStartupDelaySeconds;
     }
 
     private bool SettingsChanged => draftWorkspace != LibrarySettings.Workspace ||
@@ -66,7 +68,8 @@ public sealed partial class EditorView
         draftIndicatorColours[3] != LibrarySettings.HyperDashIndicatorColour ||
         draftTestplayKeys[0] != LibrarySettings.TestplayLeftKey ||
         draftTestplayKeys[1] != LibrarySettings.TestplayRightKey ||
-        draftTestplayKeys[2] != LibrarySettings.TestplayDashKey;
+        draftTestplayKeys[2] != LibrarySettings.TestplayDashKey ||
+        draftTestplayStartupDelaySeconds != LibrarySettings.TestplayStartupDelaySeconds;
 
     private void CloseSettings()
     {
@@ -150,6 +153,7 @@ public sealed partial class EditorView
         {
             var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
+            settings.TestplayStartupDelaySeconds = draftTestplayStartupDelaySeconds;
             settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.DerandomizeDroplets = draftDerandomizeDroplets;
             settings.StandIndicatorColour = draftIndicatorColours[0]; settings.WalkIndicatorColour = draftIndicatorColours[1];

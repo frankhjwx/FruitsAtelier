@@ -147,9 +147,11 @@ internal static class RenderCheck
         var updateCheck = view.RequestUpdateCheck;
         var updateStatus = view.UpdateStatus;
         int[] volumes = [view.LibrarySettings.MasterVolume, view.LibrarySettings.SongVolume, view.LibrarySettings.HitsoundVolume];
+        int startupDelay = view.LibrarySettings.TestplayStartupDelaySeconds;
         string language = FruitsAtelier.Localization.Strings.Language;
         try
         {
+            view.LibrarySettings.TestplayStartupDelaySeconds = 0;
             view.RequestTogglePlayback = () => { }; view.RequestPausePlayback = () => { };
             view.RequestSeek = _ => { }; view.RequestHitsound = _ => { };
             view.RequestAudioPreference = () => { };
@@ -308,6 +310,7 @@ internal static class RenderCheck
             view.RequestUpdateCheck = updateCheck;
             view.UpdateStatus = updateStatus;
             view.LibrarySettings.MasterVolume = volumes[0]; view.LibrarySettings.SongVolume = volumes[1]; view.LibrarySettings.HitsoundVolume = volumes[2];
+            view.LibrarySettings.TestplayStartupDelaySeconds = startupDelay;
             view.ApplyAudioVolume();
             FruitsAtelier.Localization.Strings.SetLanguage(language);
         }

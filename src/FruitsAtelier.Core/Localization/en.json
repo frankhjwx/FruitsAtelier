@@ -43,6 +43,9 @@
   "testplay.paused": "Paused",
   "testplay.autoplayEntered": "Entered autoplay",
   "testplay.autoplayExited": "Exited autoplay",
+  "testplay.countdownCancel": "Esc: cancel",
+  "testplay.startupDelay": "Startup delay",
+  "testplay.startupDelayValue": "{0} s",
 
   "testplay.start": "Testplay (F5)",
   "timeline.transport.play": "Play",

@@ -729,6 +729,15 @@ public sealed partial class EditorView
         if (virtualKey == 27 && testplayEscapeConsumed) return;
         if (IsTestplaying)
         {
+            if (TestplayCountingDown)
+            {
+                if (virtualKey is 27 or 112 or 113)
+                {
+                    if (virtualKey == 27) testplayEscapeConsumed = true;
+                    StopTestplay();
+                }
+                return;
+            }
             if (virtualKey == 27) { testplayEscapeConsumed = true; StopTestplay(); }
             else if (virtualKey == 112) StopTestplay();
             else if (virtualKey == 113) { AdvanceTestplay(); StopTestplay(atCurrentPosition: true); }
