@@ -46,7 +46,7 @@ public sealed partial class EditorView
         {
             double now = VolumeNowMs;
             double fadeIn = Math.Clamp((now - volumePopoverOpenedMs) / 120, 0, 1);
-            double fadeOutStart = Math.Max(volumePopoverOpenedMs + 120, volumePopoverTouchedMs + 300);
+            double fadeOutStart = Math.Max(volumePopoverOpenedMs + 120, volumePopoverTouchedMs + 800);
             double fadeOut = Math.Clamp((now - fadeOutStart) / 150, 0, 1);
             return (float)(fadeIn * (1 - fadeOut));
         }

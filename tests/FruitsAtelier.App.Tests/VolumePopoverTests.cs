@@ -65,8 +65,8 @@ internal static class VolumePopoverTests
         Check(settings.HitsoundVolume == beforePlainArrow, "Plain arrow changed volume.");
 
         ui.View.PointerMove(ui.Plot.X, ui.Plot.Y, false, false);
-        clock.Advance(299); ui.Paint();
-        Check(Opacity() > .99f, "Popover faded before 0.3 seconds of inactivity.");
+        clock.Advance(799); ui.Paint();
+        Check(Opacity() > .99f, "Popover faded before 0.8 seconds of inactivity.");
         clock.Advance(76); ui.Paint();
         Check(Opacity() > .45f && Opacity() < .55f, "Popover did not fade out over 150 ms.");
         clock.Advance(75); ui.Paint();
