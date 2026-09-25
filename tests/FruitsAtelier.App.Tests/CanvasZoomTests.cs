@@ -48,7 +48,7 @@ internal static class CanvasZoomTests
         Near(ui.Plot.Width / initialWidth, ui.View.PixelsPerMs / initialSpacing);
         Near((plot.X + plot.Right) / 2, (ui.Plot.X + ui.Plot.Right) / 2);
         double scale = ui.View.PixelsPerMs;
-        ui.View.Wheel(plot.X + 80, plot.Y + 80, 120, true, true); ui.Paint();
+        ui.View.Wheel(plot.X + 80, plot.Y + 80, 120, false, false, true); ui.Paint();
         Near(scale * 1.16, ui.View.PixelsPerMs);
         var slider = ui.View.ZoomSliderBounds;
         ui.View.PointerDown(slider.X, slider.Y + 15, 0, false, false);
@@ -58,9 +58,9 @@ internal static class CanvasZoomTests
         Near(1, ui.View.CanvasZoom);
         ui.View.PointerUp(slider.Right + 100, slider.Y + 15, 0); ui.Paint();
         if (ui.View.WantsCapture) throw new Exception("Slider retained capture after release");
-        ui.View.Wheel(plot.X + 80, plot.Y + 80, -120000, true, true); ui.Paint();
+        ui.View.Wheel(plot.X + 80, plot.Y + 80, -120000, false, false, true); ui.Paint();
         Near(EditorView.MinimumPlayfieldWidth, ui.Plot.Width);
-        ui.View.Wheel(plot.X + 80, plot.Y + 80, 120000, true, true); ui.Paint();
+        ui.View.Wheel(plot.X + 80, plot.Y + 80, 120000, false, false, true); ui.Paint();
         Near(1, ui.View.CanvasZoom);
         ui.Key('Z', ctrl: true);
         if (ui.View.IsDirty || !original.ContentEquals(ui.View.Document)) throw new Exception("Zoom entered document history");

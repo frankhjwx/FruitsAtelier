@@ -25,8 +25,11 @@ static class WheelGestureTests
         Check(ui.View.SnapDivisor != afterTimeline, "Ctrl+wheel on overview must adjust Snap.");
 
         double zoom = ui.View.CanvasZoom;
+        ui.View.Wheel(cx, cy, 120, false, false, true);
+        Check(ui.View.CanvasZoom > zoom, "Alt+wheel must zoom the canvas.");
+        zoom = ui.View.CanvasZoom;
         ui.View.Wheel(cx, cy, 120, true, true);
-        Check(ui.View.CanvasZoom > zoom, "Ctrl+Shift+wheel must zoom the canvas.");
+        Check(ui.View.CanvasZoom == zoom, "Ctrl+Shift+wheel must not zoom the canvas.");
         double timelineZoom = ui.View.ObjectTimelinePixelsPerMs;
         ui.View.Wheel(tx, ty, 120, false, false, true);
         Check(ui.View.ObjectTimelinePixelsPerMs > timelineZoom, "Alt+wheel must zoom the object timeline.");

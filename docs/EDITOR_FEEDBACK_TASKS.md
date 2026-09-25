@@ -27,7 +27,7 @@ This table defines the accepted editor feedback scope. The current user-facing b
 | Ctrl+M | Cycle 1/3 → 1/4 → 1/6 → 1/8. |
 | Ctrl+wheel | Adjust every supported Snap divisor on canvas and timelines. |
 | Shift+wheel | Seek four times the normal wheel distance. |
-| Ctrl+Shift+wheel | Zoom canvas. |
+| Alt+wheel over canvas | Zoom canvas. |
 | Alt+wheel over upper timeline | Zoom object timeline. |
 | Ctrl+Alt+wheel over canvas/upper timeline | Cycle placement tools. |
 | Ctrl+= / Ctrl+− | Add / remove slider reverses. |

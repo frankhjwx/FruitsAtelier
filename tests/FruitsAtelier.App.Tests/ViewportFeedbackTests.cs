@@ -26,7 +26,7 @@ internal static class ViewportFeedbackTests
             ui.View.Wheel(x, y, -360, false); ui.Paint();
             if (Math.Abs(ui.View.PlayheadMs - (playing ? 2320 : 1520)) > 1e-7) throw new Exception("Three notches must advance three playback beats or paused snap steps.");
             double before = ui.View.PlayheadMs;
-            ui.View.Wheel(ui.Plot.X + 20, ui.Plot.Y + 30, 120, true, true); ui.Paint();
+            ui.View.Wheel(ui.Plot.X + 20, ui.Plot.Y + 30, 120, false, false, true); ui.Paint();
             ui.View.Wheel(x, y, -120, false); ui.Paint();
             if (Math.Abs(ui.View.PlayheadMs - before - (playing ? 400 : 400.0 / 6)) > 1e-7) throw new Exception("Canvas zoom changed wheel step size.");
             if (ui.View.IsDirty || !ui.View.Document.ContentEquals(map) || ui.View.AudioPlaying != playing)
@@ -49,7 +49,7 @@ internal static class ViewportFeedbackTests
             {
                 ui.Resize(size.Item1, size.Item2);
                 AssertPinned(ui);
-                ui.View.Wheel(ui.Plot.X + 80, ui.Plot.Y + 80, 120, true, true);
+                ui.View.Wheel(ui.Plot.X + 80, ui.Plot.Y + 80, 120, false, false, true);
                 ui.Paint();
                 AssertPinned(ui);
             }

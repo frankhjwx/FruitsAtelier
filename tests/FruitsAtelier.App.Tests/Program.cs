@@ -206,7 +206,7 @@ var tests = new (string Name, Action Run)[]
     ("Canvas defaults and reset use 60% zoom while enforcing minimum width", CanvasZoomTests.DefaultsAndReset),
     ("Zoom slider and wheel share scale, bounds and content isolation", CanvasZoomTests.SliderAndWheel),
     ("Zoom slider fits both languages and preserves playback following", CanvasZoomTests.PlaybackAndLanguages),
-    ("Control-wheel keeps pointer time fixed while scaling object positions", ZoomPaintedAnchor),
+    ("Alt-wheel keeps pointer time fixed while scaling object positions", ZoomPaintedAnchor),
     ("Reset view positions the playhead without editing map or history", ResetCanvasViewport),
     ("Read-only AR controls preview fall distance and visibility", ArPreviewAndInput),
     ("AR scale works with a hidden preview and follows canvas width changes", ArScaleResize),
@@ -611,10 +611,10 @@ static void ZoomPaintedAnchor()
     foreach (float delta in new[] { 120f, 120f, -120f, -120f })
     {
         double previousScale = ui.View.PixelsPerMs;
-        ui.View.Wheel(anchor.X, anchor.Y, delta, true, true);
+        ui.View.Wheel(anchor.X, anchor.Y, delta, false, false, true);
         ui.Paint();
         True(delta > 0 ? ui.View.PixelsPerMs > previousScale : ui.View.PixelsPerMs < previousScale,
-            "Control-wheel did not change zoom in the requested direction.");
+            "Alt-wheel did not change zoom in the requested direction.");
         var after = ui.PaintedFruitAtX(160);
         // Horizontal positions scale around the playfield centre; pointer time stays fixed.
         Near(anchor.Y, after.Y);
@@ -633,7 +633,7 @@ static void ResetCanvasViewport()
     Near(ui.View.PlayheadMs - ui.Plot.Height * 0.25 / ui.View.PixelsPerMs, ui.View.ViewStartMs);
     double restoredScale = ui.View.PixelsPerMs;
     var plot = ui.Plot;
-    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, -120, true, true);
+    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, -120, false, false, true);
     ui.Paint();
     True(ui.View.PixelsPerMs < restoredScale, "Manual zoom could not leave AR scale.");
     ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.resetView"));
@@ -937,7 +937,7 @@ sealed class Ui
     private void ShowFixtureOverview()
     {
         // Keep multi-second editing fixtures visible at the minimum supported canvas width.
-        View.Wheel(Plot.X, Plot.Bottom, (float)(120 * Math.Log(0.09 / View.PixelsPerMs) / Math.Log(1.16)), true, true);
+        View.Wheel(Plot.X, Plot.Bottom, (float)(120 * Math.Log(0.09 / View.PixelsPerMs) / Math.Log(1.16)), false, false, true);
         height = Math.Max(height, (float)(400 + 8000 * View.PixelsPerMs));
         Paint();
         float panY = Plot.Bottom - 1;

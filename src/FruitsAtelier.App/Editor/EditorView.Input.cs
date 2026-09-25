@@ -706,7 +706,7 @@ public sealed partial class EditorView
         }
         if (!onCanvas) return;
         if (!AudioPlaying) pinPlayhead = false;
-        if (ctrl && shift && !alt)
+        if (alt && !ctrl && !shift)
         {
             ZoomCanvasAt(y, Math.Pow(1.16, delta / 120));
             StatusMessage = L.Get("editor.status.canvasZoom", canvasZoom * 100);
