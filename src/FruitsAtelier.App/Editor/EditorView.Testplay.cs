@@ -204,6 +204,7 @@ public sealed partial class EditorView
                 c.Text(notice, width / 2f - c.MeasureText(notice, 20) / 2, bar.Y + 18, 20, textColour, stage.Width, true);
             }
         }
+        DrawVolumePopover(c);
     }
 
     // ppy/osu 48c4800e: LegacyCatchComboCounter, LegacyRollingCounter and CatcherArea.

@@ -769,6 +769,7 @@ public sealed partial class EditorView
         if (virtualKey == 27 && testplayEscapeConsumed) return;
         if (IsTestplaying)
         {
+            if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift)) return;
             if (virtualKey == 27) { testplayEscapeConsumed = true; StopTestplay(); }
             else if (virtualKey == 112) StopTestplay();
             else if (virtualKey == 113) { AdvanceTestplay(); StopTestplay(atCurrentPosition: true); }

@@ -104,6 +104,45 @@ internal static class VolumePopoverTests
         float Opacity() => ui.Canvas.PaintCalls.Last(call => call.FillBounds == ui.View.VolumePopoverBounds).Opacity;
     }
 
+    public static void TestplayShortcuts()
+    {
+        var clock = new ManualClock();
+        var ui = new Ui(timeProvider: clock);
+        var settings = new LibrarySettings();
+        ui.View.InitializeLibrary(false, settings);
+        var map = new MapDocument { DurationMs = 5000 };
+        map.Fruits.Add(new Fruit { TimeMs = 3000, X = 256 });
+        ui.LoadDocument(map);
+        int saves = 0;
+        ui.View.RequestAudioPreference = () => saves++;
+        var hiddenButton = ui.View.VolumeButtonBounds;
+        ui.View.PointerMove(hiddenButton.X + 4, hiddenButton.Y + 4, false, false);
+        ui.View.StartTestplay();
+        Check(ui.View.IsTestplaying, "Testplay did not start.");
+
+        ui.View.SetModifiers(true, false);
+        ui.Key(39);
+        ui.View.KeyUp(39);
+        ui.Key(40);
+        ui.View.KeyUp(40);
+        clock.Advance(60); ui.Paint();
+        Check(ui.View.IsTestplaying && ui.View.VolumePopoverVisible
+            && ui.Canvas.Texts.Any(text => text.Value == L.Get("volume.music")),
+            "Alt+arrows did not show the volume controls over testplay.");
+        Check(settings.SongVolume == 95 && saves == 1 && ui.View.TestplayCatcherX == 256,
+            "Testplay volume shortcuts changed gameplay movement or failed to save Music volume.");
+
+        ui.View.SetModifiers(false, false);
+        ui.Key(37);
+        clock.Advance(100); ui.Paint();
+        Check(ui.View.TestplayCatcherX < 256, "Plain arrow stopped controlling the catcher.");
+        ui.View.KeyUp(37);
+        clock.Advance(950); ui.Paint();
+        Check(!ui.View.VolumePopoverVisible, "Testplay volume controls did not fade after key release.");
+        ui.View.StopTestplay();
+        Check(map.ContentEquals(ui.View.Document), "Testplay volume adjustment changed beatmap content.");
+    }
+
     private static void Check(bool value, string message)
     {
         if (!value) throw new Exception(message);

@@ -11,7 +11,7 @@ public sealed partial class EditorView
     private bool volumeShortcutHeld;
     private int volumeChannel;
     private bool CanUseVolumePopover => !LibraryVisible && !ExportVisible && !updatesPage
-        && !IsTestplaying && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible
+        && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible
         && !SongSetupVisible && !DistanceSnapDialogVisible && !VolumeDialogVisible
         && !TimeJumpVisible && !StreamDialogVisible && !IsEditingText && drag == DragKind.None;
 
@@ -37,7 +37,7 @@ public sealed partial class EditorView
 
     public bool VolumePopoverNeedsRedraw => VolumePopoverVisible && volumePopoverDrag < 0
         && !volumeShortcutHeld && !VolumePopoverBounds.Contains(mouseX, mouseY)
-        && !VolumeButtonBounds.Contains(mouseX, mouseY)
+        && (IsTestplaying || !VolumeButtonBounds.Contains(mouseX, mouseY))
         || volumePopoverOpen && VolumePopoverOpacity < 1;
 
     private float VolumePopoverOpacity
@@ -57,7 +57,8 @@ public sealed partial class EditorView
         if (!volumePopoverOpen) return;
         if (!CanUseVolumePopover) { CloseVolumePopover(); return; }
         if (volumePopoverDrag >= 0 || volumeShortcutHeld
-            || VolumePopoverBounds.Contains(mouseX, mouseY) || VolumeButtonBounds.Contains(mouseX, mouseY))
+            || VolumePopoverBounds.Contains(mouseX, mouseY)
+            || !IsTestplaying && VolumeButtonBounds.Contains(mouseX, mouseY))
             volumePopoverTouchedMs = VolumeNowMs;
         if (VolumePopoverOpacity <= 0 && VolumeNowMs - volumePopoverOpenedMs >= 120)
             volumePopoverOpen = false;
@@ -80,7 +81,7 @@ public sealed partial class EditorView
 
     public bool BeginVolumePopoverPointer(float x, float y, int button)
     {
-        if (button != 0 || !CanUseVolumePopover) return false;
+        if (button != 0 || !CanUseVolumePopover || IsTestplaying) return false;
         if (VolumeButtonBounds.Contains(x, y))
         {
             if (volumePopoverOpen) CloseVolumePopover(); else OpenVolumePopover();
