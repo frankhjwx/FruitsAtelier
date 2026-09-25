@@ -200,7 +200,7 @@ public sealed partial class EditorView
         {
             float labelY = Math.Clamp(label.Y - 7, plot.Y, plot.Bottom - 14);
             if (axisLabelRows.Any(row => Math.Abs(row - labelY) < 14)) continue;
-            c.Text(Time(label.Time), canvas.X + 3, labelY, 10, Muted, 64);
+            c.Text(Time(label.Time), canvas.X + 3, labelY, 10, 0x70B8FF, 64);
             axisLabelRows.Add(labelY);
         }
         DrawCanvasBookmarks(c, axisLabelRows);
