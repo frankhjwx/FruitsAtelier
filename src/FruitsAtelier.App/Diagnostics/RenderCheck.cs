@@ -409,7 +409,7 @@ internal static class RenderCheck
                 view.LoadDocument(map); view.CloseLibrary();
                 canvas.Resize(1440, 900, 96);
                 Paint();
-                view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom, -2400, true);
+                view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom, -2400, true, true);
                 Paint();
                 var field = view.PlayfieldBounds;
                 float x = field.X + 240f / 512 * field.Width;

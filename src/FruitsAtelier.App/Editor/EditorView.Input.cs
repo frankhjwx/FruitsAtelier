@@ -7,6 +7,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private double timelineMsPerDip;
+    private float snapWheelRemainder, toolWheelRemainder;
     private int breakStartMs;
     private int OverviewTime(float x) => (int)Math.Clamp(Math.Round((x - overview.X) / overview.Width * TimelineDurationMs), 0, int.MaxValue);
     private float TimelineHeadX => overview.X + (float)(playhead / TimelineDurationMs) * overview.Width;
@@ -608,8 +609,10 @@ public sealed partial class EditorView
         bool buttonTargetIsUnavailable() => editField >= 0 || draftTrack != Guid.Empty || draftBanana != Guid.Empty || menu >= 0 || contextItems.Count > 0;
     }
 
-    public void Wheel(float x, float y, float delta, bool ctrl)
+    public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        shift |= shiftHeld;
+        alt |= altHeld;
         if (SongSetupVisible) return;
         if (DistanceSnapDialogVisible)
         {
@@ -658,25 +661,49 @@ public sealed partial class EditorView
         {
             return;
         }
+        bool onTimeline = objectTimeline.Contains(x, y);
+        bool onCanvas = canvas.Contains(x, y);
+        bool onOverview = overview.Contains(x, y);
+        if ((onTimeline || onCanvas) && ctrl && alt && !shift)
+        {
+            toolWheelRemainder += delta;
+            int steps = (int)Math.Truncate(toolWheelRemainder / 120);
+            toolWheelRemainder -= steps * 120;
+            if (steps != 0) ChangeTool((Tool)(((int)tool + ((steps % 4) + 4) % 4) % 4));
+            return;
+        }
+        if ((onTimeline || onCanvas || onOverview) && ctrl && !alt && !shift)
+        {
+            snapWheelRemainder += delta;
+            int steps = (int)Math.Truncate(snapWheelRemainder / 120);
+            snapWheelRemainder -= steps * 120;
+            if (steps != 0)
+            {
+                ForgetTemporarySnap();
+                int current = Array.IndexOf(SnapDivisors, divisor);
+                divisor = SnapDivisors[((current + steps) % SnapDivisors.Length + SnapDivisors.Length) % SnapDivisors.Length];
+            }
+            return;
+        }
         if (objectTimeline.Contains(x, y))
         {
-            if (ctrl) ZoomObjectTimeline(Math.Pow(1.25, delta / 120));
-            else SeekByWheel(-delta / 120, 1);
+            if (alt && !ctrl && !shift) ZoomObjectTimeline(Math.Pow(1.25, delta / 120));
+            else if (!ctrl && !alt) SeekByWheel(-delta / 120 * (shift ? 4 : 1), 1);
             return;
         }
-        if (overview.Contains(x, y))
+        if (onOverview)
         {
-            if (!AudioLoading) SeekByWheel(-delta / 120, 2);
+            if (!AudioLoading && !ctrl && !alt) SeekByWheel(-delta / 120 * (shift ? 4 : 1), 2);
             return;
         }
-        if (!canvas.Contains(x, y)) return;
+        if (!onCanvas) return;
         if (!AudioPlaying) pinPlayhead = false;
-        if (ctrl)
+        if (ctrl && shift && !alt)
         {
             ZoomCanvasAt(y, Math.Pow(1.16, delta / 120));
             StatusMessage = L.Get("editor.status.canvasZoom", canvasZoom * 100);
         }
-        else SeekByWheel(-delta / 120, 0);
+        else if (!ctrl && !alt) SeekByWheel(-delta / 120 * (shift ? 4 : 1), 0);
         ClampView();
     }
 

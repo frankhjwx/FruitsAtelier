@@ -258,7 +258,7 @@ internal static class ObjectTimelineTests
         ui.View.PointerUp(origin, y, 0);
         if (ui.View.PlayheadMs != 1500 || requested != -1 || ui.View.WantsCapture) throw new Exception("Empty timeline drag must not seek");
         double zoom = ui.View.CanvasZoom, scale = ui.View.ObjectTimelinePixelsPerMs;
-        ui.View.Wheel(rect.X + 100, rect.Y + 20, 120, true); ui.Paint();
+        ui.View.Wheel(rect.X + 100, rect.Y + 20, 120, false, false, true); ui.Paint();
         if (ui.View.CanvasZoom != zoom || ui.View.ObjectTimelinePixelsPerMs <= scale || ui.View.IsDirty)
             throw new Exception("Timeline zoom changed canvas scale or document content");
     }

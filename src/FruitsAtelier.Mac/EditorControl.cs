@@ -140,7 +140,7 @@ internal sealed class EditorControl : Control, IDisposable
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-        var p = e.GetPosition(this); View.Wheel((float)p.X, (float)p.Y, (float)e.Delta.Y * 120, MacInput.Control(e.KeyModifiers));
+        var p = e.GetPosition(this); View.Wheel((float)p.X, (float)p.Y, (float)e.Delta.Y * 120, MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift), e.KeyModifiers.HasFlag(KeyModifiers.Alt));
         e.Handled = true; Refresh();
     }
     protected override void OnKeyDown(KeyEventArgs e)

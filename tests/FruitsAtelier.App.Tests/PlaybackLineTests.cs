@@ -51,7 +51,7 @@ internal static class PlaybackLineTests
         Begin(); Move(ui.Plot.Y + ui.Plot.Height * .3f);
         ui.View.UpdateTransport(4100, 10000, true, true, false, null, "fixture.wav"); ui.Paint(); Height(.95);
         if (ui.View.WantsCapture) throw new Exception("Playback start retained handle capture");
-        ui.View.Wheel(ui.Plot.X + 30, ui.Plot.Y + 30, 120, true); ui.Paint(); Height(.95);
+        ui.View.Wheel(ui.Plot.X + 30, ui.Plot.Y + 30, 120, true, true); ui.Paint(); Height(.95);
         if (seeks != 0 || !original.ContentEquals(ui.View.Document)) throw new Exception("Handle drag sought time or edited map content");
         if (saves != 3) throw new Exception("Cancelled or disabled drag saved its height");
         var reopened = new Ui(overview: false);

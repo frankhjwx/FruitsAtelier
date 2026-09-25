@@ -20,12 +20,13 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
-    ("Completing an FSlider replaces only exact head fruit overlaps and undoes atomically", SliderHeadReplacementTests.OnCompletion),
-    ("New Combo grouping refreshes on first edit and undo/redo", ComboGroupingTests.Run),
-    ("Final stream fruit accepts lower-half hit and drags independently", StreamFruitDragTests.Run),
-    ("Testplay startup countdown waits, cancels, synchronizes audio and persists settings", TestplayStartupDelayTests.Countdown),
+    ("Wheel modifiers distinguish snapping zoom and navigation", WheelGestureTests.Run),
     ("Dense canvas bookmarks preserve labels, history and source data", CanvasBookmarkTests.DenseAxisMarks),
     ("Draft tools and editor shortcuts respect modifiers", DraftToolShortcutsTests.Run),
+    ("New Combo grouping refreshes on first edit and undo/redo", ComboGroupingTests.Run),
+    ("Completing an FSlider replaces only exact head fruit overlaps and undoes atomically", SliderHeadReplacementTests.OnCompletion),
+    ("Final stream fruit accepts lower-half hit and drags independently", StreamFruitDragTests.Run),
+    ("Testplay startup countdown waits, cancels, synchronizes audio and persists settings", TestplayStartupDelayTests.Countdown),
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
@@ -253,12 +254,15 @@ var tests = new (string Name, Action Run)[]
 };
 
 int failures = 0;
-foreach (var test in tests)
+var selectedTests = args.Length == 2 && args[0] == "--filter"
+    ? tests.Where(test => test.Name.Contains(args[1], StringComparison.OrdinalIgnoreCase)).ToArray() : tests;
+if (selectedTests.Length == 0) { Console.Error.WriteLine("No matching tests."); return 1; }
+foreach (var test in selectedTests)
 {
     try { test.Run(); Console.WriteLine($"PASS {test.Name}"); }
     catch (Exception error) { failures++; Console.WriteLine($"FAIL {test.Name}: {error}"); }
 }
-Console.WriteLine($"{tests.Length - failures}/{tests.Length} editor integration tests passed.");
+Console.WriteLine($"{selectedTests.Length - failures}/{selectedTests.Length} editor integration tests passed.");
 return failures == 0 ? 0 : 1;
 
 static void ContinuousFollow()
@@ -605,7 +609,7 @@ static void ZoomPaintedAnchor()
     foreach (float delta in new[] { 120f, 120f, -120f, -120f })
     {
         double previousScale = ui.View.PixelsPerMs;
-        ui.View.Wheel(anchor.X, anchor.Y, delta, true);
+        ui.View.Wheel(anchor.X, anchor.Y, delta, true, true);
         ui.Paint();
         True(delta > 0 ? ui.View.PixelsPerMs > previousScale : ui.View.PixelsPerMs < previousScale,
             "Control-wheel did not change zoom in the requested direction.");
@@ -627,7 +631,7 @@ static void ResetCanvasViewport()
     Near(ui.View.PlayheadMs - ui.Plot.Height * 0.25 / ui.View.PixelsPerMs, ui.View.ViewStartMs);
     double restoredScale = ui.View.PixelsPerMs;
     var plot = ui.Plot;
-    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, -120, true);
+    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, -120, true, true);
     ui.Paint();
     True(ui.View.PixelsPerMs < restoredScale, "Manual zoom could not leave AR scale.");
     ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.resetView"));
@@ -931,7 +935,7 @@ sealed class Ui
     private void ShowFixtureOverview()
     {
         // Keep multi-second editing fixtures visible at the minimum supported canvas width.
-        View.Wheel(Plot.X, Plot.Bottom, (float)(120 * Math.Log(0.09 / View.PixelsPerMs) / Math.Log(1.16)), true);
+        View.Wheel(Plot.X, Plot.Bottom, (float)(120 * Math.Log(0.09 / View.PixelsPerMs) / Math.Log(1.16)), true, true);
         height = Math.Max(height, (float)(400 + 8000 * View.PixelsPerMs));
         Paint();
         float panY = Plot.Bottom - 1;

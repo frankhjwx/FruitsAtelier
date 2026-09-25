@@ -195,7 +195,7 @@ internal static class AssistToolsTests
         var ui = new Ui(); ui.LoadDocument(map); ui.ClickMap(2000, 310);
         Near(.75, ui.View.DistanceReadout.Previous!.Value);
         double ratio = ui.View.DistanceReadout.Previous.Value;
-        ui.View.Wheel(ui.Plot.X, ui.Plot.Y + 50, 120, true); ui.Paint(); Near(ratio, ui.View.DistanceReadout.Previous!.Value);
+        ui.View.Wheel(ui.Plot.X, ui.Plot.Y + 50, 120, true, true); ui.Paint(); Near(ratio, ui.View.DistanceReadout.Previous!.Value);
         Check(ui.Canvas.Texts.Any(t => t.Value.Contains("DPB 140px")), "Details must show base DPB");
         foreach (string language in new[] { "en", "zh-CN" })
         {

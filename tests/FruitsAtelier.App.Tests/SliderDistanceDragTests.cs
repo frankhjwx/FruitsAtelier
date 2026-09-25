@@ -16,7 +16,7 @@ internal static class SliderDistanceDragTests
         var ui = new Ui(); ui.LoadDocument(map); ui.SelectTrack(track.Id); ui.Key('Y');
         // Closely spaced events need a larger viewport scale for unambiguous hit testing.
         ui.Resize(1440, 2400);
-        ui.View.Wheel(ui.Plot.X, ui.Plot.Bottom, 120 * 15, true); ui.Paint();
+        ui.View.Wheel(ui.Plot.X, ui.Plot.Bottom, 120 * 15, true, true); ui.Paint();
         ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
         ui.ClickMap(target.TimeMs, target.X);
         ui.DownMap(target.TimeMs, target.X); ui.MoveMap(target.TimeMs, 215); ui.UpMap(target.TimeMs, 215);

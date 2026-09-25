@@ -221,7 +221,7 @@ internal static class DistanceEditingTests
         shortGap.Fruits.AddRange([new Fruit { TimeMs = 100, X = 256 }, new Fruit { TimeMs = 175, X = 256 }]);
         ui.LoadDocument(shortGap); ui.Paint();
         plot = ui.View.CanvasPlotBounds;
-        ui.View.Wheel(plot.X, plot.Bottom, 2400, true); ui.Paint();
+        ui.View.Wheel(plot.X, plot.Bottom, 2400, true, true); ui.Paint();
         Check(ui.View.DistanceLabelBounds.Count == 1, "Short isolated connection was hidden at high zoom");
         shortGap.Fruits[1].TimeMs = 137.5;
         ui.LoadDocument(shortGap); ui.Paint();

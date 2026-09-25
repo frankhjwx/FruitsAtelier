@@ -38,7 +38,7 @@ On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are
 
 ### Navigate and select
 
-The main canvas shows horizontal placement and note timing; later notes are higher on the screen. On the canvas and both timelines, each wheel notch moves one full beat (1/1) during playback or one current Snap subdivision while paused: up to the preceding grid line and down to the following one, regardless of zoom. The canvas and playhead move together, including while paused. Middle-drag pans, and Ctrl+wheel zooms. Click empty canvas in Select mode to clear selection without seeking. The bottom timeline also supports seeking; click the timestamp above its left-side Play, Pause, Stop, and Testplay controls to jump to an exact time. Stop pauses playback and returns to the start. Hover over the timeline to reveal the fixed bookmark toolbar above it: add or remove a bookmark at the playhead, seek to the previous or next bookmark, or reset all bookmarks. Bookmark edits can be undone.
+The main canvas shows horizontal placement and note timing; later notes are higher on the screen. On the canvas and both timelines, each wheel notch moves one full beat (1/1) during playback or one current Snap subdivision while paused: up to the preceding grid line and down to the following one, regardless of zoom. The canvas and playhead move together, including while paused. Middle-drag pans, and Ctrl+Shift+wheel zooms. Ctrl+wheel changes Snap; Shift+wheel seeks four times as far. Click empty canvas in Select mode to clear selection without seeking. The bottom timeline also supports seeking; click the timestamp above its left-side Play, Pause, Stop, and Testplay controls to jump to an exact time. Stop pauses playback and returns to the start. Hover over the timeline to reveal the fixed bookmark toolbar above it: add or remove a bookmark at the playhead, seek to the previous or next bookmark, or reset all bookmarks. Bookmark edits can be undone.
 
 The Timing menu can set the current position as the song preview point. A long yellow line marks it on the bottom timeline. Red and green timing marks appear on the upper object timeline, while shaded break intervals appear there and on the canvas's left time axis. To insert a break, place the playhead between two objects with enough space and click **Insert Break Time** next to Movement Analysis. Undo removes the inserted break.
 When the playhead is inside kiai time, a small Kiai badge appears in the upper-left of the editing plot. It brightens on each full beat and fades until the next beat.
@@ -151,7 +151,11 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Ctrl+Up / Ctrl+Down | Increase / decrease playback speed by 25 percentage points (10%–150%). |
 | Ctrl+Shift+Up / Ctrl+Shift+Down | Increase / decrease playback speed by 5 percentage points. |
 | Wheel / middle-drag | Wheel up moves the playhead and canvas earlier; down moves both later by the same relative amount. Middle-drag pans the canvas. |
-| Ctrl+wheel | Zoom the canvas, or the object timeline under the pointer. |
+| Ctrl+wheel | Change Snap across all supported subdivisions. |
+| Ctrl+Shift+wheel | Zoom the canvas. |
+| Alt+wheel (upper timeline) | Zoom the object timeline. |
+| Shift+wheel | Seek four times as far. |
+| Ctrl+Alt+wheel (canvas / upper timeline) | Cycle placement tools. |
 | Click the current timestamp | Open Jump to time; accepts timestamps or milliseconds. |
 
 ## 05 / Slider, snap and testplay keys
@@ -173,7 +177,7 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Keys | Action |
 | --- | --- |
 | Shift+1 through Shift+9 | Choose beat subdivision 1/1 through 1/9. |
-| Ctrl+M | Cycle all beat subdivisions, including 1/12 and 1/16. |
+| Ctrl+M | Cycle 1/3, 1/4, 1/6 and 1/8; enter at 1/3 from another divisor. |
 | Ctrl+1 / 2 / 3 / 4 | Set horizontal grid size to 4 / 8 / 16 / 32. |
 | G / T | Cycle grid size / toggle Grid Snap. |
 | Y | Toggle Distance Snap. |

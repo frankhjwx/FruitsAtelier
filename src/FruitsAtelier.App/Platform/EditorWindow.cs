@@ -307,7 +307,7 @@ internal sealed partial class EditorWindow : IDisposable
                 view.SetModifiers(Native.Alt, Native.Shift);
                 var point = new Native.Point { X = (short)((long)lParam & 0xFFFF), Y = (short)(((long)lParam >> 16) & 0xFFFF) };
                 Native.ScreenToClient(window, ref point);
-                view.Wheel(point.X * 96f / dpi, point.Y * 96f / dpi, (short)((ulong)wParam >> 16), (wParam & 0x0008) != 0);
+                view.Wheel(point.X * 96f / dpi, point.Y * 96f / dpi, (short)((ulong)wParam >> 16), (wParam & 0x0008) != 0, Native.Shift, Native.Alt);
                 Invalidate(); return 0;
             case 0x0100:
                 view.SetModifiers(Native.Alt, Native.Shift);
