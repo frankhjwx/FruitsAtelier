@@ -11,7 +11,7 @@ This table defines the accepted editor feedback scope. The current user-facing b
 | E05 | Preserve playback time on empty canvas clicks. | Clear selection without seeking, both paused and playing; retain explicit time controls and box selection. |
 | E06 | Limit Ctrl+M to 1/3, 1/4, 1/6 and 1/8. | Enter at 1/3 from another divisor; direct Snap controls retain all subdivisions. |
 | E07 | Separate wheel snapping, seeking and zoom. | Ctrl changes complete Snap choices; Shift seeks four times as far; Ctrl+Shift zooms canvas; Alt zooms the upper timeline; Ctrl+Alt cycles tools on canvas/upper timeline. |
-| E08 | Delay testplay startup. | Persistent 0–5 second setting, default 1; cancellable countdown; preserve the start position and synchronize audio/gameplay startup. |
+| E08 | Start testplay with a lead-in. | Persistent 0–5 second setting, default 1; immediately begin from the selected position minus the lead-in, clamped to zero, and return to the selected position on exit. |
 | E09 | Expose Master, Music and Effect as vertical volume bars. | Left-to-right channel order; mouse and Alt arrows; 120 ms fade-in, 300 ms idle delay, 150 ms fade-out; hover/drag/held adjustment stays visible; changes persist without committing drafts. |
 | E10 | Show bookmarks on the left canvas axis and in the canvas. | Distinct red timing and blue bookmark ticks/lines, nonoverlapping labels and clustered hover details; dense display does not merge stored entries. |
 | E11 | Use blue canvas time labels. | Ordinary time labels remain distinct from red timing labels and lines. |

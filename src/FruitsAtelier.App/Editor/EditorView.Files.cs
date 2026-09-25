@@ -187,11 +187,6 @@ public sealed partial class EditorView
         if (playing && drag == DragKind.PlaybackLine) CancelPlaybackLineDrag();
         bool wasReady = AudioReady;
         AudioReady = ready; AudioPlaying = playing; AudioLoading = loading;
-        if (pendingTestplay is not null)
-        {
-            if (ready && playing) PauseCountdownAudio();
-            else countdownPauseRequested = false;
-        }
         AudioDurationMs = double.IsFinite(durationMs) ? Math.Max(0, durationMs) : 0;
         AudioNotice = error ?? (loading ? L.Get("editor.audio.loading") : ready ? Path.GetFileName(filename) ?? L.Get("editor.audio.loaded") : L.Get("editor.audio.notLoaded"));
         if (ready && drag != DragKind.Timeline && !IsTestplaying)

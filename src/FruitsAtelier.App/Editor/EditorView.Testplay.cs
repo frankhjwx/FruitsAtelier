@@ -7,9 +7,6 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private CatchTestplaySession? testplay;
-    private CatchTestplay? pendingTestplay;
-    private double countdownEndsAt;
-    private bool countdownPauseRequested;
     private CatchTestplayFrame? testplayFrame;
     private IDisposable? testplayDriver;
     private bool testplayEscapeConsumed;
@@ -22,10 +19,10 @@ public sealed partial class EditorView
     public bool TestplayAutoplay => testplay?.Autoplay ?? false;
     private double TestplayRealtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
     private double testplayStart;
+    private double testplayReturnPosition;
     private bool testplayWithAudio;
     private double transportSampleAt, transportSamplePosition, transportSampleLeadMs;
-    public bool IsTestplaying => testplay is not null || pendingTestplay is not null;
-    public bool TestplayCountingDown => pendingTestplay is not null;
+    public bool IsTestplaying => testplay is not null;
     public int TestplayCombo => testplay?.Combo ?? 0;
     public double TestplayCatcherX => testplay?.X ?? 256;
     public Rect TestplayButtonBounds { get; private set; }
@@ -38,26 +35,27 @@ public sealed partial class EditorView
             DiscardConfirmationVisible || SliderDialogVisible || TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
             drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty || AudioLoading) return;
         EnsureConversion();
-        var session = new CatchTestplay(PreviewObjects(), PreviewCircleSize, playhead);
+        testplayReturnPosition = playhead;
+        testplayStart = Math.Max(0, playhead - LibrarySettings.TestplayStartupDelaySeconds * 1000d);
+        var session = new CatchTestplay(PreviewObjects(), PreviewCircleSize, testplayStart);
         if (session.Finished || AudioReady && playhead >= AudioDurationMs)
         { StatusMessage = L.Get("testplay.noNotes"); return; }
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
-        testplayStart = playhead;
         testplayTabHeld = false;
         testplayPauseHeld = false;
         testplayBookmarkHeld = false;
         testplayAutoNotice = null;
         testplayWithAudio = AudioReady;
         ResetHitsounds();
-        if (LibrarySettings.TestplayStartupDelaySeconds > 0)
+        bool restartAudio = AudioReady && AudioPlaying && testplayStart < testplayReturnPosition;
+        if (restartAudio)
         {
-            pendingTestplay = session;
-            countdownEndsAt = TestplayRealtime + LibrarySettings.TestplayStartupDelaySeconds * 1000;
-            countdownPauseRequested = false;
-            if (AudioReady && AudioPlaying) PauseCountdownAudio();
-            return;
+            if (RequestPausePlayback is not null) RequestPausePlayback();
+            else RequestTogglePlayback?.Invoke();
         }
-        BeginTestplay(session, audioAlreadyPlaying: AudioPlaying);
+        playhead = testplayStart;
+        FollowPlayhead();
+        BeginTestplay(session, audioAlreadyPlaying: AudioPlaying && !restartAudio);
     }
 
     private void BeginTestplay(CatchTestplay session, bool audioAlreadyPlaying)
@@ -90,27 +88,16 @@ public sealed partial class EditorView
         catch { StopTestplay(); throw; }
     }
 
-    private void PauseCountdownAudio()
-    {
-        if (countdownPauseRequested) return;
-        countdownPauseRequested = true;
-        if (RequestPausePlayback is not null) RequestPausePlayback();
-        else RequestTogglePlayback?.Invoke();
-    }
-
     public void StopTestplay(bool atCurrentPosition = false)
     {
         if (!IsTestplaying) return;
-        double returnTime = atCurrentPosition && testplay is not null ? testplay.TransportPosition : testplayStart;
+        double returnTime = atCurrentPosition && testplay is not null ? testplay.TransportPosition : testplayReturnPosition;
         testplay?.Cancel();
-        bool wasPending = pendingTestplay is not null;
-        pendingTestplay = null;
-        countdownPauseRequested = false;
         testplayDriver?.Dispose(); testplayDriver = null;
         testplay = null; testplayFrame = null;
         testplayAutoNotice = null;
         testplayBookmarkHeld = false;
-        if (testplayWithAudio && !wasPending)
+        if (testplayWithAudio)
         {
             if (RequestPausePlayback is not null) RequestPausePlayback();
             else if (AudioPlaying) RequestTogglePlayback?.Invoke();
@@ -133,14 +120,6 @@ public sealed partial class EditorView
 
     private void AdvanceTestplay()
     {
-        if (pendingTestplay is { } pending)
-        {
-            if (TestplayRealtime < countdownEndsAt) return;
-            if (AudioReady && AudioPlaying) { PauseCountdownAudio(); return; }
-            pendingTestplay = null;
-            countdownPauseRequested = false;
-            BeginTestplay(pending, audioAlreadyPlaying: false);
-        }
         if (testplay is null) return;
         if (testplayDriver is null) testplay.Tick();
         bool wasAutoplay = testplayFrame?.Autoplay ?? false;
@@ -180,15 +159,6 @@ public sealed partial class EditorView
 
     private void DrawTestplay(ICanvas c)
     {
-        if (pendingTestplay is not null)
-        {
-            c.Fill(new(0, 0, width, height), Background);
-            string count = Math.Ceiling(Math.Max(0, countdownEndsAt - TestplayRealtime) / 1000).ToString(System.Globalization.CultureInfo.InvariantCulture);
-            c.Text(count, width / 2 - c.MeasureText(count, 72, true) / 2, height / 2 - 52, 72, Foreground, width, true);
-            string hint = L.Get("testplay.countdownCancel");
-            c.Text(hint, width / 2 - c.MeasureText(hint, 15) / 2, height / 2 + 42, 15, Muted, width);
-            return;
-        }
         c.Fill(new(0, 0, width, height), Background);
         float stageHeight = Math.Max(1, Math.Min(height, width * .75f));
         var stage = new Rect((width - stageHeight * 4 / 3) / 2, (height - stageHeight) / 2,

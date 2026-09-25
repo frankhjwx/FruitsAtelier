@@ -85,7 +85,7 @@ Open **Catch Preview** using the button on the right edge of the canvas. Drag th
 
 ### Try the map
 
-Press **F5** to testplay from the current position using the selected preview mod and speed. Startup waits one second by default; change the delay from 0 to 5 seconds in **Settings > Testplay keys**. Esc cancels the countdown. Music and gameplay start together after the countdown. Move with **Left / Right**, and hold **Shift** to dash. Catch fruits and droplets to build combo. **Tab** toggles autoplay; **Ctrl+P** pauses or resumes.
+Press **F5** to testplay using the selected preview mod and speed. Testplay immediately begins one second before the current position by default; change the lead-in from 0 to 5 seconds in **Settings > Testplay keys**. A lead-in that reaches before the song starts begins at zero. Esc returns to the selected position. Move with **Left / Right**, and hold **Shift** to dash. Catch fruits and droplets to build combo. **Tab** toggles autoplay; **Ctrl+P** pauses or resumes.
 Press **Ctrl+B** during testplay to add a bookmark at the current position. The shortcut appears with the other testplay controls in the upper-left corner.
 
 **F1 / Esc** exits to the testplay start; **F2** exits at the current position. Losing window focus releases held keys while playback continues. A movement or dash key exits autoplay; a centered banner briefly announces entering or leaving autoplay. Testplay does not change your objects or undo history. Change movement and dash bindings in **Library > Settings**.

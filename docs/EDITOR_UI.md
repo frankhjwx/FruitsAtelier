@@ -330,7 +330,7 @@ A confirmed stream remains one editable slider parent with its anchors, handles 
 
 The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Timing creation and geometric rotation dialogs are not available.
 
-Testplay startup delay is configured in Settings > Testplay keys, from 0 to 5 seconds (default 1). The countdown pauses editor audio and preserves the requested starting position. Esc cancels it; reaching the deadline starts the audio and gameplay session together after any pending audio pause is acknowledged.
+Testplay lead-in is configured in Settings > Testplay keys, from 0 to 5 seconds (default 1). Starting testplay immediately begins audio and gameplay from the selected position minus the lead-in, clamped to zero. Esc returns to the selected position.
 
 Number keys 1–4 select Select, Fruit, FSlider and Banana Shower. During an FSlider draft they finish valid geometry, or cancel an insufficient draft, before switching tools; pressing 3 prepares another slider. Shift+1–9 changes Snap during drawing without moving placed points. F4 opens Song Setup. Unsupported modifier combinations do not invoke the corresponding unmodified editing command.
 

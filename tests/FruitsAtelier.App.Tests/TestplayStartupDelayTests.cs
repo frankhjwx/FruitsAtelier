@@ -2,7 +2,7 @@ using FruitsAtelier.Core;
 
 internal static class TestplayStartupDelayTests
 {
-    public static void Countdown()
+    public static void LeadIn()
     {
         var clock = new ManualTime();
         var ui = new Ui(timeProvider: clock);
@@ -16,43 +16,43 @@ internal static class TestplayStartupDelayTests
         int sounds = 0;
         ui.View.RequestHitsound = _ => sounds++;
         ui.View.StartTestplay();
-        Check(ui.View.IsTestplaying && ui.View.TestplayCountingDown, "Countdown did not start.");
-        clock.Advance(999); ui.Paint();
-        Check(ui.View.TestplayCountingDown && ui.View.PlayheadMs == 500 && sounds == 0,
-            "Countdown advanced gameplay before its deadline.");
+        Check(ui.View.IsTestplaying && ui.View.PlayheadMs == 0, "Testplay did not start immediately from the lead-in position.");
+        clock.Advance(750); ui.Paint();
+        Check(ui.View.PlayheadMs == 750 && sounds == 0, "Lead-in did not advance gameplay before the selected position.");
         ui.Key(27);
-        Check(!ui.View.IsTestplaying && ui.View.PlayheadMs == 500, "Escape did not cancel at the original position.");
+        Check(!ui.View.IsTestplaying && ui.View.PlayheadMs == 500, "Escape did not return to the selected position.");
         ui.View.KeyUp(27);
 
+        ui.View.UpdateTransport(2500, 5000, true, false, false, null, null);
+        ui.View.UpdateTransport(2500, 5000, false, false, false, null, null);
         ui.View.StartTestplay();
-        clock.Advance(1000); ui.Paint();
-        Check(ui.View.IsTestplaying && !ui.View.TestplayCountingDown && ui.View.PlayheadMs == 500,
-            "Gameplay did not begin at the original position when the countdown ended.");
+        Check(ui.View.IsTestplaying && ui.View.PlayheadMs == 1500,
+            "Testplay did not subtract the configured lead-in from the selected position.");
         clock.Advance(250); ui.Paint();
-        Check(ui.View.PlayheadMs == 750 && sounds == 0, "Gameplay clock did not start at countdown completion.");
+        Check(ui.View.PlayheadMs == 1750, "Gameplay did not advance immediately.");
         ui.View.StopTestplay();
+        Check(ui.View.PlayheadMs == 2500, "Leaving testplay did not restore the selected position.");
 
         var audioClock = new ManualTime();
         var audioUi = new Ui(timeProvider: audioClock);
         audioUi.LoadDocument(map);
         audioUi.View.LibrarySettings.TestplayStartupDelaySeconds = 1;
-        audioUi.View.UpdateTransport(500, 5000, true, false, false, null, null);
+        audioUi.View.UpdateTransport(2500, 5000, true, true, false, null, null);
         double seek = -1;
         int starts = 0, pauses = 0;
         audioUi.View.RequestSeek = position => seek = position;
         audioUi.View.RequestTogglePlayback = () => starts++;
         audioUi.View.RequestPausePlayback = () => pauses++;
         audioUi.View.StartTestplay();
-        audioUi.View.UpdateTransport(510, 5000, true, true, false, null, null);
-        Check(pauses == 1 && audioUi.View.PlayheadMs == 500,
-            "Playback that started during countdown was not paused at the saved position.");
-        audioUi.View.UpdateTransport(510, 5000, true, false, false, null, null);
-        audioClock.Advance(999); audioUi.Paint();
-        Check(starts == 0 && seek < 0 && audioUi.View.PlayheadMs == 500,
-            "Audio or gameplay started during the countdown.");
-        audioClock.Advance(1); audioUi.Paint();
-        Check(starts == 1 && seek == 500 && !audioUi.View.TestplayCountingDown && audioUi.View.PlayheadMs == 500,
-            "Audio and gameplay did not start together at the saved position.");
+        Check(pauses == 1 && starts == 1 && seek == 1500 && audioUi.View.PlayheadMs == 1500,
+            "Playing audio was not restarted immediately at the lead-in position.");
+        audioUi.View.StopTestplay();
+        Check(audioUi.View.PlayheadMs == 2500, "Audio testplay did not restore the selected position.");
+
+        audioUi.View.LibrarySettings.TestplayStartupDelaySeconds = 0;
+        audioUi.View.UpdateTransport(2500, 5000, true, false, false, null, null);
+        audioUi.View.StartTestplay();
+        Check(audioUi.View.PlayheadMs == 2500, "Zero lead-in did not start at the selected position.");
         audioUi.View.StopTestplay();
 
         var settings = new LibrarySettings { Workspace = Path.GetFullPath("artifacts/tests/testplay-delay-workspace"), TestplayStartupDelaySeconds = 5 };
