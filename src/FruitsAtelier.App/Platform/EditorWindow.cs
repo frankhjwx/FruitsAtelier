@@ -122,12 +122,11 @@ internal sealed partial class EditorWindow : IDisposable
                 if (result < 0) throw new Win32Exception();
                 if (result == 0) break;
             }
-            // Resolve IME-owned physical keys before translation while the editor owns shortcuts.
+            // TranslateMessage can let the IME consume editor shortcuts, even when WM_KEYDOWN still has the original key.
             if (msg.Window == hwnd && msg.Id == 0x0100 && !view.IsEditingText && !view.CapturingTestplayKey && !view.IsTestplaying)
             {
                 uint key = msg.WParam == 0xE5 ? Native.ImmGetVirtualKey(hwnd) : (uint)msg.WParam;
-                if (msg.WParam == 0xE5 && key is > 0 and < 0xE5 ||
-                    key == 70 && Native.Control && Native.Shift)
+                if (key is > 0 and < 0xE5)
                 {
                     view.SetModifiers(Native.Alt, Native.Shift);
                     view.KeyDown((int)key, Native.Control, Native.Shift);
