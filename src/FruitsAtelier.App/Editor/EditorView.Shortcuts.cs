@@ -5,6 +5,8 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private static readonly int[] QuickSnapDivisors = [3, 4, 6, 8];
+
     private bool HandleLegacyShortcut(int key, bool shift)
     {
         if (shift) return false;
@@ -12,7 +14,7 @@ public sealed partial class EditorView
         {
             case 65: SelectObjects(ClipboardParents(Document).Select(p => p.Id)); return true;
             case >= 49 and <= 52: gridSize = 4 << (key - 49); return true;
-            case 77: ForgetTemporarySnap(); divisor = SnapDivisors[(Array.IndexOf(SnapDivisors, divisor) + 1) % SnapDivisors.Length]; return true;
+            case 77: ForgetTemporarySnap(); divisor = QuickSnapDivisors[(Array.IndexOf(QuickSnapDivisors, divisor) + 1) % QuickSnapDivisors.Length]; return true;
             case 68: CloneSelection(); return true;
             case 72: MirrorSelection(); return true;
             case 38: AdjustPlaybackSpeed(1); return true;

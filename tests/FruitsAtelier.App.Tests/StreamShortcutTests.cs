@@ -76,7 +76,11 @@ internal static class StreamShortcutTests
         ui.Key('H', ctrl: true); Check(ui.View.Document.Tracks.Single().Nodes[0].X == 412, "stream horizontal flip preserves geometry owner");
         ui.Key('D', ctrl: true); Check(ui.View.Document.Tracks.Count == 2 && ui.View.Document.Tracks.All(t => t.StreamSnapDivisor == 16), "clone retains stream settings");
         ui.Key('9', shift: true); Check(ui.View.SnapDivisor == 9, "legacy snap shortcut");
-        ui.Key('M', ctrl: true); Check(ui.View.SnapDivisor == 12, "snap shortcut cycles subdivisions");
+        foreach (int expected in new[] { 3, 4, 6, 8, 3 })
+        {
+            ui.Key('M', ctrl: true);
+            Check(ui.View.SnapDivisor == expected, "Ctrl+M must cycle only the four quick Snap divisors");
+        }
         ui.Key('A', ctrl: true); Check(ui.View.SelectedObjectIds.Count == 2, "select all includes stream parents");
         ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
         ui.SelectTrack(id); ui.HoldMap(1000, 100);
