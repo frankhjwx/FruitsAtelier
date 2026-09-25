@@ -57,7 +57,10 @@ public sealed partial class EditorView
 
     private void PickSoundEdge(ConvertedCatchObject item)
     {
-        distanceObject = item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet ? (item.SourceId, item.EventIndex) : null;
+        distanceObject = item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet
+            && !(item.Kind is CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet
+                && Document.ImportedSliders.Any(s => s.Id == item.SourceId))
+            ? (item.SourceId, item.EventIndex) : null;
         soundEdge = null;
         if (item.Kind != CatchObjectKind.Fruit || item.IsStandalone) return;
         int edge = conversion!.Objects.Where(o => o.SourceId == item.SourceId && o.Kind == CatchObjectKind.Fruit)
@@ -71,7 +74,16 @@ public sealed partial class EditorView
         var ids = FlagTargets();
         if (tool == Tool.Fruit || ids.Length == 0) { nextFruitNewCombo = !nextFruitNewCombo; return; }
         bool enabled = !ids.All(id => ObjectFlags.NewCombo(Document, id));
-        Edit(L.Get("assist.comboChange"), () => { foreach (var id in ids) ObjectFlags.SetNewCombo(Document, id, enabled); });
+        bool conversionCurrent = conversion is not null && convertedSnapshot is not null
+            && convertedSnapshot.ContentEquals(Document) && convertedWithCompensation == compensateTinyDroplets
+            && !contentDragPreview;
+        if (Edit(L.Get("assist.comboChange"), () => { foreach (var id in ids) ObjectFlags.SetNewCombo(Document, id, enabled); })
+            && conversionCurrent)
+        {
+            // The flag changes combo grouping but not the converted catch object stream.
+            convertedSnapshot = Document.DeepClone();
+            BuildComboColours();
+        }
     }
 
     private void ToggleSound(int flag)

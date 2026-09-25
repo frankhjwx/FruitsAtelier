@@ -57,10 +57,15 @@ public sealed partial class EditorView
 
     private void SetSongHsv(uint colour)
     {
+        (songHue, songSaturation, songValue) = ColourToHsv(colour, songHue);
+    }
+
+    private static (double Hue, double Saturation, double Value) ColourToHsv(uint colour, double fallbackHue)
+    {
         double r = (colour >> 16 & 255) / 255d, g = (colour >> 8 & 255) / 255d, b = (colour & 255) / 255d;
         double max = Math.Max(r, Math.Max(g, b)), min = Math.Min(r, Math.Min(g, b)), delta = max - min;
-        songValue = max; songSaturation = max == 0 ? 0 : delta / max;
-        if (delta > 0) songHue = ((max == r ? (g - b) / delta : max == g ? (b - r) / delta + 2 : (r - g) / delta + 4) * 60 + 360) % 360;
+        double hue = delta > 0 ? ((max == r ? (g - b) / delta : max == g ? (b - r) / delta + 2 : (r - g) / delta + 4) * 60 + 360) % 360 : fallbackHue;
+        return (hue, max == 0 ? 0 : delta / max, max);
     }
 
     private static uint SongHsv(double hue, double saturation, double value)

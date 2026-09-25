@@ -336,9 +336,11 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0007: view.SetTextInputFocus(true); Invalidate(); return 0; // WM_SETFOCUS
             case 0x0008: // WM_KILLFOCUS
                 view.SetTextInputFocus(false);
-                goto case 0x001F;
+                view.CancelInteraction(preserveTestplay: true);
+                if (Native.GetCapture() == window) Native.ReleaseCapture();
+                UpdateTitle(); Invalidate(); return 0;
             case 0x001F: // WM_CANCELMODE
-                view.CancelInteraction();
+                view.CancelInteraction(preserveTestplay: view.IsTestplaying);
                 if (Native.GetCapture() == window) Native.ReleaseCapture();
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0215: // WM_CAPTURECHANGED

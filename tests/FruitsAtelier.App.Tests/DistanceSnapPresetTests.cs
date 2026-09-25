@@ -220,6 +220,60 @@ internal static class DistanceSnapPresetTests
 
     }
 
+    public static void SliderEvents()
+    {
+        var map = new MapDocument { DurationMs = 5000, SliderTickRate = 4 };
+        map.DistanceSnapRatios.Add(1);
+        var track = new CurveTrack { Kind = CurveKind.Linear };
+        track.Nodes.Add(new Anchor { TimeMs = 1000, X = 200 });
+        track.Nodes.Add(new Anchor { TimeMs = 1500, X = 392 });
+        map.Tracks.Add(track);
+        var objects = new[]
+        {
+            new ConvertedCatchObject(track.Id, 0, CatchObjectKind.Fruit, 1000, 200, 200, 200, 0),
+            new ConvertedCatchObject(track.Id, 1, CatchObjectKind.Droplet, 1250, 296, 296, 296, 0),
+            new ConvertedCatchObject(track.Id, 2, CatchObjectKind.Fruit, 1500, 392, 392, 392, 0)
+        };
+        Check(SliderDistanceSnap.Excesses(map, objects, track.Id).Count == 0
+            && SliderDistanceSnap.StrictErrors(map, track, objects).Count == 0,
+            "Straight slider events at 1 DS were rejected.");
+        var bulged = objects.ToArray();
+        bulged[1] = bulged[1] with { X = 500 };
+        var excess = SliderDistanceSnap.Excesses(map, bulged, track.Id);
+        Check(excess.Count == 2 && !SliderDistanceSnap.Allows(new Dictionary<(int, int), double>(), excess),
+            "An internal droplet exceeding DS was not detected.");
+        Check(SliderDistanceSnap.Allows(excess, excess), "An existing violation blocked unchanged geometry.");
+        var ui = new Ui(); ui.LoadDocument(WithTrackRemoved());
+        ui.View.SetSliderEditingMode(FruitsAtelier.App.Editor.SliderEditingMode.PenTool);
+        ui.Key('B'); ui.Key('Y');
+        ui.ClickMap(1000, 200);
+        ui.ClickMap(1500, 450, ctrl: true);
+        var drawn = ui.View.Document.Tracks.Single();
+        Check(Math.Abs(drawn.Nodes[^1].X - 392) < 1e-5, "Straight slider endpoint did not snap to 1 DS.");
+        var generated = CatchStreamConverter.Convert(ui.View.Document);
+        Check(generated.Success && generated.Objects.Count(item => item.SourceId == drawn.Id
+            && item.Kind == CatchObjectKind.Droplet) > 0
+            && SliderDistanceSnap.Excesses(ui.View.Document, generated.Objects, drawn.Id).Count == 0
+            && SliderDistanceSnap.StrictErrors(ui.View.Document, drawn, generated.Objects).Count == 0,
+            "Generated straight-slider droplets did not follow the selected DS.");
+        ui.Key(13);
+        ui.DownMap(1500, 392); ui.MoveMap(1625, 450); ui.UpMap(1625, 450);
+        Check(Math.Abs(ui.View.Document.Tracks.Single().Nodes[^1].X - 440) < 1e-5,
+            "Dragging a completed pen slider tail did not snap to DS.");
+
+        var legacy = new Ui(); legacy.LoadDocument(ui.View.Document.DeepClone());
+        legacy.View.SetSliderEditingMode(FruitsAtelier.App.Editor.SliderEditingMode.OsuLegacy);
+        legacy.Key('Y'); legacy.SelectTrack(drawn.Id); legacy.Key('B');
+        legacy.DownMap(1625, 440); legacy.MoveMap(1750, 480); legacy.UpMap(1750, 480);
+        Check(Math.Abs(legacy.View.Document.Tracks.Single().Nodes[^1].X - 488) < 1e-5,
+            $"Dragging a completed legacy slider tail did not snap to DS: {legacy.View.Document.Tracks.Single().Nodes[^1].TimeMs}, {legacy.View.Document.Tracks.Single().Nodes[^1].X}, {legacy.View.StatusMessage}.");
+
+        MapDocument WithTrackRemoved()
+        {
+            var copy = map.DeepClone(); copy.Tracks.Clear(); return copy;
+        }
+    }
+
     public static void Dialog()
     {
         foreach (string language in new[] { "en", "zh-CN" })
@@ -379,14 +433,14 @@ internal static class DistanceSnapPresetTests
         float Y(double beat) => r.Bottom - 12 - (float)(beat / 4) * (r.Height - 24);
         ui.Click(X(80), Y(0));
         ui.View.PointerMove(X(380), Y(.25), false, false); ui.Paint();
-        Check(ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF5555 && Math.Abs(c.X - X(80)) < .01), "Prospective HDash did not colour its departure fruit red.");
+        Check(ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF0000 && Math.Abs(c.X - X(80)) < .01), "Prospective HDash did not use its departure fruit colour.");
         ui.Click(X(380), Y(.25));
         ui.View.PointerMove(r.X - 20, r.Y, false, false); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", 12)), "HDash connection omitted its actual DS.");
-        Check(ui.Canvas.Circles.Count(c => c.Filled && c.Color == 0xFF5555 && r.Contains(c.X, c.Y)) == 1, "HDash did not mark only the departure fruit.");
+        Check(ui.Canvas.Circles.Count(c => c.Filled && c.Color == 0xFF0000 && r.Contains(c.X, c.Y)) == 1, "HDash did not mark only the departure fruit.");
         ui.ClickText(Strings.Get("ds.showValues"));
         Check(!ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", 12))
-            && ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF5555 && r.Contains(c.X, c.Y))
+            && ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF0000 && r.Contains(c.X, c.Y))
             && ui.View.DistanceSnapPreviewFruits.Count == 2, "Hiding DS labels changed preview fruits or HDash markings.");
         ui.ClickText(Strings.Get("ds.showValues"));
         Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.previewRatio", 12)), "Show DS did not restore the labels.");
@@ -403,7 +457,7 @@ internal static class DistanceSnapPresetTests
         ui.View.PointerMove(r.X - 20, r.Y, false, false); ui.Paint();
         ui.View.PointerDown(X(380), Y(.25), 2, false, false);
         ui.View.PointerMove(r.X - 20, r.Y, false, false); ui.Paint();
-        Check(!ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF5555 && r.Contains(c.X, c.Y)), "Deleted target left a stale HDash colour.");
+        Check(!ui.Canvas.Circles.Any(c => c.Filled && c.Color == 0xFF0000 && r.Contains(c.X, c.Y)), "Deleted target left a stale HDash colour.");
         ui.ClickText(Strings.Get("ds.reset"));
         Check(ui.View.DistanceSnapPreviewFruits.Count == 0 && ui.View.DistanceSnapPointerBounds.Count == 1,
             "Reset did not clear only the preview fruits.");

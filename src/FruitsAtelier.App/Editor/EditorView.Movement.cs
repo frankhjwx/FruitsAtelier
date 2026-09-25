@@ -30,12 +30,12 @@ public sealed partial class EditorView
         }
     }
 
-    private static uint MovementColour(CatchMovementMode mode) => mode switch
+    private uint MovementColour(CatchMovementMode mode) => mode switch
     {
-        CatchMovementMode.Stand => 0xC0C0C0,
-        CatchMovementMode.Walk => 0x63B99D,
-        CatchMovementMode.Dash => 0xD6B365,
-        _ => 0xCE7683
+        CatchMovementMode.Stand => LibrarySettings.StandIndicatorColour,
+        CatchMovementMode.Walk => LibrarySettings.WalkIndicatorColour,
+        CatchMovementMode.Dash => LibrarySettings.DashIndicatorColour,
+        _ => LibrarySettings.HyperDashIndicatorColour
     };
 
     private int FirstVisibleMovement(IReadOnlyList<ConvertedCatchObject> objects)
@@ -63,21 +63,13 @@ public sealed partial class EditorView
             var to = objects[movementIndices[i]];
             if (from.TimeMs > endTime) break;
             if (movementStates[departure].Movement is not { } movement) continue;
-            if (Document.BananaShowers.Any(shower => shower.TimeMs <= to.TimeMs && shower.EndTimeMs >= from.TimeMs)) continue;
+            if (Document.BananaShowers.Any(shower => shower.TimeMs <= to.TimeMs && shower.EndTimeMs >= from.TimeMs)
+                || breakPeriods.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
             // Clip in map time so long connections keep their slope without oversized screen coordinates.
             double start = Math.Max(viewStart, from.TimeMs), end = Math.Min(endTime, to.TimeMs);
             if (end <= start) continue;
             double XAt(double time) => from.X + (to.X - from.X) * ((time - from.TimeMs) / (to.TimeMs - from.TimeMs));
-            double cursor = start;
-            foreach (var period in breakPeriods)
-            {
-                if (period.EndMs <= cursor) continue;
-                if (period.StartMs >= end) break;
-                Segment(cursor, Math.Min(end, period.StartMs));
-                cursor = Math.Max(cursor, period.EndMs);
-                if (cursor >= end) break;
-            }
-            Segment(cursor, end);
+            Segment(start, end);
 
             void Segment(double first, double last)
             {
@@ -113,10 +105,13 @@ public sealed partial class EditorView
         var selectedObject = placement ? placementGhost : SelectedDistanceObject();
         int first = Array.FindIndex(indices, i => objects[i].SourceId == source
             && (selectedObject is null || objects[i].EventIndex == selectedObject.EventIndex));
+        if (first < 0 && selectedObject?.Kind == CatchObjectKind.TinyDroplet)
+            first = Array.FindIndex(indices, i => objects[i].SourceId == source);
         if (first < 0) return;
         int last = selectedObject is not null ? first : Array.FindLastIndex(indices, i => objects[i].SourceId == source);
-        MovementReadout = (first > 0 ? movementStates[indices[first - 1]].Movement : null,
-            movementStates[indices[last]].Movement);
+        if (selectedObject?.Kind != CatchObjectKind.TinyDroplet)
+            MovementReadout = (first > 0 ? movementStates[indices[first - 1]].Movement : null,
+                movementStates[indices[last]].Movement);
 
         float panelWidth = Math.Min(MovementPanelWidth, plot.Width - 12);
         if (panelWidth < 180 || plot.Height < MovementPanelHeight + 20) return;

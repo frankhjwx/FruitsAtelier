@@ -94,6 +94,34 @@ internal sealed partial class MacWindow
             View.LoadWorkspace(session, checkAdditionalDifficulties: true);
             await audio.LoadAsync(View.Document.AudioPath); PollAudio();
         });
+        View.RequestLibraryDelete = map =>
+        {
+            if (map.ProjectPath is not { } project) return;
+            View.ShowDeleteProjectConfirmation(confirmed =>
+            {
+                if (confirmed) RunFile(async () =>
+                {
+                    await Task.Run(() => LibraryOperations.DeleteProject(project, View.LibrarySettings));
+                    View.RefreshLibrary();
+                });
+            });
+        };
+        View.RequestLibraryOszExport = map => RunFile(async () =>
+        {
+            string filename = WorkspaceProject.SafeName(map.Artist + " - " + map.Title) + ".osz";
+            var path = await SavePicker(L.Get("library.exportOsz"), "osz", filename);
+            if (path is null) return;
+            await Task.Run(() => LibraryOperations.ExportOsz(LibraryOperations.ExportProject(map), path, View.CompensateTinyDroplets));
+            View.SetNotice(L.Get("library.exported", path));
+        });
+        View.RequestOszExport = () => RunFile(async () =>
+        {
+            var project = View.CaptureProject();
+            var path = await SavePicker(L.Get("library.exportOsz"), "osz", WorkspaceProject.SafeName(project.Name) + ".osz");
+            if (path is null) return;
+            await Task.Run(() => LibraryOperations.ExportOsz(project, path, View.CompensateTinyDroplets));
+            View.SetNotice(L.Get("library.exported", path));
+        });
         View.RequestOsuExport = name => RunFile(async () =>
         {
             var project = View.CaptureProject();

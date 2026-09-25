@@ -243,7 +243,7 @@ public sealed partial class EditorView
 
     private void DrawSelectedDistanceTick(ICanvas c)
     {
-        if (SelectedDistanceObject() is not { Kind: CatchObjectKind.Droplet } tick) return;
+        if (SelectedDistanceObject() is not { IsStandalone: false, Kind: CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet } tick) return;
         var p = Screen(new(tick.TimeMs, tick.X));
         float radius = Math.Max(6, ObjectRadius(tick.Kind) * Playfield.Width / 512);
         c.Circle(p.X, p.Y, radius + 3, Accent, false, 2);
@@ -273,7 +273,8 @@ public sealed partial class EditorView
             var from = objects[movementIndices[i - 1]];
             var to = objects[movementIndices[i]];
             if (to.TimeMs - from.TimeMs <= 37.5
-                || Document.BananaShowers.Any(s => s.TimeMs <= to.TimeMs && s.EndTimeMs >= from.TimeMs)) continue;
+                || Document.BananaShowers.Any(s => s.TimeMs <= to.TimeMs && s.EndTimeMs >= from.TimeMs)
+                || breakPeriods.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
             if (BaseDistanceRatio(from, to) is not { } ratio) continue;
             string text = L.Get("assist.ratio", ratio);
             var label = new DistanceLabel((from.TimeMs + to.TimeMs) / 2,

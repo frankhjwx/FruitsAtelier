@@ -24,8 +24,8 @@ This document distinguishes lazer behavior from the time-based editor's adaptati
 ## Coordinate boundary
 
 lazer's slider controls live in a spatial XY plane. Here, vertical position is time,
-so a path must define a single X at each time. Backtracking control times and loops
-cannot be copied directly. Zoom is a viewport transformation; it never rewrites
+so a path must define a single X at each time. Control times may extend beyond segment endpoints, but time reversal inside the
+authored interval is invalid because event positions would be ambiguous. Zoom is a viewport transformation; it never rewrites
 control points. Circular arcs retain their creation-time AR reference ratio.
 
 Mode switches, hover, and selection preserve saved geometry. Both tools edit the

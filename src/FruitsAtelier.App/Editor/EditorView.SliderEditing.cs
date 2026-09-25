@@ -5,6 +5,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private readonly HashSet<Guid> pendingImplicitSliderConversions = [];
     private void ChangeReverseCount(Guid id, int change)
     {
         if (Document.Tracks.FirstOrDefault(t => t.Id == id) is not { } track) return;
@@ -35,14 +36,38 @@ public sealed partial class EditorView
 
     private void EditImportedSlider()
     {
-        if (SelectedImportedSlider is not { } slider) return;
+        if (SelectedImportedSlider is { } slider) EditImportedSlider(slider.Id);
+    }
+
+    private void EditImportedSlider(Guid id)
+    {
+        if (!Document.ImportedSliders.Any(slider => slider.Id == id)) return;
+        if (Document.DerandomizeDroplets is null)
+        {
+            OfferSingleSliderConversion(id);
+            return;
+        }
+        ConvertSelectedImportedSlider(id, Document.DerandomizeDroplets.Value);
+    }
+
+    private ImportedSliderEditResult ConvertImportedSlider(Guid id, CatchConversionCache? cache = null)
+    {
+        bool derandomize = Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets;
+        var result = ImportedSliderEditing.ConvertToTrack(Document, id, cache, derandomize);
+        if (drag != DragKind.None && Document.DerandomizeDroplets is null) pendingImplicitSliderConversions.Add(id);
+        return result;
+    }
+
+    private void ConvertSelectedImportedSlider(Guid id, bool derandomizeDroplets)
+    {
         string notice = "";
         if (!Edit(L.Get("editor.command.editImportedSlider"), () =>
         {
-            var result = ImportedSliderEditing.ConvertToTrack(Document, slider.Id);
+            var result = ImportedSliderEditing.ConvertToTrack(Document, id, derandomizeDroplets: derandomizeDroplets);
+            Document.DerandomizeDroplets = derandomizeDroplets;
             notice = string.Join(L.Get("editor.diagnostics.separator"), result.Diagnostics);
         })) return;
-        Select(slider.Id, slider.Id);
+        Select(id, id);
         tool = Tool.Slider;
         StatusMessage = notice.Length == 0 ? L.Get("editor.status.importedSliderEditable") : notice;
     }

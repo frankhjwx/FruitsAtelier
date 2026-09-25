@@ -128,3 +128,28 @@ jobs:
           gh release edit "$RELEASE_TAG" --notes-file "$notes"
           gh release upload "$RELEASE_TAG" release-assets/*.zip release-assets/*.sha256 release-assets/*.nupkg release-assets/releases.*.json --clobber
           gh release edit "$RELEASE_TAG" --draft=false
+      - name: Verify anonymous updater discovery
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          set -euo pipefail
+          expected=$(find release-assets -maxdepth 1 -type f -printf '%f\n' | jq -Rsc 'split("\n") | map(select(length > 0))')
+          response="$RUNNER_TEMP/public-releases.json"
+          # Velopack reads embedded assets here, not the separate release-assets endpoint.
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error --max-time 20 \
+              -H 'Accept: application/vnd.github.v3+json' \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases?per_page=10&page=1" -o "$response" \
+              && jq -e --arg tag "$RELEASE_TAG" --argjson expected "$expected" '
+                [.[] | select(.tag_name == $tag and .draft == false)
+                  | [.assets[].name]] | any(. as $actual | ($expected - $actual | length) == 0)
+              ' "$response"; then
+              echo "Anonymous release discovery includes every published asset."
+              exit 0
+            fi
+            echo "Waiting for anonymous release assets (attempt $attempt/12)."
+            if [ "$attempt" -lt 12 ]; then sleep 10; fi
+          done
+          echo '::error::Published assets are missing from the anonymous release list; verify updater discovery before announcing the release.'
+          exit 1

@@ -9,6 +9,12 @@ FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
 if (args.Length > 0 && args[0] == "--benchmark-library") return LibraryScaleTests.Benchmark(args.Length > 1 ? args[1] : null);
 if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
+if (args.Length == 2 && args[0] == "--slider-drag-performance") return EditorPerformance.RunSliderDrag(args[1]);
+if (args.Length == 2 && args[0] == "--anchor-drag-performance")
+{
+    try { return EditorPerformance.RunAnchorDrag(args[1]); }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 
 if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.InspectMap(args[1]);
 
@@ -21,12 +27,13 @@ var tests = new (string Name, Action Run)[]
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
+    ("Appearance indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
     ("Slider stream confirmation, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
     ("Slider long press progress, cancellation and control-point shortcut", StreamShortcutTests.HoldAndShortcut),
     ("Testplay pause, resume and legacy exit shortcuts", TestplayTests.PauseAndExitShortcuts),
     ("Testplay bookmark shortcuts edit at the live position", TestplayTests.BookmarksDuringTestplay),
     ("Testplay movement, combo, hyperdash and facing", TestplayTests.MovementAndJudgement),
-    ("Testplay Tab switches autoplay and returns control without seeking", TestplayTests.AutoplaySwitching),
+    ("Testplay autoplay notices, manual input and focus persistence", TestplayTests.AutoplaySwitching),
     ("Catch rotations, banana arrival transforms and combo colours", TestplayTests.VisualTransformsAndColours),
     ("Testplay Escape returns to editor without repeated navigation", TestplayTests.EscapeReturnsToEditor),
     ("Testplay caught stacks share preview effects and outlive final judgement", TestplayTests.LivePlate),
@@ -37,6 +44,9 @@ var tests = new (string Name, Action Run)[]
     ("Testplay key capture and settings persistence", TestplayTests.Bindings),
     ("Extended testplay key capture, persistence and gameplay", TestplayTests.ExtendedBindings),
     ("Update lifecycle, persistence and save-before-restart", UpdateTests.Lifecycle),
+#if WINDOWS
+    ("GitHub update discovery recovers omitted assets and preserves download metadata", GithubReleaseSourceTests.Run),
+#endif
     ("Update settings and explicit installation controls", UpdateTests.Interface),
     ("Opening maps initializes position and duration without transient jumps", AudioFeedbackTests.OpeningTransport),
     ("Audio volume settings, persistence and document isolation", AudioFeedbackTests.VolumeSettings),
@@ -75,7 +85,7 @@ var tests = new (string Name, Action Run)[]
     ("Text inputs blink, highlight selection and menus fit their rows", TextInputFeedbackTests.Run),
     ("Legacy clipboard and horizontal grid preserve pattern scope", LegacyAlignmentTests.ClipboardAndGrid),
     ("Legacy timestamps and read-only details preserve precision", LegacyAlignmentTests.TimestampAndReadOnly),
-    ("Legacy samples use edge leniency and slider-start tick samples", LegacyAlignmentTests.Samples),
+    ("Legacy samples use event timing and edge leniency", LegacyAlignmentTests.Samples),
     ("Cached timeline durations follow timing, repeat and document changes", ObjectTimelineTests.CachedDurationsFollowEdits),
     ("Selected-slider body drag, point drag and two-stage right-click follow the same rules in both modes", ToolPaletteTests.SelectedSliderControls),
     ("Timeline layout, centered numbers, box selection and deletion", ObjectTimelineTests.BoxAndDelete),
@@ -83,6 +93,7 @@ var tests = new (string Name, Action Run)[]
     ("Tool palette is exclusive and placement ghosts snap at 60% opacity", ToolPaletteTests.PaletteAndGhost),
     ("Fruit and both slider modes preview incoming and outgoing hyperdash without committing", ToolPaletteTests.PlacementHyperdash),
     ("Fruit New combo survives project/osu round-trips and undo", ToolPaletteTests.FruitCombo),
+    ("Canvas labels New Combo fruits with NC in both languages", ToolPaletteTests.ComboLabels),
     ("Both slider modes support straight placement and draft point removal", ToolPaletteTests.DraftRemovalAndStraight),
     ("Repeated points, whole-slider deletion and banana completion", ToolPaletteTests.RepeatedPointAndWholeDelete),
     ("Legacy drafting and pen sliders coexist", SliderModeInteractionTests.LegacyDraftAndMixedModes),
@@ -91,6 +102,21 @@ var tests = new (string Name, Action Run)[]
     ("Lazer placement and selected-slider controls avoid extra mode transitions", SliderModeInteractionTests.LazerPlacementAndSelection),
     ("FSlider hover offers both editing modes without changing content", SliderModeInteractionTests.GlobalModeMenu),
     ("Multiple distance snaps include zero and persist per-map configuration", DistanceSnapPresetTests.Snapping),
+    ("Slider large droplets follow distance snap while drawing", DistanceSnapPresetTests.SliderEvents),
+    ("Segmented droplets snap without requiring matching presets on both sides", SliderDistanceDragTests.SegmentedDroplet),
+    ("Droplet drag permits outgoing spacing beyond maximum DS", SliderDistanceDragTests.DropletOutgoingSpacing),
+    ("Curve controls cross endpoint heights with and without DS", SliderDistanceDragTests.ControlOverhangs),
+    ("Selected slider tails snap across the full DS range", SliderDistanceDragTests.SelectedTail),
+    ("Curve tail edits preserve shape limits and preceding-event snap", SliderDistanceDragTests.CurvedTail),
+    ("Segmented slider tails use strict distance snap", SliderDistanceDragTests.SegmentedTail),
+    ("Selected repeat endpoints use their preceding reference", SliderDistanceDragTests.RepeatedTailAndHead),
+    ("Droplet distance snap preserves other events and compensation", SliderDistanceDragTests.TinyDroplet),
+    ("Slider DS modifiers and unreachable candidates preserve drag state", SliderDistanceDragTests.ModifiersAndUnreachable),
+    ("Slider DS allows a first draft handle before events exist", SliderDistanceDragTests.FirstDraftHandle),
+    ("Fractional folded slider tails edit their source event", SliderDistanceDragTests.FractionalFoldedTail),
+    ("Note placement recalculates breaks and exports with one undo", BreakRecalculationTests.Placement),
+    ("Break recalculation respects slider duration and cancellation", BreakRecalculationTests.DurationAndCancellation),
+    ("Removing break notes merges intervals and nearby notes shorten them", BreakRecalculationTests.RemovalAndNearbyPlacement),
     ("Distance per beat uses grid drag, numeric entry, export and undo", DistanceSnapPresetTests.BaseDistance),
     ("Editor DPB preserves existing slider playback and imported multiplier", DistanceSnapPresetTests.ExistingSliderPreservation),
     ("DPB input and bar use the reference distance range", DistanceSnapPresetTests.DynamicBaseRange),
@@ -133,6 +159,18 @@ var tests = new (string Name, Action Run)[]
     ("Beat snap slider exposes every requested divisor through one drag control", RequestedInteractionTests.SnapDivisors),
     ("Centred controls and timestamp clipboard dialog preserve editor content", TimeJumpTests.Run),
     ("Double-click enters one Slider and other clicks leave its edit mode", RequestedInteractionTests.DoubleClickEditing),
+    ("Long press reports note beat position and temporarily uses its snap", NoteSnapTests.InspectBeatPosition),
+    ("Note hold activates at 300 ms, cancels and continues directly into dragging", NoteSnapTests.HoldTimingAndDragging),
+    ("Slider edges drag independently and slider objects follow Grid Snap", NoteSnapTests.SliderObjectDragging),
+    ("Slider drag candidates preserve unrelated sources and restore their baseline", NoteSnapTests.SliderDragBaseline),
+    ("Slider edges highlight and inspect snap while matching current grids stay unchanged", NoteSnapTests.SliderEdgesAndCurrentSnap),
+    ("Slider droplets select on the second click and drag locally", DropletDragTests.SelectAndMove),
+    ("Dragging a curved slider droplet preserves its neighbouring events", DropletDragTests.CurvedNeighbors),
+    ("Droplet dragging handles fractional timing and dense anchors", DropletDragTests.ConvertedAndDenseCurves),
+    ("Default slider mode drags displayed droplets continuously", DropletDragTests.DefaultModeDrag),
+    ("Legacy-converted FSlider children drag in default mode", DropletDragTests.DragAfterLegacyConversion),
+    ("Legacy slider children require conversion before individual selection", DropletDragTests.LegacyRequiresConversion),
+    ("HDash fruit, catcher and afterimage use separate skin colours", HyperDashSkinTests.ThreeColours),
     ("Legacy Slider long-press buttons convert to a strictly aligned FSlider", SliderInteractionTests.LegacyContextConversion),
     ("Selected parents snap from the earliest start and keep one time and X offset", RequestedInteractionTests.MultiObjectDrag),
     ("A single Slider uses its start as the snap reference while moving", RequestedInteractionTests.SingleSliderSnap),
@@ -935,6 +973,7 @@ sealed class Ui
     }
     public void SetField(string label, string value) { FocusField(label); Type(value); Key(13); }
     public void ClickMap(double time, double x, bool ctrl = false) { var p = Screen(time, x); View.PointerDown(p.X, p.Y, 0, false, ctrl); Paint(); View.PointerUp(p.X, p.Y, 0); Paint(); }
+    public (float X, float Y) ScreenAt(double time, double x) => Screen(time, x);
     public void DownMap(double time, double x)
     {
         var p = Screen(time, x); View.PointerDown(p.X, p.Y, 0, false, false); Paint();

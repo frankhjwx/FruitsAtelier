@@ -24,7 +24,7 @@ Pinned sources: [CatchPlayfieldAdjustmentContainer.cs](https://github.com/ppy/os
 
 This project truncates preempt to integer milliseconds; the reference version's scrolling time range retains fractions, creating a rounding difference for fractional AR.
 
-Catcher dash trails sample map time every 16 ms and fade from 0.4 opacity over 800 ms with OutQuint easing. Hyperdash starts at the departure fruit, colours the body over a 180 ms transition, and adds a 1200 ms afterimage that rises 10 field units and grows from 0.95 to 1.2 scale. Skin sprites use additive blending for trails and afterimages; geometric fallback ghosts use alpha blending. `HyperDash` and `HyperDashAfterImage` skin colours are independent from `HyperDashFruit`. Effects reconstruct from cached movement and hyperdash intervals when seeking, rather than accumulating render-frame history. These rules reference `Catcher.cs`, `CatcherArea.cs`, `CatcherTrail.cs` and `CatcherTrailDisplay.cs` at the pinned ppy/osu revision above.
+Catcher dash trails sample map time every 16 ms and fade from 0.4 opacity over 800 ms with OutQuint easing. Hyperdash starts at the departure fruit, colours the body over a 180 ms transition, and adds a 1200 ms afterimage that rises 10 field units and grows from 0.95 to 1.2 scale. Skin sprites use additive blending for trails and afterimages; geometric fallback ghosts use alpha blending. `HyperDashFruit` colours marked departure notes, `HyperDash` colours the catcher, and `HyperDashAfterImage` colours its afterimage. Effects reconstruct from cached movement and hyperdash intervals when seeking, rather than accumulating render-frame history. These rules reference `Catcher.cs`, `CatcherArea.cs`, `CatcherTrail.cs` and `CatcherTrailDisplay.cs` at the pinned ppy/osu revision above.
 
 Caught Fruits and Bananas remain on the plate at half size with deterministic collision-separated offsets; Droplets eject immediately and TinyDroplets do not stack. At the last converted event of the parent before a New Combo (and at the final parent), the stack explodes: 250 ms upward, 500 ms downward, horizontal spreading and a 750 ms fade. Plate batches and transient droplets are cached and queried by time so seeks restore them without replaying all prior frames. Stack offset randomness is deterministic for preview rather than sharing the runtime random generator. Source rules: Catcher.cs, CaughtObject.cs, CaughtDroplet.cs and CatchBeatmapProcessor.cs at the pinned revision.
 
@@ -46,7 +46,7 @@ PNGs use original logical dimensions; `@2x` logical dimensions are half their pi
 
 Bananas use the static arrival scale 0.6 in both views, scaling base and overlay together. The fallback radius is `FruitRadius(CS) × 0.6`. Random scale/rotation animations are not implemented; this visual simplification does not change banana RNG consumption order.
 
-Selection hit testing uses the union of actual base/overlay destination rectangles with a minimum click tolerance. It excludes the enlarged hyperdash layer and does not test pixel alpha. Missing textures fall back to the corresponding geometric sizes. Clicking any slider Fruit / Droplet / TinyDroplet selects the entire slider by SourceId; selection does not change conversion output.
+Selection hit testing uses the union of actual base/overlay destination rectangles with a minimum click tolerance. It excludes the enlarged hyperdash layer and does not test pixel alpha. Missing textures fall back to the corresponding geometric sizes. The first click on a slider Fruit, Droplet, or TinyDroplet selects its parent by SourceId. A second click selects an individual Droplet or TinyDroplet only after its parent is an FSlider; Legacy Slider children remain parent selections. Selection does not change conversion output.
 
 Fruit variants cycle pear / grapes / apple / orange by index in the complete parent-object order. Nested slider fruits inherit the parent index. The repository does not bundle a skin; users can configure a default skin `.osk` file in Library Settings and import custom archives through the skin selector. Each image resolves from the selected custom skin, then the configured default skin, then the existing geometric renderer. Base and overlay images resolve independently; unreadable images also try the default. See [Architecture](ARCHITECTURE.md) for ZIP limits and [Third-party notices](../THIRD_PARTY_NOTICES.md) for asset licensing.
 
@@ -102,8 +102,8 @@ its live hitsound mixer. First-note judgement waits for the audio device to adva
 
 Tab toggles autoplay without seeking or resetting combo. It uses the same cached
 automatic catcher path as the preview and feeds live judgements, sounds, stacks
-and effects. Held Tab toggles once; another press restores manual control. Each
-new session starts in manual mode.
+and effects. Held Tab toggles once; another press or a movement/dash key restores
+manual control. Each new session starts in manual mode.
 
 Input and drawing use a continuous monotonic clock between audio samples, with
 50 ms half-life drift correction and at most 100 ms of extrapolation if the audio

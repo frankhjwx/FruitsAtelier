@@ -57,7 +57,11 @@ internal sealed class TestplayInputThread : IDisposable
                 int count = 0;
                 while (count++ < 256 && Native.PeekMessage(out var message, window, 0, 0, 1))
                     Native.DispatchMessage(ref message);
-                if (!diagnostic && Native.GetForegroundWindow() != owner) { session.Cancel(); break; }
+                if (!diagnostic && Native.GetForegroundWindow() != owner)
+                {
+                    pressed.Clear();
+                    session.ReleaseKeys();
+                }
                 if (pacer.FrameDue)
                 {
                     UpdateAudio(); session.Tick(); CheckTick?.Invoke(); pacer.FrameStarted();

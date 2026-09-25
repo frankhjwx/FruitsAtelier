@@ -13,6 +13,9 @@ public sealed partial class EditorView
     public Action<bool>? RequestLibraryFolder { get; set; }
     public Action<bool>? RequestLibraryImport { get; set; }
     public Action<LibraryMap>? RequestLibraryOpen { get; set; }
+    public Action<LibraryMap>? RequestLibraryOszExport { get; set; }
+    public Action<LibraryMap>? RequestLibraryDelete { get; set; }
+    public Action? RequestOszExport { get; set; }
     public Action<string>? RequestOsuExport { get; set; }
     public Action<bool, string>? RequestWorkspaceExport { get; set; }
     private LibraryDatabase? libraryDatabase;
@@ -468,14 +471,15 @@ public sealed partial class EditorView
     private void LibraryTextField(ICanvas c, int index, string label, string value, float y)
     {
         float x = librarySettingsOpen ? SettingsContentX : 32;
-        c.Text(label, x, y, 14, Foreground, width - x - 32, true);
+        float textSize = librarySettingsOpen ? SettingsTextSize : 14;
+        c.Text(label, x, y, textSize, Foreground, width - x - 32, true);
         var rect = new Rect(x, y + 28, width - x - (index < 2 || index == 4 ? 184 : 32), 42);
         c.Fill(rect, Surface, 5); c.Stroke(rect, libraryField == index ? Accent : Grid, radius: 5);
         string inputKey = "library:" + index;
-        DrawInputText(c, new(x + 12, y + 40, rect.Width - 24, 20), value, 14, libraryField == index, inputKey);
+        DrawInputText(c, new(x + 12, y + 40, rect.Width - 24, 20), value, textSize, libraryField == index, inputKey);
         hits.Add(new(rect, () => { libraryField = index; FocusInput(inputKey, value, mouseX); }, true));
-        if (index == 4) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestDefaultSkinArchive?.Invoke());
-        if (index < 2) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestLibraryFolder?.Invoke(index == 0));
+        if (index == 4) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestDefaultSkinArchive?.Invoke(), fontSize: textSize);
+        if (index < 2) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestLibraryFolder?.Invoke(index == 0), fontSize: textSize);
     }
     public bool LibraryLoading => scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
     public bool LibraryTextFocused => (LibraryVisible || ExportVisible) && libraryField >= 0 && !ErrorVisible && !DiscardConfirmationVisible;
@@ -483,7 +487,7 @@ public sealed partial class EditorView
     public Action? RequestPasteLibrary { get; set; }
     private bool SelectLibraryInputAt(float x, float y)
     {
-        foreach (int index in (ExportVisible ? new[] { 3 } : librarySettingsOpen ? new[] { 0, 1, 4 } : new[] { 2 }))
+        foreach (int index in (ExportVisible ? new[] { 3 } : librarySettingsOpen ? settingsColourIndex >= 0 ? new[] { 5 } : new[] { 0, 1, 4 } : new[] { 2 }))
         {
             string key = "library:" + index;
             if (!textLayouts.TryGetValue(key, out var layout)) continue;
@@ -505,6 +509,7 @@ public sealed partial class EditorView
     private void LibraryKey(int key, bool ctrl, bool shift)
     {
         if (updatesPage) { if (key == 27) updatesPage = false; return; }
+        if (key == 27 && settingsColourIndex >= 0) { CancelIndicatorColourPicker(); return; }
         if (key == 27) FinishVolumeDrag();
         if (key == 27) { if (contextItems.Count > 0) contextItems.Clear(); else if (libraryField >= 0) libraryField = -1; else if (librarySettingsOpen) CloseSettings(); else resourcePage = false; return; }
         if (key == 116) { StartLibraryScan(); return; }
@@ -512,6 +517,11 @@ public sealed partial class EditorView
         if (key == 13 && libraryField < 0 && !librarySettingsOpen && !resourcePage && libraryBrowser?.Selected?.Map is { } map)
         { OpenSelectedLibraryMap(map); return; }
         if (libraryField < 0) return;
+        if (key == 13 && libraryField == 5)
+        {
+            if (CommitIndicatorColourHex()) { settingsColourIndex = -1; libraryField = -1; }
+            return;
+        }
         if (ctrl && key == 86) { RequestPasteLibrary?.Invoke(); return; }
         string value = LibraryFieldValue;
         if (InputKey("library:" + libraryField, ref value, key, ctrl, shift, 4096)) LibraryFieldValue = value;
@@ -519,7 +529,7 @@ public sealed partial class EditorView
     }
     private string LibraryFieldValue
     {
-        get => libraryField switch { 0 => draftWorkspace, 1 => draftOsuRoot, 2 => libraryQuery, 3 => exportName, 4 => draftDefaultSkin, _ => "" };
-        set { switch (libraryField) { case 0: draftWorkspace = value; break; case 1: draftOsuRoot = value; break; case 2: libraryQuery = value; libraryScroll = 0; libraryResultsReady = false; QueueLibrarySearch(); RememberLibraryPosition(); break; case 3: exportName = value; break; case 4: draftDefaultSkin = value; break; } }
+        get => libraryField switch { 0 => draftWorkspace, 1 => draftOsuRoot, 2 => libraryQuery, 3 => exportName, 4 => draftDefaultSkin, 5 => settingsColourHex, _ => "" };
+        set { switch (libraryField) { case 0: draftWorkspace = value; break; case 1: draftOsuRoot = value; break; case 2: libraryQuery = value; libraryScroll = 0; libraryResultsReady = false; QueueLibrarySearch(); RememberLibraryPosition(); break; case 3: exportName = value; break; case 4: draftDefaultSkin = value; break; case 5: settingsColourHex = value; settingsColourError = ""; break; } }
     }
 }

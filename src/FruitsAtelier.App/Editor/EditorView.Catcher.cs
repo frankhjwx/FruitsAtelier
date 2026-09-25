@@ -10,8 +10,7 @@ public sealed partial class EditorView
         float age = (float)(playhead - trail.TimeMs);
         float progress = Math.Clamp(age / (trail.AfterImage ? 1200 : 800), 0, 1);
         float eased = progress * progress;
-        uint hyperColour = skin?.HyperDashColour ?? 0xFF0000;
-        uint colour = trail.AfterImage ? skin?.HyperDashAfterImageColour ?? hyperColour : trail.Hyper ? hyperColour : 0xFFFFFF;
+        uint colour = trail.AfterImage ? HyperDashAfterImageColour : trail.Hyper ? HyperDashColour : 0xFFFFFF;
         DrawCatcherBody(c, fieldLeft + (float)trail.X * fieldWidth / 512,
             catchY - (trail.AfterImage ? 10 * eased * fieldWidth / 512 : 0),
             fieldWidth * (trail.AfterImage ? .95f + .25f * eased : 1), colour,

@@ -49,7 +49,7 @@ public sealed class CurveTrack
     public CurveKind Kind { get; set; } = CurveKind.Bezier;
     public int SourceOrder { get; set; } = int.MaxValue;
     public List<Anchor> Nodes { get; private set; } = new();
-    internal CurveTrack DeepClone()
+    public CurveTrack DeepClone()
     {
         var copy = (CurveTrack)MemberwiseClone();
         copy.Nodes = Nodes.Select(n => n.DeepClone()).ToList();
@@ -141,6 +141,8 @@ public sealed partial class MapDocument
     public double DistancePerBeat => DistancePerBeatOverride ?? 100 * SliderMultiplier;
     public double SliderTickRate { get; set; } = 1;
     public double DistanceSpacing { get; set; } = 1;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? DerandomizeDroplets { get; set; }
     public List<double> DistanceSnapRatios { get; } = new();
     public List<Fruit> Fruits { get; } = new();
     public List<CurveTrack> Tracks { get; } = new();
@@ -155,7 +157,7 @@ public sealed partial class MapDocument
             Name = Name, DurationMs = DurationMs,
             BeatLengthMs = BeatLengthMs, TimingOffsetMs = TimingOffsetMs, ApproachRate = ApproachRate,
             CircleSize = CircleSize, SliderMultiplier = SliderMultiplier, DistancePerBeatOverride = DistancePerBeatOverride,
-            SliderTickRate = SliderTickRate, DistanceSpacing = DistanceSpacing
+            SliderTickRate = SliderTickRate, DistanceSpacing = DistanceSpacing, DerandomizeDroplets = DerandomizeDroplets
         };
         copy.DistanceSnapRatios.AddRange(DistanceSnapRatios);
         copy.Fruits.AddRange(Fruits.Select(f => f.DeepClone()));
@@ -174,7 +176,8 @@ public sealed partial class MapDocument
             || CircleSize != other.CircleSize || SliderMultiplier != other.SliderMultiplier
             || DistancePerBeatOverride != other.DistancePerBeatOverride || SliderTickRate != other.SliderTickRate
             || !DistanceSnapRatios.SequenceEqual(other.DistanceSnapRatios)
-            || DistanceSpacing != other.DistanceSpacing || Fruits.Count != other.Fruits.Count || Tracks.Count != other.Tracks.Count
+            || DistanceSpacing != other.DistanceSpacing || DerandomizeDroplets != other.DerandomizeDroplets
+            || Fruits.Count != other.Fruits.Count || Tracks.Count != other.Tracks.Count
             || TimingPoints.Count != other.TimingPoints.Count || ImportedSliders.Count != other.ImportedSliders.Count
             || BananaShowers.Count != other.BananaShowers.Count || !FileStateEquals(other))
             return false;

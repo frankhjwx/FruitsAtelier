@@ -40,7 +40,7 @@ public sealed partial class EditorView
             foreach (Guid id in streamTargets)
             {
                 var track = Document.Tracks.FirstOrDefault(t => t.Id == id)
-                    ?? ImportedSliderEditing.ConvertToTrack(Document, id).Track;
+                    ?? ConvertImportedSlider(id).Track;
                 track.StreamSnapDivisor = StreamSnapDivisor;
             }
             var converted = CatchStreamConverter.Convert(Document);

@@ -50,6 +50,9 @@ public sealed partial class EditorView
     public const float MinimumPlayfieldWidth = 256;
     public double CanvasZoom => canvasZoom;
     private CatchSkin? skin;
+    private uint HyperDashFruitColour => skin?.HyperDashFruitColour ?? 0xFF0000;
+    private uint HyperDashColour => skin?.HyperDashColour ?? 0xFF0000;
+    private uint HyperDashAfterImageColour => skin?.HyperDashAfterImageColour ?? HyperDashColour;
     private bool compensateTinyDroplets = true;
     private MapDocument? convertedSnapshot;
     private CatchConversionCache editorConversionCache = new();
@@ -57,6 +60,7 @@ public sealed partial class EditorView
     private OsuWriteResult? playableExport;
     private IReadOnlyList<ConvertedCatchObject> playableObjects = [];
     private bool convertedWithCompensation;
+    private bool contentDragPreview;
     private HashSet<(Guid SourceId, int EventIndex)> hyperdashObjects = [];
     private Dictionary<Guid, int> skinIndices = [];
     private Guid selection, selectedTrack, draftTrack, draftBanana;
@@ -95,7 +99,11 @@ public sealed partial class EditorView
     public Rect ZoomSliderBounds => zoomSlider;
     public string ActiveTool => tool.ToString();
     public string StatusMessage { get; private set; } = L.Get("editor.status.demoLoaded");
-    public void SetNotice(string notice) => StatusMessage = notice;
+    public void SetNotice(string notice)
+    {
+        StatusMessage = notice;
+        if (LibraryVisible) libraryNotice = notice;
+    }
 
     public void LoadSkin(string folder)
     {
@@ -106,10 +114,15 @@ public sealed partial class EditorView
     }
 
     private TimingMap.Lookup? renderedTiming;
+    private bool IsContentDrag => drag is DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn
+        or DragKind.HandleOut or DragKind.DraftHandle or DragKind.LegacyControl or DragKind.Objects
+        or DragKind.BananaStart or DragKind.BananaEnd or DragKind.TimelineTail;
+
     private void EnsureConversion()
     {
         if (convertedSnapshot is not null && convertedSnapshot.ContentEquals(Document)
-            && convertedWithCompensation == compensateTinyDroplets) return;
+            && convertedWithCompensation == compensateTinyDroplets
+            && (!contentDragPreview || IsContentDrag)) return;
         convertedSnapshot = Document.DeepClone();
         renderedTiming = new TimingMap.Lookup(Document);
         convertedWithCompensation = compensateTinyDroplets;
@@ -129,7 +142,9 @@ public sealed partial class EditorView
         conversion = CatchStreamConverter.Convert(input, compensateTinyDroplets, editorConversionCache);
         playableExport = null;
         playableObjects = conversion.Objects;
-        if (conversion.Success)
+        // While dragging, use the validated conversion; refresh export quantization on release/cancel.
+        contentDragPreview = IsContentDrag;
+        if (conversion.Success && !contentDragPreview)
         {
             try
             {
@@ -149,7 +164,7 @@ public sealed partial class EditorView
     }
 
     private enum Tool { Select, Fruit, Slider, Banana }
-    private enum DragKind { None, PlaybackLine, Objects, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Break, BreakEdge, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail, PreviewResize }
+    private enum DragKind { None, PlaybackLine, Objects, SliderObject, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Break, BreakEdge, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail, PreviewResize }
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
     private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp);
     private float FullPlayfieldWidth => plot.Width * 512 / (512 + PlayfieldPadding * 2);
@@ -250,6 +265,7 @@ public sealed partial class EditorView
 
     private void Select(Guid id, Guid track = default)
     {
+        if (id != temporarySnapSource || track != Guid.Empty) RestoreTemporarySnap();
         soundEdge = null; distanceObject = null;
         objectSelection.Clear(); anchorSelection.Clear();
         if (Document.Tracks.FirstOrDefault(t => t.Id == track)?.Nodes.Any(n => n.Id == id) == true)
@@ -289,7 +305,7 @@ public sealed partial class EditorView
 
     private void Undo()
     {
-        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.Marquee)
+        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.Marquee)
         { CancelInteraction(); return; }
         CancelInteraction();
         history.Undo();
@@ -299,7 +315,7 @@ public sealed partial class EditorView
 
     private void Redo()
     {
-        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.Marquee)
+        if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.Marquee)
         { CancelInteraction(); return; }
         CancelInteraction();
         history.Redo();
@@ -313,9 +329,12 @@ public sealed partial class EditorView
         try
         {
             var before = notesLocked ? Document.DeepClone() : null;
+            int importedBefore = Document.ImportedSliders.Count;
             change();
             if (before is not null && !PositionsEqual(before, Document))
             { history.Cancel(); StatusMessage = L.Get("assist.locked"); return false; }
+            if (Document.DerandomizeDroplets is null && Document.ImportedSliders.Count < importedBefore)
+                Document.DerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
             history.Commit(); return true;
         }
         catch (ArgumentException ex) { history.Cancel(); StatusMessage = fieldError = ex.Message; }
@@ -355,7 +374,7 @@ public sealed partial class EditorView
         drag = DragKind.None;
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         tool = Tool.Slider;
-        Select(Guid.Empty);
+        SelectAnchors(track, []);
         StatusMessage = L.Get("editor.status.sliderFinished");
     }
 

@@ -2,6 +2,30 @@ using FruitsAtelier.Core;
 
 internal static class EditableSliderTests
 {
+    public static int VerifyPreservedMap(string path)
+    {
+        var doc = path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
+            ? OsuBeatmapReader.ReadFile(path) : ProjectSerializer.ReadFile(path);
+        var before = CatchStreamConverter.Convert(doc); Valid(before);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var result = ImportedSliderEditing.ConvertAll(doc, derandomizeDroplets: false);
+        Console.WriteLine($"Converted={result.Tracks.Count}, retained Legacy={result.Failures.Count}, elapsed={watch.Elapsed.TotalMilliseconds:F1} ms");
+        var after = CatchStreamConverter.Convert(doc); Valid(after);
+        Compare(before.Objects, after.Objects, CatchStreamConverter.AlignmentTolerance);
+        var tracks = result.Tracks.ToDictionary(t => t.Id);
+        double maximum = after.Objects.Where(o => tracks.ContainsKey(o.SourceId))
+            .Select(o => Math.Abs(o.X - CurveMath.PositionAtTime(tracks[o.SourceId], o.TimeMs))).DefaultIfEmpty().Max();
+        True(maximum <= CatchStreamConverter.AlignmentTolerance, "Preserved map contains off-path objects.");
+        var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(doc));
+        Compare(after.Objects, CatchStreamConverter.Convert(restored).Objects, CatchStreamConverter.AlignmentTolerance);
+        var exported = OsuBeatmapWriter.Serialize(doc);
+        True(exported.ObjectSequenceMatches, "Preserved map lost exported events.");
+        Console.WriteLine($"Objects={after.Objects.Count}, maximum path error={maximum:R}; project round trip and osu export passed.");
+        Console.WriteLine($"Export read-back: maximum X error={exported.MaxConvertedXError:R}, maximum time error={exported.MaxConvertedTimeErrorMs:R} ms");
+        foreach (var failure in result.Failures.Take(8)) Console.WriteLine($"Retained {failure.TimeMs:F3}: {failure.Reason}");
+        return 0;
+    }
+
     public static void MixedSegments()
     {
         var track = Mixed();
@@ -121,6 +145,16 @@ internal static class EditableSliderTests
             doc.BananaShowers.Add(new() { TimeMs = 0, EndTimeMs = 50, SourceOrder = 1 });
             var before = CatchStreamConverter.Convert(doc);
             Valid(before);
+            var randomCopy = doc.DeepClone();
+            var randomTrack = ImportedSliderEditing.ConvertToTrack(randomCopy, slider.Id, derandomizeDroplets: false).Track;
+            True(randomTrack.CompensateTinyDroplets == true, "Preserved positions require compensated FSlider geometry.");
+            var randomObjects = CatchStreamConverter.Convert(randomCopy); Valid(randomObjects);
+            Compare(before.Objects, randomObjects.Objects, CatchStreamConverter.AlignmentTolerance);
+            True(randomObjects.Objects.Where(o => o.SourceId == slider.Id).All(o => Math.Abs(o.X - CurveMath.PositionAtTime(randomTrack, o.TimeMs)) <= CatchStreamConverter.AlignmentTolerance), "Preserved random droplets left the FSlider path.");
+            var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(randomCopy));
+            Compare(randomObjects.Objects, CatchStreamConverter.Convert(restored).Objects, CatchStreamConverter.AlignmentTolerance);
+            var exportCopy = randomCopy.DeepClone(); exportCopy.Tracks.Single().OriginalLine = null;
+            True(OsuBeatmapWriter.Serialize(exportCopy).ObjectSequenceMatches, "Preserved random conversion could not be exported.");
             var converted = ImportedSliderEditing.ConvertToTrack(doc, slider.Id);
             True(doc.ImportedSliders.Count == 0 && doc.Tracks.Single() == converted.Track, "Editable replacement was not atomic.");
             True(converted.Track.Id == slider.Id && converted.Track.SourceOrder == slider.SourceOrder
@@ -138,6 +172,37 @@ internal static class EditableSliderTests
             True(CurveMath.TryMoveAnchor(converted.Track, anchor.Id, anchor.TimeMs, anchor.X - 5, out string error), error);
             Valid(CatchStreamConverter.Convert(doc));
         }
+        var random = new MapDocument { SliderMultiplier = 1.4, SliderTickRate = 1 };
+        var source = new ImportedSlider { TimeMs = 1000, X = 100, Y = 100, PathType = 'L', PixelLength = 200, SpanCount = 3 };
+        source.ControlPoints.AddRange([new(100, 100), new(300, 100)]);
+        random.ImportedSliders.Add(source);
+        var original = CatchStreamConverter.Convert(random);
+        Valid(original);
+        var unchanged = random.DeepClone();
+        var retained = ImportedSliderEditing.ConvertAll(random, derandomizeDroplets: false);
+        True(retained.Tracks.Count == 0 && retained.Failures.Count == 1 && random.ContentEquals(unchanged), "Conflicting repeats must retain the source instead of creating off-path droplets.");
+        var output = CatchStreamConverter.Convert(random);
+        Valid(output);
+        Compare(original.Objects, output.Objects, CatchStreamConverter.AlignmentTolerance);
+
+        var shortRepeat = new ImportedSlider { TimeMs = 5000.333, X = 0, Y = 100, PathType = 'L', PixelLength = 10, SpanCount = 2 };
+        shortRepeat.ControlPoints.AddRange([new(0, 100), new(10, 100)]);
+        random.ImportedSliders.Add(shortRepeat);
+        var fractional = new ImportedSlider { TimeMs = 6000.333, X = 0, Y = 100, PathType = 'B', PixelLength = 300 };
+        fractional.ControlPoints.AddRange([new(0, 100), new(100, 180), new(300, 100)]);
+        random.ImportedSliders.Add(fractional);
+        original = CatchStreamConverter.Convert(random); Valid(original);
+        unchanged = random.DeepClone();
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        try { ImportedSliderEditing.ConvertAll(random, cancelled.Token, false); throw new Exception("Cancellation was ignored."); }
+        catch (OperationCanceledException) { }
+        True(random.ContentEquals(unchanged), "Cancelled preservation changed source content.");
+        retained = ImportedSliderEditing.ConvertAll(random, derandomizeDroplets: false);
+        True(retained.Tracks.Count == 2 && retained.Failures.Count == 1, "One conflicting repeat blocked compatible sliders.");
+        output = CatchStreamConverter.Convert(random); Valid(output);
+        Compare(original.Objects, output.Objects, CatchStreamConverter.AlignmentTolerance);
+        True(output.Objects.Where(o => o.SourceId != source.Id).All(o => Math.Abs(o.X - o.TargetX) <= CatchStreamConverter.AlignmentTolerance),
+            "Fractional or boundary events left the target path.");
     }
 
     public static void ConversionHistoryAndFailure()
@@ -231,7 +296,7 @@ internal static class EditableSliderTests
             True(before[i].SourceId == after[i].SourceId && before[i].EventIndex == after[i].EventIndex && before[i].Kind == after[i].Kind,
                 "Imported edit changed source order, event identity or kind.");
             Near(before[i].TimeMs, after[i].TimeMs, 0.000001); Near(before[i].X, after[i].X, xTolerance);
-            Near(before[i].RandomOffset, after[i].RandomOffset);
+
         }
     }
 

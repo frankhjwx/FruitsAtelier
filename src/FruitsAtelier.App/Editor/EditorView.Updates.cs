@@ -34,10 +34,11 @@ public sealed partial class EditorView
 
     private void DrawUpdates(ICanvas c, float x = 32, bool embedded = false)
     {
-        c.Text(L.Get("update.title"), x, 96, 22, Foreground, width - x - 32, true);
-        c.Text(L.Get("update.currentVersion", DisplayVersion), x, 144, 15, Muted, width - x - 32);
+        float textSize = embedded ? SettingsTextSize : 15;
+        if (!embedded) c.Text(L.Get("update.title"), x, 96, 22, Foreground, width - x - 32, true);
+        c.Text(L.Get("update.currentVersion", DisplayVersion), x, 144, textSize, Muted, width - x - 32);
         Button(c, new(x, 186, 340, 36), L.Get(AutomaticUpdateChecks ? "update.automaticOn" : "update.automaticOff"), () =>
-        { AutomaticUpdateChecks = !AutomaticUpdateChecks; RequestUpdatePreference?.Invoke(); }, AutomaticUpdateChecks);
+        { AutomaticUpdateChecks = !AutomaticUpdateChecks; RequestUpdatePreference?.Invoke(); }, AutomaticUpdateChecks, fontSize: embedded ? SettingsTextSize : 12, bold: embedded ? false : null);
         string key = UpdateStatus.Phase switch
         {
             UpdatePhase.Unsupported => "update.unsupported", UpdatePhase.Checking => "update.checking",
@@ -45,18 +46,18 @@ public sealed partial class EditorView
             UpdatePhase.Downloading => "update.downloading", UpdatePhase.Ready => "update.ready",
             UpdatePhase.Failed => "update.failed", _ => "update.help"
         };
-        c.Text(L.Get(key, UpdateStatus.Version, UpdateStatus.Progress), x, 246, 15, Foreground, width - x - 32);
+        c.Text(L.Get(key, UpdateStatus.Version, UpdateStatus.Progress), x, 246, textSize, Foreground, width - x - 32);
         var phase = UpdateStatus.Phase;
         Button(c, new(x, 296, 210, 38), L.Get("update.check"), () => RequestUpdateCheck?.Invoke(), active: true,
-            enabled: phase is not (UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Unsupported));
+            enabled: phase is not (UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Unsupported), fontSize: embedded ? SettingsTextSize : 12, bold: embedded ? false : null);
         if (phase is UpdatePhase.Available or UpdatePhase.Ready)
             Button(c, new(x + 222, 296, 320, 38), L.Get(phase == UpdatePhase.Ready ? "update.restart" : "update.download"), () =>
         {
             if (phase == UpdatePhase.Ready) RequestUpdateRestart?.Invoke();
             else RequestUpdateDownload?.Invoke();
-        }, active: true);
-        Button(c, new(x, 350, 220, 38), L.Get("update.notes"), () => RequestUpdateNotes?.Invoke());
-        c.Text(L.Get("update.saveHelp"), x, 410, 14, Muted, width - x - 32);
+        }, active: true, fontSize: embedded ? SettingsTextSize : 12, bold: embedded ? false : null);
+        Button(c, new(x, 350, 220, 38), L.Get("update.notes"), () => RequestUpdateNotes?.Invoke(), fontSize: embedded ? SettingsTextSize : 12);
+        c.Text(L.Get("update.saveHelp"), x, 410, embedded ? SettingsTextSize : 14, Muted, width - x - 32);
         if (!embedded) Button(c, new(x, 466, 200, 36), L.Get(LibraryVisible ? "update.back" : "library.editor"), () => updatesPage = false);
     }
 }

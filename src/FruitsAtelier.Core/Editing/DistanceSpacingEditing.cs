@@ -19,14 +19,70 @@ public static class DistanceSpacingEditing
         ApplyPosition(document, target, reference, x, compensateTinyDroplets);
     }
 
-    public static void ApplyX(MapDocument document, ConvertedCatchObject target, double x, bool compensateTinyDroplets)
+    public static void ApplyX(MapDocument document, ConvertedCatchObject target, double x, bool compensateTinyDroplets, CatchConversionCache? cache = null)
     {
         if (!double.IsFinite(x)) throw new ArgumentException(L.Get("editor.error.finiteNumberRequired"));
-        ApplyPosition(document, target, null, Math.Clamp(x, 0, 512), compensateTinyDroplets);
+        ApplyPosition(document, target, null, Math.Clamp(x, 0, 512), compensateTinyDroplets, cache);
+    }
+
+    // Isolate a drag between its adjacent converted events; existing handles need not keep those events fixed.
+    public static void ApplyIsolatedX(MapDocument document, ConvertedCatchObject target, double x, bool compensateTinyDroplets, CatchConversionCache? cache = null)
+    {
+        if (!double.IsFinite(x)) throw new ArgumentException(L.Get("editor.error.finiteNumberRequired"));
+        x = Math.Clamp(x, 0, 512);
+        if (Math.Abs(x - target.X) < .00001) return;
+        if (target.Kind is not (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet))
+            throw new ArgumentException(L.Get("distance.unsupported"));
+
+        var track = document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
+            ?? throw new ArgumentException(L.Get("distance.unsupported"));
+        var before = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache);
+        if (!before.Success) throw new ArgumentException(L.Get("coordinate.unreachable"));
+        var siblings = before.Objects.Where(o => o.SourceId == target.SourceId).ToArray();
+        var selected = siblings.FirstOrDefault(o => o.EventIndex == target.EventIndex);
+        if (selected is null) throw new ArgumentException(L.Get("coordinate.unreachable"));
+        var slider = before.Sliders.Single(s => s.SourceId == track.Id);
+        double start = track.Nodes[0].TimeMs, duration = track.Nodes[^1].TimeMs - start;
+        var nested = LegacyCatchRules.CreateNested(start, duration, slider.Velocity,
+            slider.TickDistance, slider.Length, track.SpanCount);
+        // Uncompensated tiny droplets sample path progress, which differs from their rounded event time.
+        double SampleTime(ConvertedCatchObject item) => item.Kind == CatchObjectKind.TinyDroplet && !slider.TinyCompensationApplied
+            ? start + nested[item.EventIndex].Progress * duration
+            : CurveMath.FirstSpanTime(track, item.TimeMs);
+        double time = SampleTime(selected);
+        var times = siblings.Select(SampleTime)
+            .Distinct().OrderBy(t => t).ToArray();
+        double? previous = times.Where(t => t < time - CurveMath.MinimumAnchorSpacingMs).Select(t => (double?)t).LastOrDefault();
+        double? next = times.Where(t => t > time + CurveMath.MinimumAnchorSpacingMs).Select(t => (double?)t).FirstOrDefault();
+        if (previous is null || next is null)
+            throw new ArgumentException(L.Get("coordinate.unreachable"));
+
+        var left = AnchorAt(track, previous.Value);
+        var right = AnchorAt(track, next.Value);
+        var anchor = AnchorAt(track, time);
+        track.Nodes.RemoveAll(n => n != anchor && n.TimeMs > left.TimeMs && n.TimeMs < right.TimeMs);
+        int index = track.Nodes.IndexOf(anchor);
+        if (index <= 0 || index >= track.Nodes.Count - 1 || track.Nodes[index - 1] != left || track.Nodes[index + 1] != right)
+            throw new ArgumentException(L.Get("coordinate.unreachable"));
+        left.OutgoingCurve = null; left.OutgoingKind = CurveKind.Linear; left.HandleOut = default;
+        anchor.HandleIn = default; anchor.OutgoingCurve = null; anchor.OutgoingKind = CurveKind.Linear; anchor.HandleOut = default;
+        right.HandleIn = default;
+        double pathX = selected.Kind == CatchObjectKind.TinyDroplet && !slider.TinyCompensationApplied
+            ? x - selected.RandomOffset : x;
+        if (pathX is < 0 or > 512 || !CurveMath.TryMoveAnchor(track, anchor.Id, time, pathX, out _))
+            throw new ArgumentException(L.Get("coordinate.unreachable"));
+
+        var after = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache);
+        if (!after.Success) throw new ArgumentException(L.Get("coordinate.unreachable"));
+        var updated = after.Objects.Where(o => o.SourceId == target.SourceId).ToDictionary(o => o.EventIndex);
+        if (updated.Count != siblings.Length || siblings.Any(o => !updated.TryGetValue(o.EventIndex, out var current)
+            || current.Kind != o.Kind || Math.Abs(current.TimeMs - o.TimeMs) > .001
+            || Math.Abs(current.X - (o.EventIndex == target.EventIndex ? x : o.X)) > .001))
+            throw new ArgumentException(L.Get("coordinate.unreachable"));
     }
 
     private static void ApplyPosition(MapDocument document, ConvertedCatchObject target, ConvertedCatchObject? reference,
-        double x, bool compensateTinyDroplets)
+        double x, bool compensateTinyDroplets, CatchConversionCache? cache = null)
     {
         if (Math.Abs(x - target.X) < .00001) return;
         if (document.Fruits.FirstOrDefault(f => f.Id == target.SourceId) is { } fruit)
@@ -34,7 +90,7 @@ public static class DistanceSpacingEditing
             fruit.X = x;
             return;
         }
-        if (target.Kind is not (CatchObjectKind.Fruit or CatchObjectKind.Droplet))
+        if (target.Kind is not (CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet))
             throw new ArgumentException(L.Get("distance.unsupported"));
         var track = document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
             ?? ImportedSliderEditing.ConvertToTrack(document, target.SourceId).Track;
@@ -49,9 +105,13 @@ public static class DistanceSpacingEditing
                 throw new ArgumentException(error);
         }
         var anchor = AnchorAt(track, time);
-        if (!CurveMath.TryMoveAnchor(track, anchor.Id, anchor.TimeMs, x, out string failure))
+        // Compensated tiny droplets follow the authored curve; uncompensated ones retain their random offset.
+        double pathX = target.Kind == CatchObjectKind.TinyDroplet && Math.Abs(target.X - target.TargetX) > .001
+            ? x - target.RandomOffset : x;
+        if (pathX is < 0 or > 512) throw new ArgumentException(L.Get("distance.outside"));
+        if (!CurveMath.TryMoveAnchor(track, anchor.Id, anchor.TimeMs, pathX, out string failure))
             throw new ArgumentException(failure);
-        var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets);
+        var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache);
         var moved = converted.Objects.FirstOrDefault(o => o.SourceId == target.SourceId && o.Kind == target.Kind && Math.Abs(o.TimeMs - target.TimeMs) < .001);
         var fixedObject = reference is null ? null : converted.Objects.FirstOrDefault(o => o.SourceId == reference.SourceId && o.Kind == reference.Kind && Math.Abs(o.TimeMs - reference.TimeMs) < .001);
         if (!converted.Success || moved is null || Math.Abs(moved.X - x) > .001

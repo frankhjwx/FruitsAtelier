@@ -18,9 +18,9 @@ internal static class ToolPaletteTests
             Check(GlowAt(ui, previous.X, previous.Y, .7f), "Previous fruit did not acquire a placement hyperdash.");
             Check(GlowAt(ui, ghost.X, ghost.Y, .42f), "Placement ghost did not show its outgoing hyperdash.");
             ui.MoveMap(1125, 0);
-            Check(!ui.Canvas.Circles.Any(c => c.Color == 0xFF3030), "Hover movement retained a stale hyperdash.");
+            Check(!ui.Canvas.Circles.Any(c => c.Color == 0xFF0000), "Hover movement retained a stale hyperdash.");
             ui.MoveMap(1125, 512); ui.Key('1');
-            Check(!ui.Canvas.Circles.Any(c => c.Color == 0xFF3030), "Leaving placement retained a phantom hyperdash.");
+            Check(!ui.Canvas.Circles.Any(c => c.Color == 0xFF0000), "Leaving placement retained a phantom hyperdash.");
             Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Hover changed content or history.");
         }
         foreach (var mode in Enum.GetValues<SliderEditingMode>())
@@ -40,7 +40,7 @@ internal static class ToolPaletteTests
     }
 
     private static bool GlowAt(Ui ui, float x, float y, float opacity) => ui.Canvas.Circles.Any(c =>
-        c.Color == 0xFF3030 && Math.Abs(c.X - x) < 1 && Math.Abs(c.Y - y) < 1 && Math.Abs(c.Opacity - opacity) < .001);
+        c.Color == 0xFF0000 && Math.Abs(c.X - x) < 1 && Math.Abs(c.Y - y) < 1 && Math.Abs(c.Opacity - opacity) < .001);
 
     public static void PaletteAndGhost()
     {
@@ -75,6 +75,7 @@ internal static class ToolPaletteTests
         var ui = Empty(); ui.Key('F');
         Right(ui, 1234, 230);
         Check(ui.View.NextFruitNewCombo && !ui.View.IsDirty, "Arming New combo modified the document.");
+        Check(ui.Canvas.Texts.Any(t => t.Value == "NC" && t.Color == 0xF2C66D), "New Combo placement preview did not show NC.");
         ui.ClickMap(1234, 230);
         var fruit = ui.View.Document.Fruits.Single(); Near(1250, fruit.TimeMs);
         Check(!ui.View.NextFruitNewCombo && Combo(fruit), "Placed fruit lost its New combo flag.");
@@ -91,6 +92,55 @@ internal static class ToolPaletteTests
         ui.View.UpdateTransport(1250, 12000, true, true, false, null, "fixture.wav"); ui.Paint();
         Right(ui, 1250, 230);
         Check(ui.View.NextFruitNewCombo && ui.View.Document.Fruits.Count == 2, "Playing right-click should arm a combo without deleting.");
+    }
+
+    public static void ComboLabels()
+    {
+        var map = new MapDocument { DurationMs = 12000 };
+        var left = new Fruit { TimeMs = 1000, X = 0 };
+        var right = new Fruit { TimeMs = 1000, X = 512 };
+        map.Fruits.AddRange([left, right, new Fruit { TimeMs = 1250, X = 256 }]);
+        ObjectFlags.SetNewCombo(map, left.Id, true);
+        ObjectFlags.SetNewCombo(map, right.Id, true);
+        var ui = new Ui(); ui.LoadDocument(map);
+        var plot = ui.View.CanvasPlotBounds;
+        ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, 120000, true);
+        ui.View.UpdateTransport(1000, 12000, true, true, false, null, null);
+        ui.View.UpdateTransport(1000, 12000, true, true, false, null, null);
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            FruitsAtelier.Localization.Strings.SetLanguage(language); ui.Paint();
+            var labels = ui.Canvas.Texts.Where(t => t.Value == "NC" && t.Color == 0xF2C66D).OrderBy(t => t.X).ToArray();
+            Check(labels.Length == 2, "Canvas must label only New Combo fruits with NC in every language.");
+            float middle = ui.View.PlayfieldBounds.X + ui.View.PlayfieldBounds.Width / 2;
+            Check(labels[0].X >= plot.X && labels[0].X < middle
+                && labels[1].X > middle && labels[1].X < plot.Right,
+                "NC labels were not placed beside their fruits inside the canvas.");
+        }
+        FruitsAtelier.Localization.Strings.SetLanguage("en");
+
+        ui.Key('1'); ui.ClickFruit(map.Fruits[2].Id);
+        var conversion = ui.View.Conversion;
+        ui.Key('Q');
+        Check(ReferenceEquals(conversion, ui.View.Conversion), "Toggling New Combo rebuilt the catch object stream.");
+        Check(ui.Canvas.Texts.Count(t => t.Value == "NC" && t.Color == 0xF2C66D) == 3,
+            "Toggling New Combo did not show NC immediately.");
+        ui.Key('Q');
+        Check(ReferenceEquals(conversion, ui.View.Conversion)
+            && ui.Canvas.Texts.Count(t => t.Value == "NC" && t.Color == 0xF2C66D) == 2,
+            "Removing New Combo rebuilt the stream or retained NC.");
+        ui.Key('Z', ctrl: true);
+        Check(ui.Canvas.Texts.Count(t => t.Value == "NC" && t.Color == 0xF2C66D) == 3,
+            "Undo did not restore the NC label.");
+
+        var slider = new ImportedSlider { TimeMs = 1000, X = 256, Y = 192, PathType = 'L', PixelLength = 200 };
+        slider.ControlPoints.Add(new(256, 192)); slider.ControlPoints.Add(new(400, 192));
+        var sliderMap = new MapDocument { DurationMs = 12000 };
+        sliderMap.ImportedSliders.Add(slider);
+        ObjectFlags.SetNewCombo(sliderMap, slider.Id, true);
+        ui.LoadDocument(sliderMap);
+        Check(ui.Canvas.Texts.Count(t => t.Value == "NC" && t.Color == 0xF2C66D) == 1,
+            "Slider New Combo must label its head with NC once.");
     }
 
     public static void DraftRemovalAndStraight()
@@ -138,6 +188,7 @@ internal static class ToolPaletteTests
             ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.SelectTrack(track.Id);
             var original = ui.View.Document.DeepClone();
             double bodyX = CurveMath.PositionAtTime(track, 2000);
+            ui.ClickMap(800, 400);
             ui.DownMap(2000, bodyX); ui.MoveMap(2125, bodyX + 20); ui.UpMap(2125, bodyX + 20);
             for (int i = 0; i < 3; i++)
             {

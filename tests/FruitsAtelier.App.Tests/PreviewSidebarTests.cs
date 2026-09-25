@@ -181,6 +181,8 @@ internal static class PreviewSidebarTests
         ui.View.PointerMove(button.Right - 10, button.Y + 15, false, false); ui.Paint();
         Check(ui.View.LegacyConversionBounds == button, "button stays reachable while moving into it");
         ui.Click(button.Right - 10, button.Y + 15);
+        Check(ui.View.SliderImportPromptVisible, "First conversion did not offer droplet options");
+        ui.ClickText(FruitsAtelier.Localization.Strings.Get("sliderBatch.convert"));
         Check(ui.View.Document.ImportedSliders.Count == 0 && ui.View.Document.Tracks.Count == 1, "button converts slider");
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.ContentEquals(map), "conversion undo restores source");

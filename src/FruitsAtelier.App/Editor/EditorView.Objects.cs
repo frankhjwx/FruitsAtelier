@@ -16,7 +16,7 @@ public sealed partial class EditorView
         diameter *= visual.Scale;
         uint colour = ObjectColour(item);
         bool hyper = (hyperStarts ?? hyperdashObjects).Contains((item.SourceId, item.EventIndex));
-        uint hyperColour = skin?.HyperDashFruitColour ?? 0xFF3030;
+        uint hyperColour = HyperDashFruitColour;
         var kind = SkinObjectKind(item.Kind);
         if (skin is not null)
         {
@@ -168,6 +168,7 @@ public sealed partial class EditorView
     {
         if (notesLocked) return;
         if (objectSelection.Count == 0) return;
+        if (SelectedDistanceObject() is { IsStandalone: false }) { distanceObject = null; soundEdge = null; }
         bool movesOneFruit = objectSelection.Count == 1 && Document.Fruits.Any(item => objectSelection.Contains(item.Id));
         history.Begin(L.Get(movesOneFruit ? "editor.command.moveFruit" : "editor.command.moveObjects"));
         objectDragStart = Document.DeepClone();
@@ -189,7 +190,7 @@ public sealed partial class EditorView
             try
             {
                 foreach (Guid id in objectSelection.Where(id => !objectDragTimeline && Document.ImportedSliders.Any(slider => slider.Id == id)).ToArray())
-                    ImportedSliderEditing.ConvertToTrack(Document, id);
+                    ConvertImportedSlider(id);
                 objectDragStart = Document.DeepClone();
                 dragFruits = Document.Fruits.ToDictionary(item => item.Id);
                 dragTracks = Document.Tracks.ToDictionary(item => item.Id);
@@ -242,7 +243,7 @@ public sealed partial class EditorView
             IncludeTime(ImportedSliderConverter.EndTimeMs(objectDragStart, slider));
         }
 
-        if (snap && double.IsFinite(minTime))
+        if (snap && double.IsFinite(minTime) && Math.Abs(deltaTime) > .001)
             deltaTime = TimingMap.Snap(Document, minTime + deltaTime, divisor) - minTime;
         if (double.IsFinite(minTime)) deltaTime = Math.Clamp(deltaTime, -minTime, EditableDurationMs - maxTime);
         else deltaTime = 0;

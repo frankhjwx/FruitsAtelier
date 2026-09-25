@@ -6,6 +6,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private Action<int>? discardConfirmation;
+    private bool deleteProjectConfirmation;
     private bool offerSongsExport;
     private IReadOnlyList<FruitsAtelier.Core.LibraryMap>? additionalDifficulties;
     public bool DiscardConfirmationVisible => discardConfirmation is not null;
@@ -20,10 +21,17 @@ public sealed partial class EditorView
         hits.Clear(); fields.Clear();
     }
 
+    public void ShowDeleteProjectConfirmation(Action<bool> answer)
+    {
+        ShowDiscardConfirmation(value => answer(value == 7));
+        deleteProjectConfirmation = true;
+    }
+
     private void AnswerDiscard(int answer)
     {
         var callback = discardConfirmation;
         discardConfirmation = null;
+        deleteProjectConfirmation = false;
         offerSongsExport = false;
         additionalDifficulties = null;
         hits.Clear();
@@ -34,6 +42,16 @@ public sealed partial class EditorView
     {
         if (!DiscardConfirmationVisible) return;
         hits.Clear(); fields.Clear();
+        if (deleteProjectConfirmation)
+        {
+            float left = (width - 500) / 2, top = (height - 160) / 2;
+            c.Fill(new(left, top, 500, 160), Panel, 8);
+            c.Stroke(new(left, top, 500, 160), Accent, 2, 8);
+            c.Text(L.Get("library.deleteProjectConfirm"), left + 24, top + 28, 20, Foreground, 452, true);
+            Button(c, new(left + 24, top + 96, 210, 40), L.Get("mac.cancel"), () => AnswerDiscard(2), true);
+            Button(c, new(left + 266, top + 96, 210, 40), L.Get("library.deleteProject"), () => AnswerDiscard(7));
+            return;
+        }
         if (offerSongsExport)
         {
             float left = (width - 600) / 2, top = (height - 210) / 2;

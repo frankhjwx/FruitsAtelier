@@ -1,8 +1,108 @@
 using FruitsAtelier.Core;
+using System.IO.Compression;
+using System.Text;
 namespace FruitsAtelier.App.Platform;
 
 public static class LibraryOperations
 {
+    public static void ExportOsz(BeatmapProject project, string destination, bool compensate)
+    {
+        // macOS's default /var temp path traverses a symlink rejected by resource copying.
+        string temporaryRoot = OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath();
+        string staging = Path.Combine(temporaryRoot, "FruitsAtelier-osz-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(staging);
+        try
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var difficulty in project.Difficulties)
+            {
+                var document = StandaloneExportDocument(difficulty, difficulty.Name);
+                var output = OsuBeatmapWriter.Serialize(document, compensate);
+                string name = WorkspaceProject.DifficultyFileName(document, difficulty.Name, ".osu");
+                if (!names.Add(name)) throw new IOException(FruitsAtelier.Localization.Strings.Get("library.exportExists", name));
+                BeatmapResources.Copy(document, staging, output.ReadBack);
+                CopyArchiveExtras(document, staging);
+                File.WriteAllText(Path.Combine(staging, name), output.Text, new UTF8Encoding(false));
+            }
+            long total = 0;
+            int count = 0;
+            foreach (string file in Directory.EnumerateFiles(staging, "*", SearchOption.AllDirectories))
+            {
+                if (++count > 20000) throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("archive.fileCount"));
+                long size = new FileInfo(file).Length;
+                long maximum = Path.GetExtension(file).Equals(".osu", StringComparison.OrdinalIgnoreCase)
+                    ? 16L * 1024 * 1024 : 256L * 1024 * 1024;
+                if (size > maximum || (total += size) > 512L * 1024 * 1024)
+                    throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("archive.expansionLimit"));
+            }
+            string temporary = destination + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                ZipFile.CreateFromDirectory(staging, temporary, CompressionLevel.Optimal, false);
+                File.Move(temporary, destination, true);
+            }
+            finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        }
+        finally { Directory.Delete(staging, true); }
+    }
+
+    private static void CopyArchiveExtras(MapDocument document, string staging)
+    {
+        if (document.SourcePath is not { } source) return;
+        string root = Path.GetDirectoryName(Path.GetFullPath(source))!;
+        if (!Directory.Exists(root)) return;
+        var extensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { ".osb", ".mp4", ".avi", ".mkv", ".webm", ".mov", ".flv", ".mpg", ".mpeg" };
+        var options = new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint };
+        foreach (string file in Directory.EnumerateFiles(root, "*", options))
+        {
+            if (!extensions.Contains(Path.GetExtension(file))) continue;
+            string relative = BeatmapArchive.ValidateRelativePath(Path.GetRelativePath(root, file));
+            string target = BeatmapArchive.Within(staging, relative);
+            if (File.Exists(target))
+            {
+                if (WorkspaceProject.Hash(file) != WorkspaceProject.Hash(target))
+                    throw new IOException(FruitsAtelier.Localization.Strings.Get("resource.conflict", target));
+                continue;
+            }
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(file, target);
+        }
+    }
+
+    public static BeatmapProject ExportProject(LibraryMap map)
+    {
+        if (map.ProjectPath is { } project) return WorkspaceProject.Open(project).Project;
+        var documents = Directory.EnumerateFiles(map.Directory, "*.osu")
+            .Where(path =>
+            {
+                bool general = false;
+                foreach (string line in File.ReadLines(path))
+                {
+                    string value = line.Trim();
+                    if (value.StartsWith('[')) general = value == "[General]";
+                    else if (general && value.Split(':', 2) is [var key, var setting] && key.Trim() == "Mode")
+                        return setting.Trim() == "2";
+                }
+                return false;
+            })
+            .Select(OsuBeatmapReader.ReadFile).ToArray();
+        if (documents.Length == 0) throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("project.noCatch"));
+        return BeatmapProject.FromDocuments(documents);
+    }
+
+    public static void DeleteProject(string projectPath, LibrarySettings settings)
+    {
+        string projects = settings.Workspace;
+        string project = Path.GetFullPath(projectPath);
+        if (!WorkspaceProject.Within(projects, project) || project == Path.GetFullPath(projects))
+            throw new IOException(FruitsAtelier.Localization.Strings.Get("library.deleteUnavailable"));
+        WorkspaceProject.RejectLinks(project);
+        var manifest = WorkspaceProject.ReadManifest(project);
+        if (WorkspaceProject.HasExistingSongsFile(manifest, settings.Songs))
+            throw new IOException(FruitsAtelier.Localization.Strings.Get("library.deleteUnavailable"));
+        Directory.Delete(project, true);
+    }
     public static void OpenExternalPath(string path)
     {
         if (Directory.Exists(path))

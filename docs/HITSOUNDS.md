@@ -20,7 +20,7 @@ The right toolbar edits Whistle, Finish and Clap flags for fruits and slider edg
 
 `HitsoundResolver` reads the object's preserved `.osu` line, including FSliders converted
 from imported sliders. Timing points provide the sample bank, custom index, and volume;
-nonzero circle sample values override them. Fruit and slider-edge sample lookup includes the legacy 5 ms tolerance around timing boundaries. Droplets inherit the slider body's sample bank, index and volume at its start plus 6 ms; later timing points do not change those tick samples. These tolerances select samples only and do not shift object playback times. Legacy slider hitSample fields supply banks;
+nonzero circle sample values override them. Fruit, slider-edge, and droplet sample lookup includes the legacy 5 ms tolerance around timing boundaries. Each droplet uses the sample bank, index, and volume at its own time, so a timing point within a slider can change its tick sample. This tolerance selects samples only and does not shift object playback times. Legacy slider hitSample fields supply banks;
 their index and volume follow timing. Normal, soft, and drum banks are supported. Addition
 bank zero follows the normal bank. Slider edge settings select samples independently for
 the head, repeats, and tail. An explicit custom filename replaces the normal layer

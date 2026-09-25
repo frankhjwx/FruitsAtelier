@@ -3,6 +3,92 @@ using L = FruitsAtelier.Localization.Strings;
 
 static class SettingsTests
 {
+    public static void IndicatorColours()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts", "tests", "indicator-settings-" + Guid.NewGuid()));
+        try
+        {
+            var ui = new Ui(false);
+            ui.View.LibrarySettings.Workspace = root;
+            var map = new MapDocument { DurationMs = 10000, CircleSize = 5, IsDemo = false };
+            foreach (var (time, x) in new[] { (1000, 100), (1125, 120), (1250, 220), (1375, 370), (1500, 70) })
+                map.Fruits.Add(new Fruit { TimeMs = time, X = x });
+            ui.LoadDocument(map);
+            var original = ui.View.Document.DeepClone();
+            ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.appearance"));
+            Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.indicatorColours")), "Appearance omitted indicator colours.");
+            string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
+            string[] hexes = ["#112233", "#445566", "#778899", "#AABBCC"];
+            string originalStand = $"#{ui.View.LibrarySettings.StandIndicatorColour:X6}";
+            ui.ClickText(L.Get(names[0]));
+            var cancelHex = ui.Canvas.Texts.Last(t => t.Value == L.Get("settings.indicatorHex"));
+            Check(ui.Canvas.Fills.Any(f => f.Color == ui.View.LibrarySettings.StandIndicatorColour
+                && Math.Abs(f.Bounds.X - (cancelHex.X - 48)) < .1f
+                && Math.Abs(f.Bounds.Y - (cancelHex.Y + 20)) < .1f),
+                "Selected-colour preview was not beside the HEX field.");
+            ui.Click(cancelHex.X + 400, cancelHex.Y - 262);
+            Check(ui.Canvas.Texts.Last(t => t.Value.StartsWith('#')).Value != originalStand,
+                "Colour picker did not update its draft before Cancel.");
+            ui.ClickText(L.Get("settings.indicatorCancel"));
+            ui.ClickText(L.Get(names[0]));
+            Check(ui.Canvas.Texts.Last(t => t.Value.StartsWith('#')).Value == originalStand,
+                "Cancel did not restore the colour from before the picker opened.");
+            ui.Key(27);
+            for (int i = 0; i < names.Length; i++)
+            {
+                ui.ClickText(L.Get(names[i]));
+                var hexLabel = ui.Canvas.Texts.Last(t => t.Value == L.Get("settings.indicatorHex"));
+                if (i == 0)
+                {
+                    string before = ui.Canvas.Texts.Last(t => t.Value.StartsWith('#')).Value;
+                    float paletteX = hexLabel.X + 400, paletteY = hexLabel.Y - 262;
+                    ui.View.PointerDown(paletteX, paletteY, 0, false, false);
+                    ui.View.PointerMove(paletteX - 100, paletteY + 100, false, false);
+                    ui.View.PointerUp(paletteX - 100, paletteY + 100, 0); ui.Paint();
+                    string afterPalette = ui.Canvas.Texts.Last(t => t.Value.StartsWith('#')).Value;
+                    Check(afterPalette != before,
+                        "Saturation/value drag did not update the indicator colour.");
+                    float hueY = hexLabel.Y - 31;
+                    ui.View.PointerDown(hexLabel.X + 10, hueY, 0, false, false);
+                    ui.View.PointerMove(hexLabel.X + 350, hueY, false, false);
+                    ui.View.PointerUp(hexLabel.X + 350, hueY, 0); ui.Paint();
+                    Check(ui.Canvas.Texts.Last(t => t.Value.StartsWith('#')).Value != afterPalette,
+                        "Hue drag did not update the indicator colour.");
+                }
+                ui.Click(hexLabel.X + 30, hexLabel.Y + 32);
+                ui.Key('A', ctrl: true); ui.Type(hexes[i]); ui.Key(13);
+            }
+            string path = Path.Combine(root, "settings.json");
+            ui.View.ApplySettings(path); ui.Paint();
+            var saved = LibrarySettings.Load(path);
+            Check(saved.StandIndicatorColour == 0x112233 && saved.WalkIndicatorColour == 0x445566
+                && saved.DashIndicatorColour == 0x778899 && saved.HyperDashIndicatorColour == 0xAABBCC,
+                "Appearance did not persist all four indicator colours.");
+            ui.ClickText(L.Get("library.editor"));
+            ui.ClickText(L.Get("movement.analysis"));
+            foreach (uint colour in new uint[] { 0x112233, 0x445566, 0x778899, 0xAABBCC })
+                Check(ui.Canvas.Lines.Any(l => l.Color == colour && l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001),
+                    $"Movement Analysis did not use custom indicator colour {colour:X6}.");
+            ui.View.OpenDistanceSnapDialog(); ui.Paint();
+            var reference = ui.View.DistanceSnapBaseTrackBounds;
+            foreach (uint colour in new uint[] { 0x112233, 0x445566, 0x778899, 0xAABBCC })
+                Check(ui.Canvas.Fills.Any(f => f.Color == colour && f.Bounds.Y == reference.Y + 3),
+                    $"Distance Snap reference did not use custom indicator colour {colour:X6}.");
+            ui.Key(27);
+            Check(original.ContentEquals(ui.View.Document), "Changing indicator colours edited the beatmap.");
+            ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.appearance"));
+            ui.ClickText(L.Get("settings.indicatorReset"));
+            ui.View.ApplySettings(path);
+            saved = LibrarySettings.Load(path);
+            Check(saved.StandIndicatorColour == LibrarySettings.DefaultStandIndicatorColour
+                && saved.WalkIndicatorColour == LibrarySettings.DefaultWalkIndicatorColour
+                && saved.DashIndicatorColour == LibrarySettings.DefaultDashIndicatorColour
+                && saved.HyperDashIndicatorColour == LibrarySettings.DefaultHyperDashIndicatorColour,
+                "Reset did not restore the four original indicator colours.");
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+    }
+
     public static void ApplyState()
     {
         string root = Path.GetFullPath(Path.Combine("artifacts", "tests", "settings-" + Guid.NewGuid()));
@@ -37,6 +123,12 @@ static class SettingsTests
                 Check(LibrarySettings.Load(path).PlaybackLineFromBottom == .6, "Apply preserves playback line height");
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.romanisedOff")) &&
                     ApplyColor() == disabled, "Apply stays in category and resets dirty state");
+                ui.ClickText(L.Get("settings.general"));
+                ui.ClickText(L.Get("settings.derandomizeOn"));
+                Check(ApplyColor() != disabled, "Droplet default change did not enable Apply");
+                ui.View.ApplySettings(path); ui.Paint();
+                Check(!LibrarySettings.Load(path).DerandomizeDroplets && ApplyColor() == disabled,
+                    "General droplet default did not persist");
                 ui.ClickText(L.Get("settings.testplay"));
                 ui.ClickText("Shift"); ui.Key(65);
                 Check(ApplyColor() != disabled, "Binding change enables Apply");

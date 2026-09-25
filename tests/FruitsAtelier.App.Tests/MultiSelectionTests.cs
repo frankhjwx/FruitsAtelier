@@ -22,6 +22,7 @@ internal static class MultiSelectionTests
         Click(ui, 5000, 340, ctrl: true); Anchors(ui, track.Nodes[4].Id);
         Click(ui, 2000, 220, ctrl: true); Anchors(ui, track.Nodes[1].Id);
         ui.Key('1'); Anchors(ui);
+        ui.ClickMap(500, 500);
         ui.DownMap(2500, 240); ui.MoveMap(2625, 260); ui.UpMap(2625, 260);
         Objects(ui, track.Id); Anchors(ui);
         Near(1125, ui.View.Document.Tracks.Single().Nodes[0].TimeMs);

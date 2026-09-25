@@ -10,7 +10,6 @@ public sealed class HitsoundResolver
     private readonly Dictionary<string, string> files = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> skinFiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly TimingPoint[] timing;
-    private readonly Dictionary<Guid, double> sliderStarts;
     private readonly int defaultSet;
     private readonly Dictionary<Guid, CurveTrack> streams;
     public HitsoundResolver(MapDocument document, IReadOnlyList<ConvertedCatchObject> objects, IEnumerable<string>? skinFolders = null)
@@ -25,8 +24,6 @@ public sealed class HitsoundResolver
             int index = 0;
             foreach (var item in group) edges[(item.SourceId, item.EventIndex)] = index++;
         }
-        sliderStarts = document.Tracks.Where(t => t.Nodes.Count > 0).Select(t => (t.Id, Time: t.Nodes[0].TimeMs))
-            .Concat(document.ImportedSliders.Select(s => (s.Id, Time: s.TimeMs))).ToDictionary(s => s.Id, s => s.Time);
         timing = document.TimingPoints.OrderBy(t => t.TimeMs).ThenBy(t => t.SourceOrder).ToArray();
         string? set = document.OriginalSections.Where(s => s.Name == "General").SelectMany(s => s.Lines)
             .Select(l => l.Split(':', 2)).Where(p => p.Length == 2 && p[0].Trim() == "SampleSet").Select(p => p[1].Trim()).LastOrDefault();
@@ -62,9 +59,8 @@ public sealed class HitsoundResolver
     {
         if (item.Kind == CatchObjectKind.TinyDroplet) return Array.Empty<Hitsound>();
         if (item.Kind == CatchObjectKind.Banana) return new[] { new Hitsound(item.Kind, HitsoundDefaults.Find(1, "catch-banana"), 1, "catch-banana") };
-        // Legacy edges allow 5 ms for rounding; ticks inherit the slider body's start sample (+6 ms).
-        double sampleTime = item.Kind == CatchObjectKind.Droplet && sliderStarts.TryGetValue(item.SourceId, out double start)
-            ? start + 6 : item.TimeMs + 5;
+        // Resolve each audible event at its own time with legacy 5 ms sample leniency.
+        double sampleTime = item.TimeMs + 5;
         int low = 0, high = timing.Length;
         while (low < high) { int mid = (low + high) / 2; if (timing[mid].TimeMs <= sampleTime) low = mid + 1; else high = mid; }
         var point = low > 0 ? timing[low - 1] : timing.FirstOrDefault(p => p.Uninherited) ?? timing.FirstOrDefault();

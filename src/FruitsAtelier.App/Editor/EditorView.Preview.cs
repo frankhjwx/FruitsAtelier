@@ -114,7 +114,7 @@ public sealed partial class EditorView
         var frame = previewAutoplay!.At(playhead);
         PreviewCatcherX = frame.X;
         float x = fieldLeft + (float)(frame.X / 512) * fieldWidth;
-        uint hyperColour = skin?.HyperDashColour ?? 0xFF0000;
+        uint hyperColour = HyperDashColour;
         // Sample map time, not render history, so pause, seek and playback speed produce identical trails.
         for (double at = Math.Max(0, Math.Ceiling((playhead - 800) / 16) * 16); at <= playhead; at += 16)
         {
@@ -134,12 +134,17 @@ public sealed partial class EditorView
     private float sliderHoldX, sliderHoldY;
     private double sliderHoldStart;
     private bool sliderHoldConsumed;
-    public bool SliderHoldNeedsRedraw => sliderHoldId != Guid.Empty;
+    private ConvertedCatchObject? noteHoldTarget;
+    public bool SliderHoldNeedsRedraw => sliderHoldId != Guid.Empty || noteHoldTarget is not null;
     private void BeginSliderHold(float x, float y, bool modified)
     {
         sliderHoldId = Guid.Empty;
+        noteHoldTarget = null;
         if (modified || notesLocked || draftTrack != Guid.Empty || draftBanana != Guid.Empty || tool is not (Tool.Select or Tool.Slider)) return;
-        Guid id = HitCatchObject(x, y)?.SourceId ?? (showTargets ? HitSliderLocation(x, y)?.Id : null) ?? Guid.Empty;
+        var hit = HitCatchObject(x, y);
+        noteHoldTarget = hit is { Kind: CatchObjectKind.Fruit } ? hit : null;
+        sliderHoldX = x; sliderHoldY = y; sliderHoldStart = TestplayRealtime;
+        Guid id = hit?.SourceId ?? (showTargets ? HitSliderLocation(x, y)?.Id : null) ?? Guid.Empty;
         if (!Document.Tracks.Any(t => t.Id == id) && !Document.ImportedSliders.Any(t => t.Id == id)) return;
         if (tool == Tool.Slider && SelectedTrack?.Id != id) return;
         sliderHoldId = id; sliderHoldX = x; sliderHoldY = y; sliderHoldStart = TestplayRealtime;
@@ -149,9 +154,23 @@ public sealed partial class EditorView
     {
         if (!SliderHoldNeedsRedraw) return;
         if (dragMoved || draftTrack != Guid.Empty || draftBanana != Guid.Empty)
-        { sliderHoldId = Guid.Empty; return; }
+        { sliderHoldId = Guid.Empty; noteHoldTarget = null; return; }
         double elapsed = TestplayRealtime - sliderHoldStart;
         if (elapsed < 300) return;
+        if (noteHoldTarget is { } note)
+        {
+            noteHoldTarget = null;
+            if (!note.IsStandalone)
+            {
+                history.Commit(); drag = DragKind.None;
+                tool = Tool.Select;
+                SelectObjects([note.SourceId], note.SourceId);
+                PickSoundEdge(note);
+                BeginSliderObjectDrag(note, sliderHoldX, sliderHoldY);
+            }
+            ShowNoteBeatPosition(note);
+        }
+        if (sliderHoldId == Guid.Empty) return;
         double progress = Math.Clamp((elapsed - 300) / 700, 0, 1);
         if (progress >= 1)
         {
@@ -194,7 +213,7 @@ public sealed partial class EditorView
         LegacyConversionBounds = imported ? new(r.X, r.Y, 224, 32) : default;
         StreamConversionBounds = new(r.X, imported ? r.Y + 36 : r.Y, r.Width, 32);
         c.Fill(r, Surface, 4);
-        if (imported) Button(c, LegacyConversionBounds, L.Get("preview.convertSlider"), EditImportedSlider);
+        if (imported) Button(c, LegacyConversionBounds, L.Get("preview.convertSlider"), () => EditImportedSlider(id));
         Button(c, StreamConversionBounds, L.Get(stream ? "stream.changeSnap" : "stream.apply"), () => { SelectObjects([id]); OpenStreamDialog(); }, enabled: !notesLocked);
         if (stream) Button(c, new(r.X, r.Y + 36, r.Width, 32), L.Get("stream.convertBack"),
             () => { SelectObjects([id]); ConvertStreamsBack(); }, enabled: !notesLocked);

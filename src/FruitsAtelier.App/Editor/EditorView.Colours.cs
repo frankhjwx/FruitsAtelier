@@ -6,11 +6,13 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private readonly Dictionary<Guid, (int Skin, int Beatmap)> comboIndices = [];
+    private readonly HashSet<Guid> newComboSources = [];
     private uint[] beatmapColours = [];
 
     private void BuildComboColours()
     {
         comboIndices.Clear();
+        newComboSources.Clear();
         var lines = Document.Fruits.Select(f => (f.Id, f.OriginalLine))
             .Concat(Document.Tracks.Select(t => (t.Id, t.OriginalLine)))
             .Concat(Document.ImportedSliders.Select(t => (t.Id, t.OriginalLine)))
@@ -22,6 +24,7 @@ public sealed partial class EditorView
         {
             var parts = lines[parent.Id]?.Split(',');
             int flags = parts is { Length: > 3 } && int.TryParse(parts[3], out int value) ? value : 0;
+            if ((flags & 4) != 0) newComboSources.Add(parent.Id);
             bool spinner = spinners.Contains(parent.Id);
             if (!spinner && (first || afterSpinner || (flags & 4) != 0))
             { index++; offsets += 1 + ((flags >> 4) & 7); }

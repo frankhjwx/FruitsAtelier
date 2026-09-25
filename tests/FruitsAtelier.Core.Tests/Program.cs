@@ -1,6 +1,11 @@
 using FruitsAtelier.Core;
 
 if (args.Length == 2 && args[0] == "--slider-corpus") return ImportedSliderCorpus.Run(args[1]);
+if (args.Length == 2 && args[0] == "--preserve-slider-positions")
+{
+    try { return EditableSliderTests.VerifyPreservedMap(args[1]); }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 
 var tests = new (string Name, Action Run)[]
 {
@@ -11,6 +16,7 @@ var tests = new (string Name, Action Run)[]
     ("Grid fractions and measure starts follow active meter changes", TimingLookupTests.SubdivisionsAndMeasures),
     ("Timing lookup preserves boundary precedence and owns its snapshot", TimingLookupTests.BoundariesAndSnapshot),
     ("Dense imported sliders share reader, validation and conversion limits", DenseImportedSliderTests.ReadAndConvert),
+    ("Bezier endpoint overhangs sample, persist and export safely", SliderModeTests.EndpointOverhangs),
     ("Shared slider curves persist exact AR references and clone independently", SliderModeTests.PersistenceAndAr),
     ("Legacy controls edit, split, merge and reject invalid moves atomically", SliderModeTests.SharedEditing),
     ("Pen conversion approximates locally and undo restores exact geometry", SliderModeTests.PenConversionAndHistory),
@@ -216,9 +222,9 @@ static void MoveHandle()
 {
     var curve = EditableCurve(); var first = curve.Nodes[0];
     MapPoint initial = first.HandleOut;
-    True(!CurveMath.TryMoveHandle(curve, first.Id, false, new(900, 50), out _), "Crossed control times accepted.");
+    True(!CurveMath.TryMoveHandle(curve, first.Id, false, new(2000, 50), out _), "Time reversal inside the slider accepted.");
     True(!CurveMath.TryMoveHandle(curve, first.Id, false, new(200, 500), out _), "X overflow accepted.");
-    True(!CurveMath.TryMoveHandle(curve, first.Id, true, new(1, 0), out _), "Incoming direction accepted.");
+    True(!CurveMath.TryMoveHandle(curve, first.Id, true, new(double.NaN, 0), out _), "Nonfinite handle accepted.");
     True(first.HandleOut == initial, "Rejected handle edit changed state.");
     True(CurveMath.TryMoveHandle(curve, first.Id, false, new(400, 100), out string error), error);
     True(first.HandleOut == new MapPoint(400, 100), "Valid edit was not applied.");

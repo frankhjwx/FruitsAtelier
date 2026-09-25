@@ -41,6 +41,8 @@ public sealed class EditorHistory
     public void Commit()
     {
         if (transactionStart is null) return;
+        // Break changes belong to the same undo step as the notes that occupy them.
+        OsuTimeline.ReconcileBreaks(transactionStart, Document);
         if (!Document.ContentEquals(transactionStart))
         {
             undo.Push(new Change(transactionLabel, transactionStart, Document.DeepClone(), transactionRelated));

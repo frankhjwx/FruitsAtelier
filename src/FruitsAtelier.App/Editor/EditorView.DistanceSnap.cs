@@ -32,7 +32,13 @@ public sealed partial class EditorView
     private readonly List<MapPoint> dsPreviewFruits = [];
     private double dsBpm, dsReferenceTime;
     private int dsSnap;
-    private static readonly uint[] DsColors = [0xC0C0C0, 0x63B99D, 0xD6B365, 0xCE7683];
+    private uint DsColor(int index) => MovementColour(index switch
+    {
+        0 => CatchMovementMode.Stand,
+        1 => CatchMovementMode.Walk,
+        2 => CatchMovementMode.Dash,
+        _ => CatchMovementMode.HyperDash
+    });
     internal Rect DistanceSnapSubdivisionBounds { get; private set; }
     private float dsDragX;
     private Rect DistanceSnapDialogBounds => new((width - Math.Min(1040, width - 32)) / 2,
@@ -210,7 +216,7 @@ public sealed partial class EditorView
         for (int i = 0; i < 4; i++)
         {
             float start = track.X + i * segmentWidth;
-            c.Fill(new(start, track.Y + 3, segmentWidth - 2, 18), DsColors[i], 2);
+            c.Fill(new(start, track.Y + 3, segmentWidth - 2, 18), DsColor(i), 2);
             c.Text(L.Get(names[i]), start + 5, track.Y + 6, 10, Background, segmentWidth - 10, true);
         }
         float marker = track.X + DistanceSnapFraction(1, limits) * track.Width;
@@ -275,11 +281,11 @@ public sealed partial class EditorView
         float radius = Math.Clamp((float)(CatchSize.CatchWidth(Document.CircleSize) / 2 / 512 * (r.Width - 20)), 3, 12);
         var hyperdashStarts = DrawDistanceSnapPreviewConnections(c, candidate, out var labels);
         foreach (var fruit in dsPreviewFruits)
-            c.Circle(DistanceSnapPreviewX(fruit.X), DistanceSnapPreviewY(fruit.TimeMs), radius, hyperdashStarts.Contains(fruit) ? 0xFF5555 : Accent);
+            c.Circle(DistanceSnapPreviewX(fruit.X), DistanceSnapPreviewY(fruit.TimeMs), radius, hyperdashStarts.Contains(fruit) ? HyperDashFruitColour : Accent);
         if (candidate is { } ghost)
         {
             c.Circle(DistanceSnapPreviewX(ghost.X), DistanceSnapPreviewY(ghost.TimeMs), radius,
-                hyperdashStarts.Contains(ghost) ? 0xFF5555 : Foreground, false, 1.5f, .7f);
+                hyperdashStarts.Contains(ghost) ? HyperDashFruitColour : Foreground, false, 1.5f, .7f);
         }
         foreach (var label in labels)
         {
@@ -425,8 +431,8 @@ public sealed partial class EditorView
     {
         var limits = dsSliderDrag >= 0 ? dsDragLimits : DistanceSnapLimits();
         for (int i = 0; i < 3; i++)
-            if (ratio <= limits[i + 1]) return DsColors[i];
-        return DsColors[3];
+            if (ratio <= limits[i + 1]) return DsColor(i);
+        return DsColor(3);
     }
 
     private static float DistanceSnapFraction(double ratio, double[] limits)
@@ -473,21 +479,21 @@ public sealed partial class EditorView
         for (int i = 0; i < 4; i++)
         {
             float x = r.X + 20 + i * segment;
-            c.Fill(new(x, r.Y + 56, segment - 2, 25), DsColors[i], 3);
+            c.Fill(new(x, r.Y + 56, segment - 2, 25), DsColor(i), 3);
             c.Text(L.Get(names[i]), x + 6, r.Y + 62, 11, Background, segment - 12, true);
             if (i < 3)
             {
                 double maximum = 512 / (dsBaseDraft / dsSnap);
                 string mid = limits[i] >= maximum ? "—" : L.Get("assist.ratio", (limits[i] + Math.Min(maximum, limits[i + 1])) / 2);
                 float center = x + segment / 2;
-                c.Line(center, r.Y + 81, center, r.Y + 93, DsColors[i]);
+                c.Line(center, r.Y + 81, center, r.Y + 93, DsColor(i));
                 c.Text(mid, center - c.MeasureText(mid, 11) / 2, r.Y + 98, 11, Foreground, segment);
             }
             if (i < 3)
             {
                 string boundary = L.Get("assist.ratio", limits[i + 1]);
                 float edge = x + segment - 1;
-                c.Line(edge, r.Y + 81, edge, r.Y + 119, DsColors[i]);
+                c.Line(edge, r.Y + 81, edge, r.Y + 119, DsColor(i));
                 c.Text(boundary, edge - c.MeasureText(boundary, 11) / 2, r.Y + 124, 11, Foreground, segment);
             }
         }

@@ -112,7 +112,7 @@ internal sealed partial class MacWindow : Window
         };
         Closed += (_, _) => { View.SaveLibraryMemory(); timer.Stop(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
         Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); editor.Refresh(); };
-        Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(); editor.Refresh(); };
+        Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); editor.Refresh(); };
     }
     private void UpdateTitle() => Title = View.WindowTitle;
     private void PollAudio()
