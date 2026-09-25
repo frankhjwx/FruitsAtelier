@@ -24,6 +24,7 @@ var tests = new (string Name, Action Run)[]
     ("New Combo grouping refreshes on first edit and undo/redo", ComboGroupingTests.Run),
     ("Final stream fruit accepts lower-half hit and drags independently", StreamFruitDragTests.Run),
     ("Testplay startup countdown waits, cancels, synchronizes audio and persists settings", TestplayStartupDelayTests.Countdown),
+    ("Dense canvas bookmarks preserve labels, history and source data", CanvasBookmarkTests.DenseAxisMarks),
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),

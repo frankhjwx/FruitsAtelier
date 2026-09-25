@@ -111,6 +111,7 @@ public sealed partial class EditorView
 
     private void DrawCanvas(ICanvas c)
     {
+        axisTooltip = null;
         float toolbarRight = rightPanel.X;
         c.Fill(new(0, canvas.Y, toolbarRight, 38), 0x1C2129);
         c.Text(L.Get("ui.canvasZoom"), 16, canvas.Y + 13, 11, Muted, 48);
@@ -178,6 +179,8 @@ public sealed partial class EditorView
             var bounds = new Rect(canvas.X, upper, plot.X - canvas.X, lower - upper);
             c.Fill(bounds, color, 0, opacity);
         }
+        List<float> axisLabelRows = [];
+        List<(float Y, double Time)> axisLabels = [];
         foreach (var line in renderedTiming!.Grid(viewStart, viewStart + plot.Height / pixelsPerMs, divisor))
         {
             double time = line.TimeMs;
@@ -189,9 +192,18 @@ public sealed partial class EditorView
             if (!beat && !line.IsTimingBoundary && step * pixelsPerMs < 7) continue;
             var style = GridStyle(line);
             c.Line(playfield.X, y, playfield.Right, y, style.Color, style.Width, .35f);
-            if (line.IsTimingBoundary || beat && (localTiming.BeatLengthMs * pixelsPerMs >= 25 || bar))
-                c.Text(Time(time), canvas.X + 3, Math.Clamp(y - 7, plot.Y, plot.Bottom - 14), 10, line.IsTimingBoundary ? Error : Muted, 64);
+            if (!line.IsTimingBoundary && beat && (localTiming.BeatLengthMs * pixelsPerMs >= 25 || bar))
+                axisLabels.Add((y, time));
         }
+        DrawCanvasTimingMarkers(c, axisLabelRows);
+        foreach (var label in axisLabels)
+        {
+            float labelY = Math.Clamp(label.Y - 7, plot.Y, plot.Bottom - 14);
+            if (axisLabelRows.Any(row => Math.Abs(row - labelY) < 14)) continue;
+            c.Text(Time(label.Time), canvas.X + 3, labelY, 10, Muted, 64);
+            axisLabelRows.Add(labelY);
+        }
+        DrawCanvasBookmarks(c, axisLabelRows);
         c.Unclip();
         c.Clip(plot);
         foreach (var shower in Document.BananaShowers.Where(item => item.Id != draftBanana))
@@ -295,6 +307,7 @@ public sealed partial class EditorView
         c.Line(plot.X, headY, plot.Right, headY, Gold, 1.5f);
         c.Fill(new(plot.X, headY - 3, 5, 6), Gold);
         c.Unclip();
+        DrawPendingAxisTooltip(c);
     }
 
     private void DrawCanvasCatchObjects(ICanvas c)
@@ -523,7 +536,7 @@ public sealed partial class EditorView
             float x = TimelineX(point.TimeMs);
             c.Line(x, overview.Y + 2, x, overview.Y + 20, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
         }
-        foreach (int bookmark in OsuTimeline.Bookmarks(Document))
+        foreach (int bookmark in AxisBookmarks())
         {
             float x = TimelineX(bookmark);
             c.Line(x, overview.Y + 20, x, overview.Bottom - 1, 0x4B9EF5, 1, timelineMarkerOpacity);

@@ -46,6 +46,12 @@
   "testplay.countdownCancel": "Esc：取消",
   "testplay.startupDelay": "启动倒计时",
   "testplay.startupDelayValue": "{0} 秒",
+  "axis.bookmarkCount": "{0} 个书签",
+  "axis.bookmarkTime": "书签 {0}",
+  "axis.bookmarkRange": "{0} 个书签：{1}–{2}",
+  "axis.timingCount": "{0} 个时间点",
+  "axis.timingTime": "时间点 {0}",
+  "axis.timingRange": "{0} 个时间点：{1}–{2}",
 
   "testplay.start": "试玩 (F5)",
   "timeline.transport.play": "播放",

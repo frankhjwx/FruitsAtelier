@@ -46,6 +46,12 @@
   "testplay.countdownCancel": "Esc: cancel",
   "testplay.startupDelay": "Startup delay",
   "testplay.startupDelayValue": "{0} s",
+  "axis.bookmarkCount": "{0} bookmarks",
+  "axis.bookmarkTime": "Bookmark {0}",
+  "axis.bookmarkRange": "{0} bookmarks: {1}–{2}",
+  "axis.timingCount": "{0} timing points",
+  "axis.timingTime": "Timing point {0}",
+  "axis.timingRange": "{0} timing points: {1}–{2}",
 
   "testplay.start": "Testplay (F5)",
   "timeline.transport.play": "Play",
