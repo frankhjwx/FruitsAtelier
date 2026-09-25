@@ -23,6 +23,7 @@ var tests = new (string Name, Action Run)[]
     ("Wheel modifiers distinguish snapping zoom and navigation", WheelGestureTests.Run),
     ("Dense canvas bookmarks preserve labels, history and source data", CanvasBookmarkTests.DenseAxisMarks),
     ("Draft tools and editor shortcuts respect modifiers", DraftToolShortcutsTests.Run),
+    ("Volume popover buttons, bars, keyboard and fade", VolumePopoverTests.Run),
     ("New Combo grouping refreshes on first edit and undo/redo", ComboGroupingTests.Run),
     ("Completing an FSlider replaces only exact head fruit overlaps and undoes atomically", SliderHeadReplacementTests.OnCompletion),
     ("Final stream fruit accepts lower-half hit and drags independently", StreamFruitDragTests.Run),

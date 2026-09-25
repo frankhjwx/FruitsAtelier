@@ -259,7 +259,8 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0113: // WM_TIMER
                 if (painting || failed || NativeModalScope.Active) return 0;
                 PollUpdates(); PollAudio();
-                if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
+                if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
+                    || view.VolumePopoverNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0005: Invalidate(); return 0;
             case 0x02E0: // WM_DPICHANGED
@@ -307,7 +308,8 @@ internal sealed partial class EditorWindow : IDisposable
                 view.SetModifiers(Native.Alt, Native.Shift);
                 var point = new Native.Point { X = (short)((long)lParam & 0xFFFF), Y = (short)(((long)lParam >> 16) & 0xFFFF) };
                 Native.ScreenToClient(window, ref point);
-                view.Wheel(point.X * 96f / dpi, point.Y * 96f / dpi, (short)((ulong)wParam >> 16), (wParam & 0x0008) != 0, Native.Shift, Native.Alt);
+                view.Wheel(point.X * 96f / dpi, point.Y * 96f / dpi, (short)((ulong)wParam >> 16),
+                    (wParam & 0x0008) != 0, Native.Shift, Native.Alt);
                 Invalidate(); return 0;
             case 0x0100:
                 view.SetModifiers(Native.Alt, Native.Shift);
@@ -316,7 +318,7 @@ internal sealed partial class EditorWindow : IDisposable
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0104: // WM_SYSKEYDOWN: Alt changes editor snapping without opening the system menu.
                 view.SetModifiers(Native.Alt, Native.Shift);
-                if ((int)wParam == 69 && Native.Control)
+                if ((int)wParam is 37 or 38 or 39 or 40 || (int)wParam == 69 && Native.Control)
                 {
                     view.KeyDown((int)wParam, Native.Control, Native.Shift);
                     UpdateTitle(); Invalidate(); return 0;

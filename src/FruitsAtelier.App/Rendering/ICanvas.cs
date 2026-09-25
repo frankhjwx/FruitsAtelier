@@ -11,10 +11,18 @@ public interface ICanvas
 {
     void Fill(Rect r, uint color, float radius = 0, float opacity = 1);
     void Stroke(Rect r, uint color, float width = 1, float radius = 0);
+    void StrokeOpacity(Rect r, uint color, float width, float radius, float opacity)
+    {
+        if (opacity > 0) Stroke(r, color, width, radius);
+    }
     void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1);
     void Circle(float x, float y, float radius, uint color, bool filled = true, float width = 1, float opacity = 1);
     float MeasureText(string text, float size, bool bold = false) => text.Length * size * 0.6f;
     void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false);
+    void TextOpacity(string text, float x, float y, float size, uint color, float maxWidth, bool bold, float opacity)
+    {
+        if (opacity > 0) Text(text, x, y, size, color, maxWidth, bold);
+    }
     bool Image(string filePath, Rect destination, uint tint = 0xFFFFFF, Rect? source = null, float opacity = 1);
     bool SpriteImage(string filePath, Rect destination, uint tint, Rect source, float opacity, float rotation, bool additive)
         => Image(filePath, destination, tint, source, opacity);

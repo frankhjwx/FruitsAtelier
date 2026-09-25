@@ -87,6 +87,7 @@ public sealed partial class EditorView
         DrawTimeJump(c);
         DrawStreamDialog(c);
         DrawVolumeDialog(c);
+        DrawVolumePopover(c);
         DrawDistanceSnapDialog(c);
         DrawSongSetup(c);
         DrawDiscardConfirmation(c);
@@ -562,7 +563,8 @@ public sealed partial class EditorView
         c.Fill(new(0, height - 28, width, 28), 0x171C23);
         c.Circle(13, height - 14, 3, IsDirty ? Gold : Accent);
         string notice = conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
-        c.Text(notice, 25, height - 21, 11, conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 40));
+        c.Text(notice, 25, height - 21, 11, conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 145));
+        DrawVolumeButton(c);
     }
 
     private Rect MenuBounds { get; set; }
@@ -611,7 +613,7 @@ public sealed partial class EditorView
             Item(L.Get("ui.gridSnap"), () => gridSnap = !gridSnap, active: gridSnap);
             Item(L.Get("ui.anchorSnap"), () => anchorSnap = !anchorSnap, active: anchorSnap);
             Item(L.Get("ui.resetView"), ResetView);
-            Item(L.Get("volume.title"), OpenVolumeDialog);
+            Item(L.Get("volume.title"), OpenVolumePopover);
             Item(L.Get("ui.sliderPathCurves"), () => showTargets = !showTargets, active: showTargets);
             Item(showPreviewCurves ? L.Get("ui.previewCurvesOn") : L.Get("ui.previewCurvesOff"), () => showPreviewCurves = !showPreviewCurves);
             Item(L.Get("ui.follow"), FollowPlayhead);

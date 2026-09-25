@@ -23,6 +23,7 @@ public sealed partial class EditorView
     public void SetModifiers(bool alt, bool shift)
     {
         altHeld = alt; shiftHeld = shift;
+        if (!alt) volumeShortcutHeld = false;
         if (dsSliderDrag >= 0) UpdateDistanceSnapSlider(dsDragX, shift);
     }
 

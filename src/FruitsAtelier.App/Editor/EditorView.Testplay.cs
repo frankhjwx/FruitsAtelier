@@ -168,6 +168,7 @@ public sealed partial class EditorView
 
     public void KeyUp(int virtualKey)
     {
+        ReleaseVolumeShortcut(virtualKey);
         if (virtualKey is 17 or 162 or 163) placementCtrl = false;
         if (virtualKey == 27) testplayEscapeConsumed = false;
         if (virtualKey == 9) testplayTabHeld = false;

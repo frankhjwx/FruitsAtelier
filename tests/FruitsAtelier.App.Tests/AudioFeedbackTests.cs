@@ -129,8 +129,8 @@ internal static class AudioFeedbackTests
         ui.View.RequestAudioVolume = (s, h) => { song = s; hit = h; };
         ui.View.RequestAudioPreference = () => { settings.Save(Path.Combine(folder, "settings.json")); saves++; };
         ui.View.InitializeLibrary(false, settings); ui.Paint();
-        ui.ClickText(L.Get("ui.view")); ui.ClickText(L.Get("volume.title"));
-        Check(ui.View.VolumeDialogVisible, "View menu opens volume dialog");
+        ui.View.OpenVolumeDialog(); ui.Paint();
+        Check(ui.View.VolumeDialogVisible, "Volume settings dialog opens");
         ui.Key(46); ui.Key(116); ui.Key('S', ctrl: true);
         ui.View.Wheel(ui.Plot.X, ui.Plot.Y, 120, false);
         Check(ui.View.VolumeDialogVisible && !ui.View.IsTestplaying, "dialog isolates editor shortcuts");
@@ -146,7 +146,7 @@ internal static class AudioFeedbackTests
         Check(!ui.View.WantsCapture && before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "volume never edits the map");
         ui.Key(27);
         Check(!ui.View.VolumeDialogVisible, "Escape closes volume dialog");
-        ui.ClickText(L.Get("ui.view")); ui.ClickText(L.Get("volume.title"));
+        ui.View.OpenVolumeDialog(); ui.Paint();
         ui.ClickText(L.Get("ui.close"));
         Check(!ui.View.VolumeDialogVisible, "Close button closes volume dialog");
         var old = System.Text.Json.JsonSerializer.Deserialize<LibrarySettings>("{}")!;

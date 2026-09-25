@@ -160,10 +160,12 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         else context!.FillRectangle(Convert(r), Brush(color, opacity));
     }
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0)
+        => StrokeOpacity(r, color, width, radius, 1);
+    public void StrokeOpacity(Rect r, uint color, float width, float radius, float opacity)
     {
         if (r.Width <= 0 || r.Height <= 0) return;
-        if (radius > 0) context!.DrawRoundedRectangle(new RoundedRectangle(new System.Drawing.RectangleF(r.X, r.Y, r.Width, r.Height), radius, radius), Brush(color), width);
-        else context!.DrawRectangle(Convert(r), Brush(color), width);
+        if (radius > 0) context!.DrawRoundedRectangle(new RoundedRectangle(new System.Drawing.RectangleF(r.X, r.Y, r.Width, r.Height), radius, radius), Brush(color, opacity), width);
+        else context!.DrawRectangle(Convert(r), Brush(color, opacity), width);
     }
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)
         => context!.DrawLine(new Vector2(x1, y1), new Vector2(x2, y2), Brush(color, opacity), width);
@@ -182,6 +184,8 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         return layout.Metrics.WidthIncludingTrailingWhitespace;
     }
     public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false)
+        => TextOpacity(text, x, y, size, color, maxWidth, bold, 1);
+    public void TextOpacity(string text, float x, float y, float size, uint color, float maxWidth, bool bold, float opacity)
     {
         if (maxWidth <= 0 || string.IsNullOrEmpty(text)) return;
         if (!formats.TryGetValue((size, bold), out var format))
@@ -191,7 +195,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
             format.WordWrapping = WordWrapping.NoWrap;
             formats.Add((size, bold), format);
         }
-        context!.DrawText(text, format, new DRect(x, y, maxWidth, size * 1.8f), Brush(color), DrawTextOptions.Clip);
+        context!.DrawText(text, format, new DRect(x, y, maxWidth, size * 1.8f), Brush(color, opacity), DrawTextOptions.Clip);
     }
     public void Clip(Rect r) { context!.PushAxisAlignedClip(Convert(r), AntialiasMode.PerPrimitive); clipDepth++; }
     public void Unclip() { if (clipDepth > 0) { context!.PopAxisAlignedClip(); clipDepth--; } }

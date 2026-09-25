@@ -67,7 +67,13 @@ internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICa
         using var state = context.PushOpacity(opacity);
         context.DrawRectangle(Brush(color), null, Convert(r), radius, radius);
     }
-    public void Stroke(R r, uint color, float width = 1, float radius = 0) => context.DrawRectangle(null, new Pen(Brush(color), width), Convert(r), radius, radius);
+    public void Stroke(R r, uint color, float width = 1, float radius = 0)
+        => StrokeOpacity(r, color, width, radius, 1);
+    public void StrokeOpacity(R r, uint color, float width, float radius, float opacity)
+    {
+        using var state = context.PushOpacity(opacity);
+        context.DrawRectangle(null, new Pen(Brush(color), width), Convert(r), radius, radius);
+    }
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)
     {
         using var state = context.PushOpacity(opacity);
@@ -85,10 +91,13 @@ internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICa
         return (float)formatted.WidthIncludingTrailingWhitespace;
     }
     public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false)
+        => TextOpacity(text, x, y, size, color, maxWidth, bold, 1);
+    public void TextOpacity(string text, float x, float y, float size, uint color, float maxWidth, bool bold, float opacity)
     {
         if (maxWidth <= 0 || text.Length == 0) return;
         var formatted = new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
             new Typeface("Arial, PingFang SC", FontStyle.Normal, bold ? FontWeight.SemiBold : FontWeight.Normal), size, Brush(color));
+        using var state = context.PushOpacity(opacity);
         using var clip = context.PushClip(new Avalonia.Rect(x, y, maxWidth, size * 1.8));
         context.DrawText(formatted, new Point(x, y));
     }

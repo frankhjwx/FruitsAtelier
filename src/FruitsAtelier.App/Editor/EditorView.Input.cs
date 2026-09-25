@@ -26,6 +26,7 @@ public sealed partial class EditorView
         }
         ResetTextCaret();
         mouseX = x; mouseY = y;
+        if (BeginVolumePopoverPointer(x, y, button)) return;
         if (SongSetupVisible) { SongSetupPointerDown(x, y, button, shift); return; }
         if (DistanceSnapDialogVisible)
         {
@@ -328,6 +329,8 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        MoveVolumePopoverPointer(x, y);
+        if (volumePopoverDrag >= 0) return;
         if (textSelecting) { MoveInputSelection(x); return; }
         if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
         if (dsBaseDragging) { UpdateDistanceBase(x); return; }
@@ -478,6 +481,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        if (EndVolumePopoverPointer(x, y, button)) return;
         if (settingsColourDrag != 0 && button == 0) { UpdateIndicatorColourDrag(x, y); settingsColourDrag = 0; return; }
         if (textSelecting && button == 0) { MoveInputSelection(x); textSelecting = false; return; }
         if (SongSetupVisible) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }
@@ -871,12 +875,14 @@ public sealed partial class EditorView
         }
         if (virtualKey == 27)
         {
+            if (VolumePopoverVisible) { CloseVolumePopover(); return; }
             if (contextItems.Count > 0) { contextItems.Clear(); return; }
             if (drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty) CancelInteraction();
             else if (menu >= 0) menu = -1;
             else ShowLibrary();
             return;
         }
+        if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift)) return;
         if (ctrl && !altHeld)
         {
             if (drag != DragKind.None) return;
@@ -988,6 +994,7 @@ public sealed partial class EditorView
         FinishVolumeDrag();
         testplayEscapeConsumed = false;
         streamSnapDragging = false;
+        CloseVolumePopover();
         sliderHoldId = legacyButtonSlider = Guid.Empty; noteHoldTarget = null;
         sliderHoldConsumed = false;
         if (preserveTestplay) testplay?.ReleaseKeys();

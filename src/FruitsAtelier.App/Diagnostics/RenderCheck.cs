@@ -264,6 +264,25 @@ internal static class RenderCheck
                     throw new InvalidOperationException("Native volume controls did not update percentages.");
                 view.KeyDown(27, false, false);
                 if (view.VolumeDialogVisible) throw new InvalidOperationException("Native volume dialog did not close.");
+                view.OpenVolumePopover();
+                Thread.Sleep(130);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                for (int channel = 0; channel < 3; channel++)
+                {
+                    var bar = view.VolumeBarBounds(channel);
+                    float x = bar.X + bar.Width / 2;
+                    float y = bar.Bottom - bar.Height * (channel + 1) / 4;
+                    if (bar.Bottom >= height || bar.Right >= width)
+                        throw new InvalidOperationException("Volume bar is outside the window.");
+                    view.PointerDown(x, y, 0, false, false);
+                    if (!view.WantsCapture) throw new InvalidOperationException("Volume bar did not capture.");
+                    view.PointerUp(x, y, 0);
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                }
+                if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
+                    throw new InvalidOperationException("Native volume bars did not update percentages.");
+                view.KeyDown(27, false, false);
+                if (view.VolumePopoverVisible) throw new InvalidOperationException("Native volume popover did not close.");
                 var dsRatios = view.Document.DistanceSnapRatios.ToArray();
                 view.Document.DistanceSnapRatios.Clear();
                 view.Document.DistanceSnapRatios.AddRange([.75, 1.25, 2.5]);
