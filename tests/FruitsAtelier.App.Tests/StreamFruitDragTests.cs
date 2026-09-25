@@ -25,28 +25,47 @@ internal static class StreamFruitDragTests
         double pointerTime = last.TimeMs - (last.TimeMs - preceding.TimeMs) * .55;
         ui.ClickMap(pointerTime, last.X + 20);
         if (!ui.View.SelectedObjectIds.Contains(track.Id))
-            throw new Exception($"The lower half of the final stream fruit did not select its slider: selected={string.Join(',', ui.View.SelectedObjectIds)}, status={ui.View.StatusMessage}, radius={CatchSize.FruitRadius(map.CircleSize) * ui.Plot.Width / 512}, pixelsPerMs={ui.View.PixelsPerMs}.");
-        ui.DownMap(pointerTime, last.X);
-        ui.MoveMap(pointerTime, last.X + 80);
-        ui.UpMap(pointerTime, last.X + 80);
+            throw new Exception("The first click did not select the stream parent.");
+        var originalPosition = ui.ScreenAt(last.TimeMs, last.X);
+        Check(!OuterRing(ui, originalPosition), "Selecting the stream parent highlighted an individual fruit.");
 
-        var changed = ui.View.Conversion.Objects.Where(item => item.SourceId == track.Id).ToArray();
-        if (Math.Abs(changed[^1].X - (last.X + 80)) > .001)
-            throw new Exception($"Dragging the lower half of the final stream fruit did not move it: {changed[^1].X} (expected {last.X + 80}).");
-        if (Math.Abs(changed[^2].X - preceding.X) > .001)
-            throw new Exception($"Dragging the final stream fruit moved the preceding fruit: {changed[^2].X} (expected {preceding.X}).");
-        ui.Key('Z', ctrl: true);
-        if (!map.ContentEquals(ui.View.Document))
-            throw new Exception("Undo did not restore the slider stream.");
-
-        ui.DownMap(last.TimeMs, last.X);
-        ui.MoveMap(last.TimeMs + 100, last.X);
-        ui.UpMap(last.TimeMs + 100, last.X);
+        ui.DownMap(pointerTime, last.X + 20);
+        ui.MoveMap(pointerTime + 100, last.X + 100);
+        ui.UpMap(pointerTime + 100, last.X + 100);
         var moved = ui.View.Document.Tracks.Single();
-        if (Math.Abs(moved.Nodes[0].TimeMs - 1100) > .001 || moved.StreamSnapDivisor != 16)
-            throw new Exception("Dragging a selected stream vertically did not move the whole stream on the time axis.");
+        Check(moved.StreamSnapDivisor == 16 && moved.Nodes.Select((node, index) =>
+            Math.Abs(node.TimeMs - map.Tracks[0].Nodes[index].TimeMs - 100) < .001
+            && Math.Abs(node.X - map.Tracks[0].Nodes[index].X - 80) < .001).All(matched => matched),
+            "Dragging the selected stream did not move the whole parent in time and X.");
         ui.Key('Z', ctrl: true);
-        if (!map.ContentEquals(ui.View.Document))
-            throw new Exception("Undo did not restore the vertically moved slider stream.");
+        Check(map.ContentEquals(ui.View.Document), "Undo did not restore the whole stream move.");
+
+        var childUi = new Ui(); childUi.LoadDocument(map);
+        childUi.ClickMap(pointerTime, last.X + 20);
+        childUi.ClickMap(pointerTime, last.X + 20);
+        Check(OuterRing(childUi, childUi.ScreenAt(last.TimeMs, last.X)),
+            "The second click did not highlight the selected stream fruit.");
+        childUi.DownMap(pointerTime, last.X);
+        childUi.MoveMap(pointerTime, last.X + 80);
+        childUi.UpMap(pointerTime, last.X + 80);
+        var changed = childUi.View.Conversion.Objects.Where(item => item.SourceId == track.Id).ToArray();
+        Check(Math.Abs(changed[^1].X - (last.X + 80)) < .001,
+            "Dragging the selected stream fruit did not move that fruit.");
+        Check(Math.Abs(changed[^1].TimeMs - last.TimeMs) < .001
+            && OuterRing(childUi, childUi.ScreenAt(changed[^1].TimeMs, changed[^1].X)),
+            "The selected stream fruit lost its time or highlight after dragging.");
+        Check(Math.Abs(changed[^2].X - preceding.X) < .001,
+            "Dragging one stream fruit moved its preceding fruit.");
+        childUi.Key('Z', ctrl: true);
+        Check(map.ContentEquals(childUi.View.Document), "Undo did not restore the individual stream fruit move.");
+    }
+
+    private static bool OuterRing(Ui ui, (float X, float Y) position)
+        => ui.Canvas.Circles.Any(circle => !circle.Filled && circle.Color == 0xE7EBF2
+            && Math.Abs(circle.X - position.X) < 1 && Math.Abs(circle.Y - position.Y) < 1);
+
+    private static void Check(bool condition, string message)
+    {
+        if (!condition) throw new Exception(message);
     }
 }

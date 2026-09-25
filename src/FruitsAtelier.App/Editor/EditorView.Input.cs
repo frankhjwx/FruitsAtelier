@@ -259,22 +259,28 @@ public sealed partial class EditorView
         {
             bool parentSelected = objectSelection.Count == 1 && objectSelection.Contains(hitObject.SourceId);
             bool editableChild = Document.Tracks.Any(t => t.Id == hitObject.SourceId);
+            bool streamChild = hitObject.Kind == CatchObjectKind.Fruit
+                && Document.Tracks.Any(t => t.Id == hitObject.SourceId && t.StreamSnapDivisor is not null);
+            bool childSelected = distanceObject == (hitObject.SourceId, hitObject.EventIndex);
             bool sliderChild = !hitObject.IsStandalone || editableChild && hitObject.Kind == CatchObjectKind.Fruit;
             PickObject(hitObject.SourceId, ctrl);
-            if (sliderChild && (!parentSelected || !editableChild && hitObject.Kind != CatchObjectKind.Fruit))
+            if (sliderChild && (!parentSelected || streamChild && !childSelected
+                || !editableChild && hitObject.Kind != CatchObjectKind.Fruit))
                 distanceObject = null;
             else PickSoundEdge(hitObject);
             if (ctrl) return;
             if (sliderChild)
             {
-                if (parentSelected && (hitObject.Kind == CatchObjectKind.Fruit
-                    || editableChild && hitObject.Kind is (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet)))
+                if (parentSelected && (!streamChild || childSelected)
+                    && (hitObject.Kind == CatchObjectKind.Fruit
+                        || editableChild && hitObject.Kind is (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet)))
                 {
                     BeginSliderObjectDrag(hitObject, x, y);
                     return;
                 }
                 StatusMessage = L.Get("editor.status.parentSelected", hitObject.Kind == CatchObjectKind.Banana ? L.Get("editor.object.bananaShower") : L.Get("editor.object.sliderWithSpace"), Time(hitObject.TimeMs));
                 BeginObjectDrag(x, y);
+                if (parentSelected && streamChild) pendingStreamChildSelection = hitObject;
                 return;
             }
             if (Document.Fruits.FirstOrDefault(f => f.Id == hitObject.SourceId) is { } fruit)
@@ -379,11 +385,7 @@ public sealed partial class EditorView
         if (drag == DragKind.TimelineTail) { MoveTimelineTail(x); return; }
         if (drag == DragKind.LegacyControl) { MoveLegacyPoints(x, y); return; }
         if (drag == DragKind.Objects) { MoveSelectedObjects(x, y, shift); return; }
-        if (drag == DragKind.SliderObject)
-        {
-            if (!TryMoveStreamAsWhole(x, y, shift)) MoveSliderObject(x);
-            return;
-        }
+        if (drag == DragKind.SliderObject) { MoveSliderObject(x); return; }
         if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y); return; }
         var raw = Transform.ToMap(x, y) - dragOffset;
         var p = new MapPoint(Math.Clamp(raw.TimeMs, 0, EditableDurationMs), Math.Clamp(SnapX(raw.X), 0, 512));
@@ -558,6 +560,9 @@ public sealed partial class EditorView
             objectDragPrepared = false;
             if (AudioPlaying || pinPlayhead) FollowPlayhead();
         }
+        if (pendingStreamChildSelection is { } streamChildSelection && !dragMoved && objectSelection.Contains(streamChildSelection.SourceId))
+            PickSoundEdge(streamChildSelection);
+        pendingStreamChildSelection = null;
         drag = DragKind.None;
     }
 
@@ -980,6 +985,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        pendingStreamChildSelection = null;
         pendingImplicitSliderConversions.Clear();
         textSelecting = false;
         songDrag = -1;

@@ -71,7 +71,7 @@ Hold the mouse button on an imported slider until its actions appear, then choos
 
 ### Fruit streams and snapping
 
-Select sliders and press **Ctrl+Shift+F**, choose a beat subdivision, and confirm to create a fruit stream. It remains an editable slider shape in the project and exports as individual fruits. Hold on a stream to change snapping or convert it back to a slider.
+Select sliders and press **Ctrl+Shift+F**, choose a beat subdivision, and confirm to create a fruit stream. It remains an editable slider shape in the project and exports as individual fruits. Click a stream fruit once to select the whole slider, which can then be dragged in time and X. Click a fruit again without dragging to select that event; its bright outer ring shows which fruit will move when dragged horizontally. Hold on a stream to change snapping or convert it back to a slider.
 
 Beat Snap offers 1/1 through 1/9, plus 1/12 and 1/16. Grid Snap controls horizontal placement. Distance Snap spaces objects relative to the previous object; use Configure DS… to edit its multipliers, or hold Alt to temporarily invert snapping. New Combo and Whistle/Finish/Clap are available on the right toolbar. Selecting a slider edge lets you edit that edge's hitsound.
 
