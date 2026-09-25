@@ -37,7 +37,7 @@ Building requires .NET SDK **8.0.419** and Xcode Command Line Tools. Run `bash s
 
 The [user manual](docs/USER_MANUAL.md) covers setup, editing, saving, testplay, and keyboard shortcuts.
 
-Save projects to retain editable sliders and difficulty data. Export creates `.osu` files for osu!. After linking a difficulty through export, **Ctrl+S also updates its linked `.osu`**; **Ctrl+E** opens the export choices.
+Save projects to retain editable sliders and difficulty data. Export creates `.osu` files for osu!. After linking a difficulty through export, **Ctrl+S also updates its linked `.osu`**; **Ctrl+Alt+E** opens the export choices.
 
 ## Development
 

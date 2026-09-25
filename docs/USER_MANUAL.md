@@ -103,7 +103,7 @@ The workspace contains a `project.catchdiff` manifest and separate `.catchdiff` 
 | Action | Result |
 | --- | --- |
 | Ctrl+S: Save | Saves the project's editable difficulty data. Workspace-only projects offer an optional Songs export after saving; choosing to keep the project in the workspace completes the save. For projects already in Songs, an imported difficulty’s first save opens export choices, and subsequent saves update its linked `.osu`. |
-| Ctrl+E: Export | Opens choices for the active difficulty: a standalone `.osu`, overwriting an associated difficulty, or creating a new difficulty in Songs. |
+| Ctrl+Alt+E: Export | Opens choices for the active difficulty: a standalone `.osu`, overwriting an associated difficulty, or creating a new difficulty in Songs. |
 
 Exporting a new difficulty to Songs saves your edits in a new workspace difficulty and activates it. The original difficulty keeps its last saved content. Exported `.osu` files do not preserve all editor-specific controls, so keep the workspace project for further editing.
 
@@ -119,9 +119,10 @@ Shortcuts below apply while editing, outside text fields and dialogs. On macOS, 
 
 | Keys | Action |
 | --- | --- |
-| Ctrl+O | Open a beatmap, OSZ or older project. |
+| Ctrl+O | Choose a difficulty in the current project. |
+| Ctrl+Shift+O | Open a beatmap, OSZ or older project. |
 | Ctrl+S | Save project. |
-| Ctrl+E | Open export choices. |
+| Ctrl+Alt+E | Open export choices. |
 | Ctrl+Tab / Ctrl+Shift+Tab | Next / previous difficulty. |
 | 1 / F / B / N | Select / Fruit / FSlider / Banana tools. |
 | 1 / 2 / 3 / 4 | The same four tools. |
@@ -147,7 +148,8 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Z / V (also End) | First object's start / last object's end; repeat for song start / end. |
 | Left / Right | Seek one beat subdivision; Shift multiplies by four. |
 | Up / Down | Previous / next timing point. |
-| Ctrl+Up / Ctrl+Down | Next faster / slower playback speed (10%–150%). |
+| Ctrl+Up / Ctrl+Down | Increase / decrease playback speed by 25 percentage points (10%–150%). |
+| Ctrl+Shift+Up / Ctrl+Shift+Down | Increase / decrease playback speed by 5 percentage points. |
 | Wheel / middle-drag | Wheel up moves the playhead and canvas earlier; down moves both later by the same relative amount. Middle-drag pans the canvas. |
 | Ctrl+wheel | Zoom the canvas, or the object timeline under the pointer. |
 | Click the current timestamp | Open Jump to time; accepts timestamps or milliseconds. |

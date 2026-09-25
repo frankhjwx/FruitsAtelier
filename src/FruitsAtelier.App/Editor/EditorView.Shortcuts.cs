@@ -9,16 +9,15 @@ public sealed partial class EditorView
 
     private bool HandleLegacyShortcut(int key, bool shift)
     {
-        if (shift) return false;
         switch (key)
         {
-            case 65: SelectObjects(ClipboardParents(Document).Select(p => p.Id)); return true;
-            case >= 49 and <= 52: gridSize = 4 << (key - 49); return true;
-            case 77: ForgetTemporarySnap(); divisor = QuickSnapDivisors[(Array.IndexOf(QuickSnapDivisors, divisor) + 1) % QuickSnapDivisors.Length]; return true;
-            case 68: CloneSelection(); return true;
-            case 72: MirrorSelection(); return true;
-            case 38: AdjustPlaybackSpeed(1); return true;
-            case 40: AdjustPlaybackSpeed(-1); return true;
+            case 65 when !shift: SelectObjects(ClipboardParents(Document).Select(p => p.Id)); return true;
+            case >= 49 and <= 52 when !shift: gridSize = 4 << (key - 49); return true;
+            case 77 when !shift: ForgetTemporarySnap(); divisor = QuickSnapDivisors[(Array.IndexOf(QuickSnapDivisors, divisor) + 1) % QuickSnapDivisors.Length]; return true;
+            case 68 when !shift: CloneSelection(); return true;
+            case 72 when !shift: MirrorSelection(); return true;
+            case 38: AdjustPlaybackSpeed(1, shift); return true;
+            case 40: AdjustPlaybackSpeed(-1, shift); return true;
             default: return false;
         }
     }

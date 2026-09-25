@@ -193,13 +193,13 @@ public sealed partial class EditorView
 
     public void SetPlaybackSpeed(double speed)
     {
-        if (!PlaybackRates.Contains(speed) || speed == PlaybackSpeed) return;
+        if (!double.IsFinite(speed) || speed < .1 || speed > 1.5 || speed == PlaybackSpeed) return;
         PlaybackSpeed = speed;
         RequestPlaybackSpeed?.Invoke(speed);
     }
 
-    private void AdjustPlaybackSpeed(int direction)
-        => SetPlaybackSpeed(PlaybackRates[Math.Clamp(Array.IndexOf(PlaybackRates, PlaybackSpeed) + direction, 0, PlaybackRates.Length - 1)]);
+    private void AdjustPlaybackSpeed(int direction, bool fine)
+        => SetPlaybackSpeed(Math.Clamp((Math.Round(PlaybackSpeed * 100) + direction * (fine ? 5 : 25)) / 100, .1, 1.5));
 
     private Rect TimelineObjectBounds(double start, double end)
         => new(objectTimeline.X + (float)((start - ObjectTimelineStartMs) * objectTimelineScale) - 19,

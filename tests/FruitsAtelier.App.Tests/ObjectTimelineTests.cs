@@ -316,12 +316,12 @@ internal static class ObjectTimelineTests
         }
         ui.View.SetPlaybackSpeed(double.NaN);
         if (ui.View.PlaybackSpeed != 1.5) throw new Exception("Invalid speed was accepted");
-        foreach (double expected in new[] { 1d, .75, .5, .25, .1, .1 })
+        foreach (double expected in new[] { 1.25, 1d, .75, .5, .25, .1 })
         {
             ui.Key(40, ctrl: true);
             if (ui.View.PlaybackSpeed != expected) throw new Exception("Slower shortcut skipped a speed or the lower limit.");
         }
-        foreach (double expected in new[] { .25, .5, .75, 1, 1.5, 1.5 })
+        foreach (double expected in new[] { .35, .6, .85, 1.1, 1.35, 1.5 })
         {
             ui.Key(38, ctrl: true);
             if (ui.View.PlaybackSpeed != expected) throw new Exception("Faster shortcut skipped a speed or the upper limit.");

@@ -84,6 +84,18 @@ public sealed partial class EditorView
         for (int i = 0; i < lines.Count; i++) c.Text(lines[i], x + 10, y + 7 + i * 18, 12, Foreground, boxWidth - 20);
     }
     private Rect difficultyTabStrip, difficultyAddButton;
+
+    private void OpenDifficultyChooser()
+    {
+        contextItems.Clear(); menu = -1;
+        for (int i = 0; i < difficulties.Count; i++)
+        {
+            int target = i;
+            contextItems.Add(new(difficulties[i].Name, () => SwitchDifficulty(target), true,
+                Color: i == activeDifficulty ? Accent : null));
+        }
+        contextBounds = new(12, 88, 280, 12 + contextItems.Count * 32);
+    }
     private int visibleDifficultyTabs = 1;
     private static readonly string catchIconPath = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "osu", "RulesetCatch.png");
 

@@ -132,7 +132,7 @@ internal sealed class EditorControl : Control, IDisposable
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         var p = e.GetPosition(this);
-        View.PointerUp((float)p.X, (float)p.Y, e.InitialPressMouseButton == MouseButton.Right ? 2 : e.InitialPressMouseButton == MouseButton.Middle ? 1 : 0);
+        View.PointerUp((float)p.X, (float)p.Y, e.InitialPressMouseButton == MouseButton.Right ? 2 : e.InitialPressMouseButton == MouseButton.Middle ? 1 : 0, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         if (!View.WantsCapture) e.Pointer.Capture(null);
         e.Handled = true; Refresh();
     }

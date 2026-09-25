@@ -142,7 +142,7 @@ public sealed partial class EditorView
         if (objectTimeline.Contains(x, y))
         {
             if (!ctrl && !shift && BeginBreakEdge(x, y)) return;
-            BeginObjectTimeline(x, y, ctrl || shift); return;
+            BeginObjectTimeline(x, y, ctrl); return;
         }
         if (!AudioLoading && (overview.Contains(x, y) || HitsTimelineHead(x, y)))
         {
@@ -374,7 +374,7 @@ public sealed partial class EditorView
         }
         if (drag == DragKind.TimelineTail) { MoveTimelineTail(x); return; }
         if (drag == DragKind.LegacyControl) { MoveLegacyPoints(x, y); return; }
-        if (drag == DragKind.Objects) { MoveSelectedObjects(x, y); return; }
+        if (drag == DragKind.Objects) { MoveSelectedObjects(x, y, shift); return; }
         if (drag == DragKind.SliderObject) { MoveSliderObject(x); return; }
         if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y); return; }
         var raw = Transform.ToMap(x, y) - dragOffset;
@@ -475,7 +475,7 @@ public sealed partial class EditorView
         }
     }
 
-    public void PointerUp(float x, float y, int button)
+    public void PointerUp(float x, float y, int button, bool shift = false)
     {
         if (settingsColourDrag != 0 && button == 0) { UpdateIndicatorColourDrag(x, y); settingsColourDrag = 0; return; }
         if (textSelecting && button == 0) { MoveInputSelection(x); textSelecting = false; return; }
@@ -520,7 +520,7 @@ public sealed partial class EditorView
             FinishBreakEdge();
             return;
         }
-        PointerMove(x, y, false, false);
+        PointerMove(x, y, shift, false);
         if (drag == DragKind.PlaybackLine) { FinishPlaybackLineDrag(); return; }
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
         if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
@@ -801,12 +801,16 @@ public sealed partial class EditorView
         }
         if (ExportVisible) { ExportKey(virtualKey, ctrl, shift); return; }
         if (LibraryVisible) { LibraryKey(virtualKey, ctrl, shift); return; }
-        if (virtualKey == 116 && !ctrl && !shift) { StartTestplay(); return; }
-        if (ctrl && !shift && virtualKey is 83 or 69 && drag == DragKind.None)
+        if (virtualKey == 115 && !ctrl && !shift && !altHeld && drag == DragKind.None)
+        { OpenSongSetup(); return; }
+        if (virtualKey == 116 && !ctrl && !shift && !altHeld) { StartTestplay(); return; }
+        if (ctrl && !shift && !altHeld && virtualKey == 83 && drag == DragKind.None)
         {
-            if (virtualKey == 83) RequestSave?.Invoke(); else RequestExport?.Invoke();
+            RequestSave?.Invoke();
             return;
         }
+        if (ctrl && altHeld && !shift && virtualKey == 69 && drag == DragKind.None)
+        { RequestExport?.Invoke(); return; }
         if (languageMenuOpen)
         {
             if (virtualKey == 27) languageMenuOpen = false;
@@ -814,7 +818,7 @@ public sealed partial class EditorView
             else if (virtualKey == 13) SelectLanguage(L.AvailableLanguages[languageSelection]);
             return;
         }
-        if (ctrl && shift && virtualKey == 70)
+        if (ctrl && shift && !altHeld && virtualKey == 70)
         {
             if (!dragMoved && draftTrack == Guid.Empty && draftBanana == Guid.Empty
                 && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.LegacyControl)
@@ -846,7 +850,7 @@ public sealed partial class EditorView
             else ShowLibrary();
             return;
         }
-        if (ctrl)
+        if (ctrl && !altHeld)
         {
             if (drag != DragKind.None) return;
             contextItems.Clear();
@@ -870,24 +874,32 @@ public sealed partial class EditorView
             if (virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (virtualKey == 89) Redo();
             else if (virtualKey == 9) SwitchDifficulty((activeDifficulty + (shift ? difficulties.Count - 1 : 1)) % difficulties.Count);
-            else if (virtualKey == 79) RequestOpen?.Invoke();
+            else if (virtualKey == 79) { if (shift) RequestOpen?.Invoke(); else OpenDifficultyChooser(); }
             else if (virtualKey == 83 && !shift) RequestSave?.Invoke();
-            else if (virtualKey == 69) RequestExport?.Invoke();
-            else if (virtualKey == 67) CopySelection();
-            else if (virtualKey == 88) CutSelection();
-            else if (virtualKey == 86) PasteSelection();
+            else if (virtualKey == 67 && !shift) CopySelection();
+            else if (virtualKey == 88 && !shift) CutSelection();
+            else if (virtualKey == 86 && !shift) PasteSelection();
             else if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
-            else if (virtualKey == 71) ReverseSelectedPath();
-            else if (virtualKey == 76) TogglePointCurve();
-            else if (virtualKey == 73 && plot.Contains(mouseX, mouseY) && HitSliderLocation(mouseX, mouseY) is { } location) InsertControlPoint(location);
-            else if (virtualKey == 187 && SelectedTrack is { } addReverse) ChangeReverseCount(addReverse.Id, 1);
-            else if (virtualKey == 189 && SelectedTrack is { } removeReverse) ChangeReverseCount(removeReverse.Id, -1);
-            else if (virtualKey == 74 && plot.Contains(mouseX, mouseY) && SelectedTrack is { } extend) ExtendSlider(extend.Id, MapAt(mouseX, mouseY, true));
+            else if (virtualKey == 71 && !shift) ReverseSelectedPath();
+            else if (virtualKey == 76 && !shift) TogglePointCurve();
+            else if (virtualKey == 73 && !shift && plot.Contains(mouseX, mouseY) && HitSliderLocation(mouseX, mouseY) is { } location) InsertControlPoint(location);
+            else if (virtualKey == 187 && !shift && SelectedTrack is { } addReverse) ChangeReverseCount(addReverse.Id, 1);
+            else if (virtualKey == 189 && !shift && SelectedTrack is { } removeReverse) ChangeReverseCount(removeReverse.Id, -1);
+            else if (virtualKey == 74 && !shift && plot.Contains(mouseX, mouseY) && SelectedTrack is { } extend) ExtendSlider(extend.Id, MapAt(mouseX, mouseY, true));
             return;
         }
+        if (ctrl || altHeld) return;
         if (drag != DragKind.None) return;
         contextItems.Clear();
-        if (draftTrack == Guid.Empty && draftBanana == Guid.Empty && HandleLegacyKey(virtualKey, shift)) return;
+        if (draftTrack != Guid.Empty && !shift && virtualKey is >= 49 and <= 52)
+        {
+            ChangeTool(virtualKey switch { 49 => Tool.Select, 50 => Tool.Fruit, 51 => Tool.Slider, _ => Tool.Banana });
+            return;
+        }
+        if ((draftTrack == Guid.Empty && draftBanana == Guid.Empty ||
+             draftTrack != Guid.Empty && shift && virtualKey is >= 49 and <= 57)
+            && HandleLegacyKey(virtualKey, shift)) return;
+        if (shift) return;
         switch (virtualKey)
         {
             case 71: gridSize = gridSize == 32 ? 4 : gridSize * 2; break;

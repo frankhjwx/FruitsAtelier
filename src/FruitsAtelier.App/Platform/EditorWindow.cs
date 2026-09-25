@@ -300,7 +300,7 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0202:
             case 0x0205:
             case 0x0208:
-                view.PointerUp(x, y, message == 0x0208 ? 1 : message == 0x0205 ? 2 : 0);
+                view.PointerUp(x, y, message == 0x0208 ? 1 : message == 0x0205 ? 2 : 0, Native.Shift);
                 if (!view.WantsCapture && Native.GetCapture() == window) Native.ReleaseCapture();
                 UpdateTitle(); Invalidate(); return 0;
             case 0x020A:
@@ -316,6 +316,11 @@ internal sealed partial class EditorWindow : IDisposable
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0104: // WM_SYSKEYDOWN: Alt changes editor snapping without opening the system menu.
                 view.SetModifiers(Native.Alt, Native.Shift);
+                if ((int)wParam == 69 && Native.Control)
+                {
+                    view.KeyDown((int)wParam, Native.Control, Native.Shift);
+                    UpdateTitle(); Invalidate(); return 0;
+                }
                 if ((view.CapturingTestplayKey || view.IsTestplaying) && !((int)wParam == 115 && Native.Alt))
                 {
                     view.KeyDown((int)wParam, Native.Control, Native.Shift);

@@ -126,13 +126,16 @@ internal static class AssistToolsTests
         Near(.5, ui.View.DistanceReadout.Next!.Value);
         ui.ClickMap(1500, 270);
         Near(240, ui.View.Document.Fruits.Single(f => f.TimeMs == 1500).X);
+        ui.View.SetModifiers(false, false);
         ui.Key('1');
+        ui.View.SetModifiers(true, false);
         Near(1, ui.View.DistanceReadout.Previous!.Value);
         Near(.5, ui.View.DistanceReadout.Next!.Value);
+        ui.View.SetModifiers(false, false);
         ui.Key('Z', ctrl: true);
         ui.Key('1');
         Check(ui.View.DistanceReadout == (null, null), "Clearing selection retained distance readouts");
-        ui.Key('B'); ui.MoveMap(1500, 240);
+        ui.Key('B'); ui.View.SetModifiers(true, false); ui.MoveMap(1500, 240);
         Near(1, ui.View.DistanceReadout.Previous!.Value);
         Near(.5, ui.View.DistanceReadout.Next!.Value);
         ui.View.PointerMove(10, 10, false, false); ui.Paint();

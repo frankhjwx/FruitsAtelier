@@ -25,6 +25,7 @@ var tests = new (string Name, Action Run)[]
     ("Final stream fruit accepts lower-half hit and drags independently", StreamFruitDragTests.Run),
     ("Testplay startup countdown waits, cancels, synchronizes audio and persists settings", TestplayStartupDelayTests.Countdown),
     ("Dense canvas bookmarks preserve labels, history and source data", CanvasBookmarkTests.DenseAxisMarks),
+    ("Draft tools and editor shortcuts respect modifiers", DraftToolShortcutsTests.Run),
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
@@ -345,7 +346,11 @@ static void FileCommands()
     ui.View.RequestOpen = () => calls.Add("open");
     ui.View.RequestSave = () => calls.Add("save");
     ui.View.RequestExport = () => calls.Add("export");
-    ui.Key('O', ctrl: true); ui.Key('S', ctrl: true); ui.Key('S', ctrl: true, shift: true); ui.Key('E', ctrl: true);
+    ui.Key('O', ctrl: true);
+    True(calls.Count == 0, "Ctrl+O must open the difficulty chooser.");
+    ui.Key('O', ctrl: true, shift: true);
+    ui.Key('S', ctrl: true); ui.Key('S', ctrl: true, shift: true);
+    ui.View.SetModifiers(true, false); ui.Key('E', ctrl: true); ui.View.SetModifiers(false, false);
     True(calls.SequenceEqual(new[] { "open", "save", "export" }), "A file shortcut did not invoke its host callback.");
     True(!ui.View.IsDirty, "File commands changed content without a host action.");
 }

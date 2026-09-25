@@ -187,7 +187,7 @@ public sealed partial class EditorView
     private Dictionary<Guid, Fruit> dragFruits = [];
     private Dictionary<Guid, CurveTrack> dragTracks = [];
     private Dictionary<Guid, BananaShower> dragBananas = [];
-    private void MoveSelectedObjects(float x, float y)
+    private void MoveSelectedObjects(float x, float y, bool shift)
     {
         if (objectDragStart is null) return;
         if (!objectDragPrepared)
@@ -248,7 +248,7 @@ public sealed partial class EditorView
             IncludeTime(ImportedSliderConverter.EndTimeMs(objectDragStart, slider));
         }
 
-        if (snap && double.IsFinite(minTime) && Math.Abs(deltaTime) > .001)
+        if (snap && !(objectDragTimeline && shift) && double.IsFinite(minTime) && Math.Abs(deltaTime) > .001)
             deltaTime = TimingMap.Snap(Document, minTime + deltaTime, divisor) - minTime;
         if (double.IsFinite(minTime)) deltaTime = Math.Clamp(deltaTime, -minTime, EditableDurationMs - maxTime);
         else deltaTime = 0;

@@ -280,22 +280,26 @@ public sealed partial class EditorView
 
     private void ChangeTool(Tool next)
     {
+        bool finishingSlider = draftTrack != Guid.Empty;
         if (draftBanana != Guid.Empty)
         {
             history.Cancel();
             draftBanana = Guid.Empty;
             Select(Guid.Empty);
         }
-        if (draftTrack != Guid.Empty && next == Tool.Slider) return;
         if (draftTrack != Guid.Empty) FinishCurve();
-        if (draftTrack != Guid.Empty) return;
+        if (draftTrack != Guid.Empty) CancelInteraction();
         tool = next;
         legacyDragStart = null;
         if (next == Tool.Slider)
         {
-            if (SelectedImportedSlider is not null) EditImportedSlider();
-            if (SelectedTrack is { } track) SelectAnchors(track, anchorSelection.ToArray());
-            else Select(Guid.Empty);
+            if (finishingSlider) Select(Guid.Empty);
+            else
+            {
+                if (SelectedImportedSlider is not null) EditImportedSlider();
+                if (SelectedTrack is { } track) SelectAnchors(track, anchorSelection.ToArray());
+                else Select(Guid.Empty);
+            }
         }
         else if (anchorSelection.Count > 0 && SelectedTrack is { } parent) SelectObjects([parent.Id]);
         menu = -1;
