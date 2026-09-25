@@ -21,6 +21,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 var tests = new (string Name, Action Run)[]
 {
     ("Wheel modifiers distinguish snapping zoom and navigation", WheelGestureTests.Run),
+    ("Canvas axis colors only marked times and spans marker lines", CanvasBookmarkTests.AxisColorsAndLines),
     ("Dense canvas bookmarks preserve labels, history and source data", CanvasBookmarkTests.DenseAxisMarks),
     ("Draft tools and editor shortcuts respect modifiers", DraftToolShortcutsTests.Run),
     ("Volume popover buttons, bars, keyboard and fade", VolumePopoverTests.Run),

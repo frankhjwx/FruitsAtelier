@@ -197,14 +197,14 @@ public sealed partial class EditorView
                 axisLabels.Add((y, time));
         }
         DrawCanvasTimingMarkers(c, axisLabelRows);
+        DrawCanvasBookmarks(c, axisLabelRows);
         foreach (var label in axisLabels)
         {
             float labelY = Math.Clamp(label.Y - 7, plot.Y, plot.Bottom - 14);
             if (axisLabelRows.Any(row => Math.Abs(row - labelY) < 14)) continue;
-            c.Text(Time(label.Time), canvas.X + 3, labelY, 10, 0x70B8FF, 64);
+            c.Text(Time(label.Time), canvas.X + 3, labelY, 10, Muted, 64);
             axisLabelRows.Add(labelY);
         }
-        DrawCanvasBookmarks(c, axisLabelRows);
         c.Unclip();
         c.Clip(plot);
         foreach (var shower in Document.BananaShowers.Where(item => item.Id != draftBanana))

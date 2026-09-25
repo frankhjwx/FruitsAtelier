@@ -39,8 +39,7 @@ public sealed partial class EditorView
             if (first == end) continue;
             int count = end - first;
             float y = Math.Clamp(row + .5f, plot.Y + .5f, plot.Bottom - .5f);
-            c.Line(Playfield.X, y, Playfield.Right, y, Error, 1.5f, .35f);
-            c.Line(plot.X - 23, y, plot.X - 12, y, Error, count > 1 ? 2.5f : 2);
+            c.Line(plot.X, y, plot.Right, y, Error, 1.5f, .35f);
             float labelY = Math.Clamp(y - 7, plot.Y, plot.Bottom - 14);
             if (!occupiedLabelRows.Any(other => Math.Abs(other - labelY) < 14))
             {
@@ -73,8 +72,7 @@ public sealed partial class EditorView
             if (first == end) continue;
             int count = end - first;
             float y = Math.Clamp(row + .5f, plot.Y + .5f, plot.Bottom - .5f);
-            c.Line(Playfield.X, y, Playfield.Right, y, blue, 1, .22f);
-            c.Line(plot.X - 9, y, plot.X - 2, y, blue, count > 1 ? 2.5f : 2);
+            c.Line(plot.X, y, plot.Right, y, blue, 1.5f, .22f);
             float labelY = Math.Clamp(y - 7, plot.Y, plot.Bottom - 14);
             if (!occupiedLabelRows.Any(other => Math.Abs(other - labelY) < 14))
             {
