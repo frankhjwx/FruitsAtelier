@@ -41,7 +41,53 @@ internal static class BreakRecalculationTests
         history.Undo();
         history.Begin("Short remnants"); history.Document.Fruits.Add(new() { TimeMs = 2000, X = 100 });
         history.Document.Fruits.Add(new() { TimeMs = 5700, X = 100 }); history.Commit();
-        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(2200, 4800)]), "Sub-400 ms break fragments remained.");
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(2200, 4800)]), "Short break fragments remained.");
+    }
+
+    public static void RemovalAndNearbyPlacement()
+    {
+        var map = Map();
+        var history = new EditorHistory(map);
+        history.Begin("Split break");
+        var inserted = new Fruit { TimeMs = 3000, X = 100 };
+        history.Document.Fruits.Add(inserted);
+        history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(1200, 2100), new BreakPeriod(3200, 6000)]),
+            "Placement did not split the break.");
+        history.Begin("Remove split note");
+        history.Document.Fruits.RemoveAll(fruit => fruit.Id == inserted.Id);
+        history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(1200, 6000)]),
+            "Removing the split note did not merge its breaks.");
+        history.Undo();
+        Check(OsuTimeline.Breaks(history.Document).Count == 2, "Undo did not restore split breaks.");
+        history.Redo();
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(1200, 6000)]),
+            "Redo did not restore the merged break.");
+
+        history.Begin("Place near previous note");
+        var nearby = new Fruit { TimeMs = 2500, X = 100 };
+        history.Document.Fruits.Add(nearby);
+        history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(2700, 6000)]),
+            "A short break remained beside the previous note.");
+        history.Begin("Remove nearby note");
+        history.Document.Fruits.RemoveAll(fruit => fruit.Id == nearby.Id);
+        history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(1200, 6000)]),
+            "Removing a nearby note did not restore the full break.");
+
+        history.Begin("Place near next note");
+        var nearEnd = new Fruit { TimeMs = 5600, X = 100 };
+        history.Document.Fruits.Add(nearEnd);
+        history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(1200, 4700)]),
+            "A short break remained beside the next note.");
+        history.Begin("Remove note near next note");
+        history.Document.Fruits.RemoveAll(fruit => fruit.Id == nearEnd.Id);
+        history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(1200, 6100)]),
+            "Removing a note near the next note did not recalculate the break end.");
     }
 
     private static MapDocument Map()

@@ -14,12 +14,43 @@ public static class OsuTimeline
         var current = ObjectIntervals(document);
         var changed = current.Where(pair => !previous.TryGetValue(pair.Key, out var old) || old != pair.Value)
             .Select(pair => pair.Value).ToArray();
-        if (changed.Length == 0) return;
+        var vacated = previous.Where(pair => !current.TryGetValue(pair.Key, out var now) || now != pair.Value)
+            .Select(pair => pair.Value).ToArray();
+        if (changed.Length == 0 && vacated.Length == 0) return;
         double preempt = CatchScrollTiming.PreemptMs(document.ApproachRate);
         var occupied = current.Values.OrderBy(interval => interval.Start).ToArray();
-        foreach (var period in periods)
+        foreach (var interval in vacated)
         {
-            if (!changed.Any(interval => interval.Start - preempt < period.EndMs && interval.End + 200 > period.StartMs)) continue;
+            int beforeNote = (int)Math.Clamp(Math.Floor(interval.Start - preempt), 0, int.MaxValue);
+            int afterNote = (int)Math.Clamp(Math.Ceiling(interval.End + 200), 0, int.MaxValue);
+            var adjacent = Breaks(document);
+            var left = adjacent.LastOrDefault(period => period.EndMs == beforeNote);
+            var right = adjacent.FirstOrDefault(period => period.StartMs == afterNote);
+            if (left == default && right == default) continue;
+            if (left != default && right != default && left != right)
+            {
+                ReplaceBreak(document, left, new(left.StartMs, right.EndMs));
+                RemoveBreak(document, right);
+            }
+            else if (left != default)
+            {
+                double? next = occupied.Where(item => item.Start >= interval.End).Select(item => (double?)item.Start).FirstOrDefault();
+                if (next is not null)
+                    ReplaceBreak(document, left, new(left.StartMs,
+                        Math.Max(left.EndMs, (int)Math.Clamp(Math.Floor(next.Value - preempt), 0, int.MaxValue))));
+            }
+            else
+            {
+                double? prior = occupied.Where(item => item.End <= interval.Start).Select(item => (double?)item.End).LastOrDefault();
+                if (prior is not null)
+                    ReplaceBreak(document, right, new(
+                        Math.Min(right.StartMs, (int)Math.Clamp(Math.Ceiling(prior.Value + 200), 0, int.MaxValue)), right.EndMs));
+            }
+        }
+        foreach (var period in Breaks(document))
+        {
+            if (!changed.Any(interval => interval.Start - preempt < period.EndMs && interval.End + 200 > period.StartMs)
+                && !vacated.Any(interval => interval.Start - preempt < period.EndMs && interval.End + 200 > period.StartMs)) continue;
             var remaining = new List<BreakPeriod>();
             int start = period.StartMs;
             foreach (var interval in occupied)
@@ -29,11 +60,11 @@ public static class OsuTimeline
                 if (afterNote <= start) continue;
                 if (beforeNote >= period.EndMs) break;
                 int end = Math.Min(beforeNote, period.EndMs);
-                if ((long)end - start >= 400) remaining.Add(new(start, end));
+                if ((long)end - start >= 650) remaining.Add(new(start, end));
                 start = Math.Max(start, afterNote);
                 if (start >= period.EndMs) break;
             }
-            if ((long)period.EndMs - start >= 400) remaining.Add(new(start, period.EndMs));
+            if ((long)period.EndMs - start >= 650) remaining.Add(new(start, period.EndMs));
             if (remaining.Count == 1 && remaining[0] == period) continue;
             if (remaining.Count == 0) RemoveBreak(document, period);
             else

@@ -116,6 +116,7 @@ var tests = new (string Name, Action Run)[]
     ("Fractional folded slider tails edit their source event", SliderDistanceDragTests.FractionalFoldedTail),
     ("Note placement recalculates breaks and exports with one undo", BreakRecalculationTests.Placement),
     ("Break recalculation respects slider duration and cancellation", BreakRecalculationTests.DurationAndCancellation),
+    ("Removing break notes merges intervals and nearby notes shorten them", BreakRecalculationTests.RemovalAndNearbyPlacement),
     ("Distance per beat uses grid drag, numeric entry, export and undo", DistanceSnapPresetTests.BaseDistance),
     ("Editor DPB preserves existing slider playback and imported multiplier", DistanceSnapPresetTests.ExistingSliderPreservation),
     ("DPB input and bar use the reference distance range", DistanceSnapPresetTests.DynamicBaseRange),
