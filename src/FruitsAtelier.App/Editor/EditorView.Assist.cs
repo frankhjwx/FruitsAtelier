@@ -83,6 +83,8 @@ public sealed partial class EditorView
             // The flag changes combo grouping but not the converted catch object stream.
             convertedSnapshot = Document.DeepClone();
             BuildComboColours();
+            timelineConversion = null;
+            previewSource = null;
         }
     }
 
