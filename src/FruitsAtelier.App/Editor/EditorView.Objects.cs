@@ -57,7 +57,6 @@ public sealed partial class EditorView
             if (sourceId is { } id && item.SourceId != id) continue;
             var point = new MapPoint(item.TimeMs, item.X);
             double candidateDistance = PointerDistance(point, x, y);
-            if (candidateDistance >= distance) continue;
             var p = Screen(point);
             float scale = Playfield.Width / 512;
             var bounds = skin?.Bounds(SkinObjectKind(item.Kind), skinIndices.GetValueOrDefault(item.SourceId),
@@ -65,7 +64,13 @@ public sealed partial class EditorView
             bool hit = bounds is { } b
                 ? Math.Abs(x - p.X) <= Math.Max(7, b.Width / 2) && Math.Abs(y - p.Y) <= Math.Max(7, b.Height / 2)
                 : Near(point, x, y, Math.Max(7, ObjectRadius(item.Kind) * scale));
-            if (hit) { closest = item; distance = candidateDistance; }
+            if (!hit) continue;
+            // Later stream fruits are drawn over earlier ones, so their whole visible sprite wins an overlap.
+            bool frontStreamFruit = closest is { } previous && previous.SourceId == item.SourceId
+                && item.TimeMs > previous.TimeMs && item.Kind == CatchObjectKind.Fruit
+                && Document.Tracks.Any(track => track.Id == item.SourceId && track.StreamSnapDivisor is not null);
+            if (candidateDistance < distance || frontStreamFruit)
+            { closest = item; distance = candidateDistance; }
         }
         return closest;
     }

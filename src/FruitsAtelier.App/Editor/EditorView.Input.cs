@@ -257,12 +257,13 @@ public sealed partial class EditorView
         {
             bool parentSelected = objectSelection.Count == 1 && objectSelection.Contains(hitObject.SourceId);
             bool editableChild = Document.Tracks.Any(t => t.Id == hitObject.SourceId);
+            bool sliderChild = !hitObject.IsStandalone || editableChild && hitObject.Kind == CatchObjectKind.Fruit;
             PickObject(hitObject.SourceId, ctrl);
-            if (!hitObject.IsStandalone && (!parentSelected || !editableChild && hitObject.Kind != CatchObjectKind.Fruit))
+            if (sliderChild && (!parentSelected || !editableChild && hitObject.Kind != CatchObjectKind.Fruit))
                 distanceObject = null;
             else PickSoundEdge(hitObject);
             if (ctrl) return;
-            if (!hitObject.IsStandalone)
+            if (sliderChild)
             {
                 if (parentSelected && (hitObject.Kind == CatchObjectKind.Fruit
                     || editableChild && hitObject.Kind is (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet)))
