@@ -367,6 +367,8 @@ public sealed partial class EditorView
         var track = Document.Tracks.First(t => t.Id == draftTrack);
         if (LegacyMode && legacyDraft is not null && !legacyPreviewValid) { StatusMessage = L.Get("editor.status.needTwoAnchors"); return; }
         if (track.Nodes.Count < 2) { StatusMessage = L.Get("editor.status.needTwoAnchors"); return; }
+        var head = track.Nodes[0];
+        Document.Fruits.RemoveAll(fruit => fruit.TimeMs == head.TimeMs && fruit.X == head.X);
         Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
         history.Commit();
         legacyDraft = null; legacyPreviewVertices = null;

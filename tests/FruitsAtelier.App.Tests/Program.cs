@@ -20,6 +20,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Completing an FSlider replaces only exact head fruit overlaps and undoes atomically", SliderHeadReplacementTests.OnCompletion),
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
