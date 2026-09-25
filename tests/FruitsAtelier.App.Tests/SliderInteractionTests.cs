@@ -237,8 +237,9 @@ internal static class SliderInteractionTests
         Check(ui.View.Document.Fruits.Count == 0, "Right-click did not delete the fruit.");
         ui.Key('Z', ctrl: true);
         Check(baseline.ContentEquals(ui.View.Document), "Deletion did not undo exactly.");
+        double beforeClick = ui.View.PlayheadMs;
         ui.ClickMap(3000, 450);
-        Near(3000, ui.View.PlayheadMs);
+        Near(beforeClick, ui.View.PlayheadMs);
     }
 
     public static void DeleteDoesNotActivateDormantHandles()

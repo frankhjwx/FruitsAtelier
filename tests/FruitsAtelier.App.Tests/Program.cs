@@ -20,6 +20,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
     ("Workspace-only saves persist before optional Songs export", WorkspaceSaveTests.Run),
@@ -151,7 +152,7 @@ var tests = new (string Name, Action Run)[]
     ("Star ratings refresh asynchronously without losing cached or newer results", DifficultyTabTests.AsyncRatings),
     ("Overflow difficulty tabs scroll, switch and add without losing content", DifficultyTabTests.Overflow),
     ("Multi-difficulty projects preserve content, history and compatibility", ProjectTests.Run),
-    ("Select blank-canvas clicks seek across beat divisors", CanvasSeekSnapTests.BeatGrid),
+    ("Select blank-canvas clicks preserve time across beat divisors", CanvasSeekSnapTests.BeatGrid),
     ("Canvas and timeline navigation do not edit content", CanvasSeekSnapTests.FreeMode),
     ("Timeline grabs retain the exact original time after round trips", TimelineDragTests.ReturnToStart),
     ("Timeline background clicks seek and drag limits preserve the origin", TimelineDragTests.ClickAndLimits),
@@ -186,7 +187,7 @@ var tests = new (string Name, Action Run)[]
     ("A zero-length handle does not prevent dragging its anchor", ZeroHandleAnchor),
     ("Ctrl-click-created slider keeps corner points and commits one transaction", DraftCompletion),
     ("Painted fruit, time ruler and playhead share an upward time axis", UpwardPainting),
-    ("Select blank clicks seek while objects and box drags preserve time", UpwardClickTime),
+    ("Canvas clicks, objects and box drags preserve time", UpwardClickTime),
     ("Wheel up reveals later time and middle drag keeps content under the pointer", WheelAndPan),
     ("Overview wheel accumulates snap steps and preserves playback and content", OverviewWheel),
     ("Object timeline selects without seeking and scales independently", ObjectTimelineTests.NavigationAndSelection),
@@ -516,12 +517,12 @@ static void UpwardClickTime()
     var map = new MapDocument { DurationMs = 10000 };
     map.Fruits.Add(new() { TimeMs = 1000, X = 100 });
     ui.LoadDocument(map);
-    ui.ClickMap(1128, 480); Near(1125, ui.View.PlayheadMs);
-    ui.ClickMap(1730, 480); Near(1750, ui.View.PlayheadMs);
-    ui.ClickMap(1000, 100); Near(1750, ui.View.PlayheadMs);
-    ui.ClickMap(2300, 480, ctrl: true); Near(1750, ui.View.PlayheadMs);
+    ui.ClickMap(1128, 480); Near(0, ui.View.PlayheadMs);
+    ui.ClickMap(1730, 480); Near(0, ui.View.PlayheadMs);
+    ui.ClickMap(1000, 100); Near(0, ui.View.PlayheadMs);
+    ui.ClickMap(2300, 480, ctrl: true); Near(0, ui.View.PlayheadMs);
     ui.DownMap(2500, 450); ui.MoveMap(3000, 490); ui.UpMap(3000, 490);
-    Near(1750, ui.View.PlayheadMs);
+    Near(0, ui.View.PlayheadMs);
     True(!ui.View.IsDirty, "Navigation or selection mutated the map.");
 }
 
