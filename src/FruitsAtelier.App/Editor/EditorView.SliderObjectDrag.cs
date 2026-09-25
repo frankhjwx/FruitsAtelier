@@ -11,6 +11,7 @@ public sealed partial class EditorView
     private MapDocument? sliderObjectDragSource, sliderObjectDragShape;
     private int sliderObjectTrackIndex, sliderObjectImportIndex;
     private ConvertedCatchObject? sliderObjectDragPrevious;
+    private bool sliderObjectHorizontalCommitted;
 
     private bool TryBeginSelectedSliderObjectDrag(float x, float y)
     {
@@ -36,6 +37,7 @@ public sealed partial class EditorView
 
     private void BeginSliderObjectDrag(ConvertedCatchObject target, float x, float y)
     {
+        sliderObjectHorizontalCommitted = false;
         sliderObjectPointerOriginX = target.X;
         EnsureConversion();
         // Hit testing uses exported coordinates. Editing needs the authored event's
@@ -63,6 +65,28 @@ public sealed partial class EditorView
         distanceObject = (target.SourceId, target.EventIndex);
         drag = DragKind.SliderObject;
         BeginPointerDrag(x, y);
+    }
+
+    private bool TryMoveStreamAsWhole(float x, float y, bool shift)
+    {
+        if (sliderObjectHorizontalCommitted || sliderObjectDragTarget is not { } target
+            || !Document.Tracks.Any(track => track.Id == target.SourceId && track.StreamSnapDivisor is not null))
+            return false;
+        float horizontal = Math.Abs(x - dragStartX), vertical = Math.Abs(y - dragStartY);
+        if (vertical <= horizontal)
+        {
+            sliderObjectHorizontalCommitted = true;
+            return false;
+        }
+        float startX = dragStartX, startY = dragStartY;
+        history.Cancel();
+        sliderObjectDragTarget = null;
+        sliderObjectDragSource = sliderObjectDragShape = null;
+        sliderObjectDragPrevious = null;
+        BeginObjectDrag(startX, startY);
+        dragMoved = true;
+        MoveSelectedObjects(x, y, shift);
+        return true;
     }
 
     private void MoveSliderObject(float x)

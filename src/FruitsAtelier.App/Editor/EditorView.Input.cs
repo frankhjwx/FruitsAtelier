@@ -379,7 +379,11 @@ public sealed partial class EditorView
         if (drag == DragKind.TimelineTail) { MoveTimelineTail(x); return; }
         if (drag == DragKind.LegacyControl) { MoveLegacyPoints(x, y); return; }
         if (drag == DragKind.Objects) { MoveSelectedObjects(x, y, shift); return; }
-        if (drag == DragKind.SliderObject) { MoveSliderObject(x); return; }
+        if (drag == DragKind.SliderObject)
+        {
+            if (!TryMoveStreamAsWhole(x, y, shift)) MoveSliderObject(x);
+            return;
+        }
         if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y); return; }
         var raw = Transform.ToMap(x, y) - dragOffset;
         var p = new MapPoint(Math.Clamp(raw.TimeMs, 0, EditableDurationMs), Math.Clamp(SnapX(raw.X), 0, 512));

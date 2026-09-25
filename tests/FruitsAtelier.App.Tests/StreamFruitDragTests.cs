@@ -38,5 +38,15 @@ internal static class StreamFruitDragTests
         ui.Key('Z', ctrl: true);
         if (!map.ContentEquals(ui.View.Document))
             throw new Exception("Undo did not restore the slider stream.");
+
+        ui.DownMap(last.TimeMs, last.X);
+        ui.MoveMap(last.TimeMs + 100, last.X);
+        ui.UpMap(last.TimeMs + 100, last.X);
+        var moved = ui.View.Document.Tracks.Single();
+        if (Math.Abs(moved.Nodes[0].TimeMs - 1100) > .001 || moved.StreamSnapDivisor != 16)
+            throw new Exception("Dragging a selected stream vertically did not move the whole stream on the time axis.");
+        ui.Key('Z', ctrl: true);
+        if (!map.ContentEquals(ui.View.Document))
+            throw new Exception("Undo did not restore the vertically moved slider stream.");
     }
 }
