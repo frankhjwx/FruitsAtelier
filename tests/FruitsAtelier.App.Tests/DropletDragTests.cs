@@ -2,6 +2,50 @@ using FruitsAtelier.Core;
 
 internal static class DropletDragTests
 {
+    public static void RepeatedPathDrag()
+    {
+        foreach (int spans in new[] { 2, 3 })
+        foreach (var mode in Enum.GetValues<FruitsAtelier.App.Editor.SliderEditingMode>())
+        foreach (bool returning in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 60000.0 / 220,
+                SliderMultiplier = 1.8, SliderTickRate = 2, IsDemo = false };
+            var track = new CurveTrack { Kind = CurveKind.Linear, SpanCount = spans, CompensateTinyDroplets = true };
+            track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 400 },
+                new Anchor { TimeMs = 1000 + 45000.0 / 220, X = 330 }]);
+            map.Tracks.Add(track);
+            var baseline = CatchStreamConverter.Convert(map);
+            Check(baseline.Success, "Repeated droplet fixture did not convert.");
+            var droplets = baseline.Objects.Where(o => o.Kind == CatchObjectKind.Droplet).ToArray();
+            Check(droplets.Length == spans, "Expected one shared droplet per traversal.");
+            var target = droplets[returning ? 1 : 0];
+            var displayed = OsuBeatmapWriter.Serialize(map).PlayableObjects.Single(o => o.EventIndex == target.EventIndex);
+            var ui = new Ui(); ui.LoadDocument(map);
+            ui.View.SetSliderEditingMode(mode); ui.Paint();
+            ui.ClickMap(displayed.TimeMs, displayed.X);
+            ui.DownMap(displayed.TimeMs, displayed.X);
+            ui.MoveMap(displayed.TimeMs, displayed.X + 5);
+            ui.MoveMap(displayed.TimeMs, displayed.X + 10);
+            ui.UpMap(displayed.TimeMs, displayed.X + 10);
+            var after = CatchStreamConverter.Convert(ui.View.Document);
+            Check(after.Success, "Repeated droplet drag became invalid.");
+            foreach (var old in baseline.Objects)
+            {
+                var current = after.Objects.Single(o => o.EventIndex == old.EventIndex);
+                double expected = old.Kind == CatchObjectKind.Droplet ? displayed.X + 10 : old.X;
+                Check(Math.Abs(current.X - expected) < .001 && Math.Abs(current.TimeMs - old.TimeMs) < .001,
+                    $"Repeated drag ({spans}, {mode}, returning={returning}) event {old.EventIndex}: expected {expected}, got {current.X}; {ui.View.StatusMessage}");
+            }
+            ui.Key('Z', ctrl: true);
+            Check(map.ContentEquals(ui.View.Document), "Repeated droplet drag did not undo in one step.");
+            ui.ClickMap(displayed.TimeMs, displayed.X);
+            ui.DownMap(displayed.TimeMs, displayed.X);
+            ui.MoveMap(displayed.TimeMs, displayed.X - 5);
+            ui.Key(27); ui.UpMap(displayed.TimeMs, displayed.X - 5);
+            Check(map.ContentEquals(ui.View.Document), "Cancelling repeated droplet drag changed the map.");
+        }
+    }
+
     public static void DefaultModeDrag()
     {
         foreach (var kind in new[] { CatchObjectKind.Droplet, CatchObjectKind.TinyDroplet })

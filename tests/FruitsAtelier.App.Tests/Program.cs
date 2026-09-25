@@ -174,6 +174,7 @@ var tests = new (string Name, Action Run)[]
     ("Slider edges drag independently and slider objects follow Grid Snap", NoteSnapTests.SliderObjectDragging),
     ("Slider drag candidates preserve unrelated sources and restore their baseline", NoteSnapTests.SliderDragBaseline),
     ("Slider edges highlight and inspect snap while matching current grids stay unchanged", NoteSnapTests.SliderEdgesAndCurrentSnap),
+    ("Repeated slider droplets sharing a path position drag together and undo atomically", DropletDragTests.RepeatedPathDrag),
     ("Slider droplets select on the second click and drag locally", DropletDragTests.SelectAndMove),
     ("Dragging a curved slider droplet preserves its neighbouring events", DropletDragTests.CurvedNeighbors),
     ("Droplet dragging handles fractional timing and dense anchors", DropletDragTests.ConvertedAndDenseCurves),
