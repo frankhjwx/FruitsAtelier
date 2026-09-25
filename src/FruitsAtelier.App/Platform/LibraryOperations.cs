@@ -7,7 +7,9 @@ public static class LibraryOperations
 {
     public static void ExportOsz(BeatmapProject project, string destination, bool compensate)
     {
-        string staging = Path.Combine(Path.GetTempPath(), "FruitsAtelier-osz-" + Guid.NewGuid().ToString("N"));
+        // macOS's default /var temp path traverses a symlink rejected by resource copying.
+        string temporaryRoot = OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath();
+        string staging = Path.Combine(temporaryRoot, "FruitsAtelier-osz-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(staging);
         try
         {
