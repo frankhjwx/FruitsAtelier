@@ -122,13 +122,15 @@ internal sealed partial class EditorWindow : IDisposable
                 if (result < 0) throw new Win32Exception();
                 if (result == 0) break;
             }
-            // IME-owned key messages lose their original key after TranslateMessage.
-            if (msg.Window == hwnd && msg.Id == 0x0100 && Native.Control && Native.Shift)
+            // Resolve IME-owned physical keys before translation while the editor owns shortcuts.
+            if (msg.Window == hwnd && msg.Id == 0x0100 && !view.IsEditingText && !view.CapturingTestplayKey && !view.IsTestplaying)
             {
                 uint key = msg.WParam == 0xE5 ? Native.ImmGetVirtualKey(hwnd) : (uint)msg.WParam;
-                if (key == 70)
+                if (msg.WParam == 0xE5 && key is > 0 and < 0xE5 ||
+                    key == 70 && Native.Control && Native.Shift)
                 {
-                    view.KeyDown(70, true, true);
+                    view.SetModifiers(Native.Alt, Native.Shift);
+                    view.KeyDown((int)key, Native.Control, Native.Shift);
                     if (!view.WantsCapture && Native.GetCapture() == hwnd) Native.ReleaseCapture();
                     UpdateTitle(); Invalidate();
                     continue;
