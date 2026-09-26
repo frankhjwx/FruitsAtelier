@@ -595,6 +595,11 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (librarySettingsOpen)
+        {
+            PointerDown(x, y, 0, shift, ctrl);
+            return;
+        }
         if (TimingModal || TimingPageVisible && rightPanel.Contains(x, y))
         {
             var field = timingFields.FirstOrDefault(f => f.Bounds.Contains(x, y));

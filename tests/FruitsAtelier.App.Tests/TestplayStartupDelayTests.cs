@@ -4,6 +4,17 @@ internal static class TestplayStartupDelayTests
 {
     public static void LeadIn()
     {
+        var settingsUi = new Ui();
+        settingsUi.View.OpenSettings(); settingsUi.Paint();
+        settingsUi.ClickText(FruitsAtelier.Localization.Strings.Get("settings.testplay"));
+        var bounds = settingsUi.View.SettingsBounds;
+        float rightX = bounds.X + 230 + 270 + 202 - 12, leftX = bounds.X + 230 + 270 + 12;
+        float arrowY = bounds.Y + 260 + 19;
+        settingsUi.Click(rightX, arrowY);
+        settingsUi.View.PointerDoubleClick(rightX, arrowY, false, false); settingsUi.Paint();
+        settingsUi.View.ApplySettings(Path.GetFullPath("artifacts/tests/testplay-delay-clicks.json"));
+        Check(settingsUi.View.LibrarySettings.TestplayStartupDelaySeconds == 1,
+            "Rapid consecutive lead-in arrow clicks did not both apply.");
         var clock = new ManualTime();
         var ui = new Ui(timeProvider: clock);
         var map = new MapDocument { DurationMs = 5000 };
