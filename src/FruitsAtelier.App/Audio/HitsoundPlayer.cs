@@ -72,7 +72,17 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
         auditionMixer.PlayImmediate(sound);
         auditionOutput.Play();
     }
-    internal ISampleProvider MixWithMusic(ISampleProvider music, double startMs, double speed = 1) => new MusicMixer(this, music, startMs, speed);
+    internal ISampleProvider MixWithMusic(ISampleProvider music, double startMs, double speed = 1)
+    {
+        lock (gate)
+        {
+            // Cached frame positions belong to the old output's origin and tempo.
+            voices.Clear();
+            scheduled.RemoveAll(voice => voice.TimeMs < startMs);
+            foreach (var voice in scheduled) voice.StartFrame = null;
+        }
+        return new MusicMixer(this, music, startMs, speed);
+    }
 
     private sealed class MusicMixer(HitsoundPlayer owner, ISampleProvider music, double startMs, double speed) : ISampleProvider
     {

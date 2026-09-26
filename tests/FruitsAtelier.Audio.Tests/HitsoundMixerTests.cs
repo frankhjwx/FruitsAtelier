@@ -9,6 +9,7 @@ static class HitsoundMixerTests
     {
         ByteAdapterBuffers();
         ScheduledMusic();
+        SpeedChangeSession();
         IndependentVolume();
         AuditionWithoutMusic();
         WaveformDecoding();
@@ -184,6 +185,35 @@ static class HitsoundMixerTests
             if (buffer.Take(channels * 257).Any(v => v != .1f)) throw new Exception("Live catch survived cancellation");
         }
         Console.WriteLine("PASS Timestamped hitsounds share music frames across buffer boundaries, sample rates, channels and cancellation");
+    }
+
+    private static void SpeedChangeSession()
+    {
+        foreach (double speed in new[] { .5, 1, 1.5 })
+        {
+            using var mixer = new HitsoundPlayer();
+            var sound = new Hitsound(CatchObjectKind.Fruit, null, .5f);
+            var sample = HitsoundSamples.Create(sound);
+            var oldSession = mixer.MixWithMusic(new ConstantMusic(44100, 1), 0, .5);
+            var elapsed = new float[44100 * 2];
+            oldSession.Read(elapsed, 0, elapsed.Length);
+            mixer.Schedule(sound, 1000);
+            mixer.Schedule(sound, 1100);
+            oldSession.Read(new float[441], 0, 441);
+
+            var resumed = mixer.MixWithMusic(new ConstantMusic(44100, 1), 1005, speed);
+            var output = new float[44100 * 3];
+            resumed.Read(output, 0, output.Length);
+            long attack = (long)Math.Round(95 * 44100 / (1000 * speed));
+            for (int i = 0; i < output.Length; i++)
+            {
+                long position = i - attack;
+                float expected = .1f + (position >= 0 && position < sample.Length ? sample[position] * sound.Volume : 0);
+                if (Math.Abs(output[i] - expected) > .00001f)
+                    throw new Exception($"Rebuilt {speed}x session misplaced a hit or emitted stale PCM in the break at frame {i}");
+            }
+        }
+        Console.WriteLine("PASS Speed changes rebase future hits and discard prior attacks; following break has no hitsound PCM");
     }
 
     private sealed class ConstantMusic(int rate, int channels) : ISampleProvider
