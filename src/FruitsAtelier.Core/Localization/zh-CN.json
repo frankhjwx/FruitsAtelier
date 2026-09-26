@@ -770,6 +770,8 @@
   "settings.derandomizeOn": "默认去随机化 droplet：开启",
   "settings.derandomizeOff": "默认去随机化 droplet：关闭",
   "settings.appearance": "外观",
+  "settings.skins": "皮肤",
+  "settings.immediatePreferences": "更改会立即生效并自动保存。",
   "settings.audio": "音频",
   "settings.testplay": "试玩按键",
   "settings.immediate": "音量修改会立即保存。",

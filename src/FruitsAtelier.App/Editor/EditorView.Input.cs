@@ -30,6 +30,12 @@ public sealed partial class EditorView
         if (librarySettingsOpen)
         {
             if (LanguagePointerDown(x, y, button) || BeginIndicatorColourDrag(x, y, button)) return;
+            if (contextItems.Count > 0)
+            {
+                if (button == 0) ActivateContextMenu(x, y); else contextItems.Clear();
+                return;
+            }
+            if (BeginVolumeDrag(x, y, button)) return;
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;

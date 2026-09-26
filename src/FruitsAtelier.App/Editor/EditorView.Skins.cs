@@ -75,19 +75,23 @@ public sealed partial class EditorView
     }
 
     private void DrawSkinSelector(ICanvas c)
+        => DrawSkinSelector(c, SkinSelectorBounds);
+
+    private void DrawSkinSelector(ICanvas c, Rect bounds)
     {
-        var bounds = SkinSelectorBounds;
-        Button(c, bounds, "", () => OpenSkinMenu());
-        c.Text(L.Get("skin.selector", SkinName ?? L.Get("skin.default")) + " ▾", bounds.X + 8, bounds.Y + 7,
+        Button(c, bounds, "", () => OpenSkinMenu(anchor: bounds));
+        c.Text(L.Get("skin.selector", SkinName ?? L.Get("skin.default")) + " ▾", bounds.X + 8, bounds.Y + (bounds.Height - 14) / 2,
             12, ImportedSkin ? Gold : Foreground, bounds.Width - 16);
     }
 
-    private void OpenSkinMenu(int page = 0)
+    private void OpenSkinMenu(int page = 0, Rect? anchor = null)
     {
         try
         {
             if (editField >= 0 && !CommitField()) return;
             languageMenuOpen = false; menu = -1; contextItems.Clear();
+            libraryField = bindingCapture = -1;
+            var bounds = anchor ?? SkinSelectorBounds;
             var entries = new List<(string Folder, string Name, bool Imported)>();
             void Add(string root, bool imported)
             {
@@ -118,9 +122,11 @@ public sealed partial class EditorView
                     + (entry.Imported ? " · " + L.Get("skin.imported") : "");
                 contextItems.Add(new(label, () => SelectSkin(entry.Folder), Color: entry.Imported ? Gold : Foreground));
             }
-            if (page > 0) contextItems.Add(new(L.Get("skin.previousPage"), () => OpenSkinMenu(page - 1)));
-            if (page < lastPage) contextItems.Add(new(L.Get("skin.nextPage"), () => OpenSkinMenu(page + 1)));
-            contextBounds = new(Math.Max(0, Math.Min(SkinSelectorBounds.X, width - 310)), 38, 310, 12 + contextItems.Count * 32);
+            if (page > 0) contextItems.Add(new(L.Get("skin.previousPage"), () => OpenSkinMenu(page - 1, bounds)));
+            if (page < lastPage) contextItems.Add(new(L.Get("skin.nextPage"), () => OpenSkinMenu(page + 1, bounds)));
+            float menuHeight = 12 + contextItems.Count * 32;
+            contextBounds = new(Math.Max(0, Math.Min(bounds.X, width - 310)),
+                Math.Clamp(bounds.Bottom + 4, 0, Math.Max(0, height - menuHeight)), 310, menuHeight);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
         { contextItems.Clear(); ShowError(error.Message); }

@@ -393,11 +393,31 @@ internal static class RenderCheck
                 view.OpenSettings();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 var settings = view.SettingsBounds;
-                for (int category = 0; category < 5; category++)
+                foreach (int category in new[] { 0, 1, 2, 3, 5, 6, 4 })
                 {
                     float sx = settings.X + 40, sy = settings.Y + 96 + category * 48;
                     view.PointerDown(sx, sy, 0, false, false); view.PointerUp(sx, sy, 0);
                     canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                    if (category == 5)
+                    {
+                        for (int channel = 0; channel < 3; channel++)
+                        {
+                            var bar = view.VolumeSliderBounds(channel);
+                            float vx = bar.X + bar.Width * (channel + 1) / 4, vy = bar.Y + 12;
+                            view.PointerDown(vx, vy, 0, false, false);
+                            view.PointerUp(vx, vy, 0);
+                        }
+                        if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
+                            throw new InvalidOperationException("Settings volume controls did not update shared percentages.");
+                    }
+                    if (category == 6)
+                    {
+                        var selector = view.SettingsSkinSelectorBounds;
+                        view.PointerDown(selector.X + 8, selector.Y + 8, 0, false, false);
+                        view.PointerUp(selector.X + 8, selector.Y + 8, 0);
+                        canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                        view.KeyDown(27, false, false);
+                    }
                 }
                 foreach (var phase in new[] { UpdatePhase.Unsupported, UpdatePhase.Checking, UpdatePhase.Available, UpdatePhase.Downloading, UpdatePhase.Ready, UpdatePhase.Failed })
                 {

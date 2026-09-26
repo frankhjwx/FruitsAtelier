@@ -770,6 +770,8 @@
   "settings.derandomizeOn": "Default derandomize droplets: On",
   "settings.derandomizeOff": "Default derandomize droplets: Off",
   "settings.appearance": "Appearance",
+  "settings.skins": "Skins",
+  "settings.immediatePreferences": "Changes apply immediately and are saved automatically.",
   "settings.audio": "Audio",
   "settings.testplay": "Testplay keys",
   "settings.immediate": "Volume changes are saved immediately.",

@@ -44,7 +44,7 @@ public sealed partial class EditorView
         PumpSliderBatch();
         PumpLibrary();
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
-        if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawContextMenu(c); DrawSettings(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
+        if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
         bool expandedPanel = catchPreviewVisible || TimingPageVisible;
         float rightWidth = expandedPanel ? Math.Clamp(previewWidth, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)) : 0;
         float bodyHeight = Math.Max(180, height - 204);
@@ -88,7 +88,7 @@ public sealed partial class EditorView
         }
         DrawUpdateNotice(c);
         if (menu >= 0) DrawMenu(c);
-        DrawContextMenu(c);
+        if (!librarySettingsOpen) DrawContextMenu(c);
         if (!librarySettingsOpen) DrawLanguageMenu(c);
         DrawPanelMenu(c);
         DrawSliderDialog(c);
@@ -101,6 +101,7 @@ public sealed partial class EditorView
         DrawSongSetup(c);
         DrawTimingSetup(c);
         DrawSettings(c);
+        if (librarySettingsOpen) DrawContextMenu(c);
         if (librarySettingsOpen) DrawLanguageMenu(c);
         DrawDiscardConfirmation(c);
         if (!librarySettingsOpen) DrawDifficultyTooltip(c);

@@ -90,6 +90,8 @@ even when the device advances before the worker handles it.
 
 ## Window checks
 
+Settings preference regressions cover Audio sliders and the Skins selector from both the Library and editor, shared values with the original controls, immediate persistence, menu dismissal, and unchanged beatmap content in English and Chinese. The Windows `--render-check` also exercises the Settings sliders and skin menu at its tested sizes and DPI values.
+
 Shortcut routing regressions verify that Timing cannot move hidden Compose
 selections, unsupported modifiers cannot delete timing rows or invoke base
 transport commands, and export remains available outside Timing fields and modal

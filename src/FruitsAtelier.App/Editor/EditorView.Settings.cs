@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { General, Workspace, Appearance, Testplay, Updates }
+    private enum SettingsCategory { General, Workspace, Appearance, Testplay, Updates, Audio, Skins }
     private SettingsCategory settingsCategory;
     private bool draftRomanisedMetadata;
     private bool draftDerandomizeDroplets;
@@ -25,6 +25,9 @@ public sealed partial class EditorView
     private float SettingsTop => SettingsBounds.Y;
     private float SettingsRight => SettingsBounds.Right;
     private const float SettingsTextSize = 13;
+    private bool SettingsAudioVisible => librarySettingsOpen && settingsCategory == SettingsCategory.Audio;
+    internal Rect SettingsSkinSelectorBounds => new(SettingsContentX, SettingsTop + 144,
+        Math.Min(520, SettingsRight - SettingsContentX - 32), 38);
 
     private void SettingsButton(ICanvas c, Rect bounds, string label, Action action, bool active = false, bool enabled = true)
         => Button(c, bounds, label, action, active, enabled, SettingsTextSize, bold: false);
@@ -94,14 +97,14 @@ public sealed partial class EditorView
         c.Text(L.Get("library.settings"), r.X + 20, r.Y + 16, 19, Foreground, r.Width - 80, true);
         SettingsButton(c, new(r.Right - 48, r.Y + 10, 32, 28), "×", CloseSettings);
         c.Line(r.X + 214, r.Y + 56, r.X + 214, r.Bottom - 20, Grid);
-        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.testplay", "update.title"];
+        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.testplay", "update.title", "settings.audio", "settings.skins"];
         for (int i = 0; i < categories.Length; i++)
         {
             var category = (SettingsCategory)i;
             if (category == SettingsCategory.Updates && RequestUpdateCheck is null) continue;
             Button(c, new(r.X + 16, r.Y + 78 + i * 48, 182, 38), L.Get(categories[i]), () =>
             {
-                FinishVolumeDrag(); libraryField = bindingCapture = -1;
+                FinishVolumeDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
                 settingsCategory = category;
                 if (category == SettingsCategory.Updates && UpdateStatus.Phase is UpdatePhase.Idle or UpdatePhase.Current or UpdatePhase.Failed)
                     RequestUpdateCheck?.Invoke();
@@ -141,6 +144,14 @@ public sealed partial class EditorView
                 break;
             case SettingsCategory.Updates:
                 DrawUpdates(c, SettingsContentX, true);
+                break;
+            case SettingsCategory.Audio:
+                DrawVolumeControls(c);
+                c.Text(L.Get("settings.immediatePreferences"), SettingsContentX, SettingsTop + 368, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
+                break;
+            case SettingsCategory.Skins:
+                DrawSkinSelector(c, SettingsSkinSelectorBounds);
+                c.Text(L.Get("settings.immediatePreferences"), SettingsContentX, SettingsTop + 204, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
                 break;
         }
         c.Line(SettingsContentX, r.Bottom - 86, r.Right - 24, r.Bottom - 86, Grid);
