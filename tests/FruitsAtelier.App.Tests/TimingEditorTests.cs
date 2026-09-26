@@ -121,14 +121,14 @@ internal static class TimingEditorTests
         var envelope = Envelope();
         Check(envelope.Length > 20 && envelope.All(f => f.Bounds.Height <= r.Height * .32f + .001), "Waveform uses a filled envelope at half the former height");
         Check(ui.Canvas.Texts.All(t => !t.Value.Contains("Alt + wheel")), "Waveform omits instructional caption");
-        var quarterTicks = ui.Canvas.Lines.Where(l => l.Y2 == r.Bottom - 24 && l.Y1 < l.Y2).ToArray();
+        var quarterTicks = ui.Canvas.Lines.Where(l => l.Y2 == ui.View.WaveformRulerY && l.Y1 < l.Y2).ToArray();
         Check(quarterTicks.Any(l => l.Color == 0x66AAFF), "Waveform ruler includes quarter snap ticks");
         ui.View.UpdateTransport(1001, 10000, true, true, false, null, map.AudioPath); ui.Paint();
         var moved = Envelope();
         Check(envelope.Take(20).Select(f => f.Bounds.Height).SequenceEqual(moved.Take(20).Select(f => f.Bounds.Height))
             && moved[10].Bounds.X < envelope[10].Bounds.X, "Playback translates fixed envelope peaks without resampling flicker");
         ui.SetSnapDivisor(3);
-        var tripletTicks = ui.Canvas.Lines.Where(l => l.Y2 == r.Bottom - 24 && l.Y1 < l.Y2).ToArray();
+        var tripletTicks = ui.Canvas.Lines.Where(l => l.Y2 == ui.View.WaveformRulerY && l.Y1 < l.Y2).ToArray();
         Check(tripletTicks.Length < quarterTicks.Length && tripletTicks.Any(l => l.Color == 0xBB66EE), "Changing Snap updates ruler subdivisions and colours");
         float RedX() => ui.Canvas.Texts.Single(t => t.Value == "120 BPM").X;
         float red = RedX();
@@ -138,6 +138,18 @@ internal static class TimingEditorTests
         Check(ui.View.TimingSetupVisible && ui.View.TimingFields.Any(f => f.Key == "bpm"), "Clicking a red line opens its BPM properties");
         ui.Key(27); ui.Key(112);
         Check(ui.View.Document.ContentEquals(before), "Waveform navigation and cancelled timing edit preserve content");
+        var dense = Map();
+        foreach (int time in new[] { 10, 20, 30, 1000, 2000 })
+            dense.TimingPoints.Add(new TimingPoint { TimeMs = time, BeatLengthMs = 400, Uninherited = true });
+        ui.LoadDocument(dense); ui.Key(114);
+        r = ui.View.WaveformBounds;
+        var labels = ui.Canvas.Texts.Where(t => t.Value.EndsWith(" BPM") && t.Y == r.Y + 8).OrderBy(t => t.X).ToArray();
+        Check(labels.Length > 0 && labels.Length < dense.TimingPoints.Count, "Dense red points omit crowded labels");
+        for (int i = 1; i < labels.Length; i++)
+            Check(labels[i].X >= labels[i - 1].X + labels[i - 1].Value.Length * 12 * .6f + 8,
+                "Visible BPM labels retain a gap");
+        Check(ui.Canvas.Lines.Count(l => l.Y1 == r.Y + 30 && l.Y2 == ui.View.WaveformRulerY) == dense.TimingPoints.Count,
+            "Crowded labels preserve every red timing line");
     }
 
     private static MapDocument Map() => OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n128,192,1200,1,0,0:0:0:0:\n");

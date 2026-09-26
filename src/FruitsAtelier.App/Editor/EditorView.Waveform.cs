@@ -16,6 +16,8 @@ public sealed partial class EditorView
     public bool WaveformNeedsRedraw => TimingPageVisible && waveformTask is { IsCompleted: true };
     internal Rect WaveformBounds => new(16, 150, Math.Max(80, rightPanel.X - 32), Math.Max(100, height - 280));
 
+    internal float WaveformRulerY => WaveformBounds.Y + WaveformBounds.Height * .66f + 28;
+
     public void ReleaseWaveform()
     {
         waveformCancellation?.Cancel(); waveformCancellation?.Dispose(); waveformCancellation = null;
@@ -52,7 +54,7 @@ public sealed partial class EditorView
         c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, 97, 10, Foreground, 40);
         c.Fill(r, Background);
         double start = playhead - waveformSpanMs / 2, msPerPixel = waveformSpanMs / r.Width;
-        float center = r.Y + r.Height / 2;
+        float center = r.Y + r.Height / 2, rulerY = WaveformRulerY;
         c.Clip(r);
         c.Line(r.X, center, r.Right, center, Grid);
         if (waveform != null)
@@ -72,23 +74,30 @@ public sealed partial class EditorView
         {
             float x = r.X + (float)((tick.TimeMs - start) / msPerPixel);
             var style = GridStyle(tick);
-            c.Line(x, r.Bottom - 24 - style.Height, x, r.Bottom - 24, style.Color, style.Width);
+            c.Line(x, rulerY - style.Height, x, rulerY, style.Color, style.Width);
         }
-        c.Line(r.X, r.Bottom - 24, r.Right, r.Bottom - 24, Grid);
+        c.Line(r.X, rulerY, r.Right, rulerY, Grid);
         for (double time = Math.Max(0, Math.Ceiling(start / step) * step); time < start + waveformSpanMs; time += step)
         {
             float x = r.X + (float)((time - start) / msPerPixel);
-            c.Text(Time(time), x + 3, r.Bottom - 18, 10, Muted, 80);
+            c.Text(Time(time), x + 3, rulerY + 6, 10, Muted, 80);
         }
-        foreach (var point in Document.TimingPoints)
+        float labelRight = r.X;
+        foreach (var point in Document.TimingPoints.OrderBy(p => p.TimeMs))
         {
             if (!point.Uninherited || point.TimeMs < start || point.TimeMs > start + waveformSpanMs) continue;
             float x = r.X + (float)((point.TimeMs - start) / msPerPixel);
-            c.Line(x, r.Y + 30, x, r.Bottom - 24, Error);
-            c.Text(TimingN(60000 / point.BeatLengthMs) + " BPM", x + 5, r.Y + 8, 12, Error, 120);
+            c.Line(x, r.Y + 30, x, rulerY, Error);
+            string label = TimingN(60000 / point.BeatLengthMs) + " BPM";
+            float labelWidth = Math.Min(120, c.MeasureText(label, 12));
+            if (x + 5 >= labelRight && x + 5 + labelWidth <= r.Right)
+            {
+                c.Text(label, x + 5, r.Y + 8, 12, Error, labelWidth + 1);
+                labelRight = x + 5 + labelWidth + 8;
+            }
         }
         float head = r.X + r.Width / 2;
-        c.Line(head, r.Y + 28, head, r.Bottom, Accent, 2);
+        c.Line(head, r.Y + 28, head, rulerY + 24, Accent, 2);
         c.Text(Time(playhead), head + 5, r.Y + 30, 12, Foreground, 110);
         c.Unclip();
     }

@@ -41,8 +41,6 @@ public sealed partial class EditorView
         }
         c.Fill(PreviewToggleBounds, Surface, 5);
         Button(c, PreviewToggleBounds, catchPreviewVisible ? "›" : "‹", () => catchPreviewVisible = !catchPreviewVisible);
-        if (PreviewToggleBounds.Contains(mouseX, mouseY))
-            c.Text(L.Get("ui.preview"), PreviewToggleBounds.X - 112, PreviewToggleBounds.Y + 14, 12, Foreground, 108);
     }
     private void DrawPreviewMods(ICanvas c, Rect r)
     {

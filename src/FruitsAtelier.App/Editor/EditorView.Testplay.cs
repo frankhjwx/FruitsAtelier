@@ -281,10 +281,10 @@ public sealed partial class EditorView
         c.Text(value, valueBounds.X + (valueBounds.Width - valueWidth) / 2,
             valueBounds.Y + (valueBounds.Height - 17) / 2, SettingsTextSize, Foreground, valueWidth + 1);
         TimingButton(c, new(leadIn.X, leadIn.Y, 24, leadIn.Height), "‹",
-            () => draftTestplayStartupDelaySeconds = Math.Max(0, draftTestplayStartupDelaySeconds - 1),
+            () => draftTestplayStartupDelaySeconds = Math.Max(0, draftTestplayStartupDelaySeconds - .5),
             enabled: draftTestplayStartupDelaySeconds > 0, flatArrow: true);
         TimingButton(c, new(leadIn.Right - 24, leadIn.Y, 24, leadIn.Height), "›",
-            () => draftTestplayStartupDelaySeconds = Math.Min(5, draftTestplayStartupDelaySeconds + 1),
+            () => draftTestplayStartupDelaySeconds = Math.Min(5, draftTestplayStartupDelaySeconds + .5),
             enabled: draftTestplayStartupDelaySeconds < 5, flatArrow: true);
         string[] labels = ["testplay.left", "testplay.right", "testplay.dash"];
         float cell = Math.Min(220, (SettingsRight - SettingsContentX - 32) / 3);

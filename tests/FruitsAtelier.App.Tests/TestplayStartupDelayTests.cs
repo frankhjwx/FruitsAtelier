@@ -10,7 +10,7 @@ internal static class TestplayStartupDelayTests
         map.Fruits.Add(new Fruit { TimeMs = 1000, X = 256 });
         map.Fruits.Add(new Fruit { TimeMs = 3000, X = 256 });
         ui.LoadDocument(map);
-        ui.View.LibrarySettings.TestplayStartupDelaySeconds = 1;
+        ui.View.LibrarySettings.TestplayStartupDelaySeconds = .5;
         ui.View.UpdateTransport(500, 5000, true, false, false, null, null);
         ui.View.UpdateTransport(500, 5000, false, false, false, null, null);
         int sounds = 0;
@@ -26,10 +26,10 @@ internal static class TestplayStartupDelayTests
         ui.View.UpdateTransport(2500, 5000, true, false, false, null, null);
         ui.View.UpdateTransport(2500, 5000, false, false, false, null, null);
         ui.View.StartTestplay();
-        Check(ui.View.IsTestplaying && ui.View.PlayheadMs == 1500,
+        Check(ui.View.IsTestplaying && ui.View.PlayheadMs == 2000,
             "Testplay did not subtract the configured lead-in from the selected position.");
         clock.Advance(250); ui.Paint();
-        Check(ui.View.PlayheadMs == 1750, "Gameplay did not advance immediately.");
+        Check(ui.View.PlayheadMs == 2250, "Gameplay did not advance immediately.");
         ui.View.StopTestplay();
         Check(ui.View.PlayheadMs == 2500, "Leaving testplay did not restore the selected position.");
 
@@ -55,10 +55,10 @@ internal static class TestplayStartupDelayTests
         Check(audioUi.View.PlayheadMs == 2500, "Zero lead-in did not start at the selected position.");
         audioUi.View.StopTestplay();
 
-        var settings = new LibrarySettings { Workspace = Path.GetFullPath("artifacts/tests/testplay-delay-workspace"), TestplayStartupDelaySeconds = 5 };
+        var settings = new LibrarySettings { Workspace = Path.GetFullPath("artifacts/tests/testplay-delay-workspace"), TestplayStartupDelaySeconds = 2.5 };
         string path = Path.GetFullPath("artifacts/tests/testplay-delay-settings.json");
         settings.Save(path);
-        Check(LibrarySettings.Load(path).TestplayStartupDelaySeconds == 5, "Startup delay did not persist.");
+        Check(LibrarySettings.Load(path).TestplayStartupDelaySeconds == 2.5, "Startup delay did not persist.");
         Check(new LibrarySettings().TestplayStartupDelaySeconds == 1, "Startup delay default changed.");
         Check(new LibrarySettings { TestplayStartupDelaySeconds = -1 }.TestplayStartupDelaySeconds == 0
             && new LibrarySettings { TestplayStartupDelaySeconds = 9 }.TestplayStartupDelaySeconds == 5,

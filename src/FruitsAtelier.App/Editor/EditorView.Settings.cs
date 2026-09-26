@@ -11,7 +11,7 @@ public sealed partial class EditorView
     private SettingsCategory settingsCategory;
     private bool draftRomanisedMetadata;
     private bool draftDerandomizeDroplets;
-    private int draftTestplayStartupDelaySeconds;
+    private double draftTestplayStartupDelaySeconds;
     private readonly uint[] draftIndicatorColours = new uint[4];
     private int settingsColourIndex = -1;
     private uint settingsColourOriginal;

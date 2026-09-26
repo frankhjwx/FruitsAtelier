@@ -211,7 +211,7 @@ internal static class RenderCheck
         var updateCheck = view.RequestUpdateCheck;
         var updateStatus = view.UpdateStatus;
         int[] volumes = [view.LibrarySettings.MasterVolume, view.LibrarySettings.SongVolume, view.LibrarySettings.HitsoundVolume];
-        int startupDelay = view.LibrarySettings.TestplayStartupDelaySeconds;
+        double startupDelay = view.LibrarySettings.TestplayStartupDelaySeconds;
         string language = FruitsAtelier.Localization.Strings.Language;
         try
         {

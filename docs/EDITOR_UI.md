@@ -8,9 +8,10 @@ See the [shortcut manual](KEY_BINDINGS.md) for the complete keyboard reference a
 **Timing Panel**. **F3** selects Timing; **F1** returns to Details. Timing replaces
 the note canvas with a horizontal audio waveform and a centered playback cursor.
 Alt+wheel zooms its time scale; click to seek or click a red line to edit it.
-Only red timing points and their BPM labels appear on the waveform. Audio is decoded
+Only red timing points and their BPM labels appear on the waveform. Crowded BPM
+labels are omitted until there is enough space; every red line remains visible and clickable. Audio is decoded
 in the background and its peak envelope is cached at multiple resolutions.
-The time ruler shows the current Snap subdivisions with the editor's beat-grid
+The time ruler sits just below the waveform envelope and shows the current Snap subdivisions with the editor's beat-grid
 colours and tick lengths. The filled envelope uses fixed audio-time sampling
 windows while scrolling and reserves vertical space around its peaks.
 The single-column Timing panel places tap controls above
@@ -407,7 +408,7 @@ A confirmed stream remains one editable slider parent with its anchors, handles 
 
 The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
 
-Testplay lead-in is configured in Settings > Testplay keys, from 0 to 5 seconds (default 1). Starting testplay immediately begins audio and gameplay from the selected position minus the lead-in, clamped to zero. Esc returns to the selected position.
+Testplay lead-in is configured in Settings > Testplay keys, from 0 to 5 seconds in 0.5-second steps (default 1). Starting testplay immediately begins audio and gameplay from the selected position minus the lead-in, clamped to zero. Esc returns to the selected position.
 
 Number keys 1–4 select Select, Fruit, FSlider and Banana Shower. During an FSlider draft they finish valid geometry, or cancel an insufficient draft, before switching tools; pressing 3 prepares another slider. Shift+1–9 changes Snap during drawing without moving placed points. F4 opens Song Setup. Shift+Left/Right seeks four subdivisions and Shift+1–9 changes Snap; other Shift variants do not invoke unmodified transport or nudge commands. Timing blocks horizontal object nudges and accepts Ctrl+Alt+E outside fields and dialogs. F6 row deletion requires Delete or Ctrl+I without Shift or Alt. The Settings language dropdown consumes keyboard input until Enter applies or Esc closes it.
 
