@@ -252,7 +252,7 @@ public sealed partial class EditorView
 
     private int bindingCapture = -1;
     private int[] draftTestplayKeys = [37, 39, 16];
-    public bool CapturingTestplayKey => bindingCapture >= 0 && LibraryVisible && librarySettingsOpen;
+    public bool CapturingTestplayKey => bindingCapture >= 0 && librarySettingsOpen;
     // Esc, Tab, F1 and F2 belong to testplay navigation; OS/media keys cannot reliably reach both hosts.
     private static bool IsBindingKey(int key) => key is >= 65 and <= 90 or >= 48 and <= 57 or >= 33 and <= 40
         or >= 96 and <= 111 or >= 114 and <= 135 or >= 186 and <= 192 or >= 219 and <= 223
@@ -271,22 +271,28 @@ public sealed partial class EditorView
     };
     private void DrawTestplayBindings(ICanvas c)
     {
-        c.Text(L.Get("testplay.startupDelay"), SettingsContentX, 270, SettingsTextSize, Foreground, 260, true);
-        SettingsButton(c, new(SettingsContentX + 270, 260, 42, 38), "−",
+        var leadIn = new Rect(SettingsContentX + 270, SettingsTop + 260, 202, 38);
+        c.Text(L.Get("testplay.startupDelay"), SettingsContentX, leadIn.Y + (leadIn.Height - 17) / 2,
+            SettingsTextSize, Foreground, 260, true);
+        var valueBounds = new Rect(leadIn.X + 26, leadIn.Y, leadIn.Width - 52, leadIn.Height);
+        c.Fill(valueBounds, Surface, 4); c.Stroke(valueBounds, Grid, radius: 4);
+        string value = L.Get("testplay.startupDelayValue", draftTestplayStartupDelaySeconds);
+        float valueWidth = c.MeasureText(value, SettingsTextSize);
+        c.Text(value, valueBounds.X + (valueBounds.Width - valueWidth) / 2,
+            valueBounds.Y + (valueBounds.Height - 17) / 2, SettingsTextSize, Foreground, valueWidth + 1);
+        TimingButton(c, new(leadIn.X, leadIn.Y, 24, leadIn.Height), "‹",
             () => draftTestplayStartupDelaySeconds = Math.Max(0, draftTestplayStartupDelaySeconds - 1),
-            enabled: draftTestplayStartupDelaySeconds > 0);
-        c.Text(L.Get("testplay.startupDelayValue", draftTestplayStartupDelaySeconds), SettingsContentX + 320, 270,
-            SettingsTextSize, Foreground, 100, true);
-        SettingsButton(c, new(SettingsContentX + 430, 260, 42, 38), "+",
+            enabled: draftTestplayStartupDelaySeconds > 0, flatArrow: true);
+        TimingButton(c, new(leadIn.Right - 24, leadIn.Y, 24, leadIn.Height), "›",
             () => draftTestplayStartupDelaySeconds = Math.Min(5, draftTestplayStartupDelaySeconds + 1),
-            enabled: draftTestplayStartupDelaySeconds < 5);
+            enabled: draftTestplayStartupDelaySeconds < 5, flatArrow: true);
         string[] labels = ["testplay.left", "testplay.right", "testplay.dash"];
-        float cell = Math.Min(220, (width - SettingsContentX - 32) / 3);
+        float cell = Math.Min(220, (SettingsRight - SettingsContentX - 32) / 3);
         for (int i = 0; i < 3; i++)
         {
             int action = i;
-            c.Text(L.Get(labels[i]), SettingsContentX + i * cell, 160, SettingsTextSize, Foreground, cell - 8, true);
-            SettingsButton(c, new(SettingsContentX + i * cell, 188, cell - 12, 42), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
+            c.Text(L.Get(labels[i]), SettingsContentX + i * cell, SettingsTop + 160, SettingsTextSize, Foreground, cell - 8, true);
+            SettingsButton(c, new(SettingsContentX + i * cell, SettingsTop + 188, cell - 12, 42), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
                 () => { libraryField = -1; bindingCapture = action; }, bindingCapture == i);
         }
     }

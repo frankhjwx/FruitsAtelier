@@ -151,7 +151,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
-        if (SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
+        if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
         if (!CommitTimingField()) return false;
         if (SliderDialogVisible || ErrorVisible) return false;
         if (draftBanana != Guid.Empty)

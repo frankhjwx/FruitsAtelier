@@ -27,6 +27,13 @@ public sealed partial class EditorView
         ResetTextCaret();
         mouseX = x; mouseY = y;
         timingPointerShift = shift;
+        if (librarySettingsOpen)
+        {
+            if (LanguagePointerDown(x, y, button) || BeginIndicatorColourDrag(x, y, button)) return;
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         if (TimingModal) { TimingPointerDown(x, y, button); return; }
         if (!LibraryVisible && !SongSetupVisible && panelMenuOpen) { PanelPointerDown(x, y); return; }
         if (TimingPageVisible && !SongSetupVisible && menu < 0 && rightPanel.Contains(x, y)) { TimingPointerDown(x, y, button); return; }
@@ -364,7 +371,7 @@ public sealed partial class EditorView
         if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
-        if (ExportVisible || languageMenuOpen) return;
+        if (librarySettingsOpen || ExportVisible || languageMenuOpen) return;
         if (LibraryVisible) { MoveLibraryPointer(y); return; }
         if (tabPointer) { MoveTabPointer(x); return; }
         if (drag == DragKind.PreviewResize) { previewWidth = Math.Clamp(width - x, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)); return; }
@@ -527,7 +534,7 @@ public sealed partial class EditorView
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
-        if (ExportVisible) return;
+        if (librarySettingsOpen || ExportVisible) return;
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
         if (drag == DragKind.Break)
         {
@@ -608,8 +615,8 @@ public sealed partial class EditorView
         if (TimeJumpVisible) { if (TimeJumpInputBounds.Contains(x, y)) SelectInput("time", timeJumpText); return; }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
-        if ((ExportVisible || LibraryVisible) && SelectLibraryInputAt(x, y)) return;
-        if (ExportVisible) return;
+        if ((librarySettingsOpen || ExportVisible || LibraryVisible) && SelectLibraryInputAt(x, y)) return;
+        if (librarySettingsOpen || ExportVisible) return;
         if (LibraryVisible) { if (!libraryPointerMoved && contextItems.Count == 0 && !languageMenuOpen) OpenLibraryCard(x, y); return; }
         for (int i = 0; i < fields.Count; i++)
             if (fields[i].Bounds.Contains(x, y))
@@ -643,6 +650,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (librarySettingsOpen) return;
         if (TimingModal)
         { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
         if (TimingPageVisible && WaveformBounds.Contains(x, y) && !SongSetupVisible && !LibraryVisible)
@@ -670,7 +678,7 @@ public sealed partial class EditorView
         }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
-        if (ExportVisible) return;
+        if (librarySettingsOpen || ExportVisible) return;
         if (LibraryVisible)
         {
             if (languageMenuOpen || contextItems.Count > 0 || librarySettingsOpen) return;
@@ -870,7 +878,7 @@ public sealed partial class EditorView
             }
             return;
         }
-        if (LibraryVisible) { LibraryKey(virtualKey, ctrl, shift); return; }
+        if (librarySettingsOpen || LibraryVisible) { LibraryKey(virtualKey, ctrl, shift); return; }
         if (TimingKey(virtualKey, ctrl, shift)) return;
         if (virtualKey == 117 && !ctrl && !shift && !altHeld) { OpenTimingSetup(); return; }
         if (virtualKey == 114 && !ctrl && !shift && !altHeld) { ShowTimingPage(true); return; }
@@ -1014,7 +1022,7 @@ public sealed partial class EditorView
             return;
         }
         if (SliderDialogVisible) return;
-        if (LibraryVisible || ExportVisible) { if (libraryField >= 0 && !char.IsControl(value)) LibraryFieldValue = InsertInput("library:" + libraryField, LibraryFieldValue, value.ToString(), 4096); return; }
+        if (librarySettingsOpen || LibraryVisible || ExportVisible) { if (libraryField >= 0 && !char.IsControl(value)) LibraryFieldValue = InsertInput("library:" + libraryField, LibraryFieldValue, value.ToString(), 4096); return; }
         if (editField < 0 || char.IsControl(value)) return;
         if (!(char.IsAsciiDigit(value) || value is '.' or '-' or '+' or 'e' or 'E' || value == ':' && fields[editField].Timestamp)) return;
         editBuffer = InsertInput("numeric:" + editField, editBuffer, value.ToString(), 30);

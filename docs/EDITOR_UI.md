@@ -412,3 +412,12 @@ Testplay lead-in is configured in Settings > Testplay keys, from 0 to 5 seconds 
 Number keys 1–4 select Select, Fruit, FSlider and Banana Shower. During an FSlider draft they finish valid geometry, or cancel an insufficient draft, before switching tools; pressing 3 prepares another slider. Shift+1–9 changes Snap during drawing without moving placed points. F4 opens Song Setup. Shift+Left/Right seeks four subdivisions and Shift+1–9 changes Snap; other Shift variants do not invoke unmodified transport or nudge commands. Timing blocks horizontal object nudges and accepts Ctrl+Alt+E outside fields and dialogs. F6 row deletion requires Delete or Ctrl+I without Shift or Alt. The Settings language dropdown consumes keyboard input until Enter applies or Esc closes it.
 
 Ctrl+wheel selects among all supported Snap divisors on the canvas and timelines. Shift+wheel seeks four times the normal wheel distance. Alt+wheel zooms the canvas or the upper object timeline under the pointer. Ctrl+Alt+wheel cycles Select, Fruit, FSlider and Banana Shower over the canvas or upper timeline. Unsupported wheel modifier combinations do not seek. Ctrl+M enters its quick cycle at 1/3 when the current divisor is outside the four choices.
+
+## Settings
+
+Settings opens a centered modal overlay above the current editor or library, with
+its background dimmed and blocked from pointer and keyboard input. Categories retain
+unapplied drafts while switching between them. Apply saves changes and keeps the
+overlay open; Escape or the close button closes it and discards
+unapplied drafts. Escape first dismisses an active field, key capture, language menu,
+or colour picker. Language changes take effect immediately.

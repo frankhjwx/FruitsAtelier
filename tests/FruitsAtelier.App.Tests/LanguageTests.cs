@@ -10,7 +10,7 @@ internal static class LanguageTests
         ui.ClickText(Strings.Get("settings.appearance"));
         ui.ClickText(System.Globalization.CultureInfo.GetCultureInfo(Strings.Language).NativeName + " ▾");
         ui.ClickText(System.Globalization.CultureInfo.GetCultureInfo(code).NativeName);
-        ui.ClickText(Strings.Get("library.editor"));
+        ui.Click(ui.View.SettingsBounds.Right - 32, ui.View.SettingsBounds.Y + 24);
     }
     public static void PreferencesAndPreview()
     {

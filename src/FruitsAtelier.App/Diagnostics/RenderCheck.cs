@@ -297,11 +297,13 @@ internal static class RenderCheck
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(width - 160, 20, 0, false, false); view.PointerUp(width - 160, 20, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
-                view.PointerDown(40, 238, 0, false, false); view.PointerUp(40, 238, 0);
+                view.PointerDown(view.SettingsBounds.X + 40, view.SettingsBounds.Y + 238, 0, false, false);
+                view.PointerUp(view.SettingsBounds.X + 40, view.SettingsBounds.Y + 238, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 foreach (int binding in new[] { 186, 222, 219, 221, 8, 17, 18, 96, 111, 121 })
                 {
-                    view.PointerDown(254, 200, 0, false, false); view.PointerUp(254, 200, 0);
+                    view.PointerDown(view.SettingsBounds.X + 238, view.SettingsBounds.Y + 200, 0, false, false);
+                    view.PointerUp(view.SettingsBounds.X + 238, view.SettingsBounds.Y + 200, 0);
                     if (!view.CapturingTestplayKey) throw new InvalidOperationException("Native binding capture did not open.");
                     var down = new Native.Message { Window = window, Id = binding is 18 or 121 ? 0x0104u : 0x0100u, WParam = (nuint)binding };
                     Native.DispatchMessage(ref down);
@@ -374,7 +376,13 @@ internal static class RenderCheck
                 view.Document.DistanceSnapRatios.Clear(); view.Document.DistanceSnapRatios.AddRange(dsRatios);
                 view.OpenSettings();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
-                view.PointerDown(40, 286, 0, false, false); view.PointerUp(40, 286, 0);
+                var settings = view.SettingsBounds;
+                for (int category = 0; category < 5; category++)
+                {
+                    float sx = settings.X + 40, sy = settings.Y + 96 + category * 48;
+                    view.PointerDown(sx, sy, 0, false, false); view.PointerUp(sx, sy, 0);
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                }
                 foreach (var phase in new[] { UpdatePhase.Unsupported, UpdatePhase.Checking, UpdatePhase.Available, UpdatePhase.Downloading, UpdatePhase.Ready, UpdatePhase.Failed })
                 {
                     view.UpdateStatus = new(phase, "0.8.2", 42);

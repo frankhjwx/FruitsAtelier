@@ -44,7 +44,7 @@ public sealed partial class EditorView
         PumpSliderBatch();
         PumpLibrary();
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
-        if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
+        if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawContextMenu(c); DrawSettings(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
         bool expandedPanel = catchPreviewVisible || TimingPageVisible;
         float rightWidth = expandedPanel ? Math.Clamp(previewWidth, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)) : 0;
         float bodyHeight = Math.Max(180, height - 204);
@@ -89,7 +89,7 @@ public sealed partial class EditorView
         DrawUpdateNotice(c);
         if (menu >= 0) DrawMenu(c);
         DrawContextMenu(c);
-        DrawLanguageMenu(c);
+        if (!librarySettingsOpen) DrawLanguageMenu(c);
         DrawPanelMenu(c);
         DrawSliderDialog(c);
         DrawExportOverlay(c);
@@ -100,8 +100,10 @@ public sealed partial class EditorView
         DrawDistanceSnapDialog(c);
         DrawSongSetup(c);
         DrawTimingSetup(c);
+        DrawSettings(c);
+        if (librarySettingsOpen) DrawLanguageMenu(c);
         DrawDiscardConfirmation(c);
-        DrawDifficultyTooltip(c);
+        if (!librarySettingsOpen) DrawDifficultyTooltip(c);
     }
 
     private void DrawChrome(ICanvas c)
@@ -149,13 +151,14 @@ public sealed partial class EditorView
         c.Text(breakLabel, breakButton.X + (breakButton.Width - c.MeasureText(breakLabel, 12)) / 2,
             breakButton.Y + (breakButton.Height - 16) / 2, 12, canInsertBreak ? Foreground : Muted, breakButton.Width - 6);
         hits.Add(new(breakButton, InsertBreakAtPlayhead, canInsertBreak));
-        c.Text(L.Get("ui.snap"), snapLeft, canvas.Y + 13, 11, Muted, 40);
+        float snapCenterY = canvas.Y + 19, snapTextY = snapCenterY - 7.5f;
+        c.Text(L.Get("ui.snap"), snapLeft, snapTextY, 11, Muted, 40);
         snapSlider = new(snapLeft + 40, canvas.Y + 4, 106, 29);
         float sliderStart = snapSlider.X + 7, sliderEnd = snapSlider.Right - 31;
         float snapX = sliderStart + (Array.IndexOf(SnapDivisors, divisor) / (float)(SnapDivisors.Length - 1)) * (sliderEnd - sliderStart);
-        c.Line(sliderStart, canvas.Y + 19, sliderEnd, canvas.Y + 19, Accent, 2);
-        c.Circle(snapX, canvas.Y + 19, 6, Accent);
-        c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, canvas.Y + 13, 10, Foreground, 40);
+        c.Line(sliderStart, snapCenterY, sliderEnd, snapCenterY, Accent, 2);
+        c.Circle(snapX, snapCenterY, 6, Accent);
+        c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, snapTextY, 11, Foreground, 40);
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
         c.Text(L.Get("ui.timeAxis"), canvas.X + 11, canvas.Y + 120, 10, Muted, 43);
         var playfield = Playfield;
@@ -701,7 +704,13 @@ public sealed partial class EditorView
         if (active) c.Stroke(r, 0x477E7B, 1, 4);
         uint color = !enabled ? 0x5B6777u : active ? Accent : Foreground;
         int shortcut = label.IndexOf("  ", StringComparison.Ordinal);
-        if (shortcut >= 0)
+        if (label == "×")
+        {
+            float cx = r.X + r.Width / 2, cy = r.Y + r.Height / 2;
+            c.Line(cx - 3, cy - 3, cx + 3, cy + 3, color, 1.2f);
+            c.Line(cx - 3, cy + 3, cx + 3, cy - 3, color, 1.2f);
+        }
+        else if (shortcut >= 0)
         {
             string key = label[(shortcut + 2)..].Trim();
             float keyWidth = c.MeasureText(key, fontSize, textBold);

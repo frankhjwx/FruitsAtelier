@@ -327,7 +327,6 @@ public sealed partial class EditorView
         libraryCards.Clear();
         libraryScrollTrack = libraryDiffTrack = default;
         c.Fill(new(0, 0, width, height), Background);
-        if (librarySettingsOpen) { DrawSettings(c); return; }
         DrawHeader(c);
         c.Text(L.Get(resourcePage ? "library.referenceErrors" : exportPage ? "library.export" : "library.title"), 109, 11, 13, Foreground, width - 535, true);
         Button(c, new(HeaderNavigationBounds.X - 116, 6, 110, 28), L.Get("library.settings"), OpenSettings);
@@ -470,19 +469,20 @@ public sealed partial class EditorView
     }
     private void LibraryTextField(ICanvas c, int index, string label, string value, float y)
     {
+        float right = librarySettingsOpen ? SettingsRight : width;
         float x = librarySettingsOpen ? SettingsContentX : 32;
         float textSize = librarySettingsOpen ? SettingsTextSize : 14;
-        c.Text(label, x, y, textSize, Foreground, width - x - 32, true);
-        var rect = new Rect(x, y + 28, width - x - (index < 2 || index == 4 ? 184 : 32), 42);
+        c.Text(label, x, y, textSize, Foreground, right - x - 32, true);
+        var rect = new Rect(x, y + 28, right - x - (index < 2 || index == 4 ? 184 : 32), 42);
         c.Fill(rect, Surface, 5); c.Stroke(rect, libraryField == index ? Accent : Grid, radius: 5);
         string inputKey = "library:" + index;
         DrawInputText(c, new(x + 12, y + 40, rect.Width - 24, 20), value, textSize, libraryField == index, inputKey);
         hits.Add(new(rect, () => { libraryField = index; FocusInput(inputKey, value, mouseX); }, true));
-        if (index == 4) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestDefaultSkinArchive?.Invoke(), fontSize: textSize);
-        if (index < 2) Button(c, new(width - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestLibraryFolder?.Invoke(index == 0), fontSize: textSize);
+        if (index == 4) Button(c, new(right - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestDefaultSkinArchive?.Invoke(), fontSize: textSize);
+        if (index < 2) Button(c, new(right - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestLibraryFolder?.Invoke(index == 0), fontSize: textSize);
     }
     public bool LibraryLoading => scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
-    public bool LibraryTextFocused => (LibraryVisible || ExportVisible) && libraryField >= 0 && !ErrorVisible && !DiscardConfirmationVisible;
+    public bool LibraryTextFocused => (LibraryVisible || librarySettingsOpen || ExportVisible) && libraryField >= 0 && !ErrorVisible && !DiscardConfirmationVisible;
     public int LibraryInputField => LibraryTextFocused ? libraryField : -1;
     public Action? RequestPasteLibrary { get; set; }
     private bool SelectLibraryInputAt(float x, float y)

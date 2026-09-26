@@ -128,16 +128,16 @@ internal static class ShortcutRoutingTests
                 ui.ClickText(L.Get("settings.appearance"));
                 void Open() => ui.ClickText(System.Globalization.CultureInfo.GetCultureInfo(L.Language).NativeName + " ▾");
                 Open(); ui.Key(40); ui.Key(27);
-                Check(ui.View.LibraryVisible && saved is null && L.Language == language
+                Check(!ui.View.LibraryVisible && saved is null && L.Language == language
                     && ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.appearance")),
                     "Escape closes only the language menu and does not apply its highlighted language.");
                 Open(); ui.Key(38); ui.Key(40); ui.Key(40);
                 string expected = L.AvailableLanguages[(L.AvailableLanguages.ToList().IndexOf(language) + 1) % L.AvailableLanguages.Count];
                 ui.Key(13);
-                Check(L.Language == expected && saved == expected && ui.View.LibraryVisible,
+                Check(L.Language == expected && saved == expected && !ui.View.LibraryVisible,
                     "Language arrows wrap and Enter persists the choice without leaving Settings.");
                 Open(); ui.Key(116); ui.Key('F', ctrl: true); ui.Key(27);
-                Check(ui.View.LibraryVisible && L.Language == expected, "The dropdown consumes background Library shortcuts.");
+                Check(!ui.View.LibraryVisible && L.Language == expected, "The dropdown consumes background Library shortcuts.");
                 ui.Key(27);
                 Check(!ui.View.LibraryVisible && ui.View.Document.ContentEquals(before) && !ui.View.IsDirty,
                     "The next Escape closes Settings; language changes preserve beatmap content.");

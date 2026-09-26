@@ -64,7 +64,7 @@ static class SettingsTests
             Check(saved.StandIndicatorColour == 0x112233 && saved.WalkIndicatorColour == 0x445566
                 && saved.DashIndicatorColour == 0x778899 && saved.HyperDashIndicatorColour == 0xAABBCC,
                 "Appearance did not persist all four indicator colours.");
-            ui.ClickText(L.Get("library.editor"));
+            ui.Click(ui.View.SettingsBounds.Right - 32, ui.View.SettingsBounds.Y + 24);
             ui.ClickText(L.Get("movement.analysis"));
             foreach (uint colour in new uint[] { 0x112233, 0x445566, 0x778899, 0xAABBCC })
                 Check(ui.Canvas.Lines.Any(l => l.Color == colour && l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001),
@@ -135,7 +135,7 @@ static class SettingsTests
                 ui.View.ApplySettings(path); ui.Paint();
                 Check(ApplyColor() == disabled && LibrarySettings.Load(path).TestplayDashKey == 65,
                     "Bindings apply and reset dirty state");
-                ui.ClickText(L.Get(fromLibrary ? "library.back" : "library.editor"));
+                ui.Click(ui.View.SettingsBounds.Right - 32, ui.View.SettingsBounds.Y + 24);
                 Check(ui.View.LibraryVisible == fromLibrary, "Apply preserves return destination");
             }
         }
@@ -162,28 +162,38 @@ static class SettingsTests
                 double playhead = ui.View.PlayheadMs, viewport = ui.View.ViewStartMs;
                 var selected = ui.View.SelectedObjectIds.ToArray();
                 ui.ClickText(L.Get("library.settings"));
+                Check(!ui.View.LibraryVisible, "Settings keeps the editor visible underneath");
+                var bounds = ui.View.SettingsBounds;
+                Check(bounds.X > 0 && bounds.Y > 0 && bounds.Right < size.Item1 && bounds.Bottom < size.Item2,
+                    "Settings is inset from all window edges");
+                ui.Click(2, 2);
+                ui.View.Wheel(400, 300, -120, false);
+                ui.Key(32); ui.Key(117); ui.Key('Z', ctrl: true);
+                Check(!ui.View.TimingSetupVisible && before.ContentEquals(ui.View.Document) &&
+                    playhead == ui.View.PlayheadMs && viewport == ui.View.ViewStartMs,
+                    "Settings blocks background pointer, wheel and keyboard input");
                 ui.ClickText(L.Get("settings.testplay"));
                 ui.ClickText("Shift"); ui.Key(65);
                 ui.ClickText(L.Get("settings.appearance"));
                 ui.ClickText(L.Get("settings.testplay"));
                 Check(ui.Canvas.Texts.Any(t => t.Value == "A"), "Category changes retain draft bindings");
                 ui.Key(46); ui.Key(116);
-                ui.ClickText(L.Get("library.editor"));
-                Check(!ui.View.LibraryVisible && !ui.View.IsTestplaying, "Return button restores editor");
+                ui.Click(ui.View.SettingsBounds.Right - 32, ui.View.SettingsBounds.Y + 24);
+                Check(!ui.View.LibraryVisible && !ui.View.IsTestplaying, "Close button restores editor");
                 Check(before.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty &&
                     playhead == ui.View.PlayheadMs && viewport == ui.View.ViewStartMs &&
                     selected.SequenceEqual(ui.View.SelectedObjectIds), "Settings preserve editor state");
-                ui.ClickText(L.Get("library.settings")); ui.Key(27);
-                Check(!ui.View.LibraryVisible, "Escape restores editor");
+                ui.ClickText(L.Get("library.settings")); ui.Click(ui.View.SettingsBounds.Right - 32, ui.View.SettingsBounds.Y + 24);
+                Check(!ui.View.LibraryVisible, "Close button restores editor");
                 ui.Key('Z', ctrl: true);
                 Check(ui.View.Document.Fruits.Count == before.Fruits.Count - 1, "Undo history survives settings");
                 ui.View.MarkSaved(); ui.View.ShowLibrary(); ui.Paint();
                 ui.ClickText(L.Get("library.settings")); ui.Key(27);
                 Check(ui.View.LibraryVisible && !ui.Canvas.Texts.Any(t => t.Value == L.Get("library.apply")),
                     "Escape restores library");
-                ui.ClickText(L.Get("library.settings")); ui.ClickText(L.Get("library.back"));
+                ui.ClickText(L.Get("library.settings")); ui.Click(ui.View.SettingsBounds.Right - 32, ui.View.SettingsBounds.Y + 24);
                 Check(ui.View.LibraryVisible && !ui.Canvas.Texts.Any(t => t.Value == L.Get("library.apply")),
-                    "Return button restores library");
+                    "Close button restores library");
             }
         }
         finally { L.SetLanguage(language); }
