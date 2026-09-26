@@ -51,6 +51,9 @@ public sealed partial class EditorView
 
     private void UpdateHitsounds(double position, bool playing, string? filename)
     {
+        if (TimingModal && !playing) { hitsoundPosition = scheduledThrough = null; return; }
+        if (TimingPageVisible && !IsTestplaying)
+        { UpdateTimingMetronome(position, playing); return; }
         if (IsTestplaying)
         {
             return;

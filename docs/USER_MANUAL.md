@@ -41,6 +41,16 @@ On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are
 The main canvas shows horizontal placement and note timing; later notes are higher on the screen. On the canvas and both timelines, each wheel notch moves one full beat (1/1) during playback or one current Snap subdivision while paused: up to the preceding grid line and down to the following one, regardless of zoom. The canvas and playhead move together, including while paused. Middle-drag pans, and Alt+wheel over the canvas zooms. Ctrl+wheel changes Snap; Shift+wheel seeks four times as far. Click empty canvas in Select mode to clear selection without seeking. The bottom timeline also supports seeking; click the timestamp above its left-side Play, Pause, Stop, and Testplay controls to jump to an exact time. Stop pauses playback and returns to the start. Hover over the timeline to reveal the fixed bookmark toolbar above it: add or remove a bookmark at the playhead, seek to the previous or next bookmark, or reset all bookmarks. Bookmark edits can be undone. The canvas left axis displays blue bookmark markers and red timing markers; faint bookmark lines cross the canvas. Dense markers share display rows and reveal counts and time ranges on hover without changing their stored timestamps. Ordinary canvas time labels are blue.
 
 The Timing menu can set the current position as the song preview point. A long yellow line marks it on the bottom timeline. Red and green timing marks appear on the upper object timeline, while shaded break intervals appear there and on the canvas's left time axis. To insert a break, place the playhead between two objects with enough space and click **Insert Break Time** next to Movement Analysis. Undo removes the inserted break.
+
+Press **F3** for the Timing page: edit BPM, offset and Slider Tick Rate, or tap with
+**T** during playback and apply the measured tempo. The metronome plays each beat;
+hold **Ctrl** to hear the current Snap subdivisions. **F1** returns to Compose.
+**F6 / Timing Setup** opens red/green control-point editing, sample settings,
+volume and Kiai. OK applies the draft as one undo step; Cancel discards it.
+The apply options can scale or resnap objects, recalculate slider lengths, and
+adjust bookmarks and the preview point. See [Timing editing](EDITOR_UI.md#timing-editing)
+for selection, clipboard, section commands and transformation rules.
+
 When the playhead is inside kiai time, a small Kiai badge appears in the upper-left of the editing plot. It brightens on each full beat and fades until the next beat.
 
 Break shading on the upper timeline extends lightly to the notes before and after the stored break. Drag either edge of its darker center to adjust the range; with Snap on, the edge follows the current beat subdivision. Shortening it below 400 ms removes it; Esc cancels a drag, and Undo restores the previous range.
@@ -109,7 +119,7 @@ Exporting a new difficulty to Songs saves your edits in a new workspace difficul
 
 Use **Library** or Esc to return to the library. Unsaved work prompts for Save, Discard or Cancel. Missing-resource messages indicate that a referenced file needs to be restored or relinked.
 
-Version 0.8 does not provide timing-point creation, video or storyboard playback. Imported timing and slider velocity are supported. Testplay is for checking patterns; star ratings and exported behavior may differ between osu! versions.
+Version 0.8 does not provide video or storyboard playback. Imported timing and slider velocity are supported. Testplay is for checking patterns; star ratings and exported behavior may differ between osu! versions.
 
 ## 04 / Keyboard reference
 
@@ -165,7 +175,11 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Keys | Action |
 | --- | --- |
 | Enter / Esc | Finish / cancel a slider draft. |
-| Ctrl+I | Insert a point on the curve under the pointer. |
+| F3 / F1 | Open Timing / return to Compose. |
+| F6 | Open Timing and Control Points. |
+| Ctrl+P / Ctrl+Shift+P | Add a red / green timing point. |
+| Ctrl+I | Delete the current timing section. |
+| Ctrl+Shift+I | Insert a point on the curve under the pointer. |
 | Ctrl+L | Toggle the selected point between straight and curved. |
 | Ctrl+= / Ctrl+- | Add / remove a reverse. |
 | Ctrl+G | Reverse the selected FSlider's path direction. |

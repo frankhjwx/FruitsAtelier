@@ -50,6 +50,20 @@ Catch preview Hard Rock follows [CatchModHardRock.ApplyToDifficulty](https://git
 
 These classes depend on osu!framework. See [Architecture](ARCHITECTURE.md) for this project's audio implementation.
 
+## Timing editor
+
+The timing editor also references these files at the pinned revision above:
+
+- [TimingScreen](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Timing/TimingScreen.cs): active control-point selection when entering Timing.
+- [TimingSectionAdjustments](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Timing/TimingSectionAdjustments.cs): section-scoped offset and beat-length transformations.
+- [TapTimingControl](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Timing/TapTimingControl.cs): timing controls and editor-clock integration.
+- [MetronomeDisplay](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Timing/MetronomeDisplay.cs): playback gating, modifier handling and measure accents.
+
+The implementation uses this project's document transactions, FSlider time geometry,
+shared canvas and timestamped audio mixer. Metronome samples are procedurally
+generated locally. Ctrl selects the full current editor Snap divisor. User-facing
+behavior is documented in [Editing Controls](EDITOR_UI.md#timing-editing).
+
 ## Dependencies and licenses
 
 At this revision, [osu.Game.csproj](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/osu.Game.csproj) targets net8.0 but also depends on Realm, osu!framework, resources, and other components. This project does not reference that project.

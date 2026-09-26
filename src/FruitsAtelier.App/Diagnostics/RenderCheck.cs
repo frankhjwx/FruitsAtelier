@@ -9,6 +9,37 @@ namespace FruitsAtelier.App.Diagnostics;
 
 internal static class RenderCheck
 {
+    private static void CheckTimingSetup(D2DCanvas canvas, EditorView view, int width, int height)
+    {
+        string language = FruitsAtelier.Localization.Strings.Language;
+        var original = view.Document.DeepClone();
+        void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
+        try
+        {
+            foreach (string lang in new[] { "en", "zh-CN" })
+            {
+                FruitsAtelier.Localization.Strings.SetLanguage(lang); Paint();
+                view.KeyDown(114, false, false); Paint();
+                if (!view.TimingPageVisible) throw new InvalidOperationException("F3 failed to open timing page.");
+                view.KeyDown(117, false, false); Paint();
+                if (!view.TimingSetupVisible) throw new InvalidOperationException("F6 failed to open timing setup.");
+                var r = view.TimingSetupBounds;
+                float tabWidth = Math.Clamp(r.Width * .39f, 280, 360) / 3;
+                for (int tab = 0; tab < 3; tab++)
+                {
+                    view.PointerDown(r.X + 22 + tab * tabWidth, r.Y + 65, 0, false, false);
+                    view.PointerUp(r.X + 22 + tab * tabWidth, r.Y + 65, 0); Paint();
+                    if (view.TimingFields.Any(f => f.Bounds.Bottom > r.Bottom - 188))
+                        throw new InvalidOperationException("Timing properties overlap apply options.");
+                }
+                view.KeyDown(27, false, false); view.KeyDown(112, false, false); Paint();
+                if (view.TimingSetupVisible || view.TimingPageVisible || !view.Document.ContentEquals(original))
+                    throw new InvalidOperationException("Timing navigation or Cancel changed the map.");
+            }
+        }
+        finally { FruitsAtelier.Localization.Strings.SetLanguage(language); Paint(); }
+    }
+
     private static void CheckSongSetup(D2DCanvas canvas, EditorView view, int width, int height)
     {
         string language = FruitsAtelier.Localization.Strings.Language;
@@ -522,6 +553,7 @@ internal static class RenderCheck
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             CheckSongSetup(canvas, view, size.Item1, size.Item2);
+            CheckTimingSetup(canvas, view, size.Item1, size.Item2);
             if (!view.MovementAnalysisEnabled)
             {
                 view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0);

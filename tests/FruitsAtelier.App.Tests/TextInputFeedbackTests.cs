@@ -57,12 +57,12 @@ internal static class TextInputFeedbackTests
             view.SetTextInputFocus(false); Paint();
             Check(!Caret() && !view.TextCaretNeedsRedraw, "An unfocused window must not blink");
             view.NewProject(); view.CloseLibrary(); view.SetTextInputFocus(true); Paint();
-            foreach (var (menu, last) in new[] { ("ui.file", "ui.exitMenu"), ("ui.view", "movement.analysis"), ("ui.edit", "sliderBatch.menu") })
+            foreach (var (menu, last) in new[] { ("ui.file", "ui.exitMenu"), ("ui.view", "timing.setup"), ("ui.edit", "sliderBatch.menu") })
             {
                 var label = canvas.Texts.Single(t => t.Value == L.Get(menu));
                 view.PointerDown(label.X + 2, label.Y + 2, 0, false, false); view.PointerUp(label.X + 2, label.Y + 2, 0); Paint();
                 var bounds = canvas.Outlines.Single(o => o.Bounds.Width == 282 && o.Bounds.Y == 38).Bounds;
-                var lastLabel = canvas.Texts.Single(t => t.Value == L.Get(last) && Math.Abs(t.X - (bounds.X + 15)) < .01);
+                var lastLabel = canvas.Texts.Single(t => t.Value == L.Get(last).Split("  ")[0] && Math.Abs(t.X - (bounds.X + 15)) < .01);
                 Check(Math.Abs(bounds.Bottom - lastLabel.Y - 30.5) < .01, "Menu must end with seven pixels of padding after its last row");
                 view.KeyDown(27, false, false); Paint();
             }

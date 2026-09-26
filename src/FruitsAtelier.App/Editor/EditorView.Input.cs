@@ -26,6 +26,9 @@ public sealed partial class EditorView
         }
         ResetTextCaret();
         mouseX = x; mouseY = y;
+        timingPointerShift = shift;
+        if (TimingModal) { TimingPointerDown(x, y, button); return; }
+        if (TimingPageVisible && menu < 0 && y >= 84 && y < height - 120) { TimingPointerDown(x, y, button); return; }
         if (BeginVolumePopoverPointer(x, y, button)) return;
         if (SongSetupVisible) { SongSetupPointerDown(x, y, button, shift); return; }
         if (DistanceSnapDialogVisible)
@@ -336,6 +339,8 @@ public sealed partial class EditorView
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
         MoveVolumePopoverPointer(x, y);
+        if (timingVolumeStart is not null) { UpdateTimingVolume(x); return; }
+        if (TimingModal) { mouseX = x; mouseY = y; return; }
         if (volumePopoverDrag >= 0) return;
         if (textSelecting) { MoveInputSelection(x); return; }
         if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
@@ -487,6 +492,8 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        if (timingVolumeStart is not null) { UpdateTimingVolume(x); EndTimingVolume(false); return; }
+        if (TimingModal) return;
         if (EndVolumePopoverPointer(x, y, button)) return;
         if (settingsColourDrag != 0 && button == 0) { UpdateIndicatorColourDrag(x, y); settingsColourDrag = 0; return; }
         if (textSelecting && button == 0) { MoveInputSelection(x); textSelecting = false; return; }
@@ -568,6 +575,13 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (TimingModal || TimingPageVisible)
+        {
+            var field = timingFields.FirstOrDefault(f => f.Bounds.Contains(x, y));
+            if (field.Key is not null && CommitTimingField())
+            { timingField = field.Key; timingText = field.Value; timingFieldApply = field.Apply; SelectInput("timing:" + field.Key, timingText); }
+            return;
+        }
         if (SongSetupVisible)
         {
             foreach (var pair in songFieldBounds)
@@ -624,6 +638,8 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (TimingModal)
+        { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
         shift |= shiftHeld;
         alt |= altHeld;
         if (SongSetupVisible) return;
@@ -833,6 +849,9 @@ public sealed partial class EditorView
         }
         if (ExportVisible) { ExportKey(virtualKey, ctrl, shift); return; }
         if (LibraryVisible) { LibraryKey(virtualKey, ctrl, shift); return; }
+        if (TimingKey(virtualKey, ctrl, shift)) return;
+        if (virtualKey == 117 && !ctrl && !shift && !altHeld) { OpenTimingSetup(); return; }
+        if (virtualKey == 114 && !ctrl && !shift && !altHeld) { ShowTimingPage(true); return; }
         if (virtualKey == 115 && !ctrl && !shift && !altHeld && drag == DragKind.None)
         { OpenSongSetup(); return; }
         if (virtualKey == 116 && !ctrl && !shift && !altHeld) { StartTestplay(); return; }
@@ -916,7 +935,9 @@ public sealed partial class EditorView
             else if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
             else if (virtualKey == 71 && !shift) ReverseSelectedPath();
             else if (virtualKey == 76 && !shift) TogglePointCurve();
-            else if (virtualKey == 73 && !shift && plot.Contains(mouseX, mouseY) && HitSliderLocation(mouseX, mouseY) is { } location) InsertControlPoint(location);
+            else if (virtualKey == 73 && !shift) DeleteCurrentTiming();
+            else if (virtualKey == 73 && shift && plot.Contains(mouseX, mouseY) && HitSliderLocation(mouseX, mouseY) is { } location) InsertControlPoint(location);
+            else if (virtualKey == 80) AddTimingPoint(shift);
             else if (virtualKey == 187 && !shift && SelectedTrack is { } addReverse) ChangeReverseCount(addReverse.Id, 1);
             else if (virtualKey == 189 && !shift && SelectedTrack is { } removeReverse) ChangeReverseCount(removeReverse.Id, -1);
             else if (virtualKey == 74 && !shift && plot.Contains(mouseX, mouseY) && SelectedTrack is { } extend) ExtendSlider(extend.Id, MapAt(mouseX, mouseY, true));
@@ -956,6 +977,8 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (TimingModal || TimingPageVisible && timingField.Length > 0)
+        { if (!char.IsControl(value)) PasteTimingText(value.ToString(), TimingInputSession); return; }
         if (SongSetupVisible) { if (!char.IsControl(value)) PasteSongSetupText(value.ToString(), SongSetupInputSession); return; }
         if (DistanceSnapDialogVisible)
         {
@@ -986,6 +1009,8 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        placementCtrl = false; timingTapHeld = false;
+        EndTimingVolume(true);
         pendingStreamChildSelection = null;
         pendingImplicitSliderConversions.Clear();
         textSelecting = false;

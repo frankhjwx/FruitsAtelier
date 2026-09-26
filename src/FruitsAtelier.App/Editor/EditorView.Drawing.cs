@@ -60,16 +60,20 @@ public sealed partial class EditorView
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
         c.Fill(new(0, 0, width, height), Background);
         DrawChrome(c);
-        DrawCanvas(c);
-        DrawInspector(c);
-        DrawToolPalette(c);
-        DrawDistanceReadout(c);
-        DrawAssistPalette(c);
-        DrawSelectionBox(c);
-        DrawPreviewSidebar(c);
-        DrawLegacyConversionButton(c);
-        DrawMovementOverlay(c);
-        DrawKiaiBadge(c);
+        if (TimingPageVisible) DrawTimingPage(c);
+        else
+        {
+            DrawCanvas(c);
+            DrawInspector(c);
+            DrawToolPalette(c);
+            DrawDistanceReadout(c);
+            DrawAssistPalette(c);
+            DrawSelectionBox(c);
+            DrawPreviewSidebar(c);
+            DrawLegacyConversionButton(c);
+            DrawMovementOverlay(c);
+            DrawKiaiBadge(c);
+        }
         DrawTransport(c);
         DrawStatus(c);
         if (resourceErrors.Count > 0)
@@ -90,6 +94,7 @@ public sealed partial class EditorView
         DrawVolumePopover(c);
         DrawDistanceSnapDialog(c);
         DrawSongSetup(c);
+        DrawTimingSetup(c);
         DrawDiscardConfirmation(c);
         DrawDifficultyTooltip(c);
     }
@@ -604,9 +609,25 @@ public sealed partial class EditorView
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
         }
         else if (menu == 4)
+        {
+            Item(L.Get("timing.page"), () => ShowTimingPage(true));
+            Item(L.Get("timing.meter4"), () => ChangeCurrentRed("meter", 4));
+            Item(L.Get("timing.meter3"), () => ChangeCurrentRed("meter", 3));
+            Item(L.Get("timing.metronome"), () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }, active: metronomeEnabled);
+            Item(L.Get("timing.addRed"), () => AddTimingPoint(false));
+            Item(L.Get("timing.addGreen"), () => AddTimingPoint(true));
+            Item(L.Get("timing.reset"), () => OpenTimingCommand("reset"));
+            Item(L.Get("timing.delete"), DeleteCurrentTiming);
+            Item(L.Get("timing.resnap"), () => ResnapTimingSection(false));
+            Item(L.Get("timing.setup"), OpenTimingSetup);
+            Item(L.Get("timing.resnapAll"), () => ResnapTimingSection(true));
+            Item(L.Get("timing.move"), () => OpenTimingCommand("move"));
+            Item(L.Get("timing.recalculate"), () => Edit(L.Get("timing.recalculate"), () => TimingEditing.ResnapLengths(Document, divisor)));
+            Item(L.Get("timing.deleteAll"), () => OpenTimingCommand("deleteAll"));
             Item(L.Get("timeline.setPreviewPoint"), () => Edit(L.Get("timeline.setPreviewPoint"), () =>
                 SongSetup.Set(Document, "General", "PreviewTime",
                     ((int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue)).ToString(System.Globalization.CultureInfo.InvariantCulture))));
+        }
         else
         {
             Item(L.Get("ui.gridLevel", L.Get("ui.grid" + gridSize)), () => gridLevelMenuOpen = true);
@@ -618,6 +639,8 @@ public sealed partial class EditorView
             Item(showPreviewCurves ? L.Get("ui.previewCurvesOn") : L.Get("ui.previewCurvesOff"), () => showPreviewCurves = !showPreviewCurves);
             Item(L.Get("ui.follow"), FollowPlayhead);
             Item(L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, active: movementAnalysis);
+            Item(L.Get("timing.page"), () => ShowTimingPage(true));
+            Item(L.Get("timing.setup"), OpenTimingSetup);
         }
         float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : menu == 4 ? 268 : 109 + menu * 53;
         float top = menu == 3 ? difficultyAddButton.Bottom + 4 : 38;

@@ -90,6 +90,12 @@ even when the device advances before the worker handles it.
 
 ## Window checks
 
+Timing regressions cover draft cancellation, atomic apply/undo, clipboard session
+isolation, red/green control points, reset/replacement, and FSlider time transforms.
+Metronome tests compare scheduled timestamps for whole beats, Ctrl subdivisions,
+pause and seek. The native render check draws the Timing page and all setup tabs
+in English and Chinese at each tested window size and DPI.
+
 The Windows `--render-check` injects nested paint/timer messages, nested native-modal
 scopes, an abandoned drawing batch, and a real Direct2D wrong-state failure. It
 checks that the renderer recovers, the error can be dismissed, and map content is

@@ -64,7 +64,7 @@ These are explicitly recorded so “missing shortcuts” does not get confused w
 | Area | Unimplemented osu!stable keys / actions | Current scope |
 | --- | --- | --- |
 | General file/edit | `Ctrl+Shift+L` full reload; `Ctrl+N` remove all hit objects. | No matching command. Select all + Delete can clear objects through separate actions. |
-| Editor pages and timing | `F1` Compose tab, `F2` Design tab, `F3` Timing tab, `F6` timing/control-points dialog; `Ctrl+P` new red timing point; `Ctrl+Shift+P` new green timing point; `Ctrl+I` delete timing section. | This app has one catch Compose workspace, read-only imported timing points, and no Design tab. F5 testplay exists. |
+| Editor pages | `F2` Design tab. | Compose and Timing pages, the F6 control-point dialog, timing creation/deletion and F5 testplay are available. There is no Design tab. |
 | Object transforms | `Ctrl+,` / `Ctrl+.` rotate 90°; `Ctrl+J` vertical flip; `Ctrl+G` reverse selection; `Ctrl+Shift+R` arbitrary rotation; `Ctrl+Shift+S` scale; `Ctrl+Shift+D` polygon generation. | Horizontal flip (`Ctrl+H`) and FSlider path reversal (`Ctrl+G`) exist; the listed transformations do not. |
 | Compose analysis | `Ctrl+Shift+A` opens AiMod. | No AiMod equivalent. |
 | Hitsound sample sets | `Shift+Q/W/E/R` choose object sampleset; `Ctrl+Q/W/E/R` choose addition set; `Ctrl+Shift+I` import a sample. | Whistle/Finish/Clap flags (`W/E/R`) exist; these sample-set and import controls do not. |

@@ -29,6 +29,8 @@ internal sealed partial class EditorWindow : IDisposable
         view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
         view.RequestPasteTime = () => view.PasteTimeJumpText(Native.ReadClipboardText(hwnd), view.TimeJumpSession);
         view.RequestPasteSongSetup = () => view.PasteSongSetupText(Native.ReadClipboardText(hwnd), view.SongSetupInputSession);
+        view.RequestPasteTiming = () => view.PasteTimingText(Native.ReadClipboardText(hwnd), view.TimingInputSession);
+        view.RequestTimingSampleHelp = () => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://osu.ppy.sh/wiki/en/Beatmapping/Hitsound") { UseShellExecute = true });
         view.RequestPasteLibrary = () => view.PasteLibraryText(Native.ReadClipboardText(hwnd));
         view.RequestPasteField = () => view.PasteFieldText(Native.ReadClipboardText(hwnd));
         view.RequestClose = Close;

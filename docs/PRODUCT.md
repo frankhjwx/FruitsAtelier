@@ -35,4 +35,4 @@ Supported features include multiple timing points, inherited SV, beat snapping, 
 
 Song playback supports 10%, 25%, 50%, 75%, 100%, and 150% speed while preserving pitch; hitsounds keep their original speed. Testplay starts at the playhead and supports movement, dash, combo feedback, pause and autoplay. Preview and testplay animate fruit and banana sprites and catcher effects; the editing canvas uses static sprites. Slider-to-stream conversion retains editable geometry and exports individual fruits.
 
-Audio waveforms, timing-point creation, bookmarks, video and storyboard playback are not provided. See the [user manual](USER_MANUAL.md) for a concise feature guide and keyboard reference.
+Audio waveforms, video and storyboard playback are not provided. Timing editing and bookmarks are described in the editing controls guide. See the [user manual](USER_MANUAL.md) for a concise feature guide and keyboard reference.

@@ -37,6 +37,7 @@ public sealed partial class EditorView
     {
         project.Validate();
         CloseSongSetup();
+        CloseTimingSetup(); TimingPageVisible = false;
         TimeJumpVisible = false;
         StreamDialogVisible = false;
         CloseVolumeDialog();
@@ -150,7 +151,8 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
-        if (SongSetupVisible || DistanceSnapDialogVisible) return false;
+        if (SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
+        if (!CommitTimingField()) return false;
         if (SliderDialogVisible || ErrorVisible) return false;
         if (draftBanana != Guid.Empty)
         {

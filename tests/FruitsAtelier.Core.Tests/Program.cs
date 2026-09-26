@@ -9,6 +9,7 @@ if (args.Length == 2 && args[0] == "--preserve-slider-positions")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Timing edits transform sections, FSliders, metadata and exported durations", TimingEditingTests.Run),
     ("Slider streams persist, sample repeats and match exported fruits", SliderStreamTests.ConversionAndPersistence),
     ("Exported milliseconds and coordinates determine hyperdash", SliderStreamTests.ExportedMillisecondsDriveHyperdash),
     ("Source section snapshots detect all writes, undo and project round trips", SourceSectionTests.SnapshotsAndWrites),

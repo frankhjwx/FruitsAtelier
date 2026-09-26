@@ -1,5 +1,62 @@
 # Editing Controls
 
+## Timing editing
+
+**F3** or **Timing → Timing** opens the Timing page; **F1** returns to Compose.
+The page edits the active red section's BPM and offset and the difficulty's Slider
+Tick Rate. **Move notes with offset / BPM changes** keeps objects at their beat
+positions within the edited section. BPM buttons step by 1, Ctrl by 0.25 and Shift
+by 5; offset buttons step by 2 ms, Ctrl by 1 ms and Shift by 10 ms.
+
+During playback, **Metronome Clicks** schedules one tick per beat, with a distinct
+measure accent. Holding Ctrl uses the current Snap divisor, including triplets and
+finer divisions. The music clock controls tick times and visual indicators. Pause,
+seek, timing changes and leaving Timing cancel queued ticks. These controls are
+editor state and do not alter beatmap data. **Tap Here / T** collects up to 32 taps;
+**Apply timing** sets the red section's BPM and first-tap offset in one undo step.
+**Reset taps** clears the measurement. Tap uses map time, including playback speed.
+
+**Timing Setup / F6** opens an application-modal **Timing and Control Points**
+window. Its draft is committed by OK as one undo step; Cancel, Escape or the close
+button discards it. Timing, Audio and Style pages edit the selected rows, while
+All, Timing Points and Inherited Points filter the list. Ctrl-click toggles rows;
+Shift-click selects a range. Ctrl+A selects visible rows. Mixed numeric values are
+blank until explicitly replaced. Arrow, Page Up/Down and Home/End keys navigate
+the list. Tab moves between numeric fields; Enter commits a field before accepting
+the dialog. Ctrl+Z/Y operate on the draft while no numeric field has focus.
+
+Red points expose offset, BPM and meter. Green points expose offset, samples,
+volume and Kiai. The inheritance checkbox changes point type; it protects the
+first red point. Audio supports Normal/Soft/Drum banks, default or numbered custom
+samples, a volume slider, and four sample audition buttons. Imported velocity and
+unrelated effect bits are preserved. The list shows existing velocity multipliers
+as read-only values. Kiai updates the editor's existing Kiai indication and exports.
+
+Ctrl+P adds a red point at the playhead; Ctrl+Shift+P adds a green point, opening
+the draft window. Ctrl+I deletes the current section outside the window, or the
+selected rows inside it. Ordinary deletion protects the first red point. The
+window supports Ctrl+C/X/V with `.osu` timing-row text; text fields retain normal
+text clipboard behavior. Ctrl+Shift+I inserts a slider control point on the curve
+under the pointer in Compose.
+
+The dialog's apply options independently control object time scaling, object
+resnapping, slider-length resnapping and bookmark/preview-point adjustment. The
+original red section determines which object is transformed, so moving a timing
+boundary does not reassign objects before scaling them. FSlider scaling transforms
+node times, handle time components and exact-curve reference scale while retaining
+X. Object resnap translates a complete parent from its start. Length resnap changes
+an imported slider's path length or scales an FSlider's complete duration, including
+repeats. Imported sliders retain source samples and flags. Invalid edits roll back
+the transaction. The chosen beat divisor is independent of Slider Tick Rate.
+
+The Timing menu also offers 3/4 and 4/4 meter presets, section/all-object resnap,
+all-object time translation, slider-length recalculation, clearing all sections,
+and setting the song preview point. **Reset Current Section** clears the active
+red point for retiming; applying taps or entering BPM/offset restores a section.
+An untouched cleared section is absent when saved. Clearing all timing uses the
+editor's 120 BPM / 0 ms fallback until new timing is supplied. All content operations
+participate in undo/redo; clearing and resetting have a confirmation panel.
+
 ## Workspace
 
 The time–X canvas occupies the main area, read-only AR/CS/DPB are at the upper right, and time navigation is at the bottom. Select objects directly on the canvas. Playfield X spans `0..512`; time increases upward. Startup opens the Library without loading a demo beatmap. Open a beatmap set to enter the editor. The window title identifies the active difficulty as `Artist - Title (Mapper) [Diffname]`; the menu row does not repeat the project title. The compact **← Library** button at the top right returns to the library. Esc first dismisses an active menu, field, dialog, or gesture; otherwise it requests a return to the library. Unsaved changes prompt for Save, Discard, or Cancel before closing the editor; Cancel or a failed save keeps the editor open. See [Workspace](WORKSPACE.md) for navigation and position memory.
@@ -148,7 +205,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Ctrl+Z / Y | Undo / redo |
 | Right-click a note / edited point | Delete an object; a straight point becomes curved, a curved point is deleted; no context menu |
 | Ctrl+L | Toggle the selected point between straight and curved |
-| Ctrl+I | Insert a control point on the curve under the pointer |
+| Ctrl+Shift+I | Insert a control point on the curve under the pointer |
 | Ctrl+D | Clone selected parents one measure after the last selected start |
 | Ctrl+A | Select all objects |
 | Ctrl+H | Flip selected parents horizontally around X=256 |
@@ -232,7 +289,7 @@ In **pen tool mode**, press B with no track selected to start drawing. Click to 
 
 Select an FSlider and press B, or double-click its track, to edit anchors. Clicking an interior control on an already selected complete track also enters editing; visible slider fruits use the selection rules below. Drag anchors and handles directly on the canvas. Interior anchor dragging is free by default. Enable **View → Snap interior anchors** to snap interior anchor times to the selected beat subdivision. Head and tail anchors follow beat Snap. Invalid snapped endpoint moves keep their previous time rather than clamping between grid lines. Handles remain free, and the option does not change placement or whole-object snapping. Anchor times remain increasing, and control-point X stays within the playfield. Curve handles may extend before the start or after the end; the curve must define an unambiguous forward branch inside the slider time interval. Generated events still undergo normal conversion validation.
 
-In Select mode, the first click selects the whole slider; the second click on a head, tail or repeat selects that fruit with an individual outer ring. Dragging the selected fruit changes only its X, preserving its time and reshaping the slider; repeated traversals share the same endpoint geometry. Legacy endpoint edits convert the owning slider to an FSlider inside the same undo step. Clicking outside a selected child returns to whole-slider selection; a subsequent outside click clears it. Dragging the body selects and moves the whole slider. In anchor edit mode, dragging an anchor changes that anchor. Ctrl+click at a new position inside the slider's time range inserts a curved anchor; Ctrl+click on an existing anchor makes it straight. Right-click a straight anchor to restore a curved anchor, then right-click the curved anchor to delete it. These rules apply in both editing modes, including points exposed in Select mode. In legacy mode, an interior straight anchor is a segment boundary; restoring it to curved merges it back into the control polygon. Right-click the slider body away from anchors to delete the parent. Ctrl+L also toggles the selected point, and Ctrl+I inserts on the curve under the pointer. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
+In Select mode, the first click selects the whole slider; the second click on a head, tail or repeat selects that fruit with an individual outer ring. Dragging the selected fruit changes only its X, preserving its time and reshaping the slider; repeated traversals share the same endpoint geometry. Legacy endpoint edits convert the owning slider to an FSlider inside the same undo step. Clicking outside a selected child returns to whole-slider selection; a subsequent outside click clears it. Dragging the body selects and moves the whole slider. In anchor edit mode, dragging an anchor changes that anchor. Ctrl+click at a new position inside the slider's time range inserts a curved anchor; Ctrl+click on an existing anchor makes it straight. Right-click a straight anchor to restore a curved anchor, then right-click the curved anchor to delete it. These rules apply in both editing modes, including points exposed in Select mode. In legacy mode, an interior straight anchor is a segment boundary; restoring it to curved merges it back into the control polygon. Right-click the slider body away from anchors to delete the parent. Ctrl+L also toggles the selected point, and Ctrl+Shift+I inserts on the curve under the pointer. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
 
 Span count applies to the entire FSlider; later traversals reuse the first span's nodes in alternating directions. Hold the left mouse button stationary on a Legacy Slider to open its conversion actions beside the pointer. Holding a slider fruit first identifies its beat at 300 ms. Continuing to hold stationary opens conversion actions at 1000 ms; a small progress ring fills during the final 700 ms. Moving at least 2 DIP or releasing before completion cancels the hold; ordinary selection and dragging remain available. The buttons stay open until an action, another click, a key, or focus loss dismisses them. Conversion preserves start time, total duration, and span count. It first fits a small set of straight/Bezier anchors within 0.25 playfield units, then relaxes TinyDroplet alignment or uses a linear approximation if needed to complete the conversion. Exact nested-object positions and sequences are not required to match. Invalid or unrepresentable input retains its original object with a reason.
 
@@ -252,7 +309,7 @@ Left-click a start point, move the pointer to preview the endpoint, and left-cli
 
 A single selected slider exposes controls in Select mode as well as the Slider tool. For a completed slider, drag a control, Ctrl-click an existing control to turn it into a straight segment boundary, or box-select controls. Ctrl-click between the slider's first and last times to insert a control at the pointer's position; the time interval determines its place in the control polygon. Insertion can change shape. Right-click a straight point to return it to a curved control; right-click a curved control to delete it. Delete removes selected controls directly. Double-click an interior point to toggle its segment boundary. Removing a boundary merges its adjacent control polygons; removing endpoints changes the time range. Fewer than two remaining controls deletes the slider. Each edit is undoable. Segment boundary times remain ordered. Bezier controls may extend beyond the endpoint times, provided the curve does not reverse time inside the segment interval. A circular preview or drag that would reverse time or leave the playfield falls back to Bezier; moving back during the same gesture can restore the arc. Explicit circular-arc commands still reject invalid geometry.
 
-Use Ctrl+I for insertion and Ctrl+L to toggle the selected point between straight and curved. A circular arc requires exactly three points. Existing Bezier segments retain their type when their point count decreases; changing tools never implicitly turns a three-point Bezier into an arc. A line receiving its first internal control becomes an arc using the current map AR. Ordinary control dragging uses the interior-anchor snap setting; endpoint moves use the global snap setting.
+Use Ctrl+Shift+I for insertion and Ctrl+L to toggle the selected point between straight and curved. A circular arc requires exactly three points. Existing Bezier segments retain their type when their point count decreases; changing tools never implicitly turns a three-point Bezier into an arc. A line receiving its first internal control becomes an arc using the current map AR. Ordinary control dragging uses the interior-anchor snap setting; endpoint moves use the global snap setting.
 
 Circular arcs retain a reference ratio derived from the map AR at creation (`440 / preemptMs` in playfield units per millisecond). Changing map AR or viewport zoom stretches their appearance without changing time–X coordinates. The reference excludes window width and DPI. Editing an existing arc preserves this reference; explicitly choosing a new circular arc uses the current map AR.
 
@@ -328,7 +385,7 @@ Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Slider 
 
 A confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging reshapes only that fruit while keeping its time fixed. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Change snapping** above **Convert back to slider** in their long-press menu. The Edit menu and Ctrl+Shift+F open Change snapping for a stream selection. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
 
-The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Timing creation and geometric rotation dialogs are not available.
+The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
 
 Testplay lead-in is configured in Settings > Testplay keys, from 0 to 5 seconds (default 1). Starting testplay immediately begins audio and gameplay from the selected position minus the lead-in, clamped to zero. Esc returns to the selected position.
 

@@ -60,6 +60,18 @@ internal sealed class EditorControl : Control, IDisposable
             catch (Exception error) { View.SetNotice(error.Message); }
             Refresh();
         };
+        View.RequestPasteTiming = async () =>
+        {
+            int session = View.TimingInputSession;
+            try
+            {
+                if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+                    View.PasteTimingText(await clipboard.TryGetTextAsync() ?? "", session);
+            }
+            catch (Exception error) { View.SetNotice(error.Message); }
+            Refresh();
+        };
+        View.RequestTimingSampleHelp = () => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://osu.ppy.sh/wiki/en/Beatmapping/Hitsound") { UseShellExecute = true });
         View.RequestPasteTime = async () =>
         {
             int session = View.TimeJumpSession;

@@ -11,7 +11,7 @@ public static class HitsoundSamples
         var kind = sound.Kind;
         double frequency = kind switch { CatchObjectKind.Fruit => 1100, CatchObjectKind.Droplet => 1600, CatchObjectKind.TinyDroplet => 2200, _ => 850 };
         frequency *= sound.SampleSet switch { 2 => .8, 3 => .6, _ => 1 };
-        frequency *= sound.Name switch { "hitwhistle" => 1.7, "hitfinish" => .55, "hitclap" => 2.3, _ => 1 };
+        frequency *= sound.Name switch { "hitwhistle" => 1.7, "hitfinish" => .55, "hitclap" => 2.3, "metronome-downbeat" => 1.5, "metronome-tick" => 1, _ => 1 };
         double gain = kind switch { CatchObjectKind.Fruit => .32, CatchObjectKind.Droplet => .20, CatchObjectKind.TinyDroplet => .10, _ => .18 };
         var samples = new float[SampleRate / 16];
         for (int i = 0; i < samples.Length; i++)
