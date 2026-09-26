@@ -61,16 +61,23 @@ public sealed partial class EditorView
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
         c.Fill(new(0, 0, width, height), Background);
         DrawChrome(c);
-        DrawCanvas(c);
+        if (TimingPageVisible) DrawTimingWaveform(c);
+        else
+        {
+            DrawCanvas(c);
+            DrawToolPalette(c);
+            DrawDistanceReadout(c);
+            DrawAssistPalette(c);
+            DrawSelectionBox(c);
+        }
         DrawInspector(c);
-        DrawToolPalette(c);
-        DrawDistanceReadout(c);
-        DrawAssistPalette(c);
-        DrawSelectionBox(c);
         if (TimingPageVisible) DrawTimingPage(c); else DrawPreviewSidebar(c);
-        DrawLegacyConversionButton(c);
-        DrawMovementOverlay(c);
-        DrawKiaiBadge(c);
+        if (!TimingPageVisible)
+        {
+            DrawLegacyConversionButton(c);
+            DrawMovementOverlay(c);
+            DrawKiaiBadge(c);
+        }
         DrawTransport(c);
         DrawStatus(c);
         if (resourceErrors.Count > 0)

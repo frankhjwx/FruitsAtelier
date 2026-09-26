@@ -16,6 +16,11 @@ See [Building and Testing](TESTING.md) for SDK selection and build commands, and
 
 ## Source layout
 
+Both renderers keep the bookmark toolbar texture in its own resident cache slot,
+outside the 64 MiB scene-image cache. Scene images are evicted individually by
+least recent use. Cache slots are released with the renderer and replaced when
+their source image version changes.
+
 | Directory | Responsibility |
 | --- | --- |
 | `src/FruitsAtelier.Core/Model` | Documents, FSliders, imported objects, and timing |

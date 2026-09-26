@@ -263,7 +263,7 @@ internal sealed partial class EditorWindow : IDisposable
                 if (painting || failed || NativeModalScope.Active) return 0;
                 PollUpdates(); PollAudio();
                 if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
-                    || view.VolumePopoverNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
+                    || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0005: Invalidate(); return 0;
             case 0x02E0: // WM_DPICHANGED
@@ -390,6 +390,7 @@ internal sealed partial class EditorWindow : IDisposable
         disposed = true;
         updates?.Dispose();
         view.StopTestplay();
+        view.ReleaseWaveform();
         if (largeBrandIcon != 0) { Native.DestroyIcon(largeBrandIcon); largeBrandIcon = 0; }
         if (smallBrandIcon != 0) { Native.DestroyIcon(smallBrandIcon); smallBrandIcon = 0; }
         hitsounds.Dispose();

@@ -19,7 +19,7 @@ public static class TimingEditing
     {
         var point = Current(map, time)?.DeepClone() ?? new TimingPoint();
         var state = TimingMap.At(map, time);
-        point.TimeMs = time; point.Uninherited = !inherited;
+        point.TimeMs = inherited ? Math.Truncate(time) : time; point.Uninherited = !inherited;
         point.BeatLengthMs = inherited ? -100 / state.SliderVelocityMultiplier : state.BeatLengthMs;
         point.Meter = state.Meter; point.OriginalLine = null;
         point.SourceOrder = map.TimingPoints.Count;

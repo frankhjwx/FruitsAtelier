@@ -10,7 +10,10 @@ namespace FruitsAtelier.Mac;
 
 internal sealed class ImageCache : IDisposable
 {
-    private readonly Dictionary<(string, uint, long, long), Bitmap> images = [];
+    private readonly Dictionary<(string, uint, long, long), (Bitmap Bitmap, long Used)> images = [];
+    private readonly string bookmarkToolbarPath = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
+    private ((string, uint, long, long) Key, Bitmap Bitmap)? bookmarkToolbar;
+    private long clock;
     private long bytes;
     private readonly ThumbnailCache<Bitmap> thumbnails = new(path =>
     {
@@ -26,11 +29,19 @@ internal sealed class ImageCache : IDisposable
         var file = new FileInfo(path);
         if (!file.Exists || file.Length > 32 * 1024 * 1024) return null;
         var key = (path, tint, file.LastWriteTimeUtc.Ticks, file.Length);
-        if (images.TryGetValue(key, out var existing)) return existing;
+        bool isToolbar = path == bookmarkToolbarPath;
+        if (isToolbar && bookmarkToolbar is { } toolbar && toolbar.Key == key) return toolbar.Bitmap;
+        if (images.TryGetValue(key, out var existing)) { images[key] = (existing.Bitmap, ++clock); return existing.Bitmap; }
         using var decoded = new Bitmap(path);
         long size = (long)decoded.PixelSize.Width * decoded.PixelSize.Height * 4;
         if (size > 64 * 1024 * 1024) return null;
-        if (bytes + size > 64 * 1024 * 1024 || images.Count >= 256) ClearImages();
+        while (!isToolbar && images.Count > 0 && (bytes + size > 64 * 1024 * 1024 || images.Count >= 256))
+        {
+            var oldest = images.MinBy(entry => entry.Value.Used);
+            images.Remove(oldest.Key);
+            bytes -= (long)oldest.Value.Bitmap.PixelSize.Width * oldest.Value.Bitmap.PixelSize.Height * 4;
+            oldest.Value.Bitmap.Dispose();
+        }
         var result = new WriteableBitmap(decoded.PixelSize, new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
         try
         {
@@ -48,12 +59,17 @@ internal sealed class ImageCache : IDisposable
                     }
                 }
             }
-            images.Add(key, result); bytes += size;
+            if (isToolbar) { bookmarkToolbar?.Bitmap.Dispose(); bookmarkToolbar = (key, result); }
+            else { images.Add(key, (result, ++clock)); bytes += size; }
             return result;
         }
         catch { result.Dispose(); throw; }
     }
-    private void ClearImages() { foreach (var image in images.Values) image.Dispose(); images.Clear(); bytes = 0; }
+    private void ClearImages()
+    {
+        bookmarkToolbar?.Bitmap.Dispose(); bookmarkToolbar = null;
+        foreach (var image in images.Values) image.Bitmap.Dispose(); images.Clear(); bytes = 0;
+    }
     public void Dispose() { ClearImages(); thumbnails.Dispose(); }
 }
 

@@ -164,7 +164,7 @@ public sealed partial class EditorView
                 var p = entry.Point;
                 switch (key)
                 {
-                    case "offset": p.TimeMs = value; break;
+                    case "offset": p.TimeMs = p.Uninherited ? value : Math.Truncate(value); break;
                     case "bpm" when p.Uninherited: p.BeatLengthMs = 60000 / value; break;
                     case "meter" when p.Uninherited: p.Meter = (int)value; break;
                     case "volume": p.Volume = (int)Math.Round(value); break;
@@ -190,6 +190,7 @@ public sealed partial class EditorView
                 if (inherited && entry == first) continue;
                 var state = TimingMap.At(map, entry.Point.TimeMs);
                 entry.Point.Uninherited = !inherited;
+                if (inherited) entry.Point.TimeMs = Math.Truncate(entry.Point.TimeMs);
                 entry.Point.BeatLengthMs = inherited ? -100 / state.SliderVelocityMultiplier : state.BeatLengthMs;
             }
         });
@@ -250,6 +251,7 @@ public sealed partial class EditorView
         try
         {
             var points = TimingEditing.Parse(text);
+            foreach (var point in points.Where(p => !p.Uninherited)) point.TimeMs = Math.Truncate(point.TimeMs);
             ChangeTimingDraft(() =>
             {
                 timingSelected.Clear();

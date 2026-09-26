@@ -18,14 +18,15 @@ internal static class TimingEditorTests
                 ui.Key(27); Check(!ui.View.TimingSetupVisible && ui.View.Document.ContentEquals(map), "Escape cancels whole draft");
                 ui.Key(117); ui.Key('A', true); ui.Key(46); ui.Key(13);
                 Check(ui.View.Document.TimingPoints.Count == 1 && !ui.View.IsDirty, "First red survives multi-delete; unchanged confirm is clean");
-                ui.View.UpdateTransport(1000, 10000, true, false, false, null, null);
+                ui.View.UpdateTransport(1000.9, 10000, true, false, false, null, null);
                 ui.Key('P', ctrl: true, shift: true); Check(ui.View.TimingSetupVisible, "Green shortcut opens setup");
                 Check(ui.View.TimingFields.All(f => f.Key == "offset"), "Green timing page exposes only offset");
+                Check(ui.View.TimingFields.Single().Value == "1000", "Green creation truncates fractional milliseconds");
                 ui.ClickText(L.Get("timing.audio")); Set(ui, "volume", "35");
                 Check(ui.View.TimingFields.All(f => f.Key != "index"), "Default sample index is read-only");
                 ui.ClickText(L.Get("timing.custom")); Set(ui, "index", "2");
                 ui.ClickText(L.Get("timing.drum"));
-                var samples = new List<Hitsound>(); ui.View.RequestHitsound = samples.Add;
+                var samples = new List<Hitsound>(); ui.View.RequestAuditionHitsound = samples.Add;
                 foreach (string name in new[] { "hitnormal", "hitfinish", "hitwhistle", "hitclap" }) ClickProperty(ui, L.Get($"timing.{name}"));
                 Check(samples.Select(s => s.Name).SequenceEqual(new[] { "hitnormal", "hitfinish", "hitwhistle", "hitclap" }) && samples.All(s => s.SampleSet == 3 && Math.Abs(s.Volume - .35f) < .001), "Audition buttons resolve the selected bank and volume independently");
                 ui.ClickText(L.Get("timing.custom1")); Check(ui.View.TimingFields.All(f => f.Key != "index"), "Custom 1 locks numeric sample index");
@@ -49,7 +50,8 @@ internal static class TimingEditorTests
                 ui.Key(27); ui.View.PasteTimingText(copied, session); Check(ui.View.Document.ContentEquals(saved), "Delayed clipboard cannot change closed dialog");
                 ui.ClickText(L.Get("timing.detailsPanel") + " ▾"); ui.ClickText(L.Get("timing.panel"));
                 Check(ui.View.TimingPageVisible, "Panel dropdown enters timing mode");
-                Check(ui.View.PlayfieldBounds.Width > 0 && ui.Canvas.Circles.Any(c => c.Color == 0xFFFFFF), "Timing panel retains note rendering");
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.waveform")) && !ui.Canvas.Circles.Any(c => c.Color == 0xFFFFFF), "Timing panel replaces notes with audio view");
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("timing.panel") + " ▾"), "Timing panel retains its switcher");
                 Set(ui, "page.bpm", "180"); Check(Math.Abs(TimingMap.At(ui.View.Document, 0).BeatLengthMs - 60000d / 180) < .001, "Timing page edits BPM");
                 var bpmField = ui.View.TimingFields.Single(f => f.Key == "page.bpm").Bounds;
                 ui.Click(bpmField.X + 8, bpmField.Y + 8); ui.Key('A', ctrl: true); ui.Type("160");
@@ -82,13 +84,47 @@ internal static class TimingEditorTests
         Check(events[0].Sound.Name == "metronome-downbeat" && events[1].Sound.Name == "metronome-tick", "Measure starts use distinct accent sample");
         events.Clear(); ui.Key(17, ctrl: true);
         for (int time = 501; time <= 1001; time += 50) At(time);
-        Check(events.Select(e => e.Time).SequenceEqual(new double[] { 625, 750, 875, 1000 }), "Ctrl schedules every quarter-beat snap");
+        Check(events.Select(e => e.Time).SequenceEqual(new double[] { 750, 1000 }), "Ctrl with even snap schedules two ticks per beat");
         events.Clear(); ui.View.KeyUp(17);
         for (int time = 1100; time <= 1400; time += 50) At(time);
         Check(events.Select(e => e.Time).SequenceEqual(new double[] { 1500 }), "Releasing Ctrl restores whole beats");
         events.Clear(); At(1400, false); At(1400, false); Check(events.Count == 0, "Paused updates are silent");
         At(0); Check(events.Count == 1 && events[0].Time == 0, "Backward seek restarts schedule at new position");
         ui.Key(112); events.Clear(); At(10); Check(events.All(e => !e.Sound.Name.StartsWith("metronome")), "Compose has no timing metronome");
+        foreach (int snap in new[] { 3, 6, 9, 12, 5, 7, 16 })
+        {
+            ui.Key(114); ui.SetSnapDivisor(snap); events.Clear(); ui.Key(17, ctrl: true);
+            At(0, false);
+            for (int time = 1; time <= 451; time += 50) At(time);
+            int expected = snap % 3 == 0 ? 3 : snap % 2 == 0 ? 2 : 1;
+            Check(events.Count == expected, "Ctrl respects triplet/even/odd Snap family: " + snap);
+            ui.Key(112);
+        }
+    }
+
+    public static void Waveform()
+    {
+        var ui = new Ui(false); var map = Map(); map.AudioPath = "synthetic.wav";
+        int loads = 0;
+        var pending = new TaskCompletionSource<AudioWaveform>();
+        ui.View.RequestWaveform = (_, _) => { loads++; return pending.Task; };
+        ui.LoadDocument(map); ui.Resize(980, 620);
+        ui.View.UpdateTransport(0, 10000, true, false, false, null, map.AudioPath);
+        ui.View.UpdateTransport(1000, 10000, true, false, false, null, map.AudioPath); ui.Key(114);
+        Check(!ui.View.WaveformNeedsRedraw, "Pending waveform does not busy-loop rendering");
+        pending.SetResult(new AudioWaveform(Enumerable.Repeat(.5f, 10000).ToArray(), 1));
+        Check(ui.View.WaveformNeedsRedraw, "Decoded waveform wakes a paused editor"); ui.Paint();
+        Check(!ui.View.WaveformNeedsRedraw, "Completed waveform is consumed once");
+        var before = ui.View.Document.DeepClone();
+        var r = ui.View.WaveformBounds;
+        float RedX() => ui.Canvas.Texts.Single(t => t.Value == "120 BPM").X;
+        float red = RedX();
+        ui.View.Wheel(r.X + r.Width / 2, r.Y + 80, 120, false, false, true); ui.Paint();
+        Check(RedX() < red && loads == 1, $"Zoom spreads red lines without decoding audio again: {red} -> {RedX()}, loads {loads}, playhead {ui.View.PlayheadMs}");
+        ui.Click(RedX() - 5, r.Y + 80);
+        Check(ui.View.TimingSetupVisible && ui.View.TimingFields.Any(f => f.Key == "bpm"), "Clicking a red line opens its BPM properties");
+        ui.Key(27); ui.Key(112);
+        Check(ui.View.Document.ContentEquals(before), "Waveform navigation and cancelled timing edit preserve content");
     }
 
     private static MapDocument Map() => OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n128,192,1200,1,0,0:0:0:0:\n");

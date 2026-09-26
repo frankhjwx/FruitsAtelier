@@ -61,7 +61,8 @@ The timing editor also references these files at the pinned revision above:
 
 The implementation uses this project's document transactions, FSlider time geometry,
 shared canvas and timestamped audio mixer. Metronome samples are procedurally
-generated locally. Ctrl selects the full current editor Snap divisor. User-facing
+generated locally. Ctrl follows `computeSpedUpDivisor`: three ticks per beat for
+Snap divisors divisible by three, two for other even divisors, otherwise one. User-facing
 behavior is documented in [Editing Controls](EDITOR_UI.md#timing-editing).
 
 ## Dependencies and licenses

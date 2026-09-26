@@ -22,6 +22,7 @@ var tests = new (string Name, Action Run)[]
 {
     ("Timing setup drafts, shortcuts, clipboard, undo and narrow bilingual layout", TimingEditorTests.Run),
     ("Timing metronome schedules beat and Ctrl snap ticks without duplicate playback", TimingEditorTests.Metronome),
+    ("Timing waveform zoom, cached audio and red-line selection", TimingEditorTests.Waveform),
     ("Wheel modifiers distinguish snapping zoom and navigation", WheelGestureTests.Run),
     ("Canvas axis colors only marked times and spans marker lines", CanvasBookmarkTests.AxisColorsAndLines),
     ("Dense canvas bookmarks preserve labels, history and source data", CanvasBookmarkTests.DenseAxisMarks),

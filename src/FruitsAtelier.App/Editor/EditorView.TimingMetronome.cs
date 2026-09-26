@@ -7,11 +7,12 @@ public sealed partial class EditorView
     private int metronomeDivisor;
     private MapDocument? metronomeSnapshot;
     private TimingMap.Lookup? metronomeLookup;
+    private int MetronomeSubdivision => !placementCtrl ? 1 : divisor % 3 == 0 ? 3 : divisor % 2 == 0 ? 2 : 1;
     private void UpdateTimingMetronome(double position, bool playing)
     {
         if (!playing || !metronomeEnabled || TimingModal || !double.IsFinite(position))
         { ResetHitsounds(); return; }
-        int subdivision = placementCtrl ? divisor : 1;
+        int subdivision = MetronomeSubdivision;
         if (metronomeSnapshot is null || !Document.ContentEquals(metronomeSnapshot) || subdivision != metronomeDivisor)
         {
             ResetHitsounds(); metronomeSnapshot = Document.DeepClone(); metronomeLookup = new(Document); metronomeDivisor = subdivision;

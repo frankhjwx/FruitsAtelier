@@ -3,8 +3,12 @@
 ## Timing editing
 
 **Details Panel** in the right header opens a dropdown with **Details Panel** and
-**Timing Panel**. **F3** selects Timing; **F1** returns to Details. Notes remain
-visible on the canvas. The single-column Timing panel places tap controls above
+**Timing Panel**. **F3** selects Timing; **F1** returns to Details. Timing replaces
+the note canvas with a horizontal audio waveform and a centered playback cursor.
+Alt+wheel zooms its time scale; click to seek or click a red line to edit it.
+Only red timing points and their BPM labels appear on the waveform. Audio is decoded
+in the background and its peak envelope is cached at multiple resolutions.
+The single-column Timing panel places tap controls above
 BPM and edits the active red section's BPM and offset and the difficulty's Slider
 Tick Rate. **Move notes with offset / BPM changes** keeps objects at their beat
 positions within the edited section. BPM buttons step by 1, Ctrl by 0.25 and Shift
@@ -12,8 +16,9 @@ by 5; offset buttons step by 2 ms, Ctrl by 1 ms and Shift by 10 ms.
 
 In Timing mode, object hitsounds are suppressed and the sound-flag palette is
 disabled. During playback, **Metronome Clicks** schedules one tick per beat, with a distinct
-measure accent. Holding Ctrl uses the current Snap divisor, including triplets and
-finer divisions. The music clock controls tick times and visual indicators. Pause,
+measure accent. Holding Ctrl follows lazer: Snap divisors divisible by three use
+three ticks per beat, other even divisors use two, and other divisors use one.
+The music clock controls tick times and visual indicators. Pause,
 seek, timing changes and leaving Timing cancel queued ticks. These controls are
 editor state and do not alter beatmap data. **Tap Here / T** collects up to 32 taps;
 **Apply timing** sets the red section's BPM and first-tap offset in one undo step.
@@ -33,12 +38,14 @@ volume and Kiai. The inheritance checkbox changes point type; it protects the
 first red point. Audio supports Normal/Soft/Drum banks, default or numbered custom
 samples, a volume slider, and four sample audition buttons. Default and Custom 1
 lock the sample-index input; selecting Custom enables it. Each audition button
-plays only its named sound from the selected bank, index and volume. Default
+plays only its named sound from the selected bank, index and volume, including
+while music is paused. Default
 samples show only the bank abbreviation in the list. Imported velocity and
 unrelated effect bits are preserved, while green-point BPM cells remain empty. Kiai updates the editor's existing Kiai indication and exports.
 
 Ctrl+P adds a red point at the playhead; Ctrl+Shift+P adds a green point, opening
-the draft window. Ctrl+I deletes the current section outside the window, or the
+the draft window. Newly created, pasted or edited green offsets use integer
+milliseconds (fractional parts are truncated). Ctrl+I deletes the current section outside the window, or the
 selected rows inside it. Ordinary deletion protects the first red point. The
 window supports Ctrl+C/X/V with `.osu` timing-row text; text fields retain normal
 text clipboard behavior. Ctrl+Shift+I inserts a slider control point on the curve

@@ -9,9 +9,28 @@ namespace FruitsAtelier.App.Diagnostics;
 
 internal static class RenderCheck
 {
+    private static void CheckBookmarkCache(D2DCanvas canvas)
+    {
+        string toolbar = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
+        string scene = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "assist", "clap.png");
+        canvas.Begin();
+        if (!canvas.Image(toolbar, new(0, 0, 246, 34))) throw new InvalidOperationException("Toolbar texture unavailable.");
+        for (uint tint = 0; tint < 14; tint++)
+            if (!canvas.Image(scene, new(0, 40, 32, 32), 0xFFFF00 + tint)) throw new InvalidOperationException("Cache pressure fixture unavailable.");
+        int decodes = canvas.ImageDecodeCount;
+        canvas.Image(toolbar, new(0, 0, 246, 34));
+        canvas.End();
+        if (canvas.ImageDecodeCount != decodes)
+            throw new InvalidOperationException("Scene cache pressure evicted the independent bookmark toolbar.");
+    }
     private static void CheckTimingSetup(D2DCanvas canvas, EditorView view, int width, int height)
     {
         string language = FruitsAtelier.Localization.Strings.Language;
+        string? audioPath = view.Document.AudioPath;
+        var decoder = view.RequestWaveform;
+        view.Document.AudioPath = "render-waveform.wav";
+        var peaks = Enumerable.Range(0, 12000).Select(i => (float)(.15 + .65 * Math.Abs(Math.Sin(i * .007)))).ToArray();
+        view.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(peaks, 1));
         var original = view.Document.DeepClone();
         void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
         try
@@ -21,6 +40,16 @@ internal static class RenderCheck
                 FruitsAtelier.Localization.Strings.SetLanguage(lang); Paint();
                 view.KeyDown(114, false, false); Paint();
                 if (!view.TimingPageVisible) throw new InvalidOperationException("F3 failed to open timing page.");
+                view.PointerMove(350, height - 55, false, false); Paint();
+                int decodes = canvas.ImageDecodeCount;
+                for (int frame = 0; frame < 12; frame++)
+                {
+                    view.UpdateTransport(1000 + frame * 10, 10000, true, true, false, null, view.Document.AudioPath);
+                    Paint();
+                }
+                if (canvas.ImageDecodeCount != decodes)
+                    throw new InvalidOperationException("Hover playback repeatedly decodes cached images.");
+                view.UpdateTransport(1000, 10000, true, false, false, null, null);
                 view.KeyDown(117, false, false); Paint();
                 if (!view.TimingSetupVisible) throw new InvalidOperationException("F6 failed to open timing setup.");
                 var r = view.TimingSetupBounds;
@@ -37,7 +66,11 @@ internal static class RenderCheck
                     throw new InvalidOperationException("Timing navigation or Cancel changed the map.");
             }
         }
-        finally { FruitsAtelier.Localization.Strings.SetLanguage(language); Paint(); }
+        finally
+        {
+            view.Document.AudioPath = audioPath; view.RequestWaveform = decoder;
+            FruitsAtelier.Localization.Strings.SetLanguage(language); Paint();
+        }
     }
 
     private static void CheckSongSetup(D2DCanvas canvas, EditorView view, int width, int height)
@@ -530,6 +563,7 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        CheckBookmarkCache(canvas);
         CheckWorkspaceSave(canvas, view);
         LibraryDropCheck.Run(view, window);
         CheckDistanceFields(canvas, view);

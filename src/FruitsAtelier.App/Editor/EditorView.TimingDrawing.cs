@@ -178,7 +178,7 @@ public sealed partial class EditorView
         map.Fruits.Clear(); map.Tracks.Clear(); map.ImportedSliders.Clear(); map.BananaShowers.Clear(); map.Fruits.Add(fruit);
         var objects = CatchStreamConverter.Convert(map).Objects;
         var resolved = new HitsoundResolver(map, objects, HitsoundSkinFolders);
-        foreach (var sample in resolved.Resolve(objects[0]).Where(s => s.Name == sound)) RequestHitsound?.Invoke(sample);
+        foreach (var sample in resolved.Resolve(objects[0]).Where(s => s.Name == sound)) (RequestAuditionHitsound ?? RequestHitsound)?.Invoke(sample);
     }
 
     private void TimingButton(ICanvas c, Rect r, string text, Action action, int sprite = -1, bool enabled = true, bool flatArrow = false)
@@ -266,7 +266,7 @@ public sealed partial class EditorView
         {
             var lamp = new Rect(lampX + i * lampWidth, y, lampWidth - 4, row);
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "ui", "timing", "controls.png"), lamp, source: new Rect(80, 962, 1096, 192));
-            if (AudioPlaying && i == active && beat * (placementCtrl ? divisor : 1) % 1 < .35) c.Fill(lamp, i == 0 ? Gold : Accent, 4, .8f);
+            if (AudioPlaying && i == active && beat * MetronomeSubdivision % 1 < .35) c.Fill(lamp, i == 0 ? Gold : Accent, 4, .8f);
         }
         TimingButton(c, new(r.X, y, 74, row * 2 + gap), L.Get("timing.tapReset"), () => timingTaps.Clear(), 2);
         y += row + gap;
