@@ -35,6 +35,43 @@ internal static class ShortcutRoutingTests
             "Arrow seeking does not edit beatmap content.");
     }
 
+    public static void PausedSeekingSnaps()
+    {
+        var ui = new Ui();
+        ui.LoadDocument(OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n50,500,4,1,0,100,1,0\n730,-100,4,1,0,100,0,0\n1110,400,4,1,0,100,1,0\n"));
+        var before = ui.View.Document.DeepClone();
+        double requested = -1;
+        ui.View.RequestSeek = time => requested = time;
+        foreach (bool timing in new[] { false, true })
+        {
+            ui.Key(timing ? 114 : 112);
+            ui.Key('4', shift: true);
+            Seek(601, 37, 550); Seek(601, 39, 675);
+            ui.Key(39); Check(ui.View.PlayheadMs == 800, "Repeated arrows remain on the grid.");
+            Seek(675, 37, 550); Seek(675, 39, 800);
+            Seek(731, 37, 675); Seek(731, 39, 800);
+            Seek(1090, 37, 1050); Seek(1090, 39, 1110);
+            Seek(1110, 37, 1050); Seek(1110, 39, 1210);
+            Seek(1090, 37, 675, shift: true); Seek(1090, 39, 1410, shift: true);
+            Seek(25, 37, 0); Seek(4999, 39, 5000);
+            ui.Key('8', shift: true);
+            Seek(87, 37, 50); Seek(87, 39, 112.5);
+            ui.View.UpdateTransport(601, 5000, true, true, false, null, null);
+            ui.Key(37);
+            Check(ui.View.PlayheadMs == 101, "Playback keeps relative whole-beat seeking off the grid.");
+        }
+        Check(ui.View.Document.ContentEquals(before) && !ui.View.IsDirty,
+            "Paused grid navigation preserves beatmap content.");
+
+        void Seek(double start, int key, double expected, bool shift = false)
+        {
+            ui.View.UpdateTransport(start, 5000, true, false, false, null, null);
+            ui.Key(key, shift: shift);
+            Check(Math.Abs(ui.View.PlayheadMs - expected) < 1e-7 && Math.Abs(requested - expected) < 1e-7,
+                $"Paused arrow from {start} must seek to grid line {expected}, got {ui.View.PlayheadMs}.");
+        }
+    }
+
     public static void TimingPage()
     {
         var ui = new Ui();

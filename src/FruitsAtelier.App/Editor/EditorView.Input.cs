@@ -782,9 +782,19 @@ public sealed partial class EditorView
         wheelRemainder = ticks - steps;
         wheelPlayhead = playhead; wheelDivisor = stepDivisor; wheelSurface = surface;
         if (steps == 0) return;
+        double target = StepAlongBeatGrid(playhead, steps, stepDivisor);
+        if (target == 0 || target == TimelineDurationMs) wheelRemainder = 0;
+        double nextView = viewStart + target - playhead;
+        if (drag == DragKind.Marquee) ScrollBoxTo(target);
+        else SeekTo(target);
+        wheelPlayhead = playhead; wheelDivisor = stepDivisor; wheelSurface = surface;
+        if (surface == 0 && drag != DragKind.Marquee) { viewStart = nextView; pinPlayhead = false; }
+    }
+
+    private double StepAlongBeatGrid(double target, double steps, int stepDivisor)
+    {
         var timing = new TimingMap.Lookup(Document);
         var boundaries = Document.TimingPoints.Where(t => t.Uninherited).Select(t => t.TimeMs).Distinct().Order().ToArray();
-        double target = playhead;
         int direction = Math.Sign(steps);
         for (double i = 0; i < Math.Abs(steps); i++)
         {
@@ -799,13 +809,9 @@ public sealed partial class EditorView
                 ? Math.Min(next, boundaries.FirstOrDefault(t => t > target + 1e-7, double.PositiveInfinity))
                 : Math.Max(next, boundaries.LastOrDefault(t => t < target - 1e-7, double.NegativeInfinity));
             target = Math.Clamp(next, 0, TimelineDurationMs);
-            if (target == 0 || target == TimelineDurationMs) { wheelRemainder = 0; break; }
+            if (target == 0 || target == TimelineDurationMs) break;
         }
-        double nextView = viewStart + target - playhead;
-        if (drag == DragKind.Marquee) ScrollBoxTo(target);
-        else SeekTo(target);
-        wheelPlayhead = playhead; wheelDivisor = stepDivisor; wheelSurface = surface;
-        if (surface == 0 && drag != DragKind.Marquee) { viewStart = nextView; pinPlayhead = false; }
+        return target;
     }
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
