@@ -11,6 +11,7 @@ internal static class TimingEditorTests
             foreach (string lang in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(lang);
+                Scrollbar();
                 var map = Map(); var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(980, 620);
                 ui.View.UpdateTransport(0, 10000, true, false, false, null, null); ui.Paint();
                 ui.Key(117); Check(ui.View.TimingSetupVisible, "F6 opens timing setup");
@@ -77,6 +78,34 @@ internal static class TimingEditorTests
             }
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void Scrollbar()
+    {
+        var map = Map();
+        for (int i = 1; i < 200; i++) map.TimingPoints.Add(new TimingPoint { TimeMs = i * 1000, BeatLengthMs = -100, Uninherited = false });
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(980, 620); ui.Key(117);
+        var (track, thumb, maximum) = ui.View.TimingScrollbar;
+        Check(maximum > 0, "Dense timing list has a scrollbar");
+        float x = thumb.X + thumb.Width / 2, y = thumb.Y + thumb.Height / 2;
+        ui.View.PointerDown(x, y, 0, false, false);
+        Check(ui.View.WantsCapture, "Scrollbar captures pointer for dragging outside the window");
+        ui.View.PointerMove(x, y, false, false); ui.Paint();
+        Check(ui.View.TimingScrollbar.Thumb == thumb, "Grabbing thumb does not jump the list");
+        ui.View.PointerMove(x + 50, track.Bottom + 50, false, false); ui.Paint();
+        Check(Math.Abs(ui.View.TimingScrollbar.Thumb.Bottom - track.Bottom) < .01, "Dragging outside track reaches the last row");
+        ui.View.PointerUp(x, track.Bottom + 50, 0);
+        Check(!ui.View.WantsCapture, "Releasing scrollbar releases pointer capture");
+        ui.View.PointerMove(x, track.Y, false, false); ui.Paint();
+        Check(Math.Abs(ui.View.TimingScrollbar.Thumb.Bottom - track.Bottom) < .01, "Released scrollbar no longer follows pointer");
+        ui.View.PointerDown(x, track.Y, 0, false, false); ui.Paint();
+        Check(ui.View.TimingScrollbar.Thumb.Y == track.Y, "Track click reaches the first row");
+        ui.View.CancelInteraction();
+        ui.View.PointerMove(x, track.Bottom, false, false); ui.Paint();
+        Check(ui.View.TimingScrollbar.Thumb.Y == track.Y, "Capture cancellation ends scrollbar drag");
+        Check(ui.View.TimingFields.Single(f => f.Key == "offset").Value == "0", "Scrolling preserves row selection");
+        ui.Key(13);
+        Check(ui.View.Document.ContentEquals(map) && !ui.View.IsDirty, "Scrolling leaves timing draft and document unchanged");
     }
 
     public static void Metronome()

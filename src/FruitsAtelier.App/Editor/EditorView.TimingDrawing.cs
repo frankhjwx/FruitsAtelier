@@ -76,14 +76,14 @@ public sealed partial class EditorView
         c.Unclip();
         if (entries.Length > capacity)
         {
-            float h = Math.Max(12, (list.Height - 34) * capacity / entries.Length);
-            c.Fill(new(list.Right - 6, list.Y + 34 + (list.Height - 34 - h) * timingScroll / Math.Max(1, entries.Length - capacity), 3, h), Muted, 2);
+            var thumb = TimingScrollbar.Thumb;
+            c.Fill(new(thumb.X + 3, thumb.Y, 3, thumb.Height), Muted, 2);
         }
         float controlsY = list.Bottom + 8;
         TimingCheck(c, new(list.X, controlsY, list.Width - 90, 30), "timing.inherit",
             selected.Length > 0 && selected.All(p => !p.Uninherited), ToggleTimingInheritance, selected.Length > 0);
-        Button(c, new(list.Right - 82, controlsY, 36, 30), "+", () => AddTimingPoint(timingFilter != 1), true);
-        Button(c, new(list.Right - 40, controlsY, 36, 30), "−", DeleteTimingPoints, enabled: selected.Length > 0);
+        TimingPointButton(c, new(list.Right - 82, controlsY, 36, 30), true, () => AddTimingPoint(timingFilter != 1));
+        TimingPointButton(c, new(list.Right - 40, controlsY, 36, 30), false, DeleteTimingPoints, selected.Length > 0);
         float applyY = r.Bottom - 188;
         c.Text(L.Get("timing.whenApplying"), r.X + 20, applyY, 13, Foreground, r.Width - 40);
         TimingCheck(c, new(r.X + 20, applyY + 25, r.Width * .47f, 28), "timing.scale", timingScale, () => timingScale = !timingScale);
@@ -94,6 +94,15 @@ public sealed partial class EditorView
         c.Text(timingError, r.X + 340, applyY + 95, 11, Error, r.Width - 360);
         Button(c, new(r.X + 20, r.Bottom - 46, r.Width * .65f - 24, 32), L.Get("song.ok"), ApplyTimingSetup, true);
         Button(c, new(r.X + r.Width * .65f, r.Bottom - 46, r.Width * .35f - 20, 32), L.Get("mac.cancel"), CloseTimingSetup);
+    }
+
+    private void TimingPointButton(ICanvas c, Rect bounds, bool add, Action action, bool enabled = true)
+    {
+        Button(c, bounds, "", action, active: add, enabled: enabled);
+        float x = bounds.X + bounds.Width / 2, y = bounds.Y + bounds.Height / 2;
+        uint color = !enabled ? 0x5B6777u : add ? Accent : Foreground;
+        c.Line(x - 3, y, x + 3, y, color, 1.2f);
+        if (add) c.Line(x, y - 3, x, y + 3, color, 1.2f);
     }
 
     private void TimingCheck(ICanvas c, Rect bounds, string key, bool value, Action action, bool enabled = true)

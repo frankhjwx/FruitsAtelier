@@ -42,7 +42,8 @@ button discards it. Timing, Audio and Style pages edit the selected rows, while
 All, Timing Points and Inherited Points filter the list. Ctrl-click toggles rows;
 Shift-click selects a range. Ctrl+A selects visible rows. Mixed numeric values are
 blank until explicitly replaced. Arrow, Page Up/Down and Home/End keys navigate
-the list. Tab moves between numeric fields; Enter commits a field before accepting
+the list. Drag the list scrollbar or click its track to navigate longer lists without
+changing the selected rows. Tab moves between numeric fields; Enter commits a field before accepting
 the dialog. Ctrl+Z/Y operate on the draft while no numeric field has focus.
 
 Red points expose offset, BPM and meter. Green points expose offset, samples,

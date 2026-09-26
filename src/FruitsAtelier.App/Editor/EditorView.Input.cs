@@ -350,6 +350,7 @@ public sealed partial class EditorView
     {
         MoveVolumePopoverPointer(x, y);
         if (timingSnapDragging) { SetTimingSnap(x); return; }
+        if (timingScrollDragging) { UpdateTimingScroll(y); return; }
         if (timingVolumeStart is not null) { UpdateTimingVolume(x); return; }
         if (TimingModal) { mouseX = x; mouseY = y; return; }
         if (volumePopoverDrag >= 0) return;
@@ -504,6 +505,7 @@ public sealed partial class EditorView
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
         if (timingSnapDragging) { SetTimingSnap(x); timingSnapDragging = false; return; }
+        if (timingScrollDragging && button == 0) { UpdateTimingScroll(y); timingScrollDragging = false; return; }
         if (timingVolumeStart is not null) { UpdateTimingVolume(x); EndTimingVolume(false); return; }
         if (TimingModal) return;
         if (EndVolumePopoverPointer(x, y, button)) return;
@@ -1034,6 +1036,7 @@ public sealed partial class EditorView
     {
         placementCtrl = false; timingTapHeld = false; timingSnapDragging = false; panelMenuOpen = false;
         EndTimingVolume(true);
+        timingScrollDragging = false;
         pendingStreamChildSelection = null;
         pendingImplicitSliderConversions.Clear();
         textSelecting = false;

@@ -22,6 +22,20 @@ public sealed partial class EditorView
     private Action<double>? timingFieldApply;
     private readonly List<(string Key, Rect Bounds, string Value, Action<double> Apply)> timingFields = [];
     private Rect timingListBounds;
+    private bool timingScrollDragging;
+    private float timingScrollGrab;
+    internal (Rect Track, Rect Thumb, int Maximum) TimingScrollbar
+    {
+        get
+        {
+            int count = VisibleTimingEntries().Length;
+            int capacity = Math.Max(1, (int)((timingListBounds.Height - 34) / 28));
+            var track = new Rect(timingListBounds.Right - 9, timingListBounds.Y + 34, 9, Math.Max(0, timingListBounds.Height - 34));
+            int maximum = Math.Max(0, count - capacity);
+            float h = maximum == 0 ? track.Height : Math.Min(track.Height, Math.Max(12, track.Height * capacity / count));
+            return (track, new(track.X, track.Y + (track.Height - h) * Math.Clamp(timingScroll, 0, maximum) / Math.Max(1, maximum), track.Width, h), maximum);
+        }
+    }
     private Rect timingVolumeTrack;
     private TimingEntry[]? timingVolumeStart;
     internal IReadOnlyList<(string Key, Rect Bounds, string Value, Action<double> Apply)> TimingFields => timingFields;
@@ -56,6 +70,7 @@ public sealed partial class EditorView
     {
         if (TimingModal) ResetHitsounds();
         timingVolumeStart = null;
+        timingScrollDragging = false;
         TimingSetupVisible = false; timingCommand = timingField = timingError = "";
         timingFieldApply = null; timingFields.Clear(); hits.Clear(); fields.Clear(); TimingInputSession++;
     }
@@ -329,6 +344,14 @@ public sealed partial class EditorView
     {
         if (button != 0) return;
         if (!timingFields.Any(f => f.Key == timingField && f.Bounds.Contains(x, y)) && !CommitTimingField()) return;
+        var scrollbar = TimingScrollbar;
+        if (TimingSetupVisible && scrollbar.Maximum > 0 && scrollbar.Track.Contains(x, y))
+        {
+            timingScrollDragging = true;
+            timingScrollGrab = scrollbar.Thumb.Contains(x, y) ? y - scrollbar.Thumb.Y : scrollbar.Thumb.Height / 2;
+            UpdateTimingScroll(y);
+            return;
+        }
         for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y))
         { if (hits[i].Enabled) hits[i].Action(); return; }
     }
@@ -337,6 +360,13 @@ public sealed partial class EditorView
     {
         if (!CommitTimingField()) return;
         timingVolumeTrack = track; timingVolumeStart = TimingSnapshot(); UpdateTimingVolume(mouseX);
+    }
+
+    private void UpdateTimingScroll(float y)
+    {
+        var scrollbar = TimingScrollbar;
+        float travel = scrollbar.Track.Height - scrollbar.Thumb.Height;
+        timingScroll = travel <= 0 ? 0 : (int)Math.Round(Math.Clamp((y - scrollbar.Track.Y - timingScrollGrab) / travel, 0, 1) * scrollbar.Maximum);
     }
 
     private void UpdateTimingVolume(float x)
