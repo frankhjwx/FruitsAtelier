@@ -276,8 +276,11 @@ public sealed partial class EditorView
             uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true);
             var bounds = timelineObjects[index].Bounds;
             c.Fill(bounds, item.IsBanana ? color : skin?.SliderTrackColour ?? color, 19, .7f);
-            c.Stroke(bounds, item.IsBanana ? 0xFFFFFF : skin?.SliderBorderColour ?? 0xFFFFFFu, 1.5f, 19);
-            if (selected) c.Stroke(bounds, 0x2866C6, 2, 19);
+            if (item.IsBanana)
+            {
+                c.Stroke(bounds, 0xFFFFFF, 1.5f, 19);
+                if (selected) c.Stroke(bounds, 0x2866C6, 2, 19);
+            }
         }
 
         void DrawMarkers(int index)

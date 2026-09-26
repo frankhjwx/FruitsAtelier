@@ -145,7 +145,7 @@ slider-start samples for droplets. The upstream MIT licence is retained in
 
 ## Standard skin and editor timeline references
 
-Timeline ordering and standard circle resource composition reference ppy/osu
+Timeline ordering, standard circle composition, padding and HitCircle font scaling reference ppy/osu
 revision `48c4800e3ae4ee752452cdff83bd3787ccf3105f` (ppy Pty Ltd, MIT).
 Source files and the independently implemented editor behaviour are listed in
 [osu!lazer references](docs/LAZER_REFERENCE.md#upper-object-timeline).

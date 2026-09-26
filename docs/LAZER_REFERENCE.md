@@ -72,7 +72,9 @@ The legacy-style timeline consults these files at the same pinned revision:
 - [HitObjectOrderedSelectionContainer](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Compose/Components/HitObjectOrderedSelectionContainer.cs): earlier objects are drawn and hit-tested in front, with end time breaking equal-start ties.
 - [TimelineHitObjectBlueprint](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Compose/Components/Timeline/TimelineHitObjectBlueprint.cs): lazer uses simplified editor shapes rather than legacy circle textures.
 - [LegacyMainCirclePiece](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Osu/Skinning/Legacy/LegacyMainCirclePiece.cs): standard circle base, overlay, endpoint overrides and number-layer configuration.
-- [LegacySliderBody](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Osu/Skinning/Legacy/LegacySliderBody.cs): slider border, track colour override and track opacity. The editor projects slider duration onto a straight capsule.
+- [LegacySliderBody](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Osu/Skinning/Legacy/LegacySliderBody.cs): track colour override and track opacity. The editor projects slider duration onto a straight capsule.
+
+Circle padding and the HitCircle font's 0.8 scale follow [OsuLegacySkinTransformer](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Osu/Skinning/Legacy/OsuLegacySkinTransformer.cs). The upper timeline uses a borderless slider fill matching the legacy editor reference, rather than the gameplay slider border.
 
 Resource handling is documented in [Skinning reference](../src/FruitsAtelier.App/Skinning/REFERENCE.md).
 

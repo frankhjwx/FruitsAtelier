@@ -24,9 +24,9 @@ colour; overlays and numbers remain white. The number font uses `HitCirclePrefix
 (default `default`) and `HitCircleOverlap`, independently of the Catch combo font.
 `HitCircleOverlayAboveNumber` controls their local layer order. Endpoint overrides
 without an overlay do not borrow `hitcircleoverlay`. Images prefer @2x and retain
-transparent padding at a 128-unit nominal size, capped at twice the circle diameter.
+transparent padding: the 128-unit texture has a nominal 118-unit visible circle, capped at twice the visible diameter. HitCircle glyphs additionally use the legacy 0.8 scale.
 Slider tracks use `SliderTrackOverride` when set, otherwise combo colour, with
-`SliderBorder` and 0.7 track opacity. Missing circle artwork or digits use geometric
+0.7 track opacity and no separate perimeter; endpoint artwork supplies the circle edges. Missing circle artwork or digits use geometric
 and text fallbacks. Objects are painted in descending start time, then descending
 end time and source order, keeping each object's number within its own layer.
 

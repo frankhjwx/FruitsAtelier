@@ -140,6 +140,8 @@ public sealed class CatchSkin
     public static void DrawTimelineCircle(ICanvas canvas, CatchSkin? skin, float x, float y, float diameter,
         uint colour, int? number = null, string prefix = "hitcircle")
     {
+        // Legacy's 128px circle has 5px padding on each side; diameter is the visible track width.
+        float circleScale = diameter / 118;
         var provider = skin;
         while (provider != null && !provider.textures.ContainsKey("hitcircle")) provider = provider.fallback;
         provider ??= skin;
@@ -149,7 +151,7 @@ public sealed class CatchSkin
             if (skin == null) return false;
             foreach (var texture in skin.Candidates(name))
             {
-                float scale = Math.Min(diameter / (128 * texture.Density), diameter * 2 / Math.Max(texture.PixelWidth, texture.PixelHeight));
+                float scale = Math.Min(circleScale / texture.Density, diameter * 2 / Math.Max(texture.PixelWidth, texture.PixelHeight));
                 float w = texture.PixelWidth * scale, h = texture.PixelHeight * scale;
                 if (canvas.Image(texture.FilePath, new(x - w / 2, y - h / 2, w, h), tint)) return true;
             }
@@ -162,7 +164,7 @@ public sealed class CatchSkin
         }
         bool above = skin?.OverlayAboveNumber ?? true;
         if (!above) Texture(prefix + "overlay", 0xFFFFFF);
-        if (number is int value && !(skin?.DrawHitCircleNumber(canvas, value, x, y, diameter / 128) ?? false))
+        if (number is int value && !(skin?.DrawHitCircleNumber(canvas, value, x, y, circleScale * .8f) ?? false))
         {
             string label = value.ToString(CultureInfo.InvariantCulture);
             canvas.Text(label, x - canvas.MeasureText(label, 13) / 2, y - 8, 13, 0xFFFFFF, diameter);

@@ -138,7 +138,8 @@ void TimelineCircles()
         True(c.Calls.Count == 4 && c.Calls[0].Path.EndsWith("sliderstartcircle@2x.png"));
         True(c.Calls[above ? 3 : 1].Path.EndsWith("sliderstartcircleoverlay@2x.png"));
         True(c.Calls[0].Tint == 0x123456 && c.Calls.Skip(1).All(t => t.Tint == 0xFFFFFF));
-        Rectangle(c.Calls.First(t => t.Path.EndsWith("digits-1@2x.png")).Destination, 90.25f, 192.5f, 10, 15);
+        Rectangle(c.Calls[0].Destination, 65.28814f, 165.28814f, 69.42373f, 69.42373f);
+        Rectangle(c.Calls.First(t => t.Path.EndsWith("digits-1@2x.png")).Destination, 91.53898f, 193.49153f, 8.677966f, 13.016949f);
         Equal(0x0A141E, loaded.SliderBorderColour); Equal(0x28323C, loaded.SliderTrackColour!.Value);
         c.Calls.Clear(); CatchSkin.DrawTimelineCircle(c, loaded, 100, 200, 64, 0x123456, prefix: "sliderendcircle");
         True(c.Calls.Count == 1 && c.Calls[0].Path.EndsWith("sliderendcircle@2x.png"));

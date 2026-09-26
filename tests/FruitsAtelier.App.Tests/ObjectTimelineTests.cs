@@ -239,7 +239,9 @@ internal static class ObjectTimelineTests
         float Width()
         {
             var r = ui.View.ObjectTimelineBounds;
-            return ui.Canvas.Outlines.Single(o => o.Bounds.Y == r.Y + 8 && o.Bounds.Height == 38).Bounds.Width;
+            if (ui.Canvas.Outlines.Any(o => o.Bounds.Y == r.Y + 8 && o.Bounds.Height == 38))
+                throw new Exception("Slider timeline body must not have a separate perimeter");
+            return ui.Canvas.Fills.Single(o => o.Bounds.Y == r.Y + 8 && o.Bounds.Height == 38).Bounds.Width;
         }
         float initial = Width();
         ui.Paint();
