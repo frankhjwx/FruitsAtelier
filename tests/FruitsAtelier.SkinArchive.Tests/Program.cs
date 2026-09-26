@@ -6,7 +6,7 @@ using FruitsAtelier.App.Skinning;
 
 var tests = new (string Name, Action<string> Run)[]
 {
-    ("Root and nested skin packages extract only Catch assets and reuse completed hashes", ImportAndReuse),
+    ("Root and nested skin packages extract editor skin assets and reuse completed hashes", ImportAndReuse),
     ("All archive paths reject traversal, absolute paths and Windows aliases", MaliciousPaths),
     ("Case-insensitive duplicates and multiple skin roots are rejected", AmbiguousEntries),
     ("Declared individual and cumulative expansion limits are enforced before extraction", ExpansionLimits),
@@ -45,15 +45,17 @@ static void ImportAndReuse(string root)
         string archive = MakeZip(root, [(wrapper + "skin.ini", "[General]\nName: Import fixture"u8.ToArray()),
             (wrapper + "fruit-pear.png", Png()), (wrapper + "reversearrow.png", Png()),
             (wrapper + "reversearrow@2x.png", Png()), (wrapper + "custom-0@2x.png", Png()),
+            (wrapper + "hitcircle.png", Png()), (wrapper + "sliderstartcircleoverlay@2x.png", Png()),
             (wrapper + "normal-hitnormal.wav", FruitsAtelier.Core.HitsoundSamples.CreateWave(FruitsAtelier.Core.CatchObjectKind.Fruit)),
             (wrapper + "ignored.exe", "not executable"u8.ToArray())]);
         string cache = Path.Combine(root, "cache");
         string folder = SkinArchive.Import(archive, cache);
         string key = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive))).ToLowerInvariant();
-        True(folder == Path.Combine(cache, "v4-" + key), "Cache is not keyed by extraction version and archive contents.");
+        True(folder == Path.Combine(cache, "v5-" + key), "Cache is not keyed by extraction version and archive contents.");
         True(CatchSkin.TryLoad(folder, out var skin, out _) && skin!.Name == "Import fixture", "Extracted skin cannot be loaded.");
         True(!File.Exists(Path.Combine(folder, "ignored.exe")), "Unselected package content was extracted.");
-        True(Directory.GetFiles(folder).Length == 7 && File.Exists(Path.Combine(folder, "custom-0@2x.png")), "Combo glyphs were not extracted.");
+        True(Directory.GetFiles(folder).Length == 9 && File.Exists(Path.Combine(folder, "custom-0@2x.png")), "Combo glyphs were not extracted.");
+        True(File.Exists(Path.Combine(folder, "hitcircle.png")) && File.Exists(Path.Combine(folder, "sliderstartcircleoverlay@2x.png")), "Standard circle resources were not extracted.");
         True(File.Exists(Path.Combine(folder, "normal-hitnormal.wav")), "Skin hitsound was not extracted.");
         True(File.Exists(Path.Combine(folder, "reversearrow.png")) && File.Exists(Path.Combine(folder, "reversearrow@2x.png")), "Reverse arrow textures were not extracted.");
         DateTime completed = File.GetLastWriteTimeUtc(Path.Combine(folder, ".complete"));
@@ -119,7 +121,7 @@ static void IncompleteCache(string root)
     string archive = MakeZip(root, [("fruit-pear.png", Png()), ("fruit-apple.png", Png())]);
     string cache = Path.Combine(root, "cache");
     string key = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive))).ToLowerInvariant();
-    string partial = Path.Combine(cache, "v4-" + key);
+    string partial = Path.Combine(cache, "v5-" + key);
     Directory.CreateDirectory(partial);
     File.WriteAllText(Path.Combine(partial, "sentinel.txt"), "preserve");
     Reject(() => SkinArchive.Import(archive, cache));

@@ -46,7 +46,7 @@ public static class SkinArchive
             throw new InvalidDataException(L.Get("skinArchive.multipleFolders"));
 
         // Version the cache when the extracted resource set changes.
-        string destination = ChildPath(root, "v4-" + key);
+        string destination = ChildPath(root, "v5-" + key);
         if (Directory.Exists(destination))
         {
             EnsureComplete(destination, key, selected);
@@ -155,6 +155,7 @@ public static class SkinArchive
         || System.Text.RegularExpressions.Regex.IsMatch(name, @"^.+-[0-9](@2x)?\.png$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
         || name.Equals("reversearrow.png", StringComparison.OrdinalIgnoreCase)
         || name.Equals("reversearrow@2x.png", StringComparison.OrdinalIgnoreCase)
+        || System.Text.RegularExpressions.Regex.IsMatch(name, @"^(hitcircle|sliderstartcircle|sliderendcircle)(overlay)?(@2x)?\.png$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
         || (name.StartsWith("fruit-", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".png", StringComparison.OrdinalIgnoreCase));
 
     private static string ChildPath(string root, string name)

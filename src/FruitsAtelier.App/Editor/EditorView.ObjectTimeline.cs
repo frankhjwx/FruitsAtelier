@@ -261,44 +261,47 @@ public sealed partial class EditorView
                 style.Color, style.Width);
         }
         var visibleItems = timelineSources.Where(item => item.End >= start - 20 / objectTimelineScale
-            && item.Start <= end + 20 / objectTimelineScale).ToArray();
+            && item.Start <= end + 20 / objectTimelineScale)
+            .OrderByDescending(item => item.Start).ThenByDescending(item => item.End).ThenByDescending(item => item.SourceOrder).ToArray();
         foreach (var item in visibleItems)
             timelineObjects.Add((item.Id, item.Start, TimelineObjectBounds(item.Start, item.End)));
-        for (int selectedPass = 0; selectedPass < 2; selectedPass++)
-            for (int i = 0; i < visibleItems.Length; i++)
-                if (IsObjectSelected(visibleItems[i].Id) == (selectedPass == 1)) DrawBody(i);
-        for (int selectedPass = 0; selectedPass < 2; selectedPass++)
-            for (int i = 0; i < visibleItems.Length; i++)
-                if (IsObjectSelected(visibleItems[i].Id) == (selectedPass == 1)) DrawMarkers(i);
+        // Each object's body, circles and number share its chronological layer and hit order.
+        for (int i = 0; i < visibleItems.Length; i++) { DrawBody(i); DrawMarkers(i); }
 
         void DrawBody(int index)
         {
             var item = visibleItems[index];
+            if (item.End <= item.Start) return;
             bool selected = IsObjectSelected(item.Id);
             uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true);
             var bounds = timelineObjects[index].Bounds;
-            c.Fill(bounds, color, 19, selected ? .94f : .78f);
-            c.Stroke(bounds, selected ? 0x2866C6u : 0xFFFFFFu, selected ? 2 : 1.5f, 19);
+            c.Fill(bounds, item.IsBanana ? color : skin?.SliderTrackColour ?? color, 19, .7f);
+            c.Stroke(bounds, item.IsBanana ? 0xFFFFFF : skin?.SliderBorderColour ?? 0xFFFFFFu, 1.5f, 19);
+            if (selected) c.Stroke(bounds, 0x2866C6, 2, 19);
         }
 
         void DrawMarkers(int index)
         {
             var item = visibleItems[index];
             bool selected = IsObjectSelected(item.Id);
+            uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true);
             float left = X(item.Start), right = X(item.End), cy = objectTimeline.Y + 27;
-            void Ring(float ringX)
+            void Ring(float ringX, int? number = null, string prefix = "hitcircle")
             {
-                if (selected) c.Circle(ringX, cy, 21, 0x2866C6, false, 2);
-                c.Circle(ringX, cy, 19, selected ? 0xFFA600u : 0xFFFFFFu, false, selected ? 3 : 1.5f);
+                FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin, ringX, cy, 38, color, number, prefix);
+                if (selected)
+                {
+                    c.Circle(ringX, cy, 19, 0xFFA600, false, 3);
+                    c.Circle(ringX, cy, 21, 0x2866C6, false, 2);
+                }
             }
-            Ring(left);
-            if (right > left + 1) Ring(right);
+            if (right > left + 1) Ring(right, prefix: "sliderendcircle");
             if (item.Spans > 1 && item.End > item.Start)
             {
                 double spanDuration = (item.End - item.Start) / item.Spans;
                 int first = (int)Math.Clamp(Math.Ceiling((start - 20 / objectTimelineScale - item.Start) / spanDuration), 1, item.Spans);
                 int last = (int)Math.Clamp(Math.Floor((end + 20 / objectTimelineScale - item.Start) / spanDuration), 0, item.Spans - 1);
-                for (int span = first; span <= last; span++)
+                for (int span = last; span >= first; span--)
                 {
                     float repeatX = X(item.Start + span * spanDuration);
                     Ring(repeatX);
@@ -310,8 +313,7 @@ public sealed partial class EditorView
                     }
                 }
             }
-            string label = timelineNumbers[item.Id].ToString();
-            c.Text(label, left - c.MeasureText(label, 13) / 2, cy - 8, 13, Foreground, 38);
+            Ring(left, timelineNumbers[item.Id], item.End > item.Start ? "sliderstartcircle" : "hitcircle");
         }
         foreach (var period in breaks)
         {

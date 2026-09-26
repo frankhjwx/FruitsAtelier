@@ -66,7 +66,7 @@ public sealed partial class EditorView
     {
         string root = Path.Combine(LibrarySettings.Workspace, "Skins");
         string name = Path.GetFileName(Path.TrimEndingDirectorySeparator(folder));
-        if (!name.StartsWith("v4-", StringComparison.Ordinal) && FruitsAtelier.Core.WorkspaceProject.Within(Path.Combine(root, "Imported"), folder))
+        if (!name.StartsWith("v5-", StringComparison.Ordinal) && FruitsAtelier.Core.WorkspaceProject.Within(Path.Combine(root, "Imported"), folder))
         {
             string archive = Path.Combine(root, "Archives", name + ".osk");
             if (File.Exists(archive)) return StoreSkinArchive(LibrarySettings.Workspace, archive).Folder;

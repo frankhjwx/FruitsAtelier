@@ -143,6 +143,15 @@ Hitsound timing selection follows `LegacyBeatmapDecoder.applySamples` and
 slider-start samples for droplets. The upstream MIT licence is retained in
 `src/FruitsAtelier.Core/Conversion/LICENCE.osu.txt`.
 
+## Standard skin and editor timeline references
+
+Timeline ordering and standard circle resource composition reference ppy/osu
+revision `48c4800e3ae4ee752452cdff83bd3787ccf3105f` (ppy Pty Ltd, MIT).
+Source files and the independently implemented editor behaviour are listed in
+[osu!lazer references](docs/LAZER_REFERENCE.md#upper-object-timeline).
+The retained upstream license is `src/FruitsAtelier.Core/Conversion/LICENCE.osu.txt`.
+No additional upstream artwork is bundled by this implementation.
+
 ## Default hitsound samples
 
 The classic normal/soft/drum sample banks and the Catch banana sample are unmodified

@@ -61,16 +61,15 @@ internal static class TimelineOverviewTests
         ui.View.UpdateTransport(1500, 3000, true, false, false, null, null); ui.Paint();
         var timeline = ui.View.ObjectTimelineBounds;
         float X(double time) => timeline.X + (float)((time - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
-        uint Color(double time) => ui.Canvas.Fills.Single(f => f.Bounds.Y == timeline.Y + 8
-            && Math.Abs(f.Bounds.X - (X(time) - 19)) < .01f).Color;
+        uint Color(double time) => ui.Canvas.Circles.Single(f => f.Filled && f.Radius == 19 && f.Y == timeline.Y + 27
+            && Math.Abs(f.X - X(time)) < .01f).Color;
         uint firstColor = Color(1000);
         Check(Color(1000) == Color(1500) && Color(1500) != Color(2000),
             "Object timeline must use one combo colour until New Combo");
         Check(ui.Canvas.Circles.Count(c => c.Radius == 19 && c.Color == 0xFFFFFF
             && c.Y == timeline.Y + 27) == 3, "Unselected timeline circles need white borders");
         ui.Click(X(1000), timeline.Y + 27); ui.Paint();
-        Check(ui.Canvas.Fills.Any(f => f.Color == firstColor && f.Bounds.Y == timeline.Y + 8
-            && Math.Abs(f.Bounds.X - (X(1000) - 19)) < .01f), "Selection must retain the combo fill");
+        Check(Color(1000) == firstColor, "Selection must retain the combo fill");
         Check(ui.Canvas.Circles.Any(c => c.Radius == 19 && c.Color == 0xFFA600
             && Math.Abs(c.X - X(1000)) < .01f), "Selected timeline note needs an orange ring");
     }
@@ -89,9 +88,9 @@ internal static class TimelineOverviewTests
         Check(ui.Canvas.Circles.Count(c => c.Radius == 19 && c.X == x && c.Y == y && c.Color == 0xFFFFFF) == 2,
             "Stacked objects must retain both white circle outlines");
         ui.Click(x, y); ui.Paint();
-        var rings = ui.Canvas.Circles.Where(c => c.Radius == 19 && c.X == x && c.Y == y).ToArray();
-        Check(rings.Length == 2 && rings[0].Color == 0xFFFFFF && rings[1].Color == 0xFFA600,
-            "Selected stacked object must render above the other circle");
+        var rings = ui.Canvas.Circles.Where(c => !c.Filled && c.Radius == 19 && c.X == x && c.Y == y).ToArray();
+        Check(rings.Length == 3 && rings[^1].Color == 0xFFA600 && ui.View.SelectedObjectIds.Contains(map.Fruits[0].Id),
+            "Selection highlights the foremost source object without changing chronological order");
     }
 
     public static void BreakEdgeEditing()
@@ -203,7 +202,7 @@ internal static class TimelineOverviewTests
             Check(!ui.Canvas.Lines.Any(l => l.Color == color && l.X1 == 108 && l.X2 == plot.X),
                 "Canvas time axis should only show break bands");
         }
-        var fruit = ui.Canvas.Circles.Single(c => c.Radius == 19 && c.Y == timeline.Y + 27);
+        var fruit = ui.Canvas.Circles.Single(c => !c.Filled && c.Radius == 19 && c.Y == timeline.Y + 27);
         Check(ui.Canvas.Lines.Any(l => l.Color == 0x7BC600 && l.Y1 == timeline.Y
             && Math.Abs(l.X1 - fruit.X) < .01f), "Upper timing marker and object center must share the same time coordinate");
         Check(ui.Canvas.Fills.Any(f => f.Color == 0x858585 && f.Bounds.Y == timeline.Y

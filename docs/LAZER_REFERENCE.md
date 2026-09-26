@@ -65,6 +65,17 @@ generated locally. Ctrl follows `computeSpedUpDivisor`: three ticks per beat for
 Snap divisors divisible by three, two for other even divisors, otherwise one. User-facing
 behavior is documented in [Editing Controls](EDITOR_UI.md#timing-editing).
 
+## Upper object timeline
+
+The legacy-style timeline consults these files at the same pinned revision:
+
+- [HitObjectOrderedSelectionContainer](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Compose/Components/HitObjectOrderedSelectionContainer.cs): earlier objects are drawn and hit-tested in front, with end time breaking equal-start ties.
+- [TimelineHitObjectBlueprint](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Compose/Components/Timeline/TimelineHitObjectBlueprint.cs): lazer uses simplified editor shapes rather than legacy circle textures.
+- [LegacyMainCirclePiece](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Osu/Skinning/Legacy/LegacyMainCirclePiece.cs): standard circle base, overlay, endpoint overrides and number-layer configuration.
+- [LegacySliderBody](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Osu/Skinning/Legacy/LegacySliderBody.cs): slider border, track colour override and track opacity. The editor projects slider duration onto a straight capsule.
+
+Resource handling is documented in [Skinning reference](../src/FruitsAtelier.App/Skinning/REFERENCE.md).
+
 ## Dependencies and licenses
 
 At this revision, [osu.Game.csproj](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/osu.Game.csproj) targets net8.0 but also depends on Realm, osu!framework, resources, and other components. This project does not reference that project.

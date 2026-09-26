@@ -16,7 +16,19 @@ Static editor bananas use `CatchSize.BananaScaleFactor = 0.6`, the referenced ar
 
 `CatchSkin.Bounds` returns the union of the base and overlay destination rectangles using the same scale and geometry as `Draw`. It includes transparent padding and the logical centre crop, but excludes the enlarged hyperdash layer. An absent sprite or invalid nominal diameter returns null so the caller can use geometric fallback bounds. This is a rectangle for hit testing, not a per-pixel alpha test.
 
-`.osk` importing is owned by the application; this loader reads an extracted folder's `skin.ini`, `fruit-*.png`, `reversearrow.png` / `reversearrow@2x.png`, and numeric font glyphs. The extraction cache uses a versioned directory so older packages without combo glyphs are extracted again.
+`.osk` importing is owned by the application; this loader reads an extracted folder's `skin.ini`, `fruit-*.png`, standard hit-circle and slider-endpoint PNGs, `reversearrow.png` / `reversearrow@2x.png`, and numeric font glyphs. The v5 extraction cache includes standard circle resources; retained source archives allow older imported skins to be upgraded.
+
+The upper timeline uses `hitcircle` and `hitcircleoverlay`, with `sliderstartcircle`
+and `sliderendcircle` overrides for slider endpoints. Base images receive combo
+colour; overlays and numbers remain white. The number font uses `HitCirclePrefix`
+(default `default`) and `HitCircleOverlap`, independently of the Catch combo font.
+`HitCircleOverlayAboveNumber` controls their local layer order. Endpoint overrides
+without an overlay do not borrow `hitcircleoverlay`. Images prefer @2x and retain
+transparent padding at a 128-unit nominal size, capped at twice the circle diameter.
+Slider tracks use `SliderTrackOverride` when set, otherwise combo colour, with
+`SliderBorder` and 0.7 track opacity. Missing circle artwork or digits use geometric
+and text fallbacks. Objects are painted in descending start time, then descending
+end time and source order, keeping each object's number within its own layer.
 
 Testplay combo uses `ComboPrefix` (default `score`) and `ComboOverlap` from `[Fonts]`.
 Digits use raw texture dimensions, prefer @2x and preserve transparent padding.

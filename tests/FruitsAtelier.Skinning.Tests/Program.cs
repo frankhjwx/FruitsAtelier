@@ -14,6 +14,7 @@ var tests = new List<(string Name, Action Run)>
     ("Catcher uses raw dimensions, density and the legacy plate origin", CatcherPlate),
     ("Combo uses configured glyphs, overlap and density without a suffix", ComboFont),
     ("Reverse arrows use skin density and fall back for missing or undecodable images", ReverseArrows),
+    ("Timeline standard circles use hit-circle fonts, overlays and slider overrides", TimelineCircles),
     ("Oversized artwork is centre cropped without distorting the other axis", CentreCrop),
     ("Base tint and independently sized white overlay compose at one centre", Overlay),
     ("Hyper fruit draws only its base as a rotated additive underlay", HyperGlow),
@@ -119,6 +120,29 @@ void ReverseArrows()
     string missing = Fixture("no-reverse-arrow");
     Header(missing, "fruit-pear.png", 128, 128);
     True(!Load(missing).DrawReverseArrow(canvas, 100, 200, 38));
+}
+
+void TimelineCircles()
+{
+    string folder = Fixture("timeline-standard");
+    foreach (string name in new[] { "hitcircle", "hitcircleoverlay", "sliderstartcircle", "sliderstartcircleoverlay", "sliderendcircle" })
+        Header(folder, name + "@2x.png", 256, 256);
+    Header(folder, "digits-1@2x.png", 40, 60);
+    Header(folder, "digits-2.png", 22, 30);
+    foreach (bool above in new[] { false, true })
+    {
+        File.WriteAllText(Path.Combine(folder, "skin.ini"), "[General]\nHitCircleOverlayAboveNumber:" + (above ? "1" : "0")
+            + "\n[Fonts]\nHitCirclePrefix:digits\nHitCircleOverlap:3\n[Colours]\nSliderBorder:10,20,30\nSliderTrackOverride:40,50,60\n");
+        var loaded = Load(folder); var c = new RecordingCanvas();
+        CatchSkin.DrawTimelineCircle(c, loaded, 100, 200, 64, 0x123456, 12, "sliderstartcircle");
+        True(c.Calls.Count == 4 && c.Calls[0].Path.EndsWith("sliderstartcircle@2x.png"));
+        True(c.Calls[above ? 3 : 1].Path.EndsWith("sliderstartcircleoverlay@2x.png"));
+        True(c.Calls[0].Tint == 0x123456 && c.Calls.Skip(1).All(t => t.Tint == 0xFFFFFF));
+        Rectangle(c.Calls.First(t => t.Path.EndsWith("digits-1@2x.png")).Destination, 90.25f, 192.5f, 10, 15);
+        Equal(0x0A141E, loaded.SliderBorderColour); Equal(0x28323C, loaded.SliderTrackColour!.Value);
+        c.Calls.Clear(); CatchSkin.DrawTimelineCircle(c, loaded, 100, 200, 64, 0x123456, prefix: "sliderendcircle");
+        True(c.Calls.Count == 1 && c.Calls[0].Path.EndsWith("sliderendcircle@2x.png"));
+    }
 }
 
 void HighDensity()
