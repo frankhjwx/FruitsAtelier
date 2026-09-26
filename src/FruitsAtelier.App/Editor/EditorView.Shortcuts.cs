@@ -27,6 +27,7 @@ public sealed partial class EditorView
         if (shift && key is >= 49 and <= 57) { ForgetTemporarySnap(); divisor = key - 48; return true; }
         if (!shift && key is >= 49 and <= 52)
         { ChangeTool(key switch { 49 => Tool.Select, 50 => Tool.Fruit, 51 => Tool.Slider, _ => Tool.Banana }); return true; }
+        if (shift && key is not (37 or 39)) return false;
         switch (key)
         {
             case 67: TogglePlayback(); return true;

@@ -90,6 +90,12 @@ even when the device advances before the worker handles it.
 
 ## Window checks
 
+Shortcut routing regressions verify that Timing cannot move hidden Compose
+selections, unsupported modifiers cannot delete timing rows or invoke base
+transport commands, and export remains available outside Timing fields and modal
+dialogs. Language dropdown checks cover arrow navigation, confirmation, Escape,
+background shortcut isolation and unchanged document history in both languages.
+
 Timing regressions cover draft cancellation, atomic apply/undo, clipboard session
 isolation, red/green control points, reset/replacement, and FSlider time transforms.
 Metronome tests compare scheduled timestamps for whole beats, Ctrl subdivisions,

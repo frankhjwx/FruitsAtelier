@@ -287,17 +287,18 @@ public sealed partial class EditorView
         }
         if (TimingSetupVisible)
         {
-            if (ctrl && key == 65) { timingSelected.Clear(); foreach (var entry in VisibleTimingEntries()) timingSelected.Add(entry.Id); }
-            else if (ctrl && key == 67) RequestCopyText?.Invoke(TimingEditing.Serialize(VisibleTimingEntries().Where(e => timingSelected.Contains(e.Id)).Select(e => e.Point)));
-            else if (ctrl && key == 88)
+            if (altHeld) return true;
+            if (ctrl && !shift && key == 65) { timingSelected.Clear(); foreach (var entry in VisibleTimingEntries()) timingSelected.Add(entry.Id); }
+            else if (ctrl && !shift && key == 67) RequestCopyText?.Invoke(TimingEditing.Serialize(VisibleTimingEntries().Where(e => timingSelected.Contains(e.Id)).Select(e => e.Point)));
+            else if (ctrl && !shift && key == 88)
             { RequestCopyText?.Invoke(TimingEditing.Serialize(VisibleTimingEntries().Where(e => timingSelected.Contains(e.Id)).Select(e => e.Point))); DeleteTimingPoints(); }
-            else if (ctrl && key == 86) RequestPasteTiming?.Invoke();
+            else if (ctrl && !shift && key == 86) RequestPasteTiming?.Invoke();
             else if (ctrl && key == 90) TimingDraftUndo(shift);
-            else if (ctrl && key == 89) TimingDraftUndo(true);
+            else if (ctrl && !shift && key == 89) TimingDraftUndo(true);
             else if (ctrl && key == 80) AddTimingPoint(shift);
-            else if (key == 46 || ctrl && key == 73) DeleteTimingPoints();
-            else if (key == 27) CloseTimingSetup();
-            else if (key == 13) ApplyTimingSetup();
+            else if (!shift && (key == 46 && !ctrl || ctrl && key == 73)) DeleteTimingPoints();
+            else if (!ctrl && !shift && key == 27) CloseTimingSetup();
+            else if (!ctrl && !shift && key == 13) ApplyTimingSetup();
             else if (key is 38 or 40 or 33 or 34 or 36 or 35)
             {
                 var entries = VisibleTimingEntries(); if (entries.Length == 0) return true;
@@ -305,7 +306,7 @@ public sealed partial class EditorView
                 index = key switch { 36 => 0, 35 => entries.Length - 1, _ => Math.Clamp(index + (key is 38 or 33 ? -1 : 1) * (key is 33 or 34 ? 8 : 1), 0, entries.Length - 1) };
                 SelectTimingEntry(entries[index].Id, ctrl, shift); timingScroll = Math.Max(0, index - 3);
             }
-            else if (key == 9 && timingFields.Count > 0)
+            else if (!ctrl && key == 9 && timingFields.Count > 0)
             {
                 var next = timingFields[0]; timingField = next.Key; timingText = next.Value; timingFieldApply = next.Apply; SelectInput("timing:" + timingField, timingText);
             }
@@ -317,7 +318,8 @@ public sealed partial class EditorView
         if (key == 27 && panelMenuOpen) { panelMenuOpen = false; return true; }
         if (key == 27 && menu >= 0) { menu = -1; return true; }
         if (key == 27 || key == 112) { ShowTimingPage(false); return true; }
-        if (ctrl && shift && key == 73) return true;
+        if (ctrl && altHeld && !shift && key == 69) return false;
+        if (ctrl && shift && key is 37 or 39 or 73) return true;
         if (ctrl) return key is not (17 or 80 or 73 or 90 or 89 or 83 or 9 or 79 or 66 or 37 or 39 or 38 or 40 or 77);
         return key is not (17 or 32 or 67 or 88 or 90 or 86 or 35 or 36 or 37 or 38 or 39 or 40 or 114 or 115 or 116 or 117)
             && !(shift && key is >= 49 and <= 57);

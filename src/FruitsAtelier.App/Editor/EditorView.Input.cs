@@ -860,6 +860,16 @@ public sealed partial class EditorView
             return;
         }
         if (ExportVisible) { ExportKey(virtualKey, ctrl, shift); return; }
+        if (languageMenuOpen)
+        {
+            if (!ctrl && !shift && !altHeld)
+            {
+                if (virtualKey == 27) languageMenuOpen = false;
+                else if (virtualKey is 38 or 40) languageSelection = (languageSelection + (virtualKey == 38 ? L.AvailableLanguages.Count - 1 : 1)) % L.AvailableLanguages.Count;
+                else if (virtualKey == 13) SelectLanguage(L.AvailableLanguages[languageSelection]);
+            }
+            return;
+        }
         if (LibraryVisible) { LibraryKey(virtualKey, ctrl, shift); return; }
         if (TimingKey(virtualKey, ctrl, shift)) return;
         if (virtualKey == 117 && !ctrl && !shift && !altHeld) { OpenTimingSetup(); return; }
@@ -874,13 +884,6 @@ public sealed partial class EditorView
         }
         if (ctrl && altHeld && !shift && virtualKey == 69 && drag == DragKind.None)
         { RequestExport?.Invoke(); return; }
-        if (languageMenuOpen)
-        {
-            if (virtualKey == 27) languageMenuOpen = false;
-            else if (virtualKey is 38 or 40) languageSelection = (languageSelection + (virtualKey == 38 ? L.AvailableLanguages.Count - 1 : 1)) % L.AvailableLanguages.Count;
-            else if (virtualKey == 13) SelectLanguage(L.AvailableLanguages[languageSelection]);
-            return;
-        }
         if (ctrl && shift && !altHeld && virtualKey == 70)
         {
             if (!dragMoved && draftTrack == Guid.Empty && draftBanana == Guid.Empty

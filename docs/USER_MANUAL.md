@@ -125,6 +125,8 @@ Version 0.8 does not provide video or storyboard playback. Imported timing and s
 
 ## 04 / Keyboard reference
 
+See the [complete keyboard and mouse shortcut manual](KEY_BINDINGS.md) for context-specific bindings, dialogs and current limitations, and the [osu!stable compatibility review](KEY_BINDINGS_REVIEW.md) for differences and possible additions.
+
 Shortcuts below apply while editing, outside text fields and dialogs. On macOS, Command also works for Ctrl shortcuts; Backspace also deletes. Some Mac keyboards require Fn for function keys.
 
 ### Files, selection and editing

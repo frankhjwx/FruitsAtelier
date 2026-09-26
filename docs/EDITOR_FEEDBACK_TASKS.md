@@ -1,6 +1,6 @@
 # Editor feedback tasks and shortcut decisions
 
-This table defines the accepted editor feedback scope. The current user-facing bindings are maintained in [the user manual](USER_MANUAL.md#04--keyboard-shortcuts); interaction details are in [editing controls](EDITOR_UI.md).
+This table defines the accepted editor feedback scope. The current user-facing bindings are maintained in [the shortcut manual](KEY_BINDINGS.md); interaction details are in [editing controls](EDITOR_UI.md).
 
 | ID | Outcome | Acceptance |
 | --- | --- | --- |
@@ -10,7 +10,7 @@ This table defines the accepted editor feedback scope. The current user-facing b
 | E04 | Drag the visible lower half of a slider-stream endpoint. | Hit testing respects overlapping stream sprites; selecting and dragging an endpoint retains the slider parent and supports undo. |
 | E05 | Preserve playback time on empty canvas clicks. | Clear selection without seeking, both paused and playing; retain explicit time controls and box selection. |
 | E06 | Limit Ctrl+M to 1/3, 1/4, 1/6 and 1/8. | Enter at 1/3 from another divisor; direct Snap controls retain all subdivisions. |
-| E07 | Separate wheel snapping, seeking and zoom. | Ctrl changes complete Snap choices; Shift seeks four times as far; Ctrl+Shift zooms canvas; Alt zooms the upper timeline; Ctrl+Alt cycles tools on canvas/upper timeline. |
+| E07 | Separate wheel snapping, seeking and zoom. | Ctrl changes complete Snap choices; Shift seeks four times as far; Alt zooms canvas; Alt zooms the upper timeline; Ctrl+Alt cycles tools on canvas/upper timeline. |
 | E08 | Start testplay with a lead-in. | Persistent 0–5 second setting, default 1; immediately begin from the selected position minus the lead-in, clamped to zero, and return to the selected position on exit. |
 | E09 | Expose Master, Music and Effect as vertical volume bars. | Left-to-right channel order; mouse and Alt arrows; 120 ms fade-in, 300 ms idle delay, 150 ms fade-out; hover/drag/held adjustment stays visible; changes persist without committing drafts. |
 | E10 | Show bookmarks on the left canvas axis and in the canvas. | Distinct red timing and blue bookmark ticks/lines, nonoverlapping labels and clustered hover details; dense display does not merge stored entries. |
@@ -31,7 +31,7 @@ This table defines the accepted editor feedback scope. The current user-facing b
 | Alt+wheel over upper timeline | Zoom object timeline. |
 | Ctrl+Alt+wheel over canvas/upper timeline | Cycle placement tools. |
 | Ctrl+= / Ctrl+− | Add / remove slider reverses. |
-| Ctrl+L / I / J / G | Retain point curve toggle / point insertion / slider extension / path reversal. |
+| Ctrl+L / Ctrl+Shift+I / Ctrl+J / Ctrl+G | Point curve toggle / point insertion / slider extension / path reversal. |
 | Ctrl+O / Ctrl+Shift+O | Choose difficulty / open file or project. |
 | Ctrl+Alt+E | Open export choices. |
 | F4 / F5 | Song Setup / testplay. |
@@ -57,16 +57,6 @@ Use [osu!stable's shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard
 
 These are behavioral references; no external implementation is copied into these changes.
 
-## Shortcut audit: osu!stable editor commands with no equivalent command
+## Shortcut audit
 
-These are explicitly recorded so “missing shortcuts” does not get confused with a small key-mapping fix. Some would add product scope beyond a catch-focused Compose editor.
-
-| Area | Unimplemented osu!stable keys / actions | Current scope |
-| --- | --- | --- |
-| General file/edit | `Ctrl+Shift+L` full reload; `Ctrl+N` remove all hit objects. | No matching command. Select all + Delete can clear objects through separate actions. |
-| Editor pages | `F2` Design tab. | Compose and Timing pages, the F6 control-point dialog, timing creation/deletion and F5 testplay are available. There is no Design tab. |
-| Object transforms | `Ctrl+,` / `Ctrl+.` rotate 90°; `Ctrl+J` vertical flip; `Ctrl+G` reverse selection; `Ctrl+Shift+R` arbitrary rotation; `Ctrl+Shift+S` scale; `Ctrl+Shift+D` polygon generation. | Horizontal flip (`Ctrl+H`) and FSlider path reversal (`Ctrl+G`) exist; the listed transformations do not. |
-| Compose analysis | `Ctrl+Shift+A` opens AiMod. | No AiMod equivalent. |
-| Hitsound sample sets | `Shift+Q/W/E/R` choose object sampleset; `Ctrl+Q/W/E/R` choose addition set; `Ctrl+Shift+I` import a sample. | Whistle/Finish/Clap flags (`W/E/R`) exist; these sample-set and import controls do not. |
-| Design tab | `I`; `Ctrl+Z/Y/X/C/V`; `Delete`; `W/A/S/D` in Design context. | No Design tab or sprite editing. These keys already have other Compose meanings. |
-| Timing tab | `T` tap BPM; Shift/Ctrl precision modifiers for BPM, offset, and slider velocity. | No editable Timing tab. `T` toggles horizontal Grid Snap in Compose. |
+See the [current compatibility review](KEY_BINDINGS_REVIEW.md) for remaining conflicts, missing keys and implementation candidates. The Timing page, T tap tempo, timing precision modifiers, F3 and F6 are implemented; their bindings are covered by the [shortcut manual](KEY_BINDINGS.md#timing-page-and-f6-dialog).
