@@ -106,13 +106,36 @@ public sealed partial class EditorView
 
     public void MoveVolumePopoverPointer(float x, float y)
     {
+        mouseX = x; mouseY = y;
         if (volumePopoverDrag >= 0)
         {
-            mouseX = x; mouseY = y;
             UpdateVolumePopoverDrag(y);
         }
         else if (volumePopoverOpen && (VolumePopoverBounds.Contains(x, y) || VolumeButtonBounds.Contains(x, y)))
+        {
             volumePopoverTouchedMs = VolumeNowMs;
+            SelectHoveredVolumeChannel(x, y);
+        }
+    }
+
+    private void SelectHoveredVolumeChannel(float x, float y)
+    {
+        if (volumePopoverDrag >= 0) return;
+        for (int channel = 0; channel < 3; channel++)
+            if (VolumeBarBounds(channel).Contains(x, y))
+            {
+                volumeChannel = channel;
+                return;
+            }
+    }
+
+    private bool HandleVolumePopoverWheel(float x, float y, float delta)
+    {
+        if (!CanUseVolumePopover || !VolumePopoverVisible || !VolumePopoverBounds.Contains(x, y)) return false;
+        mouseX = x; mouseY = y;
+        SelectHoveredVolumeChannel(x, y);
+        AdjustVolumeWheel(delta);
+        return true;
     }
 
     public bool EndVolumePopoverPointer(float x, float y, int button)
@@ -149,6 +172,16 @@ public sealed partial class EditorView
         }
         volumePopoverTouchedMs = VolumeNowMs;
         return true;
+    }
+
+    private void AdjustVolumeWheel(float delta)
+    {
+        if (delta == 0 || !CanUseVolumePopover) return;
+        if (!volumePopoverOpen) OpenVolumePopover();
+        int value = VolumeChannelValue(volumeChannel) + (delta > 0 ? 5 : -5);
+        SetVolumeChannel(volumeChannel, Math.Clamp(value, 0, 100));
+        RequestAudioPreference?.Invoke();
+        volumePopoverTouchedMs = VolumeNowMs;
     }
 
     public void ReleaseVolumeShortcut(int key)
@@ -198,11 +231,12 @@ public sealed partial class EditorView
             c.Fill(bar, Surface, 5, opacity);
             float fill = bar.Height * value / 100;
             c.Fill(new(bar.X, bar.Bottom - fill, bar.Width, fill), Accent, 5, opacity);
-            if (channel == volumeChannel) c.StrokeOpacity(bar, Accent, 1.5f, 5, opacity);
+            bool active = channel == volumeChannel;
+            if (active) c.StrokeOpacity(bar, Foreground, 3, 5, opacity);
             c.TextOpacity(L.Get(labels[channel]), bar.X - 10, bar.Bottom + 8, 11,
-                Foreground, bar.Width + 20, false, opacity);
+                active ? Accent : Foreground, bar.Width + 20, active, opacity);
             c.TextOpacity(L.Get("ui.zoomPercent", value), bar.X + 2, bar.Bottom + 27, 11,
-                Muted, bar.Width + 14, false, opacity);
+                active ? Foreground : Muted, bar.Width + 14, active, opacity);
         }
     }
 }

@@ -13,6 +13,8 @@ internal static class VolumePopoverTests
 
     public static void Run()
     {
+        HoverAndWheel(false);
+        HoverAndWheel(true);
         var clock = new ManualClock();
         var ui = new Ui(timeProvider: clock);
         var settings = new LibrarySettings();
@@ -133,6 +135,18 @@ internal static class VolumePopoverTests
             "Testplay volume shortcuts changed gameplay movement or failed to save Music volume.");
 
         ui.View.SetModifiers(false, false);
+        clock.Advance(950); ui.Paint();
+        Check(!ui.View.VolumePopoverVisible, "Testplay volume controls did not fade after key release.");
+        ui.View.Wheel(ui.Plot.X + 20, ui.Plot.Y + 20, 120, false, false, true);
+        clock.Advance(60); ui.Paint();
+        Check(ui.View.VolumePopoverVisible && ui.Canvas.Texts.Any(text => text.Value == L.Get("volume.music"))
+            && settings.SongVolume == 100 && saves == 2,
+            "Alt+wheel did not show the volume controls and adjust Music over testplay.");
+        ui.View.Wheel(ui.Plot.X + 20, ui.Plot.Y + 20, -120, false, false, true);
+        ui.Paint();
+        Check(settings.SongVolume == 95 && saves == 3 && ui.View.VolumePopoverVisible,
+            "Consecutive Alt+wheel did not adjust the selected volume channel.");
+
         ui.Key(37);
         clock.Advance(100); ui.Paint();
         Check(ui.View.TestplayCatcherX < 256, "Plain arrow stopped controlling the catcher.");
@@ -141,6 +155,65 @@ internal static class VolumePopoverTests
         Check(!ui.View.VolumePopoverVisible, "Testplay volume controls did not fade after key release.");
         ui.View.StopTestplay();
         Check(map.ContentEquals(ui.View.Document), "Testplay volume adjustment changed beatmap content.");
+    }
+
+    private static void HoverAndWheel(bool testplay)
+    {
+        var clock = new ManualClock();
+        var ui = new Ui(timeProvider: clock);
+        var settings = new LibrarySettings { MasterVolume = 50, SongVolume = 50, HitsoundVolume = 50 };
+        ui.View.InitializeLibrary(false, settings);
+        var map = new MapDocument { DurationMs = 5000 };
+        map.Fruits.Add(new Fruit { TimeMs = 3000, X = 256 });
+        ui.LoadDocument(map);
+        if (testplay) ui.View.StartTestplay();
+        ui.View.SetModifiers(true, false);
+        ui.Key(38); ui.View.KeyUp(38);
+        ui.View.SetModifiers(false, false);
+        clock.Advance(120); ui.Paint();
+
+        string[] labels = ["volume.master", "volume.music", "volume.effect"];
+        for (int channel = 0; channel < 3; channel++)
+        {
+            var bar = ui.View.VolumeBarBounds(channel);
+            float x = bar.X + bar.Width / 2, y = bar.Y + bar.Height / 2;
+            var before = Values();
+            ui.View.PointerMove(x, y, false, false);
+            clock.Advance(1000); ui.Paint();
+            Check(ui.View.VolumePopoverVisible, "Hover did not keep volume controls visible.");
+            Check(Values().SequenceEqual(before), "Hover changed volume without an adjustment.");
+            var activeLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get(labels[channel]));
+            Check(labels.Where((_, i) => i != channel).All(label =>
+                ui.Canvas.Texts.Single(t => t.Value == L.Get(label)).Color != activeLabel.Color),
+                "Hovered volume channel did not have a distinct highlight.");
+            ui.View.Wheel(x, y, -120, false);
+            before[channel] -= 5;
+            Check(Values().SequenceEqual(before), "Plain wheel did not adjust only the hovered channel.");
+            ui.View.SetModifiers(true, false);
+            ui.Key(40); ui.View.KeyUp(40);
+            before[channel] -= 5;
+            Check(Values().SequenceEqual(before), "Alt+Down did not adjust the hovered channel.");
+            ui.Key(37); ui.View.KeyUp(37);
+            ui.Key(38); ui.View.KeyUp(38);
+            before[Math.Max(0, channel - 1)] += 5;
+            Check(Values().SequenceEqual(before), "Alt+Left did not switch the active channel after hover.");
+            ui.View.SetModifiers(false, false);
+        }
+
+        var master = ui.View.VolumeBarBounds(0);
+        ui.View.Wheel(master.X + 4, master.Y + 4, -120, false);
+        int masterAfterWheel = settings.MasterVolume;
+        ui.View.SetModifiers(true, false);
+        ui.Key(38); ui.View.KeyUp(38);
+        ui.View.SetModifiers(false, false);
+        Check(settings.MasterVolume == masterAfterWheel + 5, "Wheel coordinates did not select the active bar.");
+        ui.View.PointerMove(ui.Plot.X, ui.Plot.Y, false, false);
+        clock.Advance(950); ui.Paint();
+        Check(!ui.View.VolumePopoverVisible, "Leaving the controls did not allow them to fade.");
+        if (testplay) ui.View.StopTestplay();
+        Check(map.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Volume hover or wheel changed map content.");
+
+        int[] Values() => [settings.MasterVolume, settings.SongVolume, settings.HitsoundVolume];
     }
 
     private static void Check(bool value, string message)

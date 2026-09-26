@@ -347,6 +347,22 @@ internal static class RenderCheck
                 }
                 if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
                     throw new InvalidOperationException("Native volume bars did not update percentages.");
+                for (int channel = 0; channel < 3; channel++)
+                {
+                    var bar = view.VolumeBarBounds(channel);
+                    view.PointerMove(bar.X + 4, bar.Y + 4, false, false);
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                    view.Wheel(bar.X + 4, bar.Y + 4, -120, false);
+                    int[] hoveredVolumes = [view.LibrarySettings.MasterVolume, view.LibrarySettings.SongVolume, view.LibrarySettings.HitsoundVolume];
+                    if (hoveredVolumes[channel] != (channel + 1) * 25 - 5)
+                        throw new InvalidOperationException("Native volume wheel did not adjust the hovered bar.");
+                    view.SetModifiers(true, false);
+                    view.KeyDown(38, false, false); view.KeyUp(38);
+                    view.SetModifiers(false, false);
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                }
+                if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
+                    throw new InvalidOperationException("Native Alt+Up did not adjust the hovered volume channel.");
                 view.KeyDown(27, false, false);
                 if (view.VolumePopoverVisible) throw new InvalidOperationException("Native volume popover did not close.");
                 var dsRatios = view.Document.DistanceSnapRatios.ToArray();

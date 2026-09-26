@@ -655,6 +655,7 @@ public sealed partial class EditorView
         if (librarySettingsOpen) return;
         if (TimingModal)
         { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
+        if (HandleVolumePopoverWheel(x, y, delta)) return;
         if (TimingPageVisible && WaveformBounds.Contains(x, y) && !SongSetupVisible && !LibraryVisible)
         {
             if ((alt || altHeld) && !ctrl && !shift && !shiftHeld)
@@ -670,7 +671,11 @@ public sealed partial class EditorView
             return;
         }
         if (updatesPage) return;
-        if (IsTestplaying) return;
+        if (IsTestplaying)
+        {
+            if (alt && !ctrl && !shift) AdjustVolumeWheel(delta);
+            return;
+        }
         if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (languageMenuOpen) return;
         if (ErrorVisible)

@@ -223,7 +223,7 @@ For detailed editing behavior, see `docs/EDITOR_UI.md` in the repository. Projec
 
 ### Audio volume
 
-In the editor, click the bottom-right **Volume** button or **View → Volume** for three vertical bars: **Master**, **Music**, **Effect**. Drag a bar, use **Alt+Left/Right** to choose a channel, or **Alt+Up/Down** to adjust it by 5%. The same Alt+arrow shortcuts show the bars during testplay without moving the catcher. The controls fade in, stay visible while hovered or adjusted, and wait 0.3 seconds before fading out. In the editor, Esc closes them. Drawing drafts remain active.
+In the editor, click the bottom-right **Volume** button or **View → Volume** for three vertical bars: **Master**, **Music**, **Effect**. The active bar has a bright outline and bold label. Hover a bar to select it, scroll over the controls to adjust the selected channel by 5%, or drag a bar. Use **Alt+Left/Right** to choose a channel, or **Alt+Up/Down** to adjust it by 5%. During testplay, Alt+wheel shows the bars and adjusts the selected channel by 5% per wheel event; Alt+arrow shortcuts also work without moving the catcher. The controls fade in, stay visible while hovered or adjusted, and wait 0.8 seconds before fading out. In the editor, Esc closes them. Drawing drafts remain active.
 
 Open **Library > Settings** to adjust **All**, **Song** and **Hitsound** from 0% to 100%. Values apply immediately and are saved when you release the slider. All multiplies both other channels. Setting Song to 0% leaves hitsounds audible; setting Hitsound to 0% leaves the song audible. Custom skin samples apply in both preview and testplay, with beatmap custom samples taking priority.
 
