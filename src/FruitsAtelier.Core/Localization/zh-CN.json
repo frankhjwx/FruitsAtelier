@@ -841,7 +841,6 @@
   "timing.waveform": "音频波形",
   "timing.waveformError": "无法加载音频波形。",
   "timing.waveformEmpty": "暂无音频波形。",
-  "timing.waveformHelp": "Alt + 滚轮：缩放 · 点击：跳转 · 点击红线：编辑时间点",
   "timing.page": "Timing 编辑  F3",
   "timing.compose": "编排  F1",
   "timing.setup": "Timing 设置…  F6",

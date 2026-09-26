@@ -56,19 +56,28 @@ public sealed partial class EditorView
         c.Clip(r);
         c.Line(r.X, center, r.Right, center, Grid);
         if (waveform != null)
-            for (int x = 0; x < r.Width; x++)
+            // Anchor peak windows to audio time so playback only translates the envelope.
+            for (double bin = Math.Floor(start / msPerPixel); bin * msPerPixel < start + waveformSpanMs; bin++)
             {
-                float peak = waveform.Peak(start + x * msPerPixel, start + (x + 1) * msPerPixel) * (r.Height * .32f);
-                if (peak > 0) c.Line(r.X + x, center - peak, r.X + x, center + peak, Accent);
+                float peak = waveform.Peak(bin * msPerPixel, (bin + 1) * msPerPixel) * (r.Height * .16f);
+                float x = r.X + (float)(bin - start / msPerPixel);
+                // Overlapping filled columns avoid antialiased hairline seams at fractional DPI.
+                if (peak > 0) c.Fill(new(x, center - peak, 2, peak * 2), Accent);
             }
         else c.Text(L.Get(waveformFailed ? "timing.waveformError" : waveformTask != null ? "timing.waveformLoading" : "timing.waveformEmpty"),
             r.X + 16, center + 20, 13, Muted, r.Width - 32);
         double step = Math.Pow(10, Math.Floor(Math.Log10(waveformSpanMs / 8)));
         if (waveformSpanMs / step > 16) step *= 5;
+        foreach (var tick in renderedTiming!.Grid(Math.Max(0, start), start + waveformSpanMs, divisor))
+        {
+            float x = r.X + (float)((tick.TimeMs - start) / msPerPixel);
+            var style = GridStyle(tick);
+            c.Line(x, r.Bottom - 24 - style.Height, x, r.Bottom - 24, style.Color, style.Width);
+        }
+        c.Line(r.X, r.Bottom - 24, r.Right, r.Bottom - 24, Grid);
         for (double time = Math.Max(0, Math.Ceiling(start / step) * step); time < start + waveformSpanMs; time += step)
         {
             float x = r.X + (float)((time - start) / msPerPixel);
-            c.Line(x, r.Bottom - 22, x, r.Bottom, Grid);
             c.Text(Time(time), x + 3, r.Bottom - 18, 10, Muted, 80);
         }
         foreach (var point in Document.TimingPoints)
@@ -82,7 +91,6 @@ public sealed partial class EditorView
         c.Line(head, r.Y + 28, head, r.Bottom, Accent, 2);
         c.Text(Time(playhead), head + 5, r.Y + 30, 12, Foreground, 110);
         c.Unclip();
-        c.Text(L.Get("timing.waveformHelp"), r.X + 8, r.Y - 25, 12, Muted, r.Width - 16);
     }
 
     private void TimingWaveformPointer(float x, float y, int button)

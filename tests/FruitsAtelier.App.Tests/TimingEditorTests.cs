@@ -112,11 +112,24 @@ internal static class TimingEditorTests
         ui.View.UpdateTransport(0, 10000, true, false, false, null, map.AudioPath);
         ui.View.UpdateTransport(1000, 10000, true, false, false, null, map.AudioPath); ui.Key(114);
         Check(!ui.View.WaveformNeedsRedraw, "Pending waveform does not busy-loop rendering");
-        pending.SetResult(new AudioWaveform(Enumerable.Repeat(.5f, 10000).ToArray(), 1));
+        pending.SetResult(new AudioWaveform(Enumerable.Range(0, 10000).Select(i => .3f + .7f * (float)Math.Abs(Math.Sin(i * .017))).ToArray(), 1));
         Check(ui.View.WaveformNeedsRedraw, "Decoded waveform wakes a paused editor"); ui.Paint();
         Check(!ui.View.WaveformNeedsRedraw, "Completed waveform is consumed once");
         var before = ui.View.Document.DeepClone();
         var r = ui.View.WaveformBounds;
+        RecordingCanvas.Outline[] Envelope() => ui.Canvas.Fills.Where(f => f.Color == 0x59D3C3 && f.Bounds.Width == 2 && f.Bounds.Y > r.Y).ToArray();
+        var envelope = Envelope();
+        Check(envelope.Length > 20 && envelope.All(f => f.Bounds.Height <= r.Height * .32f + .001), "Waveform uses a filled envelope at half the former height");
+        Check(ui.Canvas.Texts.All(t => !t.Value.Contains("Alt + wheel")), "Waveform omits instructional caption");
+        var quarterTicks = ui.Canvas.Lines.Where(l => l.Y2 == r.Bottom - 24 && l.Y1 < l.Y2).ToArray();
+        Check(quarterTicks.Any(l => l.Color == 0x66AAFF), "Waveform ruler includes quarter snap ticks");
+        ui.View.UpdateTransport(1001, 10000, true, true, false, null, map.AudioPath); ui.Paint();
+        var moved = Envelope();
+        Check(envelope.Take(20).Select(f => f.Bounds.Height).SequenceEqual(moved.Take(20).Select(f => f.Bounds.Height))
+            && moved[10].Bounds.X < envelope[10].Bounds.X, "Playback translates fixed envelope peaks without resampling flicker");
+        ui.SetSnapDivisor(3);
+        var tripletTicks = ui.Canvas.Lines.Where(l => l.Y2 == r.Bottom - 24 && l.Y1 < l.Y2).ToArray();
+        Check(tripletTicks.Length < quarterTicks.Length && tripletTicks.Any(l => l.Color == 0xBB66EE), "Changing Snap updates ruler subdivisions and colours");
         float RedX() => ui.Canvas.Texts.Single(t => t.Value == "120 BPM").X;
         float red = RedX();
         ui.View.Wheel(r.X + r.Width / 2, r.Y + 80, 120, false, false, true); ui.Paint();
