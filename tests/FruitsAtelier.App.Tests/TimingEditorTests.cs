@@ -123,6 +123,10 @@ internal static class TimingEditorTests
         Check(ui.Canvas.Texts.All(t => !t.Value.Contains("Alt + wheel")), "Waveform omits instructional caption");
         var quarterTicks = ui.Canvas.Lines.Where(l => l.Y2 == ui.View.WaveformRulerY && l.Y1 < l.Y2).ToArray();
         Check(quarterTicks.Any(l => l.Color == 0x66AAFF), "Waveform ruler includes quarter snap ticks");
+        Check(quarterTicks.Any(l => l.Color == 0x66AAFF && l.Y1 == r.Y + 96 && l.Opacity == .35f),
+            "Snap subdivisions extend across the waveform grid");
+        Check(ui.Canvas.Lines.Count(l => l.X1 == r.X && l.X2 == r.Right && l.Y1 == l.Y2 && l.Y1 >= r.Y + 96) >= 4,
+            "Waveform grid includes horizontal reference lines");
         ui.View.UpdateTransport(1001, 10000, true, true, false, null, map.AudioPath); ui.Paint();
         var moved = Envelope();
         Check(envelope.Take(20).Select(f => f.Bounds.Height).SequenceEqual(moved.Take(20).Select(f => f.Bounds.Height))
@@ -143,13 +147,17 @@ internal static class TimingEditorTests
             dense.TimingPoints.Add(new TimingPoint { TimeMs = time, BeatLengthMs = 400, Uninherited = true });
         ui.LoadDocument(dense); ui.Key(114);
         r = ui.View.WaveformBounds;
-        var labels = ui.Canvas.Texts.Where(t => t.Value.EndsWith(" BPM") && t.Y == r.Y + 8).OrderBy(t => t.X).ToArray();
-        Check(labels.Length > 0 && labels.Length < dense.TimingPoints.Count, "Dense red points omit crowded labels");
-        for (int i = 1; i < labels.Length; i++)
-            Check(labels[i].X >= labels[i - 1].X + labels[i - 1].Value.Length * 12 * .6f + 8,
-                "Visible BPM labels retain a gap");
-        Check(ui.Canvas.Lines.Count(l => l.Y1 == r.Y + 30 && l.Y2 == ui.View.WaveformRulerY) == dense.TimingPoints.Count,
-            "Crowded labels preserve every red timing line");
+        var labels = ui.Canvas.Texts.Where(t => t.Value.EndsWith(" BPM") && t.Y >= r.Y + 8 && t.Y <= r.Y + 62).ToArray();
+        Check(labels.Length == dense.TimingPoints.Count, "Every dense red point keeps its BPM label");
+        Check(labels.Select(t => t.Y).Distinct().Count() == 4, "Nearby BPM labels use separate rows");
+        Check(labels.All(t => t.X >= r.X && t.X + t.Value.Length * 12 * .6f <= r.Right),
+            "BPM labels stay within the waveform width");
+        Check(ui.Canvas.Lines.Count(l => l.Y1 >= r.Y + 30 && l.Y1 <= r.Y + 84 && l.Y2 == ui.View.WaveformRulerY) == dense.TimingPoints.Count,
+            "Staggered labels preserve every red timing line");
+        dense.TimingPoints.Add(new TimingPoint { TimeMs = 40, BeatLengthMs = 450, Uninherited = true });
+        ui.LoadDocument(dense); ui.Key(114);
+        Check(ui.Canvas.Texts.Count(t => t.Value.EndsWith(" BPM")) == dense.TimingPoints.Count,
+            "Even when all label rows are occupied no BPM label is dropped");
     }
 
     private static MapDocument Map() => OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n128,192,1200,1,0,0:0:0:0:\n");

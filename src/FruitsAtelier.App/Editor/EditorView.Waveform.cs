@@ -56,7 +56,18 @@ public sealed partial class EditorView
         double start = playhead - waveformSpanMs / 2, msPerPixel = waveformSpanMs / r.Width;
         float center = r.Y + r.Height / 2, rulerY = WaveformRulerY;
         c.Clip(r);
-        c.Line(r.X, center, r.Right, center, Grid);
+        float gridTop = r.Y + 96;
+        for (float y = center; y >= gridTop; y -= 40)
+            c.Line(r.X, y, r.Right, y, y == center ? 0x3C4653u : 0x262D37u);
+        for (float y = center + 40; y < rulerY; y += 40)
+            c.Line(r.X, y, r.Right, y, 0x262D37);
+        foreach (var tick in renderedTiming!.Grid(Math.Max(0, start), start + waveformSpanMs, divisor))
+        {
+            float x = r.X + (float)((tick.TimeMs - start) / msPerPixel);
+            var style = GridStyle(tick);
+            c.Line(x, gridTop, x, rulerY, style.Color, style.Width, .35f);
+        }
+        c.Stroke(new(r.X, gridTop, r.Width, rulerY - gridTop), Grid);
         if (waveform != null)
             // Anchor peak windows to audio time so playback only translates the envelope.
             for (double bin = Math.Floor(start / msPerPixel); bin * msPerPixel < start + waveformSpanMs; bin++)
@@ -82,23 +93,31 @@ public sealed partial class EditorView
             float x = r.X + (float)((time - start) / msPerPixel);
             c.Text(Time(time), x + 3, rulerY + 6, 10, Muted, 80);
         }
-        float labelRight = r.X;
+        Span<float> labelRights = stackalloc float[4];
+        labelRights.Fill(r.X);
         foreach (var point in Document.TimingPoints.OrderBy(p => p.TimeMs))
         {
             if (!point.Uninherited || point.TimeMs < start || point.TimeMs > start + waveformSpanMs) continue;
             float x = r.X + (float)((point.TimeMs - start) / msPerPixel);
-            c.Line(x, r.Y + 30, x, rulerY, Error);
             string label = TimingN(60000 / point.BeatLengthMs) + " BPM";
-            float labelWidth = Math.Min(120, c.MeasureText(label, 12));
-            if (x + 5 >= labelRight && x + 5 + labelWidth <= r.Right)
+            float labelWidth = Math.Min(r.Width - 1, c.MeasureText(label, 12));
+            float labelX = Math.Clamp(x + 5, r.X, r.Right - labelWidth - 1);
+            int row = 0;
+            while (row < labelRights.Length && labelX < labelRights[row]) row++;
+            if (row == labelRights.Length)
             {
-                c.Text(label, x + 5, r.Y + 8, 12, Error, labelWidth + 1);
-                labelRight = x + 5 + labelWidth + 8;
+                row = 0;
+                for (int i = 1; i < labelRights.Length; i++)
+                    if (labelRights[i] < labelRights[row]) row = i;
             }
+            float labelY = r.Y + 8 + row * 18;
+            c.Line(x, labelY + 22, x, rulerY, Error);
+            c.Text(label, labelX, labelY, 12, Error, labelWidth + 1);
+            labelRights[row] = Math.Max(labelRights[row], labelX + labelWidth + 8);
         }
         float head = r.X + r.Width / 2;
         c.Line(head, r.Y + 28, head, rulerY + 24, Accent, 2);
-        c.Text(Time(playhead), head + 5, r.Y + 30, 12, Foreground, 110);
+        c.Text(Time(playhead), head + 5, r.Y + 84, 12, Foreground, 110);
         c.Unclip();
     }
 
