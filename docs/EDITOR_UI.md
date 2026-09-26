@@ -107,7 +107,7 @@ Copy, cut and paste operate on the selected range and caret position. Keyboard
 focus changes can request select-all explicitly, such as Tab between Song Setup
 fields.
 
-The **Song Setup** button immediately left of Skin opens a modal with General,
+The **Song Setup** button immediately left of Settings opens a modal with General,
 Difficulty, Colors and Design tabs. **OK** applies the draft in one undo step;
 Cancel or Esc discards it. Playback pauses when opening the dialog. Editor
 shortcuts, seeking and object input are blocked until it closes.

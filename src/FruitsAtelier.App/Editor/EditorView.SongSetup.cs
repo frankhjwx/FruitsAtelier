@@ -25,7 +25,7 @@ public sealed partial class EditorView
     private static readonly string[] SongDifficulty = ["HPDrainRate", "CircleSize", "ApproachRate", "OverallDifficulty"];
     private static readonly string[] SongDesign = ["Countdown", "CountdownOffset", "WidescreenStoryboard", "LetterboxInBreaks", "EpilepsyWarning"];
     private static readonly string[] SongCountdownSpeeds = ["song.countdownOff", "song.countdownNormal", "song.countdownHalf", "song.countdownDouble"];
-    internal Rect SongSetupButtonBounds => new(SkinSelectorBounds.X - 126, 6, 120, 28);
+    internal Rect SongSetupButtonBounds => new(EditorSettingsButtonBounds.X - 126, 6, 120, 28);
     internal Rect SongSetupBounds => new((width - Math.Min(840, width - 32)) / 2,
         (height - Math.Min(580, height - 32)) / 2, Math.Min(840, width - 32), Math.Min(580, height - 32));
     internal IReadOnlyDictionary<string, Rect> SongSetupFieldBounds => songFieldBounds;
