@@ -95,6 +95,19 @@ The Details header shows read-only beatmap AR, CS, and Distance Per Beat (DPB) i
 
 During playback and seeking, the play line stays at its configured height, initially 25% above the bottom of the drawing area. While paused, drag its leftmost yellow handle vertically to set that height between 5% and 95% of the drawing area. The current time stays unchanged and canvas content scrolls with the line. Playback disables handle dragging and uses the chosen height. The height is saved as a global view preference when the drag finishes and restored after restarting the editor. It is retained across resizing and difficulty switches without editing map content or undo history. Esc or lost capture cancels a drag. Left-button marquee selection on the canvas and object timeline keeps playback scrolling and accepts wheel navigation while held. The start stays anchored to its original map time while the other end follows the pointer, so the box grows during scrolling even with a stationary pointer. Within 24 DIP of the canvas's top/bottom edge or the object timeline's left/right edge, a dragged selection automatically scrolls toward that edge, gradually increasing to 1200 DIP per second on the canvas or 600 DIP per second on the object timeline. Moving back inside, releasing the button, cancelling, or reaching the map boundary stops automatic scrolling. Objects inside the time range remain selected after they move outside the viewport. Paused middle-button panning is free; canvas wheel navigation preserves the current playhead-to-viewport offset, while playback and other seeking resume following.
 
+### Playback pause snapping
+
+With beat snapping enabled, pausing through Space, C or the Pause button aligns
+the confirmed audio position to the nearest current Snap grid line. An exact
+midpoint selects the later line. The audio seek, playhead and viewport use the
+same target, bounded by the audio duration. Note placement continues to use the
+mouse's snapped time, as shown by the placement preview.
+
+The alignment runs once after the pause is confirmed. A later seek, document
+change, loading or audio failure cancels it. Stop returns to zero; testplay,
+automatic pauses for dialogs and disabled beat snapping retain their existing
+pause behavior.
+
 ## Song Setup
 
 Editor text fields share one caret and selection model, including Song Setup,

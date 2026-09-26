@@ -70,7 +70,7 @@ change. Other shortcuts may be blocked until the draft or drag ends.
 
 | Keys | Action |
 | --- | --- |
-| Space / C | Play / pause. |
+| Space / C | Play / pause. With beat snapping enabled, pausing aligns to the nearest current Snap grid line; see [pause behavior](EDITOR_UI.md#playback-pause-snapping). |
 | X | Seek to song start and play. |
 | Home | Seek to song start without forcing playback. |
 | Z | Seek to the first object's start; if already at or before it, seek to zero. |
