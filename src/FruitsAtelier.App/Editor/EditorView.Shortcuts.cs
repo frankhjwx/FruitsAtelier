@@ -39,7 +39,7 @@ public sealed partial class EditorView
                 double last = LastObjectEndMs();
                 SeekTo(playhead >= last ? AudioReady && AudioDurationMs > 0 ? AudioDurationMs : TimelineDurationMs : last); return true;
             case 37: case 39:
-                SeekTo(playhead + (key == 37 ? -1 : 1) * (shift ? 4 : 1) * TimingMap.At(Document, playhead).BeatLengthMs / divisor); return true;
+                SeekTo(playhead + (key == 37 ? -1 : 1) * (shift ? 4 : 1) * TimingMap.At(Document, playhead).BeatLengthMs / (AudioPlaying ? 1 : divisor)); return true;
             case 38: case 40:
                 var times = Document.TimingPoints.Select(t => t.TimeMs).Distinct().Order().ToArray();
                 SeekTo(key == 38 ? times.Where(t => t < playhead).LastOrDefault(0) : times.FirstOrDefault(t => t > playhead, TimelineDurationMs)); return true;

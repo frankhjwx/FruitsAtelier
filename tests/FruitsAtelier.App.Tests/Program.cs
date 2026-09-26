@@ -23,6 +23,7 @@ var tests = new (string Name, Action Run)[]
     ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),
     ("Shortcut routing isolates Timing object nudges and preserves navigation", ShortcutRoutingTests.TimingPage),
     ("Shortcut routing rejects unsupported Compose and Timing modifiers", ShortcutRoutingTests.Modifiers),
+    ("Arrow seeking uses whole beats during playback and subdivisions while paused", ShortcutRoutingTests.PlaybackSeeking),
     ("Shortcut routing exports from Timing while retaining modal focus", ShortcutRoutingTests.Export),
     ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),
     ("Timing setup drafts, shortcuts, clipboard, undo and narrow bilingual layout", TimingEditorTests.Run),

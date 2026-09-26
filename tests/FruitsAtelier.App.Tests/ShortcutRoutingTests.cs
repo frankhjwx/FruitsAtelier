@@ -3,6 +3,38 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class ShortcutRoutingTests
 {
+    public static void PlaybackSeeking()
+    {
+        var ui = new Ui();
+        ui.LoadDocument(Map());
+        var before = ui.View.Document.DeepClone();
+        double requested = -1;
+        ui.View.RequestSeek = time => requested = time;
+        foreach (bool timing in new[] { false, true })
+        {
+            ui.Key(timing ? 114 : 112);
+            foreach (int snap in new[] { 4, 8 })
+            {
+                ui.Key('0' + snap, shift: true);
+                foreach (bool playing in new[] { false, true })
+                foreach (bool shift in new[] { false, true })
+                foreach (int key in new[] { 37, 39 })
+                {
+                    ui.View.UpdateTransport(5000, 20000, true, playing, false, null, null);
+                    ui.Key(key, shift: shift);
+                    double expected = 5000 + (key == 37 ? -1 : 1) * (shift ? 4 : 1)
+                        * (playing ? 500 : snap == 4 ? 125 : 62.5);
+                    Check(ui.View.PlayheadMs == expected && requested == expected,
+                        "Arrow seeking uses full beats during playback and Snap subdivisions while paused.");
+                    Check(ui.View.AudioPlaying == playing && ui.View.SnapDivisor == snap,
+                        "Arrow seeking preserves playback and Snap settings.");
+                }
+            }
+        }
+        Check(ui.View.Document.ContentEquals(before) && !ui.View.IsDirty,
+            "Arrow seeking does not edit beatmap content.");
+    }
+
     public static void TimingPage()
     {
         var ui = new Ui();

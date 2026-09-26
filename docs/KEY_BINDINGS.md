@@ -75,8 +75,8 @@ change. Other shortcuts may be blocked until the draft or drag ends.
 | Home | Seek to song start without forcing playback. |
 | Z | Seek to the first object's start; if already at or before it, seek to zero. |
 | V / End | Seek to the end of the last object by start order; if already at or after it, seek to song end. |
-| Left / Right | Seek earlier / later by one current Snap subdivision. |
-| Shift+Left / Shift+Right | Seek four subdivisions. |
+| Left / Right | Seek earlier / later by one full beat during playback, or one current Snap subdivision while paused. |
+| Shift+Left / Shift+Right | Seek four full beats during playback, or four Snap subdivisions while paused. |
 | Up / Down | Previous / next timing point, including inherited points. |
 | Ctrl+Up / Ctrl+Down | Increase / decrease speed by 25 percentage points, within 10%–150%. |
 | Ctrl+Shift+Up / Ctrl+Shift+Down | Increase / decrease speed by 5 percentage points. |
