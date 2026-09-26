@@ -233,9 +233,13 @@ public sealed partial class EditorView
             c.Fill(new(bar.X, bar.Bottom - fill, bar.Width, fill), Accent, 5, opacity);
             bool active = channel == volumeChannel;
             if (active) c.StrokeOpacity(bar, Foreground, 3, 5, opacity);
-            c.TextOpacity(L.Get(labels[channel]), bar.X - 10, bar.Bottom + 8, 11,
+            string label = L.Get(labels[channel]);
+            string percentage = L.Get("ui.zoomPercent", value);
+            float labelX = bar.X + (bar.Width - c.MeasureText(label, 11, active)) / 2;
+            float percentageX = bar.X + (bar.Width - c.MeasureText(percentage, 11, active)) / 2;
+            c.TextOpacity(label, labelX, bar.Bottom + 8, 11,
                 active ? Accent : Foreground, bar.Width + 20, active, opacity);
-            c.TextOpacity(L.Get("ui.zoomPercent", value), bar.X + 2, bar.Bottom + 27, 11,
+            c.TextOpacity(percentage, percentageX, bar.Bottom + 27, 11,
                 active ? Foreground : Muted, bar.Width + 14, active, opacity);
         }
     }
