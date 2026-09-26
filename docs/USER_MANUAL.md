@@ -28,7 +28,7 @@ On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are
 
 | File | Use |
 | --- | --- |
-| `.osu` / `.osz` | Import Catch difficulties (Mode 2, osu versions 12-14); export version 14 `.osu`. |
+| `.osu` / `.osz` | Import Catch difficulties (Mode 2, osu versions 12-14 and stable-compatible lazer v128); export version 14 `.osu`. |
 | `.catchdiff` | Saved workspace projects and their editable difficulties. |
 | `.catchproj` | Open older editor projects. Subsequent saves use the workspace format. |
 | `.osk` | Import Catch skin assets. |

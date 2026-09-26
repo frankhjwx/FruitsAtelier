@@ -1,6 +1,6 @@
 # Stable files and editable projects
 
-This module independently reads stable `osu file format v12`, `v13` and `v14`, `Mode: 2`, and writes v14. It does not call a lazer encoder. Other input versions and unsupported object types are rejected.
+This module independently reads stable `osu file format v12`, `v13` and `v14`, plus stable-compatible lazer `v128`, `Mode: 2`, and writes v14. It does not call a lazer encoder. Other input versions and unsupported object types are rejected.
 
 - `OsuBeatmapReader.Read(text, sourcePath)` / `ReadFile(path)` returns a `MapDocument`. Original sections, timing line order, same-time points, hit samples, slider paths/repeats and spinner lines are retained. Video/storyboard text is retained but not loaded or rendered.
 - `OsuBeatmapWriter.Serialize(document, compensateTinyDroplets)` returns text, a parsed `ReadBack`, diagnostics and quantization/reconversion errors. `WriteFile` atomically writes after validation and reconversion, and refuses the imported source path. Legacy Sliders and spinners retain their original lines; modified fruit keeps its original flags, Y and sample suffix.
@@ -18,5 +18,5 @@ The format fixture harness includes independent timing/sample/curve cases and op
 - [Official `.osu` format specification](https://osu.ppy.sh/wiki/en/Client/File_formats/osu_%28file_format%29): sections, field types, slider span count, sample syntax and inherited timing.
 - [LegacyBeatmapDecoder.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs): legacy timing and difficulty decoding, including inherited NaN.
 - [LegacyBeatmapExporter.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Database/LegacyBeatmapExporter.cs): stable-compatible export floors control-point times, motivating integer restoration offsets that cannot collapse onto the slider head. This timing fix uses independently implemented logic; this MIT-licensed file was consulted as a reference, not copied.
-- [ConvertHitObjectParser.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Rulesets/Objects/Legacy/ConvertHitObjectParser.cs): v12–v14 coordinates pass through float then integer truncation. The reader preserves original spelling separately from this interpreted value.
+- [ConvertHitObjectParser.cs](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Rulesets/Objects/Legacy/ConvertHitObjectParser.cs): v12–v14 coordinates pass through float then integer truncation; v128 keeps the float. The reader preserves original spelling and accepts v128 only when coordinates are integer-valued and paths use supported syntax. See the [format contract](../../../docs/STABLE_FORMAT.md) for import boundaries.
 - [Conversion references](../Conversion/UPSTREAM.md): the shared actual Catch conversion and imported path implementation, its fixed revisions, limits and MIT notices.

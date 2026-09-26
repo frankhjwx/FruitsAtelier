@@ -16,7 +16,8 @@ if (args.Length == 2 && args[0] == "--import-roundtrip")
 
 var tests = new (string Name, Action Run)[]
 {
-    ("v12 and v13 imports preserve gameplay, optional fields and v14 export", OlderVersions),
+    ("v12, v13 and compatible v128 imports preserve gameplay, optional fields and v14 export", CompatibleVersions),
+    ("v128 rejects fractional coordinates and unsupported slider syntax", LazerExtensions),
     ("Workspace isolation, recovery, indexing and explicit export", WorkspaceTests.Run),
     ("Multi-difficulty projects preserve content, history and compatibility", MultiProjectTests.Run),
     ("Pre-rename schema 1 projects preserve user names and editable curves", RenameCompatibilityTests.Run),
@@ -156,9 +157,9 @@ static void OriginalRoundTrip()
     Check(r.ObjectSequenceMatches, "Unedited sequence changed"); Near(0, r.MaxConvertedXError); Near(0, r.MaxConvertedTimeErrorMs);
 }
 
-static void OlderVersions()
+static void CompatibleVersions()
 {
-    foreach (int version in new[] { 12, 13 })
+    foreach (int version in new[] { 12, 13, 128 })
     foreach (bool optional in new[] { false, true })
     {
         string text = Fixture();
@@ -179,6 +180,32 @@ static void OlderVersions()
         Check(result.ObjectSequenceMatches, "Old-format export changed object sequence");
         Near(0, result.MaxConvertedXError); Near(0, result.MaxConvertedTimeErrorMs);
     }
+}
+
+static void LazerExtensions()
+{
+    string text = Fixture().Replace("format v14", "format v128");
+    foreach (string coordinates in new[] { "123.5,176", "123,176.5" })
+        EachLanguage(() =>
+        {
+            try { OsuBeatmapReader.Read(text.Replace("123,176", coordinates)); }
+            catch (InvalidDataException error)
+            {
+                Check(error.Message.Contains(L.Get("core.reader.lazerCoordinates")), "Missing fractional-coordinate diagnostic");
+                return;
+            }
+            throw new Exception("Fractional lazer coordinates were truncated");
+        });
+    string slider = "osu file format v128\n[General]\nMode:2\n[TimingPoints]\n0,500\n[HitObjects]\n";
+    foreach (string line in new[]
+    {
+        "100.5,192,1000,2,0,L|200:192,1,100",
+        "100,192.5,1000,2,0,L|200:192,1,100",
+        "100,192,1000,2,0,L|200.5:192,1,100",
+        "100,192,1000,2,0,L|200:192.5,1,100",
+        "100,192,1000,2,0,B2|150:160|200:192,1,100",
+        "100,192,1000,2,0,B|150:160|L|200:192,1,100"
+    }) Throws(() => OsuBeatmapReader.Read(slider + line), "unsupported lazer path");
 }
 
 static void EditFruit()
@@ -424,7 +451,7 @@ static void InvalidProjects()
 static void InvalidBeatmaps()
 {
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("Mode: 2", "Mode: 0")), "non-Catch input");
-    foreach (string version in new[] { "v11", "v15", "v128", "v12x" })
+    foreach (string version in new[] { "v11", "v15", "v127", "v129", "v12x", "v128x" })
         Throws(() => OsuBeatmapReader.Read(Fixture().Replace("format v14", "format " + version)), "unsupported version");
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("250,21,8", "250,128,8")), "unknown object");
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("-100,500,4", "-100,NaN,4")), "NaN red timing");

@@ -28,6 +28,7 @@ public static class OsuBeatmapReader
         using var reader = new StringReader(text);
         string? line;
         bool header = false;
+        bool lazer = false;
         int lineNumber = 0, objectOrder = 0, timingOrder = 0;
         while ((line = reader.ReadLine()) is not null)
         {
@@ -36,8 +37,9 @@ public static class OsuBeatmapReader
             if (!header)
             {
                 if (trimmed.Length == 0) continue;
-                if (trimmed is not ("osu file format v12" or "osu file format v13" or "osu file format v14"))
+                if (trimmed is not ("osu file format v12" or "osu file format v13" or "osu file format v14" or "osu file format v128"))
                     throw new InvalidDataException(L.Get("core.reader.formatVersion"));
+                lazer = trimmed == "osu file format v128";
                 header = true;
                 continue;
             }
@@ -52,7 +54,7 @@ public static class OsuBeatmapReader
             try
             {
                 if (section.Name == "TimingPoints") document.TimingPoints.Add(ParseTiming(line, timingOrder++));
-                else if (section.Name == "HitObjects") ParseObject(document, line, objectOrder++);
+                else if (section.Name == "HitObjects") ParseObject(document, line, objectOrder++, lazer);
             }
             catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException or IndexOutOfRangeException or InvalidDataException)
             { throw new InvalidDataException(L.Get("core.reader.lineError", lineNumber, ex.Message), ex); }
@@ -123,11 +125,11 @@ public static class OsuBeatmapReader
         return point;
     }
 
-    internal static void ParseObject(MapDocument document, string line, int order)
+    internal static void ParseObject(MapDocument document, string line, int order, bool lazer = false)
     {
         string[] p = line.Split(',');
         if (p.Length < 5) throw new InvalidDataException(L.Get("core.reader.objectFields"));
-        double x = LegacyCoordinate(p[0]), y = LegacyCoordinate(p[1]), time = Number(p[2]);
+        double x = Coordinate(p[0]), y = Coordinate(p[1]), time = Number(p[2]);
         int type = Integer(p[3]);
         _ = Integer(p[4]);
         int kind = type & (1 | 2 | 8 | 128);
@@ -148,7 +150,7 @@ public static class OsuBeatmapReader
             {
                 string[] coords = control.Split(':');
                 if (coords.Length != 2) throw new InvalidDataException(L.Get("core.reader.coordinates"));
-                slider.ControlPoints.Add(new(LegacyCoordinate(coords[0]), LegacyCoordinate(coords[1])));
+                slider.ControlPoints.Add(new(Coordinate(coords[0]), Coordinate(coords[1])));
             }
             document.ImportedSliders.Add(slider);
         }
@@ -158,6 +160,15 @@ public static class OsuBeatmapReader
             document.BananaShowers.Add(new BananaShower { TimeMs = time, EndTimeMs = Number(p[5]), SourceOrder = order, OriginalLine = line });
         }
         else throw new InvalidDataException(L.Get("core.reader.objectType", type));
+
+        int Coordinate(string value)
+        {
+            // v128 retains fractional coordinates; truncating them would change the imported path.
+            float coordinate = (float)Number(value);
+            if (lazer && coordinate != MathF.Truncate(coordinate))
+                throw new InvalidDataException(L.Get("core.reader.lazerCoordinates"));
+            return checked((int)coordinate);
+        }
     }
 
     public static void Validate(MapDocument document)

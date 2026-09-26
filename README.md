@@ -20,7 +20,7 @@ An osu!catch beatmap editor for Windows and macOS. Create patterns, reshape slid
 - **Multiple difficulties.** Switch between difficulties in tabs, view star ratings, save editable projects, and export `.osu` files or new difficulties to osu!stable.
 - **Skins and languages.** Use osu!stable skins or import `.osk` files. The interface supports English and Simplified Chinese.
 
-The editor reads Catch `.osu` files in versions 12-14 and exports version 14. Video and storyboard playback are not available in 0.8.
+The editor reads Catch `.osu` files in versions 12-14 and stable-compatible lazer v128 and exports version 14. Video and storyboard playback are not available in 0.8.
 
 ## Get started
 
