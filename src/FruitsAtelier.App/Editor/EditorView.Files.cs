@@ -19,6 +19,7 @@ public sealed partial class EditorView
     public string AudioNotice { get; private set; } = L.Get("editor.audio.notLoaded");
     public double AudioDurationMs { get; private set; }
     private bool initializeTransport;
+    private int? pauseSnapDivisor;
     private double playbackLineFromBottom = 0.25;
     private bool pinPlayhead = true;
     public double TimelineDurationMs => Math.Max(Document.DurationMs, AudioDurationMs);
@@ -37,6 +38,7 @@ public sealed partial class EditorView
     {
         project.Validate();
         CloseSongSetup();
+        CloseTimingSetup(); TimingPageVisible = false;
         TimeJumpVisible = false;
         StreamDialogVisible = false;
         CloseVolumeDialog();
@@ -65,6 +67,7 @@ public sealed partial class EditorView
 
     private void ResetDifficultyView()
     {
+        pauseSnapDivisor = null;
         nextFruitNewCombo = false;
         nextSounds = 0; soundEdge = null;
         var document = Document;
@@ -150,7 +153,8 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
-        if (SongSetupVisible || DistanceSnapDialogVisible) return false;
+        if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
+        if (!CommitTimingField()) return false;
         if (SliderDialogVisible || ErrorVisible) return false;
         if (draftBanana != Guid.Empty)
         {
@@ -192,17 +196,25 @@ public sealed partial class EditorView
         if (ready && drag != DragKind.Timeline && !IsTestplaying)
             playhead = Math.Clamp(positionMs, 0, TimelineDurationMs);
         if (playing || ready && !wasReady) FollowPlayhead();
-        if (IsTestplaying && testplayWithAudio)
+        if (testplay is not null && testplayWithAudio)
         {
             if (testplayDriver is null)
                 testplay!.UpdateAudio(positionMs, transportSampleAt, AudioDurationMs, ready, playing, loading,
                     error is not null, outputBufferAheadMs);
             AdvanceTestplay();
         }
+        if (!ready || loading || error is not null || IsTestplaying) pauseSnapDivisor = null;
+        if (!playing && pauseSnapDivisor is { } pauseDivisor)
+        {
+            pauseSnapDivisor = null;
+            if (snap && !LibraryVisible && !librarySettingsOpen && !SongSetupVisible && !TimingModal)
+                SeekTo(Math.Clamp(TimingMap.Snap(Document, positionMs, pauseDivisor), 0, AudioDurationMs));
+        }
     }
 
     private void SeekTo(double time)
     {
+        pauseSnapDivisor = null;
         wheelPlayhead = double.NaN;
         playhead = Math.Clamp(time, 0, TimelineDurationMs);
         FollowPlayhead();
@@ -220,7 +232,12 @@ public sealed partial class EditorView
 
     private void TogglePlayback()
     {
-        if (AudioReady) RequestTogglePlayback?.Invoke();
+        if (AudioReady)
+        {
+            // Arm before the callback: hosts may publish the confirmed pause synchronously.
+            pauseSnapDivisor = AudioPlaying && snap ? divisor : null;
+            RequestTogglePlayback?.Invoke();
+        }
         else StatusMessage = AudioLoading ? L.Get("editor.audio.stillLoading") : L.Get("editor.audio.loadFromFileMenu");
     }
 }

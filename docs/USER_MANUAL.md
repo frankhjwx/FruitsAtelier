@@ -1,6 +1,6 @@
 # FruitsAtelier
 
-User Manual | Version 0.8.2
+User Manual | Version 0.9.0
 
 ## 01 / Getting started
 
@@ -11,7 +11,7 @@ FruitsAtelier is an osu!catch beatmap editor for Windows and macOS. Use it to ed
 1. On Windows, extract the entire release ZIP and open `FruitsAtelier.App.exe`. Keep the DLLs and assets beside it. No separate .NET installation is needed. Windows 10/11 x64 and DirectX 11 are required; Windows N needs the Media Feature Pack for MP3 playback.
 2. In **Library > Settings**, choose a workspace for your projects. You may also select your osu!stable installation folder to use its Songs and Skins folders. Keep the workspace separate from Songs.
 3. Right-click the library to import a folder or a beatmap/OSZ, or choose **New project**. Double-click a library entry to start or continue editing.
-4. Choose the interface language in **Settings → Appearance** and use the top-bar Skin control to set up the display. Testplay movement keys can be changed in Settings.
+4. Choose the interface language in **Settings → Appearance** and select a skin using **Settings → Skins** or the top-bar Skin control. Both skin selectors offer the default skin, installed skins, and skin import; selection applies immediately and is saved automatically. Testplay movement keys can be changed in Settings.
 
 On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are in the repository's macOS guide. Command can be used in place of Ctrl for editor shortcuts.
 
@@ -28,7 +28,7 @@ On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are
 
 | File | Use |
 | --- | --- |
-| `.osu` / `.osz` | Import Catch difficulties (Mode 2, osu versions 12-14); export version 14 `.osu`. |
+| `.osu` / `.osz` | Import Catch difficulties (Mode 2, osu versions 12-14 and stable-compatible lazer v128); export version 14 `.osu`. |
 | `.catchdiff` | Saved workspace projects and their editable difficulties. |
 | `.catchproj` | Open older editor projects. Subsequent saves use the workspace format. |
 | `.osk` | Import Catch skin assets. |
@@ -38,9 +38,21 @@ On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are
 
 ### Navigate and select
 
-The main canvas shows horizontal placement and note timing; later notes are higher on the screen. On the canvas and both timelines, each wheel notch moves one full beat (1/1) during playback or one current Snap subdivision while paused: up to the preceding grid line and down to the following one, regardless of zoom. The canvas and playhead move together, including while paused. Middle-drag pans, and Ctrl+wheel zooms. Click empty canvas in Select mode to seek. The bottom timeline also supports seeking; click the timestamp above its left-side Play, Pause, Stop, and Testplay controls to jump to an exact time. Stop pauses playback and returns to the start. Hover over the timeline to reveal the fixed bookmark toolbar above it: add or remove a bookmark at the playhead, seek to the previous or next bookmark, or reset all bookmarks. Bookmark edits can be undone.
+The main canvas shows horizontal placement and note timing; later notes are higher on the screen. On the canvas and both timelines, each wheel notch moves one full beat (1/1) during playback or one current Snap subdivision while paused: up to the preceding grid line and down to the following one, regardless of zoom. The canvas and playhead move together, including while paused. Middle-drag pans, and Alt+wheel over the canvas zooms. Ctrl+wheel changes Snap; Shift+wheel seeks four times as far. Click empty canvas in Select mode to clear selection without seeking. The bottom timeline also supports seeking; click the timestamp above its left-side Play, Pause, Stop, and Testplay controls to jump to an exact time. Stop pauses playback and returns to the start. Hover over the timeline to reveal the fixed bookmark toolbar above it: add or remove a bookmark at the playhead, seek to the previous or next bookmark, or reset all bookmarks. Bookmark edits can be undone. The canvas left axis displays blue bookmark markers and red timing markers; faint bookmark lines cross the canvas. Dense markers share display rows and reveal counts and time ranges on hover without changing their stored timestamps. Ordinary canvas time labels are blue.
 
 The Timing menu can set the current position as the song preview point. A long yellow line marks it on the bottom timeline. Red and green timing marks appear on the upper object timeline, while shaded break intervals appear there and on the canvas's left time axis. To insert a break, place the playhead between two objects with enough space and click **Insert Break Time** next to Movement Analysis. Undo removes the inserted break.
+
+Choose **Timing Panel** from the **Details Panel** header dropdown, or press
+**F3**: edit BPM, offset and Slider Tick Rate, or tap with
+**T** during playback and apply the measured tempo. The metronome plays each beat;
+hold **Ctrl** to hear the current Snap subdivisions. **F1** returns to Details. Notes stay visible while Timing plays only metronome
+ticks alongside the music.
+**F6 / Timing Setup** opens red/green control-point editing, sample settings,
+volume and Kiai. OK applies the draft as one undo step; Cancel discards it.
+The apply options can scale or resnap objects, recalculate slider lengths, and
+adjust bookmarks and the preview point. See [Timing editing](EDITOR_UI.md#timing-editing)
+for selection, clipboard, section commands and transformation rules.
+
 When the playhead is inside kiai time, a small Kiai badge appears in the upper-left of the editing plot. It brightens on each full beat and fades until the next beat.
 
 Break shading on the upper timeline extends lightly to the notes before and after the stored break. Drag either edge of its darker center to adjust the range; with Snap on, the edge follows the current beat subdivision. Shortening it below 400 ms removes it; Esc cancels a drag, and Undo restores the previous range.
@@ -71,7 +83,7 @@ Hold the mouse button on an imported slider until its actions appear, then choos
 
 ### Fruit streams and snapping
 
-Select sliders and press **Ctrl+Shift+F**, choose a beat subdivision, and confirm to create a fruit stream. It remains an editable slider shape in the project and exports as individual fruits. Hold on a stream to change snapping or convert it back to a slider.
+Select sliders and press **Ctrl+Shift+F**, choose a beat subdivision, and confirm to create a fruit stream. It remains an editable slider shape in the project and exports as individual fruits. Click a stream fruit once to select the whole slider, which can then be dragged in time and X. Click a fruit again without dragging to select that event; its bright outer ring shows which fruit will move when dragged horizontally. Hold on a stream to change snapping or convert it back to a slider.
 
 Beat Snap offers 1/1 through 1/9, plus 1/12 and 1/16. Grid Snap controls horizontal placement. Distance Snap spaces objects relative to the previous object; use Configure DS… to edit its multipliers, or hold Alt to temporarily invert snapping. New Combo and Whistle/Finish/Clap are available on the right toolbar. Selecting a slider edge lets you edit that edge's hitsound.
 
@@ -85,7 +97,7 @@ Open **Catch Preview** using the button on the right edge of the canvas. Drag th
 
 ### Try the map
 
-Press **F5** to testplay from the current position using the selected preview mod and speed. Move with **Left / Right**, and hold **Shift** to dash. Catch fruits and droplets to build combo. **Tab** toggles autoplay; **Ctrl+P** pauses or resumes.
+Press **F5** to testplay using the selected preview mod and speed. Testplay immediately begins one second before the current position by default; change the lead-in from 0 to 5 seconds in **Settings > Testplay keys**. A lead-in that reaches before the song starts begins at zero. Esc returns to the selected position. Move with **Left / Right**, and hold **Shift** to dash. Catch fruits and droplets to build combo. **Tab** toggles autoplay; **Ctrl+P** pauses or resumes.
 Press **Ctrl+B** during testplay to add a bookmark at the current position. The shortcut appears with the other testplay controls in the upper-left corner.
 
 **F1 / Esc** exits to the testplay start; **F2** exits at the current position. Losing window focus releases held keys while playback continues. A movement or dash key exits autoplay; a centered banner briefly announces entering or leaving autoplay. Testplay does not change your objects or undo history. Change movement and dash bindings in **Library > Settings**.
@@ -103,15 +115,17 @@ The workspace contains a `project.catchdiff` manifest and separate `.catchdiff` 
 | Action | Result |
 | --- | --- |
 | Ctrl+S: Save | Saves the project's editable difficulty data. Workspace-only projects offer an optional Songs export after saving; choosing to keep the project in the workspace completes the save. For projects already in Songs, an imported difficulty’s first save opens export choices, and subsequent saves update its linked `.osu`. |
-| Ctrl+E: Export | Opens choices for the active difficulty: a standalone `.osu`, overwriting an associated difficulty, or creating a new difficulty in Songs. |
+| Ctrl+Alt+E: Export | Opens choices for the active difficulty: a standalone `.osu`, overwriting an associated difficulty, or creating a new difficulty in Songs. |
 
 Exporting a new difficulty to Songs saves your edits in a new workspace difficulty and activates it. The original difficulty keeps its last saved content. Exported `.osu` files do not preserve all editor-specific controls, so keep the workspace project for further editing.
 
 Use **Library** or Esc to return to the library. Unsaved work prompts for Save, Discard or Cancel. Missing-resource messages indicate that a referenced file needs to be restored or relinked.
 
-Version 0.8 does not provide timing-point creation, video or storyboard playback. Imported timing and slider velocity are supported. Testplay is for checking patterns; star ratings and exported behavior may differ between osu! versions.
+Version 0.9 does not provide video or storyboard playback. Imported timing and slider velocity are supported. Testplay is for checking patterns; star ratings and exported behavior may differ between osu! versions.
 
 ## 04 / Keyboard reference
+
+See the [complete keyboard and mouse shortcut manual](KEY_BINDINGS.md) for context-specific bindings, dialogs and current limitations, and the [osu!stable compatibility review](KEY_BINDINGS_REVIEW.md) for differences and possible additions.
 
 Shortcuts below apply while editing, outside text fields and dialogs. On macOS, Command also works for Ctrl shortcuts; Backspace also deletes. Some Mac keyboards require Fn for function keys.
 
@@ -119,9 +133,10 @@ Shortcuts below apply while editing, outside text fields and dialogs. On macOS, 
 
 | Keys | Action |
 | --- | --- |
-| Ctrl+O | Open a beatmap, OSZ or older project. |
+| Ctrl+O | Choose a difficulty in the current project. |
+| Ctrl+Shift+O | Open a beatmap, OSZ or older project. |
 | Ctrl+S | Save project. |
-| Ctrl+E | Open export choices. |
+| Ctrl+Alt+E | Open export choices. |
 | Ctrl+Tab / Ctrl+Shift+Tab | Next / previous difficulty. |
 | 1 / F / B / N | Select / Fruit / FSlider / Banana tools. |
 | 1 / 2 / 3 / 4 | The same four tools. |
@@ -147,9 +162,14 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Z / V (also End) | First object's start / last object's end; repeat for song start / end. |
 | Left / Right | Seek one beat subdivision; Shift multiplies by four. |
 | Up / Down | Previous / next timing point. |
-| Ctrl+Up / Ctrl+Down | Next faster / slower playback speed (10%–150%). |
+| Ctrl+Up / Ctrl+Down | Increase / decrease playback speed by 25 percentage points (10%–150%). |
+| Ctrl+Shift+Up / Ctrl+Shift+Down | Increase / decrease playback speed by 5 percentage points. |
 | Wheel / middle-drag | Wheel up moves the playhead and canvas earlier; down moves both later by the same relative amount. Middle-drag pans the canvas. |
-| Ctrl+wheel | Zoom the canvas, or the object timeline under the pointer. |
+| Ctrl+wheel | Change Snap across all supported subdivisions. |
+| Alt+wheel (canvas) | Zoom the canvas. |
+| Alt+wheel (upper timeline) | Zoom the object timeline. |
+| Shift+wheel | Seek four times as far. |
+| Ctrl+Alt+wheel (canvas / upper timeline) | Cycle placement tools. |
 | Click the current timestamp | Open Jump to time; accepts timestamps or milliseconds. |
 
 ## 05 / Slider, snap and testplay keys
@@ -159,7 +179,11 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Keys | Action |
 | --- | --- |
 | Enter / Esc | Finish / cancel a slider draft. |
-| Ctrl+I | Insert a point on the curve under the pointer. |
+| F3 / F1 | Open Timing / return to Compose. |
+| F6 | Open Timing and Control Points. |
+| Ctrl+P / Ctrl+Shift+P | Add a red / green timing point. |
+| Ctrl+I | Delete the current timing section. |
+| Ctrl+Shift+I | Insert a point on the curve under the pointer. |
 | Ctrl+L | Toggle the selected point between straight and curved. |
 | Ctrl+= / Ctrl+- | Add / remove a reverse. |
 | Ctrl+G | Reverse the selected FSlider's path direction. |
@@ -171,7 +195,7 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Keys | Action |
 | --- | --- |
 | Shift+1 through Shift+9 | Choose beat subdivision 1/1 through 1/9. |
-| Ctrl+M | Cycle all beat subdivisions, including 1/12 and 1/16. |
+| Ctrl+M | Cycle 1/3, 1/4, 1/6 and 1/8; enter at 1/3 from another divisor. |
 | Ctrl+1 / 2 / 3 / 4 | Set horizontal grid size to 4 / 8 / 16 / 32. |
 | G / T | Cycle grid size / toggle Grid Snap. |
 | Y | Toggle Distance Snap. |
@@ -199,7 +223,9 @@ For detailed editing behavior, see `docs/EDITOR_UI.md` in the repository. Projec
 
 ### Audio volume
 
-Open **Library > Settings** to adjust **All**, **Song** and **Hitsound** from 0% to 100%. Values apply immediately and are saved when you release the slider. All multiplies both other channels. Setting Song to 0% leaves hitsounds audible; setting Hitsound to 0% leaves the song audible. Custom skin samples apply in both preview and testplay, with beatmap custom samples taking priority.
+In the editor, click the bottom-right **Volume** button or **View → Volume** for three vertical bars: **Master**, **Music**, **Effect**. The active bar has a bright outline and bold label. Hover a bar to select it, scroll over the controls to adjust the selected channel by 5%, or drag a bar. Use **Alt+Left/Right** to choose a channel, or **Alt+Up/Down** to adjust it by 5%. During testplay, Alt+wheel shows the bars and adjusts the selected channel by 5% per wheel event; Alt+arrow shortcuts also work without moving the catcher. The controls fade in, stay visible while hovered or adjusted, and wait 0.8 seconds before fading out. In the editor, Esc closes them. Drawing drafts remain active.
+
+Open **Settings > Audio** from the Library or editor to adjust **All**, **Song** and **Hitsound** from 0% to 100%. These controls share values with the existing volume controls. Values apply immediately and are saved when you release the slider. All multiplies both other channels. Setting Song to 0% leaves hitsounds audible; setting Hitsound to 0% leaves the song audible. Custom skin samples apply in both preview and testplay, with beatmap custom samples taking priority.
 
 ### Application updates (Windows)
 

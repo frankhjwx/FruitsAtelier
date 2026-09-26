@@ -4,8 +4,11 @@ using NAudio.Wave;
 namespace FruitsAtelier.App.Audio;
 
 /// <summary>A bounded polyphonic mixer for the music output.</summary>
-internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnosticDirectory = null) : ISampleProvider, IDisposable
+internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnosticDirectory = null,
+    Func<IWavePlayer>? createAuditionOutput = null) : ISampleProvider, IDisposable
 {
+    private HitsoundPlayer? auditionMixer;
+    private IWavePlayer? auditionOutput;
     private readonly AudioDiagnosticLog diagnostics = new(diagnosticDirectory);
     private readonly object gate = new();
     private readonly Dictionary<string, float[]> cache = new();
@@ -51,7 +54,35 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
         if (unavailable) return;
         Queue(sound);
     }
-    internal ISampleProvider MixWithMusic(ISampleProvider music, double startMs, double speed = 1) => new MusicMixer(this, music, startMs, speed);
+    public void PlayAudition(Hitsound sound)
+    {
+        if (unavailable) return;
+        // Settings pause the music transport, so auditions need their own device clock.
+        if (auditionOutput == null)
+        {
+            var mixer = new HitsoundPlayer(log);
+            var output = createAuditionOutput?.Invoke()
+                ?? new WasapiOut(NAudio.CoreAudioApi.AudioClientShareMode.Shared, true, 10);
+            try { output.Init(new NAudio.Wave.SampleProviders.SampleToWaveProvider(mixer)); }
+            catch { output.Dispose(); mixer.Dispose(); throw; }
+            auditionMixer = mixer;
+            auditionOutput = output;
+        }
+        auditionMixer!.Volume = Volume;
+        auditionMixer.PlayImmediate(sound);
+        auditionOutput.Play();
+    }
+    internal ISampleProvider MixWithMusic(ISampleProvider music, double startMs, double speed = 1)
+    {
+        lock (gate)
+        {
+            // Cached frame positions belong to the old output's origin and tempo.
+            voices.Clear();
+            scheduled.RemoveAll(voice => voice.TimeMs < startMs);
+            foreach (var voice in scheduled) voice.StartFrame = null;
+        }
+        return new MusicMixer(this, music, startMs, speed);
+    }
 
     private sealed class MusicMixer(HitsoundPlayer owner, ISampleProvider music, double startMs, double speed) : ISampleProvider
     {
@@ -187,11 +218,11 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
         for (int i = offset; i < offset + count; i++) buffer[i] = Math.Clamp(buffer[i], -1, 1);
         return count;
     }
-    public void Stop() { lock (gate) { voices.Clear(); scheduled.Clear(); } }
+    public void Stop() { lock (gate) { voices.Clear(); scheduled.Clear(); } auditionMixer?.Stop(); }
     public void Dispose()
     {
         unavailable = true;
         try { Stop(); }
-        finally { diagnostics.Dispose(); }
+        finally { auditionOutput?.Dispose(); auditionMixer?.Dispose(); diagnostics.Dispose(); }
     }
 }

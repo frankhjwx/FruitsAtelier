@@ -66,7 +66,7 @@ internal static class ProjectTests
                 for (int index = 0; index < 3; index++)
                 {
                     using var writer = new StreamWriter(zip.CreateEntry($"diff{index}.osu").Open());
-                    writer.Write($"osu file format v14\n[General]\nMode:{(index == 2 ? 0 : 2)}\n[Metadata]\nTitle:Song\nVersion:Diff{index}\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,1,0,0:0:0:0:");
+                    writer.Write($"osu file format v{(index == 0 ? 14 : 128)}\n[General]\nMode:{(index == 2 ? 0 : 2)}\n[Metadata]\nTitle:Song\nVersion:Diff{index}\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,1,0,0:0:0:0:");
                 }
             }
             var project = BeatmapArchive.OpenProject(archive, Path.Combine(folder, "cache"));

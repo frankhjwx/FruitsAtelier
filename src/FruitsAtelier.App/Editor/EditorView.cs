@@ -85,8 +85,8 @@ public sealed partial class EditorView
     public Action? RequestClose { get; set; }
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
-    public bool IsEditingText => SongSetupVisible && songField.Length > 0 || DistanceSnapDialogVisible && dsBaseFocused || DistanceEditing || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
-    public bool WantsCapture => textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || SliderHoldNeedsRedraw || sliderHoldConsumed;
+    public bool IsEditingText => timingField.Length > 0 || SongSetupVisible && songField.Length > 0 || DistanceSnapDialogVisible && dsBaseFocused || DistanceEditing || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
+    public bool WantsCapture => timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || SliderHoldNeedsRedraw || sliderHoldConsumed;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;
     public double PlayheadMs => playhead;
@@ -280,22 +280,26 @@ public sealed partial class EditorView
 
     private void ChangeTool(Tool next)
     {
+        bool finishingSlider = draftTrack != Guid.Empty;
         if (draftBanana != Guid.Empty)
         {
             history.Cancel();
             draftBanana = Guid.Empty;
             Select(Guid.Empty);
         }
-        if (draftTrack != Guid.Empty && next == Tool.Slider) return;
         if (draftTrack != Guid.Empty) FinishCurve();
-        if (draftTrack != Guid.Empty) return;
+        if (draftTrack != Guid.Empty) CancelInteraction();
         tool = next;
         legacyDragStart = null;
         if (next == Tool.Slider)
         {
-            if (SelectedImportedSlider is not null) EditImportedSlider();
-            if (SelectedTrack is { } track) SelectAnchors(track, anchorSelection.ToArray());
-            else Select(Guid.Empty);
+            if (finishingSlider) Select(Guid.Empty);
+            else
+            {
+                if (SelectedImportedSlider is not null) EditImportedSlider();
+                if (SelectedTrack is { } track) SelectAnchors(track, anchorSelection.ToArray());
+                else Select(Guid.Empty);
+            }
         }
         else if (anchorSelection.Count > 0 && SelectedTrack is { } parent) SelectObjects([parent.Id]);
         menu = -1;
@@ -367,6 +371,8 @@ public sealed partial class EditorView
         var track = Document.Tracks.First(t => t.Id == draftTrack);
         if (LegacyMode && legacyDraft is not null && !legacyPreviewValid) { StatusMessage = L.Get("editor.status.needTwoAnchors"); return; }
         if (track.Nodes.Count < 2) { StatusMessage = L.Get("editor.status.needTwoAnchors"); return; }
+        var head = track.Nodes[0];
+        Document.Fruits.RemoveAll(fruit => fruit.TimeMs == head.TimeMs && fruit.X == head.X);
         Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
         history.Commit();
         legacyDraft = null; legacyPreviewVertices = null;

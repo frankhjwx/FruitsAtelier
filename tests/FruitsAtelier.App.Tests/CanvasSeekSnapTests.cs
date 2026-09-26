@@ -17,8 +17,8 @@ internal static class CanvasSeekSnapTests
         {
             ui.SetSnapDivisor(divisor);
             ui.ClickMap(raw, 480);
-            Near(expected, ui.View.PlayheadMs);
-            Near(expected, lastSeek);
+            Near(0, ui.View.PlayheadMs);
+            Near(-1, lastSeek);
         }
         if (ui.View.IsDirty) throw new Exception("Snapped navigation edited the beatmap.");
         ui.View.UpdateTransport(2000, 10000, true, true, false, null, "fixture.wav"); ui.Paint();
@@ -28,17 +28,17 @@ internal static class CanvasSeekSnapTests
         if (!ui.View.AudioPlaying || ui.View.IsDirty) throw new Exception("Blank canvas click interrupted playback or edited content.");
         ui.View.UpdateTransport(2100, 10000, true, false, false, null, "fixture.wav"); ui.Paint();
         ui.ClickMap(2217, 480);
-        Near(2200, lastSeek);
+        Near(-1, lastSeek);
     }
 
     public static void FreeMode()
     {
         var ui = Create();
         ui.ClickMap(1137.25, 480);
-        Near(1125, ui.View.PlayheadMs);
+        Near(0, ui.View.PlayheadMs);
         var timeline = ui.View.ObjectTimelineBounds;
         ui.Click(timeline.X + timeline.Width * .75f, timeline.Bottom - 3);
-        if (ui.View.PlayheadMs <= 0 || ui.View.IsDirty) throw new Exception("Timeline seeks without modifying content.");
+        if (ui.View.PlayheadMs != 0 || ui.View.IsDirty) throw new Exception("Empty object timeline clicks must preserve time and content.");
     }
 
     private static Ui Create()

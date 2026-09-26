@@ -11,7 +11,9 @@ public sealed partial class EditorView
     public bool VolumeDialogVisible { get; private set; }
     private Rect VolumeDialogBounds => new((width - Math.Min(540, width - 32)) / 2, (height - 260) / 2, Math.Min(540, width - 32), 260);
     public Rect VolumeSliderBounds(int channel)
-        => new(VolumeDialogBounds.X + 24, VolumeDialogBounds.Y + 84 + channel * 64, VolumeDialogBounds.Width - 48, 24);
+        => SettingsAudioVisible
+            ? new(SettingsContentX, SettingsTop + 174 + channel * 64, Math.Min(520, SettingsRight - SettingsContentX - 32), 24)
+            : new(VolumeDialogBounds.X + 24, VolumeDialogBounds.Y + 84 + channel * 64, VolumeDialogBounds.Width - 48, 24);
 
     internal void OpenVolumeDialog()
     {
@@ -60,7 +62,7 @@ public sealed partial class EditorView
 
     private bool BeginVolumeDrag(float x, float y, int button)
     {
-        if (!VolumeDialogVisible || button != 0) return false;
+        if ((!VolumeDialogVisible && !SettingsAudioVisible) || button != 0) return false;
         for (int i = 0; i < 3; i++)
             if (VolumeSliderBounds(i).Contains(x, y))
             { volumeDrag = i; libraryField = bindingCapture = -1; UpdateVolumeDrag(x); return true; }

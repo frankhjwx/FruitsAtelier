@@ -27,6 +27,7 @@ The AR/preempt and field geometry calculations refer to ppy/osu commit `48c4800e
 
 All osu! references below use that same commit of [ppy/osu](https://github.com/ppy/osu/tree/48c4800e3ae4ee752452cdff83bd3787ccf3105f):
 
+- `src/FruitsAtelier.Core/Formats/OsuBeatmapReader.cs`: v128 coordinate and slider syntax boundaries reference `osu.Game/Rulesets/Objects/Legacy/ConvertHitObjectParser.cs`. The compatibility checks are independently implemented; the source was consulted, not copied. Import boundaries are described in [the format contract](docs/STABLE_FORMAT.md).
 - `src/FruitsAtelier.App/Editor/EditorView.NoteSnap.cs`: nearest beat subdivision recognition adapts `GetClosestBeatDivisor` and its grid calculation from `osu.Game/Beatmaps/ControlPoints/ControlPointInfo.cs`. Equal-distance comparisons use the `1e-7` double precision from osu!framework commit `e01524d1492885d8b00ac88b38e7963d76d7d454`, `osu.Framework/Utils/Precision.cs`. MIT texts are retained in `src/FruitsAtelier.Core/Conversion/LICENCE.osu.txt` and `LICENCE.osu-framework.txt`.
 - `src/FruitsAtelier.Core/Conversion`: slider events, legacy RNG and Catch stream conversion adapted from `SliderEventGenerator.cs`, `JuiceStream.cs`, `JuiceStreamPath.cs`, `SliderPath.cs`, `LegacyRulesetExtensions.cs`, `LegacyRandom.cs`, `CatchBeatmapProcessor.cs` and `CatchBeatmap.cs`. Full source paths and boundaries: [UPSTREAM.md](src/FruitsAtelier.Core/Conversion/UPSTREAM.md); MIT text retained in `LICENCE.osu.txt`.
 - `src/FruitsAtelier.Core/Gameplay`: Catch size, hyperdash, automatic preview movement and Hard Rock preview position rules from `osu.Game/Rulesets/Objects/Legacy/LegacyRulesetExtensions.cs`, `osu.Game.Rulesets.Catch/UI/Catcher.cs`, `osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapProcessor.cs` and `osu.Game/Utils/LegacyRandom.cs` and `osu.Game.Rulesets.Catch/Replays/CatchAutoGenerator.cs`; MIT text retained in `LICENSE.osu.txt`. Shared preview and testplay plate stacking and release trajectories also follow `Catcher.cs`, `CaughtObject.cs` and `CaughtDroplet.cs`; combo-end catch/miss release selection follows `CatchJudgement.cs`. Preview difficulty multipliers follow `ModEasy.cs`, `ModHardRock.cs` and `CatchModHardRock.cs` from the same revision.
@@ -142,6 +143,15 @@ Hitsound timing selection follows `LegacyBeatmapDecoder.applySamples` and
 `48c4800e3ae4ee752452cdff83bd3787ccf3105f`: 5 ms edge sample tolerance and
 slider-start samples for droplets. The upstream MIT licence is retained in
 `src/FruitsAtelier.Core/Conversion/LICENCE.osu.txt`.
+
+## Standard skin and editor timeline references
+
+Timeline ordering, standard circle composition, padding and HitCircle font scaling reference ppy/osu
+revision `48c4800e3ae4ee752452cdff83bd3787ccf3105f` (ppy Pty Ltd, MIT).
+Source files and the independently implemented editor behaviour are listed in
+[osu!lazer references](docs/LAZER_REFERENCE.md#upper-object-timeline).
+The retained upstream license is `src/FruitsAtelier.Core/Conversion/LICENCE.osu.txt`.
+No additional upstream artwork is bundled by this implementation.
 
 ## Default hitsound samples
 

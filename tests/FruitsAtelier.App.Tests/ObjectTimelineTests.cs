@@ -3,6 +3,28 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class ObjectTimelineTests
 {
+    public static void Stacking()
+    {
+        var map = new MapDocument { DurationMs = 10000 };
+        map.Fruits.AddRange([new() { TimeMs = 1000, X = 100, SourceOrder = 0 }, new() { TimeMs = 1010, X = 200, SourceOrder = 1 }]);
+        var ui = new Ui(false); ui.LoadDocument(map);
+        var r = ui.View.ObjectTimelineBounds;
+        float X(double time) => r.X + (float)((time - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+        void CheckOrder()
+        {
+            var labels = ui.Canvas.Texts.Where(t => t.Y == r.Y + 19 && t.Value is "1" or "2").ToArray();
+            if (!labels.Select(t => t.Value).SequenceEqual(new[] { "2", "1" })) throw new Exception("Earlier timeline numbers do not cover later objects.");
+            var bodies = ui.Canvas.Circles.Where(c => c.Y == r.Y + 27 && c.Radius == 19 && c.Filled).ToArray();
+            if (bodies.Length != 2 || bodies[0].X <= bodies[1].X) throw new Exception("Earlier circle is not painted last.");
+        }
+        CheckOrder();
+        ui.Click(X(1010) + 18.9f, r.Y + 27);
+        if (!ui.View.SelectedObjectIds.Contains(map.Fruits[1].Id)) throw new Exception("Exposed later object cannot be selected.");
+        CheckOrder();
+        ui.Click(X(1000), r.Y + 27);
+        if (!ui.View.SelectedObjectIds.Contains(map.Fruits[0].Id)) throw new Exception("Timeline hit order disagrees with visible stacking.");
+        CheckOrder();
+    }
     public static void GridColors()
     {
         var ui = new Ui(false);
@@ -144,7 +166,7 @@ internal static class ObjectTimelineTests
             float y = r.Y + 27;
             void CheckMarkers(int spans)
             {
-                var circles = ui.Canvas.Circles.Where(c => c.Y == y && c.Radius == 19).ToArray();
+                var circles = ui.Canvas.Circles.Where(c => c.Y == y && c.Radius == 19 && !c.Filled && c.Color == 0xFFFFFF).ToArray();
                 if (circles.Length != spans + 1) throw new Exception("Timeline must show a head, each reverse boundary, and an empty tail.");
                 for (int i = 0; i <= spans; i++)
                     if (!circles.Any(c => Math.Abs(c.X - X(1000 + i * 500)) < .01)) throw new Exception("Reverse circle is not at its span boundary.");
@@ -211,13 +233,15 @@ internal static class ObjectTimelineTests
         var ui = new Ui(false);
         var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
         var slider = new ImportedSlider { TimeMs = 1000, X = 100, Y = 192, PathType = 'L', PixelLength = 100, SpanCount = 1 };
-        slider.ControlPoints.Add(new(200, 192));
+        slider.ControlPoints.AddRange([new(100, 192), new(200, 192)]);
         map.ImportedSliders.Add(slider);
         ui.LoadDocument(map); ui.Paint();
         float Width()
         {
             var r = ui.View.ObjectTimelineBounds;
-            return ui.Canvas.Outlines.Single(o => o.Bounds.Y == r.Y + 8 && o.Bounds.Height == 38).Bounds.Width;
+            if (ui.Canvas.Outlines.Any(o => o.Bounds.Y == r.Y + 8 && o.Bounds.Height == 38))
+                throw new Exception("Slider timeline body must not have a separate perimeter");
+            return ui.Canvas.Fills.Single(o => o.Bounds.Y == r.Y + 8 && o.Bounds.Height == 38).Bounds.Width;
         }
         float initial = Width();
         ui.Paint();
@@ -258,7 +282,7 @@ internal static class ObjectTimelineTests
         ui.View.PointerUp(origin, y, 0);
         if (ui.View.PlayheadMs != 1500 || requested != -1 || ui.View.WantsCapture) throw new Exception("Empty timeline drag must not seek");
         double zoom = ui.View.CanvasZoom, scale = ui.View.ObjectTimelinePixelsPerMs;
-        ui.View.Wheel(rect.X + 100, rect.Y + 20, 120, true); ui.Paint();
+        ui.View.Wheel(rect.X + 100, rect.Y + 20, 120, false, false, true); ui.Paint();
         if (ui.View.CanvasZoom != zoom || ui.View.ObjectTimelinePixelsPerMs <= scale || ui.View.IsDirty)
             throw new Exception("Timeline zoom changed canvas scale or document content");
     }
@@ -316,12 +340,12 @@ internal static class ObjectTimelineTests
         }
         ui.View.SetPlaybackSpeed(double.NaN);
         if (ui.View.PlaybackSpeed != 1.5) throw new Exception("Invalid speed was accepted");
-        foreach (double expected in new[] { 1d, .75, .5, .25, .1, .1 })
+        foreach (double expected in new[] { 1.25, 1d, .75, .5, .25, .1 })
         {
             ui.Key(40, ctrl: true);
             if (ui.View.PlaybackSpeed != expected) throw new Exception("Slower shortcut skipped a speed or the lower limit.");
         }
-        foreach (double expected in new[] { .25, .5, .75, 1, 1.5, 1.5 })
+        foreach (double expected in new[] { .35, .6, .85, 1.1, 1.35, 1.5 })
         {
             ui.Key(38, ctrl: true);
             if (ui.View.PlaybackSpeed != expected) throw new Exception("Faster shortcut skipped a speed or the upper limit.");

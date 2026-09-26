@@ -9,6 +9,70 @@ namespace FruitsAtelier.App.Diagnostics;
 
 internal static class RenderCheck
 {
+    private static void CheckBookmarkCache(D2DCanvas canvas)
+    {
+        string toolbar = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
+        string scene = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "assist", "clap.png");
+        canvas.Begin();
+        if (!canvas.Image(toolbar, new(0, 0, 246, 34))) throw new InvalidOperationException("Toolbar texture unavailable.");
+        for (uint tint = 0; tint < 14; tint++)
+            if (!canvas.Image(scene, new(0, 40, 32, 32), 0xFFFF00 + tint)) throw new InvalidOperationException("Cache pressure fixture unavailable.");
+        int decodes = canvas.ImageDecodeCount;
+        canvas.Image(toolbar, new(0, 0, 246, 34));
+        canvas.End();
+        if (canvas.ImageDecodeCount != decodes)
+            throw new InvalidOperationException("Scene cache pressure evicted the independent bookmark toolbar.");
+    }
+    private static void CheckTimingSetup(D2DCanvas canvas, EditorView view, int width, int height)
+    {
+        string language = FruitsAtelier.Localization.Strings.Language;
+        string? audioPath = view.Document.AudioPath;
+        var decoder = view.RequestWaveform;
+        view.Document.AudioPath = "render-waveform.wav";
+        var peaks = Enumerable.Range(0, 12000).Select(i => (float)(.15 + .65 * Math.Abs(Math.Sin(i * .007)))).ToArray();
+        view.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(peaks, 1));
+        var original = view.Document.DeepClone();
+        void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
+        try
+        {
+            foreach (string lang in new[] { "en", "zh-CN" })
+            {
+                FruitsAtelier.Localization.Strings.SetLanguage(lang); Paint();
+                view.KeyDown(114, false, false); Paint();
+                if (!view.TimingPageVisible) throw new InvalidOperationException("F3 failed to open timing page.");
+                view.PointerMove(350, height - 55, false, false); Paint();
+                int decodes = canvas.ImageDecodeCount;
+                for (int frame = 0; frame < 12; frame++)
+                {
+                    view.UpdateTransport(1000 + frame * 10, 10000, true, true, false, null, view.Document.AudioPath);
+                    Paint();
+                }
+                if (canvas.ImageDecodeCount != decodes)
+                    throw new InvalidOperationException("Hover playback repeatedly decodes cached images.");
+                view.UpdateTransport(1000, 10000, true, false, false, null, null);
+                view.KeyDown(117, false, false); Paint();
+                if (!view.TimingSetupVisible) throw new InvalidOperationException("F6 failed to open timing setup.");
+                var r = view.TimingSetupBounds;
+                float tabWidth = Math.Clamp(r.Width * .39f, 280, 360) / 3;
+                for (int tab = 0; tab < 3; tab++)
+                {
+                    view.PointerDown(r.X + 22 + tab * tabWidth, r.Y + 65, 0, false, false);
+                    view.PointerUp(r.X + 22 + tab * tabWidth, r.Y + 65, 0); Paint();
+                    if (view.TimingFields.Any(f => f.Bounds.Bottom > r.Bottom - 188))
+                        throw new InvalidOperationException("Timing properties overlap apply options.");
+                }
+                view.KeyDown(27, false, false); view.KeyDown(112, false, false); Paint();
+                if (view.TimingSetupVisible || view.TimingPageVisible || !view.Document.ContentEquals(original))
+                    throw new InvalidOperationException("Timing navigation or Cancel changed the map.");
+            }
+        }
+        finally
+        {
+            view.Document.AudioPath = audioPath; view.RequestWaveform = decoder;
+            FruitsAtelier.Localization.Strings.SetLanguage(language); Paint();
+        }
+    }
+
     private static void CheckSongSetup(D2DCanvas canvas, EditorView view, int width, int height)
     {
         string language = FruitsAtelier.Localization.Strings.Language;
@@ -147,9 +211,11 @@ internal static class RenderCheck
         var updateCheck = view.RequestUpdateCheck;
         var updateStatus = view.UpdateStatus;
         int[] volumes = [view.LibrarySettings.MasterVolume, view.LibrarySettings.SongVolume, view.LibrarySettings.HitsoundVolume];
+        double startupDelay = view.LibrarySettings.TestplayStartupDelaySeconds;
         string language = FruitsAtelier.Localization.Strings.Language;
         try
         {
+            view.LibrarySettings.TestplayStartupDelaySeconds = 0;
             view.RequestTogglePlayback = () => { }; view.RequestPausePlayback = () => { };
             view.RequestSeek = _ => { }; view.RequestHitsound = _ => { };
             view.RequestAudioPreference = () => { };
@@ -231,11 +297,13 @@ internal static class RenderCheck
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(width - 160, 20, 0, false, false); view.PointerUp(width - 160, 20, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
-                view.PointerDown(40, 238, 0, false, false); view.PointerUp(40, 238, 0);
+                view.PointerDown(view.SettingsBounds.X + 40, view.SettingsBounds.Y + 238, 0, false, false);
+                view.PointerUp(view.SettingsBounds.X + 40, view.SettingsBounds.Y + 238, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 foreach (int binding in new[] { 186, 222, 219, 221, 8, 17, 18, 96, 111, 121 })
                 {
-                    view.PointerDown(254, 200, 0, false, false); view.PointerUp(254, 200, 0);
+                    view.PointerDown(view.SettingsBounds.X + 238, view.SettingsBounds.Y + 200, 0, false, false);
+                    view.PointerUp(view.SettingsBounds.X + 238, view.SettingsBounds.Y + 200, 0);
                     if (!view.CapturingTestplayKey) throw new InvalidOperationException("Native binding capture did not open.");
                     var down = new Native.Message { Window = window, Id = binding is 18 or 121 ? 0x0104u : 0x0100u, WParam = (nuint)binding };
                     Native.DispatchMessage(ref down);
@@ -262,6 +330,41 @@ internal static class RenderCheck
                     throw new InvalidOperationException("Native volume controls did not update percentages.");
                 view.KeyDown(27, false, false);
                 if (view.VolumeDialogVisible) throw new InvalidOperationException("Native volume dialog did not close.");
+                view.OpenVolumePopover();
+                Thread.Sleep(130);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                for (int channel = 0; channel < 3; channel++)
+                {
+                    var bar = view.VolumeBarBounds(channel);
+                    float x = bar.X + bar.Width / 2;
+                    float y = bar.Bottom - bar.Height * (channel + 1) / 4;
+                    if (bar.Bottom >= height || bar.Right >= width)
+                        throw new InvalidOperationException("Volume bar is outside the window.");
+                    view.PointerDown(x, y, 0, false, false);
+                    if (!view.WantsCapture) throw new InvalidOperationException("Volume bar did not capture.");
+                    view.PointerUp(x, y, 0);
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                }
+                if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
+                    throw new InvalidOperationException("Native volume bars did not update percentages.");
+                for (int channel = 0; channel < 3; channel++)
+                {
+                    var bar = view.VolumeBarBounds(channel);
+                    view.PointerMove(bar.X + 4, bar.Y + 4, false, false);
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                    view.Wheel(bar.X + 4, bar.Y + 4, -120, false);
+                    int[] hoveredVolumes = [view.LibrarySettings.MasterVolume, view.LibrarySettings.SongVolume, view.LibrarySettings.HitsoundVolume];
+                    if (hoveredVolumes[channel] != (channel + 1) * 25 - 5)
+                        throw new InvalidOperationException("Native volume wheel did not adjust the hovered bar.");
+                    view.SetModifiers(true, false);
+                    view.KeyDown(38, false, false); view.KeyUp(38);
+                    view.SetModifiers(false, false);
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                }
+                if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
+                    throw new InvalidOperationException("Native Alt+Up did not adjust the hovered volume channel.");
+                view.KeyDown(27, false, false);
+                if (view.VolumePopoverVisible) throw new InvalidOperationException("Native volume popover did not close.");
                 var dsRatios = view.Document.DistanceSnapRatios.ToArray();
                 view.Document.DistanceSnapRatios.Clear();
                 view.Document.DistanceSnapRatios.AddRange([.75, 1.25, 2.5]);
@@ -289,7 +392,33 @@ internal static class RenderCheck
                 view.Document.DistanceSnapRatios.Clear(); view.Document.DistanceSnapRatios.AddRange(dsRatios);
                 view.OpenSettings();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
-                view.PointerDown(40, 286, 0, false, false); view.PointerUp(40, 286, 0);
+                var settings = view.SettingsBounds;
+                foreach (int category in new[] { 0, 1, 2, 3, 5, 6, 4 })
+                {
+                    float sx = settings.X + 40, sy = settings.Y + 96 + category * 48;
+                    view.PointerDown(sx, sy, 0, false, false); view.PointerUp(sx, sy, 0);
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                    if (category == 5)
+                    {
+                        for (int channel = 0; channel < 3; channel++)
+                        {
+                            var bar = view.VolumeSliderBounds(channel);
+                            float vx = bar.X + bar.Width * (channel + 1) / 4, vy = bar.Y + 12;
+                            view.PointerDown(vx, vy, 0, false, false);
+                            view.PointerUp(vx, vy, 0);
+                        }
+                        if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
+                            throw new InvalidOperationException("Settings volume controls did not update shared percentages.");
+                    }
+                    if (category == 6)
+                    {
+                        var selector = view.SettingsSkinSelectorBounds;
+                        view.PointerDown(selector.X + 8, selector.Y + 8, 0, false, false);
+                        view.PointerUp(selector.X + 8, selector.Y + 8, 0);
+                        canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                        view.KeyDown(27, false, false);
+                    }
+                }
                 foreach (var phase in new[] { UpdatePhase.Unsupported, UpdatePhase.Checking, UpdatePhase.Available, UpdatePhase.Downloading, UpdatePhase.Ready, UpdatePhase.Failed })
                 {
                     view.UpdateStatus = new(phase, "0.8.2", 42);
@@ -308,6 +437,7 @@ internal static class RenderCheck
             view.RequestUpdateCheck = updateCheck;
             view.UpdateStatus = updateStatus;
             view.LibrarySettings.MasterVolume = volumes[0]; view.LibrarySettings.SongVolume = volumes[1]; view.LibrarySettings.HitsoundVolume = volumes[2];
+            view.LibrarySettings.TestplayStartupDelaySeconds = startupDelay;
             view.ApplyAudioVolume();
             FruitsAtelier.Localization.Strings.SetLanguage(language);
         }
@@ -406,7 +536,7 @@ internal static class RenderCheck
                 view.LoadDocument(map); view.CloseLibrary();
                 canvas.Resize(1440, 900, 96);
                 Paint();
-                view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom, -2400, true);
+                view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom, -2400, false, false, true);
                 Paint();
                 var field = view.PlayfieldBounds;
                 float x = field.X + 240f / 512 * field.Width;
@@ -477,6 +607,7 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        CheckBookmarkCache(canvas);
         CheckWorkspaceSave(canvas, view);
         LibraryDropCheck.Run(view, window);
         CheckDistanceFields(canvas, view);
@@ -500,6 +631,7 @@ internal static class RenderCheck
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             CheckSongSetup(canvas, view, size.Item1, size.Item2);
+            CheckTimingSetup(canvas, view, size.Item1, size.Item2);
             if (!view.MovementAnalysisEnabled)
             {
                 view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0);

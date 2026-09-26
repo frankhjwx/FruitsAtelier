@@ -50,7 +50,7 @@ internal static class SliderModeInteractionTests
         ui.View.Wheel(ui.Plot.X, ui.Plot.Bottom, (float)((ui.View.ViewStartMs - centerStart) * ui.View.PixelsPerMs / 78 * 120), false); ui.Paint();
         // Zoom around the segment so its small, exact-approximation endpoint handles can be selected.
         var p = Screen(ui, 1000, 200);
-        ui.View.Wheel(p.X, p.Y, 120 * 18, true); ui.Paint();
+        ui.View.Wheel(p.X, p.Y, 120 * 18, false, false, true); ui.Paint();
         var handle = ControlCurveEditing.PenSegments(track, 0)[0].Out;
         p = Screen(ui, handle.TimeMs, handle.X);
         var beforeDrag = ui.View.Document.DeepClone();

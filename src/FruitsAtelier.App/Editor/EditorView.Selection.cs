@@ -174,8 +174,6 @@ public sealed partial class EditorView
     private void FinishBox(float x, float y)
     {
         bool moved = dragMoved;
-        bool timelineClick = boxTimeline;
-        double clickTime = boxTimeline ? ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale : MapAt(x, y, true).TimeMs;
         drag = DragKind.None;
         selectionBeforeBox = null;
         boxTimeline = false;
@@ -186,7 +184,7 @@ public sealed partial class EditorView
                 tool = Tool.Select;
                 Select(Guid.Empty);
             }
-            else { Select(Guid.Empty); if (!timelineClick && tool == Tool.Select && !AudioPlaying) SeekTo(clickTime); }
+            else Select(Guid.Empty);
         }
         if (AudioPlaying || pinPlayhead) FollowPlayhead();
     }

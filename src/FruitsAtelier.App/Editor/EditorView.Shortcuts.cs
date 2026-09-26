@@ -5,18 +5,19 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private static readonly int[] QuickSnapDivisors = [3, 4, 6, 8];
+
     private bool HandleLegacyShortcut(int key, bool shift)
     {
-        if (shift) return false;
         switch (key)
         {
-            case 65: SelectObjects(ClipboardParents(Document).Select(p => p.Id)); return true;
-            case >= 49 and <= 52: gridSize = 4 << (key - 49); return true;
-            case 77: ForgetTemporarySnap(); divisor = SnapDivisors[(Array.IndexOf(SnapDivisors, divisor) + 1) % SnapDivisors.Length]; return true;
-            case 68: CloneSelection(); return true;
-            case 72: MirrorSelection(); return true;
-            case 38: AdjustPlaybackSpeed(1); return true;
-            case 40: AdjustPlaybackSpeed(-1); return true;
+            case 65 when !shift: SelectObjects(ClipboardParents(Document).Select(p => p.Id)); return true;
+            case >= 49 and <= 52 when !shift: gridSize = 4 << (key - 49); return true;
+            case 77 when !shift: ForgetTemporarySnap(); divisor = QuickSnapDivisors[(Array.IndexOf(QuickSnapDivisors, divisor) + 1) % QuickSnapDivisors.Length]; return true;
+            case 68 when !shift: CloneSelection(); return true;
+            case 72 when !shift: MirrorSelection(); return true;
+            case 38: AdjustPlaybackSpeed(1, shift); return true;
+            case 40: AdjustPlaybackSpeed(-1, shift); return true;
             default: return false;
         }
     }
@@ -26,6 +27,7 @@ public sealed partial class EditorView
         if (shift && key is >= 49 and <= 57) { ForgetTemporarySnap(); divisor = key - 48; return true; }
         if (!shift && key is >= 49 and <= 52)
         { ChangeTool(key switch { 49 => Tool.Select, 50 => Tool.Fruit, 51 => Tool.Slider, _ => Tool.Banana }); return true; }
+        if (shift && key is not (37 or 39)) return false;
         switch (key)
         {
             case 67: TogglePlayback(); return true;
@@ -37,7 +39,10 @@ public sealed partial class EditorView
                 double last = LastObjectEndMs();
                 SeekTo(playhead >= last ? AudioReady && AudioDurationMs > 0 ? AudioDurationMs : TimelineDurationMs : last); return true;
             case 37: case 39:
-                SeekTo(playhead + (key == 37 ? -1 : 1) * (shift ? 4 : 1) * TimingMap.At(Document, playhead).BeatLengthMs / divisor); return true;
+                int steps = (key == 37 ? -1 : 1) * (shift ? 4 : 1);
+                SeekTo(AudioPlaying
+                    ? playhead + steps * TimingMap.At(Document, playhead).BeatLengthMs
+                    : StepAlongBeatGrid(playhead, steps, divisor)); return true;
             case 38: case 40:
                 var times = Document.TimingPoints.Select(t => t.TimeMs).Distinct().Order().ToArray();
                 SeekTo(key == 38 ? times.Where(t => t < playhead).LastOrDefault(0) : times.FirstOrDefault(t => t > playhead, TimelineDurationMs)); return true;

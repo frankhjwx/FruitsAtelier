@@ -34,6 +34,8 @@ internal sealed partial class MacWindow : Window
         };
         View.RequestPrepareHitsound = hitsounds.Prepare;
         View.RequestHitsound = hitsounds.Play;
+        View.RequestAuditionHitsound = hitsounds.Play;
+        View.RequestWaveform = MacWaveformDecoder.Load;
         View.RequestPreloadHitsounds = documents => hitsounds.PreloadProject(documents, View.HitsoundSkinFolders);
         View.PreloadProjectHitsounds();
         View.RequestStopHitsounds = hitsounds.Stop;
@@ -110,7 +112,7 @@ internal sealed partial class MacWindow : Window
             e.Cancel = true;
             RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
         };
-        Closed += (_, _) => { View.SaveLibraryMemory(); timer.Stop(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
+        Closed += (_, _) => { View.SaveLibraryMemory(); View.ReleaseWaveform(); timer.Stop(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
         Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); editor.Refresh(); };
         Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); editor.Refresh(); };
     }
@@ -123,7 +125,7 @@ internal sealed partial class MacWindow : Window
             _ = audio.LoadAsync(View.Document.AudioPath); state = audio.State;
         }
         View.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading, state.Error is null ? null : L.Reformat(state.Error), state.FilePath);
-        if (View.TextCaretNeedsRedraw || View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
+        if (View.WaveformNeedsRedraw || View.TextCaretNeedsRedraw || View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
             editor.Refresh();
         lastReady = state.CanPlay; lastPosition = state.PositionMs; lastError = state.Error;
     }

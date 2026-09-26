@@ -22,7 +22,7 @@ See [Editing Controls](EDITOR_UI.md) for shortcuts, selection, and control-point
 | Format | Purpose |
 | --- | --- |
 | `.osz` | Open a beatmap archive with its difficulties and associated resources |
-| `.osu` | Read v12–v14 / Mode=2 Catch beatmaps; export v14 |
+| `.osu` | Read v12–v14 and stable-compatible lazer v128 / Mode=2 Catch beatmaps; export v14 |
 | `.catchproj` | Compatible editor project format containing nodes, handles, timing, imported context, and resource references |
 | `.catchdiff` | Workspace project manifest and separate difficulty documents; see [Workspace](WORKSPACE.md) |
 | `.osk` | Import Catch skin images and configuration |
@@ -35,4 +35,4 @@ Supported features include multiple timing points, inherited SV, beat snapping, 
 
 Song playback supports 10%, 25%, 50%, 75%, 100%, and 150% speed while preserving pitch; hitsounds keep their original speed. Testplay starts at the playhead and supports movement, dash, combo feedback, pause and autoplay. Preview and testplay animate fruit and banana sprites and catcher effects; the editing canvas uses static sprites. Slider-to-stream conversion retains editable geometry and exports individual fruits.
 
-Audio waveforms, timing-point creation, bookmarks, video and storyboard playback are not provided. See the [user manual](USER_MANUAL.md) for a concise feature guide and keyboard reference.
+Audio waveforms, video and storyboard playback are not provided. Timing editing and bookmarks are described in the editing controls guide. See the [user manual](USER_MANUAL.md) for a concise feature guide and keyboard reference.

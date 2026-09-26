@@ -4,6 +4,31 @@
 #include <math.h>
 #include <stdint.h>
 
+void *fa_waveform_open(const char *path, int *rate, int *channels) {
+    @autoreleasepool {
+        AVAudioFile *file = [[AVAudioFile alloc] initForReading:[NSURL fileURLWithPath:[NSString stringWithUTF8String:path]]
+            commonFormat:AVAudioPCMFormatFloat32 interleaved:NO error:nil];
+        if (!file) return NULL;
+        *rate = (int)file.processingFormat.sampleRate;
+        *channels = (int)file.processingFormat.channelCount;
+        return (__bridge_retained void *)file;
+    }
+}
+int fa_waveform_read(void *handle, float *samples, int count) {
+    @autoreleasepool {
+        AVAudioFile *file = (__bridge AVAudioFile *)handle;
+        unsigned channels = file.processingFormat.channelCount;
+        AVAudioPCMBuffer *buffer = [[AVAudioPCMBuffer alloc] initWithPCMFormat:file.processingFormat frameCapacity:count / channels];
+        if (![file readIntoBuffer:buffer error:nil]) return -1;
+        for (unsigned f = 0; f < buffer.frameLength; f++)
+            for (unsigned c = 0; c < channels; c++) samples[f * channels + c] = buffer.floatChannelData[c][f];
+        return (int)(buffer.frameLength * channels);
+    }
+}
+void fa_waveform_close(void *handle) {
+    @autoreleasepool { AVAudioFile *file = (__bridge_transfer AVAudioFile *)handle; (void)file; }
+}
+
 // Music owns its time-pitch unit; hitsounds use their independent engine.
 @interface FAMusic : NSObject
 @property(nonatomic, strong) AVAudioEngine *engine;

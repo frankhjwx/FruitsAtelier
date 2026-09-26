@@ -51,8 +51,8 @@ internal static class ExternalResourceTests
             using (var zip = ZipFile.Open(archive, ZipArchiveMode.Create))
             {
                 zip.CreateEntry("set/empty/");
-                Add(zip, "set/Rain.osu", Map("Archive song", "Rain"));
-                Add(zip, "set/Cup.osu", Map("Archive song", "Cup"));
+                Add(zip, "set/Rain.osu", Map("Archive song", "Rain").Replace("format v14", "format v128"));
+                Add(zip, "set/Cup.osu", Map("Archive song", "Cup").Replace("format v14", "format v128"));
                 foreach (string name in new[] { "audio.ogg", "background.jpg", "video.mp4", "scene.osb", "notes.txt", "nested/effect.wav" }) Add(zip, "set/" + name, name);
             }
             var imported = LibraryOperations.ImportPath(archive, settings);

@@ -88,7 +88,7 @@ internal static class UpdateTests
         ui.View.UpdateStatus = new(UpdatePhase.Available, "0.8.2"); ui.Paint(); Click("update.download");
         Check(download == 1, "Download action");
         ui.View.UpdateStatus = new(UpdatePhase.Downloading, "0.8.2", 42); ui.Paint();
-        ui.Click(260, 310); Check(check == 2 && restart == 0, "Installing is unavailable during download");
+        ui.Click(ui.View.SettingsBounds.X + 244, ui.View.SettingsBounds.Y + 310); Check(check == 2 && restart == 0, "Installing is unavailable during download");
         ui.View.UpdateStatus = new(UpdatePhase.Ready, "0.8.2"); ui.Paint(); Click("update.restart");
         Check(restart == 1, "Restart requires explicit action");
         Click("update.automaticOn"); Check(!ui.View.AutomaticUpdateChecks && preference == 1, "Preference toggles and persists");

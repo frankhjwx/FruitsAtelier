@@ -29,6 +29,8 @@ internal sealed partial class EditorWindow : IDisposable
         view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
         view.RequestPasteTime = () => view.PasteTimeJumpText(Native.ReadClipboardText(hwnd), view.TimeJumpSession);
         view.RequestPasteSongSetup = () => view.PasteSongSetupText(Native.ReadClipboardText(hwnd), view.SongSetupInputSession);
+        view.RequestPasteTiming = () => view.PasteTimingText(Native.ReadClipboardText(hwnd), view.TimingInputSession);
+        view.RequestTimingSampleHelp = () => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://osu.ppy.sh/wiki/en/Beatmapping/Hitsound") { UseShellExecute = true });
         view.RequestPasteLibrary = () => view.PasteLibraryText(Native.ReadClipboardText(hwnd));
         view.RequestPasteField = () => view.PasteFieldText(Native.ReadClipboardText(hwnd));
         view.RequestClose = Close;
@@ -122,13 +124,14 @@ internal sealed partial class EditorWindow : IDisposable
                 if (result < 0) throw new Win32Exception();
                 if (result == 0) break;
             }
-            // IME-owned key messages lose their original key after TranslateMessage.
-            if (msg.Window == hwnd && msg.Id == 0x0100 && Native.Control && Native.Shift)
+            // TranslateMessage can let the IME consume editor shortcuts, even when WM_KEYDOWN still has the original key.
+            if (msg.Window == hwnd && msg.Id == 0x0100 && !view.IsEditingText && !view.CapturingTestplayKey && !view.IsTestplaying)
             {
                 uint key = msg.WParam == 0xE5 ? Native.ImmGetVirtualKey(hwnd) : (uint)msg.WParam;
-                if (key == 70)
+                if (key is > 0 and < 0xE5)
                 {
-                    view.KeyDown(70, true, true);
+                    view.SetModifiers(Native.Alt, Native.Shift);
+                    view.KeyDown((int)key, Native.Control, Native.Shift);
                     if (!view.WantsCapture && Native.GetCapture() == hwnd) Native.ReleaseCapture();
                     UpdateTitle(); Invalidate();
                     continue;
@@ -259,7 +262,8 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0113: // WM_TIMER
                 if (painting || failed || NativeModalScope.Active) return 0;
                 PollUpdates(); PollAudio();
-                if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
+                if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
+                    || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0005: Invalidate(); return 0;
             case 0x02E0: // WM_DPICHANGED
@@ -300,14 +304,15 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0202:
             case 0x0205:
             case 0x0208:
-                view.PointerUp(x, y, message == 0x0208 ? 1 : message == 0x0205 ? 2 : 0);
+                view.PointerUp(x, y, message == 0x0208 ? 1 : message == 0x0205 ? 2 : 0, Native.Shift);
                 if (!view.WantsCapture && Native.GetCapture() == window) Native.ReleaseCapture();
                 UpdateTitle(); Invalidate(); return 0;
             case 0x020A:
                 view.SetModifiers(Native.Alt, Native.Shift);
                 var point = new Native.Point { X = (short)((long)lParam & 0xFFFF), Y = (short)(((long)lParam >> 16) & 0xFFFF) };
                 Native.ScreenToClient(window, ref point);
-                view.Wheel(point.X * 96f / dpi, point.Y * 96f / dpi, (short)((ulong)wParam >> 16), (wParam & 0x0008) != 0);
+                view.Wheel(point.X * 96f / dpi, point.Y * 96f / dpi, (short)((ulong)wParam >> 16),
+                    (wParam & 0x0008) != 0, Native.Shift, Native.Alt);
                 Invalidate(); return 0;
             case 0x0100:
                 view.SetModifiers(Native.Alt, Native.Shift);
@@ -316,6 +321,11 @@ internal sealed partial class EditorWindow : IDisposable
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0104: // WM_SYSKEYDOWN: Alt changes editor snapping without opening the system menu.
                 view.SetModifiers(Native.Alt, Native.Shift);
+                if ((int)wParam is 37 or 38 or 39 or 40 || (int)wParam == 69 && Native.Control)
+                {
+                    view.KeyDown((int)wParam, Native.Control, Native.Shift);
+                    UpdateTitle(); Invalidate(); return 0;
+                }
                 if ((view.CapturingTestplayKey || view.IsTestplaying) && !((int)wParam == 115 && Native.Alt))
                 {
                     view.KeyDown((int)wParam, Native.Control, Native.Shift);
@@ -380,6 +390,7 @@ internal sealed partial class EditorWindow : IDisposable
         disposed = true;
         updates?.Dispose();
         view.StopTestplay();
+        view.ReleaseWaveform();
         if (largeBrandIcon != 0) { Native.DestroyIcon(largeBrandIcon); largeBrandIcon = 0; }
         if (smallBrandIcon != 0) { Native.DestroyIcon(smallBrandIcon); smallBrandIcon = 0; }
         hitsounds.Dispose();

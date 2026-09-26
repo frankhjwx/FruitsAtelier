@@ -413,7 +413,8 @@ internal static class TestplayTests
         var clock = new ManualTime();
         var ui = new Ui(timeProvider: clock);
         string folder = Path.GetFullPath("artifacts/testplay-settings");
-        var settings = new LibrarySettings { Workspace = folder, TestplayLeftKey = 65, TestplayRightKey = 68, TestplayDashKey = 32 };
+        var settings = new LibrarySettings { Workspace = folder, TestplayLeftKey = 65, TestplayRightKey = 68,
+            TestplayDashKey = 32, TestplayStartupDelaySeconds = 0 };
         string path = Path.Combine(folder, "settings.json");
         settings.Save(path); var loaded = LibrarySettings.Load(path);
         Check(loaded.TestplayLeftKey == 65 && loaded.TestplayRightKey == 68 && loaded.TestplayDashKey == 32, "bindings persist");
@@ -450,11 +451,11 @@ internal static class TestplayTests
         {
             for (int action = 0; action < 3; action++)
             {
-                ui.View.PointerDown(254 + action * 220, 200, 0, false, false);
-                ui.View.PointerUp(254 + action * 220, 200, 0);
+                ui.View.PointerDown(ui.View.SettingsBounds.X + 238 + action * 220, ui.View.SettingsBounds.Y + 200, 0, false, false);
+                ui.View.PointerUp(ui.View.SettingsBounds.X + 238 + action * 220, ui.View.SettingsBounds.Y + 200, 0);
                 Check(ui.View.CapturingTestplayKey, "binding field starts capture");
                 ui.Key(key); ui.View.KeyUp(key); ui.Paint();
-                Check(!ui.View.CapturingTestplayKey && ui.Canvas.Texts.Any(t => t.Value == name && t.Y >= 188 && t.Y < 218),
+                Check(!ui.View.CapturingTestplayKey && ui.Canvas.Texts.Any(t => t.Value == name && t.Y >= ui.View.SettingsBounds.Y + 188 && t.Y < ui.View.SettingsBounds.Y + 218),
                     $"{name} captures and displays for action {action}");
                 int[] captured = (int[])draft.GetValue(ui.View)!;
                 Check(captured[action] == key && captured.Distinct().Count() == 3, "capture preserves distinct bindings");
@@ -477,7 +478,7 @@ internal static class TestplayTests
                 Near(expected + (action == 2 ? 50 : 0), session.Capture().X);
             }
         }
-        ui.View.PointerDown(254, 200, 0, false, false); ui.View.PointerUp(254, 200, 0);
+        ui.View.PointerDown(ui.View.SettingsBounds.X + 238, ui.View.SettingsBounds.Y + 200, 0, false, false); ui.View.PointerUp(ui.View.SettingsBounds.X + 238, ui.View.SettingsBounds.Y + 200, 0);
         int[] before = ((int[])draft.GetValue(ui.View)!).ToArray();
         foreach (int key in new[] { 0, 9, 112, 113, 91, 92, 173, 255 })
         {

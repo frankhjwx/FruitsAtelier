@@ -20,6 +20,29 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),
+    ("Shortcut routing isolates Timing object nudges and preserves navigation", ShortcutRoutingTests.TimingPage),
+    ("Shortcut routing rejects unsupported Compose and Timing modifiers", ShortcutRoutingTests.Modifiers),
+    ("Arrow seeking uses whole beats during playback and subdivisions while paused", ShortcutRoutingTests.PlaybackSeeking),
+    ("Paused arrows align off-grid positions and cross timing boundaries", ShortcutRoutingTests.PausedSeekingSnaps),
+    ("Explicit pause aligns transport and note placement with the Snap grid", PauseSnapTests.UserPause),
+    ("Pause snapping waits for confirmation and isolates other transport operations", PauseSnapTests.PauseIsolation),
+    ("Shortcut routing exports from Timing while retaining modal focus", ShortcutRoutingTests.Export),
+    ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),
+    ("Timing setup drafts, shortcuts, clipboard, undo and narrow bilingual layout", TimingEditorTests.Run),
+    ("Timing metronome schedules beat and Ctrl snap ticks without duplicate playback", TimingEditorTests.Metronome),
+    ("Timing waveform zoom, cached audio and red-line selection", TimingEditorTests.Waveform),
+    ("Wheel modifiers distinguish snapping zoom and navigation", WheelGestureTests.Run),
+    ("Canvas axis colors only marked times and spans marker lines", CanvasBookmarkTests.AxisColorsAndLines),
+    ("Dense canvas bookmarks preserve labels, history and source data", CanvasBookmarkTests.DenseAxisMarks),
+    ("Draft tools and editor shortcuts respect modifiers", DraftToolShortcutsTests.Run),
+    ("Volume popover buttons, bars, keyboard and fade", VolumePopoverTests.Run),
+    ("Testplay Alt arrows show volume controls without moving the catcher", VolumePopoverTests.TestplayShortcuts),
+    ("New Combo grouping refreshes on first edit and undo/redo", ComboGroupingTests.Run),
+    ("Completing an FSlider replaces only exact head fruit overlaps and undoes atomically", SliderHeadReplacementTests.OnCompletion),
+    ("Final stream fruit accepts lower-half hit and drags independently", StreamFruitDragTests.Run),
+    ("Testplay lead-in starts early, returns to selection and persists settings", TestplayStartupDelayTests.LeadIn),
+    ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
     ("Workspace-only saves persist before optional Songs export", WorkspaceSaveTests.Run),
@@ -79,6 +102,7 @@ var tests = new (string Name, Action Run)[]
     ("Hard Rock preview applies deterministic positions without changing source", PreviewSidebarTests.HardRock),
     ("Timeline tails adjust reverses with undo and cancellation", ObjectTimelineTests.TailReverses),
     ("Timeline reverse circles follow spans, tail edits and undo", ObjectTimelineTests.ReverseMarkers),
+    ("Timeline chronological stacking includes numbers and matches selection", ObjectTimelineTests.Stacking),
     ("Grid Level opens a checked View submenu", GridLevelMenuTests.Run),
     ("Playback reuses timing data and edits invalidate it", ObjectTimelineTests.TimingCacheInvalidation),
     ("Operation errors remain visible and isolate input on editor and library pages", OperationErrorTests.Run),
@@ -129,7 +153,7 @@ var tests = new (string Name, Action Run)[]
     ("Upper timeline notes follow combo colours and New Combo boundaries", TimelineOverviewTests.ComboColours),
     ("Kiai indicator pulses on full beats and follows timing edits", TimelineOverviewTests.KiaiPulse),
     ("Storyboard-heavy maps reuse break intervals during repaint", TimelineOverviewTests.StoryboardBreakRendering),
-    ("Upper timeline stacks preserve white rings and lift selected notes", TimelineOverviewTests.StackAndSelection),
+    ("Upper timeline stacks preserve source order and selected rings", TimelineOverviewTests.StackAndSelection),
     ("Timing menu sets an undoable preview point", TimelineOverviewTests.PreviewPointMenu),
     ("Snap toolbar inserts an undoable break between objects", TimelineOverviewTests.InsertBreakButton),
     ("Upper timeline break edges drag, preview, cancel and remove short breaks", TimelineOverviewTests.BreakEdgeEditing),
@@ -151,7 +175,7 @@ var tests = new (string Name, Action Run)[]
     ("Star ratings refresh asynchronously without losing cached or newer results", DifficultyTabTests.AsyncRatings),
     ("Overflow difficulty tabs scroll, switch and add without losing content", DifficultyTabTests.Overflow),
     ("Multi-difficulty projects preserve content, history and compatibility", ProjectTests.Run),
-    ("Select blank-canvas clicks seek across beat divisors", CanvasSeekSnapTests.BeatGrid),
+    ("Select blank-canvas clicks preserve time across beat divisors", CanvasSeekSnapTests.BeatGrid),
     ("Canvas and timeline navigation do not edit content", CanvasSeekSnapTests.FreeMode),
     ("Timeline grabs retain the exact original time after round trips", TimelineDragTests.ReturnToStart),
     ("Timeline background clicks seek and drag limits preserve the origin", TimelineDragTests.ClickAndLimits),
@@ -164,6 +188,7 @@ var tests = new (string Name, Action Run)[]
     ("Slider edges drag independently and slider objects follow Grid Snap", NoteSnapTests.SliderObjectDragging),
     ("Slider drag candidates preserve unrelated sources and restore their baseline", NoteSnapTests.SliderDragBaseline),
     ("Slider edges highlight and inspect snap while matching current grids stay unchanged", NoteSnapTests.SliderEdgesAndCurrentSnap),
+    ("Repeated slider droplets sharing a path position drag together and undo atomically", DropletDragTests.RepeatedPathDrag),
     ("Slider droplets select on the second click and drag locally", DropletDragTests.SelectAndMove),
     ("Dragging a curved slider droplet preserves its neighbouring events", DropletDragTests.CurvedNeighbors),
     ("Droplet dragging handles fractional timing and dense anchors", DropletDragTests.ConvertedAndDenseCurves),
@@ -186,7 +211,7 @@ var tests = new (string Name, Action Run)[]
     ("A zero-length handle does not prevent dragging its anchor", ZeroHandleAnchor),
     ("Ctrl-click-created slider keeps corner points and commits one transaction", DraftCompletion),
     ("Painted fruit, time ruler and playhead share an upward time axis", UpwardPainting),
-    ("Select blank clicks seek while objects and box drags preserve time", UpwardClickTime),
+    ("Canvas clicks, objects and box drags preserve time", UpwardClickTime),
     ("Wheel up reveals later time and middle drag keeps content under the pointer", WheelAndPan),
     ("Overview wheel accumulates snap steps and preserves playback and content", OverviewWheel),
     ("Object timeline selects without seeking and scales independently", ObjectTimelineTests.NavigationAndSelection),
@@ -196,7 +221,7 @@ var tests = new (string Name, Action Run)[]
     ("Canvas defaults and reset use 60% zoom while enforcing minimum width", CanvasZoomTests.DefaultsAndReset),
     ("Zoom slider and wheel share scale, bounds and content isolation", CanvasZoomTests.SliderAndWheel),
     ("Zoom slider fits both languages and preserves playback following", CanvasZoomTests.PlaybackAndLanguages),
-    ("Control-wheel keeps pointer time fixed while scaling object positions", ZoomPaintedAnchor),
+    ("Alt-wheel keeps pointer time fixed while scaling object positions", ZoomPaintedAnchor),
     ("Reset view positions the playhead without editing map or history", ResetCanvasViewport),
     ("Read-only AR controls preview fall distance and visibility", ArPreviewAndInput),
     ("AR scale works with a hidden preview and follows canvas width changes", ArScaleResize),
@@ -246,12 +271,15 @@ var tests = new (string Name, Action Run)[]
 };
 
 int failures = 0;
-foreach (var test in tests)
+var selectedTests = args.Length == 2 && args[0] == "--filter"
+    ? tests.Where(test => test.Name.Contains(args[1], StringComparison.OrdinalIgnoreCase)).ToArray() : tests;
+if (selectedTests.Length == 0) { Console.Error.WriteLine("No matching tests."); return 1; }
+foreach (var test in selectedTests)
 {
     try { test.Run(); Console.WriteLine($"PASS {test.Name}"); }
     catch (Exception error) { failures++; Console.WriteLine($"FAIL {test.Name}: {error}"); }
 }
-Console.WriteLine($"{tests.Length - failures}/{tests.Length} editor integration tests passed.");
+Console.WriteLine($"{selectedTests.Length - failures}/{selectedTests.Length} editor integration tests passed.");
 return failures == 0 ? 0 : 1;
 
 static void ContinuousFollow()
@@ -339,7 +367,11 @@ static void FileCommands()
     ui.View.RequestOpen = () => calls.Add("open");
     ui.View.RequestSave = () => calls.Add("save");
     ui.View.RequestExport = () => calls.Add("export");
-    ui.Key('O', ctrl: true); ui.Key('S', ctrl: true); ui.Key('S', ctrl: true, shift: true); ui.Key('E', ctrl: true);
+    ui.Key('O', ctrl: true);
+    True(calls.Count == 0, "Ctrl+O must open the difficulty chooser.");
+    ui.Key('O', ctrl: true, shift: true);
+    ui.Key('S', ctrl: true); ui.Key('S', ctrl: true, shift: true);
+    ui.View.SetModifiers(true, false); ui.Key('E', ctrl: true); ui.View.SetModifiers(false, false);
     True(calls.SequenceEqual(new[] { "open", "save", "export" }), "A file shortcut did not invoke its host callback.");
     True(!ui.View.IsDirty, "File commands changed content without a host action.");
 }
@@ -516,12 +548,12 @@ static void UpwardClickTime()
     var map = new MapDocument { DurationMs = 10000 };
     map.Fruits.Add(new() { TimeMs = 1000, X = 100 });
     ui.LoadDocument(map);
-    ui.ClickMap(1128, 480); Near(1125, ui.View.PlayheadMs);
-    ui.ClickMap(1730, 480); Near(1750, ui.View.PlayheadMs);
-    ui.ClickMap(1000, 100); Near(1750, ui.View.PlayheadMs);
-    ui.ClickMap(2300, 480, ctrl: true); Near(1750, ui.View.PlayheadMs);
+    ui.ClickMap(1128, 480); Near(0, ui.View.PlayheadMs);
+    ui.ClickMap(1730, 480); Near(0, ui.View.PlayheadMs);
+    ui.ClickMap(1000, 100); Near(0, ui.View.PlayheadMs);
+    ui.ClickMap(2300, 480, ctrl: true); Near(0, ui.View.PlayheadMs);
     ui.DownMap(2500, 450); ui.MoveMap(3000, 490); ui.UpMap(3000, 490);
-    Near(1750, ui.View.PlayheadMs);
+    Near(0, ui.View.PlayheadMs);
     True(!ui.View.IsDirty, "Navigation or selection mutated the map.");
 }
 
@@ -594,10 +626,10 @@ static void ZoomPaintedAnchor()
     foreach (float delta in new[] { 120f, 120f, -120f, -120f })
     {
         double previousScale = ui.View.PixelsPerMs;
-        ui.View.Wheel(anchor.X, anchor.Y, delta, true);
+        ui.View.Wheel(anchor.X, anchor.Y, delta, false, false, true);
         ui.Paint();
         True(delta > 0 ? ui.View.PixelsPerMs > previousScale : ui.View.PixelsPerMs < previousScale,
-            "Control-wheel did not change zoom in the requested direction.");
+            "Alt-wheel did not change zoom in the requested direction.");
         var after = ui.PaintedFruitAtX(160);
         // Horizontal positions scale around the playfield centre; pointer time stays fixed.
         Near(anchor.Y, after.Y);
@@ -616,7 +648,7 @@ static void ResetCanvasViewport()
     Near(ui.View.PlayheadMs - ui.Plot.Height * 0.25 / ui.View.PixelsPerMs, ui.View.ViewStartMs);
     double restoredScale = ui.View.PixelsPerMs;
     var plot = ui.Plot;
-    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, -120, true);
+    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, -120, false, false, true);
     ui.Paint();
     True(ui.View.PixelsPerMs < restoredScale, "Manual zoom could not leave AR scale.");
     ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.resetView"));
@@ -906,6 +938,7 @@ sealed class Ui
     public Ui(bool overview = true, TimeProvider? timeProvider = null)
     {
         View = new(timeProvider: timeProvider);
+        View.LibrarySettings.TestplayStartupDelaySeconds = 0;
         View.SetSliderEditingMode(SliderEditingMode.PenTool);
         Paint();
         if (overview) ShowFixtureOverview();
@@ -919,7 +952,7 @@ sealed class Ui
     private void ShowFixtureOverview()
     {
         // Keep multi-second editing fixtures visible at the minimum supported canvas width.
-        View.Wheel(Plot.X, Plot.Bottom, (float)(120 * Math.Log(0.09 / View.PixelsPerMs) / Math.Log(1.16)), true);
+        View.Wheel(Plot.X, Plot.Bottom, (float)(120 * Math.Log(0.09 / View.PixelsPerMs) / Math.Log(1.16)), false, false, true);
         height = Math.Max(height, (float)(400 + 8000 * View.PixelsPerMs));
         Paint();
         float panY = Plot.Bottom - 1;

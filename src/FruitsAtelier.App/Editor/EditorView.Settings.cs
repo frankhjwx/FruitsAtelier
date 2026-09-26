@@ -7,11 +7,11 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { General, Workspace, Appearance, Testplay, Updates }
+    private enum SettingsCategory { General, Workspace, Appearance, Testplay, Updates, Audio, Skins }
     private SettingsCategory settingsCategory;
-    private bool settingsFromLibrary;
     private bool draftRomanisedMetadata;
     private bool draftDerandomizeDroplets;
+    private double draftTestplayStartupDelaySeconds;
     private readonly uint[] draftIndicatorColours = new uint[4];
     private int settingsColourIndex = -1;
     private uint settingsColourOriginal;
@@ -19,8 +19,15 @@ public sealed partial class EditorView
     private double settingsHue, settingsSaturation, settingsValue;
     private Rect settingsPalette, settingsHueTrack;
     private int settingsColourDrag;
-    private const float SettingsContentX = 246;
+    internal Rect SettingsBounds => new((width - Math.Min(1040, width - 24)) / 2,
+        (height - Math.Min(680, height - 24)) / 2, Math.Min(1040, width - 24), Math.Min(680, height - 24));
+    private float SettingsContentX => SettingsBounds.X + 230;
+    private float SettingsTop => SettingsBounds.Y;
+    private float SettingsRight => SettingsBounds.Right;
     private const float SettingsTextSize = 13;
+    private bool SettingsAudioVisible => librarySettingsOpen && settingsCategory == SettingsCategory.Audio;
+    internal Rect SettingsSkinSelectorBounds => new(SettingsContentX, SettingsTop + 144,
+        Math.Min(520, SettingsRight - SettingsContentX - 32), 38);
 
     private void SettingsButton(ICanvas c, Rect bounds, string label, Action action, bool active = false, bool enabled = true)
         => Button(c, bounds, label, action, active, enabled, SettingsTextSize, bold: false);
@@ -28,11 +35,10 @@ public sealed partial class EditorView
     public void OpenSettings()
     {
         if (librarySettingsOpen || IsTestplaying || !PrepareFileOperation()) return;
-        settingsFromLibrary = LibraryVisible;
         if (AudioPlaying) RequestTogglePlayback?.Invoke();
         ResetSettingsDrafts();
         settingsCategory = SettingsCategory.General;
-        LibraryVisible = librarySettingsOpen = true;
+        librarySettingsOpen = true;
         updatesPage = exportPage = resourcePage = false;
         libraryField = bindingCapture = menu = -1;
         libraryError = "";
@@ -53,6 +59,7 @@ public sealed partial class EditorView
         draftIndicatorColours[3] = LibrarySettings.HyperDashIndicatorColour;
         settingsColourIndex = -1; settingsColourDrag = 0; settingsColourHex = settingsColourError = "";
         draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
+        draftTestplayStartupDelaySeconds = LibrarySettings.TestplayStartupDelaySeconds;
     }
 
     private bool SettingsChanged => draftWorkspace != LibrarySettings.Workspace ||
@@ -66,12 +73,12 @@ public sealed partial class EditorView
         draftIndicatorColours[3] != LibrarySettings.HyperDashIndicatorColour ||
         draftTestplayKeys[0] != LibrarySettings.TestplayLeftKey ||
         draftTestplayKeys[1] != LibrarySettings.TestplayRightKey ||
-        draftTestplayKeys[2] != LibrarySettings.TestplayDashKey;
+        draftTestplayKeys[2] != LibrarySettings.TestplayDashKey ||
+        draftTestplayStartupDelaySeconds != LibrarySettings.TestplayStartupDelaySeconds;
 
     private void CloseSettings()
     {
         FinishVolumeDrag();
-        LibraryVisible = settingsFromLibrary;
         librarySettingsOpen = false;
         settingsColourIndex = -1;
         settingsColourDrag = 0;
@@ -82,50 +89,54 @@ public sealed partial class EditorView
 
     private void DrawSettings(ICanvas c)
     {
-        DrawHeader(c);
-        c.Text(L.Get("library.settings"), 109, 11, 13, Foreground, 200, true);
-        SettingsButton(c, HeaderNavigationBounds, L.Get(settingsFromLibrary ? "library.back" : "library.editor"), CloseSettings);
-        c.Fill(new(0, HeaderHeight, 214, height - HeaderHeight), Panel);
-        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.testplay", "update.title"];
+        if (!librarySettingsOpen) return;
+        hits.Clear(); fields.Clear();
+        var r = SettingsBounds;
+        c.Fill(new(0, 0, width, height), Background, opacity: .8f);
+        c.Fill(r, Panel, 8); c.Stroke(r, Grid, radius: 8);
+        c.Text(L.Get("library.settings"), r.X + 20, r.Y + 16, 19, Foreground, r.Width - 80, true);
+        SettingsButton(c, new(r.Right - 48, r.Y + 10, 32, 28), "×", CloseSettings);
+        c.Line(r.X + 214, r.Y + 56, r.X + 214, r.Bottom - 20, Grid);
+        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.testplay", "update.title", "settings.audio", "settings.skins"];
         for (int i = 0; i < categories.Length; i++)
         {
             var category = (SettingsCategory)i;
             if (category == SettingsCategory.Updates && RequestUpdateCheck is null) continue;
-            Button(c, new(16, 78 + i * 48, 182, 38), L.Get(categories[i]), () =>
+            Button(c, new(r.X + 16, r.Y + 78 + i * 48, 182, 38), L.Get(categories[i]), () =>
             {
-                FinishVolumeDrag(); libraryField = bindingCapture = -1;
+                FinishVolumeDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
                 settingsCategory = category;
                 if (category == SettingsCategory.Updates && UpdateStatus.Phase is UpdatePhase.Idle or UpdatePhase.Current or UpdatePhase.Failed)
                     RequestUpdateCheck?.Invoke();
             }, settingsCategory == category, fontSize: SettingsTextSize);
         }
-        c.Text(L.Get(categories[(int)settingsCategory]), SettingsContentX, 82, 24, Foreground, width - SettingsContentX - 32, true);
+        c.Text(L.Get(categories[(int)settingsCategory]), SettingsContentX, SettingsTop + 82, 24, Foreground, SettingsRight - SettingsContentX - 32, true);
         switch (settingsCategory)
         {
             case SettingsCategory.General:
-                SettingsButton(c, new(SettingsContentX, 144, Math.Min(520, width - SettingsContentX - 32), 38),
+                SettingsButton(c, new(SettingsContentX, SettingsTop + 144, Math.Min(520, SettingsRight - SettingsContentX - 32), 38),
                     L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
                     () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
                 break;
             case SettingsCategory.Workspace:
-                c.Text(L.Get("library.settingsDescription"), SettingsContentX, 128, SettingsTextSize, Muted, width - SettingsContentX - 32);
-                LibraryTextField(c, 0, L.Get("library.workspace"), draftWorkspace, 180);
-                LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, 284);
+                c.Text(L.Get("library.settingsDescription"), SettingsContentX, SettingsTop + 128, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
+                LibraryTextField(c, 0, L.Get("library.workspace"), draftWorkspace, SettingsTop + 180);
+                LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, SettingsTop + 284);
                 break;
             case SettingsCategory.Appearance:
-                LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, 160);
-                float rowWidth = Math.Min(520, width - SettingsContentX - 32);
+                LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, SettingsTop + 160);
+                float rowWidth = Math.Min(520, SettingsRight - SettingsContentX - 32);
                 float labelWidth = Math.Min(240, rowWidth / 2);
                 float controlX = SettingsContentX + labelWidth + 16;
                 float controlWidth = rowWidth - labelWidth - 16;
-                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, 264.5f, SettingsTextSize, Foreground, labelWidth, true);
-                var romanisedBounds = new Rect(controlX, 254, controlWidth, 38);
+                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, SettingsTop + 264.5f, SettingsTextSize, Foreground, labelWidth, true);
+                var romanisedBounds = new Rect(controlX, SettingsTop + 254, controlWidth, 38);
                 c.Fill(romanisedBounds, Surface, 4); c.Stroke(romanisedBounds, Grid, radius: 4);
                 SettingsButton(c, romanisedBounds,
                     L.Get(draftRomanisedMetadata ? "settings.romanisedOn" : "settings.romanisedOff"),
                     () => draftRomanisedMetadata = !draftRomanisedMetadata, draftRomanisedMetadata);
-                c.Text(L.Get("ui.language"), SettingsContentX, 326.5f, SettingsTextSize, Foreground, labelWidth, true);
-                DrawLanguageButton(c, new(controlX, 316, controlWidth, 38));
+                c.Text(L.Get("ui.language"), SettingsContentX, SettingsTop + 326.5f, SettingsTextSize, Foreground, labelWidth, true);
+                DrawLanguageButton(c, new(controlX, SettingsTop + 316, controlWidth, 38));
                 DrawIndicatorColours(c);
                 break;
             case SettingsCategory.Testplay:
@@ -134,11 +145,19 @@ public sealed partial class EditorView
             case SettingsCategory.Updates:
                 DrawUpdates(c, SettingsContentX, true);
                 break;
+            case SettingsCategory.Audio:
+                DrawVolumeControls(c);
+                c.Text(L.Get("settings.immediatePreferences"), SettingsContentX, SettingsTop + 368, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
+                break;
+            case SettingsCategory.Skins:
+                DrawSkinSelector(c, SettingsSkinSelectorBounds);
+                c.Text(L.Get("settings.immediatePreferences"), SettingsContentX, SettingsTop + 204, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
+                break;
         }
-        c.Line(230, height - 86, width - 24, height - 86, Grid);
-        c.Text(libraryError, SettingsContentX, height - 116, 13, Error, width - SettingsContentX - 32);
+        c.Line(SettingsContentX, r.Bottom - 86, r.Right - 24, r.Bottom - 86, Grid);
+        c.Text(libraryError, SettingsContentX, r.Bottom - 116, 13, Error, SettingsRight - SettingsContentX - 32);
         bool canApply = SettingsChanged && scanTask is null && searchTask is null;
-        SettingsButton(c, new(SettingsContentX, height - 64, 200, 38), L.Get("library.apply"), () => ApplySettings(),
+        SettingsButton(c, new(SettingsContentX, r.Bottom - 64, 200, 38), L.Get("library.apply"), () => ApplySettings(),
             active: canApply, enabled: canApply);
         if (settingsColourIndex >= 0) DrawIndicatorColourPicker(c);
     }
@@ -150,6 +169,7 @@ public sealed partial class EditorView
         {
             var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
+            settings.TestplayStartupDelaySeconds = draftTestplayStartupDelaySeconds;
             settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.DerandomizeDroplets = draftDerandomizeDroplets;
             settings.StandIndicatorColour = draftIndicatorColours[0]; settings.WalkIndicatorColour = draftIndicatorColours[1];
@@ -173,14 +193,14 @@ public sealed partial class EditorView
 
     private void DrawIndicatorColours(ICanvas c)
     {
-        float available = width - SettingsContentX - 32;
+        float available = SettingsRight - SettingsContentX - 32;
         float cellWidth = (available - 12) / 2;
-        c.Text(L.Get("settings.indicatorColours"), SettingsContentX, 380, SettingsTextSize, Foreground, available - 190, true);
+        c.Text(L.Get("settings.indicatorColours"), SettingsContentX, SettingsTop + 380, SettingsTextSize, Foreground, available - 190, true);
         string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
         for (int i = 0; i < 4; i++)
         {
             int index = i;
-            var bounds = new Rect(SettingsContentX + i % 2 * (cellWidth + 12), 410 + i / 2 * 42, cellWidth, 34);
+            var bounds = new Rect(SettingsContentX + i % 2 * (cellWidth + 12), SettingsTop + 410 + i / 2 * 42, cellWidth, 34);
             c.Fill(bounds, Surface, 4);
             c.Stroke(bounds, Grid, radius: 4);
             var swatch = new Rect(bounds.X + 7, bounds.Y + 7, 20, 20);
@@ -189,7 +209,7 @@ public sealed partial class EditorView
             c.Text($"#{draftIndicatorColours[i]:X6}", bounds.Right - 82, bounds.Y + 8, SettingsTextSize, Muted, 76);
             hits.Add(new(bounds, () => OpenIndicatorColourPicker(index), true));
         }
-        SettingsButton(c, new(SettingsContentX + available - 174, 374, 174, 30), L.Get("settings.indicatorReset"), () =>
+        SettingsButton(c, new(SettingsContentX + available - 174, SettingsTop + 374, 174, 30), L.Get("settings.indicatorReset"), () =>
         {
             draftIndicatorColours[0] = FruitsAtelier.Core.LibrarySettings.DefaultStandIndicatorColour;
             draftIndicatorColours[1] = FruitsAtelier.Core.LibrarySettings.DefaultWalkIndicatorColour;

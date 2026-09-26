@@ -31,6 +31,12 @@ public sealed class LibrarySettings
     public int TestplayLeftKey { get; set; } = 37;
     public int TestplayRightKey { get; set; } = 39;
     public int TestplayDashKey { get; set; } = 16;
+    private double testplayStartupDelaySeconds = 1;
+    public double TestplayStartupDelaySeconds
+    {
+        get => testplayStartupDelaySeconds;
+        set => testplayStartupDelaySeconds = double.IsFinite(value) ? Math.Clamp(value, 0, 5) : 1;
+    }
     private int masterVolume = 100, songVolume = 100, hitsoundVolume = 100;
     public int MasterVolume { get => masterVolume; set => masterVolume = Math.Clamp(value, 0, 100); }
     public int SongVolume { get => songVolume; set => songVolume = Math.Clamp(value, 0, 100); }

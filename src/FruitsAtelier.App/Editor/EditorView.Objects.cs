@@ -57,7 +57,6 @@ public sealed partial class EditorView
             if (sourceId is { } id && item.SourceId != id) continue;
             var point = new MapPoint(item.TimeMs, item.X);
             double candidateDistance = PointerDistance(point, x, y);
-            if (candidateDistance >= distance) continue;
             var p = Screen(point);
             float scale = Playfield.Width / 512;
             var bounds = skin?.Bounds(SkinObjectKind(item.Kind), skinIndices.GetValueOrDefault(item.SourceId),
@@ -65,7 +64,13 @@ public sealed partial class EditorView
             bool hit = bounds is { } b
                 ? Math.Abs(x - p.X) <= Math.Max(7, b.Width / 2) && Math.Abs(y - p.Y) <= Math.Max(7, b.Height / 2)
                 : Near(point, x, y, Math.Max(7, ObjectRadius(item.Kind) * scale));
-            if (hit) { closest = item; distance = candidateDistance; }
+            if (!hit) continue;
+            // Later stream fruits are drawn over earlier ones, so their whole visible sprite wins an overlap.
+            bool frontStreamFruit = closest is { } previous && previous.SourceId == item.SourceId
+                && item.TimeMs > previous.TimeMs && item.Kind == CatchObjectKind.Fruit
+                && Document.Tracks.Any(track => track.Id == item.SourceId && track.StreamSnapDivisor is not null);
+            if (candidateDistance < distance || frontStreamFruit)
+            { closest = item; distance = candidateDistance; }
         }
         return closest;
     }
@@ -168,7 +173,10 @@ public sealed partial class EditorView
     {
         if (notesLocked) return;
         if (objectSelection.Count == 0) return;
-        if (SelectedDistanceObject() is { IsStandalone: false }) { distanceObject = null; soundEdge = null; }
+        if (SelectedDistanceObject() is { } selectedChild
+            && (!selectedChild.IsStandalone || Document.Tracks.Any(track => track.Id == selectedChild.SourceId && track.StreamSnapDivisor is not null)))
+        { distanceObject = null; soundEdge = null; }
+        pendingStreamChildSelection = null;
         bool movesOneFruit = objectSelection.Count == 1 && Document.Fruits.Any(item => objectSelection.Contains(item.Id));
         history.Begin(L.Get(movesOneFruit ? "editor.command.moveFruit" : "editor.command.moveObjects"));
         objectDragStart = Document.DeepClone();
@@ -182,7 +190,7 @@ public sealed partial class EditorView
     private Dictionary<Guid, Fruit> dragFruits = [];
     private Dictionary<Guid, CurveTrack> dragTracks = [];
     private Dictionary<Guid, BananaShower> dragBananas = [];
-    private void MoveSelectedObjects(float x, float y)
+    private void MoveSelectedObjects(float x, float y, bool shift)
     {
         if (objectDragStart is null) return;
         if (!objectDragPrepared)
@@ -243,7 +251,7 @@ public sealed partial class EditorView
             IncludeTime(ImportedSliderConverter.EndTimeMs(objectDragStart, slider));
         }
 
-        if (snap && double.IsFinite(minTime) && Math.Abs(deltaTime) > .001)
+        if (snap && !(objectDragTimeline && shift) && double.IsFinite(minTime) && Math.Abs(deltaTime) > .001)
             deltaTime = TimingMap.Snap(Document, minTime + deltaTime, divisor) - minTime;
         if (double.IsFinite(minTime)) deltaTime = Math.Clamp(deltaTime, -minTime, EditableDurationMs - maxTime);
         else deltaTime = 0;

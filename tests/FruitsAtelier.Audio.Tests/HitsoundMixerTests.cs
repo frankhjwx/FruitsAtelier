@@ -9,7 +9,10 @@ static class HitsoundMixerTests
     {
         ByteAdapterBuffers();
         ScheduledMusic();
+        SpeedChangeSession();
         IndependentVolume();
+        AuditionWithoutMusic();
+        WaveformDecoding();
         using var mixer = new HitsoundPlayer();
         var buffer = new float[4096];
         var sound = new Hitsound(CatchObjectKind.Fruit, null, .5f);
@@ -39,6 +42,58 @@ static class HitsoundMixerTests
         mixer.Queue(new(CatchObjectKind.Fruit, normal, 1)); mixer.Read(buffer, 0, buffer.Length);
         if (!buffer.Any(v => Math.Abs(v) > .001)) throw new Exception("Default normal-only note emitted silent PCM");
         Console.WriteLine("PASS Hitsound PCM mixing, volume, overlap, stop, clipping and custom WAV decoding");
+    }
+
+    private static void AuditionWithoutMusic()
+    {
+        var output = new AuditionOutput();
+        using var mixer = new HitsoundPlayer(createAuditionOutput: () => output);
+        foreach (string name in new[] { "hitnormal", "hitfinish", "hitwhistle", "hitclap" })
+        {
+            mixer.Stop(); mixer.Volume = .5f;
+            mixer.PlayAudition(new(CatchObjectKind.Fruit, HitsoundDefaults.Find(1, name), .7f, name));
+            var bytes = new byte[16384];
+            output.Source!.Read(bytes, 0, bytes.Length);
+            if (output.PlaybackState != PlaybackState.Playing || !bytes.Any(b => b != 0))
+                throw new Exception("Audition has no PCM without music: " + name);
+            mixer.Stop(); output.Source.Read(bytes, 0, bytes.Length);
+            if (bytes.Any(b => b != 0)) throw new Exception("Stopped audition still emits PCM.");
+        }
+        mixer.Dispose();
+        if (!output.Disposed) throw new Exception("Audition device not released.");
+        Console.WriteLine("PASS Four audition samples have independent output while music is paused");
+    }
+
+    private static void WaveformDecoding()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "waveform-" + Guid.NewGuid() + ".wav");
+        try
+        {
+            File.WriteAllBytes(path, HitsoundSamples.CreateWave(CatchObjectKind.Fruit));
+            var wave = WaveformDecoder.Load(path, default).GetAwaiter().GetResult();
+            if (wave.DurationMs < 60 || wave.DurationMs > 64 || wave.Peak(0, 64) < .2f)
+                throw new Exception("WAV waveform has incorrect duration or amplitude.");
+            wave = WaveformDecoder.Load(Path.Combine(AppContext.BaseDirectory, "Fixtures", "quiet-tone.ogg"), default).GetAwaiter().GetResult();
+            if (wave.DurationMs <= 0 || wave.Peak(0, wave.DurationMs) <= 0)
+                throw new Exception("OGG waveform is empty.");
+        }
+        finally { File.Delete(path); }
+        Console.WriteLine("PASS WAV and OGG waveform decoding without playback output");
+    }
+
+    private sealed class AuditionOutput : IWavePlayer
+    {
+        public IWaveProvider? Source;
+        public WaveFormat OutputWaveFormat => Source?.WaveFormat ?? WaveFormat.CreateIeeeFloatWaveFormat(44100, 1);
+        public bool Disposed;
+        public PlaybackState PlaybackState { get; private set; }
+        public float Volume { get; set; } = 1;
+        public event EventHandler<StoppedEventArgs>? PlaybackStopped { add { } remove { } }
+        public void Init(IWaveProvider source) => Source = source;
+        public void Play() => PlaybackState = PlaybackState.Playing;
+        public void Pause() => PlaybackState = PlaybackState.Paused;
+        public void Stop() => PlaybackState = PlaybackState.Stopped;
+        public void Dispose() => Disposed = true;
     }
 
     private static void IndependentVolume()
@@ -130,6 +185,35 @@ static class HitsoundMixerTests
             if (buffer.Take(channels * 257).Any(v => v != .1f)) throw new Exception("Live catch survived cancellation");
         }
         Console.WriteLine("PASS Timestamped hitsounds share music frames across buffer boundaries, sample rates, channels and cancellation");
+    }
+
+    private static void SpeedChangeSession()
+    {
+        foreach (double speed in new[] { .5, 1, 1.5 })
+        {
+            using var mixer = new HitsoundPlayer();
+            var sound = new Hitsound(CatchObjectKind.Fruit, null, .5f);
+            var sample = HitsoundSamples.Create(sound);
+            var oldSession = mixer.MixWithMusic(new ConstantMusic(44100, 1), 0, .5);
+            var elapsed = new float[44100 * 2];
+            oldSession.Read(elapsed, 0, elapsed.Length);
+            mixer.Schedule(sound, 1000);
+            mixer.Schedule(sound, 1100);
+            oldSession.Read(new float[441], 0, 441);
+
+            var resumed = mixer.MixWithMusic(new ConstantMusic(44100, 1), 1005, speed);
+            var output = new float[44100 * 3];
+            resumed.Read(output, 0, output.Length);
+            long attack = (long)Math.Round(95 * 44100 / (1000 * speed));
+            for (int i = 0; i < output.Length; i++)
+            {
+                long position = i - attack;
+                float expected = .1f + (position >= 0 && position < sample.Length ? sample[position] * sound.Volume : 0);
+                if (Math.Abs(output[i] - expected) > .00001f)
+                    throw new Exception($"Rebuilt {speed}x session misplaced a hit or emitted stale PCM in the break at frame {i}");
+            }
+        }
+        Console.WriteLine("PASS Speed changes rebase future hits and discard prior attacks; following break has no hitsound PCM");
     }
 
     private sealed class ConstantMusic(int rate, int channels) : ISampleProvider

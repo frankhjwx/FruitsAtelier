@@ -123,7 +123,7 @@ Apple mixer reference: [AVAudioSourceNode](https://developer.apple.com/documenta
 
 ## Playback speed
 
-Song tempo is adjustable to 10%, 25%, 50%, 75%, 100%, and 150% with pitch preserved. Windows stretches music before mixing hitsounds: event map offsets are divided by tempo to locate output frames, while each sample advances at its normal sample rate. macOS applies a music-only AVAudioUnitTimePitch and divides event offsets by tempo when scheduling the independent hitsound engine. Speed changes retain the map playhead; macOS cancels future hitsounds and reschedules against the new start time.
+Song tempo is adjustable to 10%, 25%, 50%, 75%, 100%, and 150% with pitch preserved. Windows stretches music before mixing hitsounds: event map offsets are divided by tempo to locate output frames, while each sample advances at its normal sample rate. Rebuilding Windows output discards prior hitsound attacks and recalculates queued future events from their map timestamps using the new output origin and tempo. macOS applies a music-only AVAudioUnitTimePitch and divides event offsets by tempo when scheduling the independent hitsound engine. Speed changes retain the map playhead; macOS cancels future hitsounds and reschedules against the new start time.
 
 ## Volume
 

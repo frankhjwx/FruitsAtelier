@@ -19,6 +19,7 @@ public sealed partial class EditorView
     public bool TestplayAutoplay => testplay?.Autoplay ?? false;
     private double TestplayRealtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
     private double testplayStart;
+    private double testplayReturnPosition;
     private bool testplayWithAudio;
     private double transportSampleAt, transportSamplePosition, transportSampleLeadMs;
     public bool IsTestplaying => testplay is not null;
@@ -34,30 +35,44 @@ public sealed partial class EditorView
             DiscardConfirmationVisible || SliderDialogVisible || TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
             drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty || AudioLoading) return;
         EnsureConversion();
-        var session = new CatchTestplay(PreviewObjects(), PreviewCircleSize, playhead);
+        testplayReturnPosition = playhead;
+        testplayStart = Math.Max(0, playhead - LibrarySettings.TestplayStartupDelaySeconds * 1000d);
+        var session = new CatchTestplay(PreviewObjects(), PreviewCircleSize, testplayStart);
         if (session.Finished || AudioReady && playhead >= AudioDurationMs)
         { StatusMessage = L.Get("testplay.noNotes"); return; }
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
-        testplayStart = playhead;
         testplayTabHeld = false;
         testplayPauseHeld = false;
         testplayBookmarkHeld = false;
         testplayAutoNotice = null;
         testplayWithAudio = AudioReady;
-        comboCurrent = comboPrevious = 0; comboChangedAt = double.NegativeInfinity;
         ResetHitsounds();
+        bool restartAudio = AudioReady && AudioPlaying && testplayStart < testplayReturnPosition;
+        if (restartAudio)
+        {
+            if (RequestPausePlayback is not null) RequestPausePlayback();
+            else RequestTogglePlayback?.Invoke();
+        }
+        playhead = testplayStart;
+        FollowPlayhead();
+        BeginTestplay(session, audioAlreadyPlaying: AudioPlaying && !restartAudio);
+    }
+
+    private void BeginTestplay(CatchTestplay session, bool audioAlreadyPlaying)
+    {
+        comboCurrent = comboPrevious = 0; comboChangedAt = double.NegativeInfinity;
         var resolver = new HitsoundResolver(Document, PreviewObjects(), HitsoundSkinFolders);
         var sounds = PreviewObjects().ToDictionary(item => (item.SourceId, item.EventIndex), resolver.Resolve);
         foreach (var sound in sounds.Values.SelectMany(s => s).Distinct()) RequestPrepareHitsound?.Invoke(sound);
         var playSound = RequestHitsound;
         var scheduleSound = OperatingSystem.IsWindows() && AudioReady ? RequestScheduleHitsound : null;
         double now = TestplayRealtime;
-        double clockStart = AudioPlaying ? Math.Min(AudioDurationMs,
+        double clockStart = audioAlreadyPlaying ? Math.Min(AudioDurationMs,
             transportSamplePosition + Math.Max(0, now - transportSampleAt) * PlaybackSpeed
-            + CatchTestplaySession.LiveHitsoundLead(transportSampleLeadMs, PlaybackSpeed)) : playhead;
-        var clock = new CatchTestplayClock(clockStart, PlaybackSpeed, now, AudioReady && !AudioPlaying);
+            + CatchTestplaySession.LiveHitsoundLead(transportSampleLeadMs, PlaybackSpeed)) : testplayStart;
+        var clock = new CatchTestplayClock(clockStart, PlaybackSpeed, now, AudioReady && !audioAlreadyPlaying);
         if (AudioReady) clock.Synchronize(clockStart, now, now);
-        testplay = new(session, clock, playhead, AudioReady, AudioPlaying, LibrarySettings.TestplayLeftKey,
+        testplay = new(session, clock, testplayStart, AudioReady, audioAlreadyPlaying, LibrarySettings.TestplayLeftKey,
             LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey, timeProvider, PreviewCircleSize, previewComboEnds,
             item =>
             {
@@ -68,7 +83,7 @@ public sealed partial class EditorView
                 }
             });
         testplayFrame = testplay.Capture();
-        if (AudioReady && !AudioPlaying) { RequestSeek?.Invoke(playhead); RequestTogglePlayback?.Invoke(); }
+        if (AudioReady && !audioAlreadyPlaying) { RequestSeek?.Invoke(testplayStart); RequestTogglePlayback?.Invoke(); }
         try { if (testplay is not null) testplayDriver = RequestRunTestplay?.Invoke(testplay); }
         catch { StopTestplay(); throw; }
     }
@@ -76,8 +91,8 @@ public sealed partial class EditorView
     public void StopTestplay(bool atCurrentPosition = false)
     {
         if (!IsTestplaying) return;
-        double returnTime = atCurrentPosition ? testplay!.TransportPosition : testplayStart;
-        testplay!.Cancel();
+        double returnTime = atCurrentPosition && testplay is not null ? testplay.TransportPosition : testplayReturnPosition;
+        testplay?.Cancel();
         testplayDriver?.Dispose(); testplayDriver = null;
         testplay = null; testplayFrame = null;
         testplayAutoNotice = null;
@@ -132,6 +147,8 @@ public sealed partial class EditorView
 
     public void KeyUp(int virtualKey)
     {
+        if (virtualKey == 84) timingTapHeld = false;
+        ReleaseVolumeShortcut(virtualKey);
         if (virtualKey is 17 or 162 or 163) placementCtrl = false;
         if (virtualKey == 27) testplayEscapeConsumed = false;
         if (virtualKey == 9) testplayTabHeld = false;
@@ -188,6 +205,7 @@ public sealed partial class EditorView
                 c.Text(notice, width / 2f - c.MeasureText(notice, 20) / 2, bar.Y + 18, 20, textColour, stage.Width, true);
             }
         }
+        DrawVolumePopover(c);
     }
 
     // ppy/osu 48c4800e: LegacyCatchComboCounter, LegacyRollingCounter and CatcherArea.
@@ -234,7 +252,7 @@ public sealed partial class EditorView
 
     private int bindingCapture = -1;
     private int[] draftTestplayKeys = [37, 39, 16];
-    public bool CapturingTestplayKey => bindingCapture >= 0 && LibraryVisible && librarySettingsOpen;
+    public bool CapturingTestplayKey => bindingCapture >= 0 && librarySettingsOpen;
     // Esc, Tab, F1 and F2 belong to testplay navigation; OS/media keys cannot reliably reach both hosts.
     private static bool IsBindingKey(int key) => key is >= 65 and <= 90 or >= 48 and <= 57 or >= 33 and <= 40
         or >= 96 and <= 111 or >= 114 and <= 135 or >= 186 and <= 192 or >= 219 and <= 223
@@ -253,13 +271,28 @@ public sealed partial class EditorView
     };
     private void DrawTestplayBindings(ICanvas c)
     {
+        var leadIn = new Rect(SettingsContentX + 270, SettingsTop + 260, 202, 38);
+        c.Text(L.Get("testplay.startupDelay"), SettingsContentX, leadIn.Y + (leadIn.Height - 17) / 2,
+            SettingsTextSize, Foreground, 260, true);
+        var valueBounds = new Rect(leadIn.X + 26, leadIn.Y, leadIn.Width - 52, leadIn.Height);
+        c.Fill(valueBounds, Surface, 4); c.Stroke(valueBounds, Grid, radius: 4);
+        string value = L.Get("testplay.startupDelayValue", draftTestplayStartupDelaySeconds);
+        float valueWidth = c.MeasureText(value, SettingsTextSize);
+        c.Text(value, valueBounds.X + (valueBounds.Width - valueWidth) / 2,
+            valueBounds.Y + (valueBounds.Height - 17) / 2, SettingsTextSize, Foreground, valueWidth + 1);
+        TimingButton(c, new(leadIn.X, leadIn.Y, 24, leadIn.Height), "‹",
+            () => draftTestplayStartupDelaySeconds = Math.Max(0, draftTestplayStartupDelaySeconds - .5),
+            enabled: draftTestplayStartupDelaySeconds > 0, flatArrow: true);
+        TimingButton(c, new(leadIn.Right - 24, leadIn.Y, 24, leadIn.Height), "›",
+            () => draftTestplayStartupDelaySeconds = Math.Min(5, draftTestplayStartupDelaySeconds + .5),
+            enabled: draftTestplayStartupDelaySeconds < 5, flatArrow: true);
         string[] labels = ["testplay.left", "testplay.right", "testplay.dash"];
-        float cell = Math.Min(220, (width - SettingsContentX - 32) / 3);
+        float cell = Math.Min(220, (SettingsRight - SettingsContentX - 32) / 3);
         for (int i = 0; i < 3; i++)
         {
             int action = i;
-            c.Text(L.Get(labels[i]), SettingsContentX + i * cell, 160, SettingsTextSize, Foreground, cell - 8, true);
-            SettingsButton(c, new(SettingsContentX + i * cell, 188, cell - 12, 42), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
+            c.Text(L.Get(labels[i]), SettingsContentX + i * cell, SettingsTop + 160, SettingsTextSize, Foreground, cell - 8, true);
+            SettingsButton(c, new(SettingsContentX + i * cell, SettingsTop + 188, cell - 12, 42), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
                 () => { libraryField = -1; bindingCapture = action; }, bindingCapture == i);
         }
     }

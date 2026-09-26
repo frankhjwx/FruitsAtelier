@@ -54,16 +54,20 @@ public sealed partial class EditorView
         if (AudioReady && !AudioPlaying) TogglePlayback();
     }
 
-    private void Pause()
+    private void Pause() => Pause(snapToGrid: true);
+
+    private void Pause(bool snapToGrid)
     {
+        pauseSnapDivisor = null;
         if (!AudioPlaying) return;
+        pauseSnapDivisor = snapToGrid && snap ? divisor : null;
         if (RequestPausePlayback is not null) RequestPausePlayback();
         else RequestTogglePlayback?.Invoke();
     }
 
     private void Stop()
     {
-        Pause();
+        Pause(snapToGrid: false);
         SeekTo(0);
     }
 }

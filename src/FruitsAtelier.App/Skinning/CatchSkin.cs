@@ -26,6 +26,13 @@ public sealed class CatchSkin
     private CatchSkin? fallback;
     private string comboPrefix = "score";
     private float comboOverlap;
+    private string hitCirclePrefix = "default";
+    private float hitCircleOverlap;
+    private bool? overlayAboveNumber;
+    private bool OverlayAboveNumber => overlayAboveNumber ?? fallback?.OverlayAboveNumber ?? true;
+    private uint? sliderTrackColour, sliderBorderColour;
+    public uint? SliderTrackColour => sliderTrackColour ?? fallback?.SliderTrackColour;
+    public uint SliderBorderColour => sliderBorderColour ?? fallback?.SliderBorderColour ?? 0xFFFFFF;
     public string FolderPath { get; }
     public string Name { get; private set; }
     private static readonly uint[] defaultComboColours = [0xFFC000, 0x00CA00, 0x127CFF, 0xF21839];
@@ -56,6 +63,7 @@ public sealed class CatchSkin
             for (int digit = 0; digit <= 9; digit++)
             {
                 LoadTexture($"{candidate.comboPrefix}-{digit}");
+                LoadTexture($"{candidate.hitCirclePrefix}-{digit}");
                 if (candidate.comboPrefix != "score") LoadTexture($"score-{digit}");
             }
             foreach (string name in fruitNames.Concat(["drop", "bananas"]))
@@ -64,6 +72,7 @@ public sealed class CatchSkin
                 LoadTexture($"fruit-{name}-overlay");
             }
             LoadTexture("reversearrow");
+            foreach (string component in new[] { "hitcircle", "hitcircleoverlay", "sliderstartcircle", "sliderstartcircleoverlay", "sliderendcircle", "sliderendcircleoverlay" }) LoadTexture(component);
             LoadTexture("fruit-catcher-idle");
             LoadTexture("fruit-catcher-idle-0");
             if (candidate.textures.Count == 0 && fallback is null && !allowEmpty && !files.Keys.Any(HitsoundResolver.IsSkinSample)) { message = L.Get("skin.noTextures"); return false; }
@@ -77,7 +86,7 @@ public sealed class CatchSkin
                 {
                     string filename = component + (density == 2 ? "@2x" : "") + ".png";
                     if (!files.TryGetValue(filename, out var path)) continue;
-                    if (TryReadTexture(path, density, out var texture)) { candidate.textures.Add(component, texture!); return; }
+                    if (TryReadTexture(path, density, out var texture)) { candidate.textures[component] = texture!; return; }
                     invalid++;
                 }
             }
@@ -126,6 +135,65 @@ public sealed class CatchSkin
             if (textures.TryGetValue(component, out var texture)) yield return texture;
         if (fallback is not null)
             foreach (var texture in fallback.Candidates(components)) yield return texture;
+    }
+
+    public static void DrawTimelineCircle(ICanvas canvas, CatchSkin? skin, float x, float y, float diameter,
+        uint colour, int? number = null, string prefix = "hitcircle")
+    {
+        // Legacy's 128px circle has 5px padding on each side; diameter is the visible track width.
+        float circleScale = diameter / 118;
+        var provider = skin;
+        while (provider != null && !provider.textures.ContainsKey("hitcircle")) provider = provider.fallback;
+        provider ??= skin;
+        if (provider == null || !provider.textures.ContainsKey(prefix)) prefix = "hitcircle";
+        bool Texture(string name, uint tint)
+        {
+            if (skin == null) return false;
+            foreach (var texture in skin.Candidates(name))
+            {
+                float scale = Math.Min(circleScale / texture.Density, diameter * 2 / Math.Max(texture.PixelWidth, texture.PixelHeight));
+                float w = texture.PixelWidth * scale, h = texture.PixelHeight * scale;
+                if (canvas.Image(texture.FilePath, new(x - w / 2, y - h / 2, w, h), tint)) return true;
+            }
+            return false;
+        }
+        if (!Texture(prefix, colour))
+        {
+            canvas.Circle(x, y, diameter / 2, colour);
+            canvas.Circle(x, y, diameter / 2, 0xFFFFFF, false, 1.5f);
+        }
+        bool above = skin?.OverlayAboveNumber ?? true;
+        if (!above) Texture(prefix + "overlay", 0xFFFFFF);
+        if (number is int value && !(skin?.DrawHitCircleNumber(canvas, value, x, y, circleScale * .8f) ?? false))
+        {
+            string label = value.ToString(CultureInfo.InvariantCulture);
+            canvas.Text(label, x - canvas.MeasureText(label, 13) / 2, y - 8, 13, 0xFFFFFF, diameter);
+        }
+        if (above) Texture(prefix + "overlay", 0xFFFFFF);
+    }
+
+    private bool DrawHitCircleNumber(ICanvas canvas, int number, float x, float y, float scale)
+    {
+        var owner = this;
+        string text = number.ToString(CultureInfo.InvariantCulture);
+        while (owner != null)
+        {
+            var glyphs = text.Select(d => owner.textures.GetValueOrDefault($"{owner.hitCirclePrefix}-{d}")).ToArray();
+            if (glyphs.All(g => g != null))
+            {
+                float width = glyphs.Sum(g => g!.PixelWidth / (float)g.Density) - owner.hitCircleOverlap * (glyphs.Length - 1);
+                float left = x - width * scale / 2;
+                foreach (var glyph in glyphs)
+                {
+                    float w = glyph!.PixelWidth / (float)glyph.Density * scale, h = glyph.PixelHeight / (float)glyph.Density * scale;
+                    if (!canvas.Image(glyph.FilePath, new(left, y - h / 2, w, h))) return false;
+                    left += w - owner.hitCircleOverlap * scale;
+                }
+                return true;
+            }
+            owner = owner.fallback;
+        }
+        return false;
     }
 
     public bool DrawCombo(ICanvas canvas, int combo, float x, float y, float scale, uint tint, float opacity, bool additive)
@@ -228,8 +296,16 @@ public sealed class CatchSkin
             int split = line.IndexOf(':');
             if (split < 0) continue;
             string key = line[..split].Trim(), value = line[(split + 1)..].Trim();
+            if (section.Equals("General", StringComparison.OrdinalIgnoreCase) && key.Equals("HitCircleOverlayAboveNumber", StringComparison.OrdinalIgnoreCase))
+                overlayAboveNumber = value != "0";
             if (section.Equals("Fonts", StringComparison.OrdinalIgnoreCase))
             {
+                if (key.Equals("HitCirclePrefix", StringComparison.OrdinalIgnoreCase) && value.Length > 0 &&
+                    !value.Contains('/') && !value.Contains('\\') && value.IndexOfAny(Path.GetInvalidFileNameChars()) < 0)
+                    hitCirclePrefix = value;
+                if (key.Equals("HitCircleOverlap", StringComparison.OrdinalIgnoreCase) &&
+                    float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float hitOverlap) && float.IsFinite(hitOverlap))
+                    hitCircleOverlap = Math.Clamp(hitOverlap, -128, 128);
                 if (key.Equals("ComboPrefix", StringComparison.OrdinalIgnoreCase) && value.Length > 0 &&
                     !value.Contains('/') && !value.Contains('\\') && value.IndexOfAny(Path.GetInvalidFileNameChars()) < 0)
                     comboPrefix = value;
@@ -241,6 +317,11 @@ public sealed class CatchSkin
             if (section.Equals("General", StringComparison.OrdinalIgnoreCase) && key.Equals("Name", StringComparison.OrdinalIgnoreCase))
             { if (value.Length > 0) Name = value[..Math.Min(value.Length, 120)]; continue; }
             if (!TryColour(value, out uint colour)) continue;
+            if (section.Equals("Colours", StringComparison.OrdinalIgnoreCase))
+            {
+                if (key.Equals("SliderBorder", StringComparison.OrdinalIgnoreCase)) sliderBorderColour = colour;
+                if (key.Equals("SliderTrackOverride", StringComparison.OrdinalIgnoreCase)) sliderTrackColour = colour;
+            }
             if (section.Equals("CatchTheBeat", StringComparison.OrdinalIgnoreCase))
             {
                 if (key.Equals("HyperDashFruit", StringComparison.OrdinalIgnoreCase)) hyperFruit = colour;

@@ -50,6 +50,9 @@ public static class DistanceSpacingEditing
             ? start + nested[item.EventIndex].Progress * duration
             : CurveMath.FirstSpanTime(track, item.TimeMs);
         double time = SampleTime(selected);
+        // Repeated traversals share the same path sample, so their droplets move together.
+        var linkedEvents = siblings.Where(o => o.Kind == selected.Kind
+            && Math.Abs(SampleTime(o) - time) < .000001).Select(o => o.EventIndex).ToHashSet();
         var times = siblings.Select(SampleTime)
             .Distinct().OrderBy(t => t).ToArray();
         double? previous = times.Where(t => t < time - CurveMath.MinimumAnchorSpacingMs).Select(t => (double?)t).LastOrDefault();
@@ -77,7 +80,7 @@ public static class DistanceSpacingEditing
         var updated = after.Objects.Where(o => o.SourceId == target.SourceId).ToDictionary(o => o.EventIndex);
         if (updated.Count != siblings.Length || siblings.Any(o => !updated.TryGetValue(o.EventIndex, out var current)
             || current.Kind != o.Kind || Math.Abs(current.TimeMs - o.TimeMs) > .001
-            || Math.Abs(current.X - (o.EventIndex == target.EventIndex ? x : o.X)) > .001))
+            || Math.Abs(current.X - (linkedEvents.Contains(o.EventIndex) ? o.X + x - selected.X : o.X)) > .001))
             throw new ArgumentException(L.Get("coordinate.unreachable"));
     }
 

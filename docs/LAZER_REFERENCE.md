@@ -50,6 +50,34 @@ Catch preview Hard Rock follows [CatchModHardRock.ApplyToDifficulty](https://git
 
 These classes depend on osu!framework. See [Architecture](ARCHITECTURE.md) for this project's audio implementation.
 
+## Timing editor
+
+The timing editor also references these files at the pinned revision above:
+
+- [TimingScreen](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Timing/TimingScreen.cs): active control-point selection when entering Timing.
+- [TimingSectionAdjustments](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Timing/TimingSectionAdjustments.cs): section-scoped offset and beat-length transformations.
+- [TapTimingControl](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Timing/TapTimingControl.cs): timing controls and editor-clock integration.
+- [MetronomeDisplay](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Timing/MetronomeDisplay.cs): playback gating, modifier handling and measure accents.
+
+The implementation uses this project's document transactions, FSlider time geometry,
+shared canvas and timestamped audio mixer. Metronome samples are procedurally
+generated locally. Ctrl follows `computeSpedUpDivisor`: three ticks per beat for
+Snap divisors divisible by three, two for other even divisors, otherwise one. User-facing
+behavior is documented in [Editing Controls](EDITOR_UI.md#timing-editing).
+
+## Upper object timeline
+
+The legacy-style timeline consults these files at the same pinned revision:
+
+- [HitObjectOrderedSelectionContainer](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Compose/Components/HitObjectOrderedSelectionContainer.cs): earlier objects are drawn and hit-tested in front, with end time breaking equal-start ties.
+- [TimelineHitObjectBlueprint](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Compose/Components/Timeline/TimelineHitObjectBlueprint.cs): lazer uses simplified editor shapes rather than legacy circle textures.
+- [LegacyMainCirclePiece](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Osu/Skinning/Legacy/LegacyMainCirclePiece.cs): standard circle base, overlay, endpoint overrides and number-layer configuration.
+- [LegacySliderBody](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Osu/Skinning/Legacy/LegacySliderBody.cs): track colour override and track opacity. The editor projects slider duration onto a straight capsule.
+
+Circle padding and the HitCircle font's 0.8 scale follow [OsuLegacySkinTransformer](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Osu/Skinning/Legacy/OsuLegacySkinTransformer.cs). The upper timeline uses a borderless slider fill matching the legacy editor reference, rather than the gameplay slider border.
+
+Resource handling is documented in [Skinning reference](../src/FruitsAtelier.App/Skinning/REFERENCE.md).
+
 ## Dependencies and licenses
 
 At this revision, [osu.Game.csproj](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/osu.Game.csproj) targets net8.0 but also depends on Realm, osu!framework, resources, and other components. This project does not reference that project.

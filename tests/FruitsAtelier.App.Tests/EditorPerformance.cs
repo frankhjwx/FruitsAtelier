@@ -78,7 +78,7 @@ internal static class EditorPerformance
         var canvas = new CountCanvas();
         view.Render(canvas, 1440, 900);
         view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom,
-            (float)(120 * Math.Log(.32 / view.CanvasZoom) / Math.Log(1.16)), true);
+            (float)(120 * Math.Log(.32 / view.CanvasZoom) / Math.Log(1.16)), true, true);
         var snap = view.SnapSliderBounds;
         view.PointerDown(snap.Right - 31, snap.Y + snap.Height / 2, 0, false, false);
         view.PointerUp(snap.Right - 31, snap.Y + snap.Height / 2, 0);

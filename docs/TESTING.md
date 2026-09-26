@@ -90,6 +90,20 @@ even when the device advances before the worker handles it.
 
 ## Window checks
 
+Settings preference regressions cover Audio sliders and the Skins selector from both the Library and editor, shared values with the original controls, immediate persistence, menu dismissal, and unchanged beatmap content in English and Chinese. The Windows `--render-check` also exercises the Settings sliders and skin menu at its tested sizes and DPI values.
+
+Shortcut routing regressions verify that Timing cannot move hidden Compose
+selections, unsupported modifiers cannot delete timing rows or invoke base
+transport commands, and export remains available outside Timing fields and modal
+dialogs. Language dropdown checks cover arrow navigation, confirmation, Escape,
+background shortcut isolation and unchanged document history in both languages.
+
+Timing regressions cover draft cancellation, atomic apply/undo, clipboard session
+isolation, red/green control points, reset/replacement, and FSlider time transforms.
+Metronome tests compare scheduled timestamps for whole beats, Ctrl subdivisions,
+pause and seek. The native render check draws the Timing page and all setup tabs
+in English and Chinese at each tested window size and DPI.
+
 The Windows `--render-check` injects nested paint/timer messages, nested native-modal
 scopes, an abandoned drawing batch, and a real Direct2D wrong-state failure. It
 checks that the renderer recovers, the error can be dismissed, and map content is

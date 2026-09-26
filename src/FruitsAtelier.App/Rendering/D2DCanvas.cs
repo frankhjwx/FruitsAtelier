@@ -38,12 +38,18 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     private readonly Dictionary<string, (ThumbnailPixels Pixels, ID2D1Bitmap1 Bitmap, long Used)> thumbnailImages = [];
     private long thumbnailClock;
     private const long imageCacheLimit = 64 * 1024 * 1024;
+    private readonly string bookmarkToolbarPath = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
+    private (ImageKey Key, CachedImage Image)? bookmarkToolbar;
+    private long imageClock;
     private readonly record struct ImageKey(string Path, uint Tint, long Version, long Length);
-    private sealed record CachedImage(ID2D1Bitmap1 Bitmap, int Width, int Height);
+    private sealed record CachedImage(ID2D1Bitmap1 Bitmap, int Width, int Height)
+    {
+        public long Used { get; set; }
+    }
     private int width, height, clipDepth;
     private float dpi;
     public string AdapterName { get; private set; } = "";
-    public int LoadedImageCount => images.Count;
+    public int LoadedImageCount => images.Count + (bookmarkToolbar.HasValue ? 1 : 0);
     internal int ImageDecodeCount { get; private set; }
 
     public D2DCanvas(nint hwnd, int width, int height, float dpi)
@@ -160,10 +166,12 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         else context!.FillRectangle(Convert(r), Brush(color, opacity));
     }
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0)
+        => StrokeOpacity(r, color, width, radius, 1);
+    public void StrokeOpacity(Rect r, uint color, float width, float radius, float opacity)
     {
         if (r.Width <= 0 || r.Height <= 0) return;
-        if (radius > 0) context!.DrawRoundedRectangle(new RoundedRectangle(new System.Drawing.RectangleF(r.X, r.Y, r.Width, r.Height), radius, radius), Brush(color), width);
-        else context!.DrawRectangle(Convert(r), Brush(color), width);
+        if (radius > 0) context!.DrawRoundedRectangle(new RoundedRectangle(new System.Drawing.RectangleF(r.X, r.Y, r.Width, r.Height), radius, radius), Brush(color, opacity), width);
+        else context!.DrawRectangle(Convert(r), Brush(color, opacity), width);
     }
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)
         => context!.DrawLine(new Vector2(x1, y1), new Vector2(x2, y2), Brush(color, opacity), width);
@@ -182,6 +190,8 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         return layout.Metrics.WidthIncludingTrailingWhitespace;
     }
     public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false)
+        => TextOpacity(text, x, y, size, color, maxWidth, bold, 1);
+    public void TextOpacity(string text, float x, float y, float size, uint color, float maxWidth, bool bold, float opacity)
     {
         if (maxWidth <= 0 || string.IsNullOrEmpty(text)) return;
         if (!formats.TryGetValue((size, bold), out var format))
@@ -191,7 +201,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
             format.WordWrapping = WordWrapping.NoWrap;
             formats.Add((size, bold), format);
         }
-        context!.DrawText(text, format, new DRect(x, y, maxWidth, size * 1.8f), Brush(color), DrawTextOptions.Clip);
+        context!.DrawText(text, format, new DRect(x, y, maxWidth, size * 1.8f), Brush(color, opacity), DrawTextOptions.Clip);
     }
     public void Clip(Rect r) { context!.PushAxisAlignedClip(Convert(r), AntialiasMode.PerPrimitive); clipDepth++; }
     public void Unclip() { if (clipDepth > 0) { context!.PopAxisAlignedClip(); clipDepth--; } }
@@ -211,15 +221,35 @@ public sealed class D2DCanvas : ICanvas, IDisposable
             if (version.Length is < 24 or > 32 * 1024 * 1024) return false;
             key = new(filePath, tint & 0xFFFFFF, version.Version, version.Length);
             if (failedImages.Contains(key)) return false;
-            if (!images.TryGetValue(key, out var image))
+            CachedImage image;
+            if (string.Equals(filePath, bookmarkToolbarPath, StringComparison.OrdinalIgnoreCase))
+            {
+                // This hover-only chrome stays resident without evicting the visible scene.
+                if (bookmarkToolbar is not { } toolbar || toolbar.Key != key)
+                {
+                    var decoded = LoadImage(filePath, key.Tint);
+                    bookmarkToolbar?.Image.Bitmap.Dispose();
+                    bookmarkToolbar = (key, decoded);
+                    ImageDecodeCount++;
+                }
+                image = bookmarkToolbar.Value.Image;
+            }
+            else if (!images.TryGetValue(key, out image!))
             {
                 image = LoadImage(filePath, key.Tint);
                 ImageDecodeCount++;
                 long bytes = (long)image.Width * image.Height * 4;
-                if (imageBytes + bytes > imageCacheLimit || images.Count >= 128) ClearImages();
+                while (images.Count > 0 && (imageBytes + bytes > imageCacheLimit || images.Count >= 128))
+                {
+                    var oldest = images.MinBy(entry => entry.Value.Used);
+                    images.Remove(oldest.Key);
+                    imageBytes -= (long)oldest.Value.Width * oldest.Value.Height * 4;
+                    oldest.Value.Bitmap.Dispose();
+                }
                 images.Add(key, image);
                 imageBytes += bytes;
             }
+            image.Used = ++imageClock;
             var region = source ?? new Rect(0, 0, image.Width, image.Height);
             if (!ValidRectangle(region) || region.X < 0 || region.Y < 0 || region.Right > image.Width || region.Bottom > image.Height) return false;
             context!.DrawBitmap(image.Bitmap, Convert(destination), opacity, Vortice.Direct2D1.BitmapInterpolationMode.Linear, Convert(region));
@@ -341,6 +371,8 @@ public sealed class D2DCanvas : ICanvas, IDisposable
 
     private void ClearImages()
     {
+        bookmarkToolbar?.Image.Bitmap.Dispose();
+        bookmarkToolbar = null;
         foreach (var image in images.Values) image.Bitmap.Dispose();
         images.Clear();
         imageBytes = 0;

@@ -165,12 +165,13 @@ public sealed partial class EditorView
         return result;
     }
 
-    private void DrawInputText(ICanvas c, Rect content, string value, float size, bool focused, string key)
+    private void DrawInputText(ICanvas c, Rect content, string value, float size, bool focused, string key, bool centered = false)
     {
         float textWidth = c.MeasureText(value, size);
         int caret = focused && textEditor.Field == key ? Math.Clamp(textEditor.Caret, 0, value.Length) : value.Length;
         float caretWidth = c.MeasureText(value[..caret], size);
         float left = content.X - (focused ? Math.Max(0, caretWidth - content.Width + 2) : 0);
+        if (centered && textWidth <= content.Width - 2) left = content.X + (content.Width - textWidth) / 2;
         if (!textMetrics.TryGetValue(key, out var metrics) || metrics.Value != value || metrics.Size != size)
         {
             int[] positions = [.. StringInfo.ParseCombiningCharacters(value).Append(value.Length).Distinct()];

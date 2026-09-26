@@ -11,13 +11,18 @@ public sealed partial class EditorView
     private MapDocument? sliderObjectDragSource, sliderObjectDragShape;
     private int sliderObjectTrackIndex, sliderObjectImportIndex;
     private ConvertedCatchObject? sliderObjectDragPrevious;
+    private ConvertedCatchObject? pendingStreamChildSelection;
 
     private bool TryBeginSelectedSliderObjectDrag(float x, float y)
     {
         if (tool != Tool.Select || objectSelection.Count != 1
-            || HitCatchObject(x, y) is not { IsStandalone: false, Kind: CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet } target
-            || !objectSelection.Contains(target.SourceId)) return false;
+            || HitCatchObject(x, y) is not { Kind: CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet } target
+            || !objectSelection.Contains(target.SourceId)
+            || target.IsStandalone && (target.Kind != CatchObjectKind.Fruit
+                || !Document.Tracks.Any(track => track.Id == target.SourceId && track.StreamSnapDivisor is not null)))
+            return false;
         var track = SelectedTrack;
+        if (track?.StreamSnapDivisor is not null && distanceObject != (target.SourceId, target.EventIndex)) return false;
         if (target.Kind != CatchObjectKind.Fruit && track is null) return false;
         if (target.Kind != CatchObjectKind.Fruit && track is not null && showTargets && distanceObject != (target.SourceId, target.EventIndex))
         {

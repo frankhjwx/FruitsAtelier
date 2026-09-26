@@ -24,6 +24,7 @@ public sealed partial class EditorView
     }
     private double? scheduledThrough;
     public Action<Hitsound>? RequestHitsound { get; set; }
+    public Action<Hitsound>? RequestAuditionHitsound { get; set; }
     public Action<Hitsound>? RequestPrepareHitsound { get; set; }
     private double preparedThrough = double.NegativeInfinity;
     public Action? RequestStopHitsounds { get; set; }
@@ -51,6 +52,9 @@ public sealed partial class EditorView
 
     private void UpdateHitsounds(double position, bool playing, string? filename)
     {
+        if (TimingModal && !playing) { hitsoundPosition = scheduledThrough = null; return; }
+        if (TimingPageVisible && !IsTestplaying)
+        { UpdateTimingMetronome(position, playing); return; }
         if (IsTestplaying)
         {
             return;

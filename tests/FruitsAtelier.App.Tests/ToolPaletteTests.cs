@@ -104,7 +104,7 @@ internal static class ToolPaletteTests
         ObjectFlags.SetNewCombo(map, right.Id, true);
         var ui = new Ui(); ui.LoadDocument(map);
         var plot = ui.View.CanvasPlotBounds;
-        ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, 120000, true);
+        ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, 120000, false, false, true);
         ui.View.UpdateTransport(1000, 12000, true, true, false, null, null);
         ui.View.UpdateTransport(1000, 12000, true, true, false, null, null);
         foreach (string language in new[] { "en", "zh-CN" })

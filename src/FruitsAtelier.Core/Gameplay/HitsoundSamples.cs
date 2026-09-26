@@ -11,8 +11,9 @@ public static class HitsoundSamples
         var kind = sound.Kind;
         double frequency = kind switch { CatchObjectKind.Fruit => 1100, CatchObjectKind.Droplet => 1600, CatchObjectKind.TinyDroplet => 2200, _ => 850 };
         frequency *= sound.SampleSet switch { 2 => .8, 3 => .6, _ => 1 };
-        frequency *= sound.Name switch { "hitwhistle" => 1.7, "hitfinish" => .55, "hitclap" => 2.3, _ => 1 };
+        frequency *= sound.Name switch { "hitwhistle" => 1.7, "hitfinish" => .55, "hitclap" => 2.3, "metronome-downbeat" => 1.5, "metronome-tick" => 1, _ => 1 };
         double gain = kind switch { CatchObjectKind.Fruit => .32, CatchObjectKind.Droplet => .20, CatchObjectKind.TinyDroplet => .10, _ => .18 };
+        if (sound.Name is "metronome-downbeat" or "metronome-tick") gain *= 5;
         var samples = new float[SampleRate / 16];
         for (int i = 0; i < samples.Length; i++)
         {
@@ -34,7 +35,7 @@ public static class HitsoundSamples
         writer.Write(16); writer.Write((short)1); writer.Write((short)1); writer.Write(SampleRate);
         writer.Write(SampleRate * 2); writer.Write((short)2); writer.Write((short)16);
         writer.Write("data"u8); writer.Write(samples.Length * 2);
-        foreach (float sample in samples) writer.Write((short)(sample * short.MaxValue));
+        foreach (float sample in samples) writer.Write((short)(Math.Clamp(sample, -1, 1) * short.MaxValue));
         return stream.ToArray();
     }
 }

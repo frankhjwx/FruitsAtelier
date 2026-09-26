@@ -44,10 +44,11 @@ public sealed partial class EditorView
         PumpSliderBatch();
         PumpLibrary();
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
-        if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
-        float rightWidth = catchPreviewVisible ? Math.Clamp(previewWidth, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)) : 0;
+        if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
+        bool expandedPanel = catchPreviewVisible || TimingPageVisible;
+        float rightWidth = expandedPanel ? Math.Clamp(previewWidth, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)) : 0;
         float bodyHeight = Math.Max(180, height - 204);
-        rightPanel = new(width - (catchPreviewVisible ? rightWidth : 290), 84, catchPreviewVisible ? rightWidth : 290, catchPreviewVisible ? bodyHeight : 38);
+        rightPanel = new(width - (expandedPanel ? rightWidth : 340), 84, expandedPanel ? rightWidth : 340, expandedPanel ? bodyHeight : 38);
         canvas = new(108, 84, Math.Max(120, width - rightWidth - 109), bodyHeight);
         plot = new(canvas.X + 70, canvas.Y + 140, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 152));
         overview = new(220, height - 77, Math.Max(100, width - 248), 40);
@@ -60,16 +61,23 @@ public sealed partial class EditorView
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
         c.Fill(new(0, 0, width, height), Background);
         DrawChrome(c);
-        DrawCanvas(c);
+        if (TimingPageVisible) DrawTimingWaveform(c);
+        else
+        {
+            DrawCanvas(c);
+            DrawToolPalette(c);
+            DrawDistanceReadout(c);
+            DrawAssistPalette(c);
+            DrawSelectionBox(c);
+        }
         DrawInspector(c);
-        DrawToolPalette(c);
-        DrawDistanceReadout(c);
-        DrawAssistPalette(c);
-        DrawSelectionBox(c);
-        DrawPreviewSidebar(c);
-        DrawLegacyConversionButton(c);
-        DrawMovementOverlay(c);
-        DrawKiaiBadge(c);
+        if (TimingPageVisible) DrawTimingPage(c); else DrawPreviewSidebar(c);
+        if (!TimingPageVisible)
+        {
+            DrawLegacyConversionButton(c);
+            DrawMovementOverlay(c);
+            DrawKiaiBadge(c);
+        }
         DrawTransport(c);
         DrawStatus(c);
         if (resourceErrors.Count > 0)
@@ -80,17 +88,23 @@ public sealed partial class EditorView
         }
         DrawUpdateNotice(c);
         if (menu >= 0) DrawMenu(c);
-        DrawContextMenu(c);
-        DrawLanguageMenu(c);
+        if (!librarySettingsOpen) DrawContextMenu(c);
+        if (!librarySettingsOpen) DrawLanguageMenu(c);
+        DrawPanelMenu(c);
         DrawSliderDialog(c);
         DrawExportOverlay(c);
         DrawTimeJump(c);
         DrawStreamDialog(c);
         DrawVolumeDialog(c);
+        DrawVolumePopover(c);
         DrawDistanceSnapDialog(c);
         DrawSongSetup(c);
+        DrawTimingSetup(c);
+        DrawSettings(c);
+        if (librarySettingsOpen) DrawContextMenu(c);
+        if (librarySettingsOpen) DrawLanguageMenu(c);
         DrawDiscardConfirmation(c);
-        DrawDifficultyTooltip(c);
+        if (!librarySettingsOpen) DrawDifficultyTooltip(c);
     }
 
     private void DrawChrome(ICanvas c)
@@ -101,9 +115,9 @@ public sealed partial class EditorView
         Button(c, new(162, 6, 50, 28), L.Get("ui.edit"), () => menu = menu == 1 ? -1 : 1, menu == 1);
         Button(c, new(215, 6, 50, 28), L.Get("ui.view"), () => { gridLevelMenuOpen = false; menu = menu == 2 ? -1 : 2; }, menu == 2);
         Button(c, new(268, 6, 70, 28), L.Get("timeline.timingMenu"), () => menu = menu == 4 ? -1 : 4, menu == 4);
-        Button(c, new(341, 6, 94, 28), L.Get("library.settings"), OpenSettings);
         DrawDifficultyTabs(c);
         Button(c, SongSetupButtonBounds, L.Get("song.title"), OpenSongSetup);
+        Button(c, EditorSettingsButtonBounds, L.Get("library.settings"), OpenSettings);
         DrawSkinSelector(c);
         Button(c, HeaderNavigationBounds, L.Get("library.back"), ShowLibrary);
         c.Line(0, 83, width, 83, Grid);
@@ -111,6 +125,7 @@ public sealed partial class EditorView
 
     private void DrawCanvas(ICanvas c)
     {
+        axisTooltip = null;
         float toolbarRight = rightPanel.X;
         c.Fill(new(0, canvas.Y, toolbarRight, 38), 0x1C2129);
         c.Text(L.Get("ui.canvasZoom"), 16, canvas.Y + 13, 11, Muted, 48);
@@ -137,13 +152,14 @@ public sealed partial class EditorView
         c.Text(breakLabel, breakButton.X + (breakButton.Width - c.MeasureText(breakLabel, 12)) / 2,
             breakButton.Y + (breakButton.Height - 16) / 2, 12, canInsertBreak ? Foreground : Muted, breakButton.Width - 6);
         hits.Add(new(breakButton, InsertBreakAtPlayhead, canInsertBreak));
-        c.Text(L.Get("ui.snap"), snapLeft, canvas.Y + 13, 11, Muted, 40);
+        float snapCenterY = canvas.Y + 19, snapTextY = snapCenterY - 7.5f;
+        c.Text(L.Get("ui.snap"), snapLeft, snapTextY, 11, Muted, 40);
         snapSlider = new(snapLeft + 40, canvas.Y + 4, 106, 29);
         float sliderStart = snapSlider.X + 7, sliderEnd = snapSlider.Right - 31;
         float snapX = sliderStart + (Array.IndexOf(SnapDivisors, divisor) / (float)(SnapDivisors.Length - 1)) * (sliderEnd - sliderStart);
-        c.Line(sliderStart, canvas.Y + 19, sliderEnd, canvas.Y + 19, Accent, 2);
-        c.Circle(snapX, canvas.Y + 19, 6, Accent);
-        c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, canvas.Y + 13, 10, Foreground, 40);
+        c.Line(sliderStart, snapCenterY, sliderEnd, snapCenterY, Accent, 2);
+        c.Circle(snapX, snapCenterY, 6, Accent);
+        c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, snapTextY, 11, Foreground, 40);
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
         c.Text(L.Get("ui.timeAxis"), canvas.X + 11, canvas.Y + 120, 10, Muted, 43);
         var playfield = Playfield;
@@ -178,6 +194,8 @@ public sealed partial class EditorView
             var bounds = new Rect(canvas.X, upper, plot.X - canvas.X, lower - upper);
             c.Fill(bounds, color, 0, opacity);
         }
+        List<float> axisLabelRows = [];
+        List<(float Y, double Time)> axisLabels = [];
         foreach (var line in renderedTiming!.Grid(viewStart, viewStart + plot.Height / pixelsPerMs, divisor))
         {
             double time = line.TimeMs;
@@ -189,8 +207,17 @@ public sealed partial class EditorView
             if (!beat && !line.IsTimingBoundary && step * pixelsPerMs < 7) continue;
             var style = GridStyle(line);
             c.Line(playfield.X, y, playfield.Right, y, style.Color, style.Width, .35f);
-            if (line.IsTimingBoundary || beat && (localTiming.BeatLengthMs * pixelsPerMs >= 25 || bar))
-                c.Text(Time(time), canvas.X + 3, Math.Clamp(y - 7, plot.Y, plot.Bottom - 14), 10, line.IsTimingBoundary ? Error : Muted, 64);
+            if (!line.IsTimingBoundary && beat && (localTiming.BeatLengthMs * pixelsPerMs >= 25 || bar))
+                axisLabels.Add((y, time));
+        }
+        DrawCanvasTimingMarkers(c, axisLabelRows);
+        DrawCanvasBookmarks(c, axisLabelRows);
+        foreach (var label in axisLabels)
+        {
+            float labelY = Math.Clamp(label.Y - 7, plot.Y, plot.Bottom - 14);
+            if (axisLabelRows.Any(row => Math.Abs(row - labelY) < 14)) continue;
+            c.Text(Time(label.Time), canvas.X + 3, labelY, 10, Muted, 64);
+            axisLabelRows.Add(labelY);
         }
         c.Unclip();
         c.Clip(plot);
@@ -295,6 +322,7 @@ public sealed partial class EditorView
         c.Line(plot.X, headY, plot.Right, headY, Gold, 1.5f);
         c.Fill(new(plot.X, headY - 3, 5, 6), Gold);
         c.Unclip();
+        DrawPendingAxisTooltip(c);
     }
 
     private void DrawCanvasCatchObjects(ICanvas c)
@@ -334,8 +362,8 @@ public sealed partial class EditorView
         c.Line(rightPanel.X, rightPanel.Y + 38, rightPanel.Right, rightPanel.Y + 38, Grid);
         float x = rightPanel.X + 16;
         float rowY = rightPanel.Y + 11;
-        c.Text(L.Get("ui.properties"), x, rowY, 12, Foreground, 90, true);
-        float statX = x + 84;
+        Button(c, new(x - 8, rightPanel.Y + 4, 130, 30), L.Get(TimingPageVisible ? "timing.panel" : "timing.detailsPanel") + " ▾", () => panelMenuOpen = !panelMenuOpen);
+        float statX = x + 132;
         c.Text($"{L.Get("ui.ar")} {Number(Document.ApproachRate)}", statX, rowY, 12, Muted, 48);
         c.Text($"{L.Get("ui.cs")} {Number(Document.CircleSize)}", statX + 50, rowY, 12, Muted, 48);
         c.Text($"{L.Get("ui.dpb")} {Number(Document.DistancePerBeat)}px", statX + 100, rowY, 12, Muted,
@@ -523,7 +551,7 @@ public sealed partial class EditorView
             float x = TimelineX(point.TimeMs);
             c.Line(x, overview.Y + 2, x, overview.Y + 20, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
         }
-        foreach (int bookmark in OsuTimeline.Bookmarks(Document))
+        foreach (int bookmark in AxisBookmarks())
         {
             float x = TimelineX(bookmark);
             c.Line(x, overview.Y + 20, x, overview.Bottom - 1, 0x4B9EF5, 1, timelineMarkerOpacity);
@@ -549,7 +577,8 @@ public sealed partial class EditorView
         c.Fill(new(0, height - 28, width, 28), 0x171C23);
         c.Circle(13, height - 14, 3, IsDirty ? Gold : Accent);
         string notice = conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
-        c.Text(notice, 25, height - 21, 11, conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 40));
+        c.Text(notice, 25, height - 21, 11, conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 145));
+        DrawVolumeButton(c);
     }
 
     private Rect MenuBounds { get; set; }
@@ -589,36 +618,52 @@ public sealed partial class EditorView
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
         }
         else if (menu == 4)
+        {
+            Item(L.Get("timing.signature"), () => gridLevelMenuOpen = true);
+            Item(L.Get("timing.metronome"), () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }, active: metronomeEnabled);
+            Item(L.Get("timing.addRed"), () => AddTimingPoint(false));
+            Item(L.Get("timing.addGreen"), () => AddTimingPoint(true));
+            Item(L.Get("timing.reset"), () => OpenTimingCommand("reset"));
+            Item(L.Get("timing.delete"), DeleteCurrentTiming);
+            Item(L.Get("timing.resnap"), () => ResnapTimingSection(false));
+            Item(L.Get("timing.setup"), OpenTimingSetup);
+            Item(L.Get("timing.resnapAll"), () => ResnapTimingSection(true));
+            Item(L.Get("timing.move"), () => OpenTimingCommand("move"));
+            Item(L.Get("timing.recalculate"), () => Edit(L.Get("timing.recalculate"), () => TimingEditing.ResnapLengths(Document, divisor)));
+            Item(L.Get("timing.deleteAll"), () => OpenTimingCommand("deleteAll"));
             Item(L.Get("timeline.setPreviewPoint"), () => Edit(L.Get("timeline.setPreviewPoint"), () =>
                 SongSetup.Set(Document, "General", "PreviewTime",
                     ((int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue)).ToString(System.Globalization.CultureInfo.InvariantCulture))));
+        }
         else
         {
             Item(L.Get("ui.gridLevel", L.Get("ui.grid" + gridSize)), () => gridLevelMenuOpen = true);
             Item(L.Get("ui.gridSnap"), () => gridSnap = !gridSnap, active: gridSnap);
             Item(L.Get("ui.anchorSnap"), () => anchorSnap = !anchorSnap, active: anchorSnap);
             Item(L.Get("ui.resetView"), ResetView);
-            Item(L.Get("volume.title"), OpenVolumeDialog);
+            Item(L.Get("volume.title"), OpenVolumePopover);
             Item(L.Get("ui.sliderPathCurves"), () => showTargets = !showTargets, active: showTargets);
             Item(showPreviewCurves ? L.Get("ui.previewCurvesOn") : L.Get("ui.previewCurvesOff"), () => showPreviewCurves = !showPreviewCurves);
             Item(L.Get("ui.follow"), FollowPlayhead);
             Item(L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, active: movementAnalysis);
+            Item(L.Get("timing.page"), () => ShowTimingPage(true));
+            Item(L.Get("timing.setup"), OpenTimingSetup);
         }
         float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : menu == 4 ? 268 : 109 + menu * 53;
         float top = menu == 3 ? difficultyAddButton.Bottom + 4 : 38;
         MenuBounds = new(x, top, 282, 14 + items.Count * 34 - 3);
         var rect = MenuBounds;
         var gridRow = new Rect(rect.X + 6, rect.Y + 7, rect.Width - 12, 31);
-        gridLevelMenuBounds = new(rect.Right, gridRow.Y - 7, 160, 147);
+        gridLevelMenuBounds = new(rect.Right, gridRow.Y - 7, menu == 4 ? 240 : 160, menu == 4 ? 79 : 147);
         var gridBridge = new Rect(gridRow.X, gridRow.Y, rect.Right - gridRow.X, gridRow.Height);
-        gridLevelMenuOpen = menu == 2 && (gridRow.Contains(mouseX, mouseY)
+        gridLevelMenuOpen = (menu == 2 || menu == 4) && (gridRow.Contains(mouseX, mouseY)
             || gridLevelMenuOpen && (gridBridge.Contains(mouseX, mouseY) || gridLevelMenuBounds.Contains(mouseX, mouseY)));
         c.Fill(new(rect.X + 3, rect.Y + 4, rect.Width, rect.Height), 0x11151B, 5);
         c.Fill(rect, Surface, 5); c.Stroke(rect, Grid, 1, 5);
         float y = rect.Y + 7;
         foreach (var item in items)
         {
-            bool submenu = menu == 2 && y == rect.Y + 7;
+            bool submenu = (menu == 2 || menu == 4) && y == rect.Y + 7;
             Button(c, new(rect.X + 6, y, rect.Width - 12, 31), item.Label,
                 () => { if (!submenu) menu = -1; item.Action(); }, item.Active || submenu && gridLevelMenuOpen, item.Enabled);
             if (submenu)
@@ -634,11 +679,11 @@ public sealed partial class EditorView
             c.Fill(new(child.X + 3, child.Y + 4, child.Width, child.Height), 0x11151B, 5);
             c.Fill(child, Surface, 5); c.Stroke(child, Grid, 1, 5);
             float childY = child.Y + 7;
-            foreach (int size in new[] { 4, 8, 16, 32 })
+            foreach (int size in menu == 4 ? new[] { 4, 3 } : new[] { 4, 8, 16, 32 })
             {
-                Button(c, new(child.X + 6, childY, child.Width - 12, 31), L.Get("ui.grid" + size),
-                    () => { gridSize = size; gridLevelMenuOpen = false; menu = -1; }, size == gridSize);
-                if (size == gridSize)
+                Button(c, new(child.X + 6, childY, child.Width - 12, 31), menu == 4 ? L.Get($"timing.meter{size}") : L.Get("ui.grid" + size),
+                    () => { if (menu == 4) ChangeCurrentRed("meter", size); else gridSize = size; gridLevelMenuOpen = false; menu = -1; }, size == (menu == 4 ? TimingMap.At(Document, playhead).Meter : gridSize));
+                if (size == (menu == 4 ? TimingMap.At(Document, playhead).Meter : gridSize))
                 {
                     c.Line(child.Right - 27, childY + 16, child.Right - 23, childY + 20, Foreground, 2);
                     c.Line(child.Right - 23, childY + 20, child.Right - 16, childY + 11, Foreground, 2);
@@ -660,7 +705,13 @@ public sealed partial class EditorView
         if (active) c.Stroke(r, 0x477E7B, 1, 4);
         uint color = !enabled ? 0x5B6777u : active ? Accent : Foreground;
         int shortcut = label.IndexOf("  ", StringComparison.Ordinal);
-        if (shortcut >= 0)
+        if (label == "×")
+        {
+            float cx = r.X + r.Width / 2, cy = r.Y + r.Height / 2;
+            c.Line(cx - 3, cy - 3, cx + 3, cy + 3, color, 1.2f);
+            c.Line(cx - 3, cy + 3, cx + 3, cy - 3, color, 1.2f);
+        }
+        else if (shortcut >= 0)
         {
             string key = label[(shortcut + 2)..].Trim();
             float keyWidth = c.MeasureText(key, fontSize, textBold);

@@ -101,8 +101,8 @@ internal static class SliderInteractionTests
 
         double farTime = 2000;
         ui.MoveMap(farTime, CurveMath.PositionAtTime(track, farTime));
-        ui.Key('I', ctrl: true);
-        Check(track.Nodes.Count == 4, "Ctrl+I did not insert at the pointer location.");
+        ui.Key('I', ctrl: true, shift: true);
+        Check(track.Nodes.Count == 4, "Ctrl+Shift+I did not insert at the pointer location.");
     }
 
     public static void PointContextMenu()
@@ -112,7 +112,7 @@ internal static class SliderInteractionTests
         var track = ui.View.Document.Tracks.Single();
         Guid trackId = track.Id;
         var oldIds = track.Nodes.Select(n => n.Id).ToHashSet();
-        ui.SelectTrack(track.Id); ui.MoveMap(1777, CurveMath.PositionAtTime(track, 1777)); ui.Key('I', ctrl: true);
+        ui.SelectTrack(track.Id); ui.MoveMap(1777, CurveMath.PositionAtTime(track, 1777)); ui.Key('I', ctrl: true, shift: true);
         track = ui.View.Document.Tracks.Single();
         var inserted = track.Nodes.Single(n => !oldIds.Contains(n.Id));
         Guid nodeId = inserted.Id;
@@ -237,8 +237,9 @@ internal static class SliderInteractionTests
         Check(ui.View.Document.Fruits.Count == 0, "Right-click did not delete the fruit.");
         ui.Key('Z', ctrl: true);
         Check(baseline.ContentEquals(ui.View.Document), "Deletion did not undo exactly.");
+        double beforeClick = ui.View.PlayheadMs;
         ui.ClickMap(3000, 450);
-        Near(3000, ui.View.PlayheadMs);
+        Near(beforeClick, ui.View.PlayheadMs);
     }
 
     public static void DeleteDoesNotActivateDormantHandles()
@@ -269,7 +270,7 @@ internal static class SliderInteractionTests
         var original = ui.View.Document.DeepClone();
         Guid sourceId = map.ImportedSliders.Single().Id;
         // The return span goes X=300 to X=100 between 2000 and 3000 ms.
-        ui.MoveMap(2500, 200); ui.Key('I', ctrl: true);
+        ui.MoveMap(2500, 200); ui.Key('I', ctrl: true, shift: true);
         Check(ui.View.Document.ImportedSliders.Count == 0, "Repeat insertion left the source unconverted.");
         var converted = ui.View.Document.Tracks.Single();
         Check(converted.Id == sourceId && converted.SpanCount == 2 && converted.Nodes.Any(n => Math.Abs(n.TimeMs - 1500) < .001),

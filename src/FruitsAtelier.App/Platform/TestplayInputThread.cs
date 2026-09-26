@@ -18,6 +18,7 @@ internal sealed class TestplayInputThread : IDisposable
     private readonly ManualResetEventSlim ready = new();
     private readonly Native.WindowProc procedure;
     private readonly Dictionary<(nint Device, ushort Scan, ushort Extended), int> pressed = [];
+    private readonly HashSet<(nint Device, ushort Scan, ushort Extended)> altPressed = [];
     private nint window;
     private Exception? startupError;
     private volatile bool stopping;
@@ -59,7 +60,7 @@ internal sealed class TestplayInputThread : IDisposable
                     Native.DispatchMessage(ref message);
                 if (!diagnostic && Native.GetForegroundWindow() != owner)
                 {
-                    pressed.Clear();
+                    pressed.Clear(); altPressed.Clear();
                     session.ReleaseKeys();
                 }
                 if (pacer.FrameDue)
@@ -99,11 +100,25 @@ internal sealed class TestplayInputThread : IDisposable
                     if (key is 0xA2 or 0xA3) key = 0x11;
                     if (key is 0xA4 or 0xA5) key = 0x12;
                     bool down = (input.Flags & 1) == 0;
+                    var physical = (input.Header.Device, input.MakeCode, (ushort)(input.Flags & 6));
+                    if (key == 0x12)
+                    {
+                        if (down)
+                        {
+                            altPressed.Add(physical);
+                            foreach (var held in pressed.Where(pair => pair.Value is 37 or 38 or 39 or 40).Select(pair => pair.Key).ToArray())
+                                pressed.Remove(held);
+                            foreach (int arrow in new[] { 37, 38, 39, 40 })
+                                if (session.UsesKey(arrow)) session.SetKey(arrow, pressed.ContainsValue(arrow));
+                        }
+                        else altPressed.Remove(physical);
+                    }
                     // Navigation belongs to WM_KEYDOWN on the UI thread, avoiding a second Escape after return.
                     if (key != 27 && session.UsesKey(key))
                     {
-                        var physical = (input.Header.Device, input.MakeCode, (ushort)(input.Flags & 6));
-                        if (down) pressed.TryAdd(physical, key); else pressed.Remove(physical);
+                        if (key is 37 or 38 or 39 or 40 && altPressed.Count > 0) pressed.Remove(physical);
+                        else if (down) pressed.TryAdd(physical, key);
+                        else pressed.Remove(physical);
                         UpdateAudio(); session.SetKey(key, pressed.ContainsValue(key));
                     }
                 }
