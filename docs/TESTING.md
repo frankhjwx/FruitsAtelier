@@ -159,6 +159,33 @@ After changing input or drawing, manually check affected operations, language sw
 
 ## Editing performance benchmark
 
+Windows builds automatically aggregate UI performance into `editor.log`. Every
+five seconds with processed window messages, an interval containing a sample of
+at least 16 ms is written; fast-only intervals are discarded. Shutdown flushes the
+remaining interval. Counters use fixed storage and do not write per input or frame.
+Logs live in `artifacts/logs` for repository builds and
+`%LOCALAPPDATA%/FruitsAtelier/logs` for distributed builds.
+
+`UI performance` reports count, average, maximum, and count at or above 16 ms for
+input queue age, input dispatch (including title updates), audio/update polling,
+frame preparation, editor rendering, and `EndDraw`/`Present` submission. Conversion
+snapshot comparison, rebuilding, and export/read-back are measured separately;
+these are nested within editor rendering, and export is nested within rebuilding,
+so their durations must not be added together. `InputToSubmit` measures the oldest
+pending input's queue age plus time through the next completed submission. It is
+an application-side latency estimate, not physical input-to-display latency.
+Queue ages use the coarse Win32 message clock; coalesced mouse messages and modal
+dialogs can affect these measurements. Native modal message loops are not sampled
+by the main input-dispatch counter.
+
+Each report includes the slowest dispatched input message ID, process-wide GC
+collection deltas, and the editor state/object counts **at report time**. Startup
+records the application/runtime/OS version and process ID. Request this log along
+with the reproduction time and map when investigating stalls. Playback's five-second
+average render rate alone cannot diagnose individual editing stalls. Shared
+conversion counters are also available to tests; macOS does not enable or persist
+these Windows host diagnostics.
+
 Run the shared App test executable with `--benchmark-editing` to measure adding and
 continuously dragging objects in synthetic maps of 1,000 fruits, 10,000 fruits,
 and 1,000 FSliders. On macOS, from the repository root:

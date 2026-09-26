@@ -118,11 +118,24 @@ public sealed partial class EditorView
         or DragKind.HandleOut or DragKind.DraftHandle or DragKind.LegacyControl or DragKind.Objects
         or DragKind.BananaStart or DragKind.BananaEnd or DragKind.TimelineTail;
 
+    public EditorPerformanceMetrics Performance { get; } = new();
+    public string PerformanceContext => $"library={LibraryVisible}; playing={AudioPlaying}; testplay={IsTestplaying}; drag={drag}; difficulties={DifficultyCount}; fruits={Document.Fruits.Count}; tracks={Document.Tracks.Count}; importedSliders={Document.ImportedSliders.Count}; bananas={Document.BananaShowers.Count}; timing={Document.TimingPoints.Count}";
+
     private void EnsureConversion()
     {
-        if (convertedSnapshot is not null && convertedSnapshot.ContentEquals(Document)
+        long checkStart = Performance.Start();
+        bool cached = convertedSnapshot is not null && convertedSnapshot.ContentEquals(Document)
             && convertedWithCompensation == compensateTinyDroplets
-            && (!contentDragPreview || IsContentDrag)) return;
+            && (!contentDragPreview || IsContentDrag);
+        Performance.End(EditorPerformanceStage.ConversionCheck, checkStart);
+        if (cached) return;
+        long rebuildStart = Performance.Start();
+        try { RebuildConversion(); }
+        finally { Performance.End(EditorPerformanceStage.ConversionRebuild, rebuildStart); }
+    }
+
+    private void RebuildConversion()
+    {
         convertedSnapshot = Document.DeepClone();
         renderedTiming = new TimingMap.Lookup(Document);
         convertedWithCompensation = compensateTinyDroplets;
@@ -146,6 +159,7 @@ public sealed partial class EditorView
         contentDragPreview = IsContentDrag;
         if (conversion.Success && !contentDragPreview)
         {
+            long exportStart = Performance.Start();
             try
             {
                 var exported = OsuBeatmapWriter.Serialize(input, compensateTinyDroplets);
@@ -156,6 +170,7 @@ public sealed partial class EditorView
                 }
             }
             catch (InvalidDataException) { } // Draft content may be convertible before it is exportable.
+            finally { Performance.End(EditorPerformanceStage.ExportReadback, exportStart); }
         }
         BuildComboColours();
         RefreshKiaiTransitions();

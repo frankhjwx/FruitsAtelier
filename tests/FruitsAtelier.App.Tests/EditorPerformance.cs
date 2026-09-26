@@ -151,8 +151,11 @@ internal static class EditorPerformance
             if (Math.Abs(movedX - 120) > 0.01) throw new Exception("Benchmark did not drag the target object.");
             Console.WriteLine($"{count} {(sliders ? "sliders" : "fruits")}: down={down:F2} ms, drag move={moveMs / 20:F2} conversion={conversionMs / 20:F2} draw={drawMs / 20:F2} ms/frame; draw commands={canvas.Commands}; allocated={(GC.GetAllocatedBytesForCurrentThread()-bytes)/20/1024:F0} KiB/frame");
             view.KeyDown(70, false, false);
+            view.Performance.Enabled = true;
             watch.Restart(); view.PointerDown(X(490), Y(1100), 0, false, false); view.PointerUp(X(490), Y(1100), 0); Render();
             Console.WriteLine($"  Add + render={watch.Elapsed.TotalMilliseconds:F2} ms");
+            if (view.Performance.Drain() is { } report) Console.WriteLine($"  {report}");
+            view.Performance.Enabled = false;
             if (view.Document.Fruits.Count != (sliders ? 1 : count + 1)) throw new Exception("Benchmark did not add a fruit.");
             view.KeyDown(90, true, false);
             if (view.Document.Fruits.Count != (sliders ? 0 : count)) throw new Exception("Large-map add undo failed.");

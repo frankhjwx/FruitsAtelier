@@ -25,6 +25,7 @@ internal sealed partial class EditorWindow : IDisposable
     public EditorWindow()
     {
         procedure = WndProc;
+        view.Performance.Enabled = true;
         ConfigureFiles();
         view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
         view.RequestPasteTime = () => view.PasteTimeJumpText(Native.ReadClipboardText(hwnd), view.TimeJumpSession);
@@ -84,6 +85,7 @@ internal sealed partial class EditorWindow : IDisposable
         Native.GetClientRect(hwnd, out var client);
         canvas = new D2DCanvas(hwnd, client.Right, client.Bottom, dpi);
         AppLog.Write($"Window ready. Adapter={canvas.AdapterName}; DPI={dpi}; Client={client.Right}x{client.Bottom}");
+        AppLog.Write($"UI diagnostics enabled. Version={typeof(EditorView).Assembly.GetName().Version}; Runtime={Environment.Version}; OS={Environment.OSVersion}; Process={Environment.ProcessId}");
         if (profileMap is not null)
         {
             Diagnostics.RenderCheck.ProfileMap(canvas, view, profileMap, dpi, profileStartMs);
@@ -124,21 +126,30 @@ internal sealed partial class EditorWindow : IDisposable
                 if (result < 0) throw new Win32Exception();
                 if (result == 0) break;
             }
-            // TranslateMessage can let the IME consume editor shortcuts, even when WM_KEYDOWN still has the original key.
-            if (msg.Window == hwnd && msg.Id == 0x0100 && !view.IsEditingText && !view.CapturingTestplayKey && !view.IsTestplaying)
+            long inputStart = BeginInputSample(msg);
+            try
             {
-                uint key = msg.WParam == 0xE5 ? Native.ImmGetVirtualKey(hwnd) : (uint)msg.WParam;
-                if (key is > 0 and < 0xE5)
+                // TranslateMessage can let the IME consume editor shortcuts, even when WM_KEYDOWN still has the original key.
+                if (msg.Window == hwnd && msg.Id == 0x0100 && !view.IsEditingText && !view.CapturingTestplayKey && !view.IsTestplaying)
                 {
-                    view.SetModifiers(Native.Alt, Native.Shift);
-                    view.KeyDown((int)key, Native.Control, Native.Shift);
-                    if (!view.WantsCapture && Native.GetCapture() == hwnd) Native.ReleaseCapture();
-                    UpdateTitle(); Invalidate();
-                    continue;
+                    uint key = msg.WParam == 0xE5 ? Native.ImmGetVirtualKey(hwnd) : (uint)msg.WParam;
+                    if (key is > 0 and < 0xE5)
+                    {
+                        view.SetModifiers(Native.Alt, Native.Shift);
+                        view.KeyDown((int)key, Native.Control, Native.Shift);
+                        if (!view.WantsCapture && Native.GetCapture() == hwnd) Native.ReleaseCapture();
+                        UpdateTitle(); Invalidate();
+                        continue;
+                    }
                 }
+                Native.TranslateMessage(ref msg);
+                Native.DispatchMessage(ref msg);
             }
-            Native.TranslateMessage(ref msg);
-            Native.DispatchMessage(ref msg);
+            finally
+            {
+                EndInputSample(msg.Id, inputStart);
+                FlushPerformance();
+            }
         }
         return 0;
     }
@@ -232,13 +243,23 @@ internal sealed partial class EditorWindow : IDisposable
                     if (canvas is not null && rect.Right > 0 && rect.Bottom > 0 && !Native.IsIconic(window))
                     {
                         // Continuous repainting can starve WM_TIMER, including update status polling.
-                        PollUpdates(); PollAudio();
                         renderTimer.Restart();
+                        long phase = view.Performance.Start();
+                        PollUpdates(); PollAudio();
+                        view.Performance.End(EditorPerformanceStage.Poll, phase);
+                        phase = view.Performance.Start();
                         canvas.Resize(rect.Right, rect.Bottom, dpi);
                         if (view.IsTestplaying && !canvas.TryAcquireFrame()) return 0;
                         canvas.Begin();
+                        view.Performance.End(EditorPerformanceStage.PrepareFrame, phase);
+                        phase = view.Performance.Start();
                         view.Render(canvas, rect.Right * 96 / dpi, rect.Bottom * 96 / dpi);
+                        view.Performance.End(EditorPerformanceStage.ViewRender, phase);
+                        phase = view.Performance.Start();
                         canvas.End(lowLatency: view.IsTestplaying);
+                        view.Performance.End(EditorPerformanceStage.Submit, phase);
+                        view.Performance.Record(EditorPerformanceStage.Frame, renderTimer.Elapsed.TotalMilliseconds);
+                        RecordInputSubmission();
                         recoveringRenderer = false;
                         RecordPlaybackRate();
                         renderTimer.Stop();
@@ -261,7 +282,9 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0014: return 1; // WM_ERASEBKGND
             case 0x0113: // WM_TIMER
                 if (painting || failed || NativeModalScope.Active) return 0;
+                long pollStart = view.Performance.Start();
                 PollUpdates(); PollAudio();
+                view.Performance.End(EditorPerformanceStage.Poll, pollStart);
                 if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
                     || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
                 return 0;
@@ -396,6 +419,7 @@ internal sealed partial class EditorWindow : IDisposable
         hitsounds.Dispose();
         audio.Dispose();
         canvas?.Dispose();
+        FlushPerformance(force: true);
         AppLog.Write($"Window closed. Frames={frames}");
         GC.KeepAlive(procedure);
     }
