@@ -1,6 +1,6 @@
 # Keyboard and mouse shortcut manual
 
-This reference describes FruitsAtelier 0.8.6. Bindings depend on the active page,
+This reference describes FruitsAtelier 0.9.0. Bindings depend on the active page,
 focused field, selected object and drawing state. For differences from osu!stable
 and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 

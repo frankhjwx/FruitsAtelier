@@ -1,6 +1,6 @@
 # FruitsAtelier
 
-User Manual | Version 0.8.2
+User Manual | Version 0.9.0
 
 ## 01 / Getting started
 
@@ -121,7 +121,7 @@ Exporting a new difficulty to Songs saves your edits in a new workspace difficul
 
 Use **Library** or Esc to return to the library. Unsaved work prompts for Save, Discard or Cancel. Missing-resource messages indicate that a referenced file needs to be restored or relinked.
 
-Version 0.8 does not provide video or storyboard playback. Imported timing and slider velocity are supported. Testplay is for checking patterns; star ratings and exported behavior may differ between osu! versions.
+Version 0.9 does not provide video or storyboard playback. Imported timing and slider velocity are supported. Testplay is for checking patterns; star ratings and exported behavior may differ between osu! versions.
 
 ## 04 / Keyboard reference
 

@@ -1,6 +1,6 @@
 # Shortcut compatibility review
 
-This reference compares FruitsAtelier 0.8.6 with the
+This reference compares FruitsAtelier 0.9.0 with the
 [official osu!stable default shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts),
 not lazer or a user's customized bindings. Scope includes shared keyboard
 dispatch, mouse modifiers, text fields, modal dialogs, Library, testplay, and
