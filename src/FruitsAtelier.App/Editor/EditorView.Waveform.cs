@@ -58,13 +58,6 @@ public sealed partial class EditorView
         float center = r.Y + r.Height / 2, rulerY = WaveformRulerY;
         c.Clip(r);
         float gridTop = WaveformGridTop;
-        foreach (var tick in renderedTiming!.Grid(Math.Max(0, start), start + waveformSpanMs, divisor))
-        {
-            float x = r.X + (float)((tick.TimeMs - start) / msPerPixel);
-            var style = GridStyle(tick);
-            c.Line(x, gridTop, x, rulerY, style.Color, style.Width, .35f);
-        }
-        c.Stroke(new(r.X, gridTop, r.Width, rulerY - gridTop), Grid);
         if (waveform != null)
             // Anchor peak windows to audio time so playback only translates the envelope.
             for (double bin = Math.Floor(start / msPerPixel); bin * msPerPixel < start + waveformSpanMs; bin++)
@@ -76,13 +69,20 @@ public sealed partial class EditorView
             }
         else c.Text(L.Get(waveformFailed ? "timing.waveformError" : waveformTask != null ? "timing.waveformLoading" : "timing.waveformEmpty"),
             r.X + 16, center + 20, 13, Muted, r.Width - 32);
+        foreach (var tick in renderedTiming!.Grid(Math.Max(0, start), start + waveformSpanMs, divisor))
+        {
+            float x = r.X + (float)((tick.TimeMs - start) / msPerPixel);
+            var style = GridStyle(tick);
+            c.Line(x, gridTop, x, rulerY, style.Color, style.Width, .55f);
+        }
+        c.Stroke(new(r.X, gridTop, r.Width, rulerY - gridTop), Grid);
         double step = Math.Pow(10, Math.Floor(Math.Log10(waveformSpanMs / 8)));
         if (waveformSpanMs / step > 16) step *= 5;
         foreach (var tick in renderedTiming!.Grid(Math.Max(0, start), start + waveformSpanMs, divisor))
         {
             float x = r.X + (float)((tick.TimeMs - start) / msPerPixel);
             var style = GridStyle(tick);
-            c.Line(x, rulerY - style.Height, x, rulerY, style.Color, style.Width);
+            c.Line(x, rulerY - style.Height, x, rulerY, style.Color, style.Width, .75f);
         }
         c.Line(r.X, rulerY, r.Right, rulerY, Grid);
         for (double time = Math.Max(0, Math.Ceiling(start / step) * step); time < start + waveformSpanMs; time += step)
@@ -108,12 +108,13 @@ public sealed partial class EditorView
                     if (labelRights[i] < labelRights[row]) row = i;
             }
             float labelY = gridTop - 24 - row * 18;
-            c.Line(x, labelY + 22, x, rulerY, Error);
+            c.Line(x, labelY + 22, x, rulerY, Error, opacity: .75f);
             c.Text(label, labelX, labelY, 12, Error, labelWidth + 1);
             labelRights[row] = Math.Max(labelRights[row], labelX + labelWidth + 8);
         }
         float head = r.X + r.Width / 2;
-        c.Line(head, gridTop - 6, head, rulerY + 24, Accent, 2);
+        c.Line(head, gridTop - 6, head, rulerY + 24, Background, 4, .6f);
+        c.Line(head, gridTop - 6, head, rulerY + 24, Accent, 2, .85f);
         c.Text(Time(playhead), head + 5, rulerY + 26, 12, Foreground, 110);
         c.Unclip();
     }

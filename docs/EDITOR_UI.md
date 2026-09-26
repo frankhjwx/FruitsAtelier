@@ -15,7 +15,8 @@ in the background and its peak envelope is cached at multiple resolutions.
 The time ruler sits just below the waveform envelope. Snap subdivisions extend
 through a rectangular waveform band, using the editor's beat-grid colours. The
 band follows the waveform amplitude range symmetrically around its center, with
-vertical subdivisions only. BPM and playback markers extend just beyond the band. The ruler retains its beat and subdivision tick lengths. The filled envelope uses fixed audio-time sampling
+vertical subdivisions only. The waveform is drawn beneath translucent grid and
+marker lines. BPM and playback markers extend just beyond the band. The ruler retains its beat and subdivision tick lengths. The filled envelope uses fixed audio-time sampling
 windows while scrolling and reserves vertical space around its peaks.
 The single-column Timing panel places tap controls above
 BPM and edits the active red section's BPM and offset and the difficulty's Slider

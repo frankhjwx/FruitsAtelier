@@ -123,7 +123,7 @@ internal static class TimingEditorTests
         Check(ui.Canvas.Texts.All(t => !t.Value.Contains("Alt + wheel")), "Waveform omits instructional caption");
         var quarterTicks = ui.Canvas.Lines.Where(l => l.Y2 == ui.View.WaveformRulerY && l.Y1 < l.Y2).ToArray();
         Check(quarterTicks.Any(l => l.Color == 0x66AAFF), "Waveform ruler includes quarter snap ticks");
-        Check(quarterTicks.Any(l => l.Color == 0x66AAFF && l.Y1 == ui.View.WaveformGridTop && l.Opacity == .35f),
+        Check(quarterTicks.Any(l => l.Color == 0x66AAFF && l.Y1 == ui.View.WaveformGridTop && l.Opacity == .55f),
             "Snap subdivisions extend across the waveform grid");
         Check(Math.Abs((ui.View.WaveformGridTop + ui.View.WaveformRulerY) / 2 - (r.Y + r.Height / 2)) < .001,
             "Waveform grid is symmetric around the audio center");
