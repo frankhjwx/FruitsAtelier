@@ -123,10 +123,13 @@ internal static class TimingEditorTests
         Check(ui.Canvas.Texts.All(t => !t.Value.Contains("Alt + wheel")), "Waveform omits instructional caption");
         var quarterTicks = ui.Canvas.Lines.Where(l => l.Y2 == ui.View.WaveformRulerY && l.Y1 < l.Y2).ToArray();
         Check(quarterTicks.Any(l => l.Color == 0x66AAFF), "Waveform ruler includes quarter snap ticks");
-        Check(quarterTicks.Any(l => l.Color == 0x66AAFF && l.Y1 == r.Y + 96 && l.Opacity == .35f),
+        Check(quarterTicks.Any(l => l.Color == 0x66AAFF && l.Y1 == ui.View.WaveformGridTop && l.Opacity == .35f),
             "Snap subdivisions extend across the waveform grid");
-        Check(ui.Canvas.Lines.Count(l => l.X1 == r.X && l.X2 == r.Right && l.Y1 == l.Y2 && l.Y1 >= r.Y + 96) >= 4,
-            "Waveform grid includes horizontal reference lines");
+        Check(Math.Abs((ui.View.WaveformGridTop + ui.View.WaveformRulerY) / 2 - (r.Y + r.Height / 2)) < .001,
+            "Waveform grid is symmetric around the audio center");
+        Check(!ui.Canvas.Lines.Any(l => l.X1 == r.X && l.X2 == r.Right && l.Y1 == l.Y2
+            && l.Y1 > ui.View.WaveformGridTop && l.Y1 < ui.View.WaveformRulerY),
+            "Waveform band has no internal horizontal reference lines");
         ui.View.UpdateTransport(1001, 10000, true, true, false, null, map.AudioPath); ui.Paint();
         var moved = Envelope();
         Check(envelope.Take(20).Select(f => f.Bounds.Height).SequenceEqual(moved.Take(20).Select(f => f.Bounds.Height))
@@ -147,12 +150,12 @@ internal static class TimingEditorTests
             dense.TimingPoints.Add(new TimingPoint { TimeMs = time, BeatLengthMs = 400, Uninherited = true });
         ui.LoadDocument(dense); ui.Key(114);
         r = ui.View.WaveformBounds;
-        var labels = ui.Canvas.Texts.Where(t => t.Value.EndsWith(" BPM") && t.Y >= r.Y + 8 && t.Y <= r.Y + 62).ToArray();
+        var labels = ui.Canvas.Texts.Where(t => t.Value.EndsWith(" BPM") && t.Y >= ui.View.WaveformGridTop - 78 && t.Y <= ui.View.WaveformGridTop - 24).ToArray();
         Check(labels.Length == dense.TimingPoints.Count, "Every dense red point keeps its BPM label");
         Check(labels.Select(t => t.Y).Distinct().Count() == 4, "Nearby BPM labels use separate rows");
         Check(labels.All(t => t.X >= r.X && t.X + t.Value.Length * 12 * .6f <= r.Right),
             "BPM labels stay within the waveform width");
-        Check(ui.Canvas.Lines.Count(l => l.Y1 >= r.Y + 30 && l.Y1 <= r.Y + 84 && l.Y2 == ui.View.WaveformRulerY) == dense.TimingPoints.Count,
+        Check(ui.Canvas.Lines.Count(l => l.Y1 >= ui.View.WaveformGridTop - 56 && l.Y1 <= ui.View.WaveformGridTop - 2 && l.Y2 == ui.View.WaveformRulerY) == dense.TimingPoints.Count,
             "Staggered labels preserve every red timing line");
         dense.TimingPoints.Add(new TimingPoint { TimeMs = 40, BeatLengthMs = 450, Uninherited = true });
         ui.LoadDocument(dense); ui.Key(114);

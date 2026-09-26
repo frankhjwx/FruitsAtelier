@@ -16,7 +16,8 @@ public sealed partial class EditorView
     public bool WaveformNeedsRedraw => TimingPageVisible && waveformTask is { IsCompleted: true };
     internal Rect WaveformBounds => new(16, 150, Math.Max(80, rightPanel.X - 32), Math.Max(100, height - 280));
 
-    internal float WaveformRulerY => WaveformBounds.Y + WaveformBounds.Height * .66f + 28;
+    internal float WaveformGridTop => WaveformBounds.Y + WaveformBounds.Height * .34f;
+    internal float WaveformRulerY => WaveformBounds.Y + WaveformBounds.Height * .66f;
 
     public void ReleaseWaveform()
     {
@@ -56,11 +57,7 @@ public sealed partial class EditorView
         double start = playhead - waveformSpanMs / 2, msPerPixel = waveformSpanMs / r.Width;
         float center = r.Y + r.Height / 2, rulerY = WaveformRulerY;
         c.Clip(r);
-        float gridTop = r.Y + 96;
-        for (float y = center; y >= gridTop; y -= 40)
-            c.Line(r.X, y, r.Right, y, y == center ? 0x3C4653u : 0x262D37u);
-        for (float y = center + 40; y < rulerY; y += 40)
-            c.Line(r.X, y, r.Right, y, 0x262D37);
+        float gridTop = WaveformGridTop;
         foreach (var tick in renderedTiming!.Grid(Math.Max(0, start), start + waveformSpanMs, divisor))
         {
             float x = r.X + (float)((tick.TimeMs - start) / msPerPixel);
@@ -110,14 +107,14 @@ public sealed partial class EditorView
                 for (int i = 1; i < labelRights.Length; i++)
                     if (labelRights[i] < labelRights[row]) row = i;
             }
-            float labelY = r.Y + 8 + row * 18;
+            float labelY = gridTop - 24 - row * 18;
             c.Line(x, labelY + 22, x, rulerY, Error);
             c.Text(label, labelX, labelY, 12, Error, labelWidth + 1);
             labelRights[row] = Math.Max(labelRights[row], labelX + labelWidth + 8);
         }
         float head = r.X + r.Width / 2;
-        c.Line(head, r.Y + 28, head, rulerY + 24, Accent, 2);
-        c.Text(Time(playhead), head + 5, r.Y + 84, 12, Foreground, 110);
+        c.Line(head, gridTop - 6, head, rulerY + 24, Accent, 2);
+        c.Text(Time(playhead), head + 5, rulerY + 26, 12, Foreground, 110);
         c.Unclip();
     }
 
