@@ -65,6 +65,15 @@ internal static class TimingEditorTests
                 Check(ui.View.Document.TimingPoints.Count(p => p.Uninherited) == 1, "Entering BPM restores reset section");
                 ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
                 Check(ui.View.Document.ContentEquals(beforeReset), "Reset and replacement undo independently");
+                var beforePrecision = ui.View.Document.DeepClone();
+                Set(ui, "page.bpm", "137.696");
+                Check(Math.Abs(60000 / TimingEditing.Current(ui.View.Document, ui.View.PlayheadMs, true)!.BeatLengthMs - 137.7) < 1e-8,
+                    "Timing page commits BPM rounded to two decimal places");
+                Set(ui, "page.offset", "7822.261429");
+                Check(ui.View.Document.TimingPoints.Any(p => p.Uninherited && p.TimeMs == 7822),
+                    "Timing page commits an integer offset");
+                ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
+                Check(ui.View.Document.ContentEquals(beforePrecision), "Precision-limited timing edits remain undoable");
             }
         }
         finally { L.SetLanguage(language); }

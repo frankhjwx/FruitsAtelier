@@ -353,8 +353,16 @@ public sealed partial class EditorView
         timingVolumeStart = null;
     }
 
+    private static double TimingPageValue(string key, double value) => key switch
+    {
+        "bpm" => Math.Round(value, 2, MidpointRounding.AwayFromZero),
+        "offset" => Math.Round(value, MidpointRounding.AwayFromZero),
+        _ => value
+    };
+
     private void ChangeCurrentRed(string key, double value)
     {
+        value = TimingPageValue(key, value);
         bool retiming = timingResetPoint is not null && ReferenceEquals(timingResetDocument, Document);
         var before = retiming ? timingResetPoint! : TimingEditing.Current(Document, playhead, true) ?? new TimingPoint { TimeMs = Document.TimingOffsetMs, BeatLengthMs = Document.BeatLengthMs };
         var after = TimingEditing.Copy(before);
@@ -384,7 +392,8 @@ public sealed partial class EditorView
         bool retiming = timingResetPoint is not null && ReferenceEquals(timingResetDocument, Document);
         var before = retiming ? null : TimingEditing.Current(Document, playhead, true);
         var point = retiming ? TimingEditing.Copy(timingResetPoint!) : before is null ? TimingEditing.Create(Document, timingTaps[0], false) : TimingEditing.Copy(before);
-        point.TimeMs = timingTaps[0]; point.BeatLengthMs = beatLength;
+        point.TimeMs = TimingPageValue("offset", timingTaps[0]);
+        point.BeatLengthMs = 60000 / TimingPageValue("bpm", 60000 / beatLength);
         var points = Document.TimingPoints.Select(p => p == before ? point : p).ToList(); if (before is null) points.Add(point);
         if (Edit(L.Get("timing.tap"), () => TimingEditing.Apply(Document, points, before is null ? [] : [(before, point)], new(Scale: timingMoveNotes)))) timingResetPoint = null;
         ResetHitsounds();

@@ -20,7 +20,9 @@ marker lines. BPM and playback markers extend just beyond the band. The ruler re
 windows while scrolling and reserves vertical space around its peaks.
 The single-column Timing panel places tap controls above
 BPM and edits the active red section's BPM and offset and the difficulty's Slider
-Tick Rate. **Move notes with offset / BPM changes** keeps objects at their beat
+Tick Rate. This panel displays and commits BPM to at most two decimal places and
+offset to whole milliseconds, rounding to the nearest value. Tap timing uses the
+same precision when applied. **Move notes with offset / BPM changes** keeps objects at their beat
 positions within the edited section. BPM buttons step by 1, Ctrl by 0.25 and Shift
 by 5; offset buttons step by 2 ms, Ctrl by 1 ms and Shift by 10 ms.
 

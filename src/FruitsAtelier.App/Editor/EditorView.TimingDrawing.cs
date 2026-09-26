@@ -277,13 +277,13 @@ public sealed partial class EditorView
             c.Text(L.Get($"timing.{key}"), r.X, y + 7, 12, Foreground, 95);
             var input = new Rect(r.X + 100, y, r.Width - 100, row);
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "ui", "timing", "controls.png"), input, source: new Rect(80, 80, 1096, 192));
-            TimingNumber(c, "page." + key, new(input.X + 26, y, input.Width - 52, row), TimingN(value), apply);
+            TimingNumber(c, "page." + key, new(input.X + 26, y, input.Width - 52, row), TimingN(TimingPageValue(key, value)), apply);
             void Step(int direction)
             {
                 var current = TimingMap.At(Document, playhead);
                 double number = key == "bpm" ? 60000 / (timingResetPoint?.BeatLengthMs ?? current.BeatLengthMs) : key == "offset" ? timingResetPoint?.TimeMs ?? current.OffsetMs : Document.SliderTickRate;
                 double step = key == "bpm" ? placementCtrl ? .25 : timingPointerShift ? 5 : 1 : key == "offset" ? placementCtrl ? 1 : timingPointerShift ? 10 : 2 : 1;
-                try { apply(number + direction * step); } catch (ArgumentException ex) { timingError = ex.Message; }
+                try { apply(TimingPageValue(key, number) + direction * step); } catch (ArgumentException ex) { timingError = ex.Message; }
             }
             TimingButton(c, new(input.X, y, 24, row), "‹", () => Step(-1));
             TimingButton(c, new(input.Right - 24, y, 24, row), "›", () => Step(1));
