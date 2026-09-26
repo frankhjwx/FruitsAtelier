@@ -30,6 +30,8 @@ public sealed partial class EditorView
     private TimingPoint? timingResetPoint;
     private MapDocument? timingResetDocument;
     private bool timingPointerShift;
+    private bool panelMenuOpen, timingSnapDragging;
+    private Rect panelMenuBounds, timingSnapBounds;
     private bool TimingModal => TimingSetupVisible || timingCommand.Length > 0;
     internal Rect TimingSetupBounds => new((width - Math.Min(1000, width - 24)) / 2,
         (height - Math.Min(680, height - 24)) / 2, Math.Min(1000, width - 24), Math.Min(680, height - 24));
@@ -61,7 +63,7 @@ public sealed partial class EditorView
     private void ShowTimingPage(bool visible)
     {
         if (!PrepareFileOperation()) return;
-        TimingPageVisible = visible; timingField = timingError = ""; timingTaps.Clear();
+        TimingPageVisible = visible; panelMenuOpen = false; timingField = timingError = ""; timingTaps.Clear();
         ResetHitsounds(); timingTapHeld = false;
     }
 
@@ -193,14 +195,16 @@ public sealed partial class EditorView
         });
     }
 
-    private void TimingNumber(ICanvas c, string key, Rect box, string value, Action<double> apply, Func<double>? read = null)
+    private void TimingNumber(ICanvas c, string key, Rect box, string value, Action<double> apply, Func<double>? read = null, bool enabled = true)
     {
         var full = box;
-        bool stepper = !key.StartsWith("page.", StringComparison.Ordinal) && key != "move";
-        if (stepper) box = new(box.X, box.Y, box.Width - 20, box.Height);
-        timingFields.Add((key, box, value, apply));
-        c.Fill(box, Surface, 4); c.Stroke(box, timingField == key ? Accent : Grid, radius: 4);
-        DrawInputText(c, new(box.X + 8, box.Y + 7, box.Width - 16, 20), timingField == key ? timingText : value, 13, timingField == key, "timing:" + key);
+        bool stepper = !key.StartsWith("page.", StringComparison.Ordinal) && key is not ("move" or "volume" or "index");
+        if (stepper) box = new(box.X + 26, box.Y, box.Width - 52, box.Height);
+        if (enabled) timingFields.Add((key, box, value, apply));
+        if (!key.StartsWith("page.", StringComparison.Ordinal)) c.Fill(box, Surface, 4);
+        if (!key.StartsWith("page.", StringComparison.Ordinal) || timingField == key) c.Stroke(box, timingField == key ? Accent : Grid, radius: 4);
+        DrawInputText(c, new(box.X + 8, box.Y + (box.Height - 20) / 2, box.Width - 16, 20), timingField == key ? timingText : value, 13, enabled && timingField == key, "timing:" + key, centered: stepper || key.StartsWith("page.", StringComparison.Ordinal));
+        if (!enabled) { c.Fill(full, Background, opacity: .55f); return; }
         hits.Add(new(box, () =>
         {
             if (!CommitTimingField()) return;
@@ -219,8 +223,8 @@ public sealed partial class EditorView
                 double step = key == "bpm" ? placementCtrl ? .25 : timingPointerShift ? 5 : 1 : key == "offset" ? placementCtrl ? 1 : timingPointerShift ? 10 : 2 : 1;
                 try { apply(number + step * direction); } catch (ArgumentException ex) { timingError = ex.Message; }
             }
-            Button(c, new(full.Right - 18, full.Y, 18, full.Height / 2), "+", () => Step(1), fontSize: 10);
-            Button(c, new(full.Right - 18, full.Y + full.Height / 2, 18, full.Height / 2), "−", () => Step(-1), fontSize: 10);
+            TimingButton(c, new(full.X, full.Y, 24, full.Height), "‹", () => Step(-1), flatArrow: true);
+            TimingButton(c, new(full.Right - 24, full.Y, 24, full.Height), "›", () => Step(1), flatArrow: true);
         }
     }
 
@@ -308,6 +312,8 @@ public sealed partial class EditorView
         if (timingCommand.Length > 0)
         { if (key == 27) CloseTimingSetup(); else if (key == 13) ApplyTimingCommand(); return true; }
         if (key == 84 && !ctrl && !shift) { if (!timingTapHeld) TapTiming(); timingTapHeld = true; return true; }
+        if (key == 27 && panelMenuOpen) { panelMenuOpen = false; return true; }
+        if (key == 27 && menu >= 0) { menu = -1; return true; }
         if (key == 27 || key == 112) { ShowTimingPage(false); return true; }
         if (ctrl && shift && key == 73) return true;
         if (ctrl) return key is not (17 or 80 or 73 or 90 or 89 or 83 or 9 or 79 or 66 or 37 or 39 or 38 or 40 or 77);

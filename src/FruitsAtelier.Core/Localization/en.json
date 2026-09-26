@@ -54,7 +54,6 @@
   "axis.timingCount": "{0} timing points",
   "axis.timingTime": "Timing point {0}",
   "axis.timingRange": "{0} timing points: {1}–{2}",
-
   "testplay.start": "Testplay (F5)",
   "timeline.transport.play": "Play",
   "timeline.transport.pause": "Pause",
@@ -88,7 +87,6 @@
   "assist.hint.4": "Grid Snap (T); hold Shift to invert",
   "assist.hint.5": "Distance Snap (Y); hold Alt to temporarily invert",
   "assist.hint.6": "Lock positions and timestamps (L)",
-
   "library.additionalTitle": "New difficulties found: {0}",
   "library.importAdditional": "Import new difficulties",
   "library.openExisting": "Open project only",
@@ -107,11 +105,9 @@
   "tools.newCombo": "New combo",
   "tools.newComboOn": "Next fruit starts a new combo",
   "tools.newComboOff": "Next fruit continues the combo",
-
   "ui.timelineZoomIn": "+",
   "ui.timelineZoomOut": "−",
   "ui.playbackSpeed": "Playback speed",
-
   "app.name": "FruitsAtelier",
   "archive.cacheIncomplete": "The beatmap cache is incomplete. Choose another cache folder or remove the damaged cache and try again.",
   "archive.cacheLink": "Beatmap cache paths cannot contain links.",
@@ -900,12 +896,17 @@
   "timing.meter4": "Time Signature: 4/4",
   "timing.meter3": "Time Signature: 3/4",
   "timing.metronome": "Metronome Clicks",
-  "timing.moveNotes": "Move notes with offset / BPM changes",
+  "timing.moveNotes": "Move notes with BPM / offset",
   "timing.tap": "Tap Here!  T",
   "timing.tapReset": "Reset taps",
   "timing.tapApply": "Apply timing",
   "timing.tapPlaying": "Play the song before tapping.",
   "timing.tapResult": "{0:F2} BPM · {1} taps",
   "timing.ctrlTicks": "Hold Ctrl to hear the current snap subdivision.",
-  "timing.retiming": "Section cleared. Tap and apply, or enter BPM / Offset to restore this section."
+  "timing.retiming": "Section cleared. Tap and apply, or enter BPM / Offset to restore this section.",
+  "timing.panel": "Timing Panel",
+  "timing.detailsPanel": "Details Panel",
+  "timing.signature": "Time Signature",
+  "timing.custom": "Custom",
+  "timing.offsetShort": "Offset"
 }

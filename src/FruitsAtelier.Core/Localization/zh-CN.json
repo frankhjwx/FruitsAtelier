@@ -54,7 +54,6 @@
   "axis.timingCount": "{0} 个时间点",
   "axis.timingTime": "时间点 {0}",
   "axis.timingRange": "{0} 个时间点：{1}–{2}",
-
   "testplay.start": "试玩 (F5)",
   "timeline.transport.play": "播放",
   "timeline.transport.pause": "暂停",
@@ -88,7 +87,6 @@
   "assist.hint.4": "网格吸附（T）；按住 Shift 临时反转",
   "assist.hint.5": "距离吸附（Y）；按住 Alt 临时切换",
   "assist.hint.6": "锁定位置与时间（L）",
-
   "library.additionalTitle": "发现 {0} 个新增难度",
   "library.importAdditional": "导入新增难度",
   "library.openExisting": "仅打开工程",
@@ -107,11 +105,9 @@
   "tools.newCombo": "新连击",
   "tools.newComboOn": "下一颗水果开始新连击",
   "tools.newComboOff": "下一颗水果延续当前连击",
-
   "ui.timelineZoomIn": "+",
   "ui.timelineZoomOut": "−",
   "ui.playbackSpeed": "播放速度",
-
   "app.name": "水果工坊",
   "archive.cacheIncomplete": "谱面缓存未完成，请选择另一个缓存目录或移除损坏缓存后重试。",
   "archive.cacheLink": "谱面缓存路径不能包含链接。",
@@ -900,12 +896,17 @@
   "timing.meter4": "拍号：4/4",
   "timing.meter3": "拍号：3/4",
   "timing.metronome": "节拍器音效",
-  "timing.moveNotes": "修改偏移 / BPM 时移动已有物件",
+  "timing.moveNotes": "随 BPM / 偏移移动物件",
   "timing.tap": "点击打拍！  T",
   "timing.tapReset": "重置打拍",
   "timing.tapApply": "应用定时",
   "timing.tapPlaying": "请先播放歌曲再打拍。",
   "timing.tapResult": "{0:F2} BPM · {1} 次打拍",
   "timing.ctrlTicks": "按住 Ctrl 按当前 Snap 细分播放 tick。",
-  "timing.retiming": "区段已清除。应用打拍结果，或输入 BPM / 偏移以重新添加该区段。"
+  "timing.retiming": "区段已清除。应用打拍结果，或输入 BPM / 偏移以重新添加该区段。",
+  "timing.panel": "Timing 面板",
+  "timing.detailsPanel": "详情面板",
+  "timing.signature": "拍号",
+  "timing.custom": "自定义",
+  "timing.offsetShort": "偏移"
 }

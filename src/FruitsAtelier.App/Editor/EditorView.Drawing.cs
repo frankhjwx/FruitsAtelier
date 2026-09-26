@@ -45,9 +45,10 @@ public sealed partial class EditorView
         PumpLibrary();
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
         if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
-        float rightWidth = catchPreviewVisible ? Math.Clamp(previewWidth, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)) : 0;
+        bool expandedPanel = catchPreviewVisible || TimingPageVisible;
+        float rightWidth = expandedPanel ? Math.Clamp(previewWidth, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)) : 0;
         float bodyHeight = Math.Max(180, height - 204);
-        rightPanel = new(width - (catchPreviewVisible ? rightWidth : 290), 84, catchPreviewVisible ? rightWidth : 290, catchPreviewVisible ? bodyHeight : 38);
+        rightPanel = new(width - (expandedPanel ? rightWidth : 340), 84, expandedPanel ? rightWidth : 340, expandedPanel ? bodyHeight : 38);
         canvas = new(108, 84, Math.Max(120, width - rightWidth - 109), bodyHeight);
         plot = new(canvas.X + 70, canvas.Y + 140, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 152));
         overview = new(220, height - 77, Math.Max(100, width - 248), 40);
@@ -60,20 +61,16 @@ public sealed partial class EditorView
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
         c.Fill(new(0, 0, width, height), Background);
         DrawChrome(c);
-        if (TimingPageVisible) DrawTimingPage(c);
-        else
-        {
-            DrawCanvas(c);
-            DrawInspector(c);
-            DrawToolPalette(c);
-            DrawDistanceReadout(c);
-            DrawAssistPalette(c);
-            DrawSelectionBox(c);
-            DrawPreviewSidebar(c);
-            DrawLegacyConversionButton(c);
-            DrawMovementOverlay(c);
-            DrawKiaiBadge(c);
-        }
+        DrawCanvas(c);
+        DrawInspector(c);
+        DrawToolPalette(c);
+        DrawDistanceReadout(c);
+        DrawAssistPalette(c);
+        DrawSelectionBox(c);
+        if (TimingPageVisible) DrawTimingPage(c); else DrawPreviewSidebar(c);
+        DrawLegacyConversionButton(c);
+        DrawMovementOverlay(c);
+        DrawKiaiBadge(c);
         DrawTransport(c);
         DrawStatus(c);
         if (resourceErrors.Count > 0)
@@ -86,6 +83,7 @@ public sealed partial class EditorView
         if (menu >= 0) DrawMenu(c);
         DrawContextMenu(c);
         DrawLanguageMenu(c);
+        DrawPanelMenu(c);
         DrawSliderDialog(c);
         DrawExportOverlay(c);
         DrawTimeJump(c);
@@ -353,8 +351,8 @@ public sealed partial class EditorView
         c.Line(rightPanel.X, rightPanel.Y + 38, rightPanel.Right, rightPanel.Y + 38, Grid);
         float x = rightPanel.X + 16;
         float rowY = rightPanel.Y + 11;
-        c.Text(L.Get("ui.properties"), x, rowY, 12, Foreground, 90, true);
-        float statX = x + 84;
+        Button(c, new(x - 8, rightPanel.Y + 4, 130, 30), L.Get(TimingPageVisible ? "timing.panel" : "timing.detailsPanel") + " ▾", () => panelMenuOpen = !panelMenuOpen);
+        float statX = x + 132;
         c.Text($"{L.Get("ui.ar")} {Number(Document.ApproachRate)}", statX, rowY, 12, Muted, 48);
         c.Text($"{L.Get("ui.cs")} {Number(Document.CircleSize)}", statX + 50, rowY, 12, Muted, 48);
         c.Text($"{L.Get("ui.dpb")} {Number(Document.DistancePerBeat)}px", statX + 100, rowY, 12, Muted,
@@ -610,9 +608,7 @@ public sealed partial class EditorView
         }
         else if (menu == 4)
         {
-            Item(L.Get("timing.page"), () => ShowTimingPage(true));
-            Item(L.Get("timing.meter4"), () => ChangeCurrentRed("meter", 4));
-            Item(L.Get("timing.meter3"), () => ChangeCurrentRed("meter", 3));
+            Item(L.Get("timing.signature"), () => gridLevelMenuOpen = true);
             Item(L.Get("timing.metronome"), () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }, active: metronomeEnabled);
             Item(L.Get("timing.addRed"), () => AddTimingPoint(false));
             Item(L.Get("timing.addGreen"), () => AddTimingPoint(true));
@@ -647,16 +643,16 @@ public sealed partial class EditorView
         MenuBounds = new(x, top, 282, 14 + items.Count * 34 - 3);
         var rect = MenuBounds;
         var gridRow = new Rect(rect.X + 6, rect.Y + 7, rect.Width - 12, 31);
-        gridLevelMenuBounds = new(rect.Right, gridRow.Y - 7, 160, 147);
+        gridLevelMenuBounds = new(rect.Right, gridRow.Y - 7, menu == 4 ? 240 : 160, menu == 4 ? 79 : 147);
         var gridBridge = new Rect(gridRow.X, gridRow.Y, rect.Right - gridRow.X, gridRow.Height);
-        gridLevelMenuOpen = menu == 2 && (gridRow.Contains(mouseX, mouseY)
+        gridLevelMenuOpen = (menu == 2 || menu == 4) && (gridRow.Contains(mouseX, mouseY)
             || gridLevelMenuOpen && (gridBridge.Contains(mouseX, mouseY) || gridLevelMenuBounds.Contains(mouseX, mouseY)));
         c.Fill(new(rect.X + 3, rect.Y + 4, rect.Width, rect.Height), 0x11151B, 5);
         c.Fill(rect, Surface, 5); c.Stroke(rect, Grid, 1, 5);
         float y = rect.Y + 7;
         foreach (var item in items)
         {
-            bool submenu = menu == 2 && y == rect.Y + 7;
+            bool submenu = (menu == 2 || menu == 4) && y == rect.Y + 7;
             Button(c, new(rect.X + 6, y, rect.Width - 12, 31), item.Label,
                 () => { if (!submenu) menu = -1; item.Action(); }, item.Active || submenu && gridLevelMenuOpen, item.Enabled);
             if (submenu)
@@ -672,11 +668,11 @@ public sealed partial class EditorView
             c.Fill(new(child.X + 3, child.Y + 4, child.Width, child.Height), 0x11151B, 5);
             c.Fill(child, Surface, 5); c.Stroke(child, Grid, 1, 5);
             float childY = child.Y + 7;
-            foreach (int size in new[] { 4, 8, 16, 32 })
+            foreach (int size in menu == 4 ? new[] { 4, 3 } : new[] { 4, 8, 16, 32 })
             {
-                Button(c, new(child.X + 6, childY, child.Width - 12, 31), L.Get("ui.grid" + size),
-                    () => { gridSize = size; gridLevelMenuOpen = false; menu = -1; }, size == gridSize);
-                if (size == gridSize)
+                Button(c, new(child.X + 6, childY, child.Width - 12, 31), menu == 4 ? L.Get($"timing.meter{size}") : L.Get("ui.grid" + size),
+                    () => { if (menu == 4) ChangeCurrentRed("meter", size); else gridSize = size; gridLevelMenuOpen = false; menu = -1; }, size == (menu == 4 ? TimingMap.At(Document, playhead).Meter : gridSize));
+                if (size == (menu == 4 ? TimingMap.At(Document, playhead).Meter : gridSize))
                 {
                     c.Line(child.Right - 27, childY + 16, child.Right - 23, childY + 20, Foreground, 2);
                     c.Line(child.Right - 23, childY + 20, child.Right - 16, childY + 11, Foreground, 2);

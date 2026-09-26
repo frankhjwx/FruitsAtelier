@@ -91,6 +91,7 @@ public sealed partial class EditorView
 
     private void ToggleSound(int flag)
     {
+        if (TimingPageVisible) return;
         if (tool == Tool.Banana) return;
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
         var ids = FlagTargets().Where(id => !Document.BananaShowers.Any(b => b.Id == id)).ToArray();
@@ -160,7 +161,7 @@ public sealed partial class EditorView
             assistButtons.Add(r);
             if (!Intersects(r, assistPalette)) continue;
             bool enabled = i is 4 or 5 || draftTrack == Guid.Empty && draftBanana == Guid.Empty;
-            if (i is >= 1 and <= 3 && (tool == Tool.Banana || !placement && sounds.Length == 0)) enabled = false;
+            if (i is >= 1 and <= 3 && (TimingPageVisible || tool == Tool.Banana || !placement && sounds.Length == 0)) enabled = false;
             float opacity = !enabled ? .25f : active[i] ? 1 : .45f;
             bool mixed = i is >= 1 and <= 3 && !placement && !active[i] && sounds.Any(s => (s & (1 << i)) != 0);
             float scale = size / 512;

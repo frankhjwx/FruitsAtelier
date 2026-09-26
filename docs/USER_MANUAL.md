@@ -42,9 +42,11 @@ The main canvas shows horizontal placement and note timing; later notes are high
 
 The Timing menu can set the current position as the song preview point. A long yellow line marks it on the bottom timeline. Red and green timing marks appear on the upper object timeline, while shaded break intervals appear there and on the canvas's left time axis. To insert a break, place the playhead between two objects with enough space and click **Insert Break Time** next to Movement Analysis. Undo removes the inserted break.
 
-Press **F3** for the Timing page: edit BPM, offset and Slider Tick Rate, or tap with
+Choose **Timing Panel** from the **Details Panel** header dropdown, or press
+**F3**: edit BPM, offset and Slider Tick Rate, or tap with
 **T** during playback and apply the measured tempo. The metronome plays each beat;
-hold **Ctrl** to hear the current Snap subdivisions. **F1** returns to Compose.
+hold **Ctrl** to hear the current Snap subdivisions. **F1** returns to Details. Notes stay visible while Timing plays only metronome
+ticks alongside the music.
 **F6 / Timing Setup** opens red/green control-point editing, sample settings,
 volume and Kiai. OK applies the draft as one undo step; Cancel discards it.
 The apply options can scale or resnap objects, recalculate slider lengths, and

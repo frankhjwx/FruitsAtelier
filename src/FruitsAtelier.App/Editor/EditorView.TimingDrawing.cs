@@ -27,7 +27,9 @@ public sealed partial class EditorView
         }
         c.Text(L.Get("timing.title"), r.X + 20, r.Y + 16, 19, Foreground, r.Width - 80, true);
         Button(c, new(r.Right - 48, r.Y + 10, 32, 28), "×", CloseTimingSetup);
-        float leftWidth = Math.Clamp(r.Width * .39f, 280, 360), listX = r.X + leftWidth + 24;
+        float leftWidth = Math.Clamp(r.Width * .39f, 280, 360), listX = r.X + leftWidth + 40;
+        c.Stroke(new(r.X + 10, r.Y + 46, leftWidth + 12, r.Height - 252), Grid, radius: 5);
+        c.Stroke(new(listX - 6, r.Y + 46, r.Right - listX - 4, r.Height - 252), Grid, radius: 5);
         string[] tabs = ["timing.timing", "timing.audio", "timing.style"];
         for (int i = 0; i < 3; i++)
         {
@@ -51,9 +53,9 @@ public sealed partial class EditorView
         timingListBounds = new(listX, r.Y + 98, r.Right - listX - 16, r.Height - 348);
         var list = timingListBounds;
         c.Fill(list, Background, 4);
-        float[] columns = [0, .28f, .48f, .62f, .79f, .91f];
-        string[] headings = ["timing.offset", "timing.bpm", "timing.meter", "timing.sample", "timing.volumeShort", "timing.ki"];
-        for (int i = 0; i < columns.Length; i++) c.Text(L.Get(headings[i]), list.X + 9 + list.Width * columns[i], list.Y + 8, 11, Muted, list.Width * (i == 0 ? .27f : .17f) - 8);
+        float[] columns = [0, .22f, .35f, .49f, .69f, .84f];
+        string[] headings = ["timing.offsetShort", "timing.bpm", "timing.meter", "timing.sample", "timing.volumeShort", "timing.kiai"];
+        for (int i = 0; i < columns.Length; i++) c.Text(L.Get(headings[i]), list.X + 9 + list.Width * columns[i], list.Y + 8, 11, Muted, list.Width * (i + 1 < columns.Length ? columns[i + 1] - columns[i] : 1 - columns[i]) - 8);
         var entries = VisibleTimingEntries();
         int capacity = Math.Max(1, (int)((list.Height - 34) / 28));
         timingScroll = Math.Clamp(timingScroll, 0, Math.Max(0, entries.Length - capacity));
@@ -64,11 +66,11 @@ public sealed partial class EditorView
             var row = new Rect(list.X + 3, list.Y + 32 + (i - timingScroll) * 28, list.Width - 12, 28);
             c.Fill(row, timingSelected.Contains(entry.Id) ? 0x35495B : i % 2 == 0 ? 0x222832u : Background);
             c.Circle(row.X + 6, row.Y + 14, 3, p.Uninherited ? Error : Accent);
-            string[] values = [Time(p.TimeMs), p.Uninherited ? TimingN(60000 / p.BeatLengthMs) : "×" + TimingN(p.BeatLengthMs < 0 ? -100 / p.BeatLengthMs : 1),
-                p.Uninherited ? p.Meter + "/4" : "", (p.SampleSet switch { 1 => "N", 2 => "S", 3 => "D", _ => "–" }) + ":C" + p.SampleIndex,
+            string[] values = [Time(p.TimeMs), p.Uninherited ? TimingN(60000 / p.BeatLengthMs) : "",
+                p.Uninherited ? p.Meter + "/4" : "", (p.SampleSet switch { 1 => "N", 2 => "S", 3 => "D", _ => "–" }) + (p.SampleIndex == 0 ? "" : ":C" + p.SampleIndex),
                 p.Volume + "%", (p.Effects & 1) != 0 ? "✓" : ""];
             for (int k = 0; k < columns.Length; k++) c.Text(values[k], list.X + (k == 0 ? 15 : 9) + list.Width * columns[k], row.Y + 7, 11, Foreground,
-                list.Width * (k + 1 < columns.Length ? columns[k + 1] - columns[k] : .09f) - 12);
+                list.Width * (k + 1 < columns.Length ? columns[k + 1] - columns[k] : 1 - columns[k]) - 12);
             hits.Add(new(row, () => SelectTimingEntry(entry.Id, placementCtrl, timingPointerShift), true));
         }
         c.Unclip();
@@ -88,9 +90,8 @@ public sealed partial class EditorView
         TimingCheck(c, new(r.X + 20, applyY + 58, r.Width * .47f, 28), "timing.snap", timingResnap, () => timingResnap = !timingResnap);
         TimingCheck(c, new(r.X + r.Width * .5f, applyY + 25, r.Width * .47f, 28), "timing.lengths", timingLengths, () => timingLengths = !timingLengths);
         TimingCheck(c, new(r.X + r.Width * .5f, applyY + 58, r.Width * .47f, 28), "timing.bookmarks", timingBookmarks, () => timingBookmarks = !timingBookmarks);
-        Button(c, new(r.X + 20, applyY + 91, 235, 26), L.Get("timing.snapDivisor", timingSnap),
-            () => timingSnap = SnapDivisors[(Array.IndexOf(SnapDivisors, timingSnap) + 1) % SnapDivisors.Length]);
-        c.Text(timingError, r.X + 265, applyY + 95, 11, Error, r.Width - 285);
+        DrawTimingSnap(c, new(r.X + 20, applyY + 91, 300, 38));
+        c.Text(timingError, r.X + 340, applyY + 95, 11, Error, r.Width - 360);
         Button(c, new(r.X + 20, r.Bottom - 46, r.Width * .65f - 24, 32), L.Get("song.ok"), ApplyTimingSetup, true);
         Button(c, new(r.X + r.Width * .65f, r.Bottom - 46, r.Width * .35f - 20, 32), L.Get("mac.cancel"), CloseTimingSetup);
     }
@@ -111,37 +112,52 @@ public sealed partial class EditorView
         string Common(Func<TimingPoint, double> get) => points.Select(get).Distinct().Take(2).Count() == 1 ? TimingN(get(points[0])) : "";
         void Number(string key, Func<TimingPoint, double> get)
         {
-            c.Text(L.Get($"timing.{key}"), r.X + 12, y + 8, 12, Foreground, r.Width * .48f - 12);
-            TimingNumber(c, key, new(r.X + r.Width * .48f, y, r.Width * .52f - 12, 30), Common(get), v => SetTimingValues(key, v), () => get(points[0])); y += timingTab == 1 ? 34 : 45;
+            c.Text(L.Get($"timing.{key}"), r.X + 12, y + 8, 12, Foreground, 90);
+            TimingNumber(c, key, new(r.X + 106, y, r.Width - 118, 30), Common(get), v => SetTimingValues(key, v), () => get(points[0])); y += timingTab == 1 ? 34 : 45;
         }
         if (timingTab == 0)
         {
             Number("offset", p => p.TimeMs);
-            Button(c, new(r.X + 12, y, r.Width - 24, 32), L.Get("timing.useCurrent"), () => SetTimingValues("offset", playhead)); y += 48;
+            TimingButton(c, new(r.X + 12, y, r.Width - 24, 32), L.Get("timing.useCurrent"), () => SetTimingValues("offset", playhead)); y += 48;
             if (points.All(p => p.Uninherited)) { Number("bpm", p => 60000 / p.BeatLengthMs); Number("meter", p => p.Meter); }
             else if (points.Any(p => p.Uninherited)) c.Text(L.Get("timing.mixedTypes"), r.X + 12, y, 12, Muted, r.Width - 24);
         }
         else if (timingTab == 1)
         {
+            float bankWidth = (r.Width - 36) * .47f, choiceX = r.X + bankWidth + 24, choiceWidth = r.Right - choiceX - 12;
+            c.Stroke(new(r.X + 12, y, bankWidth, 96), Grid);
             string[] banks = ["timing.normal", "timing.soft", "timing.drum"];
             for (int i = 0; i < 3; i++)
             {
-                int bank = i + 1; Button(c, new(r.X + 12 + i * (r.Width - 24) / 3, y, (r.Width - 24) / 3 - 4, 30), L.Get(banks[i]), () => SetTimingValues("bank", bank), points.All(p => p.SampleSet == bank));
+                int bank = i + 1;
+                Button(c, new(r.X + 14, y + 2 + i * 30, bankWidth - 4, 30), L.Get(banks[i]), () => SetTimingValues("bank", bank), points.All(p => p.SampleSet == bank));
             }
-            y += 34;
-            Button(c, new(r.X + 12, y, (r.Width - 28) / 2, 30), L.Get("timing.default"), () => SetTimingValues("index", 0), points.All(p => p.SampleIndex == 0));
-            Button(c, new(r.X + r.Width / 2, y, (r.Width - 28) / 2, 30), L.Get("timing.custom1"), () => SetTimingValues("index", 1), points.All(p => p.SampleIndex == 1));
-            y += 34; Number("index", p => p.SampleIndex); Number("volume", p => p.Volume);
-            var slider = new Rect(r.X + 16, y, r.Width - 32, 20);
-            c.Line(slider.X, y + 10, slider.Right, y + 10, Grid, 4);
-            c.Circle(slider.X + slider.Width * points[0].Volume / 100, y + 10, 6, Accent);
-            hits.Add(new(slider, () => BeginTimingVolumeDrag(slider), true)); y += 24;
+            void Choice(string key, int index, float cy)
+            {
+                bool active = index == 2 ? points.All(p => p.SampleIndex >= 2) : points.All(p => p.SampleIndex == index);
+                var bounds = new Rect(choiceX, cy, choiceWidth, 28);
+                c.Circle(choiceX + 8, cy + 14, 7, Muted);
+                c.Circle(choiceX + 8, cy + 14, 5, Background);
+                if (active) c.Circle(choiceX + 8, cy + 14, 3, Accent);
+                c.Text(L.Get(key), choiceX + 22, cy + 7, 12, Foreground, choiceWidth - 22);
+                hits.Add(new(bounds, () => SetTimingValues("index", index == 2 ? Math.Max(2, points[0].SampleIndex) : index), true));
+            }
+            Choice("timing.default", 0, y); Choice("timing.custom1", 1, y + 30); Choice("timing.custom", 2, y + 60);
+            TimingNumber(c, "index", new(choiceX + 22, y + 92, choiceWidth - 22, 28), Common(p => p.SampleIndex), v => SetTimingValues("index", v), enabled: points.All(p => p.SampleIndex >= 2));
+            y += 132;
+            c.Text(L.Get("timing.volume"), r.X + 12, y + 7, 12, Foreground, 64);
+            var slider = new Rect(r.X + 78, y + 3, r.Width - 166, 24);
+            c.Line(slider.X, slider.Y + 12, slider.Right, slider.Y + 12, Grid, 4);
+            c.Circle(slider.X + slider.Width * points[0].Volume / 100, slider.Y + 12, 6, Accent);
+            hits.Add(new(slider, () => BeginTimingVolumeDrag(slider), true));
+            TimingNumber(c, "volume", new(r.Right - 78, y, 50, 28), Common(p => p.Volume), v => SetTimingValues("volume", v));
+            c.Text("%", r.Right - 24, y + 7, 12, Foreground, 20); y += 38;
             string[] sounds = ["hitnormal", "hitfinish", "hitwhistle", "hitclap"];
             for (int i = 0; i < 4; i++)
             {
-                string sound = sounds[i]; Button(c, new(r.X + 12 + i % 2 * (r.Width - 24) / 2, y + i / 2 * 30, (r.Width - 24) / 2 - 4, 28), L.Get($"timing.{sound}"), () => PreviewTimingSample(points[0], sound));
+                string sound = sounds[i]; TimingButton(c, new(r.X + 12 + i % 2 * (r.Width - 24) / 2, y + i / 2 * 32, (r.Width - 24) / 2 - 6, 28), L.Get($"timing.{sound}"), () => PreviewTimingSample(points[0], sound));
             }
-            y += 60;
+            y += 66;
             Button(c, new(r.X + 12, y, r.Width - 24, 28), L.Get("timing.sampleHelp"), () => RequestTimingSampleHelp?.Invoke());
         }
         else
@@ -165,57 +181,120 @@ public sealed partial class EditorView
         foreach (var sample in resolved.Resolve(objects[0]).Where(s => s.Name == sound)) RequestHitsound?.Invoke(sample);
     }
 
+    private void TimingButton(ICanvas c, Rect r, string text, Action action, int sprite = -1, bool enabled = true, bool flatArrow = false)
+    {
+        bool arrow = text is "‹" or "›";
+        if (arrow && !flatArrow)
+        {
+            c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "ui", "timing", "arrows.png"), r,
+                source: new Rect(text == "‹" ? 62 : 674, 368, 520, 492), opacity: enabled ? 1 : .35f);
+        }
+        else if (arrow)
+        {
+            c.Fill(r, Surface, 3);
+            c.Stroke(r, Grid, radius: 3);
+            float direction = text == "‹" ? -1 : 1, cx = r.X + r.Width / 2, cy = r.Y + r.Height / 2;
+            uint color = enabled ? Foreground : Muted;
+            c.Line(cx - direction * 3, cy - 5, cx + direction * 3, cy, color, 2);
+            c.Line(cx + direction * 3, cy, cx - direction * 3, cy + 5, color, 2);
+        }
+        else if (sprite >= 0)
+        {
+            var source = new Rect(80, new[] { 80, 374, 666, 962 }[sprite], 1096, 192);
+            if (!c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "ui", "timing", "controls.png"), r, source: source, opacity: enabled ? 1 : .35f))
+                c.Fill(r, sprite == 2 ? 0xC98512u : 0x2977B8u, 4);
+        }
+        else { c.Fill(r, Surface, 4); c.Stroke(r, enabled ? Muted : Grid, radius: 4); }
+        if (enabled && r.Contains(mouseX, mouseY)) c.Fill(r, Foreground, 4, .12f);
+        string label = text.Split("  ")[0];
+        float size = 12, tw = Math.Min(r.Width - 8, c.MeasureText(label, size));
+        if (!arrow) c.Text(label, r.X + (r.Width - tw) / 2, r.Y + (r.Height - 16) / 2, size, enabled ? Foreground : Muted, tw + 1);
+        hits.Add(new(r, () => { if (CommitTimingField()) action(); }, enabled));
+    }
+
+    private void DrawPanelMenu(ICanvas c)
+    {
+        if (!panelMenuOpen) return;
+        panelMenuBounds = new(rightPanel.X + 8, rightPanel.Y + 36, 180, 76);
+        c.Fill(panelMenuBounds, Surface, 4); c.Stroke(panelMenuBounds, Muted, radius: 4);
+        Button(c, new(panelMenuBounds.X + 4, panelMenuBounds.Y + 4, 172, 32), L.Get("timing.detailsPanel"), () => ShowTimingPage(false), !TimingPageVisible);
+        Button(c, new(panelMenuBounds.X + 4, panelMenuBounds.Y + 40, 172, 32), L.Get("timing.panel"), () => ShowTimingPage(true), TimingPageVisible);
+    }
+
+    private void PanelPointerDown(float x, float y)
+    {
+        if (panelMenuBounds.Contains(x, y))
+        {
+            for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { hits[i].Action(); return; }
+        }
+        panelMenuOpen = false;
+    }
+
+    private void DrawTimingSnap(ICanvas c, Rect r)
+    {
+        timingSnapBounds = r;
+        int value = TimingSetupVisible ? timingSnap : divisor;
+        c.Text(L.Get("timing.snapDivisor", value), r.X, r.Y, 12, Foreground, r.Width);
+        float left = r.X + 8, length = r.Width - 16, cy = r.Y + 28;
+        c.Line(left, cy, left + length, cy, Muted, 3);
+        for (int i = 0; i < SnapDivisors.Length; i++) c.Line(left + length * i / (SnapDivisors.Length - 1), cy - 4, left + length * i / (SnapDivisors.Length - 1), cy + 4, Grid);
+        c.Circle(left + length * Math.Max(0, Array.IndexOf(SnapDivisors, value)) / (SnapDivisors.Length - 1), cy, 6, Accent);
+        hits.Add(new(r, () => { timingSnapDragging = true; SetTimingSnap(mouseX); }, true));
+    }
+
+    private void SetTimingSnap(float x)
+    {
+        int index = (int)Math.Round(Math.Clamp((x - timingSnapBounds.X - 8) / (timingSnapBounds.Width - 16), 0, 1) * (SnapDivisors.Length - 1));
+        if (TimingSetupVisible) timingSnap = SnapDivisors[index];
+        else { divisor = SnapDivisors[index]; ResetHitsounds(); }
+    }
+
     private void DrawTimingPage(ICanvas c)
     {
         timingFields.Clear();
-        var r = new Rect(24, 96, width - 48, height - 218);
-        c.Fill(r, Panel, 8);
-        Button(c, new(r.X + 20, r.Y + 14, 120, 30), L.Get("timing.compose"), () => ShowTimingPage(false));
-        c.Text(L.Get("timing.page"), r.X + 158, r.Y + 20, 19, Foreground, 240, true);
-        Button(c, new(r.Right - 240, r.Y + 14, 220, 32), L.Get("timing.setup"), OpenTimingSetup, true);
+        var r = new Rect(rightPanel.X + 14, rightPanel.Y + 46, rightPanel.Width - 28, rightPanel.Height - 52);
+        bool compact = r.Height < 540;
+        float y = r.Y, gap = compact ? 5 : 12, row = compact ? 28 : 34;
         var state = TimingMap.At(Document, playhead);
         if (timingResetPoint is not null && !ReferenceEquals(timingResetDocument, Document)) timingResetPoint = null;
-        float x = r.X + 24, y = r.Y + 78, controlsWidth = Math.Min(500, r.Width * .58f);
-        void Number(string key, double value, double step, Action<double> apply)
-        {
-            c.Text(L.Get($"timing.{key}"), x, y + 9, 13, Foreground, controlsWidth * .45f);
-            float inputX = x + controlsWidth * .45f, inputWidth = controlsWidth * .55f - 80;
-            TimingNumber(c, "page." + key, new(inputX + 36, y, inputWidth, 34), TimingN(value), apply);
-            void Step(int direction)
-            {
-                if (!CommitTimingField()) return;
-                double change = key == "bpm" ? placementCtrl ? .25 : timingPointerShift ? 5 : 1 : key == "offset" ? placementCtrl ? 1 : timingPointerShift ? 10 : 2 : step;
-                var current = TimingMap.At(Document, playhead);
-                double number = key == "bpm" ? 60000 / (timingResetPoint?.BeatLengthMs ?? current.BeatLengthMs)
-                    : key == "offset" ? timingResetPoint?.TimeMs ?? current.OffsetMs : Document.SliderTickRate;
-                try { apply(number + direction * change); } catch (ArgumentException ex) { timingError = ex.Message; }
-            }
-            Button(c, new(inputX, y, 32, 34), "−", () => Step(-1));
-            Button(c, new(inputX + inputWidth + 40, y, 32, 34), "+", () => Step(1));
-            y += 56;
-        }
-        Number("bpm", 60000 / (timingResetPoint?.BeatLengthMs ?? state.BeatLengthMs), 1, v => ChangeCurrentRed("bpm", v));
-        Number("offset", timingResetPoint?.TimeMs ?? state.OffsetMs, 2, v => ChangeCurrentRed("offset", v));
-        TimingCheck(c, new(x, y, controlsWidth, 34), "timing.moveNotes", timingMoveNotes, () => timingMoveNotes = !timingMoveNotes); y += 56;
-        Number("tickRate", Document.SliderTickRate, 1, v =>
-        {
-            if (v < .5 || v > 8) throw new ArgumentException(L.Get("timing.range"));
-            Edit(L.Get("timing.edit"), () => Document.SliderTickRate = v);
-        });
-        float rightX = r.X + controlsWidth + 50, rightWidth = r.Right - rightX - 24;
         int count = Math.Min(16, state.Meter);
         double beat = (playhead - state.OffsetMs) / state.BeatLengthMs;
         int active = ((int)Math.Floor(beat) % state.Meter + state.Meter) % state.Meter;
+        float lampX = r.X + 82, lampWidth = (r.Width - 82) / count;
         for (int i = 0; i < count; i++)
-            c.Fill(new(rightX + i * rightWidth / count, r.Y + 78, rightWidth / count - 4, 32),
-                AudioPlaying && i == active && beat * (placementCtrl ? divisor : 1) % 1 < .35 ? i == 0 ? Accent : Foreground : Background, 4);
-        TimingCheck(c, new(rightX, r.Y + 124, rightWidth, 30), "timing.metronome", metronomeEnabled, () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); });
-        Button(c, new(rightX, r.Y + 170, rightWidth, 40), L.Get("timing.tap"), TapTiming, true);
-        Button(c, new(rightX, r.Y + 224, rightWidth / 2 - 4, 32), L.Get("timing.tapReset"), () => timingTaps.Clear());
-        Button(c, new(rightX + rightWidth / 2, r.Y + 224, rightWidth / 2, 32), L.Get("timing.tapApply"), ApplyTappedTiming, enabled: timingTaps.Count >= 2);
-        if (timingTaps.Count >= 2) c.Text(L.Get("timing.tapResult", 60000 * (timingTaps.Count - 1) / (timingTaps[^1] - timingTaps[0]), timingTaps.Count), rightX, r.Y + 270, 13, Accent, rightWidth);
-        Button(c, new(rightX, r.Y + 308, rightWidth, 30), L.Get("timing.snapDivisor", divisor), () => { divisor = SnapDivisors[(Array.IndexOf(SnapDivisors, divisor) + 1) % SnapDivisors.Length]; ResetHitsounds(); });
-        c.Text(L.Get("timing.ctrlTicks"), rightX, r.Y + 350, 12, Muted, rightWidth);
-        c.Text(timingError.Length > 0 ? timingError : timingResetPoint is not null ? L.Get("timing.retiming") : "", x, r.Bottom - 32, 12, timingError.Length > 0 ? Error : Gold, r.Width - 48);
+        {
+            var lamp = new Rect(lampX + i * lampWidth, y, lampWidth - 4, row);
+            c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "ui", "timing", "controls.png"), lamp, source: new Rect(80, 962, 1096, 192));
+            if (AudioPlaying && i == active && beat * (placementCtrl ? divisor : 1) % 1 < .35) c.Fill(lamp, i == 0 ? Gold : Accent, 4, .8f);
+        }
+        TimingButton(c, new(r.X, y, 74, row * 2 + gap), L.Get("timing.tapReset"), () => timingTaps.Clear(), 2);
+        y += row + gap;
+        TimingButton(c, new(lampX, y, r.Width - 82, row), L.Get("timing.tap"), TapTiming, 1); y += row + gap;
+        TimingButton(c, new(r.X, y, r.Width, row), timingTaps.Count >= 2 ? L.Get("timing.tapResult", 60000 * (timingTaps.Count - 1) / (timingTaps[^1] - timingTaps[0]), timingTaps.Count) : L.Get("timing.tapApply"), ApplyTappedTiming, enabled: timingTaps.Count >= 2); y += row + gap;
+        void Number(string key, double value, Action<double> apply)
+        {
+            c.Text(L.Get($"timing.{key}"), r.X, y + 7, 12, Foreground, 95);
+            var input = new Rect(r.X + 100, y, r.Width - 100, row);
+            c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "ui", "timing", "controls.png"), input, source: new Rect(80, 80, 1096, 192));
+            TimingNumber(c, "page." + key, new(input.X + 26, y, input.Width - 52, row), TimingN(value), apply);
+            void Step(int direction)
+            {
+                var current = TimingMap.At(Document, playhead);
+                double number = key == "bpm" ? 60000 / (timingResetPoint?.BeatLengthMs ?? current.BeatLengthMs) : key == "offset" ? timingResetPoint?.TimeMs ?? current.OffsetMs : Document.SliderTickRate;
+                double step = key == "bpm" ? placementCtrl ? .25 : timingPointerShift ? 5 : 1 : key == "offset" ? placementCtrl ? 1 : timingPointerShift ? 10 : 2 : 1;
+                try { apply(number + direction * step); } catch (ArgumentException ex) { timingError = ex.Message; }
+            }
+            TimingButton(c, new(input.X, y, 24, row), "‹", () => Step(-1));
+            TimingButton(c, new(input.Right - 24, y, 24, row), "›", () => Step(1));
+            y += row + gap;
+        }
+        Number("bpm", 60000 / (timingResetPoint?.BeatLengthMs ?? state.BeatLengthMs), v => ChangeCurrentRed("bpm", v));
+        Number("offset", timingResetPoint?.TimeMs ?? state.OffsetMs, v => ChangeCurrentRed("offset", v));
+        TimingCheck(c, new(r.X, y, r.Width, row), "timing.moveNotes", timingMoveNotes, () => timingMoveNotes = !timingMoveNotes); y += row + gap;
+        Number("tickRate", Document.SliderTickRate, v => { if (v < .5 || v > 8) throw new ArgumentException(L.Get("timing.range")); Edit(L.Get("timing.edit"), () => Document.SliderTickRate = v); });
+        TimingCheck(c, new(r.X, y, r.Width, row), "timing.metronome", metronomeEnabled, () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }); y += row + gap;
+        TimingButton(c, new(r.X, y, r.Width, row), L.Get("timing.setup"), OpenTimingSetup); y += row + gap;
+        c.Text(timingError, r.X, y, 11, Error, r.Width);
     }
 }

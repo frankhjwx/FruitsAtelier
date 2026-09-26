@@ -2,13 +2,16 @@
 
 ## Timing editing
 
-**F3** or **Timing → Timing** opens the Timing page; **F1** returns to Compose.
-The page edits the active red section's BPM and offset and the difficulty's Slider
+**Details Panel** in the right header opens a dropdown with **Details Panel** and
+**Timing Panel**. **F3** selects Timing; **F1** returns to Details. Notes remain
+visible on the canvas. The single-column Timing panel places tap controls above
+BPM and edits the active red section's BPM and offset and the difficulty's Slider
 Tick Rate. **Move notes with offset / BPM changes** keeps objects at their beat
 positions within the edited section. BPM buttons step by 1, Ctrl by 0.25 and Shift
 by 5; offset buttons step by 2 ms, Ctrl by 1 ms and Shift by 10 ms.
 
-During playback, **Metronome Clicks** schedules one tick per beat, with a distinct
+In Timing mode, object hitsounds are suppressed and the sound-flag palette is
+disabled. During playback, **Metronome Clicks** schedules one tick per beat, with a distinct
 measure accent. Holding Ctrl uses the current Snap divisor, including triplets and
 finer divisions. The music clock controls tick times and visual indicators. Pause,
 seek, timing changes and leaving Timing cancel queued ticks. These controls are
@@ -28,9 +31,11 @@ the dialog. Ctrl+Z/Y operate on the draft while no numeric field has focus.
 Red points expose offset, BPM and meter. Green points expose offset, samples,
 volume and Kiai. The inheritance checkbox changes point type; it protects the
 first red point. Audio supports Normal/Soft/Drum banks, default or numbered custom
-samples, a volume slider, and four sample audition buttons. Imported velocity and
-unrelated effect bits are preserved. The list shows existing velocity multipliers
-as read-only values. Kiai updates the editor's existing Kiai indication and exports.
+samples, a volume slider, and four sample audition buttons. Default and Custom 1
+lock the sample-index input; selecting Custom enables it. Each audition button
+plays only its named sound from the selected bank, index and volume. Default
+samples show only the bank abbreviation in the list. Imported velocity and
+unrelated effect bits are preserved, while green-point BPM cells remain empty. Kiai updates the editor's existing Kiai indication and exports.
 
 Ctrl+P adds a red point at the playhead; Ctrl+Shift+P adds a green point, opening
 the draft window. Ctrl+I deletes the current section outside the window, or the
@@ -47,9 +52,12 @@ node times, handle time components and exact-curve reference scale while retaini
 X. Object resnap translates a complete parent from its start. Length resnap changes
 an imported slider's path length or scales an FSlider's complete duration, including
 repeats. Imported sliders retain source samples and flags. Invalid edits roll back
-the transaction. The chosen beat divisor is independent of Slider Tick Rate.
+the transaction. The chosen beat divisor is independent of Slider Tick Rate and is adjusted with
+the draggable snap bar. Timing Panel uses blue textured controls and arrows;
+setup uses flat arrows. Numeric values between arrows are centered, including
+while editing.
 
-The Timing menu also offers 3/4 and 4/4 meter presets, section/all-object resnap,
+The Timing menu has a **Time Signature** submenu with 3/4 and 4/4 presets, section/all-object resnap,
 all-object time translation, slider-length recalculation, clearing all sections,
 and setting the song preview point. **Reset Current Section** clears the active
 red point for retiming; applying taps or entering BPM/offset restores a section.

@@ -21,10 +21,18 @@ internal static class TimingEditorTests
                 ui.View.UpdateTransport(1000, 10000, true, false, false, null, null);
                 ui.Key('P', ctrl: true, shift: true); Check(ui.View.TimingSetupVisible, "Green shortcut opens setup");
                 Check(ui.View.TimingFields.All(f => f.Key == "offset"), "Green timing page exposes only offset");
-                ui.ClickText(L.Get("timing.audio")); Set(ui, "volume", "35"); Set(ui, "index", "2");
+                ui.ClickText(L.Get("timing.audio")); Set(ui, "volume", "35");
+                Check(ui.View.TimingFields.All(f => f.Key != "index"), "Default sample index is read-only");
+                ui.ClickText(L.Get("timing.custom")); Set(ui, "index", "2");
                 ui.ClickText(L.Get("timing.drum"));
+                var samples = new List<Hitsound>(); ui.View.RequestHitsound = samples.Add;
+                foreach (string name in new[] { "hitnormal", "hitfinish", "hitwhistle", "hitclap" }) ClickProperty(ui, L.Get($"timing.{name}"));
+                Check(samples.Select(s => s.Name).SequenceEqual(new[] { "hitnormal", "hitfinish", "hitwhistle", "hitclap" }) && samples.All(s => s.SampleSet == 3 && Math.Abs(s.Volume - .35f) < .001), "Audition buttons resolve the selected bank and volume independently");
+                ui.ClickText(L.Get("timing.custom1")); Check(ui.View.TimingFields.All(f => f.Key != "index"), "Custom 1 locks numeric sample index");
+                ui.ClickText(L.Get("timing.custom"));
+
                 Check(ui.View.TimingFields.All(f => f.Bounds.Bottom <= ui.View.TimingSetupBounds.Bottom - 188), "Audio inputs fit narrow window above apply options");
-                ui.ClickText(L.Get("timing.style")); ui.ClickText(L.Get("timing.kiai"));
+                ui.ClickText(L.Get("timing.style")); ClickProperty(ui, L.Get("timing.kiai"));
                 string copied = ""; ui.View.RequestCopyText = text => copied = text;
                 ui.Key('C', ctrl: true); Check(copied.Contains(",3,2,35,0,1"), "Clipboard includes edited samples, volume and Kiai");
                 ui.Key(13);
@@ -39,7 +47,9 @@ internal static class TimingEditorTests
                 int session = ui.View.TimingInputSession;
                 ui.View.PasteTimingText("broken", session); Check(ui.View.TimingSetupVisible, "Invalid paste leaves dialog open");
                 ui.Key(27); ui.View.PasteTimingText(copied, session); Check(ui.View.Document.ContentEquals(saved), "Delayed clipboard cannot change closed dialog");
-                ui.Key(114); Check(ui.View.TimingPageVisible, "F3 enters timing page");
+                ui.ClickText(L.Get("timing.detailsPanel") + " ▾"); ui.ClickText(L.Get("timing.panel"));
+                Check(ui.View.TimingPageVisible, "Panel dropdown enters timing mode");
+                Check(ui.View.PlayfieldBounds.Width > 0 && ui.Canvas.Circles.Any(c => c.Color == 0xFFFFFF), "Timing panel retains note rendering");
                 Set(ui, "page.bpm", "180"); Check(Math.Abs(TimingMap.At(ui.View.Document, 0).BeatLengthMs - 60000d / 180) < .001, "Timing page edits BPM");
                 var bpmField = ui.View.TimingFields.Single(f => f.Key == "page.bpm").Bounds;
                 ui.Click(bpmField.X + 8, bpmField.Y + 8); ui.Key('A', ctrl: true); ui.Type("160");
@@ -82,6 +92,13 @@ internal static class TimingEditorTests
     }
 
     private static MapDocument Map() => OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n128,192,1200,1,0,0:0:0:0:\n");
+    private static void ClickProperty(Ui ui, string text)
+    {
+        var bounds = ui.View.TimingSetupBounds;
+        var label = ui.Canvas.Texts.Single(t => t.Value == text && t.X > bounds.X && t.X < bounds.X + 380 && t.Y > bounds.Y + 98);
+        ui.Click(label.X + 2, label.Y + 2);
+    }
+
     private static void Set(Ui ui, string key, string value)
     {
         var bounds = ui.View.TimingFields.Single(f => f.Key == key).Bounds;

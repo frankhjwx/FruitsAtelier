@@ -28,7 +28,8 @@ public sealed partial class EditorView
         mouseX = x; mouseY = y;
         timingPointerShift = shift;
         if (TimingModal) { TimingPointerDown(x, y, button); return; }
-        if (TimingPageVisible && menu < 0 && y >= 84 && y < height - 120) { TimingPointerDown(x, y, button); return; }
+        if (!LibraryVisible && !SongSetupVisible && panelMenuOpen) { PanelPointerDown(x, y); return; }
+        if (TimingPageVisible && !SongSetupVisible && menu < 0 && rightPanel.Contains(x, y)) { TimingPointerDown(x, y, button); return; }
         if (BeginVolumePopoverPointer(x, y, button)) return;
         if (SongSetupVisible) { SongSetupPointerDown(x, y, button, shift); return; }
         if (DistanceSnapDialogVisible)
@@ -104,7 +105,7 @@ public sealed partial class EditorView
         if (menu >= 0)
         {
             var popup = MenuBounds;
-            if (popup.Contains(x, y) || menu == 2 && gridLevelMenuOpen && gridLevelMenuBounds.Contains(x, y))
+            if (popup.Contains(x, y) || (menu == 2 || menu == 4) && gridLevelMenuOpen && gridLevelMenuBounds.Contains(x, y))
             {
                 for (int i = hits.Count - 1; i >= menuHitStart; i--)
                     if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); return; }
@@ -339,6 +340,7 @@ public sealed partial class EditorView
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
         MoveVolumePopoverPointer(x, y);
+        if (timingSnapDragging) { SetTimingSnap(x); return; }
         if (timingVolumeStart is not null) { UpdateTimingVolume(x); return; }
         if (TimingModal) { mouseX = x; mouseY = y; return; }
         if (volumePopoverDrag >= 0) return;
@@ -492,6 +494,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        if (timingSnapDragging) { SetTimingSnap(x); timingSnapDragging = false; return; }
         if (timingVolumeStart is not null) { UpdateTimingVolume(x); EndTimingVolume(false); return; }
         if (TimingModal) return;
         if (EndVolumePopoverPointer(x, y, button)) return;
@@ -575,7 +578,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
-        if (TimingModal || TimingPageVisible)
+        if (TimingModal || TimingPageVisible && rightPanel.Contains(x, y))
         {
             var field = timingFields.FirstOrDefault(f => f.Bounds.Contains(x, y));
             if (field.Key is not null && CommitTimingField())
@@ -1009,7 +1012,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
-        placementCtrl = false; timingTapHeld = false;
+        placementCtrl = false; timingTapHeld = false; timingSnapDragging = false; panelMenuOpen = false;
         EndTimingVolume(true);
         pendingStreamChildSelection = null;
         pendingImplicitSliderConversions.Clear();

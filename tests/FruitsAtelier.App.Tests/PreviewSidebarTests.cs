@@ -15,7 +15,7 @@ internal static class PreviewSidebarTests
         Check(ui.Canvas.Lines.Any(line => line.X1 == 0 && line.X2 == splitX && line.Y1 == headerY && line.Y2 == headerY)
             && ui.Canvas.Lines.Any(line => line.X1 == splitX && line.X2 == ui.Width && line.Y1 == headerY && line.Y2 == headerY),
             "Canvas toolbar and Details header must end on the same row.");
-        float labelY = ui.Canvas.Texts.Single(t => t.Value == L.Get("ui.properties")).Y;
+        float labelY = ui.Canvas.Texts.Single(t => t.Value == L.Get("timing.detailsPanel") + " ▾").Y;
         Check(Math.Abs(labelY - ui.Canvas.Texts.Single(t => t.Value == L.Get("movement.analysis")).Y) <= 1
             && ui.Canvas.Texts.Where(t => t.X >= splitX && t.Y < headerY
                 && (t.Value.StartsWith("AR ") || t.Value.StartsWith("CS ") || t.Value.StartsWith("DPB ")))
