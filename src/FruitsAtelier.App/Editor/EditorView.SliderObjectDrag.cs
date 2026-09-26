@@ -67,6 +67,29 @@ public sealed partial class EditorView
         BeginPointerDrag(x, y);
     }
 
+    private bool TryBeginSliderEndpointTimeDrag(float y)
+    {
+        if (Math.Abs(y - dragStartY) < 2 || sliderObjectDragTarget is not { Kind: CatchObjectKind.Fruit } target
+            || sliderObjectDragSource?.Tracks.FirstOrDefault() is not { StreamSnapDivisor: null } source
+            || source.Nodes.Count < 2) return false;
+        var endpoint = new[] { source.Nodes[0], source.Nodes[^1] }
+            .FirstOrDefault(node => Math.Abs(node.TimeMs - target.TimeMs) < .001);
+        if (endpoint is null) return false;
+
+        // Restart from the gesture's source so an earlier horizontal move and the
+        // endpoint time edit remain a single undo step.
+        history.Cancel();
+        var track = Document.Tracks.Single(item => item.Id == source.Id);
+        var node = track.Nodes.Single(item => item.Id == endpoint.Id);
+        SelectAnchors(track, [node.Id]);
+        if (LegacyMode) BeginLegacyDrag(track, Point(node), dragStartX, dragStartY);
+        else BeginNodeDrag(track, node, DragKind.Anchor, dragStartX, dragStartY);
+        sliderObjectDragTarget = null;
+        sliderObjectDragSource = sliderObjectDragShape = null;
+        sliderObjectDragPrevious = null;
+        return true;
+    }
+
     private void MoveSliderObject(float x)
     {
         if (sliderObjectDragTarget is not { } target) return;
