@@ -32,8 +32,8 @@ public sealed class CatchConversionCache
         slider = null; objects = [];
         if (!entries.TryGetValue(id, out var entry) || !rng.SameState(entry.Before)
             || (track is not null ? entry.Track is null || !Equal(track, entry.Track)
-                : imported is not null ? entry.Imported is null || !imported.ContentEquals(entry.Imported)
-                : entry.Banana is null || !banana!.ContentEquals(entry.Banana))) return false;
+                : imported is not null ? entry.Imported is null || !Equal(imported, entry.Imported)
+                : entry.Banana is null || banana!.TimeMs != entry.Banana.TimeMs || banana.EndTimeMs != entry.Banana.EndTimeMs)) return false;
         rng = entry.After; slider = entry.Slider; objects = entry.Objects; return true;
     }
     internal void Store(CurveTrack? track, ImportedSlider? imported, BananaShower? banana,
@@ -54,4 +54,9 @@ public sealed class CatchConversionCache
         }
         return true;
     }
+
+    // Parent order is applied by the converter before cache lookup; the incoming RNG state is checked separately.
+    private static bool Equal(ImportedSlider a, ImportedSlider b) => a.Id == b.Id && a.OriginalLine == b.OriginalLine
+        && a.X == b.X && a.Y == b.Y && a.TimeMs == b.TimeMs && a.PathType == b.PathType
+        && a.SpanCount == b.SpanCount && a.PixelLength == b.PixelLength && a.ControlPoints.SequenceEqual(b.ControlPoints);
 }

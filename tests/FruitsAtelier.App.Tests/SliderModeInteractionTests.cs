@@ -22,7 +22,7 @@ internal static class SliderModeInteractionTests
         Check(ui.View.Document.Tracks.Count == 2 && ui.View.Document.Tracks[0].Nodes[0].OutgoingCurve is not null
             && ui.View.Document.Tracks[1].Nodes.All(n => n.OutgoingCurve is null), "Both editing styles did not coexist.");
         var penId = ui.View.Document.Tracks[1].Id;
-        ui.SelectTrack(penId); ui.Key('B'); ui.View.SetSliderEditingMode(SliderEditingMode.OsuLegacy); ui.Paint();
+        ui.EditTrack(penId); ui.View.SetSliderEditingMode(SliderEditingMode.OsuLegacy); ui.Paint();
         ui.DownMap(2625, 380); ui.MoveMap(2750, 390); ui.UpMap(2750, 390);
         var pen = ui.View.Document.Tracks.Single(t => t.Id == penId);
         Near(250, pen.Nodes[1].HandleOut.TimeMs); Near(40, pen.Nodes[1].HandleOut.X);
@@ -34,7 +34,7 @@ internal static class SliderModeInteractionTests
     {
         var map = Arc(); var ui = new Ui(false); ui.LoadDocument(map);
         var track = ui.View.Document.Tracks[0];
-        ui.SelectTrack(track.Id); ui.Key('B');
+        ui.EditTrack(track.Id);
         var baseline = ui.View.Document.DeepClone();
         for (int i = 0; i < 3; i++)
         {
@@ -68,13 +68,15 @@ internal static class SliderModeInteractionTests
     public static void InsertDeleteAndBoundary()
     {
         var ui = new Ui(); ui.LoadDocument(Arc()); ui.View.SetSliderEditingMode(SliderEditingMode.OsuLegacy);
-        ui.SelectTrack(ui.View.Document.Tracks[0].Id); ui.Key('B');
+        ui.EditTrack(ui.View.Document.Tracks[0].Id);
         var saved = ui.View.Document.DeepClone();
         var p = Screen(ui, 1375, 240);
         ui.View.PointerDown(p.X, p.Y, 0, false, true); ui.View.PointerUp(p.X, p.Y, 0); ui.Paint();
         Check(SliderControlEditing.Vertices(ui.View.Document.Tracks[0]).Count == 4, "Ctrl+click did not insert a control.");
         ui.Key('Z', ctrl: true); Check(saved.ContentEquals(ui.View.Document), "Insert undo changed original shape.");
-        ui.SelectTrack(ui.View.Document.Tracks[0].Id); ui.Key('B');
+        Check(ui.View.ActiveTool == "Select" && ui.View.SelectedAnchorIds.Count == 0,
+            "Undo insertion retained a legacy control selection or left Select.");
+        ui.EditTrack(ui.View.Document.Tracks[0].Id);
         ui.ClickMap(1250, 250); p = Screen(ui, 1250, 250);
         ui.View.PointerDoubleClick(p.X, p.Y, false, false); ui.Paint();
         Check(ui.View.Document.Tracks[0].Nodes.Count == 3, "Double-click did not create a segment boundary.");
@@ -102,7 +104,7 @@ internal static class SliderModeInteractionTests
                 Check(before.ContentEquals(ui.View.Document), "Global mode switching changed content.");
             }
         }
-        ui.SelectTrack(ui.View.Document.Tracks[0].Id); ui.Key('B');
+        ui.EditTrack(ui.View.Document.Tracks[0].Id);
         var end = Screen(ui, 1500, 200);
         ui.View.PointerDown(end.X + 28, end.Y, 0, false, false);
         ui.View.PointerMove(end.X + 28, end.Y - 45, false, false);

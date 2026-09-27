@@ -39,6 +39,7 @@ internal static class AppLog
         while (root is not null && !File.Exists(System.IO.Path.Combine(root.FullName, "global.json"))) root = root.Parent;
         var directory = root is not null ? System.IO.Path.Combine(root.FullName, "artifacts", "logs")
             : System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FruitsAtelier", "logs");
+        if (Audio.AudioDiagnosticLog.CaptureDirectory is { Length: > 0 } capture) directory = capture;
         return System.IO.Path.Combine(directory, "editor.log");
     }
     public static void Write(string text)

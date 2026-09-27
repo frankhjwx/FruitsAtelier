@@ -19,8 +19,9 @@ public sealed partial class EditorView
         public double Playhead, ViewStart;
         public MapDocument? RatingSnapshot;
         public double? Stars;
+        public IReadOnlyList<CatchStrainSample>? StrainSamples;
         public bool RatingCompensation, RatingFailed;
-        public Task<double?>? RatingTask;
+        public Task<CatchDifficultyCurveResult?>? RatingTask;
         public readonly CancellationTokenSource RatingCancellation = new();
     }
     private readonly List<DifficultySession> difficulties;
@@ -44,7 +45,7 @@ public sealed partial class EditorView
     private readonly List<HitArea> hits = [];
     private readonly List<NumericField> fields = [];
     private float width, height, mouseX = -1, mouseY = -1;
-    private Rect canvas, plot, rightPanel, overview, snapSlider, zoomSlider;
+    private Rect canvas, plot, rightPanel, leftPanel, overview, snapSlider, zoomSlider;
     private double viewStart, pixelsPerMs = 0.09, playhead = 1500;
     private double canvasZoom = .6;
     public const float MinimumPlayfieldWidth = 256;
@@ -114,15 +115,29 @@ public sealed partial class EditorView
     }
 
     private TimingMap.Lookup? renderedTiming;
+    private readonly OsuWriteCache editorWriteCache = new();
     private bool IsContentDrag => drag is DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn
         or DragKind.HandleOut or DragKind.DraftHandle or DragKind.LegacyControl or DragKind.Objects
         or DragKind.BananaStart or DragKind.BananaEnd or DragKind.TimelineTail;
 
+    public EditorPerformanceMetrics Performance { get; } = new();
+    public string PerformanceContext => $"library={LibraryVisible}; playing={AudioPlaying}; testplay={IsTestplaying}; drag={drag}; difficulties={DifficultyCount}; fruits={Document.Fruits.Count}; tracks={Document.Tracks.Count}; importedSliders={Document.ImportedSliders.Count}; bananas={Document.BananaShowers.Count}; timing={Document.TimingPoints.Count}";
+
     private void EnsureConversion()
     {
-        if (convertedSnapshot is not null && convertedSnapshot.ContentEquals(Document)
+        long checkStart = Performance.Start();
+        bool cached = convertedSnapshot is not null && convertedSnapshot.ContentEquals(Document)
             && convertedWithCompensation == compensateTinyDroplets
-            && (!contentDragPreview || IsContentDrag)) return;
+            && (!contentDragPreview || IsContentDrag);
+        Performance.End(EditorPerformanceStage.ConversionCheck, checkStart);
+        if (cached) return;
+        long rebuildStart = Performance.Start();
+        try { RebuildConversion(); }
+        finally { Performance.End(EditorPerformanceStage.ConversionRebuild, rebuildStart); }
+    }
+
+    private void RebuildConversion()
+    {
         convertedSnapshot = Document.DeepClone();
         renderedTiming = new TimingMap.Lookup(Document);
         convertedWithCompensation = compensateTinyDroplets;
@@ -146,9 +161,10 @@ public sealed partial class EditorView
         contentDragPreview = IsContentDrag;
         if (conversion.Success && !contentDragPreview)
         {
+            long exportStart = Performance.Start();
             try
             {
-                var exported = OsuBeatmapWriter.Serialize(input, compensateTinyDroplets);
+                var exported = OsuBeatmapWriter.Serialize(input, compensateTinyDroplets, editorWriteCache);
                 if (exported.ObjectSequenceMatches)
                 {
                     playableExport = exported;
@@ -156,6 +172,7 @@ public sealed partial class EditorView
                 }
             }
             catch (InvalidDataException) { } // Draft content may be convertible before it is exportable.
+            finally { Performance.End(EditorPerformanceStage.ExportReadback, exportStart); }
         }
         BuildComboColours();
         RefreshKiaiTransitions();
@@ -164,7 +181,7 @@ public sealed partial class EditorView
     }
 
     private enum Tool { Select, Fruit, Slider, Banana }
-    private enum DragKind { None, PlaybackLine, Objects, SliderObject, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Break, BreakEdge, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail, PreviewResize }
+    private enum DragKind { None, PlaybackLine, Objects, SliderObject, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Break, BreakEdge, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail, PreviewResize, DifficultySeek }
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
     private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp);
     private float FullPlayfieldWidth => plot.Width * 512 / (512 + PlayfieldPadding * 2);
@@ -280,7 +297,6 @@ public sealed partial class EditorView
 
     private void ChangeTool(Tool next)
     {
-        bool finishingSlider = draftTrack != Guid.Empty;
         if (draftBanana != Guid.Empty)
         {
             history.Cancel();
@@ -291,17 +307,8 @@ public sealed partial class EditorView
         if (draftTrack != Guid.Empty) CancelInteraction();
         tool = next;
         legacyDragStart = null;
-        if (next == Tool.Slider)
-        {
-            if (finishingSlider) Select(Guid.Empty);
-            else
-            {
-                if (SelectedImportedSlider is not null) EditImportedSlider();
-                if (SelectedTrack is { } track) SelectAnchors(track, anchorSelection.ToArray());
-                else Select(Guid.Empty);
-            }
-        }
-        else if (anchorSelection.Count > 0 && SelectedTrack is { } parent) SelectObjects([parent.Id]);
+        if (next != Tool.Select) Select(Guid.Empty);
+        else if (objectSelection.Count == 0 && SelectedTrack is { } parent) SelectObjects([parent.Id]);
         menu = -1;
         contextItems.Clear();
         StatusMessage = "";
@@ -311,9 +318,11 @@ public sealed partial class EditorView
     {
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.Marquee)
         { CancelInteraction(); return; }
+        if (!history.CanUndo) return;
         CancelInteraction();
+        var before = Document;
         history.Undo();
-        Select(Guid.Empty);
+        RestoreSelectionAfterHistory(before);
         StatusMessage = L.Get("editor.status.undone");
     }
 
@@ -321,10 +330,24 @@ public sealed partial class EditorView
     {
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.Marquee)
         { CancelInteraction(); return; }
+        if (!history.CanRedo) return;
         CancelInteraction();
+        var before = Document;
         history.Redo();
-        Select(Guid.Empty);
+        RestoreSelectionAfterHistory(before);
         StatusMessage = L.Get("editor.status.redone");
+    }
+
+    private void RestoreSelectionAfterHistory(MapDocument before)
+    {
+        var unchanged = before.UnchangedObjectIds(Document).ToHashSet();
+        if (selectedTrack != Guid.Empty && unchanged.Contains(selectedTrack) && objectSelection.Count == 0
+            && SelectedTrack is { } track)
+        {
+            SelectAnchors(track, anchorSelection, selection);
+            return;
+        }
+        SelectObjects(objectSelection.Where(unchanged.Contains), selection);
     }
 
     private bool Edit(string label, Action change, Action<bool, MapDocument, MapDocument>? restoreRelated = null)
@@ -349,8 +372,8 @@ public sealed partial class EditorView
 
     private void DeleteSelection()
     {
-        if (LegacyMode && tool == Tool.Slider) { DeleteLegacyPoints(); return; }
-        if (tool == Tool.Slider) DeleteSelectedAnchors();
+        if (LegacyMode && anchorSelection.Count > 0) { DeleteLegacyPoints(); return; }
+        if (anchorSelection.Count > 0) DeleteSelectedAnchors();
         else DeleteSelectedObjects();
     }
 
@@ -361,7 +384,7 @@ public sealed partial class EditorView
         int segment = SelectedAnchor is { } node ? Math.Min(track.Nodes.IndexOf(node), track.Nodes.Count - 2) : 0;
         if (!Edit(L.Get("editor.command.splitCurve"), () => CurveMath.Split(track, segment, 0.5))) return;
         Select(track.Nodes[segment + 1].Id, track.Id);
-        tool = Tool.Slider;
+        tool = Tool.Select;
         StatusMessage = L.Get("editor.status.curveSplit");
     }
 
@@ -380,7 +403,7 @@ public sealed partial class EditorView
         drag = DragKind.None;
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         tool = Tool.Slider;
-        SelectAnchors(track, []);
+        Select(Guid.Empty);
         StatusMessage = L.Get("editor.status.sliderFinished");
     }
 

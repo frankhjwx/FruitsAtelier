@@ -36,6 +36,18 @@ try {
     if ($AudioDiagnostics) {
         'Audio diagnostic logging enabled.' | Set-Content -LiteralPath (Join-Path $payload 'audio-diagnostics.enabled') -Encoding ascii
         Copy-Item -LiteralPath (Join-Path $repo 'docs/AUDIO-DIAGNOSTICS.txt') -Destination (Join-Path $payload 'AUDIO-DIAGNOSTICS.txt')
+        Copy-Item -LiteralPath (Join-Path $repo 'scripts/Start-AudioDiagnostic.ps1') -Destination $payload
+        $profileNumber = 0
+        foreach ($profile in @('event-10', 'event-50', 'poll-10', 'poll-50')) {
+            $profileNumber++
+            "@echo off`r`npowershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0Start-AudioDiagnostic.ps1`" -Profile $profile`r`n" |
+                Set-Content -LiteralPath (Join-Path $payload "$profileNumber-Test-$profile.cmd") -Encoding ascii
+        }
+        foreach ($presentation in @('vsync', 'immediate')) {
+            $profileNumber++
+            "@echo off`r`npowershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0Start-AudioDiagnostic.ps1`" -Profile event-10 -Presentation $presentation`r`n" |
+                Set-Content -LiteralPath (Join-Path $payload "$profileNumber-Test-display-$presentation.cmd") -Encoding ascii
+        }
     }
     if (!$AudioDiagnostics -and (Test-Path -LiteralPath (Join-Path $payload 'audio-diagnostics.enabled'))) {
         throw 'A normal release must not contain the audio diagnostic enabling marker.'

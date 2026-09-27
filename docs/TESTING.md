@@ -62,6 +62,10 @@ It creates 500,000 synthetic map records in distinct sets under `artifacts/libra
 
 ## External test resources
 
+Run `dotnet run --project tests/FruitsAtelier.SkinArchive.Tests -c Release -- --import-archive <path.osk>`
+to validate a user-owned skin archive and load its textures. The source archive is read-only;
+the extracted cache stays under `artifacts/tests/skin-archive/external`.
+
 To check an individual supported `.osu` without modifying it, run the Formats test executable with `--import-roundtrip <path>`. This verifies project persistence and v14 export preserve raw object/timing lines and the converted Catch sequence, times and positions.
 
 The repository contains synthetic format fixtures, older `.catchproj` compatibility fixtures, and OGG audio fixtures. These checks additionally require local resources:
@@ -90,7 +94,7 @@ even when the device advances before the worker handles it.
 
 ## Window checks
 
-Settings preference regressions cover Audio sliders and the Skins selector from both the Library and editor, shared values with the original controls, immediate persistence, menu dismissal, and unchanged beatmap content in English and Chinese. The Windows `--render-check` also exercises the Settings sliders and skin menu at its tested sizes and DPI values.
+Settings preference regressions cover Audio sliders and the Appearance skin selector from both the Library and editor, shared values with the original controls, immediate persistence, menu dismissal, and unchanged beatmap content in English and Chinese. The Windows `--render-check` also exercises the Settings sliders and skin menu at its tested sizes and DPI values.
 
 Shortcut routing regressions verify that Timing cannot move hidden Compose
 selections, unsupported modifiers cannot delete timing rows or invoke base
@@ -158,6 +162,40 @@ Shared Core and App regressions cover exact control-curve persistence, fixed AR 
 After changing input or drawing, manually check affected operations, language switching, window resizing, and file dialogs. Additional coverage is still needed for physical Windows window/audio behavior, Intel Mac, cross-display DPI, Mac MP3, and stable-client comparisons.
 
 ## Editing performance benchmark
+
+Follow the [editing performance constraints](EDITING_PERFORMANCE.md) when changing
+interactive paths. For a read-only benchmark of an existing `.osu` map, run the App
+test executable with `--fruit-placement-performance <path.osu>`. It measures warm
+conversion/export, fruit hover and repeated same-time replacement, including pointer
+dispatch, rendering and per-operation allocations. Edits stay in memory. This uses
+`RecordingCanvas` and does not measure physical display latency.
+
+Windows builds automatically aggregate UI performance into `editor.log`. Every
+five seconds with processed window messages, an interval containing a sample of
+at least 16 ms is written; fast-only intervals are discarded. Shutdown flushes the
+remaining interval. Counters use fixed storage and do not write per input or frame.
+Logs live in `artifacts/logs` for repository builds and
+`%LOCALAPPDATA%/FruitsAtelier/logs` for distributed builds.
+
+`UI performance` reports count, average, maximum, and count at or above 16 ms for
+input queue age, input dispatch (including title updates), audio/update polling,
+frame preparation, editor rendering, and `EndDraw`/`Present` submission. Conversion
+snapshot comparison, rebuilding, and export/read-back are measured separately;
+these are nested within editor rendering, and export is nested within rebuilding,
+so their durations must not be added together. `InputToSubmit` measures the oldest
+pending input's queue age plus time through the next completed submission. It is
+an application-side latency estimate, not physical input-to-display latency.
+Queue ages use the coarse Win32 message clock; coalesced mouse messages and modal
+dialogs can affect these measurements. Native modal message loops are not sampled
+by the main input-dispatch counter.
+
+Each report includes the slowest dispatched input message ID, process-wide GC
+collection deltas, and the editor state/object counts **at report time**. Startup
+records the application/runtime/OS version and process ID. Request this log along
+with the reproduction time and map when investigating stalls. Playback's five-second
+average render rate alone cannot diagnose individual editing stalls. Shared
+conversion counters are also available to tests; macOS does not enable or persist
+these Windows host diagnostics.
 
 Run the shared App test executable with `--benchmark-editing` to measure adding and
 continuously dragging objects in synthetic maps of 1,000 fruits, 10,000 fruits,

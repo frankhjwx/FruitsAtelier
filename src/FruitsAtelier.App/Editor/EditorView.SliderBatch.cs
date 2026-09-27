@@ -9,12 +9,11 @@ public sealed partial class EditorView
     private Task<SliderBatchItem[]>? sliderBatchTask;
     private CancellationTokenSource? sliderBatchCancellation;
     private int[] sliderImportTargets = [];
-    private Guid sliderSingleTarget;
     private bool sliderDerandomizeDroplets = true;
     private string[] sliderBatchErrors = [];
     private int sliderErrorPage;
     private readonly List<HitArea> sliderDialogHits = [];
-    public bool SliderImportPromptVisible => sliderImportTargets.Length > 0 || sliderSingleTarget != Guid.Empty;
+    public bool SliderImportPromptVisible => sliderImportTargets.Length > 0;
     public bool SliderConversionBusy => sliderBatchTask is not null;
     private bool SliderDialogVisible => SliderImportPromptVisible || SliderConversionBusy || sliderBatchErrors.Length > 0;
 
@@ -29,21 +28,14 @@ public sealed partial class EditorView
     {
         sliderDialogHits.Clear();
         var targets = sliderImportTargets; sliderImportTargets = [];
-        var single = sliderSingleTarget; sliderSingleTarget = Guid.Empty;
         if (!convert) return;
-        if (single != Guid.Empty) ConvertSelectedImportedSlider(single, sliderDerandomizeDroplets);
-        else StartSliderBatch(targets, sliderDerandomizeDroplets);
+        StartSliderBatch(targets, sliderDerandomizeDroplets);
     }
     public void ConvertAllSliders()
     {
         if (notesLocked) { StatusMessage = L.Get("assist.locked"); return; }
         if (!PrepareFileOperation()) return;
         OfferSliderConversion(false);
-    }
-    private void OfferSingleSliderConversion(Guid id)
-    {
-        sliderSingleTarget = id;
-        sliderDerandomizeDroplets = Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets;
     }
     public void CancelSliderConversion() => sliderBatchCancellation?.Cancel();
     private void StartSliderBatch(int[] targets, bool derandomizeDroplets)
@@ -101,7 +93,7 @@ public sealed partial class EditorView
         if (SliderImportPromptVisible)
         {
             int count = sliderImportTargets.Sum(i => difficulties[i].History.Document.ImportedSliders.Count);
-            c.Text(sliderSingleTarget != Guid.Empty ? L.Get("sliderBatch.singlePrompt") : L.Get("sliderBatch.prompt", count, sliderImportTargets.Length), rect.X + 22, rect.Y + 65, 14, Foreground, rect.Width - 44);
+            c.Text(L.Get("sliderBatch.prompt", count, sliderImportTargets.Length), rect.X + 22, rect.Y + 65, 14, Foreground, rect.Width - 44);
             c.Text(L.Get("sliderBatch.help"), rect.X + 22, rect.Y + 104, 12, Muted, rect.Width - 44);
             Button(c, new(rect.X + 22, rect.Y + 145, rect.Width - 44, 36),
                 L.Get(sliderDerandomizeDroplets ? "sliderBatch.derandomizeOn" : "sliderBatch.derandomizeOff"),

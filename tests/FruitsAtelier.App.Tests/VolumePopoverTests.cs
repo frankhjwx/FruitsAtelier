@@ -157,6 +157,54 @@ internal static class VolumePopoverTests
         Check(map.ContentEquals(ui.View.Document), "Testplay volume adjustment changed beatmap content.");
     }
 
+    public static void TestplayPointer()
+    {
+        foreach (bool keyboard in new[] { true, false })
+        {
+            var ui = new Ui(timeProvider: new ManualClock());
+            var settings = new LibrarySettings { MasterVolume = 50, SongVolume = 50 };
+            ui.View.InitializeLibrary(false, settings);
+            var map = new MapDocument { DurationMs = 5000 };
+            map.Fruits.Add(new Fruit { TimeMs = 3000, X = 256 });
+            ui.LoadDocument(map);
+            int saves = 0;
+            ui.View.RequestAudioPreference = () => saves++;
+            ui.View.StartTestplay();
+            int channel = keyboard ? 1 : 0;
+            int Value() => keyboard ? settings.SongVolume : settings.MasterVolume;
+
+            if (keyboard)
+            {
+                ui.View.SetModifiers(true, false);
+                ui.Key(39); ui.View.KeyUp(39);
+                ui.Key(38); ui.View.KeyUp(38);
+                ui.View.SetModifiers(false, false);
+            }
+            else ui.View.Wheel(ui.Plot.X + 20, ui.Plot.Y + 20, 120, false, false, true);
+            Check(ui.View.VolumePopoverVisible && Value() == 55 && saves == 1,
+                "Volume shortcut did not open the testplay controls.");
+
+            var bar = ui.View.VolumeBarBounds(channel);
+            float x = bar.X + bar.Width / 2;
+            float quarter = bar.Bottom - bar.Height * .25f;
+            ui.View.PointerDown(x, quarter, 0, false, false);
+            Check(ui.View.WantsCapture && Value() == 25,
+                "Left click did not set the testplay volume bar or capture its drag.");
+            ui.View.PointerUp(x, quarter, 0);
+            Check(!ui.View.WantsCapture && Value() == 25 && saves == 2,
+                "Testplay volume bar click did not finish and persist.");
+
+            float threeQuarters = bar.Bottom - bar.Height * .75f;
+            ui.View.PointerDown(x, quarter, 0, false, false);
+            ui.View.PointerMove(x, threeQuarters, false, false);
+            ui.View.PointerUp(x, threeQuarters, 0);
+            Check(Value() == 75 && saves == 3 && ui.View.IsTestplaying
+                && ui.View.TestplayCatcherX == 256 && map.ContentEquals(ui.View.Document),
+                "Testplay volume bar drag changed gameplay or beatmap content, or failed to persist.");
+            ui.View.StopTestplay();
+        }
+    }
+
     private static void HoverAndWheel(bool testplay)
     {
         var clock = new ManualClock();

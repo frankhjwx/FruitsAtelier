@@ -23,7 +23,7 @@ public sealed partial class EditorView
         {
             var mode = (Tool)i;
             string name = i == 2 ? "fslider" : mode.ToString().ToLowerInvariant();
-            var bounds = new Rect((108 - size) / 2, top + i * size, size, size);
+            var bounds = new Rect(leftPanel.Right + (108 - size) / 2, top + i * size, size, size);
             toolButtons.Add(bounds);
             bool active = mode == tool;
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "tools", name + ".png"), bounds, opacity: active ? 1 : .45f);
@@ -47,6 +47,40 @@ public sealed partial class EditorView
             Button(c, new(flyout.X, flyout.Y, 142, 32), L.Get("ui.osuLegacyMode"), () => SetSliderEditingMode(SliderEditingMode.OsuLegacy), LegacyMode);
             Button(c, new(flyout.X, flyout.Y + 34, 142, 32), L.Get("ui.penToolMode"), () => SetSliderEditingMode(SliderEditingMode.PenTool), !LegacyMode);
         }
+        for (int i = 0; i < toolButtons.Count; i++)
+            if (toolButtons[i].Contains(mouseX, mouseY))
+                DrawPaletteTooltip(c, L.Get(i switch
+                {
+                    0 => "tools.hint.select", 1 => "tools.hint.fruit",
+                    2 => LegacyMode ? "tools.hint.sliderLegacy" : "tools.hint.sliderPen",
+                    _ => "tools.hint.banana"
+                }), toolButtons[i], left: false, above: i == 2);
+    }
+
+    private void DrawPaletteTooltip(ICanvas c, string text, Rect button, bool left, bool above)
+    {
+        float maxWidth = Math.Max(80, Math.Min(620, left ? button.X - 24 : width - button.Right - 24));
+        var lines = new List<string>();
+        foreach (string paragraph in text.Split('\n'))
+        {
+            string remaining = paragraph;
+            while (c.MeasureText(remaining, 11) > maxWidth)
+            {
+                int count = remaining.Length - 1;
+                while (count > 1 && c.MeasureText(remaining[..count], 11) > maxWidth) count--;
+                int space = remaining.LastIndexOf(' ', count - 1, count);
+                if (space > 0) count = space;
+                lines.Add(remaining[..count]);
+                remaining = remaining[count..].TrimStart();
+            }
+            lines.Add(remaining);
+        }
+        float w = lines.Max(line => c.MeasureText(line, 11)) + 16;
+        float h = lines.Count * 16 + 12;
+        float x = left ? button.X - w - 6 : button.Right + 6;
+        float y = Math.Clamp(above ? button.Y - h - 4 : button.Y, 84, height - h - 8);
+        c.Fill(new(x, y, w, h), Surface, 4);
+        for (int i = 0; i < lines.Count; i++) c.Text(lines[i], x + 8, y + 6 + i * 16, 11, Foreground, w - 16);
     }
 
     private bool gridSnap;
@@ -55,6 +89,7 @@ public sealed partial class EditorView
 
     private readonly Guid placementId = Guid.NewGuid();
     private readonly CatchConversionCache placementConversionCache = new();
+    private readonly OsuWriteCache placementWriteCache = new();
     private CatchConversionResult? placementSource;
     private MapPoint? cachedPlacementPoint;
     private Tool cachedPlacementTool;
@@ -77,6 +112,7 @@ public sealed partial class EditorView
         placementSource = conversion; cachedPlacementPoint = point;
         cachedPlacementTool = tool; cachedPlacementCtrl = placementCtrl;
         placementGhost = null; placementMovementObjects = null; placementHyperdash = hyperdashObjects;
+        if (tool == Tool.Fruit && TryPreviewFruitPlacement(point.Value)) return;
         // Conversion reads its inputs; clone only the track whose uncommitted endpoint needs editing.
         var candidate = new MapDocument
         {
@@ -99,14 +135,18 @@ public sealed partial class EditorView
             if (AppendDraftAnchor(track, point.Value, placementCtrl) is null) return;
             source = track.Id;
         }
-        else candidate.Fruits.Add(new Fruit { Id = placementId, TimeMs = point.Value.TimeMs, X = point.Value.X });
+        else
+        {
+            if (tool == Tool.Fruit) RemoveFruitPlacementConflicts(candidate, point.Value.TimeMs);
+            candidate.Fruits.Add(new Fruit { Id = placementId, TimeMs = point.Value.TimeMs, X = point.Value.X });
+        }
         candidate.Tracks.RemoveAll(t => t.Nodes.Count < 2);
         var preview = CatchStreamConverter.Convert(candidate, compensateTinyDroplets, placementConversionCache);
         if (!preview.Success) return;
         IReadOnlyList<ConvertedCatchObject> objects = preview.Objects;
         try
         {
-            var exported = OsuBeatmapWriter.Serialize(candidate, compensateTinyDroplets);
+            var exported = OsuBeatmapWriter.Serialize(candidate, compensateTinyDroplets, placementWriteCache);
             if (exported.ObjectSequenceMatches) objects = exported.PlayableObjects;
         }
         catch (InvalidDataException) { }
@@ -150,10 +190,41 @@ public sealed partial class EditorView
         var fruit = new Fruit { TimeMs = point.TimeMs, X = point.X };
         if (Edit(L.Get("editor.command.addFruit"), () =>
         {
+            RemoveFruitPlacementConflicts(Document, fruit.TimeMs);
             Document.Fruits.Add(fruit);
             ApplyPlacementFlags(fruit.Id);
             Document.DurationMs = Math.Max(Document.DurationMs, fruit.TimeMs);
         })) { Select(fruit.Id); nextFruitNewCombo = false; }
+    }
+
+    private bool TryPreviewFruitPlacement(MapPoint point)
+    {
+        if (playableExport is null
+            || Document.Tracks.Any(t => t.Nodes.Count > 0 && Math.Abs(t.Nodes[0].TimeMs - point.TimeMs) <= 2)
+            || Document.ImportedSliders.Any(s => Math.Abs(s.TimeMs - point.TimeMs) <= 2)
+            || Document.BananaShowers.Any(s => Math.Abs(s.TimeMs - point.TimeMs) <= 2)) return false;
+        // Standalone fruits consume no NM random state; unchanged parents keep their exported events.
+        var removed = Document.Fruits.Where(f => Math.Abs(f.TimeMs - point.TimeMs) <= 2).Select(f => f.Id).ToHashSet();
+        double time = Math.Round(point.TimeMs, MidpointRounding.AwayFromZero);
+        double x = Math.Round(point.X, MidpointRounding.AwayFromZero);
+        placementGhost = new(placementId, 0, CatchObjectKind.Fruit, time, x, x, x, 0, true);
+        var starts = playableExport.ReadBack.ImportedSliders.Select(s => (s.Id, s.TimeMs))
+            .Concat(playableExport.ReadBack.BananaShowers.Select(s => (s.Id, s.TimeMs)))
+            .ToDictionary(s => s.Id, s => s.TimeMs);
+        placementMovementObjects = playableObjects.Where(o => !removed.Contains(o.SourceId)).Append(placementGhost)
+            .OrderBy(o => o.TimeMs).ThenBy(o => o.IsStandalone ? o.TimeMs : starts[o.SourceId]).ToArray();
+        placementHyperdash = HyperDashCalculator.GetHyperDashStarts(placementMovementObjects, Document.CircleSize);
+        return true;
+    }
+
+    private static void RemoveFruitPlacementConflicts(MapDocument document, double timeMs)
+    {
+        // Match osu! placement leniency for rounding errors and slightly unsnapped starts.
+        bool Replaces(double startTimeMs) => Math.Abs(startTimeMs - timeMs) <= 2;
+        document.Fruits.RemoveAll(f => Replaces(f.TimeMs));
+        document.Tracks.RemoveAll(t => t.Nodes.Count > 0 && Replaces(t.Nodes[0].TimeMs));
+        document.ImportedSliders.RemoveAll(s => Replaces(s.TimeMs));
+        document.BananaShowers.RemoveAll(s => Replaces(s.TimeMs));
     }
 
     private void RightClickCanvas(float x, float y)

@@ -23,7 +23,6 @@ public sealed partial class EditorView
             return false;
         var track = SelectedTrack;
         if (track?.StreamSnapDivisor is not null && distanceObject != (target.SourceId, target.EventIndex)) return false;
-        if (target.Kind != CatchObjectKind.Fruit && track is null) return false;
         if (target.Kind != CatchObjectKind.Fruit && track is not null && showTargets && distanceObject != (target.SourceId, target.EventIndex))
         {
             double distance = PointerDistance(new(target.TimeMs, target.X), x, y);
@@ -65,6 +64,42 @@ public sealed partial class EditorView
         distanceObject = (target.SourceId, target.EventIndex);
         drag = DragKind.SliderObject;
         BeginPointerDrag(x, y);
+    }
+
+    private bool TryBeginSliderEndpointTimeDrag(float y)
+    {
+        if (Math.Abs(y - dragStartY) < 2 || sliderObjectDragTarget is not { Kind: CatchObjectKind.Fruit } target) return false;
+        var source = sliderObjectDragSource?.Tracks.FirstOrDefault();
+        bool imported = source is null && sliderObjectDragSource?.ImportedSliders.Count > 0;
+        if (imported)
+        {
+            var generated = conversion!.Sliders.FirstOrDefault(s => s.SourceId == target.SourceId);
+            if (generated is null || Math.Abs(target.TimeMs - generated.StartTimeMs) >= .001
+                && Math.Abs(target.TimeMs - generated.StartTimeMs - generated.DurationMs / generated.SpanCount) >= .001) return false;
+            try { PrepareSliderObjectShape(target); }
+            catch (Exception error) when (error is ArgumentException or InvalidOperationException or InvalidDataException)
+            { RestoreSliderObjectSource(sliderObjectDragSource!); StatusMessage = error.Message; return false; }
+            source = sliderObjectDragShape!.Tracks.Single();
+        }
+        if (source is not { StreamSnapDivisor: null } || source.Nodes.Count < 2) return false;
+        var endpoint = new[] { source.Nodes[0], source.Nodes[^1] }
+            .FirstOrDefault(node => Math.Abs(node.TimeMs - target.TimeMs) < .001);
+        if (endpoint is null) return false;
+
+        // Restart from the gesture's source so an earlier horizontal move and the
+        // endpoint time edit remain a single undo step.
+        if (imported) RestoreSliderObjectSource(sliderObjectDragShape!);
+        else history.Cancel();
+        var track = Document.Tracks.Single(item => item.Id == source.Id);
+        var node = track.Nodes.Single(item => item.Id == endpoint.Id);
+        SelectAnchors(track, [node.Id]);
+        if (LegacyMode) BeginLegacyDrag(track, Point(node), dragStartX, dragStartY, alreadyBegun: imported);
+        else if (imported) ContinueNodeDrag(track, node, DragKind.Anchor, dragStartX, dragStartY);
+        else BeginNodeDrag(track, node, DragKind.Anchor, dragStartX, dragStartY);
+        sliderObjectDragTarget = null;
+        sliderObjectDragSource = sliderObjectDragShape = null;
+        sliderObjectDragPrevious = null;
+        return true;
     }
 
     private void MoveSliderObject(float x)

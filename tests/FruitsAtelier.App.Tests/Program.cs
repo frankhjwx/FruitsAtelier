@@ -7,6 +7,7 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Length == 2 && args[0] == "--fruit-placement-performance") return EditorPerformance.RunFruitPlacement(args[1]);
 if (args.Length > 0 && args[0] == "--benchmark-library") return LibraryScaleTests.Benchmark(args.Length > 1 ? args[1] : null);
 if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
 if (args.Length == 2 && args[0] == "--slider-drag-performance") return EditorPerformance.RunSliderDrag(args[1]);
@@ -20,6 +21,9 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
+    ("Legacy slider editing converts silently with atomic drag, insertion and cancellation", ImplicitSliderEditingTests.Run),
+    ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),
     ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),
     ("Shortcut routing isolates Timing object nudges and preserves navigation", ShortcutRoutingTests.TimingPage),
     ("Shortcut routing rejects unsupported Compose and Timing modifiers", ShortcutRoutingTests.Modifiers),
@@ -38,6 +42,7 @@ var tests = new (string Name, Action Run)[]
     ("Draft tools and editor shortcuts respect modifiers", DraftToolShortcutsTests.Run),
     ("Volume popover buttons, bars, keyboard and fade", VolumePopoverTests.Run),
     ("Testplay Alt arrows show volume controls without moving the catcher", VolumePopoverTests.TestplayShortcuts),
+    ("Testplay volume bars accept clicks and drags after keyboard and wheel shortcuts", VolumePopoverTests.TestplayPointer),
     ("New Combo grouping refreshes on first edit and undo/redo", ComboGroupingTests.Run),
     ("Completing an FSlider replaces only exact head fruit overlaps and undoes atomically", SliderHeadReplacementTests.OnCompletion),
     ("Final stream fruit accepts lower-half hit and drags independently", StreamFruitDragTests.Run),
@@ -58,6 +63,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay movement, combo, hyperdash and facing", TestplayTests.MovementAndJudgement),
     ("Testplay autoplay notices, manual input and focus persistence", TestplayTests.AutoplaySwitching),
     ("Catch rotations, banana arrival transforms and combo colours", TestplayTests.VisualTransformsAndColours),
+    ("Unskinned Catch objects keep dark map colours bright", FallbackSkinTests.BrightComboColour),
     ("Testplay Escape returns to editor without repeated navigation", TestplayTests.EscapeReturnsToEditor),
     ("Testplay caught stacks share preview effects and outlive final judgement", TestplayTests.LivePlate),
     ("Testplay input isolation and transport lifecycle", TestplayTests.EditorLifecycle),
@@ -91,9 +97,12 @@ var tests = new (string Name, Action Run)[]
     ("Distance readouts, slider tails, base SV and layout", AssistToolsTests.DistanceRules),
     ("Distance snapping moves selected groups by a shared offset", AssistToolsTests.GroupDistanceDrag),
     ("Combo, hitsound editing and note locking", AssistToolsTests.SoundsAndLocks),
+    ("Droplet selection lock preserves slider editing and content", DropletSelectionLockTests.Selection),
+    ("Tool operation hints coexist with palette flyouts in both languages", DropletSelectionLockTests.Tooltips),
     ("Slider edge and whole-slider sounds survive conversion and export", AssistToolsTests.SliderSounds),
     ("Background resource checks refresh missing files and discard stale edits and projects", ResourcePollingTests.RefreshAndStaleResults),
     ("Preview drawer, mods, resizing and aligned shortcuts preserve content", PreviewSidebarTests.Sidebar),
+    ("Difficulty curve panel resizes, seeks, and preserves canvas width", DifficultyCurveSidebarTests.LayoutAndSeeking),
     ("Preview aspect modes, Fit height and edge overscan", PreviewSidebarTests.DisplayModesAndOverscan),
     ("Automatic catcher movement and seeking", PreviewSidebarTests.AutomaticCatcher),
     ("Caught stacks and combo explosions survive seeking", PreviewSidebarTests.PlateEffects),
@@ -117,6 +126,7 @@ var tests = new (string Name, Action Run)[]
     ("Tool palette is exclusive and placement ghosts snap at 60% opacity", ToolPaletteTests.PaletteAndGhost),
     ("Fruit and both slider modes preview incoming and outgoing hyperdash without committing", ToolPaletteTests.PlacementHyperdash),
     ("Fruit New combo survives project/osu round-trips and undo", ToolPaletteTests.FruitCombo),
+    ("Fruit placement replaces same-start parents within 2 ms in one undo step", ToolPaletteTests.FruitReplacement),
     ("Canvas labels New Combo fruits with NC in both languages", ToolPaletteTests.ComboLabels),
     ("Both slider modes support straight placement and draft point removal", ToolPaletteTests.DraftRemovalAndStraight),
     ("Repeated points, whole-slider deletion and banana completion", ToolPaletteTests.RepeatedPointAndWholeDelete),
@@ -194,7 +204,7 @@ var tests = new (string Name, Action Run)[]
     ("Droplet dragging handles fractional timing and dense anchors", DropletDragTests.ConvertedAndDenseCurves),
     ("Default slider mode drags displayed droplets continuously", DropletDragTests.DefaultModeDrag),
     ("Legacy-converted FSlider children drag in default mode", DropletDragTests.DragAfterLegacyConversion),
-    ("Legacy slider children require conversion before individual selection", DropletDragTests.LegacyRequiresConversion),
+    ("Legacy slider child selection preserves its source until editing", DropletDragTests.LegacySelectionPreservesSource),
     ("HDash fruit, catcher and afterimage use separate skin colours", HyperDashSkinTests.ThreeColours),
     ("Legacy Slider long-press buttons convert to a strictly aligned FSlider", SliderInteractionTests.LegacyContextConversion),
     ("Selected parents snap from the earliest start and keep one time and X offset", RequestedInteractionTests.MultiObjectDrag),
@@ -246,6 +256,9 @@ var tests = new (string Name, Action Run)[]
     ("Clipboard rejects drafts and overflowing pastes without data loss", ClipboardTests.ClipboardBoundaries),
     ("Slider pen gestures combine corner points and curve handles", SliderInteractionTests.DrawGestures),
     ("Selected control points and handles highlight and drag", SliderInteractionTests.ControlSelectionAndDrag),
+    ("Slider tool state separates existing controls from placement in both languages", SliderToolStateTests.EditingAndPlacement),
+    ("Slider tool state stays Select after deleting or cutting edited sliders", SliderToolStateTests.DeleteAndCut),
+    ("Slider tool state and unrelated selection survive unavailable and partial history", SliderToolStateTests.HistorySelection),
     ("A selected FSlider enters anchor editing on one point click and scopes its shortcuts", SliderInteractionTests.SelectedAnchorEntryAndContext),
     ("FSlider reverse controls and forward extension preserve existing curves", SliderInteractionTests.ReverseAndExtend),
     ("Point shortcuts inserts converts and deletes with undo", SliderInteractionTests.PointContextMenu),
@@ -480,8 +493,7 @@ static void ZeroHandleAnchor()
 {
     var ui = new Ui();
     var id = ui.View.Document.Tracks[0].Nodes[1].Id;
-    ui.ClickMap(2500, 392);
-    ui.Key('B');
+    ui.EditTrack(ui.View.Document.Tracks[0].Id);
     ui.ClickMap(2500, 392);
     ui.Anchor(id).HandleIn = default; ui.Paint();
     True(ui.Anchor(id).HandleIn == new MapPoint(0, 0), "Zero-length handle setup failed.");
@@ -935,12 +947,19 @@ sealed class Ui
     public float Width => width;
     public EditorView View { get; }
     public RecordingCanvas Canvas { get; } = new();
-    public Ui(bool overview = true, TimeProvider? timeProvider = null)
+    public Ui(bool overview = true, TimeProvider? timeProvider = null, bool lockDropletSelection = false)
     {
         View = new(timeProvider: timeProvider);
         View.LibrarySettings.TestplayStartupDelaySeconds = 0;
         View.SetSliderEditingMode(SliderEditingMode.PenTool);
         Paint();
+        if (!lockDropletSelection)
+        {
+            var button = View.AssistButtonBounds[6];
+            View.PointerMove(button.X + 10, button.Y + 10, false, false); Paint();
+            ClickText(FruitsAtelier.Localization.Strings.Get("assist.lockDropletSelection"));
+            View.PointerMove(0, 0, false, false); Paint();
+        }
         if (overview) ShowFixtureOverview();
     }
     public void LoadDocument(MapDocument document)
@@ -989,6 +1008,14 @@ sealed class Ui
         var track = View.Document.Tracks.Single(t => t.Id == id);
         ClickMap(track.Nodes[0].TimeMs, track.Nodes[0].X);
         Key('1');
+    }
+    public void EditTrack(Guid id)
+    {
+        Key('B'); Key('1');
+        var track = View.Document.Tracks.Single(t => t.Id == id);
+        var point = Screen(track.Nodes[0].TimeMs, track.Nodes[0].X);
+        View.PointerDoubleClick(point.X, point.Y, false, false);
+        Paint();
     }
     public void ClickFruit(Guid id) { var fruit = Fruit(id); ClickMap(fruit.TimeMs, fruit.X); }
     public void ClickText(string text)

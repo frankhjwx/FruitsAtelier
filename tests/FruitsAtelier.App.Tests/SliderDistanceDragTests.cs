@@ -78,7 +78,7 @@ internal static class SliderDistanceDragTests
             track.Nodes.Add(new() { TimeMs = 2000, X = 240, HandleIn = new(-200, 60) });
             map.Tracks.Add(track);
             var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode);
-            ui.SelectTrack(track.Id); ui.Key('B');
+            ui.EditTrack(track.Id);
             if (ds) ui.Key('Y');
             double x = incoming ? 300 : 260, from = incoming ? 1800 : 1200, to = incoming ? 2200 : 800;
             ui.DownMap(from, x); ui.MoveMap(to, x); ui.UpMap(to, x);
@@ -143,7 +143,7 @@ internal static class SliderDistanceDragTests
         foreach (bool controls in new[] { false, true })
         {
             var (ui, id) = Create(mode, true);
-            if (controls) ui.Key('B');
+            if (controls) ui.EditTrack(id);
             ui.DownMap(1500, 280); ui.MoveMap(1500, 500);
             double moved = ui.View.Document.Tracks.Single().Nodes[^1].X;
             Check(controls ? moved > 281 && moved < 499 : Math.Abs(moved - 280) > 1,
@@ -233,7 +233,7 @@ internal static class SliderDistanceDragTests
             var (ui, id) = Create(mode, false);
             ui.View.Document.Tracks.Single().Nodes.Insert(1, new Anchor { TimeMs = 1250, X = 296 });
             ui.Paint();
-            if (controls) ui.Key('B');
+            if (controls) ui.EditTrack(id);
             ui.DownMap(1500, 392); ui.MoveMap(1500, 310); ui.UpMap(1500, 310);
             Check(Math.Abs(ui.View.Document.Tracks.Single().Nodes[^1].X - 296) < .001,
                 $"{mode}, controls={controls}: segmented straight tail did not snap: {ui.View.Document.Tracks.Single().Nodes[^1].X}");

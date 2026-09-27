@@ -7,10 +7,12 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { General, Workspace, Appearance, Testplay, Updates, Audio, Skins }
+    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, Updates }
     private SettingsCategory settingsCategory;
     private bool draftRomanisedMetadata;
     private bool draftDerandomizeDroplets;
+    public bool SupportsDisplayMode { get; set; }
+    private bool draftLowLatencyDisplay;
     private double draftTestplayStartupDelaySeconds;
     private readonly uint[] draftIndicatorColours = new uint[4];
     private int settingsColourIndex = -1;
@@ -26,7 +28,7 @@ public sealed partial class EditorView
     private float SettingsRight => SettingsBounds.Right;
     private const float SettingsTextSize = 13;
     private bool SettingsAudioVisible => librarySettingsOpen && settingsCategory == SettingsCategory.Audio;
-    internal Rect SettingsSkinSelectorBounds => new(SettingsContentX, SettingsTop + 144,
+    internal Rect SettingsSkinSelectorBounds => new(SettingsContentX, SettingsTop + 128,
         Math.Min(520, SettingsRight - SettingsContentX - 32), 38);
 
     private void SettingsButton(ICanvas c, Rect bounds, string label, Action action, bool active = false, bool enabled = true)
@@ -53,6 +55,7 @@ public sealed partial class EditorView
         draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         draftRomanisedMetadata = LibrarySettings.RomanisedMetadata;
         draftDerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
+        draftLowLatencyDisplay = LibrarySettings.LowLatencyDisplay;
         draftIndicatorColours[0] = LibrarySettings.StandIndicatorColour;
         draftIndicatorColours[1] = LibrarySettings.WalkIndicatorColour;
         draftIndicatorColours[2] = LibrarySettings.DashIndicatorColour;
@@ -67,6 +70,7 @@ public sealed partial class EditorView
         draftDefaultSkin != (LibrarySettings.DefaultSkin ?? "") ||
         draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
         draftDerandomizeDroplets != LibrarySettings.DerandomizeDroplets ||
+        draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
         draftIndicatorColours[0] != LibrarySettings.StandIndicatorColour ||
         draftIndicatorColours[1] != LibrarySettings.WalkIndicatorColour ||
         draftIndicatorColours[2] != LibrarySettings.DashIndicatorColour ||
@@ -97,7 +101,7 @@ public sealed partial class EditorView
         c.Text(L.Get("library.settings"), r.X + 20, r.Y + 16, 19, Foreground, r.Width - 80, true);
         SettingsButton(c, new(r.Right - 48, r.Y + 10, 32, 28), "×", CloseSettings);
         c.Line(r.X + 214, r.Y + 56, r.X + 214, r.Bottom - 20, Grid);
-        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.testplay", "update.title", "settings.audio", "settings.skins"];
+        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "update.title"];
         for (int i = 0; i < categories.Length; i++)
         {
             var category = (SettingsCategory)i;
@@ -117,6 +121,18 @@ public sealed partial class EditorView
                 SettingsButton(c, new(SettingsContentX, SettingsTop + 144, Math.Min(520, SettingsRight - SettingsContentX - 32), 38),
                     L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
                     () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
+                if (SupportsDisplayMode)
+                {
+                    float displayWidth = Math.Min(520, SettingsRight - SettingsContentX - 32);
+                    c.Text(L.Get("settings.displayMode"), SettingsContentX, SettingsTop + 214, SettingsTextSize, Foreground, displayWidth, true);
+                    c.Fill(new(SettingsContentX, SettingsTop + 244, displayWidth, 64), Gold, 4, .12f);
+                    c.Text(L.Get("settings.displayDelayHint"), SettingsContentX + 12, SettingsTop + 255, 14, Gold, displayWidth - 24, true);
+                    c.Text(L.Get("settings.displayChangeHint"), SettingsContentX + 12, SettingsTop + 278, 14, Gold, displayWidth - 24, true);
+                    var displayBounds = new Rect(SettingsContentX, SettingsTop + 324, displayWidth, 38);
+                    SettingsButton(c, displayBounds,
+                        L.Get(draftLowLatencyDisplay ? "settings.displayImmediate" : "settings.displayVsync") + " ▾",
+                        () => OpenDisplayModeMenu(displayBounds));
+                }
                 break;
             case SettingsCategory.Workspace:
                 c.Text(L.Get("library.settingsDescription"), SettingsContentX, SettingsTop + 128, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
@@ -124,19 +140,20 @@ public sealed partial class EditorView
                 LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, SettingsTop + 284);
                 break;
             case SettingsCategory.Appearance:
-                LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, SettingsTop + 160);
+                DrawSkinSelector(c, SettingsSkinSelectorBounds);
+                LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, SettingsTop + 184);
                 float rowWidth = Math.Min(520, SettingsRight - SettingsContentX - 32);
                 float labelWidth = Math.Min(240, rowWidth / 2);
                 float controlX = SettingsContentX + labelWidth + 16;
                 float controlWidth = rowWidth - labelWidth - 16;
-                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, SettingsTop + 264.5f, SettingsTextSize, Foreground, labelWidth, true);
-                var romanisedBounds = new Rect(controlX, SettingsTop + 254, controlWidth, 38);
+                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, SettingsTop + 280.5f, SettingsTextSize, Foreground, labelWidth, true);
+                var romanisedBounds = new Rect(controlX, SettingsTop + 270, controlWidth, 38);
                 c.Fill(romanisedBounds, Surface, 4); c.Stroke(romanisedBounds, Grid, radius: 4);
                 SettingsButton(c, romanisedBounds,
                     L.Get(draftRomanisedMetadata ? "settings.romanisedOn" : "settings.romanisedOff"),
                     () => draftRomanisedMetadata = !draftRomanisedMetadata, draftRomanisedMetadata);
-                c.Text(L.Get("ui.language"), SettingsContentX, SettingsTop + 326.5f, SettingsTextSize, Foreground, labelWidth, true);
-                DrawLanguageButton(c, new(controlX, SettingsTop + 316, controlWidth, 38));
+                c.Text(L.Get("ui.language"), SettingsContentX, SettingsTop + 330.5f, SettingsTextSize, Foreground, labelWidth, true);
+                DrawLanguageButton(c, new(controlX, SettingsTop + 320, controlWidth, 38));
                 DrawIndicatorColours(c);
                 break;
             case SettingsCategory.Testplay:
@@ -149,10 +166,6 @@ public sealed partial class EditorView
                 DrawVolumeControls(c);
                 c.Text(L.Get("settings.immediatePreferences"), SettingsContentX, SettingsTop + 368, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
                 break;
-            case SettingsCategory.Skins:
-                DrawSkinSelector(c, SettingsSkinSelectorBounds);
-                c.Text(L.Get("settings.immediatePreferences"), SettingsContentX, SettingsTop + 204, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
-                break;
         }
         c.Line(SettingsContentX, r.Bottom - 86, r.Right - 24, r.Bottom - 86, Grid);
         c.Text(libraryError, SettingsContentX, r.Bottom - 116, 13, Error, SettingsRight - SettingsContentX - 32);
@@ -160,6 +173,18 @@ public sealed partial class EditorView
         SettingsButton(c, new(SettingsContentX, r.Bottom - 64, 200, 38), L.Get("library.apply"), () => ApplySettings(),
             active: canApply, enabled: canApply);
         if (settingsColourIndex >= 0) DrawIndicatorColourPicker(c);
+    }
+
+    private void OpenDisplayModeMenu(Rect bounds)
+    {
+        languageMenuOpen = false; menu = -1; contextItems.Clear();
+        libraryField = bindingCapture = -1;
+        foreach (bool lowLatency in new[] { false, true })
+            contextItems.Add(new((draftLowLatencyDisplay == lowLatency ? "✓ " : "") +
+                L.Get(lowLatency ? "settings.displayImmediate" : "settings.displayVsync"),
+                () => draftLowLatencyDisplay = lowLatency));
+        const float menuHeight = 12 + 2 * 32;
+        contextBounds = new(bounds.X, Math.Clamp(bounds.Bottom + 4, 0, Math.Max(0, height - menuHeight)), bounds.Width, menuHeight);
     }
 
     internal void ApplySettings(string? settingsPath = null)
@@ -172,6 +197,7 @@ public sealed partial class EditorView
             settings.TestplayStartupDelaySeconds = draftTestplayStartupDelaySeconds;
             settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.DerandomizeDroplets = draftDerandomizeDroplets;
+            settings.LowLatencyDisplay = draftLowLatencyDisplay;
             settings.StandIndicatorColour = draftIndicatorColours[0]; settings.WalkIndicatorColour = draftIndicatorColours[1];
             settings.DashIndicatorColour = draftIndicatorColours[2]; settings.HyperDashIndicatorColour = draftIndicatorColours[3];
             settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;

@@ -52,7 +52,13 @@ public sealed class AudioTransport : IDisposable
                     errorType = e.Exception?.GetType().FullName, hresult = e.Exception?.HResult });
                 Stopped.TrySetResult(true); wake();
             };
-            try { Player.Init(source); }
+            double initMs = AudioDiagnosticLog.NowMs;
+            try
+            {
+                Player.Init(source);
+                if (diagnostics.Enabled) diagnostics.Write("outputInitialized", new { session = Id,
+                    elapsedMs = AudioDiagnosticLog.NowMs - initMs, outputFormat = Player.OutputWaveFormat.ToString() });
+            }
             catch { Player.Dispose(); throw; }
         }
         public void Dispose() => Player.Dispose();
@@ -76,6 +82,8 @@ public sealed class AudioTransport : IDisposable
     private readonly CancellationTokenSource cancellation = new();
     private readonly Task worker;
     private readonly AudioDiagnosticLog diagnostics;
+    private readonly AudioDiagnosticProfile profile;
+    private double lastClockSampleMs, lastDeviceMs, lastDeviceAdvanceMs, nextClockAnomalyMs;
     private double nextDiagnosticMs, nextPresentationMs, lastPresentationMs, maximumPresentationGapMs;
     private readonly Func<IWavePlayer> createPlayer;
     private readonly float outputGain;
@@ -100,8 +108,11 @@ public sealed class AudioTransport : IDisposable
         string? diagnosticDirectory = null)
     {
         diagnostics = new AudioDiagnosticLog(diagnosticDirectory);
+        profile = AudioDiagnosticProfile.Select(diagnostics.Enabled, Environment.GetEnvironmentVariable("FRUITSATELIER_AUDIO_PROFILE"));
+        if (diagnostics.Enabled) diagnostics.Write("outputConfiguration", new { profile.Name, profile.EventDriven, profile.BufferMs,
+            injectedPlayer = createPlayer is not null, outputGain });
         this.outputGain = outputGain;
-        this.createPlayer = createPlayer ?? (() => new WasapiOut(AudioClientShareMode.Shared, true, 10));
+        this.createPlayer = createPlayer ?? profile.CreatePlayer;
         this.stopTimeout = stopTimeout ?? TimeSpan.FromSeconds(3);
         worker = Task.Run(WorkAsync);
     }
@@ -131,6 +142,8 @@ public sealed class AudioTransport : IDisposable
             diagnostics.Write(kind, new { detail, session = output?.Id, basePositionMs = basePosition,
                 devicePositionBytes = output?.PositionBytes, bytesPerSecond = output?.Player.OutputWaveFormat.AverageBytesPerSecond,
                 readerPositionMs = reader?.CurrentTime.TotalMilliseconds, publishedPositionMs = State.PositionMs,
+                bufferAheadMs = State.OutputBufferAheadMs, songVolume = SongVolume,
+                hitsoundVolume = Hitsounds?.Volume, outputGain,
                 publishedPlaying = State.IsPlaying, playIntent, playbackSpeed, loadVersion = loadedVersion,
                 appliedIntentVersion, requestedIntentVersion = Interlocked.Read(ref intentVersion),
                 appliedSeekVersion, requestedSeekVersion = Interlocked.Read(ref seekVersion),
@@ -336,10 +349,26 @@ public sealed class AudioTransport : IDisposable
         loadedPath = command.Path;
         recoveryAttempted = false;
         if (string.IsNullOrWhiteSpace(command.Path) || !File.Exists(command.Path)) throw new FileNotFoundException(L.Get("audio.fileMissing"), command.Path);
+        double decodeBeganMs = AudioDiagnosticLog.NowMs;
+        if (diagnostics.Enabled) diagnostics.Write("decodeBegin", new { command.Id, fileName = Path.GetFileName(command.Path),
+            fileBytes = new FileInfo(command.Path).Length });
         reader = OpenReader(command.Path, () => cancellation.IsCancellationRequested || command.LoadVersion != Interlocked.Read(ref loadVersion));
         duration = reader.TotalTime.TotalMilliseconds;
         if (diagnostics.Enabled) diagnostics.Write("sourceLoaded", new { extension = Path.GetExtension(command.Path),
-            decoder = reader.GetType().Name, format = reader.WaveFormat.ToString(), durationMs = duration });
+            decoder = reader.GetType().Name, format = reader.WaveFormat.ToString(), durationMs = duration,
+            elapsedMs = AudioDiagnosticLog.NowMs - decodeBeganMs,
+            mp3LeadingFrames = reader is MediaFoundationAudioReader ? Mp3Timeline.LeadingFrames(command.Path) : (int?)null });
+        if (diagnostics.Enabled)
+        {
+            try
+            {
+                using var input = File.OpenRead(command.Path);
+                diagnostics.Write("sourceIdentity", new { fileName = Path.GetFileName(command.Path), input.Length,
+                    sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(input)) });
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            { diagnostics.Write("sourceIdentityFailed", new { ex.HResult, type = ex.GetType().Name }); }
+        }
         if (!double.IsFinite(duration) || duration <= 0) throw new InvalidDataException(L.Get("audio.noDuration"));
         if (reader.WaveFormat.Channels is < 1 or > 2) throw new NotSupportedException(L.Get("audio.channels"));
         basePosition = 0;
@@ -374,7 +403,8 @@ public sealed class AudioTransport : IDisposable
         var session = new OutputSession(pcm, () => commands.Writer.TryWrite(new(CommandKind.Refresh, version)), createPlayer, diagnostics, tempo, buffered);
         if (diagnostics.Enabled) diagnostics.Write("outputCreated", new { session = session.Id,
             backend = session.Player.GetType().Name, outputFormat = session.Player.OutputWaveFormat.ToString(),
-            sourceFormat = pcm.WaveFormat.ToString(), requestedLatencyMs = session.Player is WasapiOut ? 10 : (int?)null,
+            sourceFormat = pcm.WaveFormat.ToString(), requestedLatencyMs = session.Player is WasapiOut ? profile.BufferMs : (int?)null,
+            profile.Name, profile.EventDriven,
             basePositionMs = basePosition, playbackSpeed });
         return session;
     }
@@ -414,6 +444,8 @@ public sealed class AudioTransport : IDisposable
         if (basePosition >= duration - 0.5) { playIntent = false; return; }
         TraceSnapshot("playBegin");
         output.PlayBeganMs = AudioDiagnosticLog.NowMs;
+        lastClockSampleMs = lastDeviceAdvanceMs = output.PlayBeganMs;
+        lastDeviceMs = 0;
         output.Player.Play();
         output.Started = true;
         TraceSnapshot("playEnd");
@@ -443,6 +475,21 @@ public sealed class AudioTransport : IDisposable
     {
         long bytes = output!.PositionBytes;
         double deviceMs = bytes * 1000d / output.Player.OutputWaveFormat.AverageBytesPerSecond;
+        if (diagnostics.Enabled && output.Started && playIntent)
+        {
+            double now = AudioDiagnosticLog.NowMs;
+            double sampleGap = now - lastClockSampleMs;
+            double advance = deviceMs - lastDeviceMs;
+            if (advance > 0) lastDeviceAdvanceMs = now;
+            if (now >= nextClockAnomalyMs && (sampleGap > 50 || now - lastDeviceAdvanceMs > 100 || advance < 0))
+            {
+                diagnostics.Write("clockAnomaly", new { session = output.Id, sampleGapMs = sampleGap,
+                    deviceAdvanceMs = advance, stationaryMs = now - lastDeviceAdvanceMs, deviceMs });
+                nextClockAnomalyMs = now + 250;
+            }
+            lastClockSampleMs = now;
+            lastDeviceMs = deviceMs;
+        }
         if (diagnostics.Enabled && output.Started && !output.ProgressRecorded && bytes > 0)
         {
             output.ProgressRecorded = true;

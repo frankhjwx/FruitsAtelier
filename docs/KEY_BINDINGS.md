@@ -56,6 +56,11 @@ Library. Finish a text edit with Enter before using page or file commands.
 | J / K | Move selected objects earlier / later by one current Snap subdivision, using the earliest selected start's BPM. |
 | L | Toggle Lock Notes. |
 
+Undo and redo keep the current tool. Changed or removed objects lose their selection;
+unchanged selected objects retain it. Restored objects are not automatically selected.
+When no history step is available, selection stays unchanged. Existing slider controls
+are edited in Select; B / 3 clears selection and prepares a new FSlider.
+
 Object paste is confined to the same difficulty session and aligns the earliest
 copied start to the playhead. Copy also writes an osu! timestamp reference to the
 system clipboard. Slider controls use their own editing selection; the object

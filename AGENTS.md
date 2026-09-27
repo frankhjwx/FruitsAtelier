@@ -4,6 +4,7 @@
 
 - [README](README.md): startup instructions and documentation index.
 - [Architecture](docs/ARCHITECTURE.md): modules and platform boundaries.
+- Before changing interactive editing or its derived data, read [Editing performance](docs/EDITING_PERFORMANCE.md) and follow its hot-path and verification requirements.
 - [Windows releases](docs/RELEASING.md): branch, tag, package, and publication workflow.
 - Depending on the change, read [Editing Controls](docs/EDITOR_UI.md), [Data Model](docs/PROJECT_MODEL.md), [File Format](docs/STABLE_FORMAT.md), or [Localization Maintenance](docs/LOCALIZATION.md).
 

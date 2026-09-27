@@ -48,7 +48,12 @@ public sealed partial class EditorView
     private uint ObjectColour(ConvertedCatchObject item)
     {
         if (item.Kind == CatchObjectKind.Banana) return CatchObjectVisual.BananaColour(item.TimeMs);
-        return ComboColour(item.SourceId);
+        var indices = comboIndices.GetValueOrDefault(item.SourceId);
+        if (beatmapColours.Length > 0) return beatmapColours[indices.Beatmap % beatmapColours.Length];
+        var colours = skin?.ComboColours;
+        // Catch skin colours advance per parent; beatmap colours retain NC offsets.
+        int index = skinIndices.GetValueOrDefault(item.SourceId) + 1;
+        return colours is { Count: > 0 } ? colours[index % colours.Count] : 0xFFFFFF;
     }
 
     private uint ComboColour(Guid sourceId, bool useFallbackPalette = false)

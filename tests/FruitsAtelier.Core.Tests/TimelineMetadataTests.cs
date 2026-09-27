@@ -4,6 +4,7 @@ internal static class TimelineMetadataTests
 {
     public static void Run()
     {
+        CachedBreakIntervals();
         const string source = "osu file format v14\n[General]\nMode:2\nPreviewTime:1500\n[Editor]\nBookmarks: 100, 300\n[Events]\n//Break Periods\n2,1000,2000\n0,0,background.jpg\n[TimingPoints]\n0,500,4,1,0,100,1,1\n[HitObjects]\n256,192,100,1,0,0:0:0:0:\n";
         var document = OsuBeatmapReader.Read(source);
         Check(OsuTimeline.PreviewTime(document) == 1500, "Preview point was not read");
@@ -38,6 +39,37 @@ internal static class TimelineMetadataTests
             && OsuTimeline.Breaks(exported).SequenceEqual([new BreakPeriod(3200, 3800)])
             && events.Lines[breakLine].EndsWith("// keep this comment", StringComparison.Ordinal),
             "Resizing a break must preserve its Events line and comment");
+    }
+
+    private static void CachedBreakIntervals()
+    {
+        var map = new MapDocument { DurationMs = 12000 };
+        var slider = new ImportedSlider { TimeMs = 1000, X = 100, Y = 192, PathType = 'L', PixelLength = 200 };
+        slider.ControlPoints.AddRange([new(100, 192), new(300, 192)]);
+        map.ImportedSliders.Add(slider);
+        OsuTimeline.AddBreak(map, 2000, 9000);
+        var history = new EditorHistory(map);
+        Compare(d => d.Fruits.Add(new() { TimeMs = 100, X = 80 }));
+        Compare(d => d.ImportedSliders[0].SpanCount = 4);
+        Compare(d => d.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 800 }));
+        Compare(d => { d.ImportedSliders[0].PixelLength = 400; d.ImportedSliders[0].ControlPoints[1] = new(500, 100); });
+        history.Undo();
+        Compare(d => d.ImportedSliders[0].TimeMs = 1500);
+
+        void Compare(Action<MapDocument> change)
+        {
+            var baseline = history.Document.DeepClone();
+            var fresh = new EditorHistory(baseline);
+            history.Begin("Edit"); fresh.Begin("Edit");
+            change(history.Document);
+            // Share authored values and IDs while keeping the fresh history's duration cache empty.
+            var edited = history.Document.DeepClone();
+            fresh.Document.Fruits.Clear(); fresh.Document.Fruits.AddRange(edited.Fruits);
+            fresh.Document.ImportedSliders.Clear(); fresh.Document.ImportedSliders.AddRange(edited.ImportedSliders);
+            fresh.Document.TimingPoints.Clear(); fresh.Document.TimingPoints.AddRange(edited.TimingPoints);
+            history.Commit(); fresh.Commit();
+            Check(history.Document.ContentEquals(fresh.Document), "Warm break interval cache changed reconciliation after an edit or undo.");
+        }
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

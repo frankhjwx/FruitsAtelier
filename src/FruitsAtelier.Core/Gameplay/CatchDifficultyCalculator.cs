@@ -3,6 +3,8 @@
 namespace FruitsAtelier.Core;
 
 public readonly record struct CatchDifficultyResult(double StarRating, int MaxCombo);
+public readonly record struct CatchStrainSample(double TimeMs, double Before, double After);
+public readonly record struct CatchDifficultyCurveResult(CatchDifficultyResult Difficulty, IReadOnlyList<CatchStrainSample> Samples);
 
 /// <summary>No-mod Catch movement difficulty, calculated from the complete converted object sequence.</summary>
 public static class CatchDifficultyCalculator
@@ -11,6 +13,16 @@ public static class CatchDifficultyCalculator
     private readonly record struct Movement(float Distance, float ExactDistance, double StrainTime);
 
     public static CatchDifficultyResult Calculate(IReadOnlyList<ConvertedCatchObject> objects, double circleSize)
+        => CalculateCore(objects, circleSize, null);
+
+    public static CatchDifficultyCurveResult CalculateWithCurve(IReadOnlyList<ConvertedCatchObject> objects, double circleSize)
+    {
+        var samples = new List<CatchStrainSample>();
+        var result = CalculateCore(objects, circleSize, samples);
+        return new(result, samples.ToArray());
+    }
+
+    private static CatchDifficultyResult CalculateCore(IReadOnlyList<ConvertedCatchObject> objects, double circleSize, List<CatchStrainSample>? samples)
     {
         ArgumentNullException.ThrowIfNull(objects);
         float halfWidth = CatchSize.CatchWidth(circleSize) * 0.5f;
@@ -20,6 +32,7 @@ public static class CatchDifficultyCalculator
         var indices = Enumerable.Range(0, objects.Count)
             .Where(i => objects[i].Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet)
             .OrderBy(i => objects[i].TimeMs).ToArray();
+        if (indices.Length > 0) samples?.Add(new(objects[indices[0]].TimeMs, 0, 0));
         if (indices.Length < 2) return new(0, indices.Length);
 
         float scale = 41 / halfWidth;
@@ -47,7 +60,9 @@ public static class CatchDifficultyCalculator
                 if (peak == 0 && sectionEnd < current.TimeMs)
                     sectionEnd = Math.Ceiling(current.TimeMs / 750) * 750;
             }
-            strain = strain * Decay(current.TimeMs - last.TimeMs) + Evaluate(movements, hyper[indices[i - 1]]);
+            double before = strain * Decay(current.TimeMs - last.TimeMs);
+            strain = before + Evaluate(movements, hyper[indices[i - 1]]);
+            samples?.Add(new(current.TimeMs, before, strain));
             peak = Math.Max(peak, strain);
         }
         if (peak > 0) peaks.Add(peak);

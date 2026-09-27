@@ -89,7 +89,7 @@ See [Project Model](PROJECT_MODEL.md) for data and conversion flow, and [Catch R
 
 Core handles text and project serialization. Hosts handle dialogs, archive extraction, and resource copying. Workspace OSZ import preserves complete archives as described in [Workspace](WORKSPACE.md); the legacy supported-file importer extracts supported entries. `.osk` import extracts `skin.ini`, Catch PNGs and supported hitsound samples. Importers validate paths, duplicate entries, links, and extraction limits, and write temporary directories before publishing caches.
 
-Skin archives are limited to 256 MiB, selected files to 16 MiB each and 64 MiB total, and ZIP entries to 20000. Imported skin archives and extracted images are stored under `workspace/Skins`. Extraction includes numeric font glyphs for testplay combo; the versioned cache prevents reuse of older extracts without those glyphs. Users configure their own default skin `.osk` file in Settings; no default skin is copied into build outputs or packages. See [Skins](../assets/skins/README.md).
+Skin archives are limited to 256 MiB, selected files to 16 MiB each and 64 MiB total, and ZIP entries to 20000. Imported skin archives and extracted images are stored under `workspace/Skins`. Extraction preserves resource paths relative to a single `skin.ini`, including nested numeric fonts in lazer legacy exports; archives without configuration must keep selected resources in one folder. The versioned cache prevents reuse of older flattened extracts. Users configure their own default skin `.osk` file in Settings; no default skin is copied into build outputs or packages. See [Skins](../assets/skins/README.md).
 
 ## Audio and lifecycle
 
@@ -102,6 +102,9 @@ Preview hitsound scheduling, sample resolution, and platform playback are docume
 On Windows resize, release the Direct2D target attached to the back buffer before resizing DXGI buffers, then recreate it. Skip presentation at zero size. Lost mouse capture or focus cancels active interactions. Mac maps its corresponding events to the same editor cancellation methods.
 
 ## Interactive editing performance
+
+See [Editing performance](EDITING_PERFORMANCE.md) for hot-path constraints, cache
+ownership, correctness boundaries, and review requirements.
 
 The editor keeps a per-instance `CatchConversionCache`. Unchanged FSliders, imported
 sliders, and banana showers reuse their derived output only when their source content,

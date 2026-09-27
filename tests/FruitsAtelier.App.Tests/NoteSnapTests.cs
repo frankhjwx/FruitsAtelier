@@ -40,6 +40,38 @@ internal static class NoteSnapTests
 
     public static void SliderObjectDragging()
     {
+        foreach (var mode in Enum.GetValues<FruitsAtelier.App.Editor.SliderEditingMode>())
+        foreach (bool tail in new[] { false, true })
+        foreach (double delta in new[] { -250d, 250d })
+        {
+            var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 1000, IsDemo = false };
+            var track = new CurveTrack { Kind = CurveKind.Linear };
+            track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 120 }, new Anchor { TimeMs = 2000, X = 220 }]);
+            map.Tracks.Add(track);
+            var endpoint = tail ? track.Nodes[^1] : track.Nodes[0];
+            var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode);
+            ui.ClickMap(endpoint.TimeMs, endpoint.X);
+            ui.DownMap(endpoint.TimeMs, endpoint.X);
+            ui.MoveMap(endpoint.TimeMs, endpoint.X + 20);
+            ui.MoveMap(endpoint.TimeMs + delta, endpoint.X + 20);
+            ui.UpMap(endpoint.TimeMs + delta, endpoint.X + 20);
+            var changed = ui.View.Document.Tracks.Single();
+            var moved = changed.Nodes.Single(n => n.Id == endpoint.Id);
+            Check(Math.Abs(moved.TimeMs - endpoint.TimeMs - delta) < .001 && Math.Abs(moved.X - endpoint.X - 20) < .001,
+                $"Selected red endpoint did not move across time: mode={mode}, tail={tail}, delta={delta}.");
+            var fixedNode = tail ? changed.Nodes[0] : changed.Nodes[^1];
+            var originalFixed = tail ? track.Nodes[0] : track.Nodes[^1];
+            Check(fixedNode.TimeMs == originalFixed.TimeMs && fixedNode.X == originalFixed.X, "Endpoint time drag moved the opposite endpoint.");
+            var result = ui.View.Document.DeepClone();
+            ui.Key('Z', ctrl: true);
+            Check(map.ContentEquals(ui.View.Document), "Endpoint time drag did not undo in one step.");
+            ui.Key('Y', ctrl: true);
+            Check(result.ContentEquals(ui.View.Document), "Endpoint time drag did not redo.");
+            ui.DownMap(moved.TimeMs, moved.X); ui.MoveMap(moved.TimeMs + delta, moved.X);
+            ui.View.CancelInteraction();
+            Check(result.ContentEquals(ui.View.Document), "Cancelling endpoint time drag changed content.");
+        }
+
         foreach (bool imported in new[] { false, true })
         foreach (bool tail in new[] { false, true })
         foreach (bool hold in new[] { false, true })

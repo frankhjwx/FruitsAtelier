@@ -6,12 +6,12 @@ public readonly record struct BreakPeriod(int StartMs, int EndMs);
 
 public static class OsuTimeline
 {
-    internal static void ReconcileBreaks(MapDocument before, MapDocument document)
+    internal static void ReconcileBreaks(MapDocument before, MapDocument document, ImportedSliderLengthCache sliderLengths)
     {
         var periods = Breaks(document);
         if (periods.Count == 0) return;
-        var previous = ObjectIntervals(before);
-        var current = ObjectIntervals(document);
+        var previous = ObjectIntervals(before, sliderLengths);
+        var current = ObjectIntervals(document, sliderLengths);
         var changed = current.Where(pair => !previous.TryGetValue(pair.Key, out var old) || old != pair.Value)
             .Select(pair => pair.Value).ToArray();
         var vacated = previous.Where(pair => !current.TryGetValue(pair.Key, out var now) || now != pair.Value)
@@ -75,14 +75,17 @@ public static class OsuTimeline
         }
     }
 
-    private static Dictionary<Guid, (double Start, double End)> ObjectIntervals(MapDocument document)
-        => document.Fruits.Select(item => (item.Id, Start: item.TimeMs, End: item.TimeMs))
+    private static Dictionary<Guid, (double Start, double End)> ObjectIntervals(MapDocument document, ImportedSliderLengthCache sliderLengths)
+    {
+        var timing = new TimingMap.Lookup(document);
+        return document.Fruits.Select(item => (item.Id, Start: item.TimeMs, End: item.TimeMs))
             .Concat(document.Tracks.Where(track => track.Nodes.Count >= 2)
                 .Select(track => (track.Id, Start: track.Nodes[0].TimeMs, End: CurveMath.EndTimeMs(track))))
             .Concat(document.ImportedSliders.Select(slider => (slider.Id, Start: slider.TimeMs,
-                End: ImportedSliderConverter.EndTimeMs(document, slider))))
+                End: sliderLengths.EndTimeMs(document, slider, timing))))
             .Concat(document.BananaShowers.Select(shower => (shower.Id, Start: shower.TimeMs, End: shower.EndTimeMs)))
             .ToDictionary(item => item.Id, item => (item.Start, item.End));
+    }
 
     public static int? PreviewTime(MapDocument document)
     {

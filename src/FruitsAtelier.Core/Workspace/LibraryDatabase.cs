@@ -18,6 +18,7 @@ public sealed class LibrarySettings
     public string? DefaultSkin { get; set; }
     public bool RomanisedMetadata { get; set; } = true;
     public bool DerandomizeDroplets { get; set; } = true;
+    public bool LowLatencyDisplay { get; set; }
     public uint StandIndicatorColour { get; set; } = DefaultStandIndicatorColour;
     public uint WalkIndicatorColour { get; set; } = DefaultWalkIndicatorColour;
     public uint DashIndicatorColour { get; set; } = DefaultDashIndicatorColour;

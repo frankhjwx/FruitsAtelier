@@ -5,6 +5,25 @@ namespace FruitsAtelier.App.Platform;
 
 internal sealed partial class EditorWindow
 {
+    private void CheckDisplayPreference()
+    {
+        if (canvas?.DiagnosticImmediatePresentation is not null) return;
+        bool original = view.LibrarySettings.LowLatencyDisplay;
+        try
+        {
+            foreach (bool lowLatency in new[] { true, false })
+            {
+                view.LibrarySettings.LowLatencyDisplay = lowLatency;
+                if (ImmediatePresentation != lowLatency)
+                    throw new InvalidOperationException("Display preference did not change window presentation.");
+                Native.ShowWindow(hwnd, 4);
+                CheckUpdateRefresh();
+            }
+            AppLog.Write("Display preference check passed: live switching and paused update repaints in both modes.");
+        }
+        finally { view.LibrarySettings.LowLatencyDisplay = original; Native.ShowWindow(hwnd, 0); }
+    }
+
     private void CheckUpdateRefresh()
     {
         CheckUpdateRefresh(false);
@@ -27,8 +46,9 @@ internal sealed partial class EditorWindow
             lastUpdateStatus = null;
             if (postedNotifications)
             {
-                // Hidden windows have no paint region. Exercise a visible, off-screen owner without taking focus.
-                Native.SetWindowPos(hwnd, 0, -32000, -32000, 0, 0, 0x0001 | 0x0004 | 0x0010);
+                // Keep the immediate-mode owner on screen so DXGI can signal readiness.
+                if (!ImmediatePresentation)
+                    Native.SetWindowPos(hwnd, 0, -32000, -32000, 0, 0, 0x0001 | 0x0004 | 0x0010);
                 Native.ShowWindow(hwnd, 4);
             }
             Native.ValidateRect(hwnd, 0);
@@ -86,6 +106,7 @@ internal sealed partial class EditorWindow
                 Native.UpdateWindow(hwnd);
             }
             else WndProc(hwnd, 0x000F, 0, 0);
+            CompletePendingCheckPaint();
             if (frames != before + 1 || view.UpdateStatus != expected)
                 throw new InvalidOperationException($"Paint did not refresh update status to {expected}.");
             Native.ValidateRect(hwnd, 0);
@@ -105,6 +126,21 @@ internal sealed partial class EditorWindow
             return DownloadResult.Task;
         }
         public void Apply() => throw new InvalidOperationException("The refresh check must not restart the application.");
+    }
+
+    private void CompletePendingCheckPaint()
+    {
+        var deadline = System.Diagnostics.Stopwatch.StartNew();
+        while (framePending && !failed)
+        {
+            if (deadline.Elapsed.TotalSeconds > 3)
+                throw new InvalidOperationException("Paused editor did not complete its pending repaint.");
+            for (int i = 0; i < 256 && Native.PeekMessage(out var message, 0, 0, 0, 1); i++)
+                Native.DispatchMessage(ref message);
+            if (!framePending) break;
+            if (canvas!.WaitForFrameOrInput()) WndProc(hwnd, 0x000F, 0, 0);
+            else Thread.Sleep(1);
+        }
     }
 
     private void CheckPaintLifecycle()
@@ -143,12 +179,15 @@ internal sealed partial class EditorWindow
         var previous = canvas;
         canvas.Begin();
         WndProc(hwnd, 0x000F, 0, 0);
+        CompletePendingCheckPaint();
         if (ReferenceEquals(previous, canvas) || failed || !view.ErrorVisible)
             throw new InvalidOperationException("Paint failure did not rebuild the renderer and expose its error.");
         WndProc(hwnd, 0x000F, 0, 0);
+        CompletePendingCheckPaint();
         if (recoveringRenderer || failed) throw new InvalidOperationException("Recovered renderer could not draw its error.");
         view.KeyDown(13, false, false); view.KeyUp(13);
         WndProc(hwnd, 0x000F, 0, 0);
+        CompletePendingCheckPaint();
         if (view.ErrorVisible || !document.ContentEquals(view.Document))
             throw new InvalidOperationException("Paint recovery lost document content or trapped input.");
         AppLog.Write("Paint lifecycle check passed: nested paint, modal owner, abandoned frame, Direct2D recovery.");

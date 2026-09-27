@@ -15,8 +15,7 @@ public sealed partial class EditorView
     private List<SliderVertex>? legacyDragStart;
     private MapPoint legacyDragPoint;
     private bool legacyPreviewValid;
-    private bool LegacyControlsActive => LegacyMode && showTargets && tool is Tool.Select or Tool.Slider
-        && (objectSelection.Count <= 1) && SelectedTrack is not null;
+    private bool LegacyControlsActive => LegacyMode && showTargets && SliderControlsActive;
     private readonly Dictionary<Guid, (ControlCurve Curve, MapPoint Start, MapPoint End, IReadOnlyList<ControlCurveEditing.Cubic> Cubics)> penPreview = [];
 
     private void OpenSliderModeMenu(float x, float y)
@@ -35,7 +34,7 @@ public sealed partial class EditorView
         if (draftTrack != Guid.Empty) return;
         SliderMode = mode;
         legacyDraft = null; legacyDragStart = null;
-        if (SelectedTrack is { } track && tool == Tool.Slider) SelectAnchors(track, []);
+        if (SelectedTrack is { } track && SliderControlsActive) SelectAnchors(track, []);
         StatusMessage = "";
     }
 
@@ -184,7 +183,7 @@ public sealed partial class EditorView
         if (hit is not null)
         {
             if (button != 0) return false;
-            tool = Tool.Slider;
+            tool = Tool.Select;
             if (!anchorSelection.Contains(hit.Id)) SelectAnchors(track, [hit.Id]);
             BeginLegacyDrag(track, hit.Point, x, y);
             return true;
@@ -200,7 +199,7 @@ public sealed partial class EditorView
             try
             {
                 Guid id = SliderControlEditing.Insert(track, segment, point, ControlCurveMath.ReferenceScale(Document.ApproachRate), allowArcFallback: true);
-                tool = Tool.Slider;
+                tool = Tool.Select;
                 SelectAnchors(track, [id]);
                 BeginLegacyDrag(track, point, x, y, alreadyBegun: true);
             }
@@ -290,7 +289,7 @@ public sealed partial class EditorView
         }
         var hit = SliderControlEditing.Vertices(track).FirstOrDefault(v => Near(v.Point, x, y, 8));
         if (hit is null || draftTrack != Guid.Empty) return false;
-        tool = Tool.Slider;
+        tool = Tool.Select;
         if (drag == DragKind.LegacyControl) { history.Commit(); drag = DragKind.None; }
         if (Edit(L.Get("editor.command.toggleBoundary"), () => SliderControlEditing.ToggleBoundary(track, hit.Id))) SelectAnchors(track, [hit.Id]);
         return true;

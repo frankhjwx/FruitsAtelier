@@ -4,6 +4,7 @@ var tests = new (string Name, Action Run)[]
 {
     ("Catch stars match 21 official algorithm fixtures", CatchDifficultyTests.OfficialValues),
     ("Catch star calculation respects object participation and input boundaries", CatchDifficultyTests.Participation),
+    ("Catch curve samples retain chronological contributions and decay", CatchDifficultyTests.CurveSamples),
     ("Movement ranges distinguish standing, walking, dash, hyperdash and zero-time gaps", MovementRanges),
     ("CS scales nominal fruit, default droplets and catcher independently", Sizes),
     ("Static bananas use the arrival scale across the CS range", BananaSizes),
@@ -64,8 +65,9 @@ static void Sizes()
     Near(0.15, CatchSize.Scale(10));
     Near(64, CatchSize.FruitDiameter(5));
     Near(32, CatchSize.FruitRadius(5));
-    Near(8, CatchSize.DefaultDropletRadius(5));
-    Near(4, CatchSize.DefaultTinyDropletRadius(5));
+    Near(16, CatchSize.DefaultDropletRadius(5));
+    Near(8, CatchSize.DefaultTinyDropletRadius(5));
+    Near(CatchSize.DefaultDropletRadius(5) * .5, CatchSize.DefaultTinyDropletRadius(5));
     Near(106.75, CatchSize.CatcherWidth(5));
     Near(85.4, CatchSize.CatchWidth(5));
     True(CatchSize.CatcherWidth(0) > CatchSize.CatcherWidth(5)

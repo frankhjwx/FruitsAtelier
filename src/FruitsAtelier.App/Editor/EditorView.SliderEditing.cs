@@ -31,7 +31,7 @@ public sealed partial class EditorView
             Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
         })) return;
         Select(node.Id, track.Id);
-        tool = Tool.Slider;
+        tool = Tool.Select;
     }
 
     private void EditImportedSlider()
@@ -42,18 +42,13 @@ public sealed partial class EditorView
     private void EditImportedSlider(Guid id)
     {
         if (!Document.ImportedSliders.Any(slider => slider.Id == id)) return;
-        if (Document.DerandomizeDroplets is null)
-        {
-            OfferSingleSliderConversion(id);
-            return;
-        }
-        ConvertSelectedImportedSlider(id, Document.DerandomizeDroplets.Value);
+        ConvertSelectedImportedSlider(id, Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets);
     }
 
     private ImportedSliderEditResult ConvertImportedSlider(Guid id, CatchConversionCache? cache = null)
     {
         bool derandomize = Document.DerandomizeDroplets ?? LibrarySettings.DerandomizeDroplets;
-        var result = ImportedSliderEditing.ConvertToTrack(Document, id, cache, derandomize);
+        var result = ImportedSliderEditing.ConvertToTrack(Document, id, cache ?? editorConversionCache, derandomize);
         if (drag != DragKind.None && Document.DerandomizeDroplets is null) pendingImplicitSliderConversions.Add(id);
         return result;
     }
@@ -63,12 +58,11 @@ public sealed partial class EditorView
         string notice = "";
         if (!Edit(L.Get("editor.command.editImportedSlider"), () =>
         {
-            var result = ImportedSliderEditing.ConvertToTrack(Document, id, derandomizeDroplets: derandomizeDroplets);
+            var result = ImportedSliderEditing.ConvertToTrack(Document, id, editorConversionCache, derandomizeDroplets);
             Document.DerandomizeDroplets = derandomizeDroplets;
             notice = string.Join(L.Get("editor.diagnostics.separator"), result.Diagnostics);
         })) return;
-        Select(id, id);
-        tool = Tool.Slider;
+        SelectAnchors(Document.Tracks.Single(track => track.Id == id), []);
         StatusMessage = notice.Length == 0 ? L.Get("editor.status.importedSliderEditable") : notice;
     }
 }

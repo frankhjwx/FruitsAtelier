@@ -37,11 +37,14 @@ internal static class DifficultyTabTests
         var ui = new Ui();
         double initial = Rating(ui.View);
         ui.Key('F'); ui.ClickMap(1250, 480);
-        double expected = CatchDifficultyCalculator.Calculate(ui.View.Conversion.Objects, ui.View.Document.CircleSize).StarRating;
+        var exported = OsuBeatmapWriter.Serialize(ui.View.Document);
+        double expected = CatchDifficultyCalculator.Calculate(exported.ObjectSequenceMatches ? exported.PlayableObjects : ui.View.Conversion.Objects,
+            ui.View.Document.CircleSize).StarRating;
         double displayed = ui.View.CurrentStarRating ?? 0;
-        Check(ui.View.CurrentStarRatingRefreshing ? displayed == initial : Math.Abs(displayed - expected) < 1e-12,
+        Check(displayed == initial || Math.Abs(displayed - expected) < 1e-12,
             "Edits show the cached rating while pending or the correct completed result");
         double changed = Rating(ui.View);
+        Check(Math.Abs(changed - expected) < 1e-12, "Completed stars match independently exported gameplay events");
         Check(initial != changed, "Object edits must recalculate difficulty");
         ui.Key('Z', ctrl: true);
         Check(Math.Abs(Rating(ui.View) - initial) < 1e-12, "Undo restores rating");

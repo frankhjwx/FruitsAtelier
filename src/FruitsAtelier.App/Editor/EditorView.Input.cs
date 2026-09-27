@@ -17,7 +17,7 @@ public sealed partial class EditorView
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
         placementCtrl = ctrl;
-        if (IsTestplaying) return;
+        if (IsTestplaying) { BeginVolumePopoverPointer(x, y, button); return; }
         if (ErrorVisible || DiscardConfirmationVisible)
         {
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
@@ -134,6 +134,10 @@ public sealed partial class EditorView
             if (y >= 39) return;
         }
         if (catchPreviewVisible && PreviewResizeBounds.Contains(x, y)) { drag = DragKind.PreviewResize; return; }
+        if (DifficultyCurveToggleBounds.Contains(x, y)) { difficultyCurveVisible = !difficultyCurveVisible; return; }
+        if (difficultyCurveVisible && DifficultyCurveGraphBounds.Contains(x, y))
+        { drag = DragKind.DifficultySeek; SeekDifficultyCurve(y); return; }
+        if (difficultyCurveVisible && leftPanel.Contains(x, y)) return;
         if (BeginPlaybackLineDrag(x, y)) return;
         if (zoomSlider.Contains(x, y))
         {
@@ -190,7 +194,7 @@ public sealed partial class EditorView
             return;
         }
         if (!plot.Contains(x, y)) return;
-        if (!ctrl && tool == Tool.Select && SelectedDistanceObject() is { IsStandalone: false } selectedChild
+        if (!ctrl && tool == Tool.Select && objectSelection.Count == 1 && SelectedDistanceObject() is { IsStandalone: false } selectedChild
             && HitCatchObject(x, y)?.SourceId != selectedChild.SourceId && HitTrackPath(x, y) != selectedChild.SourceId
             && HitSliderLocation(x, y)?.Id != selectedChild.SourceId)
         {
@@ -214,7 +218,24 @@ public sealed partial class EditorView
         if (ctrl && StraightenHitPoint(x, y)) return;
         if (ctrl && tool == Tool.Select && SelectedTrack is { } parent && HitCatchObject(x, y) is { } other && other.SourceId != parent.Id)
         { PickObject(other.SourceId, true); return; }
+        if (ctrl && tool == Tool.Select && SelectedImportedSlider is { } importedParent
+            && HitCatchObject(x, y) is { } otherObject && otherObject.SourceId != importedParent.Id)
+        { PickObject(otherObject.SourceId, true); return; }
         if (!ctrl && TryBeginSelectedSliderObjectDrag(x, y)) return;
+        if (showTargets && ctrl && tool is Tool.Select or Tool.Slider && objectSelection.Count == 1
+            && SelectedImportedSlider is { } imported)
+        {
+            var point = MapAt(x, y, anchorSnap);
+            var generated = conversion!.Sliders.FirstOrDefault(s => s.SourceId == imported.Id);
+            if (generated is not null && point.TimeMs > generated.StartTimeMs && point.TimeMs < generated.StartTimeMs + generated.DurationMs)
+            {
+                double duration = generated.DurationMs / generated.SpanCount;
+                int span = Math.Min(generated.SpanCount - 1, (int)((point.TimeMs - generated.StartTimeMs) / duration));
+                double local = point.TimeMs - generated.StartTimeMs - span * duration;
+                InsertControlPoint(new(imported.Id, generated.StartTimeMs + (span % 2 == 0 ? local : duration - local)), point.X);
+            }
+            return;
+        }
         if (LegacyMode && HandleLegacyPointerDown(x, y, button, ctrl)) return;
         if (!LegacyMode && showTargets && ctrl && tool is Tool.Select or Tool.Slider
             && draftTrack == Guid.Empty && objectSelection.Count <= 1 && SelectedTrack is { } insertTrack)
@@ -224,22 +245,20 @@ public sealed partial class EditorView
                 InsertControlPoint(new(insertTrack.Id, CurveMath.FirstSpanTime(insertTrack, point.TimeMs)), point.X);
             return;
         }
-        if (showTargets && ctrl && SelectedImportedSlider is { } imported && HitSliderLocation(x, y) is { } importedHit && importedHit.Id == imported.Id)
-        { InsertControlPoint(importedHit); return; }
         if (!ctrl && TryBeginSelectedBananaHandle(x, y)) return;
         if (tool != Tool.Slider && !ctrl && showTargets && objectSelection.Count == 1 && SelectedTrack is { } selectedObject)
         {
             foreach (var node in selectedObject.Nodes)
                 if (Near(Point(node), x, y, 9))
                 {
-                    tool = Tool.Slider;
+                    tool = Tool.Select;
                     PickAnchor(selectedObject, node, false);
                     if (LegacyMode) BeginLegacyDrag(selectedObject, Point(node), x, y);
                     else BeginNodeDrag(selectedObject, node, DragKind.Anchor, x, y);
                     return;
                 }
         }
-        if (tool == Tool.Slider && !LegacyMode && showTargets && SelectedTrack is { } selected)
+        if (SliderControlsActive && !LegacyMode && showTargets && SelectedTrack is { } selected)
         {
             foreach (var node in selected.Nodes)
                 if (Near(Point(node), x, y, 7))
@@ -257,7 +276,7 @@ public sealed partial class EditorView
                 { BeginNodeDrag(selected, node, DragKind.HandleOut, x, y); return; }
             }
         }
-        if (tool == Tool.Slider && draftTrack == Guid.Empty && SelectedTrack is { } editedTrack)
+        if (tool == Tool.Select && draftTrack == Guid.Empty && objectSelection.Count == 0 && SelectedTrack is { } editedTrack)
         {
             if (HitCatchObject(x, y) is null && HitTrackPath(x, y) == Guid.Empty && HitBananaRectangle(x, y) is null)
             {
@@ -381,7 +400,13 @@ public sealed partial class EditorView
         if (librarySettingsOpen || ExportVisible || languageMenuOpen) return;
         if (LibraryVisible) { MoveLibraryPointer(y); return; }
         if (tabPointer) { MoveTabPointer(x); return; }
-        if (drag == DragKind.PreviewResize) { previewWidth = Math.Clamp(width - x, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)); return; }
+        if (drag == DragKind.PreviewResize)
+        {
+            previewWidth = Math.Clamp(width - x, MinimumPreviewWidth,
+                Math.Max(MinimumPreviewWidth, width - 109 - leftPanel.Width - (MinimumPlayfieldWidth + 198)));
+            return;
+        }
+        if (drag == DragKind.DifficultySeek) { SeekDifficultyCurve(y); return; }
         if (drag == DragKind.None)
         {
             if (LegacyMode && draftTrack != Guid.Empty) UpdateLegacyPreview(x, y);
@@ -406,9 +431,12 @@ public sealed partial class EditorView
             dragMoved = true;
         }
         if (drag == DragKind.TimelineTail) { MoveTimelineTail(x); return; }
-        if (drag == DragKind.LegacyControl) { MoveLegacyPoints(x, y); return; }
         if (drag == DragKind.Objects) { MoveSelectedObjects(x, y, shift); return; }
-        if (drag == DragKind.SliderObject) { MoveSliderObject(x); return; }
+        if (drag == DragKind.SliderObject)
+        {
+            if (!TryBeginSliderEndpointTimeDrag(y)) { MoveSliderObject(x); return; }
+        }
+        if (drag == DragKind.LegacyControl) { MoveLegacyPoints(x, y); return; }
         if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y); return; }
         var raw = Transform.ToMap(x, y) - dragOffset;
         var p = new MapPoint(Math.Clamp(raw.TimeMs, 0, EditableDurationMs), Math.Clamp(SnapX(raw.X), 0, 512));
@@ -559,6 +587,7 @@ public sealed partial class EditorView
             return;
         }
         PointerMove(x, y, shift, false);
+        if (drag == DragKind.DifficultySeek) { drag = DragKind.None; return; }
         if (drag == DragKind.PlaybackLine) { FinishPlaybackLineDrag(); return; }
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
         if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
@@ -654,7 +683,7 @@ public sealed partial class EditorView
             return;
         }
         if (Document.Tracks.FirstOrDefault(track => track.Id == sourceId) is not { } track) return;
-        tool = Tool.Slider;
+        tool = Tool.Select;
         SelectAnchors(track, []);
         StatusMessage = "";
 
@@ -1210,10 +1239,15 @@ public sealed partial class EditorView
 
     private void BeginNodeDrag(CurveTrack track, Anchor node, DragKind kind, float x, float y)
     {
+        if (draftTrack == Guid.Empty) history.Begin(kind == DragKind.Anchor ? L.Get("editor.command.moveAnchor") : L.Get("editor.command.adjustHandle"));
+        ContinueNodeDrag(track, node, kind, x, y);
+    }
+
+    private void ContinueNodeDrag(CurveTrack track, Anchor node, DragKind kind, float x, float y)
+    {
         Select(node.Id, track.Id);
         if (HitCatchObject(x, y) is { } item) PickSoundEdge(item);
         selectedPart = kind;
-        if (draftTrack == Guid.Empty) history.Begin(kind == DragKind.Anchor ? L.Get("editor.command.moveAnchor") : L.Get("editor.command.adjustHandle"));
         drag = kind;
         BeginPointerDrag(x, y);
         var original = Point(node);

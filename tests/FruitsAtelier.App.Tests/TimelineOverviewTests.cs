@@ -199,7 +199,7 @@ internal static class TimelineOverviewTests
         {
             Check(ui.Canvas.Lines.Any(l => l.Color == color && l.Y1 == timeline.Y && l.Y2 == timeline.Bottom - 1),
                 "Timing marker missing from the upper timeline");
-            Check(!ui.Canvas.Lines.Any(l => l.Color == color && l.X1 == 108 && l.X2 == plot.X),
+            Check(!ui.Canvas.Lines.Any(l => l.Color == color && l.X1 == plot.X - 70 && l.X2 == plot.X),
                 "Canvas time axis should only show break bands");
         }
         var fruit = ui.Canvas.Circles.Single(c => !c.Filled && c.Radius == 19 && c.Y == timeline.Y + 27);
@@ -207,7 +207,7 @@ internal static class TimelineOverviewTests
             && Math.Abs(l.X1 - fruit.X) < .01f), "Upper timing marker and object center must share the same time coordinate");
         Check(ui.Canvas.Fills.Any(f => f.Color == 0x858585 && f.Bounds.Y == timeline.Y
             && f.Bounds.Height == timeline.Height - 1), "Break must fill the upper timeline height");
-        Check(ui.Canvas.Fills.Any(f => f.Color == 0x858585 && f.Bounds.X == 108
+        Check(ui.Canvas.Fills.Any(f => f.Color == 0x858585 && f.Bounds.X == plot.X - 70
             && f.Bounds.Right == plot.X && f.Bounds.Y >= plot.Y && f.Bounds.Bottom <= plot.Bottom),
             "Break must be clipped to the canvas time axis");
         Check(ui.Canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("timeline.breakLabel")),

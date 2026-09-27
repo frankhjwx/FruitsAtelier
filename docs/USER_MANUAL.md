@@ -11,7 +11,7 @@ FruitsAtelier is an osu!catch beatmap editor for Windows and macOS. Use it to ed
 1. On Windows, extract the entire release ZIP and open `FruitsAtelier.App.exe`. Keep the DLLs and assets beside it. No separate .NET installation is needed. Windows 10/11 x64 and DirectX 11 are required; Windows N needs the Media Feature Pack for MP3 playback.
 2. In **Library > Settings**, choose a workspace for your projects. You may also select your osu!stable installation folder to use its Songs and Skins folders. Keep the workspace separate from Songs.
 3. Right-click the library to import a folder or a beatmap/OSZ, or choose **New project**. Double-click a library entry to start or continue editing.
-4. Choose the interface language in **Settings → Appearance** and select a skin using **Settings → Skins** or the top-bar Skin control. Both skin selectors offer the default skin, installed skins, and skin import; selection applies immediately and is saved automatically. Testplay movement keys can be changed in Settings.
+4. Choose the interface language in **Settings → Appearance** and select a skin using **Settings → Appearance** or the top-bar Skin control. Both skin selectors offer the default skin, installed skins, and skin import; selection applies immediately and is saved automatically. Testplay movement keys can be changed in Settings.
 
 On macOS, open the standalone `FruitsAtelier.app`. Source-build instructions are in the repository's macOS guide. Command can be used in place of Ctrl for editor shortcuts.
 
@@ -75,7 +75,7 @@ Fruit and slider placement previews show hyperdash markers before you confirm pl
 
 Hover over the FSlider tool to choose **osu legacy mode** or **pen tool mode**. Both edit the same FSlider. Legacy mode uses control points; pen mode lets you drag Bezier handles while placing anchors. Ctrl-click adds a straight segment. Click the last draft point again to begin a new segment.
 
-Double-click an FSlider, or select it and press B, to edit its points. Drag points or handles to reshape it. Ctrl-click within its time range to insert a point; Ctrl-click an existing point to make it straight. Right-click a straight point to make it curved, then right-click again to delete it. A right-click on the slider body away from points deletes the slider.
+Double-click an FSlider, or select it and click its controls, to edit its points in **Select**. **B / 3** clears selection and prepares a new slider. Drag points or handles to reshape it. Ctrl-click within its time range to insert a point; Ctrl-click an existing point to make it straight. Right-click a straight point to make it curved, then right-click again to delete it. A right-click on the slider body away from points deletes the slider.
 
 Hold the mouse button on an imported slider until its actions appear, then choose **Convert to FSlider** to edit its shape. **Edit > Convert all sliders to FSliders** converts the active difficulty. Conversion can approximate the imported path; undo restores the original.
 
@@ -223,7 +223,7 @@ For detailed editing behavior, see `docs/EDITOR_UI.md` in the repository. Projec
 
 ### Audio volume
 
-In the editor, click the bottom-right **Volume** button or **View → Volume** for three vertical bars: **Master**, **Music**, **Effect**. The active bar has a bright outline and bold label. Hover a bar to select it, scroll over the controls to adjust the selected channel by 5%, or drag a bar. Use **Alt+Left/Right** to choose a channel, or **Alt+Up/Down** to adjust it by 5%. During testplay, Alt+wheel shows the bars and adjusts the selected channel by 5% per wheel event; Alt+arrow shortcuts also work without moving the catcher. The controls fade in, stay visible while hovered or adjusted, and wait 0.8 seconds before fading out. In the editor, Esc closes them. Drawing drafts remain active.
+In the editor, click the bottom-right **Volume** button or **View → Volume** for three vertical bars: **Master**, **Music**, **Effect**. The active bar has a bright outline and bold label. Hover a bar to select it. Click a bar to set its level, drag it for continuous adjustment, or scroll over the controls to adjust the selected channel by 5%. Use **Alt+Left/Right** to choose a channel, or **Alt+Up/Down** to adjust it by 5%. During testplay, Alt+wheel shows the bars and adjusts the selected channel by 5% per wheel event; Alt+arrow shortcuts also work without moving the catcher. The displayed bars accept clicks and drags during testplay. The controls fade in, stay visible while hovered or adjusted, and wait 0.8 seconds before fading out. In the editor, Esc closes them. Drawing drafts remain active.
 
 Open **Settings > Audio** from the Library or editor to adjust **All**, **Song** and **Hitsound** from 0% to 100%. These controls share values with the existing volume controls. Values apply immediately and are saved when you release the slider. All multiplies both other channels. Setting Song to 0% leaves hitsounds audible; setting Hitsound to 0% leaves the song audible. Custom skin samples apply in both preview and testplay, with beatmap custom samples taking priority.
 

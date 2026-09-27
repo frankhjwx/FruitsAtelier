@@ -18,23 +18,27 @@ From the repository root, using PowerShell 7 and the SDK pinned in `global.json`
 
 ```powershell
 ./scripts/Publish-Windows.ps1
-./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-0.9.0-win-x64.zip
+./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-0.9.1-win-x64.zip
 ```
 
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
 `.zip.sha256` checksum, plus a Velopack full `.nupkg` and
 `releases.win-x64.json` update feed. The default version comes from `Directory.Build.props`
-(currently 0.9.0); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
+(currently 0.9.1); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
 the local checkout had uncommitted changes. Executable version metadata uses the
 same version and commit. Release builds run from the clean tagged commit.
 The window title displays this version beside the application name, omitting the
 source commit suffix and retaining any prerelease label.
 
 For a Windows audio diagnostic package, pass `-AudioDiagnostics` and a separate
-output directory, for example `-Version 0.9.0-beta.1` with
+output directory, for example `-Version 0.9.1-beta.1` with
 `-OutputDirectory artifacts/audio-diagnostic-release`. The package includes an
 enabling marker and [capture instructions](AUDIO-DIAGNOSTICS.txt). This creates
 local package artifacts; it does not publish a GitHub release.
+Test launchers in `current/` compare event-driven/polling output with requested
+10/50 ms buffers, plus two display modes with frame diagnostics. Each creates a separate capture directory and ZIP beside `current/`,
+including the build manifest, run profile, editor log and audio logs. The package
+check verifies the launchers and actual diagnostic log creation.
 
 Normal packages and the GitHub release workflow omit `-AudioDiagnostics`, so
 detailed audio logging is off by default. The manifest records `audioDiagnostics`,

@@ -3,8 +3,54 @@ using FruitsAtelier.Core;
 
 internal static class ToolPaletteTests
 {
+    public static void FruitReplacement()
+    {
+        var ui = Empty();
+        var map = new MapDocument { DurationMs = 12000 };
+        foreach (double offset in new[] { -2.01, -2, -1.5, 0, 1.5, 2, 2.01 })
+            map.Fruits.Add(new() { TimeMs = 1250 + offset, X = 100 });
+        var track = new CurveTrack();
+        track.Nodes.AddRange([new() { TimeMs = 1250, X = 200 }, new() { TimeMs = 1750, X = 300 }]);
+        map.Tracks.Add(track);
+        var spanning = new CurveTrack();
+        spanning.Nodes.AddRange([new() { TimeMs = 750, X = 200 }, new() { TimeMs = 1250, X = 300 }]);
+        map.Tracks.Add(spanning);
+        var imported = new ImportedSlider { TimeMs = 1250, X = 100, Y = 192, PathType = 'L', PixelLength = 100 };
+        imported.ControlPoints.AddRange([new(100, 192), new(200, 192)]);
+        map.ImportedSliders.Add(imported);
+        map.BananaShowers.Add(new() { TimeMs = 1250, EndTimeMs = 1500 });
+        ui.LoadDocument(map); ui.Key('F');
+        var before = ui.View.Document.DeepClone();
+        ui.MoveMap(1250, 450);
+        Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Replacement preview modified content or history.");
+        ui.ClickMap(1250, 450);
+        Check(ui.View.Document.Fruits.Count == 3, "Placement did not replace all starts within 2 ms or removed outside starts.");
+        var fruit = ui.View.Document.Fruits.Single(f => f.TimeMs == 1250);
+        Near(450, fruit.X);
+        Check(ui.View.Document.Fruits.Where(f => f.Id != fruit.Id).All(f => Math.Abs(f.TimeMs - 1250) > 2), "A conflicting fruit survived.");
+        Check(ui.View.Document.Tracks.Single().Id == spanning.Id, "Replacement must compare parent starts, not slider tails.");
+        Check(ui.View.Document.ImportedSliders.Count == 0 && ui.View.Document.BananaShowers.Count == 0, "Same-start parents survived replacement.");
+        var after = ui.View.Document.DeepClone();
+        ui.Key('Z', ctrl: true);
+        Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Replacement did not undo in one step.");
+        ui.Key('Y', ctrl: true);
+        Check(after.ContentEquals(ui.View.Document), "Replacement redo changed object identities or content.");
+    }
+
     public static void PlacementHyperdash()
     {
+        var replacement = Empty();
+        var replacementMap = new MapDocument { DurationMs = 12000 };
+        replacementMap.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1250, X = 100 }, new() { TimeMs = 1500, X = 450 }]);
+        replacementMap.BananaShowers.Add(new() { TimeMs = 2000, EndTimeMs = 2400 });
+        replacement.LoadDocument(replacementMap); replacement.Key('F'); replacement.MoveMap(1250, 450);
+        var preview = (IReadOnlyList<ConvertedCatchObject>)typeof(EditorView).GetField("placementMovementObjects",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(replacement.View)!;
+        replacement.ClickMap(1250, 450);
+        var committed = OsuBeatmapWriter.Serialize(replacement.View.Document).PlayableObjects;
+        Check(preview.Select(o => (o.Kind, o.TimeMs, o.X, o.EventIndex)).SequenceEqual(committed.Select(o => (o.Kind, o.TimeMs, o.X, o.EventIndex))),
+            "Fruit replacement preview disagrees with exported placement or changes downstream random events.");
+
         foreach (int key in new[] { 'F', 'B' })
         {
             var ui = Empty();
@@ -87,11 +133,11 @@ internal static class ToolPaletteTests
         ui.Key('Y', ctrl: true); Check(saved.ContentEquals(ui.View.Document), "Redo lost combo or object identity.");
         Right(ui, 1250, 230); Check(ui.View.Document.Fruits.Count == 0 && !ui.View.NextFruitNewCombo, "Paused right-click failed to delete the fruit.");
         ui.Key('Z', ctrl: true);
-        ui.ClickMap(1250, 230); Check(ui.View.Document.Fruits.Count == 2, "Fruit mode selected an existing object instead of placing.");
-        Check(ui.View.Document.Fruits.Count(Combo) == 1, "New combo leaked to the next fruit.");
+        ui.ClickMap(1250, 230); Check(ui.View.Document.Fruits.Count == 1 && ui.View.Document.Fruits[0].Id != fruit.Id, "Fruit mode did not replace the existing object.");
+        Check(ui.View.Document.Fruits.Count(Combo) == 0, "New combo leaked to the next fruit.");
         ui.View.UpdateTransport(1250, 12000, true, true, false, null, "fixture.wav"); ui.Paint();
         Right(ui, 1250, 230);
-        Check(ui.View.NextFruitNewCombo && ui.View.Document.Fruits.Count == 2, "Playing right-click should arm a combo without deleting.");
+        Check(ui.View.NextFruitNewCombo && ui.View.Document.Fruits.Count == 1, "Playing right-click should arm a combo without deleting.");
     }
 
     public static void ComboLabels()

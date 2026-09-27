@@ -40,7 +40,7 @@ full catcher width = 106.75 × (2 × scale)
 effective catch width = full catcher width × 0.8
 ```
 
-Multiply these dimensions by view width / 512. At CS=5, nominal fruit diameter is 64 units. Basic-shape fallback Droplet / TinyDroplet radii are `16 × scale` / `8 × scale`; these differ from legacy PNG visible-size rules.
+Multiply these dimensions by view width / 512. At CS=5, nominal fruit diameter is 64 units. Basic-shape fallback Droplet / TinyDroplet radii are `32 × scale` / `16 × scale`; the ordinary Droplet diameter is half the Fruit diameter, and the TinyDroplet diameter is half the Droplet diameter. These differ from legacy PNG visible-size rules. Fallback Fruits, Droplets, and TinyDroplets blend their combo colour 40% with white 60%, keeping dark beatmap colours visible at a lighter value. Bananas retain their gold colour.
 
 PNGs use original logical dimensions; `@2x` logical dimensions are half their pixel dimensions. Each axis is center-cropped to at most 160 logical pixels rather than scaling the whole oversized image down. Target size is `cropped logical size × nominal fruit diameter / 128 × view width / 512`, additionally multiplied by 0.8 for drops, 0.4 for tiny droplets, and 0.6 for bananas. Transparent margins count toward size; overlays do not inherit base-image tint.
 
@@ -64,9 +64,17 @@ Hyperdash uses stably time-sorted Fruits / Droplets, excluding TinyDroplets and 
 
 Fruit and droplet bases use combo colours, while overlays remain white. Beatmap
 `[Colours]` takes precedence over skin colours and honours combo-skip offsets;
-skin colours advance at combo boundaries without those offsets. Nested slider
+Catch skin colours advance once per parent element using its zero-based map index
+plus one, independently of NC flags and skip offsets. The upper object timeline
+continues to use NC-group colours. Nested slider
 objects inherit their parent colour. Bananas use the three deterministic yellow
 tints from `Banana.cs`. Without a palette or skin, ordinary geometric objects stay white.
+
+Colour lookup references at osu!lazer revision
+[`325c8f5c68413ca3085e4faa7dbf28c237c19ae7`](https://github.com/ppy/osu/tree/325c8f5c68413ca3085e4faa7dbf28c237c19ae7):
+`PalpableCatchHitObject.GetComboColour` selects `IndexInBeatmap + 1`,
+`CatchBeatmapProcessor.PostProcess` shares the index with nested objects, and
+`LegacyBeatmapSkin.GetComboColour` overrides it with `ComboIndexWithOffsets`.
 
 Hyperdash draws only the base texture as a 1.2× additive underlay at 70% opacity,
 tinted with `HyperDashFruit` (falling back to `HyperDash` / red), followed by the

@@ -9,6 +9,45 @@ namespace FruitsAtelier.App.Diagnostics;
 
 internal static class RenderCheck
 {
+    private static void CheckPaletteHints(D2DCanvas canvas, EditorView view, int width, int height)
+    {
+        string language = FruitsAtelier.Localization.Strings.Language;
+        var original = view.Document.DeepClone();
+        bool dirty = view.IsDirty;
+        void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
+        try
+        {
+            foreach (string locale in new[] { "en", "zh-CN" })
+            {
+                FruitsAtelier.Localization.Strings.SetLanguage(locale); Paint();
+                foreach (var button in view.ToolButtonBounds.ToArray())
+                {
+                    view.PointerMove(button.X + button.Width / 2, button.Y + button.Height / 2, false, false); Paint();
+                }
+                var last = view.AssistButtonBounds[^1];
+                view.Wheel(last.X + 10, view.CanvasPlotBounds.Bottom - 10, -1200, false, false); Paint();
+                foreach (int index in new[] { 5, 6 })
+                {
+                    var button = view.AssistButtonBounds[index];
+                    view.PointerMove(button.X + 10, button.Y + 10, false, false); Paint();
+                    if (index != 6) continue;
+                    bool locked = view.DropletSelectionLocked;
+                    for (int i = 0; i < 2; i++)
+                    {
+                        view.PointerMove(button.X - 20, button.Y + 16, false, false); Paint();
+                        view.PointerDown(button.X - 20, button.Y + 16, 0, false, false);
+                        view.PointerUp(button.X - 20, button.Y + 16, 0); Paint();
+                        if (view.DropletSelectionLocked != (i == 0 ? !locked : locked))
+                            throw new InvalidOperationException("Native droplet lock flyout did not toggle.");
+                    }
+                }
+            }
+            if (!original.ContentEquals(view.Document) || dirty != view.IsDirty)
+                throw new InvalidOperationException("Palette hints or droplet locking changed the document.");
+        }
+        finally { FruitsAtelier.Localization.Strings.SetLanguage(language); view.PointerMove(0, 0, false, false); }
+    }
+
     private static void CheckBookmarkCache(D2DCanvas canvas)
     {
         string toolbar = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
@@ -297,8 +336,8 @@ internal static class RenderCheck
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerDown(width - 160, 20, 0, false, false); view.PointerUp(width - 160, 20, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
-                view.PointerDown(view.SettingsBounds.X + 40, view.SettingsBounds.Y + 238, 0, false, false);
-                view.PointerUp(view.SettingsBounds.X + 40, view.SettingsBounds.Y + 238, 0);
+                view.PointerDown(view.SettingsBounds.X + 40, view.SettingsBounds.Y + 286, 0, false, false);
+                view.PointerUp(view.SettingsBounds.X + 40, view.SettingsBounds.Y + 286, 0);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 foreach (int binding in new[] { 186, 222, 219, 221, 8, 17, 18, 96, 111, 121 })
                 {
@@ -393,12 +432,12 @@ internal static class RenderCheck
                 view.OpenSettings();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 var settings = view.SettingsBounds;
-                foreach (int category in new[] { 0, 1, 2, 3, 5, 6, 4 })
+                foreach (int category in new[] { 0, 1, 2, 3, 4, 5 })
                 {
                     float sx = settings.X + 40, sy = settings.Y + 96 + category * 48;
                     view.PointerDown(sx, sy, 0, false, false); view.PointerUp(sx, sy, 0);
                     canvas.Begin(); view.Render(canvas, width, height); canvas.End();
-                    if (category == 5)
+                    if (category == 3)
                     {
                         for (int channel = 0; channel < 3; channel++)
                         {
@@ -410,7 +449,7 @@ internal static class RenderCheck
                         if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
                             throw new InvalidOperationException("Settings volume controls did not update shared percentages.");
                     }
-                    if (category == 6)
+                    if (category == 2)
                     {
                         var selector = view.SettingsSkinSelectorBounds;
                         view.PointerDown(selector.X + 8, selector.Y + 8, 0, false, false);
@@ -630,6 +669,7 @@ internal static class RenderCheck
         {
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            CheckPaletteHints(canvas, view, size.Item1, size.Item2);
             CheckSongSetup(canvas, view, size.Item1, size.Item2);
             CheckTimingSetup(canvas, view, size.Item1, size.Item2);
             if (!view.MovementAnalysisEnabled)
@@ -670,6 +710,26 @@ internal static class RenderCheck
             view.PointerMove(splitter.X - 32, splitter.Y + 20, false, false);
             view.PointerUp(splitter.X - 32, splitter.Y + 20, 0);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            if (size.Item1 >= 1400)
+            {
+                var curveToggle = view.DifficultyCurveToggleBounds;
+                view.PointerDown(curveToggle.X + 10, curveToggle.Y + 10, 0, false, false);
+                view.PointerUp(curveToggle.X + 10, curveToggle.Y + 10, 0);
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+                var curve = view.DifficultyCurveGraphBounds;
+                if (!view.DifficultyCurveVisible || curve.Width < 100
+                    || view.DifficultyCurvePanelBounds.Y != 84
+                    || view.CanvasPlotBounds.Width < EditorView.MinimumPlayfieldWidth)
+                    throw new InvalidOperationException("Difficulty curve sidebar did not fit beside Catch preview.");
+                view.PointerDown(curve.X + curve.Width / 2, curve.Y + 2, 0, false, false);
+                view.PointerMove(curve.X + curve.Width / 2, curve.Bottom - 2, false, false);
+                view.PointerUp(curve.X + curve.Width / 2, curve.Bottom - 2, 0);
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+                curveToggle = view.DifficultyCurveToggleBounds;
+                view.PointerDown(curveToggle.X + 10, curveToggle.Y + 10, 0, false, false);
+                view.PointerUp(curveToggle.X + 10, curveToggle.Y + 10, 0);
+                canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            }
             float previewLeft = view.PreviewResizeBounds.X + 20, previewWidth = size.Item1 - previewLeft - 16;
             for (int mod = 0; mod < 3; mod++)
             {

@@ -26,7 +26,15 @@ public sealed partial class EditorView
         float radius = (item.Kind switch { CatchObjectKind.Droplet => CatchSize.DefaultDropletRadius(cs), CatchObjectKind.TinyDroplet => CatchSize.DefaultTinyDropletRadius(cs), CatchObjectKind.Banana => CatchSize.BananaRadius(cs), _ => CatchSize.FruitRadius(cs) }) * scale;
         radius *= visual.Scale;
         if (hyper) c.Circle(x, y, radius * 1.2f, hyperColour, opacity: opacity * .7f);
-        c.Circle(x, y, radius, colour, opacity: opacity);
+        c.Circle(x, y, radius, item.Kind == CatchObjectKind.Banana ? colour : BrightFallbackColour(colour), opacity: opacity);
+    }
+
+    private static uint BrightFallbackColour(uint colour)
+    {
+        static uint Channel(uint value) => (value * 2 + 255 * 3) / 5;
+        return Channel((colour >> 16) & 0xFF) << 16
+            | Channel((colour >> 8) & 0xFF) << 8
+            | Channel(colour & 0xFF);
     }
 
     private static CatchSkinObject SkinObjectKind(CatchObjectKind kind) => kind switch
@@ -54,6 +62,7 @@ public sealed partial class EditorView
         double timeRadius = Math.Max(7, CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512) / pixelsPerMs;
         foreach (var item in ObjectsInTimeRange(pointerTime - timeRadius, pointerTime + timeRadius))
         {
+            if (!CanSelectCatchObject(item)) continue;
             if (sourceId is { } id && item.SourceId != id) continue;
             var point = new MapPoint(item.TimeMs, item.X);
             double candidateDistance = PointerDistance(point, x, y);
