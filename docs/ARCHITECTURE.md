@@ -103,6 +103,9 @@ On Windows resize, release the Direct2D target attached to the back buffer befor
 
 ## Interactive editing performance
 
+See [Editing performance](EDITING_PERFORMANCE.md) for hot-path constraints, cache
+ownership, correctness boundaries, and review requirements.
+
 The editor keeps a per-instance `CatchConversionCache`. Unchanged FSliders, imported
 sliders, and banana showers reuse their derived output only when their source content,
 conversion settings, timing points, and incoming legacy RNG state match. Cached entries

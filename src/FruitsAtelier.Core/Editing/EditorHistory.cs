@@ -7,6 +7,7 @@ public sealed class EditorHistory
 
     private readonly Stack<Change> undo = new();
     private readonly Stack<Change> redo = new();
+    private readonly ImportedSliderLengthCache breakSliderLengths = new();
     private MapDocument baseline;
     private MapDocument? transactionStart;
     private string transactionLabel = "";
@@ -42,7 +43,8 @@ public sealed class EditorHistory
     {
         if (transactionStart is null) return;
         // Break changes belong to the same undo step as the notes that occupy them.
-        OsuTimeline.ReconcileBreaks(transactionStart, Document);
+        OsuTimeline.ReconcileBreaks(transactionStart, Document, breakSliderLengths);
+        breakSliderLengths.Retain(Document);
         if (!Document.ContentEquals(transactionStart))
         {
             undo.Push(new Change(transactionLabel, transactionStart, Document.DeepClone(), transactionRelated));
@@ -85,6 +87,7 @@ public sealed class EditorHistory
     public void Reset(MapDocument document)
     {
         Document = document.DeepClone();
+        breakSliderLengths.Retain(Document);
         baseline = Document.DeepClone();
         undo.Clear();
         redo.Clear();

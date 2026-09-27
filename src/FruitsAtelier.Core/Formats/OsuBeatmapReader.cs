@@ -19,6 +19,9 @@ public static class OsuBeatmapReader
     }
 
     public static MapDocument Read(string text, string? sourcePath = null)
+        => Read(text, sourcePath, inferDuration: true);
+
+    internal static MapDocument Read(string text, string? sourcePath, bool inferDuration, OsuSliderParseCache? sliderCache = null)
     {
         ArgumentNullException.ThrowIfNull(text);
         if (text.Length > MaximumFileBytes) throw new InvalidDataException(L.Get("core.reader.textLimit"));
@@ -54,7 +57,11 @@ public static class OsuBeatmapReader
             try
             {
                 if (section.Name == "TimingPoints") document.TimingPoints.Add(ParseTiming(line, timingOrder++));
-                else if (section.Name == "HitObjects") ParseObject(document, line, objectOrder++, lazer);
+                else if (section.Name == "HitObjects")
+                {
+                    if (sliderCache is null) ParseObject(document, line, objectOrder++, lazer);
+                    else sliderCache.Parse(document, line, objectOrder++, lazer);
+                }
             }
             catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException or IndexOutOfRangeException or InvalidDataException)
             { throw new InvalidDataException(L.Get("core.reader.lineError", lineNumber, ex.Message), ex); }
@@ -81,17 +88,22 @@ public static class OsuBeatmapReader
             document.AudioPath = sourcePath is null ? audio : ResolveResource(sourcePath, audio);
         }
         Validate(document);
+        if (inferDuration) SetDuration(document, document.ImportedSliders.Select(s => ImportedSliderConverter.EndTimeMs(document, s)));
+        return document;
+
+        double Difficulty(string key, double fallback) => Setting(document, "Difficulty", key) is { } value ? Number(value) : fallback;
+    }
+
+    internal static void SetDuration(MapDocument document, IEnumerable<double> sliderEnds)
+    {
         double last = document.Fruits.Select(f => f.TimeMs)
             .Concat(document.BananaShowers.Select(s => s.EndTimeMs))
-            .Concat(document.ImportedSliders.Select(s => s.TimeMs + ImportedSliderConverter.DurationMs(document, s)))
+            .Concat(sliderEnds)
             .Concat(OsuTimeline.Breaks(document).Select(b => (double)b.EndMs))
             .Concat(OsuTimeline.Bookmarks(document).Select(b => (double)b))
             .DefaultIfEmpty(0).Max();
         if (!double.IsFinite(last) || last > int.MaxValue) throw new InvalidDataException(L.Get("core.reader.endRange"));
         document.DurationMs = Math.Min(int.MaxValue, Math.Max(1000, last + 2000));
-        return document;
-
-        double Difficulty(string key, double fallback) => Setting(document, "Difficulty", key) is { } value ? Number(value) : fallback;
     }
 
     public static string? Setting(MapDocument document, string section, string key) => document.OriginalSections

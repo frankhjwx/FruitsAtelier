@@ -39,6 +39,18 @@ internal static class ToolPaletteTests
 
     public static void PlacementHyperdash()
     {
+        var replacement = Empty();
+        var replacementMap = new MapDocument { DurationMs = 12000 };
+        replacementMap.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1250, X = 100 }, new() { TimeMs = 1500, X = 450 }]);
+        replacementMap.BananaShowers.Add(new() { TimeMs = 2000, EndTimeMs = 2400 });
+        replacement.LoadDocument(replacementMap); replacement.Key('F'); replacement.MoveMap(1250, 450);
+        var preview = (IReadOnlyList<ConvertedCatchObject>)typeof(EditorView).GetField("placementMovementObjects",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(replacement.View)!;
+        replacement.ClickMap(1250, 450);
+        var committed = OsuBeatmapWriter.Serialize(replacement.View.Document).PlayableObjects;
+        Check(preview.Select(o => (o.Kind, o.TimeMs, o.X, o.EventIndex)).SequenceEqual(committed.Select(o => (o.Kind, o.TimeMs, o.X, o.EventIndex))),
+            "Fruit replacement preview disagrees with exported placement or changes downstream random events.");
+
         foreach (int key in new[] { 'F', 'B' })
         {
             var ui = Empty();

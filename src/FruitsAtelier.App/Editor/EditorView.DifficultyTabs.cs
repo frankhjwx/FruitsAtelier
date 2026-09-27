@@ -143,6 +143,10 @@ public sealed partial class EditorView
         {
             var snapshot = document.DeepClone();
             bool compensation = compensateTinyDroplets;
+            // The active editor has already produced immutable playable events for this snapshot.
+            var ratingObjects = index == activeDifficulty && conversion is { Success: true }
+                && !contentDragPreview && convertedWithCompensation == compensation
+                && convertedSnapshot?.ContentEquals(snapshot) == true ? playableObjects : null;
             session.RatingSnapshot = snapshot; session.RatingCompensation = compensation; session.RatingFailed = false;
             var cancellation = session.RatingCancellation.Token;
             session.RatingTask = Task.Run(async () =>
@@ -153,10 +157,14 @@ public sealed partial class EditorView
                     try
                     {
                         cancellation.ThrowIfCancellationRequested();
-                        var converted = CatchStreamConverter.Convert(snapshot, compensation);
-                        if (!converted.Success) return (double?)null;
-                        var exported = OsuBeatmapWriter.Serialize(snapshot, compensation);
-                        var objects = exported.ObjectSequenceMatches ? exported.PlayableObjects : converted.Objects;
+                        var objects = ratingObjects;
+                        if (objects is null)
+                        {
+                            var converted = CatchStreamConverter.Convert(snapshot, compensation);
+                            if (!converted.Success) return (double?)null;
+                            var exported = OsuBeatmapWriter.Serialize(snapshot, compensation);
+                            objects = exported.ObjectSequenceMatches ? exported.PlayableObjects : converted.Objects;
+                        }
                         return (double?)CatchDifficultyCalculator.Calculate(objects, snapshot.CircleSize).StarRating;
                     }
                     finally { ratingWorkers.Release(); }

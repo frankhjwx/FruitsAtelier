@@ -55,6 +55,7 @@ public sealed partial class EditorView
 
     private readonly Guid placementId = Guid.NewGuid();
     private readonly CatchConversionCache placementConversionCache = new();
+    private readonly OsuWriteCache placementWriteCache = new();
     private CatchConversionResult? placementSource;
     private MapPoint? cachedPlacementPoint;
     private Tool cachedPlacementTool;
@@ -77,6 +78,7 @@ public sealed partial class EditorView
         placementSource = conversion; cachedPlacementPoint = point;
         cachedPlacementTool = tool; cachedPlacementCtrl = placementCtrl;
         placementGhost = null; placementMovementObjects = null; placementHyperdash = hyperdashObjects;
+        if (tool == Tool.Fruit && TryPreviewFruitPlacement(point.Value)) return;
         // Conversion reads its inputs; clone only the track whose uncommitted endpoint needs editing.
         var candidate = new MapDocument
         {
@@ -110,7 +112,7 @@ public sealed partial class EditorView
         IReadOnlyList<ConvertedCatchObject> objects = preview.Objects;
         try
         {
-            var exported = OsuBeatmapWriter.Serialize(candidate, compensateTinyDroplets);
+            var exported = OsuBeatmapWriter.Serialize(candidate, compensateTinyDroplets, placementWriteCache);
             if (exported.ObjectSequenceMatches) objects = exported.PlayableObjects;
         }
         catch (InvalidDataException) { }
@@ -159,6 +161,26 @@ public sealed partial class EditorView
             ApplyPlacementFlags(fruit.Id);
             Document.DurationMs = Math.Max(Document.DurationMs, fruit.TimeMs);
         })) { Select(fruit.Id); nextFruitNewCombo = false; }
+    }
+
+    private bool TryPreviewFruitPlacement(MapPoint point)
+    {
+        if (playableExport is null
+            || Document.Tracks.Any(t => t.Nodes.Count > 0 && Math.Abs(t.Nodes[0].TimeMs - point.TimeMs) <= 2)
+            || Document.ImportedSliders.Any(s => Math.Abs(s.TimeMs - point.TimeMs) <= 2)
+            || Document.BananaShowers.Any(s => Math.Abs(s.TimeMs - point.TimeMs) <= 2)) return false;
+        // Standalone fruits consume no NM random state; unchanged parents keep their exported events.
+        var removed = Document.Fruits.Where(f => Math.Abs(f.TimeMs - point.TimeMs) <= 2).Select(f => f.Id).ToHashSet();
+        double time = Math.Round(point.TimeMs, MidpointRounding.AwayFromZero);
+        double x = Math.Round(point.X, MidpointRounding.AwayFromZero);
+        placementGhost = new(placementId, 0, CatchObjectKind.Fruit, time, x, x, x, 0, true);
+        var starts = playableExport.ReadBack.ImportedSliders.Select(s => (s.Id, s.TimeMs))
+            .Concat(playableExport.ReadBack.BananaShowers.Select(s => (s.Id, s.TimeMs)))
+            .ToDictionary(s => s.Id, s => s.TimeMs);
+        placementMovementObjects = playableObjects.Where(o => !removed.Contains(o.SourceId)).Append(placementGhost)
+            .OrderBy(o => o.TimeMs).ThenBy(o => o.IsStandalone ? o.TimeMs : starts[o.SourceId]).ToArray();
+        placementHyperdash = HyperDashCalculator.GetHyperDashStarts(placementMovementObjects, Document.CircleSize);
+        return true;
     }
 
     private static void RemoveFruitPlacementConflicts(MapDocument document, double timeMs)

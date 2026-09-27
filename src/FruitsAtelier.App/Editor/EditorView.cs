@@ -114,6 +114,7 @@ public sealed partial class EditorView
     }
 
     private TimingMap.Lookup? renderedTiming;
+    private readonly OsuWriteCache editorWriteCache = new();
     private bool IsContentDrag => drag is DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn
         or DragKind.HandleOut or DragKind.DraftHandle or DragKind.LegacyControl or DragKind.Objects
         or DragKind.BananaStart or DragKind.BananaEnd or DragKind.TimelineTail;
@@ -162,7 +163,7 @@ public sealed partial class EditorView
             long exportStart = Performance.Start();
             try
             {
-                var exported = OsuBeatmapWriter.Serialize(input, compensateTinyDroplets);
+                var exported = OsuBeatmapWriter.Serialize(input, compensateTinyDroplets, editorWriteCache);
                 if (exported.ObjectSequenceMatches)
                 {
                     playableExport = exported;

@@ -4,6 +4,14 @@ using System.Text;
 
 namespace FruitsAtelier.Core;
 
+// Keep authoring and quantized read-back conversions separate; each cache belongs to one caller.
+public sealed class OsuWriteCache
+{
+    internal CatchConversionCache Source { get; } = new();
+    internal CatchConversionCache ReadBack { get; } = new();
+    internal OsuSliderParseCache ParsedSliders { get; } = new();
+}
+
 public sealed class OsuWriteResult
 {
     public required string Text { get; init; }
@@ -30,10 +38,11 @@ public static class OsuBeatmapWriter
         return result;
     }
 
-    public static OsuWriteResult Serialize(MapDocument document, bool compensateTinyDroplets = true)
+    public static OsuWriteResult Serialize(MapDocument document, bool compensateTinyDroplets = true, OsuWriteCache? cache = null)
     {
         OsuBeatmapReader.Validate(document);
-        var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets);
+        cache?.ParsedSliders.Begin();
+        var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache?.Source);
         if (!converted.Success) throw new InvalidDataException(L.Get("core.writer.incompletePrefix") + string.Join(L.Get("core.diagnostics.separator"), converted.Diagnostics));
         var generated = converted.Sliders.Where(s => document.Tracks.Any(t => t.Id == s.SourceId)).ToArray();
         if (generated.Length != document.Tracks.Count(t => t.StreamSnapDivisor is null)) throw new InvalidDataException(L.Get("core.writer.sliderCount"));
@@ -60,7 +69,8 @@ public static class OsuBeatmapWriter
             if (slider.OriginalLine is not null)
             {
                 var original = new MapDocument();
-                OsuBeatmapReader.ParseObject(original, slider.OriginalLine, slider.SourceOrder);
+                if (cache is null) OsuBeatmapReader.ParseObject(original, slider.OriginalLine, slider.SourceOrder);
+                else cache.ParsedSliders.Parse(original, slider.OriginalLine, slider.SourceOrder);
                 if (original.ImportedSliders.Count != 1) throw new InvalidDataException(L.Get("core.writer.importedText"));
                 original.ImportedSliders[0].Id = slider.Id;
                 if (!slider.ContentEquals(original.ImportedSliders[0])) throw new InvalidDataException(L.Get("core.writer.importedChanged"));
@@ -137,9 +147,14 @@ public static class OsuBeatmapWriter
             foreach (string line in section.Lines) text.Append(line).Append("\r\n");
         }
         string serialized = text.ToString();
-        var readBack = OsuBeatmapReader.Read(serialized, document.SourcePath);
-        var reconverted = CatchStreamConverter.Convert(readBack, compensateTinyDroplets);
+        var readBack = OsuBeatmapReader.Read(serialized, document.SourcePath, inferDuration: false, cache?.ParsedSliders);
+        cache?.ParsedSliders.End();
+        // Parser IDs change on every read. Parent identities keep unchanged geometry reusable across edits.
+        foreach (var slider in readBack.ImportedSliders) slider.Id = orderedLines[slider.SourceOrder].SourceId;
+        foreach (var shower in readBack.BananaShowers) shower.Id = orderedLines[shower.SourceOrder].SourceId;
+        var reconverted = CatchStreamConverter.Convert(readBack, compensateTinyDroplets, cache?.ReadBack);
         if (!reconverted.Success) throw new InvalidDataException(L.Get("core.writer.readBackPrefix") + string.Join(L.Get("core.diagnostics.separator"), reconverted.Diagnostics));
+        OsuBeatmapReader.SetDuration(readBack, reconverted.Sliders.Select(s => s.StartTimeMs + s.DurationMs));
         var sourceIds = readBack.Fruits.Select(f => (f.Id, f.SourceOrder))
             .Concat(readBack.ImportedSliders.Select(s => (s.Id, s.SourceOrder)))
             .Concat(readBack.BananaShowers.Select(s => (s.Id, s.SourceOrder)))
@@ -192,7 +207,7 @@ public static class OsuBeatmapWriter
             : [];
         var playableEndTimes = matches
             ? readBack.Fruits.Select(f => (SourceId: sourceIds[f.Id], EndTimeMs: f.TimeMs))
-                .Concat(readBack.ImportedSliders.Select(s => (SourceId: sourceIds[s.Id], EndTimeMs: ImportedSliderConverter.EndTimeMs(readBack, s))))
+                .Concat(reconverted.Sliders.Select(s => (SourceId: sourceIds[s.SourceId], EndTimeMs: s.StartTimeMs + s.DurationMs)))
                 .Concat(readBack.BananaShowers.Select(s => (SourceId: sourceIds[s.Id], EndTimeMs: s.EndTimeMs)))
                 .GroupBy(item => item.SourceId).ToDictionary(group => group.Key, group => group.Max(item => item.EndTimeMs))
             : [];

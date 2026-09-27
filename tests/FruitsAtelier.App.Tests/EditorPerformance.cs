@@ -5,6 +5,52 @@ using FruitsAtelier.Core;
 
 internal static class EditorPerformance
 {
+    public static int RunFruitPlacement(string path)
+    {
+        var document = OsuBeatmapReader.ReadFile(path);
+        var ui = new Ui(); ui.LoadDocument(document); ui.Key('F');
+        Console.WriteLine($"Fruit placement: fruits={document.Fruits.Count}, sliders={document.ImportedSliders.Count}, bananas={document.BananaShowers.Count}");
+        var conversionCache = new CatchConversionCache();
+        var writeCache = new OsuWriteCache();
+        foreach (bool export in new[] { false, true })
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                long bytes = GC.GetAllocatedBytesForCurrentThread();
+                var timer = Stopwatch.StartNew();
+                if (export) _ = OsuBeatmapWriter.Serialize(document, cache: writeCache);
+                else _ = CatchStreamConverter.Convert(document, cache: conversionCache);
+                if (i == 3) Console.WriteLine($"Warm {(export ? "export" : "conversion")}: {timer.Elapsed.TotalMilliseconds:F2} ms, {(GC.GetAllocatedBytesForCurrentThread() - bytes) / 1024} KiB");
+            }
+        }
+        foreach (bool click in new[] { false, true })
+        {
+            var samples = new List<double>();
+            var dispatch = new List<double>();
+            var render = new List<double>();
+            long allocated = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 24; i++)
+            {
+                var watch = Stopwatch.StartNew();
+                if (click)
+                {
+                    var p = ui.ScreenAt(1250, 50 + i * 16);
+                    ui.View.PointerDown(p.X, p.Y, 0, false, false);
+                    double inputMs = watch.Elapsed.TotalMilliseconds;
+                    ui.Paint(); ui.View.PointerUp(p.X, p.Y, 0); ui.Paint();
+                    if (i >= 4) { dispatch.Add(inputMs); render.Add(watch.Elapsed.TotalMilliseconds - inputMs); }
+                }
+                else ui.MoveMap(1250, 50 + i * 16);
+                if (i >= 4) samples.Add(watch.Elapsed.TotalMilliseconds);
+            }
+            samples.Sort();
+            Console.WriteLine($"{(click ? "Click + render" : "Hover + render")}: median={samples[10]:F2} ms, p95={samples[19]:F2} ms, allocation={(GC.GetAllocatedBytesForCurrentThread() - allocated) / 24 / 1024} KiB/operation");
+            if (click) { dispatch.Sort(); render.Sort(); Console.WriteLine($"  Dispatch median={dispatch[10]:F2} ms; rendering median={render[10]:F2} ms"); }
+        }
+        ui.View.NewProject();
+        return 0;
+    }
+
     public static int RunAnchorDrag(string path)
     {
         var document = ProjectSerializer.ReadFile(path);

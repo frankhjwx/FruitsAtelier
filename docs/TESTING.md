@@ -163,6 +163,13 @@ After changing input or drawing, manually check affected operations, language sw
 
 ## Editing performance benchmark
 
+Follow the [editing performance constraints](EDITING_PERFORMANCE.md) when changing
+interactive paths. For a read-only benchmark of an existing `.osu` map, run the App
+test executable with `--fruit-placement-performance <path.osu>`. It measures warm
+conversion/export, fruit hover and repeated same-time replacement, including pointer
+dispatch, rendering and per-operation allocations. Edits stay in memory. This uses
+`RecordingCanvas` and does not measure physical display latency.
+
 Windows builds automatically aggregate UI performance into `editor.log`. Every
 five seconds with processed window messages, an interval containing a sample of
 at least 16 ms is written; fast-only intervals are discarded. Shutdown flushes the

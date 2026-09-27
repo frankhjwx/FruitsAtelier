@@ -16,6 +16,7 @@ if (args.Length == 2 && args[0] == "--import-roundtrip")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Cached export matches full serialization across edits, order, RNG, timing and streams", WriteCacheTests.MatchesUncached),
     ("v12, v13 and compatible v128 imports preserve gameplay, optional fields and v14 export", CompatibleVersions),
     ("v128 rejects fractional coordinates and unsupported slider syntax", LazerExtensions),
     ("Workspace isolation, recovery, indexing and explicit export", WorkspaceTests.Run),
