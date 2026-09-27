@@ -64,9 +64,17 @@ Hyperdash uses stably time-sorted Fruits / Droplets, excluding TinyDroplets and 
 
 Fruit and droplet bases use combo colours, while overlays remain white. Beatmap
 `[Colours]` takes precedence over skin colours and honours combo-skip offsets;
-skin colours advance at combo boundaries without those offsets. Nested slider
+Catch skin colours advance once per parent element using its zero-based map index
+plus one, independently of NC flags and skip offsets. The upper object timeline
+continues to use NC-group colours. Nested slider
 objects inherit their parent colour. Bananas use the three deterministic yellow
 tints from `Banana.cs`. Without a palette or skin, ordinary geometric objects stay white.
+
+Colour lookup references at osu!lazer revision
+[`325c8f5c68413ca3085e4faa7dbf28c237c19ae7`](https://github.com/ppy/osu/tree/325c8f5c68413ca3085e4faa7dbf28c237c19ae7):
+`PalpableCatchHitObject.GetComboColour` selects `IndexInBeatmap + 1`,
+`CatchBeatmapProcessor.PostProcess` shares the index with nested objects, and
+`LegacyBeatmapSkin.GetComboColour` overrides it with `ComboIndexWithOffsets`.
 
 Hyperdash draws only the base texture as a 1.2× additive underlay at 70% opacity,
 tinted with `HyperDashFruit` (falling back to `HyperDash` / red), followed by the

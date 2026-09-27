@@ -136,6 +136,25 @@ internal static class TestplayTests
         Check(ui.Canvas.Sprites.Any(s => s.Rotation != 0), "right-hand preview applies fruit rotation");
         ui.View.StartTestplay(); clock.Advance(100); ui.Paint();
         Check(ui.Canvas.Sprites.Any(s => s.Rotation != 0), "F5 playtest applies the same fruit rotation");
+        ui.View.StopTestplay();
+        var catchMap = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,1,0\n200,192,1100,1,0\n160,192,1200,22,0,L|300:192,1,140\n300,192,2000,1,0\n");
+        ui.LoadDocument(catchMap);
+        uint[] expected = [0x00CA00, 0x127CFF, 0xF21839, 0xFFC000];
+        var parents = new[] { catchMap.Fruits[0].Id, catchMap.Fruits[1].Id,
+            catchMap.ImportedSliders[0].Id, catchMap.Fruits[2].Id };
+        var colourMethod = typeof(FruitsAtelier.App.Editor.EditorView).GetMethod("ObjectColour",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        for (int i = 0; i < parents.Length; i++)
+        {
+            var children = ui.View.Conversion.Objects.Where(o => o.SourceId == parents[i]).ToArray();
+            Check(children.Length > 0, "colour fixture has converted children");
+            foreach (var child in children)
+                Check((uint)colourMethod.Invoke(ui.View, [child])! == expected[i],
+                    "Catch skin colours advance per parent, including all slider children, independently of NC skips");
+        }
+        Check(ui.View.Conversion.Objects.Any(o => o.Kind == CatchObjectKind.Droplet)
+            && ui.View.Conversion.Objects.Any(o => o.Kind == CatchObjectKind.TinyDroplet),
+            "colour fixture covers droplets and tiny droplets");
     }
     public static void EscapeReturnsToEditor()
     {
