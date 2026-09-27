@@ -57,7 +57,9 @@ public sealed class CatchSkin
             var candidate = new CatchSkin(Path.GetFullPath(folder));
             candidate.fallback = fallback;
             if (!Directory.Exists(candidate.FolderPath)) { message = L.Get("skin.folderMissing"); return false; }
-            var files = Directory.EnumerateFiles(candidate.FolderPath).ToDictionary(p => Path.GetFileName(p)!, p => p, StringComparer.OrdinalIgnoreCase);
+            var files = Directory.EnumerateFiles(candidate.FolderPath, "*", new EnumerationOptions
+            { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint }).ToDictionary(
+                p => Path.GetRelativePath(candidate.FolderPath, p).Replace('\\', '/'), p => p, StringComparer.OrdinalIgnoreCase);
             int invalid = 0;
             if (files.TryGetValue("skin.ini", out var configuration)) candidate.ReadConfiguration(configuration);
             for (int digit = 0; digit <= 9; digit++)
@@ -282,6 +284,10 @@ public sealed class CatchSkin
         return new(centerX - width / 2, centerY - height / 2, width, height);
     }
 
+    private static bool IsFontPrefix(string value) => value.Replace('\\', '/').Split('/').All(part =>
+        part.Length > 0 && part is not "." and not ".." && !part.EndsWith('.') && !part.EndsWith(' ')
+        && !part.Any(c => c < 32 || ":<>\"|?*".Contains(c)));
+
     private void ReadConfiguration(string path)
     {
         if (new FileInfo(path).Length > 1024 * 1024) return;
@@ -301,14 +307,14 @@ public sealed class CatchSkin
             if (section.Equals("Fonts", StringComparison.OrdinalIgnoreCase))
             {
                 if (key.Equals("HitCirclePrefix", StringComparison.OrdinalIgnoreCase) && value.Length > 0 &&
-                    !value.Contains('/') && !value.Contains('\\') && value.IndexOfAny(Path.GetInvalidFileNameChars()) < 0)
-                    hitCirclePrefix = value;
+                    IsFontPrefix(value))
+                    hitCirclePrefix = value.Replace('\\', '/');
                 if (key.Equals("HitCircleOverlap", StringComparison.OrdinalIgnoreCase) &&
                     float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float hitOverlap) && float.IsFinite(hitOverlap))
                     hitCircleOverlap = Math.Clamp(hitOverlap, -128, 128);
                 if (key.Equals("ComboPrefix", StringComparison.OrdinalIgnoreCase) && value.Length > 0 &&
-                    !value.Contains('/') && !value.Contains('\\') && value.IndexOfAny(Path.GetInvalidFileNameChars()) < 0)
-                    comboPrefix = value;
+                    IsFontPrefix(value))
+                    comboPrefix = value.Replace('\\', '/');
                 if (key.Equals("ComboOverlap", StringComparison.OrdinalIgnoreCase) &&
                     float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float overlap) && float.IsFinite(overlap))
                     comboOverlap = Math.Clamp(overlap, -100, 100);

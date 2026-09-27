@@ -62,6 +62,10 @@ It creates 500,000 synthetic map records in distinct sets under `artifacts/libra
 
 ## External test resources
 
+Run `dotnet run --project tests/FruitsAtelier.SkinArchive.Tests -c Release -- --import-archive <path.osk>`
+to validate a user-owned skin archive and load its textures. The source archive is read-only;
+the extracted cache stays under `artifacts/tests/skin-archive/external`.
+
 To check an individual supported `.osu` without modifying it, run the Formats test executable with `--import-roundtrip <path>`. This verifies project persistence and v14 export preserve raw object/timing lines and the converted Catch sequence, times and positions.
 
 The repository contains synthetic format fixtures, older `.catchproj` compatibility fixtures, and OGG audio fixtures. These checks additionally require local resources:

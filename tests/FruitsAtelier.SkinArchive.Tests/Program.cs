@@ -7,6 +7,7 @@ using FruitsAtelier.App.Skinning;
 var tests = new (string Name, Action<string> Run)[]
 {
     ("Root and nested skin packages extract editor skin assets and reuse completed hashes", ImportAndReuse),
+    ("Lazer legacy exports preserve nested font resources", NestedFonts),
     ("All archive paths reject traversal, absolute paths and Windows aliases", MaliciousPaths),
     ("Case-insensitive duplicates and multiple skin roots are rejected", AmbiguousEntries),
     ("Declared individual and cumulative expansion limits are enforced before extraction", ExpansionLimits),
@@ -18,6 +19,13 @@ var tests = new (string Name, Action<string> Run)[]
 
 string testBase = Path.GetFullPath("artifacts/tests/skin-archive");
 Directory.CreateDirectory(testBase);
+if (args.Length == 2 && args[0] == "--import-archive")
+{
+    string imported = SkinArchive.Import(args[1], Path.Combine(testBase, "external"));
+    if (!CatchSkin.TryLoad(imported, out var skin, out string message)) throw new Exception(message);
+    Console.WriteLine($"Imported {skin!.Name}: {skin.TextureCount} textures; {imported}");
+    return 0;
+}
 int failures = 0;
 foreach (var test in tests)
 {
@@ -38,6 +46,23 @@ return failures == 0 ? 0 : 1;
 
 static byte[] Png() => Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jZxkAAAAASUVORK5CYII=");
 
+static void NestedFonts(string root)
+{
+    foreach (string wrapper in new[] { "", "wrapped/" })
+    {
+        string archive = MakeZip(root, [(wrapper + "skin.ini", "[General]\nName: Lazer export\n[Fonts]\nHitCirclePrefix: Numbers/Default/D\nComboPrefix: Numbers\\Combo\\C"u8.ToArray()),
+            (wrapper + "Numbers/Default/D-0@2x.png", Png()), (wrapper + "Numbers/Combo/C-0.png", Png())]);
+        string folder = SkinArchive.Import(archive, Path.Combine(root, "cache"));
+        True(CatchSkin.TryLoad(folder, out var skin, out _) && skin!.TextureCount == 2, "Nested font glyphs were not loaded.");
+        True(File.Exists(Path.Combine(folder, "Numbers/Default/D-0@2x.png")), "Font path was flattened.");
+        True(SkinArchive.Import(archive, Path.Combine(root, "cache")) == folder, "Nested cache was not reused.");
+        File.Delete(Path.Combine(folder, "Numbers/Combo/C-0.png"));
+        Reject(() => SkinArchive.Import(archive, Path.Combine(root, "cache")));
+    }
+    string multiple = MakeZip(root, [("skin.ini", "[General]"u8.ToArray()), ("other/skin.ini", "[General]"u8.ToArray()), ("fruit-pear.png", Png())]);
+    Reject(() => SkinArchive.Import(multiple, Path.Combine(root, "cache")));
+}
+
 static void ImportAndReuse(string root)
 {
     foreach (string wrapper in new[] { "", "one/", "one/two/three/" })
@@ -51,7 +76,7 @@ static void ImportAndReuse(string root)
         string cache = Path.Combine(root, "cache");
         string folder = SkinArchive.Import(archive, cache);
         string key = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive))).ToLowerInvariant();
-        True(folder == Path.Combine(cache, "v5-" + key), "Cache is not keyed by extraction version and archive contents.");
+        True(folder == Path.Combine(cache, "v6-" + key), "Cache is not keyed by extraction version and archive contents.");
         True(CatchSkin.TryLoad(folder, out var skin, out _) && skin!.Name == "Import fixture", "Extracted skin cannot be loaded.");
         True(!File.Exists(Path.Combine(folder, "ignored.exe")), "Unselected package content was extracted.");
         True(Directory.GetFiles(folder).Length == 9 && File.Exists(Path.Combine(folder, "custom-0@2x.png")), "Combo glyphs were not extracted.");
@@ -121,7 +146,7 @@ static void IncompleteCache(string root)
     string archive = MakeZip(root, [("fruit-pear.png", Png()), ("fruit-apple.png", Png())]);
     string cache = Path.Combine(root, "cache");
     string key = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive))).ToLowerInvariant();
-    string partial = Path.Combine(cache, "v5-" + key);
+    string partial = Path.Combine(cache, "v6-" + key);
     Directory.CreateDirectory(partial);
     File.WriteAllText(Path.Combine(partial, "sentinel.txt"), "preserve");
     Reject(() => SkinArchive.Import(archive, cache));

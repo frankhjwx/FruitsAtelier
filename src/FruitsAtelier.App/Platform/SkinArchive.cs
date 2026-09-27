@@ -42,11 +42,16 @@ public static class SkinArchive
             selected.Add((entry, separator < 0 ? "" : normalized[..separator], name));
         }
         if (selected.Count == 0) throw new InvalidDataException(L.Get("skinArchive.noFiles"));
-        if (selected.Select(e => e.Folder).Distinct(StringComparer.OrdinalIgnoreCase).Count() != 1)
+        var configurations = selected.Where(e => e.Name.Equals("skin.ini", StringComparison.OrdinalIgnoreCase)).ToArray();
+        string skinRoot = configurations.Length == 1 ? configurations[0].Folder : selected[0].Folder;
+        if (configurations.Length > 1 || selected.Any(e => !e.Folder.Equals(skinRoot, StringComparison.OrdinalIgnoreCase)
+            && (configurations.Length == 0 || (skinRoot.Length > 0 && !e.Folder.StartsWith(skinRoot + "/", StringComparison.OrdinalIgnoreCase)))))
             throw new InvalidDataException(L.Get("skinArchive.multipleFolders"));
+        selected = selected.Select(e => (e.Entry, e.Folder,
+            (e.Folder.Length == skinRoot.Length ? "" : e.Folder[(skinRoot.Length == 0 ? 0 : skinRoot.Length + 1)..] + "/") + e.Name)).ToList();
 
         // Version the cache when the extracted resource set changes.
-        string destination = ChildPath(root, "v5-" + key);
+        string destination = ChildPath(root, "v6-" + key);
         if (Directory.Exists(destination))
         {
             EnsureComplete(destination, key, selected);
@@ -63,6 +68,8 @@ public static class SkinArchive
             foreach (var file in selected)
             {
                 string path = ChildPath(staging, file.Name);
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                RejectReparseAncestors(Path.GetDirectoryName(path)!);
                 using var source = file.Entry.Open();
                 using var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
                 byte[] buffer = new byte[81920];
@@ -92,13 +99,15 @@ public static class SkinArchive
             if (Directory.Exists(staging))
             {
                 RejectReparseAncestors(staging);
-                foreach (string file in Directory.EnumerateFiles(staging))
+                foreach (string directory in Directory.EnumerateDirectories(staging, "*", SearchOption.AllDirectories))
+                    RejectReparseAncestors(directory);
+                foreach (string file in Directory.EnumerateFiles(staging, "*", SearchOption.AllDirectories))
                 {
-                    if (Path.GetDirectoryName(Path.GetFullPath(file)) != staging)
-                        throw new IOException(L.Get("skinArchive.tempBoundary"));
+                    ChildPath(staging, Path.GetRelativePath(staging, file));
+                    RejectReparseAncestors(Path.GetDirectoryName(file)!);
                     File.Delete(file);
                 }
-                Directory.Delete(staging, recursive: false);
+                Directory.Delete(staging, recursive: true);
             }
         }
     }
@@ -114,7 +123,9 @@ public static class SkinArchive
         if (new FileInfo(marker).Length != key.Length)
             throw new InvalidDataException(L.Get("skinArchive.invalidMarker"));
         if (File.ReadAllText(marker) != key) throw new InvalidDataException(L.Get("skinArchive.markerMismatch"));
-        if (Directory.EnumerateDirectories(folder).Any() || Directory.EnumerateFiles(folder).Count() != selected.Count + 1)
+        foreach (string directory in Directory.EnumerateDirectories(folder, "*", SearchOption.AllDirectories))
+            RejectReparseAncestors(directory);
+        if (Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories).Count() != selected.Count + 1)
             throw new InvalidDataException(L.Get("skinArchive.modifiedFiles"));
         foreach (var entry in selected)
         {
