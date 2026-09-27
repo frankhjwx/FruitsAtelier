@@ -214,7 +214,24 @@ public sealed partial class EditorView
         if (ctrl && StraightenHitPoint(x, y)) return;
         if (ctrl && tool == Tool.Select && SelectedTrack is { } parent && HitCatchObject(x, y) is { } other && other.SourceId != parent.Id)
         { PickObject(other.SourceId, true); return; }
+        if (ctrl && tool == Tool.Select && SelectedImportedSlider is { } importedParent
+            && HitCatchObject(x, y) is { } otherObject && otherObject.SourceId != importedParent.Id)
+        { PickObject(otherObject.SourceId, true); return; }
         if (!ctrl && TryBeginSelectedSliderObjectDrag(x, y)) return;
+        if (showTargets && ctrl && tool is Tool.Select or Tool.Slider && objectSelection.Count == 1
+            && SelectedImportedSlider is { } imported)
+        {
+            var point = MapAt(x, y, anchorSnap);
+            var generated = conversion!.Sliders.FirstOrDefault(s => s.SourceId == imported.Id);
+            if (generated is not null && point.TimeMs > generated.StartTimeMs && point.TimeMs < generated.StartTimeMs + generated.DurationMs)
+            {
+                double duration = generated.DurationMs / generated.SpanCount;
+                int span = Math.Min(generated.SpanCount - 1, (int)((point.TimeMs - generated.StartTimeMs) / duration));
+                double local = point.TimeMs - generated.StartTimeMs - span * duration;
+                InsertControlPoint(new(imported.Id, generated.StartTimeMs + (span % 2 == 0 ? local : duration - local)), point.X);
+            }
+            return;
+        }
         if (LegacyMode && HandleLegacyPointerDown(x, y, button, ctrl)) return;
         if (!LegacyMode && showTargets && ctrl && tool is Tool.Select or Tool.Slider
             && draftTrack == Guid.Empty && objectSelection.Count <= 1 && SelectedTrack is { } insertTrack)
@@ -224,8 +241,6 @@ public sealed partial class EditorView
                 InsertControlPoint(new(insertTrack.Id, CurveMath.FirstSpanTime(insertTrack, point.TimeMs)), point.X);
             return;
         }
-        if (showTargets && ctrl && SelectedImportedSlider is { } imported && HitSliderLocation(x, y) is { } importedHit && importedHit.Id == imported.Id)
-        { InsertControlPoint(importedHit); return; }
         if (!ctrl && TryBeginSelectedBananaHandle(x, y)) return;
         if (tool != Tool.Slider && !ctrl && showTargets && objectSelection.Count == 1 && SelectedTrack is { } selectedObject)
         {
@@ -1213,10 +1228,15 @@ public sealed partial class EditorView
 
     private void BeginNodeDrag(CurveTrack track, Anchor node, DragKind kind, float x, float y)
     {
+        if (draftTrack == Guid.Empty) history.Begin(kind == DragKind.Anchor ? L.Get("editor.command.moveAnchor") : L.Get("editor.command.adjustHandle"));
+        ContinueNodeDrag(track, node, kind, x, y);
+    }
+
+    private void ContinueNodeDrag(CurveTrack track, Anchor node, DragKind kind, float x, float y)
+    {
         Select(node.Id, track.Id);
         if (HitCatchObject(x, y) is { } item) PickSoundEdge(item);
         selectedPart = kind;
-        if (draftTrack == Guid.Empty) history.Begin(kind == DragKind.Anchor ? L.Get("editor.command.moveAnchor") : L.Get("editor.command.adjustHandle"));
         drag = kind;
         BeginPointerDrag(x, y);
         var original = Point(node);

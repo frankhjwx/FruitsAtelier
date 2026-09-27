@@ -49,7 +49,7 @@ internal static class MixedSliderTests
         ui.LoadDocument(map); ui.Paint();
         ui.Key('1'); ui.ClickMap(1000, 160);
         ui.HoldMap(1000, 160); ui.ClickText(FruitsAtelier.Localization.Strings.Get("preview.convertSlider"));
-        ui.ClickText(FruitsAtelier.Localization.Strings.Get("sliderBatch.convert"));
+        Check(!ui.View.SliderImportPromptVisible, "Single-slider conversion prompted instead of editing.");
         var track = ui.View.Document.Tracks.Single();
         Check(track.Id == id && track.SpanCount == 1 && track.CompensateTinyDroplets == true
             && ui.View.Document.ImportedSliders.Count == 0, "Conversion lost the original parent identity or FSlider alignment policy.");

@@ -66,7 +66,7 @@ public sealed partial class EditorView
                 target = Document.Tracks.FirstOrDefault(t => t.Id == location.Id) ?? ConvertImportedSlider(location.Id).Track;
                 int index = target.Nodes.FindIndex(n => n.TimeMs > location.FirstSpanTimeMs) - 1;
                 if (index < 0) throw new ArgumentException(L.Get("editor.error.insertBetweenPoints"));
-                insertedId = SliderControlEditing.Insert(target, index, new(location.FirstSpanTimeMs, CurveMath.PositionAtTime(target, location.FirstSpanTimeMs)), ControlCurveMath.ReferenceScale(Document.ApproachRate));
+                insertedId = SliderControlEditing.Insert(target, index, new(location.FirstSpanTimeMs, desiredX ?? CurveMath.PositionAtTime(target, location.FirstSpanTimeMs)), ControlCurveMath.ReferenceScale(Document.ApproachRate), allowArcFallback: desiredX is not null);
             })) { tool = Tool.Slider; SelectAnchors(target!, [insertedId]); }
             return;
         }

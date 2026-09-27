@@ -207,7 +207,7 @@ internal static class DropletDragTests
         }
     }
 
-    public static void LegacyRequiresConversion()
+    public static void LegacySelectionPreservesSource()
     {
         var map = new MapDocument { DurationMs = 5000, SliderTickRate = 1, IsDemo = false };
         var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'L', PixelLength = 200 };
@@ -219,9 +219,9 @@ internal static class DropletDragTests
             var original = ui.View.Document.DeepClone();
             var child = CatchStreamConverter.Convert(map).Objects.First(o => o.SourceId == slider.Id && o.Kind == kind);
             ui.ClickMap(child.TimeMs, child.X); ui.ClickMap(child.TimeMs, child.X);
-            Check(ui.View.SelectedObjectIds.Single() == slider.Id && ui.View.XCoordinateFieldBounds is null
+            Check(ui.View.SelectedObjectIds.Single() == slider.Id && ui.View.XCoordinateFieldBounds is not null
                 && original.ContentEquals(ui.View.Document),
-                $"Legacy {kind} was selected or auto-converted before its parent became an FSlider.");
+                $"Selecting Legacy {kind} changed its representation before an edit.");
         }
         ImportedSliderEditing.ConvertToTrack(map, slider.Id);
         var converted = CatchStreamConverter.Convert(map);

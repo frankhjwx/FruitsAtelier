@@ -668,7 +668,6 @@
   "sliderBatch.menu": "Convert all sliders to FSliders",
   "sliderBatch.command": "Convert all Legacy Sliders",
   "sliderBatch.prompt": "Convert the imported Legacy Sliders? Sliders: {0} · Difficulties: {1}",
-  "sliderBatch.singlePrompt": "Convert this Legacy Slider to an FSlider?",
   "sliderBatch.derandomizeOn": "Derandomize droplets: On",
   "sliderBatch.derandomizeOff": "Derandomize droplets: Off (keep random positions)",
   "sliderBatch.help": "Create editable paths with matching duration; approximate shapes where needed.",

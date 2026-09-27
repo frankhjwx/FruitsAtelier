@@ -287,8 +287,7 @@ internal static class SliderInteractionTests
         var ui = Load(map);
         Guid sourceId = map.ImportedSliders.Single().Id;
         ui.ClickMap(1500, 200); ui.HoldMap(1000, 100); ui.ClickText(FruitsAtelier.Localization.Strings.Get("preview.convertSlider"));
-        Check(ui.View.SliderImportPromptVisible, "First conversion did not offer droplet options.");
-        ui.ClickText(FruitsAtelier.Localization.Strings.Get("sliderBatch.convert"));
+        Check(!ui.View.SliderImportPromptVisible, "Single-slider editing must convert without a prompt.");
         var track = ui.View.Document.Tracks.Single();
         Check(track.Id == sourceId && track.CompensateTinyDroplets == true && ui.View.Document.ImportedSliders.Count == 0,
             "Context conversion did not replace the Legacy Slider with one FSlider.");

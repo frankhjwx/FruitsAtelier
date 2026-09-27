@@ -668,7 +668,6 @@
   "sliderBatch.menu": "将所有 slider 转为 FSlider",
   "sliderBatch.command": "批量转换 Legacy Slider",
   "sliderBatch.prompt": "将新导入的 {1} 个难度内的 {0} 个 slider 转为 FSlider？",
-  "sliderBatch.singlePrompt": "将此 Legacy Slider 转为 FSlider？",
   "sliderBatch.derandomizeOn": "去随机化 droplet：开启",
   "sliderBatch.derandomizeOff": "去随机化 droplet：关闭（保留随机位置）",
   "sliderBatch.help": "转换为可编辑轨迹并保持时长；必要时使用近似形状。",

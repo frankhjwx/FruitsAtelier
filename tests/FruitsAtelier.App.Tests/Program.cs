@@ -21,6 +21,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Legacy slider editing converts silently with atomic drag, insertion and cancellation", ImplicitSliderEditingTests.Run),
     ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),
     ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),
     ("Shortcut routing isolates Timing object nudges and preserves navigation", ShortcutRoutingTests.TimingPage),
@@ -197,7 +198,7 @@ var tests = new (string Name, Action Run)[]
     ("Droplet dragging handles fractional timing and dense anchors", DropletDragTests.ConvertedAndDenseCurves),
     ("Default slider mode drags displayed droplets continuously", DropletDragTests.DefaultModeDrag),
     ("Legacy-converted FSlider children drag in default mode", DropletDragTests.DragAfterLegacyConversion),
-    ("Legacy slider children require conversion before individual selection", DropletDragTests.LegacyRequiresConversion),
+    ("Legacy slider child selection preserves its source until editing", DropletDragTests.LegacySelectionPreservesSource),
     ("HDash fruit, catcher and afterimage use separate skin colours", HyperDashSkinTests.ThreeColours),
     ("Legacy Slider long-press buttons convert to a strictly aligned FSlider", SliderInteractionTests.LegacyContextConversion),
     ("Selected parents snap from the earliest start and keep one time and X offset", RequestedInteractionTests.MultiObjectDrag),
