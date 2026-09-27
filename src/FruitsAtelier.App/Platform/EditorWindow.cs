@@ -16,7 +16,8 @@ internal sealed partial class EditorWindow : IDisposable
     private float dpi = 96;
     private bool failed, disposed, painting, recoveringRenderer;
     private bool framePending;
-    private bool ImmediatePresentation => view.IsTestplaying || canvas?.DiagnosticImmediatePresentation == true;
+    private bool ImmediatePresentation => view.IsTestplaying ||
+        (canvas?.DiagnosticImmediatePresentation ?? view.LibrarySettings.LowLatencyDisplay);
     private string lastTitle = "";
     private int frames;
     private readonly Stopwatch renderTimer = new();
@@ -27,6 +28,7 @@ internal sealed partial class EditorWindow : IDisposable
     public EditorWindow()
     {
         procedure = WndProc;
+        view.SupportsDisplayMode = true;
         view.Performance.Enabled = true;
         ConfigureFiles();
         view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
@@ -100,7 +102,7 @@ internal sealed partial class EditorWindow : IDisposable
             view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
             // DXGI need not signal frame readiness for an entirely hidden window.
             if (ImmediatePresentation) Native.ShowWindow(hwnd, 4);
-            try { CheckPaintLifecycle(); CheckUpdateRefresh(); }
+            try { CheckPaintLifecycle(); CheckUpdateRefresh(); CheckDisplayPreference(); }
             finally { Native.ShowWindow(hwnd, 0); }
             Diagnostics.RenderCheck.Run(canvas, view, hwnd);
             Native.DestroyWindow(hwnd);
@@ -286,7 +288,7 @@ internal sealed partial class EditorWindow : IDisposable
                     if (ownsPaint) painting = false;
                 }
                 // DXGI readiness wakes immediate-mode drawing; window messages can interrupt that wait.
-                if (audio.IsPlaying && !view.IsTestplaying && canvas?.DiagnosticImmediatePresentation != true && !Native.IsIconic(window)) Invalidate();
+                if (audio.IsPlaying && !ImmediatePresentation && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0014: return 1; // WM_ERASEBKGND
             case 0x0113: // WM_TIMER

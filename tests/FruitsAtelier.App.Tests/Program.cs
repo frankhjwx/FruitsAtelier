@@ -21,6 +21,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
     ("Legacy slider editing converts silently with atomic drag, insertion and cancellation", ImplicitSliderEditingTests.Run),
     ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),
     ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),

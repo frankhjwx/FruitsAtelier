@@ -5,6 +5,25 @@ namespace FruitsAtelier.App.Platform;
 
 internal sealed partial class EditorWindow
 {
+    private void CheckDisplayPreference()
+    {
+        if (canvas?.DiagnosticImmediatePresentation is not null) return;
+        bool original = view.LibrarySettings.LowLatencyDisplay;
+        try
+        {
+            foreach (bool lowLatency in new[] { true, false })
+            {
+                view.LibrarySettings.LowLatencyDisplay = lowLatency;
+                if (ImmediatePresentation != lowLatency)
+                    throw new InvalidOperationException("Display preference did not change window presentation.");
+                Native.ShowWindow(hwnd, 4);
+                CheckUpdateRefresh();
+            }
+            AppLog.Write("Display preference check passed: live switching and paused update repaints in both modes.");
+        }
+        finally { view.LibrarySettings.LowLatencyDisplay = original; Native.ShowWindow(hwnd, 0); }
+    }
+
     private void CheckUpdateRefresh()
     {
         CheckUpdateRefresh(false);

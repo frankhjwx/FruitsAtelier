@@ -152,6 +152,14 @@ Audio, Advanced and preferred-skin controls are not part of Song Setup.
 
 ## Settings
 
+On Windows, **General → Display mode** offers **Vertical sync (default)** and
+**Low latency**. The highlighted hint recommends trying this option for audio
+delay or sound/picture mismatch. **Apply** saves the preference and switches
+presentation immediately, including paused editing and Library; no diagnostic
+launcher or restart is needed. Closing without applying discards the draft.
+Testplay retains its low-latency presentation. Diagnostic display launchers
+override this preference for their run. macOS does not expose this Windows setting.
+
 **General → Default derandomize droplets** sets the initial choice for Legacy Slider conversion in maps without a saved choice. Applying it saves the preference across launches; changing the default does not alter an existing map's saved choice.
 
 Settings pages use 24 DIP page headings and 13 DIP labels, values, and actions. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In Appearance, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.

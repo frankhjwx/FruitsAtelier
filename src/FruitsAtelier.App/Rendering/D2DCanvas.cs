@@ -16,7 +16,7 @@ namespace FruitsAtelier.App.Rendering;
 public sealed class D2DCanvas : ICanvas, IDisposable
 {
     private readonly Audio.AudioDiagnosticLog? displayDiagnostics;
-    internal bool DiagnosticImmediatePresentation { get; }
+    internal bool? DiagnosticImmediatePresentation { get; }
     private double nextDisplaySampleMs, frameBeganMs;
     private long diagnosticFrame;
     private object? diagnosticAudio;
