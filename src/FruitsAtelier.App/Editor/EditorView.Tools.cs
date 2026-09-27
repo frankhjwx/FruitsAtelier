@@ -99,7 +99,11 @@ public sealed partial class EditorView
             if (AppendDraftAnchor(track, point.Value, placementCtrl) is null) return;
             source = track.Id;
         }
-        else candidate.Fruits.Add(new Fruit { Id = placementId, TimeMs = point.Value.TimeMs, X = point.Value.X });
+        else
+        {
+            if (tool == Tool.Fruit) RemoveFruitPlacementConflicts(candidate, point.Value.TimeMs);
+            candidate.Fruits.Add(new Fruit { Id = placementId, TimeMs = point.Value.TimeMs, X = point.Value.X });
+        }
         candidate.Tracks.RemoveAll(t => t.Nodes.Count < 2);
         var preview = CatchStreamConverter.Convert(candidate, compensateTinyDroplets, placementConversionCache);
         if (!preview.Success) return;
@@ -150,10 +154,21 @@ public sealed partial class EditorView
         var fruit = new Fruit { TimeMs = point.TimeMs, X = point.X };
         if (Edit(L.Get("editor.command.addFruit"), () =>
         {
+            RemoveFruitPlacementConflicts(Document, fruit.TimeMs);
             Document.Fruits.Add(fruit);
             ApplyPlacementFlags(fruit.Id);
             Document.DurationMs = Math.Max(Document.DurationMs, fruit.TimeMs);
         })) { Select(fruit.Id); nextFruitNewCombo = false; }
+    }
+
+    private static void RemoveFruitPlacementConflicts(MapDocument document, double timeMs)
+    {
+        // Match osu! placement leniency for rounding errors and slightly unsnapped starts.
+        bool Replaces(double startTimeMs) => Math.Abs(startTimeMs - timeMs) <= 2;
+        document.Fruits.RemoveAll(f => Replaces(f.TimeMs));
+        document.Tracks.RemoveAll(t => t.Nodes.Count > 0 && Replaces(t.Nodes[0].TimeMs));
+        document.ImportedSliders.RemoveAll(s => Replaces(s.TimeMs));
+        document.BananaShowers.RemoveAll(s => Replaces(s.TimeMs));
     }
 
     private void RightClickCanvas(float x, float y)

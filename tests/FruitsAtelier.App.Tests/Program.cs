@@ -118,6 +118,7 @@ var tests = new (string Name, Action Run)[]
     ("Tool palette is exclusive and placement ghosts snap at 60% opacity", ToolPaletteTests.PaletteAndGhost),
     ("Fruit and both slider modes preview incoming and outgoing hyperdash without committing", ToolPaletteTests.PlacementHyperdash),
     ("Fruit New combo survives project/osu round-trips and undo", ToolPaletteTests.FruitCombo),
+    ("Fruit placement replaces same-start parents within 2 ms in one undo step", ToolPaletteTests.FruitReplacement),
     ("Canvas labels New Combo fruits with NC in both languages", ToolPaletteTests.ComboLabels),
     ("Both slider modes support straight placement and draft point removal", ToolPaletteTests.DraftRemovalAndStraight),
     ("Repeated points, whole-slider deletion and banana completion", ToolPaletteTests.RepeatedPointAndWholeDelete),
