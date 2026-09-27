@@ -55,7 +55,12 @@ public sealed partial class EditorView
         if (phase is UpdatePhase.Available or UpdatePhase.Ready)
             Button(c, new(x + 222, top + 296, 320, 38), L.Get(phase == UpdatePhase.Ready ? "update.restart" : "update.download"), () =>
         {
-            if (phase == UpdatePhase.Ready) RequestUpdateRestart?.Invoke();
+            if (phase == UpdatePhase.Ready)
+            {
+                // Saving checks modal state, so dismiss Settings before handing off to the host.
+                if (embedded) CloseSettings();
+                RequestUpdateRestart?.Invoke();
+            }
             else RequestUpdateDownload?.Invoke();
         }, active: true, fontSize: embedded ? SettingsTextSize : 12, bold: embedded ? false : null);
         Button(c, new(x, top + 350, 220, 38), L.Get("update.notes"), () => RequestUpdateNotes?.Invoke(), fontSize: embedded ? SettingsTextSize : 12);

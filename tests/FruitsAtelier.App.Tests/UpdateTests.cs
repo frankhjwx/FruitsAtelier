@@ -78,7 +78,11 @@ internal static class UpdateTests
         int check = 0, download = 0, restart = 0, preference = 0;
         ui.View.RequestUpdateCheck = () => check++;
         ui.View.RequestUpdateDownload = () => download++;
-        ui.View.RequestUpdateRestart = () => restart++;
+        ui.View.RequestUpdateRestart = () =>
+        {
+            Check(ui.View.PrepareFileOperation(), "Restart callback can prepare saving after Settings closes");
+            restart++;
+        };
         ui.View.RequestUpdatePreference = () => preference++;
         ui.View.ShowLibrary(); ui.Paint();
         Click("library.settings"); Click("update.title");
@@ -91,6 +95,8 @@ internal static class UpdateTests
         ui.Click(ui.View.SettingsBounds.X + 244, ui.View.SettingsBounds.Y + 310); Check(check == 2 && restart == 0, "Installing is unavailable during download");
         ui.View.UpdateStatus = new(UpdatePhase.Ready, "0.8.2"); ui.Paint(); Click("update.restart");
         Check(restart == 1, "Restart requires explicit action");
+        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("update.restart")), "Restart dismisses the Settings modal");
+        Click("library.settings"); Click("update.title");
         Click("update.automaticOn"); Check(!ui.View.AutomaticUpdateChecks && preference == 1, "Preference toggles and persists");
         ui.Key(27); ui.Paint(); Check(ui.View.LibraryVisible && !ui.Canvas.Texts.Any(t => t.Value == L.Get("library.apply")), "Escape returns to library");
         ui.View.UpdateStatus = new(UpdatePhase.Available, "0.8.2"); ui.Paint();
@@ -105,6 +111,10 @@ internal static class UpdateTests
         Check(!ui.View.IsTestplaying && ui.View.Document.ContentEquals(before), "Update page isolates editor shortcuts and wheel input");
         ui.Key(27); ui.Paint();
         Check(!ui.View.LibraryVisible, "Closing editor update page returns directly to the map");
+        ui.View.OpenSettings(); ui.Paint(); Click("update.title");
+        ui.View.UpdateStatus = new(UpdatePhase.Ready, "0.8.2"); ui.Paint(); Click("update.restart");
+        Check(restart == 2 && ui.View.Document.ContentEquals(before),
+            "Restart from editor Settings permits saving without changing beatmap content");
         void Click(string key)
         {
             var text = ui.Canvas.Texts.Last(t => t.Value == L.Get(key));

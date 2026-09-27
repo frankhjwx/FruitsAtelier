@@ -248,6 +248,7 @@ internal static class RenderCheck
         var seek = view.RequestSeek; var hitsound = view.RequestHitsound;
         var volumePreference = view.RequestAudioPreference;
         var updateCheck = view.RequestUpdateCheck;
+        var updateRestart = view.RequestUpdateRestart;
         var updateStatus = view.UpdateStatus;
         int[] volumes = [view.LibrarySettings.MasterVolume, view.LibrarySettings.SongVolume, view.LibrarySettings.HitsoundVolume];
         double startupDelay = view.LibrarySettings.TestplayStartupDelaySeconds;
@@ -463,6 +464,15 @@ internal static class RenderCheck
                     view.UpdateStatus = new(phase, "0.8.2", 42);
                     canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 }
+                bool restartPrepared = false;
+                view.RequestUpdateRestart = () => restartPrepared = view.PrepareFileOperation();
+                view.UpdateStatus = new(UpdatePhase.Ready, "0.9.1", 100);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                float restartX = view.SettingsBounds.X + 230 + 230;
+                float restartY = view.SettingsBounds.Y + 310;
+                view.PointerDown(restartX, restartY, 0, false, false);
+                view.PointerUp(restartX, restartY, 0);
+                if (!restartPrepared) throw new InvalidOperationException("Update restart from Settings could not prepare saving.");
                 view.KeyDown(27, false, false);
                 view.KeyDown(27, false, false); view.CloseLibrary();
             }
@@ -474,6 +484,7 @@ internal static class RenderCheck
             view.RequestSeek = seek; view.RequestHitsound = hitsound;
             view.RequestAudioPreference = volumePreference;
             view.RequestUpdateCheck = updateCheck;
+            view.RequestUpdateRestart = updateRestart;
             view.UpdateStatus = updateStatus;
             view.LibrarySettings.MasterVolume = volumes[0]; view.LibrarySettings.SongVolume = volumes[1]; view.LibrarySettings.HitsoundVolume = volumes[2];
             view.LibrarySettings.TestplayStartupDelaySeconds = startupDelay;
