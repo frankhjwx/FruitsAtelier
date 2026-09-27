@@ -152,7 +152,8 @@ Audio, Advanced and preferred-skin controls are not part of Song Setup.
 
 ## Settings
 
-On Windows, **General → Display mode** offers **Vertical sync (default)** and
+On Windows, **General → Display mode** uses a dropdown with a check beside the
+current draft choice, offering **Vertical sync (default)** and
 **Low latency**. The highlighted hint recommends trying this option for audio
 delay or sound/picture mismatch. **Apply** saves the preference and switches
 presentation immediately, including paused editing and Library; no diagnostic

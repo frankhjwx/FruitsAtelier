@@ -125,9 +125,10 @@ public sealed partial class EditorView
                 {
                     float displayWidth = Math.Min(520, SettingsRight - SettingsContentX - 32);
                     c.Text(L.Get("settings.displayMode"), SettingsContentX, SettingsTop + 214, SettingsTextSize, Foreground, displayWidth, true);
-                    SettingsButton(c, new(SettingsContentX, SettingsTop + 244, displayWidth, 38),
-                        L.Get(draftLowLatencyDisplay ? "settings.displayImmediate" : "settings.displayVsync"),
-                        () => draftLowLatencyDisplay = !draftLowLatencyDisplay, draftLowLatencyDisplay);
+                    var displayBounds = new Rect(SettingsContentX, SettingsTop + 244, displayWidth, 38);
+                    SettingsButton(c, displayBounds,
+                        L.Get(draftLowLatencyDisplay ? "settings.displayImmediate" : "settings.displayVsync") + " ▾",
+                        () => OpenDisplayModeMenu(displayBounds));
                     c.Fill(new(SettingsContentX, SettingsTop + 298, displayWidth, 64), Gold, 4, .12f);
                     c.Text(L.Get("settings.displayDelayHint"), SettingsContentX + 12, SettingsTop + 309, 14, Gold, displayWidth - 24, true);
                     c.Text(L.Get("settings.displayChangeHint"), SettingsContentX + 12, SettingsTop + 332, 14, Gold, displayWidth - 24, true);
@@ -175,6 +176,18 @@ public sealed partial class EditorView
         SettingsButton(c, new(SettingsContentX, r.Bottom - 64, 200, 38), L.Get("library.apply"), () => ApplySettings(),
             active: canApply, enabled: canApply);
         if (settingsColourIndex >= 0) DrawIndicatorColourPicker(c);
+    }
+
+    private void OpenDisplayModeMenu(Rect bounds)
+    {
+        languageMenuOpen = false; menu = -1; contextItems.Clear();
+        libraryField = bindingCapture = -1;
+        foreach (bool lowLatency in new[] { false, true })
+            contextItems.Add(new((draftLowLatencyDisplay == lowLatency ? "✓ " : "") +
+                L.Get(lowLatency ? "settings.displayImmediate" : "settings.displayVsync"),
+                () => draftLowLatencyDisplay = lowLatency));
+        const float menuHeight = 12 + 2 * 32;
+        contextBounds = new(bounds.X, Math.Clamp(bounds.Bottom + 4, 0, Math.Max(0, height - menuHeight)), bounds.Width, menuHeight);
     }
 
     internal void ApplySettings(string? settingsPath = null)
