@@ -17,6 +17,7 @@ internal static class SliderInteractionTests
         var saved = ui.View.Document.DeepClone();
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.Tracks.Count == 0, "One undo did not remove the complete draft.");
+        Check(ui.View.ActiveTool == "Select", "Undoing slider creation left the placement tool active.");
         ui.Key('Y', ctrl: true);
         Check(saved.ContentEquals(ui.View.Document), "Redo changed click-only authoring.");
 
@@ -60,7 +61,15 @@ internal static class SliderInteractionTests
         Near(3125, ui.Anchor(nodeId).TimeMs); Near(330, ui.Anchor(nodeId).X);
         ui.Key('Z', ctrl: true);
         Check(saved.ContentEquals(ui.View.Document), "Point drag did not undo completely.");
+        Check(ui.View.ActiveTool == "Slider" && ui.View.SelectedAnchorIds.Contains(nodeId),
+            "Undo left the existing slider's control editing session.");
         ui.Key('Y', ctrl: true); Near(3125, ui.Anchor(nodeId).TimeMs);
+        Check(ui.View.SelectedAnchorIds.Contains(nodeId), "Redo cleared the edited control selection.");
+        ui.Key('Z', ctrl: true);
+
+        ui.DownMap(3000, 350); ui.MoveMap(3125, 330); ui.UpMap(3125, 330);
+        Near(3125, ui.Anchor(nodeId).TimeMs);
+        Check(ui.View.Document.Tracks.Count == 1, "Editing after undo started another slider.");
         ui.Key('Z', ctrl: true);
 
         ui.SelectTrack(track.Id); ui.Key('B');
@@ -123,6 +132,8 @@ internal static class SliderInteractionTests
         var withCorner = ui.View.Document.DeepClone();
         ui.Key('Z', ctrl: true);
         Check(original.ContentEquals(ui.View.Document), "Undo insertion did not restore neighboring handles.");
+        Check(ui.View.ActiveTool == "Slider" && ui.View.SelectedAnchorIds.Count == 0,
+            "Undo insertion retained a missing control or left slider editing.");
         ui.Key('Y', ctrl: true);
         Check(withCorner.ContentEquals(ui.View.Document), "Redo insertion changed its identity or handles.");
 

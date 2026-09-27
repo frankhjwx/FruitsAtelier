@@ -329,7 +329,7 @@ public sealed partial class EditorView
         { CancelInteraction(); return; }
         CancelInteraction();
         history.Undo();
-        Select(Guid.Empty);
+        RestoreSliderSelectionAfterHistory();
         StatusMessage = L.Get("editor.status.undone");
     }
 
@@ -339,8 +339,22 @@ public sealed partial class EditorView
         { CancelInteraction(); return; }
         CancelInteraction();
         history.Redo();
-        Select(Guid.Empty);
+        RestoreSliderSelectionAfterHistory();
         StatusMessage = L.Get("editor.status.redone");
+    }
+
+    private void RestoreSliderSelectionAfterHistory()
+    {
+        if (tool == Tool.Slider && selectedTrack != Guid.Empty)
+        {
+            if (SelectedTrack is { } track)
+            {
+                SelectAnchors(track, anchorSelection, selection);
+                return;
+            }
+            tool = Tool.Select;
+        }
+        Select(Guid.Empty);
     }
 
     private bool Edit(string label, Action change, Action<bool, MapDocument, MapDocument>? restoreRelated = null)

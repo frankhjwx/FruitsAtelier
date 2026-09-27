@@ -74,7 +74,8 @@ internal static class SliderModeInteractionTests
         ui.View.PointerDown(p.X, p.Y, 0, false, true); ui.View.PointerUp(p.X, p.Y, 0); ui.Paint();
         Check(SliderControlEditing.Vertices(ui.View.Document.Tracks[0]).Count == 4, "Ctrl+click did not insert a control.");
         ui.Key('Z', ctrl: true); Check(saved.ContentEquals(ui.View.Document), "Insert undo changed original shape.");
-        ui.SelectTrack(ui.View.Document.Tracks[0].Id); ui.Key('B');
+        Check(ui.View.ActiveTool == "Slider" && ui.View.SelectedAnchorIds.Count == 0,
+            "Undo insertion retained a missing legacy control or left slider editing.");
         ui.ClickMap(1250, 250); p = Screen(ui, 1250, 250);
         ui.View.PointerDoubleClick(p.X, p.Y, false, false); ui.Paint();
         Check(ui.View.Document.Tracks[0].Nodes.Count == 3, "Double-click did not create a segment boundary.");
