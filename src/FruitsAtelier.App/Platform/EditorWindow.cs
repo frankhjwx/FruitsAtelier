@@ -15,6 +15,8 @@ internal sealed partial class EditorWindow : IDisposable
     private nint hwnd;
     private float dpi = 96;
     private bool failed, disposed, painting, recoveringRenderer;
+    private bool framePending;
+    private bool ImmediatePresentation => view.IsTestplaying || canvas?.DiagnosticImmediatePresentation == true;
     private string lastTitle = "";
     private int frames;
     private readonly Stopwatch renderTimer = new();
@@ -96,8 +98,10 @@ internal sealed partial class EditorWindow : IDisposable
         if (renderCheck)
         {
             view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
-            CheckPaintLifecycle();
-            CheckUpdateRefresh();
+            // DXGI need not signal frame readiness for an entirely hidden window.
+            if (ImmediatePresentation) Native.ShowWindow(hwnd, 4);
+            try { CheckPaintLifecycle(); CheckUpdateRefresh(); }
+            finally { Native.ShowWindow(hwnd, 0); }
             Diagnostics.RenderCheck.Run(canvas, view, hwnd);
             Native.DestroyWindow(hwnd);
             return 0;
@@ -111,7 +115,7 @@ internal sealed partial class EditorWindow : IDisposable
         while (true)
         {
             Native.Message msg;
-            if ((view.IsTestplaying || audio.IsPlaying && canvas?.DiagnosticImmediatePresentation == true) && !Native.IsIconic(hwnd))
+            if (ImmediatePresentation && (framePending || view.IsTestplaying || audio.IsPlaying) && !Native.IsIconic(hwnd))
             {
                 if (!Native.PeekMessage(out msg, 0, 0, 0, 1))
                 {
@@ -249,7 +253,10 @@ internal sealed partial class EditorWindow : IDisposable
                         view.Performance.End(EditorPerformanceStage.Poll, phase);
                         phase = view.Performance.Start();
                         canvas.Resize(rect.Right, rect.Bottom, dpi);
-                        bool immediatePresentation = view.IsTestplaying || audio.IsPlaying && canvas.DiagnosticImmediatePresentation;
+                        bool immediatePresentation = ImmediatePresentation;
+                        // BeginPaint consumes the invalid region even when DXGI cannot accept a frame yet.
+                        // Keep that repaint pending so a paused editor also retries when the slot is ready.
+                        framePending = true;
                         if (immediatePresentation && !canvas.TryAcquireFrame()) return 0;
                         canvas.Begin();
                         view.Performance.End(EditorPerformanceStage.PrepareFrame, phase);
@@ -258,12 +265,12 @@ internal sealed partial class EditorWindow : IDisposable
                         canvas.DrawDisplayDiagnostics(view.PlayheadMs, displayedAudioState ?? audio.State);
                         view.Performance.End(EditorPerformanceStage.ViewRender, phase);
                         phase = view.Performance.Start();
-                        canvas.End(lowLatency: immediatePresentation);
+                        framePending = !canvas.End(lowLatency: immediatePresentation);
                         view.Performance.End(EditorPerformanceStage.Submit, phase);
                         view.Performance.Record(EditorPerformanceStage.Frame, renderTimer.Elapsed.TotalMilliseconds);
-                        RecordInputSubmission();
+                        if (!framePending) RecordInputSubmission();
                         recoveringRenderer = false;
-                        RecordPlaybackRate();
+                        RecordPlaybackRate(immediatePresentation);
                         renderTimer.Stop();
                         if (++frames == 1) AppLog.Write($"First frame: {renderTimer.Elapsed.TotalMilliseconds:F2}ms");
                     }
@@ -278,7 +285,7 @@ internal sealed partial class EditorWindow : IDisposable
                     Native.EndPaint(window, ref paint);
                     if (ownsPaint) painting = false;
                 }
-                // DXGI readiness wakes testplay drawing; window messages can interrupt that wait.
+                // DXGI readiness wakes immediate-mode drawing; window messages can interrupt that wait.
                 if (audio.IsPlaying && !view.IsTestplaying && canvas?.DiagnosticImmediatePresentation != true && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0014: return 1; // WM_ERASEBKGND
@@ -387,7 +394,7 @@ internal sealed partial class EditorWindow : IDisposable
         return Native.DefWindowProc(window, message, wParam, lParam);
     }
 
-    private void RecordPlaybackRate()
+    private void RecordPlaybackRate(bool immediatePresentation)
     {
         if (!audio.IsPlaying)
         {
@@ -398,7 +405,7 @@ internal sealed partial class EditorWindow : IDisposable
         if (!playbackSampleTimer.IsRunning) { playbackSampleTimer.Start(); return; }
         playbackSampleFrames++;
         if (playbackSampleTimer.Elapsed.TotalSeconds < 5) return;
-        AppLog.Write($"Playback render rate: {playbackSampleFrames / playbackSampleTimer.Elapsed.TotalSeconds:F1} FPS over {playbackSampleTimer.Elapsed.TotalSeconds:F2}s (Present sync interval 1)");
+        AppLog.Write($"Playback render rate: {playbackSampleFrames / playbackSampleTimer.Elapsed.TotalSeconds:F1} FPS over {playbackSampleTimer.Elapsed.TotalSeconds:F2}s (Present sync interval {(immediatePresentation ? 0 : 1)})");
         playbackSampleComplete = true;
     }
 

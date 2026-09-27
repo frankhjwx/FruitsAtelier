@@ -160,7 +160,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     [DllImport("kernel32.dll")]
     private static extern uint WaitForSingleObject(SafeWaitHandle handle, uint milliseconds);
 
-    public void End(bool lowLatency = false)
+    public bool End(bool lowLatency = false)
     {
         frameAcquired = false;
         while (clipDepth > 0) Unclip();
@@ -177,7 +177,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
                 uint lastSubmitted = swapChain.LastPresentCount;
                 if (result == Vortice.DXGI.ResultCode.WasStillDrawing) skippedFrames++;
                 else submittedFrames[lastSubmitted % submittedFrames.Length] = new(lastSubmitted, diagnosticFrame, frameBeganMs, sampledMs);
-                if (!forceDisplaySample && sampledMs < nextDisplaySampleMs) return;
+                if (!forceDisplaySample && sampledMs < nextDisplaySampleMs) return result != Vortice.DXGI.ResultCode.WasStillDrawing;
                 forceDisplaySample = false;
                 nextDisplaySampleMs = sampledMs + 250;
                 var statisticsResult = swapChain.GetFrameStatistics(out var statistics);
@@ -195,6 +195,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
             }
             catch (Exception ex) { displayDiagnostics.Write("displayStatisticsFailed", new { ex.HResult, type = ex.GetType().Name }); }
         }
+        return result != Vortice.DXGI.ResultCode.WasStillDrawing;
     }
 
     internal void DrawDisplayDiagnostics(double playheadMs, Audio.AudioState audio)

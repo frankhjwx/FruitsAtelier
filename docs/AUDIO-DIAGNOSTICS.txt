@@ -10,6 +10,11 @@ Open current/ and double-click each launcher, one run at a time:
   5-Test-display-vsync.cmd      Default display submission with frame diagnostics.
   6-Test-display-immediate.cmd  Wait for frame readiness and submit without VSync.
 
+Script 6 applies to playback, paused editing and the library. While paused, move
+the pointer, select objects, scroll and drag an object, then undo the edit. Compare
+the responsiveness with script 5. A repaint waiting for DXGI is retried even when
+music is paused; the diagnostic mode does not require continuous playback.
+
 For sound leading the picture, compare scripts 5 and 6 first. Both keep audio on
 event-10. Keep the F/QPC/MAP overlay visible in the recording. It connects recorded
 frames to log timestamps. Test normal window size and maximized. Also describe
