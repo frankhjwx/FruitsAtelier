@@ -1,4 +1,5 @@
-param([ValidateSet('event-10','event-50','poll-10','poll-50')][string]$Profile = 'event-10')
+param([ValidateSet('event-10','event-50','poll-10','poll-50')][string]$Profile = 'event-10',
+    [ValidateSet('','vsync','immediate')][string]$Presentation = '')
 $ErrorActionPreference = 'Stop'
 try {
     $exe = Join-Path $PSScriptRoot 'FruitsAtelier.App.exe'
@@ -6,15 +7,17 @@ try {
     if (Get-Process -Name 'FruitsAtelier.App' -ErrorAction SilentlyContinue) {
         throw 'Close all FruitsAtelier windows before starting a diagnostic run.'
     }
-    $runName = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + $Profile + '-' + [Guid]::NewGuid().ToString('N').Substring(0,6)
+    $runName = (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + $Profile + '-' + $Presentation + '-' + [Guid]::NewGuid().ToString('N').Substring(0,6)
     $capture = Join-Path (Split-Path $PSScriptRoot -Parent) ('audio-captures\' + $runName)
     New-Item -ItemType Directory -Path $capture -Force | Out-Null
     $env:FRUITSATELIER_AUDIO_DIAGNOSTICS = '1'
     $env:FRUITSATELIER_AUDIO_PROFILE = $Profile
+    $env:FRUITSATELIER_DISPLAY_PROFILE = $Presentation
     $env:FRUITSATELIER_AUDIO_LOG_DIRECTORY = $capture
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'build-info.json') -Destination $capture
-    "Profile: $Profile`r`nStarted: $([DateTimeOffset]::Now.ToString('O'))" | Set-Content -LiteralPath (Join-Path $capture 'run.txt')
+    "Profile: $Profile`r`nPresentation: $Presentation`r`nStarted: $([DateTimeOffset]::Now.ToString('O'))" | Set-Content -LiteralPath (Join-Path $capture 'run.txt')
     Write-Host "Profile: $Profile"
+    if ($Presentation) { Write-Host "Display: $Presentation. Keep the F/QPC/MAP overlay visible in your recording." }
     Write-Host 'Open the affected map. Play at 100%, pause/resume five times, and try seeking.'
     Write-Host 'Then try your usual playback speed. Close the editor when finished.'
     Write-Host "Logs: $capture"

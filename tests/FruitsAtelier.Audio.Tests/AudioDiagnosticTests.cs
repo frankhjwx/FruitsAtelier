@@ -43,8 +43,15 @@ internal static class AudioDiagnosticTests
             if (!ended.Any(r => r.GetProperty("data").GetProperty("detail").GetProperty("Id").GetInt64() == id))
                 throw new Exception("Diagnostic command has no matching completion.");
         }
-        foreach (string kind in new[] { "environment", "outputConfiguration", "decodeBegin", "outputInitialized", "commandBegin", "stopBegin", "stopEnd", "resetEnd", "presentation", "clock", "sourceRead", "firstDeviceProgress", "logClosed" })
+        foreach (string kind in new[] { "environment", "outputConfiguration", "decodeBegin", "sourceIdentity", "outputInitialized", "commandBegin", "stopBegin", "stopEnd", "resetEnd", "presentation", "clock", "sourceRead", "firstDeviceProgress", "logClosed" })
             if (!records.Any(r => r.GetProperty("kind").GetString() == kind)) throw new Exception("Missing diagnostic event: " + kind);
+        using (var source = File.OpenRead(wave))
+        {
+            string expectedHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(source));
+            if (records.Single(r => r.GetProperty("kind").GetString() == "sourceIdentity")
+                .GetProperty("data").GetProperty("sha256").GetString() != expectedHash)
+                throw new Exception("Source identity does not match the decoded file.");
+        }
         var progress = records.Where(r => r.GetProperty("kind").GetString() == "firstDeviceProgress").ToArray();
         if (progress.Length != 5 || progress.Select(r => r.GetProperty("data").GetProperty("session").GetInt64()).Distinct().Count() != 5)
             throw new Exception("First device progress must be recorded once per playing session.");

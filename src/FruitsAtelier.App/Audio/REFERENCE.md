@@ -35,12 +35,21 @@ PCM recording and tempo overrides are not provided. Diagnostic capture accepts
 actual buffering; the mixed read-through/device-clock difference is logged separately.
 `FRUITSATELIER_AUDIO_LOG_DIRECTORY` directs both audio logs and `editor.log` to a
 per-run capture folder while diagnostics are enabled. Diagnostic packages include
-four launchers that create this folder, check for logs and ZIP it after exit.
+launchers that create this folder, check for logs and ZIP it after exit.
 Logger startup and write failures are reported in `editor.log` when writable.
 Decode duration, MP3 leading-frame correction, output initialization duration,
 clock gaps/stalls, slow/short source reads, gains and hitsound scheduling/late/drop
 counts supplement the existing lifecycle and tempo counters. Anomalies are rate
 limited; audio callback threads enqueue bounded records and never write files.
+Source identity includes SHA-256, computed on the load worker after decode.
+`FRUITSATELIER_DISPLAY_PROFILE=vsync` or `immediate` enables diagnostic frame logs
+and a visible frame/QPC/map-time overlay while audio diagnostics are requested.
+The immediate mode uses frame readiness and nonblocking interval-zero submission
+for editing as well as testplay. Normal rendering is unchanged without this option.
+Logs include render/submit timestamps, audio snapshot age and DXGI frame statistics.
+The reported frame age is measured at query time; SyncQPCTime is a synchronization
+sample, not independently a physical display latency measurement. See
+[DXGI frame statistics](https://learn.microsoft.com/en-us/windows/win32/api/dxgi/ns-dxgi-dxgi_frame_statistics).
 
 `AudioTransport` queues load, play, pause, seek and speed operations on one worker. The UI reads its immutable `State` snapshot; it does not call the decoder or output device. `LoadAsync` and `WaitForCommandsAsync` allow callers to await applied operations. `CanPlay` stays true while a loaded device is paused.
 

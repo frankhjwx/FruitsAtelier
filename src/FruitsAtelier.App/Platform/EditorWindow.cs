@@ -111,7 +111,7 @@ internal sealed partial class EditorWindow : IDisposable
         while (true)
         {
             Native.Message msg;
-            if (view.IsTestplaying && !Native.IsIconic(hwnd))
+            if ((view.IsTestplaying || audio.IsPlaying && canvas?.DiagnosticImmediatePresentation == true) && !Native.IsIconic(hwnd))
             {
                 if (!Native.PeekMessage(out msg, 0, 0, 0, 1))
                 {
@@ -249,14 +249,16 @@ internal sealed partial class EditorWindow : IDisposable
                         view.Performance.End(EditorPerformanceStage.Poll, phase);
                         phase = view.Performance.Start();
                         canvas.Resize(rect.Right, rect.Bottom, dpi);
-                        if (view.IsTestplaying && !canvas.TryAcquireFrame()) return 0;
+                        bool immediatePresentation = view.IsTestplaying || audio.IsPlaying && canvas.DiagnosticImmediatePresentation;
+                        if (immediatePresentation && !canvas.TryAcquireFrame()) return 0;
                         canvas.Begin();
                         view.Performance.End(EditorPerformanceStage.PrepareFrame, phase);
                         phase = view.Performance.Start();
                         view.Render(canvas, rect.Right * 96 / dpi, rect.Bottom * 96 / dpi);
+                        canvas.DrawDisplayDiagnostics(view.PlayheadMs, displayedAudioState ?? audio.State);
                         view.Performance.End(EditorPerformanceStage.ViewRender, phase);
                         phase = view.Performance.Start();
-                        canvas.End(lowLatency: view.IsTestplaying);
+                        canvas.End(lowLatency: immediatePresentation);
                         view.Performance.End(EditorPerformanceStage.Submit, phase);
                         view.Performance.Record(EditorPerformanceStage.Frame, renderTimer.Elapsed.TotalMilliseconds);
                         RecordInputSubmission();
@@ -277,7 +279,7 @@ internal sealed partial class EditorWindow : IDisposable
                     if (ownsPaint) painting = false;
                 }
                 // DXGI readiness wakes testplay drawing; window messages can interrupt that wait.
-                if (audio.IsPlaying && !view.IsTestplaying && !Native.IsIconic(window)) Invalidate();
+                if (audio.IsPlaying && !view.IsTestplaying && canvas?.DiagnosticImmediatePresentation != true && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0014: return 1; // WM_ERASEBKGND
             case 0x0113: // WM_TIMER

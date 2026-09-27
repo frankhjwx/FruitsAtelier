@@ -358,6 +358,17 @@ public sealed class AudioTransport : IDisposable
             decoder = reader.GetType().Name, format = reader.WaveFormat.ToString(), durationMs = duration,
             elapsedMs = AudioDiagnosticLog.NowMs - decodeBeganMs,
             mp3LeadingFrames = reader is MediaFoundationAudioReader ? Mp3Timeline.LeadingFrames(command.Path) : (int?)null });
+        if (diagnostics.Enabled)
+        {
+            try
+            {
+                using var input = File.OpenRead(command.Path);
+                diagnostics.Write("sourceIdentity", new { fileName = Path.GetFileName(command.Path), input.Length,
+                    sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(input)) });
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            { diagnostics.Write("sourceIdentityFailed", new { ex.HResult, type = ex.GetType().Name }); }
+        }
         if (!double.IsFinite(duration) || duration <= 0) throw new InvalidDataException(L.Get("audio.noDuration"));
         if (reader.WaveFormat.Channels is < 1 or > 2) throw new NotSupportedException(L.Get("audio.channels"));
         basePosition = 0;

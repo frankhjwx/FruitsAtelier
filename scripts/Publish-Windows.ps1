@@ -43,6 +43,11 @@ try {
             "@echo off`r`npowershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0Start-AudioDiagnostic.ps1`" -Profile $profile`r`n" |
                 Set-Content -LiteralPath (Join-Path $payload "$profileNumber-Test-$profile.cmd") -Encoding ascii
         }
+        foreach ($presentation in @('vsync', 'immediate')) {
+            $profileNumber++
+            "@echo off`r`npowershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0Start-AudioDiagnostic.ps1`" -Profile event-10 -Presentation $presentation`r`n" |
+                Set-Content -LiteralPath (Join-Path $payload "$profileNumber-Test-display-$presentation.cmd") -Encoding ascii
+        }
     }
     if (!$AudioDiagnostics -and (Test-Path -LiteralPath (Join-Path $payload 'audio-diagnostics.enabled'))) {
         throw 'A normal release must not contain the audio diagnostic enabling marker.'

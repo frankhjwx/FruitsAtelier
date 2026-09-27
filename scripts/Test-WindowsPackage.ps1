@@ -18,7 +18,7 @@ if ($diagnosticsEnabled -and !(Test-Path -LiteralPath (Join-Path $current 'AUDIO
     throw 'Audio diagnostic capture instructions are missing.'
 }
 if ($diagnosticsEnabled) {
-    foreach ($file in @('Start-AudioDiagnostic.ps1', '1-Test-event-10.cmd', '2-Test-event-50.cmd', '3-Test-poll-10.cmd', '4-Test-poll-50.cmd')) {
+    foreach ($file in @('Start-AudioDiagnostic.ps1', '1-Test-event-10.cmd', '2-Test-event-50.cmd', '3-Test-poll-10.cmd', '4-Test-poll-50.cmd', '5-Test-display-vsync.cmd', '6-Test-display-immediate.cmd')) {
         if (!(Test-Path -LiteralPath (Join-Path $current $file))) { throw "Diagnostic launcher missing: $file" }
     }
     $processCapture = Join-Path $destination 'diagnostic-check'

@@ -15,6 +15,16 @@ namespace FruitsAtelier.App.Rendering;
 
 public sealed class D2DCanvas : ICanvas, IDisposable
 {
+    private readonly Audio.AudioDiagnosticLog? displayDiagnostics;
+    internal bool DiagnosticImmediatePresentation { get; }
+    private double nextDisplaySampleMs, frameBeganMs;
+    private long diagnosticFrame;
+    private object? diagnosticAudio;
+    private bool forceDisplaySample, lastDiagnosticPlaying;
+    private double lastDiagnosticPosition, previousFrameBeganMs, maximumFrameGapMs;
+    private long skippedFrames;
+    private readonly record struct SubmittedFrame(uint Count, long Frame, double BeganMs, double SubmittedMs);
+    private readonly SubmittedFrame[] submittedFrames = new SubmittedFrame[512];
     private ID3D11Device? device;
     private ID3D11DeviceContext? immediateContext;
     private IDXGISwapChain1? swapChain;
@@ -54,6 +64,12 @@ public sealed class D2DCanvas : ICanvas, IDisposable
 
     public D2DCanvas(nint hwnd, int width, int height, float dpi)
     {
+        string? presentation = Environment.GetEnvironmentVariable("FRUITSATELIER_DISPLAY_PROFILE");
+        if (Audio.AudioDiagnosticLog.Requested && presentation is "vsync" or "immediate")
+        {
+            displayDiagnostics = new Audio.AudioDiagnosticLog();
+            DiagnosticImmediatePresentation = presentation == "immediate";
+        }
         try
         {
             D3D11.D3D11CreateDevice(null, DriverType.Hardware, DeviceCreationFlags.BgraSupport,
@@ -78,6 +94,8 @@ public sealed class D2DCanvas : ICanvas, IDisposable
             context = drawingDevice.CreateDeviceContext(DeviceContextOptions.None);
             textFactory = DWrite.DWriteCreateFactory<IDWriteFactory>();
             Resize(width, height, dpi);
+            displayDiagnostics?.Write("displayConfiguration", new { presentation, AdapterName,
+                bufferCount = 2, maximumFrameLatency = 1, width, height, dpi });
         }
         catch { Dispose(); throw; }
     }
@@ -91,6 +109,11 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         target?.Dispose(); target = null;
         swapChain!.ResizeBuffers(2, (uint)newWidth, (uint)newHeight, Format.B8G8R8A8_UNorm, SwapChainFlags.FrameLatencyWaitableObject).CheckError();
         width = newWidth; height = newHeight; dpi = newDpi;
+        if (displayDiagnostics is not null)
+        {
+            Array.Clear(submittedFrames);
+            displayDiagnostics.Write("displayResize", new { width, height, dpi });
+        }
         using var surface = swapChain.GetBuffer<IDXGISurface>(0);
         target = context.CreateBitmapFromDxgiSurface(surface,
             new BitmapProperties1(new PixelFormat(Format.B8G8R8A8_UNorm, Vortice.DCommon.AlphaMode.Ignore),
@@ -102,6 +125,14 @@ public sealed class D2DCanvas : ICanvas, IDisposable
 
     public void Begin()
     {
+        if (displayDiagnostics is not null)
+        {
+            frameBeganMs = Audio.AudioDiagnosticLog.NowMs;
+            if (previousFrameBeganMs != 0) maximumFrameGapMs = Math.Max(maximumFrameGapMs, frameBeganMs - previousFrameBeganMs);
+            previousFrameBeganMs = frameBeganMs;
+            diagnosticFrame++;
+            diagnosticAudio = null;
+        }
         context!.BeginDraw();
         drawing = true;
         context.Clear(new Color4(0.07f, 0.085f, 0.11f, 1));
@@ -120,7 +151,9 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     public bool TryAcquireFrame()
     {
         if (frameAcquired) { frameAcquired = false; return true; }
-        return frameReady is null || frameReady.IsInvalid || WaitForSingleObject(frameReady, 0) == 0;
+        bool ready = frameReady is null || frameReady.IsInvalid || WaitForSingleObject(frameReady, 0) == 0;
+        if (!ready && displayDiagnostics is not null) skippedFrames++;
+        return ready;
     }
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint MsgWaitForMultipleObjectsEx(uint count, nint[] handles, uint milliseconds, uint wakeMask, uint flags);
@@ -133,8 +166,51 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         while (clipDepth > 0) Unclip();
         drawing = false;
         context!.EndDraw().CheckError();
+        double submitBeganMs = displayDiagnostics is null ? 0 : Audio.AudioDiagnosticLog.NowMs;
         var result = swapChain!.Present(lowLatency ? 0u : 1u, lowLatency ? PresentFlags.DoNotWait : PresentFlags.None);
         if (result != Vortice.DXGI.ResultCode.WasStillDrawing) result.CheckError();
+        if (displayDiagnostics is not null)
+        {
+            double sampledMs = Audio.AudioDiagnosticLog.NowMs;
+            try
+            {
+                uint lastSubmitted = swapChain.LastPresentCount;
+                if (result == Vortice.DXGI.ResultCode.WasStillDrawing) skippedFrames++;
+                else submittedFrames[lastSubmitted % submittedFrames.Length] = new(lastSubmitted, diagnosticFrame, frameBeganMs, sampledMs);
+                if (!forceDisplaySample && sampledMs < nextDisplaySampleMs) return;
+                forceDisplaySample = false;
+                nextDisplaySampleMs = sampledMs + 250;
+                var statisticsResult = swapChain.GetFrameStatistics(out var statistics);
+                var reported = submittedFrames[statistics.PresentCount % submittedFrames.Length];
+                bool matched = statisticsResult.Success && reported.Frame != 0 && reported.Count == statistics.PresentCount;
+                displayDiagnostics.Write("displayFrame", new { diagnosticFrame, frameBeganMs, sampledMs,
+                    submitBeganMs, submitDurationMs = sampledMs - submitBeganMs, maximumFrameGapMs, skippedFrames,
+                    submitResult = result.Code, lowLatency, diagnosticAudio, lastSubmitted,
+                    statisticsResult = statisticsResult.Code, statistics.PresentCount, statistics.PresentRefreshCount,
+                    statistics.SyncRefreshCount, syncQpcMs = statistics.SyncQPCTime * 1000d / System.Diagnostics.Stopwatch.Frequency,
+                    reportedFrame = matched ? reported.Frame : (long?)null,
+                    reportedFrameAgeAtSampleMs = matched ? sampledMs - reported.BeganMs : (double?)null,
+                    reportedSubmitMs = matched ? reported.SubmittedMs : (double?)null });
+                maximumFrameGapMs = 0;
+            }
+            catch (Exception ex) { displayDiagnostics.Write("displayStatisticsFailed", new { ex.HResult, type = ex.GetType().Name }); }
+        }
+    }
+
+    internal void DrawDisplayDiagnostics(double playheadMs, Audio.AudioState audio)
+    {
+        if (displayDiagnostics is null) return;
+        if (lastDiagnosticPlaying != audio.IsPlaying || Math.Abs(playheadMs - lastDiagnosticPosition) > 100)
+            forceDisplaySample = true;
+        lastDiagnosticPlaying = audio.IsPlaying;
+        lastDiagnosticPosition = playheadMs;
+        diagnosticAudio = new { playheadMs, audio.PositionMs, audio.PositionTimestampMs,
+            audio.IsPlaying, audio.OutputBufferAheadMs,
+            frameSampleAgeMs = audio.PositionTimestampMs > 0 ? frameBeganMs - audio.PositionTimestampMs : (double?)null };
+        float y = height * 96 / dpi - 65;
+        Fill(new(8, y, 650, 24), 0x101010);
+        Text(FormattableString.Invariant($"F {diagnosticFrame}  QPC {frameBeganMs:F1}  MAP {playheadMs:F1}  {(audio.IsPlaying ? "PLAY" : "PAUSE")}"),
+            14, y + 4, 14, 0xFFFFFF, 640);
     }
 
     internal void AbortDraw()
@@ -397,5 +473,6 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         swapChain?.Dispose(); swapChain = null;
         immediateContext?.Dispose(); immediateContext = null;
         device?.Dispose(); device = null;
+        displayDiagnostics?.Dispose();
     }
 }

@@ -7,6 +7,19 @@ Open current/ and double-click each launcher, one run at a time:
   2-Test-event-50.cmd  Event-driven output, requested 50 ms buffer.
   3-Test-poll-10.cmd   Polling output, requested 10 ms buffer.
   4-Test-poll-50.cmd   Polling output, requested 50 ms buffer.
+  5-Test-display-vsync.cmd      Default display submission with frame diagnostics.
+  6-Test-display-immediate.cmd  Wait for frame readiness and submit without VSync.
+
+For sound leading the picture, compare scripts 5 and 6 first. Both keep audio on
+event-10. Keep the F/QPC/MAP overlay visible in the recording. It connects recorded
+frames to log timestamps. Test normal window size and maximized. Also describe
+whether the delay is visible without recording. If possible, film the screen and
+speaker sound together with a phone to compare with the desktop capture.
+These scripts log render time, snapshot age, submitted/presented frame counters,
+DXGI synchronization timestamps, skipped frames and errors. Frame statistics can
+be unavailable on some drivers; this is recorded, not treated as zero latency.
+Reported frame age is its age when statistics were sampled, not physical scanout
+latency. Music SHA-256 identifies the exact source file without including its data.
 
 These are comparisons, not guaranteed fixes. The driver can use a different actual
 buffer size. A larger buffer may reduce interruptions but add output delay.
@@ -19,7 +32,8 @@ For each run:
    cuts out, or whether the picture/input freezes. Record the map time where it
    happens. A screen recording with sound helps.
 4. Close the editor. The launcher checks for audio logs and creates a ZIP under
-   audio-captures/ beside current/. Send all four capture ZIPs, even if a run fails.
+   audio-captures/ beside current/. Send the capture ZIPs for each tested mode,
+   even if a run fails.
 5. Include Windows version, device/connection (wired, USB, Bluetooth, HDMI), the
    map, speed, and which profile improved or worsened the problem.
 

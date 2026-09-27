@@ -120,6 +120,8 @@ internal sealed partial class EditorWindow
 
     private void ResetAudio() { view.ResetHitsounds(); audio.Dispose(); audio = new AudioTransport { Hitsounds = hitsounds }; audio.SetPlaybackSpeed(view.PlaybackSpeed); view.ApplyAudioVolume(); }
 
+    private AudioState? displayedAudioState;
+
     private void PollAudio()
     {
         if (view.LibraryVisible || view.WorkspaceSession is not null || view.SliderConversionBusy || view.StarRatingsRefreshing) Invalidate();
@@ -139,6 +141,7 @@ internal sealed partial class EditorWindow
         audio.TracePresentation(view.PlayheadMs, view.AudioPlaying, state);
         view.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading,
             error, state.FilePath, state.PositionTimestampMs, state.OutputBufferAheadMs);
+        displayedAudioState = state;
         Invalidate();
     }
 }

@@ -35,8 +35,8 @@ output directory, for example `-Version 0.9.0-beta.1` with
 `-OutputDirectory artifacts/audio-diagnostic-release`. The package includes an
 enabling marker and [capture instructions](AUDIO-DIAGNOSTICS.txt). This creates
 local package artifacts; it does not publish a GitHub release.
-Four test launchers in `current/` compare event-driven/polling output with requested
-10/50 ms buffers. Each creates a separate capture directory and ZIP beside `current/`,
+Test launchers in `current/` compare event-driven/polling output with requested
+10/50 ms buffers, plus two display modes with frame diagnostics. Each creates a separate capture directory and ZIP beside `current/`,
 including the build manifest, run profile, editor log and audio logs. The package
 check verifies the launchers and actual diagnostic log creation.
 
