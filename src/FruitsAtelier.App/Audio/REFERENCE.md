@@ -28,7 +28,19 @@ and 4 ms overlap to reduce choppy low-speed playback. Higher speeds retain the
 library defaults. These parameters reference `osu.Framework/Audio/Track/TrackBass.cs`
 at osu!framework commit `94724b4385479b2e00bb347c9201ce9d9d13f594`; BASS is not
 bundled. Output requests a 10 ms shared-mode WASAPI buffer. Runtime
-PCM recording and environment-based tempo/buffer overrides are not provided.
+PCM recording and tempo overrides are not provided. Diagnostic capture accepts
+`FRUITSATELIER_AUDIO_PROFILE`: `event-10` (default), `event-50`, `poll-10`, or
+`poll-50`. These select event-driven or polling shared-mode WASAPI and a requested
+10 or 50 ms buffer. Overrides are ignored without diagnostics. The driver determines
+actual buffering; the mixed read-through/device-clock difference is logged separately.
+`FRUITSATELIER_AUDIO_LOG_DIRECTORY` directs both audio logs and `editor.log` to a
+per-run capture folder while diagnostics are enabled. Diagnostic packages include
+four launchers that create this folder, check for logs and ZIP it after exit.
+Logger startup and write failures are reported in `editor.log` when writable.
+Decode duration, MP3 leading-frame correction, output initialization duration,
+clock gaps/stalls, slow/short source reads, gains and hitsound scheduling/late/drop
+counts supplement the existing lifecycle and tempo counters. Anomalies are rate
+limited; audio callback threads enqueue bounded records and never write files.
 
 `AudioTransport` queues load, play, pause, seek and speed operations on one worker. The UI reads its immutable `State` snapshot; it does not call the decoder or output device. `LoadAsync` and `WaitForCommandsAsync` allow callers to await applied operations. `CanPlay` stays true while a loaded device is paused.
 

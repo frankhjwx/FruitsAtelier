@@ -16,18 +16,22 @@ internal sealed class AudioDiagnosticLog : IDisposable
     private long dropped;
     public bool Enabled { get; }
     public string? FilePath { get; }
+    internal static bool Requested => Environment.GetEnvironmentVariable("FRUITSATELIER_AUDIO_DIAGNOSTICS") == "1"
+        || File.Exists(Path.Combine(AppContext.BaseDirectory, "audio-diagnostics.enabled"));
+    internal static string? CaptureDirectory => Requested
+        ? Environment.GetEnvironmentVariable("FRUITSATELIER_AUDIO_LOG_DIRECTORY") : null;
 
     internal AudioDiagnosticLog(string? directory = null)
     {
-        Enabled = directory is not null || Environment.GetEnvironmentVariable("FRUITSATELIER_AUDIO_DIAGNOSTICS") == "1"
-            || File.Exists(Path.Combine(AppContext.BaseDirectory, "audio-diagnostics.enabled"));
+        Enabled = directory is not null || Requested;
         if (!Enabled) { writer = Task.CompletedTask; return; }
         entries = Channel.CreateBounded<Entry>(new BoundedChannelOptions(2048)
         {
             SingleReader = true,
             FullMode = BoundedChannelFullMode.Wait
         });
-        if (directory is null)
+        directory ??= CaptureDirectory;
+        if (string.IsNullOrWhiteSpace(directory))
         {
             var root = new DirectoryInfo(AppContext.BaseDirectory);
             while (root is not null && !File.Exists(Path.Combine(root.FullName, "global.json"))) root = root.Parent;
@@ -43,6 +47,7 @@ internal sealed class AudioDiagnosticLog : IDisposable
             stopwatchFrequency = Stopwatch.Frequency, maximumBytes = MaximumBytes
         });
         writer = Task.Run(WriteAsync);
+        AppLog.Write($"Audio diagnostics requested: {FilePath}; profile={Environment.GetEnvironmentVariable("FRUITSATELIER_AUDIO_PROFILE") ?? "event-10"}");
     }
 
     public void Write(string kind, object data)
@@ -71,6 +76,7 @@ internal sealed class AudioDiagnosticLog : IDisposable
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath!)!);
             using var stream = new FileStream(FilePath!, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
             using var text = new StreamWriter(stream) { AutoFlush = true };
+            AppLog.Write($"Audio diagnostics opened: {FilePath}");
             // Endpoint queries and disk writes stay off the transport and device callback threads.
             try
             {
@@ -80,7 +86,7 @@ internal sealed class AudioDiagnosticLog : IDisposable
                     using var device = devices.GetDefaultAudioEndpoint(DataFlow.Render, role);
                     using var client = device.AudioClient;
                     await text.WriteLineAsync(Serialize("defaultEndpoint", new { role = role.ToString(), name = device.FriendlyName,
-                        mixFormat = client.MixFormat.ToString(), defaultPeriodMs = client.DefaultDevicePeriod / 10000d,
+                        deviceId = device.ID, state = device.State.ToString(), mixFormat = client.MixFormat.ToString(), defaultPeriodMs = client.DefaultDevicePeriod / 10000d,
                         minimumPeriodMs = client.MinimumDevicePeriod / 10000d }));
                 }
             }
@@ -99,6 +105,7 @@ internal sealed class AudioDiagnosticLog : IDisposable
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
+            AppLog.Write($"Audio diagnostics failed: {FilePath}; {ex}");
             entries!.Writer.TryComplete();
         }
     }

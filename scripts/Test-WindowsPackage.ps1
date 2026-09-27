@@ -17,6 +17,12 @@ if ($diagnosticMarker -ne $diagnosticsEnabled) { throw 'Audio diagnostic marker 
 if ($diagnosticsEnabled -and !(Test-Path -LiteralPath (Join-Path $current 'AUDIO-DIAGNOSTICS.txt'))) {
     throw 'Audio diagnostic capture instructions are missing.'
 }
+if ($diagnosticsEnabled) {
+    foreach ($file in @('Start-AudioDiagnostic.ps1', '1-Test-event-10.cmd', '2-Test-event-50.cmd', '3-Test-poll-10.cmd', '4-Test-poll-50.cmd')) {
+        if (!(Test-Path -LiteralPath (Join-Path $current $file))) { throw "Diagnostic launcher missing: $file" }
+    }
+    $processCapture = Join-Path $destination 'diagnostic-check'
+}
 foreach ($required in @('FruitsAtelier.exe', 'Update.exe', '.portable', 'current/sq.version', 'current/FruitsAtelier.App.exe')) {
     if (!(Test-Path -LiteralPath (Join-Path $destination $required))) { throw "Portable updater file missing: $required" }
 }
@@ -31,6 +37,7 @@ $processInfo.ArgumentList.Add($report)
 $processInfo.Environment['DOTNET_ROOT'] = Join-Path $destination 'no-installed-runtime'
 $processInfo.Environment['DOTNET_ROOT_X64'] = $processInfo.Environment['DOTNET_ROOT']
 $processInfo.Environment['DOTNET_MULTILEVEL_LOOKUP'] = '0'
+if ($diagnosticsEnabled) { $processInfo.Environment['FRUITSATELIER_AUDIO_LOG_DIRECTORY'] = $processCapture }
 $process = [Diagnostics.Process]::Start($processInfo)
 try {
     if (!$process.WaitForExit(120000)) { $process.Kill(); throw 'Packaged executable timed out.' }
@@ -42,5 +49,8 @@ try {
     if ($result.architecture -ne 'X64' -or $result.version -ne "$($manifest.version)+$($manifest.commit)") { throw 'Package version, source commit or architecture mismatch.' }
     Write-Host "PASS: $($result.checks -join ', ')"
     Write-Host "Report: $report"
+    if ($diagnosticsEnabled -and !(Get-ChildItem -LiteralPath $processCapture -Filter 'audio-*.jsonl')) {
+        throw 'Packaged diagnostic logger did not create an audio log.'
+    }
 }
 finally { $process.Dispose() }

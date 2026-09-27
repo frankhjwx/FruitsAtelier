@@ -1,38 +1,45 @@
-FruitsAtelier - Windows audio diagnostics
+FruitsAtelier - Windows audio lag diagnostic package
 
-1. Extract the entire ZIP into a new folder. Close other FruitsAtelier instances.
-2. Launch FruitsAtelier.exe. This package enables diagnostic logging automatically.
-3. Open a map that reproduces the problem. Start at 100% playback speed.
-4. Play for 5 seconds, pause for 2 seconds, then resume. Repeat 5 times.
-   If needed, also reproduce with your usual speed and pause timing.
-5. Note whether music continues after pause, whether the timeline jumps forward,
-   and whether the delay grows. A recording with both the timeline and sound helps.
-   For first-play delay, distinguish a delay before sound starts from music staying
-   behind the timeline or hitsounds throughout playback.
-   For low-speed interruptions, play the same section at 100%, 50%, 25%, and 10%
-   for at least 10 seconds each. Note when music and/or hitsounds cut out, and
-   include a recording if possible. Stay away from the end of the music file.
-6. Close the application so the logs finish writing.
-7. Paste this path into the Windows Explorer address bar:
-   %LOCALAPPDATA%\FruitsAtelier\logs
-8. Send the audio-*.jsonl files created during this test, plus editor.log if present.
-   Include your Windows version, output device/connection (Bluetooth, USB, wired,
-   HDMI), playback speed, and the map/music that reproduced the problem.
-   If a hitsoundDecodeFailed entry appears, include the named sample and skin name.
+Extract the whole ZIP to a writable folder. Close all other FruitsAtelier windows.
+Open current/ and double-click each launcher, one run at a time:
 
-Diagnostics include application/runtime versions, default output device names and
-formats, playback commands, clock positions, startup reads, first device progress,
-read timing/counters, UI update gaps, and hitsound filenames and decode failures.
-These timings do not measure when sound physically reaches your ears.
-Detailed audio logs omit full source paths and audio contents;
-the existing editor.log may include paths in exception messages. Nothing uploads
-automatically. Each audio log is capped at 16 MiB; a new run creates fresh files.
-Old logs remain available until you delete them.
+  1-Test-event-10.cmd  Default event-driven output, requested 10 ms buffer.
+  2-Test-event-50.cmd  Event-driven output, requested 50 ms buffer.
+  3-Test-poll-10.cmd   Polling output, requested 10 ms buffer.
+  4-Test-poll-50.cmd   Polling output, requested 50 ms buffer.
 
-Logging writes through a bounded background queue. A logClosed record reports any
-dropped entries. A sizeLimitReached record means the file reached its limit; restart
-the application for a fresh capture.
+These are comparisons, not guaranteed fixes. The driver can use a different actual
+buffer size. A larger buffer may reduce interruptions but add output delay.
 
-To disable diagnostic logging, close the app and remove
-current\audio-diagnostics.enabled from this extracted package.
-Repository builds write to artifacts\logs instead of the path above.
+For each run:
+1. Open the same affected map and use the same audio device.
+2. At 100% speed, play for 10 seconds, pause for 2 seconds, and resume. Repeat five
+   times. Seek forward and backward. Then reproduce with your usual speed.
+3. Note whether sound starts late, remains behind the timeline, gradually drifts,
+   cuts out, or whether the picture/input freezes. Record the map time where it
+   happens. A screen recording with sound helps.
+4. Close the editor. The launcher checks for audio logs and creates a ZIP under
+   audio-captures/ beside current/. Send all four capture ZIPs, even if a run fails.
+5. Include Windows version, device/connection (wired, USB, Bluetooth, HDMI), the
+   map, speed, and which profile improved or worsened the problem.
+
+Each run includes build-info.json, run.txt, editor.log and audio-*.jsonl. No manual
+marker or launch arguments are required. Keep the launcher's console open until
+it reports the ZIP. If Windows blocks a script, report the message; do not change
+system security settings. If the script cannot run, launching FruitsAtelier.exe
+normally still enables the default diagnostic profile. Its logs are normally in
+%LOCALAPPDATA%\FruitsAtelier\logs (repository builds use artifacts/logs).
+
+Audio logs record configuration, device names/IDs/formats, decode and command
+timing, source filenames, MP3 origin correction, output initialization, buffer
+read timing, clock stalls, UI update gaps, hitsound scheduling/late counts, tempo
+processing, signal statistics, and errors. They do not record PCM or measure when
+sound physically reaches your ears. editor.log can contain filesystem paths.
+Nothing uploads automatically. Queues and files are bounded; each audio file is
+limited to 16 MiB. logClosed reports dropped entries; sizeLimitReached means a
+fresh run is needed. A logging failure is recorded in editor.log when writable.
+
+Diagnostic profiles apply only while audio diagnostics are enabled. The default
+application output remains event-driven shared-mode WASAPI with a requested
+10 ms buffer. To disable direct-launch diagnostics, close the application and
+remove current/audio-diagnostics.enabled; the test scripts explicitly enable it.

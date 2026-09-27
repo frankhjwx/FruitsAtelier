@@ -13,6 +13,8 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
     private readonly object gate = new();
     private readonly Dictionary<string, float[]> cache = new();
     private long cacheBytes;
+    private long scheduledCount, immediateCount, droppedVoices, lateVoices;
+    private double maximumLateMs, nextMixDiagnosticMs;
     private readonly List<(float[] Samples, double Position, float Volume)> voices = new();
     private sealed class ScheduledVoice(float[] samples, double timeMs, float volume)
     {
@@ -45,7 +47,8 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
         var samples = GetSamples(sound);
         lock (gate)
         {
-            if (scheduled.Count == 2048) scheduled.RemoveAt(0);
+            scheduledCount++;
+            if (scheduled.Count == 2048) { scheduled.RemoveAt(0); droppedVoices++; }
             scheduled.Add(new(samples, timeMs, sound.Volume));
         }
     }
@@ -116,8 +119,13 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
                 {
                     var voice = owner.scheduled[v];
                     // A late catch begins at the next writable frame with its attack intact.
-                    long firstFrame = voice.StartFrame ??= Math.Max(framesRead,
-                        (long)Math.Round((voice.TimeMs - startMs) * rate / (1000 * speed)));
+                    long targetFrame = (long)Math.Round((voice.TimeMs - startMs) * rate / (1000 * speed));
+                    if (owner.diagnostics.Enabled && voice.StartFrame is null && targetFrame < framesRead)
+                    {
+                        owner.lateVoices++;
+                        owner.maximumLateMs = Math.Max(owner.maximumLateMs, (framesRead - targetFrame) * 1000d / rate);
+                    }
+                    long firstFrame = voice.StartFrame ??= Math.Max(framesRead, targetFrame);
                     int begin = (int)Math.Clamp(firstFrame - framesRead, 0, frames);
                     for (int frame = begin; frame < frames; frame++)
                     {
@@ -132,6 +140,13 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
                     if ((framesRead + frames - firstFrame) * (double)HitsoundSamples.SampleRate / rate >= voice.Samples.Length)
                         owner.scheduled.RemoveAt(v);
                 }
+                if (owner.diagnostics.Enabled && AudioDiagnosticLog.NowMs >= owner.nextMixDiagnosticMs)
+                {
+                    owner.nextMixDiagnosticMs = AudioDiagnosticLog.NowMs + 250;
+                    owner.diagnostics.Write("hitsoundMix", new { startMs, speed, framesRead, frames, rate,
+                        owner.scheduledCount, owner.immediateCount, owner.droppedVoices, owner.lateVoices, owner.maximumLateMs,
+                        pending = owner.scheduled.Count, live = owner.voices.Count, owner.cacheBytes, volume = owner.Volume });
+                }
             }
             framesRead += frames;
             for (int i = offset; i < offset + read; i++) buffer[i] = Math.Clamp(buffer[i], -1, 1);
@@ -143,7 +158,8 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
         var decoded = GetSamples(sound);
         lock (gate)
         {
-            if (voices.Count == 32) voices.RemoveAt(0);
+            immediateCount++;
+            if (voices.Count == 32) { voices.RemoveAt(0); droppedVoices++; }
             voices.Add((decoded, 0, sound.Volume));
         }
     }

@@ -7,6 +7,13 @@ internal static class AudioDiagnosticTests
 {
     public static async Task Run(string wave, string directory)
     {
+        foreach (string name in new[] { "event-10", "event-50", "poll-10", "poll-50" })
+        {
+            var profile = AudioDiagnosticProfile.Select(true, name);
+            if (profile.Name != name || profile.EventDriven != name.StartsWith("event")
+                || profile.BufferMs != (name.EndsWith("50") ? 50 : 10)) throw new Exception("Incorrect diagnostic profile.");
+            if (AudioDiagnosticProfile.Select(false, name).Name != "event-10") throw new Exception("Diagnostic overrides affect normal playback.");
+        }
         string capture = Path.Combine(directory, "diagnostics", Guid.NewGuid().ToString("N"));
         var players = new List<PausePositionTests.BufferedPlayer>();
         using (var audio = new AudioTransport(0, () =>
@@ -36,7 +43,7 @@ internal static class AudioDiagnosticTests
             if (!ended.Any(r => r.GetProperty("data").GetProperty("detail").GetProperty("Id").GetInt64() == id))
                 throw new Exception("Diagnostic command has no matching completion.");
         }
-        foreach (string kind in new[] { "environment", "commandBegin", "stopBegin", "stopEnd", "resetEnd", "presentation", "clock", "sourceRead", "firstDeviceProgress", "logClosed" })
+        foreach (string kind in new[] { "environment", "outputConfiguration", "decodeBegin", "outputInitialized", "commandBegin", "stopBegin", "stopEnd", "resetEnd", "presentation", "clock", "sourceRead", "firstDeviceProgress", "logClosed" })
             if (!records.Any(r => r.GetProperty("kind").GetString() == kind)) throw new Exception("Missing diagnostic event: " + kind);
         var progress = records.Where(r => r.GetProperty("kind").GetString() == "firstDeviceProgress").ToArray();
         if (progress.Length != 5 || progress.Select(r => r.GetProperty("data").GetProperty("session").GetInt64()).Distinct().Count() != 5)
