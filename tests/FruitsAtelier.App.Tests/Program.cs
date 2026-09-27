@@ -61,6 +61,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay movement, combo, hyperdash and facing", TestplayTests.MovementAndJudgement),
     ("Testplay autoplay notices, manual input and focus persistence", TestplayTests.AutoplaySwitching),
     ("Catch rotations, banana arrival transforms and combo colours", TestplayTests.VisualTransformsAndColours),
+    ("Unskinned Catch objects keep dark map colours bright", FallbackSkinTests.BrightComboColour),
     ("Testplay Escape returns to editor without repeated navigation", TestplayTests.EscapeReturnsToEditor),
     ("Testplay caught stacks share preview effects and outlive final judgement", TestplayTests.LivePlate),
     ("Testplay input isolation and transport lifecycle", TestplayTests.EditorLifecycle),

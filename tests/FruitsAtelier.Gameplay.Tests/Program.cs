@@ -64,7 +64,7 @@ static void Sizes()
     Near(0.15, CatchSize.Scale(10));
     Near(64, CatchSize.FruitDiameter(5));
     Near(32, CatchSize.FruitRadius(5));
-    Near(8, CatchSize.DefaultDropletRadius(5));
+    Near(12, CatchSize.DefaultDropletRadius(5));
     Near(4, CatchSize.DefaultTinyDropletRadius(5));
     Near(106.75, CatchSize.CatcherWidth(5));
     Near(85.4, CatchSize.CatchWidth(5));

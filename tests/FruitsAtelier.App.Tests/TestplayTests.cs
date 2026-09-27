@@ -116,11 +116,11 @@ internal static class TestplayTests
         map.OriginalSections.Add(colours);
         ui.LoadDocument(map); ui.View.StartTestplay();
         clock.Advance(1000); ui.Paint();
-        Check(ui.Canvas.Circles.Any(c => c.Color == 0x00FF00 && c.Filled), "first combo uses the beatmap palette");
+        Check(ui.Canvas.Circles.Any(c => c.Color == 0x99FF99 && c.Filled), "first combo keeps the beatmap hue in the brighter fallback palette");
         clock.Advance(1000); ui.Paint();
-        Check(ui.Canvas.Circles.Count(c => c.Color == 0x00FF00 && c.Filled) >= 2, "objects in one combo retain their colour on the plate");
+        Check(ui.Canvas.Circles.Count(c => c.Color == 0x99FF99 && c.Filled) >= 2, "objects in one combo retain their colour on the plate");
         clock.Advance(1000); ui.Paint();
-        Check(ui.Canvas.Circles.Any(c => c.Color == 0xFF0000 && c.Filled), "new combo applies the stable colour skip offset");
+        Check(ui.Canvas.Circles.Any(c => c.Color == 0xFF9999 && c.Filled), "new combo applies the stable colour skip offset");
         ui.View.StopTestplay();
         string folder = Path.GetFullPath("artifacts/tests/visual-rotation-skin"); Directory.CreateDirectory(folder);
         byte[] header = new byte[24]; new byte[] {137, 80, 78, 71, 13, 10, 26, 10}.CopyTo(header, 0);

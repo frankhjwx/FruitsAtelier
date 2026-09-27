@@ -40,7 +40,7 @@ full catcher width = 106.75 × (2 × scale)
 effective catch width = full catcher width × 0.8
 ```
 
-Multiply these dimensions by view width / 512. At CS=5, nominal fruit diameter is 64 units. Basic-shape fallback Droplet / TinyDroplet radii are `16 × scale` / `8 × scale`; these differ from legacy PNG visible-size rules.
+Multiply these dimensions by view width / 512. At CS=5, nominal fruit diameter is 64 units. Basic-shape fallback Droplet / TinyDroplet radii are `24 × scale` / `8 × scale`; these differ from legacy PNG visible-size rules. Fallback Fruits, Droplets, and TinyDroplets blend their combo colour 40% with white 60%, keeping dark beatmap colours visible at a lighter value. Bananas retain their gold colour.
 
 PNGs use original logical dimensions; `@2x` logical dimensions are half their pixel dimensions. Each axis is center-cropped to at most 160 logical pixels rather than scaling the whole oversized image down. Target size is `cropped logical size × nominal fruit diameter / 128 × view width / 512`, additionally multiplied by 0.8 for drops, 0.4 for tiny droplets, and 0.6 for bananas. Transparent margins count toward size; overlays do not inherit base-image tint.
 

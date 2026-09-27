@@ -24,7 +24,7 @@ public static class CatchSize
     public static float FruitDiameter(double circleSize) => 128 * Scale(circleSize);
     public static float FruitRadius(double circleSize) => 64 * Scale(circleSize);
     public static float BananaRadius(double circleSize) => FruitRadius(circleSize) * BananaScaleFactor;
-    public static float DefaultDropletRadius(double circleSize) => 16 * Scale(circleSize);
+    public static float DefaultDropletRadius(double circleSize) => 24 * Scale(circleSize);
     public static float DefaultTinyDropletRadius(double circleSize) => 8 * Scale(circleSize);
     public static float CatcherWidth(double circleSize) => BaseCatcherWidth * (Scale(circleSize) * 2);
     public static float CatchWidth(double circleSize) => CatcherWidth(circleSize) * AllowedCatchRange;
