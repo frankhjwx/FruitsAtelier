@@ -93,6 +93,8 @@ The Details header shows read-only beatmap AR, CS, and Distance Per Beat (DPB) i
 
 `Catch Preview` offers 4:3, 16:9 and Fit display modes. Fit uses the entire available sidebar height, revealing more future notes as the window grows vertically. Drag the sidebar divider to adjust width. Objects retain their proportions, and an automatic catcher follows playback and seeking. Mode and Resolution controls stay above the picture; 4:3 and 16:9 pictures are centred in the remaining area. Caught fruit remains on the plate. Completing a combo group scatters the stack; seeking restores the plate effects.
 
+The arrow to the left of the four tool buttons opens a whole-map **Movement strain** sidebar. It is 280 DIP wide at normal window sizes and has the same height as Catch Preview. Time increases upward in its vertical curve, matching the canvas; an amber marker shows the shared playback position. Click or drag in the graph to seek continuously. The left sidebar and Catch Preview can be open together. A very narrow window may compress the sidebars to preserve at least 256 DIP for the central playfield. Sidebar visibility is session display state and does not edit the beatmap.
+
 During playback and seeking, the play line stays at its configured height, initially 25% above the bottom of the drawing area. While paused, drag its leftmost yellow handle vertically to set that height between 5% and 95% of the drawing area. The current time stays unchanged and canvas content scrolls with the line. Playback disables handle dragging and uses the chosen height. The height is saved as a global view preference when the drag finishes and restored after restarting the editor. It is retained across resizing and difficulty switches without editing map content or undo history. Esc or lost capture cancels a drag. Left-button marquee selection on the canvas and object timeline keeps playback scrolling and accepts wheel navigation while held. The start stays anchored to its original map time while the other end follows the pointer, so the box grows during scrolling even with a stationary pointer. Within 24 DIP of the canvas's top/bottom edge or the object timeline's left/right edge, a dragged selection automatically scrolls toward that edge, gradually increasing to 1200 DIP per second on the canvas or 600 DIP per second on the object timeline. Moving back inside, releasing the button, cancelling, or reaching the map boundary stops automatic scrolling. Objects inside the time range remain selected after they move outside the viewport. Paused middle-button panning is free; canvas wheel navigation preserves the current playhead-to-viewport offset, while playback and other seeking resume following.
 
 ### Playback pause snapping
@@ -448,6 +450,11 @@ Number keys 1–4 select Select, Fruit, FSlider and Banana Shower. During an FSl
 Ctrl+wheel selects among all supported Snap divisors on the canvas and timelines. Shift+wheel seeks four times the normal wheel distance. Alt+wheel zooms the canvas or the upper object timeline under the pointer. Ctrl+Alt+wheel cycles Select, Fruit, FSlider and Banana Shower over the canvas or upper timeline. Unsupported wheel modifier combinations do not seek. Ctrl+M enters its quick cycle at 1/3 when the current divisor is outside the four choices.
 
 ## Settings
+
+Categories are ordered General, Workspace, Appearance, Audio, Testplay keys, and
+Application updates (where supported). Appearance groups the active skin selector
+with the default skin archive, metadata display, language, and indicator colours.
+Active skin selection takes effect immediately and is saved automatically.
 
 Settings opens a centered modal overlay above the current editor or library, with
 its background dimmed and blocked from pointer and keyboard input. Categories retain

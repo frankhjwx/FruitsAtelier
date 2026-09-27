@@ -49,7 +49,7 @@ internal static class SettingsPreferencesTests
                 Check(saved == 3 && loaded.MasterVolume == 25 && loaded.SongVolume == 50 && loaded.HitsoundVolume == 75,
                     "Settings saves all three volume channels on release");
                 Check(songGain == .125f && hitGain == .1875f && !ui.View.WantsCapture, "Settings applies shared audio gains");
-                ui.ClickText(L.Get("settings.skins"));
+                ui.ClickText(L.Get("settings.appearance"));
                 void Menu()
                 {
                     var selector = ui.View.SettingsSkinSelectorBounds;
@@ -59,7 +59,7 @@ internal static class SettingsPreferencesTests
                 Check(ui.View.SkinName == "Settings skin" && LibrarySettings.Load(config).SelectedSkin == skin,
                     "Settings skin selector loads and persists the shared selection");
                 Menu(); ui.Key(27);
-                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.immediatePreferences")), "Escape dismisses skin menu before Settings");
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("skin.defaultArchive")), "Escape dismisses skin menu before Settings");
                 bool importRequested = false;
                 ui.View.RequestLoadSkin = () => importRequested = true;
                 Menu(); ui.ClickText(L.Get("skin.import"));
@@ -84,7 +84,7 @@ internal static class SettingsPreferencesTests
                 ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.audio"));
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("volume.song") + "  " + L.Get("ui.zoomPercent", 100)),
                     "Settings reflects changes from original volume control");
-                ui.ClickText(L.Get("settings.skins")); Menu();
+                ui.ClickText(L.Get("settings.appearance")); Menu();
                 Check(ui.Canvas.Texts.Any(t => t.Value == "Settings skin") && !ui.Canvas.Texts.Any(t => t.Value == "✓ Settings skin"),
                     "Settings reflects changes from header skin selector");
                 ui.Key(27); ui.Key(27);

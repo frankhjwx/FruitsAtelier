@@ -4,6 +4,7 @@ var tests = new (string Name, Action Run)[]
 {
     ("Catch stars match 21 official algorithm fixtures", CatchDifficultyTests.OfficialValues),
     ("Catch star calculation respects object participation and input boundaries", CatchDifficultyTests.Participation),
+    ("Catch curve samples retain chronological contributions and decay", CatchDifficultyTests.CurveSamples),
     ("Movement ranges distinguish standing, walking, dash, hyperdash and zero-time gaps", MovementRanges),
     ("CS scales nominal fruit, default droplets and catcher independently", Sizes),
     ("Static bananas use the arrival scale across the CS range", BananaSizes),

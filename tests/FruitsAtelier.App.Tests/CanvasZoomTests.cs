@@ -9,7 +9,8 @@ internal static class CanvasZoomTests
         var ui = new Ui(overview: false);
         Near(.6, ui.View.CanvasZoom);
         AssertScale(ui);
-        if (ui.View.CanvasPlotBounds.X > 180 || ui.Canvas.Texts.Any(t => t.Value is "Objects" or "对象"))
+        if (ui.View.CanvasPlotBounds.X > ui.View.DifficultyCurvePanelBounds.Right + 180
+            || ui.Canvas.Texts.Any(t => t.Value is "Objects" or "对象"))
             throw new Exception("Objects panel still occupies the canvas layout");
         ClickZoom(ui, 0);
         Near(EditorView.MinimumPlayfieldWidth, ui.Plot.Width);

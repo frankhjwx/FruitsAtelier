@@ -23,7 +23,7 @@ public sealed partial class EditorView
         {
             var mode = (Tool)i;
             string name = i == 2 ? "fslider" : mode.ToString().ToLowerInvariant();
-            var bounds = new Rect((108 - size) / 2, top + i * size, size, size);
+            var bounds = new Rect(leftPanel.Right + (108 - size) / 2, top + i * size, size, size);
             toolButtons.Add(bounds);
             bool active = mode == tool;
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "tools", name + ".png"), bounds, opacity: active ? 1 : .45f);

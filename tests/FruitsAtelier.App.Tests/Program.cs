@@ -102,6 +102,7 @@ var tests = new (string Name, Action Run)[]
     ("Slider edge and whole-slider sounds survive conversion and export", AssistToolsTests.SliderSounds),
     ("Background resource checks refresh missing files and discard stale edits and projects", ResourcePollingTests.RefreshAndStaleResults),
     ("Preview drawer, mods, resizing and aligned shortcuts preserve content", PreviewSidebarTests.Sidebar),
+    ("Difficulty curve panel resizes, seeks, and preserves canvas width", DifficultyCurveSidebarTests.LayoutAndSeeking),
     ("Preview aspect modes, Fit height and edge overscan", PreviewSidebarTests.DisplayModesAndOverscan),
     ("Automatic catcher movement and seeking", PreviewSidebarTests.AutomaticCatcher),
     ("Caught stacks and combo explosions survive seeking", PreviewSidebarTests.PlateEffects),

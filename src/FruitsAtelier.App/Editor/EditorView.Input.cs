@@ -134,6 +134,10 @@ public sealed partial class EditorView
             if (y >= 39) return;
         }
         if (catchPreviewVisible && PreviewResizeBounds.Contains(x, y)) { drag = DragKind.PreviewResize; return; }
+        if (DifficultyCurveToggleBounds.Contains(x, y)) { difficultyCurveVisible = !difficultyCurveVisible; return; }
+        if (difficultyCurveVisible && DifficultyCurveGraphBounds.Contains(x, y))
+        { drag = DragKind.DifficultySeek; SeekDifficultyCurve(y); return; }
+        if (difficultyCurveVisible && leftPanel.Contains(x, y)) return;
         if (BeginPlaybackLineDrag(x, y)) return;
         if (zoomSlider.Contains(x, y))
         {
@@ -396,7 +400,13 @@ public sealed partial class EditorView
         if (librarySettingsOpen || ExportVisible || languageMenuOpen) return;
         if (LibraryVisible) { MoveLibraryPointer(y); return; }
         if (tabPointer) { MoveTabPointer(x); return; }
-        if (drag == DragKind.PreviewResize) { previewWidth = Math.Clamp(width - x, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)); return; }
+        if (drag == DragKind.PreviewResize)
+        {
+            previewWidth = Math.Clamp(width - x, MinimumPreviewWidth,
+                Math.Max(MinimumPreviewWidth, width - 109 - leftPanel.Width - (MinimumPlayfieldWidth + 198)));
+            return;
+        }
+        if (drag == DragKind.DifficultySeek) { SeekDifficultyCurve(y); return; }
         if (drag == DragKind.None)
         {
             if (LegacyMode && draftTrack != Guid.Empty) UpdateLegacyPreview(x, y);
@@ -577,6 +587,7 @@ public sealed partial class EditorView
             return;
         }
         PointerMove(x, y, shift, false);
+        if (drag == DragKind.DifficultySeek) { drag = DragKind.None; return; }
         if (drag == DragKind.PlaybackLine) { FinishPlaybackLineDrag(); return; }
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
         if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)

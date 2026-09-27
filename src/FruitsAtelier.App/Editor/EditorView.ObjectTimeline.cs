@@ -228,11 +228,11 @@ public sealed partial class EditorView
     private void DrawObjectTimeline(ICanvas c)
     {
         float top = canvas.Y + 38;
-        objectTimeline = new(42, top + 4, Math.Max(30, canvas.Right - 54), 64);
+        objectTimeline = new(leftPanel.Right + 42, top + 4, Math.Max(30, canvas.Right - leftPanel.Right - 54), 64);
         timelineObjects.Clear();
         c.Fill(new(0, top, canvas.Right, 72), Background);
-        Button(c, new(7, top + 5, 29, 28), L.Get("ui.timelineZoomIn"), () => ZoomObjectTimeline(1.25));
-        Button(c, new(7, top + 37, 29, 28), L.Get("ui.timelineZoomOut"), () => ZoomObjectTimeline(.8));
+        Button(c, new(leftPanel.Right + 7, top + 5, 29, 28), L.Get("ui.timelineZoomIn"), () => ZoomObjectTimeline(1.25));
+        Button(c, new(leftPanel.Right + 7, top + 37, 29, 28), L.Get("ui.timelineZoomOut"), () => ZoomObjectTimeline(.8));
         double start = ObjectTimelineStartMs;
         double end = start + objectTimeline.Width / objectTimelineScale;
         float X(double time) => objectTimeline.X + (float)((time - start) * objectTimelineScale);

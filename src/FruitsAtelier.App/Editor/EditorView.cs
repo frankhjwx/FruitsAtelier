@@ -19,8 +19,9 @@ public sealed partial class EditorView
         public double Playhead, ViewStart;
         public MapDocument? RatingSnapshot;
         public double? Stars;
+        public IReadOnlyList<CatchStrainSample>? StrainSamples;
         public bool RatingCompensation, RatingFailed;
-        public Task<double?>? RatingTask;
+        public Task<CatchDifficultyCurveResult?>? RatingTask;
         public readonly CancellationTokenSource RatingCancellation = new();
     }
     private readonly List<DifficultySession> difficulties;
@@ -44,7 +45,7 @@ public sealed partial class EditorView
     private readonly List<HitArea> hits = [];
     private readonly List<NumericField> fields = [];
     private float width, height, mouseX = -1, mouseY = -1;
-    private Rect canvas, plot, rightPanel, overview, snapSlider, zoomSlider;
+    private Rect canvas, plot, rightPanel, leftPanel, overview, snapSlider, zoomSlider;
     private double viewStart, pixelsPerMs = 0.09, playhead = 1500;
     private double canvasZoom = .6;
     public const float MinimumPlayfieldWidth = 256;
@@ -180,7 +181,7 @@ public sealed partial class EditorView
     }
 
     private enum Tool { Select, Fruit, Slider, Banana }
-    private enum DragKind { None, PlaybackLine, Objects, SliderObject, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Break, BreakEdge, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail, PreviewResize }
+    private enum DragKind { None, PlaybackLine, Objects, SliderObject, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Break, BreakEdge, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail, PreviewResize, DifficultySeek }
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
     private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp);
     private float FullPlayfieldWidth => plot.Width * 512 / (512 + PlayfieldPadding * 2);

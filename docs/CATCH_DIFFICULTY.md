@@ -10,6 +10,8 @@ Positions are normalized to a catcher half-width of 41, with minimum required mo
 
 ## Display and invalidation
 
+The optional left editor sidebar shows a whole-map movement-strain curve from the same No Mod, 1× calculation as the star rating. Each sample records strain immediately before and after a Fruit or Droplet contribution; the value decays by the rating algorithm between objects. Time increases upward, as on the canvas. The curve uses the full-map maximum as its horizontal scale. The display retains the maximum sample in each pixel row, then smooths the contour over nearby rows; areas near samples at least 80% of the full-map maximum appear amber. It is a movement metric, not a local star rating. Dragging in the graph seeks the shared playback position without beat snapping or modifying beatmap content.
+
 Stars are calculated in the background against independent document snapshots, with one editor star task at a time. When the document changes, the last successful value remains visible with a spinner. Before the first result, the display shows `0.00★` and a spinner. A successfully calculated zero-star result stops the spinner.
 
 During object drags or unfinished FSlider/banana drafts, the old value remains until editing completes. Continuous edits coalesce pending changes; stale snapshot results are not published. Replacing a project cancels its queued calculations. Conversion failures retain the cached value, stop the spinner, and show `!` with a status message; further edits retry. The cache lasts only for the current session.

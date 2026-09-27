@@ -31,6 +31,25 @@ internal static class CatchDifficultyTests
         catch (ArgumentOutOfRangeException) { }
     }
 
+    public static void CurveSamples()
+    {
+        var objects = Pattern(3, i => i % 2 == 0 ? 80 : 430, i => i == 2 ? 10000 : i * 100);
+        var curve = CatchDifficultyCalculator.CalculateWithCurve(objects, 5);
+        Near(curve.Difficulty.StarRating, CatchDifficultyCalculator.Calculate(objects, 5).StarRating);
+        if (curve.Samples.Count != 3 || curve.Samples[0].After != 0
+            || curve.Samples[1].After <= curve.Samples[1].Before
+            || curve.Samples[2].Before >= curve.Samples[1].After * .001)
+            throw new Exception("Chronological curve samples must retain contributions and long-gap decay");
+        var tied = Pattern(3, i => i * 150, i => i == 0 ? 0 : 100);
+        var sameTime = CatchDifficultyCalculator.CalculateWithCurve(tied, 5).Samples;
+        if (sameTime.Count != 3 || sameTime[1].TimeMs != sameTime[2].TimeMs
+            || sameTime[2].Before != sameTime[1].After)
+            throw new Exception("Simultaneous objects must keep stable cumulative strain");
+        if (CatchDifficultyCalculator.CalculateWithCurve([], 5).Samples.Count != 0
+            || CatchDifficultyCalculator.CalculateWithCurve([objects[0]], 5).Samples.Count != 1)
+            throw new Exception("Empty and one-object maps must produce well-defined samples");
+    }
+
     private static void CheckPattern(int count, Func<int, double> x, Func<int, double> time, double[] expected)
     {
         var objects = Pattern(count, x, time);

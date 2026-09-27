@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { General, Workspace, Appearance, Testplay, Updates, Audio, Skins }
+    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, Updates }
     private SettingsCategory settingsCategory;
     private bool draftRomanisedMetadata;
     private bool draftDerandomizeDroplets;
@@ -28,7 +28,7 @@ public sealed partial class EditorView
     private float SettingsRight => SettingsBounds.Right;
     private const float SettingsTextSize = 13;
     private bool SettingsAudioVisible => librarySettingsOpen && settingsCategory == SettingsCategory.Audio;
-    internal Rect SettingsSkinSelectorBounds => new(SettingsContentX, SettingsTop + 144,
+    internal Rect SettingsSkinSelectorBounds => new(SettingsContentX, SettingsTop + 128,
         Math.Min(520, SettingsRight - SettingsContentX - 32), 38);
 
     private void SettingsButton(ICanvas c, Rect bounds, string label, Action action, bool active = false, bool enabled = true)
@@ -101,7 +101,7 @@ public sealed partial class EditorView
         c.Text(L.Get("library.settings"), r.X + 20, r.Y + 16, 19, Foreground, r.Width - 80, true);
         SettingsButton(c, new(r.Right - 48, r.Y + 10, 32, 28), "×", CloseSettings);
         c.Line(r.X + 214, r.Y + 56, r.X + 214, r.Bottom - 20, Grid);
-        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.testplay", "update.title", "settings.audio", "settings.skins"];
+        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "update.title"];
         for (int i = 0; i < categories.Length; i++)
         {
             var category = (SettingsCategory)i;
@@ -140,19 +140,20 @@ public sealed partial class EditorView
                 LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, SettingsTop + 284);
                 break;
             case SettingsCategory.Appearance:
-                LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, SettingsTop + 160);
+                DrawSkinSelector(c, SettingsSkinSelectorBounds);
+                LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, SettingsTop + 184);
                 float rowWidth = Math.Min(520, SettingsRight - SettingsContentX - 32);
                 float labelWidth = Math.Min(240, rowWidth / 2);
                 float controlX = SettingsContentX + labelWidth + 16;
                 float controlWidth = rowWidth - labelWidth - 16;
-                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, SettingsTop + 264.5f, SettingsTextSize, Foreground, labelWidth, true);
-                var romanisedBounds = new Rect(controlX, SettingsTop + 254, controlWidth, 38);
+                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, SettingsTop + 280.5f, SettingsTextSize, Foreground, labelWidth, true);
+                var romanisedBounds = new Rect(controlX, SettingsTop + 270, controlWidth, 38);
                 c.Fill(romanisedBounds, Surface, 4); c.Stroke(romanisedBounds, Grid, radius: 4);
                 SettingsButton(c, romanisedBounds,
                     L.Get(draftRomanisedMetadata ? "settings.romanisedOn" : "settings.romanisedOff"),
                     () => draftRomanisedMetadata = !draftRomanisedMetadata, draftRomanisedMetadata);
-                c.Text(L.Get("ui.language"), SettingsContentX, SettingsTop + 326.5f, SettingsTextSize, Foreground, labelWidth, true);
-                DrawLanguageButton(c, new(controlX, SettingsTop + 316, controlWidth, 38));
+                c.Text(L.Get("ui.language"), SettingsContentX, SettingsTop + 330.5f, SettingsTextSize, Foreground, labelWidth, true);
+                DrawLanguageButton(c, new(controlX, SettingsTop + 320, controlWidth, 38));
                 DrawIndicatorColours(c);
                 break;
             case SettingsCategory.Testplay:
@@ -164,10 +165,6 @@ public sealed partial class EditorView
             case SettingsCategory.Audio:
                 DrawVolumeControls(c);
                 c.Text(L.Get("settings.immediatePreferences"), SettingsContentX, SettingsTop + 368, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
-                break;
-            case SettingsCategory.Skins:
-                DrawSkinSelector(c, SettingsSkinSelectorBounds);
-                c.Text(L.Get("settings.immediatePreferences"), SettingsContentX, SettingsTop + 204, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
                 break;
         }
         c.Line(SettingsContentX, r.Bottom - 86, r.Right - 24, r.Bottom - 86, Grid);

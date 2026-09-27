@@ -131,9 +131,13 @@ public sealed partial class EditorView
             if (!matches) session.RatingSnapshot = null;
             if (matches)
             {
-                double? result = completed.IsCompletedSuccessfully ? completed.Result : null;
+                CatchDifficultyCurveResult? result = completed.IsCompletedSuccessfully ? completed.Result : null;
                 session.RatingFailed = result is null;
-                if (result is { } stars) session.Stars = stars;
+                if (result is { } rating)
+                {
+                    session.Stars = rating.Difficulty.StarRating;
+                    session.StrainSamples = rating.Samples;
+                }
                 else SetNotice(L.Get("project.starCalculationFailed", session.Name));
             }
         }
@@ -161,11 +165,11 @@ public sealed partial class EditorView
                         if (objects is null)
                         {
                             var converted = CatchStreamConverter.Convert(snapshot, compensation);
-                            if (!converted.Success) return (double?)null;
+                            if (!converted.Success) return (CatchDifficultyCurveResult?)null;
                             var exported = OsuBeatmapWriter.Serialize(snapshot, compensation);
                             objects = exported.ObjectSequenceMatches ? exported.PlayableObjects : converted.Objects;
                         }
-                        return (double?)CatchDifficultyCalculator.Calculate(objects, snapshot.CircleSize).StarRating;
+                        return CatchDifficultyCalculator.CalculateWithCurve(objects, snapshot.CircleSize);
                     }
                     finally { ratingWorkers.Release(); }
                 }

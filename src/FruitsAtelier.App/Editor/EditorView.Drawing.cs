@@ -46,10 +46,16 @@ public sealed partial class EditorView
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
         if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
         bool expandedPanel = catchPreviewVisible || TimingPageVisible;
-        float rightWidth = expandedPanel ? Math.Clamp(previewWidth, MinimumPreviewWidth, Math.Max(MinimumPreviewWidth, width * .5f)) : 0;
+        const float minimumCanvasWidth = MinimumPlayfieldWidth + 198;
+        const float collapsedCurveWidth = 24;
+        float leftWidth = difficultyCurveVisible
+            ? Math.Min(DifficultyCurveWidth, Math.Max(collapsedCurveWidth, width - 109 - minimumCanvasWidth))
+            : collapsedCurveWidth;
+        float rightWidth = expandedPanel ? Math.Clamp(previewWidth, 0, Math.Max(0, width - 109 - leftWidth - minimumCanvasWidth)) : 0;
         float bodyHeight = Math.Max(180, height - 204);
         rightPanel = new(width - (expandedPanel ? rightWidth : 340), 84, expandedPanel ? rightWidth : 340, expandedPanel ? bodyHeight : 38);
-        canvas = new(108, 84, Math.Max(120, width - rightWidth - 109), bodyHeight);
+        leftPanel = new(0, 84, leftWidth, bodyHeight);
+        canvas = new(108 + leftWidth, 84, Math.Max(120, width - rightWidth - leftWidth - 109), bodyHeight);
         plot = new(canvas.X + 70, canvas.Y + 140, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 152));
         overview = new(220, height - 77, Math.Max(100, width - 248), 40);
         canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, 1);
@@ -71,6 +77,7 @@ public sealed partial class EditorView
             DrawSelectionBox(c);
         }
         DrawInspector(c);
+        if (!TimingPageVisible) DrawDifficultySidebar(c);
         if (TimingPageVisible) DrawTimingPage(c); else DrawPreviewSidebar(c);
         if (!TimingPageVisible)
         {
@@ -128,7 +135,7 @@ public sealed partial class EditorView
         axisTooltip = null;
         float toolbarRight = rightPanel.X;
         c.Fill(new(0, canvas.Y, toolbarRight, 38), 0x1C2129);
-        c.Text(L.Get("ui.canvasZoom"), 16, canvas.Y + 13, 11, Muted, 48);
+        c.Text(L.Get("ui.canvasZoom"), leftPanel.Right + 16, canvas.Y + 13, 11, Muted, 48);
         float snapLeft = toolbarRight - 158;
         bool compactToolbar = toolbarRight < 900;
         float breakWidth = compactToolbar ? 115 : 140;
@@ -136,7 +143,7 @@ public sealed partial class EditorView
         float movementX = breakX - 130;
         float pathWidth = compactToolbar ? 100 : 150;
         float pathX = movementX - pathWidth - 5;
-        zoomSlider = new(74, canvas.Y + 4, Math.Max(30, pathX - 130), 29);
+        zoomSlider = new(leftPanel.Right + 74, canvas.Y + 4, Math.Max(30, pathX - 130 - leftPanel.Right), 29);
         float zoomX = zoomSlider.X + (float)(1 - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (1 - MinimumCanvasZoom) : 1) * zoomSlider.Width;
         c.Line(zoomSlider.X, canvas.Y + 19, zoomSlider.Right, canvas.Y + 19, Grid, 3);
         c.Line(zoomSlider.X, canvas.Y + 19, zoomX, canvas.Y + 19, Accent, 3);
