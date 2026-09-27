@@ -125,13 +125,13 @@ public sealed partial class EditorView
                 {
                     float displayWidth = Math.Min(520, SettingsRight - SettingsContentX - 32);
                     c.Text(L.Get("settings.displayMode"), SettingsContentX, SettingsTop + 214, SettingsTextSize, Foreground, displayWidth, true);
-                    var displayBounds = new Rect(SettingsContentX, SettingsTop + 244, displayWidth, 38);
+                    c.Fill(new(SettingsContentX, SettingsTop + 244, displayWidth, 64), Gold, 4, .12f);
+                    c.Text(L.Get("settings.displayDelayHint"), SettingsContentX + 12, SettingsTop + 255, 14, Gold, displayWidth - 24, true);
+                    c.Text(L.Get("settings.displayChangeHint"), SettingsContentX + 12, SettingsTop + 278, 14, Gold, displayWidth - 24, true);
+                    var displayBounds = new Rect(SettingsContentX, SettingsTop + 324, displayWidth, 38);
                     SettingsButton(c, displayBounds,
                         L.Get(draftLowLatencyDisplay ? "settings.displayImmediate" : "settings.displayVsync") + " ▾",
                         () => OpenDisplayModeMenu(displayBounds));
-                    c.Fill(new(SettingsContentX, SettingsTop + 298, displayWidth, 64), Gold, 4, .12f);
-                    c.Text(L.Get("settings.displayDelayHint"), SettingsContentX + 12, SettingsTop + 309, 14, Gold, displayWidth - 24, true);
-                    c.Text(L.Get("settings.displayChangeHint"), SettingsContentX + 12, SettingsTop + 332, 14, Gold, displayWidth - 24, true);
                 }
                 break;
             case SettingsCategory.Workspace:

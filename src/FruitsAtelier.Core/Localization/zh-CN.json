@@ -777,7 +777,7 @@
   "settings.displayVsync": "垂直同步（默认）",
   "settings.displayImmediate": "低延迟",
   "settings.displayDelayHint": "遇到声音延迟或声画不同步？",
-  "settings.displayChangeHint": "可尝试调整此选项，然后点击“应用”。",
+  "settings.displayChangeHint": "可尝试调整此选项。",
   "settings.derandomizeOff": "默认去随机化 droplet：关闭",
   "settings.appearance": "外观",
   "settings.skins": "皮肤",

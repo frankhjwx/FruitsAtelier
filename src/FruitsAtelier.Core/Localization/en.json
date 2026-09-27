@@ -777,7 +777,7 @@
   "settings.displayVsync": "Vertical sync (default)",
   "settings.displayImmediate": "Low latency",
   "settings.displayDelayHint": "Audio delay or sound / picture mismatch?",
-  "settings.displayChangeHint": "Try changing this option, then click Apply.",
+  "settings.displayChangeHint": "Try changing this option.",
   "settings.derandomizeOff": "Default derandomize droplets: Off",
   "settings.appearance": "Appearance",
   "settings.skins": "Skins",
