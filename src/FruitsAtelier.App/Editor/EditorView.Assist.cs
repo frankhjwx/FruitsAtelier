@@ -17,7 +17,7 @@ public sealed partial class EditorView
     public IReadOnlyList<Rect> AssistButtonBounds => assistButtons;
     public bool DistanceSnapEnabled => distanceSnap ^ altHeld;
     public bool NotesLocked => notesLocked;
-    private bool dropletSelectionLocked, notesLockFlyout;
+    private bool dropletSelectionLocked = true, notesLockFlyout;
     public bool DropletSelectionLocked => dropletSelectionLocked;
     private bool EffectiveGridSnap => gridSnap ^ (shiftHeld && !altHeld);
     public (double? Previous, double? Next) DistanceReadout { get; private set; }

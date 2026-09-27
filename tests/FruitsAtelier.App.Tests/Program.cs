@@ -941,12 +941,19 @@ sealed class Ui
     public float Width => width;
     public EditorView View { get; }
     public RecordingCanvas Canvas { get; } = new();
-    public Ui(bool overview = true, TimeProvider? timeProvider = null)
+    public Ui(bool overview = true, TimeProvider? timeProvider = null, bool lockDropletSelection = false)
     {
         View = new(timeProvider: timeProvider);
         View.LibrarySettings.TestplayStartupDelaySeconds = 0;
         View.SetSliderEditingMode(SliderEditingMode.PenTool);
         Paint();
+        if (!lockDropletSelection)
+        {
+            var button = View.AssistButtonBounds[6];
+            View.PointerMove(button.X + 10, button.Y + 10, false, false); Paint();
+            ClickText(FruitsAtelier.Localization.Strings.Get("assist.lockDropletSelection"));
+            View.PointerMove(0, 0, false, false); Paint();
+        }
         if (overview) ShowFixtureOverview();
     }
     public void LoadDocument(MapDocument document)

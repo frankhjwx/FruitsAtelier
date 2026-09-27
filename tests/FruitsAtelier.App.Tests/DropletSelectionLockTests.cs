@@ -15,7 +15,9 @@ internal static class DropletSelectionLockTests
             slider.ControlPoints.AddRange([new(120, 192), new(400, 192)]);
             map.ImportedSliders.Add(slider);
             if (!imported) ImportedSliderEditing.ConvertToTrack(map, slider.Id);
-            var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.Paint();
+            var ui = new Ui(lockDropletSelection: true); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.Paint();
+            Check(ui.View.DropletSelectionLocked, "Droplet selection must be locked by default.");
+            Toggle(ui);
             var baseline = ui.View.Document.DeepClone();
             var target = OsuBeatmapWriter.Serialize(map).PlayableObjects
                 .First(o => o.Kind == kind && o.TimeMs > 1400 && o.TimeMs < 1600);
