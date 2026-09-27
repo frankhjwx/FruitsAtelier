@@ -41,6 +41,7 @@ var tests = new (string Name, Action Run)[]
     ("Draft tools and editor shortcuts respect modifiers", DraftToolShortcutsTests.Run),
     ("Volume popover buttons, bars, keyboard and fade", VolumePopoverTests.Run),
     ("Testplay Alt arrows show volume controls without moving the catcher", VolumePopoverTests.TestplayShortcuts),
+    ("Testplay volume bars accept clicks and drags after keyboard and wheel shortcuts", VolumePopoverTests.TestplayPointer),
     ("New Combo grouping refreshes on first edit and undo/redo", ComboGroupingTests.Run),
     ("Completing an FSlider replaces only exact head fruit overlaps and undoes atomically", SliderHeadReplacementTests.OnCompletion),
     ("Final stream fruit accepts lower-half hit and drags independently", StreamFruitDragTests.Run),

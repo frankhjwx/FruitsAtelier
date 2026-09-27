@@ -17,7 +17,7 @@ public sealed partial class EditorView
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
         placementCtrl = ctrl;
-        if (IsTestplaying) return;
+        if (IsTestplaying) { BeginVolumePopoverPointer(x, y, button); return; }
         if (ErrorVisible || DiscardConfirmationVisible)
         {
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
