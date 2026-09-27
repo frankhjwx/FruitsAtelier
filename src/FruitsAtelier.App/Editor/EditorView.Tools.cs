@@ -47,6 +47,40 @@ public sealed partial class EditorView
             Button(c, new(flyout.X, flyout.Y, 142, 32), L.Get("ui.osuLegacyMode"), () => SetSliderEditingMode(SliderEditingMode.OsuLegacy), LegacyMode);
             Button(c, new(flyout.X, flyout.Y + 34, 142, 32), L.Get("ui.penToolMode"), () => SetSliderEditingMode(SliderEditingMode.PenTool), !LegacyMode);
         }
+        for (int i = 0; i < toolButtons.Count; i++)
+            if (toolButtons[i].Contains(mouseX, mouseY))
+                DrawPaletteTooltip(c, L.Get(i switch
+                {
+                    0 => "tools.hint.select", 1 => "tools.hint.fruit",
+                    2 => LegacyMode ? "tools.hint.sliderLegacy" : "tools.hint.sliderPen",
+                    _ => "tools.hint.banana"
+                }), toolButtons[i], left: false, above: i == 2);
+    }
+
+    private void DrawPaletteTooltip(ICanvas c, string text, Rect button, bool left, bool above)
+    {
+        float maxWidth = Math.Max(80, Math.Min(620, left ? button.X - 24 : width - button.Right - 24));
+        var lines = new List<string>();
+        foreach (string paragraph in text.Split('\n'))
+        {
+            string remaining = paragraph;
+            while (c.MeasureText(remaining, 11) > maxWidth)
+            {
+                int count = remaining.Length - 1;
+                while (count > 1 && c.MeasureText(remaining[..count], 11) > maxWidth) count--;
+                int space = remaining.LastIndexOf(' ', count - 1, count);
+                if (space > 0) count = space;
+                lines.Add(remaining[..count]);
+                remaining = remaining[count..].TrimStart();
+            }
+            lines.Add(remaining);
+        }
+        float w = lines.Max(line => c.MeasureText(line, 11)) + 16;
+        float h = lines.Count * 16 + 12;
+        float x = left ? button.X - w - 6 : button.Right + 6;
+        float y = Math.Clamp(above ? button.Y - h - 4 : button.Y, 84, height - h - 8);
+        c.Fill(new(x, y, w, h), Surface, 4);
+        for (int i = 0; i < lines.Count; i++) c.Text(lines[i], x + 8, y + 6 + i * 16, 11, Foreground, w - 16);
     }
 
     private bool gridSnap;

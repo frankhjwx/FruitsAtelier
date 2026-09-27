@@ -163,6 +163,7 @@ public sealed partial class EditorView
             double end = viewStart + (plot.Bottom - selectionBox.Y) / pixelsPerMs + padding;
             foreach (var item in ObjectsInTimeRange(start, end))
             {
+                if (!CanSelectCatchObject(item)) continue;
                 var bounds = CatchHitBounds(item);
                 if (Intersects(bounds, selectionBox)) ids.Add(item.SourceId);
             }

@@ -94,6 +94,8 @@ var tests = new (string Name, Action Run)[]
     ("Distance readouts, slider tails, base SV and layout", AssistToolsTests.DistanceRules),
     ("Distance snapping moves selected groups by a shared offset", AssistToolsTests.GroupDistanceDrag),
     ("Combo, hitsound editing and note locking", AssistToolsTests.SoundsAndLocks),
+    ("Droplet selection lock preserves slider editing and content", DropletSelectionLockTests.Selection),
+    ("Tool operation hints coexist with palette flyouts in both languages", DropletSelectionLockTests.Tooltips),
     ("Slider edge and whole-slider sounds survive conversion and export", AssistToolsTests.SliderSounds),
     ("Background resource checks refresh missing files and discard stale edits and projects", ResourcePollingTests.RefreshAndStaleResults),
     ("Preview drawer, mods, resizing and aligned shortcuts preserve content", PreviewSidebarTests.Sidebar),

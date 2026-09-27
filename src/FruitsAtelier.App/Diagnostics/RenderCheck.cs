@@ -9,6 +9,45 @@ namespace FruitsAtelier.App.Diagnostics;
 
 internal static class RenderCheck
 {
+    private static void CheckPaletteHints(D2DCanvas canvas, EditorView view, int width, int height)
+    {
+        string language = FruitsAtelier.Localization.Strings.Language;
+        var original = view.Document.DeepClone();
+        bool dirty = view.IsDirty;
+        void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
+        try
+        {
+            foreach (string locale in new[] { "en", "zh-CN" })
+            {
+                FruitsAtelier.Localization.Strings.SetLanguage(locale); Paint();
+                foreach (var button in view.ToolButtonBounds.ToArray())
+                {
+                    view.PointerMove(button.X + button.Width / 2, button.Y + button.Height / 2, false, false); Paint();
+                }
+                var last = view.AssistButtonBounds[^1];
+                view.Wheel(last.X + 10, view.CanvasPlotBounds.Bottom - 10, -1200, false, false); Paint();
+                foreach (int index in new[] { 5, 6 })
+                {
+                    var button = view.AssistButtonBounds[index];
+                    view.PointerMove(button.X + 10, button.Y + 10, false, false); Paint();
+                    if (index != 6) continue;
+                    bool locked = view.DropletSelectionLocked;
+                    for (int i = 0; i < 2; i++)
+                    {
+                        view.PointerMove(button.X - 20, button.Y + 16, false, false); Paint();
+                        view.PointerDown(button.X - 20, button.Y + 16, 0, false, false);
+                        view.PointerUp(button.X - 20, button.Y + 16, 0); Paint();
+                        if (view.DropletSelectionLocked != (i == 0 ? !locked : locked))
+                            throw new InvalidOperationException("Native droplet lock flyout did not toggle.");
+                    }
+                }
+            }
+            if (!original.ContentEquals(view.Document) || dirty != view.IsDirty)
+                throw new InvalidOperationException("Palette hints or droplet locking changed the document.");
+        }
+        finally { FruitsAtelier.Localization.Strings.SetLanguage(language); view.PointerMove(0, 0, false, false); }
+    }
+
     private static void CheckBookmarkCache(D2DCanvas canvas)
     {
         string toolbar = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
@@ -630,6 +669,7 @@ internal static class RenderCheck
         {
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
+            CheckPaletteHints(canvas, view, size.Item1, size.Item2);
             CheckSongSetup(canvas, view, size.Item1, size.Item2);
             CheckTimingSetup(canvas, view, size.Item1, size.Item2);
             if (!view.MovementAnalysisEnabled)

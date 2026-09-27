@@ -17,6 +17,8 @@ public sealed partial class EditorView
     public IReadOnlyList<Rect> AssistButtonBounds => assistButtons;
     public bool DistanceSnapEnabled => distanceSnap ^ altHeld;
     public bool NotesLocked => notesLocked;
+    private bool dropletSelectionLocked, notesLockFlyout;
+    public bool DropletSelectionLocked => dropletSelectionLocked;
     private bool EffectiveGridSnap => gridSnap ^ (shiftHeld && !altHeld);
     public (double? Previous, double? Next) DistanceReadout { get; private set; }
 
@@ -114,6 +116,31 @@ public sealed partial class EditorView
         notesLocked = !notesLocked;
     }
 
+    private void ToggleDropletSelectionLock()
+    {
+        dropletSelectionLocked = !dropletSelectionLocked;
+        if (dropletSelectionLocked && SelectedDistanceObject() is { Kind: CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet })
+            distanceObject = null;
+    }
+
+    private bool CanSelectCatchObject(ConvertedCatchObject item)
+        => !dropletSelectionLocked || item.Kind is not (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet);
+
+    private void DrawNotesLockFlyout(ICanvas c)
+    {
+        var button = assistButtons[6];
+        string label = L.Get("assist.lockDropletSelection");
+        float w = Math.Max(180, c.MeasureText(label, 12, true) + 20);
+        float y = Math.Clamp(button.Y, assistPalette.Y, assistPalette.Bottom - 34);
+        var flyout = new Rect(button.X - w, y, w, 34);
+        var area = new Rect(flyout.X, y, w + button.Width, Math.Max(34, button.Height));
+        notesLockFlyout = button.Contains(mouseX, mouseY) && assistPalette.Contains(mouseX, mouseY)
+            || notesLockFlyout && area.Contains(mouseX, mouseY);
+        if (!notesLockFlyout) return;
+        c.Fill(flyout, Surface, 4);
+        Button(c, new(flyout.X, flyout.Y, w - 2, 32), label, ToggleDropletSelectionLock, dropletSelectionLocked);
+    }
+
     private static bool PositionsEqual(MapDocument before, MapDocument after)
     {
         var a = before.DeepClone(); var b = after.DeepClone();
@@ -192,14 +219,12 @@ public sealed partial class EditorView
             c.Fill(new(assistPalette.Right + 2, plot.Y + (plot.Height - thumbHeight) * assistScroll / assistScrollLimit, 3, thumbHeight), Muted, 1);
         }
         DrawDistanceSnapFlyout(c);
-        if (hovered >= 0 && hovered != 5)
+        DrawNotesLockFlyout(c);
+        if (hovered >= 0)
         {
             string tip = hovered is >= 1 and <= 3 && !placement && soundEdge is { } edge && ids.Length == 1
                 ? L.Get("assist.edge", edge.Edge + 1) : L.Get(hints[hovered]);
-            float w = Math.Min(280, c.MeasureText(tip, 11) + 16);
-            float y = Math.Clamp(assistButtons[hovered].Y, plot.Y, plot.Bottom - 28);
-            c.Fill(new(assistPalette.X - w - 6, y, w, 28), Surface, 4);
-            c.Text(tip, assistPalette.X - w + 2, y + 8, 11, Foreground, w - 12);
+            DrawPaletteTooltip(c, tip, assistButtons[hovered], left: true, above: hovered is 5 or 6);
         }
         static uint Dim(uint color, float opacity)
         {
