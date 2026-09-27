@@ -31,7 +31,7 @@ public sealed partial class EditorView
             Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
         })) return;
         Select(node.Id, track.Id);
-        tool = Tool.Slider;
+        tool = Tool.Select;
     }
 
     private void EditImportedSlider()
@@ -62,8 +62,7 @@ public sealed partial class EditorView
             Document.DerandomizeDroplets = derandomizeDroplets;
             notice = string.Join(L.Get("editor.diagnostics.separator"), result.Diagnostics);
         })) return;
-        Select(id, id);
-        tool = Tool.Slider;
+        SelectAnchors(Document.Tracks.Single(track => track.Id == id), []);
         StatusMessage = notice.Length == 0 ? L.Get("editor.status.importedSliderEditable") : notice;
     }
 }

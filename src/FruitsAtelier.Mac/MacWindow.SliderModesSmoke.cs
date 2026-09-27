@@ -20,7 +20,10 @@ internal sealed partial class MacWindow
         var end = Screen(375, 200);
         View.PointerMove(end.X, end.Y, false, false);
         View.PointerDown(end.X, end.Y, 2, false, false); View.PointerUp(end.X, end.Y, 2);
-        View.KeyDown(66, false, false);
+        View.KeyDown(49, false, false);
+        var head = Screen(125, 200);
+        View.PointerDoubleClick(head.X, head.Y, false, false);
+        if (View.ActiveTool != "Select") throw new InvalidOperationException("Slider editing left Select.");
         if (View.Document.Tracks.Count != 1 || View.Document.Tracks[0].Nodes[0].OutgoingCurve?.Kind != ControlCurveKind.CircularArc)
             throw new InvalidOperationException("Native legacy drafting did not produce a circular arc.");
         var saved = View.Document.DeepClone();

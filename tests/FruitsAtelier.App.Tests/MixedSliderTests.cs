@@ -25,8 +25,8 @@ internal static class MixedSliderTests
         Check(ui.View.Document.Tracks.Count == 0, "Mixed authoring did not undo in one transaction.");
         ui.Key('Y', ctrl: true);
         track = ui.View.Document.Tracks.Single();
-        ui.SelectTrack(track.Id); ui.Key('B'); ui.ClickMap(1500, ui.View.Document.Tracks.Single(t => t.Id == track.Id).Nodes[1].X);
-        ui.Key('B'); ui.ClickMap(1500, track.Nodes[1].X);
+        ui.EditTrack(track.Id); ui.ClickMap(1500, ui.View.Document.Tracks.Single(t => t.Id == track.Id).Nodes[1].X);
+        ui.ClickMap(1500, track.Nodes[1].X);
         ui.Key('L', ctrl: true);
         ui.Key('L', ctrl: true);
         Check(CurveMath.SegmentKind(track, 1) == CurveKind.Bezier, "The selected outgoing segment was not changed.");

@@ -41,6 +41,11 @@ internal static class ImplicitSliderEditingTests
                 Check(SliderControlEditing.Vertices(track).Any(n => Math.Abs(n.Point.TimeMs - 1500) < .001 && Math.Abs(n.Point.X - 400) < .001), "Insertion ignored the pointer away from the curve.");
                 ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Insertion did not restore the Legacy Slider in one undo.");
                 ui.Key('1'); ui.ClickMap(1000, 100); ui.Key('B');
+                Check(before.ContentEquals(ui.View.Document) && ui.View.ActiveTool == "Slider"
+                    && ui.View.SelectedObjectIds.Count == 0, "Placement converted or retained the selected Legacy Slider.");
+                ui.Key('1');
+                var point = ui.ScreenAt(1000, 100);
+                ui.View.PointerDoubleClick(point.X, point.Y, false, false); ui.Paint();
                 Check(!ui.View.SliderImportPromptVisible && ui.View.Document.Tracks.Count == 1, "Entering slider editing asked for conversion.");
             }
             foreach (var kind in new[] { CatchObjectKind.Droplet, CatchObjectKind.TinyDroplet })

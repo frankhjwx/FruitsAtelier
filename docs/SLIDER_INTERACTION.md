@@ -12,7 +12,7 @@ This document distinguishes lazer behavior from the time-based editor's adaptati
 | Default curve type | Each new segment progresses through linear, perfect curve, Bezier as its total point count grows. | Two points give a line, three an AR-referenced arc, four or more a Bezier. |
 | Invalid perfect curve | `PathControlPointVisualiser.EnsureValidPathTypes` falls back to Bezier for excess controls or an excessive arc bounding box. | Falls back when the arc violates the playfield or forward-time constraints. Explicit arc commands retain validation errors. |
 | Finish | Right-button release ends ControlPoints placement. | Right-click away from committed points completes the preview in one transaction; Enter is also supported. |
-| Existing slider | A single selected slider exposes its control visualiser without a separate placement-tool requirement. | Controls are available in Select and Slider tools. |
+| Existing slider | A single selected slider exposes its control visualiser without a separate placement-tool requirement. | Existing controls are edited in Select. FSlider / B / 3 clears selection and starts a new slider. |
 | Ctrl insertion | `SliderSelectionBlueprint.addControlPoint` finds the nearest control-polygon edge, inserts, selects, and permits immediate dragging. | Insertion uses time order, which fixes the eligible control-polygon interval. New points can be dragged immediately. |
 | Ctrl selection | Mouse-down preserves existing selected points; Ctrl mouse-up deselects only if no drag occurred. | Ctrl-click on an existing control makes it a straight boundary. Box selection remains available. |
 | Right click | Opens a context menu; quick deletion is a separate selection-blueprint operation. | A straight point returns to curved; a curved point is deleted. Body clicks delete the parent. Delete handles batch selection. |
@@ -20,6 +20,17 @@ This document distinguishes lazer behavior from the time-based editor's adaptati
 | Freehand placement | Dragging from the initial head enters Drawing state and fits a B-spline on release. | Not implemented in osu legacy mode. Pen tool mode retains its handle-drag gesture. |
 | Tail length | The tail marker changes expected path length independently of path nodes; Shift can adjust velocity instead. | No independent expected-length marker: endpoint time determines span duration. |
 | Repeats | Timeline duration edits and path geometry are separate operations. | Reverses property and Ctrl+= / Ctrl+− edit repeat count. No extra canvas repeat-drag marker. |
+
+## Selection and history
+
+Tool and history behavior also references [ppy/osu revision 325c8f5](https://github.com/ppy/osu/tree/325c8f5c68413ca3085e4faa7dbf28c237c19ae7):
+`HitObjectComposer.selectionChanged`, `EditorChangeHandler.RestoreState`, and
+`LegacyEditorBeatmapPatcher.processHitObjects`. Existing slider editing uses Select;
+finishing placement retains the placement tool. Undo/redo does not change tools,
+clears selection of changed or removed objects, and retains unaffected selections.
+Restoring a deleted object does not select it. Unavailable undo/redo leaves selection
+unchanged. FruitsAtelier compares authored object content across its ID-preserving
+snapshots rather than replacing objects from an encoded `.osu` diff.
 
 ## Coordinate boundary
 

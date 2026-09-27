@@ -190,7 +190,7 @@ public sealed partial class EditorView
             return;
         }
         if (!plot.Contains(x, y)) return;
-        if (!ctrl && tool == Tool.Select && SelectedDistanceObject() is { IsStandalone: false } selectedChild
+        if (!ctrl && tool == Tool.Select && objectSelection.Count == 1 && SelectedDistanceObject() is { IsStandalone: false } selectedChild
             && HitCatchObject(x, y)?.SourceId != selectedChild.SourceId && HitTrackPath(x, y) != selectedChild.SourceId
             && HitSliderLocation(x, y)?.Id != selectedChild.SourceId)
         {
@@ -247,14 +247,14 @@ public sealed partial class EditorView
             foreach (var node in selectedObject.Nodes)
                 if (Near(Point(node), x, y, 9))
                 {
-                    tool = Tool.Slider;
+                    tool = Tool.Select;
                     PickAnchor(selectedObject, node, false);
                     if (LegacyMode) BeginLegacyDrag(selectedObject, Point(node), x, y);
                     else BeginNodeDrag(selectedObject, node, DragKind.Anchor, x, y);
                     return;
                 }
         }
-        if (tool == Tool.Slider && !LegacyMode && showTargets && SelectedTrack is { } selected)
+        if (SliderControlsActive && !LegacyMode && showTargets && SelectedTrack is { } selected)
         {
             foreach (var node in selected.Nodes)
                 if (Near(Point(node), x, y, 7))
@@ -272,7 +272,7 @@ public sealed partial class EditorView
                 { BeginNodeDrag(selected, node, DragKind.HandleOut, x, y); return; }
             }
         }
-        if (tool == Tool.Slider && draftTrack == Guid.Empty && SelectedTrack is { } editedTrack)
+        if (tool == Tool.Select && draftTrack == Guid.Empty && objectSelection.Count == 0 && SelectedTrack is { } editedTrack)
         {
             if (HitCatchObject(x, y) is null && HitTrackPath(x, y) == Guid.Empty && HitBananaRectangle(x, y) is null)
             {
@@ -672,7 +672,7 @@ public sealed partial class EditorView
             return;
         }
         if (Document.Tracks.FirstOrDefault(track => track.Id == sourceId) is not { } track) return;
-        tool = Tool.Slider;
+        tool = Tool.Select;
         SelectAnchors(track, []);
         StatusMessage = "";
 

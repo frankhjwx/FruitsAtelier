@@ -17,7 +17,7 @@ internal static class MultiSelectionTests
         Objects(ui, fruit.Id); Anchors(ui);
         Check(baseline.ContentEquals(ui.View.Document), "Ctrl selection moved an object or modified the map.");
 
-        ui.SelectTrack(track.Id); ui.Key('B');
+        ui.EditTrack(track.Id);
         ui.ClickMap(2000, 220); Anchors(ui, track.Nodes[1].Id);
         Click(ui, 5000, 340, ctrl: true); Anchors(ui, track.Nodes[4].Id);
         Click(ui, 2000, 220, ctrl: true); Anchors(ui, track.Nodes[1].Id);
@@ -30,10 +30,10 @@ internal static class MultiSelectionTests
         ui.Key('Z', ctrl: true);
         Check(baseline.ContentEquals(ui.View.Document), "Whole-slider drag did not undo atomically.");
 
-        ui.SelectTrack(track.Id); ui.Key('B'); ui.ClickMap(6000, 450);
+        ui.EditTrack(track.Id); ui.ClickMap(6000, 450);
         Check(ui.View.ActiveTool == "Select" && ui.View.Document.Tracks.Count == 1,
             "Empty click did not leave existing-slider edit mode.");
-        ui.SelectTrack(track.Id); ui.Key('B');
+        ui.EditTrack(track.Id);
         var sliderButton = ui.View.ToolButtonBounds[2]; ui.Click(sliderButton.X + 10, sliderButton.Y + 10);
         ui.View.Wheel(ui.Plot.X, ui.Plot.Bottom, -120, false, false, true); ui.Paint();
         ui.ClickMap(5500, 80); ui.ClickMap(6500, 160); ui.Key(13);
@@ -123,7 +123,7 @@ internal static class MultiSelectionTests
         var ui = Load(map);
         var original = ui.View.Document.DeepClone();
         var track = map.Tracks.Single();
-        ui.SelectTrack(track.Id); ui.Key('B');
+        ui.EditTrack(track.Id);
         Box(ui, 800, 130, 3200, 280);
         Anchors(ui, track.Nodes[0].Id, track.Nodes[1].Id, track.Nodes[2].Id);
         ui.Key(46);
@@ -137,7 +137,7 @@ internal static class MultiSelectionTests
         Check(original.ContentEquals(ui.View.Document), "Undo did not recover all deleted endpoints and intermediate points.");
         ui.Key('Y', ctrl: true);
         var twoNodes = ui.View.Document.DeepClone();
-        ui.SelectTrack(track.Id); ui.Key('B');
+        ui.EditTrack(track.Id);
         ui.ClickMap(4000, 300); Anchors(ui, track.Nodes[3].Id);
         ui.Key(46);
         Check(ui.View.Document.Tracks.Count == 0, "Deleting one of two remaining anchors left an invalid one-point slider.");
@@ -173,7 +173,7 @@ internal static class MultiSelectionTests
         var anchors = AnchorMap();
         ui = Load(anchors);
         var track = anchors.Tracks.Single();
-        ui.SelectTrack(track.Id); ui.Key('B'); ui.ClickMap(5000, 340);
+        ui.EditTrack(track.Id); ui.ClickMap(5000, 340);
         start = Screen(ui, 800, 130); end = Screen(ui, 3200, 280);
         ui.View.PointerDown(start.X, start.Y, 0, false, false);
         ui.View.PointerMove(end.X, end.Y, false, false); ui.Paint();

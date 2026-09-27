@@ -43,7 +43,7 @@ internal static class RequestedInteractionTests
         ui.Key(36);
 
         DoubleClick(ui, 1000, 100);
-        Check(ui.View.ActiveTool == "Slider", "Double-clicking a Slider did not enter anchor edit mode.");
+        Check(ui.View.ActiveTool == "Select", "Double-clicking a Slider left the Select tool.");
         ui.ClickMap(fruit.TimeMs, fruit.X);
         Check(ui.View.ActiveTool == "Select" && ui.View.SelectedObjectIds.SequenceEqual([fruit.Id]),
             $"Clicking another object did not leave Slider editing and select that object (tool={ui.View.ActiveTool}, selected={string.Join(',', ui.View.SelectedObjectIds)}).");

@@ -40,7 +40,9 @@ public sealed partial class EditorView
     private sealed record SelectionSnapshot(Guid[] Objects, Guid[] Anchors, Guid Primary, Guid Track, DragKind Part);
     public IReadOnlyCollection<Guid> SelectedObjectIds => objectSelection.ToArray();
     public IReadOnlyCollection<Guid> SelectedAnchorIds => anchorSelection.ToArray();
-    private bool IsObjectSelected(Guid id) => objectSelection.Contains(id) || tool == Tool.Slider && selectedTrack == id;
+    private bool SliderControlsActive => (tool == Tool.Select || draftTrack != Guid.Empty)
+        && objectSelection.Count <= 1 && SelectedTrack is not null;
+    private bool IsObjectSelected(Guid id) => objectSelection.Contains(id) || selectedTrack == id;
 
     private void SelectObjects(IEnumerable<Guid> ids, Guid primary = default)
     {
@@ -57,6 +59,7 @@ public sealed partial class EditorView
 
     private void SelectAnchors(CurveTrack track, IEnumerable<Guid> ids, Guid primary = default)
     {
+        if (draftTrack == Guid.Empty) tool = Tool.Select;
         RestoreTemporarySnap();
         soundEdge = null; distanceObject = null;
         var validIds = LegacyMode ? SliderControlEditing.Vertices(track).Select(v => v.Id).ToHashSet() : track.Nodes.Select(n => n.Id).ToHashSet();

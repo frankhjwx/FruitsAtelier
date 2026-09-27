@@ -15,6 +15,8 @@ public readonly record struct MapPoint(double TimeMs, double X)
 public sealed class Fruit
 {
     internal Fruit DeepClone() => (Fruit)MemberwiseClone();
+    internal bool ContentEquals(Fruit other) => Id == other.Id && TimeMs == other.TimeMs && X == other.X
+        && SourceOrder == other.SourceOrder && OriginalLine == other.OriginalLine;
     public Guid Id { get; set; } = Guid.NewGuid();
     public double TimeMs { get; set; }
     public double X { get; set; }
@@ -44,6 +46,21 @@ public enum CurveKind { Linear, Bezier }
 
 public sealed class CurveTrack
 {
+    internal bool ContentEquals(CurveTrack other)
+    {
+        var a = this; var b = other;
+        if (a.Id != b.Id || a.Name != b.Name || a.Kind != b.Kind || a.SourceOrder != b.SourceOrder || a.Nodes.Count != b.Nodes.Count
+            || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets
+            || a.StreamSnapDivisor != b.StreamSnapDivisor) return false;
+        for (int j = 0; j < a.Nodes.Count; j++)
+        {
+            var an = a.Nodes[j]; var bn = b.Nodes[j];
+            if (an.Id != bn.Id || an.TimeMs != bn.TimeMs || an.X != bn.X
+                || an.HandleIn != bn.HandleIn || an.HandleOut != bn.HandleOut || an.OutgoingKind != bn.OutgoingKind || !ControlCurve.Equal(an.OutgoingCurve, bn.OutgoingCurve)) return false;
+        }
+        return true;
+    }
+
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = L.Get("core.names.curve");
     public CurveKind Kind { get; set; } = CurveKind.Bezier;
@@ -169,6 +186,22 @@ public sealed partial class MapDocument
         return copy;
     }
 
+    public IEnumerable<Guid> UnchangedObjectIds(MapDocument other)
+    {
+        return Unchanged(Fruits, other.Fruits, f => f.Id, (a, b) => a.ContentEquals(b))
+            .Concat(Unchanged(Tracks, other.Tracks, t => t.Id, (a, b) => a.ContentEquals(b)))
+            .Concat(Unchanged(ImportedSliders, other.ImportedSliders, s => s.Id, (a, b) => a.ContentEquals(b)))
+            .Concat(Unchanged(BananaShowers, other.BananaShowers, s => s.Id, (a, b) => a.ContentEquals(b)));
+
+        static IEnumerable<Guid> Unchanged<T>(IEnumerable<T> before, IEnumerable<T> after,
+            Func<T, Guid> id, Func<T, T, bool> equal)
+        {
+            var current = after.ToDictionary(id);
+            foreach (var item in before)
+                if (current.TryGetValue(id(item), out var restored) && equal(item, restored)) yield return id(item);
+        }
+    }
+
     public bool ContentEquals(MapDocument other)
     {
         if (Name != other.Name || DurationMs != other.DurationMs || BeatLengthMs != other.BeatLengthMs
@@ -184,20 +217,12 @@ public sealed partial class MapDocument
         for (int i = 0; i < Fruits.Count; i++)
         {
             var a = Fruits[i]; var b = other.Fruits[i];
-            if (a.Id != b.Id || a.TimeMs != b.TimeMs || a.X != b.X || a.SourceOrder != b.SourceOrder || a.OriginalLine != b.OriginalLine) return false;
+            if (!a.ContentEquals(b)) return false;
         }
         for (int i = 0; i < Tracks.Count; i++)
         {
             var a = Tracks[i]; var b = other.Tracks[i];
-            if (a.Id != b.Id || a.Name != b.Name || a.Kind != b.Kind || a.SourceOrder != b.SourceOrder || a.Nodes.Count != b.Nodes.Count
-                || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets
-                || a.StreamSnapDivisor != b.StreamSnapDivisor) return false;
-            for (int j = 0; j < a.Nodes.Count; j++)
-            {
-                var an = a.Nodes[j]; var bn = b.Nodes[j];
-                if (an.Id != bn.Id || an.TimeMs != bn.TimeMs || an.X != bn.X
-                    || an.HandleIn != bn.HandleIn || an.HandleOut != bn.HandleOut || an.OutgoingKind != bn.OutgoingKind || !ControlCurve.Equal(an.OutgoingCurve, bn.OutgoingCurve)) return false;
-            }
+            if (!a.ContentEquals(b)) return false;
         }
         for (int i = 0; i < TimingPoints.Count; i++) if (!TimingPoints[i].ContentEquals(other.TimingPoints[i])) return false;
         for (int i = 0; i < ImportedSliders.Count; i++) if (!ImportedSliders[i].ContentEquals(other.ImportedSliders[i])) return false;

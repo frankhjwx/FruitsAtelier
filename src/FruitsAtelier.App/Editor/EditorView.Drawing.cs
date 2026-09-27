@@ -251,6 +251,7 @@ public sealed partial class EditorView
         {
             DrawImportedCurves(c, playfield.X, playfield.Width, plot.Bottom, viewStart, pixelsPerMs,
                 viewStart, viewStart + plot.Height / pixelsPerMs, false);
+            bool controlsActive = SliderControlsActive;
             foreach (var track in Document.Tracks)
             {
                 uint color = track.Kind == CurveKind.Bezier ? Purple : Accent;
@@ -279,7 +280,7 @@ public sealed partial class EditorView
                         }
                     }
                 }
-                if (selected && LegacyControlsActive)
+                if (selected && LegacyMode && controlsActive)
                 {
                     DrawLegacyControls(c, track);
                     continue;
@@ -287,7 +288,7 @@ public sealed partial class EditorView
                 foreach (var node in track.Nodes)
                 {
                     var p = Screen(Point(node));
-                    if (selected && tool == Tool.Slider)
+                    if (selected && controlsActive)
                     {
                         int index = track.Nodes.IndexOf(node);
                         if (index > 0 && CurveMath.SegmentKind(track, index - 1) == CurveKind.Bezier) DrawHandle(PenHandle(track, index, true), DragKind.HandleIn);
@@ -295,7 +296,7 @@ public sealed partial class EditorView
                             || track.Id == draftTrack && tool == Tool.Slider) DrawHandle(PenHandle(track, index, false), DragKind.HandleOut);
                     }
                     if (p.Y < plot.Y - 9 || p.Y > plot.Bottom + 9) continue;
-                    bool nodeSelected = tool == Tool.Slider && anchorSelection.Contains(node.Id);
+                    bool nodeSelected = anchorSelection.Contains(node.Id);
                     Diamond(c, p.X, p.Y, nodeSelected ? 8 : 5.5f, nodeSelected ? Error : color, opacity);
                     if (nodeSelected) c.Circle(p.X, p.Y, 3, Foreground);
                     void DrawHandle(MapPoint offset, DragKind part)

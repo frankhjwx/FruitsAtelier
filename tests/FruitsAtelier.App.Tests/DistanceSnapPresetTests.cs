@@ -257,13 +257,14 @@ internal static class DistanceSnapPresetTests
             && SliderDistanceSnap.StrictErrors(ui.View.Document, drawn, generated.Objects).Count == 0,
             "Generated straight-slider droplets did not follow the selected DS.");
         ui.Key(13);
+        ui.EditTrack(drawn.Id);
         ui.DownMap(1500, 392); ui.MoveMap(1625, 450); ui.UpMap(1625, 450);
         Check(Math.Abs(ui.View.Document.Tracks.Single().Nodes[^1].X - 440) < 1e-5,
             "Dragging a completed pen slider tail did not snap to DS.");
 
         var legacy = new Ui(); legacy.LoadDocument(ui.View.Document.DeepClone());
         legacy.View.SetSliderEditingMode(FruitsAtelier.App.Editor.SliderEditingMode.OsuLegacy);
-        legacy.Key('Y'); legacy.SelectTrack(drawn.Id); legacy.Key('B');
+        legacy.Key('Y'); legacy.EditTrack(drawn.Id);
         legacy.DownMap(1625, 440); legacy.MoveMap(1750, 480); legacy.UpMap(1750, 480);
         Check(Math.Abs(legacy.View.Document.Tracks.Single().Nodes[^1].X - 488) < 1e-5,
             $"Dragging a completed legacy slider tail did not snap to DS: {legacy.View.Document.Tracks.Single().Nodes[^1].TimeMs}, {legacy.View.Document.Tracks.Single().Nodes[^1].X}, {legacy.View.StatusMessage}.");

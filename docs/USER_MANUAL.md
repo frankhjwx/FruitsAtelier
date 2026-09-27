@@ -75,7 +75,7 @@ Fruit and slider placement previews show hyperdash markers before you confirm pl
 
 Hover over the FSlider tool to choose **osu legacy mode** or **pen tool mode**. Both edit the same FSlider. Legacy mode uses control points; pen mode lets you drag Bezier handles while placing anchors. Ctrl-click adds a straight segment. Click the last draft point again to begin a new segment.
 
-Double-click an FSlider, or select it and press B, to edit its points. Drag points or handles to reshape it. Ctrl-click within its time range to insert a point; Ctrl-click an existing point to make it straight. Right-click a straight point to make it curved, then right-click again to delete it. A right-click on the slider body away from points deletes the slider.
+Double-click an FSlider, or select it and click its controls, to edit its points in **Select**. **B / 3** clears selection and prepares a new slider. Drag points or handles to reshape it. Ctrl-click within its time range to insert a point; Ctrl-click an existing point to make it straight. Right-click a straight point to make it curved, then right-click again to delete it. A right-click on the slider body away from points deletes the slider.
 
 Hold the mouse button on an imported slider until its actions appear, then choose **Convert to FSlider** to edit its shape. **Edit > Convert all sliders to FSliders** converts the active difficulty. Conversion can approximate the imported path; undo restores the original.
 

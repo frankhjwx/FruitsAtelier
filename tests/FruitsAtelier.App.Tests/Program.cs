@@ -255,6 +255,9 @@ var tests = new (string Name, Action Run)[]
     ("Clipboard rejects drafts and overflowing pastes without data loss", ClipboardTests.ClipboardBoundaries),
     ("Slider pen gestures combine corner points and curve handles", SliderInteractionTests.DrawGestures),
     ("Selected control points and handles highlight and drag", SliderInteractionTests.ControlSelectionAndDrag),
+    ("Slider tool state separates existing controls from placement in both languages", SliderToolStateTests.EditingAndPlacement),
+    ("Slider tool state stays Select after deleting or cutting edited sliders", SliderToolStateTests.DeleteAndCut),
+    ("Slider tool state and unrelated selection survive unavailable and partial history", SliderToolStateTests.HistorySelection),
     ("A selected FSlider enters anchor editing on one point click and scopes its shortcuts", SliderInteractionTests.SelectedAnchorEntryAndContext),
     ("FSlider reverse controls and forward extension preserve existing curves", SliderInteractionTests.ReverseAndExtend),
     ("Point shortcuts inserts converts and deletes with undo", SliderInteractionTests.PointContextMenu),
@@ -489,8 +492,7 @@ static void ZeroHandleAnchor()
 {
     var ui = new Ui();
     var id = ui.View.Document.Tracks[0].Nodes[1].Id;
-    ui.ClickMap(2500, 392);
-    ui.Key('B');
+    ui.EditTrack(ui.View.Document.Tracks[0].Id);
     ui.ClickMap(2500, 392);
     ui.Anchor(id).HandleIn = default; ui.Paint();
     True(ui.Anchor(id).HandleIn == new MapPoint(0, 0), "Zero-length handle setup failed.");
@@ -1005,6 +1007,14 @@ sealed class Ui
         var track = View.Document.Tracks.Single(t => t.Id == id);
         ClickMap(track.Nodes[0].TimeMs, track.Nodes[0].X);
         Key('1');
+    }
+    public void EditTrack(Guid id)
+    {
+        Key('B'); Key('1');
+        var track = View.Document.Tracks.Single(t => t.Id == id);
+        var point = Screen(track.Nodes[0].TimeMs, track.Nodes[0].X);
+        View.PointerDoubleClick(point.X, point.Y, false, false);
+        Paint();
     }
     public void ClickFruit(Guid id) { var fruit = Fruit(id); ClickMap(fruit.TimeMs, fruit.X); }
     public void ClickText(string text)

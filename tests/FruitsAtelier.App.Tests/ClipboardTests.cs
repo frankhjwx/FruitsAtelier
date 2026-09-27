@@ -37,7 +37,7 @@ internal static class ClipboardTests
         track.Nodes.Add(new() { TimeMs = 1500, X = 240, HandleIn = new(-100, -40), HandleOut = new(100, 50), OutgoingKind = CurveKind.Linear });
         track.Nodes.Add(new() { TimeMs = 2000, X = 300, HandleIn = new(-100, -20) });
         var map = new MapDocument { DurationMs = 3200 }; map.Tracks.Add(track);
-        ui.LoadDocument(map); ui.Paint(); ui.SelectTrack(track.Id); ui.Key('B'); ui.ClickMap(1500, ui.View.Document.Tracks.Single(t => t.Id == track.Id).Nodes[1].X);
+        ui.LoadDocument(map); ui.Paint(); ui.EditTrack(track.Id); ui.ClickMap(1500, ui.View.Document.Tracks.Single(t => t.Id == track.Id).Nodes[1].X);
         Check(ui.View.CopySelection(), "Selecting an anchor did not copy its parent track.");
         ui.View.Document.Tracks[0].Nodes[1].X = 250;
         ui.View.UpdateTransport(2500, 6000, true, false, false, null, "fixture.wav");
@@ -54,7 +54,7 @@ internal static class ClipboardTests
         Check(ui.View.Document.Tracks.Count == 1, "Paste undo retained the clone.");
 
         ui.View.UpdateTransport(0, 6000, true, false, false, null, "fixture.wav"); ui.Paint();
-        ui.SelectTrack(track.Id); ui.Key('B'); ui.ClickMap(1500, ui.View.Document.Tracks.Single(t => t.Id == track.Id).Nodes[1].X);
+        ui.EditTrack(track.Id); ui.ClickMap(1500, ui.View.Document.Tracks.Single(t => t.Id == track.Id).Nodes[1].X);
         Check(ui.View.CutSelection(), ui.View.StatusMessage);
         Check(ui.View.Document.Tracks.Count == 0 && ui.View.CanPasteSelection, "Cut deleted only the anchor or lost the clipboard.");
         ui.Key('Z', ctrl: true);

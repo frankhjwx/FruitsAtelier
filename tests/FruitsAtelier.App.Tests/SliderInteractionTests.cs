@@ -17,7 +17,7 @@ internal static class SliderInteractionTests
         var saved = ui.View.Document.DeepClone();
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.Tracks.Count == 0, "One undo did not remove the complete draft.");
-        Check(ui.View.ActiveTool == "Select", "Undoing slider creation left the placement tool active.");
+        Check(ui.View.ActiveTool == "Slider", "Undoing placement changed the active tool.");
         ui.Key('Y', ctrl: true);
         Check(saved.ContentEquals(ui.View.Document), "Redo changed click-only authoring.");
 
@@ -50,7 +50,6 @@ internal static class SliderInteractionTests
         ui.SelectTrack(track.Id);
         var saved = ui.View.Document.DeepClone();
         Check(!DotAt(ui, 3000, 350, 3, 0xE7EBF2), "Whole-object selection unexpectedly highlighted a point.");
-        ui.Key('B');
         ui.ClickMap(3000, 350);
         Check(DotAt(ui, 3000, 350, 3, 0xE7EBF2), "Selected control point has no visible center highlight.");
         Check(saved.ContentEquals(ui.View.Document), "Point selection changed curve content.");
@@ -61,18 +60,19 @@ internal static class SliderInteractionTests
         Near(3125, ui.Anchor(nodeId).TimeMs); Near(330, ui.Anchor(nodeId).X);
         ui.Key('Z', ctrl: true);
         Check(saved.ContentEquals(ui.View.Document), "Point drag did not undo completely.");
-        Check(ui.View.ActiveTool == "Slider" && ui.View.SelectedAnchorIds.Contains(nodeId),
-            "Undo left the existing slider's control editing session.");
+        Check(ui.View.ActiveTool == "Select" && ui.View.SelectedAnchorIds.Count == 0,
+            "Undo retained a changed control selection or left Select.");
         ui.Key('Y', ctrl: true); Near(3125, ui.Anchor(nodeId).TimeMs);
-        Check(ui.View.SelectedAnchorIds.Contains(nodeId), "Redo cleared the edited control selection.");
+        Check(ui.View.SelectedAnchorIds.Count == 0, "Redo automatically selected restored controls.");
         ui.Key('Z', ctrl: true);
 
+        ui.ClickMap(3000, 350);
         ui.DownMap(3000, 350); ui.MoveMap(3125, 330); ui.UpMap(3125, 330);
         Near(3125, ui.Anchor(nodeId).TimeMs);
         Check(ui.View.Document.Tracks.Count == 1, "Editing after undo started another slider.");
         ui.Key('Z', ctrl: true);
 
-        ui.SelectTrack(track.Id); ui.Key('B');
+        ui.EditTrack(track.Id);
         ui.ClickMap(3000, 350);
         Check(ui.Canvas.Circles.Any(c => At(ui, c, 3250, 320) && Math.Abs(c.Radius - 4.5) < 0.001),
             "The unselected outgoing handle was not drawn.");
@@ -83,7 +83,7 @@ internal static class SliderInteractionTests
         Near(375, ui.Anchor(nodeId).HandleOut.TimeMs); Near(-10, ui.Anchor(nodeId).HandleOut.X);
         ui.Key('Z', ctrl: true);
         Check(saved.ContentEquals(ui.View.Document), "Handle drag did not undo completely.");
-        ui.ClickMap(3000, 350);
+        ui.EditTrack(track.Id); ui.ClickMap(3000, 350);
         ui.DownMap(3250, 320); ui.MoveMap(3375, 340); ui.Key(27); ui.UpMap(3375, 340);
         CheckDragPreview(ui, false);
         Check(saved.ContentEquals(ui.View.Document) && !ui.View.WantsCapture, "Escape retained a partial handle edit.");
@@ -100,7 +100,7 @@ internal static class SliderInteractionTests
             "Selecting the FSlider unexpectedly entered point editing.");
 
         ui.ClickMap(node.TimeMs, node.X);
-        Check(ui.View.ActiveTool == "Slider" && ui.View.SelectedAnchorIds.SequenceEqual([node.Id]),
+        Check(ui.View.ActiveTool == "Select" && ui.View.SelectedAnchorIds.SequenceEqual([node.Id]),
             "A single click on a selected FSlider anchor did not enter anchor editing.");
         var point = Screen(ui, node.TimeMs, node.X);
         Check(ui.Canvas.Lines.Any(line => line.Color == 0xFF7F8D
@@ -132,8 +132,8 @@ internal static class SliderInteractionTests
         var withCorner = ui.View.Document.DeepClone();
         ui.Key('Z', ctrl: true);
         Check(original.ContentEquals(ui.View.Document), "Undo insertion did not restore neighboring handles.");
-        Check(ui.View.ActiveTool == "Slider" && ui.View.SelectedAnchorIds.Count == 0,
-            "Undo insertion retained a missing control or left slider editing.");
+        Check(ui.View.ActiveTool == "Select" && ui.View.SelectedAnchorIds.Count == 0,
+            "Undo insertion retained a control selection or left Select.");
         ui.Key('Y', ctrl: true);
         Check(withCorner.ContentEquals(ui.View.Document), "Redo insertion changed its identity or handles.");
 
@@ -305,7 +305,8 @@ internal static class SliderInteractionTests
         var objects = ui.View.Conversion.Objects.Where(item => item.SourceId == sourceId).ToArray();
         Check(objects.Length > 0 && objects.All(item => Math.Abs(item.X - CurveMath.PositionAtTime(track, item.TimeMs))
             <= CatchStreamConverter.AlignmentTolerance), "Converted FSlider objects are not aligned to its target path.");
-        Check(ui.View.SelectedObjectIds.Contains(track.Id), "Conversion did not retain canvas selection.");
+        Check(ui.View.ActiveTool == "Select" && ui.View.CanCopySelection,
+            "Conversion did not retain an editable selection in Select.");
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.ImportedSliders.Single().Id == sourceId && ui.View.Document.Tracks.Count == 0,
             "Undo did not restore the Legacy Slider representation.");
@@ -342,7 +343,7 @@ internal static class SliderInteractionTests
             node.HandleOut = new(node.HandleOut.TimeMs / 4, node.HandleOut.X);
         }
         var ui = Load(map);
-        ui.SelectTrack(original.Id); ui.Key('B');
+        ui.EditTrack(original.Id);
         ui.Key(187, ctrl: true);
         Check(ui.View.Document.Tracks.Single().SpanCount == 2, "Reverse not added during anchor editing.");
         ui.Key(187, ctrl: true);
@@ -412,14 +413,14 @@ internal static class SliderInteractionTests
     {
         var node = ui.Anchor(id);
         var track = ui.View.Document.Tracks.Single(t => t.Nodes.Any(n => n.Id == id));
-        ui.SelectTrack(track.Id); ui.Key('B'); ui.ClickMap(node.TimeMs, node.X);
+        ui.EditTrack(track.Id); ui.ClickMap(node.TimeMs, node.X);
     }
 
     private static void RightNode(Ui ui, Guid id)
     {
         var node = ui.Anchor(id);
         var track = ui.View.Document.Tracks.Single(t => t.Nodes.Any(n => n.Id == id));
-        ui.SelectTrack(track.Id); ui.Key('B');
+        ui.EditTrack(track.Id);
         ui.ClickMap(node.TimeMs, node.X);
         RightMap(ui, node.TimeMs, node.X);
     }

@@ -296,7 +296,6 @@ public sealed partial class EditorView
 
     private void ChangeTool(Tool next)
     {
-        bool finishingSlider = draftTrack != Guid.Empty;
         if (draftBanana != Guid.Empty)
         {
             history.Cancel();
@@ -307,17 +306,8 @@ public sealed partial class EditorView
         if (draftTrack != Guid.Empty) CancelInteraction();
         tool = next;
         legacyDragStart = null;
-        if (next == Tool.Slider)
-        {
-            if (finishingSlider) Select(Guid.Empty);
-            else
-            {
-                if (SelectedImportedSlider is not null) EditImportedSlider();
-                if (SelectedTrack is { } track) SelectAnchors(track, anchorSelection.ToArray());
-                else Select(Guid.Empty);
-            }
-        }
-        else if (anchorSelection.Count > 0 && SelectedTrack is { } parent) SelectObjects([parent.Id]);
+        if (next != Tool.Select) Select(Guid.Empty);
+        else if (objectSelection.Count == 0 && SelectedTrack is { } parent) SelectObjects([parent.Id]);
         menu = -1;
         contextItems.Clear();
         StatusMessage = "";
@@ -327,9 +317,11 @@ public sealed partial class EditorView
     {
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.Marquee)
         { CancelInteraction(); return; }
+        if (!history.CanUndo) return;
         CancelInteraction();
+        var before = Document;
         history.Undo();
-        RestoreSliderSelectionAfterHistory();
+        RestoreSelectionAfterHistory(before);
         StatusMessage = L.Get("editor.status.undone");
     }
 
@@ -337,24 +329,24 @@ public sealed partial class EditorView
     {
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.Marquee)
         { CancelInteraction(); return; }
+        if (!history.CanRedo) return;
         CancelInteraction();
+        var before = Document;
         history.Redo();
-        RestoreSliderSelectionAfterHistory();
+        RestoreSelectionAfterHistory(before);
         StatusMessage = L.Get("editor.status.redone");
     }
 
-    private void RestoreSliderSelectionAfterHistory()
+    private void RestoreSelectionAfterHistory(MapDocument before)
     {
-        if (tool == Tool.Slider && selectedTrack != Guid.Empty)
+        var unchanged = before.UnchangedObjectIds(Document).ToHashSet();
+        if (selectedTrack != Guid.Empty && unchanged.Contains(selectedTrack) && objectSelection.Count == 0
+            && SelectedTrack is { } track)
         {
-            if (SelectedTrack is { } track)
-            {
-                SelectAnchors(track, anchorSelection, selection);
-                return;
-            }
-            tool = Tool.Select;
+            SelectAnchors(track, anchorSelection, selection);
+            return;
         }
-        Select(Guid.Empty);
+        SelectObjects(objectSelection.Where(unchanged.Contains), selection);
     }
 
     private bool Edit(string label, Action change, Action<bool, MapDocument, MapDocument>? restoreRelated = null)
@@ -379,8 +371,8 @@ public sealed partial class EditorView
 
     private void DeleteSelection()
     {
-        if (LegacyMode && tool == Tool.Slider) { DeleteLegacyPoints(); return; }
-        if (tool == Tool.Slider) DeleteSelectedAnchors();
+        if (LegacyMode && anchorSelection.Count > 0) { DeleteLegacyPoints(); return; }
+        if (anchorSelection.Count > 0) DeleteSelectedAnchors();
         else DeleteSelectedObjects();
     }
 
@@ -391,7 +383,7 @@ public sealed partial class EditorView
         int segment = SelectedAnchor is { } node ? Math.Min(track.Nodes.IndexOf(node), track.Nodes.Count - 2) : 0;
         if (!Edit(L.Get("editor.command.splitCurve"), () => CurveMath.Split(track, segment, 0.5))) return;
         Select(track.Nodes[segment + 1].Id, track.Id);
-        tool = Tool.Slider;
+        tool = Tool.Select;
         StatusMessage = L.Get("editor.status.curveSplit");
     }
 
@@ -410,7 +402,7 @@ public sealed partial class EditorView
         drag = DragKind.None;
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         tool = Tool.Slider;
-        SelectAnchors(track, []);
+        Select(Guid.Empty);
         StatusMessage = L.Get("editor.status.sliderFinished");
     }
 
