@@ -4,6 +4,54 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class SynchronizationUiTests
 {
+    public static void ArScaleAndDecisions()
+    {
+        foreach (int ar in new[] { 1, 5, 9 })
+        foreach (int width in new[] { 980, 1440 })
+        {
+            string root = Path.GetFullPath(Path.Combine("artifacts/tests/sync-ar", Guid.NewGuid().ToString("N")));
+            string songs = Path.Combine(root, "Songs"), set = Path.Combine(songs, "set"), source = Path.Combine(set, "map.osu");
+            string text = Fixture.Replace("ApproachRate:5", "ApproachRate:" + ar) + "200,192,1200,1,0,0:0:0:0:\n";
+            Directory.CreateDirectory(set); File.WriteAllText(source, text);
+            var ui = new Ui(false); ui.Resize(width, 900);
+            ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
+            var session = LibraryOperations.ImportPath(source, ui.View.LibrarySettings); ui.View.LoadWorkspace(session);
+            File.WriteAllText(source, text.Replace("123,192", "321,192").Replace("200,192", "400,192"));
+            ui.View.RefreshSynchronization(); Wait(ui);
+            var field = ui.Canvas.Clips[1];
+            double Spacing() { var dots = ui.Canvas.Circles.Where(c => c.Filled && c.X < width / 2).OrderBy(c => c.Y).ToArray(); Check(dots.Length == 2, "two visible FA objects"); return dots[1].Y - dots[0].Y; }
+            double expected = 200 * CatchScrollTiming.PixelsPerMs(ar, field.Width);
+            Check(Math.Abs(Spacing() - expected) < .02, "comparison uses editor AR scale at each width");
+            ui.View.Wheel(field.X + 10, field.Y + 10, 120, true); ui.Paint();
+            Check(Math.Abs(Spacing() - expected * 1.2) < .02, "zoom is relative to AR scale");
+            ui.ClickText(L.Get("sync.chooseLocal"));
+            Check(Math.Abs(Spacing() - expected) < .02, "next conflict restores current AR scale");
+            Check(ui.Canvas.Outlines.Any(c => c.Color == 0x70D69B && c.Bounds.X < width / 2)
+                && ui.Canvas.Circles.Any(c => c.Filled && c.Opacity == .2f && c.X > width / 2), "previous decision distinguishes retained and rejected context");
+            var green = ui.Canvas.Outlines.First(c => c.Color == 0x70D69B && c.Bounds.X < width / 2).Bounds;
+            ui.View.PointerDown(green.X + 5, green.Y + green.Height / 2, 0, false, false); ui.Paint();
+            Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.resolvedThisRound")))
+                && ui.Canvas.Outlines.Any(o => o.Color == 0xED737B), "green interval remains clickable alongside unresolved red intervals");
+            ui.ClickText(L.Get("sync.chooseExternal"));
+            Check(ui.View.Document.Fruits[0].X == 123, "changing a green decision does not apply it early");
+            ui.ClickText("‹");
+            ui.ClickText(L.Get("sync.chooseLocal"));
+            ui.ClickText(L.Get("sync.chooseLocal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+            Check(!ui.View.SynchronizationVisible, "retained differences do not repeat");
+            File.WriteAllText(source, text.Replace("123,192", "333,192").Replace("200,192", "400,192"));
+            ui.View.RefreshSynchronization(); Wait(ui);
+            Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Y == 86 && t.Value.Contains(L.Get("sync.unresolvedRange"))), "later external edit is a normal unresolved conflict");
+            Check(ui.Canvas.Circles.Count(c => !c.Filled && c.Color == 0xED737B) == 2, "both corresponding objects remain highlighted");
+            Check(ui.Canvas.Outlines.Any(o => o.Color == 0xD5A34D), "unchanged prior resolution has an amber interval");
+            ui.ClickText(L.Get("sync.chooseLocal")); ui.ClickText("›");
+            Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.alreadyResolved"))), "unchanged prior resolution is explicitly identified");
+            ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+            Check(ui.View.Document.Fruits.Any(f => f.TimeMs == 1200 && f.X == 400), "previously resolved group can be resolved to the other side");
+            ui.View.RefreshSynchronization(reviewResolved: true); Wait(ui);
+            Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.alreadyResolved"))), "explicit check can review retained differences without new edits");
+        }
+    }
+
     public static void Run()
     {
         string language = L.Language;
@@ -51,7 +99,7 @@ internal static class SynchronizationUiTests
                 File.SetLastWriteTimeUtc(source, DateTime.UtcNow.AddMinutes(1));
                 ui.View.LoadWorkspace(WorkspaceProject.Open(session.Directory), checkAdditionalDifficulties: true); Wait(ui);
                 Check(ui.View.DifficultySyncState(0) == WorkspaceSyncState.NeedsBaseline, "legacy comparison stays explicit");
-                Check(ui.Canvas.Texts.Any(t => t.Value == "Metadata/Title") && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 1, 2)), "legacy first difference and count shown");
+                Check(ui.Canvas.Texts.Any(t => t.Value.StartsWith("Metadata/Title")) && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 1, 2)), "legacy first difference and count shown");
                 Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.newerSaved")) && t.X > size.Item1 / 2), "external timestamp marks newer saved version");
                 string authoringFile = Path.Combine(legacy.Directory, legacy.Manifest.Difficulties[0].File);
                 DateTime savedTime = File.GetLastWriteTimeUtc(authoringFile);
@@ -61,11 +109,11 @@ internal static class SynchronizationUiTests
                 Check(!ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.newerSaved"))), "equal timestamps do not invent a newer side");
                 ui.ClickText(L.Get("sync.chooseExternal")); ui.Paint();
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 2, 2)), "choosing advances to next unresolved item");
-                var rings = ui.Canvas.Circles.Where(c => !c.Filled && c.Color == 0xF2C66D).ToArray();
+                var rings = ui.Canvas.Circles.Where(c => !c.Filled && c.Color == 0xED737B).ToArray();
                 Check(rings.Length == 2 && Math.Abs(rings[0].Y - rings[1].Y) < .01 && rings[0].X < size.Item1 / 2 && rings[1].X > size.Item1 / 2, "both canvas versions highlight the aligned conflict");
                 var unchanged = ui.View.Document.DeepClone();
                 ui.View.Wheel(200, 260, 120, false); ui.Paint();
-                var moved = ui.Canvas.Circles.Where(c => !c.Filled && c.Color == 0xF2C66D).ToArray();
+                var moved = ui.Canvas.Circles.Where(c => !c.Filled && c.Color == 0xED737B).ToArray();
                 Check(moved.Length == 2 && Math.Abs(moved[0].Y - moved[1].Y) < .01 && moved[0].Y != rings[0].Y, "wheel scrolls both canvases together");
                 ui.View.Wheel(200, 260, 120, true); ui.Paint();
                 Check(ui.View.Document.ContentEquals(unchanged), "comparison scrolling and zoom never edit content");
@@ -74,7 +122,7 @@ internal static class SynchronizationUiTests
                 while (!ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.previewPending")) && DateTime.UtcNow < previewDeadline) { Thread.Sleep(10); ui.Paint(); }
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.previewPending")), "merged result preview prepared asynchronously");
                 ui.ClickText("‹"); ui.Paint();
-                Check(ui.Canvas.Texts.Any(t => t.Value == "Metadata/Title"), "previous choice can be reviewed");
+                Check(ui.Canvas.Texts.Any(t => t.Value.StartsWith("Metadata/Title")), "previous choice can be reviewed");
                 ui.ClickText("›"); ui.ClickText(L.Get("sync.chooseLocal"));
                 ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(!ui.View.SynchronizationVisible && ui.View.Document.Fruits[0].Id == original

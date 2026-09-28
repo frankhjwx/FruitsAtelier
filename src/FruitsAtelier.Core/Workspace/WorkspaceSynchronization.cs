@@ -15,7 +15,11 @@ public sealed class WorkspaceSyncBaseline
     public string? AuthoringAudioHash { get; set; }
     public List<string> PreviousPaths { get; set; } = [];
     public List<string> LocalOverrides { get; set; } = [];
+    public List<WorkspaceRetainedObjects> RetainedObjects { get; set; } = [];
+    public bool RetainedObjectsRecorded { get; set; }
 }
+
+public sealed record WorkspaceRetainedObjects(List<Guid> Sources, List<string> ExternalLines);
 
 public enum WorkspaceSyncState { Local, Current, Changed, Missing, Unavailable, Ambiguous, Duplicate, NeedsBaseline, AudioMissing }
 public sealed record WorkspaceSyncCandidate(string Path, string Hash, string Text, MapDocument Document);
@@ -33,6 +37,12 @@ public sealed class WorkspaceMerge
     internal Dictionary<string, string?> Fields { get; } = [];
     internal List<(string Key, Guid[] Sources, string[] Lines)> Objects { get; } = [];
     internal Dictionary<Guid, int> ExternalOrders { get; } = [];
+    public IReadOnlyList<WorkspaceRetainedObjects> PreviouslyRetained { get; internal set; } = [];
+    public HashSet<string> PreviouslyResolved { get; } = [];
+    public bool RequiresResolution => Conflicts.Any(c => !PreviouslyResolved.Contains(c.Key));
+    internal Dictionary<string, string[]> ChangedBeforeLines { get; } = [];
+    public bool WasPreviouslyRetained(string key) => ChangedBeforeLines.TryGetValue(key, out var before)
+        && PreviouslyRetained.Any(p => p.ExternalLines.Intersect(before).Any());
     public IReadOnlySet<Guid> ConflictSources(string key, bool external)
     {
         var group = Objects.FirstOrDefault(g => g.Key == key);
@@ -70,6 +80,7 @@ public static class WorkspaceSynchronization
             ObjectSources = sources?.ToList() ?? SourceIds(authoring).OrderBy(p => p.Order).Select(p => p.Id).ToList(),
             AudioHash = StoreAudio(OsuBeatmapReader.Read(text, path).AudioPath, directory),
             AuthoringAudioHash = authoringAudioHash,
+            RetainedObjectsRecorded = true,
             PreviousPaths = previous?.PreviousPaths.ToList() ?? []
         };
         if (previous is not null && !Paths.Equals(previous.Path, path) && !baseline.PreviousPaths.Contains(previous.Path, Paths))
@@ -211,7 +222,7 @@ public static class WorkspaceSynchronization
         {
             Path = local.SourcePath ?? external.Path, Text = output.Text,
             Authoring = ProjectSerializer.Serialize(local, SnapshotPath(directory)),
-            ObjectSources = output.ObjectSources.ToList(), AudioHash = AudioHash(local.AudioPath)
+            ObjectSources = output.ObjectSources.ToList(), AudioHash = AudioHash(local.AudioPath), RetainedObjectsRecorded = true
         } };
         var merge = Merge(comparison, local, external, directory, compensate);
         var ours = Fields(output.ReadBack); var theirs = Fields(external.Document);
@@ -233,7 +244,16 @@ public static class WorkspaceSynchronization
     {
         if (entry.Sync is not { } baseline) throw new InvalidOperationException(L.Get("sync.baseline"));
         var original = ProjectSerializer.Read(baseline.Authoring, SnapshotPath(directory));
-        var merge = new WorkspaceMerge { Local = local.DeepClone(), External = external, Baseline = original };
+        if (!baseline.RetainedObjectsRecorded)
+        {
+            // Older baselines already record the accepted pair of versions, even though
+            // they did not store the unresolved export differences as explicit groups.
+            var historical = new WorkspaceSyncCandidate(baseline.Path, Digest(baseline.Text), baseline.Text, OsuBeatmapReader.Read(baseline.Text, baseline.Path));
+            var comparison = CompareWithoutBaseline(original, historical, directory, compensate);
+            baseline.RetainedObjects = comparison.Objects.Select(g => new WorkspaceRetainedObjects(g.Sources.ToList(), g.Lines.ToList())).ToList();
+            baseline.RetainedObjectsRecorded = true;
+        }
+        var merge = new WorkspaceMerge { Local = local.DeepClone(), External = external, Baseline = original, PreviouslyRetained = baseline.RetainedObjects };
         var baseFields = Fields(OsuBeatmapReader.Read(baseline.Text, baseline.Path));
         var authorFields = Fields(original); var localFields = Fields(local); var externalFields = Fields(external.Document);
         foreach (string key in baseFields.Keys.Concat(authorFields.Keys).Concat(localFields.Keys).Concat(externalFields.Keys).Distinct())
@@ -244,6 +264,11 @@ public static class WorkspaceSynchronization
             merge.Fields[key] = outsideChanged && !insideChanged ? theirs : ours;
             if (outsideChanged && insideChanged && ours != theirs)
                 merge.Conflicts.Add(new(key, ours ?? "", theirs ?? ""));
+            else if (!outsideChanged && baseline.LocalOverrides.Contains(key) && ours != theirs)
+            {
+                merge.Conflicts.Add(new(key, ours ?? "", theirs ?? ""));
+                merge.PreviouslyResolved.Add(key);
+            }
         }
         string? localAudio = AudioHash(local.AudioPath), externalAudio = AudioHash(external.Document.AudioPath);
         if (localAudio is null && Paths.Equals(local.AudioPath, original.AudioPath)) localAudio = baseline.AudioHash;
@@ -251,6 +276,13 @@ public static class WorkspaceSynchronization
             merge.Conflicts.Add(new("$audio", local.AudioPath ?? "", external.Document.AudioPath ?? ""));
 
         string[] beforeLines = ObjectLines(baseline.Text), afterLines = ObjectLines(external.Text);
+        var retainedSources = baseline.RetainedObjects.SelectMany(r => r.ExternalLines.Select(line => (Line: line, r.Sources)))
+            .GroupBy(p => p.Line).ToDictionary(g => g.Key, g => g.SelectMany(p => p.Sources).Distinct().ToArray());
+        Guid[] SourcesAt(int index)
+        {
+            return retainedSources.TryGetValue(beforeLines[index], out var retained) ? retained
+                : [index < baseline.ObjectSources.Count ? baseline.ObjectSources[index] : Guid.Empty];
+        }
         if (!beforeLines.SequenceEqual(afterLines))
         {
             // Unique exact lines anchor ordered runs. Unmatched runs are explicit groups, never guessed identities.
@@ -266,7 +298,7 @@ public static class WorkspaceSynchronization
                 Guid id = baseline.ObjectSources[anchor.Before];
                 if (id != Guid.Empty) merge.ExternalOrders[id] = Math.Min(merge.ExternalOrders.GetValueOrDefault(id, int.MaxValue), anchor.After);
             }
-            var changed = new List<(HashSet<Guid> Sources, List<string> Lines)>();
+            var changed = new List<(HashSet<Guid> Sources, List<string> Lines, HashSet<string> Before)>();
             for (int k = 1; k < anchors.Count; k++)
             {
                 var a = anchors[k - 1]; var b = anchors[k];
@@ -277,17 +309,29 @@ public static class WorkspaceSynchronization
                 {
                     for (int offset = 1; offset <= beforeCount; offset++)
                     {
-                        Guid source = a.Before + offset < baseline.ObjectSources.Count ? baseline.ObjectSources[a.Before + offset] : Guid.Empty;
-                        if (source == Guid.Empty) break;
-                        changed.Add((new HashSet<Guid> { source }, [afterLines[a.After + offset]]));
+                        var sources = SourcesAt(a.Before + offset);
+                        if (sources.Contains(Guid.Empty)) break;
+                        changed.Add((sources.ToHashSet(), [afterLines[a.After + offset]], [beforeLines[a.Before + offset]]));
                     }
-                    if (Enumerable.Range(a.Before + 1, beforeCount).All(i => i < baseline.ObjectSources.Count && baseline.ObjectSources[i] != Guid.Empty)) continue;
+                    if (Enumerable.Range(a.Before + 1, beforeCount).All(i => !SourcesAt(i).Contains(Guid.Empty))) continue;
                 }
                 var ids = Enumerable.Range(a.Before + 1, b.Before - a.Before - 1)
-                    .Select(i => i < baseline.ObjectSources.Count ? baseline.ObjectSources[i] : Guid.Empty).ToHashSet();
-                if (ids.Contains(Guid.Empty)) { ids = SourceIds(original).Select(p => p.Id).ToHashSet(); changed.Clear(); changed.Add((ids, afterLines.ToList())); break; }
+                    .SelectMany(SourcesAt).ToHashSet();
+                if (ids.Contains(Guid.Empty)) { ids = SourceIds(original).Select(p => p.Id).ToHashSet(); changed.Clear(); changed.Add((ids, afterLines.ToList(), beforeLines.ToHashSet())); break; }
                 var lines = afterLines.Skip(a.After + 1).Take(b.After - a.After - 1).ToList();
-                changed.Add((ids, lines));
+                changed.Add((ids, lines, beforeLines.Skip(a.Before + 1).Take(beforeCount).ToHashSet()));
+            }
+            // A moved object can cross an unchanged anchor. Keep the unmatched removal and
+            // insertion together rather than presenting an invented absence on each side.
+            var removals = changed.Where(c => c.Sources.Count > 0 && c.Lines.Count == 0).ToArray();
+            var insertions = changed.Where(c => c.Sources.Count == 0 && c.Before.Count == 0 && c.Lines.Count > 0).ToArray();
+            if (removals.Length > 0 && insertions.Length > 0)
+            {
+                var related = removals.Concat(insertions).ToArray();
+                int index = related.Min(c => changed.IndexOf(c));
+                var joined = (related.SelectMany(c => c.Sources).ToHashSet(), related.SelectMany(c => c.Lines).ToList(), related.SelectMany(c => c.Before).ToHashSet());
+                foreach (var item in related) changed.Remove(item);
+                changed.Insert(index, joined);
             }
             // One authoring curve may emit many lines; accepting part would destroy the rest of that curve.
             foreach (var change in changed.ToArray())
@@ -295,32 +339,52 @@ public static class WorkspaceSynchronization
                 if (!changed.Contains(change)) continue;
                 foreach (var other in changed.ToArray())
                     if (!ReferenceEquals(change.Sources, other.Sources) && change.Sources.Overlaps(other.Sources))
-                    { change.Sources.UnionWith(other.Sources); change.Lines.AddRange(other.Lines); changed.Remove(other); }
+                    { change.Sources.UnionWith(other.Sources); change.Lines.AddRange(other.Lines); change.Before.UnionWith(other.Before); changed.Remove(other); }
             }
             int n = 0;
             var localOutput = OsuBeatmapWriter.Serialize(local, compensate);
             foreach (var change in changed)
             {
                 // Include unchanged output members of a changed multi-output source.
-                for (int i = 0; i < beforeLines.Length && i < baseline.ObjectSources.Count; i++)
-                    if (change.Sources.Contains(baseline.ObjectSources[i]) && anchors.Any(a => a.Before == i)) change.Lines.Add(beforeLines[i]);
+                for (int i = 0; i < beforeLines.Length; i++)
+                    if (SourcesAt(i).Any(change.Sources.Contains) && anchors.Any(a => a.Before == i)) { change.Lines.Add(beforeLines[i]); change.Before.Add(beforeLines[i]); }
                 string key = "$objects:" + n++;
                 merge.Objects.Add((key, change.Sources.ToArray(), change.Lines.ToArray()));
+                merge.ChangedBeforeLines[key] = change.Before.ToArray();
                 merge.Conflicts.Add(new(key, string.Join("\n", ObjectLines(localOutput.Text).Where((_, i) => i < localOutput.ObjectSources.Count && change.Sources.Contains(localOutput.ObjectSources[i]))), string.Join("\n", change.Lines)));
             }
         }
+        if (baseline.RetainedObjects.Count > 0)
+        {
+            var output = OsuBeatmapWriter.Serialize(local, compensate);
+            var localLines = ObjectLines(output.Text);
+            foreach (var retained in baseline.RetainedObjects)
+            {
+                if (merge.Objects.Any(g => g.Sources.Intersect(retained.Sources).Any()
+                    || merge.ChangedBeforeLines[g.Key].Intersect(retained.ExternalLines).Any())) continue;
+                var ours = localLines.Where((_, i) => retained.Sources.Contains(output.ObjectSources[i])).ToArray();
+                if (ours.SequenceEqual(retained.ExternalLines)) continue;
+                string key = "$objects:resolved:" + merge.PreviouslyResolved.Count;
+                merge.Objects.Add((key, retained.Sources.ToArray(), retained.ExternalLines.ToArray()));
+                merge.ChangedBeforeLines[key] = retained.ExternalLines.ToArray();
+                merge.PreviouslyResolved.Add(key);
+                merge.Conflicts.Add(new(key, string.Join('\n', ours), string.Join('\n', retained.ExternalLines)));
+            }
+        }
+        var ordered = merge.Conflicts.OrderBy(c => merge.PreviouslyResolved.Contains(c.Key)).ToArray();
+        merge.Conflicts.Clear(); merge.Conflicts.AddRange(ordered);
         return merge;
     }
 
     public static MapDocument Resolve(WorkspaceMerge merge, IReadOnlyDictionary<string, bool> externalChoices)
     {
         foreach (var conflict in merge.Conflicts)
-            if (!externalChoices.ContainsKey(conflict.Key)) throw new InvalidOperationException(L.Get("sync.unresolved"));
+            if (!externalChoices.ContainsKey(conflict.Key) && !merge.PreviouslyResolved.Contains(conflict.Key)) throw new InvalidOperationException(L.Get("sync.unresolved"));
         var result = merge.Local.DeepClone();
         var fields = new Dictionary<string, string?>(merge.Fields);
         var outside = Fields(merge.External.Document);
         foreach (var conflict in merge.Conflicts.Where(c => !c.Key.StartsWith('$')))
-            if (externalChoices[conflict.Key]) fields[conflict.Key] = outside.GetValueOrDefault(conflict.Key);
+            if (externalChoices.GetValueOrDefault(conflict.Key)) fields[conflict.Key] = outside.GetValueOrDefault(conflict.Key);
         ApplyFields(result, fields, merge.External.Path);
         foreach (var group in merge.Objects)
         {
@@ -347,7 +411,8 @@ public static class WorkspaceSynchronization
         return result;
     }
 
-    public static void Accept(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceSyncCandidate external, MapDocument resolved, bool compensate, bool retainLocalFields = false)
+    public static void Accept(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceSyncCandidate external, MapDocument resolved, bool compensate, bool retainLocalFields = false,
+        WorkspaceMerge? review = null, IReadOnlyDictionary<string, bool>? choices = null)
     {
         if (WorkspaceProject.Hash(external.Path) != external.Hash) throw new IOException(L.Get("library.exportConflict", external.Path));
         WorkspaceAssociations.EnsureOwner(session, entry.Id, external.Path);
@@ -363,7 +428,22 @@ public static class WorkspaceSynchronization
                 && resolvedFields.GetValueOrDefault(k) != externalFields.GetValueOrDefault(k)));
         }
         else pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => resolvedFields.GetValueOrDefault(k) != externalFields.GetValueOrDefault(k)));
+        var retained = entry.Sync?.RetainedObjects.ToList() ?? [];
+        if (review is not null && choices is not null)
+            foreach (var group in review.Objects)
+            {
+                retained.RemoveAll(r => r.Sources.Intersect(group.Sources).Any() || r.ExternalLines.Intersect(review.ChangedBeforeLines.GetValueOrDefault(group.Key) ?? []).Any());
+                if (choices.TryGetValue(group.Key, out bool takeExternal) && !takeExternal)
+                    retained.Add(new(group.Sources.ToList(), group.Lines.ToList()));
+            }
+        if (ObjectLines(output.Text).SequenceEqual(ObjectLines(external.Text))) retained.Clear();
+        else
+        {
+            var liveSources = SourceIds(resolved).Select(p => p.Id).ToHashSet();
+            retained = retained.Select(r => new WorkspaceRetainedObjects(r.Sources.Where(liveSources.Contains).ToList(), r.ExternalLines.ToList())).ToList();
+        }
         entry.Sync = Capture(external.Path, resolved, session.Directory, external.Text, sources, entry.Sync);
+        entry.Sync.RetainedObjects = retained;
         entry.Sync.LocalOverrides = pending;
         entry.Source = external.Path; entry.SourceHash = external.Hash;
         if (entry.ExportTarget is not null) { entry.ExportTarget = external.Path; entry.ExportHash = external.Hash; }

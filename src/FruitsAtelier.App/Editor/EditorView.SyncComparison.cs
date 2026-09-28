@@ -14,11 +14,15 @@ public sealed partial class EditorView
     }
     private sealed record SyncPane(MapDocument Document, IReadOnlyList<ConvertedCatchObject> Objects, SyncPath[] Paths, Dictionary<Guid, int> Indices, uint[] Colours);
     private sealed record SyncFocus(IReadOnlySet<Guid> Local, IReadOnlySet<Guid> External, double Start, double End);
-    private sealed record SyncComparison(SyncPane Local, SyncPane External, Dictionary<string, SyncFocus> Focus, DateTime? LocalSaved, DateTime? ExternalSaved);
+    private sealed record SyncRange(string Key, double Start, double End, uint Colour, string Label);
+    private const uint SyncUnresolved = 0xED737B, SyncPreviouslyResolved = 0xD5A34D, SyncResolvedThisRound = 0x70D69B;
+    private sealed record SyncComparison(SyncPane Local, SyncPane External, Dictionary<string, SyncFocus> Focus, DateTime? LocalSaved, DateTime? ExternalSaved,
+        IReadOnlySet<Guid> RetainedLocal, IReadOnlySet<Guid> RejectedExternal);
     private readonly Dictionary<Guid, SyncComparison> syncComparisons = [];
     private WorkspaceMerge? syncVisualMerge;
     private string? syncVisualKey;
-    private double syncViewStart, syncViewSpan = 3000;
+    private double syncViewStart, syncViewSpan, syncZoom = 1;
+    private bool syncShowValues;
     private Rect syncCanvasBounds;
     private bool syncShowResult;
     private int syncPreviewRevision;
@@ -89,8 +93,13 @@ public sealed partial class EditorView
                 .Concat(local.Paths.Where(p => ours.Contains(p.Source)).Concat(external.Paths.Where(p => theirs.Contains(p.Source))).SelectMany(p => p.Points.Select(v => v.TimeMs))).ToArray();
             focus[conflict.Key] = new(ours, theirs, times.Length == 0 ? 0 : times.Min(), times.Length == 0 ? 0 : times.Max());
         }
+        var rejectedLines = merge.PreviouslyRetained.SelectMany(r => r.ExternalLines).ToHashSet();
+        var rejectedOrders = WorkspaceSynchronization.ObjectLines(merge.External.Text).Select((line, order) => (line, order))
+            .Where(p => rejectedLines.Contains(p.line)).Select(p => p.order).ToHashSet();
         return new(local, external, focus, authoringPath is not null && File.Exists(authoringPath) ? File.GetLastWriteTimeUtc(authoringPath) : null,
-            File.Exists(merge.External.Path) ? File.GetLastWriteTimeUtc(merge.External.Path) : null);
+            File.Exists(merge.External.Path) ? File.GetLastWriteTimeUtc(merge.External.Path) : null,
+            merge.PreviouslyRetained.SelectMany(r => r.Sources).ToHashSet(),
+            WorkspaceSynchronization.SourceIds(merge.External.Document).Where(p => rejectedOrders.Contains(p.Order)).Select(p => p.Id).ToHashSet());
     }
 
     private void DrawSyncComparison(ICanvas c, WorkspaceMerge merge, SyncComparison comparison)
@@ -99,11 +108,11 @@ public sealed partial class EditorView
         var conflict = merge.Conflicts[syncRow]; var focus = comparison.Focus[conflict.Key];
         if (!ReferenceEquals(syncVisualMerge, merge))
         { syncVisualMerge = merge; syncVisualKey = null; syncResultPane = null; syncPreviewRevision++; }
-        if (syncVisualKey != conflict.Key)
+        bool newFocus = syncVisualKey != conflict.Key;
+        if (newFocus)
         {
             syncVisualKey = conflict.Key;
-            syncViewSpan = Math.Max(2500, (focus.End - focus.Start) * 1.4 + 600);
-            syncViewStart = Math.Max(0, (focus.Start + focus.End - syncViewSpan) / 2);
+            syncZoom = 1;
         }
         PumpSyncPreview(merge);
         float x = 16, y = 16, w = width - 32, h = height - 32;
@@ -112,16 +121,37 @@ public sealed partial class EditorView
         c.Text(L.Get("sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
         c.Text(syncStatuses.GetValueOrDefault(syncDifficulty)?.State == WorkspaceSyncState.NeedsBaseline ? L.Get("sync.compareNoBaseline") : L.Get("sync.compareHelp"), x + 20, y + 46, 12, Muted, w - 40);
         string label = conflict.Key.StartsWith("$objects:") ? L.Get("sync.objects", syncRow + 1) : conflict.Key == "$audio" ? L.Get("sync.audio") : conflict.Key;
+        string stateLabel = syncRoundChoices.Contains(conflict.Key) ? L.Get("sync.resolvedThisRound")
+            : merge.PreviouslyResolved.Contains(conflict.Key) ? L.Get("sync.alreadyResolved") : L.Get("sync.unresolvedRange");
+        label += " · " + stateLabel;
         c.Text(label, x + 20, y + 70, 15, Accent, w - 40);
         float paneWidth = (w - 40 - (syncShowResult ? 24 : 12)) / (syncShowResult ? 3 : 2);
         var left = new Rect(x + 20, y + 102, paneWidth, h - 256);
         var right = left with { X = left.Right + 12 };
+        syncShowValues = !conflict.Key.StartsWith("$objects:");
+        var field = SyncField(left);
+        double center = syncViewStart + syncViewSpan / 2;
+        // A common AR scale keeps matching times aligned even when the versions disagree about AR.
+        syncViewSpan = field.Height / (CatchScrollTiming.PixelsPerMs(comparison.Local.Document.ApproachRate, field.Width) * syncZoom);
+        syncViewStart = Math.Max(0, newFocus ? focus.Start - syncViewSpan * .35 : center - syncViewSpan / 2);
         syncCanvasBounds = new(left.X, left.Y, w - 40, left.Height);
         bool dirty = difficulties.FirstOrDefault(d => d.Id == syncDifficulty)?.History.IsDirty == true;
+        var ranges = comparison.Focus.Where(p => p.Key.StartsWith("$objects:")).Select(p => new SyncRange(p.Key, p.Value.Start, p.Value.End,
+            syncRoundChoices.Contains(p.Key) ? SyncResolvedThisRound : merge.PreviouslyResolved.Contains(p.Key) ? SyncPreviouslyResolved : SyncUnresolved,
+            syncRoundChoices.Contains(p.Key) ? L.Get("sync.resolvedThisRound") : merge.PreviouslyResolved.Contains(p.Key) ? L.Get("sync.alreadyResolved") : L.Get("sync.unresolvedRange"))).ToArray();
+        var localChoices = comparison.RetainedLocal.ToDictionary(id => id, _ => true);
+        var externalChoices = comparison.RejectedExternal.ToDictionary(id => id, _ => false);
+        foreach (var choice in syncChoices)
+            if (comparison.Focus.TryGetValue(choice.Key, out var decided))
+            {
+                foreach (var id in decided.Local) localChoices[id] = !choice.Value;
+                foreach (var id in decided.External) externalChoices[id] = choice.Value;
+            }
         DrawSyncPane(c, comparison.Local, left, "FA", focus.Local, conflict.Key.StartsWith("$objects:") ? null : conflict.Local,
-            SavedLabel(comparison.LocalSaved, comparison.ExternalSaved, dirty));
+            SavedLabel(comparison.LocalSaved, comparison.ExternalSaved, dirty), localChoices,
+            merge.PreviouslyResolved.Contains(conflict.Key) ? L.Get("sync.previouslyRejected") : null, ranges, conflict.Key);
         DrawSyncPane(c, comparison.External, right, "osu!", focus.External, conflict.Key.StartsWith("$objects:") ? null : conflict.External,
-            SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false));
+            SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false), externalChoices, ranges: ranges, currentKey: conflict.Key);
         bool chosen = syncChoices.TryGetValue(conflict.Key, out bool external);
         if (chosen) c.Stroke(external ? right : left, Accent, 3);
         if (syncShowResult)
@@ -132,7 +162,7 @@ public sealed partial class EditorView
         }
         Button(c, new(left.X, y + h - 142, left.Width, 32), L.Get("sync.chooseLocal"), () => ChooseSyncItem(merge, conflict.Key, false), chosen && !external);
         Button(c, new(right.X, y + h - 142, right.Width, 32), L.Get("sync.chooseExternal"), () => ChooseSyncItem(merge, conflict.Key, true), chosen && external);
-        c.Text(L.Get("sync.reviewProgress", syncChoices.Count, merge.Conflicts.Count), x + 20, y + h - 102, 12, Muted, 300);
+        c.Text(L.Get("sync.reviewProgress", syncChoices.Count, merge.Conflicts.Count) + " · " + L.Get("sync.comparisonLegend"), x + 20, y + h - 102, 12, Muted, w - 40);
         Navigation(c, x, y + h - 80, merge.Conflicts.Count);
         Button(c, new(x + 320, y + h - 80, 180, 30), L.Get("sync.resultPreview"), () => syncShowResult = !syncShowResult, syncShowResult);
         Button(c, new(x + w - 240, y + h - 80, 220, 30), L.Get("sync.inspect"), () => InspectSync(merge));
@@ -150,14 +180,14 @@ public sealed partial class EditorView
         return label;
     }
 
-    private void DrawSyncPane(ICanvas c, SyncPane pane, Rect bounds, string title, IReadOnlySet<Guid> selected, string? value, string? saved = null)
+    private void DrawSyncPane(ICanvas c, SyncPane pane, Rect bounds, string title, IReadOnlySet<Guid> selected, string? value, string? saved = null,
+        IReadOnlyDictionary<Guid, bool>? decisions = null, string? absentMessage = null, IReadOnlyList<SyncRange>? ranges = null, string? currentKey = null)
     {
         c.Fill(bounds, Background); c.Stroke(bounds, Grid);
         c.Text(title, bounds.X + 10, bounds.Y + 6, 15, Foreground, bounds.Width - 20, true);
         c.Text(saved ?? L.Get("sync.previewPending"), bounds.X + 10, bounds.Y + 27, 10, Muted, bounds.Width - 20);
-        float inset = value is null ? 52 : 136;
         if (value is not null) DrawSyncValue(c, value.Length == 0 ? L.Get("sync.absent") : value, bounds.X + 10, bounds.Y + 50, bounds.Width - 20);
-        var field = new Rect(bounds.X + 50, bounds.Y + inset, bounds.Width - 62, Math.Max(40, bounds.Height - inset - 14));
+        var field = SyncField(bounds);
         float Y(double t) => field.Bottom - (float)((t - syncViewStart) / syncViewSpan * field.Height);
         float X(double p) => field.X + (float)(p / 512) * field.Width;
         c.Clip(bounds);
@@ -170,12 +200,31 @@ public sealed partial class EditorView
         }
         for (int i = 0; i <= 4; i++) c.Line(X(i * 128), field.Y, X(i * 128), field.Bottom, Grid, opacity: .5f);
         c.Clip(field);
+        foreach (var range in ranges ?? [])
+        {
+            float top = Y(range.End), bottom = Y(range.Start);
+            if (bottom < field.Y || top > field.Bottom) continue;
+            float padding = Math.Max(8, (float)CatchSize.FruitRadius(pane.Document.CircleSize) * field.Width / 512);
+            var area = new Rect(field.X + 1, top - padding, field.Width - 2, Math.Max(1, bottom - top) + padding * 2);
+            c.Fill(area, range.Colour, opacity: .10f);
+            c.Stroke(area, range.Colour, range.Key == currentKey ? 2.5f : 1.5f);
+            c.Text(range.Label, field.X + 6, Math.Max(field.Y + 2, area.Y + 3), 10, range.Colour, field.Width - 12);
+            string key = range.Key;
+            hits.Add(new(area with { Y = Math.Max(area.Y, field.Y), Height = Math.Max(0, Math.Min(area.Bottom, field.Bottom) - Math.Max(area.Y, field.Y)) }, () =>
+            {
+                if (syncVisualMerge is { } active) syncRow = active.Conflicts.FindIndex(c => c.Key == key);
+            }, true));
+        }
+        uint currentColour = ranges?.FirstOrDefault(r => r.Key == currentKey)?.Colour ?? SyncUnresolved;
         foreach (var path in pane.Paths)
         {
             if (path.Points.Length == 0 || path.End < syncViewStart || path.Start > syncViewStart + syncViewSpan) continue;
             bool highlight = selected.Contains(path.Source);
-            for (int i = 1; i < path.Points.Length; i++) c.Line(X(path.Points[i - 1].X), Y(path.Points[i - 1].TimeMs), X(path.Points[i].X), Y(path.Points[i].TimeMs), highlight ? Gold : Purple, highlight ? 2.5f : 1.5f, path.Controls ? .6f : 1);
-            if (path.Controls && highlight) foreach (var point in path.Points) Diamond(c, X(point.X), Y(point.TimeMs), 4, Gold);
+            bool decided = decisions?.TryGetValue(path.Source, out _) == true;
+            bool retained = decided && decisions![path.Source];
+            float opacity = !highlight && decided && !retained ? .2f : path.Controls ? .6f : 1;
+            for (int i = 1; i < path.Points.Length; i++) c.Line(X(path.Points[i - 1].X), Y(path.Points[i - 1].TimeMs), X(path.Points[i].X), Y(path.Points[i].TimeMs), highlight ? currentColour : Purple, highlight ? 2.5f : 1.5f, opacity);
+            if (path.Controls && highlight) foreach (var point in path.Points) Diamond(c, X(point.X), Y(point.TimeMs), 4, currentColour);
         }
         int low = 0, high = pane.Objects.Count;
         while (low < high) { int middle = low + (high - low) / 2; if (pane.Objects[middle].TimeMs < syncViewStart) low = middle + 1; else high = middle; }
@@ -185,12 +234,15 @@ public sealed partial class EditorView
             int index = pane.Indices.GetValueOrDefault(item.SourceId);
             uint colour = item.Kind == CatchObjectKind.Banana ? CatchObjectVisual.BananaColour(item.TimeMs)
                 : pane.Colours.Length > 0 ? pane.Colours[index % pane.Colours.Length] : 0xFFFFFF;
-            DrawCatchObject(c, item, X(item.X), Y(item.TimeMs), field.Width, circleSize: pane.Document.CircleSize,
+            bool highlight = selected.Contains(item.SourceId);
+            bool decided = decisions?.TryGetValue(item.SourceId, out _) == true;
+            bool retained = decided && decisions![item.SourceId];
+            DrawCatchObject(c, item, X(item.X), Y(item.TimeMs), field.Width, opacity: !highlight && decided && !retained ? .2f : 1, circleSize: pane.Document.CircleSize,
                 hyperStarts: noSyncHyper, colourOverride: colour, skinIndexOverride: index);
-            if (selected.Contains(item.SourceId)) c.Circle(X(item.X), Y(item.TimeMs), (float)CatchSize.FruitRadius(pane.Document.CircleSize) * field.Width / 512 + 4, Gold, false, 2.5f);
+            if (highlight) c.Circle(X(item.X), Y(item.TimeMs), (float)CatchSize.FruitRadius(pane.Document.CircleSize) * field.Width / 512 + 4, currentColour, false, 2.5f);
         }
         c.Unclip(); c.Unclip();
-        if (value is null && selected.Count == 0 && title is "FA" or "osu!") c.Text(L.Get("sync.absent"), bounds.X + 10, bounds.Y + 52, 12, Gold, bounds.Width - 20);
+        if (value is null && selected.Count == 0 && title is "FA" or "osu!") c.Text(absentMessage ?? L.Get("sync.absent"), bounds.X + 10, bounds.Y + 52, 12, Gold, bounds.Width - 20);
     }
 
     private void ScrollSyncComparison(float x, float y, float delta, bool zoom)
@@ -198,11 +250,15 @@ public sealed partial class EditorView
         if (syncPage != "resolve" || !syncCanvasBounds.Contains(x, y)) return;
         if (zoom)
         {
-            double center = syncViewStart + syncViewSpan / 2;
-            syncViewSpan = Math.Clamp(syncViewSpan * Math.Pow(1.2, -delta / 120), 100, 3600000);
-            syncViewStart = Math.Max(0, center - syncViewSpan / 2);
+            syncZoom = Math.Clamp(syncZoom * Math.Pow(1.2, delta / 120), .1, 10);
         }
         else syncViewStart = Math.Max(0, syncViewStart + delta / 120 * syncViewSpan / 8);
+    }
+
+    private Rect SyncField(Rect bounds)
+    {
+        float inset = syncShowValues ? 136 : 52;
+        return new(bounds.X + 50, bounds.Y + inset, bounds.Width - 62, Math.Max(40, bounds.Height - inset - 14));
     }
 
     private void PumpSyncPreview(WorkspaceMerge merge)

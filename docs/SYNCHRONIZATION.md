@@ -39,13 +39,29 @@ the source of a change. Choosing an item advances to the next unresolved differe
 previous/next navigation retains choices for review. Whole-map choices remain available.
 
 Conflict review shows FA and osu! on side-by-side editor canvases with synchronized
-time ranges and zoom. Current conflicting objects and related curve controls are
+time ranges and zoom. Their common default scale uses the current FA difficulty's
+AR and playfield width, matching the editor canvas. Selecting a conflict restores
+that AR scale and locates its start; long groups remain scrollable rather than
+being compressed to fit. Current conflicting objects and related curve controls are
 highlighted; missing counterparts are labelled. Mouse wheel scrolls both maps and
 Ctrl+wheel zooms them together. Field differences appear above the canvases. The
 optional result pane previews chosen resolutions, using FA for unresolved items;
 it does not save or export. File timestamps identify the more recently saved version,
 and unsaved FA edits are labelled separately. A newer timestamp does not resolve
 individual conflicts automatically.
+
+Full-width rectangles mark corresponding object intervals: red for unresolved conflicts,
+amber yellow for previously resolved differences, and green for choices made in the
+current review. Amber borders, translucent fill and status labels distinguish review
+intervals from banana objects. Clicking a rectangle returns to that item; every item
+remains available until Apply, including green items that can be changed again.
+Retained FA decisions persist with their external object groups and local
+source IDs. Unchanged retained differences are labelled **Already resolved** and can
+be selected again in the comparison. They keep their prior choice by default and do
+not prompt automatically. The difficulty-tab synchronization action also opens these
+retained differences for review without new edits. Editing that group in osu! again
+creates an ordinary unresolved conflict. Moving an object across unchanged
+anchors keeps related unmatched removals and insertions in one review group.
 
 Local saving preserves the baseline. Successful export records the actual emitted
 text and source mapping. Synchronization compares external fields with the external

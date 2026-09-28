@@ -52,7 +52,7 @@ public sealed partial class EditorView
         contextItems.Add(new(L.Get("project.openFolder"), () => RequestOpenExternalPath?.Invoke(folder!), Directory.Exists(folder)));
         contextItems.Add(new(L.Get("project.openSongsFolder"), () => RequestOpenExternalPath?.Invoke(songsFolder!), Directory.Exists(songsFolder)));
         int index = difficultyTabTargets[target].Index;
-        contextItems.Add(new(L.Get("sync.refresh"), () => RefreshSynchronization()));
+        contextItems.Add(new(L.Get("sync.refresh"), () => { syncDifficulty = difficulty.Id; RefreshSynchronization(reviewResolved: true); }));
         contextItems.Add(new(L.Get("sync.delete"), () => ShowDeleteDifficulty(index)));
         float menuHeight = 12 + contextItems.Count * 32;
         contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 240)), Math.Clamp(y, 0, Math.Max(0, height - menuHeight)), 240, menuHeight);

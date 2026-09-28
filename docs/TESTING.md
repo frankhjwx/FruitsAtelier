@@ -309,3 +309,8 @@ Visual merge checks cover baseline-free field/object comparisons, sequential cho
 revisiting decisions, aligned highlights on both canvases, synchronized scrolling and
 zoom, newer-save timestamps, and asynchronous result previews without content edits.
 Native rendering checks include the baseline-free comparison and canvas navigation.
+
+AR regressions compare note spacing with the editor's timing scale at AR 1, 5 and 9
+and both window widths. Resolution-history checks cover repeated time moves across
+anchors, ignored additions, older baseline migration, red/amber/green interval states,
+clicking completed intervals and changing prior choices before applying the review.

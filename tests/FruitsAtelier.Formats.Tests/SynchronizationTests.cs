@@ -4,6 +4,64 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: older accepted baselines recover reviewable retained objects", () => Run(f =>
+        {
+            f.Diff.Document.Fruits[0].TimeMs = 800;
+            File.WriteAllText(f.Source, Fixture().Replace("100,192,1000", "320,192,1800"));
+            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], WorkspaceSynchronization.ReadStable(f.Source), f.Diff.Document, true);
+            f.Session.Manifest.Difficulties[0].Sync!.RetainedObjectsRecorded = false;
+            var review = f.Merge();
+            Check(!review.RequiresResolution && review.PreviouslyResolved.Count == 1, "older accepted difference is already resolved and reviewable");
+            var replaced = WorkspaceSynchronization.Resolve(review, review.Conflicts.ToDictionary(c => c.Key, _ => true));
+            Check(replaced.Fruits.Count == 3 && replaced.Fruits.Any(o => o.TimeMs == 1800) && replaced.Fruits.All(o => o.TimeMs != 800), "older decision can be changed without duplicate objects");
+        }));
+        yield return ("Sync: retained fields can be reviewed again without becoming new conflicts", () => Run(f =>
+        {
+            Set(f.Diff.Document, "Title", "FA title");
+            File.WriteAllText(f.Source, Fixture().Replace("Title:Title", "Title:External title"));
+            var first = f.Merge(); var decisions = first.Conflicts.ToDictionary(c => c.Key, _ => false);
+            var kept = WorkspaceSynchronization.Resolve(first, decisions);
+            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], first.External, kept, true, review: first, choices: decisions);
+            f.Diff.Document = kept;
+            var review = f.Merge();
+            Check(!review.RequiresResolution && review.PreviouslyResolved.Contains("Metadata/Title"), "resolved field remains reviewable");
+            Check(OsuBeatmapReader.Setting(WorkspaceSynchronization.Resolve(review, new Dictionary<string, bool>()), "Metadata", "Title") == "FA title", "automatic updates retain the choice");
+            Check(OsuBeatmapReader.Setting(WorkspaceSynchronization.Resolve(review, new Dictionary<string, bool> { ["Metadata/Title"] = true }), "Metadata", "Title") == "External title", "field can be resolved again");
+        }));
+        yield return ("Sync: retained FA objects track repeated external time moves across anchors after restart", () => Run(f =>
+        {
+            Guid id = f.Diff.Document.Fruits[0].Id;
+            f.Diff.Document.Fruits[0].TimeMs = 800;
+            File.WriteAllText(f.Source, Fixture().Replace("100,192,1000", "300,192,1800"));
+            var first = f.Merge(); var decisions = first.Conflicts.ToDictionary(c => c.Key, _ => false);
+            var kept = WorkspaceSynchronization.Resolve(first, decisions);
+            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], first.External, kept, true, review: first, choices: decisions);
+            f.Diff.Document = kept; WorkspaceProject.Save(f.Session, f.Session.Project);
+            f.Session = WorkspaceProject.Open(f.Session.Directory);
+            var history = f.Merge();
+            Check(f.Scan().Difficulties.Single().State == WorkspaceSyncState.Current && !history.RequiresResolution && history.PreviouslyResolved.Count == 1,
+                "resolved difference remains reviewable without requiring another decision");
+            File.WriteAllText(f.Source, Fixture().Replace("100,192,1000", "320,192,1900"));
+            var second = f.Merge(); var conflict = second.Conflicts.Single(c => c.Key.StartsWith("$objects:"));
+            Check(second.WasPreviouslyRetained(conflict.Key) && second.ConflictSources(conflict.Key, false).SetEquals(new[] { id }), "retained identity survives time changes");
+            var accepted = WorkspaceSynchronization.Resolve(second, second.Conflicts.ToDictionary(c => c.Key, _ => true));
+            Check(accepted.Fruits.Count == 3 && accepted.Fruits.All(o => o.Id != id) && accepted.Fruits.Any(o => o.TimeMs == 1900), "external replaces the retained local object instead of duplicating it");
+            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], second.External, accepted, true, review: second, choices: second.Conflicts.ToDictionary(c => c.Key, _ => true));
+            Check(f.Session.Manifest.Difficulties[0].Sync!.RetainedObjects.Count == 0, "external choice clears the previous local decision");
+        }));
+        yield return ("Sync: ignored external additions conflict again without claiming unrelated FA objects", () => Run(f =>
+        {
+            File.WriteAllText(f.Source, Fixture() + "\n320,192,2300,1,0,0:0:0:0:\n");
+            var first = f.Merge(); var decisions = first.Conflicts.ToDictionary(c => c.Key, _ => false);
+            var kept = WorkspaceSynchronization.Resolve(first, decisions);
+            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], first.External, kept, true, review: first, choices: decisions);
+            f.Diff.Document = kept;
+            File.WriteAllText(f.Source, Fixture() + "\n340,192,2400,1,0,0:0:0:0:\n");
+            var second = f.Merge(); var conflict = second.Conflicts.Single(c => c.Key.StartsWith("$objects:"));
+            Check(second.WasPreviouslyRetained(conflict.Key) && second.ConflictSources(conflict.Key, false).Count == 0, "previously rejected insertion is explicit");
+            var accepted = WorkspaceSynchronization.Resolve(second, second.Conflicts.ToDictionary(c => c.Key, _ => true));
+            Check(accepted.Fruits.Count == 4 && kept.Fruits.All(o => accepted.Fruits.Any(a => a.Id == o.Id)), "unrelated FA objects survive accepting the new addition");
+        }));
         yield return ("Sync: baseline-free deletions expose an absent side and retain unrelated identities", () => Run(f =>
         {
             string text = string.Join('\n', OsuBeatmapWriter.Serialize(f.Diff.Document).Text.Split('\n').Where(line => !line.StartsWith("100,192,1000,")));

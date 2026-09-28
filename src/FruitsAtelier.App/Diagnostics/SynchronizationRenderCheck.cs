@@ -34,7 +34,17 @@ internal static class SynchronizationRenderCheck
                 view.Wheel(200, 260, 120, true); Paint();
                 if (!before.ContentEquals(view.Document)) throw new InvalidOperationException("Native comparison navigation changed authoring.");
                 view.KeyDown(27, false, false);
+                var retained = WorkspaceProject.Open(session.Directory);
+                var merge = WorkspaceSynchronization.Merge(retained.Manifest.Difficulties[0], retained.Project.Difficulties[0].Document,
+                    WorkspaceSynchronization.ReadStable(source), retained.Directory, true);
+                var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => false);
+                WorkspaceSynchronization.Accept(retained, retained.Manifest.Difficulties[0], merge.External, retained.Project.Difficulties[0].Document, true, review: merge, choices: choices);
+                WorkspaceProject.Save(retained, retained.Project);
+                view.LoadWorkspace(WorkspaceProject.Open(session.Directory)); view.RefreshSynchronization(reviewResolved: true); Wait();
+                if (!view.SynchronizationVisible) throw new InvalidOperationException("Native resolved interval review was not shown.");
+                view.KeyDown(27, false, false);
                 var legacy = WorkspaceProject.Open(session.Directory); legacy.Manifest.Difficulties[0].Sync = null;
+                File.WriteAllText(source, text.Replace("100,192", "450,192"));
                 WorkspaceProject.Save(legacy, legacy.Project);
                 view.LoadWorkspace(WorkspaceProject.Open(session.Directory)); view.RefreshSynchronization(); Wait();
                 if (view.DifficultySyncState(0) != WorkspaceSyncState.NeedsBaseline) throw new InvalidOperationException("Native legacy comparison was not shown.");

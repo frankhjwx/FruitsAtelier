@@ -6,7 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private sealed record SyncResult(WorkspaceSession Session, BeatmapProject Snapshot, WorkspaceManifest Manifest, string Stamp, WorkspaceSyncScan Scan, Dictionary<Guid, WorkspaceMerge> Merges, IReadOnlyList<WorkspaceClaim> Claims, Dictionary<Guid, SyncComparison> Comparisons);
+    private sealed record SyncResult(WorkspaceSession Session, BeatmapProject Snapshot, WorkspaceManifest Manifest, string Stamp, WorkspaceSyncScan Scan, Dictionary<Guid, WorkspaceMerge> Merges, IReadOnlyList<WorkspaceClaim> Claims, Dictionary<Guid, SyncComparison> Comparisons, bool ReviewResolved);
     private Task<SyncResult>? syncTask;
     private Task<WorkspaceSession>? syncCommitTask;
     private DateTime nextSyncCheck = DateTime.MaxValue;
@@ -16,6 +16,7 @@ public sealed partial class EditorView
     private Guid syncDifficulty;
     private int syncRow;
     private readonly Dictionary<string, bool> syncChoices = [];
+    private readonly HashSet<string> syncRoundChoices = [];
     private Action? afterSynchronization;
     private bool syncBypass;
     private bool syncPreserveHistory;
@@ -30,7 +31,7 @@ public sealed partial class EditorView
     public Action<Action<string?>>? RequestSyncFile { get; set; }
     public Action<Action<string?>>? RequestSyncAudio { get; set; }
 
-    public void RefreshSynchronization(Action? continuation = null, bool quiet = false)
+    public void RefreshSynchronization(Action? continuation = null, bool quiet = false, bool reviewResolved = false)
     {
         if (WorkspaceSession is not { } session) return;
         if (SynchronizationBusy)
@@ -51,7 +52,8 @@ public sealed partial class EditorView
         {
             var scan = WorkspaceSynchronization.Scan(frozen, songs);
             var merges = new Dictionary<Guid, WorkspaceMerge>();
-            foreach (var status in scan.Difficulties.Where(s => s.State is WorkspaceSyncState.Changed or WorkspaceSyncState.NeedsBaseline))
+            foreach (var status in scan.Difficulties.Where(s => s.State is WorkspaceSyncState.Changed or WorkspaceSyncState.NeedsBaseline
+                || reviewResolved && s.State == WorkspaceSyncState.Current))
             {
                 var entry = frozen.Manifest.Difficulties.Single(d => d.Id == status.DifficultyId);
                 var diff = snapshot.Difficulties.Single(d => d.Id == status.DifficultyId);
@@ -61,7 +63,7 @@ public sealed partial class EditorView
             }
             var comparisons = merges.Where(m => m.Value.Conflicts.Count > 0).ToDictionary(m => m.Key, m => PrepareSyncComparison(m.Value, compensate,
                 Path.Combine(session.Directory, manifest.Difficulties.Single(d => d.Id == m.Key).File)));
-            return new SyncResult(session, snapshot, manifest, stamp, scan, merges, WorkspaceAssociations.Claims(Path.GetDirectoryName(session.Directory)!), comparisons);
+            return new SyncResult(session, snapshot, manifest, stamp, scan, merges, WorkspaceAssociations.Claims(Path.GetDirectoryName(session.Directory)!), comparisons, reviewResolved);
         });
         nextSyncCheck = DateTime.UtcNow.AddSeconds(30);
     }
@@ -126,7 +128,8 @@ public sealed partial class EditorView
                 syncClaims = result.Claims;
                 foreach (var status in result.Scan.Difficulties) syncStatuses[status.DifficultyId] = status;
                 foreach (var merge in result.Merges) syncMerges[merge.Key] = merge.Value;
-                var automatic = result.Scan.Difficulties.Where(s => s.State == WorkspaceSyncState.Changed && result.Merges[s.DifficultyId].Conflicts.Count == 0
+                var automatic = result.Scan.Difficulties.Where(s => s.State == WorkspaceSyncState.Changed && !result.Merges[s.DifficultyId].RequiresResolution
+                    && !(result.ReviewResolved && result.Merges[s.DifficultyId].PreviouslyResolved.Count > 0)
                     || s.State == WorkspaceSyncState.NeedsBaseline && s.Candidate!.Hash == (result.Session.Manifest.Difficulties.Single(d => d.Id == s.DifficultyId).ExportHash
                         ?? result.Session.Manifest.Difficulties.Single(d => d.Id == s.DifficultyId).SourceHash)).ToArray();
                 bool canAdd = !result.Scan.Difficulties.Any(s => s.State is WorkspaceSyncState.Ambiguous or WorkspaceSyncState.Duplicate or WorkspaceSyncState.Unavailable);
@@ -162,6 +165,8 @@ public sealed partial class EditorView
                 }
                 syncPage = null;
                 int target = syncDifficulty == Guid.Empty ? activeDifficulty : difficulties.FindIndex(d => d.Id == syncDifficulty);
+                if (result.ReviewResolved && target >= 0 && syncMerges.TryGetValue(difficulties[target].Id, out var review) && review.Conflicts.Count > 0)
+                { BeginSyncReview(target); return; }
                 if (target >= 0 && ShowSyncProblem(target)) return;
                 var continuation = afterSynchronization; afterSynchronization = null;
                 syncBypass = true;
@@ -178,11 +183,18 @@ public sealed partial class EditorView
     {
         var state = DifficultySyncState(index);
         if (state is WorkspaceSyncState.Local or WorkspaceSyncState.Current) return false;
-        syncDifficulty = difficulties[index].Id; syncRow = 0; syncChoices.Clear();
+        BeginSyncReview(index);
+        return true;
+    }
+
+    private void BeginSyncReview(int index)
+    {
+        syncDifficulty = difficulties[index].Id; syncRow = 0; syncChoices.Clear(); syncRoundChoices.Clear();
+        if (syncMerges.TryGetValue(syncDifficulty, out var merge))
+            foreach (string key in merge.PreviouslyResolved) syncChoices[key] = false;
         syncPage = "resolve";
         if (AudioPlaying) RequestPausePlayback?.Invoke();
         CancelInteraction(); hits.Clear(); fields.Clear();
-        return true;
     }
 
     private void CancelSynchronization()
@@ -229,7 +241,9 @@ public sealed partial class EditorView
             else if (useExternal is false) diff.Document.AudioPath = WorkspaceSynchronization.LocalAudioVersion(entry, diff.Document, session.Directory);
             else if (useExternal is null && syncMerges.TryGetValue(diff.Id, out var merge)) diff.Document = WorkspaceSynchronization.Resolve(merge, choices);
             diff.Document.SourcePath = external.Path;
-            WorkspaceSynchronization.Accept(session, entry, external, diff.Document, compensateTinyDroplets, retainLocalFields: useExternal is false);
+            syncMerges.TryGetValue(diff.Id, out var review);
+            var decisions = review?.Conflicts.ToDictionary(c => c.Key, c => useExternal ?? choices.GetValueOrDefault(c.Key));
+            WorkspaceSynchronization.Accept(session, entry, external, diff.Document, compensateTinyDroplets, retainLocalFields: useExternal is false, review: review, choices: decisions);
             diff.Name = OsuBeatmapReader.Setting(diff.Document, "Metadata", "Version") ?? diff.Name;
             WorkspaceProject.Save(session, project);
             return WorkspaceProject.Open(session.Directory);
@@ -253,7 +267,7 @@ public sealed partial class EditorView
             }
             else syncMerges[syncDifficulty] = WorkspaceSynchronization.CompareWithoutBaseline(local, candidate, session.Directory, compensateTinyDroplets);
             syncComparisons[syncDifficulty] = PrepareSyncComparison(syncMerges[syncDifficulty], compensateTinyDroplets, Path.Combine(session.Directory, entry.File));
-            syncPage = "resolve"; syncChoices.Clear(); syncRow = 0;
+            BeginSyncReview(difficulties.FindIndex(d => d.Id == syncDifficulty));
         }
         catch (Exception e) { ShowError(e.Message); }
     }
@@ -377,6 +391,7 @@ public sealed partial class EditorView
     private void ChooseSyncItem(WorkspaceMerge merge, string key, bool external)
     {
         syncChoices[key] = external;
+        syncRoundChoices.Add(key);
         syncPreviewRevision++; syncResultPane = null;
         for (int offset = 1; offset < merge.Conflicts.Count; offset++)
         {

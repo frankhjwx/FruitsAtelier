@@ -49,7 +49,8 @@ public static class WorkspaceProject
             Id = e.Id, Name = e.Name, File = e.File, Source = e.Source, SourceHash = e.SourceHash,
             ExportTarget = e.ExportTarget, ExportHash = e.ExportHash, SyncFile = e.SyncFile,
             Sync = e.Sync is not { } s ? null : new WorkspaceSyncBaseline { Path = s.Path, Text = s.Text, Authoring = s.Authoring,
-                AudioHash = s.AudioHash, AuthoringAudioHash = s.AuthoringAudioHash, ObjectSources = s.ObjectSources.ToList(), PreviousPaths = s.PreviousPaths.ToList(), LocalOverrides = s.LocalOverrides.ToList() }
+                AudioHash = s.AudioHash, AuthoringAudioHash = s.AuthoringAudioHash, ObjectSources = s.ObjectSources.ToList(), PreviousPaths = s.PreviousPaths.ToList(), LocalOverrides = s.LocalOverrides.ToList(),
+                RetainedObjects = s.RetainedObjects.Select(r => new WorkspaceRetainedObjects(r.Sources.ToList(), r.ExternalLines.ToList())).ToList(), RetainedObjectsRecorded = s.RetainedObjectsRecorded }
         }).ToList()
     };
     private static readonly JsonSerializerOptions json = new() { WriteIndented = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow };
