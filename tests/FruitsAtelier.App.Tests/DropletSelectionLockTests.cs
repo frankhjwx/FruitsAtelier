@@ -27,8 +27,23 @@ internal static class DropletSelectionLockTests
             Check(ui.View.XCoordinateFieldBounds is null && ui.View.SelectedObjectIds.SequenceEqual(new[] { slider.Id }),
                 "Coordinate readout changed the first-click parent selection.");
             Check(baseline.ContentEquals(ui.View.Document), "Coordinate readout changed slider content.");
+            if (kind == CatchObjectKind.TinyDroplet) CheckTinyReadout();
             ui.ClickMap(target.TimeMs, target.X);
             Check(ui.View.XCoordinateFieldBounds is not null, "Unlocked droplet could not be selected.");
+            if (kind == CatchObjectKind.TinyDroplet) CheckTinyReadout();
+
+            void CheckTinyReadout()
+            {
+                Check(ui.View.MovementReadout.Previous is not null && ui.View.MovementReadout.Next is not null,
+                    "Tiny droplet movement readout is missing a neighbour");
+                Check(ui.View.DistanceReadout.Previous is not null && ui.View.DistanceReadout.Next is not null,
+                    "Tiny droplet distance readout is missing a neighbour");
+                Check(ui.View.PreviousDistanceFieldBounds is null, "Reading tiny droplet distances enabled DS editing");
+                var prior = ui.View.DistanceReadout;
+                ui.Paint(); ui.Paint();
+                Check(prior == ui.View.DistanceReadout && baseline.ContentEquals(ui.View.Document),
+                    "Repainting changed tiny droplet distances or content");
+            }
             Toggle(ui);
             Check(ui.View.DropletSelectionLocked && !ui.View.NotesLocked, "Droplet lock is not independent.");
             Check(ui.View.XCoordinateFieldBounds is null, "Lock retained the active droplet child selection.");

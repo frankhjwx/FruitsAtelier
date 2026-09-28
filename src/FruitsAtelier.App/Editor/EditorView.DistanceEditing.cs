@@ -28,10 +28,13 @@ public sealed partial class EditorView
         return conversion!.Objects.FirstOrDefault(o => o.SourceId == selected.Source && o.EventIndex == selected.Event);
     }
 
+    private ConvertedCatchObject? DistanceReadoutObject() => SelectedDistanceObject()
+        ?? (clickedCoordinate is { } clicked && FlagTargets() is [var source] && source == clicked.SourceId ? clicked : null);
+
     private (ConvertedCatchObject? Previous, ConvertedCatchObject? Next) DistanceNeighbours(ConvertedCatchObject target, IReadOnlyList<ConvertedCatchObject>? objects = null)
     {
         objects ??= conversion!.Objects;
-        EnsureMovementStates(objects);
+        EnsureMovementStates(objects, target.Kind == CatchObjectKind.TinyDroplet);
         int index = Array.FindIndex(movementIndices, i => objects[i].SourceId == target.SourceId && objects[i].EventIndex == target.EventIndex);
         if (index < 0) return (null, null);
         return (index > 0 ? objects[movementIndices[index - 1]] : null,
@@ -51,7 +54,7 @@ public sealed partial class EditorView
         DistanceSliderBounds = null;
         var target = PlacementGhostPoint() is null ? SelectedDistanceObject() : null;
         var previous = target is not null ? DistanceNeighbours(target).Previous : null;
-        bool editable = target is not null && previous is not null && DistanceReadout.Previous.HasValue && !notesLocked && drag == DragKind.None;
+        bool editable = target is not null && target.Kind != CatchObjectKind.TinyDroplet && previous is not null && DistanceReadout.Previous.HasValue && !notesLocked && drag == DragKind.None;
         NextDistanceFieldBounds = null;
         PreviousDistanceFieldBounds = editable ? new(panel.X, panel.Y, panel.Width, 56) : null;
         var coordinateInput = new Rect(panel.Right - 74, panel.Y + 58, 64, 20);

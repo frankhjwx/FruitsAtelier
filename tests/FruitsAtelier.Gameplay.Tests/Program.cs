@@ -10,6 +10,7 @@ var tests = new (string Name, Action Run)[]
     ("Static bananas use the arrival scale across the CS range", BananaSizes),
     ("Hyperdash uses full catcher width and marks the departure object", Departure),
     ("Droplet participates while tiny droplet does not interrupt hyperdash context", DropletParticipation),
+    ("Tiny droplet display analysis is opt-in and preserves gameplay states", TinyMovementAnalysis),
     ("Same-direction excess from a prefix can turn the next jump red", PrefixExcess),
     ("Direction reversal restores the full half-catcher allowance", DirectionReversal),
     ("A hyperdash resets excess for the next jump", HyperdashReset),
@@ -29,6 +30,18 @@ foreach (var test in tests)
 }
 Console.WriteLine($"{tests.Length - failures}/{tests.Length} gameplay tests passed.");
 return failures == 0 ? 0 : 1;
+
+static void TinyMovementAnalysis()
+{
+    ConvertedCatchObject[] objects = [Obj(0, 100), Obj(100, 110, CatchObjectKind.TinyDroplet), Obj(200, 300)];
+    var gameplay = HyperDashCalculator.Calculate(objects, 5);
+    var display = HyperDashCalculator.Calculate(objects, 5, includeTinyDroplets: true);
+    True(gameplay[1].Movement is null && display[1].Movement is not null, "Tiny analysis participation is incorrect");
+    Near(10, display[0].Movement!.Value.Distance);
+    Near(190, display[1].Movement!.Value.Distance);
+    True(display[0].Movement!.Value.Mode == CatchMovementMode.Stand, "Tiny neighbour Stand classification is incorrect");
+    True(gameplay.SequenceEqual(HyperDashCalculator.Calculate(objects, 5)), "Display analysis changed gameplay states");
+}
 
 static void MovementRanges()
 {

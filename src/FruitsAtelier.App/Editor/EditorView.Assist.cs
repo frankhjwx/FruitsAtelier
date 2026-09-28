@@ -239,10 +239,10 @@ public sealed partial class EditorView
     {
         DistanceReadout = (null, null);
         bool placement = PlacementGhostPoint() is not null;
-        var target = placement ? placementGhost : SelectedDistanceObject();
+        var target = placement ? placementGhost : DistanceReadoutObject();
         if (target is not null)
         {
-            var neighbours = DistanceNeighbours(target, placement ? placementMovementObjects : null);
+            var neighbours = DistanceNeighbours(target, placement ? placementMovementObjects : ReferenceEquals(target, clickedCoordinate) ? playableObjects : null);
             DistanceReadout = (neighbours.Previous is { } prev ? BaseDistanceRatio(prev, target) : null,
                 neighbours.Next is { } nextObject ? BaseDistanceRatio(target, nextObject) : null);
             return;
