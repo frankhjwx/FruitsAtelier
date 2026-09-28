@@ -168,7 +168,6 @@ public sealed partial class EditorView
         if (DiscardConfirmationVisible || ExportVisible || !PrepareFileOperation()) return;
         if (WorkspaceSession is { } syncSession && syncSession.Manifest.Difficulties.Any(d => WorkspaceSynchronization.Target(d) is not null) && !syncBypass)
         {
-            if (!SaveWorkspace()) return;
             syncDifficulty = difficulties[activeDifficulty].Id;
             RefreshSynchronization(SaveCurrentDifficulty);
             return;
