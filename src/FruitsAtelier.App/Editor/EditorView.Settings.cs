@@ -14,6 +14,7 @@ public sealed partial class EditorView
     public bool SupportsDisplayMode { get; set; }
     private bool draftLowLatencyDisplay;
     private double draftTestplayStartupDelaySeconds;
+    private bool draftShowTestplayCombo;
     private readonly uint[] draftIndicatorColours = new uint[4];
     private int settingsColourIndex = -1;
     private uint settingsColourOriginal;
@@ -63,9 +64,10 @@ public sealed partial class EditorView
         settingsColourIndex = -1; settingsColourDrag = 0; settingsColourHex = settingsColourError = "";
         draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
         draftTestplayStartupDelaySeconds = LibrarySettings.TestplayStartupDelaySeconds;
+        draftShowTestplayCombo = LibrarySettings.ShowTestplayCombo;
     }
 
-    private bool SettingsChanged => draftWorkspace != LibrarySettings.Workspace ||
+    private bool SettingsChanged => draftShowTestplayCombo != LibrarySettings.ShowTestplayCombo || draftWorkspace != LibrarySettings.Workspace ||
         draftOsuRoot != LibrarySettings.OsuRoot ||
         draftDefaultSkin != (LibrarySettings.DefaultSkin ?? "") ||
         draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
@@ -195,6 +197,7 @@ public sealed partial class EditorView
             var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
             settings.TestplayStartupDelaySeconds = draftTestplayStartupDelaySeconds;
+            settings.ShowTestplayCombo = draftShowTestplayCombo;
             settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.DerandomizeDroplets = draftDerandomizeDroplets;
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
@@ -202,6 +205,9 @@ public sealed partial class EditorView
             settings.DashIndicatorColour = draftIndicatorColours[2]; settings.HyperDashIndicatorColour = draftIndicatorColours[3];
             settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;
             settings.PlaybackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
+            settings.CanvasZoom = LibrarySettings.CanvasZoom;
+            settings.ObjectTimelineScale = LibrarySettings.ObjectTimelineScale;
+            settings.WaveformSpanMs = LibrarySettings.WaveformSpanMs;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
             bool rootsChanged = settings.Workspace != LibrarySettings.Workspace || settings.OsuRoot != LibrarySettings.OsuRoot;
             settings.Save(settingsPath);

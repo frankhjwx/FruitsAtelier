@@ -49,6 +49,9 @@ public sealed partial class EditorView
     public Rect? DistanceSliderBounds { get; private set; }
     private bool DistanceEditing => distanceEditTarget is not null;
 
+    public bool EqualDistanceHighlighted => DistanceReadout.Previous is { } previous
+        && DistanceReadout.Next is { } next && Math.Abs(previous - next) <= .0100000001;
+
     private void DrawDistanceFields(ICanvas c, Rect panel)
     {
         DistanceSliderBounds = null;
@@ -91,10 +94,10 @@ public sealed partial class EditorView
         }
         else
         {
-            c.Text(L.Get("assist.previous", DistanceReadout.Previous is { } p ? L.Get("assist.ratio", p) : "—"), panel.X + 10, panel.Y + 38, MovementPanelFontSize, Muted, panel.Width / 2 - 14);
+            c.Text(L.Get("assist.previous", DistanceReadout.Previous is { } p ? L.Get("assist.ratio", p) : "—"), panel.X + 10, panel.Y + 38, MovementPanelFontSize, EqualDistanceHighlighted ? Gold : Muted, panel.Width / 2 - 14);
             string next = L.Get("assist.next", DistanceReadout.Next is { } n ? L.Get("assist.ratio", n) : "—");
             float nextWidth = Math.Min(c.MeasureText(next, MovementPanelFontSize), panel.Width / 2 - 14);
-            c.Text(next, panel.Right - 10 - nextWidth, panel.Y + 38, MovementPanelFontSize, Muted, nextWidth);
+            c.Text(next, panel.Right - 10 - nextWidth, panel.Y + 38, MovementPanelFontSize, EqualDistanceHighlighted ? Gold : Muted, nextWidth);
         }
         if (DistanceEditing && fieldError.Length > 0)
         {

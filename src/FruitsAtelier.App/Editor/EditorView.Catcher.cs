@@ -18,12 +18,12 @@ public sealed partial class EditorView
     }
 
     private void DrawCatcherBody(ICanvas c, float bodyX, float plateY, float drawWidth, uint color,
-        float opacity, bool additive, bool facingLeft)
+        float opacity, bool additive, bool facingLeft, bool brighten = false)
     {
         if (opacity <= 0) return;
         if (skin?.DrawCatcher(c, bodyX, plateY, drawWidth, PreviewCircleSize, color, opacity, additive, facingLeft) == true) return;
         float size = CatchSize.CatcherWidth(PreviewCircleSize) * drawWidth / 512;
-        if (color == 0xFFFFFF) color = 0xB5C9D0;
+        if (color == 0xFFFFFF && !brighten) color = 0xB5C9D0;
         float plateHeight = Math.Max(2, size * .055f);
         if (opacity == 1) c.Fill(new(bodyX - size / 2, plateY, size, plateHeight), color, 2);
         else c.Line(bodyX - size / 2, plateY + plateHeight / 2, bodyX + size / 2, plateY + plateHeight / 2, color, plateHeight, opacity);

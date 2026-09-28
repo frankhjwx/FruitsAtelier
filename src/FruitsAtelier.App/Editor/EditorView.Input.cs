@@ -14,6 +14,12 @@ public sealed partial class EditorView
     private bool HitsTimelineHead(float x, float y) => Math.Abs(x - TimelineHeadX) <= 6
         && y >= overview.Y - 7 && y <= overview.Bottom + 2;
 
+    public void PointerLeave()
+    {
+        if (WantsCapture) return;
+        mouseX = mouseY = -1;
+    }
+
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
         placementCtrl = ctrl;
@@ -431,7 +437,7 @@ public sealed partial class EditorView
             if (MathF.Abs(x - dragStartX) < 2 && MathF.Abs(y - dragStartY) < 2) return;
             dragMoved = true;
         }
-        if (drag == DragKind.TimelineTail) { MoveTimelineTail(x); return; }
+        if (drag == DragKind.TimelineTail) { MoveTimelineTail(x, shift); return; }
         if (drag == DragKind.Objects) { MoveSelectedObjects(x, y, shift); return; }
         if (drag == DragKind.SliderObject)
         {
@@ -591,6 +597,7 @@ public sealed partial class EditorView
         if (drag == DragKind.DifficultySeek) { drag = DragKind.None; return; }
         if (drag == DragKind.PlaybackLine) { FinishPlaybackLineDrag(); return; }
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
+        if (drag == DragKind.CanvasZoom) RequestViewPreference?.Invoke();
         if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
         {
             if (Document.DerandomizeDroplets is null && Document.Tracks.Any(track => pendingImplicitSliderConversions.Contains(track.Id)))
@@ -701,7 +708,11 @@ public sealed partial class EditorView
         if (TimingPageVisible && WaveformBounds.Contains(x, y) && !SongSetupVisible && !LibraryVisible)
         {
             if ((alt || altHeld) && !ctrl && !shift && !shiftHeld)
+            {
                 waveformSpanMs = Math.Clamp(waveformSpanMs / Math.Pow(1.25, delta / 120), 100, Math.Max(10000, TimelineDurationMs * 2));
+                LibrarySettings.WaveformSpanMs = waveformSpanMs;
+                RequestViewPreference?.Invoke();
+            }
             else if (!alt && !altHeld && !ctrl) SeekByWheel(-delta / 120 * (shift ? 4 : 1), 0);
             return;
         }
@@ -778,8 +789,12 @@ public sealed partial class EditorView
             if (steps != 0)
             {
                 ForgetTemporarySnap();
-                int current = Array.IndexOf(SnapDivisors, divisor);
-                divisor = SnapDivisors[((current + steps) % SnapDivisors.Length + SnapDivisors.Length) % SnapDivisors.Length];
+                for (int i = 0; i < Math.Abs(steps); i++)
+                {
+                    int next = steps > 0 ? divisor * 2 : divisor % 2 == 0 ? divisor / 2 : divisor;
+                    if (!SnapDivisors.Contains(next)) break;
+                    divisor = next;
+                }
             }
             return;
         }
@@ -791,6 +806,7 @@ public sealed partial class EditorView
         }
         if (onOverview)
         {
+            if (alt && !ctrl && !shift) { AdjustVolumeWheel(delta); return; }
             if (!AudioLoading && !ctrl && !alt) SeekByWheel(-delta / 120 * (shift ? 4 : 1), 2);
             return;
         }
@@ -997,8 +1013,9 @@ public sealed partial class EditorView
             }
             if (virtualKey is 37 or 39)
             {
-                if (shift) NudgeSelection(0, virtualKey == 37 ? -1 : 1);
-                else SeekBookmark(virtualKey == 39);
+                if (ClipboardSelectedParentIds().Count > 0)
+                    NudgeSelection(0, (virtualKey == 37 ? -1 : 1) * (shift ? gridSize : 1));
+                else if (!shift) SeekBookmark(virtualKey == 39);
                 return;
             }
             if (ClipboardInteractionReady && HandleLegacyShortcut(virtualKey, shift)) return;
@@ -1011,7 +1028,7 @@ public sealed partial class EditorView
             else if (virtualKey == 88 && !shift) CutSelection();
             else if (virtualKey == 86 && !shift) PasteSelection();
             else if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
-            else if (virtualKey == 71 && !shift) ReverseSelectedPath();
+            else if (virtualKey == 71 && !shift) ReverseSelection();
             else if (virtualKey == 76 && !shift) TogglePointCurve();
             else if (virtualKey == 73 && !shift) DeleteCurrentTiming();
             else if (virtualKey == 73 && shift && plot.Contains(mouseX, mouseY) && HitSliderLocation(mouseX, mouseY) is { } location) InsertControlPoint(location);
@@ -1022,6 +1039,8 @@ public sealed partial class EditorView
             return;
         }
         if (ctrl || altHeld) return;
+        if (drag == DragKind.Marquee && !shift && virtualKey is 32 or 67)
+        { TogglePlayback(); return; }
         if (drag != DragKind.None) return;
         contextItems.Clear();
         if (draftTrack != Guid.Empty && !shift && virtualKey is >= 49 and <= 52)

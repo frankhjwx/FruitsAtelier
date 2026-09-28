@@ -79,7 +79,7 @@ Double-click an FSlider, or select it and click its controls, to edit its points
 
 Hold the mouse button on an imported slider until its actions appear, then choose **Convert to FSlider** to edit its shape. **Edit > Convert all sliders to FSliders** converts the active difficulty. Conversion can approximate the imported path; undo restores the original.
 
-**Ctrl+= / Ctrl+-** adds or removes a reverse. **Ctrl+G** reverses path direction. **Ctrl+J** extends a selected FSlider to the pointer at a time after its final end. Repeated spans share one base path, so extending it lengthens every span.
+**Ctrl+= / Ctrl+-** adds or removes a reverse. **Ctrl+G** reverses selection timing and each selected slider path. A single FSlider reverses its own path while keeping its interval and repeats. **Ctrl+J** extends a selected FSlider to the pointer at a time after its final end. Repeated spans share one base path, so extending it lengthens every span.
 
 ### Fruit streams and snapping
 
@@ -146,8 +146,8 @@ Shortcuts below apply while editing, outside text fields and dialogs. On macOS, 
 | Delete | Delete selected objects or edited points. |
 | Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z | Undo / redo / redo. |
 | Ctrl+H | Flip selected objects horizontally. |
-| Ctrl+Left / Ctrl+Right | Seek to the previous / next bookmark. |
-| Ctrl+Shift+Left / Ctrl+Shift+Right | Move selected objects one horizontal unit. |
+| Ctrl+Left / Ctrl+Right | Move a Compose selection by one X unit; otherwise seek the previous / next bookmark. |
+| Ctrl+Shift+Left / Ctrl+Shift+Right | Move selected objects by the horizontal grid step. |
 | J / K | Move selection back / forward one beat subdivision. |
 | Esc | Cancel the current action; otherwise return to Library. |
 
@@ -165,8 +165,9 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Ctrl+Up / Ctrl+Down | Increase / decrease playback speed by 25 percentage points (10%–150%). |
 | Ctrl+Shift+Up / Ctrl+Shift+Down | Increase / decrease playback speed by 5 percentage points. |
 | Wheel / middle-drag | Wheel up moves the playhead and canvas earlier; down moves both later by the same relative amount. Middle-drag pans the canvas. |
-| Ctrl+wheel | Change Snap across all supported subdivisions. |
+| Ctrl+wheel | Double/halve Snap within the current supported family, stopping at boundaries. |
 | Alt+wheel (canvas) | Zoom the canvas. |
+| Alt+wheel (bottom timeline) | Adjust the current volume channel. |
 | Alt+wheel (upper timeline) | Zoom the object timeline. |
 | Shift+wheel | Seek four times as far. |
 | Ctrl+Alt+wheel (canvas / upper timeline) | Cycle placement tools. |
@@ -186,7 +187,7 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Ctrl+Shift+I | Insert a point on the curve under the pointer. |
 | Ctrl+L | Toggle the selected point between straight and curved. |
 | Ctrl+= / Ctrl+- | Add / remove a reverse. |
-| Ctrl+G | Reverse the selected FSlider's path direction. |
+| Ctrl+G | Reverse selection timing and each selected slider path. |
 | Ctrl+J | Extend the selected FSlider to the pointer. |
 | Ctrl+Shift+F | Convert sliders to a fruit stream, or change stream snap. |
 

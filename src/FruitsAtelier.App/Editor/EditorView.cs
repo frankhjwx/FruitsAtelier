@@ -222,7 +222,7 @@ public sealed partial class EditorView
     private void ResetView()
     {
         pinPlayhead = true;
-        canvasZoom = .6;
+        canvasZoom = LibrarySettings.CanvasZoom;
         viewStart = 0;
         if (Playfield.Width > 0) pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
         if (AudioPlaying) FollowPlayhead();
@@ -244,6 +244,8 @@ public sealed partial class EditorView
         y = Math.Clamp(y, plot.Y, plot.Bottom);
         double anchorTime = Transform.ToMap(Playfield.X, y).TimeMs;
         canvasZoom = Math.Clamp(canvasZoom * factor, MinimumCanvasZoom, 1);
+        LibrarySettings.CanvasZoom = canvasZoom;
+        if (drag != DragKind.CanvasZoom) RequestViewPreference?.Invoke();
         pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
         viewStart = anchorTime - (plot.Bottom - y) / pixelsPerMs;
         ClampView();

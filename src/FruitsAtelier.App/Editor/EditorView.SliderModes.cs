@@ -314,6 +314,34 @@ public sealed partial class EditorView
         }
     }
 
+    private void ReverseSelection()
+    {
+        var ids = ClipboardSelectedParentIds();
+        if (ids.Count == 0 || notesLocked || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
+        EnsureConversion();
+        RefreshTimelineSources();
+        var intervals = timelineSources.Where(s => ids.Contains(s.Id)).ToArray();
+        if (intervals.Length == 0) return;
+        double sum = intervals.Min(s => s.Start) + intervals.Max(s => s.End);
+        Edit(L.Get("editor.command.reverseSelection"), () =>
+        {
+            foreach (var id in Document.ImportedSliders.Where(s => ids.Contains(s.Id)).Select(s => s.Id).ToArray())
+                ConvertImportedSlider(id);
+            foreach (var fruit in Document.Fruits.Where(f => ids.Contains(f.Id))) fruit.TimeMs = sum - fruit.TimeMs;
+            foreach (var track in Document.Tracks.Where(t => ids.Contains(t.Id)))
+            {
+                double offset = sum - CurveMath.EndTimeMs(track) - track.Nodes[0].TimeMs;
+                SliderControlEditing.Reverse(track);
+                foreach (var node in track.Nodes) node.TimeMs += offset;
+            }
+            foreach (var shower in Document.BananaShowers.Where(s => ids.Contains(s.Id)))
+                (shower.TimeMs, shower.EndTimeMs) = (sum - shower.EndTimeMs, sum - shower.TimeMs);
+            OsuBeatmapReader.Validate(Document);
+            var errors = CurveMath.Validate(Document);
+            if (errors.Count > 0) throw new InvalidOperationException(errors[0]);
+        });
+    }
+
     private void ReverseSelectedPath()
     {
         if (draftTrack != Guid.Empty || SelectedTrack is not { } track) return;

@@ -21,6 +21,12 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Mapping selection reversal and contextual horizontal nudges", MappingSessionTests.ReverseAndNudge),
+    ("Mapping Snap families and overview volume routing", MappingSessionTests.SnapAndVolume),
+    ("Mapping boundary distances, DS equality and pointer exit", MappingSessionTests.DistanceAndHover),
+    ("Mapping marquee playback and banana timeline resizing", MappingSessionTests.MarqueeAndBanana),
+    ("Mapping independent zoom and Combo preferences", MappingSessionTests.Preferences),
+    ("Mapping Combo visibility and configured dash brightness", MappingSessionTests.TestplayDisplay),
     ("Clearing internal slider nodes preserves endpoints and batch undo", ClearSliderNodesTests.Run),
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
     ("Legacy slider editing converts silently with atomic drag, insertion and cancellation", ImplicitSliderEditingTests.Run),
@@ -232,7 +238,7 @@ var tests = new (string Name, Action Run)[]
     ("Playing timeline marquee anchors time and retains offscreen selection", ObjectTimelineTests.PlaybackMarquee),
     ("Beat colors and widths agree on canvas and timeline across divisors", ObjectTimelineTests.GridColors),
     ("Playback speed buttons work in both languages without editing content", ObjectTimelineTests.SpeedControls),
-    ("Canvas defaults and reset use 60% zoom while enforcing minimum width", CanvasZoomTests.DefaultsAndReset),
+    ("Canvas starts at 60% and retains remembered zoom while enforcing minimum width", CanvasZoomTests.DefaultsAndReset),
     ("Zoom slider and wheel share scale, bounds and content isolation", CanvasZoomTests.SliderAndWheel),
     ("Zoom slider fits both languages and preserves playback following", CanvasZoomTests.PlaybackAndLanguages),
     ("Alt-wheel keeps pointer time fixed while scaling object positions", ZoomPaintedAnchor),
@@ -664,9 +670,10 @@ static void ResetCanvasViewport()
     Near(ui.View.PlayheadMs - ui.Plot.Height * 0.25 / ui.View.PixelsPerMs, ui.View.ViewStartMs);
     double restoredScale = ui.View.PixelsPerMs;
     var plot = ui.Plot;
-    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, -120, false, false, true);
+    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, 120, false, false, true);
     ui.Paint();
-    True(ui.View.PixelsPerMs < restoredScale, "Manual zoom could not leave AR scale.");
+    True(ui.View.PixelsPerMs > restoredScale, "Manual zoom could not leave AR scale.");
+    restoredScale = ui.View.PixelsPerMs;
     ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.resetView"));
     Near(restoredScale, ui.View.PixelsPerMs);
     Near(ui.View.PlayheadMs - ui.Plot.Height * 0.25 / ui.View.PixelsPerMs, ui.View.ViewStartMs);

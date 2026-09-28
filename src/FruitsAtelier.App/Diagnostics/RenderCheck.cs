@@ -587,6 +587,7 @@ internal static class RenderCheck
                 canvas.Resize(1440, 900, 96);
                 Paint();
                 view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom, -2400, false, false, true);
+                view.UpdateTransport(1500, 10000, true, false, false, null, null);
                 Paint();
                 var field = view.PlayfieldBounds;
                 float x = field.X + 240f / 512 * field.Width;
@@ -628,6 +629,7 @@ internal static class RenderCheck
                 view.PointerUp(lockButton.X - 20, lockButton.Y + 16, 0); Paint();
                 if (view.DropletSelectionLocked) throw new InvalidOperationException("Could not unlock native droplet fixture.");
                 var tiny = OsuBeatmapWriter.Serialize(sliderMap).PlayableObjects.First(o => o.Kind == CatchObjectKind.TinyDroplet && o.TimeMs > 1400);
+                view.UpdateTransport(tiny.TimeMs, 6000, true, false, false, null, null); Paint();
                 field = view.PlayfieldBounds;
                 x = field.X + (float)tiny.X / 512 * field.Width;
                 y = view.CanvasPlotBounds.Bottom - (float)((tiny.TimeMs - view.ViewStartMs) * view.PixelsPerMs);

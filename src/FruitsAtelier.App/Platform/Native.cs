@@ -26,6 +26,15 @@ internal static class Native
         finally { DragFinish(drop); }
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MouseTracking
+    {
+        internal uint Size, Flags;
+        internal nint Window;
+        internal uint HoverTime;
+    }
+    [DllImport("user32.dll")] internal static extern bool TrackMouseEvent(ref MouseTracking tracking);
+
     internal const uint WindowStyle = 0x00CF0000;
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     internal delegate nint WindowProc(nint hwnd, uint message, nuint wParam, nint lParam);

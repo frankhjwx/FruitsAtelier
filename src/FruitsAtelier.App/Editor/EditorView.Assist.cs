@@ -259,10 +259,12 @@ public sealed partial class EditorView
         }
         else
         {
-            if (ids.Count != 1 || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
-            var selected = distanceReferences.FirstOrDefault(r => ids.Contains(r.Id));
-            if (selected is null) return;
-            point = selected.Start; end = selected.End; velocity = BaseDistanceVelocity(end.TimeMs);
+            if (ids.Count == 0 || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
+            var selected = distanceReferences.Where(r => ids.Contains(r.Id)).ToArray();
+            if (selected.Length == 0) return;
+            point = selected.MinBy(r => r.Start.TimeMs)!.Start;
+            end = selected.MaxBy(r => r.End.TimeMs)!.End;
+            velocity = BaseDistanceVelocity(end.TimeMs);
         }
         var previous = PreviousReference(point.TimeMs, ids);
         var next = distanceReferences.FirstOrDefault(r => r.Id != draftTrack && !ids.Contains(r.Id) && r.Start.TimeMs >= end.TimeMs);

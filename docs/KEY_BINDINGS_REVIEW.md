@@ -57,9 +57,8 @@ explanations and feasibility assessment derive from this repository's code.
 | --- | --- | --- |
 | Ctrl+L | Reload | Point curvature |
 | Ctrl+J | Vertical flip | Extend FSlider |
-| Ctrl+G | Reverse selection | Reverse one FSlider path |
 | Ctrl+Shift+I | Import sample | Insert control in Compose |
-| Ctrl+arrows | Contextual nudge / navigation | Bookmarks or speed; horizontal nudge uses Ctrl+Shift |
+| Ctrl+Up/Down | Contextual nudge / navigation | Playback speed |
 | Alt+wheel, canvas | Distance multiplier | Zoom |
 | Alt+Shift+wheel | Fine distance multiplier | Unbound |
 | Wheel up | Forward | Earlier |
@@ -68,12 +67,10 @@ explanations and feasibility assessment derive from this repository's code.
 | Double-click object | Seek | Slider editing; no general fruit seek |
 | Alt+F4 | Leave editor | Close Windows application |
 
-The horizontal-nudge mapping, slider editing chords and canvas Alt+wheel are
+The slider editing chords and canvas Alt+wheel are
 deliberate editor choices described in
 [shortcut decisions](EDITOR_FEEDBACK_TASKS.md). They are compatibility differences,
-not evidence of two handlers simultaneously executing. The FSlider chords are
-retained. Any future migration requires moving the existing commands and updating
-hints and documentation together.
+not evidence of two handlers simultaneously executing. Ctrl+G reverses selection timing and each selected slider path; the single-path command remains in Edit. Ctrl+Left/Right nudges a Compose selection by one X unit and navigates bookmarks without a selection. Ctrl+Shift+Left/Right uses the horizontal grid step.
 
 Normal save, clipboard, undo/redo, clone, horizontal mirror, tools 1–4, playback,
 bookmarks, timing creation/deletion, sound flags and snap/grid toggles already have
@@ -110,7 +107,6 @@ Sources: [shortcut operations](../src/FruitsAtelier.App/Editor/EditorView.Shortc
 | Ctrl+L / Ctrl+Shift+L reload | Define project versus linked `.osu` authority, partial/full reload, unsaved confirmation and per-difficulty state. Ctrl+L must first move to another chord. |
 | Shift+Q/W/E/R and Ctrl+Q/W/E/R sample banks | Add selection-wide sample-bank editing, including imported source context and slider edge overrides, undo and export preservation. Timing-point bank controls do not implement object-bank edits. |
 | Ctrl+Shift+I sample import | Needs an import dialog, asset copying/name policy and persistence; also conflicts with control insertion. |
-| Ctrl+G selection reversal | Current path reversal affects one FSlider. Define group time/order reversal for mixed fruits, showers and repeated sliders. |
 | Ctrl+Shift+S scaling | Define separate X/time scaling, pivot, range validation and slider-handle/repeat behavior. |
 | Alt / Alt+Shift+wheel DS adjustment | DS uses multiple simultaneous presets. Choose which preset or aggregate is adjusted; existing Alt+wheel zoom would need a migration. |
 | Ctrl-modified slider-velocity precision | Add editable SV first and define how it interacts with time-based FSliders and export. |

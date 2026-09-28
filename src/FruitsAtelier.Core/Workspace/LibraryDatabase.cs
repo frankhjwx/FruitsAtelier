@@ -29,6 +29,11 @@ public sealed class LibrarySettings
         get => playbackLineFromBottom;
         set => playbackLineFromBottom = double.IsFinite(value) ? Math.Clamp(value, .05, .95) : .25;
     }
+    public bool ShowTestplayCombo { get; set; } = true;
+    private double canvasZoom = .6, objectTimelineScale = .18, waveformSpanMs = 10000;
+    public double CanvasZoom { get => canvasZoom; set => canvasZoom = double.IsFinite(value) ? Math.Clamp(value, .01, 1) : .6; }
+    public double ObjectTimelineScale { get => objectTimelineScale; set => objectTimelineScale = double.IsFinite(value) ? Math.Clamp(value, .025, 1.5) : .18; }
+    public double WaveformSpanMs { get => waveformSpanMs; set => waveformSpanMs = double.IsFinite(value) ? Math.Clamp(value, 100, int.MaxValue * 2d) : 10000; }
     public int TestplayLeftKey { get; set; } = 37;
     public int TestplayRightKey { get; set; } = 39;
     public int TestplayDashKey { get; set; } = 16;

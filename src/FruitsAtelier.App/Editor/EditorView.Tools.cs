@@ -169,6 +169,13 @@ public sealed partial class EditorView
 
     private void DrawPlacementGhost(ICanvas c)
     {
+        if (tool == Tool.Banana && plot.Contains(mouseX, mouseY) && drag == DragKind.None
+            && menu < 0 && contextItems.Count == 0 && editField < 0)
+        {
+            float y = Screen(MapAt(mouseX, mouseY, true)).Y;
+            c.Line(Playfield.X, y, Playfield.Right, y, Gold, opacity: .7f);
+            return;
+        }
         if (PlacementGhostPoint() is not { } point) return;
         var p = Screen(point);
         float diameter = CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512;

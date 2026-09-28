@@ -96,27 +96,28 @@ public sealed partial class EditorView
         MovementOverlayBounds = null;
         MovementReadout = (null, null);
         IReadOnlyList<ConvertedCatchObject> objects = playableObjects;
-        Guid source;
+        HashSet<Guid> sources;
         bool placement = PlacementGhostPoint() is not null;
         if (placement)
         {
             if (placementGhost is not { } ghost || placementMovementObjects is null) return;
             objects = placementMovementObjects;
-            source = ghost.SourceId;
+            sources = [ghost.SourceId];
         }
         else
         {
             var ids = FlagTargets();
-            if (ids.Length != 1 || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
-            source = ids[0];
+            if (ids.Length == 0 || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
+            if (tool is Tool.Fruit or Tool.Slider && !plot.Contains(mouseX, mouseY) && !DistanceEditing) return;
+            sources = ids.ToHashSet();
         }
         var selectedObject = placement ? placementGhost : DistanceReadoutObject();
         EnsureMovementStates(objects, selectedObject?.Kind == CatchObjectKind.TinyDroplet);
         var indices = movementIndices;
-        int first = Array.FindIndex(indices, i => objects[i].SourceId == source
+        int first = Array.FindIndex(indices, i => sources.Contains(objects[i].SourceId)
             && (selectedObject is null || objects[i].EventIndex == selectedObject.EventIndex));
         if (first < 0) return;
-        int last = selectedObject is not null ? first : Array.FindLastIndex(indices, i => objects[i].SourceId == source);
+        int last = selectedObject is not null ? first : Array.FindLastIndex(indices, i => sources.Contains(objects[i].SourceId));
         MovementReadout = (first > 0 ? movementStates[indices[first - 1]].Movement : null,
                 movementStates[indices[last]].Movement);
 

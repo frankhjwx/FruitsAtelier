@@ -53,7 +53,7 @@ internal static class PlaybackLineTests
         if (ui.View.WantsCapture) throw new Exception("Playback start retained handle capture");
         ui.View.Wheel(ui.Plot.X + 30, ui.Plot.Y + 30, 120, false, false, true); ui.Paint(); Height(.95);
         if (seeks != 0 || !original.ContentEquals(ui.View.Document)) throw new Exception("Handle drag sought time or edited map content");
-        if (saves != 3) throw new Exception("Cancelled or disabled drag saved its height");
+        if (saves != 4) throw new Exception("Cancelled or disabled drag saved its height");
         var reopened = new Ui(overview: false);
         reopened.View.InitializeLibrary(false, LibrarySettings.Load(settingsPath));
         reopened.View.LoadDocument(original);

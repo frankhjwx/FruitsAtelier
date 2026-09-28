@@ -186,8 +186,9 @@ public sealed partial class EditorView
         foreach (var trail in frame.Trails)
             DrawCatcherTrail(c, trail, left, fieldWidth, catchY);
         DrawCatcherBody(c, x, catchY, fieldWidth, tint, 1, false, frame.FacingLeft);
+        if (frame.Dashing) DrawCatcherBody(c, x, catchY, fieldWidth, 0xFFFFFF, .65f, true, frame.FacingLeft, brighten: true);
         DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
-        DrawTestplayCombo(c, x, catchY - 175 * fieldWidth / 512, fieldWidth / 512);
+        if (LibrarySettings.ShowTestplayCombo) DrawTestplayCombo(c, x, catchY - 175 * fieldWidth / 512, fieldWidth / 512);
         c.Unclip();
         string[] hints = ["testplay.hintAutoplay", "testplay.hintPause", "testplay.hintBookmark", "testplay.hintQuickExit", "testplay.hintCurrentExit"];
         for (int i = 0; i < hints.Length; i++)
@@ -286,6 +287,9 @@ public sealed partial class EditorView
         TimingButton(c, new(leadIn.Right - 24, leadIn.Y, 24, leadIn.Height), "›",
             () => draftTestplayStartupDelaySeconds = Math.Min(5, draftTestplayStartupDelaySeconds + .5),
             enabled: draftTestplayStartupDelaySeconds < 5, flatArrow: true);
+        SettingsButton(c, new(SettingsContentX, SettingsTop + 322, Math.Min(472, SettingsRight - SettingsContentX - 32), 38),
+            L.Get(draftShowTestplayCombo ? "testplay.comboOn" : "testplay.comboOff"),
+            () => draftShowTestplayCombo = !draftShowTestplayCombo, draftShowTestplayCombo);
         string[] labels = ["testplay.left", "testplay.right", "testplay.dash"];
         float cell = Math.Min(220, (SettingsRight - SettingsContentX - 32) / 3);
         for (int i = 0; i < 3; i++)

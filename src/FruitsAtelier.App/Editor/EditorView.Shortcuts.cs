@@ -89,7 +89,7 @@ public sealed partial class EditorView
     private void NudgeSelection(double time, double x)
     {
         var ids = ClipboardSelectedParentIds();
-        if (ids.Count == 0 || notesLocked) return;
+        if (ids.Count == 0 || notesLocked || !ClipboardInteractionReady) return;
         Edit(L.Get("editor.command.moveObjects"), () =>
         {
             if (x != 0)

@@ -141,6 +141,11 @@ internal sealed class EditorControl : Control, IDisposable
         Cursor = new Cursor(View.TimelineResizeCursor || View.PreviewResizeCursor ? StandardCursorType.SizeWestEast : StandardCursorType.Arrow);
         Refresh();
     }
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        View.PointerLeave(); Refresh();
+    }
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         var p = e.GetPosition(this);
