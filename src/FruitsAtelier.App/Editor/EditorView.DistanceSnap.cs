@@ -151,8 +151,14 @@ public sealed partial class EditorView
             () => dsShowValues = !dsShowValues, dsShowValues);
         DistanceSnapPreviewBounds = new(split + 16, r.Y + 108, r.Right - split - 32, r.Height - 180);
         DrawDistanceSnapPreview(c);
-        Button(c, new(r.X + 20, r.Bottom - 44, 180, 30), L.Get("ds.collinear"),
-            () => dsCollinear = !dsCollinear, active: dsCollinear);
+        float collinearY = dsDraft.Count == 0 ? r.Y + 480 : textY + 44;
+        c.Line(r.X + 20, collinearY, split - 16, collinearY, Grid);
+        var collinearRow = new Rect(r.X + 20, collinearY + 10, split - r.X - 36, 32);
+        c.Text(L.Get("ds.collinear"), collinearRow.X, collinearRow.Y + 8, 12, Foreground, 126);
+        var collinearSwitch = new Rect(collinearRow.X + 136, collinearRow.Y + 4, 46, 24);
+        c.Fill(collinearSwitch, dsCollinear ? 0x417D77u : 0x46515Fu, 12);
+        c.Circle(collinearSwitch.X + (dsCollinear ? 34 : 12), collinearSwitch.Y + 12, 9, 0xF0F3F6);
+        hits.Add(new(collinearRow, () => dsCollinear = !dsCollinear, true));
         Button(c, new(r.Right - 196, r.Bottom - 44, 80, 30), L.Get("mac.cancel"), CloseDistanceSnapDialog);
         double? editedBase = DistanceBaseValue(dsBaseText);
         bool validBase = !dsBaseEdited || editedBase is not null;
@@ -167,7 +173,8 @@ public sealed partial class EditorView
                     Document.DistancePerBeatOverride = dpb;
             })) CloseDistanceSnapDialog();
         }, enabled: validBase);
-
+        if (collinearRow.Contains(mouseX, mouseY))
+            DrawPaletteTooltip(c, L.Get("ds.collinearTip"), collinearRow, left: false, above: true);
     }
 
     private double DistanceBaseMaximum() => DistanceSnapLimits()[4] * dsBaseDraft;

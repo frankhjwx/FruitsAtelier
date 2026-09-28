@@ -808,6 +808,7 @@
   "library.offerSongsExportHelp": "You can keep this project in the workspace only.",
   "library.workspaceOnly": "Keep in workspace",
   "library.exportToSongs": "Export to osu! Songs…",
+  "ds.collinearTip": "While Distance Snap is active, adds a snap position on the line between the previous object’s final tail and the next object’s head, at the current object’s time.\nChooses the nearest position among this candidate, your DS presets and zero spacing. Both neighbours must be present without overlapping the current time.\nWith Grid Snap on, rounds to the nearest grid position. With Grid Snap off, keeps exact collinearity. Applies to placement and whole-object dragging; does not reshape internal slider curves.\nSaved per difficulty when you click Apply.",
   "ds.collinear": "Collinear snap",
   "ds.configure": "Configure DS…",
   "ds.title": "Distance Snap configuration",

@@ -808,6 +808,7 @@
   "library.offerSongsExportHelp": "也可以只保存在工作区。",
   "library.workspaceOnly": "仅保存在工作区",
   "library.exportToSongs": "导出到 osu! Songs…",
+  "ds.collinearTip": "启用距离吸附（DS）时，根据当前对象的时间，在前一对象的最终尾端与后一对象的起点连线上增加一个吸附位置。\n与已设定的 DS 倍率及零间距候选一起，就近选择吸附位置。需要前后对象都存在，且不与当前时间重叠。\n开启网格吸附（GS）时，取最近的网格位置；关闭 GS 时，保持精确共线。适用于对象放置和整体拖动，不会调整滑条内部曲线。\n点击“应用”后随当前难度保存。",
   "ds.collinear": "共线吸附",
   "ds.configure": "配置 DS…",
   "ds.title": "Distance Snap 配置",

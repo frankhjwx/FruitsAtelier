@@ -189,6 +189,26 @@ internal static class DistanceSnapPresetTests
             "Undo should restore DPB and its preset multipliers together.");
     }
 
+    public static void PlacementReadoutPrecision()
+    {
+        var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 60000.0 / 220, TimingOffsetMs = -18,
+            DistancePerBeatOverride = 200, DistanceSnapCollinear = true };
+        double first = -18 + map.BeatLengthMs / 2, middle = first + map.BeatLengthMs / 4,
+            last = first + map.BeatLengthMs * .75;
+        map.Fruits.Add(new Fruit { TimeMs = first, X = 113.4 });
+        map.Fruits.Add(new Fruit { TimeMs = last, X = 396.9 });
+        var ui = new Ui(); ui.LoadDocument(map); ui.Key('Y'); ui.Key('2');
+        ui.MoveMap(middle, 208); var preview = ui.View.DistanceReadout;
+        Check(preview.Previous is { } p && Math.Abs(p - 1.89) < 1e-6
+            && preview.Next is { } n && Math.Abs(n - 1.89) < 1e-6 && ui.View.EqualDistanceHighlighted,
+            $"Fractional-time preview DS used exported integer coordinates or time: {preview}, step={ui.View.SnapDivisor}, x={ui.Canvas.Texts.LastOrDefault(t => t.Value.StartsWith("X:"))}.");
+        ui.ClickMap(middle, 208); ui.Key('1'); ui.ClickMap(middle, 207.9);
+        var placed = ui.View.DistanceReadout;
+        Check(placed.Previous is { } a && placed.Next is { } b
+            && Math.Abs(a - preview.Previous!.Value) < 1e-6 && Math.Abs(b - preview.Next!.Value) < 1e-6,
+            "Placement changed the DS readout.");
+    }
+
     public static void Collinear()
     {
         var before = new DistanceSnap.Reference(Guid.NewGuid(), new(500, 20), new(1000, 100), .384, 0);

@@ -145,6 +145,7 @@ var tests = new (string Name, Action Run)[]
     ("Legacy insertion, deletion and double-click segmentation are undoable", SliderModeInteractionTests.InsertDeleteAndBoundary),
     ("Lazer placement and selected-slider controls avoid extra mode transitions", SliderModeInteractionTests.LazerPlacementAndSelection),
     ("FSlider hover offers both editing modes without changing content", SliderModeInteractionTests.GlobalModeMenu),
+    ("Placement DS readout retains authored fractional precision", DistanceSnapPresetTests.PlacementReadoutPrecision),
     ("Collinear distance snap respects grid settings, dragging and configuration", DistanceSnapPresetTests.Collinear),
     ("Multiple distance snaps include zero and persist per-map configuration", DistanceSnapPresetTests.Snapping),
     ("Slider large droplets follow distance snap while drawing", DistanceSnapPresetTests.SliderEvents),
