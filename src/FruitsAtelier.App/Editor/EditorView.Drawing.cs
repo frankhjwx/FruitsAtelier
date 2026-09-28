@@ -6,6 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private readonly List<BeatGridLine> canvasGrid = [];
     private (double TimeMs, bool Active)[] kiaiTransitions = [];
 
     private void RefreshKiaiTransitions()
@@ -203,7 +204,8 @@ public sealed partial class EditorView
         }
         List<float> axisLabelRows = [];
         List<(float Y, double Time)> axisLabels = [];
-        foreach (var line in renderedTiming!.Grid(viewStart, viewStart + plot.Height / pixelsPerMs, divisor))
+        renderedTiming!.FillGrid(viewStart, viewStart + plot.Height / pixelsPerMs, divisor, canvasGrid);
+        foreach (var line in canvasGrid)
         {
             double time = line.TimeMs;
             var localTiming = renderedTiming.At(time);

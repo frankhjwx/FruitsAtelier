@@ -7,6 +7,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private Rect objectTimeline;
+    private readonly List<BeatGridLine> timelineGrid = [];
     private double objectTimelineScale = .18;
     private readonly List<(Guid Id, double Time, Rect Bounds)> timelineObjects = [];
     private CatchConversionResult? timelineConversion;
@@ -253,7 +254,8 @@ public sealed partial class EditorView
             double a = Math.Max(start, from), b = Math.Min(end, to);
             if (b > a) c.Fill(new(X(a), objectTimeline.Y, X(b) - X(a), objectTimeline.Height - 1), color, 0, opacity);
         }
-        foreach (var tick in renderedTiming!.Grid(Math.Max(0, start), Math.Max(0, end), divisor))
+        renderedTiming!.FillGrid(Math.Max(0, start), Math.Max(0, end), divisor, timelineGrid);
+        foreach (var tick in timelineGrid)
         {
             if (!tick.IsBeat && renderedTiming.At(tick.TimeMs).BeatLengthMs / tick.Subdivision * objectTimelineScale < 5) continue;
             var style = GridStyle(tick);
