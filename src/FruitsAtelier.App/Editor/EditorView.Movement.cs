@@ -88,15 +88,12 @@ public sealed partial class EditorView
         IReadOnlyList<ConvertedCatchObject> objects = playableObjects;
         Guid source;
         bool placement = PlacementGhostPoint() is not null;
-        var inspection = placement ? null : coordinateInspection;
-        if (inspection is not null) DistanceReadout = (null, null);
         if (placement)
         {
             if (placementGhost is not { } ghost || placementMovementObjects is null) return;
             objects = placementMovementObjects;
             source = ghost.SourceId;
         }
-        else if (inspection is not null) source = inspection.SourceId;
         else
         {
             var ids = FlagTargets();
@@ -105,7 +102,7 @@ public sealed partial class EditorView
         }
         EnsureMovementStates(objects);
         var indices = movementIndices;
-        var selectedObject = placement ? placementGhost : inspection ?? SelectedDistanceObject();
+        var selectedObject = placement ? placementGhost : SelectedDistanceObject();
         int first = Array.FindIndex(indices, i => objects[i].SourceId == source
             && (selectedObject is null || objects[i].EventIndex == selectedObject.EventIndex));
         if (first < 0 && selectedObject?.Kind == CatchObjectKind.TinyDroplet)
