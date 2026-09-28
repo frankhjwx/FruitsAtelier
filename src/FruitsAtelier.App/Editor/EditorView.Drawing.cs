@@ -258,10 +258,8 @@ public sealed partial class EditorView
         {
             DrawImportedCurves(c, playfield.X, playfield.Width, plot.Bottom, viewStart, pixelsPerMs,
                 viewStart, viewStart + plot.Height / pixelsPerMs, false);
-            bool controlsActive = SliderControlsActive;
             foreach (var track in Document.Tracks)
             {
-                uint color = track.Kind == CurveKind.Bezier ? Purple : Accent;
                 bool selected = IsObjectSelected(track.Id);
                 float opacity = selected ? 1 : 0.5f;
                 for (int span = 0; span < track.SpanCount; span++)
@@ -287,6 +285,22 @@ public sealed partial class EditorView
                         }
                     }
                 }
+            }
+        }
+        if (movementAnalysis)
+        {
+            DrawMovementConnections(c);
+            DrawCanvasCatchObjects(c);
+            DrawMovementDistanceLabels(c);
+        }
+        if (showTargets)
+        {
+            bool controlsActive = SliderControlsActive;
+            foreach (var track in Document.Tracks)
+            {
+                uint color = track.Kind == CurveKind.Bezier ? Purple : Accent;
+                bool selected = IsObjectSelected(track.Id);
+                float opacity = selected ? 1 : 0.5f;
                 if (selected && LegacyMode && controlsActive)
                 {
                     DrawLegacyControls(c, track);
@@ -317,12 +331,6 @@ public sealed partial class EditorView
                     }
                 }
             }
-        }
-        if (movementAnalysis)
-        {
-            DrawMovementConnections(c);
-            DrawCanvasCatchObjects(c);
-            DrawMovementDistanceLabels(c);
         }
         DrawSelectedDistanceTick(c);
         DrawPlacementGhost(c);
