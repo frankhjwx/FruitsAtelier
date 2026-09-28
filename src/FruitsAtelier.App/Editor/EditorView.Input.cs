@@ -42,7 +42,7 @@ public sealed partial class EditorView
                 if (button == 0) ActivateContextMenu(x, y); else contextItems.Clear();
                 return;
             }
-            if (BeginVolumeDrag(x, y, button)) return;
+            if (BeginWorkspaceScroll(x, y, button) || BeginVolumeDrag(x, y, button)) return;
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
@@ -60,7 +60,7 @@ public sealed partial class EditorView
         }
         if (VolumeDialogVisible)
         {
-            if (BeginVolumeDrag(x, y, button)) return;
+            if (BeginWorkspaceScroll(x, y, button) || BeginVolumeDrag(x, y, button)) return;
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
@@ -398,6 +398,7 @@ public sealed partial class EditorView
         if (volumeDrag >= 0) { UpdateVolumeDrag(x); return; }
         if (IsTestplaying) return;
         mouseX = x; mouseY = y;
+        if (workspaceScrollDragging) { MoveWorkspaceScroll(y); return; }
         if (settingsColourDrag != 0) { UpdateIndicatorColourDrag(x, y); return; }
         if (updatesPage) return;
         if (sliderHoldConsumed) return;
@@ -553,6 +554,7 @@ public sealed partial class EditorView
         if (timingVolumeStart is not null) { UpdateTimingVolume(x); EndTimingVolume(false); return; }
         if (TimingModal) return;
         if (EndVolumePopoverPointer(x, y, button)) return;
+        if (workspaceScrollDragging && button == 0) { MoveWorkspaceScroll(y); workspaceScrollDragging = false; return; }
         if (settingsColourDrag != 0 && button == 0) { UpdateIndicatorColourDrag(x, y); settingsColourDrag = 0; return; }
         if (textSelecting && button == 0) { MoveInputSelection(x); textSelecting = false; return; }
         if (SongSetupVisible) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }
@@ -1123,6 +1125,7 @@ public sealed partial class EditorView
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
         FinishDistanceEdit(true);
+        workspaceScrollDragging = false;
         FinishVolumeDrag();
         testplayEscapeConsumed = false;
         streamSnapDragging = false;

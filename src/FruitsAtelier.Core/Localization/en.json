@@ -1011,5 +1011,7 @@
   "storage.reclaimed": "Reclaimed: {0}",
   "storage.refresh": "Refresh",
   "storage.cleanHistory": "Clean history",
-  "storage.clearCache": "Clear cache"
+  "storage.clearCache": "Clear cache",
+  "storage.openFolder": "Open workspace folder",
+  "storage.invalidReference": "Invalid resource path in {0}. Cleanup stopped."
 }

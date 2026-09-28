@@ -19,6 +19,9 @@ internal static class WorkspaceStorageTests
             string relative = Path.Combine(".sync-history", id.ToString("N"), now.AddDays(-age).ToString("yyyyMMddTHHmmssfffffff") + "-resolution", "current.catchproj");
             return Path.GetDirectoryName(Write(relative, content, age))!;
         }
+        string objectLine = "240,352,197071,6,0,B|" + string.Join("|", Enumerable.Repeat("238:352", 6000)) + ",0.5";
+        Write("project/source-lines.catchdiff", JsonSerializer.Serialize(new { OriginalSourceLine = objectLine, Name = "{not JSON", Tags = "a/b.c" }));
+        Write("project/embedded.catchsync", JsonSerializer.Serialize(new { Authoring = JsonSerializer.Serialize(new { OriginalSections = new[] { new { Lines = new[] { objectLine } } } }) }));
         Write("project/project.catchsync", JsonSerializer.Serialize(new { AuthoringAudioHash = active }));
         string activeAudio = Write(".sync-history/resources/" + active, "active audio");
         string oldAudio = Write(".sync-history/resources/" + historical, "retained history audio");
@@ -58,6 +61,10 @@ internal static class WorkspaceStorageTests
         try { WorkspaceStorage.Clean(workspace, utcNow: now); throw new Exception("corrupt references accepted"); }
         catch (JsonException) { Check(Directory.Exists(stale), "corrupt references prevent any deletion"); }
         File.Delete(broken);
+        string invalidPath = Write("project/invalid-path.catchdiff", JsonSerializer.Serialize(new { AudioPath = "\0" }));
+        try { WorkspaceStorage.Clean(workspace, utcNow: now); throw new Exception("invalid resource path accepted"); }
+        catch (InvalidDataException) { Check(Directory.Exists(stale), "invalid real path fields abort before deletion"); }
+        File.Delete(invalidPath);
         string liveAudio = Write(".sync-history/resources/playback/" + new string('F', 64) + ".mp3", "unsaved open audio");
         WorkspaceStorage.Clean(workspace, utcNow: now, protectedPaths: [liveAudio]);
         Check(File.Exists(liveAudio), "open document audio is protected before its reference is saved");

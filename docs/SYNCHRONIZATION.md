@@ -196,9 +196,12 @@ a fresh decision. Other sections retain their existing three-way merge rules.
 
 ## Storage maintenance
 
-Settings → Workspace storage shows byte totals and shares for projects, imported
+Settings → Workspace contains a vertically scrollable storage section below the
+workspace and osu! folder fields. It shows byte totals and shares for projects, imported
 songs and skins, audio backups, recovery history, caches, and other files, plus the
-largest top-level folders/files. Accounting and maintenance run on background workers.
+largest top-level folders/files. The scrollbar and wheel move the whole content
+area while Apply stays fixed. **Open workspace folder** opens the active workspace
+in the system file manager. Accounting and maintenance run on background workers.
 The displayed root is the active workspace, not an unapplied path draft.
 
 Automatic maintenance runs after startup while idle in the library without an open
@@ -215,7 +218,8 @@ when no retained document references their path, even if the canonical audio has
 is still retained. Resources used by open documents are protected even before
 their references are saved. Referenced audio is recovery data, even if the same
 bytes currently exist in Songs. Newly captured audio receives a 24-hour grace period
-while its baseline is published. Unknown resource filenames are retained. Cleanup
+while its baseline is published. Unknown resource filenames are retained. Reference scanning reads explicit path fields and embedded authoring documents;
+object source lines and metadata text are never interpreted as paths. Cleanup
 refuses linked filesystem paths, aborts before deletion on unreadable reference
 documents, and defers when export/deletion recovery or project publication is pending.
 

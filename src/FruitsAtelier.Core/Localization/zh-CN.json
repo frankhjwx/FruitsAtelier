@@ -1011,5 +1011,7 @@
   "storage.reclaimed": "已回收：{0}",
   "storage.refresh": "刷新",
   "storage.cleanHistory": "清理历史",
-  "storage.clearCache": "清理缓存"
+  "storage.clearCache": "清理缓存",
+  "storage.openFolder": "打开工作区文件夹",
+  "storage.invalidReference": "{0} 中的资源路径无效，已停止清理。"
 }

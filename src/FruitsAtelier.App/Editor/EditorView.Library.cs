@@ -487,6 +487,7 @@ public sealed partial class EditorView
     public Action? RequestPasteLibrary { get; set; }
     private bool SelectLibraryInputAt(float x, float y)
     {
+        if (librarySettingsOpen && settingsCategory == SettingsCategory.Workspace && !workspaceScrollBounds.Contains(x, y)) return false;
         foreach (int index in (ExportVisible ? new[] { 3 } : librarySettingsOpen ? settingsColourIndex >= 0 ? new[] { 5 } : new[] { 0, 1, 4 } : new[] { 2 }))
         {
             string key = "library:" + index;

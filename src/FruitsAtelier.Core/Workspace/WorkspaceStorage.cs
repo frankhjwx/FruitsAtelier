@@ -75,24 +75,36 @@ public static class WorkspaceStorage
                 playbackReferences[file.FullName] = playback;
                 FindPaths(document.RootElement, Path.GetDirectoryName(file.FullName)!, playback, snapshots.FirstOrDefault(s => WorkspaceProject.Within(s.Path, file.FullName))?.Path);
             }
-            void FindPaths(JsonElement element, string directory, HashSet<string> playback, string? owner)
+            void FindPaths(JsonElement element, string directory, HashSet<string> playback, string? owner, string? propertyName = null)
             {
-                if (element.ValueKind == JsonValueKind.Object) foreach (var property in element.EnumerateObject()) FindPaths(property.Value, directory, playback, owner);
-                else if (element.ValueKind == JsonValueKind.Array) foreach (var item in element.EnumerateArray()) FindPaths(item, directory, playback, owner);
-                else if (element.ValueKind == JsonValueKind.String && element.GetString() is { } value)
+                if (element.ValueKind == JsonValueKind.Object)
+                    foreach (var property in element.EnumerateObject()) FindPaths(property.Value, directory, playback, owner, property.Name);
+                else if (element.ValueKind == JsonValueKind.Array)
+                    foreach (var item in element.EnumerateArray()) FindPaths(item, directory, playback, owner, propertyName);
+                else if (element.ValueKind == JsonValueKind.String && element.GetString() is { Length: > 0 } value)
                 {
-                    if (value.StartsWith('{')) { try { using var nested = JsonDocument.Parse(value); FindPaths(nested.RootElement, directory, playback, owner); } catch (JsonException) { } }
+                    string? key = propertyName?.ToLowerInvariant();
+                    if (key is "authoring" or "project" or "manifest")
+                    {
+                        using var nested = JsonDocument.Parse(value);
+                        FindPaths(nested.RootElement, directory, playback, owner);
+                        return;
+                    }
+                    // Object source lines and metadata are content, even when they contain
+                    // slashes or decimal points. Only persisted path fields form references.
+                    if (key is not ("audiopath" or "sourcepath" or "path" or "source" or "exporttarget" or "file" or "syncfile"
+                        or "directory" or "songsroot" or "sourcedirectory" or "externalsourcedirectory" or "previouspaths" or "backup")) return;
                     string portable = value.Replace('\\', '/');
-                    if (portable.Contains("resources/playback/", StringComparison.OrdinalIgnoreCase) && portable.IndexOfAny(['\n', '\r', '\0']) < 0)
-                        playback.Add(portable.Split('/')[^1]);
-                    if (value.IndexOfAny(['/', '\\']) < 0 && !Path.HasExtension(value) || value.IndexOfAny(['\n', '\r', '\0']) >= 0) return;
+                    if (portable.Contains("resources/playback/", StringComparison.OrdinalIgnoreCase)) playback.Add(portable.Split('/')[^1]);
                     try
                     {
                         string path = Path.GetFullPath(value, directory);
                         if (WorkspaceProject.Within(Path.Combine(history, "resources", "playback"), path)) playback.Add(Path.GetFileName(path));
-                        foreach (var snapshot in snapshots) if (!WorkspaceSynchronization.Paths.Equals(snapshot.Path, owner) && WorkspaceProject.Within(snapshot.Path, path)) pinned.Add(snapshot.Path);
+                        foreach (var snapshot in snapshots)
+                            if (!WorkspaceSynchronization.Paths.Equals(snapshot.Path, owner) && WorkspaceProject.Within(snapshot.Path, path)) pinned.Add(snapshot.Path);
                     }
-                    catch (Exception e) when (e is ArgumentException or NotSupportedException) { }
+                    catch (Exception e) when (e is ArgumentException or NotSupportedException or IOException)
+                    { throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("storage.invalidReference", propertyName), e); }
                 }
             }
             var remove = new HashSet<string>(WorkspaceSynchronization.Paths);

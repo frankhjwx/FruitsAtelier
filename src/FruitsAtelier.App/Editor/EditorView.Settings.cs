@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, Updates, Storage }
+    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, Updates }
     private SettingsCategory settingsCategory;
     private bool draftRomanisedMetadata;
     private bool draftDerandomizeDroplets;
@@ -85,6 +85,7 @@ public sealed partial class EditorView
     private void CloseSettings()
     {
         FinishVolumeDrag();
+        workspaceScrollDragging = false;
         librarySettingsOpen = false;
         settingsColourIndex = -1;
         settingsColourDrag = 0;
@@ -103,7 +104,7 @@ public sealed partial class EditorView
         c.Text(L.Get("library.settings"), r.X + 20, r.Y + 16, 19, Foreground, r.Width - 80, true);
         SettingsButton(c, new(r.Right - 48, r.Y + 10, 32, 28), "×", CloseSettings);
         c.Line(r.X + 214, r.Y + 56, r.X + 214, r.Bottom - 20, Grid);
-        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "update.title", "storage.title"];
+        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "update.title"];
         for (int i = 0; i < categories.Length; i++)
         {
             var category = (SettingsCategory)i;
@@ -112,7 +113,7 @@ public sealed partial class EditorView
             {
                 FinishVolumeDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
                 settingsCategory = category;
-                if (category == SettingsCategory.Storage) StartStorage();
+                if (category == SettingsCategory.Workspace) { workspaceScroll = 0; StartStorage(); }
                 if (category == SettingsCategory.Updates && UpdateStatus.Phase is UpdatePhase.Idle or UpdatePhase.Current or UpdatePhase.Failed)
                     RequestUpdateCheck?.Invoke();
             }, settingsCategory == category, fontSize: SettingsTextSize);
@@ -137,13 +138,8 @@ public sealed partial class EditorView
                         () => OpenDisplayModeMenu(displayBounds));
                 }
                 break;
-            case SettingsCategory.Storage:
-                DrawStorage(c);
-                break;
             case SettingsCategory.Workspace:
-                c.Text(L.Get("library.settingsDescription"), SettingsContentX, SettingsTop + 128, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
-                LibraryTextField(c, 0, L.Get("library.workspace"), draftWorkspace, SettingsTop + 180);
-                LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, SettingsTop + 284);
+                DrawWorkspaceSettings(c);
                 break;
             case SettingsCategory.Appearance:
                 DrawSkinSelector(c, SettingsSkinSelectorBounds);
