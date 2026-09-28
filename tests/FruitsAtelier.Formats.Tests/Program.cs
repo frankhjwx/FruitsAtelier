@@ -17,6 +17,7 @@ if (args.Length == 2 && args[0] == "--import-roundtrip")
 var tests = new (string Name, Action Run)[]
 {
     ("Export keeps timing data below its header and a blank before Colours", TimingSectionSpacing),
+    ("Export orders metadata with difficulty identity at the end", MetadataLayout),
     ("Cached export matches full serialization across edits, order, RNG, timing and streams", WriteCacheTests.MatchesUncached),
     ("v12, v13 and compatible v128 imports preserve gameplay, optional fields and v14 export", CompatibleVersions),
     ("v128 rejects fractional coordinates and unsupported slider syntax", LazerExtensions),
@@ -74,6 +75,18 @@ static void TimingSectionSpacing()
     Check(text.Contains("[TimingPoints]\r\n" + timing + "\r\n\r\n[Colours]"), "Timing section spacing is misplaced");
     Check(text == OsuBeatmapWriter.Serialize(OsuBeatmapReader.Read(text)).Text, "Repeated exports accumulate blank lines");
     Check(document.ContentEquals(before), "Export changed source content");
+    document.OriginalSections.Insert(document.OriginalSections.FindIndex(section => section.Name == "Colours"),
+        new OsuSection { Name = "Extra", Lines = { "Value:1", "", " ", "" } });
+    Check(OsuBeatmapWriter.Serialize(document).Text.Contains("Value:1\r\n\r\n[Colours]"), "Colours must have exactly one preceding blank regardless of preserved source spacing");
+}
+static void MetadataLayout()
+{
+    const string ordered = "Title:18sai\r\nTitleUnicode:18歳\r\nArtist:Goose house\r\nArtistUnicode:Goose house\r\nCreator:mingmichael\r\nSource:\r\nTags:tag\r\nBeatmapSetID:242856\r\n\r\nVersion:Rain (FruitsAtelier)\r\nBeatmapID:0\r\n";
+    var document = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Metadata]\n"
+        + string.Join('\n', ordered.Split("\r\n").Reverse()) + "\n[Difficulty]\nHPDrainRate:7\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n");
+    string text = OsuBeatmapWriter.Serialize(document).Text;
+    Check(text.Contains("[Metadata]\r\n" + ordered + "[Difficulty]"), "Metadata order or spacing differs from export layout");
+    Check(OsuBeatmapWriter.Serialize(OsuBeatmapReader.Read(text)).Text == text, "Metadata layout changes on repeated export");
 }
 int failed = 0, skipped = 0;
 tests = tests.Concat(SynchronizationTests.Cases()).ToArray();

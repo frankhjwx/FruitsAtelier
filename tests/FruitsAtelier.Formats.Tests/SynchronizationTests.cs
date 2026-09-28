@@ -4,6 +4,20 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: missing difficulty search skips unrelated oversized and invalid maps", () => Run(f =>
+        {
+            File.Delete(f.Source);
+            string other = Path.Combine(f.Songs, "other"); Directory.CreateDirectory(other);
+            foreach (string folder in new[] { f.Set, other })
+            {
+                using (var oversized = File.Create(Path.Combine(folder, "oversized.osu")))
+                    oversized.SetLength(OsuBeatmapReader.MaximumFileBytes + 1L);
+                File.WriteAllText(Path.Combine(folder, "invalid.osu"), Fixture().Replace("osu file format v14", "osu file format v999"));
+            }
+            Check(f.Scan().Difficulties.Single().State == WorkspaceSyncState.Missing, "unrelated invalid files must not block missing-file resolution");
+            using (var oversized = File.Create(f.Source)) oversized.SetLength(OsuBeatmapReader.MaximumFileBytes + 1L);
+            Check(f.Scan().Difficulties.Single().State == WorkspaceSyncState.Unavailable, "oversized linked file remains unavailable rather than deleted");
+        }));
         yield return ("Sync: older accepted baselines recover reviewable retained objects", () => Run(f =>
         {
             f.Diff.Document.Fruits[0].TimeMs = 800;

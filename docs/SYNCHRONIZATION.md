@@ -23,6 +23,8 @@ Positive beatmap and set IDs provide additional candidates when objects changed.
 Multiple candidates require explicit association. Identical copies at different
 live paths remain separate files. An unavailable root or an unreadable live file
 is not evidence of deletion.
+Unrelated malformed or oversized beatmaps are skipped during discovery. A linked
+file that is malformed or exceeds the reader limit is reported as unavailable.
 
 New Catch difficulties in associated directories are added without replacing
 existing authoring or undo history. The library indexes only Catch difficulties;

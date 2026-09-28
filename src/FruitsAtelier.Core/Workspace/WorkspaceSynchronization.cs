@@ -133,13 +133,17 @@ public static class WorkspaceSynchronization
                 {
                     try
                     {
+                        if (new FileInfo(file).Length > OsuBeatmapReader.MaximumFileBytes)
+                        {
+                            if (trackedPaths.Contains(file)) errors.Add(file);
+                            continue;
+                        }
                         if (LibraryDatabase.ReadMetadata(file) is not null)
                         {
                             // A missing association may require searching a very large Songs root. Retain full
                             // documents only for this set or identity candidates, not for the entire library.
                             if (!associatedFolders.Contains(System.IO.Path.GetDirectoryName(file)!))
                             {
-                                if (new FileInfo(file).Length > OsuBeatmapReader.MaximumFileBytes) continue;
                                 string text = File.ReadAllText(file);
                                 if (!signatures.Contains(ObjectSignature(text)) && (OnlineIdentity(text) is not { } identity || !onlineIds.Contains(identity))) continue;
                             }
@@ -147,6 +151,7 @@ public static class WorkspaceSynchronization
                         }
                         else if (trackedPaths.Contains(file)) errors.Add(file);
                     }
+                    catch (InvalidDataException) { if (trackedPaths.Contains(file)) errors.Add(file); }
                     catch (Exception e) when (e is IOException or UnauthorizedAccessException) { errors.Add(file); }
                 }
             }
