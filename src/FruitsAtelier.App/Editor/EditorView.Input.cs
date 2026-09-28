@@ -22,7 +22,7 @@ public sealed partial class EditorView
 
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
-        if (SynchronizationBusy) return;
+        if (SynchronizationBlocksInput) return;
         placementCtrl = ctrl;
         if (IsTestplaying) { BeginVolumePopoverPointer(x, y, button); return; }
         if (ErrorVisible || DiscardConfirmationVisible)
@@ -381,7 +381,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
-        if (SynchronizationBusy) return;
+        if (SynchronizationBlocksInput) return;
         MoveVolumePopoverPointer(x, y);
         if (timingSnapDragging) { SetTimingSnap(x); return; }
         if (timingScrollDragging) { UpdateTimingScroll(y); return; }
@@ -547,7 +547,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
-        if (SynchronizationBusy) return;
+        if (SynchronizationBlocksInput) return;
         if (timingSnapDragging) { SetTimingSnap(x); timingSnapDragging = false; return; }
         if (timingScrollDragging && button == 0) { UpdateTimingScroll(y); timingScrollDragging = false; return; }
         if (timingVolumeStart is not null) { UpdateTimingVolume(x); EndTimingVolume(false); return; }
@@ -635,7 +635,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
-        if (SynchronizationBusy) return;
+        if (SynchronizationBlocksInput) return;
         if (librarySettingsOpen)
         {
             PointerDown(x, y, 0, shift, ctrl);
@@ -704,7 +704,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
-        if (SynchronizationBusy) return;
+        if (SynchronizationBlocksInput) return;
         if (SynchronizationVisible) { ScrollSyncComparison(x, y, delta, ctrl); return; }
         if (librarySettingsOpen) return;
         if (TimingModal)
@@ -873,7 +873,7 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
-        if (SynchronizationBusy) return;
+        if (SynchronizationBlocksInput) return;
         if (DistanceKeyDown(virtualKey, ctrl, shift)) return;
         placementCtrl = ctrl;
         if (virtualKey == 27 && legacyButtonSlider != Guid.Empty)
@@ -1080,7 +1080,7 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
-        if (SynchronizationBusy) return;
+        if (SynchronizationBlocksInput) return;
         if (TimingModal || TimingPageVisible && timingField.Length > 0)
         { if (!char.IsControl(value)) PasteTimingText(value.ToString(), TimingInputSession); return; }
         if (SongSetupVisible) { if (!char.IsControl(value)) PasteSongSetupText(value.ToString(), SongSetupInputSession); return; }

@@ -20,7 +20,7 @@ internal static class LibraryTests
             view.ChangeAudioPath(Path.Combine(songs, "missing.mp3"));
             view.SaveWorkspace();
             var canvas = new RecordingCanvas(); view.Render(canvas, 1440, 900);
-            Check(canvas.Texts.Any(t => t.Value.Contains("missing.mp3")), "missing references visible inside editor");
+            Check(!canvas.Texts.Any(t => t.Value.Contains("missing.mp3")), "missing references do not show a persistent editor banner");
             string savedDirectory = view.WorkspaceSession!.Directory;
             view.ShowLibrary(); canvas.Clear(); view.Render(canvas, 980, 620);
             Check(canvas.Texts.Any(t => t.Value == L.Get("library.title")), "separate library page");

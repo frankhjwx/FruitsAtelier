@@ -51,6 +51,8 @@ public sealed partial class EditorView
         sliderBatchTask = null; sliderBatchCancellation = null;
         sliderImportTargets = []; sliderBatchErrors = []; sliderDialogHits.Clear();
         WorkspaceSession = null; resourceErrors = [];
+        if (syncTask is { } retiredSync) _ = retiredSync.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        syncTask = null; afterSynchronization = null; syncReviewRequested = false; syncSearching.Clear();
         syncStatuses.Clear(); syncMerges.Clear(); syncPage = null; nextSyncCheck = DateTime.MaxValue;
         syncDifficulty = Guid.Empty; syncPreserveHistory = false;
         syncComparisons.Clear(); syncVisualMerge = null; syncResultPane = null; syncPreviewRevision++;
@@ -110,9 +112,7 @@ public sealed partial class EditorView
             && WorkspaceSynchronization.Target(linked) is { } target && !File.Exists(target)
             && DifficultySyncState(index) is WorkspaceSyncState.Local or WorkspaceSyncState.Current)
         {
-            syncDifficulty = difficulties[index].Id;
-            RefreshSynchronization(() => SwitchDifficulty(index));
-            return false;
+            if (!SynchronizationBusy) RefreshSynchronization(quiet: true);
         }
         if (!syncBypass && WorkspaceSession is not null && ShowSyncProblem(index)) return false;
         if (index == activeDifficulty) return true;
@@ -178,7 +178,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
-        if (SynchronizationVisible || SynchronizationBusy) return false;
+        if (SynchronizationVisible || SynchronizationBlocksInput) return false;
         if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
         if (!CommitTimingField()) return false;
         if (SliderDialogVisible || ErrorVisible) return false;

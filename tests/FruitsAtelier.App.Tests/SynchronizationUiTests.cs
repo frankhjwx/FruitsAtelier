@@ -79,8 +79,10 @@ internal static class SynchronizationUiTests
                 ui.Key('Z', ctrl: true);
                 Check(ui.View.Document.AudioPath is null && OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Title") == "Updated", "undo retains synchronized metadata");
                 File.Delete(source);
-                ui.View.RefreshSynchronization(); Wait(ui);
-                Check(ui.View.SynchronizationVisible && ui.View.DifficultySyncState(0) == WorkspaceSyncState.Missing, "missing blocks active editing");
+                CheckSearchingInput(ui);
+                Check(!ui.View.SynchronizationVisible && ui.View.DifficultySyncState(0) == WorkspaceSyncState.Missing, "missing reference leaves editing available");
+                ui.View.RefreshSynchronization(reviewResolved: true); Wait(ui);
+                Check(ui.View.SynchronizationVisible, "explicit review offers missing reference repair");
                 var before = ui.View.Document.DeepClone(); ui.Key(46); ui.Key('Z', ctrl: true); ui.Type("x");
                 Check(ui.View.Document.ContentEquals(before), "modal isolates object input");
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.missingBadge")), "missing badge drawn");
@@ -178,6 +180,34 @@ internal static class SynchronizationUiTests
         Check(ui.View.SynchronizationBusy && !ui.View.SynchronizationVisible, "scan has no modal");
         Wait(ui);
         Check(ui.View.StatusMessage == L.Get("sync.complete"), "completed scan clears busy feedback");
+    }
+
+    private static void CheckSearchingInput(Ui ui)
+    {
+        ui.View.RefreshSynchronization();
+        var field = typeof(FruitsAtelier.App.Editor.EditorView).GetField("syncTask",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var scan = field.GetValue(ui.View)!;
+        var gateType = typeof(TaskCompletionSource<>).MakeGenericType(field.FieldType.GenericTypeArguments[0]);
+        var gate = Activator.CreateInstance(gateType)!;
+        field.SetValue(ui.View, gateType.GetProperty("Task")!.GetValue(gate));
+        var original = ui.View.Document.DeepClone();
+        try
+        {
+            ui.Paint();
+            Check(!ui.View.DiscardConfirmationVisible && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.searchingReference")), "reference search is indicated on its tab without input lock");
+            Check(!ui.Canvas.Texts.Any(t => t.Value.StartsWith(L.Get("library.missingResources", ""))), "no persistent resource error banner");
+            ui.Key('A', ctrl: true); ui.Key(46);
+            Check(ui.View.Document.Fruits.Count == 0, "keyboard edits work during search");
+            ui.Key('Z', ctrl: true);
+            Check(ui.View.Document.ContentEquals(original), "undo works during search");
+            ui.View.ChangeAudioPath(Path.GetFullPath("artifacts/search-edit.ogg"));
+        }
+        finally { field.SetValue(ui.View, scan); }
+        Wait(ui);
+        Check(ui.View.Document.AudioPath!.EndsWith("search-edit.ogg"), "completed search rebases against edits instead of replacing them");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.ContentEquals(original), "search retains edit history");
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
     private const string Fixture = "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Original\nArtist:Artist\nCreator:Mapper\nVersion:Catch\n[Difficulty]\nCircleSize:5\nApproachRate:5\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n123,192,1000,1,0,0:0:0:0:\n";

@@ -436,13 +436,13 @@ See [Catch Star Rating](CATCH_DIFFICULTY.md) for calculation, cache invalidation
 
 ## Library and workspace
 
-**Library** opens a separate page for workspace/stable Songs settings, bilingual metadata search, difficulty browsing, and project opening. Editor difficulty tabs retain their layout. Missing source maps or song audio show an error bar. Missing optional video, storyboard, background, or sample files do not. Export offers a standalone `.osu` save dialog, associated-difficulty overwrite, or a new difficulty in Songs. After export links a difficulty to Songs, Save also updates its linked `.osu`. See [Workspace](WORKSPACE.md).
+**Library** opens a separate page for workspace/stable Songs settings, bilingual metadata search, difficulty browsing, and project opening. Editor difficulty tabs retain their layout. Missing source maps show status on their difficulty tabs without a persistent error bar. Missing required resources are checked before export. Export offers a standalone `.osu` save dialog, associated-difficulty overwrite, or a new difficulty in Songs. After export links a difficulty to Songs, Save also updates its linked `.osu`. See [Workspace](WORKSPACE.md).
 
 Below the Catch Preview title, one line shows `AR … · CS … · NM`. It omits fall time, generation status, and skin name. Preview scrolling and object drawing still follow AR/CS.
 
 A new project's blank difficulty starts unmodified, so directly opening or importing an external beatmap does not trigger an unsaved prompt. Content edits, audio binding, and added/imported difficulties do prompt. Undoing to the initial blank state clears the dirty marker.
 
-The bottom status bar shows current action feedback, such as save results or operation limits. While synchronization blocks editor input, its checking or applying status takes priority; otherwise conversion errors take priority. It is not a log viewer. Platform details, internal zoom percentages, and duplicate dirty indicators are omitted.
+The bottom status bar shows current action feedback, such as save results or operation limits. During background synchronization checks or application of changes, synchronization status takes priority; otherwise conversion errors take priority. It is not a log viewer. Platform details, internal zoom percentages, and duplicate dirty indicators are omitted.
 
 For FSliders, 0 reverses plays the path once, 1 returns once, and higher counts continue alternating. Use **Ctrl+= / Ctrl+−** to add/remove a reverse. With a completed FSlider selected, move the pointer to empty canvas at a time after its final end and press **Ctrl+J**. A new anchor is placed at the pointer position using the placement snap setting, with a straight segment from the base path endpoint. Existing segments remain unchanged. Extending a repeated slider lengthens its base path for every span; it does not append after the repeats. Each operation is undoable.
 

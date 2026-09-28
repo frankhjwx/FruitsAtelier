@@ -10,12 +10,19 @@ excluded from ownership.
 
 Opening or resuming an existing project, checking synchronization from a difficulty
 tab, and saving a linked difficulty check its external files. The editor also
-checks periodically in the background. Missing paths trigger a wider Songs search.
+checks periodically in the background. Opening or explicitly checking a project
+with missing paths can trigger a wider Songs search.
 Scans and merge preparation use detached snapshots; stale results are discarded.
 Background scanning does not run conversion in pointer or painting hot paths.
-During checking and applying synchronization, editor input is blocked and the
-bottom-left status bar shows progress. The check itself has no dialog; differences
-requiring a choice and synchronization problems open the resolution interface.
+Reference discovery runs in the background without pausing playback or blocking
+editing and difficulty navigation. Missing difficulty tabs show "Finding reference..."
+while their scan runs, then retain a missing badge if no match is found. Opening a
+project or explicitly checking synchronization can search all of Songs for moved
+files; periodic checks only inspect associated folders. Edits made during discovery
+are compared against the returned candidates again without repeating the file scan.
+Only applying changes and resolving conflicts temporarily own editor input. Missing
+references alone do not open a dialog; an explicit check or linked save/export offers
+repair. Required resources are still validated before export.
 
 Existing paths are checked by content, not only modification time and size. When a
 path disappears, the last synchronized object sequence locates rename candidates.

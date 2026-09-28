@@ -8,6 +8,9 @@ public sealed partial class EditorView
 {
     private sealed record SyncResult(WorkspaceSession Session, BeatmapProject Snapshot, WorkspaceManifest Manifest, string Stamp, WorkspaceSyncScan Scan, Dictionary<Guid, WorkspaceMerge> Merges, IReadOnlyList<WorkspaceClaim> Claims, Dictionary<Guid, SyncComparison> Comparisons, bool ReviewResolved);
     private Task<SyncResult>? syncTask;
+    private readonly HashSet<Guid> syncSearching = [];
+    private bool SynchronizationBlocksInput => syncCommitTask is not null;
+    private bool SearchingReference(int index) => syncTask is not null && index >= 0 && index < difficulties.Count && syncSearching.Contains(difficulties[index].Id);
     private Task<WorkspaceSession>? syncCommitTask;
     private DateTime nextSyncCheck = DateTime.MaxValue;
     private readonly Dictionary<Guid, WorkspaceSyncStatus> syncStatuses = [];
@@ -19,6 +22,7 @@ public sealed partial class EditorView
     private readonly HashSet<string> syncRoundChoices = [];
     private Action? afterSynchronization;
     private bool syncBypass;
+    private bool syncReviewRequested;
     private bool syncPreserveHistory;
     private IReadOnlyList<WorkspaceClaim> syncClaims = [];
     private string syncFailure = "";
@@ -32,16 +36,22 @@ public sealed partial class EditorView
     public Action<Action<string?>>? RequestSyncAudio { get; set; }
 
     public void RefreshSynchronization(Action? continuation = null, bool quiet = false, bool reviewResolved = false)
+        => StartSynchronization(continuation, quiet, reviewResolved);
+
+    private void StartSynchronization(Action? continuation, bool quiet, bool reviewResolved, WorkspaceSyncScan? previousScan = null)
     {
         if (WorkspaceSession is not { } session) return;
         if (SynchronizationBusy)
         {
             if (continuation is not null) afterSynchronization = continuation;
+            syncReviewRequested |= reviewResolved;
             if (!quiet) syncPage = "checking";
             return;
         }
-        if (AudioPlaying) RequestPausePlayback?.Invoke();
-        CancelInteraction(); syncPage = "checking"; hits.Clear(); fields.Clear();
+        syncPage = null;
+        syncSearching.Clear();
+        foreach (var entry in session.Manifest.Difficulties)
+            if (WorkspaceSynchronization.Target(entry) is { } path && !File.Exists(path)) syncSearching.Add(entry.Id);
         var snapshot = CaptureProject();
         var manifest = WorkspaceProject.SnapshotManifest(session.Manifest);
         string stamp = ManifestStamp(manifest);
@@ -50,7 +60,7 @@ public sealed partial class EditorView
         afterSynchronization = continuation;
         syncTask = Task.Run(() =>
         {
-            var scan = WorkspaceSynchronization.Scan(frozen, songs);
+            var scan = previousScan ?? WorkspaceSynchronization.Scan(frozen, songs, searchMissing: !quiet);
             var merges = new Dictionary<Guid, WorkspaceMerge>();
             foreach (var status in scan.Difficulties.Where(s => s.State is WorkspaceSyncState.Changed or WorkspaceSyncState.NeedsBaseline
                 || reviewResolved && s.State == WorkspaceSyncState.Current))
@@ -108,20 +118,25 @@ public sealed partial class EditorView
             }
             catch (Exception e) { syncPreserveHistory = false; syncPage = "failed"; syncFailure = e.Message; }
         }
-        if (syncTask is { IsCompleted: true } completed)
+        if (syncTask is { IsCompleted: true } completed && !RatingEditInProgress && !IsEditingText && !SongSetupVisible)
         {
             syncTask = null;
             try
             {
                 var result = completed.GetAwaiter().GetResult();
+                bool reviewResolved = result.ReviewResolved || syncReviewRequested;
                 if (!ReferenceEquals(WorkspaceSession, result.Session))
                 {
                     syncPage = null;
                     if (WorkspaceSession is not null) RefreshSynchronization(afterSynchronization);
                     return;
                 }
-                if (!ResourceSnapshotMatches(result.Snapshot) || result.Stamp != ManifestStamp(result.Session.Manifest))
+                if (result.Stamp != ManifestStamp(result.Session.Manifest))
                 { syncPage = null; RefreshSynchronization(afterSynchronization); return; }
+                if (!ResourceSnapshotMatches(result.Snapshot) || reviewResolved != result.ReviewResolved)
+                { StartSynchronization(afterSynchronization, true, reviewResolved, result.Scan); return; }
+                syncSearching.Clear(); syncReviewRequested = false;
+                nextSyncCheck = DateTime.UtcNow.AddSeconds(30);
                 syncStatuses.Clear(); syncMerges.Clear();
                 syncComparisons.Clear();
                 foreach (var comparison in result.Comparisons) syncComparisons[comparison.Key] = comparison.Value;
@@ -129,13 +144,14 @@ public sealed partial class EditorView
                 foreach (var status in result.Scan.Difficulties) syncStatuses[status.DifficultyId] = status;
                 foreach (var merge in result.Merges) syncMerges[merge.Key] = merge.Value;
                 var automatic = result.Scan.Difficulties.Where(s => s.State == WorkspaceSyncState.Changed && !result.Merges[s.DifficultyId].RequiresResolution
-                    && !(result.ReviewResolved && result.Merges[s.DifficultyId].PreviouslyResolved.Count > 0)
+                    && !(reviewResolved && result.Merges[s.DifficultyId].PreviouslyResolved.Count > 0)
                     || s.State == WorkspaceSyncState.NeedsBaseline && s.Candidate!.Hash == (result.Session.Manifest.Difficulties.Single(d => d.Id == s.DifficultyId).ExportHash
                         ?? result.Session.Manifest.Difficulties.Single(d => d.Id == s.DifficultyId).SourceHash)).ToArray();
                 bool canAdd = !result.Scan.Difficulties.Any(s => s.State is WorkspaceSyncState.Ambiguous or WorkspaceSyncState.Duplicate or WorkspaceSyncState.Unavailable);
                 if (automatic.Length > 0 || canAdd && result.Scan.Additions.Count > 0)
                 {
                     if (AudioPlaying) RequestPausePlayback?.Invoke();
+                    CancelInteraction(); hits.Clear(); fields.Clear();
                     syncPage = "checking";
                     syncPreserveHistory = true;
                     syncCommitTask = Task.Run(() =>
@@ -166,9 +182,9 @@ public sealed partial class EditorView
                 syncPage = null;
                 StatusMessage = L.Get("sync.complete");
                 int target = syncDifficulty == Guid.Empty ? activeDifficulty : difficulties.FindIndex(d => d.Id == syncDifficulty);
-                if (result.ReviewResolved && target >= 0 && syncMerges.TryGetValue(difficulties[target].Id, out var review) && review.Conflicts.Count > 0)
+                if (reviewResolved && target >= 0 && syncMerges.TryGetValue(difficulties[target].Id, out var review) && review.Conflicts.Count > 0)
                 { BeginSyncReview(target); return; }
-                if (target >= 0 && ShowSyncProblem(target)) return;
+                if (target >= 0 && ShowSyncProblem(target, reviewResolved || afterSynchronization is not null)) return;
                 var continuation = afterSynchronization; afterSynchronization = null;
                 syncBypass = true;
                 try { continuation?.Invoke(); }
@@ -180,9 +196,11 @@ public sealed partial class EditorView
             && !IsEditingText && !SongSetupVisible && DateTime.UtcNow >= nextSyncCheck) RefreshSynchronization(quiet: true);
     }
 
-    private bool ShowSyncProblem(int index)
+    private bool ShowSyncProblem(int index, bool includeMissing = false)
     {
+        if (SearchingReference(index)) return false;
         var state = DifficultySyncState(index);
+        if (!includeMissing && state == WorkspaceSyncState.Missing) return false;
         if (state is WorkspaceSyncState.Local or WorkspaceSyncState.Current) return false;
         BeginSyncReview(index);
         return true;

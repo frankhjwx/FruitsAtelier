@@ -67,7 +67,7 @@ The database's maps/projects/project_sources tables are rebuildable indexes. The
 
 ## Resource errors
 
-Opening a project and refreshing the editor check source `.osu` files and song audio. Missing required references produce a red editor error bar; **View details** shows full paths. Linked difficulties with missing sources or unresolved synchronization problems require resolution before editing. Local workspace saving preserves authoring data, while exporting into Songs with missing required references fails. Unlinked local difficulties retain their editing workflow. Restoring the original path clears the error; audio can also be replaced from the File menu. Videos, backgrounds, storyboard sprites and animation frames, and custom samples are optional: missing files do not produce a persistent error or block export. Their original references remain in the project and exported `.osu`.
+Opening a project and refreshing the editor check source `.osu` files and song audio. Reference discovery runs in the background; difficulty tabs show searching or missing references without a persistent editor error bar. Missing source files do not block authoring. Conflicting changes still require explicit resolution. Local workspace saving preserves authoring data, while exporting into Songs with missing required references fails. Unlinked local difficulties retain their editing workflow. Restoring the original path clears the missing state; audio can also be replaced from the File menu. Videos, backgrounds, storyboard sprites and animation frames, and custom samples are optional: missing files do not produce a persistent error or block export. Their original references remain in the project and exported `.osu`.
 
 ## Explicit export
 

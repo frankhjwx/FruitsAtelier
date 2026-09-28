@@ -4,6 +4,15 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: periodic checks stay in associated folders while explicit discovery finds moved maps", () => Run(f =>
+        {
+            string moved = Path.Combine(f.Songs, "moved"); Directory.CreateDirectory(moved);
+            File.Move(f.Source, Path.Combine(moved, "map.osu"));
+            File.Move(Path.Combine(f.Set, "audio.mp3"), Path.Combine(moved, "audio.mp3"));
+            Check(WorkspaceSynchronization.Scan(f.Session, f.Songs, searchMissing: false).Difficulties.Single().State == WorkspaceSyncState.Missing,
+                "periodic check does not search unrelated folders");
+            Check(f.Scan().Difficulties.Single().State == WorkspaceSyncState.Changed, "explicit discovery finds the relocated association");
+        }));
         yield return ("Sync: missing difficulty search skips unrelated oversized and invalid maps", () => Run(f =>
         {
             File.Delete(f.Source);

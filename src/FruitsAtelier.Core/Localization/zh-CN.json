@@ -952,6 +952,7 @@
   "sync.newerSaved": "较新保存",
   "sync.unsaved": "有未保存编辑",
   "sync.checking": "正在检查关联和文件变化…",
+  "sync.searchingReference": "正在查找引用…",
   "sync.applying": "正在应用同步更改…",
   "sync.complete": "同步完成。",
   "sync.baseline": "请选择一个版本建立同步基线。",

@@ -50,7 +50,7 @@ internal static class SynchronizationRenderCheck
                 if (view.DifficultySyncState(0) != WorkspaceSyncState.NeedsBaseline) throw new InvalidOperationException("Native legacy comparison was not shown.");
                 view.KeyDown(27, false, false);
                 view.LoadWorkspace(WorkspaceProject.Open(session.Directory));
-                File.Delete(source); view.RefreshSynchronization(); Wait();
+                File.Delete(source); view.RefreshSynchronization(reviewResolved: true); Wait();
                 if (view.DifficultySyncState(0) != WorkspaceSyncState.Missing) throw new InvalidOperationException("Native missing difficulty state was not shown.");
                 view.KeyDown(27, false, false);
                 view.LoadWorkspace(WorkspaceProject.Open(session.Directory));

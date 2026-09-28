@@ -59,7 +59,7 @@ var tests = new (string Name, Action Run)[]
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
     ("Workspace-only saves persist before optional Songs export", WorkspaceSaveTests.Run),
-    ("Synchronization UI preserves authoring and undo, gates missing files, resolves objects and deletes both copies", SynchronizationUiTests.Run),
+    ("Synchronization UI permits background editing, preserves undo, repairs missing files and resolves objects", SynchronizationUiTests.Run),
     ("Synchronization canvases use AR and distinguish retained choices from renewed conflicts", SynchronizationUiTests.ArScaleAndDecisions),
     ("Library archive drops preserve Songs and report source/export presence", LibraryImportTests.Run),
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),

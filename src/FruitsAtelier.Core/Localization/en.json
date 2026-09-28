@@ -952,6 +952,7 @@
   "sync.newerSaved": "Newer save",
   "sync.unsaved": "Unsaved edits",
   "sync.checking": "Checking associations and changes…",
+  "sync.searchingReference": "Finding reference…",
   "sync.applying": "Applying synchronization changes…",
   "sync.complete": "Synchronization complete.",
   "sync.baseline": "Choose a version to establish the synchronization baseline.",

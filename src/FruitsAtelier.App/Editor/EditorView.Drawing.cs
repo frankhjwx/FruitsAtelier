@@ -90,12 +90,6 @@ public sealed partial class EditorView
         }
         DrawTransport(c);
         DrawStatus(c);
-        if (resourceErrors.Count > 0)
-        {
-            c.Fill(new(0, height - 145, width, 25), 0x48272Du);
-            c.Text(L.Get("library.missingResources", string.Join("; ", resourceErrors)), 12, height - 140, 12, Error, width - 140);
-            Button(c, new(width - 126, height - 145, 114, 25), L.Get("library.details"), () => { resourcePage = LibraryVisible = true; exportPage = false; libraryScroll = 0; });
-        }
         DrawUpdateNotice(c);
         if (menu >= 0) DrawMenu(c);
         if (!librarySettingsOpen) DrawContextMenu(c);

@@ -319,7 +319,8 @@ public sealed partial class EditorView
             difficultyTabTargets.Add((hitRect, index));
             double? stars = DifficultyRating(index);
             uint colour = DifficultyColour(stars);
-            bool missing = DifficultySyncState(index) == WorkspaceSyncState.Missing;
+            bool searching = SearchingReference(index);
+            bool missing = searching || DifficultySyncState(index) == WorkspaceSyncState.Missing;
             if (missing) colour = 0xC4CAD2;
             bool hover = rect.Contains(mouseX, mouseY);
             if (active || hover) DrawChromeTab(c, rect, active ? Panel : 0x2B3542u);
@@ -328,7 +329,7 @@ public sealed partial class EditorView
             if (stars >= 6.7) c.Circle(x + 19, 62, 10, 0xE7EBF2);
             c.Image(catchIconPath, new(x + 9, 52, 20, 20), colour);
             c.Text(names[index], x + 36, 54, 12, missing ? 0x718092u : active ? Foreground : Muted, rect.Width - 101, active);
-            if (missing) c.Text(L.Get("sync.missingBadge"), x + 36, 69, 9, 0x718092, rect.Width - 101);
+            if (missing) c.Text(L.Get(searching ? "sync.searchingReference" : "sync.missingBadge"), x + 36, 69, 9, 0x718092, rect.Width - 45);
             c.Text(stars is null ? L.Get("project.starsUnavailable") : L.Get("project.stars", stars.Value),
                 rect.Right - 59, 55, 10, active ? Foreground : Muted, 47);
             if (RatingRefreshing(index)) DrawRatingSpinner(c, rect.Right - 9, 106);

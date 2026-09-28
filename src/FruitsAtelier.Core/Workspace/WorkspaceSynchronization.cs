@@ -109,7 +109,7 @@ public static class WorkspaceSynchronization
         return new(System.IO.Path.GetFullPath(path), hash, text, OsuBeatmapReader.Read(text, path));
     }
 
-    public static WorkspaceSyncScan Scan(WorkspaceSession session, string songs)
+    public static WorkspaceSyncScan Scan(WorkspaceSession session, string songs, bool searchMissing = true)
     {
         var entries = session.Manifest.Difficulties;
         var files = new Dictionary<string, WorkspaceSyncCandidate>(Paths);
@@ -120,9 +120,9 @@ public static class WorkspaceSynchronization
         var signatures = entries.Where(e => e.Sync is not null).Select(e => ObjectSignature(e.Sync!.Text)).ToHashSet();
         var onlineIds = entries.Where(e => e.Sync is not null).Select(e => OnlineIdentity(e.Sync!.Text)).OfType<string>().ToHashSet();
         bool missingAssociation = entries.Select(Target).OfType<string>().Any(path => !File.Exists(path));
-        if (!string.IsNullOrWhiteSpace(songs) && missingAssociation) roots.Add(System.IO.Path.GetFullPath(songs));
+        if (!string.IsNullOrWhiteSpace(songs) && missingAssociation && searchMissing) roots.Add(System.IO.Path.GetFullPath(songs));
         foreach (var path in entries.Select(Target).OfType<string>())
-            if (string.IsNullOrWhiteSpace(songs) || !missingAssociation || !WorkspaceProject.Within(songs, path)) roots.Add(System.IO.Path.GetDirectoryName(path)!);
+            if (string.IsNullOrWhiteSpace(songs) || !missingAssociation || !searchMissing || !WorkspaceProject.Within(songs, path)) roots.Add(System.IO.Path.GetDirectoryName(path)!);
         foreach (var root in roots)
         {
             try

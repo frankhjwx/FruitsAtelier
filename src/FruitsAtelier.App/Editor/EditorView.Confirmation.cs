@@ -8,7 +8,7 @@ public sealed partial class EditorView
     private Action<int>? discardConfirmation;
     private bool deleteProjectConfirmation;
     private bool offerSongsExport;
-    public bool DiscardConfirmationVisible => discardConfirmation is not null || SynchronizationVisible || SynchronizationBusy;
+    public bool DiscardConfirmationVisible => discardConfirmation is not null || SynchronizationVisible || SynchronizationBlocksInput;
 
     public void ShowDiscardConfirmation(Action<int> answer)
     {
@@ -27,7 +27,7 @@ public sealed partial class EditorView
 
     private void AnswerDiscard(int answer)
     {
-        if (SynchronizationBusy) return;
+        if (SynchronizationBlocksInput) return;
         if (SynchronizationVisible) { CancelSynchronization(); return; }
         var callback = discardConfirmation;
         discardConfirmation = null;
@@ -39,7 +39,7 @@ public sealed partial class EditorView
 
     private void DrawDiscardConfirmation(ICanvas c)
     {
-        if (SynchronizationBusy) { DrawStatus(c); hits.Clear(); fields.Clear(); return; }
+        if (SynchronizationBlocksInput) { DrawStatus(c); hits.Clear(); fields.Clear(); return; }
         if (SynchronizationVisible) { DrawSynchronization(c); return; }
         if (!DiscardConfirmationVisible) return;
         hits.Clear(); fields.Clear();
