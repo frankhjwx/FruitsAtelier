@@ -236,6 +236,7 @@ public sealed partial class EditorView
     private void QueueLibrarySearch() { searchAfter = DateTime.UtcNow.AddMilliseconds(150); searchTaskQuery = "\0"; }
     private void PumpLibrary()
     {
+        PumpStorage();
         PumpFileMonitoring();
         PumpSynchronization();
         libraryBrowser?.Pump();

@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, Updates }
+    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, Updates, Storage }
     private SettingsCategory settingsCategory;
     private bool draftRomanisedMetadata;
     private bool draftDerandomizeDroplets;
@@ -103,7 +103,7 @@ public sealed partial class EditorView
         c.Text(L.Get("library.settings"), r.X + 20, r.Y + 16, 19, Foreground, r.Width - 80, true);
         SettingsButton(c, new(r.Right - 48, r.Y + 10, 32, 28), "×", CloseSettings);
         c.Line(r.X + 214, r.Y + 56, r.X + 214, r.Bottom - 20, Grid);
-        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "update.title"];
+        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "update.title", "storage.title"];
         for (int i = 0; i < categories.Length; i++)
         {
             var category = (SettingsCategory)i;
@@ -112,6 +112,7 @@ public sealed partial class EditorView
             {
                 FinishVolumeDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
                 settingsCategory = category;
+                if (category == SettingsCategory.Storage) StartStorage();
                 if (category == SettingsCategory.Updates && UpdateStatus.Phase is UpdatePhase.Idle or UpdatePhase.Current or UpdatePhase.Failed)
                     RequestUpdateCheck?.Invoke();
             }, settingsCategory == category, fontSize: SettingsTextSize);
@@ -135,6 +136,9 @@ public sealed partial class EditorView
                         L.Get(draftLowLatencyDisplay ? "settings.displayImmediate" : "settings.displayVsync") + " ▾",
                         () => OpenDisplayModeMenu(displayBounds));
                 }
+                break;
+            case SettingsCategory.Storage:
+                DrawStorage(c);
                 break;
             case SettingsCategory.Workspace:
                 c.Text(L.Get("library.settingsDescription"), SettingsContentX, SettingsTop + 128, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);

@@ -113,6 +113,16 @@ public sealed class LibraryDatabase
         var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString()); db.Open(); return db;
     }
     public LibrarySearchSnapshot SearchSnapshot(string query, bool projectsOnly = false) => new(Open(), songs, query, projectsOnly);
+    public void ClearDerivedCache()
+    {
+        using var db = Open();
+        using var command = db.CreateCommand();
+        // Source registrations and project associations survive an index rebuild.
+        command.CommandText = "DELETE FROM maps;";
+        command.ExecuteNonQuery();
+        command.CommandText = "VACUUM";
+        command.ExecuteNonQuery();
+    }
     public void RegisterSource(string directory, string? archive = null)
     {
         directory = Path.GetFullPath(directory);

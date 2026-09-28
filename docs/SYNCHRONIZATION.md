@@ -193,3 +193,35 @@ Rows remain available for changing a choice until Apply. Object conflicts retain
 their canvas pages. Metadata-only resolutions preserve authoring objects and undo
 history. An unchanged accepted mismatch remains reviewable; another edit requires
 a fresh decision. Other sections retain their existing three-way merge rules.
+
+## Storage maintenance
+
+Settings → Workspace storage shows byte totals and shares for projects, imported
+songs and skins, audio backups, recovery history, caches, and other files, plus the
+largest top-level folders/files. Accounting and maintenance run on background workers.
+The displayed root is the active workspace, not an unapplied path draft.
+
+Automatic maintenance runs after startup while idle in the library without an open
+workspace project, then at most once per day during that app session. Ordinary
+history expires after 30 days or beyond 10 snapshots per project. A 1 GiB history
+budget removes older eligible snapshots first. Every project's newest snapshot,
+referenced snapshots, and snapshots from the last 24 hours are protected, so the
+budget is a soft limit. Deleted or retired projects retain their newest recovery copy.
+
+Audio remains content-addressed and deduplicated. Cleanup traces hashes and paths
+from current authoring, synchronization baselines, and retained history before
+removing old unreferenced audio. Derived playback copies are collected separately
+when no retained document references their path, even if the canonical audio hash
+is still retained. Resources used by open documents are protected even before
+their references are saved. Referenced audio is recovery data, even if the same
+bytes currently exist in Songs. Newly captured audio receives a 24-hour grace period
+while its baseline is published. Unknown resource filenames are retained. Cleanup
+refuses linked filesystem paths, aborts before deletion on unreadable reference
+documents, and defers when export/deletion recovery or project publication is pending.
+
+**Clean history** applies the same retention policy immediately. **Clear cache**
+removes temporary comparison files and reconstructible library map rows, then
+reindexes sources. It preserves project/source registrations, version snapshots,
+imported music, skins, and current authoring. Both operations may reclaim old
+unreferenced audio; neither deletes a referenced audio backup. The page reports
+reclaimed bytes or the reason maintenance could not finish.

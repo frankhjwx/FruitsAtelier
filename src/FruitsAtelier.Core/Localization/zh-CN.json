@@ -995,5 +995,21 @@
   "sync.readOnly": "此谱面集没有可编辑的 Catch 难度。其他模式以只读条目显示。",
   "sync.readOnlyMode": "模式 {0} · 只读",
   "sync.inspect": "查看完整版本…",
-  "sync.keepHelp": "保留所选项目，迁入独有难度并归档重复 FA 副本。"
+  "sync.keepHelp": "保留所选项目，迁入独有难度并归档重复 FA 副本。",
+  "storage.title": "工作区空间",
+  "storage.policy": "自动清理：30 天、每项目 10 份、历史上限 1 GiB；保留最新备份及被引用的音频。",
+  "storage.total": "总占用：{0}",
+  "storage.projects": "项目文件",
+  "storage.audio": "音频备份",
+  "storage.history": "恢复历史",
+  "storage.cache": "缓存",
+  "storage.resources": "导入的歌曲和皮肤",
+  "storage.other": "其他文件",
+  "storage.folders": "文件夹 / 文件占用排行 · 滚轮浏览",
+  "storage.working": "正在后台统计 / 清理…",
+  "storage.pending": "暂缓清理：存在需要恢复的中断操作。",
+  "storage.reclaimed": "已回收：{0}",
+  "storage.refresh": "刷新",
+  "storage.cleanHistory": "清理历史",
+  "storage.clearCache": "清理缓存"
 }

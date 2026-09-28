@@ -518,32 +518,41 @@ public static class WorkspaceSynchronization
 
     private static string? StoreAudio(string? path, string directory)
     {
-        string? hash = AudioHash(path);
-        if (hash is null) return null;
-        string target = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(directory)!, ".sync-history", "resources", hash);
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(target)!);
-        if (!File.Exists(target)) File.Copy(path!, target);
-        if (WorkspaceProject.Hash(target) != hash) throw new IOException(L.Get("sync.resourceChanged"));
-        return hash;
+        lock (WorkspaceProject.Gate)
+        {
+            string? hash = AudioHash(path);
+            if (hash is null) return null;
+            string target = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(directory)!, ".sync-history", "resources", hash);
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(target)!);
+            if (!File.Exists(target)) File.Copy(path!, target);
+            if (WorkspaceProject.Hash(target) != hash) throw new IOException(L.Get("sync.resourceChanged"));
+            // A newly captured baseline may not be published yet when maintenance runs.
+            File.SetLastWriteTimeUtc(target, DateTime.UtcNow);
+            return hash;
+        }
     }
     public static string? AudioHash(string? path) => path is not null && File.Exists(path) ? WorkspaceProject.Hash(path) : null;
     public static string? LocalAudioVersion(WorkspaceDifficulty entry, MapDocument local, string directory)
     {
-        if (entry.Sync is not { } baseline || (baseline.AuthoringAudioHash ?? baseline.AudioHash) is not { } hash) return local.AudioPath;
-        var original = ProjectSerializer.Read(baseline.Authoring, SnapshotPath(directory));
-        if (!Paths.Equals(local.AudioPath, original.AudioPath) || AudioHash(local.AudioPath) == hash) return local.AudioPath;
-        string resources = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(directory)!, ".sync-history", "resources");
-        string stored = System.IO.Path.Combine(resources, hash);
-        if (!File.Exists(stored) || WorkspaceProject.Hash(stored) != hash) throw new IOException(L.Get("sync.resourceChanged"));
-        string playback = System.IO.Path.Combine(resources, "playback", hash + System.IO.Path.GetExtension(original.AudioPath ?? ".mp3"));
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(playback)!);
-        if (!File.Exists(playback)) File.Copy(stored, playback);
-        else if (WorkspaceProject.Hash(playback) != hash)
+        lock (WorkspaceProject.Gate)
         {
-            playback = System.IO.Path.Combine(resources, "playback", Guid.NewGuid().ToString("N") + System.IO.Path.GetExtension(playback));
-            File.Copy(stored, playback);
+            if (entry.Sync is not { } baseline || (baseline.AuthoringAudioHash ?? baseline.AudioHash) is not { } hash) return local.AudioPath;
+            var original = ProjectSerializer.Read(baseline.Authoring, SnapshotPath(directory));
+            if (!Paths.Equals(local.AudioPath, original.AudioPath) || AudioHash(local.AudioPath) == hash) return local.AudioPath;
+            string resources = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(directory)!, ".sync-history", "resources");
+            string stored = System.IO.Path.Combine(resources, hash);
+            if (!File.Exists(stored) || WorkspaceProject.Hash(stored) != hash) throw new IOException(L.Get("sync.resourceChanged"));
+            string playback = System.IO.Path.Combine(resources, "playback", hash + System.IO.Path.GetExtension(original.AudioPath ?? ".mp3"));
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(playback)!);
+            if (!File.Exists(playback)) File.Copy(stored, playback);
+            else if (WorkspaceProject.Hash(playback) != hash)
+            {
+                playback = System.IO.Path.Combine(resources, "playback", Guid.NewGuid().ToString("N") + System.IO.Path.GetExtension(playback));
+                File.Copy(stored, playback);
+            }
+            File.SetLastWriteTimeUtc(playback, DateTime.UtcNow);
+            return playback;
         }
-        return playback;
     }
     public static IEnumerable<(Guid Id, int Order)> SourceIds(MapDocument document) => document.Fruits.Select(f => (f.Id, f.SourceOrder))
         .Concat(document.Tracks.Select(f => (f.Id, f.SourceOrder))).Concat(document.ImportedSliders.Select(f => (f.Id, f.SourceOrder)))

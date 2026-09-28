@@ -433,11 +433,18 @@ internal static class RenderCheck
                 view.OpenSettings();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 var settings = view.SettingsBounds;
-                foreach (int category in new[] { 0, 1, 2, 3, 4, 5 })
+                foreach (int category in new[] { 0, 1, 2, 3, 4, 6, 5 })
                 {
                     float sx = settings.X + 40, sy = settings.Y + 96 + category * 48;
                     view.PointerDown(sx, sy, 0, false, false); view.PointerUp(sx, sy, 0);
                     canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                    if (category == 6)
+                    {
+                        var deadline = DateTime.UtcNow.AddSeconds(20);
+                        while (view.StorageBusy && DateTime.UtcNow < deadline)
+                        { Thread.Sleep(10); canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
+                        if (view.StorageBusy) throw new InvalidOperationException("Native storage accounting did not complete.");
+                    }
                     if (category == 3)
                     {
                         for (int channel = 0; channel < 3; channel++)

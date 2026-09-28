@@ -995,5 +995,21 @@
   "sync.readOnly": "This set has no editable Catch difficulty. Other modes are listed read-only.",
   "sync.readOnlyMode": "Mode {0} · read-only",
   "sync.inspect": "Inspect complete versions…",
-  "sync.keepHelp": "Keep the selected project; preserve unique difficulties and archive duplicate FA copies."
+  "sync.keepHelp": "Keep the selected project; preserve unique difficulties and archive duplicate FA copies.",
+  "storage.title": "Workspace storage",
+  "storage.policy": "Auto-clean: 30 days, 10 versions/project, 1 GiB history budget; latest copy and referenced audio retained.",
+  "storage.total": "Total: {0}",
+  "storage.projects": "Projects",
+  "storage.audio": "Audio backups",
+  "storage.history": "Recovery history",
+  "storage.cache": "Cache",
+  "storage.resources": "Imported songs and skins",
+  "storage.other": "Other files",
+  "storage.folders": "Folders / files by size · Wheel to scroll",
+  "storage.working": "Calculating / cleaning in background…",
+  "storage.pending": "Cleanup deferred: an interrupted operation needs recovery.",
+  "storage.reclaimed": "Reclaimed: {0}",
+  "storage.refresh": "Refresh",
+  "storage.cleanHistory": "Clean history",
+  "storage.clearCache": "Clear cache"
 }

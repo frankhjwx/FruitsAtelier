@@ -706,7 +706,7 @@ public sealed partial class EditorView
     {
         if (SynchronizationBlocksInput) return;
         if (SynchronizationVisible) { ScrollSyncComparison(x, y, delta, ctrl); return; }
-        if (librarySettingsOpen) return;
+        if (librarySettingsOpen) { ScrollStorage(x, y, delta); return; }
         if (TimingModal)
         { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
         if (HandleVolumePopoverWheel(x, y, delta)) return;
