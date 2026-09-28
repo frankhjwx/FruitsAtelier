@@ -79,10 +79,10 @@ internal static class MappingSessionTests
         Check(ui.View.EqualDistanceHighlighted, "Equal DS across unequal time intervals did not highlight.");
         Check(ui.View.PreviousDistanceFieldBounds is null, "Multi-selection exposed single-object editing.");
         var baseline = ui.View.Document.DeepClone();
-        ui.View.Document.Fruits[^1].X += map.DistancePerBeat * 2 * .009; ui.Paint();
-        Check(ui.View.EqualDistanceHighlighted, "DS tolerance rejected .009.");
+        ui.View.Document.Fruits[^1].X += map.DistancePerBeat * 2 * .019; ui.Paint();
+        Check(ui.View.EqualDistanceHighlighted, "DS tolerance rejected .019.");
         ui.View.Document.Fruits[^1].X += map.DistancePerBeat * 2 * .002; ui.Paint();
-        Check(!ui.View.EqualDistanceHighlighted, "DS tolerance accepted .011.");
+        Check(!ui.View.EqualDistanceHighlighted, "DS tolerance accepted .021.");
         ui.LoadDocument(baseline); ui.Key('F'); ui.MoveMap(1250, 250);
         Check(ui.View.MovementOverlayBounds is not null, "Placement panel missing.");
         ui.View.PointerMove(0, 0, false, false); ui.Paint();

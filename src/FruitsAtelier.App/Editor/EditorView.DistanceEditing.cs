@@ -50,7 +50,7 @@ public sealed partial class EditorView
     private bool DistanceEditing => distanceEditTarget is not null;
 
     public bool EqualDistanceHighlighted => DistanceReadout.Previous is { } previous
-        && DistanceReadout.Next is { } next && Math.Abs(previous - next) <= .0100000001;
+        && DistanceReadout.Next is { } next && Math.Abs(previous - next) <= .0200000001;
 
     private void DrawDistanceFields(ICanvas c, Rect panel)
     {
