@@ -64,6 +64,8 @@ var tests = new (string Name, Action Run)[]
     ("File notifications coalesce and recover through native create rename delete events", WorkspaceFileMonitorTests.Run),
     ("File notifications synchronize automatically and isolate ongoing conflict review", SynchronizationUiTests.FileNotifications),
     ("Refreshed synchronization review retains only unchanged choices", SynchronizationUiTests.RefreshedReviewChoices),
+    ("Project library refreshes live difficulties and discovers missing references in background", SynchronizationUiTests.ProjectLibraryChanges),
+    ("Project library keeps separate live source files visible after export", SynchronizationUiTests.ProjectLibraryExportSources),
     ("Library archive drops preserve Songs and report source/export presence", LibraryImportTests.Run),
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),

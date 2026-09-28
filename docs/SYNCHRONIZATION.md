@@ -31,6 +31,16 @@ received during review remain queued; the displayed comparison and green choices
 stay intact. Apply checks the external map and compared audio again. If they changed,
 the review is refreshed before applying; choices survive only for unchanged conflict
 contents and authoring source identities. Changed audio always requires a fresh choice.
+
+The My projects library combines saved FA difficulties with newly indexed Catch
+difficulties in associated source directories. Counts and detail rows refresh
+together without opening the editor. Deleted unimported files leave the list;
+saved difficulties with missing sources remain muted, with the card counting
+available and missing difficulties separately. Missing references trigger read-only
+identity discovery on the library worker, including renamed directories. Recovered
+references remove the missing badge without duplicating the FA entry. Library
+discovery does not save authoring or accept a synchronization baseline; opening the
+project performs the normal synchronization and conflict checks.
 Scans and merge preparation use detached snapshots; stale results are discarded.
 Background scanning does not run conversion in pointer or painting hot paths.
 Reference discovery runs in the background without pausing playback or blocking

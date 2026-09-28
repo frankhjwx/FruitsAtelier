@@ -639,6 +639,7 @@
   "library.results": "{0} beatmap sets",
   "library.diffCount": "{0} difficulties",
   "library.projectCount": "Workspace project · {0} difficulties",
+  "library.projectMissingCount": "Workspace project · {0} difficulties · {1} missing",
   "library.empty": "No matching songs. Configure Songs or refresh the library.",
   "library.start": "Start editing",
   "library.continue": "Continue editing",

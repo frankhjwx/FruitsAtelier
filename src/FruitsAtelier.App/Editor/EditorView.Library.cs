@@ -400,7 +400,10 @@ public sealed partial class EditorView
                 c.Text(presence, badge.X + 8, y + 53, 11, Foreground, badgeWidth - 16);
                 countWidth = Math.Max(0, badge.X - 324);
             }
-            c.Text(L.Get(libraryProjectsOnly ? "library.projectCount" : "library.diffCount", group.Count), 314, y + 53, 11, Accent, countWidth);
+            string countLabel = libraryProjectsOnly && group.MissingCount > 0
+                ? L.Get("library.projectMissingCount", group.Count - group.MissingCount, group.MissingCount)
+                : L.Get(libraryProjectsOnly ? "library.projectCount" : "library.diffCount", group.Count);
+            c.Text(countLabel, 314, y + 53, 11, Accent, countWidth);
             c.Unclip();
         }
         c.Unclip();

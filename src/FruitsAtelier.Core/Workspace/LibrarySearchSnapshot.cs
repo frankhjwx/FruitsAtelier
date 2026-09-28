@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace FruitsAtelier.Core;
 
-public sealed record LibrarySetRow(int Index, string Key, LibraryMap Map, int Count, bool? InSongs = null);
+public sealed record LibrarySetRow(int Index, string Key, LibraryMap Map, int Count, bool? InSongs = null, int MissingCount = 0);
 
 // A disk-backed result index keeps random scrolling independent of library size.
 // Callers serialize access on a worker; no query or disposal belongs on the UI thread.
@@ -13,6 +13,8 @@ public sealed class LibrarySearchSnapshot : IDisposable
     private readonly string catalogPath;
     private readonly bool projectsOnly;
     private readonly string songs;
+    private sealed record ProjectListing(IReadOnlyList<LibraryMap> Maps, bool? InSongs, LibraryMap Representative);
+    private readonly Dictionary<string, ProjectListing> projectDetails = new(WorkspaceSynchronization.Paths);
     public int Count { get; }
     internal LibrarySearchSnapshot(SqliteConnection connection, string songs, string query, bool projectsOnly)
     {
@@ -82,12 +84,13 @@ public sealed class LibrarySearchSnapshot : IDisposable
             WorkspaceManifest? manifest = null;
             if (project is not null)
                 lock (WorkspaceProject.Gate) manifest = WorkspaceProject.ReadManifest(project, includeSync: false);
-            if (projectsOnly && manifest is not null) difficultyCount = manifest.Difficulties.Count;
+            ProjectListing? details = projectsOnly && manifest is not null ? ProjectDifficulties(project!, map, manifest) : null;
+            if (details is not null) { difficultyCount = details.Maps.Count; map = details.Representative; }
             bool? inSongs = string.IsNullOrWhiteSpace(songs) ? null
                 : manifest is not null
                     ? WorkspaceProject.HasExistingSongsFile(manifest, songs)
                     : ExistsInSongs(map.Path);
-            rows.Add(new(reader.GetInt32(0), reader.GetString(1), map, difficultyCount, inSongs));
+            rows.Add(new(reader.GetInt32(0), reader.GetString(1), map, difficultyCount, details?.InSongs ?? inSongs, details?.Maps.Count(d => d.ExternalMissing) ?? 0));
         }
         return rows;
     }
@@ -98,27 +101,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
         using var attachment = Attach();
         if (projectsOnly && set.Map.ProjectPath is { } project)
         {
-            WorkspaceManifest manifest;
-            lock (WorkspaceProject.Gate) manifest = WorkspaceProject.ReadManifest(project, includeSync: false);
-            var entries = new List<LibraryMap>();
-            foreach (var difficulty in manifest.Difficulties.Skip(Math.Max(0, start)).Take(Math.Clamp(count, 1, 128)))
-            {
-                if (Path.GetFileName(difficulty.File) != difficulty.File || !difficulty.File.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("project.invalid"));
-                var metadata = set.Map;
-                if (difficulty.Source is { } source)
-                {
-                    using var lookup = db.CreateCommand();
-                    lookup.CommandText = "SELECT data FROM maps WHERE path=$p";
-                    lookup.Parameters.AddWithValue("$p", source);
-                    if (lookup.ExecuteScalar() is string data) metadata = JsonSerializer.Deserialize<LibraryMap>(data)!;
-                }
-                entries.Add(metadata with { Path = Path.Combine(project, difficulty.File), Directory = project,
-                    Difficulty = difficulty.Name, ProjectPath = project,
-                    ExternalMissing = WorkspaceSynchronization.Target(difficulty) is { } target && !string.IsNullOrWhiteSpace(songs)
-                        && Directory.Exists(songs) && WorkspaceProject.Within(songs, target) && !File.Exists(target) });
-            }
-            return entries;
+            return ProjectDifficulties(project, set.Map).Maps.Skip(Math.Max(0, start)).Take(Math.Clamp(count, 1, 128)).ToArray();
         }
         using var command = db.CreateCommand();
         command.CommandText = "SELECT m.data FROM matches s JOIN maps m ON m.path=s.path WHERE s.groupKey=$k ORDER BY s.path LIMIT $n OFFSET $s";
@@ -128,6 +111,67 @@ public sealed class LibrarySearchSnapshot : IDisposable
         while (reader.Read()) result.Add(JsonSerializer.Deserialize<LibraryMap>(reader.GetString(0))! with { ProjectPath = set.Map.ProjectPath });
         if (result.Count == 0 && start == 0) result.Add(set.Map);
         return result;
+    }
+
+    private ProjectListing ProjectDifficulties(string project, LibraryMap fallback, WorkspaceManifest? manifest = null)
+    {
+        if (projectDetails.TryGetValue(project, out var cached)) return cached;
+        if (manifest is null)
+            lock (WorkspaceProject.Gate) manifest = WorkspaceProject.ReadManifest(project, includeSync: false);
+        var targets = manifest.Difficulties.ToDictionary(d => d.Id, WorkspaceSynchronization.Target);
+        var folders = targets.Values.OfType<string>().Select(p => Path.GetDirectoryName(p)!).ToHashSet(WorkspaceSynchronization.Paths);
+        if (manifest.SongsRoot is { } root && manifest.SourceDirectory is { } relative) folders.Add(Path.Combine(root, relative));
+        if (manifest.ExternalSourceDirectory is { } external) folders.Add(external);
+        var missing = new HashSet<Guid>();
+        if (targets.Values.OfType<string>().Any(p => !File.Exists(p)))
+        {
+            // Discovery is read-only and runs on the library worker. Authoring is only
+            // reconciled when the project is opened through the synchronization workflow.
+            WorkspaceManifest baseline;
+            lock (WorkspaceProject.Gate) baseline = WorkspaceProject.ReadManifest(project);
+            var scan = WorkspaceSynchronization.Scan(new(project, baseline, new BeatmapProject()), songs, searchMissing: true);
+            foreach (var status in scan.Difficulties)
+            {
+                if (status.State is WorkspaceSyncState.Missing or WorkspaceSyncState.Ambiguous
+                    || status.State == WorkspaceSyncState.Duplicate && targets[status.DifficultyId] is { } absent && !File.Exists(absent))
+                    missing.Add(status.DifficultyId);
+                if (status.State != WorkspaceSyncState.Duplicate && status.Candidate is { } candidate)
+                {
+                    targets[status.DifficultyId] = candidate.Path;
+                    folders.Add(Path.GetDirectoryName(candidate.Path)!);
+                }
+            }
+        }
+        var live = new Dictionary<string, LibraryMap>(WorkspaceSynchronization.Paths);
+        foreach (string folder in folders)
+        {
+            using var lookup = db.CreateCommand();
+            lookup.CommandText = "SELECT data FROM maps WHERE json_extract(data,'$.Directory') COLLATE NOCASE=$d";
+            lookup.Parameters.AddWithValue("$d", folder);
+            using var reader = lookup.ExecuteReader();
+            while (reader.Read())
+            {
+                var map = JsonSerializer.Deserialize<LibraryMap>(reader.GetString(0))!;
+                if (WorkspaceSynchronization.Paths.Equals(map.Directory, folder) && File.Exists(map.Path)) live[map.Path] = map;
+            }
+        }
+        var entries = new List<LibraryMap>();
+        var representative = (live.Values.OrderBy(m => m.Path, WorkspaceSynchronization.Paths).FirstOrDefault() ?? fallback) with { ProjectPath = project };
+        foreach (var difficulty in manifest.Difficulties)
+        {
+            if (Path.GetFileName(difficulty.File) != difficulty.File || !difficulty.File.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("project.invalid"));
+            var metadata = targets[difficulty.Id] is { } target && live.Remove(target, out var map) ? map : fallback;
+            entries.Add(metadata with { Path = Path.Combine(project, difficulty.File), Directory = project,
+                Difficulty = difficulty.Name, ProjectPath = project, ExternalMissing = missing.Contains(difficulty.Id) });
+        }
+        entries.AddRange(live.Values.OrderBy(m => m.Path, WorkspaceSynchronization.Paths).Select(m => m with { ProjectPath = project }));
+        if (projectDetails.Count >= 128) projectDetails.Remove(projectDetails.Keys.First());
+        bool? inSongs = string.IsNullOrWhiteSpace(songs) ? null : targets.Values.OfType<string>()
+            .Concat(live.Keys).Any(p => WorkspaceProject.Within(songs, p) && File.Exists(p));
+        var listing = new ProjectListing(entries, inSongs, representative);
+        projectDetails[project] = listing;
+        return listing;
     }
     private IDisposable Attach()
     {

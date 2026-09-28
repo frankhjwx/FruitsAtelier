@@ -232,6 +232,69 @@ internal static class SynchronizationUiTests
         Check(ui.View.Document.Fruits[0].X == 123 && ui.View.Document.Fruits[1].X == 450, "refreshed choices merge correctly");
     }
 
+    public static void ProjectLibraryChanges()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/project-library-watch", Guid.NewGuid().ToString("N")));
+        string songs = Path.Combine(root, "Songs"), set = Path.Combine(songs, "set");
+        Directory.CreateDirectory(set);
+        string Text(int n) => Fixture.Replace("Version:Catch", "Version:Diff " + n).Replace("123,192", (100 + n * 20) + ",192");
+        string FilePath(int n) => Path.Combine(set, n + ".osu");
+        for (int n = 1; n <= 3; n++) File.WriteAllText(FilePath(n), Text(n));
+        var settings = new LibrarySettings { Workspace = Path.Combine(root, "Workspace"), Songs = songs };
+        var session = LibraryOperations.ImportPath(FilePath(1), settings);
+        var authoring = Directory.GetFiles(session.Directory).ToDictionary(p => p, WorkspaceProject.Hash);
+        var ui = new Ui(false); ui.Resize(1440, 900); ui.View.InitializeLibrary(true, settings);
+        void Until(Func<bool> predicate, string message) => WorkspaceFileMonitorTests.Await(() =>
+        { ui.Paint(); return predicate() && !ui.View.LibraryLoading; }, message);
+        bool Has(string value) => ui.Canvas.Texts.Any(t => t.Value == value);
+        try
+        {
+            Until(() => ui.View.LibrarySetTotal == 1, "initial library ready");
+            ui.ClickText(L.Get("library.projects"));
+            Until(() => Has(L.Get("library.projectCount", 3)) && Has("Diff 3"), "project shows saved difficulties");
+            File.WriteAllText(FilePath(4), Text(4)); File.WriteAllText(FilePath(5), Text(5));
+            Until(() => Has(L.Get("library.projectCount", 5)) && Has("Diff 4") && Has("Diff 5"), "project count and details refresh from three to five");
+            File.Delete(FilePath(5));
+            Until(() => Has(L.Get("library.projectCount", 4)) && !Has("Diff 5"), "unimported deletion updates count and details");
+            File.Delete(FilePath(1));
+            Until(() => Has(L.Get("library.projectMissingCount", 3, 1)) && Has(L.Get("sync.missingBadge")), "linked deletion remains a missing authoring row");
+            Check(ui.Canvas.Texts.Any(t => t.Value == "Diff 1" && t.Color == 0x718092u), "missing difficulty is muted");
+            File.WriteAllText(Path.Combine(set, "renamed.osu"), Text(1));
+            Until(() => Has(L.Get("library.projectCount", 4)) && !Has(L.Get("sync.missingBadge")), "background discovery finds renamed reference without opening project");
+            string moved = Path.Combine(songs, "moved set"); Directory.Move(set, moved); set = moved;
+            Until(() => Has(L.Get("library.projectCount", 4)) && Has("Diff 4") && !Has(L.Get("sync.missingBadge")), "moved project still includes newly discovered difficulties");
+            Check(ui.View.LibraryVisible && ui.View.WorkspaceSession is null && !ui.View.SynchronizationVisible, "library refresh never opens project or merge");
+            Check(authoring.All(p => WorkspaceProject.Hash(p.Key) == p.Value), "library discovery does not rewrite authoring or baselines");
+            var db = new LibraryDatabase(settings.Workspace, songs); db.Scan();
+            using var snapshot = db.SearchSnapshot("", projectsOnly: true);
+            var row = snapshot.Page(0).Single(); var details = snapshot.Difficulties(row, 0);
+            Check(row.Count == 4 && row.InSongs == true && details.Count == 4, "fresh snapshot recovers entire renamed directory without duplicates");
+            File.WriteAllText(Path.Combine(set, "ambiguous-copy.osu"), Text(1)); db.Scan();
+            using var ambiguous = db.SearchSnapshot("", projectsOnly: true);
+            var uncertain = ambiguous.Page(0).Single();
+            Check(uncertain.MissingCount == 1 && ambiguous.Difficulties(uncertain, 0).Single(d => d.Difficulty == "Diff 1" && d.Path.EndsWith(".catchdiff")).ExternalMissing,
+                "ambiguous copies do not silently relink the retained FA difficulty");
+        }
+        finally { ui.View.StopFileMonitoring(); }
+    }
+
+    public static void ProjectLibraryExportSources()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/project-library-export", Guid.NewGuid().ToString("N")));
+        string songs = Path.Combine(root, "Songs"), set = Path.Combine(songs, "set"), source = Path.Combine(set, "original.osu");
+        Directory.CreateDirectory(set); File.WriteAllText(source, Fixture);
+        var settings = new LibrarySettings { Workspace = Path.Combine(root, "Workspace"), Songs = songs };
+        var session = LibraryOperations.ImportPath(source, settings);
+        string exported = Path.Combine(set, "exported.osu"); File.WriteAllText(exported, Fixture);
+        session.Manifest.Difficulties[0].ExportTarget = exported;
+        WorkspaceProject.Save(session, session.Project);
+        var db = new LibraryDatabase(settings.Workspace, songs); db.Scan();
+        using var snapshot = db.SearchSnapshot("", projectsOnly: true);
+        var row = snapshot.Page(0).Single(); var details = snapshot.Difficulties(row, 0);
+        Check(row.Count == 2 && details.Count(d => d.Path.EndsWith(".catchdiff")) == 1 && details.Any(d => d.Path == source),
+            "separate live import source remains visible beside its FA exported target");
+    }
+
     internal static void Wait(Ui ui)
     {
         var deadline = DateTime.UtcNow.AddSeconds(20);

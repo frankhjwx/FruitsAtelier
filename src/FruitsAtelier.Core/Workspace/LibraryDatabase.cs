@@ -104,7 +104,7 @@ public sealed class LibraryDatabase
             command.CommandText = "DELETE FROM maps WHERE COALESCE(json_extract(data,'$.Mode'),2) <> 2; PRAGMA user_version=3;";
             command.ExecuteNonQuery();
         }
-        command.CommandText = "CREATE INDEX IF NOT EXISTS maps_root ON maps(root); CREATE INDEX IF NOT EXISTS project_sources_source ON project_sources(source,project);";
+        command.CommandText = "CREATE INDEX IF NOT EXISTS maps_root ON maps(root); CREATE INDEX IF NOT EXISTS maps_directory_nocase ON maps(json_extract(data,'$.Directory') COLLATE NOCASE); CREATE INDEX IF NOT EXISTS project_sources_source ON project_sources(source,project);";
         command.ExecuteNonQuery();
     }
     private SqliteConnection Open()

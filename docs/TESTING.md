@@ -320,3 +320,8 @@ native create/rename/delete events, archive/index exclusions and disposal. Edito
 checks cover automatic metadata synchronization, directory identity recovery,
 new difficulties, inactive conflict gating, pointer-capture deferral and external
 changes during a pending merge. Apply must revalidate rather than commit a stale choice.
+
+Project-library notification regressions add and remove external difficulties while
+the My projects view stays open, checking both card counts and detail rows. They
+also verify muted retained FA entries, background filename/directory rediscovery,
+duplicate-free listings and unchanged authoring/baseline files during discovery.

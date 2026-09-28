@@ -639,6 +639,7 @@
   "library.results": "{0} 个谱面集",
   "library.diffCount": "{0} 个难度",
   "library.projectCount": "Workspace 工程 · {0} 个难度",
+  "library.projectMissingCount": "Workspace 工程 · {0} 个难度 · {1} 个缺失",
   "library.empty": "没有匹配的歌曲。请配置 Songs 或刷新曲库。",
   "library.start": "开始编辑",
   "library.continue": "继续编辑",
