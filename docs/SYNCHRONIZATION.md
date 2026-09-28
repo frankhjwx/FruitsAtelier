@@ -25,8 +25,8 @@ live paths remain separate files. An unavailable root or an unreadable live file
 is not evidence of deletion.
 
 New Catch difficulties in associated directories are added without replacing
-existing authoring or undo history. The library also lists other osu! modes as
-read-only entries; they are not imported into the Catch editor.
+existing authoring or undo history. The library indexes only Catch difficulties;
+other osu! modes are skipped during scanning and import.
 
 ## Baselines and conflicts
 

@@ -95,8 +95,15 @@ public sealed class LibraryDatabase
         Directory.CreateDirectory(workspace);
         using var db = Open();
         using var command = db.CreateCommand();
-        command.CommandText = "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS maps(path TEXT PRIMARY KEY, root TEXT NOT NULL, stamp INTEGER NOT NULL, size INTEGER NOT NULL, data TEXT NOT NULL, search TEXT NOT NULL); CREATE TABLE IF NOT EXISTS projects(path TEXT PRIMARY KEY, source TEXT, name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS external_sources(path TEXT PRIMARY KEY, archive TEXT); CREATE TABLE IF NOT EXISTS project_sources(project TEXT NOT NULL, source TEXT NOT NULL, PRIMARY KEY(project,source)); PRAGMA user_version=2;";
+        command.CommandText = "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS maps(path TEXT PRIMARY KEY, root TEXT NOT NULL, stamp INTEGER NOT NULL, size INTEGER NOT NULL, data TEXT NOT NULL, search TEXT NOT NULL); CREATE TABLE IF NOT EXISTS projects(path TEXT PRIMARY KEY, source TEXT, name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS external_sources(path TEXT PRIMARY KEY, archive TEXT); CREATE TABLE IF NOT EXISTS project_sources(project TEXT NOT NULL, source TEXT NOT NULL, PRIMARY KEY(project,source));";
         command.ExecuteNonQuery();
+        command.CommandText = "PRAGMA user_version";
+        if (Convert.ToInt64(command.ExecuteScalar()) < 3)
+        {
+            // Older catalogs may contain other rulesets; missing Mode predates mixed-mode indexing.
+            command.CommandText = "DELETE FROM maps WHERE COALESCE(json_extract(data,'$.Mode'),2) <> 2; PRAGMA user_version=3;";
+            command.ExecuteNonQuery();
+        }
         command.CommandText = "CREATE INDEX IF NOT EXISTS maps_root ON maps(root); CREATE INDEX IF NOT EXISTS project_sources_source ON project_sources(source,project);";
         command.ExecuteNonQuery();
     }
@@ -190,7 +197,7 @@ public sealed class LibraryDatabase
                     WorkspaceProject.RejectLinks(file);
                     var info = new FileInfo(file); var stamp = info.LastWriteTimeUtc.Ticks;
                     if (cached.TryGetValue(file, out var old) && old == (stamp, info.Length)) { seen.Add(file); accepted = true; continue; }
-                    var map = ReadMetadata(file, includeOtherModes: true);
+                    var map = ReadMetadata(file);
                     if (map is null) continue;
                     seen.Add(file);
                     using var command = db.CreateCommand();
@@ -281,8 +288,7 @@ public sealed class LibraryDatabase
         return maps;
     }
 
-    public static LibraryMap? ReadMetadata(string path) => ReadMetadata(path, false);
-    public static LibraryMap? ReadMetadata(string path, bool includeOtherModes)
+    public static LibraryMap? ReadMetadata(string path)
     {
         if (new FileInfo(path).Length > OsuBeatmapReader.MaximumFileBytes) throw new InvalidDataException(L.Get("core.reader.fileLimit"));
         var values = new Dictionary<string, string>(); string section = "", background = "";
@@ -295,7 +301,7 @@ public sealed class LibraryDatabase
         }
         string Get(string key) => values.GetValueOrDefault(key, "");
         int mode = int.TryParse(Get("Mode"), out int parsedMode) ? parsedMode : 0;
-        if (mode is < 0 or > 3 || !includeOtherModes && mode != 2) return null;
+        if (mode != 2) return null;
         string Resolve(string resource) => resource.Length == 0 ? "" : OsuBeatmapReader.ResolveResource(path, resource.Replace('\\', '/'));
         return new(path, Path.GetDirectoryName(path)!, Get("Title"), Get("TitleUnicode"), Get("Artist"), Get("ArtistUnicode"), Get("Creator"), Get("Version"), Get("Tags"), Get("Source"), Resolve(Get("AudioFilename")), Resolve(background), Mode: mode);
     }

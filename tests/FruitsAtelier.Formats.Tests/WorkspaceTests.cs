@@ -84,8 +84,8 @@ internal static class WorkspaceTests
             Reject(() => WorkspaceExport.Plan(session, project.Difficulties[0], songs, false, "Missing audio", true));
             Reject(() => WorkspaceProject.Create(Path.Combine(songs, "bad"), project, songs));
             File.WriteAllText(Path.Combine(set, "standard.osu"), Fixture().Replace("Mode:2", "Mode:0"));
-            Check(db.Scan().Count == 3, "index other modes as read-only and discover new diff");
-            File.Delete(source); db.Scan(); Check(db.Search("").Count == 2, "incremental removal");
+            Check(db.Scan().Count == 2, "only index Catch and discover new diff");
+            File.Delete(source); db.Scan(); Check(db.Search("").Count == 1, "incremental removal");
             File.Delete(Path.Combine(workspace, "library.db"));
             db = new(workspace, songs); db.Scan(); Check(db.Search("", true).Any(), "database rebuild retains projects");
             string moved = songs + "-offline"; Directory.Move(songs, moved);

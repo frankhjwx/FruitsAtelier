@@ -262,12 +262,35 @@ internal static class SynchronizationTests
             string recovered = WorkspaceSynchronization.LocalAudioVersion(reopened.Manifest.Difficulties[0], local, reopened.Directory)!;
             Check(File.ReadAllText(recovered) == "original audio", "authoring hash is independent of external baseline");
         }));
-        yield return ("Sync: read-only modes appear in the library without entering Catch import", () => Run(f =>
+        yield return ("Sync: library and synchronization only accept Catch difficulties", () => Run(f =>
         {
-            string other = Path.Combine(f.Set, "standard.osu"); File.WriteAllText(other, Fixture().Replace("Mode:2", "Mode:0"));
-            var db = new LibraryDatabase(f.Workspace, f.Songs); db.Scan();
-            Check(db.Search("").Any(m => m.Path == other && m.Mode == 0), "read-only indexed");
+            var db = new LibraryDatabase(f.Workspace, f.Songs);
+            foreach (int mode in new[] { 0, 1, 3 })
+            {
+                string directory = mode == 3 ? Path.Combine(f.Songs, "mania-only") : f.Set;
+                Directory.CreateDirectory(directory);
+                string other = Path.Combine(directory, $"mode-{mode}.osu");
+                File.WriteAllText(other, Fixture().Replace("Mode:2", $"Mode:{mode}"));
+            }
+            Check(db.Scan().Count == 1 && db.Scan().Count == 1, "fresh and cached scans only count Catch");
+            Check(db.Search("").All(m => m.Mode == 2), "only Catch indexed");
+            using (var snapshot = db.SearchSnapshot(""))
+                Check(snapshot.Count == 1, "non-Catch sets excluded from paged library");
             Check(f.Scan().Additions.Count == 0, "not imported as Catch");
+
+            using (var connection = new Microsoft.Data.Sqlite.SqliteConnection(new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder
+                { DataSource = Path.Combine(f.Workspace, "library.db"), Pooling = false }.ToString()))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "INSERT INTO maps SELECT path || '.other',root,stamp,size,json_set(data,'$.Mode',3),search FROM maps; PRAGMA user_version=2;";
+                command.ExecuteNonQuery();
+            }
+            db = new LibraryDatabase(f.Workspace, f.Songs);
+            Check(db.Search("").Count == 1, "reopening removes cached non-Catch entries before scanning");
+            using (var snapshot = db.SearchSnapshot(""))
+                Check(snapshot.Page(0).Count == 1, "paged library excludes migrated entries");
+            Check(db.Scan().Count == 1, "rescanning preserves Catch-only catalog");
         }));
         yield return ("Sync: metadata, file and folder rename retain authoring identities", () => Run(f =>
         {
