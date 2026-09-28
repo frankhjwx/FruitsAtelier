@@ -375,13 +375,14 @@ A cubic Bezier exposes exactly the same controls in either tool. Arcs and higher
 
 ### Clearing internal nodes
 
-Select one or more FSliders and choose **Edit → Clear internal slider nodes**, next to
-**Convert all sliders to FSliders**. The command replaces each selected path with a
+Choose **Edit → Clear all internal slider nodes**, next to
+**Convert all sliders to FSliders**. The command processes every FSlider in the active
+difficulty, including unselected and offscreen sliders, and replaces each path with a
 straight segment, removing interior anchors, exact controls and endpoint handles.
 It preserves the first and last anchors (including their coordinates and times),
 repeat count, stream snap and object metadata. One undo restores the whole batch.
-The command is disabled for locked notes, unfinished gestures, and selections
-without internal controls. Convert imported Legacy Sliders to FSliders first.
+No selection is required. The command is disabled for locked notes, unfinished
+gestures, or a difficulty without internal FSlider controls. Convert imported Legacy Sliders to FSliders first.
 
 ### Reverses and direction
 

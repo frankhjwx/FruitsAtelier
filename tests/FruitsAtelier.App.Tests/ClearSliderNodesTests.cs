@@ -24,11 +24,10 @@ internal static class ClearSliderNodesTests
             map.Fruits.Add(new() { TimeMs = 7000, X = 400 });
             var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.Paint();
             var before = ui.View.Document.DeepClone();
-            ui.ClickMap(1000, 100);
             ui.Key('L'); Clear(ui);
             Check(before.ContentEquals(ui.View.Document), "Locked notes were cleared");
             ui.Key(27); ui.Key('L');
-            ui.ClickMap(5000, 100, ctrl: true);
+            Check(ui.View.SelectedObjectIds.Count == 0, "Whole-map clear fixture unexpectedly has a selection");
             Clear(ui);
             foreach (var old in before.Tracks)
             {
@@ -51,10 +50,18 @@ internal static class ClearSliderNodesTests
             ui.Key('Z', ctrl: true);
             ui.EditTrack(pen.Id);
             Clear(ui);
-            Check(ui.View.Document.Tracks[0].Nodes.Count == 2 && ui.View.Document.Tracks[1].Nodes[0].OutgoingCurve is not null,
-                "Anchor-edit selection cleared an unselected slider");
+            Check(ui.View.Document.Tracks[0].Nodes.Count == 2 && ui.View.Document.Tracks[1].Nodes[0].OutgoingCurve is null,
+                "Anchor-edit selection restricted whole-map clearing");
             ui.Key('Z', ctrl: true);
             Check(before.ContentEquals(ui.View.Document), "Anchor-edit clear did not undo");
+            ui.View.LoadProject(BeatmapProject.FromDocuments([before, before.DeepClone()])); ui.Paint();
+            Clear(ui);
+            Check(ui.View.Document.Tracks.All(t => t.Nodes.Count == 2 && t.Nodes[0].OutgoingCurve is null),
+                "Whole-map clear missed offscreen sliders without a selection");
+            ui.View.SwitchDifficulty(1); ui.Paint();
+            Check(before.ContentEquals(ui.View.Document), "Whole-map clear modified another difficulty");
+            ui.View.SwitchDifficulty(0); ui.Paint(); ui.Key('Z', ctrl: true);
+            Check(before.ContentEquals(ui.View.Document), "Whole-map clear did not undo in its owning difficulty");
         }
     }
 

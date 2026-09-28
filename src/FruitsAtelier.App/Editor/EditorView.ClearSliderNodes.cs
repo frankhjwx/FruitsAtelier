@@ -10,12 +10,12 @@ public sealed partial class EditorView
             || node.HandleOut != default || node.OutgoingCurve is not null));
 
     private bool CanClearSliderNodes => ClipboardInteractionReady && !notesLocked && !SliderConversionBusy
-        && Document.Tracks.Any(track => IsObjectSelected(track.Id) && HasInternalSliderControls(track));
+        && Document.Tracks.Any(HasInternalSliderControls);
 
     private void ClearSliderNodes()
     {
         if (!CanClearSliderNodes) return;
-        var tracks = Document.Tracks.Where(track => IsObjectSelected(track.Id) && HasInternalSliderControls(track)).ToArray();
+        var tracks = Document.Tracks.Where(HasInternalSliderControls).ToArray();
         var selected = FlagTargets();
         if (!Edit(L.Get("slider.clearInternalNodes"), () =>
         {

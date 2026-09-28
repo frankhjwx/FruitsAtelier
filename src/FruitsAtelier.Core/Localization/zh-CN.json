@@ -674,7 +674,7 @@
   "project.starCalculationFailed": "无法刷新 {0} 的星级。已保留之前的数值，请检查谱面的转换错误。",
   "core.importEditing.fitFailed": "拟合曲线超出了允许的位置误差。",
   "sliderBatch.title": "转换 Legacy Slider",
-  "slider.clearInternalNodes": "清除滑条内部节点",
+  "slider.clearInternalNodes": "清除全图滑条内部节点",
   "sliderBatch.menu": "将所有 slider 转为 FSlider",
   "sliderBatch.command": "批量转换 Legacy Slider",
   "sliderBatch.prompt": "将新导入的 {1} 个难度内的 {0} 个 slider 转为 FSlider？",
