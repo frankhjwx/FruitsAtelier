@@ -262,15 +262,18 @@ public sealed partial class EditorView
     private TimingMap.Lookup? distanceLayoutTiming;
     private double distanceLayoutScale, distanceLayoutWidth, distanceLayoutDpb;
     private string distanceLayoutLanguage = "";
+    private bool distanceLayoutIncludeTiny;
 
     private void EnsureDistanceLabelLayout(ICanvas c, IReadOnlyList<ConvertedCatchObject> objects)
     {
         if (ReferenceEquals(distanceLayoutSource, objects) && ReferenceEquals(distanceLayoutTiming, renderedTiming)
             && distanceLayoutScale == pixelsPerMs && distanceLayoutWidth == Playfield.Width
-            && distanceLayoutDpb == Document.DistancePerBeat && distanceLayoutLanguage == L.Language) return;
+            && distanceLayoutDpb == Document.DistancePerBeat && distanceLayoutLanguage == L.Language
+            && distanceLayoutIncludeTiny == movementIncludeTinyDroplets) return;
         distanceLayoutSource = objects; distanceLayoutTiming = renderedTiming;
         distanceLayoutScale = pixelsPerMs; distanceLayoutWidth = Playfield.Width;
         distanceLayoutDpb = Document.DistancePerBeat; distanceLayoutLanguage = L.Language;
+        distanceLayoutIncludeTiny = movementIncludeTinyDroplets;
         distanceLayout.Clear();
         var nearby = new List<DistanceLabel>();
         // Choose labels in map order, including offscreen predecessors, so scrolling cannot change priority.
@@ -295,8 +298,8 @@ public sealed partial class EditorView
     private void DrawMovementDistanceLabels(ICanvas c)
     {
         if (!movementAnalysis) return;
-        var objects = placementMovementObjects ?? conversion!.Objects;
-        EnsureMovementStates(objects);
+        var objects = placementMovementObjects ?? playableObjects;
+        EnsureMovementStates(objects, movementIncludeTinyDroplets);
         EnsureDistanceLabelLayout(c, objects);
         double endTime = viewStart + plot.Height / pixelsPerMs;
         var occupied = new List<Rect>();

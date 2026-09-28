@@ -757,6 +757,7 @@
   "update.dataInsideApp": "Move your workspace and custom skin files outside the application current folder before updating.",
   "movement.previous": "Prev · {0}",
   "movement.next": "Next · {0}",
+  "movement.includeTiny": "Include tiny droplets",
   "movement.analysis": "Movement Analysis",
   "movement.stand": "Stand",
   "movement.walk": "Walk",

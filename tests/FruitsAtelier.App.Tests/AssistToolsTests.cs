@@ -3,6 +3,49 @@ using FruitsAtelier.Localization;
 
 internal static class AssistToolsTests
 {
+    public static void TinyMovementDisplay()
+    {
+        foreach (string language in Strings.AvailableLanguages)
+        {
+            Strings.SetLanguage(language);
+            var map = new MapDocument { DurationMs = 6000, SliderMultiplier = 1.4 };
+            var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'L', PixelLength = 280, SpanCount = 2 };
+            slider.ControlPoints.AddRange([new(120, 192), new(400, 192)]);
+            map.ImportedSliders.Add(slider);
+            var ui = new Ui(); ui.LoadDocument(map);
+            var before = ui.View.Document.DeepClone();
+            Check(!ui.View.MovementIncludesTinyDroplets, "Tiny analysis must start off");
+            ui.ClickText(Strings.Get("movement.analysis"));
+            RecordingCanvas.Segment[] Connections() => ui.Canvas.Operations
+                .Where(o => o.Clip == ui.View.CanvasPlotBounds && o.Segment is { Width: 4, Opacity: .65f })
+                .Select(o => o.Segment!.Value).ToArray();
+            var normal = Connections();
+            Toggle();
+            Check(ui.View.MovementIncludesTinyDroplets && Connections().Length > normal.Length,
+                "Tiny analysis did not split connections at tiny droplets");
+            var target = OsuBeatmapWriter.Serialize(map).PlayableObjects.First(o => o.Kind == CatchObjectKind.TinyDroplet && o.TimeMs > 1400);
+            var p = ui.ScreenAt(target.TimeMs, target.X);
+            Check(Connections().Any(line => Math.Abs(line.X2 - p.X) < .01 && Math.Abs(line.Y2 - p.Y) < .01),
+                "Tiny connection endpoint does not match the displayed object");
+            ui.ClickMap(target.TimeMs, target.X); ui.ClickMap(target.TimeMs, target.X);
+            var cacheField = typeof(FruitsAtelier.App.Editor.EditorView).GetField("movementSnapshots",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+            object[] Snapshots() => ((System.Collections.IEnumerable)cacheField.GetValue(ui.View)!).Cast<object>().ToArray();
+            var snapshots = Snapshots();
+            ui.Paint(); ui.Paint(); ui.Paint();
+            Check(snapshots.SequenceEqual(Snapshots(), ReferenceEqualityComparer.Instance), "Repainting rebuilt movement snapshots");
+            Toggle();
+            Check(!ui.View.MovementIncludesTinyDroplets && normal.SequenceEqual(Connections()),
+                "Turning tiny analysis off did not restore ordinary connections");
+            Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Movement display changed the beatmap");
+            void Toggle()
+            {
+                ui.ClickText(Strings.Get("ui.view"));
+                ui.ClickText(Strings.Get("movement.includeTiny"));
+            }
+        }
+    }
+
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
     private static void Near(double expected, double actual) => Check(Math.Abs(expected - actual) < .001, $"Expected {expected}, got {actual}");
     private static MapDocument Map()

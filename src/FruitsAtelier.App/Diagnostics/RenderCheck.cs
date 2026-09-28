@@ -642,6 +642,13 @@ internal static class RenderCheck
                 view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint();
                 if (!view.DropletSelectionLocked || view.XCoordinateFieldBounds is not null)
                     throw new InvalidOperationException("Native droplet lock retained child selection.");
+                foreach (bool included in new[] { true, false })
+                {
+                    view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0); Paint();
+                    view.PointerDown(235, 363, 0, false, false); view.PointerUp(235, 363, 0); Paint();
+                    if (view.MovementIncludesTinyDroplets != included || !sliderMap.ContentEquals(view.Document))
+                        throw new InvalidOperationException("Native tiny movement display toggle failed.");
+                }
             }
         }
         finally

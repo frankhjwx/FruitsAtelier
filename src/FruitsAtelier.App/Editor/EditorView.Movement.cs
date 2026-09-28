@@ -15,7 +15,8 @@ public sealed partial class EditorView
     public Rect? MovementOverlayBounds { get; private set; }
     public (CatchMovementRange? Previous, CatchMovementRange? Next) MovementReadout { get; private set; }
 
-    private bool movementAnalysis;
+    private bool movementAnalysis, movementIncludeTinyDroplets;
+    public bool MovementIncludesTinyDroplets => movementIncludeTinyDroplets;
     public bool MovementAnalysisEnabled => movementAnalysis;
 
     private void EnsureMovementStates(IReadOnlyList<ConvertedCatchObject> objects, bool includeTiny = false)
@@ -63,7 +64,7 @@ public sealed partial class EditorView
     {
         if (!movementAnalysis) return;
         var objects = placementMovementObjects ?? playableObjects;
-        EnsureMovementStates(objects);
+        EnsureMovementStates(objects, movementIncludeTinyDroplets);
         double endTime = viewStart + plot.Height / pixelsPerMs;
         for (int i = FirstVisibleMovement(objects); i < movementIndices.Length; i++)
         {
