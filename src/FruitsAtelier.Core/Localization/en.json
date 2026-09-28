@@ -674,6 +674,7 @@
   "project.starCalculationFailed": "Could not refresh stars for {0}. The previous value is retained; check the map for conversion errors.",
   "core.importEditing.fitFailed": "The fitted curve exceeds the allowed position error.",
   "sliderBatch.title": "Convert Legacy Sliders",
+  "slider.clearInternalNodes": "Clear internal slider nodes",
   "sliderBatch.menu": "Convert all sliders to FSliders",
   "sliderBatch.command": "Convert all Legacy Sliders",
   "sliderBatch.prompt": "Convert the imported Legacy Sliders? Sliders: {0} · Difficulties: {1}",

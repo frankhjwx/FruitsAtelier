@@ -373,6 +373,16 @@ Circular arcs retain a reference ratio derived from the map AR at creation (`440
 
 A cubic Bezier exposes exactly the same controls in either tool. Arcs and higher-degree Beziers remain exact when selecting or switching modes. Pen mode displays endpoint handles from a bounded cubic approximation; provisional handles have a minimum 18-DIP display length so they remain clickable. Their stored offsets remain in map coordinates. The first actual handle movement converts only its affected segment, potentially adding anchors. The conversion and gesture share one undo step. Pen corner conversion/deletion and ordinary pen insertion may likewise require local conversion. Undo restores the exact original controls and AR reference. Shape-preserving splitting retains exact custom segment geometry.
 
+### Clearing internal nodes
+
+Select one or more FSliders and choose **Edit → Clear internal slider nodes**, next to
+**Convert all sliders to FSliders**. The command replaces each selected path with a
+straight segment, removing interior anchors, exact controls and endpoint handles.
+It preserves the first and last anchors (including their coordinates and times),
+repeat count, stream snap and object metadata. One undo restores the whole batch.
+The command is disabled for locked notes, unfinished gestures, and selections
+without internal controls. Convert imported Legacy Sliders to FSliders first.
+
 ### Reverses and direction
 
 Both modes use **Ctrl+= / Ctrl+−** to change reverses. Dragging a base-path endpoint instead edits the path and therefore changes the duration of every traversal.

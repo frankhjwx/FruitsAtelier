@@ -632,6 +632,7 @@ public sealed partial class EditorView
             Item(L.Get(SelectedStreamsOnly ? "stream.changeSnapMenu" : "stream.menu"), OpenStreamDialog, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
+            Item(L.Get("slider.clearInternalNodes"), ClearSliderNodes, CanClearSliderNodes);
         }
         else if (menu == 4)
         {
