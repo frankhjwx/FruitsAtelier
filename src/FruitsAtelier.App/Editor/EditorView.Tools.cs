@@ -321,7 +321,11 @@ public sealed partial class EditorView
         }
         var source = HitCatchObject(x, y)?.SourceId ?? HitSliderLocation(x, y)?.Id ?? HitBananaRectangle(x, y)?.Id;
         if (source is { } id && (tool != Tool.Fruit || !AudioPlaying))
-        { SelectObjects([id]); DeleteSelectedObjects(); return; }
+        {
+            if (!objectSelection.Contains(id)) SelectObjects([id]);
+            DeleteSelectedObjects();
+            return;
+        }
         if (tool == Tool.Fruit) { nextFruitNewCombo = !nextFruitNewCombo; StatusMessage = L.Get(nextFruitNewCombo ? "tools.newComboOn" : "tools.newComboOff"); }
     }
 

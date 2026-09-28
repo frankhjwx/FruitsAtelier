@@ -23,6 +23,7 @@ public sealed partial class EditorView
     private Rect dsDragBounds;
     private double[] dsDragLimits = [];
     private readonly List<Rect> dsPointers = [];
+    private readonly List<(Rect Bounds, int Index)> dsBadges = [];
     internal IReadOnlyList<Rect> DistanceSnapPointerBounds => dsPointers;
     internal Rect DistanceSnapTrackBounds { get; private set; }
     internal Rect DistanceSnapBaseTrackBounds { get; private set; }
@@ -105,7 +106,7 @@ public sealed partial class EditorView
     private void DrawDistanceSnapDialog(ICanvas c)
     {
         if (!DistanceSnapDialogVisible) return;
-        hits.Clear(); fields.Clear(); dsPointers.Clear();
+        hits.Clear(); fields.Clear(); dsPointers.Clear(); dsBadges.Clear();
         var r = DistanceSnapDialogBounds;
         c.Fill(new(0, 84, width, Math.Max(0, height - 84)), Background, opacity: .65f);
         c.Fill(r, Panel, 8); c.Stroke(r, Grid, radius: 8);
@@ -128,6 +129,7 @@ public sealed partial class EditorView
             if (textX + labelWidth > split - 16) { textX = r.X + 20; textY += 40; }
             uint color = DistanceSnapColor(entry.value);
             var badge = new Rect(textX, textY, labelWidth, 32);
+            dsBadges.Add((badge, entry.index));
             c.Fill(badge, Surface, 4);
             c.Stroke(badge, color, entry.index == dsSliderDrag ? 2 : 1, 4);
             c.Text(label, textX + 12, textY + 7, 14, Foreground);
@@ -174,7 +176,7 @@ public sealed partial class EditorView
             })) CloseDistanceSnapDialog();
         }, enabled: validBase);
         if (collinearRow.Contains(mouseX, mouseY))
-            DrawPaletteTooltip(c, L.Get("ds.collinearTip"), collinearRow, left: false, above: true);
+            DrawPaletteTooltip(c, L.Get("ds.collinearTip"), collinearSwitch, left: false, above: false);
     }
 
     private double DistanceBaseMaximum() => DistanceSnapLimits()[4] * dsBaseDraft;
@@ -367,7 +369,16 @@ public sealed partial class EditorView
             for (int i = dsPointers.Count - 1; i >= 0; i--)
                 if (dsPointers[i].Contains(x, y))
                 {
-                    dsDraft.RemoveAt(i); dsPointers.Clear();
+                    dsDraft.RemoveAt(i); dsPointers.Clear(); dsBadges.Clear();
+                    return;
+                }
+        }
+        if (button == 2)
+        {
+            foreach (var badge in dsBadges)
+                if (badge.Bounds.Contains(x, y))
+                {
+                    dsDraft.RemoveAt(badge.Index); dsPointers.Clear(); dsBadges.Clear();
                     return;
                 }
         }

@@ -4,6 +4,39 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class MappingSessionTests
 {
+    public static void RightClickSelection()
+    {
+        var map = Map();
+        map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 200 },
+            new() { TimeMs = 4000, X = 400 }]);
+        map.Tracks.Add(new CurveTrack { Nodes = { new() { TimeMs = 2000, X = 220 }, new() { TimeMs = 2500, X = 300 } } });
+        var ui = new Ui(); ui.LoadDocument(map); ui.Key('1');
+        var baseline = ui.View.Document.DeepClone();
+        Box();
+        Check(ui.View.SelectedObjectIds.Count == 3, "Marquee did not select the three parent objects.");
+        RightClick(1000, 100);
+        Check(ui.View.Document.Fruits.Count == 1 && ui.View.Document.Fruits[0].TimeMs == 4000
+            && ui.View.Document.Tracks.Count == 0, "Right-click deleted only the hit object from the selected group.");
+        ui.Key('Z', ctrl: true);
+        Check(baseline.ContentEquals(ui.View.Document), "Group deletion did not restore all objects in one undo.");
+        ui.ClickMap(1000, 100); ui.ClickMap(1500, 200, ctrl: true); ui.ClickMap(2000, 220, ctrl: true);
+        Check(ui.View.SelectedObjectIds.Count == 3, "Ctrl-click did not select fruit and FSlider parents.");
+        RightClick(2000, 220);
+        Check(ui.View.Document.Fruits.Count == 1 && ui.View.Document.Tracks.Count == 0,
+            "Right-click on the selected FSlider did not delete the Ctrl-click selection.");
+        ui.Key('Z', ctrl: true);
+        Check(baseline.ContentEquals(ui.View.Document), "Ctrl-click selection deletion did not undo together.");
+        Box(); RightClick(4000, 400);
+        Check(ui.View.Document.Fruits.Count == 2 && ui.View.Document.Tracks.Count == 1,
+            "Right-click on an unselected object deleted the existing selection.");
+        void Box() { ui.DownMap(750, 50); ui.MoveMap(2750, 350); ui.UpMap(2750, 350); }
+        void RightClick(double time, double x)
+        {
+            var p = ui.ScreenAt(time, x);
+            ui.View.PointerDown(p.X, p.Y, 2, false, false); ui.View.PointerUp(p.X, p.Y, 2); ui.Paint();
+        }
+    }
+
     public static void ReverseAndNudge()
     {
         var map = Map();

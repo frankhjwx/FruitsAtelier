@@ -21,6 +21,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Mapping right-click deletes the marquee selection in one undo", MappingSessionTests.RightClickSelection),
     ("Mapping selection reversal and contextual horizontal nudges", MappingSessionTests.ReverseAndNudge),
     ("Mapping Snap families and overview volume routing", MappingSessionTests.SnapAndVolume),
     ("Mapping boundary distances, DS equality and pointer exit", MappingSessionTests.DistanceAndHover),
@@ -145,6 +146,7 @@ var tests = new (string Name, Action Run)[]
     ("Legacy insertion, deletion and double-click segmentation are undoable", SliderModeInteractionTests.InsertDeleteAndBoundary),
     ("Lazer placement and selected-slider controls avoid extra mode transitions", SliderModeInteractionTests.LazerPlacementAndSelection),
     ("FSlider hover offers both editing modes without changing content", SliderModeInteractionTests.GlobalModeMenu),
+    ("Distance preset badges support sorted right-click deletion", DistanceSnapPresetTests.DeletePresetBadge),
     ("Placement DS readout retains authored fractional precision", DistanceSnapPresetTests.PlacementReadoutPrecision),
     ("Collinear distance snap respects grid settings, dragging and configuration", DistanceSnapPresetTests.Collinear),
     ("Multiple distance snaps include zero and persist per-map configuration", DistanceSnapPresetTests.Snapping),

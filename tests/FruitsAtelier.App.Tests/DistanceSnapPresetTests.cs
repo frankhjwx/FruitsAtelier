@@ -189,6 +189,27 @@ internal static class DistanceSnapPresetTests
             "Undo should restore DPB and its preset multipliers together.");
     }
 
+    public static void DeletePresetBadge()
+    {
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            Strings.SetLanguage(language);
+            var map = new MapDocument(); map.DistanceSnapRatios.AddRange([2.6, .9, 1.3, 1.3]);
+            var ui = new Ui(); ui.LoadDocument(map); ui.View.OpenDistanceSnapDialog(); ui.Paint();
+            var badge = ui.Canvas.Texts.Where(t => t.Value == Strings.Get("ds.ratio", 1.3)).OrderByDescending(t => t.Y).First();
+            ui.View.PointerDown(badge.X + 2, badge.Y + 2, 2, false, false);
+            ui.View.PointerUp(badge.X + 2, badge.Y + 2, 2); ui.Paint();
+            Check(ui.View.DistanceSnapPointerBounds.Count == 3 && map.DistanceSnapRatios.Count == 4,
+                "Badge deletion did not remove just one draft preset.");
+            ui.ClickText(Strings.Get("library.apply"));
+            Check(ui.View.Document.DistanceSnapRatios.SequenceEqual([.9, 1.3, 2.6]),
+                "Sorted badge deleted the wrong preset or all duplicate values.");
+            ui.Key('Z', ctrl: true);
+            Check(ui.View.Document.DistanceSnapRatios.SequenceEqual([2.6, .9, 1.3, 1.3]), "Badge deletion did not undo.");
+        }
+        Strings.SetLanguage("en");
+    }
+
     public static void PlacementReadoutPrecision()
     {
         var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 60000.0 / 220, TimingOffsetMs = -18,
@@ -229,8 +250,10 @@ internal static class DistanceSnapPresetTests
         Check(ProjectSerializer.Read(ProjectSerializer.Serialize(map)).DistanceSnapCollinear
             && map.DeepClone().DistanceSnapCollinear, "Collinear setting was lost on save or clone.");
         var disabled = map.DeepClone(); disabled.DistanceSnapCollinear = false;
-        Check(!map.ContentEquals(disabled) && !ProjectSerializer.Read("{\"SchemaVersion\":1,\"Document\":{}}").DistanceSnapCollinear,
+        Check(!map.ContentEquals(disabled) && ProjectSerializer.Read("{\"SchemaVersion\":1,\"Document\":{}}").DistanceSnapCollinear,
             "Collinear setting ignored dirty comparison or old-map defaults.");
+        Check(!ProjectSerializer.Read(ProjectSerializer.Serialize(disabled)).DistanceSnapCollinear,
+            "Saved disabled state was replaced by the default.");
         var ui = new Ui(); ui.LoadDocument(map); ui.Key('Y'); ui.Key('2');
         if (ui.View.EditorGridSettings.Enabled) ui.Key('T');
         ui.ClickMap(1250, 202);

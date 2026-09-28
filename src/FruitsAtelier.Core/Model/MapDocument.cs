@@ -160,7 +160,7 @@ public sealed partial class MapDocument
     public double DistanceSpacing { get; set; } = 1;
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? DerandomizeDroplets { get; set; }
-    public bool DistanceSnapCollinear { get; set; }
+    public bool DistanceSnapCollinear { get; set; } = true;
     public List<double> DistanceSnapRatios { get; } = new();
     public List<Fruit> Fruits { get; } = new();
     public List<CurveTrack> Tracks { get; } = new();
