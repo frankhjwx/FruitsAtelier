@@ -808,6 +808,7 @@
   "library.offerSongsExportHelp": "You can keep this project in the workspace only.",
   "library.workspaceOnly": "Keep in workspace",
   "library.exportToSongs": "Export to osu! Songs…",
+  "ds.collinear": "Collinear snap",
   "ds.configure": "Configure DS…",
   "ds.title": "Distance Snap configuration",
   "ds.baseTitle": "1.0x Distance Per Beat",

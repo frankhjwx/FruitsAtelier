@@ -189,6 +189,59 @@ internal static class DistanceSnapPresetTests
             "Undo should restore DPB and its preset multipliers together.");
     }
 
+    public static void Collinear()
+    {
+        var before = new DistanceSnap.Reference(Guid.NewGuid(), new(500, 20), new(1000, 100), .384, 0);
+        var after = new DistanceSnap.Reference(Guid.NewGuid(), new(1750, 401), new(2000, 450), .384, 1);
+        double expected = 100 + 301 / 3.0;
+        Check(Math.Abs(DistanceSnap.SnapMultiple(new(1250, 202), before, [1], out _, after).X - expected) < 1e-9,
+            "Collinear candidate did not interpolate from previous tail to next head.");
+        Check(DistanceSnap.SnapMultiple(new(1250, 195), before, [1], out _, after).X == 196,
+            "Collinear snap displaced a nearer preset.");
+        Check(DistanceSnap.CollinearX(1000, before, after) is null
+            && DistanceSnap.CollinearX(1750, before, after) is null
+            && DistanceSnap.CollinearX(1250, null, after) is null
+            && DistanceSnap.CollinearX(1250, before, null) is null,
+            "Missing or overlapping neighbours produced a collinear candidate.");
+        var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 500, DistanceSnapCollinear = true };
+        map.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 });
+        map.Fruits.Add(new Fruit { TimeMs = 1750, X = 401 });
+        Check(ProjectSerializer.Read(ProjectSerializer.Serialize(map)).DistanceSnapCollinear
+            && map.DeepClone().DistanceSnapCollinear, "Collinear setting was lost on save or clone.");
+        var disabled = map.DeepClone(); disabled.DistanceSnapCollinear = false;
+        Check(!map.ContentEquals(disabled) && !ProjectSerializer.Read("{\"SchemaVersion\":1,\"Document\":{}}").DistanceSnapCollinear,
+            "Collinear setting ignored dirty comparison or old-map defaults.");
+        var ui = new Ui(); ui.LoadDocument(map); ui.Key('Y'); ui.Key('2');
+        if (ui.View.EditorGridSettings.Enabled) ui.Key('T');
+        ui.ClickMap(1250, 202);
+        Check(Math.Abs(ui.View.Document.Fruits.Single(f => f.TimeMs == 1250).X - expected) < 1e-9,
+            "Placement did not retain precise collinear X with GS off.");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.Fruits.Count == 2, "Collinear placement did not undo.");
+        ui.Key('Y', ctrl: true); ui.Key('1');
+        ui.DownMap(1250, expected); ui.MoveMap(1500, 300); ui.UpMap(1500, 300);
+        Check(ui.View.Document.Fruits.Any(f => f.TimeMs == 1500 && Math.Abs(f.X - (100 + 602 / 3.0)) < 1e-9),
+            "Dragging included the selected fruit as a neighbour or rounded collinear X.");
+        ui.Key('T'); ui.Key('2'); ui.ClickMap(1375, 252);
+        double gridX = Math.Round(250.5 / ui.View.EditorGridSettings.Size, MidpointRounding.AwayFromZero) * ui.View.EditorGridSettings.Size;
+        Check(ui.View.Document.Fruits.Any(f => f.TimeMs == 1375 && f.X == gridX),
+            "GS did not round the collinear candidate to the nearest grid position.");
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            Strings.SetLanguage(language);
+            ui.View.OpenDistanceSnapDialog(); ui.Paint(); ui.ClickText(Strings.Get("ds.collinear"));
+            Check(ui.View.Document.DistanceSnapCollinear, "Draft toggle changed the document before Apply.");
+            ui.ClickText(Strings.Get("mac.cancel"));
+            Check(ui.View.Document.DistanceSnapCollinear, "Cancel changed collinear snap.");
+            ui.View.OpenDistanceSnapDialog(); ui.Paint(); ui.ClickText(Strings.Get("ds.collinear"));
+            ui.ClickText(Strings.Get("library.apply"));
+            Check(!ui.View.Document.DistanceSnapCollinear, "Apply did not store collinear snap.");
+            ui.Key('Z', ctrl: true);
+            Check(ui.View.Document.DistanceSnapCollinear, "Collinear setting did not undo.");
+        }
+        Strings.SetLanguage("en");
+    }
+
     public static void Snapping()
     {
         var reference = new DistanceSnap.Reference(Guid.NewGuid(), new(1000, 256), new(1000, 256), .28, 0);

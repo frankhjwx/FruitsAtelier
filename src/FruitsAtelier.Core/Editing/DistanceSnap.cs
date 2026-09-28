@@ -5,7 +5,7 @@ public static class DistanceSnap
 {
     public const int MaximumPresets = 8;
 
-    public static MapPoint SnapMultiple(MapPoint point, Reference? previous, IReadOnlyList<double> presets, out bool outside)
+    public static MapPoint SnapMultiple(MapPoint point, Reference? previous, IReadOnlyList<double> presets, out bool outside, Reference? next = null)
     {
         outside = false;
         if (previous is null || point.TimeMs <= previous.End.TimeMs) return point;
@@ -19,8 +19,18 @@ public static class DistanceSnap
                 if (x is >= 0 and <= 512 && Math.Abs(point.X - x) < nearest)
                 { nearest = Math.Abs(point.X - x); result = point with { X = x }; }
         }
+        if (CollinearX(point.TimeMs, previous, next) is { } aligned && Math.Abs(point.X - aligned) < nearest)
+        { nearest = Math.Abs(point.X - aligned); result = point with { X = aligned }; }
         outside = double.IsPositiveInfinity(nearest);
         return result;
+    }
+
+    public static double? CollinearX(double time, Reference? previous, Reference? next)
+    {
+        if (previous is null || next is null || !(previous.End.TimeMs < time && time < next.Start.TimeMs)) return null;
+        double x = previous.End.X + (next.Start.X - previous.End.X)
+            * ((time - previous.End.TimeMs) / (next.Start.TimeMs - previous.End.TimeMs));
+        return double.IsFinite(x) && x is >= 0 and <= 512 ? x : null;
     }
 
     public sealed record Reference(Guid Id, MapPoint Start, MapPoint End, double Velocity, int Order);

@@ -11,7 +11,7 @@ public sealed partial class EditorView
     private bool dsGridInitialized, dsGridSnap;
     private int dsGridSize = 4;
     internal (bool Enabled, int Size) EditorGridSettings => (gridSnap, gridSize);
-    private bool dsShowValues;
+    private bool dsShowValues, dsCollinear;
     private List<double> dsDraft = [];
     private int dsSliderDrag = -1, dsSnapDragStart;
     private double dsDragStart;
@@ -62,6 +62,7 @@ public sealed partial class EditorView
         if (LibraryVisible || IsTestplaying || !PrepareFileOperation()) return;
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
         dsDraft = Document.DistanceSnapRatios.ToList();
+        dsCollinear = Document.DistanceSnapCollinear;
         dsBaseDraft = Document.DistancePerBeat;
         dsBaseOpeningValue = dsBaseDraft;
         dsBaseText = dsBaseOpeningText = dsBaseDraft.ToString("0.##########", System.Globalization.CultureInfo.InvariantCulture);
@@ -150,6 +151,8 @@ public sealed partial class EditorView
             () => dsShowValues = !dsShowValues, dsShowValues);
         DistanceSnapPreviewBounds = new(split + 16, r.Y + 108, r.Right - split - 32, r.Height - 180);
         DrawDistanceSnapPreview(c);
+        Button(c, new(r.X + 20, r.Bottom - 44, 180, 30), L.Get("ds.collinear"),
+            () => dsCollinear = !dsCollinear, active: dsCollinear);
         Button(c, new(r.Right - 196, r.Bottom - 44, 80, 30), L.Get("mac.cancel"), CloseDistanceSnapDialog);
         double? editedBase = DistanceBaseValue(dsBaseText);
         bool validBase = !dsBaseEdited || editedBase is not null;
@@ -157,6 +160,7 @@ public sealed partial class EditorView
         {
             if (Edit(L.Get("ds.title"), () =>
             {
+                Document.DistanceSnapCollinear = dsCollinear;
                 Document.DistanceSnapRatios.Clear();
                 Document.DistanceSnapRatios.AddRange(dsDraft.Order());
                 if (dsBaseEdited && editedBase is { } dpb && dpb != Document.DistancePerBeat)
@@ -341,7 +345,10 @@ public sealed partial class EditorView
         var previous = dsPreviewFruits.Where(f => f.TimeMs < beat).OrderByDescending(f => f.TimeMs).ThenBy(f => Math.Abs(f.X - px)).ToArray();
         // Preview time is measured in beats, so the matching velocity is distance per beat.
         DistanceSnap.Reference? reference = previous.Length == 0 ? null : new(Guid.Empty, previous[0], previous[0], dsBaseDraft, 0);
-        return DistanceSnap.SnapMultiple(point, reference, dsDraft, out _);
+        var next = dsCollinear ? dsPreviewFruits.Where(f => f.TimeMs > beat).OrderBy(f => f.TimeMs)
+            .Cast<MapPoint?>().FirstOrDefault() : null;
+        var nextReference = next is { } following ? new DistanceSnap.Reference(Guid.Empty, following, following, dsBaseDraft, 0) : null;
+        return DistanceSnap.SnapMultiple(point, reference, dsDraft, out _, nextReference);
     }
 
     private void DistanceSnapPointerDown(float x, float y, int button)

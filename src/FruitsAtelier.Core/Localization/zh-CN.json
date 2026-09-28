@@ -808,6 +808,7 @@
   "library.offerSongsExportHelp": "也可以只保存在工作区。",
   "library.workspaceOnly": "仅保存在工作区",
   "library.exportToSongs": "导出到 osu! Songs…",
+  "ds.collinear": "共线吸附",
   "ds.configure": "配置 DS…",
   "ds.title": "Distance Snap 配置",
   "ds.baseTitle": "1.0x 每拍距离（DPB）",
