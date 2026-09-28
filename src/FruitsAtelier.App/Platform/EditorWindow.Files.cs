@@ -13,6 +13,8 @@ internal sealed partial class EditorWindow
 
     private void ConfigureFiles()
     {
+        view.RequestSyncFile = answer => answer(MapFileDialog.Select(hwnd, false, L.Get("sync.chooseFile"), MapFileDialog.OsuFilter));
+        view.RequestSyncAudio = answer => answer(MapFileDialog.Select(hwnd, false, L.Get("sync.chooseAudio"), MapFileDialog.AudioFilter));
         view.RequestPausePlayback = () => audio.Pause();
         audio.Hitsounds = hitsounds;
         view.RequestAudioVolume = (song, hit) => { audio.SongVolume = song; hitsounds.Volume = hit; };

@@ -81,7 +81,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
             int difficultyCount = reader.GetInt32(5);
             WorkspaceManifest? manifest = null;
             if (project is not null)
-                lock (WorkspaceProject.Gate) manifest = WorkspaceProject.ReadManifest(project);
+                lock (WorkspaceProject.Gate) manifest = WorkspaceProject.ReadManifest(project, includeSync: false);
             if (projectsOnly && manifest is not null) difficultyCount = manifest.Difficulties.Count;
             bool? inSongs = string.IsNullOrWhiteSpace(songs) ? null
                 : manifest is not null
@@ -99,7 +99,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
         if (projectsOnly && set.Map.ProjectPath is { } project)
         {
             WorkspaceManifest manifest;
-            lock (WorkspaceProject.Gate) manifest = WorkspaceProject.ReadManifest(project);
+            lock (WorkspaceProject.Gate) manifest = WorkspaceProject.ReadManifest(project, includeSync: false);
             var entries = new List<LibraryMap>();
             foreach (var difficulty in manifest.Difficulties.Skip(Math.Max(0, start)).Take(Math.Clamp(count, 1, 128)))
             {
@@ -114,7 +114,9 @@ public sealed class LibrarySearchSnapshot : IDisposable
                     if (lookup.ExecuteScalar() is string data) metadata = JsonSerializer.Deserialize<LibraryMap>(data)!;
                 }
                 entries.Add(metadata with { Path = Path.Combine(project, difficulty.File), Directory = project,
-                    Difficulty = difficulty.Name, ProjectPath = project });
+                    Difficulty = difficulty.Name, ProjectPath = project,
+                    ExternalMissing = WorkspaceSynchronization.Target(difficulty) is { } target && !string.IsNullOrWhiteSpace(songs)
+                        && Directory.Exists(songs) && WorkspaceProject.Within(songs, target) && !File.Exists(target) });
             }
             return entries;
         }

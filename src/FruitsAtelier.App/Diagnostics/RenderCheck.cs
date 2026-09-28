@@ -712,6 +712,7 @@ internal static class RenderCheck
         foreach (var size in new[] { (1440, 900), (980, 620) })
         {
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+            SynchronizationRenderCheck.Run(canvas, size.Item1, size.Item2);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             CheckPaletteHints(canvas, view, size.Item1, size.Item2);
             CheckSongSetup(canvas, view, size.Item1, size.Item2);

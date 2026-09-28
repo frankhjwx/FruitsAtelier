@@ -19,11 +19,11 @@ internal static class WorkspaceTests
             var session = WorkspaceProject.Create(workspace, project, songs);
             Reject(() => WorkspaceProject.Create(workspace, project, songs));
             Reject(() => WorkspaceProject.Create(workspace, project, ""));
-            Check(Directory.GetDirectories(workspace).Length == 1, "a source directory has only one project even when Songs is unbound");
+            Check(Directory.GetDirectories(workspace).Count(p => File.Exists(Path.Combine(p, WorkspaceProject.ManifestName))) == 1, "a source directory has only one project even when Songs is unbound");
             Check(File.Exists(Path.Combine(session.Directory, "project.catchdiff")), "manifest");
             string file = session.Manifest.Difficulties[0].File;
             Check(file == "Artist - Romanised Title (Mapper) [Rain].catchdiff", "osu naming");
-            Check(Directory.GetFiles(session.Directory).All(p => p.EndsWith(".catchdiff")), "no resources copied");
+            Check(Directory.GetFiles(session.Directory).All(p => p.EndsWith(".catchdiff") || p.EndsWith(".catchsync")), "only authoring and synchronization data in project directory");
             Check(File.ReadAllText(source) == original, "create leaves Songs untouched");
             project.Difficulties[0].Document.Fruits[0].X = 400;
             WorkspaceProject.Save(session, project);
@@ -84,8 +84,8 @@ internal static class WorkspaceTests
             Reject(() => WorkspaceExport.Plan(session, project.Difficulties[0], songs, false, "Missing audio", true));
             Reject(() => WorkspaceProject.Create(Path.Combine(songs, "bad"), project, songs));
             File.WriteAllText(Path.Combine(set, "standard.osu"), Fixture().Replace("Mode:2", "Mode:0"));
-            Check(db.Scan().Count == 2, "ignore standard and discover new diff");
-            File.Delete(source); db.Scan(); Check(db.Search("").Count == 1, "incremental removal");
+            Check(db.Scan().Count == 3, "index other modes as read-only and discover new diff");
+            File.Delete(source); db.Scan(); Check(db.Search("").Count == 2, "incremental removal");
             File.Delete(Path.Combine(workspace, "library.db"));
             db = new(workspace, songs); db.Scan(); Check(db.Search("", true).Any(), "database rebuild retains projects");
             string moved = songs + "-offline"; Directory.Move(songs, moved);

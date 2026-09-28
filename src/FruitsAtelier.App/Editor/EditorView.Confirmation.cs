@@ -8,14 +8,12 @@ public sealed partial class EditorView
     private Action<int>? discardConfirmation;
     private bool deleteProjectConfirmation;
     private bool offerSongsExport;
-    private IReadOnlyList<FruitsAtelier.Core.LibraryMap>? additionalDifficulties;
-    public bool DiscardConfirmationVisible => discardConfirmation is not null;
+    public bool DiscardConfirmationVisible => discardConfirmation is not null || SynchronizationVisible;
 
     public void ShowDiscardConfirmation(Action<int> answer)
     {
         if (DiscardConfirmationVisible) return;
         offerSongsExport = false;
-        additionalDifficulties = null;
         CancelInteraction(); menu = -1; contextItems.Clear();
         discardConfirmation = answer;
         hits.Clear(); fields.Clear();
@@ -29,17 +27,18 @@ public sealed partial class EditorView
 
     private void AnswerDiscard(int answer)
     {
+        if (SynchronizationVisible) { CancelSynchronization(); return; }
         var callback = discardConfirmation;
         discardConfirmation = null;
         deleteProjectConfirmation = false;
         offerSongsExport = false;
-        additionalDifficulties = null;
         hits.Clear();
         callback?.Invoke(answer);
     }
 
     private void DrawDiscardConfirmation(ICanvas c)
     {
+        if (SynchronizationVisible) { DrawSynchronization(c); return; }
         if (!DiscardConfirmationVisible) return;
         hits.Clear(); fields.Clear();
         if (deleteProjectConfirmation)
@@ -62,19 +61,6 @@ public sealed partial class EditorView
             c.Text(L.Get("library.offerSongsExportHelp"), left + 24, top + 94, 14, Muted, 552);
             Button(c, new(left + 24, top + 146, 264, 40), L.Get("library.workspaceOnly"), () => AnswerDiscard(2));
             Button(c, new(left + 312, top + 146, 264, 40), L.Get("library.exportToSongs"), () => AnswerDiscard(6), true);
-            return;
-        }
-        if (additionalDifficulties is { } additions)
-        {
-            float boxHeight = 154 + Math.Min(8, additions.Count) * 24;
-            float left = (width - 560) / 2, top = (height - boxHeight) / 2;
-            c.Fill(new(left, top, 560, boxHeight), Panel, 8);
-            c.Stroke(new(left, top, 560, boxHeight), Accent, 2, 8);
-            c.Text(L.Get("library.additionalTitle", additions.Count), left + 24, top + 24, 20, Foreground, 512, true);
-            for (int i = 0; i < Math.Min(8, additions.Count); i++)
-                c.Text(additions[i].Difficulty, left + 24, top + 62 + i * 24, 14, Foreground, 512);
-            Button(c, new(left + 24, top + boxHeight - 64, 246, 40), L.Get("library.importAdditional"), () => AnswerDiscard(6));
-            Button(c, new(left + 290, top + boxHeight - 64, 246, 40), L.Get("library.openExisting"), () => AnswerDiscard(2));
             return;
         }
         float x = (width - 500) / 2, y = (height - 180) / 2;

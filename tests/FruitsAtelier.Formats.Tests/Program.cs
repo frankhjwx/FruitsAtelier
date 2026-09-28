@@ -63,6 +63,7 @@ var tests = new (string Name, Action Run)[]
     ("Real B/P/L and repeat sliders remain exportable after per-segment editing", RealEditableWrites)
 };
 int failed = 0, skipped = 0;
+tests = tests.Concat(SynchronizationTests.Cases()).ToArray();
 foreach (var (name, run) in tests)
 {
     if (args.Contains("--skip-external-fixtures") && (run == (Action)RealMaps || run == (Action)RealEditableWrites))

@@ -21,8 +21,8 @@ internal static class LibraryScanProgressTests
                 if (p.Indexed > 0) visibleDuringScan |= db.Search("").Count > 0;
             });
             if (!visibleDuringScan) throw new Exception("Indexed maps must be searchable before Scan returns");
-            if (scan.Count != 1 || scan.Errors.Count != 1 || !scan.Errors[0].Contains(oversized)
-                || progress[^1] != new LibraryScanProgress(3, 1, 1) || db.Search("").Count != 1)
+            if (scan.Count != 2 || scan.Errors.Count != 1 || !scan.Errors[0].Contains(oversized)
+                || progress[^1] != new LibraryScanProgress(3, 2, 1) || db.Search("").Count != 2)
                 throw new Exception("Oversized map must not abort scanning or hide its path; progress must include all examined files");
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }

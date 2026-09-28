@@ -27,7 +27,7 @@ internal static class ExternalResourceTests
             Check(db.Search("External romanised piano").Count == 2 && db.Search("原始标题 水果").Count == 2, "external metadata searchable in both scripts");
             var session = LibraryOperations.Open(db.Search("").First(), settings);
             Check(session.Project.Difficulties.Count == 2 && session.Manifest.ExternalSourceDirectory == set, "folder project remembers source");
-            Check(Directory.GetFiles(session.Directory).All(p => p.EndsWith(".catchdiff")), "project folder stores only project files");
+            Check(Directory.GetFiles(session.Directory).All(p => p.EndsWith(".catchdiff") || p.EndsWith(".catchsync")), "project folder stores authoring files and sync baselines");
             session.Project.Difficulties[0].Document.Fruits[0].X = 222;
             WorkspaceProject.Save(session, session.Project);
             db.Scan();

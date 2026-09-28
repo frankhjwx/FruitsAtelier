@@ -74,7 +74,7 @@ public sealed class LibrarySettings
 }
 
 public sealed record LibraryMap(string Path, string Directory, string Title, string TitleUnicode, string Artist, string ArtistUnicode,
-    string Creator, string Difficulty, string Tags, string Source, string Audio, string Background, string? ProjectPath = null);
+    string Creator, string Difficulty, string Tags, string Source, string Audio, string Background, string? ProjectPath = null, bool ExternalMissing = false, int Mode = 2);
 public sealed record LibraryScan(int Count, IReadOnlyList<string> Errors);
 public sealed record LibraryScanProgress(int Files, int Indexed, int Errors);
 
@@ -185,7 +185,7 @@ public sealed class LibraryDatabase
                     WorkspaceProject.RejectLinks(file);
                     var info = new FileInfo(file); var stamp = info.LastWriteTimeUtc.Ticks;
                     if (cached.TryGetValue(file, out var old) && old == (stamp, info.Length)) { seen.Add(file); accepted = true; continue; }
-                    var map = ReadMetadata(file);
+                    var map = ReadMetadata(file, includeOtherModes: true);
                     if (map is null) continue;
                     seen.Add(file);
                     using var command = db.CreateCommand();
@@ -224,7 +224,7 @@ public sealed class LibraryDatabase
             if (!File.Exists(Path.Combine(folder, WorkspaceProject.ManifestName)) || folder.EndsWith(".saving") || folder.EndsWith(".previous")) continue;
             try
             {
-                var manifest = WorkspaceProject.ReadManifest(folder);
+                var manifest = WorkspaceProject.ReadManifest(folder, includeSync: false);
                 using var command = db.CreateCommand(); command.Transaction = transaction;
                 command.CommandText = "INSERT INTO projects VALUES($p,$s,$n)";
                 command.Parameters.AddWithValue("$p", folder);
@@ -276,7 +276,8 @@ public sealed class LibraryDatabase
         return maps;
     }
 
-    public static LibraryMap? ReadMetadata(string path)
+    public static LibraryMap? ReadMetadata(string path) => ReadMetadata(path, false);
+    public static LibraryMap? ReadMetadata(string path, bool includeOtherModes)
     {
         if (new FileInfo(path).Length > OsuBeatmapReader.MaximumFileBytes) throw new InvalidDataException(L.Get("core.reader.fileLimit"));
         var values = new Dictionary<string, string>(); string section = "", background = "";
@@ -288,8 +289,9 @@ public sealed class LibraryDatabase
             if (section == "Events" && s.StartsWith("0,")) { var parts = WorkspaceProject.Csv(s); if (parts.Length > 2) background = parts[2]; }
         }
         string Get(string key) => values.GetValueOrDefault(key, "");
-        if (Get("Mode") != "2") return null;
+        int mode = int.TryParse(Get("Mode"), out int parsedMode) ? parsedMode : 0;
+        if (mode is < 0 or > 3 || !includeOtherModes && mode != 2) return null;
         string Resolve(string resource) => resource.Length == 0 ? "" : OsuBeatmapReader.ResolveResource(path, resource.Replace('\\', '/'));
-        return new(path, Path.GetDirectoryName(path)!, Get("Title"), Get("TitleUnicode"), Get("Artist"), Get("ArtistUnicode"), Get("Creator"), Get("Version"), Get("Tags"), Get("Source"), Resolve(Get("AudioFilename")), Resolve(background));
+        return new(path, Path.GetDirectoryName(path)!, Get("Title"), Get("TitleUnicode"), Get("Artist"), Get("ArtistUnicode"), Get("Creator"), Get("Version"), Get("Tags"), Get("Source"), Resolve(Get("AudioFilename")), Resolve(background), Mode: mode);
     }
 }

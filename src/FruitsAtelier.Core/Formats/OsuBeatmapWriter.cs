@@ -14,6 +14,7 @@ public sealed class OsuWriteCache
 
 public sealed class OsuWriteResult
 {
+    public IReadOnlyList<Guid> ObjectSources { get; init; } = [];
     public required string Text { get; init; }
     public required MapDocument ReadBack { get; init; }
     public required IReadOnlyList<string> Diagnostics { get; init; }
@@ -213,7 +214,7 @@ public static class OsuBeatmapWriter
             : [];
         return new OsuWriteResult
         {
-            Text = serialized, ReadBack = readBack, Diagnostics = diagnostics,
+            Text = serialized, ReadBack = readBack, Diagnostics = diagnostics, ObjectSources = orderedLines.Select(l => l.SourceId).ToArray(),
             MaxTimeQuantizationMs = maxTime, MaxCoordinateQuantization = maxCoordinate,
             MaxConvertedTimeErrorMs = timeError, MaxConvertedXError = xError, ObjectSequenceMatches = matches,
             PlayableObjects = playableObjects, PlayableHardRockObjects = playableHardRockObjects,

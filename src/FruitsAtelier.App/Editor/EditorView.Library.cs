@@ -124,12 +124,13 @@ public sealed partial class EditorView
         if (LibraryVisible && !exportPage) { RememberLibraryPosition(); SaveLibraryMemory(); }
         LibraryVisible = !HasEditorProject; exportPage = resourcePage = false; librarySettingsOpen = false; updatesPage = false;
         libraryField = -1; libraryPointerActive = false; contextItems.Clear(); languageMenuOpen = false;
+        if (WorkspaceSession is not null && !syncBypass) ShowSyncProblem(activeDifficulty);
     }
     public bool TryResumeLibraryProject(LibraryMap map)
     {
         if (WorkspaceSession is not { } session || map.ProjectPath is null || session.Directory != map.ProjectPath) return false;
         CloseLibrary();
-        OfferAdditionalDifficulties();
+        RefreshSynchronization();
         return true;
     }
     public void CheckWorkspaceResources()
@@ -162,6 +163,13 @@ public sealed partial class EditorView
     public void SaveCurrentDifficulty()
     {
         if (DiscardConfirmationVisible || ExportVisible || !PrepareFileOperation()) return;
+        if (WorkspaceSession is { } syncSession && syncSession.Manifest.Difficulties.Any(d => WorkspaceSynchronization.Target(d) is not null) && !syncBypass)
+        {
+            if (!SaveWorkspace()) return;
+            syncDifficulty = difficulties[activeDifficulty].Id;
+            RefreshSynchronization(SaveCurrentDifficulty);
+            return;
+        }
         if (string.IsNullOrWhiteSpace(LibrarySettings.Songs)) { SaveWorkspace(); return; }
         if (!ProjectInSongs)
         {
@@ -182,29 +190,8 @@ public sealed partial class EditorView
         LoadProject(session.Project); WorkspaceSession = session; CheckWorkspaceResources();
         libraryProjectsNeedReindex = true; QueueLibrarySearch(); CloseLibrary();
         if (session.IsNewImport) OfferSliderConversion(true);
-        else if (checkAdditionalDifficulties) OfferAdditionalDifficulties();
-    }
-    private void OfferAdditionalDifficulties()
-    {
-        if (WorkspaceSession is not { } session) return;
-        var additions = FruitsAtelier.App.Platform.LibraryOperations.MissingDifficulties(session, CaptureProject());
-        if (additions.Count == 0) return;
-        ShowDiscardConfirmation(answer =>
-        {
-            if (answer != 6) return;
-            try
-            {
-                var imported = BeatmapProject.FromDocuments(additions.Select(m => OsuBeatmapReader.ReadFile(m.Path)).ToArray());
-                var candidate = CaptureProject();
-                candidate.Difficulties.AddRange(imported.Difficulties);
-                candidate.Validate();
-                difficulties.AddRange(imported.Difficulties.Select(d => new DifficultySession(d)));
-                projectStructureDirty = true;
-                PreloadProjectHitsounds();
-            }
-            catch (Exception e) { ShowError(e.Message); }
-        });
-        additionalDifficulties = additions;
+        else if (checkAdditionalDifficulties) RefreshSynchronization();
+        nextSyncCheck = DateTime.UtcNow.AddSeconds(30);
     }
     public void LibraryExportFinished(WorkspaceExportPlan plan)
     {
@@ -246,6 +233,7 @@ public sealed partial class EditorView
     private void QueueLibrarySearch() { searchAfter = DateTime.UtcNow.AddMilliseconds(150); searchTaskQuery = "\0"; }
     private void PumpLibrary()
     {
+        PumpSynchronization();
         libraryBrowser?.Pump();
         if (libraryBrowser?.Error is { } browserError) libraryError = browserError;
         if (libraryMemoryDirty && DateTime.UtcNow >= libraryMemorySaveAfter) SaveLibraryMemory();
@@ -436,12 +424,14 @@ public sealed partial class EditorView
         {
             var diff = libraryBrowser.Detail(i);
             if (diff is null) continue;
-            if (!libraryRatings.ContainsKey(diff.Path) && (diff.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
+            if (diff.Mode == 2 && !libraryRatings.ContainsKey(diff.Path) && (diff.Path.EndsWith(".osu", StringComparison.OrdinalIgnoreCase)
                 || diff.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))) pending.Add(diff);
             float y = 334 + (i - libraryDiffScroll) * 40;
             libraryRatings.TryGetValue(diff.Path, out var stars);
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "osu", "RulesetCatch.png"), new(x, y, 22, 22), DifficultyColour(stars));
-            c.Text(diff.Difficulty, x + 32, y + 3, 13, Foreground, 200);
+            c.Text(diff.Difficulty, x + 32, y + 3, 13, diff.ExternalMissing ? 0x718092u : Foreground, 200);
+            if (diff.ExternalMissing) c.Text(L.Get("sync.missingBadge"), x + 32, y + 20, 10, 0x718092, 200);
+            else if (diff.Mode != 2) c.Text(L.Get("sync.readOnlyMode", diff.Mode), x + 32, y + 20, 10, Muted, 200);
             c.Text(stars is null ? "—" : stars.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "★", x + 238, y + 3, 12, DifficultyColour(stars), 60);
         }
         DrawLibraryScrollbar(c, new(width - 16, 334, 8, count * 40), libraryDiffScroll, group.Count, count, true);

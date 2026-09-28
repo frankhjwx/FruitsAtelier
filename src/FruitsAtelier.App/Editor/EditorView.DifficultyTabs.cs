@@ -41,7 +41,7 @@ public sealed partial class EditorView
         if (target < 0) return false;
         var difficulty = difficulties[difficultyTabTargets[target].Index];
         var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulty.Id);
-        string? osu = entry?.Source ?? difficulty.History.Document.SourcePath;
+        string? osu = entry?.ExportTarget ?? entry?.Source ?? difficulty.History.Document.SourcePath;
         if (osu is not null && !Path.GetExtension(osu).Equals(".osu", StringComparison.OrdinalIgnoreCase)) osu = null;
         string? catchdiff = entry is null || WorkspaceSession is null ? null : Path.Combine(WorkspaceSession.Directory, entry.File);
         string? folder = catchdiff is not null ? Path.GetDirectoryName(catchdiff) : osu is not null ? Path.GetDirectoryName(osu) : null;
@@ -51,6 +51,9 @@ public sealed partial class EditorView
         contextItems.Add(new(L.Get("project.openCatchdiff"), () => RequestOpenExternalPath?.Invoke(catchdiff!), File.Exists(catchdiff)));
         contextItems.Add(new(L.Get("project.openFolder"), () => RequestOpenExternalPath?.Invoke(folder!), Directory.Exists(folder)));
         contextItems.Add(new(L.Get("project.openSongsFolder"), () => RequestOpenExternalPath?.Invoke(songsFolder!), Directory.Exists(songsFolder)));
+        int index = difficultyTabTargets[target].Index;
+        contextItems.Add(new(L.Get("sync.refresh"), () => RefreshSynchronization()));
+        contextItems.Add(new(L.Get("sync.delete"), () => ShowDeleteDifficulty(index)));
         float menuHeight = 12 + contextItems.Count * 32;
         contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 240)), Math.Clamp(y, 0, Math.Max(0, height - menuHeight)), 240, menuHeight);
         return true;
@@ -316,13 +319,16 @@ public sealed partial class EditorView
             difficultyTabTargets.Add((hitRect, index));
             double? stars = DifficultyRating(index);
             uint colour = DifficultyColour(stars);
+            bool missing = DifficultySyncState(index) == WorkspaceSyncState.Missing;
+            if (missing) colour = 0xC4CAD2;
             bool hover = rect.Contains(mouseX, mouseY);
             if (active || hover) DrawChromeTab(c, rect, active ? Panel : 0x2B3542u);
             else if (index + 1 != activeDifficulty) c.Line(rect.Right + 3, 56, rect.Right + 3, 73, Grid);
             // A light backing keeps even the official black (9★+) icon readable on dark chrome.
             if (stars >= 6.7) c.Circle(x + 19, 62, 10, 0xE7EBF2);
             c.Image(catchIconPath, new(x + 9, 52, 20, 20), colour);
-            c.Text(names[index], x + 36, 54, 12, active ? Foreground : Muted, rect.Width - 101, active);
+            c.Text(names[index], x + 36, 54, 12, missing ? 0x718092u : active ? Foreground : Muted, rect.Width - 101, active);
+            if (missing) c.Text(L.Get("sync.missingBadge"), x + 36, 69, 9, 0x718092, rect.Width - 101);
             c.Text(stars is null ? L.Get("project.starsUnavailable") : L.Get("project.stars", stars.Value),
                 rect.Right - 59, 55, 10, active ? Foreground : Muted, 47);
             if (RatingRefreshing(index)) DrawRatingSpinner(c, rect.Right - 9, 106);

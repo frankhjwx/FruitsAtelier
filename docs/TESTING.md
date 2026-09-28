@@ -289,3 +289,18 @@ Song Setup regressions cover shared metadata, independent difficulty settings,
 romanised fields, modal isolation, cancellation, undo/redo, palette HEX input and
 project/`.osu` persistence. Native window checks open all four tabs in both
 languages at each supported test size and DPI and exercise the color picker.
+
+## Synchronization regression coverage
+
+Formats regressions exercise metadata and directory/file renames, uploaded IDs,
+three-way field conflicts, timing updates, pending local choices, external deletion,
+unavailable roots, truncated files, numeric spelling, identical copies, audio
+replacement and recovery, duplicate ownership, unique-difficulty migration, baseline
+persistence, emitted object mappings, multi-output curves, and interrupted exports.
+Fixtures and retained recovery files live under `artifacts/tests/synchronization`.
+
+Shared App tests cover asynchronous discovery, context rebasing through undo,
+missing-file input isolation, explicit restoration, per-object choices, linked
+deletion, and local-project exemptions in both languages and window sizes. Native
+Windows `--render-check` draws conflict, missing and deletion states in English
+and Chinese at each tested size and DPI without playing fixture audio.

@@ -10,6 +10,8 @@ public sealed class OsuSection
 
 public sealed partial class MapDocument
 {
+    [System.Text.Json.Serialization.JsonIgnore]
+    internal string? ImportedContentHash { get; set; }
     public string? SourcePath { get; set; }
     public string? AudioPath { get; set; }
     public bool IsDemo { get; set; } = true;
@@ -18,6 +20,7 @@ public sealed partial class MapDocument
     private void CopyFileStateTo(MapDocument copy)
     {
         copy.SourcePath = SourcePath;
+        copy.ImportedContentHash = ImportedContentHash;
         copy.AudioPath = AudioPath;
         copy.IsDemo = IsDemo;
         foreach (var section in OriginalSections)

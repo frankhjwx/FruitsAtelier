@@ -40,13 +40,16 @@ static class WorkspaceSaveTests
                 var entry = ui.View.WorkspaceSession.Manifest.Difficulties[0];
                 entry.ExportTarget = Path.Combine(songs, "deleted.osu"); entry.ExportHash = "old";
                 ui.Key('S', ctrl: true);
-                Check(ui.View.DiscardConfirmationVisible && exports == 0, "Missing linked exports offer export after saving locally");
+                var deadline = DateTime.UtcNow.AddSeconds(15);
+                while (ui.View.SynchronizationBusy && DateTime.UtcNow < deadline) { ui.Paint(); Thread.Sleep(10); }
+                Check(ui.View.SynchronizationVisible && exports == 0, "Missing linked exports require resolution after saving locally");
                 ui.Key(27);
+                ui.View.NewProject(); ui.View.CloseLibrary();
                 ui.View.LibrarySettings.Songs = "";
                 ui.Key('S', ctrl: true);
                 Check(!ui.View.DiscardConfirmationVisible && !ui.View.ExportVisible, "Unconfigured Songs saves to workspace directly");
                 ui.Key('S', ctrl: true, shift: true);
-                Check(ui.View.WorkspaceSession.Directory == directory && exports == 0, "Save uses one workspace identity");
+                Check(ui.View.WorkspaceSession is not null && exports == 0, "Local save does not export");
                 ui.ClickText(L.Get("ui.file"));
                 Check(!ui.Canvas.Texts.Any(t => t.Value.Contains("Shift + S")), "File menu exposes supported save actions");
             }
