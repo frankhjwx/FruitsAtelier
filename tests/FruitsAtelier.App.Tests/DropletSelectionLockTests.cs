@@ -4,6 +4,50 @@ using FruitsAtelier.Localization;
 
 internal static class DropletSelectionLockTests
 {
+    public static void Coordinates()
+    {
+        foreach (string language in Strings.AvailableLanguages)
+        foreach (bool imported in new[] { false, true })
+        foreach (var mode in Enum.GetValues<SliderEditingMode>())
+        {
+            Strings.SetLanguage(language);
+            var map = new MapDocument { DurationMs = 6000, SliderTickRate = 1, IsDemo = false };
+            var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'L', PixelLength = 280, SpanCount = 2 };
+            slider.ControlPoints.AddRange([new(120, 192), new(400, 192)]);
+            map.ImportedSliders.Add(slider);
+            if (!imported) ImportedSliderEditing.ConvertToTrack(map, slider.Id);
+            var ui = new Ui(lockDropletSelection: true); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.Paint();
+            var before = ui.View.Document.DeepClone();
+            var tiny = OsuBeatmapWriter.Serialize(map).PlayableObjects.Where(o => o.Kind == CatchObjectKind.TinyDroplet).ToArray();
+            foreach (var target in new[] { tiny[tiny.Length / 3], tiny[^3] })
+            {
+                ui.ClickMap(target.TimeMs, target.X);
+                Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("coordinate.readout", target.X.ToString("0", System.Globalization.CultureInfo.InvariantCulture))),
+                    "Locked tiny droplet did not display its painted X");
+                Check(ui.View.XCoordinateFieldBounds is null && ui.View.SelectedObjectIds.Count == 0,
+                    "Coordinate inspection unlocked editing or selected a parent");
+                var panel = ui.View.MovementOverlayBounds!.Value;
+                ui.Click(panel.X + 10, panel.Y + 65);
+                Check(!ui.View.IsEditingText && !ui.View.WantsCapture, "Read-only X click started editing");
+                ui.DownMap(target.TimeMs, target.X); ui.MoveMap(target.TimeMs, target.X + 30); ui.UpMap(target.TimeMs, target.X + 30);
+                Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Inspecting or dragging a locked droplet modified the map");
+                ui.ClickText(Strings.Get("movement.analysis"));
+            }
+            Toggle(ui);
+            ui.Key('L');
+            var selected = tiny[tiny.Length / 3];
+            ui.ClickMap(selected.TimeMs, selected.X);
+            Check(ui.View.MovementOverlayBounds is not null && ui.Canvas.Texts.Any(t => t.Value.StartsWith("X: ") && t.Value != "X: —"),
+                "Notes lock hid the selected tiny droplet coordinate");
+            Check(before.ContentEquals(ui.View.Document) && ui.View.XCoordinateFieldBounds is null,
+                "Viewing an unlocked droplet with notes locked modified its geometry");
+            ui.Key('L'); ui.ClickMap(selected.TimeMs, selected.X); ui.ClickMap(selected.TimeMs, selected.X);
+            Check(ui.View.XCoordinateFieldBounds is not null, "Unlocking did not restore coordinate editing");
+            ui.LoadDocument(new MapDocument());
+            Check(ui.View.MovementOverlayBounds is null, "Loading a map retained inspected coordinates");
+        }
+    }
+
     public static void Selection()
     {
         foreach (bool imported in new[] { false, true })

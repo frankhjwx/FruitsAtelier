@@ -616,6 +616,21 @@ internal static class RenderCheck
                 view.KeyDown(13, false, false); Paint();
                 view.KeyDown('Z', true, false); Paint();
                 if (Math.Abs(view.Document.Fruits[1].X - 240) > .001) throw new InvalidOperationException("X input undo failed.");
+                var sliderMap = new MapDocument { DurationMs = 6000, IsDemo = false };
+                var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'L', PixelLength = 280, SpanCount = 2 };
+                slider.ControlPoints.AddRange([new(120, 192), new(400, 192)]);
+                sliderMap.ImportedSliders.Add(slider);
+                view.LoadDocument(sliderMap); Paint();
+                view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom, -2400, false, false, true); Paint();
+                if (!view.DropletSelectionLocked) throw new InvalidOperationException("Native coordinate fixture requires default droplet lock.");
+                var tiny = OsuBeatmapWriter.Serialize(sliderMap).PlayableObjects.First(o => o.Kind == CatchObjectKind.TinyDroplet && o.TimeMs > 1400);
+                field = view.PlayfieldBounds;
+                x = field.X + (float)tiny.X / 512 * field.Width;
+                y = view.CanvasPlotBounds.Bottom - (float)((tiny.TimeMs - view.ViewStartMs) * view.PixelsPerMs);
+                view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint();
+                if (view.MovementOverlayBounds is null || view.XCoordinateFieldBounds is not null
+                    || view.IsDirty || view.SelectedObjectIds.Count != 0 || !sliderMap.ContentEquals(view.Document))
+                    throw new InvalidOperationException($"Native locked tiny-droplet inspection failed: panel={view.MovementOverlayBounds}, input={view.XCoordinateFieldBounds}, dirty={view.IsDirty}, selection={view.SelectedObjectIds.Count}, point=({x}, {y}), plot={view.CanvasPlotBounds}.");
             }
         }
         finally

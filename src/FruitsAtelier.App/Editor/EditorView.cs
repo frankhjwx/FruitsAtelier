@@ -138,6 +138,7 @@ public sealed partial class EditorView
 
     private void RebuildConversion()
     {
+        coordinateInspection = null;
         convertedSnapshot = Document.DeepClone();
         renderedTiming = new TimingMap.Lookup(Document);
         convertedWithCompensation = compensateTinyDroplets;
@@ -282,6 +283,7 @@ public sealed partial class EditorView
 
     private void Select(Guid id, Guid track = default)
     {
+        coordinateInspection = null;
         if (id != temporarySnapSource || track != Guid.Empty) RestoreTemporarySnap();
         soundEdge = null; distanceObject = null;
         objectSelection.Clear(); anchorSelection.Clear();

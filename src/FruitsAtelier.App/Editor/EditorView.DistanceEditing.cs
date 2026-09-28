@@ -7,6 +7,30 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private (Guid Source, int Event)? distanceObject;
+    private ConvertedCatchObject? coordinateInspection;
+
+    private bool InspectLockedDroplet(float x, float y, bool modified)
+    {
+        if (modified || tool != Tool.Select || !dropletSelectionLocked
+            || HitCatchObject(x, y, includeLocked: true) is not { Kind: CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet } target)
+            return false;
+        if (showTargets && SliderControlsActive && SelectedTrack is { } track)
+        {
+            double distance = PointerDistance(new(target.TimeMs, target.X), x, y);
+            var controls = LegacyMode ? SliderControlEditing.Vertices(track).Select(v => v.Point) : track.Nodes.Select(Point);
+            if (controls.Any(p => Near(p, x, y, 9) && PointerDistance(p, x, y) <= distance + .01)) return false;
+            if (!LegacyMode)
+                for (int i = 0; i < track.Nodes.Count; i++)
+                {
+                    if (i > 0 && CurveMath.SegmentKind(track, i - 1) == CurveKind.Bezier
+                        && PenHandle(track, i, true) != default && HitPenHandle(track, i, true, x, y)) return false;
+                    if (i < track.Nodes.Count - 1 && CurveMath.SegmentKind(track, i) == CurveKind.Bezier
+                        && PenHandle(track, i, false) != default && HitPenHandle(track, i, false, x, y)) return false;
+                }
+        }
+        coordinateInspection = target;
+        return true;
+    }
     private readonly List<Rect> distanceLabelBounds = [];
     public IReadOnlyList<Rect> DistanceLabelBounds => distanceLabelBounds;
     public Rect? PreviousDistanceFieldBounds { get; private set; }
@@ -48,7 +72,8 @@ public sealed partial class EditorView
     private void DrawDistanceFields(ICanvas c, Rect panel)
     {
         DistanceSliderBounds = null;
-        var target = PlacementGhostPoint() is null ? SelectedDistanceObject() : null;
+        var inspection = coordinateInspection;
+        var target = PlacementGhostPoint() is null && inspection is null ? SelectedDistanceObject() : null;
         var previous = target is not null ? DistanceNeighbours(target).Previous : null;
         bool editable = target is not null && previous is not null && DistanceReadout.Previous.HasValue && !notesLocked && drag == DragKind.None;
         NextDistanceFieldBounds = null;
@@ -65,7 +90,7 @@ public sealed partial class EditorView
         }
         else
         {
-            double? coordinate = PlacementGhostPoint()?.X ?? target?.X;
+            double? coordinate = PlacementGhostPoint()?.X ?? inspection?.X ?? target?.X;
             c.Text(L.Get("coordinate.readout", coordinate?.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "—"),
                 panel.X + 10, panel.Y + 60, MovementPanelFontSize, Muted, panel.Width - 20);
         }

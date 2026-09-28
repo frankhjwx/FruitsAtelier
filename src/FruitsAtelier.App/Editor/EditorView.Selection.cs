@@ -46,6 +46,7 @@ public sealed partial class EditorView
 
     private void SelectObjects(IEnumerable<Guid> ids, Guid primary = default)
     {
+        coordinateInspection = null;
         soundEdge = null; distanceObject = null;
         var selected = ids.Distinct().ToArray();
         if (temporarySnapSource != Guid.Empty && (selected.Length != 1 || selected[0] != temporarySnapSource)) RestoreTemporarySnap();
@@ -59,6 +60,7 @@ public sealed partial class EditorView
 
     private void SelectAnchors(CurveTrack track, IEnumerable<Guid> ids, Guid primary = default)
     {
+        coordinateInspection = null;
         if (draftTrack == Guid.Empty) tool = Tool.Select;
         RestoreTemporarySnap();
         soundEdge = null; distanceObject = null;

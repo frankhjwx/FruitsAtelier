@@ -53,7 +53,7 @@ public sealed partial class EditorView
         _ => CatchSize.FruitRadius(Document.CircleSize)
     };
 
-    private ConvertedCatchObject? HitCatchObject(float x, float y, Guid? sourceId = null)
+    private ConvertedCatchObject? HitCatchObject(float x, float y, Guid? sourceId = null, bool includeLocked = false)
     {
         EnsureConversion();
         ConvertedCatchObject? closest = null;
@@ -62,7 +62,7 @@ public sealed partial class EditorView
         double timeRadius = Math.Max(7, CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512) / pixelsPerMs;
         foreach (var item in ObjectsInTimeRange(pointerTime - timeRadius, pointerTime + timeRadius))
         {
-            if (!CanSelectCatchObject(item)) continue;
+            if (!includeLocked && !CanSelectCatchObject(item)) continue;
             if (sourceId is { } id && item.SourceId != id) continue;
             var point = new MapPoint(item.TimeMs, item.X);
             double candidateDistance = PointerDistance(point, x, y);

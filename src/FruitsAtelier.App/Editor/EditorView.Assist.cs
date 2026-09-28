@@ -61,8 +61,6 @@ public sealed partial class EditorView
     private void PickSoundEdge(ConvertedCatchObject item)
     {
         distanceObject = item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet
-            && !(item.Kind is CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet
-                && Document.ImportedSliders.Any(s => s.Id == item.SourceId))
             ? (item.SourceId, item.EventIndex) : null;
         soundEdge = null;
         if (item.Kind != CatchObjectKind.Fruit || item.IsStandalone) return;
@@ -118,6 +116,7 @@ public sealed partial class EditorView
 
     private void ToggleDropletSelectionLock()
     {
+        coordinateInspection = null;
         dropletSelectionLocked = !dropletSelectionLocked;
         if (dropletSelectionLocked && SelectedDistanceObject() is { Kind: CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet })
             distanceObject = null;

@@ -87,6 +87,7 @@ public sealed partial class EditorView
         if (TimingPageVisible && menu < 0 && contextItems.Count == 0 && WaveformBounds.Contains(x, y))
         { TimingWaveformPointer(x, y, button); return; }
         if (menu < 0 && contextItems.Count == 0 && DistancePointerDown(x, y, button, shift)) return;
+        coordinateInspection = null;
         if (button == 2 && DifficultyTabContext(x, y)) return;
         if (menu >= 0 && button != 0) { menu = -1; return; }
         if (button == 2)
@@ -194,6 +195,7 @@ public sealed partial class EditorView
             return;
         }
         if (!plot.Contains(x, y)) return;
+        if (InspectLockedDroplet(x, y, ctrl || shift)) return;
         if (!ctrl && tool == Tool.Select && objectSelection.Count == 1 && SelectedDistanceObject() is { IsStandalone: false } selectedChild
             && HitCatchObject(x, y)?.SourceId != selectedChild.SourceId && HitTrackPath(x, y) != selectedChild.SourceId
             && HitSliderLocation(x, y)?.Id != selectedChild.SourceId)
@@ -851,6 +853,7 @@ public sealed partial class EditorView
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
         if (DistanceKeyDown(virtualKey, ctrl, shift)) return;
+        coordinateInspection = null;
         placementCtrl = ctrl;
         if (virtualKey == 27 && legacyButtonSlider != Guid.Empty)
         { legacyButtonSlider = Guid.Empty; return; }
