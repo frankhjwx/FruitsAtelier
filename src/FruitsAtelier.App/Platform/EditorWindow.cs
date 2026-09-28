@@ -383,7 +383,7 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0102:
                 if (!Native.Control) view.TextInput((char)wParam);
                 UpdateTitle(); Invalidate(); return 0;
-            case 0x0007: view.SetTextInputFocus(true); Invalidate(); return 0; // WM_SETFOCUS
+            case 0x0007: view.SetTextInputFocus(true); view.CheckFilesOnActivation(); Invalidate(); return 0; // WM_SETFOCUS
             case 0x0008: // WM_KILLFOCUS
                 view.SetTextInputFocus(false);
                 view.CancelInteraction(preserveTestplay: true);
@@ -428,6 +428,7 @@ internal sealed partial class EditorWindow : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        view.StopFileMonitoring();
         updates?.Dispose();
         view.StopTestplay();
         view.ReleaseWaveform();

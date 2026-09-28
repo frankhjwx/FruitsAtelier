@@ -314,3 +314,9 @@ AR regressions compare note spacing with the editor's timing scale at AR 1, 5 an
 and both window widths. Resolution-history checks cover repeated time moves across
 anchors, ignored additions, older baseline migration, red/amber/green interval states,
 clicking completed intervals and changing prior choices before applying the review.
+
+File-monitor checks exercise notification coalescing, bounded overflow recovery,
+native create/rename/delete events, archive/index exclusions and disposal. Editor
+checks cover automatic metadata synchronization, directory identity recovery,
+new difficulties, inactive conflict gating, pointer-capture deferral and external
+changes during a pending merge. Apply must revalidate rather than commit a stale choice.

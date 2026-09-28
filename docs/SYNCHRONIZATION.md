@@ -12,6 +12,25 @@ Opening or resuming an existing project, checking synchronization from a difficu
 tab, and saving a linked difficulty check its external files. The editor also
 checks periodically in the background. Opening or explicitly checking a project
 with missing paths can trigger a wider Songs search.
+Filesystem notifications for Songs, the workspace and linked external directories
+also queue background checks. Notifications are coalesced after 750 ms of quiet;
+they request content inspection rather than directly importing or deleting data.
+Associated directory renames trigger wider identity discovery. Library indexing
+refreshes for source changes, including newly added sets. Database, temporary and
+recovery-history writes are excluded. FA saves and exports are checked against the
+accepted content baseline, so their notifications do not reimport unchanged objects.
+Bounded notification queues fall back to reconciliation on overflow. Watchers retry
+unavailable roots, activation requests a fresh check, and periodic scans remain as
+a fallback when notifications are lost. Both desktop hosts release watchers on close.
+
+Conflicts in inactive difficulties update their status without opening a dialog.
+Entering the affected difficulty opens its review. A conflict in the current editor
+opens review after pointer capture, text entry and other editing dialogs finish.
+Browsing the library does not open conflict review automatically. Notifications
+received during review remain queued; the displayed comparison and green choices
+stay intact. Apply checks the external map and compared audio again. If they changed,
+the review is refreshed before applying; choices survive only for unchanged conflict
+contents and authoring source identities. Changed audio always requires a fresh choice.
 Scans and merge preparation use detached snapshots; stale results are discarded.
 Background scanning does not run conversion in pointer or painting hot paths.
 Reference discovery runs in the background without pausing playback or blocking
@@ -68,7 +87,7 @@ current review. Amber borders, translucent fill and status labels distinguish re
 intervals from banana objects. Clicking a rectangle returns to that item; every item
 remains available until Apply, including green items that can be changed again.
 Retained FA decisions persist with their external object groups and local
-source IDs. Unchanged retained differences are labelled **Already resolved** and can
+source IDs. Unchanged retained differences are labelled **Resolved, select to re-resolve** and can
 be selected again in the comparison. They keep their prior choice by default and do
 not prompt automatically. The difficulty-tab synchronization action also opens these
 retained differences for review without new edits. Editing that group in osu! again

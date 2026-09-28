@@ -55,6 +55,9 @@ public sealed partial class EditorView
         syncTask = null; afterSynchronization = null; syncReviewRequested = false; syncSearching.Clear();
         syncStatuses.Clear(); syncMerges.Clear(); syncPage = null; nextSyncCheck = DateTime.MaxValue;
         syncDifficulty = Guid.Empty; syncPreserveHistory = false;
+        fileSyncPending = fileSearchMissing = false; nextMonitorConfiguration = DateTime.MinValue;
+        syncRetainedReview.Clear();
+        unreadableSyncRetries = 0;
         syncComparisons.Clear(); syncVisualMerge = null; syncResultPane = null; syncPreviewRevision++;
         resourceSnapshot = null; resourceReferences = null;
         CancelInteraction();

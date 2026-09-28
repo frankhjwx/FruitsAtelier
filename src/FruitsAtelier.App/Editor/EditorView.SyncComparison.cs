@@ -17,7 +17,7 @@ public sealed partial class EditorView
     private sealed record SyncRange(string Key, double Start, double End, uint Colour, string Label);
     private const uint SyncUnresolved = 0xED737B, SyncPreviouslyResolved = 0xD5A34D, SyncResolvedThisRound = 0x70D69B;
     private sealed record SyncComparison(SyncPane Local, SyncPane External, Dictionary<string, SyncFocus> Focus, DateTime? LocalSaved, DateTime? ExternalSaved,
-        IReadOnlySet<Guid> RetainedLocal, IReadOnlySet<Guid> RejectedExternal);
+        IReadOnlySet<Guid> RetainedLocal, IReadOnlySet<Guid> RejectedExternal, string? ExternalAudioHash);
     private readonly Dictionary<Guid, SyncComparison> syncComparisons = [];
     private WorkspaceMerge? syncVisualMerge;
     private string? syncVisualKey;
@@ -99,7 +99,8 @@ public sealed partial class EditorView
         return new(local, external, focus, authoringPath is not null && File.Exists(authoringPath) ? File.GetLastWriteTimeUtc(authoringPath) : null,
             File.Exists(merge.External.Path) ? File.GetLastWriteTimeUtc(merge.External.Path) : null,
             merge.PreviouslyRetained.SelectMany(r => r.Sources).ToHashSet(),
-            WorkspaceSynchronization.SourceIds(merge.External.Document).Where(p => rejectedOrders.Contains(p.Order)).Select(p => p.Id).ToHashSet());
+            WorkspaceSynchronization.SourceIds(merge.External.Document).Where(p => rejectedOrders.Contains(p.Order)).Select(p => p.Id).ToHashSet(),
+            SyncAudioHash(merge.External.Document.AudioPath));
     }
 
     private void DrawSyncComparison(ICanvas c, WorkspaceMerge merge, SyncComparison comparison)

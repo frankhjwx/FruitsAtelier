@@ -60,6 +60,7 @@ public sealed partial class EditorView
         librarySettingsOpen = false; updatesPage = false;
         LoadLibraryMemory();
         StartLibraryScan();
+        EnableFileMonitoring();
     }
     public void SetLibraryFolder(bool workspace, string path)
     {
@@ -235,6 +236,7 @@ public sealed partial class EditorView
     private void QueueLibrarySearch() { searchAfter = DateTime.UtcNow.AddMilliseconds(150); searchTaskQuery = "\0"; }
     private void PumpLibrary()
     {
+        PumpFileMonitoring();
         PumpSynchronization();
         libraryBrowser?.Pump();
         if (libraryBrowser?.Error is { } browserError) libraryError = browserError;

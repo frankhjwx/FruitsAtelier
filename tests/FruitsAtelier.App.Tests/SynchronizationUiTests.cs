@@ -147,6 +147,91 @@ internal static class SynchronizationUiTests
         finally { L.SetLanguage(language); }
     }
 
+    public static void FileNotifications()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/sync-watch", Guid.NewGuid().ToString("N")));
+        string songs = Path.Combine(root, "Songs"), set = Path.Combine(songs, "set"), source = Path.Combine(set, "map.osu");
+        Directory.CreateDirectory(set); File.WriteAllText(source, Fixture);
+        var ui = new Ui(false); ui.Resize(1440, 900);
+        ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
+        ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings));
+        ui.View.EnableFileMonitoring();
+        void Until(Func<bool> condition, string message) => WorkspaceFileMonitorTests.Await(() => { ui.Paint(); return condition(); }, message);
+        try
+        {
+            Guid identity = ui.View.Document.Fruits[0].Id;
+            File.WriteAllText(source, Fixture.Replace("Title:Original", "Title:Updated"));
+            Until(() => OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Title") == "Updated" && !ui.View.SynchronizationBusy, "file notification synchronizes metadata");
+            Check(ui.View.Document.Fruits[0].Id == identity && !ui.View.SynchronizationVisible, "automatic synchronization preserves authoring");
+            string renamed = Path.Combine(songs, "renamed set"); Directory.Move(set, renamed); source = Path.Combine(renamed, "map.osu");
+            Until(() => ui.View.WorkspaceSession!.Manifest.Difficulties[0].Source == source && !ui.View.SynchronizationBusy, "directory rename recovered automatically");
+            string second = Path.Combine(renamed, "second.osu");
+            File.WriteAllText(second, Fixture.Replace("Version:Catch", "Version:Second").Replace("123,192", "222,192"));
+            Until(() => ui.View.DifficultyCount == 2 && !ui.View.SynchronizationBusy, "new difficulty imported automatically");
+            File.WriteAllText(second, File.ReadAllText(second).Replace("222,192", "333,192"));
+            Until(() => ui.View.DifficultySyncState(1) == WorkspaceSyncState.Changed && !ui.View.SynchronizationBusy, "inactive conflict detected");
+            Check(!ui.View.SynchronizationVisible, "inactive conflict does not interrupt active map");
+            Check(!ui.View.SwitchDifficulty(1) && ui.View.SynchronizationVisible, "entering conflicted difficulty opens merge");
+            ui.Paint();
+            ui.ClickText(L.Get("sync.allLocal")); Wait(ui);
+            ui.View.SwitchDifficulty(0); ui.Paint();
+            var capture = typeof(FruitsAtelier.App.Editor.EditorView).GetField("tabPointer", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+            capture.SetValue(ui.View, true);
+            File.WriteAllText(source, File.ReadAllText(source).Replace("123,192", "321,192"));
+            var pauseUntil = DateTime.UtcNow.AddMilliseconds(1200);
+            while (DateTime.UtcNow < pauseUntil) { ui.Paint(); Thread.Sleep(20); }
+            Check(!ui.View.SynchronizationVisible, "notification waits for pointer release");
+            capture.SetValue(ui.View, false);
+            Until(() => ui.View.SynchronizationVisible, "active conflict opens after interaction");
+            ui.ClickText(L.Get("sync.chooseLocal"));
+            File.WriteAllText(source, File.ReadAllText(source).Replace("321,192", "400,192"));
+            pauseUntil = DateTime.UtcNow.AddMilliseconds(1200);
+            while (DateTime.UtcNow < pauseUntil) { ui.Paint(); Thread.Sleep(20); }
+            Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.resolvedThisRound"))), "notifications preserve ongoing review choices");
+            ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+            Check(ui.View.SynchronizationVisible && ui.View.Document.Fruits[0].X == 123, "apply rechecks changed external version without applying stale choice");
+            ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+            Check(ui.View.Document.Fruits[0].X == 400, "refreshed review accepts latest version");
+            byte[] updating = System.Text.Encoding.UTF8.GetBytes(File.ReadAllText(source).Replace("Title:Updated", "Title:After lock"));
+            using (var writing = new FileStream(source, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                writing.Write(updating); writing.Flush();
+                pauseUntil = DateTime.UtcNow.AddMilliseconds(1400);
+                while (DateTime.UtcNow < pauseUntil) { ui.Paint(); Thread.Sleep(20); }
+                Check(!ui.View.SynchronizationVisible, "temporarily locked source retries without opening merge");
+            }
+            Until(() => OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Title") == "After lock" && !ui.View.SynchronizationBusy,
+                "locked source synchronizes after writer closes without another write notification");
+            ui.View.ShowLibrary(); ui.Paint();
+            string newSet = Path.Combine(songs, "new set"); Directory.CreateDirectory(newSet);
+            File.WriteAllText(Path.Combine(newSet, "new.osu"), Fixture.Replace("Title:Original", "Title:New set"));
+            Until(() => ui.View.LibrarySetTotal >= 2 && !ui.View.LibraryLoading, "new set updates library through notification");
+            Check(ui.View.LibraryVisible && !ui.View.SynchronizationVisible, "library discovery does not open merge");
+        }
+        finally { ui.View.StopFileMonitoring(); }
+    }
+
+    public static void RefreshedReviewChoices()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/sync-review-refresh", Guid.NewGuid().ToString("N")));
+        string songs = Path.Combine(root, "Songs"), set = Path.Combine(songs, "set"), source = Path.Combine(set, "map.osu");
+        string text = Fixture + "200,192,1200,1,0,0:0:0:0:\n";
+        Directory.CreateDirectory(set); File.WriteAllText(source, text);
+        var ui = new Ui(false); ui.Resize(1440, 900);
+        ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
+        ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings));
+        File.WriteAllText(source, text.Replace("123,192", "321,192").Replace("200,192", "400,192"));
+        ui.View.RefreshSynchronization(); Wait(ui);
+        ui.ClickText(L.Get("sync.chooseLocal")); ui.ClickText(L.Get("sync.chooseLocal"));
+        File.WriteAllText(source, text.Replace("123,192", "321,192").Replace("200,192", "450,192"));
+        ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+        Check(ui.View.Document.Fruits[0].X == 123 && ui.View.Document.Fruits[1].X == 200, "stale review does not publish any choices");
+        Check(ui.Canvas.Outlines.Any(o => o.Color == 0x70D69B) && ui.Canvas.Outlines.Any(o => o.Color == 0xED737B),
+            "unchanged choice survives refresh while changed group becomes unresolved");
+        ui.ClickText("›"); ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+        Check(ui.View.Document.Fruits[0].X == 123 && ui.View.Document.Fruits[1].X == 450, "refreshed choices merge correctly");
+    }
+
     internal static void Wait(Ui ui)
     {
         var deadline = DateTime.UtcNow.AddSeconds(20);

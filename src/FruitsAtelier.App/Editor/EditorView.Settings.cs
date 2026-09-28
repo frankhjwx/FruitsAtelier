@@ -217,6 +217,7 @@ public sealed partial class EditorView
             libraryError = "";
             InitializeSkin();
             if (!rootsChanged) return;
+            EnableFileMonitoring();
             libraryRatings.Clear(); libraryBrowser?.Retire(); libraryBrowser = null; libraryDatabase = null; libraryResultsReady = false;
             LoadLibraryMemory(); StartLibraryScan();
         }

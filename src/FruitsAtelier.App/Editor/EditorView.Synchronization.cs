@@ -6,7 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private sealed record SyncResult(WorkspaceSession Session, BeatmapProject Snapshot, WorkspaceManifest Manifest, string Stamp, WorkspaceSyncScan Scan, Dictionary<Guid, WorkspaceMerge> Merges, IReadOnlyList<WorkspaceClaim> Claims, Dictionary<Guid, SyncComparison> Comparisons, bool ReviewResolved);
+    private sealed record SyncResult(WorkspaceSession Session, BeatmapProject Snapshot, WorkspaceManifest Manifest, string Stamp, WorkspaceSyncScan Scan, Dictionary<Guid, WorkspaceMerge> Merges, IReadOnlyList<WorkspaceClaim> Claims, Dictionary<Guid, SyncComparison> Comparisons, bool ReviewResolved, bool Quiet);
     private Task<SyncResult>? syncTask;
     private readonly HashSet<Guid> syncSearching = [];
     private bool SynchronizationBlocksInput => syncCommitTask is not null;
@@ -24,12 +24,17 @@ public sealed partial class EditorView
     private bool syncBypass;
     private bool syncReviewRequested;
     private bool syncPreserveHistory;
+    private int unreadableSyncRetries;
+    private sealed class SyncSourceChangedException : Exception;
+    private readonly Dictionary<WorkspaceSyncConflict, (bool Choice, IReadOnlySet<Guid> Sources)> syncRetainedReview = [];
+    private static string? SyncAudioHash(string? path) => path is not null && File.Exists(path) ? WorkspaceProject.Hash(path) : null;
     private IReadOnlyList<WorkspaceClaim> syncClaims = [];
     private string syncFailure = "";
     public bool SynchronizationVisible => syncPage is not null and not "checking";
     public bool SynchronizationBusy => syncTask is not null || syncCommitTask is not null;
     public bool SynchronizationNeedsRedraw => syncTask is { IsCompleted: true } || syncCommitTask is { IsCompleted: true } || SynchronizationVisible && syncPreviewTask is { IsCompleted: true }
-        || WorkspaceSession is not null && !LibraryVisible && DateTime.UtcNow >= nextSyncCheck;
+        || fileMonitor?.IsReady(DateTime.UtcNow) == true
+        || WorkspaceSession is not null && !SynchronizationVisible && (fileSyncPending || !LibraryVisible && DateTime.UtcNow >= nextSyncCheck);
     public WorkspaceSyncState DifficultySyncState(int index) => index >= 0 && index < difficulties.Count
         && syncStatuses.TryGetValue(difficulties[index].Id, out var status) ? status.State : WorkspaceSyncState.Local;
     public Action<Action<string?>>? RequestSyncFile { get; set; }
@@ -38,7 +43,7 @@ public sealed partial class EditorView
     public void RefreshSynchronization(Action? continuation = null, bool quiet = false, bool reviewResolved = false)
         => StartSynchronization(continuation, quiet, reviewResolved);
 
-    private void StartSynchronization(Action? continuation, bool quiet, bool reviewResolved, WorkspaceSyncScan? previousScan = null)
+    private void StartSynchronization(Action? continuation, bool quiet, bool reviewResolved, WorkspaceSyncScan? previousScan = null, bool searchMissing = false)
     {
         if (WorkspaceSession is not { } session) return;
         if (SynchronizationBusy)
@@ -60,7 +65,7 @@ public sealed partial class EditorView
         afterSynchronization = continuation;
         syncTask = Task.Run(() =>
         {
-            var scan = previousScan ?? WorkspaceSynchronization.Scan(frozen, songs, searchMissing: !quiet);
+            var scan = previousScan ?? WorkspaceSynchronization.Scan(frozen, songs, searchMissing: searchMissing || !quiet);
             var merges = new Dictionary<Guid, WorkspaceMerge>();
             foreach (var status in scan.Difficulties.Where(s => s.State is WorkspaceSyncState.Changed or WorkspaceSyncState.NeedsBaseline
                 || reviewResolved && s.State == WorkspaceSyncState.Current))
@@ -73,7 +78,7 @@ public sealed partial class EditorView
             }
             var comparisons = merges.Where(m => m.Value.Conflicts.Count > 0).ToDictionary(m => m.Key, m => PrepareSyncComparison(m.Value, compensate,
                 Path.Combine(session.Directory, manifest.Difficulties.Single(d => d.Id == m.Key).File)));
-            return new SyncResult(session, snapshot, manifest, stamp, scan, merges, WorkspaceAssociations.Claims(Path.GetDirectoryName(session.Directory)!), comparisons, reviewResolved);
+            return new SyncResult(session, snapshot, manifest, stamp, scan, merges, WorkspaceAssociations.Claims(Path.GetDirectoryName(session.Directory)!), comparisons, reviewResolved, quiet);
         });
         nextSyncCheck = DateTime.UtcNow.AddSeconds(30);
     }
@@ -116,9 +121,18 @@ public sealed partial class EditorView
                 ReleaseWaveform(); RequestDifficultyChanged?.Invoke();
                 RefreshSynchronization(continuation);
             }
+            catch (SyncSourceChangedException)
+            {
+                syncPreserveHistory = false;
+                syncRetainedReview.Clear();
+                if (syncMerges.TryGetValue(syncDifficulty, out var previous))
+                    foreach (var conflict in previous.Conflicts.Where(c => c.Key != "$audio" && syncRoundChoices.Contains(c.Key)))
+                        syncRetainedReview[conflict] = (syncChoices[conflict.Key], previous.ConflictSources(conflict.Key, false));
+                RefreshSynchronization(reviewResolved: true);
+            }
             catch (Exception e) { syncPreserveHistory = false; syncPage = "failed"; syncFailure = e.Message; }
         }
-        if (syncTask is { IsCompleted: true } completed && !RatingEditInProgress && !IsEditingText && !SongSetupVisible)
+        if (syncTask is { IsCompleted: true } completed && !SyncInteractionActive && !SynchronizationVisible)
         {
             syncTask = null;
             try
@@ -135,6 +149,10 @@ public sealed partial class EditorView
                 { syncPage = null; RefreshSynchronization(afterSynchronization); return; }
                 if (!ResourceSnapshotMatches(result.Snapshot) || reviewResolved != result.ReviewResolved)
                 { StartSynchronization(afterSynchronization, true, reviewResolved, result.Scan); return; }
+                if (result.Quiet && result.Scan.Difficulties.Any(s => s.State == WorkspaceSyncState.Unavailable)
+                    && unreadableSyncRetries++ < 2)
+                { nextSyncCheck = DateTime.UtcNow.AddSeconds(2); return; }
+                unreadableSyncRetries = 0;
                 syncSearching.Clear(); syncReviewRequested = false;
                 nextSyncCheck = DateTime.UtcNow.AddSeconds(30);
                 syncStatuses.Clear(); syncMerges.Clear();
@@ -184,7 +202,8 @@ public sealed partial class EditorView
                 int target = syncDifficulty == Guid.Empty ? activeDifficulty : difficulties.FindIndex(d => d.Id == syncDifficulty);
                 if (reviewResolved && target >= 0 && syncMerges.TryGetValue(difficulties[target].Id, out var review) && review.Conflicts.Count > 0)
                 { BeginSyncReview(target); return; }
-                if (target >= 0 && ShowSyncProblem(target, reviewResolved || afterSynchronization is not null)) return;
+                if (target >= 0 && (!LibraryVisible || reviewResolved || afterSynchronization is not null)
+                    && ShowSyncProblem(target, reviewResolved || afterSynchronization is not null)) return;
                 var continuation = afterSynchronization; afterSynchronization = null;
                 syncBypass = true;
                 try { continuation?.Invoke(); }
@@ -192,8 +211,13 @@ public sealed partial class EditorView
             }
             catch (Exception e) { syncPreserveHistory = false; syncPage = "failed"; syncFailure = e.Message; }
         }
-        if (WorkspaceSession is not null && !LibraryVisible && !SynchronizationBusy && !DiscardConfirmationVisible && !RatingEditInProgress
-            && !IsEditingText && !SongSetupVisible && DateTime.UtcNow >= nextSyncCheck) RefreshSynchronization(quiet: true);
+        if (WorkspaceSession is not null && !SynchronizationBusy && !SynchronizationVisible && !SyncInteractionActive
+            && (fileSyncPending || !LibraryVisible && DateTime.UtcNow >= nextSyncCheck))
+        {
+            bool searchMissing = fileSearchMissing;
+            fileSyncPending = fileSearchMissing = false;
+            StartSynchronization(null, true, false, searchMissing: searchMissing);
+        }
     }
 
     private bool ShowSyncProblem(int index, bool includeMissing = false)
@@ -210,7 +234,14 @@ public sealed partial class EditorView
     {
         syncDifficulty = difficulties[index].Id; syncRow = 0; syncChoices.Clear(); syncRoundChoices.Clear();
         if (syncMerges.TryGetValue(syncDifficulty, out var merge))
+        {
             foreach (string key in merge.PreviouslyResolved) syncChoices[key] = false;
+            foreach (var conflict in merge.Conflicts)
+                if (syncRetainedReview.TryGetValue(conflict, out var retained)
+                    && retained.Sources.SetEquals(merge.ConflictSources(conflict.Key, false)))
+                { syncChoices[conflict.Key] = retained.Choice; syncRoundChoices.Add(conflict.Key); }
+        }
+        syncRetainedReview.Clear();
         syncPage = "resolve";
         if (AudioPlaying) RequestPausePlayback?.Invoke();
         CancelInteraction(); hits.Clear(); fields.Clear();
@@ -252,9 +283,17 @@ public sealed partial class EditorView
         session = DetachedSession(session, project);
         var entry = session.Manifest.Difficulties.Single(d => d.Id == diff.Id);
         var choices = new Dictionary<string, bool>(syncChoices);
+        syncComparisons.TryGetValue(diff.Id, out var compared);
         syncPage = "checking";
         syncCommitTask = Task.Run(() =>
         {
+            try
+            {
+                if (WorkspaceProject.Hash(external.Path) != external.Hash
+                    || compared is not null && SyncAudioHash(external.Document.AudioPath) != compared.ExternalAudioHash)
+                    throw new SyncSourceChangedException();
+            }
+            catch (IOException) { throw new SyncSourceChangedException(); }
             ProjectSerializer.WriteFile(project, Path.Combine(WorkspaceSynchronization.Archive(session, "resolution"), "current.catchproj"));
             if (useExternal is true) diff.Document = external.Document.DeepClone();
             else if (useExternal is false) diff.Document.AudioPath = WorkspaceSynchronization.LocalAudioVersion(entry, diff.Document, session.Directory);

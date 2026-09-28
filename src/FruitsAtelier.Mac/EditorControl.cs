@@ -184,5 +184,5 @@ internal sealed class EditorControl : Control, IDisposable
     }
     protected override void OnGotFocus(GotFocusEventArgs e) { base.OnGotFocus(e); View.SetTextInputFocus(true); Refresh(); }
     protected override void OnLostFocus(Avalonia.Interactivity.RoutedEventArgs e) { base.OnLostFocus(e); View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); Refresh(); }
-    public void Dispose() => images.Dispose();
+    public void Dispose() { View.StopFileMonitoring(); images.Dispose(); }
 }
