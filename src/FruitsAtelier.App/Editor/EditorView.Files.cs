@@ -178,7 +178,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
-        if (SynchronizationVisible || syncCommitTask is not null) return false;
+        if (SynchronizationVisible || SynchronizationBusy) return false;
         if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
         if (!CommitTimingField()) return false;
         if (SliderDialogVisible || ErrorVisible) return false;

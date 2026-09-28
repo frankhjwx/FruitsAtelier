@@ -13,6 +13,9 @@ tab, and saving a linked difficulty check its external files. The editor also
 checks periodically in the background. Missing paths trigger a wider Songs search.
 Scans and merge preparation use detached snapshots; stale results are discarded.
 Background scanning does not run conversion in pointer or painting hot paths.
+During checking and applying synchronization, editor input is blocked and the
+bottom-left status bar shows progress. The check itself has no dialog; differences
+requiring a choice and synchronization problems open the resolution interface.
 
 Existing paths are checked by content, not only modification time and size. When a
 path disappears, the last synchronized object sequence locates rename candidates.

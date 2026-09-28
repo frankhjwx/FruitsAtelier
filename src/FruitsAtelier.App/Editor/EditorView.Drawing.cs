@@ -596,8 +596,9 @@ public sealed partial class EditorView
     {
         c.Fill(new(0, height - 28, width, 28), 0x171C23);
         c.Circle(13, height - 14, 3, IsDirty ? Gold : Accent);
-        string notice = conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
-        c.Text(notice, 25, height - 21, 11, conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 145));
+        string notice = SynchronizationBusy ? L.Get(syncCommitTask is not null ? "sync.applying" : "sync.checking")
+            : conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
+        c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 145));
         DrawVolumeButton(c);
     }
 

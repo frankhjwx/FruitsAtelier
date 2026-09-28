@@ -22,7 +22,7 @@ public sealed partial class EditorView
     private bool syncPreserveHistory;
     private IReadOnlyList<WorkspaceClaim> syncClaims = [];
     private string syncFailure = "";
-    public bool SynchronizationVisible => syncPage is not null;
+    public bool SynchronizationVisible => syncPage is not null and not "checking";
     public bool SynchronizationBusy => syncTask is not null || syncCommitTask is not null;
     public bool SynchronizationNeedsRedraw => syncTask is { IsCompleted: true } || syncCommitTask is { IsCompleted: true } || SynchronizationVisible && syncPreviewTask is { IsCompleted: true }
         || WorkspaceSession is not null && !LibraryVisible && DateTime.UtcNow >= nextSyncCheck;
@@ -40,14 +40,14 @@ public sealed partial class EditorView
             if (!quiet) syncPage = "checking";
             return;
         }
-        if (AudioPlaying && !quiet) RequestPausePlayback?.Invoke();
+        if (AudioPlaying) RequestPausePlayback?.Invoke();
+        CancelInteraction(); syncPage = "checking"; hits.Clear(); fields.Clear();
         var snapshot = CaptureProject();
         var manifest = WorkspaceProject.SnapshotManifest(session.Manifest);
         string stamp = ManifestStamp(manifest);
         var frozen = session with { Manifest = manifest, Project = snapshot };
         string songs = LibrarySettings.Songs; bool compensate = compensateTinyDroplets;
         afterSynchronization = continuation;
-        if (!quiet) { CancelInteraction(); syncPage = "checking"; hits.Clear(); fields.Clear(); }
         syncTask = Task.Run(() =>
         {
             var scan = WorkspaceSynchronization.Scan(frozen, songs);
@@ -164,6 +164,7 @@ public sealed partial class EditorView
                     return;
                 }
                 syncPage = null;
+                StatusMessage = L.Get("sync.complete");
                 int target = syncDifficulty == Guid.Empty ? activeDifficulty : difficulties.FindIndex(d => d.Id == syncDifficulty);
                 if (result.ReviewResolved && target >= 0 && syncMerges.TryGetValue(difficulties[target].Id, out var review) && review.Conflicts.Count > 0)
                 { BeginSyncReview(target); return; }
@@ -313,7 +314,6 @@ public sealed partial class EditorView
         c.Fill(new(0, 0, width, height), Background, opacity: .8f);
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
         c.Text(L.Get("sync.title"), x + 20, y + 18, 20, Foreground, w - 40, true);
-        if (syncPage == "checking") { c.Text(L.Get("sync.checking"), x + 20, y + 64, 14, Muted, w - 40); return; }
         if (syncPage == "failed")
         {
             c.Text(syncFailure, x + 20, y + 80, 14, Error, w - 40);

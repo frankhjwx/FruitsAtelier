@@ -952,6 +952,8 @@
   "sync.newerSaved": "Newer save",
   "sync.unsaved": "Unsaved edits",
   "sync.checking": "Checking associations and changes…",
+  "sync.applying": "Applying synchronization changes…",
+  "sync.complete": "Synchronization complete.",
   "sync.baseline": "Choose a version to establish the synchronization baseline.",
   "sync.unresolved": "Resolve all conflicts before continuing.",
   "sync.resourceChanged": "The resource changed while it was being saved. Try again.",

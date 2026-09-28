@@ -69,6 +69,7 @@ internal static class SynchronizationUiTests
                 var session = LibraryOperations.ImportPath(source, ui.View.LibrarySettings);
                 ui.View.LoadWorkspace(session, checkAdditionalDifficulties: true); Wait(ui);
                 Check(!ui.View.SynchronizationVisible, "new import remains editable");
+                CheckBusyInput(ui);
                 ui.View.ChangeAudioPath(Path.Combine(set, "pending.ogg"));
                 Guid original = ui.View.Document.Fruits[0].Id;
                 File.WriteAllText(source, Fixture.Replace("Title:Original", "Title:Updated"));
@@ -150,6 +151,33 @@ internal static class SynchronizationUiTests
         do { ui.Paint(); if (!ui.View.SynchronizationBusy) break; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
         Check(!ui.View.SynchronizationBusy, "sync timeout"); ui.Paint();
         if (ui.View.ErrorVisible) throw new Exception("Unexpected error in synchronization UI");
+    }
+
+    private static void CheckBusyInput(Ui ui)
+    {
+        var field = typeof(FruitsAtelier.App.Editor.EditorView).GetField("syncCommitTask",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var pending = new TaskCompletionSource<WorkspaceSession>();
+        var before = ui.View.Document.DeepClone();
+        field.SetValue(ui.View, pending.Task);
+        try
+        {
+            ui.Paint();
+            Check(!ui.View.SynchronizationVisible && ui.View.SynchronizationBusy, "busy sync has no modal");
+            Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.applying") && t.Y > 500), "busy progress appears in bottom status");
+            Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.title")), "busy sync title is absent");
+            ui.Key(27); ui.Key(13); ui.Key(46); ui.Key('Z', ctrl: true); ui.Type("x");
+            ui.View.PointerDown(450, 300, 0, false, false);
+            ui.View.PointerMove(550, 350, false, false);
+            ui.View.PointerUp(550, 350, 0);
+            ui.View.Wheel(450, 300, 120, false);
+            Check(ui.View.SynchronizationBusy && ui.View.Document.ContentEquals(before), "busy sync consumes input without cancellation or edits");
+        }
+        finally { field.SetValue(ui.View, null); }
+        ui.View.RefreshSynchronization();
+        Check(ui.View.SynchronizationBusy && !ui.View.SynchronizationVisible, "scan has no modal");
+        Wait(ui);
+        Check(ui.View.StatusMessage == L.Get("sync.complete"), "completed scan clears busy feedback");
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
     private const string Fixture = "osu file format v14\n[General]\nMode:2\n[Metadata]\nTitle:Original\nArtist:Artist\nCreator:Mapper\nVersion:Catch\n[Difficulty]\nCircleSize:5\nApproachRate:5\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n123,192,1000,1,0,0:0:0:0:\n";

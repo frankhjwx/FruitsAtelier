@@ -16,6 +16,7 @@ if (args.Length == 2 && args[0] == "--import-roundtrip")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Export keeps timing data below its header and a blank before Colours", TimingSectionSpacing),
     ("Cached export matches full serialization across edits, order, RNG, timing and streams", WriteCacheTests.MatchesUncached),
     ("v12, v13 and compatible v128 imports preserve gameplay, optional fields and v14 export", CompatibleVersions),
     ("v128 rejects fractional coordinates and unsupported slider syntax", LazerExtensions),
@@ -62,6 +63,18 @@ var tests = new (string Name, Action Run)[]
     ("Supplied real maps preserve original objects and timing on export", RealMaps),
     ("Real B/P/L and repeat sliders remain exportable after per-segment editing", RealEditableWrites)
 };
+
+static void TimingSectionSpacing()
+{
+    const string timing = "0,500,4,1,0,100,1,0";
+    var document = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n\n" + timing
+        + "\n\n\n[Colours]\nCombo1 : 0,128,255\n\n[HitObjects]\n123,192,1000,1,0,0:0:0:0:\n\n");
+    var before = document.DeepClone();
+    string text = OsuBeatmapWriter.Serialize(document).Text;
+    Check(text.Contains("[TimingPoints]\r\n" + timing + "\r\n\r\n[Colours]"), "Timing section spacing is misplaced");
+    Check(text == OsuBeatmapWriter.Serialize(OsuBeatmapReader.Read(text)).Text, "Repeated exports accumulate blank lines");
+    Check(document.ContentEquals(before), "Export changed source content");
+}
 int failed = 0, skipped = 0;
 tests = tests.Concat(SynchronizationTests.Cases()).ToArray();
 foreach (var (name, run) in tests)

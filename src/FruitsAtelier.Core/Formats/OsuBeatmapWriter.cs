@@ -405,7 +405,8 @@ public static class OsuBeatmapWriter
         var sections = document.OriginalSections.Where(s => s.Name == name).ToArray();
         var target = sections.FirstOrDefault();
         if (target is null) { target = new OsuSection { Name = name }; document.OriginalSections.Add(target); }
-        foreach (var section in sections) section.Lines.RemoveAll(l => OsuBeatmapReader.IsDataLine(l.Trim()));
+        foreach (var section in sections) section.Lines.RemoveAll(l => string.IsNullOrWhiteSpace(l) || OsuBeatmapReader.IsDataLine(l.Trim()));
         target.Lines.AddRange(data);
+        target.Lines.Add("");
     }
 }
