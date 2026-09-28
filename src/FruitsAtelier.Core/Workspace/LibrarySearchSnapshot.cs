@@ -15,6 +15,12 @@ public sealed class LibrarySearchSnapshot : IDisposable
     private readonly string songs;
     private sealed record ProjectListing(IReadOnlyList<LibraryMap> Maps, bool? InSongs, LibraryMap Representative);
     private readonly Dictionary<string, ProjectListing> projectDetails = new(WorkspaceSynchronization.Paths);
+    private readonly Dictionary<string, Task<WorkspaceSyncScan?>> discoveries = new(WorkspaceSynchronization.Paths);
+    private readonly CancellationTokenSource discoveryCancellation = new();
+    private readonly SemaphoreSlim discoveryQueue = new(1);
+    private long discoveryRevision, cachedDiscoveryRevision;
+    public long DiscoveryRevision => Interlocked.Read(ref discoveryRevision);
+    public void CancelReferenceDiscovery() => discoveryCancellation.Cancel();
     public int Count { get; }
     internal LibrarySearchSnapshot(SqliteConnection connection, string songs, string query, bool projectsOnly)
     {
@@ -115,6 +121,8 @@ public sealed class LibrarySearchSnapshot : IDisposable
 
     private ProjectListing ProjectDifficulties(string project, LibraryMap fallback, WorkspaceManifest? manifest = null)
     {
+        long revision = DiscoveryRevision;
+        if (cachedDiscoveryRevision != revision) { projectDetails.Clear(); cachedDiscoveryRevision = revision; }
         if (projectDetails.TryGetValue(project, out var cached)) return cached;
         if (manifest is null)
             lock (WorkspaceProject.Gate) manifest = WorkspaceProject.ReadManifest(project, includeSync: false);
@@ -123,14 +131,34 @@ public sealed class LibrarySearchSnapshot : IDisposable
         if (manifest.SongsRoot is { } root && manifest.SourceDirectory is { } relative) folders.Add(Path.Combine(root, relative));
         if (manifest.ExternalSourceDirectory is { } external) folders.Add(external);
         var missing = new HashSet<Guid>();
+        bool searching = false;
         if (targets.Values.OfType<string>().Any(p => !File.Exists(p)))
         {
-            // Discovery is read-only and runs on the library worker. Authoring is only
-            // reconciled when the project is opened through the synchronization workflow.
-            WorkspaceManifest baseline;
-            lock (WorkspaceProject.Gate) baseline = WorkspaceProject.ReadManifest(project);
-            var scan = WorkspaceSynchronization.Scan(new(project, baseline, new BeatmapProject()), songs, searchMissing: true);
-            foreach (var status in scan.Difficulties)
+            if (!discoveries.TryGetValue(project, out var task))
+            {
+                // Reference discovery must never be a prerequisite for showing indexed rows.
+                // Retiring a search cancels its queued scans rather than accumulating work.
+                var cancellation = discoveryCancellation.Token;
+                task = Task.Run(async () =>
+                {
+                    bool entered = false;
+                    try
+                    {
+                        await discoveryQueue.WaitAsync(cancellation); entered = true;
+                        cancellation.ThrowIfCancellationRequested();
+                        WorkspaceManifest baseline;
+                        lock (WorkspaceProject.Gate) baseline = WorkspaceProject.ReadManifest(project);
+                        return WorkspaceSynchronization.Scan(new(project, baseline, new BeatmapProject()), songs, searchMissing: true, cancellation: cancellation);
+                    }
+                    catch (Exception e) when (e is OperationCanceledException or IOException or UnauthorizedAccessException or System.Text.Json.JsonException) { return null; }
+                    finally { if (entered) discoveryQueue.Release(); }
+                });
+                discoveries[project] = task;
+                _ = task.ContinueWith(_ => Interlocked.Increment(ref discoveryRevision), TaskScheduler.Default);
+            }
+            searching = !task.IsCompleted;
+            var scan = task.IsCompletedSuccessfully ? task.Result : null;
+            if (scan is not null) foreach (var status in scan.Difficulties)
             {
                 if (status.State is WorkspaceSyncState.Missing or WorkspaceSyncState.Ambiguous
                     || status.State == WorkspaceSyncState.Duplicate && targets[status.DifficultyId] is { } absent && !File.Exists(absent))
@@ -163,7 +191,8 @@ public sealed class LibrarySearchSnapshot : IDisposable
                 throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("project.invalid"));
             var metadata = targets[difficulty.Id] is { } target && live.Remove(target, out var map) ? map : fallback;
             entries.Add(metadata with { Path = Path.Combine(project, difficulty.File), Directory = project,
-                Difficulty = difficulty.Name, ProjectPath = project, ExternalMissing = missing.Contains(difficulty.Id) });
+                Difficulty = difficulty.Name, ProjectPath = project, ExternalMissing = missing.Contains(difficulty.Id),
+                ReferenceSearching = searching && targets[difficulty.Id] is { } absent && !File.Exists(absent) });
         }
         entries.AddRange(live.Values.OrderBy(m => m.Path, WorkspaceSynchronization.Paths).Select(m => m with { ProjectPath = project }));
         if (projectDetails.Count >= 128) projectDetails.Remove(projectDetails.Keys.First());
@@ -187,5 +216,10 @@ public sealed class LibrarySearchSnapshot : IDisposable
             using var command = db.CreateCommand(); command.CommandText = "DETACH DATABASE catalog"; command.ExecuteNonQuery();
         }
     }
-    public void Dispose() => db.Dispose();
+    public void Dispose()
+    {
+        discoveryCancellation.Cancel(); db.Dispose();
+        _ = Task.WhenAll(discoveries.Values).ContinueWith(t =>
+        { _ = t.Exception; discoveryQueue.Dispose(); discoveryCancellation.Dispose(); }, TaskScheduler.Default);
+    }
 }

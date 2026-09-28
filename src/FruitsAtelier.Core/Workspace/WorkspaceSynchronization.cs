@@ -57,6 +57,16 @@ public sealed class WorkspaceMerge
 
 public static class WorkspaceSynchronization
 {
+    public static bool IsMetadataField(string key) => key is "Metadata/Title" or "Metadata/TitleUnicode" or "Metadata/Artist"
+        or "Metadata/ArtistUnicode" or "Metadata/Creator" or "Metadata/Version" or "Metadata/Source" or "Metadata/Tags"
+        or "Metadata/BeatmapID" or "Metadata/BeatmapSetID";
+    public static bool HasMetadataDifferences(MapDocument local, MapDocument external)
+    {
+        return local.OriginalSections.Concat(external.OriginalSections).Where(s => s.Name == "Metadata")
+            .SelectMany(s => s.Lines).Select(line => line.Split(':', 2)[0].Trim()).Distinct()
+            .Any(key => IsMetadataField("Metadata/" + key)
+                && OsuBeatmapReader.Setting(local, "Metadata", key) != OsuBeatmapReader.Setting(external, "Metadata", key));
+    }
     public static StringComparer Paths => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
         ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
     public static string? Target(WorkspaceDifficulty entry) => entry.ExportTarget ?? entry.Source;
@@ -109,7 +119,7 @@ public static class WorkspaceSynchronization
         return new(System.IO.Path.GetFullPath(path), hash, text, OsuBeatmapReader.Read(text, path));
     }
 
-    public static WorkspaceSyncScan Scan(WorkspaceSession session, string songs, bool searchMissing = true)
+    public static WorkspaceSyncScan Scan(WorkspaceSession session, string songs, bool searchMissing = true, CancellationToken cancellation = default)
     {
         var entries = session.Manifest.Difficulties;
         var files = new Dictionary<string, WorkspaceSyncCandidate>(Paths);
@@ -131,6 +141,7 @@ public static class WorkspaceSynchronization
                 foreach (string file in Directory.EnumerateFiles(root, "*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = false, AttributesToSkip = FileAttributes.ReparsePoint })
                     .Where(p => System.IO.Path.GetExtension(p).Equals(".osu", StringComparison.OrdinalIgnoreCase)))
                 {
+                    cancellation.ThrowIfCancellationRequested();
                     try
                     {
                         if (new FileInfo(file).Length > OsuBeatmapReader.MaximumFileBytes)
@@ -161,8 +172,12 @@ public static class WorkspaceSynchronization
         Dictionary<string, List<WorkspaceSyncCandidate>>? byObjects = null;
         var duplicates = WorkspaceAssociations.Claims(System.IO.Path.GetDirectoryName(session.Directory)!)
             .Where(c => !Paths.Equals(c.Project, session.Directory)).ToArray();
+        // A missing copy must not steal a surviving difficulty's exact association,
+        // even when their objects or copied online IDs are identical.
+        var occupied = trackedPaths.Concat(duplicates.Select(c => c.Target)).Where(File.Exists).ToHashSet(Paths);
         foreach (var entry in entries)
         {
+            cancellation.ThrowIfCancellationRequested();
             string? path = Target(entry);
             if (path is null) { results.Add(new(entry.Id, WorkspaceSyncState.Local, null, [])); continue; }
             files.TryGetValue(path, out var exact);
@@ -175,13 +190,13 @@ public static class WorkspaceSynchronization
             {
                 string objects = ObjectSignature(baseline.Text);
                 byObjects ??= files.Values.GroupBy(f => ObjectSignature(f.Text)).ToDictionary(g => g.Key, g => g.ToList());
-                if (byObjects.TryGetValue(objects, out var matches)) candidates.AddRange(matches);
+                if (byObjects.TryGetValue(objects, out var matches)) candidates.AddRange(matches.Where(f => !occupied.Contains(f.Path)));
                 if (candidates.Count == 0)
                 {
                     var original = OsuBeatmapReader.Read(baseline.Text, baseline.Path);
                     string? id = OsuBeatmapReader.Setting(original, "Metadata", "BeatmapID"), set = OsuBeatmapReader.Setting(original, "Metadata", "BeatmapSetID");
                     if (long.TryParse(id, out long beatmapId) && beatmapId > 0 && long.TryParse(set, out long setId) && setId > 0)
-                        candidates.AddRange(files.Values.Where(f => OsuBeatmapReader.Setting(f.Document, "Metadata", "BeatmapID") == id
+                        candidates.AddRange(files.Values.Where(f => !occupied.Contains(f.Path) && OsuBeatmapReader.Setting(f.Document, "Metadata", "BeatmapID") == id
                             && OsuBeatmapReader.Setting(f.Document, "Metadata", "BeatmapSetID") == set));
                 }
             }
@@ -211,8 +226,13 @@ public static class WorkspaceSynchronization
                 state = WorkspaceSyncState.AudioMissing;
             results.Add(new(entry.Id, state, candidate, []));
         }
-        foreach (var group in results.Where(r => r.Candidate is not null).GroupBy(r => r.Candidate!.Path, Paths).Where(g => g.Count() > 1))
-            foreach (var item in group.ToArray()) results[results.IndexOf(item)] = item with { State = WorkspaceSyncState.Duplicate };
+        foreach (var group in results.Where(r => r.Candidate is not null).GroupBy(r => r.Candidate!.Path, Paths).Where(g => g.Count() > 1).ToArray())
+        {
+            bool exactClaims = group.All(item => Paths.Equals(Target(entries.Single(e => e.Id == item.DifficultyId)), group.Key));
+            foreach (var item in group.ToArray()) results[results.IndexOf(item)] = exactClaims
+                ? item with { State = WorkspaceSyncState.Duplicate }
+                : item with { State = WorkspaceSyncState.Ambiguous, Candidate = null, Candidates = [group.Key] };
+        }
         var known = results.SelectMany(r => r.Candidate is { } c ? new[] { c.Path } : r.Candidates).ToHashSet(Paths);
         var folders = entries.Select(Target).OfType<string>().Select(p => System.IO.Path.GetDirectoryName(p)!)
             .Concat(results.Where(r => r.Candidate is not null).Select(r => System.IO.Path.GetDirectoryName(r.Candidate!.Path)!)).ToHashSet(Paths);
@@ -267,7 +287,13 @@ public static class WorkspaceSynchronization
             localFields.TryGetValue(key, out var ours); externalFields.TryGetValue(key, out var theirs);
             bool outsideChanged = before != theirs, insideChanged = authorBefore != ours || baseline.LocalOverrides.Contains(key);
             merge.Fields[key] = outsideChanged && !insideChanged ? theirs : ours;
-            if (outsideChanged && insideChanged && ours != theirs)
+            if (IsMetadataField(key) && ours != theirs)
+            {
+                merge.Fields[key] = ours;
+                merge.Conflicts.Add(new(key, ours ?? "", theirs ?? ""));
+                if (!outsideChanged && ours == authorBefore && baseline.LocalOverrides.Contains(key)) merge.PreviouslyResolved.Add(key);
+            }
+            else if (outsideChanged && insideChanged && ours != theirs)
                 merge.Conflicts.Add(new(key, ours ?? "", theirs ?? ""));
             else if (!outsideChanged && baseline.LocalOverrides.Contains(key) && ours != theirs)
             {
@@ -433,6 +459,11 @@ public static class WorkspaceSynchronization
                 && resolvedFields.GetValueOrDefault(k) != externalFields.GetValueOrDefault(k)));
         }
         else pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => resolvedFields.GetValueOrDefault(k) != externalFields.GetValueOrDefault(k)));
+        if (review is not null && choices is not null)
+            foreach (var conflict in review.Conflicts.Where(c => IsMetadataField(c.Key)))
+                if (choices.TryGetValue(conflict.Key, out bool takeExternal) && !takeExternal
+                    && resolvedFields.GetValueOrDefault(conflict.Key) != externalFields.GetValueOrDefault(conflict.Key)
+                    && !pending.Contains(conflict.Key)) pending.Add(conflict.Key);
         var retained = entry.Sync?.RetainedObjects.ToList() ?? [];
         if (review is not null && choices is not null)
             foreach (var group in review.Objects)

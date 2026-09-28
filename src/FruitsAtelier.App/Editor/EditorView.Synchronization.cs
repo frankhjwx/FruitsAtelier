@@ -68,7 +68,8 @@ public sealed partial class EditorView
             var scan = previousScan ?? WorkspaceSynchronization.Scan(frozen, songs, searchMissing: searchMissing || !quiet);
             var merges = new Dictionary<Guid, WorkspaceMerge>();
             foreach (var status in scan.Difficulties.Where(s => s.State is WorkspaceSyncState.Changed or WorkspaceSyncState.NeedsBaseline
-                || reviewResolved && s.State == WorkspaceSyncState.Current))
+                || s.State == WorkspaceSyncState.Current && (reviewResolved || WorkspaceSynchronization.HasMetadataDifferences(
+                    snapshot.Difficulties.Single(d => d.Id == s.DifficultyId).Document, s.Candidate!.Document))))
             {
                 var entry = frozen.Manifest.Difficulties.Single(d => d.Id == status.DifficultyId);
                 var diff = snapshot.Difficulties.Single(d => d.Id == status.DifficultyId);
@@ -76,6 +77,9 @@ public sealed partial class EditorView
                     ? WorkspaceSynchronization.CompareWithoutBaseline(diff.Document, status.Candidate!, session.Directory, compensate)
                     : WorkspaceSynchronization.Merge(entry, diff.Document, status.Candidate!, session.Directory, compensate);
             }
+            scan = scan with { Difficulties = scan.Difficulties.Select(s => s.State == WorkspaceSyncState.Current
+                && merges.TryGetValue(s.DifficultyId, out var merge) && merge.RequiresResolution
+                    ? s with { State = WorkspaceSyncState.Changed } : s).ToArray() };
             var comparisons = merges.Where(m => m.Value.Conflicts.Count > 0).ToDictionary(m => m.Key, m => PrepareSyncComparison(m.Value, compensate,
                 Path.Combine(session.Directory, manifest.Difficulties.Single(d => d.Id == m.Key).File)));
             return new SyncResult(session, snapshot, manifest, stamp, scan, merges, WorkspaceAssociations.Claims(Path.GetDirectoryName(session.Directory)!), comparisons, reviewResolved, quiet);
@@ -284,6 +288,10 @@ public sealed partial class EditorView
         var entry = session.Manifest.Difficulties.Single(d => d.Id == diff.Id);
         var choices = new Dictionary<string, bool>(syncChoices);
         syncComparisons.TryGetValue(diff.Id, out var compared);
+        syncMerges.TryGetValue(diff.Id, out var metadataReview);
+        bool metadataOnly = metadataReview is not null && metadataReview.Conflicts.Count > 0
+            && metadataReview.Conflicts.All(c => WorkspaceSynchronization.IsMetadataField(c.Key));
+        syncPreserveHistory = metadataOnly;
         syncPage = "checking";
         syncCommitTask = Task.Run(() =>
         {
@@ -295,7 +303,9 @@ public sealed partial class EditorView
             }
             catch (IOException) { throw new SyncSourceChangedException(); }
             ProjectSerializer.WriteFile(project, Path.Combine(WorkspaceSynchronization.Archive(session, "resolution"), "current.catchproj"));
-            if (useExternal is true) diff.Document = external.Document.DeepClone();
+            if (metadataOnly) diff.Document = WorkspaceSynchronization.Resolve(metadataReview!,
+                metadataReview!.Conflicts.ToDictionary(c => c.Key, c => useExternal ?? choices.GetValueOrDefault(c.Key)));
+            else if (useExternal is true) diff.Document = external.Document.DeepClone();
             else if (useExternal is false) diff.Document.AudioPath = WorkspaceSynchronization.LocalAudioVersion(entry, diff.Document, session.Directory);
             else if (useExternal is null && syncMerges.TryGetValue(diff.Id, out var merge)) diff.Document = WorkspaceSynchronization.Resolve(merge, choices);
             diff.Document.SourcePath = external.Path;

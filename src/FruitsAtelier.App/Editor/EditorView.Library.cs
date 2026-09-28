@@ -355,7 +355,8 @@ public sealed partial class EditorView
         if (libraryQuery.Length == 0 && libraryField != 2)
             c.Text(L.Get("library.search"), 226, 95, 14, Muted, queryRect.Width - 24);
         hits.Add(new(queryRect, () => { libraryField = 2; FocusInput("library:2", libraryQuery, mouseX); }, true));
-        c.Text(L.Get("library.results", LibrarySetCount), 214, 140, 12, Muted, listWidth);
+        bool initialLoading = libraryBrowser is null && LibraryLoading;
+        c.Text(initialLoading ? L.Get("library.scanning") : L.Get("library.results", LibrarySetCount), 214, 140, 12, Muted, listWidth);
         libraryListBounds = new(214, 170, listWidth, Math.Max(86, height - 212));
         if (revealLibrarySelection && LibrarySetCount > 0)
         {
@@ -409,7 +410,7 @@ public sealed partial class EditorView
         c.Unclip();
         DrawLibraryScrollbar(c, new(libraryListBounds.Right + 6, 170, 10, libraryListBounds.Height), libraryScroll, LibrarySetCount, LibraryVisibleRows, false);
         DrawLibraryDetails(c, width - 320);
-        if (LibrarySetCount == 0) c.Text(L.Get(string.IsNullOrWhiteSpace(LibrarySettings.Songs) && !libraryProjectsOnly ? "library.unboundEmpty" : "library.empty"), 226, 204, 15, Muted, listWidth - 24);
+        if (LibrarySetCount == 0) c.Text(initialLoading ? L.Get("library.scanning") : L.Get(string.IsNullOrWhiteSpace(LibrarySettings.Songs) && !libraryProjectsOnly ? "library.unboundEmpty" : "library.empty"), 226, 204, 15, Muted, listWidth - 24);
         if (libraryError.Length > 0) c.Text(libraryError.Replace('\n', ' '), 214, height - 34, 12, Error, width - 238);
         else c.Text(L.Get("library.dropHint"), 214, height - 34, 12, Muted, width - 238);
     }
@@ -436,8 +437,9 @@ public sealed partial class EditorView
             float y = 334 + (i - libraryDiffScroll) * 40;
             libraryRatings.TryGetValue(diff.Path, out var stars);
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "osu", "RulesetCatch.png"), new(x, y, 22, 22), DifficultyColour(stars));
-            c.Text(diff.Difficulty, x + 32, y + 3, 13, diff.ExternalMissing ? 0x718092u : Foreground, 200);
-            if (diff.ExternalMissing) c.Text(L.Get("sync.missingBadge"), x + 32, y + 20, 10, 0x718092, 200);
+            c.Text(diff.Difficulty, x + 32, y + 3, 13, diff.ExternalMissing || diff.ReferenceSearching ? 0x718092u : Foreground, 200);
+            if (diff.ReferenceSearching) c.Text(L.Get("sync.searchingReference"), x + 32, y + 20, 10, Muted, 200);
+            else if (diff.ExternalMissing) c.Text(L.Get("sync.missingBadge"), x + 32, y + 20, 10, 0x718092, 200);
             else if (diff.Mode != 2) c.Text(L.Get("sync.readOnlyMode", diff.Mode), x + 32, y + 20, 10, Muted, 200);
             c.Text(stars is null ? "—" : stars.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "★", x + 238, y + 3, 12, DifficultyColour(stars), 60);
         }

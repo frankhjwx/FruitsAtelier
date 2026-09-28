@@ -37,7 +37,10 @@ difficulties in associated source directories. Counts and detail rows refresh
 together without opening the editor. Deleted unimported files leave the list;
 saved difficulties with missing sources remain muted, with the card counting
 available and missing difficulties separately. Missing references trigger read-only
-identity discovery on the library worker, including renamed directories. Recovered
+identity discovery in a separate background queue, including renamed directories.
+Indexed rows appear before this search finishes and show pending reference status.
+Completed discovery refreshes visible cards and details without clearing the list.
+Retiring a library search cancels its pending discovery work. Recovered
 references remove the missing badge without duplicating the FA entry. Library
 discovery does not save authoring or accept a synchronization baseline; opening the
 project performs the normal synchronization and conflict checks.
@@ -59,6 +62,10 @@ Positive beatmap and set IDs provide additional candidates when objects changed.
 Multiple candidates require explicit association. Identical copies at different
 live paths remain separate files. An unavailable root or an unreadable live file
 is not evidence of deletion.
+Rename discovery excludes files already held by surviving exact associations,
+including copies with identical objects or online IDs. If multiple missing
+difficulties compete for one unclaimed candidate, they require explicit association;
+inferred matches alone never trigger duplicate-owner cleanup.
 Unrelated malformed or oversized beatmaps are skipped during discovery. A linked
 file that is malformed or exceeds the reader limit is reported as unavailable.
 
@@ -85,7 +92,7 @@ AR and playfield width, matching the editor canvas. Selecting a conflict restore
 that AR scale and locates its start; long groups remain scrollable rather than
 being compressed to fit. Current conflicting objects and related curve controls are
 highlighted; missing counterparts are labelled. Mouse wheel scrolls both maps and
-Ctrl+wheel zooms them together. Field differences appear above the canvases. The
+Ctrl+wheel zooms them together. Non-metadata field differences appear above the canvases. The
 optional result pane previews chosen resolutions, using FA for unresolved items;
 it does not save or export. File timestamps identify the more recently saved version,
 and unsaved FA edits are labelled separately. A newer timestamp does not resolve
@@ -173,3 +180,16 @@ copies cannot be assigned a trustworthy automatic identity. Use explicit associa
 and version selection in those cases.
 
 See [Building and Testing](TESTING.md) for the regression commands.
+
+## Metadata text review
+
+Differences in Title, TitleUnicode, Artist, ArtistUnicode, Creator, Version, Source,
+Tags, BeatmapID and BeatmapSetID require explicit choices, including unilateral edits.
+All differing metadata fields share one scrollable page with aligned FA and osu!
+rows. Click a value to retain that side for its row. Changed text fragments use red
+for unresolved differences, amber for unchanged previously accepted differences,
+and green for choices made in the current review; unchanged text stays neutral.
+Rows remain available for changing a choice until Apply. Object conflicts retain
+their canvas pages. Metadata-only resolutions preserve authoring objects and undo
+history. An unchanged accepted mismatch remains reviewable; another edit requires
+a fresh decision. Other sections retain their existing three-way merge rules.

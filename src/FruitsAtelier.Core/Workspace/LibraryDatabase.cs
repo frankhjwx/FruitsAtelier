@@ -79,7 +79,7 @@ public sealed class LibrarySettings
 }
 
 public sealed record LibraryMap(string Path, string Directory, string Title, string TitleUnicode, string Artist, string ArtistUnicode,
-    string Creator, string Difficulty, string Tags, string Source, string Audio, string Background, string? ProjectPath = null, bool ExternalMissing = false, int Mode = 2);
+    string Creator, string Difficulty, string Tags, string Source, string Audio, string Background, string? ProjectPath = null, bool ExternalMissing = false, int Mode = 2, bool ReferenceSearching = false);
 public sealed record LibraryScan(int Count, IReadOnlyList<string> Errors);
 public sealed record LibraryScanProgress(int Files, int Indexed, int Errors);
 

@@ -25,6 +25,19 @@ internal static class SynchronizationRenderCheck
                 view.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); view.LibrarySettings.Songs = songs;
                 var session = WorkspaceProject.Create(view.LibrarySettings.Workspace, BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(source)]), songs);
                 view.LoadWorkspace(session);
+                File.WriteAllText(source, text.Replace("Title:Native synchronization fixture", "Title:Native synchronization fixture updated")
+                    .Replace("Artist:Artist", "Artist:Artist changed")
+                    .Replace("Creator:Mapper", "Creator:Mapper changed")
+                    .Replace("Version:Catch", "Version:Catch revised\nTags:" + string.Join(" ", Enumerable.Repeat("metadata long text", 100))));
+                view.RefreshSynchronization(); Wait();
+                if (!view.SynchronizationVisible) throw new InvalidOperationException("Native metadata rows were not shown.");
+                var metadataBefore = view.Document.DeepClone();
+                view.Wheel(200, 260, -1200, false); Paint();
+                view.Wheel(200, 260, 1200, false); Paint();
+                if (!metadataBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native metadata scrolling changed authoring.");
+                view.KeyDown(27, false, false);
+
+                view.LoadWorkspace(WorkspaceProject.Open(session.Directory));
                 File.WriteAllText(source, text.Replace("100,192", "400,192"));
                 view.RefreshSynchronization(); Wait();
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native object conflict dialog was not shown.");

@@ -4,6 +4,61 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: all ten metadata fields require a choice for any differing value", () =>
+        {
+            foreach (string key in new[] { "Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Version", "Source", "Tags", "BeatmapID", "BeatmapSetID" })
+            foreach (bool localOnly in new[] { false, true }) Run(f =>
+            {
+                var external = OsuBeatmapReader.ReadFile(f.Source);
+                Set(localOnly ? f.Diff.Document : external, key, key.EndsWith("ID") ? "12345" : "Changed value");
+                File.WriteAllText(f.Source, OsuBeatmapWriter.Serialize(external).Text);
+                var merge = f.Merge();
+                Check(merge.RequiresResolution && merge.Conflicts.Any(c => c.Key == "Metadata/" + key), key + " unilateral change requires selection");
+                var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => false);
+                var kept = WorkspaceSynchronization.Resolve(merge, choices);
+                WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, kept, true, review: merge, choices: choices);
+                f.Diff.Document = kept;
+                var again = f.Merge();
+                Check(!again.RequiresResolution && again.PreviouslyResolved.Contains("Metadata/" + key), key + " accepted difference remains resolved");
+                Set(external, key, key.EndsWith("ID") ? "67890" : "Changed again");
+                File.WriteAllText(f.Source, OsuBeatmapWriter.Serialize(external).Text);
+                Check(f.Merge().RequiresResolution, key + " new external edit renews conflict");
+            });
+        });
+        yield return ("Sync: deleting copied difficulties does not steal surviving exact associations", () =>
+        {
+            foreach (bool copiedIds in new[] { false, true }) Run(f =>
+            {
+                string survivor = copiedIds ? Fixture().Replace("BeatmapID:0", "BeatmapID:123").Replace("BeatmapSetID:-1", "BeatmapSetID:456") : Fixture();
+                File.WriteAllText(f.Source, survivor);
+                var copies = new List<string>();
+                foreach (string name in new[] { "Test", "Test2" })
+                {
+                    string path = Path.Combine(f.Set, name + ".osu"); copies.Add(path);
+                    string text = survivor.Replace("Version:Rain", "Version:" + name);
+                    if (copiedIds) text = text.Replace("100,192,1000", "400,192,1000");
+                    File.WriteAllText(path, text);
+                    f.Session.Project.Difficulties.AddRange(BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(path)]).Difficulties);
+                }
+                WorkspaceProject.Save(f.Session, f.Session.Project);
+                foreach (string copy in copies) File.Delete(copy);
+                f.Session = WorkspaceProject.Open(f.Session.Directory);
+                var scan = f.Scan();
+                Check(scan.Difficulties[0].Candidate?.Path == f.Source && scan.Difficulties[0].State != WorkspaceSyncState.Duplicate, "survivor keeps its exact association");
+                Check(scan.Difficulties.Skip(1).All(s => s.State == WorkspaceSyncState.Missing && s.Candidate is null), "deleted copies remain missing even with copied objects or IDs");
+                Check(scan.Additions.Count == 0 && f.Session.Project.Difficulties.Count == 3, "discovery neither imports duplicates nor removes authoring");
+            });
+        });
+        yield return ("Sync: competing inferred rename matches require association rather than duplicate cleanup", () => Run(f =>
+        {
+            string copy = Path.Combine(f.Set, "Test.osu"); File.WriteAllText(copy, Fixture().Replace("Version:Rain", "Version:Test"));
+            f.Session.Project.Difficulties.AddRange(BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(copy)]).Difficulties);
+            WorkspaceProject.Save(f.Session, f.Session.Project);
+            string moved = Path.Combine(f.Set, "renamed.osu"); File.Move(f.Source, moved); File.Delete(copy);
+            var scan = f.Scan();
+            Check(scan.Difficulties.All(s => s.State == WorkspaceSyncState.Ambiguous && s.Candidate is null && s.Candidates.SequenceEqual(new[] { moved })), "unproven identity cannot trigger destructive duplicate cleanup");
+            Check(scan.Additions.Count == 0, "contested candidate is not imported again");
+        }));
         yield return ("Sync: periodic checks stay in associated folders while explicit discovery finds moved maps", () => Run(f =>
         {
             string moved = Path.Combine(f.Songs, "moved"); Directory.CreateDirectory(moved);
@@ -143,7 +198,7 @@ internal static class SynchronizationTests
             var added = new Fruit { TimeMs = 3000, X = 321 }; f.Diff.Document.Fruits.Add(added);
             File.WriteAllText(f.Source, Fixture().Replace("100,192,1000,1,0,0:0:0:0:\n", ""));
             var merge = f.Merge(); var result = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => true));
-            Check(result.Fruits.Count == 3 && result.Fruits.Any(o => o.Id == added.Id), "local addition retained");
+            Check(result.Fruits.Count == 3 && result.Fruits.Any(o => o.Id == added.Id), "local addition retained: " + string.Join(";", result.Fruits.Select(o => $"{o.TimeMs}:{o.X}:{o.Id == added.Id}")));
         }));
         yield return ("Sync: interrupted deletion rolls back the external removal", () => Run(f =>
         {
@@ -335,13 +390,13 @@ internal static class SynchronizationTests
             Check(resolved.Fruits[0].Id == f.Diff.Document.Fruits[0].Id, "identity");
             Check(OsuBeatmapReader.Setting(resolved, "Metadata", "BeatmapID") == "12345", "ID");
         }));
-        yield return ("Sync: disjoint metadata edits merge and same-field edits require choice", () => Run(f =>
+        yield return ("Sync: all differing metadata fields require individual choices", () => Run(f =>
         {
             Set(f.Diff.Document, "Title", "FA title"); Set(f.Diff.Document, "Tags", "local tags");
             File.WriteAllText(f.Source, Fixture().Replace("Title:Title", "Title:osu title").Replace("Creator:Mapper", "Creator:External mapper"));
-            var merge = f.Merge(); Check(merge.Conflicts.Single().Key == "Metadata/Title", "precise conflict");
+            var merge = f.Merge(); Check(merge.Conflicts.Select(c => c.Key).ToHashSet().SetEquals(new[] { "Metadata/Title", "Metadata/Creator", "Metadata/Tags" }), "single-sided and two-sided differences require choices");
             Reject(() => WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>()));
-            var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool> { ["Metadata/Title"] = false });
+            var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool> { ["Metadata/Title"] = false, ["Metadata/Creator"] = true, ["Metadata/Tags"] = false });
             Check(OsuBeatmapReader.Setting(resolved, "Metadata", "Title") == "FA title", "local choice");
             Check(OsuBeatmapReader.Setting(resolved, "Metadata", "Creator") == "External mapper", "external disjoint");
             Check(OsuBeatmapReader.Setting(resolved, "Metadata", "Tags") == "local tags", "local disjoint");
@@ -465,7 +520,11 @@ internal static class SynchronizationTests
         }
         public WorkspaceSyncScan Scan() => WorkspaceSynchronization.Scan(Session, Songs);
         public WorkspaceMerge Merge() => WorkspaceSynchronization.Merge(Session.Manifest.Difficulties[0], Diff.Document, WorkspaceSynchronization.ReadStable(Source), Session.Directory, true);
-        public MapDocument Resolve(WorkspaceSyncCandidate candidate) => WorkspaceSynchronization.Resolve(WorkspaceSynchronization.Merge(Session.Manifest.Difficulties[0], Diff.Document, candidate, Session.Directory, true), new Dictionary<string, bool>());
+        public MapDocument Resolve(WorkspaceSyncCandidate candidate)
+        {
+            var merge = WorkspaceSynchronization.Merge(Session.Manifest.Difficulties[0], Diff.Document, candidate, Session.Directory, true);
+            return WorkspaceSynchronization.Resolve(merge, merge.Conflicts.Where(c => WorkspaceSynchronization.IsMetadataField(c.Key)).ToDictionary(c => c.Key, _ => true));
+        }
         public void CopyProject()
         {
             string copy = Path.Combine(Workspace, "copied-project"); Directory.CreateDirectory(copy);
@@ -502,5 +561,5 @@ SliderTickRate:1
 100,192,1000,1,0,0:0:0:0:
 150,192,1500,1,0,0:0:0:0:
 200,192,2000,1,0,0:0:0:0:
-""";
+""".Replace("\r", "");
 }
