@@ -1,0 +1,221 @@
+using System.Globalization;
+using FruitsAtelier.App.Rendering;
+using FruitsAtelier.Core;
+using L = FruitsAtelier.Localization.Strings;
+
+namespace FruitsAtelier.App.Editor;
+
+public sealed partial class EditorView
+{
+    private sealed record SyncPath(Guid Source, MapPoint[] Points, bool Controls = false)
+    {
+        public double Start { get; } = Points.Length == 0 ? 0 : Points.Min(p => p.TimeMs);
+        public double End { get; } = Points.Length == 0 ? 0 : Points.Max(p => p.TimeMs);
+    }
+    private sealed record SyncPane(MapDocument Document, IReadOnlyList<ConvertedCatchObject> Objects, SyncPath[] Paths, Dictionary<Guid, int> Indices, uint[] Colours);
+    private sealed record SyncFocus(IReadOnlySet<Guid> Local, IReadOnlySet<Guid> External, double Start, double End);
+    private sealed record SyncComparison(SyncPane Local, SyncPane External, Dictionary<string, SyncFocus> Focus, DateTime? LocalSaved, DateTime? ExternalSaved);
+    private readonly Dictionary<Guid, SyncComparison> syncComparisons = [];
+    private WorkspaceMerge? syncVisualMerge;
+    private string? syncVisualKey;
+    private double syncViewStart, syncViewSpan = 3000;
+    private Rect syncCanvasBounds;
+    private bool syncShowResult;
+    private int syncPreviewRevision;
+    private SyncPane? syncResultPane;
+    private Task<(WorkspaceMerge Merge, int Revision, SyncPane Pane)>? syncPreviewTask;
+    private static readonly HashSet<(Guid SourceId, int EventIndex)> noSyncHyper = [];
+
+    private static SyncPane PrepareSyncPane(MapDocument document, bool compensate)
+    {
+        var conversion = CatchStreamConverter.Convert(document, compensate);
+        if (!conversion.Success) throw new InvalidDataException(string.Join("\n", conversion.Diagnostics));
+        var paths = new List<SyncPath>();
+        foreach (var track in document.Tracks)
+        {
+            double duration = track.Nodes[^1].TimeMs - track.Nodes[0].TimeMs;
+            for (int span = 0; span < track.SpanCount; span++)
+            {
+                var points = new List<MapPoint>();
+                for (int segment = 0; segment < track.Nodes.Count - 1; segment++)
+                    for (int step = 0; step <= 32; step++)
+                    {
+                        var p = CurveMath.Evaluate(track, segment, step / 32.0);
+                        points.Add(new(track.Nodes[0].TimeMs + span * duration + (span % 2 == 0 ? p.TimeMs - track.Nodes[0].TimeMs : track.Nodes[^1].TimeMs - p.TimeMs), p.X));
+                    }
+                paths.Add(new(track.Id, points.ToArray()));
+            }
+            foreach (var node in track.Nodes)
+            {
+                paths.Add(new(track.Id, [new(node.TimeMs, node.X)], true));
+                if (node.HandleIn != default) paths.Add(new(track.Id, [new(node.TimeMs, node.X), new(node.TimeMs + node.HandleIn.TimeMs, node.X + node.HandleIn.X)], true));
+                if (node.HandleOut != default) paths.Add(new(track.Id, [new(node.TimeMs, node.X), new(node.TimeMs + node.HandleOut.TimeMs, node.X + node.HandleOut.X)], true));
+            }
+        }
+        foreach (var slider in conversion.Sliders.Where(s => s.IsImported && s.Path.Count > 1))
+        {
+            var distances = new double[slider.Path.Count];
+            for (int i = 1; i < distances.Length; i++)
+                distances[i] = distances[i - 1] + Math.Sqrt(Math.Pow(slider.Path[i].X - slider.Path[i - 1].X, 2) + Math.Pow(slider.Path[i].GeometryY - slider.Path[i - 1].GeometryY, 2));
+            if (distances[^1] <= 0) continue;
+            for (int span = 0; span < slider.SpanCount; span++)
+            {
+                double start = slider.StartTimeMs + span * slider.DurationMs / slider.SpanCount;
+                paths.Add(new(slider.SourceId, slider.Path.Select((p, i) => new MapPoint(start
+                    + (span % 2 == 0 ? distances[i] / distances[^1] : 1 - distances[i] / distances[^1]) * slider.DurationMs / slider.SpanCount, p.X)).ToArray()));
+            }
+        }
+        var indices = conversion.Objects.Select(o => o.SourceId).Distinct().Select((id, i) => (id, i)).ToDictionary(p => p.id, p => p.i);
+        var colours = new List<uint>();
+        foreach (var line in document.OriginalSections.Where(s => s.Name == "Colours").SelectMany(s => s.Lines))
+        {
+            var pair = line.Split(':', 2);
+            if (pair.Length != 2 || !pair[0].Trim().StartsWith("Combo", StringComparison.Ordinal)) continue;
+            var rgb = pair[1].Split(',');
+            if (rgb.Length == 3 && byte.TryParse(rgb[0].Trim(), out byte r) && byte.TryParse(rgb[1].Trim(), out byte g) && byte.TryParse(rgb[2].Trim(), out byte b))
+                colours.Add((uint)(r << 16 | g << 8 | b));
+        }
+        return new(document, conversion.Objects, paths.ToArray(), indices, colours.ToArray());
+    }
+
+    private static SyncComparison PrepareSyncComparison(WorkspaceMerge merge, bool compensate, string? authoringPath = null)
+    {
+        var local = PrepareSyncPane(merge.Local, compensate); var external = PrepareSyncPane(merge.External.Document, compensate);
+        var focus = new Dictionary<string, SyncFocus>();
+        foreach (var conflict in merge.Conflicts)
+        {
+            var ours = merge.ConflictSources(conflict.Key, false); var theirs = merge.ConflictSources(conflict.Key, true);
+            var times = local.Objects.Where(o => ours.Contains(o.SourceId)).Concat(external.Objects.Where(o => theirs.Contains(o.SourceId))).Select(o => o.TimeMs)
+                .Concat(local.Paths.Where(p => ours.Contains(p.Source)).Concat(external.Paths.Where(p => theirs.Contains(p.Source))).SelectMany(p => p.Points.Select(v => v.TimeMs))).ToArray();
+            focus[conflict.Key] = new(ours, theirs, times.Length == 0 ? 0 : times.Min(), times.Length == 0 ? 0 : times.Max());
+        }
+        return new(local, external, focus, authoringPath is not null && File.Exists(authoringPath) ? File.GetLastWriteTimeUtc(authoringPath) : null,
+            File.Exists(merge.External.Path) ? File.GetLastWriteTimeUtc(merge.External.Path) : null);
+    }
+
+    private void DrawSyncComparison(ICanvas c, WorkspaceMerge merge, SyncComparison comparison)
+    {
+        syncRow = Math.Clamp(syncRow, 0, merge.Conflicts.Count - 1);
+        var conflict = merge.Conflicts[syncRow]; var focus = comparison.Focus[conflict.Key];
+        if (!ReferenceEquals(syncVisualMerge, merge))
+        { syncVisualMerge = merge; syncVisualKey = null; syncResultPane = null; syncPreviewRevision++; }
+        if (syncVisualKey != conflict.Key)
+        {
+            syncVisualKey = conflict.Key;
+            syncViewSpan = Math.Max(2500, (focus.End - focus.Start) * 1.4 + 600);
+            syncViewStart = Math.Max(0, (focus.Start + focus.End - syncViewSpan) / 2);
+        }
+        PumpSyncPreview(merge);
+        float x = 16, y = 16, w = width - 32, h = height - 32;
+        c.Fill(new(0, 0, width, height), Background);
+        c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
+        c.Text(L.Get("sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
+        c.Text(syncStatuses.GetValueOrDefault(syncDifficulty)?.State == WorkspaceSyncState.NeedsBaseline ? L.Get("sync.compareNoBaseline") : L.Get("sync.compareHelp"), x + 20, y + 46, 12, Muted, w - 40);
+        string label = conflict.Key.StartsWith("$objects:") ? L.Get("sync.objects", syncRow + 1) : conflict.Key == "$audio" ? L.Get("sync.audio") : conflict.Key;
+        c.Text(label, x + 20, y + 70, 15, Accent, w - 40);
+        float paneWidth = (w - 40 - (syncShowResult ? 24 : 12)) / (syncShowResult ? 3 : 2);
+        var left = new Rect(x + 20, y + 102, paneWidth, h - 256);
+        var right = left with { X = left.Right + 12 };
+        syncCanvasBounds = new(left.X, left.Y, w - 40, left.Height);
+        bool dirty = difficulties.FirstOrDefault(d => d.Id == syncDifficulty)?.History.IsDirty == true;
+        DrawSyncPane(c, comparison.Local, left, "FA", focus.Local, conflict.Key.StartsWith("$objects:") ? null : conflict.Local,
+            SavedLabel(comparison.LocalSaved, comparison.ExternalSaved, dirty));
+        DrawSyncPane(c, comparison.External, right, "osu!", focus.External, conflict.Key.StartsWith("$objects:") ? null : conflict.External,
+            SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false));
+        bool chosen = syncChoices.TryGetValue(conflict.Key, out bool external);
+        if (chosen) c.Stroke(external ? right : left, Accent, 3);
+        if (syncShowResult)
+        {
+            var result = right with { X = right.Right + 12 };
+            if (syncResultPane is { } pane) DrawSyncPane(c, pane, result, L.Get("sync.resultPreview"), new HashSet<Guid>(), null);
+            else c.Text(L.Get("sync.checking"), result.X + 12, result.Y + 35, 13, Muted, result.Width - 24);
+        }
+        Button(c, new(left.X, y + h - 142, left.Width, 32), L.Get("sync.chooseLocal"), () => ChooseSyncItem(merge, conflict.Key, false), chosen && !external);
+        Button(c, new(right.X, y + h - 142, right.Width, 32), L.Get("sync.chooseExternal"), () => ChooseSyncItem(merge, conflict.Key, true), chosen && external);
+        c.Text(L.Get("sync.reviewProgress", syncChoices.Count, merge.Conflicts.Count), x + 20, y + h - 102, 12, Muted, 300);
+        Navigation(c, x, y + h - 80, merge.Conflicts.Count);
+        Button(c, new(x + 320, y + h - 80, 180, 30), L.Get("sync.resultPreview"), () => syncShowResult = !syncShowResult, syncShowResult);
+        Button(c, new(x + w - 240, y + h - 80, 220, 30), L.Get("sync.inspect"), () => InspectSync(merge));
+        Button(c, new(x + 20, y + h - 40, 200, 30), L.Get("sync.allLocal"), () => ResolveSync(false));
+        Button(c, new(x + 232, y + h - 40, 200, 30), L.Get("sync.allExternal"), () => ResolveSync(true));
+        Button(c, new(x + w - 360, y + h - 40, 200, 30), L.Get("sync.applyChoices"), () => ResolveSync(null), enabled: merge.Conflicts.All(k => syncChoices.ContainsKey(k.Key)));
+        Button(c, new(x + w - 140, y + h - 40, 120, 30), L.Get("mac.cancel"), CancelSynchronization);
+    }
+
+    private static string SavedLabel(DateTime? saved, DateTime? other, bool dirty)
+    {
+        string label = saved is { } date ? L.Get("sync.savedAt", date.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)) : L.Get("sync.unsaved");
+        if (saved is not null && other is not null && saved > other) label += " · " + L.Get("sync.newerSaved");
+        if (dirty && saved is not null) label += " · " + L.Get("sync.unsaved");
+        return label;
+    }
+
+    private void DrawSyncPane(ICanvas c, SyncPane pane, Rect bounds, string title, IReadOnlySet<Guid> selected, string? value, string? saved = null)
+    {
+        c.Fill(bounds, Background); c.Stroke(bounds, Grid);
+        c.Text(title, bounds.X + 10, bounds.Y + 6, 15, Foreground, bounds.Width - 20, true);
+        c.Text(saved ?? L.Get("sync.previewPending"), bounds.X + 10, bounds.Y + 27, 10, Muted, bounds.Width - 20);
+        float inset = value is null ? 52 : 136;
+        if (value is not null) DrawSyncValue(c, value.Length == 0 ? L.Get("sync.absent") : value, bounds.X + 10, bounds.Y + 50, bounds.Width - 20);
+        var field = new Rect(bounds.X + 50, bounds.Y + inset, bounds.Width - 62, Math.Max(40, bounds.Height - inset - 14));
+        float Y(double t) => field.Bottom - (float)((t - syncViewStart) / syncViewSpan * field.Height);
+        float X(double p) => field.X + (float)(p / 512) * field.Width;
+        c.Clip(bounds);
+        double step = Math.Pow(10, Math.Floor(Math.Log10(syncViewSpan / 5)));
+        if (syncViewSpan / step > 12) step *= 5;
+        for (double time = Math.Ceiling(syncViewStart / step) * step; time <= syncViewStart + syncViewSpan; time += step)
+        {
+            float at = Y(time); c.Line(field.X, at, field.Right, at, Grid);
+            c.Text((time / 1000).ToString("0.##", CultureInfo.InvariantCulture), bounds.X + 4, at - 7, 10, Muted, 43);
+        }
+        for (int i = 0; i <= 4; i++) c.Line(X(i * 128), field.Y, X(i * 128), field.Bottom, Grid, opacity: .5f);
+        c.Clip(field);
+        foreach (var path in pane.Paths)
+        {
+            if (path.Points.Length == 0 || path.End < syncViewStart || path.Start > syncViewStart + syncViewSpan) continue;
+            bool highlight = selected.Contains(path.Source);
+            for (int i = 1; i < path.Points.Length; i++) c.Line(X(path.Points[i - 1].X), Y(path.Points[i - 1].TimeMs), X(path.Points[i].X), Y(path.Points[i].TimeMs), highlight ? Gold : Purple, highlight ? 2.5f : 1.5f, path.Controls ? .6f : 1);
+            if (path.Controls && highlight) foreach (var point in path.Points) Diamond(c, X(point.X), Y(point.TimeMs), 4, Gold);
+        }
+        int low = 0, high = pane.Objects.Count;
+        while (low < high) { int middle = low + (high - low) / 2; if (pane.Objects[middle].TimeMs < syncViewStart) low = middle + 1; else high = middle; }
+        for (int i = low; i < pane.Objects.Count && pane.Objects[i].TimeMs <= syncViewStart + syncViewSpan; i++)
+        {
+            var item = pane.Objects[i];
+            int index = pane.Indices.GetValueOrDefault(item.SourceId);
+            uint colour = item.Kind == CatchObjectKind.Banana ? CatchObjectVisual.BananaColour(item.TimeMs)
+                : pane.Colours.Length > 0 ? pane.Colours[index % pane.Colours.Length] : 0xFFFFFF;
+            DrawCatchObject(c, item, X(item.X), Y(item.TimeMs), field.Width, circleSize: pane.Document.CircleSize,
+                hyperStarts: noSyncHyper, colourOverride: colour, skinIndexOverride: index);
+            if (selected.Contains(item.SourceId)) c.Circle(X(item.X), Y(item.TimeMs), (float)CatchSize.FruitRadius(pane.Document.CircleSize) * field.Width / 512 + 4, Gold, false, 2.5f);
+        }
+        c.Unclip(); c.Unclip();
+        if (value is null && selected.Count == 0 && title is "FA" or "osu!") c.Text(L.Get("sync.absent"), bounds.X + 10, bounds.Y + 52, 12, Gold, bounds.Width - 20);
+    }
+
+    private void ScrollSyncComparison(float x, float y, float delta, bool zoom)
+    {
+        if (syncPage != "resolve" || !syncCanvasBounds.Contains(x, y)) return;
+        if (zoom)
+        {
+            double center = syncViewStart + syncViewSpan / 2;
+            syncViewSpan = Math.Clamp(syncViewSpan * Math.Pow(1.2, -delta / 120), 100, 3600000);
+            syncViewStart = Math.Max(0, center - syncViewSpan / 2);
+        }
+        else syncViewStart = Math.Max(0, syncViewStart + delta / 120 * syncViewSpan / 8);
+    }
+
+    private void PumpSyncPreview(WorkspaceMerge merge)
+    {
+        if (syncPreviewTask is { IsCompleted: true } task)
+        {
+            syncPreviewTask = null;
+            try { var result = task.GetAwaiter().GetResult(); if (ReferenceEquals(result.Merge, merge) && result.Revision == syncPreviewRevision) syncResultPane = result.Pane; }
+            catch (Exception e) { syncShowResult = false; ShowError(e.Message); }
+        }
+        if (!syncShowResult || syncResultPane is not null || syncPreviewTask is not null) return;
+        var choices = merge.Conflicts.ToDictionary(c => c.Key, c => syncChoices.GetValueOrDefault(c.Key));
+        int revision = syncPreviewRevision; bool compensate = compensateTinyDroplets;
+        syncPreviewTask = Task.Run(() => (merge, revision, PrepareSyncPane(WorkspaceSynchronization.Resolve(merge, choices), compensate)));
+    }
+}

@@ -33,6 +33,16 @@ public sealed class WorkspaceMerge
     internal Dictionary<string, string?> Fields { get; } = [];
     internal List<(string Key, Guid[] Sources, string[] Lines)> Objects { get; } = [];
     internal Dictionary<Guid, int> ExternalOrders { get; } = [];
+    public IReadOnlySet<Guid> ConflictSources(string key, bool external)
+    {
+        var group = Objects.FirstOrDefault(g => g.Key == key);
+        if (group.Sources is null) return new HashSet<Guid>();
+        if (!external) return group.Sources.ToHashSet();
+        var lines = group.Lines.ToHashSet();
+        var orders = WorkspaceSynchronization.ObjectLines(External.Text).Select((line, order) => (line, order))
+            .Where(p => lines.Contains(p.line)).Select(p => p.order).ToHashSet();
+        return WorkspaceSynchronization.SourceIds(External.Document).Where(p => orders.Contains(p.Order)).Select(p => p.Id).ToHashSet();
+    }
 }
 
 public static class WorkspaceSynchronization
@@ -191,6 +201,32 @@ public static class WorkspaceSynchronization
         var folders = entries.Select(Target).OfType<string>().Select(p => System.IO.Path.GetDirectoryName(p)!)
             .Concat(results.Where(r => r.Candidate is not null).Select(r => System.IO.Path.GetDirectoryName(r.Candidate!.Path)!)).ToHashSet(Paths);
         return new(results, files.Values.Where(f => folders.Contains(System.IO.Path.GetDirectoryName(f.Path)!) && !known.Contains(f.Path)).ToArray());
+    }
+
+    public static WorkspaceMerge CompareWithoutBaseline(MapDocument local, WorkspaceSyncCandidate external, string directory, bool compensate)
+    {
+        var output = OsuBeatmapWriter.Serialize(local, compensate);
+        // This snapshot aligns the two current versions; it is not evidence of a shared ancestor.
+        var comparison = new WorkspaceDifficulty { Sync = new WorkspaceSyncBaseline
+        {
+            Path = local.SourcePath ?? external.Path, Text = output.Text,
+            Authoring = ProjectSerializer.Serialize(local, SnapshotPath(directory)),
+            ObjectSources = output.ObjectSources.ToList(), AudioHash = AudioHash(local.AudioPath)
+        } };
+        var merge = Merge(comparison, local, external, directory, compensate);
+        var ours = Fields(output.ReadBack); var theirs = Fields(external.Document);
+        var objects = merge.Conflicts.Where(c => c.Key.StartsWith("$objects:")).ToArray();
+        merge.Conflicts.Clear();
+        foreach (string key in ours.Keys.Union(theirs.Keys))
+        {
+            merge.Fields[key] = ours.GetValueOrDefault(key);
+            if (ours.GetValueOrDefault(key) != theirs.GetValueOrDefault(key))
+                merge.Conflicts.Add(new(key, ours.GetValueOrDefault(key) ?? "", theirs.GetValueOrDefault(key) ?? ""));
+        }
+        if (AudioHash(local.AudioPath) != AudioHash(external.Document.AudioPath))
+            merge.Conflicts.Add(new("$audio", local.AudioPath ?? "", external.Document.AudioPath ?? ""));
+        merge.Conflicts.AddRange(objects);
+        return merge;
     }
 
     public static WorkspaceMerge Merge(WorkspaceDifficulty entry, MapDocument local, WorkspaceSyncCandidate external, string directory, bool compensate)

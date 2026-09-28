@@ -6,7 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private sealed record SyncResult(WorkspaceSession Session, BeatmapProject Snapshot, WorkspaceManifest Manifest, string Stamp, WorkspaceSyncScan Scan, Dictionary<Guid, WorkspaceMerge> Merges, IReadOnlyList<WorkspaceClaim> Claims);
+    private sealed record SyncResult(WorkspaceSession Session, BeatmapProject Snapshot, WorkspaceManifest Manifest, string Stamp, WorkspaceSyncScan Scan, Dictionary<Guid, WorkspaceMerge> Merges, IReadOnlyList<WorkspaceClaim> Claims, Dictionary<Guid, SyncComparison> Comparisons);
     private Task<SyncResult>? syncTask;
     private Task<WorkspaceSession>? syncCommitTask;
     private DateTime nextSyncCheck = DateTime.MaxValue;
@@ -23,7 +23,7 @@ public sealed partial class EditorView
     private string syncFailure = "";
     public bool SynchronizationVisible => syncPage is not null;
     public bool SynchronizationBusy => syncTask is not null || syncCommitTask is not null;
-    public bool SynchronizationNeedsRedraw => syncTask is { IsCompleted: true } || syncCommitTask is { IsCompleted: true }
+    public bool SynchronizationNeedsRedraw => syncTask is { IsCompleted: true } || syncCommitTask is { IsCompleted: true } || SynchronizationVisible && syncPreviewTask is { IsCompleted: true }
         || WorkspaceSession is not null && !LibraryVisible && DateTime.UtcNow >= nextSyncCheck;
     public WorkspaceSyncState DifficultySyncState(int index) => index >= 0 && index < difficulties.Count
         && syncStatuses.TryGetValue(difficulties[index].Id, out var status) ? status.State : WorkspaceSyncState.Local;
@@ -51,13 +51,17 @@ public sealed partial class EditorView
         {
             var scan = WorkspaceSynchronization.Scan(frozen, songs);
             var merges = new Dictionary<Guid, WorkspaceMerge>();
-            foreach (var status in scan.Difficulties.Where(s => s.State == WorkspaceSyncState.Changed))
+            foreach (var status in scan.Difficulties.Where(s => s.State is WorkspaceSyncState.Changed or WorkspaceSyncState.NeedsBaseline))
             {
                 var entry = frozen.Manifest.Difficulties.Single(d => d.Id == status.DifficultyId);
                 var diff = snapshot.Difficulties.Single(d => d.Id == status.DifficultyId);
-                merges[entry.Id] = WorkspaceSynchronization.Merge(entry, diff.Document, status.Candidate!, session.Directory, compensate);
+                merges[entry.Id] = entry.Sync is null
+                    ? WorkspaceSynchronization.CompareWithoutBaseline(diff.Document, status.Candidate!, session.Directory, compensate)
+                    : WorkspaceSynchronization.Merge(entry, diff.Document, status.Candidate!, session.Directory, compensate);
             }
-            return new SyncResult(session, snapshot, manifest, stamp, scan, merges, WorkspaceAssociations.Claims(Path.GetDirectoryName(session.Directory)!));
+            var comparisons = merges.Where(m => m.Value.Conflicts.Count > 0).ToDictionary(m => m.Key, m => PrepareSyncComparison(m.Value, compensate,
+                Path.Combine(session.Directory, manifest.Difficulties.Single(d => d.Id == m.Key).File)));
+            return new SyncResult(session, snapshot, manifest, stamp, scan, merges, WorkspaceAssociations.Claims(Path.GetDirectoryName(session.Directory)!), comparisons);
         });
         nextSyncCheck = DateTime.UtcNow.AddSeconds(30);
     }
@@ -117,6 +121,8 @@ public sealed partial class EditorView
                 if (!ResourceSnapshotMatches(result.Snapshot) || result.Stamp != ManifestStamp(result.Session.Manifest))
                 { syncPage = null; RefreshSynchronization(afterSynchronization); return; }
                 syncStatuses.Clear(); syncMerges.Clear();
+                syncComparisons.Clear();
+                foreach (var comparison in result.Comparisons) syncComparisons[comparison.Key] = comparison.Value;
                 syncClaims = result.Claims;
                 foreach (var status in result.Scan.Difficulties) syncStatuses[status.DifficultyId] = status;
                 foreach (var merge in result.Merges) syncMerges[merge.Key] = merge.Value;
@@ -138,7 +144,8 @@ public sealed partial class EditorView
                         {
                             var entry = session.Manifest.Difficulties.Single(d => d.Id == status.DifficultyId);
                             var diff = project.Difficulties.Single(d => d.Id == entry.Id);
-                            if (result.Merges.TryGetValue(entry.Id, out var merge)) diff.Document = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+                            if (status.State == WorkspaceSyncState.Changed && result.Merges.TryGetValue(entry.Id, out var merge))
+                                diff.Document = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
                             WorkspaceSynchronization.Accept(session, entry, status.Candidate!, diff.Document, compensateTinyDroplets);
                             diff.Name = OsuBeatmapReader.Setting(diff.Document, "Metadata", "Version") ?? diff.Name;
                         }
@@ -244,6 +251,8 @@ public sealed partial class EditorView
                 syncMerges[syncDifficulty] = WorkspaceSynchronization.Merge(entry, local, candidate, session.Directory, compensateTinyDroplets);
                 syncStatuses[syncDifficulty] = syncStatuses[syncDifficulty] with { State = WorkspaceSyncState.Changed };
             }
+            else syncMerges[syncDifficulty] = WorkspaceSynchronization.CompareWithoutBaseline(local, candidate, session.Directory, compensateTinyDroplets);
+            syncComparisons[syncDifficulty] = PrepareSyncComparison(syncMerges[syncDifficulty], compensateTinyDroplets, Path.Combine(session.Directory, entry.File));
             syncPage = "resolve"; syncChoices.Clear(); syncRow = 0;
         }
         catch (Exception e) { ShowError(e.Message); }
@@ -283,6 +292,9 @@ public sealed partial class EditorView
     private void DrawSynchronization(ICanvas c)
     {
         hits.Clear(); fields.Clear();
+        if (syncPage == "resolve" && syncMerges.TryGetValue(syncDifficulty, out var visualMerge) && visualMerge.Conflicts.Count > 0
+            && syncComparisons.TryGetValue(syncDifficulty, out var comparison))
+        { DrawSyncComparison(c, visualMerge, comparison); return; }
         float w = Math.Min(820, width - 32), h = Math.Min(500, height - 48), x = (width - w) / 2, y = (height - h) / 2;
         c.Fill(new(0, 0, width, height), Background, opacity: .8f);
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
@@ -356,24 +368,21 @@ public sealed partial class EditorView
             }
             else if (status.Candidate is not null)
             {
-                if (syncMerges.TryGetValue(syncDifficulty, out var merge) && merge.Conflicts.Count > 0)
-                {
-                    syncRow = Math.Clamp(syncRow, 0, merge.Conflicts.Count - 1); var conflict = merge.Conflicts[syncRow];
-                    c.Text(conflict.Key.StartsWith("$objects:") ? L.Get("sync.objects", syncRow + 1) : conflict.Key == "$audio" ? L.Get("sync.audio") : conflict.Key,
-                        x + 20, y + 115, 14, Accent, w - 40);
-                    DrawSyncValue(c, conflict.Local, x + 20, y + 146, (w - 60) / 2);
-                    DrawSyncValue(c, conflict.External, x + w / 2 + 10, y + 146, (w - 60) / 2);
-                    Button(c, new(x + 20, y + 244, 200, 32), L.Get("sync.chooseLocal"), () => syncChoices[conflict.Key] = false, syncChoices.TryGetValue(conflict.Key, out bool local) && !local);
-                    Button(c, new(x + w / 2 + 10, y + 244, 200, 32), L.Get("sync.chooseExternal"), () => syncChoices[conflict.Key] = true, syncChoices.GetValueOrDefault(conflict.Key));
-                    Navigation(c, x, y + 286, merge.Conflicts.Count);
-                    Button(c, new(x + w - 244, y + 286, 224, 30), L.Get("sync.inspect"), () => InspectSync(merge));
-                    Button(c, new(x + 20, y + h - 104, 200, 34), L.Get("sync.applyChoices"), () => ResolveSync(null), enabled: merge.Conflicts.All(k => syncChoices.ContainsKey(k.Key)));
-                }
                 Button(c, new(x + 20, y + h - 58, 200, 36), L.Get("sync.allLocal"), () => ResolveSync(false));
                 Button(c, new(x + 232, y + h - 58, 200, 36), L.Get("sync.allExternal"), () => ResolveSync(true));
             }
         }
         Button(c, new(x + w - 150, y + h - 58, 130, 36), L.Get("mac.cancel"), CancelSynchronization);
+    }
+    private void ChooseSyncItem(WorkspaceMerge merge, string key, bool external)
+    {
+        syncChoices[key] = external;
+        syncPreviewRevision++; syncResultPane = null;
+        for (int offset = 1; offset < merge.Conflicts.Count; offset++)
+        {
+            int next = (syncRow + offset) % merge.Conflicts.Count;
+            if (!syncChoices.ContainsKey(merge.Conflicts[next].Key)) { syncRow = next; break; }
+        }
     }
     private void Navigation(ICanvas c, float x, float y, int count)
     {

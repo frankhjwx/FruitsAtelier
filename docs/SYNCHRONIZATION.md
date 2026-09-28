@@ -33,7 +33,19 @@ the corresponding serialized authoring snapshot, per-output-object source IDs,
 external and authoring audio content hashes, historical paths and locally retained field overrides. These
 sidecars are published atomically with the difficulty files. Older
 manifests remain readable. An unchanged legacy fingerprint can establish a baseline;
-changed legacy files without a baseline require a version choice.
+changed legacy files without a baseline show a two-version comparison. Each differing
+field and object/group requires a choice because neither side can be identified as
+the source of a change. Choosing an item advances to the next unresolved difference;
+previous/next navigation retains choices for review. Whole-map choices remain available.
+
+Conflict review shows FA and osu! on side-by-side editor canvases with synchronized
+time ranges and zoom. Current conflicting objects and related curve controls are
+highlighted; missing counterparts are labelled. Mouse wheel scrolls both maps and
+Ctrl+wheel zooms them together. Field differences appear above the canvases. The
+optional result pane previews chosen resolutions, using FA for unresolved items;
+it does not save or export. File timestamps identify the more recently saved version,
+and unsaved FA edits are labelled separately. A newer timestamp does not resolve
+individual conflicts automatically.
 
 Local saving preserves the baseline. Successful export records the actual emitted
 text and source mapping. Synchronization compares external fields with the external

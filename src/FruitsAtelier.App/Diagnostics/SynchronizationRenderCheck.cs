@@ -30,6 +30,14 @@ internal static class SynchronizationRenderCheck
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native object conflict dialog was not shown.");
                 var before = view.Document.DeepClone(); view.KeyDown(46, false, false); Paint();
                 if (!before.ContentEquals(view.Document)) throw new InvalidOperationException("Native conflict input changed authoring.");
+                view.Wheel(200, 260, 120, false); Paint();
+                view.Wheel(200, 260, 120, true); Paint();
+                if (!before.ContentEquals(view.Document)) throw new InvalidOperationException("Native comparison navigation changed authoring.");
+                view.KeyDown(27, false, false);
+                var legacy = WorkspaceProject.Open(session.Directory); legacy.Manifest.Difficulties[0].Sync = null;
+                WorkspaceProject.Save(legacy, legacy.Project);
+                view.LoadWorkspace(WorkspaceProject.Open(session.Directory)); view.RefreshSynchronization(); Wait();
+                if (view.DifficultySyncState(0) != WorkspaceSyncState.NeedsBaseline) throw new InvalidOperationException("Native legacy comparison was not shown.");
                 view.KeyDown(27, false, false);
                 view.LoadWorkspace(WorkspaceProject.Open(session.Directory));
                 File.Delete(source); view.RefreshSynchronization(); Wait();

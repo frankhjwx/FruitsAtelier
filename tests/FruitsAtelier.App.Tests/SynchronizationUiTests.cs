@@ -44,6 +44,47 @@ internal static class SynchronizationUiTests
                 ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(ui.View.Document.Fruits[0].Id == original && ui.View.Document.Fruits[0].X == 123, "per-object local choice retains editable identity");
                 Check(OsuBeatmapReader.ReadFile(source).Fruits[0].X == 200, "resolution does not silently export");
+                var legacy = WorkspaceProject.Open(session.Directory);
+                legacy.Manifest.Difficulties[0].Sync = null;
+                WorkspaceProject.Save(legacy, legacy.Project);
+                File.WriteAllText(source, OsuBeatmapWriter.Serialize(ui.View.Document).Text.Replace("Title:Updated", "Title:Reviewed").Replace("123,192", "321,192"));
+                File.SetLastWriteTimeUtc(source, DateTime.UtcNow.AddMinutes(1));
+                ui.View.LoadWorkspace(WorkspaceProject.Open(session.Directory), checkAdditionalDifficulties: true); Wait(ui);
+                Check(ui.View.DifficultySyncState(0) == WorkspaceSyncState.NeedsBaseline, "legacy comparison stays explicit");
+                Check(ui.Canvas.Texts.Any(t => t.Value == "Metadata/Title") && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 1, 2)), "legacy first difference and count shown");
+                Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.newerSaved")) && t.X > size.Item1 / 2), "external timestamp marks newer saved version");
+                string authoringFile = Path.Combine(legacy.Directory, legacy.Manifest.Difficulties[0].File);
+                DateTime savedTime = File.GetLastWriteTimeUtc(authoringFile);
+                File.SetLastWriteTimeUtc(source, savedTime.AddMinutes(-1)); ui.View.RefreshSynchronization(); Wait(ui);
+                Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.newerSaved")) && t.X < size.Item1 / 2), "FA can be the newer saved version");
+                File.SetLastWriteTimeUtc(source, savedTime); ui.View.RefreshSynchronization(); Wait(ui);
+                Check(!ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.newerSaved"))), "equal timestamps do not invent a newer side");
+                ui.ClickText(L.Get("sync.chooseExternal")); ui.Paint();
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 2, 2)), "choosing advances to next unresolved item");
+                var rings = ui.Canvas.Circles.Where(c => !c.Filled && c.Color == 0xF2C66D).ToArray();
+                Check(rings.Length == 2 && Math.Abs(rings[0].Y - rings[1].Y) < .01 && rings[0].X < size.Item1 / 2 && rings[1].X > size.Item1 / 2, "both canvas versions highlight the aligned conflict");
+                var unchanged = ui.View.Document.DeepClone();
+                ui.View.Wheel(200, 260, 120, false); ui.Paint();
+                var moved = ui.Canvas.Circles.Where(c => !c.Filled && c.Color == 0xF2C66D).ToArray();
+                Check(moved.Length == 2 && Math.Abs(moved[0].Y - moved[1].Y) < .01 && moved[0].Y != rings[0].Y, "wheel scrolls both canvases together");
+                ui.View.Wheel(200, 260, 120, true); ui.Paint();
+                Check(ui.View.Document.ContentEquals(unchanged), "comparison scrolling and zoom never edit content");
+                ui.ClickText(L.Get("sync.resultPreview"));
+                var previewDeadline = DateTime.UtcNow.AddSeconds(10);
+                while (!ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.previewPending")) && DateTime.UtcNow < previewDeadline) { Thread.Sleep(10); ui.Paint(); }
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.previewPending")), "merged result preview prepared asynchronously");
+                ui.ClickText("‹"); ui.Paint();
+                Check(ui.Canvas.Texts.Any(t => t.Value == "Metadata/Title"), "previous choice can be reviewed");
+                ui.ClickText("›"); ui.ClickText(L.Get("sync.chooseLocal"));
+                ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+                Check(!ui.View.SynchronizationVisible && ui.View.Document.Fruits[0].Id == original
+                    && OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Title") == "Reviewed", "legacy mixed resolution applied");
+                Check(ui.View.WorkspaceSession!.Manifest.Difficulties[0].Sync is not null, "resolved legacy comparison establishes baseline");
+                legacy = WorkspaceProject.Open(session.Directory); legacy.Manifest.Difficulties[0].Sync = null;
+                WorkspaceProject.Save(legacy, legacy.Project);
+                ui.View.LoadWorkspace(WorkspaceProject.Open(session.Directory), checkAdditionalDifficulties: true); Wait(ui);
+                Check(!ui.View.SynchronizationVisible && ui.View.Document.Fruits[0].Id == original && ui.View.Document.Fruits[0].X == 123,
+                    "unchanged legacy fingerprint establishes baseline while retaining local differences");
                 ui.View.ShowDeleteDifficulty(0); ui.Paint();
                 Check(ui.Canvas.Texts.Any(t => t.Value == source), "deletion shows external target");
                 ui.ClickText(L.Get("sync.delete")); Wait(ui);

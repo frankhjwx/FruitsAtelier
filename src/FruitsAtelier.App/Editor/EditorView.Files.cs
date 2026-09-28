@@ -53,6 +53,7 @@ public sealed partial class EditorView
         WorkspaceSession = null; resourceErrors = [];
         syncStatuses.Clear(); syncMerges.Clear(); syncPage = null; nextSyncCheck = DateTime.MaxValue;
         syncDifficulty = Guid.Empty; syncPreserveHistory = false;
+        syncComparisons.Clear(); syncVisualMerge = null; syncResultPane = null; syncPreviewRevision++;
         resourceSnapshot = null; resourceReferences = null;
         CancelInteraction();
         foreach (var difficulty in difficulties) difficulty.RatingCancellation.Cancel();

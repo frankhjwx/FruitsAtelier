@@ -304,3 +304,8 @@ missing-file input isolation, explicit restoration, per-object choices, linked
 deletion, and local-project exemptions in both languages and window sizes. Native
 Windows `--render-check` draws conflict, missing and deletion states in English
 and Chinese at each tested size and DPI without playing fixture audio.
+
+Visual merge checks cover baseline-free field/object comparisons, sequential choices,
+revisiting decisions, aligned highlights on both canvases, synchronized scrolling and
+zoom, newer-save timestamps, and asynchronous result previews without content edits.
+Native rendering checks include the baseline-free comparison and canvas navigation.

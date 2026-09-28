@@ -4,6 +4,30 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: baseline-free deletions expose an absent side and retain unrelated identities", () => Run(f =>
+        {
+            string text = string.Join('\n', OsuBeatmapWriter.Serialize(f.Diff.Document).Text.Split('\n').Where(line => !line.StartsWith("100,192,1000,")));
+            File.WriteAllText(f.Source, text);
+            var merge = WorkspaceSynchronization.CompareWithoutBaseline(f.Diff.Document, WorkspaceSynchronization.ReadStable(f.Source), f.Session.Directory, true);
+            var conflict = merge.Conflicts.Single(c => c.Key.StartsWith("$objects:"));
+            Check(merge.ConflictSources(conflict.Key, false).Contains(f.Diff.Document.Fruits[0].Id) && merge.ConflictSources(conflict.Key, true).Count == 0, "absent counterpart");
+            var result = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => true));
+            Check(result.Fruits.Count == 2 && result.Fruits.Any(o => o.Id == f.Diff.Document.Fruits[1].Id), "deletion applies independently");
+        }));
+        yield return ("Sync: no baseline supports independent field and ordered object choices", () => Run(f =>
+        {
+            string text = OsuBeatmapWriter.Serialize(f.Diff.Document).Text.Replace("Title:Title", "Title:External")
+                .Replace("100,192,1000", "300,192,1000").Replace("150,192,1500", "350,192,1500");
+            File.WriteAllText(f.Source, text);
+            var merge = WorkspaceSynchronization.CompareWithoutBaseline(f.Diff.Document, WorkspaceSynchronization.ReadStable(f.Source), f.Session.Directory, true);
+            Check(merge.Conflicts.Count == 3, "one field and two ordered objects");
+            Reject(() => WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>()));
+            var choices = merge.Conflicts.ToDictionary(c => c.Key, c => c.Key == "Metadata/Title" || c.Key == "$objects:1");
+            var result = WorkspaceSynchronization.Resolve(merge, choices);
+            Check(OsuBeatmapReader.Setting(result, "Metadata", "Title") == "External", "external field chosen");
+            Check(result.Fruits.Any(o => o.Id == f.Diff.Document.Fruits[0].Id && o.X == 100)
+                && result.Fruits.Any(o => o.TimeMs == 1500 && o.X == 350), "mixed object choices");
+        }));
         yield return ("Sync: deleting a stale association requires resolving an external rename first", () => Run(f =>
         {
             string renamed = Path.Combine(f.Set, "renamed.osu"); File.Move(f.Source, renamed);
