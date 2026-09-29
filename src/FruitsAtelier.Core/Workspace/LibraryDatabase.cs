@@ -16,6 +16,7 @@ public sealed class LibrarySettings
     public string OsuRoot { get => osuRoot; set { osuRoot = value; legacySongs = ""; } }
     public string? SelectedSkin { get; set; }
     public string? DefaultSkin { get; set; }
+    public bool UseSkinSounds { get; set; } = true;
     public bool RomanisedMetadata { get; set; } = true;
     public bool DerandomizeDroplets { get; set; } = true;
     public bool LowLatencyDisplay { get; set; }

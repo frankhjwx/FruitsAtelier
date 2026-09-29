@@ -4,8 +4,16 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    public string[] HitsoundSkinFolders => new[] { skin?.FolderPath, defaultSkin?.FolderPath }
-        .OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    public string[] HitsoundSkinFolders => LibrarySettings.UseSkinSounds
+        ? new[] { skin?.FolderPath, defaultSkin?.FolderPath }
+            .OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).ToArray()
+        : [];
+    private void ToggleSkinSounds()
+    {
+        LibrarySettings.UseSkinSounds = !LibrarySettings.UseSkinSounds;
+        RefreshSkinHitsounds();
+        RequestAudioPreference?.Invoke();
+    }
     private void RefreshSkinHitsounds()
     {
         ResetHitsounds(); hitsoundConversion = null;

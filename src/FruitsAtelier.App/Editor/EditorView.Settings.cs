@@ -166,7 +166,11 @@ public sealed partial class EditorView
                 break;
             case SettingsCategory.Audio:
                 DrawVolumeControls(c);
-                c.Text(L.Get("settings.immediatePreferences"), SettingsContentX, SettingsTop + 368, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
+                SettingsButton(c, new(SettingsContentX, SettingsTop + 346, Math.Min(520, SettingsRight - SettingsContentX - 32), 38),
+                    L.Get(LibrarySettings.UseSkinSounds ? "settings.skinSoundsOn" : "settings.skinSoundsOff"),
+                    ToggleSkinSounds, LibrarySettings.UseSkinSounds);
+                c.Text(L.Get("settings.skinSoundsHint"), SettingsContentX, SettingsTop + 398, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
+                c.Text(L.Get("settings.immediatePreferences"), SettingsContentX, SettingsTop + 434, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
                 break;
         }
         c.Line(SettingsContentX, r.Bottom - 86, r.Right - 24, r.Bottom - 86, Grid);
@@ -205,6 +209,7 @@ public sealed partial class EditorView
             settings.StandIndicatorColour = draftIndicatorColours[0]; settings.WalkIndicatorColour = draftIndicatorColours[1];
             settings.DashIndicatorColour = draftIndicatorColours[2]; settings.HyperDashIndicatorColour = draftIndicatorColours[3];
             settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;
+            settings.UseSkinSounds = LibrarySettings.UseSkinSounds;
             settings.PlaybackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
             settings.CanvasZoom = LibrarySettings.CanvasZoom;
             settings.ObjectTimelineScale = LibrarySettings.ObjectTimelineScale;

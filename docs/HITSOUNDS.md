@@ -18,6 +18,12 @@ The right toolbar edits Whistle, Finish and Clap flags for fruits and slider edg
 
 ## Sample selection
 
+**Settings → Audio → Use skin's sound samples** is enabled by default. Disabling it
+skips both the selected and configured default skin's audio and uses packaged samples
+for skin fallback. Beatmap-provided samples and skin visuals remain unchanged. The
+preference is saved immediately; changing it clears scheduled hitsounds and preloads
+the project's samples again for preview, testplay and sample audition on both platforms.
+
 `HitsoundResolver` reads the object's preserved `.osu` line, including FSliders converted
 from imported sliders. Timing points provide the sample bank, custom index, and volume;
 nonzero circle sample values override them. Fruit, slider-edge, and droplet sample lookup includes the legacy 5 ms tolerance around timing boundaries. Each droplet uses the sample bank, index, and volume at its own time, so a timing point within a slider can change its tick sample. This tolerance selects samples only and does not shift object playback times. Legacy slider hitSample fields supply banks;
