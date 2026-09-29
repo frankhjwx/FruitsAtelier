@@ -38,7 +38,7 @@ public sealed class CatchTestplaySession
     public double X { get { lock (gate) return game.X; } }
     public int Combo { get { lock (gate) return game.Combo; } }
     public double TransportPosition { get { lock (gate) return WithAudio ? Math.Max(0, time - outputLead) : time; } }
-    public bool UsesKey(int key) => key == left || key == right || key == dash;
+    public bool UsesKey(int key) => key != 114 && (key == left || key == right || key == dash);
     private double Realtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
 
     public CatchTestplaySession(CatchTestplay game, CatchTestplayClock clock, double start, bool withAudio,
@@ -87,6 +87,14 @@ public sealed class CatchTestplaySession
     }
 
     public void Tick() { lock (gate) Advance(); }
+    public void SetPlaybackSpeed(double speed)
+    {
+        lock (gate)
+        {
+            Advance();
+            clock.SetRate(speed, time, Realtime);
+        }
+    }
     public double TogglePause()
     {
         lock (gate)

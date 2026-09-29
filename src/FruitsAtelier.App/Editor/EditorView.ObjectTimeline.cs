@@ -203,6 +203,7 @@ public sealed partial class EditorView
     public void SetPlaybackSpeed(double speed)
     {
         if (!double.IsFinite(speed) || speed < .1 || speed > 1.5 || speed == PlaybackSpeed) return;
+        testplay?.SetPlaybackSpeed(speed);
         PlaybackSpeed = speed;
         RequestPlaybackSpeed?.Invoke(speed);
     }

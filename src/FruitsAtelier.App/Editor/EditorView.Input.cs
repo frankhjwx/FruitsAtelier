@@ -909,6 +909,15 @@ public sealed partial class EditorView
                     }
                 }
             }
+            else if (virtualKey == 114)
+            {
+                if (!testplaySpeedHeld)
+                {
+                    testplaySpeedHeld = true;
+                    if (TestplayAutoplay) SetPlaybackSpeed(PlaybackSpeed == 1 ? 1.5 : 1);
+                }
+                AdvanceTestplay();
+            }
             else if (virtualKey == 9)
             {
                 if (!testplayTabHeld) { testplayTabHeld = true; testplay!.ToggleAutoplay(); }
@@ -1128,6 +1137,7 @@ public sealed partial class EditorView
         workspaceScrollDragging = false;
         FinishVolumeDrag();
         testplayEscapeConsumed = false;
+        testplaySpeedHeld = false;
         streamSnapDragging = false;
         CloseVolumePopover();
         sliderHoldId = legacyButtonSlider = Guid.Empty; noteHoldTarget = null;

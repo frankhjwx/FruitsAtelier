@@ -187,7 +187,7 @@ testplay. Dash and hyperdash leave fading catcher trails. The combo uses the ski
 combo digits, pulses on catches and fades while idle or after a miss. Missed notes
 fall past the catcher and fade out over 250 ms.
 
-The upper-left corner shows **Tab** (autoplay), **Ctrl+P** (pause/resume), **Ctrl+B** (add a bookmark), **F1** (exit to the testplay start), and **F2** (exit at the current position). Pausing freezes gameplay and music; resuming continues the same session.
+The upper-left corner shows the current testplay speed on its own line, followed by **Tab** (autoplay), **F3** (autoplay speed), **Ctrl+P** (pause/resume), **Ctrl+B** (add a bookmark), **F1** (exit to the testplay start), and **F2** (exit at the current position). During autoplay, F3 switches between 1.0x and 1.5x; from any other speed, the first press selects 1.0x. Holding F3 changes speed only once. Pausing freezes gameplay and music; resuming continues the same session.
 
 Press **Tab** during testplay to toggle autoplay. Pressing a bound left, right, or dash key
 also returns to manual control. A centered fading banner announces either change.

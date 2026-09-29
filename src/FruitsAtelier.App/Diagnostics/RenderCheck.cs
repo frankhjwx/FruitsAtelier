@@ -272,6 +272,11 @@ internal static class RenderCheck
                 if (!view.IsTestplaying || view.TestplayCombo != 1) throw new InvalidOperationException("Native testplay failed to start or catch fruit.");
                 view.KeyDown(9, false, false); view.KeyDown(9, false, false);
                 if (!view.TestplayAutoplay) throw new InvalidOperationException("Held Tab failed to enable autoplay once.");
+                view.KeyDown(114, false, false); view.KeyDown(114, false, false);
+                if (view.PlaybackSpeed != 1.5) throw new InvalidOperationException("Held F3 failed to switch autoplay speed once.");
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.KeyUp(114); view.KeyDown(114, false, false); view.KeyUp(114);
+                if (view.PlaybackSpeed != 1) throw new InvalidOperationException("F3 failed to restore normal speed.");
                 view.KeyUp(9); view.KeyDown(9, false, false); view.KeyUp(9);
                 if (view.TestplayAutoplay) throw new InvalidOperationException("Tab failed to restore manual control.");
                 view.KeyDown(80, true, false); view.KeyUp(80);
