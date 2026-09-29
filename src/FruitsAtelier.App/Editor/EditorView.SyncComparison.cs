@@ -110,6 +110,8 @@ public sealed partial class EditorView
         var conflict = merge.Conflicts[syncRow]; var focus = comparison.Focus[conflict.Key];
         if (WorkspaceSynchronization.IsMetadataField(conflict.Key))
         { DrawSyncMetadata(c, merge, comparison, conflict); return; }
+        if (!conflict.Key.StartsWith("$objects:", StringComparison.Ordinal))
+        { DrawSyncSection(c, merge, comparison, conflict); return; }
         if (!ReferenceEquals(syncVisualMerge, merge))
         { syncVisualMerge = merge; syncVisualKey = null; syncResultPane = null; syncPreviewRevision++; }
         bool newFocus = syncVisualKey != conflict.Key;
@@ -248,7 +250,7 @@ public sealed partial class EditorView
     private void ScrollSyncComparison(float x, float y, float delta, bool zoom)
     {
         if (syncPage is not ("resolve" or "failed") || !syncCanvasBounds.Contains(x, y)) return;
-        if (syncPage == "failed" || syncVisualKey == "$metadata")
+        if (syncPage == "failed" || syncVisualKey == "$metadata" || syncVisualKey?.StartsWith("$text:", StringComparison.Ordinal) == true)
         { syncTextScroll = Math.Clamp(syncTextScroll - (int)(delta / 120 * 69), 0, syncTextMaxScroll); return; }
         if (zoom)
         {

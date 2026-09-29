@@ -60,12 +60,10 @@ public static class WorkspaceSynchronization
     public static bool IsMetadataField(string key) => key is "Metadata/Title" or "Metadata/TitleUnicode" or "Metadata/Artist"
         or "Metadata/ArtistUnicode" or "Metadata/Creator" or "Metadata/Version" or "Metadata/Source" or "Metadata/Tags"
         or "Metadata/BeatmapID" or "Metadata/BeatmapSetID";
-    public static bool HasMetadataDifferences(MapDocument local, MapDocument external)
+    public static bool HasFieldDifferences(MapDocument local, MapDocument external)
     {
-        return local.OriginalSections.Concat(external.OriginalSections).Where(s => s.Name == "Metadata")
-            .SelectMany(s => s.Lines).Select(line => line.Split(':', 2)[0].Trim()).Distinct()
-            .Any(key => IsMetadataField("Metadata/" + key)
-                && OsuBeatmapReader.Setting(local, "Metadata", key) != OsuBeatmapReader.Setting(external, "Metadata", key));
+        var ours = Fields(local); var theirs = Fields(external);
+        return ours.Keys.Union(theirs.Keys).Any(key => ours.GetValueOrDefault(key) != theirs.GetValueOrDefault(key));
     }
     public static StringComparer Paths => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
         ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
@@ -289,18 +287,12 @@ public static class WorkspaceSynchronization
             localFields.TryGetValue(key, out var ours); externalFields.TryGetValue(key, out var theirs);
             bool outsideChanged = before != theirs, insideChanged = authorBefore != ours || baseline.LocalOverrides.Contains(key);
             merge.Fields[key] = outsideChanged && !insideChanged ? theirs : ours;
-            if (IsMetadataField(key) && ours != theirs)
+            // Emitted timing may differ from authoring without an edit on either side.
+            if ((IsMetadataField(key) || outsideChanged || insideChanged) && ours != theirs)
             {
                 merge.Fields[key] = ours;
                 merge.Conflicts.Add(new(key, ours ?? "", theirs ?? ""));
                 if (!outsideChanged && ours == authorBefore && baseline.LocalOverrides.Contains(key)) merge.PreviouslyResolved.Add(key);
-            }
-            else if (outsideChanged && insideChanged && ours != theirs)
-                merge.Conflicts.Add(new(key, ours ?? "", theirs ?? ""));
-            else if (!outsideChanged && baseline.LocalOverrides.Contains(key) && ours != theirs)
-            {
-                merge.Conflicts.Add(new(key, ours ?? "", theirs ?? ""));
-                merge.PreviouslyResolved.Add(key);
             }
         }
         string? localAudio = AudioHash(local.AudioPath), externalAudio = AudioHash(external.Document.AudioPath);
@@ -462,7 +454,7 @@ public static class WorkspaceSynchronization
         }
         else pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => resolvedFields.GetValueOrDefault(k) != externalFields.GetValueOrDefault(k)));
         if (review is not null && choices is not null)
-            foreach (var conflict in review.Conflicts.Where(c => IsMetadataField(c.Key)))
+            foreach (var conflict in review.Conflicts.Where(c => !c.Key.StartsWith('$')))
                 if (choices.TryGetValue(conflict.Key, out bool takeExternal) && !takeExternal
                     && resolvedFields.GetValueOrDefault(conflict.Key) != externalFields.GetValueOrDefault(conflict.Key)
                     && !pending.Contains(conflict.Key)) pending.Add(conflict.Key);

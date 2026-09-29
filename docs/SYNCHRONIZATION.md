@@ -100,7 +100,7 @@ AR and playfield width, matching the editor canvas. Selecting a conflict restore
 that AR scale and locates its start; long groups remain scrollable rather than
 being compressed to fit. Current conflicting objects and related curve controls are
 highlighted; missing counterparts are labelled. Mouse wheel scrolls both maps and
-Ctrl+wheel zooms them together. Non-metadata field differences appear above the canvases. The
+Ctrl+wheel zooms them together. Other field differences use side-by-side text. The
 optional result pane previews chosen resolutions, using FA for unresolved items;
 it does not save or export. File timestamps identify the more recently saved version,
 and unsaved FA edits are labelled separately. A newer timestamp does not resolve
@@ -129,10 +129,22 @@ anchors keeps related unmatched removals and insertions in one review group.
 
 Local saving preserves the baseline. Successful export records the actual emitted
 text and source mapping. Synchronization compares external fields with the external
-baseline, and authoring fields with the authoring baseline. One-sided field changes
-merge automatically; different edits to the same field require a choice. Timing is
+baseline, and authoring fields with the authoring baseline. A changed field whose
+values differ requires a choice, including one-sided additions and deletions. Timing is
 handled as an ordered section, including inherited points. Applying external context
 retains authoring objects and rebases that context through local undo snapshots.
+
+General, Editor, Difficulty and Colours settings are reviewed per key; Events,
+TimingPoints and unknown sections are reviewed as complete ordered text sections.
+Additional Metadata keys use the same text review. Text pages contain at most
+4096 UTF-16 code units plus a boundary surrogate pair. Only the current page is
+compared and wrapped; unchanged frames reuse that layout and draw visible rows.
+Use the top arrows to change text pages or jump to the first/last page, and the
+wheel to scroll within a page. The bottom arrows move between conflicts. Choosing
+a side applies the complete field or section, including text on other pages.
+Full-version inspection remains available for searching or reading a whole storyboard.
+Emitted timing that differs from its unchanged authoring baseline does not itself
+create a conflict. Accepted choices remain resolved until their contents change.
 
 Object comparisons preserve sequence order and meaningful fields while normalizing
 basic numeric spelling and line endings. Slider lengths use 15 significant digits
@@ -216,14 +228,14 @@ See [Building and Testing](TESTING.md) for the regression commands.
 
 Differences in Title, TitleUnicode, Artist, ArtistUnicode, Creator, Version, Source,
 Tags, BeatmapID and BeatmapSetID require explicit choices, including unilateral edits.
-All differing metadata fields share one scrollable page with aligned FA and osu!
+These metadata fields share one scrollable page with aligned FA and osu!
 rows. Click a value to retain that side for its row. Changed text fragments use red
 for unresolved differences, amber for unchanged previously accepted differences,
 and green for choices made in the current review; unchanged text stays neutral.
 Rows remain available for changing a choice until Apply. Object conflicts retain
-their canvas pages. Metadata-only resolutions preserve authoring objects and undo
+their canvas pages. Field-only resolutions preserve authoring objects and undo
 history. An unchanged accepted mismatch remains reviewable; another edit requires
-a fresh decision. Other sections retain their existing three-way merge rules.
+a fresh decision. Other fields and sections use the paged text review described above.
 
 ## Storage maintenance
 

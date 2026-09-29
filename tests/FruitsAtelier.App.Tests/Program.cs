@@ -23,6 +23,8 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 var tests = new (string Name, Action Run)[]
 {
     ("Synchronization failures wrap and scroll without editing content", SynchronizationUiTests.FailureText),
+    ("Section synchronization pages large Events and applies complete text", SynchronizationUiTests.SectionText),
+    ("Timeline skin uses combo-coloured tracks and hitcircle endpoints", ObjectTimelineTests.SkinColours),
     ("Workspace storage settings show usage and clear caches without editing maps", StorageSettingsTests.Run),
     ("Mapping right-click deletes the marquee selection in one undo", MappingSessionTests.RightClickSelection),
     ("Mapping selection reversal and contextual horizontal nudges", MappingSessionTests.ReverseAndNudge),

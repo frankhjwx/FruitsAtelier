@@ -66,7 +66,9 @@ Fruit and droplet bases use combo colours, while overlays remain white. Beatmap
 `[Colours]` takes precedence over skin colours and honours combo-skip offsets;
 Catch skin colours advance once per parent element using its zero-based map index
 plus one, independently of NC flags and skip offsets. The upper object timeline
-continues to use NC-group colours. Nested slider
+continues to use NC-group colours for its tracks and `hitcircle`/`hitcircleoverlay`
+for all endpoint markers. Gameplay `SliderTrackOverride` and slider start/end
+textures do not replace these timeline markers. Nested slider
 objects inherit their parent colour. Bananas use the three deterministic yellow
 tints from `Banana.cs`. Without a palette or skin, ordinary geometric objects stay white.
 

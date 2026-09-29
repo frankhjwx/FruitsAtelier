@@ -4,6 +4,48 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class SynchronizationUiTests
 {
+    public static void SectionText()
+    {
+        string unicode = new string('a', 4095) + "🍎" + new string('b', 4094) + "🍊";
+        Check(string.Concat(Enumerable.Range(0, 3).Select(i => FruitsAtelier.App.Editor.EditorView.SyncSectionSlice(unicode, i))) == unicode,
+            "text pages preserve surrogate pairs at boundaries");
+        foreach (string language in L.AvailableLanguages)
+        {
+            L.SetLanguage(language);
+            string root = Path.GetFullPath(Path.Combine("artifacts/tests/section-text", Guid.NewGuid().ToString("N")));
+            string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
+            Directory.CreateDirectory(Path.GetDirectoryName(source)!);
+            File.WriteAllText(source, Fixture);
+            var ui = new Ui(false); ui.Resize(980, 700);
+            ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
+            var session = LibraryOperations.ImportPath(source, ui.View.LibrarySettings); ui.View.LoadWorkspace(session); Wait(ui);
+            try
+            {
+                string events = string.Concat(Enumerable.Repeat("// storyboard command 012345678901234567890123456789\n", 70000)) + "// END_STORYBOARD";
+                File.WriteAllText(source, Fixture.Replace("[HitObjects]", "[Events]\n" + events + "\n[HitObjects]"));
+                ui.View.RefreshSynchronization(); Wait(ui);
+                Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Value == "Events/"), "external Events change opens text review");
+                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.resultPreview")), "sections use text instead of object preview");
+                var before = ui.View.Document.DeepClone();
+                long allocated = GC.GetAllocatedBytesForCurrentThread(); var watch = System.Diagnostics.Stopwatch.StartNew();
+                for (int i = 0; i < 30; i++) ui.Paint();
+                Console.WriteLine($"Section text warm render: {watch.Elapsed.TotalMilliseconds / 30:F2} ms, {(GC.GetAllocatedBytesForCurrentThread() - allocated) / 30} bytes/frame; {events.Length} characters");
+                Check(ui.Canvas.Texts.Count < 150, "only visible text is submitted for multi-megabyte Events");
+                ui.ClickText("»");
+                ui.View.Wheel(200, 220, -120000, false); ui.Paint();
+                Check(ui.Canvas.Texts.Any(t => t.Value.Contains("END_STORYBOARD")), "last page exposes final storyboard text");
+                ui.ClickText("«");
+                Check(ui.View.Document.ContentEquals(before), "paging and scrolling do not edit content");
+                ui.ClickText(L.Get("sync.chooseExternal"));
+                ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+                Check(string.Join('\n', ui.View.Document.OriginalSections.Single(s => s.Name == "Events").Lines).Contains(events), "applying a text page retains the complete section");
+                Check(ui.View.Document.Fruits[0].Id == before.Fruits[0].Id, "text merge retains object identity");
+            }
+            finally { ui.View.StopFileMonitoring(); }
+        }
+        L.SetLanguage("zh-CN");
+    }
+
     public static void FailureText()
     {
         foreach (string language in L.AvailableLanguages)
@@ -263,8 +305,10 @@ internal static class SynchronizationUiTests
         {
             Guid identity = ui.View.Document.Fruits[0].Id;
             File.WriteAllText(source, Fixture.Replace("Mode:2", "Mode:2\nPreviewTime:1000"));
-            Until(() => OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") == "1000" && !ui.View.SynchronizationBusy, "file notification synchronizes non-metadata fields");
-            Check(ui.View.Document.Fruits[0].Id == identity && !ui.View.SynchronizationVisible, "automatic synchronization preserves authoring");
+            Until(() => ui.View.SynchronizationVisible && !ui.View.SynchronizationBusy, "file notification opens field text review");
+            Check(OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") is null, "field review waits for a choice");
+            ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+            Check(ui.View.Document.Fruits[0].Id == identity && OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") == "1000", "field synchronization preserves authoring");
             string renamed = Path.Combine(songs, "renamed set"); Directory.Move(set, renamed); source = Path.Combine(renamed, "map.osu");
             Until(() => ui.View.WorkspaceSession!.Manifest.Difficulties[0].Source == source && !ui.View.SynchronizationBusy, "directory rename recovered automatically");
             string second = Path.Combine(renamed, "second.osu");
@@ -302,8 +346,10 @@ internal static class SynchronizationUiTests
                 while (DateTime.UtcNow < pauseUntil) { ui.Paint(); Thread.Sleep(20); }
                 Check(!ui.View.SynchronizationVisible, "temporarily locked source retries without opening merge");
             }
-            Until(() => OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") == "2000" && !ui.View.SynchronizationBusy,
+            Until(() => ui.View.SynchronizationVisible && !ui.View.SynchronizationBusy,
                 "locked source synchronizes after writer closes without another write notification");
+            ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+            Check(OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") == "2000", "retried field applies after review");
             ui.View.ShowLibrary(); ui.Paint();
             string newSet = Path.Combine(songs, "new set"); Directory.CreateDirectory(newSet);
             File.WriteAllText(Path.Combine(newSet, "new.osu"), Fixture.Replace("Title:Original", "Title:New set"));

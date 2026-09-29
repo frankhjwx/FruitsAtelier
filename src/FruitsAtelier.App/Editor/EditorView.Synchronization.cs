@@ -68,7 +68,7 @@ public sealed partial class EditorView
             var scan = previousScan ?? WorkspaceSynchronization.Scan(frozen, songs, searchMissing: searchMissing || !quiet);
             var merges = new Dictionary<Guid, WorkspaceMerge>();
             foreach (var status in scan.Difficulties.Where(s => s.State is WorkspaceSyncState.Changed or WorkspaceSyncState.NeedsBaseline
-                || s.State == WorkspaceSyncState.Current && (reviewResolved || WorkspaceSynchronization.HasMetadataDifferences(
+                || s.State == WorkspaceSyncState.Current && (reviewResolved || WorkspaceSynchronization.HasFieldDifferences(
                     snapshot.Difficulties.Single(d => d.Id == s.DifficultyId).Document, s.Candidate!.Document))))
             {
                 var entry = frozen.Manifest.Difficulties.Single(d => d.Id == status.DifficultyId);
@@ -291,10 +291,10 @@ public sealed partial class EditorView
         var entry = session.Manifest.Difficulties.Single(d => d.Id == diff.Id);
         var choices = new Dictionary<string, bool>(syncChoices);
         syncComparisons.TryGetValue(diff.Id, out var compared);
-        syncMerges.TryGetValue(diff.Id, out var metadataReview);
-        bool metadataOnly = metadataReview is not null && metadataReview.Conflicts.Count > 0
-            && metadataReview.Conflicts.All(c => WorkspaceSynchronization.IsMetadataField(c.Key));
-        syncPreserveHistory = metadataOnly;
+        syncMerges.TryGetValue(diff.Id, out var fieldReview);
+        bool fieldsOnly = fieldReview is not null && fieldReview.Conflicts.Count > 0
+            && fieldReview.Conflicts.All(c => !c.Key.StartsWith('$'));
+        syncPreserveHistory = fieldsOnly;
         syncPage = "checking";
         syncCommitTask = Task.Run(() =>
         {
@@ -306,8 +306,8 @@ public sealed partial class EditorView
             }
             catch (IOException) { throw new SyncSourceChangedException(); }
             ProjectSerializer.WriteFile(project, Path.Combine(WorkspaceSynchronization.Archive(session, "resolution"), "current.catchproj"));
-            if (metadataOnly) diff.Document = WorkspaceSynchronization.Resolve(metadataReview!,
-                metadataReview!.Conflicts.ToDictionary(c => c.Key, c => useExternal ?? choices.GetValueOrDefault(c.Key)));
+            if (fieldsOnly) diff.Document = WorkspaceSynchronization.Resolve(fieldReview!,
+                fieldReview!.Conflicts.ToDictionary(c => c.Key, c => useExternal ?? choices.GetValueOrDefault(c.Key)));
             else if (useExternal is true) diff.Document = external.Document.DeepClone();
             else if (useExternal is false) diff.Document.AudioPath = WorkspaceSynchronization.LocalAudioVersion(entry, diff.Document, session.Directory);
             else if (useExternal is null && syncMerges.TryGetValue(diff.Id, out var merge)) diff.Document = WorkspaceSynchronization.Resolve(merge, choices);

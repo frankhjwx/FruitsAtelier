@@ -4,6 +4,52 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: all section fields support additions, retained choices and deletions", () =>
+        {
+            foreach (var (section, line, key) in new[] {
+                ("General", "PreviewTime:1234", "General/PreviewTime"),
+                ("Editor", "Bookmarks:100,200", "Editor/Bookmarks"),
+                ("Difficulty", "HPDrainRate:7", "Difficulty/HPDrainRate"),
+                ("Metadata", "CustomField:extra", "Metadata/CustomField"),
+                ("Colours", "Combo1:10,20,30", "Colours/Combo1"),
+                ("Events", "// storyboard\nSprite,Foreground,Centre,\"test.png\",320,240\n F,0,1000,2000,0,1", "Events/"),
+                ("CustomSection", "arbitrary:text\nunchanged payload", "CustomSection/") }) Run(f =>
+            {
+                string addition = "[" + section + "]\n" + line + "\n";
+                string added = Fixture().Replace("[HitObjects]", addition + "[HitObjects]");
+                File.WriteAllText(f.Source, added);
+                var merge = f.Merge();
+                Check(merge.Conflicts.Any(c => c.Key == key) && merge.RequiresResolution, key + " addition is reviewable");
+                var local = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => false));
+                WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, local, true,
+                    review: merge, choices: merge.Conflicts.ToDictionary(c => c.Key, _ => false));
+                f.Diff.Document = local;
+                Check(!f.Merge().RequiresResolution && f.Merge().PreviouslyResolved.Contains(key), key + " local choice remains accepted");
+                merge = f.Merge();
+                var external = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => true));
+                Check(OsuBeatmapWriter.Serialize(external).Text.Contains(line.Replace("\n", "\r\n")), key + " complete text is applied");
+                WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, external, true);
+                f.Diff.Document = external;
+                File.WriteAllText(f.Source, Fixture());
+                merge = f.Merge();
+                Check(merge.RequiresResolution && merge.Conflicts.Any(c => c.Key == key && c.External == ""), key + " removal is reviewable");
+                var deleted = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => true));
+                Check(!OsuBeatmapWriter.Serialize(deleted).Text.Contains(line.Split('\n')[0]), key + " removal is applied");
+                Check(deleted.Fruits[0].Id == f.Diff.Document.Fruits[0].Id, key + " preserves authoring identity");
+            });
+        });
+        yield return ("Sync: timing choices preserve ordered inherited and uninherited points", () => Run(f =>
+        {
+            f.Diff.Document.TimingPoints[0].BeatLengthMs = 600;
+            File.WriteAllText(f.Source, Fixture().Replace("0,500,4,1,0,100,1,0", "0,400,3,2,1,70,1,1\n0,-50,3,3,2,60,0,0"));
+            var merge = f.Merge();
+            Check(merge.Conflicts.Any(c => c.Key == "TimingPoints/"), "timing text conflict");
+            var local = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => false));
+            var external = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => true));
+            Check(local.TimingPoints.Single().BeatLengthMs == 600, "local timing choice");
+            Check(external.TimingPoints.Count == 2 && external.TimingPoints[0].Uninherited && !external.TimingPoints[1].Uninherited
+                && external.TimingPoints[1].BeatLengthMs == -50 && external.TimingPoints[1].Volume == 60, "external timing order and fields");
+        }));
         yield return ("Sync: osu save precision and omitted slider defaults preserve real edits", () => Run(f =>
         {
             string[] lines = [
@@ -465,8 +511,8 @@ internal static class SynchronizationTests
         {
             File.Delete(Path.Combine(f.Set, "audio.mp3")); File.WriteAllText(Path.Combine(f.Set, "new.mp3"), "replacement");
             File.WriteAllText(f.Source, Fixture().Replace("audio.mp3", "new.mp3"));
-            var merge = f.Merge(); Check(merge.Conflicts.Count == 0, "missing old audio is not a local edit");
-            var result = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+            var merge = f.Merge(); Check(merge.Conflicts.Count == 1 && merge.Conflicts[0].Key == "General/AudioFilename", "renamed filename is reviewed without a spurious audio-content conflict");
+            var result = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool> { ["General/AudioFilename"] = true });
             Check(result.AudioPath == Path.Combine(f.Set, "new.mp3"), "new audio");
             Check(result.Fruits[0].TimeMs == 1000, "no implicit retiming");
         }));
@@ -559,7 +605,7 @@ internal static class SynchronizationTests
         public MapDocument Resolve(WorkspaceSyncCandidate candidate)
         {
             var merge = WorkspaceSynchronization.Merge(Session.Manifest.Difficulties[0], Diff.Document, candidate, Session.Directory, true);
-            return WorkspaceSynchronization.Resolve(merge, merge.Conflicts.Where(c => WorkspaceSynchronization.IsMetadataField(c.Key)).ToDictionary(c => c.Key, _ => true));
+            return WorkspaceSynchronization.Resolve(merge, merge.Conflicts.Where(c => !c.Key.StartsWith('$')).ToDictionary(c => c.Key, _ => true));
         }
         public void CopyProject()
         {

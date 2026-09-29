@@ -950,6 +950,8 @@
   "sync.localHeading": "FA",
   "sync.externalHeading": "osu!",
   "sync.metadataHelp": "Choose the value to keep in each row. Highlighted text differs. Wheel: scroll metadata.",
+  "sync.sectionHelp": "Compare text and choose the complete field or section to keep. Wheel: scroll. Arrows above: browse text pages.",
+  "sync.textPage": "Text {0} / {1}",
   "sync.emptyValue": "(empty)",
   "sync.resultPreview": "Result preview",
   "sync.previewPending": "Unresolved items use FA in this preview.",
