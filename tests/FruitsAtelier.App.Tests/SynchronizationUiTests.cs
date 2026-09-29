@@ -4,6 +4,35 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class SynchronizationUiTests
 {
+    public static void DeleteLocalVersion()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/delete-local", Guid.NewGuid().ToString("N")));
+        string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
+        Directory.CreateDirectory(Path.GetDirectoryName(source)!); File.WriteAllText(source, Fixture);
+        var ui = new Ui(false); ui.Resize(1440, 900);
+        ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
+        var session = LibraryOperations.ImportPath(source, ui.View.LibrarySettings);
+        ui.View.LoadWorkspace(session); Wait(ui);
+        ui.View.ChangeAudioPath("local-edit.ogg");
+        var edited = ui.View.Document.DeepClone();
+        ui.View.ShowDeleteDifficulty(0, localOnly: true); ui.Paint();
+        ui.ClickText(L.Get("mac.cancel")); Wait(ui);
+        Check(ui.View.Document.ContentEquals(edited), "cancelling local deletion preserves edits");
+        ui.View.ShowDeleteDifficulty(0, localOnly: true); ui.Paint();
+        ui.ClickText(L.Get("sync.deleteLocal")); Wait(ui);
+        Check(!ui.View.SynchronizationVisible && ui.View.Document.AudioPath is null && File.ReadAllText(source) == Fixture,
+            "deleting the local version reimports without modifying osu");
+        Check(ui.View.DifficultyCount == 1 && WorkspaceProject.Open(session.Directory).Project.Difficulties[0].Document.AudioPath is null,
+            "reimport regenerates the persisted difficulty even for a single-difficulty project");
+        ui.View.ChangeAudioPath("keep-on-failure.ogg"); edited = ui.View.Document.DeepClone();
+        File.Delete(source);
+        ui.View.ShowDeleteDifficulty(0, localOnly: true); ui.Paint();
+        ui.ClickText(L.Get("sync.deleteLocal")); Wait(ui);
+        Check(ui.View.Document.ContentEquals(edited) && File.Exists(Path.Combine(session.Directory, session.Manifest.Difficulties[0].File)),
+            "missing source cannot discard local authoring");
+        ui.View.StopFileMonitoring();
+    }
+
     public static void MetadataRows()
     {
         var suffix = FruitsAtelier.App.Editor.MetadataTextDiff.Compare("same tags", "same tags aaa");

@@ -259,22 +259,25 @@ public sealed partial class EditorView
         if (activeBlocked) { LibraryVisible = true; QueueLibrarySearch(); }
     }
 
-    public void ShowDeleteDifficulty(int index)
+    public void ShowDeleteDifficulty(int index, bool localOnly = false)
     {
         if (index < 0 || index >= difficulties.Count || SynchronizationBusy) return;
         if (WorkspaceSession is null && !SaveWorkspace()) return;
         syncDifficulty = difficulties[index].Id;
         if (DifficultySyncState(index) is WorkspaceSyncState.Duplicate or WorkspaceSyncState.Ambiguous) { ShowSyncProblem(index); return; }
-        syncPage = "delete"; menu = -1; contextItems.Clear(); hits.Clear(); fields.Clear();
+        syncPage = localOnly ? "deleteLocal" : "delete"; menu = -1; contextItems.Clear(); hits.Clear(); fields.Clear();
     }
 
     private void DeleteSyncDifficulty()
     {
         if (WorkspaceSession is not { } session) return;
         var project = CaptureProject(); Guid id = syncDifficulty;
+        bool localOnly = syncPage == "deleteLocal";
+        session = DetachedSession(session, project);
         syncPage = "checking";
         syncCommitTask = Task.Run(() =>
         {
+            if (localOnly) return WorkspaceAssociations.ReimportDifficulty(session, project, id, compensateTinyDroplets);
             WorkspaceAssociations.DeleteDifficulty(session, project, id);
             return project.Difficulties.Count == 0 ? session with { Project = project } : WorkspaceProject.Open(session.Directory);
         });
@@ -390,12 +393,13 @@ public sealed partial class EditorView
         }
         var difficulty = difficulties.FirstOrDefault(d => d.Id == syncDifficulty);
         c.Text(difficulty?.Name ?? "", x + 20, y + 52, 16, Accent, w - 40);
-        if (syncPage == "delete")
+        if (syncPage is "delete" or "deleteLocal")
         {
-            c.Text(L.Get("sync.deleteHelp"), x + 20, y + 92, 14, Foreground, w - 40);
+            bool localOnly = syncPage == "deleteLocal";
+            c.Text(L.Get(localOnly ? "sync.deleteLocalHelp" : "sync.deleteHelp"), x + 20, y + 92, 14, Foreground, w - 40);
             string? path = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == syncDifficulty) is { } entry ? WorkspaceSynchronization.Target(entry) : null;
             c.Text(path ?? L.Get("sync.local"), x + 20, y + 130, 12, Muted, w - 40);
-            Button(c, new(x + 20, y + h - 58, 220, 36), L.Get("sync.delete"), DeleteSyncDifficulty);
+            Button(c, new(x + 20, y + h - 58, 220, 36), L.Get(localOnly ? "sync.deleteLocal" : "sync.delete"), DeleteSyncDifficulty);
         }
         else if (syncStatuses.TryGetValue(syncDifficulty, out var status))
         {

@@ -54,6 +54,7 @@ public sealed partial class EditorView
         int index = difficultyTabTargets[target].Index;
         contextItems.Add(new(L.Get("sync.refresh"), () => { syncDifficulty = difficulty.Id; RefreshSynchronization(reviewResolved: true); }));
         contextItems.Add(new(L.Get("sync.delete"), () => ShowDeleteDifficulty(index)));
+        contextItems.Add(new(L.Get("sync.deleteLocal"), () => ShowDeleteDifficulty(index, localOnly: true), File.Exists(osu)));
         float menuHeight = 12 + contextItems.Count * 32;
         contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 240)), Math.Clamp(y, 0, Math.Max(0, height - menuHeight)), 240, menuHeight);
         return true;

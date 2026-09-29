@@ -12,6 +12,7 @@ public sealed partial class EditorView
     private Rect workspaceScrollBounds, workspaceScrollTrack, workspaceScrollThumb;
     private float workspaceScroll, workspaceScrollGrab;
     private bool workspaceScrollDragging;
+    private Rect cleanHistoryBounds, clearCacheBounds;
     private float WorkspaceContentHeight => 555 + StorageFolderCount * 20;
     private int StorageFolderCount => Math.Min(8, storageReport?.Folders.Count ?? 0);
     private string storageRoot = "", storageError = "";
@@ -91,9 +92,11 @@ public sealed partial class EditorView
         c.Text(message, x, messageY, 11, storageError.Length > 0 ? Error : Muted, w);
         bool available = storageTask is null && !SynchronizationBusy && !SynchronizationVisible;
         float buttonWidth = (w - 24) / 4;
+        cleanHistoryBounds = new(x + 2 * (buttonWidth + 8), messageY + 26, buttonWidth, 30);
+        clearCacheBounds = new(x + 3 * (buttonWidth + 8), messageY + 26, buttonWidth, 30);
         SettingsButton(c, new(x, messageY + 26, buttonWidth, 30), L.Get("storage.refresh"), () => StartStorage(), enabled: storageTask is null);
-        SettingsButton(c, new(x + 2 * (buttonWidth + 8), messageY + 26, buttonWidth, 30), L.Get("storage.cleanHistory"), () => StartStorage(clean: true), enabled: available);
-        SettingsButton(c, new(x + 3 * (buttonWidth + 8), messageY + 26, buttonWidth, 30), L.Get("storage.clearCache"), () => StartStorage(cache: true), enabled: available);
+        SettingsButton(c, cleanHistoryBounds, L.Get("storage.cleanHistory"), () => StartStorage(clean: true), enabled: available);
+        SettingsButton(c, clearCacheBounds, L.Get("storage.clearCache"), () => StartStorage(cache: true), enabled: available);
         SettingsButton(c, new(x + buttonWidth + 8, messageY + 26, buttonWidth, 30), L.Get("storage.openFolder"),
             () => RequestOpenExternalPath?.Invoke(LibrarySettings.Workspace), enabled: RequestOpenExternalPath is not null && Directory.Exists(LibrarySettings.Workspace));
     }
@@ -123,6 +126,13 @@ public sealed partial class EditorView
         float travel = workspaceScrollTrack.Height - thumbHeight, maximum = Math.Max(0, WorkspaceContentHeight - workspaceScrollBounds.Height);
         workspaceScrollThumb = new(workspaceScrollTrack.X, workspaceScrollTrack.Y + (maximum > 0 ? workspaceScroll / maximum * travel : 0), 6, thumbHeight);
         c.Fill(workspaceScrollTrack, Surface, 3); c.Fill(workspaceScrollThumb, Muted, 3);
+    }
+
+    private void DrawStorageTooltip(ICanvas c)
+    {
+        if (!workspaceScrollBounds.Contains(mouseX, mouseY)) return;
+        if (cleanHistoryBounds.Contains(mouseX, mouseY)) DrawPaletteTooltip(c, L.Get("storage.cleanHistoryTip"), cleanHistoryBounds, left: true, above: true);
+        else if (clearCacheBounds.Contains(mouseX, mouseY)) DrawPaletteTooltip(c, L.Get("storage.clearCacheTip"), clearCacheBounds, left: true, above: true);
     }
 
     private void ScrollStorage(float x, float y, float delta)

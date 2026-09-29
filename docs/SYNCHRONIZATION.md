@@ -161,6 +161,16 @@ currently associated `.osu`. Unlinked or externally missing difficulties delete
 only their remaining FA data. Shared audio and other resources are not deleted.
 Deleting the final difficulty retires its project and returns to the library.
 
+**Delete local version** on a difficulty tab discards its FA authoring and imports
+the current associated `.osu` into a fresh local difficulty file. The `.osu` is
+unchanged. A missing or ambiguous source stops the operation without discarding
+local data. Cancelling the confirmation also preserves the current edits.
+
+The library's **Delete local project** action removes the workspace project and
+its source association from My projects, while keeping the source maps in All
+songs. Opening a source map again creates a new workspace project. Both local
+deletion actions retain recovery copies under `.sync-history`.
+
 Deletion archives saved and current authoring and the external file first. A
 deletion journal permits rollback of an interrupted external removal. Empty
 projects are retired by directory rename. Recovery copies are retained under

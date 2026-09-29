@@ -36,6 +36,15 @@ internal static class StorageSettingsTests
                     Check(text.Y < ui.View.SettingsBounds.Bottom - 100 && text.X >= ui.View.SettingsBounds.X, "storage buttons fit narrow settings");
                 }
                 string? opened = null;
+                foreach (string key in new[] { "storage.cleanHistory", "storage.clearCache" })
+                {
+                    var button = ui.Canvas.Texts.Single(t => t.Value == L.Get(key));
+                    ui.View.PointerMove(button.X + 2, button.Y + 2, false, false); ui.Paint();
+                    string visible = string.Concat(ui.Canvas.Texts.Select(t => t.Value).SelectMany(t => t.Where(c => !char.IsWhiteSpace(c))));
+                    string tip = string.Concat(L.Get(key + "Tip").Where(c => !char.IsWhiteSpace(c)));
+                    Check(visible.Contains(tip), "maintenance tooltip explains effects without clicking");
+                }
+                ui.View.PointerMove(0, 0, false, false); ui.Paint();
                 Check(!ui.Canvas.Texts.Any(t => t.Value is "folder0" or "folder1"), "usage ranking only shows the eight largest entries");
                 Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("storage.refresh")).X < ui.Canvas.Texts.Single(t => t.Value == L.Get("storage.openFolder")).X
                     && ui.Canvas.Texts.Single(t => t.Value == L.Get("storage.openFolder")).X < ui.Canvas.Texts.Single(t => t.Value == L.Get("storage.cleanHistory")).X, "open folder sits between refresh and clean history");

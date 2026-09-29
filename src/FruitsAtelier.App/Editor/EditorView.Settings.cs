@@ -175,6 +175,7 @@ public sealed partial class EditorView
         SettingsButton(c, new(SettingsContentX, r.Bottom - 64, 200, 38), L.Get("library.apply"), () => ApplySettings(),
             active: canApply, enabled: canApply);
         if (settingsColourIndex >= 0) DrawIndicatorColourPicker(c);
+        if (settingsCategory == SettingsCategory.Workspace) DrawStorageTooltip(c);
     }
 
     private void OpenDisplayModeMenu(Rect bounds)

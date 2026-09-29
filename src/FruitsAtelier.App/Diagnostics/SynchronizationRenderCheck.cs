@@ -68,6 +68,8 @@ internal static class SynchronizationRenderCheck
                 view.KeyDown(27, false, false);
                 view.LoadWorkspace(WorkspaceProject.Open(session.Directory));
                 view.ShowDeleteDifficulty(0); Paint(); view.KeyDown(27, false, false);
+                view.ShowDeleteDifficulty(0, localOnly: true); Paint(); view.KeyDown(27, false, false);
+                view.ShowDeleteProjectConfirmation(_ => { }); Paint(); view.KeyDown(27, false, false);
                 AppLog.Write($"Synchronization rendering passed: {locale}, {width}x{height}, object conflicts, missing state, deletion confirmation and input isolation.");
 
                 void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }

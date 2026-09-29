@@ -98,10 +98,8 @@ public static class LibraryOperations
         if (!WorkspaceProject.Within(projects, project) || project == Path.GetFullPath(projects))
             throw new IOException(FruitsAtelier.Localization.Strings.Get("library.deleteUnavailable"));
         WorkspaceProject.RejectLinks(project);
-        var manifest = WorkspaceProject.ReadManifest(project);
-        if (WorkspaceProject.HasExistingSongsFile(manifest, settings.Songs))
-            throw new IOException(FruitsAtelier.Localization.Strings.Get("library.deleteUnavailable"));
-        Directory.Delete(project, true);
+        WorkspaceAssociations.DeleteLocalProject(project);
+        new LibraryDatabase(settings.Workspace, settings.Songs).ReindexProjects();
     }
     public static void OpenExternalPath(string path)
     {

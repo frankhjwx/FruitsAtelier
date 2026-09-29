@@ -56,6 +56,36 @@ public static class WorkspaceAssociations
             throw new InvalidOperationException(L.Get("sync.duplicate", path));
     }
 
+    public static void DeleteLocalProject(string directory)
+    {
+        lock (WorkspaceProject.Gate)
+        {
+            var session = WorkspaceProject.Open(directory);
+            string backup = WorkspaceSynchronization.Archive(session, "delete-local-project");
+            Directory.Move(session.Directory, Path.Combine(backup, "retired-project"));
+        }
+    }
+
+    public static WorkspaceSession ReimportDifficulty(WorkspaceSession session, BeatmapProject project, Guid id, bool compensate)
+    {
+        lock (WorkspaceProject.Gate)
+        {
+            var status = WorkspaceSynchronization.Scan(session with { Project = project }, session.Manifest.SongsRoot ?? "").Difficulties.Single(d => d.DifficultyId == id);
+            if (status.State is WorkspaceSyncState.Duplicate or WorkspaceSyncState.Ambiguous or WorkspaceSyncState.Unavailable
+                || status.Candidate is not { } external) throw new InvalidOperationException(L.Get("sync.unresolved"));
+            var entry = session.Manifest.Difficulties.Single(d => d.Id == id);
+            EnsureOwner(session, id, external.Path);
+            ProjectSerializer.WriteFile(project, Path.Combine(WorkspaceSynchronization.Archive(session, "reimport"), "current.catchproj"));
+            var diff = project.Difficulties.Single(d => d.Id == id);
+            diff.Document = external.Document.DeepClone();
+            diff.Name = OsuBeatmapReader.Setting(diff.Document, "Metadata", "Version") ?? diff.Name;
+            entry.Sync = null;
+            WorkspaceSynchronization.Accept(session, entry, external, diff.Document, compensate);
+            WorkspaceProject.Save(session, project);
+            return WorkspaceProject.Open(session.Directory);
+        }
+    }
+
     public static void DeleteDifficulty(WorkspaceSession session, BeatmapProject project, Guid id)
     {
         lock (WorkspaceProject.Gate)

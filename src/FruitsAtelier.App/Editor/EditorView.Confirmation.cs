@@ -45,12 +45,14 @@ public sealed partial class EditorView
         hits.Clear(); fields.Clear();
         if (deleteProjectConfirmation)
         {
-            float left = (width - 500) / 2, top = (height - 160) / 2;
-            c.Fill(new(left, top, 500, 160), Panel, 8);
-            c.Stroke(new(left, top, 500, 160), Accent, 2, 8);
+            float left = (width - 500) / 2, top = (height - 200) / 2;
+            c.Fill(new(left, top, 500, 200), Panel, 8);
+            c.Stroke(new(left, top, 500, 200), Accent, 2, 8);
             c.Text(L.Get("library.deleteProjectConfirm"), left + 24, top + 28, 20, Foreground, 452, true);
-            Button(c, new(left + 24, top + 96, 210, 40), L.Get("mac.cancel"), () => AnswerDiscard(2), true);
-            Button(c, new(left + 266, top + 96, 210, 40), L.Get("library.deleteProject"), () => AnswerDiscard(7));
+            c.Text(L.Get("library.deleteProjectHelp"), left + 24, top + 72, 13, Muted, 452);
+            c.Text(L.Get("library.deleteProjectReopen"), left + 24, top + 96, 13, Muted, 452);
+            Button(c, new(left + 24, top + 144, 210, 40), L.Get("mac.cancel"), () => AnswerDiscard(2), true);
+            Button(c, new(left + 266, top + 144, 210, 40), L.Get("library.deleteProject"), () => AnswerDiscard(7));
             return;
         }
         if (offerSongsExport)

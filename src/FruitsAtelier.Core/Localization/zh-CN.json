@@ -658,9 +658,9 @@
   "library.exportConflictHint": "写入 Songs 时，覆盖前会检查外部改动。",
   "library.exportFile": "导出 .osu 文件到其他位置",
   "library.exportOsz": "导出 .osz…",
-  "library.deleteProject": "删除项目…",
+  "library.deleteProject": "删除本地项目…",
   "library.deleteProjectConfirm": "删除此工作区项目？",
-  "library.deleteUnavailable": "只能删除 osu! Songs 中没有文件的项目。",
+  "library.deleteUnavailable": "只能删除工作区内的项目。",
   "library.exportFileHint": "单独导出仅保存 .osu 文件，不复制音频、背景和自定义音效。",
   "library.exported": "已导出：{0}",
   "library.referenceErrors": "引用错误",
@@ -1013,5 +1013,11 @@
   "storage.cleanHistory": "清理历史",
   "storage.clearCache": "清理缓存",
   "storage.openFolder": "打开工作区文件夹",
-  "storage.invalidReference": "{0} 中的资源路径无效，已停止清理。"
+  "storage.invalidReference": "{0} 中的资源路径无效，已停止清理。",
+  "sync.deleteLocal": "删除本地版本…",
+  "sync.deleteLocalHelp": "丢弃此 FA 版本并从对应 .osu 重新导入。保留一份恢复副本。",
+  "library.deleteProjectHelp": "从“我的项目”移除，保留 osu! 文件。",
+  "library.deleteProjectReopen": "之后从“所有歌曲”打开可重新导入。保留一份恢复副本。",
+  "storage.cleanHistoryTip": "清理超过 30 天、每个项目超过 10 份或超过 1 GiB 历史预算的旧恢复版本。\n保留每个项目的最新版本、仍被引用的版本，以及最近 24 小时内的版本。\n同时清理无引用的音频备份和过期对比文件。保留当前项目和 osu! 文件。",
+  "storage.clearCacheTip": "清理临时对比文件、无引用的音频备份及生成的播放副本，然后重建曲库索引。\n保留项目编辑数据、恢复版本、仍被引用的音频、导入的歌曲与皮肤，以及 osu! 文件。最近使用的音频受 24 小时保护。\n下次刷新曲库可能需要更长时间。"
 }

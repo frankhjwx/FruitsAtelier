@@ -658,9 +658,9 @@
   "library.exportConflictHint": "Songs export checks external changes before overwriting.",
   "library.exportFile": "Export .osu to another location",
   "library.exportOsz": "Export .osz…",
-  "library.deleteProject": "Delete project…",
+  "library.deleteProject": "Delete local project…",
   "library.deleteProjectConfirm": "Delete this workspace project?",
-  "library.deleteUnavailable": "Only projects without files in osu! Songs can be deleted.",
+  "library.deleteUnavailable": "Only projects inside the workspace can be deleted.",
   "library.exportFileHint": "Standalone export saves only the .osu file. Audio, backgrounds and custom samples are not copied.",
   "library.exported": "Exported: {0}",
   "library.referenceErrors": "Reference errors",
@@ -1013,5 +1013,11 @@
   "storage.cleanHistory": "Clean history",
   "storage.clearCache": "Clear cache",
   "storage.openFolder": "Open workspace folder",
-  "storage.invalidReference": "Invalid resource path in {0}. Cleanup stopped."
+  "storage.invalidReference": "Invalid resource path in {0}. Cleanup stopped.",
+  "sync.deleteLocal": "Delete local version…",
+  "sync.deleteLocalHelp": "Discard this FA version and reimport its .osu. A recovery copy is retained.",
+  "library.deleteProjectHelp": "Removes it from My projects; osu! files are kept.",
+  "library.deleteProjectReopen": "Open from All songs to import again. A recovery copy is kept.",
+  "storage.cleanHistoryTip": "Removes old recovery versions: older than 30 days, beyond 10 per project, or over the 1 GiB history budget.\nKeeps each project’s newest version, referenced versions, and versions from the last 24 hours.\nAlso removes unreferenced audio backups and expired comparison files. Current projects and osu! files are kept.",
+  "storage.clearCacheTip": "Clears temporary comparison files, unreferenced audio backups and generated playback copies, then rebuilds the library index.\nKeeps project edits, recovery versions, referenced audio, imported songs and skins, and osu! files. Recently used audio is protected for 24 hours.\nThe next library refresh may take longer."
 }
