@@ -14,6 +14,7 @@ public sealed partial class EditorView
     private sealed class DifficultySession(ProjectDifficulty difficulty)
     {
         public Guid Id { get; } = difficulty.Id;
+        public MapEditingPreferences EditingPreferences { get; set; } = new();
         public string Name => OsuBeatmapReader.Setting(History.Document, "Metadata", "Version") ?? difficulty.Name;
         public EditorHistory History { get; } = new(difficulty.Document);
         public MapDocument? RatingSnapshot;

@@ -212,6 +212,7 @@ public sealed partial class EditorView
             settings.UseSkinSounds = LibrarySettings.UseSkinSounds;
             settings.PlaybackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
             settings.CanvasZoom = LibrarySettings.CanvasZoom;
+            settings.MapEditingPreferences = LibrarySettings.MapEditingPreferences;
             settings.ObjectTimelineScale = LibrarySettings.ObjectTimelineScale;
             settings.WaveformSpanMs = LibrarySettings.WaveformSpanMs;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;

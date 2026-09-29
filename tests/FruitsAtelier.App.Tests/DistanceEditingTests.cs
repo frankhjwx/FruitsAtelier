@@ -207,7 +207,7 @@ internal static class DistanceEditingTests
             Check(bounds[i].Right < bounds[j].X || bounds[j].Right < bounds[i].X || bounds[i].Bottom < bounds[j].Y || bounds[j].Bottom < bounds[i].Y, "DS labels overlap");
         var longGap = Fruits(); longGap.Fruits.Clear();
         longGap.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 100 }, new Fruit { TimeMs = 5000, X = 400 }]);
-        ui.LoadDocument(longGap); ui.Paint();
+        ui.LoadDocument(longGap); ui.ClickText(Strings.Get("movement.analysis"));
         var labelBefore = ui.View.DistanceLabelBounds.Single();
         var plot = ui.View.CanvasPlotBounds;
         float panX = plot.X + 4, panY = plot.Y + 10;
@@ -219,15 +219,15 @@ internal static class DistanceEditingTests
         Near(labelBefore.Y + 2000 * ui.View.PixelsPerMs, labelAfter.Y);
         var shortGap = Fruits(); shortGap.Fruits.Clear();
         shortGap.Fruits.AddRange([new Fruit { TimeMs = 100, X = 256 }, new Fruit { TimeMs = 175, X = 256 }]);
-        ui.LoadDocument(shortGap); ui.Paint();
+        ui.LoadDocument(shortGap); ui.ClickText(Strings.Get("movement.analysis"));
         plot = ui.View.CanvasPlotBounds;
         ui.View.Wheel(plot.X, plot.Bottom, 2400, false, false, true); ui.Paint();
         Check(ui.View.DistanceLabelBounds.Count == 1, "Short isolated connection was hidden at high zoom");
         shortGap.Fruits[1].TimeMs = 137.5;
-        ui.LoadDocument(shortGap); ui.Paint();
+        ui.LoadDocument(shortGap); ui.ClickText(Strings.Get("movement.analysis"));
         Check(ui.View.DistanceLabelBounds.Count == 0, "200 BPM eighth-beat interval was labelled");
         shortGap.Fruits[1].TimeMs = 138;
-        ui.LoadDocument(shortGap); ui.Paint();
+        ui.LoadDocument(shortGap); ui.ClickText(Strings.Get("movement.analysis"));
         Check(ui.View.DistanceLabelBounds.Count == 1, "Interval above the dense timing cutoff was hidden");
         var dense = Fruits(); dense.Fruits.Clear();
         for (int i = 0; i < 100; i++) dense.Fruits.Add(new Fruit { TimeMs = 1000 + i * 3, X = 256 });

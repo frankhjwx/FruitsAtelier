@@ -83,8 +83,8 @@ public sealed partial class EditorView
         for (int i = 0; i < lines.Count; i++) c.Text(lines[i], x + 8, y + 6 + i * 16, 11, Foreground, w - 16);
     }
 
-    private bool gridSnap;
-    private int gridSize = 4;
+    private bool gridSnap { get => EditingPreferences.GridSnap; set { EditingPreferences.GridSnap = value; SaveMapEditingPreferences(); } }
+    private int gridSize { get => EditingPreferences.GridLevel; set { EditingPreferences.GridLevel = value; SaveMapEditingPreferences(); } }
     private double SnapX(double x) => EffectiveGridSnap ? Math.Round(x / gridSize, MidpointRounding.AwayFromZero) * gridSize : x;
 
     private readonly Guid placementId = Guid.NewGuid();

@@ -2,6 +2,12 @@
 
 See the [shortcut manual](KEY_BINDINGS.md) for the complete keyboard reference and the [compatibility review](KEY_BINDINGS_REVIEW.md) for known differences and gaps.
 
+Grid Snap, Distance Snap, Movement Analysis and Grid Level are saved immediately
+as local preferences for each project difficulty. Switching difficulties or reopening
+the editor restores these values. They do not change map content or undo history.
+Shift/Alt temporary snap overrides are not saved. Difficulties without saved
+preferences start with all three switches off and Grid Level Tiny (4 px).
+
 ## Timing editing
 
 **Details Panel** in the right header opens a dropdown with **Details Panel** and

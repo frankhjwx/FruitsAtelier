@@ -32,6 +32,7 @@ var tests = new (string Name, Action Run)[]
     ("Mapping boundary distances, DS equality and pointer exit", MappingSessionTests.DistanceAndHover),
     ("Mapping marquee playback and banana timeline resizing", MappingSessionTests.MarqueeAndBanana),
     ("Mapping independent zoom and Combo preferences", MappingSessionTests.Preferences),
+    ("Mapping per-difficulty editing preferences survive restart", MappingSessionTests.MapPreferences),
     ("Mapping Combo visibility and configured dash brightness", MappingSessionTests.TestplayDisplay),
     ("Clearing internal slider nodes preserves endpoints and batch undo", ClearSliderNodesTests.Run),
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),

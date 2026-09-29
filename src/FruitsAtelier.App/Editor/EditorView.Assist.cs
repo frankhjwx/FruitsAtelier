@@ -6,7 +6,8 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private bool altHeld, shiftHeld, distanceSnap, notesLocked, distanceOutside;
+    private bool altHeld, shiftHeld, notesLocked, distanceOutside;
+    private bool distanceSnap { get => EditingPreferences.DistanceSnap; set { EditingPreferences.DistanceSnap = value; SaveMapEditingPreferences(); } }
     private int nextSounds;
     private (Guid Id, int Edge)? soundEdge;
     private CatchConversionResult? distanceConversion;
