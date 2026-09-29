@@ -62,6 +62,25 @@ internal static class RenderCheck
         if (canvas.ImageDecodeCount != decodes)
             throw new InvalidOperationException("Scene cache pressure evicted the independent bookmark toolbar.");
     }
+
+    private static void CheckAnimatedTextResources(D2DCanvas canvas)
+    {
+        for (int batch = 0; batch < 16; batch++)
+        {
+            canvas.Begin();
+            for (int i = 0; i < 128; i++)
+            {
+                int frame = batch * 128 + i;
+                float size = 12 + frame * .007f;
+                float width = canvas.MeasureText("123", size, true);
+                canvas.Text("123", 10, 10, size, 0x800000u + (uint)frame, width + 10, true);
+            }
+            canvas.End();
+            if (canvas.CachedTextFormatCount > D2DCanvas.TextFormatLimit)
+                throw new InvalidOperationException("Animated text retained unbounded native formats.");
+        }
+        AppLog.Write($"Animated text resource check: 2048 sizes, retained formats={canvas.CachedTextFormatCount}");
+    }
     private static void CheckTimingSetup(D2DCanvas canvas, EditorView view, int width, int height)
     {
         string language = FruitsAtelier.Localization.Strings.Language;
@@ -707,6 +726,7 @@ internal static class RenderCheck
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
         CheckBookmarkCache(canvas);
+        CheckAnimatedTextResources(canvas);
         CheckWorkspaceSave(canvas, view);
         LibraryDropCheck.Run(view, window);
         CheckDistanceFields(canvas, view);

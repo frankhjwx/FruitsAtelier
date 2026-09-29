@@ -174,10 +174,19 @@ After changing input or drawing, manually check affected operations, language sw
 
 Follow the [editing performance constraints](EDITING_PERFORMANCE.md) when changing
 interactive paths. For a read-only benchmark of an existing `.osu` map, run the App
-test executable with `--fruit-placement-performance <path.osu>`. It measures warm
+test executable with `--fruit-placement-performance <path.osu-or-catchdiff>`. It measures warm
 conversion/export, fruit hover and repeated same-time replacement, including pointer
-dispatch, rendering and per-operation allocations. Edits stay in memory. This uses
+dispatch, rendering and per-operation allocations, plus Fruit/FSlider hover during
+playback with a stationary pointer, an active slider draft, and Grid Snap on/off.
+It reports export sequence validity to identify
+fallback preview work. Edits stay in memory. This uses
 `RecordingCanvas` and does not measure physical display latency.
+
+`--testplay-edit-performance <path.osu-or-catchdiff>` compares twenty seconds of
+testplay simulation before and after 600 in-memory fruit edits with undo history
+retained. It uses an injected clock, silent callbacks and a counting canvas, and
+reports CPU time, allocations, heap size and Gen2 collections. This accelerates the
+edit workload; it does not reproduce wall-clock aging, device scheduling or GPU load.
 
 Windows builds automatically aggregate UI performance into `editor.log`. Every
 five seconds with processed window messages, an interval containing a sample of
@@ -188,7 +197,9 @@ Logs live in `artifacts/logs` for repository builds and
 
 `UI performance` reports count, average, maximum, and count at or above 16 ms for
 input queue age, input dispatch (including title updates), audio/update polling,
-frame preparation, editor rendering, and `EndDraw`/`Present` submission. Conversion
+frame preparation, editor rendering, and combined `Submit` submission. Separate
+`EndDraw` and `Present` counters distinguish drawing completion from presentation
+waiting; both are nested within `Submit`. Conversion
 snapshot comparison, rebuilding, and export/read-back are measured separately;
 these are nested within editor rendering, and export is nested within rebuilding,
 so their durations must not be added together. `InputToSubmit` measures the oldest

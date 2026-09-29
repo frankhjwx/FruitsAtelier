@@ -114,6 +114,12 @@ public sealed partial class EditorView
     }
 
     private TimingMap.Lookup? renderedTiming;
+    private TimingMap.Lookup? snapTiming;
+    private TimingMap.Lookup SnapTiming()
+    {
+        if (snapTiming is null || !snapTiming.MatchesTiming(Document)) snapTiming = new(Document);
+        return snapTiming;
+    }
     private readonly OsuWriteCache editorWriteCache = new();
     private bool IsContentDrag => drag is DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn
         or DragKind.HandleOut or DragKind.DraftHandle or DragKind.LegacyControl or DragKind.Objects
@@ -139,7 +145,7 @@ public sealed partial class EditorView
     {
         clickedCoordinate = null;
         convertedSnapshot = Document.DeepClone();
-        renderedTiming = new TimingMap.Lookup(Document);
+        renderedTiming = SnapTiming();
         convertedWithCompensation = compensateTinyDroplets;
         var input = Document;
         if (input.Tracks.Any(t => t.Nodes.Count < 2))
@@ -272,7 +278,7 @@ public sealed partial class EditorView
     private MapPoint MapAt(float x, float y, bool useSnap, bool clampX = true)
     {
         var p = Transform.ToMap(x, y);
-        double time = useSnap && snap ? TimingMap.Snap(Document, p.TimeMs, divisor) : p.TimeMs;
+        double time = useSnap && snap ? SnapTiming().Snap(p.TimeMs, divisor) : p.TimeMs;
         return new(Math.Clamp(time, 0, EditableDurationMs), clampX ? Math.Clamp(SnapX(p.X), 0, 512) : SnapX(p.X));
     }
 

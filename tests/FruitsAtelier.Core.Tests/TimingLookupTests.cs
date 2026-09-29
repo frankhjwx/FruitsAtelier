@@ -39,6 +39,10 @@ internal static class TimingLookupTests
             new() { TimeMs = 2500, BeatLengthMs = 300, Uninherited = true, Meter = 7 }
         ]);
         var lookup = new TimingMap.Lookup(map);
+        if (!lookup.MatchesTiming(map.DeepClone())) throw new Exception("Equal timing snapshots did not match.");
+        foreach (var (time, expected) in new[] { (62.5, 100d), (987.5, 1000d), (999.9, 1000d),
+            (1050d, 1100d), (2490d, 2500d), (2537.5, 2575d) })
+            if (lookup.Snap(time, 4) != expected) throw new Exception($"Snap boundary mismatch at {time}.");
         foreach (var (time, state) in new[] {
             (-100d, new TimingState(100, 500, 1, true, 3)),
             (999.999, new TimingState(100, 500, 1, true, 3)),
@@ -51,6 +55,12 @@ internal static class TimingLookupTests
             new BeatGridLine(1100, false, false, 4), new BeatGridLine(1200, false, false, 2) }))
             throw new Exception("Grid no longer resets at the red timing boundary.");
         map.TimingPoints[2].BeatLengthMs = 200;
+        if (lookup.MatchesTiming(map)) throw new Exception("In-place timing edits retained a stale snapshot.");
+        map.TimingPoints[2].BeatLengthMs = 400;
+        if (!lookup.MatchesTiming(map)) throw new Exception("Restored timing no longer matches.");
+        map.TimingOffsetMs++;
+        if (lookup.MatchesTiming(map)) throw new Exception("Default timing changes retained a stale snapshot.");
+        map.TimingOffsetMs--;
         map.TimingPoints.Clear();
         if (lookup.At(1000).BeatLengthMs != 400 || new TimingMap.Lookup(map).At(1000) != fallback.At(1000))
             throw new Exception("A timing lookup must own its snapshot.");

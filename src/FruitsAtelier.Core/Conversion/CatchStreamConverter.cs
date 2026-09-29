@@ -29,6 +29,7 @@ public static class CatchStreamConverter
             .Concat(document.BananaShowers.Select(b => new Source(b.TimeMs, b.SourceOrder, null, null, null, b)))
             .OrderBy(s => s.TimeMs).ThenBy(s => s.SourceOrder);
         var rng = new CatchLegacyRandom(1337);
+        TimingMap.Lookup? timing = null;
         foreach (var source in parents)
         {
             Guid sourceId = source.Fruit?.Id ?? source.Track?.Id ?? source.ImportedSlider?.Id ?? source.BananaShower!.Id;
@@ -58,7 +59,7 @@ public static class CatchStreamConverter
                 if (source.ImportedSlider is ImportedSlider imported)
                 {
                     var candidateRng = rng;
-                    var convertedImport = ImportedSliderConverter.Convert(document, imported, ref candidateRng);
+                    var convertedImport = ImportedSliderConverter.Convert(document, imported, ref candidateRng, timing ??= new(document));
                     sliders.Add(convertedImport.Slider);
                     objects.AddRange(convertedImport.Objects);
                     rng = candidateRng;
@@ -78,13 +79,13 @@ public static class CatchStreamConverter
                 ValidateTrack(document, track);
                 if (track.StreamSnapDivisor is not null)
                 {
-                    var stream = SliderFruitStream.Convert(document, track);
+                    var stream = SliderFruitStream.Convert(document, track, timing ??= new(document));
                     objects.AddRange(stream);
                     cache?.Store(track, null, null, before, rng, null, stream);
                     continue;
                 }
                 var converted = ConvertTrack(document, track, track.CompensateTinyDroplets ?? compensateTinyDroplets,
-                    ref rng);
+                    ref rng, (timing ??= new(document)).At(track.Nodes[0].TimeMs));
                 sliders.Add(converted.Slider);
                 objects.AddRange(converted.Objects);
                 cache?.Store(track, null, null, before, rng, converted.Slider, converted.Objects);
@@ -116,11 +117,10 @@ public static class CatchStreamConverter
     }
 
     private static TrackConversion ConvertTrack(MapDocument document, CurveTrack track, bool requestCompensation,
-        ref CatchLegacyRandom globalRng)
+        ref CatchLegacyRandom globalRng, TimingState timing)
     {
         double start = track.Nodes[0].TimeMs;
         double duration = track.Nodes[^1].TimeMs - start;
-        var timing = TimingMap.At(document, start);
         double sv = timing.SliderVelocityMultiplier;
         // Inherited beat lengths round to float; leave room below the path-length limit.
         double maximumSv = Math.Min(LegacyCatchRules.MaximumSliderVelocityMultiplier,

@@ -88,7 +88,6 @@ public sealed partial class EditorView
     private double SnapX(double x) => EffectiveGridSnap ? Math.Round(x / gridSize, MidpointRounding.AwayFromZero) * gridSize : x;
 
     private readonly Guid placementId = Guid.NewGuid();
-    private readonly CatchConversionCache placementConversionCache = new();
     private readonly OsuWriteCache placementWriteCache = new();
     private CatchConversionResult? placementSource;
     private MapPoint? cachedPlacementPoint;
@@ -98,6 +97,8 @@ public sealed partial class EditorView
     private (double? Previous, double? Next) placementDistances;
     private IReadOnlyList<ConvertedCatchObject>? placementMovementObjects;
     private HashSet<(Guid SourceId, int EventIndex)> placementHyperdash = [];
+    private OsuWriteResult? placementOrderSource;
+    private (ConvertedCatchObject Object, double ParentTime)[] placementOrder = [];
 
     private void UpdatePlacementHyperdash()
     {
@@ -114,7 +115,7 @@ public sealed partial class EditorView
         cachedPlacementTool = tool; cachedPlacementCtrl = placementCtrl;
         placementGhost = null; placementMovementObjects = null; placementHyperdash = hyperdashObjects;
         placementDistances = (null, null);
-        if (tool == Tool.Fruit && TryPreviewFruitPlacement(point.Value)) return;
+        if ((tool == Tool.Fruit || draftTrack == Guid.Empty) && TryPreviewFruitPlacement(point.Value)) return;
         // Conversion reads its inputs; clone only the track whose uncommitted endpoint needs editing.
         var candidate = new MapDocument
         {
@@ -143,7 +144,7 @@ public sealed partial class EditorView
             candidate.Fruits.Add(new Fruit { Id = placementId, TimeMs = point.Value.TimeMs, X = point.Value.X });
         }
         candidate.Tracks.RemoveAll(t => t.Nodes.Count < 2);
-        var preview = CatchStreamConverter.Convert(candidate, compensateTinyDroplets, placementConversionCache);
+        var preview = placementWriteCache.Convert(candidate, compensateTinyDroplets);
         if (!preview.Success) return;
         if (preview.Objects.LastOrDefault(o => o.SourceId == source && o.Kind == CatchObjectKind.Fruit) is { } distanceTarget)
             UpdatePlacementDistances(distanceTarget, preview.Objects);
@@ -156,7 +157,15 @@ public sealed partial class EditorView
         catch (InvalidDataException) { }
         placementMovementObjects = objects;
         placementGhost = objects.LastOrDefault(o => o.SourceId == source && o.Kind == CatchObjectKind.Fruit);
-        placementHyperdash = HyperDashCalculator.GetHyperDashStarts(objects, Document.CircleSize);
+        UpdatePlacementMovement(objects);
+    }
+
+    private void UpdatePlacementMovement(IReadOnlyList<ConvertedCatchObject> objects)
+    {
+        EnsureMovementStates(objects);
+        placementHyperdash = [];
+        for (int i = 0; i < movementStates.Length; i++)
+            if (movementStates[i].IsHyperDash) placementHyperdash.Add((objects[i].SourceId, objects[i].EventIndex));
     }
 
     private MapPoint? PlacementGhostPoint()
@@ -210,23 +219,39 @@ public sealed partial class EditorView
 
     private bool TryPreviewFruitPlacement(MapPoint point)
     {
+        bool replace = tool == Tool.Fruit;
         if (playableExport is null
             || Document.Tracks.Any(t => t.Nodes.Count > 0 && Math.Abs(t.Nodes[0].TimeMs - point.TimeMs) <= 2)
             || Document.ImportedSliders.Any(s => Math.Abs(s.TimeMs - point.TimeMs) <= 2)
             || Document.BananaShowers.Any(s => Math.Abs(s.TimeMs - point.TimeMs) <= 2)) return false;
         // Standalone fruits consume no NM random state; unchanged parents keep their exported events.
-        var removed = Document.Fruits.Where(f => Math.Abs(f.TimeMs - point.TimeMs) <= 2).Select(f => f.Id).ToHashSet();
+        var removed = Document.Fruits.Where(f => replace && Math.Abs(f.TimeMs - point.TimeMs) <= 2).Select(f => f.Id).ToHashSet();
         UpdatePlacementDistances(new(placementId, 0, CatchObjectKind.Fruit, point.TimeMs, point.X, point.X, point.X, 0, true),
             conversion!.Objects, removed);
         double time = Math.Round(point.TimeMs, MidpointRounding.AwayFromZero);
         double x = Math.Round(point.X, MidpointRounding.AwayFromZero);
         placementGhost = new(placementId, 0, CatchObjectKind.Fruit, time, x, x, x, 0, true);
-        var starts = playableExport.ReadBack.ImportedSliders.Select(s => (s.Id, s.TimeMs))
-            .Concat(playableExport.ReadBack.BananaShowers.Select(s => (s.Id, s.TimeMs)))
-            .ToDictionary(s => s.Id, s => s.TimeMs);
-        placementMovementObjects = playableObjects.Where(o => !removed.Contains(o.SourceId)).Append(placementGhost)
-            .OrderBy(o => o.TimeMs).ThenBy(o => o.IsStandalone ? o.TimeMs : starts[o.SourceId]).ToArray();
-        placementHyperdash = HyperDashCalculator.GetHyperDashStarts(placementMovementObjects, Document.CircleSize);
+        if (!ReferenceEquals(placementOrderSource, playableExport))
+        {
+            var starts = playableExport.ReadBack.ImportedSliders.Select(s => (s.Id, s.TimeMs))
+                .Concat(playableExport.ReadBack.BananaShowers.Select(s => (s.Id, s.TimeMs)))
+                .ToDictionary(s => s.Id, s => s.TimeMs);
+            placementOrder = playableObjects.Select(o => (Object: o, ParentTime: o.IsStandalone ? o.TimeMs : starts[o.SourceId]))
+                .OrderBy(o => o.Object.TimeMs).ThenBy(o => o.ParentTime).ToArray();
+            placementOrderSource = playableExport;
+        }
+        var merged = new List<ConvertedCatchObject>(placementOrder.Length + 1);
+        bool inserted = false;
+        foreach (var (item, parentTime) in placementOrder)
+        {
+            if (removed.Contains(item.SourceId)) continue;
+            if (!inserted && (item.TimeMs > time || item.TimeMs == time && parentTime > time))
+            { merged.Add(placementGhost); inserted = true; }
+            merged.Add(item);
+        }
+        if (!inserted) merged.Add(placementGhost);
+        placementMovementObjects = merged;
+        UpdatePlacementMovement(merged);
         return true;
     }
 

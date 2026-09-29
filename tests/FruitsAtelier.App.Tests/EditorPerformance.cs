@@ -5,9 +5,64 @@ using FruitsAtelier.Core;
 
 internal static class EditorPerformance
 {
+    public static int RunTestplayEditing(string path)
+    {
+        var document = Path.GetExtension(path).Equals(".osu", StringComparison.OrdinalIgnoreCase)
+            ? OsuBeatmapReader.ReadFile(path) : ProjectSerializer.ReadFile(path);
+        document.AudioPath = null;
+        var clock = new BenchmarkClock();
+        var view = new EditorView(false, clock); view.LoadDocument(document);
+        view.LibrarySettings.TestplayStartupDelaySeconds = 0;
+        var canvas = new CountCanvas(); view.Render(canvas, 1440, 900);
+        var history = (EditorHistory)typeof(EditorView).GetProperty("history",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(view)!;
+        Measure("Fresh");
+        for (int i = 0; i < 600; i++)
+        {
+            history.Begin("Move fruit");
+            view.Document.Fruits[0].X = document.Fruits[0].X + (i % 2 == 0 ? 1 : 0);
+            history.Commit(); view.Render(canvas, 1440, 900);
+            if ((i + 1) % 100 == 0) Console.WriteLine($"Committed {i + 1}/600 edits");
+        }
+        if (!view.Document.ContentEquals(document)) throw new Exception("Editing benchmark changed final content.");
+        Measure("After 600 edits");
+        view.NewProject();
+        return 0;
+
+        void Measure(string label)
+        {
+            view.StartTestplay();
+            if (!view.IsTestplaying) throw new Exception("Testplay benchmark did not start.");
+            view.KeyDown(9, false, false); view.KeyUp(9);
+            var frames = new List<double>();
+            long bytes = GC.GetAllocatedBytesForCurrentThread();
+            int gen2 = GC.CollectionCount(2);
+            for (int i = 0; i < 2400; i++)
+            {
+                clock.Advance(1000d / 120);
+                var watch = Stopwatch.StartNew(); view.Render(canvas, 1440, 900);
+                if (!view.IsTestplaying) throw new Exception("Map ended before the testplay sample completed.");
+                if (i >= 120) frames.Add(watch.Elapsed.TotalMilliseconds);
+            }
+            long allocation = GC.GetAllocatedBytesForCurrentThread() - bytes;
+            frames.Sort();
+            Console.WriteLine($"{label} testplay CPU: median={frames[frames.Count / 2]:F3} ms, p95={frames[(int)(frames.Count * .95)]:F3} ms, max={frames[^1]:F3} ms; allocated={allocation / 2400} B/frame, heap={GC.GetTotalMemory(false) / 1024 / 1024} MiB, Gen2={GC.CollectionCount(2) - gen2}");
+            view.StopTestplay();
+        }
+    }
+
+    private sealed class BenchmarkClock : TimeProvider
+    {
+        private double milliseconds;
+        public override long TimestampFrequency => 1_000_000;
+        public override long GetTimestamp() => (long)(milliseconds * 1000);
+        public void Advance(double value) => milliseconds += value;
+    }
+
     public static int RunFruitPlacement(string path)
     {
-        var document = OsuBeatmapReader.ReadFile(path);
+        var document = Path.GetExtension(path).Equals(".osu", StringComparison.OrdinalIgnoreCase)
+            ? OsuBeatmapReader.ReadFile(path) : ProjectSerializer.ReadFile(path);
         var ui = new Ui(); ui.LoadDocument(document); ui.Key('F');
         Console.WriteLine($"Fruit placement: fruits={document.Fruits.Count}, sliders={document.ImportedSliders.Count}, bananas={document.BananaShowers.Count}");
         var conversionCache = new CatchConversionCache();
@@ -18,7 +73,11 @@ internal static class EditorPerformance
             {
                 long bytes = GC.GetAllocatedBytesForCurrentThread();
                 var timer = Stopwatch.StartNew();
-                if (export) _ = OsuBeatmapWriter.Serialize(document, cache: writeCache);
+                if (export)
+                {
+                    var result = OsuBeatmapWriter.Serialize(document, cache: writeCache);
+                    if (i == 3) Console.WriteLine($"Export sequence matches={result.ObjectSequenceMatches}; objects={result.PlayableObjects.Count}; text={result.Text.Length}; diagnostics={string.Join("; ", result.Diagnostics.TakeLast(3))}");
+                }
                 else _ = CatchStreamConverter.Convert(document, cache: conversionCache);
                 if (i == 3) Console.WriteLine($"Warm {(export ? "export" : "conversion")}: {timer.Elapsed.TotalMilliseconds:F2} ms, {(GC.GetAllocatedBytesForCurrentThread() - bytes) / 1024} KiB");
             }
@@ -48,6 +107,38 @@ internal static class EditorPerformance
             if (click) { dispatch.Sort(); render.Sort(); Console.WriteLine($"  Dispatch median={dispatch[10]:F2} ms; rendering median={render[10]:F2} ms"); }
         }
         ui.View.NewProject();
+        foreach (var (name, key, draft) in new[] { ("Fruit", (int)'F', false), ("FSlider", (int)'B', false), ("FSlider draft", (int)'B', true) })
+        foreach (bool grid in new[] { false, true })
+        {
+            var playback = new Ui(); playback.LoadDocument(document); playback.Key(key);
+            playback.View.UpdateTransport(30000, document.DurationMs, true, true, false, null, document.AudioPath);
+            playback.Paint();
+            var plot = playback.View.CanvasPlotBounds;
+            playback.View.PointerMove(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, false, false);
+            if (draft)
+            {
+                int tracks = playback.View.Document.Tracks.Count;
+                playback.View.PointerDown(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, 0, false, false);
+                playback.View.PointerUp(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, 0);
+                if (playback.View.Document.Tracks.Count != tracks + 1) throw new Exception("Slider draft did not start.");
+            }
+            playback.View.SetModifiers(false, grid);
+            var frames = new List<double>();
+            long bytes = 0;
+            for (int i = 0; i < 140; i++)
+            {
+                if (i == 20) bytes = GC.GetAllocatedBytesForCurrentThread();
+                var watch = Stopwatch.StartNew();
+                playback.View.UpdateTransport(30000 + i * 1000d / 120, document.DurationMs, true, true, false, null, document.AudioPath);
+                playback.Paint();
+                if (i >= 20) frames.Add(watch.Elapsed.TotalMilliseconds);
+            }
+            long allocation = GC.GetAllocatedBytesForCurrentThread() - bytes;
+            if (!playback.View.AudioPlaying || playback.View.PlayheadMs < 30000) throw new Exception("Playback benchmark did not advance.");
+            frames.Sort();
+            Console.WriteLine($"{name} hover playback (grid={grid}): median={frames[60]:F2} ms, p95={frames[114]:F2} ms, allocation={allocation / 120 / 1024} KiB/frame");
+            playback.View.NewProject();
+        }
         return 0;
     }
 

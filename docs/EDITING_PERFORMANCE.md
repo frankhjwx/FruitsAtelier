@@ -20,6 +20,9 @@ a time or position can still flatten a complete imported slider path.
 - Fill beat grids into each view's reusable buffer with `TimingMap.Lookup.FillGrid`.
   The lookup owns timing values; the buffer is refilled for the current visible range
   and snap divisor, without retaining grid data across timing changes.
+- Reuse `TimingMap.Lookup.Snap` for pointer placement. The editor checks the owned
+  timing snapshot against current timing values so in-place edits and undo invalidate
+  it even before the next render.
 - Obtain slider end times from existing converted slider durations. Do not rebuild
   `ImportedSliderGeometry` just to display a duration already computed elsewhere.
 - Refresh content-dependent data at its owning edit boundary. Viewport, selection,
@@ -39,6 +42,25 @@ conversion caches remain separate. Read-back slider and banana identities are
 mapped to their source parents so reparsing does not discard every cache entry.
 Parsed slider lines are reused by exact text and format, with independent mutable
 copies and pruning of unused entries.
+
+The write cache retains one emitted timing result, keyed by converted slider
+instances, the complete timing input and imported slider head times. Fruit-only
+changes can reuse it; changed geometry, repeats, timing or imported head times must
+rebuild it. Failed timing validation must not populate this cache.
+Callers that need both authoring events and exported events can use
+`OsuWriteCache.Convert` before serialization to reuse the same source conversion.
+Each conversion batches timing queries through one lookup, including downstream
+parents invalidated by a changed incoming RNG state. Emitted SV queries scan the
+current mutable timing points without rebuilding the full timing lookup per head.
+
+Placement previews share their hyperdash calculation with the movement readout.
+The ordered playable merge input is retained only for one exported snapshot.
+An unstarted slider uses the same standalone ghost calculation as a fruit without
+applying fruit replacement rules. Unmappable export sequences retain full validation.
+
+Windows drawing uses one mutable solid brush and at most 128 cached text formats.
+Animated text sizes keep exact dimensions; evicted formats are disposed, and all
+remaining formats and the brush are released with the canvas.
 
 Break reconciliation belongs to the same undo transaction as the edit. Its
 history-owned slider length cache reuses geometry, while timing, SV and repeats

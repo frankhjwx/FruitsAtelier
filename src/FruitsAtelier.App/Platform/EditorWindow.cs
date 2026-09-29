@@ -87,7 +87,7 @@ internal sealed partial class EditorWindow : IDisposable
         int dark = 1;
         Native.DwmSetWindowAttribute(hwnd, 20, ref dark, 4);
         Native.GetClientRect(hwnd, out var client);
-        canvas = new D2DCanvas(hwnd, client.Right, client.Bottom, dpi);
+        canvas = new D2DCanvas(hwnd, client.Right, client.Bottom, dpi) { Performance = view.Performance };
         AppLog.Write($"Window ready. Adapter={canvas.AdapterName}; DPI={dpi}; Client={client.Right}x{client.Bottom}");
         AppLog.Write($"UI diagnostics enabled. Version={typeof(EditorView).Assembly.GetName().Version}; Runtime={Environment.Version}; OS={Environment.OSVersion}; Process={Environment.ProcessId}");
         if (profileMap is not null)
@@ -201,7 +201,7 @@ internal sealed partial class EditorWindow : IDisposable
                     {
                         canvas?.Dispose(); canvas = null;
                         Native.GetClientRect(window, out var size);
-                        canvas = new D2DCanvas(window, Math.Max(1, size.Right), Math.Max(1, size.Bottom), dpi);
+                        canvas = new D2DCanvas(window, Math.Max(1, size.Right), Math.Max(1, size.Bottom), dpi) { Performance = view.Performance };
                         view.ShowError(L.Get("window.operationFailed", L.Localized(exception.Message)));
                         AppLog.Write("Renderer recreated after paint failure; document retained.");
                         failed = false;

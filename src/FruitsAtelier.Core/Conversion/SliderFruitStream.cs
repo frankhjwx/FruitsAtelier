@@ -6,11 +6,14 @@ namespace FruitsAtelier.Core;
 public static class SliderFruitStream
 {
     public static IReadOnlyList<ConvertedCatchObject> Convert(MapDocument document, CurveTrack track)
+        => Convert(document, track, new TimingMap.Lookup(document));
+
+    internal static IReadOnlyList<ConvertedCatchObject> Convert(MapDocument document, CurveTrack track, TimingMap.Lookup timing)
     {
         if (track.StreamSnapDivisor is not (>= 1 and <= 16))
             throw new CatchConversionException(L.Get("stream.invalidSnap"));
         double start = track.Nodes[0].TimeMs, end = CurveMath.EndTimeMs(track);
-        double step = TimingMap.At(document, start).BeatLengthMs / track.StreamSnapDivisor.Value;
+        double step = timing.At(start).BeatLengthMs / track.StreamSnapDivisor.Value;
         double intervals = (end - start) / step;
         if (!double.IsFinite(intervals) || intervals < 0 || intervals >= LegacyCatchRules.MaximumNestedObjects)
             throw new CatchConversionException(L.Get("stream.tooMany"));
