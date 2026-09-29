@@ -130,7 +130,7 @@ public sealed partial class EditorView
         label += " · " + stateLabel;
         c.Text(label, x + 20, y + 70, 15, Accent, w - 40);
         float paneWidth = (w - 40 - (syncShowResult ? 24 : 12)) / (syncShowResult ? 3 : 2);
-        var left = new Rect(x + 20, y + 102, paneWidth, h - 256);
+        var left = new Rect(x + 20, y + 102, paneWidth, h - 278);
         var right = left with { X = left.Right + 12 };
         syncShowValues = !conflict.Key.StartsWith("$objects:");
         var field = SyncField(left);
@@ -164,16 +164,9 @@ public sealed partial class EditorView
             if (syncResultPane is { } pane) DrawSyncPane(c, pane, result, L.Get("sync.resultPreview"), new HashSet<Guid>(), null);
             else c.Text(L.Get("sync.checking"), result.X + 12, result.Y + 35, 13, Muted, result.Width - 24);
         }
-        Button(c, new(left.X, y + h - 142, left.Width, 32), L.Get("sync.chooseLocal"), () => ChooseSyncItem(merge, conflict.Key, false), chosen && !external);
-        Button(c, new(right.X, y + h - 142, right.Width, 32), L.Get("sync.chooseExternal"), () => ChooseSyncItem(merge, conflict.Key, true), chosen && external);
-        c.Text(L.Get("sync.reviewProgress", syncChoices.Count, merge.Conflicts.Count) + " · " + L.Get("sync.comparisonLegend"), x + 20, y + h - 102, 12, Muted, w - 40);
-        SyncComparisonNavigation(c, merge, x, y + h - 80);
-        Button(c, new(x + 320, y + h - 80, 180, 30), L.Get("sync.resultPreview"), () => syncShowResult = !syncShowResult, syncShowResult);
-        Button(c, new(x + w - 240, y + h - 80, 220, 30), L.Get("sync.inspect"), () => InspectSync(merge));
-        Button(c, new(x + 20, y + h - 40, 200, 30), L.Get("sync.allLocal"), () => ResolveSync(false));
-        Button(c, new(x + 232, y + h - 40, 200, 30), L.Get("sync.allExternal"), () => ResolveSync(true));
-        Button(c, new(x + w - 360, y + h - 40, 200, 30), L.Get("sync.applyChoices"), () => ResolveSync(null), enabled: merge.Conflicts.All(k => syncChoices.ContainsKey(k.Key)));
-        Button(c, new(x + w - 140, y + h - 40, 120, 30), L.Get("mac.cancel"), CancelSynchronization);
+        SyncReviewButton(c, new(left.X, y + h - 164, left.Width, 36), L.Get("sync.chooseLocal"), () => ChooseSyncItem(merge, conflict.Key, false), chosen && !external);
+        SyncReviewButton(c, new(right.X, y + h - 164, right.Width, 36), L.Get("sync.chooseExternal"), () => ChooseSyncItem(merge, conflict.Key, true), chosen && external);
+        DrawSyncReviewFooter(c, merge, x, y, w, h, showPreview: true);
     }
 
     private static string SavedLabel(DateTime? saved, DateTime? other, bool dirty)

@@ -103,6 +103,11 @@ it does not save or export. File timestamps identify the more recently saved ver
 and unsaved FA edits are labelled separately. A newer timestamp does not resolve
 individual conflicts automatically.
 
+Review actions have persistent button outlines. Below the per-side choices, the
+progress row contains the result-preview toggle; paging and full-version inspection
+occupy the next row, followed by whole-map choices, Apply, and Cancel. Paging uses
+the same outlined chevrons as other editor controls.
+
 Full-width rectangles mark corresponding object intervals: red for unresolved conflicts,
 amber yellow for previously resolved differences, and green for choices made in the
 current review. Amber borders, translucent fill and status labels distinguish review

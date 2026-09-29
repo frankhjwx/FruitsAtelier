@@ -108,7 +108,7 @@ internal static class SynchronizationUiTests
                 && ui.Canvas.Outlines.Any(o => o.Color == 0xED737B), "green interval remains clickable alongside unresolved red intervals");
             ui.ClickText(L.Get("sync.chooseExternal"));
             Check(ui.View.Document.Fruits[0].X == 123, "changing a green decision does not apply it early");
-            ui.ClickText("‹");
+            Page(ui, false);
             ui.ClickText(L.Get("sync.chooseLocal"));
             ui.ClickText(L.Get("sync.chooseLocal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
             Check(!ui.View.SynchronizationVisible, "retained differences do not repeat");
@@ -117,7 +117,7 @@ internal static class SynchronizationUiTests
             Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Y == 86 && t.Value.Contains(L.Get("sync.unresolvedRange"))), "later external edit is a normal unresolved conflict");
             Check(ui.Canvas.Circles.Count(c => !c.Filled && c.Color == 0xED737B) == 2, "both corresponding objects remain highlighted");
             Check(ui.Canvas.Outlines.Any(o => o.Color == 0xD5A34D), "unchanged prior resolution has an amber interval");
-            ui.ClickText(L.Get("sync.chooseLocal")); ui.ClickText("›");
+            ui.ClickText(L.Get("sync.chooseLocal")); Page(ui, true);
             Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.alreadyResolved"))), "unchanged prior resolution is explicitly identified");
             ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
             Check(ui.View.Document.Fruits.Any(f => f.TimeMs == 1200 && f.X == 400), "previously resolved group can be resolved to the other side");
@@ -186,7 +186,7 @@ internal static class SynchronizationUiTests
                 Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.newerSaved")) && t.X < size.Item1 / 2), "FA can be the newer saved version");
                 File.SetLastWriteTimeUtc(source, savedTime); ui.View.RefreshSynchronization(); Wait(ui);
                 Check(!ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.newerSaved"))), "equal timestamps do not invent a newer side");
-                SelectMetadata(ui, "Title", true); ui.ClickText("›"); ui.Paint();
+                SelectMetadata(ui, "Title", true); Page(ui, true); ui.Paint();
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 2, 2)), "navigation reaches object conflicts after metadata");
                 var rings = ui.Canvas.Circles.Where(c => !c.Filled && c.Color == 0xED737B).ToArray();
                 Check(rings.Length == 2 && Math.Abs(rings[0].Y - rings[1].Y) < .01 && rings[0].X < size.Item1 / 2 && rings[1].X > size.Item1 / 2, "both canvas versions highlight the aligned conflict");
@@ -200,9 +200,9 @@ internal static class SynchronizationUiTests
                 var previewDeadline = DateTime.UtcNow.AddSeconds(10);
                 while (!ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.previewPending")) && DateTime.UtcNow < previewDeadline) { Thread.Sleep(10); ui.Paint(); }
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.previewPending")), "merged result preview prepared asynchronously");
-                ui.ClickText("‹"); ui.Paint();
+                Page(ui, false); ui.Paint();
                 Check(ui.Canvas.Texts.Any(t => t.Value.StartsWith("Title")), "previous choice can be reviewed");
-                ui.ClickText("›"); ui.ClickText(L.Get("sync.chooseLocal"));
+                Page(ui, true); ui.ClickText(L.Get("sync.chooseLocal"));
                 ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(!ui.View.SynchronizationVisible && ui.View.Document.Fruits[0].Id == original
                     && OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Title") == "Reviewed", "legacy mixed resolution applied");
@@ -304,7 +304,7 @@ internal static class SynchronizationUiTests
         Check(ui.View.Document.Fruits[0].X == 123 && ui.View.Document.Fruits[1].X == 200, "stale review does not publish any choices");
         Check(ui.Canvas.Outlines.Any(o => o.Color == 0x70D69B) && ui.Canvas.Outlines.Any(o => o.Color == 0xED737B),
             "unchanged choice survives refresh while changed group becomes unresolved");
-        ui.ClickText("›"); ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+        Page(ui, true); ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
         Check(ui.View.Document.Fruits[0].X == 123 && ui.View.Document.Fruits[1].X == 450, "refreshed choices merge correctly");
     }
 
@@ -469,6 +469,12 @@ internal static class SynchronizationUiTests
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.ContentEquals(original), "search retains edit history");
     }
+    private static void Page(Ui ui, bool next)
+    {
+        var label = ui.Canvas.Texts.Single(t => t.X == 116 && System.Text.RegularExpressions.Regex.IsMatch(t.Value, @"^\d+ / \d+$"));
+        ui.Click(next ? 254 : 54, label.Y + 10);
+    }
+
     private static void SelectMetadata(Ui ui, string key, bool external)
     {
         ui.Paint();

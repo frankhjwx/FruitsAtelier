@@ -25,7 +25,7 @@ public sealed partial class EditorView
         c.Text(L.Get("sync.externalHeading"), rightX + 12, y + 72, 14, Foreground, paneWidth, true);
         c.Text(SavedLabel(comparison.LocalSaved, comparison.ExternalSaved, dirty), leftX + 12, y + 94, 11, Muted, paneWidth - 24);
         c.Text(SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false), rightX + 12, y + 94, 11, Muted, paneWidth - 24);
-        syncCanvasBounds = new(leftX, y + 120, w - 40, h - 236);
+        syncCanvasBounds = new(leftX, y + 120, w - 40, h - 252);
         float rowY = syncCanvasBounds.Y - syncTextScroll;
         c.Clip(syncCanvasBounds);
         foreach (var item in merge.Conflicts.Where(item => WorkspaceSynchronization.IsMetadataField(item.Key)))
@@ -66,13 +66,7 @@ public sealed partial class EditorView
         }
         c.Unclip();
         syncTextMaxScroll = Math.Max(0, (int)(rowY + syncTextScroll - syncCanvasBounds.Bottom));
-        c.Text(L.Get("sync.reviewProgress", syncChoices.Count, merge.Conflicts.Count), x + 20, y + h - 102, 12, Muted, w - 40);
-        SyncComparisonNavigation(c, merge, x, y + h - 80);
-        Button(c, new(x + w - 240, y + h - 80, 220, 30), L.Get("sync.inspect"), () => InspectSync(merge));
-        Button(c, new(x + 20, y + h - 40, 200, 30), L.Get("sync.allLocal"), () => ResolveSync(false));
-        Button(c, new(x + 232, y + h - 40, 200, 30), L.Get("sync.allExternal"), () => ResolveSync(true));
-        Button(c, new(x + w - 360, y + h - 40, 200, 30), L.Get("sync.applyChoices"), () => ResolveSync(null), enabled: merge.Conflicts.All(k => syncChoices.ContainsKey(k.Key)));
-        Button(c, new(x + w - 140, y + h - 40, 120, 30), L.Get("mac.cancel"), CancelSynchronization);
+        DrawSyncReviewFooter(c, merge, x, y, w, h, showPreview: false);
     }
 
     private SyncTextLine[] WrapSyncText(ICanvas c, string value, float textWidth)
@@ -128,6 +122,26 @@ public sealed partial class EditorView
         }
     }
 
+    private void SyncReviewButton(ICanvas c, Rect bounds, string label, Action action, bool active = false, bool enabled = true)
+    {
+        c.Fill(bounds, Surface, 4);
+        c.Stroke(bounds, enabled ? Muted : Grid, radius: 4);
+        Button(c, bounds, label, action, active, enabled, fontSize: 14, bold: true);
+    }
+
+    private void DrawSyncReviewFooter(ICanvas c, WorkspaceMerge merge, float x, float y, float w, float h, bool showPreview)
+    {
+        c.Text(L.Get("sync.reviewProgress", syncChoices.Count, merge.Conflicts.Count), x + 20, y + h - 116, 15, Foreground, w - 250, true);
+        if (showPreview)
+            SyncReviewButton(c, new(x + w - 220, y + h - 122, 200, 32), L.Get("sync.resultPreview"), () => syncShowResult = !syncShowResult, syncShowResult);
+        SyncComparisonNavigation(c, merge, x, y + h - 82);
+        SyncReviewButton(c, new(x + w - 260, y + h - 82, 240, 32), L.Get("sync.inspect"), () => InspectSync(merge));
+        SyncReviewButton(c, new(x + 20, y + h - 42, 200, 34), L.Get("sync.allLocal"), () => ResolveSync(false));
+        SyncReviewButton(c, new(x + 232, y + h - 42, 200, 34), L.Get("sync.allExternal"), () => ResolveSync(true));
+        SyncReviewButton(c, new(x + w - 360, y + h - 42, 220, 34), L.Get("sync.applyChoices"), () => ResolveSync(null), enabled: merge.Conflicts.All(k => syncChoices.ContainsKey(k.Key)));
+        SyncReviewButton(c, new(x + w - 132, y + h - 42, 112, 34), L.Get("mac.cancel"), CancelSynchronization);
+    }
+
     private void SyncComparisonNavigation(ICanvas c, WorkspaceMerge merge, float x, float y)
     {
         var pages = new List<int>(); bool metadataAdded = false;
@@ -139,8 +153,8 @@ public sealed partial class EditorView
         }
         int current = WorkspaceSynchronization.IsMetadataField(merge.Conflicts[syncRow].Key)
             ? pages.FindIndex(i => WorkspaceSynchronization.IsMetadataField(merge.Conflicts[i].Key)) : pages.IndexOf(syncRow);
-        Button(c, new(x + 20, y, 40, 30), "\u2039", () => syncRow = pages[current - 1], enabled: current > 0);
-        c.Text(L.Get("sync.page", current + 1, pages.Count), x + 100, y + 8, 12, Muted, 100);
-        Button(c, new(x + 220, y, 40, 30), "\u203a", () => syncRow = pages[current + 1], enabled: current + 1 < pages.Count);
+        TimingButton(c, new(x + 20, y, 36, 32), "‹", () => syncRow = pages[current - 1], enabled: current > 0, flatArrow: true);
+        c.Text(L.Get("sync.page", current + 1, pages.Count), x + 100, y + 6, 15, Foreground, 110, true);
+        TimingButton(c, new(x + 220, y, 36, 32), "›", () => syncRow = pages[current + 1], enabled: current + 1 < pages.Count, flatArrow: true);
     }
 }
