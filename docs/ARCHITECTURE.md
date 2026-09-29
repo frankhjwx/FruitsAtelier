@@ -59,6 +59,10 @@ playback and rebuilds the renderer while retaining the document, then displays
 the error in the editor. If recovery cannot draw the error, rendering remains
 suspended while a native error dialog is shown.
 
+Audio replacement suppresses transport polling while the old transport is being
+disposed. Disposal can pump STA window messages; polling its retiring clock would
+prematurely complete the new difficulty's position initialization.
+
 Testplay interpolates timestamped audio samples with a monotonic clock. Key events
 advance gameplay to their processing time before changing the held actions, so a
 press and release between rendered frames still produces movement. Windows testplay

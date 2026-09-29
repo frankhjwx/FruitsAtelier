@@ -120,12 +120,28 @@ internal sealed partial class EditorWindow
         return string.IsNullOrWhiteSpace(result) ? L.Get("files.untitled") : result.Trim().TrimEnd('.');
     }
 
-    private void ResetAudio() { view.ResetHitsounds(); audio.Dispose(); audio = new AudioTransport { Hitsounds = hitsounds }; audio.SetPlaybackSpeed(view.PlaybackSpeed); view.ApplyAudioVolume(); }
+    private bool resettingAudio;
+
+    private void ResetAudio()
+    {
+        resettingAudio = true;
+        try
+        {
+            view.ResetHitsounds();
+            audio.Dispose();
+            audio = new AudioTransport { Hitsounds = hitsounds };
+            audio.SetPlaybackSpeed(view.PlaybackSpeed);
+            view.ApplyAudioVolume();
+        }
+        finally { resettingAudio = false; }
+    }
 
     private AudioState? displayedAudioState;
 
     private void PollAudio()
     {
+        // Disposing audio can pump STA window messages; the retiring clock must not initialize the new difficulty.
+        if (resettingAudio) return;
         if (view.LibraryVisible || view.WorkspaceSession is not null || view.SliderConversionBusy || view.StarRatingsRefreshing) Invalidate();
         if (!string.Equals(audio.FilePath, view.Document.AudioPath, StringComparison.OrdinalIgnoreCase))
         {

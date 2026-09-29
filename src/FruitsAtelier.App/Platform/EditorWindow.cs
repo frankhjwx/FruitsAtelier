@@ -104,7 +104,7 @@ internal sealed partial class EditorWindow : IDisposable
             view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
             // DXGI need not signal frame readiness for an entirely hidden window.
             if (ImmediatePresentation) Native.ShowWindow(hwnd, 4);
-            try { CheckPaintLifecycle(); CheckUpdateRefresh(); CheckDisplayPreference(); }
+            try { CheckDifficultyAudioReset(); CheckPaintLifecycle(); CheckUpdateRefresh(); CheckDisplayPreference(); }
             finally { Native.ShowWindow(hwnd, 0); }
             Diagnostics.RenderCheck.Run(canvas, view, hwnd);
             Native.DestroyWindow(hwnd);

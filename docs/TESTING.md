@@ -94,6 +94,11 @@ even when the device advances before the worker handles it.
 
 ## Window checks
 
+The Windows `--render-check` injects nested timer and paint messages during audio
+replacement, verifying that difficulty switches retain paused and playing
+positions when the replacement audio becomes ready. This check uses a silent
+fixture and an injected output without opening an audio device.
+
 Settings preference regressions cover Audio sliders and the Appearance skin selector from both the Library and editor, shared values with the original controls, immediate persistence, menu dismissal, and unchanged beatmap content in English and Chinese. The Windows `--render-check` also exercises the Settings sliders and skin menu at its tested sizes and DPI values.
 
 Update restart checks verify that Settings closes before the host prepares saving,
