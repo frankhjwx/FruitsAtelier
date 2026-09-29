@@ -32,6 +32,11 @@ stay intact. Apply checks the external map and compared audio again. If they cha
 the review is refreshed before applying; choices survive only for unchanged conflict
 contents and authoring source identities. Changed audio always requires a fresh choice.
 
+All songs and My projects retain their last loaded, paged results when switching
+categories. The selected category refreshes in the background while its cached
+rows remain visible. A changed search discards an incompatible cached view;
+changing workspace or osu! roots clears both category views.
+
 The My projects library combines saved FA difficulties with newly indexed Catch
 difficulties in associated source directories. Counts and detail rows refresh
 together without opening the editor. Deleted unimported files leave the list;
@@ -199,10 +204,11 @@ a fresh decision. Other sections retain their existing three-way merge rules.
 Settings → Workspace contains a vertically scrollable storage section below the
 workspace and osu! folder fields. It shows byte totals and shares for projects, imported
 songs and skins, audio backups, recovery history, caches, and other files, plus the
-largest top-level folders/files. The scrollbar and wheel move the whole content
+eight largest top-level folders/files. A divider separates storage from the folder
+settings. The scrollbar and wheel move the whole content
 area while Apply stays fixed. **Open workspace folder** opens the active workspace
 in the system file manager. Accounting and maintenance run on background workers.
-The displayed root is the active workspace, not an unapplied path draft.
+Storage actions use the active workspace, not an unapplied path draft.
 
 Automatic maintenance runs after startup while idle in the library without an open
 workspace project, then at most once per day during that app session. Ordinary

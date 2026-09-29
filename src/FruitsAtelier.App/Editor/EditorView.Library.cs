@@ -268,6 +268,7 @@ public sealed partial class EditorView
                 { result.Retire(); searchTask = null; QueueLibrarySearch(); return; }
                 float fraction = libraryScroll - (int)libraryScroll;
                 libraryBrowser?.Retire(); libraryBrowser = result;
+                libraryBrowserQuery = runningSearchQuery;
                 if (result.TopIndex >= 0 && !libraryPointerActive) libraryScroll = result.TopIndex + fraction;
                 if (selectedLibraryGroup is null || scanTask is not { IsCompleted: false }) selectedLibraryGroup = result.Selected?.Key;
                 libraryResultsReady = scanTask is not { IsCompleted: false };
@@ -356,7 +357,7 @@ public sealed partial class EditorView
         if (libraryQuery.Length == 0 && libraryField != 2)
             c.Text(L.Get("library.search"), 226, 95, 14, Muted, queryRect.Width - 24);
         hits.Add(new(queryRect, () => { libraryField = 2; FocusInput("library:2", libraryQuery, mouseX); }, true));
-        bool initialLoading = libraryBrowser is null && LibraryLoading;
+        bool initialLoading = libraryBrowser is null && (!libraryResultsReady || LibraryLoading);
         c.Text(initialLoading ? L.Get("library.scanning") : L.Get("library.results", LibrarySetCount), 214, 140, 12, Muted, listWidth);
         libraryListBounds = new(214, 170, listWidth, Math.Max(86, height - 212));
         if (revealLibrarySelection && LibrarySetCount > 0)

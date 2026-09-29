@@ -12,7 +12,8 @@ public sealed partial class EditorView
     private Rect workspaceScrollBounds, workspaceScrollTrack, workspaceScrollThumb;
     private float workspaceScroll, workspaceScrollGrab;
     private bool workspaceScrollDragging;
-    private float WorkspaceContentHeight => 605 + (storageReport?.Folders.Count ?? 0) * 20;
+    private float WorkspaceContentHeight => 555 + StorageFolderCount * 20;
+    private int StorageFolderCount => Math.Min(8, storageReport?.Folders.Count ?? 0);
     private string storageRoot = "", storageError = "";
     private bool storageReindex;
     private DateTime nextStorageMaintenance = DateTime.UtcNow.AddSeconds(30);
@@ -60,10 +61,8 @@ public sealed partial class EditorView
 
     private void DrawStorage(ICanvas c, float sectionY)
     {
-        float x = SettingsContentX, y = sectionY + 28, w = SettingsRight - x - 32;
+        float x = SettingsContentX, y = sectionY - 22, w = SettingsRight - x - 32;
         c.Text(L.Get("storage.title"), x, sectionY, 18, Foreground, w, true);
-        c.Text(LibrarySettings.Workspace, x, y, 11, Muted, w);
-        c.Text(L.Get("storage.policy"), x, y + 24, 11, Muted, w);
         if (storageReport is { } report && storageRoot == Path.GetFullPath(LibrarySettings.Workspace))
         {
             c.Text(L.Get("storage.total", Size(report.TotalBytes)), x, y + 50, 15, Foreground, w, true);
@@ -78,7 +77,7 @@ public sealed partial class EditorView
             }
             float folderY = y + 224;
             c.Text(L.Get("storage.folders"), x, folderY, 12, Foreground, w, true);
-            foreach (var folder in report.Folders)
+            foreach (var folder in report.Folders.Take(8))
             {
                 folderY += 20;
                 if (folderY + 20 < workspaceScrollBounds.Y || folderY > workspaceScrollBounds.Bottom) continue;
@@ -86,16 +85,16 @@ public sealed partial class EditorView
                 c.Text(Size(folder.Bytes) + "  " + (report.TotalBytes == 0 ? 0 : (double)folder.Bytes / report.TotalBytes).ToString("P1"), x + w * .62f, folderY, 11, Foreground, w * .38f);
             }
         }
-        float messageY = y + 250 + (storageReport?.Folders.Count ?? 0) * 20;
+        float messageY = y + 250 + StorageFolderCount * 20;
         string message = storageTask is not null ? L.Get("storage.working") : storageError.Length > 0 ? storageError
             : storageReport?.RecoveryPending == true ? L.Get("storage.pending") : L.Get("storage.reclaimed", Size(storageReport?.ReclaimedBytes ?? 0));
         c.Text(message, x, messageY, 11, storageError.Length > 0 ? Error : Muted, w);
         bool available = storageTask is null && !SynchronizationBusy && !SynchronizationVisible;
         float buttonWidth = (w - 24) / 4;
         SettingsButton(c, new(x, messageY + 26, buttonWidth, 30), L.Get("storage.refresh"), () => StartStorage(), enabled: storageTask is null);
-        SettingsButton(c, new(x + buttonWidth + 8, messageY + 26, buttonWidth, 30), L.Get("storage.cleanHistory"), () => StartStorage(clean: true), enabled: available);
-        SettingsButton(c, new(x + 2 * (buttonWidth + 8), messageY + 26, buttonWidth, 30), L.Get("storage.clearCache"), () => StartStorage(cache: true), enabled: available);
-        SettingsButton(c, new(x + 3 * (buttonWidth + 8), messageY + 26, buttonWidth, 30), L.Get("storage.openFolder"),
+        SettingsButton(c, new(x + 2 * (buttonWidth + 8), messageY + 26, buttonWidth, 30), L.Get("storage.cleanHistory"), () => StartStorage(clean: true), enabled: available);
+        SettingsButton(c, new(x + 3 * (buttonWidth + 8), messageY + 26, buttonWidth, 30), L.Get("storage.clearCache"), () => StartStorage(cache: true), enabled: available);
+        SettingsButton(c, new(x + buttonWidth + 8, messageY + 26, buttonWidth, 30), L.Get("storage.openFolder"),
             () => RequestOpenExternalPath?.Invoke(LibrarySettings.Workspace), enabled: RequestOpenExternalPath is not null && Directory.Exists(LibrarySettings.Workspace));
     }
 
@@ -109,6 +108,7 @@ public sealed partial class EditorView
         c.Text(L.Get("library.settingsDescription"), SettingsContentX, top + 128, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
         LibraryTextField(c, 0, L.Get("library.workspace"), draftWorkspace, top + 180);
         LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, top + 284);
+        c.Line(SettingsContentX, top + 367, SettingsRight - 32, top + 367, Grid);
         DrawStorage(c, top + 384);
         c.Unclip();
         for (int i = hits.Count - 1; i >= firstHit; i--)

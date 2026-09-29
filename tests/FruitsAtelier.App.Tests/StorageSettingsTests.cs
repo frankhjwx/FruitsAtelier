@@ -24,6 +24,7 @@ internal static class StorageSettingsTests
                 var before = ui.View.Document.DeepClone();
                 ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.workspace")); Wait();
                 Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("storage.title")).Y > ui.Canvas.Texts.Single(t => t.Value == L.Get("library.songs")).Y, "storage follows workspace paths");
+                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("storage.policy")), "storage omits the policy hint");
                 float applyY = ui.Canvas.Texts.Single(t => t.Value == L.Get("library.apply")).Y;
                 ui.View.Wheel(ui.View.SettingsBounds.X + 300, ui.View.SettingsBounds.Y + 200, -12000, false); ui.Paint();
                 Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("library.apply")).Y == applyY, "Apply stays fixed while workspace content scrolls");
@@ -35,6 +36,9 @@ internal static class StorageSettingsTests
                     Check(text.Y < ui.View.SettingsBounds.Bottom - 100 && text.X >= ui.View.SettingsBounds.X, "storage buttons fit narrow settings");
                 }
                 string? opened = null;
+                Check(!ui.Canvas.Texts.Any(t => t.Value is "folder0" or "folder1"), "usage ranking only shows the eight largest entries");
+                Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("storage.refresh")).X < ui.Canvas.Texts.Single(t => t.Value == L.Get("storage.openFolder")).X
+                    && ui.Canvas.Texts.Single(t => t.Value == L.Get("storage.openFolder")).X < ui.Canvas.Texts.Single(t => t.Value == L.Get("storage.cleanHistory")).X, "open folder sits between refresh and clean history");
                 ui.View.RequestOpenExternalPath = path => opened = path; ui.Paint();
                 ui.ClickText(L.Get("storage.openFolder"));
                 Check(opened == root, "open folder uses active workspace");

@@ -1005,7 +1005,7 @@
   "storage.cache": "Cache",
   "storage.resources": "Imported songs and skins",
   "storage.other": "Other files",
-  "storage.folders": "Folders / files by size · Wheel to scroll",
+  "storage.folders": "Largest folders / files · Top 8",
   "storage.working": "Calculating / cleaning in background…",
   "storage.pending": "Cleanup deferred: an interrupted operation needs recovery.",
   "storage.reclaimed": "Reclaimed: {0}",

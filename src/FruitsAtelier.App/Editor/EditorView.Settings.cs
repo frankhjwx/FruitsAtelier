@@ -219,6 +219,7 @@ public sealed partial class EditorView
             if (!rootsChanged) return;
             EnableFileMonitoring();
             libraryRatings.Clear(); libraryBrowser?.Retire(); libraryBrowser = null; libraryDatabase = null; libraryResultsReady = false;
+            inactiveLibraryBrowser?.Retire(); inactiveLibraryBrowser = null;
             LoadLibraryMemory(); StartLibraryScan();
         }
         catch (Exception e) { libraryError = e.Message; }

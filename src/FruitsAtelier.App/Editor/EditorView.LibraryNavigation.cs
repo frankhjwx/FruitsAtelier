@@ -21,6 +21,8 @@ public sealed partial class EditorView
         public LibraryPosition MyProjects { get; set; } = new();
     }
     private LibraryMemory libraryMemory = new();
+    private LibraryBrowser? inactiveLibraryBrowser;
+    private string libraryBrowserQuery = "", inactiveLibraryQuery = "";
     private bool libraryMemoryLoaded, libraryMemoryDirty, revealLibrarySelection;
     private DateTime libraryMemorySaveAfter;
     private Rect libraryListBounds, libraryScrollTrack, libraryScrollThumb, libraryDiffTrack, libraryDiffThumb;
@@ -71,7 +73,10 @@ public sealed partial class EditorView
     {
         if (libraryProjectsOnly == projects) return;
         RememberLibraryPosition(); libraryProjectsOnly = projects; RestoreLibraryPosition();
-        libraryBrowser?.Retire(); libraryBrowser = null; libraryCards.Clear(); libraryResultsReady = false;
+        (libraryBrowser, inactiveLibraryBrowser) = (inactiveLibraryBrowser, libraryBrowser);
+        (libraryBrowserQuery, inactiveLibraryQuery) = (inactiveLibraryQuery, libraryBrowserQuery);
+        if (libraryBrowserQuery != libraryQuery) { libraryBrowser?.Retire(); libraryBrowser = null; }
+        libraryCards.Clear(); libraryResultsReady = libraryBrowser is not null;
         libraryProjectsNeedReindex |= projects; libraryField = -1; contextItems.Clear();
         QueueLibrarySearch(); RememberLibraryPosition();
     }

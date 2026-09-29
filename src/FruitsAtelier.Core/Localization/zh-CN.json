@@ -1005,7 +1005,7 @@
   "storage.cache": "缓存",
   "storage.resources": "导入的歌曲和皮肤",
   "storage.other": "其他文件",
-  "storage.folders": "文件夹 / 文件占用排行 · 滚轮浏览",
+  "storage.folders": "文件夹 / 文件占用排行 · 前 8 项",
   "storage.working": "正在后台统计 / 清理…",
   "storage.pending": "暂缓清理：存在需要恢复的中断操作。",
   "storage.reclaimed": "已回收：{0}",
