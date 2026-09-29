@@ -40,7 +40,7 @@
   "shortcut.mirror": "Flip horizontally",
   "testplay.hintAutoplay": "Tab: toggle autoplay",
   "testplay.speed": "Testplay speed: {0:0.0#}x",
-  "testplay.hintSpeed": "F3: autoplay speed 1.0x / 1.5x (other speeds → 1.0x)",
+  "testplay.hintSpeed": "F3: autoplay speed 1.0x / 1.5x",
   "testplay.hintPause": "Ctrl+P: pause / resume",
   "testplay.hintBookmark": "Ctrl+B: add bookmark",
   "testplay.hintQuickExit": "F1: quick exit",

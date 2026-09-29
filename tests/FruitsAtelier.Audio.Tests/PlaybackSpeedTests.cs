@@ -1,10 +1,45 @@
 using FruitsAtelier.App.Audio;
+using FruitsAtelier.Core;
 using NAudio.Wave;
 using SoundTouch;
 using System.Text.Json;
 
 internal static class PlaybackSpeedTests
 {
+    public static async Task TestplayDuringRebuild(string file)
+    {
+        Action? beforePlay = null;
+        using var audio = new AudioTransport(0, () => new PausePositionTests.BufferedPlayer { BeforePlay = () => beforePlay?.Invoke() });
+        if (!await audio.LoadAsync(file)) throw new Exception(audio.Error);
+        audio.Play(); await audio.WaitForCommandsAsync();
+        double now = System.Diagnostics.Stopwatch.GetTimestamp() * 1000d / System.Diagnostics.Stopwatch.Frequency;
+        var map = new MapDocument(); map.Fruits.Add(new Fruit { TimeMs = 10000, X = 256 });
+        var session = new CatchTestplaySession(new CatchTestplay(CatchStreamConverter.Convert(map).Objects, 5, 0),
+            new CatchTestplayClock(0, 1, now, false), 0, true, true, 37, 39, 16, TimeProvider.System, 5, []);
+        session.ToggleAutoplay();
+        int rebuilds = 0;
+        beforePlay = () =>
+        {
+            var state = audio.State;
+            session.UpdateAudio(state.PositionMs, state.PositionTimestampMs, state.DurationMs,
+                state.CanPlay, state.IsPlaying, state.IsLoading, state.Error is not null, state.OutputBufferAheadMs);
+            rebuilds++;
+        };
+        foreach (double speed in new[] { 1.5, 1, 1.5, 1 })
+        {
+            session.SetPlaybackSpeed(speed);
+            audio.SetPlaybackSpeed(speed); await audio.WaitForCommandsAsync();
+            if (session.Ended || !session.Autoplay || !audio.IsPlaying || audio.Error is not null)
+                throw new Exception($"Speed {speed} ended testplay during output replacement");
+        }
+        if (rebuilds != 4) throw new Exception("Speed changes did not exercise output replacement");
+        audio.Pause(); await audio.WaitForCommandsAsync();
+        var stopped = audio.State;
+        session.UpdateAudio(stopped.PositionMs, stopped.PositionTimestampMs, stopped.DurationMs,
+            stopped.CanPlay, stopped.IsPlaying, stopped.IsLoading, stopped.Error is not null);
+        if (!session.Ended) throw new Exception("An actual transport stop must still end testplay");
+    }
+
     public static void PitchAndDuration()
     {
         foreach (int sampleRate in new[] { 44100, 48000 })

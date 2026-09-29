@@ -82,6 +82,7 @@ internal static class PausePositionTests
         private IWaveProvider source = null!;
         private long position;
         public Action? BeforeGetPosition;
+        public Action? BeforePlay;
         public byte[] FirstBuffer { get; private set; } = [];
         public WaveFormat OutputWaveFormat => source.WaveFormat;
         public PlaybackState PlaybackState { get; private set; }
@@ -90,6 +91,7 @@ internal static class PausePositionTests
         public void Init(IWaveProvider provider) => source = provider;
         public void Play()
         {
+            BeforePlay?.Invoke();
             if (PlaybackState == PlaybackState.Stopped)
             {
                 FirstBuffer = new byte[OutputWaveFormat.AverageBytesPerSecond * 80 / 1000];
