@@ -41,6 +41,7 @@
   "testplay.hintAutoplay": "Tab：切换自动接果",
   "testplay.speed": "试打速度：{0:0.0#}x",
   "testplay.hintSpeed": "F3：自动接果时切换 1.0x / 1.5x",
+  "testplay.speedRequiresAutoplay": "请先按 [Tab] 开启自动接果，再切换速度。",
   "testplay.hintPause": "Ctrl+P：暂停 / 继续",
   "testplay.hintBookmark": "Ctrl+B：添加书签",
   "testplay.hintQuickExit": "F1：快速退出",

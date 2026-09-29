@@ -911,12 +911,18 @@ public sealed partial class EditorView
             }
             else if (virtualKey == 114)
             {
+                bool showSpeedNotice = !testplaySpeedHeld && !TestplayAutoplay;
                 if (!testplaySpeedHeld)
                 {
                     testplaySpeedHeld = true;
                     if (TestplayAutoplay) SetPlaybackSpeed(PlaybackSpeed == 1 ? 1.5 : 1);
                 }
                 AdvanceTestplay();
+                if (showSpeedNotice && IsTestplaying)
+                {
+                    testplayAutoNotice = L.Get("testplay.speedRequiresAutoplay");
+                    testplayAutoNoticeAt = TestplayRealtime;
+                }
             }
             else if (virtualKey == 9)
             {

@@ -41,6 +41,7 @@
   "testplay.hintAutoplay": "Tab: toggle autoplay",
   "testplay.speed": "Testplay speed: {0:0.0#}x",
   "testplay.hintSpeed": "F3: autoplay speed 1.0x / 1.5x",
+  "testplay.speedRequiresAutoplay": "Press [Tab] to activate autoplay before changing speed.",
   "testplay.hintPause": "Ctrl+P: pause / resume",
   "testplay.hintBookmark": "Ctrl+B: add bookmark",
   "testplay.hintQuickExit": "F1: quick exit",

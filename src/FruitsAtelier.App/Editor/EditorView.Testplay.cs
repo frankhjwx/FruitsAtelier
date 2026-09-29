@@ -206,8 +206,8 @@ public sealed partial class EditorView
             {
                 var bar = new Rect(stage.X, height / 2f - 30, stage.Width, 60);
                 c.Fill(bar, 0x101820, opacity: .72f * opacity);
-                uint textColour = (uint)(0xE6F2FF * opacity + 0x101820 * (1 - opacity));
-                c.Text(notice, width / 2f - c.MeasureText(notice, 20) / 2, bar.Y + 18, 20, textColour, stage.Width, true);
+                c.TextOpacity(notice, width / 2f - c.MeasureText(notice, 20) / 2, bar.Y + 18,
+                    20, 0xE6F2FF, stage.Width, true, opacity);
             }
         }
         DrawVolumePopover(c);

@@ -189,6 +189,8 @@ fall past the catcher and fade out over 250 ms.
 
 The upper-left corner shows the current testplay speed on its own line, followed by **Tab** (autoplay), **F3** (autoplay speed), **Ctrl+P** (pause/resume), **Ctrl+B** (add a bookmark), **F1** (exit to the testplay start), and **F2** (exit at the current position). During autoplay, F3 switches between 1.0x and 1.5x; from any other speed, the first press selects 1.0x. Holding F3 changes speed only once. Pausing freezes gameplay and music; resuming continues the same session.
 
+Pressing **F3** in manual mode shows a brief reminder to press **Tab** before changing speed.
+
 Press **Tab** during testplay to toggle autoplay. Pressing a bound left, right, or dash key
 also returns to manual control. A centered fading banner announces either change.
 Each new testplay starts in manual mode. Losing window focus releases held keys while
