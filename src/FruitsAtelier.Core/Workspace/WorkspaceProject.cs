@@ -149,7 +149,7 @@ public static class WorkspaceProject
     {
         string path = Path.Combine(directory, ManifestName);
         RejectLinks(path);
-        if (new FileInfo(path).Length > OsuBeatmapReader.MaximumFileBytes) throw new InvalidDataException(L.Get("core.project.readLimit"));
+        if (new FileInfo(path).Length > ProjectSerializer.MaximumFileBytes) throw new InvalidDataException(L.Get("core.project.readLimit"));
         var manifest = JsonSerializer.Deserialize<WorkspaceManifest>(System.IO.File.ReadAllText(path), json);
         if (manifest is null || manifest.SchemaVersion != 1 || manifest.Id == Guid.Empty || string.IsNullOrWhiteSpace(manifest.Name)
             || manifest.Difficulties is null || manifest.Difficulties.Count is < 1 or > 256

@@ -21,14 +21,14 @@ public static partial class ProjectSerializer
             copy.Difficulties.Add(new ProjectDifficulty { Id = diff.Id, Name = diff.Name, Document = document });
         }
         string text = JsonSerializer.Serialize(new MultiProjectFile { SchemaVersion = copy.Difficulties.Any(d => HasStreams(d.Document)) ? 6 : copy.Difficulties.Any(d => HasControlCurves(d.Document)) ? 4 : 2, Project = copy }, options);
-        if (System.Text.Encoding.UTF8.GetByteCount(text) > OsuBeatmapReader.MaximumFileBytes)
+        if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumFileBytes)
             throw new InvalidDataException(L.Get("core.project.writeLimit"));
         return text;
     }
 
     public static BeatmapProject ReadProject(string text, string? projectPath = null)
     {
-        if (System.Text.Encoding.UTF8.GetByteCount(text) > OsuBeatmapReader.MaximumFileBytes)
+        if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumFileBytes)
             throw new InvalidDataException(L.Get("core.project.readLimit"));
         try
         {
@@ -48,7 +48,7 @@ public static partial class ProjectSerializer
 
     public static BeatmapProject ReadProjectFile(string path)
     {
-        if (new FileInfo(path).Length > OsuBeatmapReader.MaximumFileBytes) throw new InvalidDataException(L.Get("core.project.readLimit"));
+        if (new FileInfo(path).Length > MaximumFileBytes) throw new InvalidDataException(L.Get("core.project.readLimit"));
         return ReadProject(File.ReadAllText(path), path);
     }
 

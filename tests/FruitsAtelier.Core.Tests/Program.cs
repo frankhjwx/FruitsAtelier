@@ -9,6 +9,7 @@ if (args.Length == 2 && args[0] == "--preserve-slider-positions")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Project files support 128 MiB and reject oversized UTF-8 data", ProjectSizeLimitTests.Run),
     ("Workspace storage protects references and recovery while pruning history and rebuilding caches", WorkspaceStorageTests.Run),
     ("Reusable beat grids match reference boundaries and allocate no warm frame buffers", GridBufferTests.Equivalence),
     ("Timing edits transform sections, FSliders, metadata and exported durations", TimingEditingTests.Run),
