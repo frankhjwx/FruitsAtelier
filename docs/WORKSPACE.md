@@ -1,5 +1,7 @@
 # Workspace and Local Library
 
+Switching difficulties within the open project preserves the current timeline position, including when returning to a previously visited difficulty. Opening another project starts at the beginning.
+
 **My Projects** shows the difficulty count and names from each saved workspace manifest. **All Songs** shows the source set's difficulties. Opening or resuming an existing workspace reconciles external files and adds new Catch difficulties while preserving existing edits and undo history. See [Synchronization](SYNCHRONIZATION.md) for identity recovery, conflicts, audio and deletion.
 
 Creating a new difficulty in osu! saves the current edits into a new workspace difficulty and a new `.osu`, then activates the new difficulty. The original difficulty retains its last saved content and export link; its source `.osu` is unchanged. The new workspace difficulty retains editable FSliders and handles. Files recorded only as older export targets are offered for import when they are not already represented by a project difficulty.

@@ -23,14 +23,22 @@ internal static class AudioFeedbackTests
         ui.View.LoadProject(BeatmapProject.FromDocuments([map, map.DeepClone()]));
         ui.View.UpdateTransport(0, 70000, true, false, false, null, map.AudioPath);
         ui.View.UpdateTransport(5000, 70000, true, false, false, null, map.AudioPath);
-        Check(ui.View.SwitchDifficulty(1), "switch to another difficulty");
-        ui.View.UpdateTransport(0, 70000, true, false, false, null, map.AudioPath);
-        Check(ui.View.SwitchDifficulty(0), "return to previous difficulty");
-        Near(5000, ui.View.PlayheadMs);
+        double currentViewStart = ui.View.ViewStartMs;
         var seeks = new List<double>(); ui.View.RequestSeek = seeks.Add;
+        Check(ui.View.SwitchDifficulty(1), "switch to another difficulty");
+        Near(5000, ui.View.PlayheadMs); Near(currentViewStart, ui.View.ViewStartMs);
+        ui.View.UpdateTransport(0, 0, false, false, true, null, map.AudioPath);
+        Near(5000, ui.View.PlayheadMs);
         ui.View.UpdateTransport(0, 70000, true, false, false, null, map.AudioPath);
         Near(5000, ui.View.PlayheadMs);
-        Check(seeks.SequenceEqual([5000d]), "audio resumes the retained difficulty position without a zero frame");
+        Check(seeks.SequenceEqual([5000d]), "new difficulty audio starts at the current position");
+        ui.View.UpdateTransport(8000, 70000, true, true, false, null, map.AudioPath);
+        Check(ui.View.SwitchDifficulty(0), "return to previous difficulty");
+        Near(8000, ui.View.PlayheadMs);
+        seeks.Clear();
+        ui.View.UpdateTransport(0, 70000, true, false, false, null, map.AudioPath);
+        Near(8000, ui.View.PlayheadMs);
+        Check(seeks.SequenceEqual([8000d]), "returning to a difficulty keeps the current position without a zero frame");
         Check(!ui.View.IsDirty, "transport initialization does not edit content");
 
         ui.LoadDocument(map);

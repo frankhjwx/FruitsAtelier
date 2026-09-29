@@ -120,13 +120,13 @@ public sealed partial class EditorView
         if (!syncBypass && WorkspaceSession is not null && ShowSyncProblem(index)) return false;
         if (index == activeDifficulty) return true;
         if (!PrepareFileOperation()) return false;
-        difficulties[activeDifficulty].Playhead = playhead;
-        difficulties[activeDifficulty].ViewStart = viewStart;
+        double currentPlayhead = playhead;
+        double currentViewStart = viewStart;
         activeDifficulty = index;
         RevealDifficultyTab();
         ResetDifficultyView();
-        playhead = difficulties[index].Playhead;
-        viewStart = difficulties[index].ViewStart;
+        playhead = currentPlayhead;
+        viewStart = currentViewStart;
         RequestDifficultyChanged?.Invoke();
         return true;
     }
