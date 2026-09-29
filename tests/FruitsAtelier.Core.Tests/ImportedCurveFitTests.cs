@@ -48,7 +48,7 @@ internal static class ImportedCurveFitTests
                 && Math.Abs(output.DurationMs - ImportedSliderConverter.DurationMs(original, source)) < .000001,
                 "Conversion changed the slider's timing or span count.");
         }
-        Check(document.Tracks.Single(t => t.Id == repeated.Id).CompensateTinyDroplets == false, "Conflicting repeat did not opt out of strict tiny alignment.");
+        Check(document.Tracks.Single(t => t.Id == repeated.Id).CompensateTinyDroplets == true, "Conflicting repeat lost partial tiny compensation.");
         var saved = ProjectSerializer.Read(ProjectSerializer.Serialize(document));
         Check(saved.ContentEquals(document), "Approximation policy did not survive a project round trip.");
         var exported = OsuBeatmapWriter.Serialize(document).ReadBack;
