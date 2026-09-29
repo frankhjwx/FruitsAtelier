@@ -272,6 +272,7 @@ public sealed partial class EditorView
     };
     private void DrawTestplayBindings(ICanvas c)
     {
+        c.Text(L.Get("testplay.keyBindingSettings"), SettingsContentX, SettingsTop + 124, 18, Foreground, SettingsRight - SettingsContentX - 32, true);
         var leadIn = new Rect(SettingsContentX + 270, SettingsTop + 260, 202, 38);
         c.Text(L.Get("testplay.startupDelay"), SettingsContentX, leadIn.Y + (leadIn.Height - 17) / 2,
             SettingsTextSize, Foreground, 260, true);
