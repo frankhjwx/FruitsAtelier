@@ -108,6 +108,10 @@ Each FSlider generates one `.osu` slider preserving SpanCount. Actual position f
 
 Ordinary Droplets have no lateral RNG offset. TinyDroplet alignment solves the pre-offset X from actual RNG and event path progress. FSlider alignment is constrained by `0..512`, shared repeat geometry, and horizontal velocity. Automatic SV may increase within stable's 0.1–10 range. Unreachable fruit or droplet targets fail the track; TinyDroplets allow residual error. Legacy Sliders retain osu's original TinyDroplet RNG offsets.
 
+Partial compensation evaluates fixed fruit and droplet targets at their shared
+first-span path time, avoiding contradictory constraints from repeat-time
+round-off. TinyDroplet targets retain their actual event times.
+
 RNG uses seed 1337. Parents are stably ordered by start time and SourceOrder; new objects without imported order use deterministic collection order. All nested RNG for one stream is processed before the next parent, and time sorting happens only afterward. Droplets consume rotation randomness; TinyDroplets use lateral offsets. Each banana consumes position randomness and three appearance draws, with float time accumulation retained. Viewport culling does not change input.
 
 Failed objects produce no result, set overall Success=false, and leave RNG corresponding only to successfully generated objects. Path length, event count, imported controls, repeats, sampling, and grid sizes have explicit limits. Values, Catch handling of inherited NaN, and source references are in the [conversion module documentation](../src/FruitsAtelier.Core/Conversion/UPSTREAM.md).

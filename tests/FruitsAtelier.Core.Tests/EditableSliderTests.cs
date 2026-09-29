@@ -236,8 +236,10 @@ internal static class EditableSliderTests
         repeated.ImportedSliders.Add(conflicting);
         var repeatedBefore = repeated.DeepClone();
         var approximate = ImportedSliderEditing.ConvertToTrack(repeated, conflicting.Id).Track;
-        True(repeated.ImportedSliders.Count == 0 && approximate.CompensateTinyDroplets == false, "Conflicting repeat must produce an approximate editable track.");
+        True(repeated.ImportedSliders.Count == 0 && approximate.CompensateTinyDroplets == true, "Repeated conversion must retain reachable partial compensation.");
         var repeatedOutput = CatchStreamConverter.Convert(repeated); Valid(repeatedOutput);
+        True(repeatedOutput.Sliders.Single().TinyCompensationApplied
+            && repeatedOutput.MaxTickError <= CatchStreamConverter.AlignmentTolerance, "Repeated compensation moved fixed targets.");
         True(Math.Abs(repeatedOutput.Sliders.Single().DurationMs - ImportedSliderConverter.DurationMs(repeatedBefore, conflicting)) < .000001,
             "Approximate repeat changed its total duration.");
 

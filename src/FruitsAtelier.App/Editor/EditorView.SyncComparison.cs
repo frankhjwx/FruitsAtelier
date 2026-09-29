@@ -247,8 +247,8 @@ public sealed partial class EditorView
 
     private void ScrollSyncComparison(float x, float y, float delta, bool zoom)
     {
-        if (syncPage != "resolve" || !syncCanvasBounds.Contains(x, y)) return;
-        if (syncVisualKey == "$metadata")
+        if (syncPage is not ("resolve" or "failed") || !syncCanvasBounds.Contains(x, y)) return;
+        if (syncPage == "failed" || syncVisualKey == "$metadata")
         { syncTextScroll = Math.Clamp(syncTextScroll - (int)(delta / 120 * 69), 0, syncTextMaxScroll); return; }
         if (zoom)
         {

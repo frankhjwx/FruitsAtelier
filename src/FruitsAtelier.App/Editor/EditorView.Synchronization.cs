@@ -134,7 +134,7 @@ public sealed partial class EditorView
                         syncRetainedReview[conflict] = (syncChoices[conflict.Key], previous.ConflictSources(conflict.Key, false));
                 RefreshSynchronization(reviewResolved: true);
             }
-            catch (Exception e) { syncPreserveHistory = false; syncPage = "failed"; syncFailure = e.Message; }
+            catch (Exception e) { syncPreserveHistory = false; syncPage = "failed"; syncFailure = e.Message; syncTextScroll = 0; }
         }
         if (syncTask is { IsCompleted: true } completed && !SyncInteractionActive && !SynchronizationVisible)
         {
@@ -213,7 +213,7 @@ public sealed partial class EditorView
                 try { continuation?.Invoke(); }
                 finally { syncBypass = false; }
             }
-            catch (Exception e) { syncPreserveHistory = false; syncPage = "failed"; syncFailure = e.Message; }
+            catch (Exception e) { syncPreserveHistory = false; syncPage = "failed"; syncFailure = e.Message; syncTextScroll = 0; }
         }
         if (WorkspaceSession is not null && !SynchronizationBusy && !SynchronizationVisible && !SyncInteractionActive
             && (fileSyncPending || !LibraryVisible && DateTime.UtcNow >= nextSyncCheck))
@@ -386,7 +386,18 @@ public sealed partial class EditorView
         c.Text(L.Get("sync.title"), x + 20, y + 18, 20, Foreground, w - 40, true);
         if (syncPage == "failed")
         {
-            c.Text(syncFailure, x + 20, y + 80, 14, Error, w - 40);
+            syncCanvasBounds = new(x + 20, y + 80, w - 40, Math.Max(23, h - 154));
+            var lines = WrapSyncText(c, syncFailure.Replace("\r", ""), syncCanvasBounds.Width);
+            syncTextMaxScroll = Math.Max(0, (int)(lines.Length * 23 - syncCanvasBounds.Height));
+            syncTextScroll = Math.Clamp(syncTextScroll, 0, syncTextMaxScroll);
+            c.Clip(syncCanvasBounds);
+            for (int line = 0; line < lines.Length; line++)
+            {
+                float textY = syncCanvasBounds.Y + line * 23 - syncTextScroll;
+                if (textY + 23 < syncCanvasBounds.Y || textY > syncCanvasBounds.Bottom) continue;
+                c.Text(lines[line].Text, syncCanvasBounds.X, textY, 15, Error, syncCanvasBounds.Width);
+            }
+            c.Unclip();
             Button(c, new(x + 20, y + h - 58, 220, 36), L.Get("sync.refresh"), () => RefreshSynchronization());
             Button(c, new(x + w - 150, y + h - 58, 130, 36), L.Get("mac.cancel"), CancelSynchronization);
             return;

@@ -4,6 +4,32 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class SynchronizationUiTests
 {
+    public static void FailureText()
+    {
+        foreach (string language in L.AvailableLanguages)
+        foreach (int width in new[] { 980, 1440 })
+        {
+            L.SetLanguage(language);
+            var ui = new Ui(false); ui.Resize(width, 700);
+            var type = ui.View.GetType();
+            const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            string message = string.Join("\n", Enumerable.Repeat(L.Get("core.writer.incompletePrefix") + L.Get("core.sliderGeometry.horizontalSpeed"), 30)) + "\nEND";
+            type.GetField("syncFailure", flags)!.SetValue(ui.View, message);
+            type.GetField("syncPage", flags)!.SetValue(ui.View, "failed");
+            var before = ui.View.Document.DeepClone();
+            ui.Paint();
+            var body = (FruitsAtelier.App.Rendering.Rect)type.GetField("syncCanvasBounds", flags)!.GetValue(ui.View)!;
+            var rows = ui.Canvas.Texts.Where(t => t.Color == 0xFF7F8D).ToArray();
+            Check(rows.Length > 1 && rows.All(t => ((FruitsAtelier.App.Rendering.ICanvas)ui.Canvas).MeasureText(t.Value, 15) <= body.Width), "failure text wraps inside the dialog");
+            ui.View.Wheel(body.X + 10, body.Y + 10, -12000, false); ui.Paint();
+            Check(ui.Canvas.Texts.Any(t => t.Value == "END" && t.Y < body.Bottom), "failure text scrolls to the final diagnostic");
+            Check(ui.View.Document.ContentEquals(before), "reading diagnostics preserves the document");
+            ui.ClickText(L.Get("mac.cancel"));
+            Check(!ui.View.SynchronizationVisible, "wrapped diagnostics retain the Cancel action");
+        }
+        L.SetLanguage("zh-CN");
+    }
+
     public static void DeleteLocalVersion()
     {
         string root = Path.GetFullPath(Path.Combine("artifacts/tests/delete-local", Guid.NewGuid().ToString("N")));

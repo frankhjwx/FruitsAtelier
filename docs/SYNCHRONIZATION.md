@@ -6,6 +6,9 @@ unchanged object's controls from exported geometry. A known external file has on
 active FA owner in the configured workspace; historical and recovery copies are
 excluded from ownership.
 
+Synchronization failure messages wrap within the dialog. Scroll over the message
+area to read diagnostics that exceed its height.
+
 ## Discovery and identity
 
 Opening or resuming an existing project, checking synchronization from a difficulty

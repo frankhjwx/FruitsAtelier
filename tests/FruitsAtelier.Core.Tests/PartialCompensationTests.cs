@@ -2,6 +2,22 @@ using FruitsAtelier.Core;
 
 internal static class PartialCompensationTests
 {
+    public static void FractionalRepeats()
+    {
+        var document = new MapDocument { BeatLengthMs = 4000.0 / 13, SliderMultiplier = 2.1, SliderTickRate = 2 };
+        var track = new CurveTrack { Kind = CurveKind.Linear, SpanCount = 2, CompensateTinyDroplets = true };
+        track.Nodes.Add(new() { TimeMs = 7145.923076923084, X = 336 });
+        track.Nodes.Add(new() { TimeMs = 7761.307692307701, X = 267 });
+        document.Tracks.Add(track);
+        var result = CatchStreamConverter.Convert(document);
+        Check(result.Success, string.Join("; ", result.Diagnostics));
+        Check(result.Sliders.Single().TinyCompensationApplied && !result.Sliders.Single().TinyCompensationSucceeded,
+            "Repeated tiny targets did not exercise partial compensation.");
+        Check(result.MaxTickError <= CatchStreamConverter.AlignmentTolerance, "Repeated fixed targets moved.");
+        Check(result.Sliders.Single().SliderVelocityMultiplier <= 10, "Repeated compensation exceeded the SV limit.");
+        Check(OsuBeatmapWriter.Serialize(document).ObjectSequenceMatches, "Fractional repeats did not survive export.");
+    }
+
     public static void Run()
     {
         var doc = new MapDocument { BeatLengthMs = 3000, SliderMultiplier = 3.2, SliderTickRate = 1 };
