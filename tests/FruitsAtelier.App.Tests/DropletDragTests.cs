@@ -138,7 +138,7 @@ internal static class DropletDragTests
             Check(ui.View.SelectedObjectIds.Single() == source && ui.View.StatusMessage.Contains("Slider"),
                 $"First click on {kind} did not select the parent slider.");
             ui.ClickMap(target.TimeMs, target.X);
-            Check(ui.View.StatusMessage.Contains("drag horizontally"), $"Second click did not select {kind} for movement.");
+            Check(ui.View.StatusMessage.EndsWith(FruitsAtelier.Localization.Strings.Get("editor.status.sliderObjectReady", "{0}").Split("{0}")[^1]), $"Second click did not select {kind} for movement.");
             Check(ui.View.XCoordinateFieldBounds is not null, $"Selected {kind} has no X coordinate field.");
             var editableBaseline = ui.View.Document.DeepClone();
             var baselineEvents = CatchStreamConverter.Convert(ui.View.Document).Objects.Where(o => o.SourceId == source).ToArray();

@@ -18,7 +18,7 @@ public static class SliderFruitStream
         for (int index = 0; index <= Math.Floor(intervals + 1e-8); index++)
         {
             double time = Math.Min(end, start + index * step);
-            double target = CurveMath.PositionAtTime(track, time), x = (float)target;
+            double target = Math.Clamp(CurveMath.PositionAtTime(track, time), 0, 512), x = (float)target;
             result.Add(new(track.Id, index, CatchObjectKind.Fruit, time, x, target, x, 0, true));
         }
         return result;

@@ -203,11 +203,9 @@ public static class CurveMath
         for (int i = 0; i < track.Nodes.Count; i++)
         {
             var node = track.Nodes[i];
-            if (!IsPositionValid(node.TimeMs, node.X)) errors.Add(L.Get("core.curves.anchorRange"));
+            if (!double.IsFinite(node.TimeMs) || node.TimeMs < 0 || !double.IsFinite(node.X)) errors.Add(L.Get("core.curves.anchorRange"));
             if (node.OutgoingKind is CurveKind kind && !Enum.IsDefined(kind)) errors.Add(L.Get("core.curves.segmentKind"));
-            bool usesIn = i > 0 && track.Nodes[i - 1].OutgoingCurve is null && SegmentKind(track, i - 1) == CurveKind.Bezier;
-            bool usesOut = i + 1 < track.Nodes.Count && node.OutgoingCurve is null && SegmentKind(track, i) == CurveKind.Bezier;
-            if (!ValidHandle(node, node.HandleIn, usesIn) || !ValidHandle(node, node.HandleOut, usesOut))
+            if (!ValidHandle(node, node.HandleIn) || !ValidHandle(node, node.HandleOut))
                 errors.Add(L.Get("core.curves.handleRange"));
         }
         for (int i = 0; i + 1 < track.Nodes.Count; i++)
@@ -223,11 +221,11 @@ public static class CurveMath
         return errors;
     }
 
-    private static bool ValidHandle(Anchor node, MapPoint handle, bool active)
+    private static bool ValidHandle(Anchor node, MapPoint handle)
     {
         double controlX = node.X + handle.X;
         return double.IsFinite(handle.TimeMs) && double.IsFinite(handle.X) && double.IsFinite(node.TimeMs + handle.TimeMs)
-            && (!active || controlX >= 0 && controlX <= 512);
+            && double.IsFinite(controlX);
     }
 
     private static bool IsPositionValid(double time, double x) => double.IsFinite(time) && time >= 0 && double.IsFinite(x) && x >= 0 && x <= 512;

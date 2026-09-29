@@ -39,7 +39,7 @@ var tests = new (string Name, Action Run)[]
     ("Bezier split preserves shape and existing IDs", BezierSplit),
     ("Linear split preserves piecewise trajectory", LinearSplit),
     ("Anchor movement preserves handles and validates neighbours", MoveAnchor),
-    ("Handle movement rejects time reversal and X overflow", MoveHandle),
+    ("Handle movement permits outside X and rejects invalid time", MoveHandle),
     ("History groups drag updates and preserves identity", HistoryTransactions),
     ("History cancellation, no-op and redo branching", HistoryCancelAndBranch),
     ("Deep clones do not alias nested editing state", CloneIndependence),
@@ -214,8 +214,8 @@ static void MoveAnchor()
     True(node.HandleIn == originalIn && node.HandleOut == originalOut, "Anchor move changed relative handles.");
     Near(900, node.TimeMs + node.HandleIn.TimeMs); Near(230, node.X + node.HandleIn.X);
     True(!CurveMath.TryMoveAnchor(curve, node.Id, 100, 280, out _), "Time reversal accepted.");
-    True(!CurveMath.TryMoveAnchor(curve, node.Id, 1100, 10, out _), "Control point X overflow accepted.");
-    Near(1100, node.TimeMs); Near(280, node.X);
+    True(CurveMath.TryMoveAnchor(curve, node.Id, 1100, -80, out _), "Outside anchor was rejected.");
+    Near(1100, node.TimeMs); Near(-80, node.X);
     var linear = new CurveTrack { Kind = CurveKind.Linear };
     linear.Nodes.Add(new Anchor { TimeMs = 100, X = 200 });
     linear.Nodes.Add(new Anchor { TimeMs = 101, X = 200 });
@@ -229,9 +229,9 @@ static void MoveHandle()
     var curve = EditableCurve(); var first = curve.Nodes[0];
     MapPoint initial = first.HandleOut;
     True(!CurveMath.TryMoveHandle(curve, first.Id, false, new(2000, 50), out _), "Time reversal inside the slider accepted.");
-    True(!CurveMath.TryMoveHandle(curve, first.Id, false, new(200, 500), out _), "X overflow accepted.");
     True(!CurveMath.TryMoveHandle(curve, first.Id, true, new(double.NaN, 0), out _), "Nonfinite handle accepted.");
     True(first.HandleOut == initial, "Rejected handle edit changed state.");
+    True(CurveMath.TryMoveHandle(curve, first.Id, false, new(200, 500), out _), "Outside control point was rejected.");
     True(CurveMath.TryMoveHandle(curve, first.Id, false, new(400, 100), out string error), error);
     True(first.HandleOut == new MapPoint(400, 100), "Valid edit was not applied.");
 }

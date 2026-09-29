@@ -237,14 +237,7 @@ public sealed partial class EditorView
         }
         foreach (var track in objectDragStart.Tracks.Where(item => objectSelection.Contains(item.Id)))
         {
-            foreach (var node in track.Nodes)
-            {
-                IncludeTime(node.TimeMs);
-                IncludeX(node.X);
-                IncludeX(node.X + node.HandleIn.X);
-                IncludeX(node.X + node.HandleOut.X);
-                if (node.OutgoingCurve is { } curve) foreach (var point in curve.Controls) IncludeX(node.X + point.Offset.X);
-            }
+            foreach (var node in track.Nodes) IncludeTime(node.TimeMs);
             if (track.Nodes.Count >= 2)
                 IncludeTime(track.Nodes[0].TimeMs + (track.Nodes[^1].TimeMs - track.Nodes[0].TimeMs) * track.SpanCount);
         }
@@ -264,7 +257,10 @@ public sealed partial class EditorView
             deltaTime = TimingMap.Snap(Document, minTime + deltaTime, divisor) - minTime;
         if (double.IsFinite(minTime)) deltaTime = Math.Clamp(deltaTime, -minTime, EditableDurationMs - maxTime);
         else deltaTime = 0;
-        if (!objectDragTimeline && double.IsFinite(minX)) deltaX = Math.Clamp(SnapX(minX + deltaX) - minX, -minX, 512 - maxX);
+        if (objectDragTimeline) deltaX = 0;
+        else if (double.IsFinite(minX)) deltaX = Math.Clamp(SnapX(minX + deltaX) - minX, -minX, 512 - maxX);
+        else if (objectDragStart.Tracks.FirstOrDefault(t => objectSelection.Contains(t.Id)) is { } firstTrack)
+            deltaX = SnapX(firstTrack.Nodes[0].X + deltaX) - firstTrack.Nodes[0].X;
         else deltaX = 0;
 
         if (!objectDragTimeline && DistanceSnapEnabled && double.IsFinite(minTime))
@@ -275,7 +271,8 @@ public sealed partial class EditorView
             if (first is { } origin)
             {
                 var target = SnapDistance(origin + new MapPoint(deltaTime, deltaX), objectSelection);
-                deltaX = Math.Clamp(SnapX(target.X) - origin.X, -minX, 512 - maxX);
+                deltaX = SnapX(target.X) - origin.X;
+                if (double.IsFinite(minX)) deltaX = Math.Clamp(deltaX, -minX, 512 - maxX);
             }
         }
 

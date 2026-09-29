@@ -114,22 +114,14 @@ public static class CurvePointEditing
             (node.TimeMs - (previous.TimeMs + previous.HandleOut.TimeMs)) / 2);
         double outgoing = next is null ? 0 : Math.Min((next.TimeMs - node.TimeMs) / 3,
             (next.TimeMs + next.HandleIn.TimeMs - node.TimeMs) / 2);
-        double lower = double.NegativeInfinity, upper = double.PositiveInfinity;
-        if (incoming > 0) { lower = Math.Max(lower, (node.X - 512) / incoming); upper = Math.Min(upper, node.X / incoming); }
-        if (outgoing > 0) { lower = Math.Max(lower, -node.X / outgoing); upper = Math.Min(upper, (512 - node.X) / outgoing); }
-        slope = Math.Clamp(slope, lower, upper);
-        node.HandleIn = previous is null ? default : new(-incoming, Math.Clamp(node.X - slope * incoming, 0, 512) - node.X);
-        node.HandleOut = next is null ? default : new(outgoing, Math.Clamp(node.X + slope * outgoing, 0, 512) - node.X);
+        node.HandleIn = previous is null ? default : new(-incoming, -slope * incoming);
+        node.HandleOut = next is null ? default : new(outgoing, slope * outgoing);
         if (Nonzero(node.HandleIn) || Nonzero(node.HandleOut)) return;
 
         // Neighbouring active handles can consume all time room; a horizontal tangent still fits at that time.
         double direction = slope < 0 ? -1 : 1;
-        for (int attempt = 0; attempt < 2; attempt++, direction = -direction)
-        {
-            if (previous is not null) node.HandleIn = new(0, Math.Clamp(node.X - direction * 32, 0, 512) - node.X);
-            if (next is not null) node.HandleOut = new(0, Math.Clamp(node.X + direction * 32, 0, 512) - node.X);
-            if (Nonzero(node.HandleIn) || Nonzero(node.HandleOut)) return;
-        }
+        if (previous is not null) node.HandleIn = new(0, -direction * 32);
+        if (next is not null) node.HandleOut = new(0, direction * 32);
     }
 
     private static void ClearInactiveSegment(CurveTrack track, int segment)

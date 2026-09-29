@@ -182,7 +182,7 @@ public static class CatchStreamConverter
                 float offset = item.Kind == CatchObjectKind.TinyDroplet ? Math.Clamp(item.RawOffset, -pathX, 512 - pathX) : 0;
                 float effectiveX = Math.Clamp(pathX + offset, 0, 512);
                 converted.Add(new(track.Id, index, item.Kind, item.TimeMs, effectiveX,
-                    CurveMath.PositionAtTime(track, item.TimeMs), pathX, offset));
+                    Math.Clamp(CurveMath.PositionAtTime(track, item.TimeMs), 0, 512), pathX, offset));
             }
 
             double tickError = converted.Where(o => o.Kind != CatchObjectKind.TinyDroplet)
@@ -213,11 +213,11 @@ public static class CatchStreamConverter
         foreach (var item in nested)
         {
             double pathTime = start + item.Progress * duration;
-            double wantedX = CurveMath.PositionAtTime(track, pathTime);
+            double wantedX = Math.Clamp(CurveMath.PositionAtTime(track, pathTime), 0, 512);
             if (compensate && item.Kind == CatchObjectKind.TinyDroplet)
-                wantedX = Math.Clamp(CurveMath.PositionAtTime(track, item.TimeMs) - item.RawOffset, 0, 512);
+                wantedX = Math.Clamp(Math.Clamp(CurveMath.PositionAtTime(track, item.TimeMs), 0, 512) - item.RawOffset, 0, 512);
             else if (item.Kind != CatchObjectKind.TinyDroplet)
-                wantedX = CurveMath.PositionAtTime(track, item.TimeMs);
+                wantedX = Math.Clamp(CurveMath.PositionAtTime(track, item.TimeMs), 0, 512);
             if (knots.TryGetValue(pathTime, out double existing) && Math.Abs(existing - wantedX) > AlignmentTolerance)
                 throw new TinyConstraintException(L.Get("core.conversion.tinyConflict"));
             knots[pathTime] = wantedX;

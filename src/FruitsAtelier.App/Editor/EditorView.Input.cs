@@ -232,7 +232,7 @@ public sealed partial class EditorView
         if (showTargets && ctrl && tool is Tool.Select or Tool.Slider && objectSelection.Count == 1
             && SelectedImportedSlider is { } imported)
         {
-            var point = MapAt(x, y, anchorSnap);
+            var point = MapAt(x, y, anchorSnap, clampX: false);
             var generated = conversion!.Sliders.FirstOrDefault(s => s.SourceId == imported.Id);
             if (generated is not null && point.TimeMs > generated.StartTimeMs && point.TimeMs < generated.StartTimeMs + generated.DurationMs)
             {
@@ -247,7 +247,7 @@ public sealed partial class EditorView
         if (!LegacyMode && showTargets && ctrl && tool is Tool.Select or Tool.Slider
             && draftTrack == Guid.Empty && objectSelection.Count <= 1 && SelectedTrack is { } insertTrack)
         {
-            var point = MapAt(x, y, anchorSnap);
+            var point = MapAt(x, y, anchorSnap, clampX: false);
             if (point.TimeMs > insertTrack.Nodes[0].TimeMs && point.TimeMs < CurveMath.EndTimeMs(insertTrack))
                 InsertControlPoint(new(insertTrack.Id, CurveMath.FirstSpanTime(insertTrack, point.TimeMs)), point.X);
             return;
@@ -449,7 +449,7 @@ public sealed partial class EditorView
         if (drag == DragKind.LegacyControl) { MoveLegacyPoints(x, y); return; }
         if (drag is DragKind.BananaStart or DragKind.BananaEnd) { MoveBananaBoundary(x, y); return; }
         var raw = Transform.ToMap(x, y) - dragOffset;
-        var p = new MapPoint(Math.Clamp(raw.TimeMs, 0, EditableDurationMs), Math.Clamp(SnapX(raw.X), 0, 512));
+        var p = new MapPoint(Math.Clamp(raw.TimeMs, 0, EditableDurationMs), SnapX(raw.X));
         if (SelectedTrack is { } track && SelectedAnchor is { } node)
         {
             if (drag == DragKind.Anchor)
@@ -457,20 +457,8 @@ public sealed partial class EditorView
                 bool endpoint = node == track.Nodes[0] || node == track.Nodes[^1];
                 bool snapTime = endpoint ? snap : anchorSnap;
                 if (snapTime) p = new(Math.Clamp(TimingMap.Snap(Document, raw.TimeMs, divisor), 0, EditableDurationMs), p.X);
-                // The draft's last outgoing handle is visible before its future segment exists.
-                if (track.Id == draftTrack && node == track.Nodes[^1])
-                    p = new(p.TimeMs, Math.Clamp(p.X, Math.Max(0, -node.HandleOut.X), Math.Min(512, 512 - node.HandleOut.X)));
                 var start = Point(node);
-                if (DistanceSnapEnabled)
-                {
-                    if (TryMoveDistanceAnchor(track, node, p))
-                    {
-                        Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
-                        StatusMessage = L.Get("editor.status.anchorPosition", Time(SelectedAnchor!.TimeMs), Number(SelectedAnchor.X));
-                    }
-                    else StatusMessage = L.Get("editor.error.sliderDistanceSnap");
-                }
-                else if (!CurveMath.TryMoveAnchor(track, node.Id, p.TimeMs, p.X, out var error))
+                if (!CurveMath.TryMoveAnchor(track, node.Id, p.TimeMs, p.X, out var error))
                 {
                     if (endpoint && snapTime)
                         CurveMath.TryMoveAnchor(track, node.Id, start.TimeMs, p.X, out _);
@@ -486,30 +474,18 @@ public sealed partial class EditorView
             }
             else if (drag == DragKind.DraftHandle)
             {
-                var cursor = MapAt(x, y, false);
+                var cursor = MapAt(x, y, false, clampX: false);
                 double dt = cursor.TimeMs - node.TimeMs;
-                double dx = Math.Clamp(cursor.X - node.X, -node.X, 512 - node.X);
-                bool SetDraftHandle(double offset)
+                double dx = cursor.X - node.X;
+                node.HandleOut = new(dt, dx);
+                if (track.Nodes.Count > 1)
                 {
-                    return TryDistanceShape(track, () =>
-                    {
-                        var current = track.Nodes.Single(item => item.Id == node.Id);
-                        current.HandleOut = new(dt, offset);
-                        if (track.Nodes.Count > 1)
-                        {
-                            var previous = track.Nodes[^2];
-                            current.HandleIn = new(-dt, Math.Clamp(-offset, -current.X, 512 - current.X));
-                            previous.OutgoingKind = previous.HandleOut != default || current.HandleIn != default ? CurveKind.Bezier : CurveKind.Linear;
-                        }
-                        return true;
-                    });
+                    var previous = track.Nodes[^2];
+                    node.HandleIn = new(-dt, -dx);
+                    previous.OutgoingKind = previous.HandleOut != default || node.HandleIn != default ? CurveKind.Bezier : CurveKind.Linear;
                 }
-                bool handleAccepted = SetDraftHandle(dx);
-                if (!handleAccepted && DistanceSnapEnabled)
-                    foreach (var candidate in CurvedSliderCandidates(new(0, dx), node.HandleOut.X).Skip(1))
-                        if (SetDraftHandle(candidate.X)) { handleAccepted = true; break; }
                 selectedPart = DragKind.HandleOut;
-                StatusMessage = L.Get(handleAccepted ? "editor.status.definingHandle" : "editor.error.sliderDistanceSnap");
+                StatusMessage = L.Get("editor.status.definingHandle");
             }
             else
             {
@@ -523,20 +499,7 @@ public sealed partial class EditorView
                 var start = incoming ? node.HandleIn : node.HandleOut;
                 var cursor = Transform.ToMap(x, y) - dragOffset;
                 var desired = cursor - Point(node);
-                desired = new(desired.TimeMs, Math.Clamp(desired.X, -node.X, 512 - node.X));
-                bool TryHandle(MapPoint value) => TryDistanceShape(track, () =>
-                    CurveMath.TryMoveHandle(track, node.Id, incoming, value, out _));
-                if (DistanceSnapEnabled)
-                {
-                    bool accepted = TryHandle(desired);
-                    if (!accepted)
-                    {
-                        foreach (var candidate in CurvedSliderCandidates(desired, start.X).Skip(1))
-                            if (TryHandle(candidate)) { accepted = true; break; }
-                    }
-                    StatusMessage = L.Get(accepted ? "editor.status.handleAdjusted" : "editor.error.sliderDistanceSnap");
-                }
-                else if (!CurveMath.TryMoveHandle(track, node.Id, incoming, desired, out var error))
+                if (!CurveMath.TryMoveHandle(track, node.Id, incoming, desired, out var error))
                 {
                     ClampMove(start, desired, value => CurveMath.TryMoveHandle(track, node.Id, incoming, value, out _));
                     StatusMessage = error;
@@ -1058,7 +1021,7 @@ public sealed partial class EditorView
             else if (virtualKey == 80) AddTimingPoint(shift);
             else if (virtualKey == 187 && !shift && SelectedTrack is { } addReverse) ChangeReverseCount(addReverse.Id, 1);
             else if (virtualKey == 189 && !shift && SelectedTrack is { } removeReverse) ChangeReverseCount(removeReverse.Id, -1);
-            else if (virtualKey == 74 && !shift && plot.Contains(mouseX, mouseY) && SelectedTrack is { } extend) ExtendSlider(extend.Id, MapAt(mouseX, mouseY, true));
+            else if (virtualKey == 74 && !shift && plot.Contains(mouseX, mouseY) && SelectedTrack is { } extend) ExtendSlider(extend.Id, MapAt(mouseX, mouseY, true, clampX: false));
             return;
         }
         if (ctrl || altHeld) return;
@@ -1180,8 +1143,8 @@ public sealed partial class EditorView
 
     private void AddCurveAnchor(float x, float y, bool straight = false)
     {
-        var p = draftTrack != Guid.Empty && DistanceSnapEnabled
-            ? MapAt(x, y, true) with { X = Math.Clamp(SnapX(MapAt(x, y, true).X), 0, 512) }
+        var p = draftTrack != Guid.Empty
+            ? MapAt(x, y, true, clampX: false)
             : PlacementPoint(x, y);
         CurveTrack track;
         if (draftTrack == Guid.Empty)
@@ -1199,12 +1162,10 @@ public sealed partial class EditorView
         else track = Document.Tracks.First(t => t.Id == draftTrack);
         if (track.Nodes.Count > 0 && Near(Point(track.Nodes[^1]), x, y, 8))
         { track.Nodes[^1].HandleOut = default; return; }
-        var node = AppendDistanceAnchor(track, p, straight);
+        var node = AppendDraftAnchor(track, p, straight);
         if (node is null)
         {
-            StatusMessage = DistanceSnapEnabled && track.Nodes.Count > 0
-                && p.TimeMs > track.Nodes[^1].TimeMs + CurveMath.MinimumAnchorSpacingMs
-                ? L.Get("editor.error.sliderDistanceSnap") : L.Get("editor.error.anchorMustBeLater");
+            StatusMessage = L.Get("editor.error.anchorMustBeLater");
             return;
         }
         if (track.Nodes.Count == 1) ApplyPlacementFlags(track.Id);

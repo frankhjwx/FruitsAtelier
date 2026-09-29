@@ -269,11 +269,11 @@ public sealed partial class EditorView
         StatusMessage = L.Get("editor.status.tickRate", Number(Document.SliderTickRate), divisor);
     }
 
-    private MapPoint MapAt(float x, float y, bool useSnap)
+    private MapPoint MapAt(float x, float y, bool useSnap, bool clampX = true)
     {
         var p = Transform.ToMap(x, y);
         double time = useSnap && snap ? TimingMap.Snap(Document, p.TimeMs, divisor) : p.TimeMs;
-        return new(Math.Clamp(time, 0, EditableDurationMs), Math.Clamp(SnapX(p.X), 0, 512));
+        return new(Math.Clamp(time, 0, EditableDurationMs), clampX ? Math.Clamp(SnapX(p.X), 0, 512) : SnapX(p.X));
     }
 
     private (float X, float Y) Screen(MapPoint p)

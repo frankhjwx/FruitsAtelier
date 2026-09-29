@@ -64,7 +64,9 @@ internal static class EditableSliderTests
         line.Nodes.Add(new() { TimeMs = 1000, X = 200, HandleIn = new(-900, -800) });
         True(CurveMath.Validate(With(line)).Count == 0, "Dormant Bezier control points constrained a straight segment.");
         line.Nodes[0].OutgoingKind = CurveKind.Bezier;
-        True(CurveMath.Validate(With(line)).Count > 0, "Active Bezier controls escaped validation.");
+        True(CurveMath.Validate(With(line)).Count == 0, "Outside Bezier controls were rejected.");
+        line.Nodes[0].HandleOut = new(2000, 800);
+        True(CurveMath.Validate(With(line)).Count > 0, "Time-reversing Bezier controls escaped validation.");
         line.Nodes[0].OutgoingKind = (CurveKind)99;
         True(CurveMath.Validate(With(line)).Count > 0, "Unknown per-segment type was accepted.");
     }

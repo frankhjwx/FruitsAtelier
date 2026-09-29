@@ -10,7 +10,7 @@ internal static class TinyCompensationFitter
         double duration = track.Nodes[^1].TimeMs - start;
         var knots = events.GroupBy(e => start + e.Progress * duration).OrderBy(g => g.Key)
             .Select(g => new Knot(g.Key, g.Select(e => new Target(
-                CurveMath.PositionAtTime(track, e.TimeMs), e.RawOffset, e.Kind == CatchObjectKind.TinyDroplet)).ToArray()))
+                Math.Clamp(CurveMath.PositionAtTime(track, e.TimeMs), 0, 512), e.RawOffset, e.Kind == CatchObjectKind.TinyDroplet)).ToArray()))
             .ToArray();
         var lower = new double[knots.Length];
         var upper = new double[knots.Length];

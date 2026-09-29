@@ -3,6 +3,57 @@ using FruitsAtelier.Core;
 
 internal static class SliderDistanceDragTests
 {
+    public static void OutsidePlayfield()
+    {
+        foreach (var mode in Enum.GetValues<SliderEditingMode>())
+        foreach (double x in new[] { -80d, 600d })
+        {
+            var (ui, id) = Create(mode, false);
+            var before = ui.View.Document.DeepClone();
+            ui.EditTrack(id);
+            ui.DownMap(1500, 392); ui.MoveMap(1500, x); ui.UpMap(1500, x);
+            var edited = ui.View.Document;
+            Check(Math.Abs(edited.Tracks.Single().Nodes[^1].X - x) < .001,
+                $"{mode}: endpoint stopped at playfield edge: {ui.View.StatusMessage}");
+            Check(CurveMath.Validate(edited).Count == 0, "Outside anchor failed validation.");
+            var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(edited));
+            Check(edited.ContentEquals(restored), "Project lost outside geometry.");
+            var converted = CatchStreamConverter.Convert(edited);
+            Check(converted.Success && converted.Objects.All(o => o.X is >= 0 and <= 512),
+                "Outside geometry failed playable conversion.");
+            _ = OsuBeatmapWriter.Serialize(edited);
+            ui.Key('Z', ctrl: true);
+            Check(before.ContentEquals(ui.View.Document), "Outside drag did not undo.");
+            ui.Key('Y', ctrl: true);
+            Check(restored.ContentEquals(ui.View.Document), "Outside drag did not redo.");
+        }
+    }
+
+    public static void OutsideControls()
+    {
+        foreach (var mode in Enum.GetValues<SliderEditingMode>())
+        foreach (double x in new[] { -80d, 600d })
+        {
+            var map = new MapDocument { DurationMs = 5000 };
+            var track = new CurveTrack { Kind = CurveKind.Bezier, CompensateTinyDroplets = true };
+            track.Nodes.Add(new() { TimeMs = 1000, X = 200, HandleOut = new(200, 60) });
+            track.Nodes.Add(new() { TimeMs = 2000, X = 240, HandleIn = new(-200, 60) });
+            map.Tracks.Add(track);
+            var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode);
+            ui.EditTrack(track.Id); ui.Key('Y');
+            ui.DownMap(1200, 260); ui.MoveMap(1200, x); ui.UpMap(1200, x);
+            var edited = ui.View.Document;
+            Check(Math.Abs(ControlCurveMath.Points(edited.Tracks.Single(), 0)[1].X - x) < .001,
+                $"{mode}: control stopped at playfield edge: {ui.View.StatusMessage}");
+            var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(edited));
+            Check(edited.ContentEquals(restored), "Project lost outside control geometry.");
+            Check(CatchStreamConverter.Convert(edited).Success, "Outside control failed conversion.");
+            _ = OsuBeatmapWriter.Serialize(edited);
+            ui.Key('Z', ctrl: true);
+            Check(map.ContentEquals(ui.View.Document), "Outside control drag did not undo.");
+        }
+    }
+
     public static void DropletOutgoingSpacing()
     {
         var map = new MapDocument { DurationMs = 5000, SliderTickRate = 8 };
@@ -146,11 +197,11 @@ internal static class SliderDistanceDragTests
             if (controls) ui.EditTrack(id);
             ui.DownMap(1500, 280); ui.MoveMap(1500, 500);
             double moved = ui.View.Document.Tracks.Single().Nodes[^1].X;
-            Check(controls ? moved > 281 && moved < 499 : Math.Abs(moved - 280) > 1,
-                $"{mode}, controls={controls}: curve tail should clamp with useful movement, got {moved}. {ui.View.StatusMessage}");
+            Check(controls ? Math.Abs(moved - 500) < .001 : Math.Abs(moved - 280) > 1,
+                $"{mode}, controls={controls}: curve tail should follow the pointer, got {moved}. {ui.View.StatusMessage}");
             var result = CatchStreamConverter.Convert(ui.View.Document);
-            Check(result.Success && (!controls || SliderDistanceSnap.Excesses(ui.View.Document, result.Objects, id).Count == 0),
-                "Clamped tail exceeded maximum DS.");
+            Check(result.Success,
+                "Edited tail failed conversion.");
             if (!controls) CheckStrictTail(ui, result, id);
             ui.Key(27);
             Check(Math.Abs(ui.View.Document.Tracks.Single().Nodes[^1].X - 280) < .001,
@@ -235,9 +286,9 @@ internal static class SliderDistanceDragTests
             ui.Paint();
             if (controls) ui.EditTrack(id);
             ui.DownMap(1500, 392); ui.MoveMap(1500, 310); ui.UpMap(1500, 310);
-            Check(Math.Abs(ui.View.Document.Tracks.Single().Nodes[^1].X - 296) < .001,
+            Check(Math.Abs(ui.View.Document.Tracks.Single().Nodes[^1].X - (controls ? 310 : 296)) < .001,
                 $"{mode}, controls={controls}: segmented straight tail did not snap: {ui.View.Document.Tracks.Single().Nodes[^1].X}");
-            CheckStrictTail(ui, CatchStreamConverter.Convert(ui.View.Document), id);
+            if (!controls) CheckStrictTail(ui, CatchStreamConverter.Convert(ui.View.Document), id);
         }
     }
 
