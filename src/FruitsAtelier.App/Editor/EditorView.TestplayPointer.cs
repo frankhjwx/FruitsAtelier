@@ -113,13 +113,15 @@ public sealed partial class EditorView
         foreach (var period in breakPeriods)
             if (playhead >= period.StartMs && playhead <= period.EndMs) { until = period.EndMs - playhead; break; }
         if (testplayResumeAt is double resume) until = resume - TestplayRealtime;
-        if (until <= 0 || until > 3000) return;
-        float alpha = (float)(.25 + .75 * Math.Pow(Math.Sin(until / 200 * Math.PI), 2));
+        // Stable video calibration: seven 100 ms flashes, 100 ms apart,
+        // starting about 1450 ms before the first object / break end.
+        double elapsed = 1450 - until;
+        if (elapsed < 0 || elapsed >= 1300 || elapsed % 200 >= 100) return;
         for (int row = 0; row < 2; row++)
         {
             float y = height * (row == 0 ? .14f : .86f);
-            DrawTestplayArrow(c, width * .09f, y, false, true, alpha);
-            DrawTestplayArrow(c, width * .91f, y, true, true, alpha);
+            DrawTestplayArrow(c, width * .09f, y, false, true, 1);
+            DrawTestplayArrow(c, width * .91f, y, true, true, 1);
         }
     }
 

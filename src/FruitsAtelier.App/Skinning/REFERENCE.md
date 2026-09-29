@@ -13,8 +13,12 @@ Mouse hover enlarges buttons to 110% over 200 ms with OutQuint easing.
 Keyboard selection uses the same enlargement and a pair of arrows.
 `arrow-pause.png` and `arrow-warning.png` override `play-warningarrow.png`;
 only the shared fallback is tinted blue for selection and red for warnings.
-Right-side arrows are mirrored. Warnings appear in the last three seconds of
-the intro/break and during the pause menu's 600 ms resume fade.
+Right-side arrows are mirrored. Intro and break-end warnings share seven 100 ms
+flashes separated by fully hidden 100 ms gaps. The sequence starts 1450 ms before
+the first object or break end and its last flash ends 150 ms before that point.
+These timings are calibrated from 60 fps stable video, with approximately one
+frame of measurement uncertainty; they are not verified stable source constants.
+The pause menu's 600 ms resume fade uses the same warning phase, clipped to that fade.
 The pause menu fades in linearly over 300 ms, including the overlay, controls and dim setting.
 This duration follows frame measurements of stable; lazer's `GameplayMenuOverlay`
 uses a different 200 ms transition and is not the timing reference for this fade.

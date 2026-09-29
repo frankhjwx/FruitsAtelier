@@ -194,7 +194,8 @@ while retaining autoplay. Back and F1 return to the selected editor position.
 Hover smoothly enlarges buttons; keyboard selection shows two skin arrows.
 The skin cursor and its trail appear only while paused. Running testplay hides
 both the skin cursor and system pointer. Intro and break-end warnings use four
-flashing arrows; a resume transition also shows these arrows.
+flashing arrows with the same seven-flash sequence: 100 ms visible, 100 ms fully
+hidden between flashes. A resume transition also shows these arrows.
 
 Pause loops and button feedback use the selected skin when skin sounds are enabled,
 otherwise packaged osu! resources. Missing skin samples fall back to the default

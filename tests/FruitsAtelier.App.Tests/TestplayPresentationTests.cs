@@ -87,6 +87,7 @@ internal static class TestplayPresentationTests
             }
             AudioSkip();
             PointerAndArrows();
+            WarningTiming();
         }
         finally { L.SetLanguage(language); }
     }
@@ -120,7 +121,7 @@ internal static class TestplayPresentationTests
         Check(!ui.Canvas.Images.Any(i => i.Path.EndsWith("cursortrail.png")), "Trail expires on real time");
         ui.Key(13); clock.Advance(600); ui.Paint();
         ui.Key(32); ui.View.KeyUp(32);
-        Check(ui.Canvas.Images.Count(i => i.Path.EndsWith("arrow-warning.png")) == 4, "Intro lead displays four warning arrows");
+        Check(!ui.Canvas.Images.Any(i => i.Path.EndsWith("arrow-warning.png")), "Skip does not start the warning three seconds early");
         ui.Key(27); ui.View.KeyUp(27); ui.Key(40);
         Check(ui.Canvas.Images.Count(i => i.Path.EndsWith("arrow-pause.png")) == 2, "Keyboard selection displays two skin arrows");
         var button = ui.Canvas.Images.Single(i => i.Path.EndsWith("pause-continue.png")).Bounds;
@@ -141,6 +142,37 @@ internal static class TestplayPresentationTests
         ui.Key(13); clock.Advance(600); ui.Paint();
         Check(!ui.View.TestplayPaused && !ui.Canvas.Images.Any(i => i.Path.EndsWith("pause-continue.png")), "Menu disappears before play resumes");
         ui.View.StopTestplay(); Check(!ui.View.TestplayUsesCursor, "Leaving testplay restores the system cursor");
+    }
+
+    private static void WarningTiming()
+    {
+        var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
+        string folder = Path.GetFullPath("artifacts/tests/testplay-warning"); Directory.CreateDirectory(folder);
+        Header(folder, "arrow-warning.png", 32, 32);
+        var map = new MapDocument();
+        map.Fruits.Add(new Fruit { TimeMs = 10000, X = 256 });
+        map.Fruits.Add(new Fruit { TimeMs = 18000, X = 256 });
+        map.OriginalSections.Add(new OsuSection { Name = "Events", Lines = { "2,12000,16000" } });
+        ui.LoadDocument(map); ui.View.LoadSkin(folder); ui.View.StartTestplay(); ui.Paint();
+        foreach (int end in new[] { 10000, 16000 })
+        {
+            At(end - 1451, 0);
+            for (int flash = 0; flash < 7; flash++)
+            {
+                int start = end - 1450 + flash * 200;
+                At(start, 4); At(start + 99, 4);
+                At(start + 100, 0); At(start + 199, 0);
+            }
+            At(end, 0);
+        }
+        ui.View.StopTestplay();
+        void At(int time, int count)
+        {
+            clock.Advance(time - ui.View.PlayheadMs); ui.Paint();
+            var arrows = ui.Canvas.Images.Where(i => i.Path.EndsWith("arrow-warning.png")).ToArray();
+            Check(arrows.Length == count, $"Warning at {time} ms: expected {count} arrows, got {arrows.Length}");
+            Check(arrows.All(i => i.Opacity == 1), "Visible warnings are fully opaque");
+        }
     }
 
     private static void AudioSkip()
