@@ -20,7 +20,7 @@ internal static class LibraryTests
             view.ChangeAudioPath(Path.Combine(songs, "missing.mp3"));
             view.SaveWorkspace();
             var canvas = new RecordingCanvas(); view.Render(canvas, 1440, 900);
-            Check(canvas.Texts.Any(t => t.Value.Contains("missing.mp3")), "missing references visible inside editor");
+            Check(!canvas.Texts.Any(t => t.Value.Contains("missing.mp3")), "missing references do not show a persistent editor banner");
             string savedDirectory = view.WorkspaceSession!.Directory;
             view.ShowLibrary(); canvas.Clear(); view.Render(canvas, 980, 620);
             Check(canvas.Texts.Any(t => t.Value == L.Get("library.title")), "separate library page");
@@ -102,12 +102,18 @@ internal static class LibraryTests
         OsuBeatmapWriter.WriteFile(project.Difficulties[0].Document, source);
         var linked = WorkspaceProject.Create(workspace,
             BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(source)]), songs);
-        bool rejected = false;
-        try { FruitsAtelier.App.Platform.LibraryOperations.DeleteProject(linked.Directory,
-            new LibrarySettings { Workspace = workspace, Songs = songs }); }
-        catch (IOException) { rejected = true; }
-        Check(rejected && Directory.Exists(linked.Directory) && File.Exists(source),
-            "deletion protects projects linked to existing Songs files");
+        var settings = new LibrarySettings { Workspace = workspace, Songs = songs };
+        string original = File.ReadAllText(source);
+        FruitsAtelier.App.Platform.LibraryOperations.DeleteProject(linked.Directory, settings);
+        Check(!Directory.Exists(linked.Directory) && File.ReadAllText(source) == original,
+            "local project deletion preserves linked Songs files");
+        var db = new LibraryDatabase(workspace, songs);
+        Check(db.ProjectForSource(songs) is null && db.Search("", projectsOnly: true).Count == 0,
+            "deleted local project is absent from My projects and source associations");
+        var reopened = FruitsAtelier.App.Platform.LibraryOperations.Open(LibraryDatabase.ReadMetadata(source)!, settings);
+        Check(File.Exists(Path.Combine(reopened.Directory, WorkspaceProject.ManifestName))
+            && reopened.Manifest.Id != linked.Manifest.Id && File.ReadAllText(source) == original,
+            "opening the osu map recreates a fresh local project");
     }
     private static void OptionalSongs(string root)
     {

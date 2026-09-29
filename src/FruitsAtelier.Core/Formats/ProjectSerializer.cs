@@ -6,6 +6,8 @@ namespace FruitsAtelier.Core;
 
 public static partial class ProjectSerializer
 {
+    public const int MaximumFileBytes = 128 * 1024 * 1024;
+
     private sealed class ProjectFile
     {
         public int SchemaVersion { get; set; }
@@ -34,14 +36,14 @@ public static partial class ProjectSerializer
             if (copy.SourcePath is not null && Path.IsPathFullyQualified(copy.SourcePath)) copy.SourcePath = Path.GetRelativePath(directory, copy.SourcePath);
         }
         string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, options);
-        if (System.Text.Encoding.UTF8.GetByteCount(text) > OsuBeatmapReader.MaximumFileBytes)
+        if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumFileBytes)
             throw new InvalidDataException(L.Get("core.project.writeLimit"));
         return text;
     }
 
     public static MapDocument Read(string text, string? projectPath = null)
     {
-        if (text.Length > OsuBeatmapReader.MaximumFileBytes) throw new InvalidDataException(L.Get("core.project.readLimit"));
+        if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumFileBytes) throw new InvalidDataException(L.Get("core.project.readLimit"));
         ProjectFile? file;
         try { file = JsonSerializer.Deserialize<ProjectFile>(text, options); }
         catch (JsonException error) { throw new InvalidDataException(L.Get("core.project.invalidJson"), error); }
@@ -60,7 +62,7 @@ public static partial class ProjectSerializer
 
     public static MapDocument ReadFile(string path)
     {
-        if (new FileInfo(path).Length > OsuBeatmapReader.MaximumFileBytes) throw new InvalidDataException(L.Get("core.project.readLimit"));
+        if (new FileInfo(path).Length > MaximumFileBytes) throw new InvalidDataException(L.Get("core.project.readLimit"));
         return Read(File.ReadAllText(path), path);
     }
 

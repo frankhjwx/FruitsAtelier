@@ -7,27 +7,37 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private const float MovementPanelWidth = 300, MovementPanelHeight = 84, MovementPanelFontSize = 11;
-    private IReadOnlyList<ConvertedCatchObject>? movementSource;
+    private sealed record MovementSnapshot(IReadOnlyList<ConvertedCatchObject> Source, double CircleSize,
+        bool IncludeTiny, HyperDashState[] States, int[] Indices);
+    private readonly List<MovementSnapshot> movementSnapshots = [];
     private HyperDashState[] movementStates = [];
     private int[] movementIndices = [];
-    private double movementCircleSize;
     public Rect? MovementOverlayBounds { get; private set; }
     public (CatchMovementRange? Previous, CatchMovementRange? Next) MovementReadout { get; private set; }
 
-    private bool movementAnalysis;
+    private bool movementAnalysis, movementIncludeTinyDroplets;
+    public bool MovementIncludesTinyDroplets => movementIncludeTinyDroplets;
     public bool MovementAnalysisEnabled => movementAnalysis;
 
-    private void EnsureMovementStates(IReadOnlyList<ConvertedCatchObject> objects)
+    private void EnsureMovementStates(IReadOnlyList<ConvertedCatchObject> objects, bool includeTiny = false)
     {
-        if (!ReferenceEquals(movementSource, objects) || movementCircleSize != Document.CircleSize)
+        var snapshot = movementSnapshots.FirstOrDefault(s => ReferenceEquals(s.Source, objects)
+            && s.CircleSize == Document.CircleSize && s.IncludeTiny == includeTiny);
+        if (snapshot is null)
         {
-            movementSource = objects;
-            movementCircleSize = Document.CircleSize;
-            movementStates = HyperDashCalculator.Calculate(objects, movementCircleSize);
-            movementIndices = Enumerable.Range(0, objects.Count)
-                .Where(i => objects[i].Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet)
-                .OrderBy(i => objects[i].TimeMs).ToArray();
+            // Keep both display policies for the current authoring, playable and placement snapshots.
+            movementSnapshots.RemoveAll(s => s.CircleSize != Document.CircleSize
+                || !ReferenceEquals(s.Source, playableObjects) && !ReferenceEquals(s.Source, conversion?.Objects)
+                    && !ReferenceEquals(s.Source, placementMovementObjects));
+            snapshot = new(objects, Document.CircleSize, includeTiny,
+                HyperDashCalculator.Calculate(objects, Document.CircleSize, includeTiny),
+                Enumerable.Range(0, objects.Count).Where(i => objects[i].Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet
+                    || includeTiny && objects[i].Kind == CatchObjectKind.TinyDroplet)
+                    .OrderBy(i => objects[i].TimeMs).ToArray());
+            movementSnapshots.Add(snapshot);
         }
+        movementStates = snapshot.States;
+        movementIndices = snapshot.Indices;
     }
 
     private uint MovementColour(CatchMovementMode mode) => mode switch
@@ -54,7 +64,7 @@ public sealed partial class EditorView
     {
         if (!movementAnalysis) return;
         var objects = placementMovementObjects ?? playableObjects;
-        EnsureMovementStates(objects);
+        EnsureMovementStates(objects, movementIncludeTinyDroplets);
         double endTime = viewStart + plot.Height / pixelsPerMs;
         for (int i = FirstVisibleMovement(objects); i < movementIndices.Length; i++)
         {
@@ -86,31 +96,29 @@ public sealed partial class EditorView
         MovementOverlayBounds = null;
         MovementReadout = (null, null);
         IReadOnlyList<ConvertedCatchObject> objects = playableObjects;
-        Guid source;
+        HashSet<Guid> sources;
         bool placement = PlacementGhostPoint() is not null;
         if (placement)
         {
             if (placementGhost is not { } ghost || placementMovementObjects is null) return;
             objects = placementMovementObjects;
-            source = ghost.SourceId;
+            sources = [ghost.SourceId];
         }
         else
         {
             var ids = FlagTargets();
-            if (ids.Length != 1 || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
-            source = ids[0];
+            if (ids.Length == 0 || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
+            if (tool is Tool.Fruit or Tool.Slider && !plot.Contains(mouseX, mouseY) && !DistanceEditing) return;
+            sources = ids.ToHashSet();
         }
-        EnsureMovementStates(objects);
+        var selectedObject = placement ? placementGhost : DistanceReadoutObject();
+        EnsureMovementStates(objects, selectedObject?.Kind == CatchObjectKind.TinyDroplet);
         var indices = movementIndices;
-        var selectedObject = placement ? placementGhost : SelectedDistanceObject();
-        int first = Array.FindIndex(indices, i => objects[i].SourceId == source
+        int first = Array.FindIndex(indices, i => sources.Contains(objects[i].SourceId)
             && (selectedObject is null || objects[i].EventIndex == selectedObject.EventIndex));
-        if (first < 0 && selectedObject?.Kind == CatchObjectKind.TinyDroplet)
-            first = Array.FindIndex(indices, i => objects[i].SourceId == source);
         if (first < 0) return;
-        int last = selectedObject is not null ? first : Array.FindLastIndex(indices, i => objects[i].SourceId == source);
-        if (selectedObject?.Kind != CatchObjectKind.TinyDroplet)
-            MovementReadout = (first > 0 ? movementStates[indices[first - 1]].Movement : null,
+        int last = selectedObject is not null ? first : Array.FindLastIndex(indices, i => sources.Contains(objects[i].SourceId));
+        MovementReadout = (first > 0 ? movementStates[indices[first - 1]].Movement : null,
                 movementStates[indices[last]].Movement);
 
         float panelWidth = Math.Min(MovementPanelWidth, plot.Width - 12);

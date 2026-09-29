@@ -141,6 +141,11 @@ internal sealed class EditorControl : Control, IDisposable
         Cursor = new Cursor(View.TimelineResizeCursor || View.PreviewResizeCursor ? StandardCursorType.SizeWestEast : StandardCursorType.Arrow);
         Refresh();
     }
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        View.PointerLeave(); Refresh();
+    }
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         var p = e.GetPosition(this);
@@ -179,5 +184,5 @@ internal sealed class EditorControl : Control, IDisposable
     }
     protected override void OnGotFocus(GotFocusEventArgs e) { base.OnGotFocus(e); View.SetTextInputFocus(true); Refresh(); }
     protected override void OnLostFocus(Avalonia.Interactivity.RoutedEventArgs e) { base.OnLostFocus(e); View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); Refresh(); }
-    public void Dispose() => images.Dispose();
+    public void Dispose() { View.StopFileMonitoring(); images.Dispose(); }
 }

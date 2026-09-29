@@ -20,7 +20,16 @@ public sealed partial class EditorView
         if (!CanSubmitExport) return;
         libraryField = -1;
         if (exportMode == 2) RequestOsuExport?.Invoke(exportName);
-        else RequestWorkspaceExport?.Invoke(exportMode == 1, exportName);
+        else
+        {
+            bool overwrite = exportMode == 1; string name = exportName;
+            if (WorkspaceSession is not null)
+            {
+                syncDifficulty = difficulties[activeDifficulty].Id;
+                RefreshSynchronization(() => RequestWorkspaceExport?.Invoke(overwrite, name));
+            }
+            else RequestWorkspaceExport?.Invoke(overwrite, name);
+        }
     }
 
     private void SelectExportMode(int mode)

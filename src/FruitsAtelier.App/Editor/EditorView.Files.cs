@@ -51,6 +51,14 @@ public sealed partial class EditorView
         sliderBatchTask = null; sliderBatchCancellation = null;
         sliderImportTargets = []; sliderBatchErrors = []; sliderDialogHits.Clear();
         WorkspaceSession = null; resourceErrors = [];
+        if (syncTask is { } retiredSync) _ = retiredSync.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        syncTask = null; afterSynchronization = null; syncReviewRequested = false; syncSearching.Clear();
+        syncStatuses.Clear(); syncMerges.Clear(); syncPage = null; nextSyncCheck = DateTime.MaxValue;
+        syncDifficulty = Guid.Empty; syncPreserveHistory = false;
+        fileSyncPending = fileSearchMissing = false; nextMonitorConfiguration = DateTime.MinValue;
+        syncRetainedReview.Clear();
+        unreadableSyncRetries = 0;
+        syncComparisons.Clear(); syncVisualMerge = null; syncResultPane = null; syncPreviewRevision++;
         resourceSnapshot = null; resourceReferences = null;
         CancelInteraction();
         foreach (var difficulty in difficulties) difficulty.RatingCancellation.Cancel();
@@ -103,15 +111,22 @@ public sealed partial class EditorView
     public bool SwitchDifficulty(int index)
     {
         if (index < 0 || index >= difficulties.Count) return false;
+        if (!syncBypass && WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[index].Id) is { } linked
+            && WorkspaceSynchronization.Target(linked) is { } target && !File.Exists(target)
+            && DifficultySyncState(index) is WorkspaceSyncState.Local or WorkspaceSyncState.Current)
+        {
+            if (!SynchronizationBusy) RefreshSynchronization(quiet: true);
+        }
+        if (!syncBypass && WorkspaceSession is not null && ShowSyncProblem(index)) return false;
         if (index == activeDifficulty) return true;
         if (!PrepareFileOperation()) return false;
-        difficulties[activeDifficulty].Playhead = playhead;
-        difficulties[activeDifficulty].ViewStart = viewStart;
+        double currentPlayhead = playhead;
+        double currentViewStart = viewStart;
         activeDifficulty = index;
         RevealDifficultyTab();
         ResetDifficultyView();
-        playhead = difficulties[index].Playhead;
-        viewStart = difficulties[index].ViewStart;
+        playhead = currentPlayhead;
+        viewStart = currentViewStart;
         RequestDifficultyChanged?.Invoke();
         return true;
     }
@@ -119,6 +134,16 @@ public sealed partial class EditorView
     public bool AddDifficulty(MapDocument? imported = null)
     {
         if (!PrepareFileOperation()) return false;
+        if (imported?.SourcePath is { } source)
+        {
+            int existing = difficulties.FindIndex(d =>
+            {
+                var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(e => e.Id == d.Id);
+                return WorkspaceSynchronization.Paths.Equals(entry is null ? d.History.Document.SourcePath : WorkspaceSynchronization.Target(entry), source);
+            });
+            if (existing >= 0) return SwitchDifficulty(existing);
+            WorkspaceAssociations.EnsureImport(WorkspaceSession, LibrarySettings.Workspace, source);
+        }
         if (difficulties.Count >= 256) { SetNotice(L.Get("project.invalid")); return false; }
         var document = imported?.DeepClone() ?? Document.DeepClone();
         string name = imported is null ? L.Get("project.defaultDifficulty", difficulties.Count + 1)
@@ -135,7 +160,10 @@ public sealed partial class EditorView
             metadata.Lines.Add("BeatmapID:0");
         }
         OsuBeatmapReader.Validate(document);
-        difficulties.Add(new DifficultySession(new ProjectDifficulty { Name = name, Document = document }));
+        var added = new ProjectDifficulty { Name = name, Document = document };
+        difficulties.Add(new DifficultySession(added));
+        if (imported is null && WorkspaceSession is { } workspace)
+            workspace.Manifest.Difficulties.Add(new WorkspaceDifficulty { Id = added.Id, Name = name });
         projectStructureDirty = true;
         PreloadProjectHitsounds();
         bool switched = SwitchDifficulty(difficulties.Count - 1);
@@ -153,6 +181,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
+        if (SynchronizationVisible || SynchronizationBlocksInput) return false;
         if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
         if (!CommitTimingField()) return false;
         if (SliderDialogVisible || ErrorVisible) return false;

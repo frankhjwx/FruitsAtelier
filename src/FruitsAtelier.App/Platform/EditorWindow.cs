@@ -99,10 +99,12 @@ internal sealed partial class EditorWindow : IDisposable
         if (initialPath is not null) FileOperation(() => OpenPath(initialPath));
         if (renderCheck)
         {
+            // Native diagnostics exercise view gestures without saving personal preferences.
+            view.RequestViewPreference = null;
             view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
             // DXGI need not signal frame readiness for an entirely hidden window.
             if (ImmediatePresentation) Native.ShowWindow(hwnd, 4);
-            try { CheckPaintLifecycle(); CheckUpdateRefresh(); CheckDisplayPreference(); }
+            try { CheckDifficultyAudioReset(); CheckPaintLifecycle(); CheckUpdateRefresh(); CheckDisplayPreference(); }
             finally { Native.ShowWindow(hwnd, 0); }
             Diagnostics.RenderCheck.Run(canvas, view, hwnd);
             Native.DestroyWindow(hwnd);
@@ -297,7 +299,7 @@ internal sealed partial class EditorWindow : IDisposable
                 PollUpdates(); PollAudio();
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
                 if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
-                    || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
+                    || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.SynchronizationNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0005: Invalidate(); return 0;
             case 0x02E0: // WM_DPICHANGED
@@ -330,7 +332,11 @@ internal sealed partial class EditorWindow : IDisposable
                 if ((lParam.ToInt64() & 0xffff) == 1)
                 { Native.SetCursor(Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor ? 32644 : 32512))); return 1; }
                 break;
+            case 0x02A3: // WM_MOUSELEAVE
+                view.PointerLeave(); Invalidate(); return 0;
             case 0x0200:
+                var tracking = new Native.MouseTracking { Size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<Native.MouseTracking>(), Flags = 2, Window = window };
+                Native.TrackMouseEvent(ref tracking);
                 view.SetModifiers(Native.Alt, Native.Shift);
                 view.PointerMove(x, y, Native.Shift, Native.Control);
                 Native.SetCursor(Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor ? 32644 : 32512)));
@@ -377,7 +383,7 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0102:
                 if (!Native.Control) view.TextInput((char)wParam);
                 UpdateTitle(); Invalidate(); return 0;
-            case 0x0007: view.SetTextInputFocus(true); Invalidate(); return 0; // WM_SETFOCUS
+            case 0x0007: view.SetTextInputFocus(true); view.CheckFilesOnActivation(); Invalidate(); return 0; // WM_SETFOCUS
             case 0x0008: // WM_KILLFOCUS
                 view.SetTextInputFocus(false);
                 view.CancelInteraction(preserveTestplay: true);
@@ -422,6 +428,7 @@ internal sealed partial class EditorWindow : IDisposable
     {
         if (disposed) return;
         disposed = true;
+        view.StopFileMonitoring();
         updates?.Dispose();
         view.StopTestplay();
         view.ReleaseWaveform();

@@ -272,6 +272,11 @@ internal static class RenderCheck
                 if (!view.IsTestplaying || view.TestplayCombo != 1) throw new InvalidOperationException("Native testplay failed to start or catch fruit.");
                 view.KeyDown(9, false, false); view.KeyDown(9, false, false);
                 if (!view.TestplayAutoplay) throw new InvalidOperationException("Held Tab failed to enable autoplay once.");
+                view.KeyDown(114, false, false); view.KeyDown(114, false, false);
+                if (view.PlaybackSpeed != 1.5) throw new InvalidOperationException("Held F3 failed to switch autoplay speed once.");
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.KeyUp(114); view.KeyDown(114, false, false); view.KeyUp(114);
+                if (view.PlaybackSpeed != 1) throw new InvalidOperationException("F3 failed to restore normal speed.");
                 view.KeyUp(9); view.KeyDown(9, false, false); view.KeyUp(9);
                 if (view.TestplayAutoplay) throw new InvalidOperationException("Tab failed to restore manual control.");
                 view.KeyDown(80, true, false); view.KeyUp(80);
@@ -438,6 +443,15 @@ internal static class RenderCheck
                     float sx = settings.X + 40, sy = settings.Y + 96 + category * 48;
                     view.PointerDown(sx, sy, 0, false, false); view.PointerUp(sx, sy, 0);
                     canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                    if (category == 1)
+                    {
+                        var deadline = DateTime.UtcNow.AddSeconds(20);
+                        while (view.StorageBusy && DateTime.UtcNow < deadline)
+                        { Thread.Sleep(10); canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
+                        if (view.StorageBusy) throw new InvalidOperationException("Native storage accounting did not complete.");
+                        view.Wheel(settings.X + 300, settings.Y + 200, -2400, false);
+                        canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                    }
                     if (category == 3)
                     {
                         for (int channel = 0; channel < 3; channel++)
@@ -587,6 +601,7 @@ internal static class RenderCheck
                 canvas.Resize(1440, 900, 96);
                 Paint();
                 view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom, -2400, false, false, true);
+                view.UpdateTransport(1500, 10000, true, false, false, null, null);
                 Paint();
                 var field = view.PlayfieldBounds;
                 float x = field.X + 240f / 512 * field.Width;
@@ -616,6 +631,40 @@ internal static class RenderCheck
                 view.KeyDown(13, false, false); Paint();
                 view.KeyDown('Z', true, false); Paint();
                 if (Math.Abs(view.Document.Fruits[1].X - 240) > .001) throw new InvalidOperationException("X input undo failed.");
+                var sliderMap = new MapDocument { DurationMs = 6000, IsDemo = false };
+                var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'L', PixelLength = 280 };
+                slider.ControlPoints.AddRange([new(120, 192), new(400, 192)]);
+                sliderMap.ImportedSliders.Add(slider);
+                view.LoadDocument(sliderMap); Paint();
+                view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom, -2400, false, false, true); Paint();
+                var lockButton = view.AssistButtonBounds[6];
+                view.PointerMove(lockButton.X + 10, lockButton.Y + 10, false, false); Paint();
+                view.PointerDown(lockButton.X - 20, lockButton.Y + 16, 0, false, false);
+                view.PointerUp(lockButton.X - 20, lockButton.Y + 16, 0); Paint();
+                if (view.DropletSelectionLocked) throw new InvalidOperationException("Could not unlock native droplet fixture.");
+                var tiny = OsuBeatmapWriter.Serialize(sliderMap).PlayableObjects.First(o => o.Kind == CatchObjectKind.TinyDroplet && o.TimeMs > 1400);
+                view.UpdateTransport(tiny.TimeMs, 6000, true, false, false, null, null); Paint();
+                field = view.PlayfieldBounds;
+                x = field.X + (float)tiny.X / 512 * field.Width;
+                y = view.CanvasPlotBounds.Bottom - (float)((tiny.TimeMs - view.ViewStartMs) * view.PixelsPerMs);
+                view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint();
+                if (view.XCoordinateFieldBounds is not null || view.IsDirty || !sliderMap.ContentEquals(view.Document))
+                    throw new InvalidOperationException("Native droplet readout changed first-click selection or content.");
+                view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint();
+                if (view.XCoordinateFieldBounds is null) throw new InvalidOperationException("Native selected droplet X field is missing.");
+                view.PointerMove(lockButton.X + 10, lockButton.Y + 10, false, false); Paint();
+                view.PointerDown(lockButton.X - 20, lockButton.Y + 16, 0, false, false);
+                view.PointerUp(lockButton.X - 20, lockButton.Y + 16, 0); Paint();
+                view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint();
+                if (!view.DropletSelectionLocked || view.XCoordinateFieldBounds is not null)
+                    throw new InvalidOperationException("Native droplet lock retained child selection.");
+                foreach (bool included in new[] { true, false })
+                {
+                    view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0); Paint();
+                    view.PointerDown(235, 363, 0, false, false); view.PointerUp(235, 363, 0); Paint();
+                    if (view.MovementIncludesTinyDroplets != included || !sliderMap.ContentEquals(view.Document))
+                        throw new InvalidOperationException("Native tiny movement display toggle failed.");
+                }
             }
         }
         finally
@@ -679,6 +728,7 @@ internal static class RenderCheck
         foreach (var size in new[] { (1440, 900), (980, 620) })
         {
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+            SynchronizationRenderCheck.Run(canvas, size.Item1, size.Item2);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             CheckPaletteHints(canvas, view, size.Item1, size.Item2);
             CheckSongSetup(canvas, view, size.Item1, size.Item2);

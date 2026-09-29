@@ -21,6 +21,15 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Workspace storage settings show usage and clear caches without editing maps", StorageSettingsTests.Run),
+    ("Mapping right-click deletes the marquee selection in one undo", MappingSessionTests.RightClickSelection),
+    ("Mapping selection reversal and contextual horizontal nudges", MappingSessionTests.ReverseAndNudge),
+    ("Mapping Snap families and overview volume routing", MappingSessionTests.SnapAndVolume),
+    ("Mapping boundary distances, DS equality and pointer exit", MappingSessionTests.DistanceAndHover),
+    ("Mapping marquee playback and banana timeline resizing", MappingSessionTests.MarqueeAndBanana),
+    ("Mapping independent zoom and Combo preferences", MappingSessionTests.Preferences),
+    ("Mapping Combo visibility and configured dash brightness", MappingSessionTests.TestplayDisplay),
+    ("Clearing internal slider nodes preserves endpoints and batch undo", ClearSliderNodesTests.Run),
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
     ("Legacy slider editing converts silently with atomic drag, insertion and cancellation", ImplicitSliderEditingTests.Run),
     ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),
@@ -51,6 +60,16 @@ var tests = new (string Name, Action Run)[]
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
     ("Workspace-only saves persist before optional Songs export", WorkspaceSaveTests.Run),
+    ("Metadata merge rows share a page and highlight unresolved, retained and selected text", SynchronizationUiTests.MetadataRows),
+    ("Local difficulty deletion reimports osu and preserves edits on cancel or failure", SynchronizationUiTests.DeleteLocalVersion),
+    ("Synchronization UI permits background editing, preserves undo, repairs missing files and resolves objects", SynchronizationUiTests.Run),
+    ("Synchronization canvases use AR and distinguish retained choices from renewed conflicts", SynchronizationUiTests.ArScaleAndDecisions),
+    ("File notifications coalesce and recover through native create rename delete events", WorkspaceFileMonitorTests.Run),
+    ("File notifications synchronize automatically and isolate ongoing conflict review", SynchronizationUiTests.FileNotifications),
+    ("Refreshed synchronization review retains only unchanged choices", SynchronizationUiTests.RefreshedReviewChoices),
+    ("Project library refreshes live difficulties and discovers missing references in background", SynchronizationUiTests.ProjectLibraryChanges),
+    ("Project library keeps separate live source files visible after export", SynchronizationUiTests.ProjectLibraryExportSources),
+    ("Deleted copied difficulties remain missing without prompting duplicate cleanup", SynchronizationUiTests.DeletedCopiesRemainMissing),
     ("Library archive drops preserve Songs and report source/export presence", LibraryImportTests.Run),
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
@@ -62,6 +81,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay bookmark shortcuts edit at the live position", TestplayTests.BookmarksDuringTestplay),
     ("Testplay movement, combo, hyperdash and facing", TestplayTests.MovementAndJudgement),
     ("Testplay autoplay notices, manual input and focus persistence", TestplayTests.AutoplaySwitching),
+    ("Testplay autoplay speed switching and localized display", TestplayTests.AutoplaySpeed),
     ("Catch rotations, banana arrival transforms and combo colours", TestplayTests.VisualTransformsAndColours),
     ("Unskinned Catch objects keep dark map colours bright", FallbackSkinTests.BrightComboColour),
     ("Testplay Escape returns to editor without repeated navigation", TestplayTests.EscapeReturnsToEditor),
@@ -92,6 +112,7 @@ var tests = new (string Name, Action Run)[]
     ("DS edits selected slider heads, tails and droplets", DistanceEditingTests.SliderPoints),
     ("Movement DS labels use base SV and avoid collisions", DistanceEditingTests.Labels),
     ("Movement Analysis toggles all four connection colours without editing content", AssistToolsTests.MovementAnalysis),
+    ("Movement Analysis optionally includes tiny droplets without editing content", AssistToolsTests.TinyMovementDisplay),
     ("Floating movement panel follows placement, selection, dragging and language", AssistToolsTests.MovementOverlay),
     ("Distance spacing placement, persistence, Alt and undo", AssistToolsTests.SpacingAndPlacement),
     ("Distance readouts, slider tails, base SV and layout", AssistToolsTests.DistanceRules),
@@ -135,6 +156,9 @@ var tests = new (string Name, Action Run)[]
     ("Legacy insertion, deletion and double-click segmentation are undoable", SliderModeInteractionTests.InsertDeleteAndBoundary),
     ("Lazer placement and selected-slider controls avoid extra mode transitions", SliderModeInteractionTests.LazerPlacementAndSelection),
     ("FSlider hover offers both editing modes without changing content", SliderModeInteractionTests.GlobalModeMenu),
+    ("Distance preset badges support sorted right-click deletion", DistanceSnapPresetTests.DeletePresetBadge),
+    ("Placement DS readout retains authored fractional precision", DistanceSnapPresetTests.PlacementReadoutPrecision),
+    ("Collinear distance snap respects grid settings, dragging and configuration", DistanceSnapPresetTests.Collinear),
     ("Multiple distance snaps include zero and persist per-map configuration", DistanceSnapPresetTests.Snapping),
     ("Slider large droplets follow distance snap while drawing", DistanceSnapPresetTests.SliderEvents),
     ("Segmented droplets snap without requiring matching presets on both sides", SliderDistanceDragTests.SegmentedDroplet),
@@ -228,7 +252,7 @@ var tests = new (string Name, Action Run)[]
     ("Playing timeline marquee anchors time and retains offscreen selection", ObjectTimelineTests.PlaybackMarquee),
     ("Beat colors and widths agree on canvas and timeline across divisors", ObjectTimelineTests.GridColors),
     ("Playback speed buttons work in both languages without editing content", ObjectTimelineTests.SpeedControls),
-    ("Canvas defaults and reset use 60% zoom while enforcing minimum width", CanvasZoomTests.DefaultsAndReset),
+    ("Canvas starts at 60% and retains remembered zoom while enforcing minimum width", CanvasZoomTests.DefaultsAndReset),
     ("Zoom slider and wheel share scale, bounds and content isolation", CanvasZoomTests.SliderAndWheel),
     ("Zoom slider fits both languages and preserves playback following", CanvasZoomTests.PlaybackAndLanguages),
     ("Alt-wheel keeps pointer time fixed while scaling object positions", ZoomPaintedAnchor),
@@ -660,9 +684,10 @@ static void ResetCanvasViewport()
     Near(ui.View.PlayheadMs - ui.Plot.Height * 0.25 / ui.View.PixelsPerMs, ui.View.ViewStartMs);
     double restoredScale = ui.View.PixelsPerMs;
     var plot = ui.Plot;
-    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, -120, false, false, true);
+    ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, 120, false, false, true);
     ui.Paint();
-    True(ui.View.PixelsPerMs < restoredScale, "Manual zoom could not leave AR scale.");
+    True(ui.View.PixelsPerMs > restoredScale, "Manual zoom could not leave AR scale.");
+    restoredScale = ui.View.PixelsPerMs;
     ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.resetView"));
     Near(restoredScale, ui.View.PixelsPerMs);
     Near(ui.View.PlayheadMs - ui.Plot.Height * 0.25 / ui.View.PixelsPerMs, ui.View.ViewStartMs);

@@ -7,6 +7,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private Rect objectTimeline;
+    private readonly List<BeatGridLine> timelineGrid = [];
     private double objectTimelineScale = .18;
     private readonly List<(Guid Id, double Time, Rect Bounds)> timelineObjects = [];
     private CatchConversionResult? timelineConversion;
@@ -24,15 +25,23 @@ public sealed partial class EditorView
     private bool IsTimelineTail((Guid Id, double Time, Rect Bounds) item, float x, float y)
         => item.Bounds.Contains(x, y) && Math.Abs(x - (item.Bounds.Right - 19)) <= 10
         && (Document.Tracks.Any(t => t.Id == item.Id && t.Nodes.Count > 1)
-            || Document.ImportedSliders.Any(s => s.Id == item.Id));
+            || Document.ImportedSliders.Any(s => s.Id == item.Id)
+            || Document.BananaShowers.Any(s => s.Id == item.Id));
     public bool TimelineResizeCursor => !TimeJumpVisible && !LibraryVisible && !ExportVisible && !SliderDialogVisible && !DiscardConfirmationVisible && !ErrorVisible
         && (drag is DragKind.TimelineTail or DragKind.BreakEdge || menu < 0 && contextItems.Count == 0 && objectTimeline.Contains(mouseX, mouseY)
             && (BreakEdgeAt(mouseX, mouseY) is not null || timelineObjects.AsEnumerable().Reverse().Where(i => i.Bounds.Contains(mouseX, mouseY)).Take(1)
                 .Any(i => IsTimelineTail(i, mouseX, mouseY))));
 
-    private void MoveTimelineTail(float x)
+    private void MoveTimelineTail(float x, bool shift)
     {
         double end = tailEnd + (x - dragStartX) / objectTimelineScale;
+        if (Document.BananaShowers.FirstOrDefault(s => s.Id == tailId) is { } shower)
+        {
+            if (snap && !shift) end = TimingMap.Snap(Document, end, divisor);
+            shower.EndTimeMs = Math.Clamp(end, Math.Min(EditableDurationMs, tailStart + .001), EditableDurationMs);
+            Document.DurationMs = Math.Max(Document.DurationMs, shower.EndTimeMs);
+            return;
+        }
         int spans = (int)Math.Clamp(Math.Round((end - tailStart) / tailSpanDuration, MidpointRounding.AwayFromZero),
             1, Math.Max(1, Math.Min(9000, Math.Floor((int.MaxValue - tailStart) / tailSpanDuration))));
         if (Document.Tracks.FirstOrDefault(t => t.Id == tailId) is { } track) track.SpanCount = spans;
@@ -194,6 +203,7 @@ public sealed partial class EditorView
     public void SetPlaybackSpeed(double speed)
     {
         if (!double.IsFinite(speed) || speed < .1 || speed > 1.5 || speed == PlaybackSpeed) return;
+        testplay?.SetPlaybackSpeed(speed);
         PlaybackSpeed = speed;
         RequestPlaybackSpeed?.Invoke(speed);
     }
@@ -253,7 +263,8 @@ public sealed partial class EditorView
             double a = Math.Max(start, from), b = Math.Min(end, to);
             if (b > a) c.Fill(new(X(a), objectTimeline.Y, X(b) - X(a), objectTimeline.Height - 1), color, 0, opacity);
         }
-        foreach (var tick in renderedTiming!.Grid(Math.Max(0, start), Math.Max(0, end), divisor))
+        renderedTiming!.FillGrid(Math.Max(0, start), Math.Max(0, end), divisor, timelineGrid);
+        foreach (var tick in timelineGrid)
         {
             if (!tick.IsBeat && renderedTiming.At(tick.TimeMs).BeatLengthMs / tick.Subdivision * objectTimelineScale < 5) continue;
             var style = GridStyle(tick);
@@ -345,7 +356,12 @@ public sealed partial class EditorView
         c.Unclip();
     }
 
-    private void ZoomObjectTimeline(double factor) => objectTimelineScale = Math.Clamp(objectTimelineScale * factor, .025, 1.5);
+    private void ZoomObjectTimeline(double factor)
+    {
+        objectTimelineScale = Math.Clamp(objectTimelineScale * factor, .025, 1.5);
+        LibrarySettings.ObjectTimelineScale = objectTimelineScale;
+        RequestViewPreference?.Invoke();
+    }
 
     private void BeginObjectTimeline(float x, float y, bool toggle)
     {
@@ -360,13 +376,13 @@ public sealed partial class EditorView
             {
                 var source = timelineSources.First(o => o.Id == item.Id);
                 int spans = Document.Tracks.FirstOrDefault(t => t.Id == item.Id)?.SpanCount
-                    ?? Document.ImportedSliders.First(s => s.Id == item.Id).SpanCount;
+                    ?? Document.ImportedSliders.FirstOrDefault(s => s.Id == item.Id)?.SpanCount ?? 1;
                 tailOriginalLine = Document.ImportedSliders.FirstOrDefault(s => s.Id == item.Id)?.OriginalLine;
                 tailId = item.Id; tailStart = source.Start; tailEnd = source.End;
                 tailSpanDuration = (source.End - source.Start) / spans;
                 if (tailSpanDuration > 0)
                 {
-                    history.Begin(L.Get("editor.command.adjustReverse"));
+                    history.Begin(L.Get(source.IsBanana ? "editor.command.resizeBanana" : "editor.command.adjustReverse"));
                     drag = DragKind.TimelineTail; BeginPointerDrag(x, y);
                 }
             }

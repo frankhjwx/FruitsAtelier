@@ -21,6 +21,7 @@ public static class WorkspaceExport
             if (target is null || expected is null || !File.Exists(target) || !WorkspaceProject.Within(songs, target))
                 throw new IOException(L.Get("library.noExportTarget"));
             if (WorkspaceProject.Hash(target) != expected) throw new IOException(L.Get("library.exportConflict", target));
+            WorkspaceAssociations.EnsureOwner(session, difficulty.Id, target);
         }
         else
         {
@@ -39,6 +40,7 @@ public static class WorkspaceExport
     public static void Commit(WorkspaceSession session, WorkspaceExportPlan plan, bool updateAssociation = true)
     {
         WorkspaceProject.RejectLinks(plan.Target);
+        WorkspaceAssociations.EnsureOwner(session, plan.DifficultyId, plan.Target);
         if (plan.ExpectedHash is null)
         {
             // CreateNew prevents a race from turning a new-difficulty export into an overwrite.
@@ -63,7 +65,9 @@ public static class WorkspaceExport
         if (updateAssociation)
         {
             var entry = session.Manifest.Difficulties.Single(d => d.Id == plan.DifficultyId);
-            entry.ExportTarget = plan.Target; entry.ExportHash = WorkspaceProject.Hash(plan.Target);
+            entry.ExportTarget = plan.Target; entry.ExportHash = WorkspaceSynchronization.Digest(plan.Output.Text);
+            entry.Source = plan.Target; entry.SourceHash = entry.ExportHash;
+            entry.Sync = WorkspaceSynchronization.Capture(plan.Target, plan.Document, session.Directory, plan.Output.Text, plan.Output.ObjectSources, entry.Sync);
         }
     }
     private static void SetMetadata(MapDocument document, string key, string value)

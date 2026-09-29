@@ -102,13 +102,15 @@ internal static class EditableSliderTests
         var actual = CatchStreamConverter.Convert(doc, true);
         var plain = CatchStreamConverter.Convert(doc, false);
         Valid(actual); Valid(plain);
-        True(!actual.Sliders[0].TinyCompensationApplied, "Conflicting repeat offsets were reported as compensated.");
+        True(actual.Sliders[0].TinyCompensationApplied && !actual.Sliders[0].TinyCompensationSucceeded,
+            "Conflicting repeat offsets must receive partial compensation.");
         True(actual.Diagnostics.Count == 0, "A compatible repeat fallback exposed an internal compensation warning.");
-        True(actual.Objects.SequenceEqual(plain.Objects), "Repeat fallback fabricated tiny positions or changed the RNG sequence.");
+        True(actual.MaxTinyError < plain.MaxTinyError, "Partial compensation did not reduce the worst tiny error.");
+        CompareSequence(plain.Objects, actual.Objects);
         track.CompensateTinyDroplets = true;
         var required = CatchStreamConverter.Convert(doc, true);
         Valid(required);
-        True(required.Objects.SequenceEqual(plain.Objects), "Saved tiny alignment must allow repeat fallback.");
+        True(required.Objects.SequenceEqual(actual.Objects), "Saved tiny alignment changed partial compensation.");
         True(track.CompensateTinyDroplets == true, "Generation mutated the saved preference.");
         var export = OsuBeatmapWriter.Serialize(doc, true);
         True(export.ReadBack.ImportedSliders.Single().SpanCount == 3, "Fallback export lost repeats.");

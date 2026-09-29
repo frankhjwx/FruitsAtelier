@@ -26,7 +26,7 @@ public static class HyperDashCalculator
         return starts;
     }
 
-    public static HyperDashState[] Calculate(IReadOnlyList<ConvertedCatchObject> objects, double circleSize)
+    public static HyperDashState[] Calculate(IReadOnlyList<ConvertedCatchObject> objects, double circleSize, bool includeTinyDroplets = false)
     {
         ArgumentNullException.ThrowIfNull(objects);
         double standLimit = CatchSize.CatchWidth(circleSize) / 2;
@@ -45,7 +45,8 @@ public static class HyperDashCalculator
 
         // Stable sorting preserves source order for simultaneous objects. Prefix objects retain excess movement context.
         var indices = Enumerable.Range(0, objects.Count)
-            .Where(i => objects[i].Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet)
+            .Where(i => objects[i].Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet
+                || includeTinyDroplets && objects[i].Kind == CatchObjectKind.TinyDroplet)
             .OrderBy(i => objects[i].TimeMs).ToArray();
         int lastDirection = 0;
         double lastExcess = halfCatcherWidth;

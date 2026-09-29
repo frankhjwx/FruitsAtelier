@@ -7,20 +7,20 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private void DrawCatchObject(ICanvas c, ConvertedCatchObject item, float x, float y, float fieldWidth, float opacity = 1, double? circleSize = null, HashSet<(Guid SourceId, int EventIndex)>? hyperStarts = null, bool animated = false, bool caught = false)
+    private void DrawCatchObject(ICanvas c, ConvertedCatchObject item, float x, float y, float fieldWidth, float opacity = 1, double? circleSize = null, HashSet<(Guid SourceId, int EventIndex)>? hyperStarts = null, bool animated = false, bool caught = false, uint? colourOverride = null, int? skinIndexOverride = null)
     {
         float scale = fieldWidth / 512;
         double cs = circleSize ?? Document.CircleSize;
         float diameter = CatchSize.FruitDiameter(cs) * scale;
         var visual = animated ? CatchObjectVisual.At(item, playhead, PreviewApproachRate, caught) : new CatchObjectVisual(0, 1);
         diameter *= visual.Scale;
-        uint colour = ObjectColour(item);
+        uint colour = colourOverride ?? ObjectColour(item);
         bool hyper = (hyperStarts ?? hyperdashObjects).Contains((item.SourceId, item.EventIndex));
         uint hyperColour = HyperDashFruitColour;
         var kind = SkinObjectKind(item.Kind);
         if (skin is not null)
         {
-            int skinIndex = skinIndices.GetValueOrDefault(item.SourceId);
+            int skinIndex = skinIndexOverride ?? skinIndices.GetValueOrDefault(item.SourceId);
             if (skin.Draw(c, kind, skinIndex, x, y, diameter, colour, opacity, visual.Rotation, hyper ? hyperColour : null)) return;
         }
         float radius = (item.Kind switch { CatchObjectKind.Droplet => CatchSize.DefaultDropletRadius(cs), CatchObjectKind.TinyDroplet => CatchSize.DefaultTinyDropletRadius(cs), CatchObjectKind.Banana => CatchSize.BananaRadius(cs), _ => CatchSize.FruitRadius(cs) }) * scale;

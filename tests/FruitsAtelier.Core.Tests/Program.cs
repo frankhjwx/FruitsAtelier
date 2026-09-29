@@ -9,6 +9,9 @@ if (args.Length == 2 && args[0] == "--preserve-slider-positions")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Project files support 128 MiB and reject oversized UTF-8 data", ProjectSizeLimitTests.Run),
+    ("Workspace storage protects references and recovery while pruning history and rebuilding caches", WorkspaceStorageTests.Run),
+    ("Reusable beat grids match reference boundaries and allocate no warm frame buffers", GridBufferTests.Equivalence),
     ("Timing edits transform sections, FSliders, metadata and exported durations", TimingEditingTests.Run),
     ("Waveform preserves stereo transients across chunks and zoom levels", WaveformTests.Run),
     ("Slider streams persist, sample repeats and match exported fruits", SliderStreamTests.ConversionAndPersistence),
@@ -68,7 +71,8 @@ var tests = new (string Name, Action Run)[]
     ("Mixed Bezier and straight segments share one generated slider", EditableSliderTests.MixedSegments),
     ("Mixed-segment splitting preserves shape and validates active handles", EditableSliderTests.MixedSplitAndValidation),
     ("Editable repeats preserve one parent and one fruit per turnaround", EditableSliderTests.RepeatAuthoring),
-    ("Conflicting repeated tiny targets use a silent compatibility fallback", EditableSliderTests.RepeatTinyConflict),
+    ("Conflicting repeated tiny targets retain silent partial compensation", EditableSliderTests.RepeatTinyConflict),
+    ("Speed-limited tiny compensation preserves export, RNG and history", PartialCompensationTests.Run),
     ("Legacy path families convert to FSliders without losing repeat events", EditableSliderTests.ImportToEditable),
     ("Imported editing is undoable and failures preserve source state", EditableSliderTests.ConversionHistoryAndFailure),
     ("Corner insertion clears inactive line handles without touching other segments", CurvePointEditingTests.InsertLinearCorner),

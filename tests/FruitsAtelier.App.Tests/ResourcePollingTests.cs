@@ -24,7 +24,8 @@ internal static class ResourcePollingTests
             view.LoadWorkspace(new(root, new WorkspaceManifest { Name = project.Name }, project));
             var canvas = new RecordingCanvas();
             void Paint() { canvas.Clear(); view.Render(canvas, 1440, 900); }
-            bool Shows(string path) => canvas.Texts.Any(t => t.Value.Contains(path));
+            bool Missing(string path) => ((IReadOnlyList<string>)typeof(EditorView)
+                .GetField("resourceErrors", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(view)!).Contains(path);
             Task Queue()
             {
                 typeof(EditorView).GetField("nextResourceCheck", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(view, DateTime.MinValue);
@@ -32,26 +33,27 @@ internal static class ResourcePollingTests
                 return (Task)typeof(EditorView).GetField("resourceCheckTask", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(view)!;
             }
             void Finish(Task task) { Check(task.Wait(TimeSpan.FromSeconds(5)), "Resource poll did not finish."); Paint(); }
-            Paint(); Check(!Shows(image), "Existing background reported missing.");
+            Paint(); Check(!Missing(image), "Existing background reported missing.");
             Check(!canvas.Texts.Any(t => t.Value.Contains("missing-")), "Optional video, storyboard or sample showed a persistent error.");
-            File.Delete(image); Finish(Queue()); Check(!Shows(image), "Missing optional background must not show a persistent error.");
-            File.WriteAllText(image, "restored"); Finish(Queue()); Check(!Shows(image), "Restored background remained missing.");
-            File.Delete(audio); Finish(Queue()); Check(Shows(audio), "Missing song audio was not detected from cached references.");
-            File.WriteAllText(audio, "restored"); Finish(Queue()); Check(!Shows(audio), "Restored song audio remained missing.");
+            File.Delete(image); Finish(Queue()); Check(!Missing(image), "Missing optional background must not show a persistent error.");
+            File.WriteAllText(image, "restored"); Finish(Queue()); Check(!Missing(image), "Restored background remained missing.");
+            File.Delete(audio); Finish(Queue()); Check(Missing(audio), "Missing song audio was not detected from cached references.");
+            Check(!canvas.Texts.Any(t => t.Value.Contains(audio)), "Missing resources must not create a persistent editor banner.");
+            File.WriteAllText(audio, "restored"); Finish(Queue()); Check(!Missing(audio), "Restored song audio remained missing.");
 
             string oldAudio = Path.Combine(root, "old-missing.mp3"), newAudio = Path.Combine(root, "new-missing.mp3");
             view.ChangeAudioPath(oldAudio);
             var stale = Queue(); Check(stale.Wait(TimeSpan.FromSeconds(5)), "Old resource poll did not finish.");
             view.ChangeAudioPath(newAudio); Paint();
-            Check(!Shows(oldAudio), "A result for an older edit was published.");
+            Check(!Missing(oldAudio), "A result for an older edit was published.");
             var pending = (Task)typeof(EditorView).GetField("resourceCheckTask", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(view)!;
-            Finish(pending); Check(Shows(newAudio), "The current edit was not checked.");
+            Finish(pending); Check(Missing(newAudio), "The current edit was not checked.");
 
             stale = Queue(); Check(stale.Wait(TimeSpan.FromSeconds(5)), "Project resource poll did not finish.");
             view.LoadWorkspace(new(root, new WorkspaceManifest { Name = project.Name }, project)); Paint();
-            Check(!Shows(newAudio), "An old project result was published after switching projects.");
+            Check(!Missing(newAudio), "An old project result was published after switching projects.");
             pending = (Task)typeof(EditorView).GetField("resourceCheckTask", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(view)!;
-            Finish(pending); Check(!view.IsDirty && !Shows(newAudio), "Resource checking changed the new project.");
+            Finish(pending); Check(!view.IsDirty && !Missing(newAudio), "Resource checking changed the new project.");
         }
         finally { Directory.Delete(root, true); }
     }

@@ -83,11 +83,8 @@ public static class CatchStreamConverter
                     cache?.Store(track, null, null, before, rng, null, stream);
                     continue;
                 }
-                // Repeats share one geometric path but receive independent tiny offsets.
-                // A saved alignment preference must not prohibit their compatibility fallback.
-                bool requireCompensation = track.CompensateTinyDroplets == true && track.SpanCount == 1;
                 var converted = ConvertTrack(document, track, track.CompensateTinyDroplets ?? compensateTinyDroplets,
-                    requireCompensation, ref rng);
+                    ref rng);
                 sliders.Add(converted.Slider);
                 objects.AddRange(converted.Objects);
                 cache?.Store(track, null, null, before, rng, converted.Slider, converted.Objects);
@@ -119,12 +116,16 @@ public static class CatchStreamConverter
     }
 
     private static TrackConversion ConvertTrack(MapDocument document, CurveTrack track, bool requestCompensation,
-        bool requireCompensation, ref CatchLegacyRandom globalRng)
+        ref CatchLegacyRandom globalRng)
     {
         double start = track.Nodes[0].TimeMs;
         double duration = track.Nodes[^1].TimeMs - start;
         var timing = TimingMap.At(document, start);
         double sv = timing.SliderVelocityMultiplier;
+        // Inherited beat lengths round to float; leave room below the path-length limit.
+        double maximumSv = Math.Min(LegacyCatchRules.MaximumSliderVelocityMultiplier,
+            Math.Max(sv, LegacyCatchRules.MaximumPathLength * timing.BeatLengthMs
+                / (duration * 100 * document.SliderMultiplier) * (1 - 1e-7)));
         bool compensate = requestCompensation;
 
         for (int attempt = 0; attempt < 18; attempt++)
@@ -142,15 +143,14 @@ public static class CatchStreamConverter
             LegacyCatchRules.ApplyRandomSequence(nested, ref candidateRng);
             List<MapPoint> samples;
             try { samples = Samples(track, nested, compensate); }
-            catch (TinyConstraintException) when (compensate && !requireCompensation)
+            catch (TinyConstraintException) when (compensate)
             {
-                compensate = false;
-                sv = timing.SliderVelocityMultiplier;
-                continue;
-            }
-            catch (TinyConstraintException error) when (compensate)
-            {
-                throw new CatchConversionException(L.Get("core.conversion.tinyRequired", error.Message));
+                if (sv < maximumSv)
+                {
+                    sv = maximumSv;
+                    continue;
+                }
+                samples = TinyCompensationFitter.Fit(track, nested, velocity);
             }
 
             double requiredVelocity = 0;
@@ -159,22 +159,18 @@ public static class CatchStreamConverter
 
             if (requiredVelocity > velocity * (1 + 1e-12))
             {
-                if (sv < LegacyCatchRules.MaximumSliderVelocityMultiplier)
+                if (sv < maximumSv)
                 {
                     double requestedSv = requiredVelocity * timing.BeatLengthMs / (100 * document.SliderMultiplier);
-                    sv = Math.Min(LegacyCatchRules.MaximumSliderVelocityMultiplier,
+                    sv = Math.Min(maximumSv,
                         Math.Max(sv * 1.01, Math.Ceiling(requestedSv * 1.01 * 1_000_000) / 1_000_000));
                     continue;
                 }
                 if (compensate)
                 {
-                    if (requireCompensation)
-                        throw new CatchConversionException(L.Get("core.conversion.tinyRequired", L.Get("core.conversion.tinySpeedFallback")));
-                    compensate = false;
-                    sv = timing.SliderVelocityMultiplier;
-                    continue;
+                    samples = TinyCompensationFitter.Fit(track, nested, velocity);
                 }
-                throw new CatchConversionException(L.Get("core.conversion.speedLimit", velocity, requiredVelocity));
+                else throw new CatchConversionException(L.Get("core.conversion.speedLimit", velocity, requiredVelocity));
             }
 
             var geometry = SliderGeometry.Create(samples, velocity);
@@ -195,8 +191,6 @@ public static class CatchStreamConverter
                 .Select(o => Math.Abs(o.X - o.TargetX)).DefaultIfEmpty().Max();
             if (tickError > AlignmentTolerance)
                 throw new CatchConversionException(L.Get("core.conversion.tickError", tickError));
-            if (requireCompensation && tinyError > AlignmentTolerance)
-                throw new CatchConversionException(L.Get("core.conversion.tinyRequired", L.Get("core.conversion.tinyBoundary")));
 
             globalRng = candidateRng;
             return new(new GeneratedSlider

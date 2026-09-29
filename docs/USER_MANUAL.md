@@ -79,7 +79,7 @@ Double-click an FSlider, or select it and click its controls, to edit its points
 
 Hold the mouse button on an imported slider until its actions appear, then choose **Convert to FSlider** to edit its shape. **Edit > Convert all sliders to FSliders** converts the active difficulty. Conversion can approximate the imported path; undo restores the original.
 
-**Ctrl+= / Ctrl+-** adds or removes a reverse. **Ctrl+G** reverses path direction. **Ctrl+J** extends a selected FSlider to the pointer at a time after its final end. Repeated spans share one base path, so extending it lengthens every span.
+**Ctrl+= / Ctrl+-** adds or removes a reverse. **Ctrl+G** reverses selection timing and each selected slider path. A single FSlider reverses its own path while keeping its interval and repeats. **Ctrl+J** extends a selected FSlider to the pointer at a time after its final end. Repeated spans share one base path, so extending it lengthens every span.
 
 ### Fruit streams and snapping
 
@@ -100,9 +100,11 @@ Open **Catch Preview** using the button on the right edge of the canvas. Drag th
 Press **F5** to testplay using the selected preview mod and speed. Testplay immediately begins one second before the current position by default; change the lead-in from 0 to 5 seconds in **Settings > Testplay keys**. A lead-in that reaches before the song starts begins at zero. Esc returns to the selected position. Move with **Left / Right**, and hold **Shift** to dash. Catch fruits and droplets to build combo. **Tab** toggles autoplay; **Ctrl+P** pauses or resumes.
 Press **Ctrl+B** during testplay to add a bookmark at the current position. The shortcut appears with the other testplay controls in the upper-left corner.
 
+During autoplay, press **F3** to switch between **1.0x** and **1.5x**. If the current speed is neither, the first press selects 1.0x. The upper-left corner shows the current speed on its own line and includes the F3 instruction.
+
 **F1 / Esc** exits to the testplay start; **F2** exits at the current position. Losing window focus releases held keys while playback continues. A movement or dash key exits autoplay; a centered banner briefly announces entering or leaving autoplay. Testplay does not change your objects or undo history. Change movement and dash bindings in **Library > Settings**.
 
-Bindings accept letters, digits, punctuation (including `;`, `'`, `[` and `]`), arrow and navigation keys, Backspace, Enter, Space, Shift, Ctrl, Alt, lock keys, numpad keys, and F3–F24. Esc cancels capture; Tab, F1 and F2 remain reserved for testplay controls. Windows/Command, media and other system keys are not offered. Left and right modifier keys share a binding, as do main and numpad Enter. Numpad input follows Num Lock; punctuation labels use US keyboard names. OS shortcuts and Ctrl+P retain their normal behavior.
+Bindings accept letters, digits, punctuation (including `;`, `'`, `[` and `]`), arrow and navigation keys, Backspace, Enter, Space, Shift, Ctrl, Alt, lock keys, numpad keys, and F4–F24. Esc cancels capture; Tab and F1–F3 are reserved for testplay controls. Windows/Command, media and other system keys are not offered. Left and right modifier keys share a binding, as do main and numpad Enter. Numpad input follows Num Lock; punctuation labels use US keyboard names. OS shortcuts and Ctrl+P retain their normal behavior.
 
 ### Difficulties and project files
 
@@ -146,8 +148,8 @@ Shortcuts below apply while editing, outside text fields and dialogs. On macOS, 
 | Delete | Delete selected objects or edited points. |
 | Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z | Undo / redo / redo. |
 | Ctrl+H | Flip selected objects horizontally. |
-| Ctrl+Left / Ctrl+Right | Seek to the previous / next bookmark. |
-| Ctrl+Shift+Left / Ctrl+Shift+Right | Move selected objects one horizontal unit. |
+| Ctrl+Left / Ctrl+Right | Move a Compose selection by one X unit; otherwise seek the previous / next bookmark. |
+| Ctrl+Shift+Left / Ctrl+Shift+Right | Move selected objects by the horizontal grid step. |
 | J / K | Move selection back / forward one beat subdivision. |
 | Esc | Cancel the current action; otherwise return to Library. |
 
@@ -165,8 +167,9 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Ctrl+Up / Ctrl+Down | Increase / decrease playback speed by 25 percentage points (10%–150%). |
 | Ctrl+Shift+Up / Ctrl+Shift+Down | Increase / decrease playback speed by 5 percentage points. |
 | Wheel / middle-drag | Wheel up moves the playhead and canvas earlier; down moves both later by the same relative amount. Middle-drag pans the canvas. |
-| Ctrl+wheel | Change Snap across all supported subdivisions. |
+| Ctrl+wheel | Double/halve Snap within the current supported family, stopping at boundaries. |
 | Alt+wheel (canvas) | Zoom the canvas. |
+| Alt+wheel (bottom timeline) | Adjust the current volume channel. |
 | Alt+wheel (upper timeline) | Zoom the object timeline. |
 | Shift+wheel | Seek four times as far. |
 | Ctrl+Alt+wheel (canvas / upper timeline) | Cycle placement tools. |
@@ -186,7 +189,7 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Ctrl+Shift+I | Insert a point on the curve under the pointer. |
 | Ctrl+L | Toggle the selected point between straight and curved. |
 | Ctrl+= / Ctrl+- | Add / remove a reverse. |
-| Ctrl+G | Reverse the selected FSlider's path direction. |
+| Ctrl+G | Reverse selection timing and each selected slider path. |
 | Ctrl+J | Extend the selected FSlider to the pointer. |
 | Ctrl+Shift+F | Convert sliders to a fruit stream, or change stream snap. |
 

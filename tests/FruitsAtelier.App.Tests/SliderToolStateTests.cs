@@ -83,7 +83,7 @@ internal static class SliderToolStateTests
             var fruit = new Fruit { TimeMs = 2500, X = 400 };
             var otherFruit = new Fruit { TimeMs = 2750, X = 100 };
             ui.View.Document.Fruits.AddRange([fruit, otherFruit]); ui.Paint();
-            ui.ClickMap(2500, 400); ui.Key(39, ctrl: true, shift: true);
+            ui.ClickMap(2500, 400); ui.Key(39, ctrl: true);
             Check(ui.View.Document.Fruits.Single(f => f.Id == fruit.Id).X == 401, "Fixture did not move its fruit.");
             ui.EditTrack(track.Id); ui.ClickMap(1500, 250);
             ui.Key('Z', ctrl: true);

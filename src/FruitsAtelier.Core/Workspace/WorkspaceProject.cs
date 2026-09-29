@@ -25,6 +25,9 @@ public sealed class WorkspaceDifficulty
     public string? SourceHash { get; set; }
     public string? ExportTarget { get; set; }
     public string? ExportHash { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public WorkspaceSyncBaseline? Sync { get; set; }
+    public string? SyncFile { get; set; }
 }
 
 public sealed record WorkspaceSession(string Directory, WorkspaceManifest Manifest, BeatmapProject Project)
@@ -37,6 +40,19 @@ public static class WorkspaceProject
 {
     internal static readonly object Gate = new();
     public const string ManifestName = "project.catchdiff";
+    public static WorkspaceManifest SnapshotManifest(WorkspaceManifest manifest) => new()
+    {
+        SchemaVersion = manifest.SchemaVersion, Id = manifest.Id, Name = manifest.Name, SongsRoot = manifest.SongsRoot,
+        SourceDirectory = manifest.SourceDirectory, ExternalSourceDirectory = manifest.ExternalSourceDirectory,
+        Difficulties = manifest.Difficulties.Select(e => new WorkspaceDifficulty
+        {
+            Id = e.Id, Name = e.Name, File = e.File, Source = e.Source, SourceHash = e.SourceHash,
+            ExportTarget = e.ExportTarget, ExportHash = e.ExportHash, SyncFile = e.SyncFile,
+            Sync = e.Sync is not { } s ? null : new WorkspaceSyncBaseline { Path = s.Path, Text = s.Text, Authoring = s.Authoring,
+                AudioHash = s.AudioHash, AuthoringAudioHash = s.AuthoringAudioHash, ObjectSources = s.ObjectSources.ToList(), PreviousPaths = s.PreviousPaths.ToList(), LocalOverrides = s.LocalOverrides.ToList(),
+                RetainedObjects = s.RetainedObjects.Select(r => new WorkspaceRetainedObjects(r.Sources.ToList(), r.ExternalLines.ToList())).ToList(), RetainedObjectsRecorded = s.RetainedObjectsRecorded }
+        }).ToList()
+    };
     private static readonly JsonSerializerOptions json = new() { WriteIndented = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow };
 
     public static string SafeName(string value)
@@ -113,6 +129,8 @@ public static class WorkspaceProject
     {
         directory = Path.GetFullPath(directory);
         Recover(directory);
+        WorkspaceAssociations.RecoverDeletion(directory);
+        WorkspaceExportRecovery.Recover(directory);
         RejectLinks(directory);
         var manifest = ReadManifest(directory);
         var project = new BeatmapProject { Name = manifest.Name };
@@ -127,11 +145,11 @@ public static class WorkspaceProject
         return new(directory, manifest, project);
     }
 
-    public static WorkspaceManifest ReadManifest(string directory)
+    public static WorkspaceManifest ReadManifest(string directory, bool includeSync = true)
     {
         string path = Path.Combine(directory, ManifestName);
         RejectLinks(path);
-        if (new FileInfo(path).Length > OsuBeatmapReader.MaximumFileBytes) throw new InvalidDataException(L.Get("core.project.readLimit"));
+        if (new FileInfo(path).Length > ProjectSerializer.MaximumFileBytes) throw new InvalidDataException(L.Get("core.project.readLimit"));
         var manifest = JsonSerializer.Deserialize<WorkspaceManifest>(System.IO.File.ReadAllText(path), json);
         if (manifest is null || manifest.SchemaVersion != 1 || manifest.Id == Guid.Empty || string.IsNullOrWhiteSpace(manifest.Name)
             || manifest.Difficulties is null || manifest.Difficulties.Count is < 1 or > 256
@@ -139,6 +157,14 @@ public static class WorkspaceProject
             || manifest.Difficulties.Select(d => d.Id).Distinct().Count() != manifest.Difficulties.Count
             || manifest.Difficulties.Select(d => d.File).Distinct(StringComparer.OrdinalIgnoreCase).Count() != manifest.Difficulties.Count)
             throw new InvalidDataException(L.Get("project.invalid"));
+        if (includeSync)
+            foreach (var entry in manifest.Difficulties.Where(d => d.SyncFile is not null))
+            {
+                if (Path.GetFileName(entry.SyncFile) != entry.SyncFile || !entry.SyncFile!.EndsWith(".catchsync", StringComparison.Ordinal)) throw new InvalidDataException(L.Get("project.invalid"));
+                string syncPath = Path.Combine(directory, entry.SyncFile); RejectLinks(syncPath);
+                if (new FileInfo(syncPath).Length > 128L * 1024 * 1024) throw new InvalidDataException(L.Get("core.project.readLimit"));
+                entry.Sync = JsonSerializer.Deserialize<WorkspaceSyncBaseline>(System.IO.File.ReadAllText(syncPath), json) ?? throw new InvalidDataException(L.Get("project.invalid"));
+            }
         return manifest;
     }
 
@@ -171,15 +197,34 @@ public static class WorkspaceProject
                 string? source = diff.Document.SourcePath;
                 if (old is null && source is not null && System.IO.File.Exists(source)
                     && LibraryDatabase.ReadMetadata(source)?.Difficulty != diff.Name) source = null;
+                if (old is null && source is not null)
+                {
+                    WorkspaceAssociations.EnsureOwner(session, diff.Id, source);
+                    if (entries.Any(e => WorkspaceSynchronization.Paths.Equals(WorkspaceSynchronization.Target(e), source)))
+                        throw new InvalidOperationException(L.Get("sync.duplicate", source));
+                }
                 var entry = new WorkspaceDifficulty { Id = diff.Id, Name = diff.Name, File = name, Source = old is not null ? old.Source : source,
-                    SourceHash = old is not null ? old.SourceHash : (source is not null && System.IO.File.Exists(source) ? Hash(source) : null), ExportTarget = old?.ExportTarget, ExportHash = old?.ExportHash };
+                    SourceHash = old is not null ? old.SourceHash : (source is not null && System.IO.File.Exists(source) ? Hash(source) : null), ExportTarget = old?.ExportTarget, ExportHash = old?.ExportHash, Sync = old?.Sync };
+                if (old is null && source is not null && System.IO.File.Exists(source))
+                    entry.Sync = WorkspaceSynchronization.Capture(source, diff.Document, directory);
+                if (entry.Sync is not null)
+                {
+                    entry.SyncFile = entry.Id.ToString("N") + ".catchsync";
+                    string syncText = JsonSerializer.Serialize(entry.Sync, json);
+                    if (System.Text.Encoding.UTF8.GetByteCount(syncText) > 128L * 1024 * 1024) throw new InvalidDataException(L.Get("core.project.writeLimit"));
+                    AtomicFile.Write(Path.Combine(staging, entry.SyncFile), syncText);
+                }
                 entries.Add(entry);
                 // Encode relative paths against the final location, not the staging folder.
                 AtomicFile.Write(Path.Combine(staging, name), ProjectSerializer.Serialize(diff.Document, Path.Combine(directory, name)));
             }
             var manifest = new WorkspaceManifest { Id = session.Manifest.Id, Name = project.Name, SongsRoot = session.Manifest.SongsRoot,
                 SourceDirectory = session.Manifest.SourceDirectory, ExternalSourceDirectory = session.Manifest.ExternalSourceDirectory, Difficulties = entries };
-            AtomicFile.Write(Path.Combine(staging, ManifestName), JsonSerializer.Serialize(manifest, json));
+            var persisted = new WorkspaceManifest { Id = manifest.Id, Name = manifest.Name, SongsRoot = manifest.SongsRoot,
+                SourceDirectory = manifest.SourceDirectory, ExternalSourceDirectory = manifest.ExternalSourceDirectory,
+                Difficulties = entries.Select(e => new WorkspaceDifficulty { Id = e.Id, Name = e.Name, File = e.File,
+                    Source = e.Source, SourceHash = e.SourceHash, ExportTarget = e.ExportTarget, ExportHash = e.ExportHash, SyncFile = e.SyncFile }).ToList() };
+            AtomicFile.Write(Path.Combine(staging, ManifestName), JsonSerializer.Serialize(persisted, json));
             if (System.IO.Directory.Exists(directory)) System.IO.Directory.Move(directory, previous);
             try { System.IO.Directory.Move(staging, directory); }
             catch { if (System.IO.Directory.Exists(previous)) System.IO.Directory.Move(previous, directory); throw; }

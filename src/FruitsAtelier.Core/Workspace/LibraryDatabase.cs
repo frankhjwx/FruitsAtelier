@@ -16,6 +16,7 @@ public sealed class LibrarySettings
     public string OsuRoot { get => osuRoot; set { osuRoot = value; legacySongs = ""; } }
     public string? SelectedSkin { get; set; }
     public string? DefaultSkin { get; set; }
+    public bool UseSkinSounds { get; set; } = true;
     public bool RomanisedMetadata { get; set; } = true;
     public bool DerandomizeDroplets { get; set; } = true;
     public bool LowLatencyDisplay { get; set; }
@@ -29,6 +30,11 @@ public sealed class LibrarySettings
         get => playbackLineFromBottom;
         set => playbackLineFromBottom = double.IsFinite(value) ? Math.Clamp(value, .05, .95) : .25;
     }
+    public bool ShowTestplayCombo { get; set; } = true;
+    private double canvasZoom = .6, objectTimelineScale = .18, waveformSpanMs = 10000;
+    public double CanvasZoom { get => canvasZoom; set => canvasZoom = double.IsFinite(value) ? Math.Clamp(value, .01, 1) : .6; }
+    public double ObjectTimelineScale { get => objectTimelineScale; set => objectTimelineScale = double.IsFinite(value) ? Math.Clamp(value, .025, 1.5) : .18; }
+    public double WaveformSpanMs { get => waveformSpanMs; set => waveformSpanMs = double.IsFinite(value) ? Math.Clamp(value, 100, int.MaxValue * 2d) : 10000; }
     public int TestplayLeftKey { get; set; } = 37;
     public int TestplayRightKey { get; set; } = 39;
     public int TestplayDashKey { get; set; } = 16;
@@ -74,7 +80,7 @@ public sealed class LibrarySettings
 }
 
 public sealed record LibraryMap(string Path, string Directory, string Title, string TitleUnicode, string Artist, string ArtistUnicode,
-    string Creator, string Difficulty, string Tags, string Source, string Audio, string Background, string? ProjectPath = null);
+    string Creator, string Difficulty, string Tags, string Source, string Audio, string Background, string? ProjectPath = null, bool ExternalMissing = false, int Mode = 2, bool ReferenceSearching = false);
 public sealed record LibraryScan(int Count, IReadOnlyList<string> Errors);
 public sealed record LibraryScanProgress(int Files, int Indexed, int Errors);
 
@@ -90,9 +96,16 @@ public sealed class LibraryDatabase
         Directory.CreateDirectory(workspace);
         using var db = Open();
         using var command = db.CreateCommand();
-        command.CommandText = "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS maps(path TEXT PRIMARY KEY, root TEXT NOT NULL, stamp INTEGER NOT NULL, size INTEGER NOT NULL, data TEXT NOT NULL, search TEXT NOT NULL); CREATE TABLE IF NOT EXISTS projects(path TEXT PRIMARY KEY, source TEXT, name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS external_sources(path TEXT PRIMARY KEY, archive TEXT); CREATE TABLE IF NOT EXISTS project_sources(project TEXT NOT NULL, source TEXT NOT NULL, PRIMARY KEY(project,source)); PRAGMA user_version=2;";
+        command.CommandText = "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS maps(path TEXT PRIMARY KEY, root TEXT NOT NULL, stamp INTEGER NOT NULL, size INTEGER NOT NULL, data TEXT NOT NULL, search TEXT NOT NULL); CREATE TABLE IF NOT EXISTS projects(path TEXT PRIMARY KEY, source TEXT, name TEXT NOT NULL); CREATE TABLE IF NOT EXISTS external_sources(path TEXT PRIMARY KEY, archive TEXT); CREATE TABLE IF NOT EXISTS project_sources(project TEXT NOT NULL, source TEXT NOT NULL, PRIMARY KEY(project,source));";
         command.ExecuteNonQuery();
-        command.CommandText = "CREATE INDEX IF NOT EXISTS maps_root ON maps(root); CREATE INDEX IF NOT EXISTS project_sources_source ON project_sources(source,project);";
+        command.CommandText = "PRAGMA user_version";
+        if (Convert.ToInt64(command.ExecuteScalar()) < 3)
+        {
+            // Older catalogs may contain other rulesets; missing Mode predates mixed-mode indexing.
+            command.CommandText = "DELETE FROM maps WHERE COALESCE(json_extract(data,'$.Mode'),2) <> 2; PRAGMA user_version=3;";
+            command.ExecuteNonQuery();
+        }
+        command.CommandText = "CREATE INDEX IF NOT EXISTS maps_root ON maps(root); CREATE INDEX IF NOT EXISTS maps_directory_nocase ON maps(json_extract(data,'$.Directory') COLLATE NOCASE); CREATE INDEX IF NOT EXISTS project_sources_source ON project_sources(source,project);";
         command.ExecuteNonQuery();
     }
     private SqliteConnection Open()
@@ -101,6 +114,16 @@ public sealed class LibraryDatabase
         var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString()); db.Open(); return db;
     }
     public LibrarySearchSnapshot SearchSnapshot(string query, bool projectsOnly = false) => new(Open(), songs, query, projectsOnly);
+    public void ClearDerivedCache()
+    {
+        using var db = Open();
+        using var command = db.CreateCommand();
+        // Source registrations and project associations survive an index rebuild.
+        command.CommandText = "DELETE FROM maps;";
+        command.ExecuteNonQuery();
+        command.CommandText = "VACUUM";
+        command.ExecuteNonQuery();
+    }
     public void RegisterSource(string directory, string? archive = null)
     {
         directory = Path.GetFullPath(directory);
@@ -224,7 +247,7 @@ public sealed class LibraryDatabase
             if (!File.Exists(Path.Combine(folder, WorkspaceProject.ManifestName)) || folder.EndsWith(".saving") || folder.EndsWith(".previous")) continue;
             try
             {
-                var manifest = WorkspaceProject.ReadManifest(folder);
+                var manifest = WorkspaceProject.ReadManifest(folder, includeSync: false);
                 using var command = db.CreateCommand(); command.Transaction = transaction;
                 command.CommandText = "INSERT INTO projects VALUES($p,$s,$n)";
                 command.Parameters.AddWithValue("$p", folder);
@@ -288,8 +311,9 @@ public sealed class LibraryDatabase
             if (section == "Events" && s.StartsWith("0,")) { var parts = WorkspaceProject.Csv(s); if (parts.Length > 2) background = parts[2]; }
         }
         string Get(string key) => values.GetValueOrDefault(key, "");
-        if (Get("Mode") != "2") return null;
+        int mode = int.TryParse(Get("Mode"), out int parsedMode) ? parsedMode : 0;
+        if (mode != 2) return null;
         string Resolve(string resource) => resource.Length == 0 ? "" : OsuBeatmapReader.ResolveResource(path, resource.Replace('\\', '/'));
-        return new(path, Path.GetDirectoryName(path)!, Get("Title"), Get("TitleUnicode"), Get("Artist"), Get("ArtistUnicode"), Get("Creator"), Get("Version"), Get("Tags"), Get("Source"), Resolve(Get("AudioFilename")), Resolve(background));
+        return new(path, Path.GetDirectoryName(path)!, Get("Title"), Get("TitleUnicode"), Get("Artist"), Get("ArtistUnicode"), Get("Creator"), Get("Version"), Get("Tags"), Get("Source"), Resolve(Get("AudioFilename")), Resolve(background), Mode: mode);
     }
 }

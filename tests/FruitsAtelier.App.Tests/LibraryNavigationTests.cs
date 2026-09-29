@@ -23,6 +23,13 @@ internal static class LibraryNavigationTests
             view.Wheel(300, 300, -240, false); Paint();
             Check(!Titles().SequenceEqual(first), "wheel scrolls sets");
             var scrolled = Titles();
+            for (int cycle = 0; cycle < 3; cycle++)
+            {
+                Click(L.Get("library.all"));
+                Click(L.Get("library.projects"));
+                Check(view.LibrarySetTotal == 24 && Titles().SequenceEqual(scrolled), "category switching immediately restores loaded rows and scroll position");
+            }
+            Settle();
             view.PointerDown(320, 350, 0, false, false); Check(view.WantsCapture, "drag captures pointer");
             view.PointerMove(320, 180, false, false); view.PointerUp(320, 180, 0); Paint();
             Check(!view.WantsCapture && !Titles().SequenceEqual(scrolled), "drag scrolls sets and releases capture");

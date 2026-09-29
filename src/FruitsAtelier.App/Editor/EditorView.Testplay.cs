@@ -11,6 +11,7 @@ public sealed partial class EditorView
     private IDisposable? testplayDriver;
     private bool testplayEscapeConsumed;
     private bool testplayTabHeld;
+    private bool testplaySpeedHeld;
     private bool testplayPauseHeld;
     private bool testplayBookmarkHeld;
     private string? testplayAutoNotice;
@@ -42,6 +43,7 @@ public sealed partial class EditorView
         { StatusMessage = L.Get("testplay.noNotes"); return; }
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
         testplayTabHeld = false;
+        testplaySpeedHeld = false;
         testplayPauseHeld = false;
         testplayBookmarkHeld = false;
         testplayAutoNotice = null;
@@ -152,6 +154,7 @@ public sealed partial class EditorView
         if (virtualKey is 17 or 162 or 163) placementCtrl = false;
         if (virtualKey == 27) testplayEscapeConsumed = false;
         if (virtualKey == 9) testplayTabHeld = false;
+        if (virtualKey == 114) testplaySpeedHeld = false;
         if (virtualKey == 80) testplayPauseHeld = false;
         if (virtualKey == 66) testplayBookmarkHeld = false;
         if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
@@ -186,13 +189,15 @@ public sealed partial class EditorView
         foreach (var trail in frame.Trails)
             DrawCatcherTrail(c, trail, left, fieldWidth, catchY);
         DrawCatcherBody(c, x, catchY, fieldWidth, tint, 1, false, frame.FacingLeft);
+        if (frame.Dashing) DrawCatcherBody(c, x, catchY, fieldWidth, 0xFFFFFF, .65f, true, frame.FacingLeft, brighten: true);
         DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
-        DrawTestplayCombo(c, x, catchY - 175 * fieldWidth / 512, fieldWidth / 512);
+        if (LibrarySettings.ShowTestplayCombo) DrawTestplayCombo(c, x, catchY - 175 * fieldWidth / 512, fieldWidth / 512);
         c.Unclip();
-        string[] hints = ["testplay.hintAutoplay", "testplay.hintPause", "testplay.hintBookmark", "testplay.hintQuickExit", "testplay.hintCurrentExit"];
+        c.Text(L.Get("testplay.speed", PlaybackSpeed), 12, 12, 13, 0xD6E5B5, Math.Max(100, width - 24));
+        string[] hints = ["testplay.hintAutoplay", "testplay.hintSpeed", "testplay.hintPause", "testplay.hintBookmark", "testplay.hintQuickExit", "testplay.hintCurrentExit"];
         for (int i = 0; i < hints.Length; i++)
-            c.Text(L.Get(hints[i]), 12, 12 + i * 20, 13, 0xD6E5B5, Math.Max(100, width - 24));
-        if (TestplayPaused) c.Text(L.Get("testplay.paused"), 12, 118, 15, Accent, 250, true);
+            c.Text(L.Get(hints[i]), 12, 32 + i * 20, 13, 0xD6E5B5, Math.Max(100, width - 24));
+        if (TestplayPaused) c.Text(L.Get("testplay.paused"), 12, 38 + hints.Length * 20, 15, Accent, 250, true);
         if (testplayAutoNotice is { } notice)
         {
             double age = TestplayRealtime - testplayAutoNoticeAt;
@@ -201,8 +206,8 @@ public sealed partial class EditorView
             {
                 var bar = new Rect(stage.X, height / 2f - 30, stage.Width, 60);
                 c.Fill(bar, 0x101820, opacity: .72f * opacity);
-                uint textColour = (uint)(0xE6F2FF * opacity + 0x101820 * (1 - opacity));
-                c.Text(notice, width / 2f - c.MeasureText(notice, 20) / 2, bar.Y + 18, 20, textColour, stage.Width, true);
+                c.TextOpacity(notice, width / 2f - c.MeasureText(notice, 20) / 2, bar.Y + 18,
+                    20, 0xE6F2FF, stage.Width, true, opacity);
             }
         }
         DrawVolumePopover(c);
@@ -253,9 +258,9 @@ public sealed partial class EditorView
     private int bindingCapture = -1;
     private int[] draftTestplayKeys = [37, 39, 16];
     public bool CapturingTestplayKey => bindingCapture >= 0 && librarySettingsOpen;
-    // Esc, Tab, F1 and F2 belong to testplay navigation; OS/media keys cannot reliably reach both hosts.
+    // Esc, Tab and F1–F3 belong to testplay controls; OS/media keys cannot reliably reach both hosts.
     private static bool IsBindingKey(int key) => key is >= 65 and <= 90 or >= 48 and <= 57 or >= 33 and <= 40
-        or >= 96 and <= 111 or >= 114 and <= 135 or >= 186 and <= 192 or >= 219 and <= 223
+        or >= 96 and <= 111 or >= 115 and <= 135 or >= 186 and <= 192 or >= 219 and <= 223
         or 8 or 12 or 13 or 16 or 17 or 18 or 20 or 32 or 45 or 46 or 144 or 145 or 226;
     private static string KeyName(int key) => key switch
     {
@@ -271,6 +276,7 @@ public sealed partial class EditorView
     };
     private void DrawTestplayBindings(ICanvas c)
     {
+        c.Text(L.Get("testplay.keyBindingSettings"), SettingsContentX, SettingsTop + 124, 18, Foreground, SettingsRight - SettingsContentX - 32, true);
         var leadIn = new Rect(SettingsContentX + 270, SettingsTop + 260, 202, 38);
         c.Text(L.Get("testplay.startupDelay"), SettingsContentX, leadIn.Y + (leadIn.Height - 17) / 2,
             SettingsTextSize, Foreground, 260, true);
@@ -286,6 +292,9 @@ public sealed partial class EditorView
         TimingButton(c, new(leadIn.Right - 24, leadIn.Y, 24, leadIn.Height), "›",
             () => draftTestplayStartupDelaySeconds = Math.Min(5, draftTestplayStartupDelaySeconds + .5),
             enabled: draftTestplayStartupDelaySeconds < 5, flatArrow: true);
+        SettingsButton(c, new(SettingsContentX, SettingsTop + 322, Math.Min(472, SettingsRight - SettingsContentX - 32), 38),
+            L.Get(draftShowTestplayCombo ? "testplay.comboOn" : "testplay.comboOff"),
+            () => draftShowTestplayCombo = !draftShowTestplayCombo, draftShowTestplayCombo);
         string[] labels = ["testplay.left", "testplay.right", "testplay.dash"];
         float cell = Math.Min(220, (SettingsRight - SettingsContentX - 32) / 3);
         for (int i = 0; i < 3; i++)

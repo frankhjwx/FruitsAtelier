@@ -98,10 +98,8 @@ public static class LibraryOperations
         if (!WorkspaceProject.Within(projects, project) || project == Path.GetFullPath(projects))
             throw new IOException(FruitsAtelier.Localization.Strings.Get("library.deleteUnavailable"));
         WorkspaceProject.RejectLinks(project);
-        var manifest = WorkspaceProject.ReadManifest(project);
-        if (WorkspaceProject.HasExistingSongsFile(manifest, settings.Songs))
-            throw new IOException(FruitsAtelier.Localization.Strings.Get("library.deleteUnavailable"));
-        Directory.Delete(project, true);
+        WorkspaceAssociations.DeleteLocalProject(project);
+        new LibraryDatabase(settings.Workspace, settings.Songs).ReindexProjects();
     }
     public static void OpenExternalPath(string path)
     {
@@ -118,7 +116,7 @@ public static class LibraryOperations
     }
     public static IReadOnlyList<LibraryMap> MissingDifficulties(WorkspaceSession session, BeatmapProject project)
     {
-        var known = session.Manifest.Difficulties.Select(d => d.Source)
+        var known = session.Manifest.Difficulties.SelectMany(d => new[] { d.Source, d.ExportTarget })
             .Concat(project.Difficulties.Select(d => d.Document.SourcePath)).Where(p => p is not null)
             .Select(p => Path.GetFullPath(p!)).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var folders = session.Manifest.Difficulties.SelectMany(d => new[] { d.Source, d.ExportTarget }).Where(p => p is not null)
@@ -163,6 +161,8 @@ public static class LibraryOperations
         if (!Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase)
             && sourceDirectory is not null && db.ProjectForSource(sourceDirectory) is { } existing)
             return WorkspaceProject.Open(existing);
+        if (Path.GetExtension(path).Equals(".osu", StringComparison.OrdinalIgnoreCase) && WorkspaceAssociations.FindProject(settings.Workspace, path) is { } tracked)
+            return WorkspaceProject.Open(tracked);
         return WorkspaceProject.Create(settings.Workspace, project, settings.Songs) with { IsNewImport = !Path.GetExtension(path).Equals(".catchproj", StringComparison.OrdinalIgnoreCase) };
     }
     public static void ImportFolder(string directory, LibrarySettings settings)
@@ -174,6 +174,9 @@ public static class LibraryOperations
         // A library card may predate the project's creation or the next database scan.
         if (new LibraryDatabase(settings.Workspace, settings.Songs).ProjectForSource(map.Directory) is { } existing)
             return WorkspaceProject.Open(existing);
+        string? supported = map.Mode == 2 ? map.Path : Directory.EnumerateFiles(map.Directory).FirstOrDefault(p => Path.GetExtension(p).Equals(".osu", StringComparison.OrdinalIgnoreCase) && LibraryDatabase.ReadMetadata(p) is not null);
+        if (supported is null) throw new InvalidOperationException(FruitsAtelier.Localization.Strings.Get("sync.readOnly"));
+        if (WorkspaceAssociations.FindProject(settings.Workspace, supported) is { } tracked) return WorkspaceProject.Open(tracked);
         var documents = Directory.EnumerateFiles(map.Directory).Where(p => Path.GetExtension(p).Equals(".osu", StringComparison.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase)
             .Where(p => LibraryDatabase.ReadMetadata(p) is not null).Select(OsuBeatmapReader.ReadFile).ToArray();
         return WorkspaceProject.Create(settings.Workspace, BeatmapProject.FromDocuments(documents), settings.Songs) with { IsNewImport = true };
@@ -197,6 +200,7 @@ public static class LibraryOperations
         string folder = Path.GetDirectoryName(plan.Target)!;
         Directory.CreateDirectory(folder);
         BeatmapResources.Copy(plan.Document, folder, plan.Output.ReadBack);
+        string receipt = WorkspaceExportRecovery.Prepare(session, project, plan, added?.Id ?? plan.DifficultyId);
         WorkspaceExport.Commit(session, plan, updateAssociation: added is null);
         if (added is not null)
         {
@@ -204,9 +208,11 @@ public static class LibraryOperations
             session.Manifest.Difficulties.Add(new WorkspaceDifficulty
             {
                 Id = added.Id, Name = added.Name, Source = plan.Target, SourceHash = hash,
-                ExportTarget = plan.Target, ExportHash = hash
+                ExportTarget = plan.Target, ExportHash = hash,
+                Sync = WorkspaceSynchronization.Capture(plan.Target, added.Document, session.Directory, plan.Output.Text, plan.Output.ObjectSources)
             });
         }
         WorkspaceProject.Save(session, project);
+        WorkspaceExportRecovery.Complete(receipt);
     }
 }

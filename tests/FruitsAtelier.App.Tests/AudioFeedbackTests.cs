@@ -23,14 +23,22 @@ internal static class AudioFeedbackTests
         ui.View.LoadProject(BeatmapProject.FromDocuments([map, map.DeepClone()]));
         ui.View.UpdateTransport(0, 70000, true, false, false, null, map.AudioPath);
         ui.View.UpdateTransport(5000, 70000, true, false, false, null, map.AudioPath);
-        Check(ui.View.SwitchDifficulty(1), "switch to another difficulty");
-        ui.View.UpdateTransport(0, 70000, true, false, false, null, map.AudioPath);
-        Check(ui.View.SwitchDifficulty(0), "return to previous difficulty");
-        Near(5000, ui.View.PlayheadMs);
+        double currentViewStart = ui.View.ViewStartMs;
         var seeks = new List<double>(); ui.View.RequestSeek = seeks.Add;
+        Check(ui.View.SwitchDifficulty(1), "switch to another difficulty");
+        Near(5000, ui.View.PlayheadMs); Near(currentViewStart, ui.View.ViewStartMs);
+        ui.View.UpdateTransport(0, 0, false, false, true, null, map.AudioPath);
+        Near(5000, ui.View.PlayheadMs);
         ui.View.UpdateTransport(0, 70000, true, false, false, null, map.AudioPath);
         Near(5000, ui.View.PlayheadMs);
-        Check(seeks.SequenceEqual([5000d]), "audio resumes the retained difficulty position without a zero frame");
+        Check(seeks.SequenceEqual([5000d]), "new difficulty audio starts at the current position");
+        ui.View.UpdateTransport(8000, 70000, true, true, false, null, map.AudioPath);
+        Check(ui.View.SwitchDifficulty(0), "return to previous difficulty");
+        Near(8000, ui.View.PlayheadMs);
+        seeks.Clear();
+        ui.View.UpdateTransport(0, 70000, true, false, false, null, map.AudioPath);
+        Near(8000, ui.View.PlayheadMs);
+        Check(seeks.SequenceEqual([8000d]), "returning to a difficulty keeps the current position without a zero frame");
         Check(!ui.View.IsDirty, "transport initialization does not edit content");
 
         ui.LoadDocument(map);
@@ -196,6 +204,42 @@ internal static class AudioFeedbackTests
         ui.View.UpdateTransport(0, 5000, true, true, false, null, null);
         ui.View.UpdateTransport(100, 5000, true, true, false, null, null);
         Check(preloads == 2 && played[0].FilePath == Path.Combine(fallback, "soft-hitnormal.wav"), "skin switch invalidates sample resolution and preloads again");
+        string settingsPath = Path.Combine(root, "settings.json");
+        ui.View.LibrarySettings.Workspace = Path.Combine(root, "preferences-workspace");
+        ui.View.RequestAudioPreference = () => ui.View.LibrarySettings.Save(settingsPath);
+        Check(System.Text.Json.JsonSerializer.Deserialize<LibrarySettings>("{}")!.UseSkinSounds,
+            "older settings enable skin samples by default");
+        var before = ui.View.Document.DeepClone();
+        string previousLanguage = L.Language;
+        try
+        {
+            foreach (string language in new[] { "en", "zh-CN" })
+            {
+                L.SetLanguage(language);
+                ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.audio"));
+                int previousPreloads = preloads;
+                ui.ClickText(L.Get("settings.skinSoundsOn"));
+                Check(!LibrarySettings.Load(settingsPath).UseSkinSounds && ui.View.HitsoundSkinFolders.Length == 0,
+                    "audio toggle immediately saves and bypasses all skin sample folders");
+                Check(preloads == previousPreloads + 1, "audio toggle preloads the new sample bank");
+                ui.Key(27); played.Clear();
+                ui.View.UpdateTransport(0, 5000, true, true, false, null, null);
+                ui.View.UpdateTransport(100, 5000, true, true, false, null, null);
+                Check(played[0].FilePath == HitsoundDefaults.Find(2, "hitnormal"), "disabled skin audio uses packaged samples in preview");
+                map.Fruits[0].OriginalLine = "256,192,100,1,4,0:1:0:0:custom.wav";
+                var custom = new HitsoundResolver(map, objects, ui.View.HitsoundSkinFolders).Resolve(objects[0]);
+                Check(custom[0].FilePath == Path.Combine(mapFolder, "custom.wav"), "disabled skin audio preserves explicit beatmap samples");
+                ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.audio"));
+                ui.ClickText(L.Get("settings.skinSoundsOff"));
+                Check(LibrarySettings.Load(settingsPath).UseSkinSounds, "skin audio can be re-enabled and saved");
+                ui.Key(27); played.Clear();
+                ui.View.UpdateTransport(0, 5000, true, true, false, null, null);
+                ui.View.UpdateTransport(100, 5000, true, true, false, null, null);
+                Check(played[0].FilePath == Path.Combine(fallback, "soft-hitnormal.wav"), "re-enabling skin audio refreshes cached preview samples");
+            }
+            Check(ui.View.Document.ContentEquals(before), "skin sound preferences preserve map content");
+        }
+        finally { L.SetLanguage(previousLanguage); }
         string workspace = Path.Combine(root, "workspace");
         string oldFolder = Path.Combine(workspace, "Skins", "Imported", "v3-fixture");
         string archives = Path.Combine(workspace, "Skins", "Archives");

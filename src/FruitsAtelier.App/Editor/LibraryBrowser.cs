@@ -11,13 +11,15 @@ internal sealed class LibraryBrowser
     private readonly Queue<int> pageOrder = [];
     private Task<(int Start, IReadOnlyList<LibrarySetRow> Rows)>? pageTask;
     private Task<(string Key, int Start, IReadOnlyList<LibraryMap> Rows)>? detailTask;
+    private Task<(long Revision, List<(int Start, IReadOnlyList<LibrarySetRow> Rows)> Pages)>? discoveryTask;
+    private long discoveryRevision;
     private string? detailKey;
     private int detailStart;
     private IReadOnlyList<LibraryMap> details = [];
     public int Count => snapshot.Count;
     public int TopIndex { get; private init; }
     public LibrarySetRow? Selected { get; private set; }
-    public bool Loading => pageTask is { IsCompleted: false } || detailTask is { IsCompleted: false };
+    public bool Loading => pageTask is { IsCompleted: false } || detailTask is { IsCompleted: false } || discoveryTask is { IsCompleted: false };
     public int CachedRows => pages.Values.Sum(page => page.Count);
     public string? Error { get; private set; }
 
@@ -70,6 +72,27 @@ internal sealed class LibraryBrowser
             catch (Exception e) { Error = e.Message; }
             detailTask = null;
         }
+        if (discoveryTask is { IsCompleted: true })
+        {
+            try
+            {
+                var update = discoveryTask.GetAwaiter().GetResult(); discoveryRevision = update.Revision;
+                foreach (var page in update.Pages) pages[page.Start] = page.Rows;
+                if (Selected is { } selected) Selected = Get(selected.Index) ?? selected;
+                detailKey = null; details = [];
+            }
+            catch (Exception e) { Error = e.Message; discoveryRevision = snapshot.DiscoveryRevision; }
+            discoveryTask = null;
+        }
+        if (discoveryTask is null && pageTask is null && detailTask is null && snapshot.DiscoveryRevision != discoveryRevision)
+        {
+            long revision = snapshot.DiscoveryRevision;
+            int[] starts = pages.Keys.ToArray();
+            discoveryTask = Task.Run(() =>
+            {
+                lock (gate) return (revision, starts.Select(start => (start, snapshot.Page(start))).ToList());
+            });
+        }
     }
     public void RequestVisible(int first, int last)
     {
@@ -95,7 +118,8 @@ internal sealed class LibraryBrowser
     }
     public void Retire()
     {
-        var pending = new Task?[] { pageTask, detailTask }.OfType<Task>().ToArray();
+        snapshot.CancelReferenceDiscovery();
+        var pending = new Task?[] { pageTask, detailTask, discoveryTask }.OfType<Task>().ToArray();
         _ = Task.Run(async () =>
         {
             try { await Task.WhenAll(pending); }

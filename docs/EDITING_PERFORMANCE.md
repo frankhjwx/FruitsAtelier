@@ -17,6 +17,9 @@ a time or position can still flatten a complete imported slider path.
   events. Replacing a slider or banana shower requires the full RNG-aware path.
 - Batch timing queries through one `TimingMap.Lookup`. Calling `TimingMap.At` in a
   per-object loop constructs and sorts a new lookup for every object.
+- Fill beat grids into each view's reusable buffer with `TimingMap.Lookup.FillGrid`.
+  The lookup owns timing values; the buffer is refilled for the current visible range
+  and snap divisor, without retaining grid data across timing changes.
 - Obtain slider end times from existing converted slider durations. Do not rebuild
   `ImportedSliderGeometry` just to display a duration already computed elsewhere.
 - Refresh content-dependent data at its owning edit boundary. Viewport, selection,

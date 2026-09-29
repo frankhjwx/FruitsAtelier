@@ -53,7 +53,14 @@ public static class TimingMap
         }
 
         public IEnumerable<BeatGridLine> Grid(double start, double end, int divisor)
-            => TimingMap.Grid(this, start, end, divisor);
+        {
+            var lines = new List<BeatGridLine>();
+            FillGrid(start, end, divisor, lines);
+            return lines;
+        }
+
+        public void FillGrid(double start, double end, int divisor, List<BeatGridLine> destination)
+            => TimingMap.FillGrid(this, start, end, divisor, destination);
     }
 
     public static double Snap(MapDocument document, double time, int divisor)
@@ -90,21 +97,32 @@ public static class TimingMap
     public static IEnumerable<BeatGridLine> Grid(MapDocument document, double start, double end, int divisor)
         => new Lookup(document).Grid(start, end, divisor);
 
-    private static IEnumerable<BeatGridLine> Grid(Lookup lookup, double start, double end, int divisor)
+    private static void FillGrid(Lookup lookup, double start, double end, int divisor, List<BeatGridLine> lines)
     {
         if (!double.IsFinite(start) || !double.IsFinite(end) || end < start) throw new ArgumentOutOfRangeException(nameof(start));
         if (divisor <= 0) throw new ArgumentOutOfRangeException(nameof(divisor));
+        ArgumentNullException.ThrowIfNull(lines);
+        lines.Clear();
         const int maximumLines = 10000;
         var reds = lookup.RedTimes;
-        var boundaries = reds.Where(t => t >= start && t <= end).Take(maximumLines).ToArray();
-        var lines = new SortedDictionary<double, BeatGridLine>();
-        foreach (double boundary in boundaries) lines[boundary] = new(boundary, true, true, 1, true);
-        double[] starts = new[] { start }.Concat(boundaries.Where(t => t > start && t < end)).ToArray();
-        int perSegmentBudget = Math.Max(1, (maximumLines - lines.Count) / Math.Max(1, starts.Length));
-        for (int segment = 0; segment < starts.Length && lines.Count < maximumLines; segment++)
+        int boundaryStart = Array.BinarySearch(reds, start);
+        if (boundaryStart < 0) boundaryStart = ~boundaryStart;
+        int boundaryEnd = boundaryStart;
+        while (boundaryEnd < reds.Length && reds[boundaryEnd] <= end && boundaryEnd - boundaryStart < maximumLines)
         {
-            double from = starts[segment];
-            double to = segment + 1 < starts.Length ? starts[segment + 1] : end;
+            double boundary = reds[boundaryEnd++];
+            lines.Add(new(boundary, true, true, 1, true));
+        }
+        int interiorStart = boundaryStart, interiorEnd = boundaryEnd;
+        if (interiorStart < interiorEnd && reds[interiorStart] == start) interiorStart++;
+        if (interiorEnd > interiorStart && reds[interiorEnd - 1] == end) interiorEnd--;
+        int segments = 1 + interiorEnd - interiorStart;
+        int perSegmentBudget = Math.Max(1, (maximumLines - lines.Count) / segments);
+        double previousGenerated = double.NaN;
+        for (int segment = 0; segment < segments && lines.Count < maximumLines; segment++)
+        {
+            double from = segment == 0 ? start : reds[interiorStart + segment - 1];
+            double to = segment + 1 < segments ? reds[interiorStart + segment] : end;
             var state = lookup.At(from);
             double step = state.BeatLengthMs / divisor;
             if (!double.IsFinite(step) || step <= 0) continue;
@@ -115,19 +133,22 @@ public static class TimingMap
             for (double index = first; index <= last && lines.Count < maximumLines;)
             {
                 double time = state.OffsetMs + index * step;
-                if (time >= from && time <= end && (segment + 1 == starts.Length || time < to) && !lines.ContainsKey(time))
+                // Generated times are monotonic; only red boundaries and rounded adjacent times can collide.
+                if (time >= from && time <= end && (segment + 1 == segments || time < to)
+                    && time != previousGenerated && Array.BinarySearch(reds, boundaryStart, boundaryEnd - boundaryStart, time) < 0)
                 {
                     int remainder = (int)Math.Abs(index % divisor), denominator = divisor;
                     while (remainder != 0) (denominator, remainder) = (remainder, denominator % remainder);
-                    lines[time] = new(time, index % divisor == 0, false, divisor / denominator,
-                        index % ((double)divisor * state.Meter) == 0);
+                    lines.Add(new(time, index % divisor == 0, false, divisor / denominator,
+                        index % ((double)divisor * state.Meter) == 0));
+                    previousGenerated = time;
                 }
                 double next = index + stride;
                 if (!double.IsFinite(next) || next <= index) break;
                 index = next;
             }
         }
-        return lines.Values;
+        lines.Sort(static (a, b) => a.TimeMs.CompareTo(b.TimeMs));
     }
 
     private static TimingGroup[] Groups(MapDocument document) => document.TimingPoints

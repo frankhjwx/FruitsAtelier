@@ -21,6 +21,8 @@ public sealed partial class EditorView
         public LibraryPosition MyProjects { get; set; } = new();
     }
     private LibraryMemory libraryMemory = new();
+    private LibraryBrowser? inactiveLibraryBrowser;
+    private string libraryBrowserQuery = "", inactiveLibraryQuery = "";
     private bool libraryMemoryLoaded, libraryMemoryDirty, revealLibrarySelection;
     private DateTime libraryMemorySaveAfter;
     private Rect libraryListBounds, libraryScrollTrack, libraryScrollThumb, libraryDiffTrack, libraryDiffThumb;
@@ -71,7 +73,10 @@ public sealed partial class EditorView
     {
         if (libraryProjectsOnly == projects) return;
         RememberLibraryPosition(); libraryProjectsOnly = projects; RestoreLibraryPosition();
-        libraryBrowser?.Retire(); libraryBrowser = null; libraryCards.Clear(); libraryResultsReady = false;
+        (libraryBrowser, inactiveLibraryBrowser) = (inactiveLibraryBrowser, libraryBrowser);
+        (libraryBrowserQuery, inactiveLibraryQuery) = (inactiveLibraryQuery, libraryBrowserQuery);
+        if (libraryBrowserQuery != libraryQuery) { libraryBrowser?.Retire(); libraryBrowser = null; }
+        libraryCards.Clear(); libraryResultsReady = libraryBrowser is not null;
         libraryProjectsNeedReindex |= projects; libraryField = -1; contextItems.Clear();
         QueueLibrarySearch(); RememberLibraryPosition();
     }
@@ -123,22 +128,26 @@ public sealed partial class EditorView
                     { libraryNotice = L.Reformat(error.Message); }
                 }
                 contextItems.Add(new(L.Get(project is null ? "library.start" : "library.continue"), () => OpenSelectedLibraryMap(map)));
+                AddContextSeparator();
                 contextItems.Add(new(L.Get("library.openProjectFolder"), () => RequestOpenExternalPath?.Invoke(project!), Directory.Exists(project)));
-                contextItems.Add(new(L.Get("project.openSongsFolder"), () => RequestOpenExternalPath?.Invoke(songsFolder!), Directory.Exists(songsFolder)));
-                contextItems.Add(new(L.Get("library.exportOsz"), () => RequestLibraryOszExport?.Invoke(map)));
                 if (project is not null)
                 {
-                    bool canDelete = false;
-                    try { canDelete = !WorkspaceProject.HasExistingSongsFile(WorkspaceProject.ReadManifest(project), LibrarySettings.Songs); }
-                    catch (Exception error) when (error is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException)
-                    { libraryNotice = L.Reformat(error.Message); }
-                    contextItems.Add(new(L.Get("library.deleteProject"), () => RequestLibraryDelete?.Invoke(map), canDelete));
+                    contextItems.Add(new(L.Get("library.deleteProject"), () => RequestLibraryDelete?.Invoke(map)));
                 }
+                contextItems.Add(new(L.Get("library.new"), () => RequestNewProject?.Invoke()));
+                AddContextSeparator();
+                contextItems.Add(new(L.Get("project.openSongsFolder"), () => RequestOpenExternalPath?.Invoke(songsFolder!), Directory.Exists(songsFolder)));
+                AddContextSeparator();
+                contextItems.Add(new(L.Get("library.exportOsz"), () => RequestLibraryOszExport?.Invoke(map)));
             }
-            contextItems.Add(new(L.Get("library.new"), () => RequestNewProject?.Invoke()));
+            else
+            {
+                contextItems.Add(new(L.Get("library.new"), () => RequestNewProject?.Invoke()));
+                AddContextSeparator();
+            }
             contextItems.Add(new(L.Get("library.importFolder"), () => RequestLibraryImport?.Invoke(true)));
             contextItems.Add(new(L.Get("library.importFile"), () => RequestLibraryImport?.Invoke(false)));
-            float menuHeight = 12 + contextItems.Count * 32;
+            float menuHeight = ContextMenuHeight;
             contextBounds = new(Math.Clamp(x, 0, width - 270), Math.Clamp(y, 64, Math.Max(64, height - menuHeight)), 270, menuHeight);
             return true;
         }

@@ -8,14 +8,12 @@ public sealed partial class EditorView
     private Action<int>? discardConfirmation;
     private bool deleteProjectConfirmation;
     private bool offerSongsExport;
-    private IReadOnlyList<FruitsAtelier.Core.LibraryMap>? additionalDifficulties;
-    public bool DiscardConfirmationVisible => discardConfirmation is not null;
+    public bool DiscardConfirmationVisible => discardConfirmation is not null || SynchronizationVisible || SynchronizationBlocksInput;
 
     public void ShowDiscardConfirmation(Action<int> answer)
     {
         if (DiscardConfirmationVisible) return;
         offerSongsExport = false;
-        additionalDifficulties = null;
         CancelInteraction(); menu = -1; contextItems.Clear();
         discardConfirmation = answer;
         hits.Clear(); fields.Clear();
@@ -29,27 +27,32 @@ public sealed partial class EditorView
 
     private void AnswerDiscard(int answer)
     {
+        if (SynchronizationBlocksInput) return;
+        if (SynchronizationVisible) { CancelSynchronization(); return; }
         var callback = discardConfirmation;
         discardConfirmation = null;
         deleteProjectConfirmation = false;
         offerSongsExport = false;
-        additionalDifficulties = null;
         hits.Clear();
         callback?.Invoke(answer);
     }
 
     private void DrawDiscardConfirmation(ICanvas c)
     {
+        if (SynchronizationBlocksInput) { DrawStatus(c); hits.Clear(); fields.Clear(); return; }
+        if (SynchronizationVisible) { DrawSynchronization(c); return; }
         if (!DiscardConfirmationVisible) return;
         hits.Clear(); fields.Clear();
         if (deleteProjectConfirmation)
         {
-            float left = (width - 500) / 2, top = (height - 160) / 2;
-            c.Fill(new(left, top, 500, 160), Panel, 8);
-            c.Stroke(new(left, top, 500, 160), Accent, 2, 8);
+            float left = (width - 500) / 2, top = (height - 200) / 2;
+            c.Fill(new(left, top, 500, 200), Panel, 8);
+            c.Stroke(new(left, top, 500, 200), Accent, 2, 8);
             c.Text(L.Get("library.deleteProjectConfirm"), left + 24, top + 28, 20, Foreground, 452, true);
-            Button(c, new(left + 24, top + 96, 210, 40), L.Get("mac.cancel"), () => AnswerDiscard(2), true);
-            Button(c, new(left + 266, top + 96, 210, 40), L.Get("library.deleteProject"), () => AnswerDiscard(7));
+            c.Text(L.Get("library.deleteProjectHelp"), left + 24, top + 72, 13, Muted, 452);
+            c.Text(L.Get("library.deleteProjectReopen"), left + 24, top + 96, 13, Muted, 452);
+            Button(c, new(left + 24, top + 144, 210, 40), L.Get("mac.cancel"), () => AnswerDiscard(2), true);
+            Button(c, new(left + 266, top + 144, 210, 40), L.Get("library.deleteProject"), () => AnswerDiscard(7));
             return;
         }
         if (offerSongsExport)
@@ -62,19 +65,6 @@ public sealed partial class EditorView
             c.Text(L.Get("library.offerSongsExportHelp"), left + 24, top + 94, 14, Muted, 552);
             Button(c, new(left + 24, top + 146, 264, 40), L.Get("library.workspaceOnly"), () => AnswerDiscard(2));
             Button(c, new(left + 312, top + 146, 264, 40), L.Get("library.exportToSongs"), () => AnswerDiscard(6), true);
-            return;
-        }
-        if (additionalDifficulties is { } additions)
-        {
-            float boxHeight = 154 + Math.Min(8, additions.Count) * 24;
-            float left = (width - 560) / 2, top = (height - boxHeight) / 2;
-            c.Fill(new(left, top, 560, boxHeight), Panel, 8);
-            c.Stroke(new(left, top, 560, boxHeight), Accent, 2, 8);
-            c.Text(L.Get("library.additionalTitle", additions.Count), left + 24, top + 24, 20, Foreground, 512, true);
-            for (int i = 0; i < Math.Min(8, additions.Count); i++)
-                c.Text(additions[i].Difficulty, left + 24, top + 62 + i * 24, 14, Foreground, 512);
-            Button(c, new(left + 24, top + boxHeight - 64, 246, 40), L.Get("library.importAdditional"), () => AnswerDiscard(6));
-            Button(c, new(left + 290, top + boxHeight - 64, 246, 40), L.Get("library.openExisting"), () => AnswerDiscard(2));
             return;
         }
         float x = (width - 500) / 2, y = (height - 180) / 2;

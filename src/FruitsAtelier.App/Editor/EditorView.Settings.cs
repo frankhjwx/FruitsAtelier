@@ -14,6 +14,7 @@ public sealed partial class EditorView
     public bool SupportsDisplayMode { get; set; }
     private bool draftLowLatencyDisplay;
     private double draftTestplayStartupDelaySeconds;
+    private bool draftShowTestplayCombo;
     private readonly uint[] draftIndicatorColours = new uint[4];
     private int settingsColourIndex = -1;
     private uint settingsColourOriginal;
@@ -63,9 +64,10 @@ public sealed partial class EditorView
         settingsColourIndex = -1; settingsColourDrag = 0; settingsColourHex = settingsColourError = "";
         draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
         draftTestplayStartupDelaySeconds = LibrarySettings.TestplayStartupDelaySeconds;
+        draftShowTestplayCombo = LibrarySettings.ShowTestplayCombo;
     }
 
-    private bool SettingsChanged => draftWorkspace != LibrarySettings.Workspace ||
+    private bool SettingsChanged => draftShowTestplayCombo != LibrarySettings.ShowTestplayCombo || draftWorkspace != LibrarySettings.Workspace ||
         draftOsuRoot != LibrarySettings.OsuRoot ||
         draftDefaultSkin != (LibrarySettings.DefaultSkin ?? "") ||
         draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
@@ -83,6 +85,7 @@ public sealed partial class EditorView
     private void CloseSettings()
     {
         FinishVolumeDrag();
+        workspaceScrollDragging = false;
         librarySettingsOpen = false;
         settingsColourIndex = -1;
         settingsColourDrag = 0;
@@ -110,6 +113,7 @@ public sealed partial class EditorView
             {
                 FinishVolumeDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
                 settingsCategory = category;
+                if (category == SettingsCategory.Workspace) { workspaceScroll = 0; StartStorage(); }
                 if (category == SettingsCategory.Updates && UpdateStatus.Phase is UpdatePhase.Idle or UpdatePhase.Current or UpdatePhase.Failed)
                     RequestUpdateCheck?.Invoke();
             }, settingsCategory == category, fontSize: SettingsTextSize);
@@ -135,9 +139,7 @@ public sealed partial class EditorView
                 }
                 break;
             case SettingsCategory.Workspace:
-                c.Text(L.Get("library.settingsDescription"), SettingsContentX, SettingsTop + 128, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
-                LibraryTextField(c, 0, L.Get("library.workspace"), draftWorkspace, SettingsTop + 180);
-                LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, SettingsTop + 284);
+                DrawWorkspaceSettings(c);
                 break;
             case SettingsCategory.Appearance:
                 DrawSkinSelector(c, SettingsSkinSelectorBounds);
@@ -164,7 +166,11 @@ public sealed partial class EditorView
                 break;
             case SettingsCategory.Audio:
                 DrawVolumeControls(c);
-                c.Text(L.Get("settings.immediatePreferences"), SettingsContentX, SettingsTop + 368, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
+                SettingsButton(c, new(SettingsContentX, SettingsTop + 346, Math.Min(520, SettingsRight - SettingsContentX - 32), 38),
+                    L.Get(LibrarySettings.UseSkinSounds ? "settings.skinSoundsOn" : "settings.skinSoundsOff"),
+                    ToggleSkinSounds, LibrarySettings.UseSkinSounds);
+                c.Text(L.Get("settings.skinSoundsHint"), SettingsContentX, SettingsTop + 398, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
+                c.Text(L.Get("settings.immediatePreferences"), SettingsContentX, SettingsTop + 434, SettingsTextSize, Muted, SettingsRight - SettingsContentX - 32);
                 break;
         }
         c.Line(SettingsContentX, r.Bottom - 86, r.Right - 24, r.Bottom - 86, Grid);
@@ -173,6 +179,7 @@ public sealed partial class EditorView
         SettingsButton(c, new(SettingsContentX, r.Bottom - 64, 200, 38), L.Get("library.apply"), () => ApplySettings(),
             active: canApply, enabled: canApply);
         if (settingsColourIndex >= 0) DrawIndicatorColourPicker(c);
+        if (settingsCategory == SettingsCategory.Workspace) DrawStorageTooltip(c);
     }
 
     private void OpenDisplayModeMenu(Rect bounds)
@@ -195,13 +202,18 @@ public sealed partial class EditorView
             var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
             settings.TestplayStartupDelaySeconds = draftTestplayStartupDelaySeconds;
+            settings.ShowTestplayCombo = draftShowTestplayCombo;
             settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.DerandomizeDroplets = draftDerandomizeDroplets;
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
             settings.StandIndicatorColour = draftIndicatorColours[0]; settings.WalkIndicatorColour = draftIndicatorColours[1];
             settings.DashIndicatorColour = draftIndicatorColours[2]; settings.HyperDashIndicatorColour = draftIndicatorColours[3];
             settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;
+            settings.UseSkinSounds = LibrarySettings.UseSkinSounds;
             settings.PlaybackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
+            settings.CanvasZoom = LibrarySettings.CanvasZoom;
+            settings.ObjectTimelineScale = LibrarySettings.ObjectTimelineScale;
+            settings.WaveformSpanMs = LibrarySettings.WaveformSpanMs;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
             bool rootsChanged = settings.Workspace != LibrarySettings.Workspace || settings.OsuRoot != LibrarySettings.OsuRoot;
             settings.Save(settingsPath);
@@ -211,7 +223,9 @@ public sealed partial class EditorView
             libraryError = "";
             InitializeSkin();
             if (!rootsChanged) return;
+            EnableFileMonitoring();
             libraryRatings.Clear(); libraryBrowser?.Retire(); libraryBrowser = null; libraryDatabase = null; libraryResultsReady = false;
+            inactiveLibraryBrowser?.Retire(); inactiveLibraryBrowser = null;
             LoadLibraryMemory(); StartLibraryScan();
         }
         catch (Exception e) { libraryError = e.Message; }

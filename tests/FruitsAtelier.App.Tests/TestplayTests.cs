@@ -3,6 +3,52 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class TestplayTests
 {
+    public static void AutoplaySpeed()
+    {
+        string language = L.Language;
+        try
+        {
+            foreach (string locale in new[] { "en", "zh-CN" })
+            foreach (double initial in new[] { .75, 1, 1.5 })
+            {
+                L.SetLanguage(locale);
+                var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
+                var map = new MapDocument(); map.Fruits.Add(new Fruit { TimeMs = 10000, X = 256 });
+                ui.LoadDocument(map); var before = ui.View.Document.DeepClone();
+                ui.View.SetPlaybackSpeed(initial);
+                var requested = new List<double>(); ui.View.RequestPlaybackSpeed = requested.Add;
+                ui.View.StartTestplay();
+                ui.Key(114); ui.View.KeyUp(114); Near(initial, ui.View.PlaybackSpeed);
+                Check(requested.Count == 0, "Manual F3 does not change audio speed");
+                ui.Key(9); ui.View.KeyUp(9);
+                clock.Advance(100); ui.Paint(); Near(100 * initial, ui.View.PlayheadMs);
+                ui.Key(114); ui.Key(114);
+                double next = initial == 1 ? 1.5 : 1;
+                Near(next, ui.View.PlaybackSpeed); Near(100 * initial, ui.View.PlayheadMs);
+                Check(requested.SequenceEqual([next]), "F3 sends one audio speed change per press");
+                clock.Advance(100); ui.Paint(); Near(100 * (initial + next), ui.View.PlayheadMs);
+                var speed = ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.speed", next));
+                var hint = ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.hintSpeed"));
+                Check(speed.X == 12 && speed.Y == 12 && hint.Y >= speed.Y + 20, "Speed and instruction occupy separate upper-left rows");
+                ui.View.KeyUp(114);
+                ui.Key('P', ctrl: true); ui.View.KeyUp('P');
+                double paused = ui.View.PlayheadMs;
+                clock.Advance(1000); ui.Key(114); ui.View.KeyUp(114);
+                double resumed = next == 1 ? 1.5 : 1;
+                Near(resumed, ui.View.PlaybackSpeed); Near(paused, ui.View.PlayheadMs);
+                ui.Key('P', ctrl: true); ui.View.KeyUp('P');
+                clock.Advance(100); ui.Paint(); Near(paused + 100 * resumed, ui.View.PlayheadMs);
+                ui.Key(114); ui.View.CancelInteraction(preserveTestplay: true);
+                ui.Key(114); Near(resumed, ui.View.PlaybackSpeed);
+                ui.View.StopTestplay(); ui.View.StartTestplay(); ui.Key(9); ui.View.KeyUp(9);
+                ui.Key(114); Near(resumed == 1 ? 1.5 : 1, ui.View.PlaybackSpeed);
+                Check(ui.View.Document.ContentEquals(before), "Speed changes preserve beatmap content");
+                ui.View.StopTestplay();
+            }
+        }
+        finally { L.SetLanguage(language); }
+    }
+
     public static void BookmarksDuringTestplay()
     {
         var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
@@ -460,7 +506,7 @@ internal static class TestplayTests
             (106, "Num *"), (107, "Num +"), (108, "Num Separator"), (109, "Num -"), (110, "Num ."),
             (111, "Num /"), (144, "Num Lock"), (145, "Scroll Lock")];
         keys = keys.Concat(Enumerable.Range(96, 10).Select(k => (k, $"Num {k - 96}")))
-            .Concat(Enumerable.Range(114, 22).Select(k => (k, $"F{k - 111}"))).ToArray();
+            .Concat(Enumerable.Range(115, 21).Select(k => (k, $"F{k - 111}"))).ToArray();
         string folder = Path.GetFullPath("artifacts/testplay-extended-settings");
         var ui = new Ui(); ui.View.InitializeLibrary(true, new LibrarySettings { Workspace = folder });
         ui.Paint(); ui.ClickText(L.Get("library.settings")); ui.ClickText(L.Get("settings.testplay"));
@@ -499,7 +545,7 @@ internal static class TestplayTests
         }
         ui.View.PointerDown(ui.View.SettingsBounds.X + 238, ui.View.SettingsBounds.Y + 200, 0, false, false); ui.View.PointerUp(ui.View.SettingsBounds.X + 238, ui.View.SettingsBounds.Y + 200, 0);
         int[] before = ((int[])draft.GetValue(ui.View)!).ToArray();
-        foreach (int key in new[] { 0, 9, 112, 113, 91, 92, 173, 255 })
+        foreach (int key in new[] { 0, 9, 112, 113, 114, 91, 92, 173, 255 })
         {
             ui.Key(key); ui.View.KeyUp(key);
             Check(ui.View.CapturingTestplayKey && before.SequenceEqual((int[])draft.GetValue(ui.View)!),
@@ -518,7 +564,8 @@ internal static class TestplayTests
         ui.LoadDocument(map); ui.View.StartTestplay(); ui.Paint();
         Check(ui.Canvas.Texts.All(t => !int.TryParse(t.Value, out _)), "testplay starts without a combo counter");
         clock.Advance(1000); ui.Paint();
-        Check(ui.Canvas.Texts.Any(t => t.Value == "1") && ui.Canvas.Texts.All(t => !t.Value.EndsWith('x')), "legacy combo uses digits without a multiplier suffix");
+        Check(ui.Canvas.Texts.Any(t => t.Value == "1") && ui.Canvas.Texts.All(t => !t.Value.EndsWith('x') || !int.TryParse(t.Value[..^1], out _)),
+            "legacy combo uses digits without a multiplier suffix");
         clock.Advance(400); ui.Paint();
         Check(ui.Canvas.Texts.Count(t => t.Value == "1") == 1, "burst fades while main counter remains");
         clock.Advance(901); ui.Paint();

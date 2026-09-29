@@ -64,6 +64,8 @@ internal sealed partial class MacWindow : Window
                 { await audio.LoadAsync(null); await audio.LoadAsync(View.Document.AudioPath); audio.Seek(View.PlayheadMs); PollAudio(); }
             }
         });
+        View.RequestSyncFile = answer => RunFile(async () => answer(await Pick(L.Get("sync.chooseFile"), ["*.osu"])));
+        View.RequestSyncAudio = answer => RunFile(async () => answer(await Pick(L.Get("sync.chooseAudio"), ["*.mp3", "*.ogg", "*.wav"])));
         View.RequestDifficultyChanged = () => RunFile(async () =>
         {
             await audio.LoadAsync(null);
@@ -73,8 +75,7 @@ internal sealed partial class MacWindow : Window
         });
         View.RequestSave = () =>
         {
-            if (View.CurrentDifficultyHasExport && View.ProjectInSongs) View.RequestWorkspaceExport?.Invoke(true, View.CurrentDifficultyName);
-            else RunFile(() => { View.SaveCurrentDifficulty(); return Task.CompletedTask; });
+            RunFile(() => { View.SaveCurrentDifficulty(); return Task.CompletedTask; });
         };
         View.RequestExport = View.ShowWorkspaceExport;
         ConfigureLibrary(initialPath is null && !smokeCheck, smokeCheck);
@@ -113,7 +114,7 @@ internal sealed partial class MacWindow : Window
             RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
         };
         Closed += (_, _) => { View.SaveLibraryMemory(); View.ReleaseWaveform(); timer.Stop(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
-        Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); editor.Refresh(); };
+        Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); View.CheckFilesOnActivation(); editor.Refresh(); };
         Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); editor.Refresh(); };
     }
     private void UpdateTitle() => Title = View.WindowTitle;

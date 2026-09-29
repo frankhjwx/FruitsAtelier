@@ -45,7 +45,9 @@ public sealed partial class EditorView
         distanceOutside = false;
         if (!DistanceSnapEnabled) return point;
         EnsureDistanceReferences();
-        return DistanceSnap.SnapMultiple(point, PreviousReference(point.TimeMs, excluded), Document.DistanceSnapRatios, out distanceOutside);
+        var next = Document.DistanceSnapCollinear ? distanceReferences.FirstOrDefault(r =>
+            r.Id != draftTrack && r.Start.TimeMs > point.TimeMs && (excluded is null || !excluded.Contains(r.Id))) : null;
+        return DistanceSnap.SnapMultiple(point, PreviousReference(point.TimeMs, excluded), Document.DistanceSnapRatios, out distanceOutside, next);
     }
 
     private MapPoint PlacementPoint(float x, float y)
@@ -60,6 +62,7 @@ public sealed partial class EditorView
 
     private void PickSoundEdge(ConvertedCatchObject item)
     {
+        clickedCoordinate = item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet ? item : null;
         distanceObject = item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet
             && !(item.Kind is CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet
                 && Document.ImportedSliders.Any(s => s.Id == item.SourceId))
@@ -119,6 +122,7 @@ public sealed partial class EditorView
     private void ToggleDropletSelectionLock()
     {
         dropletSelectionLocked = !dropletSelectionLocked;
+        if (dropletSelectionLocked) clickedCoordinate = null;
         if (dropletSelectionLocked && SelectedDistanceObject() is { Kind: CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet })
             distanceObject = null;
     }
@@ -155,6 +159,7 @@ public sealed partial class EditorView
             foreach (var s in map.ImportedSliders) s.OriginalLine = null;
             foreach (var s in map.BananaShowers) s.OriginalLine = null;
         }
+        b.DistanceSnapCollinear = a.DistanceSnapCollinear;
         b.DistanceSnapRatios.Clear(); b.DistanceSnapRatios.AddRange(a.DistanceSnapRatios);
         b.DistanceSpacing = a.DistanceSpacing; b.DurationMs = a.DurationMs;
         return a.ContentEquals(b);
@@ -237,10 +242,11 @@ public sealed partial class EditorView
     {
         DistanceReadout = (null, null);
         bool placement = PlacementGhostPoint() is not null;
-        var target = placement ? placementGhost : SelectedDistanceObject();
+        if (placement && placementGhost is not null) { DistanceReadout = placementDistances; return; }
+        var target = placement ? null : DistanceReadoutObject();
         if (target is not null)
         {
-            var neighbours = DistanceNeighbours(target, placement ? placementMovementObjects : null);
+            var neighbours = DistanceNeighbours(target, ReferenceEquals(target, clickedCoordinate) ? playableObjects : null);
             DistanceReadout = (neighbours.Previous is { } prev ? BaseDistanceRatio(prev, target) : null,
                 neighbours.Next is { } nextObject ? BaseDistanceRatio(target, nextObject) : null);
             return;
@@ -257,10 +263,12 @@ public sealed partial class EditorView
         }
         else
         {
-            if (ids.Count != 1 || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
-            var selected = distanceReferences.FirstOrDefault(r => ids.Contains(r.Id));
-            if (selected is null) return;
-            point = selected.Start; end = selected.End; velocity = BaseDistanceVelocity(end.TimeMs);
+            if (ids.Count == 0 || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
+            var selected = distanceReferences.Where(r => ids.Contains(r.Id)).ToArray();
+            if (selected.Length == 0) return;
+            point = selected.MinBy(r => r.Start.TimeMs)!.Start;
+            end = selected.MaxBy(r => r.End.TimeMs)!.End;
+            velocity = BaseDistanceVelocity(end.TimeMs);
         }
         var previous = PreviousReference(point.TimeMs, ids);
         var next = distanceReferences.FirstOrDefault(r => r.Id != draftTrack && !ids.Contains(r.Id) && r.Start.TimeMs >= end.TimeMs);

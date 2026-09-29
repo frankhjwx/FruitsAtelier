@@ -101,7 +101,7 @@ internal static class ShortcutRoutingTests
         ui.Key('A', ctrl: true);
         double x = ui.View.Document.Fruits.Single().X;
         ui.Key(39, ctrl: true, shift: true);
-        Check(ui.View.Document.Fruits.Single().X == x + 1, "Compose horizontal nudge remains available.");
+        Check(ui.View.Document.Fruits.Single().X == x + 4, "Compose grid nudge remains available.");
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.ContentEquals(edited), "Compose nudge remains undoable.");
     }

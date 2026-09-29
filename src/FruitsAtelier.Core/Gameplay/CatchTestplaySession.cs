@@ -4,7 +4,7 @@ public readonly record struct CatchComboChange(int Combo, ConvertedCatchObject O
 
 public sealed record CatchTestplayFrame(double TimeMs, double X, int Combo, bool FacingLeft, bool HyperDashing,
     bool Ended, Exception? Error, int JudgedCount, ConvertedCatchObject[] MissedObjects, CatchTrail[] Trails,
-    CatchComboChange[] ComboChanges, CatchPlateSprite[] Plate, bool Autoplay = false);
+    CatchComboChange[] ComboChanges, CatchPlateSprite[] Plate, bool Autoplay = false, bool Dashing = false);
 
 /// <summary>Serialises gameplay mutations; drawing consumes a detached snapshot without holding the lock.</summary>
 public sealed class CatchTestplaySession
@@ -38,7 +38,7 @@ public sealed class CatchTestplaySession
     public double X { get { lock (gate) return game.X; } }
     public int Combo { get { lock (gate) return game.Combo; } }
     public double TransportPosition { get { lock (gate) return WithAudio ? Math.Max(0, time - outputLead) : time; } }
-    public bool UsesKey(int key) => key == left || key == right || key == dash;
+    public bool UsesKey(int key) => key != 114 && (key == left || key == right || key == dash);
     private double Realtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
 
     public CatchTestplaySession(CatchTestplay game, CatchTestplayClock clock, double start, bool withAudio,
@@ -87,6 +87,14 @@ public sealed class CatchTestplaySession
     }
 
     public void Tick() { lock (gate) Advance(); }
+    public void SetPlaybackSpeed(double speed)
+    {
+        lock (gate)
+        {
+            Advance();
+            clock.SetRate(speed, time, Realtime);
+        }
+    }
     public double TogglePause()
     {
         lock (gate)
@@ -146,7 +154,7 @@ public sealed class CatchTestplaySession
         {
             var frame = new CatchTestplayFrame(time, game.X, game.Combo, game.FacingLeft, game.HyperDashing,
                 ended, error, game.JudgedCount, game.MissedObjects.ToArray(), game.Trails.ToArray(), comboChanges.ToArray(),
-                plate.At(time, game.X).ToArray(), autoplay);
+                plate.At(time, game.X).ToArray(), autoplay, keys.Contains(dash));
             comboChanges.Clear();
             return frame;
         }

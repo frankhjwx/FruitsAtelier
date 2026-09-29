@@ -7,6 +7,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private (Guid Source, int Event)? distanceObject;
+    private ConvertedCatchObject? clickedCoordinate;
     private readonly List<Rect> distanceLabelBounds = [];
     public IReadOnlyList<Rect> DistanceLabelBounds => distanceLabelBounds;
     public Rect? PreviousDistanceFieldBounds { get; private set; }
@@ -27,10 +28,13 @@ public sealed partial class EditorView
         return conversion!.Objects.FirstOrDefault(o => o.SourceId == selected.Source && o.EventIndex == selected.Event);
     }
 
+    private ConvertedCatchObject? DistanceReadoutObject() => SelectedDistanceObject()
+        ?? (clickedCoordinate is { } clicked && FlagTargets() is [var source] && source == clicked.SourceId ? clicked : null);
+
     private (ConvertedCatchObject? Previous, ConvertedCatchObject? Next) DistanceNeighbours(ConvertedCatchObject target, IReadOnlyList<ConvertedCatchObject>? objects = null)
     {
         objects ??= conversion!.Objects;
-        EnsureMovementStates(objects);
+        EnsureMovementStates(objects, target.Kind == CatchObjectKind.TinyDroplet);
         int index = Array.FindIndex(movementIndices, i => objects[i].SourceId == target.SourceId && objects[i].EventIndex == target.EventIndex);
         if (index < 0) return (null, null);
         return (index > 0 ? objects[movementIndices[index - 1]] : null,
@@ -45,12 +49,15 @@ public sealed partial class EditorView
     public Rect? DistanceSliderBounds { get; private set; }
     private bool DistanceEditing => distanceEditTarget is not null;
 
+    public bool EqualDistanceHighlighted => DistanceReadout.Previous is { } previous
+        && DistanceReadout.Next is { } next && Math.Abs(previous - next) <= .0200000001;
+
     private void DrawDistanceFields(ICanvas c, Rect panel)
     {
         DistanceSliderBounds = null;
         var target = PlacementGhostPoint() is null ? SelectedDistanceObject() : null;
         var previous = target is not null ? DistanceNeighbours(target).Previous : null;
-        bool editable = target is not null && previous is not null && DistanceReadout.Previous.HasValue && !notesLocked && drag == DragKind.None;
+        bool editable = target is not null && target.Kind != CatchObjectKind.TinyDroplet && previous is not null && DistanceReadout.Previous.HasValue && !notesLocked && drag == DragKind.None;
         NextDistanceFieldBounds = null;
         PreviousDistanceFieldBounds = editable ? new(panel.X, panel.Y, panel.Width, 56) : null;
         var coordinateInput = new Rect(panel.Right - 74, panel.Y + 58, 64, 20);
@@ -65,7 +72,8 @@ public sealed partial class EditorView
         }
         else
         {
-            double? coordinate = PlacementGhostPoint()?.X ?? target?.X;
+            double? coordinate = PlacementGhostPoint()?.X ?? target?.X
+                ?? (clickedCoordinate is { } clicked && FlagTargets().Contains(clicked.SourceId) ? clicked.X : null);
             c.Text(L.Get("coordinate.readout", coordinate?.ToString("0", System.Globalization.CultureInfo.InvariantCulture) ?? "—"),
                 panel.X + 10, panel.Y + 60, MovementPanelFontSize, Muted, panel.Width - 20);
         }
@@ -86,10 +94,10 @@ public sealed partial class EditorView
         }
         else
         {
-            c.Text(L.Get("assist.previous", DistanceReadout.Previous is { } p ? L.Get("assist.ratio", p) : "—"), panel.X + 10, panel.Y + 38, MovementPanelFontSize, Muted, panel.Width / 2 - 14);
+            c.Text(L.Get("assist.previous", DistanceReadout.Previous is { } p ? L.Get("assist.ratio", p) : "—"), panel.X + 10, panel.Y + 38, MovementPanelFontSize, EqualDistanceHighlighted ? Gold : Muted, panel.Width / 2 - 14);
             string next = L.Get("assist.next", DistanceReadout.Next is { } n ? L.Get("assist.ratio", n) : "—");
             float nextWidth = Math.Min(c.MeasureText(next, MovementPanelFontSize), panel.Width / 2 - 14);
-            c.Text(next, panel.Right - 10 - nextWidth, panel.Y + 38, MovementPanelFontSize, Muted, nextWidth);
+            c.Text(next, panel.Right - 10 - nextWidth, panel.Y + 38, MovementPanelFontSize, EqualDistanceHighlighted ? Gold : Muted, nextWidth);
         }
         if (DistanceEditing && fieldError.Length > 0)
         {
@@ -257,15 +265,18 @@ public sealed partial class EditorView
     private TimingMap.Lookup? distanceLayoutTiming;
     private double distanceLayoutScale, distanceLayoutWidth, distanceLayoutDpb;
     private string distanceLayoutLanguage = "";
+    private bool distanceLayoutIncludeTiny;
 
     private void EnsureDistanceLabelLayout(ICanvas c, IReadOnlyList<ConvertedCatchObject> objects)
     {
         if (ReferenceEquals(distanceLayoutSource, objects) && ReferenceEquals(distanceLayoutTiming, renderedTiming)
             && distanceLayoutScale == pixelsPerMs && distanceLayoutWidth == Playfield.Width
-            && distanceLayoutDpb == Document.DistancePerBeat && distanceLayoutLanguage == L.Language) return;
+            && distanceLayoutDpb == Document.DistancePerBeat && distanceLayoutLanguage == L.Language
+            && distanceLayoutIncludeTiny == movementIncludeTinyDroplets) return;
         distanceLayoutSource = objects; distanceLayoutTiming = renderedTiming;
         distanceLayoutScale = pixelsPerMs; distanceLayoutWidth = Playfield.Width;
         distanceLayoutDpb = Document.DistancePerBeat; distanceLayoutLanguage = L.Language;
+        distanceLayoutIncludeTiny = movementIncludeTinyDroplets;
         distanceLayout.Clear();
         var nearby = new List<DistanceLabel>();
         // Choose labels in map order, including offscreen predecessors, so scrolling cannot change priority.
@@ -290,8 +301,8 @@ public sealed partial class EditorView
     private void DrawMovementDistanceLabels(ICanvas c)
     {
         if (!movementAnalysis) return;
-        var objects = placementMovementObjects ?? conversion!.Objects;
-        EnsureMovementStates(objects);
+        var objects = placementMovementObjects ?? playableObjects;
+        EnsureMovementStates(objects, movementIncludeTinyDroplets);
         EnsureDistanceLabelLayout(c, objects);
         double endTime = viewStart + plot.Height / pixelsPerMs;
         var occupied = new List<Rect>();

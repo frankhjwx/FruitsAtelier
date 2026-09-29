@@ -95,6 +95,7 @@ public sealed partial class EditorView
     private Tool cachedPlacementTool;
     private bool placementCtrl, cachedPlacementCtrl;
     private ConvertedCatchObject? placementGhost;
+    private (double? Previous, double? Next) placementDistances;
     private IReadOnlyList<ConvertedCatchObject>? placementMovementObjects;
     private HashSet<(Guid SourceId, int EventIndex)> placementHyperdash = [];
 
@@ -103,7 +104,7 @@ public sealed partial class EditorView
         var point = PlacementGhostPoint();
         if (point is null)
         {
-            cachedPlacementPoint = null; placementGhost = null; placementMovementObjects = null;
+            cachedPlacementPoint = null; placementGhost = null; placementMovementObjects = null; placementDistances = (null, null);
             placementHyperdash = hyperdashObjects;
             return;
         }
@@ -112,6 +113,7 @@ public sealed partial class EditorView
         placementSource = conversion; cachedPlacementPoint = point;
         cachedPlacementTool = tool; cachedPlacementCtrl = placementCtrl;
         placementGhost = null; placementMovementObjects = null; placementHyperdash = hyperdashObjects;
+        placementDistances = (null, null);
         if (tool == Tool.Fruit && TryPreviewFruitPlacement(point.Value)) return;
         // Conversion reads its inputs; clone only the track whose uncommitted endpoint needs editing.
         var candidate = new MapDocument
@@ -143,6 +145,8 @@ public sealed partial class EditorView
         candidate.Tracks.RemoveAll(t => t.Nodes.Count < 2);
         var preview = CatchStreamConverter.Convert(candidate, compensateTinyDroplets, placementConversionCache);
         if (!preview.Success) return;
+        if (preview.Objects.LastOrDefault(o => o.SourceId == source && o.Kind == CatchObjectKind.Fruit) is { } distanceTarget)
+            UpdatePlacementDistances(distanceTarget, preview.Objects);
         IReadOnlyList<ConvertedCatchObject> objects = preview.Objects;
         try
         {
@@ -169,6 +173,13 @@ public sealed partial class EditorView
 
     private void DrawPlacementGhost(ICanvas c)
     {
+        if (tool == Tool.Banana && plot.Contains(mouseX, mouseY) && drag == DragKind.None
+            && menu < 0 && contextItems.Count == 0 && editField < 0)
+        {
+            float y = Screen(MapAt(mouseX, mouseY, true)).Y;
+            c.Line(Playfield.X, y, Playfield.Right, y, Gold, opacity: .7f);
+            return;
+        }
         if (PlacementGhostPoint() is not { } point) return;
         var p = Screen(point);
         float diameter = CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512;
@@ -205,6 +216,8 @@ public sealed partial class EditorView
             || Document.BananaShowers.Any(s => Math.Abs(s.TimeMs - point.TimeMs) <= 2)) return false;
         // Standalone fruits consume no NM random state; unchanged parents keep their exported events.
         var removed = Document.Fruits.Where(f => Math.Abs(f.TimeMs - point.TimeMs) <= 2).Select(f => f.Id).ToHashSet();
+        UpdatePlacementDistances(new(placementId, 0, CatchObjectKind.Fruit, point.TimeMs, point.X, point.X, point.X, 0, true),
+            conversion!.Objects, removed);
         double time = Math.Round(point.TimeMs, MidpointRounding.AwayFromZero);
         double x = Math.Round(point.X, MidpointRounding.AwayFromZero);
         placementGhost = new(placementId, 0, CatchObjectKind.Fruit, time, x, x, x, 0, true);
@@ -215,6 +228,30 @@ public sealed partial class EditorView
             .OrderBy(o => o.TimeMs).ThenBy(o => o.IsStandalone ? o.TimeMs : starts[o.SourceId]).ToArray();
         placementHyperdash = HyperDashCalculator.GetHyperDashStarts(placementMovementObjects, Document.CircleSize);
         return true;
+    }
+
+    private void UpdatePlacementDistances(ConvertedCatchObject target, IReadOnlyList<ConvertedCatchObject> objects,
+        ISet<Guid>? excluded = null)
+    {
+        // DS describes authored spacing; playable rounding is reserved for movement and hyperdash previews.
+        int targetIndex = objects.Count;
+        for (int i = 0; i < objects.Count; i++)
+            if (objects[i].SourceId == target.SourceId && objects[i].EventIndex == target.EventIndex)
+            { targetIndex = i; break; }
+        ConvertedCatchObject? previous = null, next = null;
+        for (int i = 0; i < objects.Count; i++)
+        {
+            var item = objects[i];
+            if (i == targetIndex || item.Kind is not (CatchObjectKind.Fruit or CatchObjectKind.Droplet)
+                || excluded?.Contains(item.SourceId) == true) continue;
+            if (item.TimeMs < target.TimeMs || item.TimeMs == target.TimeMs && i < targetIndex)
+            {
+                if (previous is null || item.TimeMs >= previous.TimeMs) previous = item;
+            }
+            else if (next is null || item.TimeMs < next.TimeMs) next = item;
+        }
+        placementDistances = (previous is null ? null : BaseDistanceRatio(previous, target),
+            next is null ? null : BaseDistanceRatio(target, next));
     }
 
     private static void RemoveFruitPlacementConflicts(MapDocument document, double timeMs)
@@ -284,7 +321,11 @@ public sealed partial class EditorView
         }
         var source = HitCatchObject(x, y)?.SourceId ?? HitSliderLocation(x, y)?.Id ?? HitBananaRectangle(x, y)?.Id;
         if (source is { } id && (tool != Tool.Fruit || !AudioPlaying))
-        { SelectObjects([id]); DeleteSelectedObjects(); return; }
+        {
+            if (!objectSelection.Contains(id)) SelectObjects([id]);
+            DeleteSelectedObjects();
+            return;
+        }
         if (tool == Tool.Fruit) { nextFruitNewCombo = !nextFruitNewCombo; StatusMessage = L.Get(nextFruitNewCombo ? "tools.newComboOn" : "tools.newComboOff"); }
     }
 

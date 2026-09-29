@@ -52,7 +52,7 @@ Library. Finish a text edit with Enter before using page or file commands.
 | Ctrl+Z | Undo. |
 | Ctrl+Y / Ctrl+Shift+Z | Redo. |
 | Ctrl+H | Mirror selected objects around X=256. |
-| Ctrl+Shift+Left / Ctrl+Shift+Right | Move selected objects by one X unit. |
+| Ctrl+Shift+Left / Ctrl+Shift+Right | Move selected objects by the current horizontal grid step. |
 | J / K | Move selected objects earlier / later by one current Snap subdivision, using the earliest selected start's BPM. |
 | L | Toggle Lock Notes. |
 
@@ -75,7 +75,7 @@ change. Other shortcuts may be blocked until the draft or drag ends.
 
 | Keys | Action |
 | --- | --- |
-| Space / C | Play / pause. With beat snapping enabled, pausing aligns to the nearest current Snap grid line; see [pause behavior](EDITOR_UI.md#playback-pause-snapping). |
+| Space / C | Play / pause. Available while holding a canvas or upper-timeline marquee. With beat snapping enabled, pausing aligns to the nearest current Snap grid line; see [pause behavior](EDITOR_UI.md#playback-pause-snapping). |
 | X | Seek to song start and play. |
 | Home | Seek to song start without forcing playback. |
 | Z | Seek to the first object's start; if already at or before it, seek to zero. |
@@ -87,7 +87,7 @@ change. Other shortcuts may be blocked until the draft or drag ends.
 | Ctrl+Shift+Up / Ctrl+Shift+Down | Increase / decrease speed by 5 percentage points. |
 | Ctrl+B | Add a bookmark at the playhead. |
 | Ctrl+Shift+B | Remove the nearest bookmark within two seconds. |
-| Ctrl+Left / Ctrl+Right | Previous / next bookmark, even with objects selected. |
+| Ctrl+Left / Ctrl+Right | In Compose, move selected objects by one X unit; without a selection, seek the previous / next bookmark. Timing always navigates bookmarks. |
 | Alt+Left / Alt+Right | Open volume controls and select Master, Music or Effect. |
 | Alt+Up / Alt+Down | Open volume controls and change the selected channel by five percentage points. |
 
@@ -123,7 +123,7 @@ Object sampleset selection is not bound to Shift+Q/W/E/R or Ctrl+Q/W/E/R.
 | Ctrl+L | Toggle the selected control between straight and curved. |
 | Ctrl+Shift+I | Insert a control on the curve under the pointer in Compose. |
 | Ctrl+= / Ctrl+- | Add / remove one reverse on the selected FSlider. |
-| Ctrl+G | Reverse the selected FSlider's first-span horizontal trajectory while retaining its time range and repeats. |
+| Ctrl+G | Reverse the selection in time, including each slider’s own path. A single FSlider retains its time range and repeats. |
 | Ctrl+J | Extend the selected FSlider to the pointer at a valid later canvas time. |
 | Ctrl+Shift+F | Open slider-to-stream conversion, or Change snapping for a stream selection. |
 
@@ -131,7 +131,7 @@ In the stream dialog, Left/Up and Right/Down decrease and increase the chosen
 subdivision. Enter applies; Esc cancels. Converting to a stream retains an editable
 slider parent and exports fruit objects.
 
-Ctrl+L, Ctrl+G, Ctrl+J and Ctrl+Shift+I have editor-specific meanings; do not assume
+Ctrl+L, Ctrl+J and Ctrl+Shift+I have editor-specific meanings; do not assume
 osu!stable behavior. Ctrl++ (Ctrl+Shift+= on a US keyboard) and keypad plus/minus
 currently do not adjust reverses.
 
@@ -141,8 +141,9 @@ currently do not adjust reverses.
 | --- | --- |
 | Wheel over canvas, object timeline or overview | Up seeks earlier; down seeks later. One notch is a Snap subdivision while paused, or a whole beat while playing. |
 | Shift+wheel | Seek four times the normal wheel distance. During marquee selection, wheel seeking remains single-step. |
-| Ctrl+wheel over canvas or either timeline | Cycle all supported Snap choices. |
+| Ctrl+wheel over canvas or either timeline | Double / halve the current divisor within supported choices, stopping at the family boundary. |
 | Alt+wheel over canvas | Zoom around the pointer's time. |
+| Alt+wheel over bottom overview | Adjust the selected volume channel by five percentage points and show the volume overlay. |
 | Alt+wheel over object timeline | Zoom that timeline independently. |
 | Alt+wheel over Timing waveform | Zoom the waveform time scale. Ctrl+wheel on the waveform currently does nothing. |
 | Ctrl+Alt+wheel over canvas or object timeline | Cycle the four tools. |
@@ -203,6 +204,8 @@ to Compose before moving selected objects.
 | Esc / F1 | Exit and return to the selected testplay start position. |
 | F2 | Exit at the current testplay position. |
 | Alt+arrows | Select and adjust volume channels as above. |
+
+Combo visibility is configured in **Settings → Testplay keys** and has no shortcut.
 
 Change movement and dash in **Settings → Testplay keys**: click a binding, press
 the new key, then Apply. Esc cancels capture; reusing an assigned key swaps the

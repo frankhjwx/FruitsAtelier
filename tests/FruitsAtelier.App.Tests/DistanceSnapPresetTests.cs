@@ -189,6 +189,102 @@ internal static class DistanceSnapPresetTests
             "Undo should restore DPB and its preset multipliers together.");
     }
 
+    public static void DeletePresetBadge()
+    {
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            Strings.SetLanguage(language);
+            var map = new MapDocument(); map.DistanceSnapRatios.AddRange([2.6, .9, 1.3, 1.3]);
+            var ui = new Ui(); ui.LoadDocument(map); ui.View.OpenDistanceSnapDialog(); ui.Paint();
+            var badge = ui.Canvas.Texts.Where(t => t.Value == Strings.Get("ds.ratio", 1.3)).OrderByDescending(t => t.Y).First();
+            ui.View.PointerDown(badge.X + 2, badge.Y + 2, 2, false, false);
+            ui.View.PointerUp(badge.X + 2, badge.Y + 2, 2); ui.Paint();
+            Check(ui.View.DistanceSnapPointerBounds.Count == 3 && map.DistanceSnapRatios.Count == 4,
+                "Badge deletion did not remove just one draft preset.");
+            ui.ClickText(Strings.Get("library.apply"));
+            Check(ui.View.Document.DistanceSnapRatios.SequenceEqual([.9, 1.3, 2.6]),
+                "Sorted badge deleted the wrong preset or all duplicate values.");
+            ui.Key('Z', ctrl: true);
+            Check(ui.View.Document.DistanceSnapRatios.SequenceEqual([2.6, .9, 1.3, 1.3]), "Badge deletion did not undo.");
+        }
+        Strings.SetLanguage("en");
+    }
+
+    public static void PlacementReadoutPrecision()
+    {
+        var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 60000.0 / 220, TimingOffsetMs = -18,
+            DistancePerBeatOverride = 200, DistanceSnapCollinear = true };
+        double first = -18 + map.BeatLengthMs / 2, middle = first + map.BeatLengthMs / 4,
+            last = first + map.BeatLengthMs * .75;
+        map.Fruits.Add(new Fruit { TimeMs = first, X = 113.4 });
+        map.Fruits.Add(new Fruit { TimeMs = last, X = 396.9 });
+        var ui = new Ui(); ui.LoadDocument(map); ui.Key('Y'); ui.Key('2');
+        ui.MoveMap(middle, 208); var preview = ui.View.DistanceReadout;
+        Check(preview.Previous is { } p && Math.Abs(p - 1.89) < 1e-6
+            && preview.Next is { } n && Math.Abs(n - 1.89) < 1e-6 && ui.View.EqualDistanceHighlighted,
+            $"Fractional-time preview DS used exported integer coordinates or time: {preview}, step={ui.View.SnapDivisor}, x={ui.Canvas.Texts.LastOrDefault(t => t.Value.StartsWith("X:"))}.");
+        ui.ClickMap(middle, 208); ui.Key('1'); ui.ClickMap(middle, 207.9);
+        var placed = ui.View.DistanceReadout;
+        Check(placed.Previous is { } a && placed.Next is { } b
+            && Math.Abs(a - preview.Previous!.Value) < 1e-6 && Math.Abs(b - preview.Next!.Value) < 1e-6,
+            "Placement changed the DS readout.");
+    }
+
+    public static void Collinear()
+    {
+        var before = new DistanceSnap.Reference(Guid.NewGuid(), new(500, 20), new(1000, 100), .384, 0);
+        var after = new DistanceSnap.Reference(Guid.NewGuid(), new(1750, 401), new(2000, 450), .384, 1);
+        double expected = 100 + 301 / 3.0;
+        Check(Math.Abs(DistanceSnap.SnapMultiple(new(1250, 202), before, [1], out _, after).X - expected) < 1e-9,
+            "Collinear candidate did not interpolate from previous tail to next head.");
+        Check(DistanceSnap.SnapMultiple(new(1250, 195), before, [1], out _, after).X == 196,
+            "Collinear snap displaced a nearer preset.");
+        Check(DistanceSnap.CollinearX(1000, before, after) is null
+            && DistanceSnap.CollinearX(1750, before, after) is null
+            && DistanceSnap.CollinearX(1250, null, after) is null
+            && DistanceSnap.CollinearX(1250, before, null) is null,
+            "Missing or overlapping neighbours produced a collinear candidate.");
+        var map = new MapDocument { DurationMs = 5000, BeatLengthMs = 500, DistanceSnapCollinear = true };
+        map.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 });
+        map.Fruits.Add(new Fruit { TimeMs = 1750, X = 401 });
+        Check(ProjectSerializer.Read(ProjectSerializer.Serialize(map)).DistanceSnapCollinear
+            && map.DeepClone().DistanceSnapCollinear, "Collinear setting was lost on save or clone.");
+        var disabled = map.DeepClone(); disabled.DistanceSnapCollinear = false;
+        Check(!map.ContentEquals(disabled) && ProjectSerializer.Read("{\"SchemaVersion\":1,\"Document\":{}}").DistanceSnapCollinear,
+            "Collinear setting ignored dirty comparison or old-map defaults.");
+        Check(!ProjectSerializer.Read(ProjectSerializer.Serialize(disabled)).DistanceSnapCollinear,
+            "Saved disabled state was replaced by the default.");
+        var ui = new Ui(); ui.LoadDocument(map); ui.Key('Y'); ui.Key('2');
+        if (ui.View.EditorGridSettings.Enabled) ui.Key('T');
+        ui.ClickMap(1250, 202);
+        Check(Math.Abs(ui.View.Document.Fruits.Single(f => f.TimeMs == 1250).X - expected) < 1e-9,
+            "Placement did not retain precise collinear X with GS off.");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.Fruits.Count == 2, "Collinear placement did not undo.");
+        ui.Key('Y', ctrl: true); ui.Key('1');
+        ui.DownMap(1250, expected); ui.MoveMap(1500, 300); ui.UpMap(1500, 300);
+        Check(ui.View.Document.Fruits.Any(f => f.TimeMs == 1500 && Math.Abs(f.X - (100 + 602 / 3.0)) < 1e-9),
+            "Dragging included the selected fruit as a neighbour or rounded collinear X.");
+        ui.Key('T'); ui.Key('2'); ui.ClickMap(1375, 252);
+        double gridX = Math.Round(250.5 / ui.View.EditorGridSettings.Size, MidpointRounding.AwayFromZero) * ui.View.EditorGridSettings.Size;
+        Check(ui.View.Document.Fruits.Any(f => f.TimeMs == 1375 && f.X == gridX),
+            "GS did not round the collinear candidate to the nearest grid position.");
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            Strings.SetLanguage(language);
+            ui.View.OpenDistanceSnapDialog(); ui.Paint(); ui.ClickText(Strings.Get("ds.collinear"));
+            Check(ui.View.Document.DistanceSnapCollinear, "Draft toggle changed the document before Apply.");
+            ui.ClickText(Strings.Get("mac.cancel"));
+            Check(ui.View.Document.DistanceSnapCollinear, "Cancel changed collinear snap.");
+            ui.View.OpenDistanceSnapDialog(); ui.Paint(); ui.ClickText(Strings.Get("ds.collinear"));
+            ui.ClickText(Strings.Get("library.apply"));
+            Check(!ui.View.Document.DistanceSnapCollinear, "Apply did not store collinear snap.");
+            ui.Key('Z', ctrl: true);
+            Check(ui.View.Document.DistanceSnapCollinear, "Collinear setting did not undo.");
+        }
+        Strings.SetLanguage("en");
+    }
+
     public static void Snapping()
     {
         var reference = new DistanceSnap.Reference(Guid.NewGuid(), new(1000, 256), new(1000, 256), .28, 0);

@@ -25,7 +25,8 @@ public static class OsuBeatmapReader
     {
         ArgumentNullException.ThrowIfNull(text);
         if (text.Length > MaximumFileBytes) throw new InvalidDataException(L.Get("core.reader.textLimit"));
-        var document = new MapDocument { IsDemo = false, SourcePath = sourcePath is null ? null : Path.GetFullPath(sourcePath) };
+        var document = new MapDocument { IsDemo = false, SourcePath = sourcePath is null ? null : Path.GetFullPath(sourcePath),
+            ImportedContentHash = sourcePath is null || !inferDuration ? null : WorkspaceSynchronization.Digest(text) };
         var section = new OsuSection();
         document.OriginalSections.Add(section);
         using var reader = new StringReader(text);

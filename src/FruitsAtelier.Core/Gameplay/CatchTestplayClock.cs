@@ -13,6 +13,14 @@ public sealed class CatchTestplayClock(double start, double rate, double realtim
     private bool running = !waitForAudio;
     public bool IsRunning => running;
 
+    public void SetRate(double value, double position, double now)
+    {
+        rate = value;
+        anchorTime = lastTime = position;
+        anchorRealtime = now;
+        correction = 0;
+    }
+
     public void Restart(double position, double now, bool waitForAudio)
     {
         anchorTime = lastTime = position; anchorRealtime = now; correction = 0;

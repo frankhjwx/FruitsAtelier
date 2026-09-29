@@ -14,6 +14,7 @@ public sealed class OsuWriteCache
 
 public sealed class OsuWriteResult
 {
+    public IReadOnlyList<Guid> ObjectSources { get; init; } = [];
     public required string Text { get; init; }
     public required MapDocument ReadBack { get; init; }
     public required IReadOnlyList<string> Diagnostics { get; init; }
@@ -143,7 +144,17 @@ public static class OsuBeatmapWriter
         var text = new StringBuilder("osu file format v14\r\n");
         foreach (var section in output.OriginalSections)
         {
+            if (section.Name == "Colours")
+            {
+                while (text.Length > 0 && char.IsWhiteSpace(text[^1])) text.Length--;
+                text.Append("\r\n\r\n");
+            }
             if (section.Name.Length != 0) text.Append('[').Append(section.Name).Append("]\r\n");
+            if (section.Name == "Metadata")
+            {
+                WriteMetadata(text, section);
+                continue;
+            }
             foreach (string line in section.Lines) text.Append(line).Append("\r\n");
         }
         string serialized = text.ToString();
@@ -213,7 +224,7 @@ public static class OsuBeatmapWriter
             : [];
         return new OsuWriteResult
         {
-            Text = serialized, ReadBack = readBack, Diagnostics = diagnostics,
+            Text = serialized, ReadBack = readBack, Diagnostics = diagnostics, ObjectSources = orderedLines.Select(l => l.SourceId).ToArray(),
             MaxTimeQuantizationMs = maxTime, MaxCoordinateQuantization = maxCoordinate,
             MaxConvertedTimeErrorMs = timeError, MaxConvertedXError = xError, ObjectSequenceMatches = matches,
             PlayableObjects = playableObjects, PlayableHardRockObjects = playableHardRockObjects,
@@ -399,12 +410,26 @@ public static class OsuBeatmapWriter
         if (target is null) { target = new OsuSection { Name = name }; document.OriginalSections.Add(target); }
         target.Lines.Add(key + ":" + value);
     }
+    private static void WriteMetadata(StringBuilder text, OsuSection section)
+    {
+        string[] keys = ["Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Source", "Tags", "BeatmapSetID", "Version", "BeatmapID"];
+        string Key(string line) => line.Split(':', 2)[0].Trim();
+        foreach (string key in keys.Take(8))
+            foreach (string line in section.Lines.Where(line => Key(line) == key)) text.Append(line).Append("\r\n");
+        foreach (string line in section.Lines.Where(line => !string.IsNullOrWhiteSpace(line) && !keys.Contains(Key(line))))
+            text.Append(line).Append("\r\n");
+        if (section.Lines.Any(line => Key(line) is "Version" or "BeatmapID")) text.Append("\r\n");
+        foreach (string key in keys.Skip(8))
+            foreach (string line in section.Lines.Where(line => Key(line) == key)) text.Append(line).Append("\r\n");
+    }
+
     private static void ReplaceData(MapDocument document, string name, IEnumerable<string> data)
     {
         var sections = document.OriginalSections.Where(s => s.Name == name).ToArray();
         var target = sections.FirstOrDefault();
         if (target is null) { target = new OsuSection { Name = name }; document.OriginalSections.Add(target); }
-        foreach (var section in sections) section.Lines.RemoveAll(l => OsuBeatmapReader.IsDataLine(l.Trim()));
+        foreach (var section in sections) section.Lines.RemoveAll(l => string.IsNullOrWhiteSpace(l) || OsuBeatmapReader.IsDataLine(l.Trim()));
         target.Lines.AddRange(data);
+        target.Lines.Add("");
     }
 }

@@ -16,10 +16,13 @@ internal static class CanvasZoomTests
         Near(EditorView.MinimumPlayfieldWidth, ui.Plot.Width);
         ui.Resize(980, 620);
         if (ui.Plot.Width < EditorView.MinimumPlayfieldWidth - .001) throw new Exception("Resize bypassed minimum width");
+        double remembered = ui.View.LibrarySettings.CanvasZoom;
+        ui.Resize(1440, 900);
         ui.ClickText(L.Get("ui.resetView"));
-        Near(.6, ui.View.CanvasZoom);
+        Near(remembered, ui.View.CanvasZoom);
         AssertScale(ui);
         if (ui.View.IsDirty) throw new Exception("View defaults changed document content");
+        ClickZoom(ui, .5f);
         var map = new MapDocument { DurationMs = 30000 };
         map.Fruits.Add(new Fruit { TimeMs = 100, X = 256 });
         ui.Resize(1440, 900); ui.View.LoadDocument(map); ui.Paint();

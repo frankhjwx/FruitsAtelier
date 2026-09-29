@@ -295,7 +295,7 @@ public sealed class AudioTransport : IDisposable
                                 playbackSpeed = command.Position;
                                 if (reader is not null)
                                 {
-                                    await ResetOutputAsync(position);
+                                    await ResetOutputAsync(position, publishStopped: false);
                                     if (playIntent) StartOutput();
                                 }
                                 break;
@@ -412,7 +412,7 @@ public sealed class AudioTransport : IDisposable
     private float songVolume = 1;
     public float SongVolume { get => Volatile.Read(ref songVolume); set => Volatile.Write(ref songVolume, float.IsFinite(value) ? Math.Clamp(value, 0, 1) : 1); }
 
-    private async Task ResetOutputAsync(double position, long requestedSeek = 0)
+    private async Task ResetOutputAsync(double position, long requestedSeek = 0, bool publishStopped = true)
     {
         TraceSnapshot("resetBegin", new { targetMs = position, requestedSeek });
         try { await ReleaseOutputAsync(); }
@@ -434,7 +434,8 @@ public sealed class AudioTransport : IDisposable
         output = CreateOutput();
         lock (stateLock)
             if (requestedSeek != 0 && loadedVersion == loadVersion && requestedSeek == seekVersion) appliedSeekVersion = requestedSeek;
-        Publish(basePosition, false);
+        // A speed rebuild must not expose a temporary stop to live testplay observers.
+        if (publishStopped) Publish(basePosition, false);
         TraceSnapshot("resetEnd", new { targetMs = position, actualMs = basePosition, requestedSeek });
     }
 

@@ -94,6 +94,11 @@ even when the device advances before the worker handles it.
 
 ## Window checks
 
+The Windows `--render-check` injects nested timer and paint messages during audio
+replacement, verifying that difficulty switches retain paused and playing
+positions when the replacement audio becomes ready. This check uses a silent
+fixture and an injected output without opening an audio device.
+
 Settings preference regressions cover Audio sliders and the Appearance skin selector from both the Library and editor, shared values with the original controls, immediate persistence, menu dismissal, and unchanged beatmap content in English and Chinese. The Windows `--render-check` also exercises the Settings sliders and skin menu at its tested sizes and DPI values.
 
 Update restart checks verify that Settings closes before the host prepares saving,
@@ -289,3 +294,39 @@ Song Setup regressions cover shared metadata, independent difficulty settings,
 romanised fields, modal isolation, cancellation, undo/redo, palette HEX input and
 project/`.osu` persistence. Native window checks open all four tabs in both
 languages at each supported test size and DPI and exercise the color picker.
+
+## Synchronization regression coverage
+
+Formats regressions exercise metadata and directory/file renames, uploaded IDs,
+three-way field conflicts, timing updates, pending local choices, external deletion,
+unavailable roots, truncated files, numeric spelling, identical copies, audio
+replacement and recovery, duplicate ownership, unique-difficulty migration, baseline
+persistence, emitted object mappings, multi-output curves, and interrupted exports.
+Fixtures and retained recovery files live under `artifacts/tests/synchronization`.
+
+Shared App tests cover asynchronous discovery, context rebasing through undo,
+missing-file input isolation, explicit restoration, per-object choices, linked
+deletion, and local-project exemptions in both languages and window sizes. Native
+Windows `--render-check` draws conflict, missing and deletion states in English
+and Chinese at each tested size and DPI without playing fixture audio.
+
+Visual merge checks cover baseline-free field/object comparisons, sequential choices,
+revisiting decisions, aligned highlights on both canvases, synchronized scrolling and
+zoom, newer-save timestamps, and asynchronous result previews without content edits.
+Native rendering checks include the baseline-free comparison and canvas navigation.
+
+AR regressions compare note spacing with the editor's timing scale at AR 1, 5 and 9
+and both window widths. Resolution-history checks cover repeated time moves across
+anchors, ignored additions, older baseline migration, red/amber/green interval states,
+clicking completed intervals and changing prior choices before applying the review.
+
+File-monitor checks exercise notification coalescing, bounded overflow recovery,
+native create/rename/delete events, archive/index exclusions and disposal. Editor
+checks cover automatic metadata synchronization, directory identity recovery,
+new difficulties, inactive conflict gating, pointer-capture deferral and external
+changes during a pending merge. Apply must revalidate rather than commit a stale choice.
+
+Project-library notification regressions add and remove external difficulties while
+the My projects view stays open, checking both card counts and detail rows. They
+also verify muted retained FA entries, background filename/directory rediscovery,
+duplicate-free listings and unchanged authoring/baseline files during discovery.

@@ -6,6 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    private readonly List<BeatGridLine> canvasGrid = [];
     private (double TimeMs, bool Active)[] kiaiTransitions = [];
 
     private void RefreshKiaiTransitions()
@@ -43,6 +44,8 @@ public sealed partial class EditorView
         if (ErrorVisible) { DrawError(c); return; }
         PumpSliderBatch();
         PumpLibrary();
+        if (syncPage == "resolve" && syncMerges.TryGetValue(syncDifficulty, out var comparisonMerge) && comparisonMerge.Conflicts.Count > 0
+            && syncComparisons.ContainsKey(syncDifficulty)) { DrawSynchronization(c); return; }
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
         if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
         bool expandedPanel = catchPreviewVisible || TimingPageVisible;
@@ -87,12 +90,6 @@ public sealed partial class EditorView
         }
         DrawTransport(c);
         DrawStatus(c);
-        if (resourceErrors.Count > 0)
-        {
-            c.Fill(new(0, height - 145, width, 25), 0x48272Du);
-            c.Text(L.Get("library.missingResources", string.Join("; ", resourceErrors)), 12, height - 140, 12, Error, width - 140);
-            Button(c, new(width - 126, height - 145, 114, 25), L.Get("library.details"), () => { resourcePage = LibraryVisible = true; exportPage = false; libraryScroll = 0; });
-        }
         DrawUpdateNotice(c);
         if (menu >= 0) DrawMenu(c);
         if (!librarySettingsOpen) DrawContextMenu(c);
@@ -203,7 +200,8 @@ public sealed partial class EditorView
         }
         List<float> axisLabelRows = [];
         List<(float Y, double Time)> axisLabels = [];
-        foreach (var line in renderedTiming!.Grid(viewStart, viewStart + plot.Height / pixelsPerMs, divisor))
+        renderedTiming!.FillGrid(viewStart, viewStart + plot.Height / pixelsPerMs, divisor, canvasGrid);
+        foreach (var line in canvasGrid)
         {
             double time = line.TimeMs;
             var localTiming = renderedTiming.At(time);
@@ -258,10 +256,8 @@ public sealed partial class EditorView
         {
             DrawImportedCurves(c, playfield.X, playfield.Width, plot.Bottom, viewStart, pixelsPerMs,
                 viewStart, viewStart + plot.Height / pixelsPerMs, false);
-            bool controlsActive = SliderControlsActive;
             foreach (var track in Document.Tracks)
             {
-                uint color = track.Kind == CurveKind.Bezier ? Purple : Accent;
                 bool selected = IsObjectSelected(track.Id);
                 float opacity = selected ? 1 : 0.5f;
                 for (int span = 0; span < track.SpanCount; span++)
@@ -287,6 +283,22 @@ public sealed partial class EditorView
                         }
                     }
                 }
+            }
+        }
+        if (movementAnalysis)
+        {
+            DrawMovementConnections(c);
+            DrawCanvasCatchObjects(c);
+            DrawMovementDistanceLabels(c);
+        }
+        if (showTargets)
+        {
+            bool controlsActive = SliderControlsActive;
+            foreach (var track in Document.Tracks)
+            {
+                uint color = track.Kind == CurveKind.Bezier ? Purple : Accent;
+                bool selected = IsObjectSelected(track.Id);
+                float opacity = selected ? 1 : 0.5f;
                 if (selected && LegacyMode && controlsActive)
                 {
                     DrawLegacyControls(c, track);
@@ -317,12 +329,6 @@ public sealed partial class EditorView
                     }
                 }
             }
-        }
-        if (movementAnalysis)
-        {
-            DrawMovementConnections(c);
-            DrawCanvasCatchObjects(c);
-            DrawMovementDistanceLabels(c);
         }
         DrawSelectedDistanceTick(c);
         DrawPlacementGhost(c);
@@ -584,8 +590,9 @@ public sealed partial class EditorView
     {
         c.Fill(new(0, height - 28, width, 28), 0x171C23);
         c.Circle(13, height - 14, 3, IsDirty ? Gold : Accent);
-        string notice = conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
-        c.Text(notice, 25, height - 21, 11, conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 145));
+        string notice = SynchronizationBusy ? L.Get(syncCommitTask is not null ? "sync.applying" : "sync.checking")
+            : conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
+        c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 145));
         DrawVolumeButton(c);
     }
 
@@ -617,6 +624,8 @@ public sealed partial class EditorView
             Item(L.Get("ui.undoMenu"), Undo, history.CanUndo);
             Item(L.Get("ui.redoMenu"), Redo, history.CanRedo);
             Item(L.Get("ui.deleteMenu"), DeleteSelection, selection != Guid.Empty);
+            Item(L.Get("editor.command.reverseSelection") + "  Ctrl+G", ReverseSelection, CanCopySelection && !notesLocked);
+            Item(L.Get("editor.command.reversePath"), ReverseSelectedPath, SelectedTrack is not null && ClipboardInteractionReady && !notesLocked);
             Item(L.Get("ui.splitMenu"), SplitSelected, SelectedTrack is not null && draftTrack == Guid.Empty);
             Item(L.Get("ui.cutMenu"), () => CutSelection(), CanCopySelection);
             Item(L.Get("ui.copyMenu"), () => CopySelection(), CanCopySelection);
@@ -624,6 +633,7 @@ public sealed partial class EditorView
             Item(L.Get(SelectedStreamsOnly ? "stream.changeSnapMenu" : "stream.menu"), OpenStreamDialog, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
+            Item(L.Get("slider.clearInternalNodes"), ClearSliderNodes, CanClearSliderNodes);
         }
         else if (menu == 4)
         {
@@ -654,6 +664,7 @@ public sealed partial class EditorView
             Item(showPreviewCurves ? L.Get("ui.previewCurvesOn") : L.Get("ui.previewCurvesOff"), () => showPreviewCurves = !showPreviewCurves);
             Item(L.Get("ui.follow"), FollowPlayhead);
             Item(L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, active: movementAnalysis);
+            Item(L.Get("movement.includeTiny"), () => movementIncludeTinyDroplets = !movementIncludeTinyDroplets, active: movementIncludeTinyDroplets);
             Item(L.Get("timing.page"), () => ShowTimingPage(true));
             Item(L.Get("timing.setup"), OpenTimingSetup);
         }

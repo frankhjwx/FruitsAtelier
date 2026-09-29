@@ -21,13 +21,35 @@ internal static class DropletSelectionLockTests
             var baseline = ui.View.Document.DeepClone();
             var target = OsuBeatmapWriter.Serialize(map).PlayableObjects
                 .First(o => o.Kind == kind && o.TimeMs > 1400 && o.TimeMs < 1600);
-            ui.ClickMap(target.TimeMs, target.X); ui.ClickMap(target.TimeMs, target.X);
+            ui.ClickMap(target.TimeMs, target.X);
+            string readout = Strings.Get("coordinate.readout", target.X.ToString("0", System.Globalization.CultureInfo.InvariantCulture));
+            Check(ui.Canvas.Texts.Any(t => t.Value == readout), "Clicked droplet did not display X while its parent was selected.");
+            Check(ui.View.XCoordinateFieldBounds is null && ui.View.SelectedObjectIds.SequenceEqual(new[] { slider.Id }),
+                "Coordinate readout changed the first-click parent selection.");
+            Check(baseline.ContentEquals(ui.View.Document), "Coordinate readout changed slider content.");
+            if (kind == CatchObjectKind.TinyDroplet) CheckTinyReadout();
+            ui.ClickMap(target.TimeMs, target.X);
             Check(ui.View.XCoordinateFieldBounds is not null, "Unlocked droplet could not be selected.");
+            if (kind == CatchObjectKind.TinyDroplet) CheckTinyReadout();
+
+            void CheckTinyReadout()
+            {
+                Check(ui.View.MovementReadout.Previous is not null && ui.View.MovementReadout.Next is not null,
+                    "Tiny droplet movement readout is missing a neighbour");
+                Check(ui.View.DistanceReadout.Previous is not null && ui.View.DistanceReadout.Next is not null,
+                    "Tiny droplet distance readout is missing a neighbour");
+                Check(ui.View.PreviousDistanceFieldBounds is null, "Reading tiny droplet distances enabled DS editing");
+                var prior = ui.View.DistanceReadout;
+                ui.Paint(); ui.Paint();
+                Check(prior == ui.View.DistanceReadout && baseline.ContentEquals(ui.View.Document),
+                    "Repainting changed tiny droplet distances or content");
+            }
             Toggle(ui);
             Check(ui.View.DropletSelectionLocked && !ui.View.NotesLocked, "Droplet lock is not independent.");
             Check(ui.View.XCoordinateFieldBounds is null, "Lock retained the active droplet child selection.");
             ui.ClickMap(target.TimeMs, target.X); ui.ClickMap(target.TimeMs, target.X);
             Check(ui.View.XCoordinateFieldBounds is null, "Locked droplet was selected through its slider path.");
+            Check(!ui.Canvas.Texts.Any(t => t.Value == readout), "Locked droplet exposed an X readout.");
             ui.ClickText(Strings.Get("ui.sliderPathCurves"));
             ui.Key('1'); ui.ClickMap(3500, 50);
             ui.ClickMap(target.TimeMs, target.X); ui.ClickMap(target.TimeMs, target.X, ctrl: true);

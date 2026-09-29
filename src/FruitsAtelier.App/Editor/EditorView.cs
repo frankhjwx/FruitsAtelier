@@ -16,7 +16,6 @@ public sealed partial class EditorView
         public Guid Id { get; } = difficulty.Id;
         public string Name => OsuBeatmapReader.Setting(History.Document, "Metadata", "Version") ?? difficulty.Name;
         public EditorHistory History { get; } = new(difficulty.Document);
-        public double Playhead, ViewStart;
         public MapDocument? RatingSnapshot;
         public double? Stars;
         public IReadOnlyList<CatchStrainSample>? StrainSamples;
@@ -87,7 +86,7 @@ public sealed partial class EditorView
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
     public bool IsEditingText => timingField.Length > 0 || SongSetupVisible && songField.Length > 0 || DistanceSnapDialogVisible && dsBaseFocused || DistanceEditing || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
-    public bool WantsCapture => timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || SliderHoldNeedsRedraw || sliderHoldConsumed;
+    public bool WantsCapture => workspaceScrollDragging || timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || SliderHoldNeedsRedraw || sliderHoldConsumed;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;
     public double PlayheadMs => playhead;
@@ -138,6 +137,7 @@ public sealed partial class EditorView
 
     private void RebuildConversion()
     {
+        clickedCoordinate = null;
         convertedSnapshot = Document.DeepClone();
         renderedTiming = new TimingMap.Lookup(Document);
         convertedWithCompensation = compensateTinyDroplets;
@@ -221,7 +221,7 @@ public sealed partial class EditorView
     private void ResetView()
     {
         pinPlayhead = true;
-        canvasZoom = .6;
+        canvasZoom = LibrarySettings.CanvasZoom;
         viewStart = 0;
         if (Playfield.Width > 0) pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
         if (AudioPlaying) FollowPlayhead();
@@ -243,6 +243,8 @@ public sealed partial class EditorView
         y = Math.Clamp(y, plot.Y, plot.Bottom);
         double anchorTime = Transform.ToMap(Playfield.X, y).TimeMs;
         canvasZoom = Math.Clamp(canvasZoom * factor, MinimumCanvasZoom, 1);
+        LibrarySettings.CanvasZoom = canvasZoom;
+        if (drag != DragKind.CanvasZoom) RequestViewPreference?.Invoke();
         pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
         viewStart = anchorTime - (plot.Bottom - y) / pixelsPerMs;
         ClampView();
@@ -283,7 +285,7 @@ public sealed partial class EditorView
     private void Select(Guid id, Guid track = default)
     {
         if (id != temporarySnapSource || track != Guid.Empty) RestoreTemporarySnap();
-        soundEdge = null; distanceObject = null;
+        soundEdge = null; distanceObject = null; clickedCoordinate = null;
         objectSelection.Clear(); anchorSelection.Clear();
         if (Document.Tracks.FirstOrDefault(t => t.Id == track)?.Nodes.Any(n => n.Id == id) == true)
             anchorSelection.Add(id);
