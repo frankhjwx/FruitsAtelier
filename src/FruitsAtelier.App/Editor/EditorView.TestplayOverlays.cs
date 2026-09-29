@@ -7,8 +7,26 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private const double TestplayMenuFadeMs = 600;
+    private const double TestplayMenuFadeInMs = 300;
     private double testplayGameplayStart, testplayMenuStartedAt;
     private double? testplayResumeAt;
+    private float testplayMenuOpacityFrom, testplayMenuOpacityTarget;
+    private double testplayMenuOpacityAt;
+    private float TestplayMenuOpacity
+    {
+        get
+        {
+            float t = (float)Math.Clamp((TestplayRealtime - testplayMenuOpacityAt) /
+                (testplayMenuOpacityTarget == 1 ? TestplayMenuFadeInMs : TestplayMenuFadeMs), 0, 1);
+            return testplayMenuOpacityFrom + (testplayMenuOpacityTarget - testplayMenuOpacityFrom) * t;
+        }
+    }
+    private void FadeTestplayMenu(float target, bool opening = false)
+    {
+        testplayMenuOpacityFrom = opening ? 0 : TestplayMenuOpacity;
+        testplayMenuOpacityTarget = target;
+        testplayMenuOpacityAt = TestplayRealtime;
+    }
     private int testplayMenuSelection;
     private int testplayHoveredMenu = -1;
     private readonly Rect[] testplayMenuBounds = new Rect[3];
@@ -87,7 +105,7 @@ public sealed partial class EditorView
 
     private void DrawTestplayOverlays(ICanvas c)
     {
-        float opacity = testplayResumeAt is double resume ? (float)Math.Clamp((resume - TestplayRealtime) / TestplayMenuFadeMs, 0, 1) : 1;
+        float opacity = TestplayMenuOpacity;
         if (TestplayPaused)
         {
             c.Fill(new(0, 0, width, height), 0, opacity: .75f * opacity);
@@ -109,7 +127,7 @@ public sealed partial class EditorView
                     (224 + i * 176) * scale, false, () => ActivateTestplayMenu(item), testplayMenuSelection == i && testplayKeyboardSelection, opacity);
             }
             if (testplayKeyboardSelection) DrawTestplaySelectionArrows(c, opacity);
-            if (testplayResumeAt is null) DrawBackgroundDimSetting(c, new(Math.Max(8, width / 2 - 160), height - 58, Math.Min(320, width - 16), 38), false);
+            if (testplayResumeAt is null) DrawBackgroundDimSetting(c, new(Math.Max(8, width / 2 - 160), height - 58, Math.Min(320, width - 16), 38), false, opacity);
         }
         else if (TestplaySkipVisible)
             TestplaySkipBounds = DrawTestplaySkinButton(c, "play-skip", L.Get("testplay.skip"), width, height,

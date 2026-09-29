@@ -186,7 +186,8 @@ the pause menu adjust the persistent 0–100% dim preference (default 90%). The 
 **Space** or clicking **Skip** skips an intro to three seconds before the first
 note. Skip is unavailable after that point. **Esc / Ctrl+P** opens the pause menu;
 **Up/Down** selects Continue, Retry or Back and **Enter** activates the selection.
-Mouse buttons use the same actions. Continue fades the pause menu out over 600 ms,
+Mouse buttons use the same actions. Opening the menu fades it in over 300 ms while
+music and judgement are already paused. Continue fades the pause menu out over 600 ms,
 then resumes music and judgement together. Esc cancels the fade back to the menu. Retry
 restarts at the session's original lead-in position, resetting judgement and combo
 while retaining autoplay. Back and F1 return to the selected editor position.

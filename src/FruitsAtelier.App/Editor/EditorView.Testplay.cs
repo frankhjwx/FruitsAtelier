@@ -120,9 +120,10 @@ public sealed partial class EditorView
     private void ToggleTestplayPause()
     {
         if (testplay is null) return;
-        if (testplayResumeAt is not null) { testplayResumeAt = null; SetTestplayPauseLoop(true); return; }
+        if (testplayResumeAt is not null) { testplayResumeAt = null; FadeTestplayMenu(1); SetTestplayPauseLoop(true); return; }
         if (TestplayPaused)
         {
+            FadeTestplayMenu(0);
             testplayResumeAt = TestplayRealtime + TestplayMenuFadeMs;
             SetTestplayPauseLoop(false);
             return;
@@ -134,6 +135,7 @@ public sealed partial class EditorView
     {
         if (testplay is null) return;
         double time = testplay.TogglePause();
+        if (TestplayPaused) FadeTestplayMenu(1, opening: true);
         ResetTestplayPointer();
         testplayMenuSelection = 0;
         testplayKeyboardSelection = false;

@@ -104,6 +104,12 @@ internal static class TestplayPresentationTests
         Check(ui.View.TestplayUsesCursor, "Testplay replaces the system cursor");
         Check(!ui.Canvas.Images.Any(i => i.Path.EndsWith("cursor.png")), "Running gameplay hides the skin cursor");
         ui.Key(27); ui.View.KeyUp(27);
+        Near(0, ui.Canvas.Images.Single(i => i.Path.EndsWith("pause-continue.png")).Opacity);
+        clock.Advance(150); ui.Paint();
+        Near(.5, ui.Canvas.Images.Single(i => i.Path.EndsWith("pause-continue.png")).Opacity);
+        Check(ui.View.PlayheadMs == 0, "Pause freezes gameplay during its fade-in");
+        clock.Advance(150); ui.Paint();
+        Near(1, ui.Canvas.Images.Single(i => i.Path.EndsWith("pause-continue.png")).Opacity);
         ui.View.PointerMove(100, 100, false, false); clock.Advance(20);
         ui.View.PointerMove(200, 100, false, false); ui.Paint();
         Check(ui.Canvas.Images.Any(i => i.Path.EndsWith("cursortrail.png")), "Moving the skin cursor leaves a trail");
@@ -124,7 +130,15 @@ internal static class TestplayPresentationTests
         Check(!ui.Canvas.Images.Any(i => i.Path.EndsWith("arrow-pause.png")), "Mouse movement clears keyboard arrows");
         ui.Key(13); clock.Advance(100); ui.Paint();
         Check(ui.View.TestplayPaused && ui.Canvas.Images.Any(i => i.Path.EndsWith("pause-continue.png")), "Fade retains the menu while gameplay is frozen");
-        clock.Advance(500); ui.Paint();
+        Near(5d / 6, ui.Canvas.Images.Single(i => i.Path.EndsWith("pause-continue.png")).Opacity);
+        ui.Key(27); ui.View.KeyUp(27);
+        Near(5d / 6, ui.Canvas.Images.Single(i => i.Path.EndsWith("pause-continue.png")).Opacity);
+        clock.Advance(150); ui.Paint();
+        Near(11d / 12, ui.Canvas.Images.Single(i => i.Path.EndsWith("pause-continue.png")).Opacity);
+        clock.Advance(150); ui.Paint();
+        Near(1, ui.Canvas.Images.Single(i => i.Path.EndsWith("pause-continue.png")).Opacity);
+        Check(ui.View.TestplayPauseMenuVisible, "Cancelling resume fades back in without an opacity jump");
+        ui.Key(13); clock.Advance(600); ui.Paint();
         Check(!ui.View.TestplayPaused && !ui.Canvas.Images.Any(i => i.Path.EndsWith("pause-continue.png")), "Menu disappears before play resumes");
         ui.View.StopTestplay(); Check(!ui.View.TestplayUsesCursor, "Leaving testplay restores the system cursor");
     }

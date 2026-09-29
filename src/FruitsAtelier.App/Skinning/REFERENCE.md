@@ -15,6 +15,9 @@ Keyboard selection uses the same enlargement and a pair of arrows.
 only the shared fallback is tinted blue for selection and red for warnings.
 Right-side arrows are mirrored. Warnings appear in the last three seconds of
 the intro/break and during the pause menu's 600 ms resume fade.
+The pause menu fades in linearly over 300 ms, including the overlay, controls and dim setting.
+This duration follows frame measurements of stable; lazer's `GameplayMenuOverlay`
+uses a different 200 ms transition and is not the timing reference for this fade.
 
 The pause cursor uses `cursor`, `cursormiddle` and `cursortrail`, preferring `@2x`.
 `CursorCentre`, `CursorRotate`, `CursorExpand` and `CursorTrailRotate` are respected.
