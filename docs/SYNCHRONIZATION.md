@@ -113,6 +113,9 @@ amber yellow for previously resolved differences, and green for choices made in 
 current review. Amber borders, translucent fill and status labels distinguish review
 intervals from banana objects. Clicking a rectangle returns to that item; every item
 remains available until Apply, including green items that can be changed again.
+After a choice, the rejected side's interval and highlight use muted grey while
+the retained side keeps its resolution color. Action labels use normal weight;
+progress and page counts receive stronger emphasis.
 Retained FA decisions persist with their external object groups and local
 source IDs. Unchanged retained differences are labelled **Resolved, select to re-resolve** and can
 be selected again in the comparison. They keep their prior choice by default and do

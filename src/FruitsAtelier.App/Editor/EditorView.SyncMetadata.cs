@@ -126,7 +126,7 @@ public sealed partial class EditorView
     {
         c.Fill(bounds, Surface, 4);
         c.Stroke(bounds, enabled ? Muted : Grid, radius: 4);
-        Button(c, bounds, label, action, active, enabled, fontSize: 14, bold: true);
+        Button(c, bounds, label, action, active, enabled, fontSize: 12, bold: false);
     }
 
     private void DrawSyncReviewFooter(ICanvas c, WorkspaceMerge merge, float x, float y, float w, float h, bool showPreview)

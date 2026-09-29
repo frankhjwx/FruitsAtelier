@@ -143,6 +143,9 @@ public sealed partial class EditorView
         var ranges = comparison.Focus.Where(p => p.Key.StartsWith("$objects:")).Select(p => new SyncRange(p.Key, p.Value.Start, p.Value.End,
             syncRoundChoices.Contains(p.Key) ? SyncResolvedThisRound : merge.PreviouslyResolved.Contains(p.Key) ? SyncPreviouslyResolved : SyncUnresolved,
             syncRoundChoices.Contains(p.Key) ? L.Get("sync.resolvedThisRound") : merge.PreviouslyResolved.Contains(p.Key) ? L.Get("sync.alreadyResolved") : L.Get("sync.unresolvedRange"))).ToArray();
+        SyncRange[] PaneRanges(bool external) => ranges.Select(range =>
+            syncChoices.TryGetValue(range.Key, out bool chosenExternal) && chosenExternal != external
+                ? range with { Colour = Muted } : range).ToArray();
         var localChoices = comparison.RetainedLocal.ToDictionary(id => id, _ => true);
         var externalChoices = comparison.RejectedExternal.ToDictionary(id => id, _ => false);
         foreach (var choice in syncChoices)
@@ -153,9 +156,9 @@ public sealed partial class EditorView
             }
         DrawSyncPane(c, comparison.Local, left, "FA", focus.Local, conflict.Key.StartsWith("$objects:") ? null : conflict.Local,
             SavedLabel(comparison.LocalSaved, comparison.ExternalSaved, dirty), localChoices,
-            merge.PreviouslyResolved.Contains(conflict.Key) ? L.Get("sync.previouslyRejected") : null, ranges, conflict.Key);
+            merge.PreviouslyResolved.Contains(conflict.Key) ? L.Get("sync.previouslyRejected") : null, PaneRanges(false), conflict.Key);
         DrawSyncPane(c, comparison.External, right, "osu!", focus.External, conflict.Key.StartsWith("$objects:") ? null : conflict.External,
-            SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false), externalChoices, ranges: ranges, currentKey: conflict.Key);
+            SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false), externalChoices, ranges: PaneRanges(true), currentKey: conflict.Key);
         bool chosen = syncChoices.TryGetValue(conflict.Key, out bool external);
         if (chosen) c.Stroke(external ? right : left, Accent, 3);
         if (syncShowResult)
