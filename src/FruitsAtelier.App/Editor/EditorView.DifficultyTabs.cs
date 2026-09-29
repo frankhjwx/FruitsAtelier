@@ -47,15 +47,16 @@ public sealed partial class EditorView
         string? folder = catchdiff is not null ? Path.GetDirectoryName(catchdiff) : osu is not null ? Path.GetDirectoryName(osu) : null;
         string? songsFolder = (osu ?? entry?.ExportTarget) is { } source ? Path.GetDirectoryName(source) : null;
         contextItems.Clear(); menu = -1;
-        contextItems.Add(new(L.Get("project.openOsu"), () => RequestOpenExternalPath?.Invoke(osu!), File.Exists(osu)));
+        int index = difficultyTabTargets[target].Index;
         contextItems.Add(new(L.Get("project.openCatchdiff"), () => RequestOpenExternalPath?.Invoke(catchdiff!), File.Exists(catchdiff)));
         contextItems.Add(new(L.Get("project.openFolder"), () => RequestOpenExternalPath?.Invoke(folder!), Directory.Exists(folder)));
+        contextItems.Add(new(L.Get("sync.deleteLocal"), () => ShowDeleteDifficulty(index, localOnly: true), File.Exists(osu)));
+        AddContextSeparator();
+        contextItems.Add(new(L.Get("project.openOsu"), () => RequestOpenExternalPath?.Invoke(osu!), File.Exists(osu)));
         contextItems.Add(new(L.Get("project.openSongsFolder"), () => RequestOpenExternalPath?.Invoke(songsFolder!), Directory.Exists(songsFolder)));
-        int index = difficultyTabTargets[target].Index;
         contextItems.Add(new(L.Get("sync.refresh"), () => { syncDifficulty = difficulty.Id; RefreshSynchronization(reviewResolved: true); }));
         contextItems.Add(new(L.Get("sync.delete"), () => ShowDeleteDifficulty(index)));
-        contextItems.Add(new(L.Get("sync.deleteLocal"), () => ShowDeleteDifficulty(index, localOnly: true), File.Exists(osu)));
-        float menuHeight = 12 + contextItems.Count * 32;
+        float menuHeight = ContextMenuHeight;
         contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 240)), Math.Clamp(y, 0, Math.Max(0, height - menuHeight)), 240, menuHeight);
         return true;
     }

@@ -8,7 +8,9 @@ public sealed partial class EditorView
 {
     private readonly List<ContextItem> contextItems = [];
     private Rect contextBounds;
-    private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "", uint? Color = null);
+    private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "", uint? Color = null, bool Separator = false);
+    private float ContextMenuHeight => 12 + contextItems.Sum(item => item.Separator ? 10 : 32);
+    private void AddContextSeparator() => contextItems.Add(new("", () => { }, Enabled: false, Separator: true));
     private sealed record SliderLocation(Guid Id, double FirstSpanTimeMs);
 
     private void DrawContextMenu(ICanvas c)
@@ -21,6 +23,7 @@ public sealed partial class EditorView
         {
             var item = contextItems[i];
             var rect = ContextItemBounds(i);
+            if (item.Separator) { c.Line(rect.X + 9, rect.Y + 4, rect.Right - 9, rect.Y + 4, Grid); continue; }
             if (item.Enabled && rect.Contains(mouseX, mouseY)) c.Fill(rect, 0x343E4D, 4);
             c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, item.Enabled ? item.Color ?? Foreground : 0x5B6777, rect.Width - (item.Shortcut.Length > 0 ? 90 : 18));
             string shortcut = item.Shortcut;
@@ -32,7 +35,9 @@ public sealed partial class EditorView
         }
     }
 
-    private Rect ContextItemBounds(int index) => new(contextBounds.X + 6, contextBounds.Y + 6 + index * 32, contextBounds.Width - 12, 30);
+    private Rect ContextItemBounds(int index) => new(contextBounds.X + 6,
+        contextBounds.Y + 6 + contextItems.Take(index).Sum(item => item.Separator ? 10 : 32),
+        contextBounds.Width - 12, contextItems[index].Separator ? 8 : 30);
 
     private void ActivateContextMenu(float x, float y)
     {
