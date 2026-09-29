@@ -46,7 +46,11 @@ public sealed partial class EditorView
                 DrawSyncText(c, left, item.Local, colour, differences.Local);
                 DrawSyncText(c, right, item.External, colour, differences.External);
                 bool chosen = syncChoices.TryGetValue(item.Key, out bool external);
-                if (chosen) c.Stroke(external ? right : left, Accent, 3);
+                if (chosen)
+                {
+                    c.Stroke(external ? left : right, Grid);
+                    c.Stroke(external ? right : left, Accent, 3);
+                }
                 AddChoice(left, false); AddChoice(right, true);
                 void AddChoice(Rect bounds, bool useExternal)
                 {
