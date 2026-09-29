@@ -47,6 +47,12 @@ public sealed partial class EditorView
         testplayPauseHeld = false;
         testplayBookmarkHeld = false;
         testplayAutoNotice = null;
+        testplayResumeAt = null;
+        testplayMenuSelection = 0;
+        ResetTestplayPointer();
+        testplayGameplayStart = PreviewObjects().FirstOrDefault()?.TimeMs - 2000 ?? 0;
+        backgroundDimFrom = backgroundDimTarget = Math.Max(0, LibrarySettings.BackgroundDim / 100f - (testplayStart < testplayGameplayStart ? .3f : 0));
+        PrepareTestplayMenuSounds();
         testplayWithAudio = AudioReady;
         ResetHitsounds();
         bool restartAudio = AudioReady && AudioPlaying && testplayStart < testplayReturnPosition;
@@ -93,13 +99,16 @@ public sealed partial class EditorView
     public void StopTestplay(bool atCurrentPosition = false)
     {
         if (!IsTestplaying) return;
+        bool wasPaused = TestplayPaused;
+        SetTestplayPauseLoop(false);
         double returnTime = atCurrentPosition && testplay is not null ? testplay.TransportPosition : testplayReturnPosition;
         testplay?.Cancel();
         testplayDriver?.Dispose(); testplayDriver = null;
         testplay = null; testplayFrame = null;
+        testplayResumeAt = null;
         testplayAutoNotice = null;
         testplayBookmarkHeld = false;
-        if (testplayWithAudio)
+        if (testplayWithAudio && !wasPaused)
         {
             if (RequestPausePlayback is not null) RequestPausePlayback();
             else if (AudioPlaying) RequestTogglePlayback?.Invoke();
@@ -111,18 +120,46 @@ public sealed partial class EditorView
     private void ToggleTestplayPause()
     {
         if (testplay is null) return;
+        if (testplayResumeAt is not null) { testplayResumeAt = null; SetTestplayPauseLoop(true); return; }
+        if (TestplayPaused)
+        {
+            testplayResumeAt = TestplayRealtime + TestplayMenuFadeMs;
+            SetTestplayPauseLoop(false);
+            return;
+        }
+        CompleteTestplayPauseToggle();
+    }
+
+    private void CompleteTestplayPauseToggle()
+    {
+        if (testplay is null) return;
         double time = testplay.TogglePause();
+        ResetTestplayPointer();
+        testplayMenuSelection = 0;
+        testplayKeyboardSelection = false;
         if (testplayWithAudio)
         {
-            if (testplay.Paused) RequestPausePlayback?.Invoke();
+            if (testplay.Paused)
+            {
+                if (RequestPausePlayback is not null) RequestPausePlayback();
+                else if (AudioPlaying) RequestTogglePlayback?.Invoke();
+            }
             else { RequestSeek?.Invoke(time); RequestTogglePlayback?.Invoke(); }
         }
+        SetTestplayPauseLoop(TestplayPaused);
+        if (TestplayPaused) PlayTestplayMenuSound("menuhit");
         AdvanceTestplay();
     }
 
     private void AdvanceTestplay()
     {
         if (testplay is null) return;
+        if (testplayResumeAt is double resume && TestplayRealtime >= resume)
+        {
+            testplayResumeAt = null;
+            CompleteTestplayPauseToggle();
+            if (testplay is null) return;
+        }
         if (testplayDriver is null) testplay.Tick();
         bool wasAutoplay = testplayFrame?.Autoplay ?? false;
         testplayFrame = testplay.Capture();
@@ -132,6 +169,7 @@ public sealed partial class EditorView
             testplayAutoNoticeAt = TestplayRealtime;
         }
         playhead = testplayFrame.TimeMs;
+        UpdateBackgroundDim();
         foreach (var change in testplayFrame.ComboChanges)
         {
             var item = change.Object;
@@ -164,10 +202,11 @@ public sealed partial class EditorView
     private void DrawTestplay(ICanvas c)
     {
         c.Fill(new(0, 0, width, height), Background);
+        DrawBeatmapBackground(c, new(0, 0, width, height), CurrentBackgroundDim);
         float stageHeight = Math.Max(1, Math.Min(height, width * .75f));
         var stage = new Rect((width - stageHeight * 4 / 3) / 2, (height - stageHeight) / 2,
             stageHeight * 4 / 3, stageHeight);
-        c.Fill(stage, 0x151A22); c.Clip(stage);
+        c.Clip(stage);
         float fieldWidth = stage.Width * .8f, left = stage.X + stage.Width * .1f;
         float catchY = stage.Y + stage.Height * .15f + 340 * fieldWidth / 512;
         double speed = CatchScrollTiming.PixelsPerMs(PreviewApproachRate, fieldWidth);
@@ -197,7 +236,6 @@ public sealed partial class EditorView
         string[] hints = ["testplay.hintAutoplay", "testplay.hintSpeed", "testplay.hintPause", "testplay.hintBookmark", "testplay.hintQuickExit", "testplay.hintCurrentExit"];
         for (int i = 0; i < hints.Length; i++)
             c.Text(L.Get(hints[i]), 12, 32 + i * 20, 13, 0xD6E5B5, Math.Max(100, width - 24));
-        if (TestplayPaused) c.Text(L.Get("testplay.paused"), 12, 38 + hints.Length * 20, 15, Accent, 250, true);
         if (testplayAutoNotice is { } notice)
         {
             double age = TestplayRealtime - testplayAutoNoticeAt;
@@ -211,6 +249,8 @@ public sealed partial class EditorView
             }
         }
         DrawVolumePopover(c);
+        DrawTestplayOverlays(c);
+        DrawTestplayCursor(c);
     }
 
     // ppy/osu 48c4800e: LegacyCatchComboCounter, LegacyRollingCounter and CatcherArea.
@@ -295,6 +335,7 @@ public sealed partial class EditorView
         SettingsButton(c, new(SettingsContentX, SettingsTop + 322, Math.Min(472, SettingsRight - SettingsContentX - 32), 38),
             L.Get(draftShowTestplayCombo ? "testplay.comboOn" : "testplay.comboOff"),
             () => draftShowTestplayCombo = !draftShowTestplayCombo, draftShowTestplayCombo);
+        DrawBackgroundDimSetting(c, new(SettingsContentX, SettingsTop + 384, Math.Min(472, SettingsRight - SettingsContentX - 32), 38), true);
         string[] labels = ["testplay.left", "testplay.right", "testplay.dash"];
         float cell = Math.Min(220, (SettingsRight - SettingsContentX - 32) / 3);
         for (int i = 0; i < 3; i++)

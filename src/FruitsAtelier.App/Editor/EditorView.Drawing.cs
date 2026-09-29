@@ -167,6 +167,7 @@ public sealed partial class EditorView
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
         c.Text(L.Get("ui.timeAxis"), canvas.X + 11, canvas.Y + 120, 10, Muted, 43);
         var playfield = Playfield;
+        c.Fill(new(canvas.X, plot.Y, canvas.Width, plot.Height), Background);
         for (int x = 0; x <= 512; x += 128)
         {
             float sx = Screen(new(0, x)).X;
@@ -422,6 +423,7 @@ public sealed partial class EditorView
         }
         PreviewViewport = stage;
         c.Fill(stage, 0x151A22);
+        DrawBeatmapBackground(c, stage, LibrarySettings.BackgroundDim / 100f);
         if (previewDisplayMode == 2) c.Stroke(stage, Grid);
         c.Clip(stage);
         float referenceWidth = Math.Max(1, stage.Width - 18);

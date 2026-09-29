@@ -30,9 +30,9 @@ internal static class TestplayStartupDelayTests
         Check(ui.View.IsTestplaying && ui.View.PlayheadMs == 0, "Testplay did not start immediately from the lead-in position.");
         clock.Advance(750); ui.Paint();
         Check(ui.View.PlayheadMs == 750 && sounds == 0, "Lead-in did not advance gameplay before the selected position.");
-        ui.Key(27);
-        Check(!ui.View.IsTestplaying && ui.View.PlayheadMs == 500, "Escape did not return to the selected position.");
-        ui.View.KeyUp(27);
+        ui.Key(112);
+        Check(!ui.View.IsTestplaying && ui.View.PlayheadMs == 500, "F1 did not return to the selected position.");
+        ui.View.KeyUp(112);
 
         ui.View.UpdateTransport(2500, 5000, true, false, false, null, null);
         ui.View.UpdateTransport(2500, 5000, false, false, false, null, null);

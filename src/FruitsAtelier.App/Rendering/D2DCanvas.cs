@@ -55,6 +55,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     private const long imageCacheLimit = 64 * 1024 * 1024;
     private readonly string bookmarkToolbarPath = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
     private (ImageKey Key, CachedImage Image)? bookmarkToolbar;
+    private (ImageKey Key, CachedImage Image)? beatmapBackground;
     private long imageClock;
     private readonly record struct ImageKey(string Path, uint Tint, long Version, long Length);
     private sealed record CachedImage(ID2D1Bitmap1 Bitmap, int Width, int Height)
@@ -300,6 +301,12 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     public void Unclip() { if (clipDepth > 0) { context!.PopAxisAlignedClip(); clipDepth--; } }
 
     public bool Image(string filePath, Rect destination, uint tint = 0xFFFFFF, Rect? source = null, float opacity = 1)
+        => DrawImage(filePath, destination, tint, source, opacity, false);
+
+    public bool BackgroundImage(string filePath, Rect destination)
+        => DrawImage(filePath, destination, 0xFFFFFF, null, 1, true);
+
+    private bool DrawImage(string filePath, Rect destination, uint tint, Rect? source, float opacity, bool fill)
     {
         if (!ValidRectangle(destination)) return false;
         ImageKey key = default;
@@ -315,7 +322,19 @@ public sealed class D2DCanvas : ICanvas, IDisposable
             key = new(filePath, tint & 0xFFFFFF, version.Version, version.Length);
             if (failedImages.Contains(key)) return false;
             CachedImage image;
-            if (string.Equals(filePath, bookmarkToolbarPath, StringComparison.OrdinalIgnoreCase))
+            if (fill)
+            {
+                // A full-size background must not evict the skin on every frame.
+                if (beatmapBackground is not { } background || background.Key != key)
+                {
+                    var decoded = LoadImage(filePath, key.Tint);
+                    beatmapBackground?.Image.Bitmap.Dispose();
+                    beatmapBackground = (key, decoded);
+                    ImageDecodeCount++;
+                }
+                image = beatmapBackground.Value.Image;
+            }
+            else if (string.Equals(filePath, bookmarkToolbarPath, StringComparison.OrdinalIgnoreCase))
             {
                 // This hover-only chrome stays resident without evicting the visible scene.
                 if (bookmarkToolbar is not { } toolbar || toolbar.Key != key)
@@ -344,6 +363,12 @@ public sealed class D2DCanvas : ICanvas, IDisposable
             }
             image.Used = ++imageClock;
             var region = source ?? new Rect(0, 0, image.Width, image.Height);
+            if (fill)
+            {
+                float scale = Math.Max(destination.Width / image.Width, destination.Height / image.Height);
+                float w = destination.Width / scale, h = destination.Height / scale;
+                region = new((image.Width - w) / 2, (image.Height - h) / 2, w, h);
+            }
             if (!ValidRectangle(region) || region.X < 0 || region.Y < 0 || region.Right > image.Width || region.Bottom > image.Height) return false;
             context!.DrawBitmap(image.Bitmap, Convert(destination), opacity, Vortice.Direct2D1.BitmapInterpolationMode.Linear, Convert(region));
             return true;
@@ -464,6 +489,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
 
     private void ClearImages()
     {
+        beatmapBackground?.Image.Bitmap.Dispose(); beatmapBackground = null;
         bookmarkToolbar?.Image.Bitmap.Dispose();
         bookmarkToolbar = null;
         foreach (var image in images.Values) image.Bitmap.Dispose();

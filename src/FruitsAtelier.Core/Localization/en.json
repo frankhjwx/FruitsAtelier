@@ -1,4 +1,9 @@
 {
+  "settings.backgroundDim": "Background dim: {0}%",
+  "testplay.skip": "Skip (Space)",
+  "testplay.continue": "Continue",
+  "testplay.retry": "Retry",
+  "testplay.quit": "Back to editor",
   "timeline.addBreak": "Add break",
   "timeline.removeBreak": "Remove break",
   "timeline.breakLabel": "Break",
@@ -42,7 +47,7 @@
   "testplay.speed": "Testplay speed: {0:0.0#}x",
   "testplay.hintSpeed": "F3: autoplay speed 1.0x / 1.5x",
   "testplay.speedRequiresAutoplay": "Press [Tab] to activate autoplay before changing speed.",
-  "testplay.hintPause": "Ctrl+P: pause / resume",
+  "testplay.hintPause": "Esc / Ctrl+P: pause / resume",
   "testplay.hintBookmark": "Ctrl+B: add bookmark",
   "testplay.hintQuickExit": "F1: quick exit",
   "testplay.hintCurrentExit": "F2: exit at current position",

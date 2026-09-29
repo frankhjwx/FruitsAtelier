@@ -94,6 +94,13 @@ even when the device advances before the worker handles it.
 
 ## Window checks
 
+`FruitsAtelier.App.exe --testplay-render-check` independently exercises background
+decoding, custom Skip and pause textures, mouse/Space skip, keyboard Retry/Back,
+and both languages at wide, narrow and portrait sizes with 96/144/192 DPI.
+It uses silent callbacks and writes `artifacts/tests/testplay-native/report.json`.
+The shared App regressions additionally check dim transitions, frozen resume
+countdowns, stale audio samples after skip, content isolation and preferences.
+
 The Windows `--render-check` injects nested timer and paint messages during audio
 replacement, verifying that difficulty switches retain paused and playing
 positions when the replacement audio becomes ready. This check uses a silent
@@ -346,3 +353,8 @@ Project-library notification regressions add and remove external difficulties wh
 the My projects view stays open, checking both card counts and detail rows. They
 also verify muted retained FA entries, background filename/directory rediscovery,
 duplicate-free listings and unchanged authoring/baseline files during discovery.
+
+The focused `--testplay-render-check` also writes `background-cache.json` under
+`artifacts/tests/testplay-native`. It compares the shared scene cache and resident
+background path with a generated 4096×4096 image, recording warm frame time,
+allocations and repeat decodes. The resident path must perform no warm decodes.

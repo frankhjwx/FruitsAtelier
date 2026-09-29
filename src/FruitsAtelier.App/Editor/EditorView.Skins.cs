@@ -26,7 +26,7 @@ public sealed partial class EditorView
                 string folder = SkinArchive.Import(configured, Path.Combine(LibrarySettings.Workspace, "Skins", "Imported"));
                 CatchSkin.TryLoad(folder, out defaultSkin, out _);
             }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+            catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
             { SetNotice(L.Get("window.defaultSkinFailed", L.Localized(error.Message))); }
         }
         skin = defaultSkin;
@@ -128,7 +128,7 @@ public sealed partial class EditorView
             contextBounds = new(Math.Max(0, Math.Min(bounds.X, width - 310)),
                 Math.Clamp(bounds.Bottom + 4, 0, Math.Max(0, height - menuHeight)), 310, menuHeight);
         }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException)
         { contextItems.Clear(); ShowError(error.Message); }
     }
 }

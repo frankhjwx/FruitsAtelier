@@ -16,6 +16,7 @@ internal sealed partial class EditorWindow : IDisposable
     private float dpi = 96;
     private bool failed, disposed, painting, recoveringRenderer;
     private bool framePending;
+    private bool testplayCursorMode;
     private bool ImmediatePresentation => view.IsTestplaying ||
         (canvas?.DiagnosticImmediatePresentation ?? view.LibrarySettings.LowLatencyDisplay);
     private string lastTitle = "";
@@ -54,7 +55,7 @@ internal sealed partial class EditorWindow : IDisposable
         };
     }
 
-    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000)
+    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false)
     {
         view.InitializeLibrary(!renderCheck && profileMap is null, renderCheck || profileMap is not null
             ? new FruitsAtelier.Core.LibrarySettings { Workspace = Path.Combine(Artifacts, "render-library") } : null);
@@ -99,6 +100,12 @@ internal sealed partial class EditorWindow : IDisposable
         if (initialPath is not null) FileOperation(() => OpenPath(initialPath));
         if (renderCheck)
         {
+            if (testplayCheck)
+            {
+                Diagnostics.TestplayRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             // Native diagnostics exercise view gestures without saving personal preferences.
             view.RequestViewPreference = null;
             view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
@@ -266,6 +273,12 @@ internal sealed partial class EditorWindow : IDisposable
                         view.Performance.End(EditorPerformanceStage.PrepareFrame, phase);
                         phase = view.Performance.Start();
                         view.Render(canvas, rect.Right * 96 / dpi, rect.Bottom * 96 / dpi);
+                        if (testplayCursorMode != view.TestplayUsesCursor)
+                        {
+                            testplayCursorMode = view.TestplayUsesCursor;
+                            if (Native.GetCursorPos(out var pointer) && Native.WindowFromPoint(pointer) == hwnd)
+                                Native.SetCursor(testplayCursorMode ? 0 : Native.LoadCursor(0, (nint)32512));
+                        }
                         canvas.DrawDisplayDiagnostics(view.PlayheadMs, displayedAudioState ?? audio.State);
                         view.Performance.End(EditorPerformanceStage.ViewRender, phase);
                         phase = view.Performance.Start();
@@ -330,7 +343,7 @@ internal sealed partial class EditorWindow : IDisposable
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0020: // WM_SETCURSOR
                 if ((lParam.ToInt64() & 0xffff) == 1)
-                { Native.SetCursor(Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor ? 32644 : 32512))); return 1; }
+                { Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor ? 32644 : 32512))); return 1; }
                 break;
             case 0x02A3: // WM_MOUSELEAVE
                 view.PointerLeave(); Invalidate(); return 0;
@@ -339,7 +352,7 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.TrackMouseEvent(ref tracking);
                 view.SetModifiers(Native.Alt, Native.Shift);
                 view.PointerMove(x, y, Native.Shift, Native.Control);
-                Native.SetCursor(Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor ? 32644 : 32512)));
+                Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor ? 32644 : 32512)));
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0202:
             case 0x0205:

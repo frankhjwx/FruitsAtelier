@@ -58,6 +58,10 @@ internal static class SkinSelectorTests
             restarted.LibrarySettings.SelectedSkin = LibrarySettings.Load(config).SelectedSkin;
             restarted.InitializeSkin();
             Check(restarted.SkinName == "Imported fixture", "Saved skin restores without a bundled default archive");
+            string invalid = Path.Combine(root, "invalid.osk"); File.WriteAllText(invalid, "invalid archive");
+            restarted.LibrarySettings.DefaultSkin = invalid;
+            restarted.InitializeSkin();
+            Check(restarted.SkinName == "Imported fixture", "An invalid default archive cannot prevent startup with the selected skin");
             settings.DefaultSkin = archive; settings.Save(config);
             Check(LibrarySettings.Load(config).DefaultSkin == archive, "Default skin archive preference persists");
             restarted.LibrarySettings.Workspace = workspace;

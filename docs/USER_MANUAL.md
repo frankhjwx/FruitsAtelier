@@ -97,12 +97,14 @@ Open **Catch Preview** using the button on the right edge of the canvas. Drag th
 
 ### Try the map
 
-Press **F5** to testplay using the selected preview mod and speed. Testplay immediately begins one second before the current position by default; change the lead-in from 0 to 5 seconds in **Settings > Testplay keys**. A lead-in that reaches before the song starts begins at zero. Esc returns to the selected position. Move with **Left / Right**, and hold **Shift** to dash. Catch fruits and droplets to build combo. **Tab** toggles autoplay; **Ctrl+P** pauses or resumes.
+Press **F5** to testplay using the selected preview mod and speed. Testplay immediately begins one second before the current position by default; change the lead-in from 0 to 5 seconds in **Settings > Testplay keys**. A lead-in that reaches before the song starts begins at zero. Esc opens the pause menu; F1 returns to the selected position. Move with **Left / Right**, and hold **Shift** to dash. Catch fruits and droplets to build combo. **Tab** toggles autoplay; **Ctrl+P** pauses or resumes.
 Press **Ctrl+B** during testplay to add a bookmark at the current position. The shortcut appears with the other testplay controls in the upper-left corner.
 
 During autoplay, press **F3** to switch between **1.0x** and **1.5x**. If the current speed is neither, the first press selects 1.0x. The upper-left corner shows the current speed on its own line and includes the F3 instruction.
 
-**F1 / Esc** exits to the testplay start; **F2** exits at the current position. Losing window focus releases held keys while playback continues. A movement or dash key exits autoplay; a centered banner briefly announces entering or leaving autoplay. Testplay does not change your objects or undo history. Change movement and dash bindings in **Library > Settings**.
+**F1** exits to the testplay start; **F2** exits at the current position. **Esc** opens the pause menu: select Continue, Retry or Back with Up/Down and Enter, or click a button. Continue fades the pause menu out before resuming music and gameplay. **Space** or clicking **Skip** skips a long intro while preserving three seconds before the first note. Losing window focus releases held keys while playback continues. A movement or dash key exits autoplay; a centered banner briefly announces entering or leaving autoplay. Testplay does not change your objects or undo history. Change movement and dash bindings in **Library > Settings**.
+
+Beatmap backgrounds appear in preview and testplay; the editing canvas has an opaque backing. Adjust **Background dim** in **Settings > Testplay** or the pause menu; the default is 90%. During testplay breaks the background becomes brighter, then returns to the chosen dim. Skip and the pause menu use the selected skin's graphics, with default controls for missing components. Pause buttons enlarge on hover; Up/Down selection shows two arrows. The skin cursor and trail appear only while paused. Four flashing arrows warn of the upcoming start or end of a break. Disabling skin sounds uses packaged osu! menu and pause samples.
 
 Bindings accept letters, digits, punctuation (including `;`, `'`, `[` and `]`), arrow and navigation keys, Backspace, Enter, Space, Shift, Ctrl, Alt, lock keys, numpad keys, and F4–F24. Esc cancels capture; Tab and F1–F3 are reserved for testplay controls. Windows/Command, media and other system keys are not offered. Left and right modifier keys share a binding, as do main and numpad Enter. Numpad input follows Num Lock; punctuation labels use US keyboard names. OS shortcuts and Ctrl+P retain their normal behavior.
 
@@ -219,7 +221,9 @@ Lock Notes prevents moving, reshaping or deleting existing objects. You can stil
 | Tab | Toggle autoplay. |
 | Ctrl+P | Pause / resume testplay. |
 | Ctrl+B | Add a bookmark at the current position. |
-| F1 / Esc | Return to the editor at the testplay start. |
+| F1 | Return to the editor at the testplay start. |
+| Esc | Open the pause menu; Up/Down selects and Enter activates a button. |
+| Space | Skip the intro while Skip is available. |
 | F2 | Return to the editor at the current position. |
 
 For detailed editing behavior, see `docs/EDITOR_UI.md` in the repository. Project and resource management are described in `docs/WORKSPACE.md`.

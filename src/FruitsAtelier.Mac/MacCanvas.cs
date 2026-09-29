@@ -13,6 +13,7 @@ internal sealed class ImageCache : IDisposable
     private readonly Dictionary<(string, uint, long, long), (Bitmap Bitmap, long Used)> images = [];
     private readonly string bookmarkToolbarPath = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
     private ((string, uint, long, long) Key, Bitmap Bitmap)? bookmarkToolbar;
+    private ((string, uint, long, long) Key, Bitmap Bitmap)? beatmapBackground;
     private long clock;
     private long bytes;
     private readonly ThumbnailCache<Bitmap> thumbnails = new(path =>
@@ -24,18 +25,19 @@ internal sealed class ImageCache : IDisposable
         return bitmap.CreateScaledBitmap(new PixelSize(Math.Max(1, (int)(bitmap.PixelSize.Width * scale)), Math.Max(1, (int)(bitmap.PixelSize.Height * scale))));
     });
     public Bitmap? Thumbnail(string path) => thumbnails.Get(path);
-    public unsafe Bitmap? Get(string path, uint tint)
+    public unsafe Bitmap? Get(string path, uint tint, bool background = false)
     {
         var file = new FileInfo(path);
         if (!file.Exists || file.Length > 32 * 1024 * 1024) return null;
         var key = (path, tint, file.LastWriteTimeUtc.Ticks, file.Length);
         bool isToolbar = path == bookmarkToolbarPath;
+        if (background && beatmapBackground is { } bg && bg.Key == key) return bg.Bitmap;
         if (isToolbar && bookmarkToolbar is { } toolbar && toolbar.Key == key) return toolbar.Bitmap;
-        if (images.TryGetValue(key, out var existing)) { images[key] = (existing.Bitmap, ++clock); return existing.Bitmap; }
+        if (!background && images.TryGetValue(key, out var existing)) { images[key] = (existing.Bitmap, ++clock); return existing.Bitmap; }
         using var decoded = new Bitmap(path);
         long size = (long)decoded.PixelSize.Width * decoded.PixelSize.Height * 4;
         if (size > 64 * 1024 * 1024) return null;
-        while (!isToolbar && images.Count > 0 && (bytes + size > 64 * 1024 * 1024 || images.Count >= 256))
+        while (!isToolbar && !background && images.Count > 0 && (bytes + size > 64 * 1024 * 1024 || images.Count >= 256))
         {
             var oldest = images.MinBy(entry => entry.Value.Used);
             images.Remove(oldest.Key);
@@ -59,7 +61,8 @@ internal sealed class ImageCache : IDisposable
                     }
                 }
             }
-            if (isToolbar) { bookmarkToolbar?.Bitmap.Dispose(); bookmarkToolbar = (key, result); }
+            if (background) { beatmapBackground?.Bitmap.Dispose(); beatmapBackground = (key, result); }
+            else if (isToolbar) { bookmarkToolbar?.Bitmap.Dispose(); bookmarkToolbar = (key, result); }
             else { images.Add(key, (result, ++clock)); bytes += size; }
             return result;
         }
@@ -67,6 +70,7 @@ internal sealed class ImageCache : IDisposable
     }
     private void ClearImages()
     {
+        beatmapBackground?.Bitmap.Dispose(); beatmapBackground = null;
         bookmarkToolbar?.Bitmap.Dispose(); bookmarkToolbar = null;
         foreach (var image in images.Values) image.Bitmap.Dispose(); images.Clear(); bytes = 0;
     }
@@ -118,11 +122,23 @@ internal sealed class MacCanvas(DrawingContext context, ImageCache images) : ICa
         context.DrawText(formatted, new Point(x, y));
     }
     public bool Image(string filePath, R destination, uint tint = 0xFFFFFF, R? source = null, float opacity = 1)
+        => DrawImage(filePath, destination, tint, source, opacity, false);
+
+    public bool BackgroundImage(string filePath, R destination)
+        => DrawImage(filePath, destination, 0xFFFFFF, null, 1, true);
+
+    private bool DrawImage(string filePath, R destination, uint tint, R? source, float opacity, bool fill)
     {
         try
         {
-            var bitmap = images.Get(filePath, tint);
+            var bitmap = images.Get(filePath, tint, fill);
             if (bitmap is null) return false;
+            if (fill)
+            {
+                double scale = Math.Max(destination.Width / bitmap.Size.Width, destination.Height / bitmap.Size.Height);
+                float w = (float)(destination.Width / scale), h = (float)(destination.Height / scale);
+                source = new((float)(bitmap.Size.Width - w) / 2, (float)(bitmap.Size.Height - h) / 2, w, h);
+            }
             using var state = context.PushOpacity(opacity);
             context.DrawImage(bitmap, source is R s ? Convert(s) : new Avalonia.Rect(bitmap.Size), Convert(destination));
             return true;

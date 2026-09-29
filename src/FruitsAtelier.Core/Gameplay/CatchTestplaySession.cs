@@ -87,6 +87,25 @@ public sealed class CatchTestplaySession
     }
 
     public void Tick() { lock (gate) Advance(); }
+    public bool SkipIntro(double target)
+    {
+        lock (gate)
+        {
+            Advance();
+            if (ended || paused || !double.IsFinite(target) || target <= time ||
+                game.JudgedCount != 0 || game.PendingUntil(target).Any()) return false;
+            keys.Clear();
+            time = target;
+            outputLead = 0;
+            game.Advance(target, false, false, false, autoplay);
+            waitingForDeviceProgress = false;
+            awaitingResume = WithAudio;
+            resumePosition = target;
+            resumeRequestedAt = Realtime;
+            clock.Restart(target, resumeRequestedAt, WithAudio);
+            return true;
+        }
+    }
     public void SetPlaybackSpeed(double speed)
     {
         lock (gate)

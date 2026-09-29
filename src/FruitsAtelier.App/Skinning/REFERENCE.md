@@ -1,5 +1,44 @@
 # Catch PNG skin rendering
 
+## Testplay interface
+
+Skip uses `play-skip.png` or consecutive `play-skip-{n}.png` frames starting at
+zero, preferring `@2x` per frame. `AnimationFramerate` sets the frame rate; when
+unset, one animation cycle lasts one second. The sprite is bottom-right aligned.
+Pause uses `pause-overlay.png` (or `.jpg`), `pause-continue.png`, `pause-retry.png`
+and `pause-back.png`. Overlay and buttons retain their full logical dimensions,
+without the fruit-specific 160px crop. Their scale is viewport height / 768;
+the overlay is centred and button centres are at 224, 400 and 576 reference pixels.
+Mouse hover enlarges buttons to 110% over 200 ms with OutQuint easing.
+Keyboard selection uses the same enlargement and a pair of arrows.
+`arrow-pause.png` and `arrow-warning.png` override `play-warningarrow.png`;
+only the shared fallback is tinted blue for selection and red for warnings.
+Right-side arrows are mirrored. Warnings appear in the last three seconds of
+the intro/break and during the pause menu's 600 ms resume fade.
+
+The pause cursor uses `cursor`, `cursormiddle` and `cursortrail`, preferring `@2x`.
+`CursorCentre`, `CursorRotate`, `CursorExpand` and `CursorTrailRotate` are respected.
+A middle sprite enables the continuous additive 500 ms trail; otherwise trail
+points use normal blending and fade over 150 ms. Trails have fixed-capacity storage.
+The cursor and trail are hidden during running gameplay.
+
+Each missing component falls back to the configured default skin, then to the
+localized built-in control. Click/hover samples use the matching
+`pause-{continue,retry,back}-{click,hover}` names, falling back to `menuhit` and
+`menuclick` (`menuback` for Back). Generic `pause-hover` is also supported.
+`pause-loop` loops while paused and fades out over 200 ms. Samples use the audition output
+so they remain audible while music
+is paused. The skin-sound preference applies to these samples too.
+Disabling skin sounds selects the packaged osu! samples, including interface sounds.
+Their pinned source paths and hashes are in `assets/audio/osu/manifest.json`.
+These resources are included in `.osk` extraction cache version 11.
+
+Flow and animation references use the pinned osu! revision below:
+`SkipOverlay`, `MasterGameplayClockContainer`, `PauseOverlay`, `GameplayMenuOverlay`,
+`LegacyCursor`, `LegacyCursorTrail`, `CursorTrail`, `DialogButton`, `BreakTracker`, `BreakOverlay`, `UserDimContainer` and
+`LegacySkinExtensions`. Legacy artwork placement follows the official
+[interface skin specification](https://osu.ppy.sh/wiki/en/Skinning/Interface).
+
 The texture mapping and size rules are independently implemented from these MIT-licensed osu!lazer references at [`48c4800e3ae4ee752452cdff83bd3787ccf3105f`](https://github.com/ppy/osu/tree/48c4800e3ae4ee752452cdff83bd3787ccf3105f):
 
 - `osu.Game.Rulesets.Catch/Objects/Fruit.cs` and `FruitVisualRepresentation.cs`: full-map visual index modulo four maps to pear, grapes, apple, orange.

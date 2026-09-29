@@ -183,6 +183,7 @@ public sealed partial class EditorView
         }
         BuildComboColours();
         RefreshKiaiTransitions();
+        RefreshBeatmapBackground();
         breakPeriods = OsuTimeline.Breaks(Document).ToArray();
         hyperdashObjects = HyperDashCalculator.GetHyperDashStarts(playableObjects, Document.CircleSize);
     }

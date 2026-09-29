@@ -35,6 +35,7 @@ internal sealed partial class MacWindow : Window
         View.RequestPrepareHitsound = hitsounds.Prepare;
         View.RequestHitsound = hitsounds.Play;
         View.RequestAuditionHitsound = hitsounds.Play;
+        View.RequestTestplayMenuLoop = hitsounds.SetMenuLoop;
         View.RequestWaveform = MacWaveformDecoder.Load;
         View.RequestPreloadHitsounds = documents => hitsounds.PreloadProject(documents, View.HitsoundSkinFolders);
         View.PreloadProjectHitsounds();

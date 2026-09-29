@@ -24,7 +24,7 @@ public sealed partial class EditorView
     {
         if (SynchronizationBlocksInput) return;
         placementCtrl = ctrl;
-        if (IsTestplaying) { BeginVolumePopoverPointer(x, y, button); return; }
+        if (IsTestplaying) { TestplayPointerDown(x, y, button); return; }
         if (ErrorVisible || DiscardConfirmationVisible)
         {
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
@@ -396,8 +396,8 @@ public sealed partial class EditorView
         if (distanceDragging) { UpdateDistanceSlider(x, shift); return; }
         placementCtrl = ctrl;
         if (volumeDrag >= 0) { UpdateVolumeDrag(x); return; }
-        if (IsTestplaying) return;
         mouseX = x; mouseY = y;
+        if (IsTestplaying) { TestplayPointerMove(x, y); return; }
         if (workspaceScrollDragging) { MoveWorkspaceScroll(y); return; }
         if (settingsColourDrag != 0) { UpdateIndicatorColourDrag(x, y); return; }
         if (updatesPage) return;
@@ -511,6 +511,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        testplayCursorPressed = false;
         if (SynchronizationBlocksInput) return;
         if (timingSnapDragging) { SetTimingSnap(x); timingSnapDragging = false; return; }
         if (timingScrollDragging && button == 0) { UpdateTimingScroll(y); timingScrollDragging = false; return; }
@@ -848,13 +849,15 @@ public sealed partial class EditorView
         if (IsTestplaying)
         {
             if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift)) return;
-            if (virtualKey == 27) { testplayEscapeConsumed = true; StopTestplay(); }
+            if (virtualKey == 27) { testplayEscapeConsumed = true; ToggleTestplayPause(); }
             else if (virtualKey == 112) StopTestplay();
             else if (virtualKey == 113) { AdvanceTestplay(); StopTestplay(atCurrentPosition: true); }
             else if (ctrl && virtualKey == 80)
             {
                 if (!testplayPauseHeld) { testplayPauseHeld = true; ToggleTestplayPause(); }
             }
+            else if (TestplayMenuKey(virtualKey)) return;
+            else if (virtualKey == 32 && !ctrl && !shift && !altHeld && TestplaySkipVisible) SkipTestplayIntro();
             else if (ctrl && virtualKey == 66)
             {
                 if (!testplayBookmarkHeld)

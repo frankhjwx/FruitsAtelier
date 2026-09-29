@@ -179,6 +179,36 @@ The top-bar **Settings** button is available in both Library and Editor. Setting
 
 ## Testplay
 
+Beatmap backgrounds fill the Catch preview and testplay viewport
+without changing their aspect ratio. **Settings > Testplay > Background dim** and
+the pause menu adjust the persistent 0–100% dim preference (default 90%). The editing canvas has a fully opaque backing.
+
+**Space** or clicking **Skip** skips an intro to three seconds before the first
+note. Skip is unavailable after that point. **Esc / Ctrl+P** opens the pause menu;
+**Up/Down** selects Continue, Retry or Back and **Enter** activates the selection.
+Mouse buttons use the same actions. Continue fades the pause menu out over 600 ms,
+then resumes music and judgement together. Esc cancels the fade back to the menu. Retry
+restarts at the session's original lead-in position, resetting judgement and combo
+while retaining autoplay. Back and F1 return to the selected editor position.
+Hover smoothly enlarges buttons; keyboard selection shows two skin arrows.
+The skin cursor and its trail appear only while paused. Running testplay hides
+both the skin cursor and system pointer. Intro and break-end warnings use four
+flashing arrows; a resume transition also shows these arrows.
+
+Pause loops and button feedback use the selected skin when skin sounds are enabled,
+otherwise packaged osu! resources. Missing skin samples fall back to the default
+skin and packaged resources. Explicit silent samples remain silent.
+
+Breaks of at least 650 ms lighten the background by 30 percentage points, clamped
+at zero dim. The background returns to the configured dim starting just after
+325 ms before the break ends. Dim transitions last 800 ms with OutQuint easing.
+The intro before the first note minus 2000 ms also uses the lighter background.
+Breaks and background filenames are cached with the document conversion snapshot;
+rendering does not parse Events or read image headers each frame.
+
+See [skin rendering](../src/FruitsAtelier.App/Skinning/REFERENCE.md) for supported
+Skip and pause assets, animation, scaling and fallback.
+
 Click **Testplay (F5)** in the transport bar or press **F5** to play from the current
 playhead. Finish any active object draft or text input first. Testplay uses the
 preview's NM/Easy/Hard Rock selection and the selected playback speed. With no
@@ -468,7 +498,7 @@ A confirmed stream remains one editable slider parent with its anchors, handles 
 
 The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
 
-Testplay lead-in is configured in Settings > Testplay, from 0 to 5 seconds in 0.5-second steps (default 1). Settings also offers a persistent Combo-count visibility toggle, without a keyboard shortcut. Holding the configured Dash key adds a bright white catcher layer while preserving the existing trails and Hyperdash tint. Starting testplay immediately begins audio and gameplay from the selected position minus the lead-in, clamped to zero. Esc returns to the selected position.
+Testplay lead-in is configured in Settings > Testplay, from 0 to 5 seconds in 0.5-second steps (default 1). Settings also offers a persistent Combo-count visibility toggle, without a keyboard shortcut. Holding the configured Dash key adds a bright white catcher layer while preserving the existing trails and Hyperdash tint. Starting testplay immediately begins audio and gameplay from the selected position minus the lead-in, clamped to zero. Esc opens the pause menu; F1 returns to the selected position.
 
 Number keys 1–4 select Select, Fruit, FSlider and Banana Shower. During an FSlider draft they finish valid geometry, or cancel an insufficient draft, before switching tools; pressing 3 prepares another slider. Shift+1–9 changes Snap during drawing without moving placed points. F4 opens Song Setup. Left/Right seeks one full beat during playback. While paused, it moves to the preceding/following Snap grid line, including timing boundaries, so off-grid positions align in the chosen direction. Shift+Left/Right seeks four full beats during playback or four grid lines while paused, and Shift+1–9 changes Snap; other Shift variants do not invoke unmodified transport or nudge commands. Timing blocks horizontal object nudges and accepts Ctrl+Alt+E outside fields and dialogs. F6 row deletion requires Delete or Ctrl+I without Shift or Alt. The Settings language dropdown consumes keyboard input until Enter applies or Esc closes it.
 

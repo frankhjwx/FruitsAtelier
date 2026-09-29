@@ -31,6 +31,8 @@ public sealed class LibrarySettings
         set => playbackLineFromBottom = double.IsFinite(value) ? Math.Clamp(value, .05, .95) : .25;
     }
     public bool ShowTestplayCombo { get; set; } = true;
+    private int backgroundDim = 90;
+    public int BackgroundDim { get => backgroundDim; set => backgroundDim = Math.Clamp(value, 0, 100); }
     public Dictionary<Guid, MapEditingPreferences> MapEditingPreferences { get; set; } = [];
     private double canvasZoom = .6, objectTimelineScale = .18, waveformSpanMs = 10000;
     public double CanvasZoom { get => canvasZoom; set => canvasZoom = double.IsFinite(value) ? Math.Clamp(value, .01, 1) : .6; }

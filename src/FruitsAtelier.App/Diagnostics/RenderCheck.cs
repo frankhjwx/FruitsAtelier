@@ -265,6 +265,8 @@ internal static class RenderCheck
         var project = view.CaptureProject();
         var toggle = view.RequestTogglePlayback; var pause = view.RequestPausePlayback;
         var seek = view.RequestSeek; var hitsound = view.RequestHitsound;
+        var audition = view.RequestAuditionHitsound;
+        var menuLoop = view.RequestTestplayMenuLoop;
         var volumePreference = view.RequestAudioPreference;
         var updateCheck = view.RequestUpdateCheck;
         var updateRestart = view.RequestUpdateRestart;
@@ -277,6 +279,8 @@ internal static class RenderCheck
             view.LibrarySettings.TestplayStartupDelaySeconds = 0;
             view.RequestTogglePlayback = () => { }; view.RequestPausePlayback = () => { };
             view.RequestSeek = _ => { }; view.RequestHitsound = _ => { };
+            view.RequestAuditionHitsound = _ => { };
+            view.RequestTestplayMenuLoop = _ => { };
             view.RequestAudioPreference = () => { };
             view.RequestUpdateCheck = () => { };
             var map = new MapDocument();
@@ -317,6 +321,10 @@ internal static class RenderCheck
                     view.KeyUp(key);
                 }
                 view.KeyDown(27, false, false);
+                if (!view.TestplayPauseMenuVisible) throw new InvalidOperationException("Escape did not open the native pause menu.");
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.KeyDown(38, false, false); view.KeyUp(38);
+                view.KeyDown(13, false, false); view.KeyUp(13);
                 if (view.IsTestplaying || view.PlayheadMs != 1000) throw new InvalidOperationException("Native testplay failed to return.");
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.KeyDown(27, false, false);
@@ -515,6 +523,8 @@ internal static class RenderCheck
             view.StopTestplay(); view.LoadProject(project); view.CloseLibrary();
             view.RequestTogglePlayback = toggle; view.RequestPausePlayback = pause;
             view.RequestSeek = seek; view.RequestHitsound = hitsound;
+            view.RequestAuditionHitsound = audition;
+            view.RequestTestplayMenuLoop = menuLoop;
             view.RequestAudioPreference = volumePreference;
             view.RequestUpdateCheck = updateCheck;
             view.RequestUpdateRestart = updateRestart;

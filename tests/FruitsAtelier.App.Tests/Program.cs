@@ -89,7 +89,8 @@ var tests = new (string Name, Action Run)[]
     ("Testplay autoplay speed switching and localized display", TestplayTests.AutoplaySpeed),
     ("Catch rotations, banana arrival transforms and combo colours", TestplayTests.VisualTransformsAndColours),
     ("Unskinned Catch objects keep dark map colours bright", FallbackSkinTests.BrightComboColour),
-    ("Testplay Escape returns to editor without repeated navigation", TestplayTests.EscapeReturnsToEditor),
+    ("Testplay Escape opens the pause menu without repeated navigation", TestplayTests.EscapeReturnsToEditor),
+    ("Testplay skip, pause menu, background and break dim", TestplayPresentationTests.ControlsAndBackground),
     ("Testplay caught stacks share preview effects and outlive final judgement", TestplayTests.LivePlate),
     ("Testplay input isolation and transport lifecycle", TestplayTests.EditorLifecycle),
     ("Testplay compensates output buffer lead without shifting resume", TestplayTests.OutputBufferLead),
@@ -1116,6 +1117,9 @@ sealed class RecordingCanvas : ICanvas
     private readonly Stack<Rect> clipStack = new();
     public readonly record struct Texture(string Path, Rect Bounds, float Opacity);
     public List<Texture> Images { get; } = [];
+    public bool AcceptBackgrounds { get; set; }
+    public bool BackgroundImage(string path, Rect destination)
+    { Images.Add(new(path, destination, 1)); return AcceptBackgrounds; }
     public List<(float Rotation, bool Additive, uint Tint)> Sprites { get; } = [];
     public bool SpriteImage(string path, Rect destination, uint tint, Rect source, float opacity, float rotation, bool additive)
     {

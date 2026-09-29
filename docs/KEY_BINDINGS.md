@@ -199,9 +199,11 @@ to Compose before moving selected objects.
 | Left / Right | Move catcher, by default. |
 | Hold Shift | Dash, by default. |
 | Tab | Toggle autoplay. |
-| Ctrl+P | Pause / resume the session. |
+| Esc / Ctrl+P | Open the pause menu / resume the session. |
+| Space | Skip the opening empty time while Skip is available; clicking Skip also works. |
+| Up / Down, Enter (pause menu) | Select Continue, Retry or Back, then activate it. |
 | Ctrl+B / Ctrl+Shift+B | Add a bookmark / remove the nearest within two seconds at the live position. |
-| Esc / F1 | Exit and return to the selected testplay start position. |
+| F1 | Exit and return to the selected testplay start position. |
 | F2 | Exit at the current testplay position. |
 | Alt+arrows | Select and adjust volume channels as above. |
 

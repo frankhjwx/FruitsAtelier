@@ -12,6 +12,7 @@ static class HitsoundMixerTests
         SpeedChangeSession();
         IndependentVolume();
         AuditionWithoutMusic();
+        TestplayMenuSamples();
         WaveformDecoding();
         using var mixer = new HitsoundPlayer();
         var buffer = new float[4096];
@@ -42,6 +43,35 @@ static class HitsoundMixerTests
         mixer.Queue(new(CatchObjectKind.Fruit, normal, 1)); mixer.Read(buffer, 0, buffer.Length);
         if (!buffer.Any(v => Math.Abs(v) > .001)) throw new Exception("Default normal-only note emitted silent PCM");
         Console.WriteLine("PASS Hitsound PCM mixing, volume, overlap, stop, clipping and custom WAV decoding");
+    }
+
+    private static void TestplayMenuSamples()
+    {
+        var output = new AuditionOutput();
+        using var mixer = new HitsoundPlayer(createAuditionOutput: () => output);
+        foreach (string name in new[] { "menuhit", "menuclick", "pause-continue-click", "pause-retry-click", "pause-back-click" })
+        {
+            string path = HitsoundDefaults.FindInterface(name) ?? throw new Exception("Packaged osu interface sample is missing: " + name);
+            mixer.Stop(); mixer.Prepare(new(CatchObjectKind.Fruit, path, 1, name));
+            mixer.PlayAudition(new(CatchObjectKind.Fruit, path, 1, name));
+            var bytes = new byte[44100 * 4]; output.Source!.Read(bytes, 0, bytes.Length);
+            if (!bytes.Any(b => b != 0)) throw new Exception("Official interface sample decoded as silence: " + name);
+        }
+        string loopPath = HitsoundDefaults.FindInterface("pause-loop") ?? throw new Exception("Packaged pause loop missing");
+        mixer.Stop(); mixer.SetMenuLoop(new(CatchObjectKind.Fruit, loopPath, 1, "pause-loop"));
+        var block = new byte[44100 * 4];
+        for (int i = 0; i < 12; i++)
+        {
+            output.Source!.Read(block, 0, block.Length);
+            if (!block.Any(b => b != 0)) throw new Exception("Pause loop stopped before being dismissed");
+        }
+        mixer.SetMenuLoop(null); output.Source!.Read(block, 0, block.Length);
+        if (!block.Take(8820 * 4).Any(b => b != 0) || block.Skip(8820 * 4).Any(b => b != 0))
+            throw new Exception("Pause loop must fade out within 200 ms");
+        mixer.SetMenuLoop(new(CatchObjectKind.Fruit, loopPath, 1, "pause-loop")); mixer.Volume = 0;
+        output.Source.Read(block, 0, block.Length);
+        if (block.Any(b => b != 0)) throw new Exception("Pause loop ignored effects volume");
+        Console.WriteLine("PASS Official osu interface PCM, continuous pause loop, fade and volume");
     }
 
     private static void AuditionWithoutMusic()

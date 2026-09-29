@@ -15,6 +15,7 @@ public sealed partial class EditorView
     private bool draftLowLatencyDisplay;
     private double draftTestplayStartupDelaySeconds;
     private bool draftShowTestplayCombo;
+    private int draftBackgroundDim;
     private readonly uint[] draftIndicatorColours = new uint[4];
     private int settingsColourIndex = -1;
     private uint settingsColourOriginal;
@@ -65,9 +66,10 @@ public sealed partial class EditorView
         draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
         draftTestplayStartupDelaySeconds = LibrarySettings.TestplayStartupDelaySeconds;
         draftShowTestplayCombo = LibrarySettings.ShowTestplayCombo;
+        draftBackgroundDim = LibrarySettings.BackgroundDim;
     }
 
-    private bool SettingsChanged => draftShowTestplayCombo != LibrarySettings.ShowTestplayCombo || draftWorkspace != LibrarySettings.Workspace ||
+    private bool SettingsChanged => draftBackgroundDim != LibrarySettings.BackgroundDim || draftShowTestplayCombo != LibrarySettings.ShowTestplayCombo || draftWorkspace != LibrarySettings.Workspace ||
         draftOsuRoot != LibrarySettings.OsuRoot ||
         draftDefaultSkin != (LibrarySettings.DefaultSkin ?? "") ||
         draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
@@ -203,6 +205,7 @@ public sealed partial class EditorView
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
             settings.TestplayStartupDelaySeconds = draftTestplayStartupDelaySeconds;
             settings.ShowTestplayCombo = draftShowTestplayCombo;
+            settings.BackgroundDim = draftBackgroundDim;
             settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.DerandomizeDroplets = draftDerandomizeDroplets;
             settings.LowLatencyDisplay = draftLowLatencyDisplay;

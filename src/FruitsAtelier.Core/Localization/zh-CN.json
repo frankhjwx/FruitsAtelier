@@ -1,4 +1,9 @@
 {
+  "settings.backgroundDim": "背景暗化：{0}%",
+  "testplay.skip": "跳过（空格）",
+  "testplay.continue": "继续",
+  "testplay.retry": "重试",
+  "testplay.quit": "返回编辑器",
   "timeline.addBreak": "添加休息段",
   "timeline.removeBreak": "删除休息段",
   "timeline.breakLabel": "休息",
@@ -42,7 +47,7 @@
   "testplay.speed": "试打速度：{0:0.0#}x",
   "testplay.hintSpeed": "F3：自动接果时切换 1.0x / 1.5x",
   "testplay.speedRequiresAutoplay": "请先按 [Tab] 开启自动接果，再切换速度。",
-  "testplay.hintPause": "Ctrl+P：暂停 / 继续",
+  "testplay.hintPause": "Esc / Ctrl+P：暂停 / 继续",
   "testplay.hintBookmark": "Ctrl+B：添加书签",
   "testplay.hintQuickExit": "F1：快速退出",
   "testplay.hintCurrentExit": "F2：退出并保留当前位置",

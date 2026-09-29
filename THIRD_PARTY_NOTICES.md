@@ -19,6 +19,17 @@ The editor owns its models, curve editing and transactions. Catch conversion and
 
 ## Catch algorithms and display calculations
 
+Testplay Skip, pause/resume and background dim behavior references
+`SkipOverlay.cs`, `MasterGameplayClockContainer.cs`, `PauseOverlay.cs`,
+`GameplayMenuOverlay.cs`, `LegacyCursor.cs`, `LegacyCursorTrail.cs`,
+`CursorTrail.cs`, `DialogButton.cs`, `BreakTracker.cs`,
+`BreakOverlay.cs`, `BreakPeriod.cs`, `UserDimContainer.cs` and
+`LegacySkinExtensions.cs` at ppy/osu commit
+`48c4800e3ae4ee752452cdff83bd3787ccf3105f`. The MIT notice below and
+`src/FruitsAtelier.Core/Gameplay/LICENSE.osu.txt` apply. Legacy skin artwork mapping
+follows the [official interface specification](https://osu.ppy.sh/wiki/en/Skinning/Interface);
+no osu! artwork or framework runtime is included by this adaptation.
+
 Low-speed audio parameters reference `osu.Framework/Audio/Track/TrackBass.cs`
 from osu!framework commit `94724b4385479b2e00bb347c9201ce9d9d13f594`. The Windows
 implementation uses SoundTouch.Net; BASS and osu!framework are not bundled.
@@ -155,7 +166,7 @@ No additional upstream artwork is bundled by this implementation.
 
 ## Default hitsound samples
 
-The classic normal/soft/drum sample banks and the Catch banana sample are unmodified
+The classic normal/soft/drum sample banks, Catch banana sample and interface/pause samples are unmodified
 recordings from ppy/osu-resources commit `d8d01c29ce0f298159aea3644b947d8b4a1882a2`,
 copyright ppy Pty Ltd and contributors, licensed under CC BY-NC 4.0. Source paths,
 checksums, attribution, and the full license ship in
