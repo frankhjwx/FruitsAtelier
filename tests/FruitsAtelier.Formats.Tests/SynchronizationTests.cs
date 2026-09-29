@@ -4,6 +4,42 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: osu save precision and omitted slider defaults preserve real edits", () => Run(f =>
+        {
+            string[] lines = [
+                "100,192,1000,2,0,L|180:220,1,129.68676013495843,4|0,0:0|0:0,0:0:0:0:",
+                "200,192,2000,2,0,L|280:220,1,209.99999999999994,,,0:0:0:0:",
+                "300,192,3000,2,0,L|380:220,1,78.75000300407498,,,0:0:0:0:",
+                "400,192,4000,1,2,0:0:0:0:"];
+            string prefix = Fixture().Split("[HitObjects]")[0] + "[HitObjects]\n";
+            File.WriteAllText(f.Source, prefix + string.Join('\n', lines));
+            f.Diff.Document = OsuBeatmapReader.ReadFile(f.Source);
+            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], WorkspaceSynchronization.ReadStable(f.Source), f.Diff.Document, true);
+            WorkspaceProject.Save(f.Session, f.Session.Project);
+            string[] rewritten = [
+                lines[0].Replace("129.68676013495843", "129.686760134958"),
+                "200,192,2000,2,0,L|280:220,1,210",
+                "300,192,3000,2,0,L|380:220,1,78.750003004075",
+                lines[3]];
+            File.WriteAllText(f.Source, prefix + string.Join('\n', rewritten));
+            Check(f.Merge().Conflicts.Count(c => c.Key.StartsWith("$objects:")) == 0, "save-only precision and default fields create no object conflicts");
+            foreach (string changed in new[] {
+                rewritten[0].Replace("4|0", "2|0"),
+                rewritten[0].Replace("0:0:0:0:", "0:0:0:80:custom.wav"),
+                rewritten[0].Replace("0:0|0:0", "1:2|0:0") })
+            {
+                File.WriteAllText(f.Source, prefix + string.Join('\n', new[] { changed }.Concat(rewritten.Skip(1))));
+                Check(f.Merge().Conflicts.Count(c => c.Key.StartsWith("$objects:")) == 1, "non-default sound changes remain visible");
+            }
+            rewritten[0] = rewritten[0].Replace("180:220", "179:220");
+            rewritten[3] = rewritten[3].Replace("400,192", "399,193");
+            File.WriteAllText(f.Source, prefix + string.Join('\n', rewritten));
+            Check(f.Merge().Conflicts.Count(c => c.Key.StartsWith("$objects:")) == 2, "two actual geometry edits remain exactly two conflicts");
+            rewritten[0] = lines[0].Replace("129.68676013495843", "129.686761134958");
+            rewritten[3] = lines[3];
+            File.WriteAllText(f.Source, prefix + string.Join('\n', rewritten));
+            Check(f.Merge().Conflicts.Count(c => c.Key.StartsWith("$objects:")) == 1, "a small real slider length change remains visible");
+        }));
         yield return ("Sync: all ten metadata fields require a choice for any differing value", () =>
         {
             foreach (string key in new[] { "Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Version", "Source", "Tags", "BeatmapID", "BeatmapSetID" })

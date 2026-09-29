@@ -268,6 +268,8 @@ public static class WorkspaceSynchronization
     public static WorkspaceMerge Merge(WorkspaceDifficulty entry, MapDocument local, WorkspaceSyncCandidate external, string directory, bool compensate)
     {
         if (entry.Sync is not { } baseline) throw new InvalidOperationException(L.Get("sync.baseline"));
+        baseline.RetainedObjects = baseline.RetainedObjects.Select(r =>
+            new WorkspaceRetainedObjects(r.Sources, r.ExternalLines.Select(NormalizeObject).ToList())).ToList();
         var original = ProjectSerializer.Read(baseline.Authoring, SnapshotPath(directory));
         if (!baseline.RetainedObjectsRecorded)
         {
@@ -597,14 +599,23 @@ public static class WorkspaceSynchronization
     private static string NormalizeObject(string line)
     {
         string[] parts = line.Split(',');
+        bool slider = parts.Length > 7 && int.TryParse(parts[3], out int type) && (type & 2) != 0;
         for (int i = 0; i < parts.Length; i++)
         {
             if (i < 5 || i is 6 or 7)
             {
-                if (double.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out double n)) parts[i] = n.ToString("R", CultureInfo.InvariantCulture);
+                // osu! saves slider lengths with 15 significant digits. Compare that
+                // representation so a save does not turn round-trip noise into edits.
+                if (double.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out double n)) parts[i] = n.ToString(slider && i == 7 ? "G15" : "R", CultureInfo.InvariantCulture);
             }
         }
-        return string.Join(',', parts);
+        int count = parts.Length;
+        if (slider)
+        {
+            if (count == 11 && parts[10] is "" or "0:0:0:0:") count--;
+            while (count > 8 && count <= 10 && parts[count - 1].Length == 0) count--;
+        }
+        return string.Join(',', parts.Take(count));
     }
     private static string ObjectKey(string line)
     {

@@ -124,7 +124,12 @@ handled as an ordered section, including inherited points. Applying external con
 retains authoring objects and rebases that context through local undo snapshots.
 
 Object comparisons preserve sequence order and meaningful fields while normalizing
-basic numeric spelling and line endings. Unique unchanged lines anchor changed
+basic numeric spelling and line endings. Slider lengths use 15 significant digits
+for comparison, matching osu! save precision; omitted empty edge fields and the
+default slider hit-sample suffix compare equal to explicit defaults. Position,
+time, curve controls, and non-default sound fields remain significant. Persisted
+retained decisions use the same normalization when reviewed again.
+Unique unchanged lines anchor changed
 runs. Unambiguous same-time/type replacements can be selected separately; uncertain
 runs remain explicit groups. Outputs sharing an FA curve resolve together. Keeping
 an FA group retains its controls; accepting external geometry can replace those
