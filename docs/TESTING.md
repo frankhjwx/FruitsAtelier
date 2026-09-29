@@ -315,6 +315,11 @@ replacement and recovery, duplicate ownership, unique-difficulty migration, base
 persistence, emitted object mappings, multi-output curves, and interrupted exports.
 Fixtures and retained recovery files live under `artifacts/tests/synchronization`.
 
+Save-rewrite regressions cover fractional object times, implicit combo boundaries,
+timing precision, and relocated break lines alongside storyboard commands. They
+also verify real time, combo colour, SV, break and video edits remain reviewable,
+and accepting a setting change preserves authoring precision and event text.
+
 Shared App tests cover asynchronous discovery, context rebasing through undo,
 missing-file input isolation, explicit restoration, per-object choices, linked
 deletion, and local-project exemptions in both languages and window sizes. Native

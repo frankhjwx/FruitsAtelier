@@ -10,6 +10,12 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 - New projects start with `[Difficulty] SliderMultiplier` 1.92 and editor DPB 192 px. Imported maps initially derive DPB as 100 × their stored SliderMultiplier. Subsequent DPB edits belong to the `.catchproj` editor configuration; `.osu` export retains SliderMultiplier and slider playback unchanged.
 - Read and edit `[Editor] Bookmarks` and `[Events]` break periods as difficulty-local timeline content. Unrelated event lines retain their source text and order.
 - Preserve raw section text and unedited object lines; unsupported object types are errors.
+- Synchronization compares osu! save representations: truncated object start/end
+  milliseconds, 15-significant-digit slider lengths and timing values, and implicit
+  first-object/post-spinner combo boundaries. Events comparisons ignore comments,
+  blank lines and break placement within the section, while retaining break
+  intervals and storyboard command order/indentation. Comparison does not rewrite
+  authoring values or retained section text; actual edits remain reviewable.
 - Save authored anchors, Bezier handles, and editing constraints in the editor project, rather than custom `.osu` object fields.
 
 ## Object and timing rules

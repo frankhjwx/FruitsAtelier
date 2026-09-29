@@ -21,7 +21,11 @@ internal static class SynchronizationUiTests
             var session = LibraryOperations.ImportPath(source, ui.View.LibrarySettings); ui.View.LoadWorkspace(session); Wait(ui);
             try
             {
-                string events = string.Concat(Enumerable.Repeat("// storyboard command 012345678901234567890123456789\n", 70000)) + "// END_STORYBOARD";
+                File.WriteAllText(source, Fixture.Replace("[HitObjects]", "[Events]\n//Break Periods\n//Storyboard\n\n[HitObjects]"));
+                ui.View.RefreshSynchronization(); Wait(ui);
+                Check(!ui.View.SynchronizationVisible, "comment-only Events save needs no review");
+                string events = "Sprite,Foreground,Centre,\"sprite.png\",320,240\n"
+                    + string.Concat(Enumerable.Repeat(" F,0,0,500,0,1\n// storyboard command 012345678901234567890123456789\n", 70000)) + "// END_STORYBOARD";
                 File.WriteAllText(source, Fixture.Replace("[HitObjects]", "[Events]\n" + events + "\n[HitObjects]"));
                 ui.View.RefreshSynchronization(); Wait(ui);
                 Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Value == "Events/"), "external Events change opens text review");

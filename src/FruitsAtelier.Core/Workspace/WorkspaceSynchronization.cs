@@ -63,7 +63,7 @@ public static class WorkspaceSynchronization
     public static bool HasFieldDifferences(MapDocument local, MapDocument external)
     {
         var ours = Fields(local); var theirs = Fields(external);
-        return ours.Keys.Union(theirs.Keys).Any(key => ours.GetValueOrDefault(key) != theirs.GetValueOrDefault(key));
+        return ours.Keys.Union(theirs.Keys).Any(key => !FieldEquals(key, ours.GetValueOrDefault(key), theirs.GetValueOrDefault(key)));
     }
     public static StringComparer Paths => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
         ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
@@ -254,7 +254,7 @@ public static class WorkspaceSynchronization
         foreach (string key in ours.Keys.Union(theirs.Keys))
         {
             merge.Fields[key] = ours.GetValueOrDefault(key);
-            if (ours.GetValueOrDefault(key) != theirs.GetValueOrDefault(key))
+            if (!FieldEquals(key, ours.GetValueOrDefault(key), theirs.GetValueOrDefault(key)))
                 merge.Conflicts.Add(new(key, ours.GetValueOrDefault(key) ?? "", theirs.GetValueOrDefault(key) ?? ""));
         }
         if (AudioHash(local.AudioPath) != AudioHash(external.Document.AudioPath))
@@ -285,14 +285,14 @@ public static class WorkspaceSynchronization
         {
             baseFields.TryGetValue(key, out var before); authorFields.TryGetValue(key, out var authorBefore);
             localFields.TryGetValue(key, out var ours); externalFields.TryGetValue(key, out var theirs);
-            bool outsideChanged = before != theirs, insideChanged = authorBefore != ours || baseline.LocalOverrides.Contains(key);
+            bool outsideChanged = !FieldEquals(key, before, theirs), insideChanged = !FieldEquals(key, authorBefore, ours) || baseline.LocalOverrides.Contains(key);
             merge.Fields[key] = outsideChanged && !insideChanged ? theirs : ours;
             // Emitted timing may differ from authoring without an edit on either side.
-            if ((IsMetadataField(key) || outsideChanged || insideChanged) && ours != theirs)
+            if ((IsMetadataField(key) || outsideChanged || insideChanged) && !FieldEquals(key, ours, theirs))
             {
                 merge.Fields[key] = ours;
                 merge.Conflicts.Add(new(key, ours ?? "", theirs ?? ""));
-                if (!outsideChanged && ours == authorBefore && baseline.LocalOverrides.Contains(key)) merge.PreviouslyResolved.Add(key);
+                if (!outsideChanged && FieldEquals(key, ours, authorBefore) && baseline.LocalOverrides.Contains(key)) merge.PreviouslyResolved.Add(key);
             }
         }
         string? localAudio = AudioHash(local.AudioPath), externalAudio = AudioHash(external.Document.AudioPath);
@@ -310,13 +310,14 @@ public static class WorkspaceSynchronization
         }
         if (!beforeLines.SequenceEqual(afterLines))
         {
-            // Unique exact lines anchor ordered runs. Unmatched runs are explicit groups, never guessed identities.
-            var counts = beforeLines.GroupBy(x => x).ToDictionary(g => g.Key, g => g.Count());
-            var positions = afterLines.Select((line, index) => (line, index)).GroupBy(x => x.line)
+            // Unique save-equivalent lines anchor ordered runs. Unmatched runs are explicit groups, never guessed identities.
+            var (beforeKeys, afterKeys) = AnchorKeys(beforeLines, afterLines);
+            var counts = beforeKeys.GroupBy(x => x).ToDictionary(g => g.Key, g => g.Count());
+            var positions = afterKeys.Select((line, index) => (line, index)).GroupBy(x => x.line)
                 .Where(g => g.Count() == 1).ToDictionary(g => g.Key, g => g.Single().index);
             var anchors = new List<(int Before, int After)> { (-1, -1) };
             for (int i = 0; i < beforeLines.Length; i++)
-                if (counts[beforeLines[i]] == 1 && positions.TryGetValue(beforeLines[i], out int j) && j > anchors[^1].After) anchors.Add((i, j));
+                if (counts[beforeKeys[i]] == 1 && positions.TryGetValue(beforeKeys[i], out int j) && j > anchors[^1].After) anchors.Add((i, j));
             anchors.Add((beforeLines.Length, afterLines.Length));
             foreach (var anchor in anchors.Where(a => a.Before >= 0 && a.Before < baseline.ObjectSources.Count))
             {
@@ -372,7 +373,7 @@ public static class WorkspaceSynchronization
             {
                 // Include unchanged output members of a changed multi-output source.
                 for (int i = 0; i < beforeLines.Length; i++)
-                    if (SourcesAt(i).Any(change.Sources.Contains) && anchors.Any(a => a.Before == i)) { change.Lines.Add(beforeLines[i]); change.Before.Add(beforeLines[i]); }
+                    if (SourcesAt(i).Any(change.Sources.Contains) && anchors.Any(a => a.Before == i)) { change.Lines.Add(afterLines[anchors.First(a => a.Before == i).After]); change.Before.Add(beforeLines[i]); }
                 string key = "$objects:" + n++;
                 merge.Objects.Add((key, change.Sources.ToArray(), change.Lines.ToArray()));
                 merge.ChangedBeforeLines[key] = change.Before.ToArray();
@@ -449,14 +450,14 @@ public static class WorkspaceSynchronization
         if (entry.Sync is { } previous && !retainLocalFields)
         {
             var oldFields = Fields(ProjectSerializer.Read(previous.Authoring, SnapshotPath(session.Directory)));
-            pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => (previous.LocalOverrides.Contains(k) || resolvedFields.GetValueOrDefault(k) != oldFields.GetValueOrDefault(k))
-                && resolvedFields.GetValueOrDefault(k) != externalFields.GetValueOrDefault(k)));
+            pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => (previous.LocalOverrides.Contains(k) || !FieldEquals(k, resolvedFields.GetValueOrDefault(k), oldFields.GetValueOrDefault(k)))
+                && !FieldEquals(k, resolvedFields.GetValueOrDefault(k), externalFields.GetValueOrDefault(k))));
         }
-        else pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => resolvedFields.GetValueOrDefault(k) != externalFields.GetValueOrDefault(k)));
+        else pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => !FieldEquals(k, resolvedFields.GetValueOrDefault(k), externalFields.GetValueOrDefault(k))));
         if (review is not null && choices is not null)
             foreach (var conflict in review.Conflicts.Where(c => !c.Key.StartsWith('$')))
                 if (choices.TryGetValue(conflict.Key, out bool takeExternal) && !takeExternal
-                    && resolvedFields.GetValueOrDefault(conflict.Key) != externalFields.GetValueOrDefault(conflict.Key)
+                    && !FieldEquals(conflict.Key, resolvedFields.GetValueOrDefault(conflict.Key), externalFields.GetValueOrDefault(conflict.Key))
                     && !pending.Contains(conflict.Key)) pending.Add(conflict.Key);
         var retained = entry.Sync?.RetainedObjects.ToList() ?? [];
         if (review is not null && choices is not null)
@@ -554,12 +555,22 @@ public static class WorkspaceSynchronization
 
     public static string[] ObjectLines(string text)
     {
-        bool objects = false; var lines = new List<string>();
+        bool objects = false, afterSpinner = false; var lines = new List<string>();
         foreach (string raw in text.Replace("\r", "").Split('\n'))
         {
             string line = raw.Trim();
             if (line.StartsWith('[')) { objects = line == "[HitObjects]"; continue; }
-            if (objects && OsuBeatmapReader.IsDataLine(line)) lines.Add(NormalizeObject(line));
+            if (objects && OsuBeatmapReader.IsDataLine(line))
+            {
+                string[] parts = NormalizeObject(line).Split(',');
+                if (parts.Length > 3 && int.TryParse(parts[3], out int type))
+                {
+                    // These combo boundaries are implicit in Catch and made explicit by osu! saves.
+                    if ((lines.Count == 0 || afterSpinner) && (type & 8) == 0) parts[3] = (type | 4).ToString(CultureInfo.InvariantCulture);
+                    afterSpinner = (type & 8) != 0;
+                }
+                lines.Add(string.Join(',', parts));
+            }
         }
         return lines.ToArray();
     }
@@ -591,14 +602,20 @@ public static class WorkspaceSynchronization
     private static string NormalizeObject(string line)
     {
         string[] parts = line.Split(',');
-        bool slider = parts.Length > 7 && int.TryParse(parts[3], out int type) && (type & 2) != 0;
+        int type = parts.Length > 3 && int.TryParse(parts[3], out int flags) ? flags : 0;
+        bool slider = parts.Length > 7 && (type & 2) != 0;
         for (int i = 0; i < parts.Length; i++)
         {
-            if (i < 5 || i is 6 or 7)
+            if (i < 5 || i is 6 or 7 || i == 5 && (type & 8) != 0)
             {
                 // osu! saves slider lengths with 15 significant digits. Compare that
                 // representation so a save does not turn round-trip noise into edits.
-                if (double.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out double n)) parts[i] = n.ToString(slider && i == 7 ? "G15" : "R", CultureInfo.InvariantCulture);
+                if (double.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out double n))
+                {
+                    // stable truncates legacy object start/end times when saving.
+                    if (i == 2 || i == 5 && (type & 8) != 0) n = Math.Truncate(n);
+                    parts[i] = n.ToString(slider && i == 7 ? "G15" : "R", CultureInfo.InvariantCulture);
+                }
             }
         }
         int count = parts.Length;
@@ -615,7 +632,71 @@ public static class WorkspaceSynchronization
         return parts.Length > 3 ? parts[2] + "/" + (int.Parse(parts[3], CultureInfo.InvariantCulture) & 11) : line;
     }
 
+    private static (string[] Before, string[] After) AnchorKeys(string[] before, string[] after)
+    {
+        string WithoutCombo(string line)
+        {
+            var parts = line.Split(',');
+            parts[3] = (int.Parse(parts[3], CultureInfo.InvariantCulture) & ~4).ToString(CultureInfo.InvariantCulture);
+            return string.Join(',', parts);
+        }
+        var left = before.Select(WithoutCombo).ToArray();
+        var right = after.Select(WithoutCombo).ToArray();
+        var uniqueLeft = left.GroupBy(s => s).Where(g => g.Count() == 1).Select(g => g.Key).ToHashSet();
+        var uniqueRight = right.GroupBy(s => s).Where(g => g.Count() == 1).Select(g => g.Key).ToHashSet();
+        var implicitCombos = new HashSet<string>();
+        foreach (var lines in new[] { before, after })
+            for (int i = 0; i < lines.Length; i++)
+                if ((int.Parse(lines[i].Split(',')[3], CultureInfo.InvariantCulture) & 8) == 0
+                    && (i == 0 || (int.Parse(lines[i - 1].Split(',')[3], CultureInfo.InvariantCulture) & 8) != 0))
+                {
+                    string key = WithoutCombo(lines[i]);
+                    // A deletion can make an unchanged object the new first object.
+                    // Only unambiguous, otherwise identical objects can bridge that boundary.
+                    if (uniqueLeft.Contains(key) && uniqueRight.Contains(key)) implicitCombos.Add(key);
+                }
+        return (before.Select((line, i) => implicitCombos.Contains(left[i]) ? left[i] : line).ToArray(),
+            after.Select((line, i) => implicitCombos.Contains(right[i]) ? right[i] : line).ToArray());
+    }
+
     private static readonly HashSet<string> SettingsSections = ["General", "Editor", "Metadata", "Difficulty", "Colours"];
+    private static bool FieldEquals(string key, string? left, string? right)
+    {
+        if (left == right) return true;
+        if (key == "TimingPoints/") return TimingComparison(left) == TimingComparison(right);
+        if (key == "Events/") return EventComparison(left) == EventComparison(right);
+        return false;
+    }
+
+    private static string TimingComparison(string? value) => string.Join('\n', (value ?? "").Split('\n').Select(line =>
+    {
+        var parts = line.Split(',');
+        for (int i = 0; i < Math.Min(2, parts.Length); i++)
+            if (double.TryParse(parts[i], NumberStyles.Float, CultureInfo.InvariantCulture, out double number))
+                parts[i] = number.ToString("G15", CultureInfo.InvariantCulture);
+        return string.Join(',', parts);
+    }));
+
+    private static string EventComparison(string? value)
+    {
+        var events = new List<string>();
+        var breaks = new List<(int Start, int End)>();
+        foreach (string line in (value ?? "").Split('\n'))
+        {
+            if (!OsuBeatmapReader.IsDataLine(line.Trim())) continue;
+            var parts = line.Trim().Split(',');
+            if (parts.Length == 3 && parts[0].Trim() is "2" or "Break"
+                && int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int start)
+                && int.TryParse(parts[2].Split("//", 2)[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int end))
+                breaks.Add((start, end));
+            else events.Add(line.TrimEnd('\r'));
+        }
+        // Break placement amongst storyboard comments/commands is not part of its interval.
+        // Keep storyboard command order and indentation, and retain original text for resolution.
+        return string.Join('\n', events.Concat(breaks.OrderBy(b => b.Start).ThenBy(b => b.End)
+            .Select(b => FormattableString.Invariant($"2,{b.Start},{b.End}"))));
+    }
+
     internal static Dictionary<string, string?> Fields(MapDocument document)
     {
         var fields = new Dictionary<string, string?>();

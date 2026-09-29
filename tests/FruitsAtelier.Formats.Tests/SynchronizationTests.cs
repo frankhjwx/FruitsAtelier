@@ -4,6 +4,65 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: osu save rewrites do not conflict with storyboard settings", () => Run(f =>
+        {
+            string before = Fixture().Replace("Mode:2", "Mode:2\nWidescreenStoryboard:0")
+                .Replace("[TimingPoints]", "[Events]\n//Background\n0,0,\"bg.jpg\",0,0\n//Break Periods\n//Storyboard\nSprite,Foreground,Centre,\"sprite.png\",320,240\n F,0,0,500,0,1\n2,2100,2900\n[TimingPoints]")
+                .Replace("0,500,4,1,0,100,1,0", "0,413.793103448276,4,1,0,100,1,0\n1000,-76.25857146343249,4,1,0,100,0,0")
+                .Replace("100,192,1000,1,0", "100,192,1000.82758620691,1,0")
+                .Replace("150,192,1500,1,0,0:0:0:0:", "256,192,1500.7,8,0,2000.9,0:0:0:0:")
+                .Replace("200,192,2000,1,0", "200,192,3000,1,0");
+            File.WriteAllText(f.Source, before);
+            f.Diff.Document = OsuBeatmapReader.ReadFile(f.Source);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory);
+            string saved = before.Replace("WidescreenStoryboard:0", "WidescreenStoryboard:1")
+                .Replace("//Break Periods", "//Break Periods\nBreak,2100,2900")
+                .Replace("2,2100,2900\n[TimingPoints]", "\n[TimingPoints]")
+                .Replace("-76.25857146343249", "-76.2585714634325")
+                .Replace("1000.82758620691,1", "1000,5")
+                .Replace("1500.7,8,0,2000.9", "1500,8,0,2000")
+                .Replace("200,192,3000,1", "200,192,3000,5");
+            File.WriteAllText(f.Source, saved);
+            var merge = f.Merge();
+            Check(merge.Conflicts.Select(c => c.Key).SequenceEqual(["General/WidescreenStoryboard"]), "only the changed storyboard setting needs review");
+            var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool> { ["General/WidescreenStoryboard"] = true });
+            Check(resolved.Fruits[0].TimeMs == f.Diff.Document.Fruits[0].TimeMs
+                && resolved.TimingPoints[1].BeatLengthMs == f.Diff.Document.TimingPoints[1].BeatLengthMs,
+                "comparison does not round authoring values");
+            Check(resolved.OriginalSections.Single(s => s.Name == "Events").Lines.SequenceEqual(
+                f.Diff.Document.OriginalSections.Single(s => s.Name == "Events").Lines), "comparison preserves event source text");
+            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, resolved, true,
+                review: merge, choices: new Dictionary<string, bool> { ["General/WidescreenStoryboard"] = true });
+            f.Diff.Document = resolved;
+            Check(!f.Merge().RequiresResolution && f.Session.Manifest.Difficulties[0].Sync!.LocalOverrides.Count == 0,
+                "save rewrites do not become pending local overrides");
+            Check(!WorkspaceSynchronization.CompareWithoutBaseline(resolved, WorkspaceSynchronization.ReadStable(f.Source), f.Session.Directory, true).RequiresResolution,
+                "baseline-free comparison uses the same save semantics");
+            foreach (var (text, key) in new[] {
+                (saved.Replace("Break,2100,2900", "Break,2101,2900"), "Events/"),
+                (saved.Replace(" F,0,0,500,0,1", " F,0,0,501,0,1"), "Events/"),
+                (saved.Replace("//Background", "Video,0,\"movie.mp4\"\n//Background"), "Events/"),
+                (saved.Replace("-76.2585714634325", "-76.2585714634"), "TimingPoints/"),
+                (saved.Replace("1000,-76", "1000.1,-76"), "TimingPoints/"),
+                (saved.Replace("1000,5", "1001,5"), "$objects:"),
+                (saved.Replace("1500,8,0,2000", "1500,8,0,2001"), "$objects:"),
+                (saved.Replace("1000,5,0", "1000,21,0"), "$objects:") })
+            {
+                File.WriteAllText(f.Source, text);
+                Check(f.Merge().Conflicts.Any(c => c.Key.StartsWith(key)), "real edit stays visible: " + key);
+            }
+        }));
+        yield return ("Sync: ordinary combo edits and timing order remain visible", () => Run(f =>
+        {
+            File.WriteAllText(f.Source, Fixture().Replace("1500,1,0", "1500,5,0"));
+            Check(f.Merge().Conflicts.Count(c => c.Key.StartsWith("$objects:")) == 1, "ordinary new combo edit");
+            string before = Fixture().Replace("0,500,4,1,0,100,1,0", "0,500,4,1,0,100,1,0\n0,-50,4,1,0,100,0,0\n0,-100,4,1,0,100,0,0");
+            File.WriteAllText(f.Source, before);
+            f.Diff.Document = OsuBeatmapReader.ReadFile(f.Source);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory);
+            File.WriteAllText(f.Source, before.Replace("0,-50,4,1,0,100,0,0\n0,-100,4,1,0,100,0,0", "0,-100,4,1,0,100,0,0\n0,-50,4,1,0,100,0,0"));
+            Check(f.Merge().Conflicts.Any(c => c.Key == "TimingPoints/"), "same-time timing order affects SV");
+        }));
         yield return ("Sync: all section fields support additions, retained choices and deletions", () =>
         {
             foreach (var (section, line, key) in new[] {
