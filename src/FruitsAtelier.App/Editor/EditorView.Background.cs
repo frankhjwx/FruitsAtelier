@@ -10,27 +10,33 @@ public sealed partial class EditorView
     private float backgroundDimFrom, backgroundDimTarget;
     private double backgroundDimChangedAt;
     private Rect backgroundDimSliderBounds;
-    private bool backgroundDimDragging;
+    private bool backgroundDimDragging, backgroundDimSliderDraft, backgroundDimDragDraft;
     private int backgroundDimDragStart;
 
     private bool BeginBackgroundDimDrag(float x, float y, int button)
     {
-        if (!TestplayPauseMenuVisible || button != 0 || backgroundDimSliderBounds.Width <= 0 || !backgroundDimSliderBounds.Contains(x, y)) return false;
+        bool visible = backgroundDimSliderDraft
+            ? librarySettingsOpen && settingsCategory == SettingsCategory.Testplay : TestplayPauseMenuVisible;
+        if (!visible || button != 0 || backgroundDimSliderBounds.Width <= 0 || !backgroundDimSliderBounds.Contains(x, y)) return false;
         backgroundDimDragging = true;
+        backgroundDimDragDraft = backgroundDimSliderDraft;
         backgroundDimDragStart = LibrarySettings.BackgroundDim;
         UpdateBackgroundDimDrag(x);
         return true;
     }
 
     private void UpdateBackgroundDimDrag(float x)
-        => LibrarySettings.BackgroundDim = (int)Math.Round(Math.Clamp(
-            (x - backgroundDimSliderBounds.X) / backgroundDimSliderBounds.Width, 0, 1) * 100);
+    {
+        int value = (int)Math.Round(Math.Clamp((x - backgroundDimSliderBounds.X) / backgroundDimSliderBounds.Width, 0, 1) * 100);
+        if (backgroundDimDragDraft) draftBackgroundDim = value;
+        else LibrarySettings.BackgroundDim = value;
+    }
 
     private void FinishBackgroundDimDrag()
     {
         if (!backgroundDimDragging) return;
         backgroundDimDragging = false;
-        if (LibrarySettings.BackgroundDim != backgroundDimDragStart) RequestViewPreference?.Invoke();
+        if (!backgroundDimDragDraft && LibrarySettings.BackgroundDim != backgroundDimDragStart) RequestViewPreference?.Invoke();
     }
 
     private void RefreshBeatmapBackground()
@@ -78,17 +84,15 @@ public sealed partial class EditorView
     {
         int value = draft ? draftBackgroundDim : LibrarySettings.BackgroundDim;
         if (draft) c.Fill(bounds, Surface, 4, opacity);
-        else
-        {
-            backgroundDimSliderBounds = new(bounds.X + 36, bounds.Y, bounds.Width - 72, bounds.Height);
-            var slider = backgroundDimSliderBounds;
-            c.Fill(new(slider.X, slider.Y, slider.Width * value / 100f, slider.Height), 0xFFFFFF, 4, .18f * opacity);
-            c.StrokeOpacity(slider, 0xFFFFFF, 1, 4, .65f * opacity);
-        }
+        backgroundDimSliderDraft = draft;
+        backgroundDimSliderBounds = new(bounds.X + 36, bounds.Y, bounds.Width - 72, bounds.Height);
+        var slider = backgroundDimSliderBounds;
+        c.Fill(new(slider.X, slider.Y, slider.Width * value / 100f, slider.Height), 0xFFFFFF, 4, .18f * opacity);
+        c.StrokeOpacity(slider, 0xFFFFFF, 1, 4, .65f * opacity);
         string label = L.Get("settings.backgroundDim", value);
         float labelWidth = Math.Min(c.MeasureText(label, 14), bounds.Width - 72);
-        c.TextOpacity(label, draft ? bounds.X + 36 : bounds.X + (bounds.Width - labelWidth) / 2,
-            bounds.Y + 11, 14, Foreground, draft ? bounds.Width - 72 : labelWidth, false, opacity);
+        c.TextOpacity(label, bounds.X + (bounds.Width - labelWidth) / 2,
+            bounds.Y + 11, 14, Foreground, labelWidth, false, opacity);
         Control(new(bounds.X, bounds.Y, 30, bounds.Height), "−", -5, value > 0);
         Control(new(bounds.Right - 30, bounds.Y, 30, bounds.Height), "+", 5, value < 100);
         void Control(Rect r, string text, int delta, bool enabled)

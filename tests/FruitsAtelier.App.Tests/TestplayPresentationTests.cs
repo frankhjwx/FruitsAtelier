@@ -89,10 +89,30 @@ internal static class TestplayPresentationTests
             PointerAndArrows();
             WarningTiming();
             DimSlider();
+            SettingsDimSlider();
         }
         finally { L.SetLanguage(language); }
     }
 
+
+    private static void SettingsDimSlider()
+    {
+        var ui = new Ui();
+        ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.testplay"));
+        var bounds = ui.View.SettingsBounds;
+        float left = bounds.X + 266, width = Math.Min(472, bounds.Width - 262) - 72, y = bounds.Y + 403;
+        int saved = ui.View.LibrarySettings.BackgroundDim;
+        ui.View.PointerDown(left + width * .25f, y, 0, false, false);
+        ui.View.PointerMove(left + width * .5f, y, false, false);
+        ui.View.PointerUp(left + width * .5f, y, 0); ui.Paint();
+        Check(ui.View.LibrarySettings.BackgroundDim == saved && !ui.View.WantsCapture, "Settings dim drag only changes the draft and releases capture");
+        string path = Path.GetFullPath("artifacts/tests/settings-dim-slider.json");
+        ui.View.ApplySettings(path); ui.Paint();
+        Check(ui.View.LibrarySettings.BackgroundDim == 50 && LibrarySettings.Load(path).BackgroundDim == 50, "Apply persists the dim slider draft");
+        ui.Click(left, y);
+        ui.Key(27); ui.View.KeyUp(27);
+        Check(ui.View.LibrarySettings.BackgroundDim == 50 && !ui.View.WantsCapture, "Closing Settings discards unapplied dim changes");
+    }
 
     private static void DimSlider()
     {

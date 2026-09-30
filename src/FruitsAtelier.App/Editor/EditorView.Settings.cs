@@ -86,6 +86,7 @@ public sealed partial class EditorView
 
     private void CloseSettings()
     {
+        FinishBackgroundDimDrag();
         FinishVolumeDrag();
         workspaceScrollDragging = false;
         librarySettingsOpen = false;
@@ -113,7 +114,7 @@ public sealed partial class EditorView
             if (category == SettingsCategory.Updates && RequestUpdateCheck is null) continue;
             Button(c, new(r.X + 16, r.Y + 78 + i * 48, 182, 38), L.Get(categories[i]), () =>
             {
-                FinishVolumeDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
+                FinishVolumeDrag(); FinishBackgroundDimDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
                 settingsCategory = category;
                 if (category == SettingsCategory.Workspace) { workspaceScroll = 0; StartStorage(); }
                 if (category == SettingsCategory.Updates && UpdateStatus.Phase is UpdatePhase.Idle or UpdatePhase.Current or UpdatePhase.Failed)
@@ -198,6 +199,7 @@ public sealed partial class EditorView
 
     internal void ApplySettings(string? settingsPath = null)
     {
+        FinishBackgroundDimDrag();
         if (!SettingsChanged) return;
         try
         {

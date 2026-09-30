@@ -139,7 +139,6 @@ public sealed partial class EditorView
     private void TestplayPointerMove(float x, float y)
     {
         MoveTestplayCursor(x, y);
-        if (backgroundDimDragging) { UpdateBackgroundDimDrag(x); return; }
         if (!TestplayPauseMenuVisible) return;
         testplayKeyboardSelection = false;
         int hovered = -1;

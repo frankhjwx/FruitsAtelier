@@ -42,7 +42,7 @@ public sealed partial class EditorView
                 if (button == 0) ActivateContextMenu(x, y); else contextItems.Clear();
                 return;
             }
-            if (BeginWorkspaceScroll(x, y, button) || BeginVolumeDrag(x, y, button)) return;
+            if (BeginWorkspaceScroll(x, y, button) || BeginVolumeDrag(x, y, button) || BeginBackgroundDimDrag(x, y, button)) return;
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
@@ -383,6 +383,7 @@ public sealed partial class EditorView
     {
         if (SynchronizationBlocksInput) return;
         MoveVolumePopoverPointer(x, y);
+        if (backgroundDimDragging) { mouseX = x; mouseY = y; UpdateBackgroundDimDrag(x); return; }
         if (timingSnapDragging) { SetTimingSnap(x); return; }
         if (timingScrollDragging) { UpdateTimingScroll(y); return; }
         if (timingVolumeStart is not null) { UpdateTimingVolume(x); return; }

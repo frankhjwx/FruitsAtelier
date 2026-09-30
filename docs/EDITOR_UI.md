@@ -198,7 +198,8 @@ without changing their aspect ratio. **Settings > Testplay > Background dim** an
 the pause menu adjust the persistent 0–100% dim preference (default 90%). In the pause
 menu, click or drag the fill bar behind the centered label to set the percentage;
 the side buttons adjust it by 5%. Dragging updates the background immediately and
-saves the preference when the drag ends. The editing canvas has a fully opaque backing.
+saves the preference when the drag ends. Settings uses the same fill bar, with changes
+kept in the draft until Apply. The editing canvas has a fully opaque backing.
 
 **Space** or clicking **Skip** skips an intro to three seconds before the first
 note. Skip is unavailable after that point. **Esc / Ctrl+P** opens the pause menu;
