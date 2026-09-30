@@ -63,7 +63,7 @@ internal static class GridBufferTests
             double stride = Math.Max(1, Math.Ceiling((last - first + 1) / perSegmentBudget));
             for (double index = first; index <= last && lines.Count < maximumLines;)
             {
-                double time = state.OffsetMs + index * step;
+                double time = state.OffsetMs + index * state.BeatLengthMs / divisor;
                 if (time >= from && time <= end && (segment + 1 == starts.Length || time < to) && !lines.ContainsKey(time))
                 {
                     int remainder = (int)Math.Abs(index % divisor), denominator = divisor;

@@ -136,12 +136,14 @@ public sealed partial class EditorView
             if (!matches) session.RatingSnapshot = null;
             if (matches)
             {
-                CatchDifficultyCurveResult? result = completed.IsCompletedSuccessfully ? completed.Result : null;
+                var result = completed.IsCompletedSuccessfully ? completed.Result : null;
                 session.RatingFailed = result is null;
                 if (result is { } rating)
                 {
-                    session.Stars = rating.Difficulty.StarRating;
-                    session.StrainSamples = rating.Samples;
+                    session.Stars = rating.Normal.Difficulty.StarRating;
+                    session.EasyStars = rating.Easy;
+                    session.HardRockStars = rating.HardRock;
+                    session.StrainSamples = rating.Normal.Samples;
                 }
                 else SetNotice(L.Get("project.starCalculationFailed", session.Name));
             }
@@ -156,6 +158,7 @@ public sealed partial class EditorView
             var ratingObjects = index == activeDifficulty && conversion is { Success: true }
                 && !contentDragPreview && convertedWithCompensation == compensation
                 && convertedSnapshot?.ContentEquals(snapshot) == true ? playableObjects : null;
+            var ratingHardRockObjects = ratingObjects is not null ? playableExport?.PlayableHardRockObjects : null;
             session.RatingSnapshot = snapshot; session.RatingCompensation = compensation; session.RatingFailed = false;
             var cancellation = session.RatingCancellation.Token;
             session.RatingTask = Task.Run(async () =>
@@ -167,14 +170,19 @@ public sealed partial class EditorView
                     {
                         cancellation.ThrowIfCancellationRequested();
                         var objects = ratingObjects;
+                        var hardRockObjects = ratingHardRockObjects;
                         if (objects is null)
                         {
                             var converted = CatchStreamConverter.Convert(snapshot, compensation);
-                            if (!converted.Success) return (CatchDifficultyCurveResult?)null;
+                            if (!converted.Success) return ((CatchDifficultyCurveResult Normal, double Easy, double HardRock)?)null;
                             var exported = OsuBeatmapWriter.Serialize(snapshot, compensation);
                             objects = exported.ObjectSequenceMatches ? exported.PlayableObjects : converted.Objects;
+                            hardRockObjects = exported.ObjectSequenceMatches ? exported.PlayableHardRockObjects : CatchPreviewMods.HardRock(snapshot, converted);
                         }
-                        return CatchDifficultyCalculator.CalculateWithCurve(objects, snapshot.CircleSize);
+                        hardRockObjects ??= CatchPreviewMods.HardRock(snapshot, CatchStreamConverter.Convert(snapshot, compensation));
+                        return (CatchDifficultyCalculator.CalculateWithCurve(objects, snapshot.CircleSize),
+                            CatchDifficultyCalculator.Calculate(objects, snapshot.CircleSize * .5).StarRating,
+                            CatchDifficultyCalculator.Calculate(hardRockObjects, Math.Min(10, snapshot.CircleSize * 1.3)).StarRating);
                     }
                     finally { ratingWorkers.Release(); }
                 }

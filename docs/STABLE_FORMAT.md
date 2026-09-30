@@ -46,7 +46,7 @@ These rules follow the [official format document](https://github.com/ppy/osu-wik
 
 ## Writer behavior
 
-The generator first produces a two-dimensional slider that satisfies its targets; the writer then serializes it. Serialization uses invariant culture with consistent newline and UTF-8 policies. Integer object times and coordinates round midpoints away from zero. Original unedited integer values remain unchanged.
+The generator first produces a two-dimensional slider that satisfies its targets; the writer then serializes it. Serialization uses invariant culture with consistent newline and UTF-8 policies. Integer object times truncate toward zero, matching stable snapping as modeled by MapsetVerifier. Coordinates round midpoints away from zero. Generated SV points use the same truncated time as their slider heads. Beat grids calculate offsets from whole subdivision counts before dividing, retaining exact whole-millisecond grid points. Original unedited integer values remain unchanged.
 
 Metadata exports Title, TitleUnicode, Artist, ArtistUnicode, Creator, Source, Tags,
 and BeatmapSetID in that order, followed by any additional fields or comments.

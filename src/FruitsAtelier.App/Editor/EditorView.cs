@@ -18,10 +18,10 @@ public sealed partial class EditorView
         public string Name => OsuBeatmapReader.Setting(History.Document, "Metadata", "Version") ?? difficulty.Name;
         public EditorHistory History { get; } = new(difficulty.Document);
         public MapDocument? RatingSnapshot;
-        public double? Stars;
+        public double? Stars, EasyStars, HardRockStars;
         public IReadOnlyList<CatchStrainSample>? StrainSamples;
         public bool RatingCompensation, RatingFailed;
-        public Task<CatchDifficultyCurveResult?>? RatingTask;
+        public Task<(CatchDifficultyCurveResult Normal, double Easy, double HardRock)?>? RatingTask;
         public readonly CancellationTokenSource RatingCancellation = new();
     }
     private readonly List<DifficultySession> difficulties;

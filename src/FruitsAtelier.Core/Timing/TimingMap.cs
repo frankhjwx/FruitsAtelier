@@ -98,8 +98,8 @@ public static class TimingMap
         double nearestDistance = double.PositiveInfinity;
         Consider(previousBoundary);
         Consider(nextBoundary);
-        double lower = state.OffsetMs + index * step;
-        double upper = state.OffsetMs + (index + 1) * step;
+        double lower = state.OffsetMs + index * state.BeatLengthMs / divisor;
+        double upper = state.OffsetMs + (index + 1) * state.BeatLengthMs / divisor;
         if (lower >= previousBoundary && lower < nextBoundary) Consider(lower);
         if (upper >= previousBoundary && upper < nextBoundary) Consider(upper);
         if (!double.IsFinite(nearest)) throw new ArgumentOutOfRangeException(nameof(time));
@@ -152,7 +152,7 @@ public static class TimingMap
             double stride = Math.Max(1, Math.Ceiling((last - first + 1) / perSegmentBudget));
             for (double index = first; index <= last && lines.Count < maximumLines;)
             {
-                double time = state.OffsetMs + index * step;
+                double time = state.OffsetMs + index * state.BeatLengthMs / divisor;
                 // Generated times are monotonic; only red boundaries and rounded adjacent times can collide.
                 if (time >= from && time <= end && (segment + 1 == segments || time < to)
                     && time != previousGenerated && Array.BinarySearch(reds, boundaryStart, boundaryEnd - boundaryStart, time) < 0)

@@ -412,7 +412,13 @@ public sealed partial class EditorView
     private void DrawPreview(ICanvas c, Rect r)
     {
         c.Text(L.Get("ui.preview"), r.X, r.Y, 13, Foreground, r.Width, true);
-        c.Text(L.Get("ui.previewStats", Number(PreviewApproachRate), Number(PreviewCircleSize), PreviewModName), r.X, r.Y + 23, 10, Foreground, r.Width);
+        string stars = L.Get("preview.stars", PreviewStarRating);
+        float starWidth = c.MeasureText(stars, 10), indicatorWidth = 14;
+        float starX = r.Right - starWidth - indicatorWidth;
+        c.Text(L.Get("ui.previewStats", Number(PreviewApproachRate), Number(PreviewCircleSize), PreviewModName), r.X, r.Y + 23, 10, Foreground, Math.Max(0, starX - r.X - 8));
+        c.Text(stars, starX, r.Y + 23, 10, Foreground, starWidth);
+        if (RatingRefreshing(activeDifficulty)) DrawRatingSpinner(c, r.Right - 5, r.Y + 30);
+        else if (CurrentStarRatingFailed) c.Text("!", r.Right - 10, r.Y + 23, 10, Error, 10, true);
         DrawPreviewMods(c, r);
         DrawPreviewDisplayModes(c, r);
         Rect stage = new(r.X, r.Y + 107, r.Width, Math.Max(12, r.Height - 113));

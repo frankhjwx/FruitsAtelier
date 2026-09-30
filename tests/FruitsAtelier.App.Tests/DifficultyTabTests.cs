@@ -61,6 +61,41 @@ internal static class DifficultyTabTests
         Check(ui.View.ActiveDifficultyIndex == 0 && Rating(ui.View) == initial, "Ctrl Shift Tab restores previous difficulty");
     }
 
+    public static void PreviewRatings()
+    {
+        string originalLanguage = L.Language;
+        var view = new EditorView();
+        var canvas = new RecordingCanvas();
+        view.Render(canvas, 1440, 900);
+        view.PointerDown(view.PreviewToggleBounds.X + 5, view.PreviewToggleBounds.Y + 5, 0, false, false);
+        view.PointerUp(view.PreviewToggleBounds.X + 5, view.PreviewToggleBounds.Y + 5, 0);
+        Rating(view);
+        foreach (string language in L.AvailableLanguages)
+        {
+            L.SetLanguage(language);
+            foreach (int mod in new[] { 0, 1, 2 })
+            {
+                canvas.Clear(); view.Render(canvas, 1440, 900);
+                string key = mod switch { 1 => "preview.easy", 2 => "preview.hardRock", _ => "preview.normal" };
+                var button = canvas.Texts.Single(t => t.Value == L.Get(key));
+                view.PointerDown(button.X + 2, button.Y + 2, 0, false, false);
+                view.PointerUp(button.X + 2, button.Y + 2, 0);
+                canvas.Clear(); view.Render(canvas, 1440, 900);
+                var exported = OsuBeatmapWriter.Serialize(view.Document);
+                var objects = mod == 2 ? exported.PlayableHardRockObjects : exported.PlayableObjects;
+                double expected = CatchDifficultyCalculator.Calculate(objects, view.PreviewCircleSize).StarRating;
+                Check(Math.Abs(view.PreviewStarRating - expected) < 1e-12, "Preview SR follows mod CS and HR positions");
+                Check(!view.CurrentStarRatingRefreshing, "Switching preview mode reuses background results");
+                var stats = canvas.Texts.Single(t => t.Value == L.Get("ui.previewStats",
+                    view.PreviewApproachRate.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture), view.PreviewCircleSize.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
+                    mod switch { 1 => "EZ", 2 => "HR", _ => "NM" }));
+                var stars = canvas.Texts.Single(t => t.Value == L.Get("preview.stars", expected));
+                Check(stars.X > stats.X && stars.Y == stats.Y, "SR appears at the right of the stats row");
+            }
+        }
+        L.SetLanguage(originalLanguage);
+    }
+
     private static double Rating(EditorView view)
     {
         double value = view.CurrentStarRating ?? 0;

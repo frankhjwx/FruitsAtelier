@@ -201,7 +201,7 @@ public sealed partial class EditorView
         }
         c.Line(Playfield.X, p.Y, Playfield.Right, p.Y, Gold, opacity: .4f);
         if (tool == Tool.Fruit && nextFruitNewCombo)
-            c.Text("NC", p.X + diameter / 2 + 6, p.Y - 8, 11, Gold, 120);
+            c.Text(L.Get("tools.newComboAbbreviation"), p.X + diameter / 2 + 6, p.Y - 8, 11, Gold, 120);
     }
 
     private void PlaceFruit(float x, float y)
@@ -228,7 +228,7 @@ public sealed partial class EditorView
         var removed = Document.Fruits.Where(f => replace && Math.Abs(f.TimeMs - point.TimeMs) <= 2).Select(f => f.Id).ToHashSet();
         UpdatePlacementDistances(new(placementId, 0, CatchObjectKind.Fruit, point.TimeMs, point.X, point.X, point.X, 0, true),
             conversion!.Objects, removed);
-        double time = Math.Round(point.TimeMs, MidpointRounding.AwayFromZero);
+        double time = OsuBeatmapWriter.QuantizeTime(point.TimeMs);
         double x = Math.Round(point.X, MidpointRounding.AwayFromZero);
         placementGhost = new(placementId, 0, CatchObjectKind.Fruit, time, x, x, x, 0, true);
         if (!ReferenceEquals(placementOrderSource, playableExport))

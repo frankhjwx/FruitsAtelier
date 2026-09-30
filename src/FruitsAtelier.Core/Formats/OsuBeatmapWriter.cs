@@ -159,7 +159,7 @@ public static class OsuBeatmapWriter
         SetNumber(output, "Difficulty", "SliderMultiplier", document.SliderMultiplier);
         SetNumber(output, "Difficulty", "SliderTickRate", document.SliderTickRate);
         ReplaceData(output, "TimingPoints", timing.Select(TimingLine));
-        // Rounding is monotone; sorting before it retains current parent order when distinct times collapse.
+        // Time truncation is monotone; sorting before it retains current parent order when distinct times collapse.
         var orderedLines = lines.OrderBy(l => l.Time).ThenBy(l => l.Order).ToArray();
         ReplaceData(output, "HitObjects", orderedLines.Select(l => l.Text));
         var text = new StringBuilder("osu file format v14\r\n");
@@ -253,7 +253,7 @@ public static class OsuBeatmapWriter
         };
 
         string Coordinate(double value) { double rounded = Round(value); maxCoordinate = Math.Max(maxCoordinate, Math.Abs(rounded - value)); return Number(rounded); }
-        string Time(double value) { double rounded = Round(value); maxTime = Math.Max(maxTime, Math.Abs(rounded - value)); return Number(rounded); }
+        string Time(double value) { double quantized = QuantizeTime(value); maxTime = Math.Max(maxTime, Math.Abs(quantized - value)); return Number(quantized); }
     }
 
     private static List<TimingPoint> BuildTiming(MapDocument document, IReadOnlyList<GeneratedSlider> generated)
@@ -266,7 +266,7 @@ public static class OsuBeatmapWriter
         var emitted = new MapDocument { BeatLengthMs = document.BeatLengthMs, TimingOffsetMs = document.TimingOffsetMs };
         emitted.TimingPoints.AddRange(original.Select(t => t.DeepClone()));
         var originalLookup = new TimingMap.Lookup(document);
-        foreach (var group in generated.GroupBy(s => Round(s.StartTimeMs)).OrderBy(g => g.Key))
+        foreach (var group in generated.GroupBy(s => QuantizeTime(s.StartTimeMs)).OrderBy(g => g.Key))
         {
             double start = group.Key;
             var first = group.First();
@@ -288,16 +288,16 @@ public static class OsuBeatmapWriter
             var template = TemplateAt(start, inclusive: true);
             // Equal-SV heads can share a window, but its restoration must clear every head in the chain.
             double restoreTime = start + 2;
-            foreach (var nearby in generated.Where(s => Round(s.StartTimeMs) > start).OrderBy(s => s.StartTimeMs))
+            foreach (var nearby in generated.Where(s => QuantizeTime(s.StartTimeMs) > start).OrderBy(s => s.StartTimeMs))
             {
-                double head = Round(nearby.StartTimeMs);
+                double head = QuantizeTime(nearby.StartTimeMs);
                 if (head >= restoreTime) break;
                 if (Math.Abs(nearby.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9)
                     throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(head), Number(start)));
                 restoreTime = head + 2;
             }
             double nextBoundary = original.Where(t => t.TimeMs >= restoreTime).Select(t => t.TimeMs)
-                .Concat(generated.Select(s => Round(s.StartTimeMs)).Where(t => t >= restoreTime))
+                .Concat(generated.Select(s => QuantizeTime(s.StartTimeMs)).Where(t => t >= restoreTime))
                 .DefaultIfEmpty(double.PositiveInfinity).Min();
             double nextImported = document.ImportedSliders.Where(s => s.TimeMs > start && s.TimeMs < nextBoundary)
                 .Select(s => s.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min();
@@ -394,8 +394,8 @@ public static class OsuBeatmapWriter
                 if (Math.Abs(expected.BeatLengthMs - actual.BeatLengthMs) <= 1e-9
                     && Math.Abs(expected.SliderVelocityMultiplier - actual.SliderVelocityMultiplier) <= 1e-9
                     && expected.GenerateTicks == actual.GenerateTicks) continue;
-                double head = generated.MinBy(s => Math.Abs(Round(s.StartTimeMs) - slider.TimeMs))!.StartTimeMs;
-                throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(slider.TimeMs), Number(Round(head))));
+                double head = generated.MinBy(s => Math.Abs(QuantizeTime(s.StartTimeMs) - slider.TimeMs))!.StartTimeMs;
+                throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(slider.TimeMs), Number(QuantizeTime(head))));
             }
         }
     }
@@ -429,8 +429,10 @@ public static class OsuBeatmapWriter
         return (Effective(shower.TimeMs, 2), Effective(shower.EndTimeMs, 5));
 
         double Effective(double time, int field) => values is not null && values.Length > field
-            && OsuBeatmapReader.Number(values[field]) == time ? time : Round(time);
+            && OsuBeatmapReader.Number(values[field]) == time ? time : QuantizeTime(time);
     }
+
+    public static double QuantizeTime(double value) => Math.Truncate(value);
 
     private static double Round(double value) => Math.Round(value, MidpointRounding.AwayFromZero);
     private static string DefaultEdges(int spans, string value) => string.Join('|', Enumerable.Repeat(value, checked(spans + 1)));

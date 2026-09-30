@@ -28,6 +28,14 @@ public sealed partial class EditorView
     public Rect LegacyConversionBounds { get; private set; }
     public double PreviewApproachRate => previewMod switch { 1 => Document.ApproachRate * .5, 2 => Math.Min(10, Document.ApproachRate * 1.4), _ => Document.ApproachRate };
     public double PreviewCircleSize => previewMod switch { 1 => Document.CircleSize * .5, 2 => Math.Min(10, Document.CircleSize * 1.3), _ => Document.CircleSize };
+    public double PreviewStarRating
+    {
+        get
+        {
+            var session = difficulties[activeDifficulty];
+            return (previewMod switch { 1 => session.EasyStars, 2 => session.HardRockStars, _ => session.Stars }) ?? 0;
+        }
+    }
     private string PreviewModName => previewMod switch { 1 => "EZ", 2 => "HR", _ => "NM" };
     private void DrawPreviewSidebar(ICanvas c)
     {

@@ -30,6 +30,8 @@ var tests = new (string Name, Action Run)[]
     ("Edited fruit preserves flags, geometry Y and sample suffix", EditFruit),
     ("Legacy fractional coordinates truncate but original spelling survives", LegacyCoordinates),
     ("Sixth beat time quantization is reported without mutating source", SixthBeat),
+    ("Stable integer snaps truncate fruits and preserve exact grid boundaries", StableTimeSnaps),
+    ("Stable slider heads and SV share a snap while repeat edges retain duration", SliderTimingTests.StableSnappedHeadsAndEdges),
     ("Collapsing fractional times preserves current parent order rather than stale source order", QuantizedOrder),
     ("Generated Bezier exports as slider and reports actual reconversion", () => EachLanguage(CurveExport)),
     ("Authored repeats retain span count and every repeat fruit and tick after export", AuthoredRepeats),
@@ -242,7 +244,7 @@ static void EditFruit()
     var d = OsuBeatmapReader.Read(Fixture());
     d.Fruits[0].X = 222.5; d.Fruits[0].TimeMs = 333.5;
     var r = OsuBeatmapWriter.Serialize(d);
-    Check(r.Text.Contains("223,176,334,21,8,2:3:4:80:custom.wav"), "Fruit sample or flags changed");
+    Check(r.Text.Contains("223,176,333,21,8,2:3:4:80:custom.wav"), "Fruit sample or flags changed");
     Equal(222.5, d.Fruits[0].X); Equal(333.5, d.Fruits[0].TimeMs);
     Near(0.5, r.MaxTimeQuantizationMs); Near(0.5, r.MaxCoordinateQuantization);
 }
@@ -267,6 +269,35 @@ static void SixthBeat()
     Near(1d / 3, r.MaxTimeQuantizationMs, 1e-10); Equal(time, d.Fruits.Single().TimeMs);
 }
 
+static void StableTimeSnaps()
+{
+    var document = new MapDocument { TimingOffsetMs = 2512, BeatLengthMs = 413.793103448276 };
+    document.TimingPoints.Add(new TimingPoint { TimeMs = 2512, BeatLengthMs = document.BeatLengthMs });
+    foreach (var (time, expected) in new[] { (24857d, 24856d), (25133d, 25132d), (25684d, 25684d) })
+    {
+        document.Fruits.Clear();
+        document.Fruits.Add(new Fruit { TimeMs = TimingMap.Snap(document, time, 12), X = 127.5 });
+        var before = document.DeepClone();
+        var output = OsuBeatmapWriter.Serialize(document);
+        Equal(expected, output.ReadBack.Fruits.Single().TimeMs);
+        Equal(128d, output.ReadBack.Fruits.Single().X);
+        Check(document.ContentEquals(before), "Time quantization mutated the source");
+    }
+    Equal(-10d, OsuBeatmapWriter.QuantizeTime(-10.8));
+    Equal(10d, OsuBeatmapWriter.QuantizeTime(10.8));
+    var exact = new MapDocument { TimingOffsetMs = 8900, BeatLengthMs = 300 };
+    Equal(47675d, TimingMap.Snap(exact, 47675.000000004, 12));
+    Equal(47675d, BeatGrid.Snap(47675.000000004, 8900, 300, 12));
+    Check(TimingMap.Grid(exact, 47674, 47676, 12).Single().TimeMs == 47675,
+        "Grid and snap must compute the same exact whole-ms point");
+    var seventh = new MapDocument { BeatLengthMs = 150 };
+    Equal(450d, TimingMap.Snap(seventh, 450.000000004, 7));
+    Equal(450d, BeatGrid.Snap(450.000000004, 0, 150, 7));
+    Equal(450d, TimingMap.Grid(seventh, 449, 451, 7).Single().TimeMs);
+    seventh.Fruits.Add(new Fruit { TimeMs = TimingMap.Snap(seventh, 450.000000004, 7), X = 256 });
+    Equal(450d, OsuBeatmapWriter.Serialize(seventh).ReadBack.Fruits.Single().TimeMs);
+}
+
 static void CurveExport()
 {
     var d = new MapDocument();
@@ -288,7 +319,7 @@ static void QuantizedOrder()
     d.Fruits.Add(new Fruit { TimeMs = 774.1428571428571, X = 370, SourceOrder = 0 });
     d.Fruits.Add(new Fruit { TimeMs = 774, X = 378, SourceOrder = 1 });
     var r = OsuBeatmapWriter.Serialize(d);
-    Check(r.ObjectSequenceMatches, "Rounding reordered parent identity");
+    Check(r.ObjectSequenceMatches, "Time quantization reordered parent identity");
     Equal(378d, r.ReadBack.Fruits[0].X); Equal(370d, r.ReadBack.Fruits[1].X);
     Near(0, r.MaxConvertedXError); Near(0.1428571428571, r.MaxConvertedTimeErrorMs);
 }
@@ -423,9 +454,9 @@ static void QuantizedBoundary()
 {
     var d = new MapDocument();
     d.TimingPoints.Add(new TimingPoint { TimeMs = 0, BeatLengthMs = 500 });
-    d.TimingPoints.Add(new TimingPoint { TimeMs = 1000, BeatLengthMs = 400 });
-    AddCurve(d, 999.8, 1800);
-    Throws(() => OsuBeatmapWriter.Serialize(d), "rounded head crossing timing");
+    d.TimingPoints.Add(new TimingPoint { TimeMs = 1000.5, BeatLengthMs = 400 });
+    AddCurve(d, 1000.8, 1800);
+    Throws(() => OsuBeatmapWriter.Serialize(d), "truncated head crossing timing");
 }
 
 static void ReadOnlyObjects()

@@ -222,6 +222,7 @@ var tests = new (string Name, Action Run)[]
     ("External folders and full OSZ resources persist across restarts", ExternalResourceTests.Run),
     ("Difficulty tabs adapt names to available width and show full-name tooltips", DifficultyTabTests.Layout),
     ("Difficulty tab stars follow edits, undo and CS", DifficultyTabTests.Editing),
+    ("Preview stars use cached NM, EZ and HR calculations", DifficultyTabTests.PreviewRatings),
     ("Star ratings refresh asynchronously without losing cached or newer results", DifficultyTabTests.AsyncRatings),
     ("Overflow difficulty tabs scroll, switch and add without losing content", DifficultyTabTests.Overflow),
     ("Multi-difficulty projects preserve content, history and compatibility", ProjectTests.Run),
