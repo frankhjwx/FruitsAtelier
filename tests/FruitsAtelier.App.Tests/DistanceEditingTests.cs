@@ -235,6 +235,35 @@ internal static class DistanceEditingTests
         if (!ui.View.MovementAnalysisEnabled) ui.ClickText(Strings.Get("movement.analysis"));
         Check(ui.View.DistanceLabelBounds.Count < 99, "Dense connections did not suppress colliding labels");
         PlaybackLabelStability();
+        FractionalLabelPrecision();
+    }
+
+    private static void FractionalLabelPrecision()
+    {
+        foreach (string language in new[] { "en", "zh-CN" })
+        {
+            Strings.SetLanguage(language);
+            var map = Fruits(); map.Fruits.Clear(); map.DistancePerBeatOverride = 192;
+            double interval = 60000.0 / 145 / 4;
+            map.BeatLengthMs = 60000.0 / 145; map.TimingPoints.Clear();
+            map.Fruits.AddRange([new Fruit { TimeMs = 1000.2, X = 256 },
+                new Fruit { TimeMs = 1000.2 + interval, X = 96 },
+                new Fruit { TimeMs = 1000.2 + interval * 2, X = 256 }]);
+            var ui = new Ui(); ui.LoadDocument(map); ui.ClickText(Strings.Get("movement.analysis"));
+            string expected = Strings.Get("assist.ratio", 10.0 / 3);
+            Check(ui.Canvas.Texts.Count(t => t.Value == expected) == 2,
+                "Connection labels rounded authored coordinates or timestamps before calculating DS");
+            ui.ClickMap(map.Fruits[1].TimeMs, 96);
+            Near(10.0 / 3, ui.View.DistanceReadout.Previous!.Value);
+            Near(10.0 / 3, ui.View.DistanceReadout.Next!.Value);
+            var original = ui.View.Document.DeepClone();
+            Input(ui, false, "3.2");
+            Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("assist.ratio", 3.2)), "DS edit retained stale label spacing");
+            ui.Key('Z', ctrl: true);
+            Check(original.ContentEquals(ui.View.Document), "Label calculation changed undo content");
+            Check(ui.Canvas.Texts.Count(t => t.Value == expected) == 2, "Undo retained stale label spacing");
+        }
+        Strings.SetLanguage("en");
     }
 
     private static void PlaybackLabelStability()
