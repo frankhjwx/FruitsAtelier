@@ -56,7 +56,9 @@ public sealed partial class EditorView
         int value = draft ? draftBackgroundDim : LibrarySettings.BackgroundDim;
         if (draft) c.Fill(bounds, Surface, 4, opacity);
         string label = L.Get("settings.backgroundDim", value);
-        c.TextOpacity(label, bounds.X + 36, bounds.Y + 11, 14, Foreground, bounds.Width - 72, false, opacity);
+        float labelWidth = Math.Min(c.MeasureText(label, 14), bounds.Width - 72);
+        c.TextOpacity(label, draft ? bounds.X + 36 : bounds.X + (bounds.Width - labelWidth) / 2,
+            bounds.Y + 11, 14, Foreground, draft ? bounds.Width - 72 : labelWidth, false, opacity);
         Control(new(bounds.X, bounds.Y, 30, bounds.Height), "−", -5, value > 0);
         Control(new(bounds.Right - 30, bounds.Y, 30, bounds.Height), "+", 5, value < 100);
         void Control(Rect r, string text, int delta, bool enabled)
@@ -65,8 +67,8 @@ public sealed partial class EditorView
             if (enabled && r.Contains(mouseX, mouseY))
             {
                 c.Fill(r, 0x3D495A, 4, opacity);
-                c.StrokeOpacity(r, 0x71849A, 1, 4, opacity);
             }
+            c.StrokeOpacity(r, draft ? 0x71849Au : 0xFFFFFFu, 1, 4, opacity * (enabled ? 1 : .35f));
             c.TextOpacity(text, r.X + 9, r.Y + (r.Height - 16) / 2, 12, enabled ? Foreground : 0x5B6777u, r.Width - 15, false, opacity);
             hits.Add(new(r, () => Change(delta), enabled));
         }
