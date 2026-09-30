@@ -107,6 +107,8 @@ participate in undo/redo; clearing and resetting have a confirmation panel.
 
 ## Workspace
 
+The **View** menu groups grid and snapping, view navigation, display, movement analysis, and timing controls, with separators between groups.
+
 The time–X canvas occupies the main area, read-only AR/CS/DPB are at the upper right, and time navigation is at the bottom. Select objects directly on the canvas. Playfield X spans `0..512`; time increases upward. Startup opens the Library without loading a demo beatmap. Open a beatmap set to enter the editor. The window title identifies the active difficulty as `Artist - Title (Mapper) [Diffname]`; the menu row does not repeat the project title. The compact **← Library** button at the top right returns to the library. Esc first dismisses an active menu, field, dialog, or gesture; otherwise it requests a return to the library. Unsaved changes prompt for Save, Discard, or Cancel before closing the editor; Cancel or a failed save keeps the editor open. See [Workspace](WORKSPACE.md) for navigation and position memory.
 
 The Details header shows read-only beatmap AR, CS, and Distance Per Beat (DPB) in pixels. Catch Preview starts collapsed; the small button at the center of the canvas’s right edge opens it at the upper right. Drag the sidebar’s left boundary to resize it, and use the edge button to close it. NM, Easy and Hard Rock select preview-only difficulty and position rules; see [Catch rendering](CATCH_RENDERING.md). The preview uses its effective AR for falling speed. The main canvas uses the beatmap's AR timing ratio; its **Zoom** slider changes the displayed width of X=0..512 and scales object sizes and time spacing together. Zooming out shows more notes vertically without changing their coordinates, map AR, or CS. The playfield stays horizontally centered, from a minimum **256 DIP** wide to the full available width with CS0 edge padding. Percentages are relative to that available width; resizing preserves the zoom percentage except when the minimum width requires clamping. **Zoom initially defaults to 60%.** Canvas zoom, upper object-timeline scale and Timing waveform scale are remembered independently across restarts and difficulties. **View → Reset view** uses the remembered canvas zoom and follows the playhead. Each wheel notch moves one full beat (1/1) during playback or one current Snap subdivision while paused: up to the preceding grid line and down to the following one, independent of zoom. Canvas scrolling shifts the viewport and playhead by the same relative amount, even while paused; each clamps at its bounds. Off-grid positions move to the adjacent grid line in the scroll direction, and BPM changes use the grid on the corresponding side of the timing boundary. High-resolution wheel input accumulates until it reaches one notch. Drag with the middle button to pan, and Alt+scroll to scale around the pointer's time. When paused, slider zoom preserves the viewport's center time; during playback, it preserves the play line.
@@ -201,7 +203,7 @@ the side buttons adjust it by 5%. Dragging updates the background immediately an
 saves the preference when the drag ends. Settings uses the same fill bar, with changes
 kept in the draft until Apply. The editing canvas has a fully opaque backing.
 
-**View > Fully dim background** and the matching **Settings > Testplay** switch
+**View > Dim Background** and the matching **Settings > Testplay** switch
 force an opaque black background in Catch preview and testplay, including intro
 and break periods. The stored dim percentage is retained and used again when the
 switch is off. View changes save immediately; Settings changes require Apply.
@@ -486,7 +488,7 @@ Text inputs show a blinking caret at the end of the text and highlight the full 
 
 ## Display settings
 
-The language dropdown in **Settings → Appearance** lists the supported languages. Selecting a language applies and saves it immediately. Menu shortcut hints align to the right edge of each row. Existing beatmap titles and object names retain their values. The main canvas can hide curves and nodes, while the right-hand preview has a separate debug-curve toggle.
+The language dropdown in **Settings → Appearance** lists the supported languages. Selecting a language applies and saves it immediately. Menu shortcut hints align to the right edge of each row. Existing beatmap titles and object names retain their values. The main canvas can hide curves and nodes. Catch Preview displays gameplay objects.
 
 The Skin selector to the left of **← Library** lists skins from the configured osu!stable `Skins` folder and offers `.osk` import. Imported archives and extracted Catch assets are kept under `workspace/Skins`; imported entries use gold text and an Imported label. Skin selection persists independently of beatmap edits. Library Settings accepts a user-owned default skin `.osk` file; each missing or unreadable custom image falls back to the default skin independently, then to geometric rendering. Long lists provide previous/next pages. Missing skins or textures fall back to basic shapes; see [Skins](../assets/skins/README.md). Drawing and hit-test sizes are described in [Catch Rendering and Conversion](CATCH_RENDERING.md).
 

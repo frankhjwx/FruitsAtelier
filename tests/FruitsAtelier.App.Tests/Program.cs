@@ -276,7 +276,6 @@ var tests = new (string Name, Action Run)[]
     ("Read-only AR controls preview fall distance and visibility", ArPreviewAndInput),
     ("AR scale works with a hidden preview and follows canvas width changes", ArScaleResize),
     ("Hiding main curves preserves every converted fruit, droplet and tiny droplet", MainCurveVisibility),
-    ("Preview debug curves are independent and remain behind converted objects", PreviewCurveLayers),
     ("Map CS scales main and preview objects together", CircleSizeAcrossViews),
     ("Main curves overlay objects and selection changes only their opacity", MainCurveSelectionOpacity),
     ("Imported timing boundaries drive both quarter and sixth editing", MultiTimingEditing),
@@ -807,30 +806,6 @@ static void MainCurveVisibility()
     True(Snapshot(ui) == original && !ui.View.IsDirty, "Curve visibility mutated the document or history.");
 }
 
-static void PreviewCurveLayers()
-{
-    var ui = new Ui(); ui.OpenPreview();
-    var objects = ObjectCircles(ui, preview: true);
-    True(objects.Length > 0, "Preview has no converted objects.");
-    True(!CurveCommands(ui, preview: true).Any(), "Debug curves are visible in the preview by default.");
-    ui.ClickText("调试曲线");
-    var curves = CurveCommands(ui, preview: true).Select(c => c.Segment!.Value).ToArray();
-    True(curves.Length > 0, "The preview debug toggle did not show target curves.");
-    True(ObjectCircles(ui, preview: true).SequenceEqual(objects), "Enabling debug curves changed preview objects.");
-    AssertPreviewDrawOrder(ui);
-    ui.ClickText("滑条路径");
-    True(!CurveCommands(ui, preview: false).Any(), "The main curve toggle did not hide the main layer.");
-    True(CurveCommands(ui, preview: true).Select(c => c.Segment!.Value).SequenceEqual(curves), "Main visibility incorrectly changed the preview debug flag.");
-    True(ObjectCircles(ui, preview: true).SequenceEqual(objects), "Main visibility changed the preview object sequence.");
-    AssertPreviewDrawOrder(ui);
-    ui.ClickText("滑条路径");
-    ui.ClickText("调试曲线");
-    True(!CurveCommands(ui, preview: true).Any(), "Preview debug curves did not hide again.");
-    True(CurveCommands(ui, preview: false).Any(), "Disabling preview curves also hid the main target layer.");
-    True(ObjectCircles(ui, preview: true).SequenceEqual(objects), "Disabling debug curves changed preview objects.");
-    True(!ui.View.IsDirty, "Debug layer toggles created an edit transaction.");
-}
-
 static void CircleSizeAcrossViews()
 {
     var ui = new Ui(); ui.OpenPreview();
@@ -876,7 +851,6 @@ static void MainCurveSelectionOpacity()
     True(CurveCommands(ui, preview: false).Any(), "The main curve fixture is empty.");
     AssertMainDrawOrder();
     foreach (var command in CurveCommands(ui, preview: false)) Near(0.5, command.Segment!.Value.Opacity);
-    ui.ClickText("调试曲线");
     AssertPreviewLayer();
     // The linear fixture has a distinct colour, so selected and unselected tracks can be distinguished without private state.
     ui.SelectTrack(ui.View.Document.Tracks.Single(t => t.Kind == CurveKind.Linear).Id);
@@ -905,10 +879,7 @@ static void MainCurveSelectionOpacity()
     }
     void AssertPreviewLayer()
     {
-        var curves = CurveCommands(ui, preview: true).ToArray();
-        True(curves.Length > 0, "The enabled preview debug layer disappeared during selection.");
-        foreach (var command in curves) Near(1, command.Segment!.Value.Opacity);
-        AssertPreviewDrawOrder(ui);
+        True(!CurveCommands(ui, preview: true).Any(), "Preview contains authored debug curves.");
     }
 }
 
@@ -933,13 +904,6 @@ static void AssertObjectKinds(Ui ui, RecordingCanvas.Dot[] circles, float fieldW
     foreach (float radius in radii)
         True(circles.Any(c => Math.Abs(c.Radius - radius * fieldWidth / 512) < 0.001),
             "The fixture is missing a painted Fruit, Droplet or TinyDroplet type.");
-}
-
-static void AssertPreviewDrawOrder(Ui ui)
-{
-    int lastCurve = CurveCommands(ui, preview: true).Max(c => c.Order);
-    int firstObject = ViewCommands(ui, preview: true).Where(c => c.Dot is { Filled: true }).Min(c => c.Order);
-    True(lastCurve < firstObject, "Preview target curves were painted over the converted objects.");
 }
 
 static void AssertScaled(RecordingCanvas.Dot[] before, RecordingCanvas.Dot[] after, double ratio, bool comparePosition = true)

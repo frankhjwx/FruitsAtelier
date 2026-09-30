@@ -257,7 +257,7 @@ public sealed partial class EditorView
         if (showTargets)
         {
             DrawImportedCurves(c, playfield.X, playfield.Width, plot.Bottom, viewStart, pixelsPerMs,
-                viewStart, viewStart + plot.Height / pixelsPerMs, false);
+                viewStart, viewStart + plot.Height / pixelsPerMs);
             foreach (var track in Document.Tracks)
             {
                 bool selected = IsObjectSelected(track.Id);
@@ -412,7 +412,6 @@ public sealed partial class EditorView
     private void DrawPreview(ICanvas c, Rect r)
     {
         c.Text(L.Get("ui.preview"), r.X, r.Y, 13, Foreground, r.Width, true);
-        Button(c, new(r.Right - 92, r.Y - 5, 92, 27), L.Get("ui.debugCurves"), () => showPreviewCurves = !showPreviewCurves, showPreviewCurves);
         c.Text(L.Get("ui.previewStats", Number(PreviewApproachRate), Number(PreviewCircleSize), PreviewModName), r.X, r.Y + 23, 10, Foreground, r.Width);
         DrawPreviewMods(c, r);
         DrawPreviewDisplayModes(c, r);
@@ -441,26 +440,6 @@ public sealed partial class EditorView
             c.Stroke(new(stage.X + 9, referenceTop, referenceWidth, referenceHeight), 0x2B3442);
         double scrollSpeed = CatchScrollTiming.PixelsPerMs(PreviewApproachRate, fieldWidth);
         double visibleAhead = (catchY - stage.Y + CatchSize.FruitDiameter(PreviewCircleSize) * fieldWidth / 512 * 1.2) / scrollSpeed;
-        if (showPreviewCurves)
-        {
-            DrawImportedCurves(c, fieldLeft, fieldWidth, catchY, playhead, scrollSpeed,
-                playhead, playhead + visibleAhead, true);
-            foreach (var track in Document.Tracks)
-            {
-                if (track.Nodes.Count < 2) continue;
-                double begin = Math.Max(playhead, track.Nodes[0].TimeMs), end = Math.Min(playhead + visibleAhead, CurveMath.EndTimeMs(track));
-                if (end < begin) continue;
-                (float X, float Y)? last = null;
-                for (int i = 0; i <= 48; i++)
-                {
-                    double time = begin + (end - begin) * i / 48;
-                    float x = fieldLeft + (float)(CurveMath.PositionAtTime(track, time) / 512) * fieldWidth;
-                    float y = catchY - (float)((time - playhead) * scrollSpeed);
-                    if (last is { } p) c.Line(p.X, p.Y, x, y, track.Kind == CurveKind.Bezier ? Purple : Accent, 2);
-                    last = (x, y);
-                }
-            }
-        }
         DrawPreviewCatcher(c, fieldLeft, fieldWidth, catchY);
         DrawPreviewPlate(c, fieldLeft, fieldWidth, catchY);
         foreach (var item in PreviewObjectsInRange(playhead, playhead + visibleAhead))
@@ -608,7 +587,7 @@ public sealed partial class EditorView
     private void DrawMenu(ICanvas c)
     {
         menuHitStart = hits.Count;
-        var items = new List<(string Label, Action Action, bool Enabled, bool Active)>();
+        var items = new List<(string Label, Action Action, bool Enabled, bool Active, bool Separator)>();
         if (menu == 0)
         {
             Item(L.Get("project.new"), () => RequestNewProject?.Invoke());
@@ -663,24 +642,27 @@ public sealed partial class EditorView
             Item(L.Get("ui.gridLevel", L.Get("ui.grid" + gridSize)), () => gridLevelMenuOpen = true);
             Item(L.Get("ui.gridSnap"), () => gridSnap = !gridSnap, active: gridSnap);
             Item(L.Get("ui.anchorSnap"), () => anchorSnap = !anchorSnap, active: anchorSnap);
+            Separator();
             Item(L.Get("ui.resetView"), ResetView);
-            Item(L.Get("volume.title"), OpenVolumePopover);
-            Item(L.Get("ui.sliderPathCurves"), () => showTargets = !showTargets, active: showTargets);
-            Item(showPreviewCurves ? L.Get("ui.previewCurvesOn") : L.Get("ui.previewCurvesOff"), () => showPreviewCurves = !showPreviewCurves);
             Item(L.Get("ui.follow"), FollowPlayhead);
-            Item(L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, active: movementAnalysis);
-            Item(L.Get("movement.includeTiny"), () => movementIncludeTinyDroplets = !movementIncludeTinyDroplets, active: movementIncludeTinyDroplets);
-            Item(L.Get("timing.page"), () => ShowTimingPage(true));
-            Item(L.Get("timing.setup"), OpenTimingSetup);
+            Separator();
+            Item(L.Get("ui.sliderPathCurves"), () => showTargets = !showTargets, active: showTargets);
             Item((LibrarySettings.ForceBackgroundDim ? "✓ " : "") + L.Get("settings.forceBackgroundDim"), () =>
             {
                 LibrarySettings.ForceBackgroundDim = !LibrarySettings.ForceBackgroundDim;
                 RequestViewPreference?.Invoke();
             }, active: LibrarySettings.ForceBackgroundDim);
+            Item(L.Get("volume.title"), OpenVolumePopover);
+            Separator();
+            Item(L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, active: movementAnalysis);
+            Item(L.Get("movement.includeTiny"), () => movementIncludeTinyDroplets = !movementIncludeTinyDroplets, active: movementIncludeTinyDroplets);
+            Separator();
+            Item(L.Get("timing.page"), () => ShowTimingPage(true));
+            Item(L.Get("timing.setup"), OpenTimingSetup);
         }
         float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : menu == 4 ? 268 : 109 + menu * 53;
         float top = menu == 3 ? difficultyAddButton.Bottom + 4 : 38;
-        MenuBounds = new(x, top, 282, 14 + items.Count * 34 - 3);
+        MenuBounds = new(x, top, 282, 14 + items.Sum(item => item.Separator ? 10 : 34) - 3);
         var rect = MenuBounds;
         var gridRow = new Rect(rect.X + 6, rect.Y + 7, rect.Width - 12, 31);
         gridLevelMenuBounds = new(rect.Right, gridRow.Y - 7, menu == 4 ? 240 : 160, menu == 4 ? 79 : 147);
@@ -692,6 +674,12 @@ public sealed partial class EditorView
         float y = rect.Y + 7;
         foreach (var item in items)
         {
+            if (item.Separator)
+            {
+                c.Line(rect.X + 9, y + 3, rect.Right - 9, y + 3, Grid);
+                y += 10;
+                continue;
+            }
             bool submenu = (menu == 2 || menu == 4) && y == rect.Y + 7;
             Button(c, new(rect.X + 6, y, rect.Width - 12, 31), item.Label,
                 () => { if (!submenu) menu = -1; item.Action(); }, item.Active || submenu && gridLevelMenuOpen, item.Enabled);
@@ -721,7 +709,8 @@ public sealed partial class EditorView
             }
         }
         void Item(string label, Action action, bool enabled = true, bool active = false)
-            => items.Add((label, action, enabled, active));
+            => items.Add((label, action, enabled, active, false));
+        void Separator() => items.Add(("", () => { }, false, false, true));
     }
 
     private void Button(ICanvas c, Rect r, string label, Action action, bool active = false, bool enabled = true, float fontSize = 12, bool? bold = null)

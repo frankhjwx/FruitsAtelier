@@ -81,7 +81,7 @@ public sealed partial class EditorView
     private const float PlayfieldPadding = 54.4f;
     private int divisor = 4, menu = -1, editField = -1;
     private string editBuffer = "", fieldError = "";
-    private bool replaceText = true, showTargets = true, showPreviewCurves;
+    private bool replaceText = true, showTargets = true;
 
     public Action? RequestClose { get; set; }
     public Action? RequestLoadSkin { get; set; }
