@@ -26,14 +26,31 @@ public sealed partial class EditorView
         stackMode = true; stackSelectedPoint = 0;
         stackTiming = new TimingMap.Lookup(Document);
         stackDraft = Document.Tracks.FirstOrDefault(t => t.Id == streamTargets[0])?.Stack?.DeepClone() ?? new();
-        stackGraphRange = stackDraft.Points.Any(p => p.Distance > 128) ? 512 : 128;
+        for (int i = 0; i < stackDraft.Points.Count; i++)
+            stackDraft.Points[i] = stackDraft.Points[i] with { Distance = Math.Min(StackMaximumDistance, stackDraft.Points[i].Distance) };
         stackPreviewSource = Document.Tracks.FirstOrDefault(t => t.Id == streamTargets[0])?.DeepClone();
         if (stackPreviewSource is null)
         {
             try { stackPreviewSource = ImportedSliderEditing.ConvertToTrack(Document.DeepClone(), streamTargets[0]).Track; }
             catch (Exception error) { StreamDialogVisible = false; StatusMessage = error.Message; }
         }
+        if (stackPreviewSource?.Stack is null) StreamSnapDivisor = 16;
+        stackNumericField = -1; stackNumericError = "";
         RefreshStackPreview();
+        double start = stackPreviewSource?.Nodes[0].TimeMs ?? 0;
+        double duration = stackPreviewSource is null ? 1 : Math.Max(.001, CurveMath.EndTimeMs(stackPreviewSource) - start);
+        foreach (var fruit in stackPreview)
+        {
+            double u = (fruit.TimeMs - start) / duration;
+            if (Math.Abs(stackDraft.AdjustmentAt(u)) < 1e-8) continue;
+            double center = CurveMath.PositionAtTime(stackPreviewSource!, fruit.TimeMs);
+            double distance = fruit.X - center;
+            if (Math.Abs(distance) <= StackMaximumDistance) continue;
+            double side = (fruit.EventIndex % 2 == 0) == stackDraft.StartLeft ? -1 : 1;
+            double baseX = Math.Clamp(center + side * stackDraft.DistanceAt(u), 0, 512);
+            stackDraft.SetAdjustment(u, Math.Clamp(center + Math.Sign(distance) * StackMaximumDistance, 0, 512) - baseX);
+        }
+        RefreshStackPreview(); ResetStackHistory();
     }
 
     private void OpenStreamDialog()
@@ -55,6 +72,7 @@ public sealed partial class EditorView
 
     private void ApplyStream()
     {
+        if (stackMode && !CommitStackNumeric()) return;
         Guid[] selected = streamTargets;
         if (Edit(L.Get(stackMode ? "stack.title" : changingStreamSnap ? "stream.changeSnap" : "stream.title"), () =>
         {
@@ -77,15 +95,17 @@ public sealed partial class EditorView
         else streamError = StatusMessage;
     }
 
-    private void StreamKey(int key)
+    private void StreamKey(int key, bool ctrl, bool shift)
     {
+        if (stackMode && StackHistoryKey(key, ctrl, shift)) return;
+        if (stackMode && StackNumericKey(key, ctrl, shift)) return;
         if (key == 27) { StreamDialogVisible = false; streamSnapDragging = false; stackPointDragging = stackFruitDragging = -1; }
         else if (key == 13) ApplyStream();
         else if (key is 37 or 38 or 39 or 40)
         {
             StreamSnapDivisor = SnapDivisors[Math.Clamp(Array.IndexOf(SnapDivisors, StreamSnapDivisor)
                 + (key is 37 or 38 ? -1 : 1), 0, SnapDivisors.Length - 1)];
-            RefreshStackPreview();
+            RefreshStackPreview(); if (stackMode) RecordStackDraft();
         }
     }
 

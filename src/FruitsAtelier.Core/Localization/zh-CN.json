@@ -1058,9 +1058,12 @@
   "stack.title": "生成 / 编辑 stack",
   "stack.menu": "生成 / 编辑 stack…",
   "stack.description": "编辑展开曲线，或在右侧预览中横向拖动单颗 Fruit。X 限制在 0–512。",
-  "stack.graph": "时间 0–100% · 拖动距离 · 点击添加，右键删除",
+  "stack.graph": "时间 0–100% · 宽度 0–32 px · 拖动吸附 1 px · 右键删除锚点",
   "stack.left": "首颗 Fruit 位于左侧",
   "stack.invalid": "Stack 展开曲线无效。",
-  "stack.point": "时间 {0:P0} · 距离 {1:0.0}",
-  "stack.range": "范围 {0:0} px"
+  "stack.timePercent": "时间 (%)",
+  "stack.distancePx": "宽度 (px)",
+  "stack.autoEnds": "自动处理首尾",
+  "stack.numericInvalid": "请输入范围内的数值。",
+  "stack.numericOrder": "时间必须位于相邻锚点之间。"
 }

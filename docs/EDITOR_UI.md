@@ -580,7 +580,8 @@ all spans. The first-side switch chooses left or right.
 The envelope graph edits horizontal distance from the centre curve over 0–100% of
 the complete duration. Drag a point to change time and distance; endpoints stay at
 0% and 100%. Click empty graph space to add a point, and right-click an interior
-point to remove it. The graph starts with a 0–128 playfield-unit range; the Range button expands it to 0–512. Smooth
+point to remove it. The graph uses a fixed 0–32 px range divided into 32 horizontal bands. Mouse
+dragging snaps distance to whole pixels; numeric inputs allow fractions. Smooth
 interpolation joins points without overshooting their distance values. The right
 preview updates immediately; generation alternates sides and clamps final X to
 0–512. Actual DS follows the generated positions and time intervals.
@@ -600,3 +601,21 @@ returning to the previous subdivision restores its adjusted fruits. Cancel and l
 capture restore the draft, and confirmation groups all adjustments into one undo
 step. The preview leaves room above and below the centre trajectory for complete
 fruit outlines, including their stroke.
+
+Select an envelope point to edit **Time (%)** and **Width (px)** numerically.
+Enter or Tab accepts the value; Escape cancels the text edit. Interior times must
+remain between neighbouring points; endpoint times stay at 0% and 100%. Width
+accepts 0–32 px. Manual fruit markers
+also accept width edits; moving their percentage turns the marker into an envelope
+point at that time, replacing its individual-fruit offset.
+
+New stacks default to 1/16 subdivision and reach their width over the first 2% of
+the duration, returning to zero over the final 2%. Existing stacks retain their
+subdivision. **Auto endpoints** sets endpoint widths to zero and adds short entry
+and exit transitions using adjacent widths.
+
+Within the stack editor, Ctrl+Z undoes a completed drag, numeric edit, point removal,
+first-side change or subdivision change; Ctrl+Y or Ctrl+Shift+Z redoes it. Draft
+history stays inside the dialog. Confirming still creates one document undo step.
+Right-click a manual fruit marker on the left graph to remove its offset and
+recompute that fruit from the envelope. This removal is also undoable.

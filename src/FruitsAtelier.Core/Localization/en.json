@@ -1058,9 +1058,12 @@
   "stack.title": "Convert / edit stack",
   "stack.menu": "Convert / edit stack…",
   "stack.description": "Edit the envelope or drag individual fruits horizontally in the preview. X is clamped to 0–512.",
-  "stack.graph": "Time 0–100% · drag distance · click to add, right-click to remove",
+  "stack.graph": "Time 0–100% · width 0–32 px · drag snaps to 1 px · right-click to remove",
   "stack.left": "First fruit on the left",
   "stack.invalid": "Invalid stack envelope.",
-  "stack.point": "Time {0:P0} · distance {1:0.0}",
-  "stack.range": "Range {0:0} px"
+  "stack.timePercent": "Time (%)",
+  "stack.distancePx": "Width (px)",
+  "stack.autoEnds": "Auto endpoints",
+  "stack.numericInvalid": "Enter a value within range.",
+  "stack.numericOrder": "Time must stay between adjacent points."
 }

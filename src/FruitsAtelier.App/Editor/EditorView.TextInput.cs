@@ -71,6 +71,7 @@ public sealed partial class EditorView
     public void PasteFieldText(string text, string? expectedField = null)
     {
         if (expectedField is not null && textEditor.Field != expectedField) return;
+        if (StreamDialogVisible && stackMode) { StackNumericText(text); return; }
         if (DistanceSnapDialogVisible && dsBaseFocused)
         {
             string filtered = new(text.Where(value => char.IsAsciiDigit(value) || value == '.').ToArray());
@@ -126,6 +127,7 @@ public sealed partial class EditorView
             "time" => timeJumpText,
             "distance" => editBuffer,
             "ds:base" => dsBaseText,
+            "stack:0" or "stack:1" => stackNumericText,
             _ when key.StartsWith("song:") => songValues.GetValueOrDefault(key[5..], ""),
             _ when key.StartsWith("library:") => LibraryFieldValue,
             _ when key.StartsWith("numeric:") => editBuffer,

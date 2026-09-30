@@ -74,6 +74,7 @@ public sealed partial class EditorView
         }
         if (TimeJumpVisible || StreamDialogVisible || MergeDialogVisible)
         {
+            if (StreamDialogVisible && stackMode && !StackNumericPointerDown(x, y)) return;
             if (StreamDialogVisible && stackMode && StackPointerDown(x, y, button)) return;
             if (StreamDialogVisible && button == 0 && StreamSnapBounds.Contains(x, y))
             { streamSnapDragging = true; SetStreamSnap(x); return; }
@@ -546,11 +547,11 @@ public sealed partial class EditorView
             return;
         }
         if (StreamDialogVisible && stackFruitDragging >= 0 && button == 0)
-        { MoveStackFruit(x, y); stackFruitDragging = -1; return; }
+        { MoveStackFruit(x, y); stackFruitDragging = -1; RecordStackDraft(); return; }
         if (StreamDialogVisible && stackPointDragging >= 0 && button == 0)
-        { MoveStackPoint(x, y); stackPointDragging = -1; return; }
+        { MoveStackPoint(x, y); stackPointDragging = -1; RecordStackDraft(); return; }
         if (StreamDialogVisible && streamSnapDragging && button == 0)
-        { SetStreamSnap(x); streamSnapDragging = false; return; }
+        { SetStreamSnap(x); streamSnapDragging = false; if (stackMode) RecordStackDraft(); return; }
         if (TimeJumpVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
@@ -933,7 +934,7 @@ public sealed partial class EditorView
         if (SongSetupVisible) { SongSetupKey(virtualKey, ctrl, shift); return; }
         if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl, shift); return; }
         if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
-        if (StreamDialogVisible) { StreamKey(virtualKey); return; }
+        if (StreamDialogVisible) { StreamKey(virtualKey, ctrl, shift); return; }
         if (MergeDialogVisible)
         {
             if (virtualKey == 27) MergeDialogVisible = false;
@@ -1097,6 +1098,7 @@ public sealed partial class EditorView
                 SetDistanceBaseText(InsertInput("ds:base", dsBaseText, value.ToString(), 16));
             return;
         }
+        if (StreamDialogVisible && stackMode) { StackNumericText(value.ToString()); return; }
         if (DistanceEditing) { DistanceTextInput(value); return; }
         if (updatesPage) return;
         if (StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;

@@ -352,12 +352,18 @@ internal static class RenderCheck
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 if (!view.StreamDialogVisible) throw new InvalidOperationException("Native stack dialog did not open.");
                 var graph = view.StackGraphBounds;
-                view.PointerDown(graph.X + graph.Width * .25f, graph.Bottom - graph.Height * 24 / 128, 0, false, false);
+                view.PointerDown(graph.X + graph.Width * .25f, graph.Bottom - graph.Height * 24 / 32, 0, false, false);
                 view.PointerMove(graph.X + graph.Width * .3f, graph.Bottom - graph.Height * .5f, false, false);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.PointerUp(graph.X + graph.Width * .3f, graph.Bottom - graph.Height * .5f, 0);
+                var numeric = view.StackDistanceFieldBounds;
+                view.PointerDown(numeric.X + 10, numeric.Y + 12, 0, false, false);
+                view.PointerUp(numeric.X + 10, numeric.Y + 12, 0);
+                view.KeyDown(65, true, false); foreach (char digit in "15.25") view.TextInput(digit);
                 view.KeyDown(13, false, false);
-                if (view.Document.Tracks[0].Stack is not { } envelope || !envelope.Points.Any(p => p.Distance == 64))
+                view.KeyDown(90, true, false); view.KeyDown(89, true, false);
+                view.KeyDown(13, false, false);
+                if (view.Document.Tracks[0].Stack is not { } envelope || !envelope.Points.Any(p => p.Distance == 15.25))
                     throw new InvalidOperationException("Native stack envelope drag or confirmation failed.");
                 view.KeyDown(90, true, false); view.KeyDown(89, true, false);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();

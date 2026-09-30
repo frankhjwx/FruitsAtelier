@@ -10,7 +10,7 @@ public sealed class StackEnvelope
 {
     public bool StartLeft { get; set; } = true;
     [JsonObjectCreationHandling(JsonObjectCreationHandling.Replace)]
-    public List<StackPoint> Points { get; set; } = [new(0, 0), new(0.25, 24), new(0.75, 24), new(1, 0)];
+    public List<StackPoint> Points { get; set; } = [new(0, 0), new(0.02, 24), new(0.98, 24), new(1, 0)];
     public List<StackFruitAdjustment> FruitAdjustments { get; set; } = [];
     public StackEnvelope DeepClone() => new() { StartLeft = StartLeft, Points = [.. Points], FruitAdjustments = [.. FruitAdjustments] };
     public static bool Equal(StackEnvelope? a, StackEnvelope? b) => ReferenceEquals(a, b)
