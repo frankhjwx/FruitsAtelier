@@ -327,6 +327,13 @@ timing precision, and relocated break lines alongside storyboard commands. They
 also verify real time, combo colour, SV, break and video edits remain reviewable,
 and accepting a setting change preserves authoring precision and event text.
 
+Timing synchronization regressions use editable curves whose exports add or
+replace inherited SV points. They cover isolated green additions, edits and
+deletions, sample edits at generated overrides, and revisiting retained choices
+after restart. Shared UI checks verify one changed green produces one highlighted
+row and preserves editable curves when applied in both languages and window sizes.
+Native rendering checks also exercise the compact timing review.
+
 Shared App tests cover asynchronous discovery, context rebasing through undo,
 missing-file input isolation, explicit restoration, per-object choices, linked
 deletion, and local-project exemptions in both languages and window sizes. Native

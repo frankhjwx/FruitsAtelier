@@ -38,7 +38,8 @@ internal static class SynchronizationRenderCheck
                 view.KeyDown(27, false, false);
 
                 view.LoadWorkspace(WorkspaceProject.Open(session.Directory));
-                string events = string.Concat(Enumerable.Repeat("// storyboard command 01234567890123456789\n", 60000));
+                string events = "Sprite,Foreground,Centre,\"sprite.png\",320,240\n F,0,0,500,0,1\n"
+                    + string.Concat(Enumerable.Repeat("// storyboard command 01234567890123456789\n", 60000));
                 File.WriteAllText(source, text.Replace("[HitObjects]", "[Events]\n" + events + "[HitObjects]"));
                 view.RefreshSynchronization(); Wait();
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native section text review was not shown.");
@@ -46,6 +47,14 @@ internal static class SynchronizationRenderCheck
                 view.Wheel(200, 260, -1200, false); Paint();
                 view.PointerDown(width - 52, 95, 0, false, false); view.PointerUp(width - 52, 95, 0); Paint();
                 if (!sectionBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native text paging changed authoring.");
+                view.KeyDown(27, false, false);
+
+                view.LoadWorkspace(WorkspaceProject.Open(session.Directory));
+                File.WriteAllText(source, text.Replace("0,500,4,1,0,100,1,0", "0,500,4,1,0,100,1,0\n500,-100,4,1,0,100,0,0"));
+                view.RefreshSynchronization(); Wait();
+                if (!view.SynchronizationVisible) throw new InvalidOperationException("Native timing addition review was not shown.");
+                var timingBefore = view.Document.DeepClone(); Paint();
+                if (!timingBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native timing review changed authoring.");
                 view.KeyDown(27, false, false);
 
                 view.LoadWorkspace(WorkspaceProject.Open(session.Directory));

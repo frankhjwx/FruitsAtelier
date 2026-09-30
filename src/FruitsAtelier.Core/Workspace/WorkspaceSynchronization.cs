@@ -35,6 +35,7 @@ public sealed class WorkspaceMerge
     public required MapDocument Baseline { get; init; }
     public List<WorkspaceSyncConflict> Conflicts { get; } = [];
     internal Dictionary<string, string?> Fields { get; } = [];
+    internal string? ExternalTiming { get; set; }
     internal List<(string Key, Guid[] Sources, string[] Lines)> Objects { get; } = [];
     internal Dictionary<Guid, int> ExternalOrders { get; } = [];
     public IReadOnlyList<WorkspaceRetainedObjects> PreviouslyRetained { get; internal set; } = [];
@@ -253,9 +254,18 @@ public static class WorkspaceSynchronization
         merge.Conflicts.Clear();
         foreach (string key in ours.Keys.Union(theirs.Keys))
         {
-            merge.Fields[key] = ours.GetValueOrDefault(key);
+            merge.Fields[key] = key == "TimingPoints/" ? WorkspaceTimingSynchronization.Text(local.TimingPoints) : ours.GetValueOrDefault(key);
             if (!FieldEquals(key, ours.GetValueOrDefault(key), theirs.GetValueOrDefault(key)))
-                merge.Conflicts.Add(new(key, ours.GetValueOrDefault(key) ?? "", theirs.GetValueOrDefault(key) ?? ""));
+            {
+                if (key == "TimingPoints/")
+                {
+                    merge.ExternalTiming = WorkspaceTimingSynchronization.Text(WorkspaceTimingSynchronization.ProjectChanges(
+                        local.TimingPoints, output.ReadBack.TimingPoints, external.Document.TimingPoints));
+                    if (WorkspaceTimingSynchronization.Conflict(output.ReadBack.TimingPoints, external.Document.TimingPoints) is { } timing)
+                        merge.Conflicts.Add(timing);
+                }
+                else merge.Conflicts.Add(new(key, ours.GetValueOrDefault(key) ?? "", theirs.GetValueOrDefault(key) ?? ""));
+            }
         }
         if (AudioHash(local.AudioPath) != AudioHash(external.Document.AudioPath))
             merge.Conflicts.Add(new("$audio", local.AudioPath ?? "", external.Document.AudioPath ?? ""));
@@ -279,7 +289,8 @@ public static class WorkspaceSynchronization
             baseline.RetainedObjectsRecorded = true;
         }
         var merge = new WorkspaceMerge { Local = local.DeepClone(), External = external, Baseline = original, PreviouslyRetained = baseline.RetainedObjects };
-        var baseFields = Fields(OsuBeatmapReader.Read(baseline.Text, baseline.Path));
+        var emittedBaseline = OsuBeatmapReader.Read(baseline.Text, baseline.Path);
+        var baseFields = Fields(emittedBaseline);
         var authorFields = Fields(original); var localFields = Fields(local); var externalFields = Fields(external.Document);
         foreach (string key in baseFields.Keys.Concat(authorFields.Keys).Concat(localFields.Keys).Concat(externalFields.Keys).Distinct())
         {
@@ -287,7 +298,26 @@ public static class WorkspaceSynchronization
             localFields.TryGetValue(key, out var ours); externalFields.TryGetValue(key, out var theirs);
             bool outsideChanged = !FieldEquals(key, before, theirs), insideChanged = !FieldEquals(key, authorBefore, ours) || baseline.LocalOverrides.Contains(key);
             merge.Fields[key] = outsideChanged && !insideChanged ? theirs : ours;
-            // Emitted timing may differ from authoring without an edit on either side.
+            if (key == "TimingPoints/")
+            {
+                merge.Fields[key] = ours;
+                if (outsideChanged || insideChanged)
+                {
+                    var timingBaseline = baseline.LocalOverrides.Contains(key) ? OsuBeatmapWriter.Serialize(original, compensate).ReadBack.TimingPoints
+                        : emittedBaseline.TimingPoints;
+                    // Generated SV belongs to the emitted baseline. Transfer only actual
+                    // external timing edits back to authoring, preserving unrelated points.
+                    merge.ExternalTiming = WorkspaceTimingSynchronization.Text(WorkspaceTimingSynchronization.ProjectChanges(
+                        original.TimingPoints, timingBaseline, external.Document.TimingPoints));
+                    var localTiming = WorkspaceTimingSynchronization.ProjectChanges(timingBaseline, original.TimingPoints, local.TimingPoints);
+                    if (WorkspaceTimingSynchronization.Conflict(localTiming, external.Document.TimingPoints) is { } timing)
+                    {
+                        merge.Conflicts.Add(timing);
+                        if (!outsideChanged && FieldEquals(key, ours, authorBefore) && baseline.LocalOverrides.Contains(key)) merge.PreviouslyResolved.Add(key);
+                    }
+                }
+                continue;
+            }
             if ((IsMetadataField(key) || outsideChanged || insideChanged) && !FieldEquals(key, ours, theirs))
             {
                 merge.Fields[key] = ours;
@@ -410,7 +440,8 @@ public static class WorkspaceSynchronization
         var fields = new Dictionary<string, string?>(merge.Fields);
         var outside = Fields(merge.External.Document);
         foreach (var conflict in merge.Conflicts.Where(c => !c.Key.StartsWith('$')))
-            if (externalChoices.GetValueOrDefault(conflict.Key)) fields[conflict.Key] = outside.GetValueOrDefault(conflict.Key);
+            if (externalChoices.GetValueOrDefault(conflict.Key)) fields[conflict.Key] = conflict.Key == "TimingPoints/"
+                ? merge.ExternalTiming ?? outside.GetValueOrDefault(conflict.Key) : outside.GetValueOrDefault(conflict.Key);
         ApplyFields(result, fields, merge.External.Path);
         foreach (var group in merge.Objects)
         {
@@ -447,17 +478,19 @@ public static class WorkspaceSynchronization
         var sources = ObjectLines(output.Text).SequenceEqual(ObjectLines(external.Text)) ? output.ObjectSources : MapExternalSources(resolved, external, output, entry.Sync);
         var pending = new List<string>();
         var resolvedFields = Fields(resolved); var externalFields = Fields(external.Document);
+        string emittedTiming = WorkspaceTimingSynchronization.Text(output.ReadBack.TimingPoints);
+        bool MatchesExternal(string key) => FieldEquals(key, key == "TimingPoints/" ? emittedTiming : resolvedFields.GetValueOrDefault(key), externalFields.GetValueOrDefault(key));
         if (entry.Sync is { } previous && !retainLocalFields)
         {
             var oldFields = Fields(ProjectSerializer.Read(previous.Authoring, SnapshotPath(session.Directory)));
             pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => (previous.LocalOverrides.Contains(k) || !FieldEquals(k, resolvedFields.GetValueOrDefault(k), oldFields.GetValueOrDefault(k)))
-                && !FieldEquals(k, resolvedFields.GetValueOrDefault(k), externalFields.GetValueOrDefault(k))));
+                && !MatchesExternal(k)));
         }
-        else pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => !FieldEquals(k, resolvedFields.GetValueOrDefault(k), externalFields.GetValueOrDefault(k))));
+        else pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => !MatchesExternal(k)));
         if (review is not null && choices is not null)
             foreach (var conflict in review.Conflicts.Where(c => !c.Key.StartsWith('$')))
                 if (choices.TryGetValue(conflict.Key, out bool takeExternal) && !takeExternal
-                    && !FieldEquals(conflict.Key, resolvedFields.GetValueOrDefault(conflict.Key), externalFields.GetValueOrDefault(conflict.Key))
+                    && !MatchesExternal(conflict.Key)
                     && !pending.Contains(conflict.Key)) pending.Add(conflict.Key);
         var retained = entry.Sync?.RetainedObjects.ToList() ?? [];
         if (review is not null && choices is not null)
@@ -717,8 +750,7 @@ public static class WorkspaceSynchronization
         fields["Difficulty/SliderMultiplier"] = document.SliderMultiplier.ToString("R", CultureInfo.InvariantCulture);
         fields["Difficulty/SliderTickRate"] = document.SliderTickRate.ToString("R", CultureInfo.InvariantCulture);
         fields["Editor/DistanceSpacing"] = document.DistanceSpacing.ToString("R", CultureInfo.InvariantCulture);
-        fields["TimingPoints/"] = string.Join("\n", document.TimingPoints.Select(t => string.Join(',',
-            t.TimeMs.ToString("R", CultureInfo.InvariantCulture), t.BeatLengthMs.ToString("R", CultureInfo.InvariantCulture), t.Meter, t.SampleSet, t.SampleIndex, t.Volume, t.Uninherited ? 1 : 0, t.Effects)));
+        fields["TimingPoints/"] = WorkspaceTimingSynchronization.Text(document.TimingPoints);
         return fields;
     }
     private static void ApplyFields(MapDocument target, Dictionary<string, string?> fields, string path)

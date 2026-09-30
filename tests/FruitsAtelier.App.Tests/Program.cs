@@ -24,6 +24,7 @@ var tests = new (string Name, Action Run)[]
 {
     ("Synchronization failures wrap and scroll without editing content", SynchronizationUiTests.FailureText),
     ("Section synchronization pages large Events and applies complete text", SynchronizationUiTests.SectionText),
+    ("Timing synchronization reviews one green line amongst generated SV", SynchronizationUiTests.TimingRows),
     ("Timeline skin uses combo-coloured tracks and hitcircle endpoints", ObjectTimelineTests.SkinColours),
     ("Workspace storage settings show usage and clear caches without editing maps", StorageSettingsTests.Run),
     ("Mapping right-click deletes the marquee selection in one undo", MappingSessionTests.RightClickSelection),

@@ -959,6 +959,7 @@
   "sync.externalHeading": "osu!",
   "sync.metadataHelp": "点击每行要保留的一侧。高亮文字表示差异。滚轮：滚动元数据。",
   "sync.sectionHelp": "对比文本并选择要保留的完整字段或段落。滚轮：滚动。上方箭头：翻阅文本页。",
+  "sync.timingHelp": "仅显示有变化的时间点。选择要保留的时间点版本。滚轮：滚动。上方箭头：翻阅文本页。",
   "sync.textPage": "文本 {0} / {1}",
   "sync.emptyValue": "（空）",
   "sync.resultPreview": "合并结果预览",

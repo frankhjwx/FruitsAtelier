@@ -16,6 +16,12 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
   blank lines and break placement within the section, while retaining break
   intervals and storyboard command order/indentation. Comparison does not rewrite
   authoring values or retained section text; actual edits remain reviewable.
+- Timing synchronization compares changes against the captured emitted timing
+  baseline and reviews only changed timestamp groups. Unchanged generated SV
+  points remain derived. Applying external timing transfers edited fields and
+  added/deleted groups to the saved authoring timing, preserving unrelated
+  authoring values and same-time ordering. Retained local timing choices remain
+  reviewable after saving and restarting.
 - Save authored anchors, Bezier handles, and editing constraints in the editor project, rather than custom `.osu` object fields.
 
 ## Object and timing rules
