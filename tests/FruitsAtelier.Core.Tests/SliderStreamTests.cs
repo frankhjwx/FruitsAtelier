@@ -53,14 +53,14 @@ internal static class SliderStreamTests
     public static void ExportedMillisecondsDriveHyperdash()
     {
         var map = new MapDocument { CircleSize = 4, DurationMs = 12000 };
-        var first = new Fruit { TimeMs = 11013.936, X = 459.766 };
+        var first = new Fruit { TimeMs = 11013.936, X = 460.5 };
         var second = new Fruit { TimeMs = 11099.251, X = 317.958, SourceOrder = 1 };
         map.Fruits.AddRange([first, second]);
         var precise = CatchStreamConverter.Convert(map);
         var exported = OsuBeatmapWriter.Serialize(map);
         Check(exported.ObjectSequenceMatches, "export preserves gameplay object identity");
-        Check(exported.PlayableObjects.Select(o => o.TimeMs).SequenceEqual([11014d, 11099d]), "playable times match osu file milliseconds");
-        Check(exported.PlayableObjects.Select(o => o.X).SequenceEqual([460d, 318d]), "playable coordinates match osu file integers");
+        Check(exported.PlayableObjects.Select(o => o.TimeMs).SequenceEqual([11013d, 11099d]), "playable times match osu file milliseconds");
+        Check(exported.PlayableObjects.Select(o => o.X).SequenceEqual([461d, 318d]), "playable coordinates match osu file integers");
         Check(!HyperDashCalculator.Calculate(precise.Objects, map.CircleSize)[0].IsHyperDash,
             "precise editing coordinates stay below this hyperdash threshold");
         Check(HyperDashCalculator.Calculate(exported.PlayableObjects, map.CircleSize)[0].IsHyperDash,

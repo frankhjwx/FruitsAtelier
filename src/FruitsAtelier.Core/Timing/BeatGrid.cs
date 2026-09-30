@@ -10,7 +10,7 @@ public static class BeatGrid
         if (divisor <= 0) throw new ArgumentOutOfRangeException(nameof(divisor));
         double step = beatLength / divisor;
         double index = Math.Floor((time - offset) / step + 0.5);
-        double snapped = offset + index * step;
+        double snapped = offset + index * beatLength / divisor;
         if (!double.IsFinite(snapped)) throw new ArgumentOutOfRangeException(nameof(time));
         return snapped;
     }

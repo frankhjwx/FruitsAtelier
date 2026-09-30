@@ -39,6 +39,22 @@ internal static class ToolPaletteTests
 
     public static void PlacementHyperdash()
     {
+        var fractional = Empty();
+        var fractionalMap = new MapDocument { DurationMs = 12000, BeatLengthMs = 60000d / 145 };
+        fractionalMap.Fruits.Add(new() { TimeMs = 1000, X = 100 });
+        fractional.LoadDocument(fractionalMap); fractional.Key('F'); fractional.MoveMap(1241, 450);
+        var fractionalBefore = fractional.View.Document.DeepClone();
+        var fractionalPreview = (IReadOnlyList<ConvertedCatchObject>)typeof(EditorView).GetField("placementMovementObjects",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(fractional.View)!;
+        Check(fractionalPreview.Single(o => o.SourceId != fractionalMap.Fruits[0].Id).TimeMs == 1241,
+            "Fractional placement preview must use stable time truncation.");
+        fractional.ClickMap(1241, 450);
+        Check(fractionalPreview.Select(o => (o.TimeMs, o.X)).SequenceEqual(
+            OsuBeatmapWriter.Serialize(fractional.View.Document).PlayableObjects.Select(o => (o.TimeMs, o.X))),
+            "Fractional preview and committed export disagree.");
+        fractional.Key('Z', ctrl: true);
+        Check(fractionalBefore.ContentEquals(fractional.View.Document), "Fractional placement undo changed source content.");
+
         var head = Empty();
         var headMap = new MapDocument { DurationMs = 12000 };
         headMap.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1250, X = 100 }, new() { TimeMs = 1500, X = 450 }]);

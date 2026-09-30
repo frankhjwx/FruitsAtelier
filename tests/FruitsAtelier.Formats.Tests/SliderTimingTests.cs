@@ -3,6 +3,36 @@ using FruitsAtelier.Core;
 
 internal static class SliderTimingTests
 {
+    public static void StableSnappedHeadsAndEdges()
+    {
+        var document = Map();
+        document.DurationMs = 30000;
+        const double beatLength = 413.793103448276;
+        document.TimingPoints[0].TimeMs = 2512;
+        document.TimingPoints[0].BeatLengthMs = beatLength;
+        document.BeatLengthMs = beatLength;
+        document.TimingOffsetMs = 2512;
+        double start = 2512 + 648 * beatLength / 12;
+        double end = 2512 + 660 * beatLength / 12;
+        AddTrack(document, start, end, 0, 400);
+        document.Tracks[0].SpanCount = 2;
+        var before = document.DeepClone();
+        var output = OsuBeatmapWriter.Serialize(document, false);
+        var raw = RawMap.Parse(output.Text);
+        Near(beatLength * 2, raw.Duration(24856, 0));
+        Near(beatLength * 2, raw.Duration(24856, 1));
+        Check(raw.Timing.Any(p => !p.Red && p.Time == 24856), "SV must share the truncated slider head.");
+        var slider = output.ReadBack.ImportedSliders.Single();
+        Check(slider.TimeMs == 24856 && document.ContentEquals(before), "Export must truncate without changing the source.");
+        // Stable retains span duration: moving the head changes every derived edge by the same sub-ms amount.
+        for (int edge = 1; edge <= 2; edge++)
+        {
+            double actual = slider.TimeMs + raw.Duration(24856, 0) * edge / 2;
+            double grid = Math.Truncate(2512 + (648 + edge * 12) * beatLength / 12);
+            Check(Math.Abs(actual - grid) < 1, "Repeat/tail must stay within one ms of the stable grid.");
+        }
+    }
+
     public static void CompatibleCloseTiming()
     {
         var document = Map();
@@ -274,7 +304,7 @@ internal static class SliderTimingTests
         var sliderReports = new List<object>();
         foreach (var track in document.Tracks)
         {
-            double head = Math.Round(track.Nodes[0].TimeMs, MidpointRounding.AwayFromZero);
+            double head = Math.Truncate(track.Nodes[0].TimeMs);
             double duration = (track.Nodes[^1].TimeMs - track.Nodes[0].TimeMs) * track.SpanCount;
             Near(duration, raw.Duration(head, 0)); Near(duration, raw.Duration(head, 1));
             Check(raw.Timing.Count(p => p.Time == head && !p.Red) <= 1, "User export has ambiguous same-time SV points.");
@@ -318,7 +348,7 @@ internal static class SliderTimingTests
         }
         Check(document.ContentEquals(before), "User project changed during export validation.");
         var originalTimes = document.TimingPoints.Select(p => p.TimeMs).ToHashSet();
-        var generatedHeads = document.Tracks.Select(t => Math.Round(t.Nodes[0].TimeMs, MidpointRounding.AwayFromZero)).ToHashSet();
+        var generatedHeads = document.Tracks.Select(t => Math.Truncate(t.Nodes[0].TimeMs)).ToHashSet();
         double[] currentRestoreTimes = raw.Timing.Where(p => !p.Red && !originalTimes.Contains(p.Time) && !generatedHeads.Contains(p.Time))
             .Select(p => p.Time).ToArray();
         double[] previousRestoreTimes = previous?.Timing.Where(p => !p.Red && !originalTimes.Contains(p.Time) && !generatedHeads.Contains(p.Time))
