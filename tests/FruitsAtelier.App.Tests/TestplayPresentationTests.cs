@@ -90,10 +90,49 @@ internal static class TestplayPresentationTests
             WarningTiming();
             DimSlider();
             SettingsDimSlider();
+            FullyDimBackground();
         }
         finally { L.SetLanguage(language); }
     }
 
+
+    private static void FullyDimBackground()
+    {
+        string language = L.Language;
+        try
+        {
+            foreach (string locale in new[] { "en", "zh-CN" })
+            {
+                L.SetLanguage(locale);
+                var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
+                var map = new MapDocument { SourcePath = Path.GetFullPath("artifacts/tests/full-dim/map.osu") };
+                map.Fruits.AddRange([new Fruit { TimeMs = 10000, X = 256 }, new Fruit { TimeMs = 20000, X = 256 }]);
+                map.OriginalSections.Add(new OsuSection { Name = "Events", Lines = { "0,0,\"background.jpg\",0,0", "2,12000,16000" } });
+                ui.Canvas.AcceptBackgrounds = true; ui.LoadDocument(map);
+                var before = ui.View.Document.DeepClone();
+                ui.View.LibrarySettings.BackgroundDim = 37;
+                int saves = 0; ui.View.RequestViewPreference = () => saves++;
+                ui.ClickText(L.Get("ui.view")); ui.ClickText(L.Get("settings.forceBackgroundDim"));
+                Check(ui.View.LibrarySettings.ForceBackgroundDim && saves == 1, "View enables and saves full dim immediately");
+                ui.View.StartTestplay(); ui.Paint(); Near(1, Dim(ui));
+                clock.Advance(12800); ui.Paint(); Near(1, Dim(ui));
+                ui.View.LibrarySettings.BackgroundDim = 0; ui.Paint(); Near(1, Dim(ui));
+                Check(ui.View.Document.ContentEquals(before), "Full dim preserves beatmap content");
+                ui.View.StopTestplay();
+                ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.testplay"));
+                ui.ClickText("✓ " + L.Get("settings.forceBackgroundDim"));
+                Check(ui.View.LibrarySettings.ForceBackgroundDim, "Settings full dim remains a draft before Apply");
+                string path = Path.GetFullPath("artifacts/tests/full-dim-settings.json");
+                ui.View.ApplySettings(path); ui.Paint();
+                var saved = LibrarySettings.Load(path);
+                Check(!saved.ForceBackgroundDim && saved.BackgroundDim == 0, "Apply saves full dim separately from its percentage");
+                ui.Key(27); ui.View.KeyUp(27);
+                ui.View.StartTestplay(); ui.Paint(); Near(0, Dim(ui)); ui.View.StopTestplay();
+                Check(!new LibrarySettings().ForceBackgroundDim, "Full dim defaults off for existing settings");
+            }
+        }
+        finally { L.SetLanguage(language); }
+    }
 
     private static void SettingsDimSlider()
     {

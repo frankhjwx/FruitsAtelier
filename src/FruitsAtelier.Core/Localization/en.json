@@ -16,6 +16,7 @@
   "merge.failed": "Merge failed: {0}",
   "merge.tooManyPoints": "The merged path would contain too many control points. Select fewer objects or reduce repeats.",
   "settings.backgroundDim": "Background dim: {0}%",
+  "settings.forceBackgroundDim": "Fully dim background",
   "testplay.skip": "Skip (Space)",
   "testplay.continue": "Continue",
   "testplay.retry": "Retry",

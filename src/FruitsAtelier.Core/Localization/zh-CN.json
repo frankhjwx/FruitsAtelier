@@ -16,6 +16,7 @@
   "merge.failed": "合并失败：{0}",
   "merge.tooManyPoints": "合并后的路径控制点过多，请减少选中对象或重复次数。",
   "settings.backgroundDim": "背景暗化：{0}%",
+  "settings.forceBackgroundDim": "完全调暗背景",
   "testplay.skip": "跳过（空格）",
   "testplay.continue": "继续",
   "testplay.retry": "重试",

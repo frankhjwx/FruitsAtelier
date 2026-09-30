@@ -670,6 +670,11 @@ public sealed partial class EditorView
             Item(L.Get("movement.includeTiny"), () => movementIncludeTinyDroplets = !movementIncludeTinyDroplets, active: movementIncludeTinyDroplets);
             Item(L.Get("timing.page"), () => ShowTimingPage(true));
             Item(L.Get("timing.setup"), OpenTimingSetup);
+            Item((LibrarySettings.ForceBackgroundDim ? "✓ " : "") + L.Get("settings.forceBackgroundDim"), () =>
+            {
+                LibrarySettings.ForceBackgroundDim = !LibrarySettings.ForceBackgroundDim;
+                RequestViewPreference?.Invoke();
+            }, active: LibrarySettings.ForceBackgroundDim);
         }
         float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : menu == 4 ? 268 : 109 + menu * 53;
         float top = menu == 3 ? difficultyAddButton.Bottom + 4 : 38;

@@ -76,6 +76,7 @@ public sealed partial class EditorView
 
     private void DrawBeatmapBackground(ICanvas c, Rect bounds, float dim)
     {
+        if (LibrarySettings.ForceBackgroundDim) { c.Fill(bounds, 0); return; }
         if (beatmapBackground is not null && c.BackgroundImage(beatmapBackground, bounds))
             c.Fill(bounds, 0, opacity: dim);
     }

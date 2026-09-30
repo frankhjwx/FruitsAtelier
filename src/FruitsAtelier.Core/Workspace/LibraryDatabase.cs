@@ -31,6 +31,7 @@ public sealed class LibrarySettings
         set => playbackLineFromBottom = double.IsFinite(value) ? Math.Clamp(value, .05, .95) : .25;
     }
     public bool ShowTestplayCombo { get; set; } = true;
+    public bool ForceBackgroundDim { get; set; }
     private int backgroundDim = 90;
     public int BackgroundDim { get => backgroundDim; set => backgroundDim = Math.Clamp(value, 0, 100); }
     public Dictionary<Guid, MapEditingPreferences> MapEditingPreferences { get; set; } = [];

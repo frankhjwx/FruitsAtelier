@@ -201,6 +201,11 @@ the side buttons adjust it by 5%. Dragging updates the background immediately an
 saves the preference when the drag ends. Settings uses the same fill bar, with changes
 kept in the draft until Apply. The editing canvas has a fully opaque backing.
 
+**View > Fully dim background** and the matching **Settings > Testplay** switch
+force an opaque black background in Catch preview and testplay, including intro
+and break periods. The stored dim percentage is retained and used again when the
+switch is off. View changes save immediately; Settings changes require Apply.
+
 **Space** or clicking **Skip** skips an intro to three seconds before the first
 note. Skip is unavailable after that point. **Esc / Ctrl+P** opens the pause menu;
 **Up/Down** selects Continue, Retry or Back and **Enter** activates the selection.

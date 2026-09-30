@@ -339,6 +339,9 @@ public sealed partial class EditorView
             L.Get(draftShowTestplayCombo ? "testplay.comboOn" : "testplay.comboOff"),
             () => draftShowTestplayCombo = !draftShowTestplayCombo, draftShowTestplayCombo);
         DrawBackgroundDimSetting(c, new(SettingsContentX, SettingsTop + 384, Math.Min(472, SettingsRight - SettingsContentX - 32), 38), true);
+        SettingsButton(c, new(SettingsContentX, SettingsTop + 432, Math.Min(472, SettingsRight - SettingsContentX - 32), 38),
+            (draftForceBackgroundDim ? "✓ " : "") + L.Get("settings.forceBackgroundDim"),
+            () => draftForceBackgroundDim = !draftForceBackgroundDim, draftForceBackgroundDim);
         string[] labels = ["testplay.left", "testplay.right", "testplay.dash"];
         float cell = Math.Min(220, (SettingsRight - SettingsContentX - 32) / 3);
         for (int i = 0; i < 3; i++)
