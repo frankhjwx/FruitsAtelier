@@ -8,7 +8,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private int stackNumericField = -1;
-    private string stackNumericText = "", stackNumericError = "";
+    private string stackNumericText = "", stackNumericOpeningText = "", stackNumericError = "";
     internal Rect StackPercentFieldBounds { get; private set; }
     internal Rect StackDistanceFieldBounds { get; private set; }
     private StackPoint SelectedStackPoint => stackSelectedFruit >= 0 && stackSelectedFruit < stackPreview.Count
@@ -30,7 +30,7 @@ public sealed partial class EditorView
         {
             int field = i; var bounds = i == 0 ? StackPercentFieldBounds : StackDistanceFieldBounds;
             string value = stackNumericField == i ? stackNumericText
-                : (i == 0 ? selected.Progress * 100 : selected.Distance).ToString("0.########", CultureInfo.InvariantCulture);
+                : (i == 0 ? selected.Progress * 100 : selected.Distance).ToString(i == 0 ? "0.00" : "0.########", CultureInfo.InvariantCulture);
             bool enabled = i == 1 || selected.Progress is > 0 and < 1;
             c.Fill(bounds, Surface, 4); c.Stroke(bounds, stackNumericField == i ? stackNumericError.Length > 0 ? Error : Accent : Grid, radius: 4);
             DrawInputText(c, new(bounds.X + 7, bounds.Y + 5, bounds.Width - 14, 20), value, 12, stackNumericField == i, "stack:" + i);
@@ -39,7 +39,8 @@ public sealed partial class EditorView
                 if (stackNumericField == field || !CommitStackNumeric()) return;
                 var point = SelectedStackPoint;
                 stackNumericField = field; stackNumericError = "";
-                stackNumericText = (field == 0 ? point.Progress * 100 : point.Distance).ToString("0.########", CultureInfo.InvariantCulture);
+                stackNumericText = stackNumericOpeningText = (field == 0 ? point.Progress * 100 : point.Distance)
+                    .ToString(field == 0 ? "0.00" : "0.########", CultureInfo.InvariantCulture);
                 SelectInput("stack:" + field, stackNumericText);
             }, enabled));
         }
@@ -62,6 +63,8 @@ public sealed partial class EditorView
     private bool CommitStackNumeric()
     {
         if (stackNumericField < 0) return true;
+        if (stackNumericText == stackNumericOpeningText)
+        { stackNumericField = -1; stackNumericError = ""; return true; }
         if (!double.TryParse(stackNumericText, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out double value)
             || !double.IsFinite(value) || value < 0 || value > (stackNumericField == 0 ? 100 : StackMaximumDistance))
         { stackNumericError = L.Get("stack.numericInvalid"); return false; }
