@@ -54,14 +54,14 @@ public sealed partial class EditorView
     private void DrawBackgroundDimSetting(ICanvas c, Rect bounds, bool draft, float opacity = 1)
     {
         int value = draft ? draftBackgroundDim : LibrarySettings.BackgroundDim;
-        c.Fill(bounds, Surface, 4, opacity);
+        if (draft) c.Fill(bounds, Surface, 4, opacity);
         string label = L.Get("settings.backgroundDim", value);
         c.TextOpacity(label, bounds.X + 36, bounds.Y + 11, 14, Foreground, bounds.Width - 72, false, opacity);
         Control(new(bounds.X, bounds.Y, 30, bounds.Height), "−", -5, value > 0);
         Control(new(bounds.Right - 30, bounds.Y, 30, bounds.Height), "+", 5, value < 100);
         void Control(Rect r, string text, int delta, bool enabled)
         {
-            if (opacity >= 1) { Button(c, r, text, () => Change(delta), enabled: enabled); return; }
+            if (draft && opacity >= 1) { Button(c, r, text, () => Change(delta), enabled: enabled); return; }
             if (enabled && r.Contains(mouseX, mouseY))
             {
                 c.Fill(r, 0x3D495A, 4, opacity);

@@ -245,7 +245,7 @@ public sealed partial class EditorView
             if (opacity > 0)
             {
                 var bar = new Rect(stage.X, height / 2f - 30, stage.Width, 60);
-                c.Fill(bar, 0x101820, opacity: .72f * opacity);
+                c.Fill(bar, 0, opacity: .72f * opacity);
                 c.TextOpacity(notice, width / 2f - c.MeasureText(notice, 20) / 2, bar.Y + 18,
                     20, 0xE6F2FF, stage.Width, true, opacity);
             }
