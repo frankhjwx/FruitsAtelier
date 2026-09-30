@@ -1054,5 +1054,13 @@
   "library.deleteProjectHelp": "从“我的项目”移除，保留 osu! 文件。",
   "library.deleteProjectReopen": "之后从“所有歌曲”打开可重新导入。保留一份恢复副本。",
   "storage.cleanHistoryTip": "清理超过 30 天、每个项目超过 10 份或超过 1 GiB 历史预算的旧恢复版本。\n保留每个项目的最新版本、仍被引用的版本，以及最近 24 小时内的版本。\n同时清理无引用的音频备份和过期对比文件。保留当前项目和 osu! 文件。",
-  "storage.clearCacheTip": "清理临时对比文件、无引用的音频备份及生成的播放副本，然后重建曲库索引。\n保留项目编辑数据、恢复版本、仍被引用的音频、导入的歌曲与皮肤，以及 osu! 文件。最近使用的音频受 24 小时保护。\n下次刷新曲库可能需要更长时间。"
+  "storage.clearCacheTip": "清理临时对比文件、无引用的音频备份及生成的播放副本，然后重建曲库索引。\n保留项目编辑数据、恢复版本、仍被引用的音频、导入的歌曲与皮肤，以及 osu! 文件。最近使用的音频受 24 小时保护。\n下次刷新曲库可能需要更长时间。",
+  "stack.title": "生成 / 编辑 stack",
+  "stack.menu": "生成 / 编辑 stack…",
+  "stack.description": "编辑展开曲线，或在右侧预览中横向拖动单颗 Fruit。X 限制在 0–512。",
+  "stack.graph": "时间 0–100% · 拖动距离 · 点击添加，右键删除",
+  "stack.left": "首颗 Fruit 位于左侧",
+  "stack.invalid": "Stack 展开曲线无效。",
+  "stack.point": "时间 {0:P0} · 距离 {1:0.0}",
+  "stack.range": "范围 {0:0} px"
 }

@@ -15,6 +15,7 @@ var tests = new (string Name, Action Run)[]
     ("Reusable beat grids match reference boundaries and allocate no warm frame buffers", GridBufferTests.Equivalence),
     ("Timing edits transform sections, FSliders, metadata and exported durations", TimingEditingTests.Run),
     ("Waveform preserves stereo transients across chunks and zoom levels", WaveformTests.Run),
+    ("Stacks preserve envelopes, alternating positions, clamping and export", StackTests.Run),
     ("Slider streams persist, sample repeats and match exported fruits", SliderStreamTests.ConversionAndPersistence),
     ("Exported milliseconds and coordinates determine hyperdash", SliderStreamTests.ExportedMillisecondsDriveHyperdash),
     ("Source section snapshots detect all writes, undo and project round trips", SourceSectionTests.SnapshotsAndWrites),

@@ -19,6 +19,23 @@ public sealed partial class EditorView
     private bool CanConvertStream => ClipboardInteractionReady && ClipboardSelectedParentIds().Any(id =>
         Document.Tracks.Any(t => t.Id == id) || Document.ImportedSliders.Any(t => t.Id == id));
 
+    internal void OpenStackDialog()
+    {
+        OpenStreamDialog();
+        if (!StreamDialogVisible) return;
+        stackMode = true; stackSelectedPoint = 0;
+        stackTiming = new TimingMap.Lookup(Document);
+        stackDraft = Document.Tracks.FirstOrDefault(t => t.Id == streamTargets[0])?.Stack?.DeepClone() ?? new();
+        stackGraphRange = stackDraft.Points.Any(p => p.Distance > 128) ? 512 : 128;
+        stackPreviewSource = Document.Tracks.FirstOrDefault(t => t.Id == streamTargets[0])?.DeepClone();
+        if (stackPreviewSource is null)
+        {
+            try { stackPreviewSource = ImportedSliderEditing.ConvertToTrack(Document.DeepClone(), streamTargets[0]).Track; }
+            catch (Exception error) { StreamDialogVisible = false; StatusMessage = error.Message; }
+        }
+        RefreshStackPreview();
+    }
+
     private void OpenStreamDialog()
     {
         if (notesLocked) { StatusMessage = L.Get("assist.locked"); return; }
@@ -30,6 +47,7 @@ public sealed partial class EditorView
         changingStreamSnap = SelectedStreamsOnly;
         StreamBreakIntoFruits = false;
         streamSnapDragging = false;
+        stackMode = false; stackPointDragging = stackFruitDragging = stackSelectedFruit = -1;
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
         StreamDialogVisible = true;
         streamError = "";
@@ -38,13 +56,14 @@ public sealed partial class EditorView
     private void ApplyStream()
     {
         Guid[] selected = streamTargets;
-        if (Edit(L.Get(changingStreamSnap ? "stream.changeSnap" : "stream.title"), () =>
+        if (Edit(L.Get(stackMode ? "stack.title" : changingStreamSnap ? "stream.changeSnap" : "stream.title"), () =>
         {
             foreach (Guid id in streamTargets)
             {
                 var track = Document.Tracks.FirstOrDefault(t => t.Id == id)
                     ?? ConvertImportedSlider(id).Track;
                 track.StreamSnapDivisor = StreamSnapDivisor;
+                if (stackMode) track.Stack = stackDraft.DeepClone();
             }
             if (StreamBreakIntoFruits) selected = ObjectStructureEditing.BreakStreams(Document, streamTargets);
             var converted = CatchStreamConverter.Convert(Document);
@@ -60,18 +79,21 @@ public sealed partial class EditorView
 
     private void StreamKey(int key)
     {
-        if (key == 27) { StreamDialogVisible = false; streamSnapDragging = false; }
+        if (key == 27) { StreamDialogVisible = false; streamSnapDragging = false; stackPointDragging = stackFruitDragging = -1; }
         else if (key == 13) ApplyStream();
         else if (key is 37 or 38 or 39 or 40)
+        {
             StreamSnapDivisor = SnapDivisors[Math.Clamp(Array.IndexOf(SnapDivisors, StreamSnapDivisor)
                 + (key is 37 or 38 ? -1 : 1), 0, SnapDivisors.Length - 1)];
+            RefreshStackPreview();
+        }
     }
 
     private void SetStreamSnap(float x)
     {
         float left = StreamSnapBounds.X + 7, right = StreamSnapBounds.Right - 31;
         int index = (int)MathF.Round(Math.Clamp((x - left) / (right - left), 0, 1) * (SnapDivisors.Length - 1));
-        StreamSnapDivisor = SnapDivisors[index]; streamError = "";
+        StreamSnapDivisor = SnapDivisors[index]; streamError = ""; RefreshStackPreview();
     }
 
     private void ConvertStreamsBack()
@@ -80,7 +102,7 @@ public sealed partial class EditorView
         var ids = ClipboardSelectedParentIds();
         Edit(L.Get("stream.convertBack"), () =>
         {
-            foreach (var track in Document.Tracks.Where(t => ids.Contains(t.Id))) track.StreamSnapDivisor = null;
+            foreach (var track in Document.Tracks.Where(t => ids.Contains(t.Id))) { track.StreamSnapDivisor = null; track.Stack = null; }
             var converted = CatchStreamConverter.Convert(Document);
             if (!converted.Success) throw new InvalidOperationException(string.Join(L.Get("editor.diagnostics.separator"), converted.Diagnostics));
         });
@@ -89,6 +111,7 @@ public sealed partial class EditorView
     private void DrawStreamDialog(ICanvas c)
     {
         if (!StreamDialogVisible) return;
+        if (stackMode) { DrawStackDialog(c); return; }
         hits.Clear();
         float w = Math.Min(500, width - 32), x = (width - w) / 2, y = (height - 256) / 2;
         c.Fill(new(x, y, w, 256), Panel, 8); c.Stroke(new(x, y, w, 256), Grid, radius: 8);

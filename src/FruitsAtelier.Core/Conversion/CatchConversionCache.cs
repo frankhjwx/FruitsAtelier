@@ -47,7 +47,7 @@ public sealed class CatchConversionCache
     {
         if (a.Id != b.Id || a.Kind != b.Kind || a.Name != b.Name || a.SourceOrder != b.SourceOrder || a.SpanCount != b.SpanCount
             || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets || a.Nodes.Count != b.Nodes.Count
-            || a.StreamSnapDivisor != b.StreamSnapDivisor) return false;
+            || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)) return false;
         for (int i = 0; i < a.Nodes.Count; i++)
         {
             var x = a.Nodes[i]; var y = b.Nodes[i];

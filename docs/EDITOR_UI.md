@@ -569,3 +569,34 @@ unapplied drafts while switching between them. Apply saves changes and keeps the
 overlay open; Escape or the close button closes it and discards
 unapplied drafts. Escape first dismisses an active field, key capture, language menu,
 or colour picker. Language changes take effect immediately.
+
+## Stack generation
+
+Select a slider and choose **Edit → Convert / edit stack…**, or use the same action
+in its long-press menu. The floating dialog retains the source curve and samples
+independent fruits with the selected stream subdivision, using the head BPM across
+all spans. The first-side switch chooses left or right.
+
+The envelope graph edits horizontal distance from the centre curve over 0–100% of
+the complete duration. Drag a point to change time and distance; endpoints stay at
+0% and 100%. Click empty graph space to add a point, and right-click an interior
+point to remove it. The graph starts with a 0–128 playfield-unit range; the Range button expands it to 0–512. Smooth
+interpolation joins points without overshooting their distance values. The right
+preview updates immediately; generation alternates sides and clamps final X to
+0–512. Actual DS follows the generated positions and time intervals.
+
+Confirm applies all selected sliders as one undo step. Cancel or Esc discards the
+draft. Reopen the action to edit a saved stack. Conversion back to a slider clears
+the envelope and retains the centre geometry. Project files retain the editable
+parent and envelope; osu export writes independent hit circles.
+
+In the stack dialog's right preview, drag a fruit horizontally to adjust only that
+fruit. Its time stays fixed, and the highlighted outline marks the selected fruit.
+Manual adjustments are added to the clamped envelope result and persist with the
+editable parent. The left distance curve reflects each adjusted fruit and shows a
+control point at its fixed time. Drag that point vertically to edit its distance. Envelope changes retain these adjustments. Changing subdivision
+uses an adjustment only when a generated fruit has the same normalized time;
+returning to the previous subdivision restores its adjusted fruits. Cancel and lost
+capture restore the draft, and confirmation groups all adjustments into one undo
+step. The preview leaves room above and below the centre trajectory for complete
+fruit outlines, including their stroke.

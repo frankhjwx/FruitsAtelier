@@ -348,6 +348,36 @@ internal static class RenderCheck
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 if (view.StreamDialogVisible || view.Document.Tracks[0].StreamSnapDivisor != 5)
                     throw new InvalidOperationException("Native stream confirmation failed.");
+                view.KeyDown(65, true, false); view.OpenStackDialog();
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                if (!view.StreamDialogVisible) throw new InvalidOperationException("Native stack dialog did not open.");
+                var graph = view.StackGraphBounds;
+                view.PointerDown(graph.X + graph.Width * .25f, graph.Bottom - graph.Height * 24 / 128, 0, false, false);
+                view.PointerMove(graph.X + graph.Width * .3f, graph.Bottom - graph.Height * .5f, false, false);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.PointerUp(graph.X + graph.Width * .3f, graph.Bottom - graph.Height * .5f, 0);
+                view.KeyDown(13, false, false);
+                if (view.Document.Tracks[0].Stack is not { } envelope || !envelope.Points.Any(p => p.Distance == 64))
+                    throw new InvalidOperationException("Native stack envelope drag or confirmation failed.");
+                view.KeyDown(90, true, false); view.KeyDown(89, true, false);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.KeyDown(65, true, false); view.OpenStackDialog();
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                var fruitPreview = view.StackPreviewBounds;
+                var editedFruit = view.Conversion.Objects[2];
+                double stackStart = view.Document.Tracks[0].Nodes[0].TimeMs;
+                double stackDuration = CurveMath.EndTimeMs(view.Document.Tracks[0]) - stackStart;
+                float fruitPadding = (float)(CatchSize.FruitRadius(view.Document.CircleSize) / 512 * fruitPreview.Width) + 2;
+                float fruitX = fruitPreview.X + (float)(editedFruit.X / 512) * fruitPreview.Width;
+                float fruitY = fruitPreview.Bottom - fruitPadding - (float)((editedFruit.TimeMs - stackStart) / stackDuration)
+                    * (fruitPreview.Height - 2 * fruitPadding);
+                view.PointerDown(fruitX, fruitY, 0, false, false);
+                view.PointerMove(fruitX + 12, fruitY - 20, false, false);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.PointerUp(fruitX + 12, fruitY - 20, 0); view.KeyDown(13, false, false);
+                if (view.Document.Tracks[0].Stack!.FruitAdjustments.Count != 1
+                    || view.Conversion.Objects[2].TimeMs != editedFruit.TimeMs)
+                    throw new InvalidOperationException("Native individual stack fruit drag failed.");
                 view.UpdateTransport(1000, 6000, true, false, false, null, null);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 var field = view.PlayfieldBounds; var plot = view.CanvasPlotBounds;

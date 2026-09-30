@@ -2,7 +2,7 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). All six schemas are readable. Older applications reject the newer schemas rather than silently discarding curve geometry. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). All eight schemas are readable. Older applications reject the newer schemas rather than silently discarding curve geometry. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
 
 ## Authoritative and derived data
 
@@ -129,3 +129,16 @@ Project saving and `.osu` export are independent; exporting cannot replace savin
 `CurveTrack.StreamSnapDivisor` is null for ordinary sliders and 1–16 for slider-managed fruit streams. It participates in cloning, history, equality and conversion-cache invalidation. Stream sampling uses the head BPM and follows every repeated traversal without consuming slider RNG. Derived fruits retain the parent ID with distinct event indices and standalone gameplay semantics. They do not produce generated slider geometry or SV overrides. `.osu` export expands them into ordered hit circles; only project files retain the editable parent.
 
 `DistanceSnapCollinear` is an editor-only per-difficulty flag, defaulting to true for new and older projects without a saved value. An explicitly saved false value remains disabled. It participates in cloning, content comparison, undo and project persistence, and is not exported to `.osu`. It adds a time-interpolated collinear candidate between adjacent parent endpoints while distance snapping is active.
+
+`CurveTrack.Stack` adds a horizontal-distance envelope to a slider-managed fruit
+stream. Points store normalized time over the complete repeated duration and
+non-negative distance from the centre curve; `StartLeft` selects the first side.
+Adjacent points use smoothstep interpolation. Fruits alternate sides before final
+X is clamped to 0–512. The envelope participates in deep cloning, content equality,
+undo and conversion-cache invalidation. Ordinary sliders and streams omit it.
+
+`StackEnvelope.FruitAdjustments` stores sorted normalized-time keys and signed
+horizontal offsets. Generation first clamps the envelope result, adds the matching
+fruit adjustment and clamps again. Adjustments do not change event times or
+neighbours, and unmatched keys remain saved when subdivision changes. Horizontal
+mirroring reverses their signs together with the envelope's starting side.

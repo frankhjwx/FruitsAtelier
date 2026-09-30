@@ -74,6 +74,7 @@ public sealed partial class EditorView
         }
         if (TimeJumpVisible || StreamDialogVisible || MergeDialogVisible)
         {
+            if (StreamDialogVisible && stackMode && StackPointerDown(x, y, button)) return;
             if (StreamDialogVisible && button == 0 && StreamSnapBounds.Contains(x, y))
             { streamSnapDragging = true; SetStreamSnap(x); return; }
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
@@ -404,6 +405,8 @@ public sealed partial class EditorView
         if (updatesPage) return;
         if (sliderHoldConsumed) return;
         if (SliderHoldNeedsRedraw && (Math.Abs(x - sliderHoldX) >= 2 || Math.Abs(y - sliderHoldY) >= 2)) { sliderHoldId = Guid.Empty; noteHoldTarget = null; }
+        if (StreamDialogVisible && stackFruitDragging >= 0) { MoveStackFruit(x, y); return; }
+        if (StreamDialogVisible && stackPointDragging >= 0) { MoveStackPoint(x, y); return; }
         if (StreamDialogVisible && streamSnapDragging) { SetStreamSnap(x); return; }
         if (TimeJumpVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
@@ -542,6 +545,10 @@ public sealed partial class EditorView
             if (!tabMoved) SwitchDifficulty(tabPressed);
             return;
         }
+        if (StreamDialogVisible && stackFruitDragging >= 0 && button == 0)
+        { MoveStackFruit(x, y); stackFruitDragging = -1; return; }
+        if (StreamDialogVisible && stackPointDragging >= 0 && button == 0)
+        { MoveStackPoint(x, y); stackPointDragging = -1; return; }
         if (StreamDialogVisible && streamSnapDragging && button == 0)
         { SetStreamSnap(x); streamSnapDragging = false; return; }
         if (TimeJumpVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
@@ -1128,7 +1135,7 @@ public sealed partial class EditorView
         FinishBackgroundDimDrag();
         testplayEscapeConsumed = false;
         testplaySpeedHeld = false;
-        streamSnapDragging = false;
+        streamSnapDragging = false; CancelStackDrag();
         CloseVolumePopover();
         sliderHoldId = legacyButtonSlider = Guid.Empty; noteHoldTarget = null;
         sliderHoldConsumed = false;
