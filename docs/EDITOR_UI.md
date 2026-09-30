@@ -562,6 +562,10 @@ Categories are ordered General, Workspace, Appearance, Audio, Testplay, and
 Application updates (where supported). Appearance groups the active skin selector
 with the default skin archive, metadata display, language, and indicator colours.
 Active skin selection takes effect immediately and is saved automatically.
+General includes a Reverse canvas scrolling toggle, separated by a divider. It
+defaults to off and reverses ordinary and Shift+wheel time navigation over the
+canvas, including wheel navigation during marquee selection. Other panels and
+wheel shortcuts retain their direction. Apply saves this preference.
 
 Settings opens a centered modal overlay above the current editor or library, with
 its background dimmed and blocked from pointer and keyboard input. Categories retain

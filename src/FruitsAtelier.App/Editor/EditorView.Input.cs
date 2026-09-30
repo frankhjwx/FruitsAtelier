@@ -733,7 +733,7 @@ public sealed partial class EditorView
             if (!ctrl && (canvas.Contains(x, y) || objectTimeline.Contains(x, y)))
             {
                 mouseX = x; mouseY = y;
-                SeekByWheel(-delta / 120, boxTimeline ? 1 : 0);
+                SeekByWheel(-delta / 120 * (canvas.Contains(x, y) && LibrarySettings.ReverseCanvasScroll ? -1 : 1), boxTimeline ? 1 : 0);
                 MoveBox(x, y);
             }
             return;
@@ -787,7 +787,7 @@ public sealed partial class EditorView
             ZoomCanvasAt(y, Math.Pow(1.16, delta / 120));
             StatusMessage = L.Get("editor.status.canvasZoom", canvasZoom * 100);
         }
-        else if (!ctrl && !alt) SeekByWheel(-delta / 120 * (shift ? 4 : 1), 0);
+        else if (!ctrl && !alt) SeekByWheel(-delta / 120 * (shift ? 4 : 1) * (LibrarySettings.ReverseCanvasScroll ? -1 : 1), 0);
         ClampView();
     }
 

@@ -805,6 +805,8 @@
   "distance.sharedRepeat": "这两个折返对象共用同一曲线位置。",
   "distance.unreachable": "此 slider 无法在保持时间的情况下达到该 DS。",
   "settings.workspace": "工作区",
+  "settings.reverseCanvasScrollOn": "画布滚动反向：开启",
+  "settings.reverseCanvasScrollOff": "画布滚动反向：关闭",
   "settings.general": "常规",
   "settings.derandomizeOn": "默认去随机化 droplet：开启",
   "settings.displayMode": "显示模式",

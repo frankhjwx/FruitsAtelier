@@ -13,6 +13,7 @@ public sealed partial class EditorView
     private bool draftDerandomizeDroplets;
     public bool SupportsDisplayMode { get; set; }
     private bool draftLowLatencyDisplay;
+    private bool draftReverseCanvasScroll;
     private double draftTestplayStartupDelaySeconds;
     private bool draftShowTestplayCombo;
     private int draftBackgroundDim;
@@ -58,6 +59,7 @@ public sealed partial class EditorView
         draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         draftRomanisedMetadata = LibrarySettings.RomanisedMetadata;
         draftDerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
+        draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
         draftLowLatencyDisplay = LibrarySettings.LowLatencyDisplay;
         draftIndicatorColours[0] = LibrarySettings.StandIndicatorColour;
         draftIndicatorColours[1] = LibrarySettings.WalkIndicatorColour;
@@ -77,6 +79,7 @@ public sealed partial class EditorView
         draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
         draftDerandomizeDroplets != LibrarySettings.DerandomizeDroplets ||
         draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
+        draftReverseCanvasScroll != LibrarySettings.ReverseCanvasScroll ||
         draftIndicatorColours[0] != LibrarySettings.StandIndicatorColour ||
         draftIndicatorColours[1] != LibrarySettings.WalkIndicatorColour ||
         draftIndicatorColours[2] != LibrarySettings.DashIndicatorColour ||
@@ -142,6 +145,12 @@ public sealed partial class EditorView
                         L.Get(draftLowLatencyDisplay ? "settings.displayImmediate" : "settings.displayVsync") + " ▾",
                         () => OpenDisplayModeMenu(displayBounds));
                 }
+                float scrollTop = SettingsTop + (SupportsDisplayMode ? 390 : 214);
+                float scrollWidth = Math.Min(520, SettingsRight - SettingsContentX - 32);
+                c.Line(SettingsContentX, scrollTop, SettingsContentX + scrollWidth, scrollTop, Grid);
+                SettingsButton(c, new(SettingsContentX, scrollTop + 20, scrollWidth, 38),
+                    L.Get(draftReverseCanvasScroll ? "settings.reverseCanvasScrollOn" : "settings.reverseCanvasScrollOff"),
+                    () => draftReverseCanvasScroll = !draftReverseCanvasScroll, draftReverseCanvasScroll);
                 break;
             case SettingsCategory.Workspace:
                 DrawWorkspaceSettings(c);
@@ -214,6 +223,7 @@ public sealed partial class EditorView
             settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.DerandomizeDroplets = draftDerandomizeDroplets;
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
+            settings.ReverseCanvasScroll = draftReverseCanvasScroll;
             settings.StandIndicatorColour = draftIndicatorColours[0]; settings.WalkIndicatorColour = draftIndicatorColours[1];
             settings.DashIndicatorColour = draftIndicatorColours[2]; settings.HyperDashIndicatorColour = draftIndicatorColours[3];
             settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;

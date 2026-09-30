@@ -7,6 +7,20 @@ internal static class SkinSelectorTests
 {
     public static void Run()
     {
+        string originalLanguage = L.Language;
+        try
+        {
+            foreach (string language in L.AvailableLanguages)
+            {
+                L.SetLanguage(language);
+                RunLanguage();
+            }
+        }
+        finally { L.SetLanguage(originalLanguage); }
+    }
+
+    private static void RunLanguage()
+    {
         string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-skins-" + Guid.NewGuid());
         Directory.CreateDirectory(root);
         try
@@ -50,7 +64,7 @@ internal static class SkinSelectorTests
             ui.View.ImportSkin(archive);
             Check(Directory.GetDirectories(Path.Combine(workspace, "Skins", "Imported")).Length == 1, "Repeated imports reuse the skin");
             Menu();
-            var imported = ui.Canvas.Texts.Single(t => t.Value.Contains("Imported fixture") && t.Value.Contains(L.Get("skin.imported")));
+            var imported = ui.Canvas.Texts.Single(t => t.Value == "✓ Imported fixture · " + L.Get("skin.imported"));
             var stable = ui.Canvas.Texts.Single(t => t.Value == "Native skin");
             Check(imported.Color != stable.Color, "Imported and stable skins have distinct colors");
             ui.Key(27);
