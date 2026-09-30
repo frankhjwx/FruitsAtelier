@@ -31,6 +31,7 @@ public interface ICanvas
     bool CatcherImage(string filePath, Rect destination, uint tint, float opacity, bool additive, bool flipHorizontal)
         => additive ? AdditiveImage(filePath, destination, tint, opacity) : Image(filePath, destination, tint, opacity: opacity);
     bool Thumbnail(string filePath, Rect destination) => false;
+    bool BackgroundImage(string filePath, Rect destination) => Image(filePath, destination);
     void Clip(Rect r);
     void Unclip();
 }

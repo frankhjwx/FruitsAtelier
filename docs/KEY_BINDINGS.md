@@ -126,10 +126,21 @@ Object sampleset selection is not bound to Shift+Q/W/E/R or Ctrl+Q/W/E/R.
 | Ctrl+G | Reverse the selection in time, including each slider’s own path. A single FSlider retains its time range and repeats. |
 | Ctrl+J | Extend the selected FSlider to the pointer at a valid later canvas time. |
 | Ctrl+Shift+F | Open slider-to-stream conversion, or Change snapping for a stream selection. |
+| Ctrl+Shift+A | Clear internal anchors and controls from selected sliders, keeping their endpoints. |
+| Ctrl+Shift+M | Open Merge into slider for at least two consecutive circles/sliders. |
 
 In the stream dialog, Left/Up and Right/Down decrease and increase the chosen
 subdivision. Enter applies; Esc cancels. Converting to a stream retains an editable
-slider parent and exports fruit objects.
+slider parent and exports fruit objects. **Break into Fruits**, off by default,
+instead creates separate editable fruits. Existing streams also offer this action
+directly below **Change snapping** in their long-press menu.
+
+Holding a selected object retains the complete selection for batch slider actions.
+Merge offers straight segments and a curved path; a selection containing a curved
+slider offers only the curved path. A selected banana shower blocks merging.
+Enter applies the merge; Esc cancels. Saving stores the resulting slider without
+the original objects; reopening cannot restore them, while session undo remains
+available.
 
 Ctrl+L, Ctrl+J and Ctrl+Shift+I have editor-specific meanings; do not assume
 osu!stable behavior. Ctrl++ (Ctrl+Shift+= on a US keyboard) and keypad plus/minus
@@ -199,9 +210,11 @@ to Compose before moving selected objects.
 | Left / Right | Move catcher, by default. |
 | Hold Shift | Dash, by default. |
 | Tab | Toggle autoplay. |
-| Ctrl+P | Pause / resume the session. |
+| Esc / Ctrl+P | Open the pause menu / resume the session. |
+| Space | Skip the opening empty time while Skip is available; clicking Skip also works. |
+| Up / Down, Enter (pause menu) | Select Continue, Retry or Back, then activate it. |
 | Ctrl+B / Ctrl+Shift+B | Add a bookmark / remove the nearest within two seconds at the live position. |
-| Esc / F1 | Exit and return to the selected testplay start position. |
+| F1 | Exit and return to the selected testplay start position. |
 | F2 | Exit at the current testplay position. |
 | Alt+arrows | Select and adjust volume channels as above. |
 

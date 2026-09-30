@@ -27,7 +27,7 @@ public static class ImportedSliderConverter
     }
 
     internal static (GeneratedSlider Slider, IReadOnlyList<ConvertedCatchObject> Objects) Convert(
-        MapDocument document, ImportedSlider slider, ref CatchLegacyRandom rng)
+        MapDocument document, ImportedSlider slider, ref CatchLegacyRandom rng, TimingMap.Lookup lookup)
     {
         if (!double.IsFinite(slider.TimeMs) || slider.TimeMs < 0 || slider.TimeMs > int.MaxValue
             || !double.IsFinite(slider.X) || !double.IsFinite(slider.Y) || !double.IsFinite(slider.PixelLength)
@@ -35,7 +35,7 @@ public static class ImportedSliderConverter
             || slider.ControlPoints.Any(p => !double.IsFinite(p.X) || !double.IsFinite(p.GeometryY)))
             throw new CatchConversionException(L.Get("core.importConverter.parameters"));
         var path = new ImportedSliderGeometry(slider);
-        var timing = TimingMap.At(document, slider.TimeMs);
+        var timing = lookup.At(slider.TimeMs);
         double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.SliderMultiplier, timing.SliderVelocityMultiplier);
         double duration = path.Distance / velocity;
         double tickDistance = velocity * timing.BeatLengthMs / document.SliderTickRate;

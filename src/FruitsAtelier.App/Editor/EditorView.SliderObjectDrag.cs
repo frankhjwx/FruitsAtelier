@@ -205,6 +205,20 @@ public sealed partial class EditorView
         sliderObjectDragShape.Tracks.Add(track.DeepClone());
     }
 
+    private IEnumerable<MapPoint> StraightSliderCandidates(MapPoint target, MapPoint fixedPoint)
+    {
+        double velocity = DistanceSnap.BaseVelocity(Document, Math.Min(target.TimeMs, fixedPoint.TimeMs));
+        double dt = Math.Abs(target.TimeMs - fixedPoint.TimeMs);
+        return new[] { 0d }.Concat(Document.DistanceSnapRatios.Take(DistanceSnap.MaximumPresets)
+                .Where(ratio => double.IsFinite(ratio) && ratio > 0))
+            .SelectMany(ratio => ratio == 0 ? new[] { fixedPoint.X }
+                : new[] { fixedPoint.X - dt * velocity * ratio, fixedPoint.X + dt * velocity * ratio })
+            .Where(position => position is >= 0 and <= 512)
+            .Distinct()
+            .OrderBy(position => Math.Abs(position - target.X))
+            .Select(position => target with { X = position });
+    }
+
     private IEnumerable<double> SliderObjectDistanceCandidates(ConvertedCatchObject target, double wantedX)
     {
         var reference = sliderObjectDragPrevious;

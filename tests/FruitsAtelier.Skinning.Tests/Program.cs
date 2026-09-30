@@ -13,6 +13,7 @@ var tests = new List<(string Name, Action Run)>
     ("A doubled texture has the same logical size and is preferred over 1x", HighDensity),
     ("Catcher uses raw dimensions, density and the legacy plate origin", CatcherPlate),
     ("Combo uses configured glyphs, overlap and density without a suffix", ComboFont),
+    ("Testplay menu textures preserve density, animation and per-component fallback", TestplayMenu),
     ("Reverse arrows use skin density and fall back for missing or undecodable images", ReverseArrows),
     ("Timeline standard circles use hit-circle fonts, overlays and slider overrides", TimelineCircles),
     ("Oversized artwork is centre cropped without distorting the other axis", CentreCrop),
@@ -37,6 +38,35 @@ foreach (var (name, run) in tests)
 }
 Console.WriteLine($"{passed}/{tests.Count} skin layout tests passed; PNG decoding is verified separately by the renderer.");
 return passed == tests.Count ? 0 : 1;
+
+void TestplayMenu()
+{
+    string defaults = Fixture("menu-default"), custom = Fixture("menu-custom");
+    Header(defaults, "pause-back.png", 400, 80);
+    Header(defaults, "pause-retry.png", 400, 80);
+    Header(custom, "pause-continue@2x.png", 800, 160);
+    Header(custom, "play-skip.png", 200, 100);
+    Header(custom, "play-skip-0.png", 200, 100);
+    Header(custom, "play-skip-1@2x.png", 400, 200);
+    File.WriteAllText(Path.Combine(custom, "pause-retry.png"), "invalid");
+    File.WriteAllText(Path.Combine(custom, "skin.ini"), "[General]\nAnimationFramerate: 2");
+    File.WriteAllBytes(Path.Combine(custom, "pause-continue-click.wav"), [0]);
+    byte[] jpeg = new byte[32];
+    new byte[] { 0xff, 0xd8, 0xff, 0xc0, 0, 17, 8, 3, 0, 5, 86 }.CopyTo(jpeg, 0);
+    File.WriteAllBytes(Path.Combine(custom, "pause-overlay.jpg"), jpeg);
+    var baseline = Load(defaults);
+    True(CatchSkin.TryLoad(custom, out var skin, out _, baseline));
+    var button = skin!.MenuTexture("pause-continue")!;
+    Equal(400, button.PixelWidth / button.Density);
+    True(skin.MenuTexture("pause-retry")!.FilePath.StartsWith(defaults));
+    True(skin.MenuTexture("pause-back")!.FilePath.StartsWith(defaults));
+    True(skin.MenuTexture("play-skip", 0)!.FilePath.EndsWith("-0.png"));
+    True(skin.MenuTexture("play-skip", 500)!.FilePath.EndsWith("-1@2x.png"));
+    True(skin.MenuTexture("play-skip", 1000)!.FilePath.EndsWith("-0.png"));
+    Equal(1366, skin.MenuTexture("pause-overlay")!.PixelWidth);
+    Equal(768, skin.MenuTexture("pause-overlay")!.PixelHeight);
+    True(skin.MenuSound("pause-continue-click") == Path.Combine(custom, "pause-continue-click.wav"));
+}
 
 void PerImageFallback()
 {

@@ -4,6 +4,185 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: one green edit reviews and applies only changed timing amongst generated SV", () => Run(f =>
+        {
+            var output = CaptureCurveTiming(f);
+            var before = f.Diff.Document.DeepClone();
+            string green = "500,-100,4,1,0,100,0,0";
+            string external = output.Text.Replace("0,500,4,1,0,100,1,0", "0,500,4,1,0,100,1,0\r\n" + green);
+            foreach (var point in output.ReadBack.TimingPoints)
+                external = external.Replace(point.BeatLengthMs.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+                    point.BeatLengthMs.ToString("G15", System.Globalization.CultureInfo.InvariantCulture));
+            File.WriteAllText(f.Source, external);
+            var merge = f.Merge();
+            Check(merge.Conflicts.Count == 1 && merge.Conflicts[0] is { Key: "TimingPoints/", Local: "" }
+                && merge.Conflicts[0].External == green, "only the added green line is shown");
+            var choices = new Dictionary<string, bool> { ["TimingPoints/"] = true };
+            var comparison = WorkspaceSynchronization.CompareWithoutBaseline(before, merge.External, f.Session.Directory, true);
+            Check(comparison.Conflicts.Count == 1 && comparison.Conflicts[0].External == green, "baseline-free review also isolates the added green");
+            var keptComparison = WorkspaceSynchronization.Resolve(comparison, new Dictionary<string, bool> { ["TimingPoints/"] = false });
+            Check(TimingValues(keptComparison.TimingPoints) == TimingValues(before.TimingPoints), "baseline-free FA choice keeps authoring timing");
+            var outsideComparison = WorkspaceSynchronization.Resolve(comparison, choices);
+            Check(outsideComparison.TimingPoints.Count == before.TimingPoints.Count + 1, "baseline-free osu choice does not import unrelated generated SV");
+            var resolved = WorkspaceSynchronization.Resolve(merge, choices);
+            Check(resolved.TimingPoints.Count == before.TimingPoints.Count + 1, "unrelated generated greens stay derived");
+            Check(TimingValues(resolved.TimingPoints.Where(point => point.TimeMs != 500)) == TimingValues(before.TimingPoints),
+                "unrelated authoring timing keeps its exact values");
+            Check(resolved.Tracks.Select(t => t.Id).SequenceEqual(before.Tracks.Select(t => t.Id)), "editable curves keep identity");
+            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, resolved, true, review: merge, choices: choices);
+            f.Diff.Document = resolved; WorkspaceProject.Save(f.Session, f.Session.Project); f.Session = WorkspaceProject.Open(f.Session.Directory);
+            Check(!f.Merge().RequiresResolution && !f.Session.Manifest.Difficulties[0].Sync!.LocalOverrides.Contains("TimingPoints/"),
+                "applied timing does not become a retained generated-SV difference after restart");
+            foreach (bool remove in new[] { false, true })
+            {
+                File.WriteAllText(f.Source, remove ? external.Replace(green + "\r\n", "") : external.Replace(green, green.Replace("-100", "-50")));
+                merge = f.Merge();
+                Check(merge.Conflicts.Count == 1 && merge.Conflicts[0].Local == green
+                    && merge.Conflicts[0].External == (remove ? "" : green.Replace("-100", "-50")), "one changed/deleted green remains one review row");
+                resolved = WorkspaceSynchronization.Resolve(merge, choices);
+                Check(TimingValues(resolved.TimingPoints.Where(point => point.TimeMs != 500)) == TimingValues(before.TimingPoints),
+                    "editing/deleting a green preserves unrelated timing");
+                Check(remove ? resolved.TimingPoints.All(t => t.TimeMs != 500) : resolved.TimingPoints.Single(t => t.TimeMs == 500).BeatLengthMs == -50,
+                    "external green choice is applied");
+            }
+        }));
+        yield return ("Sync: retained timing additions can be revisited without importing generated SV", () => Run(f =>
+        {
+            var output = CaptureCurveTiming(f);
+            string green = "500,-100,4,1,0,100,0,0";
+            File.WriteAllText(f.Source, output.Text.Replace("0,500,4,1,0,100,1,0", "0,500,4,1,0,100,1,0\r\n" + green));
+            var merge = f.Merge(); var choices = new Dictionary<string, bool> { ["TimingPoints/"] = false };
+            var kept = WorkspaceSynchronization.Resolve(merge, choices);
+            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, kept, true, review: merge, choices: choices);
+            f.Diff.Document = kept; WorkspaceProject.Save(f.Session, f.Session.Project); f.Session = WorkspaceProject.Open(f.Session.Directory);
+            merge = f.Merge();
+            Check(!merge.RequiresResolution && merge.PreviouslyResolved.Contains("TimingPoints/")
+                && merge.Conflicts.Single().Local == "" && merge.Conflicts.Single().External == green, "retained choice reviews only the actual addition");
+            var outside = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool> { ["TimingPoints/"] = true });
+            Check(outside.TimingPoints.Count == kept.TimingPoints.Count + 1 && outside.TimingPoints.Single(t => t.TimeMs == 500).BeatLengthMs == -100,
+                "revisiting the retained choice restores the external addition");
+        }));
+        yield return ("Sync: sample edits on replaced generated SV preserve authored velocity", () => Run(f =>
+        {
+            var output = CaptureCurveTiming(f, sampleBoundary: true);
+            var generated = output.ReadBack.TimingPoints.Single(t => t.TimeMs == 3000);
+            Check(generated.BeatLengthMs != -100, "fixture has a replaced authored green");
+            string line = generated.OriginalLine!;
+            var parts = line.Split(','); parts[5] = "80";
+            File.WriteAllText(f.Source, output.Text.Replace(line, string.Join(',', parts)));
+            var merge = f.Merge();
+            Check(merge.Conflicts.Count == 1 && merge.Conflicts[0].Local.Split('\n').Length == 1
+                && merge.Conflicts[0].External.Split('\n').Length == 1, "one sample edit is one changed timing row");
+            var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool> { ["TimingPoints/"] = true });
+            var point = resolved.TimingPoints.Single(t => t.TimeMs == 3000);
+            Check(point.BeatLengthMs == -100 && point.Volume == 80 && resolved.TimingPoints.Count == f.Diff.Document.TimingPoints.Count,
+                "only the edited sample field is transferred to authoring");
+        }));
+        yield return ("Sync: osu save rewrites do not conflict with storyboard settings", () => Run(f =>
+        {
+            string before = Fixture().Replace("Mode:2", "Mode:2\nWidescreenStoryboard:0")
+                .Replace("[TimingPoints]", "[Events]\n//Background\n0,0,\"bg.jpg\",0,0\n//Break Periods\n//Storyboard\nSprite,Foreground,Centre,\"sprite.png\",320,240\n F,0,0,500,0,1\n2,2100,2900\n[TimingPoints]")
+                .Replace("0,500,4,1,0,100,1,0", "0,413.793103448276,4,1,0,100,1,0\n1000,-76.25857146343249,4,1,0,100,0,0")
+                .Replace("100,192,1000,1,0", "100,192,1000.82758620691,1,0")
+                .Replace("150,192,1500,1,0,0:0:0:0:", "256,192,1500.7,8,0,2000.9,0:0:0:0:")
+                .Replace("200,192,2000,1,0", "200,192,3000,1,0");
+            File.WriteAllText(f.Source, before);
+            f.Diff.Document = OsuBeatmapReader.ReadFile(f.Source);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory);
+            string saved = before.Replace("WidescreenStoryboard:0", "WidescreenStoryboard:1")
+                .Replace("//Break Periods", "//Break Periods\nBreak,2100,2900")
+                .Replace("2,2100,2900\n[TimingPoints]", "\n[TimingPoints]")
+                .Replace("-76.25857146343249", "-76.2585714634325")
+                .Replace("1000.82758620691,1", "1000,5")
+                .Replace("1500.7,8,0,2000.9", "1500,8,0,2000")
+                .Replace("200,192,3000,1", "200,192,3000,5");
+            File.WriteAllText(f.Source, saved);
+            var merge = f.Merge();
+            Check(merge.Conflicts.Select(c => c.Key).SequenceEqual(["General/WidescreenStoryboard"]), "only the changed storyboard setting needs review");
+            var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool> { ["General/WidescreenStoryboard"] = true });
+            Check(resolved.Fruits[0].TimeMs == f.Diff.Document.Fruits[0].TimeMs
+                && resolved.TimingPoints[1].BeatLengthMs == f.Diff.Document.TimingPoints[1].BeatLengthMs,
+                "comparison does not round authoring values");
+            Check(resolved.OriginalSections.Single(s => s.Name == "Events").Lines.SequenceEqual(
+                f.Diff.Document.OriginalSections.Single(s => s.Name == "Events").Lines), "comparison preserves event source text");
+            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, resolved, true,
+                review: merge, choices: new Dictionary<string, bool> { ["General/WidescreenStoryboard"] = true });
+            f.Diff.Document = resolved;
+            Check(!f.Merge().RequiresResolution && f.Session.Manifest.Difficulties[0].Sync!.LocalOverrides.Count == 0,
+                "save rewrites do not become pending local overrides");
+            Check(!WorkspaceSynchronization.CompareWithoutBaseline(resolved, WorkspaceSynchronization.ReadStable(f.Source), f.Session.Directory, true).RequiresResolution,
+                "baseline-free comparison uses the same save semantics");
+            foreach (var (text, key) in new[] {
+                (saved.Replace("Break,2100,2900", "Break,2101,2900"), "Events/"),
+                (saved.Replace(" F,0,0,500,0,1", " F,0,0,501,0,1"), "Events/"),
+                (saved.Replace("//Background", "Video,0,\"movie.mp4\"\n//Background"), "Events/"),
+                (saved.Replace("-76.2585714634325", "-76.2585714634"), "TimingPoints/"),
+                (saved.Replace("1000,-76", "1000.1,-76"), "TimingPoints/"),
+                (saved.Replace("1000,5", "1001,5"), "$objects:"),
+                (saved.Replace("1500,8,0,2000", "1500,8,0,2001"), "$objects:"),
+                (saved.Replace("1000,5,0", "1000,21,0"), "$objects:") })
+            {
+                File.WriteAllText(f.Source, text);
+                Check(f.Merge().Conflicts.Any(c => c.Key.StartsWith(key)), "real edit stays visible: " + key);
+            }
+        }));
+        yield return ("Sync: ordinary combo edits and timing order remain visible", () => Run(f =>
+        {
+            File.WriteAllText(f.Source, Fixture().Replace("1500,1,0", "1500,5,0"));
+            Check(f.Merge().Conflicts.Count(c => c.Key.StartsWith("$objects:")) == 1, "ordinary new combo edit");
+            string before = Fixture().Replace("0,500,4,1,0,100,1,0", "0,500,4,1,0,100,1,0\n0,-50,4,1,0,100,0,0\n0,-100,4,1,0,100,0,0");
+            File.WriteAllText(f.Source, before);
+            f.Diff.Document = OsuBeatmapReader.ReadFile(f.Source);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory);
+            File.WriteAllText(f.Source, before.Replace("0,-50,4,1,0,100,0,0\n0,-100,4,1,0,100,0,0", "0,-100,4,1,0,100,0,0\n0,-50,4,1,0,100,0,0"));
+            Check(f.Merge().Conflicts.Any(c => c.Key == "TimingPoints/"), "same-time timing order affects SV");
+        }));
+        yield return ("Sync: all section fields support additions, retained choices and deletions", () =>
+        {
+            foreach (var (section, line, key) in new[] {
+                ("General", "PreviewTime:1234", "General/PreviewTime"),
+                ("Editor", "Bookmarks:100,200", "Editor/Bookmarks"),
+                ("Difficulty", "HPDrainRate:7", "Difficulty/HPDrainRate"),
+                ("Metadata", "CustomField:extra", "Metadata/CustomField"),
+                ("Colours", "Combo1:10,20,30", "Colours/Combo1"),
+                ("Events", "// storyboard\nSprite,Foreground,Centre,\"test.png\",320,240\n F,0,1000,2000,0,1", "Events/"),
+                ("CustomSection", "arbitrary:text\nunchanged payload", "CustomSection/") }) Run(f =>
+            {
+                string addition = "[" + section + "]\n" + line + "\n";
+                string added = Fixture().Replace("[HitObjects]", addition + "[HitObjects]");
+                File.WriteAllText(f.Source, added);
+                var merge = f.Merge();
+                Check(merge.Conflicts.Any(c => c.Key == key) && merge.RequiresResolution, key + " addition is reviewable");
+                var local = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => false));
+                WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, local, true,
+                    review: merge, choices: merge.Conflicts.ToDictionary(c => c.Key, _ => false));
+                f.Diff.Document = local;
+                Check(!f.Merge().RequiresResolution && f.Merge().PreviouslyResolved.Contains(key), key + " local choice remains accepted");
+                merge = f.Merge();
+                var external = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => true));
+                Check(OsuBeatmapWriter.Serialize(external).Text.Contains(line.Replace("\n", "\r\n")), key + " complete text is applied");
+                WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, external, true);
+                f.Diff.Document = external;
+                File.WriteAllText(f.Source, Fixture());
+                merge = f.Merge();
+                Check(merge.RequiresResolution && merge.Conflicts.Any(c => c.Key == key && c.External == ""), key + " removal is reviewable");
+                var deleted = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => true));
+                Check(!OsuBeatmapWriter.Serialize(deleted).Text.Contains(line.Split('\n')[0]), key + " removal is applied");
+                Check(deleted.Fruits[0].Id == f.Diff.Document.Fruits[0].Id, key + " preserves authoring identity");
+            });
+        });
+        yield return ("Sync: timing choices preserve ordered inherited and uninherited points", () => Run(f =>
+        {
+            f.Diff.Document.TimingPoints[0].BeatLengthMs = 600;
+            File.WriteAllText(f.Source, Fixture().Replace("0,500,4,1,0,100,1,0", "0,400,3,2,1,70,1,1\n0,-50,3,3,2,60,0,0"));
+            var merge = f.Merge();
+            Check(merge.Conflicts.Any(c => c.Key == "TimingPoints/"), "timing text conflict");
+            var local = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => false));
+            var external = WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => true));
+            Check(local.TimingPoints.Single().BeatLengthMs == 600, "local timing choice");
+            Check(external.TimingPoints.Count == 2 && external.TimingPoints[0].Uninherited && !external.TimingPoints[1].Uninherited
+                && external.TimingPoints[1].BeatLengthMs == -50 && external.TimingPoints[1].Volume == 60, "external timing order and fields");
+        }));
         yield return ("Sync: osu save precision and omitted slider defaults preserve real edits", () => Run(f =>
         {
             string[] lines = [
@@ -465,8 +644,8 @@ internal static class SynchronizationTests
         {
             File.Delete(Path.Combine(f.Set, "audio.mp3")); File.WriteAllText(Path.Combine(f.Set, "new.mp3"), "replacement");
             File.WriteAllText(f.Source, Fixture().Replace("audio.mp3", "new.mp3"));
-            var merge = f.Merge(); Check(merge.Conflicts.Count == 0, "missing old audio is not a local edit");
-            var result = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+            var merge = f.Merge(); Check(merge.Conflicts.Count == 1 && merge.Conflicts[0].Key == "General/AudioFilename", "renamed filename is reviewed without a spurious audio-content conflict");
+            var result = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool> { ["General/AudioFilename"] = true });
             Check(result.AudioPath == Path.Combine(f.Set, "new.mp3"), "new audio");
             Check(result.Fruits[0].TimeMs == 1000, "no implicit retiming");
         }));
@@ -559,7 +738,7 @@ internal static class SynchronizationTests
         public MapDocument Resolve(WorkspaceSyncCandidate candidate)
         {
             var merge = WorkspaceSynchronization.Merge(Session.Manifest.Difficulties[0], Diff.Document, candidate, Session.Directory, true);
-            return WorkspaceSynchronization.Resolve(merge, merge.Conflicts.Where(c => WorkspaceSynchronization.IsMetadataField(c.Key)).ToDictionary(c => c.Key, _ => true));
+            return WorkspaceSynchronization.Resolve(merge, merge.Conflicts.Where(c => !c.Key.StartsWith('$')).ToDictionary(c => c.Key, _ => true));
         }
         public void CopyProject()
         {
@@ -568,6 +747,25 @@ internal static class SynchronizationTests
         }
     }
     private static void Run(Action<FixtureContext> action) => action(new FixtureContext());
+    private static OsuWriteResult CaptureCurveTiming(FixtureContext f, bool sampleBoundary = false)
+    {
+        f.Diff.Document.DurationMs = 10000;
+        f.Diff.Document.TimingPoints.Add(new TimingPoint { TimeMs = 3000, BeatLengthMs = -100, Uninherited = false, SampleSet = 1 });
+        if (sampleBoundary) f.Diff.Document.TimingPoints.Add(new TimingPoint { TimeMs = 4000, BeatLengthMs = -100, Uninherited = false, SampleSet = 1 });
+        foreach (var (start, end) in new[] { (3000, 3500), (4000, 4250) })
+        {
+            var track = new CurveTrack(); track.Nodes.AddRange([new() { TimeMs = start, X = 100 }, new() { TimeMs = end, X = 400 }]);
+            f.Diff.Document.Tracks.Add(track);
+        }
+        var output = OsuBeatmapWriter.Serialize(f.Diff.Document);
+        File.WriteAllText(f.Source, output.Text);
+        f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory,
+            output.Text, output.ObjectSources);
+        return output;
+    }
+    private static string TimingValues(IEnumerable<TimingPoint> points) => string.Join('\n', points.Select(t => string.Join(',',
+        t.TimeMs.ToString("R", System.Globalization.CultureInfo.InvariantCulture), t.BeatLengthMs.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+        t.Meter, t.SampleSet, t.SampleIndex, t.Volume, t.Uninherited, t.Effects)));
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
     private static void Reject(Action action) { try { action(); } catch (Exception e) when (e is IOException or InvalidOperationException) { return; } throw new Exception("Expected rejection"); }
     private static void Set(MapDocument document, string key, string value)

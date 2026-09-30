@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
+using FruitsAtelier.App.Editor;
 using Microsoft.Win32.SafeHandles;
 using Vortice.Direct2D1;
 using Vortice.Direct3D;
@@ -15,6 +16,7 @@ namespace FruitsAtelier.App.Rendering;
 
 public sealed class D2DCanvas : ICanvas, IDisposable
 {
+    internal EditorPerformanceMetrics? Performance { get; init; }
     private readonly Audio.AudioDiagnosticLog? displayDiagnostics;
     internal bool? DiagnosticImmediatePresentation { get; }
     private double nextDisplaySampleMs, frameBeganMs;
@@ -37,8 +39,11 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     private ID2D1Bitmap1? target;
     private IDWriteFactory? textFactory;
     private IWICImagingFactory? imagingFactory;
-    private readonly Dictionary<uint, ID2D1SolidColorBrush> brushes = [];
+    private ID2D1SolidColorBrush? solidBrush;
     private readonly Dictionary<(float, bool), IDWriteTextFormat> formats = [];
+    private readonly Queue<(float, bool)> formatOrder = new();
+    internal int CachedTextFormatCount => formats.Count;
+    internal const int TextFormatLimit = 128;
     private readonly Dictionary<ImageKey, CachedImage> images = [];
     private readonly HashSet<ImageKey> failedImages = [];
     private readonly Dictionary<string, (long Version, long Length)> imageVersions = new(StringComparer.OrdinalIgnoreCase);
@@ -50,6 +55,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     private const long imageCacheLimit = 64 * 1024 * 1024;
     private readonly string bookmarkToolbarPath = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "bookmarks", "toolbar-panel.png");
     private (ImageKey Key, CachedImage Image)? bookmarkToolbar;
+    private (ImageKey Key, CachedImage Image)? beatmapBackground;
     private long imageClock;
     private readonly record struct ImageKey(string Path, uint Tint, long Version, long Length);
     private sealed record CachedImage(ID2D1Bitmap1 Bitmap, int Width, int Height)
@@ -165,9 +171,13 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         frameAcquired = false;
         while (clipDepth > 0) Unclip();
         drawing = false;
+        long drawStart = Performance?.Start() ?? 0;
         context!.EndDraw().CheckError();
+        Performance?.End(EditorPerformanceStage.EndDraw, drawStart);
         double submitBeganMs = displayDiagnostics is null ? 0 : Audio.AudioDiagnosticLog.NowMs;
+        long presentStart = Performance?.Start() ?? 0;
         var result = swapChain!.Present(lowLatency ? 0u : 1u, lowLatency ? PresentFlags.DoNotWait : PresentFlags.None);
+        Performance?.End(EditorPerformanceStage.Present, presentStart);
         if (result != Vortice.DXGI.ResultCode.WasStillDrawing) result.CheckError();
         if (displayDiagnostics is not null)
         {
@@ -225,14 +235,11 @@ public sealed class D2DCanvas : ICanvas, IDisposable
 
     private ID2D1SolidColorBrush Brush(uint color, float opacity = 1)
     {
-        if (!brushes.TryGetValue(color, out var brush))
-        {
-            brush = context!.CreateSolidColorBrush(new Color4(((color >> 16) & 255) / 255f,
-                ((color >> 8) & 255) / 255f, (color & 255) / 255f, 1));
-            brushes.Add(color, brush);
-        }
-        brush.Opacity = opacity;
-        return brush;
+        var value = new Color4(((color >> 16) & 255) / 255f, ((color >> 8) & 255) / 255f, (color & 255) / 255f, 1);
+        solidBrush ??= context!.CreateSolidColorBrush(value);
+        solidBrush.Color = value;
+        solidBrush.Opacity = opacity;
+        return solidBrush;
     }
 
     private static DRect Convert(Rect r) => new(r.X, r.Y, Math.Max(0, r.Width), Math.Max(0, r.Height));
@@ -260,10 +267,8 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     }
     public float MeasureText(string text, float size, bool bold = false)
     {
-        using var format = textFactory!.CreateTextFormat("Segoe UI", null, bold ? FontWeight.SemiBold : FontWeight.Normal,
-            FontStyle.Normal, FontStretch.Normal, size, "zh-CN");
-        format.WordWrapping = WordWrapping.NoWrap;
-        using var layout = textFactory.CreateTextLayout(text, format, 10000, size * 2);
+        var format = TextFormat(size, bold);
+        using var layout = textFactory!.CreateTextLayout(text, format, 10000, size * 2);
         return layout.Metrics.WidthIncludingTrailingWhitespace;
     }
     public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false)
@@ -271,19 +276,37 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     public void TextOpacity(string text, float x, float y, float size, uint color, float maxWidth, bool bold, float opacity)
     {
         if (maxWidth <= 0 || string.IsNullOrEmpty(text)) return;
+        var format = TextFormat(size, bold);
+        context!.DrawText(text, format, new DRect(x, y, maxWidth, size * 1.8f), Brush(color, opacity), DrawTextOptions.Clip);
+    }
+    private IDWriteTextFormat TextFormat(float size, bool bold)
+    {
         if (!formats.TryGetValue((size, bold), out var format))
         {
+            // Animated combo sizes and continuous zoom must not retain a native format for every frame.
+            if (formats.Count >= TextFormatLimit)
+            {
+                var oldest = formatOrder.Dequeue();
+                formats[oldest].Dispose(); formats.Remove(oldest);
+            }
             format = textFactory!.CreateTextFormat("Segoe UI", null, bold ? FontWeight.SemiBold : FontWeight.Normal,
                 FontStyle.Normal, FontStretch.Normal, size, "zh-CN");
             format.WordWrapping = WordWrapping.NoWrap;
             formats.Add((size, bold), format);
+            formatOrder.Enqueue((size, bold));
         }
-        context!.DrawText(text, format, new DRect(x, y, maxWidth, size * 1.8f), Brush(color, opacity), DrawTextOptions.Clip);
+        return format;
     }
     public void Clip(Rect r) { context!.PushAxisAlignedClip(Convert(r), AntialiasMode.PerPrimitive); clipDepth++; }
     public void Unclip() { if (clipDepth > 0) { context!.PopAxisAlignedClip(); clipDepth--; } }
 
     public bool Image(string filePath, Rect destination, uint tint = 0xFFFFFF, Rect? source = null, float opacity = 1)
+        => DrawImage(filePath, destination, tint, source, opacity, false);
+
+    public bool BackgroundImage(string filePath, Rect destination)
+        => DrawImage(filePath, destination, 0xFFFFFF, null, 1, true);
+
+    private bool DrawImage(string filePath, Rect destination, uint tint, Rect? source, float opacity, bool fill)
     {
         if (!ValidRectangle(destination)) return false;
         ImageKey key = default;
@@ -299,7 +322,19 @@ public sealed class D2DCanvas : ICanvas, IDisposable
             key = new(filePath, tint & 0xFFFFFF, version.Version, version.Length);
             if (failedImages.Contains(key)) return false;
             CachedImage image;
-            if (string.Equals(filePath, bookmarkToolbarPath, StringComparison.OrdinalIgnoreCase))
+            if (fill)
+            {
+                // A full-size background must not evict the skin on every frame.
+                if (beatmapBackground is not { } background || background.Key != key)
+                {
+                    var decoded = LoadImage(filePath, key.Tint);
+                    beatmapBackground?.Image.Bitmap.Dispose();
+                    beatmapBackground = (key, decoded);
+                    ImageDecodeCount++;
+                }
+                image = beatmapBackground.Value.Image;
+            }
+            else if (string.Equals(filePath, bookmarkToolbarPath, StringComparison.OrdinalIgnoreCase))
             {
                 // This hover-only chrome stays resident without evicting the visible scene.
                 if (bookmarkToolbar is not { } toolbar || toolbar.Key != key)
@@ -328,6 +363,12 @@ public sealed class D2DCanvas : ICanvas, IDisposable
             }
             image.Used = ++imageClock;
             var region = source ?? new Rect(0, 0, image.Width, image.Height);
+            if (fill)
+            {
+                float scale = Math.Max(destination.Width / image.Width, destination.Height / image.Height);
+                float w = destination.Width / scale, h = destination.Height / scale;
+                region = new((image.Width - w) / 2, (image.Height - h) / 2, w, h);
+            }
             if (!ValidRectangle(region) || region.X < 0 || region.Y < 0 || region.Right > image.Width || region.Bottom > image.Height) return false;
             context!.DrawBitmap(image.Bitmap, Convert(destination), opacity, Vortice.Direct2D1.BitmapInterpolationMode.Linear, Convert(region));
             return true;
@@ -448,6 +489,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
 
     private void ClearImages()
     {
+        beatmapBackground?.Image.Bitmap.Dispose(); beatmapBackground = null;
         bookmarkToolbar?.Image.Bitmap.Dispose();
         bookmarkToolbar = null;
         foreach (var image in images.Values) image.Bitmap.Dispose();
@@ -463,7 +505,8 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         ClearImages();
         imagingFactory?.Dispose(); imagingFactory = null;
         foreach (var format in formats.Values) format.Dispose(); formats.Clear();
-        foreach (var brush in brushes.Values) brush.Dispose(); brushes.Clear();
+        formatOrder.Clear();
+        solidBrush?.Dispose(); solidBrush = null;
         if (context is not null) context.Target = null;
         target?.Dispose(); target = null;
         context?.Dispose(); context = null;

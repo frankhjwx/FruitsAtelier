@@ -64,7 +64,9 @@ internal static class EditableSliderTests
         line.Nodes.Add(new() { TimeMs = 1000, X = 200, HandleIn = new(-900, -800) });
         True(CurveMath.Validate(With(line)).Count == 0, "Dormant Bezier control points constrained a straight segment.");
         line.Nodes[0].OutgoingKind = CurveKind.Bezier;
-        True(CurveMath.Validate(With(line)).Count > 0, "Active Bezier controls escaped validation.");
+        True(CurveMath.Validate(With(line)).Count == 0, "Outside Bezier controls were rejected.");
+        line.Nodes[0].HandleOut = new(2000, 800);
+        True(CurveMath.Validate(With(line)).Count > 0, "Time-reversing Bezier controls escaped validation.");
         line.Nodes[0].OutgoingKind = (CurveKind)99;
         True(CurveMath.Validate(With(line)).Count > 0, "Unknown per-segment type was accepted.");
     }
@@ -234,8 +236,10 @@ internal static class EditableSliderTests
         repeated.ImportedSliders.Add(conflicting);
         var repeatedBefore = repeated.DeepClone();
         var approximate = ImportedSliderEditing.ConvertToTrack(repeated, conflicting.Id).Track;
-        True(repeated.ImportedSliders.Count == 0 && approximate.CompensateTinyDroplets == false, "Conflicting repeat must produce an approximate editable track.");
+        True(repeated.ImportedSliders.Count == 0 && approximate.CompensateTinyDroplets == true, "Repeated conversion must retain reachable partial compensation.");
         var repeatedOutput = CatchStreamConverter.Convert(repeated); Valid(repeatedOutput);
+        True(repeatedOutput.Sliders.Single().TinyCompensationApplied
+            && repeatedOutput.MaxTickError <= CatchStreamConverter.AlignmentTolerance, "Repeated compensation moved fixed targets.");
         True(Math.Abs(repeatedOutput.Sliders.Single().DurationMs - ImportedSliderConverter.DurationMs(repeatedBefore, conflicting)) < .000001,
             "Approximate repeat changed its total duration.");
 

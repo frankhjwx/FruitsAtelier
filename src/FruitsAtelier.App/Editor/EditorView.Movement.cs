@@ -15,7 +15,8 @@ public sealed partial class EditorView
     public Rect? MovementOverlayBounds { get; private set; }
     public (CatchMovementRange? Previous, CatchMovementRange? Next) MovementReadout { get; private set; }
 
-    private bool movementAnalysis, movementIncludeTinyDroplets;
+    private bool movementIncludeTinyDroplets;
+    private bool movementAnalysis { get => EditingPreferences.MovementAnalysis; set { EditingPreferences.MovementAnalysis = value; SaveMapEditingPreferences(); } }
     public bool MovementIncludesTinyDroplets => movementIncludeTinyDroplets;
     public bool MovementAnalysisEnabled => movementAnalysis;
 

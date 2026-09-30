@@ -99,7 +99,7 @@ public static class ControlCurveMath
         var points = Points(track, segment);
         for (int i = 0; i < points.Length; i++)
         {
-            if (!double.IsFinite(points[i].TimeMs) || !double.IsFinite(points[i].X) || points[i].X is < 0 or > 512)
+            if (!double.IsFinite(points[i].TimeMs) || !double.IsFinite(points[i].X))
                 return L.Get("core.curves.handleRange");
         }
         if (curve.Kind != ControlCurveKind.CircularArc)
@@ -111,8 +111,7 @@ public static class ControlCurveMath
         for (int k = (int)Math.Ceiling(lo / (Math.PI / 2)); k * (Math.PI / 2) < hi; k++) angles.Add(k * (Math.PI / 2));
         foreach (double angle in angles)
         {
-            double x = arc.X + arc.Radius * Math.Cos(angle);
-            if (x < -1e-7 || x > 512 + 1e-7 || arc.Sweep * Math.Cos(angle) < -1e-9)
+            if (arc.Sweep * Math.Cos(angle) < -1e-9)
                 return L.Get("core.controlCurve.monotone");
         }
         return null;

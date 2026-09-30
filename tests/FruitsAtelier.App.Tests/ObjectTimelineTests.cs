@@ -3,6 +3,33 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class ObjectTimelineTests
 {
+    public static void SkinColours()
+    {
+        string folder = Path.GetFullPath(Path.Combine("artifacts/tests/timeline-skin", Guid.NewGuid().ToString("N")));
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "skin.ini"), "[Colours]\nCombo1:100,200,100\nSliderTrackOverride:15,14,29\n");
+        foreach (string name in new[] { "hitcircle", "hitcircleoverlay", "sliderstartcircle", "sliderendcircle" })
+        {
+            byte[] header = new byte[24];
+            new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }.CopyTo(header, 0);
+            System.Text.Encoding.ASCII.GetBytes("IHDR").CopyTo(header, 12);
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(16), 128);
+            System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(20), 128);
+            File.WriteAllBytes(Path.Combine(folder, name + ".png"), header);
+        }
+        var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n256,192,1000,2,0,L|396:192,1,140");
+        var ui = new Ui(false); ui.LoadDocument(map); ui.View.LoadSkin(folder);
+        ui.View.UpdateTransport(1000, 5000, true, false, false, null, null); ui.Paint();
+        var bounds = ui.View.ObjectTimelineBounds;
+        var images = ui.Canvas.Images.Where(i => i.Bounds.Y >= bounds.Y && i.Bounds.Bottom <= bounds.Bottom).ToArray();
+        if (images.Count(i => Path.GetFileName(i.Path) == "hitcircle.png") != 2
+            || images.Any(i => Path.GetFileName(i.Path).StartsWith("slider")))
+            throw new Exception("Timeline used gameplay slider textures instead of hitcircle endpoints.");
+        if (!ui.Canvas.Fills.Any(f => f.Bounds.Y == bounds.Y + 8 && f.Color == 0x64C864)
+            || ui.Canvas.Fills.Any(f => f.Bounds.Y == bounds.Y + 8 && f.Color == 0x0F0E1D))
+            throw new Exception("Gameplay slider track override obscured timeline combo colours.");
+    }
+
     public static void Stacking()
     {
         var map = new MapDocument { DurationMs = 10000 };

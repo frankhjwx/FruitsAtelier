@@ -8,6 +8,7 @@ public static class HitsoundSamples
 
     public static float[] Create(Hitsound sound)
     {
+        if (HitsoundDefaults.IsInterface(sound.Name)) return [];
         var kind = sound.Kind;
         double frequency = kind switch { CatchObjectKind.Fruit => 1100, CatchObjectKind.Droplet => 1600, CatchObjectKind.TinyDroplet => 2200, _ => 850 };
         frequency *= sound.SampleSet switch { 2 => .8, 3 => .6, _ => 1 };

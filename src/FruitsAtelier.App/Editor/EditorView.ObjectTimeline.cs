@@ -286,7 +286,7 @@ public sealed partial class EditorView
             bool selected = IsObjectSelected(item.Id);
             uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true);
             var bounds = timelineObjects[index].Bounds;
-            c.Fill(bounds, item.IsBanana ? color : skin?.SliderTrackColour ?? color, 19, .7f);
+            c.Fill(bounds, color, 19, .7f);
             if (item.IsBanana)
             {
                 c.Stroke(bounds, 0xFFFFFF, 1.5f, 19);
@@ -300,16 +300,17 @@ public sealed partial class EditorView
             bool selected = IsObjectSelected(item.Id);
             uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true);
             float left = X(item.Start), right = X(item.End), cy = objectTimeline.Y + 27;
-            void Ring(float ringX, int? number = null, string prefix = "hitcircle")
+            void Ring(float ringX, int? number = null)
             {
-                FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin, ringX, cy, 38, color, number, prefix);
+                // Timeline endpoints use the combo marker, independently of gameplay slider textures.
+                FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin, ringX, cy, 38, color, number);
                 if (selected)
                 {
                     c.Circle(ringX, cy, 19, 0xFFA600, false, 3);
                     c.Circle(ringX, cy, 21, 0x2866C6, false, 2);
                 }
             }
-            if (right > left + 1) Ring(right, prefix: "sliderendcircle");
+            if (right > left + 1) Ring(right);
             if (item.Spans > 1 && item.End > item.Start)
             {
                 double spanDuration = (item.End - item.Start) / item.Spans;
@@ -327,7 +328,7 @@ public sealed partial class EditorView
                     }
                 }
             }
-            Ring(left, timelineNumbers[item.Id], item.End > item.Start ? "sliderstartcircle" : "hitcircle");
+            Ring(left, timelineNumbers[item.Id]);
         }
         foreach (var period in breaks)
         {

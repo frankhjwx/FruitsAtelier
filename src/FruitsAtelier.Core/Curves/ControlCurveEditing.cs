@@ -79,8 +79,8 @@ public static class ControlCurveEditing
             var p1 = start + Derivative(from) * ((to - from) / 3);
             var p2 = end - Derivative(to) * ((to - from) / 3);
             var original1 = p1; var original2 = p2;
-            p1 = new(Math.Clamp(p1.TimeMs, start.TimeMs, end.TimeMs), Math.Clamp(p1.X, 0, 512));
-            p2 = new(Math.Clamp(p2.TimeMs, p1.TimeMs, end.TimeMs), Math.Clamp(p2.X, 0, 512));
+            p1 = new(Math.Clamp(p1.TimeMs, start.TimeMs, end.TimeMs), p1.X);
+            p2 = new(Math.Clamp(p2.TimeMs, p1.TimeMs, end.TimeMs), p2.X);
             double errorTime = 0, errorX = 0;
             if (curve.Kind == ControlCurveKind.CircularArc)
             {

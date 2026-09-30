@@ -62,6 +62,25 @@ internal static class RenderCheck
         if (canvas.ImageDecodeCount != decodes)
             throw new InvalidOperationException("Scene cache pressure evicted the independent bookmark toolbar.");
     }
+
+    private static void CheckAnimatedTextResources(D2DCanvas canvas)
+    {
+        for (int batch = 0; batch < 16; batch++)
+        {
+            canvas.Begin();
+            for (int i = 0; i < 128; i++)
+            {
+                int frame = batch * 128 + i;
+                float size = 12 + frame * .007f;
+                float width = canvas.MeasureText("123", size, true);
+                canvas.Text("123", 10, 10, size, 0x800000u + (uint)frame, width + 10, true);
+            }
+            canvas.End();
+            if (canvas.CachedTextFormatCount > D2DCanvas.TextFormatLimit)
+                throw new InvalidOperationException("Animated text retained unbounded native formats.");
+        }
+        AppLog.Write($"Animated text resource check: 2048 sizes, retained formats={canvas.CachedTextFormatCount}");
+    }
     private static void CheckTimingSetup(D2DCanvas canvas, EditorView view, int width, int height)
     {
         string language = FruitsAtelier.Localization.Strings.Language;
@@ -246,6 +265,8 @@ internal static class RenderCheck
         var project = view.CaptureProject();
         var toggle = view.RequestTogglePlayback; var pause = view.RequestPausePlayback;
         var seek = view.RequestSeek; var hitsound = view.RequestHitsound;
+        var audition = view.RequestAuditionHitsound;
+        var menuLoop = view.RequestTestplayMenuLoop;
         var volumePreference = view.RequestAudioPreference;
         var updateCheck = view.RequestUpdateCheck;
         var updateRestart = view.RequestUpdateRestart;
@@ -258,6 +279,8 @@ internal static class RenderCheck
             view.LibrarySettings.TestplayStartupDelaySeconds = 0;
             view.RequestTogglePlayback = () => { }; view.RequestPausePlayback = () => { };
             view.RequestSeek = _ => { }; view.RequestHitsound = _ => { };
+            view.RequestAuditionHitsound = _ => { };
+            view.RequestTestplayMenuLoop = _ => { };
             view.RequestAudioPreference = () => { };
             view.RequestUpdateCheck = () => { };
             var map = new MapDocument();
@@ -298,6 +321,10 @@ internal static class RenderCheck
                     view.KeyUp(key);
                 }
                 view.KeyDown(27, false, false);
+                if (!view.TestplayPauseMenuVisible) throw new InvalidOperationException("Escape did not open the native pause menu.");
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.KeyDown(38, false, false); view.KeyUp(38);
+                view.KeyDown(13, false, false); view.KeyUp(13);
                 if (view.IsTestplaying || view.PlayheadMs != 1000) throw new InvalidOperationException("Native testplay failed to return.");
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 view.KeyDown(27, false, false);
@@ -321,6 +348,42 @@ internal static class RenderCheck
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 if (view.StreamDialogVisible || view.Document.Tracks[0].StreamSnapDivisor != 5)
                     throw new InvalidOperationException("Native stream confirmation failed.");
+                view.KeyDown(65, true, false); view.OpenStackDialog();
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                if (!view.StreamDialogVisible) throw new InvalidOperationException("Native stack dialog did not open.");
+                var graph = view.StackGraphBounds;
+                view.PointerDown(graph.X + graph.Width * .25f, graph.Bottom - graph.Height * 24 / 32, 0, false, false);
+                view.PointerMove(graph.X + graph.Width * .3f, graph.Bottom - graph.Height * .5f, false, false);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.PointerUp(graph.X + graph.Width * .3f, graph.Bottom - graph.Height * .5f, 0);
+                var numeric = view.StackDistanceFieldBounds;
+                view.PointerDown(numeric.X + 10, numeric.Y + 12, 0, false, false);
+                view.PointerUp(numeric.X + 10, numeric.Y + 12, 0);
+                view.KeyDown(65, true, false); foreach (char digit in "15.25") view.TextInput(digit);
+                view.KeyDown(13, false, false);
+                view.KeyDown(90, true, false); view.KeyDown(89, true, false);
+                view.KeyDown(13, false, false);
+                if (view.Document.Tracks[0].Stack is not { } envelope || !envelope.Points.Any(p => p.Distance == 15.25))
+                    throw new InvalidOperationException("Native stack envelope drag or confirmation failed.");
+                view.KeyDown(90, true, false); view.KeyDown(89, true, false);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.KeyDown(65, true, false); view.OpenStackDialog();
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                var fruitPreview = view.StackPreviewBounds;
+                var editedFruit = view.Conversion.Objects[2];
+                double stackStart = view.Document.Tracks[0].Nodes[0].TimeMs;
+                double stackDuration = CurveMath.EndTimeMs(view.Document.Tracks[0]) - stackStart;
+                float fruitPadding = (float)(CatchSize.FruitRadius(view.Document.CircleSize) / 512 * fruitPreview.Width) + 2;
+                float fruitX = fruitPreview.X + (float)(editedFruit.X / 512) * fruitPreview.Width;
+                float fruitY = fruitPreview.Bottom - fruitPadding - (float)((editedFruit.TimeMs - stackStart) / stackDuration)
+                    * (fruitPreview.Height - 2 * fruitPadding);
+                view.PointerDown(fruitX, fruitY, 0, false, false);
+                view.PointerMove(fruitX + 12, fruitY - 20, false, false);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                view.PointerUp(fruitX + 12, fruitY - 20, 0); view.KeyDown(13, false, false);
+                if (view.Document.Tracks[0].Stack!.FruitAdjustments.Count != 1
+                    || view.Conversion.Objects[2].TimeMs != editedFruit.TimeMs)
+                    throw new InvalidOperationException("Native individual stack fruit drag failed.");
                 view.UpdateTransport(1000, 6000, true, false, false, null, null);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 var field = view.PlayfieldBounds; var plot = view.CanvasPlotBounds;
@@ -496,6 +559,8 @@ internal static class RenderCheck
             view.StopTestplay(); view.LoadProject(project); view.CloseLibrary();
             view.RequestTogglePlayback = toggle; view.RequestPausePlayback = pause;
             view.RequestSeek = seek; view.RequestHitsound = hitsound;
+            view.RequestAuditionHitsound = audition;
+            view.RequestTestplayMenuLoop = menuLoop;
             view.RequestAudioPreference = volumePreference;
             view.RequestUpdateCheck = updateCheck;
             view.RequestUpdateRestart = updateRestart;
@@ -707,6 +772,7 @@ internal static class RenderCheck
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
         CheckBookmarkCache(canvas);
+        CheckAnimatedTextResources(canvas);
         CheckWorkspaceSave(canvas, view);
         LibraryDropCheck.Run(view, window);
         CheckDistanceFields(canvas, view);
@@ -728,6 +794,7 @@ internal static class RenderCheck
         foreach (var size in new[] { (1440, 900), (980, 620) })
         {
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+            ObjectStructureRenderCheck.Run(canvas, size.Item1, size.Item2);
             SynchronizationRenderCheck.Run(canvas, size.Item1, size.Item2);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             CheckPaletteHints(canvas, view, size.Item1, size.Item2);

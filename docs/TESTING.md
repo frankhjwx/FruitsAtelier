@@ -94,6 +94,13 @@ even when the device advances before the worker handles it.
 
 ## Window checks
 
+`FruitsAtelier.App.exe --testplay-render-check` independently exercises background
+decoding, custom Skip and pause textures, mouse/Space skip, keyboard Retry/Back,
+and both languages at wide, narrow and portrait sizes with 96/144/192 DPI.
+It uses silent callbacks and writes `artifacts/tests/testplay-native/report.json`.
+The shared App regressions additionally check dim transitions, frozen resume
+countdowns, stale audio samples after skip, content isolation and preferences.
+
 The Windows `--render-check` injects nested timer and paint messages during audio
 replacement, verifying that difficulty switches retain paused and playing
 positions when the replacement audio becomes ready. This check uses a silent
@@ -174,10 +181,19 @@ After changing input or drawing, manually check affected operations, language sw
 
 Follow the [editing performance constraints](EDITING_PERFORMANCE.md) when changing
 interactive paths. For a read-only benchmark of an existing `.osu` map, run the App
-test executable with `--fruit-placement-performance <path.osu>`. It measures warm
+test executable with `--fruit-placement-performance <path.osu-or-catchdiff>`. It measures warm
 conversion/export, fruit hover and repeated same-time replacement, including pointer
-dispatch, rendering and per-operation allocations. Edits stay in memory. This uses
+dispatch, rendering and per-operation allocations, plus Fruit/FSlider hover during
+playback with a stationary pointer, an active slider draft, and Grid Snap on/off.
+It reports export sequence validity to identify
+fallback preview work. Edits stay in memory. This uses
 `RecordingCanvas` and does not measure physical display latency.
+
+`--testplay-edit-performance <path.osu-or-catchdiff>` compares twenty seconds of
+testplay simulation before and after 600 in-memory fruit edits with undo history
+retained. It uses an injected clock, silent callbacks and a counting canvas, and
+reports CPU time, allocations, heap size and Gen2 collections. This accelerates the
+edit workload; it does not reproduce wall-clock aging, device scheduling or GPU load.
 
 Windows builds automatically aggregate UI performance into `editor.log`. Every
 five seconds with processed window messages, an interval containing a sample of
@@ -188,7 +204,9 @@ Logs live in `artifacts/logs` for repository builds and
 
 `UI performance` reports count, average, maximum, and count at or above 16 ms for
 input queue age, input dispatch (including title updates), audio/update polling,
-frame preparation, editor rendering, and `EndDraw`/`Present` submission. Conversion
+frame preparation, editor rendering, and combined `Submit` submission. Separate
+`EndDraw` and `Present` counters distinguish drawing completion from presentation
+waiting; both are nested within `Submit`. Conversion
 snapshot comparison, rebuilding, and export/read-back are measured separately;
 these are nested within editor rendering, and export is nested within rebuilding,
 so their durations must not be added together. `InputToSubmit` measures the oldest
@@ -304,6 +322,18 @@ replacement and recovery, duplicate ownership, unique-difficulty migration, base
 persistence, emitted object mappings, multi-output curves, and interrupted exports.
 Fixtures and retained recovery files live under `artifacts/tests/synchronization`.
 
+Save-rewrite regressions cover fractional object times, implicit combo boundaries,
+timing precision, and relocated break lines alongside storyboard commands. They
+also verify real time, combo colour, SV, break and video edits remain reviewable,
+and accepting a setting change preserves authoring precision and event text.
+
+Timing synchronization regressions use editable curves whose exports add or
+replace inherited SV points. They cover isolated green additions, edits and
+deletions, sample edits at generated overrides, and revisiting retained choices
+after restart. Shared UI checks verify one changed green produces one highlighted
+row and preserves editable curves when applied in both languages and window sizes.
+Native rendering checks also exercise the compact timing review.
+
 Shared App tests cover asynchronous discovery, context rebasing through undo,
 missing-file input isolation, explicit restoration, per-object choices, linked
 deletion, and local-project exemptions in both languages and window sizes. Native
@@ -330,3 +360,8 @@ Project-library notification regressions add and remove external difficulties wh
 the My projects view stays open, checking both card counts and detail rows. They
 also verify muted retained FA entries, background filename/directory rediscovery,
 duplicate-free listings and unchanged authoring/baseline files during discovery.
+
+The focused `--testplay-render-check` also writes `background-cache.json` under
+`artifacts/tests/testplay-native`. It compares the shared scene cache and resident
+background path with a generated 4096×4096 image, recording warm frame time,
+allocations and repeat decodes. The resident path must perform no warm decodes.

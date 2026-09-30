@@ -139,3 +139,13 @@ direct target lookup. Undo/redo still retains independent document snapshots.
 
 Star calculation runs against separate snapshots on a bounded background worker and
 waits for an active content drag to finish. See [Catch difficulty](CATCH_DIFFICULTY.md).
+
+### Testplay background and menu resources
+
+The active beatmap background occupies one resident texture slot independent of
+scene-sprite LRU eviction on Windows and macOS. Replacing its path or file version
+replaces the slot; renderer disposal releases it. Decoded size is bounded to 64 MiB.
+This prevents large backgrounds from evicting skin sprites on every frame.
+Pause and button samples are prepared before play. Windows mixes the pause loop
+through the independent audition output; macOS uses a loop voice in its persistent
+native mixer. Both respect effects volume and fade the loop on dismissal.

@@ -102,7 +102,7 @@ internal static class AssistToolsTests
             && ui.View.DistanceLabelBounds.Count == 1,
             "Kiai between two fruits hid their connection or DS label.");
         kiaiMap.TimingPoints.RemoveRange(1, 2);
-        ui.LoadDocument(kiaiMap); ui.Paint();
+        ui.LoadDocument(kiaiMap); ui.ClickText(Strings.Get("movement.analysis"));
         Check(ui.Canvas.Lines.Any(l => l.Width == 4 && Math.Abs(l.Opacity - .65f) < .001)
             && ui.View.DistanceLabelBounds.Count == 1,
             "Movement connection or DS label disappeared outside kiai.");

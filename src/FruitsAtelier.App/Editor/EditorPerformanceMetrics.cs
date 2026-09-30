@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 public enum EditorPerformanceStage
 {
     InputQueue, InputDispatch, Poll, PrepareFrame, ViewRender, Submit, Frame,
-    ConversionCheck, ConversionRebuild, ExportReadback, InputToSubmit
+    ConversionCheck, ConversionRebuild, ExportReadback, InputToSubmit, EndDraw, Present
 }
 
 // UI-thread counters; recording never allocates or writes to disk.

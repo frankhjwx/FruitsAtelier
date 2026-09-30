@@ -2,12 +2,20 @@
 
 See the [shortcut manual](KEY_BINDINGS.md) for the complete keyboard reference and the [compatibility review](KEY_BINDINGS_REVIEW.md) for known differences and gaps.
 
+Grid Snap, Distance Snap, Movement Analysis and Grid Level are saved immediately
+as local preferences for each project difficulty. Switching difficulties or reopening
+the editor restores these values. They do not change map content or undo history.
+Shift/Alt temporary snap overrides are not saved. Difficulties without saved
+preferences start with all three switches off and Grid Level Tiny (4 px).
+
 ## Timing editing
 
 **Details Panel** in the right header opens a dropdown with **Details Panel** and
 **Timing Panel**. **F3** selects Timing; **F1** returns to Details. Timing replaces
 the note canvas with a horizontal audio waveform and a centered playback cursor.
-Alt+wheel zooms its time scale; click to seek or click a red line to edit it.
+Ctrl+wheel changes Snap within its doubling/halving family (for example 1/3, 1/6,
+1/12), stopping at either end. Alt+wheel zooms its time scale; click to seek or click
+a red line to edit it.
 Only red timing points and their BPM labels appear on the waveform. Nearby BPM
 labels use up to four rows. Every label remains visible, allowing overlap when all
 rows are occupied; red lines remain clickable. Audio is decoded
@@ -24,7 +32,11 @@ Tick Rate. This panel displays and commits BPM to at most two decimal places and
 offset to whole milliseconds, rounding to the nearest value. Tap timing uses the
 same precision when applied. **Move notes with offset / BPM changes** keeps objects at their beat
 positions within the edited section. BPM buttons step by 1, Ctrl by 0.25 and Shift
-by 5; offset buttons step by 2 ms, Ctrl by 1 ms and Shift by 10 ms.
+by 5. **Move greens / bookmarks with offset** independently translates
+inherited points and bookmarks by the offset difference within the original red
+section, including its start and excluding the next red point. BPM changes do not
+move these markers; the audio preview point stays fixed. The option starts off.
+Offset buttons step by 2 ms, Ctrl by 1 ms and Shift by 10 ms.
 
 In Timing mode, object hitsounds are suppressed and the sound-flag palette is
 disabled. During playback, **Metronome Clicks** schedules one tick per beat, with a distinct
@@ -41,7 +53,15 @@ window. Its draft is committed by OK as one undo step; Cancel, Escape or the clo
 button discards it. Timing, Audio and Style pages edit the selected rows, while
 All, Timing Points and Inherited Points filter the list. Ctrl-click toggles rows;
 Shift-click selects a range. Ctrl+A selects visible rows. Mixed numeric values are
-blank until explicitly replaced. Arrow, Page Up/Down and Home/End keys navigate
+blank until explicitly replaced. Offset arrows add or subtract from each selected
+row independently, including mixed values. **Shift selected points (ms)** accepts a
+signed amount; **Apply** translates the selected rows while retaining their spacing
+(subject to integer-millisecond truncation for inherited points). Click the Volume
+column header to toggle ascending/descending display order; ties retain time and
+source order. Click Offset to restore chronological display. Selection follows row
+identity, and range selection/navigation follow the displayed order. Sorting does
+not change timing source order or content history. Arrow, Page Up/Down and
+Home/End keys navigate
 the list. Drag the list scrollbar or click its track to navigate longer lists without
 changing the selected rows. Tab moves between numeric fields; Enter commits a field before accepting
 the dialog. Ctrl+Z/Y operate on the draft while no numeric field has focus.
@@ -86,6 +106,8 @@ editor's 120 BPM / 0 ms fallback until new timing is supplied. All content opera
 participate in undo/redo; clearing and resetting have a confirmation panel.
 
 ## Workspace
+
+The **View** menu groups grid and snapping, view navigation, display, movement analysis, and timing controls, with separators between groups.
 
 The time–X canvas occupies the main area, read-only AR/CS/DPB are at the upper right, and time navigation is at the bottom. Select objects directly on the canvas. Playfield X spans `0..512`; time increases upward. Startup opens the Library without loading a demo beatmap. Open a beatmap set to enter the editor. The window title identifies the active difficulty as `Artist - Title (Mapper) [Diffname]`; the menu row does not repeat the project title. The compact **← Library** button at the top right returns to the library. Esc first dismisses an active menu, field, dialog, or gesture; otherwise it requests a return to the library. Unsaved changes prompt for Save, Discard, or Cancel before closing the editor; Cancel or a failed save keeps the editor open. See [Workspace](WORKSPACE.md) for navigation and position memory.
 
@@ -167,11 +189,52 @@ override this preference for their run. macOS does not expose this Windows setti
 
 Settings pages use 24 DIP page headings and 13 DIP labels, values, and actions. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In Appearance, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
 
-The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Testplay, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** is enabled only while unapplied changes exist. It saves them, stays in the current settings category, and becomes disabled again; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport. **Appearance → Romanised artist / title** defaults to On and controls Library cards, Library details, and the editor window title. Off prefers the Unicode metadata; either mode falls back to the other spelling when its preferred field is empty. Apply persists the preference without changing beatmap data, filenames, or search matching.
+The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Testplay, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** is enabled only while unapplied changes exist. Ordinary preferences can be applied during library scanning or searching; changes to library paths wait for those tasks to finish. It saves them, stays in the current settings category, and becomes disabled again; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport. **Appearance → Romanised artist / title** defaults to On and controls Library cards, Library details, and the editor window title. Off prefers the Unicode metadata; either mode falls back to the other spelling when its preferred field is empty. Apply persists the preference without changing beatmap data, filenames, or search matching.
 
 **Appearance → Movement indicator colours** provides separate Stand, Walk, Dash, and HDash swatches. Click a swatch to drag within a saturation/value palette and hue bar, or enter an exact six-digit HEX value, as in Song Setup → Colors. The selected colour appears beside the HEX field. Done keeps the choice in the settings draft; Cancel or Esc restores the colour from before the picker opened. These preferences colour Movement Analysis connections, the floating movement indicator, and Distance Snap reference regions; they do not change skin rendering or beatmap content. **Reset colours** restores the original silver, green, amber, and rose drafts. **Apply** saves the colours across launches; leaving Settings before applying discards draft changes.
 
 ## Testplay
+
+Beatmap backgrounds fill the Catch preview and testplay viewport
+without changing their aspect ratio. **Settings > Testplay > Background dim** and
+the pause menu adjust the persistent 0–100% dim preference (default 90%). In the pause
+menu, click or drag the fill bar behind the centered label to set the percentage;
+the side buttons adjust it by 5%. Dragging updates the background immediately and
+saves the preference when the drag ends. Settings uses the same fill bar, with changes
+kept in the draft until Apply. The editing canvas has a fully opaque backing.
+
+**View > Dim Background** and the matching **Settings > Testplay** switch
+force an opaque black background in Catch preview and testplay, including intro
+and break periods. The stored dim percentage is retained and used again when the
+switch is off. View changes save immediately; Settings changes require Apply.
+
+**Space** or clicking **Skip** skips an intro to three seconds before the first
+note. Skip is unavailable after that point. **Esc / Ctrl+P** opens the pause menu;
+**Up/Down** selects Continue, Retry or Back and **Enter** activates the selection.
+Mouse buttons use the same actions. Opening the menu fades it in over 300 ms while
+music and judgement are already paused. Continue fades the pause menu out over 600 ms,
+then resumes music and judgement together. Esc cancels the fade back to the menu. Retry
+restarts at the session's original lead-in position, resetting judgement and combo
+while retaining autoplay. Back and F1 return to the selected editor position.
+Hover smoothly enlarges buttons; keyboard selection shows two skin arrows.
+The skin cursor and its trail appear only while paused. Running testplay hides
+both the skin cursor and system pointer. Intro and break-end warnings use four
+flashing arrows with the same seven-flash sequence: 100 ms visible, 100 ms fully
+hidden between flashes. A resume transition also shows these arrows.
+
+Pause loops and button feedback use the selected skin when skin sounds are enabled,
+otherwise packaged osu! resources. Missing skin samples fall back to the default
+skin and packaged resources. Explicit silent samples remain silent.
+
+Breaks of at least 650 ms lighten the background by 30 percentage points, clamped
+at zero dim. The background returns to the configured dim starting just after
+325 ms before the break ends. Dim transitions last 800 ms with OutQuint easing.
+The intro before the first note minus 2000 ms also uses the lighter background.
+Breaks and background filenames are cached with the document conversion snapshot;
+rendering does not parse Events or read image headers each frame.
+
+See [skin rendering](../src/FruitsAtelier.App/Skinning/REFERENCE.md) for supported
+Skip and pause assets, animation, scaling and fallback.
 
 Click **Testplay (F5)** in the transport bar or press **F5** to play from the current
 playhead. Finish any active object draft or text input first. Testplay uses the
@@ -293,11 +356,11 @@ Y toggles distance snapping; holding Alt temporarily inverts that toggle. The up
 
 Distance snapping places fruits and the first slider draft point relative to the previous source object, and moves a selected group by a shared offset based on its earliest object. Beat snapping still determines time. All DS calculations use `DPB / beatLength` as the 1.0x reference speed (green timing speed fixed at 1.0x), ignoring inherited slider speed. Horizontal DS is `abs(deltaX) / (deltaTime × referenceSpeed)`. Snapping and readouts sample this speed at the departure endpoint's time; slider references use their final endpoint after all spans. Cross-timing gaps retain that departure speed. BPM and the difficulty's DPB still determine the reference speed. Banana showers do not supply horizontal references. Overlapping or simultaneous references have no positive spacing interval. Distance snapping chooses the closest valid X among both sides of every configured multiplier and an implicit **0 DS** (the reference endpoint X). Zero DS is always available when snapping is enabled and does not consume a configuration slot. An empty configuration uses only zero DS.
 
-While DS is enabled, drawing and reshaping a slider also checks its generated Fruit/Droplet events, including repeats. A straight segment snaps its endpoint to a configured DS or implicit zero; Grid Snap does not round that endpoint afterward. Each adjacent large-event pair wholly inside a straight segment must match a preset. Curved segments retain their shape controls, but a drag or new point is limited to the largest configured DS between adjacent large events. TinyDroplets do not set this limit. A completed slider remains selected in Slider mode, so its tail can be dragged immediately. Dragging its head or tail control edits the endpoint and follows the same DS rule.
+Drawing and reshaping a slider uses beat and horizontal grid snapping independently of DS. Slider endpoints, control points and Bezier handles are not constrained by DS presets or by the spacing of generated Fruit/Droplet events. Their X coordinates may extend beyond the 0–512 playfield while dragging or editing numeric values. The first draft point still distance-snaps relative to the previous source object. A completed slider remains selected in Slider mode, so its tail can be dragged immediately.
 
 In Select mode, horizontal dragging of a slider head, tail or large droplet keeps its time and strictly snaps relative to the preceding large event in the same slider, including zero DS, even on a curved slider. Endpoint candidates account for the preceding droplets that move with the reshaped curve. A selected TinyDroplet instead snaps its displayed X relative to the preceding event in the same slider, including other tiny droplets. Its compensation policy still applies. Following events impose no DS preset or maximum-distance requirement on a selected-object drag. With no preceding reference, dragging follows horizontal Grid Snap. Candidate positions are tried in pointer-distance order; unrepresentable candidates are skipped, and if none is available, the last accepted position remains unchanged. DS takes precedence over horizontal Grid Snap when a preceding reference exists.
 
-Shape editing does not automatically repair spacing already outside the current presets; shape edits must avoid adding or increasing a violation. Selected-object drags use only the preceding-reference rule above. Changing DS settings, BPM, or tick rate does not reshape existing sliders. Holding Alt to turn DS off temporarily restores unrestricted slider editing.
+Changing DS settings, BPM, or tick rate does not reshape existing sliders.
 
 **Configure DS…** opens a two-column modal. The left side has an upper 1.0x DPB section and a lower four-colour Stand → Walk → Dash → HDash distance reference and an initially empty collection of up to eight non-negative DS multipliers. **Add**, beside HDash, creates an arrow at 0 DS. A left-click on empty space in the arrow row creates an arrow at the clicked distance, rounded to 0.1 steps or 0.01 with Shift. Both respect the eight-preset limit; clicking an existing arrow starts its drag. Drag an arrow to adjust its value in 0.1 steps, or 0.01 while Shift is held. Right-click an arrow or its DS value badge to remove that preset. Esc or lost capture cancels the active drag. Each arrow shows its DS value above it; nearby labels stack to stay readable. The values below the reference are read-only and displayed from smallest to largest in outlined badges, wrapping when needed. Each badge border uses the colour of its current Stand, Walk, Dash or HDash interval. All configured multipliers participate simultaneously, along with implicit 0 DS. **Apply** stores the sorted list and base DPB on the current difficulty as one undoable change; saving the project retains it in the difficulty file. New and previously unconfigured maps start empty. Switching difficulty restores its own list. **Cancel** discards the draft. The stored DistanceSpacing value is retained for project and osu! file compatibility but does not provide a hidden snap target. Custom DS lists are not exported to osu! files.
 
@@ -349,7 +412,7 @@ Hover over **FSlider** to reveal two vertically stacked buttons on its right: **
 
 In **pen tool mode**, press B or 3 to clear selection and start drawing. Click to add curved anchors; Ctrl+click adds a straight segment. Hold and drag to pull direction handles. Click the last anchor again to begin a new curve section. Right-click a placed draft point to remove it, or right-click elsewhere to finish at that position. One track may mix straight and Bezier segments. Enter also finishes; Esc cancels the draft. Finishing keeps the FSlider placement tool active for another slider. Press 1 to select and edit existing objects.
 
-Select an FSlider and click its controls, or double-click its track, to edit anchors in **Select**. Clicking an interior control on an already selected complete track also enters editing; visible slider fruits use the selection rules below. Drag anchors and handles directly on the canvas. Interior anchor dragging is free by default. Enable **View → Snap interior anchors** to snap interior anchor times to the selected beat subdivision. Head and tail anchors follow beat Snap. Invalid snapped endpoint moves keep their previous time rather than clamping between grid lines. Handles remain free, and the option does not change placement or whole-object snapping. Anchor times remain increasing, and control-point X stays within the playfield. Curve handles may extend before the start or after the end; the curve must define an unambiguous forward branch inside the slider time interval. Generated events still undergo normal conversion validation.
+Select an FSlider and click its controls, or double-click its track, to edit anchors in **Select**. Clicking an interior control on an already selected complete track also enters editing; visible slider fruits use the selection rules below. Drag anchors and handles directly on the canvas. Interior anchor dragging is free by default. Enable **View → Snap interior anchors** to snap interior anchor times to the selected beat subdivision. Head and tail anchors follow beat Snap. Invalid snapped endpoint moves keep their previous time rather than clamping between grid lines. Handles remain free, and the option does not change placement or whole-object snapping. Anchor times remain increasing; anchors and handles may extend beyond the playfield. Moving a pen draft anchor preserves its handle vectors, and the whole draft remains one undo step. Curve handles may extend before the start or after the end; the curve must define an unambiguous forward branch inside the slider time interval. Generated events still undergo normal conversion validation.
 
 In Select mode, the first click selects the whole slider; the second click on a head, tail or repeat selects that fruit with an individual outer ring. Horizontal dragging of the selected fruit changes its X while preserving its time. Dragging a selected FSlider fruit at a base-path endpoint vertically edits that red anchor in time and X, with endpoint beat snapping and a single undo step. This works in both editing modes, including paths with only two red anchors; the opposite endpoint stays fixed. Other slider events keep their time during dragging; repeated traversals share the same endpoint geometry. Legacy endpoint edits convert the owning slider to an FSlider inside the same undo step. Clicking outside a selected child returns to whole-slider selection; a subsequent outside click clears it. Dragging the body selects and moves the whole slider. In anchor edit mode, dragging an anchor changes that anchor. Ctrl+click at a new position inside the slider's time range inserts a curved anchor; Ctrl+click on an existing anchor makes it straight. Right-click a straight anchor to restore a curved anchor, then right-click the curved anchor to delete it. These rules apply in both editing modes, including points exposed in Select mode. In legacy mode, an interior straight anchor is a segment boundary; restoring it to curved merges it back into the control polygon. Right-click the slider body away from anchors to delete the parent. Ctrl+L also toggles the selected point, and Ctrl+Shift+I inserts on the curve under the pointer. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
 
@@ -392,6 +455,11 @@ repeat count, stream snap and object metadata. One undo restores the whole batch
 No selection is required. The command is disabled for locked notes, unfinished
 gestures, or a difficulty without internal FSlider controls. Convert imported Legacy Sliders to FSliders first.
 
+For selected sliders, use **Clear internal anchors** in the long-press menu or
+**Ctrl+Shift+A**. This applies the same endpoint-only path to the selected sliders
+in one undo step, converting selected Legacy Sliders first. Holding a selected
+slider retains the complete selection for the batch operation.
+
 ### Reverses and direction
 
 Both modes use **Ctrl+= / Ctrl+−** to change reverses. Dragging a base-path endpoint instead edits the path and therefore changes the duration of every traversal.
@@ -420,7 +488,7 @@ Text inputs show a blinking caret at the end of the text and highlight the full 
 
 ## Display settings
 
-The language dropdown in **Settings → Appearance** lists the supported languages. Selecting a language applies and saves it immediately. Menu shortcut hints align to the right edge of each row. Existing beatmap titles and object names retain their values. The main canvas can hide curves and nodes, while the right-hand preview has a separate debug-curve toggle.
+The language dropdown in **Settings → Appearance** lists the supported languages. Selecting a language applies and saves it immediately. Menu shortcut hints align to the right edge of each row. Existing beatmap titles and object names retain their values. The main canvas can hide curves and nodes. Catch Preview displays gameplay objects.
 
 The Skin selector to the left of **← Library** lists skins from the configured osu!stable `Skins` folder and offers `.osk` import. Imported archives and extracted Catch assets are kept under `workspace/Skins`; imported entries use gold text and an Imported label. Skin selection persists independently of beatmap edits. Library Settings accepts a user-owned default skin `.osk` file; each missing or unreadable custom image falls back to the default skin independently, then to geometric rendering. Long lists provide previous/next pages. Missing skins or textures fall back to basic shapes; see [Skins](../assets/skins/README.md). Drawing and hit-test sizes are described in [Catch Rendering and Conversion](CATCH_RENDERING.md).
 
@@ -456,13 +524,35 @@ Recoverable file-operation errors appear inside the editor window on both the ca
 
 ## Slider fruit streams
 
+The conversion and Change snapping dialogs include **Break into Fruits**, off by
+default. Enabling it replaces the slider parent with independent fruits at the
+chosen snap, each editable separately. Existing streams offer **Break into Fruits**
+directly below **Change snapping** in the long-press menu. Breaking preserves the
+stream's fruit positions, times, combo flags and sample settings, and forms one
+undo step.
+
+Select at least two consecutive circles or sliders and long-press one of them,
+or press **Ctrl+Shift+M**, to open **Merge into slider**. Consecutive means no
+circle or slider is omitted between the earliest and latest selected starts in
+time/source order. A selected banana shower blocks merging. The dialog offers
+straight segments or a curved path; when any selected slider has a curved path,
+only the curved choice appears. Existing slider paths are retained, with repeats
+unfolded into consecutive traversals; circles become path anchors. Overlapping
+selected objects or incompatible joining endpoints fail with a reason, retaining
+the original objects. Conversion failures also leave the selection unchanged.
+
+Merging replaces the selected objects with one FSlider and supports session undo.
+Its generated catch events can differ from the original objects. The dialog warns
+that saving retains only the merged slider: reopening cannot recover the original
+objects because project files do not store undo history.
+
 Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Slider to stream**. Long-press an FSlider to reveal **Convert to stream**; imported Legacy Sliders offer **Convert to FSlider** above **Convert to stream**. Every stream-conversion entry opens a confirmation dialog with the same snap slider and subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**. Enter confirms; Esc cancels; arrow keys change the choice.
 
-A confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging reshapes only that fruit while keeping its time fixed. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Change snapping** above **Convert back to slider** in their long-press menu. The Edit menu and Ctrl+Shift+F open Change snapping for a stream selection. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
+With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging reshapes only that fruit while keeping its time fixed. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Change snapping** above **Convert back to slider** in their long-press menu. The Edit menu and Ctrl+Shift+F open Change snapping for a stream selection. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
 
 The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
 
-Testplay lead-in is configured in Settings > Testplay, from 0 to 5 seconds in 0.5-second steps (default 1). Settings also offers a persistent Combo-count visibility toggle, without a keyboard shortcut. Holding the configured Dash key adds a bright white catcher layer while preserving the existing trails and Hyperdash tint. Starting testplay immediately begins audio and gameplay from the selected position minus the lead-in, clamped to zero. Esc returns to the selected position.
+Testplay lead-in is configured in Settings > Testplay, from 0 to 5 seconds in 0.5-second steps (default 1). Settings also offers a persistent Combo-count visibility toggle, without a keyboard shortcut. Holding the configured Dash key adds a bright white catcher layer while preserving the existing trails and Hyperdash tint. Starting testplay immediately begins audio and gameplay from the selected position minus the lead-in, clamped to zero. Esc opens the pause menu; F1 returns to the selected position.
 
 Number keys 1–4 select Select, Fruit, FSlider and Banana Shower. During an FSlider draft they finish valid geometry, or cancel an insufficient draft, before switching tools; pressing 3 prepares another slider. Shift+1–9 changes Snap during drawing without moving placed points. F4 opens Song Setup. Left/Right seeks one full beat during playback. While paused, it moves to the preceding/following Snap grid line, including timing boundaries, so off-grid positions align in the chosen direction. Shift+Left/Right seeks four full beats during playback or four grid lines while paused, and Shift+1–9 changes Snap; other Shift variants do not invoke unmodified transport or nudge commands. Timing blocks horizontal object nudges and accepts Ctrl+Alt+E outside fields and dialogs. F6 row deletion requires Delete or Ctrl+I without Shift or Alt. The Settings language dropdown consumes keyboard input until Enter applies or Esc closes it.
 
@@ -474,6 +564,10 @@ Categories are ordered General, Workspace, Appearance, Audio, Testplay, and
 Application updates (where supported). Appearance groups the active skin selector
 with the default skin archive, metadata display, language, and indicator colours.
 Active skin selection takes effect immediately and is saved automatically.
+General includes a Reverse canvas scrolling toggle, separated by a divider. It
+defaults to off and reverses ordinary and Shift+wheel time navigation over the
+canvas, including wheel navigation during marquee selection. Other panels and
+wheel shortcuts retain their direction. Apply saves this preference.
 
 Settings opens a centered modal overlay above the current editor or library, with
 its background dimmed and blocked from pointer and keyboard input. Categories retain
@@ -481,3 +575,53 @@ unapplied drafts while switching between them. Apply saves changes and keeps the
 overlay open; Escape or the close button closes it and discards
 unapplied drafts. Escape first dismisses an active field, key capture, language menu,
 or colour picker. Language changes take effect immediately.
+
+## Stack generation
+
+Select a slider and choose **Edit → Convert / edit stack…**, or use the same action
+in its long-press menu. The floating dialog retains the source curve and samples
+independent fruits with the selected stream subdivision, using the head BPM across
+all spans. The first-side switch chooses left or right.
+
+The envelope graph edits horizontal distance from the centre curve over 0–100% of
+the complete duration. Drag a point to change time and distance; endpoints stay at
+0% and 100%. Click empty graph space to add a point, and right-click an interior
+point to remove it. The graph uses a fixed 0–32 px range divided into 32 horizontal bands. Mouse
+dragging snaps distance to whole pixels; numeric inputs allow fractions. Smooth
+interpolation joins points without overshooting their distance values. The right
+preview updates immediately; generation alternates sides and clamps final X to
+0–512. Actual DS follows the generated positions and time intervals.
+
+Confirm applies all selected sliders as one undo step. Cancel or Esc discards the
+draft. Reopen the action to edit a saved stack. Conversion back to a slider clears
+the envelope and retains the centre geometry. Project files retain the editable
+parent and envelope; osu export writes independent hit circles.
+
+In the stack dialog's right preview, drag a fruit horizontally to adjust only that
+fruit. Its time stays fixed, and the highlighted outline marks the selected fruit.
+Manual adjustments are added to the clamped envelope result and persist with the
+editable parent. The left distance curve reflects each adjusted fruit and shows a
+control point at its fixed time. Drag that point vertically to edit its distance. Envelope changes retain these adjustments. Changing subdivision
+uses an adjustment only when a generated fruit has the same normalized time;
+returning to the previous subdivision restores its adjusted fruits. Cancel and lost
+capture restore the draft, and confirmation groups all adjustments into one undo
+step. The preview leaves room above and below the centre trajectory for complete
+fruit outlines, including their stroke.
+
+Select an envelope point to edit **Time (%)** and **Width (px)** numerically.
+Enter or Tab accepts the value; Escape cancels the text edit. Interior times must
+remain between neighbouring points; endpoint times stay at 0% and 100%. Width
+accepts 0–32 px. Manual fruit markers
+also accept width edits; moving their percentage turns the marker into an envelope
+point at that time, replacing its individual-fruit offset.
+
+New stacks default to 1/16 subdivision and reach their width over the first 2% of
+the duration, returning to zero over the final 2%. Existing stacks retain their
+subdivision. **Auto endpoints** sets endpoint widths to zero and adds short entry
+and exit transitions using adjacent widths.
+
+Within the stack editor, Ctrl+Z undoes a completed drag, numeric edit, point removal,
+first-side change or subdivision change; Ctrl+Y or Ctrl+Shift+Z redoes it. Draft
+history stays inside the dialog. Confirming still creates one document undo step.
+Right-click a manual fruit marker on the left graph to remove its offset and
+recompute that fruit from the envelope. This removal is also undoable.

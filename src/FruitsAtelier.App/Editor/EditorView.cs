@@ -14,6 +14,7 @@ public sealed partial class EditorView
     private sealed class DifficultySession(ProjectDifficulty difficulty)
     {
         public Guid Id { get; } = difficulty.Id;
+        public MapEditingPreferences EditingPreferences { get; set; } = new();
         public string Name => OsuBeatmapReader.Setting(History.Document, "Metadata", "Version") ?? difficulty.Name;
         public EditorHistory History { get; } = new(difficulty.Document);
         public MapDocument? RatingSnapshot;
@@ -80,13 +81,13 @@ public sealed partial class EditorView
     private const float PlayfieldPadding = 54.4f;
     private int divisor = 4, menu = -1, editField = -1;
     private string editBuffer = "", fieldError = "";
-    private bool replaceText = true, showTargets = true, showPreviewCurves;
+    private bool replaceText = true, showTargets = true;
 
     public Action? RequestClose { get; set; }
     public Action? RequestLoadSkin { get; set; }
     public bool IsDirty => projectStructureDirty || difficulties.Any(d => d.History.IsDirty);
-    public bool IsEditingText => timingField.Length > 0 || SongSetupVisible && songField.Length > 0 || DistanceSnapDialogVisible && dsBaseFocused || DistanceEditing || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
-    public bool WantsCapture => workspaceScrollDragging || timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || SliderHoldNeedsRedraw || sliderHoldConsumed;
+    public bool IsEditingText => StreamDialogVisible && stackMode && stackNumericField >= 0 || timingField.Length > 0 || SongSetupVisible && songField.Length > 0 || DistanceSnapDialogVisible && dsBaseFocused || DistanceEditing || TimeJumpVisible || editField >= 0 || (LibraryVisible || ExportVisible) && libraryField >= 0;
+    public bool WantsCapture => backgroundDimDragging || workspaceScrollDragging || timingScrollDragging || timingSnapDragging || timingVolumeStart is not null || textSelecting || songDrag >= 0 || dsSnapDragging || dsBaseDragging || dsSliderDrag >= 0 || distanceDragging || volumeDrag >= 0 || volumePopoverDrag >= 0 || drag != DragKind.None || libraryPointerActive || tabPointer || streamSnapDragging || stackPointDragging >= 0 || stackFruitDragging >= 0 || SliderHoldNeedsRedraw || sliderHoldConsumed;
     public MapDocument Document => history.Document;
     public string? SkinName => skin?.Name;
     public double PlayheadMs => playhead;
@@ -114,6 +115,12 @@ public sealed partial class EditorView
     }
 
     private TimingMap.Lookup? renderedTiming;
+    private TimingMap.Lookup? snapTiming;
+    private TimingMap.Lookup SnapTiming()
+    {
+        if (snapTiming is null || !snapTiming.MatchesTiming(Document)) snapTiming = new(Document);
+        return snapTiming;
+    }
     private readonly OsuWriteCache editorWriteCache = new();
     private bool IsContentDrag => drag is DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn
         or DragKind.HandleOut or DragKind.DraftHandle or DragKind.LegacyControl or DragKind.Objects
@@ -139,7 +146,7 @@ public sealed partial class EditorView
     {
         clickedCoordinate = null;
         convertedSnapshot = Document.DeepClone();
-        renderedTiming = new TimingMap.Lookup(Document);
+        renderedTiming = SnapTiming();
         convertedWithCompensation = compensateTinyDroplets;
         var input = Document;
         if (input.Tracks.Any(t => t.Nodes.Count < 2))
@@ -176,6 +183,7 @@ public sealed partial class EditorView
         }
         BuildComboColours();
         RefreshKiaiTransitions();
+        RefreshBeatmapBackground();
         breakPeriods = OsuTimeline.Breaks(Document).ToArray();
         hyperdashObjects = HyperDashCalculator.GetHyperDashStarts(playableObjects, Document.CircleSize);
     }
@@ -269,11 +277,11 @@ public sealed partial class EditorView
         StatusMessage = L.Get("editor.status.tickRate", Number(Document.SliderTickRate), divisor);
     }
 
-    private MapPoint MapAt(float x, float y, bool useSnap)
+    private MapPoint MapAt(float x, float y, bool useSnap, bool clampX = true)
     {
         var p = Transform.ToMap(x, y);
-        double time = useSnap && snap ? TimingMap.Snap(Document, p.TimeMs, divisor) : p.TimeMs;
-        return new(Math.Clamp(time, 0, EditableDurationMs), Math.Clamp(SnapX(p.X), 0, 512));
+        double time = useSnap && snap ? SnapTiming().Snap(p.TimeMs, divisor) : p.TimeMs;
+        return new(Math.Clamp(time, 0, EditableDurationMs), clampX ? Math.Clamp(SnapX(p.X), 0, 512) : SnapX(p.X));
     }
 
     private (float X, float Y) Screen(MapPoint p)

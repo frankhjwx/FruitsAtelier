@@ -6,6 +6,20 @@ public readonly record struct BreakPeriod(int StartMs, int EndMs);
 
 public static class OsuTimeline
 {
+    public static string? BackgroundFilename(MapDocument document)
+    {
+        foreach (var line in document.OriginalSections.Where(s => s.Name == "Events").SelectMany(s => s.Lines))
+        {
+            var parts = WorkspaceProject.Csv(line);
+            if (parts.Length >= 3 && parts[0] is "0" or "Background" && !string.IsNullOrWhiteSpace(parts[2]))
+            {
+                OsuBeatmapReader.ValidateOsuResourceReference(parts[2]);
+                return parts[2].Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+            }
+        }
+        return null;
+    }
+
     internal static void ReconcileBreaks(MapDocument before, MapDocument document, ImportedSliderLengthCache sliderLengths)
     {
         var periods = Breaks(document);

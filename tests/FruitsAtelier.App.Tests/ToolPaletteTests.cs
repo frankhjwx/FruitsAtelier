@@ -39,6 +39,19 @@ internal static class ToolPaletteTests
 
     public static void PlacementHyperdash()
     {
+        var head = Empty();
+        var headMap = new MapDocument { DurationMs = 12000 };
+        headMap.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1250, X = 100 }, new() { TimeMs = 1500, X = 450 }]);
+        head.LoadDocument(headMap); head.Key('B'); head.MoveMap(1250, 450);
+        var headPreview = (IReadOnlyList<ConvertedCatchObject>)typeof(EditorView).GetField("placementMovementObjects",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(head.View)!;
+        Check(headPreview.Count == 4 && headPreview.Any(o => o.SourceId == headMap.Fruits[1].Id),
+            "Unstarted slider ghost replaced the existing fruit.");
+        var candidate = headMap.DeepClone();
+        var headGhost = headPreview.Single(o => !headMap.Fruits.Any(f => f.Id == o.SourceId));
+        candidate.Fruits.Add(new() { Id = headGhost.SourceId, TimeMs = headGhost.TimeMs, X = headGhost.X });
+        Check(headPreview.SequenceEqual(OsuBeatmapWriter.Serialize(candidate).PlayableObjects),
+            "Unstarted slider ghost disagrees with full exported event order.");
         var replacement = Empty();
         var replacementMap = new MapDocument { DurationMs = 12000 };
         replacementMap.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1250, X = 100 }, new() { TimeMs = 1500, X = 450 }]);

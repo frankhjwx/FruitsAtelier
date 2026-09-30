@@ -55,7 +55,22 @@ public sealed partial class EditorView
         c.Fill(list, Background, 4);
         float[] columns = [0, .22f, .35f, .49f, .69f, .84f];
         string[] headings = ["timing.offsetShort", "timing.bpm", "timing.meter", "timing.sample", "timing.volumeShort", "timing.kiai"];
-        for (int i = 0; i < columns.Length; i++) c.Text(L.Get(headings[i]), list.X + 9 + list.Width * columns[i], list.Y + 8, 11, Muted, list.Width * (i + 1 < columns.Length ? columns[i + 1] - columns[i] : 1 - columns[i]) - 8);
+        for (int i = 0; i < columns.Length; i++)
+        {
+            string arrow = i == 4 && timingSort != 0 ? timingSort == 1 ? " ↑" : " ↓" : "";
+            c.Text(L.Get(headings[i]) + arrow, list.X + 9 + list.Width * columns[i], list.Y + 8, 11, Muted,
+                list.Width * (i + 1 < columns.Length ? columns[i + 1] - columns[i] : 1 - columns[i]) - 8);
+            if (i is 0 or 4)
+            {
+                int column = i;
+                hits.Add(new(new(list.X + list.Width * columns[i], list.Y, list.Width * (columns[i + 1] - columns[i]), 30), () =>
+                {
+                    if (!CommitTimingField()) return;
+                    timingSort = column == 0 ? 0 : timingSort == 1 ? 2 : 1;
+                    timingScroll = 0;
+                }, true));
+            }
+        }
         var entries = VisibleTimingEntries();
         int capacity = Math.Max(1, (int)((list.Height - 34) / 28));
         timingScroll = Math.Clamp(timingScroll, 0, Math.Max(0, entries.Length - capacity));
@@ -127,7 +142,10 @@ public sealed partial class EditorView
         if (timingTab == 0)
         {
             Number("offset", p => p.TimeMs);
-            TimingButton(c, new(r.X + 12, y, r.Width - 24, 32), L.Get("timing.useCurrent"), () => SetTimingValues("offset", playhead)); y += 48;
+            TimingButton(c, new(r.X + 12, y, r.Width - 24, 32), L.Get("timing.useCurrent"), () => SetTimingValues("offset", playhead)); y += 38;
+            c.Text(L.Get("timing.shiftSelected"), r.X + 12, y, 12, Foreground, r.Width - 24); y += 20;
+            TimingNumber(c, "shift", new(r.X + 12, y, r.Width - 112, 30), TimingN(timingShiftMs), v => timingShiftMs = v);
+            TimingButton(c, new(r.Right - 94, y, 82, 30), L.Get("timing.shiftApply"), () => ShiftSelectedTiming(timingShiftMs)); y += 38;
             if (points.All(p => p.Uninherited)) { Number("bpm", p => 60000 / p.BeatLengthMs); Number("meter", p => p.Meter); }
             else if (points.Any(p => p.Uninherited)) c.Text(L.Get("timing.mixedTypes"), r.X + 12, y, 12, Muted, r.Width - 24);
         }
@@ -301,6 +319,7 @@ public sealed partial class EditorView
         Number("bpm", 60000 / (timingResetPoint?.BeatLengthMs ?? state.BeatLengthMs), v => ChangeCurrentRed("bpm", v));
         Number("offset", timingResetPoint?.TimeMs ?? state.OffsetMs, v => ChangeCurrentRed("offset", v));
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.moveNotes", timingMoveNotes, () => timingMoveNotes = !timingMoveNotes); y += row + gap;
+        TimingCheck(c, new(r.X, y, r.Width, row), "timing.moveMarkers", timingMoveMarkers, () => timingMoveMarkers = !timingMoveMarkers); y += row + gap;
         Number("tickRate", Document.SliderTickRate, v => { if (v < .5 || v > 8) throw new ArgumentException(L.Get("timing.range")); Edit(L.Get("timing.edit"), () => Document.SliderTickRate = v); });
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.metronome", metronomeEnabled, () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }); y += row + gap;
         TimingButton(c, new(r.X, y, r.Width, row), L.Get("timing.setup"), OpenTimingSetup); y += row + gap;

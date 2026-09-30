@@ -132,6 +132,7 @@ public sealed partial class EditorView
     private float sliderHoldX, sliderHoldY;
     private double sliderHoldStart;
     private bool sliderHoldConsumed;
+    private bool holdMergeAllowed;
     private ConvertedCatchObject? noteHoldTarget;
     public bool SliderHoldNeedsRedraw => sliderHoldId != Guid.Empty || noteHoldTarget is not null;
     private void BeginSliderHold(float x, float y, bool modified)
@@ -143,7 +144,8 @@ public sealed partial class EditorView
         noteHoldTarget = hit is { Kind: CatchObjectKind.Fruit } ? hit : null;
         sliderHoldX = x; sliderHoldY = y; sliderHoldStart = TestplayRealtime;
         Guid id = hit?.SourceId ?? (showTargets ? HitSliderLocation(x, y)?.Id : null) ?? Guid.Empty;
-        if (!Document.Tracks.Any(t => t.Id == id) && !Document.ImportedSliders.Any(t => t.Id == id)) return;
+        if (!Document.Tracks.Any(t => t.Id == id) && !Document.ImportedSliders.Any(t => t.Id == id)
+            && !(objectSelection.Count > 1 && objectSelection.Contains(id) && Document.Fruits.Any(f => f.Id == id))) return;
         if (tool == Tool.Slider && SelectedTrack?.Id != id) return;
         sliderHoldId = id; sliderHoldX = x; sliderHoldY = y; sliderHoldStart = TestplayRealtime;
     }
@@ -162,9 +164,12 @@ public sealed partial class EditorView
             {
                 history.Commit(); drag = DragKind.None;
                 tool = Tool.Select;
-                SelectObjects([note.SourceId], note.SourceId);
-                PickSoundEdge(note);
-                BeginSliderObjectDrag(note, sliderHoldX, sliderHoldY);
+                if (objectSelection.Count <= 1)
+                {
+                    SelectObjects([note.SourceId], note.SourceId);
+                    PickSoundEdge(note);
+                    BeginSliderObjectDrag(note, sliderHoldX, sliderHoldY);
+                }
             }
             ShowNoteBeatPosition(note);
         }
@@ -173,7 +178,8 @@ public sealed partial class EditorView
         if (progress >= 1)
         {
             history.Commit(); drag = DragKind.None;
-            SelectObjects([sliderHoldId]);
+            if (!objectSelection.Contains(sliderHoldId)) SelectObjects([sliderHoldId]);
+            holdMergeAllowed = ObjectStructureEditing.MergeSelection(Document, ClipboardSelectedParentIds()).Error is null;
             legacyButtonSlider = sliderHoldId; sliderHoldId = Guid.Empty; sliderHoldConsumed = true;
             sliderConversionBounds = default;
             return;
@@ -193,14 +199,19 @@ public sealed partial class EditorView
     private void DrawLegacyConversionButton(ICanvas c)
     {
         DrawSliderHold(c);
-        Guid id = SelectedImportedSlider?.Id ?? SelectedTrack?.Id ?? Guid.Empty;
-        bool imported = SelectedImportedSlider is not null;
-        bool stream = SelectedTrack?.StreamSnapDivisor is not null;
-        if (id == Guid.Empty || tool is not (Tool.Select or Tool.Slider) || draftTrack != Guid.Empty || drag != DragKind.None || menu >= 0 || ExportVisible || SliderDialogVisible || StreamDialogVisible || TimeJumpVisible || DistanceSnapDialogVisible)
+        Guid id = legacyButtonSlider;
+        if (id == Guid.Empty) { LegacyConversionBounds = StreamConversionBounds = default; return; }
+        var ids = ClipboardSelectedParentIds();
+        bool imported = ids.Count == 1 && Document.ImportedSliders.Any(t => ids.Contains(t.Id));
+        bool slider = Document.Tracks.Any(t => ids.Contains(t.Id)) || Document.ImportedSliders.Any(t => ids.Contains(t.Id));
+        bool stream = SelectedStreamsOnly;
+        bool merge = holdMergeAllowed;
+        if (!ids.Contains(id) || tool is not (Tool.Select or Tool.Slider) || draftTrack != Guid.Empty || drag != DragKind.None || menu >= 0 || ExportVisible || SliderDialogVisible || StreamDialogVisible || MergeDialogVisible || TimeJumpVisible || DistanceSnapDialogVisible)
         { LegacyConversionBounds = StreamConversionBounds = default; legacyButtonSlider = Guid.Empty; return; }
-        if (legacyButtonSlider != id) { LegacyConversionBounds = StreamConversionBounds = default; return; }
-        float buttonWidth = imported ? 224 : stream ? 200 : 136;
-        float buttonHeight = imported || stream ? 68 : 32;
+        int count = (imported ? 1 : 0) + (slider ? 3 : 0) + (stream ? 2 : 0) + (merge ? 1 : 0);
+        if (count == 0) { LegacyConversionBounds = StreamConversionBounds = default; return; }
+        float buttonWidth = 260;
+        float buttonHeight = count * 36 - 4;
         if (sliderConversionBounds.Width != buttonWidth || sliderConversionBounds.Height != buttonHeight)
         {
             float w = buttonWidth;
@@ -209,11 +220,25 @@ public sealed partial class EditorView
         legacyButtonSlider = id;
         var r = sliderConversionBounds;
         LegacyConversionBounds = imported ? new(r.X, r.Y, 224, 32) : default;
-        StreamConversionBounds = new(r.X, imported ? r.Y + 36 : r.Y, r.Width, 32);
+        StreamConversionBounds = slider ? new(r.X, imported ? r.Y + 36 : r.Y, r.Width, 32) : default;
         c.Fill(r, Surface, 4);
         if (imported) Button(c, LegacyConversionBounds, L.Get("preview.convertSlider"), () => EditImportedSlider(id));
-        Button(c, StreamConversionBounds, L.Get(stream ? "stream.changeSnap" : "stream.apply"), () => { SelectObjects([id]); OpenStreamDialog(); }, enabled: !notesLocked);
-        if (stream) Button(c, new(r.X, r.Y + 36, r.Width, 32), L.Get("stream.convertBack"),
-            () => { SelectObjects([id]); ConvertStreamsBack(); }, enabled: !notesLocked);
+        float row = imported ? r.Y + 36 : r.Y;
+        if (slider)
+        {
+            Button(c, new(r.X, row, r.Width, 32), L.Get("stack.menu"), OpenStackDialog, enabled: !notesLocked);
+            row += 36;
+            StreamConversionBounds = new(r.X, row, r.Width, 32);
+            Button(c, StreamConversionBounds, L.Get(stream ? "stream.changeSnap" : "stream.apply"), OpenStreamDialog, enabled: !notesLocked);
+            row += 36;
+        }
+        if (stream)
+        {
+            Button(c, new(r.X, row, r.Width, 32), L.Get("stream.breakFruits"), BreakSelectedStreams, enabled: !notesLocked); row += 36;
+            Button(c, new(r.X, row, r.Width, 32), L.Get("stream.convertBack"), ConvertStreamsBack, enabled: !notesLocked); row += 36;
+        }
+        if (slider)
+        { Button(c, new(r.X, row, r.Width, 32), L.Get("slider.clearInternal"), ClearSelectedInternalAnchors, enabled: !notesLocked); row += 36; }
+        if (merge) Button(c, new(r.X, row, r.Width, 32), L.Get("merge.title"), OpenMergeDialog, enabled: !notesLocked);
     }
 }

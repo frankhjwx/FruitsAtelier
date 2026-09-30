@@ -51,7 +51,7 @@ public static class SkinArchive
             (e.Folder.Length == skinRoot.Length ? "" : e.Folder[(skinRoot.Length == 0 ? 0 : skinRoot.Length + 1)..] + "/") + e.Name)).ToList();
 
         // Version the cache when the extracted resource set changes.
-        string destination = ChildPath(root, "v6-" + key);
+        string destination = ChildPath(root, "v11-" + key);
         if (Directory.Exists(destination))
         {
             EnsureComplete(destination, key, selected);
@@ -162,6 +162,7 @@ public static class SkinArchive
     }
 
     private static bool IsSelected(string name) => name.Equals("skin.ini", StringComparison.OrdinalIgnoreCase)
+        || System.Text.RegularExpressions.Regex.IsMatch(name, @"^(cursor|cursormiddle|cursortrail|arrow-pause|arrow-warning|play-warningarrow|play-skip(-[0-9]+)?|pause-(overlay|continue|retry|back))(@2x)?\.png$|^pause-overlay\.jpg$|^(menuhit|menuclick|menuback|pause-(loop|hover|(continue|retry|back)-(click|hover)))\.(wav|ogg|mp3)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
         || FruitsAtelier.Core.HitsoundResolver.IsSkinSample(name)
         || System.Text.RegularExpressions.Regex.IsMatch(name, @"^.+-[0-9](@2x)?\.png$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
         || name.Equals("reversearrow.png", StringComparison.OrdinalIgnoreCase)

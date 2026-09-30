@@ -26,6 +26,13 @@ public sealed class CatchSkin
     private CatchSkin? fallback;
     private string comboPrefix = "score";
     private float comboOverlap;
+    private double animationFramerate;
+    public bool CursorCentre { get; private set; } = true;
+    public bool CursorRotate { get; private set; } = true;
+    public bool CursorExpand { get; private set; } = true;
+    public bool CursorTrailRotate { get; private set; } = true;
+    private readonly List<SkinTexture> skipFrames = [];
+    private readonly Dictionary<string, string> menuSounds = new(StringComparer.OrdinalIgnoreCase);
     private string hitCirclePrefix = "default";
     private float hitCircleOverlap;
     private bool? overlayAboveNumber;
@@ -77,6 +84,20 @@ public sealed class CatchSkin
             foreach (string component in new[] { "hitcircle", "hitcircleoverlay", "sliderstartcircle", "sliderstartcircleoverlay", "sliderendcircle", "sliderendcircleoverlay" }) LoadTexture(component);
             LoadTexture("fruit-catcher-idle");
             LoadTexture("fruit-catcher-idle-0");
+            foreach (string component in new[] { "cursor", "cursormiddle", "cursortrail", "arrow-pause", "arrow-warning", "play-warningarrow", "play-skip", "pause-overlay", "pause-continue", "pause-retry", "pause-back" }) LoadTexture(component);
+            if (!candidate.textures.ContainsKey("pause-overlay") && files.TryGetValue("pause-overlay.jpg", out var overlay)
+                && TryReadTexture(overlay, 1, out var overlayTexture)) candidate.textures["pause-overlay"] = overlayTexture!;
+            for (int frame = 0; frame < 4096; frame++)
+            {
+                string component = $"play-skip-{frame}";
+                LoadTexture(component);
+                if (!candidate.textures.TryGetValue(component, out var texture)) break;
+                candidate.skipFrames.Add(texture);
+            }
+            foreach (string name in new[] { "menuclick", "menuhit", "menuback", "pause-continue-click", "pause-retry-click", "pause-back-click",
+                "pause-continue-hover", "pause-retry-hover", "pause-back-hover", "pause-hover", "pause-loop" })
+                foreach (string extension in new[] { ".wav", ".ogg", ".mp3" })
+                    if (files.TryGetValue(name + extension, out var sound)) { candidate.menuSounds[name] = sound; break; }
             if (candidate.textures.Count == 0 && fallback is null && !allowEmpty && !files.Keys.Any(HitsoundResolver.IsSkinSample)) { message = L.Get("skin.noTextures"); return false; }
             skin = candidate;
             message = L.Get("skin.loaded", candidate.Name, candidate.TextureCount, invalid > 0 ? L.Get("skin.invalidImages", invalid) : "");
@@ -105,6 +126,32 @@ public sealed class CatchSkin
         var texture = Candidates("fruit-catcher-idle-0", "fruit-catcher-idle").FirstOrDefault();
         if (texture is null) return null;
         return Math.Max(0, texture.PixelHeight / (float)texture.Density - 16) * .35f * CatchSize.Scale(circleSize) * 2 * fieldWidth / 512;
+    }
+
+    public SkinTexture? MenuTexture(string name, double elapsed = 0)
+    {
+        if (name == "play-skip" && skipFrames.Count > 0)
+        {
+            double rate = animationFramerate > 0 ? animationFramerate : skipFrames.Count;
+            return skipFrames[(int)(Math.Max(0, elapsed) * rate / 1000 % skipFrames.Count)];
+        }
+        return textures.GetValueOrDefault(name) ?? fallback?.MenuTexture(name, elapsed);
+    }
+
+    public string? MenuSound(string name)
+    {
+        if (menuSounds.TryGetValue(name, out var exact)) return exact;
+        if (name.EndsWith("-hover", StringComparison.Ordinal))
+        {
+            if (menuSounds.TryGetValue("pause-hover", out var hover)) return hover;
+            if (menuSounds.TryGetValue("menuclick", out var generic)) return generic;
+        }
+        if (name.EndsWith("-click", StringComparison.Ordinal))
+        {
+            if (name == "pause-back-click" && menuSounds.TryGetValue("menuback", out var back)) return back;
+            if (menuSounds.TryGetValue("menuhit", out var hit)) return hit;
+        }
+        return fallback?.MenuSound(name);
     }
     public bool DrawCatcher(ICanvas canvas, float centerX, float catchY, float fieldWidth, double circleSize, uint tint = 0xFFFFFF, float opacity = 1, bool additive = false, bool flipHorizontal = false)
     {
@@ -302,8 +349,18 @@ public sealed class CatchSkin
             int split = line.IndexOf(':');
             if (split < 0) continue;
             string key = line[..split].Trim(), value = line[(split + 1)..].Trim();
+            if (section.Equals("General", StringComparison.OrdinalIgnoreCase) && key.Equals("AnimationFramerate", StringComparison.OrdinalIgnoreCase)
+                && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double fps) && double.IsFinite(fps))
+                animationFramerate = Math.Clamp(fps, 0, 1000);
             if (section.Equals("General", StringComparison.OrdinalIgnoreCase) && key.Equals("HitCircleOverlayAboveNumber", StringComparison.OrdinalIgnoreCase))
                 overlayAboveNumber = value != "0";
+            if (section.Equals("General", StringComparison.OrdinalIgnoreCase))
+            {
+                if (key.Equals("CursorCentre", StringComparison.OrdinalIgnoreCase)) CursorCentre = value != "0";
+                if (key.Equals("CursorRotate", StringComparison.OrdinalIgnoreCase)) CursorRotate = value != "0";
+                if (key.Equals("CursorExpand", StringComparison.OrdinalIgnoreCase)) CursorExpand = value != "0";
+                if (key.Equals("CursorTrailRotate", StringComparison.OrdinalIgnoreCase)) CursorTrailRotate = value != "0";
+            }
             if (section.Equals("Fonts", StringComparison.OrdinalIgnoreCase))
             {
                 if (key.Equals("HitCirclePrefix", StringComparison.OrdinalIgnoreCase) && value.Length > 0 &&
@@ -368,6 +425,33 @@ public sealed class CatchSkin
             Span<byte> header = stackalloc byte[24];
             using var stream = File.OpenRead(path);
             stream.ReadExactly(header);
+            if (header[0] == 0xff && header[1] == 0xd8)
+            {
+                stream.Position = 2;
+                while (stream.Position < stream.Length)
+                {
+                    if (stream.ReadByte() != 0xff) return false;
+                    int marker;
+                    do { marker = stream.ReadByte(); } while (marker == 0xff);
+                    if (marker < 0 || marker is 0xda or 0xd9) return false;
+                    if (marker is 0x01 or >= 0xd0 and <= 0xd7) continue;
+                    stream.ReadExactly(header[..2]);
+                    int length = BinaryPrimitives.ReadUInt16BigEndian(header[..2]);
+                    if (length < 2 || stream.Position + length - 2 > stream.Length) return false;
+                    if (marker is >= 0xc0 and <= 0xc3 or >= 0xc5 and <= 0xc7 or >= 0xc9 and <= 0xcb or >= 0xcd and <= 0xcf)
+                    {
+                        if (length < 7) return false;
+                        stream.ReadExactly(header[..5]);
+                        int jpegHeight = BinaryPrimitives.ReadUInt16BigEndian(header[1..3]);
+                        int jpegWidth = BinaryPrimitives.ReadUInt16BigEndian(header[3..5]);
+                        if (jpegWidth is < 1 or > 4096 || jpegHeight is < 1 or > 4096) return false;
+                        texture = new(path, jpegWidth, jpegHeight, density);
+                        return true;
+                    }
+                    stream.Position += length - 2;
+                }
+                return false;
+            }
             ReadOnlySpan<byte> signature = [137, 80, 78, 71, 13, 10, 26, 10];
             if (!header[..8].SequenceEqual(signature) || !header[12..16].SequenceEqual("IHDR"u8)) return false;
             int width = BinaryPrimitives.ReadInt32BigEndian(header[16..20]);

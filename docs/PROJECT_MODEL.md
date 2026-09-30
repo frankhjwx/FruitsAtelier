@@ -2,7 +2,7 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). All six schemas are readable. Older applications reject the newer schemas rather than silently discarding curve geometry. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). All eight schemas are readable. Older applications reject the newer schemas rather than silently discarding curve geometry. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
 
 ## Authoritative and derived data
 
@@ -65,7 +65,7 @@ Interface language and resources are not serialized in `.catchproj`. Built-in de
 
 Randomized conversion includes nested event positions as exact fitting boundaries and compares TinyDroplet X with the original full-map conversion. If the fitted curve changes a position, conversion uses a linear track through the original path and TinyDroplet positions; dense paths can use just the mandatory event positions.
 
-Tracks lie in the `(timeMs, X)` plane, with segment type `Nodes[i].OutgoingKind ?? track.Kind`. Null inherits the track default; a track may mix linear and cubic Bezier segments. Endpoint times increase. Bezier controls may extend beyond either endpoint in time; Bernstein subdivision validates that any time reversal lies outside the authored interval. Time evaluation solves `time(u)` rather than substituting a linear time fraction for u. Anchors are at least 0.001 ms apart, and control-point X stays in 0..512.
+Tracks lie in the `(timeMs, X)` plane, with segment type `Nodes[i].OutgoingKind ?? track.Kind`. Null inherits the track default; a track may mix linear and cubic Bezier segments. Endpoint times increase. Bezier controls may extend beyond either endpoint in time; Bernstein subdivision validates that any time reversal lies outside the authored interval. Time evaluation solves `time(u)` rather than substituting a linear time fraction for u. Anchors are at least 0.001 ms apart, and anchor and control-point X may extend outside 0..512. Gameplay event targets are clamped to the playfield; saved authoring geometry retains its coordinates.
 
 Handles store relative offsets and move with their anchor. The Slider tool (B) has a session-only editing-mode choice. Pen tool mode adds handle-free points on click and direction handles by holding and dragging; osu legacy mode edits a control-polygon projection of the same track. Converting control points between curved and straight uses handles and adjacent segment types. Right-click insertion creates a point without handles; neighboring handles may still curve adjacent segments, so ordinary insertion need not preserve shape. The split action preserves the segment's shape and subsequent types according to its type, without replacing existing anchors/handles with sampled output. Geometric slider Y is not editing time.
 
@@ -108,7 +108,11 @@ Each FSlider generates one `.osu` slider preserving SpanCount. Actual position f
 
 Ordinary Droplets have no lateral RNG offset. TinyDroplet alignment solves the pre-offset X from actual RNG and event path progress. FSlider alignment is constrained by `0..512`, shared repeat geometry, and horizontal velocity. Automatic SV may increase within stable's 0.1–10 range. Unreachable fruit or droplet targets fail the track; TinyDroplets allow residual error. Legacy Sliders retain osu's original TinyDroplet RNG offsets.
 
-RNG uses seed 1337. Parents are stably ordered by start time and SourceOrder; new objects without imported order use deterministic collection order. All nested RNG for one stream is processed before the next parent, and time sorting happens only afterward. Droplets consume rotation randomness; TinyDroplets use lateral offsets. Each banana consumes position randomness and three appearance draws, with float time accumulation retained. Viewport culling does not change input.
+Partial compensation evaluates fixed fruit and droplet targets at their shared
+first-span path time, avoiding contradictory constraints from repeat-time
+round-off. TinyDroplet targets retain their actual event times.
+
+RNG uses seed 1337. Parents are stably ordered by start time and SourceOrder; new objects without imported order use deterministic collection order. All nested RNG for one stream is processed before the next parent, and time sorting happens only afterward. Droplets consume rotation randomness; TinyDroplets use lateral offsets. Each banana consumes position randomness and three appearance draws, with float time accumulation retained. Banana generation uses the timestamps emitted by `.osu` export: changed or newly authored endpoints round to integer milliseconds, while unchanged imported endpoints retain their original values. This keeps banana counts and downstream slider compensation consistent with export. Viewport culling does not change input.
 
 Failed objects produce no result, set overall Success=false, and leave RNG corresponding only to successfully generated objects. Path length, event count, imported controls, repeats, sampling, and grid sizes have explicit limits. Values, Catch handling of inherited NaN, and source references are in the [conversion module documentation](../src/FruitsAtelier.Core/Conversion/UPSTREAM.md).
 
@@ -125,3 +129,16 @@ Project saving and `.osu` export are independent; exporting cannot replace savin
 `CurveTrack.StreamSnapDivisor` is null for ordinary sliders and 1–16 for slider-managed fruit streams. It participates in cloning, history, equality and conversion-cache invalidation. Stream sampling uses the head BPM and follows every repeated traversal without consuming slider RNG. Derived fruits retain the parent ID with distinct event indices and standalone gameplay semantics. They do not produce generated slider geometry or SV overrides. `.osu` export expands them into ordered hit circles; only project files retain the editable parent.
 
 `DistanceSnapCollinear` is an editor-only per-difficulty flag, defaulting to true for new and older projects without a saved value. An explicitly saved false value remains disabled. It participates in cloning, content comparison, undo and project persistence, and is not exported to `.osu`. It adds a time-interpolated collinear candidate between adjacent parent endpoints while distance snapping is active.
+
+`CurveTrack.Stack` adds a horizontal-distance envelope to a slider-managed fruit
+stream. Points store normalized time over the complete repeated duration and
+non-negative distance from the centre curve; `StartLeft` selects the first side.
+Adjacent points use smoothstep interpolation. Fruits alternate sides before final
+X is clamped to 0–512. The envelope participates in deep cloning, content equality,
+undo and conversion-cache invalidation. Ordinary sliders and streams omit it.
+
+`StackEnvelope.FruitAdjustments` stores sorted normalized-time keys and signed
+horizontal offsets. Generation first clamps the envelope result, adds the matching
+fruit adjustment and clamps again. Adjustments do not change event times or
+neighbours, and unmatched keys remain saved when subdivision changes. Horizontal
+mirroring reverses their signs together with the envelope's starting side.

@@ -120,6 +120,13 @@ public sealed partial class EditorView
                 ConvertImportedSlider(id);
             foreach (var fruit in Document.Fruits.Where(f => ids.Contains(f.Id))) fruit.X = 512 - fruit.X;
             foreach (var track in Document.Tracks.Where(t => ids.Contains(t.Id)))
+            {
+                if (track.Stack is { } stack)
+                {
+                    stack.StartLeft = !stack.StartLeft;
+                    for (int i = 0; i < stack.FruitAdjustments.Count; i++)
+                        stack.FruitAdjustments[i] = stack.FruitAdjustments[i] with { Offset = -stack.FruitAdjustments[i].Offset };
+                }
                 foreach (var node in track.Nodes)
                 {
                     node.X = 512 - node.X;
@@ -128,6 +135,7 @@ public sealed partial class EditorView
                     if (node.OutgoingCurve is { } curve)
                         foreach (var point in curve.Controls) point.Offset = point.Offset with { X = -point.Offset.X };
                 }
+            }
         });
     }
 }

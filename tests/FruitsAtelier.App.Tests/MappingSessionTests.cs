@@ -185,6 +185,45 @@ internal static class MappingSessionTests
         Check(new LibrarySettings().ShowTestplayCombo, "Old settings no longer default to visible Combo.");
     }
 
+    public static void MapPreferences()
+    {
+        string folder = Path.GetFullPath("artifacts/tests/map-preferences");
+        string path = Path.Combine(folder, "settings.json");
+        var project = BeatmapProject.FromDocuments([Map(), Map()]);
+        string savedProject = ProjectSerializer.Serialize(project);
+        var ui = new Ui(overview: false);
+        ui.View.InitializeLibrary(false, new LibrarySettings { Workspace = folder });
+        ui.View.LoadProject(project); ui.Paint();
+        ui.View.RequestViewPreference = () => ui.View.LibrarySettings.Save(path);
+        ui.Key('T'); ui.Key('Y'); ui.Key('3', ctrl: true);
+        ui.ClickText(L.Get("movement.analysis"));
+        AssertPreferences(ui, true, 16);
+        ui.View.SetModifiers(true, true);
+        var saved = LibrarySettings.Load(path).MapEditingPreferences[project.Difficulties[0].Id];
+        Check(saved.GridSnap && saved.DistanceSnap && saved.MovementAnalysis && saved.GridLevel == 16,
+            "Preferences were not saved immediately or modifiers changed saved values.");
+        ui.View.SetModifiers(false, false);
+        ui.View.SwitchDifficulty(1); ui.Paint(); AssertPreferences(ui, false, 4);
+        ui.Key('G');
+        ui.View.SwitchDifficulty(0); ui.Paint(); AssertPreferences(ui, true, 16);
+        ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.testplay"));
+        ui.ClickText(L.Get("testplay.comboOn")); ui.View.ApplySettings(path);
+        var reopened = new Ui(overview: false);
+        reopened.View.InitializeLibrary(false, LibrarySettings.Load(path));
+        reopened.View.LoadProject(ProjectSerializer.ReadProject(savedProject)); reopened.Paint();
+        AssertPreferences(reopened, true, 16);
+        reopened.View.SwitchDifficulty(1); reopened.Paint(); AssertPreferences(reopened, false, 8);
+        Check(!ui.View.IsDirty && !reopened.View.IsDirty && ProjectSerializer.Serialize(ui.View.CaptureProject()) == savedProject,
+            "Editing preferences changed project content.");
+        Check(new MapEditingPreferences { GridLevel = 3 }.GridLevel == 4, "Invalid grid level was retained.");
+
+        static void AssertPreferences(Ui ui, bool enabled, int level)
+        {
+            Check(ui.View.EditorGridSettings == (enabled, level) && ui.View.DistanceSnapEnabled == enabled
+                && ui.View.MovementAnalysisEnabled == enabled, "Difficulty editing preferences were not restored.");
+        }
+    }
+
     public static void TestplayDisplay()
     {
         var clock = new ManualTime();

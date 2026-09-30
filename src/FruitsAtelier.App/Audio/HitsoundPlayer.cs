@@ -9,6 +9,9 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
 {
     private HitsoundPlayer? auditionMixer;
     private IWavePlayer? auditionOutput;
+    private float[]? loopSamples;
+    private int loopPosition;
+    private float loopGain, loopTargetGain;
     private readonly AudioDiagnosticLog diagnostics = new(diagnosticDirectory);
     private readonly object gate = new();
     private readonly Dictionary<string, float[]> cache = new();
@@ -26,7 +29,15 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
     private readonly List<ScheduledVoice> scheduled = new();
     private bool unavailable;
     private float volume = 1;
-    public float Volume { get => Volatile.Read(ref volume); set => Volatile.Write(ref volume, float.IsFinite(value) ? Math.Clamp(value, 0, 1) : 1); }
+    public float Volume
+    {
+        get => Volatile.Read(ref volume);
+        set
+        {
+            Volatile.Write(ref volume, float.IsFinite(value) ? Math.Clamp(value, 0, 1) : 1);
+            if (auditionMixer is not null) auditionMixer.Volume = Volume;
+        }
+    }
     public WaveFormat WaveFormat { get; } = WaveFormat.CreateIeeeFloatWaveFormat(HitsoundSamples.SampleRate, 1);
     public void PreloadProject(IReadOnlyList<MapDocument> documents, IEnumerable<string>? skinFolders = null)
     {
@@ -60,6 +71,33 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
     public void PlayAudition(Hitsound sound)
     {
         if (unavailable) return;
+        EnsureAuditionOutput();
+        auditionMixer!.Volume = Volume;
+        auditionMixer.QueueSamples(GetSamples(sound), sound.Volume);
+        auditionOutput!.Play();
+    }
+    public void SetMenuLoop(Hitsound? sound)
+    {
+        if (unavailable) return;
+        if (sound is null)
+        {
+            if (auditionMixer is not null) lock (auditionMixer.gate) auditionMixer.loopTargetGain = 0;
+            return;
+        }
+        EnsureAuditionOutput();
+        var samples = GetSamples(sound);
+        lock (auditionMixer!.gate)
+        {
+            auditionMixer.loopSamples = samples;
+            auditionMixer.loopPosition = 0;
+            auditionMixer.loopGain = 0;
+            auditionMixer.loopTargetGain = sound.Volume;
+        }
+        auditionMixer.Volume = Volume;
+        auditionOutput!.Play();
+    }
+    private void EnsureAuditionOutput()
+    {
         // Settings pause the music transport, so auditions need their own device clock.
         if (auditionOutput == null)
         {
@@ -71,9 +109,6 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
             auditionMixer = mixer;
             auditionOutput = output;
         }
-        auditionMixer!.Volume = Volume;
-        auditionMixer.PlayImmediate(sound);
-        auditionOutput.Play();
     }
     internal ISampleProvider MixWithMusic(ISampleProvider music, double startMs, double speed = 1)
     {
@@ -155,12 +190,15 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
     }
     internal void Queue(Hitsound sound)
     {
-        var decoded = GetSamples(sound);
+        QueueSamples(GetSamples(sound), sound.Volume);
+    }
+    private void QueueSamples(float[] decoded, float gain)
+    {
         lock (gate)
         {
             immediateCount++;
             if (voices.Count == 32) { voices.RemoveAt(0); droppedVoices++; }
-            voices.Add((decoded, 0, sound.Volume));
+            voices.Add((decoded, 0, gain));
         }
     }
     private float[] GetSamples(Hitsound sound)
@@ -222,6 +260,14 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
         for (int i = offset; i < offset + count; i++) buffer[i] = 0;
         lock (gate)
         {
+            if (loopSamples is { Length: > 0 } loop)
+                for (int i = 0; i < count; i++)
+                {
+                    loopGain += Math.Clamp(loopTargetGain - loopGain, -1f / 8820, 1f / 8820);
+                    buffer[offset + i] += loop[loopPosition] * loopGain * Volume;
+                    loopPosition = (loopPosition + 1) % loop.Length;
+                    if (loopGain == 0 && loopTargetGain == 0) { loopSamples = null; break; }
+                }
             for (int v = voices.Count - 1; v >= 0; v--)
             {
                 var voice = voices[v];
@@ -234,7 +280,7 @@ internal sealed class HitsoundPlayer(Action<string>? log = null, string? diagnos
         for (int i = offset; i < offset + count; i++) buffer[i] = Math.Clamp(buffer[i], -1, 1);
         return count;
     }
-    public void Stop() { lock (gate) { voices.Clear(); scheduled.Clear(); } auditionMixer?.Stop(); }
+    public void Stop() { lock (gate) { voices.Clear(); scheduled.Clear(); loopSamples = null; loopGain = loopTargetGain = 0; } auditionMixer?.Stop(); }
     public void Dispose()
     {
         unavailable = true;

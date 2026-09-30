@@ -81,6 +81,26 @@
       "file": "catch-banana.wav",
       "source": "osu.Game.Resources/Samples/Gameplay/catch-banana.wav",
       "sha256": "6da3deac1fde5992357e92c87926a6e55adc61d4a794df94e1cdc5d27717f8dd"
+    },
+    {
+      "file": "menuclick.mp3",
+      "source": "osu.Game.Resources/Skins/Legacy/menuclick.mp3",
+      "sha256": "45e54f82d29e22490f6156f0f8e92e3bd65ed366bc40b16dea0ca3eae2c5bdf0"
+    },
+    {
+      "file": "menuhit.mp3",
+      "source": "osu.Game.Resources/Skins/Legacy/click-short-confirm.mp3",
+      "sha256": "9abbf0423d856b7e6ffc71ad296dcf6ec722c3f9c6695b109992583764433721"
+    },
+    {
+      "file": "menuback.mp3",
+      "source": "osu.Game.Resources/Skins/Legacy/menuback.mp3",
+      "sha256": "83fc9f2c54440e7c690c9b6fdaae8d394d42f2eb38255ae3ff5a71c5c92d2960"
+    },
+    {
+      "file": "pause-loop.mp3",
+      "source": "osu.Game.Resources/Samples/Gameplay/pause-loop.mp3",
+      "sha256": "f057218551ae4a643ed12c4ff63d3a244df522c1583a4a7498ea45c642ec4f75"
     }
   ]
 }

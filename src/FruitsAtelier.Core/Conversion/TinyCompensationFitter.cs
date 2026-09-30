@@ -8,9 +8,12 @@ internal static class TinyCompensationFitter
     {
         double start = track.Nodes[0].TimeMs;
         double duration = track.Nodes[^1].TimeMs - start;
+        // Repeated events share one path position. Evaluating their absolute times
+        // separately can introduce round-off that makes fixed targets disagree.
         var knots = events.GroupBy(e => start + e.Progress * duration).OrderBy(g => g.Key)
             .Select(g => new Knot(g.Key, g.Select(e => new Target(
-                CurveMath.PositionAtTime(track, e.TimeMs), e.RawOffset, e.Kind == CatchObjectKind.TinyDroplet)).ToArray()))
+                Math.Clamp(CurveMath.PositionAtTime(track, e.Kind == CatchObjectKind.TinyDroplet ? e.TimeMs : g.Key), 0, 512),
+                e.RawOffset, e.Kind == CatchObjectKind.TinyDroplet)).ToArray()))
             .ToArray();
         var lower = new double[knots.Length];
         var upper = new double[knots.Length];

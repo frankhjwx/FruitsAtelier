@@ -119,6 +119,15 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
     }
     private static string Key(Hitsound sound) => sound.FilePath ?? $"{sound.Kind}/{sound.SampleSet}/{sound.Name}";
     public void Play(Hitsound sound) => Schedule(sound, HostTime());
+    public void SetMenuLoop(Hitsound? sound)
+    {
+        lock (gate)
+        {
+            if (disposed || engine == 0) return;
+            nint sample = sound is not null ? samples.GetValueOrDefault(Key(sound)) : 0;
+            LoopNative(engine, sample, sound?.Volume ?? 0);
+        }
+    }
     public void Schedule(Hitsound sound, double hostTime)
     {
         if (!double.IsFinite(hostTime)) return;
@@ -176,6 +185,7 @@ public sealed class MacHitsoundPlayer(bool muted = false) : IDisposable
     [DllImport(Library, EntryPoint="fa_hitsounds_sample_bytes")] private static extern uint SampleBytes(nint sample);
     [DllImport(Library, EntryPoint="fa_hitsounds_schedule")] private static extern int ScheduleNative(nint engine, nint sample, double start, float volume);
     [DllImport(Library, EntryPoint="fa_hitsounds_stop")] private static extern void StopNative(nint engine);
+    [DllImport(Library, EntryPoint="fa_hitsounds_loop")] private static extern void LoopNative(nint engine, nint sample, float volume);
     [DllImport(Library, EntryPoint="fa_hitsounds_position")] private static extern double Position(nint engine);
     [DllImport(Library, EntryPoint="fa_hitsounds_active")] private static extern uint Active(nint engine);
     [DllImport(Library, EntryPoint="fa_audio_host_time")] private static extern double HostTime();

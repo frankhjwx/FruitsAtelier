@@ -8,6 +8,7 @@ FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
 if (args.Length == 2 && args[0] == "--fruit-placement-performance") return EditorPerformance.RunFruitPlacement(args[1]);
+if (args.Length == 2 && args[0] == "--testplay-edit-performance") return EditorPerformance.RunTestplayEditing(args[1]);
 if (args.Length > 0 && args[0] == "--benchmark-library") return LibraryScaleTests.Benchmark(args.Length > 1 ? args[1] : null);
 if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
 if (args.Length == 2 && args[0] == "--slider-drag-performance") return EditorPerformance.RunSliderDrag(args[1]);
@@ -21,6 +22,10 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Synchronization failures wrap and scroll without editing content", SynchronizationUiTests.FailureText),
+    ("Section synchronization pages large Events and applies complete text", SynchronizationUiTests.SectionText),
+    ("Timing synchronization reviews one green line amongst generated SV", SynchronizationUiTests.TimingRows),
+    ("Timeline skin uses combo-coloured tracks and hitcircle endpoints", ObjectTimelineTests.SkinColours),
     ("Workspace storage settings show usage and clear caches without editing maps", StorageSettingsTests.Run),
     ("Mapping right-click deletes the marquee selection in one undo", MappingSessionTests.RightClickSelection),
     ("Mapping selection reversal and contextual horizontal nudges", MappingSessionTests.ReverseAndNudge),
@@ -28,6 +33,7 @@ var tests = new (string Name, Action Run)[]
     ("Mapping boundary distances, DS equality and pointer exit", MappingSessionTests.DistanceAndHover),
     ("Mapping marquee playback and banana timeline resizing", MappingSessionTests.MarqueeAndBanana),
     ("Mapping independent zoom and Combo preferences", MappingSessionTests.Preferences),
+    ("Mapping per-difficulty editing preferences survive restart", MappingSessionTests.MapPreferences),
     ("Mapping Combo visibility and configured dash brightness", MappingSessionTests.TestplayDisplay),
     ("Clearing internal slider nodes preserves endpoints and batch undo", ClearSliderNodesTests.Run),
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
@@ -75,8 +81,15 @@ var tests = new (string Name, Action Run)[]
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
     ("Appearance indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
+    ("Stack preview retains full outlines and edits individual fruits horizontally", StackDialogTests.ManualFruits),
+    ("Stack draft history undoes fruit drags and removing manual knots", StackDialogTests.DraftHistory),
+    ("Stack numeric controls edit percentages and pixels with automatic endpoints", StackDialogTests.Numeric),
+    ("Stack dialog edits envelopes locally and confirms with undo", StackDialogTests.Run),
     ("Slider stream confirmation, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
     ("Slider long press progress, cancellation and control-point shortcut", StreamShortcutTests.HoldAndShortcut),
+    ("Stream breaking and batch internal anchor clearing", ObjectStructureTests.StreamsAndAnchors),
+    ("Consecutive object merge dialog, restrictions, errors and undo", ObjectStructureTests.MergeUi),
+    ("Mixed slider merge preserves repeated and exact curve paths", ObjectStructureTests.MixedPaths),
     ("Testplay pause, resume and legacy exit shortcuts", TestplayTests.PauseAndExitShortcuts),
     ("Testplay bookmark shortcuts edit at the live position", TestplayTests.BookmarksDuringTestplay),
     ("Testplay movement, combo, hyperdash and facing", TestplayTests.MovementAndJudgement),
@@ -84,7 +97,8 @@ var tests = new (string Name, Action Run)[]
     ("Testplay autoplay speed switching and localized display", TestplayTests.AutoplaySpeed),
     ("Catch rotations, banana arrival transforms and combo colours", TestplayTests.VisualTransformsAndColours),
     ("Unskinned Catch objects keep dark map colours bright", FallbackSkinTests.BrightComboColour),
-    ("Testplay Escape returns to editor without repeated navigation", TestplayTests.EscapeReturnsToEditor),
+    ("Testplay Escape opens the pause menu without repeated navigation", TestplayTests.EscapeReturnsToEditor),
+    ("Testplay skip, pause menu, background and break dim", TestplayPresentationTests.ControlsAndBackground),
     ("Testplay caught stacks share preview effects and outlive final judgement", TestplayTests.LivePlate),
     ("Testplay input isolation and transport lifecycle", TestplayTests.EditorLifecycle),
     ("Testplay compensates output buffer lead without shifting resume", TestplayTests.OutputBufferLead),
@@ -160,13 +174,15 @@ var tests = new (string Name, Action Run)[]
     ("Placement DS readout retains authored fractional precision", DistanceSnapPresetTests.PlacementReadoutPrecision),
     ("Collinear distance snap respects grid settings, dragging and configuration", DistanceSnapPresetTests.Collinear),
     ("Multiple distance snaps include zero and persist per-map configuration", DistanceSnapPresetTests.Snapping),
-    ("Slider large droplets follow distance snap while drawing", DistanceSnapPresetTests.SliderEvents),
+    ("Slider controls cross both playfield edges in both editing modes", SliderDistanceDragTests.OutsideControls),
+    ("Slider anchors cross both playfield edges and preserve export and undo", SliderDistanceDragTests.OutsidePlayfield),
+    ("Slider drawing and shape editing ignore distance snap", DistanceSnapPresetTests.SliderEvents),
     ("Segmented droplets snap without requiring matching presets on both sides", SliderDistanceDragTests.SegmentedDroplet),
     ("Droplet drag permits outgoing spacing beyond maximum DS", SliderDistanceDragTests.DropletOutgoingSpacing),
     ("Curve controls cross endpoint heights with and without DS", SliderDistanceDragTests.ControlOverhangs),
     ("Selected slider tails snap across the full DS range", SliderDistanceDragTests.SelectedTail),
     ("Curve tail edits preserve shape limits and preceding-event snap", SliderDistanceDragTests.CurvedTail),
-    ("Segmented slider tails use strict distance snap", SliderDistanceDragTests.SegmentedTail),
+    ("Segmented slider tails distinguish object snapping and shape editing", SliderDistanceDragTests.SegmentedTail),
     ("Selected repeat endpoints use their preceding reference", SliderDistanceDragTests.RepeatedTailAndHead),
     ("Droplet distance snap preserves other events and compensation", SliderDistanceDragTests.TinyDroplet),
     ("Slider DS modifiers and unreachable candidates preserve drag state", SliderDistanceDragTests.ModifiersAndUnreachable),
@@ -260,7 +276,6 @@ var tests = new (string Name, Action Run)[]
     ("Read-only AR controls preview fall distance and visibility", ArPreviewAndInput),
     ("AR scale works with a hidden preview and follows canvas width changes", ArScaleResize),
     ("Hiding main curves preserves every converted fruit, droplet and tiny droplet", MainCurveVisibility),
-    ("Preview debug curves are independent and remain behind converted objects", PreviewCurveLayers),
     ("Map CS scales main and preview objects together", CircleSizeAcrossViews),
     ("Main curves overlay objects and selection changes only their opacity", MainCurveSelectionOpacity),
     ("Imported timing boundaries drive both quarter and sixth editing", MultiTimingEditing),
@@ -291,7 +306,7 @@ var tests = new (string Name, Action Run)[]
     ("Closing a shortcuts does not pass clicks to the canvas", SliderInteractionTests.ContextOutsideClick),
     ("Deleting a point never revives dormant neighbour handles", SliderInteractionTests.DeleteDoesNotActivateDormantHandles),
     ("Legacy repeat insertion uses an approximate FSlider and preserves duration", SliderInteractionTests.RepeatInsertion),
-    ("Moving a draft tail keeps its visible future handle in bounds", SliderInteractionTests.DraftTailHandleBounds),
+    ("Moving a draft tail preserves its handles beyond both playfield edges", SliderInteractionTests.DraftTailHandleTranslation),
     ("Mixed clipboard batches preserve relative time and independent source order", ClipboardMultiTests.MixedBatchPreservesSnapshotAndOrder),
     ("Cutting a mixed batch is one reversible transaction", ClipboardMultiTests.MixedCutIsOneTransaction),
     ("A later overflowing pasted object rolls back the entire batch", ClipboardMultiTests.OverflowPasteRollsBackBatch),
@@ -791,30 +806,6 @@ static void MainCurveVisibility()
     True(Snapshot(ui) == original && !ui.View.IsDirty, "Curve visibility mutated the document or history.");
 }
 
-static void PreviewCurveLayers()
-{
-    var ui = new Ui(); ui.OpenPreview();
-    var objects = ObjectCircles(ui, preview: true);
-    True(objects.Length > 0, "Preview has no converted objects.");
-    True(!CurveCommands(ui, preview: true).Any(), "Debug curves are visible in the preview by default.");
-    ui.ClickText("调试曲线");
-    var curves = CurveCommands(ui, preview: true).Select(c => c.Segment!.Value).ToArray();
-    True(curves.Length > 0, "The preview debug toggle did not show target curves.");
-    True(ObjectCircles(ui, preview: true).SequenceEqual(objects), "Enabling debug curves changed preview objects.");
-    AssertPreviewDrawOrder(ui);
-    ui.ClickText("滑条路径");
-    True(!CurveCommands(ui, preview: false).Any(), "The main curve toggle did not hide the main layer.");
-    True(CurveCommands(ui, preview: true).Select(c => c.Segment!.Value).SequenceEqual(curves), "Main visibility incorrectly changed the preview debug flag.");
-    True(ObjectCircles(ui, preview: true).SequenceEqual(objects), "Main visibility changed the preview object sequence.");
-    AssertPreviewDrawOrder(ui);
-    ui.ClickText("滑条路径");
-    ui.ClickText("调试曲线");
-    True(!CurveCommands(ui, preview: true).Any(), "Preview debug curves did not hide again.");
-    True(CurveCommands(ui, preview: false).Any(), "Disabling preview curves also hid the main target layer.");
-    True(ObjectCircles(ui, preview: true).SequenceEqual(objects), "Disabling debug curves changed preview objects.");
-    True(!ui.View.IsDirty, "Debug layer toggles created an edit transaction.");
-}
-
 static void CircleSizeAcrossViews()
 {
     var ui = new Ui(); ui.OpenPreview();
@@ -860,7 +851,6 @@ static void MainCurveSelectionOpacity()
     True(CurveCommands(ui, preview: false).Any(), "The main curve fixture is empty.");
     AssertMainDrawOrder();
     foreach (var command in CurveCommands(ui, preview: false)) Near(0.5, command.Segment!.Value.Opacity);
-    ui.ClickText("调试曲线");
     AssertPreviewLayer();
     // The linear fixture has a distinct colour, so selected and unselected tracks can be distinguished without private state.
     ui.SelectTrack(ui.View.Document.Tracks.Single(t => t.Kind == CurveKind.Linear).Id);
@@ -889,10 +879,7 @@ static void MainCurveSelectionOpacity()
     }
     void AssertPreviewLayer()
     {
-        var curves = CurveCommands(ui, preview: true).ToArray();
-        True(curves.Length > 0, "The enabled preview debug layer disappeared during selection.");
-        foreach (var command in curves) Near(1, command.Segment!.Value.Opacity);
-        AssertPreviewDrawOrder(ui);
+        True(!CurveCommands(ui, preview: true).Any(), "Preview contains authored debug curves.");
     }
 }
 
@@ -917,13 +904,6 @@ static void AssertObjectKinds(Ui ui, RecordingCanvas.Dot[] circles, float fieldW
     foreach (float radius in radii)
         True(circles.Any(c => Math.Abs(c.Radius - radius * fieldWidth / 512) < 0.001),
             "The fixture is missing a painted Fruit, Droplet or TinyDroplet type.");
-}
-
-static void AssertPreviewDrawOrder(Ui ui)
-{
-    int lastCurve = CurveCommands(ui, preview: true).Max(c => c.Order);
-    int firstObject = ViewCommands(ui, preview: true).Where(c => c.Dot is { Filled: true }).Min(c => c.Order);
-    True(lastCurve < firstObject, "Preview target curves were painted over the converted objects.");
 }
 
 static void AssertScaled(RecordingCanvas.Dot[] before, RecordingCanvas.Dot[] after, double ratio, bool comparePosition = true)
@@ -1109,6 +1089,9 @@ sealed class RecordingCanvas : ICanvas
     private readonly Stack<Rect> clipStack = new();
     public readonly record struct Texture(string Path, Rect Bounds, float Opacity);
     public List<Texture> Images { get; } = [];
+    public bool AcceptBackgrounds { get; set; }
+    public bool BackgroundImage(string path, Rect destination)
+    { Images.Add(new(path, destination, 1)); return AcceptBackgrounds; }
     public List<(float Rotation, bool Additive, uint Tint)> Sprites { get; } = [];
     public bool SpriteImage(string path, Rect destination, uint tint, Rect source, float opacity, float rotation, bool additive)
     {

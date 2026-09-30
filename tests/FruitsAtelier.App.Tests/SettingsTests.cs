@@ -135,6 +135,27 @@ static class SettingsTests
                 ui.View.ApplySettings(path); ui.Paint();
                 Check(ApplyColor() == disabled && LibrarySettings.Load(path).TestplayDashKey == 65,
                     "Bindings apply and reset dirty state");
+                var searchField = typeof(FruitsAtelier.App.Editor.EditorView).GetField("searchTask",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+                var pendingSearch = new TaskCompletionSource<FruitsAtelier.App.Editor.LibraryBrowser>();
+                searchField.SetValue(ui.View, pendingSearch.Task);
+                try
+                {
+                    ui.ClickText(L.Get("settings.forceBackgroundDim"));
+                    Check(ApplyColor() != disabled, "Background toggle enables Apply during library search");
+                    ui.View.ApplySettings(path); ui.Paint();
+                    Check(LibrarySettings.Load(path).ForceBackgroundDim && ApplyColor() == disabled,
+                        "Background toggle persists during library search");
+                    int originalDim = ui.View.LibrarySettings.BackgroundDim;
+                    var dimMinus = ui.Canvas.Texts.Single(t => t.Value == "−"
+                        && t.Y > ui.View.SettingsBounds.Y + 384 && t.Y < ui.View.SettingsBounds.Y + 422);
+                    ui.Click(dimMinus.X + 4, dimMinus.Y + 5);
+                    Check(ApplyColor() != disabled, "Background percentage enables Apply during library search");
+                    ui.View.ApplySettings(path); ui.Paint();
+                    Check(LibrarySettings.Load(path).BackgroundDim == Math.Max(0, originalDim - 5) && ApplyColor() == disabled,
+                        "Background percentage persists during library search");
+                }
+                finally { searchField.SetValue(ui.View, null); }
                 ui.Click(ui.View.SettingsBounds.Right - 32, ui.View.SettingsBounds.Y + 24);
                 Check(ui.View.LibraryVisible == fromLibrary, "Apply preserves return destination");
             }

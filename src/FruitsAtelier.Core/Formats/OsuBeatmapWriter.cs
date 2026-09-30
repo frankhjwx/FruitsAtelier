@@ -7,9 +7,30 @@ namespace FruitsAtelier.Core;
 // Keep authoring and quantized read-back conversions separate; each cache belongs to one caller.
 public sealed class OsuWriteCache
 {
+    public CatchConversionResult Convert(MapDocument document, bool compensateTinyDroplets = true)
+        => CatchStreamConverter.Convert(document, compensateTinyDroplets, Source);
+
     internal CatchConversionCache Source { get; } = new();
     internal CatchConversionCache ReadBack { get; } = new();
     internal OsuSliderParseCache ParsedSliders { get; } = new();
+    private GeneratedSlider[] timingSliders = [];
+    private TimingMap.Lookup? timingInput;
+    private double[] importedTimes = [];
+    private List<TimingPoint>? emittedTiming;
+
+    internal List<TimingPoint> Timing(MapDocument document, IReadOnlyList<GeneratedSlider> sliders,
+        Func<MapDocument, IReadOnlyList<GeneratedSlider>, List<TimingPoint>> build)
+    {
+        if (emittedTiming is not null && timingInput!.MatchesTiming(document)
+            && timingSliders.Length == sliders.Count
+            && timingSliders.Where((slider, i) => !ReferenceEquals(slider, sliders[i])).Any() == false
+            && importedTimes.SequenceEqual(document.ImportedSliders.Select(s => s.TimeMs))) return emittedTiming;
+        var result = build(document, sliders);
+        timingSliders = sliders.ToArray();
+        timingInput = new(document);
+        importedTimes = document.ImportedSliders.Select(s => s.TimeMs).ToArray();
+        return emittedTiming = result;
+    }
 }
 
 public sealed class OsuWriteResult
@@ -119,7 +140,7 @@ public static class OsuBeatmapWriter
             values[10] ??= "0:0:0:0:";
             lines.Add((slider.StartTimeMs, track.SourceOrder, slider.SourceId, string.Join(',', values)));
         }
-        var timing = BuildTiming(document, generated);
+        var timing = cache is null ? BuildTiming(document, generated) : cache.Timing(document, generated, BuildTiming);
         var output = document.DeepClone();
         SetNumber(output, "Editor", "DistanceSpacing", document.DistanceSpacing);
         Set(output, "General", "Mode", "2");
@@ -244,28 +265,27 @@ public static class OsuBeatmapWriter
             throw new InvalidDataException(L.Get("core.writer.timingOrder"));
         var emitted = new MapDocument { BeatLengthMs = document.BeatLengthMs, TimingOffsetMs = document.TimingOffsetMs };
         emitted.TimingPoints.AddRange(original.Select(t => t.DeepClone()));
+        var originalLookup = new TimingMap.Lookup(document);
         foreach (var group in generated.GroupBy(s => Round(s.StartTimeMs)).OrderBy(g => g.Key))
         {
             double start = group.Key;
             var first = group.First();
             if (group.Any(s => Math.Abs(s.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9))
                 throw new InvalidDataException(L.Get("core.writer.svCollision"));
-            var current = TimingMap.At(document, start);
+            var current = originalLookup.At(start);
             // Quantising a head across a red timing boundary changes its locked beat length.
-            if (group.Any(s => Math.Abs(TimingMap.At(document, s.StartTimeMs).BeatLengthMs - current.BeatLengthMs) > 1e-9))
+            if (group.Any(s => Math.Abs(originalLookup.At(s.StartTimeMs).BeatLengthMs - current.BeatLengthMs) > 1e-9))
                 throw new InvalidDataException(L.Get("core.writer.bpmBoundary"));
-            var emittedState = TimingMap.At(emitted, start);
-            bool changesSv = Math.Abs(emittedState.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9;
+            bool changesSv = Math.Abs(EmittedSliderVelocityAt(emitted.TimingPoints, start) - first.SliderVelocityMultiplier) > 1e-9;
             bool differsFromOriginal = Math.Abs(current.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9;
             if (differsFromOriginal && document.ImportedSliders.Any(s => s.TimeMs == start))
                 throw new InvalidDataException(L.Get("core.writer.existingSv"));
             var preceding = document.ImportedSliders.FirstOrDefault(s => s.TimeMs >= start - 1 && s.TimeMs < start
-                && (Math.Abs(TimingMap.At(document, s.TimeMs).SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9
-                    || !TimingMap.At(document, s.TimeMs).GenerateTicks));
+                && (Math.Abs(originalLookup.At(s.TimeMs).SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9
+                    || !originalLookup.At(s.TimeMs).GenerateTicks));
             if (changesSv && preceding is not null)
                 throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(preceding.TimeMs), Number(start)));
-            var currentGroup = original.Where(t => t.TimeMs <= start).GroupBy(t => t.TimeMs).LastOrDefault();
-            var template = currentGroup?.LastOrDefault(t => !t.Uninherited) ?? currentGroup?.First() ?? original[0];
+            var template = TemplateAt(start, inclusive: true);
             // Equal-SV heads can share a window, but its restoration must clear every head in the chain.
             double restoreTime = start + 2;
             foreach (var nearby in generated.Where(s => Round(s.StartTimeMs) > start).OrderBy(s => s.StartTimeMs))
@@ -286,7 +306,7 @@ public static class OsuBeatmapWriter
             bool normalizedBoundary = false;
             foreach (var boundary in closeBoundaries)
             {
-                var state = TimingMap.At(document, boundary.Key);
+                var state = originalLookup.At(boundary.Key);
                 if (Math.Abs(state.BeatLengthMs - current.BeatLengthMs) > 1e-9)
                     throw new InvalidDataException(L.Get("core.writer.restoreIntervalAt", Number(boundary.Key), Number(start)));
                 if (Math.Abs(state.SliderVelocityMultiplier - first.SliderVelocityMultiplier) <= 1e-9) continue;
@@ -297,7 +317,7 @@ public static class OsuBeatmapWriter
                     OverrideInherited(emitted.TimingPoints, boundary.First(), boundary.Key, -100 / first.SliderVelocityMultiplier);
                 normalizedBoundary = true;
             }
-            var restoreState = TimingMap.At(document, Math.BitDecrement(restoreTime));
+            var restoreState = originalLookup.At(Math.BitDecrement(restoreTime));
             bool restoreDiffers = Math.Abs(restoreState.SliderVelocityMultiplier - first.SliderVelocityMultiplier) > 1e-9;
             bool needsRestore = restoreDiffers && (normalizedBoundary || double.IsFinite(nextImported))
                 && !original.Any(t => t.TimeMs == restoreTime);
@@ -308,8 +328,7 @@ public static class OsuBeatmapWriter
                     current.GenerateTicks || differsFromOriginal ? -100 / first.SliderVelocityMultiplier : double.NaN);
             if (needsRestore)
             {
-                var restoreGroup = original.Where(t => t.TimeMs < restoreTime).GroupBy(t => t.TimeMs).LastOrDefault();
-                var restoreTemplate = restoreGroup?.LastOrDefault(t => !t.Uninherited) ?? restoreGroup?.First() ?? original[0];
+                var restoreTemplate = TemplateAt(restoreTime, inclusive: false);
                 OverrideInherited(emitted.TimingPoints, restoreTemplate, restoreTime,
                     restoreState.GenerateTicks ? -100 / restoreState.SliderVelocityMultiplier : double.NaN);
             }
@@ -317,6 +336,38 @@ public static class OsuBeatmapWriter
         // An SV-only boundary can move only if unchanged sliders keep both their exact and legacy lookup states.
         VerifyImportedTiming(document, emitted, generated);
         return emitted.TimingPoints.OrderBy(t => t.TimeMs).ToList();
+
+        TimingPoint TemplateAt(double time, bool inclusive)
+        {
+            int last = original.Count - 1;
+            while (last >= 0 && (inclusive ? original[last].TimeMs > time : original[last].TimeMs >= time)) last--;
+            if (last < 0) return original[0];
+            var first = original[last];
+            for (int i = last; i >= 0 && original[i].TimeMs == original[last].TimeMs; i--)
+            {
+                first = original[i];
+                if (!first.Uninherited) return first;
+            }
+            return first;
+        }
+    }
+
+    private static double EmittedSliderVelocityAt(List<TimingPoint> points, double time)
+    {
+        // Emission mutates green points after each head; query that local state without rebuilding every timing group.
+        double latest = double.NegativeInfinity;
+        TimingPoint? red = null, green = null;
+        foreach (var point in points)
+        {
+            if (point.TimeMs > time || point.TimeMs < latest) continue;
+            if (point.TimeMs > latest) { latest = point.TimeMs; red = green = null; }
+            if (point.Uninherited)
+            { if (red is null || point.SourceOrder < red.SourceOrder) red = point; }
+            else if (green is null || point.SourceOrder >= green.SourceOrder) green = point;
+        }
+        var selected = green ?? red;
+        return selected is { BeatLengthMs: < 0 } ? Math.Clamp(100 / -selected.BeatLengthMs,
+            LegacyCatchRules.MinimumSliderVelocityMultiplier, LegacyCatchRules.MaximumSliderVelocityMultiplier) : 1;
     }
 
     private static void VerifyImportedTiming(MapDocument original, MapDocument emitted, IReadOnlyList<GeneratedSlider> generated)
@@ -370,6 +421,15 @@ public static class OsuBeatmapWriter
             point.Volume.ToString(CultureInfo.InvariantCulture), point.Uninherited ? "1" : "0", point.Effects.ToString(CultureInfo.InvariantCulture)];
         if (point.OriginalLine?.Split(',') is { Length: > 8 } previous) values = values.Concat(previous.Skip(8)).ToArray();
         return string.Join(',', values);
+    }
+
+    internal static (double Start, double End) BananaTimes(BananaShower shower)
+    {
+        var values = shower.OriginalLine?.Split(',');
+        return (Effective(shower.TimeMs, 2), Effective(shower.EndTimeMs, 5));
+
+        double Effective(double time, int field) => values is not null && values.Length > field
+            && OsuBeatmapReader.Number(values[field]) == time ? time : Round(time);
     }
 
     private static double Round(double value) => Math.Round(value, MidpointRounding.AwayFromZero);

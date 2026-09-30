@@ -312,24 +312,40 @@ internal static class SliderInteractionTests
             "Undo did not restore the Legacy Slider representation.");
     }
 
-    public static void DraftTailHandleBounds()
+    public static void DraftTailHandleTranslation()
     {
-        var ui = Load(new MapDocument { DurationMs = 12000 });
-        ui.Key('B'); ui.ClickMap(1000, 100);
-        ui.DownMap(2000, 200); ui.MoveMap(2125, 300); ui.UpMap(2125, 300);
-        Guid tailId = ui.View.Document.Tracks.Single().Nodes[^1].Id;
-        var handle = ui.Anchor(tailId).HandleOut;
-        Check(handle.X > 99, "The fixture did not create an outgoing draft handle.");
-        ui.DownMap(2000, 200); ui.MoveMap(2000, 450); ui.UpMap(2000, 450);
-        var tail = ui.Anchor(tailId);
-        Check(tail.X > 200 && tail.X + tail.HandleOut.X <= 512,
-            "Moving the draft tail allowed its visible outgoing handle past X=512.");
-        Check(tail.HandleOut == handle, "Clamping the tail silently changed its direction handle.");
-        ui.ClickMap(3000, 400); ui.Key(13);
-        Check(ui.View.Document.Tracks.Single().Nodes.Count == 3, "A valid continuation could not finish after moving the tail.");
-        Valid(ui);
-        ui.Key('Z', ctrl: true);
-        Check(ui.View.Document.Tracks.Count == 0, "Draft-tail editing split the complete slider's undo transaction.");
+        foreach (int direction in new[] { -1, 1 })
+        {
+            var ui = Load(new MapDocument { DurationMs = 12000 });
+            ui.Key('B'); ui.ClickMap(1000, 100);
+            double pullX = 200 + direction * 100;
+            ui.DownMap(2000, 200); ui.MoveMap(2125, pullX); ui.UpMap(2125, pullX);
+            Guid tailId = ui.View.Document.Tracks.Single().Nodes[^1].Id;
+            var outgoing = ui.Anchor(tailId).HandleOut;
+            var incoming = ui.Anchor(tailId).HandleIn;
+            Check(direction * outgoing.X > 99, "The fixture did not create an outgoing draft handle.");
+            double targetX = direction > 0 ? 450 : 60;
+            ui.DownMap(2000, 200); ui.MoveMap(2000, targetX); ui.UpMap(2000, targetX);
+            var tail = ui.Anchor(tailId);
+            Near(targetX, tail.X); Near(2000, tail.TimeMs);
+            Check(direction > 0 ? tail.X + tail.HandleOut.X > 512 : tail.X + tail.HandleOut.X < 0,
+                "The draft handle did not translate beyond the playfield edge with its anchor.");
+            Check(tail.HandleOut == outgoing && tail.HandleIn == incoming,
+                "Moving the draft tail changed its direction handle vectors.");
+            ui.ClickMap(3000, direction > 0 ? 400 : 100); ui.Key(13);
+            Check(ui.View.Document.Tracks.Single().Nodes.Count == 3, "Continuation could not finish after moving the tail.");
+            Valid(ui);
+            var completed = ui.View.Document.DeepClone();
+            Check(ProjectSerializer.Read(ProjectSerializer.Serialize(completed)).ContentEquals(completed),
+                "Project persistence lost the translated draft handle geometry.");
+            var exported = OsuBeatmapWriter.Serialize(completed);
+            Check(exported.PlayableObjects.Count > 0 && exported.PlayableObjects.All(o => o.X is >= 0 and <= 512),
+                "Completed outside-handle geometry did not export playable in-field events.");
+            ui.Key('Z', ctrl: true);
+            Check(ui.View.Document.Tracks.Count == 0, "Draft-tail editing split the complete slider's undo transaction.");
+            ui.Key('Y', ctrl: true);
+            Check(completed.ContentEquals(ui.View.Document), "Redo did not restore the completed draft geometry.");
+        }
     }
 
     public static void ReverseAndExtend()

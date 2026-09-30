@@ -11,6 +11,7 @@ internal static class DisplaySettingsTests
         string path = Path.Combine(root, "settings.json");
         File.WriteAllText(path, "{}");
         Check(!LibrarySettings.Load(path).LowLatencyDisplay, "Older preferences must default to VSync.");
+        Check(!LibrarySettings.Load(path).ReverseCanvasScroll, "Older preferences must default to normal canvas scrolling.");
         try
         {
             foreach (string language in L.AvailableLanguages)
@@ -20,6 +21,31 @@ internal static class DisplaySettingsTests
                 ui.View.LibrarySettings.Workspace = root;
                 var original = ui.View.Document.DeepClone();
                 bool dirty = ui.View.IsDirty;
+                ui.View.OpenSettings(); ui.Paint();
+                ui.ClickText(L.Get("settings.reverseCanvasScrollOff"));
+                Check(!ui.View.LibrarySettings.ReverseCanvasScroll, "Scroll draft applied before Apply.");
+                ui.Key(27); ui.View.OpenSettings(); ui.Paint();
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.reverseCanvasScrollOff")), "Closing retained an unapplied scroll draft.");
+                ui.ClickText(L.Get("settings.reverseCanvasScrollOff"));
+                ui.ClickText(L.Get("settings.appearance")); ui.ClickText(L.Get("settings.general"));
+                ui.View.ApplySettings(path);
+                Check(LibrarySettings.Load(path).ReverseCanvasScroll, "Reverse canvas scroll was not saved.");
+                ui.Key(27);
+                foreach (bool shift in new[] { false, true })
+                {
+                    ui.View.UpdateTransport(3000, 10000, true, false, false, null, null); ui.Paint();
+                    ui.View.Wheel(ui.Plot.X + 10, ui.Plot.Y + 20, 120, false, shift); ui.Paint();
+                    Check(ui.View.PlayheadMs > 3000, "Reverse canvas wheel did not move later.");
+                    ui.View.Wheel(ui.Plot.X + 10, ui.Plot.Y + 20, -120, false, shift); ui.Paint();
+                    Check(Math.Abs(ui.View.PlayheadMs - 3000) < .001, "Reverse wheel did not return to its starting time.");
+                }
+                ui.View.UpdateTransport(3000, 10000, true, false, false, null, null); ui.Paint();
+                var timeline = ui.View.ObjectTimelineBounds;
+                ui.View.Wheel(timeline.X + 10, timeline.Y + 10, 120, false); ui.Paint();
+                Check(ui.View.PlayheadMs < 3000, "Canvas preference reversed the object timeline.");
+                double zoom = ui.View.CanvasZoom;
+                ui.View.Wheel(ui.Plot.X + 10, ui.Plot.Y + 20, 120, false, false, true); ui.Paint();
+                Check(ui.View.CanvasZoom > zoom, "Reverse scrolling changed zoom direction.");
                 ui.View.OpenSettings(); ui.Paint();
                 Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.displayMode")), "Unsupported host exposed display setting.");
                 ui.Key(27);

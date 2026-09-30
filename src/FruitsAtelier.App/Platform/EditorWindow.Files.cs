@@ -25,6 +25,7 @@ internal sealed partial class EditorWindow
         view.RequestScheduleHitsound = hitsounds.Schedule;
         view.RequestHitsound = hitsounds.PlayImmediate;
         view.RequestAuditionHitsound = hitsounds.PlayAudition;
+        view.RequestTestplayMenuLoop = hitsounds.SetMenuLoop;
         view.RequestWaveform = WaveformDecoder.Load;
         view.RequestPrepareHitsound = hitsounds.Prepare;
         view.RequestPreloadHitsounds = documents => hitsounds.PreloadProject(documents, view.HitsoundSkinFolders);

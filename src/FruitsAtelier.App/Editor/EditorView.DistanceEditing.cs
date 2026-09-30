@@ -263,22 +263,26 @@ public sealed partial class EditorView
     private readonly List<DistanceLabel> distanceLayout = [];
     private IReadOnlyList<ConvertedCatchObject>? distanceLayoutSource;
     private TimingMap.Lookup? distanceLayoutTiming;
+    private IReadOnlyList<ConvertedCatchObject>? distanceLayoutAuthoredSource;
     private double distanceLayoutScale, distanceLayoutWidth, distanceLayoutDpb;
     private string distanceLayoutLanguage = "";
     private bool distanceLayoutIncludeTiny;
 
     private void EnsureDistanceLabelLayout(ICanvas c, IReadOnlyList<ConvertedCatchObject> objects)
     {
-        if (ReferenceEquals(distanceLayoutSource, objects) && ReferenceEquals(distanceLayoutTiming, renderedTiming)
+        if (ReferenceEquals(distanceLayoutSource, objects) && ReferenceEquals(distanceLayoutAuthoredSource, conversion!.Objects)
+            && ReferenceEquals(distanceLayoutTiming, renderedTiming)
             && distanceLayoutScale == pixelsPerMs && distanceLayoutWidth == Playfield.Width
             && distanceLayoutDpb == Document.DistancePerBeat && distanceLayoutLanguage == L.Language
             && distanceLayoutIncludeTiny == movementIncludeTinyDroplets) return;
         distanceLayoutSource = objects; distanceLayoutTiming = renderedTiming;
+        distanceLayoutAuthoredSource = conversion!.Objects;
         distanceLayoutScale = pixelsPerMs; distanceLayoutWidth = Playfield.Width;
         distanceLayoutDpb = Document.DistancePerBeat; distanceLayoutLanguage = L.Language;
         distanceLayoutIncludeTiny = movementIncludeTinyDroplets;
         distanceLayout.Clear();
         var nearby = new List<DistanceLabel>();
+        var authored = conversion!.Objects.ToDictionary(o => (o.SourceId, o.EventIndex));
         // Choose labels in map order, including offscreen predecessors, so scrolling cannot change priority.
         for (int i = 1; i < movementIndices.Length; i++)
         {
@@ -287,7 +291,14 @@ public sealed partial class EditorView
             if (to.TimeMs - from.TimeMs <= 37.5
                 || Document.BananaShowers.Any(s => s.TimeMs <= to.TimeMs && s.EndTimeMs >= from.TimeMs)
                 || breakPeriods.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
-            if (BaseDistanceRatio(from, to) is not { } ratio) continue;
+            // Keep labels aligned with playable connections while measuring authored spacing, like the inspector.
+            double? spacing = placementGhost is { } ghost && placementMovementObjects is not null
+                && (to.SourceId, to.EventIndex) == (ghost.SourceId, ghost.EventIndex) ? placementDistances.Previous
+                : placementGhost is { } nextGhost && placementMovementObjects is not null
+                && (from.SourceId, from.EventIndex) == (nextGhost.SourceId, nextGhost.EventIndex) ? placementDistances.Next
+                : BaseDistanceRatio(authored.GetValueOrDefault((from.SourceId, from.EventIndex), from),
+                    authored.GetValueOrDefault((to.SourceId, to.EventIndex), to));
+            if (spacing is not { } ratio) continue;
             string text = L.Get("assist.ratio", ratio);
             var label = new DistanceLabel((from.TimeMs + to.TimeMs) / 2,
                 (float)((from.X + to.X) / 2 / 512 * Playfield.Width) + 8, c.MeasureText(text, 11) + 8, text);

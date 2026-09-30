@@ -24,6 +24,26 @@ static class WheelGestureTests
         ui.View.Wheel(ox, oy, -120, true);
         Check(ui.View.SnapDivisor != afterTimeline, "Ctrl+wheel on overview must adjust Snap.");
 
+        ui.Key(114);
+        var waveform = ui.View.WaveformBounds;
+        foreach (var family in new[] { new[] { 1, 2, 4, 8, 16 }, new[] { 3, 6, 12 }, new[] { 5 }, new[] { 7 }, new[] { 9 } })
+        {
+            ui.SetSnapDivisor(family[0]);
+            foreach (int expected in family.Skip(1))
+            {
+                int previous = ui.View.SnapDivisor;
+                ui.View.Wheel(waveform.X + 100, waveform.Y + 80, 60, true);
+                Check(ui.View.SnapDivisor == previous, "Partial wheel notch accumulates.");
+                ui.View.Wheel(waveform.X + 100, waveform.Y + 80, 60, true);
+                Check(ui.View.SnapDivisor == expected, "Timing wheel doubles within its Snap family.");
+            }
+            ui.View.Wheel(waveform.X + 100, waveform.Y + 80, 240, true);
+            Check(ui.View.SnapDivisor == family[^1], "Timing Snap stops at upper family limit.");
+            ui.View.Wheel(waveform.X + 100, waveform.Y + 80, -120 * family.Length, true);
+            Check(ui.View.SnapDivisor == family[0], "Timing Snap stops at lower family limit.");
+        }
+        ui.Key(112);
+
         double zoom = ui.View.CanvasZoom;
         ui.View.Wheel(cx, cy, 120, false, false, true);
         Check(ui.View.CanvasZoom > zoom, "Alt+wheel must zoom the canvas.");

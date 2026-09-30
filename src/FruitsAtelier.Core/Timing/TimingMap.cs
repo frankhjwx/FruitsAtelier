@@ -13,10 +13,14 @@ public static class TimingMap
         private readonly double[] times;
         private readonly TimingState[] states;
         private readonly TimingState initial;
+        private readonly double beatLengthMs, offsetMs;
+        private readonly TimingPoint[] inputPoints;
         internal double[] RedTimes { get; }
 
         public Lookup(MapDocument document)
         {
+            beatLengthMs = document.BeatLengthMs; offsetMs = document.TimingOffsetMs;
+            inputPoints = document.TimingPoints.Select(p => p.DeepClone()).ToArray();
             var groups = Groups(document);
             var firstRed = groups.Select(g => g.Red).FirstOrDefault(p => p is not null);
             double beatLength = firstRed?.BeatLengthMs ?? document.BeatLengthMs;
@@ -52,6 +56,17 @@ public static class TimingMap
             return index < 0 ? initial : states[index];
         }
 
+        public bool MatchesTiming(MapDocument document)
+        {
+            if (beatLengthMs != document.BeatLengthMs || offsetMs != document.TimingOffsetMs
+                || inputPoints.Length != document.TimingPoints.Count) return false;
+            for (int i = 0; i < inputPoints.Length; i++)
+                if (!inputPoints[i].ContentEquals(document.TimingPoints[i])) return false;
+            return true;
+        }
+
+        public double Snap(double time, int divisor) => TimingMap.Snap(this, time, divisor);
+
         public IEnumerable<BeatGridLine> Grid(double start, double end, int divisor)
         {
             var lines = new List<BeatGridLine>();
@@ -64,15 +79,20 @@ public static class TimingMap
     }
 
     public static double Snap(MapDocument document, double time, int divisor)
+        => new Lookup(document).Snap(time, divisor);
+
+    private static double Snap(Lookup lookup, double time, int divisor)
     {
         if (!double.IsFinite(time)) throw new ArgumentOutOfRangeException(nameof(time));
         if (divisor <= 0) throw new ArgumentOutOfRangeException(nameof(divisor));
-        var state = At(document, time);
+        var state = lookup.At(time);
         double step = state.BeatLengthMs / divisor;
-        if (!double.IsFinite(step) || step <= 0) throw new ArgumentOutOfRangeException(nameof(document));
-        var reds = Groups(document).Where(g => g.Red is not null).Select(g => g.TimeMs).ToArray();
-        double previousBoundary = reds.Where(t => t <= time).DefaultIfEmpty(double.NegativeInfinity).Last();
-        double nextBoundary = reds.FirstOrDefault(t => t > time, double.PositiveInfinity);
+        if (!double.IsFinite(step) || step <= 0) throw new ArgumentOutOfRangeException(nameof(lookup));
+        var reds = lookup.RedTimes;
+        int boundary = Array.BinarySearch(reds, time);
+        if (boundary < 0) boundary = ~boundary - 1;
+        double previousBoundary = boundary >= 0 ? reds[boundary] : double.NegativeInfinity;
+        double nextBoundary = boundary + 1 < reds.Length ? reds[boundary + 1] : double.PositiveInfinity;
         double index = Math.Floor((time - state.OffsetMs) / step);
         double nearest = double.NaN;
         double nearestDistance = double.PositiveInfinity;

@@ -116,8 +116,17 @@ internal sealed class EditorControl : Control, IDisposable
         base.Render(context);
         using var canvas = new MacCanvas(context, images);
         View.Render(canvas, (float)Bounds.Width, (float)Bounds.Height);
+        UpdatePointerCursor();
         if (View.IsTestplaying || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.VolumePopoverNeedsRedraw)
             TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.VolumePopoverNeedsRedraw) InvalidateVisual(); });
+    }
+    private StandardCursorType? pointerCursorType;
+    private void UpdatePointerCursor()
+    {
+        var next = View.TestplayUsesCursor ? StandardCursorType.None : View.TimelineResizeCursor || View.PreviewResizeCursor ? StandardCursorType.SizeWestEast : StandardCursorType.Arrow;
+        if (pointerCursorType == next) return;
+        pointerCursorType = next;
+        Cursor = new Cursor(next);
     }
     private static IEnumerable<string> DroppedPaths(DragEventArgs e)
         => e.DataTransfer.TryGetFiles()?.OfType<IStorageFile>().Select(f => f.TryGetLocalPath()).OfType<string>() ?? [];
@@ -138,7 +147,7 @@ internal sealed class EditorControl : Control, IDisposable
         View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         var p = e.GetPosition(this);
         View.PointerMove((float)p.X, (float)p.Y, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
-        Cursor = new Cursor(View.TimelineResizeCursor || View.PreviewResizeCursor ? StandardCursorType.SizeWestEast : StandardCursorType.Arrow);
+        UpdatePointerCursor();
         Refresh();
     }
     protected override void OnPointerExited(PointerEventArgs e)

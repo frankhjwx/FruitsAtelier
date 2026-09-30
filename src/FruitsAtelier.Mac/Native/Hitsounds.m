@@ -6,10 +6,11 @@
 #define FA_VOICES 128
 #define FA_RATE 44100.0
 
-typedef struct { const float *data; unsigned length; double start; float volume; unsigned generation; bool rendered; } FAHit;
+typedef struct { const float *data; unsigned length; double start; float volume; unsigned generation; bool rendered; bool loop; unsigned loopGeneration; float loopGain; } FAHit;
 typedef struct {
     FAHit queue[FA_QUEUE], voices[FA_VOICES];
     _Atomic unsigned read, write, generation, active;
+    _Atomic unsigned loopGeneration;
     _Atomic double lastStart, lastDuration, lastRenderedStart;
     _Atomic float volume;
     double secondsPerTick;
@@ -27,7 +28,7 @@ static void render(FAMix *mix, double time, unsigned frames, float *out) {
         unsigned slot = 0;
         for (unsigned i = 0; i < FA_VOICES; i++) {
             FAHit v = mix->voices[i];
-            if (!v.data || v.generation != generation || v.start + v.length / FA_RATE <= time) { slot = i; break; }
+            if (!v.data || v.generation != generation || (!v.loop && v.start + v.length / FA_RATE <= time)) { slot = i; break; }
             if (v.start < mix->voices[slot].start) slot = i;
         }
         mix->voices[slot] = hit;
@@ -38,6 +39,18 @@ static void render(FAMix *mix, double time, unsigned frames, float *out) {
         FAHit hit = mix->voices[v];
         if (!hit.data || hit.generation != generation) continue;
         long offset = llround((time - hit.start) * FA_RATE);
+        if (hit.loop) {
+            bool stopping = hit.loopGeneration != atomic_load(&mix->loopGeneration);
+            for (unsigned f = 0; f < frames; f++) {
+                float target = stopping ? 0 : 1;
+                hit.loopGain += fmaxf(-1.0f / 8820, fminf(1.0f / 8820, target - hit.loopGain));
+                if (offset + f >= 0 && hit.length) out[f] += hit.data[(offset + f) % hit.length] * hit.volume * hit.loopGain;
+            }
+            mix->voices[v].loopGain = hit.loopGain;
+            if (stopping && hit.loopGain == 0) mix->voices[v].data = NULL;
+            else active++;
+            continue;
+        }
         if (offset >= hit.length) { mix->voices[v].data = NULL; continue; }
         active++;
         unsigned first = offset < 0 ? (unsigned)MIN((long)frames, -offset) : 0;
@@ -126,6 +139,19 @@ int fa_hitsounds_schedule(void *handle, void *sample, double start, float volume
 void fa_hitsounds_stop(void *handle) {
     FAMix *mix = ((__bridge FAHitEngine *)handle)->mix;
     atomic_fetch_add(&mix->generation, 1); atomic_store(&mix->active, 0); atomic_store(&mix->lastStart, 0);
+}
+void fa_hitsounds_loop(void *handle, void *sample, float volume) {
+    FAMix *mix = ((__bridge FAHitEngine *)handle)->mix;
+    unsigned loopGeneration = atomic_fetch_add(&mix->loopGeneration, 1) + 1;
+    if (!sample) return;
+    unsigned write = atomic_load(&mix->write), next = (write + 1) % FA_QUEUE;
+    if (next == atomic_load(&mix->read)) return;
+    AVAudioPCMBuffer *buffer = (__bridge AVAudioPCMBuffer *)sample;
+    mix->queue[write] = (FAHit){ buffer.floatChannelData[0], buffer.frameLength, fa_audio_host_time(), volume,
+        atomic_load(&mix->generation), false, true, loopGeneration, 0 };
+    atomic_store(&mix->lastStart, mix->queue[write].start);
+    atomic_store(&mix->lastDuration, buffer.frameLength / FA_RATE);
+    atomic_store(&mix->write, next);
 }
 void fa_hitsounds_volume(void *handle, float volume) {
     atomic_store(&(((__bridge FAHitEngine *)handle)->mix->volume), fmaxf(0, fminf(1, volume)));

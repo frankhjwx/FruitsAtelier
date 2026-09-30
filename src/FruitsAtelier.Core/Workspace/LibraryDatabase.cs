@@ -19,6 +19,7 @@ public sealed class LibrarySettings
     public bool UseSkinSounds { get; set; } = true;
     public bool RomanisedMetadata { get; set; } = true;
     public bool DerandomizeDroplets { get; set; } = true;
+    public bool ReverseCanvasScroll { get; set; }
     public bool LowLatencyDisplay { get; set; }
     public uint StandIndicatorColour { get; set; } = DefaultStandIndicatorColour;
     public uint WalkIndicatorColour { get; set; } = DefaultWalkIndicatorColour;
@@ -31,6 +32,10 @@ public sealed class LibrarySettings
         set => playbackLineFromBottom = double.IsFinite(value) ? Math.Clamp(value, .05, .95) : .25;
     }
     public bool ShowTestplayCombo { get; set; } = true;
+    public bool ForceBackgroundDim { get; set; }
+    private int backgroundDim = 90;
+    public int BackgroundDim { get => backgroundDim; set => backgroundDim = Math.Clamp(value, 0, 100); }
+    public Dictionary<Guid, MapEditingPreferences> MapEditingPreferences { get; set; } = [];
     private double canvasZoom = .6, objectTimelineScale = .18, waveformSpanMs = 10000;
     public double CanvasZoom { get => canvasZoom; set => canvasZoom = double.IsFinite(value) ? Math.Clamp(value, .01, 1) : .6; }
     public double ObjectTimelineScale { get => objectTimelineScale; set => objectTimelineScale = double.IsFinite(value) ? Math.Clamp(value, .025, 1.5) : .18; }
@@ -77,6 +82,15 @@ public sealed class LibrarySettings
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         AtomicFile.Write(path, JsonSerializer.Serialize(this));
     }
+}
+
+public sealed class MapEditingPreferences
+{
+    public bool GridSnap { get; set; }
+    public bool DistanceSnap { get; set; }
+    public bool MovementAnalysis { get; set; }
+    private int gridLevel = 4;
+    public int GridLevel { get => gridLevel; set => gridLevel = value is 4 or 8 or 16 or 32 ? value : 4; }
 }
 
 public sealed record LibraryMap(string Path, string Directory, string Title, string TitleUnicode, string Artist, string ArtistUnicode,

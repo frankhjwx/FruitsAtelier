@@ -51,7 +51,7 @@ public sealed class CurveTrack
         var a = this; var b = other;
         if (a.Id != b.Id || a.Name != b.Name || a.Kind != b.Kind || a.SourceOrder != b.SourceOrder || a.Nodes.Count != b.Nodes.Count
             || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets
-            || a.StreamSnapDivisor != b.StreamSnapDivisor) return false;
+            || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)) return false;
         for (int j = 0; j < a.Nodes.Count; j++)
         {
             var an = a.Nodes[j]; var bn = b.Nodes[j];
@@ -70,6 +70,7 @@ public sealed class CurveTrack
     {
         var copy = (CurveTrack)MemberwiseClone();
         copy.Nodes = Nodes.Select(n => n.DeepClone()).ToList();
+        copy.Stack = Stack?.DeepClone();
         return copy;
     }
     public int SpanCount { get; set; } = 1;
@@ -77,6 +78,8 @@ public sealed class CurveTrack
     public bool? CompensateTinyDroplets { get; set; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public int? StreamSnapDivisor { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public StackEnvelope? Stack { get; set; }
 }
 
 public sealed class TimingPoint

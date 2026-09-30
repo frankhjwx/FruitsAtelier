@@ -5,13 +5,13 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private void DrawImportedCurves(ICanvas c, float left, float fieldWidth, float bottom, double originTime,
-        double pixelsPerTime, double visibleStart, double visibleEnd, bool preview)
+        double pixelsPerTime, double visibleStart, double visibleEnd)
     {
         foreach (var slider in conversion!.Sliders.Where(s => s.IsImported))
         {
             if (slider.StartTimeMs > visibleEnd || slider.StartTimeMs + slider.DurationMs < visibleStart || slider.Path.Count < 2) continue;
             double spanDuration = slider.DurationMs / slider.SpanCount;
-            float opacity = preview || IsObjectSelected(slider.SourceId) ? 1 : 0.5f;
+            float opacity = IsObjectSelected(slider.SourceId) ? 1 : 0.5f;
             double[] distances = new double[slider.Path.Count];
             for (int i = 1; i < distances.Length; i++)
             {

@@ -13,8 +13,11 @@ public sealed partial class EditorView
     private bool draftDerandomizeDroplets;
     public bool SupportsDisplayMode { get; set; }
     private bool draftLowLatencyDisplay;
+    private bool draftReverseCanvasScroll;
     private double draftTestplayStartupDelaySeconds;
     private bool draftShowTestplayCombo;
+    private int draftBackgroundDim;
+    private bool draftForceBackgroundDim;
     private readonly uint[] draftIndicatorColours = new uint[4];
     private int settingsColourIndex = -1;
     private uint settingsColourOriginal;
@@ -56,6 +59,7 @@ public sealed partial class EditorView
         draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         draftRomanisedMetadata = LibrarySettings.RomanisedMetadata;
         draftDerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
+        draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
         draftLowLatencyDisplay = LibrarySettings.LowLatencyDisplay;
         draftIndicatorColours[0] = LibrarySettings.StandIndicatorColour;
         draftIndicatorColours[1] = LibrarySettings.WalkIndicatorColour;
@@ -65,14 +69,19 @@ public sealed partial class EditorView
         draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
         draftTestplayStartupDelaySeconds = LibrarySettings.TestplayStartupDelaySeconds;
         draftShowTestplayCombo = LibrarySettings.ShowTestplayCombo;
+        draftBackgroundDim = LibrarySettings.BackgroundDim;
+        draftForceBackgroundDim = LibrarySettings.ForceBackgroundDim;
     }
 
-    private bool SettingsChanged => draftShowTestplayCombo != LibrarySettings.ShowTestplayCombo || draftWorkspace != LibrarySettings.Workspace ||
+    private bool SettingsRootsChanged => draftWorkspace != LibrarySettings.Workspace || draftOsuRoot != LibrarySettings.OsuRoot;
+
+    private bool SettingsChanged => draftForceBackgroundDim != LibrarySettings.ForceBackgroundDim || draftBackgroundDim != LibrarySettings.BackgroundDim || draftShowTestplayCombo != LibrarySettings.ShowTestplayCombo || draftWorkspace != LibrarySettings.Workspace ||
         draftOsuRoot != LibrarySettings.OsuRoot ||
         draftDefaultSkin != (LibrarySettings.DefaultSkin ?? "") ||
         draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
         draftDerandomizeDroplets != LibrarySettings.DerandomizeDroplets ||
         draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
+        draftReverseCanvasScroll != LibrarySettings.ReverseCanvasScroll ||
         draftIndicatorColours[0] != LibrarySettings.StandIndicatorColour ||
         draftIndicatorColours[1] != LibrarySettings.WalkIndicatorColour ||
         draftIndicatorColours[2] != LibrarySettings.DashIndicatorColour ||
@@ -84,6 +93,7 @@ public sealed partial class EditorView
 
     private void CloseSettings()
     {
+        FinishBackgroundDimDrag();
         FinishVolumeDrag();
         workspaceScrollDragging = false;
         librarySettingsOpen = false;
@@ -111,7 +121,7 @@ public sealed partial class EditorView
             if (category == SettingsCategory.Updates && RequestUpdateCheck is null) continue;
             Button(c, new(r.X + 16, r.Y + 78 + i * 48, 182, 38), L.Get(categories[i]), () =>
             {
-                FinishVolumeDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
+                FinishVolumeDrag(); FinishBackgroundDimDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
                 settingsCategory = category;
                 if (category == SettingsCategory.Workspace) { workspaceScroll = 0; StartStorage(); }
                 if (category == SettingsCategory.Updates && UpdateStatus.Phase is UpdatePhase.Idle or UpdatePhase.Current or UpdatePhase.Failed)
@@ -137,6 +147,12 @@ public sealed partial class EditorView
                         L.Get(draftLowLatencyDisplay ? "settings.displayImmediate" : "settings.displayVsync") + " ▾",
                         () => OpenDisplayModeMenu(displayBounds));
                 }
+                float scrollTop = SettingsTop + (SupportsDisplayMode ? 390 : 214);
+                float scrollWidth = Math.Min(520, SettingsRight - SettingsContentX - 32);
+                c.Line(SettingsContentX, scrollTop, SettingsContentX + scrollWidth, scrollTop, Grid);
+                SettingsButton(c, new(SettingsContentX, scrollTop + 20, scrollWidth, 38),
+                    L.Get(draftReverseCanvasScroll ? "settings.reverseCanvasScrollOn" : "settings.reverseCanvasScrollOff"),
+                    () => draftReverseCanvasScroll = !draftReverseCanvasScroll, draftReverseCanvasScroll);
                 break;
             case SettingsCategory.Workspace:
                 DrawWorkspaceSettings(c);
@@ -175,7 +191,7 @@ public sealed partial class EditorView
         }
         c.Line(SettingsContentX, r.Bottom - 86, r.Right - 24, r.Bottom - 86, Grid);
         c.Text(libraryError, SettingsContentX, r.Bottom - 116, 13, Error, SettingsRight - SettingsContentX - 32);
-        bool canApply = SettingsChanged && scanTask is null && searchTask is null;
+        bool canApply = SettingsChanged && (!SettingsRootsChanged || scanTask is null && searchTask is null);
         SettingsButton(c, new(SettingsContentX, r.Bottom - 64, 200, 38), L.Get("library.apply"), () => ApplySettings(),
             active: canApply, enabled: canApply);
         if (settingsColourIndex >= 0) DrawIndicatorColourPicker(c);
@@ -196,6 +212,7 @@ public sealed partial class EditorView
 
     internal void ApplySettings(string? settingsPath = null)
     {
+        FinishBackgroundDimDrag();
         if (!SettingsChanged) return;
         try
         {
@@ -203,15 +220,19 @@ public sealed partial class EditorView
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
             settings.TestplayStartupDelaySeconds = draftTestplayStartupDelaySeconds;
             settings.ShowTestplayCombo = draftShowTestplayCombo;
+            settings.BackgroundDim = draftBackgroundDim;
+            settings.ForceBackgroundDim = draftForceBackgroundDim;
             settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.DerandomizeDroplets = draftDerandomizeDroplets;
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
+            settings.ReverseCanvasScroll = draftReverseCanvasScroll;
             settings.StandIndicatorColour = draftIndicatorColours[0]; settings.WalkIndicatorColour = draftIndicatorColours[1];
             settings.DashIndicatorColour = draftIndicatorColours[2]; settings.HyperDashIndicatorColour = draftIndicatorColours[3];
             settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;
             settings.UseSkinSounds = LibrarySettings.UseSkinSounds;
             settings.PlaybackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
             settings.CanvasZoom = LibrarySettings.CanvasZoom;
+            settings.MapEditingPreferences = LibrarySettings.MapEditingPreferences;
             settings.ObjectTimelineScale = LibrarySettings.ObjectTimelineScale;
             settings.WaveformSpanMs = LibrarySettings.WaveformSpanMs;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;

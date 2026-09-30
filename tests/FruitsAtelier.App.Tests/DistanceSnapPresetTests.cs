@@ -339,35 +339,28 @@ internal static class DistanceSnapPresetTests
         Check(excess.Count == 2 && !SliderDistanceSnap.Allows(new Dictionary<(int, int), double>(), excess),
             "An internal droplet exceeding DS was not detected.");
         Check(SliderDistanceSnap.Allows(excess, excess), "An existing violation blocked unchanged geometry.");
-        var ui = new Ui(); ui.LoadDocument(WithTrackRemoved());
-        ui.View.SetSliderEditingMode(FruitsAtelier.App.Editor.SliderEditingMode.PenTool);
-        ui.Key('B'); ui.Key('Y');
-        ui.ClickMap(1000, 200);
-        ui.ClickMap(1500, 450, ctrl: true);
-        var drawn = ui.View.Document.Tracks.Single();
-        Check(Math.Abs(drawn.Nodes[^1].X - 392) < 1e-5, "Straight slider endpoint did not snap to 1 DS.");
-        var generated = CatchStreamConverter.Convert(ui.View.Document);
-        Check(generated.Success && generated.Objects.Count(item => item.SourceId == drawn.Id
-            && item.Kind == CatchObjectKind.Droplet) > 0
-            && SliderDistanceSnap.Excesses(ui.View.Document, generated.Objects, drawn.Id).Count == 0
-            && SliderDistanceSnap.StrictErrors(ui.View.Document, drawn, generated.Objects).Count == 0,
-            "Generated straight-slider droplets did not follow the selected DS.");
-        ui.Key(13);
-        ui.EditTrack(drawn.Id);
-        ui.DownMap(1500, 392); ui.MoveMap(1625, 450); ui.UpMap(1625, 450);
-        Check(Math.Abs(ui.View.Document.Tracks.Single().Nodes[^1].X - 440) < 1e-5,
-            "Dragging a completed pen slider tail did not snap to DS.");
-
-        var legacy = new Ui(); legacy.LoadDocument(ui.View.Document.DeepClone());
-        legacy.View.SetSliderEditingMode(FruitsAtelier.App.Editor.SliderEditingMode.OsuLegacy);
-        legacy.Key('Y'); legacy.EditTrack(drawn.Id);
-        legacy.DownMap(1625, 440); legacy.MoveMap(1750, 480); legacy.UpMap(1750, 480);
-        Check(Math.Abs(legacy.View.Document.Tracks.Single().Nodes[^1].X - 488) < 1e-5,
-            $"Dragging a completed legacy slider tail did not snap to DS: {legacy.View.Document.Tracks.Single().Nodes[^1].TimeMs}, {legacy.View.Document.Tracks.Single().Nodes[^1].X}, {legacy.View.StatusMessage}.");
-
-        MapDocument WithTrackRemoved()
+        foreach (var mode in Enum.GetValues<FruitsAtelier.App.Editor.SliderEditingMode>())
+        foreach (bool empty in new[] { false, true })
         {
-            var copy = map.DeepClone(); copy.Tracks.Clear(); return copy;
+            var copy = map.DeepClone(); copy.Tracks.Clear();
+            if (empty) copy.DistanceSnapRatios.Clear();
+            var ui = new Ui(); ui.LoadDocument(copy); ui.View.SetSliderEditingMode(mode);
+            ui.Key('B'); ui.Key('Y');
+            ui.ClickMap(1000, 200);
+            ui.ClickMap(1500, 450, ctrl: true);
+            ui.Key(13);
+            var drawn = ui.View.Document.Tracks.Single();
+            Check(Math.Abs(drawn.Nodes[^1].X - 450) < .001, $"{mode}: DS constrained draft endpoint.");
+            Check(CatchStreamConverter.Convert(ui.View.Document).Success, "Unrestricted draft failed conversion.");
+            var completed = ui.View.Document.DeepClone();
+            ui.EditTrack(drawn.Id);
+            ui.DownMap(1500, 450); ui.MoveMap(1625, 480); ui.UpMap(1625, 480);
+            Check(Math.Abs(ui.View.Document.Tracks.Single().Nodes[^1].X - 480) < .001,
+                $"{mode}: DS constrained endpoint editing.");
+            ui.Key('Z', ctrl: true);
+            Check(completed.ContentEquals(ui.View.Document), "Endpoint editing did not undo.");
+            ui.Key('Z', ctrl: true);
+            Check(copy.ContentEquals(ui.View.Document), "Draft did not undo as one edit.");
         }
     }
 

@@ -37,6 +37,7 @@ internal static class TestplayTests
                 double resumed = next == 1 ? 1.5 : 1;
                 Near(resumed, ui.View.PlaybackSpeed); Near(paused, ui.View.PlayheadMs);
                 ui.Key('P', ctrl: true); ui.View.KeyUp('P');
+                clock.Advance(600); ui.Paint();
                 clock.Advance(100); ui.Paint(); Near(paused + 100 * resumed, ui.View.PlayheadMs);
                 ui.Key(114); ui.View.CancelInteraction(preserveTestplay: true);
                 ui.Key(114); Near(resumed, ui.View.PlaybackSpeed);
@@ -83,10 +84,9 @@ internal static class TestplayTests
         clock.Advance(2000); ui.Key(39); ui.Paint();
         Near(500, ui.View.PlayheadMs); Near(256, ui.View.TestplayCatcherX);
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.paused")), "pause state appears with shortcuts");
-        var bookmarkHint = ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.hintBookmark"));
-        Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.paused")).Y >= bookmarkHint.Y + 20,
-            "Testplay bookmark shortcut and pause state should have separate rows");
+        Check(ui.View.TestplayPauseMenuVisible, "Pause opens the interactive menu");
         ui.View.KeyUp('P'); ui.Key('P', ctrl: true); ui.View.KeyUp('P');
+        clock.Advance(600); ui.Paint();
         clock.Advance(100); ui.Paint(); Near(600, ui.View.PlayheadMs);
         ui.Key(113); Check(!ui.View.IsTestplaying, "F2 exits"); Near(600, ui.View.PlayheadMs);
         ui.View.StartTestplay(); clock.Advance(250); ui.Paint(); ui.Key(112);
@@ -221,11 +221,13 @@ internal static class TestplayTests
         Check(stage.X == 0 && stage.Width == 600 && stage.Y == 225 && stage.Height == 450,
             "tall windows use full width and center the playfield without stretching");
         ui.Key(27); ui.Paint();
-        Check(!ui.View.IsTestplaying && !ui.View.LibraryVisible && ui.View.HasEditorProject,
-            "Escape returns from testplay to the editor");
+        Check(ui.View.TestplayPauseMenuVisible && !ui.View.LibraryVisible && ui.View.HasEditorProject,
+            "Escape opens the pause menu");
         ui.Key(27); ui.Paint(); ui.Key(27);
         Check(!ui.View.LibraryVisible && ui.View.HasEditorProject,
             "held Escape cannot continue through the editor into Library");
+        ui.Key(38); ui.Key(13);
+        Check(!ui.View.IsTestplaying, "Up selects Back and Enter returns to the editor");
         ui.View.KeyUp(27); ui.Key(27);
         Check(ui.View.LibraryVisible, "a fresh Escape press retains editor navigation");
         ui.View.KeyUp(27); ui.LoadDocument(map); ui.View.StartTestplay(); ui.Key(27);
@@ -338,7 +340,8 @@ internal static class TestplayTests
         ui.View.PointerDoubleClick(ui.Plot.X + 10, ui.Plot.Y + 10, false, false);
         ui.Key(46); ui.Key(90, true); ui.Key(32); ui.View.Wheel(400, 400, 120, false);
         Check(ui.View.Document.ContentEquals(snapshot) && !ui.View.IsDirty, "testplay isolates editing shortcuts and pointer input");
-        ui.Key(27); Check(!ui.View.IsTestplaying && pauses == 1, "Esc pauses and returns"); Near(1000, ui.View.PlayheadMs);
+        ui.Key(27); Check(ui.View.TestplayPauseMenuVisible && pauses == 1, "Esc pauses with a menu");
+        ui.Key(112); Check(!ui.View.IsTestplaying, "F1 returns to the editor"); Near(1000, ui.View.PlayheadMs);
         Transport(1000, 6000, true, false, false, null, null); ui.Key(116);
         Transport(5000, 6000, true, true, false, null, null);
         Check(ui.View.IsTestplaying, "last catch retains its plate animation");

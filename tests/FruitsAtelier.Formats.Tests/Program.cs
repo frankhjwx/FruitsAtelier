@@ -16,6 +16,7 @@ if (args.Length == 2 && args[0] == "--import-roundtrip")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Fractional banana endpoints preserve exported counts and downstream tiny compensation", BananaQuantizationTests.Run),
     ("Export keeps timing data below its header and a blank before Colours", TimingSectionSpacing),
     ("Export orders metadata with difficulty identity at the end", MetadataLayout),
     ("Cached export matches full serialization across edits, order, RNG, timing and streams", WriteCacheTests.MatchesUncached),
