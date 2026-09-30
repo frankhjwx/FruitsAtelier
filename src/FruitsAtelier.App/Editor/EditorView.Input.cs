@@ -684,6 +684,7 @@ public sealed partial class EditorView
                 LibrarySettings.WaveformSpanMs = waveformSpanMs;
                 RequestViewPreference?.Invoke();
             }
+            else if (ctrl && !alt && !altHeld && !shift && !shiftHeld) AdjustSnapWheel(delta);
             else if (!alt && !altHeld && !ctrl) SeekByWheel(-delta / 120 * (shift ? 4 : 1), 0);
             return;
         }
@@ -754,19 +755,7 @@ public sealed partial class EditorView
         }
         if ((onTimeline || onCanvas || onOverview) && ctrl && !alt && !shift)
         {
-            snapWheelRemainder += delta;
-            int steps = (int)Math.Truncate(snapWheelRemainder / 120);
-            snapWheelRemainder -= steps * 120;
-            if (steps != 0)
-            {
-                ForgetTemporarySnap();
-                for (int i = 0; i < Math.Abs(steps); i++)
-                {
-                    int next = steps > 0 ? divisor * 2 : divisor % 2 == 0 ? divisor / 2 : divisor;
-                    if (!SnapDivisors.Contains(next)) break;
-                    divisor = next;
-                }
-            }
+            AdjustSnapWheel(delta);
             return;
         }
         if (objectTimeline.Contains(x, y))
@@ -794,6 +783,22 @@ public sealed partial class EditorView
 
     private double wheelRemainder, wheelPlayhead = double.NaN;
     private int wheelDivisor, wheelSurface = -1;
+
+    private void AdjustSnapWheel(float delta)
+    {
+        snapWheelRemainder += delta;
+        int steps = (int)Math.Truncate(snapWheelRemainder / 120);
+        snapWheelRemainder -= steps * 120;
+        if (steps == 0) return;
+        ForgetTemporarySnap();
+        for (int i = 0; i < Math.Abs(steps); i++)
+        {
+            int next = steps > 0 ? divisor * 2 : divisor % 2 == 0 ? divisor / 2 : divisor;
+            if (!SnapDivisors.Contains(next) || next == divisor) break;
+            divisor = next;
+        }
+        if (TimingPageVisible) ResetHitsounds();
+    }
 
     private void SeekByWheel(double delta, int surface)
     {

@@ -12,6 +12,7 @@ internal static class TimingEditorTests
             {
                 L.SetLanguage(lang);
                 Scrollbar();
+                BatchAndMarkers();
                 var map = Map(); var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(980, 620);
                 ui.View.UpdateTransport(0, 10000, true, false, false, null, null); ui.Paint();
                 ui.Key(117); Check(ui.View.TimingSetupVisible, "F6 opens timing setup");
@@ -21,8 +22,8 @@ internal static class TimingEditorTests
                 Check(ui.View.Document.TimingPoints.Count == 1 && !ui.View.IsDirty, "First red survives multi-delete; unchanged confirm is clean");
                 ui.View.UpdateTransport(1000.9, 10000, true, false, false, null, null);
                 ui.Key('P', ctrl: true, shift: true); Check(ui.View.TimingSetupVisible, "Green shortcut opens setup");
-                Check(ui.View.TimingFields.All(f => f.Key == "offset"), "Green timing page exposes only offset");
-                Check(ui.View.TimingFields.Single().Value == "1000", "Green creation truncates fractional milliseconds");
+                Check(ui.View.TimingFields.All(f => f.Key is "offset" or "shift"), "Green timing page exposes offset and batch shift");
+                Check(ui.View.TimingFields.Single(f => f.Key == "offset").Value == "1000", "Green creation truncates fractional milliseconds");
                 ui.ClickText(L.Get("timing.audio")); Set(ui, "volume", "35");
                 Check(ui.View.TimingFields.All(f => f.Key != "index"), "Default sample index is read-only");
                 ui.ClickText(L.Get("timing.custom")); Set(ui, "index", "2");
@@ -78,6 +79,64 @@ internal static class TimingEditorTests
             }
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void BatchAndMarkers()
+    {
+        var map = Map();
+        map.TimingPoints.AddRange([
+            new() { TimeMs = 2000, BeatLengthMs = 400, SourceOrder = 1 },
+            new() { TimeMs = 0, BeatLengthMs = -100, Uninherited = false, Volume = 80, SourceOrder = 2 },
+            new() { TimeMs = 500, BeatLengthMs = -50, Uninherited = false, Volume = 5, Effects = 1, SourceOrder = 3 },
+            new() { TimeMs = 2000, BeatLengthMs = -100, Uninherited = false, Volume = 5, SourceOrder = 4 }]);
+        SongSetup.Set(map, "Editor", "Bookmarks", "0,500,2000");
+        SongSetup.Set(map, "General", "PreviewTime", "500");
+        var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(980, 620);
+        ui.View.UpdateTransport(500, 10000, true, false, false, null, null); ui.Key(114);
+        ui.ClickText(L.Get("timing.moveMarkers")); Set(ui, "page.offset", "20");
+        Check(ui.View.Document.TimingPoints.Where(p => !p.Uninherited).Select(p => p.TimeMs).SequenceEqual(new double[] { 20, 520, 2000 }),
+            "Offset moves greens within original section boundaries");
+        Check(OsuTimeline.Bookmarks(ui.View.Document).SequenceEqual(new[] { 20, 520, 2000 })
+            && SongSetup.Get(ui.View.Document, "General", "PreviewTime") == "500" && ui.View.Document.Fruits[0].TimeMs == 1200,
+            "Section bookmarks move independently of notes and preview");
+        ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Offset and markers undo together");
+        Set(ui, "page.bpm", "150");
+        Check(OsuTimeline.Bookmarks(ui.View.Document).SequenceEqual(new[] { 0, 500, 2000 })
+            && ui.View.Document.TimingPoints.Where(p => !p.Uninherited).Select(p => p.TimeMs).SequenceEqual(new double[] { 0, 500, 2000 }),
+            "Marker option does not scale with BPM");
+        ui.Key('Z', ctrl: true); ui.Key(117); ui.ClickText(L.Get("timing.green")); ui.Key('A', ctrl: true);
+        Check(ui.View.TimingFields.Single(f => f.Key == "offset").Value == "", "Mixed offsets remain blank");
+        Set(ui, "shift", "-10"); ui.ClickText(L.Get("timing.shiftApply"));
+        var offset = ui.View.TimingFields.Single(f => f.Key == "offset").Bounds;
+        ui.Click(offset.Right + 12, offset.Y + 8);
+        string copied = ""; ui.View.RequestCopyText = text => copied = text; ui.Key('C', ctrl: true);
+        Check(TimingEditing.Parse(copied).Select(p => p.TimeMs).SequenceEqual(new double[] { -8, 492, 1992 }),
+            "Signed shift and mixed-value arrows retain relative spacing");
+        ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true); ui.Key('C', ctrl: true);
+        Check(TimingEditing.Parse(copied).Select(p => p.TimeMs).SequenceEqual(new double[] { 0, 500, 2000 }), "Draft undo restores batch shifts");
+        ClickVolumeHeader(ui, ""); ui.Key('C', ctrl: true);
+        Check(TimingEditing.Parse(copied).Select(p => p.TimeMs).SequenceEqual(new double[] { 500, 2000, 0 }), "Volume sorting preserves selected IDs and chronological ties");
+        ClickVolumeHeader(ui, " ↑"); ui.Key('C', ctrl: true);
+        Check(TimingEditing.Parse(copied).Select(p => p.TimeMs).SequenceEqual(new double[] { 0, 500, 2000 }), "Descending sorting preserves chronological ties");
+        ClickVolumeHeader(ui, " ↓"); ui.Key(36); ui.Key(40, shift: true); ui.Key('C', ctrl: true);
+        Check(TimingEditing.Parse(copied).Select(p => p.TimeMs).SequenceEqual(new double[] { 500, 2000 }), "Range selection follows volume display order");
+        ui.Key(46); ui.Key(13);
+        Check(ui.View.Document.TimingPoints.Count == 3 && ui.View.Document.TimingPoints.Count(p => !p.Uninherited) == 1
+            && ui.View.Document.TimingPoints.Single(p => !p.Uninherited).Volume == 80, "Sorted range deletion removes only selected 5 percent lines");
+        ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Sorted deletion restores source order on undo");
+        ui.Key(117); ui.ClickText(L.Get("timing.green")); ui.Key('A', ctrl: true);
+        Set(ui, "shift", "2147483647"); ui.ClickText(L.Get("timing.shiftApply")); ui.Key('C', ctrl: true);
+        Check(TimingEditing.Parse(copied).Select(p => p.TimeMs).SequenceEqual(new double[] { 0, 500, 2000 }), "An overflowing batch shift rejects every row atomically");
+        Set(ui, "shift", "25"); ui.ClickText(L.Get("timing.shiftApply")); ui.Key(13);
+        Check(ui.View.Document.TimingPoints.Where(p => !p.Uninherited).Select(p => p.TimeMs).SequenceEqual(new double[] { 25, 525, 2025 }), "F6 confirms the whole batch");
+        ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "One content undo restores batch apply");
+    }
+
+    private static void ClickVolumeHeader(Ui ui, string arrow)
+    {
+        var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("timing.volumeShort") + arrow
+            && Math.Abs(t.Y - ui.View.TimingSetupBounds.Y - 106) < .01);
+        ui.Click(label.X + 2, label.Y + 2);
     }
 
     private static void Scrollbar()

@@ -16,8 +16,9 @@ public sealed partial class EditorView
     private readonly List<TimingEntry> timingEntries = [];
     private readonly HashSet<int> timingSelected = [];
     private readonly Stack<TimingEntry[]> timingUndo = [], timingRedo = [];
-    private int timingTab, timingFilter, timingScroll, timingAnchor, timingNextId, timingSnap = 4;
-    private bool timingScale, timingResnap, timingLengths, timingBookmarks, timingMoveNotes, metronomeEnabled = true;
+    private int timingTab, timingFilter, timingScroll, timingAnchor, timingNextId, timingSnap = 4, timingSort;
+    private double timingShiftMs;
+    private bool timingScale, timingResnap, timingLengths, timingBookmarks, timingMoveNotes, timingMoveMarkers, metronomeEnabled = true;
     private string timingField = "", timingText = "", timingError = "", timingCommand = "";
     private Action<double>? timingFieldApply;
     private readonly List<(string Key, Rect Bounds, string Value, Action<double> Apply)> timingFields = [];
@@ -56,7 +57,7 @@ public sealed partial class EditorView
         if (AudioPlaying) RequestPausePlayback?.Invoke();
         TimingSetupVisible = true; timingCommand = timingField = timingError = "";
         timingEntries.Clear(); timingSelected.Clear(); timingUndo.Clear(); timingRedo.Clear();
-        timingNextId = 0; timingTab = timingFilter = timingScroll = 0;
+        timingNextId = 0; timingTab = timingFilter = timingScroll = timingSort = 0; timingShiftMs = 0;
         foreach (var point in Document.TimingPoints) timingEntries.Add(new(timingNextId++, TimingEditing.Copy(point), TimingEditing.Copy(point)));
         var active = TimingEditing.Current(Document, playhead);
         int index = active is null ? -1 : Document.TimingPoints.IndexOf(active);
@@ -91,8 +92,25 @@ public sealed partial class EditorView
         { timingEntries.Clear(); timingEntries.AddRange(before); timingError = ex.Message; }
     }
 
-    private TimingEntry[] VisibleTimingEntries() => timingEntries.Where(e => timingFilter == 0 || e.Point.Uninherited == (timingFilter == 1))
-        .OrderBy(e => e.Point.TimeMs).ThenBy(e => e.Point.SourceOrder).ThenBy(e => e.Id).ToArray();
+    private TimingEntry[] VisibleTimingEntries()
+    {
+        var entries = timingEntries.Where(e => timingFilter == 0 || e.Point.Uninherited == (timingFilter == 1));
+        return (timingSort == 0 ? entries.OrderBy(e => e.Point.TimeMs)
+            : entries.OrderBy(e => timingSort == 1 ? e.Point.Volume : -e.Point.Volume).ThenBy(e => e.Point.TimeMs))
+            .ThenBy(e => e.Point.SourceOrder).ThenBy(e => e.Id).ToArray();
+    }
+
+    private void ShiftSelectedTiming(double amount)
+    {
+        ChangeTimingDraft(() =>
+        {
+            if (!double.IsFinite(amount)) throw new ArgumentException(L.Get("editor.error.finiteNumberRequired"));
+            var selected = timingEntries.Where(e => timingSelected.Contains(e.Id)).ToArray();
+            var values = selected.Select(e => e.Point.Uninherited ? e.Point.TimeMs + amount : Math.Truncate(e.Point.TimeMs + amount)).ToArray();
+            if (values.Any(v => !double.IsFinite(v) || Math.Abs(v) > int.MaxValue)) throw new ArgumentException(L.Get("timing.range"));
+            for (int i = 0; i < selected.Length; i++) selected[i].Point.TimeMs = values[i];
+        });
+    }
 
     private void TimingDraftUndo(bool redo)
     {
@@ -214,7 +232,7 @@ public sealed partial class EditorView
     private void TimingNumber(ICanvas c, string key, Rect box, string value, Action<double> apply, Func<double>? read = null, bool enabled = true)
     {
         var full = box;
-        bool stepper = !key.StartsWith("page.", StringComparison.Ordinal) && key is not ("move" or "volume" or "index");
+        bool stepper = !key.StartsWith("page.", StringComparison.Ordinal) && key is not ("move" or "volume" or "index" or "shift");
         if (stepper) box = new(box.X + 26, box.Y, box.Width - 52, box.Height);
         if (enabled) timingFields.Add((key, box, value, apply));
         if (!key.StartsWith("page.", StringComparison.Ordinal)) c.Fill(box, Surface, 4);
@@ -233,6 +251,11 @@ public sealed partial class EditorView
             {
                 string current = timingField == key ? timingText : value;
                 if (!CommitTimingField()) return;
+                if (key == "offset")
+                {
+                    ShiftSelectedTiming((placementCtrl ? 1 : timingPointerShift ? 10 : 2) * direction);
+                    return;
+                }
                 double number;
                 if (read is not null) number = read();
                 else if (!double.TryParse(current, NumberStyles.Float, CultureInfo.InvariantCulture, out number)) return;
@@ -401,7 +424,7 @@ public sealed partial class EditorView
         else { if (Math.Abs(value) > int.MaxValue) throw new ArgumentException(L.Get("timing.range")); after.TimeMs = value; }
         var points = Document.TimingPoints.Select(p => ReferenceEquals(p, before) ? after : p).ToList();
         if (!Document.TimingPoints.Contains(before)) points.Add(after);
-        if (!Edit(L.Get("timing.edit"), () => TimingEditing.Apply(Document, points, [(before, after)], new(Scale: timingMoveNotes))))
+        if (!Edit(L.Get("timing.edit"), () => TimingEditing.Apply(Document, points, [(before, after)], new(Scale: timingMoveNotes, OffsetMarkers: timingMoveMarkers))))
             throw new ArgumentException(StatusMessage);
         timingResetPoint = null;
         ResetHitsounds();
@@ -425,7 +448,7 @@ public sealed partial class EditorView
         point.TimeMs = TimingPageValue("offset", timingTaps[0]);
         point.BeatLengthMs = 60000 / TimingPageValue("bpm", 60000 / beatLength);
         var points = Document.TimingPoints.Select(p => p == before ? point : p).ToList(); if (before is null) points.Add(point);
-        if (Edit(L.Get("timing.tap"), () => TimingEditing.Apply(Document, points, before is null ? [] : [(before, point)], new(Scale: timingMoveNotes)))) timingResetPoint = null;
+        if (Edit(L.Get("timing.tap"), () => TimingEditing.Apply(Document, points, before is null ? [] : [(before, point)], new(Scale: timingMoveNotes, OffsetMarkers: timingMoveMarkers)))) timingResetPoint = null;
         ResetHitsounds();
     }
 

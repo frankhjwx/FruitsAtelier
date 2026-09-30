@@ -3,7 +3,7 @@ using L = FruitsAtelier.Localization.Strings;
 
 namespace FruitsAtelier.Core;
 
-public sealed record TimingApplyOptions(bool Scale = false, bool Snap = false, bool SliderLengths = false, bool Bookmarks = false, int Divisor = 4);
+public sealed record TimingApplyOptions(bool Scale = false, bool Snap = false, bool SliderLengths = false, bool Bookmarks = false, int Divisor = 4, bool OffsetMarkers = false);
 
 public static class TimingEditing
 {
@@ -51,6 +51,31 @@ public static class TimingEditing
                 Math.Clamp(Math.Round(Transform(t).Time), 0, int.MaxValue).ToString(CultureInfo.InvariantCulture))));
             if (double.TryParse(SongSetup.Get(before, "General", "PreviewTime"), CultureInfo.InvariantCulture, out double preview) && preview >= 0)
                 SongSetup.Set(map, "General", "PreviewTime", Math.Clamp(Math.Round(Transform(preview).Time), 0, int.MaxValue).ToString(CultureInfo.InvariantCulture));
+        }
+        if (options.OffsetMarkers && changes.Any(c => c.Before.Uninherited && c.After.Uninherited && c.Before.TimeMs != c.After.TimeMs))
+        {
+            var offsets = oldReds.Select(p => p.TimeMs).ToArray();
+            var deltas = oldReds.Select(red =>
+            {
+                var change = changes.LastOrDefault(c => c.Before.Uninherited && c.After.Uninherited
+                    && c.Before.TimeMs == red.TimeMs && c.Before.SourceOrder == red.SourceOrder);
+                return change.Before is null ? 0 : change.After.TimeMs - change.Before.TimeMs;
+            }).ToArray();
+            double MoveMarker(double time)
+            {
+                int index = Array.BinarySearch(offsets, time);
+                if (index < 0) index = ~index - 1;
+                return index < 0 ? time : time + deltas[index];
+            }
+            foreach (var point in map.TimingPoints.Where(p => !p.Uninherited))
+            {
+                double moved = MoveMarker(point.TimeMs);
+                if (moved != point.TimeMs) point.TimeMs = Math.Truncate(moved);
+            }
+            var bookmarks = OsuTimeline.Bookmarks(before);
+            var movedBookmarks = bookmarks.Select(t => (int)Math.Clamp(Math.Round(MoveMarker(t)), 0, int.MaxValue)).ToArray();
+            if (!bookmarks.SequenceEqual(movedBookmarks))
+                SongSetup.Set(map, "Editor", "Bookmarks", string.Join(',', movedBookmarks.Select(t => t.ToString(CultureInfo.InvariantCulture))));
         }
         if (options.Snap) Resnap(map, options.Divisor);
         if (options.SliderLengths) ResnapLengths(map, options.Divisor);

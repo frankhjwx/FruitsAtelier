@@ -13,7 +13,9 @@ preferences start with all three switches off and Grid Level Tiny (4 px).
 **Details Panel** in the right header opens a dropdown with **Details Panel** and
 **Timing Panel**. **F3** selects Timing; **F1** returns to Details. Timing replaces
 the note canvas with a horizontal audio waveform and a centered playback cursor.
-Alt+wheel zooms its time scale; click to seek or click a red line to edit it.
+Ctrl+wheel changes Snap within its doubling/halving family (for example 1/3, 1/6,
+1/12), stopping at either end. Alt+wheel zooms its time scale; click to seek or click
+a red line to edit it.
 Only red timing points and their BPM labels appear on the waveform. Nearby BPM
 labels use up to four rows. Every label remains visible, allowing overlap when all
 rows are occupied; red lines remain clickable. Audio is decoded
@@ -30,7 +32,11 @@ Tick Rate. This panel displays and commits BPM to at most two decimal places and
 offset to whole milliseconds, rounding to the nearest value. Tap timing uses the
 same precision when applied. **Move notes with offset / BPM changes** keeps objects at their beat
 positions within the edited section. BPM buttons step by 1, Ctrl by 0.25 and Shift
-by 5; offset buttons step by 2 ms, Ctrl by 1 ms and Shift by 10 ms.
+by 5. **Move greens / bookmarks with offset** independently translates
+inherited points and bookmarks by the offset difference within the original red
+section, including its start and excluding the next red point. BPM changes do not
+move these markers; the audio preview point stays fixed. The option starts off.
+Offset buttons step by 2 ms, Ctrl by 1 ms and Shift by 10 ms.
 
 In Timing mode, object hitsounds are suppressed and the sound-flag palette is
 disabled. During playback, **Metronome Clicks** schedules one tick per beat, with a distinct
@@ -47,7 +53,15 @@ window. Its draft is committed by OK as one undo step; Cancel, Escape or the clo
 button discards it. Timing, Audio and Style pages edit the selected rows, while
 All, Timing Points and Inherited Points filter the list. Ctrl-click toggles rows;
 Shift-click selects a range. Ctrl+A selects visible rows. Mixed numeric values are
-blank until explicitly replaced. Arrow, Page Up/Down and Home/End keys navigate
+blank until explicitly replaced. Offset arrows add or subtract from each selected
+row independently, including mixed values. **Shift selected points (ms)** accepts a
+signed amount; **Apply** translates the selected rows while retaining their spacing
+(subject to integer-millisecond truncation for inherited points). Click the Volume
+column header to toggle ascending/descending display order; ties retain time and
+source order. Click Offset to restore chronological display. Selection follows row
+identity, and range selection/navigation follow the displayed order. Sorting does
+not change timing source order or content history. Arrow, Page Up/Down and
+Home/End keys navigate
 the list. Drag the list scrollbar or click its track to navigate longer lists without
 changing the selected rows. Tab moves between numeric fields; Enter commits a field before accepting
 the dialog. Ctrl+Z/Y operate on the draft while no numeric field has focus.
