@@ -33,7 +33,8 @@ public sealed class CatchConversionCache
         if (!entries.TryGetValue(id, out var entry) || !rng.SameState(entry.Before)
             || (track is not null ? entry.Track is null || !Equal(track, entry.Track)
                 : imported is not null ? entry.Imported is null || !Equal(imported, entry.Imported)
-                : entry.Banana is null || banana!.TimeMs != entry.Banana.TimeMs || banana.EndTimeMs != entry.Banana.EndTimeMs)) return false;
+                : entry.Banana is null || banana!.TimeMs != entry.Banana.TimeMs || banana.EndTimeMs != entry.Banana.EndTimeMs
+                    || banana.OriginalLine != entry.Banana.OriginalLine)) return false;
         rng = entry.After; slider = entry.Slider; objects = entry.Objects; return true;
     }
     internal void Store(CurveTrack? track, ImportedSlider? imported, BananaShower? banana,

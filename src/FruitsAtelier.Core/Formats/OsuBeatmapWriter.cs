@@ -423,6 +423,15 @@ public static class OsuBeatmapWriter
         return string.Join(',', values);
     }
 
+    internal static (double Start, double End) BananaTimes(BananaShower shower)
+    {
+        var values = shower.OriginalLine?.Split(',');
+        return (Effective(shower.TimeMs, 2), Effective(shower.EndTimeMs, 5));
+
+        double Effective(double time, int field) => values is not null && values.Length > field
+            && OsuBeatmapReader.Number(values[field]) == time ? time : Round(time);
+    }
+
     private static double Round(double value) => Math.Round(value, MidpointRounding.AwayFromZero);
     private static string DefaultEdges(int spans, string value) => string.Join('|', Enumerable.Repeat(value, checked(spans + 1)));
     private static string ResizeEdges(string? source, int spans, string fallback)

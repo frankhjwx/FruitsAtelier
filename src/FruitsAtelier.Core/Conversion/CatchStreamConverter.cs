@@ -248,8 +248,10 @@ public static class CatchStreamConverter
         if (!double.IsFinite(shower.TimeMs) || !double.IsFinite(shower.EndTimeMs) || shower.TimeMs < 0
             || shower.EndTimeMs < shower.TimeMs || shower.EndTimeMs > int.MaxValue)
             throw new CatchConversionException(L.Get("core.conversion.bananaRange"));
-        int start = (int)shower.TimeMs, end = (int)shower.EndTimeMs;
-        float spacing = (float)(shower.EndTimeMs - shower.TimeMs);
+        // Banana counts determine downstream RNG, so use the timestamps emitted by export.
+        var times = OsuBeatmapWriter.BananaTimes(shower);
+        int start = (int)times.Start, end = (int)times.End;
+        float spacing = (float)(times.End - times.Start);
         while (spacing > 100) spacing /= 2;
         var result = new List<ConvertedCatchObject>();
         if (spacing <= 0) return result;
