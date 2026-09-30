@@ -16,7 +16,8 @@ internal static class LibraryDropCheck
         var request = view.RequestLibraryDrop;
         string folder = Path.GetFullPath("artifacts/library-drop-check");
         Directory.CreateDirectory(folder);
-        string[] paths = [Path.Combine(folder, "谱面.OSZ"), Path.Combine(folder, "皮肤.OSK")];
+        // Unicode filenames verify that native drop routing preserves UTF-16 paths.
+        string[] paths = [Path.Combine(folder, "\u8c31\u9762.OSZ"), Path.Combine(folder, "\u76ae\u80a4.OSK")];
         foreach (string path in paths) File.WriteAllText(path, "native drop routing fixture");
         int count = 0;
         try

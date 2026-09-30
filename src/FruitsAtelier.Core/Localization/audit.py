@@ -50,7 +50,7 @@ def audit():
                 continue
             content = path.read_text(encoding="utf-8-sig")
             code = token.sub(lambda match: match.group() if match.group("literal") else "\n" * match.group().count("\n"), content)
-            for match in re.finditer(r'\b(?:L|Strings)\.Get\(\s*"([^"\n]+)"', code):
+            for match in re.finditer(r'\b(?:L|Strings)\.Get\(\s*"([^"\n]+)"\s*(?=[,)])', code):
                 key = match.group(1)
                 referenced.add(key)
                 if key not in source:

@@ -201,7 +201,7 @@ public sealed partial class EditorView
         }
         c.Line(Playfield.X, p.Y, Playfield.Right, p.Y, Gold, opacity: .4f);
         if (tool == Tool.Fruit && nextFruitNewCombo)
-            c.Text("NC", p.X + diameter / 2 + 6, p.Y - 8, 11, Gold, 120);
+            c.Text(L.Get("tools.newComboAbbreviation"), p.X + diameter / 2 + 6, p.Y - 8, 11, Gold, 120);
     }
 
     private void PlaceFruit(float x, float y)

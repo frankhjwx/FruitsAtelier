@@ -249,7 +249,7 @@ public sealed partial class EditorView
         c.Stroke(field, DistanceBaseValue(dsBaseText) is null ? Error : dsBaseFocused ? Accent : Grid, radius: 4);
         DrawInputText(c, new(field.X + 9, field.Y + 5, field.Width - 18, 20), dsBaseText, 13, dsBaseFocused, "ds:base");
         hits.Add(new(field, () => { dsBaseFocused = true; FocusInput("ds:base", dsBaseText, mouseX); }, true));
-        c.Text("px", field.Right + 8, field.Y + 8, 12, Muted, 26);
+        c.Text(L.Get("ui.pixelUnit"), field.Right + 8, field.Y + 8, 12, Muted, 26);
         c.Text(L.Get("ds.baseRange", Number(DistanceBaseMaximum())), field.Right + 44, field.Y + 8,
             11, Muted, r.Right - field.Right - 48);
         var gridRow = new Rect(r.X + 4, r.Y + 116, r.Width - 8, 32);
@@ -262,7 +262,7 @@ public sealed partial class EditorView
         for (int i = 0; i < 4; i++)
         {
             int size = 4 << i;
-            Button(c, new(r.X + 136 + i * 70, r.Y + 153, 64, 28), $"{size} px", () => dsGridSize = size,
+            Button(c, new(r.X + 136 + i * 70, r.Y + 153, 64, 28), L.Get("ui.pixelCount", size), () => dsGridSize = size,
                 active: dsGridSnap && size == dsGridSize, enabled: dsGridSnap);
         }
     }
