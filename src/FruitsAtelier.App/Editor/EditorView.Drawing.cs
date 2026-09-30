@@ -99,6 +99,7 @@ public sealed partial class EditorView
         DrawExportOverlay(c);
         DrawTimeJump(c);
         DrawStreamDialog(c);
+        DrawMergeDialog(c);
         DrawVolumeDialog(c);
         DrawVolumePopover(c);
         DrawDistanceSnapDialog(c);

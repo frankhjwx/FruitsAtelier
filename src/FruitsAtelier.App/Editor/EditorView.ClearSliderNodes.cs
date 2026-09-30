@@ -19,17 +19,7 @@ public sealed partial class EditorView
         var selected = FlagTargets();
         if (!Edit(L.Get("slider.clearInternalNodes"), () =>
         {
-            foreach (var track in tracks)
-            {
-                track.Nodes.RemoveRange(1, track.Nodes.Count - 2);
-                track.Kind = CurveKind.Linear;
-                foreach (var node in track.Nodes)
-                {
-                    node.HandleIn = node.HandleOut = default;
-                    node.OutgoingKind = null;
-                    node.OutgoingCurve = null;
-                }
-            }
+            foreach (var track in tracks) ObjectStructureEditing.ClearInternalAnchors(track);
         })) return;
         SelectObjects(selected);
     }

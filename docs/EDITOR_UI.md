@@ -448,6 +448,11 @@ repeat count, stream snap and object metadata. One undo restores the whole batch
 No selection is required. The command is disabled for locked notes, unfinished
 gestures, or a difficulty without internal FSlider controls. Convert imported Legacy Sliders to FSliders first.
 
+For selected sliders, use **Clear internal anchors** in the long-press menu or
+**Ctrl+Shift+A**. This applies the same endpoint-only path to the selected sliders
+in one undo step, converting selected Legacy Sliders first. Holding a selected
+slider retains the complete selection for the batch operation.
+
 ### Reverses and direction
 
 Both modes use **Ctrl+= / Ctrl+−** to change reverses. Dragging a base-path endpoint instead edits the path and therefore changes the duration of every traversal.
@@ -512,9 +517,31 @@ Recoverable file-operation errors appear inside the editor window on both the ca
 
 ## Slider fruit streams
 
+The conversion and Change snapping dialogs include **Break into Fruits**, off by
+default. Enabling it replaces the slider parent with independent fruits at the
+chosen snap, each editable separately. Existing streams offer **Break into Fruits**
+directly below **Change snapping** in the long-press menu. Breaking preserves the
+stream's fruit positions, times, combo flags and sample settings, and forms one
+undo step.
+
+Select at least two consecutive circles or sliders and long-press one of them,
+or press **Ctrl+Shift+M**, to open **Merge into slider**. Consecutive means no
+circle or slider is omitted between the earliest and latest selected starts in
+time/source order. A selected banana shower blocks merging. The dialog offers
+straight segments or a curved path; when any selected slider has a curved path,
+only the curved choice appears. Existing slider paths are retained, with repeats
+unfolded into consecutive traversals; circles become path anchors. Overlapping
+selected objects or incompatible joining endpoints fail with a reason, retaining
+the original objects. Conversion failures also leave the selection unchanged.
+
+Merging replaces the selected objects with one FSlider and supports session undo.
+Its generated catch events can differ from the original objects. The dialog warns
+that saving retains only the merged slider: reopening cannot recover the original
+objects because project files do not store undo history.
+
 Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Slider to stream**. Long-press an FSlider to reveal **Convert to stream**; imported Legacy Sliders offer **Convert to FSlider** above **Convert to stream**. Every stream-conversion entry opens a confirmation dialog with the same snap slider and subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**. Enter confirms; Esc cancels; arrow keys change the choice.
 
-A confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging reshapes only that fruit while keeping its time fixed. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Change snapping** above **Convert back to slider** in their long-press menu. The Edit menu and Ctrl+Shift+F open Change snapping for a stream selection. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
+With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging reshapes only that fruit while keeping its time fixed. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Change snapping** above **Convert back to slider** in their long-press menu. The Edit menu and Ctrl+Shift+F open Change snapping for a stream selection. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
 
 The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
 

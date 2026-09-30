@@ -33,7 +33,7 @@ public sealed partial class EditorView
     public void StartTestplay()
     {
         if (IsTestplaying || !HasEditorProject || LibraryVisible || ExportVisible || ErrorVisible ||
-            DiscardConfirmationVisible || SliderDialogVisible || TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
+            DiscardConfirmationVisible || SliderDialogVisible || TimeJumpVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
             drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty || AudioLoading) return;
         EnsureConversion();
         testplayReturnPosition = playhead;

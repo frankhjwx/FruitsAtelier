@@ -72,7 +72,7 @@ public sealed partial class EditorView
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
         }
-        if (TimeJumpVisible || StreamDialogVisible)
+        if (TimeJumpVisible || StreamDialogVisible || MergeDialogVisible)
         {
             if (StreamDialogVisible && button == 0 && StreamSnapBounds.Contains(x, y))
             { streamSnapDragging = true; SetStreamSnap(x); return; }
@@ -405,7 +405,7 @@ public sealed partial class EditorView
         if (sliderHoldConsumed) return;
         if (SliderHoldNeedsRedraw && (Math.Abs(x - sliderHoldX) >= 2 || Math.Abs(y - sliderHoldY) >= 2)) { sliderHoldId = Guid.Empty; noteHoldTarget = null; }
         if (StreamDialogVisible && streamSnapDragging) { SetStreamSnap(x); return; }
-        if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
+        if (TimeJumpVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (librarySettingsOpen || ExportVisible || languageMenuOpen) return;
@@ -544,7 +544,7 @@ public sealed partial class EditorView
         }
         if (StreamDialogVisible && streamSnapDragging && button == 0)
         { SetStreamSnap(x); streamSnapDragging = false; return; }
-        if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
+        if (TimeJumpVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
@@ -633,7 +633,7 @@ public sealed partial class EditorView
         if (updatesPage) return;
         if (IsTestplaying) return;
         if (notesLocked && plot.Contains(x, y)) { PointerDown(x, y, 0, shift, ctrl); return; }
-        if (StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
+        if (StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (TimeJumpVisible) { if (TimeJumpInputBounds.Contains(x, y)) SelectInput("time", timeJumpText); return; }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
@@ -703,7 +703,7 @@ public sealed partial class EditorView
             if (alt && !ctrl && !shift) AdjustVolumeWheel(delta);
             return;
         }
-        if (TimeJumpVisible || StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
+        if (TimeJumpVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (languageMenuOpen) return;
         if (ErrorVisible)
         {
@@ -927,6 +927,14 @@ public sealed partial class EditorView
         if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl, shift); return; }
         if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey); return; }
+        if (MergeDialogVisible)
+        {
+            if (virtualKey == 27) MergeDialogVisible = false;
+            else if (virtualKey == 13) ApplyMerge();
+            else if (virtualKey is 37 or 38 && mergeAllowsLinear) mergeCurved = false;
+            else if (virtualKey is 39 or 40) mergeCurved = true;
+            return;
+        }
         if (TimeJumpVisible) { TimeJumpKey(virtualKey, ctrl, shift); return; }
         if (SliderDialogVisible)
         {
@@ -959,13 +967,15 @@ public sealed partial class EditorView
         }
         if (ctrl && altHeld && !shift && virtualKey == 69 && drag == DragKind.None)
         { RequestExport?.Invoke(); return; }
-        if (ctrl && shift && !altHeld && virtualKey == 70)
+        if (ctrl && shift && !altHeld && virtualKey is 65 or 70 or 77)
         {
             if (!dragMoved && draftTrack == Guid.Empty && draftBanana == Guid.Empty
                 && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.LegacyControl)
             { history.Commit(); drag = DragKind.None; sliderHoldConsumed = false; }
             if (editField >= 0 && !CommitField()) return;
-            OpenStreamDialog();
+            if (virtualKey == 65) ClearSelectedInternalAnchors();
+            else if (virtualKey == 77) OpenMergeDialog();
+            else OpenStreamDialog();
             return;
         }
         if (editField >= 0)
@@ -1082,7 +1092,7 @@ public sealed partial class EditorView
         }
         if (DistanceEditing) { DistanceTextInput(value); return; }
         if (updatesPage) return;
-        if (StreamDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
+        if (StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (IsTestplaying || CapturingTestplayKey) return;
         if (languageMenuOpen) return;
         ResetTextCaret();

@@ -13,7 +13,7 @@ public sealed partial class EditorView
     private bool CanUseVolumePopover => !LibraryVisible && !ExportVisible && !updatesPage
         && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible
         && !SongSetupVisible && !DistanceSnapDialogVisible && !VolumeDialogVisible
-        && !TimeJumpVisible && !StreamDialogVisible && !IsEditingText && drag == DragKind.None;
+        && !TimeJumpVisible && !StreamDialogVisible && !MergeDialogVisible && !IsEditingText && drag == DragKind.None;
 
     private double VolumeNowMs => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
     public Rect VolumeButtonBounds => new(width - 95, height - 27, 88, 26);

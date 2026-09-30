@@ -41,6 +41,7 @@ public sealed partial class EditorView
         CloseTimingSetup(); TimingPageVisible = false;
         TimeJumpVisible = false;
         StreamDialogVisible = false;
+        MergeDialogVisible = false;
         CloseVolumeDialog();
         CloseDistanceSnapDialog();
         HasEditorProject = true;
