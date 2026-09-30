@@ -23,6 +23,7 @@ public sealed partial class EditorView
     }
     private void FadeTestplayMenu(float target, bool opening = false)
     {
+        FinishBackgroundDimDrag();
         testplayMenuOpacityFrom = opening ? 0 : TestplayMenuOpacity;
         testplayMenuOpacityTarget = target;
         testplayMenuOpacityAt = TestplayRealtime;
@@ -138,6 +139,7 @@ public sealed partial class EditorView
     private void TestplayPointerMove(float x, float y)
     {
         MoveTestplayCursor(x, y);
+        if (backgroundDimDragging) { UpdateBackgroundDimDrag(x); return; }
         if (!TestplayPauseMenuVisible) return;
         testplayKeyboardSelection = false;
         int hovered = -1;
@@ -180,6 +182,7 @@ public sealed partial class EditorView
         testplayCursorPressed = true;
         if (!TestplayPauseMenuVisible && BeginVolumePopoverPointer(x, y, button)) return;
         if (button != 0 || testplayResumeAt is not null) return;
+        if (BeginBackgroundDimDrag(x, y, button)) return;
         for (int i = hits.Count - 1; i >= 0; i--)
             if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
     }

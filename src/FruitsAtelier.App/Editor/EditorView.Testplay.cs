@@ -99,6 +99,7 @@ public sealed partial class EditorView
     public void StopTestplay(bool atCurrentPosition = false)
     {
         if (!IsTestplaying) return;
+        FinishBackgroundDimDrag();
         bool wasPaused = TestplayPaused;
         SetTestplayPauseLoop(false);
         double returnTime = atCurrentPosition && testplay is not null ? testplay.TransportPosition : testplayReturnPosition;

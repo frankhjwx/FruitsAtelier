@@ -88,10 +88,37 @@ internal static class TestplayPresentationTests
             AudioSkip();
             PointerAndArrows();
             WarningTiming();
+            DimSlider();
         }
         finally { L.SetLanguage(language); }
     }
 
+
+    private static void DimSlider()
+    {
+        var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
+        var map = new MapDocument(); map.Fruits.Add(new Fruit { TimeMs = 10000, X = 256 });
+        ui.LoadDocument(map); var before = ui.View.Document.DeepClone();
+        int saves = 0; ui.View.RequestViewPreference = () => saves++;
+        ui.View.StartTestplay(); ui.Paint(); ui.Key(27); ui.View.KeyUp(27);
+        clock.Advance(300); ui.Paint();
+        float left = ui.Width / 2f - 124, y = ui.Height - 39, width = 248;
+        ui.View.PointerDown(left + width / 2, y, 0, false, false);
+        Check(ui.View.LibrarySettings.BackgroundDim == 50 && ui.View.WantsCapture, "Dim slider clicks set the percentage and capture the pointer");
+        ui.View.PointerMove(left - 100, y, false, false);
+        Check(ui.View.LibrarySettings.BackgroundDim == 0, "Dim dragging clamps at zero outside the control");
+        ui.View.PointerMove(left + width + 100, y, false, false);
+        Check(ui.View.LibrarySettings.BackgroundDim == 100 && saves == 0, "Dim dragging clamps at 100 without saving every movement");
+        ui.View.PointerUp(left + width * .75f, y, 0); ui.Paint();
+        Check(ui.View.LibrarySettings.BackgroundDim == 75 && !ui.View.WantsCapture && saves == 1, "Release applies the final value and persists once");
+        ui.View.PointerDown(left, y, 0, false, false);
+        ui.View.CancelInteraction(preserveTestplay: true);
+        Check(!ui.View.WantsCapture && saves == 2, "Focus cancellation ends and saves the dim drag");
+        ui.View.PointerMove(left + width, y, false, false);
+        Check(ui.View.LibrarySettings.BackgroundDim == 0, "Pointer movement after cancellation does not change dim");
+        Check(ui.View.TestplayPaused && ui.View.PlayheadMs == 0 && ui.View.Document.ContentEquals(before), "Dim controls preserve paused gameplay and beatmap content");
+        ui.View.StopTestplay();
+    }
 
     private static void PointerAndArrows()
     {

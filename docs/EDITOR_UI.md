@@ -195,7 +195,10 @@ The top-bar **Settings** button is available in both Library and Editor. Setting
 
 Beatmap backgrounds fill the Catch preview and testplay viewport
 without changing their aspect ratio. **Settings > Testplay > Background dim** and
-the pause menu adjust the persistent 0–100% dim preference (default 90%). The editing canvas has a fully opaque backing.
+the pause menu adjust the persistent 0–100% dim preference (default 90%). In the pause
+menu, click or drag the fill bar behind the centered label to set the percentage;
+the side buttons adjust it by 5%. Dragging updates the background immediately and
+saves the preference when the drag ends. The editing canvas has a fully opaque backing.
 
 **Space** or clicking **Skip** skips an intro to three seconds before the first
 note. Skip is unavailable after that point. **Esc / Ctrl+P** opens the pause menu;

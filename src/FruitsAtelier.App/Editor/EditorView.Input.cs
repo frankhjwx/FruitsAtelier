@@ -513,6 +513,7 @@ public sealed partial class EditorView
     {
         testplayCursorPressed = false;
         if (SynchronizationBlocksInput) return;
+        if (backgroundDimDragging && button == 0) { UpdateBackgroundDimDrag(x); FinishBackgroundDimDrag(); return; }
         if (timingSnapDragging) { SetTimingSnap(x); timingSnapDragging = false; return; }
         if (timingScrollDragging && button == 0) { UpdateTimingScroll(y); timingScrollDragging = false; return; }
         if (timingVolumeStart is not null) { UpdateTimingVolume(x); EndTimingVolume(false); return; }
@@ -1113,6 +1114,7 @@ public sealed partial class EditorView
         FinishDistanceEdit(true);
         workspaceScrollDragging = false;
         FinishVolumeDrag();
+        FinishBackgroundDimDrag();
         testplayEscapeConsumed = false;
         testplaySpeedHeld = false;
         streamSnapDragging = false;

@@ -9,6 +9,29 @@ public sealed partial class EditorView
     private string? beatmapBackground;
     private float backgroundDimFrom, backgroundDimTarget;
     private double backgroundDimChangedAt;
+    private Rect backgroundDimSliderBounds;
+    private bool backgroundDimDragging;
+    private int backgroundDimDragStart;
+
+    private bool BeginBackgroundDimDrag(float x, float y, int button)
+    {
+        if (!TestplayPauseMenuVisible || button != 0 || backgroundDimSliderBounds.Width <= 0 || !backgroundDimSliderBounds.Contains(x, y)) return false;
+        backgroundDimDragging = true;
+        backgroundDimDragStart = LibrarySettings.BackgroundDim;
+        UpdateBackgroundDimDrag(x);
+        return true;
+    }
+
+    private void UpdateBackgroundDimDrag(float x)
+        => LibrarySettings.BackgroundDim = (int)Math.Round(Math.Clamp(
+            (x - backgroundDimSliderBounds.X) / backgroundDimSliderBounds.Width, 0, 1) * 100);
+
+    private void FinishBackgroundDimDrag()
+    {
+        if (!backgroundDimDragging) return;
+        backgroundDimDragging = false;
+        if (LibrarySettings.BackgroundDim != backgroundDimDragStart) RequestViewPreference?.Invoke();
+    }
 
     private void RefreshBeatmapBackground()
     {
@@ -55,6 +78,13 @@ public sealed partial class EditorView
     {
         int value = draft ? draftBackgroundDim : LibrarySettings.BackgroundDim;
         if (draft) c.Fill(bounds, Surface, 4, opacity);
+        else
+        {
+            backgroundDimSliderBounds = new(bounds.X + 36, bounds.Y, bounds.Width - 72, bounds.Height);
+            var slider = backgroundDimSliderBounds;
+            c.Fill(new(slider.X, slider.Y, slider.Width * value / 100f, slider.Height), 0xFFFFFF, 4, .18f * opacity);
+            c.StrokeOpacity(slider, 0xFFFFFF, 1, 4, .65f * opacity);
+        }
         string label = L.Get("settings.backgroundDim", value);
         float labelWidth = Math.Min(c.MeasureText(label, 14), bounds.Width - 72);
         c.TextOpacity(label, draft ? bounds.X + 36 : bounds.X + (bounds.Width - labelWidth) / 2,

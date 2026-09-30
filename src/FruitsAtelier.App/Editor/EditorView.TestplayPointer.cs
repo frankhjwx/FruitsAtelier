@@ -15,6 +15,7 @@ public sealed partial class EditorView
 
     private void ResetTestplayPointer()
     {
+        FinishBackgroundDimDrag();
         testplayKeyboardSelection = testplayCursorPressed = false;
         testplayHoveredMenu = -1;
         testplayTrailX = testplayTrailY = -1;
