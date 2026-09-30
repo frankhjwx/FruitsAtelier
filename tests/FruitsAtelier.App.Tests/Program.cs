@@ -299,7 +299,7 @@ var tests = new (string Name, Action Run)[]
     ("Closing a shortcuts does not pass clicks to the canvas", SliderInteractionTests.ContextOutsideClick),
     ("Deleting a point never revives dormant neighbour handles", SliderInteractionTests.DeleteDoesNotActivateDormantHandles),
     ("Legacy repeat insertion uses an approximate FSlider and preserves duration", SliderInteractionTests.RepeatInsertion),
-    ("Moving a draft tail keeps its visible future handle in bounds", SliderInteractionTests.DraftTailHandleBounds),
+    ("Moving a draft tail preserves its handles beyond both playfield edges", SliderInteractionTests.DraftTailHandleTranslation),
     ("Mixed clipboard batches preserve relative time and independent source order", ClipboardMultiTests.MixedBatchPreservesSnapshotAndOrder),
     ("Cutting a mixed batch is one reversible transaction", ClipboardMultiTests.MixedCutIsOneTransaction),
     ("A later overflowing pasted object rolls back the entire batch", ClipboardMultiTests.OverflowPasteRollsBackBatch),
