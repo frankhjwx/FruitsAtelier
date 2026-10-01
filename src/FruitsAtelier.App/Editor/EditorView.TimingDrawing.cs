@@ -333,8 +333,8 @@ public sealed partial class EditorView
         Number("sliderMultiplier", DisplaySliderMultiplier, ChangeSliderMultiplier, Document.OverrideSliderMultiplier);
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.metronome", metronomeEnabled, () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }); y += row + gap;
         TimingButton(c, new(r.X, y, r.Width, row), L.Get("timing.setup"), OpenTimingSetup); y += row + gap;
-        c.Text(timingError.Length > 0 ? timingError : SliderMultiplierValidationBusy
-            ? L.Get(sliderMultiplierValidation is null ? "timing.sliderMultiplierPending" : "timing.sliderMultiplierChecking") : "", r.X, y, 11,
+        c.Text(timingError.Length > 0 ? timingError : sliderMultiplierValidation is not null
+            ? L.Get("timing.sliderMultiplierChecking") : "", r.X, y, 11,
             timingError.Length > 0 ? Error : Muted, r.Width);
     }
 }
