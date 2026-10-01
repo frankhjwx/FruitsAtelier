@@ -151,6 +151,13 @@ remain in FA with the export diagnostic; they do not overwrite `.osu` or block
 background difficulty discovery. Correcting the content allows a later check to
 export it.
 
+Publishing local edits against an unchanged external version keeps playback,
+viewport navigation and note editing available. Completion acknowledges only the
+published authoring snapshot; edits made during publication remain dirty and are
+included in the next comparison. Project/file operations wait for publication.
+Conflict resolution and external changes retain their guarded apply boundary.
+An automatically completed save does not repeat the export on the UI thread.
+
 A changed external version returns to field/object comparison and resolution.
 Without a baseline, differences still require explicit choices. An unchanged
 retained choice remains available for review; a subsequent FA content edit exports

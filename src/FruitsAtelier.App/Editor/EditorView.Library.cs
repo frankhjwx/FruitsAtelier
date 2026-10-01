@@ -141,13 +141,8 @@ public sealed partial class EditorView
     public void CheckWorkspaceResources()
     {
         if (WorkspaceSession is null) resourceErrors = [];
-        else
-        {
-            var snapshot = ResourceSnapshot();
-            resourceReferences ??= WorkspaceProject.ResourceReferences(snapshot);
-            resourceErrors = resourceReferences.FindMissing();
-        }
-        nextResourceCheck = DateTime.UtcNow.AddSeconds(3);
+        nextResourceCheck = DateTime.MinValue;
+        PumpWorkspaceResources();
     }
     public bool SaveWorkspace()
     {

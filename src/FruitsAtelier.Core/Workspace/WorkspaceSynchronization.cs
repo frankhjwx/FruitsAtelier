@@ -707,14 +707,30 @@ public static class WorkspaceSynchronization
         return long.TryParse(id, out long mapId) && mapId > 0 && long.TryParse(set, out long setId) && setId > 0 ? setId + "/" + mapId : null;
     }
     public static void RebaseContext(MapDocument snapshot, MapDocument before, MapDocument after)
+        => PrepareContextRebase(before, after)(snapshot);
+
+    public static Action<MapDocument> PrepareContextRebase(MapDocument before, MapDocument after)
     {
-        var fields = Fields(snapshot); var oldFields = Fields(before); var newFields = Fields(after);
-        foreach (string key in oldFields.Keys.Concat(newFields.Keys).Distinct())
-            if (oldFields.GetValueOrDefault(key) != newFields.GetValueOrDefault(key)) fields[key] = newFields.GetValueOrDefault(key);
-        string? audio = snapshot.AudioPath;
-        ApplyFields(snapshot, fields, after.SourcePath ?? before.SourcePath ?? System.IO.Path.Combine(Environment.CurrentDirectory, "map.osu"));
-        snapshot.SourcePath = after.SourcePath;
-        snapshot.AudioPath = Paths.Equals(before.AudioPath, after.AudioPath) ? audio : after.AudioPath;
+        var oldFields = Fields(before); var newFields = Fields(after);
+        var changes = oldFields.Keys.Concat(newFields.Keys).Distinct()
+            .Where(key => oldFields.GetValueOrDefault(key) != newFields.GetValueOrDefault(key))
+            .ToDictionary(key => key, key => newFields.GetValueOrDefault(key));
+        string? source = after.SourcePath, replacementAudio = after.AudioPath;
+        string path = source ?? before.SourcePath ?? System.IO.Path.Combine(Environment.CurrentDirectory, "map.osu");
+        bool preserveAudio = Paths.Equals(before.AudioPath, replacementAudio);
+        // One save rebases every undo snapshot; unchanged context needs no parsing or timing reconstruction.
+        return snapshot =>
+        {
+            string? audio = snapshot.AudioPath;
+            if (changes.Count > 0)
+            {
+                var fields = Fields(snapshot);
+                foreach (var pair in changes) fields[pair.Key] = pair.Value;
+                ApplyFields(snapshot, fields, path);
+            }
+            snapshot.SourcePath = source;
+            snapshot.AudioPath = preserveAudio ? audio : replacementAudio;
+        };
     }
     private static string NormalizeObject(string line)
     {

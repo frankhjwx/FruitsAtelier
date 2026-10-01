@@ -93,6 +93,13 @@ already produced for the matching editor snapshot. Starting another uncached
 export in a worker still creates CPU and GC pressure that can stall UI frames.
 Do not share mutable conversion caches across workers.
 
+Synchronization context rebasing prepares one metadata delta for the entire undo/redo history.
+Content-only saves retain each snapshot's existing sections and timing without
+parsing or rebuilding them. Changed metadata still rebases across history while
+preserving unrelated historical fields. Explicit resource checks use the same
+snapshot-owned background worker as periodic checks; filesystem and storyboard
+work must not run during save completion on the UI thread.
+
 ## Correctness boundaries
 
 Optimizations must preserve source order for tied timestamps, exported time and

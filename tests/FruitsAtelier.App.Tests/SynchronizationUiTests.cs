@@ -4,6 +4,49 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class SynchronizationUiTests
 {
+    public static void PlaybackSave()
+    {
+        var ui = new Ui(false);
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/playback-save", Guid.NewGuid().ToString("N")));
+        string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
+        Directory.CreateDirectory(Path.GetDirectoryName(source)!); File.WriteAllText(source, Fixture);
+        ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
+        ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);
+        ui.View.UpdateTransport(1000, 20000, true, true, false, null, ui.View.Document.AudioPath);
+        int pauses = 0, foregroundExports = 0;
+        ui.View.RequestPausePlayback = () => pauses++;
+        ui.View.RequestWorkspaceExport = (_, _) => foregroundExports++;
+        ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
+        var history = (EditorHistory)ui.View.GetType().GetProperty("history", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
+        var commitField = ui.View.GetType().GetField("syncCommitTask", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        try
+        {
+            history.Begin("note"); history.Document.Fruits.Add(new Fruit { TimeMs = 3000, X = 200 }); history.Commit();
+            ui.Key('S', ctrl: true);
+            WorkspaceFileMonitorTests.Await(() => { ui.Paint(); return commitField.GetValue(ui.View) is not null; }, "Playback save starts publication");
+            var committing = (Task<WorkspaceSession>)commitField.GetValue(ui.View)!;
+            var gate = new TaskCompletionSource<WorkspaceSession>();
+            commitField.SetValue(ui.View, gate.Task);
+            Check(committing.Wait(TimeSpan.FromSeconds(15)), "Background publication completes");
+            Check(!ui.View.DiscardConfirmationVisible && pauses == 0 && ui.View.AudioPlaying, "Local publication keeps playback and input active");
+            ui.Key('Z', ctrl: true);
+            Check(!ui.View.Document.Fruits.Any(f => f.TimeMs == 3000), "Undo works while publication is pending");
+            ui.Key('Y', ctrl: true);
+            history.Begin("newer note"); history.Document.Fruits.Add(new Fruit { TimeMs = 4000, X = 300 });
+            gate.SetResult(committing.Result); ui.Paint();
+            Check(history.HasActiveTransaction && ui.View.IsDirty && ui.View.Document.Fruits.Any(f => f.TimeMs == 4000),
+                "Save completion retains an active newer edit and acknowledges only the published snapshot");
+            Check(!OsuBeatmapReader.ReadFile(source).Fruits.Any(f => f.TimeMs == 4000), "An unfinished edit is not part of the earlier publication");
+            history.Commit(); Wait(ui);
+            Check(OsuBeatmapReader.ReadFile(source).Fruits.Any(f => f.TimeMs == 4000) && !ui.View.IsDirty,
+                "The subsequent synchronization publishes the newer committed edit");
+            Check(pauses == 0 && foregroundExports == 0 && ui.View.AudioPlaying, "Playback saves avoid pausing or repeating export on the foreground thread");
+            ui.Key('Z', ctrl: true); Wait(ui);
+            Check(!ui.View.Document.Fruits.Any(f => f.TimeMs == 4000), "The newer edit remains undoable after saving");
+        }
+        finally { ui.View.StopFileMonitoring(); }
+    }
+
     public static void LocalBreaks()
     {
         var ui = new Ui(false);

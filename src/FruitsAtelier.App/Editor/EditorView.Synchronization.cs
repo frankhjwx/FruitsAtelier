@@ -10,7 +10,9 @@ public sealed partial class EditorView
     private sealed record SyncResult(WorkspaceSession Session, BeatmapProject Snapshot, WorkspaceManifest Manifest, string Stamp, WorkspaceSyncScan Scan, Dictionary<Guid, WorkspaceMerge> Merges, IReadOnlyList<WorkspaceClaim> Claims, Dictionary<Guid, SyncComparison> Comparisons, Dictionary<Guid, WorkspaceExportPlan> LocalExports, Dictionary<Guid, string> LocalExportErrors, bool ReviewResolved, bool Quiet);
     private Task<SyncResult>? syncTask;
     private readonly HashSet<Guid> syncSearching = [];
-    private bool SynchronizationBlocksInput => syncCommitTask is not null;
+    private bool SynchronizationBlocksInput => syncCommitTask is not null && !syncCommitAllowsEditing;
+    private bool syncCommitAllowsEditing;
+    private bool syncCommitCompletesSave;
     private bool SearchingReference(int index) => syncTask is not null && index >= 0 && index < difficulties.Count && syncSearching.Contains(difficulties[index].Id);
     private Task<WorkspaceSession>? syncCommitTask;
     private DateTime nextSyncCheck = DateTime.MaxValue;
@@ -101,11 +103,17 @@ public sealed partial class EditorView
     {
         if (syncCommitTask is { IsCompleted: true } committed)
         {
+            bool localCommit = syncCommitAllowsEditing;
+            bool completesSave = syncCommitCompletesSave;
+            syncCommitAllowsEditing = false;
+            syncCommitCompletesSave = false;
             syncCommitTask = null;
             try
             {
                 var session = committed.GetAwaiter().GetResult();
                 var continuation = afterSynchronization; afterSynchronization = null;
+                // The requested difficulty has already been validated and published by the worker.
+                if (completesSave && continuation == (Action)SaveCurrentDifficulty) continuation = null;
                 syncPage = null;
                 libraryProjectsNeedReindex = true; StartLibraryScan();
                 if (session.Project.Difficulties.Count == 0) { LeaveEditor(); return; }
@@ -124,13 +132,18 @@ public sealed partial class EditorView
                         if (existing is null) difficulties.Add(new DifficultySession(diff));
                         else
                         {
-                            var before = existing.History.Document.DeepClone();
-                            existing.History.RebaseSharedMetadata(snapshot => WorkspaceSynchronization.RebaseContext(snapshot, before, diff.Document));
-                            existing.History.MarkSaved();
+                            if (localCommit) existing.History.MarkSaved(diff.Document);
+                            else
+                            {
+                                var rebase = WorkspaceSynchronization.PrepareContextRebase(existing.History.Document, diff.Document);
+                                existing.History.RebaseSharedMetadata(rebase);
+                                existing.History.MarkSaved();
+                            }
                         }
                     }
                     WorkspaceSession = session; projectStructureDirty = false;
-                    convertedSnapshot = null; resourceSnapshot = null; resourceReferences = null;
+                    if (!localCommit) convertedSnapshot = null;
+                    resourceSnapshot = null; resourceReferences = null;
                     libraryProjectsNeedReindex = true; QueueLibrarySearch(); CheckWorkspaceResources();
                 }
                 else
@@ -203,8 +216,14 @@ public sealed partial class EditorView
                 bool canAdd = !result.Scan.Difficulties.Any(s => s.State is WorkspaceSyncState.Ambiguous or WorkspaceSyncState.Duplicate or WorkspaceSyncState.Unavailable);
                 if (automatic.Length > 0 || canAdd && result.Scan.Additions.Count > 0)
                 {
-                    if (AudioPlaying) RequestPausePlayback?.Invoke();
-                    CancelInteraction(); hits.Clear(); fields.Clear();
+                    syncCommitAllowsEditing = automatic.Length > 0 && automatic.All(s => result.LocalExports.ContainsKey(s.DifficultyId))
+                        && !(canAdd && result.Scan.Additions.Count > 0);
+                    syncCommitCompletesSave = syncCommitAllowsEditing && result.LocalExports.ContainsKey(syncDifficulty);
+                    if (!syncCommitAllowsEditing)
+                    {
+                        if (AudioPlaying) RequestPausePlayback?.Invoke();
+                        CancelInteraction(); hits.Clear(); fields.Clear();
+                    }
                     syncPage = "checking";
                     syncPreserveHistory = true;
                     syncCommitTask = Task.Run(() =>

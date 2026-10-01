@@ -9,6 +9,7 @@ if (args.Length == 2 && args[0] == "--preserve-slider-positions")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Save context rebasing avoids unchanged history work and preserves undo and redo", ContextRebaseTests.History),
     ("Fractional repeats share fixed targets during partial tiny compensation", PartialCompensationTests.FractionalRepeats),
     ("Project files support 128 MiB and reject oversized UTF-8 data", ProjectSizeLimitTests.Run),
     ("Workspace storage protects references and recovery while pruning history and rebuilding caches", WorkspaceStorageTests.Run),

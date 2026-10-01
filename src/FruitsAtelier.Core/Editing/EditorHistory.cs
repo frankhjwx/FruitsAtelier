@@ -29,8 +29,11 @@ public sealed class EditorHistory
     public void MarkSaved()
     {
         if (transactionStart is not null) throw new InvalidOperationException(L.Get("core.history.saveDuringEdit"));
-        baseline = Document.DeepClone();
+        MarkSaved(Document);
     }
+
+    // A background save acknowledges its frozen snapshot, including while a newer edit is active.
+    public void MarkSaved(MapDocument savedDocument) => baseline = savedDocument.DeepClone();
 
     public void Begin(string label, Action<bool, MapDocument, MapDocument>? restoreRelated = null)
     {

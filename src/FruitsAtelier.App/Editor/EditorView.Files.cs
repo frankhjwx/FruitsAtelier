@@ -112,6 +112,7 @@ public sealed partial class EditorView
 
     public bool SwitchDifficulty(int index)
     {
+        if (syncCommitTask is not null) return false;
         if (index < 0 || index >= difficulties.Count) return false;
         if (!syncBypass && WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[index].Id) is { } linked
             && WorkspaceSynchronization.Target(linked) is { } target && !File.Exists(target)
@@ -183,7 +184,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
-        if (SynchronizationVisible || SynchronizationBlocksInput) return false;
+        if (SynchronizationVisible || syncCommitTask is not null) return false;
         if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
         if (!CommitTimingField()) return false;
         if (SliderMultiplierValidationBusy)
