@@ -747,7 +747,7 @@ public static class WorkspaceSynchronization
         }
         fields["Difficulty/ApproachRate"] = document.ApproachRate.ToString("R", CultureInfo.InvariantCulture);
         fields["Difficulty/CircleSize"] = document.CircleSize.ToString("R", CultureInfo.InvariantCulture);
-        fields["Difficulty/SliderMultiplier"] = document.SliderMultiplier.ToString("R", CultureInfo.InvariantCulture);
+        fields["Difficulty/SliderMultiplier"] = document.EffectiveSliderMultiplier.ToString("R", CultureInfo.InvariantCulture);
         fields["Difficulty/SliderTickRate"] = document.SliderTickRate.ToString("R", CultureInfo.InvariantCulture);
         fields["Editor/DistanceSpacing"] = document.DistanceSpacing.ToString("R", CultureInfo.InvariantCulture);
         fields["TimingPoints/"] = WorkspaceTimingSynchronization.Text(document.TimingPoints);
@@ -764,7 +764,9 @@ public static class WorkspaceSynchronization
         var parsed = OsuBeatmapReader.Read(text.ToString(), path);
         target.OriginalSections.Clear(); target.OriginalSections.AddRange(parsed.OriginalSections);
         target.Name = parsed.Name; target.ApproachRate = parsed.ApproachRate; target.CircleSize = parsed.CircleSize;
-        target.SliderMultiplier = parsed.SliderMultiplier; target.SliderTickRate = parsed.SliderTickRate; target.DistanceSpacing = parsed.DistanceSpacing;
+        if (target.EffectiveSliderMultiplier != parsed.SliderMultiplier)
+        { target.SliderMultiplierOverride = null; target.SliderMultiplier = parsed.SliderMultiplier; }
+        target.SliderTickRate = parsed.SliderTickRate; target.DistanceSpacing = parsed.DistanceSpacing;
         target.TimingPoints.Clear(); target.TimingPoints.AddRange(parsed.TimingPoints);
         target.BeatLengthMs = parsed.BeatLengthMs; target.TimingOffsetMs = parsed.TimingOffsetMs;
         target.AudioPath = parsed.AudioPath;

@@ -59,6 +59,16 @@ The internal clipboard stores deep snapshots of selected complete parent objects
 
 Interface language and resources are not serialized in `.catchproj`. Built-in default names come from resources when creating objects. Existing Name values, imported metadata, and raw lines remain user data; switching languages does not rename them. Language changes invalidate conversion diagnostic caches without changing geometry or document history.
 
+`OverrideSliderMultiplier` unlocks base-SV editing in the Timing panel and defaults
+to false. `SliderMultiplierOverride` is nullable and stores the confirmed export
+base SV (0.4–3.6); `EffectiveSliderMultiplier` displays it, falling back to the
+authoring `SliderMultiplier`. These settings participate in cloning, dirty
+comparison, project persistence and undo. Locking editing retains the override.
+Authoring conversion and DPB use the original multiplier. Export first generates
+the original geometry, then rebases the emitted base SV and inherited timing
+without changing object lines. NM/HR read-back validation checks object identities,
+kinds, times and positions. See [Timing editing](EDITOR_UI.md#timing-editing).
+
 ## FSliders and Legacy Sliders
 
 `MapDocument.DerandomizeDroplets` stores the per-difficulty Legacy conversion choice. A null value uses the General settings default until conversion. When disabled, conversion samples the original full-map Catch output once and builds a linear target path through every actual event position, including randomized TinyDroplets. Tracks use `CompensateTinyDroplets=true` to keep the generated objects on that path. Acceptance checks every event identity, kind, time, position, and target alignment. Conflicting folded repeat targets or unreachable geometry leave the source Legacy Slider intact.

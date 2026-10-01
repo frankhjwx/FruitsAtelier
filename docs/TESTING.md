@@ -253,6 +253,15 @@ to verify conversion with derandomization disabled, checking full-map event posi
 FSlider path alignment, project persistence, and export. Incompatible sliders remain
 Legacy and are reported. Neither command saves the supplied map.
 
+## Base SV validation benchmark
+
+Run `dotnet run --no-build --project tests/FruitsAtelier.App.Tests -c Release -- --sv-performance`
+to measure base-SV confirmation on 100 and 1,000 imported Bezier sliders with
+repeats and BPM changes. `artifacts/sv/performance.json` separates pointer dispatch
+from background-validation completion and records current-thread allocations.
+The counting canvas measures CPU work; worker allocations, GPU presentation and
+physical display latency are not included in that allocation/dispatch measure.
+
 ## Playback rendering profile
 
 For a read-only CPU profile of an existing `.osu` file, run the App test executable with `--map-performance <path>`. It measures playback around 89 seconds at 32% Zoom and 1/16 Snap, reporting render median/p95, allocation per frame, rendering phases, and transport/hitsound scheduling with silent callbacks. The counting canvas excludes GPU and device submission.

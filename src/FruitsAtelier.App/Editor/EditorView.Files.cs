@@ -186,6 +186,8 @@ public sealed partial class EditorView
         if (SynchronizationVisible || SynchronizationBlocksInput) return false;
         if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
         if (!CommitTimingField()) return false;
+        if (SliderMultiplierValidationBusy)
+        { StatusMessage = L.Get("timing.sliderMultiplierChecking"); return false; }
         if (SliderDialogVisible || ErrorVisible) return false;
         if (draftBanana != Guid.Empty)
         {

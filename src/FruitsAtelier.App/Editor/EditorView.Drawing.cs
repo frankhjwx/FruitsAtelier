@@ -25,6 +25,7 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        CompleteSliderMultiplierValidation();
         RefreshLanguage();
         if (this.width != width || this.height != height)
         {

@@ -40,6 +40,13 @@ public sealed partial class EditorView
     private Rect timingVolumeTrack;
     private TimingEntry[]? timingVolumeStart;
     internal IReadOnlyList<(string Key, Rect Bounds, string Value, Action<double> Apply)> TimingFields => timingFields;
+    internal Rect TimingSliderMultiplierBounds { get; private set; }
+    private sealed record SliderMultiplierValidation(double Value, OsuWriteResult? Output, string? Error);
+    private Task<SliderMultiplierValidation>? sliderMultiplierValidation;
+    private MapDocument? sliderMultiplierValidationSnapshot;
+    private EditorHistory? sliderMultiplierValidationOwner;
+    private bool sliderMultiplierValidationText, sliderMultiplierValidationCompensation;
+    public bool SliderMultiplierValidationBusy => sliderMultiplierValidation is not null;
     private readonly List<double> timingTaps = [];
     private bool timingTapHeld;
     private TimingPoint? timingResetPoint;
@@ -412,6 +419,61 @@ public sealed partial class EditorView
         "offset" => Math.Round(value, MidpointRounding.AwayFromZero),
         _ => value
     };
+
+    private void ChangeSliderMultiplier(double value)
+    {
+        if (!Document.OverrideSliderMultiplier || SliderMultiplierValidationBusy) return;
+        if (!double.IsFinite(value) || value < SliderMultiplierEditing.Minimum || value > SliderMultiplierEditing.Maximum)
+            throw new ArgumentException(L.Get("timing.sliderMultiplierRange"));
+        if (value == Document.EffectiveSliderMultiplier) return;
+        var snapshot = Document.DeepClone();
+        var currentExport = editorWriteCache.MultiplierBaseline(Document, compensateTinyDroplets);
+        bool compensation = compensateTinyDroplets;
+        sliderMultiplierValidationSnapshot = snapshot; sliderMultiplierValidationOwner = history;
+        sliderMultiplierValidationText = timingField == "page.sliderMultiplier";
+        sliderMultiplierValidationCompensation = compensation;
+        timingError = "";
+        sliderMultiplierValidation = Task.Run(() =>
+        {
+            try
+            {
+                var source = snapshot.DeepClone(); source.SliderMultiplierOverride = null;
+                var baseline = currentExport ?? OsuBeatmapWriter.Serialize(source, compensation);
+                return new SliderMultiplierValidation(value, SliderMultiplierEditing.Rebase(baseline, value), null);
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidDataException or InvalidOperationException)
+            { return new SliderMultiplierValidation(value, null, ex.Message); }
+        });
+    }
+
+    private void CompleteSliderMultiplierValidation()
+    {
+        if (sliderMultiplierValidation is not { IsCompleted: true } task || history.HasActiveTransaction) return;
+        sliderMultiplierValidation = null;
+        var result = task.GetAwaiter().GetResult();
+        bool current = ReferenceEquals(history, sliderMultiplierValidationOwner)
+            && sliderMultiplierValidationSnapshot!.ContentEquals(Document)
+            && sliderMultiplierValidationCompensation == compensateTinyDroplets;
+        sliderMultiplierValidationSnapshot = null; sliderMultiplierValidationOwner = null;
+        if (!current) { timingError = L.Get("timing.sliderMultiplierChanged"); return; }
+        if (result.Error is { } error)
+        {
+            timingError = error;
+            if (sliderMultiplierValidationText && TimingPageVisible && !TimingModal && timingField.Length == 0)
+            {
+                timingField = "page.sliderMultiplier"; timingText = result.Value.ToString(CultureInfo.InvariantCulture);
+                timingFieldApply = ChangeSliderMultiplier; TimingInputSession++;
+                SelectInput("timing:" + timingField, timingText);
+            }
+            return;
+        }
+        if (!Edit(L.Get("timing.overrideSv"), () =>
+        {
+            Document.SliderMultiplierOverride = result.Value == Document.SliderMultiplier ? null : result.Value;
+            editorWriteCache.RememberMultiplier(Document, result.Output!, sliderMultiplierValidationCompensation);
+        })) { timingError = StatusMessage; return; }
+        timingError = ""; ResetHitsounds();
+    }
 
     private void ChangeCurrentRed(string key, double value)
     {

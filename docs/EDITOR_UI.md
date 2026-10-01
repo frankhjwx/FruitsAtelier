@@ -38,6 +38,22 @@ section, including its start and excluding the next red point. BPM changes do no
 move these markers; the audio preview point stays fixed. The option starts off.
 Offset buttons step by 2 ms, Ctrl by 1 ms and Shift by 10 ms.
 
+Below Slider Tick Rate, **Override SV** unlocks the difficulty's base slider
+velocity (SliderMultiplier) on a separate row. It starts off for new and older
+projects. Use the arrows for 0.1 steps, hold Ctrl for 0.01 steps, or type a value
+from 0.4 to 3.6. The value displays two decimal places. Turning the switch off
+locks editing and retains the confirmed value. The switch is saved in
+`.catchproj`, belongs to the current difficulty, and participates in undo/redo.
+Changing base SV preserves DPB and distance-snap presets and compensates inherited
+SV at export, including red-point resets, while retaining generated slider
+geometry. Confirmation starts background validation and keeps the previous value
+active until it succeeds. The row is locked and displays a checking message while
+validation runs. File operations wait for validation; retry after it completes.
+An intervening content edit invalidates the pending result. The change is applied only when exported NM/HR
+objects retain their kinds, times and positions within 0.001 ms/px. Changes that
+require inherited SV outside 0.1–10 or cannot preserve playback report an error
+and leave the difficulty unchanged.
+
 In Timing mode, object hitsounds are suppressed and the sound-flag palette is
 disabled. During playback, **Metronome Clicks** schedules one tick per beat, with a distinct
 measure accent. Holding Ctrl follows lazer: Snap divisors divisible by three use

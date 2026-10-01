@@ -58,6 +58,16 @@ The ordered playable merge input is retained only for one exported snapshot.
 An unstarted slider uses the same standalone ghost calculation as a fruit without
 applying fruit replacement rules. Unmappable export sequences retain full validation.
 
+Base-SV confirmation reuses the editor write cache's canonical export before SV
+override and validates the rebased text on a detached background snapshot. It
+keeps generated geometry and does not rerun FSlider fitting for an SV step.
+Each write cache retains one canonical baseline and one validated override result,
+keyed by document content, Tiny compensation and language. The baseline ignores
+only the override value and editing-lock flag. Content edits invalidate pending
+results; a successful result commits after active history transactions end and
+supplies the next render's export cache. Workers do not share mutable conversion
+caches with the UI.
+
 Windows drawing uses one mutable solid brush and at most 128 cached text formats.
 Animated text sizes keep exact dimensions; evicted formats are disposed, and all
 remaining formats and the brush are released with the canvas.

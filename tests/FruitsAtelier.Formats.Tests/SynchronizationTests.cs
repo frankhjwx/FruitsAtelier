@@ -4,6 +4,30 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: base SV overrides retain authoring and review the actual exported value", () => Run(f =>
+        {
+            var document = f.Diff.Document;
+            document.OverrideSliderMultiplier = true; SliderMultiplierEditing.Apply(document, 1.3);
+            double authoringMultiplier = document.SliderMultiplier;
+            var output = OsuBeatmapWriter.Serialize(document);
+            File.WriteAllText(f.Source, output.Text);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, document, f.Session.Directory,
+                output.Text, output.ObjectSources);
+            var merge = f.Merge();
+            Check(!merge.RequiresResolution, "Unchanged override export has no synchronization conflict");
+            var retained = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+            Check(retained.SliderMultiplier == authoringMultiplier && retained.SliderMultiplierOverride == 1.3,
+                "Keeping the exported value retains the independent authoring base");
+            SliderMultiplierEditing.Apply(document, 1.5);
+            File.WriteAllText(f.Source, output.Text.Replace("SliderMultiplier:1.3", "SliderMultiplier:1.2"));
+            merge = f.Merge();
+            Check(merge.Conflicts.Any(c => c.Key == "Difficulty/SliderMultiplier" && c.Local == "1.5" && c.External == "1.2"),
+                "Concurrent SV edits review actual local and external values");
+            var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => false);
+            retained = WorkspaceSynchronization.Resolve(merge, choices);
+            Check(retained.SliderMultiplierOverride == 1.5 && retained.SliderMultiplier == authoringMultiplier,
+                "Choosing FA retains the confirmed override");
+        }));
         yield return ("Sync: one green edit reviews and applies only changed timing amongst generated SV", () => Run(f =>
         {
             var output = CaptureCurveTiming(f);

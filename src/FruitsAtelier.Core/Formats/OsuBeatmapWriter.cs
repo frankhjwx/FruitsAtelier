@@ -7,6 +7,31 @@ namespace FruitsAtelier.Core;
 // Keep authoring and quantized read-back conversions separate; each cache belongs to one caller.
 public sealed class OsuWriteCache
 {
+    private MapDocument? multiplierSnapshot;
+    private OsuWriteResult? multiplierOutput;
+    private bool multiplierCompensation;
+    private string multiplierLanguage = "";
+    private MapDocument? multiplierBaselineSnapshot;
+    private OsuWriteResult? multiplierBaseline;
+    private bool multiplierBaselineCompensation;
+    private string multiplierBaselineLanguage = "";
+    public OsuWriteResult? MultiplierBaseline(MapDocument document, bool compensation)
+    {
+        if (multiplierBaselineSnapshot is null || multiplierBaselineCompensation != compensation || multiplierBaselineLanguage != L.Language) return null;
+        var source = document.DeepClone(); source.SliderMultiplierOverride = null; source.OverrideSliderMultiplier = false;
+        return multiplierBaselineSnapshot.ContentEquals(source) ? multiplierBaseline : null;
+    }
+    internal void RememberBaseline(MapDocument document, OsuWriteResult output, bool compensation)
+    {
+        multiplierBaselineSnapshot = document.DeepClone(); multiplierBaselineSnapshot.OverrideSliderMultiplier = false;
+        multiplierBaseline = output; multiplierBaselineCompensation = compensation; multiplierBaselineLanguage = L.Language;
+    }
+    internal OsuWriteResult? Multiplier(MapDocument document, bool compensation)
+        => multiplierCompensation == compensation && multiplierLanguage == L.Language && multiplierSnapshot?.ContentEquals(document) == true ? multiplierOutput : null;
+    public void RememberMultiplier(MapDocument document, OsuWriteResult output, bool compensation)
+    {
+        multiplierSnapshot = document.DeepClone(); multiplierOutput = output; multiplierCompensation = compensation; multiplierLanguage = L.Language;
+    }
     public CatchConversionResult Convert(MapDocument document, bool compensateTinyDroplets = true)
         => CatchStreamConverter.Convert(document, compensateTinyDroplets, Source);
 
@@ -63,6 +88,8 @@ public static class OsuBeatmapWriter
     public static OsuWriteResult Serialize(MapDocument document, bool compensateTinyDroplets = true, OsuWriteCache? cache = null)
     {
         OsuBeatmapReader.Validate(document);
+        if (document.SliderMultiplierOverride is { } multiplier)
+            return SliderMultiplierEditing.Serialize(document, multiplier, compensateTinyDroplets, cache);
         cache?.ParsedSliders.Begin();
         var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache?.Source);
         if (!converted.Success) throw new InvalidDataException(L.Get("core.writer.incompletePrefix") + string.Join(L.Get("core.diagnostics.separator"), converted.Diagnostics));
@@ -162,23 +189,7 @@ public static class OsuBeatmapWriter
         // Time truncation is monotone; sorting before it retains current parent order when distinct times collapse.
         var orderedLines = lines.OrderBy(l => l.Time).ThenBy(l => l.Order).ToArray();
         ReplaceData(output, "HitObjects", orderedLines.Select(l => l.Text));
-        var text = new StringBuilder("osu file format v14\r\n");
-        foreach (var section in output.OriginalSections)
-        {
-            if (section.Name == "Colours")
-            {
-                while (text.Length > 0 && char.IsWhiteSpace(text[^1])) text.Length--;
-                text.Append("\r\n\r\n");
-            }
-            if (section.Name.Length != 0) text.Append('[').Append(section.Name).Append("]\r\n");
-            if (section.Name == "Metadata")
-            {
-                WriteMetadata(text, section);
-                continue;
-            }
-            foreach (string line in section.Lines) text.Append(line).Append("\r\n");
-        }
-        string serialized = text.ToString();
+        string serialized = SectionText(output);
         var readBack = OsuBeatmapReader.Read(serialized, document.SourcePath, inferDuration: false, cache?.ParsedSliders);
         cache?.ParsedSliders.End();
         // Parser IDs change on every read. Parent identities keep unchanged geometry reusable across edits.
@@ -243,7 +254,7 @@ public static class OsuBeatmapWriter
                 .Concat(readBack.BananaShowers.Select(s => (SourceId: sourceIds[s.Id], EndTimeMs: s.EndTimeMs)))
                 .GroupBy(item => item.SourceId).ToDictionary(group => group.Key, group => group.Max(item => item.EndTimeMs))
             : [];
-        return new OsuWriteResult
+        var result = new OsuWriteResult
         {
             Text = serialized, ReadBack = readBack, Diagnostics = diagnostics, ObjectSources = orderedLines.Select(l => l.SourceId).ToArray(),
             MaxTimeQuantizationMs = maxTime, MaxCoordinateQuantization = maxCoordinate,
@@ -251,6 +262,8 @@ public static class OsuBeatmapWriter
             PlayableObjects = playableObjects, PlayableHardRockObjects = playableHardRockObjects,
             PlayableEndTimes = playableEndTimes
         };
+        cache?.RememberBaseline(document, result, compensateTinyDroplets);
+        return result;
 
         string Coordinate(double value) { double rounded = Round(value); maxCoordinate = Math.Max(maxCoordinate, Math.Abs(rounded - value)); return Number(rounded); }
         string Time(double value) { double quantized = QuantizeTime(value); maxTime = Math.Max(maxTime, Math.Abs(quantized - value)); return Number(quantized); }
@@ -472,6 +485,30 @@ public static class OsuBeatmapWriter
         if (target is null) { target = new OsuSection { Name = name }; document.OriginalSections.Add(target); }
         target.Lines.Add(key + ":" + value);
     }
+    internal static string MultiplierText(MapDocument document, TimingPoint[] points)
+    {
+        SetNumber(document, "Difficulty", "SliderMultiplier", document.SliderMultiplier);
+        ReplaceData(document, "TimingPoints", points.Select(TimingLine));
+        return SectionText(document);
+    }
+
+    private static string SectionText(MapDocument document)
+    {
+        var text = new StringBuilder("osu file format v14\r\n");
+        foreach (var section in document.OriginalSections)
+        {
+            if (section.Name == "Colours")
+            {
+                while (text.Length > 0 && char.IsWhiteSpace(text[^1])) text.Length--;
+                text.Append("\r\n\r\n");
+            }
+            if (section.Name.Length != 0) text.Append('[').Append(section.Name).Append("]\r\n");
+            if (section.Name == "Metadata") WriteMetadata(text, section);
+            else foreach (string line in section.Lines) text.Append(line).Append("\r\n");
+        }
+        return text.ToString();
+    }
+
     private static void WriteMetadata(StringBuilder text, OsuSection section)
     {
         string[] keys = ["Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Source", "Tags", "BeatmapSetID", "Version", "BeatmapID"];

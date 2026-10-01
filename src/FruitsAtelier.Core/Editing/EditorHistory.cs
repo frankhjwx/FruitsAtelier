@@ -23,6 +23,7 @@ public sealed class EditorHistory
     public bool IsDirty => !Document.ContentEquals(baseline);
     public bool CanUndo => undo.Count > 0;
     public bool CanRedo => redo.Count > 0;
+    public bool HasActiveTransaction => transactionStart is not null;
     public string UndoLabel => undo.TryPeek(out var change) ? change.Label : "";
 
     public void MarkSaved()

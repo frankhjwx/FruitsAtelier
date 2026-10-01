@@ -98,6 +98,26 @@ internal static class RenderCheck
                 FruitsAtelier.Localization.Strings.SetLanguage(lang); Paint();
                 view.KeyDown(114, false, false); Paint();
                 if (!view.TimingPageVisible) throw new InvalidOperationException("F3 failed to open timing page.");
+                var svRow = view.TimingSliderMultiplierBounds;
+                if (svRow.Bottom > height || view.TimingFields.Any(f => f.Key == "page.sliderMultiplier"))
+                    throw new InvalidOperationException("Base SV must start locked and fit the Timing panel.");
+                view.PointerDown(svRow.X + 8, svRow.Y + 10, 0, false, false);
+                view.PointerUp(svRow.X + 8, svRow.Y + 10, 0); Paint();
+                var svField = view.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
+                if (!view.Document.OverrideSliderMultiplier || svField.Bounds.Bottom != svRow.Bottom)
+                    throw new InvalidOperationException("Base SV override did not unlock its row.");
+                double previousSv = view.Document.EffectiveSliderMultiplier;
+                view.PointerDown(svField.Bounds.Right + 14, svField.Bounds.Y + 10, 0, false, true);
+                view.PointerUp(svField.Bounds.Right + 14, svField.Bounds.Y + 10, 0); Paint();
+                var svWait = Stopwatch.StartNew();
+                while (view.SliderMultiplierValidationBusy && svWait.ElapsedMilliseconds < 10000)
+                { Thread.Sleep(1); Paint(); }
+                if (Math.Abs(view.Document.EffectiveSliderMultiplier - Math.Round(previousSv + .01, 2)) > 1e-9)
+                    throw new InvalidOperationException($"Base SV Ctrl arrow did not step by 0.01: {previousSv} -> {view.Document.EffectiveSliderMultiplier}; {view.StatusMessage}");
+                view.KeyDown(90, true, false); view.KeyDown(90, true, false); Paint();
+                if (!view.Document.ContentEquals(original))
+                    throw new InvalidOperationException("Base SV native undo did not restore the difficulty.");
+                AppLog.Write($"Timing base SV native check passed: {lang}, {width}x{height}");
                 view.PointerMove(350, height - 55, false, false); Paint();
                 int decodes = canvas.ImageDecodeCount;
                 for (int frame = 0; frame < 12; frame++)

@@ -202,6 +202,8 @@ public static class OsuBeatmapReader
             throw new InvalidDataException(L.Get("core.reader.sliderSettings"));
         if (document.DistancePerBeatOverride is { } dpb && (!double.IsFinite(dpb) || dpb < 32))
             throw new InvalidDataException(L.Get("core.dpb.range"));
+        if (document.SliderMultiplierOverride is { } sv && (!double.IsFinite(sv) || sv < SliderMultiplierEditing.Minimum || sv > SliderMultiplierEditing.Maximum))
+            throw new InvalidDataException(L.Get("timing.sliderMultiplierRange"));
         var ids = new HashSet<Guid>();
         foreach (var fruit in document.Fruits) { Id(fruit.Id); Time(fruit.TimeMs); X(fruit.X); }
         foreach (var track in document.Tracks)

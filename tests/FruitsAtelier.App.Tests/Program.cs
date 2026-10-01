@@ -7,6 +7,7 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Contains("--sv-performance")) return SliderMultiplierTests.Performance();
 if (args.Length == 2 && args[0] == "--fruit-placement-performance") return EditorPerformance.RunFruitPlacement(args[1]);
 if (args.Length == 2 && args[0] == "--testplay-edit-performance") return EditorPerformance.RunTestplayEditing(args[1]);
 if (args.Length > 0 && args[0] == "--benchmark-library") return LibraryScaleTests.Benchmark(args.Length > 1 ? args[1] : null);
@@ -49,6 +50,7 @@ var tests = new (string Name, Action Run)[]
     ("Shortcut routing exports from Timing while retaining modal focus", ShortcutRoutingTests.Export),
     ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),
     ("Timing setup drafts, shortcuts, clipboard, undo and narrow bilingual layout", TimingEditorTests.Run),
+    ("Timing base SV override preserves gameplay, DPB, precision, persistence and undo", SliderMultiplierTests.Run),
     ("Timing metronome schedules beat and Ctrl snap ticks without duplicate playback", TimingEditorTests.Metronome),
     ("Timing waveform zoom, cached audio and red-line selection", TimingEditorTests.Waveform),
     ("Wheel modifiers distinguish snapping zoom and navigation", WheelGestureTests.Run),
