@@ -46,8 +46,12 @@ locks editing and retains the confirmed value. The switch is saved in
 `.catchproj`, belongs to the current difficulty, and participates in undo/redo.
 Changing base SV preserves DPB and distance-snap presets and compensates inherited
 SV at export, including red-point resets, while retaining generated slider
-geometry. Confirmation starts background validation and keeps the previous value
-active until it succeeds. The row is locked and displays a checking message while
+geometry. Cached exported green-point limits reject out-of-range compensation
+immediately in either direction. Warm adjustments use a bounded local event check
+with cached slider paths and verify NM/HR playback before applying the value.
+Cold caches, large event sets, exhausted checks and uncertain rounding use
+background validation and keep the previous value active until it succeeds.
+The row is locked and displays a checking message while
 validation runs. File operations wait for validation; retry after it completes.
 An intervening content edit invalidates the pending result. The change is applied only when exported NM/HR
 objects retain their kinds, times and positions within 0.001 ms/px. Changes that

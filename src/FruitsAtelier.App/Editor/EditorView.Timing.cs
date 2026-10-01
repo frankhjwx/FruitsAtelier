@@ -426,8 +426,21 @@ public sealed partial class EditorView
         if (!double.IsFinite(value) || value < SliderMultiplierEditing.Minimum || value > SliderMultiplierEditing.Maximum)
             throw new ArgumentException(L.Get("timing.sliderMultiplierRange"));
         if (value == Document.EffectiveSliderMultiplier) return;
-        var snapshot = Document.DeepClone();
         var currentExport = editorWriteCache.MultiplierBaseline(Document, compensateTinyDroplets);
+        if (currentExport is not null)
+        {
+            try
+            {
+                SliderMultiplierEditing.CheckLimits(currentExport, value);
+                if (!history.HasActiveTransaction && SliderMultiplierEditing.TryRebase(currentExport, value, out var output))
+                {
+                    ApplySliderMultiplier(value, output!, compensateTinyDroplets);
+                    return;
+                }
+            }
+            catch (InvalidDataException ex) { throw new ArgumentException(ex.Message, ex); }
+        }
+        var snapshot = Document.DeepClone();
         bool compensation = compensateTinyDroplets;
         sliderMultiplierValidationSnapshot = snapshot; sliderMultiplierValidationOwner = history;
         sliderMultiplierValidationText = timingField == "page.sliderMultiplier";
@@ -439,7 +452,9 @@ public sealed partial class EditorView
             {
                 var source = snapshot.DeepClone(); source.SliderMultiplierOverride = null;
                 var baseline = currentExport ?? OsuBeatmapWriter.Serialize(source, compensation);
-                return new SliderMultiplierValidation(value, SliderMultiplierEditing.Rebase(baseline, value), null);
+                var output = SliderMultiplierEditing.TryRebase(baseline, value, out var local, double.PositiveInfinity)
+                    ? local! : SliderMultiplierEditing.Rebase(baseline, value);
+                return new SliderMultiplierValidation(value, output, null);
             }
             catch (Exception ex) when (ex is ArgumentException or InvalidDataException or InvalidOperationException)
             { return new SliderMultiplierValidation(value, null, ex.Message); }
@@ -467,10 +482,15 @@ public sealed partial class EditorView
             }
             return;
         }
+        ApplySliderMultiplier(result.Value, result.Output!, sliderMultiplierValidationCompensation);
+    }
+
+    private void ApplySliderMultiplier(double value, OsuWriteResult output, bool compensation)
+    {
         if (!Edit(L.Get("timing.overrideSv"), () =>
         {
-            Document.SliderMultiplierOverride = result.Value == Document.SliderMultiplier ? null : result.Value;
-            editorWriteCache.RememberMultiplier(Document, result.Output!, sliderMultiplierValidationCompensation);
+            Document.SliderMultiplierOverride = value == Document.SliderMultiplier ? null : value;
+            editorWriteCache.RememberMultiplier(Document, output, compensation);
         })) { timingError = StatusMessage; return; }
         timingError = ""; ResetHitsounds();
     }

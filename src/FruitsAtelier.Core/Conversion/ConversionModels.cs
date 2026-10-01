@@ -17,6 +17,8 @@ public readonly record struct SliderPathPoint(double X, double GeometryY);
 
 public sealed class GeneratedSlider
 {
+    internal ImportedSliderGeometry? ImportedGeometry { get; init; }
+    internal IReadOnlyList<int>? ImportedOffsets { get; init; }
     public bool IsImported { get; init; }
     public int SpanCount { get; init; } = 1;
     public required Guid SourceId { get; init; }

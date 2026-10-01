@@ -23,13 +23,17 @@ internal static class SliderMultiplierTests
             {
                 var field = ui.View.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
                 long bytes = GC.GetAllocatedBytesForCurrentThread();
+                long processBytes = GC.GetTotalAllocatedBytes();
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 ui.View.PointerDown(field.Bounds.Right + 14, field.Bounds.Y + 8, 0, false, true);
                 double dispatchMs = watch.Elapsed.TotalMilliseconds;
+                bool backgroundValidation = ui.View.SliderMultiplierValidationBusy;
                 ui.View.PointerUp(field.Bounds.Right + 14, field.Bounds.Y + 8, 0); ui.Paint();
                 Wait(ui);
                 samples.Add(new { sliders = count, step, dispatchMs, totalMs = watch.Elapsed.TotalMilliseconds,
-                    allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - bytes, sv = ui.View.Document.EffectiveSliderMultiplier });
+                    allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - bytes,
+                    processAllocatedBytes = GC.GetTotalAllocatedBytes() - processBytes, backgroundValidation,
+                    sv = ui.View.Document.EffectiveSliderMultiplier });
                 Check(ui.View.Document.EffectiveSliderMultiplier == Math.Round(1.92 + .01 * (step + 1), 2), "Performance fixture SV edit applied");
             }
         }
@@ -71,8 +75,12 @@ internal static class SliderMultiplierTests
                 Check(ui.View.TimingFields.All(f => f.Key != "page.sliderMultiplier"), "Locked SV cannot receive text input");
                 ui.ClickText(L.Get("timing.overrideSv"));
                 var pendingField = ui.View.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
+                var owner = (EditorHistory)typeof(FruitsAtelier.App.Editor.EditorView).GetProperty("history",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(ui.View)!;
+                owner.Begin("Concurrent edit");
                 ui.View.PointerDown(pendingField.Bounds.Right + 14, pendingField.Bounds.Y + 8, 0, false, true);
                 Check(ui.View.SliderMultiplierValidationBusy && !ui.View.PrepareFileOperation(), "Pending SV validation keeps file operations on the confirmed value");
+                owner.Cancel();
                 ui.View.Document.Fruits.Add(new() { TimeMs = 6000, X = 200 });
                 ui.View.PointerUp(pendingField.Bounds.Right + 14, pendingField.Bounds.Y + 8, 0); Wait(ui);
                 Check(ui.View.Document.EffectiveSliderMultiplier == 2.09 && ui.View.Document.Fruits.Count == 1,
@@ -86,10 +94,8 @@ internal static class SliderMultiplierTests
                 Check(OsuBeatmapWriter.Serialize(ui.View.Document, cache: outputCache).Text
                     == OsuBeatmapWriter.Serialize(ui.View.Document).Text, "Content edits invalidate override output");
                 pendingField = ui.View.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
-                ui.View.PointerDown(pendingField.Bounds.Right + 14, pendingField.Bounds.Y + 8, 0, false, true);
-                var owner = (EditorHistory)typeof(FruitsAtelier.App.Editor.EditorView).GetProperty("history",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(ui.View)!;
                 owner.Begin("Concurrent edit");
+                ui.View.PointerDown(pendingField.Bounds.Right + 14, pendingField.Bounds.Y + 8, 0, false, true);
                 var validation = (System.Threading.Tasks.Task)typeof(FruitsAtelier.App.Editor.EditorView).GetField("sliderMultiplierValidation",
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(ui.View)!;
                 Check(validation.Wait(10000), "SV worker finishes during an active transaction");
@@ -103,15 +109,24 @@ internal static class SliderMultiplierTests
                     var after = OsuBeatmapWriter.Serialize(test);
                     Check(after.ReadBack.SliderMultiplier == value && test.DistancePerBeat == 200, "Requested SV exports with stable DPB");
                     Equivalent(before, after);
+                    Check(SliderMultiplierEditing.TryRebase(before, value, out var fast, double.PositiveInfinity), "Local SV validation resolves ordinary adjustments");
+                    Check(fast!.Text == after.Text, "Local SV timing matches full export");
+                    Equivalent(after, fast);
+                    Check(!SliderMultiplierEditing.TryRebase(before, value, out _, 0), "Exhausted fast-check budget falls back without applying");
                 }
                 var limited = Fixture(); limited.TimingPoints.Add(new() { TimeMs = 0, Uninherited = false, BeatLengthMs = -10 });
                 var original = limited.DeepClone();
                 try { SliderMultiplierEditing.Apply(limited, .4); throw new Exception("SV limit accepted"); }
                 catch (System.IO.InvalidDataException) { Check(limited.ContentEquals(original), "Unrepresentable SV leaves map intact"); }
                 var rejected = new Ui(false); rejected.LoadDocument(limited); rejected.Key(114);
-                rejected.ClickText(L.Get("timing.overrideSv")); Set(rejected, ".4"); rejected.Key(13); Wait(rejected);
+                rejected.ClickText(L.Get("timing.overrideSv")); Set(rejected, ".4"); rejected.Key(13);
+                Check(!rejected.View.SliderMultiplierValidationBusy, "Maximum green SV rejects a downward adjustment immediately"); Wait(rejected);
                 Check(rejected.View.Document.EffectiveSliderMultiplier == 2 && rejected.View.IsEditingText,
                     "Rejected typed SV retains the last valid value and restores the draft field");
+                var slowest = Fixture(); slowest.TimingPoints.Add(new() { TimeMs = 0, Uninherited = false, BeatLengthMs = -1000 });
+                var slowBefore = OsuBeatmapWriter.Serialize(slowest);
+                try { SliderMultiplierEditing.CheckLimits(slowBefore, 3.6); throw new Exception("Minimum green SV accepted"); }
+                catch (System.IO.InvalidDataException) { }
                 var authored = new MapDocument { IsDemo = false };
                 var track = new CurveTrack { Kind = CurveKind.Linear };
                 track.Nodes.Add(new() { TimeMs = 1000, X = 100 }); track.Nodes.Add(new() { TimeMs = 2000, X = 200 });
@@ -119,6 +134,16 @@ internal static class SliderMultiplierTests
                 var authoredBefore = OsuBeatmapWriter.Serialize(authored);
                 SliderMultiplierEditing.Apply(authored, 1.3);
                 Equivalent(authoredBefore, OsuBeatmapWriter.Serialize(authored));
+                Check(SliderMultiplierEditing.TryRebase(authoredBefore, 1.3, out var authoredFast, double.PositiveInfinity), "Generated slider geometry supports local SV validation");
+                Equivalent(OsuBeatmapWriter.Serialize(authored), authoredFast!);
+                FastBoundaryCases();
+                var rounding = new MapDocument { IsDemo = false, SliderMultiplier = 1.4 };
+                var shortRepeat = new ImportedSlider { TimeMs = 500, X = 100, Y = 192, PixelLength = 28.2799999, SpanCount = 2, PathType = 'L' };
+                shortRepeat.ControlPoints.AddRange([new(100, 192), new(200, 192)]); rounding.ImportedSliders.Add(shortRepeat);
+                var roundingBefore = OsuBeatmapWriter.Serialize(rounding);
+                Check(!SliderMultiplierEditing.TryRebase(roundingBefore, 1.3, out _, double.PositiveInfinity), "Tiny count boundary requires full validation");
+                try { SliderMultiplierEditing.Rebase(roundingBefore, 1.3); throw new Exception("Changed tiny count accepted"); }
+                catch (System.IO.InvalidDataException) { }
                 var old = ProjectSerializer.Read("{\"SchemaVersion\":1,\"Document\":{\"SliderMultiplier\":1.4}}");
                 Check(!old.OverrideSliderMultiplier && old.SliderMultiplier == 1.4, "Older projects retain SV with editing locked");
             }
@@ -127,6 +152,26 @@ internal static class SliderMultiplierTests
     }
 
     private static MapDocument Fixture() => OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:2\nSliderTickRate:2\n[TimingPoints]\n0,500,4,1,0,80,1,1\n2000,400,3,2,1,60,1,0\n[HitObjects]\n100,192,500,2,0,L|300:192,2,200\n200,192,2500,2,0,L|400:192,1,200\n256,192,4000,8,0,5000\n");
+
+    private static void FastBoundaryCases()
+    {
+        foreach (double length in new[] { 31.99999, 32, 32.00001, 100, 200 })
+        foreach (double value in new[] { 1.3, 1.99, 2.01, 3.6 })
+        {
+            var map = Fixture();
+            map.ImportedSliders[0].OriginalLine = null;
+            map.ImportedSliders[0].PixelLength = length;
+            map.ImportedSliders[0].PathType = 'B';
+            map.ImportedSliders[0].ControlPoints.Insert(1, new(200, 100));
+            map.Fruits.Add(new() { TimeMs = 5800, X = 256 });
+            var baseline = OsuBeatmapWriter.Serialize(map);
+            if (!SliderMultiplierEditing.TryRebase(baseline, value, out var fast, double.PositiveInfinity)) continue;
+            var full = SliderMultiplierEditing.Rebase(baseline, value);
+            Check(fast!.Text == full.Text, "Local timing matches full validation near tiny thresholds");
+            foreach (var pair in new[] { (fast.PlayableObjects, full.PlayableObjects), (fast.PlayableHardRockObjects, full.PlayableHardRockObjects) })
+                Check(pair.Item1.SequenceEqual(pair.Item2), "Local validation reproduces full NM/HR events and downstream banana RNG");
+        }
+    }
 
     private static void Set(Ui ui, string value)
     {

@@ -31,9 +31,95 @@ public static class SliderMultiplierEditing
     public static OsuWriteResult Rebase(OsuWriteResult before, double multiplier)
     {
         Validate(multiplier);
+        if (multiplier == before.ReadBack.SliderMultiplier) return before;
+        var candidate = Candidate(before, multiplier);
+        string text = OsuBeatmapWriter.MultiplierText(candidate, candidate.TimingPoints.ToArray());
+        var readBack = OsuBeatmapReader.Read(text, candidate.SourcePath, inferDuration: false);
+        foreach (var slider in readBack.ImportedSliders) slider.Id = before.ObjectSources[slider.SourceOrder];
+        foreach (var shower in readBack.BananaShowers) shower.Id = before.ObjectSources[shower.SourceOrder];
+        var converted = CatchStreamConverter.Convert(readBack, false);
+        var hardRock = converted.Success ? CatchPreviewMods.HardRock(readBack, converted) : [];
+        return Finish(before, text, readBack, converted, hardRock);
+    }
+
+    public static void CheckLimits(OsuWriteResult before, double multiplier)
+    {
+        Validate(multiplier);
+        if (multiplier == before.ReadBack.SliderMultiplier) return;
+        if (before.MultiplierAnalysis is { } analysis && (multiplier < analysis.Minimum || multiplier > analysis.Maximum))
+            throw new InvalidDataException(L.Get("timing.sliderMultiplierSvLimit"));
+    }
+
+    public static bool TryRebase(OsuWriteResult before, double multiplier, out OsuWriteResult? result, double budgetMs = 4)
+    {
+        result = null;
+        CheckLimits(before, multiplier);
+        if (multiplier == before.ReadBack.SliderMultiplier) { result = before; return true; }
+        if (before.MultiplierAnalysis is not { } analysis) return false;
+        if (double.IsFinite(budgetMs) && !analysis.Prepared) return false;
+        if (double.IsFinite(budgetMs) && analysis.Conversion.Objects.Count > 4096) return false;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var candidate = Candidate(before, multiplier);
+        var timing = new TimingMap.Lookup(candidate);
+        var changed = new Dictionary<Guid, IReadOnlyList<ConvertedCatchObject>>();
+        var sliders = new List<GeneratedSlider>(analysis.Conversion.Sliders.Count);
+        foreach (var slider in analysis.Conversion.Sliders)
+        {
+            if (watch.Elapsed.TotalMilliseconds > budgetMs) return false;
+            var import = analysis.Imports[slider.SourceId];
+            var state = timing.At(import.TimeMs);
+            double velocity = LegacyCatchRules.Velocity(state.BeatLengthMs, multiplier, state.SliderVelocityMultiplier);
+            if (velocity == slider.Velocity) { sliders.Add(slider); continue; }
+            if (slider.ImportedGeometry is not { } path || slider.ImportedOffsets is not { } offsets) return false;
+            var previous = analysis.Objects[slider.SourceId];
+            if (double.IsFinite(budgetMs) && previous.Length > 1024) return false;
+            double duration = path.Distance / velocity;
+            if (!double.IsFinite(duration) || duration <= 0 || import.TimeMs + duration * import.SpanCount > int.MaxValue) return false;
+            double tickDistance = velocity * state.BeatLengthMs / candidate.SliderTickRate;
+            List<NestedCatchEvent> nested;
+            try { nested = LegacyCatchRules.CreateNested(import.TimeMs, duration, velocity, tickDistance, path.Distance, import.SpanCount); }
+            catch (CatchConversionException) { return false; }
+            if (nested.Count != previous.Length || offsets.Count != previous.Length) return false;
+            var objects = new ConvertedCatchObject[nested.Count];
+            for (int i = 0; i < nested.Count; i++)
+            {
+                var item = nested[i];
+                // Equal kinds/counts consume identical RNG, including all downstream parents.
+                if (item.Kind != previous[i].Kind || Math.Abs(item.TimeMs - previous[i].TimeMs) >= .001) return false;
+                float pathX = Math.Clamp((float)import.X, 0, 512) + path.PositionAt(item.Progress).X;
+                float offset = item.Kind == CatchObjectKind.TinyDroplet ? Math.Clamp(offsets[i], -pathX, 512 - pathX) : 0;
+                float x = Math.Clamp(pathX + offset, 0, 512);
+                if (Math.Abs(x - previous[i].X) >= .001) return false;
+                objects[i] = new(import.Id, i, item.Kind, item.TimeMs, x, x, pathX, offset);
+            }
+            changed[import.Id] = objects;
+            sliders.Add(new()
+            {
+                SourceId = slider.SourceId, IsImported = true, SpanCount = slider.SpanCount, StartTimeMs = slider.StartTimeMs,
+                DurationMs = duration * slider.SpanCount, Velocity = velocity, SliderVelocityMultiplier = state.SliderVelocityMultiplier,
+                TickDistance = tickDistance, Length = slider.Length, Path = slider.Path, TinyCompensationApplied = false
+            });
+        }
+        if (watch.Elapsed.TotalMilliseconds > budgetMs) return false;
+        var converted = new CatchConversionResult
+        {
+            Success = true, Diagnostics = analysis.Conversion.Diagnostics, Sliders = sliders,
+            Objects = analysis.Objects.SelectMany(p => changed.GetValueOrDefault(p.Key) ?? p.Value)
+                .OrderBy(o => o.TimeMs).ThenBy(o => o.IsStandalone ? o.TimeMs : analysis.Parents[o.SourceId].Time)
+                .ThenBy(o => analysis.Parents[o.SourceId].Order).ToArray()
+        };
+        var hardRock = CatchPreviewMods.HardRock(candidate, converted);
+        if (watch.Elapsed.TotalMilliseconds > budgetMs) return false;
+        string text = OsuBeatmapWriter.MultiplierText(candidate, candidate.TimingPoints.ToArray());
+        try { result = Finish(before, text, candidate, converted, hardRock, reuseIdentities: true); return true; }
+        catch (InvalidDataException) { return false; }
+    }
+
+    private static MapDocument Candidate(OsuWriteResult before, double multiplier)
+    {
+        CheckLimits(before, multiplier);
         var candidate = before.ReadBack.DeepClone();
         double ratio = candidate.SliderMultiplier / multiplier;
-        if (ratio == 1) return before;
         candidate.SliderMultiplier = multiplier;
         var points = candidate.TimingPoints;
         var originals = points.Select(p => p.DeepClone()).ToArray();
@@ -54,19 +140,31 @@ public static class SliderMultiplierEditing
         if (points.Count == 0 || points.All(p => p.TimeMs > 0))
             points.Add(new() { TimeMs = 0, Uninherited = false, BeatLengthMs = BeatLength(100) });
         var ordered = points.OrderBy(p => p.TimeMs).ThenBy(p => p.Uninherited ? 0 : 1).ThenBy(p => p.SourceOrder).ToArray();
-        string text = OsuBeatmapWriter.MultiplierText(candidate, ordered);
-        var readBack = OsuBeatmapReader.Read(text, candidate.SourcePath, inferDuration: false);
-        foreach (var slider in readBack.ImportedSliders) slider.Id = before.ObjectSources[slider.SourceOrder];
-        foreach (var shower in readBack.BananaShowers) shower.Id = before.ObjectSources[shower.SourceOrder];
-        var converted = CatchStreamConverter.Convert(readBack, false);
-        var hardRock = converted.Success ? CatchPreviewMods.HardRock(readBack, converted) : [];
+        candidate.TimingPoints.Clear(); candidate.TimingPoints.AddRange(ordered);
+        return candidate;
+
+        double BeatLength(double magnitude)
+        {
+            double scaled = magnitude / ratio;
+            if (scaled < 10 || scaled > 1000) throw new InvalidDataException(L.Get("timing.sliderMultiplierSvLimit"));
+            float rounded = (float)scaled;
+            // Stable rounds inherited beat lengths to float; avoid shortening exact-integer spans.
+            if (rounded < scaled) rounded = MathF.BitIncrement(rounded);
+            return -rounded;
+        }
+    }
+
+    private static OsuWriteResult Finish(OsuWriteResult before, string text, MapDocument readBack,
+        CatchConversionResult converted, IReadOnlyList<ConvertedCatchObject> hardRock, bool reuseIdentities = false)
+    {
         if (!before.ObjectSequenceMatches || !converted.Success)
             throw new InvalidDataException(L.Get("timing.sliderMultiplierPreservation"));
-        var identities = before.PlayableObjects.ToDictionary(p => (p.SourceId, p.EventIndex));
-        var parentFruits = before.PlayableObjects.Where(p => p.Kind == CatchObjectKind.Fruit)
+        var analysis = reuseIdentities ? before.MultiplierAnalysis : null;
+        var identities = analysis?.Normal ?? before.PlayableObjects.ToDictionary(p => (p.SourceId, p.EventIndex));
+        var parentFruits = analysis is not null ? [] : before.PlayableObjects.Where(p => p.Kind == CatchObjectKind.Fruit)
             .GroupBy(p => p.SourceId).ToDictionary(g => g.Key, g => g.OrderBy(p => p.EventIndex).ToArray());
         var fruitIdentities = new Dictionary<Guid, ConvertedCatchObject>();
-        foreach (var group in readBack.Fruits.GroupBy(f => before.ObjectSources[f.SourceOrder]))
+        foreach (var group in (analysis is not null ? [] : readBack.Fruits).GroupBy(f => before.ObjectSources[f.SourceOrder]))
         {
             if (!parentFruits.TryGetValue(group.Key, out var originalsForParent))
                 throw new InvalidDataException(L.Get("timing.sliderMultiplierPreservation"));
@@ -76,6 +174,11 @@ public static class SliderMultiplierEditing
         }
         ConvertedCatchObject Identity(ConvertedCatchObject item)
         {
+            if (analysis is not null)
+            {
+                var identity = analysis.Identities[(item.SourceId, item.EventIndex)];
+                return item with { SourceId = identity.SourceId, EventIndex = identity.EventIndex, IsStandalone = identity.IsStandalone };
+            }
             if (!fruitIdentities.TryGetValue(item.SourceId, out var original)
                 && !identities.TryGetValue((item.SourceId, item.EventIndex), out original))
                 throw new InvalidDataException(L.Get("timing.sliderMultiplierPreservation"));
@@ -83,8 +186,8 @@ public static class SliderMultiplierEditing
         }
         var playable = converted.Objects.Select(Identity).ToArray();
         var playableHardRock = hardRock.Select(Identity).ToArray();
-        if (!Equivalent(before.PlayableObjects, playable)
-            || !Equivalent(before.PlayableHardRockObjects, playableHardRock))
+        if (!Equivalent(before.PlayableObjects, playable, analysis?.Normal)
+            || !Equivalent(before.PlayableHardRockObjects, playableHardRock, analysis?.HardRock))
             throw new InvalidDataException(L.Get("timing.sliderMultiplierPreservation"));
         OsuBeatmapReader.SetDuration(readBack, converted.Sliders.Select(s => s.StartTimeMs + s.DurationMs));
         var ends = readBack.Fruits.Select(f => (Id: before.ObjectSources[f.SourceOrder], End: f.TimeMs))
@@ -101,15 +204,6 @@ public static class SliderMultiplierEditing
             MaxConvertedXError = before.MaxConvertedXError
         };
 
-        double BeatLength(double magnitude)
-        {
-            double scaled = magnitude / ratio;
-            if (scaled < 10 || scaled > 1000) throw new InvalidDataException(L.Get("timing.sliderMultiplierSvLimit"));
-            float rounded = (float)scaled;
-            // Stable rounds inherited beat lengths to float; avoid shortening exact-integer spans.
-            if (rounded < scaled) rounded = MathF.BitIncrement(rounded);
-            return -rounded;
-        }
     }
 
     private static void Validate(double multiplier)
@@ -118,10 +212,11 @@ public static class SliderMultiplierEditing
             throw new ArgumentException(L.Get("timing.sliderMultiplierRange"));
     }
 
-    private static bool Equivalent(IReadOnlyList<ConvertedCatchObject> before, IReadOnlyList<ConvertedCatchObject> after)
+    private static bool Equivalent(IReadOnlyList<ConvertedCatchObject> before, IReadOnlyList<ConvertedCatchObject> after,
+        Dictionary<(Guid, int), ConvertedCatchObject>? cached = null)
     {
         if (before.Count != after.Count) return false;
-        var expected = before.ToDictionary(p => (p.SourceId, p.EventIndex));
+        var expected = cached ?? before.ToDictionary(p => (p.SourceId, p.EventIndex));
         return after.All(item => expected.TryGetValue((item.SourceId, item.EventIndex), out var original)
             && original.Kind == item.Kind && Math.Abs(original.TimeMs - item.TimeMs) < .001
             && Math.Abs(original.X - item.X) < .001);

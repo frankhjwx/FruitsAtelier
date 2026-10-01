@@ -54,6 +54,7 @@ public static class ImportedSliderConverter
         }
         return (new GeneratedSlider
         {
+            ImportedGeometry = path, ImportedOffsets = nested.Select(item => item.RawOffset).ToArray(),
             SourceId = slider.Id, IsImported = true, SpanCount = slider.SpanCount, StartTimeMs = slider.TimeMs,
             DurationMs = duration * slider.SpanCount, Velocity = velocity, SliderVelocityMultiplier = timing.SliderVelocityMultiplier,
             TickDistance = tickDistance, Length = path.Distance, Path = path.AbsolutePoints(slider), TinyCompensationApplied = false

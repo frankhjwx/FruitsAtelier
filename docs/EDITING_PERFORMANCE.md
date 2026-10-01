@@ -59,8 +59,16 @@ An unstarted slider uses the same standalone ghost calculation as a fruit withou
 applying fruit replacement rules. Unmappable export sequences retain full validation.
 
 Base-SV confirmation reuses the editor write cache's canonical export before SV
-override and validates the rebased text on a detached background snapshot. It
-keeps generated geometry and does not rerun FSlider fitting for an SV step.
+override. Cached minimum/maximum inherited beat-length magnitudes provide a
+constant-time range rejection, including compensated red resets. Local validation
+reuses read-back slider geometry and recomputes nested events only when velocity
+changes. Identical event kinds/counts preserve NM random offsets and downstream
+RNG consumption; the merged NM and recalculated HR sequences must still match.
+Cold profiles are prepared lazily on a worker, so ordinary editing does not build
+SV event indexes. Warm UI checks have a 4 ms cooperative budget and an event-count
+cap; cold, large, exhausted or uncertain checks use the detached background
+snapshot and retain full read-back validation as a fallback and correctness oracle.
+Both paths keep generated geometry and do not rerun FSlider fitting for an SV step.
 Each write cache retains one canonical baseline and one validated override result,
 keyed by document content, Tiny compensation and language. The baseline ignores
 only the override value and editing-lock flag. Content edits invalidate pending

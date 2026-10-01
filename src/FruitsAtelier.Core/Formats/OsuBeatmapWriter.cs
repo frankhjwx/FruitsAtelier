@@ -60,6 +60,7 @@ public sealed class OsuWriteCache
 
 public sealed class OsuWriteResult
 {
+    internal SliderMultiplierAnalysis? MultiplierAnalysis { get; set; }
     public IReadOnlyList<Guid> ObjectSources { get; init; } = [];
     public required string Text { get; init; }
     public required MapDocument ReadBack { get; init; }
@@ -262,6 +263,7 @@ public static class OsuBeatmapWriter
             PlayableObjects = playableObjects, PlayableHardRockObjects = playableHardRockObjects,
             PlayableEndTimes = playableEndTimes
         };
+        if (matches) result.MultiplierAnalysis = new(result, reconverted);
         cache?.RememberBaseline(document, result, compensateTinyDroplets);
         return result;
 
