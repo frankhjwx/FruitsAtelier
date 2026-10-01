@@ -64,10 +64,13 @@ constant-time range rejection, including compensated red resets. Local validatio
 reuses read-back slider geometry and recomputes nested events only when velocity
 changes. Identical event kinds/counts preserve NM random offsets and downstream
 RNG consumption; the merged NM and recalculated HR sequences must still match.
-Cold profiles are prepared lazily on a worker, so ordinary editing does not build
-SV event indexes. Warm UI checks have a 4 ms cooperative budget and an event-count
-cap; cold, large, exhausted or uncertain checks use the detached background
-snapshot and retain full read-back validation as a fallback and correctness oracle.
+SV input updates a displayed draft and resets a one-second idle deadline; it does
+not change document content or invalidate conversion during continuous input.
+Validation starts on a detached worker only after that deadline. Cold profiles
+are prepared lazily there, so ordinary editing does not build SV event indexes.
+New input remains available during validation, supersedes the worker's result and
+restarts the deadline. Only the current, matching snapshot may commit, in one undo
+step. Full read-back validation remains a fallback and correctness oracle.
 Both paths keep generated geometry and do not rerun FSlider fitting for an SV step.
 Each write cache retains one canonical baseline and one validated override result,
 keyed by document content, Tiny compensation and language. The baseline ignores

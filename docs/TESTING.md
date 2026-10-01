@@ -256,11 +256,14 @@ Legacy and are reported. Neither command saves the supplied map.
 ## Base SV validation benchmark
 
 Run `dotnet run --no-build --project tests/FruitsAtelier.App.Tests -c Release -- --sv-performance`
-to measure base-SV confirmation on 100 and 1,000 imported Bezier sliders with
-repeats and BPM changes. `artifacts/sv/performance.json` separates pointer dispatch
-from background-validation completion and records current-thread allocations.
-The counting canvas measures CPU work; worker allocations, GPU presentation and
-physical display latency are not included in that allocation/dispatch measure.
+to measure continuous base-SV adjustment on 100 and 1,000 imported Bezier sliders
+with repeats and BPM changes. Eight adjustments arrive 100 ms apart using an
+injected clock. The report separates pointer dispatch plus painting during the
+burst from validation after a simulated one-second idle interval, and records
+current-thread and process-wide allocations. Regressions verify the deadline
+restarts, conversion stays cached during input, superseded workers cannot commit,
+and the final value produces one undo step. The counting canvas measures CPU work;
+GPU presentation and physical display latency are excluded.
 
 ## Playback rendering profile
 

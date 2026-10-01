@@ -885,6 +885,7 @@
   "song.invalidDifficulty": "请输入 0 到 10 之间的难度数值。",
   "timing.overrideSv": "覆盖 SV",
   "timing.sliderMultiplierChecking": "正在验证基础 SV…",
+  "timing.sliderMultiplierPending": "停止调整 1 秒后应用。",
   "timing.sliderMultiplierChanged": "SV 验证期间难度已变化，请重试。",
   "timing.sliderMultiplierRange": "请输入 0.4 到 3.6 之间的基础滑条速度。",
   "timing.sliderMultiplierPreservation": "该 SV 会改变现有可玩物件。",

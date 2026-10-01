@@ -885,6 +885,7 @@
   "song.invalidDifficulty": "Enter difficulty values from 0 to 10.",
   "timing.overrideSv": "Override SV",
   "timing.sliderMultiplierChecking": "Checking base SV…",
+  "timing.sliderMultiplierPending": "Applies after 1 second without changes.",
   "timing.sliderMultiplierChanged": "The difficulty changed during SV validation. Try again.",
   "timing.sliderMultiplierRange": "Enter base slider velocity from 0.4 to 3.6.",
   "timing.sliderMultiplierPreservation": "This SV changes existing playable objects.",

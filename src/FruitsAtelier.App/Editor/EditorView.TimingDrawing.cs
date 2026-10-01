@@ -315,7 +315,7 @@ public sealed partial class EditorView
             void Step(int direction)
             {
                 var current = TimingMap.At(Document, playhead);
-                double number = key == "bpm" ? 60000 / (timingResetPoint?.BeatLengthMs ?? current.BeatLengthMs) : key == "offset" ? timingResetPoint?.TimeMs ?? current.OffsetMs : key == "sliderMultiplier" ? Document.EffectiveSliderMultiplier : Document.SliderTickRate;
+                double number = key == "bpm" ? 60000 / (timingResetPoint?.BeatLengthMs ?? current.BeatLengthMs) : key == "offset" ? timingResetPoint?.TimeMs ?? current.OffsetMs : key == "sliderMultiplier" ? DisplaySliderMultiplier : Document.SliderTickRate;
                 double step = key == "bpm" ? placementCtrl ? .25 : timingPointerShift ? 5 : 1 : key == "offset" ? placementCtrl ? 1 : timingPointerShift ? 10 : 2 : key == "sliderMultiplier" ? placementCtrl ? .01 : .1 : 1;
                 double next = TimingPageValue(key, number) + direction * step;
                 if (key == "sliderMultiplier") next = Math.Clamp(Math.Round(next, 2), SliderMultiplierEditing.Minimum, SliderMultiplierEditing.Maximum);
@@ -330,10 +330,11 @@ public sealed partial class EditorView
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.moveNotes", timingMoveNotes, () => timingMoveNotes = !timingMoveNotes); y += row + gap;
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.moveMarkers", timingMoveMarkers, () => timingMoveMarkers = !timingMoveMarkers); y += row + gap;
         Number("tickRate", Document.SliderTickRate, v => { if (v < .5 || v > 8) throw new ArgumentException(L.Get("timing.range")); Edit(L.Get("timing.edit"), () => Document.SliderTickRate = v); });
-        Number("sliderMultiplier", Document.EffectiveSliderMultiplier, ChangeSliderMultiplier, Document.OverrideSliderMultiplier && !SliderMultiplierValidationBusy);
+        Number("sliderMultiplier", DisplaySliderMultiplier, ChangeSliderMultiplier, Document.OverrideSliderMultiplier);
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.metronome", metronomeEnabled, () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }); y += row + gap;
         TimingButton(c, new(r.X, y, r.Width, row), L.Get("timing.setup"), OpenTimingSetup); y += row + gap;
-        c.Text(SliderMultiplierValidationBusy ? L.Get("timing.sliderMultiplierChecking") : timingError, r.X, y, 11,
-            SliderMultiplierValidationBusy ? Muted : Error, r.Width);
+        c.Text(timingError.Length > 0 ? timingError : SliderMultiplierValidationBusy
+            ? L.Get(sliderMultiplierValidation is null ? "timing.sliderMultiplierPending" : "timing.sliderMultiplierChecking") : "", r.X, y, 11,
+            timingError.Length > 0 ? Error : Muted, r.Width);
     }
 }

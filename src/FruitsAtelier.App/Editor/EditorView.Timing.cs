@@ -46,7 +46,12 @@ public sealed partial class EditorView
     private MapDocument? sliderMultiplierValidationSnapshot;
     private EditorHistory? sliderMultiplierValidationOwner;
     private bool sliderMultiplierValidationText, sliderMultiplierValidationCompensation;
-    public bool SliderMultiplierValidationBusy => sliderMultiplierValidation is not null;
+    private double? sliderMultiplierDraft;
+    private long sliderMultiplierDeadline, sliderMultiplierVersion, sliderMultiplierWorkerVersion;
+    internal Func<long> SliderMultiplierClock { get; set; } = () => Environment.TickCount64;
+    private double DisplaySliderMultiplier => ReferenceEquals(history, sliderMultiplierValidationOwner)
+        ? sliderMultiplierDraft ?? Document.EffectiveSliderMultiplier : Document.EffectiveSliderMultiplier;
+    public bool SliderMultiplierValidationBusy => sliderMultiplierDraft is not null || sliderMultiplierValidation is not null;
     private readonly List<double> timingTaps = [];
     private bool timingTapHeld;
     private TimingPoint? timingResetPoint;
@@ -422,30 +427,45 @@ public sealed partial class EditorView
 
     private void ChangeSliderMultiplier(double value)
     {
-        if (!Document.OverrideSliderMultiplier || SliderMultiplierValidationBusy) return;
+        if (!Document.OverrideSliderMultiplier) return;
         if (!double.IsFinite(value) || value < SliderMultiplierEditing.Minimum || value > SliderMultiplierEditing.Maximum)
             throw new ArgumentException(L.Get("timing.sliderMultiplierRange"));
-        if (value == Document.EffectiveSliderMultiplier) return;
+        if (value == DisplaySliderMultiplier) return;
         var currentExport = editorWriteCache.MultiplierBaseline(Document, compensateTinyDroplets);
         if (currentExport is not null)
         {
             try
             {
                 SliderMultiplierEditing.CheckLimits(currentExport, value);
-                if (!history.HasActiveTransaction && SliderMultiplierEditing.TryRebase(currentExport, value, out var output))
-                {
-                    ApplySliderMultiplier(value, output!, compensateTinyDroplets);
-                    return;
-                }
             }
             catch (InvalidDataException ex) { throw new ArgumentException(ex.Message, ex); }
         }
-        var snapshot = Document.DeepClone();
-        bool compensation = compensateTinyDroplets;
-        sliderMultiplierValidationSnapshot = snapshot; sliderMultiplierValidationOwner = history;
+        sliderMultiplierVersion++;
+        sliderMultiplierDraft = value == Document.EffectiveSliderMultiplier ? null : value;
+        sliderMultiplierDeadline = SliderMultiplierClock() + 1000;
+        sliderMultiplierValidationSnapshot = Document.DeepClone(); sliderMultiplierValidationOwner = history;
         sliderMultiplierValidationText = timingField == "page.sliderMultiplier";
-        sliderMultiplierValidationCompensation = compensation;
+        sliderMultiplierValidationCompensation = compensateTinyDroplets;
+        if (sliderMultiplierDraft is null)
+        { sliderMultiplierValidationSnapshot = null; sliderMultiplierValidationOwner = null; }
         timingError = "";
+    }
+
+    private void StartSliderMultiplierValidation()
+    {
+        if (sliderMultiplierDraft is not { } value || sliderMultiplierValidation is not null
+            || SliderMultiplierClock() < sliderMultiplierDeadline) return;
+        if (!ReferenceEquals(history, sliderMultiplierValidationOwner)
+            || !sliderMultiplierValidationSnapshot!.ContentEquals(Document)
+            || sliderMultiplierValidationCompensation != compensateTinyDroplets)
+        {
+            sliderMultiplierDraft = null; sliderMultiplierValidationSnapshot = null; sliderMultiplierValidationOwner = null;
+            timingError = L.Get("timing.sliderMultiplierChanged"); return;
+        }
+        var snapshot = sliderMultiplierValidationSnapshot;
+        bool compensation = sliderMultiplierValidationCompensation;
+        var currentExport = editorWriteCache.MultiplierBaseline(Document, compensation);
+        sliderMultiplierWorkerVersion = sliderMultiplierVersion;
         sliderMultiplierValidation = Task.Run(() =>
         {
             try
@@ -463,13 +483,16 @@ public sealed partial class EditorView
 
     private void CompleteSliderMultiplierValidation()
     {
-        if (sliderMultiplierValidation is not { IsCompleted: true } task || history.HasActiveTransaction) return;
+        if (sliderMultiplierValidation is not { IsCompleted: true } task || history.HasActiveTransaction)
+        { StartSliderMultiplierValidation(); return; }
         sliderMultiplierValidation = null;
+        if (sliderMultiplierWorkerVersion != sliderMultiplierVersion)
+        { StartSliderMultiplierValidation(); return; }
         var result = task.GetAwaiter().GetResult();
         bool current = ReferenceEquals(history, sliderMultiplierValidationOwner)
             && sliderMultiplierValidationSnapshot!.ContentEquals(Document)
             && sliderMultiplierValidationCompensation == compensateTinyDroplets;
-        sliderMultiplierValidationSnapshot = null; sliderMultiplierValidationOwner = null;
+        sliderMultiplierDraft = null; sliderMultiplierValidationSnapshot = null; sliderMultiplierValidationOwner = null;
         if (!current) { timingError = L.Get("timing.sliderMultiplierChanged"); return; }
         if (result.Error is { } error)
         {

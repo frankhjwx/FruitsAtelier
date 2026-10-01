@@ -47,12 +47,15 @@ locks editing and retains the confirmed value. The switch is saved in
 Changing base SV preserves DPB and distance-snap presets and compensates inherited
 SV at export, including red-point resets, while retaining generated slider
 geometry. Cached exported green-point limits reject out-of-range compensation
-immediately in either direction. Warm adjustments use a bounded local event check
-with cached slider paths and verify NM/HR playback before applying the value.
-Cold caches, large event sets, exhausted checks and uncertain rounding use
-background validation and keep the previous value active until it succeeds.
-The row is locked and displays a checking message while
-validation runs. File operations wait for validation; retry after it completes.
+immediately in either direction. Valid adjustments update the displayed draft
+immediately and restart a one-second idle timer. The number and arrows remain
+available while waiting and during validation. Once the value stays unchanged
+for one second, a worker validates the latest draft using cached slider paths
+and local events, with full read-back validation for uncertain rounding.
+The previous confirmed value remains active until validation succeeds. A new
+adjustment supersedes an older worker result and starts its own idle interval.
+One continuous adjustment commits as one undo step. File operations wait for
+the draft to be validated; retry after it completes.
 An intervening content edit invalidates the pending result. The change is applied only when exported NM/HR
 objects retain their kinds, times and positions within 0.001 ms/px. Changes that
 require inherited SV outside 0.1–10 or cannot preserve playback report an error
