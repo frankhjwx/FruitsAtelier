@@ -986,6 +986,7 @@
   "sync.metadataHelp": "Choose the value to keep in each row. Highlighted text differs. Wheel: scroll metadata.",
   "sync.sectionHelp": "Compare text and choose the complete field or section to keep. Wheel: scroll. Arrows above: browse text pages.",
   "sync.timingHelp": "Only changed timing points are shown. Choose the timing version to keep. Wheel: scroll. Arrows above: browse text pages.",
+  "sync.timingOffsetSummary": "{0} timing points: offset {1:+0.######;-0.######;0} ms",
   "sync.textPage": "Text {0} / {1}",
   "sync.emptyValue": "(empty)",
   "sync.resultPreview": "Result preview",

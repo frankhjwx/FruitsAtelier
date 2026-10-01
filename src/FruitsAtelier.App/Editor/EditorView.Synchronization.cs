@@ -308,7 +308,8 @@ public sealed partial class EditorView
             ProjectSerializer.WriteFile(project, Path.Combine(WorkspaceSynchronization.Archive(session, "resolution"), "current.catchproj"));
             if (fieldsOnly) diff.Document = WorkspaceSynchronization.Resolve(fieldReview!,
                 fieldReview!.Conflicts.ToDictionary(c => c.Key, c => useExternal ?? choices.GetValueOrDefault(c.Key)));
-            else if (useExternal is true) diff.Document = external.Document.DeepClone();
+            else if (useExternal is true) diff.Document = fieldReview is not null
+                ? WorkspaceSynchronization.ResolveExternal(fieldReview) : external.Document.DeepClone();
             else if (useExternal is false) diff.Document.AudioPath = WorkspaceSynchronization.LocalAudioVersion(entry, diff.Document, session.Directory);
             else if (useExternal is null && syncMerges.TryGetValue(diff.Id, out var merge)) diff.Document = WorkspaceSynchronization.Resolve(merge, choices);
             diff.Document.SourcePath = external.Path;

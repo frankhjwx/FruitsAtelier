@@ -25,17 +25,25 @@ public sealed partial class EditorView
     private void DrawSyncSection(ICanvas c, WorkspaceMerge merge, SyncComparison comparison, WorkspaceSyncConflict conflict)
     {
         string key = "$text:" + conflict.Key;
+        string localText = conflict.Local, externalText = conflict.External;
+        if (conflict.TimingShift is { } shift)
+        {
+            localText = L.Get("sync.timingOffsetSummary", shift.Count, 0);
+            externalText = L.Get("sync.timingOffsetSummary", shift.Count, shift.OffsetMs);
+            if (shift.LocalRemainder.Length > 0) localText += "\n\n" + shift.LocalRemainder;
+            if (shift.ExternalRemainder.Length > 0) externalText += "\n\n" + shift.ExternalRemainder;
+        }
         if (!ReferenceEquals(syncVisualMerge, merge) || syncVisualKey != key)
         {
             syncVisualMerge = merge; syncVisualKey = key;
             syncSectionPage = 0; syncSectionLoaded = null;
         }
-        int pages = Math.Max(1, (Math.Max(conflict.Local.Length, conflict.External.Length) + SyncSectionPageSize - 1) / SyncSectionPageSize);
+        int pages = Math.Max(1, (Math.Max(localText.Length, externalText.Length) + SyncSectionPageSize - 1) / SyncSectionPageSize);
         syncSectionPage = Math.Clamp(syncSectionPage, 0, pages - 1);
         if (syncSectionLoaded != (key, syncSectionPage))
         {
-            syncSectionLocal = SyncSectionSlice(conflict.Local, syncSectionPage);
-            syncSectionExternal = SyncSectionSlice(conflict.External, syncSectionPage);
+            syncSectionLocal = SyncSectionSlice(localText, syncSectionPage);
+            syncSectionExternal = SyncSectionSlice(externalText, syncSectionPage);
             syncSectionDiff = MetadataTextDiff.Compare(syncSectionLocal, syncSectionExternal);
             syncSectionLoaded = (key, syncSectionPage);
             syncTextScroll = 0; syncTextLayouts.Clear();

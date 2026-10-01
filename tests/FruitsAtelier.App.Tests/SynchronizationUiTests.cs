@@ -41,6 +41,16 @@ internal static class SynchronizationUiTests
                 ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(!ui.View.SynchronizationVisible && ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 1
                     && ui.View.Document.Tracks.Single().Id == track.Id, "apply transfers one timing addition and keeps editable curves");
+                var shifted = OsuBeatmapReader.ReadFile(source);
+                foreach (var point in shifted.TimingPoints) point.TimeMs += 12;
+                File.WriteAllText(source, OsuBeatmapWriter.Serialize(shifted).Text);
+                ui.View.RefreshSynchronization(); Wait(ui);
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.timingOffsetSummary", shifted.TimingPoints.Count, 12))
+                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.timingOffsetSummary", shifted.TimingPoints.Count, 0)),
+                    "uniform offset shows one localized summary per side");
+                Check(!ui.Canvas.Texts.Any(t => t.Value.Contains(",")), "pure offset does not fill the panes with green lines");
+                ui.ClickText(L.Get("sync.chooseLocal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+                Check(ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 1, "offset summary retains the FA choice");
             }
             finally { ui.View.StopFileMonitoring(); }
         }

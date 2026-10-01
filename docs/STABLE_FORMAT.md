@@ -23,6 +23,14 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
   added/deleted groups to the saved authoring timing, preserving unrelated
   authoring values and same-time ordering. Retained local timing choices remain
   reviewable after saving and restarting.
+- Uniform timing shifts are summarized as an offset with the affected point count,
+  with unmatched changes shown below. FA/osu! confirmation remains required.
+  Applying a pure shift moves authored timing; generated SV stays derived.
+- Accepting external slider sound, sample or combo edits retains the exact FSlider
+  anchors and handles when its single exported slider has unambiguous matching
+  geometry, start time, repeats and playback velocity. Changed paths or ambiguous
+  matches are imported as external sliders. This also applies to the entire osu!
+  version choice.
 - Save authored anchors, Bezier handles, and editing constraints in the editor project, rather than custom `.osu` object fields.
 
 ## Object and timing rules

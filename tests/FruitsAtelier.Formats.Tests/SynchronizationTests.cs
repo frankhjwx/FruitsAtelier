@@ -4,6 +4,66 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: uniform timing offset has one summary and keeps generated SV derived", () => Run(f =>
+        {
+            var output = CaptureCurveTiming(f);
+            var shifted = output.ReadBack.DeepClone();
+            foreach (var point in shifted.TimingPoints) point.TimeMs += 12;
+            string external = OsuBeatmapWriter.Serialize(shifted).Text;
+            File.WriteAllText(f.Source, external);
+            var merge = f.Merge();
+            var conflict = merge.Conflicts.Single(c => c.Key == "TimingPoints/");
+            Check(conflict.TimingShift is { OffsetMs: 12, Count: > 1, LocalRemainder.Length: 0, ExternalRemainder.Length: 0 }, "one exact offset summary replaces repeated lines");
+            var choices = merge.Conflicts.ToDictionary(c => c.Key, c => c.Key == "TimingPoints/");
+            var resolved = WorkspaceSynchronization.Resolve(merge, choices);
+            Check(resolved.TimingPoints.Count == f.Diff.Document.TimingPoints.Count
+                && resolved.TimingPoints.Zip(f.Diff.Document.TimingPoints).All(pair => pair.First.TimeMs == pair.Second.TimeMs + 12
+                    && pair.First.BeatLengthMs == pair.Second.BeatLengthMs), "only authored timing moves; generated SV is not imported");
+            choices["TimingPoints/"] = false;
+            Check(TimingValues(WorkspaceSynchronization.Resolve(merge, choices).TimingPoints) == TimingValues(f.Diff.Document.TimingPoints), "FA choice keeps timing exact");
+            shifted.TimingPoints.Add(new TimingPoint { TimeMs = 6000, BeatLengthMs = -50, Uninherited = false });
+            File.WriteAllText(f.Source, OsuBeatmapWriter.Serialize(shifted).Text);
+            conflict = f.Merge().Conflicts.Single(c => c.Key == "TimingPoints/");
+            Check(conflict.TimingShift is { OffsetMs: 12 } summary && summary.ExternalRemainder.Contains("6000,-50"), "additional edits remain visible beside the offset");
+        }));
+        yield return ("Sync: sound and combo edits retain exact editable curve handles", () => Run(f =>
+        {
+            CaptureCurveTiming(f);
+            var track = f.Diff.Document.Tracks[0];
+            track.Kind = CurveKind.Bezier;
+            track.Nodes[0].HandleOut = new(80, 40); track.Nodes[1].HandleIn = new(-80, -20);
+            var output = OsuBeatmapWriter.Serialize(f.Diff.Document);
+            File.WriteAllText(f.Source, output.Text);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory,
+                output.Text, output.ObjectSources);
+            var lines = WorkspaceSynchronization.ObjectLines(output.Text);
+            int index = output.ObjectSources.ToList().IndexOf(track.Id);
+            string originalLine = output.ReadBack.ImportedSliders.Single(s => s.SourceOrder == index).OriginalLine!;
+            var parts = originalLine.Split(',');
+            Array.Resize(ref parts, 11);
+            parts[3] = "6"; parts[4] = "8"; parts[8] = "8|2"; parts[9] = "2:3|3:2"; parts[10] = "2:3:0:0:";
+            string edited = string.Join(',', parts);
+            File.WriteAllText(f.Source, output.Text.Replace(originalLine, edited));
+            var merge = f.Merge();
+            var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => true);
+            foreach (var resolved in new[] { WorkspaceSynchronization.Resolve(merge, choices), WorkspaceSynchronization.ResolveExternal(merge) })
+            {
+                var retained = resolved.Tracks.Single(t => t.Id == track.Id);
+                Check(retained.Nodes.Select(n => (n.Id, n.TimeMs, n.X, n.HandleIn, n.HandleOut))
+                    .SequenceEqual(track.Nodes.Select(n => (n.Id, n.TimeMs, n.X, n.HandleIn, n.HandleOut))), "anchors and handles stay exact");
+                Check(retained.OriginalLine!.Split(',').Skip(8).SequenceEqual(parts.Skip(8)) && ObjectFlags.NewCombo(resolved, track.Id)
+                    && ObjectFlags.Sounds(resolved, track.Id).SequenceEqual(new[] { 8, 2 }), "external flags and sample fields are applied");
+                Check(WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(resolved).Text).SequenceEqual(WorkspaceSynchronization.ObjectLines(merge.External.Text)),
+                    "export reproduces the accepted external attributes");
+                var saved = ProjectSerializer.Read(ProjectSerializer.Serialize(resolved, f.Source), f.Source);
+                Check(saved.Tracks.Single(t => t.Id == track.Id).Nodes[0].HandleOut == track.Nodes[0].HandleOut, "project round trip retains handles");
+            }
+            parts[5] = "L|300:192";
+            File.WriteAllText(f.Source, output.Text.Replace(originalLine, string.Join(',', parts)));
+            merge = f.Merge();
+            Check(WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => true)).Tracks.All(t => t.Id != track.Id),
+                "changed geometry imports the external slider");
+        }));
         yield return ("Sync: base SV overrides retain authoring and review the actual exported value", () => Run(f =>
         {
             var document = f.Diff.Document;

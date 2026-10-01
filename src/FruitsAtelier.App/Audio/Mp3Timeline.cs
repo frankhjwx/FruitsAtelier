@@ -6,7 +6,7 @@ namespace FruitsAtelier.App.Audio;
 internal static class Mp3Timeline
 {
     // Media Foundation omits 528 decoder-delay frames retained by legacy BASS for untagged MP3s.
-    // Tagged streams also include the Xing frame in MF output; their encoder delay is explicit.
+    // MF includes CBR Info frames in PCM but omits VBR Xing frames.
     internal static int LeadingFrames(string path)
     {
         using var input = File.OpenRead(path);
@@ -28,17 +28,19 @@ internal static class Mp3Timeline
         if (frame.Length < offset + 8) return -528;
         var marker = frame.AsSpan(offset, 4);
         if (!marker.SequenceEqual("Xing"u8) && !marker.SequenceEqual("Info"u8)) return -528;
+        int headerFrames = marker.SequenceEqual("Info"u8) ? samplesPerFrame : 0;
         uint flags = BinaryPrimitives.ReadUInt32BigEndian(frame.AsSpan(offset + 4, 4));
         int tag = offset + 8 + ((flags & 1) != 0 ? 4 : 0) + ((flags & 2) != 0 ? 4 : 0)
             + ((flags & 4) != 0 ? 100 : 0) + ((flags & 8) != 0 ? 4 : 0);
-        if (tag + 24 > frame.Length) return samplesPerFrame - 528;
+        if (tag + 24 > frame.Length) return headerFrames - 528;
         var encoder = frame.AsSpan(tag, 4);
         if (!encoder.SequenceEqual("LAME"u8) && !encoder.SequenceEqual("Lavf"u8) && !encoder.SequenceEqual("Lavc"u8))
-            return samplesPerFrame - 528;
+            return headerFrames - 528;
         int delay = frame[tag + 21] << 4 | frame[tag + 22] >> 4;
+        int padding = (frame[tag + 22] & 15) << 8 | frame[tag + 23];
         // Some encoders write a LAME identifier but leave gapless metadata empty.
         // BASS retains decoder delay in that case, just as for an untagged Xing stream.
-        if (delay == 0) return samplesPerFrame - 528;
-        return samplesPerFrame + delay + 1;
+        if (delay == 0 && padding == 0) return headerFrames - 528;
+        return headerFrames + delay + 1;
     }
 }

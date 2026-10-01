@@ -26,7 +26,11 @@ public sealed record WorkspaceSyncCandidate(string Path, string Hash, string Tex
 public sealed record WorkspaceSyncStatus(Guid DifficultyId, WorkspaceSyncState State, WorkspaceSyncCandidate? Candidate,
     IReadOnlyList<string> Candidates, string? Detail = null);
 public sealed record WorkspaceSyncScan(IReadOnlyList<WorkspaceSyncStatus> Difficulties, IReadOnlyList<WorkspaceSyncCandidate> Additions);
-public sealed record WorkspaceSyncConflict(string Key, string Local, string External);
+public sealed record WorkspaceTimingShift(double OffsetMs, int Count, string LocalRemainder, string ExternalRemainder);
+public sealed record WorkspaceSyncConflict(string Key, string Local, string External)
+{
+    public WorkspaceTimingShift? TimingShift { get; init; }
+}
 
 public sealed class WorkspaceMerge
 {
@@ -36,6 +40,7 @@ public sealed class WorkspaceMerge
     public List<WorkspaceSyncConflict> Conflicts { get; } = [];
     internal Dictionary<string, string?> Fields { get; } = [];
     internal string? ExternalTiming { get; set; }
+    internal bool Compensate { get; set; }
     internal List<(string Key, Guid[] Sources, string[] Lines)> Objects { get; } = [];
     internal Dictionary<Guid, int> ExternalOrders { get; } = [];
     public IReadOnlyList<WorkspaceRetainedObjects> PreviouslyRetained { get; internal set; } = [];
@@ -288,7 +293,7 @@ public static class WorkspaceSynchronization
             baseline.RetainedObjects = comparison.Objects.Select(g => new WorkspaceRetainedObjects(g.Sources.ToList(), g.Lines.ToList())).ToList();
             baseline.RetainedObjectsRecorded = true;
         }
-        var merge = new WorkspaceMerge { Local = local.DeepClone(), External = external, Baseline = original, PreviouslyRetained = baseline.RetainedObjects };
+        var merge = new WorkspaceMerge { Local = local.DeepClone(), External = external, Baseline = original, PreviouslyRetained = baseline.RetainedObjects, Compensate = compensate };
         var emittedBaseline = OsuBeatmapReader.Read(baseline.Text, baseline.Path);
         var baseFields = Fields(emittedBaseline);
         var authorFields = Fields(original); var localFields = Fields(local); var externalFields = Fields(external.Document);
@@ -455,6 +460,7 @@ public static class WorkspaceSynchronization
         }
         if (merge.Objects.Any(g => externalChoices.GetValueOrDefault(g.Key)))
         {
+            PreserveCurves(merge, result, merge.Objects.Where(g => externalChoices.GetValueOrDefault(g.Key)).SelectMany(g => g.Sources).ToHashSet());
             foreach (var f in result.Fruits) if (merge.ExternalOrders.TryGetValue(f.Id, out int order)) f.SourceOrder = order;
             foreach (var f in result.Tracks) if (merge.ExternalOrders.TryGetValue(f.Id, out int order)) f.SourceOrder = order;
             foreach (var f in result.ImportedSliders) if (merge.ExternalOrders.TryGetValue(f.Id, out int order)) f.SourceOrder = order;
@@ -466,6 +472,52 @@ public static class WorkspaceSynchronization
         result.SourcePath = merge.External.Path;
         OsuBeatmapReader.Validate(result);
         return result;
+    }
+
+    public static MapDocument ResolveExternal(WorkspaceMerge merge)
+    {
+        var result = merge.External.Document.DeepClone();
+        PreserveCurves(merge, result, merge.Local.Tracks.Select(t => t.Id).ToHashSet());
+        OsuBeatmapReader.Validate(result);
+        return result;
+    }
+
+    private static void PreserveCurves(WorkspaceMerge merge, MapDocument target, HashSet<Guid> eligible)
+    {
+        if (!merge.Local.Tracks.Any(t => eligible.Contains(t.Id))) return;
+        var output = OsuBeatmapWriter.Serialize(merge.Local, merge.Compensate);
+        var lines = ObjectLines(output.Text);
+        var emitted = lines.Select((line, i) => (Line: line, Id: output.ObjectSources[i]))
+            .GroupBy(p => p.Id).Where(g => g.Count() == 1).Select(g => g.Single())
+            .GroupBy(p => SliderShape(p.Line)).Where(g => g.Key is not null && g.Count() == 1)
+            .ToDictionary(g => g.Key!, g => g.Single().Id);
+        var incoming = target.ImportedSliders.GroupBy(s => SliderShape(s.OriginalLine ?? ""))
+            .Where(g => g.Key is not null && g.Count() == 1).ToArray();
+        var localTiming = new TimingMap.Lookup(output.ReadBack);
+        var externalTiming = new TimingMap.Lookup(merge.External.Document);
+        foreach (var group in incoming)
+        {
+            if (!emitted.TryGetValue(group.Key!, out var id) || !eligible.Contains(id)) continue;
+            var track = merge.Local.Tracks.FirstOrDefault(t => t.Id == id);
+            if (track is null) continue;
+            var slider = group.Single();
+            var before = localTiming.At(slider.TimeMs); var after = externalTiming.At(slider.TimeMs);
+            if (before.BeatLengthMs.ToString("G15", CultureInfo.InvariantCulture) != after.BeatLengthMs.ToString("G15", CultureInfo.InvariantCulture)
+                || before.SliderVelocityMultiplier.ToString("G15", CultureInfo.InvariantCulture) != after.SliderVelocityMultiplier.ToString("G15", CultureInfo.InvariantCulture)
+                || output.ReadBack.SliderMultiplier != merge.External.Document.SliderMultiplier) continue;
+            // Attributes live in the preserved line; exact exported geometry and duration
+            // identify the curve without fitting new anchors or guessing duplicate objects.
+            var retained = track.DeepClone();
+            retained.OriginalLine = slider.OriginalLine; retained.SourceOrder = slider.SourceOrder;
+            target.ImportedSliders.Remove(slider); target.Tracks.Add(retained);
+        }
+    }
+
+    private static string? SliderShape(string line)
+    {
+        var parts = NormalizeObject(line).Split(',');
+        if (parts.Length < 8 || (int.Parse(parts[3], CultureInfo.InvariantCulture) & 11) != 2) return null;
+        return string.Join(',', parts[0], parts[1], parts[2], parts[5], parts[6], parts[7]);
     }
 
     public static void Accept(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceSyncCandidate external, MapDocument resolved, bool compensate, bool retainLocalFields = false,
