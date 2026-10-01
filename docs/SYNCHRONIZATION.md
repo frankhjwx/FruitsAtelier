@@ -127,20 +127,31 @@ retained differences for review without new edits. Editing that group in osu! ag
 creates an ordinary unresolved conflict. Moving an object across unchanged
 anchors keeps related unmatched removals and insertions in one review group.
 
-Local saving preserves the baseline. Successful export records the actual emitted
-text and source mapping. Synchronization compares external fields with the external
-baseline, and authoring fields with the authoring baseline. A changed field whose
-values differ requires a choice, including external additions and deletions. With a
-baseline, FA-only bookmark, authored timing and break-period changes automatically
-write back to the linked `.osu` when synchronization runs. This includes break
-adjustments caused by note edits and undo/redo. The external field must still match
-its baseline. Unchanged retained local conflict choices remain pending explicit export;
-a new FA edit to these fields can write back against the unchanged external baseline.
-Write-back preserves external hit-object text and unrelated fields, archives the
-previous versions and checks the external fingerprint before publishing. Events
-changes affecting backgrounds, video or storyboard commands still require review. Timing is
-handled as an ordered section, including inherited points. Applying external context
-retains authoring objects and rebases that context through local undo snapshots.
+Local saving preserves the baseline. Synchronization compares the current external
+text and audio content with the last resolved external version, and FA authoring
+with the corresponding authoring snapshot. While the external version is unchanged,
+any new FA content edit automatically exports the complete difficulty when
+synchronization runs. This includes metadata such as Tags, settings, sections,
+notes, curves, timing, break reconciliation and undo/redo. Generated objects and SV
+are exported together. Source-path discovery and derived audio duration refreshes
+do not count as authoring edits.
+
+Automatic export validates the complete map and resources, preserves authoring
+and undo history, backs up the external file, and records emitted text and object
+source mappings as the new baseline. The existing export recovery receipt protects
+an interrupted publication. A final fingerprint check rejects a new external save
+instead of overwriting it. Export and conversion run on the synchronization worker,
+after active edits finish. Temporarily invalid maps or missing required resources
+remain in FA with the export diagnostic; they do not overwrite `.osu` or block
+background difficulty discovery. Correcting the content allows a later check to
+export it.
+
+A changed external version returns to field/object comparison and resolution.
+Without a baseline, differences still require explicit choices. An unchanged
+retained choice remains available for review; a subsequent FA content edit exports
+the resulting complete FA version against the resolved external version. Timing
+comparison includes inherited points. Applying external context retains authoring
+objects and rebases that context through local undo snapshots.
 
 General, Editor, Difficulty and Colours settings are reviewed per key; Events,
 TimingPoints and unknown sections are reviewed as complete ordered text sections.
@@ -168,8 +179,9 @@ controls with imported objects. The dialog supports complete FA/external version
 per-field or object-group choices, and inspection of complete version text. All
 choices must be resolved before the affected difficulty can be edited.
 
-An accepted local choice remains pending until export; another external edit must
-not silently overwrite it. Resolution saves authoring and updates the external
+An accepted local choice remains pending until explicit export or a subsequent FA
+content edit triggers automatic export; another external edit must not silently
+overwrite it. Resolution saves authoring and updates the external
 observation baseline without implicitly exporting the chosen version.
 
 ## Audio
@@ -234,8 +246,9 @@ See [Building and Testing](TESTING.md) for the regression commands.
 
 ## Metadata text review
 
-Differences in Title, TitleUnicode, Artist, ArtistUnicode, Creator, Version, Source,
-Tags, BeatmapID and BeatmapSetID require explicit choices, including unilateral edits.
+New external differences in Title, TitleUnicode, Artist, ArtistUnicode, Creator,
+Version, Source, Tags, BeatmapID and BeatmapSetID require explicit choices. FA edits
+against the unchanged resolved external version use automatic export.
 These metadata fields share one scrollable page with aligned FA and osu!
 rows. Click a value to retain that side for its row. Changed text fragments use red
 for unresolved differences, amber for unchanged previously accepted differences,

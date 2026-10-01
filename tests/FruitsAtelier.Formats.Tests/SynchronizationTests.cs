@@ -4,21 +4,24 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
-        yield return ("Sync: FA breaks bookmarks and timing write back without exporting notes", () => Run(f =>
+        yield return ("Sync: FA content writes back against the resolved external version", () => Run(f =>
         {
-            var entry = f.Session.Manifest.Difficulties[0];
-            string objects = string.Join('\n', WorkspaceSynchronization.ObjectLines(File.ReadAllText(f.Source)));
             OsuTimeline.AddBreak(f.Diff.Document, 4000, 10000);
             OsuTimeline.AddBookmark(f.Diff.Document, 5000);
             f.Diff.Document.TimingPoints.Add(new TimingPoint { TimeMs = 500, BeatLengthMs = -100, Uninherited = false });
             void Synchronize()
             {
+                var entry = f.Session.Manifest.Difficulties[0];
                 var merge = f.Merge();
-                Check(!merge.RequiresResolution && merge.LocalFieldUpdates.Count > 0, "FA changes need no choice");
-                var candidate = WorkspaceSynchronization.WriteLocalFields(f.Session, entry, merge);
-                WorkspaceSynchronization.Accept(f.Session, entry, candidate, f.Diff.Document, true, writtenFields: merge.LocalFieldUpdates);
-                Check(!f.Merge().RequiresResolution && f.Merge().LocalFieldUpdates.Count == 0, "write advances the baseline");
-                Check(string.Join('\n', WorkspaceSynchronization.ObjectLines(File.ReadAllText(f.Source))) == objects, "notes stay byte-equivalent");
+                Check(!merge.RequiresResolution && merge.CanExportLocalChanges, "FA changes need no choice");
+                var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, entry, merge);
+                string receipt = WorkspaceExportRecovery.Prepare(f.Session, f.Session.Project, plan, entry.Id);
+                WorkspaceExport.Commit(f.Session, plan);
+                WorkspaceProject.Save(f.Session, f.Session.Project);
+                WorkspaceExportRecovery.Complete(receipt);
+                Check(!f.Merge().RequiresResolution && !f.Merge().CanExportLocalChanges, "write advances the baseline");
+                Check(WorkspaceSynchronization.ObjectLines(File.ReadAllText(f.Source)).SequenceEqual(
+                    WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(f.Diff.Document).Text)), "notes match the complete FA export");
             }
             Synchronize();
             var history = new EditorHistory(f.Diff.Document);
@@ -33,26 +36,27 @@ internal static class SynchronizationTests
             File.WriteAllText(f.Source, File.ReadAllText(f.Source).Replace("2,4000,", "2,4100,"));
             Check(f.Merge().RequiresResolution, "external break edits remain reviewable");
         }));
-        yield return ("Sync: authored timing write excludes SV from unexported curves", () => Run(f =>
+        yield return ("Sync: automatic export keeps curves and generated SV together", () => Run(f =>
         {
             var track = new CurveTrack(); track.Nodes.AddRange([new() { TimeMs = 3000, X = 100 }, new() { TimeMs = 3500, X = 400 }]);
             f.Diff.Document.Tracks.Add(track);
             f.Diff.Document.TimingPoints.Add(new TimingPoint { TimeMs = 500, BeatLengthMs = -100, Uninherited = false });
             var merge = f.Merge();
-            var candidate = WorkspaceSynchronization.WriteLocalFields(f.Session, f.Session.Manifest.Difficulties[0], merge);
-            Check(candidate.Document.TimingPoints.Count == 2 && candidate.Document.TimingPoints[1].TimeMs == 500,
-                "only authored green is written; new curve SV stays local");
-            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], candidate, f.Diff.Document, true, writtenFields: merge.LocalFieldUpdates);
-            Check(!f.Merge().RequiresResolution, "generated timing mismatch does not prompt after write-back");
+            var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], merge);
+            WorkspaceExport.Commit(f.Session, plan);
+            var exported = OsuBeatmapReader.ReadFile(f.Source);
+            Check(exported.ImportedSliders.Count == 1 && exported.TimingPoints.Any(t => t.TimeMs == 3000), "curve and its generated SV are written together");
+            Check(!f.Merge().RequiresResolution && !f.Merge().CanExportLocalChanges, "export advances both baselines");
         }));
         yield return ("Sync: local break write rejects an external save after comparison", () => Run(f =>
         {
             OsuTimeline.AddBreak(f.Diff.Document, 4000, 10000);
             var merge = f.Merge();
+            var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], merge);
             string changed = File.ReadAllText(f.Source).Replace("Title:Title", "Title:external");
             File.WriteAllText(f.Source, changed);
             bool rejected = false;
-            try { WorkspaceSynchronization.WriteLocalFields(f.Session, f.Session.Manifest.Difficulties[0], merge); }
+            try { WorkspaceExport.Commit(f.Session, plan); }
             catch (IOException) { rejected = true; }
             Check(rejected && File.ReadAllText(f.Source) == changed, "stale write preserves external bytes");
         }));
@@ -62,12 +66,12 @@ internal static class SynchronizationTests
             var merge = f.Merge();
             var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => false);
             WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, f.Diff.Document, true, review: merge, choices: choices);
-            Check(!f.Merge().RequiresResolution && f.Merge().LocalFieldUpdates.Count == 0, "unchanged retained choice stays pending");
+            Check(!f.Merge().RequiresResolution && !f.Merge().CanExportLocalChanges, "unchanged retained choice stays pending");
             OsuTimeline.AddBreak(f.Diff.Document, 5000, 9000);
             merge = f.Merge();
-            Check(!merge.RequiresResolution && merge.LocalFieldUpdates.Contains("Events/"), "new FA edit replaces the retained difference");
-            var candidate = WorkspaceSynchronization.WriteLocalFields(f.Session, f.Session.Manifest.Difficulties[0], merge);
-            Check(OsuTimeline.Breaks(candidate.Document).Single() == new BreakPeriod(5000, 9000), "new break is written");
+            Check(!merge.RequiresResolution && merge.CanExportLocalChanges, "new FA edit replaces the retained difference");
+            WorkspaceExport.Commit(f.Session, WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], merge));
+            Check(OsuTimeline.Breaks(OsuBeatmapReader.ReadFile(f.Source)).Single() == new BreakPeriod(5000, 9000), "new break is written");
         }));
         yield return ("Sync: uniform timing offset has one summary and keeps generated SV derived", () => Run(f =>
         {
@@ -368,16 +372,26 @@ internal static class SynchronizationTests
             File.WriteAllText(f.Source, prefix + string.Join('\n', rewritten));
             Check(f.Merge().Conflicts.Count(c => c.Key.StartsWith("$objects:")) == 1, "a small real slider length change remains visible");
         }));
-        yield return ("Sync: all ten metadata fields require a choice for any differing value", () =>
+        yield return ("Sync: FA metadata exports automatically while new external metadata requires review", () =>
         {
             foreach (string key in new[] { "Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Version", "Source", "Tags", "BeatmapID", "BeatmapSetID" })
             foreach (bool localOnly in new[] { false, true }) Run(f =>
             {
                 var external = OsuBeatmapReader.ReadFile(f.Source);
                 Set(localOnly ? f.Diff.Document : external, key, key.EndsWith("ID") ? "12345" : "Changed value");
-                File.WriteAllText(f.Source, OsuBeatmapWriter.Serialize(external).Text);
+                if (!localOnly) File.WriteAllText(f.Source, OsuBeatmapWriter.Serialize(external).Text);
                 var merge = f.Merge();
-                Check(merge.RequiresResolution && merge.Conflicts.Any(c => c.Key == "Metadata/" + key), key + " unilateral change requires selection");
+                if (localOnly)
+                {
+                    Check(merge.CanExportLocalChanges && !merge.RequiresResolution, key + " FA edit exports without a choice");
+                    WorkspaceExport.Commit(f.Session, WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], merge));
+                    Check(!f.Merge().CanExportLocalChanges && !f.Merge().RequiresResolution, key + " export records the resolved version");
+                    Set(external, key, key.EndsWith("ID") ? "67890" : "Changed again");
+                    File.WriteAllText(f.Source, OsuBeatmapWriter.Serialize(external).Text);
+                    Check(f.Merge().RequiresResolution, key + " new external edit requires selection");
+                    return;
+                }
+                Check(merge.RequiresResolution && merge.Conflicts.Any(c => c.Key == "Metadata/" + key), key + " external change requires selection");
                 var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => false);
                 var kept = WorkspaceSynchronization.Resolve(merge, choices);
                 WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, kept, true, review: merge, choices: choices);

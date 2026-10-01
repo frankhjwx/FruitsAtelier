@@ -15,13 +15,19 @@ internal static class SynchronizationUiTests
         try
         {
             var history = (EditorHistory)ui.View.GetType().GetProperty("history", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
-            history.Begin("break"); OsuTimeline.AddBreak(ui.View.Document, 4000, 10000); history.Commit();
+            history.Begin("content");
+            OsuTimeline.AddBreak(ui.View.Document, 4000, 10000);
+            SongSetup.Set(ui.View.Document, "Metadata", "Tags", "FA tags");
+            history.Commit();
             void Synchronize()
             {
                 ui.View.RefreshSynchronization(); Wait(ui);
                 Check(!ui.View.SynchronizationVisible, "local break sync keeps the editor open");
                 Check(OsuTimeline.Breaks(OsuBeatmapReader.ReadFile(source)).SequenceEqual(OsuTimeline.Breaks(ui.View.Document)), "external breaks match FA");
                 Check(ReferenceEquals(history.Document, ui.View.Document), "sync retains the history owner");
+                Check(WorkspaceSynchronization.ObjectLines(File.ReadAllText(source)).SequenceEqual(
+                    WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(ui.View.Document).Text)), "automatic export includes FA notes");
+                Check(OsuBeatmapReader.Setting(OsuBeatmapReader.ReadFile(source), "Metadata", "Tags") == "FA tags", "FA Tags sync without review");
             }
             Synchronize();
             history.Begin("note in break"); ui.View.Document.Fruits.Add(new Fruit { TimeMs = 7000, X = 200 }); history.Commit();
@@ -31,6 +37,9 @@ internal static class SynchronizationUiTests
             Check(OsuTimeline.Breaks(ui.View.Document).Single() == new BreakPeriod(4000, 10000), "undo retains the original break");
             ui.Key('Y', ctrl: true); Synchronize();
             Check(OsuTimeline.Breaks(ui.View.Document).Count == 2, "redo retains the split break");
+            history.Begin("standalone note"); ui.View.Document.Fruits.Add(new Fruit { TimeMs = 12000, X = 300 }); history.Commit();
+            Synchronize();
+            Check(OsuBeatmapReader.ReadFile(source).Fruits.Any(f => f.TimeMs == 12000), "object-only changes trigger automatic export");
         }
         finally { ui.View.StopFileMonitoring(); }
     }

@@ -72,7 +72,6 @@ static class WorkspaceSaveTests
         var session = ui.View.WorkspaceSession!;
         Guid originalId = session.Manifest.Difficulties.Single().Id;
         string catchdiff = Path.Combine(session.Directory, session.Manifest.Difficulties.Single().File);
-        string originalCatchdiff = File.ReadAllText(catchdiff);
         ui.View.ConvertAllSliders(); ui.View.AnswerSliderImport(true);
         var deadline = DateTime.UtcNow.AddSeconds(15);
         while (ui.View.SliderConversionBusy && DateTime.UtcNow < deadline) { ui.Paint(); Thread.Sleep(10); }
@@ -85,20 +84,23 @@ static class WorkspaceSaveTests
             LibraryOperations.Export(ui.View.WorkspaceSession!, project, plan); ui.View.LibraryExportFinished(plan);
         };
         ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui);
-        Check(ui.View.ExportVisible && ui.View.IsDirty && File.ReadAllText(catchdiff) == originalCatchdiff, "Save opens export choices without writing the converted source difficulty");
+        Check(!ui.View.ExportVisible && !ui.View.IsDirty && WorkspaceProject.Open(session.Directory).Project.Difficulties[0].Document.Tracks.Count == 1,
+            "Save synchronizes converted authoring directly to the resolved source");
+        string syncedCatchdiff = File.ReadAllText(catchdiff), syncedOsu = File.ReadAllText(source);
+        ui.View.ShowWorkspaceExport(); ui.Paint();
         ui.Key(27);
-        Check(ui.View.IsDirty && ui.View.Document.Tracks.Count == 1 && File.ReadAllText(catchdiff) == originalCatchdiff, "Cancelling export retains unsaved edits and the saved source");
-        ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui);
+        Check(!ui.View.IsDirty && ui.View.Document.Tracks.Count == 1 && File.ReadAllText(catchdiff) == syncedCatchdiff, "Cancelling new export retains synchronized authoring");
+        ui.View.ShowWorkspaceExport(); ui.Paint();
         ui.ClickText(L.Get("library.exportCreate")); SynchronizationUiTests.Wait(ui);
         var reopened = WorkspaceProject.Open(session.Directory).Project;
         Check(reopened.Difficulties.Count == 2 && ui.View.CurrentDifficultyName == "Rain (FruitsAtelier)" && !ui.View.IsDirty, "New difficulty is persisted and selected");
         var original = reopened.Difficulties.Single(d => d.Id == originalId);
         var added = reopened.Difficulties.Single(d => d.Id != originalId);
-        Check(original.Document.ImportedSliders.Count == 1 && original.Document.Tracks.Count == 0
-            && added.Document.Tracks.Count == 1 && added.Document.ImportedSliders.Count == 0, "Only the new catchdiff contains converted FSliders");
-        Check(File.ReadAllText(catchdiff) == originalCatchdiff && File.ReadAllText(source) == originalOsu, "Source catchdiff and osu remain unchanged");
+        Check(original.Document.ImportedSliders.Count == 0 && original.Document.Tracks.Count == 1
+            && added.Document.Tracks.Count == 1 && added.Document.ImportedSliders.Count == 0, "Both difficulties retain converted authoring");
+        Check(File.ReadAllText(catchdiff) == syncedCatchdiff && File.ReadAllText(source) == syncedOsu, "Creating a difficulty preserves the synchronized source");
         Check(ui.View.SwitchDifficulty(reopened.Difficulties.FindIndex(d => d.Id == originalId))
-            && ui.View.Document.ImportedSliders.Count == 1 && ui.View.Document.Tracks.Count == 0, "Original editor tab returns to its saved slider representation");
+            && ui.View.Document.ImportedSliders.Count == 0 && ui.View.Document.Tracks.Count == 1, "Original editor tab retains its synchronized slider representation");
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

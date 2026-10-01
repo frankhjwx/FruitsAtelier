@@ -45,7 +45,7 @@ public sealed class WorkspaceMerge
     internal Dictionary<Guid, int> ExternalOrders { get; } = [];
     public IReadOnlyList<WorkspaceRetainedObjects> PreviouslyRetained { get; internal set; } = [];
     public HashSet<string> PreviouslyResolved { get; } = [];
-    public HashSet<string> LocalFieldUpdates { get; } = [];
+    public bool CanExportLocalChanges { get; internal set; }
     public bool RequiresResolution => Conflicts.Any(c => !PreviouslyResolved.Contains(c.Key));
     internal Dictionary<string, string[]> ChangedBeforeLines { get; } = [];
     public bool WasPreviouslyRetained(string key) => ChangedBeforeLines.TryGetValue(key, out var before)
@@ -67,6 +67,16 @@ public static class WorkspaceSynchronization
     public static bool IsMetadataField(string key) => key is "Metadata/Title" or "Metadata/TitleUnicode" or "Metadata/Artist"
         or "Metadata/ArtistUnicode" or "Metadata/Creator" or "Metadata/Version" or "Metadata/Source" or "Metadata/Tags"
         or "Metadata/BeatmapID" or "Metadata/BeatmapSetID";
+    public static bool HasLocalChanges(WorkspaceDifficulty entry, MapDocument local, string directory)
+        => entry.Sync is { } baseline && AuthoringChanged(local, ProjectSerializer.Read(baseline.Authoring, SnapshotPath(directory)));
+
+    private static bool AuthoringChanged(MapDocument local, MapDocument original)
+    {
+        // Source discovery and audio duration refresh are not authoring edits.
+        original.SourcePath = local.SourcePath;
+        original.DurationMs = local.DurationMs;
+        return !local.ContentEquals(original);
+    }
     public static bool HasFieldDifferences(MapDocument local, MapDocument external)
     {
         var ours = Fields(local); var theirs = Fields(external);
@@ -295,6 +305,12 @@ public static class WorkspaceSynchronization
             baseline.RetainedObjectsRecorded = true;
         }
         var merge = new WorkspaceMerge { Local = local.DeepClone(), External = external, Baseline = original, PreviouslyRetained = baseline.RetainedObjects, Compensate = compensate };
+        if (external.Text == baseline.Text && AudioHash(external.Document.AudioPath) == baseline.AudioHash
+            && AuthoringChanged(local, original))
+        {
+            merge.CanExportLocalChanges = true;
+            return merge;
+        }
         var emittedBaseline = OsuBeatmapReader.Read(baseline.Text, baseline.Path);
         var baseFields = Fields(emittedBaseline);
         var authorFields = Fields(original); var localFields = Fields(local); var externalFields = Fields(external.Document);
@@ -304,15 +320,6 @@ public static class WorkspaceSynchronization
             localFields.TryGetValue(key, out var ours); externalFields.TryGetValue(key, out var theirs);
             bool outsideChanged = !FieldEquals(key, before, theirs), insideChanged = !FieldEquals(key, authorBefore, ours) || baseline.LocalOverrides.Contains(key);
             merge.Fields[key] = outsideChanged && !insideChanged ? theirs : ours;
-            if (!outsideChanged && !FieldEquals(key, authorBefore, ours)
-                && !FieldEquals(key, ours, theirs)
-                && (key is "Editor/Bookmarks" or "TimingPoints/"
-                    || key == "Events/" && EventComparison(authorBefore, includeBreaks: false) == EventComparison(ours, includeBreaks: false)
-                        && EventComparison(ours, includeBreaks: false) == EventComparison(theirs, includeBreaks: false)))
-            {
-                merge.LocalFieldUpdates.Add(key);
-                continue;
-            }
             if (key == "TimingPoints/")
             {
                 merge.Fields[key] = ours;
@@ -449,6 +456,7 @@ public static class WorkspaceSynchronization
 
     public static MapDocument Resolve(WorkspaceMerge merge, IReadOnlyDictionary<string, bool> externalChoices)
     {
+        if (merge.CanExportLocalChanges) return merge.Local.DeepClone();
         foreach (var conflict in merge.Conflicts)
             if (!externalChoices.ContainsKey(conflict.Key) && !merge.PreviouslyResolved.Contains(conflict.Key)) throw new InvalidOperationException(L.Get("sync.unresolved"));
         var result = merge.Local.DeepClone();
@@ -530,50 +538,22 @@ public static class WorkspaceSynchronization
         return string.Join(',', parts[0], parts[1], parts[2], parts[5], parts[6], parts[7]);
     }
 
-    public static WorkspaceSyncCandidate WriteLocalFields(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceMerge merge)
+    public static WorkspaceExportPlan PlanLocalChanges(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceMerge merge)
     {
-        if (merge.LocalFieldUpdates.Count == 0) return merge.External;
-        var external = merge.External;
-        WorkspaceAssociations.EnsureOwner(session, entry.Id, external.Path);
-        WorkspaceProject.RejectLinks(external.Path);
-        var fields = Fields(merge.Local);
-        if (merge.LocalFieldUpdates.Contains("TimingPoints/"))
-        {
-            // Timing write-back applies to the objects still in the external file.
-            // Unexported local curves must not introduce their generated SV here.
-            var timingDocument = external.Document.DeepClone();
-            timingDocument.TimingPoints.Clear();
-            timingDocument.TimingPoints.AddRange(WorkspaceTimingSynchronization.ProjectChanges(
-                external.Document.TimingPoints, merge.Baseline.TimingPoints, merge.Local.TimingPoints));
-            fields["TimingPoints/"] = WorkspaceTimingSynchronization.Text(OsuBeatmapWriter.Serialize(timingDocument, merge.Compensate).ReadBack.TimingPoints);
-        }
-        string newline = external.Text.Contains("\r\n") ? "\r\n" : "\n";
-        var lines = external.Text.Replace("\r\n", "\n").Split('\n').ToList();
-        foreach (string key in merge.LocalFieldUpdates)
-        {
-            string[] parts = key.Split('/', 2);
-            int start = lines.FindIndex(line => line.Trim() == "[" + parts[0] + "]");
-            if (start < 0) { start = lines.Count; lines.Add("[" + parts[0] + "]"); }
-            int end = start + 1;
-            while (end < lines.Count && !lines[end].Trim().StartsWith('[')) end++;
-            if (parts[1].Length == 0) lines.RemoveRange(start + 1, end - start - 1);
-            else
-                for (int i = end - 1; i > start; i--)
-                    if (lines[i].Split(':', 2)[0].Trim() == parts[1]) lines.RemoveAt(i);
-            if (fields.GetValueOrDefault(key) is { } value)
-                lines.InsertRange(start + 1, (parts[1].Length == 0 ? value : parts[1] + ":" + value).Replace("\r", "").Split('\n'));
-        }
-        string text = string.Join(newline, lines);
-        var candidate = new WorkspaceSyncCandidate(external.Path, Digest(text), text, OsuBeatmapReader.Read(text, external.Path));
-        string archive = Archive(session, "local-fields");
-        File.WriteAllText(System.IO.Path.Combine(archive, "external.osu"), external.Text);
-        if (WorkspaceProject.Hash(external.Path) != external.Hash) throw new IOException(L.Get("library.exportConflict", external.Path));
-        AtomicFile.Write(external.Path, text);
-        return candidate;
+        if (!merge.CanExportLocalChanges || entry.Sync is not { } baseline || merge.External.Text != baseline.Text)
+            throw new InvalidOperationException(L.Get("sync.baseline"));
+        if (AudioHash(merge.External.Document.AudioPath) != baseline.AudioHash)
+            throw new IOException(L.Get("library.exportConflict", merge.External.Path));
+        WorkspaceAssociations.EnsureOwner(session, entry.Id, merge.External.Path);
+        WorkspaceProject.RejectLinks(merge.External.Path);
+        var missing = WorkspaceProject.MissingResources(BeatmapProject.FromDocuments([merge.Local]));
+        if (missing.Count > 0) throw new IOException(L.Get("library.missingResources", string.Join("\n", missing)));
+        return new(entry.Id, merge.Local, merge.External.Path, merge.External.Hash,
+            OsuBeatmapWriter.Serialize(merge.Local, merge.Compensate));
     }
 
     public static void Accept(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceSyncCandidate external, MapDocument resolved, bool compensate, bool retainLocalFields = false,
-        WorkspaceMerge? review = null, IReadOnlyDictionary<string, bool>? choices = null, IReadOnlySet<string>? writtenFields = null)
+        WorkspaceMerge? review = null, IReadOnlyDictionary<string, bool>? choices = null)
     {
         if (WorkspaceProject.Hash(external.Path) != external.Hash) throw new IOException(L.Get("library.exportConflict", external.Path));
         WorkspaceAssociations.EnsureOwner(session, entry.Id, external.Path);
@@ -613,7 +593,6 @@ public static class WorkspaceSynchronization
         entry.Sync = Capture(external.Path, resolved, session.Directory, external.Text, sources, entry.Sync);
         entry.Sync.RetainedObjects = retained;
         entry.Sync.LocalOverrides = pending;
-        if (writtenFields is not null) entry.Sync.LocalOverrides.RemoveAll(writtenFields.Contains);
         entry.Source = external.Path; entry.SourceHash = external.Hash;
         if (entry.ExportTarget is not null) { entry.ExportTarget = external.Path; entry.ExportHash = external.Hash; }
         if (session.Manifest.SongsRoot is { } root && WorkspaceProject.Within(root, external.Path))
@@ -815,7 +794,7 @@ public static class WorkspaceSynchronization
         return string.Join(',', parts);
     }));
 
-    private static string EventComparison(string? value, bool includeBreaks = true)
+    private static string EventComparison(string? value)
     {
         var events = new List<string>();
         var breaks = new List<(int Start, int End)>();
@@ -831,7 +810,7 @@ public static class WorkspaceSynchronization
         }
         // Break placement amongst storyboard comments/commands is not part of its interval.
         // Keep storyboard command order and indentation, and retain original text for resolution.
-        return string.Join('\n', events.Concat((includeBreaks ? breaks : []).OrderBy(b => b.Start).ThenBy(b => b.End)
+        return string.Join('\n', events.Concat(breaks.OrderBy(b => b.Start).ThenBy(b => b.End)
             .Select(b => FormattableString.Invariant($"2,{b.Start},{b.End}"))));
     }
 

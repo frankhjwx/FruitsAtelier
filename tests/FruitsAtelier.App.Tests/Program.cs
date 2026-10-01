@@ -23,7 +23,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
-    ("FA break changes write back automatically and preserve note undo", SynchronizationUiTests.LocalBreaks),
+    ("FA metadata and notes export against resolved osu versions while retaining undo", SynchronizationUiTests.LocalBreaks),
     ("Synchronization failures wrap and scroll without editing content", SynchronizationUiTests.FailureText),
     ("Section synchronization pages large Events and applies complete text", SynchronizationUiTests.SectionText),
     ("Timing synchronization reviews one green line amongst generated SV", SynchronizationUiTests.TimingRows),
@@ -68,7 +68,7 @@ var tests = new (string Name, Action Run)[]
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
-    ("Workspace-only saves persist before optional Songs export", WorkspaceSaveTests.Run),
+    ("Workspace saves and linked synchronization persist before optional Songs export", WorkspaceSaveTests.Run),
     ("Metadata merge rows share a page and highlight unresolved, retained and selected text", SynchronizationUiTests.MetadataRows),
     ("Local difficulty deletion reimports osu and preserves edits on cancel or failure", SynchronizationUiTests.DeleteLocalVersion),
     ("Synchronization UI permits background editing, preserves undo, repairs missing files and resolves objects", SynchronizationUiTests.Run),
