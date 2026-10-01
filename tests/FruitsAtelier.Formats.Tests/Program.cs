@@ -20,6 +20,7 @@ var tests = new (string Name, Action Run)[]
     ("Export keeps timing data below its header and a blank before Colours", TimingSectionSpacing),
     ("Export orders metadata with difficulty identity at the end", MetadataLayout),
     ("Cached export matches full serialization across edits, order, RNG, timing and streams", WriteCacheTests.MatchesUncached),
+    ("Equal-time/order fruits, streams and random parents retain converter order through export and undo", WriteCacheTests.StableParentOrder),
     ("v12, v13 and compatible v128 imports preserve gameplay, optional fields and v14 export", CompatibleVersions),
     ("v128 rejects fractional coordinates and unsupported slider syntax", LazerExtensions),
     ("Workspace isolation, recovery, indexing and explicit export", WorkspaceTests.Run),

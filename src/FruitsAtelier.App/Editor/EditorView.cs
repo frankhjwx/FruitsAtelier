@@ -161,7 +161,7 @@ public sealed partial class EditorView
             .OrderBy(source => source.Time).ThenBy(source => source.SourceOrder)
             .Select((source, index) => (source.Id, Index: index))
             .ToDictionary(source => source.Id, source => source.Index);
-        conversion = CatchStreamConverter.Convert(input, compensateTinyDroplets, editorConversionCache);
+        conversion = editorWriteCache.Convert(input, compensateTinyDroplets);
         playableExport = null;
         playableObjects = conversion.Objects;
         // While dragging, use the validated conversion; refresh export quantization on release/cancel.

@@ -100,6 +100,10 @@ coordinate quantization, nested event identities, downstream random events, NM/H
 results, and undo/redo. Removing an RNG-consuming parent can invalidate later
 parents even if their geometry is unchanged. Stream fruits and ordinary nested
 slider fruits have different parent ordering rules.
+When both event timestamp and source order tie, emission must retain the
+converter's stable parent traversal order (parent start, source order, then input
+order across fruits, tracks, imported sliders and banana showers). A stream fruit
+uses its own timestamp as the primary event sort key.
 
 For each cache, identify its owner, invalidation inputs and retention policy.
 Compare optimized output against the existing full calculation after geometry,

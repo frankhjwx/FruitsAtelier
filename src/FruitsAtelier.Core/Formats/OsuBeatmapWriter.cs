@@ -188,7 +188,15 @@ public static class OsuBeatmapWriter
         SetNumber(output, "Difficulty", "SliderTickRate", document.SliderTickRate);
         ReplaceData(output, "TimingPoints", timing.Select(TimingLine));
         // Time truncation is monotone; sorting before it retains current parent order when distinct times collapse.
-        var orderedLines = lines.OrderBy(l => l.Time).ThenBy(l => l.Order).ToArray();
+        // Equal time/order follows the converter's stable parent input order, including stream fruits.
+        var sourcePositions = document.Fruits.Select(f => (f.Id, Time: f.TimeMs, f.SourceOrder))
+            .Concat(document.Tracks.Select(t => (t.Id, Time: t.Nodes[0].TimeMs, t.SourceOrder)))
+            .Concat(document.ImportedSliders.Select(s => (s.Id, Time: s.TimeMs, s.SourceOrder)))
+            .Concat(document.BananaShowers.Select(s => (s.Id, Time: s.TimeMs, s.SourceOrder)))
+            .OrderBy(p => p.Time).ThenBy(p => p.SourceOrder)
+            .Select((p, index) => (p.Id, index)).ToDictionary(p => p.Id, p => p.index);
+        var orderedLines = lines.OrderBy(l => l.Time).ThenBy(l => l.Order)
+            .ThenBy(l => sourcePositions[l.SourceId]).ToArray();
         ReplaceData(output, "HitObjects", orderedLines.Select(l => l.Text));
         string serialized = SectionText(output);
         var readBack = OsuBeatmapReader.Read(serialized, document.SourcePath, inferDuration: false, cache?.ParsedSliders);

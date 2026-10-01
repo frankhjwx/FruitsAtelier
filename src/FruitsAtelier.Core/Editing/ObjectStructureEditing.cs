@@ -30,23 +30,30 @@ public static class ObjectStructureEditing
         var ids = selection.ToHashSet();
         var tracks = document.Tracks.Where(t => ids.Contains(t.Id) && t.StreamSnapDivisor is not null)
             .OrderBy(t => t.Nodes[0].TimeMs).ThenBy(t => t.SourceOrder).ToArray();
+        var parentOrder = document.Fruits.Select(f => (f.Id, Time: f.TimeMs, f.SourceOrder))
+            .Concat(document.Tracks.Select(t => (t.Id, Time: t.Nodes[0].TimeMs, t.SourceOrder)))
+            .OrderBy(p => p.Time).ThenBy(p => p.SourceOrder)
+            .Select((p, index) => (p.Id, index)).ToDictionary(p => p.Id, p => p.index);
         var timing = new TimingMap.Lookup(document);
-        Fruit[] fruits;
+        (Fruit Fruit, int ParentOrder)[] fruits;
         try
         {
-            fruits = tracks.SelectMany(track => SliderFruitStream.Convert(document, track, timing).Select(item => new Fruit
+            fruits = tracks.SelectMany(track => SliderFruitStream.Convert(document, track, timing).Select(item => (new Fruit
             {
                 TimeMs = item.TimeMs, X = item.X, SourceOrder = track.SourceOrder,
                 OriginalLine = SliderFruitStream.FruitLine(track, item.EventIndex,
                     Math.Round(item.X, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture),
                     Math.Round(item.TimeMs, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture))
-            })).ToArray();
+            }, parentOrder[track.Id]))).ToArray();
         }
         catch (CatchConversionException ex) { throw new InvalidOperationException(ex.Message, ex); }
         document.Tracks.RemoveAll(t => tracks.Contains(t));
-        // Stream exports precede existing standalone fruits when time and source order tie.
-        document.Fruits.InsertRange(0, fruits);
-        return fruits.Select(f => f.Id).ToArray();
+        // Expanded fruits retain the stream's parent traversal order at tied event times.
+        var ordered = document.Fruits.Select(f => (Fruit: f, ParentOrder: parentOrder[f.Id])).Concat(fruits)
+            .OrderBy(p => p.Fruit.TimeMs).ThenBy(p => p.Fruit.SourceOrder).ThenBy(p => p.ParentOrder)
+            .Select(p => p.Fruit).ToArray();
+        document.Fruits.Clear(); document.Fruits.AddRange(ordered);
+        return fruits.Select(p => p.Fruit.Id).ToArray();
     }
 
     public static void ClearInternalAnchors(CurveTrack track)

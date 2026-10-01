@@ -2,6 +2,48 @@ using FruitsAtelier.Core;
 
 internal static class WriteCacheTests
 {
+    public static void StableParentOrder()
+    {
+        var map = new MapDocument { DurationMs = 12000 };
+        map.Fruits.Add(new() { TimeMs = 1000, X = 220 });
+        var stream = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = 4 };
+        stream.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 200 }]);
+        map.Tracks.Add(stream);
+        var imported = new ImportedSlider { TimeMs = 1000, X = 300, Y = 192, PathType = 'L', PixelLength = 70 };
+        imported.ControlPoints.AddRange([new(300, 192), new(370, 192)]);
+        map.ImportedSliders.Add(imported);
+        map.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 1250 });
+        var history = new EditorHistory(map);
+        map = history.Document; stream = map.Tracks[0];
+        var cache = new OsuWriteCache();
+        Check(); Check();
+        history.Begin("Change source order");
+        stream.SourceOrder = -1;
+        history.Commit(); Check();
+        history.Undo(); map = history.Document; Check();
+        history.Redo(); map = history.Document; Check();
+        map.ImportedSliders.Clear(); map.BananaShowers.Clear();
+        map.Tracks[0].SourceOrder = int.MaxValue;
+        map.Fruits[0].TimeMs += .75;
+        foreach (var node in map.Tracks[0].Nodes) node.TimeMs += .75;
+        Check();
+
+        void Check()
+        {
+            var before = map.DeepClone();
+            var converted = CatchStreamConverter.Convert(map);
+            var actual = OsuBeatmapWriter.Serialize(map, cache: cache);
+            var expected = OsuBeatmapWriter.Serialize(map);
+            if (!actual.ObjectSequenceMatches || !expected.ObjectSequenceMatches
+                || !actual.PlayableObjects.Select(o => (o.SourceId, o.EventIndex, o.Kind))
+                    .SequenceEqual(converted.Objects.Select(o => (o.SourceId, o.EventIndex, o.Kind)))
+                || actual.Text != expected.Text || !actual.PlayableObjects.SequenceEqual(expected.PlayableObjects)
+                || !actual.PlayableHardRockObjects.SequenceEqual(expected.PlayableHardRockObjects)
+                || !map.ContentEquals(before))
+                throw new Exception("Equal-time/order parent export diverged from conversion or changed source content.");
+        }
+    }
+
     public static void MatchesUncached()
     {
         var velocityQuery = typeof(OsuBeatmapWriter).GetMethod("EmittedSliderVelocityAt",
