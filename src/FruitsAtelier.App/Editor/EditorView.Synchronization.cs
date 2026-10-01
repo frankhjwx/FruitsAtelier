@@ -109,8 +109,14 @@ public sealed partial class EditorView
                 syncPage = null;
                 libraryProjectsNeedReindex = true; StartLibraryScan();
                 if (session.Project.Difficulties.Count == 0) { LeaveEditor(); return; }
+                Guid previousDifficulty = difficulties[activeDifficulty].Id;
+                string? previousAudio = Document.AudioPath;
+                string? previousAudioHash = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == previousDifficulty)?.Sync?.AudioHash;
+                double previousPlayhead = playhead, previousViewStart = viewStart;
+                bool previousPin = pinPlayhead;
                 Guid active = syncDifficulty == Guid.Empty ? difficulties[activeDifficulty].Id : syncDifficulty;
-                if (syncPreserveHistory && WorkspaceSession?.Directory == session.Directory)
+                bool preserveView = syncPreserveHistory && WorkspaceSession?.Directory == session.Directory;
+                if (preserveView)
                 {
                     foreach (var diff in session.Project.Difficulties)
                     {
@@ -127,12 +133,26 @@ public sealed partial class EditorView
                     convertedSnapshot = null; resourceSnapshot = null; resourceReferences = null;
                     libraryProjectsNeedReindex = true; QueueLibrarySearch(); CheckWorkspaceResources();
                 }
-                else LoadWorkspace(session);
+                else
+                {
+                    LoadWorkspace(session);
+                    playhead = previousPlayhead; viewStart = previousViewStart; pinPlayhead = previousPin;
+                }
                 syncPreserveHistory = false;
                 syncBypass = true;
-                try { SwitchDifficulty(Math.Max(0, difficulties.FindIndex(d => d.Id == active))); }
+                int targetDifficulty = Math.Max(0, difficulties.FindIndex(d => d.Id == active));
+                bool switched = targetDifficulty != activeDifficulty;
+                try { SwitchDifficulty(targetDifficulty); }
                 finally { syncBypass = false; }
-                ReleaseWaveform(); RequestDifficultyChanged?.Invoke();
+                string? audioHash = session.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id)?.Sync?.AudioHash;
+                // Content-only synchronization keeps the live clock and viewport; changed audio needs a position-preserving reload.
+                if (!switched && (!preserveView || previousDifficulty != difficulties[activeDifficulty].Id
+                    || !string.Equals(previousAudio, Document.AudioPath, StringComparison.OrdinalIgnoreCase) || previousAudioHash != audioHash))
+                {
+                    ReleaseWaveform();
+                    initializeTransport = !string.IsNullOrWhiteSpace(Document.AudioPath);
+                    RequestDifficultyChanged?.Invoke();
+                }
                 RefreshSynchronization(continuation);
             }
             catch (SyncSourceChangedException)

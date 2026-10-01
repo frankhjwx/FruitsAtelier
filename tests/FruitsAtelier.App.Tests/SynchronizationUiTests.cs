@@ -9,9 +9,21 @@ internal static class SynchronizationUiTests
         var ui = new Ui(false);
         string root = Path.GetFullPath(Path.Combine("artifacts/tests/sync-local-breaks", Guid.NewGuid().ToString("N")));
         string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
-        Directory.CreateDirectory(Path.GetDirectoryName(source)!); File.WriteAllText(source, Fixture);
+        Directory.CreateDirectory(Path.GetDirectoryName(source)!);
+        File.WriteAllText(source, Fixture.Replace("Mode:2", "Mode:2\nAudioFilename:music.wav"));
+        File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(source)!, "music.wav"), [1, 2, 3, 4]);
         ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
         ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);
+        int audioReloads = 0;
+        double requestedSeek = -1;
+        ui.View.RequestSeek = time => requestedSeek = time;
+        ui.View.RequestDifficultyChanged = () =>
+        {
+            audioReloads++;
+            ui.View.UpdateTransport(0, 20000, true, false, false, null, ui.View.Document.AudioPath);
+        };
+        ui.View.UpdateTransport(0, 20000, true, false, false, null, ui.View.Document.AudioPath);
+        ui.View.UpdateTransport(9000, 20000, true, false, false, null, ui.View.Document.AudioPath); ui.Paint();
         try
         {
             var history = (EditorHistory)ui.View.GetType().GetProperty("history", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
@@ -21,7 +33,12 @@ internal static class SynchronizationUiTests
             history.Commit();
             void Synchronize()
             {
-                ui.View.RefreshSynchronization(); Wait(ui);
+                double position = ui.View.PlayheadMs, start = ui.View.ViewStartMs;
+                int reloads = audioReloads;
+                ui.View.SaveCurrentDifficulty(); Wait(ui);
+                Check(ui.View.PlayheadMs == position && ui.View.ViewStartMs == start,
+                    "saving and automatic export retain nonzero transport and viewport positions");
+                Check(audioReloads == reloads, "content-only save does not reload unchanged audio");
                 Check(!ui.View.SynchronizationVisible, "local break sync keeps the editor open");
                 Check(OsuTimeline.Breaks(OsuBeatmapReader.ReadFile(source)).SequenceEqual(OsuTimeline.Breaks(ui.View.Document)), "external breaks match FA");
                 Check(ReferenceEquals(history.Document, ui.View.Document), "sync retains the history owner");
@@ -40,6 +57,11 @@ internal static class SynchronizationUiTests
             history.Begin("standalone note"); ui.View.Document.Fruits.Add(new Fruit { TimeMs = 12000, X = 300 }); history.Commit();
             Synchronize();
             Check(OsuBeatmapReader.ReadFile(source).Fruits.Any(f => f.TimeMs == 12000), "object-only changes trigger automatic export");
+            double audioPosition = ui.View.PlayheadMs;
+            File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(source)!, "music.wav"), [5, 6, 7, 8]);
+            ui.View.RefreshSynchronization(); Wait(ui);
+            Check(audioReloads == 1 && ui.View.PlayheadMs == audioPosition && requestedSeek == audioPosition,
+                "same-path audio replacement reloads while retaining the current transport position");
         }
         finally { ui.View.StopFileMonitoring(); }
     }
