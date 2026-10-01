@@ -4,6 +4,37 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class SynchronizationUiTests
 {
+    public static void LocalBreaks()
+    {
+        var ui = new Ui(false);
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/sync-local-breaks", Guid.NewGuid().ToString("N")));
+        string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
+        Directory.CreateDirectory(Path.GetDirectoryName(source)!); File.WriteAllText(source, Fixture);
+        ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
+        ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);
+        try
+        {
+            var history = (EditorHistory)ui.View.GetType().GetProperty("history", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
+            history.Begin("break"); OsuTimeline.AddBreak(ui.View.Document, 4000, 10000); history.Commit();
+            void Synchronize()
+            {
+                ui.View.RefreshSynchronization(); Wait(ui);
+                Check(!ui.View.SynchronizationVisible, "local break sync keeps the editor open");
+                Check(OsuTimeline.Breaks(OsuBeatmapReader.ReadFile(source)).SequenceEqual(OsuTimeline.Breaks(ui.View.Document)), "external breaks match FA");
+                Check(ReferenceEquals(history.Document, ui.View.Document), "sync retains the history owner");
+            }
+            Synchronize();
+            history.Begin("note in break"); ui.View.Document.Fruits.Add(new Fruit { TimeMs = 7000, X = 200 }); history.Commit();
+            Synchronize();
+            Check(OsuTimeline.Breaks(ui.View.Document).Count == 2, "note splits the break");
+            ui.Key('Z', ctrl: true); Synchronize();
+            Check(OsuTimeline.Breaks(ui.View.Document).Single() == new BreakPeriod(4000, 10000), "undo retains the original break");
+            ui.Key('Y', ctrl: true); Synchronize();
+            Check(OsuTimeline.Breaks(ui.View.Document).Count == 2, "redo retains the split break");
+        }
+        finally { ui.View.StopFileMonitoring(); }
+    }
+
     public static void TimingRows()
     {
         foreach (string language in L.AvailableLanguages)

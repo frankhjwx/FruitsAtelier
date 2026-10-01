@@ -4,6 +4,71 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: FA breaks bookmarks and timing write back without exporting notes", () => Run(f =>
+        {
+            var entry = f.Session.Manifest.Difficulties[0];
+            string objects = string.Join('\n', WorkspaceSynchronization.ObjectLines(File.ReadAllText(f.Source)));
+            OsuTimeline.AddBreak(f.Diff.Document, 4000, 10000);
+            OsuTimeline.AddBookmark(f.Diff.Document, 5000);
+            f.Diff.Document.TimingPoints.Add(new TimingPoint { TimeMs = 500, BeatLengthMs = -100, Uninherited = false });
+            void Synchronize()
+            {
+                var merge = f.Merge();
+                Check(!merge.RequiresResolution && merge.LocalFieldUpdates.Count > 0, "FA changes need no choice");
+                var candidate = WorkspaceSynchronization.WriteLocalFields(f.Session, entry, merge);
+                WorkspaceSynchronization.Accept(f.Session, entry, candidate, f.Diff.Document, true, writtenFields: merge.LocalFieldUpdates);
+                Check(!f.Merge().RequiresResolution && f.Merge().LocalFieldUpdates.Count == 0, "write advances the baseline");
+                Check(string.Join('\n', WorkspaceSynchronization.ObjectLines(File.ReadAllText(f.Source))) == objects, "notes stay byte-equivalent");
+            }
+            Synchronize();
+            var history = new EditorHistory(f.Diff.Document);
+            history.Begin("note in break");
+            history.Document.Fruits.Add(new Fruit { TimeMs = 7000, X = 200 });
+            history.Commit(); f.Diff.Document = history.Document;
+            Check(OsuTimeline.Breaks(f.Diff.Document).Count == 2, "note splits the break");
+            Synchronize();
+            history.Undo(); f.Diff.Document = history.Document; Synchronize();
+            Check(OsuTimeline.Breaks(OsuBeatmapReader.ReadFile(f.Source)).Single() == new BreakPeriod(4000, 10000), "undo writes back the restored break");
+            history.Redo(); f.Diff.Document = history.Document; Synchronize();
+            File.WriteAllText(f.Source, File.ReadAllText(f.Source).Replace("2,4000,", "2,4100,"));
+            Check(f.Merge().RequiresResolution, "external break edits remain reviewable");
+        }));
+        yield return ("Sync: authored timing write excludes SV from unexported curves", () => Run(f =>
+        {
+            var track = new CurveTrack(); track.Nodes.AddRange([new() { TimeMs = 3000, X = 100 }, new() { TimeMs = 3500, X = 400 }]);
+            f.Diff.Document.Tracks.Add(track);
+            f.Diff.Document.TimingPoints.Add(new TimingPoint { TimeMs = 500, BeatLengthMs = -100, Uninherited = false });
+            var merge = f.Merge();
+            var candidate = WorkspaceSynchronization.WriteLocalFields(f.Session, f.Session.Manifest.Difficulties[0], merge);
+            Check(candidate.Document.TimingPoints.Count == 2 && candidate.Document.TimingPoints[1].TimeMs == 500,
+                "only authored green is written; new curve SV stays local");
+            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], candidate, f.Diff.Document, true, writtenFields: merge.LocalFieldUpdates);
+            Check(!f.Merge().RequiresResolution, "generated timing mismatch does not prompt after write-back");
+        }));
+        yield return ("Sync: local break write rejects an external save after comparison", () => Run(f =>
+        {
+            OsuTimeline.AddBreak(f.Diff.Document, 4000, 10000);
+            var merge = f.Merge();
+            string changed = File.ReadAllText(f.Source).Replace("Title:Title", "Title:external");
+            File.WriteAllText(f.Source, changed);
+            bool rejected = false;
+            try { WorkspaceSynchronization.WriteLocalFields(f.Session, f.Session.Manifest.Difficulties[0], merge); }
+            catch (IOException) { rejected = true; }
+            Check(rejected && File.ReadAllText(f.Source) == changed, "stale write preserves external bytes");
+        }));
+        yield return ("Sync: a new FA break edit writes back after a retained decision", () => Run(f =>
+        {
+            File.WriteAllText(f.Source, Fixture().Replace("[HitObjects]", "[Events]\n2,4000,10000\n[HitObjects]"));
+            var merge = f.Merge();
+            var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => false);
+            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, f.Diff.Document, true, review: merge, choices: choices);
+            Check(!f.Merge().RequiresResolution && f.Merge().LocalFieldUpdates.Count == 0, "unchanged retained choice stays pending");
+            OsuTimeline.AddBreak(f.Diff.Document, 5000, 9000);
+            merge = f.Merge();
+            Check(!merge.RequiresResolution && merge.LocalFieldUpdates.Contains("Events/"), "new FA edit replaces the retained difference");
+            var candidate = WorkspaceSynchronization.WriteLocalFields(f.Session, f.Session.Manifest.Difficulties[0], merge);
+            Check(OsuTimeline.Breaks(candidate.Document).Single() == new BreakPeriod(5000, 9000), "new break is written");
+        }));
         yield return ("Sync: uniform timing offset has one summary and keeps generated SV derived", () => Run(f =>
         {
             var output = CaptureCurveTiming(f);

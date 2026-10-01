@@ -130,7 +130,15 @@ anchors keeps related unmatched removals and insertions in one review group.
 Local saving preserves the baseline. Successful export records the actual emitted
 text and source mapping. Synchronization compares external fields with the external
 baseline, and authoring fields with the authoring baseline. A changed field whose
-values differ requires a choice, including one-sided additions and deletions. Timing is
+values differ requires a choice, including external additions and deletions. With a
+baseline, FA-only bookmark, authored timing and break-period changes automatically
+write back to the linked `.osu` when synchronization runs. This includes break
+adjustments caused by note edits and undo/redo. The external field must still match
+its baseline. Unchanged retained local conflict choices remain pending explicit export;
+a new FA edit to these fields can write back against the unchanged external baseline.
+Write-back preserves external hit-object text and unrelated fields, archives the
+previous versions and checks the external fingerprint before publishing. Events
+changes affecting backgrounds, video or storyboard commands still require review. Timing is
 handled as an ordered section, including inherited points. Applying external context
 retains authoring objects and rebases that context through local undo snapshots.
 

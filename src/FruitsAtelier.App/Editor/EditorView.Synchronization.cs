@@ -78,7 +78,7 @@ public sealed partial class EditorView
                     : WorkspaceSynchronization.Merge(entry, diff.Document, status.Candidate!, session.Directory, compensate);
             }
             scan = scan with { Difficulties = scan.Difficulties.Select(s => s.State == WorkspaceSyncState.Current
-                && merges.TryGetValue(s.DifficultyId, out var merge) && merge.RequiresResolution
+                && merges.TryGetValue(s.DifficultyId, out var merge) && (merge.RequiresResolution || merge.LocalFieldUpdates.Count > 0)
                     ? s with { State = WorkspaceSyncState.Changed } : s).ToArray() };
             var comparisons = merges.Where(m => m.Value.Conflicts.Count > 0).ToDictionary(m => m.Key, m => PrepareSyncComparison(m.Value, compensate,
                 Path.Combine(session.Directory, manifest.Difficulties.Single(d => d.Id == m.Key).File)));
@@ -187,7 +187,9 @@ public sealed partial class EditorView
                             var diff = project.Difficulties.Single(d => d.Id == entry.Id);
                             if (status.State == WorkspaceSyncState.Changed && result.Merges.TryGetValue(entry.Id, out var merge))
                                 diff.Document = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
-                            WorkspaceSynchronization.Accept(session, entry, status.Candidate!, diff.Document, compensateTinyDroplets);
+                            var candidate = result.Merges.TryGetValue(entry.Id, out var localMerge)
+                                ? WorkspaceSynchronization.WriteLocalFields(session, entry, localMerge) : status.Candidate!;
+                            WorkspaceSynchronization.Accept(session, entry, candidate, diff.Document, compensateTinyDroplets, writtenFields: localMerge?.LocalFieldUpdates);
                             diff.Name = OsuBeatmapReader.Setting(diff.Document, "Metadata", "Version") ?? diff.Name;
                         }
                         if (canAdd)
@@ -315,7 +317,10 @@ public sealed partial class EditorView
             diff.Document.SourcePath = external.Path;
             syncMerges.TryGetValue(diff.Id, out var review);
             var decisions = review?.Conflicts.ToDictionary(c => c.Key, c => useExternal ?? choices.GetValueOrDefault(c.Key));
-            WorkspaceSynchronization.Accept(session, entry, external, diff.Document, compensateTinyDroplets, retainLocalFields: useExternal is false, review: review, choices: decisions);
+            if (review is not null && (fieldsOnly || useExternal is not true))
+                external = WorkspaceSynchronization.WriteLocalFields(session, entry, review);
+            WorkspaceSynchronization.Accept(session, entry, external, diff.Document, compensateTinyDroplets, retainLocalFields: useExternal is false, review: review, choices: decisions,
+                writtenFields: fieldsOnly || useExternal is not true ? review?.LocalFieldUpdates : null);
             diff.Name = OsuBeatmapReader.Setting(diff.Document, "Metadata", "Version") ?? diff.Name;
             WorkspaceProject.Save(session, project);
             return WorkspaceProject.Open(session.Directory);
