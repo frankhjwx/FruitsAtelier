@@ -9,7 +9,7 @@ internal static class SyncObjectDifferences
     internal static IReadOnlyList<SyncObjectDifference> Compare(string local, string external)
     {
         var left = Lines(local); var right = Lines(external);
-        var result = new List<SyncObjectDifference> { new("sync.diff.count", left.Count, right.Count) };
+        var result = new List<SyncObjectDifference>();
         var common = left.GroupBy(l => l).ToDictionary(g => g.Key, g => g.Count());
         var rightCounts = right.GroupBy(l => l).ToDictionary(g => g.Key, g => g.Count());
         foreach (string key in common.Keys.ToArray()) common[key] = Math.Min(common[key], rightCounts.GetValueOrDefault(key));

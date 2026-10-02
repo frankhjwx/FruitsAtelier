@@ -32,7 +32,9 @@ public sealed partial class EditorView
     private BeatmapProject? versionProject;
     private Task<IReadOnlyList<WorkspaceVersion>>? versionListTask;
     private Task<BeatmapProject>? versionReadTask;
-    private Task<(SyncPane? Current, SyncPane Historical)>? versionPreviewTask;
+    private Task<(WorkspaceMerge Merge, SyncComparison Comparison)>? versionPreviewTask;
+    private WorkspaceMerge? versionMerge;
+    private SyncComparison? versionComparison;
     private Task<ProjectDifficulty>? versionRestoreTask;
     private SyncPane? versionCurrentPane, versionHistoricalPane;
     private int versionIndex, versionDifficultyIndex, versionScroll, versionDifficultyScroll;
@@ -48,7 +50,7 @@ public sealed partial class EditorView
         menu = -1; contextItems.Clear(); hits.Clear(); fields.Clear();
         VersionHistoryVisible = true;
         versions = []; versionProject = null; versionError = ""; versionScroll = versionDifficultyScroll = 0;
-        versionCurrentPane = versionHistoricalPane = null;
+        versionCurrentPane = versionHistoricalPane = null; versionMerge = null; versionComparison = null;
         syncShowValues = false;
         QueueVersionWork(() => versionListTask = Task.Run(() => WorkspaceVersionHistory.List(session)));
     }
@@ -61,7 +63,7 @@ public sealed partial class EditorView
         versionListTask = null; versionReadTask = null; versionPreviewTask = null; versionRestoreTask = null;
         versionPending = null;
         if (versionBackground is { IsCompleted: true }) versionBackground = null;
-        versionProject = null; versionCurrentPane = versionHistoricalPane = null;
+        versionProject = null; versionCurrentPane = versionHistoricalPane = null; versionMerge = null; versionComparison = null;
         hits.Clear(); fields.Clear();
     }
 
@@ -72,7 +74,7 @@ public sealed partial class EditorView
         int rows = Math.Max(1, (int)(versionListBounds.Height / 54));
         versionScroll = Math.Clamp(versionScroll, Math.Max(0, versionIndex - rows + 1), versionIndex);
         versionProject = null; versionError = "";
-        versionCurrentPane = versionHistoricalPane = null;
+        versionCurrentPane = versionHistoricalPane = null; versionMerge = null; versionComparison = null;
         versionPreviewTask = null;
         versionReadTask = null;
         var version = versions[versionIndex];
@@ -85,7 +87,7 @@ public sealed partial class EditorView
         versionDifficultyIndex = Math.Clamp(index, 0, versionProject.Difficulties.Count - 1);
         int rows = Math.Max(1, (int)(versionDifficultyBounds.Height / 28));
         versionDifficultyScroll = Math.Clamp(versionDifficultyScroll, Math.Max(0, versionDifficultyIndex - rows + 1), versionDifficultyIndex);
-        versionError = ""; versionCurrentPane = versionHistoricalPane = null;
+        versionError = ""; versionCurrentPane = versionHistoricalPane = null; versionMerge = null; versionComparison = null;
         versionPreviewTask = null;
         QueueVersionWork(() =>
         {
@@ -93,7 +95,14 @@ public sealed partial class EditorView
             Guid id = versionProject.Difficulties[versionDifficultyIndex].Id;
             var current = difficulties.FirstOrDefault(d => d.Id == id)?.History.Document.DeepClone();
             bool compensate = compensateTinyDroplets;
-            versionPreviewTask = Task.Run(() => (current is null ? null : PrepareSyncPane(current, compensate), PrepareSyncPane(historical, compensate)));
+            string directory = WorkspaceSession!.Directory;
+            versionPreviewTask = Task.Run(() =>
+            {
+                var output = OsuBeatmapWriter.Serialize(historical, compensate);
+                var candidate = new WorkspaceSyncCandidate(Path.Combine(directory, "history.osu"), "", output.Text, output.ReadBack);
+                var merge = WorkspaceSynchronization.CompareWithoutBaseline(current ?? new MapDocument { IsDemo = false }, candidate, directory, compensate);
+                return (merge, PrepareSyncComparison(merge, compensate));
+            });
         });
     }
 
@@ -121,9 +130,9 @@ public sealed partial class EditorView
             if (versionPreviewTask is { IsCompleted: true } prepared)
             {
                 versionPreviewTask = null;
-                (versionCurrentPane, versionHistoricalPane) = prepared.GetAwaiter().GetResult();
-                syncViewStart = Math.Max(0, viewStart);
-                versionZoom = 1;
+                (versionMerge, versionComparison) = prepared.GetAwaiter().GetResult();
+                versionCurrentPane = versionComparison.Local; versionHistoricalPane = versionComparison.External;
+                SelectVersionTab(versionMerge.Conflicts.Count == 0 ? "Objects" : SyncCategory(versionMerge.Conflicts[0].Key));
             }
             if (versionRestoreTask is { IsCompleted: true } restored)
             {
@@ -216,7 +225,9 @@ public sealed partial class EditorView
             Math.Max(0, (versionProject?.Difficulties.Count ?? 0) - (int)(versionDifficultyBounds.Height / 28)));
         else if (versionPreviewBounds.Contains(x, y) && versionHistoricalPane is not null)
         {
-            if (ctrl)
+            if (versionTab != "Objects") versionTextScroll = Math.Clamp(versionTextScroll - (int)(delta / 120) * 69, 0, versionTextMax);
+            else if (syncObjectDetailBounds.Contains(x, y)) syncObjectDetailScroll = Math.Clamp(syncObjectDetailScroll - (int)(delta / 120), 0, syncObjectDetailMax);
+            else if (ctrl)
             {
                 double previous = versionZoom;
                 versionZoom = Math.Clamp(versionZoom * Math.Pow(1.25, delta / 120), .1, 10);
@@ -260,24 +271,9 @@ public sealed partial class EditorView
                     deleted ? L.Get("history.deletedName", diff.Name) : diff.Name, () => SelectVersionDifficulty(selected), i == versionDifficultyIndex, versionRestoreTask is null);
             }
             var historical = project.Difficulties[versionDifficultyIndex];
-            var current = difficulties.FirstOrDefault(d => d.Id == historical.Id)?.History.Document;
-            string Metadata(MapDocument? doc, string key) => doc is null ? "—" : OsuBeatmapReader.Setting(doc, "Metadata", key) ?? "—";
-            foreach (var (key, row) in new[] { ("Artist", 0), ("Title", 1), ("Creator", 2), ("Version", 3) })
-                c.Text(L.Get("history.field", key, Metadata(current, key), Metadata(historical.Document, key)), rightX, 184 + row * 17, 11, Foreground, rightWidth);
-            versionPreviewBounds = new(rightX, 260, rightWidth, Math.Max(100, height - 384));
-            float paneWidth = (rightWidth - 12) / 2;
-            if (versionHistoricalPane is { } pane)
-            {
-                var left = new Rect(rightX, 260, paneWidth, versionPreviewBounds.Height);
-                var field = SyncField(left);
-                // Both versions use the active editor's AR so matching timestamps stay aligned.
-                syncViewSpan = field.Height / (CatchScrollTiming.PixelsPerMs(Document.ApproachRate, field.Width) * versionZoom);
-                if (versionCurrentPane is { } currentPane) DrawSyncPane(c, currentPane, left, L.Get("history.current"), noVersionSelection, null, L.Get("history.current"));
-                else { c.Fill(left, Panel); c.Text(L.Get("history.deleted"), left.X + 12, left.Y + 16, 14, Muted, left.Width - 24); }
-                DrawSyncPane(c, pane, new(rightX + paneWidth + 12, 260, paneWidth, versionPreviewBounds.Height), L.Get("history.historical"), noVersionSelection, null,
-                    versions[versionIndex].TimeUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"));
-            }
-            else c.Text(L.Get("history.loading"), rightX, 270, 13, Muted, rightWidth);
+            versionPreviewBounds = new(rightX, 184, rightWidth, Math.Max(100, height - 300));
+            if (versionComparison is not null && versionMerge is not null) DrawVersionDiff(c, versionPreviewBounds);
+            else c.Text(L.Get("history.loading"), rightX, 194, 13, Muted, rightWidth);
             c.Text(L.Get("history.counts", historical.Document.Fruits.Count, historical.Document.Tracks.Count, historical.Document.ImportedSliders.Count,
                 historical.Document.BananaShowers.Count), rightX, height - 108, 12, Muted, rightWidth);
         }

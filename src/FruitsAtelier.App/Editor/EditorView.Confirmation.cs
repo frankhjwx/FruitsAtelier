@@ -40,7 +40,18 @@ public sealed partial class EditorView
 
     private void DrawDiscardConfirmation(ICanvas c)
     {
-        if (SynchronizationBlocksInput) { DrawStatus(c); hits.Clear(); fields.Clear(); return; }
+        if (SynchronizationBlocksInput)
+        {
+            if (syncPage == "applying" && syncMerges.TryGetValue(syncDifficulty, out var merge)
+                && merge.Conflicts.Count > 0 && syncComparisons.TryGetValue(syncDifficulty, out var comparison))
+            {
+                DrawSyncComparison(c, merge, comparison);
+                c.Fill(new(0, 0, width, height), Background, opacity: .65f);
+                c.Text(L.Get("sync.applying"), 36, height / 2, 20, Foreground, width - 72, true);
+            }
+            else DrawStatus(c);
+            hits.Clear(); fields.Clear(); return;
+        }
         if (VersionHistoryVisible) { DrawVersionHistory(c); return; }
         if (SynchronizationVisible) { DrawSynchronization(c); return; }
         if (!DiscardConfirmationVisible) return;

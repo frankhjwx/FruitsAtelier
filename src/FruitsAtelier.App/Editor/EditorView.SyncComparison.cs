@@ -195,7 +195,7 @@ public sealed partial class EditorView
     }
 
     private void DrawSyncPane(ICanvas c, SyncPane pane, Rect bounds, string title, IReadOnlySet<Guid> selected, string? value, string? saved = null,
-        IReadOnlyDictionary<Guid, bool>? decisions = null, string? absentMessage = null, IReadOnlyList<SyncRange>? ranges = null, string? currentKey = null)
+        IReadOnlyDictionary<Guid, bool>? decisions = null, string? absentMessage = null, IReadOnlyList<SyncRange>? ranges = null, string? currentKey = null, Action<string>? selectRange = null)
     {
         c.Fill(bounds, Background); c.Stroke(bounds, Grid);
         c.Text(title, bounds.X + 10, bounds.Y + 6, 15, Foreground, bounds.Width - 20, true);
@@ -226,7 +226,8 @@ public sealed partial class EditorView
             string key = range.Key;
             hits.Add(new(area with { Y = Math.Max(area.Y, field.Y), Height = Math.Max(0, Math.Min(area.Bottom, field.Bottom) - Math.Max(area.Y, field.Y)) }, () =>
             {
-                if (syncVisualMerge is { } active) syncRow = active.Conflicts.FindIndex(c => c.Key == key);
+                if (selectRange is not null) selectRange(key);
+                else if (syncVisualMerge is { } active) syncRow = active.Conflicts.FindIndex(c => c.Key == key);
             }, true));
         }
         uint currentColour = ranges?.FirstOrDefault(r => r.Key == currentKey)?.Colour ?? SyncUnresolved;

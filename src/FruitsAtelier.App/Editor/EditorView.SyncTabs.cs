@@ -29,14 +29,15 @@ public sealed partial class EditorView
             syncObjectDetailLayout = layout;
         }
         var lines = syncObjectDetailLines;
-        syncObjectDetailMax = Math.Max(0, lines.Length - 3);
+        int visible = Math.Max(1, (int)((bounds.Height - 5) / 23));
+        syncObjectDetailMax = Math.Max(0, lines.Length - visible);
         syncObjectDetailScroll = Math.Clamp(syncObjectDetailScroll, 0, syncObjectDetailMax);
         c.Fill(bounds, Background); c.Stroke(bounds, Grid);
         c.Clip(bounds);
-        for (int i = 0; i < 3 && syncObjectDetailScroll + i < lines.Length; i++)
+        for (int i = 0; i < visible && syncObjectDetailScroll + i < lines.Length; i++)
             c.Text(lines[syncObjectDetailScroll + i].Text, bounds.X + 8, bounds.Y + 3 + i * 23, 15, Foreground, bounds.Width - 20);
         c.Unclip();
-        if (lines.Length > 3) c.Text("↕", bounds.Right - 14, bounds.Y + 4, 12, Muted, 14);
+        if (lines.Length > visible) c.Text("↕", bounds.Right - 14, bounds.Y + 4, 12, Muted, 14);
     }
     private static readonly string[] SyncTabOrder = ["General", "Editor", "Metadata", "Difficulty", "Events", "Timing", "Colours", "Objects"];
     private static readonly Dictionary<string, string[]> SyncFieldOrder = new()

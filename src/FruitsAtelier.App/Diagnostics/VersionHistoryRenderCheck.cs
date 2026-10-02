@@ -28,7 +28,13 @@ internal static class VersionHistoryRenderCheck
         if (!view.VersionHistoryVisible) throw new InvalidOperationException("Native version history did not open.");
         var before = view.Document.DeepClone();
         view.KeyDown(39, false, false); Wait();
-        view.Wheel(width - 100, 300, 120, true); Paint();
+        float rightX = Math.Clamp(width * .27f, 220, 330) + 36, tabWidth = (width - rightX - 24) / 8;
+        for (int i = 0; i < 8; i++)
+        {
+            view.PointerDown(rightX + (i + .5f) * tabWidth, 196, 0, false, false);
+            view.PointerUp(rightX + (i + .5f) * tabWidth, 196, 0); Paint();
+        }
+        view.Wheel(width - 100, height - 160, 120, true); Paint();
         view.KeyDown(46, false, false); view.KeyDown('S', true, false); Paint();
         if (!view.Document.ContentEquals(before)) throw new InvalidOperationException("History browsing changed current authoring.");
         view.PointerDown(width - 120, height - 34, 0, false, false);

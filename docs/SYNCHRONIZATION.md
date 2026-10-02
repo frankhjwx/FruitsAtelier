@@ -111,6 +111,12 @@ partially resolved tabs amber, and fully resolved tabs green. Clean categories
 remain readable. Choices stay in their category; object choices advance to the
 next unresolved group there. Whole-map choices remain available.
 
+Applying a resolution retains the comparison with an applying message until
+publication finishes. Saved and working authoring are archived once before the
+resolution; publication reuses that recovery round. Object-only resolutions retain
+the existing audio session and transport position when the audio path and baseline
+hash are unchanged.
+
 Conflict review shows FA and osu! on side-by-side editor canvases with synchronized
 time ranges and zoom. Their common default scale uses the current FA difficulty's
 AR and playfield width, matching the editor canvas. Selecting a conflict restores
@@ -118,8 +124,8 @@ that AR scale and locates its start; long groups remain scrollable rather than
 being compressed to fit. Current conflicting objects and related curve controls are
 highlighted; missing counterparts are labelled. Mouse wheel scrolls both maps and
 Ctrl+wheel zooms them together. Other field differences use side-by-side text.
-The Objects tab also lists both sides' object counts and the changed properties for
-each group: time, position, New Combo, colour skip, hitsounds, sample settings,
+The Objects tab describes the changed properties in each group with explicit left
+and right values: time, position, New Combo, colour skip, hitsounds, sample settings,
 slider path, span count and length, or banana shower end time. Unmatched entries
 are identified by side rather than assuming an ambiguous replacement is a move.
 The detail box scrolls independently of the canvases. Canvas time labels and
@@ -257,6 +263,13 @@ projects are retired by directory rename. Recovery copies are retained under
 `workspace/.sync-history`; they are excluded from ordinary indexing.
 
 ## Version history
+
+The right-hand comparison uses the same category tabs, ordered fields, text
+highlights and object-group descriptions as synchronization review. The left side
+is the current difficulty; the right side is the selected historical difficulty.
+All categories remain available: grey tabs have no differences and red tabs have
+changes. Objects open at the first changed group; arrows and highlighted ranges
+navigate other groups. Comparison is read-only; restoring remains a separate action.
 
 **Edit → Version history…** lists retained versions for the open workspace project,
 newest first. Each entry shows its local date/time, operation, and whether it is the

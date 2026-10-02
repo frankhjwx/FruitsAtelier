@@ -144,6 +144,7 @@ public sealed partial class EditorView
                 string? previousAudio = Document.AudioPath;
                 string? previousAudioHash = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == previousDifficulty)?.Sync?.AudioHash;
                 double previousPlayhead = playhead, previousViewStart = viewStart;
+                var previousTransport = (AudioReady, AudioPlaying, AudioLoading, AudioDurationMs, AudioNotice, initializeTransport);
                 bool previousPin = pinPlayhead;
                 Guid active = syncDifficulty == Guid.Empty ? difficulties[activeDifficulty].Id : syncDifficulty;
                 bool preserveView = syncPreserveHistory && WorkspaceSession?.Directory == session.Directory;
@@ -182,17 +183,21 @@ public sealed partial class EditorView
                 syncPreserveHistory = false;
                 syncBypass = true;
                 int targetDifficulty = Math.Max(0, difficulties.FindIndex(d => d.Id == active));
-                bool switched = targetDifficulty != activeDifficulty;
-                try { SwitchDifficulty(targetDifficulty); }
+                try { SwitchDifficultyCore(targetDifficulty, reloadAudio: false); }
                 finally { syncBypass = false; }
                 string? audioHash = session.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id)?.Sync?.AudioHash;
                 // Content-only synchronization keeps the live clock and viewport; changed audio needs a position-preserving reload.
-                if (!switched && (!preserveView || previousDifficulty != difficulties[activeDifficulty].Id
-                    || !string.Equals(previousAudio, Document.AudioPath, StringComparison.OrdinalIgnoreCase) || previousAudioHash != audioHash))
+                if (previousDifficulty != difficulties[activeDifficulty].Id
+                    || !string.Equals(previousAudio, Document.AudioPath, StringComparison.OrdinalIgnoreCase) || previousAudioHash != audioHash)
                 {
                     ReleaseWaveform();
                     initializeTransport = !string.IsNullOrWhiteSpace(Document.AudioPath);
                     RequestDifficultyChanged?.Invoke();
+                }
+                else
+                {
+                    (AudioReady, AudioPlaying, AudioLoading, AudioDurationMs, AudioNotice, initializeTransport) = previousTransport;
+                    playhead = previousPlayhead; viewStart = previousViewStart; pinPlayhead = previousPin;
                 }
                 RefreshSynchronization(continuation);
             }
@@ -390,7 +395,7 @@ public sealed partial class EditorView
         bool fieldsOnly = fieldReview is not null && fieldReview.Conflicts.Count > 0
             && fieldReview.Conflicts.All(c => !c.Key.StartsWith('$'));
         syncPreserveHistory = fieldsOnly;
-        syncPage = "checking";
+        syncPage = "applying";
         syncCommitTask = Task.Run(() =>
         {
             try
@@ -412,7 +417,7 @@ public sealed partial class EditorView
             var decisions = review?.Conflicts.ToDictionary(c => c.Key, c => useExternal ?? choices.GetValueOrDefault(c.Key));
             WorkspaceSynchronization.Accept(session, entry, external, diff.Document, compensateTinyDroplets, retainLocalFields: useExternal is false, review: review, choices: decisions);
             diff.Name = OsuBeatmapReader.Setting(diff.Document, "Metadata", "Version") ?? diff.Name;
-            WorkspaceProject.Save(session, project);
+            WorkspaceProject.Save(session, project, archiveBeforeSave: false);
             return WorkspaceProject.Open(session.Directory);
         });
     }

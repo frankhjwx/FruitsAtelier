@@ -113,6 +113,9 @@ public sealed partial class EditorView
     }
 
     public bool SwitchDifficulty(int index)
+        => SwitchDifficultyCore(index, reloadAudio: true);
+
+    private bool SwitchDifficultyCore(int index, bool reloadAudio)
     {
         if (workspaceSaveTask is not null || syncCommitTask is not null) return false;
         if (index < 0 || index >= difficulties.Count) return false;
@@ -132,7 +135,7 @@ public sealed partial class EditorView
         ResetDifficultyView();
         playhead = currentPlayhead;
         viewStart = currentViewStart;
-        RequestDifficultyChanged?.Invoke();
+        if (reloadAudio) RequestDifficultyChanged?.Invoke();
         return true;
     }
 

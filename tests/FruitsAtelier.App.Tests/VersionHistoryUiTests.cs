@@ -17,10 +17,15 @@ internal static class VersionHistoryUiTests
                 first.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 });
                 first.TimingPoints.Add(new TimingPoint { TimeMs = 0, BeatLengthMs = 500 });
                 SongSetup.Set(first, "Metadata", "Version", "Kept");
+                SongSetup.Set(first, "Metadata", "Title", "Original title");
+                SongSetup.Set(first, "General", "SampleSet", "Soft");
                 var second = first.DeepClone(); SongSetup.Set(second, "Metadata", "Version", "Removed");
                 var project = BeatmapProject.FromDocuments([first, second]);
                 var session = WorkspaceProject.Create(workspace, project, "");
                 project.Difficulties[0].Document.Fruits[0].X = 300;
+                SongSetup.Set(project.Difficulties[0].Document, "Metadata", "Title", "Edited title");
+                SongSetup.Set(project.Difficulties[0].Document, "General", "SampleSet", "Normal");
+                project.Difficulties[0].Document.TimingPoints[0].BeatLengthMs = 400;
                 WorkspaceProject.Save(session, project);
                 Guid removedId = project.Difficulties[1].Id;
                 WorkspaceAssociations.DeleteDifficulty(session, project, removedId);
@@ -31,17 +36,25 @@ internal static class VersionHistoryUiTests
                 ui.ClickText(L.Get("ui.edit")); ui.ClickText(L.Get("history.menu")); Wait(ui);
                 Check(ui.View.VersionHistoryVisible && ui.Canvas.Texts.Any(t => t.Value == L.Get("history.title")), "Edit opens localized history");
                 PerformanceSchedulingTests.History(ui);
+                void Tab(string name)
+                {
+                    var label = ui.Canvas.Texts.Single(t => t.Value == name && t.Y == 191);
+                    ui.Click(label.X + 4, label.Y + 5);
+                }
                 var before = ui.View.Document.DeepClone();
                 ui.Key('S', ctrl: true); ui.Key(46); ui.Key('Z', ctrl: true);
                 Check(saves == 0 && !ui.View.IsDirty && ui.View.Document.ContentEquals(before), "history browsing isolates editor commands");
                 ui.ClickText(L.Get("history.deletedName", "Removed")); Wait(ui);
+                foreach (string tab in new[] { "General", "Editor", "Metadata", "Difficulty", "Events", "Timing", "Colours", "Objects" })
+                    Tab(tab);
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("history.difference", 1, 1)), "deleted difficulty exposes an object addition");
                 double Span() => (double)ui.View.GetType().GetField("syncViewSpan", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
                 double normalSpan = Span();
                 Check(normalSpan < first.DurationMs / 2, "history shows an AR-sized time window rather than the entire map");
                 ui.View.Document.ApproachRate = 10; ui.Paint();
                 Check(Span() < normalSpan, "both previews follow the active editor AR even for a deleted difficulty");
                 ui.View.Document.ApproachRate = before.ApproachRate; ui.Paint();
-                ui.View.Wheel(size.Item1 - 100, 300, 120, true); ui.Paint();
+                ui.View.Wheel(size.Item1 - 100, size.Item2 - 160, 120, true); ui.Paint();
                 Check(Span() < normalSpan, "history zoom changes the AR-sized viewport");
                 Check(ui.View.Document.ContentEquals(before), "preview navigation does not edit authoring");
                 ui.ClickText(L.Get("history.restore")); Wait(ui);
@@ -65,6 +78,15 @@ internal static class VersionHistoryUiTests
                 var keptRow = ui.Canvas.Texts.Single(t => t.Value == "Kept" && t.Y >= 88 && t.Y < 176);
                 ui.View.PointerDown(keptRow.X + 4, keptRow.Y + 4, 0, false, false); ui.View.PointerUp(keptRow.X + 4, keptRow.Y + 4, 0);
                 Wait(ui);
+                Tab("Metadata");
+                Check(ui.Canvas.Texts.Any(t => t.Value == "Edited title") && ui.Canvas.Texts.Any(t => t.Value == "Original title"),
+                    "history shows complete current and historical metadata values");
+                Tab("Timing");
+                Check(ui.Canvas.Texts.Any(t => t.Value.Contains(",400,")) && ui.Canvas.Texts.Any(t => t.Value.Contains(",500,")),
+                    "history shows timing changes as text");
+                Tab("Objects");
+                Check(ui.Canvas.Texts.Any(t => t.Value.Contains("300") && t.Value.Contains("100")), "history describes current and historical object positions");
+                Check(ui.Canvas.Texts.Any(t => t.Value == "Objects" && t.Color == 0xED737B), "history marks changed categories");
                 ui.ClickText(L.Get("history.restore")); Wait(ui);
                 Check(ui.View.Document.Fruits[0].X == 100 && ui.View.DifficultyCount == 2, "existing restore changes only the selected difficulty");
                 Check(ui.View.Document.SourcePath is null && WorkspaceSynchronization.Target(ui.View.WorkspaceSession!.Manifest.Difficulties.Single(d => d.Id == keptId)) is null,
