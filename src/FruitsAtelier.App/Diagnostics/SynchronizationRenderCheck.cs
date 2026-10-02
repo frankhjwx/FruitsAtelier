@@ -71,6 +71,16 @@ internal static class SynchronizationRenderCheck
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native object conflict dialog was not shown.");
                 var before = view.Document.DeepClone(); view.KeyDown(46, false, false); Paint();
                 if (!before.ContentEquals(view.Document)) throw new InvalidOperationException("Native conflict input changed authoring.");
+                float rangeY = 282 + .65f * Math.Max(40, height - 488);
+                var choicesField = typeof(EditorView).GetField("syncChoices", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+                foreach (bool external in new[] { false, true, false })
+                {
+                    float rangeX = external ? width / 2 + 100 : 130;
+                    view.PointerDown(rangeX, rangeY, 0, false, false); view.PointerUp(rangeX, rangeY, 0); Paint();
+                    var selected = (Dictionary<string, bool>)choicesField.GetValue(view)!;
+                    if (selected.Count == 0 || selected.Values.Any(value => value != external))
+                        throw new InvalidOperationException("Native conflict rectangle did not select its side.");
+                }
                 view.Wheel(200, 260, 120, false); Paint();
                 view.Wheel(200, 260, 120, true); Paint();
                 if (!before.ContentEquals(view.Document)) throw new InvalidOperationException("Native comparison navigation changed authoring.");

@@ -143,8 +143,9 @@ the same outlined chevrons as other editor controls.
 Full-width rectangles mark corresponding object intervals: red for unresolved conflicts,
 amber yellow for previously resolved differences, and green for choices made in the
 current review. Amber borders, translucent fill and status labels distinguish review
-intervals from banana objects. Clicking a rectangle returns to that item; every item
-remains available until Apply, including green items that can be changed again.
+intervals from banana objects. Clicking a rectangle chooses that side for its group,
+just like the per-side choice buttons. Every item remains available until Apply,
+including green items that can be changed again.
 After a choice, the rejected side's interval and highlight use muted grey while
 the retained side keeps its resolution color. Action labels use normal weight;
 progress and page counts receive stronger emphasis.

@@ -169,9 +169,11 @@ public sealed partial class EditorView
             }
         DrawSyncPane(c, comparison.Local, left, "FA", focus.Local, conflict.Key.StartsWith("$objects:") ? null : conflict.Local,
             SavedLabel(comparison.LocalSaved, comparison.ExternalSaved, dirty), localChoices,
-            merge.PreviouslyResolved.Contains(conflict.Key) ? L.Get("sync.previouslyRejected") : null, PaneRanges(false), conflict.Key);
+            merge.PreviouslyResolved.Contains(conflict.Key) ? L.Get("sync.previouslyRejected") : null, PaneRanges(false), conflict.Key,
+            selectRange: key => ChooseSyncItem(merge, key, false));
         DrawSyncPane(c, comparison.External, right, "osu!", focus.External, conflict.Key.StartsWith("$objects:") ? null : conflict.External,
-            SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false), externalChoices, ranges: PaneRanges(true), currentKey: conflict.Key);
+            SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false), externalChoices, ranges: PaneRanges(true), currentKey: conflict.Key,
+            selectRange: key => ChooseSyncItem(merge, key, true));
         bool chosen = syncChoices.TryGetValue(conflict.Key, out bool external);
         if (chosen) c.Stroke(external ? right : left, Accent, 3);
         if (syncShowResult)

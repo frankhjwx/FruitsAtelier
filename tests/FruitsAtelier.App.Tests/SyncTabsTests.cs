@@ -51,9 +51,10 @@ internal static class SyncTabsTests
                     ui.ClickText("Events"); ui.ClickText("Timing"); ui.ClickText("Objects");
                     Check(ui.Canvas.Texts.Any(t => t.Value.Contains("04:17:090") && t.Value.Contains(L.Get("sync.diff.on"))), "object group explains the New Combo edit");
                     Check(ui.Canvas.Texts.Any(t => System.Text.RegularExpressions.Regex.IsMatch(t.Value, @"^\d{2,}:\d{2}:\d{3}$")), "canvas axis uses three-digit milliseconds");
-                    ui.ClickText(L.Get("sync.chooseLocal")); Check(TabColour("Objects") == 0xD5A34D, "object group choice makes category partially resolved");
+                    ClickRange(false); Check(TabColour("Objects") == 0xD5A34D, "left rectangle chooses FA and advances to next group");
                     Check(ui.Canvas.Texts.Any(t => t.Value.Contains("200") && t.Value.Contains("240")), "next group explains X change");
-                    ui.ClickText(L.Get("sync.chooseLocal")); Check(TabColour("Objects") == 0x70D69B, "all object groups resolved");
+                    ClickRange(true); Check(TabColour("Objects") == 0x70D69B, "right rectangle chooses osu and resolves category");
+                    ClickRange(false); Check(TabColour("Objects") == 0x70D69B, "resolved rectangle can switch its choice back to FA");
                     Check(before.ContentEquals(ui.View.Document), "tabs, scrolling and choices do not apply edits early");
                     var previousVersions = WorkspaceVersionHistory.List(ui.View.WorkspaceSession!).Select(v => v.Path).ToHashSet();
                     ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
@@ -67,6 +68,12 @@ internal static class SyncTabsTests
                     uint TabColour(string name) => ui.Canvas.Texts.Single(t => t.Value == name && t.Y == 90).Color;
                     float Row(string key) => ui.Canvas.Texts.Single(t => t.X == 36 && (t.Value == key || t.Value.StartsWith(key + " · "))).Y;
                     void Select(string key, bool external) { float y = Row(key); ui.Click(external ? width / 2 + 40 : 60, y + 40); }
+                    void ClickRange(bool external)
+                    {
+                        var area = ui.Canvas.Outlines.First(o => o.Bounds.Y > 230 && o.Bounds.Width > 100
+                            && o.Color is 0xED737B or 0x70D69B or 0x9AA8BC && (o.Bounds.X > width / 2) == external).Bounds;
+                        ui.Click(area.X + 10, Math.Clamp(area.Y + area.Height / 2, 292, 690));
+                    }
                 }
                 finally { ui.View.StopFileMonitoring(); }
             }

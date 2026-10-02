@@ -355,6 +355,7 @@ internal static class SynchronizationUiTests
             ui.View.PointerDown(green.X + 5, green.Y + green.Height / 2, 0, false, false); ui.Paint();
             Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.resolvedThisRound")))
                 && ui.Canvas.Outlines.Any(o => o.Color == 0xED737B), "green interval remains clickable alongside unresolved red intervals");
+            Page(ui, false);
             ui.ClickText(L.Get("sync.chooseExternal"));
             Check(ui.View.Document.Fruits[0].X == 123, "changing a green decision does not apply it early");
             Page(ui, false);
