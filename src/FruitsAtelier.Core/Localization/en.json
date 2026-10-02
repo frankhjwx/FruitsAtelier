@@ -1044,6 +1044,7 @@
   "sync.savedAt": "Saved {0}",
   "sync.newerSaved": "Newer save",
   "sync.unsaved": "Unsaved edits",
+  "sync.waitHelp": "Please wait for saving and synchronization to finish.",
   "sync.checking": "Checking associations and changes…",
   "sync.searchingReference": "Finding reference…",
   "sync.applying": "Applying synchronization changes…",

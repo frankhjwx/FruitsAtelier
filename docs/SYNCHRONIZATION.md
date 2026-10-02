@@ -14,6 +14,13 @@ and viewport. Content-only synchronization keeps the existing audio transport.
 Replacing audio, including changed bytes at the same path, reloads it at the
 current timeline position.
 
+Background saving and synchronization do not open a progress overlay by default.
+Attempting an operation that must wait for them shows a small overlay with the
+current saving, checking or applying stage and an indeterminate progress bar.
+It disappears when the work finishes. Returning to Library, opening another
+project and closing the window resume after successful completion; a failure or
+conflict review keeps the current editor open. Other blocked input is not replayed.
+
 Saving local changes to Artist, Title, Creator (mapper), or Version (difficulty name)
 renames the linked `.osu` to `Artist - Title (Creator) [Version].osu` in its existing
 directory. Automatic synchronization and explicit overwrite export both update

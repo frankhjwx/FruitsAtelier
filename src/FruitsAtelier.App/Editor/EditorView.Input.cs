@@ -22,7 +22,11 @@ public sealed partial class EditorView
 
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
-        if (SynchronizationBlocksInput) return;
+        if (SynchronizationBlocksInput || SynchronizationWaitVisible)
+        {
+            if (button == 0 && HeaderNavigationBounds.Contains(x, y)) ShowLibrary();
+            NotifySynchronizationBlocked(); return;
+        }
         if (AimodVisible)
         {
             mouseX = x; mouseY = y;
@@ -621,7 +625,10 @@ public sealed partial class EditorView
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
         if (AimodVisible) return;
-        if (SynchronizationBlocksInput) return;
+        if (SynchronizationBlocksInput || SynchronizationWaitVisible)
+        {
+            NotifySynchronizationBlocked(); return;
+        }
         if (librarySettingsOpen)
         {
             PointerDown(x, y, 0, shift, ctrl);
@@ -697,7 +704,10 @@ public sealed partial class EditorView
             return;
         }
         if (VersionHistoryVisible) { ScrollVersionHistory(x, y, delta, ctrl); return; }
-        if (SynchronizationBlocksInput) return;
+        if (SynchronizationBlocksInput || SynchronizationWaitVisible)
+        {
+            NotifySynchronizationBlocked(); return;
+        }
         if (SynchronizationVisible) { ScrollSyncComparison(x, y, delta, ctrl); return; }
         if (librarySettingsOpen) { ScrollStorage(x, y, delta); return; }
         if (TimingModal)
@@ -877,7 +887,10 @@ public sealed partial class EditorView
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
         if (VersionHistoryVisible) { VersionHistoryKey(virtualKey); return; }
-        if (SynchronizationBlocksInput) return;
+        if (SynchronizationBlocksInput || SynchronizationWaitVisible)
+        {
+            NotifySynchronizationBlocked(); return;
+        }
         if (DistanceKeyDown(virtualKey, ctrl, shift)) return;
         placementCtrl = ctrl;
         if (virtualKey == 27 && legacyButtonSlider != Guid.Empty)
@@ -1115,7 +1128,10 @@ public sealed partial class EditorView
     public void TextInput(char value)
     {
         if (AimodVisible) return;
-        if (SynchronizationBlocksInput) return;
+        if (SynchronizationBlocksInput || SynchronizationWaitVisible)
+        {
+            NotifySynchronizationBlocked(); return;
+        }
         if (TimingModal || TimingPageVisible && timingField.Length > 0)
         { if (!char.IsControl(value)) PasteTimingText(value.ToString(), TimingInputSession); return; }
         if (SongSetupVisible) { if (!char.IsControl(value)) PasteSongSetupText(value.ToString(), SongSetupInputSession); return; }

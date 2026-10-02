@@ -40,6 +40,7 @@ public sealed partial class EditorView
 
     private void DrawDiscardConfirmation(ICanvas c)
     {
+        if (SynchronizationWaitVisible) { DrawSynchronizationWait(c); return; }
         if (SynchronizationBlocksInput)
         {
             if (syncPage == "applying" && syncMerges.TryGetValue(syncDifficulty, out var merge)

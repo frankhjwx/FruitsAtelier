@@ -118,7 +118,7 @@ public sealed partial class EditorView
 
     private bool SwitchDifficultyCore(int index, bool reloadAudio)
     {
-        if (workspaceSaveTask is not null || syncCommitTask is not null) return false;
+        if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
         if (index < 0 || index >= difficulties.Count) return false;
         if (!syncBypass && WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[index].Id) is { } linked
             && WorkspaceSynchronization.Target(linked) is { } target && !File.Exists(target)
@@ -190,7 +190,8 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
-        if (VersionHistoryVisible || SynchronizationVisible || workspaceSaveTask is not null || syncCommitTask is not null) return false;
+        if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
+        if (VersionHistoryVisible || SynchronizationVisible) return false;
         if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal || AimodVisible) return false;
         if (!CommitTimingField()) return false;
         if (SliderMultiplierValidationBusy)

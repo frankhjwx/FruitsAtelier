@@ -363,6 +363,19 @@ internal static class RenderCheck
                 double exitTime = view.PlayheadMs;
                 view.KeyDown(113, false, false);
                 if (view.IsTestplaying || Math.Abs(view.PlayheadMs - exitTime) > 100) throw new InvalidOperationException("Native F2 failed to retain position.");
+                var saveTaskField = typeof(EditorView).GetField("workspaceSaveTask", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+                saveTaskField.SetValue(view, new TaskCompletionSource<WorkspaceSession>().Task);
+                try
+                {
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                    if (view.SynchronizationWaitVisible) throw new InvalidOperationException("Background save opened a waiting overlay without input.");
+                    view.PrepareFileOperation();
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                    if (!view.SynchronizationWaitVisible) throw new InvalidOperationException("Blocked operation did not render the waiting overlay.");
+                }
+                finally { saveTaskField.SetValue(view, null); }
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                if (view.SynchronizationWaitVisible) throw new InvalidOperationException("Waiting overlay remained after save completion.");
                 var streamMap = new MapDocument();
                 var track = new CurveTrack { Kind = CurveKind.Linear };
                 track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 100 }, new Anchor { TimeMs = 2000, X = 400 }]);
@@ -400,9 +413,10 @@ internal static class RenderCheck
                 var fruitPreview = view.StackPreviewBounds;
                 var editedFruit = view.Conversion.Objects[2];
                 double stackStart = view.Document.Tracks[0].Nodes[0].TimeMs;
-                float fruitPadding = (float)(CatchSize.FruitRadius(view.Document.CircleSize) / 512 * fruitPreview.Width) + 2;
-                float fruitX = fruitPreview.X + (float)(editedFruit.X / 512) * fruitPreview.Width;
-                float fruitY = fruitPreview.Bottom - fruitPadding - (float)((editedFruit.TimeMs - stackStart) * CatchScrollTiming.PixelsPerMs(view.Document.ApproachRate, fruitPreview.Width));
+                float previewContentWidth = (float)((fruitPreview.Width - 12) / (1 + 2 * CatchSize.FruitRadius(view.Document.CircleSize) / 512));
+                float fruitPadding = (float)(CatchSize.FruitRadius(view.Document.CircleSize) / 512 * previewContentWidth) + 2;
+                float fruitX = fruitPreview.X + 2 + fruitPadding + (float)(editedFruit.X / 512) * previewContentWidth;
+                float fruitY = fruitPreview.Bottom - fruitPadding - (float)((editedFruit.TimeMs - stackStart) * CatchScrollTiming.PixelsPerMs(view.Document.ApproachRate, previewContentWidth));
                 view.PointerDown(fruitX, fruitY, 0, false, false);
                 view.PointerMove(fruitX + 12, fruitY - 20, false, false);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();

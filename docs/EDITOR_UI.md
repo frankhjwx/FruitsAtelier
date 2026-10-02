@@ -641,8 +641,10 @@ are on the left; Stack also keeps its distance curve and numeric fields there.
 The right column contains the preview in both modes. The shared **Break into Fruits**
 switch retains its value across tabs and confirms either mode as independent fruits.
 
-Both previews use the current map's AR and CS, scaling time and X by the preview
-width. Roll the mouse wheel over the preview to inspect long patterns; wheel up
+Both previews use the current map's AR and CS, scaling time and X by the inner
+playfield width. Side margins fit the full fruit outline at X=0 and X=512 and
+leave room for the scrollbar. Hit testing and horizontal dragging use the same
+inner playfield. Roll the mouse wheel over the preview to inspect long patterns; wheel up
 views later times and wheel down views earlier times, independently of Reverse
 canvas scrolling. The position indicator follows the visible interval.
 Scrolling does not change content or undo.

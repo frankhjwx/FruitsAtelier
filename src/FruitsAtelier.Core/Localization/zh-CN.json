@@ -1044,6 +1044,7 @@
   "sync.savedAt": "保存于 {0}",
   "sync.newerSaved": "较新保存",
   "sync.unsaved": "有未保存编辑",
+  "sync.waitHelp": "正在保存或同步，请稍候。",
   "sync.checking": "正在检查关联和文件变化…",
   "sync.searchingReference": "正在查找引用…",
   "sync.applying": "正在应用同步更改…",

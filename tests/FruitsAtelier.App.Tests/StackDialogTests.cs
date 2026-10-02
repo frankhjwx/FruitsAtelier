@@ -3,8 +3,12 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class StackDialogTests
 {
+    private static float PreviewWidth(Ui ui) => (float)((ui.View.StackPreviewBounds.Width - 12)
+        / (1 + 2 * CatchSize.FruitRadius(ui.View.Document.CircleSize) / 512));
+
     public static void Run()
     {
+        EdgePreview();
         SharedBreakSwitch();
         CombinedPreview();
         foreach (string language in new[] { "en", "zh-CN" })
@@ -55,6 +59,32 @@ internal static class StackDialogTests
         }
         L.SetLanguage("en");
     }
+    private static void EdgePreview()
+    {
+        foreach (double cs in new[] { 0d, 5d, 10d })
+        foreach (var size in new[] { (800f, 600f), (1500f, 900f) })
+        foreach (bool stack in new[] { false, true })
+        {
+            var ui = new Ui(); ui.Resize(size.Item1, size.Item2);
+            var map = new MapDocument { CircleSize = cs };
+            var track = new CurveTrack { Kind = CurveKind.Linear };
+            track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 0 }, new Anchor { TimeMs = 5000, X = 512 }]);
+            map.Tracks.Add(track); ui.LoadDocument(map); ui.SelectTrack(track.Id);
+            ui.Key('F', ctrl: true, shift: true);
+            if (stack) ui.ClickText(L.Get("conversion.stackTab"));
+            var bounds = ui.View.StackPreviewBounds;
+            void CheckEdges()
+            {
+                var dots = ui.Canvas.Operations.Where(o => o.Clip == bounds && o.Dot is { Filled: false })
+                    .Select(o => o.Dot!.Value).ToArray();
+                Check(dots.Length > 0 && dots.All(d => d.X - d.Radius >= bounds.X + 2
+                    && d.X + d.Radius <= bounds.Right - 6), "full fruit outlines fit beside the preview scrollbar at both X edges");
+            }
+            CheckEdges();
+            ui.View.Wheel(bounds.X + 20, bounds.Y + 20, 120000, false); ui.Paint(); CheckEdges();
+            Check(ui.View.Document.ContentEquals(map), "preview padding does not edit the map");
+        }
+    }
     private static void CombinedPreview()
     {
         foreach (string language in new[] { "en", "zh-CN" })
@@ -72,7 +102,7 @@ internal static class StackDialogTests
                 var bounds = ui.View.StackPreviewBounds;
                 var dots = ui.Canvas.Operations.Where(o => o.Clip == bounds && o.Dot is { Filled: false })
                     .Select(o => o.Dot!.Value).ToArray();
-                double expected = 500d / ui.View.StreamSnapDivisor * CatchScrollTiming.PixelsPerMs(ar, bounds.Width);
+                double expected = 500d / ui.View.StreamSnapDivisor * CatchScrollTiming.PixelsPerMs(ar, PreviewWidth(ui));
                 Check(dots.Length >= 2 && Math.Abs(dots[0].Y - dots[1].Y - expected) < .001, "preview spacing follows map AR");
             }
             CheckSpacing();
@@ -155,7 +185,7 @@ internal static class StackDialogTests
             var bounds = ui.View.StackPreviewBounds;
             var dots = ui.Canvas.Operations.Where(o => o.Clip == bounds && o.Dot is { Filled: false }).Select(o => o.Dot!.Value).ToArray();
             Check(dots.Length == 9 && dots.All(d => d.Y - d.Radius >= bounds.Y + .75f && d.Y + d.Radius <= bounds.Bottom - .75f), "complete first and last fruit outlines");
-            var selected = dots[2]; float movedX = selected.X + bounds.Width * 32 / 512;
+            var selected = dots[2]; float movedX = selected.X + PreviewWidth(ui) * 32 / 512;
             ui.View.PointerDown(selected.X, selected.Y, 0, false, false);
             Check(ui.View.WantsCapture, "fruit drag captures pointer");
             ui.View.PointerMove(movedX, selected.Y - 30, false, false);
@@ -247,8 +277,8 @@ internal static class StackDialogTests
                 .Select(o => o.Dot!.Value).ElementAt(2);
             var preview = ui.View.StackPreviewBounds;
             ui.View.PointerDown(dot.X, dot.Y, 0, false, false);
-            ui.View.PointerMove(dot.X + preview.Width * 32 / 512, dot.Y, false, false);
-            ui.View.PointerUp(dot.X + preview.Width * 32 / 512, dot.Y, 0); ui.Paint();
+            ui.View.PointerMove(dot.X + PreviewWidth(ui) * 32 / 512, dot.Y, false, false);
+            ui.View.PointerUp(dot.X + PreviewWidth(ui) * 32 / 512, dot.Y, 0); ui.Paint();
             float moved = FruitX(); Check(moved > dot.X + 1, "fruit draft moves");
             ui.Key('Z', ctrl: true); Check(Math.Abs(FruitX() - dot.X) < .01, "local fruit undo");
             ui.Key('Y', ctrl: true); Check(Math.Abs(FruitX() - moved) < .01, "local fruit redo");

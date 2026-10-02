@@ -16,7 +16,9 @@ public sealed partial class EditorView
     public Rect StackPreviewBounds { get; private set; }
     private float stackPreviewBottom, stackPreviewRadius;
     private double stackPreviewScrollMs;
-    private double StackPreviewScale => CatchScrollTiming.PixelsPerMs(Document.ApproachRate, StackPreviewBounds.Width);
+    private float StackPreviewContentWidth => (float)Math.Max(1,
+        (StackPreviewBounds.Width - 12) / (1 + 2 * CatchSize.FruitRadius(Document.CircleSize) / 512));
+    private double StackPreviewScale => CatchScrollTiming.PixelsPerMs(Document.ApproachRate, StackPreviewContentWidth);
     private double StackPreviewScrollMaximum => stackPreviewSource is null ? 0 : Math.Max(0,
         CurveMath.EndTimeMs(stackPreviewSource) - stackPreviewSource.Nodes[0].TimeMs
         - Math.Max(0, StackPreviewBounds.Height - 2 * (stackPreviewRadius + 2)) / StackPreviewScale);
@@ -40,7 +42,8 @@ public sealed partial class EditorView
     private readonly List<int> stackManualFruitIndices = [];
     private float stackFruitPointerStart;
     private double stackFruitStartX, stackFruitBaseX, stackFruitProgress;
-    private float StackFruitX(ConvertedCatchObject fruit) => StackPreviewBounds.X + (float)(fruit.X / 512) * StackPreviewBounds.Width;
+    private float StackPreviewX(double x) => StackPreviewBounds.X + 4 + stackPreviewRadius + (float)(x / 512) * StackPreviewContentWidth;
+    private float StackFruitX(ConvertedCatchObject fruit) => StackPreviewX(fruit.X);
     private float StackFruitY(ConvertedCatchObject fruit) => stackPreviewBottom - (float)((fruit.TimeMs - stackPreviewSource!.Nodes[0].TimeMs
         - stackPreviewScrollMs) * StackPreviewScale);
     private double StackFruitProgressAt(int index) => (stackPreview[index].TimeMs - stackPreviewSource!.Nodes[0].TimeMs)
@@ -106,7 +109,7 @@ public sealed partial class EditorView
             double distance = Math.Round(Math.Clamp((stackGraph.Bottom - y) / stackGraph.Height, 0, 1) * StackMaximumDistance);
             desired = Math.Clamp(centre + side * distance, 0, 512);
         }
-        else desired = Math.Clamp(stackFruitStartX + (x - stackFruitPointerStart) / StackPreviewBounds.Width * 512, 0, 512);
+        else desired = Math.Clamp(stackFruitStartX + (x - stackFruitPointerStart) / StackPreviewContentWidth * 512, 0, 512);
         double center = CurveMath.PositionAtTime(stackPreviewSource!, stackPreview[stackFruitDragging].TimeMs);
         double direction = Math.Sign(desired - center);
         desired = Math.Clamp(center + direction * Math.Round(Math.Min(StackMaximumDistance, Math.Abs(desired - center))), 0, 512);
@@ -279,7 +282,7 @@ public sealed partial class EditorView
         if (stackPreviewSource is { } track)
         {
             double start = track.Nodes[0].TimeMs, duration = Math.Max(0.001, CurveMath.EndTimeMs(track) - start);
-            float fruitRadius = stackPreviewRadius = (float)(CatchSize.FruitRadius(Document.CircleSize) / 512 * preview.Width);
+            float fruitRadius = stackPreviewRadius = (float)(CatchSize.FruitRadius(Document.CircleSize) / 512 * StackPreviewContentWidth);
             float padding = fruitRadius + 2;
             float previewBottom = stackPreviewBottom = preview.Bottom - padding;
             stackPreviewScrollMs = Math.Clamp(stackPreviewScrollMs, 0, StackPreviewScrollMaximum);
@@ -289,9 +292,9 @@ public sealed partial class EditorView
             for (int i = 1; i <= 100; i++)
             {
                 double ta = visibleStart + (visibleEnd - visibleStart) * (i - 1) / 100, tb = visibleStart + (visibleEnd - visibleStart) * i / 100;
-                c.Line(preview.X + (float)(Math.Clamp(CurveMath.PositionAtTime(track, ta), 0, 512) / 512) * preview.Width,
+                c.Line(StackPreviewX(Math.Clamp(CurveMath.PositionAtTime(track, ta), 0, 512)),
                     previewBottom - (float)((ta - visibleStart) * StackPreviewScale),
-                    preview.X + (float)(Math.Clamp(CurveMath.PositionAtTime(track, tb), 0, 512) / 512) * preview.Width,
+                    StackPreviewX(Math.Clamp(CurveMath.PositionAtTime(track, tb), 0, 512)),
                     previewBottom - (float)((tb - visibleStart) * StackPreviewScale), Muted);
             }
             int first = FirstConversionPreviewFruit(visibleStart - padding / StackPreviewScale);

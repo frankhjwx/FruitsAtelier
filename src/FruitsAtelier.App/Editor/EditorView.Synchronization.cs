@@ -37,7 +37,7 @@ public sealed partial class EditorView
     private string syncFailure = "";
     public bool SynchronizationVisible => syncPage is not null and not "checking";
     public bool SynchronizationBusy => syncRetry is not null || workspaceSaveTask is not null || syncTask is not null || syncCommitTask is not null;
-    public bool SynchronizationNeedsRedraw => syncRetry is { } retry && DateTime.UtcNow >= retry.After || workspaceSaveTask is { IsCompleted: true } || VersionHistoryNeedsRedraw || syncTask is { IsCompleted: true } || syncCommitTask is { IsCompleted: true } || SynchronizationVisible && syncPreviewTask is { IsCompleted: true }
+    public bool SynchronizationNeedsRedraw => SynchronizationWaitVisible || syncRetry is { } retry && DateTime.UtcNow >= retry.After || workspaceSaveTask is { IsCompleted: true } || VersionHistoryNeedsRedraw || syncTask is { IsCompleted: true } || syncCommitTask is { IsCompleted: true } || SynchronizationVisible && syncPreviewTask is { IsCompleted: true }
         || fileMonitor?.IsReady(DateTime.UtcNow) == true
         || WorkspaceSession is not null && !SynchronizationVisible && (fileSyncPending || !LibraryVisible && DateTime.UtcNow >= nextSyncCheck);
     public WorkspaceSyncState DifficultySyncState(int index) => index >= 0 && index < difficulties.Count
@@ -360,7 +360,7 @@ public sealed partial class EditorView
 
     public void ShowDeleteDifficulty(int index, bool localOnly = false)
     {
-        if (index < 0 || index >= difficulties.Count || SynchronizationBusy) return;
+        if (index < 0 || index >= difficulties.Count || NotifySynchronizationBlocked()) return;
         if (WorkspaceSession is null)
         { BeginWorkspaceSave(saved => { if (saved) ShowDeleteDifficulty(index, localOnly); }); return; }
         syncDifficulty = difficulties[index].Id;

@@ -45,7 +45,8 @@ public sealed partial class EditorView
 
     public void ShowVersionHistory()
     {
-        if (WorkspaceSession is not { } session || VersionHistoryVisible || SynchronizationBusy || !PrepareFileOperation()) return;
+        if (WorkspaceSession is not { } session || VersionHistoryVisible) return;
+        if (NotifySynchronizationBlocked() || !PrepareFileOperation()) return;
         if (AudioPlaying) RequestPausePlayback?.Invoke();
         menu = -1; contextItems.Clear(); hits.Clear(); fields.Clear();
         VersionHistoryVisible = true;

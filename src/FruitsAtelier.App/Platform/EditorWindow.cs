@@ -183,6 +183,7 @@ internal sealed partial class EditorWindow : IDisposable
 
     private void ConfirmDiscard(Action continuation)
     {
+        if (view.WaitForSynchronization(ready => { if (ready) ConfirmDiscard(continuation); })) { Invalidate(); return; }
         if (view.DiscardConfirmationVisible || !view.PrepareFileOperation()) return;
         if (Native.GetCapture() == hwnd) Native.ReleaseCapture();
         if (!view.IsDirty) { FileOperation(continuation); return; }

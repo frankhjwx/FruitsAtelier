@@ -27,6 +27,7 @@ public sealed partial class EditorView
     {
         historyCompressionPaused = !LibraryVisible || SyncInteractionActive || AudioPlaying || SynchronizationBusy;
         PumpWorkspaceSave();
+        PumpSynchronizationWait();
         if (ConversionNeedsRedraw) PumpDeferredConversion();
         CompleteSliderMultiplierValidation();
         RefreshLanguage();
@@ -48,6 +49,7 @@ public sealed partial class EditorView
         if (ErrorVisible) { DrawError(c); return; }
         PumpSliderBatch();
         PumpLibrary();
+        PumpSynchronizationWait();
         if (syncPage == "resolve" && syncMerges.TryGetValue(syncDifficulty, out var comparisonMerge) && comparisonMerge.Conflicts.Count > 0
             && syncComparisons.ContainsKey(syncDifficulty)) { DrawSynchronization(c); return; }
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
@@ -617,7 +619,7 @@ public sealed partial class EditorView
         {
             Item(L.Get("ui.undoMenu"), Undo, history.CanUndo);
             Item(L.Get("ui.redoMenu"), Redo, history.CanRedo);
-            Item(L.Get("history.menu"), ShowVersionHistory, WorkspaceSession is not null && !SynchronizationBusy);
+            Item(L.Get("history.menu"), ShowVersionHistory, WorkspaceSession is not null);
             Item(L.Get("ui.deleteMenu"), DeleteSelection, selection != Guid.Empty);
             Item(L.Get("editor.command.reverseSelection") + "  Ctrl+G", ReverseSelection, CanCopySelection && !notesLocked);
             Item(L.Get("editor.command.reversePath"), ReverseSelectedPath, SelectedTrack is not null && ClipboardInteractionReady && !notesLocked);

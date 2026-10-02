@@ -33,6 +33,7 @@ var tests = new (string Name, Action Run)[]
     ("Synchronization category tabs explain object changes and preserve choices", SyncTabsTests.Run),
     ("AiMod checks object starts, isolates input, navigates errors and preserves undo", AimodTests.Run),
     ("Background workspace saves isolate input and acknowledge only their snapshot", PerformanceSchedulingTests.Save),
+    ("Blocked operations show synchronization progress only on demand", SynchronizationWaitTests.Run),
     ("Native testplay copies state at render while retaining the driver clock", PerformanceSchedulingTests.NativeTestplayCapture),
     ("Stale synchronization waits for stable edits and archives one recovery round", PerformanceSchedulingTests.SynchronizationRetry),
     ("Version history previews and restores changed and deleted difficulties with undo and modal isolation", VersionHistoryUiTests.Run),

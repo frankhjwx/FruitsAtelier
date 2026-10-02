@@ -71,6 +71,7 @@ public sealed partial class EditorView
     }
     public void ShowLibrary()
     {
+        if (WaitForSynchronization(ready => { if (ready) ShowLibrary(); })) return;
         if (DiscardConfirmationVisible || !PrepareFileOperation()) return;
         if (HasEditorProject && IsDirty)
         {
@@ -206,6 +207,7 @@ public sealed partial class EditorView
         : Document.SourcePath is { } path && WorkspaceProject.Within(LibrarySettings.Songs, path) && File.Exists(path));
     public void SaveCurrentDifficulty()
     {
+        if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return; }
         if (DiscardConfirmationVisible || ExportVisible || !PrepareFileOperation()) return;
         if (WorkspaceSession is { } syncSession && syncSession.Manifest.Difficulties.Any(d => WorkspaceSynchronization.Target(d) is not null) && !syncBypass)
         {
