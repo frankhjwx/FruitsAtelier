@@ -332,7 +332,9 @@ Select a version, then a difficulty. The window compares metadata and shows alig
 current/historical object previews, including editable curves. Both previews use the
 active editor's AR scroll scale and initially show its current timeline position,
 so a long map remains readable. Scroll the version and
-difficulty lists independently. Scroll over either preview to move both timelines;
+difficulty lists independently. Scroll over either preview to move both timelines:
+wheel up views later times and wheel down views earlier times, independently of
+Reverse canvas scrolling.
 Ctrl+wheel changes their common time span. Up/Down selects versions, Left/Right selects
 difficulties, and Escape closes the window. Browsing does not modify authoring or write
 external files. Loading, decoding and preview preparation share one background worker

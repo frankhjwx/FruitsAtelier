@@ -313,6 +313,14 @@ internal static class RenderCheck
                 view.KeyDown(116, false, false);
                 view.UpdateTransport(1001, 6000, true, true, false, null, null);
                 if (!view.IsTestplaying || view.TestplayCombo != 1) throw new InvalidOperationException("Native testplay failed to start or catch fruit.");
+                int channelBefore = (int)typeof(EditorView).GetField("volumeChannel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(view)!;
+                int VolumeValue() => channelBefore switch { 0 => view.LibrarySettings.MasterVolume, 1 => view.LibrarySettings.SongVolume, _ => view.LibrarySettings.HitsoundVolume };
+                int volumeBefore = VolumeValue();
+                view.KeyDown(40, false, false); view.KeyUp(40);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                if (!view.VolumePopoverVisible || VolumeValue() != Math.Max(0, volumeBefore - 5))
+                    throw new InvalidOperationException("Native plain Down did not open testplay volume controls.");
+                view.KeyDown(38, false, false); view.KeyUp(38);
                 view.KeyDown(9, false, false); view.KeyDown(9, false, false);
                 if (!view.TestplayAutoplay) throw new InvalidOperationException("Held Tab failed to enable autoplay once.");
                 view.KeyDown(114, false, false); view.KeyDown(114, false, false);

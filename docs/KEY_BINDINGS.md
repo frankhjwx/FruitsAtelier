@@ -218,6 +218,7 @@ to Compose before moving selected objects.
 | F1 | Exit and return to the selected testplay start position. |
 | F2 | Exit at the current testplay position. |
 | Alt+arrows | Select and adjust volume channels as above. |
+| Up / Down (active testplay) | Open volume controls and change the selected channel by five percentage points. |
 
 Combo visibility is configured in **Settings → Testplay keys** and has no shortcut.
 

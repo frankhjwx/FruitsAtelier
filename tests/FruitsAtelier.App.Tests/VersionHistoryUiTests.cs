@@ -54,6 +54,16 @@ internal static class VersionHistoryUiTests
                 ui.View.Document.ApproachRate = 10; ui.Paint();
                 Check(Span() < normalSpan, "both previews follow the active editor AR even for a deleted difficulty");
                 ui.View.Document.ApproachRate = before.ApproachRate; ui.Paint();
+                double Start() => (double)ui.View.GetType().GetField("syncViewStart", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
+                foreach (bool reverse in new[] { false, true })
+                {
+                    ui.View.LibrarySettings.ReverseCanvasScroll = reverse;
+                    double start = Start();
+                    ui.View.Wheel(size.Item1 - 100, size.Item2 - 160, 120, false); ui.Paint();
+                    Check(Start() > start, "history wheel up views later times independently of canvas settings");
+                    ui.View.Wheel(size.Item1 - 100, size.Item2 - 160, -120, false); ui.Paint();
+                    Check(Math.Abs(Start() - start) < .001, "history wheel down restores the previous view");
+                }
                 ui.View.Wheel(size.Item1 - 100, size.Item2 - 160, 120, true); ui.Paint();
                 Check(Span() < normalSpan, "history zoom changes the AR-sized viewport");
                 Check(ui.View.Document.ContentEquals(before), "preview navigation does not edit authoring");

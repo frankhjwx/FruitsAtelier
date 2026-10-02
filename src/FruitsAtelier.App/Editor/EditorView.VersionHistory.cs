@@ -233,7 +233,7 @@ public sealed partial class EditorView
                 versionZoom = Math.Clamp(versionZoom * Math.Pow(1.25, delta / 120), .1, 10);
                 syncViewStart = Math.Max(0, syncViewStart + syncViewSpan * (1 - previous / versionZoom) / 2);
             }
-            else syncViewStart = Math.Max(0, syncViewStart - delta / 120 * syncViewSpan / 8);
+            else syncViewStart = Math.Max(0, syncViewStart + delta / 120 * syncViewSpan / 8);
         }
     }
 

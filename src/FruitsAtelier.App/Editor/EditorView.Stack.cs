@@ -33,7 +33,7 @@ public sealed partial class EditorView
     private void ScrollConversionPreview(float delta)
     {
         if (stackPointDragging >= 0 || stackFruitDragging >= 0 || streamSnapDragging) return;
-        stackPreviewScrollMs = Math.Clamp(stackPreviewScrollMs - delta / 120 * 64 / StackPreviewScale, 0, StackPreviewScrollMaximum);
+        stackPreviewScrollMs = Math.Clamp(stackPreviewScrollMs + delta / 120 * 64 / StackPreviewScale, 0, StackPreviewScrollMaximum);
     }
     private int stackFruitDragging = -1, stackSelectedFruit = -1;
     private bool stackFruitGraphDragging;

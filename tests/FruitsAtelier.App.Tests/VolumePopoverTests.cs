@@ -155,6 +155,21 @@ internal static class VolumePopoverTests
         Check(!ui.View.VolumePopoverVisible, "Testplay volume controls did not fade after key release.");
         ui.View.StopTestplay();
         Check(map.ContentEquals(ui.View.Document), "Testplay volume adjustment changed beatmap content.");
+
+        foreach (int key in new[] { 38, 40 })
+        {
+            ui.View.StartTestplay();
+            int before = settings.SongVolume;
+            ui.Key(key); ui.View.KeyUp(key);
+            Check(ui.View.VolumePopoverVisible && settings.SongVolume == before + (key == 38 ? 5 : -5),
+                "Plain Up/Down did not open and adjust testplay volume.");
+            clock.Advance(950); ui.Paint();
+            Check(!ui.View.VolumePopoverVisible, "Plain volume shortcut did not release and fade.");
+            ui.Key(27); ui.View.KeyUp(27);
+            ui.Key(key); ui.View.KeyUp(key);
+            Check(!ui.View.VolumePopoverVisible && ui.View.TestplayPaused, "Pause-menu arrows opened volume controls.");
+            ui.View.StopTestplay();
+        }
     }
 
     public static void TestplayPointer()

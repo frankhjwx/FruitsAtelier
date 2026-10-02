@@ -90,11 +90,15 @@ internal static class StackDialogTests
             float[] Positions() => ui.Canvas.Operations.Where(o => o.Clip == preview && o.Dot is { Filled: false })
                 .Select(o => o.Dot!.Value.Y).ToArray();
             var before = Positions();
-            ui.View.Wheel(preview.X + 20, preview.Y + 20, -120, false); ui.Paint();
-            Check(!Positions().SequenceEqual(before) && ui.View.Document.ContentEquals(map), "scroll moves preview without editing content");
+            foreach (bool reverse in new[] { false, true })
+            {
+                ui.View.LibrarySettings.ReverseCanvasScroll = reverse;
+                ui.View.Wheel(preview.X + 20, preview.Y + 20, 120, false); ui.Paint();
+                Check(!Positions().SequenceEqual(before) && ui.View.Document.ContentEquals(map), "wheel up views later times independently of canvas settings");
+                ui.View.Wheel(preview.X + 20, preview.Y + 20, -120000, false); ui.Paint();
+                Check(Positions().SequenceEqual(before), "wheel down clamps at the start");
+            }
             ui.View.Wheel(preview.X + 20, preview.Y + 20, 120000, false); ui.Paint();
-            Check(Positions().SequenceEqual(before), "scroll clamps at the start");
-            ui.View.Wheel(preview.X + 20, preview.Y + 20, -120000, false); ui.Paint();
             var last = ui.Canvas.Operations.Where(o => o.Clip == preview && o.Dot is { Filled: false })
                 .Select(o => o.Dot!.Value).Last();
             Check(Math.Abs(last.Y - last.Radius - preview.Y - 2) < .01, "scroll reaches the final fruit");
