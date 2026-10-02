@@ -25,6 +25,8 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        historyCompressionPaused = !LibraryVisible || SyncInteractionActive || AudioPlaying || SynchronizationBusy;
+        PumpWorkspaceSave();
         CompleteSliderMultiplierValidation();
         RefreshLanguage();
         if (this.width != width || this.height != height)
@@ -580,7 +582,7 @@ public sealed partial class EditorView
     {
         c.Fill(new(0, height - 28, width, 28), 0x171C23);
         c.Circle(13, height - 14, 3, IsDirty ? Gold : Accent);
-        string notice = SynchronizationBusy ? L.Get(syncCommitTask is not null ? "sync.applying" : "sync.checking")
+        string notice = workspaceSaveTask is not null ? L.Get("files.saving") : SynchronizationBusy ? L.Get(syncCommitTask is not null ? "sync.applying" : "sync.checking")
             : conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
         c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 145));
         DrawVolumeButton(c);
@@ -703,11 +705,12 @@ public sealed partial class EditorView
             c.Fill(new(child.X + 3, child.Y + 4, child.Width, child.Height), 0x11151B, 5);
             c.Fill(child, Surface, 5); c.Stroke(child, Grid, 1, 5);
             float childY = child.Y + 7;
+            int currentGridLevel = menu == 4 ? SnapTiming().At(playhead).Meter : gridSize;
             foreach (int size in menu == 4 ? new[] { 4, 3 } : new[] { 4, 8, 16, 32 })
             {
                 Button(c, new(child.X + 6, childY, child.Width - 12, 31), menu == 4 ? L.Get($"timing.meter{size}") : L.Get("ui.grid" + size),
-                    () => { if (menu == 4) ChangeCurrentRed("meter", size); else gridSize = size; gridLevelMenuOpen = false; menu = -1; }, size == (menu == 4 ? TimingMap.At(Document, playhead).Meter : gridSize));
-                if (size == (menu == 4 ? TimingMap.At(Document, playhead).Meter : gridSize))
+                    () => { if (menu == 4) ChangeCurrentRed("meter", size); else gridSize = size; gridLevelMenuOpen = false; menu = -1; }, size == currentGridLevel);
+                if (size == currentGridLevel)
                 {
                     c.Line(child.Right - 27, childY + 16, child.Right - 23, childY + 20, Foreground, 2);
                     c.Line(child.Right - 23, childY + 20, child.Right - 16, childY + 11, Foreground, 2);

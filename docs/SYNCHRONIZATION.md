@@ -265,14 +265,18 @@ Version browsing decompresses only the selected project file in memory.
 
 The version 1 envelope contains eight bytes `46 41 43 42 01 00 00 00` (`FACB`,
 version 1), a little-endian signed 32-bit uncompressed byte count, a 32-byte SHA-256
-of the original bytes, and a Brotli payload written with `CompressionLevel.SmallestSize`.
+of the original bytes, and a Brotli payload written with `CompressionLevel.Optimal`.
 Readers bound decompressed authoring files to the 128 MiB project limit and verify
 the length and checksum. Export receipt containers allow 512 MiB for their embedded
 project and synchronization baseline strings; the project reader still enforces its
 128 MiB limit. The payload preserves the original serialized bytes, including unknown
 source text and synchronization context. This uses .NET's built-in compression on
-both platforms. Maximum compression costs additional CPU time during backup writes;
-automatic synchronization and storage maintenance run on background workers.
+both platforms. Backup writes favor lower compression cost over the smallest
+possible payload. Workspace saves, automatic synchronization and storage maintenance
+run on background workers. An ordinary save acknowledges only its captured document;
+newer edits remain dirty and undoable. Save-and-close and save-before-export wait for
+successful publication before continuing. Automatic synchronization reuses its
+saved/current archive when publishing, without creating a second identical save round.
 
 Writes flush a temporary binary file before atomically publishing it. Legacy JSON
 snapshots remain readable. History maintenance compresses retained legacy authoring,
@@ -282,8 +286,9 @@ the original. Conversion preserves snapshot timestamps, identities and all versi
 otherwise protected by retention; it does not recompress audio resources.
 
 At startup, a separate worker converts existing uncompressed recovery documents,
-including when a project is open. It runs below normal priority on Windows and waits
-two seconds between files. Compression and staging verification happen outside the
+when the library is idle. Opening the editor or starting playback defers the next
+file; an already started file can finish. It runs below normal priority on Windows
+and waits two seconds between files. Compression and staging verification happen outside the
 project save lock; publication briefly takes the lock and checks that the source
 still contains the original bytes. A flushed, published binary must pass checksum
 and byte-for-byte verification before the original is deleted. Changed sources,
@@ -304,7 +309,8 @@ so a long map remains readable. Scroll the version and
 difficulty lists independently. Scroll over either preview to move both timelines;
 Ctrl+wheel changes their common time span. Up/Down selects versions, Left/Right selects
 difficulties, and Escape closes the window. Browsing does not modify authoring or write
-external files. Loading, decoding and preview preparation run on background workers.
+external files. Loading, decoding and preview preparation share one background worker
+per editor. Navigation replaces the pending selection; closing discards pending work.
 A damaged version reports an error without hiding the other retained entries.
 
 **Restore this difficulty** first archives the current project, including unsaved edits,

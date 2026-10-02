@@ -24,6 +24,7 @@ static class WorkspaceSaveTests
                 ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
                 ui.View.RequestWorkspaceExport = (_, _) => exports++;
                 ui.Key('S', ctrl: true);
+                SynchronizationUiTests.Wait(ui);
                 Check(ui.View.DiscardConfirmationVisible && !ui.View.ExportVisible && !ui.View.IsDirty, "Workspace saves before the optional export prompt");
                 string directory = ui.View.WorkspaceSession!.Directory;
                 Check(WorkspaceProject.Open(directory).Project.Difficulties[0].Document.ContentEquals(ui.View.Document), "Workspace content is already persisted");
@@ -33,9 +34,9 @@ static class WorkspaceSaveTests
                 ui.ClickText(L.Get("library.workspaceOnly"));
                 Check(!ui.View.DiscardConfirmationVisible && !ui.View.ExportVisible && Directory.GetFiles(songs, "*", SearchOption.AllDirectories).Length == 0,
                     "Keeping the workspace completes save without touching Songs");
-                ui.Key('S', ctrl: true); ui.Key(27);
+                ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui); ui.Key(27);
                 Check(!ui.View.DiscardConfirmationVisible && !ui.View.IsDirty, "Escape keeps the completed save");
-                ui.Key('S', ctrl: true); ui.ClickText(L.Get("library.exportToSongs"));
+                ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui); ui.ClickText(L.Get("library.exportToSongs"));
                 Check(ui.View.ExportVisible && !ui.View.DiscardConfirmationVisible && exports == 0, "Consent opens export choices before writing Songs");
                 ui.Key(27);
                 Check(!ui.View.ExportVisible && !ui.View.IsDirty && ui.View.WorkspaceSession.Directory == directory, "Cancelling export preserves the workspace save");
@@ -49,6 +50,7 @@ static class WorkspaceSaveTests
                 ui.View.NewProject(); ui.View.CloseLibrary();
                 ui.View.LibrarySettings.Songs = "";
                 ui.Key('S', ctrl: true);
+                SynchronizationUiTests.Wait(ui);
                 Check(!ui.View.DiscardConfirmationVisible && !ui.View.ExportVisible, "Unconfigured Songs saves to workspace directly");
                 ui.Key('S', ctrl: true, shift: true);
                 Check(ui.View.WorkspaceSession is not null && exports == 0, "Local save does not export");

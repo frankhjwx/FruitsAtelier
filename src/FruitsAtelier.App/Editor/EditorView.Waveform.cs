@@ -13,6 +13,9 @@ public sealed partial class EditorView
     private string? waveformPath;
     private bool waveformFailed;
     private double waveformSpanMs = 10000;
+    private readonly List<BeatGridLine> waveformGrid = [];
+    private TimingMap.Lookup? waveformTiming;
+    private (double TimeMs, double BeatLengthMs)[] waveformRedPoints = [];
     public bool WaveformNeedsRedraw => TimingPageVisible && waveformTask is { IsCompleted: true };
     internal Rect WaveformBounds => new(16, 150, Math.Max(80, rightPanel.X - 32), Math.Max(100, height - 280));
 
@@ -69,7 +72,8 @@ public sealed partial class EditorView
             }
         else c.Text(L.Get(waveformFailed ? "timing.waveformError" : waveformTask != null ? "timing.waveformLoading" : "timing.waveformEmpty"),
             r.X + 16, center + 20, 13, Muted, r.Width - 32);
-        foreach (var tick in renderedTiming!.Grid(Math.Max(0, start), start + waveformSpanMs, divisor))
+        renderedTiming!.FillGrid(Math.Max(0, start), start + waveformSpanMs, divisor, waveformGrid);
+        foreach (var tick in waveformGrid)
         {
             float x = r.X + (float)((tick.TimeMs - start) / msPerPixel);
             var style = GridStyle(tick);
@@ -78,7 +82,7 @@ public sealed partial class EditorView
         c.Stroke(new(r.X, gridTop, r.Width, rulerY - gridTop), Grid);
         double step = Math.Pow(10, Math.Floor(Math.Log10(waveformSpanMs / 8)));
         if (waveformSpanMs / step > 16) step *= 5;
-        foreach (var tick in renderedTiming!.Grid(Math.Max(0, start), start + waveformSpanMs, divisor))
+        foreach (var tick in waveformGrid)
         {
             float x = r.X + (float)((tick.TimeMs - start) / msPerPixel);
             var style = GridStyle(tick);
@@ -92,9 +96,14 @@ public sealed partial class EditorView
         }
         Span<float> labelRights = stackalloc float[4];
         labelRights.Fill(r.X);
-        foreach (var point in Document.TimingPoints.OrderBy(p => p.TimeMs))
+        if (!ReferenceEquals(waveformTiming, renderedTiming))
         {
-            if (!point.Uninherited || point.TimeMs < start || point.TimeMs > start + waveformSpanMs) continue;
+            waveformTiming = renderedTiming;
+            waveformRedPoints = Document.TimingPoints.Where(p => p.Uninherited).OrderBy(p => p.TimeMs).Select(p => (p.TimeMs, p.BeatLengthMs)).ToArray();
+        }
+        foreach (var point in waveformRedPoints)
+        {
+            if (point.TimeMs < start || point.TimeMs > start + waveformSpanMs) continue;
             float x = r.X + (float)((point.TimeMs - start) / msPerPixel);
             string label = TimingN(60000 / point.BeatLengthMs) + " BPM";
             float labelWidth = Math.Min(r.Width - 1, c.MeasureText(label, 12));

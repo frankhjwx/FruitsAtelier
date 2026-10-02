@@ -63,7 +63,7 @@ public static class WorkspaceHistoryFile
             {
                 using var writer = new BinaryWriter(output, Encoding.UTF8, leaveOpen: true);
                 writer.Write(Magic); writer.Write(bytes.Length); writer.Write(SHA256.HashData(bytes));
-                using (var brotli = new BrotliStream(output, CompressionLevel.SmallestSize, leaveOpen: true)) brotli.Write(bytes);
+                using (var brotli = new BrotliStream(output, CompressionLevel.Optimal, leaveOpen: true)) brotli.Write(bytes);
                 output.Flush(flushToDisk: true);
             }
             File.Move(temporary, target, overwrite: true);

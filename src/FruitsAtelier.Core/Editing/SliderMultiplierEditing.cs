@@ -20,24 +20,33 @@ public static class SliderMultiplierEditing
     {
         Validate(multiplier);
         if (cache?.Multiplier(document, compensateTinyDroplets) is { } cached) return cached;
-        var source = document.DeepClone(); source.SliderMultiplierOverride = null;
-        var original = cache?.MultiplierBaseline(document, compensateTinyDroplets)
-            ?? OsuBeatmapWriter.Serialize(source, compensateTinyDroplets, cache);
-        var result = Rebase(original, multiplier);
+        var original = cache?.MultiplierBaseline(document, compensateTinyDroplets);
+        if (original is null)
+        {
+            var source = document.DeepClone(); source.SliderMultiplierOverride = null;
+            original = OsuBeatmapWriter.Serialize(source, compensateTinyDroplets, cache);
+        }
+        var result = Rebase(original, multiplier, cache);
         cache?.RememberMultiplier(document, result, compensateTinyDroplets);
         return result;
     }
 
     public static OsuWriteResult Rebase(OsuWriteResult before, double multiplier)
+        => Rebase(before, multiplier, null);
+
+    private static OsuWriteResult Rebase(OsuWriteResult before, double multiplier, OsuWriteCache? cache)
     {
         Validate(multiplier);
         if (multiplier == before.ReadBack.SliderMultiplier) return before;
         var candidate = Candidate(before, multiplier);
         string text = OsuBeatmapWriter.MultiplierText(candidate, candidate.TimingPoints.ToArray());
-        var readBack = OsuBeatmapReader.Read(text, candidate.SourcePath, inferDuration: false);
+        MapDocument readBack;
+        cache?.MultiplierParsedSliders.Begin();
+        try { readBack = OsuBeatmapReader.Read(text, candidate.SourcePath, inferDuration: false, cache?.MultiplierParsedSliders); }
+        finally { cache?.MultiplierParsedSliders.End(); }
         foreach (var slider in readBack.ImportedSliders) slider.Id = before.ObjectSources[slider.SourceOrder];
         foreach (var shower in readBack.BananaShowers) shower.Id = before.ObjectSources[shower.SourceOrder];
-        var converted = CatchStreamConverter.Convert(readBack, false);
+        var converted = CatchStreamConverter.Convert(readBack, false, cache?.MultiplierReadBack);
         var hardRock = converted.Success ? CatchPreviewMods.HardRock(readBack, converted) : [];
         return Finish(before, text, readBack, converted, hardRock);
     }

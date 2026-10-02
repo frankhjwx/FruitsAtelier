@@ -443,7 +443,10 @@ public sealed partial class EditorView
         sliderMultiplierVersion++;
         sliderMultiplierDraft = value == Document.EffectiveSliderMultiplier ? null : value;
         sliderMultiplierDeadline = SliderMultiplierClock() + 1000;
-        sliderMultiplierValidationSnapshot = Document.DeepClone(); sliderMultiplierValidationOwner = history;
+        if (!ReferenceEquals(sliderMultiplierValidationOwner, history)
+            || sliderMultiplierValidationSnapshot?.ContentEquals(Document) != true)
+            sliderMultiplierValidationSnapshot = Document.DeepClone();
+        sliderMultiplierValidationOwner = history;
         sliderMultiplierValidationText = timingField == "page.sliderMultiplier";
         sliderMultiplierValidationCompensation = compensateTinyDroplets;
         if (sliderMultiplierDraft is null)
@@ -470,8 +473,12 @@ public sealed partial class EditorView
         {
             try
             {
-                var source = snapshot.DeepClone(); source.SliderMultiplierOverride = null;
-                var baseline = currentExport ?? OsuBeatmapWriter.Serialize(source, compensation);
+                var baseline = currentExport;
+                if (baseline is null)
+                {
+                    var source = snapshot.DeepClone(); source.SliderMultiplierOverride = null;
+                    baseline = OsuBeatmapWriter.Serialize(source, compensation);
+                }
                 var output = SliderMultiplierEditing.TryRebase(baseline, value, out var local, double.PositiveInfinity)
                     ? local! : SliderMultiplierEditing.Rebase(baseline, value);
                 return new SliderMultiplierValidation(value, output, null);

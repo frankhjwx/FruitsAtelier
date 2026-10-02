@@ -111,10 +111,13 @@ internal static class StorageSettingsTests
         ui.View.InitializeLibrary(false, settings);
         try
         {
+            ui.Paint();
+            Check(!ui.View.LibraryVisible && File.Exists(source), "history migration defers work while editing");
+            ui.View.ShowLibrary(); ui.Paint();
             var deadline = DateTime.UtcNow.AddSeconds(15);
             while (File.Exists(source) && DateTime.UtcNow < deadline) { Thread.Sleep(10); ui.Paint(); }
-            Check(!ui.View.LibraryVisible && !File.Exists(source) && WorkspaceHistoryFile.ReadText(source) == content,
-                "startup converts old history while the editing view is open");
+            Check(ui.View.LibraryVisible && !File.Exists(source) && WorkspaceHistoryFile.ReadText(source) == content,
+                "history migration resumes in the idle library and preserves original content");
         }
         finally { ui.View.StopFileMonitoring(); }
     }

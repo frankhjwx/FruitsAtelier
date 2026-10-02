@@ -478,6 +478,7 @@
   "files.open": "打开 Catch 谱面包、谱面或工程",
   "files.saveProject": "保存 Catch 工程",
   "files.saved": "工程已保存：{0}",
+  "files.saving": "正在保存工程…",
   "files.untitled": "Catch map",
   "meta.languageName": "简体中文",
   "resource.conflict": "目标目录已有不同内容的资源，未覆盖：{0}",

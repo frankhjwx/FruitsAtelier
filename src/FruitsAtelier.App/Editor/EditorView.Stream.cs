@@ -43,11 +43,18 @@ public sealed partial class EditorView
         streamSnap = StreamSnapDivisor;
         stackPreviewScrollMs = 0;
         stackNumericField = -1; stackNumericError = "";
-        stackMode = true;
-        StreamSnapDivisor = stackSnap;
+        stackInitialized = false;
+        RefreshStackPreview();
+    }
+
+    private bool stackInitialized;
+    private void InitializeStackPreview()
+    {
+        stackInitialized = true;
         RefreshStackPreview();
         double start = stackPreviewSource?.Nodes[0].TimeMs ?? 0;
         double duration = stackPreviewSource is null ? 1 : Math.Max(.001, CurveMath.EndTimeMs(stackPreviewSource) - start);
+        bool changed = false;
         foreach (var fruit in stackPreview)
         {
             double u = (fruit.TimeMs - start) / duration;
@@ -58,10 +65,10 @@ public sealed partial class EditorView
             double side = (fruit.EventIndex % 2 == 0) == stackDraft.StartLeft ? -1 : 1;
             double baseX = Math.Clamp(center + side * stackDraft.DistanceAt(u), 0, 512);
             stackDraft.SetAdjustment(u, Math.Clamp(center + Math.Sign(distance) * StackMaximumDistance, 0, 512) - baseX);
+            changed = true;
         }
-        RefreshStackPreview(); ResetStackHistory();
-        stackMode = false; StreamSnapDivisor = streamSnap;
-        RefreshStackPreview();
+        if (changed) RefreshStackPreview();
+        ResetStackHistory();
     }
 
     private void OpenStreamDialog()
@@ -90,7 +97,8 @@ public sealed partial class EditorView
         if (stackMode) stackSnap = StreamSnapDivisor; else streamSnap = StreamSnapDivisor;
         stackMode = stack;
         StreamSnapDivisor = stack ? stackSnap : streamSnap;
-        RefreshStackPreview();
+        if (stack && !stackInitialized) InitializeStackPreview();
+        else RefreshStackPreview();
     }
 
     private void ApplyStream()
@@ -137,6 +145,7 @@ public sealed partial class EditorView
     {
         float left = StreamSnapBounds.X + 7, right = StreamSnapBounds.Right - 31;
         int index = (int)MathF.Round(Math.Clamp((x - left) / (right - left), 0, 1) * (SnapDivisors.Length - 1));
+        if (StreamSnapDivisor == SnapDivisors[index]) return;
         StreamSnapDivisor = SnapDivisors[index]; streamError = ""; RefreshStackPreview();
     }
 

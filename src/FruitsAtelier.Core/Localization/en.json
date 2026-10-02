@@ -478,6 +478,7 @@
   "files.open": "Open a Catch beatmap package, beatmap or project",
   "files.saveProject": "Save Catch project",
   "files.saved": "Project saved: {0}",
+  "files.saving": "Saving project…",
   "files.untitled": "Catch map",
   "meta.languageName": "English",
   "resource.conflict": "The destination contains a resource with different contents; it was not overwritten: {0}",

@@ -46,12 +46,19 @@ public static class WorkspaceStorage
     public static WorkspaceStorageReport Clean(string workspace, bool clearCache = false, DateTime? utcNow = null, IReadOnlyCollection<string>? protectedPaths = null, bool compactLegacy = true)
         => CleanCore(workspace, clearCache, utcNow, protectedPaths, compactLegacy: compactLegacy);
 
-    public static Task<WorkspaceHistoryCompressionResult> CompressLegacyHistoryAsync(string workspace, CancellationToken cancellation = default, TimeSpan? interval = null)
+    public static Task<WorkspaceHistoryCompressionResult> CompressLegacyHistoryAsync(string workspace, CancellationToken cancellation = default, TimeSpan? interval = null, Func<bool>? isIdle = null)
         => Task.Factory.StartNew(() =>
         {
             var thread = Thread.CurrentThread;
             if (OperatingSystem.IsWindows()) thread.Priority = ThreadPriority.BelowNormal;
             cancellation.ThrowIfCancellationRequested();
+            void WaitForIdle()
+            {
+                while (isIdle?.Invoke() == false)
+                    if (cancellation.WaitHandle.WaitOne(100)) cancellation.ThrowIfCancellationRequested();
+                cancellation.ThrowIfCancellationRequested();
+            }
+            WaitForIdle();
             string history = Path.Combine(Path.GetFullPath(workspace), ".sync-history");
             if (!Directory.Exists(history)) return new WorkspaceHistoryCompressionResult(0, 0);
             string staging = Path.Combine(history, ".compression");
@@ -69,6 +76,7 @@ public static class WorkspaceStorage
             foreach (string path in references)
             {
                 if (cancellation.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(10))) cancellation.ThrowIfCancellationRequested();
+                WaitForIdle();
                 try { PrimeSnapshotReferences(path, history); }
                 catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
                 { error ??= e.Message; }
@@ -76,6 +84,7 @@ public static class WorkspaceStorage
             foreach (string path in candidates)
             {
                 if (cancellation.WaitHandle.WaitOne(interval ?? TimeSpan.FromSeconds(2))) cancellation.ThrowIfCancellationRequested();
+                WaitForIdle();
                 try
                 {
                     Directory.CreateDirectory(staging);

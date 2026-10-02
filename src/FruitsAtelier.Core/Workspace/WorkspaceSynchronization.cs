@@ -538,7 +538,7 @@ public static class WorkspaceSynchronization
         return string.Join(',', parts[0], parts[1], parts[2], parts[5], parts[6], parts[7]);
     }
 
-    public static WorkspaceExportPlan PlanLocalChanges(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceMerge merge)
+    public static WorkspaceExportPlan PlanLocalChanges(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceMerge merge, OsuWriteCache? cache = null)
     {
         if (!merge.CanExportLocalChanges || entry.Sync is not { } baseline || merge.External.Text != baseline.Text)
             throw new InvalidOperationException(L.Get("sync.baseline"));
@@ -549,7 +549,7 @@ public static class WorkspaceSynchronization
         var missing = WorkspaceProject.MissingResources(BeatmapProject.FromDocuments([merge.Local]));
         if (missing.Count > 0) throw new IOException(L.Get("library.missingResources", string.Join("\n", missing)));
         return WorkspaceExport.WithMetadataFileName(new(entry.Id, merge.Local, merge.External.Path, merge.External.Hash,
-            OsuBeatmapWriter.Serialize(merge.Local, merge.Compensate)), merge.External.Document);
+            OsuBeatmapWriter.Serialize(merge.Local, merge.Compensate, cache)), merge.External.Document);
     }
 
     public static void Accept(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceSyncCandidate external, MapDocument resolved, bool compensate, bool retainLocalFields = false,

@@ -54,7 +54,7 @@ public sealed partial class EditorView
         sliderImportTargets = []; sliderBatchErrors = []; sliderDialogHits.Clear();
         WorkspaceSession = null; resourceErrors = [];
         if (syncTask is { } retiredSync) _ = retiredSync.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
-        syncTask = null; afterSynchronization = null; syncReviewRequested = false; syncSearching.Clear();
+        syncTask = null; syncRetry = null; afterSynchronization = null; syncReviewRequested = false; syncSearching.Clear();
         syncStatuses.Clear(); syncMerges.Clear(); syncPage = null; nextSyncCheck = DateTime.MaxValue;
         syncDifficulty = Guid.Empty; syncPreserveHistory = false;
         fileSyncPending = fileSearchMissing = false; nextMonitorConfiguration = DateTime.MinValue;
@@ -113,7 +113,7 @@ public sealed partial class EditorView
 
     public bool SwitchDifficulty(int index)
     {
-        if (syncCommitTask is not null) return false;
+        if (workspaceSaveTask is not null || syncCommitTask is not null) return false;
         if (index < 0 || index >= difficulties.Count) return false;
         if (!syncBypass && WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[index].Id) is { } linked
             && WorkspaceSynchronization.Target(linked) is { } target && !File.Exists(target)
@@ -185,7 +185,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
-        if (VersionHistoryVisible || SynchronizationVisible || syncCommitTask is not null) return false;
+        if (VersionHistoryVisible || SynchronizationVisible || workspaceSaveTask is not null || syncCommitTask is not null) return false;
         if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
         if (!CommitTimingField()) return false;
         if (SliderMultiplierValidationBusy)
@@ -234,9 +234,11 @@ public sealed partial class EditorView
         if (testplay is not null && testplayWithAudio)
         {
             if (testplayDriver is null)
+            {
                 testplay!.UpdateAudio(positionMs, transportSampleAt, AudioDurationMs, ready, playing, loading,
                     error is not null, outputBufferAheadMs);
-            AdvanceTestplay();
+                AdvanceTestplay();
+            }
         }
         if (!ready || loading || error is not null || IsTestplaying) pauseSnapDivisor = null;
         if (!playing && pauseSnapDivisor is { } pauseDivisor)

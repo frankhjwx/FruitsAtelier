@@ -2,6 +2,8 @@ using FruitsAtelier.Core;
 using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
 
+if (args.Contains("--benchmark-sv-edits")) return WriteCacheTests.BenchmarkMultiplierEdits();
+
 if (args.Length == 2 && args[0] == "--import-roundtrip")
 {
     var imported = OsuBeatmapReader.ReadFile(args[1]);

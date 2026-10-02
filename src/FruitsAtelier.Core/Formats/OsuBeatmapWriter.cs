@@ -18,8 +18,7 @@ public sealed class OsuWriteCache
     public OsuWriteResult? MultiplierBaseline(MapDocument document, bool compensation)
     {
         if (multiplierBaselineSnapshot is null || multiplierBaselineCompensation != compensation || multiplierBaselineLanguage != L.Language) return null;
-        var source = document.DeepClone(); source.SliderMultiplierOverride = null; source.OverrideSliderMultiplier = false;
-        return multiplierBaselineSnapshot.ContentEquals(source) ? multiplierBaseline : null;
+        return multiplierBaselineSnapshot.ContentEquals(document, ignoreMultiplierOverride: true) ? multiplierBaseline : null;
     }
     internal void RememberBaseline(MapDocument document, OsuWriteResult output, bool compensation)
     {
@@ -37,6 +36,8 @@ public sealed class OsuWriteCache
 
     internal CatchConversionCache Source { get; } = new();
     internal CatchConversionCache ReadBack { get; } = new();
+    internal CatchConversionCache MultiplierReadBack { get; } = new();
+    internal OsuSliderParseCache MultiplierParsedSliders { get; } = new();
     internal OsuSliderParseCache ParsedSliders { get; } = new();
     private GeneratedSlider[] timingSliders = [];
     private TimingMap.Lookup? timingInput;

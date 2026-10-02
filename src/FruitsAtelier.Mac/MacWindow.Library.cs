@@ -135,7 +135,7 @@ internal sealed partial class MacWindow
         View.RequestWorkspaceExport = (overwrite, name) => RunFile(async () =>
         {
             if (!View.PrepareFileOperation()) return;
-            if ((overwrite || View.WorkspaceSession is null) && !View.SaveWorkspace()) return;
+            if ((overwrite || View.WorkspaceSession is null) && !await Save()) return;
             if (View.WorkspaceSession is null) return;
             var project = View.CaptureProject();
             var plan = WorkspaceExport.Plan(View.WorkspaceSession, project.Difficulties[View.ActiveDifficultyIndex], View.LibrarySettings.Songs, overwrite, name, View.CompensateTinyDroplets);

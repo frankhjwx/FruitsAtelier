@@ -42,6 +42,10 @@ conversion caches remain separate. Read-back slider and banana identities are
 mapped to their source parents so reparsing does not discard every cache entry.
 Parsed slider lines are reused by exact text and format, with independent mutable
 copies and pruning of unused entries.
+SV-adjusted read-back owns separate conversion and parsed-line caches from the
+canonical export. Baseline matching compares authored content without cloning,
+ignoring only the override value and editing lock. Continuous SV input retains
+one detached validation snapshot until its owning history or content changes.
 
 The write cache retains one emitted timing result, keyed by converted slider
 instances, the complete timing input and imported slider head times. Fruit-only
@@ -99,6 +103,15 @@ parsing or rebuilding them. Changed metadata still rebases across history while
 preserving unrelated historical fields. Explicit resource checks use the same
 snapshot-owned background worker as periodic checks; filesystem and storyboard
 work must not run during save completion on the UI thread.
+Stale synchronization results wait for a stable snapshot before retrying. Retries
+reuse per-difficulty export caches passed from the completed worker; these caches
+are released when the synchronization chain ends and never shared with UI conversion.
+
+The Timing waveform fills one reusable grid for its two drawing passes and retains
+sorted red-line values for the current timing snapshot. Stream previews initialize
+Stack adjustments only when that mode is selected. With a native testplay driver,
+transport polling leaves simulation updates to that driver and copies presentation
+state during rendering. The fallback driver still advances with transport updates.
 
 ## Correctness boundaries
 

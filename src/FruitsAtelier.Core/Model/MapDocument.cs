@@ -216,12 +216,15 @@ public sealed partial class MapDocument
     }
 
     public bool ContentEquals(MapDocument other)
+        => ContentEquals(other, ignoreMultiplierOverride: false);
+
+    internal bool ContentEquals(MapDocument other, bool ignoreMultiplierOverride)
     {
         if (Name != other.Name || DurationMs != other.DurationMs || BeatLengthMs != other.BeatLengthMs
             || TimingOffsetMs != other.TimingOffsetMs || ApproachRate != other.ApproachRate
             || CircleSize != other.CircleSize || SliderMultiplier != other.SliderMultiplier
-            || OverrideSliderMultiplier != other.OverrideSliderMultiplier
-            || SliderMultiplierOverride != other.SliderMultiplierOverride
+            || (!ignoreMultiplierOverride && (OverrideSliderMultiplier != other.OverrideSliderMultiplier
+                || SliderMultiplierOverride != other.SliderMultiplierOverride))
             || DistancePerBeatOverride != other.DistancePerBeatOverride || SliderTickRate != other.SliderTickRate
             || DistanceSnapCollinear != other.DistanceSnapCollinear
             || !DistanceSnapRatios.SequenceEqual(other.DistanceSnapRatios)

@@ -283,7 +283,7 @@ public sealed partial class EditorView
         var r = new Rect(rightPanel.X + 14, rightPanel.Y + 46, rightPanel.Width - 28, rightPanel.Height - 52);
         bool compact = r.Height < 585;
         float y = r.Y, gap = compact ? 5 : 12, row = compact ? 28 : 34;
-        var state = TimingMap.At(Document, playhead);
+        var state = SnapTiming().At(playhead);
         if (timingResetPoint is not null && !ReferenceEquals(timingResetDocument, Document)) timingResetPoint = null;
         int count = Math.Min(16, state.Meter);
         double beat = (playhead - state.OffsetMs) / state.BeatLengthMs;
@@ -314,7 +314,7 @@ public sealed partial class EditorView
                 key == "sliderMultiplier" ? value.ToString("0.00", CultureInfo.InvariantCulture) : TimingN(TimingPageValue(key, value)), apply, enabled: enabled);
             void Step(int direction)
             {
-                var current = TimingMap.At(Document, playhead);
+                var current = SnapTiming().At(playhead);
                 double number = key == "bpm" ? 60000 / (timingResetPoint?.BeatLengthMs ?? current.BeatLengthMs) : key == "offset" ? timingResetPoint?.TimeMs ?? current.OffsetMs : key == "sliderMultiplier" ? DisplaySliderMultiplier : Document.SliderTickRate;
                 double step = key == "bpm" ? placementCtrl ? .25 : timingPointerShift ? 5 : 1 : key == "offset" ? placementCtrl ? 1 : timingPointerShift ? 10 : 2 : key == "sliderMultiplier" ? placementCtrl ? .01 : .1 : 1;
                 double next = TimingPageValue(key, number) + direction * step;

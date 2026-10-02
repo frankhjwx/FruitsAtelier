@@ -215,11 +215,12 @@ internal sealed partial class MacWindow : Window
         PollAudio();
     }
 
-    private async Task<bool> Save()
+    private Task<bool> Save()
     {
-        if (!View.PrepareFileOperation()) return false;
-        await Task.CompletedTask;
-        return View.SaveWorkspace();
+        var completion = new TaskCompletionSource<bool>();
+        if (!View.BeginWorkspaceSave(saved => completion.SetResult(saved))) completion.SetResult(false);
+        editor.Refresh();
+        return completion.Task;
     }
 
     private static string SafeName(string name) => string.IsNullOrWhiteSpace(name) ? L.Get("files.untitled") : new string(name.Where(c => !Path.GetInvalidFileNameChars().Contains(c) && c != ':').Take(100).ToArray());

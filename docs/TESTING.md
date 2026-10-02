@@ -52,6 +52,14 @@ bash scripts/Test-Mac.sh --native-only        # Mac input/audio checks only
 
 ## Library scale benchmark
 
+The opt-in `App.Tests --performance-scheduling` benchmark measures Timing frames
+and Stream setup with synthetic data. `Formats.Tests --benchmark-sv-edits` measures
+ordinary edits with an SV override and compares every export against uncached NM/HR
+output. `App.Tests --sv-performance` measures continuous SV input and idle validation.
+Run the same fixtures and build configuration before and after an optimization;
+capture console JSON in `artifacts/`. These are CPU/allocation measurements, not GPU
+presentation or physical input latency.
+
 Recovery compression can be measured against an existing project's history directory:
 
 ```powershell

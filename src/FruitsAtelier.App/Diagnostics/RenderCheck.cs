@@ -744,7 +744,7 @@ internal static class RenderCheck
                 foreach (bool included in new[] { true, false })
                 {
                     view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0); Paint();
-                    view.PointerDown(235, 363, 0, false, false); view.PointerUp(235, 363, 0); Paint();
+                    view.PointerDown(235, 397, 0, false, false); view.PointerUp(235, 397, 0); Paint();
                     if (view.MovementIncludesTinyDroplets != included || !sliderMap.ContentEquals(view.Document))
                         throw new InvalidOperationException("Native tiny movement display toggle failed.");
                 }
@@ -770,6 +770,10 @@ internal static class RenderCheck
             {
                 FruitsAtelier.Localization.Strings.SetLanguage(locale);
                 view.NewProject(); view.CloseLibrary(); view.SaveCurrentDifficulty();
+                canvas.Resize(size.Item1, size.Item2, 96);
+                var deadline = Stopwatch.StartNew();
+                while (view.SynchronizationBusy && deadline.Elapsed.TotalSeconds < 15)
+                { canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End(); Thread.Sleep(5); }
                 if (!view.DiscardConfirmationVisible || view.IsDirty || view.WorkspaceSession is null)
                     throw new InvalidOperationException("Workspace save did not precede the Songs export offer.");
                 canvas.Resize(size.Item1, size.Item2, 96);
@@ -822,8 +826,8 @@ internal static class RenderCheck
             {
                 view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0);
                 canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
-                view.PointerDown(235, 329, 0, false, false);
-                view.PointerUp(235, 329, 0);
+                view.PointerDown(235, 363, 0, false, false);
+                view.PointerUp(235, 363, 0);
                 if (!view.MovementAnalysisEnabled) throw new InvalidOperationException("Movement analysis menu did not enable connections.");
                 canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             }

@@ -7,9 +7,27 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     public bool VersionHistoryVisible { get; private set; }
-    public bool VersionHistoryBusy => versionListTask is not null || versionReadTask is not null || versionPreviewTask is not null || versionRestoreTask is not null;
+    public bool VersionHistoryBusy => versionPending is not null || versionListTask is not null || versionReadTask is not null || versionPreviewTask is not null || versionRestoreTask is not null;
     private bool VersionHistoryNeedsRedraw => versionListTask is { IsCompleted: true } || versionReadTask is { IsCompleted: true }
-        || versionPreviewTask is { IsCompleted: true } || versionRestoreTask is { IsCompleted: true };
+        || versionPreviewTask is { IsCompleted: true } || versionRestoreTask is { IsCompleted: true }
+        || (versionPending is not null && versionBackground is { IsCompleted: true });
+    private Task? versionBackground;
+    private Action? versionPending;
+
+    private void QueueVersionWork(Action start)
+    {
+        versionPending = start;
+        StartVersionWork();
+    }
+
+    private void StartVersionWork()
+    {
+        if (versionPending is null || versionBackground is { IsCompleted: false }) return;
+        _ = versionBackground?.Exception;
+        var start = versionPending; versionPending = null;
+        start();
+        versionBackground = (Task?)versionListTask ?? (Task?)versionReadTask ?? versionPreviewTask;
+    }
     private IReadOnlyList<WorkspaceVersion> versions = [];
     private BeatmapProject? versionProject;
     private Task<IReadOnlyList<WorkspaceVersion>>? versionListTask;
@@ -32,7 +50,7 @@ public sealed partial class EditorView
         versions = []; versionProject = null; versionError = ""; versionScroll = versionDifficultyScroll = 0;
         versionCurrentPane = versionHistoricalPane = null;
         syncShowValues = false;
-        versionListTask = Task.Run(() => WorkspaceVersionHistory.List(session));
+        QueueVersionWork(() => versionListTask = Task.Run(() => WorkspaceVersionHistory.List(session)));
     }
 
     private void CloseVersionHistory()
@@ -41,6 +59,8 @@ public sealed partial class EditorView
         foreach (Task? task in new Task?[] { versionListTask, versionReadTask, versionPreviewTask, versionRestoreTask })
             if (task is not null) _ = task.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
         versionListTask = null; versionReadTask = null; versionPreviewTask = null; versionRestoreTask = null;
+        versionPending = null;
+        if (versionBackground is { IsCompleted: true }) versionBackground = null;
         versionProject = null; versionCurrentPane = versionHistoricalPane = null;
         hits.Clear(); fields.Clear();
     }
@@ -53,11 +73,10 @@ public sealed partial class EditorView
         versionScroll = Math.Clamp(versionScroll, Math.Max(0, versionIndex - rows + 1), versionIndex);
         versionProject = null; versionError = "";
         versionCurrentPane = versionHistoricalPane = null;
-        if (versionPreviewTask is { } preview) _ = preview.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
         versionPreviewTask = null;
-        if (versionReadTask is { } previous) _ = previous.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        versionReadTask = null;
         var version = versions[versionIndex];
-        versionReadTask = Task.Run(() => WorkspaceVersionHistory.Read(session, version));
+        QueueVersionWork(() => versionReadTask = Task.Run(() => WorkspaceVersionHistory.Read(session, version)));
     }
 
     private void SelectVersionDifficulty(int index)
@@ -66,20 +85,27 @@ public sealed partial class EditorView
         versionDifficultyIndex = Math.Clamp(index, 0, versionProject.Difficulties.Count - 1);
         int rows = Math.Max(1, (int)(versionDifficultyBounds.Height / 28));
         versionDifficultyScroll = Math.Clamp(versionDifficultyScroll, Math.Max(0, versionDifficultyIndex - rows + 1), versionDifficultyIndex);
-        var historical = versionProject.Difficulties[versionDifficultyIndex].Document.DeepClone();
-        Guid id = versionProject.Difficulties[versionDifficultyIndex].Id;
-        var current = difficulties.FirstOrDefault(d => d.Id == id)?.History.Document.DeepClone();
-        bool compensate = compensateTinyDroplets;
         versionError = ""; versionCurrentPane = versionHistoricalPane = null;
-        if (versionPreviewTask is { } previous) _ = previous.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
-        versionPreviewTask = Task.Run(() => (current is null ? null : PrepareSyncPane(current, compensate), PrepareSyncPane(historical, compensate)));
+        versionPreviewTask = null;
+        QueueVersionWork(() =>
+        {
+            var historical = versionProject.Difficulties[versionDifficultyIndex].Document.DeepClone();
+            Guid id = versionProject.Difficulties[versionDifficultyIndex].Id;
+            var current = difficulties.FirstOrDefault(d => d.Id == id)?.History.Document.DeepClone();
+            bool compensate = compensateTinyDroplets;
+            versionPreviewTask = Task.Run(() => (current is null ? null : PrepareSyncPane(current, compensate), PrepareSyncPane(historical, compensate)));
+        });
     }
 
     private void PumpVersionHistory()
     {
+        if (versionPending is null && versionListTask is null && versionReadTask is null && versionPreviewTask is null
+            && versionBackground is { IsCompleted: true } finished)
+        { _ = finished.Exception; versionBackground = null; }
         if (!VersionHistoryVisible) return;
         try
         {
+            StartVersionWork();
             if (versionListTask is { IsCompleted: true } listed)
             {
                 versionListTask = null; versions = listed.GetAwaiter().GetResult();

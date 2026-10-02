@@ -11,6 +11,7 @@ public sealed partial class EditorView
     private Task<WorkspaceHistoryCompressionResult>? historyCompressionTask;
     private CancellationTokenSource? historyCompressionCancellation;
     private bool historyCompressionEnabled;
+    private volatile bool historyCompressionPaused = true;
     private string historyCompressionRoot = "";
     private WorkspaceStorageReport? storageReport;
     private Rect workspaceScrollBounds, workspaceScrollTrack, workspaceScrollThumb;
@@ -91,7 +92,8 @@ public sealed partial class EditorView
         StopHistoryCompression();
         historyCompressionRoot = root;
         historyCompressionCancellation = new();
-        historyCompressionTask = WorkspaceStorage.CompressLegacyHistoryAsync(root, historyCompressionCancellation.Token);
+        historyCompressionTask = WorkspaceStorage.CompressLegacyHistoryAsync(root, historyCompressionCancellation.Token,
+            isIdle: () => !historyCompressionPaused);
     }
 
     private void StopHistoryCompression()

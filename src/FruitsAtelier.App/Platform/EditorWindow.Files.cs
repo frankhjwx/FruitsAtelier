@@ -106,11 +106,8 @@ internal sealed partial class EditorWindow
         AppLog.Write($"Opened project: {path}; difficulties={session.Project.Difficulties.Count}");
     }
 
-    private bool SaveProject()
-    {
-        if (!view.PrepareFileOperation()) return false;
-        return view.SaveWorkspace();
-    }
+    private void SaveProject(Action continuation)
+        => view.BeginWorkspaceSave(saved => { if (saved) FileOperation(continuation); });
 
     internal static void CopyResources(MapDocument document, string destinationDirectory, MapDocument exportedDocument)
         => BeatmapResources.Copy(document, destinationDirectory, exportedDocument);

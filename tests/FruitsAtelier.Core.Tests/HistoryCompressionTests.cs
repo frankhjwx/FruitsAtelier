@@ -118,6 +118,17 @@ internal static class HistoryCompressionTests
         byte[] bytes = Encoding.Unicode.GetPreamble().Concat(Encoding.Unicode.GetBytes(new string('中', 20000))).ToArray();
         string source = Path.Combine(snapshot, "saved.catchproj");
         File.WriteAllBytes(source, bytes);
+        using (var observed = new ManualResetEventSlim())
+        using (var cancel = new CancellationTokenSource())
+        {
+            var task = WorkspaceStorage.CompressLegacyHistoryAsync(workspace, cancel.Token, TimeSpan.Zero,
+                () => { observed.Set(); return false; });
+            Check(observed.Wait(TimeSpan.FromSeconds(5)) && !task.IsCompleted && File.Exists(source),
+                "busy editor defers migration before reading or compressing recovery documents");
+            cancel.Cancel();
+            try { task.GetAwaiter().GetResult(); throw new Exception("paused migration ignored cancellation"); }
+            catch (OperationCanceledException) { }
+        }
         using (var cancel = new CancellationTokenSource())
         {
             var task = WorkspaceStorage.CompressLegacyHistoryAsync(workspace, cancel.Token, TimeSpan.FromSeconds(30));

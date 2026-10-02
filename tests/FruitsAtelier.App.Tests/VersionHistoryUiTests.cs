@@ -30,6 +30,7 @@ internal static class VersionHistoryUiTests
                 int saves = 0; ui.View.RequestSave = () => saves++;
                 ui.ClickText(L.Get("ui.edit")); ui.ClickText(L.Get("history.menu")); Wait(ui);
                 Check(ui.View.VersionHistoryVisible && ui.Canvas.Texts.Any(t => t.Value == L.Get("history.title")), "Edit opens localized history");
+                PerformanceSchedulingTests.History(ui);
                 var before = ui.View.Document.DeepClone();
                 ui.Key('S', ctrl: true); ui.Key(46); ui.Key('Z', ctrl: true);
                 Check(saves == 0 && !ui.View.IsDirty && ui.View.Document.ContentEquals(before), "history browsing isolates editor commands");
