@@ -134,7 +134,7 @@ Roll the wheel over the preview to scroll long patterns. Left/Up and Right/Down
 decrease and increase the chosen subdivision. Enter applies; Esc cancels. Converting to a stream retains an editable
 slider parent and exports fruit objects. **Break into Fruits**, off by default,
 instead creates separate editable fruits. Existing streams also offer this action
-directly below **Convert to Stream/Stack** in their long-press menu.
+directly below **Edit Stream/Stack** in their long-press menu.
 
 Holding a selected object retains the complete selection for batch slider actions.
 Merge offers straight segments and a curved path; a selection containing a curved

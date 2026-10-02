@@ -620,7 +620,7 @@ public sealed partial class EditorView
             Item(L.Get("ui.cutMenu"), () => CutSelection(), CanCopySelection);
             Item(L.Get("ui.copyMenu"), () => CopySelection(), CanCopySelection);
             Item(L.Get("ui.pasteMenu"), () => PasteSelection(), CanPasteSelection);
-            Item(L.Get("conversion.menu"), OpenStreamDialog, CanConvertStream && !notesLocked);
+            Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), OpenStreamDialog, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
             Item(L.Get("slider.clearInternalNodes"), ClearSliderNodes, CanClearSliderNodes);

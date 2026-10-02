@@ -235,7 +235,7 @@ public sealed partial class EditorView
         if (slider)
         {
             StreamConversionBounds = new(r.X, row, r.Width, 32);
-            Button(c, StreamConversionBounds, L.Get("conversion.title"), OpenStreamDialog, enabled: !notesLocked);
+            Button(c, StreamConversionBounds, L.Get(stream ? "conversion.editTitle" : "conversion.title"), OpenStreamDialog, enabled: !notesLocked);
             row += 36;
         }
         if (stream)

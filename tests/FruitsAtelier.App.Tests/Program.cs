@@ -87,7 +87,7 @@ var tests = new (string Name, Action Run)[]
     ("Appearance indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
     ("Stack preview retains full outlines and edits individual fruits horizontally", StackDialogTests.ManualFruits),
     ("Stack draft history undoes fruit drags and removing manual knots", StackDialogTests.DraftHistory),
-    ("Stack numeric controls edit percentages and pixels with automatic endpoints", StackDialogTests.Numeric),
+    ("Stack numeric controls edit percentages and pixels with editable endpoints", StackDialogTests.Numeric),
     ("Stack dialog edits envelopes locally and confirms with undo", StackDialogTests.Run),
     ("Slider stream confirmation, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
     ("Slider long press progress, cancellation and control-point shortcut", StreamShortcutTests.HoldAndShortcut),

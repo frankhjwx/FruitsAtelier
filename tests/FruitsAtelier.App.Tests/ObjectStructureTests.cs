@@ -37,16 +37,16 @@ internal static class ObjectStructureTests
                 var stream = ui.View.Document.DeepClone();
                 var expected = OsuBeatmapWriter.Serialize(stream).Text;
                 ui.HoldMap(1000, 100, clock.Advance);
-                var change = ui.Canvas.Texts.Single(t => t.Value == L.Get("conversion.title"));
+                var change = ui.Canvas.Texts.Single(t => t.Value == L.Get("conversion.editTitle"));
                 var breakLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("stream.breakFruits"));
-                Check(breakLabel.Y > change.Y && breakLabel.Y - change.Y < 40, "break is immediately below Convert to Stream/Stack");
+                Check(breakLabel.Y > change.Y && breakLabel.Y - change.Y < 40, "break is immediately below Edit Stream/Stack");
                 ui.ClickText(L.Get("stream.breakFruits"));
                 Check(ui.View.Document.Tracks.Count == 0 && ui.View.Document.Fruits.Count == 5, "long press breaks an existing stream");
                 Check(OsuBeatmapWriter.Serialize(ui.View.Document).Text == expected, "breaking retains exported positions, samples and flags");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(stream), "undo restores stream geometry");
                 ui.SelectTrack(track.Id); ui.Key('F', ctrl: true, shift: true);
                 ui.ClickText(L.Get("stream.breakFruits")); ui.Key(13);
-                Check(ui.View.Document.Tracks.Count == 0, "Change snapping also supports breaking");
+                Check(ui.View.Document.Tracks.Count == 0, "Edit Stream/Stack also supports breaking");
 
                 var second = Line(2000, 2500, 300, 400);
                 second.Nodes.Insert(1, new Anchor { TimeMs = 2250, X = 330 });

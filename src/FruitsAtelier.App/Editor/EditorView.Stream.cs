@@ -106,7 +106,7 @@ public sealed partial class EditorView
                 track.StreamSnapDivisor = StreamSnapDivisor;
                 track.Stack = stackMode ? stackDraft.DeepClone() : null;
             }
-            if (!stackMode && StreamBreakIntoFruits) selected = ObjectStructureEditing.BreakStreams(Document, streamTargets);
+            if (StreamBreakIntoFruits) selected = ObjectStructureEditing.BreakStreams(Document, streamTargets);
             var converted = CatchStreamConverter.Convert(Document);
             if (!converted.Success) throw new InvalidOperationException(string.Join(L.Get("editor.diagnostics.separator"), converted.Diagnostics));
         }))
