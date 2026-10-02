@@ -21,6 +21,14 @@ the editor restores these values. They do not change map content or undo history
 Shift/Alt temporary snap overrides are not saved. Difficulties without saved
 preferences start with all three switches off and Grid Level Tiny (4 px).
 
+## FSlider preview
+
+When drawing a new FSlider, the canvas updates only that slider's provisional
+preview. Finish the curve to update full-map gameplay data in the background;
+the status bar indicates this work while editing remains available. Testplay
+requested during this update starts after the current result is ready. Cancelling
+an unfinished curve restores the previous preview and leaves no undo entry.
+
 ## Timing editing
 
 **Details Panel** in the right header opens a dropdown with **Details Panel** and

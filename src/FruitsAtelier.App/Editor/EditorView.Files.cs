@@ -79,6 +79,7 @@ public sealed partial class EditorView
 
     private void ResetDifficultyView()
     {
+        ResetDeferredConversion();
         pauseSnapDivisor = null;
         nextFruitNewCombo = false;
         nextSounds = 0; soundEdge = null;

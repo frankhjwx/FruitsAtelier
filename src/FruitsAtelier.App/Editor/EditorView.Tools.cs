@@ -103,7 +103,7 @@ public sealed partial class EditorView
     private void UpdatePlacementHyperdash()
     {
         var point = PlacementGhostPoint();
-        if (point is null)
+        if (point is null || deferredConversion && draftTrack == Guid.Empty)
         {
             cachedPlacementPoint = null; placementGhost = null; placementMovementObjects = null; placementDistances = (null, null);
             placementHyperdash = hyperdashObjects;
@@ -123,14 +123,19 @@ public sealed partial class EditorView
             TimingOffsetMs = Document.TimingOffsetMs, ApproachRate = Document.ApproachRate,
             CircleSize = Document.CircleSize, SliderMultiplier = Document.SliderMultiplier, SliderTickRate = Document.SliderTickRate
         };
-        candidate.Fruits.AddRange(Document.Fruits);
-        candidate.ImportedSliders.AddRange(Document.ImportedSliders);
-        candidate.BananaShowers.AddRange(Document.BananaShowers);
+        bool localDraft = tool == Tool.Slider && draftTrack != Guid.Empty;
+        if (!localDraft)
+        {
+            candidate.Fruits.AddRange(Document.Fruits);
+            candidate.ImportedSliders.AddRange(Document.ImportedSliders);
+            candidate.BananaShowers.AddRange(Document.BananaShowers);
+        }
         candidate.TimingPoints.AddRange(Document.TimingPoints);
         var draftDocument = new MapDocument();
         draftDocument.Tracks.AddRange(Document.Tracks.Where(t => t.Id == draftTrack));
         var draftCopy = draftDocument.DeepClone().Tracks.SingleOrDefault();
-        candidate.Tracks.AddRange(Document.Tracks.Select(t => t.Id == draftTrack ? draftCopy! : t));
+        candidate.Tracks.AddRange(Document.Tracks.Where(t => !localDraft || t.Id == draftTrack)
+            .Select(t => t.Id == draftTrack ? draftCopy! : t));
         Guid source = placementId;
         if (tool == Tool.Slider && draftTrack != Guid.Empty && !LegacyMode)
         {
@@ -146,6 +151,15 @@ public sealed partial class EditorView
         candidate.Tracks.RemoveAll(t => t.Nodes.Count < 2);
         var preview = placementWriteCache.Convert(candidate, compensateTinyDroplets);
         if (!preview.Success) return;
+        if (localDraft)
+        {
+            var merged = MergeDraftObjects(draftBaseObjects, preview.Objects);
+            placementGhost = preview.Objects.LastOrDefault(o => o.SourceId == source && o.Kind == CatchObjectKind.Fruit);
+            if (placementGhost is { } target) UpdatePlacementDistances(target, merged);
+            placementMovementObjects = merged;
+            UpdatePlacementMovement(merged);
+            return;
+        }
         if (preview.Objects.LastOrDefault(o => o.SourceId == source && o.Kind == CatchObjectKind.Fruit) is { } distanceTarget)
             UpdatePlacementDistances(distanceTarget, preview.Objects);
         IReadOnlyList<ConvertedCatchObject> objects = preview.Objects;

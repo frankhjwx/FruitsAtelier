@@ -121,7 +121,7 @@ public sealed partial class EditorView
         if (snapTiming is null || !snapTiming.MatchesTiming(Document)) snapTiming = new(Document);
         return snapTiming;
     }
-    private readonly OsuWriteCache editorWriteCache = new();
+    private OsuWriteCache editorWriteCache = new();
     private bool IsContentDrag => drag is DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn
         or DragKind.HandleOut or DragKind.DraftHandle or DragKind.LegacyControl or DragKind.Objects
         or DragKind.BananaStart or DragKind.BananaEnd or DragKind.TimelineTail;
@@ -131,6 +131,16 @@ public sealed partial class EditorView
 
     private void EnsureConversion()
     {
+        if (draftTrack != Guid.Empty && draftBaseConversion is not null)
+        {
+            UpdateDraftConversion();
+            return;
+        }
+        if (deferredConversion)
+        {
+            PumpDeferredConversion();
+            return;
+        }
         long checkStart = Performance.Start();
         bool cached = convertedSnapshot is not null && convertedSnapshot.ContentEquals(Document)
             && convertedWithCompensation == compensateTinyDroplets
@@ -153,14 +163,6 @@ public sealed partial class EditorView
         {
             input = Document.DeepClone(); input.Tracks.RemoveAll(t => t.Nodes.Count < 2);
         }
-        // Nested slider fruits inherit their parent's full-map visual index.
-        skinIndices = input.Fruits.Select(f => (f.Id, Time: f.TimeMs, f.SourceOrder))
-            .Concat(input.Tracks.Select(t => (t.Id, Time: t.Nodes[0].TimeMs, t.SourceOrder)))
-            .Concat(input.ImportedSliders.Select(t => (t.Id, Time: t.TimeMs, t.SourceOrder)))
-            .Concat(input.BananaShowers.Select(t => (t.Id, Time: t.TimeMs, t.SourceOrder)))
-            .OrderBy(source => source.Time).ThenBy(source => source.SourceOrder)
-            .Select((source, index) => (source.Id, Index: index))
-            .ToDictionary(source => source.Id, source => source.Index);
         conversion = editorWriteCache.Convert(input, compensateTinyDroplets);
         playableExport = null;
         playableObjects = conversion.Objects;
@@ -181,6 +183,19 @@ public sealed partial class EditorView
             catch (InvalidDataException) { } // Draft content may be convertible before it is exportable.
             finally { Performance.End(EditorPerformanceStage.ExportReadback, exportStart); }
         }
+        RefreshConversionPresentation();
+    }
+
+    private void RefreshConversionPresentation()
+    {
+        // Nested slider fruits inherit their parent's full-map visual index.
+        skinIndices = Document.Fruits.Select(f => (f.Id, Time: f.TimeMs, f.SourceOrder))
+            .Concat(Document.Tracks.Where(t => t.Nodes.Count > 0).Select(t => (t.Id, Time: t.Nodes[0].TimeMs, t.SourceOrder)))
+            .Concat(Document.ImportedSliders.Select(t => (t.Id, Time: t.TimeMs, t.SourceOrder)))
+            .Concat(Document.BananaShowers.Select(t => (t.Id, Time: t.TimeMs, t.SourceOrder)))
+            .OrderBy(source => source.Time).ThenBy(source => source.SourceOrder)
+            .Select((source, index) => (source.Id, Index: index))
+            .ToDictionary(source => source.Id, source => source.Index);
         BuildComboColours();
         RefreshKiaiTransitions();
         RefreshBeatmapBackground();
@@ -408,6 +423,7 @@ public sealed partial class EditorView
         Document.Fruits.RemoveAll(fruit => fruit.TimeMs == head.TimeMs && fruit.X == head.X);
         Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
         history.Commit();
+        EndDraftConversion(cancelled: false);
         legacyDraft = null; legacyPreviewVertices = null;
         draftTrack = Guid.Empty;
         drag = DragKind.None;

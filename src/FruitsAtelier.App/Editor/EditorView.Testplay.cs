@@ -36,6 +36,12 @@ public sealed partial class EditorView
             DiscardConfirmationVisible || SliderDialogVisible || TimeJumpVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
             drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty || AudioLoading || AimodVisible) return;
         EnsureConversion();
+        if (deferredConversion)
+        {
+            deferredTestplay = true;
+            return;
+        }
+        if (!conversion!.Success) return;
         testplayReturnPosition = playhead;
         testplayStart = Math.Max(0, playhead - LibrarySettings.TestplayStartupDelaySeconds * 1000d);
         var session = new CatchTestplay(PreviewObjects(), PreviewCircleSize, testplayStart);

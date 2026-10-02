@@ -326,7 +326,7 @@ internal sealed partial class EditorWindow : IDisposable
                 PollUpdates(); PollAudio();
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
                 if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
-                    || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.SynchronizationNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
+                    || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0005: Invalidate(); return 0;
             case 0x02E0: // WM_DPICHANGED

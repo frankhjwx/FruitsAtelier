@@ -1,4 +1,5 @@
 {
+  "editor.status.convertingSlider": "正在后台更新滑条的游玩数据…",
   "aimod.title": "AiMod",
   "aimod.refresh": "刷新",
   "aimod.summary": "难度：{0}    错误：{1}",

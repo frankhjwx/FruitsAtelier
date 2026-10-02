@@ -1147,6 +1147,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        deferredTestplay = false;
         placementCtrl = false; timingTapHeld = false; timingSnapDragging = false; panelMenuOpen = false;
         EndTimingVolume(true);
         timingScrollDragging = false;
@@ -1176,6 +1177,7 @@ public sealed partial class EditorView
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
         {
             history.Cancel();
+            if (draftTrack != Guid.Empty) EndDraftConversion(cancelled: true);
             if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) Select(Guid.Empty);
             StatusMessage = L.Get("editor.status.editCancelled");
         }
@@ -1204,6 +1206,7 @@ public sealed partial class EditorView
         CurveTrack track;
         if (draftTrack == Guid.Empty)
         {
+            BeginDraftConversion();
             history.Begin(L.Get("editor.command.drawTrack"));
             track = new CurveTrack
             {

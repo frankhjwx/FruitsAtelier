@@ -86,6 +86,7 @@ public sealed partial class EditorView
             : PlacementPoint(x, y);
         if (draftTrack == Guid.Empty)
         {
+            BeginDraftConversion();
             history.Begin(L.Get("editor.command.drawTrack"));
             var track = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = true,
                 Name = L.Get("editor.track.defaultName", Document.Tracks.Count + 1) };

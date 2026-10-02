@@ -70,6 +70,19 @@ The ordered playable merge input is retained only for one exported snapshot.
 An unstarted slider uses the same standalone ghost calculation as a fruit without
 applying fruit replacement rules. Unmappable export sequences retain full validation.
 
+An active FSlider draft converts only its own track, merging provisional visual
+events with the unchanged committed preview. Pen hover likewise uses a single-track
+candidate without export/read-back. Timeline parent ordering and combo numbers are
+retained while the draft tail changes. Hitsounds retain the pre-draft conversion.
+Completing the curve commits one undo transaction, then queues full-map conversion
+and export/read-back on a detached worker. The UI transfers exclusive ownership of
+its warmed write cache to that worker. Only one job runs at a time; newer edits are
+captured after the preceding job finishes, and results publish only when history,
+content, compensation and language still match. A new draft delays publication.
+Testplay requests wait for validated output. Save and export use their own authored
+snapshots, never the provisional preview. Cancellation restores the pre-draft
+preview; switching projects or difficulties retires the pending result.
+
 Base-SV confirmation reuses the editor write cache's canonical export before SV
 override. Cached minimum/maximum inherited beat-length magnitudes provide a
 constant-time range rejection, including compensated red resets. Local validation
@@ -137,8 +150,9 @@ For each cache, identify its owner, invalidation inputs and retention policy.
 Compare optimized output against the existing full calculation after geometry,
 timing, repeat, source-order and parent-removal changes, including undo and failed
 edits. Keep the uncached calculation available as an independent correctness oracle.
-Do not silently defer required content validation or substitute unquantized events
-for exported gameplay data to make a benchmark pass.
+Draft visuals may be provisional while the curve is being authored. Required
+export validation and playable NM/HR results must complete before testplay consumes
+them; benchmark completed output against the uncached calculation.
 
 ## Verification and review
 

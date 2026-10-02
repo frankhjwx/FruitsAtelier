@@ -1,4 +1,5 @@
 {
+  "editor.status.convertingSlider": "Updating slider gameplay in the background…",
   "aimod.title": "AiMod",
   "aimod.refresh": "Refresh",
   "aimod.summary": "Difficulty: {0}    Errors: {1}",
