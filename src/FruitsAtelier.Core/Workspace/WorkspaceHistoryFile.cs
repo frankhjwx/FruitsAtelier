@@ -20,6 +20,11 @@ public static class WorkspaceHistoryFile
 
     public static byte[] Read(string path)
     {
+        lock (WorkspaceProject.Gate) return ReadCore(path);
+    }
+
+    private static byte[] ReadCore(string path)
+    {
         string compressed = path.EndsWith(Extension, StringComparison.OrdinalIgnoreCase) ? path : path + Extension;
         if (!File.Exists(compressed))
         {
@@ -67,6 +72,45 @@ public static class WorkspaceHistoryFile
     }
 
     internal static bool Compressible(string path) => Path.GetExtension(path).ToLowerInvariant() is ".catchdiff" or ".catchproj" or ".catchsync" or ".osu";
+    internal static long CompactInBackground(string path, string stagingDirectory, CancellationToken cancellation)
+    {
+        byte[] original;
+        lock (WorkspaceProject.Gate)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            WorkspaceProject.RejectLinks(path);
+            if (!File.Exists(path)) return 0;
+            original = ReadLegacy(path);
+        }
+        string staging = Path.Combine(stagingDirectory, Guid.NewGuid().ToString("N") + ".tmp");
+        string stagedFile = staging + Extension, target = path + Extension;
+        try
+        {
+            Write(staging, original);
+            cancellation.ThrowIfCancellationRequested();
+            if (!ReadCore(stagedFile).SequenceEqual(original)) throw Invalid();
+            if (new FileInfo(stagedFile).Length >= original.Length) return 0;
+            lock (WorkspaceProject.Gate)
+            {
+                cancellation.ThrowIfCancellationRequested();
+                WorkspaceProject.RejectLinks(path); WorkspaceProject.RejectLinks(target);
+                // Retention may remove this round, or another writer may replace either copy during compression.
+                if (!File.Exists(path) || !ReadLegacy(path).SequenceEqual(original)) return 0;
+                if (File.Exists(target))
+                {
+                    if (!ReadCore(target).SequenceEqual(original)) return 0;
+                }
+                else File.Move(stagedFile, target);
+                if (!ReadCore(target).SequenceEqual(original)) throw Invalid();
+                cancellation.ThrowIfCancellationRequested();
+                long saved = original.Length - new FileInfo(target).Length;
+                if (saved <= 0) return 0;
+                File.Delete(path);
+                return saved;
+            }
+        }
+        finally { if (File.Exists(stagedFile)) File.Delete(stagedFile); }
+    }
     internal static long Compact(string path)
     {
         WorkspaceProject.RejectLinks(path);

@@ -62,6 +62,8 @@ public sealed partial class EditorView
         LoadLibraryMemory();
         StartLibraryScan();
         EnableFileMonitoring();
+        historyCompressionEnabled = true;
+        StartHistoryCompression(Path.GetFullPath(LibrarySettings.Workspace));
     }
     public void SetLibraryFolder(bool workspace, string path)
     {

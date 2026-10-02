@@ -281,6 +281,16 @@ when compression reduces their size. It verifies each published copy before remo
 the original. Conversion preserves snapshot timestamps, identities and all versions
 otherwise protected by retention; it does not recompress audio resources.
 
+At startup, a separate worker converts existing uncompressed recovery documents,
+including when a project is open. It runs below normal priority on Windows and waits
+two seconds between files. Compression and staging verification happen outside the
+project save lock; publication briefly takes the lock and checks that the source
+still contains the original bytes. A flushed, published binary must pass checksum
+and byte-for-byte verification before the original is deleted. Changed sources,
+conflicting binaries, and failed conversions retain their originals. Closing the
+editor or switching workspaces cancels migration; the next startup retries remaining
+files. Current project files, library databases, and audio are not converted.
+
 Select a version, then a difficulty. The window compares metadata and shows aligned
 current/historical object previews, including editable curves. Both previews use the
 active editor's AR scroll scale and initially show its current timeline position,
@@ -376,8 +386,8 @@ object source lines and metadata text are never interpreted as paths. Cleanup
 refuses linked filesystem paths, aborts before deletion on unreadable reference
 documents, and defers when export/deletion recovery or project publication is pending.
 
-**Clean history** applies the same retention policy immediately and compacts retained
-legacy snapshots. **Clear cache**
+**Clean history** applies the same retention policy immediately and schedules retained
+legacy snapshots for the same background conversion. **Clear cache**
 removes temporary comparison files and reconstructible library map rows, then
 reindexes sources. It preserves project/source registrations, version snapshots,
 imported music, skins, and current authoring. Both operations may reclaim old

@@ -93,6 +93,30 @@ internal static class StorageSettingsTests
             }
         }
         finally { L.SetLanguage(language); }
+        StartupCompression();
+    }
+
+    private static void StartupCompression()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/storage-startup", Guid.NewGuid().ToString("N")));
+        string snapshot = Path.Combine(root, ".sync-history", Guid.NewGuid().ToString("N"), "20200101T0000000000000-save");
+        Directory.CreateDirectory(snapshot);
+        string source = Path.Combine(snapshot, "saved.catchproj"), content = "{\"Name\":\"" + new string('x', 20000) + "\"}";
+        File.WriteAllText(source, content);
+        var ui = new Ui(false);
+        var settings = new LibrarySettings { Workspace = root, OsuRoot = "" };
+        ui.View.InitializeLibrary(false, settings);
+        ui.View.StopFileMonitoring();
+        Check(File.Exists(source), "closing the editor before migration retains its original");
+        ui.View.InitializeLibrary(false, settings);
+        try
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(15);
+            while (File.Exists(source) && DateTime.UtcNow < deadline) { Thread.Sleep(10); ui.Paint(); }
+            Check(!ui.View.LibraryVisible && !File.Exists(source) && WorkspaceHistoryFile.ReadText(source) == content,
+                "startup converts old history while the editing view is open");
+        }
+        finally { ui.View.StopFileMonitoring(); }
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
 }

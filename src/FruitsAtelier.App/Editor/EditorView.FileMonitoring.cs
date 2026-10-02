@@ -17,7 +17,12 @@ public sealed partial class EditorView
         ConfigureFileMonitoring();
     }
 
-    public void StopFileMonitoring() { fileMonitor?.Dispose(); fileMonitor = null; }
+    public void StopFileMonitoring()
+    {
+        fileMonitor?.Dispose(); fileMonitor = null;
+        historyCompressionEnabled = false;
+        StopHistoryCompression(); historyCompressionRoot = "";
+    }
 
     public void CheckFilesOnActivation() => fileMonitor?.Invalidate();
 

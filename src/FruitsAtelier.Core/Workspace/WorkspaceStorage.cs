@@ -7,6 +7,7 @@ namespace FruitsAtelier.Core;
 public sealed record WorkspaceStoragePart(string Name, long Bytes);
 public sealed record WorkspaceStorageReport(long TotalBytes, IReadOnlyList<WorkspaceStoragePart> Categories,
     IReadOnlyList<WorkspaceStoragePart> Folders, long ReclaimedBytes = 0, bool RecoveryPending = false);
+public sealed record WorkspaceHistoryCompressionResult(int ConvertedFiles, long ReclaimedBytes, string? Error = null);
 
 public static class WorkspaceStorage
 {
@@ -16,6 +17,11 @@ public static class WorkspaceStorage
     private sealed record Snapshot(string Path, DateTime Time, long Bytes);
 
     public static WorkspaceStorageReport Inspect(string workspace)
+    {
+        lock (WorkspaceProject.Gate) return InspectCore(workspace);
+    }
+
+    private static WorkspaceStorageReport InspectCore(string workspace)
     {
         string root = Path.GetFullPath(workspace);
         var categories = new Dictionary<string, long>(); var folders = new Dictionary<string, long>();
@@ -35,8 +41,44 @@ public static class WorkspaceStorage
             folders.Select(p => new WorkspaceStoragePart(p.Key, p.Value)).OrderByDescending(p => p.Bytes).ToArray());
     }
 
-    public static WorkspaceStorageReport Clean(string workspace, bool clearCache = false, DateTime? utcNow = null, IReadOnlyCollection<string>? protectedPaths = null)
-        => CleanCore(workspace, clearCache, utcNow, protectedPaths);
+    public static WorkspaceStorageReport Clean(string workspace, bool clearCache = false, DateTime? utcNow = null, IReadOnlyCollection<string>? protectedPaths = null, bool compactLegacy = true)
+        => CleanCore(workspace, clearCache, utcNow, protectedPaths, compactLegacy: compactLegacy);
+
+    public static Task<WorkspaceHistoryCompressionResult> CompressLegacyHistoryAsync(string workspace, CancellationToken cancellation = default, TimeSpan? interval = null)
+        => Task.Factory.StartNew(() =>
+        {
+            var thread = Thread.CurrentThread;
+            if (OperatingSystem.IsWindows()) thread.Priority = ThreadPriority.BelowNormal;
+            cancellation.ThrowIfCancellationRequested();
+            string history = Path.Combine(Path.GetFullPath(workspace), ".sync-history");
+            if (!Directory.Exists(history)) return new WorkspaceHistoryCompressionResult(0, 0);
+            string staging = Path.Combine(history, ".compression");
+            WorkspaceProject.RejectLinks(staging);
+            string[] candidates;
+            lock (WorkspaceProject.Gate)
+                candidates = Files(history).Where(f => WorkspaceHistoryFile.Compressible(f.FullName)
+                    && IsHistorySnapshot(f.FullName, history)).Select(f => f.FullName).ToArray();
+            int converted = 0; long reclaimed = 0; string? error = null;
+            foreach (string path in candidates)
+            {
+                if (cancellation.WaitHandle.WaitOne(interval ?? TimeSpan.FromSeconds(2))) cancellation.ThrowIfCancellationRequested();
+                try
+                {
+                    Directory.CreateDirectory(staging);
+                    long saved = WorkspaceHistoryFile.CompactInBackground(path, staging, cancellation);
+                    if (saved > 0) { converted++; reclaimed += saved; }
+                }
+                catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
+                { error ??= e.Message; }
+            }
+            return new WorkspaceHistoryCompressionResult(converted, reclaimed, error);
+        }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+    private static bool IsHistorySnapshot(string path, string history)
+    {
+        string[] parts = Path.GetRelativePath(history, path).Split(Path.DirectorySeparatorChar);
+        return parts.Length >= 3 && Guid.TryParseExact(parts[0], "N", out _) && IsSnapshot(parts[1]);
+    }
 
     internal static void EnforceVersionLimit(WorkspaceSession session)
     {
@@ -53,7 +95,7 @@ public static class WorkspaceStorage
             DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out _);
     }
 
-    private static WorkspaceStorageReport CleanCore(string workspace, bool clearCache, DateTime? utcNow, IReadOnlyCollection<string>? protectedPaths, string? limitProject = null)
+    private static WorkspaceStorageReport CleanCore(string workspace, bool clearCache, DateTime? utcNow, IReadOnlyCollection<string>? protectedPaths, string? limitProject = null, bool compactLegacy = true)
     {
         string root = Path.GetFullPath(workspace), history = Path.Combine(root, ".sync-history");
         DateTime now = utcNow ?? DateTime.UtcNow;
@@ -182,7 +224,7 @@ public static class WorkspaceStorage
             }
             foreach (var file in files.Where(f => WorkspaceProject.Within(reviews, f.FullName)))
                 if (clearCache || file.LastWriteTimeUtc < now.AddDays(-RetentionDays)) Delete(file);
-            if (!clearCache)
+            if (!clearCache && compactLegacy)
                 foreach (var file in files.Where(f => File.Exists(f.FullName) && WorkspaceHistoryFile.Compressible(f.FullName)
                     && snapshots.Any(s => !remove.Contains(s.Path) && WorkspaceProject.Within(s.Path, f.FullName))))
                     reclaimed += WorkspaceHistoryFile.Compact(file.FullName);
@@ -205,6 +247,8 @@ public static class WorkspaceStorage
             foreach (string path in Directory.EnumerateFileSystemEntries(directory))
             {
                 WorkspaceProject.RejectLinks(path);
+                // Staging belongs to the compression worker and can disappear outside the save lock.
+                if (Path.GetFileName(directory) == ".sync-history" && Path.GetFileName(path) == ".compression") continue;
                 if (Directory.Exists(path)) pending.Push(path); else yield return new FileInfo(path);
             }
     }

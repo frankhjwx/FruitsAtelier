@@ -78,6 +78,71 @@ internal static class HistoryCompressionTests
         Check(Directory.Exists(other), "write-time retention leaves other sets alone");
         var newest = WorkspaceVersionHistory.List(session).First(v => v.WorkingCopy);
         Check(WorkspaceVersionHistory.Read(session, newest).Difficulties[0].Document.Fruits[0].X == 200, "latest unsaved authoring survives write-time pruning");
+        BackgroundMigration(Path.Combine(root, "background"));
+    }
+
+    private static void BackgroundMigration(string workspace)
+    {
+        string snapshot = Path.Combine(workspace, ".sync-history", Guid.NewGuid().ToString("N"), "20200101T0000000000000-save");
+        Directory.CreateDirectory(snapshot);
+        byte[] bytes = Encoding.Unicode.GetPreamble().Concat(Encoding.Unicode.GetBytes(new string('中', 20000))).ToArray();
+        string source = Path.Combine(snapshot, "saved.catchproj");
+        File.WriteAllBytes(source, bytes);
+        using (var cancel = new CancellationTokenSource())
+        {
+            var task = WorkspaceStorage.CompressLegacyHistoryAsync(workspace, cancel.Token, TimeSpan.FromSeconds(30));
+            cancel.Cancel();
+            try { task.GetAwaiter().GetResult(); throw new Exception("canceled migration completed"); }
+            catch (OperationCanceledException) { }
+        }
+        Check(File.Exists(source) && !File.Exists(source + WorkspaceHistoryFile.Extension), "canceling before conversion preserves the original");
+        string conflicting = Path.Combine(snapshot, "conflict.catchdiff");
+        File.WriteAllBytes(conflicting, bytes);
+        byte[] replacement = Encoding.UTF8.GetBytes(new string('y', 20000));
+        WorkspaceHistoryFile.Write(conflicting, replacement);
+        string damaged = Path.Combine(snapshot, "damaged.catchsync");
+        File.WriteAllBytes(damaged, bytes); File.WriteAllText(damaged + WorkspaceHistoryFile.Extension, "broken");
+        string audio = Path.Combine(snapshot, "audio.mp3"), active = Path.Combine(workspace, "active.catchproj");
+        File.WriteAllBytes(audio, bytes); File.WriteAllBytes(active, bytes);
+        var result = WorkspaceStorage.CompressLegacyHistoryAsync(workspace, interval: TimeSpan.Zero).GetAwaiter().GetResult();
+        Check(result.ConvertedFiles == 1 && result.ReclaimedBytes == bytes.Length - new FileInfo(source + WorkspaceHistoryFile.Extension).Length, "migration reports exact reclaimed bytes");
+        Check(result.Error is not null && File.Exists(damaged), "damaged binary retains its original while other conversions continue");
+        Check(!File.Exists(source) && WorkspaceHistoryFile.Read(source).SequenceEqual(bytes), "background conversion publishes a readable exact copy before deleting the original");
+        Check(File.Exists(conflicting) && WorkspaceHistoryFile.Read(conflicting).SequenceEqual(replacement), "migration preserves a different existing binary and its raw copy");
+        Check(File.Exists(audio) && File.Exists(active), "migration only converts recovery documents");
+        Check(!Directory.EnumerateFiles(Path.Combine(workspace, ".sync-history", ".compression")).Any(), "migration removes staging files after success and failure");
+
+        File.Delete(conflicting); File.Delete(damaged);
+
+        string racing = Path.Combine(snapshot, "racing.catchproj");
+        byte[] noise = new byte[1024 * 1024]; new Random(731).NextBytes(noise);
+        File.WriteAllBytes(racing, noise.Concat(noise).ToArray());
+        // The staging file exists while Brotli is running, before publication under the save lock.
+        var race = WorkspaceStorage.CompressLegacyHistoryAsync(workspace, interval: TimeSpan.Zero);
+        string staging = Path.Combine(workspace, ".sync-history", ".compression");
+        var deadline = Stopwatch.StartNew();
+        while (!Directory.EnumerateFiles(staging, "*.tmp").Any() && !race.IsCompleted && deadline.Elapsed.TotalSeconds < 15) Thread.Sleep(1);
+        Check(!race.IsCompleted && deadline.Elapsed.TotalSeconds < 15, "background compression reaches staging before publication");
+        bool acquired = Monitor.TryEnter(WorkspaceProject.Gate, 100);
+        try
+        {
+            Check(acquired, "expensive compression leaves the save lock available");
+            File.WriteAllBytes(racing, replacement);
+        }
+        finally { if (acquired) Monitor.Exit(WorkspaceProject.Gate); }
+        race.GetAwaiter().GetResult();
+        Check(File.ReadAllBytes(racing).SequenceEqual(replacement) && !File.Exists(racing + WorkspaceHistoryFile.Extension), "source changed during compression survives without a stale binary");
+        File.WriteAllBytes(racing, noise.Concat(noise).ToArray());
+        using var interrupted = new CancellationTokenSource();
+        var inProgress = WorkspaceStorage.CompressLegacyHistoryAsync(workspace, interrupted.Token, TimeSpan.Zero);
+        deadline.Restart();
+        while (!Directory.EnumerateFiles(staging, "*.tmp").Any() && !inProgress.IsCompleted && deadline.Elapsed.TotalSeconds < 15) Thread.Sleep(1);
+        Check(!inProgress.IsCompleted && deadline.Elapsed.TotalSeconds < 15, "cancellation test reaches an unfinished compressed file");
+        interrupted.Cancel();
+        try { inProgress.GetAwaiter().GetResult(); throw new Exception("interrupted compression completed"); }
+        catch (OperationCanceledException) { }
+        Check(File.Exists(racing) && !File.Exists(racing + WorkspaceHistoryFile.Extension) && !Directory.EnumerateFiles(staging).Any(),
+            "canceling during compression retains the original and removes unfinished staging");
     }
 
     public static void Benchmark(string history)
