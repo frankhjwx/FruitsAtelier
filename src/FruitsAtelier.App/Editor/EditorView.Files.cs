@@ -190,6 +190,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
+        if (AudioProjectCreating) return false;
         if (VersionHistoryVisible || SynchronizationVisible || workspaceSaveTask is not null || syncCommitTask is not null) return false;
         if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal || AimodVisible) return false;
         if (!CommitTimingField()) return false;

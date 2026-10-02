@@ -49,6 +49,7 @@ internal sealed partial class MacWindow
     }
     private void ConfigureLibrary(bool show, bool smokeCheck)
     {
+        View.RequestAudioProject = path => RunFile(async () => { if (await ConfirmDiscard()) View.BeginAudioProject(path); });
         View.RequestLibraryDrop = paths => RunFile(async () =>
         {
             foreach (string skin in paths.Where(p => Path.GetExtension(p).Equals(".osk", StringComparison.OrdinalIgnoreCase)))
