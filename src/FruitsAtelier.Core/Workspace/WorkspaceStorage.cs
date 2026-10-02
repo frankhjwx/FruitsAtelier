@@ -66,14 +66,15 @@ public static class WorkspaceStorage
             foreach (string live in protectedPaths ?? [])
                 foreach (var snapshot in snapshots)
                     if (WorkspaceProject.Within(snapshot.Path, live)) pinned.Add(snapshot.Path);
-            foreach (var file in files.Where(f => f.Extension.ToLowerInvariant() is ".catchdiff" or ".catchproj" or ".catchsync" or ".json"))
+            foreach (var file in files.Where(f => Path.GetExtension(WorkspaceHistoryFile.LogicalPath(f.FullName)).ToLowerInvariant() is ".catchdiff" or ".catchproj" or ".catchsync" or ".json"))
             {
-                string text = File.ReadAllText(file.FullName);
+                string logical = WorkspaceHistoryFile.LogicalPath(file.FullName);
+                string text = WorkspaceProject.Within(history, file.FullName) ? WorkspaceHistoryFile.ReadText(file.FullName) : File.ReadAllText(file.FullName);
                 using var document = JsonDocument.Parse(text);
                 documents[file.FullName] = Hashes.Matches(text).Select(m => m.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
                 var playback = new HashSet<string>(WorkspaceSynchronization.Paths);
                 playbackReferences[file.FullName] = playback;
-                FindPaths(document.RootElement, Path.GetDirectoryName(file.FullName)!, playback, snapshots.FirstOrDefault(s => WorkspaceProject.Within(s.Path, file.FullName))?.Path);
+                FindPaths(document.RootElement, Path.GetDirectoryName(logical)!, playback, snapshots.FirstOrDefault(s => WorkspaceProject.Within(s.Path, file.FullName))?.Path);
             }
             void FindPaths(JsonElement element, string directory, HashSet<string> playback, string? owner, string? propertyName = null)
             {
@@ -155,6 +156,10 @@ public static class WorkspaceStorage
             }
             foreach (var file in files.Where(f => WorkspaceProject.Within(reviews, f.FullName)))
                 if (clearCache || file.LastWriteTimeUtc < now.AddDays(-RetentionDays)) Delete(file);
+            if (!clearCache)
+                foreach (var file in files.Where(f => File.Exists(f.FullName) && WorkspaceHistoryFile.Compressible(f.FullName)
+                    && snapshots.Any(s => !remove.Contains(s.Path) && WorkspaceProject.Within(s.Path, f.FullName))))
+                    reclaimed += WorkspaceHistoryFile.Compact(file.FullName);
             return Inspect(root) with { ReclaimedBytes = reclaimed };
             void Delete(FileInfo file)
             {

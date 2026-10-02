@@ -615,7 +615,13 @@ public static class WorkspaceSynchronization
     {
         string target = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(session.Directory)!, ".sync-history", session.Manifest.Id.ToString("N"), DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffffff") + "-" + operation);
         Directory.CreateDirectory(target);
-        foreach (string path in Directory.EnumerateFiles(session.Directory)) File.Copy(path, System.IO.Path.Combine(target, System.IO.Path.GetFileName(path)));
+        foreach (string path in Directory.EnumerateFiles(session.Directory))
+        {
+            WorkspaceProject.RejectLinks(path);
+            string copy = System.IO.Path.Combine(target, System.IO.Path.GetFileName(path));
+            if (WorkspaceHistoryFile.Compressible(path)) WorkspaceHistoryFile.Write(copy, File.ReadAllBytes(path));
+            else File.Copy(path, copy);
+        }
         var saved = new BeatmapProject { Name = session.Manifest.Name };
         var manifest = WorkspaceProject.ReadManifest(session.Directory);
         foreach (var entry in manifest.Difficulties)
@@ -624,7 +630,7 @@ public static class WorkspaceSynchronization
             saved.Difficulties.Add(new ProjectDifficulty { Id = entry.Id, Name = entry.Name,
                 Document = ProjectSerializer.ReadFile(System.IO.Path.Combine(session.Directory, entry.File)) });
         }
-        ProjectSerializer.WriteFile(saved, System.IO.Path.Combine(target, "saved.catchproj"));
+        WorkspaceHistoryFile.WriteProject(saved, System.IO.Path.Combine(target, "saved.catchproj"));
         return target;
     }
 

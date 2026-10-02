@@ -7,8 +7,15 @@ if (args.Length == 2 && args[0] == "--preserve-slider-positions")
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
 
+if (args.Length == 2 && args[0] == "--benchmark-history")
+{
+    HistoryCompressionTests.Benchmark(args[1]);
+    return 0;
+}
+
 var tests = new (string Name, Action Run)[]
 {
+    ("Binary recovery history preserves bytes, rejects corruption and retains audio", HistoryCompressionTests.Run),
     ("Save context rebasing avoids unchanged history work and preserves undo and redo", ContextRebaseTests.History),
     ("Fractional repeats share fixed targets during partial tiny compensation", PartialCompensationTests.FractionalRepeats),
     ("Project files support 128 MiB and reject oversized UTF-8 data", ProjectSizeLimitTests.Run),

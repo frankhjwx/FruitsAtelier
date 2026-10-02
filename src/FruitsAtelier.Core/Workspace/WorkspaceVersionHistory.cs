@@ -22,7 +22,7 @@ public static class WorkspaceVersionHistory
             foreach (string file in new[] { "current.catchproj", "saved.catchproj" })
             {
                 string path = System.IO.Path.Combine(directory, file);
-                if (File.Exists(path)) versions.Add(new(path, time, name[23..], file == "current.catchproj"));
+                if (WorkspaceHistoryFile.Exists(path)) versions.Add(new(path, time, name[23..], file == "current.catchproj"));
             }
         }
         return versions.OrderByDescending(v => v.TimeUtc).ThenByDescending(v => v.WorkingCopy).ToArray();
@@ -34,7 +34,7 @@ public static class WorkspaceVersionHistory
             || System.IO.Path.GetFileName(version.Path) is not ("current.catchproj" or "saved.catchproj"))
             throw new InvalidDataException(L.Get("project.invalid"));
         WorkspaceProject.RejectLinks(version.Path);
-        return ProjectSerializer.ReadProjectFile(version.Path);
+        return ProjectSerializer.ReadProject(WorkspaceHistoryFile.ReadText(version.Path), version.Path);
     }
 
     public static void ArchiveCurrent(WorkspaceSession session, BeatmapProject project)
@@ -42,7 +42,7 @@ public static class WorkspaceVersionHistory
         lock (WorkspaceProject.Gate)
         {
             string directory = WorkspaceSynchronization.Archive(session, "restore");
-            ProjectSerializer.WriteFile(project, System.IO.Path.Combine(directory, "current.catchproj"));
+            WorkspaceHistoryFile.WriteProject(project, System.IO.Path.Combine(directory, "current.catchproj"));
         }
     }
 

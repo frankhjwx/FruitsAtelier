@@ -236,7 +236,7 @@ public sealed partial class EditorView
                         var project = result.Snapshot;
                         var session = result.Session with { Manifest = result.Manifest, Project = project };
                         var receipts = new List<string>();
-                        ProjectSerializer.WriteFile(project, Path.Combine(WorkspaceSynchronization.Archive(session, "before-sync"), "current.catchproj"));
+                        WorkspaceHistoryFile.WriteProject(project, Path.Combine(WorkspaceSynchronization.Archive(session, "before-sync"), "current.catchproj"));
                         foreach (var status in automatic)
                         {
                             var entry = session.Manifest.Difficulties.Single(d => d.Id == status.DifficultyId);
@@ -376,7 +376,7 @@ public sealed partial class EditorView
                     throw new SyncSourceChangedException();
             }
             catch (IOException) { throw new SyncSourceChangedException(); }
-            ProjectSerializer.WriteFile(project, Path.Combine(WorkspaceSynchronization.Archive(session, "resolution"), "current.catchproj"));
+            WorkspaceHistoryFile.WriteProject(project, Path.Combine(WorkspaceSynchronization.Archive(session, "resolution"), "current.catchproj"));
             if (fieldsOnly) diff.Document = WorkspaceSynchronization.Resolve(fieldReview!,
                 fieldReview!.Conflicts.ToDictionary(c => c.Key, c => useExternal ?? choices.GetValueOrDefault(c.Key)));
             else if (useExternal is true) diff.Document = fieldReview is not null
@@ -427,7 +427,7 @@ public sealed partial class EditorView
         syncCommitTask = Task.Run(() =>
         {
             WorkspaceAssociations.EnsureOwner(session, diff.Id, target);
-            ProjectSerializer.WriteFile(project, Path.Combine(WorkspaceSynchronization.Archive(session, "restore"), "current.catchproj"));
+            WorkspaceHistoryFile.WriteProject(project, Path.Combine(WorkspaceSynchronization.Archive(session, "restore"), "current.catchproj"));
             string folder = Path.GetDirectoryName(target)!;
             if (!Directory.Exists(folder))
             {

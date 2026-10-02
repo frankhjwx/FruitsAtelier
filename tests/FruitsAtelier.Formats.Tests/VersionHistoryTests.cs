@@ -17,8 +17,13 @@ internal static class VersionHistoryTests
         project.Difficulties[0].Document.Fruits[0].X = 200;
         WorkspaceProject.Save(session, project);
         var first = WorkspaceVersionHistory.List(session).Single();
+        Check(File.Exists(first.Path + WorkspaceHistoryFile.Extension) && !File.Exists(first.Path), "new saved versions are compressed binary files");
         Check(first.Operation == "save" && !first.WorkingCopy, "changed saves archive previous authoring");
         Check(WorkspaceVersionHistory.Read(session, first).Difficulties[0].Document.Fruits[0].X == 100, "old note position remains readable");
+        byte[] legacy = WorkspaceHistoryFile.Read(first.Path);
+        File.WriteAllBytes(first.Path, legacy);
+        File.Delete(first.Path + WorkspaceHistoryFile.Extension);
+        Check(WorkspaceVersionHistory.Read(session, first).Difficulties[0].Document.Fruits[0].X == 100, "legacy JSON versions remain readable");
         WorkspaceProject.Save(session, project);
         Check(WorkspaceVersionHistory.List(session).Count == 1, "unchanged saves create no extra version");
         project.Difficulties[0].Document.Fruits[0].X = 300;

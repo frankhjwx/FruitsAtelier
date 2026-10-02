@@ -651,12 +651,16 @@ internal static class SynchronizationTests
         }));
         yield return ("Sync: interrupted deletion rolls back the external removal", () => Run(f =>
         {
-            string backup = WorkspaceSynchronization.Archive(f.Session, "delete-test");
-            File.Copy(f.Source, Path.Combine(backup, "external.osu"));
-            string journal = System.Text.Json.JsonSerializer.Serialize(new { DifficultyId = f.Diff.Id, Path = f.Source, Backup = backup, Hash = WorkspaceProject.Hash(f.Source) });
-            File.WriteAllText(Path.Combine(f.Session.Directory, "delete.json"), journal); File.Delete(f.Source);
-            var reopened = WorkspaceProject.Open(f.Session.Directory);
-            Check(File.Exists(f.Source) && reopened.Project.Difficulties[0].Id == f.Diff.Id, "both sides restored");
+            foreach (bool compressed in new[] { false, true })
+            {
+                string backup = WorkspaceSynchronization.Archive(f.Session, "delete-test");
+                if (compressed) WorkspaceHistoryFile.Write(Path.Combine(backup, "external.osu"), File.ReadAllBytes(f.Source));
+                else File.Copy(f.Source, Path.Combine(backup, "external.osu"));
+                string journal = System.Text.Json.JsonSerializer.Serialize(new { DifficultyId = f.Diff.Id, Path = f.Source, Backup = backup, Hash = WorkspaceProject.Hash(f.Source) });
+                File.WriteAllText(Path.Combine(f.Session.Directory, "delete.json"), journal); File.Delete(f.Source);
+                var reopened = WorkspaceProject.Open(f.Session.Directory);
+                Check(File.Exists(f.Source) && reopened.Project.Difficulties[0].Id == f.Diff.Id, "legacy and compressed external recovery restore both sides");
+            }
         }));
         yield return ("Sync: two legacy difficulties in one project require one retained owner", () => Run(f =>
         {
@@ -741,12 +745,21 @@ internal static class SynchronizationTests
         {
             f.Diff.Document.Fruits[0].X = 430;
             var plan = WorkspaceExport.Plan(f.Session, f.Diff, f.Songs, true, "", true);
-            WorkspaceExportRecovery.Prepare(f.Session, f.Session.Project, plan, f.Diff.Id);
-            File.WriteAllText(f.Source, Fixture().Replace("100,192", "321,192"));
-            var reopened = WorkspaceProject.Open(f.Session.Directory);
-            Check(reopened.Project.Difficulties[0].Document.Fruits[0].X == 430, "pending authoring recovered");
-            Check(OsuBeatmapReader.ReadFile(f.Source).Fruits[0].X == 321, "newer external state not overwritten");
-            Check(WorkspaceSynchronization.Scan(reopened, f.Songs).Difficulties.Single().State == WorkspaceSyncState.Changed, "external difference still detected");
+            foreach (bool compressed in new[] { false, true })
+            {
+                string receipt = WorkspaceExportRecovery.Prepare(f.Session, f.Session.Project, plan, f.Diff.Id);
+                Check(File.Exists(receipt + WorkspaceHistoryFile.Extension), "new recovery receipt is binary");
+                if (!compressed)
+                {
+                    File.WriteAllBytes(receipt, WorkspaceHistoryFile.Read(receipt));
+                    File.Delete(receipt + WorkspaceHistoryFile.Extension);
+                }
+                File.WriteAllText(f.Source, Fixture().Replace("100,192", "321,192"));
+                var reopened = WorkspaceProject.Open(f.Session.Directory);
+                Check(reopened.Project.Difficulties[0].Document.Fruits[0].X == 430, "legacy and compressed pending authoring recovered");
+                Check(OsuBeatmapReader.ReadFile(f.Source).Fruits[0].X == 321, "newer external state not overwritten");
+                Check(WorkspaceSynchronization.Scan(reopened, f.Songs).Difficulties.Single().State == WorkspaceSyncState.Changed, "external difference still detected");
+            }
         }));
         yield return ("Sync: legacy missing baseline requires explicit version choice", () => Run(f =>
         {
@@ -930,7 +943,7 @@ internal static class SynchronizationTests
             string diff = Path.Combine(f.Session.Directory, f.Session.Manifest.Difficulties[0].File);
             WorkspaceAssociations.DeleteDifficulty(f.Session, f.Session.Project, f.Diff.Id);
             Check(!File.Exists(f.Source) && !File.Exists(diff) && !File.Exists(Path.Combine(f.Session.Directory, WorkspaceProject.ManifestName)), "both removed");
-            Check(Directory.EnumerateFiles(Path.Combine(f.Workspace, ".sync-history"), "external.osu", SearchOption.AllDirectories).Any(), "external recovery");
+            Check(Directory.EnumerateFiles(Path.Combine(f.Workspace, ".sync-history"), "external.osu" + WorkspaceHistoryFile.Extension, SearchOption.AllDirectories).Any(), "external recovery");
         }));
         yield return ("Sync: duplicate ownership blocks export and ordinary deletion", () => Run(f =>
         {

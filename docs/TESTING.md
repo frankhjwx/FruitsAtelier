@@ -52,6 +52,18 @@ bash scripts/Test-Mac.sh --native-only        # Mac input/audio checks only
 
 ## Library scale benchmark
 
+Recovery compression can be measured against an existing project's history directory:
+
+```powershell
+dotnet run --no-build --project tests/FruitsAtelier.Core.Tests -c Release -- --benchmark-history <workspace/.sync-history/project-id>
+```
+
+The source remains read-only. The benchmark writes compressed payloads and its report
+under `artifacts/history-compression`, verifies byte-for-byte decompression, and counts
+every source file in the before/after totals. Identical payloads are measured once to
+avoid repeating CPU work; their compressed sizes are counted for every occurrence.
+This does not measure per-write latency or apply deduplication to actual backups.
+
 Run the opt-in benchmark from the repository root after building:
 
 ```powershell
