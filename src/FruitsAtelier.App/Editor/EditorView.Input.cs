@@ -680,6 +680,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (VersionHistoryVisible) { ScrollVersionHistory(x, y, delta, ctrl); return; }
         if (SynchronizationBlocksInput) return;
         if (SynchronizationVisible) { ScrollSyncComparison(x, y, delta, ctrl); return; }
         if (librarySettingsOpen) { ScrollStorage(x, y, delta); return; }
@@ -859,6 +860,7 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (VersionHistoryVisible) { VersionHistoryKey(virtualKey); return; }
         if (SynchronizationBlocksInput) return;
         if (DistanceKeyDown(virtualKey, ctrl, shift)) return;
         placementCtrl = ctrl;

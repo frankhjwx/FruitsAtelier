@@ -37,6 +37,7 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        CloseVersionHistory();
         CloseSongSetup();
         CloseTimingSetup(); TimingPageVisible = false;
         TimeJumpVisible = false;
@@ -184,7 +185,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
-        if (SynchronizationVisible || syncCommitTask is not null) return false;
+        if (VersionHistoryVisible || SynchronizationVisible || syncCommitTask is not null) return false;
         if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
         if (!CommitTimingField()) return false;
         if (SliderMultiplierValidationBusy)

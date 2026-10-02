@@ -23,6 +23,8 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Version history previews and restores changed and deleted difficulties with undo and modal isolation", VersionHistoryUiTests.Run),
+
     ("Playback note saves keep input responsive and retain edits made during publication", SynchronizationUiTests.PlaybackSave),
     ("FA metadata and notes export against resolved osu versions while retaining undo", SynchronizationUiTests.LocalBreaks),
     ("Synchronization failures wrap and scroll without editing content", SynchronizationUiTests.FailureText),

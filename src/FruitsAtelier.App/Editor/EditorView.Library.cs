@@ -238,6 +238,7 @@ public sealed partial class EditorView
     private void PumpLibrary()
     {
         PumpStorage();
+        PumpVersionHistory();
         PumpFileMonitoring();
         PumpSynchronization();
         libraryBrowser?.Pump();

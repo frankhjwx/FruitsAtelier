@@ -16,6 +16,8 @@ if (args.Length == 2 && args[0] == "--import-roundtrip")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Version history preserves saved, unsaved and deleted authoring by project identity", VersionHistoryTests.Run),
+
     ("Fractional banana endpoints preserve exported counts and downstream tiny compensation", BananaQuantizationTests.Run),
     ("Export keeps timing data below its header and a blank before Colours", TimingSectionSpacing),
     ("Export orders metadata with difficulty identity at the end", MetadataLayout),

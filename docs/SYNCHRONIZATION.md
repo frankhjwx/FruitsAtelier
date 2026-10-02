@@ -244,6 +244,35 @@ deletion journal permits rollback of an interrupted external removal. Empty
 projects are retired by directory rename. Recovery copies are retained under
 `workspace/.sync-history`; they are excluded from ordinary indexing.
 
+## Version history
+
+**Edit → Version history…** lists retained versions for the open workspace project,
+newest first. Each entry shows its local date/time, operation, and whether it is the
+saved version or the working copy captured before a change. Both are available when
+an operation archived unsaved edits. History includes earlier names and difficulties
+that were subsequently deleted. It uses existing `.sync-history` archives; no migration
+is required. Changed workspace saves also retain their previous authoring state.
+Unchanged saves do not add versions. The storage retention policy below still applies.
+
+Select a version, then a difficulty. The window compares metadata and shows aligned
+current/historical object previews, including editable curves. Scroll the version and
+difficulty lists independently. Scroll over either preview to move both timelines;
+Ctrl+wheel changes their common time span. Up/Down selects versions, Left/Right selects
+difficulties, and Escape closes the window. Browsing does not modify authoring or write
+external files. Loading, decoding and preview preparation run on background workers.
+A damaged version reports an error without hiding the other retained entries.
+
+**Restore this difficulty** first archives the current project, including unsaved edits,
+then restores only the selected difficulty. Existing difficulties with available sources
+keep their current source association and gain one undo step. Deleted difficulties and
+existing difficulties with missing sources
+return with their original identity as unlinked local copies, so missing sources or
+another difficulty's live file cannot block restoration. Undo/redo of an existing
+difficulty also restores its previous/local association. Other difficulties remain
+unchanged. Save to persist the restored version; later synchronization/export follows
+the normal rules. Recovery history is scoped
+to the current project and does not automatically restore an entirely deleted project.
+
 ## Duplicate ownership and interrupted export
 
 Duplicate owners block normal editing, export and external deletion. The user

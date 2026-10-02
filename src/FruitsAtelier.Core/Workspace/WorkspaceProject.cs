@@ -177,6 +177,7 @@ public static class WorkspaceProject
         string directory = Path.GetFullPath(session.Directory);
         if (session.Manifest.SongsRoot is { } songs) ValidateRoots(Path.GetDirectoryName(directory)!, songs, false);
         RejectLinks(directory); Recover(directory);
+        WorkspaceVersionHistory.ArchiveBeforeSave(session, project);
         string staging = directory + ".saving", previous = directory + ".previous";
         RejectLinks(staging); RejectLinks(previous);
         if (System.IO.Directory.Exists(staging)) System.IO.Directory.Delete(staging, true);

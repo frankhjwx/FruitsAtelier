@@ -68,6 +68,22 @@ public sealed class EditorHistory
         transactionRelated = null;
     }
 
+    public void RestoreVersion(string label, MapDocument document, Action<bool, MapDocument, MapDocument>? restoreRelated = null)
+    {
+        OsuBeatmapReader.Validate(document);
+        Begin(label, restoreRelated);
+        Document = document.DeepClone();
+        // A complete historical snapshot already owns its authored break intervals.
+        if (!Document.ContentEquals(transactionStart!))
+        {
+            undo.Push(new Change(label, transactionStart!, Document.DeepClone(), transactionRelated));
+            redo.Clear();
+        }
+        transactionStart = null;
+        transactionLabel = "";
+        transactionRelated = null;
+    }
+
     public void Undo()
     {
         if (transactionStart is not null) { Cancel(); return; }

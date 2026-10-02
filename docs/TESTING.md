@@ -377,3 +377,10 @@ The focused `--testplay-render-check` also writes `background-cache.json` under
 `artifacts/tests/testplay-native`. It compares the shared scene cache and resident
 background path with a generated 4096×4096 image, recording warm frame time,
 allocations and repeat decodes. The resident path must perform no warm decodes.
+
+Version history regressions cover changed/unchanged saves, retained working copies,
+deleted difficulty identities, project isolation, damaged snapshots, modal input,
+selective restoration, save/restart and undo/redo. Native `--render-check` draws the
+browser and restores a deleted difficulty in both languages at its tested window
+sizes and DPI values. The editing benchmark verifies ordinary interactions while
+version-history work remains outside the pointer and paint paths.
