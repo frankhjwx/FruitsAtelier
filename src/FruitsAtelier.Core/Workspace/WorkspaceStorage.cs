@@ -15,6 +15,8 @@ public static class WorkspaceStorage
     public const long HistoryBudget = 1024L * 1024 * 1024;
     private static readonly Regex Hashes = new("[A-Fa-f0-9]{64}", RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private sealed record Snapshot(string Path, DateTime Time, long Bytes);
+    private sealed record SnapshotReferences(long Length, DateTime Written, HashSet<string> Paths);
+    private static readonly Dictionary<string, SnapshotReferences> snapshotReferences = new(WorkspaceSynchronization.Paths);
 
     public static WorkspaceStorageReport Inspect(string workspace)
     {
@@ -54,11 +56,23 @@ public static class WorkspaceStorage
             if (!Directory.Exists(history)) return new WorkspaceHistoryCompressionResult(0, 0);
             string staging = Path.Combine(history, ".compression");
             WorkspaceProject.RejectLinks(staging);
-            string[] candidates;
+            string[] candidates, references;
             lock (WorkspaceProject.Gate)
-                candidates = Files(history).Where(f => WorkspaceHistoryFile.Compressible(f.FullName)
-                    && IsHistorySnapshot(f.FullName, history)).Select(f => f.FullName).ToArray();
+            {
+                var files = Files(history).Where(f => IsHistorySnapshot(f.FullName, history)).ToArray();
+                candidates = files.Where(f => WorkspaceHistoryFile.Compressible(f.FullName)).Select(f => f.FullName).ToArray();
+                references = files.Where(f => f.FullName.EndsWith(WorkspaceHistoryFile.Extension, StringComparison.OrdinalIgnoreCase)
+                    && Path.GetExtension(WorkspaceHistoryFile.LogicalPath(f.FullName)).ToLowerInvariant() is ".catchproj" or ".catchdiff" or ".catchsync" or ".json")
+                    .Select(f => f.FullName).ToArray();
+            }
             int converted = 0; long reclaimed = 0; string? error = null;
+            foreach (string path in references)
+            {
+                if (cancellation.WaitHandle.WaitOne(TimeSpan.FromMilliseconds(10))) cancellation.ThrowIfCancellationRequested();
+                try { PrimeSnapshotReferences(path, history); }
+                catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
+                { error ??= e.Message; }
+            }
             foreach (string path in candidates)
             {
                 if (cancellation.WaitHandle.WaitOne(interval ?? TimeSpan.FromSeconds(2))) cancellation.ThrowIfCancellationRequested();
@@ -73,6 +87,64 @@ public static class WorkspaceStorage
             }
             return new WorkspaceHistoryCompressionResult(converted, reclaimed, error);
         }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+    private static void PrimeSnapshotReferences(string path, string history)
+    {
+        FileInfo file;
+        string text;
+        lock (WorkspaceProject.Gate)
+        {
+            file = new(path);
+            if (!file.Exists) return;
+            if (snapshotReferences.TryGetValue(path, out var cached) && cached.Length == file.Length && cached.Written == file.LastWriteTimeUtc) return;
+            text = WorkspaceHistoryFile.ReadText(path);
+        }
+        // Large history documents are parsed outside the lock used by project saves and opens.
+        using var document = JsonDocument.Parse(text);
+        var paths = new HashSet<string>(WorkspaceSynchronization.Paths);
+        FindPaths(document.RootElement, Path.GetDirectoryName(WorkspaceHistoryFile.LogicalPath(path))!, new(WorkspaceSynchronization.Paths), paths, history);
+        lock (WorkspaceProject.Gate)
+        {
+            var current = new FileInfo(path);
+            if (!current.Exists || current.Length != file.Length || current.LastWriteTimeUtc != file.LastWriteTimeUtc) return;
+            if (snapshotReferences.Count >= 2048) snapshotReferences.Clear();
+            snapshotReferences[path] = new(file.Length, file.LastWriteTimeUtc, paths);
+        }
+    }
+
+    private static void FindPaths(JsonElement element, string directory, HashSet<string> playback, HashSet<string> paths, string history, string? propertyName = null)
+    {
+        if (element.ValueKind == JsonValueKind.Object)
+            foreach (var property in element.EnumerateObject()) FindPaths(property.Value, directory, playback, paths, history, property.Name);
+        else if (element.ValueKind == JsonValueKind.Array)
+            foreach (var item in element.EnumerateArray()) FindPaths(item, directory, playback, paths, history, propertyName);
+        else if (element.ValueKind == JsonValueKind.String)
+        {
+            string? key = propertyName?.ToLowerInvariant();
+            if (key is "authoring" or "project" or "manifest")
+            {
+                if (element.GetString() is not { Length: > 0 } nestedText) return;
+                using var nested = JsonDocument.Parse(nestedText);
+                FindPaths(nested.RootElement, directory, playback, paths, history);
+                return;
+            }
+            // Object source lines and metadata are content, even when they contain
+            // slashes or decimal points. Only persisted path fields form references.
+            if (key is not ("audiopath" or "sourcepath" or "path" or "source" or "exporttarget" or "file" or "syncfile"
+                or "directory" or "songsroot" or "sourcedirectory" or "externalsourcedirectory" or "previouspaths" or "backup")) return;
+            if (element.GetString() is not { Length: > 0 } value) return;
+            string portable = value.Replace('\\', '/');
+            if (portable.Contains("resources/playback/", StringComparison.OrdinalIgnoreCase)) playback.Add(portable.Split('/')[^1]);
+            try
+            {
+                string path = Path.GetFullPath(value, directory);
+                paths.Add(path);
+                if (WorkspaceProject.Within(Path.Combine(history, "resources", "playback"), path)) playback.Add(Path.GetFileName(path));
+            }
+            catch (Exception e) when (e is ArgumentException or NotSupportedException or IOException)
+            { throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("storage.invalidReference", propertyName), e); }
+        }
+    }
 
     private static bool IsHistorySnapshot(string path, string history)
     {
@@ -115,7 +187,7 @@ public static class WorkspaceStorage
                     string name = Path.GetFileName(path);
                     if (name.Length < 24 || !DateTime.TryParseExact(name[..22], "yyyyMMddTHHmmssfffffff", CultureInfo.InvariantCulture,
                         DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var time)) continue;
-                    snapshots.Add(new(path, time, files.Where(f => WorkspaceProject.Within(path, f.FullName)).Sum(f => f.Length)));
+                    snapshots.Add(new(path, time, limitProject is not null ? 0 : files.Where(f => WorkspaceProject.Within(path, f.FullName)).Sum(f => f.Length)));
                 }
             }
             // Parse every authoring/reference document before deleting anything. A damaged reference
@@ -129,44 +201,34 @@ public static class WorkspaceStorage
             foreach (var file in files.Where(f => Path.GetExtension(WorkspaceHistoryFile.LogicalPath(f.FullName)).ToLowerInvariant() is ".catchdiff" or ".catchproj" or ".catchsync" or ".json"))
             {
                 string logical = WorkspaceHistoryFile.LogicalPath(file.FullName);
+                string? owner = snapshots.FirstOrDefault(s => WorkspaceProject.Within(s.Path, file.FullName))?.Path;
+                bool cacheable = limitProject is not null && owner is not null && file.FullName.EndsWith(WorkspaceHistoryFile.Extension, StringComparison.OrdinalIgnoreCase);
+                if (cacheable && snapshotReferences.TryGetValue(file.FullName, out var cached)
+                    && cached.Length == file.Length && cached.Written == file.LastWriteTimeUtc)
+                {
+                    PinReferences(cached.Paths, owner);
+                    continue;
+                }
                 string text = WorkspaceProject.Within(history, file.FullName) ? WorkspaceHistoryFile.ReadText(file.FullName) : File.ReadAllText(file.FullName);
                 using var document = JsonDocument.Parse(text);
-                documents[file.FullName] = Hashes.Matches(text).Select(m => m.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                if (limitProject is null) documents[file.FullName] = Hashes.Matches(text).Select(m => m.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
                 var playback = new HashSet<string>(WorkspaceSynchronization.Paths);
                 playbackReferences[file.FullName] = playback;
-                FindPaths(document.RootElement, Path.GetDirectoryName(logical)!, playback, snapshots.FirstOrDefault(s => WorkspaceProject.Within(s.Path, file.FullName))?.Path);
-            }
-            void FindPaths(JsonElement element, string directory, HashSet<string> playback, string? owner, string? propertyName = null)
-            {
-                if (element.ValueKind == JsonValueKind.Object)
-                    foreach (var property in element.EnumerateObject()) FindPaths(property.Value, directory, playback, owner, property.Name);
-                else if (element.ValueKind == JsonValueKind.Array)
-                    foreach (var item in element.EnumerateArray()) FindPaths(item, directory, playback, owner, propertyName);
-                else if (element.ValueKind == JsonValueKind.String && element.GetString() is { Length: > 0 } value)
+                var paths = new HashSet<string>(WorkspaceSynchronization.Paths);
+                FindPaths(document.RootElement, Path.GetDirectoryName(logical)!, playback, paths, history);
+                PinReferences(paths, owner);
+                if (cacheable)
                 {
-                    string? key = propertyName?.ToLowerInvariant();
-                    if (key is "authoring" or "project" or "manifest")
-                    {
-                        using var nested = JsonDocument.Parse(value);
-                        FindPaths(nested.RootElement, directory, playback, owner);
-                        return;
-                    }
-                    // Object source lines and metadata are content, even when they contain
-                    // slashes or decimal points. Only persisted path fields form references.
-                    if (key is not ("audiopath" or "sourcepath" or "path" or "source" or "exporttarget" or "file" or "syncfile"
-                        or "directory" or "songsroot" or "sourcedirectory" or "externalsourcedirectory" or "previouspaths" or "backup")) return;
-                    string portable = value.Replace('\\', '/');
-                    if (portable.Contains("resources/playback/", StringComparison.OrdinalIgnoreCase)) playback.Add(portable.Split('/')[^1]);
-                    try
-                    {
-                        string path = Path.GetFullPath(value, directory);
-                        if (WorkspaceProject.Within(Path.Combine(history, "resources", "playback"), path)) playback.Add(Path.GetFileName(path));
-                        foreach (var snapshot in snapshots)
-                            if (!WorkspaceSynchronization.Paths.Equals(snapshot.Path, owner) && WorkspaceProject.Within(snapshot.Path, path)) pinned.Add(snapshot.Path);
-                    }
-                    catch (Exception e) when (e is ArgumentException or NotSupportedException or IOException)
-                    { throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("storage.invalidReference", propertyName), e); }
+                    // Published history binaries are immutable; replacement invalidates their file stamp.
+                    if (snapshotReferences.Count >= 2048) snapshotReferences.Clear();
+                    snapshotReferences[file.FullName] = new(file.Length, file.LastWriteTimeUtc, paths);
                 }
+            }
+            void PinReferences(IEnumerable<string> paths, string? owner)
+            {
+                foreach (string path in paths)
+                    foreach (var snapshot in snapshots)
+                        if (!WorkspaceSynchronization.Paths.Equals(snapshot.Path, owner) && WorkspaceProject.Within(snapshot.Path, path)) pinned.Add(snapshot.Path);
             }
             var remove = new HashSet<string>(WorkspaceSynchronization.Paths);
             foreach (var group in snapshots.GroupBy(s => Path.GetDirectoryName(s.Path)))

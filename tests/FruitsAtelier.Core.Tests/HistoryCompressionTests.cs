@@ -79,6 +79,36 @@ internal static class HistoryCompressionTests
         var newest = WorkspaceVersionHistory.List(session).First(v => v.WorkingCopy);
         Check(WorkspaceVersionHistory.Read(session, newest).Difficulties[0].Document.Fruits[0].X == 200, "latest unsaved authoring survives write-time pruning");
         BackgroundMigration(Path.Combine(root, "background"));
+        CachedRetention(Path.Combine(root, "cached-retention"));
+    }
+
+    private static void CachedRetention(string workspace)
+    {
+        var project = BeatmapProject.FromDocuments([new MapDocument { IsDemo = false }]);
+        var session = WorkspaceProject.Create(workspace, project, "");
+        string history = Path.Combine(workspace, ".sync-history", session.Manifest.Id.ToString("N"));
+        string[] rounds = Enumerable.Range(0, 101).Select(i => Path.Combine(history, DateTime.UtcNow.AddMinutes(i - 200).ToString("yyyyMMddTHHmmssfffffff") + "-save")).ToArray();
+        foreach (string round in rounds) { Directory.CreateDirectory(round); WorkspaceHistoryFile.Write(Path.Combine(round, "saved.catchproj"), "{}"u8.ToArray()); }
+        string other = Path.Combine(workspace, ".sync-history", Guid.NewGuid().ToString("N"), "20200101T0000000000000-save", "saved.catchproj");
+        Directory.CreateDirectory(Path.GetDirectoryName(other)!);
+        WorkspaceHistoryFile.Write(other, Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { AudioPath = Path.Combine(rounds[0], "audio.mp3") })));
+        WorkspaceStorage.CompressLegacyHistoryAsync(workspace, interval: TimeSpan.Zero).GetAwaiter().GetResult();
+        WorkspaceStorage.EnforceVersionLimit(session);
+        Check(Directory.Exists(rounds[0]) && !Directory.Exists(rounds[1]) && Directory.GetDirectories(history).Length == 100,
+            "primed references protect an older round and consume a retention slot");
+        string extra = Path.Combine(history, DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffffff") + "-save");
+        Directory.CreateDirectory(extra); WorkspaceHistoryFile.Write(Path.Combine(extra, "saved.catchproj"), "{}"u8.ToArray());
+        WorkspaceHistoryFile.Write(other, "{}"u8.ToArray());
+        File.SetLastWriteTimeUtc(other + WorkspaceHistoryFile.Extension, DateTime.UtcNow.AddSeconds(1));
+        WorkspaceStorage.EnforceVersionLimit(session);
+        Check(!Directory.Exists(rounds[0]) && Directory.GetDirectories(history).Length == 100, "replaced binary invalidates its cached reference pins");
+        extra = Path.Combine(history, DateTime.UtcNow.AddSeconds(1).ToString("yyyyMMddTHHmmssfffffff") + "-save");
+        Directory.CreateDirectory(extra); WorkspaceHistoryFile.Write(Path.Combine(extra, "saved.catchproj"), "{}"u8.ToArray());
+        byte[] damaged = File.ReadAllBytes(other + WorkspaceHistoryFile.Extension); damaged[12] ^= 1;
+        File.WriteAllBytes(other + WorkspaceHistoryFile.Extension, damaged);
+        File.SetLastWriteTimeUtc(other + WorkspaceHistoryFile.Extension, DateTime.UtcNow.AddSeconds(2));
+        Reject(() => WorkspaceStorage.EnforceVersionLimit(session), "changed corrupt reference accepted from cache");
+        Check(Directory.GetDirectories(history).Length == 101, "corrupt replacement aborts retention before any deletion");
     }
 
     private static void BackgroundMigration(string workspace)

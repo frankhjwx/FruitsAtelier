@@ -291,6 +291,12 @@ conflicting binaries, and failed conversions retain their originals. Closing the
 editor or switching workspaces cancels migration; the next startup retries remaining
 files. Current project files, library databases, and audio are not converted.
 
+The startup worker also prepares a bounded in-memory index of snapshot path
+references. JSON parsing runs outside the project lock. The write-time 100-round
+limit reuses this index for immutable binary snapshots while reading current files
+and changed snapshots afresh. Length or modification-time changes invalidate an
+entry; full storage cleanup still validates all reference documents and audio hashes.
+
 Select a version, then a difficulty. The window compares metadata and shows aligned
 current/historical object previews, including editable curves. Both previews use the
 active editor's AR scroll scale and initially show its current timeline position,
