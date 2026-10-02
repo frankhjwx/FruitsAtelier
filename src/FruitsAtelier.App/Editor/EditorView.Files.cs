@@ -38,6 +38,7 @@ public sealed partial class EditorView
     {
         project.Validate();
         CloseVersionHistory();
+        CloseAimod();
         CloseSongSetup();
         CloseTimingSetup(); TimingPageVisible = false;
         TimeJumpVisible = false;
@@ -186,7 +187,7 @@ public sealed partial class EditorView
     public bool PrepareFileOperation()
     {
         if (VersionHistoryVisible || SynchronizationVisible || workspaceSaveTask is not null || syncCommitTask is not null) return false;
-        if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
+        if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal || AimodVisible) return false;
         if (!CommitTimingField()) return false;
         if (SliderMultiplierValidationBusy)
         { StatusMessage = L.Get("timing.sliderMultiplierChecking"); return false; }

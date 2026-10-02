@@ -1,4 +1,12 @@
 {
+  "aimod.title": "AiMod",
+  "aimod.refresh": "刷新",
+  "aimod.summary": "难度：{0}    错误：{1}",
+  "aimod.scope": "检查起点间隔小于 10 ms 的对象。点击错误可选中两个对象并跳转到对应位置。",
+  "aimod.empty": "未发现重叠 note。",
+  "aimod.overlap": "错误：这两个对象的起点间隔小于 10 ms。",
+  "aimod.times": "{0} → {1}   （间隔：{2} ms）",
+  "aimod.range": "{0}–{1} / {2}",
   "history.menu": "历史版本…",
   "history.title": "历史版本回溯",
   "history.help": "选择一个历史版本，再选择其中的难度。对照当前与历史谱面后恢复。",

@@ -282,6 +282,12 @@ movement of an imported slider's head and tail, reporting pointer-path CPU time,
 counting-canvas rendering time, and current-thread allocations separately. It invokes
 the selected-object drag path directly and excludes native input dispatch and GPU work.
 
+The App test executable accepts `--slider-draft-performance <path.catchdiff>` for
+new FSlider previews in Legacy and Pen modes. Use an isolated copy of the project.
+It measures pointer dispatch, rendering and allocations for horizontal movement
+and changing endpoint times, checks cancellation, and prints a digest of all
+validated export text and NM/HR events for comparisons between builds.
+
 The App test executable also accepts `--anchor-drag-performance <path.catchdiff>`
 for a read-only benchmark of anchor pointer handling plus counting-canvas rendering.
 It reports median/P95 CPU time after warm-up and verifies cancellation restores content.

@@ -15,6 +15,14 @@ internal static class ConversionCacheTests
         var cache = new CatchConversionCache(); bool compensation = false;
         Check(); Check();
         var previous = CatchStreamConverter.Convert(document, compensation, cache);
+        var lateTiming = new TimingPoint { TimeMs = 2500, BeatLengthMs = -80, Uninherited = false };
+        document.TimingPoints.Add(lateTiming); Check();
+        var retimed = CatchStreamConverter.Convert(document, compensation, cache);
+        if (!ReferenceEquals(previous.Sliders[0], retimed.Sliders[0]))
+            throw new Exception("An unrelated timing edit rebuilt a slider whose head timing and RNG stayed unchanged.");
+        lateTiming.TimeMs = 500; Check();
+        document.TimingPoints.Clear(); Check();
+        previous = CatchStreamConverter.Convert(document, compensation, cache);
         var fruit = new Fruit { TimeMs = 600, X = 80 }; document.Fruits.Add(fruit); Check();
         var added = CatchStreamConverter.Convert(document, compensation, cache);
         if (!ReferenceEquals(previous.Sliders[0], added.Sliders[0])) throw new Exception("Fruit edits rebuilt an unchanged slider.");
@@ -37,6 +45,22 @@ internal static class ConversionCacheTests
         document.BananaShowers.Clear(); Check(); document.ImportedSliders.Clear(); Check();
         document.TimingPoints.Clear(); Check();
         document = document.DeepClone(); Check();
+        first = document.Tracks[0];
+        var curve = new ControlCurve { Kind = ControlCurveKind.Bezier };
+        curve.Controls.Add(new() { Offset = new(300, 50) });
+        first.Nodes[0].OutgoingCurve = curve;
+        Check();
+        document.BananaShowers.Add(new() { TimeMs = 0, EndTimeMs = 100 }); Check();
+        document.BananaShowers[0].EndTimeMs = 700; Check();
+        curve.Controls[0].Offset = new(600, -20); Check();
+        curve.Kind = ControlCurveKind.CircularArc; Check();
+        curve.ReferenceScale = .8; Check();
+        document.BananaShowers[0].EndTimeMs = 300; Check();
+        var history = new EditorHistory(document);
+        history.Begin("Edit curve"); history.Document.Tracks[0].Nodes[0].X += 10; history.Commit();
+        document = history.Document; Check();
+        history.Undo(); document = history.Document; Check();
+        history.Redo(); document = history.Document; Check();
 
         void Check()
         {

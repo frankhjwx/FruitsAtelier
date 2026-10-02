@@ -111,8 +111,9 @@ public sealed partial class EditorView
         DrawSettings(c);
         if (librarySettingsOpen) DrawContextMenu(c);
         if (librarySettingsOpen) DrawLanguageMenu(c);
+        DrawAimod(c);
         DrawDiscardConfirmation(c);
-        if (!librarySettingsOpen) DrawDifficultyTooltip(c);
+        if (!librarySettingsOpen && !AimodVisible) DrawDifficultyTooltip(c);
     }
 
     private void DrawChrome(ICanvas c)
@@ -627,6 +628,7 @@ public sealed partial class EditorView
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
             Item(L.Get("slider.clearInternalNodes"), ClearSliderNodes, CanClearSliderNodes);
+            Item(L.Get("aimod.title"), ShowAimod, ClipboardInteractionReady);
         }
         else if (menu == 4)
         {

@@ -172,6 +172,49 @@ internal static class EditorPerformance
         return 0;
     }
 
+    public static int RunSliderDraft(string path)
+    {
+        var document = ProjectSerializer.ReadFile(path);
+        document.AudioPath = null; document.SourcePath = null;
+        Console.WriteLine($"Slider draft: tracks={document.Tracks.Count}, fruits={document.Fruits.Count}, timing={document.TimingPoints.Count}");
+        var baseline = CatchStreamConverter.Convert(document);
+        Console.WriteLine($"Parents with tiny droplets={baseline.Objects.Where(o => o.Kind == CatchObjectKind.TinyDroplet).Select(o => o.SourceId).Distinct().Count()}; curve controls={document.Tracks.Sum(t => t.Nodes.Count(n => n.OutgoingCurve is not null))}");
+        foreach (var mode in new[] { SliderEditingMode.OsuLegacy, SliderEditingMode.PenTool })
+        foreach (bool varyTime in new[] { false, true })
+        {
+            var ui = new Ui(); ui.LoadDocument(document); ui.View.SetSliderEditingMode(mode); ui.Key('B');
+            ui.ClickMap(1000, 25);
+            if (ui.View.Document.Tracks.Count != document.Tracks.Count + 1) throw new Exception("Slider draft did not start.");
+            var dispatch = new List<double>(); var render = new List<double>(); var allocated = new List<long>();
+            ui.View.Performance.Enabled = true;
+            using var digest = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var writeCache = (OsuWriteCache)typeof(EditorView).GetField(mode == SliderEditingMode.OsuLegacy ? "editorWriteCache" : "placementWriteCache", flags)!.GetValue(ui.View)!;
+            for (int i = 0; i < 64; i++)
+            {
+                var point = ui.ScreenAt(1500 + (varyTime ? i % 8 * 125 : 0), 100 + i % 12 * 20);
+                long bytes = GC.GetAllocatedBytesForCurrentThread();
+                var timer = Stopwatch.StartNew(); ui.View.PointerMove(point.X, point.Y, false, false);
+                double input = timer.Elapsed.TotalMilliseconds;
+                timer.Restart(); ui.Paint(); double paint = timer.Elapsed.TotalMilliseconds;
+                if (i >= 4) { dispatch.Add(input); render.Add(paint); allocated.Add(GC.GetAllocatedBytesForCurrentThread() - bytes); }
+                var exported = (OsuWriteResult?)typeof(OsuWriteCache).GetField("multiplierBaseline", flags)!.GetValue(writeCache);
+                if (exported is null || !exported.ObjectSequenceMatches) throw new Exception("Draft benchmark requires validated export read-back.");
+                digest.AppendData(System.Text.Encoding.UTF8.GetBytes(exported.Text));
+                foreach (var objects in new[] { exported.PlayableObjects, exported.PlayableHardRockObjects })
+                    digest.AppendData(System.Text.Encoding.UTF8.GetBytes(System.Text.Json.JsonSerializer.Serialize(objects.Select(o => new {
+                        o.Kind, o.TimeMs, o.X, o.TargetX, o.PathX, o.RandomOffset, o.EventIndex, o.IsStandalone }))));
+            }
+            dispatch.Sort(); render.Sort(); allocated.Sort();
+            Console.WriteLine($"{mode}, {(varyTime ? "time and X" : "X only")}: dispatch median={dispatch[30]:F2} ms, p95={dispatch[57]:F2} ms; render median={render[30]:F2} ms, p95={render[57]:F2} ms; allocated={allocated[30] / 1024} KiB/frame; output={Convert.ToHexString(digest.GetHashAndReset())}");
+            Console.WriteLine(ui.View.Performance.Drain());
+            ui.View.CancelInteraction(); ui.Paint();
+            if (!ui.View.Document.ContentEquals(document)) throw new Exception("Cancelled draft changed content.");
+            ui.View.NewProject();
+        }
+        return 0;
+    }
+
     public static int RunSliderDrag(string path)
     {
         var document = OsuBeatmapReader.ReadFile(path);

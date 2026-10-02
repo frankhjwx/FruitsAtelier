@@ -228,9 +228,7 @@ public static class OsuBeatmapReader
         foreach (var shower in document.BananaShowers)
         { Id(shower.Id); Time(shower.TimeMs); Time(shower.EndTimeMs); if (shower.EndTimeMs < shower.TimeMs) throw new InvalidDataException(L.Get("core.reader.bananaEnd")); }
         foreach (var timing in document.TimingPoints) ValidateTiming(timing);
-        var curveOnly = document.DeepClone();
-        curveOnly.DurationMs = int.MaxValue;
-        var errors = CurveMath.Validate(curveOnly);
+        var errors = CurveMath.Validate(document, int.MaxValue);
         if (errors.Count != 0) throw new InvalidDataException(string.Join(L.Get("core.diagnostics.separator"), errors));
 
         void Id(Guid id) { if (id == Guid.Empty || !ids.Add(id)) throw new InvalidDataException(L.Get("core.reader.uniqueId")); }

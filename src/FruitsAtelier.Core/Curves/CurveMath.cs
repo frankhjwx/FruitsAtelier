@@ -66,15 +66,25 @@ public static class CurveMath
             return start.X + (end.X - start.X) * (time - start.TimeMs) / (end.TimeMs - start.TimeMs);
         }
 
+        // The binary search samples one immutable segment; prepare its controls and arc once.
+        var curve = track.Nodes[segment].OutgoingCurve;
+        var points = curve is null ? null : ControlCurveMath.Points(track, segment);
+        ControlCurveMath.Arc arc = default;
+        bool circular = curve?.Kind == ControlCurveKind.CircularArc;
+        bool hasArc = circular && ControlCurveMath.TryArc(points!, curve!.ReferenceScale, out arc);
+        MapPoint At(double u) => points is null ? Evaluate(track, segment, u)
+            : u == 0 ? points[0] : u == 1 ? points[^1]
+            : circular ? hasArc ? arc.At(u) : MapPoint.Lerp(points[0], points[^1], u)
+            : ControlCurveMath.Bezier(points, u);
         // Handle time offsets make u nonlinear in time; solve the time coordinate before reading X.
         double lo = 0, hi = 1;
         for (int i = 0; i < 60; i++)
         {
             double mid = (lo + hi) / 2;
-            if (Evaluate(track, segment, mid).TimeMs < time) lo = mid;
+            if (At(mid).TimeMs < time) lo = mid;
             else hi = mid;
         }
-        return Evaluate(track, segment, (lo + hi) / 2).X;
+        return At((lo + hi) / 2).X;
     }
 
     public static void Split(CurveTrack track, int segment, double u)
@@ -137,9 +147,12 @@ public static class CurveMath
     }
 
     public static IReadOnlyList<string> Validate(MapDocument document)
+        => Validate(document, document.DurationMs);
+
+    internal static IReadOnlyList<string> Validate(MapDocument document, double durationMs)
     {
         var errors = new List<string>();
-        if (!double.IsFinite(document.DurationMs) || document.DurationMs <= 0) errors.Add(L.Get("core.curves.duration"));
+        if (!double.IsFinite(durationMs) || durationMs <= 0) errors.Add(L.Get("core.curves.duration"));
         if (!double.IsFinite(document.BeatLengthMs) || document.BeatLengthMs <= 0) errors.Add(L.Get("core.curves.beatLength"));
         if (!double.IsFinite(document.TimingOffsetMs)) errors.Add(L.Get("core.curves.timingOffset"));
         if (!double.IsFinite(document.ApproachRate) || document.ApproachRate < 0 || document.ApproachRate > 10)
@@ -158,21 +171,21 @@ public static class CurveMath
         foreach (var fruit in document.Fruits)
         {
             CheckId(fruit.Id, ids, errors);
-            if (!IsPositionValid(fruit.TimeMs, fruit.X) || fruit.TimeMs > document.DurationMs)
+            if (!IsPositionValid(fruit.TimeMs, fruit.X) || fruit.TimeMs > durationMs)
                 errors.Add(L.Get("core.curves.fruitRange"));
         }
         foreach (var track in document.Tracks)
         {
             CheckId(track.Id, ids, errors);
             errors.AddRange(ValidateTrack(track, requireComplete: true));
-            if (track.Nodes.Count > 0 && (!double.IsFinite(EndTimeMs(track)) || EndTimeMs(track) > document.DurationMs))
+            if (track.Nodes.Count > 0 && (!double.IsFinite(EndTimeMs(track)) || EndTimeMs(track) > durationMs))
                 errors.Add(L.Get("core.curves.repeatEnd"));
             foreach (var node in track.Nodes)
             {
                 CheckId(node.Id, ids, errors);
                 if (node.OutgoingCurve is { } curve)
                     foreach (var control in curve.Controls) CheckId(control.Id, ids, errors);
-                if (node.TimeMs > document.DurationMs) errors.Add(L.Get("core.curves.anchorEnd"));
+                if (node.TimeMs > durationMs) errors.Add(L.Get("core.curves.anchorEnd"));
             }
         }
         foreach (var slider in document.ImportedSliders)

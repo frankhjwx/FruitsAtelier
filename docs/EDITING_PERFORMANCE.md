@@ -36,21 +36,29 @@ It is not a cheap accessor. Explicit export needs this validation. The committed
 editor snapshot also uses exported events for gameplay accuracy, but must reuse
 unchanged work through its caller-owned `OsuWriteCache`.
 
-`CatchConversionCache` reuses parent results only when input geometry, timing,
+`CatchConversionCache` reuses parent results only when input geometry, timing at the parent head,
 conversion settings and incoming RNG state permit it. Authoring and read-back
 conversion caches remain separate. Read-back slider and banana identities are
 mapped to their source parents so reparsing does not discard every cache entry.
 Parsed slider lines are reused by exact text and format, with independent mutable
 copies and pruning of unused entries.
+Authored curve targets can be reused when incoming RNG changes. The conversion
+cache owns a detached track snapshot and exact-time position memo per parent,
+invalidates it on track or conversion-setting changes, and prunes removed parents.
+Each memo retains at most 16,384 positions. Control-curve time queries prepare the
+segment's points and circular arc once for the complete binary search.
 SV-adjusted read-back owns separate conversion and parsed-line caches from the
 canonical export. Baseline matching compares authored content without cloning,
 ignoring only the override value and editing lock. Continuous SV input retains
 one detached validation snapshot until its owning history or content changes.
 
-The write cache retains one emitted timing result, keyed by converted slider
-instances, the complete timing input and imported slider head times. Fruit-only
-changes can reuse it; changed geometry, repeats, timing or imported head times must
-rebuild it. Failed timing validation must not populate this cache.
+The write cache retains one emitted timing result, keyed by generated slider
+start times and SV values, the complete timing input and imported slider head times.
+Geometry or repeat edits that leave these inputs unchanged can reuse it. Changed
+heads, generated SV, timing or imported head times rebuild it. Failed timing
+validation must not populate this cache.
+Timing emission sorts generated heads once and searches existing timing boundaries
+by time; it does not repeatedly sort all following sliders for each head.
 Callers that need both authoring events and exported events can use
 `OsuWriteCache.Convert` before serialization to reuse the same source conversion.
 Each conversion batches timing queries through one lookup, including downstream

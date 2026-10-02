@@ -1,5 +1,18 @@
 # Editing Controls
 
+## AiMod
+
+Open **Edit → AiMod** to check the current difficulty for overlapping notes.
+It reports an error for adjacent object starts less than 10 ms apart, regardless
+of horizontal position. Exactly 10 ms is allowed. Fruits, authored and imported
+sliders, streams and banana showers each contribute their editable object's start;
+nested slider fruits, droplets, tiny droplets and bananas are excluded.
+
+Click a result to select both objects and jump to the first start time. **Refresh**
+reruns the check; paging and the mouse wheel browse longer lists. Checking and
+navigating do not change content or undo history. Close the dialog to edit the map,
+then reopen it to check the current state. AiMod currently reports only overlaps.
+
 See the [shortcut manual](KEY_BINDINGS.md) for the complete keyboard reference and the [compatibility review](KEY_BINDINGS_REVIEW.md) for known differences and gaps.
 
 Grid Snap, Distance Snap, Movement Analysis and Grid Level are saved immediately

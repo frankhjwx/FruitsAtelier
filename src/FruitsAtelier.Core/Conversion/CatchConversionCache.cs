@@ -4,26 +4,43 @@ namespace FruitsAtelier.Core;
 public sealed class CatchConversionCache
 {
     private sealed record Entry(CurveTrack? Track, ImportedSlider? Imported, BananaShower? Banana,
-        CatchLegacyRandom Before, CatchLegacyRandom After, GeneratedSlider? Slider, IReadOnlyList<ConvertedCatchObject> Objects);
+        TimingState Timing, CatchLegacyRandom Before, CatchLegacyRandom After, GeneratedSlider? Slider, IReadOnlyList<ConvertedCatchObject> Objects);
     private readonly Dictionary<Guid, Entry> entries = new();
+    private sealed record TrackPositions(CurveTrack Snapshot, Dictionary<double, double> Values);
+    private readonly Dictionary<Guid, TrackPositions> trackPositions = new();
     private readonly HashSet<Guid> seen = new();
     private (double, double, double, double, double, double, bool) settings;
-    private TimingPoint[] timing = [];
+    private TimingMap.Lookup? timing;
     internal void Begin(MapDocument document, bool compensation)
     {
         var current = (document.DurationMs, document.BeatLengthMs, document.TimingOffsetMs, document.ApproachRate,
             document.SliderMultiplier, document.SliderTickRate, compensation);
-        if (current != settings || timing.Length != document.TimingPoints.Count
-            || timing.Where((p, i) => !p.ContentEquals(document.TimingPoints[i])).Any())
+        if (current != settings)
         {
-            entries.Clear(); settings = current;
-            timing = document.TimingPoints.Select(p => p.DeepClone()).ToArray();
+            entries.Clear(); trackPositions.Clear(); settings = current;
         }
+        if (timing is null || !timing.MatchesTiming(document)) timing = new(document);
         seen.Clear();
     }
     internal void End()
     {
         foreach (var id in entries.Keys.Where(id => !seen.Contains(id)).ToArray()) entries.Remove(id);
+        foreach (var id in trackPositions.Keys.Where(id => !seen.Contains(id)).ToArray()) trackPositions.Remove(id);
+    }
+    internal Func<double, double> PositionAtTime(CurveTrack track)
+    {
+        if (!trackPositions.TryGetValue(track.Id, out var positions) || !Equal(track, positions.Snapshot))
+            trackPositions[track.Id] = positions = new(track.DeepClone(), new());
+        // Incoming RNG changes tiny compensation, but not the authored target curve.
+        return time =>
+        {
+            if (!positions.Values.TryGetValue(time, out double x))
+            {
+                if (positions.Values.Count >= 16384) positions.Values.Clear();
+                positions.Values[time] = x = CurveMath.PositionAtTime(positions.Snapshot, time);
+            }
+            return x;
+        };
     }
     internal bool TryGet(CurveTrack? track, ImportedSlider? imported, BananaShower? banana, ref CatchLegacyRandom rng,
         out GeneratedSlider? slider, out IReadOnlyList<ConvertedCatchObject> objects)
@@ -35,13 +52,20 @@ public sealed class CatchConversionCache
                 : imported is not null ? entry.Imported is null || !Equal(imported, entry.Imported)
                 : entry.Banana is null || banana!.TimeMs != entry.Banana.TimeMs || banana.EndTimeMs != entry.Banana.EndTimeMs
                     || banana.OriginalLine != entry.Banana.OriginalLine)) return false;
+        // Sliders and streams lock their timing at the head; unrelated timing edits
+        // cannot invalidate their geometry or nested events. Bananas use no timing.
+        if (entry.Timing != TimingAt(track, imported)) return false;
         rng = entry.After; slider = entry.Slider; objects = entry.Objects; return true;
     }
     internal void Store(CurveTrack? track, ImportedSlider? imported, BananaShower? banana,
         CatchLegacyRandom before, CatchLegacyRandom after, GeneratedSlider? slider, IReadOnlyList<ConvertedCatchObject> objects)
     {
-        entries[track?.Id ?? imported?.Id ?? banana!.Id] = new(track?.DeepClone(), imported?.DeepClone(), banana?.DeepClone(), before, after, slider, objects);
+        entries[track?.Id ?? imported?.Id ?? banana!.Id] = new(track?.DeepClone(), imported?.DeepClone(), banana?.DeepClone(),
+            TimingAt(track, imported), before, after, slider, objects);
     }
+
+    private TimingState TimingAt(CurveTrack? track, ImportedSlider? imported)
+        => track is not null ? timing!.At(track.Nodes[0].TimeMs) : imported is not null ? timing!.At(imported.TimeMs) : default;
 
     private static bool Equal(CurveTrack a, CurveTrack b)
     {

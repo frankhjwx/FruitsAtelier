@@ -8,7 +8,7 @@ public sealed partial class EditorView
     private DateTime nextMonitorConfiguration;
     private bool fileSyncPending, fileSearchMissing;
     private bool SyncInteractionActive => WantsCapture || IsEditingText || SongSetupVisible || RatingEditInProgress
-        || StreamDialogVisible || TimingModal || DiscardConfirmationVisible || IsTestplaying;
+        || StreamDialogVisible || TimingModal || DiscardConfirmationVisible || IsTestplaying || AimodVisible;
 
     public void EnableFileMonitoring()
     {

@@ -23,6 +23,13 @@ public sealed partial class EditorView
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
         if (SynchronizationBlocksInput) return;
+        if (AimodVisible)
+        {
+            mouseX = x; mouseY = y;
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         placementCtrl = ctrl;
         if (IsTestplaying) { TestplayPointerDown(x, y, button); return; }
         if (ErrorVisible || DiscardConfirmationVisible)
@@ -383,6 +390,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (AimodVisible) { mouseX = x; mouseY = y; return; }
         if (SynchronizationBlocksInput) return;
         MoveVolumePopoverPointer(x, y);
         if (backgroundDimDragging) { mouseX = x; mouseY = y; UpdateBackgroundDimDrag(x); return; }
@@ -516,6 +524,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        if (AimodVisible) return;
         testplayCursorPressed = false;
         if (SynchronizationBlocksInput) return;
         if (backgroundDimDragging && button == 0) { UpdateBackgroundDimDrag(x); FinishBackgroundDimDrag(); return; }
@@ -611,6 +620,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (AimodVisible) return;
         if (SynchronizationBlocksInput) return;
         if (librarySettingsOpen)
         {
@@ -680,6 +690,12 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (AimodVisible)
+        {
+            if (aimodListBounds.Contains(x, y)) aimodFirst = Math.Clamp(aimodFirst - (int)(delta / 120) * 3,
+                0, Math.Max(0, AimodErrors.Count - aimodVisibleRows));
+            return;
+        }
         if (VersionHistoryVisible) { ScrollVersionHistory(x, y, delta, ctrl); return; }
         if (SynchronizationBlocksInput) return;
         if (SynchronizationVisible) { ScrollSyncComparison(x, y, delta, ctrl); return; }
@@ -941,6 +957,7 @@ public sealed partial class EditorView
         if (SongSetupVisible) { SongSetupKey(virtualKey, ctrl, shift); return; }
         if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl, shift); return; }
         if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
+        if (AimodVisible) { if (virtualKey == 27) CloseAimod(); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey, ctrl, shift); return; }
         if (MergeDialogVisible)
         {
@@ -1095,6 +1112,7 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (AimodVisible) return;
         if (SynchronizationBlocksInput) return;
         if (TimingModal || TimingPageVisible && timingField.Length > 0)
         { if (!char.IsControl(value)) PasteTimingText(value.ToString(), TimingInputSession); return; }

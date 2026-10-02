@@ -14,6 +14,7 @@ if (args.Length == 2 && args[0] == "--testplay-edit-performance") return EditorP
 if (args.Length > 0 && args[0] == "--benchmark-library") return LibraryScaleTests.Benchmark(args.Length > 1 ? args[1] : null);
 if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
 if (args.Length == 2 && args[0] == "--slider-drag-performance") return EditorPerformance.RunSliderDrag(args[1]);
+if (args.Length == 2 && args[0] == "--slider-draft-performance") return EditorPerformance.RunSliderDraft(args[1]);
 if (args.Length == 2 && args[0] == "--anchor-drag-performance")
 {
     try { return EditorPerformance.RunAnchorDrag(args[1]); }
@@ -24,6 +25,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("AiMod checks object starts, isolates input, navigates errors and preserves undo", AimodTests.Run),
     ("Background workspace saves isolate input and acknowledge only their snapshot", PerformanceSchedulingTests.Save),
     ("Native testplay copies state at render while retaining the driver clock", PerformanceSchedulingTests.NativeTestplayCapture),
     ("Stale synchronization waits for stable edits and archives one recovery round", PerformanceSchedulingTests.SynchronizationRetry),

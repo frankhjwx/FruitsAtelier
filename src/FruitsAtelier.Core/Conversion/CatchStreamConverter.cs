@@ -85,7 +85,7 @@ public static class CatchStreamConverter
                     continue;
                 }
                 var converted = ConvertTrack(document, track, track.CompensateTinyDroplets ?? compensateTinyDroplets,
-                    ref rng, (timing ??= new(document)).At(track.Nodes[0].TimeMs));
+                    ref rng, (timing ??= new(document)).At(track.Nodes[0].TimeMs), cache?.PositionAtTime(track));
                 sliders.Add(converted.Slider);
                 objects.AddRange(converted.Objects);
                 cache?.Store(track, null, null, before, rng, converted.Slider, converted.Objects);
@@ -117,8 +117,9 @@ public static class CatchStreamConverter
     }
 
     private static TrackConversion ConvertTrack(MapDocument document, CurveTrack track, bool requestCompensation,
-        ref CatchLegacyRandom globalRng, TimingState timing)
+        ref CatchLegacyRandom globalRng, TimingState timing, Func<double, double>? positionAtTime = null)
     {
+        positionAtTime ??= time => CurveMath.PositionAtTime(track, time);
         double start = track.Nodes[0].TimeMs;
         double duration = track.Nodes[^1].TimeMs - start;
         double sv = timing.SliderVelocityMultiplier;
@@ -142,7 +143,7 @@ public static class CatchStreamConverter
             var candidateRng = globalRng;
             LegacyCatchRules.ApplyRandomSequence(nested, ref candidateRng);
             List<MapPoint> samples;
-            try { samples = Samples(track, nested, compensate); }
+            try { samples = Samples(track, nested, compensate, positionAtTime); }
             catch (TinyConstraintException) when (compensate)
             {
                 if (sv < maximumSv)
@@ -150,7 +151,7 @@ public static class CatchStreamConverter
                     sv = maximumSv;
                     continue;
                 }
-                samples = TinyCompensationFitter.Fit(track, nested, velocity);
+                samples = TinyCompensationFitter.Fit(track, nested, velocity, positionAtTime);
             }
 
             double requiredVelocity = 0;
@@ -168,7 +169,7 @@ public static class CatchStreamConverter
                 }
                 if (compensate)
                 {
-                    samples = TinyCompensationFitter.Fit(track, nested, velocity);
+                    samples = TinyCompensationFitter.Fit(track, nested, velocity, positionAtTime);
                 }
                 else throw new CatchConversionException(L.Get("core.conversion.speedLimit", velocity, requiredVelocity));
             }
@@ -182,7 +183,7 @@ public static class CatchStreamConverter
                 float offset = item.Kind == CatchObjectKind.TinyDroplet ? Math.Clamp(item.RawOffset, -pathX, 512 - pathX) : 0;
                 float effectiveX = Math.Clamp(pathX + offset, 0, 512);
                 converted.Add(new(track.Id, index, item.Kind, item.TimeMs, effectiveX,
-                    Math.Clamp(CurveMath.PositionAtTime(track, item.TimeMs), 0, 512), pathX, offset));
+                    Math.Clamp(positionAtTime(item.TimeMs), 0, 512), pathX, offset));
             }
 
             double tickError = converted.Where(o => o.Kind != CatchObjectKind.TinyDroplet)
@@ -205,7 +206,7 @@ public static class CatchStreamConverter
         throw new CatchConversionException(L.Get("core.conversion.iterationLimit"));
     }
 
-    private static List<MapPoint> Samples(CurveTrack track, IReadOnlyList<NestedCatchEvent> nested, bool compensate)
+    private static List<MapPoint> Samples(CurveTrack track, IReadOnlyList<NestedCatchEvent> nested, bool compensate, Func<double, double> positionAtTime)
     {
         double start = track.Nodes[0].TimeMs;
         double duration = track.Nodes[^1].TimeMs - start;
@@ -213,9 +214,9 @@ public static class CatchStreamConverter
         foreach (var item in nested)
         {
             double pathTime = start + item.Progress * duration;
-            double wantedX = Math.Clamp(CurveMath.PositionAtTime(track, pathTime), 0, 512);
+            double wantedX = Math.Clamp(positionAtTime(pathTime), 0, 512);
             if (compensate && item.Kind == CatchObjectKind.TinyDroplet)
-                wantedX = Math.Clamp(Math.Clamp(CurveMath.PositionAtTime(track, item.TimeMs), 0, 512) - item.RawOffset, 0, 512);
+                wantedX = Math.Clamp(Math.Clamp(positionAtTime(item.TimeMs), 0, 512) - item.RawOffset, 0, 512);
             else if (item.Kind != CatchObjectKind.TinyDroplet)
                 wantedX = Math.Clamp(CurveMath.PositionAtTime(track, item.TimeMs), 0, 512);
             if (knots.TryGetValue(pathTime, out double existing) && Math.Abs(existing - wantedX) > AlignmentTolerance)

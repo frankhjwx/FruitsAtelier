@@ -1,4 +1,12 @@
 {
+  "aimod.title": "AiMod",
+  "aimod.refresh": "Refresh",
+  "aimod.summary": "Difficulty: {0}    Errors: {1}",
+  "aimod.scope": "Checks object starts less than 10 ms apart. Click an error to select both objects and jump to them.",
+  "aimod.empty": "No overlapping notes found.",
+  "aimod.overlap": "Error: these two objects start less than 10 ms apart.",
+  "aimod.times": "{0} → {1}   (gap: {2} ms)",
+  "aimod.range": "{0}–{1} / {2}",
   "history.menu": "Version history…",
   "history.title": "Version history",
   "history.help": "Select a version, then a difficulty. Compare the current and historical maps before restoring.",
