@@ -330,7 +330,7 @@ public sealed partial class EditorView
 
     private void BeginSyncReview(int index)
     {
-        syncDifficulty = difficulties[index].Id; syncRow = 0; syncChoices.Clear(); syncRoundChoices.Clear();
+        syncDifficulty = difficulties[index].Id; syncTab = null; syncVisualKey = null; syncRow = 0; syncChoices.Clear(); syncRoundChoices.Clear();
         if (syncMerges.TryGetValue(syncDifficulty, out var merge))
         {
             foreach (string key in merge.PreviouslyResolved) syncChoices[key] = false;
@@ -571,11 +571,13 @@ public sealed partial class EditorView
         syncChoices[key] = external;
         syncRoundChoices.Add(key);
         syncPreviewRevision++; syncResultPane = null;
-        for (int offset = 1; offset < merge.Conflicts.Count; offset++)
-        {
-            int next = (syncRow + offset) % merge.Conflicts.Count;
-            if (!syncChoices.ContainsKey(merge.Conflicts[next].Key)) { syncRow = next; break; }
-        }
+        if (syncTab == "Objects")
+            for (int offset = 1; offset < merge.Conflicts.Count; offset++)
+            {
+                int next = (syncRow + offset) % merge.Conflicts.Count;
+                if (SyncCategory(merge.Conflicts[next].Key) == syncTab && !syncChoices.ContainsKey(merge.Conflicts[next].Key))
+                { syncRow = next; break; }
+            }
     }
     private void Navigation(ICanvas c, float x, float y, int count)
     {

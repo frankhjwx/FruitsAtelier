@@ -305,15 +305,15 @@ internal static class SynchronizationUiTests
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 1, 1)), "metadata uses a single navigation page");
                 Check(ui.Canvas.Texts.Any(t => t.Value == " added" && t.Color == 0xED737B), "only changed suffix is red");
                 var before = ui.View.Document.DeepClone();
-                SelectMetadata(ui, "Title", true);
+                SelectSyncField(ui, "Title", true);
                 Check(ui.Canvas.Texts.Any(t => t.Value == " added" && t.Color == 0x70D69B), "selected row turns green without disappearing");
-                SelectMetadata(ui, "Title", false); SelectMetadata(ui, "Artist", true);
+                SelectSyncField(ui, "Title", false); SelectSyncField(ui, "Artist", true);
                 Check(ui.View.Document.ContentEquals(before), "row choices do not edit before Apply");
                 ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Title") == "Original" && OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Artist") == "Artist changed", "each row retains its selected side");
                 ui.View.RefreshSynchronization(reviewResolved: true); Wait(ui);
                 Check(ui.Canvas.Texts.Any(t => t.Value == " added" && t.Color == 0xD5A34D), "previously resolved mismatch is amber");
-                SelectMetadata(ui, "Title", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+                SelectSyncField(ui, "Title", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Title") == "Original added", "accepted metadata can be resolved again");
                 File.WriteAllText(source, File.ReadAllText(source).Replace("Version:Catch", "Version:Catch\nTags:" + string.Join(" ", Enumerable.Repeat("long wrapped metadata", 100))));
                 ui.View.RefreshSynchronization(); Wait(ui);
@@ -336,12 +336,12 @@ internal static class SynchronizationUiTests
             string songs = Path.Combine(root, "Songs"), set = Path.Combine(songs, "set"), source = Path.Combine(set, "map.osu");
             string text = Fixture.Replace("ApproachRate:5", "ApproachRate:" + ar) + "200,192,1200,1,0,0:0:0:0:\n";
             Directory.CreateDirectory(set); File.WriteAllText(source, text);
-            var ui = new Ui(false); ui.Resize(width, 900);
+            var ui = new Ui(false); ui.Resize(width, 1100);
             ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
             var session = LibraryOperations.ImportPath(source, ui.View.LibrarySettings); ui.View.LoadWorkspace(session);
             File.WriteAllText(source, text.Replace("123,192", "321,192").Replace("200,192", "400,192"));
             ui.View.RefreshSynchronization(); Wait(ui);
-            var field = ui.Canvas.Clips[1];
+            var field = ui.Canvas.Clips[2];
             double Spacing() { var dots = ui.Canvas.Circles.Where(c => c.Filled && c.X < width / 2).OrderBy(c => c.Y).ToArray(); Check(dots.Length == 2, "two visible FA objects"); return dots[1].Y - dots[0].Y; }
             double expected = 200 * CatchScrollTiming.PixelsPerMs(ar, field.Width);
             Check(Math.Abs(Spacing() - expected) < .02, "comparison uses editor AR scale at each width");
@@ -363,7 +363,7 @@ internal static class SynchronizationUiTests
             Check(!ui.View.SynchronizationVisible, "retained differences do not repeat");
             File.WriteAllText(source, text.Replace("123,192", "333,192").Replace("200,192", "400,192"));
             ui.View.RefreshSynchronization(); Wait(ui);
-            Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Y == 86 && t.Value.Contains(L.Get("sync.unresolvedRange"))), "later external edit is a normal unresolved conflict");
+            Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Y == 122 && t.Value.Contains(L.Get("sync.unresolvedRange"))), "later external edit is a normal unresolved conflict");
             Check(ui.Canvas.Circles.Count(c => !c.Filled && c.Color == 0xED737B) == 2, "both corresponding objects remain highlighted");
             Check(ui.Canvas.Outlines.Any(o => o.Color == 0xD5A34D), "unchanged prior resolution has an amber interval");
             ui.ClickText(L.Get("sync.chooseLocal")); Page(ui, true);
@@ -398,7 +398,7 @@ internal static class SynchronizationUiTests
                 File.WriteAllText(source, Fixture.Replace("Title:Original", "Title:Updated"));
                 ui.View.RefreshSynchronization(); Wait(ui);
                 Check(ui.View.SynchronizationVisible && ui.Canvas.Circles.Count == 0, "one-sided metadata change opens text comparison");
-                SelectMetadata(ui, "Title", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+                SelectSyncField(ui, "Title", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(!ui.View.SynchronizationVisible && OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Title") == "Updated", "metadata choice applies");
                 Check(ui.View.Document.Fruits[0].Id == original && ui.View.Document.AudioPath!.EndsWith("pending.ogg"), "authoring preserved");
                 ui.Key('Z', ctrl: true);
@@ -427,7 +427,7 @@ internal static class SynchronizationUiTests
                 File.SetLastWriteTimeUtc(source, DateTime.UtcNow.AddMinutes(1));
                 ui.View.LoadWorkspace(WorkspaceProject.Open(session.Directory), checkAdditionalDifficulties: true); Wait(ui);
                 Check(ui.View.DifficultySyncState(0) == WorkspaceSyncState.NeedsBaseline, "legacy comparison stays explicit");
-                Check(ui.Canvas.Texts.Any(t => t.Value.StartsWith("Title")) && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 1, 2)), "legacy first difference and count shown");
+                Check(ui.Canvas.Texts.Any(t => t.Value.StartsWith("Title")) && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 1, 1)), "legacy first category and group count shown");
                 Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.newerSaved")) && t.X > size.Item1 / 2), "external timestamp marks newer saved version");
                 string authoringFile = Path.Combine(legacy.Directory, legacy.Manifest.Difficulties[0].File);
                 DateTime savedTime = File.GetLastWriteTimeUtc(authoringFile);
@@ -435,8 +435,8 @@ internal static class SynchronizationUiTests
                 Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.newerSaved")) && t.X < size.Item1 / 2), "FA can be the newer saved version");
                 File.SetLastWriteTimeUtc(source, savedTime); ui.View.RefreshSynchronization(); Wait(ui);
                 Check(!ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.newerSaved"))), "equal timestamps do not invent a newer side");
-                SelectMetadata(ui, "Title", true); Page(ui, true); ui.Paint();
-                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 2, 2)), "navigation reaches object conflicts after metadata");
+                SelectSyncField(ui, "Title", true); ui.ClickText("Objects"); ui.Paint();
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 1, 1)), "Objects tab opens object conflicts");
                 var rings = ui.Canvas.Circles.Where(c => !c.Filled && c.Color == 0xED737B).ToArray();
                 Check(rings.Length == 2 && Math.Abs(rings[0].Y - rings[1].Y) < .01 && rings[0].X < size.Item1 / 2 && rings[1].X > size.Item1 / 2, "both canvas versions highlight the aligned conflict");
                 var unchanged = ui.View.Document.DeepClone();
@@ -449,9 +449,9 @@ internal static class SynchronizationUiTests
                 var previewDeadline = DateTime.UtcNow.AddSeconds(10);
                 while (!ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.previewPending")) && DateTime.UtcNow < previewDeadline) { Thread.Sleep(10); ui.Paint(); }
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.previewPending")), "merged result preview prepared asynchronously");
-                Page(ui, false); ui.Paint();
+                ui.ClickText("Metadata"); ui.Paint();
                 Check(ui.Canvas.Texts.Any(t => t.Value.StartsWith("Title")), "previous choice can be reviewed");
-                Page(ui, true); ui.ClickText(L.Get("sync.chooseLocal"));
+                ui.ClickText("Objects"); ui.ClickText(L.Get("sync.chooseLocal"));
                 ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(!ui.View.SynchronizationVisible && ui.View.Document.Fruits[0].Id == original
                     && OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Title") == "Reviewed", "legacy mixed resolution applied");
@@ -488,7 +488,7 @@ internal static class SynchronizationUiTests
             File.WriteAllText(source, Fixture.Replace("Mode:2", "Mode:2\nPreviewTime:1000"));
             Until(() => ui.View.SynchronizationVisible && !ui.View.SynchronizationBusy, "file notification opens field text review");
             Check(OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") is null, "field review waits for a choice");
-            ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+            SelectSyncField(ui, "PreviewTime", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
             Check(ui.View.Document.Fruits[0].Id == identity && OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") == "1000", "field synchronization preserves authoring");
             string renamed = Path.Combine(songs, "renamed set"); Directory.Move(set, renamed); source = Path.Combine(renamed, "map.osu");
             Until(() => ui.View.WorkspaceSession!.Manifest.Difficulties[0].Source == source && !ui.View.SynchronizationBusy, "directory rename recovered automatically");
@@ -529,7 +529,7 @@ internal static class SynchronizationUiTests
             }
             Until(() => ui.View.SynchronizationVisible && !ui.View.SynchronizationBusy,
                 "locked source synchronizes after writer closes without another write notification");
-            ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+            SelectSyncField(ui, "PreviewTime", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
             Check(OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") == "2000", "retried field applies after review");
             ui.View.ShowLibrary(); ui.Paint();
             string newSet = Path.Combine(songs, "new set"); Directory.CreateDirectory(newSet);
@@ -728,7 +728,7 @@ internal static class SynchronizationUiTests
         ui.Click(next ? 254 : 54, label.Y + 10);
     }
 
-    private static void SelectMetadata(Ui ui, string key, bool external)
+    private static void SelectSyncField(Ui ui, string key, bool external)
     {
         ui.Paint();
         var row = ui.Canvas.Texts.Single(t => t.Value.StartsWith(key + " · "));

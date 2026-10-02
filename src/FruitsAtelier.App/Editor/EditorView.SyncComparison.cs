@@ -17,7 +17,7 @@ public sealed partial class EditorView
     private sealed record SyncRange(string Key, double Start, double End, uint Colour, string Label);
     private const uint SyncUnresolved = 0xED737B, SyncPreviouslyResolved = 0xD5A34D, SyncResolvedThisRound = 0x70D69B;
     private sealed record SyncComparison(SyncPane Local, SyncPane External, Dictionary<string, SyncFocus> Focus, DateTime? LocalSaved, DateTime? ExternalSaved,
-        IReadOnlySet<Guid> RetainedLocal, IReadOnlySet<Guid> RejectedExternal, string? ExternalAudioHash, Dictionary<string, MetadataTextDiff> TextDifferences);
+        IReadOnlySet<Guid> RetainedLocal, IReadOnlySet<Guid> RejectedExternal, string? ExternalAudioHash, SyncReviewData Review);
     private readonly Dictionary<Guid, SyncComparison> syncComparisons = [];
     private WorkspaceMerge? syncVisualMerge;
     private string? syncVisualKey;
@@ -100,25 +100,34 @@ public sealed partial class EditorView
             File.Exists(merge.External.Path) ? File.GetLastWriteTimeUtc(merge.External.Path) : null,
             merge.PreviouslyRetained.SelectMany(r => r.Sources).ToHashSet(),
             WorkspaceSynchronization.SourceIds(merge.External.Document).Where(p => rejectedOrders.Contains(p.Order)).Select(p => p.Id).ToHashSet(),
-            SyncAudioHash(merge.External.Document.AudioPath), merge.Conflicts.Where(c => WorkspaceSynchronization.IsMetadataField(c.Key))
-                .ToDictionary(c => c.Key, c => MetadataTextDiff.Compare(c.Local, c.External)));
+            SyncAudioHash(merge.External.Document.AudioPath), PrepareSyncReview(merge));
     }
 
     private void DrawSyncComparison(ICanvas c, WorkspaceMerge merge, SyncComparison comparison)
     {
         syncRow = Math.Clamp(syncRow, 0, merge.Conflicts.Count - 1);
-        var conflict = merge.Conflicts[syncRow]; var focus = comparison.Focus[conflict.Key];
-        if (WorkspaceSynchronization.IsMetadataField(conflict.Key))
-        { DrawSyncMetadata(c, merge, comparison, conflict); return; }
-        if (!conflict.Key.StartsWith("$objects:", StringComparison.Ordinal))
-        { DrawSyncSection(c, merge, comparison, conflict); return; }
+        syncTab ??= SyncCategory(merge.Conflicts[syncRow].Key);
+        if (SyncFieldOrder.ContainsKey(syncTab))
+        { DrawSyncFields(c, merge, comparison); DrawSyncTabs(c, merge, comparison); return; }
+        var categoryConflicts = merge.Conflicts.Where(c => SyncCategory(c.Key) == syncTab).ToArray();
+        var conflict = categoryConflicts.FirstOrDefault(c => c.Key == merge.Conflicts[syncRow].Key) ?? categoryConflicts.FirstOrDefault();
+        if (syncTab != "Objects")
+        {
+            string section = syncTab == "Timing" ? "TimingPoints" : syncTab;
+            conflict ??= new(section + "/", comparison.Review.LocalSections.GetValueOrDefault(section, ""), comparison.Review.ExternalSections.GetValueOrDefault(section, ""));
+            DrawSyncSection(c, merge, comparison, conflict); DrawSyncTabs(c, merge, comparison); return;
+        }
+        bool hasConflict = conflict is not null;
+        conflict ??= new("$objects:all", "", "");
+        var focus = comparison.Focus.GetValueOrDefault(conflict.Key) ?? new SyncFocus(new HashSet<Guid>(), new HashSet<Guid>(),
+            comparison.Local.Objects.FirstOrDefault()?.TimeMs ?? 0, comparison.Local.Objects.LastOrDefault()?.TimeMs ?? 0);
         if (!ReferenceEquals(syncVisualMerge, merge))
         { syncVisualMerge = merge; syncVisualKey = null; syncResultPane = null; syncPreviewRevision++; }
         bool newFocus = syncVisualKey != conflict.Key;
         if (newFocus)
         {
             syncVisualKey = conflict.Key;
-            syncZoom = 1;
+            syncZoom = 1; syncObjectDetailScroll = 0;
         }
         PumpSyncPreview(merge);
         float x = 16, y = 16, w = width - 32, h = height - 32;
@@ -126,13 +135,15 @@ public sealed partial class EditorView
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
         c.Text(L.Get("sync.title"), x + 20, y + 16, 20, Foreground, w - 40, true);
         c.Text(syncStatuses.GetValueOrDefault(syncDifficulty)?.State == WorkspaceSyncState.NeedsBaseline ? L.Get("sync.compareNoBaseline") : L.Get("sync.compareHelp"), x + 20, y + 46, 12, Muted, w - 40);
-        string label = conflict.Key.StartsWith("$objects:") ? L.Get("sync.objects", syncRow + 1) : conflict.Key == "$audio" ? L.Get("sync.audio") : conflict.Key;
+        string label = !hasConflict ? L.Get("ui.unchanged") : conflict.Key.StartsWith("$objects:") ? L.Get("sync.objects", Array.IndexOf(categoryConflicts, conflict) + 1) : conflict.Key == "$audio" ? L.Get("sync.audio") : conflict.Key;
         string stateLabel = syncRoundChoices.Contains(conflict.Key) ? L.Get("sync.resolvedThisRound")
             : merge.PreviouslyResolved.Contains(conflict.Key) ? L.Get("sync.alreadyResolved") : L.Get("sync.unresolvedRange");
-        label += " · " + stateLabel;
-        c.Text(label, x + 20, y + 70, 15, Accent, w - 40);
+        if (hasConflict) label += " · " + stateLabel;
+        c.Text(label, x + 20, y + 106, 15, Accent, w - 40);
         float paneWidth = (w - 40 - (syncShowResult ? 24 : 12)) / (syncShowResult ? 3 : 2);
-        var left = new Rect(x + 20, y + 102, paneWidth, h - 278);
+        if (hasConflict) DrawSyncObjectDetails(c, comparison.Review.Objects[conflict.Key], new(x + 20, y + 130, w - 40, 74));
+        else syncObjectDetailBounds = default;
+        var left = new Rect(x + 20, y + 214, paneWidth, h - 390);
         var right = left with { X = left.Right + 12 };
         syncShowValues = !conflict.Key.StartsWith("$objects:");
         var field = SyncField(left);
@@ -169,9 +180,10 @@ public sealed partial class EditorView
             if (syncResultPane is { } pane) DrawSyncPane(c, pane, result, L.Get("sync.resultPreview"), new HashSet<Guid>(), null);
             else c.Text(L.Get("sync.checking"), result.X + 12, result.Y + 35, 13, Muted, result.Width - 24);
         }
-        SyncReviewButton(c, new(left.X, y + h - 164, left.Width, 36), L.Get("sync.chooseLocal"), () => ChooseSyncItem(merge, conflict.Key, false), chosen && !external);
-        SyncReviewButton(c, new(right.X, y + h - 164, right.Width, 36), L.Get("sync.chooseExternal"), () => ChooseSyncItem(merge, conflict.Key, true), chosen && external);
+        SyncReviewButton(c, new(left.X, y + h - 164, left.Width, 36), L.Get("sync.chooseLocal"), () => ChooseSyncItem(merge, conflict.Key, false), chosen && !external, enabled: hasConflict);
+        SyncReviewButton(c, new(right.X, y + h - 164, right.Width, 36), L.Get("sync.chooseExternal"), () => ChooseSyncItem(merge, conflict.Key, true), chosen && external, enabled: hasConflict);
         DrawSyncReviewFooter(c, merge, x, y, w, h, showPreview: true);
+        DrawSyncTabs(c, merge, comparison);
     }
 
     private static string SavedLabel(DateTime? saved, DateTime? other, bool dirty)
@@ -198,7 +210,7 @@ public sealed partial class EditorView
         for (double time = Math.Ceiling(syncViewStart / step) * step; time <= syncViewStart + syncViewSpan; time += step)
         {
             float at = Y(time); c.Line(field.X, at, field.Right, at, Grid);
-            c.Text((time / 1000).ToString("0.##", CultureInfo.InvariantCulture), bounds.X + 4, at - 7, 10, Muted, 43);
+            c.Text(SyncObjectDifferences.FormatTime(time), bounds.X + 4, at - 7, 10, Muted, 74);
         }
         for (int i = 0; i <= 4; i++) c.Line(X(i * 128), field.Y, X(i * 128), field.Bottom, Grid, opacity: .5f);
         c.Clip(field);
@@ -244,13 +256,15 @@ public sealed partial class EditorView
             if (highlight) c.Circle(X(item.X), Y(item.TimeMs), (float)CatchSize.FruitRadius(pane.Document.CircleSize) * field.Width / 512 + 4, currentColour, false, 2.5f);
         }
         c.Unclip(); c.Unclip();
-        if (value is null && selected.Count == 0 && title is "FA" or "osu!") c.Text(absentMessage ?? L.Get("sync.absent"), bounds.X + 10, bounds.Y + 52, 12, Gold, bounds.Width - 20);
+        if (value is null && selected.Count == 0 && currentKey != "$objects:all" && title is "FA" or "osu!") c.Text(absentMessage ?? L.Get("sync.absent"), bounds.X + 10, bounds.Y + 52, 12, Gold, bounds.Width - 20);
     }
 
     private void ScrollSyncComparison(float x, float y, float delta, bool zoom)
     {
+        if (syncPage == "resolve" && syncTab == "Objects" && syncObjectDetailBounds.Contains(x, y))
+        { syncObjectDetailScroll = Math.Clamp(syncObjectDetailScroll - (int)(delta / 120) * 2, 0, syncObjectDetailMax); return; }
         if (syncPage is not ("resolve" or "failed") || !syncCanvasBounds.Contains(x, y)) return;
-        if (syncPage == "failed" || syncVisualKey == "$metadata" || syncVisualKey?.StartsWith("$text:", StringComparison.Ordinal) == true)
+        if (syncPage == "failed" || syncVisualKey?.StartsWith("$fields:", StringComparison.Ordinal) == true || syncVisualKey?.StartsWith("$text:", StringComparison.Ordinal) == true)
         { syncTextScroll = Math.Clamp(syncTextScroll - (int)(delta / 120 * 69), 0, syncTextMaxScroll); return; }
         if (zoom)
         {
@@ -262,7 +276,7 @@ public sealed partial class EditorView
     private Rect SyncField(Rect bounds)
     {
         float inset = syncShowValues ? 136 : 52;
-        return new(bounds.X + 50, bounds.Y + inset, bounds.Width - 62, Math.Max(40, bounds.Height - inset - 14));
+        return new(bounds.X + 80, bounds.Y + inset, bounds.Width - 92, Math.Max(40, bounds.Height - inset - 14));
     }
 
     private void PumpSyncPreview(WorkspaceMerge merge)

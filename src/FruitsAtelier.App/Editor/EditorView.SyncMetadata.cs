@@ -10,10 +10,10 @@ public sealed partial class EditorView
     private readonly record struct SyncTextLine(int Start, string Text);
     private readonly Dictionary<(string Value, float Width), SyncTextLine[]> syncTextLayouts = [];
 
-    private void DrawSyncMetadata(ICanvas c, WorkspaceMerge merge, SyncComparison comparison, WorkspaceSyncConflict conflict)
+    private void DrawSyncFields(ICanvas c, WorkspaceMerge merge, SyncComparison comparison)
     {
-        if (!ReferenceEquals(syncVisualMerge, merge) || syncVisualKey != "$metadata")
-        { syncVisualMerge = merge; syncVisualKey = "$metadata"; syncTextScroll = 0; syncTextLayouts.Clear(); }
+        if (!ReferenceEquals(syncVisualMerge, merge) || syncVisualKey != "$fields:" + syncTab)
+        { syncVisualMerge = merge; syncVisualKey = "$fields:" + syncTab; syncTextScroll = 0; syncTextLayouts.Clear(); }
         float x = 16, y = 16, w = width - 32, h = height - 32;
         c.Fill(new(0, 0, width, height), Background);
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
@@ -21,43 +21,47 @@ public sealed partial class EditorView
         c.Text(L.Get("sync.metadataHelp"), x + 20, y + 46, 12, Muted, w - 40);
         float paneWidth = (w - 52) / 2, leftX = x + 20, rightX = leftX + paneWidth + 12;
         bool dirty = difficulties.FirstOrDefault(d => d.Id == syncDifficulty)?.History.IsDirty == true;
-        c.Text(L.Get("sync.localHeading"), leftX + 12, y + 72, 14, Foreground, paneWidth, true);
-        c.Text(L.Get("sync.externalHeading"), rightX + 12, y + 72, 14, Foreground, paneWidth, true);
-        c.Text(SavedLabel(comparison.LocalSaved, comparison.ExternalSaved, dirty), leftX + 12, y + 94, 11, Muted, paneWidth - 24);
-        c.Text(SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false), rightX + 12, y + 94, 11, Muted, paneWidth - 24);
-        syncCanvasBounds = new(leftX, y + 120, w - 40, h - 252);
+        c.Text(L.Get("sync.localHeading"), leftX + 12, y + 108, 14, Foreground, paneWidth, true);
+        c.Text(L.Get("sync.externalHeading"), rightX + 12, y + 108, 14, Foreground, paneWidth, true);
+        c.Text(SavedLabel(comparison.LocalSaved, comparison.ExternalSaved, dirty), leftX + 12, y + 130, 11, Muted, paneWidth - 24);
+        c.Text(SavedLabel(comparison.ExternalSaved, comparison.LocalSaved, false), rightX + 12, y + 130, 11, Muted, paneWidth - 24);
+        syncCanvasBounds = new(leftX, y + 156, w - 40, h - 288);
         float rowY = syncCanvasBounds.Y - syncTextScroll;
         c.Clip(syncCanvasBounds);
-        foreach (var item in merge.Conflicts.Where(item => WorkspaceSynchronization.IsMetadataField(item.Key)))
+        foreach (var row in comparison.Review.Fields[syncTab!])
         {
-            uint colour = syncRoundChoices.Contains(item.Key) ? SyncResolvedThisRound
-                : merge.PreviouslyResolved.Contains(item.Key) ? SyncPreviouslyResolved : SyncUnresolved;
-            string status = syncRoundChoices.Contains(item.Key) ? L.Get("sync.resolvedThisRound")
-                : merge.PreviouslyResolved.Contains(item.Key) ? L.Get("sync.alreadyResolved") : L.Get("sync.unresolvedRange");
-            int lines = Math.Max(WrapSyncText(c, item.Local.Replace("\r", ""), paneWidth - 24).Length,
-                WrapSyncText(c, item.External.Replace("\r", ""), paneWidth - 24).Length);
+            var item = merge.Conflicts.FirstOrDefault(c => c.Key == row.Key);
+            bool hasConflict = item is not null;
+            string localValue = row.LocalPresent ? row.Local : L.Get("sync.absent");
+            string externalValue = row.ExternalPresent ? row.External : L.Get("sync.absent");
+            uint colour = !hasConflict ? Muted : syncRoundChoices.Contains(row.Key) ? SyncResolvedThisRound
+                : merge.PreviouslyResolved.Contains(row.Key) ? SyncPreviouslyResolved : SyncUnresolved;
+            string status = syncRoundChoices.Contains(row.Key) ? L.Get("sync.resolvedThisRound")
+                : merge.PreviouslyResolved.Contains(row.Key) ? L.Get("sync.alreadyResolved") : L.Get("sync.unresolvedRange");
+            int lines = Math.Max(WrapSyncText(c, localValue.Replace("\r", ""), paneWidth - 24).Length,
+                WrapSyncText(c, externalValue.Replace("\r", ""), paneWidth - 24).Length);
             float rowHeight = 68 + lines * 23;
             if (rowY + rowHeight > syncCanvasBounds.Y && rowY < syncCanvasBounds.Bottom)
             {
-                c.Text(item.Key[9..] + " · " + status, leftX, rowY, 14, colour, w - 40);
+                c.Text(row.Key[(row.Key.IndexOf('/') + 1)..] + (hasConflict ? " · " + status : ""), leftX, rowY, 14, colour, w - 40);
                 var left = new Rect(leftX, rowY + 26, paneWidth, rowHeight - 34);
                 var right = left with { X = rightX };
-                var differences = comparison.TextDifferences[item.Key];
-                DrawSyncText(c, left, item.Local, colour, differences.Local);
-                DrawSyncText(c, right, item.External, colour, differences.External);
-                bool chosen = syncChoices.TryGetValue(item.Key, out bool external);
+                var differences = hasConflict ? row.Diff : new MetadataTextDiff([], []);
+                DrawSyncText(c, left, localValue, colour, differences.Local);
+                DrawSyncText(c, right, externalValue, colour, differences.External);
+                bool chosen = syncChoices.TryGetValue(row.Key, out bool external);
                 if (chosen)
                 {
                     c.Stroke(external ? left : right, Grid);
                     c.Stroke(external ? right : left, Accent, 3);
                 }
-                AddChoice(left, false); AddChoice(right, true);
+                if (hasConflict) { AddChoice(left, false); AddChoice(right, true); }
                 void AddChoice(Rect bounds, bool useExternal)
                 {
                     float top = Math.Max(bounds.Y, syncCanvasBounds.Y), bottom = Math.Min(bounds.Bottom, syncCanvasBounds.Bottom);
                     if (bottom > top) hits.Add(new(bounds with { Y = top, Height = bottom - top }, () =>
                     {
-                        syncChoices[item.Key] = useExternal; syncRoundChoices.Add(item.Key);
+                        syncChoices[row.Key] = useExternal; syncRoundChoices.Add(row.Key);
                         syncPreviewRevision++; syncResultPane = null;
                     }, true));
                 }
@@ -144,17 +148,13 @@ public sealed partial class EditorView
 
     private void SyncComparisonNavigation(ICanvas c, WorkspaceMerge merge, float x, float y)
     {
-        var pages = new List<int>(); bool metadataAdded = false;
-        for (int i = 0; i < merge.Conflicts.Count; i++)
-        {
-            if (WorkspaceSynchronization.IsMetadataField(merge.Conflicts[i].Key))
-            { if (metadataAdded) continue; metadataAdded = true; }
-            pages.Add(i);
-        }
-        int current = WorkspaceSynchronization.IsMetadataField(merge.Conflicts[syncRow].Key)
-            ? pages.FindIndex(i => WorkspaceSynchronization.IsMetadataField(merge.Conflicts[i].Key)) : pages.IndexOf(syncRow);
-        TimingButton(c, new(x + 20, y, 36, 32), "‹", () => syncRow = pages[current - 1], enabled: current > 0, flatArrow: true);
-        c.Text(L.Get("sync.page", current + 1, pages.Count), x + 100, y + 6, 15, Foreground, 110, true);
-        TimingButton(c, new(x + 220, y, 36, 32), "›", () => syncRow = pages[current + 1], enabled: current + 1 < pages.Count, flatArrow: true);
+        var pages = merge.Conflicts.Select((item, index) => (item, index))
+            .Where(p => SyncCategory(p.item.Key) == syncTab).Select(p => p.index).ToArray();
+        bool groups = syncTab == "Objects";
+        int current = groups ? Math.Max(0, Array.IndexOf(pages, syncRow)) : 0;
+        int count = groups ? Math.Max(1, pages.Length) : 1;
+        TimingButton(c, new(x + 20, y, 36, 32), "‹", () => syncRow = pages[current - 1], enabled: groups && current > 0, flatArrow: true);
+        c.Text(L.Get("sync.page", current + 1, count), x + 100, y + 6, 15, Foreground, 110, true);
+        TimingButton(c, new(x + 220, y, 36, 32), "›", () => syncRow = pages[current + 1], enabled: groups && current + 1 < pages.Length, flatArrow: true);
     }
 }

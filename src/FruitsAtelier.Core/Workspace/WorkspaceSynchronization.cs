@@ -857,7 +857,7 @@ public static class WorkspaceSynchronization
             .Select(b => FormattableString.Invariant($"2,{b.Start},{b.End}"))));
     }
 
-    internal static Dictionary<string, string?> Fields(MapDocument document)
+    public static Dictionary<string, string?> Fields(MapDocument document)
     {
         var fields = new Dictionary<string, string?>();
         foreach (var section in document.OriginalSections.Where(s => s.Name is not ("HitObjects" or "TimingPoints" or "")))

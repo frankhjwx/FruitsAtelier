@@ -104,8 +104,12 @@ sidecars are published atomically with the difficulty files. Older
 manifests remain readable. An unchanged legacy fingerprint can establish a baseline;
 changed legacy files without a baseline show a two-version comparison. Each differing
 field and object/group requires a choice because neither side can be identified as
-the source of a change. Choosing an item advances to the next unresolved difference;
-previous/next navigation retains choices for review. Whole-map choices remain available.
+the source of a change. Review categories appear left to right as General, Editor,
+Metadata, Difficulty, Events, Timing, Colours and Objects, followed by audio or
+additional sections when present. Clean tabs are grey, unresolved tabs red,
+partially resolved tabs amber, and fully resolved tabs green. Clean categories
+remain readable. Choices stay in their category; object choices advance to the
+next unresolved group there. Whole-map choices remain available.
 
 Conflict review shows FA and osu! on side-by-side editor canvases with synchronized
 time ranges and zoom. Their common default scale uses the current FA difficulty's
@@ -113,8 +117,14 @@ AR and playfield width, matching the editor canvas. Selecting a conflict restore
 that AR scale and locates its start; long groups remain scrollable rather than
 being compressed to fit. Current conflicting objects and related curve controls are
 highlighted; missing counterparts are labelled. Mouse wheel scrolls both maps and
-Ctrl+wheel zooms them together. Other field differences use side-by-side text. The
-optional result pane previews chosen resolutions, using FA for unresolved items;
+Ctrl+wheel zooms them together. Other field differences use side-by-side text.
+The Objects tab also lists both sides' object counts and the changed properties for
+each group: time, position, New Combo, colour skip, hitsounds, sample settings,
+slider path, span count and length, or banana shower end time. Unmatched entries
+are identified by side rather than assuming an ambiguous replacement is a move.
+The detail box scrolls independently of the canvases. Canvas time labels and
+object references use `mm:ss:ms`, with three millisecond digits.
+The optional result pane previews chosen resolutions, using FA for unresolved items;
 it does not save or export. File timestamps identify the more recently saved version,
 and unsaved FA edits are labelled separately. A newer timestamp does not resolve
 individual conflicts automatically.
@@ -173,13 +183,15 @@ the resulting complete FA version against the resolved external version. Timing
 comparison includes inherited points. Applying external context retains authoring
 objects and rebases that context through local undo snapshots.
 
-General, Editor, Difficulty and Colours settings are reviewed per key; Events,
-TimingPoints and unknown sections are reviewed as complete ordered text sections.
-Additional Metadata keys use the same text review. Text pages contain at most
+General, Editor, Metadata, Difficulty and Colours show every field present on
+either side, including unchanged context, in fixed format-field order. Additional
+keys follow in ordinal order. Conflicting rows highlight the changed text and allow
+choosing either value; unchanged rows are read-only. Events, TimingPoints and
+unknown sections use ordered text review. Text pages contain at most
 4096 UTF-16 code units plus a boundary surrogate pair. Only the current page is
 compared and wrapped; unchanged frames reuse that layout and draw visible rows.
 Use the top arrows to change text pages or jump to the first/last page, and the
-wheel to scroll within a page. The bottom arrows move between conflicts. Choosing
+wheel to scroll within a page. The bottom arrows move between object groups. Choosing
 a side applies the complete field or section, including text on other pages.
 Full-version inspection remains available for searching or reading a whole storyboard.
 Emitted timing that differs from its unchanged authoring baseline does not itself

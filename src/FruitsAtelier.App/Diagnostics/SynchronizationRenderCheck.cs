@@ -32,6 +32,14 @@ internal static class SynchronizationRenderCheck
                 view.RefreshSynchronization(); Wait();
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native metadata rows were not shown.");
                 var metadataBefore = view.Document.DeepClone();
+                for (int tab = 0; tab < 8; tab++)
+                {
+                    float tabX = 36 + (width - 72) / 8f * (tab + .5f);
+                    view.PointerDown(tabX, 98, 0, false, false); view.PointerUp(tabX, 98, 0); Paint();
+                    if (!metadataBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native category navigation changed authoring.");
+                }
+                float metadataTabX = 36 + (width - 72) / 8f * 2.5f;
+                view.PointerDown(metadataTabX, 98, 0, false, false); view.PointerUp(metadataTabX, 98, 0); Paint();
                 view.Wheel(200, 260, -1200, false); Paint();
                 view.Wheel(200, 260, 1200, false); Paint();
                 if (!metadataBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native metadata scrolling changed authoring.");
@@ -45,7 +53,7 @@ internal static class SynchronizationRenderCheck
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native section text review was not shown.");
                 var sectionBefore = view.Document.DeepClone();
                 view.Wheel(200, 260, -1200, false); Paint();
-                view.PointerDown(width - 52, 95, 0, false, false); view.PointerUp(width - 52, 95, 0); Paint();
+                view.PointerDown(width - 52, 131, 0, false, false); view.PointerUp(width - 52, 131, 0); Paint();
                 if (!sectionBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native text paging changed authoring.");
                 view.KeyDown(27, false, false);
 
