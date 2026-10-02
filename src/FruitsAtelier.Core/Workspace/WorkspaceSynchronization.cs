@@ -548,8 +548,8 @@ public static class WorkspaceSynchronization
         WorkspaceProject.RejectLinks(merge.External.Path);
         var missing = WorkspaceProject.MissingResources(BeatmapProject.FromDocuments([merge.Local]));
         if (missing.Count > 0) throw new IOException(L.Get("library.missingResources", string.Join("\n", missing)));
-        return new(entry.Id, merge.Local, merge.External.Path, merge.External.Hash,
-            OsuBeatmapWriter.Serialize(merge.Local, merge.Compensate));
+        return WorkspaceExport.WithMetadataFileName(new(entry.Id, merge.Local, merge.External.Path, merge.External.Hash,
+            OsuBeatmapWriter.Serialize(merge.Local, merge.Compensate)), merge.External.Document);
     }
 
     public static void Accept(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceSyncCandidate external, MapDocument resolved, bool compensate, bool retainLocalFields = false,

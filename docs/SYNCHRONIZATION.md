@@ -14,6 +14,14 @@ and viewport. Content-only synchronization keeps the existing audio transport.
 Replacing audio, including changed bytes at the same path, reloads it at the
 current timeline position.
 
+Saving local changes to Artist, Title, Creator (mapper), or Version (difficulty name)
+renames the linked `.osu` to `Artist - Title (Creator) [Version].osu` in its existing
+directory. Automatic synchronization and explicit overwrite export both update
+source/export associations and baselines to the new path, preserving one difficulty.
+Invalid filename characters are removed using the workspace filename rules. A
+filename occupied by another file blocks the save without overwriting either file.
+Edits to other fields alone preserve the existing filename.
+
 ## Discovery and identity
 
 Opening or resuming an existing project, checking synchronization from a difficulty

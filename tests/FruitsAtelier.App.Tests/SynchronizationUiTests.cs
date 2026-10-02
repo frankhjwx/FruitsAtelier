@@ -79,6 +79,7 @@ internal static class SynchronizationUiTests
                 double position = ui.View.PlayheadMs, start = ui.View.ViewStartMs;
                 int reloads = audioReloads;
                 ui.View.SaveCurrentDifficulty(); Wait(ui);
+                source = ui.View.WorkspaceSession!.Manifest.Difficulties.Single().Source!;
                 Check(ui.View.PlayheadMs == position && ui.View.ViewStartMs == start,
                     "saving and automatic export retain nonzero transport and viewport positions");
                 Check(audioReloads == reloads, "content-only save does not reload unchanged audio");
@@ -100,6 +101,24 @@ internal static class SynchronizationUiTests
             history.Begin("standalone note"); ui.View.Document.Fruits.Add(new Fruit { TimeMs = 12000, X = 300 }); history.Commit();
             Synchronize();
             Check(OsuBeatmapReader.ReadFile(source).Fruits.Any(f => f.TimeMs == 12000), "object-only changes trigger automatic export");
+            foreach (string key in new[] { "Artist", "Title", "Creator", "Version" })
+            {
+                string previous = source;
+                history.Begin("metadata"); SongSetup.Set(ui.View.Document, "Metadata", key, "Changed " + key); history.Commit();
+                Synchronize();
+                Check(source != previous && !File.Exists(previous) && File.Exists(source), "save renames the linked " + key + " file");
+                Check(ui.View.Document.SourcePath == source && ui.View.CaptureProject().Difficulties.Count == 1, "editor keeps one difficulty with its current path");
+                ui.Key('Z', ctrl: true); Synchronize();
+                Check(ui.View.Document.SourcePath == source && !ui.View.SynchronizationVisible, "metadata undo saves through the rebased source path");
+            }
+            string beforeOverwrite = source;
+            history.Begin("metadata"); SongSetup.Set(ui.View.Document, "Metadata", "Artist", "Explicit artist"); history.Commit();
+            var project = ui.View.CaptureProject();
+            var plan = WorkspaceExport.Plan(ui.View.WorkspaceSession!, project.Difficulties[0], songs, true, "", true);
+            LibraryOperations.Export(ui.View.WorkspaceSession!, project, plan); ui.View.LibraryExportFinished(plan);
+            source = plan.Target;
+            Check(!File.Exists(beforeOverwrite) && ui.View.Document.SourcePath == source && !ui.View.IsDirty, "explicit overwrite renames and acknowledges the saved editor path");
+            ui.Key('Z', ctrl: true); Synchronize();
             double audioPosition = ui.View.PlayheadMs;
             File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(source)!, "music.wav"), [5, 6, 7, 8]);
             ui.View.RefreshSynchronization(); Wait(ui);

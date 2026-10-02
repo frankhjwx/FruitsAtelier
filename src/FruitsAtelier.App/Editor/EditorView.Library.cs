@@ -200,6 +200,11 @@ public sealed partial class EditorView
             int index = WorkspaceSession!.Manifest.Difficulties.FindIndex(d => string.Equals(d.Source, plan.Target, StringComparison.OrdinalIgnoreCase));
             if (index >= 0) SwitchDifficulty(index);
         }
+        if (plan.PreviousTarget is not null && difficulties.FirstOrDefault(d => d.Id == plan.DifficultyId) is { } difficulty)
+        {
+            difficulty.History.RebaseSharedMetadata(document => document.SourcePath = plan.Target);
+            difficulty.History.MarkSaved();
+        }
         CheckWorkspaceResources(); StartLibraryScan(); CloseLibrary();
     }
     public void RefreshLibrary() { librarySettingsOpen = false; updatesPage = false; libraryRescanRequested = scanTask is { IsCompleted: false }; StartLibraryScan(); }

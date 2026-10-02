@@ -132,7 +132,12 @@ public sealed partial class EditorView
                         if (existing is null) difficulties.Add(new DifficultySession(diff));
                         else
                         {
-                            if (localCommit) existing.History.MarkSaved(diff.Document);
+                            if (localCommit)
+                            {
+                                if (existing.History.Document.SourcePath != diff.Document.SourcePath)
+                                    existing.History.RebaseSharedMetadata(document => document.SourcePath = diff.Document.SourcePath);
+                                existing.History.MarkSaved(diff.Document);
+                            }
                             else
                             {
                                 var rebase = WorkspaceSynchronization.PrepareContextRebase(existing.History.Document, diff.Document);
@@ -239,12 +244,12 @@ public sealed partial class EditorView
                             if (result.Merges.TryGetValue(entry.Id, out var merge) && merge.CanExportLocalChanges)
                             {
                                 var plan = result.LocalExports[entry.Id];
-                                if (WorkspaceProject.Hash(plan.Target) != plan.ExpectedHash) throw new SyncSourceChangedException();
+                                if (WorkspaceProject.Hash(plan.ExistingTarget) != plan.ExpectedHash) throw new SyncSourceChangedException();
                                 if (WorkspaceSynchronization.AudioHash(merge.External.Document.AudioPath) != entry.Sync!.AudioHash) throw new SyncSourceChangedException();
                                 BeatmapResources.Copy(plan.Document, Path.GetDirectoryName(plan.Target)!, plan.Output.ReadBack);
                                 receipts.Add(WorkspaceExportRecovery.Prepare(session, project, plan, entry.Id));
                                 try { WorkspaceExport.Commit(session, plan); }
-                                catch (IOException) when (!File.Exists(plan.Target) || WorkspaceProject.Hash(plan.Target) != plan.ExpectedHash)
+                                catch (IOException) when (!File.Exists(plan.ExistingTarget) || WorkspaceProject.Hash(plan.ExistingTarget) != plan.ExpectedHash)
                                 { throw new SyncSourceChangedException(); }
                             }
                             else

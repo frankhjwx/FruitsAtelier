@@ -202,6 +202,7 @@ public static class LibraryOperations
         BeatmapResources.Copy(plan.Document, folder, plan.Output.ReadBack);
         string receipt = WorkspaceExportRecovery.Prepare(session, project, plan, added?.Id ?? plan.DifficultyId);
         WorkspaceExport.Commit(session, plan, updateAssociation: added is null);
+        if (added is null) project.Difficulties.Single(d => d.Id == plan.DifficultyId).Document.SourcePath = plan.Target;
         if (added is not null)
         {
             string hash = WorkspaceProject.Hash(plan.Target);

@@ -4,6 +4,77 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: metadata saves rename linked files without adding difficulties", () =>
+        {
+            foreach (string key in new[] { "Artist", "Title", "Creator", "Version" })
+            foreach (bool automatic in new[] { false, true }) Run(f =>
+            {
+                string original = f.Source;
+                Set(f.Diff.Document, key, "Changed value");
+                if (key == "Version") f.Diff.Name = "Changed value";
+                var entry = f.Session.Manifest.Difficulties.Single();
+                var plan = automatic ? WorkspaceSynchronization.PlanLocalChanges(f.Session, entry, f.Merge())
+                    : WorkspaceExport.Plan(f.Session, f.Diff, f.Songs, true, "", true);
+                string expected = Path.Combine(f.Set, WorkspaceProject.DifficultyFileName(f.Diff.Document, f.Diff.Name, ".osu"));
+                Check(plan.Target == expected && plan.ExistingTarget == original, "metadata determines the new filename");
+                WorkspaceExport.Commit(f.Session, plan);
+                WorkspaceProject.Save(f.Session, f.Session.Project);
+                f.Session = WorkspaceProject.Open(f.Session.Directory);
+                Check(!File.Exists(original) && Directory.GetFiles(f.Set, "*.osu").Single() == expected, "old file is replaced by one renamed file");
+                Check(entry.Source == expected && entry.ExportTarget == expected && entry.Sync!.Path == expected, "all associations follow the rename");
+                Check(f.Scan().Additions.Count == 0 && f.Scan().Difficulties.Single().State == WorkspaceSyncState.Current, "restart discovers one current difficulty");
+                Check(!f.Merge().RequiresResolution && (!automatic || !f.Merge().CanExportLocalChanges), "renaming preserves the resolved authoring baseline");
+            });
+        });
+        yield return ("Sync: metadata filenames sanitize characters and preserve case changes", () => Run(f =>
+        {
+            foreach (string title in new[] { "New: / Title?", "new: / title?" })
+            {
+                Set(f.Diff.Document, "Title", title);
+                var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], f.Merge());
+                WorkspaceExport.Commit(f.Session, plan);
+                Check(Directory.GetFiles(f.Set, "*.osu").Single() == plan.Target, "one file retains the requested filename casing");
+                Check(Path.GetFileName(plan.Target) == WorkspaceProject.DifficultyFileName(f.Diff.Document, f.Diff.Name, ".osu"), "cross-platform filename sanitization");
+            }
+        }));
+        yield return ("Sync: metadata filename collisions and stale writes preserve existing files", () =>
+        {
+            foreach (bool collisionBeforePlan in new[] { false, true }) Run(f =>
+            {
+                string original = File.ReadAllText(f.Source);
+                Set(f.Diff.Document, "Version", "Changed"); f.Diff.Name = "Changed";
+                string target = Path.Combine(f.Set, WorkspaceProject.DifficultyFileName(f.Diff.Document, "Changed", ".osu"));
+                if (collisionBeforePlan) File.WriteAllText(target, "other difficulty");
+                if (collisionBeforePlan) Reject(() => WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], f.Merge()));
+                else
+                {
+                    var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], f.Merge());
+                    File.WriteAllText(target, "other difficulty");
+                    Reject(() => WorkspaceExport.Commit(f.Session, plan));
+                }
+                Check(File.ReadAllText(f.Source) == original && File.ReadAllText(target) == "other difficulty", "collision preserves both files");
+            });
+            Run(f =>
+            {
+                Set(f.Diff.Document, "Title", "Changed");
+                var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], f.Merge());
+                File.AppendAllText(f.Source, "\n// external edit");
+                string changed = File.ReadAllText(f.Source);
+                Reject(() => WorkspaceExport.Commit(f.Session, plan));
+                Check(File.ReadAllText(f.Source) == changed && !File.Exists(plan.Target), "stale source is not renamed");
+            });
+        });
+        yield return ("Sync: interrupted metadata rename completes on recovery", () => Run(f =>
+        {
+            string original = f.Source;
+            Set(f.Diff.Document, "Title", "Changed");
+            var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], f.Merge());
+            WorkspaceExportRecovery.Prepare(f.Session, f.Session.Project, plan, f.Diff.Id);
+            File.WriteAllText(original, plan.Output.Text, new System.Text.UTF8Encoding(false));
+            f.Session = WorkspaceProject.Open(f.Session.Directory);
+            Check(!File.Exists(original) && File.Exists(plan.Target), "recovery finishes the pending rename");
+            Check(f.Session.Manifest.Difficulties.Single().Source == plan.Target && f.Scan().Additions.Count == 0, "recovery retains one owner");
+        }));
         yield return ("Sync: FA content writes back against the resolved external version", () => Run(f =>
         {
             OsuTimeline.AddBreak(f.Diff.Document, 4000, 10000);
@@ -888,7 +959,7 @@ internal static class SynchronizationTests
         public string Workspace => Path.Combine(Root, "Workspace");
         public string Songs => Path.Combine(Root, "Songs");
         public string Set => Path.Combine(Songs, "original");
-        public string Source => Path.Combine(Set, "map.osu");
+        public string Source => Session?.Manifest.Difficulties.FirstOrDefault()?.Source ?? Path.Combine(Set, "map.osu");
         public WorkspaceSession Session;
         public ProjectDifficulty Diff => Session.Project.Difficulties[0];
         public FixtureContext()
