@@ -392,11 +392,9 @@ internal static class RenderCheck
                 var fruitPreview = view.StackPreviewBounds;
                 var editedFruit = view.Conversion.Objects[2];
                 double stackStart = view.Document.Tracks[0].Nodes[0].TimeMs;
-                double stackDuration = CurveMath.EndTimeMs(view.Document.Tracks[0]) - stackStart;
                 float fruitPadding = (float)(CatchSize.FruitRadius(view.Document.CircleSize) / 512 * fruitPreview.Width) + 2;
                 float fruitX = fruitPreview.X + (float)(editedFruit.X / 512) * fruitPreview.Width;
-                float fruitY = fruitPreview.Bottom - fruitPadding - (float)((editedFruit.TimeMs - stackStart) / stackDuration)
-                    * (fruitPreview.Height - 2 * fruitPadding);
+                float fruitY = fruitPreview.Bottom - fruitPadding - (float)((editedFruit.TimeMs - stackStart) * CatchScrollTiming.PixelsPerMs(view.Document.ApproachRate, fruitPreview.Width));
                 view.PointerDown(fruitX, fruitY, 0, false, false);
                 view.PointerMove(fruitX + 12, fruitY - 20, false, false);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();

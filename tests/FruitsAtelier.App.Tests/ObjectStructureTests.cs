@@ -37,9 +37,9 @@ internal static class ObjectStructureTests
                 var stream = ui.View.Document.DeepClone();
                 var expected = OsuBeatmapWriter.Serialize(stream).Text;
                 ui.HoldMap(1000, 100, clock.Advance);
-                var change = ui.Canvas.Texts.Single(t => t.Value == L.Get("stream.changeSnap"));
+                var change = ui.Canvas.Texts.Single(t => t.Value == L.Get("conversion.title"));
                 var breakLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("stream.breakFruits"));
-                Check(breakLabel.Y > change.Y && breakLabel.Y - change.Y < 40, "break is immediately below Change snapping");
+                Check(breakLabel.Y > change.Y && breakLabel.Y - change.Y < 40, "break is immediately below Convert to Stream/Stack");
                 ui.ClickText(L.Get("stream.breakFruits"));
                 Check(ui.View.Document.Tracks.Count == 0 && ui.View.Document.Fruits.Count == 5, "long press breaks an existing stream");
                 Check(OsuBeatmapWriter.Serialize(ui.View.Document).Text == expected, "breaking retains exported positions, samples and flags");

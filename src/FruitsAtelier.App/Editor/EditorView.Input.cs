@@ -711,7 +711,12 @@ public sealed partial class EditorView
             if (alt && !ctrl && !shift) AdjustVolumeWheel(delta);
             return;
         }
-        if (TimeJumpVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
+        if (StreamDialogVisible)
+        {
+            if (StackPreviewBounds.Contains(x, y)) ScrollConversionPreview(delta);
+            return;
+        }
+        if (TimeJumpVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (languageMenuOpen) return;
         if (ErrorVisible)
         {

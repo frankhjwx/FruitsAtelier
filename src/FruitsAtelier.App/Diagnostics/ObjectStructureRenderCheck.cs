@@ -31,8 +31,8 @@ internal static class ObjectStructureRenderCheck
                 view.LoadDocument(document); Paint();
                 view.KeyDown(65, true, false); view.KeyDown(70, true, true); Paint();
                 if (!view.StreamDialogVisible || view.StreamBreakIntoFruits) throw new InvalidOperationException("Native stream toggle default failed.");
-                float dialogWidth = Math.Min(500, width - 32);
-                float toggleX = (width - dialogWidth) / 2 + 100, toggleY = (height - 256) / 2 + 138;
+                float dialogWidth = Math.Min(700, width - 32);
+                float toggleX = (width - dialogWidth) / 2 + 100, toggleY = (height - Math.Min(510, height - 32)) / 2 + 114;
                 Click(toggleX, toggleY); view.KeyDown(13, false, false); Paint();
                 if (view.Document.Tracks.Count != 0 || view.Document.Fruits.Count != 5) throw new InvalidOperationException("Native stream toggle did not break fruits.");
                 view.KeyDown(77, true, true); Paint();
