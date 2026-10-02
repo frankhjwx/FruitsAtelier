@@ -40,7 +40,7 @@ internal sealed class EditorControl : Control, IDisposable
         DragDrop.SetAllowDrop(this, true);
         DragDrop.AddDragOverHandler(this, (_, e) =>
         {
-            e.DragEffects = View.CanDropLibraryFiles && DroppedPaths(e).Any(EditorView.IsLibraryArchive)
+            e.DragEffects = DroppedPaths(e).Any(View.CanDropFile)
                 ? DragDropEffects.Copy : DragDropEffects.None;
             e.Handled = true;
         });

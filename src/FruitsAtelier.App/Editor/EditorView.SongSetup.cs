@@ -58,6 +58,7 @@ public sealed partial class EditorView
 
     private void CloseSongSetup()
     {
+        audioProjectPath = null;
         SongSetupVisible = false; songField = ""; songDrag = -1; songCountdownOpen = false; SongSetupInputSession++;
         hits.Clear(); fields.Clear();
     }
@@ -75,6 +76,7 @@ public sealed partial class EditorView
     private void DrawSongSetup(ICanvas c)
     {
         if (!SongSetupVisible) return;
+        if (audioProjectPath is not null) { DrawAudioProjectSetup(c); return; }
         hits.Clear(); fields.Clear(); songFieldBounds.Clear(); songSliders.Clear();
         var r = SongSetupBounds;
         c.Fill(new(0, 0, width, height), Background, opacity: .7f);
@@ -164,6 +166,7 @@ public sealed partial class EditorView
 
     private void ApplySongSetup()
     {
+        if (audioProjectPath is not null) { CreateAudioProject(); return; }
         foreach (string key in SongDifficulty)
             if (!double.TryParse(songValues[key], NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
                 || !double.IsFinite(value) || value < 0 || value > 10)
@@ -286,7 +289,7 @@ public sealed partial class EditorView
 
     public void PasteSongSetupText(string text, int session)
     {
-        if (!SongSetupVisible || ErrorVisible || DiscardConfirmationVisible || session != SongSetupInputSession
+        if (!SongSetupVisible || AudioProjectCreating || ErrorVisible || DiscardConfirmationVisible || session != SongSetupInputSession
             || songField.Length == 0 || !SongFieldEnabled(songField)) return;
         text = new string(text.Where(c => !char.IsControl(c)).ToArray());
         string value = InsertInput("song:" + songField, songValues[songField], text, 4096);

@@ -28,6 +28,7 @@ public sealed partial class EditorView
         historyCompressionPaused = !LibraryVisible || SyncInteractionActive || AudioPlaying || SynchronizationBusy;
         PumpWorkspaceSave();
         PumpSynchronizationWait();
+        PumpAudioProject();
         if (ConversionNeedsRedraw) PumpDeferredConversion();
         CompleteSliderMultiplierValidation();
         RefreshLanguage();
@@ -53,7 +54,7 @@ public sealed partial class EditorView
         if (syncPage == "resolve" && syncMerges.TryGetValue(syncDifficulty, out var comparisonMerge) && comparisonMerge.Conflicts.Count > 0
             && syncComparisons.ContainsKey(syncDifficulty)) { DrawSynchronization(c); return; }
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
-        if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
+        if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); return; }
         bool expandedPanel = catchPreviewVisible || TimingPageVisible;
         const float minimumCanvasWidth = MinimumPlayfieldWidth + 198;
         const float collapsedCurveWidth = 24;

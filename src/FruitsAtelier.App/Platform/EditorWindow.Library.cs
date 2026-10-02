@@ -6,6 +6,7 @@ internal sealed partial class EditorWindow
 {
     private void ConfigureLibrary()
     {
+        view.RequestAudioProject = path => ConfirmDiscard(() => view.BeginAudioProject(path));
         view.RequestLibraryDrop = paths => FileOperation(() =>
         {
             foreach (string skin in paths.Where(p => Path.GetExtension(p).Equals(".osk", StringComparison.OrdinalIgnoreCase)))

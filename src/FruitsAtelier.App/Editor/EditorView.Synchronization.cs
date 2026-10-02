@@ -12,7 +12,7 @@ public sealed partial class EditorView
     private SyncRetry? syncRetry;
     private Task<SyncResult>? syncTask;
     private readonly HashSet<Guid> syncSearching = [];
-    private bool SynchronizationBlocksInput => workspaceSaveTask is not null && workspaceSaveBlocksInput || syncCommitTask is not null && !syncCommitAllowsEditing;
+    private bool SynchronizationBlocksInput => AudioProjectCreating || workspaceSaveTask is not null && workspaceSaveBlocksInput || syncCommitTask is not null && !syncCommitAllowsEditing;
     private bool syncCommitAllowsEditing;
     private bool syncCommitCompletesSave;
     private bool SearchingReference(int index) => syncTask is not null && index >= 0 && index < difficulties.Count && syncSearching.Contains(difficulties[index].Id);
