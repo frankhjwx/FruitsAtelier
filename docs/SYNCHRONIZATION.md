@@ -255,7 +255,9 @@ is required. Changed workspace saves also retain their previous authoring state.
 Unchanged saves do not add versions. The storage retention policy below still applies.
 
 Select a version, then a difficulty. The window compares metadata and shows aligned
-current/historical object previews, including editable curves. Scroll the version and
+current/historical object previews, including editable curves. Both previews use the
+active editor's AR scroll scale and initially show its current timeline position,
+so a long map remains readable. Scroll the version and
 difficulty lists independently. Scroll over either preview to move both timelines;
 Ctrl+wheel changes their common time span. Up/Down selects versions, Left/Right selects
 difficulties, and Escape closes the window. Browsing does not modify authoring or write

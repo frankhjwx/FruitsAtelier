@@ -34,7 +34,14 @@ internal static class VersionHistoryUiTests
                 ui.Key('S', ctrl: true); ui.Key(46); ui.Key('Z', ctrl: true);
                 Check(saves == 0 && !ui.View.IsDirty && ui.View.Document.ContentEquals(before), "history browsing isolates editor commands");
                 ui.ClickText(L.Get("history.deletedName", "Removed")); Wait(ui);
+                double Span() => (double)ui.View.GetType().GetField("syncViewSpan", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
+                double normalSpan = Span();
+                Check(normalSpan < first.DurationMs / 2, "history shows an AR-sized time window rather than the entire map");
+                ui.View.Document.ApproachRate = 10; ui.Paint();
+                Check(Span() < normalSpan, "both previews follow the active editor AR even for a deleted difficulty");
+                ui.View.Document.ApproachRate = before.ApproachRate; ui.Paint();
                 ui.View.Wheel(size.Item1 - 100, 300, 120, true); ui.Paint();
+                Check(Span() < normalSpan, "history zoom changes the AR-sized viewport");
                 Check(ui.View.Document.ContentEquals(before), "preview navigation does not edit authoring");
                 ui.ClickText(L.Get("history.restore")); Wait(ui);
                 Check(!ui.View.VersionHistoryVisible && ui.View.DifficultyCount == 2 && ui.View.CurrentDifficultyName == "Removed" && ui.View.IsDirty,

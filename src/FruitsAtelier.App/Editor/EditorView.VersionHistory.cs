@@ -20,6 +20,7 @@ public sealed partial class EditorView
     private int versionIndex, versionDifficultyIndex, versionScroll, versionDifficultyScroll;
     private string versionError = "";
     private Rect versionListBounds, versionDifficultyBounds, versionPreviewBounds;
+    private double versionZoom = 1;
     private static readonly HashSet<Guid> noVersionSelection = [];
 
     public void ShowVersionHistory()
@@ -95,8 +96,8 @@ public sealed partial class EditorView
             {
                 versionPreviewTask = null;
                 (versionCurrentPane, versionHistoricalPane) = prepared.GetAwaiter().GetResult();
-                syncViewStart = 0;
-                syncViewSpan = Math.Max(1000, Math.Max(versionHistoricalPane.Document.DurationMs, versionCurrentPane?.Document.DurationMs ?? 0));
+                syncViewStart = Math.Max(0, viewStart);
+                versionZoom = 1;
             }
             if (versionRestoreTask is { IsCompleted: true } restored)
             {
@@ -189,7 +190,12 @@ public sealed partial class EditorView
             Math.Max(0, (versionProject?.Difficulties.Count ?? 0) - (int)(versionDifficultyBounds.Height / 28)));
         else if (versionPreviewBounds.Contains(x, y) && versionHistoricalPane is not null)
         {
-            if (ctrl) syncViewSpan = Math.Clamp(syncViewSpan / Math.Pow(1.25, delta / 120), 100, Math.Max(1000, versionHistoricalPane.Document.DurationMs * 2));
+            if (ctrl)
+            {
+                double previous = versionZoom;
+                versionZoom = Math.Clamp(versionZoom * Math.Pow(1.25, delta / 120), .1, 10);
+                syncViewStart = Math.Max(0, syncViewStart + syncViewSpan * (1 - previous / versionZoom) / 2);
+            }
             else syncViewStart = Math.Max(0, syncViewStart - delta / 120 * syncViewSpan / 8);
         }
     }
@@ -237,6 +243,9 @@ public sealed partial class EditorView
             if (versionHistoricalPane is { } pane)
             {
                 var left = new Rect(rightX, 260, paneWidth, versionPreviewBounds.Height);
+                var field = SyncField(left);
+                // Both versions use the active editor's AR so matching timestamps stay aligned.
+                syncViewSpan = field.Height / (CatchScrollTiming.PixelsPerMs(Document.ApproachRate, field.Width) * versionZoom);
                 if (versionCurrentPane is { } currentPane) DrawSyncPane(c, currentPane, left, L.Get("history.current"), noVersionSelection, null, L.Get("history.current"));
                 else { c.Fill(left, Panel); c.Text(L.Get("history.deleted"), left.X + 12, left.Y + 16, 14, Muted, left.Width - 24); }
                 DrawSyncPane(c, pane, new(rightX + paneWidth + 12, 260, paneWidth, versionPreviewBounds.Height), L.Get("history.historical"), noVersionSelection, null,
