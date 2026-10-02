@@ -72,7 +72,7 @@ public static class WorkspaceHistoryFile
     }
 
     internal static bool Compressible(string path) => Path.GetExtension(path).ToLowerInvariant() is ".catchdiff" or ".catchproj" or ".catchsync" or ".osu";
-    internal static long CompactInBackground(string path, string stagingDirectory, CancellationToken cancellation)
+    internal static long CompactInBackground(string path, string stagingDirectory, CancellationToken cancellation, Action? afterCompression = null)
     {
         byte[] original;
         lock (WorkspaceProject.Gate)
@@ -87,6 +87,7 @@ public static class WorkspaceHistoryFile
         try
         {
             Write(staging, original);
+            afterCompression?.Invoke();
             cancellation.ThrowIfCancellationRequested();
             if (!ReadCore(stagedFile).SequenceEqual(original)) throw Invalid();
             if (new FileInfo(stagedFile).Length >= original.Length) return 0;

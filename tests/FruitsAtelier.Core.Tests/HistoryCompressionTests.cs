@@ -158,28 +158,32 @@ internal static class HistoryCompressionTests
         string racing = Path.Combine(snapshot, "racing.catchproj");
         byte[] noise = new byte[1024 * 1024]; new Random(731).NextBytes(noise);
         File.WriteAllBytes(racing, noise.Concat(noise).ToArray());
-        // The staging file exists while Brotli is running, before publication under the save lock.
-        var race = WorkspaceStorage.CompressLegacyHistoryAsync(workspace, interval: TimeSpan.Zero);
         string staging = Path.Combine(workspace, ".sync-history", ".compression");
-        var deadline = Stopwatch.StartNew();
-        while (!Directory.EnumerateFiles(staging, "*.tmp").Any() && !race.IsCompleted && deadline.Elapsed.TotalSeconds < 15) Thread.Sleep(1);
-        Check(!race.IsCompleted && deadline.Elapsed.TotalSeconds < 15, "background compression reaches staging before publication");
-        bool acquired = Monitor.TryEnter(WorkspaceProject.Gate, 100);
+        using var compressed = new ManualResetEventSlim();
+        using var publish = new ManualResetEventSlim();
+        void BeforePublication() { compressed.Set(); publish.Wait(); }
+        var race = Task.Run(() => WorkspaceHistoryFile.CompactInBackground(racing, staging, CancellationToken.None, BeforePublication));
+        bool acquired = false;
         try
         {
+            Check(compressed.Wait(TimeSpan.FromSeconds(15)) && !race.IsCompleted, "background compression reaches staging before publication");
+            acquired = Monitor.TryEnter(WorkspaceProject.Gate, 100);
             Check(acquired, "expensive compression leaves the save lock available");
             File.WriteAllBytes(racing, replacement);
         }
-        finally { if (acquired) Monitor.Exit(WorkspaceProject.Gate); }
+        finally { if (acquired) Monitor.Exit(WorkspaceProject.Gate); publish.Set(); }
         race.GetAwaiter().GetResult();
         Check(File.ReadAllBytes(racing).SequenceEqual(replacement) && !File.Exists(racing + WorkspaceHistoryFile.Extension), "source changed during compression survives without a stale binary");
         File.WriteAllBytes(racing, noise.Concat(noise).ToArray());
         using var interrupted = new CancellationTokenSource();
-        var inProgress = WorkspaceStorage.CompressLegacyHistoryAsync(workspace, interrupted.Token, TimeSpan.Zero);
-        deadline.Restart();
-        while (!Directory.EnumerateFiles(staging, "*.tmp").Any() && !inProgress.IsCompleted && deadline.Elapsed.TotalSeconds < 15) Thread.Sleep(1);
-        Check(!inProgress.IsCompleted && deadline.Elapsed.TotalSeconds < 15, "cancellation test reaches an unfinished compressed file");
-        interrupted.Cancel();
+        compressed.Reset(); publish.Reset();
+        var inProgress = Task.Run(() => WorkspaceHistoryFile.CompactInBackground(racing, staging, interrupted.Token, BeforePublication));
+        try
+        {
+            Check(compressed.Wait(TimeSpan.FromSeconds(15)) && !inProgress.IsCompleted, "cancellation reaches staged compression before publication");
+            interrupted.Cancel();
+        }
+        finally { publish.Set(); }
         try { inProgress.GetAwaiter().GetResult(); throw new Exception("interrupted compression completed"); }
         catch (OperationCanceledException) { }
         Check(File.Exists(racing) && !File.Exists(racing + WorkspaceHistoryFile.Extension) && !Directory.EnumerateFiles(staging).Any(),
