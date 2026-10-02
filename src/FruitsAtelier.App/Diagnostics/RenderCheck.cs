@@ -98,6 +98,26 @@ internal static class RenderCheck
                 FruitsAtelier.Localization.Strings.SetLanguage(lang); Paint();
                 view.KeyDown(114, false, false); Paint();
                 if (!view.TimingPageVisible) throw new InvalidOperationException("F3 failed to open timing page.");
+                var svRow = view.TimingSliderMultiplierBounds;
+                if (svRow.Bottom > height || view.TimingFields.Any(f => f.Key == "page.sliderMultiplier"))
+                    throw new InvalidOperationException("Base SV must start locked and fit the Timing panel.");
+                view.PointerDown(svRow.X + 8, svRow.Y + 10, 0, false, false);
+                view.PointerUp(svRow.X + 8, svRow.Y + 10, 0); Paint();
+                var svField = view.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
+                if (!view.Document.OverrideSliderMultiplier || svField.Bounds.Bottom != svRow.Bottom)
+                    throw new InvalidOperationException("Base SV override did not unlock its row.");
+                double previousSv = view.Document.EffectiveSliderMultiplier;
+                view.PointerDown(svField.Bounds.Right + 14, svField.Bounds.Y + 10, 0, false, true);
+                view.PointerUp(svField.Bounds.Right + 14, svField.Bounds.Y + 10, 0); Paint();
+                var svWait = Stopwatch.StartNew();
+                while (view.SliderMultiplierValidationBusy && svWait.ElapsedMilliseconds < 10000)
+                { Thread.Sleep(1); Paint(); }
+                if (Math.Abs(view.Document.EffectiveSliderMultiplier - Math.Round(previousSv + .01, 2)) > 1e-9)
+                    throw new InvalidOperationException($"Base SV Ctrl arrow did not step by 0.01: {previousSv} -> {view.Document.EffectiveSliderMultiplier}; {view.StatusMessage}");
+                view.KeyDown(90, true, false); view.KeyDown(90, true, false); Paint();
+                if (!view.Document.ContentEquals(original))
+                    throw new InvalidOperationException("Base SV native undo did not restore the difficulty.");
+                AppLog.Write($"Timing base SV native check passed: {lang}, {width}x{height}");
                 view.PointerMove(350, height - 55, false, false); Paint();
                 int decodes = canvas.ImageDecodeCount;
                 for (int frame = 0; frame < 12; frame++)
@@ -166,6 +186,17 @@ internal static class RenderCheck
                 view.KeyDown(27, false, false); Paint();
                 if (view.SongSetupVisible || !before.ContentEquals(view.Document))
                     throw new InvalidOperationException("Cancelling Song Setup changed map content.");
+                view.BeginAudioProject("diagnostic.mp3"); Paint();
+                if (!view.SongSetupVisible || view.SongSetupFieldBounds.Count != 4)
+                    throw new InvalidOperationException("Audio project setup must display four metadata fields.");
+                foreach (var field in view.SongSetupFieldBounds.Values)
+                    if (field.X < dialog.X || field.Right > dialog.Right || field.Bottom > dialog.Bottom - 60)
+                        throw new InvalidOperationException("Audio project metadata exceeds its dialog bounds.");
+                view.KeyDown(13, false, false); Paint();
+                if (view.AudioProjectCreating) throw new InvalidOperationException("Empty audio metadata must not create a project.");
+                view.KeyDown(27, false, false); Paint();
+                if (view.SongSetupVisible || !before.ContentEquals(view.Document))
+                    throw new InvalidOperationException("Cancelling audio creation changed the active project.");
             }
         }
         finally
@@ -293,6 +324,14 @@ internal static class RenderCheck
                 view.KeyDown(116, false, false);
                 view.UpdateTransport(1001, 6000, true, true, false, null, null);
                 if (!view.IsTestplaying || view.TestplayCombo != 1) throw new InvalidOperationException("Native testplay failed to start or catch fruit.");
+                int channelBefore = (int)typeof(EditorView).GetField("volumeChannel", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(view)!;
+                int VolumeValue() => channelBefore switch { 0 => view.LibrarySettings.MasterVolume, 1 => view.LibrarySettings.SongVolume, _ => view.LibrarySettings.HitsoundVolume };
+                int volumeBefore = VolumeValue();
+                view.KeyDown(40, false, false); view.KeyUp(40);
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                if (!view.VolumePopoverVisible || VolumeValue() != Math.Max(0, volumeBefore - 5))
+                    throw new InvalidOperationException("Native plain Down did not open testplay volume controls.");
+                view.KeyDown(38, false, false); view.KeyUp(38);
                 view.KeyDown(9, false, false); view.KeyDown(9, false, false);
                 if (!view.TestplayAutoplay) throw new InvalidOperationException("Held Tab failed to enable autoplay once.");
                 view.KeyDown(114, false, false); view.KeyDown(114, false, false);
@@ -335,6 +374,19 @@ internal static class RenderCheck
                 double exitTime = view.PlayheadMs;
                 view.KeyDown(113, false, false);
                 if (view.IsTestplaying || Math.Abs(view.PlayheadMs - exitTime) > 100) throw new InvalidOperationException("Native F2 failed to retain position.");
+                var saveTaskField = typeof(EditorView).GetField("workspaceSaveTask", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+                saveTaskField.SetValue(view, new TaskCompletionSource<WorkspaceSession>().Task);
+                try
+                {
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                    if (view.SynchronizationWaitVisible) throw new InvalidOperationException("Background save opened a waiting overlay without input.");
+                    view.PrepareFileOperation();
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                    if (!view.SynchronizationWaitVisible) throw new InvalidOperationException("Blocked operation did not render the waiting overlay.");
+                }
+                finally { saveTaskField.SetValue(view, null); }
+                canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                if (view.SynchronizationWaitVisible) throw new InvalidOperationException("Waiting overlay remained after save completion.");
                 var streamMap = new MapDocument();
                 var track = new CurveTrack { Kind = CurveKind.Linear };
                 track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 100 }, new Anchor { TimeMs = 2000, X = 400 }]);
@@ -372,11 +424,10 @@ internal static class RenderCheck
                 var fruitPreview = view.StackPreviewBounds;
                 var editedFruit = view.Conversion.Objects[2];
                 double stackStart = view.Document.Tracks[0].Nodes[0].TimeMs;
-                double stackDuration = CurveMath.EndTimeMs(view.Document.Tracks[0]) - stackStart;
-                float fruitPadding = (float)(CatchSize.FruitRadius(view.Document.CircleSize) / 512 * fruitPreview.Width) + 2;
-                float fruitX = fruitPreview.X + (float)(editedFruit.X / 512) * fruitPreview.Width;
-                float fruitY = fruitPreview.Bottom - fruitPadding - (float)((editedFruit.TimeMs - stackStart) / stackDuration)
-                    * (fruitPreview.Height - 2 * fruitPadding);
+                float previewContentWidth = (float)((fruitPreview.Width - 12) / (1 + 2 * CatchSize.FruitRadius(view.Document.CircleSize) / 512));
+                float fruitPadding = (float)(CatchSize.FruitRadius(view.Document.CircleSize) / 512 * previewContentWidth) + 2;
+                float fruitX = fruitPreview.X + 2 + fruitPadding + (float)(editedFruit.X / 512) * previewContentWidth;
+                float fruitY = fruitPreview.Bottom - fruitPadding - (float)((editedFruit.TimeMs - stackStart) * CatchScrollTiming.PixelsPerMs(view.Document.ApproachRate, previewContentWidth));
                 view.PointerDown(fruitX, fruitY, 0, false, false);
                 view.PointerMove(fruitX + 12, fruitY - 20, false, false);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
@@ -726,7 +777,7 @@ internal static class RenderCheck
                 foreach (bool included in new[] { true, false })
                 {
                     view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0); Paint();
-                    view.PointerDown(235, 363, 0, false, false); view.PointerUp(235, 363, 0); Paint();
+                    view.PointerDown(235, 397, 0, false, false); view.PointerUp(235, 397, 0); Paint();
                     if (view.MovementIncludesTinyDroplets != included || !sliderMap.ContentEquals(view.Document))
                         throw new InvalidOperationException("Native tiny movement display toggle failed.");
                 }
@@ -752,6 +803,10 @@ internal static class RenderCheck
             {
                 FruitsAtelier.Localization.Strings.SetLanguage(locale);
                 view.NewProject(); view.CloseLibrary(); view.SaveCurrentDifficulty();
+                canvas.Resize(size.Item1, size.Item2, 96);
+                var deadline = Stopwatch.StartNew();
+                while (view.SynchronizationBusy && deadline.Elapsed.TotalSeconds < 15)
+                { canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End(); Thread.Sleep(5); }
                 if (!view.DiscardConfirmationVisible || view.IsDirty || view.WorkspaceSession is null)
                     throw new InvalidOperationException("Workspace save did not precede the Songs export offer.");
                 canvas.Resize(size.Item1, size.Item2, 96);
@@ -795,7 +850,9 @@ internal static class RenderCheck
         {
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
             ObjectStructureRenderCheck.Run(canvas, size.Item1, size.Item2);
+            AimodRenderCheck.Run(canvas, size.Item1, size.Item2);
             SynchronizationRenderCheck.Run(canvas, size.Item1, size.Item2);
+            SliderDraftRenderCheck.Run(canvas, size.Item1, size.Item2);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             CheckPaletteHints(canvas, view, size.Item1, size.Item2);
             CheckSongSetup(canvas, view, size.Item1, size.Item2);
@@ -804,8 +861,8 @@ internal static class RenderCheck
             {
                 view.PointerDown(235, 20, 0, false, false); view.PointerUp(235, 20, 0);
                 canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
-                view.PointerDown(235, 329, 0, false, false);
-                view.PointerUp(235, 329, 0);
+                view.PointerDown(235, 363, 0, false, false);
+                view.PointerUp(235, 363, 0);
                 if (!view.MovementAnalysisEnabled) throw new InvalidOperationException("Movement analysis menu did not enable connections.");
                 canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             }

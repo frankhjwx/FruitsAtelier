@@ -37,6 +37,8 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        CloseVersionHistory();
+        CloseAimod();
         CloseSongSetup();
         CloseTimingSetup(); TimingPageVisible = false;
         TimeJumpVisible = false;
@@ -53,7 +55,7 @@ public sealed partial class EditorView
         sliderImportTargets = []; sliderBatchErrors = []; sliderDialogHits.Clear();
         WorkspaceSession = null; resourceErrors = [];
         if (syncTask is { } retiredSync) _ = retiredSync.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
-        syncTask = null; afterSynchronization = null; syncReviewRequested = false; syncSearching.Clear();
+        syncTask = null; syncRetry = null; afterSynchronization = null; syncReviewRequested = false; syncSearching.Clear();
         syncStatuses.Clear(); syncMerges.Clear(); syncPage = null; nextSyncCheck = DateTime.MaxValue;
         syncDifficulty = Guid.Empty; syncPreserveHistory = false;
         fileSyncPending = fileSearchMissing = false; nextMonitorConfiguration = DateTime.MinValue;
@@ -77,6 +79,7 @@ public sealed partial class EditorView
 
     private void ResetDifficultyView()
     {
+        ResetDeferredConversion();
         pauseSnapDivisor = null;
         nextFruitNewCombo = false;
         nextSounds = 0; soundEdge = null;
@@ -111,7 +114,11 @@ public sealed partial class EditorView
     }
 
     public bool SwitchDifficulty(int index)
+        => SwitchDifficultyCore(index, reloadAudio: true);
+
+    private bool SwitchDifficultyCore(int index, bool reloadAudio)
     {
+        if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
         if (index < 0 || index >= difficulties.Count) return false;
         if (!syncBypass && WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[index].Id) is { } linked
             && WorkspaceSynchronization.Target(linked) is { } target && !File.Exists(target)
@@ -129,7 +136,7 @@ public sealed partial class EditorView
         ResetDifficultyView();
         playhead = currentPlayhead;
         viewStart = currentViewStart;
-        RequestDifficultyChanged?.Invoke();
+        if (reloadAudio) RequestDifficultyChanged?.Invoke();
         return true;
     }
 
@@ -183,9 +190,13 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
-        if (SynchronizationVisible || SynchronizationBlocksInput) return false;
-        if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
+        if (AudioProjectCreating) return false;
+        if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
+        if (VersionHistoryVisible || SynchronizationVisible) return false;
+        if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal || AimodVisible) return false;
         if (!CommitTimingField()) return false;
+        if (SliderMultiplierValidationBusy)
+        { StatusMessage = L.Get("timing.sliderMultiplierChecking"); return false; }
         if (SliderDialogVisible || ErrorVisible) return false;
         if (draftBanana != Guid.Empty)
         {
@@ -230,9 +241,11 @@ public sealed partial class EditorView
         if (testplay is not null && testplayWithAudio)
         {
             if (testplayDriver is null)
+            {
                 testplay!.UpdateAudio(positionMs, transportSampleAt, AudioDurationMs, ready, playing, loading,
                     error is not null, outputBufferAheadMs);
-            AdvanceTestplay();
+                AdvanceTestplay();
+            }
         }
         if (!ready || loading || error is not null || IsTestplaying) pauseSnapDivisor = null;
         if (!playing && pauseSnapDivisor is { } pauseDivisor)

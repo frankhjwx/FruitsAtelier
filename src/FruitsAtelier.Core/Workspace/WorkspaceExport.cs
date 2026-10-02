@@ -1,7 +1,10 @@
 using L = FruitsAtelier.Localization.Strings;
 namespace FruitsAtelier.Core;
 
-public sealed record WorkspaceExportPlan(Guid DifficultyId, MapDocument Document, string Target, string? ExpectedHash, OsuWriteResult Output);
+public sealed record WorkspaceExportPlan(Guid DifficultyId, MapDocument Document, string Target, string? ExpectedHash, OsuWriteResult Output, string? PreviousTarget = null)
+{
+    public string ExistingTarget => PreviousTarget ?? Target;
+}
 
 public static class WorkspaceExport
 {
@@ -34,12 +37,33 @@ public static class WorkspaceExport
             if (File.Exists(target)) throw new IOException(L.Get("library.exportExists", target));
         }
         WorkspaceProject.RejectLinks(target!);
-        return new(difficulty.Id, document, target!, expected, OsuBeatmapWriter.Serialize(document, compensate));
+        var plan = new WorkspaceExportPlan(difficulty.Id, document, target!, expected, OsuBeatmapWriter.Serialize(document, compensate));
+        return overwrite ? WithMetadataFileName(plan, OsuBeatmapReader.ReadFile(target!)) : plan;
+    }
+
+    internal static WorkspaceExportPlan WithMetadataFileName(WorkspaceExportPlan plan, MapDocument previous)
+    {
+        string[] keys = ["Artist", "Title", "Creator", "Version"];
+        if (!keys.Any(key => OsuBeatmapReader.Setting(previous, "Metadata", key)
+            != OsuBeatmapReader.Setting(plan.Document, "Metadata", key))) return plan;
+        string version = OsuBeatmapReader.Setting(plan.Document, "Metadata", "Version") ?? plan.Document.Name;
+        string target = Path.Combine(Path.GetDirectoryName(plan.Target)!, WorkspaceProject.DifficultyFileName(plan.Document, version, ".osu"));
+        if (string.Equals(target, plan.Target, StringComparison.Ordinal)) return plan;
+        if (!WorkspaceSynchronization.Paths.Equals(target, plan.Target) && File.Exists(target))
+            throw new IOException(L.Get("library.exportExists", target));
+        return plan with { Target = target, PreviousTarget = plan.Target };
     }
 
     public static void Commit(WorkspaceSession session, WorkspaceExportPlan plan, bool updateAssociation = true)
     {
         WorkspaceProject.RejectLinks(plan.Target);
+        if (plan.PreviousTarget is not null)
+        {
+            WorkspaceProject.RejectLinks(plan.ExistingTarget);
+            WorkspaceAssociations.EnsureOwner(session, plan.DifficultyId, plan.ExistingTarget);
+            if (!WorkspaceSynchronization.Paths.Equals(plan.Target, plan.ExistingTarget) && File.Exists(plan.Target))
+                throw new IOException(L.Get("library.exportExists", plan.Target));
+        }
         WorkspaceAssociations.EnsureOwner(session, plan.DifficultyId, plan.Target);
         if (plan.ExpectedHash is null)
         {
@@ -50,20 +74,38 @@ public static class WorkspaceExport
         }
         else
         {
-            if (!File.Exists(plan.Target) || WorkspaceProject.Hash(plan.Target) != plan.ExpectedHash)
+            if (!File.Exists(plan.ExistingTarget) || WorkspaceProject.Hash(plan.ExistingTarget) != plan.ExpectedHash)
                 throw new IOException(L.Get("library.exportConflict", plan.Target));
+            byte[] original = File.ReadAllBytes(plan.ExistingTarget);
             using (var db = new Microsoft.Data.Sqlite.SqliteConnection(new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder { DataSource = Path.Combine(Path.GetDirectoryName(session.Directory)!, "library.db"), Pooling = false }.ToString()))
             {
                 db.Open(); using var backup = db.CreateCommand();
                 backup.CommandText = "CREATE TABLE IF NOT EXISTS export_backups(target TEXT NOT NULL, hash TEXT NOT NULL, content BLOB NOT NULL, created TEXT NOT NULL); INSERT INTO export_backups VALUES($p,$h,$b,$t)";
-                backup.Parameters.AddWithValue("$p", plan.Target); backup.Parameters.AddWithValue("$h", plan.ExpectedHash);
-                backup.Parameters.AddWithValue("$b", File.ReadAllBytes(plan.Target)); backup.Parameters.AddWithValue("$t", DateTime.UtcNow.ToString("O"));
+                backup.Parameters.AddWithValue("$p", plan.ExistingTarget); backup.Parameters.AddWithValue("$h", plan.ExpectedHash);
+                backup.Parameters.AddWithValue("$b", original); backup.Parameters.AddWithValue("$t", DateTime.UtcNow.ToString("O"));
                 backup.ExecuteNonQuery();
             }
-            AtomicFile.Write(plan.Target, plan.Output.Text);
+            AtomicFile.Write(plan.ExistingTarget, plan.Output.Text);
+            if (plan.PreviousTarget is not null)
+            {
+                try { File.Move(plan.ExistingTarget, plan.Target); }
+                catch
+                {
+                    if (File.Exists(plan.ExistingTarget) && WorkspaceProject.Hash(plan.ExistingTarget) == WorkspaceSynchronization.Digest(plan.Output.Text))
+                    {
+                        string rollback = plan.ExistingTarget + "." + Guid.NewGuid().ToString("N") + ".tmp";
+                        try { File.WriteAllBytes(rollback, original); File.Move(rollback, plan.ExistingTarget, overwrite: true); }
+                        finally { if (File.Exists(rollback)) File.Delete(rollback); }
+                    }
+                    throw;
+                }
+            }
         }
         if (updateAssociation)
         {
+            plan.Document.SourcePath = plan.Target;
+            var difficulty = session.Project.Difficulties.FirstOrDefault(d => d.Id == plan.DifficultyId);
+            if (difficulty is not null) difficulty.Document.SourcePath = plan.Target;
             var entry = session.Manifest.Difficulties.Single(d => d.Id == plan.DifficultyId);
             entry.ExportTarget = plan.Target; entry.ExportHash = WorkspaceSynchronization.Digest(plan.Output.Text);
             entry.Source = plan.Target; entry.SourceHash = entry.ExportHash;

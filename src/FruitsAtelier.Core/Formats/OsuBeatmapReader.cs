@@ -202,6 +202,8 @@ public static class OsuBeatmapReader
             throw new InvalidDataException(L.Get("core.reader.sliderSettings"));
         if (document.DistancePerBeatOverride is { } dpb && (!double.IsFinite(dpb) || dpb < 32))
             throw new InvalidDataException(L.Get("core.dpb.range"));
+        if (document.SliderMultiplierOverride is { } sv && (!double.IsFinite(sv) || sv < SliderMultiplierEditing.Minimum || sv > SliderMultiplierEditing.Maximum))
+            throw new InvalidDataException(L.Get("timing.sliderMultiplierRange"));
         var ids = new HashSet<Guid>();
         foreach (var fruit in document.Fruits) { Id(fruit.Id); Time(fruit.TimeMs); X(fruit.X); }
         foreach (var track in document.Tracks)
@@ -226,9 +228,7 @@ public static class OsuBeatmapReader
         foreach (var shower in document.BananaShowers)
         { Id(shower.Id); Time(shower.TimeMs); Time(shower.EndTimeMs); if (shower.EndTimeMs < shower.TimeMs) throw new InvalidDataException(L.Get("core.reader.bananaEnd")); }
         foreach (var timing in document.TimingPoints) ValidateTiming(timing);
-        var curveOnly = document.DeepClone();
-        curveOnly.DurationMs = int.MaxValue;
-        var errors = CurveMath.Validate(curveOnly);
+        var errors = CurveMath.Validate(document, int.MaxValue);
         if (errors.Count != 0) throw new InvalidDataException(string.Join(L.Get("core.diagnostics.separator"), errors));
 
         void Id(Guid id) { if (id == Guid.Empty || !ids.Add(id)) throw new InvalidDataException(L.Get("core.reader.uniqueId")); }

@@ -4,6 +4,130 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class SynchronizationUiTests
 {
+    public static void PlaybackSave()
+    {
+        var ui = new Ui(false);
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/playback-save", Guid.NewGuid().ToString("N")));
+        string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
+        Directory.CreateDirectory(Path.GetDirectoryName(source)!); File.WriteAllText(source, Fixture);
+        ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
+        ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);
+        ui.View.UpdateTransport(1000, 20000, true, true, false, null, ui.View.Document.AudioPath);
+        int pauses = 0, foregroundExports = 0;
+        ui.View.RequestPausePlayback = () => pauses++;
+        ui.View.RequestWorkspaceExport = (_, _) => foregroundExports++;
+        ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
+        var history = (EditorHistory)ui.View.GetType().GetProperty("history", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
+        var commitField = ui.View.GetType().GetField("syncCommitTask", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        try
+        {
+            history.Begin("note"); history.Document.Fruits.Add(new Fruit { TimeMs = 3000, X = 200 }); history.Commit();
+            ui.Key('S', ctrl: true);
+            WorkspaceFileMonitorTests.Await(() => { ui.Paint(); return commitField.GetValue(ui.View) is not null; }, "Playback save starts publication");
+            var committing = (Task<WorkspaceSession>)commitField.GetValue(ui.View)!;
+            var gate = new TaskCompletionSource<WorkspaceSession>();
+            commitField.SetValue(ui.View, gate.Task);
+            Check(committing.Wait(TimeSpan.FromSeconds(15)), "Background publication completes");
+            Check(!ui.View.DiscardConfirmationVisible && pauses == 0 && ui.View.AudioPlaying, "Local publication keeps playback and input active");
+            ui.Key('Z', ctrl: true);
+            Check(!ui.View.Document.Fruits.Any(f => f.TimeMs == 3000), "Undo works while publication is pending");
+            ui.Key('Y', ctrl: true);
+            history.Begin("newer note"); history.Document.Fruits.Add(new Fruit { TimeMs = 4000, X = 300 });
+            gate.SetResult(committing.Result); ui.Paint();
+            Check(history.HasActiveTransaction && ui.View.IsDirty && ui.View.Document.Fruits.Any(f => f.TimeMs == 4000),
+                "Save completion retains an active newer edit and acknowledges only the published snapshot");
+            Check(!OsuBeatmapReader.ReadFile(source).Fruits.Any(f => f.TimeMs == 4000), "An unfinished edit is not part of the earlier publication");
+            history.Commit(); Wait(ui);
+            Check(OsuBeatmapReader.ReadFile(source).Fruits.Any(f => f.TimeMs == 4000) && !ui.View.IsDirty,
+                "The subsequent synchronization publishes the newer committed edit");
+            Check(pauses == 0 && foregroundExports == 0 && ui.View.AudioPlaying, "Playback saves avoid pausing or repeating export on the foreground thread");
+            ui.Key('Z', ctrl: true); Wait(ui);
+            Check(!ui.View.Document.Fruits.Any(f => f.TimeMs == 4000), "The newer edit remains undoable after saving");
+        }
+        finally { ui.View.StopFileMonitoring(); }
+    }
+
+    public static void LocalBreaks()
+    {
+        var ui = new Ui(false);
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/sync-local-breaks", Guid.NewGuid().ToString("N")));
+        string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
+        Directory.CreateDirectory(Path.GetDirectoryName(source)!);
+        File.WriteAllText(source, Fixture.Replace("Mode:2", "Mode:2\nAudioFilename:music.wav"));
+        File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(source)!, "music.wav"), [1, 2, 3, 4]);
+        ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
+        ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);
+        int audioReloads = 0;
+        double requestedSeek = -1;
+        ui.View.RequestSeek = time => requestedSeek = time;
+        ui.View.RequestDifficultyChanged = () =>
+        {
+            audioReloads++;
+            ui.View.UpdateTransport(0, 20000, true, false, false, null, ui.View.Document.AudioPath);
+        };
+        ui.View.UpdateTransport(0, 20000, true, false, false, null, ui.View.Document.AudioPath);
+        ui.View.UpdateTransport(9000, 20000, true, false, false, null, ui.View.Document.AudioPath); ui.Paint();
+        try
+        {
+            var history = (EditorHistory)ui.View.GetType().GetProperty("history", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
+            history.Begin("content");
+            OsuTimeline.AddBreak(ui.View.Document, 4000, 10000);
+            SongSetup.Set(ui.View.Document, "Metadata", "Tags", "FA tags");
+            history.Commit();
+            void Synchronize()
+            {
+                double position = ui.View.PlayheadMs, start = ui.View.ViewStartMs;
+                int reloads = audioReloads;
+                ui.View.SaveCurrentDifficulty(); Wait(ui);
+                source = ui.View.WorkspaceSession!.Manifest.Difficulties.Single().Source!;
+                Check(ui.View.PlayheadMs == position && ui.View.ViewStartMs == start,
+                    "saving and automatic export retain nonzero transport and viewport positions");
+                Check(audioReloads == reloads, "content-only save does not reload unchanged audio");
+                Check(!ui.View.SynchronizationVisible, "local break sync keeps the editor open");
+                Check(OsuTimeline.Breaks(OsuBeatmapReader.ReadFile(source)).SequenceEqual(OsuTimeline.Breaks(ui.View.Document)), "external breaks match FA");
+                Check(ReferenceEquals(history.Document, ui.View.Document), "sync retains the history owner");
+                Check(WorkspaceSynchronization.ObjectLines(File.ReadAllText(source)).SequenceEqual(
+                    WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(ui.View.Document).Text)), "automatic export includes FA notes");
+                Check(OsuBeatmapReader.Setting(OsuBeatmapReader.ReadFile(source), "Metadata", "Tags") == "FA tags", "FA Tags sync without review");
+            }
+            Synchronize();
+            history.Begin("note in break"); ui.View.Document.Fruits.Add(new Fruit { TimeMs = 7000, X = 200 }); history.Commit();
+            Synchronize();
+            Check(OsuTimeline.Breaks(ui.View.Document).Count == 2, "note splits the break");
+            ui.Key('Z', ctrl: true); Synchronize();
+            Check(OsuTimeline.Breaks(ui.View.Document).Single() == new BreakPeriod(4000, 10000), "undo retains the original break");
+            ui.Key('Y', ctrl: true); Synchronize();
+            Check(OsuTimeline.Breaks(ui.View.Document).Count == 2, "redo retains the split break");
+            history.Begin("standalone note"); ui.View.Document.Fruits.Add(new Fruit { TimeMs = 12000, X = 300 }); history.Commit();
+            Synchronize();
+            Check(OsuBeatmapReader.ReadFile(source).Fruits.Any(f => f.TimeMs == 12000), "object-only changes trigger automatic export");
+            foreach (string key in new[] { "Artist", "Title", "Creator", "Version" })
+            {
+                string previous = source;
+                history.Begin("metadata"); SongSetup.Set(ui.View.Document, "Metadata", key, "Changed " + key); history.Commit();
+                Synchronize();
+                Check(source != previous && !File.Exists(previous) && File.Exists(source), "save renames the linked " + key + " file");
+                Check(ui.View.Document.SourcePath == source && ui.View.CaptureProject().Difficulties.Count == 1, "editor keeps one difficulty with its current path");
+                ui.Key('Z', ctrl: true); Synchronize();
+                Check(ui.View.Document.SourcePath == source && !ui.View.SynchronizationVisible, "metadata undo saves through the rebased source path");
+            }
+            string beforeOverwrite = source;
+            history.Begin("metadata"); SongSetup.Set(ui.View.Document, "Metadata", "Artist", "Explicit artist"); history.Commit();
+            var project = ui.View.CaptureProject();
+            var plan = WorkspaceExport.Plan(ui.View.WorkspaceSession!, project.Difficulties[0], songs, true, "", true);
+            LibraryOperations.Export(ui.View.WorkspaceSession!, project, plan); ui.View.LibraryExportFinished(plan);
+            source = plan.Target;
+            Check(!File.Exists(beforeOverwrite) && ui.View.Document.SourcePath == source && !ui.View.IsDirty, "explicit overwrite renames and acknowledges the saved editor path");
+            ui.Key('Z', ctrl: true); Synchronize();
+            double audioPosition = ui.View.PlayheadMs;
+            File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(source)!, "music.wav"), [5, 6, 7, 8]);
+            ui.View.RefreshSynchronization(); Wait(ui);
+            Check(audioReloads == 1 && ui.View.PlayheadMs == audioPosition && requestedSeek == audioPosition,
+                "same-path audio replacement reloads while retaining the current transport position");
+        }
+        finally { ui.View.StopFileMonitoring(); }
+    }
+
     public static void TimingRows()
     {
         foreach (string language in L.AvailableLanguages)
@@ -41,6 +165,16 @@ internal static class SynchronizationUiTests
                 ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(!ui.View.SynchronizationVisible && ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 1
                     && ui.View.Document.Tracks.Single().Id == track.Id, "apply transfers one timing addition and keeps editable curves");
+                var shifted = OsuBeatmapReader.ReadFile(source);
+                foreach (var point in shifted.TimingPoints) point.TimeMs += 12;
+                File.WriteAllText(source, OsuBeatmapWriter.Serialize(shifted).Text);
+                ui.View.RefreshSynchronization(); Wait(ui);
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.timingOffsetSummary", shifted.TimingPoints.Count, 12))
+                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.timingOffsetSummary", shifted.TimingPoints.Count, 0)),
+                    "uniform offset shows one localized summary per side");
+                Check(!ui.Canvas.Texts.Any(t => t.Value.Contains(",")), "pure offset does not fill the panes with green lines");
+                ui.ClickText(L.Get("sync.chooseLocal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+                Check(ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 1, "offset summary retains the FA choice");
             }
             finally { ui.View.StopFileMonitoring(); }
         }
@@ -171,15 +305,15 @@ internal static class SynchronizationUiTests
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 1, 1)), "metadata uses a single navigation page");
                 Check(ui.Canvas.Texts.Any(t => t.Value == " added" && t.Color == 0xED737B), "only changed suffix is red");
                 var before = ui.View.Document.DeepClone();
-                SelectMetadata(ui, "Title", true);
+                SelectSyncField(ui, "Title", true);
                 Check(ui.Canvas.Texts.Any(t => t.Value == " added" && t.Color == 0x70D69B), "selected row turns green without disappearing");
-                SelectMetadata(ui, "Title", false); SelectMetadata(ui, "Artist", true);
+                SelectSyncField(ui, "Title", false); SelectSyncField(ui, "Artist", true);
                 Check(ui.View.Document.ContentEquals(before), "row choices do not edit before Apply");
                 ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Title") == "Original" && OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Artist") == "Artist changed", "each row retains its selected side");
                 ui.View.RefreshSynchronization(reviewResolved: true); Wait(ui);
                 Check(ui.Canvas.Texts.Any(t => t.Value == " added" && t.Color == 0xD5A34D), "previously resolved mismatch is amber");
-                SelectMetadata(ui, "Title", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+                SelectSyncField(ui, "Title", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Title") == "Original added", "accepted metadata can be resolved again");
                 File.WriteAllText(source, File.ReadAllText(source).Replace("Version:Catch", "Version:Catch\nTags:" + string.Join(" ", Enumerable.Repeat("long wrapped metadata", 100))));
                 ui.View.RefreshSynchronization(); Wait(ui);
@@ -202,12 +336,12 @@ internal static class SynchronizationUiTests
             string songs = Path.Combine(root, "Songs"), set = Path.Combine(songs, "set"), source = Path.Combine(set, "map.osu");
             string text = Fixture.Replace("ApproachRate:5", "ApproachRate:" + ar) + "200,192,1200,1,0,0:0:0:0:\n";
             Directory.CreateDirectory(set); File.WriteAllText(source, text);
-            var ui = new Ui(false); ui.Resize(width, 900);
+            var ui = new Ui(false); ui.Resize(width, 1100);
             ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
             var session = LibraryOperations.ImportPath(source, ui.View.LibrarySettings); ui.View.LoadWorkspace(session);
             File.WriteAllText(source, text.Replace("123,192", "321,192").Replace("200,192", "400,192"));
             ui.View.RefreshSynchronization(); Wait(ui);
-            var field = ui.Canvas.Clips[1];
+            var field = ui.Canvas.Clips[2];
             double Spacing() { var dots = ui.Canvas.Circles.Where(c => c.Filled && c.X < width / 2).OrderBy(c => c.Y).ToArray(); Check(dots.Length == 2, "two visible FA objects"); return dots[1].Y - dots[0].Y; }
             double expected = 200 * CatchScrollTiming.PixelsPerMs(ar, field.Width);
             Check(Math.Abs(Spacing() - expected) < .02, "comparison uses editor AR scale at each width");
@@ -221,6 +355,7 @@ internal static class SynchronizationUiTests
             ui.View.PointerDown(green.X + 5, green.Y + green.Height / 2, 0, false, false); ui.Paint();
             Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.resolvedThisRound")))
                 && ui.Canvas.Outlines.Any(o => o.Color == 0xED737B), "green interval remains clickable alongside unresolved red intervals");
+            Page(ui, false);
             ui.ClickText(L.Get("sync.chooseExternal"));
             Check(ui.View.Document.Fruits[0].X == 123, "changing a green decision does not apply it early");
             Page(ui, false);
@@ -229,7 +364,7 @@ internal static class SynchronizationUiTests
             Check(!ui.View.SynchronizationVisible, "retained differences do not repeat");
             File.WriteAllText(source, text.Replace("123,192", "333,192").Replace("200,192", "400,192"));
             ui.View.RefreshSynchronization(); Wait(ui);
-            Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Y == 86 && t.Value.Contains(L.Get("sync.unresolvedRange"))), "later external edit is a normal unresolved conflict");
+            Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Y == 122 && t.Value.Contains(L.Get("sync.unresolvedRange"))), "later external edit is a normal unresolved conflict");
             Check(ui.Canvas.Circles.Count(c => !c.Filled && c.Color == 0xED737B) == 2, "both corresponding objects remain highlighted");
             Check(ui.Canvas.Outlines.Any(o => o.Color == 0xD5A34D), "unchanged prior resolution has an amber interval");
             ui.ClickText(L.Get("sync.chooseLocal")); Page(ui, true);
@@ -264,7 +399,7 @@ internal static class SynchronizationUiTests
                 File.WriteAllText(source, Fixture.Replace("Title:Original", "Title:Updated"));
                 ui.View.RefreshSynchronization(); Wait(ui);
                 Check(ui.View.SynchronizationVisible && ui.Canvas.Circles.Count == 0, "one-sided metadata change opens text comparison");
-                SelectMetadata(ui, "Title", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+                SelectSyncField(ui, "Title", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(!ui.View.SynchronizationVisible && OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Title") == "Updated", "metadata choice applies");
                 Check(ui.View.Document.Fruits[0].Id == original && ui.View.Document.AudioPath!.EndsWith("pending.ogg"), "authoring preserved");
                 ui.Key('Z', ctrl: true);
@@ -293,7 +428,7 @@ internal static class SynchronizationUiTests
                 File.SetLastWriteTimeUtc(source, DateTime.UtcNow.AddMinutes(1));
                 ui.View.LoadWorkspace(WorkspaceProject.Open(session.Directory), checkAdditionalDifficulties: true); Wait(ui);
                 Check(ui.View.DifficultySyncState(0) == WorkspaceSyncState.NeedsBaseline, "legacy comparison stays explicit");
-                Check(ui.Canvas.Texts.Any(t => t.Value.StartsWith("Title")) && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 1, 2)), "legacy first difference and count shown");
+                Check(ui.Canvas.Texts.Any(t => t.Value.StartsWith("Title")) && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 1, 1)), "legacy first category and group count shown");
                 Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.newerSaved")) && t.X > size.Item1 / 2), "external timestamp marks newer saved version");
                 string authoringFile = Path.Combine(legacy.Directory, legacy.Manifest.Difficulties[0].File);
                 DateTime savedTime = File.GetLastWriteTimeUtc(authoringFile);
@@ -301,8 +436,8 @@ internal static class SynchronizationUiTests
                 Check(ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.newerSaved")) && t.X < size.Item1 / 2), "FA can be the newer saved version");
                 File.SetLastWriteTimeUtc(source, savedTime); ui.View.RefreshSynchronization(); Wait(ui);
                 Check(!ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("sync.newerSaved"))), "equal timestamps do not invent a newer side");
-                SelectMetadata(ui, "Title", true); Page(ui, true); ui.Paint();
-                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 2, 2)), "navigation reaches object conflicts after metadata");
+                SelectSyncField(ui, "Title", true); ui.ClickText("Objects"); ui.Paint();
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.page", 1, 1)), "Objects tab opens object conflicts");
                 var rings = ui.Canvas.Circles.Where(c => !c.Filled && c.Color == 0xED737B).ToArray();
                 Check(rings.Length == 2 && Math.Abs(rings[0].Y - rings[1].Y) < .01 && rings[0].X < size.Item1 / 2 && rings[1].X > size.Item1 / 2, "both canvas versions highlight the aligned conflict");
                 var unchanged = ui.View.Document.DeepClone();
@@ -315,9 +450,9 @@ internal static class SynchronizationUiTests
                 var previewDeadline = DateTime.UtcNow.AddSeconds(10);
                 while (!ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.previewPending")) && DateTime.UtcNow < previewDeadline) { Thread.Sleep(10); ui.Paint(); }
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.previewPending")), "merged result preview prepared asynchronously");
-                Page(ui, false); ui.Paint();
+                ui.ClickText("Metadata"); ui.Paint();
                 Check(ui.Canvas.Texts.Any(t => t.Value.StartsWith("Title")), "previous choice can be reviewed");
-                Page(ui, true); ui.ClickText(L.Get("sync.chooseLocal"));
+                ui.ClickText("Objects"); ui.ClickText(L.Get("sync.chooseLocal"));
                 ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(!ui.View.SynchronizationVisible && ui.View.Document.Fruits[0].Id == original
                     && OsuBeatmapReader.Setting(ui.View.Document, "Metadata", "Title") == "Reviewed", "legacy mixed resolution applied");
@@ -354,7 +489,7 @@ internal static class SynchronizationUiTests
             File.WriteAllText(source, Fixture.Replace("Mode:2", "Mode:2\nPreviewTime:1000"));
             Until(() => ui.View.SynchronizationVisible && !ui.View.SynchronizationBusy, "file notification opens field text review");
             Check(OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") is null, "field review waits for a choice");
-            ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+            SelectSyncField(ui, "PreviewTime", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
             Check(ui.View.Document.Fruits[0].Id == identity && OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") == "1000", "field synchronization preserves authoring");
             string renamed = Path.Combine(songs, "renamed set"); Directory.Move(set, renamed); source = Path.Combine(renamed, "map.osu");
             Until(() => ui.View.WorkspaceSession!.Manifest.Difficulties[0].Source == source && !ui.View.SynchronizationBusy, "directory rename recovered automatically");
@@ -395,7 +530,7 @@ internal static class SynchronizationUiTests
             }
             Until(() => ui.View.SynchronizationVisible && !ui.View.SynchronizationBusy,
                 "locked source synchronizes after writer closes without another write notification");
-            ui.ClickText(L.Get("sync.chooseExternal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+            SelectSyncField(ui, "PreviewTime", true); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
             Check(OsuBeatmapReader.Setting(ui.View.Document, "General", "PreviewTime") == "2000", "retried field applies after review");
             ui.View.ShowLibrary(); ui.Paint();
             string newSet = Path.Combine(songs, "new set"); Directory.CreateDirectory(newSet);
@@ -594,7 +729,7 @@ internal static class SynchronizationUiTests
         ui.Click(next ? 254 : 54, label.Y + 10);
     }
 
-    private static void SelectMetadata(Ui ui, string key, bool external)
+    private static void SelectSyncField(Ui ui, string key, bool external)
     {
         ui.Paint();
         var row = ui.Canvas.Texts.Single(t => t.Value.StartsWith(key + " · "));

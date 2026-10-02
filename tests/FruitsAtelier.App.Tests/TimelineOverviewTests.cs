@@ -155,6 +155,12 @@ internal static class TimelineOverviewTests
         Check(OsuTimeline.Breaks(ui.View.Document).Count == 1, "Insert Break Time duplicated an overlapping break");
         ui.Key(90, ctrl: true);
         Check(OsuTimeline.Breaks(ui.View.Document).Count == 0, "Inserted break did not undo");
+        map.Fruits[0].TimeMs = 1000.67639257296;
+        ui.LoadDocument(map);
+        ui.View.UpdateTransport(2500, 5000, true, false, false, null, null); ui.Paint();
+        ui.ClickText(FruitsAtelier.Localization.Strings.Get("timeline.insertBreak"));
+        Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual([new BreakPeriod(1200, 3250)]),
+            "Fractional recovery must use the same truncated boundary as osu saves");
     }
 
     public static void PreviewPointMenu()

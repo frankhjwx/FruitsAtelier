@@ -20,7 +20,15 @@ internal static class WorkspaceTimingSynchronization
 
     internal static List<TimingPoint> ProjectChanges(IEnumerable<TimingPoint> target, IEnumerable<TimingPoint> before, IEnumerable<TimingPoint> after)
     {
-        var previous = Groups(before); var next = Groups(after);
+        var oldPoints = before.ToArray(); var newPoints = after.ToArray();
+        var shift = SummarizeShift(oldPoints, newPoints);
+        // A pure offset moves authored points together instead of importing each
+        // moved generated SV as a new authoring point.
+        if (shift is { LocalRemainder.Length: 0, ExternalRemainder.Length: 0 }
+            && oldPoints.Zip(newPoints).All(pair => Attributes(pair.First) == Attributes(pair.Second)
+                && Math.Abs(pair.Second.TimeMs - pair.First.TimeMs - shift.OffsetMs) < .000001))
+            return target.Select(point => { var moved = point.DeepClone(); moved.TimeMs += shift.OffsetMs; return moved; }).ToList();
+        var previous = Groups(oldPoints); var next = Groups(newPoints);
         var authored = Groups(target);
         var changed = Changed(previous, next);
         var result = new List<TimingPoint>();
@@ -68,7 +76,41 @@ internal static class WorkspaceTimingSynchronization
         var changed = Changed(ours, theirs);
         if (changed.Count == 0) return null;
         var ordered = changed.OrderBy(key => (ours.GetValueOrDefault(key) ?? theirs[key])[0].TimeMs).ToArray();
-        return new("TimingPoints/", Text(ordered.SelectMany(key => ours.GetValueOrDefault(key) ?? []), true),
-            Text(ordered.SelectMany(key => theirs.GetValueOrDefault(key) ?? []), true));
+        var left = ordered.SelectMany(key => ours.GetValueOrDefault(key) ?? []).ToArray();
+        var right = ordered.SelectMany(key => theirs.GetValueOrDefault(key) ?? []).ToArray();
+        return new("TimingPoints/", Text(left, true), Text(right, true)) { TimingShift = SummarizeShift(left, right) };
+    }
+
+    private static string Attributes(TimingPoint point) => Text([point], true).Split(',', 2)[1];
+
+    private static WorkspaceTimingShift? SummarizeShift(TimingPoint[] local, TimingPoint[] external)
+    {
+        if (local.Length < 2 || external.Length < 2) return null;
+        var ours = local.GroupBy(Attributes).ToDictionary(g => g.Key, g => g.ToArray());
+        var theirs = external.GroupBy(Attributes).ToDictionary(g => g.Key, g => g.ToArray());
+        var offsets = ours.Where(g => g.Value.Length == 1 && theirs.GetValueOrDefault(g.Key) is { Length: 1 })
+            .Select(g => theirs[g.Key][0].TimeMs - g.Value[0].TimeMs).Where(d => Math.Abs(d) > .000001)
+            .Select(d => Math.Round(d, 6)).GroupBy(d => d).OrderByDescending(g => g.Count()).Take(2).Select(g => g.Key).ToArray();
+        var localRows = local.Select(p => (Point: p, Attributes: Attributes(p))).ToArray();
+        var externalRows = external.Select((p, i) => (Point: p, Index: i, Attributes: Attributes(p))).ToArray();
+        WorkspaceTimingShift? best = null;
+        bool ambiguous = false;
+        foreach (double offset in offsets)
+        {
+            var available = externalRows.GroupBy(p => (Time: Math.Round(p.Point.TimeMs, 6), p.Attributes))
+                .ToDictionary(g => g.Key, g => new Queue<int>(g.Select(p => p.Index)));
+            var matched = new HashSet<int>(); var unmatched = new List<TimingPoint>(); int count = 0, previousIndex = -1;
+            foreach (var row in localRows)
+            {
+                var key = (Time: Math.Round(row.Point.TimeMs + offset, 6), row.Attributes);
+                if (!available.TryGetValue(key, out var indices) || indices.Count == 0 || indices.Peek() <= previousIndex) unmatched.Add(row.Point);
+                else { previousIndex = indices.Dequeue(); matched.Add(previousIndex); count++; }
+            }
+            if (count < 2 || count * 2 < Math.Max(local.Length, external.Length)) continue;
+            if (best is null || count > best.Count)
+            { best = new(offset, count, Text(unmatched, true), Text(external.Where((_, i) => !matched.Contains(i)), true)); ambiguous = false; }
+            else if (count == best.Count) ambiguous = true;
+        }
+        return ambiguous ? null : best;
     }
 }

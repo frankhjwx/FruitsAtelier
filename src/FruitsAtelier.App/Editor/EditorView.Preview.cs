@@ -216,7 +216,7 @@ public sealed partial class EditorView
         bool merge = holdMergeAllowed;
         if (!ids.Contains(id) || tool is not (Tool.Select or Tool.Slider) || draftTrack != Guid.Empty || drag != DragKind.None || menu >= 0 || ExportVisible || SliderDialogVisible || StreamDialogVisible || MergeDialogVisible || TimeJumpVisible || DistanceSnapDialogVisible)
         { LegacyConversionBounds = StreamConversionBounds = default; legacyButtonSlider = Guid.Empty; return; }
-        int count = (imported ? 1 : 0) + (slider ? 3 : 0) + (stream ? 2 : 0) + (merge ? 1 : 0);
+        int count = (imported ? 1 : 0) + (slider ? 2 : 0) + (stream ? 2 : 0) + (merge ? 1 : 0);
         if (count == 0) { LegacyConversionBounds = StreamConversionBounds = default; return; }
         float buttonWidth = 260;
         float buttonHeight = count * 36 - 4;
@@ -234,10 +234,8 @@ public sealed partial class EditorView
         float row = imported ? r.Y + 36 : r.Y;
         if (slider)
         {
-            Button(c, new(r.X, row, r.Width, 32), L.Get("stack.menu"), OpenStackDialog, enabled: !notesLocked);
-            row += 36;
             StreamConversionBounds = new(r.X, row, r.Width, 32);
-            Button(c, StreamConversionBounds, L.Get(stream ? "stream.changeSnap" : "stream.apply"), OpenStreamDialog, enabled: !notesLocked);
+            Button(c, StreamConversionBounds, L.Get(stream ? "conversion.editTitle" : "conversion.title"), OpenStreamDialog, enabled: !notesLocked);
             row += 36;
         }
         if (stream)

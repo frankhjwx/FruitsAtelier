@@ -31,6 +31,7 @@ internal sealed partial class EditorWindow : IDisposable
         procedure = WndProc;
         view.SupportsDisplayMode = true;
         view.Performance.Enabled = true;
+        AppLog.Performance = view.Performance;
         ConfigureFiles();
         view.RequestCopyText = text => Native.WriteClipboardText(hwnd, text);
         view.RequestPasteTime = () => view.PasteTimeJumpText(Native.ReadClipboardText(hwnd), view.TimeJumpSession);
@@ -126,11 +127,18 @@ internal sealed partial class EditorWindow : IDisposable
         while (true)
         {
             Native.Message msg;
+            bool activeWait = (view.IsTestplaying || audio.IsPlaying) && !Native.IsIconic(hwnd) && !NativeModalScope.Active;
+            long messageWait = view.Performance.Start();
             if (ImmediatePresentation && (framePending || view.IsTestplaying || audio.IsPlaying) && !Native.IsIconic(hwnd))
             {
                 if (!Native.PeekMessage(out msg, 0, 0, 0, 1))
                 {
-                    if (canvas is not null && canvas.WaitForFrameOrInput()) Invalidate();
+                    if (activeWait) view.Performance.End(EditorPerformanceStage.MessageWait, messageWait);
+                    long frameWait = view.Performance.Start();
+                    bool ready;
+                    try { ready = canvas is not null && canvas.WaitForFrameOrInput(); }
+                    finally { view.Performance.End(EditorPerformanceStage.FrameWait, frameWait); }
+                    if (ready) Invalidate();
                     continue;
                 }
                 if (msg.Id == 0x0012) break;
@@ -141,6 +149,9 @@ internal sealed partial class EditorWindow : IDisposable
                 if (result < 0) throw new Win32Exception();
                 if (result == 0) break;
             }
+            if (activeWait) view.Performance.End(EditorPerformanceStage.MessageWait, messageWait);
+            long messageStart = view.Performance.Start();
+            bool messageTestplay = view.IsTestplaying;
             long inputStart = BeginInputSample(msg);
             try
             {
@@ -163,6 +174,7 @@ internal sealed partial class EditorWindow : IDisposable
             finally
             {
                 EndInputSample(msg.Id, inputStart);
+                EndMessageSample(msg.Id, messageStart, messageTestplay);
                 FlushPerformance();
             }
         }
@@ -171,12 +183,14 @@ internal sealed partial class EditorWindow : IDisposable
 
     private void ConfirmDiscard(Action continuation)
     {
+        if (view.WaitForSynchronization(ready => { if (ready) ConfirmDiscard(continuation); })) { Invalidate(); return; }
         if (view.DiscardConfirmationVisible || !view.PrepareFileOperation()) return;
         if (Native.GetCapture() == hwnd) Native.ReleaseCapture();
         if (!view.IsDirty) { FileOperation(continuation); return; }
         view.ShowDiscardConfirmation(answer => FileOperation(() =>
         {
-            if (answer == 7 || answer == 6 && SaveProject()) continuation();
+            if (answer == 7) continuation();
+            else if (answer == 6) SaveProject(continuation);
         }));
         Invalidate();
     }
@@ -257,6 +271,7 @@ internal sealed partial class EditorWindow : IDisposable
                     Native.GetClientRect(window, out var rect);
                     if (canvas is not null && rect.Right > 0 && rect.Bottom > 0 && !Native.IsIconic(window))
                     {
+                        RecordFrameGap();
                         // Continuous repainting can starve WM_TIMER, including update status polling.
                         renderTimer.Restart();
                         long phase = view.Performance.Start();
@@ -312,7 +327,7 @@ internal sealed partial class EditorWindow : IDisposable
                 PollUpdates(); PollAudio();
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
                 if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
-                    || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.SynchronizationNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
+                    || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0005: Invalidate(); return 0;
             case 0x02E0: // WM_DPICHANGED
@@ -452,6 +467,7 @@ internal sealed partial class EditorWindow : IDisposable
         canvas?.Dispose();
         FlushPerformance(force: true);
         AppLog.Write($"Window closed. Frames={frames}");
+        if (AppLog.Performance == view.Performance) AppLog.Performance = null;
         GC.KeepAlive(procedure);
     }
 }

@@ -3,8 +3,14 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class StackDialogTests
 {
+    private static float PreviewWidth(Ui ui) => (float)((ui.View.StackPreviewBounds.Width - 12)
+        / (1 + 2 * CatchSize.FruitRadius(ui.View.Document.CircleSize) / 512));
+
     public static void Run()
     {
+        EdgePreview();
+        SharedBreakSwitch();
+        CombinedPreview();
         foreach (string language in new[] { "en", "zh-CN" })
         {
             L.SetLanguage(language);
@@ -12,7 +18,7 @@ internal static class StackDialogTests
             var map = new MapDocument(); var track = new CurveTrack { Kind = CurveKind.Linear };
             track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 256 }, new Anchor { TimeMs = 2000, X = 256 }]);
             map.Tracks.Add(track); ui.LoadDocument(map); ui.SelectTrack(track.Id);
-            void Open() { ui.ClickText(L.Get("ui.edit")); ui.ClickText(L.Get("stack.menu")); }
+            void Open() { ui.Key('F', ctrl: true, shift: true); ui.ClickText(L.Get("conversion.stackTab")); }
             Open();
             Check(ui.View.StreamDialogVisible && ui.View.Document.ContentEquals(map), "draft keeps document unchanged");
             var graph = ui.View.StackGraphBounds;
@@ -53,21 +59,133 @@ internal static class StackDialogTests
         }
         L.SetLanguage("en");
     }
+    private static void EdgePreview()
+    {
+        foreach (double cs in new[] { 0d, 5d, 10d })
+        foreach (var size in new[] { (800f, 600f), (1500f, 900f) })
+        foreach (bool stack in new[] { false, true })
+        {
+            var ui = new Ui(); ui.Resize(size.Item1, size.Item2);
+            var map = new MapDocument { CircleSize = cs };
+            var track = new CurveTrack { Kind = CurveKind.Linear };
+            track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 0 }, new Anchor { TimeMs = 5000, X = 512 }]);
+            map.Tracks.Add(track); ui.LoadDocument(map); ui.SelectTrack(track.Id);
+            ui.Key('F', ctrl: true, shift: true);
+            if (stack) ui.ClickText(L.Get("conversion.stackTab"));
+            var bounds = ui.View.StackPreviewBounds;
+            void CheckEdges()
+            {
+                var dots = ui.Canvas.Operations.Where(o => o.Clip == bounds && o.Dot is { Filled: false })
+                    .Select(o => o.Dot!.Value).ToArray();
+                Check(dots.Length > 0 && dots.All(d => d.X - d.Radius >= bounds.X + 2
+                    && d.X + d.Radius <= bounds.Right - 6), "full fruit outlines fit beside the preview scrollbar at both X edges");
+            }
+            CheckEdges();
+            ui.View.Wheel(bounds.X + 20, bounds.Y + 20, 120000, false); ui.Paint(); CheckEdges();
+            Check(ui.View.Document.ContentEquals(map), "preview padding does not edit the map");
+        }
+    }
+    private static void CombinedPreview()
+    {
+        foreach (string language in new[] { "en", "zh-CN" })
+        foreach (double ar in new[] { 1d, 5d, 9d })
+        {
+            L.SetLanguage(language);
+            var ui = new Ui(); var map = new MapDocument { ApproachRate = ar };
+            var track = new CurveTrack { Kind = CurveKind.Linear };
+            track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 256 }, new Anchor { TimeMs = 21000, X = 256 }]);
+            map.Tracks.Add(track); ui.LoadDocument(map); ui.SelectTrack(track.Id);
+            ui.Key('F', ctrl: true, shift: true);
+            Check(ui.View.StreamDialogVisible && ui.View.StackGraphBounds.Width == 0, "shared shortcut defaults to Stream");
+            void CheckSpacing()
+            {
+                var bounds = ui.View.StackPreviewBounds;
+                var dots = ui.Canvas.Operations.Where(o => o.Clip == bounds && o.Dot is { Filled: false })
+                    .Select(o => o.Dot!.Value).ToArray();
+                double expected = 500d / ui.View.StreamSnapDivisor * CatchScrollTiming.PixelsPerMs(ar, PreviewWidth(ui));
+                Check(dots.Length >= 2 && Math.Abs(dots[0].Y - dots[1].Y - expected) < .001, "preview spacing follows map AR");
+            }
+            CheckSpacing();
+            var streamPreview = ui.View.StackPreviewBounds;
+            ui.ClickText(L.Get("conversion.stackTab")); CheckSpacing();
+            var graph = ui.View.StackGraphBounds;
+            Check(ui.View.StackPreviewBounds == streamPreview && graph.Width == streamPreview.Width
+                && ui.View.StreamSnapBounds.Right < streamPreview.X
+                && ui.View.StackDistanceFieldBounds.Right < streamPreview.X, "tabs share equal columns with controls on the left");
+            ui.Click(graph.X + graph.Width * .5f, graph.Bottom - graph.Height * .5f);
+            ui.ClickText(L.Get("conversion.streamTab")); CheckSpacing();
+            Check(ui.View.StackGraphBounds.Width == 0 && ui.View.Document.ContentEquals(map), "Stream preview keeps curve draft local");
+            ui.ClickText(L.Get("conversion.stackTab"));
+            var preview = ui.View.StackPreviewBounds;
+            float[] Positions() => ui.Canvas.Operations.Where(o => o.Clip == preview && o.Dot is { Filled: false })
+                .Select(o => o.Dot!.Value.Y).ToArray();
+            var before = Positions();
+            foreach (bool reverse in new[] { false, true })
+            {
+                ui.View.LibrarySettings.ReverseCanvasScroll = reverse;
+                ui.View.Wheel(preview.X + 20, preview.Y + 20, 120, false); ui.Paint();
+                Check(!Positions().SequenceEqual(before) && ui.View.Document.ContentEquals(map), "wheel up views later times independently of canvas settings");
+                ui.View.Wheel(preview.X + 20, preview.Y + 20, -120000, false); ui.Paint();
+                Check(Positions().SequenceEqual(before), "wheel down clamps at the start");
+            }
+            ui.View.Wheel(preview.X + 20, preview.Y + 20, 120000, false); ui.Paint();
+            var last = ui.Canvas.Operations.Where(o => o.Clip == preview && o.Dot is { Filled: false })
+                .Select(o => o.Dot!.Value).Last();
+            Check(Math.Abs(last.Y - last.Radius - preview.Y - 2) < .01, "scroll reaches the final fruit");
+            ui.View.PointerDown(last.X, last.Y, 0, false, false);
+            ui.View.PointerMove(last.X + 5, last.Y, false, false);
+            ui.View.PointerUp(last.X + 5, last.Y, 0); ui.Paint(); ui.Key(13);
+            Check(ui.View.Document.Tracks[0].Stack!.Points.Count == 5
+                && ui.View.Document.Tracks[0].Stack!.FruitAdjustments.Count == 1, "tab switching keeps curve edits and scrolled fruit drag");
+            ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "combined confirmation is one undo step");
+            ui.Key('Y', ctrl: true); ui.Key('A', ctrl: true); ui.Key('F', ctrl: true, shift: true); ui.Key(13);
+            Check(ui.View.Document.Tracks[0].Stack is null, "default Stream confirmation converts an existing stack to Stream");
+            ui.Key('Z', ctrl: true); Check(ui.View.Document.Tracks[0].Stack is not null, "Stack to Stream undo retains envelope");
+        }
+    }
+    private static void SharedBreakSwitch()
+    {
+        foreach (string language in new[] { "en", "zh-CN" })
+        foreach (bool stack in new[] { false, true })
+        {
+            L.SetLanguage(language); var ui = new Ui(); var map = new MapDocument();
+            var track = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = 4, Stack = new() };
+            track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 256 }, new Anchor { TimeMs = 2000, X = 256 }]);
+            map.Tracks.Add(track); ui.LoadDocument(map); ui.SelectTrack(track.Id);
+            ui.ClickText(L.Get("ui.edit")); ui.ClickText(L.Get("conversion.editMenu"));
+            Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("conversion.editTitle")), "existing streams and stacks use Edit Stream/Stack");
+            ui.ClickText(L.Get("stream.breakFruits"));
+            ui.ClickText(L.Get("conversion.stackTab"));
+            Check(ui.View.StreamBreakIntoFruits, "Stack shares the enabled break switch");
+            ui.ClickText(L.Get("stream.breakFruits"));
+            ui.ClickText(L.Get("conversion.streamTab"));
+            Check(!ui.View.StreamBreakIntoFruits, "Stream shares the disabled break switch");
+            if (stack) ui.ClickText(L.Get("conversion.stackTab"));
+            ui.ClickText(L.Get("stream.breakFruits"));
+            var expectedTrack = track.DeepClone(); expectedTrack.Stack = stack ? track.Stack : null;
+            var expected = SliderFruitStream.Convert(map, expectedTrack).Select(f => (f.TimeMs, f.X)).ToArray();
+            ui.Key(13);
+            Check(ui.View.Document.Tracks.Count == 0 && ui.View.Document.Fruits.Select(f => (f.TimeMs, f.X)).SequenceEqual(expected),
+                "both modes break into fruits at their generated positions");
+            ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "breaking a stack or stream has one undo step");
+            ui.Key('Y', ctrl: true); Check(ui.View.Document.Tracks.Count == 0, "breaking supports redo");
+        }
+    }
     public static void ManualFruits()
     {
         foreach (string language in new[] { "en", "zh-CN" })
         {
             L.SetLanguage(language);
-            var ui = new Ui(); var map = new MapDocument();
+            var ui = new Ui(); var map = new MapDocument { ApproachRate = 5 };
             var track = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = 4, Stack = new() };
             track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 256 }, new Anchor { TimeMs = 2000, X = 256 }]);
             map.Tracks.Add(track); ui.LoadDocument(map); ui.SelectTrack(track.Id);
-            void Open() { ui.Key('A', ctrl: true); ui.ClickText(L.Get("ui.edit")); ui.ClickText(L.Get("stack.menu")); }
+            void Open() { ui.Key('A', ctrl: true); ui.Key('F', ctrl: true, shift: true); ui.ClickText(L.Get("conversion.stackTab")); }
             Open();
             var bounds = ui.View.StackPreviewBounds;
             var dots = ui.Canvas.Operations.Where(o => o.Clip == bounds && o.Dot is { Filled: false }).Select(o => o.Dot!.Value).ToArray();
             Check(dots.Length == 9 && dots.All(d => d.Y - d.Radius >= bounds.Y + .75f && d.Y + d.Radius <= bounds.Bottom - .75f), "complete first and last fruit outlines");
-            var selected = dots[2]; float movedX = selected.X + bounds.Width * 32 / 512;
+            var selected = dots[2]; float movedX = selected.X + PreviewWidth(ui) * 32 / 512;
             ui.View.PointerDown(selected.X, selected.Y, 0, false, false);
             Check(ui.View.WantsCapture, "fruit drag captures pointer");
             ui.View.PointerMove(movedX, selected.Y - 30, false, false);
@@ -115,7 +233,7 @@ internal static class StackDialogTests
             var track = new CurveTrack { Kind = CurveKind.Linear };
             track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 256 }, new Anchor { TimeMs = 2000, X = 256 }]);
             map.Tracks.Add(track); ui.LoadDocument(map); ui.SelectTrack(track.Id);
-            void Open() { ui.Key('A', ctrl: true); ui.ClickText(L.Get("ui.edit")); ui.ClickText(L.Get("stack.menu")); }
+            void Open() { ui.Key('A', ctrl: true); ui.Key('F', ctrl: true, shift: true); ui.ClickText(L.Get("conversion.stackTab")); }
             void EnterValue(bool percent, string value)
             {
                 var bounds = percent ? ui.View.StackPercentFieldBounds : ui.View.StackDistanceFieldBounds;
@@ -134,10 +252,7 @@ internal static class StackDialogTests
             graph = ui.View.StackGraphBounds; ui.Click(graph.X + graph.Width * .205f, graph.Bottom - graph.Height * 26.25f / 32);
             EnterValue(true, "100"); Check(ui.View.IsEditingText, "out-of-order time rejected"); ui.Key(27);
             EnterValue(false, "33"); Check(ui.View.IsEditingText, "out-of-range width rejected"); ui.Key(27);
-            ui.ClickText(L.Get("stack.autoEnds")); ui.Key(13);
-            var ends = ui.View.Document.Tracks[0].Stack!;
-            Check(ends.Points[0].Distance == 0 && ends.Points[^1].Distance == 0 && ends.Points[1] == new StackPoint(.02, 26.25)
-                && ends.Points[^2].Progress == .98, "automatic fast endpoint transitions");
+            ui.Key(13);
             Check(ui.View.Document.ContentEquals(ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document))), "numeric persistence");
             Open(); graph = ui.View.StackGraphBounds;
             Check(ui.Canvas.Lines.Count(line => Math.Abs(line.X1 - graph.X) < .01 && Math.Abs(line.X2 - graph.Right) < .01
@@ -155,15 +270,15 @@ internal static class StackDialogTests
             var track = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = 4, Stack = new() };
             track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 256 }, new Anchor { TimeMs = 2000, X = 256 }]);
             map.Tracks.Add(track); ui.LoadDocument(map); ui.SelectTrack(track.Id);
-            ui.ClickText(L.Get("ui.edit")); ui.ClickText(L.Get("stack.menu"));
+            ui.Key('F', ctrl: true, shift: true); ui.ClickText(L.Get("conversion.stackTab"));
             float FruitX() => ui.Canvas.Operations.Where(o => o.Clip == ui.View.StackPreviewBounds && o.Dot is { Filled: false })
                 .Select(o => o.Dot!.Value).ElementAt(2).X;
             var dot = ui.Canvas.Operations.Where(o => o.Clip == ui.View.StackPreviewBounds && o.Dot is { Filled: false })
                 .Select(o => o.Dot!.Value).ElementAt(2);
             var preview = ui.View.StackPreviewBounds;
             ui.View.PointerDown(dot.X, dot.Y, 0, false, false);
-            ui.View.PointerMove(dot.X + preview.Width * 32 / 512, dot.Y, false, false);
-            ui.View.PointerUp(dot.X + preview.Width * 32 / 512, dot.Y, 0); ui.Paint();
+            ui.View.PointerMove(dot.X + PreviewWidth(ui) * 32 / 512, dot.Y, false, false);
+            ui.View.PointerUp(dot.X + PreviewWidth(ui) * 32 / 512, dot.Y, 0); ui.Paint();
             float moved = FruitX(); Check(moved > dot.X + 1, "fruit draft moves");
             ui.Key('Z', ctrl: true); Check(Math.Abs(FruitX() - dot.X) < .01, "local fruit undo");
             ui.Key('Y', ctrl: true); Check(Math.Abs(FruitX() - moved) < .01, "local fruit redo");

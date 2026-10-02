@@ -52,6 +52,26 @@ bash scripts/Test-Mac.sh --native-only        # Mac input/audio checks only
 
 ## Library scale benchmark
 
+The opt-in `App.Tests --performance-scheduling` benchmark measures Timing frames
+and Stream setup with synthetic data. `Formats.Tests --benchmark-sv-edits` measures
+ordinary edits with an SV override and compares every export against uncached NM/HR
+output. `App.Tests --sv-performance` measures continuous SV input and idle validation.
+Run the same fixtures and build configuration before and after an optimization;
+capture console JSON in `artifacts/`. These are CPU/allocation measurements, not GPU
+presentation or physical input latency.
+
+Recovery compression can be measured against an existing project's history directory:
+
+```powershell
+dotnet run --no-build --project tests/FruitsAtelier.Core.Tests -c Release -- --benchmark-history <workspace/.sync-history/project-id>
+```
+
+The source remains read-only. The benchmark writes compressed payloads and its report
+under `artifacts/history-compression`, verifies byte-for-byte decompression, and counts
+every source file in the before/after totals. Identical payloads are measured once to
+avoid repeating CPU work; their compressed sizes are counted for every occurrence.
+This does not measure per-write latency or apply deduplication to actual backups.
+
 Run the opt-in benchmark from the repository root after building:
 
 ```powershell
@@ -224,6 +244,23 @@ average render rate alone cannot diagnose individual editing stalls. Shared
 conversion counters are also available to tests; macOS does not enable or persist
 these Windows host diagnostics.
 
+Windows stall diagnostics also report `MessageDispatch` for every retrieved message,
+including timer and paint handling, and the slowest message ID with testplay state
+at dispatch start. `MessageWait` measures message retrieval while playback/testplay
+is active, including sent messages processed inside retrieval. `FrameWait` measures
+the DXGI frame-or-input wait. `FrameGap` measures intervals between paint attempts
+while both endpoints are active; `frameGapTestplay` gives the testplay state at each
+endpoint of the longest gap. Idle endpoints, minimized windows and native modal
+scopes are excluded from this gap counter. Focus changes, suspension and scheduling
+can still produce gaps, so a gap alone does not establish synchronous application work.
+
+`LogWrite` measures synchronous application-log writes on the UI thread, including
+failed writes. Background writes do not update UI counters. A performance summary's
+own write appears in the following interval. Message dispatch contains the nested
+paint stages, and frame gaps span drawing, waits and other UI work;
+these counters must not be added together. They use the existing five-second aggregate
+logging and fixed sample storage, without per-message or per-frame log writes.
+
 Run the shared App test executable with `--benchmark-editing` to measure adding and
 continuously dragging objects in synthetic maps of 1,000 fruits, 10,000 fruits,
 and 1,000 FSliders. On macOS, from the repository root:
@@ -245,6 +282,12 @@ movement of an imported slider's head and tail, reporting pointer-path CPU time,
 counting-canvas rendering time, and current-thread allocations separately. It invokes
 the selected-object drag path directly and excludes native input dispatch and GPU work.
 
+The App test executable accepts `--slider-draft-performance <path.catchdiff>` for
+new FSlider previews in Legacy and Pen modes. Use an isolated copy of the project.
+It measures pointer dispatch, rendering and allocations for horizontal movement
+and changing endpoint times, checks cancellation, and prints a digest of all
+validated export text and NM/HR events for comparisons between builds.
+
 The App test executable also accepts `--anchor-drag-performance <path.catchdiff>`
 for a read-only benchmark of anchor pointer handling plus counting-canvas rendering.
 It reports median/P95 CPU time after warm-up and verifies cancellation restores content.
@@ -252,6 +295,18 @@ The Core test executable accepts `--preserve-slider-positions <path.osu|path.cat
 to verify conversion with derandomization disabled, checking full-map event positions,
 FSlider path alignment, project persistence, and export. Incompatible sliders remain
 Legacy and are reported. Neither command saves the supplied map.
+
+## Base SV validation benchmark
+
+Run `dotnet run --no-build --project tests/FruitsAtelier.App.Tests -c Release -- --sv-performance`
+to measure continuous base-SV adjustment on 100 and 1,000 imported Bezier sliders
+with repeats and BPM changes. Eight adjustments arrive 100 ms apart using an
+injected clock. The report separates pointer dispatch plus painting during the
+burst from validation after a simulated one-second idle interval, and records
+current-thread and process-wide allocations. Regressions verify the deadline
+restarts, conversion stays cached during input, superseded workers cannot commit,
+and the final value produces one undo step. The counting canvas measures CPU work;
+GPU presentation and physical display latency are excluded.
 
 ## Playback rendering profile
 
@@ -365,3 +420,10 @@ The focused `--testplay-render-check` also writes `background-cache.json` under
 `artifacts/tests/testplay-native`. It compares the shared scene cache and resident
 background path with a generated 4096×4096 image, recording warm frame time,
 allocations and repeat decodes. The resident path must perform no warm decodes.
+
+Version history regressions cover changed/unchanged saves, retained working copies,
+deleted difficulty identities, project isolation, damaged snapshots, modal input,
+selective restoration, save/restart and undo/redo. Native `--render-check` draws the
+browser and restores a deleted difficulty in both languages at its tested window
+sizes and DPI values. The editing benchmark verifies ordinary interactions while
+version-history work remains outside the pointer and paint paths.

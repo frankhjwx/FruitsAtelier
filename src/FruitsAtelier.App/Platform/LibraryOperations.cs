@@ -5,6 +5,57 @@ namespace FruitsAtelier.App.Platform;
 
 public static class LibraryOperations
 {
+    public static WorkspaceSession CreateAudioProject(BeatmapProject project, string workspace, string songs, bool export, bool compensate)
+    {
+        project.Validate();
+        if (project.Difficulties.Count != 1) throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("project.invalid"));
+        var difficulty = project.Difficulties.Single();
+        var document = difficulty.Document;
+        if (new[] { "Title", "Artist", "Creator", "Version" }.Any(k => string.IsNullOrWhiteSpace(SongSetup.Get(document, "Metadata", k))))
+            throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("audioProject.required"));
+        WorkspaceProject.ValidateRoots(workspace, songs, export);
+        if (export && string.IsNullOrWhiteSpace(songs)) throw new InvalidOperationException(FruitsAtelier.Localization.Strings.Get("library.bindForExport"));
+        string source = Path.GetFullPath(document.AudioPath ?? "");
+        WorkspaceProject.RejectLinks(source);
+        if (!File.Exists(source)) throw new FileNotFoundException(FruitsAtelier.Localization.Strings.Get("resource.missing", source), source);
+        if (!Path.GetExtension(source).Equals(".mp3", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("audioProject.oneFile"));
+        string resources = Path.GetFullPath(Path.Combine(workspace, "Resources", "Audio-" + Guid.NewGuid().ToString("N")));
+        WorkspaceProject.RejectLinks(resources);
+        WorkspaceSession? session = null;
+        string? songsDirectory = null;
+        try
+        {
+            // Resources live outside snapshot directories, which are replaced on every project save.
+            Directory.CreateDirectory(resources);
+            string audio = Path.Combine(resources, "audio.mp3");
+            File.Copy(source, audio, overwrite: false);
+            document.AudioPath = audio;
+            SongSetup.Set(document, "General", "AudioFilename", "audio.mp3");
+            session = WorkspaceProject.Create(workspace, project, songs);
+            if (export)
+            {
+                var plan = WorkspaceExport.Plan(session, difficulty, songs, false, difficulty.Name, compensate);
+                string destination = Path.GetDirectoryName(plan.Target)!;
+                if (Directory.Exists(destination)) throw new IOException(FruitsAtelier.Localization.Strings.Get("library.exportExists", destination));
+                songsDirectory = destination;
+                Directory.CreateDirectory(destination);
+                BeatmapResources.Copy(plan.Document, destination, plan.Output.ReadBack);
+                WorkspaceExport.Commit(session, plan);
+                session.Manifest.SourceDirectory = Path.GetRelativePath(songs, destination);
+                WorkspaceProject.Save(session, project, archiveBeforeSave: false);
+            }
+            return session;
+        }
+        catch
+        {
+            if (songsDirectory is not null && Directory.Exists(songsDirectory)) Directory.Delete(songsDirectory, recursive: true);
+            if (session is not null && Directory.Exists(session.Directory)) Directory.Delete(session.Directory, recursive: true);
+            if (Directory.Exists(resources)) Directory.Delete(resources, recursive: true);
+            throw;
+        }
+    }
+
     public static void ExportOsz(BeatmapProject project, string destination, bool compensate)
     {
         // macOS's default /var temp path traverses a symlink rejected by resource copying.
@@ -202,6 +253,7 @@ public static class LibraryOperations
         BeatmapResources.Copy(plan.Document, folder, plan.Output.ReadBack);
         string receipt = WorkspaceExportRecovery.Prepare(session, project, plan, added?.Id ?? plan.DifficultyId);
         WorkspaceExport.Commit(session, plan, updateAssociation: added is null);
+        if (added is null) project.Difficulties.Single(d => d.Id == plan.DifficultyId).Document.SourcePath = plan.Target;
         if (added is not null)
         {
             string hash = WorkspaceProject.Hash(plan.Target);

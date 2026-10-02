@@ -85,10 +85,9 @@ internal static class StreamShortcutTests
         ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
         ui.SelectTrack(id); ui.HoldMap(1000, 100);
         Check(ui.View.StreamConversionBounds.Width > 0 && ui.View.LegacyConversionBounds.Width == 0, "stream long press offers its actions");
-        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("stream.changeSnap"))
-            && ui.Canvas.Texts.Any(t => t.Value == L.Get("stream.convertBack"))
-            && !ui.Canvas.Texts.Any(t => t.Value == L.Get("stream.apply")), "stream has change and restore actions");
-        ui.ClickText(L.Get("stream.changeSnap")); ui.Key(37); ui.Key(13);
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("conversion.editTitle"))
+            && ui.Canvas.Texts.Any(t => t.Value == L.Get("stream.convertBack")), "stream has conversion and restore actions");
+        ui.ClickText(L.Get("conversion.editTitle")); ui.Key(37); ui.Key(13);
         Check(ui.View.Document.Tracks.Single().StreamSnapDivisor == 12, "change snapping updates existing stream");
         ui.HoldMap(1000, 100); ui.ClickText(L.Get("stream.convertBack"));
         Check(ui.View.Document.Tracks.Single().StreamSnapDivisor is null && ui.View.Conversion.Sliders.Count == 1, "restore keeps slider geometry and preview");

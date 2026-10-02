@@ -2,6 +2,8 @@ using FruitsAtelier.Core;
 using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
 
+if (args.Contains("--benchmark-sv-edits")) return WriteCacheTests.BenchmarkMultiplierEdits();
+
 if (args.Length == 2 && args[0] == "--import-roundtrip")
 {
     var imported = OsuBeatmapReader.ReadFile(args[1]);
@@ -16,10 +18,13 @@ if (args.Length == 2 && args[0] == "--import-roundtrip")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Version history preserves saved, unsaved and deleted authoring by project identity", VersionHistoryTests.Run),
+
     ("Fractional banana endpoints preserve exported counts and downstream tiny compensation", BananaQuantizationTests.Run),
     ("Export keeps timing data below its header and a blank before Colours", TimingSectionSpacing),
     ("Export orders metadata with difficulty identity at the end", MetadataLayout),
     ("Cached export matches full serialization across edits, order, RNG, timing and streams", WriteCacheTests.MatchesUncached),
+    ("Equal-time/order fruits, streams and random parents retain converter order through export and undo", WriteCacheTests.StableParentOrder),
     ("v12, v13 and compatible v128 imports preserve gameplay, optional fields and v14 export", CompatibleVersions),
     ("v128 rejects fractional coordinates and unsupported slider syntax", LazerExtensions),
     ("Workspace isolation, recovery, indexing and explicit export", WorkspaceTests.Run),

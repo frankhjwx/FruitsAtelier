@@ -8,7 +8,7 @@ public sealed partial class EditorView
     private DateTime nextMonitorConfiguration;
     private bool fileSyncPending, fileSearchMissing;
     private bool SyncInteractionActive => WantsCapture || IsEditingText || SongSetupVisible || RatingEditInProgress
-        || StreamDialogVisible || TimingModal || DiscardConfirmationVisible || IsTestplaying;
+        || StreamDialogVisible || TimingModal || DiscardConfirmationVisible || IsTestplaying || AimodVisible;
 
     public void EnableFileMonitoring()
     {
@@ -17,7 +17,12 @@ public sealed partial class EditorView
         ConfigureFileMonitoring();
     }
 
-    public void StopFileMonitoring() { fileMonitor?.Dispose(); fileMonitor = null; }
+    public void StopFileMonitoring()
+    {
+        fileMonitor?.Dispose(); fileMonitor = null;
+        historyCompressionEnabled = false;
+        StopHistoryCompression(); historyCompressionRoot = "";
+    }
 
     public void CheckFilesOnActivation() => fileMonitor?.Invalidate();
 

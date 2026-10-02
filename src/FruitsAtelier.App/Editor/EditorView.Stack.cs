@@ -14,16 +14,38 @@ public sealed partial class EditorView
     private IReadOnlyList<ConvertedCatchObject> stackPreview = [];
     private Rect stackGraph;
     public Rect StackPreviewBounds { get; private set; }
-    private float stackPreviewBottom, stackPreviewHeight, stackPreviewRadius;
+    private float stackPreviewBottom, stackPreviewRadius;
+    private double stackPreviewScrollMs;
+    private float StackPreviewContentWidth => (float)Math.Max(1,
+        (StackPreviewBounds.Width - 12) / (1 + 2 * CatchSize.FruitRadius(Document.CircleSize) / 512));
+    private double StackPreviewScale => CatchScrollTiming.PixelsPerMs(Document.ApproachRate, StackPreviewContentWidth);
+    private double StackPreviewScrollMaximum => stackPreviewSource is null ? 0 : Math.Max(0,
+        CurveMath.EndTimeMs(stackPreviewSource) - stackPreviewSource.Nodes[0].TimeMs
+        - Math.Max(0, StackPreviewBounds.Height - 2 * (stackPreviewRadius + 2)) / StackPreviewScale);
+    private int FirstConversionPreviewFruit(double time)
+    {
+        int low = 0, high = stackPreview.Count;
+        while (low < high)
+        {
+            int mid = (low + high) / 2;
+            if (stackPreview[mid].TimeMs < time) low = mid + 1; else high = mid;
+        }
+        return low;
+    }
+    private void ScrollConversionPreview(float delta)
+    {
+        if (stackPointDragging >= 0 || stackFruitDragging >= 0 || streamSnapDragging) return;
+        stackPreviewScrollMs = Math.Clamp(stackPreviewScrollMs + delta / 120 * 64 / StackPreviewScale, 0, StackPreviewScrollMaximum);
+    }
     private int stackFruitDragging = -1, stackSelectedFruit = -1;
     private bool stackFruitGraphDragging;
     private readonly List<int> stackManualFruitIndices = [];
     private float stackFruitPointerStart;
     private double stackFruitStartX, stackFruitBaseX, stackFruitProgress;
-    private int StackPreviewStride => stackPreview.Count > 512 ? (stackPreview.Count + 255) / 256 : 1;
-    private float StackFruitX(ConvertedCatchObject fruit) => StackPreviewBounds.X + (float)(fruit.X / 512) * StackPreviewBounds.Width;
-    private float StackFruitY(ConvertedCatchObject fruit) => stackPreviewBottom - (float)((fruit.TimeMs - stackPreviewSource!.Nodes[0].TimeMs)
-        / Math.Max(.001, CurveMath.EndTimeMs(stackPreviewSource) - stackPreviewSource.Nodes[0].TimeMs)) * stackPreviewHeight;
+    private float StackPreviewX(double x) => StackPreviewBounds.X + 4 + stackPreviewRadius + (float)(x / 512) * StackPreviewContentWidth;
+    private float StackFruitX(ConvertedCatchObject fruit) => StackPreviewX(fruit.X);
+    private float StackFruitY(ConvertedCatchObject fruit) => stackPreviewBottom - (float)((fruit.TimeMs - stackPreviewSource!.Nodes[0].TimeMs
+        - stackPreviewScrollMs) * StackPreviewScale);
     private double StackFruitProgressAt(int index) => (stackPreview[index].TimeMs - stackPreviewSource!.Nodes[0].TimeMs)
         / Math.Max(.001, CurveMath.EndTimeMs(stackPreviewSource) - stackPreviewSource.Nodes[0].TimeMs);
     private double StackFruitDistance(int index) => Math.Abs(stackPreview[index].X
@@ -60,7 +82,7 @@ public sealed partial class EditorView
     {
         if (!StackPreviewBounds.Contains(x, y)) return false;
         if (button != 0) return true;
-        int nearest = -1, stride = StackPreviewStride;
+        int nearest = -1;
         double best = Math.Pow(stackPreviewRadius + 3, 2);
         void CheckFruit(int index)
         {
@@ -68,11 +90,9 @@ public sealed partial class EditorView
             double distance = Math.Pow(x - StackFruitX(fruit), 2) + Math.Pow(y - StackFruitY(fruit), 2);
             if (distance < best) { best = distance; nearest = index; }
         }
-        for (int i = 0; i < stackPreview.Count; i += stride)
-        {
-            CheckFruit(i);
-            if (stride > 1 && i + 1 < stackPreview.Count) CheckFruit(i + 1);
-        }
+        double start = stackPreviewSource!.Nodes[0].TimeMs + stackPreviewScrollMs;
+        for (int i = FirstConversionPreviewFruit(start - (stackPreviewRadius + 3) / StackPreviewScale);
+            i < stackPreview.Count && StackFruitY(stackPreview[i]) >= StackPreviewBounds.Y - stackPreviewRadius - 3; i++) CheckFruit(i);
         if (nearest < 0) { stackSelectedFruit = -1; return true; }
         BeginStackFruitDrag(nearest, x, false);
         return true;
@@ -89,7 +109,7 @@ public sealed partial class EditorView
             double distance = Math.Round(Math.Clamp((stackGraph.Bottom - y) / stackGraph.Height, 0, 1) * StackMaximumDistance);
             desired = Math.Clamp(centre + side * distance, 0, 512);
         }
-        else desired = Math.Clamp(stackFruitStartX + (x - stackFruitPointerStart) / StackPreviewBounds.Width * 512, 0, 512);
+        else desired = Math.Clamp(stackFruitStartX + (x - stackFruitPointerStart) / StackPreviewContentWidth * 512, 0, 512);
         double center = CurveMath.PositionAtTime(stackPreviewSource!, stackPreview[stackFruitDragging].TimeMs);
         double direction = Math.Sign(desired - center);
         desired = Math.Clamp(center + direction * Math.Round(Math.Min(StackMaximumDistance, Math.Abs(desired - center))), 0, 512);
@@ -103,9 +123,9 @@ public sealed partial class EditorView
     private float stackPointStartX, stackPointStartY;
     private void RefreshStackPreview()
     {
-        if (!stackMode || stackPreviewSource is null) return;
+        if (stackPreviewSource is null) return;
         stackPreviewSource.StreamSnapDivisor = StreamSnapDivisor;
-        stackPreviewSource.Stack = stackDraft;
+        stackPreviewSource.Stack = stackMode ? stackDraft : null;
         try
         {
             stackPreview = SliderFruitStream.Convert(Document, stackPreviewSource, stackTiming!); streamError = "";
@@ -211,75 +231,89 @@ public sealed partial class EditorView
         float w = Math.Min(700, width - 32), h = Math.Min(510, height - 32);
         float x = (width - w) / 2, y = (height - h) / 2;
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Grid, radius: 8);
-        c.Text(L.Get("stack.title"), x + 18, y + 14, 16, Foreground, w - 36, true);
-        c.Text(L.Get("stack.description"), x + 18, y + 42, 11, Muted, w - 36);
-        StreamSnapBounds = new(x + 64, y + 66, w - 88, 29);
+        c.Text(L.Get(changingStreamSnap ? "conversion.editTitle" : "conversion.title"), x + 18, y + 14, 16, Foreground, w - 36, true);
+        Button(c, new(x + 18, y + 40, 86, 24), L.Get("conversion.streamTab"), () => SetConversionMode(false), active: !stackMode);
+        Button(c, new(x + 108, y + 40, 86, 24), L.Get("conversion.stackTab"), () => SetConversionMode(true), active: stackMode);
+        float columnWidth = (w - 64) / 2;
+        float leftX = x + 22, rightX = leftX + columnWidth + 20;
+        StreamSnapBounds = new(leftX + 42, y + 66, columnWidth - 42, 29);
         float left = StreamSnapBounds.X + 7, right = StreamSnapBounds.Right - 31;
-        c.Text(L.Get("ui.snap"), x + 18, y + 75, 11, Muted, 40);
+        c.Text(L.Get("ui.snap"), leftX, y + 75, 11, Muted, 40);
         c.Line(left, y + 81, right, y + 81, Accent, 2);
         c.Circle(left + Array.IndexOf(SnapDivisors, StreamSnapDivisor) / (float)(SnapDivisors.Length - 1) * (right - left), y + 81, 6, Accent);
         c.Text(L.Get("ui.snapDivisor", StreamSnapDivisor), right + 3, y + 75, 10, Foreground, 40);
-        ToggleSwitch(c, new(x + 18, y + 99, w - 166, 30), L.Get("stack.left"), stackDraft.StartLeft,
-            () => { stackDraft.StartLeft = !stackDraft.StartLeft; RefreshStackPreview(); RecordStackDraft(); });
-        c.Text(L.Get("stack.graph"), x + 18, y + 137, 10, Muted, w - 36);
-        stackGraph = new(x + 22, y + 163, (w - 68) * 0.58f, Math.Max(60, h - 266));
-        c.Fill(stackGraph, Surface); c.Stroke(stackGraph, Grid);
-        for (int i = 0; i <= 32; i++)
+        ToggleSwitch(c, new(leftX, y + 99, columnWidth, 30), L.Get("stream.breakFruits"), StreamBreakIntoFruits,
+            () => StreamBreakIntoFruits = !StreamBreakIntoFruits);
+        if (stackMode)
         {
-            float gy = stackGraph.Bottom - i * stackGraph.Height / 32;
-            c.Line(stackGraph.X, gy, stackGraph.Right, gy, Grid, opacity: i % 8 == 0 ? 1 : .35f);
-            if (i % 8 == 0) c.Text(i.ToString(), stackGraph.X + 3, gy - 12, 9, Muted, 32);
+            ToggleSwitch(c, new(leftX, y + 133, columnWidth, 30), L.Get("stack.left"), stackDraft.StartLeft,
+                () => { stackDraft.StartLeft = !stackDraft.StartLeft; RefreshStackPreview(); RecordStackDraft(); });
+            c.Text(L.Get("stack.graph"), leftX, y + 170, 10, Muted, columnWidth);
+            stackGraph = new(leftX, y + 193, columnWidth, Math.Max(60, h - 296));
+            c.Fill(stackGraph, Surface); c.Stroke(stackGraph, Grid);
+            for (int i = 0; i <= 32; i++)
+            {
+                float gy = stackGraph.Bottom - i * stackGraph.Height / 32;
+                c.Line(stackGraph.X, gy, stackGraph.Right, gy, Grid, opacity: i % 8 == 0 ? 1 : .35f);
+                if (i % 8 == 0) c.Text(i.ToString(), stackGraph.X + 3, gy - 12, 9, Muted, 32);
+            }
+            for (int i = 1; i <= 128; i++)
+            {
+                double a = (i - 1) / 128d, b = i / 128d;
+                c.Line(StackPointX(new(a, 0)), StackPointY(new(a, StackGraphDistanceAt(a))),
+                    StackPointX(new(b, 0)), StackPointY(new(b, StackGraphDistanceAt(b))), Accent, 2);
+            }
+            for (int i = 0; i < stackDraft.Points.Count; i++)
+            { var p = stackDraft.Points[i] with { Distance = StackGraphDistanceAt(stackDraft.Points[i].Progress) }; c.Circle(StackPointX(p), StackPointY(p), i == stackSelectedPoint ? 6 : 4, Accent); }
+            foreach (int index in stackManualFruitIndices)
+            {
+                var point = new StackPoint(StackFruitProgressAt(index), StackFruitDistance(index));
+                c.Circle(StackPointX(point), StackPointY(point), index == stackSelectedFruit ? 6 : 4, Foreground);
+            }
+            DrawStackNumeric(c, leftX, y + h - 88, columnWidth);
         }
-        for (int i = 1; i <= 128; i++)
+        else
         {
-            double a = (i - 1) / 128d, b = i / 128d;
-            c.Line(StackPointX(new(a, 0)), StackPointY(new(a, StackGraphDistanceAt(a))),
-                StackPointX(new(b, 0)), StackPointY(new(b, StackGraphDistanceAt(b))), Accent, 2);
+            stackGraph = default; StackPercentFieldBounds = StackDistanceFieldBounds = default;
+            c.Text(L.Get("stream.description"), leftX, y + 137, 11, Muted, columnWidth);
         }
-        for (int i = 0; i < stackDraft.Points.Count; i++)
-        { var p = stackDraft.Points[i] with { Distance = StackGraphDistanceAt(stackDraft.Points[i].Progress) }; c.Circle(StackPointX(p), StackPointY(p), i == stackSelectedPoint ? 6 : 4, Accent); }
-        foreach (int index in stackManualFruitIndices)
-        {
-            var point = new StackPoint(StackFruitProgressAt(index), StackFruitDistance(index));
-            c.Circle(StackPointX(point), StackPointY(point), index == stackSelectedFruit ? 6 : 4, Foreground);
-        }
-        DrawStackNumeric(c, x + 22, y + h - 88);
-        Rect preview = StackPreviewBounds = new(stackGraph.Right + 20, stackGraph.Y, x + w - 22 - stackGraph.Right - 20, stackGraph.Height);
+        Rect preview = StackPreviewBounds = new(rightX, y + 66, columnWidth, Math.Max(60, h - 169));
         c.Fill(preview, Surface); c.Stroke(preview, Grid);
         if (stackPreviewSource is { } track)
         {
             double start = track.Nodes[0].TimeMs, duration = Math.Max(0.001, CurveMath.EndTimeMs(track) - start);
-            float fruitRadius = stackPreviewRadius = (float)(CatchSize.FruitRadius(Document.CircleSize) / 512 * preview.Width);
+            float fruitRadius = stackPreviewRadius = (float)(CatchSize.FruitRadius(Document.CircleSize) / 512 * StackPreviewContentWidth);
             float padding = fruitRadius + 2;
             float previewBottom = stackPreviewBottom = preview.Bottom - padding;
-            float previewHeight = stackPreviewHeight = Math.Max(0, preview.Height - padding * 2);
+            stackPreviewScrollMs = Math.Clamp(stackPreviewScrollMs, 0, StackPreviewScrollMaximum);
+            double visibleStart = start + stackPreviewScrollMs;
+            double visibleEnd = Math.Min(start + duration, visibleStart + (preview.Height - padding * 2) / StackPreviewScale);
             c.Clip(preview);
             for (int i = 1; i <= 100; i++)
             {
-                double ta = start + duration * (i - 1) / 100, tb = start + duration * i / 100;
-                c.Line(preview.X + (float)(Math.Clamp(CurveMath.PositionAtTime(track, ta), 0, 512) / 512) * preview.Width,
-                    previewBottom - (i - 1) / 100f * previewHeight,
-                    preview.X + (float)(Math.Clamp(CurveMath.PositionAtTime(track, tb), 0, 512) / 512) * preview.Width,
-                    previewBottom - i / 100f * previewHeight, Muted);
+                double ta = visibleStart + (visibleEnd - visibleStart) * (i - 1) / 100, tb = visibleStart + (visibleEnd - visibleStart) * i / 100;
+                c.Line(StackPreviewX(Math.Clamp(CurveMath.PositionAtTime(track, ta), 0, 512)),
+                    previewBottom - (float)((ta - visibleStart) * StackPreviewScale),
+                    StackPreviewX(Math.Clamp(CurveMath.PositionAtTime(track, tb), 0, 512)),
+                    previewBottom - (float)((tb - visibleStart) * StackPreviewScale), Muted);
             }
-            // The preview is bounded independently of the generated event count.
-            int stride = StackPreviewStride;
-            void DrawFruit(int index)
+            int first = FirstConversionPreviewFruit(visibleStart - padding / StackPreviewScale);
+            for (int i = first; i < stackPreview.Count && stackPreview[i].TimeMs <= visibleEnd + padding / StackPreviewScale; i++)
             {
-                var fruit = stackPreview[index];
-                c.Circle(preview.X + (float)(fruit.X / 512) * preview.Width,
-                    previewBottom - (float)((fruit.TimeMs - start) / duration) * previewHeight,
-                    fruitRadius, index == stackSelectedFruit ? Foreground : Accent, false, index == stackSelectedFruit ? 2.5f : 1.5f);
-            }
-            for (int i = 0; i < stackPreview.Count; i += stride)
-            {
-                DrawFruit(i);
-                if (stride > 1 && i + 1 < stackPreview.Count) DrawFruit(i + 1);
+                var fruit = stackPreview[i];
+                c.Circle(StackFruitX(fruit), StackFruitY(fruit), fruitRadius,
+                    i == stackSelectedFruit ? Foreground : Accent, false, i == stackSelectedFruit ? 2.5f : 1.5f);
             }
             c.Unclip();
+            if (StackPreviewScrollMaximum > 0)
+            {
+                float thumbHeight = Math.Max(12, preview.Height * (float)((visibleEnd - visibleStart) / duration));
+                float thumbY = preview.Bottom - thumbHeight - (float)(stackPreviewScrollMs / StackPreviewScrollMaximum) * (preview.Height - thumbHeight);
+                c.Fill(new(preview.Right - 4, thumbY, 3, thumbHeight), Muted, 1);
+                c.Text(L.Get("conversion.scroll"), preview.X, preview.Bottom + 7, 10, Muted, preview.Width);
+            }
         }
         if (streamError.Length > 0) c.Text(streamError, x + 18, y + h - 111, 10, Error, w - 36);
-        Button(c, new(x + 18, y + h - 44, 120, 30), L.Get("stack.autoEnds"), AutoStackEnds);
         Button(c, new(x + w - 194, y + h - 44, 80, 30), L.Get("mac.cancel"), () => { StreamDialogVisible = false; stackPointDragging = stackFruitDragging = -1; });
         Button(c, new(x + w - 106, y + h - 44, 88, 30), L.Get("stream.confirm"), ApplyStream, true);
     }

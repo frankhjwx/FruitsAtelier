@@ -33,6 +33,10 @@ internal static class ResourcePollingTests
                 return (Task)typeof(EditorView).GetField("resourceCheckTask", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(view)!;
             }
             void Finish(Task task) { Check(task.Wait(TimeSpan.FromSeconds(5)), "Resource poll did not finish."); Paint(); }
+            view.CheckWorkspaceResources();
+            var requested = (Task?)typeof(EditorView).GetField("resourceCheckTask", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(view);
+            Check(requested is not null, "Explicit resource checks must queue background work.");
+            Finish(requested!);
             Paint(); Check(!Missing(image), "Existing background reported missing.");
             Check(!canvas.Texts.Any(t => t.Value.Contains("missing-")), "Optional video, storyboard or sample showed a persistent error.");
             File.Delete(image); Finish(Queue()); Check(!Missing(image), "Missing optional background must not show a persistent error.");

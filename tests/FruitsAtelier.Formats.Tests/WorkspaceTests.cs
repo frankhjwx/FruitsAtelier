@@ -54,6 +54,8 @@ internal static class WorkspaceTests
             }
             var plan = WorkspaceExport.Plan(session, project.Difficulties[0], songs, true, "", true);
             WorkspaceExport.Commit(session, plan); WorkspaceProject.Save(session, project);
+            Check(!File.Exists(source) && plan.Target.EndsWith("[Platter].osu"), "overwrite renames the source difficulty");
+            source = plan.Target;
             Check(OsuBeatmapReader.ReadFile(source).Fruits[0].X == 400, "explicit overwrite");
             File.AppendAllText(source, "\n// external update\n");
             Reject(() => WorkspaceExport.Plan(session, project.Difficulties[0], songs, true, "", true));

@@ -19,13 +19,16 @@ public sealed partial class EditorView
         if (StackPercentFieldBounds.Contains(x, y) || StackDistanceFieldBounds.Contains(x, y)) return true;
         return CommitStackNumeric();
     }
-    private void DrawStackNumeric(ICanvas c, float x, float y)
+    private void DrawStackNumeric(ICanvas c, float x, float y, float columnWidth)
     {
-        StackPercentFieldBounds = new(x + 66, y, 90, 28);
-        StackDistanceFieldBounds = new(x + 246, y, 90, 28);
+        float labelWidth = Math.Min(58, columnWidth / 5);
+        float fieldWidth = (columnWidth - labelWidth * 2 - 14) / 2;
+        float secondX = x + labelWidth + fieldWidth + 14;
+        StackPercentFieldBounds = new(x + labelWidth, y, fieldWidth, 28);
+        StackDistanceFieldBounds = new(secondX + labelWidth, y, fieldWidth, 28);
         var selected = SelectedStackPoint;
-        c.Text(L.Get("stack.timePercent"), x, y + 7, 11, Muted, 64);
-        c.Text(L.Get("stack.distancePx"), x + 180, y + 7, 11, Muted, 64);
+        c.Text(L.Get("stack.timePercent"), x, y + 7, 11, Muted, labelWidth - 2);
+        c.Text(L.Get("stack.distancePx"), secondX, y + 7, 11, Muted, labelWidth - 2);
         for (int i = 0; i < 2; i++)
         {
             int field = i; var bounds = i == 0 ? StackPercentFieldBounds : StackDistanceFieldBounds;
@@ -44,7 +47,7 @@ public sealed partial class EditorView
                 SelectInput("stack:" + field, stackNumericText);
             }, enabled));
         }
-        if (stackNumericError.Length > 0) c.Text(stackNumericError, x + 352, y + 7, 10, Error, Math.Max(80, width / 2 - 352));
+        if (stackNumericError.Length > 0) c.Text(stackNumericError, x, y + 31, 10, Error, columnWidth);
     }
     private void StackNumericText(string text)
     {
@@ -107,23 +110,5 @@ public sealed partial class EditorView
 
         }
         stackNumericField = -1; stackNumericError = ""; RefreshStackPreview(); RecordStackDraft(); return true;
-    }
-    private void AutoStackEnds()
-    {
-        if (!CommitStackNumeric()) return;
-        var points = stackDraft.Points;
-        double head = points.Count > 2 ? points[1].Distance : Math.Max(points[0].Distance, points[^1].Distance);
-        double tail = points.Count > 2 ? points[^2].Distance : head;
-        double first = points.Count > 2 ? Math.Min(.02, points[1].Progress) : .02;
-        double last = points.Count > 2 ? Math.Max(.98, points[^2].Progress) : .98;
-        if (points.Count > 62) { points[1] = new(first, head); points[^2] = new(last, tail); }
-        else
-        {
-            if (points.Count == 2 || points[1].Progress > first) points.Insert(1, new(first, head));
-            if (points[^2].Progress < last) points.Insert(points.Count - 1, new(last, tail));
-        }
-        points[0] = new(0, 0); points[^1] = new(1, 0);
-        stackDraft.SetAdjustment(0, 0); stackDraft.SetAdjustment(1, 0);
-        stackSelectedFruit = -1; stackSelectedPoint = 1; RefreshStackPreview(); RecordStackDraft();
     }
 }

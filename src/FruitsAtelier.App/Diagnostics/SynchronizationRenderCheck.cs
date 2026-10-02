@@ -32,6 +32,14 @@ internal static class SynchronizationRenderCheck
                 view.RefreshSynchronization(); Wait();
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native metadata rows were not shown.");
                 var metadataBefore = view.Document.DeepClone();
+                for (int tab = 0; tab < 8; tab++)
+                {
+                    float tabX = 36 + (width - 72) / 8f * (tab + .5f);
+                    view.PointerDown(tabX, 98, 0, false, false); view.PointerUp(tabX, 98, 0); Paint();
+                    if (!metadataBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native category navigation changed authoring.");
+                }
+                float metadataTabX = 36 + (width - 72) / 8f * 2.5f;
+                view.PointerDown(metadataTabX, 98, 0, false, false); view.PointerUp(metadataTabX, 98, 0); Paint();
                 view.Wheel(200, 260, -1200, false); Paint();
                 view.Wheel(200, 260, 1200, false); Paint();
                 if (!metadataBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native metadata scrolling changed authoring.");
@@ -45,7 +53,7 @@ internal static class SynchronizationRenderCheck
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native section text review was not shown.");
                 var sectionBefore = view.Document.DeepClone();
                 view.Wheel(200, 260, -1200, false); Paint();
-                view.PointerDown(width - 52, 95, 0, false, false); view.PointerUp(width - 52, 95, 0); Paint();
+                view.PointerDown(width - 52, 131, 0, false, false); view.PointerUp(width - 52, 131, 0); Paint();
                 if (!sectionBefore.ContentEquals(view.Document)) throw new InvalidOperationException("Native text paging changed authoring.");
                 view.KeyDown(27, false, false);
 
@@ -63,6 +71,16 @@ internal static class SynchronizationRenderCheck
                 if (!view.SynchronizationVisible) throw new InvalidOperationException("Native object conflict dialog was not shown.");
                 var before = view.Document.DeepClone(); view.KeyDown(46, false, false); Paint();
                 if (!before.ContentEquals(view.Document)) throw new InvalidOperationException("Native conflict input changed authoring.");
+                float rangeY = 282 + .65f * Math.Max(40, height - 488);
+                var choicesField = typeof(EditorView).GetField("syncChoices", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+                foreach (bool external in new[] { false, true, false })
+                {
+                    float rangeX = external ? width / 2 + 100 : 130;
+                    view.PointerDown(rangeX, rangeY, 0, false, false); view.PointerUp(rangeX, rangeY, 0); Paint();
+                    var selected = (Dictionary<string, bool>)choicesField.GetValue(view)!;
+                    if (selected.Count == 0 || selected.Values.Any(value => value != external))
+                        throw new InvalidOperationException("Native conflict rectangle did not select its side.");
+                }
                 view.Wheel(200, 260, 120, false); Paint();
                 view.Wheel(200, 260, 120, true); Paint();
                 if (!before.ContentEquals(view.Document)) throw new InvalidOperationException("Native comparison navigation changed authoring.");
@@ -90,6 +108,7 @@ internal static class SynchronizationRenderCheck
                 view.ShowDeleteDifficulty(0); Paint(); view.KeyDown(27, false, false);
                 view.ShowDeleteDifficulty(0, localOnly: true); Paint(); view.KeyDown(27, false, false);
                 view.ShowDeleteProjectConfirmation(_ => { }); Paint(); view.KeyDown(27, false, false);
+                VersionHistoryRenderCheck.Run(canvas, width, height);
                 AppLog.Write($"Synchronization rendering passed: {locale}, {width}x{height}, object conflicts, missing state, deletion confirmation and input isolation.");
 
                 void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }

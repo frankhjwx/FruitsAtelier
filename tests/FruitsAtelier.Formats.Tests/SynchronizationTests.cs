@@ -4,6 +4,230 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: metadata saves rename linked files without adding difficulties", () =>
+        {
+            foreach (string key in new[] { "Artist", "Title", "Creator", "Version" })
+            foreach (bool automatic in new[] { false, true }) Run(f =>
+            {
+                string original = f.Source;
+                Set(f.Diff.Document, key, "Changed value");
+                if (key == "Version") f.Diff.Name = "Changed value";
+                var entry = f.Session.Manifest.Difficulties.Single();
+                var plan = automatic ? WorkspaceSynchronization.PlanLocalChanges(f.Session, entry, f.Merge())
+                    : WorkspaceExport.Plan(f.Session, f.Diff, f.Songs, true, "", true);
+                string expected = Path.Combine(f.Set, WorkspaceProject.DifficultyFileName(f.Diff.Document, f.Diff.Name, ".osu"));
+                Check(plan.Target == expected && plan.ExistingTarget == original, "metadata determines the new filename");
+                WorkspaceExport.Commit(f.Session, plan);
+                WorkspaceProject.Save(f.Session, f.Session.Project);
+                f.Session = WorkspaceProject.Open(f.Session.Directory);
+                Check(!File.Exists(original) && Directory.GetFiles(f.Set, "*.osu").Single() == expected, "old file is replaced by one renamed file");
+                Check(entry.Source == expected && entry.ExportTarget == expected && entry.Sync!.Path == expected, "all associations follow the rename");
+                Check(f.Scan().Additions.Count == 0 && f.Scan().Difficulties.Single().State == WorkspaceSyncState.Current, "restart discovers one current difficulty");
+                Check(!f.Merge().RequiresResolution && (!automatic || !f.Merge().CanExportLocalChanges), "renaming preserves the resolved authoring baseline");
+            });
+        });
+        yield return ("Sync: metadata filenames sanitize characters and preserve case changes", () => Run(f =>
+        {
+            foreach (string title in new[] { "New: / Title?", "new: / title?" })
+            {
+                Set(f.Diff.Document, "Title", title);
+                var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], f.Merge());
+                WorkspaceExport.Commit(f.Session, plan);
+                Check(Directory.GetFiles(f.Set, "*.osu").Single() == plan.Target, "one file retains the requested filename casing");
+                Check(Path.GetFileName(plan.Target) == WorkspaceProject.DifficultyFileName(f.Diff.Document, f.Diff.Name, ".osu"), "cross-platform filename sanitization");
+            }
+        }));
+        yield return ("Sync: metadata filename collisions and stale writes preserve existing files", () =>
+        {
+            foreach (bool collisionBeforePlan in new[] { false, true }) Run(f =>
+            {
+                string original = File.ReadAllText(f.Source);
+                Set(f.Diff.Document, "Version", "Changed"); f.Diff.Name = "Changed";
+                string target = Path.Combine(f.Set, WorkspaceProject.DifficultyFileName(f.Diff.Document, "Changed", ".osu"));
+                if (collisionBeforePlan) File.WriteAllText(target, "other difficulty");
+                if (collisionBeforePlan) Reject(() => WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], f.Merge()));
+                else
+                {
+                    var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], f.Merge());
+                    File.WriteAllText(target, "other difficulty");
+                    Reject(() => WorkspaceExport.Commit(f.Session, plan));
+                }
+                Check(File.ReadAllText(f.Source) == original && File.ReadAllText(target) == "other difficulty", "collision preserves both files");
+            });
+            Run(f =>
+            {
+                Set(f.Diff.Document, "Title", "Changed");
+                var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], f.Merge());
+                File.AppendAllText(f.Source, "\n// external edit");
+                string changed = File.ReadAllText(f.Source);
+                Reject(() => WorkspaceExport.Commit(f.Session, plan));
+                Check(File.ReadAllText(f.Source) == changed && !File.Exists(plan.Target), "stale source is not renamed");
+            });
+        });
+        yield return ("Sync: interrupted metadata rename completes on recovery", () => Run(f =>
+        {
+            string original = f.Source;
+            Set(f.Diff.Document, "Title", "Changed");
+            var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], f.Merge());
+            WorkspaceExportRecovery.Prepare(f.Session, f.Session.Project, plan, f.Diff.Id);
+            File.WriteAllText(original, plan.Output.Text, new System.Text.UTF8Encoding(false));
+            f.Session = WorkspaceProject.Open(f.Session.Directory);
+            Check(!File.Exists(original) && File.Exists(plan.Target), "recovery finishes the pending rename");
+            Check(f.Session.Manifest.Difficulties.Single().Source == plan.Target && f.Scan().Additions.Count == 0, "recovery retains one owner");
+        }));
+        yield return ("Sync: FA content writes back against the resolved external version", () => Run(f =>
+        {
+            OsuTimeline.AddBreak(f.Diff.Document, 4000, 10000);
+            OsuTimeline.AddBookmark(f.Diff.Document, 5000);
+            f.Diff.Document.TimingPoints.Add(new TimingPoint { TimeMs = 500, BeatLengthMs = -100, Uninherited = false });
+            void Synchronize()
+            {
+                var entry = f.Session.Manifest.Difficulties[0];
+                var merge = f.Merge();
+                Check(!merge.RequiresResolution && merge.CanExportLocalChanges, "FA changes need no choice");
+                var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, entry, merge);
+                string receipt = WorkspaceExportRecovery.Prepare(f.Session, f.Session.Project, plan, entry.Id);
+                WorkspaceExport.Commit(f.Session, plan);
+                WorkspaceProject.Save(f.Session, f.Session.Project);
+                WorkspaceExportRecovery.Complete(receipt);
+                Check(!f.Merge().RequiresResolution && !f.Merge().CanExportLocalChanges, "write advances the baseline");
+                Check(WorkspaceSynchronization.ObjectLines(File.ReadAllText(f.Source)).SequenceEqual(
+                    WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(f.Diff.Document).Text)), "notes match the complete FA export");
+            }
+            Synchronize();
+            var history = new EditorHistory(f.Diff.Document);
+            history.Begin("note in break");
+            history.Document.Fruits.Add(new Fruit { TimeMs = 7000, X = 200 });
+            history.Commit(); f.Diff.Document = history.Document;
+            Check(OsuTimeline.Breaks(f.Diff.Document).Count == 2, "note splits the break");
+            Synchronize();
+            history.Undo(); f.Diff.Document = history.Document; Synchronize();
+            Check(OsuTimeline.Breaks(OsuBeatmapReader.ReadFile(f.Source)).Single() == new BreakPeriod(4000, 10000), "undo writes back the restored break");
+            history.Redo(); f.Diff.Document = history.Document; Synchronize();
+            File.WriteAllText(f.Source, File.ReadAllText(f.Source).Replace("2,4000,", "2,4100,"));
+            Check(f.Merge().RequiresResolution, "external break edits remain reviewable");
+        }));
+        yield return ("Sync: automatic export keeps curves and generated SV together", () => Run(f =>
+        {
+            var track = new CurveTrack(); track.Nodes.AddRange([new() { TimeMs = 3000, X = 100 }, new() { TimeMs = 3500, X = 400 }]);
+            f.Diff.Document.Tracks.Add(track);
+            f.Diff.Document.TimingPoints.Add(new TimingPoint { TimeMs = 500, BeatLengthMs = -100, Uninherited = false });
+            var merge = f.Merge();
+            var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], merge);
+            WorkspaceExport.Commit(f.Session, plan);
+            var exported = OsuBeatmapReader.ReadFile(f.Source);
+            Check(exported.ImportedSliders.Count == 1 && exported.TimingPoints.Any(t => t.TimeMs == 3000), "curve and its generated SV are written together");
+            Check(!f.Merge().RequiresResolution && !f.Merge().CanExportLocalChanges, "export advances both baselines");
+        }));
+        yield return ("Sync: local break write rejects an external save after comparison", () => Run(f =>
+        {
+            OsuTimeline.AddBreak(f.Diff.Document, 4000, 10000);
+            var merge = f.Merge();
+            var plan = WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], merge);
+            string changed = File.ReadAllText(f.Source).Replace("Title:Title", "Title:external");
+            File.WriteAllText(f.Source, changed);
+            bool rejected = false;
+            try { WorkspaceExport.Commit(f.Session, plan); }
+            catch (IOException) { rejected = true; }
+            Check(rejected && File.ReadAllText(f.Source) == changed, "stale write preserves external bytes");
+        }));
+        yield return ("Sync: a new FA break edit writes back after a retained decision", () => Run(f =>
+        {
+            File.WriteAllText(f.Source, Fixture().Replace("[HitObjects]", "[Events]\n2,4000,10000\n[HitObjects]"));
+            var merge = f.Merge();
+            var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => false);
+            WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, f.Diff.Document, true, review: merge, choices: choices);
+            Check(!f.Merge().RequiresResolution && !f.Merge().CanExportLocalChanges, "unchanged retained choice stays pending");
+            OsuTimeline.AddBreak(f.Diff.Document, 5000, 9000);
+            merge = f.Merge();
+            Check(!merge.RequiresResolution && merge.CanExportLocalChanges, "new FA edit replaces the retained difference");
+            WorkspaceExport.Commit(f.Session, WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], merge));
+            Check(OsuTimeline.Breaks(OsuBeatmapReader.ReadFile(f.Source)).Single() == new BreakPeriod(5000, 9000), "new break is written");
+        }));
+        yield return ("Sync: uniform timing offset has one summary and keeps generated SV derived", () => Run(f =>
+        {
+            var output = CaptureCurveTiming(f);
+            var shifted = output.ReadBack.DeepClone();
+            foreach (var point in shifted.TimingPoints) point.TimeMs += 12;
+            string external = OsuBeatmapWriter.Serialize(shifted).Text;
+            File.WriteAllText(f.Source, external);
+            var merge = f.Merge();
+            var conflict = merge.Conflicts.Single(c => c.Key == "TimingPoints/");
+            Check(conflict.TimingShift is { OffsetMs: 12, Count: > 1, LocalRemainder.Length: 0, ExternalRemainder.Length: 0 }, "one exact offset summary replaces repeated lines");
+            var choices = merge.Conflicts.ToDictionary(c => c.Key, c => c.Key == "TimingPoints/");
+            var resolved = WorkspaceSynchronization.Resolve(merge, choices);
+            Check(resolved.TimingPoints.Count == f.Diff.Document.TimingPoints.Count
+                && resolved.TimingPoints.Zip(f.Diff.Document.TimingPoints).All(pair => pair.First.TimeMs == pair.Second.TimeMs + 12
+                    && pair.First.BeatLengthMs == pair.Second.BeatLengthMs), "only authored timing moves; generated SV is not imported");
+            choices["TimingPoints/"] = false;
+            Check(TimingValues(WorkspaceSynchronization.Resolve(merge, choices).TimingPoints) == TimingValues(f.Diff.Document.TimingPoints), "FA choice keeps timing exact");
+            shifted.TimingPoints.Add(new TimingPoint { TimeMs = 6000, BeatLengthMs = -50, Uninherited = false });
+            File.WriteAllText(f.Source, OsuBeatmapWriter.Serialize(shifted).Text);
+            conflict = f.Merge().Conflicts.Single(c => c.Key == "TimingPoints/");
+            Check(conflict.TimingShift is { OffsetMs: 12 } summary && summary.ExternalRemainder.Contains("6000,-50"), "additional edits remain visible beside the offset");
+        }));
+        yield return ("Sync: sound and combo edits retain exact editable curve handles", () => Run(f =>
+        {
+            CaptureCurveTiming(f);
+            var track = f.Diff.Document.Tracks[0];
+            track.Kind = CurveKind.Bezier;
+            track.Nodes[0].HandleOut = new(80, 40); track.Nodes[1].HandleIn = new(-80, -20);
+            var output = OsuBeatmapWriter.Serialize(f.Diff.Document);
+            File.WriteAllText(f.Source, output.Text);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory,
+                output.Text, output.ObjectSources);
+            var lines = WorkspaceSynchronization.ObjectLines(output.Text);
+            int index = output.ObjectSources.ToList().IndexOf(track.Id);
+            string originalLine = output.ReadBack.ImportedSliders.Single(s => s.SourceOrder == index).OriginalLine!;
+            var parts = originalLine.Split(',');
+            Array.Resize(ref parts, 11);
+            parts[3] = "6"; parts[4] = "8"; parts[8] = "8|2"; parts[9] = "2:3|3:2"; parts[10] = "2:3:0:0:";
+            string edited = string.Join(',', parts);
+            File.WriteAllText(f.Source, output.Text.Replace(originalLine, edited));
+            var merge = f.Merge();
+            var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => true);
+            foreach (var resolved in new[] { WorkspaceSynchronization.Resolve(merge, choices), WorkspaceSynchronization.ResolveExternal(merge) })
+            {
+                var retained = resolved.Tracks.Single(t => t.Id == track.Id);
+                Check(retained.Nodes.Select(n => (n.Id, n.TimeMs, n.X, n.HandleIn, n.HandleOut))
+                    .SequenceEqual(track.Nodes.Select(n => (n.Id, n.TimeMs, n.X, n.HandleIn, n.HandleOut))), "anchors and handles stay exact");
+                Check(retained.OriginalLine!.Split(',').Skip(8).SequenceEqual(parts.Skip(8)) && ObjectFlags.NewCombo(resolved, track.Id)
+                    && ObjectFlags.Sounds(resolved, track.Id).SequenceEqual(new[] { 8, 2 }), "external flags and sample fields are applied");
+                Check(WorkspaceSynchronization.ObjectLines(OsuBeatmapWriter.Serialize(resolved).Text).SequenceEqual(WorkspaceSynchronization.ObjectLines(merge.External.Text)),
+                    "export reproduces the accepted external attributes");
+                var saved = ProjectSerializer.Read(ProjectSerializer.Serialize(resolved, f.Source), f.Source);
+                Check(saved.Tracks.Single(t => t.Id == track.Id).Nodes[0].HandleOut == track.Nodes[0].HandleOut, "project round trip retains handles");
+            }
+            parts[5] = "L|300:192";
+            File.WriteAllText(f.Source, output.Text.Replace(originalLine, string.Join(',', parts)));
+            merge = f.Merge();
+            Check(WorkspaceSynchronization.Resolve(merge, merge.Conflicts.ToDictionary(c => c.Key, _ => true)).Tracks.All(t => t.Id != track.Id),
+                "changed geometry imports the external slider");
+        }));
+        yield return ("Sync: base SV overrides retain authoring and review the actual exported value", () => Run(f =>
+        {
+            var document = f.Diff.Document;
+            document.OverrideSliderMultiplier = true; SliderMultiplierEditing.Apply(document, 1.3);
+            double authoringMultiplier = document.SliderMultiplier;
+            var output = OsuBeatmapWriter.Serialize(document);
+            File.WriteAllText(f.Source, output.Text);
+            f.Session.Manifest.Difficulties[0].Sync = WorkspaceSynchronization.Capture(f.Source, document, f.Session.Directory,
+                output.Text, output.ObjectSources);
+            var merge = f.Merge();
+            Check(!merge.RequiresResolution, "Unchanged override export has no synchronization conflict");
+            var retained = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+            Check(retained.SliderMultiplier == authoringMultiplier && retained.SliderMultiplierOverride == 1.3,
+                "Keeping the exported value retains the independent authoring base");
+            SliderMultiplierEditing.Apply(document, 1.5);
+            File.WriteAllText(f.Source, output.Text.Replace("SliderMultiplier:1.3", "SliderMultiplier:1.2"));
+            merge = f.Merge();
+            Check(merge.Conflicts.Any(c => c.Key == "Difficulty/SliderMultiplier" && c.Local == "1.5" && c.External == "1.2"),
+                "Concurrent SV edits review actual local and external values");
+            var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => false);
+            retained = WorkspaceSynchronization.Resolve(merge, choices);
+            Check(retained.SliderMultiplierOverride == 1.5 && retained.SliderMultiplier == authoringMultiplier,
+                "Choosing FA retains the confirmed override");
+        }));
         yield return ("Sync: one green edit reviews and applies only changed timing amongst generated SV", () => Run(f =>
         {
             var output = CaptureCurveTiming(f);
@@ -126,6 +350,74 @@ internal static class SynchronizationTests
                 Check(f.Merge().Conflicts.Any(c => c.Key.StartsWith(key)), "real edit stays visible: " + key);
             }
         }));
+        yield return ("Sync: TimelineZoom follows osu without conflicts or local overrides", () => Run(f =>
+        {
+            string before = Fixture().Replace("[Metadata]", "[Editor]\nTimelineZoom:1\nBookmarks:100\n[Metadata]");
+            File.WriteAllText(f.Source, before);
+            f.Diff.Document = OsuBeatmapReader.ReadFile(f.Source);
+            var entry = f.Session.Manifest.Difficulties[0];
+            entry.Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory);
+            entry.Sync.LocalOverrides.Add("Editor/TimelineZoom");
+            foreach (string? zoom in new string?[] { "3.899998", null, "1.5" })
+            {
+                File.WriteAllText(f.Source, before.Replace("TimelineZoom:1\n", zoom is null ? "" : "TimelineZoom:" + zoom + "\n"));
+                var merge = f.Merge();
+                Check(!merge.RequiresResolution, "osu-only zoom must not require review");
+                var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+                Check(OsuBeatmapReader.Setting(resolved, "Editor", "TimelineZoom") == zoom, "latest external zoom is preserved, including removal");
+                Check(!WorkspaceSynchronization.HasFieldDifferences(f.Diff.Document, merge.External.Document), "zoom is not an authored field difference");
+                var noBaseline = WorkspaceSynchronization.CompareWithoutBaseline(f.Diff.Document, merge.External, f.Session.Directory, true);
+                Check(!noBaseline.RequiresResolution && OsuBeatmapReader.Setting(WorkspaceSynchronization.Resolve(noBaseline,
+                    new Dictionary<string, bool>()), "Editor", "TimelineZoom") == zoom, "baseline-free comparison also follows external zoom");
+                WorkspaceSynchronization.Accept(f.Session, entry, merge.External, resolved, true);
+                f.Diff.Document = resolved;
+                Check(!entry.Sync!.LocalOverrides.Contains("Editor/TimelineZoom"), "obsolete zoom override is retired");
+            }
+            File.WriteAllText(f.Source, File.ReadAllText(f.Source).Replace("Bookmarks:100", "Bookmarks:200"));
+            Check(f.Merge().Conflicts.Any(c => c.Key == "Editor/Bookmarks"), "editable Editor fields still need review");
+        }));
+        yield return ("Sync: legacy fractional break recovery survives osu save rewrites", () => Run(f =>
+        {
+            var map = f.Diff.Document;
+            map.ApproachRate = 9.8; map.DurationMs = 260000;
+            var track = new CurveTrack { Kind = CurveKind.Linear };
+            track.Nodes.AddRange([new() { TimeMs = 236719, X = 100 }, new() { TimeMs = 246904.67639257296, X = 400 }]);
+            map.Tracks.Add(track); map.Fruits.Add(new() { TimeMs = 257090.35278514592, X = 200 });
+            map.OriginalSections.Add(new OsuSection { Name = "Events", Lines = {
+                "//Background and Video events", "0,0,\"background.jpg\",0,0", "//Break Periods",
+                "//Storyboard Layer 0 (Background)", "Sprite,Foreground,Centre,\"sprite.png\",320,240", " F,0,0,500,0,1",
+                "//Storyboard Sound Samples", "", "2,54850,57406", "2,247105,256536" } });
+            var output = OsuBeatmapWriter.Serialize(map);
+            File.WriteAllText(f.Source, output.Text);
+            var entry = f.Session.Manifest.Difficulties[0];
+            entry.Sync = WorkspaceSynchronization.Capture(f.Source, map, f.Session.Directory, output.Text, output.ObjectSources);
+            entry.Sync.LocalOverrides.Add("Events/");
+            string saved = output.Text.Replace("\r", "").Replace("//Break Periods", "//Break Periods\n2,54850,57406\n2,247104,256536")
+                .Replace("\n2,54850,57406\n2,247105,256536", "");
+            File.WriteAllText(f.Source, saved);
+            var merge = f.Merge();
+            Check(!merge.RequiresResolution && merge.Conflicts.Count == 0, "fractional recovery and section layout rewrites need no review");
+            Check(!WorkspaceSynchronization.HasFieldDifferences(output.ReadBack, merge.External.Document), "same save semantics apply to field detection");
+            Check(!WorkspaceSynchronization.CompareWithoutBaseline(map, merge.External, f.Session.Directory, true).RequiresResolution,
+                "legacy boundary also compares correctly without a baseline");
+            var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+            Check(new MapDocument { Tracks = { resolved.Tracks.Single() } }.ContentEquals(new MapDocument { Tracks = { track } }),
+                "comparison retains fractional authored controls");
+            WorkspaceSynchronization.Accept(f.Session, entry, merge.External, resolved, true);
+            f.Diff.Document = resolved;
+            Check(!entry.Sync!.LocalOverrides.Contains("Events/"), "legacy recovery is not a pending local override");
+            WorkspaceProject.Save(f.Session, f.Session.Project);
+            var reopened = WorkspaceProject.Open(f.Session.Directory);
+            Check(!WorkspaceSynchronization.Merge(reopened.Manifest.Difficulties[0], reopened.Project.Difficulties[0].Document,
+                WorkspaceSynchronization.ReadStable(f.Source), reopened.Directory, true).RequiresResolution, "restart must not repeat the conflict");
+            foreach (string changed in new[] { saved.Replace("2,54850,57406", "2,54851,57406"),
+                saved.Replace("2,247104,256536", "2,247103,256536"), saved.Replace("2,247104,256536", "2,247104,256537"),
+                saved.Replace(" F,0,0,500,0,1", " F,0,0,501,0,1") })
+            {
+                File.WriteAllText(f.Source, changed);
+                Check(f.Merge().Conflicts.Any(c => c.Key == "Events/"), "actual break and storyboard edits remain reviewable");
+            }
+        }));
         yield return ("Sync: ordinary combo edits and timing order remain visible", () => Run(f =>
         {
             File.WriteAllText(f.Source, Fixture().Replace("1500,1,0", "1500,5,0"));
@@ -219,16 +511,26 @@ internal static class SynchronizationTests
             File.WriteAllText(f.Source, prefix + string.Join('\n', rewritten));
             Check(f.Merge().Conflicts.Count(c => c.Key.StartsWith("$objects:")) == 1, "a small real slider length change remains visible");
         }));
-        yield return ("Sync: all ten metadata fields require a choice for any differing value", () =>
+        yield return ("Sync: FA metadata exports automatically while new external metadata requires review", () =>
         {
             foreach (string key in new[] { "Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Version", "Source", "Tags", "BeatmapID", "BeatmapSetID" })
             foreach (bool localOnly in new[] { false, true }) Run(f =>
             {
                 var external = OsuBeatmapReader.ReadFile(f.Source);
                 Set(localOnly ? f.Diff.Document : external, key, key.EndsWith("ID") ? "12345" : "Changed value");
-                File.WriteAllText(f.Source, OsuBeatmapWriter.Serialize(external).Text);
+                if (!localOnly) File.WriteAllText(f.Source, OsuBeatmapWriter.Serialize(external).Text);
                 var merge = f.Merge();
-                Check(merge.RequiresResolution && merge.Conflicts.Any(c => c.Key == "Metadata/" + key), key + " unilateral change requires selection");
+                if (localOnly)
+                {
+                    Check(merge.CanExportLocalChanges && !merge.RequiresResolution, key + " FA edit exports without a choice");
+                    WorkspaceExport.Commit(f.Session, WorkspaceSynchronization.PlanLocalChanges(f.Session, f.Session.Manifest.Difficulties[0], merge));
+                    Check(!f.Merge().CanExportLocalChanges && !f.Merge().RequiresResolution, key + " export records the resolved version");
+                    Set(external, key, key.EndsWith("ID") ? "67890" : "Changed again");
+                    File.WriteAllText(f.Source, OsuBeatmapWriter.Serialize(external).Text);
+                    Check(f.Merge().RequiresResolution, key + " new external edit requires selection");
+                    return;
+                }
+                Check(merge.RequiresResolution && merge.Conflicts.Any(c => c.Key == "Metadata/" + key), key + " external change requires selection");
                 var choices = merge.Conflicts.ToDictionary(c => c.Key, _ => false);
                 var kept = WorkspaceSynchronization.Resolve(merge, choices);
                 WorkspaceSynchronization.Accept(f.Session, f.Session.Manifest.Difficulties[0], merge.External, kept, true, review: merge, choices: choices);
@@ -417,12 +719,16 @@ internal static class SynchronizationTests
         }));
         yield return ("Sync: interrupted deletion rolls back the external removal", () => Run(f =>
         {
-            string backup = WorkspaceSynchronization.Archive(f.Session, "delete-test");
-            File.Copy(f.Source, Path.Combine(backup, "external.osu"));
-            string journal = System.Text.Json.JsonSerializer.Serialize(new { DifficultyId = f.Diff.Id, Path = f.Source, Backup = backup, Hash = WorkspaceProject.Hash(f.Source) });
-            File.WriteAllText(Path.Combine(f.Session.Directory, "delete.json"), journal); File.Delete(f.Source);
-            var reopened = WorkspaceProject.Open(f.Session.Directory);
-            Check(File.Exists(f.Source) && reopened.Project.Difficulties[0].Id == f.Diff.Id, "both sides restored");
+            foreach (bool compressed in new[] { false, true })
+            {
+                string backup = WorkspaceSynchronization.Archive(f.Session, "delete-test");
+                if (compressed) WorkspaceHistoryFile.Write(Path.Combine(backup, "external.osu"), File.ReadAllBytes(f.Source));
+                else File.Copy(f.Source, Path.Combine(backup, "external.osu"));
+                string journal = System.Text.Json.JsonSerializer.Serialize(new { DifficultyId = f.Diff.Id, Path = f.Source, Backup = backup, Hash = WorkspaceProject.Hash(f.Source) });
+                File.WriteAllText(Path.Combine(f.Session.Directory, "delete.json"), journal); File.Delete(f.Source);
+                var reopened = WorkspaceProject.Open(f.Session.Directory);
+                Check(File.Exists(f.Source) && reopened.Project.Difficulties[0].Id == f.Diff.Id, "legacy and compressed external recovery restore both sides");
+            }
         }));
         yield return ("Sync: two legacy difficulties in one project require one retained owner", () => Run(f =>
         {
@@ -507,12 +813,21 @@ internal static class SynchronizationTests
         {
             f.Diff.Document.Fruits[0].X = 430;
             var plan = WorkspaceExport.Plan(f.Session, f.Diff, f.Songs, true, "", true);
-            WorkspaceExportRecovery.Prepare(f.Session, f.Session.Project, plan, f.Diff.Id);
-            File.WriteAllText(f.Source, Fixture().Replace("100,192", "321,192"));
-            var reopened = WorkspaceProject.Open(f.Session.Directory);
-            Check(reopened.Project.Difficulties[0].Document.Fruits[0].X == 430, "pending authoring recovered");
-            Check(OsuBeatmapReader.ReadFile(f.Source).Fruits[0].X == 321, "newer external state not overwritten");
-            Check(WorkspaceSynchronization.Scan(reopened, f.Songs).Difficulties.Single().State == WorkspaceSyncState.Changed, "external difference still detected");
+            foreach (bool compressed in new[] { false, true })
+            {
+                string receipt = WorkspaceExportRecovery.Prepare(f.Session, f.Session.Project, plan, f.Diff.Id);
+                Check(File.Exists(receipt + WorkspaceHistoryFile.Extension), "new recovery receipt is binary");
+                if (!compressed)
+                {
+                    File.WriteAllBytes(receipt, WorkspaceHistoryFile.Read(receipt));
+                    File.Delete(receipt + WorkspaceHistoryFile.Extension);
+                }
+                File.WriteAllText(f.Source, Fixture().Replace("100,192", "321,192"));
+                var reopened = WorkspaceProject.Open(f.Session.Directory);
+                Check(reopened.Project.Difficulties[0].Document.Fruits[0].X == 430, "legacy and compressed pending authoring recovered");
+                Check(OsuBeatmapReader.ReadFile(f.Source).Fruits[0].X == 321, "newer external state not overwritten");
+                Check(WorkspaceSynchronization.Scan(reopened, f.Songs).Difficulties.Single().State == WorkspaceSyncState.Changed, "external difference still detected");
+            }
         }));
         yield return ("Sync: legacy missing baseline requires explicit version choice", () => Run(f =>
         {
@@ -696,7 +1011,7 @@ internal static class SynchronizationTests
             string diff = Path.Combine(f.Session.Directory, f.Session.Manifest.Difficulties[0].File);
             WorkspaceAssociations.DeleteDifficulty(f.Session, f.Session.Project, f.Diff.Id);
             Check(!File.Exists(f.Source) && !File.Exists(diff) && !File.Exists(Path.Combine(f.Session.Directory, WorkspaceProject.ManifestName)), "both removed");
-            Check(Directory.EnumerateFiles(Path.Combine(f.Workspace, ".sync-history"), "external.osu", SearchOption.AllDirectories).Any(), "external recovery");
+            Check(Directory.EnumerateFiles(Path.Combine(f.Workspace, ".sync-history"), "external.osu" + WorkspaceHistoryFile.Extension, SearchOption.AllDirectories).Any(), "external recovery");
         }));
         yield return ("Sync: duplicate ownership blocks export and ordinary deletion", () => Run(f =>
         {
@@ -725,7 +1040,7 @@ internal static class SynchronizationTests
         public string Workspace => Path.Combine(Root, "Workspace");
         public string Songs => Path.Combine(Root, "Songs");
         public string Set => Path.Combine(Songs, "original");
-        public string Source => Path.Combine(Set, "map.osu");
+        public string Source => Session?.Manifest.Difficulties.FirstOrDefault()?.Source ?? Path.Combine(Set, "map.osu");
         public WorkspaceSession Session;
         public ProjectDifficulty Diff => Session.Project.Difficulties[0];
         public FixtureContext()

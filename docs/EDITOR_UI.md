@@ -1,5 +1,18 @@
 # Editing Controls
 
+## AiMod
+
+Open **Edit → AiMod** to check the current difficulty for overlapping notes.
+It reports an error for adjacent object starts less than 10 ms apart, regardless
+of horizontal position. Exactly 10 ms is allowed. Fruits, authored and imported
+sliders, streams and banana showers each contribute their editable object's start;
+nested slider fruits, droplets, tiny droplets and bananas are excluded.
+
+Click a result to select both objects and jump to the first start time. **Refresh**
+reruns the check; paging and the mouse wheel browse longer lists. Checking and
+navigating do not change content or undo history. Close the dialog to edit the map,
+then reopen it to check the current state. AiMod currently reports only overlaps.
+
 See the [shortcut manual](KEY_BINDINGS.md) for the complete keyboard reference and the [compatibility review](KEY_BINDINGS_REVIEW.md) for known differences and gaps.
 
 Grid Snap, Distance Snap, Movement Analysis and Grid Level are saved immediately
@@ -7,6 +20,14 @@ as local preferences for each project difficulty. Switching difficulties or reop
 the editor restores these values. They do not change map content or undo history.
 Shift/Alt temporary snap overrides are not saved. Difficulties without saved
 preferences start with all three switches off and Grid Level Tiny (4 px).
+
+## FSlider preview
+
+When drawing a new FSlider, the canvas updates only that slider's provisional
+preview. Finish the curve to update full-map gameplay data in the background;
+the status bar indicates this work while editing remains available. Testplay
+requested during this update starts after the current result is ready. Cancelling
+an unfinished curve restores the previous preview and leaves no undo entry.
 
 ## Timing editing
 
@@ -37,6 +58,29 @@ inherited points and bookmarks by the offset difference within the original red
 section, including its start and excluding the next red point. BPM changes do not
 move these markers; the audio preview point stays fixed. The option starts off.
 Offset buttons step by 2 ms, Ctrl by 1 ms and Shift by 10 ms.
+
+Below Slider Tick Rate, **Override SV** unlocks the difficulty's base slider
+velocity (SliderMultiplier) on a separate row. It starts off for new and older
+projects. Use the arrows for 0.1 steps, hold Ctrl for 0.01 steps, or type a value
+from 0.4 to 3.6. The value displays two decimal places. Turning the switch off
+locks editing and retains the confirmed value. The switch is saved in
+`.catchproj`, belongs to the current difficulty, and participates in undo/redo.
+Changing base SV preserves DPB and distance-snap presets and compensates inherited
+SV at export, including red-point resets, while retaining generated slider
+geometry. Cached exported green-point limits reject out-of-range compensation
+immediately in either direction. Valid adjustments update the displayed draft
+immediately and restart a one-second idle timer. The number and arrows remain
+available while waiting and during validation. Once the value stays unchanged
+for one second, a worker validates the latest draft using cached slider paths
+and local events, with full read-back validation for uncertain rounding.
+The previous confirmed value remains active until validation succeeds. A new
+adjustment supersedes an older worker result and starts its own idle interval.
+One continuous adjustment commits as one undo step. File operations wait for
+the draft to be validated; retry after it completes.
+An intervening content edit invalidates the pending result. The change is applied only when exported NM/HR
+objects retain their kinds, times and positions within 0.001 ms/px. Changes that
+require inherited SV outside 0.1–10 or cannot preserve playback report an error
+and leave the difficulty unchanged.
 
 In Timing mode, object hitsounds are suppressed and the sound-flag palette is
 disabled. During playback, **Metronome Clicks** schedules one tick per beat, with a distinct
@@ -302,6 +346,11 @@ The transport offers **10%, 25%, 50%, 75%, 100%, and 150%** playback speed. Only
 
 In the editor, the status-bar **Volume** button or **View → Volume** opens three vertical bars, ordered Master, Music and Effect from left to right, from 0% to 100%. Alt+Left/Right selects a channel; Alt+Up/Down opens the controls and changes the selected channel by five percentage points. The shortcuts also show the controls during testplay and take precedence over catcher movement. The controls fade in over 120 ms, wait 800 ms after interaction, then fade out over 150 ms. Hovering, dragging or holding an adjustment key keeps them visible; Esc dismisses them in the editor. Changes apply immediately and persist after mouse release or a keyboard adjustment. Master multiplies both channels; Music and Effect independently control music and preview/testplay samples. Opening the controls preserves active drawing drafts. Muting does not pause playback or change the beatmap.
 
+During active testplay, plain Up/Down also opens the volume controls and adjusts
+the selected channel by five percentage points. The pause menu retains Up/Down
+navigation. Channel selection, fading and all other testplay controls keep the
+same behavior as with the existing volume shortcuts.
+
 ## Tools and selection
 
 The left palette has equally sized Select, Fruit, FSlider, and Banana buttons with transparent outer margins. The four-button group is vertically centred beside the canvas plot. The active icon is fully opaque; the other three use 45% opacity. Labels share one font size. Clicking FSlider starts placement; B also enters control editing for a selected slider. Finishing placement keeps the current tool active.
@@ -524,10 +573,10 @@ Recoverable file-operation errors appear inside the editor window on both the ca
 
 ## Slider fruit streams
 
-The conversion and Change snapping dialogs include **Break into Fruits**, off by
+The conversion dialog includes **Break into Fruits**, off by
 default. Enabling it replaces the slider parent with independent fruits at the
 chosen snap, each editable separately. Existing streams offer **Break into Fruits**
-directly below **Change snapping** in the long-press menu. Breaking preserves the
+directly below **Edit Stream/Stack** in the long-press menu. Breaking preserves the
 stream's fruit positions, times, combo flags and sample settings, and forms one
 undo step.
 
@@ -546,9 +595,9 @@ Its generated catch events can differ from the original objects. The dialog warn
 that saving retains only the merged slider: reopening cannot recover the original
 objects because project files do not store undo history.
 
-Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Slider to stream**. Long-press an FSlider to reveal **Convert to stream**; imported Legacy Sliders offer **Convert to FSlider** above **Convert to stream**. Every stream-conversion entry opens a confirmation dialog with the same snap slider and subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**. Enter confirms; Esc cancels; arrow keys change the choice.
+Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press an FSlider to reveal **Convert to Stream/Stack**; imported Legacy Sliders offer **Convert to FSlider** above it. Every conversion entry opens the shared dialog on Stream with the same snap slider and subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**. Enter confirms; Esc cancels; arrow keys change the choice.
 
-With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging reshapes only that fruit while keeping its time fixed. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Change snapping** above **Convert back to slider** in their long-press menu. The Edit menu and Ctrl+Shift+F open Change snapping for a stream selection. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
+With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging reshapes only that fruit while keeping its time fixed. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in their long-press menu. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
 
 The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
 
@@ -576,10 +625,31 @@ overlay open; Escape or the close button closes it and discards
 unapplied drafts. Escape first dismisses an active field, key capture, language menu,
 or colour picker. Language changes take effect immediately.
 
-## Stack generation
+## Stream and Stack conversion
 
-Select a slider and choose **Edit → Convert / edit stack…**, or use the same action
-in its long-press menu. The floating dialog retains the source curve and samples
+Select sliders and choose **Convert to Stream/Stack** from Edit or the long-press
+menu, or press **Ctrl+Shift+F**. Existing streams and stacks use **Edit Stream/Stack**
+for the menu, button and dialog title. The dialog opens on **Stream** by default.
+The **Stream** and **Stack** tabs both preview the generated fruits. Stack enables
+curve and individual-fruit editing; switching tabs retains each tab's subdivision
+and the Stack draft. Tab switches modes when no numeric input is active. Confirm
+applies the active tab; Stream clears an existing Stack envelope. Cancel discards
+both drafts.
+
+Both tabs share equal-width left and right columns. Snap and **Break into Fruits**
+are on the left; Stack also keeps its distance curve and numeric fields there.
+The right column contains the preview in both modes. The shared **Break into Fruits**
+switch retains its value across tabs and confirms either mode as independent fruits.
+
+Both previews use the current map's AR and CS, scaling time and X by the inner
+playfield width. Side margins fit the full fruit outline at X=0 and X=512 and
+leave room for the scrollbar. Hit testing and horizontal dragging use the same
+inner playfield. Roll the mouse wheel over the preview to inspect long patterns; wheel up
+views later times and wheel down views earlier times, independently of Reverse
+canvas scrolling. The position indicator follows the visible interval.
+Scrolling does not change content or undo.
+
+The Stack tab retains the source curve and samples
 independent fruits with the selected stream subdivision, using the head BPM across
 all spans. The first-side switch chooses left or right.
 
@@ -605,8 +675,8 @@ control point at its fixed time. Drag that point vertically to edit its distance
 uses an adjustment only when a generated fruit has the same normalized time;
 returning to the previous subdivision restores its adjusted fruits. Cancel and lost
 capture restore the draft, and confirmation groups all adjustments into one undo
-step. The preview leaves room above and below the centre trajectory for complete
-fruit outlines, including their stroke.
+step. The preview leaves room for complete first and last fruit outlines, including their
+stroke, at the corresponding scroll limits.
 
 Select an envelope point to edit **Time (%)** and **Width (px)** numerically.
 Enter or Tab accepts the value; Escape cancels the text edit. Interior times must
@@ -617,8 +687,7 @@ point at that time, replacing its individual-fruit offset.
 
 New stacks default to 1/16 subdivision and reach their width over the first 2% of
 the duration, returning to zero over the final 2%. Existing stacks retain their
-subdivision. **Auto endpoints** sets endpoint widths to zero and adds short entry
-and exit transitions using adjacent widths.
+subdivision. Endpoint widths can be edited in the graph or numeric fields.
 
 Within the stack editor, Ctrl+Z undoes a completed drag, numeric edit, point removal,
 first-side change or subdivision change; Ctrl+Y or Ctrl+Shift+Z redoes it. Draft

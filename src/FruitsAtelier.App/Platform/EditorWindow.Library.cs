@@ -6,6 +6,7 @@ internal sealed partial class EditorWindow
 {
     private void ConfigureLibrary()
     {
+        view.RequestAudioProject = path => ConfirmDiscard(() => view.BeginAudioProject(path));
         view.RequestLibraryDrop = paths => FileOperation(() =>
         {
             foreach (string skin in paths.Where(p => Path.GetExtension(p).Equals(".osk", StringComparison.OrdinalIgnoreCase)))
@@ -91,12 +92,16 @@ internal sealed partial class EditorWindow
         view.RequestWorkspaceExport = (overwrite, name) => FileOperation(() =>
         {
             if (!view.PrepareFileOperation()) return;
-            if ((overwrite || view.WorkspaceSession is null) && !view.SaveWorkspace()) return;
-            if (view.WorkspaceSession is null) return;
-            var project = view.CaptureProject();
-            var plan = WorkspaceExport.Plan(view.WorkspaceSession, project.Difficulties[view.ActiveDifficultyIndex], view.LibrarySettings.Songs, overwrite, name, view.CompensateTinyDroplets);
-            LibraryOperations.Export(view.WorkspaceSession, project, plan);
-            view.LibraryExportFinished(plan); view.SetNotice(L.Get("library.exported", plan.Target));
+            if (overwrite || view.WorkspaceSession is null) SaveProject(Export);
+            else Export();
+            void Export()
+            {
+                if (view.WorkspaceSession is null) return;
+                var project = view.CaptureProject();
+                var plan = WorkspaceExport.Plan(view.WorkspaceSession, project.Difficulties[view.ActiveDifficultyIndex], view.LibrarySettings.Songs, overwrite, name, view.CompensateTinyDroplets);
+                LibraryOperations.Export(view.WorkspaceSession, project, plan);
+                view.LibraryExportFinished(plan); view.SetNotice(L.Get("library.exported", plan.Target));
+            }
         });
     }
 }

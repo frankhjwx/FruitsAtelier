@@ -172,6 +172,61 @@ internal static class EditorPerformance
         return 0;
     }
 
+    public static int RunSliderDraft(string path)
+    {
+        var document = ProjectSerializer.ReadFile(path);
+        document.AudioPath = null; document.SourcePath = null;
+        Console.WriteLine($"Slider draft: tracks={document.Tracks.Count}, fruits={document.Fruits.Count}, timing={document.TimingPoints.Count}");
+        var baseline = CatchStreamConverter.Convert(document);
+        Console.WriteLine($"Parents with tiny droplets={baseline.Objects.Where(o => o.Kind == CatchObjectKind.TinyDroplet).Select(o => o.SourceId).Distinct().Count()}; curve controls={document.Tracks.Sum(t => t.Nodes.Count(n => n.OutgoingCurve is not null))}");
+        foreach (var mode in new[] { SliderEditingMode.OsuLegacy, SliderEditingMode.PenTool })
+        foreach (bool varyTime in new[] { false, true })
+        {
+            var ui = new Ui(); ui.LoadDocument(document); ui.View.SetSliderEditingMode(mode); ui.Key('B');
+            ui.ClickMap(1000, 25);
+            if (ui.View.Document.Tracks.Count != document.Tracks.Count + 1) throw new Exception("Slider draft did not start.");
+            var dispatch = new List<double>(); var render = new List<double>(); var allocated = new List<long>();
+            ui.View.Performance.Enabled = true;
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var exportField = typeof(EditorView).GetField("playableExport", flags)!;
+            var beforeExport = exportField.GetValue(ui.View);
+            for (int i = 0; i < 64; i++)
+            {
+                var point = ui.ScreenAt(1500 + (varyTime ? i % 8 * 125 : 0), 100 + i % 12 * 20);
+                long bytes = GC.GetAllocatedBytesForCurrentThread();
+                var timer = Stopwatch.StartNew(); ui.View.PointerMove(point.X, point.Y, false, false);
+                double input = timer.Elapsed.TotalMilliseconds;
+                timer.Restart(); ui.Paint(); double paint = timer.Elapsed.TotalMilliseconds;
+                if (i >= 4) { dispatch.Add(input); render.Add(paint); allocated.Add(GC.GetAllocatedBytesForCurrentThread() - bytes); }
+                if (!ReferenceEquals(beforeExport, exportField.GetValue(ui.View)))
+                    throw new Exception("Draft pointer movement replaced the committed export.");
+            }
+            dispatch.Sort(); render.Sort(); allocated.Sort();
+            Console.WriteLine($"{mode}, {(varyTime ? "time and X" : "X only")}: dispatch median={dispatch[30]:F2} ms, p95={dispatch[57]:F2} ms; render median={render[30]:F2} ms, p95={render[57]:F2} ms; allocated={allocated[30] / 1024} KiB/frame");
+            Console.WriteLine(ui.View.Performance.Drain());
+            ui.View.CancelInteraction(); ui.Paint();
+            if (!ui.View.Document.ContentEquals(document)) throw new Exception("Cancelled draft changed content.");
+            ui.Key('B'); ui.ClickMap(1000, 25); ui.ClickMap(2375, 320, ctrl: true);
+            var finish = Stopwatch.StartNew();
+            ui.View.KeyDown(13, false, false);
+            double finishMs = finish.Elapsed.TotalMilliseconds;
+            finish.Restart(); ui.Paint();
+            double firstPaintMs = finish.Elapsed.TotalMilliseconds;
+            var pendingFrames = new List<double>();
+            while (ui.View.ConversionRefreshing && finish.Elapsed.TotalSeconds < 30)
+            {
+                var frame = Stopwatch.StartNew(); ui.Paint(); pendingFrames.Add(frame.Elapsed.TotalMilliseconds);
+                Thread.Sleep(1);
+            }
+            if (ui.View.ConversionRefreshing) throw new Exception("Background conversion timed out.");
+            double completionMs = finish.Elapsed.TotalMilliseconds;
+            DraftConversionTests.AssertExport(ui.View);
+            Console.WriteLine($"Completion: dispatch={finishMs:F2} ms; first render={firstPaintMs:F2} ms; background wall={completionMs:F2} ms; pending render max={pendingFrames.DefaultIfEmpty().Max():F2} ms; completed export/NM/HR match uncached oracle");
+            ui.View.NewProject();
+        }
+        return 0;
+    }
+
     public static int RunSliderDrag(string path)
     {
         var document = OsuBeatmapReader.ReadFile(path);

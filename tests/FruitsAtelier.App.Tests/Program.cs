@@ -7,11 +7,18 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Contains("--sv-performance")) return SliderMultiplierTests.Performance();
+if (args.Contains("--performance-scheduling")) return PerformanceSchedulingTests.Benchmark();
 if (args.Length == 2 && args[0] == "--fruit-placement-performance") return EditorPerformance.RunFruitPlacement(args[1]);
 if (args.Length == 2 && args[0] == "--testplay-edit-performance") return EditorPerformance.RunTestplayEditing(args[1]);
 if (args.Length > 0 && args[0] == "--benchmark-library") return LibraryScaleTests.Benchmark(args.Length > 1 ? args[1] : null);
 if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
 if (args.Length == 2 && args[0] == "--slider-drag-performance") return EditorPerformance.RunSliderDrag(args[1]);
+if (args.Length == 2 && args[0] == "--slider-draft-performance")
+{
+    try { return EditorPerformance.RunSliderDraft(args[1]); }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 if (args.Length == 2 && args[0] == "--anchor-drag-performance")
 {
     try { return EditorPerformance.RunAnchorDrag(args[1]); }
@@ -22,6 +29,18 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("MP3 projects require metadata, copy audio and optionally link one Songs difficulty", AudioProjectTests.Run),
+    ("Slider drafts defer full-map conversion and publish only matching validated snapshots", DraftConversionTests.Run),
+    ("Synchronization category tabs explain object changes and preserve choices", SyncTabsTests.Run),
+    ("AiMod checks object starts, isolates input, navigates errors and preserves undo", AimodTests.Run),
+    ("Background workspace saves isolate input and acknowledge only their snapshot", PerformanceSchedulingTests.Save),
+    ("Blocked operations show synchronization progress only on demand", SynchronizationWaitTests.Run),
+    ("Native testplay copies state at render while retaining the driver clock", PerformanceSchedulingTests.NativeTestplayCapture),
+    ("Stale synchronization waits for stable edits and archives one recovery round", PerformanceSchedulingTests.SynchronizationRetry),
+    ("Version history previews and restores changed and deleted difficulties with undo and modal isolation", VersionHistoryUiTests.Run),
+
+    ("Playback note saves keep input responsive and retain edits made during publication", SynchronizationUiTests.PlaybackSave),
+    ("FA metadata and notes export against resolved osu versions while retaining undo", SynchronizationUiTests.LocalBreaks),
     ("Synchronization failures wrap and scroll without editing content", SynchronizationUiTests.FailureText),
     ("Section synchronization pages large Events and applies complete text", SynchronizationUiTests.SectionText),
     ("Timing synchronization reviews one green line amongst generated SV", SynchronizationUiTests.TimingRows),
@@ -49,6 +68,7 @@ var tests = new (string Name, Action Run)[]
     ("Shortcut routing exports from Timing while retaining modal focus", ShortcutRoutingTests.Export),
     ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),
     ("Timing setup drafts, shortcuts, clipboard, undo and narrow bilingual layout", TimingEditorTests.Run),
+    ("Timing base SV override preserves gameplay, DPB, precision, persistence and undo", SliderMultiplierTests.Run),
     ("Timing metronome schedules beat and Ctrl snap ticks without duplicate playback", TimingEditorTests.Metronome),
     ("Timing waveform zoom, cached audio and red-line selection", TimingEditorTests.Waveform),
     ("Wheel modifiers distinguish snapping zoom and navigation", WheelGestureTests.Run),
@@ -65,7 +85,7 @@ var tests = new (string Name, Action Run)[]
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
-    ("Workspace-only saves persist before optional Songs export", WorkspaceSaveTests.Run),
+    ("Workspace saves and linked synchronization persist before optional Songs export", WorkspaceSaveTests.Run),
     ("Metadata merge rows share a page and highlight unresolved, retained and selected text", SynchronizationUiTests.MetadataRows),
     ("Local difficulty deletion reimports osu and preserves edits on cancel or failure", SynchronizationUiTests.DeleteLocalVersion),
     ("Synchronization UI permits background editing, preserves undo, repairs missing files and resolves objects", SynchronizationUiTests.Run),
@@ -83,7 +103,7 @@ var tests = new (string Name, Action Run)[]
     ("Appearance indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
     ("Stack preview retains full outlines and edits individual fruits horizontally", StackDialogTests.ManualFruits),
     ("Stack draft history undoes fruit drags and removing manual knots", StackDialogTests.DraftHistory),
-    ("Stack numeric controls edit percentages and pixels with automatic endpoints", StackDialogTests.Numeric),
+    ("Stack numeric controls edit percentages and pixels with editable endpoints", StackDialogTests.Numeric),
     ("Stack dialog edits envelopes locally and confirms with undo", StackDialogTests.Run),
     ("Slider stream confirmation, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
     ("Slider long press progress, cancellation and control-point shortcut", StreamShortcutTests.HoldAndShortcut),

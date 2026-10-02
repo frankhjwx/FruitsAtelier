@@ -8,6 +8,11 @@ public sealed partial class EditorView
 {
     internal bool StorageBusy => storageTask is not null;
     private Task<WorkspaceStorageReport>? storageTask;
+    private Task<WorkspaceHistoryCompressionResult>? historyCompressionTask;
+    private CancellationTokenSource? historyCompressionCancellation;
+    private bool historyCompressionEnabled;
+    private volatile bool historyCompressionPaused = true;
+    private string historyCompressionRoot = "";
     private WorkspaceStorageReport? storageReport;
     private Rect workspaceScrollBounds, workspaceScrollTrack, workspaceScrollThumb;
     private float workspaceScroll, workspaceScrollGrab;
@@ -26,10 +31,11 @@ public sealed partial class EditorView
         if (storageRoot != root) { storageReport = null; workspaceScroll = 0; }
         storageRoot = root; storageError = ""; storageReindex = false;
         if (clean || cache) nextStorageMaintenance = DateTime.UtcNow.AddDays(1);
+        if (clean) StartHistoryCompression(root, restart: true);
         string[] livePaths = difficulties.SelectMany(d => new[] { d.History.Document.AudioPath, d.History.Document.SourcePath }).OfType<string>().ToArray();
         storageTask = Task.Run(() =>
         {
-            var report = clean || cache ? WorkspaceStorage.Clean(root, cache, protectedPaths: livePaths) : WorkspaceStorage.Inspect(root);
+            var report = clean || cache ? WorkspaceStorage.Clean(root, cache, protectedPaths: livePaths, compactLegacy: false) : WorkspaceStorage.Inspect(root);
             if (cache && !report.RecoveryPending)
             {
                 storageReindex = true;
@@ -43,6 +49,25 @@ public sealed partial class EditorView
 
     private void PumpStorage()
     {
+        string root = Path.GetFullPath(LibrarySettings.Workspace);
+        if (historyCompressionEnabled && historyCompressionRoot != root) StartHistoryCompression(root);
+        if (historyCompressionTask is { IsCompleted: true } compression)
+        {
+            historyCompressionTask = null;
+            historyCompressionCancellation?.Dispose(); historyCompressionCancellation = null;
+            try
+            {
+                var result = compression.GetAwaiter().GetResult();
+                if (result.Error is not null) storageError = result.Error;
+                if (result.ConvertedFiles > 0 && storageTask is null && storageRoot == root)
+                {
+                    long reclaimed = (storageReport?.ReclaimedBytes ?? 0) + result.ReclaimedBytes;
+                    storageTask = Task.Run(() => WorkspaceStorage.Inspect(root) with { ReclaimedBytes = reclaimed });
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception e) { storageError = e.Message; }
+        }
         if (storageTask is { IsCompleted: true } completed)
         {
             storageTask = null;
@@ -58,6 +83,28 @@ public sealed partial class EditorView
             nextStorageMaintenance = DateTime.UtcNow.AddDays(1);
             StartStorage(clean: true);
         }
+    }
+
+    private void StartHistoryCompression(string root, bool restart = false)
+    {
+        if (historyCompressionRoot == root && historyCompressionTask is { IsCompleted: false }) return;
+        if (!restart && historyCompressionRoot == root) return;
+        StopHistoryCompression();
+        historyCompressionRoot = root;
+        historyCompressionCancellation = new();
+        historyCompressionTask = WorkspaceStorage.CompressLegacyHistoryAsync(root, historyCompressionCancellation.Token,
+            isIdle: () => !historyCompressionPaused);
+    }
+
+    private void StopHistoryCompression()
+    {
+        var cancellation = historyCompressionCancellation;
+        var task = historyCompressionTask;
+        cancellation?.Cancel();
+        if (task is not null)
+            _ = task.ContinueWith(completed => { _ = completed.Exception; cancellation?.Dispose(); }, TaskScheduler.Default);
+        else cancellation?.Dispose();
+        historyCompressionTask = null; historyCompressionCancellation = null;
     }
 
     private void DrawStorage(ICanvas c, float sectionY)
@@ -87,7 +134,7 @@ public sealed partial class EditorView
             }
         }
         float messageY = y + 250 + StorageFolderCount * 20;
-        string message = storageTask is not null ? L.Get("storage.working") : storageError.Length > 0 ? storageError
+        string message = storageTask is not null || historyCompressionTask is not null ? L.Get("storage.working") : storageError.Length > 0 ? storageError
             : storageReport?.RecoveryPending == true ? L.Get("storage.pending") : L.Get("storage.reclaimed", Size(storageReport?.ReclaimedBytes ?? 0));
         c.Text(message, x, messageY, 11, storageError.Length > 0 ? Error : Muted, w);
         bool available = storageTask is null && !SynchronizationBusy && !SynchronizationVisible;

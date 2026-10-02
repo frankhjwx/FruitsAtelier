@@ -170,13 +170,16 @@ public static class WorkspaceProject
 
     // A complete sibling snapshot is published by directory rename. A retained previous
     // directory makes an interrupted rename recoverable without mixing difficulty versions.
-    public static void Save(WorkspaceSession session, BeatmapProject project) { lock (Gate) { SaveLocked(session, project); } }
-    private static void SaveLocked(WorkspaceSession session, BeatmapProject project)
+    // A caller that already archived saved/current state can omit the second archive during publication.
+    public static void Save(WorkspaceSession session, BeatmapProject project, bool archiveBeforeSave = true)
+    { lock (Gate) { SaveLocked(session, project, archiveBeforeSave); } }
+    private static void SaveLocked(WorkspaceSession session, BeatmapProject project, bool archiveBeforeSave)
     {
         project.Validate();
         string directory = Path.GetFullPath(session.Directory);
         if (session.Manifest.SongsRoot is { } songs) ValidateRoots(Path.GetDirectoryName(directory)!, songs, false);
         RejectLinks(directory); Recover(directory);
+        if (archiveBeforeSave) WorkspaceVersionHistory.ArchiveBeforeSave(session, project);
         string staging = directory + ".saving", previous = directory + ".previous";
         RejectLinks(staging); RejectLinks(previous);
         if (System.IO.Directory.Exists(staging)) System.IO.Directory.Delete(staging, true);

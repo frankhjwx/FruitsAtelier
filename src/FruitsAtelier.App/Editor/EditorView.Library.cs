@@ -62,6 +62,8 @@ public sealed partial class EditorView
         LoadLibraryMemory();
         StartLibraryScan();
         EnableFileMonitoring();
+        historyCompressionEnabled = true;
+        StartHistoryCompression(Path.GetFullPath(LibrarySettings.Workspace));
     }
     public void SetLibraryFolder(bool workspace, string path)
     {
@@ -69,6 +71,7 @@ public sealed partial class EditorView
     }
     public void ShowLibrary()
     {
+        if (WaitForSynchronization(ready => { if (ready) ShowLibrary(); })) return;
         if (DiscardConfirmationVisible || !PrepareFileOperation()) return;
         if (HasEditorProject && IsDirty)
         {
@@ -77,7 +80,8 @@ public sealed partial class EditorView
                 if (answer == 2) return;
                 try
                 {
-                    if (answer == 7 || answer == 6 && SaveWorkspace()) LeaveEditor();
+                    if (answer == 7) LeaveEditor();
+                    else if (answer == 6) BeginWorkspaceSave(saved => { if (saved) LeaveEditor(); });
                 }
                 catch (Exception error) { ShowError(L.Reformat(error.Message)); }
             });
@@ -141,13 +145,8 @@ public sealed partial class EditorView
     public void CheckWorkspaceResources()
     {
         if (WorkspaceSession is null) resourceErrors = [];
-        else
-        {
-            var snapshot = ResourceSnapshot();
-            resourceReferences ??= WorkspaceProject.ResourceReferences(snapshot);
-            resourceErrors = resourceReferences.FindMissing();
-        }
-        nextResourceCheck = DateTime.UtcNow.AddSeconds(3);
+        nextResourceCheck = DateTime.MinValue;
+        PumpWorkspaceResources();
     }
     public bool SaveWorkspace()
     {
@@ -160,6 +159,47 @@ public sealed partial class EditorView
         SetNotice(L.Get("files.saved", WorkspaceSession.Directory));
         return true;
     }
+    private Task<WorkspaceSession>? workspaceSaveTask;
+    private Action<bool>? workspaceSaveCompleted;
+    private bool workspaceSaveBlocksInput;
+
+    public bool BeginWorkspaceSave(Action<bool>? completed = null)
+    {
+        if (!PrepareFileOperation()) return false;
+        var project = CaptureProject();
+        var session = WorkspaceSession is { } current ? DetachedSession(current, project) : null;
+        string workspace = LibrarySettings.Workspace, songs = LibrarySettings.Songs;
+        workspaceSaveCompleted = completed;
+        workspaceSaveBlocksInput = completed is not null;
+        workspaceSaveTask = Task.Run(() =>
+        {
+            if (session is null) return WorkspaceProject.Create(workspace, project, songs);
+            WorkspaceProject.Save(session, project);
+            return session;
+        });
+        hits.Clear(); fields.Clear();
+        return true;
+    }
+
+    private void PumpWorkspaceSave()
+    {
+        if (workspaceSaveTask is not { IsCompleted: true } task) return;
+        workspaceSaveTask = null;
+        var completed = workspaceSaveCompleted; workspaceSaveCompleted = null;
+        bool saved = false;
+        try
+        {
+            WorkspaceSession = task.GetAwaiter().GetResult();
+            foreach (var diff in WorkspaceSession.Project.Difficulties)
+                difficulties.FirstOrDefault(d => d.Id == diff.Id)?.History.MarkSaved(diff.Document);
+            if (ResourceSnapshotMatches(WorkspaceSession.Project)) projectStructureDirty = false;
+            CheckWorkspaceResources(); libraryProjectsNeedReindex = true; QueueLibrarySearch();
+            SetNotice(L.Get("files.saved", WorkspaceSession.Directory));
+            saved = true;
+        }
+        catch (Exception error) { ShowError(L.Reformat(error.Message)); }
+        completed?.Invoke(saved);
+    }
     public bool CurrentDifficultyHasExport => WorkspaceSession?.Manifest.Difficulties
         .Any(d => d.Id == difficulties[activeDifficulty].Id && d.ExportTarget is not null && d.ExportHash is not null) == true;
     public bool ProjectInSongs => !string.IsNullOrWhiteSpace(LibrarySettings.Songs) && (WorkspaceSession is { } session
@@ -167,6 +207,7 @@ public sealed partial class EditorView
         : Document.SourcePath is { } path && WorkspaceProject.Within(LibrarySettings.Songs, path) && File.Exists(path));
     public void SaveCurrentDifficulty()
     {
+        if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return; }
         if (DiscardConfirmationVisible || ExportVisible || !PrepareFileOperation()) return;
         if (WorkspaceSession is { } syncSession && syncSession.Manifest.Difficulties.Any(d => WorkspaceSynchronization.Target(d) is not null) && !syncBypass)
         {
@@ -174,12 +215,15 @@ public sealed partial class EditorView
             RefreshSynchronization(SaveCurrentDifficulty);
             return;
         }
-        if (string.IsNullOrWhiteSpace(LibrarySettings.Songs)) { SaveWorkspace(); return; }
+        if (string.IsNullOrWhiteSpace(LibrarySettings.Songs)) { BeginWorkspaceSave(); return; }
         if (!ProjectInSongs)
         {
-            if (!SaveWorkspace()) return;
-            ShowDiscardConfirmation(answer => { if (answer == 6) ShowWorkspaceExport(); });
-            offerSongsExport = true;
+            BeginWorkspaceSave(saved =>
+            {
+                if (!saved) return;
+                ShowDiscardConfirmation(answer => { if (answer == 6) ShowWorkspaceExport(); });
+                offerSongsExport = true;
+            });
             return;
         }
         var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id);
@@ -187,7 +231,7 @@ public sealed partial class EditorView
             RequestWorkspaceExport?.Invoke(true, CurrentDifficultyName);
         else if (entry?.Source is not null || Document.SourcePath is { } source && Path.GetExtension(source).Equals(".osu", StringComparison.OrdinalIgnoreCase))
             ShowWorkspaceExport();
-        else SaveWorkspace();
+        else BeginWorkspaceSave();
     }
     public void LoadWorkspace(WorkspaceSession session, bool checkAdditionalDifficulties = false)
     {
@@ -204,6 +248,11 @@ public sealed partial class EditorView
             LoadWorkspace(WorkspaceProject.Open(session.Directory));
             int index = WorkspaceSession!.Manifest.Difficulties.FindIndex(d => string.Equals(d.Source, plan.Target, StringComparison.OrdinalIgnoreCase));
             if (index >= 0) SwitchDifficulty(index);
+        }
+        if (plan.PreviousTarget is not null && difficulties.FirstOrDefault(d => d.Id == plan.DifficultyId) is { } difficulty)
+        {
+            difficulty.History.RebaseSharedMetadata(document => document.SourcePath = plan.Target);
+            difficulty.History.MarkSaved();
         }
         CheckWorkspaceResources(); StartLibraryScan(); CloseLibrary();
     }
@@ -238,6 +287,7 @@ public sealed partial class EditorView
     private void PumpLibrary()
     {
         PumpStorage();
+        PumpVersionHistory();
         PumpFileMonitoring();
         PumpSynchronization();
         libraryBrowser?.Pump();

@@ -4,7 +4,7 @@ namespace FruitsAtelier.Core;
 
 internal static class TinyCompensationFitter
 {
-    public static List<MapPoint> Fit(CurveTrack track, IReadOnlyList<NestedCatchEvent> events, double velocity)
+    public static List<MapPoint> Fit(CurveTrack track, IReadOnlyList<NestedCatchEvent> events, double velocity, Func<double, double> positionAtTime)
     {
         double start = track.Nodes[0].TimeMs;
         double duration = track.Nodes[^1].TimeMs - start;
@@ -12,7 +12,7 @@ internal static class TinyCompensationFitter
         // separately can introduce round-off that makes fixed targets disagree.
         var knots = events.GroupBy(e => start + e.Progress * duration).OrderBy(g => g.Key)
             .Select(g => new Knot(g.Key, g.Select(e => new Target(
-                Math.Clamp(CurveMath.PositionAtTime(track, e.Kind == CatchObjectKind.TinyDroplet ? e.TimeMs : g.Key), 0, 512),
+                Math.Clamp(positionAtTime(e.Kind == CatchObjectKind.TinyDroplet ? e.TimeMs : g.Key), 0, 512),
                 e.RawOffset, e.Kind == CatchObjectKind.TinyDroplet)).ToArray()))
             .ToArray();
         var lower = new double[knots.Length];

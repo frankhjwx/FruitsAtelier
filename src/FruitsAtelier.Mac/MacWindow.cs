@@ -127,7 +127,7 @@ internal sealed partial class MacWindow : Window
             _ = audio.LoadAsync(View.Document.AudioPath); state = audio.State;
         }
         View.UpdateTransport(state.PositionMs, state.DurationMs, state.CanPlay, state.IsPlaying, state.IsLoading, state.Error is null ? null : L.Reformat(state.Error), state.FilePath);
-        if (View.WaveformNeedsRedraw || View.TextCaretNeedsRedraw || View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
+        if (View.SynchronizationNeedsRedraw || View.ConversionNeedsRedraw || View.WaveformNeedsRedraw || View.TextCaretNeedsRedraw || View.LibraryVisible || View.WorkspaceSession is not null || View.SliderConversionBusy || View.SliderMultiplierValidationBusy || View.StarRatingsRefreshing || state.IsPlaying || state.IsLoading || View.AudioReady != lastReady || Math.Abs(state.PositionMs - lastPosition) > 0.1 || state.Error != lastError)
             editor.Refresh();
         lastReady = state.CanPlay; lastPosition = state.PositionMs; lastError = state.Error;
     }
@@ -168,6 +168,12 @@ internal sealed partial class MacWindow : Window
     }
     private async Task<bool> ConfirmDiscard()
     {
+        var ready = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (View.WaitForSynchronization(result => ready.SetResult(result)))
+        {
+            editor.Refresh();
+            if (!await ready.Task) return false;
+        }
         if (!View.PrepareFileOperation()) return false;
         if (!View.IsDirty) return true;
         int answer = await Message(L.Get("app.name"), L.Get("window.confirmDiscard"), true);
@@ -215,11 +221,12 @@ internal sealed partial class MacWindow : Window
         PollAudio();
     }
 
-    private async Task<bool> Save()
+    private Task<bool> Save()
     {
-        if (!View.PrepareFileOperation()) return false;
-        await Task.CompletedTask;
-        return View.SaveWorkspace();
+        var completion = new TaskCompletionSource<bool>();
+        if (!View.BeginWorkspaceSave(saved => completion.SetResult(saved))) completion.SetResult(false);
+        editor.Refresh();
+        return completion.Task;
     }
 
     private static string SafeName(string name) => string.IsNullOrWhiteSpace(name) ? L.Get("files.untitled") : new string(name.Where(c => !Path.GetInvalidFileNameChars().Contains(c) && c != ':').Take(100).ToArray());

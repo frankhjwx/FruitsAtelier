@@ -155,6 +155,12 @@ public sealed partial class MapDocument
     public double ApproachRate { get; set; } = 8;
     public double CircleSize { get; set; } = 5;
     public double SliderMultiplier { get; set; } = 1.92;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool OverrideSliderMultiplier { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? SliderMultiplierOverride { get; set; }
+    [JsonIgnore]
+    public double EffectiveSliderMultiplier => SliderMultiplierOverride ?? SliderMultiplier;
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? DistancePerBeatOverride { get; set; }
     [JsonIgnore]
@@ -177,7 +183,9 @@ public sealed partial class MapDocument
         {
             Name = Name, DurationMs = DurationMs,
             BeatLengthMs = BeatLengthMs, TimingOffsetMs = TimingOffsetMs, ApproachRate = ApproachRate,
-            CircleSize = CircleSize, SliderMultiplier = SliderMultiplier, DistancePerBeatOverride = DistancePerBeatOverride,
+            CircleSize = CircleSize, SliderMultiplier = SliderMultiplier, OverrideSliderMultiplier = OverrideSliderMultiplier,
+            SliderMultiplierOverride = SliderMultiplierOverride,
+            DistancePerBeatOverride = DistancePerBeatOverride,
             DistanceSnapCollinear = DistanceSnapCollinear,
             SliderTickRate = SliderTickRate, DistanceSpacing = DistanceSpacing, DerandomizeDroplets = DerandomizeDroplets
         };
@@ -208,10 +216,15 @@ public sealed partial class MapDocument
     }
 
     public bool ContentEquals(MapDocument other)
+        => ContentEquals(other, ignoreMultiplierOverride: false);
+
+    internal bool ContentEquals(MapDocument other, bool ignoreMultiplierOverride)
     {
         if (Name != other.Name || DurationMs != other.DurationMs || BeatLengthMs != other.BeatLengthMs
             || TimingOffsetMs != other.TimingOffsetMs || ApproachRate != other.ApproachRate
             || CircleSize != other.CircleSize || SliderMultiplier != other.SliderMultiplier
+            || (!ignoreMultiplierOverride && (OverrideSliderMultiplier != other.OverrideSliderMultiplier
+                || SliderMultiplierOverride != other.SliderMultiplierOverride))
             || DistancePerBeatOverride != other.DistancePerBeatOverride || SliderTickRate != other.SliderTickRate
             || DistanceSnapCollinear != other.DistanceSnapCollinear
             || !DistanceSnapRatios.SequenceEqual(other.DistanceSnapRatios)

@@ -7,8 +7,16 @@ if (args.Length == 2 && args[0] == "--preserve-slider-positions")
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
 
+if (args.Length == 2 && args[0] == "--benchmark-history")
+{
+    HistoryCompressionTests.Benchmark(args[1]);
+    return 0;
+}
+
 var tests = new (string Name, Action Run)[]
 {
+    ("Binary recovery history preserves bytes, rejects corruption and retains audio", HistoryCompressionTests.Run),
+    ("Save context rebasing avoids unchanged history work and preserves undo and redo", ContextRebaseTests.History),
     ("Fractional repeats share fixed targets during partial tiny compensation", PartialCompensationTests.FractionalRepeats),
     ("Project files support 128 MiB and reject oversized UTF-8 data", ProjectSizeLimitTests.Run),
     ("Workspace storage protects references and recovery while pruning history and rebuilding caches", WorkspaceStorageTests.Run),
@@ -20,6 +28,8 @@ var tests = new (string Name, Action Run)[]
     ("Exported milliseconds and coordinates determine hyperdash", SliderStreamTests.ExportedMillisecondsDriveHyperdash),
     ("Source section snapshots detect all writes, undo and project round trips", SourceSectionTests.SnapshotsAndWrites),
     ("Breaks and bookmarks edit source sections and survive history", TimelineMetadataTests.Run),
+    ("AiMod finds adjacent object starts strictly below 10 ms without changing content", AimodTests.Run),
+    ("Prepared curve queries exactly match independent repeated segment evaluation", CurveEvaluationTests.Run),
     ("Grid fractions and measure starts follow active meter changes", TimingLookupTests.SubdivisionsAndMeasures),
     ("Timing lookup preserves boundary precedence and owns its snapshot", TimingLookupTests.BoundariesAndSnapshot),
     ("Dense imported sliders share reader, validation and conversion limits", DenseImportedSliderTests.ReadAndConvert),

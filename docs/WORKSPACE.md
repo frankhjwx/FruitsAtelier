@@ -10,7 +10,7 @@ Right-click an editor difficulty tab to open its source `.osu`, saved `.catchdif
 
 The application opens in the Library and supports osu!stable's Songs directory. Choose a workspace and the osu!stable installation root in **Settings**. The editor derives `Songs` and `Skins` from that root; existing settings pointing to a `Songs` folder migrate to its parent. Songs is optional and may be configured later; startup and entering the library do not automatically open Settings. When configured, Songs and the workspace must be separate directories. Creating, saving, and opening workspace projects, including **My Projects**, work without Songs. Scanning Songs and exporting into Songs require it; standalone `.osu` export does not. Settings are stored in `FruitsAtelier/library.json` under the system application-data directory, independently of the launch directory.
 
-For a project with no existing associated source or export file in the configured Songs directory, File → Save / Ctrl+S first saves the workspace project, then offers to export the current difficulty to Songs. **Keep in workspace**, Esc, or cancelling the subsequent export panel leaves the workspace save intact and does not write to Songs. Without a configured Songs directory, Save writes only the workspace project. For projects already present in Songs, an imported difficulty with no export record opens the export choices before writing its edits. Once a difficulty has been exported to Songs, including an overwrite or a newly created difficulty, Save / Ctrl+S updates its linked `.osu` directly. Ctrl+Alt+E always opens the manual export panel. Export associations persist in the workspace manifest.
+For a project with no existing associated source or export file in the configured Songs directory, File → Save / Ctrl+S first saves the workspace project, then offers to export the current difficulty to Songs. **Keep in workspace**, Esc, or cancelling the subsequent export panel leaves the workspace save intact and does not write to Songs. Without a configured Songs directory, Save writes only the workspace project. For linked difficulties, new FA content automatically synchronizes against the unchanged resolved `.osu` version as described in [Synchronization](SYNCHRONIZATION.md#baselines-and-conflicts). Before any automatic or explicit export has been recorded, Save on an imported difficulty opens the export choices. The manual export panel remains available after automatic synchronization; cancelling it keeps the synchronized content. Once a difficulty has been exported to Songs, including an overwrite or a newly created difficulty, Save / Ctrl+S updates its linked `.osu` directly. Ctrl+Alt+E always opens the manual export panel. Export associations persist in the workspace manifest.
 
 ## File structure
 
@@ -39,11 +39,27 @@ Older `.catchproj` files still open; the next save writes a workspace project.
 
 ## Importing external resources
 
+Drop one MP3 onto the Library browser or editor to create a project. The setup dialog
+requires a song title, artist, mapper and difficulty name. Nothing is created until
+all four fields are filled and **Create** is confirmed; Cancel retains the previous
+project. Unsaved edits use the normal Save, Discard or Cancel prompt before setup.
+Audio is copied to a dedicated directory under `workspace/Resources`, so moving the
+original MP3 does not break the saved project. Creation runs in the background and
+opens the saved project when complete.
+
+**Also create in osu! Songs** is selected initially when an osu! folder is configured.
+It creates one Catch `.osu` and an audio copy in a new Songs subdirectory, linked to
+the same workspace difficulty for subsequent saves. Clear the switch to create only
+the local project. Without an osu! folder, creation is local only; configure it in
+Settings to enable Songs creation. If creation fails, the dialog retains its fields
+for correction or retry. MP3 drops must contain one audio file and cannot be mixed
+with beatmap or skin archives.
+
 While editing, resource existence is checked in the background every three seconds. Resource paths are deduplicated and reused while the document snapshot is unchanged; storyboard parsing does not repeat in the paint loop. Completed results are applied only to the matching project and content snapshot, so edits or project switches cannot publish stale missing-file warnings. Initial load and explicit save/export checks refresh the resource state immediately.
 
 Right-click a beatmap card to start or continue editing, open its project folder, or open its associated osu! Songs beatmap folder. Unavailable folders are disabled. The menu also offers **New project**, **Import folder…**, and **Import beatmap / OSZ…**, including when opened on empty list space. Import folder registers the selected source directory and recursively scans its Catch beatmaps. Files remain in place; the directory is neither modified nor copied. **Import beatmap / OSZ…** and the editor's Open action also accept `.osu` and `.osz`; imported sources are registered automatically and the project is immediately saved to the workspace. Reopening an existing source continues its existing project without overwriting edits. An external `.osu` manually selected when adding a difficulty also registers its source directory.
 
-Drag one or more `.osz` beatmaps or `.osk` skins onto the Library to import them into the current workspace. Beatmaps create or resume workspace projects; the last beatmap in a multi-file drop opens in the editor. Skins are stored in `workspace/Skins` and the last imported skin becomes active. Dropping archives does not copy or export files into osu! Songs or Skins. Unsupported files are ignored, and drops are disabled outside the Library browser.
+Drag one or more `.osz` beatmaps or `.osk` skins onto the Library to import them into the current workspace. Beatmaps create or resume workspace projects; the last beatmap in a multi-file drop opens in the editor. Skins are stored in `workspace/Skins` and the last imported skin becomes active. Dropping archives does not copy or export files into osu! Songs or Skins. Unsupported files are ignored, and archive drops are disabled outside the Library browser.
 
 OSZ contents are fully extracted to `workspace/Resources/<SHA-256 content fingerprint>/`, preserving directory structure, empty directories, audio, backgrounds, videos, storyboards, and other files. Identical archives reuse a directory. The original OSZ path remains recorded in the database; moving or deleting the archive later does not affect extracted resources. Failed extraction does not publish an incomplete directory. Path traversal, symbolic links, duplicate names, and oversized archives are rejected. Current limits are 1 GiB per archive, 20000 entries, 16 MiB per `.osu`, 256 MiB per other file, and 512 MiB total extracted data. Preserving videos and storyboards does not imply preview support.
 

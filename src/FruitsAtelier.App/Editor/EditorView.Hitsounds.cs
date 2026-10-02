@@ -110,7 +110,8 @@ public sealed partial class EditorView
 
     private CatchConversionResult GetHitsoundConversion()
     {
-        var current = Conversion;
+        EnsureConversion();
+        var current = draftBaseConversion ?? conversion!;
         if (!ReferenceEquals(current, hitsoundConversion))
         {
             hitsoundConversion = current;

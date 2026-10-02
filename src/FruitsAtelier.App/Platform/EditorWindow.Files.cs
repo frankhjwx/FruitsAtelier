@@ -106,11 +106,8 @@ internal sealed partial class EditorWindow
         AppLog.Write($"Opened project: {path}; difficulties={session.Project.Difficulties.Count}");
     }
 
-    private bool SaveProject()
-    {
-        if (!view.PrepareFileOperation()) return false;
-        return view.SaveWorkspace();
-    }
+    private void SaveProject(Action continuation)
+        => view.BeginWorkspaceSave(saved => { if (saved) FileOperation(continuation); });
 
     internal static void CopyResources(MapDocument document, string destinationDirectory, MapDocument exportedDocument)
         => BeatmapResources.Copy(document, destinationDirectory, exportedDocument);
@@ -143,7 +140,7 @@ internal sealed partial class EditorWindow
     {
         // Disposing audio can pump STA window messages; the retiring clock must not initialize the new difficulty.
         if (resettingAudio) return;
-        if (view.LibraryVisible || view.WorkspaceSession is not null || view.SliderConversionBusy || view.StarRatingsRefreshing) Invalidate();
+        if (view.LibraryVisible || view.WorkspaceSession is not null || view.AudioProjectCreating || view.SliderConversionBusy || view.SliderMultiplierValidationBusy || view.StarRatingsRefreshing) Invalidate();
         if (!string.Equals(audio.FilePath, view.Document.AudioPath, StringComparison.OrdinalIgnoreCase))
         {
             if (string.IsNullOrWhiteSpace(view.Document.AudioPath)) ResetAudio();

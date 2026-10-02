@@ -9,6 +9,26 @@ excluded from ownership.
 Synchronization failure messages wrap within the dialog. Scroll over the message
 area to read diagnostics that exceed its height.
 
+Saving and synchronizing the open difficulty retain the current timeline position
+and viewport. Content-only synchronization keeps the existing audio transport.
+Replacing audio, including changed bytes at the same path, reloads it at the
+current timeline position.
+
+Background saving and synchronization do not open a progress overlay by default.
+Attempting an operation that must wait for them shows a small overlay with the
+current saving, checking or applying stage and an indeterminate progress bar.
+It disappears when the work finishes. Returning to Library, opening another
+project and closing the window resume after successful completion; a failure or
+conflict review keeps the current editor open. Other blocked input is not replayed.
+
+Saving local changes to Artist, Title, Creator (mapper), or Version (difficulty name)
+renames the linked `.osu` to `Artist - Title (Creator) [Version].osu` in its existing
+directory. Automatic synchronization and explicit overwrite export both update
+source/export associations and baselines to the new path, preserving one difficulty.
+Invalid filename characters are removed using the workspace filename rules. A
+filename occupied by another file blocks the save without overwriting either file.
+Edits to other fields alone preserve the existing filename.
+
 ## Discovery and identity
 
 Opening or resuming an existing project, checking synchronization from a difficulty
@@ -91,8 +111,18 @@ sidecars are published atomically with the difficulty files. Older
 manifests remain readable. An unchanged legacy fingerprint can establish a baseline;
 changed legacy files without a baseline show a two-version comparison. Each differing
 field and object/group requires a choice because neither side can be identified as
-the source of a change. Choosing an item advances to the next unresolved difference;
-previous/next navigation retains choices for review. Whole-map choices remain available.
+the source of a change. Review categories appear left to right as General, Editor,
+Metadata, Difficulty, Events, Timing, Colours and Objects, followed by audio or
+additional sections when present. Clean tabs are grey, unresolved tabs red,
+partially resolved tabs amber, and fully resolved tabs green. Clean categories
+remain readable. Choices stay in their category; object choices advance to the
+next unresolved group there. Whole-map choices remain available.
+
+Applying a resolution retains the comparison with an applying message until
+publication finishes. Saved and working authoring are archived once before the
+resolution; publication reuses that recovery round. Object-only resolutions retain
+the existing audio session and transport position when the audio path and baseline
+hash are unchanged.
 
 Conflict review shows FA and osu! on side-by-side editor canvases with synchronized
 time ranges and zoom. Their common default scale uses the current FA difficulty's
@@ -100,8 +130,14 @@ AR and playfield width, matching the editor canvas. Selecting a conflict restore
 that AR scale and locates its start; long groups remain scrollable rather than
 being compressed to fit. Current conflicting objects and related curve controls are
 highlighted; missing counterparts are labelled. Mouse wheel scrolls both maps and
-Ctrl+wheel zooms them together. Other field differences use side-by-side text. The
-optional result pane previews chosen resolutions, using FA for unresolved items;
+Ctrl+wheel zooms them together. Other field differences use side-by-side text.
+The Objects tab describes the changed properties in each group with explicit left
+and right values: time, position, New Combo, colour skip, hitsounds, sample settings,
+slider path, span count and length, or banana shower end time. Unmatched entries
+are identified by side rather than assuming an ambiguous replacement is a move.
+The detail box scrolls independently of the canvases. Canvas time labels and
+object references use `mm:ss:ms`, with three millisecond digits.
+The optional result pane previews chosen resolutions, using FA for unresolved items;
 it does not save or export. File timestamps identify the more recently saved version,
 and unsaved FA edits are labelled separately. A newer timestamp does not resolve
 individual conflicts automatically.
@@ -114,8 +150,9 @@ the same outlined chevrons as other editor controls.
 Full-width rectangles mark corresponding object intervals: red for unresolved conflicts,
 amber yellow for previously resolved differences, and green for choices made in the
 current review. Amber borders, translucent fill and status labels distinguish review
-intervals from banana objects. Clicking a rectangle returns to that item; every item
-remains available until Apply, including green items that can be changed again.
+intervals from banana objects. Clicking a rectangle chooses that side for its group,
+just like the per-side choice buttons. Every item remains available until Apply,
+including green items that can be changed again.
 After a choice, the rejected side's interval and highlight use muted grey while
 the retained side keeps its resolution color. Action labels use normal weight;
 progress and page counts receive stronger emphasis.
@@ -127,20 +164,48 @@ retained differences for review without new edits. Editing that group in osu! ag
 creates an ordinary unresolved conflict. Moving an object across unchanged
 anchors keeps related unmatched removals and insertions in one review group.
 
-Local saving preserves the baseline. Successful export records the actual emitted
-text and source mapping. Synchronization compares external fields with the external
-baseline, and authoring fields with the authoring baseline. A changed field whose
-values differ requires a choice, including one-sided additions and deletions. Timing is
-handled as an ordered section, including inherited points. Applying external context
-retains authoring objects and rebases that context through local undo snapshots.
+Local saving preserves the baseline. Synchronization compares the current external
+text and audio content with the last resolved external version, and FA authoring
+with the corresponding authoring snapshot. While the external version is unchanged,
+any new FA content edit automatically exports the complete difficulty when
+synchronization runs. This includes metadata such as Tags, settings, sections,
+notes, curves, timing, break reconciliation and undo/redo. Generated objects and SV
+are exported together. Source-path discovery and derived audio duration refreshes
+do not count as authoring edits.
 
-General, Editor, Difficulty and Colours settings are reviewed per key; Events,
-TimingPoints and unknown sections are reviewed as complete ordered text sections.
-Additional Metadata keys use the same text review. Text pages contain at most
+Automatic export validates the complete map and resources, preserves authoring
+and undo history, backs up the external file, and records emitted text and object
+source mappings as the new baseline. The existing export recovery receipt protects
+an interrupted publication. A final fingerprint check rejects a new external save
+instead of overwriting it. Export and conversion run on the synchronization worker,
+after active edits finish. Temporarily invalid maps or missing required resources
+remain in FA with the export diagnostic; they do not overwrite `.osu` or block
+background difficulty discovery. Correcting the content allows a later check to
+export it.
+
+Publishing local edits against an unchanged external version keeps playback,
+viewport navigation and note editing available. Completion acknowledges only the
+published authoring snapshot; edits made during publication remain dirty and are
+included in the next comparison. Project/file operations wait for publication.
+Conflict resolution and external changes retain their guarded apply boundary.
+An automatically completed save does not repeat the export on the UI thread.
+
+A changed external version returns to field/object comparison and resolution.
+Without a baseline, differences still require explicit choices. An unchanged
+retained choice remains available for review; a subsequent FA content edit exports
+the resulting complete FA version against the resolved external version. Timing
+comparison includes inherited points. Applying external context retains authoring
+objects and rebases that context through local undo snapshots.
+
+General, Editor, Metadata, Difficulty and Colours show every field present on
+either side, including unchanged context, in fixed format-field order. Additional
+keys follow in ordinal order. Conflicting rows highlight the changed text and allow
+choosing either value; unchanged rows are read-only. Events, TimingPoints and
+unknown sections use ordered text review. Text pages contain at most
 4096 UTF-16 code units plus a boundary surrogate pair. Only the current page is
 compared and wrapped; unchanged frames reuse that layout and draw visible rows.
 Use the top arrows to change text pages or jump to the first/last page, and the
-wheel to scroll within a page. The bottom arrows move between conflicts. Choosing
+wheel to scroll within a page. The bottom arrows move between object groups. Choosing
 a side applies the complete field or section, including text on other pages.
 Full-version inspection remains available for searching or reading a whole storyboard.
 Emitted timing that differs from its unchanged authoring baseline does not itself
@@ -160,8 +225,9 @@ controls with imported objects. The dialog supports complete FA/external version
 per-field or object-group choices, and inspection of complete version text. All
 choices must be resolved before the affected difficulty can be edited.
 
-An accepted local choice remains pending until export; another external edit must
-not silently overwrite it. Resolution saves authoring and updates the external
+An accepted local choice remains pending until explicit export or a subsequent FA
+content edit triggers automatic export; another external edit must not silently
+overwrite it. Resolution saves authoring and updates the external
 observation baseline without implicitly exporting the chosen version.
 
 ## Audio
@@ -204,6 +270,95 @@ deletion journal permits rollback of an interrupted external removal. Empty
 projects are retired by directory rename. Recovery copies are retained under
 `workspace/.sync-history`; they are excluded from ordinary indexing.
 
+## Version history
+
+The right-hand comparison uses the same category tabs, ordered fields, text
+highlights and object-group descriptions as synchronization review. The left side
+is the current difficulty; the right side is the selected historical difficulty.
+All categories remain available: grey tabs have no differences and red tabs have
+changes. Objects open at the first changed group; arrows and highlighted ranges
+navigate other groups. Comparison is read-only; restoring remains a separate action.
+
+**Edit → Version history…** lists retained versions for the open workspace project,
+newest first. Each entry shows its local date/time, operation, and whether it is the
+saved version or the working copy captured before a change. Both are available when
+an operation archived unsaved edits. History includes earlier names and difficulties
+that were subsequently deleted. It reads both compressed and legacy `.sync-history`
+archives. Changed workspace saves also retain their previous authoring state.
+Unchanged saves do not add versions. The storage retention policy below still applies.
+
+### Compressed recovery files
+
+New authoring snapshots, synchronization baselines, external `.osu` recovery copies,
+and pending export receipts are compressed on each write. Each logical file has a
+binary companion with the suffix `.catchbackup`; current workspace authoring files
+keep their existing JSON format. Snapshot directories and logical file locations stay
+the same, so relative resource paths resolve without extracting a temporary project.
+Version browsing decompresses only the selected project file in memory.
+
+The version 1 envelope contains eight bytes `46 41 43 42 01 00 00 00` (`FACB`,
+version 1), a little-endian signed 32-bit uncompressed byte count, a 32-byte SHA-256
+of the original bytes, and a Brotli payload written with `CompressionLevel.Optimal`.
+Readers bound decompressed authoring files to the 128 MiB project limit and verify
+the length and checksum. Export receipt containers allow 512 MiB for their embedded
+project and synchronization baseline strings; the project reader still enforces its
+128 MiB limit. The payload preserves the original serialized bytes, including unknown
+source text and synchronization context. This uses .NET's built-in compression on
+both platforms. Backup writes favor lower compression cost over the smallest
+possible payload. Workspace saves, automatic synchronization and storage maintenance
+run on background workers. An ordinary save acknowledges only its captured document;
+newer edits remain dirty and undoable. Save-and-close and save-before-export wait for
+successful publication before continuing. Automatic synchronization reuses its
+saved/current archive when publishing, without creating a second identical save round.
+
+Writes flush a temporary binary file before atomically publishing it. Legacy JSON
+snapshots remain readable. History maintenance compresses retained legacy authoring,
+baseline and `.osu` files, including files inside retired project directories, only
+when compression reduces their size. It verifies each published copy before removing
+the original. Conversion preserves snapshot timestamps, identities and all versions
+otherwise protected by retention; it does not recompress audio resources.
+
+At startup, a separate worker converts existing uncompressed recovery documents,
+when the library is idle. Opening the editor or starting playback defers the next
+file; an already started file can finish. It runs below normal priority on Windows
+and waits two seconds between files. Compression and staging verification happen outside the
+project save lock; publication briefly takes the lock and checks that the source
+still contains the original bytes. A flushed, published binary must pass checksum
+and byte-for-byte verification before the original is deleted. Changed sources,
+conflicting binaries, and failed conversions retain their originals. Closing the
+editor or switching workspaces cancels migration; the next startup retries remaining
+files. Current project files, library databases, and audio are not converted.
+
+The startup worker also prepares a bounded in-memory index of snapshot path
+references. JSON parsing runs outside the project lock. The write-time 100-round
+limit reuses this index for immutable binary snapshots while reading current files
+and changed snapshots afresh. Length or modification-time changes invalidate an
+entry; full storage cleanup still validates all reference documents and audio hashes.
+
+Select a version, then a difficulty. The window compares metadata and shows aligned
+current/historical object previews, including editable curves. Both previews use the
+active editor's AR scroll scale and initially show its current timeline position,
+so a long map remains readable. Scroll the version and
+difficulty lists independently. Scroll over either preview to move both timelines:
+wheel up views later times and wheel down views earlier times, independently of
+Reverse canvas scrolling.
+Ctrl+wheel changes their common time span. Up/Down selects versions, Left/Right selects
+difficulties, and Escape closes the window. Browsing does not modify authoring or write
+external files. Loading, decoding and preview preparation share one background worker
+per editor. Navigation replaces the pending selection; closing discards pending work.
+A damaged version reports an error without hiding the other retained entries.
+
+**Restore this difficulty** first archives the current project, including unsaved edits,
+then restores only the selected difficulty. Existing difficulties with available sources
+keep their current source association and gain one undo step. Deleted difficulties and
+existing difficulties with missing sources
+return with their original identity as unlinked local copies, so missing sources or
+another difficulty's live file cannot block restoration. Undo/redo of an existing
+difficulty also restores its previous/local association. Other difficulties remain
+unchanged. Save to persist the restored version; later synchronization/export follows
+the normal rules. Recovery history is scoped
+to the current project and does not automatically restore an entirely deleted project.
+
 ## Duplicate ownership and interrupted export
 
 Duplicate owners block normal editing, export and external deletion. The user
@@ -226,8 +381,9 @@ See [Building and Testing](TESTING.md) for the regression commands.
 
 ## Metadata text review
 
-Differences in Title, TitleUnicode, Artist, ArtistUnicode, Creator, Version, Source,
-Tags, BeatmapID and BeatmapSetID require explicit choices, including unilateral edits.
+New external differences in Title, TitleUnicode, Artist, ArtistUnicode, Creator,
+Version, Source, Tags, BeatmapID and BeatmapSetID require explicit choices. FA edits
+against the unchanged resolved external version use automatic export.
 These metadata fields share one scrollable page with aligned FA and osu!
 rows. Click a value to retain that side for its row. Changed text fragments use red
 for unresolved differences, amber for unchanged previously accepted differences,
@@ -250,10 +406,20 @@ Storage actions use the active workspace, not an unapplied path draft.
 
 Automatic maintenance runs after startup while idle in the library without an open
 workspace project, then at most once per day during that app session. Ordinary
-history expires after 30 days or beyond 10 snapshots per project. A 1 GiB history
-budget removes older eligible snapshots first. Every project's newest snapshot,
-referenced snapshots, and snapshots from the last 24 hours are protected, so the
-budget is a soft limit. Deleted or retired projects retain their newest recovery copy.
+history expires after 30 days and each set has a 100-round limit. A round is one
+snapshot directory for the whole set; saved and working authoring in that directory
+count together. Each new archive enforces this limit for its set immediately,
+without compacting legacy data or pruning other sets. The count limit also applies
+to snapshots from the last 24 hours. Referenced rounds count toward the limit and
+leave fewer slots for ordinary rounds. Active recovery defers pruning; if references
+alone require more than 100 rounds, those dependencies remain protected until they
+can be released.
+
+A 1 GiB history budget removes older eligible snapshots first. Every set's newest
+snapshot and referenced snapshots are protected; the last 24 hours protect against
+age/budget pruning but do not exempt ordinary rounds from the count limit. The
+budget is therefore a soft limit. Deleted or retired sets retain their newest
+recovery copy.
 
 Audio remains content-addressed and deduplicated. Cleanup traces hashes and paths
 from current authoring, synchronization baselines, and retained history before
@@ -267,7 +433,8 @@ object source lines and metadata text are never interpreted as paths. Cleanup
 refuses linked filesystem paths, aborts before deletion on unreadable reference
 documents, and defers when export/deletion recovery or project publication is pending.
 
-**Clean history** applies the same retention policy immediately. **Clear cache**
+**Clean history** applies the same retention policy immediately and schedules retained
+legacy snapshots for the same background conversion. **Clear cache**
 removes temporary comparison files and reconstructible library map rows, then
 reindexes sources. It preserves project/source registrations, version snapshots,
 imported music, skins, and current authoring. Both operations may reclaim old

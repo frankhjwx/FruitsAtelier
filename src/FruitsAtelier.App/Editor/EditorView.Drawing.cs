@@ -25,6 +25,12 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        historyCompressionPaused = !LibraryVisible || SyncInteractionActive || AudioPlaying || SynchronizationBusy;
+        PumpWorkspaceSave();
+        PumpSynchronizationWait();
+        PumpAudioProject();
+        if (ConversionNeedsRedraw) PumpDeferredConversion();
+        CompleteSliderMultiplierValidation();
         RefreshLanguage();
         if (this.width != width || this.height != height)
         {
@@ -44,10 +50,11 @@ public sealed partial class EditorView
         if (ErrorVisible) { DrawError(c); return; }
         PumpSliderBatch();
         PumpLibrary();
+        PumpSynchronizationWait();
         if (syncPage == "resolve" && syncMerges.TryGetValue(syncDifficulty, out var comparisonMerge) && comparisonMerge.Conflicts.Count > 0
             && syncComparisons.ContainsKey(syncDifficulty)) { DrawSynchronization(c); return; }
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
-        if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c); return; }
+        if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); return; }
         bool expandedPanel = catchPreviewVisible || TimingPageVisible;
         const float minimumCanvasWidth = MinimumPlayfieldWidth + 198;
         const float collapsedCurveWidth = 24;
@@ -108,8 +115,9 @@ public sealed partial class EditorView
         DrawSettings(c);
         if (librarySettingsOpen) DrawContextMenu(c);
         if (librarySettingsOpen) DrawLanguageMenu(c);
+        DrawAimod(c);
         DrawDiscardConfirmation(c);
-        if (!librarySettingsOpen) DrawDifficultyTooltip(c);
+        if (!librarySettingsOpen && !AimodVisible) DrawDifficultyTooltip(c);
     }
 
     private void DrawChrome(ICanvas c)
@@ -349,7 +357,7 @@ public sealed partial class EditorView
         double margin = CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512 * 1.5 / pixelsPerMs;
         foreach (var item in ObjectsInTimeRange(viewStart - margin, viewStart + plot.Height / pixelsPerMs + margin))
         {
-            if (StreamDialogVisible && stackMode && streamTargets.Contains(item.SourceId)) continue;
+            if (StreamDialogVisible && streamTargets.Contains(item.SourceId)) continue;
             var p = Screen(new(item.TimeMs, item.X));
             float radius = (float)(CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512);
             if (p.Y < plot.Y - radius * 1.5f || p.Y > plot.Bottom + radius * 1.5f) continue;
@@ -579,8 +587,8 @@ public sealed partial class EditorView
     {
         c.Fill(new(0, height - 28, width, 28), 0x171C23);
         c.Circle(13, height - 14, 3, IsDirty ? Gold : Accent);
-        string notice = SynchronizationBusy ? L.Get(syncCommitTask is not null ? "sync.applying" : "sync.checking")
-            : conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
+        string notice = workspaceSaveTask is not null ? L.Get("files.saving") : SynchronizationBusy ? L.Get(syncCommitTask is not null ? "sync.applying" : "sync.checking")
+            : deferredConversion ? L.Get("editor.status.convertingSlider") : conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
         c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 145));
         DrawVolumeButton(c);
     }
@@ -612,6 +620,7 @@ public sealed partial class EditorView
         {
             Item(L.Get("ui.undoMenu"), Undo, history.CanUndo);
             Item(L.Get("ui.redoMenu"), Redo, history.CanRedo);
+            Item(L.Get("history.menu"), ShowVersionHistory, WorkspaceSession is not null);
             Item(L.Get("ui.deleteMenu"), DeleteSelection, selection != Guid.Empty);
             Item(L.Get("editor.command.reverseSelection") + "  Ctrl+G", ReverseSelection, CanCopySelection && !notesLocked);
             Item(L.Get("editor.command.reversePath"), ReverseSelectedPath, SelectedTrack is not null && ClipboardInteractionReady && !notesLocked);
@@ -619,11 +628,11 @@ public sealed partial class EditorView
             Item(L.Get("ui.cutMenu"), () => CutSelection(), CanCopySelection);
             Item(L.Get("ui.copyMenu"), () => CopySelection(), CanCopySelection);
             Item(L.Get("ui.pasteMenu"), () => PasteSelection(), CanPasteSelection);
-            Item(L.Get("stack.menu"), OpenStackDialog, CanConvertStream && !notesLocked);
-            Item(L.Get(SelectedStreamsOnly ? "stream.changeSnapMenu" : "stream.menu"), OpenStreamDialog, CanConvertStream && !notesLocked);
+            Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), OpenStreamDialog, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
             Item(L.Get("slider.clearInternalNodes"), ClearSliderNodes, CanClearSliderNodes);
+            Item(L.Get("aimod.title"), ShowAimod, ClipboardInteractionReady);
         }
         else if (menu == 4)
         {
@@ -702,11 +711,12 @@ public sealed partial class EditorView
             c.Fill(new(child.X + 3, child.Y + 4, child.Width, child.Height), 0x11151B, 5);
             c.Fill(child, Surface, 5); c.Stroke(child, Grid, 1, 5);
             float childY = child.Y + 7;
+            int currentGridLevel = menu == 4 ? SnapTiming().At(playhead).Meter : gridSize;
             foreach (int size in menu == 4 ? new[] { 4, 3 } : new[] { 4, 8, 16, 32 })
             {
                 Button(c, new(child.X + 6, childY, child.Width - 12, 31), menu == 4 ? L.Get($"timing.meter{size}") : L.Get("ui.grid" + size),
-                    () => { if (menu == 4) ChangeCurrentRed("meter", size); else gridSize = size; gridLevelMenuOpen = false; menu = -1; }, size == (menu == 4 ? TimingMap.At(Document, playhead).Meter : gridSize));
-                if (size == (menu == 4 ? TimingMap.At(Document, playhead).Meter : gridSize))
+                    () => { if (menu == 4) ChangeCurrentRed("meter", size); else gridSize = size; gridLevelMenuOpen = false; menu = -1; }, size == currentGridLevel);
+                if (size == currentGridLevel)
                 {
                     c.Line(child.Right - 27, childY + 16, child.Right - 23, childY + 20, Foreground, 2);
                     c.Line(child.Right - 23, childY + 20, child.Right - 16, childY + 11, Foreground, 2);

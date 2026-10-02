@@ -8,7 +8,7 @@ public sealed partial class EditorView
     private Action<int>? discardConfirmation;
     private bool deleteProjectConfirmation;
     private bool offerSongsExport;
-    public bool DiscardConfirmationVisible => discardConfirmation is not null || SynchronizationVisible || SynchronizationBlocksInput;
+    public bool DiscardConfirmationVisible => discardConfirmation is not null || VersionHistoryVisible || SynchronizationVisible || SynchronizationBlocksInput;
 
     public void ShowDiscardConfirmation(Action<int> answer)
     {
@@ -28,6 +28,7 @@ public sealed partial class EditorView
     private void AnswerDiscard(int answer)
     {
         if (SynchronizationBlocksInput) return;
+        if (VersionHistoryVisible) { if (versionRestoreTask is null) CloseVersionHistory(); return; }
         if (SynchronizationVisible) { CancelSynchronization(); return; }
         var callback = discardConfirmation;
         discardConfirmation = null;
@@ -39,7 +40,20 @@ public sealed partial class EditorView
 
     private void DrawDiscardConfirmation(ICanvas c)
     {
-        if (SynchronizationBlocksInput) { DrawStatus(c); hits.Clear(); fields.Clear(); return; }
+        if (SynchronizationWaitVisible) { DrawSynchronizationWait(c); return; }
+        if (SynchronizationBlocksInput)
+        {
+            if (syncPage == "applying" && syncMerges.TryGetValue(syncDifficulty, out var merge)
+                && merge.Conflicts.Count > 0 && syncComparisons.TryGetValue(syncDifficulty, out var comparison))
+            {
+                DrawSyncComparison(c, merge, comparison);
+                c.Fill(new(0, 0, width, height), Background, opacity: .65f);
+                c.Text(L.Get("sync.applying"), 36, height / 2, 20, Foreground, width - 72, true);
+            }
+            else DrawStatus(c);
+            hits.Clear(); fields.Clear(); return;
+        }
+        if (VersionHistoryVisible) { DrawVersionHistory(c); return; }
         if (SynchronizationVisible) { DrawSynchronization(c); return; }
         if (!DiscardConfirmationVisible) return;
         hits.Clear(); fields.Clear();

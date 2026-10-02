@@ -26,7 +26,11 @@ public sealed record WorkspaceSyncCandidate(string Path, string Hash, string Tex
 public sealed record WorkspaceSyncStatus(Guid DifficultyId, WorkspaceSyncState State, WorkspaceSyncCandidate? Candidate,
     IReadOnlyList<string> Candidates, string? Detail = null);
 public sealed record WorkspaceSyncScan(IReadOnlyList<WorkspaceSyncStatus> Difficulties, IReadOnlyList<WorkspaceSyncCandidate> Additions);
-public sealed record WorkspaceSyncConflict(string Key, string Local, string External);
+public sealed record WorkspaceTimingShift(double OffsetMs, int Count, string LocalRemainder, string ExternalRemainder);
+public sealed record WorkspaceSyncConflict(string Key, string Local, string External)
+{
+    public WorkspaceTimingShift? TimingShift { get; init; }
+}
 
 public sealed class WorkspaceMerge
 {
@@ -36,10 +40,12 @@ public sealed class WorkspaceMerge
     public List<WorkspaceSyncConflict> Conflicts { get; } = [];
     internal Dictionary<string, string?> Fields { get; } = [];
     internal string? ExternalTiming { get; set; }
+    internal bool Compensate { get; set; }
     internal List<(string Key, Guid[] Sources, string[] Lines)> Objects { get; } = [];
     internal Dictionary<Guid, int> ExternalOrders { get; } = [];
     public IReadOnlyList<WorkspaceRetainedObjects> PreviouslyRetained { get; internal set; } = [];
     public HashSet<string> PreviouslyResolved { get; } = [];
+    public bool CanExportLocalChanges { get; internal set; }
     public bool RequiresResolution => Conflicts.Any(c => !PreviouslyResolved.Contains(c.Key));
     internal Dictionary<string, string[]> ChangedBeforeLines { get; } = [];
     public bool WasPreviouslyRetained(string key) => ChangedBeforeLines.TryGetValue(key, out var before)
@@ -61,10 +67,20 @@ public static class WorkspaceSynchronization
     public static bool IsMetadataField(string key) => key is "Metadata/Title" or "Metadata/TitleUnicode" or "Metadata/Artist"
         or "Metadata/ArtistUnicode" or "Metadata/Creator" or "Metadata/Version" or "Metadata/Source" or "Metadata/Tags"
         or "Metadata/BeatmapID" or "Metadata/BeatmapSetID";
+    public static bool HasLocalChanges(WorkspaceDifficulty entry, MapDocument local, string directory)
+        => entry.Sync is { } baseline && AuthoringChanged(local, ProjectSerializer.Read(baseline.Authoring, SnapshotPath(directory)));
+
+    private static bool AuthoringChanged(MapDocument local, MapDocument original)
+    {
+        // Source discovery and audio duration refresh are not authoring edits.
+        original.SourcePath = local.SourcePath;
+        original.DurationMs = local.DurationMs;
+        return !local.ContentEquals(original);
+    }
     public static bool HasFieldDifferences(MapDocument local, MapDocument external)
     {
         var ours = Fields(local); var theirs = Fields(external);
-        return ours.Keys.Union(theirs.Keys).Any(key => !FieldEquals(key, ours.GetValueOrDefault(key), theirs.GetValueOrDefault(key)));
+        return ours.Keys.Union(theirs.Keys).Any(key => !FieldEquals(key, ours.GetValueOrDefault(key), theirs.GetValueOrDefault(key), local, external));
     }
     public static StringComparer Paths => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
         ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
@@ -255,7 +271,8 @@ public static class WorkspaceSynchronization
         foreach (string key in ours.Keys.Union(theirs.Keys))
         {
             merge.Fields[key] = key == "TimingPoints/" ? WorkspaceTimingSynchronization.Text(local.TimingPoints) : ours.GetValueOrDefault(key);
-            if (!FieldEquals(key, ours.GetValueOrDefault(key), theirs.GetValueOrDefault(key)))
+            if (key == "Editor/TimelineZoom") { merge.Fields[key] = theirs.GetValueOrDefault(key); continue; }
+            if (!FieldEquals(key, ours.GetValueOrDefault(key), theirs.GetValueOrDefault(key), output.ReadBack, external.Document))
             {
                 if (key == "TimingPoints/")
                 {
@@ -288,7 +305,13 @@ public static class WorkspaceSynchronization
             baseline.RetainedObjects = comparison.Objects.Select(g => new WorkspaceRetainedObjects(g.Sources.ToList(), g.Lines.ToList())).ToList();
             baseline.RetainedObjectsRecorded = true;
         }
-        var merge = new WorkspaceMerge { Local = local.DeepClone(), External = external, Baseline = original, PreviouslyRetained = baseline.RetainedObjects };
+        var merge = new WorkspaceMerge { Local = local.DeepClone(), External = external, Baseline = original, PreviouslyRetained = baseline.RetainedObjects, Compensate = compensate };
+        if (external.Text == baseline.Text && AudioHash(external.Document.AudioPath) == baseline.AudioHash
+            && AuthoringChanged(local, original))
+        {
+            merge.CanExportLocalChanges = true;
+            return merge;
+        }
         var emittedBaseline = OsuBeatmapReader.Read(baseline.Text, baseline.Path);
         var baseFields = Fields(emittedBaseline);
         var authorFields = Fields(original); var localFields = Fields(local); var externalFields = Fields(external.Document);
@@ -296,7 +319,9 @@ public static class WorkspaceSynchronization
         {
             baseFields.TryGetValue(key, out var before); authorFields.TryGetValue(key, out var authorBefore);
             localFields.TryGetValue(key, out var ours); externalFields.TryGetValue(key, out var theirs);
-            bool outsideChanged = !FieldEquals(key, before, theirs), insideChanged = !FieldEquals(key, authorBefore, ours) || baseline.LocalOverrides.Contains(key);
+            if (key == "Editor/TimelineZoom") { merge.Fields[key] = theirs; continue; }
+            bool outsideChanged = !FieldEquals(key, before, theirs, emittedBaseline, external.Document),
+                insideChanged = !FieldEquals(key, authorBefore, ours, original, local) || baseline.LocalOverrides.Contains(key);
             merge.Fields[key] = outsideChanged && !insideChanged ? theirs : ours;
             if (key == "TimingPoints/")
             {
@@ -318,11 +343,11 @@ public static class WorkspaceSynchronization
                 }
                 continue;
             }
-            if ((IsMetadataField(key) || outsideChanged || insideChanged) && !FieldEquals(key, ours, theirs))
+            if ((IsMetadataField(key) || outsideChanged || insideChanged) && !FieldEquals(key, ours, theirs, local, external.Document))
             {
                 merge.Fields[key] = ours;
                 merge.Conflicts.Add(new(key, ours ?? "", theirs ?? ""));
-                if (!outsideChanged && FieldEquals(key, ours, authorBefore) && baseline.LocalOverrides.Contains(key)) merge.PreviouslyResolved.Add(key);
+                if (!outsideChanged && FieldEquals(key, ours, authorBefore, local, original) && baseline.LocalOverrides.Contains(key)) merge.PreviouslyResolved.Add(key);
             }
         }
         string? localAudio = AudioHash(local.AudioPath), externalAudio = AudioHash(external.Document.AudioPath);
@@ -434,6 +459,7 @@ public static class WorkspaceSynchronization
 
     public static MapDocument Resolve(WorkspaceMerge merge, IReadOnlyDictionary<string, bool> externalChoices)
     {
+        if (merge.CanExportLocalChanges) return merge.Local.DeepClone();
         foreach (var conflict in merge.Conflicts)
             if (!externalChoices.ContainsKey(conflict.Key) && !merge.PreviouslyResolved.Contains(conflict.Key)) throw new InvalidOperationException(L.Get("sync.unresolved"));
         var result = merge.Local.DeepClone();
@@ -455,6 +481,7 @@ public static class WorkspaceSynchronization
         }
         if (merge.Objects.Any(g => externalChoices.GetValueOrDefault(g.Key)))
         {
+            PreserveCurves(merge, result, merge.Objects.Where(g => externalChoices.GetValueOrDefault(g.Key)).SelectMany(g => g.Sources).ToHashSet());
             foreach (var f in result.Fruits) if (merge.ExternalOrders.TryGetValue(f.Id, out int order)) f.SourceOrder = order;
             foreach (var f in result.Tracks) if (merge.ExternalOrders.TryGetValue(f.Id, out int order)) f.SourceOrder = order;
             foreach (var f in result.ImportedSliders) if (merge.ExternalOrders.TryGetValue(f.Id, out int order)) f.SourceOrder = order;
@@ -468,6 +495,66 @@ public static class WorkspaceSynchronization
         return result;
     }
 
+    public static MapDocument ResolveExternal(WorkspaceMerge merge)
+    {
+        var result = merge.External.Document.DeepClone();
+        PreserveCurves(merge, result, merge.Local.Tracks.Select(t => t.Id).ToHashSet());
+        OsuBeatmapReader.Validate(result);
+        return result;
+    }
+
+    private static void PreserveCurves(WorkspaceMerge merge, MapDocument target, HashSet<Guid> eligible)
+    {
+        if (!merge.Local.Tracks.Any(t => eligible.Contains(t.Id))) return;
+        var output = OsuBeatmapWriter.Serialize(merge.Local, merge.Compensate);
+        var lines = ObjectLines(output.Text);
+        var emitted = lines.Select((line, i) => (Line: line, Id: output.ObjectSources[i]))
+            .GroupBy(p => p.Id).Where(g => g.Count() == 1).Select(g => g.Single())
+            .GroupBy(p => SliderShape(p.Line)).Where(g => g.Key is not null && g.Count() == 1)
+            .ToDictionary(g => g.Key!, g => g.Single().Id);
+        var incoming = target.ImportedSliders.GroupBy(s => SliderShape(s.OriginalLine ?? ""))
+            .Where(g => g.Key is not null && g.Count() == 1).ToArray();
+        var localTiming = new TimingMap.Lookup(output.ReadBack);
+        var externalTiming = new TimingMap.Lookup(merge.External.Document);
+        foreach (var group in incoming)
+        {
+            if (!emitted.TryGetValue(group.Key!, out var id) || !eligible.Contains(id)) continue;
+            var track = merge.Local.Tracks.FirstOrDefault(t => t.Id == id);
+            if (track is null) continue;
+            var slider = group.Single();
+            var before = localTiming.At(slider.TimeMs); var after = externalTiming.At(slider.TimeMs);
+            if (before.BeatLengthMs.ToString("G15", CultureInfo.InvariantCulture) != after.BeatLengthMs.ToString("G15", CultureInfo.InvariantCulture)
+                || before.SliderVelocityMultiplier.ToString("G15", CultureInfo.InvariantCulture) != after.SliderVelocityMultiplier.ToString("G15", CultureInfo.InvariantCulture)
+                || output.ReadBack.SliderMultiplier != merge.External.Document.SliderMultiplier) continue;
+            // Attributes live in the preserved line; exact exported geometry and duration
+            // identify the curve without fitting new anchors or guessing duplicate objects.
+            var retained = track.DeepClone();
+            retained.OriginalLine = slider.OriginalLine; retained.SourceOrder = slider.SourceOrder;
+            target.ImportedSliders.Remove(slider); target.Tracks.Add(retained);
+        }
+    }
+
+    private static string? SliderShape(string line)
+    {
+        var parts = NormalizeObject(line).Split(',');
+        if (parts.Length < 8 || (int.Parse(parts[3], CultureInfo.InvariantCulture) & 11) != 2) return null;
+        return string.Join(',', parts[0], parts[1], parts[2], parts[5], parts[6], parts[7]);
+    }
+
+    public static WorkspaceExportPlan PlanLocalChanges(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceMerge merge, OsuWriteCache? cache = null)
+    {
+        if (!merge.CanExportLocalChanges || entry.Sync is not { } baseline || merge.External.Text != baseline.Text)
+            throw new InvalidOperationException(L.Get("sync.baseline"));
+        if (AudioHash(merge.External.Document.AudioPath) != baseline.AudioHash)
+            throw new IOException(L.Get("library.exportConflict", merge.External.Path));
+        WorkspaceAssociations.EnsureOwner(session, entry.Id, merge.External.Path);
+        WorkspaceProject.RejectLinks(merge.External.Path);
+        var missing = WorkspaceProject.MissingResources(BeatmapProject.FromDocuments([merge.Local]));
+        if (missing.Count > 0) throw new IOException(L.Get("library.missingResources", string.Join("\n", missing)));
+        return WorkspaceExport.WithMetadataFileName(new(entry.Id, merge.Local, merge.External.Path, merge.External.Hash,
+            OsuBeatmapWriter.Serialize(merge.Local, merge.Compensate, cache)), merge.External.Document);
+    }
+
     public static void Accept(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceSyncCandidate external, MapDocument resolved, bool compensate, bool retainLocalFields = false,
         WorkspaceMerge? review = null, IReadOnlyDictionary<string, bool>? choices = null)
     {
@@ -479,11 +566,12 @@ public static class WorkspaceSynchronization
         var pending = new List<string>();
         var resolvedFields = Fields(resolved); var externalFields = Fields(external.Document);
         string emittedTiming = WorkspaceTimingSynchronization.Text(output.ReadBack.TimingPoints);
-        bool MatchesExternal(string key) => FieldEquals(key, key == "TimingPoints/" ? emittedTiming : resolvedFields.GetValueOrDefault(key), externalFields.GetValueOrDefault(key));
+        bool MatchesExternal(string key) => FieldEquals(key, key == "TimingPoints/" ? emittedTiming : resolvedFields.GetValueOrDefault(key), externalFields.GetValueOrDefault(key), resolved, external.Document);
         if (entry.Sync is { } previous && !retainLocalFields)
         {
-            var oldFields = Fields(ProjectSerializer.Read(previous.Authoring, SnapshotPath(session.Directory)));
-            pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => (previous.LocalOverrides.Contains(k) || !FieldEquals(k, resolvedFields.GetValueOrDefault(k), oldFields.GetValueOrDefault(k)))
+            var oldDocument = ProjectSerializer.Read(previous.Authoring, SnapshotPath(session.Directory));
+            var oldFields = Fields(oldDocument);
+            pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => (previous.LocalOverrides.Contains(k) || !FieldEquals(k, resolvedFields.GetValueOrDefault(k), oldFields.GetValueOrDefault(k), resolved, oldDocument))
                 && !MatchesExternal(k)));
         }
         else pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => !MatchesExternal(k)));
@@ -531,7 +619,13 @@ public static class WorkspaceSynchronization
     {
         string target = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(session.Directory)!, ".sync-history", session.Manifest.Id.ToString("N"), DateTime.UtcNow.ToString("yyyyMMddTHHmmssfffffff") + "-" + operation);
         Directory.CreateDirectory(target);
-        foreach (string path in Directory.EnumerateFiles(session.Directory)) File.Copy(path, System.IO.Path.Combine(target, System.IO.Path.GetFileName(path)));
+        foreach (string path in Directory.EnumerateFiles(session.Directory))
+        {
+            WorkspaceProject.RejectLinks(path);
+            string copy = System.IO.Path.Combine(target, System.IO.Path.GetFileName(path));
+            if (WorkspaceHistoryFile.Compressible(path)) WorkspaceHistoryFile.Write(copy, File.ReadAllBytes(path));
+            else File.Copy(path, copy);
+        }
         var saved = new BeatmapProject { Name = session.Manifest.Name };
         var manifest = WorkspaceProject.ReadManifest(session.Directory);
         foreach (var entry in manifest.Difficulties)
@@ -540,7 +634,8 @@ public static class WorkspaceSynchronization
             saved.Difficulties.Add(new ProjectDifficulty { Id = entry.Id, Name = entry.Name,
                 Document = ProjectSerializer.ReadFile(System.IO.Path.Combine(session.Directory, entry.File)) });
         }
-        ProjectSerializer.WriteFile(saved, System.IO.Path.Combine(target, "saved.catchproj"));
+        WorkspaceHistoryFile.WriteProject(saved, System.IO.Path.Combine(target, "saved.catchproj"));
+        WorkspaceStorage.EnforceVersionLimit(session);
         return target;
     }
 
@@ -623,14 +718,30 @@ public static class WorkspaceSynchronization
         return long.TryParse(id, out long mapId) && mapId > 0 && long.TryParse(set, out long setId) && setId > 0 ? setId + "/" + mapId : null;
     }
     public static void RebaseContext(MapDocument snapshot, MapDocument before, MapDocument after)
+        => PrepareContextRebase(before, after)(snapshot);
+
+    public static Action<MapDocument> PrepareContextRebase(MapDocument before, MapDocument after)
     {
-        var fields = Fields(snapshot); var oldFields = Fields(before); var newFields = Fields(after);
-        foreach (string key in oldFields.Keys.Concat(newFields.Keys).Distinct())
-            if (oldFields.GetValueOrDefault(key) != newFields.GetValueOrDefault(key)) fields[key] = newFields.GetValueOrDefault(key);
-        string? audio = snapshot.AudioPath;
-        ApplyFields(snapshot, fields, after.SourcePath ?? before.SourcePath ?? System.IO.Path.Combine(Environment.CurrentDirectory, "map.osu"));
-        snapshot.SourcePath = after.SourcePath;
-        snapshot.AudioPath = Paths.Equals(before.AudioPath, after.AudioPath) ? audio : after.AudioPath;
+        var oldFields = Fields(before); var newFields = Fields(after);
+        var changes = oldFields.Keys.Concat(newFields.Keys).Distinct()
+            .Where(key => oldFields.GetValueOrDefault(key) != newFields.GetValueOrDefault(key))
+            .ToDictionary(key => key, key => newFields.GetValueOrDefault(key));
+        string? source = after.SourcePath, replacementAudio = after.AudioPath;
+        string path = source ?? before.SourcePath ?? System.IO.Path.Combine(Environment.CurrentDirectory, "map.osu");
+        bool preserveAudio = Paths.Equals(before.AudioPath, replacementAudio);
+        // One save rebases every undo snapshot; unchanged context needs no parsing or timing reconstruction.
+        return snapshot =>
+        {
+            string? audio = snapshot.AudioPath;
+            if (changes.Count > 0)
+            {
+                var fields = Fields(snapshot);
+                foreach (var pair in changes) fields[pair.Key] = pair.Value;
+                ApplyFields(snapshot, fields, path);
+            }
+            snapshot.SourcePath = source;
+            snapshot.AudioPath = preserveAudio ? audio : replacementAudio;
+        };
     }
     private static string NormalizeObject(string line)
     {
@@ -693,11 +804,13 @@ public static class WorkspaceSynchronization
     }
 
     private static readonly HashSet<string> SettingsSections = ["General", "Editor", "Metadata", "Difficulty", "Colours"];
-    private static bool FieldEquals(string key, string? left, string? right)
+    private static bool FieldEquals(string key, string? left, string? right, MapDocument? leftDocument = null, MapDocument? rightDocument = null)
     {
-        if (left == right) return true;
+        if (left == right || key == "Editor/TimelineZoom") return true;
         if (key == "TimingPoints/") return TimingComparison(left) == TimingComparison(right);
-        if (key == "Events/") return EventComparison(left) == EventComparison(right);
+        if (key == "Events/") return EventComparison(left) == EventComparison(right)
+            || leftDocument is not null && rightDocument is not null
+            && EventComparison(left, leftDocument) == EventComparison(right, rightDocument);
         return false;
     }
 
@@ -710,7 +823,7 @@ public static class WorkspaceSynchronization
         return string.Join(',', parts);
     }));
 
-    private static string EventComparison(string? value)
+    private static string EventComparison(string? value, MapDocument? document = null)
     {
         var events = new List<string>();
         var breaks = new List<(int Start, int End)>();
@@ -724,13 +837,27 @@ public static class WorkspaceSynchronization
                 breaks.Add((start, end));
             else events.Add(line.TrimEnd('\r'));
         }
+        if (document is not null && breaks.Count > 0)
+        {
+            var ends = OsuTimeline.ObjectIntervals(document, new ImportedSliderLengthCache()).Values.Select(i => i.End).Order().ToArray();
+            for (int i = 0; i < breaks.Count; i++)
+            {
+                var period = breaks[i];
+                int index = Array.BinarySearch(ends, (double)period.Start);
+                if (index < 0) index = ~index - 1;
+                // Older FA versions rounded the recovery boundary up. Recognize only that
+                // derived boundary; a one-millisecond edit elsewhere remains a real edit.
+                if (index >= 0 && Math.Ceiling(ends[index] + 200) == period.Start)
+                    breaks[i] = (OsuTimeline.BreakStartAfter(ends[index]), period.End);
+            }
+        }
         // Break placement amongst storyboard comments/commands is not part of its interval.
         // Keep storyboard command order and indentation, and retain original text for resolution.
         return string.Join('\n', events.Concat(breaks.OrderBy(b => b.Start).ThenBy(b => b.End)
             .Select(b => FormattableString.Invariant($"2,{b.Start},{b.End}"))));
     }
 
-    internal static Dictionary<string, string?> Fields(MapDocument document)
+    public static Dictionary<string, string?> Fields(MapDocument document)
     {
         var fields = new Dictionary<string, string?>();
         foreach (var section in document.OriginalSections.Where(s => s.Name is not ("HitObjects" or "TimingPoints" or "")))
@@ -747,7 +874,7 @@ public static class WorkspaceSynchronization
         }
         fields["Difficulty/ApproachRate"] = document.ApproachRate.ToString("R", CultureInfo.InvariantCulture);
         fields["Difficulty/CircleSize"] = document.CircleSize.ToString("R", CultureInfo.InvariantCulture);
-        fields["Difficulty/SliderMultiplier"] = document.SliderMultiplier.ToString("R", CultureInfo.InvariantCulture);
+        fields["Difficulty/SliderMultiplier"] = document.EffectiveSliderMultiplier.ToString("R", CultureInfo.InvariantCulture);
         fields["Difficulty/SliderTickRate"] = document.SliderTickRate.ToString("R", CultureInfo.InvariantCulture);
         fields["Editor/DistanceSpacing"] = document.DistanceSpacing.ToString("R", CultureInfo.InvariantCulture);
         fields["TimingPoints/"] = WorkspaceTimingSynchronization.Text(document.TimingPoints);
@@ -764,7 +891,9 @@ public static class WorkspaceSynchronization
         var parsed = OsuBeatmapReader.Read(text.ToString(), path);
         target.OriginalSections.Clear(); target.OriginalSections.AddRange(parsed.OriginalSections);
         target.Name = parsed.Name; target.ApproachRate = parsed.ApproachRate; target.CircleSize = parsed.CircleSize;
-        target.SliderMultiplier = parsed.SliderMultiplier; target.SliderTickRate = parsed.SliderTickRate; target.DistanceSpacing = parsed.DistanceSpacing;
+        if (target.EffectiveSliderMultiplier != parsed.SliderMultiplier)
+        { target.SliderMultiplierOverride = null; target.SliderMultiplier = parsed.SliderMultiplier; }
+        target.SliderTickRate = parsed.SliderTickRate; target.DistanceSpacing = parsed.DistanceSpacing;
         target.TimingPoints.Clear(); target.TimingPoints.AddRange(parsed.TimingPoints);
         target.BeatLengthMs = parsed.BeatLengthMs; target.TimingOffsetMs = parsed.TimingOffsetMs;
         target.AudioPath = parsed.AudioPath;

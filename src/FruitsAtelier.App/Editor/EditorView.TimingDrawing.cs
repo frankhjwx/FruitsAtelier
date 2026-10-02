@@ -281,9 +281,9 @@ public sealed partial class EditorView
     {
         timingFields.Clear();
         var r = new Rect(rightPanel.X + 14, rightPanel.Y + 46, rightPanel.Width - 28, rightPanel.Height - 52);
-        bool compact = r.Height < 540;
+        bool compact = r.Height < 585;
         float y = r.Y, gap = compact ? 5 : 12, row = compact ? 28 : 34;
-        var state = TimingMap.At(Document, playhead);
+        var state = SnapTiming().At(playhead);
         if (timingResetPoint is not null && !ReferenceEquals(timingResetDocument, Document)) timingResetPoint = null;
         int count = Math.Min(16, state.Meter);
         double beat = (playhead - state.OffsetMs) / state.BeatLengthMs;
@@ -299,21 +299,30 @@ public sealed partial class EditorView
         y += row + gap;
         TimingButton(c, new(lampX, y, r.Width - 82, row), L.Get("timing.tap"), TapTiming, 1); y += row + gap;
         TimingButton(c, new(r.X, y, r.Width, row), timingTaps.Count >= 2 ? L.Get("timing.tapResult", 60000 * (timingTaps.Count - 1) / (timingTaps[^1] - timingTaps[0]), timingTaps.Count) : L.Get("timing.tapApply"), ApplyTappedTiming, enabled: timingTaps.Count >= 2); y += row + gap;
-        void Number(string key, double value, Action<double> apply)
+        void Number(string key, double value, Action<double> apply, bool enabled = true)
         {
-            c.Text(L.Get($"timing.{key}"), r.X, y + 7, 12, Foreground, 95);
+            if (key == "sliderMultiplier")
+            {
+                TimingSliderMultiplierBounds = new(r.X, y, r.Width, row);
+                TimingCheck(c, new(r.X - 7, y, 107, row), "timing.overrideSv", Document.OverrideSliderMultiplier,
+                    () => Edit(L.Get("timing.overrideSv"), () => Document.OverrideSliderMultiplier = !Document.OverrideSliderMultiplier), enabled: !SliderMultiplierValidationBusy);
+            }
+            else c.Text(L.Get($"timing.{key}"), r.X, y + 7, 12, Foreground, 95);
             var input = new Rect(r.X + 100, y, r.Width - 100, row);
-            c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "ui", "timing", "controls.png"), input, source: new Rect(80, 80, 1096, 192));
-            TimingNumber(c, "page." + key, new(input.X + 26, y, input.Width - 52, row), TimingN(TimingPageValue(key, value)), apply);
+            c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "ui", "timing", "controls.png"), input, source: new Rect(80, 80, 1096, 192), opacity: enabled ? 1 : .35f);
+            TimingNumber(c, "page." + key, new(input.X + 26, y, input.Width - 52, row),
+                key == "sliderMultiplier" ? value.ToString("0.00", CultureInfo.InvariantCulture) : TimingN(TimingPageValue(key, value)), apply, enabled: enabled);
             void Step(int direction)
             {
-                var current = TimingMap.At(Document, playhead);
-                double number = key == "bpm" ? 60000 / (timingResetPoint?.BeatLengthMs ?? current.BeatLengthMs) : key == "offset" ? timingResetPoint?.TimeMs ?? current.OffsetMs : Document.SliderTickRate;
-                double step = key == "bpm" ? placementCtrl ? .25 : timingPointerShift ? 5 : 1 : key == "offset" ? placementCtrl ? 1 : timingPointerShift ? 10 : 2 : 1;
-                try { apply(TimingPageValue(key, number) + direction * step); } catch (ArgumentException ex) { timingError = ex.Message; }
+                var current = SnapTiming().At(playhead);
+                double number = key == "bpm" ? 60000 / (timingResetPoint?.BeatLengthMs ?? current.BeatLengthMs) : key == "offset" ? timingResetPoint?.TimeMs ?? current.OffsetMs : key == "sliderMultiplier" ? DisplaySliderMultiplier : Document.SliderTickRate;
+                double step = key == "bpm" ? placementCtrl ? .25 : timingPointerShift ? 5 : 1 : key == "offset" ? placementCtrl ? 1 : timingPointerShift ? 10 : 2 : key == "sliderMultiplier" ? placementCtrl ? .01 : .1 : 1;
+                double next = TimingPageValue(key, number) + direction * step;
+                if (key == "sliderMultiplier") next = Math.Clamp(Math.Round(next, 2), SliderMultiplierEditing.Minimum, SliderMultiplierEditing.Maximum);
+                try { apply(next); } catch (ArgumentException ex) { timingError = ex.Message; }
             }
-            TimingButton(c, new(input.X, y, 24, row), "‹", () => Step(-1));
-            TimingButton(c, new(input.Right - 24, y, 24, row), "›", () => Step(1));
+            TimingButton(c, new(input.X, y, 24, row), "‹", () => Step(-1), enabled: enabled);
+            TimingButton(c, new(input.Right - 24, y, 24, row), "›", () => Step(1), enabled: enabled);
             y += row + gap;
         }
         Number("bpm", 60000 / (timingResetPoint?.BeatLengthMs ?? state.BeatLengthMs), v => ChangeCurrentRed("bpm", v));
@@ -321,8 +330,11 @@ public sealed partial class EditorView
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.moveNotes", timingMoveNotes, () => timingMoveNotes = !timingMoveNotes); y += row + gap;
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.moveMarkers", timingMoveMarkers, () => timingMoveMarkers = !timingMoveMarkers); y += row + gap;
         Number("tickRate", Document.SliderTickRate, v => { if (v < .5 || v > 8) throw new ArgumentException(L.Get("timing.range")); Edit(L.Get("timing.edit"), () => Document.SliderTickRate = v); });
+        Number("sliderMultiplier", DisplaySliderMultiplier, ChangeSliderMultiplier, Document.OverrideSliderMultiplier);
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.metronome", metronomeEnabled, () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }); y += row + gap;
         TimingButton(c, new(r.X, y, r.Width, row), L.Get("timing.setup"), OpenTimingSetup); y += row + gap;
-        c.Text(timingError, r.X, y, 11, Error, r.Width);
+        c.Text(timingError.Length > 0 ? timingError : sliderMultiplierValidation is not null
+            ? L.Get("timing.sliderMultiplierChecking") : "", r.X, y, 11,
+            timingError.Length > 0 ? Error : Muted, r.Width);
     }
 }

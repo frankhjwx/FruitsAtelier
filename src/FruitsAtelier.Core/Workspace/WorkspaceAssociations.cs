@@ -75,7 +75,7 @@ public static class WorkspaceAssociations
                 || status.Candidate is not { } external) throw new InvalidOperationException(L.Get("sync.unresolved"));
             var entry = session.Manifest.Difficulties.Single(d => d.Id == id);
             EnsureOwner(session, id, external.Path);
-            ProjectSerializer.WriteFile(project, Path.Combine(WorkspaceSynchronization.Archive(session, "reimport"), "current.catchproj"));
+            WorkspaceHistoryFile.WriteProject(project, Path.Combine(WorkspaceSynchronization.Archive(session, "reimport"), "current.catchproj"));
             var diff = project.Difficulties.Single(d => d.Id == id);
             diff.Document = external.Document.DeepClone();
             diff.Name = OsuBeatmapReader.Setting(diff.Document, "Metadata", "Version") ?? diff.Name;
@@ -105,14 +105,14 @@ public static class WorkspaceAssociations
                 observed = status.Candidate;
             }
             string backup = WorkspaceSynchronization.Archive(session, "delete");
-            AtomicFile.Write(Path.Combine(backup, "current.catchproj"), ProjectSerializer.Serialize(project, Path.Combine(backup, "current.catchproj")));
+            WorkspaceHistoryFile.WriteProject(project, Path.Combine(backup, "current.catchproj"));
             string journal = Path.Combine(session.Directory, "delete.json");
             bool exists = path is not null && File.Exists(path);
             if (exists)
             {
                 WorkspaceProject.RejectLinks(path!);
-                File.Copy(path!, Path.Combine(backup, "external.osu"));
-                string hash = WorkspaceProject.Hash(Path.Combine(backup, "external.osu"));
+                WorkspaceHistoryFile.Write(Path.Combine(backup, "external.osu"), File.ReadAllBytes(path!));
+                string hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(WorkspaceHistoryFile.Read(Path.Combine(backup, "external.osu"))));
                 if (observed is null || observed.Hash != hash) throw new IOException(L.Get("library.exportConflict", path));
                 if (WorkspaceProject.Hash(path!) != hash) throw new IOException(L.Get("library.exportConflict", path));
                 AtomicFile.Write(journal, JsonSerializer.Serialize(new Deletion(entry.Id, path!, backup, hash)));
@@ -133,7 +133,7 @@ public static class WorkspaceAssociations
             }
             catch
             {
-                if (exists && !File.Exists(path)) File.Copy(Path.Combine(backup, "external.osu"), path!);
+                if (exists && !File.Exists(path)) File.WriteAllBytes(path!, WorkspaceHistoryFile.Read(Path.Combine(backup, "external.osu")));
                 File.Delete(journal);
                 throw;
             }
@@ -153,8 +153,9 @@ public static class WorkspaceAssociations
         {
             WorkspaceProject.RejectLinks(deletion.Path);
             string source = Path.Combine(deletion.Backup, "external.osu");
-            if (WorkspaceProject.Hash(source) != deletion.Hash) throw new InvalidDataException(L.Get("project.invalid"));
-            if (!File.Exists(deletion.Path)) File.Copy(source, deletion.Path);
+            byte[] bytes = WorkspaceHistoryFile.Read(source);
+            if (Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)) != deletion.Hash) throw new InvalidDataException(L.Get("project.invalid"));
+            if (!File.Exists(deletion.Path)) File.WriteAllBytes(deletion.Path, bytes);
         }
         File.Delete(journal);
     }

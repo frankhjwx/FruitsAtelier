@@ -34,8 +34,14 @@ public sealed partial class EditorView
     {
         if (IsTestplaying || !HasEditorProject || LibraryVisible || ExportVisible || ErrorVisible ||
             DiscardConfirmationVisible || SliderDialogVisible || TimeJumpVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
-            drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty || AudioLoading) return;
+            drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty || AudioLoading || AimodVisible) return;
         EnsureConversion();
+        if (deferredConversion)
+        {
+            deferredTestplay = true;
+            return;
+        }
+        if (!conversion!.Success) return;
         testplayReturnPosition = playhead;
         testplayStart = Math.Max(0, playhead - LibrarySettings.TestplayStartupDelaySeconds * 1000d);
         var session = new CatchTestplay(PreviewObjects(), PreviewCircleSize, testplayStart);
@@ -199,7 +205,7 @@ public sealed partial class EditorView
         if (virtualKey == 80) testplayPauseHeld = false;
         if (virtualKey == 66) testplayBookmarkHeld = false;
         if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
-        if (IsTestplaying) AdvanceTestplay();
+        if (IsTestplaying && testplayDriver is null) AdvanceTestplay();
     }
 
     private void DrawTestplay(ICanvas c)

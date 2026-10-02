@@ -39,6 +39,25 @@ internal static class ToolPaletteTests
 
     public static void PlacementHyperdash()
     {
+        var tied = Empty();
+        var tiedMap = new MapDocument { DurationMs = 12000 };
+        tiedMap.Fruits.Add(new() { TimeMs = 1000, X = 220 });
+        var stream = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = 4 };
+        stream.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 200 }]);
+        tiedMap.Tracks.Add(stream);
+        tied.LoadDocument(tiedMap); tied.Key('F'); tied.MoveMap(1750, 450);
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        Check(typeof(EditorView).GetField("placementOrderSource", flags)!.GetValue(tied.View) is OsuWriteResult,
+            "Tied fruit/stream parents prevented placement from reusing exported events.");
+        var tiedPreview = (IReadOnlyList<ConvertedCatchObject>)typeof(EditorView)
+            .GetField("placementMovementObjects", flags)!.GetValue(tied.View)!;
+        tied.ClickMap(1750, 450);
+        Check(tiedPreview.Select(o => (o.Kind, o.TimeMs, o.X, o.EventIndex)).SequenceEqual(
+            OsuBeatmapWriter.Serialize(tied.View.Document).PlayableObjects.Select(o => (o.Kind, o.TimeMs, o.X, o.EventIndex))),
+            "Tied fruit/stream placement preview diverged from committed export.");
+        tied.Key('Z', ctrl: true);
+        Check(tied.View.Document.ContentEquals(tiedMap), "Tied fruit/stream placement did not undo atomically.");
+
         var fractional = Empty();
         var fractionalMap = new MapDocument { DurationMs = 12000, BeatLengthMs = 60000d / 145 };
         fractionalMap.Fruits.Add(new() { TimeMs = 1000, X = 100 });

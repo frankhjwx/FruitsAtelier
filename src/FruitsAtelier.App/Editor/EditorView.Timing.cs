@@ -40,6 +40,18 @@ public sealed partial class EditorView
     private Rect timingVolumeTrack;
     private TimingEntry[]? timingVolumeStart;
     internal IReadOnlyList<(string Key, Rect Bounds, string Value, Action<double> Apply)> TimingFields => timingFields;
+    internal Rect TimingSliderMultiplierBounds { get; private set; }
+    private sealed record SliderMultiplierValidation(double Value, OsuWriteResult? Output, string? Error);
+    private Task<SliderMultiplierValidation>? sliderMultiplierValidation;
+    private MapDocument? sliderMultiplierValidationSnapshot;
+    private EditorHistory? sliderMultiplierValidationOwner;
+    private bool sliderMultiplierValidationText, sliderMultiplierValidationCompensation;
+    private double? sliderMultiplierDraft;
+    private long sliderMultiplierDeadline, sliderMultiplierVersion, sliderMultiplierWorkerVersion;
+    internal Func<long> SliderMultiplierClock { get; set; } = () => Environment.TickCount64;
+    private double DisplaySliderMultiplier => ReferenceEquals(history, sliderMultiplierValidationOwner)
+        ? sliderMultiplierDraft ?? Document.EffectiveSliderMultiplier : Document.EffectiveSliderMultiplier;
+    public bool SliderMultiplierValidationBusy => sliderMultiplierDraft is not null || sliderMultiplierValidation is not null;
     private readonly List<double> timingTaps = [];
     private bool timingTapHeld;
     private TimingPoint? timingResetPoint;
@@ -412,6 +424,106 @@ public sealed partial class EditorView
         "offset" => Math.Round(value, MidpointRounding.AwayFromZero),
         _ => value
     };
+
+    private void ChangeSliderMultiplier(double value)
+    {
+        if (!Document.OverrideSliderMultiplier) return;
+        if (!double.IsFinite(value) || value < SliderMultiplierEditing.Minimum || value > SliderMultiplierEditing.Maximum)
+            throw new ArgumentException(L.Get("timing.sliderMultiplierRange"));
+        if (value == DisplaySliderMultiplier) return;
+        var currentExport = editorWriteCache.MultiplierBaseline(Document, compensateTinyDroplets);
+        if (currentExport is not null)
+        {
+            try
+            {
+                SliderMultiplierEditing.CheckLimits(currentExport, value);
+            }
+            catch (InvalidDataException ex) { throw new ArgumentException(ex.Message, ex); }
+        }
+        sliderMultiplierVersion++;
+        sliderMultiplierDraft = value == Document.EffectiveSliderMultiplier ? null : value;
+        sliderMultiplierDeadline = SliderMultiplierClock() + 1000;
+        if (!ReferenceEquals(sliderMultiplierValidationOwner, history)
+            || sliderMultiplierValidationSnapshot?.ContentEquals(Document) != true)
+            sliderMultiplierValidationSnapshot = Document.DeepClone();
+        sliderMultiplierValidationOwner = history;
+        sliderMultiplierValidationText = timingField == "page.sliderMultiplier";
+        sliderMultiplierValidationCompensation = compensateTinyDroplets;
+        if (sliderMultiplierDraft is null)
+        { sliderMultiplierValidationSnapshot = null; sliderMultiplierValidationOwner = null; }
+        timingError = "";
+    }
+
+    private void StartSliderMultiplierValidation()
+    {
+        if (sliderMultiplierDraft is not { } value || sliderMultiplierValidation is not null
+            || SliderMultiplierClock() < sliderMultiplierDeadline) return;
+        if (!ReferenceEquals(history, sliderMultiplierValidationOwner)
+            || !sliderMultiplierValidationSnapshot!.ContentEquals(Document)
+            || sliderMultiplierValidationCompensation != compensateTinyDroplets)
+        {
+            sliderMultiplierDraft = null; sliderMultiplierValidationSnapshot = null; sliderMultiplierValidationOwner = null;
+            timingError = L.Get("timing.sliderMultiplierChanged"); return;
+        }
+        var snapshot = sliderMultiplierValidationSnapshot;
+        bool compensation = sliderMultiplierValidationCompensation;
+        var currentExport = editorWriteCache.MultiplierBaseline(Document, compensation);
+        sliderMultiplierWorkerVersion = sliderMultiplierVersion;
+        sliderMultiplierValidation = Task.Run(() =>
+        {
+            try
+            {
+                var baseline = currentExport;
+                if (baseline is null)
+                {
+                    var source = snapshot.DeepClone(); source.SliderMultiplierOverride = null;
+                    baseline = OsuBeatmapWriter.Serialize(source, compensation);
+                }
+                var output = SliderMultiplierEditing.TryRebase(baseline, value, out var local, double.PositiveInfinity)
+                    ? local! : SliderMultiplierEditing.Rebase(baseline, value);
+                return new SliderMultiplierValidation(value, output, null);
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidDataException or InvalidOperationException)
+            { return new SliderMultiplierValidation(value, null, ex.Message); }
+        });
+    }
+
+    private void CompleteSliderMultiplierValidation()
+    {
+        if (sliderMultiplierValidation is not { IsCompleted: true } task || history.HasActiveTransaction)
+        { StartSliderMultiplierValidation(); return; }
+        sliderMultiplierValidation = null;
+        if (sliderMultiplierWorkerVersion != sliderMultiplierVersion)
+        { StartSliderMultiplierValidation(); return; }
+        var result = task.GetAwaiter().GetResult();
+        bool current = ReferenceEquals(history, sliderMultiplierValidationOwner)
+            && sliderMultiplierValidationSnapshot!.ContentEquals(Document)
+            && sliderMultiplierValidationCompensation == compensateTinyDroplets;
+        sliderMultiplierDraft = null; sliderMultiplierValidationSnapshot = null; sliderMultiplierValidationOwner = null;
+        if (!current) { timingError = L.Get("timing.sliderMultiplierChanged"); return; }
+        if (result.Error is { } error)
+        {
+            timingError = error;
+            if (sliderMultiplierValidationText && TimingPageVisible && !TimingModal && timingField.Length == 0)
+            {
+                timingField = "page.sliderMultiplier"; timingText = result.Value.ToString(CultureInfo.InvariantCulture);
+                timingFieldApply = ChangeSliderMultiplier; TimingInputSession++;
+                SelectInput("timing:" + timingField, timingText);
+            }
+            return;
+        }
+        ApplySliderMultiplier(result.Value, result.Output!, sliderMultiplierValidationCompensation);
+    }
+
+    private void ApplySliderMultiplier(double value, OsuWriteResult output, bool compensation)
+    {
+        if (!Edit(L.Get("timing.overrideSv"), () =>
+        {
+            Document.SliderMultiplierOverride = value == Document.SliderMultiplier ? null : value;
+            editorWriteCache.RememberMultiplier(Document, output, compensation);
+        })) { timingError = StatusMessage; return; }
+        timingError = ""; ResetHitsounds();
+    }
 
     private void ChangeCurrentRed(string key, double value)
     {

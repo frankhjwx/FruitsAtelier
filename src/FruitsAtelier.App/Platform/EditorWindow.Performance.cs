@@ -10,6 +10,13 @@ internal sealed partial class EditorWindow
     private double pendingInputQueue;
     private uint slowestInputMessage;
     private double slowestInputMs;
+    private uint slowestMessage;
+    private double slowestMessageMs;
+    private bool slowestMessageTestplay;
+    private long previousFrame;
+    private bool previousFrameActive, previousFrameTestplay;
+    private double longestFrameGapMs;
+    private bool frameGapFromTestplay, frameGapToTestplay;
     private int performanceGen0 = GC.CollectionCount(0), performanceGen1 = GC.CollectionCount(1), performanceGen2 = GC.CollectionCount(2);
 
     private long BeginInputSample(Native.Message message)
@@ -40,15 +47,43 @@ internal sealed partial class EditorWindow
         pendingInput = 0;
     }
 
+    private void EndMessageSample(uint message, long start, bool testplay)
+    {
+        double elapsed = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+        view.Performance.Record(EditorPerformanceStage.MessageDispatch, elapsed);
+        if (elapsed > slowestMessageMs)
+        { slowestMessageMs = elapsed; slowestMessage = message; slowestMessageTestplay = testplay; }
+    }
+
+    private void RecordFrameGap()
+    {
+        long now = Stopwatch.GetTimestamp();
+        bool active = (view.IsTestplaying || audio.IsPlaying) && !Native.IsIconic(hwnd) && !NativeModalScope.Active;
+        if (previousFrame != 0 && previousFrameActive && active)
+        {
+            double gap = Stopwatch.GetElapsedTime(previousFrame, now).TotalMilliseconds;
+            view.Performance.Record(EditorPerformanceStage.FrameGap, gap);
+            if (gap > longestFrameGapMs)
+            { longestFrameGapMs = gap; frameGapFromTestplay = previousFrameTestplay; frameGapToTestplay = view.IsTestplaying; }
+        }
+        previousFrame = now; previousFrameActive = active; previousFrameTestplay = view.IsTestplaying;
+    }
+
     private void FlushPerformance(bool force = false)
     {
         if (!force && Stopwatch.GetElapsedTime(performanceFlush).TotalSeconds < 5) return;
         string? summary = view.Performance.Drain();
         int gen0 = GC.CollectionCount(0), gen1 = GC.CollectionCount(1), gen2 = GC.CollectionCount(2);
         if (summary is not null)
-            AppLog.Write($"{summary} slowestInput=0x{slowestInputMessage:X4}; GC={gen0 - performanceGen0}/{gen1 - performanceGen1}/{gen2 - performanceGen2}; {view.PerformanceContext}");
+        {
+            string context = $"slowestInput=0x{slowestInputMessage:X4}; slowestMessage=0x{slowestMessage:X4}; slowestMessageTestplay={slowestMessageTestplay}; frameGapTestplay={frameGapFromTestplay}/{frameGapToTestplay}; GC={gen0 - performanceGen0}/{gen1 - performanceGen1}/{gen2 - performanceGen2}; {view.PerformanceContext}";
+            // The summary's own LogWrite sample belongs to the next interval.
+            AppLog.Write($"{summary} {context}");
+        }
         performanceGen0 = gen0; performanceGen1 = gen1; performanceGen2 = gen2;
         slowestInputMs = 0; slowestInputMessage = 0;
+        slowestMessageMs = 0; slowestMessage = 0; slowestMessageTestplay = false;
+        longestFrameGapMs = 0; frameGapFromTestplay = frameGapToTestplay = false;
         performanceFlush = Stopwatch.GetTimestamp();
     }
 }

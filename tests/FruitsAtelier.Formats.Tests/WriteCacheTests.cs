@@ -2,7 +2,92 @@ using FruitsAtelier.Core;
 
 internal static class WriteCacheTests
 {
+    public static int BenchmarkMultiplierEdits()
+    {
+        var map = new MapDocument { DurationMs = 2010000, SliderMultiplierOverride = 2 };
+        for (int i = 0; i < 1000; i++)
+        {
+            var slider = new ImportedSlider { TimeMs = i * 2000 + 500, X = 100, Y = 192,
+                PathType = 'B', PixelLength = 200, SpanCount = 2, SourceOrder = i };
+            slider.ControlPoints.AddRange([new(100, 192), new(200, 100), new(300, 192)]);
+            map.ImportedSliders.Add(slider);
+            if (i % 25 == 0) map.TimingPoints.Add(new() { TimeMs = i * 2000, BeatLengthMs = i % 50 == 0 ? 500 : 400 });
+        }
+        map.BananaShowers.Add(new() { TimeMs = 100, EndTimeMs = 400 });
+        map.Fruits.Add(new() { TimeMs = 1500, X = 200 });
+        var cache = new OsuWriteCache();
+        var samples = new List<object>();
+        for (int i = 0; i < 12; i++)
+        {
+            map.Fruits[0].X++;
+            long bytes = GC.GetAllocatedBytesForCurrentThread();
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var actual = OsuBeatmapWriter.Serialize(map, cache: cache);
+            samples.Add(new { phase = i == 0 ? "cold" : "fruit-edit", elapsedMs = watch.Elapsed.TotalMilliseconds,
+                bytes = GC.GetAllocatedBytesForCurrentThread() - bytes });
+            var expected = OsuBeatmapWriter.Serialize(map);
+            if (actual.Text != expected.Text || !actual.PlayableObjects.SequenceEqual(expected.PlayableObjects)
+                || !actual.PlayableHardRockObjects.SequenceEqual(expected.PlayableHardRockObjects))
+                throw new Exception("SV edit differs from full export.");
+        }
+        long baselineBytes = GC.GetAllocatedBytesForCurrentThread();
+        var baselineWatch = System.Diagnostics.Stopwatch.StartNew();
+        for (int i = 0; i < 100; i++) _ = cache.MultiplierBaseline(map, true);
+        samples.Add(new { phase = "100-baseline-lookups", elapsedMs = baselineWatch.Elapsed.TotalMilliseconds,
+            bytes = GC.GetAllocatedBytesForCurrentThread() - baselineBytes });
+        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(samples, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+        return 0;
+    }
+
+    public static void StableParentOrder()
+    {
+        var map = new MapDocument { DurationMs = 12000 };
+        map.Fruits.Add(new() { TimeMs = 1000, X = 220 });
+        var stream = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = 4 };
+        stream.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 200 }]);
+        map.Tracks.Add(stream);
+        var imported = new ImportedSlider { TimeMs = 1000, X = 300, Y = 192, PathType = 'L', PixelLength = 70 };
+        imported.ControlPoints.AddRange([new(300, 192), new(370, 192)]);
+        map.ImportedSliders.Add(imported);
+        map.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 1250 });
+        var history = new EditorHistory(map);
+        map = history.Document; stream = map.Tracks[0];
+        var cache = new OsuWriteCache();
+        Check(); Check();
+        history.Begin("Change source order");
+        stream.SourceOrder = -1;
+        history.Commit(); Check();
+        history.Undo(); map = history.Document; Check();
+        history.Redo(); map = history.Document; Check();
+        map.ImportedSliders.Clear(); map.BananaShowers.Clear();
+        map.Tracks[0].SourceOrder = int.MaxValue;
+        map.Fruits[0].TimeMs += .75;
+        foreach (var node in map.Tracks[0].Nodes) node.TimeMs += .75;
+        Check();
+
+        void Check()
+        {
+            var before = map.DeepClone();
+            var converted = CatchStreamConverter.Convert(map);
+            var actual = OsuBeatmapWriter.Serialize(map, cache: cache);
+            var expected = OsuBeatmapWriter.Serialize(map);
+            if (!actual.ObjectSequenceMatches || !expected.ObjectSequenceMatches
+                || !actual.PlayableObjects.Select(o => (o.SourceId, o.EventIndex, o.Kind))
+                    .SequenceEqual(converted.Objects.Select(o => (o.SourceId, o.EventIndex, o.Kind)))
+                || actual.Text != expected.Text || !actual.PlayableObjects.SequenceEqual(expected.PlayableObjects)
+                || !actual.PlayableHardRockObjects.SequenceEqual(expected.PlayableHardRockObjects)
+                || !map.ContentEquals(before))
+                throw new Exception("Equal-time/order parent export diverged from conversion or changed source content.");
+        }
+    }
+
     public static void MatchesUncached()
+    {
+        MatchesUncached(false);
+        MatchesUncached(true);
+    }
+
+    private static void MatchesUncached(bool useOverride)
     {
         var velocityQuery = typeof(OsuBeatmapWriter).GetMethod("EmittedSliderVelocityAt",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
@@ -22,6 +107,7 @@ internal static class WriteCacheTests
         }
         var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n64,192,500,8,0,900,0:0:0:0:\n100,192,1000,2,0,B|200:50|300:192,2,300\n256,192,3000,1,0,0:0:0:0:\n");
         var cache = new OsuWriteCache();
+        if (useOverride) map.SliderMultiplierOverride = 2;
         Check(); Check();
         map.Fruits.Add(new() { TimeMs = 1200.5, X = 123.6 }); Check();
         map.Fruits[^1].X = 400; Check();

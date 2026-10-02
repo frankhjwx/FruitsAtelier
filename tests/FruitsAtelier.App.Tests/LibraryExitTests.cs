@@ -17,6 +17,8 @@ internal static class LibraryExitTests
             var text = canvas.Texts.Last(t => t.Value == L.Get(key));
             view.PointerDown(text.X + 4, text.Y + 4, 0, false, false);
             view.PointerUp(text.X + 4, text.Y + 4, 0);
+            var deadline = DateTime.UtcNow.AddSeconds(15);
+            while (view.SynchronizationBusy && DateTime.UtcNow < deadline) { canvas.Clear(); view.Render(canvas, 980, 620); Thread.Sleep(5); }
         }
         try
         {

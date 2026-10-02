@@ -11,6 +11,7 @@ public sealed partial class EditorView
     private double objectTimelineScale = .18;
     private readonly List<(Guid Id, double Time, Rect Bounds)> timelineObjects = [];
     private CatchConversionResult? timelineConversion;
+    private Guid timelineDraft;
     private (Guid Id, double Start, double End, int SourceOrder, bool IsBanana, int Spans)[] timelineSources = [];
     private double[] timelineStarts = [], timelineEnds = [], timelinePrefixEnd = [];
     private Dictionary<Guid, int> timelineNumbers = [];
@@ -79,7 +80,7 @@ public sealed partial class EditorView
         int next = UpperBound(timelineStarts, playhead);
         if (previous < 0 || next >= timelineStarts.Length) return null;
         double previousEnd = timelineEnds[previous], nextStart = timelineStarts[next];
-        int start = (int)Math.Clamp(Math.Ceiling(previousEnd + 200), 0, int.MaxValue);
+        int start = OsuTimeline.BreakStartAfter(previousEnd);
         int end = (int)Math.Clamp(Math.Floor(nextStart - CatchScrollTiming.PreemptMs(Document.ApproachRate)), 0, int.MaxValue);
         if (end - (long)start < 400 || breakPeriods.Any(period => period.StartMs < end && period.EndMs > start)) return null;
         return new(start, end);
@@ -218,6 +219,24 @@ public sealed partial class EditorView
     private void RefreshTimelineSources()
     {
         if (ReferenceEquals(timelineConversion, conversion)) return;
+        if (draftTrack != Guid.Empty && timelineDraft == draftTrack
+            && Document.Tracks.FirstOrDefault(t => t.Id == draftTrack) is { Nodes.Count: > 0 } draft)
+        {
+            int index = Array.FindIndex(timelineSources, item => item.Id == draftTrack);
+            if (index >= 0 && timelineSources[index].Start == draft.Nodes[0].TimeMs)
+            {
+                // Only this draft's tail changes; preserve the committed parent order and combo numbers.
+                timelineSources[index].End = CurveMath.EndTimeMs(draft);
+                for (int i = 0; i < timelineSources.Length; i++)
+                {
+                    timelineEnds[i] = timelineSources[i].End;
+                    timelinePrefixEnd[i] = Math.Max(i == 0 ? double.NegativeInfinity : timelinePrefixEnd[i - 1], timelineSources[i].End);
+                }
+                Array.Sort(timelineEnds);
+                timelineConversion = conversion;
+                return;
+            }
+        }
         // Slider duration resolves timing and geometry; recompute only when content changes, not on every frame.
         var sliderEnds = conversion!.Sliders.ToDictionary(s => s.SourceId, s => s.StartTimeMs + s.DurationMs);
         timelineSources = Document.Fruits.Select(f => (f.Id, Start: f.TimeMs, End: f.TimeMs, f.SourceOrder, IsBanana: false, Spans: 1))
@@ -233,6 +252,7 @@ public sealed partial class EditorView
             timelinePrefixEnd[i] = latestEnd = Math.Max(latestEnd, timelineSources[i].End);
         timelineNumbers = ComboNumbers();
         timelineConversion = conversion;
+        timelineDraft = draftTrack;
     }
 
     private void DrawObjectTimeline(ICanvas c)
