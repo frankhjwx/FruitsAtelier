@@ -23,6 +23,15 @@ internal static class PerformanceMetricsTests
         }
         finally { CultureInfo.CurrentCulture = culture; }
 
+        foreach (var stage in new[] { EditorPerformanceStage.MessageDispatch, EditorPerformanceStage.MessageWait,
+            EditorPerformanceStage.FrameWait, EditorPerformanceStage.FrameGap, EditorPerformanceStage.LogWrite })
+        {
+            metrics.Record(stage, 800);
+            string stalled = metrics.Drain() ?? throw new Exception($"{stage} stall was lost.");
+            if (!stalled.Contains($"{stage}=1/800.00/800.00/1;")) throw new Exception(stalled);
+            if (metrics.Drain() is not null) throw new Exception("Stall samples survived draining.");
+        }
+
         var view = new EditorView();
         view.Performance.Enabled = true;
         var before = view.Document.DeepClone();

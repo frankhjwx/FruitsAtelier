@@ -33,6 +33,8 @@ internal static class Program
 
 internal static class AppLog
 {
+    // Background writers must never update the window's UI-thread counters.
+    [ThreadStatic] internal static Editor.EditorPerformanceMetrics? Performance;
     public static string Path { get; } = FindPath();
     private static string FindPath()
     {
@@ -45,8 +47,10 @@ internal static class AppLog
     }
     public static void Write(string text)
     {
+        long start = Performance?.Start() ?? 0;
         try { Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!); File.AppendAllText(Path, $"{DateTimeOffset.Now:O} {text}{Environment.NewLine}"); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
+        finally { Performance?.End(Editor.EditorPerformanceStage.LogWrite, start); }
     }
 }

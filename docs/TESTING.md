@@ -236,6 +236,23 @@ average render rate alone cannot diagnose individual editing stalls. Shared
 conversion counters are also available to tests; macOS does not enable or persist
 these Windows host diagnostics.
 
+Windows stall diagnostics also report `MessageDispatch` for every retrieved message,
+including timer and paint handling, and the slowest message ID with testplay state
+at dispatch start. `MessageWait` measures message retrieval while playback/testplay
+is active, including sent messages processed inside retrieval. `FrameWait` measures
+the DXGI frame-or-input wait. `FrameGap` measures intervals between paint attempts
+while both endpoints are active; `frameGapTestplay` gives the testplay state at each
+endpoint of the longest gap. Idle endpoints, minimized windows and native modal
+scopes are excluded from this gap counter. Focus changes, suspension and scheduling
+can still produce gaps, so a gap alone does not establish synchronous application work.
+
+`LogWrite` measures synchronous application-log writes on the UI thread, including
+failed writes. Background writes do not update UI counters. A performance summary's
+own write appears in the following interval. Message dispatch contains the nested
+paint stages, and frame gaps span drawing, waits and other UI work;
+these counters must not be added together. They use the existing five-second aggregate
+logging and fixed sample storage, without per-message or per-frame log writes.
+
 Run the shared App test executable with `--benchmark-editing` to measure adding and
 continuously dragging objects in synthetic maps of 1,000 fruits, 10,000 fruits,
 and 1,000 FSliders. On macOS, from the repository root:
