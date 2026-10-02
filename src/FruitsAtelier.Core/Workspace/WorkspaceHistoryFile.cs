@@ -12,7 +12,11 @@ public static class WorkspaceHistoryFile
 
     public static string LogicalPath(string path) => path.EndsWith(Extension, StringComparison.OrdinalIgnoreCase) ? path[..^Extension.Length] : path;
     public static bool Exists(string path) => File.Exists(path + Extension) || File.Exists(path);
-    public static string ReadText(string path) => Encoding.UTF8.GetString(Read(path));
+    public static string ReadText(string path)
+    {
+        using var reader = new StreamReader(new MemoryStream(Read(path)), Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        return reader.ReadToEnd();
+    }
 
     public static byte[] Read(string path)
     {

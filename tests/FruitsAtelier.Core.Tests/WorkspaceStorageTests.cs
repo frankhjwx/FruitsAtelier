@@ -31,7 +31,12 @@ internal static class WorkspaceStorageTests
         string usedPlayback = Write(".sync-history/resources/playback/" + historical + ".mp3", "referenced playback copy");
         Write("project/playback.catchdiff", JsonSerializer.Serialize(new { AudioPath = "../.sync-history/resources/playback/" + historical + ".mp3" }));
         Guid id = Guid.NewGuid();
-        var versions = Enumerable.Range(2, 15).Select(age => Snapshot(id, age)).ToArray();
+        var versions = Enumerable.Range(0, WorkspaceStorage.VersionsPerProject + 5).Select(index =>
+        {
+            string path = Path.Combine(history, id.ToString("N"), now.AddMinutes(-index).ToString("yyyyMMddTHHmmssfffffff") + "-resolution");
+            Write(Path.GetRelativePath(workspace, Path.Combine(path, "current.catchproj")), "{}");
+            return path;
+        }).ToArray();
         string lastCopy = Snapshot(Guid.NewGuid(), 60, JsonSerializer.Serialize(new { AudioHash = historical }));
         string old = Snapshot(id, 80, JsonSerializer.Serialize(new { AudioPath = "audio.mp3" })), pinned = Snapshot(id, 90);
         Write("project/author.catchdiff", JsonSerializer.Serialize(new { AudioPath = Path.Combine(pinned, "audio.mp3") }));
@@ -41,7 +46,7 @@ internal static class WorkspaceStorageTests
         Check(before.TotalBytes == before.Categories.Sum(c => c.Bytes) && before.TotalBytes == before.Folders.Sum(f => f.Bytes), "storage totals and folder shares agree");
         var report = WorkspaceStorage.Clean(workspace, utcNow: now);
         Check(report.ReclaimedBytes > 0 && before.TotalBytes - report.TotalBytes == report.ReclaimedBytes, "reclaimed bytes match actual file sizes");
-        Check(versions.Take(10).All(Directory.Exists) && versions.Skip(10).All(p => !Directory.Exists(p)), "ten newest historical versions retained");
+        Check(versions.Take(WorkspaceStorage.VersionsPerProject - 1).All(Directory.Exists) && versions.Skip(WorkspaceStorage.VersionsPerProject - 1).All(p => !Directory.Exists(p)), "referenced round counts toward the 100-round cap even when all ordinary rounds are younger than 24 hours");
         Check(!Directory.Exists(old) && Directory.Exists(lastCopy) && Directory.Exists(pinned), "latest copy and referenced snapshots survive age expiry");
         Check(File.Exists(activeAudio) && File.Exists(oldAudio) && File.Exists(freshAudio) && !File.Exists(unusedAudio), "active, retained and unpublished audio protected; orphan reclaimed");
         Check(!File.Exists(unusedPlayback) && File.Exists(usedPlayback), "unused playback copies are reclaimed independently of retained canonical audio");

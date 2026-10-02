@@ -349,10 +349,20 @@ Storage actions use the active workspace, not an unapplied path draft.
 
 Automatic maintenance runs after startup while idle in the library without an open
 workspace project, then at most once per day during that app session. Ordinary
-history expires after 30 days or beyond 10 snapshots per project. A 1 GiB history
-budget removes older eligible snapshots first. Every project's newest snapshot,
-referenced snapshots, and snapshots from the last 24 hours are protected, so the
-budget is a soft limit. Deleted or retired projects retain their newest recovery copy.
+history expires after 30 days and each set has a 100-round limit. A round is one
+snapshot directory for the whole set; saved and working authoring in that directory
+count together. Each new archive enforces this limit for its set immediately,
+without compacting legacy data or pruning other sets. The count limit also applies
+to snapshots from the last 24 hours. Referenced rounds count toward the limit and
+leave fewer slots for ordinary rounds. Active recovery defers pruning; if references
+alone require more than 100 rounds, those dependencies remain protected until they
+can be released.
+
+A 1 GiB history budget removes older eligible snapshots first. Every set's newest
+snapshot and referenced snapshots are protected; the last 24 hours protect against
+age/budget pruning but do not exempt ordinary rounds from the count limit. The
+budget is therefore a soft limit. Deleted or retired sets retain their newest
+recovery copy.
 
 Audio remains content-addressed and deduplicated. Cleanup traces hashes and paths
 from current authoring, synchronization baselines, and retained history before

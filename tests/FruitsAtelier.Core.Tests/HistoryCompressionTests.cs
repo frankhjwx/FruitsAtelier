@@ -15,6 +15,16 @@ internal static class HistoryCompressionTests
         WorkspaceHistoryFile.Write(path, bytes);
         Check(WorkspaceHistoryFile.Read(path).SequenceEqual(bytes), "binary round trip preserves exact UTF-8 bytes");
         Check(new FileInfo(path + WorkspaceHistoryFile.Extension).Length < bytes.Length / 10, "repetitive authoring is compressed");
+        foreach (Encoding encoding in new Encoding[] { new UTF8Encoding(true), Encoding.Unicode })
+        {
+            string text = "{\"Name\":\"中文\"}", bomPath = Path.Combine(root, "bom.catchproj");
+            byte[] encodedText = encoding.GetPreamble().Concat(encoding.GetBytes(text)).ToArray();
+            File.WriteAllBytes(bomPath, encodedText);
+            Check(WorkspaceHistoryFile.ReadText(bomPath) == text, "legacy text retains BOM detection");
+            WorkspaceHistoryFile.Write(bomPath, encodedText);
+            Check(WorkspaceHistoryFile.ReadText(bomPath) == text && WorkspaceHistoryFile.Read(bomPath).SequenceEqual(encodedText), "compressed legacy text preserves encoding and exact bytes");
+            File.Delete(bomPath + WorkspaceHistoryFile.Extension);
+        }
         byte[] encoded = File.ReadAllBytes(path + WorkspaceHistoryFile.Extension);
         encoded[12] ^= 1;
         File.WriteAllBytes(path + WorkspaceHistoryFile.Extension, encoded);
@@ -46,6 +56,28 @@ internal static class HistoryCompressionTests
         File.WriteAllText(orphan, "orphan"); File.SetLastWriteTimeUtc(orphan, DateTime.UtcNow.AddDays(-10));
         Reject(() => WorkspaceStorage.Clean(workspace), "corrupt compressed references accepted");
         Check(File.Exists(orphan), "corrupt compressed history prevents cleanup before deletion");
+
+        string cappedWorkspace = Path.Combine(root, "capped-workspace");
+        var map = new MapDocument { IsDemo = false };
+        map.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 });
+        var project = BeatmapProject.FromDocuments([map]);
+        var session = WorkspaceProject.Create(cappedWorkspace, project, "");
+        string projectHistory = Path.Combine(cappedWorkspace, ".sync-history", session.Manifest.Id.ToString("N"));
+        var rounds = Enumerable.Range(0, 101).Select(i => Path.Combine(projectHistory, DateTime.UtcNow.AddMinutes(-200 + i).ToString("yyyyMMddTHHmmssfffffff") + "-save")).ToArray();
+        foreach (string round in rounds)
+        {
+            Directory.CreateDirectory(round);
+            WorkspaceHistoryFile.WriteProject(project, Path.Combine(round, "saved.catchproj"));
+        }
+        string other = Path.Combine(cappedWorkspace, ".sync-history", Guid.NewGuid().ToString("N"), "20200101T0000000000000-save");
+        Directory.CreateDirectory(other);
+        File.WriteAllText(Path.Combine(other, "saved.catchproj"), "{}");
+        project.Difficulties[0].Document.Fruits[0].X = 200;
+        WorkspaceVersionHistory.ArchiveCurrent(session, project);
+        Check(Directory.GetDirectories(projectHistory).Length == 100 && !Directory.Exists(rounds[0]) && !Directory.Exists(rounds[1]), "new backup trims a set to 100 rounds without the 24-hour exemption");
+        Check(Directory.Exists(other), "write-time retention leaves other sets alone");
+        var newest = WorkspaceVersionHistory.List(session).First(v => v.WorkingCopy);
+        Check(WorkspaceVersionHistory.Read(session, newest).Difficulties[0].Document.Fruits[0].X == 200, "latest unsaved authoring survives write-time pruning");
     }
 
     public static void Benchmark(string history)

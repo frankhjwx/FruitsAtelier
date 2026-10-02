@@ -10,7 +10,7 @@ public sealed record WorkspaceStorageReport(long TotalBytes, IReadOnlyList<Works
 
 public static class WorkspaceStorage
 {
-    public const int RetentionDays = 30, VersionsPerProject = 10;
+    public const int RetentionDays = 30, VersionsPerProject = 100;
     public const long HistoryBudget = 1024L * 1024 * 1024;
     private static readonly Regex Hashes = new("[A-Fa-f0-9]{64}", RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private sealed record Snapshot(string Path, DateTime Time, long Bytes);
@@ -36,6 +36,24 @@ public static class WorkspaceStorage
     }
 
     public static WorkspaceStorageReport Clean(string workspace, bool clearCache = false, DateTime? utcNow = null, IReadOnlyCollection<string>? protectedPaths = null)
+        => CleanCore(workspace, clearCache, utcNow, protectedPaths);
+
+    internal static void EnforceVersionLimit(WorkspaceSession session)
+    {
+        string workspace = Path.GetDirectoryName(session.Directory)!;
+        string project = Path.Combine(workspace, ".sync-history", session.Manifest.Id.ToString("N"));
+        if (Directory.EnumerateDirectories(project).Count(IsSnapshot) <= VersionsPerProject) return;
+        CleanCore(workspace, false, null, session.Project.Difficulties.SelectMany(d => new[] { d.Document.AudioPath, d.Document.SourcePath }).OfType<string>().ToArray(), project);
+    }
+
+    private static bool IsSnapshot(string path)
+    {
+        string name = Path.GetFileName(path);
+        return name.Length >= 24 && DateTime.TryParseExact(name[..22], "yyyyMMddTHHmmssfffffff", CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out _);
+    }
+
+    private static WorkspaceStorageReport CleanCore(string workspace, bool clearCache, DateTime? utcNow, IReadOnlyCollection<string>? protectedPaths, string? limitProject = null)
     {
         string root = Path.GetFullPath(workspace), history = Path.Combine(root, ".sync-history");
         DateTime now = utcNow ?? DateTime.UtcNow;
@@ -111,14 +129,21 @@ public static class WorkspaceStorage
             var remove = new HashSet<string>(WorkspaceSynchronization.Paths);
             foreach (var group in snapshots.GroupBy(s => Path.GetDirectoryName(s.Path)))
             {
+                if (limitProject is not null && !WorkspaceSynchronization.Paths.Equals(group.Key, limitProject)) continue;
                 var ordered = group.OrderByDescending(s => s.Time).ToArray();
                 if (ordered.Length > 0) pinned.Add(ordered[0].Path);
+                int unpinnedSlots = Math.Max(0, VersionsPerProject - ordered.Count(s => pinned.Contains(s.Path))), unpinnedIndex = 0;
                 for (int i = 1; i < ordered.Length; i++)
-                    if (!clearCache && (i >= VersionsPerProject || ordered[i].Time < now.AddDays(-RetentionDays)) && ordered[i].Time < now.AddDays(-1) && !pinned.Contains(ordered[i].Path)) remove.Add(ordered[i].Path);
+                {
+                    if (pinned.Contains(ordered[i].Path)) continue;
+                    bool overLimit = unpinnedIndex++ >= unpinnedSlots;
+                    if (!clearCache && (overLimit || limitProject is null && ordered[i].Time < now.AddDays(-RetentionDays)
+                        && ordered[i].Time < now.AddDays(-1))) remove.Add(ordered[i].Path);
+                }
             }
             long retained = snapshots.Where(s => !remove.Contains(s.Path)).Sum(s => s.Bytes);
             foreach (var snapshot in snapshots.OrderBy(s => s.Time))
-                if (!clearCache && retained > HistoryBudget && !remove.Contains(snapshot.Path) && !pinned.Contains(snapshot.Path) && snapshot.Time < now.AddDays(-1))
+                if (limitProject is null && !clearCache && retained > HistoryBudget && !remove.Contains(snapshot.Path) && !pinned.Contains(snapshot.Path) && snapshot.Time < now.AddDays(-1))
                 { remove.Add(snapshot.Path); retained -= snapshot.Bytes; }
             var referencedHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var pair in documents)
@@ -141,6 +166,7 @@ public static class WorkspaceStorage
                 WorkspaceProject.RejectLinks(path);
                 Directory.Delete(path);
             }
+            if (limitProject is not null) return new(0, [], [], reclaimed);
             string resources = Path.Combine(history, "resources"), reviews = Path.Combine(history, "reviews");
             foreach (var file in files.Where(f => WorkspaceProject.Within(resources, f.FullName)))
             {

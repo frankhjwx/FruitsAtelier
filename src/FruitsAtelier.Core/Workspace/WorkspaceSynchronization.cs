@@ -631,6 +631,7 @@ public static class WorkspaceSynchronization
                 Document = ProjectSerializer.ReadFile(System.IO.Path.Combine(session.Directory, entry.File)) });
         }
         WorkspaceHistoryFile.WriteProject(saved, System.IO.Path.Combine(target, "saved.catchproj"));
+        WorkspaceStorage.EnforceVersionLimit(session);
         return target;
     }
 
