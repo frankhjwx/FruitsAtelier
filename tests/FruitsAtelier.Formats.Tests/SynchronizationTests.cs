@@ -350,6 +350,74 @@ internal static class SynchronizationTests
                 Check(f.Merge().Conflicts.Any(c => c.Key.StartsWith(key)), "real edit stays visible: " + key);
             }
         }));
+        yield return ("Sync: TimelineZoom follows osu without conflicts or local overrides", () => Run(f =>
+        {
+            string before = Fixture().Replace("[Metadata]", "[Editor]\nTimelineZoom:1\nBookmarks:100\n[Metadata]");
+            File.WriteAllText(f.Source, before);
+            f.Diff.Document = OsuBeatmapReader.ReadFile(f.Source);
+            var entry = f.Session.Manifest.Difficulties[0];
+            entry.Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory);
+            entry.Sync.LocalOverrides.Add("Editor/TimelineZoom");
+            foreach (string? zoom in new string?[] { "3.899998", null, "1.5" })
+            {
+                File.WriteAllText(f.Source, before.Replace("TimelineZoom:1\n", zoom is null ? "" : "TimelineZoom:" + zoom + "\n"));
+                var merge = f.Merge();
+                Check(!merge.RequiresResolution, "osu-only zoom must not require review");
+                var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+                Check(OsuBeatmapReader.Setting(resolved, "Editor", "TimelineZoom") == zoom, "latest external zoom is preserved, including removal");
+                Check(!WorkspaceSynchronization.HasFieldDifferences(f.Diff.Document, merge.External.Document), "zoom is not an authored field difference");
+                var noBaseline = WorkspaceSynchronization.CompareWithoutBaseline(f.Diff.Document, merge.External, f.Session.Directory, true);
+                Check(!noBaseline.RequiresResolution && OsuBeatmapReader.Setting(WorkspaceSynchronization.Resolve(noBaseline,
+                    new Dictionary<string, bool>()), "Editor", "TimelineZoom") == zoom, "baseline-free comparison also follows external zoom");
+                WorkspaceSynchronization.Accept(f.Session, entry, merge.External, resolved, true);
+                f.Diff.Document = resolved;
+                Check(!entry.Sync!.LocalOverrides.Contains("Editor/TimelineZoom"), "obsolete zoom override is retired");
+            }
+            File.WriteAllText(f.Source, File.ReadAllText(f.Source).Replace("Bookmarks:100", "Bookmarks:200"));
+            Check(f.Merge().Conflicts.Any(c => c.Key == "Editor/Bookmarks"), "editable Editor fields still need review");
+        }));
+        yield return ("Sync: legacy fractional break recovery survives osu save rewrites", () => Run(f =>
+        {
+            var map = f.Diff.Document;
+            map.ApproachRate = 9.8; map.DurationMs = 260000;
+            var track = new CurveTrack { Kind = CurveKind.Linear };
+            track.Nodes.AddRange([new() { TimeMs = 236719, X = 100 }, new() { TimeMs = 246904.67639257296, X = 400 }]);
+            map.Tracks.Add(track); map.Fruits.Add(new() { TimeMs = 257090.35278514592, X = 200 });
+            map.OriginalSections.Add(new OsuSection { Name = "Events", Lines = {
+                "//Background and Video events", "0,0,\"background.jpg\",0,0", "//Break Periods",
+                "//Storyboard Layer 0 (Background)", "Sprite,Foreground,Centre,\"sprite.png\",320,240", " F,0,0,500,0,1",
+                "//Storyboard Sound Samples", "", "2,54850,57406", "2,247105,256536" } });
+            var output = OsuBeatmapWriter.Serialize(map);
+            File.WriteAllText(f.Source, output.Text);
+            var entry = f.Session.Manifest.Difficulties[0];
+            entry.Sync = WorkspaceSynchronization.Capture(f.Source, map, f.Session.Directory, output.Text, output.ObjectSources);
+            entry.Sync.LocalOverrides.Add("Events/");
+            string saved = output.Text.Replace("\r", "").Replace("//Break Periods", "//Break Periods\n2,54850,57406\n2,247104,256536")
+                .Replace("\n2,54850,57406\n2,247105,256536", "");
+            File.WriteAllText(f.Source, saved);
+            var merge = f.Merge();
+            Check(!merge.RequiresResolution && merge.Conflicts.Count == 0, "fractional recovery and section layout rewrites need no review");
+            Check(!WorkspaceSynchronization.HasFieldDifferences(output.ReadBack, merge.External.Document), "same save semantics apply to field detection");
+            Check(!WorkspaceSynchronization.CompareWithoutBaseline(map, merge.External, f.Session.Directory, true).RequiresResolution,
+                "legacy boundary also compares correctly without a baseline");
+            var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+            Check(new MapDocument { Tracks = { resolved.Tracks.Single() } }.ContentEquals(new MapDocument { Tracks = { track } }),
+                "comparison retains fractional authored controls");
+            WorkspaceSynchronization.Accept(f.Session, entry, merge.External, resolved, true);
+            f.Diff.Document = resolved;
+            Check(!entry.Sync!.LocalOverrides.Contains("Events/"), "legacy recovery is not a pending local override");
+            WorkspaceProject.Save(f.Session, f.Session.Project);
+            var reopened = WorkspaceProject.Open(f.Session.Directory);
+            Check(!WorkspaceSynchronization.Merge(reopened.Manifest.Difficulties[0], reopened.Project.Difficulties[0].Document,
+                WorkspaceSynchronization.ReadStable(f.Source), reopened.Directory, true).RequiresResolution, "restart must not repeat the conflict");
+            foreach (string changed in new[] { saved.Replace("2,54850,57406", "2,54851,57406"),
+                saved.Replace("2,247104,256536", "2,247103,256536"), saved.Replace("2,247104,256536", "2,247104,256537"),
+                saved.Replace(" F,0,0,500,0,1", " F,0,0,501,0,1") })
+            {
+                File.WriteAllText(f.Source, changed);
+                Check(f.Merge().Conflicts.Any(c => c.Key == "Events/"), "actual break and storyboard edits remain reviewable");
+            }
+        }));
         yield return ("Sync: ordinary combo edits and timing order remain visible", () => Run(f =>
         {
             File.WriteAllText(f.Source, Fixture().Replace("1500,1,0", "1500,5,0"));

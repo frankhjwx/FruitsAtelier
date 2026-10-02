@@ -79,7 +79,7 @@ public sealed partial class EditorView
         int next = UpperBound(timelineStarts, playhead);
         if (previous < 0 || next >= timelineStarts.Length) return null;
         double previousEnd = timelineEnds[previous], nextStart = timelineStarts[next];
-        int start = (int)Math.Clamp(Math.Ceiling(previousEnd + 200), 0, int.MaxValue);
+        int start = OsuTimeline.BreakStartAfter(previousEnd);
         int end = (int)Math.Clamp(Math.Floor(nextStart - CatchScrollTiming.PreemptMs(Document.ApproachRate)), 0, int.MaxValue);
         if (end - (long)start < 400 || breakPeriods.Any(period => period.StartMs < end && period.EndMs > start)) return null;
         return new(start, end);

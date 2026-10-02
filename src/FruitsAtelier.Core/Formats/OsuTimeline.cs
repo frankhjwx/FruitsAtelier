@@ -36,10 +36,11 @@ public static class OsuTimeline
         foreach (var interval in vacated)
         {
             int beforeNote = (int)Math.Clamp(Math.Floor(interval.Start - preempt), 0, int.MaxValue);
-            int afterNote = (int)Math.Clamp(Math.Ceiling(interval.End + 200), 0, int.MaxValue);
+            int afterNote = BreakStartAfter(interval.End);
             var adjacent = Breaks(document);
             var left = adjacent.LastOrDefault(period => period.EndMs == beforeNote);
-            var right = adjacent.FirstOrDefault(period => period.StartMs == afterNote);
+            var right = adjacent.FirstOrDefault(period => period.StartMs == afterNote
+                || period.StartMs == Math.Ceiling(interval.End + 200));
             if (left == default && right == default) continue;
             if (left != default && right != default && left != right)
             {
@@ -58,7 +59,7 @@ public static class OsuTimeline
                 double? prior = occupied.Where(item => item.End <= interval.Start).Select(item => (double?)item.End).LastOrDefault();
                 if (prior is not null)
                     ReplaceBreak(document, right, new(
-                        Math.Min(right.StartMs, (int)Math.Clamp(Math.Ceiling(prior.Value + 200), 0, int.MaxValue)), right.EndMs));
+                        Math.Min(right.StartMs, BreakStartAfter(prior.Value)), right.EndMs));
             }
         }
         foreach (var period in Breaks(document))
@@ -70,7 +71,7 @@ public static class OsuTimeline
             foreach (var interval in occupied)
             {
                 int beforeNote = (int)Math.Clamp(Math.Floor(interval.Start - preempt), 0, int.MaxValue);
-                int afterNote = (int)Math.Clamp(Math.Ceiling(interval.End + 200), 0, int.MaxValue);
+                int afterNote = BreakStartAfter(interval.End);
                 if (afterNote <= start) continue;
                 if (beforeNote >= period.EndMs) break;
                 int end = Math.Min(beforeNote, period.EndMs);
@@ -89,7 +90,10 @@ public static class OsuTimeline
         }
     }
 
-    private static Dictionary<Guid, (double Start, double End)> ObjectIntervals(MapDocument document, ImportedSliderLengthCache sliderLengths)
+    // Stable saves truncate fractional object recovery boundaries to integer milliseconds.
+    public static int BreakStartAfter(double endTimeMs) => (int)Math.Clamp(Math.Truncate(endTimeMs + 200), 0, int.MaxValue);
+
+    internal static Dictionary<Guid, (double Start, double End)> ObjectIntervals(MapDocument document, ImportedSliderLengthCache sliderLengths)
     {
         var timing = new TimingMap.Lookup(document);
         return document.Fruits.Select(item => (item.Id, Start: item.TimeMs, End: item.TimeMs))

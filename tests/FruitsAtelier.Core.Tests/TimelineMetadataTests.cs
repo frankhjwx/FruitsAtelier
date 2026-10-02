@@ -5,6 +5,7 @@ internal static class TimelineMetadataTests
     public static void Run()
     {
         CachedBreakIntervals();
+        FractionalBreakBoundary();
         const string source = "osu file format v14\n[General]\nMode:2\nPreviewTime:1500\n[Editor]\nBookmarks: 100, 300\n[Events]\n//Break Periods\n2,1000,2000\n0,0,background.jpg\n[TimingPoints]\n0,500,4,1,0,100,1,1\n[HitObjects]\n256,192,100,1,0,0:0:0:0:\n";
         var document = OsuBeatmapReader.Read(source);
         Check(OsuTimeline.PreviewTime(document) == 1500, "Preview point was not read");
@@ -39,6 +40,29 @@ internal static class TimelineMetadataTests
             && OsuTimeline.Breaks(exported).SequenceEqual([new BreakPeriod(3200, 3800)])
             && events.Lines[breakLine].EndsWith("// keep this comment", StringComparison.Ordinal),
             "Resizing a break must preserve its Events line and comment");
+    }
+
+    private static void FractionalBreakBoundary()
+    {
+        var map = new MapDocument { DurationMs = 260000, ApproachRate = 9.8 };
+        map.Fruits.AddRange([new() { TimeMs = 230000, X = 200 }, new() { TimeMs = 257090.35278514592, X = 200 }]);
+        OsuTimeline.AddBreak(map, 240000, 256536);
+        var history = new EditorHistory(map);
+        history.Begin("Add fractional slider");
+        var track = new CurveTrack { Kind = CurveKind.Linear };
+        track.Nodes.AddRange([new() { TimeMs = 236719, X = 100 }, new() { TimeMs = 246904.67639257296, X = 400 }]);
+        history.Document.Tracks.Add(track);
+        history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(247104, 256536)]),
+            "Fractional slider recovery must use the stable integer boundary.");
+        history.Undo(); Check(history.Document.ContentEquals(map), "Undo must restore the break and slider together.");
+        history.Redo();
+        Check(OsuTimeline.Breaks(history.Document).Single().StartMs == 247104, "Redo lost the fractional boundary.");
+        OsuTimeline.ReplaceBreak(history.Document, new(247104, 256536), new(247105, 256536));
+        history.Begin("Remove slider beside legacy break");
+        history.Document.Tracks.Clear(); history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).Single().StartMs == 230200,
+            "Removing a slider must also extend a legacy ceil-rounded break.");
     }
 
     private static void CachedBreakIntervals()

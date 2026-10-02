@@ -80,7 +80,7 @@ public static class WorkspaceSynchronization
     public static bool HasFieldDifferences(MapDocument local, MapDocument external)
     {
         var ours = Fields(local); var theirs = Fields(external);
-        return ours.Keys.Union(theirs.Keys).Any(key => !FieldEquals(key, ours.GetValueOrDefault(key), theirs.GetValueOrDefault(key)));
+        return ours.Keys.Union(theirs.Keys).Any(key => !FieldEquals(key, ours.GetValueOrDefault(key), theirs.GetValueOrDefault(key), local, external));
     }
     public static StringComparer Paths => OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
         ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
@@ -271,7 +271,8 @@ public static class WorkspaceSynchronization
         foreach (string key in ours.Keys.Union(theirs.Keys))
         {
             merge.Fields[key] = key == "TimingPoints/" ? WorkspaceTimingSynchronization.Text(local.TimingPoints) : ours.GetValueOrDefault(key);
-            if (!FieldEquals(key, ours.GetValueOrDefault(key), theirs.GetValueOrDefault(key)))
+            if (key == "Editor/TimelineZoom") { merge.Fields[key] = theirs.GetValueOrDefault(key); continue; }
+            if (!FieldEquals(key, ours.GetValueOrDefault(key), theirs.GetValueOrDefault(key), output.ReadBack, external.Document))
             {
                 if (key == "TimingPoints/")
                 {
@@ -318,7 +319,9 @@ public static class WorkspaceSynchronization
         {
             baseFields.TryGetValue(key, out var before); authorFields.TryGetValue(key, out var authorBefore);
             localFields.TryGetValue(key, out var ours); externalFields.TryGetValue(key, out var theirs);
-            bool outsideChanged = !FieldEquals(key, before, theirs), insideChanged = !FieldEquals(key, authorBefore, ours) || baseline.LocalOverrides.Contains(key);
+            if (key == "Editor/TimelineZoom") { merge.Fields[key] = theirs; continue; }
+            bool outsideChanged = !FieldEquals(key, before, theirs, emittedBaseline, external.Document),
+                insideChanged = !FieldEquals(key, authorBefore, ours, original, local) || baseline.LocalOverrides.Contains(key);
             merge.Fields[key] = outsideChanged && !insideChanged ? theirs : ours;
             if (key == "TimingPoints/")
             {
@@ -340,11 +343,11 @@ public static class WorkspaceSynchronization
                 }
                 continue;
             }
-            if ((IsMetadataField(key) || outsideChanged || insideChanged) && !FieldEquals(key, ours, theirs))
+            if ((IsMetadataField(key) || outsideChanged || insideChanged) && !FieldEquals(key, ours, theirs, local, external.Document))
             {
                 merge.Fields[key] = ours;
                 merge.Conflicts.Add(new(key, ours ?? "", theirs ?? ""));
-                if (!outsideChanged && FieldEquals(key, ours, authorBefore) && baseline.LocalOverrides.Contains(key)) merge.PreviouslyResolved.Add(key);
+                if (!outsideChanged && FieldEquals(key, ours, authorBefore, local, original) && baseline.LocalOverrides.Contains(key)) merge.PreviouslyResolved.Add(key);
             }
         }
         string? localAudio = AudioHash(local.AudioPath), externalAudio = AudioHash(external.Document.AudioPath);
@@ -563,11 +566,12 @@ public static class WorkspaceSynchronization
         var pending = new List<string>();
         var resolvedFields = Fields(resolved); var externalFields = Fields(external.Document);
         string emittedTiming = WorkspaceTimingSynchronization.Text(output.ReadBack.TimingPoints);
-        bool MatchesExternal(string key) => FieldEquals(key, key == "TimingPoints/" ? emittedTiming : resolvedFields.GetValueOrDefault(key), externalFields.GetValueOrDefault(key));
+        bool MatchesExternal(string key) => FieldEquals(key, key == "TimingPoints/" ? emittedTiming : resolvedFields.GetValueOrDefault(key), externalFields.GetValueOrDefault(key), resolved, external.Document);
         if (entry.Sync is { } previous && !retainLocalFields)
         {
-            var oldFields = Fields(ProjectSerializer.Read(previous.Authoring, SnapshotPath(session.Directory)));
-            pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => (previous.LocalOverrides.Contains(k) || !FieldEquals(k, resolvedFields.GetValueOrDefault(k), oldFields.GetValueOrDefault(k)))
+            var oldDocument = ProjectSerializer.Read(previous.Authoring, SnapshotPath(session.Directory));
+            var oldFields = Fields(oldDocument);
+            pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => (previous.LocalOverrides.Contains(k) || !FieldEquals(k, resolvedFields.GetValueOrDefault(k), oldFields.GetValueOrDefault(k), resolved, oldDocument))
                 && !MatchesExternal(k)));
         }
         else pending.AddRange(resolvedFields.Keys.Union(externalFields.Keys).Where(k => !MatchesExternal(k)));
@@ -800,11 +804,13 @@ public static class WorkspaceSynchronization
     }
 
     private static readonly HashSet<string> SettingsSections = ["General", "Editor", "Metadata", "Difficulty", "Colours"];
-    private static bool FieldEquals(string key, string? left, string? right)
+    private static bool FieldEquals(string key, string? left, string? right, MapDocument? leftDocument = null, MapDocument? rightDocument = null)
     {
-        if (left == right) return true;
+        if (left == right || key == "Editor/TimelineZoom") return true;
         if (key == "TimingPoints/") return TimingComparison(left) == TimingComparison(right);
-        if (key == "Events/") return EventComparison(left) == EventComparison(right);
+        if (key == "Events/") return EventComparison(left) == EventComparison(right)
+            || leftDocument is not null && rightDocument is not null
+            && EventComparison(left, leftDocument) == EventComparison(right, rightDocument);
         return false;
     }
 
@@ -817,7 +823,7 @@ public static class WorkspaceSynchronization
         return string.Join(',', parts);
     }));
 
-    private static string EventComparison(string? value)
+    private static string EventComparison(string? value, MapDocument? document = null)
     {
         var events = new List<string>();
         var breaks = new List<(int Start, int End)>();
@@ -830,6 +836,20 @@ public static class WorkspaceSynchronization
                 && int.TryParse(parts[2].Split("//", 2)[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int end))
                 breaks.Add((start, end));
             else events.Add(line.TrimEnd('\r'));
+        }
+        if (document is not null && breaks.Count > 0)
+        {
+            var ends = OsuTimeline.ObjectIntervals(document, new ImportedSliderLengthCache()).Values.Select(i => i.End).Order().ToArray();
+            for (int i = 0; i < breaks.Count; i++)
+            {
+                var period = breaks[i];
+                int index = Array.BinarySearch(ends, (double)period.Start);
+                if (index < 0) index = ~index - 1;
+                // Older FA versions rounded the recovery boundary up. Recognize only that
+                // derived boundary; a one-millisecond edit elsewhere remains a real edit.
+                if (index >= 0 && Math.Ceiling(ends[index] + 200) == period.Start)
+                    breaks[i] = (OsuTimeline.BreakStartAfter(ends[index]), period.End);
+            }
         }
         // Break placement amongst storyboard comments/commands is not part of its interval.
         // Keep storyboard command order and indentation, and retain original text for resolution.

@@ -7,6 +7,8 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 - Accept v12, v13, v14 and stable-compatible lazer v128 / Mode=2; export v14. The reader rejects other format versions and unsupported object types.
 - Preserve General, Editor, Metadata, Difficulty, Events, TimingPoints, Colours, HitObjects, and audio/sample references.
 - Import/export `[Editor] DistanceSpacing` as the per-difficulty spacing multiplier.
+- Synchronization accepts osu!'s `Editor/TimelineZoom` without a conflict; it is
+  an osu! editor preference and does not control FA's viewport.
 - New projects start with `[Difficulty] SliderMultiplier` 1.92 and editor DPB 192 px. Imported maps initially derive DPB as 100 × their stored SliderMultiplier. Subsequent DPB edits belong to the `.catchproj` editor configuration; `.osu` export retains SliderMultiplier and slider playback unchanged.
 - A confirmed Timing-panel SV override replaces exported SliderMultiplier and compensates inherited SV at red resets and green points. Export keeps the generated object lines and validates NM/HR playback before returning text. The authoring multiplier and DPB remain unchanged; see [Timing editing](EDITOR_UI.md#timing-editing).
 - Read and edit `[Editor] Bookmarks` and `[Events]` break periods as difficulty-local timeline content. Unrelated event lines retain their source text and order.
@@ -15,7 +17,10 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
   milliseconds, 15-significant-digit slider lengths and timing values, and implicit
   first-object/post-spinner combo boundaries. Events comparisons ignore comments,
   blank lines and break placement within the section, while retaining break
-  intervals and storyboard command order/indentation. Comparison does not rewrite
+  intervals and storyboard command order/indentation. Break starts at an object's
+  200 ms recovery boundary use truncated integer milliseconds. Synchronization
+  also recognizes the former FA ceil-rounded start at that same fractional object
+  boundary; other break-time edits remain reviewable. Comparison does not rewrite
   authoring values or retained section text; actual edits remain reviewable.
 - Timing synchronization compares changes against the captured emitted timing
   baseline and reviews only changed timestamp groups. Unchanged generated SV
