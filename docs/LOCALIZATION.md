@@ -25,7 +25,7 @@ Core embeds `Localization/*.json` and enumerates these resources at runtime to p
 
 The language dropdown opens above or below its button according to available space. Scroll with the mouse wheel when the list cannot fit; keyboard navigation keeps the highlighted language visible. Scrolling does not apply a language change.
 
-Every non-English language currently carries an **Unproofread** label, including Simplified Chinese. Selecting one opens a notice in the current interface language explaining that the target uses AI-assisted machine translation and has not been proofread. Continue or Enter applies and saves the choice; Cancel or Esc retains the current language. English has neither the label nor the notice. Restoring a saved language at startup does not reopen the selection notice.
+The language button and dropdown show native language names. Selecting a non-English language opens a notice in the current interface language explaining that the target uses AI-assisted machine translation and has not been proofread. Continue or Enter applies and saves the choice; Cancel or Esc retains the current language. English has no selection notice. Restoring a saved language at startup does not reopen the selection notice.
 
 ## Validation and checks
 

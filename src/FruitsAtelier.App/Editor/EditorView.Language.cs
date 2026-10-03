@@ -13,8 +13,7 @@ public sealed partial class EditorView
     private int languageSelection;
     private int languageFirstRow, languageVisibleRows;
     private string? pendingLanguage;
-    private static string LanguageName(string code) => CultureInfo.GetCultureInfo(code).NativeName
-        + (code == "en" ? "" : " · " + L.Get("language.unproofread"));
+    private static string LanguageName(string code) => CultureInfo.GetCultureInfo(code).NativeName;
 
     private void DrawLanguageButton(ICanvas c, Rect bounds)
     {

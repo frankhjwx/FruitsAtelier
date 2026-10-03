@@ -195,8 +195,7 @@ internal static class ShortcutRoutingTests
                 ui.View.RequestLanguagePreference = value => saved = value;
                 ui.View.OpenSettings(); ui.Paint();
                 ui.ClickText(L.Get("settings.appearance"));
-                string Label(string code) => System.Globalization.CultureInfo.GetCultureInfo(code).NativeName
-                    + (code == "en" ? "" : " · " + L.Get("language.unproofread"));
+                string Label(string code) => System.Globalization.CultureInfo.GetCultureInfo(code).NativeName;
                 void Open() => ui.ClickText(Label(L.Language) + " ▾");
                 Open(); ui.Key(40); ui.Key(27);
                 Check(!ui.View.LibraryVisible && saved is null && L.Language == language
