@@ -5,7 +5,7 @@
   "audioProject.localOnly": "Configure su carpeta osu! en Configuración para crearla también en Canciones.",
   "audioProject.create": "crear",
   "audioProject.creating": "Creando proyecto…",
-  "audioProject.oneFile": "Suelte un MP3 / OGG a la vez, por separado de los archivos Mapa o Skin.",
+  "audioProject.oneFile": "Suelte un MP3 / OGG / WAV a la vez, por separado de los archivos Mapa o Skin.",
   "editor.status.convertingSlider": "Actualizando el juego Slider en segundo plano...",
   "aimod.title": "AiMod",
   "aimod.refresh": "Actualizar",

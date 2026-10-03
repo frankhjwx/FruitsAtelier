@@ -39,7 +39,7 @@ Older `.catchproj` files still open; the next save writes a workspace project.
 
 ## Importing external resources
 
-Drop one MP3 or OGG onto the Library browser or editor to create a project. The setup dialog
+Drop one MP3, OGG or WAV onto the Library browser or editor to create a project. The setup dialog
 requires a song title, artist, mapper and difficulty name. Nothing is created until
 all four fields are filled and **Create** is confirmed; Cancel retains the previous
 project. Unsaved edits use the normal Save, Discard or Cancel prompt before setup.

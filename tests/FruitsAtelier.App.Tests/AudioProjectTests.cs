@@ -13,12 +13,19 @@ internal static class AudioProjectTests
         File.WriteAllBytes(source, [1, 2, 3, 4]);
         string ogg = Path.Combine(root, "input.OGG");
         File.Copy("tests/FruitsAtelier.Audio.Tests/Fixtures/quiet-tone.ogg", ogg);
+        string wav = Path.Combine(root, "input.WAV");
+        using (var writer = new NAudio.Wave.WaveFileWriter(wav, new NAudio.Wave.WaveFormat(44100, 16, 2)))
+            for (int i = 0; i < 44100; i++)
+            {
+                float sample = (float)(Math.Sin(2 * Math.PI * 440 * i / 44100) * .02);
+                writer.WriteSample(sample); writer.WriteSample(sample);
+            }
         try
         {
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (bool library in new[] { false, true })
             foreach (int mode in new[] { 0, 1, 2 })
-            foreach (string input in new[] { source, ogg })
+            foreach (string input in new[] { source, ogg, wav })
             {
                 L.SetLanguage(locale);
                 string workspace = Path.Combine(root, $"{locale}-{library}-{mode}-{Path.GetExtension(input)}");

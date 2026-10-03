@@ -5,7 +5,7 @@
   "audioProject.localOnly": "Définissez votre dossier osu! dans Paramètres pour qu'il soit également créé dans les morceaux.",
   "audioProject.create": "Créer",
   "audioProject.creating": "Création de projet…",
-  "audioProject.oneFile": "Déposez un MP3 / OGG à la fois, séparément des archives Beatmap ou Skin.",
+  "audioProject.oneFile": "Déposez un MP3 / OGG / WAV à la fois, séparément des archives Beatmap ou Skin.",
   "editor.status.convertingSlider": "Mise à jour du gameplay du Slider en arrière-plan…",
   "aimod.title": "AiMod",
   "aimod.refresh": "Actualiser",

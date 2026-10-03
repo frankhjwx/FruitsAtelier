@@ -5,7 +5,7 @@
   "audioProject.localOnly": "Set your osu! folder in Settings to also create in Songs.",
   "audioProject.create": "Create",
   "audioProject.creating": "Creating project…",
-  "audioProject.oneFile": "Drop one MP3 / OGG at a time, separately from beatmap or skin archives.",
+  "audioProject.oneFile": "Drop one MP3 / OGG / WAV at a time, separately from beatmap or skin archives.",
   "editor.status.convertingSlider": "Updating slider gameplay in the background…",
   "aimod.title": "AiMod",
   "aimod.refresh": "Refresh",

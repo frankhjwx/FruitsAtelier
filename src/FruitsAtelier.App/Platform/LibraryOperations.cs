@@ -6,7 +6,8 @@ namespace FruitsAtelier.App.Platform;
 public static class LibraryOperations
 {
     public static bool IsProjectAudio(string path) => Path.GetExtension(path).Equals(".mp3", StringComparison.OrdinalIgnoreCase)
-        || Path.GetExtension(path).Equals(".ogg", StringComparison.OrdinalIgnoreCase);
+        || Path.GetExtension(path).Equals(".ogg", StringComparison.OrdinalIgnoreCase)
+        || Path.GetExtension(path).Equals(".wav", StringComparison.OrdinalIgnoreCase);
 
     public static WorkspaceSession CreateAudioProject(BeatmapProject project, string workspace, string songs, bool export, bool compensate)
     {

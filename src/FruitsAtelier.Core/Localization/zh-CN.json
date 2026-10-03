@@ -5,7 +5,7 @@
   "audioProject.localOnly": "在设置中指定 osu! 文件夹后，可同时创建到 Songs。",
   "audioProject.create": "创建",
   "audioProject.creating": "正在创建项目…",
-  "audioProject.oneFile": "请一次拖入一个 MP3 / OGG，且不要与谱面或皮肤压缩包混合拖入。",
+  "audioProject.oneFile": "请一次拖入一个 MP3 / OGG / WAV，且不要与谱面或皮肤压缩包混合拖入。",
   "editor.status.convertingSlider": "正在后台更新滑条的游玩数据…",
   "aimod.title": "AiMod",
   "aimod.refresh": "刷新",
