@@ -806,7 +806,7 @@ public static class WorkspaceSynchronization
     private static readonly HashSet<string> SettingsSections = ["General", "Editor", "Metadata", "Difficulty", "Colours"];
     private static bool FieldEquals(string key, string? left, string? right, MapDocument? leftDocument = null, MapDocument? rightDocument = null)
     {
-        if (left == right || key == "Editor/TimelineZoom") return true;
+        if (left == right || key is "Editor/TimelineZoom" or "General/SampleSet") return true;
         if (key == "TimingPoints/") return TimingComparison(left) == TimingComparison(right);
         if (key == "Events/") return EventComparison(left) == EventComparison(right)
             || leftDocument is not null && rightDocument is not null

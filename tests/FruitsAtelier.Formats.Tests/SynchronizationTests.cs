@@ -4,6 +4,31 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: General SampleSet differences require no review", () =>
+        {
+            foreach (string? value in new string?[] { "None", "Normal", "Soft", "Drum", null }) Run(f =>
+            {
+                SongSetup.Set(f.Diff.Document, "General", "SampleSet", "Soft");
+                var output = OsuBeatmapWriter.Serialize(f.Diff.Document);
+                File.WriteAllText(f.Source, output.Text);
+                var entry = f.Session.Manifest.Difficulties[0];
+                entry.Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory, output.Text, output.ObjectSources);
+                entry.Sync.LocalOverrides.Add("General/SampleSet");
+                string externalText = value is null ? output.Text.Replace("SampleSet:Soft", "")
+                    : output.Text.Replace("SampleSet:Soft", "SampleSet:" + value);
+                File.WriteAllText(f.Source, externalText);
+                var candidate = WorkspaceSynchronization.ReadStable(f.Source);
+                Check(!WorkspaceSynchronization.HasFieldDifferences(f.Diff.Document, candidate.Document), "SampleSet alone is not a field difference");
+                foreach (var merge in new[] { f.Merge(), WorkspaceSynchronization.CompareWithoutBaseline(f.Diff.Document, candidate, f.Session.Directory, true) })
+                {
+                    Check(!merge.RequiresResolution && merge.Conflicts.Count == 0, "SampleSet needs no choice with or without a baseline or retained override");
+                    var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+                    Check(OsuBeatmapReader.Setting(resolved, "General", "SampleSet") == "Soft", "ignored field preserves the local setting");
+                }
+                candidate.Document.TimingPoints[0].SampleSet = 3;
+                Check(WorkspaceSynchronization.HasFieldDifferences(f.Diff.Document, candidate.Document), "timing sample-bank changes remain reviewable");
+            });
+        });
         yield return ("Sync: metadata saves rename linked files without adding difficulties", () =>
         {
             foreach (string key in new[] { "Artist", "Title", "Creator", "Version" })

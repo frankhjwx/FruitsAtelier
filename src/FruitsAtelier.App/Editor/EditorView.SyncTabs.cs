@@ -64,7 +64,8 @@ public sealed partial class EditorView
         {
             var left = Values(local.GetValueOrDefault(section.Key, ""));
             var right = Values(external.GetValueOrDefault(section.Key, ""));
-            var keys = left.Keys.Union(right.Keys).OrderBy(k => Array.IndexOf(section.Value, k) is int index && index >= 0 ? index : int.MaxValue)
+            var keys = left.Keys.Union(right.Keys).Where(k => section.Key != "General" || k != "SampleSet")
+                .OrderBy(k => Array.IndexOf(section.Value, k) is int index && index >= 0 ? index : int.MaxValue)
                 .ThenBy(k => k, StringComparer.Ordinal);
             fields[section.Key] = keys.Select(k =>
             {

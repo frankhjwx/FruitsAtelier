@@ -9,6 +9,10 @@ excluded from ownership.
 Synchronization failure messages wrap within the dialog. Scroll over the message
 area to read diagnostics that exceed its height.
 
+Synchronization ignores `[General] SampleSet` differences and omits the field from
+the review panel, preserving the local value when applying other changes. Sample
+banks in timing points remain part of synchronization.
+
 Saving and synchronizing the open difficulty retain the current timeline position
 and viewport. Content-only synchronization keeps the existing audio transport.
 Replacing audio, including changed bytes at the same path, reloads it at the
