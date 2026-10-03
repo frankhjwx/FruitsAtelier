@@ -1153,5 +1153,17 @@
   "language.machineTranslationNotice": "{0} utilise une traduction automatique assistée par IA qui n’a pas encore été relue.",
   "language.continue": "Continuer",
   "language.simplifiedChinese": "简体中文",
-  "language.traditionalChinese": "繁体中文"
+  "language.traditionalChinese": "繁体中文",
+  "randomize.title": "Randomiser les gouttelettes",
+  "randomize.enableAll": "Activer tous les FSliders",
+  "randomize.disableAll": "Désactiver tous les FSliders",
+  "randomize.enableSelected": "Activer le FSlider sélectionné",
+  "randomize.disableSelected": "Désactiver le FSlider sélectionné",
+  "randomize.resetAdjustments": "Réinitialiser les ajustements manuels",
+  "randomize.settings": "Réglages de randomisation…",
+  "randomize.count": "FSliders actifs : {0} / {1}",
+  "randomize.help": "Intensité en pixels (0–512). Faites glisser les petites gouttelettes pour les ajuster.",
+  "randomize.invalid": "L’intensité doit être entre 0 et 512 et Seed doit être un entier 32 bits.",
+  "song.RandomizeDropletStrength": "Intensité (px)",
+  "song.RandomizeDropletSeed": "Seed"
 }

@@ -15,6 +15,7 @@ if (args.Length == 2 && args[0] == "--benchmark-history")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Droplet FX preserves deterministic targets, manual edits, history, persistence and export", DropletRandomizationTests.Run),
     ("Binary recovery history preserves bytes, rejects corruption and retains audio", HistoryCompressionTests.Run),
     ("Save context rebasing avoids unchanged history work and preserves undo and redo", ContextRebaseTests.History),
     ("Fractional repeats share fixed targets during partial tiny compensation", PartialCompensationTests.FractionalRepeats),

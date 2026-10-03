@@ -1153,5 +1153,17 @@
   "language.machineTranslationNotice": "{0}使用 AI 輔助機器翻譯，尚未經過校對。",
   "language.continue": "繼續",
   "language.simplifiedChinese": "简体中文",
-  "language.traditionalChinese": "繁体中文"
+  "language.traditionalChinese": "繁体中文",
+  "randomize.title": "水滴隨機化",
+  "randomize.enableAll": "開啟所有 FSlider",
+  "randomize.disableAll": "關閉所有 FSlider",
+  "randomize.enableSelected": "開啟所選 FSlider",
+  "randomize.disableSelected": "關閉所選 FSlider",
+  "randomize.resetAdjustments": "重設水滴手動修正",
+  "randomize.settings": "隨機化設定…",
+  "randomize.count": "已開啟的 FSlider：{0} / {1}",
+  "randomize.help": "強度以像素計（0–512）。可拖曳小水滴進行手動修正。",
+  "randomize.invalid": "強度必須為 0–512，Seed 必須為 32 位元整數。",
+  "song.RandomizeDropletStrength": "強度（px）",
+  "song.RandomizeDropletSeed": "Seed"
 }

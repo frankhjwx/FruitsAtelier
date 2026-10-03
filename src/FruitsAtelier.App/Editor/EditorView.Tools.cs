@@ -121,7 +121,8 @@ public sealed partial class EditorView
         {
             DurationMs = Math.Max(Document.DurationMs, point.Value.TimeMs), BeatLengthMs = Document.BeatLengthMs,
             TimingOffsetMs = Document.TimingOffsetMs, ApproachRate = Document.ApproachRate,
-            CircleSize = Document.CircleSize, SliderMultiplier = Document.SliderMultiplier, SliderTickRate = Document.SliderTickRate
+            CircleSize = Document.CircleSize, SliderMultiplier = Document.SliderMultiplier, SliderTickRate = Document.SliderTickRate,
+            RandomizeDropletStrength = Document.RandomizeDropletStrength, RandomizeDropletSeed = Document.RandomizeDropletSeed
         };
         bool localDraft = tool == Tool.Slider && draftTrack != Guid.Empty;
         if (!localDraft)
@@ -235,6 +236,8 @@ public sealed partial class EditorView
     {
         bool replace = tool == Tool.Fruit;
         if (playableExport is null
+            || Document.Tracks.Any(t => t.StreamSnapDivisor is null && t.DropletRandomization is { Enabled: true }
+                && t.Nodes.Count > 0 && t.Nodes[0].TimeMs >= point.TimeMs - 2)
             || Document.Tracks.Any(t => t.Nodes.Count > 0 && Math.Abs(t.Nodes[0].TimeMs - point.TimeMs) <= 2)
             || Document.ImportedSliders.Any(s => Math.Abs(s.TimeMs - point.TimeMs) <= 2)
             || Document.BananaShowers.Any(s => Math.Abs(s.TimeMs - point.TimeMs) <= 2)) return false;

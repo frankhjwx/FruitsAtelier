@@ -1153,5 +1153,17 @@
   "language.machineTranslationNotice": "{0}は AI 支援の機械翻訳を使用しており、まだ校正されていません。",
   "language.continue": "続ける",
   "language.simplifiedChinese": "简体中文",
-  "language.traditionalChinese": "繁体中文"
+  "language.traditionalChinese": "繁体中文",
+  "randomize.title": "水滴をランダム化",
+  "randomize.enableAll": "すべての FSlider で有効化",
+  "randomize.disableAll": "すべての FSlider で無効化",
+  "randomize.enableSelected": "選択した FSlider で有効化",
+  "randomize.disableSelected": "選択した FSlider で無効化",
+  "randomize.resetAdjustments": "水滴の手動調整をリセット",
+  "randomize.settings": "ランダム化設定…",
+  "randomize.count": "有効な FSlider：{0} / {1}",
+  "randomize.help": "強度はピクセル単位（0–512）です。小さな水滴をドラッグして調整できます。",
+  "randomize.invalid": "強度は 0–512、Seed は 32 ビット整数にしてください。",
+  "song.RandomizeDropletStrength": "強度（px）",
+  "song.RandomizeDropletSeed": "Seed"
 }

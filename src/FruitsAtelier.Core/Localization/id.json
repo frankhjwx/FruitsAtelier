@@ -1153,5 +1153,17 @@
   "language.machineTranslationNotice": "{0} menggunakan terjemahan mesin berbantuan AI dan belum diperiksa.",
   "language.continue": "Lanjutkan",
   "language.simplifiedChinese": "简体中文",
-  "language.traditionalChinese": "繁体中文"
+  "language.traditionalChinese": "繁体中文",
+  "randomize.title": "Acak tetesan",
+  "randomize.enableAll": "Aktifkan semua FSlider",
+  "randomize.disableAll": "Nonaktifkan semua FSlider",
+  "randomize.enableSelected": "Aktifkan FSlider terpilih",
+  "randomize.disableSelected": "Nonaktifkan FSlider terpilih",
+  "randomize.resetAdjustments": "Atur ulang penyesuaian manual",
+  "randomize.settings": "Pengaturan pengacakan…",
+  "randomize.count": "FSlider aktif: {0} / {1}",
+  "randomize.help": "Kekuatan dalam piksel (0–512). Seret tetesan kecil untuk menyesuaikannya.",
+  "randomize.invalid": "Kekuatan harus 0–512 dan Seed harus berupa bilangan bulat 32-bit.",
+  "song.RandomizeDropletStrength": "Kekuatan (px)",
+  "song.RandomizeDropletSeed": "Seed"
 }

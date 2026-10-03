@@ -21,6 +21,35 @@ the editor restores these values. They do not change map content or undo history
 Shift/Alt temporary snap overrides are not saved. Difficulties without saved
 preferences start with all three switches off and Grid Level Tiny (4 px).
 
+## Droplet randomization
+
+**Song Setup → Randomize droplets** configures Strength (0–512 playfield pixels)
+and a signed 32-bit Seed for the current difficulty. **Enable all FSliders** and
+**Disable all FSliders** set the switches of existing ordinary FSliders when the
+dialog is confirmed. Cancel discards the draft. The same batch actions are
+available under **Edit → Randomize droplets**, where they apply immediately in
+one undo step. Neither action creates a persistent master switch or changes the
+initial state of subsequently created FSliders, which start disabled.
+
+Select one ordinary FSlider and use **Edit → Randomize droplets → Enable selected
+FSlider / Disable selected FSlider** to change only its switch. The menu also
+provides **Randomization settings…** and **Reset manual droplet adjustments** for
+the selected FSlider. Batch operations exclude Legacy Sliders and slider-managed
+fruit streams. Parameters and switches remain local to the current difficulty.
+
+The random sequence continues across all generated objects in the difficulty,
+including sliders with their effect disabled. Identical sliders use different
+parts of the sequence. Adding or removing earlier objects changes later random
+offsets; unchanged content and Seed reproduce the same result.
+
+Randomization affects TinyDroplets. Drag a TinyDroplet in Select mode or edit its
+X coordinate to save a correction without changing the base curve. Unlock droplet
+selection using the Lock Notes flyout when needed. Disabling randomization retains
+the corrections, and reenabling restores them. Repeat geometry and slider speed
+limits can constrain the result; unreachable manual moves stop at a valid position
+or reject a numeric change. See [Droplet randomization](PROJECT_MODEL.md#droplet-randomization)
+for target generation and export behavior.
+
 ## FSlider preview
 
 When drawing a new FSlider, the canvas updates only that slider's provisional

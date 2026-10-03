@@ -631,6 +631,7 @@ public sealed partial class EditorView
             Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), OpenStreamDialog, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
+            Item(L.Get("randomize.title"), OpenDropletRandomizationMenu, CanRandomizeDroplets);
             Item(L.Get("slider.clearInternalNodes"), ClearSliderNodes, CanClearSliderNodes);
             Item(L.Get("aimod.title"), ShowAimod, ClipboardInteractionReady);
         }

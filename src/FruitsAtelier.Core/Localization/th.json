@@ -1153,5 +1153,17 @@
   "language.machineTranslationNotice": "{0}ใช้การแปลด้วยเครื่องโดยมี AI ช่วย และยังไม่ได้ผ่านการตรวจทาน",
   "language.continue": "ดำเนินการต่อ",
   "language.simplifiedChinese": "简体中文",
-  "language.traditionalChinese": "繁体中文"
+  "language.traditionalChinese": "繁体中文",
+  "randomize.title": "สุ่มตำแหน่งหยดน้ำ",
+  "randomize.enableAll": "เปิดใช้งาน FSlider ทั้งหมด",
+  "randomize.disableAll": "ปิดใช้งาน FSlider ทั้งหมด",
+  "randomize.enableSelected": "เปิดใช้งาน FSlider ที่เลือก",
+  "randomize.disableSelected": "ปิดใช้งาน FSlider ที่เลือก",
+  "randomize.resetAdjustments": "รีเซ็ตการปรับหยดน้ำด้วยตนเอง",
+  "randomize.settings": "ตั้งค่าการสุ่ม…",
+  "randomize.count": "FSlider ที่เปิดใช้งาน: {0} / {1}",
+  "randomize.help": "ความแรงมีหน่วยเป็นพิกเซล (0–512) ลากหยดน้ำเล็กเพื่อปรับด้วยตนเอง",
+  "randomize.invalid": "ความแรงต้องอยู่ที่ 0–512 และ Seed ต้องเป็นจำนวนเต็ม 32 บิต",
+  "song.RandomizeDropletStrength": "ความแรง (px)",
+  "song.RandomizeDropletSeed": "Seed"
 }

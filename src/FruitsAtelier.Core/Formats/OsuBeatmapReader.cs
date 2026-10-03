@@ -186,6 +186,8 @@ public static class OsuBeatmapReader
 
     public static void Validate(MapDocument document)
     {
+        if (!double.IsFinite(document.RandomizeDropletStrength) || document.RandomizeDropletStrength is < 0 or > 512)
+            throw new InvalidDataException(L.Get("randomize.invalid"));
         if (document.DistanceSnapRatios.Count > DistanceSnap.MaximumPresets || document.DistanceSnapRatios.Any(r => !double.IsFinite(r) || r < 0))
             throw new InvalidDataException(L.Get("core.distanceSnap.range"));
         if (!double.IsFinite(document.DistanceSpacing) || document.DistanceSpacing is < .1 or > 6)
@@ -209,6 +211,7 @@ public static class OsuBeatmapReader
         foreach (var track in document.Tracks)
         {
             Id(track.Id);
+            if (track.DropletRandomization is { IsValid: false }) throw new InvalidDataException(L.Get("randomize.invalid"));
             if (track.Stack is { } stack && (track.StreamSnapDivisor is null || !stack.IsValid))
                 throw new InvalidDataException(L.Get("stack.invalid"));
             if (track.StreamSnapDivisor is < 1 or > 16) throw new InvalidDataException(L.Get("stream.invalidSnap"));

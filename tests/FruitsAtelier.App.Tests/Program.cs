@@ -29,6 +29,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Droplet randomization switches, setup drafts and Edit actions stay within one diff", DropletRandomizationTests.Run),
     ("Audio projects require metadata, copy audio and optionally link one Songs difficulty", AudioProjectTests.Run),
     ("Timing red insertion and deletion retain saving and slider export", TimingSaveFeedbackTests.Run),
     ("Slider drafts defer full-map conversion and publish only matching validated snapshots", DraftConversionTests.Run),

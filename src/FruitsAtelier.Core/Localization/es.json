@@ -1153,5 +1153,17 @@
   "language.machineTranslationNotice": "{0} utiliza traducción automática asistida por IA y aún no se ha revisado.",
   "language.continue": "Continuar",
   "language.simplifiedChinese": "简体中文",
-  "language.traditionalChinese": "繁体中文"
+  "language.traditionalChinese": "繁体中文",
+  "randomize.title": "Aleatorizar gotas",
+  "randomize.enableAll": "Activar todos los FSliders",
+  "randomize.disableAll": "Desactivar todos los FSliders",
+  "randomize.enableSelected": "Activar el FSlider seleccionado",
+  "randomize.disableSelected": "Desactivar el FSlider seleccionado",
+  "randomize.resetAdjustments": "Restablecer ajustes manuales",
+  "randomize.settings": "Ajustes de aleatorización…",
+  "randomize.count": "FSliders activos: {0} / {1}",
+  "randomize.help": "Intensidad en píxeles (0–512). Arrastra las gotas pequeñas para ajustarlas.",
+  "randomize.invalid": "La intensidad debe ser de 0–512 y Seed debe ser un entero de 32 bits.",
+  "song.RandomizeDropletStrength": "Intensidad (px)",
+  "song.RandomizeDropletSeed": "Seed"
 }

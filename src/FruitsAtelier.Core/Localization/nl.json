@@ -1153,5 +1153,17 @@
   "language.machineTranslationNotice": "{0} gebruikt machinevertaling met AI en is nog niet nagelezen.",
   "language.continue": "Doorgaan",
   "language.simplifiedChinese": "简体中文",
-  "language.traditionalChinese": "繁体中文"
+  "language.traditionalChinese": "繁体中文",
+  "randomize.title": "Druppels randomiseren",
+  "randomize.enableAll": "Alle FSliders inschakelen",
+  "randomize.disableAll": "Alle FSliders uitschakelen",
+  "randomize.enableSelected": "Geselecteerde FSlider inschakelen",
+  "randomize.disableSelected": "Geselecteerde FSlider uitschakelen",
+  "randomize.resetAdjustments": "Handmatige aanpassingen herstellen",
+  "randomize.settings": "Randomisatie-instellingen…",
+  "randomize.count": "Ingeschakelde FSliders: {0} / {1}",
+  "randomize.help": "Sterkte in pixels (0–512). Sleep kleine druppels om ze aan te passen.",
+  "randomize.invalid": "Sterkte moet 0–512 zijn en Seed een 32-bits geheel getal.",
+  "song.RandomizeDropletStrength": "Sterkte (px)",
+  "song.RandomizeDropletSeed": "Seed"
 }

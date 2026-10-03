@@ -1153,5 +1153,17 @@
   "language.machineTranslationNotice": "{0}: машинный перевод с помощью ИИ, без вычитки.",
   "language.continue": "Продолжить",
   "language.simplifiedChinese": "简体中文",
-  "language.traditionalChinese": "繁体中文"
+  "language.traditionalChinese": "繁体中文",
+  "randomize.title": "Рандомизация капель",
+  "randomize.enableAll": "Включить для всех FSlider",
+  "randomize.disableAll": "Выключить для всех FSlider",
+  "randomize.enableSelected": "Включить для выбранного FSlider",
+  "randomize.disableSelected": "Выключить для выбранного FSlider",
+  "randomize.resetAdjustments": "Сбросить ручные поправки капель",
+  "randomize.settings": "Настройки рандомизации…",
+  "randomize.count": "Включено FSlider: {0} / {1}",
+  "randomize.help": "Сила в пикселях (0–512). Перетаскивайте маленькие капли для ручной настройки.",
+  "randomize.invalid": "Сила должна быть от 0 до 512, а Seed — 32-битным целым числом.",
+  "song.RandomizeDropletStrength": "Сила (px)",
+  "song.RandomizeDropletSeed": "Seed"
 }

@@ -51,7 +51,8 @@ public sealed class CurveTrack
         var a = this; var b = other;
         if (a.Id != b.Id || a.Name != b.Name || a.Kind != b.Kind || a.SourceOrder != b.SourceOrder || a.Nodes.Count != b.Nodes.Count
             || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets
-            || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)) return false;
+            || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
+            || !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization)) return false;
         for (int j = 0; j < a.Nodes.Count; j++)
         {
             var an = a.Nodes[j]; var bn = b.Nodes[j];
@@ -71,6 +72,7 @@ public sealed class CurveTrack
         var copy = (CurveTrack)MemberwiseClone();
         copy.Nodes = Nodes.Select(n => n.DeepClone()).ToList();
         copy.Stack = Stack?.DeepClone();
+        copy.DropletRandomization = DropletRandomization?.DeepClone();
         return copy;
     }
     public int SpanCount { get; set; } = 1;
@@ -80,6 +82,8 @@ public sealed class CurveTrack
     public int? StreamSnapDivisor { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public StackEnvelope? Stack { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DropletRandomization? DropletRandomization { get; set; }
 }
 
 public sealed class TimingPoint
@@ -170,6 +174,8 @@ public sealed partial class MapDocument
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? DerandomizeDroplets { get; set; }
     public bool DistanceSnapCollinear { get; set; } = true;
+    public double RandomizeDropletStrength { get; set; } = 20;
+    public int RandomizeDropletSeed { get; set; } = 1337;
     public List<double> DistanceSnapRatios { get; } = new();
     public List<Fruit> Fruits { get; } = new();
     public List<CurveTrack> Tracks { get; } = new();
@@ -187,6 +193,7 @@ public sealed partial class MapDocument
             SliderMultiplierOverride = SliderMultiplierOverride,
             DistancePerBeatOverride = DistancePerBeatOverride,
             DistanceSnapCollinear = DistanceSnapCollinear,
+            RandomizeDropletStrength = RandomizeDropletStrength, RandomizeDropletSeed = RandomizeDropletSeed,
             SliderTickRate = SliderTickRate, DistanceSpacing = DistanceSpacing, DerandomizeDroplets = DerandomizeDroplets
         };
         copy.DistanceSnapRatios.AddRange(DistanceSnapRatios);
@@ -227,6 +234,7 @@ public sealed partial class MapDocument
                 || SliderMultiplierOverride != other.SliderMultiplierOverride))
             || DistancePerBeatOverride != other.DistancePerBeatOverride || SliderTickRate != other.SliderTickRate
             || DistanceSnapCollinear != other.DistanceSnapCollinear
+            || RandomizeDropletStrength != other.RandomizeDropletStrength || RandomizeDropletSeed != other.RandomizeDropletSeed
             || !DistanceSnapRatios.SequenceEqual(other.DistanceSnapRatios)
             || DistanceSpacing != other.DistanceSpacing || DerandomizeDroplets != other.DerandomizeDroplets
             || Fruits.Count != other.Fruits.Count || Tracks.Count != other.Tracks.Count

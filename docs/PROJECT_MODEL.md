@@ -2,7 +2,7 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). All eight schemas are readable. Older applications reject the newer schemas rather than silently discarding curve geometry. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). All ten schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
 
 ## Authoritative and derived data
 
@@ -98,6 +98,45 @@ Batch conversion validates in the complete beatmap context, retrying after align
 FSliders retain the original parent Id, SourceOrder, OriginalLine, and SpanCount. Nodes define the first span; repeats share them with reversed evaluation. `SpanCount=1` is a single traversal. `CompensateTinyDroplets=true` requests exact alignment where possible and partial compensation where repeat or speed constraints prevent it. A saved `false` explicitly disables compensation; existing tracks with that value are not automatically changed. `null` preserves the old-project session-toggle behavior. Banana showers store editable start/end times. Their X=0–512 canvas rectangle and top/bottom handles edit that range; individual banana positions are not saved.
 
 ## Derived conversion
+
+### Droplet randomization
+
+`MapDocument.RandomizeDropletStrength` is the TinyDroplet lateral randomization
+amplitude in playfield pixels (0–512, default 20). `RandomizeDropletSeed` is a signed
+32-bit integer, default 1337. Each ordinary FSlider can retain a
+`DropletRandomization` with its own `Enabled` flag and sorted normalized-time
+`Adjustments`. New FSliders have no effect and start disabled. These fields
+participate in deep cloning, content equality, history, persistence and cache
+invalidation. Slider-managed fruit streams retain dormant effects but do not apply
+them; imported Legacy Sliders retain their existing conversion rules.
+
+Randomization hashes the Seed and the TinyDroplet's index in the complete
+diff-wide generated event sequence. Parents follow conversion order; every fruit,
+droplet, tiny droplet and banana advances the counter, including disabled effects
+and slider-managed streams. A parent's complete nested sequence is counted before
+the next parent, before final time sorting. Earlier additions, removals and event
+count changes shift subsequent random targets. Cached parents retain their event
+counts, and active effects also validate their incoming index. The target first
+clamps the base curve, adds an integer-derived offset scaled by Strength, clamps, adds a matching manual
+adjustment, and clamps again. Fruits and ordinary Droplets retain their base
+targets. Strength zero removes the random contribution; saved manual adjustments
+still apply while the effect is enabled.
+
+Enabled effects request Tiny compensation against these targets, preserving the
+base anchors and handles. Shared repeat geometry, playfield edges and speed limits
+can require partial compensation. The normal legacy RNG still determines actual
+osu offsets and is consumed in complete parent order. Generated geometry encodes
+the effect for `.osu` export; only project files retain editable effect parameters.
+
+Dragging a randomized TinyDroplet or editing its X stores an offset at its
+normalized event time. A candidate must reach the requested X and preserve its
+sibling event positions, otherwise the editor rejects it. Timing/subdivision edits
+retain unmatched adjustments without applying them. Disabling the effect retains
+its corrections and restores the ordinary conversion of the base curve; enabling
+it again restores matching corrections. Copy/paste retains the effect and its
+normalized adjustments.
+
+### Conversion flow
 
 ```text
 Complete MapDocument

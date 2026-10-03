@@ -1153,5 +1153,17 @@
   "language.machineTranslationNotice": "{0} uses AI-assisted machine translation and has not been proofread.",
   "language.continue": "Continue",
   "language.simplifiedChinese": "简体中文",
-  "language.traditionalChinese": "繁体中文"
+  "language.traditionalChinese": "繁体中文",
+  "randomize.title": "Randomize droplets",
+  "randomize.enableAll": "Enable all FSliders",
+  "randomize.disableAll": "Disable all FSliders",
+  "randomize.enableSelected": "Enable selected FSlider",
+  "randomize.disableSelected": "Disable selected FSlider",
+  "randomize.resetAdjustments": "Reset manual droplet adjustments",
+  "randomize.settings": "Randomization settings…",
+  "randomize.count": "Enabled FSliders: {0} / {1}",
+  "randomize.help": "Strength is in pixels (0–512). Tiny droplets can be dragged for manual adjustments.",
+  "randomize.invalid": "Strength must be 0–512 and Seed must be a 32-bit integer.",
+  "song.RandomizeDropletStrength": "Strength (px)",
+  "song.RandomizeDropletSeed": "Seed"
 }

@@ -1153,5 +1153,17 @@
   "language.machineTranslationNotice": "{0}: tłumaczenie maszynowe wspomagane przez AI, które nie zostało jeszcze sprawdzone.",
   "language.continue": "Kontynuuj",
   "language.simplifiedChinese": "简体中文",
-  "language.traditionalChinese": "繁体中文"
+  "language.traditionalChinese": "繁体中文",
+  "randomize.title": "Losuj pozycje kropelek",
+  "randomize.enableAll": "Włącz wszystkie FSlidery",
+  "randomize.disableAll": "Wyłącz wszystkie FSlidery",
+  "randomize.enableSelected": "Włącz wybrany FSlider",
+  "randomize.disableSelected": "Wyłącz wybrany FSlider",
+  "randomize.resetAdjustments": "Zresetuj ręczne korekty kropelek",
+  "randomize.settings": "Ustawienia losowania…",
+  "randomize.count": "Włączone FSlidery: {0} / {1}",
+  "randomize.help": "Siła w pikselach (0–512). Przeciągaj małe kropelki, aby je dostosować.",
+  "randomize.invalid": "Siła musi wynosić 0–512, a Seed musi być 32-bitową liczbą całkowitą.",
+  "song.RandomizeDropletStrength": "Siła (px)",
+  "song.RandomizeDropletSeed": "Seed"
 }

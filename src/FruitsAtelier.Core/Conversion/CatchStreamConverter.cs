@@ -51,7 +51,8 @@ public static class CatchStreamConverter
             try
             {
                 var before = rng;
-                if (cache is not null && cache.TryGet(source.Track, source.ImportedSlider, source.BananaShower, ref rng, out var cachedSlider, out var cachedObjects))
+                int firstEventIndex = objects.Count;
+                if (cache is not null && cache.TryGet(source.Track, source.ImportedSlider, source.BananaShower, ref rng, firstEventIndex, out var cachedSlider, out var cachedObjects))
                 {
                     if (cachedSlider is not null) sliders.Add(cachedSlider);
                     objects.AddRange(cachedObjects); continue;
@@ -63,7 +64,7 @@ public static class CatchStreamConverter
                     sliders.Add(convertedImport.Slider);
                     objects.AddRange(convertedImport.Objects);
                     rng = candidateRng;
-                    cache?.Store(null, imported, null, before, rng, convertedImport.Slider, convertedImport.Objects);
+                    cache?.Store(null, imported, null, before, rng, convertedImport.Slider, convertedImport.Objects, firstEventIndex);
                     continue;
                 }
                 if (source.BananaShower is BananaShower shower)
@@ -72,7 +73,7 @@ public static class CatchStreamConverter
                     var bananas = ConvertBananas(shower, ref candidateRng);
                     objects.AddRange(bananas);
                     rng = candidateRng;
-                    cache?.Store(null, null, shower, before, rng, null, bananas);
+                    cache?.Store(null, null, shower, before, rng, null, bananas, firstEventIndex);
                     continue;
                 }
                 var track = source.Track!;
@@ -81,14 +82,14 @@ public static class CatchStreamConverter
                 {
                     var stream = SliderFruitStream.Convert(document, track, timing ??= new(document));
                     objects.AddRange(stream);
-                    cache?.Store(track, null, null, before, rng, null, stream);
+                    cache?.Store(track, null, null, before, rng, null, stream, firstEventIndex);
                     continue;
                 }
                 var converted = ConvertTrack(document, track, track.CompensateTinyDroplets ?? compensateTinyDroplets,
-                    ref rng, (timing ??= new(document)).At(track.Nodes[0].TimeMs), cache?.PositionAtTime(track));
+                    ref rng, (timing ??= new(document)).At(track.Nodes[0].TimeMs), firstEventIndex, cache?.PositionAtTime(track));
                 sliders.Add(converted.Slider);
                 objects.AddRange(converted.Objects);
-                cache?.Store(track, null, null, before, rng, converted.Slider, converted.Objects);
+                cache?.Store(track, null, null, before, rng, converted.Slider, converted.Objects, firstEventIndex);
             }
             catch (CatchConversionException error)
             {
@@ -117,7 +118,7 @@ public static class CatchStreamConverter
     }
 
     private static TrackConversion ConvertTrack(MapDocument document, CurveTrack track, bool requestCompensation,
-        ref CatchLegacyRandom globalRng, TimingState timing, Func<double, double>? positionAtTime = null)
+        ref CatchLegacyRandom globalRng, TimingState timing, int firstEventIndex, Func<double, double>? positionAtTime = null)
     {
         positionAtTime ??= time => CurveMath.PositionAtTime(track, time);
         double start = track.Nodes[0].TimeMs;
@@ -127,7 +128,8 @@ public static class CatchStreamConverter
         double maximumSv = Math.Min(LegacyCatchRules.MaximumSliderVelocityMultiplier,
             Math.Max(sv, LegacyCatchRules.MaximumPathLength * timing.BeatLengthMs
                 / (duration * 100 * document.SliderMultiplier) * (1 - 1e-7)));
-        bool compensate = requestCompensation;
+        bool randomize = track.DropletRandomization is { Enabled: true };
+        bool compensate = randomize || requestCompensation;
 
         for (int attempt = 0; attempt < 18; attempt++)
         {
@@ -142,8 +144,9 @@ public static class CatchStreamConverter
             // RNG follows each complete parent stream before the next parent, including overlapping streams.
             var candidateRng = globalRng;
             LegacyCatchRules.ApplyRandomSequence(nested, ref candidateRng);
+            var targetAtTime = randomize ? DropletRandomization.Targets(document, track, nested, positionAtTime, firstEventIndex) : positionAtTime;
             List<MapPoint> samples;
-            try { samples = Samples(track, nested, compensate, positionAtTime); }
+            try { samples = Samples(track, nested, compensate, targetAtTime); }
             catch (TinyConstraintException) when (compensate)
             {
                 if (sv < maximumSv)
@@ -151,7 +154,7 @@ public static class CatchStreamConverter
                     sv = maximumSv;
                     continue;
                 }
-                samples = TinyCompensationFitter.Fit(track, nested, velocity, positionAtTime);
+                samples = TinyCompensationFitter.Fit(track, nested, velocity, positionAtTime, targetAtTime);
             }
 
             double requiredVelocity = 0;
@@ -169,7 +172,7 @@ public static class CatchStreamConverter
                 }
                 if (compensate)
                 {
-                    samples = TinyCompensationFitter.Fit(track, nested, velocity, positionAtTime);
+                    samples = TinyCompensationFitter.Fit(track, nested, velocity, positionAtTime, targetAtTime);
                 }
                 else throw new CatchConversionException(L.Get("core.conversion.speedLimit", velocity, requiredVelocity));
             }
@@ -183,7 +186,7 @@ public static class CatchStreamConverter
                 float offset = item.Kind == CatchObjectKind.TinyDroplet ? Math.Clamp(item.RawOffset, -pathX, 512 - pathX) : 0;
                 float effectiveX = Math.Clamp(pathX + offset, 0, 512);
                 converted.Add(new(track.Id, index, item.Kind, item.TimeMs, effectiveX,
-                    Math.Clamp(positionAtTime(item.TimeMs), 0, 512), pathX, offset));
+                    Math.Clamp((item.Kind == CatchObjectKind.TinyDroplet ? targetAtTime : positionAtTime)(item.TimeMs), 0, 512), pathX, offset));
             }
 
             double tickError = converted.Where(o => o.Kind != CatchObjectKind.TinyDroplet)
@@ -232,6 +235,9 @@ public static class CatchStreamConverter
 
     private static void ValidateTrack(MapDocument document, CurveTrack track)
     {
+        if (!double.IsFinite(document.RandomizeDropletStrength) || document.RandomizeDropletStrength is < 0 or > 512
+            || track.DropletRandomization is { IsValid: false })
+            throw new CatchConversionException(L.Get("randomize.invalid"));
         var validationDocument = new MapDocument
         {
             DurationMs = document.DurationMs, BeatLengthMs = document.BeatLengthMs,
