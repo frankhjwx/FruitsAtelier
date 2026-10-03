@@ -28,6 +28,8 @@ not the finish hitsound.
   otherwise use `Fruit`. Keep the compact Fruit tool label in English.
 - Keep `AR`, `CS`, `OD`, `HP`, `DPB`, and `NC` unchanged. Full descriptions may
   be translated, but retain the abbreviation beside the description.
+- Keep the `Banana` tool name in English, including its compact label and help heading.
+- Keep movement mode keywords `Stand`, `Walk`, `Dash`, and `HDash` in English.
 - Keep preview mod identifiers `NM`, `Easy`, and `Hard Rock` in English.
 - Compact object badges, tool identifiers, parameter labels, and pattern tabs
   retain English identifiers. Translate surrounding instructions and messages.

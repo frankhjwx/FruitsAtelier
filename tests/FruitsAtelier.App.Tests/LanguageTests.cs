@@ -7,8 +7,7 @@ internal static class LanguageTests
     {
         Check(!ui.Canvas.Texts.Any(t => t.Value.StartsWith("Language:", StringComparison.Ordinal)), "Language control is absent from the editor header");
         ui.ClickText(Strings.Get("library.settings"));
-        ui.ClickText(Strings.Get("settings.appearance"));
-        string Label(string language) => System.Globalization.CultureInfo.GetCultureInfo(language).NativeName;
+        string Label(string language) => language switch { "zh-CN" => "简体中文", "zh-TW" => "繁体中文", _ => System.Globalization.CultureInfo.GetCultureInfo(language).NativeName };
         ui.ClickText(Label(Strings.Language) + " ▾");
         ui.ClickText(Label(code));
         if (code != "en") ui.ClickText(Strings.Get("language.continue"));

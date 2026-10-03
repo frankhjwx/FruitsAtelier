@@ -17,6 +17,8 @@ static class SettingsTests
             var original = ui.View.Document.DeepClone();
             ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.appearance"));
             Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.indicatorColours")), "Appearance omitted indicator colours.");
+            Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("ui.language") || t.Value == L.Get("settings.romanisedLabel")),
+                "Language and metadata display belong to General.");
             string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
             string[] hexes = ["#112233", "#445566", "#778899", "#AABBCC"];
             string originalStand = $"#{ui.View.LibrarySettings.StandIndicatorColour:X6}";
@@ -107,11 +109,13 @@ static class SettingsTests
                     Check(!ui.View.LibraryLoading, "Library finishes loading before settings interaction");
                 }
                 ui.View.OpenSettings(); ui.Paint();
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("ui.language"))
+                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.romanisedLabel")),
+                    "General exposes language and metadata display.");
                 uint ApplyColor() => ui.Canvas.Texts.Single(t => t.Value == L.Get("library.apply")).Color;
                 uint disabled = ApplyColor();
                 ui.ClickText(L.Get("library.apply"));
                 Check(ApplyColor() == disabled, "Apply initially disabled");
-                ui.ClickText(L.Get("settings.appearance"));
                 ui.ClickText(L.Get("settings.romanisedOn"));
                 Check(ApplyColor() != disabled, "Draft change enables Apply");
                 ui.ClickText(L.Get("settings.romanisedOff"));
@@ -123,7 +127,6 @@ static class SettingsTests
                 Check(LibrarySettings.Load(path).PlaybackLineFromBottom == .6, "Apply preserves playback line height");
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.romanisedOff")) &&
                     ApplyColor() == disabled, "Apply stays in category and resets dirty state");
-                ui.ClickText(L.Get("settings.general"));
                 ui.ClickText(L.Get("settings.derandomizeOn"));
                 Check(ApplyColor() != disabled, "Droplet default change did not enable Apply");
                 ui.View.ApplySettings(path); ui.Paint();

@@ -423,7 +423,7 @@
   "editor.error.sliderPasteFailed": "Slider 路径无法粘贴：{0}",
   "editor.error.zeroDurationSlider": "零时长 slider 不能粘贴。",
   "editor.help.anchors": "锚点编辑 · 空白框选 / Ctrl 点选 / Delete 删除；新 Slider 按钮开始绘制",
-  "editor.help.banana": "香蕉雨 · 左键设置开始，在更晚时间右键设置结束 · N",
+  "editor.help.banana": "Banana · 左键设置开始，在更晚时间右键设置结束 · N",
   "editor.help.drawingSlider": "点击放置直线控制点；按住向上拖出方向柄；Enter 完成，Esc 取消整条 Slider",
   "editor.help.fruit": "Fruit · 左键点击网格放置；按 1 选择或拖动已有对象",
   "editor.help.newSlider": "新 Slider · 点击放点，拖出柄；Enter 完成 / Ctrl + 拖动框选草稿锚点",
@@ -540,7 +540,7 @@
   "ui.bananaBadge": "香蕉雨",
   "ui.bananaDrawingHint": "在更晚时间右键完成 · Esc 取消",
   "ui.bananaTimeRange": "香蕉雨开始时间必须早于结束时间，且两者均须位于谱面范围内",
-  "ui.bananaTool": "香蕉雨  N",
+  "ui.bananaTool": "Banana  N",
   "ui.basicShapes": "基础图形",
   "ui.canvas": "时间—X 画布",
   "ui.catchMap": "Catch 谱面",
@@ -1151,5 +1151,7 @@
   "language.unproofread": "未校对",
   "language.machineTranslationTitle": "AI 辅助机器翻译",
   "language.machineTranslationNotice": "{0}使用 AI 辅助机器翻译，尚未经过校对。",
-  "language.continue": "继续"
+  "language.continue": "继续",
+  "language.simplifiedChinese": "简体中文",
+  "language.traditionalChinese": "繁体中文"
 }

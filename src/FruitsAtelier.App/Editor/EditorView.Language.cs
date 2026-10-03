@@ -13,7 +13,12 @@ public sealed partial class EditorView
     private int languageSelection;
     private int languageFirstRow, languageVisibleRows;
     private string? pendingLanguage;
-    private static string LanguageName(string code) => CultureInfo.GetCultureInfo(code).NativeName;
+    private static string LanguageName(string code) => code switch
+    {
+        "zh-CN" => L.Get("language.simplifiedChinese"),
+        "zh-TW" => L.Get("language.traditionalChinese"),
+        _ => CultureInfo.GetCultureInfo(code).NativeName
+    };
 
     private void DrawLanguageButton(ICanvas c, Rect bounds)
     {
@@ -95,7 +100,7 @@ public sealed partial class EditorView
     {
         if (pendingLanguage is null) return;
         float w = Math.Min(560, width - 48);
-        var lines = WrapSyncText(c, L.Get("language.machineTranslationNotice", CultureInfo.GetCultureInfo(pendingLanguage).NativeName), w - 48);
+        var lines = WrapSyncText(c, L.Get("language.machineTranslationNotice", LanguageName(pendingLanguage)), w - 48);
         float h = 132 + lines.Length * 22, x = (width - w) / 2, y = (height - h) / 2;
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Accent, 2, 8);
         c.Text(L.Get("language.machineTranslationTitle"), x + 24, y + 24, 20, Foreground, w - 48, true);

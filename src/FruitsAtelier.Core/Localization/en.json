@@ -1151,5 +1151,7 @@
   "language.unproofread": "Unproofread",
   "language.machineTranslationTitle": "AI-assisted machine translation",
   "language.machineTranslationNotice": "{0} uses AI-assisted machine translation and has not been proofread.",
-  "language.continue": "Continue"
+  "language.continue": "Continue",
+  "language.simplifiedChinese": "简体中文",
+  "language.traditionalChinese": "繁体中文"
 }

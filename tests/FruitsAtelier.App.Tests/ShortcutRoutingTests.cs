@@ -194,12 +194,11 @@ internal static class ShortcutRoutingTests
                 string? saved = null;
                 ui.View.RequestLanguagePreference = value => saved = value;
                 ui.View.OpenSettings(); ui.Paint();
-                ui.ClickText(L.Get("settings.appearance"));
-                string Label(string code) => System.Globalization.CultureInfo.GetCultureInfo(code).NativeName;
+                string Label(string code) => code switch { "zh-CN" => "简体中文", "zh-TW" => "繁体中文", _ => System.Globalization.CultureInfo.GetCultureInfo(code).NativeName };
                 void Open() => ui.ClickText(Label(L.Language) + " ▾");
                 Open(); ui.Key(40); ui.Key(27);
                 Check(!ui.View.LibraryVisible && saved is null && L.Language == language
-                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.appearance")),
+                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.general")),
                     "Escape closes only the language menu and does not apply its highlighted language.");
                 Open(); ui.Key(38); ui.Key(40); ui.Key(40);
                 string expected = L.AvailableLanguages[(L.AvailableLanguages.ToList().IndexOf(language) + 1) % L.AvailableLanguages.Count];
