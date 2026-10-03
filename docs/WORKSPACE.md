@@ -39,12 +39,12 @@ Older `.catchproj` files still open; the next save writes a workspace project.
 
 ## Importing external resources
 
-Drop one MP3 onto the Library browser or editor to create a project. The setup dialog
+Drop one MP3 or OGG onto the Library browser or editor to create a project. The setup dialog
 requires a song title, artist, mapper and difficulty name. Nothing is created until
 all four fields are filled and **Create** is confirmed; Cancel retains the previous
 project. Unsaved edits use the normal Save, Discard or Cancel prompt before setup.
 Audio is copied to a dedicated directory under `workspace/Resources`, so moving the
-original MP3 does not break the saved project. Creation runs in the background and
+original audio file does not break the saved project. Creation runs in the background and
 opens the saved project when complete.
 
 **Also create in osu! Songs** is selected initially when an osu! folder is configured.
@@ -52,7 +52,7 @@ It creates one Catch `.osu` and an audio copy in a new Songs subdirectory, linke
 the same workspace difficulty for subsequent saves. Clear the switch to create only
 the local project. Without an osu! folder, creation is local only; configure it in
 Settings to enable Songs creation. If creation fails, the dialog retains its fields
-for correction or retry. MP3 drops must contain one audio file and cannot be mixed
+for correction or retry. Audio drops must contain one audio file and cannot be mixed
 with beatmap or skin archives.
 
 While editing, resource existence is checked in the background every three seconds. Resource paths are deduplicated and reused while the document snapshot is unchanged; storyboard parsing does not repeat in the paint loop. Completed results are applied only to the matching project and content snapshot, so edits or project switches cannot publish stale missing-file warnings. Initial load and explicit save/export checks refresh the resource state immediately.

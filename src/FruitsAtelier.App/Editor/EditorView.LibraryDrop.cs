@@ -12,7 +12,7 @@ public sealed partial class EditorView
     public bool CanDropLibraryFiles => LibraryVisible && !librarySettingsOpen && !resourcePage && !updatesPage
         && !ExportVisible && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible && !SongSetupVisible;
 
-    public bool CanDropFile(string path) => CanDropAudio && Path.GetExtension(path).Equals(".mp3", StringComparison.OrdinalIgnoreCase)
+    public bool CanDropFile(string path) => CanDropAudio && Platform.LibraryOperations.IsProjectAudio(path)
         || CanDropLibraryFiles && IsLibraryArchive(path);
 
     public static bool IsLibraryArchive(string path)
@@ -22,7 +22,7 @@ public sealed partial class EditorView
     public void DropLibraryFiles(IEnumerable<string> paths)
     {
         var files = paths.Where(File.Exists).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        var audio = files.Where(p => Path.GetExtension(p).Equals(".mp3", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var audio = files.Where(Platform.LibraryOperations.IsProjectAudio).ToArray();
         if (CanDropAudio && audio.Length > 0)
         {
             if (audio.Length != 1 || files.Any(IsLibraryArchive)) { ShowError(FruitsAtelier.Localization.Strings.Get("audioProject.oneFile")); return; }

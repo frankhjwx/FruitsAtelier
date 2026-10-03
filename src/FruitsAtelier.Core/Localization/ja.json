@@ -5,7 +5,7 @@
   "audioProject.localOnly": "設定で osu! フォルダーを曲にも作成するように設定します。",
   "audioProject.create": "作成する",
   "audioProject.creating": "プロジェクトを作成中…",
-  "audioProject.oneFile": "譜面 または スキン アーカイブとは別に、一度に 1 つの MP3 をドロップします。",
+  "audioProject.oneFile": "譜面 または スキン アーカイブとは別に、一度に 1 つの MP3 / OGG をドロップします。",
   "editor.status.convertingSlider": "スライダー ゲームプレイをバックグラウンドで更新しています…",
   "aimod.title": "アイモッド",
   "aimod.refresh": "リフレッシュ",

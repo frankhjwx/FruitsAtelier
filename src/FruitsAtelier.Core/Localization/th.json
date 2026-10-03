@@ -5,7 +5,7 @@
   "audioProject.localOnly": "ตั้งค่าโฟลเดอร์ osu! ของคุณในการตั้งค่าเพื่อสร้างในเพลงด้วย",
   "audioProject.create": "สร้าง",
   "audioProject.creating": "กำลังสร้างโปรเจ็กต์...",
-  "audioProject.oneFile": "วาง MP3 ครั้งละหนึ่งไฟล์ แยกจากไฟล์เก็บถาวร บีทแมพ หรือ สกิน",
+  "audioProject.oneFile": "วาง MP3 / OGG ครั้งละหนึ่งไฟล์ แยกจากไฟล์เก็บถาวร บีทแมพ หรือ สกิน",
   "editor.status.convertingSlider": "กำลังอัปเดตการเล่นเกม สไลเดอร์ ในเบื้องหลัง...",
   "aimod.title": "ไอม็อด",
   "aimod.refresh": "รีเฟรช",

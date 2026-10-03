@@ -5,6 +5,9 @@ namespace FruitsAtelier.App.Platform;
 
 public static class LibraryOperations
 {
+    public static bool IsProjectAudio(string path) => Path.GetExtension(path).Equals(".mp3", StringComparison.OrdinalIgnoreCase)
+        || Path.GetExtension(path).Equals(".ogg", StringComparison.OrdinalIgnoreCase);
+
     public static WorkspaceSession CreateAudioProject(BeatmapProject project, string workspace, string songs, bool export, bool compensate)
     {
         project.Validate();
@@ -18,7 +21,7 @@ public static class LibraryOperations
         string source = Path.GetFullPath(document.AudioPath ?? "");
         WorkspaceProject.RejectLinks(source);
         if (!File.Exists(source)) throw new FileNotFoundException(FruitsAtelier.Localization.Strings.Get("resource.missing", source), source);
-        if (!Path.GetExtension(source).Equals(".mp3", StringComparison.OrdinalIgnoreCase))
+        if (!IsProjectAudio(source))
             throw new InvalidDataException(FruitsAtelier.Localization.Strings.Get("audioProject.oneFile"));
         string resources = Path.GetFullPath(Path.Combine(workspace, "Resources", "Audio-" + Guid.NewGuid().ToString("N")));
         WorkspaceProject.RejectLinks(resources);
@@ -28,10 +31,11 @@ public static class LibraryOperations
         {
             // Resources live outside snapshot directories, which are replaced on every project save.
             Directory.CreateDirectory(resources);
-            string audio = Path.Combine(resources, "audio.mp3");
+            string audioName = "audio" + Path.GetExtension(source).ToLowerInvariant();
+            string audio = Path.Combine(resources, audioName);
             File.Copy(source, audio, overwrite: false);
             document.AudioPath = audio;
-            SongSetup.Set(document, "General", "AudioFilename", "audio.mp3");
+            SongSetup.Set(document, "General", "AudioFilename", audioName);
             session = WorkspaceProject.Create(workspace, project, songs);
             if (export)
             {

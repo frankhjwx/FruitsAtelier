@@ -5,7 +5,7 @@
   "audioProject.localOnly": "在「設定」中將您的 osu! 資料夾設定為也在「歌曲」中建立。",
   "audioProject.create": "創建",
   "audioProject.creating": "建立項目...",
-  "audioProject.oneFile": "一次放置一張 MP3，與 圖譜 或 Skin 檔案分開。",
+  "audioProject.oneFile": "一次放置一張 MP3 / OGG，與 圖譜 或 Skin 檔案分開。",
   "editor.status.convertingSlider": "正在後台更新 滑條 遊戲玩法…",
   "aimod.title": "人工智慧模組",
   "aimod.refresh": "重新整理",

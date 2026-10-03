@@ -29,7 +29,8 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
-    ("MP3 projects require metadata, copy audio and optionally link one Songs difficulty", AudioProjectTests.Run),
+    ("Audio projects require metadata, copy audio and optionally link one Songs difficulty", AudioProjectTests.Run),
+    ("Timing red insertion and deletion retain saving and slider export", TimingSaveFeedbackTests.Run),
     ("Slider drafts defer full-map conversion and publish only matching validated snapshots", DraftConversionTests.Run),
     ("Synchronization category tabs explain object changes and preserve choices", SyncTabsTests.Run),
     ("AiMod checks object starts, isolates input, navigates errors and preserves undo", AimodTests.Run),

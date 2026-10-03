@@ -5,7 +5,7 @@
   "audioProject.localOnly": "노래에도 생성하려면 설정에서 osu! 폴더를 설정하세요.",
   "audioProject.create": "만들기",
   "audioProject.creating": "프로젝트 생성 중…",
-  "audioProject.oneFile": "비트맵 또는 스킨 아카이브와 별도로 한 번에 하나의 MP3를 삭제하세요.",
+  "audioProject.oneFile": "비트맵 또는 스킨 아카이브와 별도로 한 번에 하나의 MP3 / OGG를 삭제하세요.",
   "editor.status.convertingSlider": "백그라운드에서 슬라이더 게임플레이를 업데이트하는 중…",
   "aimod.title": "아이모드",
   "aimod.refresh": "새로고침",

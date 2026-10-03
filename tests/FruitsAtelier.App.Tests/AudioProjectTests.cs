@@ -11,15 +11,18 @@ internal static class AudioProjectTests
         Directory.CreateDirectory(root);
         string source = Path.Combine(root, "input.MP3");
         File.WriteAllBytes(source, [1, 2, 3, 4]);
+        string ogg = Path.Combine(root, "input.OGG");
+        File.Copy("tests/FruitsAtelier.Audio.Tests/Fixtures/quiet-tone.ogg", ogg);
         try
         {
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (bool library in new[] { false, true })
             foreach (int mode in new[] { 0, 1, 2 })
+            foreach (string input in new[] { source, ogg })
             {
                 L.SetLanguage(locale);
-                string workspace = Path.Combine(root, $"{locale}-{library}-{mode}");
-                string osu = Path.Combine(root, $"osu-{locale}-{library}-{mode}");
+                string workspace = Path.Combine(root, $"{locale}-{library}-{mode}-{Path.GetExtension(input)}");
+                string osu = Path.Combine(root, $"osu-{locale}-{library}-{mode}-{Path.GetExtension(input)}");
                 var ui = new Ui(false); ui.Resize(library ? 980 : 1440, library ? 620 : 900);
                 ui.View.LoadDocument(new MapDocument { Name = "Previous", IsDemo = false });
                 ui.View.LibrarySettings.Workspace = workspace;
@@ -29,9 +32,10 @@ internal static class AudioProjectTests
                 var before = ui.View.Document.DeepClone();
                 int requests = 0;
                 ui.View.RequestAudioProject = path => { requests++; ui.View.BeginAudioProject(path); };
-                ui.View.DropLibraryFiles([source]); ui.Paint();
-                Check(ui.View.SongSetupVisible && requests == 1, "MP3 opens setup from Library and editor");
-                ui.View.DropLibraryFiles([source]);
+                Check(ui.View.CanDropFile(input), "Audio is accepted by the native drop filter");
+                ui.View.DropLibraryFiles([input]); ui.Paint();
+                Check(ui.View.SongSetupVisible && requests == 1, "Audio opens setup from Library and editor");
+                ui.View.DropLibraryFiles([input]);
                 Check(requests == 1, "Setup rejects additional drops");
                 ui.Key(13);
                 Check(!ui.View.AudioProjectCreating && ui.View.SongSetupVisible && NoProject(workspace), "Empty fields cannot publish a project");
@@ -39,7 +43,7 @@ internal static class AudioProjectTests
                 Check(ui.View.Document.ContentEquals(before) && !ui.View.IsTestplaying, "Setup isolates editor shortcuts");
                 Set(ui, "TitleUnicode", "Cancelled"); ui.Key(27);
                 Check(!ui.View.SongSetupVisible && ui.View.Document.ContentEquals(before) && NoProject(workspace), "Cancel leaves original project and filesystem intact");
-                ui.View.DropLibraryFiles([source]); ui.Paint();
+                ui.View.DropLibraryFiles([input]); ui.Paint();
                 Set(ui, "TitleUnicode", "歌曲 / Song"); Set(ui, "ArtistUnicode", "艺术家"); Set(ui, "Creator", "Mapper");
                 Set(ui, "Version", "   "); ui.Key(13);
                 Check(!ui.View.AudioProjectCreating && NoProject(workspace), "Whitespace difficulty is rejected");
@@ -59,7 +63,9 @@ internal static class AudioProjectTests
                 var map = reopened.Project.Difficulties.Single().Document;
                 Check(map.Name == "歌曲 / Song" && SongSetup.Get(map, "Metadata", "Artist") == "艺术家"
                     && SongSetup.Get(map, "Metadata", "Creator") == "Mapper", "Metadata survives reopening");
-                Check(map.AudioPath != source && File.ReadAllBytes(map.AudioPath!).SequenceEqual(File.ReadAllBytes(source)), "Local audio is an independent copy");
+                Check(map.AudioPath != input && File.ReadAllBytes(map.AudioPath!).SequenceEqual(File.ReadAllBytes(input)), "Local audio is an independent copy");
+                Check(Path.GetExtension(map.AudioPath!).Equals(Path.GetExtension(input), StringComparison.OrdinalIgnoreCase)
+                    && SongSetup.Get(map, "General", "AudioFilename") == Path.GetFileName(map.AudioPath), "Audio format and reference survive reopening");
                 var entry = reopened.Manifest.Difficulties.Single();
                 Check((entry.ExportTarget is not null) == (mode == 1), "Songs creation follows the toggle");
                 if (mode == 1)

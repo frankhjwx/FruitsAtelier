@@ -49,6 +49,7 @@ if (args.Contains("--diagnostic-check"))
 if (args.Contains("--speed-check")) tests = tests.Take(5).ToArray();
 if (args.Contains("--testplay-check")) tests = tests.Take(6).ToArray();
 if (args.Contains("--lifecycle-check")) tests = tests.Where(test => test.Run == (Func<Task>)RepeatedLifecycle).ToArray();
+if (args.Contains("--vorbis-check")) tests = tests.Where(test => test.Run == (Func<Task>)VorbisSample).ToArray();
 if (args.Contains("--recovery-check")) tests = tests.TakeLast(3).ToArray();
 if (args.Contains("--pause-check")) tests = tests.Where(test => test.Name.StartsWith("Pause and resume")
     || test.Run == (Func<Task>)WavePlayback || test.Run == (Func<Task>)PlayingSeek || test.Run == (Func<Task>)EndAndReplay).ToArray();
@@ -160,7 +161,8 @@ async Task Mp3Samples()
 
 async Task VorbisSample()
 {
-    string file = Path.Combine(AppContext.BaseDirectory, "Fixtures", "quiet-tone.ogg");
+    string file = args.Length == 2 && args[0] == "--vorbis-check" ? Path.GetFullPath(args[1])
+        : Path.Combine(AppContext.BaseDirectory, "Fixtures", "quiet-tone.ogg");
     True(File.Exists(file), "OGG fixture is missing");
     await ExerciseFile(file);
 }
