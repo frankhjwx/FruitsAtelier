@@ -399,6 +399,8 @@
   "editor.command.insertPoint": "Вставить контрольную точку",
   "editor.command.moveAnchor": "Переместить якорь",
   "editor.command.moveFruit": "Переместить Фрукт",
+  "editor.command.scaleObjects": "Масштабировать объекты по горизонтали",
+  "editor.status.objectsScaled": "Масштаб {0} объектов изменён в {1} раза",
   "editor.command.moveObjects": "Перемещение объектов",
   "editor.command.resizeBanana": "Отрегулируйте Банановый душ",
   "editor.command.paste": "Вставить",

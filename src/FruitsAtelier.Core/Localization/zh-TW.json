@@ -399,6 +399,8 @@
   "editor.command.insertPoint": "插入控制點",
   "editor.command.moveAnchor": "移動錨點",
   "editor.command.moveFruit": "移動Fruit",
+  "editor.command.scaleObjects": "水平縮放物件",
+  "editor.status.objectsScaled": "已將 {0} 個物件水平縮放至 {1} 倍",
   "editor.command.moveObjects": "移動對象",
   "editor.command.resizeBanana": "調整香蕉群",
   "editor.command.paste": "貼上",

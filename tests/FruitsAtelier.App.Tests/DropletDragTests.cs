@@ -23,7 +23,7 @@ internal static class DropletDragTests
             var ui = new Ui(); ui.LoadDocument(map);
             ui.View.SetSliderEditingMode(mode); ui.Paint();
             ui.ClickMap(displayed.TimeMs, displayed.X);
-            ui.DownMap(displayed.TimeMs, displayed.X);
+            SliderEventTestDriver.Down(ui, displayed.TimeMs, displayed.X);
             ui.MoveMap(displayed.TimeMs, displayed.X + 5);
             ui.MoveMap(displayed.TimeMs, displayed.X + 10);
             ui.UpMap(displayed.TimeMs, displayed.X + 10);
@@ -39,7 +39,7 @@ internal static class DropletDragTests
             ui.Key('Z', ctrl: true);
             Check(map.ContentEquals(ui.View.Document), "Repeated droplet drag did not undo in one step.");
             ui.ClickMap(displayed.TimeMs, displayed.X);
-            ui.DownMap(displayed.TimeMs, displayed.X);
+            SliderEventTestDriver.Down(ui, displayed.TimeMs, displayed.X);
             ui.MoveMap(displayed.TimeMs, displayed.X - 5);
             ui.Key(27); ui.UpMap(displayed.TimeMs, displayed.X - 5);
             Check(map.ContentEquals(ui.View.Document), "Cancelling repeated droplet drag changed the map.");
@@ -60,7 +60,7 @@ internal static class DropletDragTests
             var original = ui.View.Document.DeepClone();
             var target = OsuBeatmapWriter.Serialize(map).PlayableObjects.First(o => o.Kind == kind);
             ui.ClickMap(target.TimeMs, target.X);
-            ui.DownMap(target.TimeMs, target.X);
+            SliderEventTestDriver.Down(ui, target.TimeMs, target.X);
             ui.MoveMap(target.TimeMs, target.X + 10);
             ui.MoveMap(target.TimeMs, target.X + 20);
             ui.UpMap(target.TimeMs, target.X + 20);
@@ -90,7 +90,7 @@ internal static class DropletDragTests
             ui.View.SetSliderEditingMode(mode);
             ui.Paint();
             ui.ClickMap(target.TimeMs, target.X);
-            ui.DownMap(target.TimeMs, target.X);
+            SliderEventTestDriver.Down(ui, target.TimeMs, target.X);
             ui.MoveMap(target.TimeMs, target.X + 5);
             ui.MoveMap(target.TimeMs, target.X + 10);
             ui.UpMap(target.TimeMs, target.X + 10);
@@ -104,7 +104,7 @@ internal static class DropletDragTests
                     $"Converted {kind} #{target.EventIndex}: event {old.EventIndex} expected {expected}, got {current.X}; {ui.View.StatusMessage}");
             }
             var moved = OsuBeatmapWriter.Serialize(ui.View.Document).PlayableObjects.Single(o => o.EventIndex == target.EventIndex);
-            ui.DownMap(moved.TimeMs, moved.X);
+            SliderEventTestDriver.Down(ui, moved.TimeMs, moved.X);
             ui.MoveMap(moved.TimeMs, moved.X - 5);
             Check(ui.View.SelectedAnchorIds.Count == 0, "Dragging the same droplet again selected its new anchor.");
             ui.Key(27);
@@ -137,8 +137,7 @@ internal static class DropletDragTests
             ui.ClickMap(target.TimeMs, target.X);
             Check(ui.View.SelectedObjectIds.Single() == source && ui.View.StatusMessage.Contains("Slider"),
                 $"First click on {kind} did not select the parent slider.");
-            ui.ClickMap(target.TimeMs, target.X);
-            Check(ui.View.StatusMessage.EndsWith(FruitsAtelier.Localization.Strings.Get("editor.status.sliderObjectReady", "{0}").Split("{0}")[^1]), $"Second click did not select {kind} for movement.");
+            SliderEventTestDriver.Select(ui, target.TimeMs, target.X);
             Check(ui.View.XCoordinateFieldBounds is not null, $"Selected {kind} has no X coordinate field.");
             var editableBaseline = ui.View.Document.DeepClone();
             var baselineEvents = CatchStreamConverter.Convert(ui.View.Document).Objects.Where(o => o.SourceId == source).ToArray();
@@ -146,7 +145,7 @@ internal static class DropletDragTests
             var position = ui.ScreenAt(selected.TimeMs, selected.X);
             Check(ui.Canvas.Circles.Any(c => !c.Filled && Math.Abs(c.X - position.X) < 1 && Math.Abs(c.Y - position.Y) < 1
                 && c.Color == 0xE7EBF2), $"Selected {kind} has no visible outer ring.");
-            ui.DownMap(selected.TimeMs, selected.X);
+            SliderEventTestDriver.Down(ui, selected.TimeMs, selected.X);
             ui.MoveMap(selected.TimeMs, selected.X + 20);
             ui.UpMap(selected.TimeMs, selected.X + 20);
             var converted = CatchStreamConverter.Convert(ui.View.Document);
@@ -162,7 +161,7 @@ internal static class DropletDragTests
             ui.Key('Z', ctrl: true);
             Check(editableBaseline.ContentEquals(ui.View.Document), $"One undo did not restore the {kind} drag.");
             ui.ClickMap(selected.TimeMs, selected.X); ui.ClickMap(selected.TimeMs, selected.X);
-            ui.DownMap(selected.TimeMs, selected.X); ui.MoveMap(selected.TimeMs, selected.X + 15);
+            SliderEventTestDriver.Down(ui, selected.TimeMs, selected.X); ui.MoveMap(selected.TimeMs, selected.X + 15);
             ui.Key(27); ui.UpMap(selected.TimeMs, selected.X + 15);
             Check(editableBaseline.ContentEquals(ui.View.Document), $"Escape did not cancel the {kind} drag.");
             Check(original.ContentEquals(ui.View.Document), "Cancelling the drag changed the original FSlider.");
@@ -170,7 +169,7 @@ internal static class DropletDragTests
             if (kind == CatchObjectKind.Droplet)
             {
                 ui.ClickMap(target.TimeMs, target.X); ui.ClickMap(target.TimeMs, target.X);
-                ui.DownMap(target.TimeMs, target.X);
+                SliderEventTestDriver.Down(ui, target.TimeMs, target.X);
                 ui.MoveMap(target.TimeMs, 512); ui.UpMap(target.TimeMs, 512);
                 converted = CatchStreamConverter.Convert(ui.View.Document);
                 moved = converted.Objects.Single(o => o.SourceId == source && o.EventIndex == target.EventIndex);

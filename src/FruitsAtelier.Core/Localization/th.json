@@ -399,6 +399,8 @@
   "editor.command.insertPoint": "แทรกจุดควบคุม",
   "editor.command.moveAnchor": "ย้ายสมอ",
   "editor.command.moveFruit": "ย้าย Fruit",
+  "editor.command.scaleObjects": "ปรับขนาดวัตถุในแนวนอน",
+  "editor.status.objectsScaled": "ปรับขนาดวัตถุ {0} รายการเป็น {1} เท่า",
   "editor.command.moveObjects": "ย้ายวัตถุ",
   "editor.command.resizeBanana": "ปรับ บานาน่าชาวเวอร์",
   "editor.command.paste": "วาง",

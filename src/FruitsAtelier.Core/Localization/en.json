@@ -399,6 +399,8 @@
   "editor.command.insertPoint": "Insert control point",
   "editor.command.moveAnchor": "Move anchor",
   "editor.command.moveFruit": "Move Fruit",
+  "editor.command.scaleObjects": "Scale objects horizontally",
+  "editor.status.objectsScaled": "Scaled {0} objects by {1}×",
   "editor.command.moveObjects": "Move objects",
   "editor.command.resizeBanana": "Adjust banana shower",
   "editor.command.paste": "Paste",

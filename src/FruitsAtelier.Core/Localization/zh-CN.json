@@ -399,6 +399,8 @@
   "editor.command.insertPoint": "插入控制点",
   "editor.command.moveAnchor": "移动锚点",
   "editor.command.moveFruit": "移动 单独大果",
+  "editor.command.scaleObjects": "水平缩放对象",
+  "editor.status.objectsScaled": "已将 {0} 个对象水平缩放至 {1} 倍",
   "editor.command.moveObjects": "移动对象",
   "editor.command.resizeBanana": "调整香蕉雨范围",
   "editor.command.paste": "粘贴",

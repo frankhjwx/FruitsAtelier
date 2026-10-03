@@ -399,6 +399,8 @@
   "editor.command.insertPoint": "コントロールポイントを挿入",
   "editor.command.moveAnchor": "アンカーを移動する",
   "editor.command.moveFruit": "Fruitを移動する",
+  "editor.command.scaleObjects": "オブジェクトを横方向に拡大縮小",
+  "editor.status.objectsScaled": "{0} 個のオブジェクトを {1} 倍に拡大縮小",
   "editor.command.moveObjects": "オブジェクトの移動",
   "editor.command.resizeBanana": "バナナシャワーの数を調整する",
   "editor.command.paste": "ペースト",

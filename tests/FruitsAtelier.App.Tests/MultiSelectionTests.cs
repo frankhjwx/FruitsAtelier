@@ -67,6 +67,7 @@ internal static class MultiSelectionTests
             ui.Key(tool); ui.ClickMap(1000, 80);
             Box(ui, 1400, 200, 2600, 320, ctrl: true);
             Objects(ui, firstFruit, sourceId); Anchors(ui);
+            ui.ClickMap(500, 500);
             Box(ui, 1400, 200, 2600, 320);
             Objects(ui, sourceId);
             var nested = covered.First(o => o.Kind == CatchObjectKind.Droplet);

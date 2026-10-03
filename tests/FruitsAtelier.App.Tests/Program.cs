@@ -29,6 +29,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Selection boxes scale and move consecutive parents with anchor priority and atomic undo", SelectionTransformTests.Run),
     ("Droplet randomization switches, setup drafts and Edit actions stay within one diff", DropletRandomizationTests.Run),
     ("Audio projects require metadata, copy audio and optionally link one Songs difficulty", AudioProjectTests.Run),
     ("Timing red insertion and deletion retain saving and slider export", TimingSaveFeedbackTests.Run),
@@ -82,7 +83,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay volume bars accept clicks and drags after keyboard and wheel shortcuts", VolumePopoverTests.TestplayPointer),
     ("New Combo grouping refreshes on first edit and undo/redo", ComboGroupingTests.Run),
     ("Completing an FSlider replaces only exact head fruit overlaps and undoes atomically", SliderHeadReplacementTests.OnCompletion),
-    ("Final stream fruit accepts lower-half hit and drags independently", StreamFruitDragTests.Run),
+    ("Final stream fruit accepts lower-half hit and box movement translates the stream", StreamFruitDragTests.Run),
     ("Testplay lead-in starts early, returns to selection and persists settings", TestplayStartupDelayTests.LeadIn),
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
@@ -262,7 +263,7 @@ var tests = new (string Name, Action Run)[]
     ("Slider drag candidates preserve unrelated sources and restore their baseline", NoteSnapTests.SliderDragBaseline),
     ("Slider edges highlight and inspect snap while matching current grids stay unchanged", NoteSnapTests.SliderEdgesAndCurrentSnap),
     ("Repeated slider droplets sharing a path position drag together and undo atomically", DropletDragTests.RepeatedPathDrag),
-    ("Slider droplets select on the second click and drag locally", DropletDragTests.SelectAndMove),
+    ("Slider event reshaping preserves neighbouring events and supports undo", DropletDragTests.SelectAndMove),
     ("Dragging a curved slider droplet preserves its neighbouring events", DropletDragTests.CurvedNeighbors),
     ("Droplet dragging handles fractional timing and dense anchors", DropletDragTests.ConvertedAndDenseCurves),
     ("Default slider mode drags displayed droplets continuously", DropletDragTests.DefaultModeDrag),

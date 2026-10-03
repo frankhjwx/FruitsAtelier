@@ -399,6 +399,8 @@
   "editor.command.insertPoint": "Insertar punto de control",
   "editor.command.moveAnchor": "Mover ancla",
   "editor.command.moveFruit": "Mover Fruit",
+  "editor.command.scaleObjects": "Escalar objetos horizontalmente",
+  "editor.status.objectsScaled": "Se escalaron {0} objetos por {1}×",
   "editor.command.moveObjects": "Mover objetos",
   "editor.command.resizeBanana": "Ajustar Lluvia de plátanos",
   "editor.command.paste": "Pegar",

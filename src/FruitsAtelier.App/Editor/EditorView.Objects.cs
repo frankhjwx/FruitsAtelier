@@ -178,7 +178,7 @@ public sealed partial class EditorView
 
     private bool objectDragTimeline;
     private double objectDragTimelineScale;
-    private void BeginObjectDrag(float x, float y, bool timeline = false)
+    private void BeginObjectDrag(float x, float y, bool timeline = false, bool scaleSelection = false)
     {
         if (notesLocked) return;
         if (objectSelection.Count == 0) return;
@@ -187,7 +187,8 @@ public sealed partial class EditorView
         { distanceObject = null; soundEdge = null; }
         pendingStreamChildSelection = null;
         bool movesOneFruit = objectSelection.Count == 1 && Document.Fruits.Any(item => objectSelection.Contains(item.Id));
-        history.Begin(L.Get(movesOneFruit ? "editor.command.moveFruit" : "editor.command.moveObjects"));
+        selectionScaleSide = 0;
+        history.Begin(L.Get(scaleSelection ? "editor.command.scaleObjects" : movesOneFruit ? "editor.command.moveFruit" : "editor.command.moveObjects"));
         objectDragStart = Document.DeepClone();
         objectDragPrepared = false;
         objectDragTimeline = timeline;
@@ -199,16 +200,31 @@ public sealed partial class EditorView
     private Dictionary<Guid, Fruit> dragFruits = [];
     private Dictionary<Guid, CurveTrack> dragTracks = [];
     private Dictionary<Guid, BananaShower> dragBananas = [];
-    private void MoveSelectedObjects(float x, float y, bool shift)
+    private bool PrepareObjectDrag()
     {
-        if (objectDragStart is null) return;
+        if (objectDragStart is null) return false;
         if (!objectDragPrepared)
         {
             try
             {
                 foreach (Guid id in objectSelection.Where(id => !objectDragTimeline && Document.ImportedSliders.Any(slider => slider.Id == id)).ToArray())
                     ConvertImportedSlider(id);
+                if (selectionScaleSide != 0)
+                    foreach (var track in Document.Tracks.Where(t => objectSelection.Contains(t.Id)))
+                        for (int i = track.Nodes.Count - 2; i >= 0; i--)
+                            if (track.Nodes[i].OutgoingCurve?.Kind == ControlCurveKind.CircularArc) ControlCurveEditing.ConvertToPen(track, i);
                 objectDragStart = Document.DeepClone();
+                selectionScaleMaximum = double.PositiveInfinity;
+                if (selectionScaleSide != 0)
+                    foreach (var track in objectDragStart.Tracks.Where(t => objectSelection.Contains(t.Id)))
+                    {
+                        // Stack widths and event adjustments have stored 512-unit limits, unlike curve controls.
+                        var extents = (track.Stack?.Points.Select(p => p.Distance) ?? [])
+                            .Concat(track.Stack?.FruitAdjustments.Select(p => Math.Abs(p.Offset)) ?? [])
+                            .Concat(track.DropletRandomization?.Adjustments.Select(p => Math.Abs(p.Offset)) ?? []);
+                        foreach (double extent in extents)
+                            if (extent > 0) selectionScaleMaximum = Math.Min(selectionScaleMaximum, 512 / extent);
+                    }
                 dragFruits = Document.Fruits.ToDictionary(item => item.Id);
                 dragTracks = Document.Tracks.ToDictionary(item => item.Id);
                 dragBananas = Document.BananaShowers.ToDictionary(item => item.Id);
@@ -220,9 +236,15 @@ public sealed partial class EditorView
                 objectDragStart = null;
                 drag = DragKind.None;
                 StatusMessage = error.Message;
-                return;
+                return false;
             }
         }
+        return true;
+    }
+
+    private void MoveSelectedObjects(float x, float y, bool shift)
+    {
+        if (!PrepareObjectDrag()) return;
         var startPointer = Transform.ToMap(dragStartX, dragStartY);
         var pointer = Transform.ToMap(x, y);
         double deltaTime = objectDragTimeline ? (x - dragStartX) / objectDragTimelineScale : pointer.TimeMs - startPointer.TimeMs;
@@ -230,7 +252,7 @@ public sealed partial class EditorView
         double minTime = double.PositiveInfinity, maxTime = double.NegativeInfinity;
         double minX = double.PositiveInfinity, maxX = double.NegativeInfinity;
 
-        foreach (var fruit in objectDragStart.Fruits.Where(item => objectSelection.Contains(item.Id)))
+        foreach (var fruit in objectDragStart!.Fruits.Where(item => objectSelection.Contains(item.Id)))
         {
             IncludeTime(fruit.TimeMs);
             IncludeX(fruit.X);

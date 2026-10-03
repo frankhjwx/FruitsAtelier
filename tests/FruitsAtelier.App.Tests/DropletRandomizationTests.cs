@@ -63,7 +63,7 @@ internal static class DropletRandomizationTests
                     var dragUi = new Ui(); dragUi.LoadDocument(dragMap); dragUi.View.SetSliderEditingMode(mode); dragUi.Paint();
                     var target = OsuBeatmapWriter.Serialize(dragMap).PlayableObjects.First(o => o.Kind == CatchObjectKind.TinyDroplet);
                     dragUi.ClickMap(target.TimeMs, target.X);
-                    dragUi.DownMap(target.TimeMs, target.X); dragUi.MoveMap(target.TimeMs, target.X + 4);
+                    SliderEventTestDriver.Down(dragUi, target.TimeMs, target.X); dragUi.MoveMap(target.TimeMs, target.X + 4);
                     dragUi.UpMap(target.TimeMs, target.X + 4);
                     Check(dragUi.View.Document.Tracks[0].Nodes.Count == 2
                         && dragUi.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 1, "pointer drag stores an FX correction in both editing modes");

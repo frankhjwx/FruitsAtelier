@@ -399,6 +399,8 @@
   "editor.command.insertPoint": "Masukkan titik kontrol",
   "editor.command.moveAnchor": "Pindahkan jangkar",
   "editor.command.moveFruit": "Pindahkan Fruit",
+  "editor.command.scaleObjects": "Skalakan objek secara horizontal",
+  "editor.status.objectsScaled": "{0} objek diskalakan sebesar {1}×",
   "editor.command.moveObjects": "Pindahkan objek",
   "editor.command.resizeBanana": "Sesuaikan Banana shower",
   "editor.command.paste": "Tempel",

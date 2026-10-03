@@ -399,6 +399,8 @@
   "editor.command.insertPoint": "Ipasok ang control point",
   "editor.command.moveAnchor": "Ilipat ang anchor",
   "editor.command.moveFruit": "Ilipat ang Fruit",
+  "editor.command.scaleObjects": "I-scale ang mga bagay nang pahalang",
+  "editor.status.objectsScaled": "Na-scale ang {0} bagay ng {1}×",
   "editor.command.moveObjects": "Ilipat ang mga bagay",
   "editor.command.resizeBanana": "Ayusin ang Mga Ulan-saging",
   "editor.command.paste": "Idikit",

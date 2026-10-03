@@ -215,6 +215,7 @@ public sealed partial class EditorView
         }
         if (!plot.Contains(x, y)) return;
         if (!ctrl && tool == Tool.Select && objectSelection.Count == 1 && SelectedDistanceObject() is { IsStandalone: false } selectedChild
+            && !SelectionTransformBounds.Contains(x, y)
             && HitCatchObject(x, y)?.SourceId != selectedChild.SourceId && HitTrackPath(x, y) != selectedChild.SourceId
             && HitSliderLocation(x, y)?.Id != selectedChild.SourceId)
         {
@@ -241,7 +242,8 @@ public sealed partial class EditorView
         if (ctrl && tool == Tool.Select && SelectedImportedSlider is { } importedParent
             && HitCatchObject(x, y) is { } otherObject && otherObject.SourceId != importedParent.Id)
         { PickObject(otherObject.SourceId, true); return; }
-        if (!ctrl && TryBeginSelectedSliderObjectDrag(x, y)) return;
+        if (!ctrl && TryBeginSelectionTransform(x, y)) return;
+        if (!ctrl && !HitSelectedSliderControl(x, y) && TryBeginSelectedSliderObjectDrag(x, y)) return;
         if (showTargets && ctrl && tool is Tool.Select or Tool.Slider && objectSelection.Count == 1
             && SelectedImportedSlider is { } imported)
         {
@@ -458,7 +460,7 @@ public sealed partial class EditorView
             dragMoved = true;
         }
         if (drag == DragKind.TimelineTail) { MoveTimelineTail(x, shift); return; }
-        if (drag == DragKind.Objects) { MoveSelectedObjects(x, y, shift); return; }
+        if (drag == DragKind.Objects) { if (selectionScaleSide != 0) ScaleSelectedObjects(x); else MoveSelectedObjects(x, y, shift); return; }
         if (drag == DragKind.SliderObject)
         {
             if (!TryBeginSliderEndpointTimeDrag(y)) { MoveSliderObject(x); return; }
@@ -611,13 +613,18 @@ public sealed partial class EditorView
         }
         if (drag is DragKind.Objects or DragKind.BananaStart or DragKind.BananaEnd)
         {
+            selectionScaleSide = 0;
             objectDragStart = null;
             dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
             objectDragPrepared = false;
             if (AudioPlaying || pinPlayhead) FollowPlayhead();
         }
         if (pendingStreamChildSelection is { } streamChildSelection && !dragMoved && objectSelection.Contains(streamChildSelection.SourceId))
+        {
             PickSoundEdge(streamChildSelection);
+            distanceObject = (streamChildSelection.SourceId, streamChildSelection.EventIndex);
+            StatusMessage = L.Get("editor.status.sliderObjectReady", Time(streamChildSelection.TimeMs));
+        }
         pendingStreamChildSelection = null;
         drag = DragKind.None;
     }
@@ -1214,6 +1221,7 @@ public sealed partial class EditorView
         sliderObjectDragTarget = null;
         sliderObjectDragSource = sliderObjectDragShape = null;
         sliderObjectDragPrevious = null;
+        selectionScaleSide = 0;
         objectDragStart = null;
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         objectDragPrepared = false;

@@ -424,6 +424,26 @@ Mac accepts both Command and Ctrl shortcuts; Delete and Backspace both delete ob
 
 A slider's Fruit, Droplet, and TinyDroplet share parent selection. Selecting several children counts as one slider. Even with curves hidden, actual objects can select their complete track.
 
+In Select mode, a single selected slider or at least two consecutive selected
+parents displays a teal bounding box with a light background and left/right resize
+handles. Consecutive means no omitted parent in start-time/source order; a selected
+or intervening banana shower blocks the box. Bounds enclose the displayed Fruit
+and Droplet circles including their radii, excluding TinyDroplets and curve controls.
+Time bounds cover complete parent durations, including slider repeats. The resize
+handles are small squares with larger pointer hit areas.
+Drag a side handle to scale X positions and slider geometry around the opposite
+side, keeping times, repeats and sprite sizes unchanged. Grid Snap applies to the
+moving edge; individual events do not distance-snap. Handles stop before crossing
+the opposite side and at the playfield boundaries; stored stack width and adjustment
+limits also cap expansion. A zero-width pattern can move
+but cannot resize. Drag inside the box to translate all selected parents using the
+ordinary group-movement snap rules. Visible slider anchors and curve handles take
+priority, followed by box resizing/movement, then individual-event DS reshaping.
+Ctrl selection, clicks on event details and long-press actions remain available.
+Each drag is one undo step; Esc or lost capture restores its starting content.
+Legacy Sliders convert to FSliders on the first movement. Horizontal resizing
+converts exact circular arcs to bounded Bezier approximations in the same transaction.
+
 Copy and cut write a legacy reference such as `02:27:094 (1,2,3) - ` to the system clipboard. Inside the editor, a separate snapshot retains complete objects for pattern pasting into the same difficulty session. Other difficulties and reopened projects cannot receive that pattern. Paste aligns the earliest start to the playhead, preserves other objects' relative times and positions, and assigns new IDs. Each batch move, delete, cut, or paste is one undo step.
 
 ## Distance spacing and object flags
@@ -436,7 +456,7 @@ Distance snapping places fruits and the first slider draft point relative to the
 
 Drawing and reshaping a slider uses beat and horizontal grid snapping independently of DS. Slider endpoints, control points and Bezier handles are not constrained by DS presets or by the spacing of generated Fruit/Droplet events. Their X coordinates may extend beyond the 0–512 playfield while dragging or editing numeric values. The first draft point still distance-snaps relative to the previous source object. A completed slider remains selected in Slider mode, so its tail can be dragged immediately.
 
-In Select mode, horizontal dragging of a slider head, tail or large droplet keeps its time and strictly snaps relative to the preceding large event in the same slider, including zero DS, even on a curved slider. Endpoint candidates account for the preceding droplets that move with the reshaped curve. A selected TinyDroplet instead snaps its displayed X relative to the preceding event in the same slider, including other tiny droplets. Its compensation policy still applies. Following events impose no DS preset or maximum-distance requirement on a selected-object drag. With no preceding reference, dragging follows horizontal Grid Snap. Candidate positions are tried in pointer-distance order; unrepresentable candidates are skipped, and if none is available, the last accepted position remains unchanged. DS takes precedence over horizontal Grid Snap when a preceding reference exists.
+When a Select-mode drag is outside the bounding box and visible slider controls, horizontal dragging of a slider head, tail or large droplet keeps its time and strictly snaps relative to the preceding large event in the same slider, including zero DS, even on a curved slider. Endpoint candidates account for the preceding droplets that move with the reshaped curve. A selected TinyDroplet instead snaps its displayed X relative to the preceding event in the same slider, including other tiny droplets. Its compensation policy still applies. Following events impose no DS preset or maximum-distance requirement on a selected-object drag. With no preceding reference, dragging follows horizontal Grid Snap. Candidate positions are tried in pointer-distance order; unrepresentable candidates are skipped, and if none is available, the last accepted position remains unchanged. DS takes precedence over horizontal Grid Snap when a preceding reference exists.
 
 Changing DS settings, BPM, or tick rate does not reshape existing sliders.
 
@@ -626,7 +646,7 @@ objects because project files do not store undo history.
 
 Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press an FSlider to reveal **Convert to Stream/Stack**; imported Legacy Sliders offer **Convert to FSlider** above it. Every conversion entry opens the shared dialog on Stream with the same snap slider and subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**. Enter confirms; Esc cancels; arrow keys change the choice.
 
-With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging reshapes only that fruit while keeping its time fixed. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in their long-press menu. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
+With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging inside the selection box moves the whole stream. Visible anchors take priority; individual-event reshaping is available outside the box. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in their long-press menu. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
 
 The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
 

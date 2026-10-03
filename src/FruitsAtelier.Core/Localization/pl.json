@@ -399,6 +399,8 @@
   "editor.command.insertPoint": "Wstaw punkt kontrolny",
   "editor.command.moveAnchor": "Przesuń kotwicę",
   "editor.command.moveFruit": "Przesuń Owoc",
+  "editor.command.scaleObjects": "Skaluj obiekty poziomo",
+  "editor.status.objectsScaled": "Przeskalowano {0} obiektów o {1}×",
   "editor.command.moveObjects": "Przesuwaj obiekty",
   "editor.command.resizeBanana": "Dostosuj Deszcz bananów",
   "editor.command.paste": "Wklej",

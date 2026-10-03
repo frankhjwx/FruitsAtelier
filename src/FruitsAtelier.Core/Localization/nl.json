@@ -399,6 +399,8 @@
   "editor.command.insertPoint": "Controlepunt invoegen",
   "editor.command.moveAnchor": "Anker verplaatsen",
   "editor.command.moveFruit": "Fruit verplaatsen",
+  "editor.command.scaleObjects": "Objecten horizontaal schalen",
+  "editor.status.objectsScaled": "{0} objecten geschaald met {1}×",
   "editor.command.moveObjects": "Verplaats objecten",
   "editor.command.resizeBanana": "Banana shower aanpassen",
   "editor.command.paste": "Plakken",

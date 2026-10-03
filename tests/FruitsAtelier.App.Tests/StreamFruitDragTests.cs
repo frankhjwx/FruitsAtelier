@@ -29,9 +29,10 @@ internal static class StreamFruitDragTests
         var originalPosition = ui.ScreenAt(last.TimeMs, last.X);
         Check(!OuterRing(ui, originalPosition), "Selecting the stream parent highlighted an individual fruit.");
 
-        ui.DownMap(pointerTime, last.X + 20);
-        ui.MoveMap(pointerTime + 100, last.X + 100);
-        ui.UpMap(pointerTime + 100, last.X + 100);
+        ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
+        ui.DownMap(pointerTime, last.X);
+        ui.MoveMap(pointerTime + 100, last.X + 80);
+        ui.UpMap(pointerTime + 100, last.X + 80);
         var moved = ui.View.Document.Tracks.Single();
         Check(moved.StreamSnapDivisor == 16 && moved.Nodes.Select((node, index) =>
             Math.Abs(node.TimeMs - map.Tracks[0].Nodes[index].TimeMs - 100) < .001
@@ -42,7 +43,8 @@ internal static class StreamFruitDragTests
 
         var childUi = new Ui(); childUi.LoadDocument(map);
         childUi.ClickMap(pointerTime, last.X + 20);
-        childUi.ClickMap(pointerTime, last.X + 20);
+        childUi.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
+        childUi.ClickMap(pointerTime, last.X);
         Check(OuterRing(childUi, childUi.ScreenAt(last.TimeMs, last.X)),
             "The second click did not highlight the selected stream fruit.");
         childUi.DownMap(pointerTime, last.X);
@@ -50,14 +52,13 @@ internal static class StreamFruitDragTests
         childUi.UpMap(pointerTime, last.X + 80);
         var changed = childUi.View.Conversion.Objects.Where(item => item.SourceId == track.Id).ToArray();
         Check(Math.Abs(changed[^1].X - (last.X + 80)) < .001,
-            "Dragging the selected stream fruit did not move that fruit.");
-        Check(Math.Abs(changed[^1].TimeMs - last.TimeMs) < .001
-            && OuterRing(childUi, childUi.ScreenAt(changed[^1].TimeMs, changed[^1].X)),
-            "The selected stream fruit lost its time or highlight after dragging.");
-        Check(Math.Abs(changed[^2].X - preceding.X) < .001,
-            "Dragging one stream fruit moved its preceding fruit.");
+            "Box movement did not translate the final stream fruit.");
+        Check(Math.Abs(changed[^1].TimeMs - last.TimeMs) < .001,
+            "Box movement changed event time during a horizontal drag.");
+        Check(Math.Abs(changed[^2].X - preceding.X - 80) < .001,
+            "Box movement did not translate the preceding fruit.");
         childUi.Key('Z', ctrl: true);
-        Check(map.ContentEquals(childUi.View.Document), "Undo did not restore the individual stream fruit move.");
+        Check(map.ContentEquals(childUi.View.Document), "Undo did not restore the stream box move.");
     }
 
     private static bool OuterRing(Ui ui, (float X, float Y) position)

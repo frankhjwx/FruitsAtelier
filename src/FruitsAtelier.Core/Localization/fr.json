@@ -399,6 +399,8 @@
   "editor.command.insertPoint": "Insérer un point de contrôle",
   "editor.command.moveAnchor": "Déplacer l'ancre",
   "editor.command.moveFruit": "Déplacer Fruit",
+  "editor.command.scaleObjects": "Redimensionner les objets horizontalement",
+  "editor.status.objectsScaled": "{0} objets redimensionnés par {1}×",
   "editor.command.moveObjects": "Déplacer des objets",
   "editor.command.resizeBanana": "Ajuster Pluie de bananes",
   "editor.command.paste": "Coller",

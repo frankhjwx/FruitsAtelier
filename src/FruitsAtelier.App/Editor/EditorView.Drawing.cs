@@ -261,6 +261,7 @@ public sealed partial class EditorView
             c.Line(playfield.X, startY, playfield.Right, startY, Gold, 2);
             c.Line(playfield.X, cursorY, playfield.Right, cursorY, Gold, 1);
         }
+        DrawSelectionTransform(c, background: true);
         if (!movementAnalysis) DrawCanvasCatchObjects(c);
         if (showTargets)
         {
@@ -340,6 +341,7 @@ public sealed partial class EditorView
                 }
             }
         }
+        DrawSelectionTransform(c, background: false);
         DrawSelectedDistanceTick(c);
         DrawPlacementGhost(c);
         float headY = Screen(new(playhead, 0)).Y;

@@ -399,6 +399,8 @@
   "editor.command.insertPoint": "제어점 삽입",
   "editor.command.moveAnchor": "앵커 이동",
   "editor.command.moveFruit": "Fruit 이동",
+  "editor.command.scaleObjects": "개체 가로 크기 조절",
+  "editor.status.objectsScaled": "개체 {0}개를 {1}배로 조절",
   "editor.command.moveObjects": "개체 이동",
   "editor.command.resizeBanana": "바나나 샤워 횟수 조정",
   "editor.command.paste": "붙여넣기",

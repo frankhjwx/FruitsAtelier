@@ -70,12 +70,12 @@ internal static class SliderDistanceDragTests
         ui.View.Wheel(ui.Plot.X, ui.Plot.Bottom, 120 * 15, false, false, true); ui.Paint();
         ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
         ui.ClickMap(target.TimeMs, target.X);
-        ui.DownMap(target.TimeMs, target.X); ui.MoveMap(target.TimeMs, 215); ui.UpMap(target.TimeMs, 215);
+        SliderEventTestDriver.Down(ui, target.TimeMs, target.X); ui.MoveMap(target.TimeMs, 215); ui.UpMap(target.TimeMs, 215);
         var after = CatchStreamConverter.Convert(ui.View.Document);
         var moved = after.Objects.Single(o => o.EventIndex == target.EventIndex);
         Check(after.Success && Math.Abs(moved.X - 214.4) < .001,
             $"Following straight segment prevented preceding-event snap: {moved.X}; {ui.View.StatusMessage}");
-        ui.DownMap(moved.TimeMs, moved.X); ui.MoveMap(moved.TimeMs, 50); ui.UpMap(moved.TimeMs, 50);
+        SliderEventTestDriver.Down(ui, moved.TimeMs, moved.X); ui.MoveMap(moved.TimeMs, 50); ui.UpMap(moved.TimeMs, 50);
         after = CatchStreamConverter.Convert(ui.View.Document);
         Check(Math.Abs(after.Objects.Single(o => o.EventIndex == target.EventIndex).X - 166.4) < .001,
             "Following maximum DS prevented a valid preceding-event snap.");
@@ -101,7 +101,7 @@ internal static class SliderDistanceDragTests
         var displayed = OsuBeatmapWriter.Serialize(map).PlayableObjects.Single(o => o.EventIndex == target.EventIndex);
         var ui = new Ui(); ui.LoadDocument(map); ui.SelectTrack(track.Id); ui.Key('Y');
         ui.ClickMap(displayed.TimeMs, displayed.X);
-        ui.DownMap(displayed.TimeMs, displayed.X); ui.MoveMap(displayed.TimeMs, 210); ui.UpMap(displayed.TimeMs, 210);
+        SliderEventTestDriver.Down(ui, displayed.TimeMs, displayed.X); ui.MoveMap(displayed.TimeMs, 210); ui.UpMap(displayed.TimeMs, 210);
         var after = CatchStreamConverter.Convert(ui.View.Document);
         var moved = after.Objects.Single(o => o.EventIndex == target.EventIndex);
         Check(after.Success && Math.Abs(moved.X - target.X) > 10,
@@ -158,7 +158,7 @@ internal static class SliderDistanceDragTests
             var ui = new Ui(); ui.LoadDocument(map); ui.SelectTrack(track.Id);
             if (ds) ui.Key('Y');
             var displayed = OsuBeatmapWriter.Serialize(map).PlayableObjects.Last(o => o.Kind == CatchObjectKind.Fruit);
-            ui.DownMap(displayed.TimeMs, displayed.X);
+            SliderEventTestDriver.Down(ui, displayed.TimeMs, displayed.X);
             ui.MoveMap(displayed.TimeMs, 280); ui.UpMap(displayed.TimeMs, 280);
             var moved = ui.View.Document.Tracks.Single().Nodes[^1];
             Check(Math.Abs(moved.X - track.Nodes[^1].X) > 10,
@@ -174,7 +174,7 @@ internal static class SliderDistanceDragTests
         foreach (var mode in Enum.GetValues<SliderEditingMode>())
         {
             var (ui, id) = Create(mode, false);
-            ui.DownMap(1500, 392);
+            SliderEventTestDriver.Down(ui, 1500, 392);
             ui.MoveMap(1500, 210);
             Check(Math.Abs(ui.View.Document.Tracks.Single().Nodes[^1].X - 200) < .001,
                 $"{mode}: selected tail could not reach zero DS: {ui.View.Document.Tracks.Single().Nodes[^1].X}");
@@ -195,7 +195,7 @@ internal static class SliderDistanceDragTests
         {
             var (ui, id) = Create(mode, true);
             if (controls) ui.EditTrack(id);
-            ui.DownMap(1500, 280); ui.MoveMap(1500, 500);
+            if (controls) ui.DownMap(1500, 280); else SliderEventTestDriver.Down(ui, 1500, 280); ui.MoveMap(1500, 500);
             double moved = ui.View.Document.Tracks.Single().Nodes[^1].X;
             Check(controls ? Math.Abs(moved - 500) < .001 : Math.Abs(moved - 280) > 1,
                 $"{mode}, controls={controls}: curve tail should follow the pointer, got {moved}. {ui.View.StatusMessage}");
@@ -227,7 +227,7 @@ internal static class SliderDistanceDragTests
             var ui = new Ui(); ui.LoadDocument(map);
             ui.ClickMap(target.TimeMs, target.X); ui.ClickMap(target.TimeMs, target.X);
             ui.Key('Y'); ui.Key('T');
-            ui.DownMap(target.TimeMs, target.X); ui.MoveMap(target.TimeMs, wanted + .3); ui.UpMap(target.TimeMs, wanted + .3);
+            SliderEventTestDriver.Down(ui, target.TimeMs, target.X); ui.MoveMap(target.TimeMs, wanted + .3); ui.UpMap(target.TimeMs, wanted + .3);
             var after = CatchStreamConverter.Convert(ui.View.Document);
             var moved = after.Objects.Single(item => item.EventIndex == target.EventIndex);
             Check(after.Success && Math.Abs(moved.X - wanted) < .001,
@@ -243,7 +243,7 @@ internal static class SliderDistanceDragTests
     public static void ModifiersAndUnreachable()
     {
         var (ui, id) = Create(SliderEditingMode.PenTool, false);
-        ui.DownMap(1500, 392);
+        SliderEventTestDriver.Down(ui, 1500, 392);
         ui.View.SetModifiers(true, false);
         ui.MoveMap(1500, 310);
         Check(Math.Abs(ui.View.Document.Tracks.Single().Nodes[^1].X - 310) < .5,
@@ -260,7 +260,7 @@ internal static class SliderDistanceDragTests
         var target = before.Objects.First(item => item.Kind == CatchObjectKind.Droplet);
         ui.Paint(); ui.ClickMap(target.TimeMs, target.X); ui.ClickMap(target.TimeMs, target.X);
         var baseline = ui.View.Document.DeepClone();
-        ui.DownMap(target.TimeMs, target.X); ui.MoveMap(target.TimeMs, 500); ui.UpMap(target.TimeMs, 500);
+        SliderEventTestDriver.Down(ui, target.TimeMs, target.X); ui.MoveMap(target.TimeMs, 500); ui.UpMap(target.TimeMs, 500);
         Check(baseline.ContentEquals(ui.View.Document), "An unreachable repeated droplet edit left partial geometry.");
     }
 
@@ -285,7 +285,7 @@ internal static class SliderDistanceDragTests
             ui.View.Document.Tracks.Single().Nodes.Insert(1, new Anchor { TimeMs = 1250, X = 296 });
             ui.Paint();
             if (controls) ui.EditTrack(id);
-            ui.DownMap(1500, 392); ui.MoveMap(1500, 310); ui.UpMap(1500, 310);
+            if (controls) ui.DownMap(1500, 392); else SliderEventTestDriver.Down(ui, 1500, 392); ui.MoveMap(1500, 310); ui.UpMap(1500, 310);
             Check(Math.Abs(ui.View.Document.Tracks.Single().Nodes[^1].X - (controls ? 310 : 296)) < .001,
                 $"{mode}, controls={controls}: segmented straight tail did not snap: {ui.View.Document.Tracks.Single().Nodes[^1].X}");
             if (!controls) CheckStrictTail(ui, CatchStreamConverter.Convert(ui.View.Document), id);
@@ -300,7 +300,7 @@ internal static class SliderDistanceDragTests
             ui.View.Document.Tracks.Single().SpanCount = 2;
             ui.Paint();
             double time = head ? 1000 : 2000;
-            ui.DownMap(time, 200); ui.MoveMap(time, 380); ui.UpMap(time, 380);
+            SliderEventTestDriver.Down(ui, time, 200); ui.MoveMap(time, 380); ui.UpMap(time, 380);
             var shape = ui.View.Document.Tracks.Single();
             Check(Math.Abs(shape.Nodes[0].X - (head ? 380 : 392)) < .001,
                 "Selected endpoint did not follow its preceding-reference rule.");
