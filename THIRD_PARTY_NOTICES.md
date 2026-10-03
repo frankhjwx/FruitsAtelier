@@ -1,5 +1,20 @@
 # Third-party dependencies
 
+## Localization terminology
+
+Equivalent editor labels and gameplay terms reference osu!stable's official
+`https://m1.ppy.sh/release/Localisation/<language>.txt` tables and
+[ppy/osu-resources](https://github.com/ppy/osu-resources) revision
+`e4010bddabce61374aacfa676d0175d5788b14b4`. The latter's localization resources
+are credited to ppy and the osu! translation contributors under CC BY-NC 4.0;
+the upstream licence is retained in
+`src/FruitsAtelier.Core/Localization/LICENCE.osu-resources.txt` and copied to
+application outputs. Referenced labels are incorporated into FA language tables;
+FA-specific prose is translated separately. Resource groups and term decisions
+are recorded in [Localization terminology](docs/LOCALIZATION_TERMINOLOGY.md).
+
+## Runtime packages
+
 The application uses the following NuGet packages, pinned by project files and `packages.lock.json`:
 
 | Package | Version | License |

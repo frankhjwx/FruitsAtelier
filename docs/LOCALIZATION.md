@@ -7,7 +7,8 @@ English is the project and documentation baseline. Maintain technical documentat
 ## Language tables and new entries
 
 - Main table: [en.json](../src/FruitsAtelier.Core/Localization/en.json). English defines the complete key set.
-- Chinese table: [zh-CN.json](../src/FruitsAtelier.Core/Localization/zh-CN.json). Its keys must match the main table.
+- Language tables: `en`, `zh-CN`, `zh-TW`, `ja`, `ko`, `ru`, `es`, `fr`, `pl`, `nl`, `fil`, `id`, and `th`. Every table under `src/FruitsAtelier.Core/Localization` must match the main table's keys.
+- Official osu! term references and dedicated-name rules: [Localization terminology](LOCALIZATION_TERMINOLOGY.md).
 - Code entry point: `using L = FruitsAtelier.Localization.Strings;`, then `L.Get("Module.SemanticKey", arguments...)`.
 
 For new application text, add the same key to the English master and every language table before referencing it from code. Store complete sentences in resources and pass dynamic names, counts, and values as parameters. Do not assemble sentences by concatenating translated words in UI code. Machine data such as format field names, extensions, protocol tokens, and source-file text is not translated.
@@ -21,6 +22,10 @@ Built-in default names also come from resources and are used only when creating 
 Add a UTF-8 `<culture>.json` file under `src/FruitsAtelier.Core/Localization`, such as `fr-FR.json`. Copy every key from the main table and translate its string, including the language button label. Use a valid culture name for the filename.
 
 Core embeds `Localization/*.json` and enumerates these resources at runtime to produce `AvailableLanguages`. Rebuilding after adding a matching JSON table makes the language available without maintaining a hardcoded list. This mechanism does not load external override files from the runtime directory or watch JSON changes while running.
+
+The language dropdown opens above or below its button according to available space. Scroll with the mouse wheel when the list cannot fit; keyboard navigation keeps the highlighted language visible. Scrolling does not apply a language change.
+
+Every non-English language currently carries an **Unproofread** label, including Simplified Chinese. Selecting one opens a notice in the current interface language explaining that the target uses AI-assisted machine translation and has not been proofread. Continue or Enter applies and saves the choice; Cancel or Esc retains the current language. English has neither the label nor the notice. Restoring a saved language at startup does not reopen the selection notice.
 
 ## Validation and checks
 

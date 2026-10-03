@@ -8,8 +8,11 @@ internal static class LanguageTests
         Check(!ui.Canvas.Texts.Any(t => t.Value.StartsWith("Language:", StringComparison.Ordinal)), "Language control is absent from the editor header");
         ui.ClickText(Strings.Get("library.settings"));
         ui.ClickText(Strings.Get("settings.appearance"));
-        ui.ClickText(System.Globalization.CultureInfo.GetCultureInfo(Strings.Language).NativeName + " ▾");
-        ui.ClickText(System.Globalization.CultureInfo.GetCultureInfo(code).NativeName);
+        string Label(string language) => System.Globalization.CultureInfo.GetCultureInfo(language).NativeName
+            + (language == "en" ? "" : " · " + Strings.Get("language.unproofread"));
+        ui.ClickText(Label(Strings.Language) + " ▾");
+        ui.ClickText(Label(code));
+        if (code != "en") ui.ClickText(Strings.Get("language.continue"));
         ui.Click(ui.View.SettingsBounds.Right - 32, ui.View.SettingsBounds.Y + 24);
     }
     public static void PreferencesAndPreview()

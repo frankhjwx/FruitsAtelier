@@ -697,6 +697,13 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (pendingLanguage is not null) return;
+        if (languageMenuOpen)
+        {
+            if (languageMenuBounds.Contains(x, y)) languageFirstRow = Math.Clamp(languageFirstRow - (int)(delta / 120),
+                0, Math.Max(0, L.AvailableLanguages.Count - languageVisibleRows));
+            return;
+        }
         if (AimodVisible)
         {
             if (aimodListBounds.Contains(x, y)) aimodFirst = Math.Clamp(aimodFirst - (int)(delta / 120) * 3,
@@ -965,7 +972,7 @@ public sealed partial class EditorView
         }
         if (DiscardConfirmationVisible)
         {
-            if (virtualKey is 27 or 13) AnswerDiscard(2);
+            if (virtualKey is 27 or 13) AnswerDiscard(virtualKey == 13 && pendingLanguage is not null ? 6 : 2);
             return;
         }
         if (updatesPage) { if (virtualKey == 27) updatesPage = false; return; }
@@ -995,7 +1002,11 @@ public sealed partial class EditorView
             if (!ctrl && !shift && !altHeld)
             {
                 if (virtualKey == 27) languageMenuOpen = false;
-                else if (virtualKey is 38 or 40) languageSelection = (languageSelection + (virtualKey == 38 ? L.AvailableLanguages.Count - 1 : 1)) % L.AvailableLanguages.Count;
+                else if (virtualKey is 38 or 40)
+                {
+                    languageSelection = (languageSelection + (virtualKey == 38 ? L.AvailableLanguages.Count - 1 : 1)) % L.AvailableLanguages.Count;
+                    KeepLanguageSelectionVisible();
+                }
                 else if (virtualKey == 13) SelectLanguage(L.AvailableLanguages[languageSelection]);
             }
             return;
