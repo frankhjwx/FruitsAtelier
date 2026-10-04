@@ -262,9 +262,9 @@ launcher or restart is needed. Closing without applying discards the draft.
 Testplay retains its low-latency presentation. Diagnostic display launchers
 override this preference for their run. macOS does not expose this Windows setting.
 
-**General → Droplet defaults** contains two independent preferences and ends with
-a separator. **Legacy → FSlider: Derandomize droplets** sets the initial conversion
-choice in maps without a saved choice. **New catchprojects: Derandomize droplets**
+**General → Droplet Derandomize Settings** contains two independent preferences and ends with
+a separator. **Enable Derandomization for Legacy slider to FSlider Conversion** sets the initial conversion
+choice in maps without a saved choice. **Enable Derandomization for new catchprojects**
 controls projects created from scratch or from audio. Both start On. With the
 new-project option Off, the new difficulty saves a default that enables
 randomization on newly drawn FSliders, with Strength 20 and Seed 1337. With it On,
@@ -275,7 +275,7 @@ across launches; changing them does not modify existing beatmap content or a
 map's saved Legacy conversion choice. Batch randomization actions affect current
 FSliders without changing the default for future ones.
 
-Settings pages use 24 DIP page headings and 13 DIP labels, values, and actions. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
+Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. Navigation retains its larger click targets. The same dimensions apply on both desktop platforms and scale with DPI. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
 
 The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Testplay, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** is enabled only while unapplied changes exist. Ordinary preferences can be applied during library scanning or searching; changes to library paths wait for those tasks to finish. It saves them, stays in the current settings category, and becomes disabled again; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport. **General → Romanised artist / title** defaults to On and controls Library cards, Library details, and the editor window title. Off prefers the Unicode metadata; either mode falls back to the other spelling when its preferred field is empty. Apply persists the preference without changing beatmap data, filenames, or search matching.
 

@@ -325,8 +325,8 @@ public sealed partial class EditorView
     };
     private void DrawTestplayBindings(ICanvas c)
     {
-        c.Text(L.Get("testplay.keyBindingSettings"), SettingsContentX, SettingsTop + 124, 18, Foreground, SettingsRight - SettingsContentX - 32, true);
-        var leadIn = new Rect(SettingsContentX + 270, SettingsTop + 260, 202, 38);
+        c.Text(L.Get("testplay.keyBindingSettings"), SettingsContentX, SettingsTop + 124, SettingsSectionSize, Foreground, SettingsRight - SettingsContentX - 32, true);
+        var leadIn = new Rect(SettingsContentX + 270, SettingsTop + 260, SettingsContentWidth - 270, SettingsControlHeight);
         c.Text(L.Get("testplay.startupDelay"), SettingsContentX, leadIn.Y + (leadIn.Height - 17) / 2,
             SettingsTextSize, Foreground, 260, true);
         var valueBounds = new Rect(leadIn.X + 26, leadIn.Y, leadIn.Width - 52, leadIn.Height);
@@ -341,11 +341,11 @@ public sealed partial class EditorView
         TimingButton(c, new(leadIn.Right - 24, leadIn.Y, 24, leadIn.Height), "›",
             () => draftTestplayStartupDelaySeconds = Math.Min(5, draftTestplayStartupDelaySeconds + .5),
             enabled: draftTestplayStartupDelaySeconds < 5, flatArrow: true);
-        SettingsButton(c, new(SettingsContentX, SettingsTop + 322, Math.Min(472, SettingsRight - SettingsContentX - 32), 38),
+        SettingsButton(c, new(SettingsContentX, SettingsTop + 336, SettingsContentWidth, SettingsControlHeight),
             L.Get(draftShowTestplayCombo ? "testplay.comboOn" : "testplay.comboOff"),
             () => draftShowTestplayCombo = !draftShowTestplayCombo, draftShowTestplayCombo);
-        DrawBackgroundDimSetting(c, new(SettingsContentX, SettingsTop + 384, Math.Min(472, SettingsRight - SettingsContentX - 32), 38), true);
-        SettingsButton(c, new(SettingsContentX, SettingsTop + 432, Math.Min(472, SettingsRight - SettingsContentX - 32), 38),
+        DrawBackgroundDimSetting(c, new(SettingsContentX, SettingsTop + 384, SettingsContentWidth, SettingsControlHeight), true);
+        SettingsButton(c, new(SettingsContentX, SettingsTop + 432, SettingsContentWidth, SettingsControlHeight),
             (draftForceBackgroundDim ? "✓ " : "") + L.Get("settings.forceBackgroundDim"),
             () => draftForceBackgroundDim = !draftForceBackgroundDim, draftForceBackgroundDim);
         string[] labels = ["testplay.left", "testplay.right", "testplay.dash"];
@@ -354,7 +354,7 @@ public sealed partial class EditorView
         {
             int action = i;
             c.Text(L.Get(labels[i]), SettingsContentX + i * cell, SettingsTop + 160, SettingsTextSize, Foreground, cell - 8, true);
-            SettingsButton(c, new(SettingsContentX + i * cell, SettingsTop + 188, cell - 12, 42), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
+            SettingsButton(c, new(SettingsContentX + i * cell, SettingsTop + 188, cell - 12, SettingsControlHeight), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
                 () => { libraryField = -1; bindingCapture = action; }, bindingCapture == i);
         }
     }

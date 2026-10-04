@@ -31,7 +31,8 @@ public sealed partial class EditorView
             languageSelection = L.AvailableLanguages.ToList().IndexOf(L.Language);
             languageFirstRow = languageSelection;
             menu = -1; contextItems.Clear();
-        }, languageMenuOpen, fontSize: librarySettingsOpen ? SettingsTextSize : 12, bold: false);
+        }, languageMenuOpen, fontSize: librarySettingsOpen ? SettingsTextSize : 12, bold: false, textPadding: librarySettingsOpen ? SettingsControlPadding : 9,
+            textRightPadding: librarySettingsOpen ? SettingsControlPadding : 6);
     }
     private void DrawLanguageMenu(ICanvas c)
     {

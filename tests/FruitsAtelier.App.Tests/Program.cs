@@ -104,6 +104,7 @@ var tests = new (string Name, Action Run)[]
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
+    ("Settings layout preserves labels and aligns controls in narrow windows", SettingsTests.Layout),
     ("Appearance indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
     ("Stack preview retains full outlines and edits individual fruits horizontally", StackDialogTests.ManualFruits),
     ("Stack draft history undoes fruit drags and removing manual knots", StackDialogTests.DraftHistory),
@@ -1106,7 +1107,7 @@ sealed class Ui
 
 sealed class RecordingCanvas : ICanvas
 {
-    public readonly record struct Label(string Value, float X, float Y, uint Color = 0);
+    public readonly record struct Label(string Value, float X, float Y, uint Color = 0, float Size = 0, float MaxWidth = 10000, bool Bold = false);
     public readonly record struct Dot(float X, float Y, float Radius, bool Filled, uint Color, float Opacity = 1);
     public readonly record struct Segment(float X1, float Y1, float X2, float Y2, uint Color, float Opacity, float Width = 1);
     public readonly record struct Outline(Rect Bounds, uint Color);
@@ -1151,7 +1152,7 @@ sealed class RecordingCanvas : ICanvas
     }
     public bool Image(string filePath, Rect destination, uint tint = 0xFFFFFF, Rect? source = null, float opacity = 1) { Images.Add(new(filePath, destination, opacity)); return false; }
     public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false)
-        => Texts.Add(new(text, x, y, color));
+        => Texts.Add(new(text, x, y, color, size, maxWidth, bold));
     public void Clip(Rect r) { Clips.Add(r); clipStack.Push(r); }
     public void Unclip() { if (clipStack.Count > 0) clipStack.Pop(); }
 }

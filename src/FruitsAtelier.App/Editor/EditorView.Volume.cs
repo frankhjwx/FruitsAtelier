@@ -12,7 +12,7 @@ public sealed partial class EditorView
     private Rect VolumeDialogBounds => new((width - Math.Min(540, width - 32)) / 2, (height - 260) / 2, Math.Min(540, width - 32), 260);
     public Rect VolumeSliderBounds(int channel)
         => SettingsAudioVisible
-            ? new(SettingsContentX, SettingsTop + 174 + channel * 64, Math.Min(520, SettingsRight - SettingsContentX - 32), 24)
+            ? new(SettingsContentX, SettingsTop + 174 + channel * 64, SettingsContentWidth, 24)
             : new(VolumeDialogBounds.X + 24, VolumeDialogBounds.Y + 84 + channel * 64, VolumeDialogBounds.Width - 48, 24);
 
     internal void OpenVolumeDialog()
@@ -53,7 +53,7 @@ public sealed partial class EditorView
         for (int i = 0; i < 3; i++)
         {
             var rect = VolumeSliderBounds(i);
-            c.Text(L.Get(labels[i]) + "  " + L.Get("ui.zoomPercent", values[i]), rect.X, rect.Y - 26, 12, Foreground, rect.Width);
+            c.Text(L.Get(labels[i]) + "  " + L.Get("ui.zoomPercent", values[i]), rect.X, rect.Y - 26, SettingsAudioVisible ? SettingsTextSize : 12, Foreground, rect.Width, SettingsAudioVisible);
             c.Fill(new(rect.X, rect.Y + 10, rect.Width, 4), Grid, 2);
             c.Fill(new(rect.X, rect.Y + 10, rect.Width * values[i] / 100, 4), Accent, 2);
             c.Circle(rect.X + rect.Width * values[i] / 100, rect.Y + 12, 6, Accent);

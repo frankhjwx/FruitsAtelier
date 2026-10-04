@@ -11,6 +11,12 @@ internal static class DropletDefaultsTests
         Directory.CreateDirectory(root);
         try
         {
+            var defaults = new LibrarySettings();
+            Check(defaults.DerandomizeDroplets && defaults.DerandomizeNewProjects, "both derandomization preferences default to On");
+            L.SetLanguage("en");
+            Check(L.Get("settings.dropletDefaults") == "Droplet Derandomize Settings"
+                && L.Get("settings.derandomizeOn") == "Enable Derandomization for Legacy slider to FSlider Conversion: On"
+                && L.Get("settings.newProjectDerandomizeOn") == "Enable Derandomization for new catchprojects: On", "English droplet settings use explicit names");
             string oldSettings = Path.Combine(root, "old.json");
             File.WriteAllText(oldSettings, "{\"DerandomizeDroplets\":false}");
             Check(!LibrarySettings.Load(oldSettings).DerandomizeDroplets && LibrarySettings.Load(oldSettings).DerandomizeNewProjects,

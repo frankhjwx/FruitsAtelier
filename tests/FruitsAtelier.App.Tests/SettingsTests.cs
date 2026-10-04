@@ -3,6 +3,63 @@ using L = FruitsAtelier.Localization.Strings;
 
 static class SettingsTests
 {
+    public static void Layout()
+    {
+        string language = L.Language;
+        try
+        {
+            foreach (string locale in new[] { "en", "zh-CN" })
+            foreach (var size in new[] { (1440, 900), (980, 620), (760, 580) })
+            {
+                L.SetLanguage(locale);
+                var ui = new Ui(false); ui.Resize(size.Item1, size.Item2);
+                ui.View.LibrarySettings.Workspace = Path.GetFullPath(Path.Combine("artifacts/tests/settings-layout", Guid.NewGuid().ToString("N")));
+                Directory.CreateDirectory(ui.View.LibrarySettings.Workspace);
+                ui.View.LibrarySettings.OsuRoot = "";
+                ui.View.SupportsDisplayMode = true;
+                ui.View.RequestUpdateCheck = () => { };
+                ui.View.UpdateStatus = new(FruitsAtelier.App.Editor.UpdatePhase.Ready, "0.9.6", 100);
+                ui.View.OpenSettings(); ui.Paint();
+                foreach (string category in new[] { "settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "update.title" })
+                {
+                    var navigation = ui.Canvas.Texts.Single(t => t.Value == L.Get(category) && t.X < ui.View.SettingsBounds.X + 230);
+                    ui.Click(navigation.X + 2, navigation.Y + 2);
+                    var page = ui.Canvas.Texts.Single(t => t.Value == L.Get(category) && t.X >= ui.View.SettingsBounds.X + 230);
+                    Check(page.Size == 24 && page.Bold, "page headings share their typography");
+                    var apply = ui.Canvas.Texts.Single(t => t.Value == L.Get("library.apply"));
+                    Check(apply.Size == 13 && !apply.Bold, "actions keep a regular body weight");
+                    if (category == "settings.general")
+                    {
+                        var heading = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.dropletDefaults"));
+                        Check(heading.Size == 16 && heading.Bold, "section headings use the shared size");
+                        foreach (string key in new[] { "settings.derandomizeOn", "settings.newProjectDerandomizeOn" })
+                        {
+                            var label = ui.Canvas.Texts.Single(t => t.Value == L.Get(key));
+                            Check(label.Size == 13 && label.X == page.X + 12, "droplet controls share body type and padding");
+                            Check(ui.Canvas.Fills.Any(f => f.Bounds.Contains(label.X, label.Y) && f.Bounds.Height == 32
+                                && f.Bounds.Right == ui.View.SettingsBounds.Right - 32), "droplet controls align to the content column");
+                        }
+                    }
+                    if (category == "settings.workspace")
+                    {
+                        var lines = ui.Canvas.Texts.Where(t => t.Y >= ui.View.SettingsBounds.Y + 128 && t.Y < ui.View.SettingsBounds.Y + 180 && t.X == page.X).ToArray();
+                        string compact(string text) => string.Concat(text.Where(ch => !char.IsWhiteSpace(ch)));
+                        Check(compact(string.Concat(lines.Select(t => t.Value))) == compact(L.Get("library.settingsDescription")),
+                            "workspace explanation retains every word when wrapped");
+                    }
+                    if (category == "update.title")
+                    {
+                        var restart = ui.Canvas.Texts.Single(t => t.Value == L.Get("update.restart"));
+                        Check(restart.X + restart.MaxWidth <= ui.View.SettingsBounds.Right - 32,
+                            "update actions stay inside narrow content columns");
+                    }
+                }
+                ui.Key(27);
+            }
+        }
+        finally { L.SetLanguage(language); }
+    }
+
     public static void IndicatorColours()
     {
         string root = Path.GetFullPath(Path.Combine("artifacts", "tests", "indicator-settings-" + Guid.NewGuid()));
