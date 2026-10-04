@@ -1068,7 +1068,7 @@ public sealed partial class EditorView
             return;
         }
         if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift)) return;
-        if (virtualKey == 68 && shift && !ctrl && !altHeld)
+        if (virtualKey == 70 && shift && !ctrl && !altHeld)
         {
             if (drag == DragKind.None && draftTrack == Guid.Empty && draftBanana == Guid.Empty && menu < 0)
                 OpenSliderActionsAtPointer();

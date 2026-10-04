@@ -132,10 +132,6 @@ public sealed partial class EditorView
             float buttonWidth = (r.Width - 56) / 2;
             Button(c, new(r.X + 22, r.Y + 364, buttonWidth, 34), L.Get("randomize.enableAll"), () => songRandomizeAll = true, songRandomizeAll == true, !notesLocked && !songDerandomizeDroplets, fontSize: 13);
             Button(c, new(r.X + 34 + buttonWidth, r.Y + 364, buttonWidth, 34), L.Get("randomize.disableAll"), () => songRandomizeAll = false, songRandomizeAll == false, !notesLocked && !songDerandomizeDroplets, fontSize: 13);
-            int total = Document.Tracks.Count(t => t.StreamSnapDivisor is null);
-            int enabled = songRandomizeAll is { } all ? all ? total : 0
-                : Document.Tracks.Count(t => t.StreamSnapDivisor is null && t.DropletRandomization is { Enabled: true });
-            c.Text(L.Get("randomize.count", enabled, total), r.X + 22, r.Y + 420, 13, songDerandomizeDroplets ? Muted : Foreground, r.Width - 44);
 
         }
         else

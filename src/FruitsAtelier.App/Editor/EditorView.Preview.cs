@@ -164,8 +164,24 @@ public sealed partial class EditorView
 
     private void OpenSliderActionsAtPointer()
     {
-        BeginSliderHold(mouseX, mouseY, false);
+        if (notesLocked || tool is not (Tool.Select or Tool.Slider)) return;
+        if (plot.Contains(mouseX, mouseY)) BeginSliderHold(mouseX, mouseY, false);
         noteHoldTarget = null;
+        if (sliderHoldId == Guid.Empty)
+        {
+            RefreshTimelineSources();
+            double visibleEnd = viewStart + plot.Height / pixelsPerMs;
+            foreach (var source in timelineSources)
+            {
+                if (!objectSelection.Contains(source.Id) || source.End < viewStart || source.Start > visibleEnd
+                    || !Document.Tracks.Any(t => t.Id == source.Id) && !Document.ImportedSliders.Any(t => t.Id == source.Id)) continue;
+                if (tool == Tool.Slider && SelectedTrack?.Id != source.Id) continue;
+                sliderHoldId = source.Id;
+                var position = Screen(new(Math.Clamp(source.Start, viewStart, visibleEnd), 256));
+                sliderHoldX = position.X; sliderHoldY = position.Y;
+                break;
+            }
+        }
         if (sliderHoldId == Guid.Empty) return;
         contextItems.Clear();
         OpenSliderActions(sliderHoldId);

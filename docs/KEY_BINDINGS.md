@@ -120,7 +120,7 @@ Object sampleset selection is not bound to Shift+Q/W/E/R or Ctrl+Q/W/E/R.
 | --- | --- |
 | Enter | Finish a slider draft. |
 | Esc | Cancel a draft or active gesture. |
-| Shift+D | Immediately open the long-press actions at the pointer over a slider or its single-selection box. A selected target retains the complete selection. |
+| Shift+F | Immediately open the long-press actions for a slider under the canvas pointer, or a selected slider visible on the canvas. Selection from the upper object timeline is supported; a selected target retains the complete selection. |
 | Ctrl+L | Toggle the selected control between straight and curved. |
 | Ctrl+Shift+I | Insert a control on the curve under the pointer in Compose. |
 | Ctrl+= / Ctrl+- | Add / remove one reverse on the selected FSlider. |

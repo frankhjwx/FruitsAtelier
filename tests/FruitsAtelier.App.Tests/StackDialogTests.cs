@@ -159,7 +159,7 @@ internal static class StackDialogTests
             var ui = new Ui(); ui.LoadDocument(map); ui.Key('1'); ui.Key('A', ctrl: true);
             ui.Key('F', ctrl: true, shift: true);
             CheckTab(); ui.Key(27);
-            ui.MoveMap(1000, 100); ui.Key('D', shift: true);
+            ui.MoveMap(1000, 100); ui.Key('F', shift: true);
             ui.ClickText(L.Get(kind == 0 ? "conversion.title" : "conversion.editTitle"));
             CheckTab(); ui.Key(27);
             void CheckTab()
