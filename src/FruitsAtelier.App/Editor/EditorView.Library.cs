@@ -201,7 +201,7 @@ public sealed partial class EditorView
         completed?.Invoke(saved);
     }
     public bool CurrentDifficultyHasExport => WorkspaceSession?.Manifest.Difficulties
-        .Any(d => d.Id == difficulties[activeDifficulty].Id && d.ExportTarget is not null && d.ExportHash is not null) == true;
+        .Any(d => d.Id == difficulties[activeDifficulty].Id && d.ExportConfirmed && d.ExportTarget is not null && d.ExportHash is not null) == true;
     public bool ProjectInSongs => !string.IsNullOrWhiteSpace(LibrarySettings.Songs) && (WorkspaceSession is { } session
         ? WorkspaceProject.HasExistingSongsFile(session.Manifest, LibrarySettings.Songs)
         : Document.SourcePath is { } path && WorkspaceProject.Within(LibrarySettings.Songs, path) && File.Exists(path));

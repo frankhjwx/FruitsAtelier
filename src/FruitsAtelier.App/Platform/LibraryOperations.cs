@@ -265,7 +265,7 @@ public static class LibraryOperations
             session.Manifest.Difficulties.Add(new WorkspaceDifficulty
             {
                 Id = added.Id, Name = added.Name, Source = plan.Target, SourceHash = hash,
-                ExportTarget = plan.Target, ExportHash = hash,
+                ExportTarget = plan.Target, ExportHash = hash, ExportConfirmed = true,
                 Sync = WorkspaceSynchronization.Capture(plan.Target, added.Document, session.Directory, plan.Output.Text, plan.Output.ObjectSources)
             });
         }

@@ -12,6 +12,7 @@ internal static class SynchronizationUiTests
         Directory.CreateDirectory(Path.GetDirectoryName(source)!); File.WriteAllText(source, Fixture);
         ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
         ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);
+        ui.View.WorkspaceSession!.Manifest.Difficulties[0].ExportConfirmed = true;
         ui.View.UpdateTransport(1000, 20000, true, true, false, null, ui.View.Document.AudioPath);
         int pauses = 0, foregroundExports = 0;
         ui.View.RequestPausePlayback = () => pauses++;
@@ -57,6 +58,7 @@ internal static class SynchronizationUiTests
         File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(source)!, "music.wav"), [1, 2, 3, 4]);
         ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
         ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);
+        ui.View.WorkspaceSession!.Manifest.Difficulties[0].ExportConfirmed = true;
         int audioReloads = 0;
         double requestedSeek = -1;
         ui.View.RequestSeek = time => requestedSeek = time;
