@@ -126,7 +126,7 @@ Object sampleset selection is not bound to Shift+Q/W/E/R or Ctrl+Q/W/E/R.
 | Ctrl+= / Ctrl+- | Add / remove one reverse on the selected FSlider. |
 | Ctrl+G | Reverse the selection in time, including each slider’s own path. A single FSlider retains its time range and repeats. |
 | Ctrl+J | Extend the selected FSlider to the pointer at a valid later canvas time. |
-| Ctrl+Shift+F | Open Convert to Stream/Stack, starting on Stream. |
+| Ctrl+Shift+F | Open Convert to Stream/Stack. Existing Stream/Stack selections open their corresponding tab; ordinary sliders start on Stream. |
 | Ctrl+Shift+A | Clear internal anchors and controls from selected sliders, keeping their endpoints. |
 | Ctrl+Shift+M | Open Merge into slider for at least two consecutive circles/sliders. |
 

@@ -661,7 +661,7 @@ Its generated catch events can differ from the original objects. The dialog warn
 that saving retains only the merged slider: reopening cannot recover the original
 objects because project files do not store undo history.
 
-Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press an FSlider to reveal **Convert to Stream/Stack**; imported Legacy Sliders offer **Convert to FSlider** above it. Every conversion entry opens the shared dialog on Stream with the same snap slider and subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**. Enter confirms; Esc cancels; arrow keys change the choice.
+Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press an FSlider to reveal **Convert to Stream/Stack**; imported Legacy Sliders offer **Convert to FSlider** above it. Ordinary sliders open the shared dialog on Stream; existing streams and stacks open their corresponding tab. The snap slider has the same subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**. Enter confirms; Esc cancels; arrow keys change the choice.
 
 With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging inside the selection box moves the whole stream. Visible anchors take priority; individual-event reshaping is available outside the box. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in their long-press menu. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
 
@@ -695,7 +695,10 @@ or colour picker. Language changes take effect immediately.
 
 Select sliders and choose **Convert to Stream/Stack** from Edit or the long-press
 menu, or press **Ctrl+Shift+F**. Existing streams and stacks use **Edit Stream/Stack**
-for the menu, button and dialog title. The dialog opens on **Stream** by default.
+for the menu, button and dialog title. Existing streams open on **Stream**, and
+existing stacks open on **Stack**, retaining their saved subdivision. Ordinary
+sliders open on **Stream**. A mixed Stream/Stack selection follows its first
+target's mode and preview.
 The **Stream** and **Stack** tabs both preview the generated fruits. Stack enables
 curve and individual-fruit editing; switching tabs retains each tab's subdivision
 and the Stack draft. Tab switches modes when no numeric input is active. Confirm
