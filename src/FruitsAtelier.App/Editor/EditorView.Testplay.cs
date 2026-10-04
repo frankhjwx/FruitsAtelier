@@ -344,7 +344,7 @@ public sealed partial class EditorView
         SettingsButton(c, new(SettingsContentX, SettingsTop + 336, Math.Min(280, SettingsContentWidth), SettingsControlHeight),
             L.Get(draftShowTestplayCombo ? "testplay.comboOn" : "testplay.comboOff"),
             () => draftShowTestplayCombo = !draftShowTestplayCombo, draftShowTestplayCombo);
-        DrawBackgroundDimSetting(c, new(SettingsContentX, SettingsTop + 384, SettingsContentWidth, SettingsControlHeight), true);
+        DrawBackgroundDimSetting(c, new(SettingsContentX, SettingsTop + 384, Math.Min(280, SettingsContentWidth), SettingsControlHeight), true);
         SettingsButton(c, new(SettingsContentX, SettingsTop + 432, Math.Min(280, SettingsContentWidth), SettingsControlHeight),
             (draftForceBackgroundDim ? "✓ " : "") + L.Get("settings.forceBackgroundDim"),
             () => draftForceBackgroundDim = !draftForceBackgroundDim, draftForceBackgroundDim);
