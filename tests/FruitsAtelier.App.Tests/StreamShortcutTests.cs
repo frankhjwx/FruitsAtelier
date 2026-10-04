@@ -97,5 +97,36 @@ internal static class StreamShortcutTests
         ui.DownMap(1375, 175); ui.MoveMap(1500, 200); ui.UpMap(1500, 200);
         Check(!ui.View.Document.ContentEquals(before) && ui.View.Document.Tracks.Single().StreamSnapDivisor == 16, "stream can still be dragged as a slider");
     }
+    public static void HoldInSelectionBox()
+    {
+        foreach (bool imported in new[] { false, true })
+        {
+            var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
+            var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,2,0,L|300:192,1,200\n");
+            Guid id = map.ImportedSliders.Single().Id;
+            if (!imported) ImportedSliderEditing.ConvertToTrack(map, id);
+            ui.LoadDocument(map); ui.Key('1'); ui.Key('A', ctrl: true);
+            var before = ui.View.Document.DeepClone();
+            foreach (var (u, v) in new[] { (.05f, .05f), (.95f, .05f), (.05f, .95f), (.95f, .95f), (0f, .5f), (1f, .5f) })
+            {
+                var box = ui.View.SelectionTransformBounds;
+                float x = box.X + box.Width * u, y = box.Y + box.Height * v;
+                ui.View.PointerDown(x, y, 0, false, false); clock.Advance(1000); ui.Paint();
+                ui.View.PointerUp(x, y, 0); ui.Paint();
+                Check(ui.View.StreamConversionBounds.Width > 0 && !ui.View.WantsCapture,
+                    $"box hold opens slider actions: imported={imported}, u={u}, v={v}, bounds={box}, actions={ui.View.StreamConversionBounds}, capture={ui.View.WantsCapture}, status={ui.View.StatusMessage}");
+                Check((ui.View.LegacyConversionBounds.Width > 0) == imported, "box hold offers the selected slider's actions");
+                Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "box hold does not edit content");
+                ui.Key(27);
+            }
+            var bounds = ui.View.SelectionTransformBounds;
+            float dragX = bounds.X + bounds.Width * .15f, dragY = bounds.Y + bounds.Height * .5f;
+            ui.View.PointerDown(dragX, dragY, 0, false, false);
+            ui.View.PointerMove(dragX + 20, dragY, false, false); clock.Advance(1000); ui.Paint();
+            Check(!ui.View.SliderHoldNeedsRedraw && ui.View.StreamConversionBounds.Width == 0, "box drag cancels long press");
+            ui.View.CancelInteraction(); ui.Paint();
+            Check(before.ContentEquals(ui.View.Document), "cancelled box drag restores content");
+        }
+    }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
 }

@@ -149,9 +149,13 @@ public sealed partial class EditorView
         noteHoldTarget = null;
         if (modified || notesLocked || draftTrack != Guid.Empty || draftBanana != Guid.Empty || tool is not (Tool.Select or Tool.Slider)) return;
         var hit = HitCatchObject(x, y);
-        noteHoldTarget = hit is { Kind: CatchObjectKind.Fruit } ? hit : null;
+        var box = SelectionTransformBounds;
+        Guid boxedSlider = tool == Tool.Select && objectSelection.Count == 1 && box.Width > 0
+            && x >= box.X && x <= box.Right && y >= box.Y && y <= box.Bottom
+            ? objectSelection.First() : Guid.Empty;
+        noteHoldTarget = hit is { Kind: CatchObjectKind.Fruit } && (boxedSlider == Guid.Empty || hit.SourceId == boxedSlider) ? hit : null;
         sliderHoldX = x; sliderHoldY = y; sliderHoldStart = TestplayRealtime;
-        Guid id = hit?.SourceId ?? (showTargets ? HitSliderLocation(x, y)?.Id : null) ?? Guid.Empty;
+        Guid id = boxedSlider != Guid.Empty ? boxedSlider : hit?.SourceId ?? (showTargets ? HitSliderLocation(x, y)?.Id : null) ?? Guid.Empty;
         if (!Document.Tracks.Any(t => t.Id == id) && !Document.ImportedSliders.Any(t => t.Id == id)
             && !(objectSelection.Count > 1 && objectSelection.Contains(id) && Document.Fruits.Any(f => f.Id == id))) return;
         if (tool == Tool.Slider && SelectedTrack?.Id != id) return;

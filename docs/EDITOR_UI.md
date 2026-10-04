@@ -441,6 +441,8 @@ but cannot resize. Drag inside the box to translate all selected parents using t
 ordinary group-movement snap rules. Visible slider anchors and curve handles take
 priority, followed by box resizing/movement, then individual-event DS reshaping.
 Ctrl selection, clicks on event details and long-press actions remain available.
+For one selected slider, holding anywhere inside its box opens its action group;
+moving the pointer cancels the hold and continues the normal drag.
 Each drag is one undo step; Esc or lost capture restores its starting content.
 Legacy Sliders convert to FSliders on the first movement. Horizontal resizing
 converts exact circular arcs to bounded Bezier approximations in the same transaction.

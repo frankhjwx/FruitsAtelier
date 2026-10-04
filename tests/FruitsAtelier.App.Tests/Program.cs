@@ -110,6 +110,7 @@ var tests = new (string Name, Action Run)[]
     ("Stack dialog edits envelopes locally and confirms with undo", StackDialogTests.Run),
     ("Slider stream confirmation, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
     ("Slider long press progress, cancellation and control-point shortcut", StreamShortcutTests.HoldAndShortcut),
+    ("Single-slider selection box long press opens actions throughout its bounds", StreamShortcutTests.HoldInSelectionBox),
     ("Stream breaking and batch internal anchor clearing", ObjectStructureTests.StreamsAndAnchors),
     ("Consecutive object merge dialog, restrictions, errors and undo", ObjectStructureTests.MergeUi),
     ("Mixed slider merge preserves repeated and exact curve paths", ObjectStructureTests.MixedPaths),

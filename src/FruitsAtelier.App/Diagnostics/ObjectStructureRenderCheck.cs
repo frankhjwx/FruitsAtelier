@@ -70,6 +70,12 @@ internal static class ObjectStructureRenderCheck
                 view.PointerMove(panX, panTargetY, false, false);
                 view.PointerUp(panX, panTargetY, 1); Paint();
                 box = view.SelectionTransformBounds;
+                float holdX = box.X + box.Width * .1f, holdY = box.Y + box.Height * .1f;
+                view.PointerDown(holdX, holdY, 0, false, false); clock.Advance(); Paint();
+                view.PointerUp(holdX, holdY, 0); Paint();
+                if (view.StreamConversionBounds.Width <= 0 || !view.Document.ContentEquals(document))
+                    throw new InvalidOperationException("Native selection box long press failed.");
+                view.KeyDown(27, false, false); Paint();
                 var displayed = OsuBeatmapWriter.Serialize(document).PlayableObjects
                     .Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet).ToArray();
                 double left = displayed.Min(o => o.X), right = displayed.Max(o => o.X);
