@@ -139,7 +139,7 @@ internal static class TestplayPresentationTests
         var ui = new Ui();
         ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.testplay"));
         var bounds = ui.View.SettingsBounds;
-        float left = bounds.X + 266, width = bounds.Width - 262 - 72, y = bounds.Y + 400;
+        float left = bounds.X + 266, width = Math.Min(280, bounds.Width - 262) - 72, y = bounds.Y + 400;
         int saved = ui.View.LibrarySettings.BackgroundDim;
         ui.View.PointerDown(left + width * .25f, y, 0, false, false);
         ui.View.PointerMove(left + width * .5f, y, false, false);
