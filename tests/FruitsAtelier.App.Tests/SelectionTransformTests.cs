@@ -48,10 +48,14 @@ internal static class SelectionTransformTests
         track.Nodes.Add(new() { TimeMs = 2000, X = 300, HandleIn = new(-300, -50) });
         trackMap.Tracks.Add(track);
         ui.LoadDocument(trackMap); ui.SelectTrack(track.Id);
-        var events = OsuBeatmapWriter.Serialize(trackMap).PlayableObjects.Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet).ToArray();
+        var events = OsuBeatmapWriter.Serialize(trackMap).PlayableObjects.ToArray();
         var bounds = ui.View.SelectionTransformBounds;
-        double Radius(ConvertedCatchObject item) => item.Kind == CatchObjectKind.Fruit
-            ? CatchSize.FruitRadius(trackMap.CircleSize) : CatchSize.DefaultDropletRadius(trackMap.CircleSize);
+        double Radius(ConvertedCatchObject item) => item.Kind switch
+        {
+            CatchObjectKind.Fruit => CatchSize.FruitRadius(trackMap.CircleSize),
+            CatchObjectKind.Droplet => CatchSize.DefaultDropletRadius(trackMap.CircleSize),
+            _ => CatchSize.DefaultTinyDropletRadius(trackMap.CircleSize)
+        };
         Near(ui.ScreenAt(1000, events.Min(o => o.X - Radius(o))).X, bounds.X);
         Near(ui.ScreenAt(1000, events.Max(o => o.X + Radius(o))).X, bounds.Right);
         Near(events.Min(o => ui.ScreenAt(o.TimeMs, o.X).Y - Radius(o) * ui.Plot.Width / 512), bounds.Y);
@@ -68,6 +72,28 @@ internal static class SelectionTransformTests
         Check(ui.View.SelectedAnchorIds.Count == 1, "Box stole anchor editing.");
         Near(300, ui.View.Document.Tracks.Single().Nodes[^1].X);
         SpecialSliders();
+        TinyDropletBounds();
+    }
+
+    private static void TinyDropletBounds()
+    {
+        var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nCircleSize:6\nSliderMultiplier:3.2\nSliderTickRate:1\n[TimingPoints]\n0,1000,4,1,0,100,1,0\n[HitObjects]\n448,88,1000,2,0,P|504:144|416:200,1,192\n");
+        map.DurationMs = 12000;
+        var ui = new Ui(); ui.LoadDocument(map); ui.Key('1'); ui.Key('A', ctrl: true);
+        var events = OsuBeatmapWriter.Serialize(map).PlayableObjects;
+        Check(events.Any(o => o.Kind == CatchObjectKind.TinyDroplet) && !events.Any(o => o.Kind == CatchObjectKind.Droplet),
+            "Fixture must contain small droplets without regular ticks.");
+        var box = ui.View.SelectionTransformBounds;
+        double Radius(ConvertedCatchObject item) => item.Kind == CatchObjectKind.Fruit
+            ? CatchSize.FruitRadius(map.CircleSize) : CatchSize.DefaultTinyDropletRadius(map.CircleSize);
+        double left = events.Min(o => o.X - Radius(o)), right = events.Max(o => o.X + Radius(o));
+        Check(right > events.Where(o => o.Kind == CatchObjectKind.Fruit).Max(o => o.X + Radius(o)),
+            "Small droplets must extend beyond the endpoint circles.");
+        Near(ui.ScreenAt(1000, left).X, box.X); Near(ui.ScreenAt(1000, right).X, box.Right);
+        Near(events.Min(o => ui.ScreenAt(o.TimeMs, o.X).Y - Radius(o) * ui.Plot.Width / 512), box.Y);
+        Near(events.Max(o => ui.ScreenAt(o.TimeMs, o.X).Y + Radius(o) * ui.Plot.Width / 512), box.Bottom);
+        Scale(ui, 1, -10);
+        ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Small-droplet box scale undo differs.");
     }
 
     private static void SpecialSliders()

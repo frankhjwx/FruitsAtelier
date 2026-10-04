@@ -77,7 +77,7 @@ internal static class ObjectStructureRenderCheck
                     throw new InvalidOperationException("Native selection box long press failed.");
                 view.KeyDown(27, false, false); Paint();
                 var displayed = OsuBeatmapWriter.Serialize(document).PlayableObjects
-                    .Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet).ToArray();
+                    .Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet).ToArray();
                 double left = displayed.Min(o => o.X), right = displayed.Max(o => o.X);
                 double expectedTail = left + (document.Tracks.Single().Nodes[^1].X - left) * (1 + 20 / (right - left));
                 float handleY = box.Y + box.Height / 2;

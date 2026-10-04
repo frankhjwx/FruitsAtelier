@@ -428,8 +428,8 @@ A slider's Fruit, Droplet, and TinyDroplet share parent selection. Selecting sev
 In Select mode, a single selected slider or at least two consecutive selected
 parents displays a teal bounding box with a light background and left/right resize
 handles. Consecutive means no omitted parent in start-time/source order; a selected
-or intervening banana shower blocks the box. Bounds enclose the displayed Fruit
-and Droplet circles including their radii, excluding TinyDroplets and curve controls.
+or intervening banana shower blocks the box. Bounds enclose the displayed Fruit,
+Droplet and TinyDroplet circles including their radii, excluding curve controls.
 Time bounds cover complete parent durations, including slider repeats. The resize
 handles are small squares with larger pointer hit areas.
 Drag a side handle to scale X positions and slider geometry around the opposite
