@@ -74,7 +74,51 @@ internal static class DropletRandomizationTests
             }
         }
         finally { L.SetLanguage(language); }
+        LongPressSwitch();
         PlacementSequence();
+    }
+    private sealed class HoldClock : TimeProvider
+    {
+        private long ticks;
+        public override long TimestampFrequency => 1000;
+        public override long GetTimestamp() => ticks;
+        public void Advance() => ticks += 1000;
+    }
+    private static void LongPressSwitch()
+    {
+        string language = L.Language;
+        try
+        {
+            foreach (string locale in new[] { "en", "zh-CN" })
+            foreach (var mode in Enum.GetValues<FruitsAtelier.App.Editor.SliderEditingMode>())
+            {
+                L.SetLanguage(locale);
+                var map = new MapDocument { DurationMs = 5000, IsDemo = false };
+                var track = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = true };
+                track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 256 }, new Anchor { TimeMs = 3000, X = 256 }]);
+                map.Tracks.Add(track);
+                var clock = new HoldClock(); var ui = new Ui(timeProvider: clock);
+                ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode);
+                ui.ClickMap(1000, 256); ui.HoldMap(1000, 256, clock.Advance);
+                Check(ui.View.Document.ContentEquals(map), "opening long-press actions leaves content unchanged");
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.enableSelected")),
+                    $"long-press offers enable in {locale}/{mode}: {string.Join(" | ", ui.Canvas.Texts.Select(t => t.Value).TakeLast(20))}");
+                ui.ClickText(L.Get("randomize.enableSelected"));
+                Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: true }, "long-press enables the selected ordinary FSlider");
+                ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "long-press switch undoes in one step");
+                ui.Key('Y', ctrl: true);
+                ui.HoldMap(1000, 256, clock.Advance); ui.ClickText(L.Get("randomize.disableSelected"));
+                Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: false }, "long-press label follows enabled state and disables FX");
+                ui.Key('Z', ctrl: true);
+                Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: true }, "disable undoes independently");
+                ui.Key(27);
+                var streamMap = map.DeepClone(); streamMap.Tracks[0].StreamSnapDivisor = 4;
+                ui.LoadDocument(streamMap); ui.HoldMap(1000, 256, clock.Advance);
+                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.enableSelected") || t.Value == L.Get("randomize.disableSelected")),
+                    "slider-managed fruit streams do not offer randomization");
+            }
+        }
+        finally { L.SetLanguage(language); }
     }
     private static void PlacementSequence()
     {

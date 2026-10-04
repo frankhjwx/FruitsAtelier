@@ -213,10 +213,11 @@ public sealed partial class EditorView
         bool imported = ids.Count == 1 && Document.ImportedSliders.Any(t => ids.Contains(t.Id));
         bool slider = Document.Tracks.Any(t => ids.Contains(t.Id)) || Document.ImportedSliders.Any(t => ids.Contains(t.Id));
         bool stream = SelectedStreamsOnly;
+        bool randomize = ids.Count == 1 && RandomizeSelectedTrack is { } randomizeTrack && ids.Contains(randomizeTrack.Id);
         bool merge = holdMergeAllowed;
         if (!ids.Contains(id) || tool is not (Tool.Select or Tool.Slider) || draftTrack != Guid.Empty || drag != DragKind.None || menu >= 0 || ExportVisible || SliderDialogVisible || StreamDialogVisible || MergeDialogVisible || TimeJumpVisible || DistanceSnapDialogVisible)
         { LegacyConversionBounds = StreamConversionBounds = default; legacyButtonSlider = Guid.Empty; return; }
-        int count = (imported ? 1 : 0) + (slider ? 2 : 0) + (stream ? 2 : 0) + (merge ? 1 : 0);
+        int count = (imported ? 1 : 0) + (slider ? 2 : 0) + (stream ? 2 : 0) + (merge ? 1 : 0) + (randomize ? 1 : 0);
         if (count == 0) { LegacyConversionBounds = StreamConversionBounds = default; return; }
         float buttonWidth = 260;
         float buttonHeight = count * 36 - 4;
@@ -245,6 +246,12 @@ public sealed partial class EditorView
         }
         if (slider)
         { Button(c, new(r.X, row, r.Width, 32), L.Get("slider.clearInternal"), ClearSelectedInternalAnchors, enabled: !notesLocked); row += 36; }
+        if (randomize)
+        {
+            Button(c, new(r.X, row, r.Width, 32), L.Get(RandomizeSelectedTrack!.DropletRandomization is { Enabled: true }
+                ? "randomize.disableSelected" : "randomize.enableSelected"), ToggleSelectedDropletRandomization, enabled: CanRandomizeDroplets);
+            row += 36;
+        }
         if (merge) Button(c, new(r.X, row, r.Width, 32), L.Get("merge.title"), OpenMergeDialog, enabled: !notesLocked);
     }
 }

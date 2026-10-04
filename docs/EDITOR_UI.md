@@ -32,7 +32,8 @@ one undo step. Neither action creates a persistent master switch or changes the
 initial state of subsequently created FSliders, which start disabled.
 
 Select one ordinary FSlider and use **Edit → Randomize droplets → Enable selected
-FSlider / Disable selected FSlider** to change only its switch. The menu also
+FSlider / Disable selected FSlider** to change only its switch. Long-pressing a
+single ordinary FSlider offers the same switch. The Edit menu also
 provides **Randomization settings…** and **Reset manual droplet adjustments** for
 the selected FSlider. Batch operations exclude Legacy Sliders and slider-managed
 fruit streams. Parameters and switches remain local to the current difficulty.
