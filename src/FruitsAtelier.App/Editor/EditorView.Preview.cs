@@ -162,6 +162,24 @@ public sealed partial class EditorView
         sliderHoldId = id; sliderHoldX = x; sliderHoldY = y; sliderHoldStart = TestplayRealtime;
     }
 
+    private void OpenSliderActionsAtPointer()
+    {
+        BeginSliderHold(mouseX, mouseY, false);
+        noteHoldTarget = null;
+        if (sliderHoldId == Guid.Empty) return;
+        contextItems.Clear();
+        OpenSliderActions(sliderHoldId);
+        sliderHoldId = Guid.Empty;
+    }
+
+    private void OpenSliderActions(Guid id)
+    {
+        if (!objectSelection.Contains(id)) SelectObjects([id]);
+        holdMergeAllowed = ObjectStructureEditing.MergeSelection(Document, ClipboardSelectedParentIds()).Error is null;
+        legacyButtonSlider = id;
+        sliderConversionBounds = default;
+    }
+
     private void DrawSliderHold(ICanvas c)
     {
         if (!SliderHoldNeedsRedraw) return;
@@ -190,10 +208,8 @@ public sealed partial class EditorView
         if (progress >= 1)
         {
             history.Commit(); drag = DragKind.None;
-            if (!objectSelection.Contains(sliderHoldId)) SelectObjects([sliderHoldId]);
-            holdMergeAllowed = ObjectStructureEditing.MergeSelection(Document, ClipboardSelectedParentIds()).Error is null;
-            legacyButtonSlider = sliderHoldId; sliderHoldId = Guid.Empty; sliderHoldConsumed = true;
-            sliderConversionBounds = default;
+            OpenSliderActions(sliderHoldId);
+            sliderHoldId = Guid.Empty; sliderHoldConsumed = true;
             return;
         }
         const float radius = 9;

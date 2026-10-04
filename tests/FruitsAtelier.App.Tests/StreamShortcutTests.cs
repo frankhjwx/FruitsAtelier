@@ -13,6 +13,7 @@ internal static class StreamShortcutTests
 
     public static void HoldAndShortcut()
     {
+        ShiftD();
         var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
         var map = new MapDocument(); var track = new CurveTrack { Kind = CurveKind.Linear };
         track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 100 }, new Anchor { TimeMs = 2000, X = 300 }]);
@@ -40,6 +41,49 @@ internal static class StreamShortcutTests
         ui.Key('F', ctrl: true, shift: true);
         Check(ui.View.StreamDialogVisible, "shortcut works for selected controls after release");
         ui.Key(27);
+    }
+
+    private static void ShiftD()
+    {
+        foreach (bool imported in new[] { false, true })
+        {
+            var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,2,0,L|300:192,1,200\n");
+            Guid id = map.ImportedSliders.Single().Id;
+            if (!imported) ImportedSliderEditing.ConvertToTrack(map, id);
+            var ui = new Ui(); ui.LoadDocument(map); ui.Key('1'); ui.MoveMap(1000, 100);
+            ui.Key('D'); Check(ui.View.StreamConversionBounds.Width == 0, "plain D does not open slider actions");
+            ui.Key('D', shift: true);
+            Check(ui.View.StreamConversionBounds.Width > 0 && (ui.View.LegacyConversionBounds.Width > 0) == imported,
+                "Shift+D immediately opens the matching slider actions");
+            Check(ui.View.SelectedObjectIds.Contains(id) && !ui.View.WantsCapture && !ui.View.SliderHoldNeedsRedraw
+                && !ui.View.IsDirty && ui.View.Document.ContentEquals(map), "shortcut selects without editing or capturing");
+            ui.Key(27); Check(ui.View.StreamConversionBounds.Width == 0, "Escape dismisses shortcut actions");
+            ui.Key('A', ctrl: true);
+            var box = ui.View.SelectionTransformBounds;
+            ui.View.PointerMove(box.X + box.Width * .05f, box.Y + box.Height * .95f, false, false);
+            ui.Key('D', shift: true); Check(ui.View.StreamConversionBounds.Width > 0, "shortcut works throughout the selection box");
+            ui.ClickText(L.Get("conversion.title"));
+            Check(ui.View.StreamDialogVisible, "shortcut actions open the same conversion dialog");
+            ui.Key('D', shift: true); Check(ui.View.StreamDialogVisible && ui.View.Document.ContentEquals(map), "dialog isolates Shift+D");
+            ui.Key(27); ui.MoveMap(4000, 450); ui.Key('D', shift: true);
+            Check(ui.View.StreamConversionBounds.Width == 0, "empty canvas does not open actions");
+            ui.DownMap(1000, 100); ui.MoveMap(1125, 120); ui.Key('D', shift: true);
+            Check(ui.View.StreamConversionBounds.Width == 0, "dragging does not open shortcut actions");
+            ui.View.CancelInteraction(); ui.Paint();
+            ui.MoveMap(1000, 100); ui.Key('L'); ui.Key('D', shift: true);
+            Check(ui.View.StreamConversionBounds.Width == 0, "Lock Notes follows the long-press restriction");
+        }
+        var batch = new MapDocument();
+        foreach (int start in new[] { 1000, 2500 })
+        {
+            var track = new CurveTrack { Kind = CurveKind.Linear };
+            track.Nodes.AddRange([new Anchor { TimeMs = start, X = 100 }, new Anchor { TimeMs = start + 500, X = 300 }]);
+            batch.Tracks.Add(track);
+        }
+        var multi = new Ui(); multi.LoadDocument(batch); multi.Key('1'); multi.Key('A', ctrl: true);
+        multi.MoveMap(1000, 100); multi.Key('D', shift: true);
+        Check(multi.View.StreamConversionBounds.Width > 0 && multi.View.SelectedObjectIds.Count == 2
+            && multi.View.Document.ContentEquals(batch), "shortcut retains a batch selection without editing");
     }
 
     public static void Run()
