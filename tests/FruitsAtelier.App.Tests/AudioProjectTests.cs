@@ -12,14 +12,22 @@ internal static class AudioProjectTests
         string source = Path.Combine(root, "input.MP3");
         File.WriteAllBytes(source, [1, 2, 3, 4]);
         string ogg = Path.Combine(root, "input.OGG");
-        File.Copy("tests/FruitsAtelier.Audio.Tests/Fixtures/quiet-tone.ogg", ogg);
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "quiet-tone.ogg"), ogg);
         string wav = Path.Combine(root, "input.WAV");
-        using (var writer = new NAudio.Wave.WaveFileWriter(wav, new NAudio.Wave.WaveFormat(44100, 16, 2)))
+        using (var writer = new BinaryWriter(File.Create(wav)))
+        {
+            const int dataLength = 44100 * 2 * sizeof(short);
+            writer.Write("RIFF"u8); writer.Write(36 + dataLength); writer.Write("WAVE"u8);
+            writer.Write("fmt "u8); writer.Write(16); writer.Write((short)1); writer.Write((short)2);
+            writer.Write(44100); writer.Write(44100 * 2 * sizeof(short));
+            writer.Write((short)(2 * sizeof(short))); writer.Write((short)16);
+            writer.Write("data"u8); writer.Write(dataLength);
             for (int i = 0; i < 44100; i++)
             {
-                float sample = (float)(Math.Sin(2 * Math.PI * 440 * i / 44100) * .02);
-                writer.WriteSample(sample); writer.WriteSample(sample);
+                short sample = (short)(Math.Sin(2 * Math.PI * 440 * i / 44100) * .02 * short.MaxValue);
+                writer.Write(sample); writer.Write(sample);
             }
+        }
         try
         {
             foreach (string locale in new[] { "en", "zh-CN" })
