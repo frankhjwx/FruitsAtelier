@@ -1159,13 +1159,14 @@
   "randomize.title": "Losuj pozycje kropelek",
   "randomize.enableAll": "Włącz wszystkie FSlidery",
   "randomize.disableAll": "Wyłącz wszystkie FSlidery",
-  "randomize.enableSelected": "Włącz wybrany FSlider",
-  "randomize.disableSelected": "Wyłącz wybrany FSlider",
+  "randomize.enableSelected": "Włącz losowość",
+  "randomize.disableSelected": "Wyłącz losowość",
+  "randomize.resetStrength": "Resetuj siłę (20)",
   "randomize.resetAdjustments": "Zresetuj ręczne korekty kropelek",
   "randomize.settings": "Ustawienia losowania…",
   "randomize.count": "Włączone FSlidery: {0} / {1}",
-  "randomize.help": "Siła w pikselach (0–512). Przeciągaj małe kropelki, aby je dostosować.",
-  "randomize.invalid": "Siła musi wynosić 0–512, a Seed musi być 32-bitową liczbą całkowitą.",
+  "randomize.help": "Siła w pikselach (0–100). Przeciągaj małe kropelki, aby je dostosować.",
+  "randomize.invalid": "Siła musi wynosić 0–100, a Seed musi być 32-bitową liczbą całkowitą.",
   "song.RandomizeDropletStrength": "Siła (px)",
   "song.RandomizeDropletSeed": "Seed"
 }

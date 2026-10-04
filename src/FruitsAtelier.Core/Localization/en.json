@@ -1159,13 +1159,14 @@
   "randomize.title": "Randomize droplets",
   "randomize.enableAll": "Enable all FSliders",
   "randomize.disableAll": "Disable all FSliders",
-  "randomize.enableSelected": "Enable selected FSlider",
-  "randomize.disableSelected": "Disable selected FSlider",
+  "randomize.enableSelected": "Enable randomization",
+  "randomize.disableSelected": "Disable randomization",
+  "randomize.resetStrength": "Reset strength (20)",
   "randomize.resetAdjustments": "Reset manual droplet adjustments",
   "randomize.settings": "Randomization settings…",
   "randomize.count": "Enabled FSliders: {0} / {1}",
-  "randomize.help": "Strength is in pixels (0–512). Tiny droplets can be dragged for manual adjustments.",
-  "randomize.invalid": "Strength must be 0–512 and Seed must be a 32-bit integer.",
+  "randomize.help": "Strength is in pixels (0–100). Tiny droplets can be dragged for manual adjustments.",
+  "randomize.invalid": "Strength must be 0–100 and Seed must be a 32-bit integer.",
   "song.RandomizeDropletStrength": "Strength (px)",
   "song.RandomizeDropletSeed": "Seed"
 }

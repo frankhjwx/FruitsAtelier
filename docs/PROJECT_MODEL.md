@@ -102,7 +102,8 @@ FSliders retain the original parent Id, SourceOrder, OriginalLine, and SpanCount
 ### Droplet randomization
 
 `MapDocument.RandomizeDropletStrength` is the TinyDroplet lateral randomization
-amplitude in playfield pixels (0–512, default 20). `RandomizeDropletSeed` is a signed
+amplitude in playfield pixels (0–100, default 20). Earlier project files with valid
+strengths above 100 are capped at 100 when loaded. `RandomizeDropletSeed` is a signed
 32-bit integer, default 1337. Each ordinary FSlider can retain a
 `DropletRandomization` with its own `Enabled` flag and sorted normalized-time
 `Adjustments`. New FSliders have no effect and start disabled. These fields

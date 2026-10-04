@@ -38,8 +38,10 @@ public static partial class ProjectSerializer
                 return BeatmapProject.FromDocuments([Read(text, projectPath)]);
             var file = JsonSerializer.Deserialize<MultiProjectFile>(text, options);
             if (file?.SchemaVersion is not (2 or 4 or 6 or 8 or 10) || file.Project is null) throw new InvalidDataException(L.Get("core.project.schema"));
+            foreach (var diff in file.Project.Difficulties ?? [])
+                if (diff?.Document is { } document) NormalizeRandomizationStrength(document);
             file.Project.Validate();
-            foreach (var diff in file.Project.Difficulties)
+            foreach (var diff in file.Project.Difficulties!)
                 diff.Document = Read(Serialize(diff.Document), projectPath);
             return file.Project;
         }

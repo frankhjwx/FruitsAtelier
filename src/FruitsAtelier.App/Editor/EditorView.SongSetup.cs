@@ -19,7 +19,7 @@ public sealed partial class EditorView
     private readonly Dictionary<string, string> songInitial = [];
     private readonly Dictionary<string, Rect> songFieldBounds = [];
     private readonly List<uint> songColours = [];
-    private readonly List<(Rect Bounds, string Key)> songSliders = [];
+    private readonly List<(Rect Bounds, string Key, double Maximum)> songSliders = [];
     private Rect songPalette, songHueTrack;
     private static readonly string[] SongMetadata = ["ArtistUnicode", "Artist", "TitleUnicode", "Title", "Creator", "Version", "Source", "Tags"];
     private static readonly string[] SongDifficulty = ["HPDrainRate", "CircleSize", "ApproachRate", "OverallDifficulty"];
@@ -103,33 +103,27 @@ public sealed partial class EditorView
         {
             for (int i = 0; i < SongDifficulty.Length; i++)
             {
-                string key = SongDifficulty[i]; float y = r.Y + 132 + i * 76;
-                SongTextField(c, key, y, compact: true);
-                var track = new Rect(r.X + 240, y + 9, r.Width - 378, 20);
-                double.TryParse(songValues[key], NumberStyles.Float, CultureInfo.InvariantCulture, out double value);
-                c.Line(track.X, track.Y + 10, track.Right, track.Y + 10, Grid, 4);
-                for (int step = 0; step <= 10; step++)
-                {
-                    float tickX = track.X + step * track.Width / 10;
-                    c.Line(tickX, track.Y + 6, tickX, track.Y + 14, Muted, 1);
-                }
-                c.Circle(track.X + (float)Math.Clamp(value / 10, 0, 1) * track.Width, track.Y + 10, 7, Accent);
-                songSliders.Add((track, key));
+                SongRangeSlider(c, SongDifficulty[i], r.Y + 132 + i * 76, 10);
             }
         }
         else if (songTab == 2) DrawSongColours(c, r);
         else if (songTab == 4)
         {
-            SongTextField(c, "RandomizeDropletStrength", r.Y + 124);
-            SongTextField(c, "RandomizeDropletSeed", r.Y + 172);
+            SongRangeSlider(c, "RandomizeDropletStrength", r.Y + 124, 100);
+            Button(c, new(r.X + 240, r.Y + 172, r.Width - 262, 32), L.Get("randomize.resetStrength"), () =>
+            {
+                songValues["RandomizeDropletStrength"] = "20";
+                songField = songError = ""; SongSetupInputSession++;
+            });
+            SongTextField(c, "RandomizeDropletSeed", r.Y + 220);
             float buttonWidth = (r.Width - 56) / 2;
-            Button(c, new(r.X + 22, r.Y + 228, buttonWidth, 34), L.Get("randomize.enableAll"), () => songRandomizeAll = true, songRandomizeAll == true, !notesLocked);
-            Button(c, new(r.X + 34 + buttonWidth, r.Y + 228, buttonWidth, 34), L.Get("randomize.disableAll"), () => songRandomizeAll = false, songRandomizeAll == false, !notesLocked);
+            Button(c, new(r.X + 22, r.Y + 276, buttonWidth, 34), L.Get("randomize.enableAll"), () => songRandomizeAll = true, songRandomizeAll == true, !notesLocked);
+            Button(c, new(r.X + 34 + buttonWidth, r.Y + 276, buttonWidth, 34), L.Get("randomize.disableAll"), () => songRandomizeAll = false, songRandomizeAll == false, !notesLocked);
             int total = Document.Tracks.Count(t => t.StreamSnapDivisor is null);
             int enabled = songRandomizeAll is { } all ? all ? total : 0
                 : Document.Tracks.Count(t => t.StreamSnapDivisor is null && t.DropletRandomization is { Enabled: true });
-            c.Text(L.Get("randomize.count", enabled, total), r.X + 22, r.Y + 284, 13, Foreground, r.Width - 44);
-            c.Text(L.Get("randomize.help"), r.X + 22, r.Y + 322, 12, Muted, r.Width - 44);
+            c.Text(L.Get("randomize.count", enabled, total), r.X + 22, r.Y + 332, 13, Foreground, r.Width - 44);
+            c.Text(L.Get("randomize.help"), r.X + 22, r.Y + 370, 12, Muted, r.Width - 44);
         }
         else
         {
@@ -181,11 +175,27 @@ public sealed partial class EditorView
         hits.Add(new(box, () => { songField = key; SongSetupInputSession++; FocusInput(inputKey, value, mouseX); }, enabled));
     }
 
+    private void SongRangeSlider(ICanvas c, string key, float y, double maximum)
+    {
+        SongTextField(c, key, y, compact: true);
+        var r = SongSetupBounds;
+        var track = new Rect(r.X + 240, y + 9, r.Width - 378, 20);
+        double.TryParse(songValues[key], NumberStyles.Float, CultureInfo.InvariantCulture, out double value);
+        c.Line(track.X, track.Y + 10, track.Right, track.Y + 10, Grid, 4);
+        for (int step = 0; step <= 10; step++)
+        {
+            float tickX = track.X + step * track.Width / 10;
+            c.Line(tickX, track.Y + 6, tickX, track.Y + 14, Muted, 1);
+        }
+        c.Circle(track.X + (float)Math.Clamp(value / maximum, 0, 1) * track.Width, track.Y + 10, 7, Accent);
+        songSliders.Add((track, key, maximum));
+    }
+
     private void ApplySongSetup()
     {
         if (audioProjectPath is not null) { CreateAudioProject(); return; }
         if (!double.TryParse(songValues["RandomizeDropletStrength"], NumberStyles.Float, CultureInfo.InvariantCulture, out double randomStrength)
-            || !double.IsFinite(randomStrength) || randomStrength is < 0 or > 512
+            || !double.IsFinite(randomStrength) || randomStrength is < 0 or > 100
             || !int.TryParse(songValues["RandomizeDropletSeed"], NumberStyles.Integer, CultureInfo.InvariantCulture, out int randomSeed))
         { songError = L.Get("randomize.invalid"); songTab = 4; return; }
         foreach (string key in SongDifficulty)
@@ -275,7 +285,7 @@ public sealed partial class EditorView
         if (songDrag is >= 0 and < 4 && songDrag < songSliders.Count)
         {
             var slider = songSliders[songDrag];
-            double value = Math.Round(Math.Clamp((x - slider.Bounds.X) / slider.Bounds.Width, 0, 1) * 10, shift ? 1 : 0);
+            double value = Math.Round(Math.Clamp((x - slider.Bounds.X) / slider.Bounds.Width, 0, 1) * slider.Maximum, shift ? 1 : 0);
             songValues[slider.Key] = value.ToString(CultureInfo.InvariantCulture);
         }
         else if (songDrag is 4 or 5)

@@ -75,7 +75,54 @@ internal static class DropletRandomizationTests
         }
         finally { L.SetLanguage(language); }
         LongPressSwitch();
+        StrengthControls();
         PlacementSequence();
+    }
+    private static void StrengthControls()
+    {
+        string language = L.Language;
+        try
+        {
+            foreach (string locale in new[] { "en", "zh-CN" })
+            foreach (var size in new[] { (1440, 900), (980, 620), (760, 580) })
+            {
+                L.SetLanguage(locale);
+                var map = new MapDocument { IsDemo = false, RandomizeDropletStrength = 12, RandomizeDropletSeed = -123 };
+                var ui = new Ui(); ui.LoadDocument(map); ui.Resize(size.Item1, size.Item2);
+                void Open() { ui.View.OpenSongSetup(); ui.Paint(); ui.ClickText(L.Get("randomize.title")); }
+                Open();
+                var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+                var sliders = (IReadOnlyList<(FruitsAtelier.App.Rendering.Rect Bounds, string Key, double Maximum)>)
+                    ui.View.GetType().GetField("songSliders", flags)!.GetValue(ui.View)!;
+                var slider = sliders.Single();
+                Check(slider.Maximum == 100 && slider.Key == "RandomizeDropletStrength", "strength slider range is 0–100");
+                Check(slider.Bounds.X >= 0 && slider.Bounds.Right <= ui.Width, "strength slider fits narrow windows");
+                Set(ui, "RandomizeDropletStrength", "37.5");
+                ui.View.PointerDown(slider.Bounds.X, slider.Bounds.Y + 10, 0, false, false);
+                ui.View.PointerMove(slider.Bounds.Right + 40, slider.Bounds.Y + 10, false, false);
+                ui.View.PointerUp(slider.Bounds.Right + 40, slider.Bounds.Y + 10, 0); ui.Paint();
+                Check(ui.View.Document.ContentEquals(map), "strength drag remains a cancellable draft");
+                ui.ClickText(L.Get("song.ok")); Check(ui.View.Document.RandomizeDropletStrength == 100, "drag clamps to maximum");
+                ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "strength drag commits as one undo step");
+                ui.Key('Y', ctrl: true);
+                Open(); Set(ui, "RandomizeDropletStrength", "101"); ui.ClickText(L.Get("song.ok"));
+                Check(ui.View.SongSetupVisible && ui.View.Document.RandomizeDropletStrength == 100, "numeric entry rejects strength above 100");
+                Set(ui, "RandomizeDropletStrength", "50.5"); ui.ClickText(L.Get("song.ok"));
+                Check(ui.View.Document.RandomizeDropletStrength == 50.5, "numeric entry retains decimal support");
+                Open(); ui.ClickText(L.Get("randomize.resetStrength")); ui.Key(27);
+                Check(ui.View.Document.RandomizeDropletStrength == 50.5, "cancel discards strength reset");
+                Open(); ui.ClickText(L.Get("randomize.resetStrength")); ui.ClickText(L.Get("song.ok"));
+                Check(ui.View.Document.RandomizeDropletStrength == 20 && ui.View.Document.RandomizeDropletSeed == -123, "reset restores only strength to 20");
+                ui.Key('Z', ctrl: true); Check(ui.View.Document.RandomizeDropletStrength == 50.5, "reset supports undo");
+                Open();
+                var box = ui.View.SongSetupFieldBounds["RandomizeDropletStrength"];
+                ui.View.PointerDown(slider.Bounds.Right - 1, box.Y + 19, 0, false, false);
+                ui.View.PointerMove(slider.Bounds.X - 40, box.Y + 19, false, false);
+                ui.View.PointerUp(slider.Bounds.X - 40, box.Y + 19, 0); ui.Paint();
+                ui.ClickText(L.Get("song.ok")); Check(ui.View.Document.RandomizeDropletStrength == 0, "drag clamps to minimum");
+            }
+        }
+        finally { L.SetLanguage(language); }
     }
     private sealed class HoldClock : TimeProvider
     {

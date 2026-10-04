@@ -1159,13 +1159,14 @@
   "randomize.title": "Aleatorizar gotas",
   "randomize.enableAll": "Activar todos los FSliders",
   "randomize.disableAll": "Desactivar todos los FSliders",
-  "randomize.enableSelected": "Activar el FSlider seleccionado",
-  "randomize.disableSelected": "Desactivar el FSlider seleccionado",
+  "randomize.enableSelected": "Activar aleatorización",
+  "randomize.disableSelected": "Desactivar aleatorización",
+  "randomize.resetStrength": "Restablecer intensidad (20)",
   "randomize.resetAdjustments": "Restablecer ajustes manuales",
   "randomize.settings": "Ajustes de aleatorización…",
   "randomize.count": "FSliders activos: {0} / {1}",
-  "randomize.help": "Intensidad en píxeles (0–512). Arrastra las gotas pequeñas para ajustarlas.",
-  "randomize.invalid": "La intensidad debe ser de 0–512 y Seed debe ser un entero de 32 bits.",
+  "randomize.help": "Intensidad en píxeles (0–100). Arrastra las gotas pequeñas para ajustarlas.",
+  "randomize.invalid": "La intensidad debe ser de 0–100 y Seed debe ser un entero de 32 bits.",
   "song.RandomizeDropletStrength": "Intensidad (px)",
   "song.RandomizeDropletSeed": "Seed"
 }

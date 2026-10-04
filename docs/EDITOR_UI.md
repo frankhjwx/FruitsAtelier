@@ -23,16 +23,18 @@ preferences start with all three switches off and Grid Level Tiny (4 px).
 
 ## Droplet randomization
 
-**Song Setup → Randomize droplets** configures Strength (0–512 playfield pixels)
-and a signed 32-bit Seed for the current difficulty. **Enable all FSliders** and
+**Song Setup → Randomize droplets** configures Strength (0–100 playfield pixels)
+and a signed 32-bit Seed for the current difficulty. Drag the Strength slider or
+type a numeric value; **Reset strength (20)** restores its default in the dialog
+draft. Confirm to apply or cancel to discard changes. **Enable all FSliders** and
 **Disable all FSliders** set the switches of existing ordinary FSliders when the
 dialog is confirmed. Cancel discards the draft. The same batch actions are
 available under **Edit → Randomize droplets**, where they apply immediately in
 one undo step. Neither action creates a persistent master switch or changes the
 initial state of subsequently created FSliders, which start disabled.
 
-Select one ordinary FSlider and use **Edit → Randomize droplets → Enable selected
-FSlider / Disable selected FSlider** to change only its switch. Long-pressing a
+Select one ordinary FSlider and use **Edit → Randomize droplets → Enable
+randomization / Disable randomization** to change only its switch. Long-pressing a
 single ordinary FSlider offers the same switch. The Edit menu also
 provides **Randomization settings…** and **Reset manual droplet adjustments** for
 the selected FSlider. Batch operations exclude Legacy Sliders and slider-managed

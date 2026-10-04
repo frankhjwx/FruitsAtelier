@@ -1159,13 +1159,14 @@
   "randomize.title": "물방울 무작위화",
   "randomize.enableAll": "모든 FSlider 활성화",
   "randomize.disableAll": "모든 FSlider 비활성화",
-  "randomize.enableSelected": "선택한 FSlider 활성화",
-  "randomize.disableSelected": "선택한 FSlider 비활성화",
+  "randomize.enableSelected": "무작위화 켜기",
+  "randomize.disableSelected": "무작위화 끄기",
+  "randomize.resetStrength": "강도 초기화 (20)",
   "randomize.resetAdjustments": "물방울 수동 조정 초기화",
   "randomize.settings": "무작위화 설정…",
   "randomize.count": "활성화된 FSlider: {0} / {1}",
-  "randomize.help": "강도는 픽셀 단위(0–512)입니다. 작은 물방울을 드래그하여 조정할 수 있습니다.",
-  "randomize.invalid": "강도는 0–512, Seed는 32비트 정수여야 합니다.",
+  "randomize.help": "강도는 픽셀 단위(0–100)입니다. 작은 물방울을 드래그하여 조정할 수 있습니다.",
+  "randomize.invalid": "강도는 0–100, Seed는 32비트 정수여야 합니다.",
   "song.RandomizeDropletStrength": "강도(px)",
   "song.RandomizeDropletSeed": "Seed"
 }

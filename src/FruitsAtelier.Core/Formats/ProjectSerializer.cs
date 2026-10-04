@@ -59,6 +59,7 @@ public static partial class ProjectSerializer
         catch (JsonException error) { throw new InvalidDataException(L.Get("core.project.invalidJson"), error); }
         if (file?.SchemaVersion is not (1 or 3 or 5 or 7 or 9) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
         var document = file.Document;
+        NormalizeRandomizationStrength(document);
         RejectNetworkPath(document.AudioPath);
         RejectNetworkPath(document.SourcePath);
         if (projectPath is not null)
@@ -68,6 +69,12 @@ public static partial class ProjectSerializer
         }
         OsuBeatmapReader.Validate(document);
         return document;
+    }
+
+    private static void NormalizeRandomizationStrength(MapDocument document)
+    {
+        // Earlier droplet FX projects allowed strengths up to 512.
+        if (document.RandomizeDropletStrength is > 100 and <= 512) document.RandomizeDropletStrength = 100;
     }
 
     public static MapDocument ReadFile(string path)

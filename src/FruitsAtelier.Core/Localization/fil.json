@@ -1159,13 +1159,14 @@
   "randomize.title": "I-randomize ang mga patak",
   "randomize.enableAll": "Paganahin lahat ng FSlider",
   "randomize.disableAll": "I-off lahat ng FSlider",
-  "randomize.enableSelected": "Paganahin ang napiling FSlider",
-  "randomize.disableSelected": "I-off ang napiling FSlider",
+  "randomize.enableSelected": "Paganahin ang randomization",
+  "randomize.disableSelected": "I-disable ang randomization",
+  "randomize.resetStrength": "I-reset ang lakas (20)",
   "randomize.resetAdjustments": "I-reset ang manu-manong pagsasaayos",
   "randomize.settings": "Mga setting ng randomization…",
   "randomize.count": "Aktibong FSlider: {0} / {1}",
-  "randomize.help": "Lakas sa pixels (0–512). I-drag ang maliliit na patak para isaayos ang mga ito.",
-  "randomize.invalid": "Ang lakas ay dapat 0–512 at ang Seed ay dapat 32-bit na integer.",
+  "randomize.help": "Lakas sa pixels (0–100). I-drag ang maliliit na patak para isaayos ang mga ito.",
+  "randomize.invalid": "Ang lakas ay dapat 0–100 at ang Seed ay dapat 32-bit na integer.",
   "song.RandomizeDropletStrength": "Lakas (px)",
   "song.RandomizeDropletSeed": "Seed"
 }

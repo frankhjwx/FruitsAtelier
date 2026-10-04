@@ -235,7 +235,7 @@ public static class CatchStreamConverter
 
     private static void ValidateTrack(MapDocument document, CurveTrack track)
     {
-        if (!double.IsFinite(document.RandomizeDropletStrength) || document.RandomizeDropletStrength is < 0 or > 512
+        if (!double.IsFinite(document.RandomizeDropletStrength) || document.RandomizeDropletStrength is < 0 or > 100
             || track.DropletRandomization is { IsValid: false })
             throw new CatchConversionException(L.Get("randomize.invalid"));
         var validationDocument = new MapDocument

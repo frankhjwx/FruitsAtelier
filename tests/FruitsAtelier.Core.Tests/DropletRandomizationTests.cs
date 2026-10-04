@@ -64,6 +64,22 @@ internal static class DropletRandomizationTests
         map.Tracks[0].DropletRandomization!.Adjustments = null!;
         Check(!CatchStreamConverter.Convert(map, cache: cache).Success, "invalid corrections reject a cached conversion safely");
         DiffWideSequence();
+        StrengthRange();
+    }
+    private static void StrengthRange()
+    {
+        var map = Fixture(); map.RandomizeDropletStrength = 100;
+        Check(CatchStreamConverter.Convert(map).Success, "maximum strength is valid");
+        string single = ProjectSerializer.Serialize(map);
+        string multi = ProjectSerializer.Serialize(BeatmapProject.FromDocuments([map]));
+        Check(ProjectSerializer.Read(single.Replace("\"RandomizeDropletStrength\": 100", "\"RandomizeDropletStrength\": 512")).RandomizeDropletStrength == 100,
+            "earlier single-difficulty strength migrates to the new maximum");
+        Check(ProjectSerializer.ReadProject(multi.Replace("\"RandomizeDropletStrength\": 100", "\"RandomizeDropletStrength\": 512")).Difficulties[0].Document.RandomizeDropletStrength == 100,
+            "earlier multi-difficulty strength migrates to the new maximum");
+        map.RandomizeDropletStrength = 101;
+        bool rejected = false;
+        try { ProjectSerializer.Serialize(map); } catch (InvalidDataException) { rejected = true; }
+        Check(rejected && !CatchStreamConverter.Convert(map).Success, "new content rejects strength above 100");
     }
 
     private static void DiffWideSequence()
