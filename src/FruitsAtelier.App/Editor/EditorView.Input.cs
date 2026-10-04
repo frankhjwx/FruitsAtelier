@@ -1249,7 +1249,8 @@ public sealed partial class EditorView
             {
                 Name = L.Get("editor.track.defaultName", Document.Tracks.Count + 1),
                 Kind = CurveKind.Linear,
-                CompensateTinyDroplets = true
+                CompensateTinyDroplets = true,
+                DropletRandomization = Document.RandomizeNewSliders ? new() { Enabled = true } : null
             };
             Document.Tracks.Add(track);
             draftTrack = track.Id;

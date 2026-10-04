@@ -29,6 +29,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Independent droplet defaults persist and initialize new projects and FSliders", DropletDefaultsTests.Run),
     ("Selection boxes scale and move consecutive parents with anchor priority and atomic undo", SelectionTransformTests.Run),
     ("Droplet randomization switches, setup drafts and Edit actions stay within one diff", DropletRandomizationTests.Run),
     ("Audio projects require metadata, copy audio and optionally link one Songs difficulty", AudioProjectTests.Run),

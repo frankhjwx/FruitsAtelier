@@ -57,7 +57,8 @@ public sealed partial class EditorView
         if (AudioProjectCreating || audioProjectPath is null) return;
         if (AudioProjectFields.Any(k => string.IsNullOrWhiteSpace(songValues[k])))
         { songError = L.Get("audioProject.required"); return; }
-        var document = new MapDocument { IsDemo = false, Name = songValues["TitleUnicode"].Trim(), AudioPath = audioProjectPath };
+        var document = NewAuthoringDocument();
+        document.Name = songValues["TitleUnicode"].Trim(); document.AudioPath = audioProjectPath;
         foreach (string key in AudioProjectFields) SongSetup.Set(document, "Metadata", key, songValues[key].Trim());
         SongSetup.Set(document, "Metadata", "Title", document.Name);
         SongSetup.Set(document, "Metadata", "Artist", songValues["ArtistUnicode"].Trim());

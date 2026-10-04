@@ -106,7 +106,15 @@ amplitude in playfield pixels (0–100, default 20). Earlier project files with 
 strengths above 100 are capped at 100 when loaded. `RandomizeDropletSeed` is a signed
 32-bit integer, default 1337. Each ordinary FSlider can retain a
 `DropletRandomization` with its own `Enabled` flag and sorted normalized-time
-`Adjustments`. New FSliders have no effect and start disabled. These fields
+`Adjustments`. `RandomizeNewSliders` captures a difficulty's default for newly
+drawn FSliders. It starts false for older projects. New projects capture the
+independent General preference: turning off new-project derandomization sets it
+true and initializes ordinary randomization with Strength 20 and Seed 1337.
+The saved flag survives deep cloning, content equality and single/multi project
+round trips; its true value selects schema 9/10 even in an empty project. False
+is omitted for older-schema compatibility. Legacy conversion uses its separate
+saved policy and application preference. Batch switches do not change this flag.
+These fields
 participate in deep cloning, content equality, history, persistence and cache
 invalidation. Slider-managed fruit streams retain dormant effects but do not apply
 them; imported Legacy Sliders retain their existing conversion rules.

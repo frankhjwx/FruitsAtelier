@@ -33,6 +33,7 @@ internal static class AudioProjectTests
                 var ui = new Ui(false); ui.Resize(library ? 980 : 1440, library ? 620 : 900);
                 ui.View.LoadDocument(new MapDocument { Name = "Previous", IsDemo = false });
                 ui.View.LibrarySettings.Workspace = workspace;
+                ui.View.LibrarySettings.DerandomizeNewProjects = mode != 1;
                 ui.View.LibrarySettings.OsuRoot = mode == 0 ? "" : osu;
                 if (mode != 0) Directory.CreateDirectory(ui.View.LibrarySettings.Songs);
                 if (library) ui.View.ShowLibrary();
@@ -68,6 +69,8 @@ internal static class AudioProjectTests
                 Check(session.Project.Difficulties.Count == 1 && ui.View.CurrentDifficultyName == "Hard" && !ui.View.IsDirty, "One saved difficulty is created");
                 var reopened = WorkspaceProject.Open(session.Directory);
                 var map = reopened.Project.Difficulties.Single().Document;
+                Check(map.RandomizeNewSliders == (mode == 1) && map.RandomizeDropletStrength == 20 && map.RandomizeDropletSeed == 1337,
+                    "audio-created catchproject persists its independent droplet defaults");
                 Check(map.Name == "歌曲 / Song" && SongSetup.Get(map, "Metadata", "Artist") == "艺术家"
                     && SongSetup.Get(map, "Metadata", "Creator") == "Mapper", "Metadata survives reopening");
                 Check(map.AudioPath != input && File.ReadAllBytes(map.AudioPath!).SequenceEqual(File.ReadAllBytes(input)), "Local audio is an independent copy");

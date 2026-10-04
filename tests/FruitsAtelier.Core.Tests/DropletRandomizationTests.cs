@@ -65,6 +65,13 @@ internal static class DropletRandomizationTests
         Check(!CatchStreamConverter.Convert(map, cache: cache).Success, "invalid corrections reject a cached conversion safely");
         DiffWideSequence();
         StrengthRange();
+        var defaults = Fixture(); defaults.RandomizeNewSliders = true;
+        Check(defaults.ContentEquals(defaults.DeepClone()) && defaults.ContentEquals(ProjectSerializer.Read(ProjectSerializer.Serialize(defaults)))
+            && ProjectSerializer.ReadProject(ProjectSerializer.Serialize(BeatmapProject.FromDocuments([defaults]))).Difficulties[0].Document.RandomizeNewSliders,
+            "new-slider default survives cloning and single/multi project persistence");
+        var changedDefault = defaults.DeepClone(); changedDefault.RandomizeNewSliders = false;
+        Check(!defaults.ContentEquals(changedDefault) && !ProjectSerializer.Serialize(changedDefault).Contains("RandomizeNewSliders"),
+            "default flag participates in content equality and old projects omit it");
     }
     private static void StrengthRange()
     {

@@ -31,7 +31,8 @@ draft. Confirm to apply or cancel to discard changes. **Enable all FSliders** an
 dialog is confirmed. Cancel discards the draft. The same batch actions are
 available under **Edit → Randomize droplets**, where they apply immediately in
 one undo step. Neither action creates a persistent master switch or changes the
-initial state of subsequently created FSliders, which start disabled.
+initial state of subsequently created FSliders, which follows the difficulty's
+saved new-slider default.
 
 Select one ordinary FSlider and use **Edit → Randomize droplets → Enable
 randomization / Disable randomization** to change only its switch. Long-pressing a
@@ -261,7 +262,18 @@ launcher or restart is needed. Closing without applying discards the draft.
 Testplay retains its low-latency presentation. Diagnostic display launchers
 override this preference for their run. macOS does not expose this Windows setting.
 
-**General → Default derandomize droplets** sets the initial choice for Legacy Slider conversion in maps without a saved choice. Applying it saves the preference across launches; changing the default does not alter an existing map's saved choice.
+**General → Droplet defaults** contains two independent preferences and ends with
+a separator. **Legacy → FSlider: Derandomize droplets** sets the initial conversion
+choice in maps without a saved choice. **New catchprojects: Derandomize droplets**
+controls projects created from scratch or from audio. Both start On. With the
+new-project option Off, the new difficulty saves a default that enables
+randomization on newly drawn FSliders, with Strength 20 and Seed 1337. With it On,
+newly drawn FSliders start without the effect. This default survives project
+reopening and is inherited by additional blank difficulties. Imported
+difficulties retain their own defaults. Settings Apply saves both preferences
+across launches; changing them does not modify existing beatmap content or a
+map's saved Legacy conversion choice. Batch randomization actions affect current
+FSliders without changing the default for future ones.
 
 Settings pages use 24 DIP page headings and 13 DIP labels, values, and actions. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
 

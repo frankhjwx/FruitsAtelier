@@ -19,6 +19,7 @@ public sealed class LibrarySettings
     public bool UseSkinSounds { get; set; } = true;
     public bool RomanisedMetadata { get; set; } = true;
     public bool DerandomizeDroplets { get; set; } = true;
+    public bool DerandomizeNewProjects { get; set; } = true;
     public bool ReverseCanvasScroll { get; set; }
     public bool LowLatencyDisplay { get; set; }
     public uint StandIndicatorColour { get; set; } = DefaultStandIndicatorColour;

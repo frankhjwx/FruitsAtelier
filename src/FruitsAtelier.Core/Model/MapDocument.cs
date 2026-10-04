@@ -176,6 +176,8 @@ public sealed partial class MapDocument
     public bool DistanceSnapCollinear { get; set; } = true;
     public double RandomizeDropletStrength { get; set; } = 20;
     public int RandomizeDropletSeed { get; set; } = 1337;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool RandomizeNewSliders { get; set; }
     public List<double> DistanceSnapRatios { get; } = new();
     public List<Fruit> Fruits { get; } = new();
     public List<CurveTrack> Tracks { get; } = new();
@@ -194,6 +196,7 @@ public sealed partial class MapDocument
             DistancePerBeatOverride = DistancePerBeatOverride,
             DistanceSnapCollinear = DistanceSnapCollinear,
             RandomizeDropletStrength = RandomizeDropletStrength, RandomizeDropletSeed = RandomizeDropletSeed,
+            RandomizeNewSliders = RandomizeNewSliders,
             SliderTickRate = SliderTickRate, DistanceSpacing = DistanceSpacing, DerandomizeDroplets = DerandomizeDroplets
         };
         copy.DistanceSnapRatios.AddRange(DistanceSnapRatios);
@@ -235,6 +238,7 @@ public sealed partial class MapDocument
             || DistancePerBeatOverride != other.DistancePerBeatOverride || SliderTickRate != other.SliderTickRate
             || DistanceSnapCollinear != other.DistanceSnapCollinear
             || RandomizeDropletStrength != other.RandomizeDropletStrength || RandomizeDropletSeed != other.RandomizeDropletSeed
+            || RandomizeNewSliders != other.RandomizeNewSliders
             || !DistanceSnapRatios.SequenceEqual(other.DistanceSnapRatios)
             || DistanceSpacing != other.DistanceSpacing || DerandomizeDroplets != other.DerandomizeDroplets
             || Fruits.Count != other.Fruits.Count || Tracks.Count != other.Tracks.Count

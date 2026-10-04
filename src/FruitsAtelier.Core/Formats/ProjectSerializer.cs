@@ -93,7 +93,7 @@ public static partial class ProjectSerializer
     private static bool HasControlCurves(MapDocument document) => document.Tracks.Any(t => t.Nodes.Any(n => n.OutgoingCurve is not null));
     private static bool HasStacks(MapDocument document) => document.Tracks.Any(t => t.Stack is not null);
     private static bool HasRandomization(MapDocument document) => document.RandomizeDropletStrength != 20
-        || document.RandomizeDropletSeed != 1337 || document.Tracks.Any(t => t.DropletRandomization is not null);
+        || document.RandomizeDropletSeed != 1337 || document.RandomizeNewSliders || document.Tracks.Any(t => t.DropletRandomization is not null);
     private static bool HasStreams(MapDocument document) => document.Tracks.Any(t => t.StreamSnapDivisor is not null);
 
     private static void RejectNetworkPath(string? path)
