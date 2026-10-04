@@ -23,11 +23,24 @@ preferences start with all three switches off and Grid Level Tiny (4 px).
 
 ## Droplet randomization
 
-**Song Setup → Randomize droplets** configures Strength (0–100 playfield pixels)
+**Song Setup → Randomize droplets** starts with **Derandomize droplets: On/Off**.
+On compensates ordinary FSlider TinyDroplets to their authored path and disables
+Strength, Seed, reset, batch actions and per-slider randomization editing. The
+existing FX switches and manual adjustments are retained; Off restores them.
+**Derandomize for HR Mode** selects HR compensation while derandomization is On.
+Export then compensates HR's random sequence, including preceding fruit stacks,
+streams, sliders and bananas, so HR TinyDroplets follow the authored path. Normal
+mode TinyDroplets may shift. Fruit and ordinary droplet targets stay unchanged;
+Legacy Sliders retain their original geometry. Shared repeat geometry, boundaries
+and integer export coordinates retain the existing compensation limits. Both
+preferences apply to the current difficulty and support Apply, Cancel and undo.
+Changing the map switch also sets the default for subsequently drawn FSliders.
+
+The page configures Strength (0–100 playfield pixels)
 and a signed 32-bit Seed for the current difficulty. Drag the Strength slider or
 type a numeric value; **Reset strength (20)** restores its default in the dialog
-draft. Confirm to apply or cancel to discard changes. **Enable all FSliders** and
-**Disable all FSliders** set the switches of existing ordinary FSliders when the
+draft. Confirm to apply or cancel to discard changes. **Enable randomization for all FSliders** and
+**Disable randomization for all FSliders** set the switches of existing ordinary FSliders when the
 dialog is confirmed. Cancel discards the draft. The same batch actions are
 available under **Edit → Randomize droplets**, where they apply immediately in
 one undo step. Neither action creates a persistent master switch or changes the
@@ -268,14 +281,14 @@ choice in maps without a saved choice. **Enable Derandomization for new catchpro
 controls projects created from scratch or from audio. Both start On. With the
 new-project option Off, the new difficulty saves a default that enables
 randomization on newly drawn FSliders, with Strength 20 and Seed 1337. With it On,
-newly drawn FSliders start without the effect. This default survives project
+the map starts with Derandomize droplets On and newly drawn FSliders start without the effect. This default survives project
 reopening and is inherited by additional blank difficulties. Imported
 difficulties retain their own defaults. Settings Apply saves both preferences
 across launches; changing them does not modify existing beatmap content or a
 map's saved Legacy conversion choice. Batch randomization actions affect current
 FSliders without changing the default for future ones.
 
-Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. Navigation retains its larger click targets. The same dimensions apply on both desktop platforms and scale with DPI. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
+Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries; its content scrolls when the window is too short, with the page title and Apply fixed. Combo count and Dim Background in Testplay use compact buttons. Navigation retains its larger click targets. The same dimensions apply on both desktop platforms and scale with DPI. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
 
 The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Testplay, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** is enabled only while unapplied changes exist. Ordinary preferences can be applied during library scanning or searching; changes to library paths wait for those tasks to finish. It saves them, stays in the current settings category, and becomes disabled again; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport. **General → Romanised artist / title** defaults to On and controls Library cards, Library details, and the editor window title. Off prefers the Unicode metadata; either mode falls back to the other spelling when its preferred field is empty. Apply persists the preference without changing beatmap data, filenames, or search matching.
 

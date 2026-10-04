@@ -159,7 +159,7 @@ public sealed partial class EditorView
             Button(c, new(r.X + 16, r.Y + 78 + i * 48, 182, 38), L.Get(categories[i]), () =>
             {
                 FinishVolumeDrag(); FinishBackgroundDimDrag(); libraryField = bindingCapture = -1; contextItems.Clear();
-                settingsCategory = category;
+                settingsCategory = category; workspaceScroll = 0;
                 if (category == SettingsCategory.Workspace) { workspaceScroll = 0; StartStorage(); }
                 if (category == SettingsCategory.Updates && UpdateStatus.Phase is UpdatePhase.Idle or UpdatePhase.Current or UpdatePhase.Failed)
                     RequestUpdateCheck?.Invoke();
@@ -169,45 +169,53 @@ public sealed partial class EditorView
         switch (settingsCategory)
         {
             case SettingsCategory.General:
-                c.Text(L.Get("settings.dropletDefaults"), SettingsContentX, SettingsTop + 118, SettingsSectionSize, Foreground,
+                workspaceScrollBounds = new(SettingsContentX, SettingsTop + 116, SettingsContentWidth + 12, SettingsBounds.Height - 208);
+                workspaceScroll = Math.Clamp(workspaceScroll, 0, Math.Max(0, GeneralContentHeight - workspaceScrollBounds.Height));
+                float generalTop = SettingsTop - workspaceScroll;
+                int generalFirstHit = hits.Count;
+                c.Clip(workspaceScrollBounds);
+                c.Text(L.Get("settings.dropletDefaults"), SettingsContentX, generalTop + 126, SettingsSectionSize, Foreground,
                     SettingsContentWidth, true);
-                SettingsButton(c, new(SettingsContentX, SettingsTop + 142, SettingsContentWidth, 32),
+                SettingsButton(c, new(SettingsContentX, generalTop + 160, SettingsContentWidth, 32),
                     L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
                     () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
-                SettingsButton(c, new(SettingsContentX, SettingsTop + 180, SettingsContentWidth, 32),
+                SettingsButton(c, new(SettingsContentX, generalTop + 208, SettingsContentWidth, 32),
                     L.Get(draftDerandomizeNewProjects ? "settings.newProjectDerandomizeOn" : "settings.newProjectDerandomizeOff"),
                     () => draftDerandomizeNewProjects = !draftDerandomizeNewProjects, draftDerandomizeNewProjects);
                 float rowWidth = SettingsContentWidth;
-                c.Line(SettingsContentX, SettingsTop + 218, SettingsContentX + rowWidth, SettingsTop + 218, Grid);
+                c.Line(SettingsContentX, generalTop + 260, SettingsContentX + rowWidth, generalTop + 260, Grid);
                 float labelWidth = Math.Min(240, rowWidth / 2);
                 float controlX = SettingsContentX + labelWidth + 16;
                 float controlWidth = rowWidth - labelWidth - 16;
-                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, SettingsTop + 240.5f, SettingsTextSize, Foreground, labelWidth, true);
-                var romanisedBounds = new Rect(controlX, SettingsTop + 230, controlWidth, 32);
+                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, generalTop + 294.5f, SettingsTextSize, Foreground, labelWidth, true);
+                var romanisedBounds = new Rect(controlX, generalTop + 284, controlWidth, 32);
                 c.Fill(romanisedBounds, Surface, 4); c.Stroke(romanisedBounds, Grid, radius: 4);
                 SettingsButton(c, romanisedBounds,
                     L.Get(draftRomanisedMetadata ? "settings.romanisedOn" : "settings.romanisedOff"),
                     () => draftRomanisedMetadata = !draftRomanisedMetadata, draftRomanisedMetadata);
-                c.Text(L.Get("ui.language"), SettingsContentX, SettingsTop + 278.5f, SettingsTextSize, Foreground, labelWidth, true);
-                DrawLanguageButton(c, new(controlX, SettingsTop + 268, controlWidth, 32));
+                c.Text(L.Get("ui.language"), SettingsContentX, generalTop + 342.5f, SettingsTextSize, Foreground, labelWidth, true);
+                DrawLanguageButton(c, new(controlX, generalTop + 332, controlWidth, 32));
                 if (SupportsDisplayMode)
                 {
                     float displayWidth = SettingsContentWidth;
-                    c.Text(L.Get("settings.displayMode"), SettingsContentX, SettingsTop + 308, SettingsTextSize, Foreground, displayWidth, true);
-                    c.Fill(new(SettingsContentX, SettingsTop + 330, displayWidth, 44), Gold, 4, .12f);
-                    c.Text(L.Get("settings.displayDelayHint"), SettingsContentX + 12, SettingsTop + 339, 12, Gold, displayWidth - 24);
-                    c.Text(L.Get("settings.displayChangeHint"), SettingsContentX + 12, SettingsTop + 357, 12, Gold, displayWidth - 24);
-                    var displayBounds = new Rect(SettingsContentX, SettingsTop + 382, displayWidth, 32);
+                    c.Text(L.Get("settings.displayMode"), SettingsContentX, generalTop + 388, SettingsTextSize, Foreground, displayWidth, true);
+                    c.Fill(new(SettingsContentX, generalTop + 416, displayWidth, 44), Gold, 4, .12f);
+                    c.Text(L.Get("settings.displayDelayHint"), SettingsContentX + 12, generalTop + 425, 12, Gold, displayWidth - 24);
+                    c.Text(L.Get("settings.displayChangeHint"), SettingsContentX + 12, generalTop + 443, 12, Gold, displayWidth - 24);
+                    var displayBounds = new Rect(SettingsContentX, generalTop + 476, displayWidth, 32);
                     SettingsButton(c, displayBounds,
                         L.Get(draftLowLatencyDisplay ? "settings.displayImmediate" : "settings.displayVsync") + " ▾",
                         () => OpenDisplayModeMenu(displayBounds));
                 }
-                float scrollTop = SettingsTop + (SupportsDisplayMode ? 426 : 322);
+                float scrollTop = generalTop + (SupportsDisplayMode ? 532 : 388);
                 float scrollWidth = SettingsContentWidth;
                 c.Line(SettingsContentX, scrollTop, SettingsContentX + scrollWidth, scrollTop, Grid);
-                SettingsButton(c, new(SettingsContentX, scrollTop + 10, scrollWidth, 32),
+                SettingsButton(c, new(SettingsContentX, scrollTop + 20, scrollWidth, 32),
                     L.Get(draftReverseCanvasScroll ? "settings.reverseCanvasScrollOn" : "settings.reverseCanvasScrollOff"),
                     () => draftReverseCanvasScroll = !draftReverseCanvasScroll, draftReverseCanvasScroll);
+                c.Unclip();
+                ClipSettingsHits(generalFirstHit);
+                DrawSettingsScrollbar(c, GeneralContentHeight);
                 break;
             case SettingsCategory.Workspace:
                 DrawWorkspaceSettings(c);

@@ -1160,16 +1160,19 @@
   "language.simplifiedChinese": "简体中文",
   "language.traditionalChinese": "繁体中文",
   "randomize.title": "Acak tetesan",
-  "randomize.enableAll": "Aktifkan semua FSlider",
-  "randomize.disableAll": "Nonaktifkan semua FSlider",
+  "randomize.enableAll": "Aktifkan pengacakan semua FSlider",
+  "randomize.disableAll": "Nonaktifkan pengacakan semua FSlider",
   "randomize.enableSelected": "Aktifkan pengacakan",
   "randomize.disableSelected": "Nonaktifkan pengacakan",
   "randomize.resetStrength": "Reset kekuatan (20)",
   "randomize.resetAdjustments": "Atur ulang penyesuaian manual",
   "randomize.settings": "Pengaturan pengacakan…",
   "randomize.count": "FSlider aktif: {0} / {1}",
-  "randomize.help": "Kekuatan dalam piksel (0–100). Seret tetesan kecil untuk menyesuaikannya.",
   "randomize.invalid": "Kekuatan harus 0–100 dan Seed harus berupa bilangan bulat 32-bit.",
   "song.RandomizeDropletStrength": "Kekuatan (px)",
-  "song.RandomizeDropletSeed": "Seed"
+  "song.RandomizeDropletSeed": "Seed",
+  "randomize.derandomizeOn": "Derandomisasi droplet: Aktif",
+  "randomize.derandomizeOff": "Derandomisasi droplet: Nonaktif",
+  "randomize.derandomizeHrOn": "Derandomisasi untuk Mode HR: Aktif",
+  "randomize.derandomizeHrOff": "Derandomisasi untuk Mode HR: Nonaktif"
 }

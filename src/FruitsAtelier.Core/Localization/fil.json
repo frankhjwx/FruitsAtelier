@@ -1160,16 +1160,19 @@
   "language.simplifiedChinese": "简体中文",
   "language.traditionalChinese": "繁体中文",
   "randomize.title": "I-randomize ang mga patak",
-  "randomize.enableAll": "Paganahin lahat ng FSlider",
-  "randomize.disableAll": "I-off lahat ng FSlider",
+  "randomize.enableAll": "I-enable ang randomization sa lahat ng FSlider",
+  "randomize.disableAll": "I-disable ang randomization sa lahat ng FSlider",
   "randomize.enableSelected": "Paganahin ang randomization",
   "randomize.disableSelected": "I-disable ang randomization",
   "randomize.resetStrength": "I-reset ang lakas (20)",
   "randomize.resetAdjustments": "I-reset ang manu-manong pagsasaayos",
   "randomize.settings": "Mga setting ng randomization…",
   "randomize.count": "Aktibong FSlider: {0} / {1}",
-  "randomize.help": "Lakas sa pixels (0–100). I-drag ang maliliit na patak para isaayos ang mga ito.",
   "randomize.invalid": "Ang lakas ay dapat 0–100 at ang Seed ay dapat 32-bit na integer.",
   "song.RandomizeDropletStrength": "Lakas (px)",
-  "song.RandomizeDropletSeed": "Seed"
+  "song.RandomizeDropletSeed": "Seed",
+  "randomize.derandomizeOn": "I-derandomize ang mga droplet: Naka-on",
+  "randomize.derandomizeOff": "I-derandomize ang mga droplet: Naka-off",
+  "randomize.derandomizeHrOn": "Derandomization para sa HR Mode: Naka-on",
+  "randomize.derandomizeHrOff": "Derandomization para sa HR Mode: Naka-off"
 }

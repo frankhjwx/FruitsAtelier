@@ -1160,16 +1160,19 @@
   "language.simplifiedChinese": "简体中文",
   "language.traditionalChinese": "繁体中文",
   "randomize.title": "水滴をランダム化",
-  "randomize.enableAll": "すべての FSlider で有効化",
-  "randomize.disableAll": "すべての FSlider で無効化",
+  "randomize.enableAll": "すべての FSlider のランダム化を有効化",
+  "randomize.disableAll": "すべての FSlider のランダム化を無効化",
   "randomize.enableSelected": "ランダム化を有効にする",
   "randomize.disableSelected": "ランダム化を無効にする",
   "randomize.resetStrength": "強度をリセット（20）",
   "randomize.resetAdjustments": "水滴の手動調整をリセット",
   "randomize.settings": "ランダム化設定…",
   "randomize.count": "有効な FSlider：{0} / {1}",
-  "randomize.help": "強度はピクセル単位（0–100）です。小さな水滴をドラッグして調整できます。",
   "randomize.invalid": "強度は 0–100、Seed は 32 ビット整数にしてください。",
   "song.RandomizeDropletStrength": "強度（px）",
-  "song.RandomizeDropletSeed": "Seed"
+  "song.RandomizeDropletSeed": "Seed",
+  "randomize.derandomizeOn": "水滴の非ランダム化: オン",
+  "randomize.derandomizeOff": "水滴の非ランダム化: オフ",
+  "randomize.derandomizeHrOn": "HR モードの非ランダム化: オン",
+  "randomize.derandomizeHrOff": "HR モードの非ランダム化: オフ"
 }

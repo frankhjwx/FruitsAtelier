@@ -36,7 +36,7 @@ public sealed partial class EditorView
             TimingOffsetMs = Document.TimingOffsetMs, ApproachRate = Document.ApproachRate,
             CircleSize = Document.CircleSize, SliderMultiplier = Document.SliderMultiplier,
             SliderTickRate = Document.SliderTickRate, DerandomizeDroplets = Document.DerandomizeDroplets,
-            RandomizeDropletStrength = Document.RandomizeDropletStrength, RandomizeDropletSeed = Document.RandomizeDropletSeed
+            DerandomizeFSliderDroplets = Document.DerandomizeFSliderDroplets, DerandomizeDropletsForHardRock = Document.DerandomizeDropletsForHardRock, RandomizeDropletStrength = Document.RandomizeDropletStrength, RandomizeDropletSeed = Document.RandomizeDropletSeed
         };
         candidate.TimingPoints.AddRange(Document.TimingPoints);
         if (track.Nodes.Count >= 2) candidate.Tracks.Add(track);

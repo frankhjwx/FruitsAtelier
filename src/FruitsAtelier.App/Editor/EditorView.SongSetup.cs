@@ -37,6 +37,8 @@ public sealed partial class EditorView
         menu = -1; languageMenuOpen = false; contextItems.Clear();
         songValues.Clear(); songInitial.Clear(); songField = songError = "";
         songRandomizeAll = null;
+        songDerandomizeDroplets = Document.DerandomizeFSliderDroplets;
+        songDerandomizeHardRock = Document.DerandomizeDropletsForHardRock;
         songTab = songColour = 0; songDrag = -1; songCountdownOpen = false; SongSetupInputSession++;
         foreach (string key in SongMetadata) songValues[key] = SongSetup.Get(Document, "Metadata", key);
         songValues["ArtistUnicode"] = SongSetup.Get(Document, "Metadata", "ArtistUnicode", songValues["Artist"]);
@@ -72,6 +74,7 @@ public sealed partial class EditorView
         "Artist" => NeedsRomanisation(songValues["ArtistUnicode"]),
         "Title" => NeedsRomanisation(songValues["TitleUnicode"]),
         "Hex" => songCustomColours,
+        "RandomizeDropletStrength" or "RandomizeDropletSeed" => !songDerandomizeDroplets,
         "CountdownOffset" => songValues["Countdown"] != "0",
         _ => true
     };
@@ -109,21 +112,31 @@ public sealed partial class EditorView
         else if (songTab == 2) DrawSongColours(c, r);
         else if (songTab == 4)
         {
-            SongRangeSlider(c, "RandomizeDropletStrength", r.Y + 124, 100);
-            Button(c, new(r.X + 240, r.Y + 172, r.Width - 262, 32), L.Get("randomize.resetStrength"), () =>
+            Button(c, new(r.X + 22, r.Y + 116, r.Width - 44, 32),
+                L.Get(songDerandomizeDroplets ? "randomize.derandomizeOn" : "randomize.derandomizeOff"), () =>
+                {
+                    songDerandomizeDroplets = !songDerandomizeDroplets;
+                    songField = ""; songDrag = -1; SongSetupInputSession++;
+                }, songDerandomizeDroplets, !notesLocked, fontSize: 13);
+            Button(c, new(r.X + 22, r.Y + 160, r.Width - 44, 32),
+                L.Get(songDerandomizeHardRock ? "randomize.derandomizeHrOn" : "randomize.derandomizeHrOff"),
+                () => songDerandomizeHardRock = !songDerandomizeHardRock,
+                songDerandomizeHardRock, !notesLocked && songDerandomizeDroplets, fontSize: 13);
+            SongRangeSlider(c, "RandomizeDropletStrength", r.Y + 216, 100);
+            Button(c, new(r.X + 240, r.Y + 260, r.Width - 262, 32), L.Get("randomize.resetStrength"), () =>
             {
                 songValues["RandomizeDropletStrength"] = "20";
                 songField = songError = ""; SongSetupInputSession++;
-            });
-            SongTextField(c, "RandomizeDropletSeed", r.Y + 220);
+            }, enabled: !songDerandomizeDroplets);
+            SongTextField(c, "RandomizeDropletSeed", r.Y + 308);
             float buttonWidth = (r.Width - 56) / 2;
-            Button(c, new(r.X + 22, r.Y + 276, buttonWidth, 34), L.Get("randomize.enableAll"), () => songRandomizeAll = true, songRandomizeAll == true, !notesLocked);
-            Button(c, new(r.X + 34 + buttonWidth, r.Y + 276, buttonWidth, 34), L.Get("randomize.disableAll"), () => songRandomizeAll = false, songRandomizeAll == false, !notesLocked);
+            Button(c, new(r.X + 22, r.Y + 364, buttonWidth, 34), L.Get("randomize.enableAll"), () => songRandomizeAll = true, songRandomizeAll == true, !notesLocked && !songDerandomizeDroplets, fontSize: 13);
+            Button(c, new(r.X + 34 + buttonWidth, r.Y + 364, buttonWidth, 34), L.Get("randomize.disableAll"), () => songRandomizeAll = false, songRandomizeAll == false, !notesLocked && !songDerandomizeDroplets, fontSize: 13);
             int total = Document.Tracks.Count(t => t.StreamSnapDivisor is null);
             int enabled = songRandomizeAll is { } all ? all ? total : 0
                 : Document.Tracks.Count(t => t.StreamSnapDivisor is null && t.DropletRandomization is { Enabled: true });
-            c.Text(L.Get("randomize.count", enabled, total), r.X + 22, r.Y + 332, 13, Foreground, r.Width - 44);
-            c.Text(L.Get("randomize.help"), r.X + 22, r.Y + 370, 12, Muted, r.Width - 44);
+            c.Text(L.Get("randomize.count", enabled, total), r.X + 22, r.Y + 420, 13, songDerandomizeDroplets ? Muted : Foreground, r.Width - 44);
+
         }
         else
         {
@@ -167,11 +180,12 @@ public sealed partial class EditorView
         var box = new Rect(compact ? r.Right - 116 : r.X + 240, y, compact ? 94 : r.Width - 262, 32);
         songFieldBounds[key] = box;
         bool enabled = SongFieldEnabled(key), focused = enabled && songField == key;
-        if (enabled) { c.Fill(box, Surface, 4); c.Stroke(box, focused ? Accent : Grid, radius: 4); }
+        if (enabled || key is "RandomizeDropletStrength" or "RandomizeDropletSeed")
+        { c.Fill(box, Surface, 4, enabled ? 1 : .45f); c.Stroke(box, focused ? Accent : Grid, radius: 4); }
         string value = !enabled && key is "Artist" or "Title" ? songValues[key + "Unicode"] : songValues[key];
         string inputKey = "song:" + key;
         if (enabled) DrawInputText(c, new(box.X + 9, box.Y + 7, box.Width - 18, 20), value, 13, focused, inputKey);
-        else c.Text(value, box.X + 9, box.Y + 7, 13, 0xB8C2CE, box.Width - 18);
+        else c.Text(value, box.X + 9, box.Y + 7, 13, key is "Artist" or "Title" ? 0xB8C2CEu : Muted, box.Width - 18);
         hits.Add(new(box, () => { songField = key; SongSetupInputSession++; FocusInput(inputKey, value, mouseX); }, enabled));
     }
 
@@ -187,8 +201,8 @@ public sealed partial class EditorView
             float tickX = track.X + step * track.Width / 10;
             c.Line(tickX, track.Y + 6, tickX, track.Y + 14, Muted, 1);
         }
-        c.Circle(track.X + (float)Math.Clamp(value / maximum, 0, 1) * track.Width, track.Y + 10, 7, Accent);
-        songSliders.Add((track, key, maximum));
+        c.Circle(track.X + (float)Math.Clamp(value / maximum, 0, 1) * track.Width, track.Y + 10, 7, SongFieldEnabled(key) ? Accent : Muted);
+        if (SongFieldEnabled(key)) songSliders.Add((track, key, maximum));
     }
 
     private void ApplySongSetup()
@@ -242,9 +256,12 @@ public sealed partial class EditorView
             foreach (string key in SongDifficulty.Where(k => songValues[k] != songInitial[k])) SongSetup.Set(Document, "Difficulty", key, songValues[key]);
             Document.CircleSize = double.Parse(songValues["CircleSize"], CultureInfo.InvariantCulture);
             Document.ApproachRate = double.Parse(songValues["ApproachRate"], CultureInfo.InvariantCulture);
+            if (Document.DerandomizeFSliderDroplets != songDerandomizeDroplets) Document.RandomizeNewSliders = !songDerandomizeDroplets;
+            Document.DerandomizeFSliderDroplets = songDerandomizeDroplets;
+            Document.DerandomizeDropletsForHardRock = songDerandomizeHardRock;
             Document.RandomizeDropletStrength = randomStrength;
             Document.RandomizeDropletSeed = randomSeed;
-            if (songRandomizeAll is { } all)
+            if (!songDerandomizeDroplets && songRandomizeAll is { } all)
                 foreach (var track in Document.Tracks.Where(t => t.StreamSnapDivisor is null)) SetDropletRandomization(track, all);
             foreach (string key in SongDesign.Where(k => songValues[k] != songInitial[k])) SongSetup.Set(Document, "General", key, songValues[key]);
             SongSetup.SetColours(Document, songCustomColours ? songColours : Array.Empty<uint>());

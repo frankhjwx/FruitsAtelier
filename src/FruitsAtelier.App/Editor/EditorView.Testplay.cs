@@ -341,11 +341,11 @@ public sealed partial class EditorView
         TimingButton(c, new(leadIn.Right - 24, leadIn.Y, 24, leadIn.Height), "›",
             () => draftTestplayStartupDelaySeconds = Math.Min(5, draftTestplayStartupDelaySeconds + .5),
             enabled: draftTestplayStartupDelaySeconds < 5, flatArrow: true);
-        SettingsButton(c, new(SettingsContentX, SettingsTop + 336, SettingsContentWidth, SettingsControlHeight),
+        SettingsButton(c, new(SettingsContentX, SettingsTop + 336, Math.Min(280, SettingsContentWidth), SettingsControlHeight),
             L.Get(draftShowTestplayCombo ? "testplay.comboOn" : "testplay.comboOff"),
             () => draftShowTestplayCombo = !draftShowTestplayCombo, draftShowTestplayCombo);
         DrawBackgroundDimSetting(c, new(SettingsContentX, SettingsTop + 384, SettingsContentWidth, SettingsControlHeight), true);
-        SettingsButton(c, new(SettingsContentX, SettingsTop + 432, SettingsContentWidth, SettingsControlHeight),
+        SettingsButton(c, new(SettingsContentX, SettingsTop + 432, Math.Min(280, SettingsContentWidth), SettingsControlHeight),
             (draftForceBackgroundDim ? "✓ " : "") + L.Get("settings.forceBackgroundDim"),
             () => draftForceBackgroundDim = !draftForceBackgroundDim, draftForceBackgroundDim);
         string[] labels = ["testplay.left", "testplay.right", "testplay.dash"];

@@ -2,7 +2,7 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). All ten schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). All twelve schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
 
 ## Authoritative and derived data
 
@@ -111,7 +111,7 @@ drawn FSliders. It starts false for older projects. New projects capture the
 independent General preference: turning off new-project derandomization sets it
 true and initializes ordinary randomization with Strength 20 and Seed 1337.
 The saved flag survives deep cloning, content equality and single/multi project
-round trips; its true value selects schema 9/10 even in an empty project. False
+round trips; its true value requires schema 9/10 or later even in an empty project. False
 is omitted for older-schema compatibility. Legacy conversion uses its separate
 saved policy and application preference. Batch switches do not change this flag.
 These fields
@@ -176,6 +176,17 @@ Failed objects produce no result, set overall Success=false, and leave RNG corre
 
 Hyperdash uses all Fruit / Droplet results, skipping TinyDroplets and Bananas, and preserves direction and remaining movement. Markers belong to the departure object and recalculate when CS changes.
 
+`DerandomizeFSliderDroplets` is the per-difficulty compensation gate. On suppresses
+FSlider FX targets without deleting switches or correction data, and forces tiny
+compensation even on tracks with an explicit compensation override. With
+`DerandomizeDropletsForHardRock` also On, compensation uses the HR RNG entering
+each exported slider. The shared HR state includes fruit stack offsets and
+rotation/banana draws. Stream fruits join the chronological exported parent
+sequence. Cache reuse additionally checks the incoming HR state, and both flags
+participate in content equality, cloning and undo. Conversion objects retain
+normal-mode X; tiny compensation errors measure the selected mode. HR preview
+and exported read-back apply the ordinary osu HR rules to the generated geometry.
+
 ## Persistence and export
 
 `.catchproj` saves nodes, handles, optional exact OutgoingCurve controls and reference ratios, OutgoingKind, default track Kind, SpanCount, OriginalLine, CompensateTinyDroplets, difficulty, complete timing, and resource references. It excludes undo history, derived objects, and GPU caches. Older projects default to OutgoingKind=null, SpanCount=1, and Tiny override=null. Reading validates schema, IDs, model boundaries, and curve constraints, rejecting unsupported fields and versions. Inherited NaN uses named JSON floating-point representation. Saving replaces a same-directory temporary file and stores resource paths relative to the project directory without copying audio.
@@ -200,3 +211,10 @@ horizontal offsets. Generation first clamps the envelope result, adds the matchi
 fruit adjustment and clamps again. Adjustments do not change event times or
 neighbours, and unmatched keys remain saved when subdivision changes. Horizontal
 mirroring reverses their signs together with the envelope's starting side.
+
+Projects using the map derandomization gate or HR mode use single-difficulty
+schema 11 or multi-difficulty schema 12. Readers still accept the earlier schemas;
+absent flags default to false to preserve existing randomization behavior. New
+blank/audio projects initialize the gate from the General new-project preference.
+The nullable `DerandomizeDroplets` field continues to hold the Legacy conversion
+choice independently of these compensation settings.

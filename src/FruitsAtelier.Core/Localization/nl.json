@@ -1160,16 +1160,19 @@
   "language.simplifiedChinese": "简体中文",
   "language.traditionalChinese": "繁体中文",
   "randomize.title": "Druppels randomiseren",
-  "randomize.enableAll": "Alle FSliders inschakelen",
-  "randomize.disableAll": "Alle FSliders uitschakelen",
+  "randomize.enableAll": "Randomisatie inschakelen voor alle FSliders",
+  "randomize.disableAll": "Randomisatie uitschakelen voor alle FSliders",
   "randomize.enableSelected": "Randomisatie inschakelen",
   "randomize.disableSelected": "Randomisatie uitschakelen",
   "randomize.resetStrength": "Sterkte resetten (20)",
   "randomize.resetAdjustments": "Handmatige aanpassingen herstellen",
   "randomize.settings": "Randomisatie-instellingen…",
   "randomize.count": "Ingeschakelde FSliders: {0} / {1}",
-  "randomize.help": "Sterkte in pixels (0–100). Sleep kleine druppels om ze aan te passen.",
   "randomize.invalid": "Sterkte moet 0–100 zijn en Seed een 32-bits geheel getal.",
   "song.RandomizeDropletStrength": "Sterkte (px)",
-  "song.RandomizeDropletSeed": "Seed"
+  "song.RandomizeDropletSeed": "Seed",
+  "randomize.derandomizeOn": "Druppels derandomiseren: Aan",
+  "randomize.derandomizeOff": "Druppels derandomiseren: Uit",
+  "randomize.derandomizeHrOn": "Derandomisatie voor HR-modus: Aan",
+  "randomize.derandomizeHrOff": "Derandomisatie voor HR-modus: Uit"
 }

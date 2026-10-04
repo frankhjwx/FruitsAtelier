@@ -40,6 +40,24 @@ static class SettingsTests
                                 && f.Bounds.Right == ui.View.SettingsBounds.Right - 32), "droplet controls align to the content column");
                         }
                     }
+                    if (category == "settings.general" && size.Item1 == 760)
+                    {
+                        float applyY = apply.Y;
+                        ui.View.Wheel(page.X + 100, ui.View.SettingsBounds.Y + 200, -1200, false); ui.Paint();
+                        var reverse = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.reverseCanvasScrollOff"));
+                        Check(reverse.Y >= ui.View.SettingsBounds.Y + 116 && reverse.Y < ui.View.SettingsBounds.Bottom - 86,
+                            "General scrolling makes the bottom preference reachable");
+                        Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("library.apply")).Y == applyY, "Apply stays fixed while General scrolls");
+                        ui.Click(reverse.X + 2, reverse.Y + 2);
+                        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.reverseCanvasScrollOn")), "scrolled preference retains its hit target");
+                    }
+                    if (category == "settings.testplay")
+                    {
+                        var combo = ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.comboOn"));
+                        Check(combo.MaxWidth <= 280, "Combo count uses a compact button");
+                        var dim = ui.Canvas.Texts.Single(t => t.Value.EndsWith(L.Get("settings.forceBackgroundDim")));
+                        Check(dim.MaxWidth <= 280, "Dim Background uses a compact button");
+                    }
                     if (category == "settings.workspace")
                     {
                         var lines = ui.Canvas.Texts.Where(t => t.Y >= ui.View.SettingsBounds.Y + 128 && t.Y < ui.View.SettingsBounds.Y + 180 && t.X == page.X).ToArray();

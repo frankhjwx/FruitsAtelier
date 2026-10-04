@@ -12,7 +12,7 @@ Adapted portions retain the upstream MIT licence in `LICENCE.osu.txt`.
 | `osu.Game.Rulesets.Catch/Objects/JuiceStream.cs` | Scoring distance, independent SliderTickRate, integer event-time differences and recursive halving for TinyDroplet spacing |
 | `osu.Game/Rulesets/Objects/Legacy/LegacyRulesetExtensions.cs` | Float quantisation of inherited beat length and SV limits |
 | `osu.Game/Utils/LegacyRandom.cs` | Seeded xorshift sequence and truncation of ranged draws |
-| `osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapProcessor.cs` | Seed 1337, complete-parent RNG traversal, droplet rotation draws, TinyDroplet X offsets and clamping |
+| `osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapProcessor.cs` | HR fruit offset state and tiny-droplet export compensation, seed 1337, complete-parent RNG traversal, droplet rotation draws, TinyDroplet X offsets and clamping |
 | `osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmap.cs` | Stable time ordering after flattening parent objects |
 | `osu.Game.Rulesets.Catch/Objects/JuiceStreamPath.cs` | Time–X velocity bound and Pythagorean construction of a linear slider path within geometric Y bounds |
 | `osu.Game/Rulesets/Objects/SliderPath.cs` | Arc-length lookup of the resulting linear path |

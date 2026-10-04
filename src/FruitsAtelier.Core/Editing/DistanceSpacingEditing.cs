@@ -127,7 +127,7 @@ public static class DistanceSpacingEditing
     private static bool TryRandomizedTiny(MapDocument document, ConvertedCatchObject target, double x,
         bool compensate, CatchConversionCache? cache)
     {
-        if (target.Kind != CatchObjectKind.TinyDroplet || document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
+        if (document.DerandomizeFSliderDroplets || target.Kind != CatchObjectKind.TinyDroplet || document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
             is not { DropletRandomization: { Enabled: true } effect } track) return false;
         var before = CatchStreamConverter.Convert(document, compensate, cache);
         var selected = before.Objects.FirstOrDefault(o => o.SourceId == target.SourceId && o.EventIndex == target.EventIndex);

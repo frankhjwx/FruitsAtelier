@@ -1160,16 +1160,19 @@
   "language.simplifiedChinese": "简体中文",
   "language.traditionalChinese": "繁体中文",
   "randomize.title": "Randomize droplets",
-  "randomize.enableAll": "Enable all FSliders",
-  "randomize.disableAll": "Disable all FSliders",
+  "randomize.enableAll": "Enable randomization for all FSliders",
+  "randomize.disableAll": "Disable randomization for all FSliders",
   "randomize.enableSelected": "Enable randomization",
   "randomize.disableSelected": "Disable randomization",
   "randomize.resetStrength": "Reset strength (20)",
   "randomize.resetAdjustments": "Reset manual droplet adjustments",
   "randomize.settings": "Randomization settings…",
   "randomize.count": "Enabled FSliders: {0} / {1}",
-  "randomize.help": "Strength is in pixels (0–100). Tiny droplets can be dragged for manual adjustments.",
   "randomize.invalid": "Strength must be 0–100 and Seed must be a 32-bit integer.",
   "song.RandomizeDropletStrength": "Strength (px)",
-  "song.RandomizeDropletSeed": "Seed"
+  "song.RandomizeDropletSeed": "Seed",
+  "randomize.derandomizeOn": "Derandomize droplets: On",
+  "randomize.derandomizeOff": "Derandomize droplets: Off",
+  "randomize.derandomizeHrOn": "Derandomize for HR Mode: On",
+  "randomize.derandomizeHrOff": "Derandomize for HR Mode: Off"
 }

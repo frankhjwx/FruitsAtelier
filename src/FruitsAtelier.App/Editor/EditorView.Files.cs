@@ -106,7 +106,7 @@ public sealed partial class EditorView
 
     private MapDocument NewAuthoringDocument() => new()
     {
-        IsDemo = false, RandomizeNewSliders = !LibrarySettings.DerandomizeNewProjects
+        IsDemo = false, DerandomizeFSliderDroplets = LibrarySettings.DerandomizeNewProjects, RandomizeNewSliders = !LibrarySettings.DerandomizeNewProjects
     };
 
     public void NewProject()

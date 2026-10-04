@@ -22,14 +22,16 @@ public static class CatchStreamConverter
             return Finish();
         }
 
+        TimingMap.Lookup? timing = null;
         cache?.Begin(document, compensateTinyDroplets);
+        Dictionary<Guid, CatchLegacyRandom>? hardRockStates = document.DerandomizeFSliderDroplets && document.DerandomizeDropletsForHardRock
+            ? HardRockRandomStates(document, cache, timing ??= new(document)) : null;
         var parents = document.Fruits.Select(f => new Source(f.TimeMs, f.SourceOrder, f, null, null, null))
             .Concat(document.Tracks.Select(t => new Source(t.Nodes.Count > 0 ? t.Nodes[0].TimeMs : 0, t.SourceOrder, null, t, null, null)))
             .Concat(document.ImportedSliders.Select(s => new Source(s.TimeMs, s.SourceOrder, null, null, s, null)))
             .Concat(document.BananaShowers.Select(b => new Source(b.TimeMs, b.SourceOrder, null, null, null, b)))
             .OrderBy(s => s.TimeMs).ThenBy(s => s.SourceOrder);
         var rng = new CatchLegacyRandom(1337);
-        TimingMap.Lookup? timing = null;
         foreach (var source in parents)
         {
             Guid sourceId = source.Fruit?.Id ?? source.Track?.Id ?? source.ImportedSlider?.Id ?? source.BananaShower!.Id;
@@ -52,7 +54,9 @@ public static class CatchStreamConverter
             {
                 var before = rng;
                 int firstEventIndex = objects.Count;
-                if (cache is not null && cache.TryGet(source.Track, source.ImportedSlider, source.BananaShower, ref rng, firstEventIndex, out var cachedSlider, out var cachedObjects))
+                CatchLegacyRandom? hardRockBefore = source.Track is { StreamSnapDivisor: null } hrTrack && hardRockStates is not null
+                    && hardRockStates.TryGetValue(hrTrack.Id, out var hrState) ? hrState : null;
+                if (cache is not null && cache.TryGet(source.Track, source.ImportedSlider, source.BananaShower, ref rng, firstEventIndex, hardRockBefore, out var cachedSlider, out var cachedObjects))
                 {
                     if (cachedSlider is not null) sliders.Add(cachedSlider);
                     objects.AddRange(cachedObjects); continue;
@@ -85,11 +89,11 @@ public static class CatchStreamConverter
                     cache?.Store(track, null, null, before, rng, null, stream, firstEventIndex);
                     continue;
                 }
-                var converted = ConvertTrack(document, track, track.CompensateTinyDroplets ?? compensateTinyDroplets,
-                    ref rng, (timing ??= new(document)).At(track.Nodes[0].TimeMs), firstEventIndex, cache?.PositionAtTime(track));
+                var converted = ConvertTrack(document, track, document.DerandomizeFSliderDroplets || (track.CompensateTinyDroplets ?? compensateTinyDroplets),
+                    ref rng, (timing ??= new(document)).At(track.Nodes[0].TimeMs), firstEventIndex, cache?.PositionAtTime(track), hardRockBefore);
                 sliders.Add(converted.Slider);
                 objects.AddRange(converted.Objects);
-                cache?.Store(track, null, null, before, rng, converted.Slider, converted.Objects, firstEventIndex);
+                cache?.Store(track, null, null, before, rng, converted.Slider, converted.Objects, firstEventIndex, hardRockBefore);
             }
             catch (CatchConversionException error)
             {
@@ -113,12 +117,14 @@ public static class CatchStreamConverter
             Diagnostics = diagnostics.ToArray(),
             Success = success && (sliders.Count > 0 || objects.Count > 0 || diagnostics.Count == 0),
             MaxTickError = objects.Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet).Select(o => Math.Abs(o.X - o.TargetX)).DefaultIfEmpty().Max(),
-            MaxTinyError = objects.Where(o => o.Kind == CatchObjectKind.TinyDroplet).Select(o => Math.Abs(o.X - o.TargetX)).DefaultIfEmpty().Max()
+            MaxTinyError = document.DerandomizeFSliderDroplets && document.DerandomizeDropletsForHardRock
+                ? sliders.Select(slider => slider.MaxTinyError).DefaultIfEmpty().Max()
+                : objects.Where(o => o.Kind == CatchObjectKind.TinyDroplet).Select(o => Math.Abs(o.X - o.TargetX)).DefaultIfEmpty().Max()
         };
     }
 
     private static TrackConversion ConvertTrack(MapDocument document, CurveTrack track, bool requestCompensation,
-        ref CatchLegacyRandom globalRng, TimingState timing, int firstEventIndex, Func<double, double>? positionAtTime = null)
+        ref CatchLegacyRandom globalRng, TimingState timing, int firstEventIndex, Func<double, double>? positionAtTime = null, CatchLegacyRandom? hardRockBefore = null)
     {
         positionAtTime ??= time => CurveMath.PositionAtTime(track, time);
         double start = track.Nodes[0].TimeMs;
@@ -128,7 +134,7 @@ public static class CatchStreamConverter
         double maximumSv = Math.Min(LegacyCatchRules.MaximumSliderVelocityMultiplier,
             Math.Max(sv, LegacyCatchRules.MaximumPathLength * timing.BeatLengthMs
                 / (duration * 100 * document.SliderMultiplier) * (1 - 1e-7)));
-        bool randomize = track.DropletRandomization is { Enabled: true };
+        bool randomize = !document.DerandomizeFSliderDroplets && track.DropletRandomization is { Enabled: true };
         bool compensate = randomize || requestCompensation;
 
         for (int attempt = 0; attempt < 18; attempt++)
@@ -144,6 +150,12 @@ public static class CatchStreamConverter
             // RNG follows each complete parent stream before the next parent, including overlapping streams.
             var candidateRng = globalRng;
             LegacyCatchRules.ApplyRandomSequence(nested, ref candidateRng);
+            int[]? normalOffsets = null;
+            if (hardRockBefore is { } hrRng)
+            {
+                normalOffsets = nested.Select(item => item.RawOffset).ToArray();
+                LegacyCatchRules.ApplyRandomSequence(nested, ref hrRng);
+            }
             var targetAtTime = randomize ? DropletRandomization.Targets(document, track, nested, positionAtTime, firstEventIndex) : positionAtTime;
             List<MapPoint> samples;
             try { samples = Samples(track, nested, compensate, targetAtTime); }
@@ -183,7 +195,8 @@ public static class CatchStreamConverter
             {
                 var item = nested[index];
                 float pathX = (float)geometry.XAtDistance(item.Progress * length);
-                float offset = item.Kind == CatchObjectKind.TinyDroplet ? Math.Clamp(item.RawOffset, -pathX, 512 - pathX) : 0;
+                float rawOffset = normalOffsets is not null ? normalOffsets[index] : item.RawOffset;
+                float offset = item.Kind == CatchObjectKind.TinyDroplet ? Math.Clamp(rawOffset, -pathX, 512 - pathX) : 0;
                 float effectiveX = Math.Clamp(pathX + offset, 0, 512);
                 converted.Add(new(track.Id, index, item.Kind, item.TimeMs, effectiveX,
                     Math.Clamp((item.Kind == CatchObjectKind.TinyDroplet ? targetAtTime : positionAtTime)(item.TimeMs), 0, 512), pathX, offset));
@@ -191,8 +204,9 @@ public static class CatchStreamConverter
 
             double tickError = converted.Where(o => o.Kind != CatchObjectKind.TinyDroplet)
                 .Select(o => Math.Abs(o.X - o.TargetX)).DefaultIfEmpty().Max();
-            double tinyError = converted.Where(o => o.Kind == CatchObjectKind.TinyDroplet)
-                .Select(o => Math.Abs(o.X - o.TargetX)).DefaultIfEmpty().Max();
+            double tinyError = converted.Select((item, index) => (item, index)).Where(pair => pair.item.Kind == CatchObjectKind.TinyDroplet)
+                .Select(pair => Math.Abs((hardRockBefore is not null
+                    ? Math.Clamp(pair.item.PathX + nested[pair.index].RawOffset, 0, 512) : pair.item.X) - pair.item.TargetX)).DefaultIfEmpty().Max();
             if (tickError > AlignmentTolerance)
                 throw new CatchConversionException(L.Get("core.conversion.tickError", tickError));
 
@@ -207,6 +221,70 @@ public static class CatchStreamConverter
             }, converted);
         }
         throw new CatchConversionException(L.Get("core.conversion.iterationLimit"));
+    }
+
+    private static Dictionary<Guid, CatchLegacyRandom> HardRockRandomStates(MapDocument document, CatchConversionCache? cache, TimingMap.Lookup timing)
+    {
+        var sources = document.Fruits.Select(f => new Source(f.TimeMs, f.SourceOrder, f, null, null, null)).ToList();
+        foreach (var track in document.Tracks.Where(t => t.Nodes.Count >= 2))
+        {
+            if (track.StreamSnapDivisor is null) sources.Add(new(track.Nodes[0].TimeMs, track.SourceOrder, null, track, null, null));
+            else
+            {
+                try
+                {
+                    var stream = cache?.ContextObjects(track: track) ?? SliderFruitStream.Convert(document, track, timing);
+                    foreach (var item in stream) sources.Add(new(item.TimeMs, track.SourceOrder,
+                        new Fruit { TimeMs = item.TimeMs, X = item.X }, null, null, null, track.Nodes[0].TimeMs));
+                }
+                catch (CatchConversionException) { }
+            }
+        }
+        sources.AddRange(document.ImportedSliders.Select(slider => new Source(slider.TimeMs, slider.SourceOrder, null, null, slider, null)));
+        sources.AddRange(document.BananaShowers.Select(shower => new Source(shower.TimeMs, shower.SourceOrder, null, null, null, shower)));
+        var result = new Dictionary<Guid, CatchLegacyRandom>();
+        var state = new CatchHardRockState();
+        foreach (var source in sources.OrderBy(s => s.TimeMs).ThenBy(s => s.SourceOrder).ThenBy(s => s.ParentStartTime ?? s.TimeMs))
+        {
+            if (source.Fruit is { } fruit)
+            {
+                // HR branches on exported coordinates and timestamps before consuming RNG.
+                state.Fruit((float)Math.Round(fruit.X, MidpointRounding.AwayFromZero), OsuBeatmapWriter.QuantizeTime(fruit.TimeMs));
+                continue;
+            }
+            try
+            {
+                IReadOnlyList<ConvertedCatchObject>? events = cache?.ContextObjects(source.Track, source.ImportedSlider, source.BananaShower);
+                if (source.Track is { } track)
+                {
+                    result[track.Id] = state.Random;
+                    state.Slider((float)Math.Round(track.Nodes[^1].X, MidpointRounding.AwayFromZero), OsuBeatmapWriter.QuantizeTime(source.TimeMs));
+                    if (events is null)
+                    {
+                        var at = timing.At(source.TimeMs);
+                        double velocity = LegacyCatchRules.Velocity(at.BeatLengthMs, document.SliderMultiplier, at.SliderVelocityMultiplier);
+                        double duration = track.Nodes[^1].TimeMs - source.TimeMs;
+                        var nested = LegacyCatchRules.CreateNested(source.TimeMs, duration, velocity,
+                            velocity * at.BeatLengthMs / document.SliderTickRate, duration * velocity, track.SpanCount);
+                        LegacyCatchRules.ApplyRandomSequence(nested, ref state.Random);
+                        continue;
+                    }
+                }
+                else if (source.ImportedSlider is { } imported)
+                {
+                    state.Slider(imported.ControlPoints.Count > 0 ? (float)imported.ControlPoints[^1].X : (float)imported.X, OsuBeatmapWriter.QuantizeTime(source.TimeMs));
+                    if (events is null) { ImportedSliderConverter.Convert(document, imported, ref state.Random, timing); continue; }
+                }
+                else if (events is null) { ConvertBananas(source.BananaShower!, ref state.Random); continue; }
+                foreach (var item in events!)
+                {
+                    if (item.Kind == CatchObjectKind.Banana) { state.Random.Next(); state.Random.Next(); state.Random.Next(); state.Random.Next(); }
+                    else if (item.Kind is CatchObjectKind.TinyDroplet or CatchObjectKind.Droplet) state.Random.Next();
+                }
+            }
+            catch (CatchConversionException) { }
+        }
+        return result;
     }
 
     private static List<MapPoint> Samples(CurveTrack track, IReadOnlyList<NestedCatchEvent> nested, bool compensate, Func<double, double> positionAtTime)
@@ -275,7 +353,7 @@ public static class CatchStreamConverter
         return result;
     }
 
-    private sealed record Source(double TimeMs, int SourceOrder, Fruit? Fruit, CurveTrack? Track, ImportedSlider? ImportedSlider, BananaShower? BananaShower);
+    private sealed record Source(double TimeMs, int SourceOrder, Fruit? Fruit, CurveTrack? Track, ImportedSlider? ImportedSlider, BananaShower? BananaShower, double? ParentStartTime = null);
     private sealed record TrackConversion(GeneratedSlider Slider, IReadOnlyList<ConvertedCatchObject> Objects);
     private sealed class TinyConstraintException(string message) : CatchConversionException(message);
 }

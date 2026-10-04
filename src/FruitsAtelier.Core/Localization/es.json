@@ -1160,16 +1160,19 @@
   "language.simplifiedChinese": "简体中文",
   "language.traditionalChinese": "繁体中文",
   "randomize.title": "Aleatorizar gotas",
-  "randomize.enableAll": "Activar todos los FSliders",
-  "randomize.disableAll": "Desactivar todos los FSliders",
+  "randomize.enableAll": "Habilitar aleatorización en todos los FSliders",
+  "randomize.disableAll": "Deshabilitar aleatorización en todos los FSliders",
   "randomize.enableSelected": "Activar aleatorización",
   "randomize.disableSelected": "Desactivar aleatorización",
   "randomize.resetStrength": "Restablecer intensidad (20)",
   "randomize.resetAdjustments": "Restablecer ajustes manuales",
   "randomize.settings": "Ajustes de aleatorización…",
   "randomize.count": "FSliders activos: {0} / {1}",
-  "randomize.help": "Intensidad en píxeles (0–100). Arrastra las gotas pequeñas para ajustarlas.",
   "randomize.invalid": "La intensidad debe ser de 0–100 y Seed debe ser un entero de 32 bits.",
   "song.RandomizeDropletStrength": "Intensidad (px)",
-  "song.RandomizeDropletSeed": "Seed"
+  "song.RandomizeDropletSeed": "Seed",
+  "randomize.derandomizeOn": "Desaleatorizar gotas: Sí",
+  "randomize.derandomizeOff": "Desaleatorizar gotas: No",
+  "randomize.derandomizeHrOn": "Desaleatorizar para el modo HR: Sí",
+  "randomize.derandomizeHrOff": "Desaleatorizar para el modo HR: No"
 }

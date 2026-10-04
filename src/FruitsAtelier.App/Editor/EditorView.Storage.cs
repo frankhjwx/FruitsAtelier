@@ -19,6 +19,8 @@ public sealed partial class EditorView
     private bool workspaceScrollDragging;
     private Rect cleanHistoryBounds, clearCacheBounds;
     private float WorkspaceContentHeight => 527 + StorageFolderCount * 20;
+    private float GeneralContentHeight => SupportsDisplayMode ? 468 : 324;
+    private float SettingsScrollableHeight => settingsCategory == SettingsCategory.General ? GeneralContentHeight : WorkspaceContentHeight;
     private int StorageFolderCount => Math.Min(8, storageReport?.Folders.Count ?? 0);
     private string storageRoot = "", storageError = "";
     private bool storageReindex;
@@ -151,7 +153,7 @@ public sealed partial class EditorView
     private void DrawWorkspaceSettings(ICanvas c)
     {
         workspaceScrollBounds = new(SettingsContentX, SettingsTop + 122, SettingsRight - SettingsContentX - 20, SettingsBounds.Height - 252);
-        workspaceScroll = Math.Clamp(workspaceScroll, 0, Math.Max(0, WorkspaceContentHeight - workspaceScrollBounds.Height));
+        workspaceScroll = Math.Clamp(workspaceScroll, 0, Math.Max(0, SettingsScrollableHeight - workspaceScrollBounds.Height));
         float top = SettingsTop - workspaceScroll;
         int firstHit = hits.Count;
         c.Clip(workspaceScrollBounds);
@@ -161,6 +163,12 @@ public sealed partial class EditorView
         c.Line(SettingsContentX, top + 340, SettingsRight - 32, top + 340, Grid);
         DrawStorage(c, top + 356);
         c.Unclip();
+        ClipSettingsHits(firstHit);
+        DrawSettingsScrollbar(c, WorkspaceContentHeight);
+    }
+
+    private void ClipSettingsHits(int firstHit)
+    {
         for (int i = hits.Count - 1; i >= firstHit; i--)
         {
             var bounds = hits[i].Bounds;
@@ -168,9 +176,14 @@ public sealed partial class EditorView
             if (end <= start) hits.RemoveAt(i);
             else hits[i] = hits[i] with { Bounds = bounds with { Y = start, Height = end - start } };
         }
+    }
+
+    private void DrawSettingsScrollbar(ICanvas c, float contentHeight)
+    {
+        if (contentHeight <= workspaceScrollBounds.Height) return;
         workspaceScrollTrack = new(SettingsRight - 16, workspaceScrollBounds.Y, 6, workspaceScrollBounds.Height);
-        float thumbHeight = Math.Min(workspaceScrollTrack.Height, Math.Max(24, workspaceScrollTrack.Height * workspaceScrollBounds.Height / WorkspaceContentHeight));
-        float travel = workspaceScrollTrack.Height - thumbHeight, maximum = Math.Max(0, WorkspaceContentHeight - workspaceScrollBounds.Height);
+        float thumbHeight = Math.Min(workspaceScrollTrack.Height, Math.Max(24, workspaceScrollTrack.Height * workspaceScrollBounds.Height / contentHeight));
+        float travel = workspaceScrollTrack.Height - thumbHeight, maximum = Math.Max(0, contentHeight - workspaceScrollBounds.Height);
         workspaceScrollThumb = new(workspaceScrollTrack.X, workspaceScrollTrack.Y + (maximum > 0 ? workspaceScroll / maximum * travel : 0), 6, thumbHeight);
         c.Fill(workspaceScrollTrack, Surface, 3); c.Fill(workspaceScrollThumb, Muted, 3);
     }
@@ -184,16 +197,16 @@ public sealed partial class EditorView
 
     private void ScrollStorage(float x, float y, float delta)
     {
-        if (settingsCategory == SettingsCategory.Workspace && workspaceScrollBounds.Contains(x, y))
+        if (settingsCategory is SettingsCategory.Workspace or SettingsCategory.General && workspaceScrollBounds.Contains(x, y))
         {
             libraryField = -1;
-            workspaceScroll = Math.Clamp(workspaceScroll - delta / 120 * 64, 0, Math.Max(0, WorkspaceContentHeight - workspaceScrollBounds.Height));
+            workspaceScroll = Math.Clamp(workspaceScroll - delta / 120 * 64, 0, Math.Max(0, SettingsScrollableHeight - workspaceScrollBounds.Height));
         }
     }
 
     private bool BeginWorkspaceScroll(float x, float y, int button)
     {
-        if (settingsCategory != SettingsCategory.Workspace || button != 0 || !workspaceScrollTrack.Contains(x, y)) return false;
+        if (settingsCategory is not (SettingsCategory.Workspace or SettingsCategory.General) || SettingsScrollableHeight <= workspaceScrollBounds.Height || button != 0 || !workspaceScrollTrack.Contains(x, y)) return false;
         workspaceScrollGrab = workspaceScrollThumb.Contains(x, y) ? y - workspaceScrollThumb.Y : workspaceScrollThumb.Height / 2;
         workspaceScrollDragging = true; libraryField = -1; MoveWorkspaceScroll(y); return true;
     }
@@ -201,7 +214,7 @@ public sealed partial class EditorView
     private void MoveWorkspaceScroll(float y)
     {
         float fraction = Math.Clamp((y - workspaceScrollTrack.Y - workspaceScrollGrab) / Math.Max(1, workspaceScrollTrack.Height - workspaceScrollThumb.Height), 0, 1);
-        workspaceScroll = fraction * Math.Max(0, WorkspaceContentHeight - workspaceScrollBounds.Height);
+        workspaceScroll = fraction * Math.Max(0, SettingsScrollableHeight - workspaceScrollBounds.Height);
     }
 
     private static string Size(long bytes) => bytes >= 1024L * 1024 * 1024 ? $"{bytes / (1024d * 1024 * 1024):F2} GiB" : $"{bytes / (1024d * 1024):F1} MiB";

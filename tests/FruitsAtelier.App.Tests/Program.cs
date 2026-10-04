@@ -102,6 +102,7 @@ var tests = new (string Name, Action Run)[]
     ("Deleted copied difficulties remain missing without prompting duplicate cleanup", SynchronizationUiTests.DeletedCopiesRemainMissing),
     ("Library archive drops preserve Songs and report source/export presence", LibraryImportTests.Run),
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
+    ("Map and HR derandomization drafts disable FX controls and support history", DropletDerandomizationTests.Run),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
     ("Settings layout preserves labels and aligns controls in narrow windows", SettingsTests.Layout),

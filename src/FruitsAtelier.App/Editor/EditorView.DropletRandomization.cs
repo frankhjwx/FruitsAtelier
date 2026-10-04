@@ -6,8 +6,9 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private bool? songRandomizeAll;
+    private bool songDerandomizeDroplets, songDerandomizeHardRock;
     private CurveTrack? RandomizeSelectedTrack => SelectedTrack is { StreamSnapDivisor: null } track ? track : null;
-    private bool CanRandomizeDroplets => ClipboardInteractionReady && !notesLocked;
+    private bool CanRandomizeDroplets => ClipboardInteractionReady && !notesLocked && !Document.DerandomizeFSliderDroplets;
 
     private static void SetDropletRandomization(CurveTrack track, bool enabled)
     {

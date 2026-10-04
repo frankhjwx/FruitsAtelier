@@ -4,17 +4,17 @@ namespace FruitsAtelier.Core;
 public sealed class CatchConversionCache
 {
     private sealed record Entry(CurveTrack? Track, ImportedSlider? Imported, BananaShower? Banana,
-        TimingState Timing, CatchLegacyRandom Before, CatchLegacyRandom After, GeneratedSlider? Slider, IReadOnlyList<ConvertedCatchObject> Objects, int FirstEventIndex);
+        TimingState Timing, CatchLegacyRandom Before, CatchLegacyRandom After, GeneratedSlider? Slider, IReadOnlyList<ConvertedCatchObject> Objects, int FirstEventIndex, CatchLegacyRandom? HardRockBefore);
     private readonly Dictionary<Guid, Entry> entries = new();
     private sealed record TrackPositions(CurveTrack Snapshot, Dictionary<double, double> Values);
     private readonly Dictionary<Guid, TrackPositions> trackPositions = new();
     private readonly HashSet<Guid> seen = new();
-    private (double, double, double, double, double, double, bool, double, int) settings;
+    private (double, double, double, double, double, double, bool, double, int, bool, bool) settings;
     private TimingMap.Lookup? timing;
     internal void Begin(MapDocument document, bool compensation)
     {
         var current = (document.DurationMs, document.BeatLengthMs, document.TimingOffsetMs, document.ApproachRate,
-            document.SliderMultiplier, document.SliderTickRate, compensation, document.RandomizeDropletStrength, document.RandomizeDropletSeed);
+            document.SliderMultiplier, document.SliderTickRate, compensation, document.RandomizeDropletStrength, document.RandomizeDropletSeed, document.DerandomizeFSliderDroplets, document.DerandomizeDropletsForHardRock);
         if (current != settings)
         {
             entries.Clear(); trackPositions.Clear(); settings = current;
@@ -43,11 +43,12 @@ public sealed class CatchConversionCache
         };
     }
     internal bool TryGet(CurveTrack? track, ImportedSlider? imported, BananaShower? banana, ref CatchLegacyRandom rng,
-        int firstEventIndex, out GeneratedSlider? slider, out IReadOnlyList<ConvertedCatchObject> objects)
+        int firstEventIndex, CatchLegacyRandom? hardRockBefore, out GeneratedSlider? slider, out IReadOnlyList<ConvertedCatchObject> objects)
     {
         Guid id = track?.Id ?? imported?.Id ?? banana!.Id; seen.Add(id);
         slider = null; objects = [];
         if (!entries.TryGetValue(id, out var entry) || !rng.SameState(entry.Before)
+            || hardRockBefore is { } hr && (entry.HardRockBefore is not { } savedHr || !hr.SameState(savedHr))
             || track is { StreamSnapDivisor: null, DropletRandomization.Enabled: true } && firstEventIndex != entry.FirstEventIndex
             || (track is not null ? entry.Track is null || !Equal(track, entry.Track)
                 : imported is not null ? entry.Imported is null || !Equal(imported, entry.Imported)
@@ -59,10 +60,20 @@ public sealed class CatchConversionCache
         rng = entry.After; slider = entry.Slider; objects = entry.Objects; return true;
     }
     internal void Store(CurveTrack? track, ImportedSlider? imported, BananaShower? banana,
-        CatchLegacyRandom before, CatchLegacyRandom after, GeneratedSlider? slider, IReadOnlyList<ConvertedCatchObject> objects, int firstEventIndex)
+        CatchLegacyRandom before, CatchLegacyRandom after, GeneratedSlider? slider, IReadOnlyList<ConvertedCatchObject> objects, int firstEventIndex, CatchLegacyRandom? hardRockBefore = null)
     {
         entries[track?.Id ?? imported?.Id ?? banana!.Id] = new(track?.DeepClone(), imported?.DeepClone(), banana?.DeepClone(),
-            TimingAt(track, imported), before, after, slider, objects, firstEventIndex);
+            TimingAt(track, imported), before, after, slider, objects, firstEventIndex, hardRockBefore);
+    }
+
+    internal IReadOnlyList<ConvertedCatchObject>? ContextObjects(CurveTrack? track = null, ImportedSlider? imported = null, BananaShower? banana = null)
+    {
+        Guid id = track?.Id ?? imported?.Id ?? banana!.Id;
+        if (!entries.TryGetValue(id, out var entry) || entry.Timing != TimingAt(track, imported)) return null;
+        bool same = track is not null ? entry.Track is not null && Equal(track, entry.Track)
+            : imported is not null ? entry.Imported is not null && Equal(imported, entry.Imported)
+            : entry.Banana is not null && banana!.TimeMs == entry.Banana.TimeMs && banana.EndTimeMs == entry.Banana.EndTimeMs;
+        return same ? entry.Objects : null;
     }
 
     private TimingState TimingAt(CurveTrack? track, ImportedSlider? imported)

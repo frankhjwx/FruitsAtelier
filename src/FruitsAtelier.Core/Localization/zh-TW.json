@@ -1160,16 +1160,19 @@
   "language.simplifiedChinese": "简体中文",
   "language.traditionalChinese": "繁体中文",
   "randomize.title": "水滴隨機化",
-  "randomize.enableAll": "開啟所有 FSlider",
-  "randomize.disableAll": "關閉所有 FSlider",
+  "randomize.enableAll": "啟用所有 FSlider 的隨機化",
+  "randomize.disableAll": "停用所有 FSlider 的隨機化",
   "randomize.enableSelected": "開啟隨機化",
   "randomize.disableSelected": "關閉隨機化",
   "randomize.resetStrength": "重設強度（20）",
   "randomize.resetAdjustments": "重設水滴手動修正",
   "randomize.settings": "隨機化設定…",
   "randomize.count": "已開啟的 FSlider：{0} / {1}",
-  "randomize.help": "強度以像素計（0–100）。可拖曳小水滴進行手動修正。",
   "randomize.invalid": "強度必須為 0–100，Seed 必須為 32 位元整數。",
   "song.RandomizeDropletStrength": "強度（px）",
-  "song.RandomizeDropletSeed": "Seed"
+  "song.RandomizeDropletSeed": "Seed",
+  "randomize.derandomizeOn": "去隨機化 droplets: 開啟",
+  "randomize.derandomizeOff": "去隨機化 droplets: 關閉",
+  "randomize.derandomizeHrOn": "HR 模式去隨機化: 開啟",
+  "randomize.derandomizeHrOff": "HR 模式去隨機化: 關閉"
 }
