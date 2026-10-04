@@ -6,7 +6,7 @@
 
 An osu!catch beatmap editor for Windows and macOS. Create patterns, reshape sliders, and try your changes with music and hitsounds.
 
-**Current version: 0.9.5**
+**Current version: 0.9.6**
 
 ## Features
 
@@ -18,7 +18,7 @@ An osu!catch beatmap editor for Windows and macOS. Create patterns, reshape slid
 - **Music and preview.** Play MP3, OGG, and WAV audio with hitsounds at 10%, 25%, 50%, 75%, 100%, or 150% speed. Preview Catch objects with skins and NM, Easy, or Hard Rock settings.
 - **Testplay.** Play from the current position with movement, dash, combo feedback, and optional autoplay. Movement keys are configurable.
 - **Multiple difficulties.** Switch between difficulties in tabs, view star ratings, save editable projects, and export `.osu` files or new difficulties to osu!stable.
-- **Skins and languages.** Use osu!stable skins or import `.osk` files. The interface supports English and Simplified Chinese.
+- **Skins and languages.** Use osu!stable skins or import `.osk` files. The interface supports English, Simplified Chinese, Traditional Chinese, Japanese, Korean, Russian, Spanish, French, Polish, Dutch, Filipino, Indonesian, and Thai.
 
 The editor reads Catch `.osu` files in versions 12-14 and stable-compatible lazer v128 and exports version 14. Video and storyboard playback are not available in 0.9.
 

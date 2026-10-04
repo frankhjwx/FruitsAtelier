@@ -309,7 +309,7 @@ public static class WorkspaceSynchronization
         if (external.Text == baseline.Text && AudioHash(external.Document.AudioPath) == baseline.AudioHash
             && AuthoringChanged(local, original))
         {
-            merge.CanExportLocalChanges = true;
+            merge.CanExportLocalChanges = entry.ExportConfirmed;
             return merge;
         }
         var emittedBaseline = OsuBeatmapReader.Read(baseline.Text, baseline.Path);
@@ -543,7 +543,7 @@ public static class WorkspaceSynchronization
 
     public static WorkspaceExportPlan PlanLocalChanges(WorkspaceSession session, WorkspaceDifficulty entry, WorkspaceMerge merge, OsuWriteCache? cache = null)
     {
-        if (!merge.CanExportLocalChanges || entry.Sync is not { } baseline || merge.External.Text != baseline.Text)
+        if (!entry.ExportConfirmed || !merge.CanExportLocalChanges || entry.Sync is not { } baseline || merge.External.Text != baseline.Text)
             throw new InvalidOperationException(L.Get("sync.baseline"));
         if (AudioHash(merge.External.Document.AudioPath) != baseline.AudioHash)
             throw new IOException(L.Get("library.exportConflict", merge.External.Path));
@@ -806,7 +806,7 @@ public static class WorkspaceSynchronization
     private static readonly HashSet<string> SettingsSections = ["General", "Editor", "Metadata", "Difficulty", "Colours"];
     private static bool FieldEquals(string key, string? left, string? right, MapDocument? leftDocument = null, MapDocument? rightDocument = null)
     {
-        if (left == right || key == "Editor/TimelineZoom") return true;
+        if (left == right || key is "Editor/TimelineZoom" or "General/SampleSet") return true;
         if (key == "TimingPoints/") return TimingComparison(left) == TimingComparison(right);
         if (key == "Events/") return EventComparison(left) == EventComparison(right)
             || leftDocument is not null && rightDocument is not null

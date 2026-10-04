@@ -24,7 +24,7 @@ internal static class SyncTabsTests
                 string root = Path.GetFullPath(Path.Combine("artifacts/tests/sync-tabs", Guid.NewGuid().ToString("N")));
                 string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
                 Directory.CreateDirectory(Path.GetDirectoryName(source)!);
-                string original = "osu file format v14\n[General]\nAudioFilename:music.wav\nMode:2\nSampleSet:Soft\nPreviewTime:-1\n[Metadata]\nVersion:Catch\nArtist:Artist\nTitle:Tabs\n[Difficulty]\nApproachRate:5\nCircleSize:5\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,2,0,100,1,0\n[HitObjects]\n100,192,1000,1,0,0:0:0:0:\n304,192,257090,1,0,0:0:0:0:\n200,192,260000,1,0,0:0:0:0:\n";
+                string original = "osu file format v14\n[General]\nAudioFilename:music.wav\nMode:2\nSampleSet:Soft\nStackLeniency:0.7\nPreviewTime:-1\n[Metadata]\nVersion:Catch\nArtist:Artist\nTitle:Tabs\n[Difficulty]\nApproachRate:5\nCircleSize:5\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,2,0,100,1,0\n[HitObjects]\n100,192,1000,1,0,0:0:0:0:\n304,192,257090,1,0,0:0:0:0:\n200,192,260000,1,0,0:0:0:0:\n";
                 File.WriteAllText(source, original);
                 File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(source)!, "music.wav"), [1, 2, 3, 4]);
                 var ui = new Ui(false); ui.Resize(width, 900);
@@ -38,14 +38,15 @@ internal static class SyncTabsTests
                 double position = ui.View.PlayheadMs, viewStart = ui.View.ViewStartMs;
                 try
                 {
-                    File.WriteAllText(source, original.Replace("SampleSet:Soft", "SampleSet:None").Replace("PreviewTime:-1", "PreviewTime:1000")
+                    File.WriteAllText(source, original.Replace("SampleSet:Soft", "SampleSet:None").Replace("StackLeniency:0.7", "StackLeniency:0.5").Replace("PreviewTime:-1", "PreviewTime:1000")
                         .Replace("257090,1", "257090,5").Replace("200,192,260000", "240,192,260000"));
                     ui.View.RefreshSynchronization(); Wait(ui);
                     var before = ui.View.Document.DeepClone();
                     Check(TabColour("General") == 0xED737B && TabColour("Objects") == 0xED737B && TabColour("Metadata") != 0xED737B, "tabs identify conflicted and clean categories");
                     Check(ui.Canvas.Texts.Any(t => t.Value == "Mode"), "unchanged fixed field is included");
-                    Check(Row("PreviewTime") < Row("SampleSet") && Row("SampleSet") < Row("Mode"), "General uses fixed field order, not source order");
-                    Select("SampleSet", true); Check(TabColour("General") == 0xD5A34D, "partially resolved tab is amber");
+                    Check(!ui.Canvas.Texts.Any(t => t.Value.StartsWith("SampleSet")), "General SampleSet is omitted from synchronization review");
+                    Check(Row("PreviewTime") < Row("StackLeniency") && Row("StackLeniency") < Row("Mode"), "General uses fixed field order, not source order");
+                    Select("StackLeniency", true); Check(TabColour("General") == 0xD5A34D, "partially resolved tab is amber");
                     Select("PreviewTime", false); Check(TabColour("General") == 0x70D69B, "fully resolved tab is green");
                     ui.ClickText("Metadata"); Check(ui.Canvas.Texts.Any(t => t.Value == "Title") && Row("Title") < Row("Artist"), "clean category shows complete ordered context");
                     ui.ClickText("Events"); ui.ClickText("Timing"); ui.ClickText("Objects");
@@ -58,7 +59,8 @@ internal static class SyncTabsTests
                     Check(before.ContentEquals(ui.View.Document), "tabs, scrolling and choices do not apply edits early");
                     var previousVersions = WorkspaceVersionHistory.List(ui.View.WorkspaceSession!).Select(v => v.Path).ToHashSet();
                     ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
-                    Check(!ui.View.SynchronizationVisible && OsuBeatmapReader.Setting(ui.View.Document, "General", "SampleSet") == "None"
+                    Check(!ui.View.SynchronizationVisible && OsuBeatmapReader.Setting(ui.View.Document, "General", "SampleSet") == "Soft"
+                        && OsuBeatmapReader.Setting(ui.View.Document, "General", "StackLeniency") == "0.5"
                         && ui.View.Document.Fruits.Single(f => f.TimeMs == 260000).X == 200, "mixed category choices apply correctly");
                     Check(audioReloads == 0 && ui.View.AudioReady && ui.View.PlayheadMs == position && ui.View.ViewStartMs == viewStart,
                         $"mixed object resolution retains unchanged audio and nonzero transport position: reloads={audioReloads}, ready={ui.View.AudioReady}, position={position}/{ui.View.PlayheadMs}, view={viewStart}/{ui.View.ViewStartMs}");

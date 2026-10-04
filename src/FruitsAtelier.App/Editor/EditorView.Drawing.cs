@@ -261,6 +261,7 @@ public sealed partial class EditorView
             c.Line(playfield.X, startY, playfield.Right, startY, Gold, 2);
             c.Line(playfield.X, cursorY, playfield.Right, cursorY, Gold, 1);
         }
+        DrawSelectionTransform(c, background: true);
         if (!movementAnalysis) DrawCanvasCatchObjects(c);
         if (showTargets)
         {
@@ -340,6 +341,7 @@ public sealed partial class EditorView
                 }
             }
         }
+        DrawSelectionTransform(c, background: false);
         DrawSelectedDistanceTick(c);
         DrawPlacementGhost(c);
         float headY = Screen(new(playhead, 0)).Y;
@@ -631,6 +633,7 @@ public sealed partial class EditorView
             Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), OpenStreamDialog, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
+            Item(L.Get("randomize.title"), OpenDropletRandomizationMenu, CanRandomizeDroplets);
             Item(L.Get("slider.clearInternalNodes"), ClearSliderNodes, CanClearSliderNodes);
             Item(L.Get("aimod.title"), ShowAimod, ClipboardInteractionReady);
         }
@@ -729,7 +732,7 @@ public sealed partial class EditorView
         void Separator() => items.Add(("", () => { }, false, false, true));
     }
 
-    private void Button(ICanvas c, Rect r, string label, Action action, bool active = false, bool enabled = true, float fontSize = 12, bool? bold = null)
+    private void Button(ICanvas c, Rect r, string label, Action action, bool active = false, bool enabled = true, float fontSize = 12, bool? bold = null, float textPadding = 9, float textRightPadding = 6)
     {
         bool textBold = bold ?? active;
         bool hover = enabled && r.Contains(mouseX, mouseY);
@@ -749,10 +752,10 @@ public sealed partial class EditorView
         {
             string key = label[(shortcut + 2)..].Trim();
             float keyWidth = c.MeasureText(key, fontSize, textBold);
-            c.Text(label[..shortcut], r.X + 9, r.Y + (r.Height - fontSize - 4) / 2, fontSize, color, Math.Max(0, r.Width - keyWidth - 36), textBold);
-            c.Text(key, r.Right - 9 - keyWidth, r.Y + (r.Height - fontSize - 4) / 2, fontSize, color, keyWidth + 1, textBold);
+            c.Text(label[..shortcut], r.X + textPadding, r.Y + (r.Height - fontSize - 4) / 2, fontSize, color, Math.Max(0, r.Width - keyWidth - 36), textBold);
+            c.Text(key, r.Right - textPadding - keyWidth, r.Y + (r.Height - fontSize - 4) / 2, fontSize, color, keyWidth + 1, textBold);
         }
-        else c.Text(label, r.X + 9, r.Y + (r.Height - fontSize - 4) / 2, fontSize, color, r.Width - 15, textBold);
+        else c.Text(label, r.X + textPadding, r.Y + (r.Height - fontSize - 4) / 2, fontSize, color, r.Width - textPadding - textRightPadding, textBold);
         hits.Add(new(r, action, enabled));
     }
 

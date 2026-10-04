@@ -12,6 +12,7 @@ internal static class SynchronizationUiTests
         Directory.CreateDirectory(Path.GetDirectoryName(source)!); File.WriteAllText(source, Fixture);
         ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
         ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);
+        ui.View.WorkspaceSession!.Manifest.Difficulties[0].ExportConfirmed = true;
         ui.View.UpdateTransport(1000, 20000, true, true, false, null, ui.View.Document.AudioPath);
         int pauses = 0, foregroundExports = 0;
         ui.View.RequestPausePlayback = () => pauses++;
@@ -57,6 +58,7 @@ internal static class SynchronizationUiTests
         File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(source)!, "music.wav"), [1, 2, 3, 4]);
         ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
         ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);
+        ui.View.WorkspaceSession!.Manifest.Difficulties[0].ExportConfirmed = true;
         int audioReloads = 0;
         double requestedSeek = -1;
         ui.View.RequestSeek = time => requestedSeek = time;
@@ -172,7 +174,7 @@ internal static class SynchronizationUiTests
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.timingOffsetSummary", shifted.TimingPoints.Count, 12))
                     && ui.Canvas.Texts.Any(t => t.Value == L.Get("sync.timingOffsetSummary", shifted.TimingPoints.Count, 0)),
                     "uniform offset shows one localized summary per side");
-                Check(!ui.Canvas.Texts.Any(t => t.Value.Contains(",")), "pure offset does not fill the panes with green lines");
+                Check(!ui.Canvas.Texts.Any(t => System.Text.RegularExpressions.Regex.IsMatch(t.Value, @"^-?\d+(?:\.\d+)?,")), "pure offset does not fill the panes with green lines");
                 ui.ClickText(L.Get("sync.chooseLocal")); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
                 Check(ui.View.Document.TimingPoints.Count == before.TimingPoints.Count + 1, "offset summary retains the FA choice");
             }

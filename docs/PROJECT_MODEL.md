@@ -2,7 +2,7 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). All eight schemas are readable. Older applications reject the newer schemas rather than silently discarding curve geometry. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). All twelve schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
 
 ## Authoritative and derived data
 
@@ -99,6 +99,54 @@ FSliders retain the original parent Id, SourceOrder, OriginalLine, and SpanCount
 
 ## Derived conversion
 
+### Droplet randomization
+
+`MapDocument.RandomizeDropletStrength` is the TinyDroplet lateral randomization
+amplitude in playfield pixels (0–100, default 20). Earlier project files with valid
+strengths above 100 are capped at 100 when loaded. `RandomizeDropletSeed` is a signed
+32-bit integer, default 1337. Each ordinary FSlider can retain a
+`DropletRandomization` with its own `Enabled` flag and sorted normalized-time
+`Adjustments`. `RandomizeNewSliders` captures a difficulty's default for newly
+drawn FSliders. It starts false for older projects. New projects capture the
+independent General preference: turning off new-project derandomization sets it
+true and initializes ordinary randomization with Strength 20 and Seed 1337.
+The saved flag survives deep cloning, content equality and single/multi project
+round trips; its true value requires schema 9/10 or later even in an empty project. False
+is omitted for older-schema compatibility. Legacy conversion uses its separate
+saved policy and application preference. Batch switches do not change this flag.
+These fields
+participate in deep cloning, content equality, history, persistence and cache
+invalidation. Slider-managed fruit streams retain dormant effects but do not apply
+them; imported Legacy Sliders retain their existing conversion rules.
+
+Randomization hashes the Seed and the TinyDroplet's index in the complete
+diff-wide generated event sequence. Parents follow conversion order; every fruit,
+droplet, tiny droplet and banana advances the counter, including disabled effects
+and slider-managed streams. A parent's complete nested sequence is counted before
+the next parent, before final time sorting. Earlier additions, removals and event
+count changes shift subsequent random targets. Cached parents retain their event
+counts, and active effects also validate their incoming index. The target first
+clamps the base curve, adds an integer-derived offset scaled by Strength, clamps, adds a matching manual
+adjustment, and clamps again. Fruits and ordinary Droplets retain their base
+targets. Strength zero removes the random contribution; saved manual adjustments
+still apply while the effect is enabled.
+
+Enabled effects request Tiny compensation against these targets, preserving the
+base anchors and handles. Shared repeat geometry, playfield edges and speed limits
+can require partial compensation. The normal legacy RNG still determines actual
+osu offsets and is consumed in complete parent order. Generated geometry encodes
+the effect for `.osu` export; only project files retain editable effect parameters.
+
+Dragging a randomized TinyDroplet or editing its X stores an offset at its
+normalized event time. A candidate must reach the requested X and preserve its
+sibling event positions, otherwise the editor rejects it. Timing/subdivision edits
+retain unmatched adjustments without applying them. Disabling the effect retains
+its corrections and restores the ordinary conversion of the base curve; enabling
+it again restores matching corrections. Copy/paste retains the effect and its
+normalized adjustments.
+
+### Conversion flow
+
 ```text
 Complete MapDocument
   → mixed-segment time–X evaluation / unedited imported L/B/P/C approximation
@@ -128,6 +176,17 @@ Failed objects produce no result, set overall Success=false, and leave RNG corre
 
 Hyperdash uses all Fruit / Droplet results, skipping TinyDroplets and Bananas, and preserves direction and remaining movement. Markers belong to the departure object and recalculate when CS changes.
 
+`DerandomizeFSliderDroplets` is the per-difficulty compensation gate. On suppresses
+FSlider FX targets without deleting switches or correction data, and forces tiny
+compensation even on tracks with an explicit compensation override. With
+`DerandomizeDropletsForHardRock` also On, compensation uses the HR RNG entering
+each exported slider. The shared HR state includes fruit stack offsets and
+rotation/banana draws. Stream fruits join the chronological exported parent
+sequence. Cache reuse additionally checks the incoming HR state, and both flags
+participate in content equality, cloning and undo. Conversion objects retain
+normal-mode X; tiny compensation errors measure the selected mode. HR preview
+and exported read-back apply the ordinary osu HR rules to the generated geometry.
+
 ## Persistence and export
 
 `.catchproj` saves nodes, handles, optional exact OutgoingCurve controls and reference ratios, OutgoingKind, default track Kind, SpanCount, OriginalLine, CompensateTinyDroplets, difficulty, complete timing, and resource references. It excludes undo history, derived objects, and GPU caches. Older projects default to OutgoingKind=null, SpanCount=1, and Tiny override=null. Reading validates schema, IDs, model boundaries, and curve constraints, rejecting unsupported fields and versions. Inherited NaN uses named JSON floating-point representation. Saving replaces a same-directory temporary file and stores resource paths relative to the project directory without copying audio.
@@ -152,3 +211,10 @@ horizontal offsets. Generation first clamps the envelope result, adds the matchi
 fruit adjustment and clamps again. Adjustments do not change event times or
 neighbours, and unmatched keys remain saved when subdivision changes. Horizontal
 mirroring reverses their signs together with the envelope's starting side.
+
+Projects using the map derandomization gate or HR mode use single-difficulty
+schema 11 or multi-difficulty schema 12. Readers still accept the earlier schemas;
+absent flags default to false to preserve existing randomization behavior. New
+blank/audio projects initialize the gate from the General new-project preference.
+The nullable `DerandomizeDroplets` field continues to hold the Legacy conversion
+choice independently of these compensation settings.

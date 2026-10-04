@@ -8,6 +8,7 @@ internal static class StackDialogTests
 
     public static void Run()
     {
+        MatchingInitialTab();
         EdgePreview();
         SharedBreakSwitch();
         CombinedPreview();
@@ -138,11 +139,39 @@ internal static class StackDialogTests
             Check(ui.View.Document.Tracks[0].Stack!.Points.Count == 5
                 && ui.View.Document.Tracks[0].Stack!.FruitAdjustments.Count == 1, "tab switching keeps curve edits and scrolled fruit drag");
             ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "combined confirmation is one undo step");
-            ui.Key('Y', ctrl: true); ui.Key('A', ctrl: true); ui.Key('F', ctrl: true, shift: true); ui.Key(13);
-            Check(ui.View.Document.Tracks[0].Stack is null, "default Stream confirmation converts an existing stack to Stream");
+            ui.Key('Y', ctrl: true); ui.Key('A', ctrl: true); ui.Key('F', ctrl: true, shift: true);
+            Check(ui.View.StackDistanceFieldBounds.Width > 0, "editing an existing Stack opens its Stack tab");
+            ui.ClickText(L.Get("conversion.streamTab")); ui.Key(13);
+            Check(ui.View.Document.Tracks[0].Stack is null, "choosing Stream converts an existing stack to Stream");
             ui.Key('Z', ctrl: true); Check(ui.View.Document.Tracks[0].Stack is not null, "Stack to Stream undo retains envelope");
         }
     }
+    private static void MatchingInitialTab()
+    {
+        foreach (string language in new[] { "en", "zh-CN" })
+        foreach (int kind in new[] { 0, 1, 2 })
+        {
+            L.SetLanguage(language);
+            var map = new MapDocument();
+            var track = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = kind == 0 ? null : 6, Stack = kind == 2 ? new() : null };
+            track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 100 }, new Anchor { TimeMs = 2000, X = 300 }]);
+            map.Tracks.Add(track);
+            var ui = new Ui(); ui.LoadDocument(map); ui.Key('1'); ui.Key('A', ctrl: true);
+            ui.Key('F', ctrl: true, shift: true);
+            CheckTab(); ui.Key(27);
+            ui.MoveMap(1000, 100); ui.Key('F', shift: true);
+            ui.ClickText(L.Get(kind == 0 ? "conversion.title" : "conversion.editTitle"));
+            CheckTab(); ui.Key(27);
+            void CheckTab()
+            {
+                Check(ui.View.StreamDialogVisible && (ui.View.StackDistanceFieldBounds.Width > 0) == (kind == 2),
+                    "keyboard and long-press action entries open the matching Stream/Stack tab");
+                Check(ui.View.Document.ContentEquals(map) && !ui.View.IsDirty, "opening the matching tab preserves content");
+                if (kind != 0) Check(ui.View.StreamSnapDivisor == 6, "existing patterns retain their subdivision");
+            }
+        }
+    }
+
     private static void SharedBreakSwitch()
     {
         foreach (string language in new[] { "en", "zh-CN" })
@@ -154,6 +183,8 @@ internal static class StackDialogTests
             map.Tracks.Add(track); ui.LoadDocument(map); ui.SelectTrack(track.Id);
             ui.ClickText(L.Get("ui.edit")); ui.ClickText(L.Get("conversion.editMenu"));
             Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("conversion.editTitle")), "existing streams and stacks use Edit Stream/Stack");
+            Check(ui.View.StackDistanceFieldBounds.Width > 0 && ui.View.StreamSnapDivisor == 4
+                && ui.View.Document.ContentEquals(map), "Edit menu opens Stack with its saved subdivision without changing content");
             ui.ClickText(L.Get("stream.breakFruits"));
             ui.ClickText(L.Get("conversion.stackTab"));
             Check(ui.View.StreamBreakIntoFruits, "Stack shares the enabled break switch");

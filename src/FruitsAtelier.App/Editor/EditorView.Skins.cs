@@ -79,9 +79,14 @@ public sealed partial class EditorView
 
     private void DrawSkinSelector(ICanvas c, Rect bounds)
     {
-        Button(c, bounds, "", () => OpenSkinMenu(anchor: bounds));
-        c.Text(L.Get("skin.selector", SkinName ?? L.Get("skin.default")) + " ▾", bounds.X + 8, bounds.Y + (bounds.Height - 14) / 2,
-            12, ImportedSkin ? Gold : Foreground, bounds.Width - 16);
+        bool settings = librarySettingsOpen;
+        if (settings) SettingsButton(c, bounds, "", () => OpenSkinMenu(anchor: bounds));
+        else Button(c, bounds, "", () => OpenSkinMenu(anchor: bounds));
+        float size = settings ? SettingsTextSize : 12;
+        float padding = settings ? SettingsControlPadding : 8;
+        c.Text(L.Get("skin.selector", SkinName ?? L.Get("skin.default")) + " ▾", bounds.X + padding,
+            bounds.Y + (bounds.Height - size - (settings ? 4 : 2)) / 2,
+            size, ImportedSkin ? Gold : Foreground, bounds.Width - padding * 2);
     }
 
     private void OpenSkinMenu(int page = 0, Rect? anchor = null)

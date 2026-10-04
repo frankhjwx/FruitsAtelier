@@ -46,7 +46,19 @@ internal static class LocalizationTests
         try
         {
             Check(Strings.Validate().Count == 0, string.Join("; ", Strings.Validate()));
-            Check(Strings.AvailableLanguages.Contains("en") && Strings.AvailableLanguages.Contains("zh-CN"), "Embedded languages missing.");
+            string[] required = ["en", "zh-CN", "zh-TW", "ja", "ko", "ru", "es", "fr", "pl", "nl", "fil", "id", "th"];
+            Check(required.All(Strings.AvailableLanguages.Contains), "Embedded languages missing.");
+            foreach (string locale in required)
+            {
+                Strings.SetLanguage(locale);
+                foreach (string key in new[] { "tools.fruit", "tools.fslider", "tools.newComboAbbreviation", "ui.ar", "ui.cs", "ui.dpb", "conversion.streamTab", "conversion.stackTab", "preview.normal", "preview.easy", "preview.hardRock" })
+                {
+                    string label = Strings.Get(key);
+                    Strings.SetLanguage("en");
+                    Equal(Strings.Get(key), label);
+                    Strings.SetLanguage(locale);
+                }
+            }
             Strings.SetLanguage("zh-CN");
             string message = Strings.Get("files.saved", "演示/user.catchproj");
             string audioError = Strings.Get("audio.unavailable", Strings.Localized(Strings.Get("audio.fileMissing")));

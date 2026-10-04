@@ -104,9 +104,14 @@ public sealed partial class EditorView
         Difficulties = difficulties.Select(d => new ProjectDifficulty { Id = d.Id, Name = d.Name, Document = d.History.Document.DeepClone() }).ToList()
     };
 
+    private MapDocument NewAuthoringDocument() => new()
+    {
+        IsDemo = false, DerandomizeFSliderDroplets = LibrarySettings.DerandomizeNewProjects, RandomizeNewSliders = !LibrarySettings.DerandomizeNewProjects
+    };
+
     public void NewProject()
     {
-        var document = new MapDocument { IsDemo = false };
+        var document = NewAuthoringDocument();
         var metadata = new OsuSection { Name = "Metadata" };
         metadata.Lines.Add("Version:" + L.Get("project.defaultDifficulty", 1));
         document.OriginalSections.Add(metadata);

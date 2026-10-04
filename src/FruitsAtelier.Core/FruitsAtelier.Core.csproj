@@ -7,5 +7,6 @@
     <InternalsVisibleTo Include="FruitsAtelier.Core.Tests" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.22" />
     <EmbeddedResource Include="Localization/*.json" LogicalName="FruitsAtelier.Localization.%(Filename)%(Extension)" WithCulture="false" />
+    <Content Include="Localization/LICENCE.osu-resources.txt" Link="Licenses/LICENCE.osu-resources.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

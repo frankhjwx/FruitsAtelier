@@ -9,6 +9,10 @@ excluded from ownership.
 Synchronization failure messages wrap within the dialog. Scroll over the message
 area to read diagnostics that exceed its height.
 
+Synchronization ignores `[General] SampleSet` differences and omits the field from
+the review panel, preserving the local value when applying other changes. Sample
+banks in timing points remain part of synchronization.
+
 Saving and synchronizing the open difficulty retain the current timeline position
 and viewport. Content-only synchronization keeps the existing audio transport.
 Replacing audio, including changed bytes at the same path, reloads it at the
@@ -166,7 +170,12 @@ anchors keeps related unmatched removals and insertions in one review group.
 
 Local saving preserves the baseline. Synchronization compares the current external
 text and audio content with the last resolved external version, and FA authoring
-with the corresponding authoring snapshot. While the external version is unchanged,
+with the corresponding authoring snapshot. Automatic publication requires an
+explicitly confirmed Songs export for that difficulty. Imported sources and older
+projects without a recorded confirmation remain read-only during synchronization;
+Save opens export choices before their first overwrite. Cancelling keeps the source
+file unchanged. An export on one difficulty does not authorize other difficulties.
+While the external version is unchanged and export is confirmed,
 any new FA content edit automatically exports the complete difficulty when
 synchronization runs. This includes metadata such as Tags, settings, sections,
 notes, curves, timing, break reconciliation and undo/redo. Generated objects and SV

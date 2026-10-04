@@ -167,9 +167,9 @@ internal static class RenderCheck
                 Click(button.X + 10, button.Y + 10);
                 if (!view.SongSetupVisible) throw new InvalidOperationException("Song Setup did not open from the header.");
                 var dialog = view.SongSetupBounds;
-                for (int tab = 0; tab < 4; tab++)
+                for (int tab = 0; tab < 5; tab++)
                 {
-                    Click(dialog.X + 32 + tab * 140, dialog.Y + 65);
+                    Click(dialog.X + 32 + tab * Math.Min(140, (dialog.Width - 44) / 5), dialog.Y + 65);
                     foreach (var field in view.SongSetupFieldBounds.Values)
                         if (field.X < dialog.X || field.Right > dialog.Right || field.Bottom > dialog.Bottom - 60)
                             throw new InvalidOperationException("Song Setup field exceeds its dialog bounds.");

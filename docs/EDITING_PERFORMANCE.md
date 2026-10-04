@@ -14,7 +14,10 @@ a time or position can still flatten a complete imported slider path.
 - Reuse the editor's current conversion and playable export when content is unchanged.
 - Use local candidate data for previews. Standalone fruits consume no normal-mode
   RNG; a fruit-only preview can merge the quantized candidate with existing playable
-  events. Replacing a slider or banana shower requires the full RNG-aware path.
+  events when no downstream FSlider uses droplet randomization. Droplet FX also
+  depends on the diff-wide event count, so adding/removing a standalone fruit before
+  an active effect requires cached full-context conversion. Replacing a slider or
+  banana shower requires the full RNG-aware path.
 - Batch timing queries through one `TimingMap.Lookup`. Calling `TimingMap.At` in a
   per-object loop constructs and sorts a new lookup for every object.
 - Fill beat grids into each view's reusable buffer with `TimingMap.Lookup.FillGrid`.

@@ -18,6 +18,7 @@ internal static class DropletSelectionLockTests
             var ui = new Ui(lockDropletSelection: true); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.Paint();
             Check(ui.View.DropletSelectionLocked, "Droplet selection must be locked by default.");
             Toggle(ui);
+            ui.ClickText(Strings.Get("ui.sliderPathCurves"));
             var baseline = ui.View.Document.DeepClone();
             var target = OsuBeatmapWriter.Serialize(map).PlayableObjects
                 .First(o => o.Kind == kind && o.TimeMs > 1400 && o.TimeMs < 1600);
@@ -50,7 +51,6 @@ internal static class DropletSelectionLockTests
             ui.ClickMap(target.TimeMs, target.X); ui.ClickMap(target.TimeMs, target.X);
             Check(ui.View.XCoordinateFieldBounds is null, "Locked droplet was selected through its slider path.");
             Check(!ui.Canvas.Texts.Any(t => t.Value == readout), "Locked droplet exposed an X readout.");
-            ui.ClickText(Strings.Get("ui.sliderPathCurves"));
             ui.Key('1'); ui.ClickMap(3500, 50);
             ui.ClickMap(target.TimeMs, target.X); ui.ClickMap(target.TimeMs, target.X, ctrl: true);
             Check(ui.View.SelectedObjectIds.Count == 0, "Hidden path still selected through a locked droplet.");
@@ -60,7 +60,7 @@ internal static class DropletSelectionLockTests
             ui.View.PointerUp(p.X + 40, p.Y + 2, 0); ui.Paint();
             Check(ui.View.SelectedObjectIds.Count == 0, "Box selection included locked droplets.");
             ui.ClickMap(1000, 120);
-            Check(ui.View.SelectedObjectIds.Contains(slider.Id), "Droplet lock blocked a slider fruit.");
+            Check(ui.View.SelectedObjectIds.Contains(slider.Id), $"Droplet lock blocked a slider fruit (imported={imported}, mode={mode}, kind={kind}, viewStart={ui.View.ViewStartMs}, status={ui.View.StatusMessage}).");
             Check(baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Droplet lock changed content/history.");
             Toggle(ui);
             ui.ClickMap(target.TimeMs, target.X); ui.ClickMap(target.TimeMs, target.X);

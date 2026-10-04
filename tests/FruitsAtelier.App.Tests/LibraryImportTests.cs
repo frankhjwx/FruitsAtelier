@@ -121,9 +121,9 @@ static class LibraryImportTests
         Check(ui.View.WindowTitle.Contains("原始作者 - 原始标题"), "Window title follows Unicode setting");
         settings.RomanisedMetadata = true;
         Check(ui.View.WindowTitle.Contains("Romanised artist - Romanised title"), "Window title follows romanised setting");
-        ui.ClickText(L.Get("library.settings")); ui.ClickText(L.Get("settings.appearance"));
+        ui.ClickText(L.Get("library.settings"));
         ui.ClickText(L.Get("settings.romanisedOn"));
-        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.romanisedOff")), "Appearance exposes metadata toggle");
+        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.romanisedOff")), "General exposes metadata toggle");
         ui.Key(27);
         Check(settings.RomanisedMetadata && before.ContentEquals(ui.View.Document) && !ui.View.IsDirty,
             "Cancelling preference draft preserves settings and map content");

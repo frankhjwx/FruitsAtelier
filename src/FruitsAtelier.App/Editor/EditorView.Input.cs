@@ -215,6 +215,7 @@ public sealed partial class EditorView
         }
         if (!plot.Contains(x, y)) return;
         if (!ctrl && tool == Tool.Select && objectSelection.Count == 1 && SelectedDistanceObject() is { IsStandalone: false } selectedChild
+            && !SelectionTransformBounds.Contains(x, y)
             && HitCatchObject(x, y)?.SourceId != selectedChild.SourceId && HitTrackPath(x, y) != selectedChild.SourceId
             && HitSliderLocation(x, y)?.Id != selectedChild.SourceId)
         {
@@ -241,7 +242,8 @@ public sealed partial class EditorView
         if (ctrl && tool == Tool.Select && SelectedImportedSlider is { } importedParent
             && HitCatchObject(x, y) is { } otherObject && otherObject.SourceId != importedParent.Id)
         { PickObject(otherObject.SourceId, true); return; }
-        if (!ctrl && TryBeginSelectedSliderObjectDrag(x, y)) return;
+        if (!ctrl && TryBeginSelectionTransform(x, y)) return;
+        if (!ctrl && !HitSelectedSliderControl(x, y) && TryBeginSelectedSliderObjectDrag(x, y)) return;
         if (showTargets && ctrl && tool is Tool.Select or Tool.Slider && objectSelection.Count == 1
             && SelectedImportedSlider is { } imported)
         {
@@ -458,7 +460,7 @@ public sealed partial class EditorView
             dragMoved = true;
         }
         if (drag == DragKind.TimelineTail) { MoveTimelineTail(x, shift); return; }
-        if (drag == DragKind.Objects) { MoveSelectedObjects(x, y, shift); return; }
+        if (drag == DragKind.Objects) { if (selectionScaleSide != 0) ScaleSelectedObjects(x); else MoveSelectedObjects(x, y, shift); return; }
         if (drag == DragKind.SliderObject)
         {
             if (!TryBeginSliderEndpointTimeDrag(y)) { MoveSliderObject(x); return; }
@@ -611,13 +613,18 @@ public sealed partial class EditorView
         }
         if (drag is DragKind.Objects or DragKind.BananaStart or DragKind.BananaEnd)
         {
+            selectionScaleSide = 0;
             objectDragStart = null;
             dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
             objectDragPrepared = false;
             if (AudioPlaying || pinPlayhead) FollowPlayhead();
         }
         if (pendingStreamChildSelection is { } streamChildSelection && !dragMoved && objectSelection.Contains(streamChildSelection.SourceId))
+        {
             PickSoundEdge(streamChildSelection);
+            distanceObject = (streamChildSelection.SourceId, streamChildSelection.EventIndex);
+            StatusMessage = L.Get("editor.status.sliderObjectReady", Time(streamChildSelection.TimeMs));
+        }
         pendingStreamChildSelection = null;
         drag = DragKind.None;
     }
@@ -697,6 +704,13 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (pendingLanguage is not null) return;
+        if (languageMenuOpen)
+        {
+            if (languageMenuBounds.Contains(x, y)) languageFirstRow = Math.Clamp(languageFirstRow - (int)(delta / 120),
+                0, Math.Max(0, L.AvailableLanguages.Count - languageVisibleRows));
+            return;
+        }
         if (AimodVisible)
         {
             if (aimodListBounds.Contains(x, y)) aimodFirst = Math.Clamp(aimodFirst - (int)(delta / 120) * 3,
@@ -965,7 +979,7 @@ public sealed partial class EditorView
         }
         if (DiscardConfirmationVisible)
         {
-            if (virtualKey is 27 or 13) AnswerDiscard(2);
+            if (virtualKey is 27 or 13) AnswerDiscard(virtualKey == 13 && pendingLanguage is not null ? 6 : 2);
             return;
         }
         if (updatesPage) { if (virtualKey == 27) updatesPage = false; return; }
@@ -995,7 +1009,11 @@ public sealed partial class EditorView
             if (!ctrl && !shift && !altHeld)
             {
                 if (virtualKey == 27) languageMenuOpen = false;
-                else if (virtualKey is 38 or 40) languageSelection = (languageSelection + (virtualKey == 38 ? L.AvailableLanguages.Count - 1 : 1)) % L.AvailableLanguages.Count;
+                else if (virtualKey is 38 or 40)
+                {
+                    languageSelection = (languageSelection + (virtualKey == 38 ? L.AvailableLanguages.Count - 1 : 1)) % L.AvailableLanguages.Count;
+                    KeepLanguageSelectionVisible();
+                }
                 else if (virtualKey == 13) SelectLanguage(L.AvailableLanguages[languageSelection]);
             }
             return;
@@ -1050,6 +1068,12 @@ public sealed partial class EditorView
             return;
         }
         if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift)) return;
+        if (virtualKey == 70 && shift && !ctrl && !altHeld)
+        {
+            if (drag == DragKind.None && draftTrack == Guid.Empty && draftBanana == Guid.Empty && menu < 0)
+                OpenSliderActionsAtPointer();
+            return;
+        }
         if (ctrl && !altHeld)
         {
             if (drag != DragKind.None) return;
@@ -1203,6 +1227,7 @@ public sealed partial class EditorView
         sliderObjectDragTarget = null;
         sliderObjectDragSource = sliderObjectDragShape = null;
         sliderObjectDragPrevious = null;
+        selectionScaleSide = 0;
         objectDragStart = null;
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         objectDragPrepared = false;
@@ -1230,7 +1255,8 @@ public sealed partial class EditorView
             {
                 Name = L.Get("editor.track.defaultName", Document.Tracks.Count + 1),
                 Kind = CurveKind.Linear,
-                CompensateTinyDroplets = true
+                CompensateTinyDroplets = true,
+                DropletRandomization = Document.RandomizeNewSliders ? new() { Enabled = true } : null
             };
             Document.Tracks.Add(track);
             draftTrack = track.Id;

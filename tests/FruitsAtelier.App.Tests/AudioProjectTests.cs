@@ -11,27 +11,47 @@ internal static class AudioProjectTests
         Directory.CreateDirectory(root);
         string source = Path.Combine(root, "input.MP3");
         File.WriteAllBytes(source, [1, 2, 3, 4]);
+        string ogg = Path.Combine(root, "input.OGG");
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "Fixtures", "quiet-tone.ogg"), ogg);
+        string wav = Path.Combine(root, "input.WAV");
+        using (var writer = new BinaryWriter(File.Create(wav)))
+        {
+            const int dataLength = 44100 * 2 * sizeof(short);
+            writer.Write("RIFF"u8); writer.Write(36 + dataLength); writer.Write("WAVE"u8);
+            writer.Write("fmt "u8); writer.Write(16); writer.Write((short)1); writer.Write((short)2);
+            writer.Write(44100); writer.Write(44100 * 2 * sizeof(short));
+            writer.Write((short)(2 * sizeof(short))); writer.Write((short)16);
+            writer.Write("data"u8); writer.Write(dataLength);
+            for (int i = 0; i < 44100; i++)
+            {
+                short sample = (short)(Math.Sin(2 * Math.PI * 440 * i / 44100) * .02 * short.MaxValue);
+                writer.Write(sample); writer.Write(sample);
+            }
+        }
         try
         {
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (bool library in new[] { false, true })
             foreach (int mode in new[] { 0, 1, 2 })
+            foreach (string input in new[] { source, ogg, wav })
             {
                 L.SetLanguage(locale);
-                string workspace = Path.Combine(root, $"{locale}-{library}-{mode}");
-                string osu = Path.Combine(root, $"osu-{locale}-{library}-{mode}");
+                string workspace = Path.Combine(root, $"{locale}-{library}-{mode}-{Path.GetExtension(input)}");
+                string osu = Path.Combine(root, $"osu-{locale}-{library}-{mode}-{Path.GetExtension(input)}");
                 var ui = new Ui(false); ui.Resize(library ? 980 : 1440, library ? 620 : 900);
                 ui.View.LoadDocument(new MapDocument { Name = "Previous", IsDemo = false });
                 ui.View.LibrarySettings.Workspace = workspace;
+                ui.View.LibrarySettings.DerandomizeNewProjects = mode != 1;
                 ui.View.LibrarySettings.OsuRoot = mode == 0 ? "" : osu;
                 if (mode != 0) Directory.CreateDirectory(ui.View.LibrarySettings.Songs);
                 if (library) ui.View.ShowLibrary();
                 var before = ui.View.Document.DeepClone();
                 int requests = 0;
                 ui.View.RequestAudioProject = path => { requests++; ui.View.BeginAudioProject(path); };
-                ui.View.DropLibraryFiles([source]); ui.Paint();
-                Check(ui.View.SongSetupVisible && requests == 1, "MP3 opens setup from Library and editor");
-                ui.View.DropLibraryFiles([source]);
+                Check(ui.View.CanDropFile(input), "Audio is accepted by the native drop filter");
+                ui.View.DropLibraryFiles([input]); ui.Paint();
+                Check(ui.View.SongSetupVisible && requests == 1, "Audio opens setup from Library and editor");
+                ui.View.DropLibraryFiles([input]);
                 Check(requests == 1, "Setup rejects additional drops");
                 ui.Key(13);
                 Check(!ui.View.AudioProjectCreating && ui.View.SongSetupVisible && NoProject(workspace), "Empty fields cannot publish a project");
@@ -39,7 +59,7 @@ internal static class AudioProjectTests
                 Check(ui.View.Document.ContentEquals(before) && !ui.View.IsTestplaying, "Setup isolates editor shortcuts");
                 Set(ui, "TitleUnicode", "Cancelled"); ui.Key(27);
                 Check(!ui.View.SongSetupVisible && ui.View.Document.ContentEquals(before) && NoProject(workspace), "Cancel leaves original project and filesystem intact");
-                ui.View.DropLibraryFiles([source]); ui.Paint();
+                ui.View.DropLibraryFiles([input]); ui.Paint();
                 Set(ui, "TitleUnicode", "歌曲 / Song"); Set(ui, "ArtistUnicode", "艺术家"); Set(ui, "Creator", "Mapper");
                 Set(ui, "Version", "   "); ui.Key(13);
                 Check(!ui.View.AudioProjectCreating && NoProject(workspace), "Whitespace difficulty is rejected");
@@ -57,9 +77,13 @@ internal static class AudioProjectTests
                 Check(session.Project.Difficulties.Count == 1 && ui.View.CurrentDifficultyName == "Hard" && !ui.View.IsDirty, "One saved difficulty is created");
                 var reopened = WorkspaceProject.Open(session.Directory);
                 var map = reopened.Project.Difficulties.Single().Document;
+                Check(map.RandomizeNewSliders == (mode == 1) && map.RandomizeDropletStrength == 20 && map.RandomizeDropletSeed == 1337,
+                    "audio-created catchproject persists its independent droplet defaults");
                 Check(map.Name == "歌曲 / Song" && SongSetup.Get(map, "Metadata", "Artist") == "艺术家"
                     && SongSetup.Get(map, "Metadata", "Creator") == "Mapper", "Metadata survives reopening");
-                Check(map.AudioPath != source && File.ReadAllBytes(map.AudioPath!).SequenceEqual(File.ReadAllBytes(source)), "Local audio is an independent copy");
+                Check(map.AudioPath != input && File.ReadAllBytes(map.AudioPath!).SequenceEqual(File.ReadAllBytes(input)), "Local audio is an independent copy");
+                Check(Path.GetExtension(map.AudioPath!).Equals(Path.GetExtension(input), StringComparison.OrdinalIgnoreCase)
+                    && SongSetup.Get(map, "General", "AudioFilename") == Path.GetFileName(map.AudioPath), "Audio format and reference survive reopening");
                 var entry = reopened.Manifest.Difficulties.Single();
                 Check((entry.ExportTarget is not null) == (mode == 1), "Songs creation follows the toggle");
                 if (mode == 1)

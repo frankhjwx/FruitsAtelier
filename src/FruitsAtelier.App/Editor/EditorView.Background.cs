@@ -91,14 +91,15 @@ public sealed partial class EditorView
         c.Fill(new(slider.X, slider.Y, slider.Width * value / 100f, slider.Height), 0xFFFFFF, 4, .18f * opacity);
         c.StrokeOpacity(slider, 0xFFFFFF, 1, 4, .65f * opacity);
         string label = L.Get("settings.backgroundDim", value);
-        float labelWidth = Math.Min(c.MeasureText(label, 14), bounds.Width - 72);
+        float textSize = draft ? SettingsTextSize : 14;
+        float labelWidth = Math.Min(c.MeasureText(label, textSize), bounds.Width - 72);
         c.TextOpacity(label, bounds.X + (bounds.Width - labelWidth) / 2,
-            bounds.Y + 11, 14, Foreground, labelWidth, false, opacity);
+            bounds.Y + (bounds.Height - textSize - 4) / 2, textSize, Foreground, labelWidth, false, opacity);
         Control(new(bounds.X, bounds.Y, 30, bounds.Height), "−", -5, value > 0);
         Control(new(bounds.Right - 30, bounds.Y, 30, bounds.Height), "+", 5, value < 100);
         void Control(Rect r, string text, int delta, bool enabled)
         {
-            if (draft && opacity >= 1) { Button(c, r, text, () => Change(delta), enabled: enabled); return; }
+            if (draft && opacity >= 1) { SettingsButton(c, r, text, () => Change(delta), enabled: enabled); return; }
             if (enabled && r.Contains(mouseX, mouseY))
             {
                 c.Fill(r, 0x3D495A, 4, opacity);

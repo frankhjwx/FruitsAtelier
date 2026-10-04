@@ -4,6 +4,60 @@ internal static class SynchronizationTests
 {
     public static IEnumerable<(string, Action)> Cases()
     {
+        yield return ("Sync: legacy associations require explicit export consent before automatic publication", () => Run(f =>
+        {
+            var entry = f.Session.Manifest.Difficulties[0];
+            entry.ExportTarget = f.Source; entry.ExportHash = WorkspaceProject.Hash(f.Source);
+            WorkspaceProject.Save(f.Session, f.Session.Project);
+            string path = Path.Combine(f.Session.Directory, WorkspaceProject.ManifestName);
+            var manifest = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!;
+            manifest["Difficulties"]![0]!.AsObject().Remove("ExportConfirmed");
+            File.WriteAllText(path, manifest.ToJsonString());
+            f.Session = WorkspaceProject.Open(f.Session.Directory);
+            entry = f.Session.Manifest.Difficulties[0];
+            Check(!entry.ExportConfirmed && !WorkspaceProject.SnapshotManifest(f.Session.Manifest).Difficulties[0].ExportConfirmed,
+                "legacy export target and hash do not imply consent");
+            string original = File.ReadAllText(f.Source);
+            f.Diff.Document.Fruits[0].X++;
+            var merge = f.Merge();
+            Check(!merge.CanExportLocalChanges && !merge.RequiresResolution, "unconfirmed local edits remain available for explicit export");
+            Reject(() => WorkspaceSynchronization.PlanLocalChanges(f.Session, entry, merge));
+            Check(File.ReadAllText(f.Source) == original, "rejected automatic export preserves source bytes");
+            var plan = WorkspaceExport.Plan(f.Session, f.Diff, f.Songs, true, f.Diff.Name, true);
+            string receipt = WorkspaceExportRecovery.Prepare(f.Session, f.Session.Project, plan, entry.Id);
+            WorkspaceExport.Commit(f.Session, plan);
+            WorkspaceExportRecovery.Recover(f.Session.Directory);
+            f.Session = WorkspaceProject.Open(f.Session.Directory);
+            Check(f.Session.Manifest.Difficulties[0].ExportConfirmed, "confirmed overwrite survives recovery and restart");
+            f.Diff.Document.Fruits[0].X++;
+            Check(f.Merge().CanExportLocalChanges, "subsequent local edits can automatically publish");
+            WorkspaceExportRecovery.Complete(receipt);
+        }));
+        yield return ("Sync: General SampleSet differences require no review", () =>
+        {
+            foreach (string? value in new string?[] { "None", "Normal", "Soft", "Drum", null }) Run(f =>
+            {
+                SongSetup.Set(f.Diff.Document, "General", "SampleSet", "Soft");
+                var output = OsuBeatmapWriter.Serialize(f.Diff.Document);
+                File.WriteAllText(f.Source, output.Text);
+                var entry = f.Session.Manifest.Difficulties[0];
+                entry.Sync = WorkspaceSynchronization.Capture(f.Source, f.Diff.Document, f.Session.Directory, output.Text, output.ObjectSources);
+                entry.Sync.LocalOverrides.Add("General/SampleSet");
+                string externalText = value is null ? output.Text.Replace("SampleSet:Soft", "")
+                    : output.Text.Replace("SampleSet:Soft", "SampleSet:" + value);
+                File.WriteAllText(f.Source, externalText);
+                var candidate = WorkspaceSynchronization.ReadStable(f.Source);
+                Check(!WorkspaceSynchronization.HasFieldDifferences(f.Diff.Document, candidate.Document), "SampleSet alone is not a field difference");
+                foreach (var merge in new[] { f.Merge(), WorkspaceSynchronization.CompareWithoutBaseline(f.Diff.Document, candidate, f.Session.Directory, true) })
+                {
+                    Check(!merge.RequiresResolution && merge.Conflicts.Count == 0, "SampleSet needs no choice with or without a baseline or retained override");
+                    var resolved = WorkspaceSynchronization.Resolve(merge, new Dictionary<string, bool>());
+                    Check(OsuBeatmapReader.Setting(resolved, "General", "SampleSet") == "Soft", "ignored field preserves the local setting");
+                }
+                candidate.Document.TimingPoints[0].SampleSet = 3;
+                Check(WorkspaceSynchronization.HasFieldDifferences(f.Diff.Document, candidate.Document), "timing sample-bank changes remain reviewable");
+            });
+        });
         yield return ("Sync: metadata saves rename linked files without adding difficulties", () =>
         {
             foreach (string key in new[] { "Artist", "Title", "Creator", "Version" })
@@ -1047,6 +1101,7 @@ internal static class SynchronizationTests
         {
             Directory.CreateDirectory(Set); File.WriteAllText(Source, Fixture()); File.WriteAllText(Path.Combine(Set, "audio.mp3"), "original audio");
             Session = WorkspaceProject.Create(Workspace, BeatmapProject.FromDocuments([OsuBeatmapReader.ReadFile(Source)]), Songs);
+            Session.Manifest.Difficulties[0].ExportConfirmed = true;
         }
         public WorkspaceSyncScan Scan() => WorkspaceSynchronization.Scan(Session, Songs);
         public WorkspaceMerge Merge() => WorkspaceSynchronization.Merge(Session.Manifest.Difficulties[0], Diff.Document, WorkspaceSynchronization.ReadStable(Source), Session.Directory, true);

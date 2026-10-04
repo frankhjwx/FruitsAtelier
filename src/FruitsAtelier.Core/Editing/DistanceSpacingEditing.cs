@@ -31,6 +31,7 @@ public static class DistanceSpacingEditing
         if (!double.IsFinite(x)) throw new ArgumentException(L.Get("editor.error.finiteNumberRequired"));
         x = Math.Clamp(x, 0, 512);
         if (Math.Abs(x - target.X) < .00001) return;
+        if (TryRandomizedTiny(document, target, x, compensateTinyDroplets, cache)) return;
         if (target.Kind is not (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet))
             throw new ArgumentException(L.Get("distance.unsupported"));
 
@@ -88,6 +89,7 @@ public static class DistanceSpacingEditing
         double x, bool compensateTinyDroplets, CatchConversionCache? cache = null)
     {
         if (Math.Abs(x - target.X) < .00001) return;
+        if (TryRandomizedTiny(document, target, x, compensateTinyDroplets, cache)) return;
         if (document.Fruits.FirstOrDefault(f => f.Id == target.SourceId) is { } fruit)
         {
             fruit.X = x;
@@ -120,6 +122,28 @@ public static class DistanceSpacingEditing
         if (!converted.Success || moved is null || Math.Abs(moved.X - x) > .001
             || reference is not null && (fixedObject is null || Math.Abs(fixedObject.X - reference.X) > .001))
             throw new ArgumentException(L.Get(reference is null ? "coordinate.unreachable" : "distance.unreachable"));
+    }
+
+    private static bool TryRandomizedTiny(MapDocument document, ConvertedCatchObject target, double x,
+        bool compensate, CatchConversionCache? cache)
+    {
+        if (document.DerandomizeFSliderDroplets || target.Kind != CatchObjectKind.TinyDroplet || document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
+            is not { DropletRandomization: { Enabled: true } effect } track) return false;
+        var before = CatchStreamConverter.Convert(document, compensate, cache);
+        var selected = before.Objects.FirstOrDefault(o => o.SourceId == target.SourceId && o.EventIndex == target.EventIndex);
+        if (!before.Success || selected is null) throw new ArgumentException(L.Get("coordinate.unreachable"));
+        double progress = DropletRandomization.Progress(track, selected.TimeMs);
+        effect.SetAdjustment(progress, Math.Clamp(effect.AdjustmentAt(progress) + x - selected.TargetX, -512, 512));
+        var after = CatchStreamConverter.Convert(document, compensate, cache);
+        var updated = after.Objects.FirstOrDefault(o => o.SourceId == target.SourceId && o.EventIndex == target.EventIndex);
+        if (!after.Success || updated is null || Math.Abs(updated.X - x) > .001)
+            throw new ArgumentException(L.Get("coordinate.unreachable"));
+        var siblings = after.Objects.Where(o => o.SourceId == target.SourceId).ToDictionary(o => o.EventIndex);
+        if (before.Objects.Where(o => o.SourceId == target.SourceId && o.EventIndex != target.EventIndex)
+            .Any(o => !siblings.TryGetValue(o.EventIndex, out var current) || current.Kind != o.Kind
+                || Math.Abs(current.TimeMs - o.TimeMs) > .001 || Math.Abs(current.X - o.X) > .001))
+            throw new ArgumentException(L.Get("coordinate.unreachable"));
+        return true;
     }
 
     private static Anchor AnchorAt(CurveTrack track, double time)

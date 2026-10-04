@@ -51,7 +51,7 @@ internal static class NoteSnapTests
             var endpoint = tail ? track.Nodes[^1] : track.Nodes[0];
             var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode);
             ui.ClickMap(endpoint.TimeMs, endpoint.X);
-            ui.DownMap(endpoint.TimeMs, endpoint.X);
+            SliderEventTestDriver.Down(ui, endpoint.TimeMs, endpoint.X);
             ui.MoveMap(endpoint.TimeMs, endpoint.X + 20);
             ui.MoveMap(endpoint.TimeMs + delta, endpoint.X + 20);
             ui.UpMap(endpoint.TimeMs + delta, endpoint.X + 20);
@@ -67,7 +67,7 @@ internal static class NoteSnapTests
             Check(map.ContentEquals(ui.View.Document), "Endpoint time drag did not undo in one step.");
             ui.Key('Y', ctrl: true);
             Check(result.ContentEquals(ui.View.Document), "Endpoint time drag did not redo.");
-            ui.DownMap(moved.TimeMs, moved.X); ui.MoveMap(moved.TimeMs + delta, moved.X);
+            SliderEventTestDriver.Down(ui, moved.TimeMs, moved.X); ui.MoveMap(moved.TimeMs + delta, moved.X);
             ui.View.CancelInteraction();
             Check(result.ContentEquals(ui.View.Document), "Cancelling endpoint time drag changed content.");
         }
@@ -95,7 +95,7 @@ internal static class NoteSnapTests
             var other = tail ? edges[0] : edges[^1];
             var ui = new Ui(timeProvider: clock); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.Key('T');
             if (!hold) ui.ClickMap(target.TimeMs, target.X);
-            ui.DownMap(target.TimeMs, target.X);
+            SliderEventTestDriver.Down(ui, target.TimeMs, target.X);
             if (hold) { clock.Advance(300); ui.Paint(); }
             ui.MoveMap(target.TimeMs + 80, target.X + 23); ui.UpMap(target.TimeMs + 80, target.X + 23);
             var after = CatchStreamConverter.Convert(ui.View.Document).Objects.Where(o => o.Kind == CatchObjectKind.Fruit).ToArray();
@@ -117,13 +117,13 @@ internal static class NoteSnapTests
             var ui = new Ui(); ui.LoadDocument(map); ui.Key('T');
             ui.ClickMap(target.TimeMs, target.X); ui.ClickMap(target.TimeMs, target.X);
             Check(map.ContentEquals(ui.View.Document), "Selecting an off-grid droplet snapped its X without dragging.");
-            ui.DownMap(target.TimeMs, target.X);
+            SliderEventTestDriver.Down(ui, target.TimeMs, target.X);
             ui.MoveMap(target.TimeMs, target.X + 5); ui.UpMap(target.TimeMs, target.X + 5);
             var moved = CatchStreamConverter.Convert(ui.View.Document).Objects.Single(o => o.EventIndex == target.EventIndex);
             double expected = Math.Round((target.X + 5) / 4, MidpointRounding.AwayFromZero) * 4;
             Check(Math.Abs(moved.X - expected) < .001 && moved.TimeMs == target.TimeMs, "Droplet drag ignored Grid Snap.");
             ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Grid-snapped droplet drag did not undo.");
-            ui.ClickMap(target.TimeMs, target.X); ui.DownMap(target.TimeMs, target.X);
+            ui.ClickMap(target.TimeMs, target.X); SliderEventTestDriver.Down(ui, target.TimeMs, target.X);
             ui.MoveMap(target.TimeMs, 512); ui.UpMap(target.TimeMs, 512);
             var clamped = CatchStreamConverter.Convert(ui.View.Document).Objects.Single(o => o.EventIndex == target.EventIndex);
             Check(Math.Abs(clamped.X - target.X) < .001 || Math.Abs(clamped.X / 4 - Math.Round(clamped.X / 4)) < .001,
@@ -149,7 +149,7 @@ internal static class NoteSnapTests
                 .Where(o => o.SourceId == slider.Id && o.Kind == CatchObjectKind.Fruit).ElementAt(tail ? 1 : 0);
             double originalX = CatchStreamConverter.Convert(map).Objects.Single(o => o.SourceId == target.SourceId && o.EventIndex == target.EventIndex).X;
             var ui = new Ui(timeProvider: clock); ui.LoadDocument(map);
-            ui.ClickMap(target.TimeMs, target.X); ui.DownMap(target.TimeMs, target.X);
+            ui.ClickMap(target.TimeMs, target.X); SliderEventTestDriver.Down(ui, target.TimeMs, target.X);
             var document = ui.View.Document;
             var untouched = document.Tracks.Single(t => t.Id == other.Id);
             foreach (double offset in new[] { 20d, -20, 392, 30, 0 })
@@ -169,10 +169,10 @@ internal static class NoteSnapTests
             }
             ui.UpMap(target.TimeMs, target.X);
             Check(map.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Returning to the drag origin retained a fitted replacement or changed source order.");
-            ui.DownMap(target.TimeMs, target.X); ui.MoveMap(target.TimeMs, target.X + 20);
+            SliderEventTestDriver.Down(ui, target.TimeMs, target.X); ui.MoveMap(target.TimeMs, target.X + 20);
             ui.View.CancelInteraction(); ui.Paint();
             Check(map.ContentEquals(ui.View.Document), "Cancelling a cached drag did not restore the original source.");
-            ui.DownMap(target.TimeMs, target.X); ui.MoveMap(target.TimeMs, target.X + 20); ui.UpMap(target.TimeMs, target.X + 20);
+            SliderEventTestDriver.Down(ui, target.TimeMs, target.X); ui.MoveMap(target.TimeMs, target.X + 20); ui.UpMap(target.TimeMs, target.X + 20);
             var exported = (OsuWriteResult?)typeof(FruitsAtelier.App.Editor.EditorView)
                 .GetField("playableExport", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View);
             Check(exported is not null && exported.PlayableObjects.SequenceEqual(OsuBeatmapWriter.Serialize(ui.View.Document).PlayableObjects),

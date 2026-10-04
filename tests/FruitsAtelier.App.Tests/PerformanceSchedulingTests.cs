@@ -56,6 +56,7 @@ internal static class PerformanceSchedulingTests
         ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
         ui.View.LoadWorkspace(FruitsAtelier.App.Platform.LibraryOperations.ImportPath(source, ui.View.LibrarySettings));
         SynchronizationUiTests.Wait(ui);
+        ui.View.WorkspaceSession!.Manifest.Difficulties[0].ExportConfirmed = true;
         var history = (EditorHistory)typeof(EditorView).GetProperty("history", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(ui.View)!;
         void Edit() { history.Begin("move"); history.Document.Fruits[0].X++; history.Commit(); }
         Edit(); ui.View.RefreshSynchronization(quiet: true);

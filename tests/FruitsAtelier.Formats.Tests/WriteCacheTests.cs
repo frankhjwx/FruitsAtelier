@@ -124,6 +124,9 @@ internal static class WriteCacheTests
         track.Nodes.AddRange([new() { TimeMs = 5000, X = 100 }, new() { TimeMs = 6000, X = 250 }]);
         map.Tracks.Add(track); map.DurationMs = 10000; Check();
         map.TimingPoints.Add(new() { TimeMs = -1, BeatLengthMs = 500 });
+        Check();
+        map.TimingPoints.RemoveAt(map.TimingPoints.Count - 1);
+        map.TimingPoints.Add(new() { TimeMs = 5000.5, BeatLengthMs = 500 });
         bool rejected = false;
         try { OsuBeatmapWriter.Serialize(map, cache: cache); }
         catch (InvalidDataException) { rejected = true; }

@@ -8,7 +8,7 @@ public sealed partial class EditorView
     private Action<int>? discardConfirmation;
     private bool deleteProjectConfirmation;
     private bool offerSongsExport;
-    public bool DiscardConfirmationVisible => discardConfirmation is not null || VersionHistoryVisible || SynchronizationVisible || SynchronizationBlocksInput;
+    public bool DiscardConfirmationVisible => discardConfirmation is not null || pendingLanguage is not null || VersionHistoryVisible || SynchronizationVisible || SynchronizationBlocksInput;
 
     public void ShowDiscardConfirmation(Action<int> answer)
     {
@@ -27,6 +27,7 @@ public sealed partial class EditorView
 
     private void AnswerDiscard(int answer)
     {
+        if (pendingLanguage is not null) { AnswerLanguageNotice(answer == 6); return; }
         if (SynchronizationBlocksInput) return;
         if (VersionHistoryVisible) { if (versionRestoreTask is null) CloseVersionHistory(); return; }
         if (SynchronizationVisible) { CancelSynchronization(); return; }
@@ -57,6 +58,7 @@ public sealed partial class EditorView
         if (SynchronizationVisible) { DrawSynchronization(c); return; }
         if (!DiscardConfirmationVisible) return;
         hits.Clear(); fields.Clear();
+        if (pendingLanguage is not null) { DrawLanguageNotice(c); return; }
         if (deleteProjectConfirmation)
         {
             float left = (width - 500) / 2, top = (height - 200) / 2;

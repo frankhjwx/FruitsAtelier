@@ -202,6 +202,7 @@ public sealed partial class EditorView
         var entry = WorkspaceSession!.Manifest.Difficulties.Single(d => d.Id == id);
         entry.Source = value.Source; entry.SourceHash = value.SourceHash;
         entry.ExportTarget = value.ExportTarget; entry.ExportHash = value.ExportHash;
+        entry.ExportConfirmed = value.ExportConfirmed;
         entry.Sync = value.Sync; entry.SyncFile = value.SyncFile;
         syncStatuses.Remove(id); syncMerges.Remove(id); syncComparisons.Remove(id);
         resourceSnapshot = null; resourceReferences = null;

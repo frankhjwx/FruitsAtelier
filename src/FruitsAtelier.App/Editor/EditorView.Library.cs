@@ -201,7 +201,7 @@ public sealed partial class EditorView
         completed?.Invoke(saved);
     }
     public bool CurrentDifficultyHasExport => WorkspaceSession?.Manifest.Difficulties
-        .Any(d => d.Id == difficulties[activeDifficulty].Id && d.ExportTarget is not null && d.ExportHash is not null) == true;
+        .Any(d => d.Id == difficulties[activeDifficulty].Id && d.ExportConfirmed && d.ExportTarget is not null && d.ExportHash is not null) == true;
     public bool ProjectInSongs => !string.IsNullOrWhiteSpace(LibrarySettings.Songs) && (WorkspaceSession is { } session
         ? WorkspaceProject.HasExistingSongsFile(session.Manifest, LibrarySettings.Songs)
         : Document.SourcePath is { } path && WorkspaceProject.Within(LibrarySettings.Songs, path) && File.Exists(path));
@@ -525,13 +525,19 @@ public sealed partial class EditorView
         float x = librarySettingsOpen ? SettingsContentX : 32;
         float textSize = librarySettingsOpen ? SettingsTextSize : 14;
         c.Text(label, x, y, textSize, Foreground, right - x - 32, true);
-        var rect = new Rect(x, y + 28, right - x - (index < 2 || index == 4 ? 184 : 32), 42);
-        c.Fill(rect, Surface, 5); c.Stroke(rect, libraryField == index ? Accent : Grid, radius: 5);
+        var rect = new Rect(x, y + 28, right - x - (index < 2 || index == 4 ? 184 : 32), librarySettingsOpen ? SettingsControlHeight : 42);
+        float radius = librarySettingsOpen ? 4 : 5;
+        c.Fill(rect, Surface, radius); c.Stroke(rect, libraryField == index ? Accent : Grid, radius: radius);
         string inputKey = "library:" + index;
-        DrawInputText(c, new(x + 12, y + 40, rect.Width - 24, 20), value, textSize, libraryField == index, inputKey);
+        DrawInputText(c, new(x + 12, librarySettingsOpen ? rect.Y + (rect.Height - 20) / 2 : y + 40, rect.Width - 24, 20), value, textSize, libraryField == index, inputKey);
         hits.Add(new(rect, () => { libraryField = index; FocusInput(inputKey, value, mouseX); }, true));
-        if (index == 4) Button(c, new(right - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestDefaultSkinArchive?.Invoke(), fontSize: textSize);
-        if (index < 2) Button(c, new(right - 168, y + 28, 136, 42), L.Get("library.browse"), () => RequestLibraryFolder?.Invoke(index == 0), fontSize: textSize);
+        if (index < 2 || index == 4)
+        {
+            Action browse = index == 4 ? () => RequestDefaultSkinArchive?.Invoke() : () => RequestLibraryFolder?.Invoke(index == 0);
+            var browseBounds = new Rect(right - 168, rect.Y, 136, rect.Height);
+            if (librarySettingsOpen) SettingsButton(c, browseBounds, L.Get("library.browse"), browse);
+            else Button(c, browseBounds, L.Get("library.browse"), browse, fontSize: textSize);
+        }
     }
     public bool LibraryLoading => scanTask is { IsCompleted: false } || searchTask is { IsCompleted: false } || ratingTask is { IsCompleted: false } || libraryBrowser is { Loading: true };
     public bool LibraryTextFocused => (LibraryVisible || librarySettingsOpen || ExportVisible) && libraryField >= 0 && !ErrorVisible && !DiscardConfirmationVisible;

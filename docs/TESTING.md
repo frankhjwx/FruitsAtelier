@@ -101,6 +101,10 @@ Automated device tests output silent PCM; sample comparisons happen before mutin
 dotnet run --project tests/FruitsAtelier.Audio.Tests -c Release
 ```
 
+Use `Audio.Tests --vorbis-check [path.ogg]` to check OGG decoding, playback and
+paused/playing seeks. Without a path it uses the repository fixture; a supplied
+project audio copy is read without modifying it.
+
 `Audio.Tests --diagnostic-check` validates command/event correlation, repeated
 pause positions with logging enabled, unsupported hitsound format identification,
 and continued loading when the diagnostic destination cannot be written. It uses

@@ -1,6 +1,7 @@
 using L = FruitsAtelier.Localization.Strings;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace FruitsAtelier.Core;
 
@@ -20,7 +21,16 @@ public static partial class ProjectSerializer
         PreferredObjectCreationHandling = JsonObjectCreationHandling.Populate,
         NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-        MaxDepth = 64
+        MaxDepth = 64,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { info =>
+        {
+            if (info.Type != typeof(MapDocument)) return;
+            foreach (var property in info.Properties)
+            {
+                if (property.Name == nameof(MapDocument.RandomizeDropletStrength)) property.ShouldSerialize = (_, value) => (double)value! != 20;
+                if (property.Name == nameof(MapDocument.RandomizeDropletSeed)) property.ShouldSerialize = (_, value) => (int)value! != 1337;
+            }
+        } } }
     };
 
     public static string Serialize(MapDocument document, string? projectPath = null)
@@ -35,7 +45,7 @@ public static partial class ProjectSerializer
             if (copy.AudioPath is not null && Path.IsPathFullyQualified(copy.AudioPath)) copy.AudioPath = Path.GetRelativePath(directory, copy.AudioPath);
             if (copy.SourcePath is not null && Path.IsPathFullyQualified(copy.SourcePath)) copy.SourcePath = Path.GetRelativePath(directory, copy.SourcePath);
         }
-        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, options);
+        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = HasDerandomization(copy) ? 11 : HasRandomization(copy) ? 9 : HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, options);
         if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumFileBytes)
             throw new InvalidDataException(L.Get("core.project.writeLimit"));
         return text;
@@ -47,8 +57,9 @@ public static partial class ProjectSerializer
         ProjectFile? file;
         try { file = JsonSerializer.Deserialize<ProjectFile>(text, options); }
         catch (JsonException error) { throw new InvalidDataException(L.Get("core.project.invalidJson"), error); }
-        if (file?.SchemaVersion is not (1 or 3 or 5 or 7) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
+        if (file?.SchemaVersion is not (1 or 3 or 5 or 7 or 9 or 11) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
         var document = file.Document;
+        NormalizeRandomizationStrength(document);
         RejectNetworkPath(document.AudioPath);
         RejectNetworkPath(document.SourcePath);
         if (projectPath is not null)
@@ -58,6 +69,12 @@ public static partial class ProjectSerializer
         }
         OsuBeatmapReader.Validate(document);
         return document;
+    }
+
+    private static void NormalizeRandomizationStrength(MapDocument document)
+    {
+        // Earlier droplet FX projects allowed strengths up to 512.
+        if (document.RandomizeDropletStrength is > 100 and <= 512) document.RandomizeDropletStrength = 100;
     }
 
     public static MapDocument ReadFile(string path)
@@ -75,6 +92,9 @@ public static partial class ProjectSerializer
 
     private static bool HasControlCurves(MapDocument document) => document.Tracks.Any(t => t.Nodes.Any(n => n.OutgoingCurve is not null));
     private static bool HasStacks(MapDocument document) => document.Tracks.Any(t => t.Stack is not null);
+    private static bool HasDerandomization(MapDocument document) => document.DerandomizeFSliderDroplets || document.DerandomizeDropletsForHardRock;
+    private static bool HasRandomization(MapDocument document) => document.RandomizeDropletStrength != 20
+        || document.RandomizeDropletSeed != 1337 || document.RandomizeNewSliders || document.Tracks.Any(t => t.DropletRandomization is not null);
     private static bool HasStreams(MapDocument document) => document.Tracks.Any(t => t.StreamSnapDivisor is not null);
 
     private static void RejectNetworkPath(string? path)

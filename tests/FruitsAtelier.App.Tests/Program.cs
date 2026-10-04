@@ -29,7 +29,11 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
-    ("MP3 projects require metadata, copy audio and optionally link one Songs difficulty", AudioProjectTests.Run),
+    ("Independent droplet defaults persist and initialize new projects and FSliders", DropletDefaultsTests.Run),
+    ("Selection boxes scale and move consecutive parents with anchor priority and atomic undo", SelectionTransformTests.Run),
+    ("Droplet randomization switches, setup drafts and Edit actions stay within one diff", DropletRandomizationTests.Run),
+    ("Audio projects require metadata, copy audio and optionally link one Songs difficulty", AudioProjectTests.Run),
+    ("Timing red insertion and deletion retain saving and slider export", TimingSaveFeedbackTests.Run),
     ("Slider drafts defer full-map conversion and publish only matching validated snapshots", DraftConversionTests.Run),
     ("Synchronization category tabs explain object changes and preserve choices", SyncTabsTests.Run),
     ("AiMod checks object starts, isolates input, navigates errors and preserves undo", AimodTests.Run),
@@ -80,7 +84,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay volume bars accept clicks and drags after keyboard and wheel shortcuts", VolumePopoverTests.TestplayPointer),
     ("New Combo grouping refreshes on first edit and undo/redo", ComboGroupingTests.Run),
     ("Completing an FSlider replaces only exact head fruit overlaps and undoes atomically", SliderHeadReplacementTests.OnCompletion),
-    ("Final stream fruit accepts lower-half hit and drags independently", StreamFruitDragTests.Run),
+    ("Final stream fruit accepts lower-half hit and box movement translates the stream", StreamFruitDragTests.Run),
     ("Testplay lead-in starts early, returns to selection and persists settings", TestplayStartupDelayTests.LeadIn),
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
@@ -98,8 +102,10 @@ var tests = new (string Name, Action Run)[]
     ("Deleted copied difficulties remain missing without prompting duplicate cleanup", SynchronizationUiTests.DeletedCopiesRemainMissing),
     ("Library archive drops preserve Songs and report source/export presence", LibraryImportTests.Run),
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
+    ("Map and HR derandomization drafts disable FX controls and support history", DropletDerandomizationTests.Run),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
+    ("Settings layout preserves labels and aligns controls in narrow windows", SettingsTests.Layout),
     ("Appearance indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
     ("Stack preview retains full outlines and edits individual fruits horizontally", StackDialogTests.ManualFruits),
     ("Stack draft history undoes fruit drags and removing manual knots", StackDialogTests.DraftHistory),
@@ -107,6 +113,7 @@ var tests = new (string Name, Action Run)[]
     ("Stack dialog edits envelopes locally and confirms with undo", StackDialogTests.Run),
     ("Slider stream confirmation, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
     ("Slider long press progress, cancellation and control-point shortcut", StreamShortcutTests.HoldAndShortcut),
+    ("Single-slider selection box long press opens actions throughout its bounds", StreamShortcutTests.HoldInSelectionBox),
     ("Stream breaking and batch internal anchor clearing", ObjectStructureTests.StreamsAndAnchors),
     ("Consecutive object merge dialog, restrictions, errors and undo", ObjectStructureTests.MergeUi),
     ("Mixed slider merge preserves repeated and exact curve paths", ObjectStructureTests.MixedPaths),
@@ -260,7 +267,7 @@ var tests = new (string Name, Action Run)[]
     ("Slider drag candidates preserve unrelated sources and restore their baseline", NoteSnapTests.SliderDragBaseline),
     ("Slider edges highlight and inspect snap while matching current grids stay unchanged", NoteSnapTests.SliderEdgesAndCurrentSnap),
     ("Repeated slider droplets sharing a path position drag together and undo atomically", DropletDragTests.RepeatedPathDrag),
-    ("Slider droplets select on the second click and drag locally", DropletDragTests.SelectAndMove),
+    ("Slider event reshaping preserves neighbouring events and supports undo", DropletDragTests.SelectAndMove),
     ("Dragging a curved slider droplet preserves its neighbouring events", DropletDragTests.CurvedNeighbors),
     ("Droplet dragging handles fractional timing and dense anchors", DropletDragTests.ConvertedAndDenseCurves),
     ("Default slider mode drags displayed droplets continuously", DropletDragTests.DefaultModeDrag),
@@ -1101,7 +1108,7 @@ sealed class Ui
 
 sealed class RecordingCanvas : ICanvas
 {
-    public readonly record struct Label(string Value, float X, float Y, uint Color = 0);
+    public readonly record struct Label(string Value, float X, float Y, uint Color = 0, float Size = 0, float MaxWidth = 10000, bool Bold = false);
     public readonly record struct Dot(float X, float Y, float Radius, bool Filled, uint Color, float Opacity = 1);
     public readonly record struct Segment(float X1, float Y1, float X2, float Y2, uint Color, float Opacity, float Width = 1);
     public readonly record struct Outline(Rect Bounds, uint Color);
@@ -1146,7 +1153,7 @@ sealed class RecordingCanvas : ICanvas
     }
     public bool Image(string filePath, Rect destination, uint tint = 0xFFFFFF, Rect? source = null, float opacity = 1) { Images.Add(new(filePath, destination, opacity)); return false; }
     public void Text(string text, float x, float y, float size, uint color, float maxWidth = 10000, bool bold = false)
-        => Texts.Add(new(text, x, y, color));
+        => Texts.Add(new(text, x, y, color, size, maxWidth, bold));
     public void Clip(Rect r) { Clips.Add(r); clipStack.Push(r); }
     public void Unclip() { if (clipStack.Count > 0) clipStack.Pop(); }
 }

@@ -5,6 +5,7 @@
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="../FruitsAtelier.Audio.Tests/Fixtures/quiet-tone.ogg" Link="Fixtures/quiet-tone.ogg" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="../../src/FruitsAtelier.App/FruitsAtelier.App.csproj" />
   </ItemGroup>
 </Project>

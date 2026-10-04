@@ -194,19 +194,67 @@ internal static class ShortcutRoutingTests
                 string? saved = null;
                 ui.View.RequestLanguagePreference = value => saved = value;
                 ui.View.OpenSettings(); ui.Paint();
-                ui.ClickText(L.Get("settings.appearance"));
-                void Open() => ui.ClickText(System.Globalization.CultureInfo.GetCultureInfo(L.Language).NativeName + " ▾");
+                string Label(string code) => code switch { "zh-CN" => "简体中文", "zh-TW" => "繁体中文", _ => System.Globalization.CultureInfo.GetCultureInfo(code).NativeName };
+                void Open() => ui.ClickText(Label(L.Language) + " ▾");
                 Open(); ui.Key(40); ui.Key(27);
                 Check(!ui.View.LibraryVisible && saved is null && L.Language == language
-                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.appearance")),
+                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.general")),
                     "Escape closes only the language menu and does not apply its highlighted language.");
                 Open(); ui.Key(38); ui.Key(40); ui.Key(40);
                 string expected = L.AvailableLanguages[(L.AvailableLanguages.ToList().IndexOf(language) + 1) % L.AvailableLanguages.Count];
                 ui.Key(13);
+                if (expected != "en")
+                {
+                    Check(L.Language == language && saved is null && ui.View.DiscardConfirmationVisible
+                        && ui.Canvas.Texts.Any(t => t.Value == L.Get("language.machineTranslationTitle")),
+                        "Non-English selection must disclose unproofread AI-assisted machine translation before applying.");
+                    ui.Key('F', ctrl: true); ui.Key(27);
+                    Check(L.Language == language && saved is null && !ui.View.DiscardConfirmationVisible,
+                        "Cancelling the translation notice preserves the language and preference.");
+                    Open(); ui.Key(40); ui.Key(13);
+                    ui.ClickText(L.Get("language.continue"));
+                }
+                else Check(!ui.View.DiscardConfirmationVisible, "English must not show a translation notice.");
                 Check(L.Language == expected && saved == expected && !ui.View.LibraryVisible,
                     "Language arrows wrap and Enter persists the choice without leaving Settings.");
                 Open(); ui.Key(116); ui.Key('F', ctrl: true); ui.Key(27);
                 Check(!ui.View.LibraryVisible && L.Language == expected, "The dropdown consumes background Library shortcuts.");
+                ui.Resize(980, 620);
+                Open();
+                var nativeNames = L.AvailableLanguages.Select(Label).ToHashSet();
+                var seen = new HashSet<string>();
+                for (int step = 0; step < L.AvailableLanguages.Count; step++)
+                {
+                    var rows = ui.Canvas.Texts.Where(t => nativeNames.Contains(t.Value.TrimStart('✓', ' '))).ToArray();
+                    Check(rows.Length > 0 && rows.All(t => t.Y >= 4 && t.Y + 24 <= ui.Height), "Language rows must remain within the window.");
+                    foreach (var row in rows) seen.Add(row.Value.TrimStart('✓', ' '));
+                    ui.View.Wheel(rows[0].X + 4, rows[0].Y + 4, -120, false);
+                    ui.Paint();
+                }
+                for (int step = 0; step < L.AvailableLanguages.Count; step++)
+                {
+                    var rows = ui.Canvas.Texts.Where(t => nativeNames.Contains(t.Value.TrimStart('✓', ' '))).ToArray();
+                    foreach (var row in rows) seen.Add(row.Value.TrimStart('✓', ' '));
+                    ui.View.Wheel(rows[0].X + 4, rows[0].Y + 4, 120, false);
+                    ui.Paint();
+                }
+                Check(seen.SetEquals(nativeNames), "Scrolling must expose every available language.");
+                Check(L.Language == expected && saved == expected, "Scrolling must not change the selected language.");
+                for (int step = 0; step < L.AvailableLanguages.Count; step++)
+                {
+                    var row = ui.Canvas.Texts.First(t => nativeNames.Contains(t.Value.TrimStart('✓', ' ')));
+                    ui.View.Wheel(row.X + 4, row.Y + 4, -120, false); ui.Paint();
+                }
+                string lastLanguage = L.AvailableLanguages[^1];
+                string lastName = Label(lastLanguage);
+                var lastRow = ui.Canvas.Texts.Single(t => t.Value.TrimStart('✓', ' ') == lastName);
+                ui.Click(lastRow.X + 4, lastRow.Y + 4);
+                Check(ui.View.DiscardConfirmationVisible && L.Language == expected,
+                    "Mouse selection must disclose AI-assisted translation before applying.");
+                ui.Key(13);
+                Check(L.Language == lastLanguage && saved == lastLanguage, "Mouse selection must apply a language revealed by scrolling.");
+                Open();
+                ui.Key(27);
                 ui.Key(27);
                 Check(!ui.View.LibraryVisible && ui.View.Document.ContentEquals(before) && !ui.View.IsDirty,
                     "The next Escape closes Settings; language changes preserve beatmap content.");

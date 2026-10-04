@@ -21,6 +21,52 @@ the editor restores these values. They do not change map content or undo history
 Shift/Alt temporary snap overrides are not saved. Difficulties without saved
 preferences start with all three switches off and Grid Level Tiny (4 px).
 
+## Droplet randomization
+
+**Song Setup → Randomize droplets** starts with **Derandomize droplets: On/Off**.
+On compensates ordinary FSlider TinyDroplets to their authored path and disables
+Strength, Seed, reset, batch actions and per-slider randomization editing. The
+existing FX switches and manual adjustments are retained; Off restores them.
+**Derandomize for HR Mode** selects HR compensation while derandomization is On.
+Export then compensates HR's random sequence, including preceding fruit stacks,
+streams, sliders and bananas, so HR TinyDroplets follow the authored path. Normal
+mode TinyDroplets may shift. Fruit and ordinary droplet targets stay unchanged;
+Legacy Sliders retain their original geometry. Shared repeat geometry, boundaries
+and integer export coordinates retain the existing compensation limits. Both
+preferences apply to the current difficulty and support Apply, Cancel and undo.
+Changing the map switch also sets the default for subsequently drawn FSliders.
+
+The page configures Strength (0–100 playfield pixels)
+and a signed 32-bit Seed for the current difficulty. Drag the Strength slider or
+type a numeric value; **Reset strength (20)** restores its default in the dialog
+draft. Confirm to apply or cancel to discard changes. **Enable randomization for all FSliders** and
+**Disable randomization for all FSliders** set the switches of existing ordinary FSliders when the
+dialog is confirmed. Cancel discards the draft. The same batch actions are
+available under **Edit → Randomize droplets**, where they apply immediately in
+one undo step. Neither action creates a persistent master switch or changes the
+initial state of subsequently created FSliders, which follows the difficulty's
+saved new-slider default.
+
+Select one ordinary FSlider and use **Edit → Randomize droplets → Enable
+randomization / Disable randomization** to change only its switch. Long-pressing a
+single ordinary FSlider offers the same switch. The Edit menu also
+provides **Randomization settings…** and **Reset manual droplet adjustments** for
+the selected FSlider. Batch operations exclude Legacy Sliders and slider-managed
+fruit streams. Parameters and switches remain local to the current difficulty.
+
+The random sequence continues across all generated objects in the difficulty,
+including sliders with their effect disabled. Identical sliders use different
+parts of the sequence. Adding or removing earlier objects changes later random
+offsets; unchanged content and Seed reproduce the same result.
+
+Randomization affects TinyDroplets. Drag a TinyDroplet in Select mode or edit its
+X coordinate to save a correction without changing the base curve. Unlock droplet
+selection using the Lock Notes flyout when needed. Disabling randomization retains
+the corrections, and reenabling restores them. Repeat geometry and slider speed
+limits can constrain the result; unreachable manual moves stop at a valid position
+or reject a numeric change. See [Droplet randomization](PROJECT_MODEL.md#droplet-randomization)
+for target generation and export behavior.
+
 ## FSlider preview
 
 When drawing a new FSlider, the canvas updates only that slider's provisional
@@ -229,11 +275,22 @@ launcher or restart is needed. Closing without applying discards the draft.
 Testplay retains its low-latency presentation. Diagnostic display launchers
 override this preference for their run. macOS does not expose this Windows setting.
 
-**General → Default derandomize droplets** sets the initial choice for Legacy Slider conversion in maps without a saved choice. Applying it saves the preference across launches; changing the default does not alter an existing map's saved choice.
+**General → Droplet Derandomize Settings** contains two independent preferences and ends with
+a separator. **Enable Derandomization for Legacy slider to FSlider Conversion** sets the initial conversion
+choice in maps without a saved choice. **Enable Derandomization for new catchprojects**
+controls projects created from scratch or from audio. Both start On. With the
+new-project option Off, the new difficulty saves a default that enables
+randomization on newly drawn FSliders, with Strength 20 and Seed 1337. With it On,
+the map starts with Derandomize droplets On and newly drawn FSliders start without the effect. This default survives project
+reopening and is inherited by additional blank difficulties. Imported
+difficulties retain their own defaults. Settings Apply saves both preferences
+across launches; changing them does not modify existing beatmap content or a
+map's saved Legacy conversion choice. Batch randomization actions affect current
+FSliders without changing the default for future ones.
 
-Settings pages use 24 DIP page headings and 13 DIP labels, values, and actions. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In Appearance, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
+Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries; its content scrolls when the window is too short, with the page title and Apply fixed. Combo count and Dim Background in Testplay use compact buttons; the Background dim row matches their width. Navigation retains its larger click targets. The same dimensions apply on both desktop platforms and scale with DPI. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
 
-The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Testplay, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** is enabled only while unapplied changes exist. Ordinary preferences can be applied during library scanning or searching; changes to library paths wait for those tasks to finish. It saves them, stays in the current settings category, and becomes disabled again; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport. **Appearance → Romanised artist / title** defaults to On and controls Library cards, Library details, and the editor window title. Off prefers the Unicode metadata; either mode falls back to the other spelling when its preferred field is empty. Apply persists the preference without changing beatmap data, filenames, or search matching.
+The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Testplay, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** is enabled only while unapplied changes exist. Ordinary preferences can be applied during library scanning or searching; changes to library paths wait for those tasks to finish. It saves them, stays in the current settings category, and becomes disabled again; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport. **General → Romanised artist / title** defaults to On and controls Library cards, Library details, and the editor window title. Off prefers the Unicode metadata; either mode falls back to the other spelling when its preferred field is empty. Apply persists the preference without changing beatmap data, filenames, or search matching.
 
 **Appearance → Movement indicator colours** provides separate Stand, Walk, Dash, and HDash swatches. Click a swatch to drag within a saturation/value palette and hue bar, or enter an exact six-digit HEX value, as in Song Setup → Colors. The selected colour appears beside the HEX field. Done keeps the choice in the settings draft; Cancel or Esc restores the colour from before the picker opened. These preferences colour Movement Analysis connections, the floating movement indicator, and Distance Snap reference regions; they do not change skin rendering or beatmap content. **Reset colours** restores the original silver, green, amber, and rose drafts. **Apply** saves the colours across launches; leaving Settings before applying discards draft changes.
 
@@ -395,6 +452,28 @@ Mac accepts both Command and Ctrl shortcuts; Delete and Backspace both delete ob
 
 A slider's Fruit, Droplet, and TinyDroplet share parent selection. Selecting several children counts as one slider. Even with curves hidden, actual objects can select their complete track.
 
+In Select mode, a single selected slider or at least two consecutive selected
+parents displays a teal bounding box with a light background and left/right resize
+handles. Consecutive means no omitted parent in start-time/source order; a selected
+or intervening banana shower blocks the box. Bounds enclose the displayed Fruit,
+Droplet and TinyDroplet circles including their radii, excluding curve controls.
+Time bounds cover complete parent durations, including slider repeats. The resize
+handles are small squares with larger pointer hit areas.
+Drag a side handle to scale X positions and slider geometry around the opposite
+side, keeping times, repeats and sprite sizes unchanged. Grid Snap applies to the
+moving edge; individual events do not distance-snap. Handles stop before crossing
+the opposite side and at the playfield boundaries; stored stack width and adjustment
+limits also cap expansion. A zero-width pattern can move
+but cannot resize. Drag inside the box to translate all selected parents using the
+ordinary group-movement snap rules. Visible slider anchors and curve handles take
+priority, followed by box resizing/movement, then individual-event DS reshaping.
+Ctrl selection, clicks on event details and long-press actions remain available.
+For one selected slider, holding anywhere inside its box opens its action group;
+moving the pointer cancels the hold and continues the normal drag.
+Each drag is one undo step; Esc or lost capture restores its starting content.
+Legacy Sliders convert to FSliders on the first movement. Horizontal resizing
+converts exact circular arcs to bounded Bezier approximations in the same transaction.
+
 Copy and cut write a legacy reference such as `02:27:094 (1,2,3) - ` to the system clipboard. Inside the editor, a separate snapshot retains complete objects for pattern pasting into the same difficulty session. Other difficulties and reopened projects cannot receive that pattern. Paste aligns the earliest start to the playhead, preserves other objects' relative times and positions, and assigns new IDs. Each batch move, delete, cut, or paste is one undo step.
 
 ## Distance spacing and object flags
@@ -407,7 +486,7 @@ Distance snapping places fruits and the first slider draft point relative to the
 
 Drawing and reshaping a slider uses beat and horizontal grid snapping independently of DS. Slider endpoints, control points and Bezier handles are not constrained by DS presets or by the spacing of generated Fruit/Droplet events. Their X coordinates may extend beyond the 0–512 playfield while dragging or editing numeric values. The first draft point still distance-snaps relative to the previous source object. A completed slider remains selected in Slider mode, so its tail can be dragged immediately.
 
-In Select mode, horizontal dragging of a slider head, tail or large droplet keeps its time and strictly snaps relative to the preceding large event in the same slider, including zero DS, even on a curved slider. Endpoint candidates account for the preceding droplets that move with the reshaped curve. A selected TinyDroplet instead snaps its displayed X relative to the preceding event in the same slider, including other tiny droplets. Its compensation policy still applies. Following events impose no DS preset or maximum-distance requirement on a selected-object drag. With no preceding reference, dragging follows horizontal Grid Snap. Candidate positions are tried in pointer-distance order; unrepresentable candidates are skipped, and if none is available, the last accepted position remains unchanged. DS takes precedence over horizontal Grid Snap when a preceding reference exists.
+When a Select-mode drag is outside the bounding box and visible slider controls, horizontal dragging of a slider head, tail or large droplet keeps its time and strictly snaps relative to the preceding large event in the same slider, including zero DS, even on a curved slider. Endpoint candidates account for the preceding droplets that move with the reshaped curve. A selected TinyDroplet instead snaps its displayed X relative to the preceding event in the same slider, including other tiny droplets. Its compensation policy still applies. Following events impose no DS preset or maximum-distance requirement on a selected-object drag. With no preceding reference, dragging follows horizontal Grid Snap. Candidate positions are tried in pointer-distance order; unrepresentable candidates are skipped, and if none is available, the last accepted position remains unchanged. DS takes precedence over horizontal Grid Snap when a preceding reference exists.
 
 Changing DS settings, BPM, or tick rate does not reshape existing sliders.
 
@@ -537,7 +616,7 @@ Text inputs show a blinking caret at the end of the text and highlight the full 
 
 ## Display settings
 
-The language dropdown in **Settings → Appearance** lists the supported languages. Selecting a language applies and saves it immediately. Menu shortcut hints align to the right edge of each row. Existing beatmap titles and object names retain their values. The main canvas can hide curves and nodes. Catch Preview displays gameplay objects.
+The language dropdown in **Settings → General** lists the supported languages. Selecting a non-English language opens an AI-assisted machine translation notice before applying and saving it. Menu shortcut hints align to the right edge of each row. Existing beatmap titles and object names retain their values. The main canvas can hide curves and nodes. Catch Preview displays gameplay objects.
 
 The Skin selector to the left of **← Library** lists skins from the configured osu!stable `Skins` folder and offers `.osk` import. Imported archives and extracted Catch assets are kept under `workspace/Skins`; imported entries use gold text and an Imported label. Skin selection persists independently of beatmap edits. Library Settings accepts a user-owned default skin `.osk` file; each missing or unreadable custom image falls back to the default skin independently, then to geometric rendering. Long lists provide previous/next pages. Missing skins or textures fall back to basic shapes; see [Skins](../assets/skins/README.md). Drawing and hit-test sizes are described in [Catch Rendering and Conversion](CATCH_RENDERING.md).
 
@@ -595,9 +674,9 @@ Its generated catch events can differ from the original objects. The dialog warn
 that saving retains only the merged slider: reopening cannot recover the original
 objects because project files do not store undo history.
 
-Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press an FSlider to reveal **Convert to Stream/Stack**; imported Legacy Sliders offer **Convert to FSlider** above it. Every conversion entry opens the shared dialog on Stream with the same snap slider and subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**. Enter confirms; Esc cancels; arrow keys change the choice.
+Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press an FSlider to reveal **Convert to Stream/Stack**; imported Legacy Sliders offer **Convert to FSlider** above it. Ordinary sliders open the shared dialog on Stream; existing streams and stacks open their corresponding tab. The snap slider has the same subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**. Enter confirms; Esc cancels; arrow keys change the choice.
 
-With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging reshapes only that fruit while keeping its time fixed. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in their long-press menu. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
+With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging inside the selection box moves the whole stream. Visible anchors take priority; individual-event reshaping is available outside the box. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in their long-press menu. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
 
 The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
 
@@ -611,7 +690,7 @@ Ctrl+wheel doubles or halves the Snap divisor within supported choices on the ca
 
 Categories are ordered General, Workspace, Appearance, Audio, Testplay, and
 Application updates (where supported). Appearance groups the active skin selector
-with the default skin archive, metadata display, language, and indicator colours.
+with the default skin archive and indicator colours. General includes metadata display and language.
 Active skin selection takes effect immediately and is saved automatically.
 General includes a Reverse canvas scrolling toggle, separated by a divider. It
 defaults to off and reverses ordinary and Shift+wheel time navigation over the
@@ -629,7 +708,10 @@ or colour picker. Language changes take effect immediately.
 
 Select sliders and choose **Convert to Stream/Stack** from Edit or the long-press
 menu, or press **Ctrl+Shift+F**. Existing streams and stacks use **Edit Stream/Stack**
-for the menu, button and dialog title. The dialog opens on **Stream** by default.
+for the menu, button and dialog title. Existing streams open on **Stream**, and
+existing stacks open on **Stack**, retaining their saved subdivision. Ordinary
+sliders open on **Stream**. A mixed Stream/Stack selection follows its first
+target's mode and preview.
 The **Stream** and **Stack** tabs both preview the generated fruits. Stack enables
 curve and individual-fruit editing; switching tabs retains each tab's subdivision
 and the Stack draft. Tab switches modes when no numeric input is active. Confirm

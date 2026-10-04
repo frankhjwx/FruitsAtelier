@@ -87,6 +87,9 @@ public sealed partial class EditorView
         StreamDialogVisible = true;
         streamError = "";
         InitializeConversionPreview();
+        if (StreamDialogVisible && changingStreamSnap
+            && Document.Tracks.FirstOrDefault(t => t.Id == streamTargets[0])?.Stack is not null)
+            SetConversionMode(true);
     }
 
     private int streamSnap, stackSnap;

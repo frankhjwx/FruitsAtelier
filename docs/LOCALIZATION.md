@@ -1,13 +1,14 @@
 # Localization Maintenance
 
-Application GUI text, status messages, and Core user diagnostics come from `FruitsAtelier.Localization.Strings`. The first launch defaults to `en`, independently of the operating system language. The current-language button beside the fixed **Language** label in **Settings → Appearance** opens a dropdown listing every available language by its native name, with a check beside the current choice. Select with the mouse or Up/Down and Enter; Esc dismisses the dropdown. The selection is saved in `FruitsAtelier/language.json` under the system application-data directory and restored on subsequent launches; missing or damaged settings fall back to English. Existing beatmap titles, object names, skin names, and user file contents are data and are not translated or rewritten when switching languages.
+Application GUI text, status messages, and Core user diagnostics come from `FruitsAtelier.Localization.Strings`. The first launch defaults to `en`, independently of the operating system language. The current-language button beside the fixed **Language** label in **Settings → General** opens a dropdown listing every available language by its native name, with a check beside the current choice. Select with the mouse or Up/Down and Enter; Esc dismisses the dropdown. The selection is saved in `FruitsAtelier/language.json` under the system application-data directory and restored on subsequent launches; missing or damaged settings fall back to English. Existing beatmap titles, object names, skin names, and user file contents are data and are not translated or rewritten when switching languages.
 
 English is the project and documentation baseline. Maintain technical documentation and AI-facing instructions in English without parallel Chinese copies. Keep `README.zh-CN.md` as the Chinese user entry point. Other Chinese text belongs in translation resources or examples specifically explaining localization.
 
 ## Language tables and new entries
 
 - Main table: [en.json](../src/FruitsAtelier.Core/Localization/en.json). English defines the complete key set.
-- Chinese table: [zh-CN.json](../src/FruitsAtelier.Core/Localization/zh-CN.json). Its keys must match the main table.
+- Language tables: `en`, `zh-CN`, `zh-TW`, `ja`, `ko`, `ru`, `es`, `fr`, `pl`, `nl`, `fil`, `id`, and `th`. Every table under `src/FruitsAtelier.Core/Localization` must match the main table's keys.
+- Official osu! term references and dedicated-name rules: [Localization terminology](LOCALIZATION_TERMINOLOGY.md).
 - Code entry point: `using L = FruitsAtelier.Localization.Strings;`, then `L.Get("Module.SemanticKey", arguments...)`.
 
 For new application text, add the same key to the English master and every language table before referencing it from code. Store complete sentences in resources and pass dynamic names, counts, and values as parameters. Do not assemble sentences by concatenating translated words in UI code. Machine data such as format field names, extensions, protocol tokens, and source-file text is not translated.
@@ -21,6 +22,10 @@ Built-in default names also come from resources and are used only when creating 
 Add a UTF-8 `<culture>.json` file under `src/FruitsAtelier.Core/Localization`, such as `fr-FR.json`. Copy every key from the main table and translate its string, including the language button label. Use a valid culture name for the filename.
 
 Core embeds `Localization/*.json` and enumerates these resources at runtime to produce `AvailableLanguages`. Rebuilding after adding a matching JSON table makes the language available without maintaining a hardcoded list. This mechanism does not load external override files from the runtime directory or watch JSON changes while running.
+
+The language dropdown opens above or below its button according to available space. Scroll with the mouse wheel when the list cannot fit; keyboard navigation keeps the highlighted language visible. Scrolling does not apply a language change.
+
+The language button and dropdown show native language names; Chinese variants use `简体中文` and `繁体中文`. Selecting a non-English language opens a notice in the current interface language explaining that the target uses AI-assisted machine translation and has not been proofread. Continue or Enter applies and saves the choice; Cancel or Esc retains the current language. English has no selection notice. Restoring a saved language at startup does not reopen the selection notice.
 
 ## Validation and checks
 

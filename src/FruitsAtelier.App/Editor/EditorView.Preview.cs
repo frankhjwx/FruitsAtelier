@@ -149,13 +149,51 @@ public sealed partial class EditorView
         noteHoldTarget = null;
         if (modified || notesLocked || draftTrack != Guid.Empty || draftBanana != Guid.Empty || tool is not (Tool.Select or Tool.Slider)) return;
         var hit = HitCatchObject(x, y);
-        noteHoldTarget = hit is { Kind: CatchObjectKind.Fruit } ? hit : null;
+        var box = SelectionTransformBounds;
+        Guid boxedSlider = tool == Tool.Select && objectSelection.Count == 1 && box.Width > 0
+            && x >= box.X && x <= box.Right && y >= box.Y && y <= box.Bottom
+            ? objectSelection.First() : Guid.Empty;
+        noteHoldTarget = hit is { Kind: CatchObjectKind.Fruit } && (boxedSlider == Guid.Empty || hit.SourceId == boxedSlider) ? hit : null;
         sliderHoldX = x; sliderHoldY = y; sliderHoldStart = TestplayRealtime;
-        Guid id = hit?.SourceId ?? (showTargets ? HitSliderLocation(x, y)?.Id : null) ?? Guid.Empty;
+        Guid id = boxedSlider != Guid.Empty ? boxedSlider : hit?.SourceId ?? (showTargets ? HitSliderLocation(x, y)?.Id : null) ?? Guid.Empty;
         if (!Document.Tracks.Any(t => t.Id == id) && !Document.ImportedSliders.Any(t => t.Id == id)
             && !(objectSelection.Count > 1 && objectSelection.Contains(id) && Document.Fruits.Any(f => f.Id == id))) return;
         if (tool == Tool.Slider && SelectedTrack?.Id != id) return;
         sliderHoldId = id; sliderHoldX = x; sliderHoldY = y; sliderHoldStart = TestplayRealtime;
+    }
+
+    private void OpenSliderActionsAtPointer()
+    {
+        if (notesLocked || tool is not (Tool.Select or Tool.Slider)) return;
+        if (plot.Contains(mouseX, mouseY)) BeginSliderHold(mouseX, mouseY, false);
+        noteHoldTarget = null;
+        if (sliderHoldId == Guid.Empty)
+        {
+            RefreshTimelineSources();
+            double visibleEnd = viewStart + plot.Height / pixelsPerMs;
+            foreach (var source in timelineSources)
+            {
+                if (!objectSelection.Contains(source.Id) || source.End < viewStart || source.Start > visibleEnd
+                    || !Document.Tracks.Any(t => t.Id == source.Id) && !Document.ImportedSliders.Any(t => t.Id == source.Id)) continue;
+                if (tool == Tool.Slider && SelectedTrack?.Id != source.Id) continue;
+                sliderHoldId = source.Id;
+                var position = Screen(new(Math.Clamp(source.Start, viewStart, visibleEnd), 256));
+                sliderHoldX = position.X; sliderHoldY = position.Y;
+                break;
+            }
+        }
+        if (sliderHoldId == Guid.Empty) return;
+        contextItems.Clear();
+        OpenSliderActions(sliderHoldId);
+        sliderHoldId = Guid.Empty;
+    }
+
+    private void OpenSliderActions(Guid id)
+    {
+        if (!objectSelection.Contains(id)) SelectObjects([id]);
+        holdMergeAllowed = ObjectStructureEditing.MergeSelection(Document, ClipboardSelectedParentIds()).Error is null;
+        legacyButtonSlider = id;
+        sliderConversionBounds = default;
     }
 
     private void DrawSliderHold(ICanvas c)
@@ -186,10 +224,8 @@ public sealed partial class EditorView
         if (progress >= 1)
         {
             history.Commit(); drag = DragKind.None;
-            if (!objectSelection.Contains(sliderHoldId)) SelectObjects([sliderHoldId]);
-            holdMergeAllowed = ObjectStructureEditing.MergeSelection(Document, ClipboardSelectedParentIds()).Error is null;
-            legacyButtonSlider = sliderHoldId; sliderHoldId = Guid.Empty; sliderHoldConsumed = true;
-            sliderConversionBounds = default;
+            OpenSliderActions(sliderHoldId);
+            sliderHoldId = Guid.Empty; sliderHoldConsumed = true;
             return;
         }
         const float radius = 9;
@@ -213,10 +249,11 @@ public sealed partial class EditorView
         bool imported = ids.Count == 1 && Document.ImportedSliders.Any(t => ids.Contains(t.Id));
         bool slider = Document.Tracks.Any(t => ids.Contains(t.Id)) || Document.ImportedSliders.Any(t => ids.Contains(t.Id));
         bool stream = SelectedStreamsOnly;
+        bool randomize = ids.Count == 1 && RandomizeSelectedTrack is { } randomizeTrack && ids.Contains(randomizeTrack.Id);
         bool merge = holdMergeAllowed;
         if (!ids.Contains(id) || tool is not (Tool.Select or Tool.Slider) || draftTrack != Guid.Empty || drag != DragKind.None || menu >= 0 || ExportVisible || SliderDialogVisible || StreamDialogVisible || MergeDialogVisible || TimeJumpVisible || DistanceSnapDialogVisible)
         { LegacyConversionBounds = StreamConversionBounds = default; legacyButtonSlider = Guid.Empty; return; }
-        int count = (imported ? 1 : 0) + (slider ? 2 : 0) + (stream ? 2 : 0) + (merge ? 1 : 0);
+        int count = (imported ? 1 : 0) + (slider ? 2 : 0) + (stream ? 2 : 0) + (merge ? 1 : 0) + (randomize ? 1 : 0);
         if (count == 0) { LegacyConversionBounds = StreamConversionBounds = default; return; }
         float buttonWidth = 260;
         float buttonHeight = count * 36 - 4;
@@ -245,6 +282,12 @@ public sealed partial class EditorView
         }
         if (slider)
         { Button(c, new(r.X, row, r.Width, 32), L.Get("slider.clearInternal"), ClearSelectedInternalAnchors, enabled: !notesLocked); row += 36; }
+        if (randomize)
+        {
+            Button(c, new(r.X, row, r.Width, 32), L.Get(RandomizeSelectedTrack!.DropletRandomization is { Enabled: true }
+                ? "randomize.disableSelected" : "randomize.enableSelected"), ToggleSelectedDropletRandomization, enabled: CanRandomizeDroplets);
+            row += 36;
+        }
         if (merge) Button(c, new(r.X, row, r.Width, 32), L.Get("merge.title"), OpenMergeDialog, enabled: !notesLocked);
     }
 }

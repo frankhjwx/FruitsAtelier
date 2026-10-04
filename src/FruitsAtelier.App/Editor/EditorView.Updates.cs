@@ -37,10 +37,15 @@ public sealed partial class EditorView
         float top = embedded ? SettingsTop : 0;
         float right = embedded ? SettingsRight : width;
         float textSize = embedded ? SettingsTextSize : 15;
+        void ActionButton(Rect bounds, string label, Action action, bool active = false, bool enabled = true)
+        {
+            if (embedded) SettingsButton(c, bounds with { Height = SettingsControlHeight }, label, action, active, enabled);
+            else Button(c, bounds, label, action, active, enabled);
+        }
         if (!embedded) c.Text(L.Get("update.title"), x, 96, 22, Foreground, right - x - 32, true);
         c.Text(L.Get("update.currentVersion", DisplayVersion), x, top + 144, textSize, Muted, right - x - 32);
-        Button(c, new(x, top + 186, 340, 36), L.Get(AutomaticUpdateChecks ? "update.automaticOn" : "update.automaticOff"), () =>
-        { AutomaticUpdateChecks = !AutomaticUpdateChecks; RequestUpdatePreference?.Invoke(); }, AutomaticUpdateChecks, fontSize: embedded ? SettingsTextSize : 12, bold: embedded ? false : null);
+        ActionButton(new(x, top + 186, embedded ? SettingsContentWidth : 340, 36), L.Get(AutomaticUpdateChecks ? "update.automaticOn" : "update.automaticOff"), () =>
+        { AutomaticUpdateChecks = !AutomaticUpdateChecks; RequestUpdatePreference?.Invoke(); }, AutomaticUpdateChecks);
         string key = UpdateStatus.Phase switch
         {
             UpdatePhase.Unsupported => "update.unsupported", UpdatePhase.Checking => "update.checking",
@@ -50,10 +55,10 @@ public sealed partial class EditorView
         };
         c.Text(L.Get(key, UpdateStatus.Version, UpdateStatus.Progress), x, top + 246, textSize, Foreground, right - x - 32);
         var phase = UpdateStatus.Phase;
-        Button(c, new(x, top + 296, 210, 38), L.Get("update.check"), () => RequestUpdateCheck?.Invoke(), active: true,
-            enabled: phase is not (UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Unsupported), fontSize: embedded ? SettingsTextSize : 12, bold: embedded ? false : null);
+        ActionButton(new(x, top + 296, 210, 38), L.Get("update.check"), () => RequestUpdateCheck?.Invoke(), active: true,
+            enabled: phase is not (UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Unsupported));
         if (phase is UpdatePhase.Available or UpdatePhase.Ready)
-            Button(c, new(x + 222, top + 296, 320, 38), L.Get(phase == UpdatePhase.Ready ? "update.restart" : "update.download"), () =>
+            ActionButton(new(x + 222, top + 296, embedded ? SettingsContentWidth - 222 : 320, 38), L.Get(phase == UpdatePhase.Ready ? "update.restart" : "update.download"), () =>
         {
             if (phase == UpdatePhase.Ready)
             {
@@ -62,9 +67,10 @@ public sealed partial class EditorView
                 RequestUpdateRestart?.Invoke();
             }
             else RequestUpdateDownload?.Invoke();
-        }, active: true, fontSize: embedded ? SettingsTextSize : 12, bold: embedded ? false : null);
-        Button(c, new(x, top + 350, 220, 38), L.Get("update.notes"), () => RequestUpdateNotes?.Invoke(), fontSize: embedded ? SettingsTextSize : 12);
-        c.Text(L.Get("update.saveHelp"), x, top + 410, embedded ? SettingsTextSize : 14, Muted, right - x - 32);
+        }, active: true);
+        ActionButton(new(x, top + 350, embedded ? SettingsContentWidth : 220, 38), L.Get("update.notes"), () => RequestUpdateNotes?.Invoke());
+        if (embedded) SettingsParagraph(c, L.Get("update.saveHelp"), top + 410);
+        else c.Text(L.Get("update.saveHelp"), x, top + 410, 14, Muted, right - x - 32);
         if (!embedded) Button(c, new(x, 466, 200, 36), L.Get(LibraryVisible ? "update.back" : "library.editor"), () => updatesPage = false);
     }
 }

@@ -287,8 +287,8 @@ public static class OsuBeatmapWriter
         var original = document.TimingPoints.Select(t => t.DeepClone()).ToList();
         if (original.Count == 0) original.Add(new TimingPoint { TimeMs = document.TimingOffsetMs, BeatLengthMs = document.BeatLengthMs });
         if (generated.Count == 0) return original;
-        if (original.Zip(original.Skip(1)).Any(p => p.First.TimeMs > p.Second.TimeMs))
-            throw new InvalidDataException(L.Get("core.writer.timingOrder"));
+        // Timing edits can append earlier points; stable sorting retains tied sample/SV precedence.
+        original = original.OrderBy(p => p.TimeMs).ToList();
         var emitted = new MapDocument { BeatLengthMs = document.BeatLengthMs, TimingOffsetMs = document.TimingOffsetMs };
         emitted.TimingPoints.AddRange(original.Select(t => t.DeepClone()));
         var originalLookup = new TimingMap.Lookup(document);

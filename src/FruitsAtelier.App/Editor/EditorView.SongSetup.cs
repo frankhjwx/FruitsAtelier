@@ -19,7 +19,7 @@ public sealed partial class EditorView
     private readonly Dictionary<string, string> songInitial = [];
     private readonly Dictionary<string, Rect> songFieldBounds = [];
     private readonly List<uint> songColours = [];
-    private readonly List<(Rect Bounds, string Key)> songSliders = [];
+    private readonly List<(Rect Bounds, string Key, double Maximum)> songSliders = [];
     private Rect songPalette, songHueTrack;
     private static readonly string[] SongMetadata = ["ArtistUnicode", "Artist", "TitleUnicode", "Title", "Creator", "Version", "Source", "Tags"];
     private static readonly string[] SongDifficulty = ["HPDrainRate", "CircleSize", "ApproachRate", "OverallDifficulty"];
@@ -36,6 +36,9 @@ public sealed partial class EditorView
         if (AudioPlaying) RequestPausePlayback?.Invoke();
         menu = -1; languageMenuOpen = false; contextItems.Clear();
         songValues.Clear(); songInitial.Clear(); songField = songError = "";
+        songRandomizeAll = null;
+        songDerandomizeDroplets = Document.DerandomizeFSliderDroplets;
+        songDerandomizeHardRock = Document.DerandomizeDropletsForHardRock;
         songTab = songColour = 0; songDrag = -1; songCountdownOpen = false; SongSetupInputSession++;
         foreach (string key in SongMetadata) songValues[key] = SongSetup.Get(Document, "Metadata", key);
         songValues["ArtistUnicode"] = SongSetup.Get(Document, "Metadata", "ArtistUnicode", songValues["Artist"]);
@@ -47,6 +50,8 @@ public sealed partial class EditorView
         songValues["OverallDifficulty"] = SongSetup.Get(Document, "Difficulty", "OverallDifficulty", "5");
         songValues["CircleSize"] = Document.CircleSize.ToString(CultureInfo.InvariantCulture);
         songValues["ApproachRate"] = Document.ApproachRate.ToString(CultureInfo.InvariantCulture);
+        songValues["RandomizeDropletStrength"] = Document.RandomizeDropletStrength.ToString(CultureInfo.InvariantCulture);
+        songValues["RandomizeDropletSeed"] = Document.RandomizeDropletSeed.ToString(CultureInfo.InvariantCulture);
         foreach (string key in SongDesign) songValues[key] = SongSetup.Get(Document, "General", key, key == "Countdown" ? "1" : "0");
         foreach (var pair in songValues) songInitial[pair.Key] = pair.Value;
         songColours.Clear(); songColours.AddRange(SongSetup.Colours(Document));
@@ -69,6 +74,7 @@ public sealed partial class EditorView
         "Artist" => NeedsRomanisation(songValues["ArtistUnicode"]),
         "Title" => NeedsRomanisation(songValues["TitleUnicode"]),
         "Hex" => songCustomColours,
+        "RandomizeDropletStrength" or "RandomizeDropletSeed" => !songDerandomizeDroplets,
         "CountdownOffset" => songValues["Countdown"] != "0",
         _ => true
     };
@@ -83,11 +89,12 @@ public sealed partial class EditorView
         c.Fill(r, Panel, 8); c.Stroke(r, Grid, radius: 8);
         c.Text(L.Get("song.title"), r.X + 22, r.Y + 16, 19, Foreground, r.Width - 80, true);
         Button(c, new(r.Right - 54, r.Y + 10, 32, 28), "×", CloseSongSetup);
-        string[] tabs = ["song.general", "song.difficulty", "song.colours", "song.design"];
+        string[] tabs = ["song.general", "song.difficulty", "song.colours", "song.design", "randomize.title"];
+        float tabStep = Math.Min(140, (r.Width - 44) / tabs.Length);
         for (int i = 0; i < tabs.Length; i++)
         {
             int tab = i;
-            Button(c, new(r.X + 22 + i * 140, r.Y + 52, 132, 32), L.Get(tabs[i]), () =>
+            Button(c, new(r.X + 22 + i * tabStep, r.Y + 52, tabStep - 8, 32), L.Get(tabs[i]), () =>
             { songTab = tab; songField = ""; songError = ""; songCountdownOpen = false; SongSetupInputSession++; }, songTab == i);
         }
         c.Line(r.X + 22, r.Y + 96, r.Right - 22, r.Y + 96, Grid);
@@ -99,21 +106,34 @@ public sealed partial class EditorView
         {
             for (int i = 0; i < SongDifficulty.Length; i++)
             {
-                string key = SongDifficulty[i]; float y = r.Y + 132 + i * 76;
-                SongTextField(c, key, y, compact: true);
-                var track = new Rect(r.X + 240, y + 9, r.Width - 378, 20);
-                double.TryParse(songValues[key], NumberStyles.Float, CultureInfo.InvariantCulture, out double value);
-                c.Line(track.X, track.Y + 10, track.Right, track.Y + 10, Grid, 4);
-                for (int step = 0; step <= 10; step++)
-                {
-                    float tickX = track.X + step * track.Width / 10;
-                    c.Line(tickX, track.Y + 6, tickX, track.Y + 14, Muted, 1);
-                }
-                c.Circle(track.X + (float)Math.Clamp(value / 10, 0, 1) * track.Width, track.Y + 10, 7, Accent);
-                songSliders.Add((track, key));
+                SongRangeSlider(c, SongDifficulty[i], r.Y + 132 + i * 76, 10);
             }
         }
         else if (songTab == 2) DrawSongColours(c, r);
+        else if (songTab == 4)
+        {
+            Button(c, new(r.X + 22, r.Y + 116, r.Width - 44, 32),
+                L.Get(songDerandomizeDroplets ? "randomize.derandomizeOn" : "randomize.derandomizeOff"), () =>
+                {
+                    songDerandomizeDroplets = !songDerandomizeDroplets;
+                    songField = ""; songDrag = -1; SongSetupInputSession++;
+                }, songDerandomizeDroplets, !notesLocked, fontSize: 13);
+            Button(c, new(r.X + 22, r.Y + 160, r.Width - 44, 32),
+                L.Get(songDerandomizeHardRock ? "randomize.derandomizeHrOn" : "randomize.derandomizeHrOff"),
+                () => songDerandomizeHardRock = !songDerandomizeHardRock,
+                songDerandomizeHardRock, !notesLocked && songDerandomizeDroplets, fontSize: 13);
+            SongRangeSlider(c, "RandomizeDropletStrength", r.Y + 216, 100);
+            Button(c, new(r.X + 240, r.Y + 260, r.Width - 262, 32), L.Get("randomize.resetStrength"), () =>
+            {
+                songValues["RandomizeDropletStrength"] = "20";
+                songField = songError = ""; SongSetupInputSession++;
+            }, enabled: !songDerandomizeDroplets);
+            SongTextField(c, "RandomizeDropletSeed", r.Y + 308);
+            float buttonWidth = (r.Width - 56) / 2;
+            Button(c, new(r.X + 22, r.Y + 364, buttonWidth, 34), L.Get("randomize.enableAll"), () => songRandomizeAll = true, songRandomizeAll == true, !notesLocked && !songDerandomizeDroplets, fontSize: 13);
+            Button(c, new(r.X + 34 + buttonWidth, r.Y + 364, buttonWidth, 34), L.Get("randomize.disableAll"), () => songRandomizeAll = false, songRandomizeAll == false, !notesLocked && !songDerandomizeDroplets, fontSize: 13);
+
+        }
         else
         {
             int.TryParse(songValues["Countdown"], out int countdown);
@@ -156,17 +176,38 @@ public sealed partial class EditorView
         var box = new Rect(compact ? r.Right - 116 : r.X + 240, y, compact ? 94 : r.Width - 262, 32);
         songFieldBounds[key] = box;
         bool enabled = SongFieldEnabled(key), focused = enabled && songField == key;
-        if (enabled) { c.Fill(box, Surface, 4); c.Stroke(box, focused ? Accent : Grid, radius: 4); }
+        if (enabled || key is "RandomizeDropletStrength" or "RandomizeDropletSeed")
+        { c.Fill(box, Surface, 4, enabled ? 1 : .45f); c.Stroke(box, focused ? Accent : Grid, radius: 4); }
         string value = !enabled && key is "Artist" or "Title" ? songValues[key + "Unicode"] : songValues[key];
         string inputKey = "song:" + key;
         if (enabled) DrawInputText(c, new(box.X + 9, box.Y + 7, box.Width - 18, 20), value, 13, focused, inputKey);
-        else c.Text(value, box.X + 9, box.Y + 7, 13, 0xB8C2CE, box.Width - 18);
+        else c.Text(value, box.X + 9, box.Y + 7, 13, key is "Artist" or "Title" ? 0xB8C2CEu : Muted, box.Width - 18);
         hits.Add(new(box, () => { songField = key; SongSetupInputSession++; FocusInput(inputKey, value, mouseX); }, enabled));
+    }
+
+    private void SongRangeSlider(ICanvas c, string key, float y, double maximum)
+    {
+        SongTextField(c, key, y, compact: true);
+        var r = SongSetupBounds;
+        var track = new Rect(r.X + 240, y + 9, r.Width - 378, 20);
+        double.TryParse(songValues[key], NumberStyles.Float, CultureInfo.InvariantCulture, out double value);
+        c.Line(track.X, track.Y + 10, track.Right, track.Y + 10, Grid, 4);
+        for (int step = 0; step <= 10; step++)
+        {
+            float tickX = track.X + step * track.Width / 10;
+            c.Line(tickX, track.Y + 6, tickX, track.Y + 14, Muted, 1);
+        }
+        c.Circle(track.X + (float)Math.Clamp(value / maximum, 0, 1) * track.Width, track.Y + 10, 7, SongFieldEnabled(key) ? Accent : Muted);
+        if (SongFieldEnabled(key)) songSliders.Add((track, key, maximum));
     }
 
     private void ApplySongSetup()
     {
         if (audioProjectPath is not null) { CreateAudioProject(); return; }
+        if (!double.TryParse(songValues["RandomizeDropletStrength"], NumberStyles.Float, CultureInfo.InvariantCulture, out double randomStrength)
+            || !double.IsFinite(randomStrength) || randomStrength is < 0 or > 100
+            || !int.TryParse(songValues["RandomizeDropletSeed"], NumberStyles.Integer, CultureInfo.InvariantCulture, out int randomSeed))
+        { songError = L.Get("randomize.invalid"); songTab = 4; return; }
         foreach (string key in SongDifficulty)
             if (!double.TryParse(songValues[key], NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
                 || !double.IsFinite(value) || value < 0 || value > 10)
@@ -211,6 +252,13 @@ public sealed partial class EditorView
             foreach (string key in SongDifficulty.Where(k => songValues[k] != songInitial[k])) SongSetup.Set(Document, "Difficulty", key, songValues[key]);
             Document.CircleSize = double.Parse(songValues["CircleSize"], CultureInfo.InvariantCulture);
             Document.ApproachRate = double.Parse(songValues["ApproachRate"], CultureInfo.InvariantCulture);
+            if (Document.DerandomizeFSliderDroplets != songDerandomizeDroplets) Document.RandomizeNewSliders = !songDerandomizeDroplets;
+            Document.DerandomizeFSliderDroplets = songDerandomizeDroplets;
+            Document.DerandomizeDropletsForHardRock = songDerandomizeHardRock;
+            Document.RandomizeDropletStrength = randomStrength;
+            Document.RandomizeDropletSeed = randomSeed;
+            if (!songDerandomizeDroplets && songRandomizeAll is { } all)
+                foreach (var track in Document.Tracks.Where(t => t.StreamSnapDivisor is null)) SetDropletRandomization(track, all);
             foreach (string key in SongDesign.Where(k => songValues[k] != songInitial[k])) SongSetup.Set(Document, "General", key, songValues[key]);
             SongSetup.SetColours(Document, songCustomColours ? songColours : Array.Empty<uint>());
             OsuBeatmapReader.Validate(Document);
@@ -250,7 +298,7 @@ public sealed partial class EditorView
         if (songDrag is >= 0 and < 4 && songDrag < songSliders.Count)
         {
             var slider = songSliders[songDrag];
-            double value = Math.Round(Math.Clamp((x - slider.Bounds.X) / slider.Bounds.Width, 0, 1) * 10, shift ? 1 : 0);
+            double value = Math.Round(Math.Clamp((x - slider.Bounds.X) / slider.Bounds.Width, 0, 1) * slider.Maximum, shift ? 1 : 0);
             songValues[slider.Key] = value.ToString(CultureInfo.InvariantCulture);
         }
         else if (songDrag is 4 or 5)
