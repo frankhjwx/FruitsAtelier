@@ -53,6 +53,8 @@ static class SettingsTests
                     }
                     if (category == "settings.testplay")
                     {
+                        Check(ui.View.TestplayBindingBounds(2).Right == ui.View.TestplayStartupDelayBounds.Right,
+                            "startup delay aligns with the Dash binding right edge");
                         var combo = ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.comboOn"));
                         Check(combo.MaxWidth <= 280, "Combo count uses a compact button");
                         var dim = ui.Canvas.Texts.Single(t => t.Value.EndsWith(L.Get("settings.forceBackgroundDim")));

@@ -47,7 +47,7 @@ public sealed partial class EditorView
     private DateTime searchAfter, nextLibraryScan = DateTime.MinValue, nextResourceCheck;
     private IReadOnlyList<string> resourceErrors = [];
 
-    public void InitializeLibrary(bool show, LibrarySettings? settings = null)
+    public void InitializeLibrary(bool show, LibrarySettings? settings = null, bool forceFirstRunSetup = false)
     {
         try { LibrarySettings = settings ?? LibrarySettings.Load(); }
         catch (Exception e) { libraryError = e.Message; }
@@ -60,6 +60,11 @@ public sealed partial class EditorView
         draftWorkspace = LibrarySettings.Workspace; draftOsuRoot = LibrarySettings.OsuRoot; draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         LibraryVisible = show;
         librarySettingsOpen = false; updatesPage = false;
+        if (forceFirstRunSetup || show && settings is null && !LibrarySettings.FirstRunSetupCompleted)
+        {
+            BeginFirstRunSetup();
+            return;
+        }
         LoadLibraryMemory();
         StartLibraryScan();
         EnableFileMonitoring();
@@ -530,7 +535,7 @@ public sealed partial class EditorView
     }
     private void LibraryTextField(ICanvas c, int index, string label, string value, float y)
     {
-        float right = librarySettingsOpen ? SettingsRight : width;
+        float right = librarySettingsOpen ? SettingsContentX + SettingsContentWidth + 32 : width;
         float x = librarySettingsOpen ? SettingsContentX : 32;
         float textSize = librarySettingsOpen ? SettingsTextSize : 14;
         c.Text(label, x, y, textSize, Foreground, right - x - 32, true);
@@ -554,8 +559,9 @@ public sealed partial class EditorView
     public Action? RequestPasteLibrary { get; set; }
     private bool SelectLibraryInputAt(float x, float y)
     {
-        if (librarySettingsOpen && settingsCategory == SettingsCategory.Workspace && !workspaceScrollBounds.Contains(x, y)) return false;
-        foreach (int index in (ExportVisible ? new[] { 3 } : librarySettingsOpen ? settingsColourIndex >= 0 ? new[] { 5 } : new[] { 0, 1, 4 } : new[] { 2 }))
+        if (librarySettingsOpen && !FirstRunSetupVisible && settingsCategory == SettingsCategory.Workspace && !workspaceScrollBounds.Contains(x, y)) return false;
+        foreach (int index in (FirstRunSetupVisible ? firstRunStep == 0 ? new[] { 0, 1 } : firstRunStep == 1 ? new[] { 4 } : Array.Empty<int>()
+            : ExportVisible ? new[] { 3 } : librarySettingsOpen ? settingsColourIndex >= 0 ? new[] { 5 } : new[] { 0, 1, 4 } : new[] { 2 }))
         {
             string key = "library:" + index;
             if (!textLayouts.TryGetValue(key, out var layout)) continue;
@@ -580,7 +586,7 @@ public sealed partial class EditorView
         if (key == 27 && settingsColourIndex >= 0) { CancelIndicatorColourPicker(); return; }
         if (key == 27) FinishVolumeDrag();
         if (key == 27) { if (contextItems.Count > 0) contextItems.Clear(); else if (libraryField >= 0) libraryField = -1; else if (librarySettingsOpen) CloseSettings(); else resourcePage = false; return; }
-        if (key == 116) { StartLibraryScan(); return; }
+        if (key == 116) { if (!FirstRunSetupVisible) StartLibraryScan(); return; }
         if (!librarySettingsOpen && ctrl && key == 70) { libraryField = 2; SelectInput("library:2", libraryQuery); return; }
         if (key == 13 && libraryField < 0 && !librarySettingsOpen && !resourcePage && libraryBrowser?.Selected?.Map is { } map)
         { OpenSelectedLibraryMap(map); return; }

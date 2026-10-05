@@ -19,7 +19,7 @@ internal static class Program
             if (args.Length is 2 or 3 && args[0] == "--profile-map") return window.Run(profileMap: args[1],
                 profileStartMs: args.Length == 3 ? double.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture) : 70000);
             return window.Run(args.Contains("--render-check") || args.Contains("--testplay-render-check"), args.FirstOrDefault(File.Exists),
-                testplayCheck: args.Contains("--testplay-render-check"));
+                testplayCheck: args.Contains("--testplay-render-check"), firstRunSetup: args.Contains("--first-run-setup"));
         }
         catch (Exception exception)
         {

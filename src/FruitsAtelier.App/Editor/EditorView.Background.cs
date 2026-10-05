@@ -17,6 +17,7 @@ public sealed partial class EditorView
     {
         bool visible = backgroundDimSliderDraft
             ? librarySettingsOpen && settingsCategory == SettingsCategory.Testplay : TestplayPauseMenuVisible;
+        if (FirstRunSetupVisible && !workspaceScrollBounds.Contains(x, y)) return false;
         if (!visible || button != 0 || backgroundDimSliderBounds.Width <= 0 || !backgroundDimSliderBounds.Contains(x, y)) return false;
         backgroundDimDragging = true;
         backgroundDimDragDraft = backgroundDimSliderDraft;

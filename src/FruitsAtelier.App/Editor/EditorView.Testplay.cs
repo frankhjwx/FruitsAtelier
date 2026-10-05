@@ -328,10 +328,16 @@ public sealed partial class EditorView
         219 => "[", 220 => "\\", 221 => "]", 222 => "'", 223 => "OEM 8", 226 => "OEM 102",
         _ => ((char)key).ToString()
     };
+    private float TestplaySettingsCellWidth => Math.Min(220, SettingsContentWidth / 3);
+    internal Rect TestplayBindingBounds(int index) => new(SettingsContentX + index * TestplaySettingsCellWidth,
+        SettingsTop + 188, TestplaySettingsCellWidth - 12, SettingsControlHeight);
+    internal Rect TestplayStartupDelayBounds => new(SettingsContentX + 270, SettingsTop + 260,
+        TestplaySettingsCellWidth * 3 - 12 - 270, SettingsControlHeight);
     private void DrawTestplayBindings(ICanvas c)
     {
+        float cell = TestplaySettingsCellWidth;
         c.Text(L.Get("testplay.keyBindingSettings"), SettingsContentX, SettingsTop + 124, SettingsSectionSize, Foreground, SettingsRight - SettingsContentX - 32, true);
-        var leadIn = new Rect(SettingsContentX + 270, SettingsTop + 260, SettingsContentWidth - 270, SettingsControlHeight);
+        var leadIn = TestplayStartupDelayBounds;
         c.Text(L.Get("testplay.startupDelay"), SettingsContentX, leadIn.Y + (leadIn.Height - 17) / 2,
             SettingsTextSize, Foreground, 260, true);
         var valueBounds = new Rect(leadIn.X + 26, leadIn.Y, leadIn.Width - 52, leadIn.Height);
@@ -354,12 +360,11 @@ public sealed partial class EditorView
             (draftForceBackgroundDim ? "✓ " : "") + L.Get("settings.forceBackgroundDim"),
             () => draftForceBackgroundDim = !draftForceBackgroundDim, draftForceBackgroundDim);
         string[] labels = ["testplay.left", "testplay.right", "testplay.dash"];
-        float cell = Math.Min(220, (SettingsRight - SettingsContentX - 32) / 3);
         for (int i = 0; i < 3; i++)
         {
             int action = i;
             c.Text(L.Get(labels[i]), SettingsContentX + i * cell, SettingsTop + 160, SettingsTextSize, Foreground, cell - 8, true);
-            SettingsButton(c, new(SettingsContentX + i * cell, SettingsTop + 188, cell - 12, SettingsControlHeight), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
+            SettingsButton(c, TestplayBindingBounds(i), bindingCapture == i ? L.Get("testplay.pressKey") : KeyName(draftTestplayKeys[i]),
                 () => { libraryField = -1; bindingCapture = action; }, bindingCapture == i);
         }
     }

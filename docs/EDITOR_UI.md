@@ -1,5 +1,42 @@
 # Editing Controls
 
+## First-time setup
+
+Startup opens a six-step setup guide when the saved setup version is missing or
+older than the current version. This includes existing users upgrading to the
+release that introduces setup. Completing the guide saves its version, so later
+normal launches open the editor directly.
+
+The guide uses a compact window, targeting 880 × 620 logical pixels and bounded
+to 85% of the screen work area after DPI scaling. Its filled arrow-shaped tabs
+cover folders and language; skin and skin sounds; volume; droplet defaults;
+romanised artist/title display; and testplay. Short windows scroll the content
+while keeping navigation visible. The guide has no system title bar or outer
+border; drag the progress strip, or the top of the completion page, to move it.
+The main editor opens after Start with its normal window decorations.
+
+Back and Next retain choices in an isolated draft. Only Finish saves the full
+configuration and selected language. Invalid workspace settings keep the current
+step open. Exit, Escape and closing the window discard unfinished choices,
+restore the original configuration, and leave setup required on the next launch.
+
+The first setup starts master, music and hitsound volume at 50%. The **Audio Test**
+uses the bundled Campus After Class recording with Play, Pause and Stop icons and never starts
+automatically. Four sample buttons audition normal, whistle, finish and clap
+through the same sample resolver as Timing, respecting skin sounds and volume.
+Leaving the volume step stops its independent music transport. The skin step
+previews a catcher, fruit and slider and links to the osu! default skin download
+page; selecting a default `.osk` updates the preview.
+
+Finish saves completion and shows a welcome page in the same compact window,
+without progress tabs, with proportionate FA and Discord logos and a community
+invite. Start opens the library. Settings
+remain editable through the ordinary Settings window.
+
+For development, `Run-Setup-Debug.cmd` or the `--first-run-setup` executable flag
+opens the guide on each run, including after completion, using current settings.
+Replay changes also remain a draft until Finish.
+
 ## AiMod
 
 Open **Edit → AiMod** to check the current difficulty for overlapping notes.

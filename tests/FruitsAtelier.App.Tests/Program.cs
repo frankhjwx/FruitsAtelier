@@ -7,6 +7,11 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Contains("--first-run-setup-check"))
+{
+    try { FirstRunSetupTests.Run(); SettingsTests.Layout(); TestplayStartupDelayTests.LeadIn(); Console.WriteLine("PASS First-run setup and settings layout"); return 0; }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 if (args.Contains("--sv-performance")) return SliderMultiplierTests.Performance();
 if (args.Contains("--performance-scheduling")) return PerformanceSchedulingTests.Benchmark();
 if (args.Length == 2 && args[0] == "--fruit-placement-performance") return EditorPerformance.RunFruitPlacement(args[1]);
@@ -64,6 +69,7 @@ var tests = new (string Name, Action Run)[]
     ("Legacy slider editing converts silently with atomic drag, insertion and cancellation", ImplicitSliderEditingTests.Run),
     ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),
     ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),
+    ("First-run setup persists preferences, isolates auditions and supports debug replay", FirstRunSetupTests.Run),
     ("Shortcut routing isolates Timing object nudges and preserves navigation", ShortcutRoutingTests.TimingPage),
     ("Shortcut routing rejects unsupported Compose and Timing modifiers", ShortcutRoutingTests.Modifiers),
     ("Arrow seeking uses whole beats during playback and subdivisions while paused", ShortcutRoutingTests.PlaybackSeeking),

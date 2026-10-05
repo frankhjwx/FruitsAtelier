@@ -5,6 +5,31 @@ namespace FruitsAtelier.App.Platform;
 
 internal sealed partial class EditorWindow
 {
+    private void CheckSetupWindow()
+    {
+        try
+        {
+            Native.ShowWindow(hwnd, 1);
+            view.BeginFirstRunSetup(); FitSetupWindow();
+            Native.GetWindowRect(hwnd, out var bounds);
+            Native.GetClientRect(hwnd, out var client);
+            var work = CurrentWorkArea();
+            if ((Native.GetWindowLongPtr(hwnd, -16) & (nint)Native.WindowStyle) != 0 ||
+                bounds.Right - bounds.Left != client.Right || bounds.Bottom - bounds.Top != client.Bottom ||
+                client.Right > (work.Right - work.Left) * .85 || client.Bottom > (work.Bottom - work.Top) * .85)
+                throw new InvalidOperationException("Setup window must have no decorations and fit its monitor work area.");
+            nint HitAt(int y) => HandleMessage(hwnd, 0x0084, 0,
+                (nint)(((long)(ushort)(bounds.Top + y) << 16) | (ushort)(bounds.Left + 20)));
+            if (HitAt(20) != 2 || HitAt((int)(120 * dpi / 96)) != 1)
+                throw new InvalidOperationException("Only the setup header should move the borderless window.");
+            view.CancelFirstRunSetup(); FitEditorWindow();
+            if ((Native.GetWindowLongPtr(hwnd, -16) & (nint)Native.WindowStyle) != (nint)Native.WindowStyle)
+                throw new InvalidOperationException("Main editor decorations were not restored after setup.");
+            AppLog.Write("Setup window check passed: borderless bounds, monitor sizing, header dragging and editor decorations.");
+        }
+        finally { view.CancelFirstRunSetup(); FitEditorWindow(); Native.ShowWindow(hwnd, 0); }
+    }
+
     private void CheckFullscreen()
     {
         bool original = view.LibrarySettings.Fullscreen;

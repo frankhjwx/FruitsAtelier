@@ -28,7 +28,7 @@ The editor reads Catch `.osu` files in versions 12-14 and stable-compatible laze
 
 Download the Windows x64 ZIP from [Releases](https://github.com/frankhjwx/FruitsAtelier/releases), extract it, and run `FruitsAtelier.exe`. Keep the extracted files together. The package includes .NET and runs on Windows 10/11 with DirectX 11 support.
 
-Open **Library > Settings** to choose a project workspace and, optionally, your osu!stable installation folder. Import a beatmap or create a new project to begin.
+On first launch, the setup guide walks through folders and language, skin and skin sounds, volume tests, droplet defaults, metadata display, and testplay settings. Import a beatmap or create a new project to begin. These choices remain available in **Library > Settings**.
 
 ### macOS
 
@@ -43,6 +43,8 @@ Save projects to retain editable sliders and difficulty data. Export creates `.o
 ## Development
 
 Windows source builds use .NET SDK **10.0.400**, pinned in `global.json`, and the .NET 8 runtime. Run [Run-Editor.cmd](Run-Editor.cmd) to build and launch.
+
+Run [Run-Setup-Debug.cmd](Run-Setup-Debug.cmd) to build and open the compact setup guide on every launch. The executable also accepts `--first-run-setup` on Windows and macOS. Finish saves the choices; closing unfinished setup discards them.
 
 - [Building and testing](docs/TESTING.md) · [Packaging and releases](docs/RELEASING.md)
 - [Editing controls](docs/EDITOR_UI.md) · [Workspace and files](docs/WORKSPACE.md)

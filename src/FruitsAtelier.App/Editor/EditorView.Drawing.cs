@@ -50,6 +50,11 @@ public sealed partial class EditorView
         if (ErrorVisible) { DrawError(c); return; }
         PumpSliderBatch();
         PumpLibrary();
+        if (FirstRunSetupVisible)
+        {
+            DrawFirstRunSetup(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawDiscardConfirmation(c);
+            return;
+        }
         PumpSynchronizationWait();
         if (syncPage == "resolve" && syncMerges.TryGetValue(syncDifficulty, out var comparisonMerge) && comparisonMerge.Conflicts.Count > 0
             && syncComparisons.ContainsKey(syncDifficulty)) { DrawSynchronization(c); return; }

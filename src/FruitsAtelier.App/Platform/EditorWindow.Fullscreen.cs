@@ -11,7 +11,7 @@ internal sealed partial class EditorWindow
 
     private void SetFullscreen(bool enabled)
     {
-        if (hwnd == 0 || fullscreen == enabled) return;
+        if (hwnd == 0 || fullscreen == enabled || view.FirstRunSetupVisible) return;
         if (enabled)
         {
             windowedPlacement = new() { Length = (uint)Marshal.SizeOf<Native.WindowPlacement>() };

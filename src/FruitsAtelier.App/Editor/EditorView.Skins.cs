@@ -10,7 +10,11 @@ public sealed partial class EditorView
     public Action? RequestSkinPreference { get; set; }
     public Rect SkinSelectorBounds => new(HeaderNavigationBounds.X - 206, 6, 200, 28);
     public Action? RequestDefaultSkinArchive { get; set; }
-    public void SetDefaultSkinArchive(string archive) => draftDefaultSkin = archive;
+    public void SetDefaultSkinArchive(string archive)
+    {
+        draftDefaultSkin = archive;
+        if (FirstRunSetupVisible) ApplySettings(firstRunSettingsPath, force: true, persist: false);
+    }
     private CatchSkin? defaultSkin;
     private bool ImportedSkin => skin is not null && FruitsAtelier.Core.WorkspaceProject.Within(
         Path.Combine(LibrarySettings.Workspace, "Skins", "Imported"), skin.FolderPath);
@@ -59,7 +63,7 @@ public sealed partial class EditorView
         else { ShowError(message); return; }
         LibrarySettings.SelectedSkin = folder;
         RefreshSkinHitsounds();
-        RequestSkinPreference?.Invoke();
+        if (!FirstRunSetupVisible) RequestSkinPreference?.Invoke();
     }
 
     private string UpgradeSkinFolder(string folder)

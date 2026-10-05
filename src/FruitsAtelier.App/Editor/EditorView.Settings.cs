@@ -29,18 +29,18 @@ public sealed partial class EditorView
     private double settingsHue, settingsSaturation, settingsValue;
     private Rect settingsPalette, settingsHueTrack;
     private int settingsColourDrag;
-    internal Rect SettingsBounds => new((width - Math.Min(1040, width - 24)) / 2,
+    internal Rect SettingsBounds => FirstRunSetupVisible ? new(0, 0, width, height) : new((width - Math.Min(1040, width - 24)) / 2,
         (height - Math.Min(680, height - 24)) / 2, Math.Min(1040, width - 24), Math.Min(680, height - 24));
-    private float SettingsContentX => SettingsBounds.X + 230;
-    private float SettingsTop => SettingsBounds.Y;
+    private float SettingsContentX => SettingsBounds.X + (FirstRunSetupVisible ? 32 : 230);
+    private float SettingsTop => SettingsBounds.Y - (FirstRunSetupVisible ? workspaceScroll : 0);
     private float SettingsRight => SettingsBounds.Right;
     private const float SettingsTextSize = 13;
     private const float SettingsSectionSize = 16;
     private const float SettingsHintSize = 12;
     private const float SettingsControlHeight = 32;
     private const float SettingsControlPadding = 12;
-    private float SettingsContentWidth => SettingsRight - SettingsContentX - 32;
-    private bool SettingsAudioVisible => librarySettingsOpen && settingsCategory == SettingsCategory.Audio;
+    private float SettingsContentWidth => SettingsRight - SettingsContentX - 32 - (FirstRunSetupVisible && firstRunStep == 1 ? 300 : 0);
+    private bool SettingsAudioVisible => librarySettingsOpen && (FirstRunSetupVisible ? firstRunStep == 2 : settingsCategory == SettingsCategory.Audio);
     internal Rect SettingsSkinSelectorBounds => new(SettingsContentX, SettingsTop + 128,
         SettingsContentWidth, SettingsControlHeight);
 
@@ -52,7 +52,7 @@ public sealed partial class EditorView
             textPadding: SettingsControlPadding, textRightPadding: SettingsControlPadding);
     }
 
-    private void SettingsParagraph(ICanvas c, string text, float y, float size = SettingsHintSize)
+    private float SettingsParagraph(ICanvas c, string text, float y, float size = SettingsHintSize)
     {
         while (text.Length > 0)
         {
@@ -74,6 +74,7 @@ public sealed partial class EditorView
             text = text[count..].TrimStart();
             y += size + 6;
         }
+        return y;
     }
 
     public void OpenSettings()
@@ -135,6 +136,7 @@ public sealed partial class EditorView
 
     private void CloseSettings()
     {
+        if (FirstRunSetupVisible) { ExitFirstRun(); return; }
         FinishBackgroundDimDrag();
         FinishVolumeDrag();
         workspaceScrollDragging = false;
@@ -149,6 +151,7 @@ public sealed partial class EditorView
     private void DrawSettings(ICanvas c)
     {
         if (!librarySettingsOpen) return;
+        if (FirstRunSetupVisible) { DrawFirstRunSetup(c); return; }
         hits.Clear(); fields.Clear();
         var r = SettingsBounds;
         c.Fill(new(0, 0, width, height), Background, opacity: .8f);
@@ -275,13 +278,14 @@ public sealed partial class EditorView
         contextBounds = new(bounds.X, Math.Clamp(bounds.Bottom + 4, 0, Math.Max(0, height - menuHeight)), bounds.Width, menuHeight);
     }
 
-    internal void ApplySettings(string? settingsPath = null)
+    internal void ApplySettings(string? settingsPath = null, bool force = false, bool persist = true)
     {
         FinishBackgroundDimDrag();
-        if (!SettingsChanged) return;
+        if (!SettingsChanged && !force) return;
         try
         {
             var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
+            settings.FirstRunSetupVersion = LibrarySettings.FirstRunSetupVersion;
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
             settings.TestplayStartupDelaySeconds = draftTestplayStartupDelaySeconds;
             settings.ShowTestplayCombo = draftShowTestplayCombo;
@@ -304,7 +308,19 @@ public sealed partial class EditorView
             settings.WaveformSpanMs = LibrarySettings.WaveformSpanMs;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
             bool rootsChanged = settings.Workspace != LibrarySettings.Workspace || settings.OsuRoot != LibrarySettings.OsuRoot;
-            settings.Save(settingsPath);
+            if (persist) settings.Save(settingsPath);
+            else
+            {
+                settings.Workspace = Path.GetFullPath(settings.Workspace);
+                if (!string.IsNullOrWhiteSpace(settings.OsuRoot)) settings.OsuRoot = Path.GetFullPath(settings.OsuRoot);
+                WorkspaceProject.ValidateRoots(settings.Workspace, settings.Songs);
+            }
+            if (FirstRunSetupVisible)
+            {
+                LibrarySettings = settings; ResetSettingsDrafts();
+                libraryField = bindingCapture = -1; libraryError = "";
+                InitializeSkin(); return;
+            }
             bool fullscreenChanged = settings.Fullscreen != LibrarySettings.Fullscreen;
             SaveLibraryMemory(); LibrarySettings = settings;
             ResetSettingsDrafts();
@@ -324,7 +340,7 @@ public sealed partial class EditorView
 
     private bool FullscreenKeyDown(int virtualKey, bool ctrl, bool shift)
     {
-        if (virtualKey != 13 || !altHeld || ctrl || shift || !SupportsFullscreen || CapturingTestplayKey) return false;
+        if (virtualKey != 13 || !altHeld || ctrl || shift || !SupportsFullscreen || CapturingTestplayKey || FirstRunSetupVisible) return false;
         if (!fullscreenShortcutHeld)
         {
             fullscreenShortcutHeld = true;

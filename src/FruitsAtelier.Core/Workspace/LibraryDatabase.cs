@@ -7,6 +7,14 @@ namespace FruitsAtelier.Core;
 
 public sealed class LibrarySettings
 {
+    public const int CurrentFirstRunSetupVersion = 1;
+    public int FirstRunSetupVersion { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool FirstRunSetupCompleted
+    {
+        get => FirstRunSetupVersion >= CurrentFirstRunSetupVersion;
+        set => FirstRunSetupVersion = value ? CurrentFirstRunSetupVersion : 0;
+    }
     public const uint DefaultStandIndicatorColour = 0xC0C0C0;
     public const uint DefaultWalkIndicatorColour = 0x63B99D;
     public const uint DefaultDashIndicatorColour = 0xD6B365;
@@ -73,7 +81,9 @@ public sealed class LibrarySettings
     [System.Text.Json.Serialization.JsonIgnore]
     public string Skins => string.IsNullOrWhiteSpace(OsuRoot) ? "" : Path.Combine(OsuRoot, "Skins");
     public static string SettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FruitsAtelier", "library.json");
-    public static LibrarySettings Load(string? path = null) => File.Exists(path ?? SettingsPath) ? JsonSerializer.Deserialize<LibrarySettings>(File.ReadAllText(path ?? SettingsPath)) ?? new() : new();
+    public static LibrarySettings Load(string? path = null) => File.Exists(path ?? SettingsPath)
+        ? JsonSerializer.Deserialize<LibrarySettings>(File.ReadAllText(path ?? SettingsPath)) ?? new()
+        : new() { FirstRunSetupCompleted = false, MasterVolume = 50, SongVolume = 50, HitsoundVolume = 50 };
     public void Save(string? path = null)
     {
         Workspace = Path.GetFullPath(Workspace);
