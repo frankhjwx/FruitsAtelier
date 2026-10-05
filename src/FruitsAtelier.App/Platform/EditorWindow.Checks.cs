@@ -11,6 +11,8 @@ internal sealed partial class EditorWindow
         {
             Native.ShowWindow(hwnd, 1);
             view.BeginFirstRunSetup(); FitSetupWindow();
+            if ((Native.GetWindowLongPtr(hwnd, -16) & 0x10000000) == 0)
+                throw new InvalidOperationException("Switching to setup decorations hid the visible window.");
             Native.GetWindowRect(hwnd, out var bounds);
             Native.GetClientRect(hwnd, out var client);
             var work = CurrentWorkArea();
@@ -23,6 +25,8 @@ internal sealed partial class EditorWindow
             if (HitAt(20) != 2 || HitAt((int)(120 * dpi / 96)) != 1)
                 throw new InvalidOperationException("Only the setup header should move the borderless window.");
             view.CancelFirstRunSetup(); FitEditorWindow();
+            if ((Native.GetWindowLongPtr(hwnd, -16) & 0x10000000) == 0)
+                throw new InvalidOperationException("Leaving setup hid the visible editor window.");
             if ((Native.GetWindowLongPtr(hwnd, -16) & (nint)Native.WindowStyle) != (nint)Native.WindowStyle)
                 throw new InvalidOperationException("Main editor decorations were not restored after setup.");
             AppLog.Write("Setup window check passed: borderless bounds, monitor sizing, header dragging and editor decorations.");

@@ -22,13 +22,17 @@ internal sealed partial class EditorWindow
 
     private void FitSetupWindow() => FitWindow(setup: true);
     private void FitEditorWindow() => FitWindow(setup: false);
+    // Hidden swap chains need not signal frame readiness, so decoration changes must preserve visibility.
+    internal static uint FirstRunWindowStyle(uint currentStyle, bool setup)
+        => (currentStyle & ~(Native.WindowStyle | 0x80000000u)) | (setup ? 0x80000000u : Native.WindowStyle);
     private void FitWindow(bool setup)
     {
         var work = CurrentWorkArea();
         var size = setup ? EditorView.FirstRunWindowSize(work.Right - work.Left, work.Bottom - work.Top, dpi / 96d)
             : (Width: 1440d, Height: 900d);
         var rect = new Native.Rectangle { Right = (int)(size.Width * dpi / 96), Bottom = (int)(size.Height * dpi / 96) };
-        uint style = setup ? 0x80000000u : Native.WindowStyle;
+        uint currentStyle = (uint)Native.GetWindowLongPtr(hwnd, -16);
+        uint style = FirstRunWindowStyle(currentStyle, setup);
         Native.SetWindowLongPtr(hwnd, -16, (nint)style);
         Native.AdjustWindowRectExForDpi(ref rect, style, false, 0, (uint)dpi);
         int w = Math.Min(rect.Right - rect.Left, setup ? (int)((work.Right - work.Left) * .85) : work.Right - work.Left - 32);

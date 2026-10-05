@@ -59,7 +59,7 @@ public sealed class LibrarySettings
         get => testplayStartupDelaySeconds;
         set => testplayStartupDelaySeconds = double.IsFinite(value) ? Math.Clamp(value, 0, 5) : 1;
     }
-    private int masterVolume = 100, songVolume = 100, hitsoundVolume = 100;
+    private int masterVolume = 50, songVolume = 50, hitsoundVolume = 50;
     public int MasterVolume { get => masterVolume; set => masterVolume = Math.Clamp(value, 0, 100); }
     public int SongVolume { get => songVolume; set => songVolume = Math.Clamp(value, 0, 100); }
     public int HitsoundVolume { get => hitsoundVolume; set => hitsoundVolume = Math.Clamp(value, 0, 100); }
@@ -83,7 +83,7 @@ public sealed class LibrarySettings
     public static string SettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FruitsAtelier", "library.json");
     public static LibrarySettings Load(string? path = null) => File.Exists(path ?? SettingsPath)
         ? JsonSerializer.Deserialize<LibrarySettings>(File.ReadAllText(path ?? SettingsPath)) ?? new()
-        : new() { FirstRunSetupCompleted = false, MasterVolume = 50, SongVolume = 50, HitsoundVolume = 50 };
+        : new();
     public void Save(string? path = null)
     {
         Workspace = Path.GetFullPath(Workspace);

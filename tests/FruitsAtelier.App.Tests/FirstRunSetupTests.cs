@@ -1,4 +1,5 @@
 using FruitsAtelier.App.Editor;
+using FruitsAtelier.App.Platform;
 using FruitsAtelier.Core;
 using L = FruitsAtelier.Localization.Strings;
 
@@ -11,6 +12,15 @@ static class FirstRunSetupTests
         Directory.CreateDirectory(root);
         try
         {
+            foreach (uint state in new[] { 0u, 0x10000000u, 0x18000000u })
+            {
+                uint originalStyle = Native.WindowStyle | state;
+                uint setupStyle = EditorWindow.FirstRunWindowStyle(originalStyle, true);
+                Check((setupStyle & 0x18000000u) == state && (setupStyle & Native.WindowStyle) == 0,
+                    "changing setup decorations preserves window visibility and disabled state");
+                Check(EditorWindow.FirstRunWindowStyle(setupStyle, false) == originalStyle,
+                    "Start restores editor decorations without hiding the window");
+            }
             string missing = Path.Combine(root, "missing.json");
             var fresh = LibrarySettings.Load(missing);
             Check(!fresh.FirstRunSetupCompleted && fresh.MasterVolume == 50 && fresh.SongVolume == 50 && fresh.HitsoundVolume == 50,
@@ -20,6 +30,11 @@ static class FirstRunSetupTests
             var upgraded = LibrarySettings.Load(legacy);
             Check(!upgraded.FirstRunSetupCompleted && upgraded.MasterVolume == 72 && upgraded.SongVolume == 34 && upgraded.HitsoundVolume == 91,
                 "existing installations require this setup version while retaining their stored preferences");
+            string partial = Path.Combine(root, "partial.json");
+            File.WriteAllText(partial, "{\"MasterVolume\":0,\"SongVolume\":83}");
+            var partialSettings = LibrarySettings.Load(partial);
+            Check(partialSettings.MasterVolume == 0 && partialSettings.SongVolume == 83 && partialSettings.HitsoundVolume == 50,
+                "saved volumes including mute load unchanged and only missing channels default to 50 percent");
             foreach (double scale in new[] { 1d, 1.25, 1.5, 1.75, 2 })
             {
                 var size = EditorView.FirstRunWindowSize(1920, 1040, scale);
@@ -114,6 +129,13 @@ static class FirstRunSetupTests
                 Check(!ui.View.CapturingTestplayKey, "testplay bindings capture keys inside setup");
                 ui.ClickText(L.Get("setup.finish"));
                 Check(ui.View.FirstRunStep == 5 && !ui.Canvas.Texts.Any(t => t.Value == L.Get("setup.step", 1, L.Get("setup.paths"))), "completion removes the progress bar");
+                Check(!ui.Canvas.Images.Any(i => Path.GetFileName(i.Path) == "discord.png"), "completion omits the Discord logo");
+                var welcome = ui.Canvas.Texts.Single(t => t.Value == L.Get("setup.discordHint"));
+                var join = ui.Canvas.Texts.Single(t => t.Value == L.Get("setup.discord"));
+                var start = ui.Canvas.Texts.Single(t => t.Value == L.Get("setup.start"));
+                var exit = ui.Canvas.Texts.Single(t => t.Value == L.Get("setup.exit"));
+                Check(Math.Abs(welcome.Y - join.Y) < 4 && start.Y > join.Y + 80 && start.Y == exit.Y,
+                    "welcome and Discord join share a row with padded Start and Exit buttons below");
                 var saved = LibrarySettings.Load(settings);
                 Check(saved.FirstRunSetupCompleted && !saved.RomanisedMetadata && !saved.DerandomizeNewProjects && saved.TestplayLeftKey == 65 && saved.SongVolume == 70,
                     "completion persists each chosen preference");
@@ -145,8 +167,9 @@ static class FirstRunSetupTests
             cancel.View.RequestSkinPreference = () => preferenceWrites++;
             cancel.View.RequestLanguagePreference = _ => preferenceWrites++;
             cancel.View.BeginFirstRunSetup(canceledPath); cancel.Paint();
-            Check(cancel.View.LibrarySettings.MasterVolume == 50 && !ReferenceEquals(beforeSettings, cancel.View.LibrarySettings),
-                "setup edits an isolated preference draft");
+            Check(cancel.View.LibrarySettings.MasterVolume == 72 && cancel.View.LibrarySettings.SongVolume == 34 &&
+                cancel.View.LibrarySettings.HitsoundVolume == 91 && !ReferenceEquals(beforeSettings, cancel.View.LibrarySettings),
+                "unfinished setup preserves saved volumes in an isolated preference draft");
             cancel.ClickText(L.Get("setup.next")); cancel.ClickText(L.Get("setup.next"));
             cancel.View.Wheel(100, 200, -1200, false); cancel.Paint();
             var play = cancel.View.SetupAudioButtonBounds(0);

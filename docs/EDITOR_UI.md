@@ -23,8 +23,9 @@ configuration and selected language. Invalid workspace settings keep the current
 step open. Exit, Escape and closing the window discard unfinished choices,
 restore the original configuration, and leave setup required on the next launch.
 
-An unfinished first setup starts in English, with master, music and hitsound
-volume at 50%. Selecting a language previews it until Finish. The **Audio Test**
+An unfinished first setup starts in English. Master, music and hitsound volume
+load their saved values; each missing volume parameter defaults to 50%.
+Selecting a language previews it until Finish. The **Audio Test**
 uses the bundled Campus After Class recording with Play, Pause and Stop icons and never starts
 automatically. **Hitsound Test** labels the four sample buttons: **Hit**,
 **Whistle**, **Finish**, and **Clap**, with these names retained in every language.
@@ -35,8 +36,9 @@ previews a catcher, fruit and slider and links to the osu! default skin download
 page; selecting a default `.osk` updates the preview.
 
 Finish saves completion and shows a welcome page in the same compact window,
-without progress tabs, with proportionate FA and Discord logos and a community
-invite. Start opens the library. Settings
+without progress tabs, with a proportionate FA logo. The community welcome and
+Join Discord button share a row; Start and Exit appear below with extra spacing.
+Start opens the library. Settings
 remain editable through the ordinary Settings window.
 
 For development, `Run-Setup-Debug.cmd` or the `--first-run-setup` executable flag

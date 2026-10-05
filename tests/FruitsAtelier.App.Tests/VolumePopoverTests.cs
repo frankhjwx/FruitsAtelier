@@ -17,7 +17,7 @@ internal static class VolumePopoverTests
         HoverAndWheel(true);
         var clock = new ManualClock();
         var ui = new Ui(timeProvider: clock);
-        var settings = new LibrarySettings();
+        var settings = new LibrarySettings { MasterVolume = 100, SongVolume = 100, HitsoundVolume = 100 };
         ui.View.InitializeLibrary(false, settings);
         ui.LoadDocument(new MapDocument { DurationMs = 5000 });
         var original = ui.View.Document.DeepClone();
@@ -110,7 +110,7 @@ internal static class VolumePopoverTests
     {
         var clock = new ManualClock();
         var ui = new Ui(timeProvider: clock);
-        var settings = new LibrarySettings();
+        var settings = new LibrarySettings { MasterVolume = 100, SongVolume = 100, HitsoundVolume = 100 };
         ui.View.InitializeLibrary(false, settings);
         var map = new MapDocument { DurationMs = 5000 };
         map.Fruits.Add(new Fruit { TimeMs = 3000, X = 256 });

@@ -40,7 +40,6 @@ public sealed partial class EditorView
         LibrarySettings = System.Text.Json.JsonSerializer.Deserialize<LibrarySettings>(System.Text.Json.JsonSerializer.Serialize(LibrarySettings))!;
         if (!LibrarySettings.FirstRunSetupCompleted)
         {
-            LibrarySettings.MasterVolume = LibrarySettings.SongVolume = LibrarySettings.HitsoundVolume = 50;
             L.SetLanguage("en"); RefreshLanguage();
         }
         ApplyAudioVolume();
@@ -132,13 +131,13 @@ public sealed partial class EditorView
             float x = complete.X + 32, y = complete.Y + Math.Max(24, (complete.Height - 360) / 2);
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png"), new(x, y, 96, 72));
             c.Text(L.Get("setup.complete"), x, y + 104, 28, Foreground, complete.Width - 64, true);
-            float discordY = y + 190;
-            c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "setup", "discord.png"), new(x, discordY, 160, 160 * 32f / 219));
-            c.Text(L.Get("setup.discordHint"), x, discordY + 54, 14, Foreground, complete.Width - 64);
-            float buttonWidth = (complete.Width - 88) / 3;
-            SettingsButton(c, new(x, discordY + 92, buttonWidth, 36), L.Get("setup.discord"), () => RequestSetupLink?.Invoke("https://discord.gg/ur9QKs4EG2"));
-            SettingsButton(c, new(x + buttonWidth + 12, discordY + 92, buttonWidth, 36), L.Get("setup.start"), FinishFirstRun, active: true);
-            SettingsButton(c, new(x + (buttonWidth + 12) * 2, discordY + 92, buttonWidth, 36), L.Get("setup.exit"), ExitFirstRun);
+            float discordY = y + 180;
+            float joinWidth = Math.Clamp(c.MeasureText(L.Get("setup.discord"), SettingsTextSize) + 24, 140, 200);
+            c.Text(L.Get("setup.discordHint"), x, discordY + 9, 14, Foreground, complete.Width - 80 - joinWidth);
+            SettingsButton(c, new(complete.Right - 32 - joinWidth, discordY, joinWidth, 36), L.Get("setup.discord"), () => RequestSetupLink?.Invoke("https://discord.gg/ur9QKs4EG2"));
+            float buttonWidth = (complete.Width - 76) / 2;
+            SettingsButton(c, new(x, discordY + 100, buttonWidth, 36), L.Get("setup.start"), FinishFirstRun, active: true);
+            SettingsButton(c, new(x + buttonWidth + 12, discordY + 100, buttonWidth, 36), L.Get("setup.exit"), ExitFirstRun);
             return;
         }
         var r = SettingsBounds;
@@ -264,8 +263,6 @@ public sealed partial class EditorView
             c.Fill(new(cx + 2, cy - 8, 5, 16), ink);
         }
         else c.Fill(new(cx - 7, cy - 7, 14, 14), ink);
-        if (r.Contains(mouseX, mouseY))
-            c.Text(L.Get(index == 0 ? "setup.play" : index == 1 ? "setup.pause" : "setup.stop"), r.X, r.Bottom + 4, 11, Muted, 100);
     }
 
     private void PreviewSetupSample(string sound)
