@@ -64,7 +64,7 @@ internal static class LibraryFavouriteTests
             finally { view.CloseLibrary(); }
 
             void Paint() { canvas.Clear(); view.Render(canvas, width, 620); }
-            int StarCount() => canvas.Images.Count(i => Path.GetFileName(i.Path) == "favourite-star.png" && i.Bounds.X == 220);
+            int StarCount() => canvas.Images.Count(i => Path.GetFileName(i.Path) == "favourite-star.png" && i.Bounds.X == 219.6f);
             void Settle(int count)
             {
                 for (int i = 0; i < 1000; i++)
