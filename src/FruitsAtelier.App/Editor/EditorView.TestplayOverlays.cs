@@ -87,6 +87,11 @@ public sealed partial class EditorView
     private void RestartTestplay()
     {
         bool autoplay = TestplayAutoplay;
+        if (testplayWithAudio && !TestplayPaused)
+        {
+            if (RequestPausePlayback is not null) RequestPausePlayback();
+            else if (AudioPlaying) RequestTogglePlayback?.Invoke();
+        }
         ResetTestplayPointer();
         SetTestplayPauseLoop(false);
         testplay?.Cancel();

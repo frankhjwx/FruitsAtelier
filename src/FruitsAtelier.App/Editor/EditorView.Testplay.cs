@@ -13,6 +13,7 @@ public sealed partial class EditorView
     private bool testplayTabHeld;
     private bool testplaySpeedHeld;
     private bool testplayPauseHeld;
+    private bool testplayRetryHeld;
     private bool testplayBookmarkHeld;
     private string? testplayAutoNotice;
     private double testplayAutoNoticeAt;
@@ -51,6 +52,7 @@ public sealed partial class EditorView
         testplayTabHeld = false;
         testplaySpeedHeld = false;
         testplayPauseHeld = false;
+        testplayRetryHeld = false;
         testplayBookmarkHeld = false;
         testplayAutoNotice = null;
         testplayResumeAt = null;
@@ -203,6 +205,7 @@ public sealed partial class EditorView
         if (virtualKey == 9) testplayTabHeld = false;
         if (virtualKey == 114) testplaySpeedHeld = false;
         if (virtualKey == 80) testplayPauseHeld = false;
+        if (virtualKey == 82) testplayRetryHeld = false;
         if (virtualKey == 66) testplayBookmarkHeld = false;
         if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
         if (IsTestplaying && testplayDriver is null) AdvanceTestplay();

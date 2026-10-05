@@ -357,6 +357,8 @@ Pressing **F3** in manual mode shows a brief reminder to press **Tab** before ch
 
 Press **Tab** during testplay to toggle autoplay. Pressing a bound left, right, or dash key
 also returns to manual control. A centered fading banner announces either change.
+**Ctrl+R** retries immediately from this session's start, including its configured lead-in, retaining autoplay and speed. It works while running or paused and triggers once per press. During autoplay, **Ctrl+Up/Down** adjusts speed by 25 percentage points; **Ctrl+Shift+Up/Down** uses 5 percentage points. Both work while paused, clamp to 10%–150%, and leave pause-menu selection unchanged. Manual play shows the existing autoplay-required notice instead of changing speed.
+
 Each new testplay starts in manual mode. Losing window focus releases held keys while
 testplay and its music continue.
 

@@ -921,6 +921,20 @@ public sealed partial class EditorView
             {
                 if (!testplayPauseHeld) { testplayPauseHeld = true; ToggleTestplayPause(); }
             }
+            else if (ctrl && !shift && !altHeld && virtualKey == 82)
+            {
+                if (!testplayRetryHeld) { testplayRetryHeld = true; RestartTestplay(); }
+            }
+            else if (ctrl && !altHeld && virtualKey is 38 or 40)
+            {
+                if (TestplayAutoplay) AdjustPlaybackSpeed(virtualKey == 38 ? 1 : -1, shift);
+                else
+                {
+                    testplayAutoNotice = L.Get("testplay.speedRequiresAutoplay");
+                    testplayAutoNoticeAt = TestplayRealtime;
+                }
+                AdvanceTestplay();
+            }
             else if (TestplayMenuKey(virtualKey)) return;
             else if (virtualKey is 38 or 40 && !ctrl && !shift && !altHeld
                 && AdjustVolumeShortcut(virtualKey, true)) return;
@@ -1205,6 +1219,7 @@ public sealed partial class EditorView
         FinishBackgroundDimDrag();
         testplayEscapeConsumed = false;
         testplaySpeedHeld = false;
+        testplayRetryHeld = false;
         streamSnapDragging = false; CancelStackDrag();
         CloseVolumePopover();
         sliderHoldId = legacyButtonSlider = Guid.Empty; noteHoldTarget = null;

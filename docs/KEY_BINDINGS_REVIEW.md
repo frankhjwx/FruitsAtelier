@@ -127,7 +127,7 @@ client rendering/debug shortcuts are outside the editor compatibility scope.
   whether a focused valid field is committed or blocks the command. File commands
   already use `PrepareFileOperation` downstream; do not assume saving drops edits.
 - Testplay capture prevents duplicate movement assignments and reserves Esc, Tab,
-  F1 and F2, but allows modifiers and P/B/arrows. Those can overlap pause, bookmarks
+  F1–F3, but allows modifiers and P/B/R/arrows. Those can overlap pause, bookmarks, retry, speed
   or volume chords. Windows has a separate raw-input worker; Mac feeds gameplay
   after shortcut dispatch. Test both routes before promising identical behavior
   for such configurations.
