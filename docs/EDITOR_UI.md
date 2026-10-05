@@ -26,7 +26,9 @@ restore the original configuration, and leave setup required on the next launch.
 An unfinished first setup starts in English, with master, music and hitsound
 volume at 50%. Selecting a language previews it until Finish. The **Audio Test**
 uses the bundled Campus After Class recording with Play, Pause and Stop icons and never starts
-automatically. Four sample buttons audition normal, whistle, finish and clap
+automatically. **Hitsound Test** labels the four sample buttons: **Hit**,
+**Whistle**, **Finish**, and **Clap**, with these names retained in every language.
+They audition normal, whistle, finish and clap
 through the same sample resolver as Timing, respecting skin sounds and volume.
 Leaving the volume step stops its independent music transport. The skin step
 previews a catcher, fruit and slider and links to the osu! default skin download

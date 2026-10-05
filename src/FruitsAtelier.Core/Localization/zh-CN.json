@@ -1189,6 +1189,7 @@
   "setup.step": "{0}. {1}",
   "setup.downloadSkin": "下载 osu! 默认皮肤…",
   "setup.music": "Audio Test",
+  "setup.hitsounds": "Hitsound Test",
   "setup.play": "播放",
   "setup.pause": "暂停",
   "setup.stop": "终止",

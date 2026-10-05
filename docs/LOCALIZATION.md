@@ -22,6 +22,10 @@ previously saved. Language choices preview immediately but remain part of
 the setup draft. Finish saves the selected language; exiting an unfinished guide
 restores the original language. See [First-time setup](EDITOR_UI.md#first-time-setup).
 
+Hitsound sample names **Hit**, **Whistle**, **Finish**, and **Clap** retain their
+English spelling in every language table. The setup headings **Audio Test** and
+**Hitsound Test** also retain their English spelling.
+
 ## Adding a language
 
 Add a UTF-8 `<culture>.json` file under `src/FruitsAtelier.Core/Localization`, such as `fr-FR.json`. Copy every key from the main table and translate its string, including the language button label. Use a valid culture name for the filename.

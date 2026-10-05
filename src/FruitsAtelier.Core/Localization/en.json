@@ -1189,6 +1189,7 @@
   "setup.step": "{0}. {1}",
   "setup.downloadSkin": "Download osu! default skin…",
   "setup.music": "Audio Test",
+  "setup.hitsounds": "Hitsound Test",
   "setup.play": "Play",
   "setup.pause": "Pause",
   "setup.stop": "Stop",

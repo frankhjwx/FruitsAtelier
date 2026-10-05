@@ -164,8 +164,8 @@ public sealed partial class EditorView
         for (int i = 0; i < FirstRunTitles.Length; i++)
         {
             float x = r.X + i * tabWidth;
-            c.Text(L.Get("setup.step", i + 1, L.Get(FirstRunTitles[i])), x + 10, r.Y + 15, 12,
-                Foreground, tabWidth - 26, true);
+            c.Text(L.Get("setup.step", i + 1, L.Get(FirstRunTitles[i])), x + 30, r.Y + 15, 12,
+                Foreground, tabWidth - 46, true);
         }
         c.Unclip();
         c.Fill(new(r.X, r.Y + 60, r.Width, r.Height - 60), Panel, 8);
@@ -209,14 +209,16 @@ public sealed partial class EditorView
                 DrawSetupAudioButton(c, 2, StopSetupAudio);
                 c.Text(setupAudioError.Length > 0 ? setupAudioError : L.Get("setup.audioTime", setupAudioPosition / 1000, setupAudioDuration / 1000),
                     SettingsContentX, SettingsTop + 405, 12, setupAudioError.Length > 0 ? Error : Muted, SettingsContentWidth);
+                c.Text(L.Get("setup.hitsounds"), SettingsContentX, SettingsTop + 434, 13, Foreground, SettingsContentWidth, true);
                 string[] sounds = ["hitnormal", "hitwhistle", "hitfinish", "hitclap"];
                 float soundWidth = (SettingsContentWidth - 36) / 4;
                 for (int i = 0; i < sounds.Length; i++)
                 {
                     string sound = sounds[i];
-                    SettingsButton(c, new(SettingsContentX + i * (soundWidth + 12), SettingsTop + 434, soundWidth, 32),
+                    SettingsButton(c, new(SettingsContentX + i * (soundWidth + 12), SettingsTop + 462, soundWidth, 32),
                         L.Get("timing." + sound), () => PreviewSetupSample(sound));
                 }
+                contentBottom = SettingsTop + 494;
                 break;
             case 3:
                 float dropletsY = SettingsTop + 128;

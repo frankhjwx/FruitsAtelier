@@ -27,7 +27,7 @@ static class FirstRunSetupTests
                     "the compact window fits 1080p work areas at common DPI scales");
             }
 
-            foreach (string locale in new[] { "en", "zh-CN" })
+            foreach (string locale in new[] { "en", "zh-CN", "zh-TW", "ja" })
             foreach (var size in new[] { (880, 620), (980, 620) })
             {
                 L.SetLanguage(locale);
@@ -82,6 +82,9 @@ static class FirstRunSetupTests
                 Check(links.Single() == "https://osu.ppy.sh/community/forums/topics/1411279?n=1", "default skin link matches the download page");
                 ui.ClickText(L.Get("setup.next"));
                 Check(ui.View.FirstRunStep == 2 && audio.All(c => c == SetupAudioCommand.Stop), "audio step stays stopped");
+                var hitsoundTitle = ui.Canvas.Texts.Single(t => t.Value == "Hitsound Test");
+                Check(new[] { "Hit", "Whistle", "Finish", "Clap" }.All(name => ui.Canvas.Texts.Any(t => t.Value == name && t.Y > hitsoundTitle.Y)),
+                    "hitsound names retain English below the Hitsound Test heading");
                 ClickAudio(0);
                 Check(audio[^1] == SetupAudioCommand.Play, "Play requests music playback");
                 ui.View.UpdateSetupAudio(1200, 3000, true, false, null); ui.Paint();
