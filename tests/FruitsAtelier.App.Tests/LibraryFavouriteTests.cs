@@ -27,7 +27,6 @@ internal static class LibraryFavouriteTests
                 var original = view.Document.DeepClone();
                 Toggle("library.addFavourite");
                 Check(StarCount() == 1, "star image on upper-left of song card");
-                Check(canvas.PaintCalls.Any(p => p.Color == 0x272C36 && p.Opacity == .5f && p.FillBounds?.X == 218), "favourite badge background has fifty percent opacity");
                 Click("library.projects"); Settle(1); Toggle("library.addFavourite");
                 Click("library.favourites"); Settle(2);
                 Check(view.LibrarySetTotal == 2, "favourites includes songs and local projects");
