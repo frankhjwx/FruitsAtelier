@@ -21,6 +21,7 @@ public sealed partial class EditorView
     public bool FirstRunSetupVisible => firstRunStep >= 0;
     internal bool FirstRunHeaderDraggable => FirstRunSetupVisible && !languageMenuOpen && pendingLanguage is null && contextItems.Count == 0;
     internal int FirstRunStep => firstRunStep;
+    internal bool FirstRunSetupComplete => firstRunStep == FirstRunTitles.Length;
     public Action<SetupAudioCommand>? RequestSetupAudio { get; set; }
     public Action<string>? RequestSetupLink { get; set; }
     public Action? RequestSetupFinished { get; set; }
@@ -28,7 +29,7 @@ public sealed partial class EditorView
     public static (double Width, double Height) FirstRunWindowSize(double workWidth, double workHeight, double scale)
         => (Math.Min(880, workWidth * .85 / scale), Math.Min(620, workHeight * .85 / scale));
     public static string SetupAudioPath => Path.Combine(AppContext.BaseDirectory, "assets", "setup", "campus-after-class.wav");
-    private static readonly string[] FirstRunTitles = ["setup.paths", "setup.skin", "setup.audio", "setup.droplets", "setup.metadata", "settings.testplay"];
+    private static readonly string[] FirstRunTitles = ["setup.paths", "setup.skin", "setup.audio", "setup.droplets", "settings.testplay"];
 
     internal void BeginFirstRunSetup(string? settingsPath = null)
     {
@@ -38,7 +39,10 @@ public sealed partial class EditorView
         firstRunOriginalSkin = skin; firstRunOriginalDefaultSkin = defaultSkin;
         LibrarySettings = System.Text.Json.JsonSerializer.Deserialize<LibrarySettings>(System.Text.Json.JsonSerializer.Serialize(LibrarySettings))!;
         if (!LibrarySettings.FirstRunSetupCompleted)
+        {
             LibrarySettings.MasterVolume = LibrarySettings.SongVolume = LibrarySettings.HitsoundVolume = 50;
+            L.SetLanguage("en"); RefreshLanguage();
+        }
         ApplyAudioVolume();
         ResetSettingsDrafts();
         firstRunStep = 0;
@@ -68,10 +72,10 @@ public sealed partial class EditorView
         FinishVolumeDrag(); FinishBackgroundDimDrag();
         libraryError = "";
         int previousVersion = LibrarySettings.FirstRunSetupVersion;
-        if (step == 6) LibrarySettings.FirstRunSetupCompleted = true;
-        ApplySettings(firstRunSettingsPath, force: true, persist: step == 6);
+        if (step == FirstRunTitles.Length) LibrarySettings.FirstRunSetupCompleted = true;
+        ApplySettings(firstRunSettingsPath, force: true, persist: step == FirstRunTitles.Length);
         if (libraryError.Length > 0) { LibrarySettings.FirstRunSetupVersion = previousVersion; return; }
-        if (step == 6)
+        if (step == FirstRunTitles.Length)
         {
             firstRunOriginalSettings = null;
             if (L.Language != firstRunOriginalLanguage) RequestLanguagePreference?.Invoke(L.Language);
@@ -79,7 +83,7 @@ public sealed partial class EditorView
         StopSetupAudio();
         firstRunStep = step;
         workspaceScroll = 0;
-        settingsCategory = step switch { 1 => SettingsCategory.Appearance, 2 => SettingsCategory.Audio, 5 => SettingsCategory.Testplay, _ => SettingsCategory.General };
+        settingsCategory = step switch { 1 => SettingsCategory.Appearance, 2 => SettingsCategory.Audio, 4 => SettingsCategory.Testplay, _ => SettingsCategory.General };
         libraryField = bindingCapture = -1;
         languageMenuOpen = false; contextItems.Clear(); hits.Clear(); fields.Clear();
     }
@@ -121,15 +125,14 @@ public sealed partial class EditorView
     {
         hits.Clear(); fields.Clear();
         c.Fill(new(0, 0, width, height), Background);
-        if (firstRunStep == 6)
+        if (FirstRunSetupComplete)
         {
             var complete = SettingsBounds;
             c.Fill(complete, Panel, 8);
             float x = complete.X + 32, y = complete.Y + Math.Max(24, (complete.Height - 360) / 2);
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "branding", "mark.png"), new(x, y, 96, 72));
             c.Text(L.Get("setup.complete"), x, y + 104, 28, Foreground, complete.Width - 64, true);
-            float hintEnd = SettingsParagraph(c, L.Get("setup.completeHint"), y + 158, 14);
-            float discordY = Math.Max(y + 218, hintEnd + 20);
+            float discordY = y + 190;
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "setup", "discord.png"), new(x, discordY, 160, 160 * 32f / 219));
             c.Text(L.Get("setup.discordHint"), x, discordY + 54, 14, Foreground, complete.Width - 64);
             float buttonWidth = (complete.Width - 88) / 3;
@@ -139,23 +142,32 @@ public sealed partial class EditorView
             return;
         }
         var r = SettingsBounds;
-        float tabWidth = r.Width / 6;
-        for (int i = 0; i < 6; i++)
+        float tabWidth = r.Width / FirstRunTitles.Length;
+        uint TabColour(int i) => i == firstRunStep ? Accent : i % 2 == 0 ? Surface : 0x303845u;
+        c.Clip(new(r.X, r.Y, r.Width, 46));
+        for (int i = 0; i < FirstRunTitles.Length; i++)
+            c.Fill(new(r.X + i * tabWidth, r.Y, tabWidth, 46), TabColour(i));
+        for (int i = FirstRunTitles.Length - 1; i >= 0; i--)
         {
             float x = r.X + i * tabWidth;
-            uint colour = i == firstRunStep ? Accent : i < firstRunStep ? 0x366C64u : Surface;
-            if (!c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "setup", "progress-tab.png"), new(x, r.Y, tabWidth, 46), colour))
+            uint colour = TabColour(i);
+            if (!c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "setup", "progress-tab.png"), new(x, r.Y, tabWidth + 12, 46), colour))
             {
-                c.Fill(new(x, r.Y, tabWidth - 12, 46), colour);
+                c.Fill(new(x, r.Y, tabWidth, 46), colour);
                 for (int row = 0; row < 46; row++)
                 {
                     float tip = 12 * (1 - Math.Abs(row - 22.5f) / 23);
-                    c.Fill(new(x + tabWidth - 12, r.Y + row, tip, 1.1f), colour);
+                    c.Fill(new(x + tabWidth, r.Y + row, tip, 1.1f), colour);
                 }
             }
+        }
+        for (int i = 0; i < FirstRunTitles.Length; i++)
+        {
+            float x = r.X + i * tabWidth;
             c.Text(L.Get("setup.step", i + 1, L.Get(FirstRunTitles[i])), x + 10, r.Y + 15, 12,
                 Foreground, tabWidth - 26, true);
         }
+        c.Unclip();
         c.Fill(new(r.X, r.Y + 60, r.Width, r.Height - 60), Panel, 8);
         c.Text(L.Get(FirstRunTitles[firstRunStep]), SettingsContentX, r.Y + 82, 24, Foreground, SettingsContentWidth, true);
         workspaceScrollBounds = new(r.X + 20, r.Y + 116, r.Width - 40, Math.Max(1, r.Height - 234));
@@ -166,13 +178,16 @@ public sealed partial class EditorView
         switch (firstRunStep)
         {
             case 0:
-                float pathsEnd = SettingsParagraph(c, L.Get("setup.pathsHint"), SettingsTop + 126);
-                float pathsY = Math.Max(SettingsTop + 188, pathsEnd + 20);
+                float pathsY = SettingsTop + 128;
                 LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, pathsY);
                 LibraryTextField(c, 0, L.Get("library.workspace"), draftWorkspace, pathsY + 90);
                 c.Text(L.Get("ui.language"), SettingsContentX, pathsY + 198, 13, Foreground, 200, true);
                 DrawLanguageButton(c, new(SettingsContentX + 220, pathsY + 188, SettingsContentWidth - 220, 32));
-                contentBottom = pathsY + 230;
+                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, pathsY + 262, 13, Foreground, 210, true);
+                SettingsButton(c, new(SettingsContentX + 220, pathsY + 252, SettingsContentWidth - 220, 32),
+                    L.Get(draftRomanisedMetadata ? "settings.romanisedOn" : "settings.romanisedOff"),
+                    () => draftRomanisedMetadata = !draftRomanisedMetadata, draftRomanisedMetadata);
+                contentBottom = pathsY + 296;
                 break;
             case 1:
                 DrawSkinSelector(c, SettingsSkinSelectorBounds);
@@ -181,9 +196,8 @@ public sealed partial class EditorView
                     L.Get("setup.downloadSkin"), () => RequestSetupLink?.Invoke("https://osu.ppy.sh/community/forums/topics/1411279?n=1"));
                 SettingsButton(c, new(SettingsContentX, SettingsTop + 320, SettingsContentWidth, 32),
                     L.Get(LibrarySettings.UseSkinSounds ? "settings.skinSoundsOn" : "settings.skinSoundsOff"), ToggleSkinSounds, LibrarySettings.UseSkinSounds);
-                contentBottom = SettingsParagraph(c, L.Get("settings.skinSoundsHint"), SettingsTop + 368) + 12;
                 DrawSetupSkinPreview(c, new(r.Right - 292, SettingsTop + 124, 260, 320));
-                contentBottom = Math.Max(contentBottom, SettingsTop + 456);
+                contentBottom = SettingsTop + 456;
                 break;
             case 2:
                 DrawVolumeControls(c);
@@ -205,7 +219,7 @@ public sealed partial class EditorView
                 }
                 break;
             case 3:
-                float dropletsY = Math.Max(SettingsTop + 216, SettingsParagraph(c, L.Get("setup.dropletsHint"), SettingsTop + 126) + 24);
+                float dropletsY = SettingsTop + 128;
                 SettingsButton(c, new(SettingsContentX, dropletsY, SettingsContentWidth, 32),
                     L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
                     () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
@@ -215,14 +229,6 @@ public sealed partial class EditorView
                 contentBottom = dropletsY + 100;
                 break;
             case 4:
-                float metadataY = Math.Max(SettingsTop + 218, SettingsParagraph(c, L.Get("setup.metadataHint"), SettingsTop + 126) + 24);
-                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, metadataY, 13, Foreground, SettingsContentWidth, true);
-                SettingsButton(c, new(SettingsContentX, metadataY + 34, 240, 32),
-                    L.Get(draftRomanisedMetadata ? "settings.romanisedOn" : "settings.romanisedOff"),
-                    () => draftRomanisedMetadata = !draftRomanisedMetadata, draftRomanisedMetadata);
-                contentBottom = metadataY + 80;
-                break;
-            case 5:
                 DrawTestplayBindings(c);
                 break;
         }
@@ -235,7 +241,7 @@ public sealed partial class EditorView
         SettingsButton(c, new(SettingsContentX, r.Bottom - 64, 160, 32), L.Get("setup.back"),
             () => MoveFirstRun(firstRunStep - 1), enabled: firstRunStep > 0);
         SettingsButton(c, new(r.Right - 360, r.Bottom - 64, 150, 32), L.Get("setup.exit"), ExitFirstRun);
-        SettingsButton(c, new(r.Right - 192, r.Bottom - 64, 160, 32), L.Get(firstRunStep == 5 ? "setup.finish" : "setup.next"),
+        SettingsButton(c, new(r.Right - 192, r.Bottom - 64, 160, 32), L.Get(firstRunStep == FirstRunTitles.Length - 1 ? "setup.finish" : "setup.next"),
             () => MoveFirstRun(firstRunStep + 1), active: true);
     }
 

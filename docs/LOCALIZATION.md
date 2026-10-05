@@ -17,7 +17,8 @@ Use .NET composite-format placeholders such as `{0}`, `{1:F3}`, and `{2:0.######
 
 Built-in default names also come from resources and are used only when creating objects or when metadata is actually missing. The Chinese table currently retains the original English data values for these names. Never traverse existing documents and reassign names when changing languages. Language changes must invalidate or rebuild cached application diagnostics so that subsequent UI messages use the new language.
 
-During first-time setup, language choices preview immediately but remain part of
+Unfinished first-time setup starts in English even when another language was
+previously saved. Language choices preview immediately but remain part of
 the setup draft. Finish saves the selected language; exiting an unfinished guide
 restores the original language. See [First-time setup](EDITOR_UI.md#first-time-setup).
 

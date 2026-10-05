@@ -68,7 +68,7 @@ internal sealed partial class MacWindow : Window
         Content = editor; Title = View.WindowTitle;
         AddHandler(PointerPressedEvent, (_, e) =>
         {
-            if (View.FirstRunHeaderDraggable && e.GetPosition(this).Y < (View.FirstRunStep == 6 ? 32 : 60) &&
+            if (View.FirstRunHeaderDraggable && e.GetPosition(this).Y < (View.FirstRunSetupComplete ? 32 : 60) &&
                 e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             { BeginMoveDrag(e); e.Handled = true; }
         }, Avalonia.Interactivity.RoutingStrategies.Tunnel);

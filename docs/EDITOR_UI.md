@@ -2,15 +2,18 @@
 
 ## First-time setup
 
-Startup opens a six-step setup guide when the saved setup version is missing or
+Startup opens a five-step setup guide when the saved setup version is missing or
 older than the current version. This includes existing users upgrading to the
 release that introduces setup. Completing the guide saves its version, so later
 normal launches open the editor directly.
 
 The guide uses a compact window, targeting 880 × 620 logical pixels and bounded
 to 85% of the screen work area after DPI scaling. Its filled arrow-shaped tabs
-cover folders and language; skin and skin sounds; volume; droplet defaults;
-romanised artist/title display; and testplay. Short windows scroll the content
+cover folders, language and romanised artist/title display; skin and skin sounds;
+volume; Slider Droplets; and testplay. Artist/title display appears below Language
+on the first page. Inactive tabs alternate two similar colours and join into a
+continuous strip. The pages show setting labels and controls without explanatory
+paragraphs. Short windows scroll the content
 while keeping navigation visible. The guide has no system title bar or outer
 border; drag the progress strip, or the top of the completion page, to move it.
 The main editor opens after Start with its normal window decorations.
@@ -20,7 +23,8 @@ configuration and selected language. Invalid workspace settings keep the current
 step open. Exit, Escape and closing the window discard unfinished choices,
 restore the original configuration, and leave setup required on the next launch.
 
-The first setup starts master, music and hitsound volume at 50%. The **Audio Test**
+An unfinished first setup starts in English, with master, music and hitsound
+volume at 50%. Selecting a language previews it until Finish. The **Audio Test**
 uses the bundled Campus After Class recording with Play, Pause and Stop icons and never starts
 automatically. Four sample buttons audition normal, whistle, finish and clap
 through the same sample resolver as Timing, respecting skin sounds and volume.

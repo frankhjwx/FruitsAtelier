@@ -28,7 +28,7 @@ The editor reads Catch `.osu` files in versions 12-14 and stable-compatible laze
 
 Download the Windows x64 ZIP from [Releases](https://github.com/frankhjwx/FruitsAtelier/releases), extract it, and run `FruitsAtelier.exe`. Keep the extracted files together. The package includes .NET and runs on Windows 10/11 with DirectX 11 support.
 
-On first launch, the setup guide walks through folders and language, skin and skin sounds, volume tests, droplet defaults, metadata display, and testplay settings. Import a beatmap or create a new project to begin. These choices remain available in **Library > Settings**.
+On first launch, the setup guide walks through folders, language and artist/title display, followed by skin and skin sounds, volume tests, Slider Droplets, and testplay settings. Import a beatmap or create a new project to begin. These choices remain available in **Library > Settings**.
 
 ### macOS
 

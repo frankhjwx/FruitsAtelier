@@ -48,7 +48,24 @@ static class FirstRunSetupTests
                 ui.View.RequestAuditionHitsound = samples.Add;
                 ui.View.RequestSetupLink = links.Add;
                 ui.View.BeginFirstRunSetup(settings); ui.Paint();
+                Check(L.Language == "en", "unfinished setup starts in English regardless of the previous language");
+                L.SetLanguage(locale); ui.Paint();
                 Check(audio.Count == 0, "entering setup never autoplays");
+                Check(ui.Canvas.Texts.Count(t => t.Value.StartsWith("1. ", StringComparison.Ordinal) || t.Value.StartsWith("2. ", StringComparison.Ordinal) ||
+                    t.Value.StartsWith("3. ", StringComparison.Ordinal) || t.Value.StartsWith("4. ", StringComparison.Ordinal) || t.Value.StartsWith("5. ", StringComparison.Ordinal)) == 5,
+                    "the guide has five progress tabs");
+                float tabWidth = size.Item1 / 5f;
+                uint ColourAt(float x, float y) => ui.Canvas.Fills.Last(fill => fill.Bounds.Contains(x, y)).Color;
+                uint firstInactive = ColourAt(tabWidth * 1.5f, 23), secondInactive = ColourAt(tabWidth * 2.5f, 23);
+                Check(firstInactive != secondInactive && ColourAt(tabWidth * 3.5f, 23) == firstInactive &&
+                    ColourAt(tabWidth * 4.5f, 23) == secondInactive, "inactive progress tabs alternate two colours");
+                for (float x = .5f; x < size.Item1; x += 4)
+                foreach (float y in new[] { .5f, 23, 45.5f })
+                    Check(ColourAt(x, y) != 0x171A20, "the progress strip exposes no window background between tabs");
+                var languageLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("ui.language"));
+                var metadataLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.romanisedLabel"));
+                Check(metadataLabel.Y > languageLabel.Y, "Artist/Title configuration appears below Language on the first step");
+                ui.ClickText(L.Get("settings.romanisedOn"));
                 var languageButton = ui.Canvas.Texts.Single(t => t.Value.EndsWith(" ▾", StringComparison.Ordinal));
                 ui.Click(languageButton.X + 4, languageButton.Y + 5);
                 Check(!ui.View.FirstRunHeaderDraggable, "language menus can receive input where they overlap the draggable header");
@@ -60,6 +77,7 @@ static class FirstRunSetupTests
                 ui.View.SetLibraryFolder(true, workspace);
                 ui.ClickText(L.Get("setup.next"));
                 Check(ui.View.FirstRunStep == 1 && !File.Exists(settings), "step navigation does not save settings");
+                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.skinSoundsHint")), "setup omits the skin sound explanatory paragraph");
                 ui.ClickText(L.Get("setup.downloadSkin"));
                 Check(links.Single() == "https://osu.ppy.sh/community/forums/topics/1411279?n=1", "default skin link matches the download page");
                 ui.ClickText(L.Get("setup.next"));
@@ -86,14 +104,13 @@ static class FirstRunSetupTests
                 ui.ClickText(L.Get("setup.next"));
                 ui.ClickText(L.Get("settings.newProjectDerandomizeOn"));
                 ui.ClickText(L.Get("setup.next"));
-                ui.ClickText(L.Get("settings.romanisedOn"));
-                ui.ClickText(L.Get("setup.next"));
+                Check(ui.View.FirstRunStep == 4, "Slider Droplets advances directly to Testplay");
                 ui.ClickText("←"); ui.Key(65);
                 Check(ui.View.TestplayBindingBounds(2).Right == ui.View.TestplayStartupDelayBounds.Right,
                     "the setup lead-in ends at the Dash button edge");
                 Check(!ui.View.CapturingTestplayKey, "testplay bindings capture keys inside setup");
                 ui.ClickText(L.Get("setup.finish"));
-                Check(ui.View.FirstRunStep == 6 && !ui.Canvas.Texts.Any(t => t.Value == L.Get("setup.step", 1, L.Get("setup.paths"))), "completion removes the progress bar");
+                Check(ui.View.FirstRunStep == 5 && !ui.Canvas.Texts.Any(t => t.Value == L.Get("setup.step", 1, L.Get("setup.paths"))), "completion removes the progress bar");
                 var saved = LibrarySettings.Load(settings);
                 Check(saved.FirstRunSetupCompleted && !saved.RomanisedMetadata && !saved.DerandomizeNewProjects && saved.TestplayLeftKey == 65 && saved.SongVolume == 70,
                     "completion persists each chosen preference");
@@ -118,6 +135,7 @@ static class FirstRunSetupTests
             cancel.View.LibrarySettings.SongVolume = 34;
             cancel.View.LibrarySettings.HitsoundVolume = 91;
             var beforeSettings = cancel.View.LibrarySettings;
+            string beforeLanguage = L.Language;
             string canceledPath = Path.Combine(root, "cancel.json");
             int preferenceWrites = 0;
             cancel.View.RequestAudioPreference = () => preferenceWrites++;
@@ -137,7 +155,7 @@ static class FirstRunSetupTests
             cancel.Click(slider.X + slider.Width * .2f, slider.Y + 12);
             cancel.ClickText(L.Get("setup.exit"));
             Check(ReferenceEquals(beforeSettings, cancel.View.LibrarySettings) && beforeSettings.MasterVolume == 72 &&
-                beforeSettings.SongVolume == 34 && beforeSettings.HitsoundVolume == 91 && preferenceWrites == 0 && !File.Exists(canceledPath),
+                beforeSettings.SongVolume == 34 && beforeSettings.HitsoundVolume == 91 && L.Language == beforeLanguage && preferenceWrites == 0 && !File.Exists(canceledPath),
                 "Exit discards every preference and leaves setup incomplete without saving");
         }
         finally { L.SetLanguage(language); }

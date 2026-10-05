@@ -268,7 +268,7 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0084 when view.FirstRunSetupVisible: // WM_NCHITTEST
                 var setupPoint = new Native.Point { X = (short)((long)lParam & 0xFFFF), Y = (short)(((long)lParam >> 16) & 0xFFFF) };
                 Native.ScreenToClient(window, ref setupPoint);
-                return view.FirstRunHeaderDraggable && setupPoint.Y >= 0 && setupPoint.Y * 96f / dpi < (view.FirstRunStep == 6 ? 32 : 60) ? 2 : 1;
+                return view.FirstRunHeaderDraggable && setupPoint.Y >= 0 && setupPoint.Y * 96f / dpi < (view.FirstRunSetupComplete ? 32 : 60) ? 2 : 1;
             case updateStatusChangedMessage:
                 Invalidate();
                 return 0;
