@@ -60,6 +60,7 @@ var tests = new (string Name, Action Run)[]
     ("Mapping Combo visibility and configured dash brightness", MappingSessionTests.TestplayDisplay),
     ("Clearing internal slider nodes preserves endpoints and batch undo", ClearSliderNodesTests.Run),
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
+    ("Fullscreen settings and Alt Enter preserve drafts, content and testplay", FullscreenSettingsTests.Run),
     ("Legacy slider editing converts silently with atomic drag, insertion and cancellation", ImplicitSliderEditingTests.Run),
     ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),
     ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),

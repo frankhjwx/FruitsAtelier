@@ -129,17 +129,17 @@ internal sealed class TestplayInputThread : IDisposable
                         if (down)
                         {
                             altPressed.Add(physical);
-                            foreach (var held in pressed.Where(pair => pair.Value is 37 or 38 or 39 or 40).Select(pair => pair.Key).ToArray())
+                            foreach (var held in pressed.Where(pair => pair.Value is 13 or 37 or 38 or 39 or 40).Select(pair => pair.Key).ToArray())
                                 pressed.Remove(held);
-                            foreach (int arrow in new[] { 37, 38, 39, 40 })
-                                if (session.UsesKey(arrow)) session.SetKey(arrow, pressed.ContainsValue(arrow));
+                            foreach (int shortcutKey in new[] { 13, 37, 38, 39, 40 })
+                                if (session.UsesKey(shortcutKey)) session.SetKey(shortcutKey, pressed.ContainsValue(shortcutKey));
                         }
                         else altPressed.Remove(physical);
                     }
                     // Navigation belongs to WM_KEYDOWN on the UI thread, avoiding a second Escape after return.
                     if (key != 27 && session.UsesKey(key))
                     {
-                        if (key is 37 or 38 or 39 or 40 && altPressed.Count > 0
+                        if (key is 13 or 37 or 38 or 39 or 40 && altPressed.Count > 0
                             || IsTestplayShortcut(key)
                             || key is 38 or 40 && volumeModifiers.Count == 0) pressed.Remove(physical);
                         else if (down) pressed.TryAdd(physical, key);

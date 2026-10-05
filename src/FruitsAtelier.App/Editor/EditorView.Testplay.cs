@@ -199,6 +199,7 @@ public sealed partial class EditorView
 
     public void KeyUp(int virtualKey)
     {
+        if (virtualKey == 13) fullscreenShortcutHeld = false;
         if (virtualKey == 84) timingTapHeld = false;
         ReleaseVolumeShortcut(virtualKey);
         if (virtualKey is 17 or 162 or 163) placementCtrl = false;

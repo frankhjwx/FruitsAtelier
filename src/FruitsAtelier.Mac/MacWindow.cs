@@ -19,6 +19,8 @@ internal sealed partial class MacWindow : Window
     private string? projectPath;
     private bool busy, allowClose;
     private int playbackRequest;
+    private WindowState windowedState;
+    private bool fullscreenInitialized;
     private FruitsAtelier.App.Editor.EditorView View => editor.View;
     public MacWindow(string? initialPath, bool smokeCheck)
     {
@@ -27,6 +29,24 @@ internal sealed partial class MacWindow : Window
         View.RequestAudioVolume = (song, hit) => { audio.SetVolume(song); hitsounds.SetVolume(hit); };
         View.RequestAudioPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
         View.RequestViewPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
+        View.SupportsFullscreen = true;
+        View.RequestFullscreen = enabled =>
+        {
+            if (enabled && WindowState != WindowState.FullScreen)
+            {
+                windowedState = WindowState;
+                WindowState = WindowState.FullScreen;
+            }
+            else if (!enabled && WindowState == WindowState.FullScreen) WindowState = windowedState;
+        };
+        PropertyChanged += (_, change) =>
+        {
+            if (!fullscreenInitialized || change.Property != WindowStateProperty || WindowState == WindowState.Minimized) return;
+            var previous = change.GetOldValue<WindowState>();
+            if (WindowState == WindowState.FullScreen && previous is WindowState.Normal or WindowState.Maximized)
+                windowedState = previous;
+            View.UpdateFullscreenState(WindowState == WindowState.FullScreen);
+        };
         View.ApplyAudioVolume();
         View.RequestScheduleHitsound = (sound, time) =>
         {
@@ -92,6 +112,8 @@ internal sealed partial class MacWindow : Window
         timer.Tick += (_, _) => PollAudio();
         Opened += async (_, _) =>
         {
+            if (!smokeCheck) View.RequestFullscreen(View.LibrarySettings.Fullscreen);
+            fullscreenInitialized = true;
             MacPaths.Log($"Native macOS window opened: {Bounds}, scaling={RenderScaling}");
             timer.Start(); editor.Focus();
             View.InitializeSkin();

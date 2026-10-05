@@ -5,6 +5,48 @@ namespace FruitsAtelier.App.Platform;
 
 internal sealed partial class EditorWindow
 {
+    private void CheckFullscreen()
+    {
+        bool original = view.LibrarySettings.Fullscreen;
+        var savePreference = view.RequestViewPreference;
+        view.RequestViewPreference = null;
+        try
+        {
+            view.LibrarySettings.Fullscreen = false;
+            foreach (int state in new[] { 1, 3 })
+            {
+                Native.ShowWindow(hwnd, state);
+                Native.GetWindowRect(hwnd, out var before);
+                WndProc(hwnd, 0x0104, 13, (nint)(1L << 29));
+                var info = new Native.MonitorInfo { Size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<Native.MonitorInfo>() };
+                Native.GetMonitorInfo(Native.MonitorFromWindow(hwnd, 2), ref info);
+                Native.GetWindowRect(hwnd, out var current);
+                if (!fullscreen || !view.LibrarySettings.Fullscreen || !current.Equals(info.Monitor)
+                    || (Native.GetWindowLongPtr(hwnd, -16) & (nint)Native.WindowStyle) != 0)
+                    throw new InvalidOperationException("Fullscreen did not cover the monitor without window borders.");
+                WndProc(hwnd, 0x0104, 13, (nint)((1L << 29) | (1L << 30)));
+                if (!fullscreen) throw new InvalidOperationException("Repeated Alt+Enter toggled fullscreen again.");
+                view.KeyUp(13);
+                WndProc(hwnd, 0x0104, 13, (nint)(1L << 29));
+                view.KeyUp(13);
+                Native.GetWindowRect(hwnd, out var restored);
+                var placement = new Native.WindowPlacement { Length = (uint)System.Runtime.InteropServices.Marshal.SizeOf<Native.WindowPlacement>() };
+                Native.GetWindowPlacement(hwnd, ref placement);
+                if (fullscreen || view.LibrarySettings.Fullscreen || !restored.Equals(before) || placement.ShowCommand != state)
+                    throw new InvalidOperationException("Leaving fullscreen did not restore window bounds and maximization.");
+            }
+            AppLog.Write("Fullscreen check passed: Alt+Enter, repeat suppression, monitor bounds and normal/maximized restoration.");
+        }
+        finally
+        {
+            view.KeyUp(13); view.SetModifiers(false, false);
+            SetFullscreen(false);
+            view.LibrarySettings.Fullscreen = original;
+            view.RequestViewPreference = savePreference;
+            Native.ShowWindow(hwnd, 0);
+        }
+    }
+
     private void CheckDisplayPreference()
     {
         if (canvas?.DiagnosticImmediatePresentation is not null) return;

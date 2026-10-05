@@ -22,6 +22,7 @@ public sealed class LibrarySettings
     public bool DerandomizeNewProjects { get; set; } = true;
     public bool ReverseCanvasScroll { get; set; }
     public bool LowLatencyDisplay { get; set; }
+    public bool Fullscreen { get; set; }
     public uint StandIndicatorColour { get; set; } = DefaultStandIndicatorColour;
     public uint WalkIndicatorColour { get; set; } = DefaultWalkIndicatorColour;
     public uint DashIndicatorColour { get; set; } = DefaultDashIndicatorColour;

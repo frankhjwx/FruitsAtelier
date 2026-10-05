@@ -14,6 +14,9 @@ public sealed partial class EditorView
     private bool draftDerandomizeNewProjects;
     public bool SupportsDisplayMode { get; set; }
     private bool draftLowLatencyDisplay;
+    public bool SupportsFullscreen { get; set; }
+    public Action<bool>? RequestFullscreen { get; set; }
+    private bool draftFullscreen, fullscreenShortcutHeld;
     private bool draftReverseCanvasScroll;
     private double draftTestplayStartupDelaySeconds;
     private bool draftShowTestplayCombo;
@@ -97,6 +100,7 @@ public sealed partial class EditorView
         draftDerandomizeNewProjects = LibrarySettings.DerandomizeNewProjects;
         draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
         draftLowLatencyDisplay = LibrarySettings.LowLatencyDisplay;
+        draftFullscreen = LibrarySettings.Fullscreen;
         draftIndicatorColours[0] = LibrarySettings.StandIndicatorColour;
         draftIndicatorColours[1] = LibrarySettings.WalkIndicatorColour;
         draftIndicatorColours[2] = LibrarySettings.DashIndicatorColour;
@@ -118,6 +122,7 @@ public sealed partial class EditorView
         draftDerandomizeDroplets != LibrarySettings.DerandomizeDroplets ||
         draftDerandomizeNewProjects != LibrarySettings.DerandomizeNewProjects ||
         draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
+        draftFullscreen != LibrarySettings.Fullscreen ||
         draftReverseCanvasScroll != LibrarySettings.ReverseCanvasScroll ||
         draftIndicatorColours[0] != LibrarySettings.StandIndicatorColour ||
         draftIndicatorColours[1] != LibrarySettings.WalkIndicatorColour ||
@@ -207,7 +212,16 @@ public sealed partial class EditorView
                         L.Get(draftLowLatencyDisplay ? "settings.displayImmediate" : "settings.displayVsync") + " ▾",
                         () => OpenDisplayModeMenu(displayBounds));
                 }
-                float scrollTop = generalTop + (SupportsDisplayMode ? 532 : 388);
+                float fullscreenTop = generalTop + (SupportsDisplayMode ? 532 : 388);
+                if (SupportsFullscreen)
+                {
+                    c.Text(L.Get("settings.fullscreen"), SettingsContentX, fullscreenTop, SettingsTextSize, Foreground, SettingsContentWidth, true);
+                    SettingsButton(c, new(SettingsContentX, fullscreenTop + 28, SettingsContentWidth, SettingsControlHeight),
+                        L.Get(draftFullscreen ? "settings.fullscreenOn" : "settings.fullscreenOff"),
+                        () => draftFullscreen = !draftFullscreen, draftFullscreen);
+                    c.Text(L.Get("settings.fullscreenShortcut"), SettingsContentX, fullscreenTop + 72, SettingsHintSize, Muted, SettingsContentWidth);
+                }
+                float scrollTop = fullscreenTop + (SupportsFullscreen ? 108 : 0);
                 float scrollWidth = SettingsContentWidth;
                 c.Line(SettingsContentX, scrollTop, SettingsContentX + scrollWidth, scrollTop, Grid);
                 SettingsButton(c, new(SettingsContentX, scrollTop + 20, scrollWidth, 32),
@@ -277,6 +291,7 @@ public sealed partial class EditorView
             settings.DerandomizeDroplets = draftDerandomizeDroplets;
             settings.DerandomizeNewProjects = draftDerandomizeNewProjects;
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
+            settings.Fullscreen = draftFullscreen;
             settings.ReverseCanvasScroll = draftReverseCanvasScroll;
             settings.StandIndicatorColour = draftIndicatorColours[0]; settings.WalkIndicatorColour = draftIndicatorColours[1];
             settings.DashIndicatorColour = draftIndicatorColours[2]; settings.HyperDashIndicatorColour = draftIndicatorColours[3];
@@ -290,8 +305,10 @@ public sealed partial class EditorView
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
             bool rootsChanged = settings.Workspace != LibrarySettings.Workspace || settings.OsuRoot != LibrarySettings.OsuRoot;
             settings.Save(settingsPath);
+            bool fullscreenChanged = settings.Fullscreen != LibrarySettings.Fullscreen;
             SaveLibraryMemory(); LibrarySettings = settings;
             ResetSettingsDrafts();
+            if (fullscreenChanged) RequestFullscreen?.Invoke(settings.Fullscreen);
             libraryField = bindingCapture = -1;
             libraryError = "";
             InitializeSkin();
@@ -303,6 +320,27 @@ public sealed partial class EditorView
             LoadLibraryMemory(); StartLibraryScan();
         }
         catch (Exception e) { libraryError = e.Message; }
+    }
+
+    private bool FullscreenKeyDown(int virtualKey, bool ctrl, bool shift)
+    {
+        if (virtualKey != 13 || !altHeld || ctrl || shift || !SupportsFullscreen || CapturingTestplayKey) return false;
+        if (!fullscreenShortcutHeld)
+        {
+            fullscreenShortcutHeld = true;
+            LibrarySettings.Fullscreen = !LibrarySettings.Fullscreen;
+            draftFullscreen = LibrarySettings.Fullscreen;
+            RequestFullscreen?.Invoke(LibrarySettings.Fullscreen);
+            RequestViewPreference?.Invoke();
+        }
+        return true;
+    }
+
+    public void UpdateFullscreenState(bool enabled)
+    {
+        if (LibrarySettings.Fullscreen == enabled) return;
+        LibrarySettings.Fullscreen = draftFullscreen = enabled;
+        RequestViewPreference?.Invoke();
     }
 
     private void DrawIndicatorColours(ICanvas c)

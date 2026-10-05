@@ -21,6 +21,7 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 
 | Keys | Action |
 | --- | --- |
+| Alt+Enter | Toggle fullscreen and save the preference. Available in Library, Settings and testplay as well as the editor. |
 | Ctrl+O | Choose a difficulty in the current project. |
 | Ctrl+Shift+O | Open a supported beatmap, archive or project file. |
 | Ctrl+S | Save the project; also update linked exported difficulties. |

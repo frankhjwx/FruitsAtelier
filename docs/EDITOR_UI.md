@@ -275,6 +275,16 @@ launcher or restart is needed. Closing without applying discards the draft.
 Testplay retains its low-latency presentation. Diagnostic display launchers
 override this preference for their run. macOS does not expose this Windows setting.
 
+**General → Fullscreen**, below Display mode on Windows, toggles fullscreen on
+Windows and macOS. Apply saves and activates the choice; closing Settings discards
+an unapplied choice. **Alt+Enter** switches immediately and saves the preference,
+including in Library, Settings and testplay. Holding the keys switches only once.
+The shortcut updates the fullscreen choice in an open Settings draft while keeping
+other pending changes. Windows uses borderless fullscreen on the current monitor;
+leaving restores the previous window bounds and maximized state. macOS uses native
+fullscreen. New installations start windowed, and subsequent launches restore the
+saved fullscreen preference. Fullscreen does not change beatmap content or history.
+
 **General → Droplet Derandomize Settings** contains two independent preferences and ends with
 a separator. **Enable Derandomization for Legacy slider to FSlider Conversion** sets the initial conversion
 choice in maps without a saved choice. **Enable Derandomization for new catchprojects**
