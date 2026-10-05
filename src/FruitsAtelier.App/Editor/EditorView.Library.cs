@@ -447,8 +447,8 @@ public sealed partial class EditorView
             if (map.Background.Length > 0) c.Thumbnail(map.Background, new(224, y + 9, 76, 60));
             if (IsLibraryFavourite(map))
             {
-                c.Fill(new(218, y + 3, 24, 24), 0x272C36, 5);
-                c.Text("★", 221, y + 3, 19, 0xFFD34D, 22);
+                c.Fill(new(218, y + 3, 24, 24), 0x272C36, 5, .5f);
+                c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "library", "favourite-star.png"), new(220, y + 5, 20, 20));
             }
             string title = DisplayMetadata(map.Title, map.TitleUnicode);
             c.Text(title, 314, y + 10, 16, Foreground, listWidth - 116, true);

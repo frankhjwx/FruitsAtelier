@@ -26,11 +26,12 @@ internal static class LibraryFavouriteTests
                 view.InitializeLibrary(true, settings); Settle(1);
                 var original = view.Document.DeepClone();
                 Toggle("library.addFavourite");
-                Check(canvas.Texts.Any(t => t.Value == "★" && t.Color == 0xFFD34D && t.X < 250), "yellow star on upper-left of song card");
+                Check(StarCount() == 1, "star image on upper-left of song card");
+                Check(canvas.PaintCalls.Any(p => p.Color == 0x272C36 && p.Opacity == .5f && p.FillBounds?.X == 218), "favourite badge background has fifty percent opacity");
                 Click("library.projects"); Settle(1); Toggle("library.addFavourite");
                 Click("library.favourites"); Settle(2);
                 Check(view.LibrarySetTotal == 2, "favourites includes songs and local projects");
-                Check(canvas.Texts.Count(t => t.Value == "★" && t.Color == 0xFFD34D) == 2, "both favourites are marked");
+                Check(StarCount() == 2, "both favourites are marked");
                 Check(original.ContentEquals(view.Document) && !view.IsDirty, "favourites leaves beatmap content unchanged");
                 view.LoadWorkspace(WorkspaceProject.Open(local.Directory)); view.ShowLibrary(); Settle(2);
                 Check(canvas.Texts.Single(t => t.Value == L.Get("library.favourites")).Bold, "returning from a local favourite retains its category");
@@ -58,11 +59,12 @@ internal static class LibraryFavouriteTests
                 view = new EditorView(loadDemo: false); view.InitializeLibrary(true, settings); Settle(0);
                 Check(view.LibrarySetTotal == 0, "removals survive restart");
                 Click("library.projects"); Settle(2);
-                Check(!canvas.Texts.Any(t => t.Value == "★" && t.Color == 0xFFD34D), "project cards no longer show favourite stars");
+                Check(StarCount() == 0, "project cards no longer show favourite stars");
             }
             finally { view.CloseLibrary(); }
 
             void Paint() { canvas.Clear(); view.Render(canvas, width, 620); }
+            int StarCount() => canvas.Images.Count(i => Path.GetFileName(i.Path) == "favourite-star.png" && i.Bounds.X == 220);
             void Settle(int count)
             {
                 for (int i = 0; i < 1000; i++)

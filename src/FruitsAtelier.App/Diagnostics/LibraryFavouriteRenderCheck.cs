@@ -9,6 +9,10 @@ internal static class LibraryFavouriteRenderCheck
 {
     internal static void Run(D2DCanvas canvas, int width, int height)
     {
+        canvas.Begin();
+        bool starLoaded = canvas.Image(Path.Combine(AppContext.BaseDirectory, "assets", "icons", "library", "favourite-star.png"), new(220, 175, 20, 20));
+        canvas.End();
+        if (!starLoaded) throw new InvalidOperationException("Native favourite star image could not be drawn.");
         string language = L.Language;
         try
         {
