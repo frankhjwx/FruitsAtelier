@@ -242,6 +242,7 @@ var tests = new (string Name, Action Run)[]
     ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),
     ("Workspace library isolates input, saving and export", LibraryTests.Run),
     ("Library navigation preserves position, supports dragging and returns with Escape", LibraryNavigationTests.Run),
+    ("Library favourites persist, filter songs and projects, and toggle from the first context action", LibraryFavouriteTests.Run),
     ("Library pages sets and difficulties and reaches uncached scrollbar positions", LibraryScaleTests.Pagination),
     ("Library remains responsive while SQLite is write-locked", LibraryResponsivenessTests.Run),
     ("Library progress survives oversized maps", LibraryScanProgressTests.Run),

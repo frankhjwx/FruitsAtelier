@@ -1,4 +1,7 @@
 {
+  "library.favourites": "즐겨찾기",
+  "library.addFavourite": "즐겨찾기에 추가",
+  "library.removeFavourite": "즐겨찾기에서 제거",
   "audioProject.title": "오디오의 새 프로젝트",
   "audioProject.required": "노래 제목, 아티스트, 매퍼, 난이도가 모두 필수입니다.",
   "audioProject.songs": "osu! 노래에서도 생성",

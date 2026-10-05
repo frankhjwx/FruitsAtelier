@@ -1,4 +1,7 @@
 {
+  "library.favourites": "Favorieten",
+  "library.addFavourite": "Toevoegen aan favorieten",
+  "library.removeFavourite": "Verwijderen uit favorieten",
   "audioProject.title": "Nieuw project van audio",
   "audioProject.required": "Titel van het nummer, artiest, mapper en moeilijkheidsgraad zijn allemaal vereist.",
   "audioProject.songs": "Maak ook in osu! nummers",

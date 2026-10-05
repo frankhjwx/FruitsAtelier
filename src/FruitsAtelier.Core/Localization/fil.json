@@ -1,4 +1,7 @@
 {
+  "library.favourites": "Mga paborito",
+  "library.addFavourite": "Idagdag sa mga paborito",
+  "library.removeFavourite": "Alisin sa mga paborito",
   "audioProject.title": "Bagong proyekto mula sa audio",
   "audioProject.required": "Ang pamagat ng kanta, artist, mapper at kahirapan ay kailangan lahat.",
   "audioProject.songs": "Gumawa din sa osu! Mga Kanta",

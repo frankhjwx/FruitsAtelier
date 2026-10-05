@@ -1,4 +1,7 @@
 {
+  "library.favourites": "Favoritos",
+  "library.addFavourite": "Añadir a favoritos",
+  "library.removeFavourite": "Quitar de favoritos",
   "audioProject.title": "Nuevo proyecto de audio.",
   "audioProject.required": "Se requieren título de la canción, artista, mapeador y dificultad.",
   "audioProject.songs": "También crear en osu! canciones.",

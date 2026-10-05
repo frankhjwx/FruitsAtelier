@@ -849,6 +849,7 @@ internal static class RenderCheck
         foreach (var size in new[] { (1440, 900), (980, 620) })
         {
             canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+            LibraryFavouriteRenderCheck.Run(canvas, size.Item1, size.Item2);
             ObjectStructureRenderCheck.Run(canvas, size.Item1, size.Item2);
             AimodRenderCheck.Run(canvas, size.Item1, size.Item2);
             SynchronizationRenderCheck.Run(canvas, size.Item1, size.Item2);

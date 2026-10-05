@@ -1,4 +1,7 @@
 {
+  "library.favourites": "Favourites",
+  "library.addFavourite": "Add to Favourites",
+  "library.removeFavourite": "Remove from Favourites",
   "audioProject.title": "New project from audio",
   "audioProject.required": "Song title, artist, mapper and difficulty are all required.",
   "audioProject.songs": "Also create in osu! Songs",

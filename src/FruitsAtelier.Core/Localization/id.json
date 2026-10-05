@@ -1,4 +1,7 @@
 {
+  "library.favourites": "Favorit",
+  "library.addFavourite": "Tambahkan ke favorit",
+  "library.removeFavourite": "Hapus dari favorit",
   "audioProject.title": "Proyek baru dari audio",
   "audioProject.required": "Judul lagu, artis, mapper, dan tingkat kesulitan semuanya diperlukan.",
   "audioProject.songs": "Juga buat di Lagu osu!",

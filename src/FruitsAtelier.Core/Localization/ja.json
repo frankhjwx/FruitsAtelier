@@ -1,4 +1,7 @@
 {
+  "library.favourites": "お気に入り",
+  "library.addFavourite": "お気に入りに追加",
+  "library.removeFavourite": "お気に入りから削除",
   "audioProject.title": "オーディオからの新プロジェクト",
   "audioProject.required": "曲のタイトル、アーティスト、マッパー、難易度はすべて必須です。",
   "audioProject.songs": "osu! ソングでも作成",

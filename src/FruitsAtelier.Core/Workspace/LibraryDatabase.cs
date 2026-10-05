@@ -128,7 +128,7 @@ public sealed class LibraryDatabase
         string path = Path.Combine(workspace, "library.db"); WorkspaceProject.RejectLinks(path);
         var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString()); db.Open(); return db;
     }
-    public LibrarySearchSnapshot SearchSnapshot(string query, bool projectsOnly = false) => new(Open(), songs, query, projectsOnly);
+    public LibrarySearchSnapshot SearchSnapshot(string query, bool projectsOnly = false, IReadOnlyCollection<string>? favourites = null) => new(Open(), songs, query, projectsOnly, favourites);
     public void ClearDerivedCache()
     {
         using var db = Open();

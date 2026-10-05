@@ -1,4 +1,7 @@
 {
+  "library.favourites": "รายการโปรด",
+  "library.addFavourite": "เพิ่มในรายการโปรด",
+  "library.removeFavourite": "นำออกจากรายการโปรด",
   "audioProject.title": "โครงการใหม่จากเสียง",
   "audioProject.required": "จำเป็นต้องมีชื่อเพลง ศิลปิน ผู้ทำแผนที่ และความยากทั้งหมด",
   "audioProject.songs": "สร้างในเพลง osu! ด้วย",

@@ -1,4 +1,7 @@
 {
+  "library.favourites": "收藏",
+  "library.addFavourite": "加入收藏",
+  "library.removeFavourite": "取消收藏",
   "audioProject.title": "來自音訊的新項目",
   "audioProject.required": "歌曲名稱、藝術家、製圖者和難度都是必需的。",
   "audioProject.songs": "還可以在 osu! 歌曲中創作",

@@ -1,4 +1,7 @@
 {
+  "library.favourites": "Избранное",
+  "library.addFavourite": "Добавить в избранное",
+  "library.removeFavourite": "Удалить из избранного",
   "audioProject.title": "Новый проект из аудио",
   "audioProject.required": "Укажите название песни, исполнителя, картографа и сложность.",
   "audioProject.songs": "Также создавайте в osu! Songs",

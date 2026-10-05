@@ -1,4 +1,7 @@
 {
+  "library.favourites": "Ulubione",
+  "library.addFavourite": "Dodaj do ulubionych",
+  "library.removeFavourite": "Usuń z ulubionych",
   "audioProject.title": "Nowy projekt od Audio",
   "audioProject.required": "Wymagany jest tytuł utworu, wykonawca, osoba tworząca mapę i poziom trudności.",
   "audioProject.songs": "Twórz także utwory w osu!",
