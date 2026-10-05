@@ -12,6 +12,7 @@ static class FirstRunSetupTests
         Directory.CreateDirectory(root);
         try
         {
+#if WINDOWS
             foreach (uint state in new[] { 0u, 0x10000000u, 0x18000000u })
             {
                 uint originalStyle = Native.WindowStyle | state;
@@ -21,6 +22,7 @@ static class FirstRunSetupTests
                 Check(EditorWindow.FirstRunWindowStyle(setupStyle, false) == originalStyle,
                     "Start restores editor decorations without hiding the window");
             }
+#endif
             string missing = Path.Combine(root, "missing.json");
             var fresh = LibrarySettings.Load(missing);
             Check(!fresh.FirstRunSetupCompleted && fresh.MasterVolume == 50 && fresh.SongVolume == 50 && fresh.HitsoundVolume == 50,
