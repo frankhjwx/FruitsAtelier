@@ -182,40 +182,31 @@ public sealed partial class EditorView
                 float generalTop = SettingsTop - workspaceScroll;
                 int generalFirstHit = hits.Count;
                 c.Clip(workspaceScrollBounds);
-                c.Text(L.Get("settings.dropletDefaults"), SettingsContentX, generalTop + 126, SettingsSectionSize, Foreground,
-                    SettingsContentWidth, true);
-                SettingsButton(c, new(SettingsContentX, generalTop + 160, SettingsContentWidth, 32),
-                    L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
-                    () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
-                SettingsButton(c, new(SettingsContentX, generalTop + 208, SettingsContentWidth, 32),
-                    L.Get(draftDerandomizeNewProjects ? "settings.newProjectDerandomizeOn" : "settings.newProjectDerandomizeOff"),
-                    () => draftDerandomizeNewProjects = !draftDerandomizeNewProjects, draftDerandomizeNewProjects);
                 float rowWidth = SettingsContentWidth;
-                c.Line(SettingsContentX, generalTop + 260, SettingsContentX + rowWidth, generalTop + 260, Grid);
                 float labelWidth = Math.Min(240, rowWidth / 2);
                 float controlX = SettingsContentX + labelWidth + 16;
                 float controlWidth = rowWidth - labelWidth - 16;
-                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, generalTop + 294.5f, SettingsTextSize, Foreground, labelWidth, true);
-                var romanisedBounds = new Rect(controlX, generalTop + 284, controlWidth, 32);
+                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, generalTop + 138.5f, SettingsTextSize, Foreground, labelWidth, true);
+                var romanisedBounds = new Rect(controlX, generalTop + 128, controlWidth, 32);
                 c.Fill(romanisedBounds, Surface, 4); c.Stroke(romanisedBounds, Grid, radius: 4);
                 SettingsButton(c, romanisedBounds,
                     L.Get(draftRomanisedMetadata ? "settings.romanisedOn" : "settings.romanisedOff"),
                     () => draftRomanisedMetadata = !draftRomanisedMetadata, draftRomanisedMetadata);
-                c.Text(L.Get("ui.language"), SettingsContentX, generalTop + 342.5f, SettingsTextSize, Foreground, labelWidth, true);
-                DrawLanguageButton(c, new(controlX, generalTop + 332, controlWidth, 32));
+                c.Text(L.Get("ui.language"), SettingsContentX, generalTop + 186.5f, SettingsTextSize, Foreground, labelWidth, true);
+                DrawLanguageButton(c, new(controlX, generalTop + 176, controlWidth, 32));
                 if (SupportsDisplayMode)
                 {
                     float displayWidth = SettingsContentWidth;
-                    c.Text(L.Get("settings.displayMode"), SettingsContentX, generalTop + 388, SettingsTextSize, Foreground, displayWidth, true);
-                    c.Fill(new(SettingsContentX, generalTop + 416, displayWidth, 44), Gold, 4, .12f);
-                    c.Text(L.Get("settings.displayDelayHint"), SettingsContentX + 12, generalTop + 425, 12, Gold, displayWidth - 24);
-                    c.Text(L.Get("settings.displayChangeHint"), SettingsContentX + 12, generalTop + 443, 12, Gold, displayWidth - 24);
-                    var displayBounds = new Rect(SettingsContentX, generalTop + 476, displayWidth, 32);
+                    c.Text(L.Get("settings.displayMode"), SettingsContentX, generalTop + 232, SettingsTextSize, Foreground, displayWidth, true);
+                    c.Fill(new(SettingsContentX, generalTop + 260, displayWidth, 44), Gold, 4, .12f);
+                    c.Text(L.Get("settings.displayDelayHint"), SettingsContentX + 12, generalTop + 269, 12, Gold, displayWidth - 24);
+                    c.Text(L.Get("settings.displayChangeHint"), SettingsContentX + 12, generalTop + 287, 12, Gold, displayWidth - 24);
+                    var displayBounds = new Rect(SettingsContentX, generalTop + 320, displayWidth, 32);
                     SettingsButton(c, displayBounds,
                         L.Get(draftLowLatencyDisplay ? "settings.displayImmediate" : "settings.displayVsync") + " ▾",
                         () => OpenDisplayModeMenu(displayBounds));
                 }
-                float fullscreenTop = generalTop + (SupportsDisplayMode ? 532 : 388);
+                float fullscreenTop = generalTop + (SupportsDisplayMode ? 376 : 232);
                 if (SupportsFullscreen)
                 {
                     c.Text(L.Get("settings.fullscreen"), SettingsContentX, fullscreenTop, SettingsTextSize, Foreground, SettingsContentWidth, true);
@@ -230,6 +221,15 @@ public sealed partial class EditorView
                 SettingsButton(c, new(SettingsContentX, scrollTop + 20, scrollWidth, 32),
                     L.Get(draftReverseCanvasScroll ? "settings.reverseCanvasScrollOn" : "settings.reverseCanvasScrollOff"),
                     () => draftReverseCanvasScroll = !draftReverseCanvasScroll, draftReverseCanvasScroll);
+                c.Line(SettingsContentX, scrollTop + 72, SettingsContentX + scrollWidth, scrollTop + 72, Grid);
+                c.Text(L.Get("settings.dropletDefaults"), SettingsContentX, scrollTop + 84, SettingsSectionSize, Foreground,
+                    SettingsContentWidth, true);
+                SettingsButton(c, new(SettingsContentX, scrollTop + 118, SettingsContentWidth, 32),
+                    L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
+                    () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
+                SettingsButton(c, new(SettingsContentX, scrollTop + 166, SettingsContentWidth, 32),
+                    L.Get(draftDerandomizeNewProjects ? "settings.newProjectDerandomizeOn" : "settings.newProjectDerandomizeOff"),
+                    () => draftDerandomizeNewProjects = !draftDerandomizeNewProjects, draftDerandomizeNewProjects);
                 c.Unclip();
                 ClipSettingsHits(generalFirstHit);
                 DrawSettingsScrollbar(c, GeneralContentHeight);
@@ -253,8 +253,6 @@ public sealed partial class EditorView
                 SettingsButton(c, new(SettingsContentX, SettingsTop + 346, SettingsContentWidth, SettingsControlHeight),
                     L.Get(LibrarySettings.UseSkinSounds ? "settings.skinSoundsOn" : "settings.skinSoundsOff"),
                     ToggleSkinSounds, LibrarySettings.UseSkinSounds);
-                SettingsParagraph(c, L.Get("settings.skinSoundsHint"), SettingsTop + 390);
-                SettingsParagraph(c, L.Get("settings.immediatePreferences"), SettingsTop + 438);
                 break;
         }
         c.Line(SettingsContentX, r.Bottom - 86, r.Right - 24, r.Bottom - 86, Grid);

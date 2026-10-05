@@ -69,8 +69,7 @@ public sealed partial class EditorView
             else RequestUpdateDownload?.Invoke();
         }, active: true);
         ActionButton(new(x, top + 350, embedded ? SettingsContentWidth : 220, 38), L.Get("update.notes"), () => RequestUpdateNotes?.Invoke());
-        if (embedded) SettingsParagraph(c, L.Get("update.saveHelp"), top + 410);
-        else c.Text(L.Get("update.saveHelp"), x, top + 410, 14, Muted, right - x - 32);
+        if (!embedded) c.Text(L.Get("update.saveHelp"), x, top + 410, 14, Muted, right - x - 32);
         if (!embedded) Button(c, new(x, 466, 200, 36), L.Get(LibraryVisible ? "update.back" : "library.editor"), () => updatesPage = false);
     }
 }

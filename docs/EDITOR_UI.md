@@ -330,8 +330,12 @@ leaving restores the previous window bounds and maximized state. macOS uses nati
 fullscreen. New installations start windowed, and subsequent launches restore the
 saved fullscreen preference. Fullscreen does not change beatmap content or history.
 
-**General → Droplet Derandomize Settings** contains two independent preferences and ends with
-a separator. **Enable Derandomization for Legacy slider to FSlider Conversion** sets the initial conversion
+Settings Workspace, Audio and embedded Updates show their controls without the
+workspace-path, skin-sound, automatic-save or restart explanatory paragraphs.
+
+**General → Droplet Derandomize Settings** is the last section of General,
+following the scroll-direction setting and a separator. It contains two independent
+preferences. **Enable Derandomization for Legacy slider to FSlider Conversion** sets the initial conversion
 choice in maps without a saved choice. **Enable Derandomization for new catchprojects**
 controls projects created from scratch or from audio. Both start On. With the
 new-project option Off, the new difficulty saves a default that enables
@@ -736,6 +740,10 @@ that saving retains only the merged slider: reopening cannot recover the origina
 objects because project files do not store undo history.
 
 Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press an FSlider to reveal **Convert to Stream/Stack**; imported Legacy Sliders offer **Convert to FSlider** above it. Ordinary sliders open the shared dialog on Stream; existing streams and stacks open their corresponding tab. The snap slider has the same subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**. Enter confirms; Esc cancels; arrow keys change the choice.
+
+The dialog separates its title, tabs, Snap and conversion switches with padding.
+The Snap value has a gap from the slider thumb. Stream and Stack show their
+controls and preview without the introductory or graph-instruction paragraphs.
 
 With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging inside the selection box moves the whole stream. Visible anchors take priority; individual-event reshaping is available outside the box. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in their long-press menu. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
 

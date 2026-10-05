@@ -19,7 +19,7 @@ public sealed partial class EditorView
     private bool workspaceScrollDragging;
     private Rect cleanHistoryBounds, clearCacheBounds;
     private float WorkspaceContentHeight => 527 + StorageFolderCount * 20;
-    private float GeneralContentHeight => (SupportsDisplayMode ? 468 : 324) + (SupportsFullscreen ? 108 : 0);
+    private float GeneralContentHeight => (SupportsDisplayMode ? 458 : 314) + (SupportsFullscreen ? 108 : 0);
     private float SettingsScrollableHeight => FirstRunSetupVisible ? firstRunContentHeight : settingsCategory == SettingsCategory.General ? GeneralContentHeight : WorkspaceContentHeight;
     private int StorageFolderCount => Math.Min(8, storageReport?.Folders.Count ?? 0);
     private string storageRoot = "", storageError = "";
@@ -157,7 +157,6 @@ public sealed partial class EditorView
         float top = SettingsTop - workspaceScroll;
         int firstHit = hits.Count;
         c.Clip(workspaceScrollBounds);
-        SettingsParagraph(c, L.Get("library.settingsDescription"), top + 128);
         LibraryTextField(c, 0, L.Get("library.workspace"), draftWorkspace, top + 180);
         LibraryTextField(c, 1, L.Get("library.songs"), draftOsuRoot, top + 264);
         c.Line(SettingsContentX, top + 340, SettingsRight - 32, top + 340, Grid);

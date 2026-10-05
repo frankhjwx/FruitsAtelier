@@ -32,6 +32,8 @@ static class SettingsTests
                     {
                         var heading = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.dropletDefaults"));
                         Check(heading.Size == 16 && heading.Bold, "section headings use the shared size");
+                        var reverseScroll = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.reverseCanvasScrollOff"));
+                        Check(heading.Y > reverseScroll.Y, "droplet defaults appear after the other General preferences");
                         foreach (string key in new[] { "settings.derandomizeOn", "settings.newProjectDerandomizeOn" })
                         {
                             var label = ui.Canvas.Texts.Single(t => t.Value == L.Get(key));
@@ -44,12 +46,12 @@ static class SettingsTests
                     {
                         float applyY = apply.Y;
                         ui.View.Wheel(page.X + 100, ui.View.SettingsBounds.Y + 200, -1200, false); ui.Paint();
-                        var reverse = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.reverseCanvasScrollOff"));
-                        Check(reverse.Y >= ui.View.SettingsBounds.Y + 116 && reverse.Y < ui.View.SettingsBounds.Bottom - 86,
+                        var droplets = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.newProjectDerandomizeOn"));
+                        Check(droplets.Y >= ui.View.SettingsBounds.Y + 116 && droplets.Y < ui.View.SettingsBounds.Bottom - 86,
                             "General scrolling makes the bottom preference reachable");
                         Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("library.apply")).Y == applyY, "Apply stays fixed while General scrolls");
-                        ui.Click(reverse.X + 2, reverse.Y + 2);
-                        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.reverseCanvasScrollOn")), "scrolled preference retains its hit target");
+                        ui.Click(droplets.X + 2, droplets.Y + 2);
+                        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.newProjectDerandomizeOff")), "scrolled preference retains its hit target");
                     }
                     if (category == "settings.testplay")
                     {
@@ -62,13 +64,12 @@ static class SettingsTests
                     }
                     if (category == "settings.workspace")
                     {
-                        var lines = ui.Canvas.Texts.Where(t => t.Y >= ui.View.SettingsBounds.Y + 128 && t.Y < ui.View.SettingsBounds.Y + 180 && t.X == page.X).ToArray();
-                        string compact(string text) => string.Concat(text.Where(ch => !char.IsWhiteSpace(ch)));
-                        Check(compact(string.Concat(lines.Select(t => t.Value))) == compact(L.Get("library.settingsDescription")),
-                            "workspace explanation retains every word when wrapped");
+                        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("library.settingsDescription")),
+                            "workspace settings omit the explanatory paragraph");
                     }
                     if (category == "update.title")
                     {
+                        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("update.saveHelp")), "embedded updates omit the save explanation");
                         var restart = ui.Canvas.Texts.Single(t => t.Value == L.Get("update.restart"));
                         Check(restart.X + restart.MaxWidth <= ui.View.SettingsBounds.Right - 32,
                             "update actions stay inside narrow content columns");
