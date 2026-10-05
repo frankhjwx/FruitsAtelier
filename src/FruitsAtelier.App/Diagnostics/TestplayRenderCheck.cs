@@ -42,6 +42,15 @@ internal static class TestplayRenderCheck
                 if (view.TestplayPaused || !view.TestplaySkipVisible) throw new InvalidOperationException("Native Retry failed.");
                 view.KeyDown(32, false, false); view.KeyUp(32); Paint();
                 if (view.TestplaySkipVisible) throw new InvalidOperationException("Native Space skip failed.");
+                view.KeyDown(9, false, false); view.KeyUp(9);
+                view.KeyDown(38, true, false); view.KeyUp(38); Paint();
+                if (view.PlaybackSpeed != 1.25 || !view.TestplayAutoplay) throw new InvalidOperationException("Native stepped autoplay speed failed.");
+                view.KeyDown(40, true, true); view.KeyUp(40); Paint();
+                if (view.PlaybackSpeed != 1.2) throw new InvalidOperationException("Native fine autoplay speed failed.");
+                view.KeyDown(82, true, false); Paint();
+                if (!view.TestplaySkipVisible || !view.TestplayAutoplay || view.PlaybackSpeed != 1.2)
+                    throw new InvalidOperationException("Native quick Retry failed.");
+                view.KeyUp(82);
                 view.KeyDown(27, false, false); view.KeyUp(27); Paint();
                 view.KeyDown(38, false, false); view.KeyUp(38);
                 view.KeyDown(13, false, false); view.KeyUp(13); Paint();

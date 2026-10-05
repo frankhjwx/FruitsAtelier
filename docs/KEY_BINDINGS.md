@@ -21,6 +21,7 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 
 | Keys | Action |
 | --- | --- |
+| Alt+Enter | Toggle fullscreen and save the preference. Available in Library, Settings and testplay as well as the editor. |
 | Ctrl+O | Choose a difficulty in the current project. |
 | Ctrl+Shift+O | Open a supported beatmap, archive or project file. |
 | Ctrl+S | Save the project; also update linked exported difficulties. |
@@ -212,6 +213,10 @@ to Compose before moving selected objects.
 | Left / Right | Move catcher, by default. |
 | Hold Shift | Dash, by default. |
 | Tab | Toggle autoplay. |
+| Ctrl+R | Retry from this session's start including its lead-in, retaining autoplay and speed. One retry per press; available while running or paused. |
+| F3 | During autoplay, toggle speed between 1.0x and 1.5x. |
+| Ctrl+Up / Ctrl+Down | During autoplay, increase / decrease speed by 25 percentage points, within 10%–150%. Works while paused too. |
+| Ctrl+Shift+Up / Ctrl+Shift+Down | During autoplay, increase / decrease speed by 5 percentage points. |
 | Esc / Ctrl+P | Open the pause menu / resume the session. |
 | Space | Skip the opening empty time while Skip is available; clicking Skip also works. |
 | Up / Down, Enter (pause menu) | Select Continue, Retry or Back, then activate it. |
@@ -225,10 +230,10 @@ Combo visibility is configured in **Settings → Testplay keys** and has no shor
 
 Change movement and dash in **Settings → Testplay keys**: click a binding, press
 the new key, then Apply. Esc cancels capture; reusing an assigned key swaps the
-two assignments. Esc, Tab, F1 and F2 are reserved. Supported keys include letters,
-digits, arrows/navigation keys, modifiers, keypad keys, punctuation and F3–F24.
+two assignments. Esc, Tab and F1–F3 are reserved. Supported keys include letters,
+digits, arrows/navigation keys, modifiers, keypad keys, punctuation and F4–F24.
 OS/media keys are not supported. System shortcuts can intercept some combinations.
-Prefer bindings that do not overlap Ctrl+P, Ctrl+B or Alt+arrows while held.
+Prefer bindings that do not overlap Ctrl+P, Ctrl+B, Ctrl+R, Ctrl+Up/Down or Alt+arrows while held.
 
 ## Text fields, Library and other dialogs
 

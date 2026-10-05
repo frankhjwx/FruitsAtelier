@@ -14,6 +14,9 @@ public sealed partial class EditorView
     private bool draftDerandomizeNewProjects;
     public bool SupportsDisplayMode { get; set; }
     private bool draftLowLatencyDisplay;
+    public bool SupportsFullscreen { get; set; }
+    public Action<bool>? RequestFullscreen { get; set; }
+    private bool draftFullscreen, fullscreenShortcutHeld;
     private bool draftReverseCanvasScroll;
     private double draftTestplayStartupDelaySeconds;
     private bool draftShowTestplayCombo;
@@ -26,18 +29,18 @@ public sealed partial class EditorView
     private double settingsHue, settingsSaturation, settingsValue;
     private Rect settingsPalette, settingsHueTrack;
     private int settingsColourDrag;
-    internal Rect SettingsBounds => new((width - Math.Min(1040, width - 24)) / 2,
+    internal Rect SettingsBounds => FirstRunSetupVisible ? new(0, 0, width, height) : new((width - Math.Min(1040, width - 24)) / 2,
         (height - Math.Min(680, height - 24)) / 2, Math.Min(1040, width - 24), Math.Min(680, height - 24));
-    private float SettingsContentX => SettingsBounds.X + 230;
-    private float SettingsTop => SettingsBounds.Y;
+    private float SettingsContentX => SettingsBounds.X + (FirstRunSetupVisible ? 32 : 230);
+    private float SettingsTop => SettingsBounds.Y - (FirstRunSetupVisible ? workspaceScroll : 0);
     private float SettingsRight => SettingsBounds.Right;
     private const float SettingsTextSize = 13;
     private const float SettingsSectionSize = 16;
     private const float SettingsHintSize = 12;
     private const float SettingsControlHeight = 32;
     private const float SettingsControlPadding = 12;
-    private float SettingsContentWidth => SettingsRight - SettingsContentX - 32;
-    private bool SettingsAudioVisible => librarySettingsOpen && settingsCategory == SettingsCategory.Audio;
+    private float SettingsContentWidth => SettingsRight - SettingsContentX - 32 - (FirstRunSetupVisible && firstRunStep == 1 ? 300 : 0);
+    private bool SettingsAudioVisible => librarySettingsOpen && (FirstRunSetupVisible ? firstRunStep == 2 : settingsCategory == SettingsCategory.Audio);
     internal Rect SettingsSkinSelectorBounds => new(SettingsContentX, SettingsTop + 128,
         SettingsContentWidth, SettingsControlHeight);
 
@@ -49,7 +52,7 @@ public sealed partial class EditorView
             textPadding: SettingsControlPadding, textRightPadding: SettingsControlPadding);
     }
 
-    private void SettingsParagraph(ICanvas c, string text, float y, float size = SettingsHintSize)
+    private float SettingsParagraph(ICanvas c, string text, float y, float size = SettingsHintSize)
     {
         while (text.Length > 0)
         {
@@ -71,6 +74,7 @@ public sealed partial class EditorView
             text = text[count..].TrimStart();
             y += size + 6;
         }
+        return y;
     }
 
     public void OpenSettings()
@@ -97,6 +101,7 @@ public sealed partial class EditorView
         draftDerandomizeNewProjects = LibrarySettings.DerandomizeNewProjects;
         draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
         draftLowLatencyDisplay = LibrarySettings.LowLatencyDisplay;
+        draftFullscreen = LibrarySettings.Fullscreen;
         draftIndicatorColours[0] = LibrarySettings.StandIndicatorColour;
         draftIndicatorColours[1] = LibrarySettings.WalkIndicatorColour;
         draftIndicatorColours[2] = LibrarySettings.DashIndicatorColour;
@@ -118,6 +123,7 @@ public sealed partial class EditorView
         draftDerandomizeDroplets != LibrarySettings.DerandomizeDroplets ||
         draftDerandomizeNewProjects != LibrarySettings.DerandomizeNewProjects ||
         draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
+        draftFullscreen != LibrarySettings.Fullscreen ||
         draftReverseCanvasScroll != LibrarySettings.ReverseCanvasScroll ||
         draftIndicatorColours[0] != LibrarySettings.StandIndicatorColour ||
         draftIndicatorColours[1] != LibrarySettings.WalkIndicatorColour ||
@@ -130,6 +136,7 @@ public sealed partial class EditorView
 
     private void CloseSettings()
     {
+        if (FirstRunSetupVisible) { ExitFirstRun(); return; }
         FinishBackgroundDimDrag();
         FinishVolumeDrag();
         workspaceScrollDragging = false;
@@ -144,6 +151,7 @@ public sealed partial class EditorView
     private void DrawSettings(ICanvas c)
     {
         if (!librarySettingsOpen) return;
+        if (FirstRunSetupVisible) { DrawFirstRunSetup(c); return; }
         hits.Clear(); fields.Clear();
         var r = SettingsBounds;
         c.Fill(new(0, 0, width, height), Background, opacity: .8f);
@@ -174,45 +182,54 @@ public sealed partial class EditorView
                 float generalTop = SettingsTop - workspaceScroll;
                 int generalFirstHit = hits.Count;
                 c.Clip(workspaceScrollBounds);
-                c.Text(L.Get("settings.dropletDefaults"), SettingsContentX, generalTop + 126, SettingsSectionSize, Foreground,
-                    SettingsContentWidth, true);
-                SettingsButton(c, new(SettingsContentX, generalTop + 160, SettingsContentWidth, 32),
-                    L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
-                    () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
-                SettingsButton(c, new(SettingsContentX, generalTop + 208, SettingsContentWidth, 32),
-                    L.Get(draftDerandomizeNewProjects ? "settings.newProjectDerandomizeOn" : "settings.newProjectDerandomizeOff"),
-                    () => draftDerandomizeNewProjects = !draftDerandomizeNewProjects, draftDerandomizeNewProjects);
                 float rowWidth = SettingsContentWidth;
-                c.Line(SettingsContentX, generalTop + 260, SettingsContentX + rowWidth, generalTop + 260, Grid);
                 float labelWidth = Math.Min(240, rowWidth / 2);
                 float controlX = SettingsContentX + labelWidth + 16;
                 float controlWidth = rowWidth - labelWidth - 16;
-                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, generalTop + 294.5f, SettingsTextSize, Foreground, labelWidth, true);
-                var romanisedBounds = new Rect(controlX, generalTop + 284, controlWidth, 32);
+                c.Text(L.Get("settings.romanisedLabel"), SettingsContentX, generalTop + 138.5f, SettingsTextSize, Foreground, labelWidth, true);
+                var romanisedBounds = new Rect(controlX, generalTop + 128, controlWidth, 32);
                 c.Fill(romanisedBounds, Surface, 4); c.Stroke(romanisedBounds, Grid, radius: 4);
                 SettingsButton(c, romanisedBounds,
                     L.Get(draftRomanisedMetadata ? "settings.romanisedOn" : "settings.romanisedOff"),
                     () => draftRomanisedMetadata = !draftRomanisedMetadata, draftRomanisedMetadata);
-                c.Text(L.Get("ui.language"), SettingsContentX, generalTop + 342.5f, SettingsTextSize, Foreground, labelWidth, true);
-                DrawLanguageButton(c, new(controlX, generalTop + 332, controlWidth, 32));
+                c.Text(L.Get("ui.language"), SettingsContentX, generalTop + 186.5f, SettingsTextSize, Foreground, labelWidth, true);
+                DrawLanguageButton(c, new(controlX, generalTop + 176, controlWidth, 32));
                 if (SupportsDisplayMode)
                 {
                     float displayWidth = SettingsContentWidth;
-                    c.Text(L.Get("settings.displayMode"), SettingsContentX, generalTop + 388, SettingsTextSize, Foreground, displayWidth, true);
-                    c.Fill(new(SettingsContentX, generalTop + 416, displayWidth, 44), Gold, 4, .12f);
-                    c.Text(L.Get("settings.displayDelayHint"), SettingsContentX + 12, generalTop + 425, 12, Gold, displayWidth - 24);
-                    c.Text(L.Get("settings.displayChangeHint"), SettingsContentX + 12, generalTop + 443, 12, Gold, displayWidth - 24);
-                    var displayBounds = new Rect(SettingsContentX, generalTop + 476, displayWidth, 32);
+                    c.Text(L.Get("settings.displayMode"), SettingsContentX, generalTop + 232, SettingsTextSize, Foreground, displayWidth, true);
+                    c.Fill(new(SettingsContentX, generalTop + 260, displayWidth, 44), Gold, 4, .12f);
+                    c.Text(L.Get("settings.displayDelayHint"), SettingsContentX + 12, generalTop + 269, 12, Gold, displayWidth - 24);
+                    c.Text(L.Get("settings.displayChangeHint"), SettingsContentX + 12, generalTop + 287, 12, Gold, displayWidth - 24);
+                    var displayBounds = new Rect(SettingsContentX, generalTop + 320, displayWidth, 32);
                     SettingsButton(c, displayBounds,
                         L.Get(draftLowLatencyDisplay ? "settings.displayImmediate" : "settings.displayVsync") + " ▾",
                         () => OpenDisplayModeMenu(displayBounds));
                 }
-                float scrollTop = generalTop + (SupportsDisplayMode ? 532 : 388);
+                float fullscreenTop = generalTop + (SupportsDisplayMode ? 376 : 232);
+                if (SupportsFullscreen)
+                {
+                    c.Text(L.Get("settings.fullscreen"), SettingsContentX, fullscreenTop, SettingsTextSize, Foreground, SettingsContentWidth, true);
+                    SettingsButton(c, new(SettingsContentX, fullscreenTop + 28, SettingsContentWidth, SettingsControlHeight),
+                        L.Get(draftFullscreen ? "settings.fullscreenOn" : "settings.fullscreenOff"),
+                        () => draftFullscreen = !draftFullscreen, draftFullscreen);
+                    c.Text(L.Get("settings.fullscreenShortcut"), SettingsContentX, fullscreenTop + 72, SettingsHintSize, Muted, SettingsContentWidth);
+                }
+                float scrollTop = fullscreenTop + (SupportsFullscreen ? 108 : 0);
                 float scrollWidth = SettingsContentWidth;
                 c.Line(SettingsContentX, scrollTop, SettingsContentX + scrollWidth, scrollTop, Grid);
                 SettingsButton(c, new(SettingsContentX, scrollTop + 20, scrollWidth, 32),
                     L.Get(draftReverseCanvasScroll ? "settings.reverseCanvasScrollOn" : "settings.reverseCanvasScrollOff"),
                     () => draftReverseCanvasScroll = !draftReverseCanvasScroll, draftReverseCanvasScroll);
+                c.Line(SettingsContentX, scrollTop + 72, SettingsContentX + scrollWidth, scrollTop + 72, Grid);
+                c.Text(L.Get("settings.dropletDefaults"), SettingsContentX, scrollTop + 84, SettingsSectionSize, Foreground,
+                    SettingsContentWidth, true);
+                SettingsButton(c, new(SettingsContentX, scrollTop + 118, SettingsContentWidth, 32),
+                    L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
+                    () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
+                SettingsButton(c, new(SettingsContentX, scrollTop + 166, SettingsContentWidth, 32),
+                    L.Get(draftDerandomizeNewProjects ? "settings.newProjectDerandomizeOn" : "settings.newProjectDerandomizeOff"),
+                    () => draftDerandomizeNewProjects = !draftDerandomizeNewProjects, draftDerandomizeNewProjects);
                 c.Unclip();
                 ClipSettingsHits(generalFirstHit);
                 DrawSettingsScrollbar(c, GeneralContentHeight);
@@ -236,8 +253,6 @@ public sealed partial class EditorView
                 SettingsButton(c, new(SettingsContentX, SettingsTop + 346, SettingsContentWidth, SettingsControlHeight),
                     L.Get(LibrarySettings.UseSkinSounds ? "settings.skinSoundsOn" : "settings.skinSoundsOff"),
                     ToggleSkinSounds, LibrarySettings.UseSkinSounds);
-                SettingsParagraph(c, L.Get("settings.skinSoundsHint"), SettingsTop + 390);
-                SettingsParagraph(c, L.Get("settings.immediatePreferences"), SettingsTop + 438);
                 break;
         }
         c.Line(SettingsContentX, r.Bottom - 86, r.Right - 24, r.Bottom - 86, Grid);
@@ -261,13 +276,14 @@ public sealed partial class EditorView
         contextBounds = new(bounds.X, Math.Clamp(bounds.Bottom + 4, 0, Math.Max(0, height - menuHeight)), bounds.Width, menuHeight);
     }
 
-    internal void ApplySettings(string? settingsPath = null)
+    internal void ApplySettings(string? settingsPath = null, bool force = false, bool persist = true)
     {
         FinishBackgroundDimDrag();
-        if (!SettingsChanged) return;
+        if (!SettingsChanged && !force) return;
         try
         {
             var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
+            settings.FirstRunSetupVersion = LibrarySettings.FirstRunSetupVersion;
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
             settings.TestplayStartupDelaySeconds = draftTestplayStartupDelaySeconds;
             settings.ShowTestplayCombo = draftShowTestplayCombo;
@@ -277,6 +293,7 @@ public sealed partial class EditorView
             settings.DerandomizeDroplets = draftDerandomizeDroplets;
             settings.DerandomizeNewProjects = draftDerandomizeNewProjects;
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
+            settings.Fullscreen = draftFullscreen;
             settings.ReverseCanvasScroll = draftReverseCanvasScroll;
             settings.StandIndicatorColour = draftIndicatorColours[0]; settings.WalkIndicatorColour = draftIndicatorColours[1];
             settings.DashIndicatorColour = draftIndicatorColours[2]; settings.HyperDashIndicatorColour = draftIndicatorColours[3];
@@ -289,19 +306,55 @@ public sealed partial class EditorView
             settings.WaveformSpanMs = LibrarySettings.WaveformSpanMs;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
             bool rootsChanged = settings.Workspace != LibrarySettings.Workspace || settings.OsuRoot != LibrarySettings.OsuRoot;
-            settings.Save(settingsPath);
+            if (persist) settings.Save(settingsPath);
+            else
+            {
+                settings.Workspace = Path.GetFullPath(settings.Workspace);
+                if (!string.IsNullOrWhiteSpace(settings.OsuRoot)) settings.OsuRoot = Path.GetFullPath(settings.OsuRoot);
+                WorkspaceProject.ValidateRoots(settings.Workspace, settings.Songs);
+            }
+            if (FirstRunSetupVisible)
+            {
+                LibrarySettings = settings; ResetSettingsDrafts();
+                libraryField = bindingCapture = -1; libraryError = "";
+                InitializeSkin(); return;
+            }
+            bool fullscreenChanged = settings.Fullscreen != LibrarySettings.Fullscreen;
             SaveLibraryMemory(); LibrarySettings = settings;
             ResetSettingsDrafts();
+            if (fullscreenChanged) RequestFullscreen?.Invoke(settings.Fullscreen);
             libraryField = bindingCapture = -1;
             libraryError = "";
             InitializeSkin();
             if (!rootsChanged) return;
             EnableFileMonitoring();
             libraryRatings.Clear(); libraryBrowser?.Retire(); libraryBrowser = null; libraryDatabase = null; libraryResultsReady = false;
-            inactiveLibraryBrowser?.Retire(); inactiveLibraryBrowser = null;
+            foreach (var cached in libraryCategoryBrowsers.Values) cached.Browser?.Retire();
+            libraryCategoryBrowsers.Clear();
             LoadLibraryMemory(); StartLibraryScan();
         }
         catch (Exception e) { libraryError = e.Message; }
+    }
+
+    private bool FullscreenKeyDown(int virtualKey, bool ctrl, bool shift)
+    {
+        if (virtualKey != 13 || !altHeld || ctrl || shift || !SupportsFullscreen || CapturingTestplayKey || FirstRunSetupVisible) return false;
+        if (!fullscreenShortcutHeld)
+        {
+            fullscreenShortcutHeld = true;
+            LibrarySettings.Fullscreen = !LibrarySettings.Fullscreen;
+            draftFullscreen = LibrarySettings.Fullscreen;
+            RequestFullscreen?.Invoke(LibrarySettings.Fullscreen);
+            RequestViewPreference?.Invoke();
+        }
+        return true;
+    }
+
+    public void UpdateFullscreenState(bool enabled)
+    {
+        if (LibrarySettings.Fullscreen == enabled) return;
+        LibrarySettings.Fullscreen = draftFullscreen = enabled;
+        RequestViewPreference?.Invoke();
     }
 
     private void DrawIndicatorColours(ICanvas c)

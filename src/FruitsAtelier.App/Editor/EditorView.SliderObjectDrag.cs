@@ -13,11 +13,12 @@ public sealed partial class EditorView
     private ConvertedCatchObject? sliderObjectDragPrevious;
     private ConvertedCatchObject? pendingStreamChildSelection;
 
-    private bool TryBeginSelectedSliderObjectDrag(float x, float y)
+    private bool TryBeginSelectedSliderObjectDrag(float x, float y, bool dropletsOnly = false)
     {
         if (tool != Tool.Select || objectSelection.Count != 1
             || HitCatchObject(x, y) is not { Kind: CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet } target
             || !objectSelection.Contains(target.SourceId)
+            || dropletsOnly && target.Kind == CatchObjectKind.Fruit
             || target.IsStandalone && (target.Kind != CatchObjectKind.Fruit
                 || !Document.Tracks.Any(track => track.Id == target.SourceId && track.StreamSnapDivisor is not null)))
             return false;

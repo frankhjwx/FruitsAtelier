@@ -900,6 +900,7 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (FullscreenKeyDown(virtualKey, ctrl, shift)) return;
         if (VersionHistoryVisible) { VersionHistoryKey(virtualKey); return; }
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
@@ -920,6 +921,20 @@ public sealed partial class EditorView
             else if (ctrl && virtualKey == 80)
             {
                 if (!testplayPauseHeld) { testplayPauseHeld = true; ToggleTestplayPause(); }
+            }
+            else if (ctrl && !shift && !altHeld && virtualKey == 82)
+            {
+                if (!testplayRetryHeld) { testplayRetryHeld = true; RestartTestplay(); }
+            }
+            else if (ctrl && !altHeld && virtualKey is 38 or 40)
+            {
+                if (TestplayAutoplay) AdjustPlaybackSpeed(virtualKey == 38 ? 1 : -1, shift);
+                else
+                {
+                    testplayAutoNotice = L.Get("testplay.speedRequiresAutoplay");
+                    testplayAutoNoticeAt = TestplayRealtime;
+                }
+                AdvanceTestplay();
             }
             else if (TestplayMenuKey(virtualKey)) return;
             else if (virtualKey is 38 or 40 && !ctrl && !shift && !altHeld
@@ -1189,6 +1204,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        fullscreenShortcutHeld = false;
         deferredTestplay = false;
         placementCtrl = false; timingTapHeld = false; timingSnapDragging = false; panelMenuOpen = false;
         EndTimingVolume(true);
@@ -1205,6 +1221,7 @@ public sealed partial class EditorView
         FinishBackgroundDimDrag();
         testplayEscapeConsumed = false;
         testplaySpeedHeld = false;
+        testplayRetryHeld = false;
         streamSnapDragging = false; CancelStackDrag();
         CloseVolumePopover();
         sliderHoldId = legacyButtonSlider = Guid.Empty; noteHoldTarget = null;

@@ -86,21 +86,32 @@ public sealed partial class EditorView
 
     private void RestartTestplay()
     {
-        bool autoplay = TestplayAutoplay;
-        ResetTestplayPointer();
-        SetTestplayPauseLoop(false);
-        testplay?.Cancel();
-        testplayDriver?.Dispose(); testplayDriver = null;
-        testplay = null; testplayFrame = null;
-        testplayResumeAt = null;
-        testplayAutoNotice = null;
-        testplayTabHeld = testplaySpeedHeld = testplayPauseHeld = testplayBookmarkHeld = false;
-        testplayMenuStartedAt = TestplayRealtime;
-        PrepareTestplayMenuSounds();
-        ResetHitsounds();
-        playhead = testplayStart;
-        BeginTestplay(new CatchTestplay(PreviewObjects(), PreviewCircleSize, testplayStart), audioAlreadyPlaying: false);
-        if (autoplay) testplay?.ToggleAutoplay();
+        if (testplayRestarting) return;
+        // Audio and driver callbacks can pump a render; keep the last gameplay frame until replacement is ready.
+        testplayRestarting = true;
+        try
+        {
+            bool autoplay = TestplayAutoplay;
+            if (testplayWithAudio && !TestplayPaused)
+            {
+                if (RequestPausePlayback is not null) RequestPausePlayback();
+                else if (AudioPlaying) RequestTogglePlayback?.Invoke();
+            }
+            ResetTestplayPointer();
+            SetTestplayPauseLoop(false);
+            testplay?.Cancel();
+            testplayDriver?.Dispose(); testplayDriver = null;
+            testplayResumeAt = null;
+            testplayAutoNotice = null;
+            testplayTabHeld = testplaySpeedHeld = testplayPauseHeld = testplayBookmarkHeld = false;
+            testplayMenuStartedAt = TestplayRealtime;
+            PrepareTestplayMenuSounds();
+            ResetHitsounds();
+            playhead = testplayStart;
+            BeginTestplay(new CatchTestplay(PreviewObjects(), PreviewCircleSize, testplayStart), audioAlreadyPlaying: false);
+            if (autoplay) testplay?.ToggleAutoplay();
+        }
+        finally { testplayRestarting = false; }
         AdvanceTestplay();
     }
 

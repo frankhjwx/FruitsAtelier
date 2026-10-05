@@ -30,6 +30,8 @@ internal sealed partial class EditorWindow : IDisposable
     {
         procedure = WndProc;
         view.SupportsDisplayMode = true;
+        view.SupportsFullscreen = true;
+        view.RequestFullscreen = SetFullscreen;
         view.Performance.Enabled = true;
         AppLog.Performance = view.Performance;
         ConfigureFiles();
@@ -56,10 +58,10 @@ internal sealed partial class EditorWindow : IDisposable
         };
     }
 
-    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false)
+    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false, bool firstRunSetup = false)
     {
         view.InitializeLibrary(!renderCheck && profileMap is null, renderCheck || profileMap is not null
-            ? new FruitsAtelier.Core.LibrarySettings { Workspace = Path.Combine(Artifacts, "render-library") } : null);
+            ? new FruitsAtelier.Core.LibrarySettings { Workspace = Path.Combine(Artifacts, "render-library") } : null, forceFirstRunSetup: firstRunSetup);
         view.InitializeSkin();
         var instance = Native.GetModuleHandle(null);
         var className = "FruitsAtelier." + Environment.ProcessId;
@@ -76,11 +78,15 @@ internal sealed partial class EditorWindow : IDisposable
         if (Native.RegisterClassEx(ref windowClass) == 0) throw new Win32Exception();
         dpi = Native.GetDpiForSystem();
         Native.SystemParametersInfo(0x0030, 0, out var work, 0);
-        var rect = new Native.Rectangle { Right = (int)(1440 * dpi / 96), Bottom = (int)(900 * dpi / 96) };
-        Native.AdjustWindowRectExForDpi(ref rect, Native.WindowStyle, false, 0, (uint)dpi);
-        int width = Math.Min(rect.Right - rect.Left, work.Right - work.Left - 32);
-        int height = Math.Min(rect.Bottom - rect.Top, work.Bottom - work.Top - 32);
-        hwnd = Native.CreateWindowEx(0, className, view.WindowTitle, Native.WindowStyle,
+        var desired = view.FirstRunSetupVisible
+            ? EditorView.FirstRunWindowSize(work.Right - work.Left, work.Bottom - work.Top, dpi / 96d)
+            : (Width: 1440d, Height: 900d);
+        var rect = new Native.Rectangle { Right = (int)(desired.Width * dpi / 96), Bottom = (int)(desired.Height * dpi / 96) };
+        uint startupStyle = view.FirstRunSetupVisible ? 0x80000000u : Native.WindowStyle;
+        Native.AdjustWindowRectExForDpi(ref rect, startupStyle, false, 0, (uint)dpi);
+        int width = Math.Min(rect.Right - rect.Left, view.FirstRunSetupVisible ? (int)((work.Right - work.Left) * .85) : work.Right - work.Left - 32);
+        int height = Math.Min(rect.Bottom - rect.Top, view.FirstRunSetupVisible ? (int)((work.Bottom - work.Top) * .85) : work.Bottom - work.Top - 32);
+        hwnd = Native.CreateWindowEx(0, className, view.WindowTitle, startupStyle,
             work.Left + (work.Right - work.Left - width) / 2, work.Top + (work.Bottom - work.Top - height) / 2,
             width, height, 0, 0, instance, 0);
         if (hwnd == 0) throw new Win32Exception();
@@ -112,13 +118,14 @@ internal sealed partial class EditorWindow : IDisposable
             view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
             // DXGI need not signal frame readiness for an entirely hidden window.
             if (ImmediatePresentation) Native.ShowWindow(hwnd, 4);
-            try { CheckDifficultyAudioReset(); CheckPaintLifecycle(); CheckUpdateRefresh(); CheckDisplayPreference(); }
+            try { CheckDifficultyAudioReset(); CheckPaintLifecycle(); CheckUpdateRefresh(); CheckDisplayPreference(); CheckFullscreen(); CheckSetupWindow(); }
             finally { Native.ShowWindow(hwnd, 0); }
             Diagnostics.RenderCheck.Run(canvas, view, hwnd);
             Native.DestroyWindow(hwnd);
             return 0;
         }
         ConfigureUpdates();
+        SetFullscreen(view.LibrarySettings.Fullscreen);
         UpdateTitle();
         view.RequestRunTestplay = session => new TestplayInputThread(hwnd, session, () => audio.State);
         Native.SetTimer(hwnd, 1, 16, 0);
@@ -194,7 +201,11 @@ internal sealed partial class EditorWindow : IDisposable
         }));
         Invalidate();
     }
-    private void Close() => ConfirmDiscard(() => { view.SaveLibraryMemory(); Native.DestroyWindow(hwnd); });
+    private void Close()
+    {
+        view.CancelFirstRunSetup();
+        ConfirmDiscard(() => { view.SaveLibraryMemory(); Native.DestroyWindow(hwnd); });
+    }
     private void Invalidate() { if (hwnd != 0 && !failed && !NativeModalScope.Active) Native.InvalidateRect(hwnd, 0, false); }
 
     private nint WndProc(nint window, uint message, nuint wParam, nint lParam)
@@ -254,6 +265,10 @@ internal sealed partial class EditorWindow : IDisposable
         float y = (short)(((long)lParam >> 16) & 0xFFFF) * 96f / dpi;
         switch (message)
         {
+            case 0x0084 when view.FirstRunSetupVisible: // WM_NCHITTEST
+                var setupPoint = new Native.Point { X = (short)((long)lParam & 0xFFFF), Y = (short)(((long)lParam >> 16) & 0xFFFF) };
+                Native.ScreenToClient(window, ref setupPoint);
+                return view.FirstRunHeaderDraggable && setupPoint.Y >= 0 && setupPoint.Y * 96f / dpi < (view.FirstRunSetupComplete ? 32 : 60) ? 2 : 1;
             case updateStatusChangedMessage:
                 Invalidate();
                 return 0;
@@ -335,13 +350,17 @@ internal sealed partial class EditorWindow : IDisposable
                 if (Native.GetCapture() == window) Native.ReleaseCapture();
                 dpi = (uint)wParam & 0xFFFF;
                 var suggested = Marshal.PtrToStructure<Native.Rectangle>(lParam);
-                Native.SetWindowPos(window, 0, suggested.Left, suggested.Top, suggested.Right - suggested.Left,
+                if (view.FirstRunSetupVisible) FitSetupWindow();
+                else if (fullscreen) FitFullscreenMonitor();
+                else Native.SetWindowPos(window, 0, suggested.Left, suggested.Top, suggested.Right - suggested.Left,
                     suggested.Bottom - suggested.Top, 0x0004 | 0x0010);
                 AppLog.Write($"DPI changed: {dpi}");
                 Invalidate(); return 0;
             case 0x0024: // WM_GETMINMAXINFO
                 var minMax = Marshal.PtrToStructure<Native.MinMaxInfo>(lParam);
-                minMax.MinTrackSize = new Native.Point { X = (int)(980 * dpi / 96), Y = (int)(620 * dpi / 96) };
+                minMax.MinTrackSize = fullscreen ? new Native.Point { X = 1, Y = 1 }
+                    : view.FirstRunSetupVisible ? SetupMinimumTrackSize()
+                    : new Native.Point { X = (int)(980 * dpi / 96), Y = (int)(620 * dpi / 96) };
                 Marshal.StructureToPtr(minMax, lParam, false); return 0;
             case 0x0201:
             case 0x0204:
@@ -389,6 +408,12 @@ internal sealed partial class EditorWindow : IDisposable
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0104: // WM_SYSKEYDOWN: Alt changes editor snapping without opening the system menu.
                 view.SetModifiers(Native.Alt, Native.Shift);
+                if ((int)wParam == 13 && ((long)lParam & (1L << 29)) != 0)
+                {
+                    view.SetModifiers(true, Native.Shift);
+                    view.KeyDown(13, Native.Control, Native.Shift);
+                    UpdateTitle(); Invalidate(); return 0;
+                }
                 if ((int)wParam is 37 or 38 or 39 or 40 || (int)wParam == 69 && Native.Control)
                 {
                     view.KeyDown((int)wParam, Native.Control, Native.Shift);
@@ -411,6 +436,9 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0102:
                 if (!Native.Control) view.TextInput((char)wParam);
                 UpdateTitle(); Invalidate(); return 0;
+            case 0x0106: // WM_SYSCHAR
+                if ((int)wParam == 13) return 0;
+                break;
             case 0x0007: view.SetTextInputFocus(true); view.CheckFilesOnActivation(); Invalidate(); return 0; // WM_SETFOCUS
             case 0x0008: // WM_KILLFOCUS
                 view.SetTextInputFocus(false);
@@ -463,6 +491,7 @@ internal sealed partial class EditorWindow : IDisposable
         if (largeBrandIcon != 0) { Native.DestroyIcon(largeBrandIcon); largeBrandIcon = 0; }
         if (smallBrandIcon != 0) { Native.DestroyIcon(smallBrandIcon); smallBrandIcon = 0; }
         hitsounds.Dispose();
+        setupAudio?.Dispose();
         audio.Dispose();
         canvas?.Dispose();
         FlushPerformance(force: true);

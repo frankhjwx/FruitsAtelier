@@ -17,7 +17,10 @@ internal sealed partial class EditorWindow
         view.RequestSyncAudio = answer => answer(MapFileDialog.Select(hwnd, false, L.Get("sync.chooseAudio"), MapFileDialog.AudioFilter));
         view.RequestPausePlayback = () => audio.Pause();
         audio.Hitsounds = hitsounds;
-        view.RequestAudioVolume = (song, hit) => { audio.SongVolume = song; hitsounds.Volume = hit; };
+        view.RequestAudioVolume = (song, hit) => { audio.SongVolume = song; if (setupAudio is not null) setupAudio.SongVolume = song; hitsounds.Volume = hit; };
+        view.RequestSetupAudio = ControlSetupAudio;
+        view.RequestSetupFinished = () => { FitEditorWindow(); SetFullscreen(view.LibrarySettings.Fullscreen); };
+        view.RequestSetupLink = url => FileOperation(() => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }));
         view.RequestAudioPreference = () => FileOperation(() => view.LibrarySettings.Save());
         view.RequestViewPreference = () => FileOperation(() => view.LibrarySettings.Save());
         view.ApplyAudioVolume();
@@ -140,6 +143,7 @@ internal sealed partial class EditorWindow
     {
         // Disposing audio can pump STA window messages; the retiring clock must not initialize the new difficulty.
         if (resettingAudio) return;
+        PollSetupAudio();
         if (view.LibraryVisible || view.WorkspaceSession is not null || view.AudioProjectCreating || view.SliderConversionBusy || view.SliderMultiplierValidationBusy || view.StarRatingsRefreshing) Invalidate();
         if (!string.Equals(audio.FilePath, view.Document.AudioPath, StringComparison.OrdinalIgnoreCase))
         {

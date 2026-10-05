@@ -88,7 +88,9 @@ public sealed partial class EditorView
     }
     private void ApplyLanguage(string code)
     {
-        L.SetLanguage(code); RequestLanguagePreference?.Invoke(code); RefreshLanguage();
+        L.SetLanguage(code);
+        if (!FirstRunSetupVisible) RequestLanguagePreference?.Invoke(code);
+        RefreshLanguage();
     }
     private void AnswerLanguageNotice(bool accept)
     {

@@ -6,6 +6,7 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="../../assets/setup/*.wav;../../assets/setup/*.png" Link="assets/setup/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <InternalsVisibleTo Include="FruitsAtelier.Mac.Tests" />
     <InternalsVisibleTo Include="FruitsAtelier.App.Tests" />
     <Content Include="../../assets/branding/app-icon.*;../../assets/branding/mark.png" Link="assets/branding/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
@@ -23,6 +24,7 @@
     <Compile Include="../FruitsAtelier.App/Platform/BeatmapResources.cs" Link="Platform/BeatmapResources.cs" />
     <Compile Include="../FruitsAtelier.App/Platform/SkinArchive.cs" Link="Platform/SkinArchive.cs" />
     <Content Include="../../assets/icons/tools/*.png" Link="assets/icons/tools/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../assets/icons/library/*.png" Link="assets/icons/library/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../assets/icons/osu/*" Link="assets/icons/osu/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Update="Licenses/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Include="../../THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" />

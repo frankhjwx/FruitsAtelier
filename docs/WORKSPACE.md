@@ -4,6 +4,8 @@ Switching difficulties within the open project preserves the current timeline po
 
 **My Projects** shows the difficulty count and names from each saved workspace manifest. **All Songs** shows the source set's difficulties. Opening or resuming an existing workspace reconciles external files and adds new Catch difficulties while preserving existing edits and undo history. See [Synchronization](SYNCHRONIZATION.md) for identity recovery, conflicts, audio and deletion.
 
+**Favourites** lists saved favourite song sets and local projects. Right-click a library card and use the first menu item to add or remove it. Favourite cards show a small yellow star in the upper-left corner in every category. Favourites and category navigation are stored in `library-view.json` in the workspace; they do not change beatmap content. A song set with an associated project appears once in Favourites, with its project difficulties.
+
 Creating a new difficulty in osu! saves the current edits into a new workspace difficulty and a new `.osu`, then activates the new difficulty. The original difficulty retains its last saved content and export link; its source `.osu` is unchanged. The new workspace difficulty retains editable FSliders and handles. Files recorded only as older export targets are offered for import when they are not already represented by a project difficulty.
 
 Right-click an editor difficulty tab to open its source `.osu`, saved `.catchdiff`, or containing folder. Files open in a text editor; unavailable files are disabled. For workspace difficulties, the folder action opens the workspace directory. **Open osu! Songs folder** opens the difficulty's source beatmap directory, falling back to its export directory when no source is linked.

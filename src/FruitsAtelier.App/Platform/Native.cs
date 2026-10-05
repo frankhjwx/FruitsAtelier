@@ -54,6 +54,20 @@ internal static class Native
     [StructLayout(LayoutKind.Sequential)]
     internal struct Rectangle { internal int Left, Top, Right, Bottom; }
     [StructLayout(LayoutKind.Sequential)]
+    internal struct WindowPlacement
+    {
+        internal uint Length, Flags, ShowCommand;
+        internal Point MinPosition, MaxPosition;
+        internal Rectangle NormalPosition;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MonitorInfo
+    {
+        internal uint Size;
+        internal Rectangle Monitor, Work;
+        internal uint Flags;
+    }
+    [StructLayout(LayoutKind.Sequential)]
     internal struct Message
     {
         internal nint Window;
@@ -134,6 +148,12 @@ internal static class Native
     [DllImport("user32.dll")] internal static extern void PostQuitMessage(int exitCode);
     [DllImport("user32.dll")] internal static extern bool GetClientRect(nint hwnd, out Rectangle rect);
     [DllImport("user32.dll")] internal static extern bool GetWindowRect(nint hwnd, out Rectangle rect);
+    [DllImport("user32.dll", SetLastError = true)] internal static extern bool GetWindowPlacement(nint hwnd, ref WindowPlacement placement);
+    [DllImport("user32.dll", SetLastError = true)] internal static extern bool SetWindowPlacement(nint hwnd, ref WindowPlacement placement);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)] internal static extern nint GetWindowLongPtr(nint hwnd, int index);
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)] internal static extern nint SetWindowLongPtr(nint hwnd, int index, nint value);
+    [DllImport("user32.dll")] internal static extern nint MonitorFromWindow(nint hwnd, uint flags);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] internal static extern bool GetMonitorInfo(nint monitor, ref MonitorInfo info);
     [DllImport("user32.dll")] internal static extern bool InvalidateRect(nint hwnd, nint rect, bool erase);
     [DllImport("user32.dll")] internal static extern bool ValidateRect(nint hwnd, nint rect);
     [DllImport("user32.dll")] internal static extern bool GetUpdateRect(nint hwnd, out Rectangle rect, bool erase);

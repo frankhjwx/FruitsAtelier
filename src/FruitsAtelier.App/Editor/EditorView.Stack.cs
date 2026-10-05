@@ -231,25 +231,24 @@ public sealed partial class EditorView
         float w = Math.Min(700, width - 32), h = Math.Min(510, height - 32);
         float x = (width - w) / 2, y = (height - h) / 2;
         c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Grid, radius: 8);
-        c.Text(L.Get(changingStreamSnap ? "conversion.editTitle" : "conversion.title"), x + 18, y + 14, 16, Foreground, w - 36, true);
-        Button(c, new(x + 18, y + 40, 86, 24), L.Get("conversion.streamTab"), () => SetConversionMode(false), active: !stackMode);
-        Button(c, new(x + 108, y + 40, 86, 24), L.Get("conversion.stackTab"), () => SetConversionMode(true), active: stackMode);
-        float columnWidth = (w - 64) / 2;
-        float leftX = x + 22, rightX = leftX + columnWidth + 20;
-        StreamSnapBounds = new(leftX + 42, y + 66, columnWidth - 42, 29);
-        float left = StreamSnapBounds.X + 7, right = StreamSnapBounds.Right - 31;
-        c.Text(L.Get("ui.snap"), leftX, y + 75, 11, Muted, 40);
-        c.Line(left, y + 81, right, y + 81, Accent, 2);
-        c.Circle(left + Array.IndexOf(SnapDivisors, StreamSnapDivisor) / (float)(SnapDivisors.Length - 1) * (right - left), y + 81, 6, Accent);
-        c.Text(L.Get("ui.snapDivisor", StreamSnapDivisor), right + 3, y + 75, 10, Foreground, 40);
-        ToggleSwitch(c, new(leftX, y + 99, columnWidth, 30), L.Get("stream.breakFruits"), StreamBreakIntoFruits,
+        c.Text(L.Get(changingStreamSnap ? "conversion.editTitle" : "conversion.title"), x + 24, y + 20, 16, Foreground, w - 48, true);
+        Button(c, new(x + 24, y + 58, 96, 28), L.Get("conversion.streamTab"), () => SetConversionMode(false), active: !stackMode);
+        Button(c, new(x + 128, y + 58, 96, 28), L.Get("conversion.stackTab"), () => SetConversionMode(true), active: stackMode);
+        float columnWidth = (w - 68) / 2;
+        float leftX = x + 24, rightX = leftX + columnWidth + 20;
+        StreamSnapBounds = new(leftX + 42, y + 110, columnWidth - 42, 32);
+        float left = StreamSnapBounds.X + 7, right = StreamSnapBounds.Right - 55;
+        c.Text(L.Get("ui.snap"), leftX, y + 120, 11, Muted, 40);
+        c.Line(left, y + 126, right, y + 126, Accent, 2);
+        c.Circle(left + Array.IndexOf(SnapDivisors, StreamSnapDivisor) / (float)(SnapDivisors.Length - 1) * (right - left), y + 126, 6, Accent);
+        c.Text(L.Get("ui.snapDivisor", StreamSnapDivisor), right + 16, y + 120, 10, Foreground, 36);
+        ToggleSwitch(c, new(leftX, y + 158, columnWidth, 32), L.Get("stream.breakFruits"), StreamBreakIntoFruits,
             () => StreamBreakIntoFruits = !StreamBreakIntoFruits);
         if (stackMode)
         {
-            ToggleSwitch(c, new(leftX, y + 133, columnWidth, 30), L.Get("stack.left"), stackDraft.StartLeft,
+            ToggleSwitch(c, new(leftX, y + 206, columnWidth, 32), L.Get("stack.left"), stackDraft.StartLeft,
                 () => { stackDraft.StartLeft = !stackDraft.StartLeft; RefreshStackPreview(); RecordStackDraft(); });
-            c.Text(L.Get("stack.graph"), leftX, y + 170, 10, Muted, columnWidth);
-            stackGraph = new(leftX, y + 193, columnWidth, Math.Max(60, h - 296));
+            stackGraph = new(leftX, y + 260, columnWidth, Math.Max(60, h - 363));
             c.Fill(stackGraph, Surface); c.Stroke(stackGraph, Grid);
             for (int i = 0; i <= 32; i++)
             {
@@ -275,9 +274,8 @@ public sealed partial class EditorView
         else
         {
             stackGraph = default; StackPercentFieldBounds = StackDistanceFieldBounds = default;
-            c.Text(L.Get("stream.description"), leftX, y + 137, 11, Muted, columnWidth);
         }
-        Rect preview = StackPreviewBounds = new(rightX, y + 66, columnWidth, Math.Max(60, h - 169));
+        Rect preview = StackPreviewBounds = new(rightX, y + 110, columnWidth, Math.Max(60, h - 213));
         c.Fill(preview, Surface); c.Stroke(preview, Grid);
         if (stackPreviewSource is { } track)
         {
@@ -313,8 +311,8 @@ public sealed partial class EditorView
                 c.Text(L.Get("conversion.scroll"), preview.X, preview.Bottom + 7, 10, Muted, preview.Width);
             }
         }
-        if (streamError.Length > 0) c.Text(streamError, x + 18, y + h - 111, 10, Error, w - 36);
-        Button(c, new(x + w - 194, y + h - 44, 80, 30), L.Get("mac.cancel"), () => { StreamDialogVisible = false; stackPointDragging = stackFruitDragging = -1; });
-        Button(c, new(x + w - 106, y + h - 44, 88, 30), L.Get("stream.confirm"), ApplyStream, true);
+        if (streamError.Length > 0) c.Text(streamError, x + 24, y + h - 111, 10, Error, w - 48);
+        Button(c, new(x + w - 200, y + h - 44, 80, 30), L.Get("mac.cancel"), () => { StreamDialogVisible = false; stackPointDragging = stackFruitDragging = -1; });
+        Button(c, new(x + w - 112, y + h - 44, 88, 30), L.Get("stream.confirm"), ApplyStream, true);
     }
 }

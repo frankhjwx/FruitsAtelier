@@ -7,9 +7,9 @@ internal static class TestplayStartupDelayTests
         var settingsUi = new Ui();
         settingsUi.View.OpenSettings(); settingsUi.Paint();
         settingsUi.ClickText(FruitsAtelier.Localization.Strings.Get("settings.testplay"));
-        var bounds = settingsUi.View.SettingsBounds;
-        float rightX = bounds.Right - 32 - 12, leftX = bounds.X + 230 + 270 + 12;
-        float arrowY = bounds.Y + 260 + 16;
+        var bounds = settingsUi.View.TestplayStartupDelayBounds;
+        float rightX = bounds.Right - 12, leftX = bounds.X + 12;
+        float arrowY = bounds.Y + 16;
         settingsUi.Click(rightX, arrowY);
         settingsUi.View.PointerDoubleClick(rightX, arrowY, false, false); settingsUi.Paint();
         settingsUi.View.ApplySettings(Path.GetFullPath("artifacts/tests/testplay-delay-clicks.json"));

@@ -7,6 +7,11 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Contains("--first-run-setup-check"))
+{
+    try { FirstRunSetupTests.Run(); SettingsTests.Layout(); TestplayStartupDelayTests.LeadIn(); Console.WriteLine("PASS First-run setup and settings layout"); return 0; }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 if (args.Contains("--sv-performance")) return SliderMultiplierTests.Performance();
 if (args.Contains("--performance-scheduling")) return PerformanceSchedulingTests.Benchmark();
 if (args.Length == 2 && args[0] == "--fruit-placement-performance") return EditorPerformance.RunFruitPlacement(args[1]);
@@ -60,9 +65,11 @@ var tests = new (string Name, Action Run)[]
     ("Mapping Combo visibility and configured dash brightness", MappingSessionTests.TestplayDisplay),
     ("Clearing internal slider nodes preserves endpoints and batch undo", ClearSliderNodesTests.Run),
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
+    ("Fullscreen settings and Alt Enter preserve drafts, content and testplay", FullscreenSettingsTests.Run),
     ("Legacy slider editing converts silently with atomic drag, insertion and cancellation", ImplicitSliderEditingTests.Run),
     ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),
     ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),
+    ("First-run setup persists preferences, isolates auditions and supports debug replay", FirstRunSetupTests.Run),
     ("Shortcut routing isolates Timing object nudges and preserves navigation", ShortcutRoutingTests.TimingPage),
     ("Shortcut routing rejects unsupported Compose and Timing modifiers", ShortcutRoutingTests.Modifiers),
     ("Arrow seeking uses whole beats during playback and subdivisions while paused", ShortcutRoutingTests.PlaybackSeeking),
@@ -122,6 +129,8 @@ var tests = new (string Name, Action Run)[]
     ("Testplay movement, combo, hyperdash and facing", TestplayTests.MovementAndJudgement),
     ("Testplay autoplay notices, manual input and focus persistence", TestplayTests.AutoplaySwitching),
     ("Testplay autoplay speed switching and localized display", TestplayTests.AutoplaySpeed),
+    ("Testplay quick retry and stepped autoplay speed preserve session boundaries", TestplayTests.RetryAndSteppedSpeed),
+    ("Testplay retry retains gameplay during reentrant audio and driver rendering", TestplayTests.RetryRendering),
     ("Catch rotations, banana arrival transforms and combo colours", TestplayTests.VisualTransformsAndColours),
     ("Unskinned Catch objects keep dark map colours bright", FallbackSkinTests.BrightComboColour),
     ("Testplay Escape opens the pause menu without repeated navigation", TestplayTests.EscapeReturnsToEditor),
@@ -240,6 +249,7 @@ var tests = new (string Name, Action Run)[]
     ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),
     ("Workspace library isolates input, saving and export", LibraryTests.Run),
     ("Library navigation preserves position, supports dragging and returns with Escape", LibraryNavigationTests.Run),
+    ("Library favourites persist, filter songs and projects, and toggle from the first context action", LibraryFavouriteTests.Run),
     ("Library pages sets and difficulties and reaches uncached scrollbar positions", LibraryScaleTests.Pagination),
     ("Library remains responsive while SQLite is write-locked", LibraryResponsivenessTests.Run),
     ("Library progress survives oversized maps", LibraryScanProgressTests.Run),

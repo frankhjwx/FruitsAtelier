@@ -12,7 +12,7 @@ public sealed partial class EditorView
     {
         LibrarySettings.UseSkinSounds = !LibrarySettings.UseSkinSounds;
         RefreshSkinHitsounds();
-        RequestAudioPreference?.Invoke();
+        if (!FirstRunSetupVisible) RequestAudioPreference?.Invoke();
     }
     private void RefreshSkinHitsounds()
     {

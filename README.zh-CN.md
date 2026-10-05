@@ -6,7 +6,7 @@
 
 适用于 Windows 和 macOS 的 osu!catch 谱面编辑器。编排水果、调整滑条，并随音乐和打击音预览、试玩谱面。
 
-**当前版本：0.9.6**
+**当前版本：0.9.7**
 
 ## 功能
 
@@ -28,7 +28,7 @@
 
 从 [Releases](https://github.com/frankhjwx/FruitsAtelier/releases) 下载 Windows x64 ZIP，完整解压后运行 `FruitsAtelier.exe`。保留解压后的所有文件。包内自带 .NET，适用于支持 DirectX 11 的 Windows 10/11。
 
-在曲库的设置中选择工程目录，并按需连接 osu!stable 安装目录。导入谱面或新建工程即可开始。
+首次启动会通过引导设置目录、语言与曲目信息显示，然后设置皮肤与音效、音量试听、Slider Droplets 和试玩。导入谱面或新建工程即可开始，这些选项也可以随时在曲库的设置中修改。
 
 ### macOS
 
@@ -43,6 +43,8 @@
 ## 开发
 
 Windows 源码构建使用 `global.json` 指定的 .NET SDK **10.0.400** 和 .NET 8 运行时。运行 [Run-Editor.cmd](Run-Editor.cmd) 构建并启动。
+
+运行 [Run-Setup-Debug.cmd](Run-Setup-Debug.cmd) 可在每次启动时打开小窗口初次设置引导，方便开发调试。Windows 和 macOS 可执行程序也支持 `--first-run-setup` 参数。只有完成全部步骤后才保存修改，中途退出会丢弃未完成的设置。
 
 - [构建与测试](docs/TESTING.md) · [打包与发布](docs/RELEASING.md)
 - [编辑操作](docs/EDITOR_UI.md) · [工程与文件](docs/WORKSPACE.md)

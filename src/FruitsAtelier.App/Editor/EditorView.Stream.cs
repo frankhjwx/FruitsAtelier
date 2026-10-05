@@ -146,7 +146,7 @@ public sealed partial class EditorView
 
     private void SetStreamSnap(float x)
     {
-        float left = StreamSnapBounds.X + 7, right = StreamSnapBounds.Right - 31;
+        float left = StreamSnapBounds.X + 7, right = StreamSnapBounds.Right - 55;
         int index = (int)MathF.Round(Math.Clamp((x - left) / (right - left), 0, 1) * (SnapDivisors.Length - 1));
         if (StreamSnapDivisor == SnapDivisors[index]) return;
         StreamSnapDivisor = SnapDivisors[index]; streamError = ""; RefreshStackPreview();

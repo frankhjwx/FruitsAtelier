@@ -66,7 +66,9 @@ internal sealed partial class MacWindow
             if (archive is not null) View.SetDefaultSkinArchive(archive);
         });
         View.RequestOpenExternalPath = path => RunFile(() => { LibraryOperations.OpenExternalPath(path); return Task.CompletedTask; });
-        View.InitializeLibrary(show, smokeCheck ? new LibrarySettings { Workspace = Path.Combine(MacPaths.Artifacts, "macos-check", "startup-workspace") } : null);
+        View.InitializeLibrary(show, smokeCheck ? new LibrarySettings { Workspace = Path.Combine(MacPaths.Artifacts, "macos-check", "startup-workspace") } : null,
+            forceFirstRunSetup: Program.Arguments.Contains("--first-run-setup"));
+        if (View.FirstRunSetupVisible) { SystemDecorations = Avalonia.Controls.SystemDecorations.None; MinWidth = 640; MinHeight = 400; Width = 880; Height = 620; }
         View.RequestLibraryFolder = workspace => RunFile(async () =>
         {
             var folders = await StorageProvider.OpenFolderPickerAsync(new() { Title = L.Get(workspace ? "library.workspace" : "library.songs"), AllowMultiple = false });

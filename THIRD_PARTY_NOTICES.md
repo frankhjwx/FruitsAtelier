@@ -201,3 +201,21 @@ Velopack SDK and packaging CLI 1.2.0 ([source](https://github.com/velopack/velop
 revision `f2edcbcafb81da5b3c884aaea330e225ad91d8b6`) provide the Windows portable
 updater under the MIT license. The license is distributed in
 `Updates/Licenses/Velopack.txt`.
+
+## Setup welcome logo
+
+The Discord logo in `assets/setup/discord.svg` comes from the official
+[Discord brand assets](https://discord.com/branding), retrieved on 2026-10-05:
+`https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/66e3d74e9607e61eeec9c91b_Logo.svg`.
+The pinned SVG SHA-256 is
+`ec5cd5ea2a05405603bdb57a3cf12f1f004a3a3880d68c6bcc76770e0922a2e3`.
+`discord.png` is a rasterization at 640 pixels wide, with the artwork unchanged.
+Discord and its logo are trademarks of Discord Inc.; the asset remains subject
+to its [brand guidelines](https://discord.com/branding), independently of the
+application code license.
+
+## Setup music
+
+`assets/setup/campus-after-class.wav` is the user-supplied
+`01 BGM_CAMPUS_AFTER_CLASS_V1.wav`, used unmodified for the setup music audition.
+It is separate from the application code license.

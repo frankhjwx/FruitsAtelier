@@ -11,7 +11,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
 {
     private readonly SqliteConnection db;
     private readonly string catalogPath;
-    private readonly bool projectsOnly;
+    private readonly bool projectsOnly, favouritesOnly;
     private readonly string songs;
     private sealed record ProjectListing(IReadOnlyList<LibraryMap> Maps, bool? InSongs, LibraryMap Representative);
     private readonly Dictionary<string, ProjectListing> projectDetails = new(WorkspaceSynchronization.Paths);
@@ -22,9 +22,10 @@ public sealed class LibrarySearchSnapshot : IDisposable
     public long DiscoveryRevision => Interlocked.Read(ref discoveryRevision);
     public void CancelReferenceDiscovery() => discoveryCancellation.Cancel();
     public int Count { get; }
-    internal LibrarySearchSnapshot(SqliteConnection connection, string songs, string query, bool projectsOnly)
+    internal LibrarySearchSnapshot(SqliteConnection connection, string songs, string query, bool projectsOnly, IReadOnlyCollection<string>? favourites)
     {
         this.projectsOnly = projectsOnly;
+        favouritesOnly = favourites is not null;
         this.songs = songs;
         catalogPath = connection.DataSource;
         connection.Dispose();
@@ -38,7 +39,10 @@ public sealed class LibrarySearchSnapshot : IDisposable
                 + "CREATE TEMP TABLE matches(path TEXT PRIMARY KEY,groupKey TEXT,title TEXT,project TEXT) WITHOUT ROWID;";
             command.ExecuteNonQuery();
             string project = "(SELECT p.project FROM project_sources p WHERE p.source=json_extract(m.data,'$.Directory') ORDER BY p.project LIMIT 1)";
-            string key = projectsOnly ? project : "json_extract(m.data,'$.Directory')";
+            var favouriteKeys = new HashSet<string>(favourites ?? [], WorkspaceSynchronization.Paths);
+            db.CreateFunction<string?, string?, bool>("is_favourite", (directory, projectPath) =>
+                directory is not null && favouriteKeys.Contains(directory) || projectPath is not null && favouriteKeys.Contains(projectPath));
+            string key = favouritesOnly ? $"coalesce({project},json_extract(m.data,'$.Directory'))" : projectsOnly ? project : "json_extract(m.data,'$.Directory')";
             command.CommandText = $"INSERT INTO matches SELECT m.path,{key},json_extract(m.data,'$.Title'),{project} FROM maps m WHERE (m.root=$r OR m.root IN (SELECT path FROM external_sources))";
             command.Parameters.AddWithValue("$r", songs);
             var words = LibraryDatabase.Normalize(query).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
@@ -47,6 +51,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
                 command.CommandText += $" AND instr(m.search,$q{i})>0";
                 command.Parameters.AddWithValue("$q" + i, words[i]);
             }
+            if (favouritesOnly) command.CommandText += $" AND is_favourite(json_extract(m.data,'$.Directory'),{project})";
             if (projectsOnly) command.CommandText += $" AND {project} IS NOT NULL";
             command.ExecuteNonQuery();
             command.Parameters.Clear();
@@ -55,10 +60,11 @@ public sealed class LibrarySearchSnapshot : IDisposable
                 + "INSERT INTO sets(groupKey,firstPath,title,project,count) SELECT groupKey,min(path),min(title),min(project),count(*) FROM matches GROUP BY groupKey ORDER BY min(title) COLLATE NOCASE,min(path); "
                 + "CREATE UNIQUE INDEX temp.sets_key ON sets(groupKey);";
             command.ExecuteNonQuery();
-            if (projectsOnly)
+            if (projectsOnly || favouritesOnly)
             {
                 db.CreateFunction<string, bool>("matches_name", name => words.All(word => LibraryDatabase.Normalize(name).Contains(word)));
                 command.CommandText = "INSERT INTO sets(groupKey,firstPath,title,project,count) SELECT path,path,name,path,1 FROM projects p WHERE NOT EXISTS(SELECT 1 FROM sets s WHERE s.groupKey=p.path) AND matches_name(name) ORDER BY name COLLATE NOCASE,path";
+                if (favouritesOnly) command.CommandText = command.CommandText.Replace("ORDER BY name", "AND is_favourite(NULL,p.path) ORDER BY name");
                 command.ExecuteNonQuery();
             }
             command.Parameters.Clear(); command.CommandText = "SELECT count(*) FROM sets";
@@ -90,7 +96,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
             WorkspaceManifest? manifest = null;
             if (project is not null)
                 lock (WorkspaceProject.Gate) manifest = WorkspaceProject.ReadManifest(project, includeSync: false);
-            ProjectListing? details = projectsOnly && manifest is not null ? ProjectDifficulties(project!, map, manifest) : null;
+            ProjectListing? details = (projectsOnly || favouritesOnly) && manifest is not null ? ProjectDifficulties(project!, map, manifest) : null;
             if (details is not null) { difficultyCount = details.Maps.Count; map = details.Representative; }
             bool? inSongs = string.IsNullOrWhiteSpace(songs) ? null
                 : manifest is not null
@@ -105,7 +111,7 @@ public sealed class LibrarySearchSnapshot : IDisposable
     public IReadOnlyList<LibraryMap> Difficulties(LibrarySetRow set, int start, int count = 64)
     {
         using var attachment = Attach();
-        if (projectsOnly && set.Map.ProjectPath is { } project)
+        if ((projectsOnly || favouritesOnly) && set.Map.ProjectPath is { } project)
         {
             return ProjectDifficulties(project, set.Map).Maps.Skip(Math.Max(0, start)).Take(Math.Clamp(count, 1, 128)).ToArray();
         }

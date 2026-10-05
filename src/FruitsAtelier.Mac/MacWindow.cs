@@ -19,14 +19,38 @@ internal sealed partial class MacWindow : Window
     private string? projectPath;
     private bool busy, allowClose;
     private int playbackRequest;
+    private WindowState windowedState;
+    private bool fullscreenInitialized;
     private FruitsAtelier.App.Editor.EditorView View => editor.View;
     public MacWindow(string? initialPath, bool smokeCheck)
     {
         audio = new(smokeCheck);
         hitsounds = new(smokeCheck);
-        View.RequestAudioVolume = (song, hit) => { audio.SetVolume(song); hitsounds.SetVolume(hit); };
+        View.RequestAudioVolume = (song, hit) => { audio.SetVolume(song); setupAudio?.SetVolume(song); hitsounds.SetVolume(hit); };
+        View.RequestSetupAudio = ControlSetupAudio;
+        View.RequestSetupFinished = () => { ResizeForSetup(false); View.RequestFullscreen?.Invoke(View.LibrarySettings.Fullscreen); };
+        View.RequestSetupLink = url => RunFile(() => { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("/usr/bin/open") { ArgumentList = { url } }); return Task.CompletedTask; });
         View.RequestAudioPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
         View.RequestViewPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
+        View.SupportsFullscreen = true;
+        View.RequestFullscreen = enabled =>
+        {
+            if (View.FirstRunSetupVisible) return;
+            if (enabled && WindowState != WindowState.FullScreen)
+            {
+                windowedState = WindowState;
+                WindowState = WindowState.FullScreen;
+            }
+            else if (!enabled && WindowState == WindowState.FullScreen) WindowState = windowedState;
+        };
+        PropertyChanged += (_, change) =>
+        {
+            if (!fullscreenInitialized || change.Property != WindowStateProperty || WindowState == WindowState.Minimized) return;
+            var previous = change.GetOldValue<WindowState>();
+            if (WindowState == WindowState.FullScreen && previous is WindowState.Normal or WindowState.Maximized)
+                windowedState = previous;
+            View.UpdateFullscreenState(WindowState == WindowState.FullScreen);
+        };
         View.ApplyAudioVolume();
         View.RequestScheduleHitsound = (sound, time) =>
         {
@@ -42,6 +66,12 @@ internal sealed partial class MacWindow : Window
         View.RequestStopHitsounds = hitsounds.Stop;
         Width = 1440; Height = 900; MinWidth = 980; MinHeight = 620;
         Content = editor; Title = View.WindowTitle;
+        AddHandler(PointerPressedEvent, (_, e) =>
+        {
+            if (View.FirstRunHeaderDraggable && e.GetPosition(this).Y < (View.FirstRunSetupComplete ? 32 : 60) &&
+                e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            { BeginMoveDrag(e); e.Handled = true; }
+        }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         string icon = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "app-icon.png");
         if (File.Exists(icon)) Icon = new WindowIcon(icon);
         editor.Changed = UpdateTitle;
@@ -92,6 +122,9 @@ internal sealed partial class MacWindow : Window
         timer.Tick += (_, _) => PollAudio();
         Opened += async (_, _) =>
         {
+            if (View.FirstRunSetupVisible) ResizeForSetup(true);
+            if (!smokeCheck) View.RequestFullscreen(View.LibrarySettings.Fullscreen);
+            fullscreenInitialized = true;
             MacPaths.Log($"Native macOS window opened: {Bounds}, scaling={RenderScaling}");
             timer.Start(); editor.Focus();
             View.InitializeSkin();
@@ -110,17 +143,19 @@ internal sealed partial class MacWindow : Window
         };
         Closing += (_, e) =>
         {
+            View.CancelFirstRunSetup();
             if (allowClose) return;
             e.Cancel = true;
             RunFile(async () => { if (await ConfirmDiscard()) { allowClose = true; Close(); } });
         };
-        Closed += (_, _) => { View.SaveLibraryMemory(); View.ReleaseWaveform(); timer.Stop(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
+        Closed += (_, _) => { View.SaveLibraryMemory(); View.ReleaseWaveform(); timer.Stop(); setupAudio?.Dispose(); hitsounds.Dispose(); audio.Dispose(); editor.Dispose(); };
         Activated += (_, _) => { View.SetTextInputFocus(editor.IsFocused); View.CheckFilesOnActivation(); editor.Refresh(); };
         Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); editor.Refresh(); };
     }
     private void UpdateTitle() => Title = View.WindowTitle;
     private void PollAudio()
     {
+        PollSetupAudio();
         var state = audio.State;
         if (!string.Equals(state.FilePath, View.Document.AudioPath, StringComparison.Ordinal))
         {

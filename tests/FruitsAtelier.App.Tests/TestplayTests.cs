@@ -3,6 +3,104 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class TestplayTests
 {
+    public static void RetryRendering()
+    {
+        foreach (bool paused in new[] { false, true })
+        {
+            var ui = new Ui(timeProvider: new ManualTime());
+            var map = new MapDocument(); map.Fruits.Add(new Fruit { TimeMs = 10000, X = 256 });
+            ui.LoadDocument(map);
+            ui.View.UpdateTransport(0, 20000, true, false, false, null, null);
+            bool observing = false;
+            var boundaries = new List<string>();
+            void PaintDuringRetry(string boundary)
+            {
+                if (!observing) return;
+                ui.Paint();
+                Check(ui.View.IsTestplaying && ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.hintQuickExit")),
+                    $"Retry rendered the editor during {boundary}");
+                boundaries.Add(boundary);
+            }
+            ui.View.RequestPausePlayback = () => PaintDuringRetry("audio pause");
+            ui.View.RequestSeek = _ => PaintDuringRetry("audio seek");
+            ui.View.RequestTogglePlayback = () => PaintDuringRetry("audio restart");
+            ui.View.RequestPrepareHitsound = _ => PaintDuringRetry("sample preparation");
+            ui.View.RequestRunTestplay = _ =>
+            {
+                PaintDuringRetry("driver creation");
+                return new RetryDriver(() => PaintDuringRetry("driver disposal"));
+            };
+            ui.View.StartTestplay();
+            if (paused) { ui.Key(27); ui.View.KeyUp(27); }
+            observing = true;
+            ui.Key(82, ctrl: true); ui.View.KeyUp(82);
+            observing = false;
+            Check(boundaries.Contains("driver disposal") && boundaries.Contains("sample preparation")
+                && boundaries.Contains("audio seek") && boundaries.Contains("audio restart")
+                && boundaries.Contains("driver creation"), "Retry must verify every reentrant setup boundary");
+            Check(ui.View.IsTestplaying && !ui.View.TestplayPaused && ui.View.Document.ContentEquals(map),
+                "Retry completes in gameplay without editing content");
+            ui.View.StopTestplay();
+        }
+    }
+
+    private sealed class RetryDriver(Action onDispose) : IDisposable
+    {
+        public void Dispose() => onDispose();
+    }
+
+    public static void RetryAndSteppedSpeed()
+    {
+        var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
+        var map = new MapDocument(); map.Fruits.Add(new Fruit { TimeMs = 10000, X = 256 });
+        ui.LoadDocument(map);
+        ui.View.LibrarySettings.TestplayStartupDelaySeconds = 1;
+        ui.View.UpdateTransport(3000, 20000, true, false, false, null, null);
+        ui.View.UpdateTransport(3000, 20000, false, false, false, null, null);
+        var before = ui.View.Document.DeepClone();
+        ui.View.StartTestplay(); Near(2000, ui.View.PlayheadMs);
+        ui.Key(38, ctrl: true); Near(1, ui.View.PlaybackSpeed);
+        Check(!ui.View.VolumePopoverVisible, "Manual speed shortcut must not adjust volume");
+        ui.View.KeyUp(38);
+        ui.Key(9); ui.View.KeyUp(9);
+        clock.Advance(100); ui.Paint();
+        double position = ui.View.PlayheadMs;
+        ui.Key(38, ctrl: true); Near(1.25, ui.View.PlaybackSpeed); Near(position, ui.View.PlayheadMs);
+        ui.View.KeyUp(38);
+        ui.Key(40, ctrl: true, shift: true); Near(1.2, ui.View.PlaybackSpeed); ui.View.KeyUp(40);
+        ui.Key(27); ui.View.KeyUp(27);
+        ui.Key(38, ctrl: true, shift: true); Near(1.25, ui.View.PlaybackSpeed); ui.View.KeyUp(38);
+        ui.Key(13); ui.View.KeyUp(13);
+        clock.Advance(600); ui.Paint();
+        Check(!ui.View.TestplayPaused, "Paused speed adjustment must retain Continue selection");
+        ui.View.SetPlaybackSpeed(1.5); ui.Key(38, ctrl: true); Near(1.5, ui.View.PlaybackSpeed); ui.View.KeyUp(38);
+        ui.View.SetPlaybackSpeed(.1); ui.Key(40, ctrl: true, shift: true); Near(.1, ui.View.PlaybackSpeed); ui.View.KeyUp(40);
+        ui.View.SetPlaybackSpeed(1.25);
+        ui.Key(82, ctrl: true);
+        Near(2000, ui.View.PlayheadMs);
+        Check(ui.View.TestplayAutoplay && !ui.View.TestplayPaused, "Retry retains autoplay and starts running");
+        clock.Advance(100); ui.Key(82, ctrl: true); Near(2125, ui.View.PlayheadMs);
+        ui.View.KeyUp(82); ui.Key(82, ctrl: true); Near(2000, ui.View.PlayheadMs); ui.View.KeyUp(82);
+        ui.Key(27); ui.View.KeyUp(27); ui.Key(82, ctrl: true); ui.View.KeyUp(82);
+        Check(!ui.View.TestplayPaused, "Retry is available from the pause menu");
+        ui.Key(82, ctrl: true); ui.View.CancelInteraction(preserveTestplay: true);
+        clock.Advance(100); ui.Key(82, ctrl: true); Near(2000, ui.View.PlayheadMs); ui.View.KeyUp(82);
+        ui.Key(112); Near(3000, ui.View.PlayheadMs);
+        Check(ui.View.Document.ContentEquals(before), "Retry and speed preserve content");
+
+        var audio = new Ui(timeProvider: new ManualTime()); audio.LoadDocument(map);
+        audio.View.LibrarySettings.TestplayStartupDelaySeconds = 1;
+        audio.View.UpdateTransport(3000, 20000, true, false, false, null, null);
+        var requests = new List<string>();
+        audio.View.RequestPausePlayback = () => requests.Add("pause");
+        audio.View.RequestSeek = time => requests.Add($"seek:{time}");
+        audio.View.RequestTogglePlayback = () => requests.Add("play");
+        audio.View.StartTestplay(); requests.Clear();
+        audio.Key(82, ctrl: true); audio.View.KeyUp(82);
+        Check(requests.SequenceEqual(["pause", "seek:2000", "play"]), "Running retry pauses audio before seeking and restarting");
+        audio.View.StopTestplay();
+    }
+
     public static void AutoplaySpeed()
     {
         string language = L.Language;

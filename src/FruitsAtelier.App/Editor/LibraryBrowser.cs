@@ -24,9 +24,9 @@ internal sealed class LibraryBrowser
     public string? Error { get; private set; }
 
     private LibraryBrowser(LibrarySearchSnapshot snapshot) => this.snapshot = snapshot;
-    public static LibraryBrowser Create(LibraryDatabase db, string query, bool projects, string? selected, string? top, int offset)
+    public static LibraryBrowser Create(LibraryDatabase db, string query, bool projects, string? selected, string? top, int offset, IReadOnlyCollection<string>? favourites = null)
     {
-        var snapshot = db.SearchSnapshot(query, projects);
+        var snapshot = db.SearchSnapshot(query, projects, favourites);
         try
         {
             int topIndex = snapshot.FindIndex(top), selectedIndex = snapshot.FindIndex(selected);

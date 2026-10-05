@@ -31,14 +31,15 @@ internal static class DropletDefaultsTests
                 var before = ui.View.Document.DeepClone();
                 foreach (var size in new[] { (1440, 900), (980, 620), (760, 580) })
                 {
-                    ui.Resize(size.Item1, size.Item2); ui.View.SupportsDisplayMode = true; ui.View.OpenSettings(); ui.Paint();
+                    ui.Resize(size.Item1, size.Item2); ui.View.SupportsDisplayMode = true; OpenSettings(ui);
                     Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.dropletDefaults")), "General has a separate droplet section");
-                    Check(ui.Canvas.Lines.Any(l => l.Y1 == ui.View.SettingsBounds.Y + 260 && l.Y2 == l.Y1 && l.X2 > l.X1),
-                        "droplet section ends with a separator");
+                    var heading = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.dropletDefaults"));
+                    Check(ui.Canvas.Lines.Any(l => l.Y1 == heading.Y - 12 && l.Y2 == l.Y1 && l.X2 > l.X1),
+                        "droplet section has a separator above its heading");
                     ui.ClickText(L.Get("settings.newProjectDerandomizeOn")); ui.Key(27);
                     Check(ui.View.LibrarySettings.DerandomizeNewProjects, "cancel discards the new-project preference draft");
                 }
-                ui.View.OpenSettings(); ui.Paint();
+                OpenSettings(ui);
                 ui.ClickText(L.Get("settings.newProjectDerandomizeOn"));
                 string path = Path.Combine(root, locale + ".json"); ui.View.ApplySettings(path); ui.Paint();
                 Check(LibrarySettings.Load(path).DerandomizeDroplets && !LibrarySettings.Load(path).DerandomizeNewProjects,
@@ -76,6 +77,13 @@ internal static class DropletDefaultsTests
         }
         finally { L.SetLanguage(language); }
     }
+    private static void OpenSettings(Ui ui)
+    {
+        ui.View.OpenSettings(); ui.Paint();
+        var bounds = ui.View.SettingsBounds;
+        ui.View.Wheel(bounds.Right - 100, bounds.Y + 150, -1200, false); ui.Paint();
+    }
+
     private static void Wait(Ui ui)
     {
         var deadline = DateTime.UtcNow.AddSeconds(15);

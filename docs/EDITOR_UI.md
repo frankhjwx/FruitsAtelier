@@ -1,5 +1,50 @@
 # Editing Controls
 
+## First-time setup
+
+Startup opens a five-step setup guide when the saved setup version is missing or
+older than the current version. This includes existing users upgrading to the
+release that introduces setup. Completing the guide saves its version, so later
+normal launches open the editor directly.
+
+The guide uses a compact window, targeting 880 × 620 logical pixels and bounded
+to 85% of the screen work area after DPI scaling. Its filled arrow-shaped tabs
+cover folders, language and romanised artist/title display; skin and skin sounds;
+volume; Slider Droplets; and testplay. Artist/title display appears below Language
+on the first page. Inactive tabs alternate two similar colours and join into a
+continuous strip. The pages show setting labels and controls without explanatory
+paragraphs. Short windows scroll the content
+while keeping navigation visible. The guide has no system title bar or outer
+border; drag the progress strip, or the top of the completion page, to move it.
+The main editor opens after Start with its normal window decorations.
+
+Back and Next retain choices in an isolated draft. Only Finish saves the full
+configuration and selected language. Invalid workspace settings keep the current
+step open. Exit, Escape and closing the window discard unfinished choices,
+restore the original configuration, and leave setup required on the next launch.
+
+An unfinished first setup starts in English. Master, music and hitsound volume
+load their saved values; each missing volume parameter defaults to 50%.
+Selecting a language previews it until Finish. The **Audio Test**
+uses the bundled Campus After Class recording with Play, Pause and Stop icons and never starts
+automatically. **Hitsound Test** labels the four sample buttons: **Hit**,
+**Whistle**, **Finish**, and **Clap**, with these names retained in every language.
+They audition normal, whistle, finish and clap
+through the same sample resolver as Timing, respecting skin sounds and volume.
+Leaving the volume step stops its independent music transport. The skin step
+previews a catcher, fruit and slider and links to the osu! default skin download
+page; selecting a default `.osk` updates the preview.
+
+Finish saves completion and shows a welcome page in the same compact window,
+without progress tabs, with a proportionate FA logo. The community welcome and
+Join Discord button share a row; Start and Exit appear below with extra spacing.
+Start opens the library. Settings
+remain editable through the ordinary Settings window.
+
+For development, `Run-Setup-Debug.cmd` or the `--first-run-setup` executable flag
+opens the guide on each run, including after completion, using current settings.
+Replay changes also remain a draft until Finish.
+
 ## AiMod
 
 Open **Edit → AiMod** to check the current difficulty for overlapping notes.
@@ -275,8 +320,22 @@ launcher or restart is needed. Closing without applying discards the draft.
 Testplay retains its low-latency presentation. Diagnostic display launchers
 override this preference for their run. macOS does not expose this Windows setting.
 
-**General → Droplet Derandomize Settings** contains two independent preferences and ends with
-a separator. **Enable Derandomization for Legacy slider to FSlider Conversion** sets the initial conversion
+**General → Fullscreen**, below Display mode on Windows, toggles fullscreen on
+Windows and macOS. Apply saves and activates the choice; closing Settings discards
+an unapplied choice. **Alt+Enter** switches immediately and saves the preference,
+including in Library, Settings and testplay. Holding the keys switches only once.
+The shortcut updates the fullscreen choice in an open Settings draft while keeping
+other pending changes. Windows uses borderless fullscreen on the current monitor;
+leaving restores the previous window bounds and maximized state. macOS uses native
+fullscreen. New installations start windowed, and subsequent launches restore the
+saved fullscreen preference. Fullscreen does not change beatmap content or history.
+
+Settings Workspace, Audio and embedded Updates show their controls without the
+workspace-path, skin-sound, automatic-save or restart explanatory paragraphs.
+
+**General → Droplet Derandomize Settings** is the last section of General,
+following the scroll-direction setting and a separator. It contains two independent
+preferences. **Enable Derandomization for Legacy slider to FSlider Conversion** sets the initial conversion
 choice in maps without a saved choice. **Enable Derandomization for new catchprojects**
 controls projects created from scratch or from audio. Both start On. With the
 new-project option Off, the new difficulty saves a default that enables
@@ -357,6 +416,8 @@ Pressing **F3** in manual mode shows a brief reminder to press **Tab** before ch
 
 Press **Tab** during testplay to toggle autoplay. Pressing a bound left, right, or dash key
 also returns to manual control. A centered fading banner announces either change.
+**Ctrl+R** retries immediately from this session's start, including its configured lead-in, retaining autoplay and speed. It works while running or paused and triggers once per press. During autoplay, **Ctrl+Up/Down** adjusts speed by 25 percentage points; **Ctrl+Shift+Up/Down** uses 5 percentage points. Both work while paused, clamp to 10%–150%, and leave pause-menu selection unchanged. Manual play shows the existing autoplay-required notice instead of changing speed.
+
 Each new testplay starts in manual mode. Losing window focus releases held keys while
 testplay and its music continue.
 
@@ -465,8 +526,12 @@ moving edge; individual events do not distance-snap. Handles stop before crossin
 the opposite side and at the playfield boundaries; stored stack width and adjustment
 limits also cap expansion. A zero-width pattern can move
 but cannot resize. Drag inside the box to translate all selected parents using the
-ordinary group-movement snap rules. Visible slider anchors and curve handles take
-priority, followed by box resizing/movement, then individual-event DS reshaping.
+ordinary group-movement snap rules. With droplet selection unlocked, droplets and
+tiny droplets in a single selected slider take priority over box movement and use
+individual-event reshaping. A nearby curve control takes priority when it is at
+least as close to the pointer, unless that droplet is already selected. Visible
+slider controls and box resize handles retain priority over box movement.
+Other points inside the box move the selected parents.
 Ctrl selection, clicks on event details and long-press actions remain available.
 For one selected slider, holding anywhere inside its box opens its action group;
 moving the pointer cancels the hold and continues the normal drag.
@@ -486,7 +551,7 @@ Distance snapping places fruits and the first slider draft point relative to the
 
 Drawing and reshaping a slider uses beat and horizontal grid snapping independently of DS. Slider endpoints, control points and Bezier handles are not constrained by DS presets or by the spacing of generated Fruit/Droplet events. Their X coordinates may extend beyond the 0–512 playfield while dragging or editing numeric values. The first draft point still distance-snaps relative to the previous source object. A completed slider remains selected in Slider mode, so its tail can be dragged immediately.
 
-When a Select-mode drag is outside the bounding box and visible slider controls, horizontal dragging of a slider head, tail or large droplet keeps its time and strictly snaps relative to the preceding large event in the same slider, including zero DS, even on a curved slider. Endpoint candidates account for the preceding droplets that move with the reshaped curve. A selected TinyDroplet instead snaps its displayed X relative to the preceding event in the same slider, including other tiny droplets. Its compensation policy still applies. Following events impose no DS preset or maximum-distance requirement on a selected-object drag. With no preceding reference, dragging follows horizontal Grid Snap. Candidate positions are tried in pointer-distance order; unrepresentable candidates are skipped, and if none is available, the last accepted position remains unchanged. DS takes precedence over horizontal Grid Snap when a preceding reference exists.
+When a Select-mode drag is outside the bounding box and visible slider controls, horizontal dragging of a slider head or tail keeps its time and strictly snaps relative to the preceding large event in the same slider, including zero DS, even on a curved slider. Droplet dragging also follows these rules inside the box. Endpoint candidates account for the preceding droplets that move with the reshaped curve. A selected TinyDroplet instead snaps its displayed X relative to the preceding event in the same slider, including other tiny droplets. Its compensation policy still applies. Following events impose no DS preset or maximum-distance requirement on a selected-object drag. With no preceding reference, dragging follows horizontal Grid Snap. Candidate positions are tried in pointer-distance order; unrepresentable candidates are skipped, and if none is available, the last accepted position remains unchanged. DS takes precedence over horizontal Grid Snap when a preceding reference exists.
 
 Changing DS settings, BPM, or tick rate does not reshape existing sliders.
 
@@ -675,6 +740,10 @@ that saving retains only the merged slider: reopening cannot recover the origina
 objects because project files do not store undo history.
 
 Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press an FSlider to reveal **Convert to Stream/Stack**; imported Legacy Sliders offer **Convert to FSlider** above it. Ordinary sliders open the shared dialog on Stream; existing streams and stacks open their corresponding tab. The snap slider has the same subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**. Enter confirms; Esc cancels; arrow keys change the choice.
+
+The dialog separates its title, tabs, Snap and conversion switches with padding.
+The Snap value has a gap from the slider thumb. Stream and Stack show their
+controls and preview without the introductory or graph-instruction paragraphs.
 
 With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging inside the selection box moves the whole stream. Visible anchors take priority; individual-event reshaping is available outside the box. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in their long-press menu. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
 

@@ -8,6 +8,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="../../assets/setup/*.wav;../../assets/setup/*.png" Link="assets/setup/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <InternalsVisibleTo Include="FruitsAtelier.App.Tests" />
     <Content Include="../../assets/branding/app-icon.*;../../assets/branding/mark.png" Link="assets/branding/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../FruitsAtelier.Core/Workspace/Licenses/*.txt" Link="Licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
@@ -15,6 +16,7 @@
     <None Update="Audio/Licenses/*.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../FruitsAtelier.Core/Conversion/LICENCE*.txt" Link="Licenses/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../assets/icons/tools/*.png" Link="assets/icons/tools/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../assets/icons/library/*.png" Link="assets/icons/library/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../assets/icons/osu/*" Link="assets/icons/osu/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <PackageReference Include="Velopack" Version="1.2.0" />

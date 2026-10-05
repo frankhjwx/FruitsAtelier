@@ -7,6 +7,14 @@ namespace FruitsAtelier.Core;
 
 public sealed class LibrarySettings
 {
+    public const int CurrentFirstRunSetupVersion = 1;
+    public int FirstRunSetupVersion { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool FirstRunSetupCompleted
+    {
+        get => FirstRunSetupVersion >= CurrentFirstRunSetupVersion;
+        set => FirstRunSetupVersion = value ? CurrentFirstRunSetupVersion : 0;
+    }
     public const uint DefaultStandIndicatorColour = 0xC0C0C0;
     public const uint DefaultWalkIndicatorColour = 0x63B99D;
     public const uint DefaultDashIndicatorColour = 0xD6B365;
@@ -22,6 +30,7 @@ public sealed class LibrarySettings
     public bool DerandomizeNewProjects { get; set; } = true;
     public bool ReverseCanvasScroll { get; set; }
     public bool LowLatencyDisplay { get; set; }
+    public bool Fullscreen { get; set; }
     public uint StandIndicatorColour { get; set; } = DefaultStandIndicatorColour;
     public uint WalkIndicatorColour { get; set; } = DefaultWalkIndicatorColour;
     public uint DashIndicatorColour { get; set; } = DefaultDashIndicatorColour;
@@ -50,7 +59,7 @@ public sealed class LibrarySettings
         get => testplayStartupDelaySeconds;
         set => testplayStartupDelaySeconds = double.IsFinite(value) ? Math.Clamp(value, 0, 5) : 1;
     }
-    private int masterVolume = 100, songVolume = 100, hitsoundVolume = 100;
+    private int masterVolume = 50, songVolume = 50, hitsoundVolume = 50;
     public int MasterVolume { get => masterVolume; set => masterVolume = Math.Clamp(value, 0, 100); }
     public int SongVolume { get => songVolume; set => songVolume = Math.Clamp(value, 0, 100); }
     public int HitsoundVolume { get => hitsoundVolume; set => hitsoundVolume = Math.Clamp(value, 0, 100); }
@@ -72,7 +81,9 @@ public sealed class LibrarySettings
     [System.Text.Json.Serialization.JsonIgnore]
     public string Skins => string.IsNullOrWhiteSpace(OsuRoot) ? "" : Path.Combine(OsuRoot, "Skins");
     public static string SettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FruitsAtelier", "library.json");
-    public static LibrarySettings Load(string? path = null) => File.Exists(path ?? SettingsPath) ? JsonSerializer.Deserialize<LibrarySettings>(File.ReadAllText(path ?? SettingsPath)) ?? new() : new();
+    public static LibrarySettings Load(string? path = null) => File.Exists(path ?? SettingsPath)
+        ? JsonSerializer.Deserialize<LibrarySettings>(File.ReadAllText(path ?? SettingsPath)) ?? new()
+        : new();
     public void Save(string? path = null)
     {
         Workspace = Path.GetFullPath(Workspace);
@@ -128,7 +139,7 @@ public sealed class LibraryDatabase
         string path = Path.Combine(workspace, "library.db"); WorkspaceProject.RejectLinks(path);
         var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = path, Pooling = false }.ToString()); db.Open(); return db;
     }
-    public LibrarySearchSnapshot SearchSnapshot(string query, bool projectsOnly = false) => new(Open(), songs, query, projectsOnly);
+    public LibrarySearchSnapshot SearchSnapshot(string query, bool projectsOnly = false, IReadOnlyCollection<string>? favourites = null) => new(Open(), songs, query, projectsOnly, favourites);
     public void ClearDerivedCache()
     {
         using var db = Open();

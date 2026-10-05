@@ -102,6 +102,16 @@ internal sealed class TestplayInputThread : IDisposable
                     if (key is 0xA4 or 0xA5) key = 0x12;
                     bool down = (input.Flags & 1) == 0;
                     var physical = (input.Header.Device, input.MakeCode, (ushort)(input.Flags & 6));
+                    if (key == 0x11)
+                    {
+                        if (down)
+                        {
+                            foreach (var held in pressed.Where(pair => IsTestplayShortcut(pair.Value)).Select(pair => pair.Key).ToArray())
+                                pressed.Remove(held);
+                            foreach (int shortcutKey in new[] { 38, 40, 82 })
+                                if (session.UsesKey(shortcutKey) && IsTestplayShortcut(shortcutKey)) session.SetKey(shortcutKey, false);
+                        }
+                    }
                     if (key is 0x10 or 0x11)
                     {
                         if (down) volumeModifiers.Add(physical);
@@ -119,17 +129,18 @@ internal sealed class TestplayInputThread : IDisposable
                         if (down)
                         {
                             altPressed.Add(physical);
-                            foreach (var held in pressed.Where(pair => pair.Value is 37 or 38 or 39 or 40).Select(pair => pair.Key).ToArray())
+                            foreach (var held in pressed.Where(pair => pair.Value is 13 or 37 or 38 or 39 or 40).Select(pair => pair.Key).ToArray())
                                 pressed.Remove(held);
-                            foreach (int arrow in new[] { 37, 38, 39, 40 })
-                                if (session.UsesKey(arrow)) session.SetKey(arrow, pressed.ContainsValue(arrow));
+                            foreach (int shortcutKey in new[] { 13, 37, 38, 39, 40 })
+                                if (session.UsesKey(shortcutKey)) session.SetKey(shortcutKey, pressed.ContainsValue(shortcutKey));
                         }
                         else altPressed.Remove(physical);
                     }
                     // Navigation belongs to WM_KEYDOWN on the UI thread, avoiding a second Escape after return.
                     if (key != 27 && session.UsesKey(key))
                     {
-                        if (key is 37 or 38 or 39 or 40 && altPressed.Count > 0
+                        if (key is 13 or 37 or 38 or 39 or 40 && altPressed.Count > 0
+                            || IsTestplayShortcut(key)
                             || key is 38 or 40 && volumeModifiers.Count == 0) pressed.Remove(physical);
                         else if (down) pressed.TryAdd(physical, key);
                         else pressed.Remove(physical);
@@ -154,6 +165,12 @@ internal sealed class TestplayInputThread : IDisposable
         session.UpdateAudio(state.PositionMs, state.PositionTimestampMs, state.DurationMs, state.CanPlay,
             state.IsPlaying, state.IsLoading, state.Error is not null, state.OutputBufferAheadMs);
     }
+    // Retry replaces the worker while Ctrl is held, before the new worker receives a modifier transition.
+    private static bool IsTestplayShortcut(int key) => GetAsyncKeyState(0x11) < 0 && GetAsyncKeyState(0x12) >= 0
+        && (key is 38 or 40 || key == 82 && GetAsyncKeyState(0x10) >= 0);
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int key);
     internal void PostCheckKey(int key, bool down)
     {
         if (!diagnostic) throw new InvalidOperationException();

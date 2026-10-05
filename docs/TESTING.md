@@ -24,6 +24,27 @@ dotnet build ../FruitsAtelier.sln -c Release -p:RestoreLockedMode=true
 
 See [Running on macOS](MACOS.md) for launch and packaging. Project files and `packages.lock.json` pin package versions; NuGet caches packages in `artifacts/packages`.
 
+### Windows sandbox permissions
+
+Before running checks from a restricted agent sandbox, inspect the selected
+command's access requirements. Run Windows `dotnet build`, the full App regression
+suite, tests that write system temporary directories or application-data settings,
+and native window checks with the required execution permissions from the start.
+Do not first run these commands with workspace-only access to discover a known
+permission failure. Other focused checks may use the sandbox when their required
+paths and services are accessible.
+
+The installed .NET SDK may need Service Control Manager access during build setup;
+denied access can produce a failed build with no compiler errors. Existing App
+regressions also use system temporary directories and application-data settings,
+so workspace-only write access can cause `UnauthorizedAccessException` failures.
+Native window checks require access to the desktop session.
+
+If a build or test fails at one of these permission boundaries, rerun it with the
+required execution permissions before classifying it as a code regression. Keep
+logs and generated validation artifacts under `artifacts/` and retain the checks'
+existing settings isolation and cleanup.
+
 Windows distribution uses the self-contained ZIP and extracted-executable check described in [Windows releases](RELEASING.md). Desktop CI checks packaging before a version is tagged; the tag workflow repeats the regressions and package check before publishing its assets.
 
 ## Automated regressions

@@ -17,6 +17,15 @@ Use .NET composite-format placeholders such as `{0}`, `{1:F3}`, and `{2:0.######
 
 Built-in default names also come from resources and are used only when creating objects or when metadata is actually missing. The Chinese table currently retains the original English data values for these names. Never traverse existing documents and reassign names when changing languages. Language changes must invalidate or rebuild cached application diagnostics so that subsequent UI messages use the new language.
 
+Unfinished first-time setup starts in English even when another language was
+previously saved. Language choices preview immediately but remain part of
+the setup draft. Finish saves the selected language; exiting an unfinished guide
+restores the original language. See [First-time setup](EDITOR_UI.md#first-time-setup).
+
+Hitsound sample names **Hit**, **Whistle**, **Finish**, and **Clap** retain their
+English spelling in every language table. The setup headings **Audio Test** and
+**Hitsound Test** also retain their English spelling.
+
 ## Adding a language
 
 Add a UTF-8 `<culture>.json` file under `src/FruitsAtelier.Core/Localization`, such as `fr-FR.json`. Copy every key from the main table and translate its string, including the language button label. Use a valid culture name for the filename.

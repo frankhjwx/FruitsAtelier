@@ -131,7 +131,7 @@ internal static class AudioFeedbackTests
     {
         string folder = Path.GetFullPath("artifacts/tests/volume-settings");
         var ui = new Ui();
-        var settings = new LibrarySettings { Workspace = folder };
+        var settings = new LibrarySettings { Workspace = folder, MasterVolume = 100, SongVolume = 100, HitsoundVolume = 100 };
         var before = ui.View.Document.DeepClone();
         float song = -1, hit = -1; int saves = 0;
         ui.View.RequestAudioVolume = (s, h) => { song = s; hit = h; };
@@ -158,7 +158,7 @@ internal static class AudioFeedbackTests
         ui.ClickText(L.Get("ui.close"));
         Check(!ui.View.VolumeDialogVisible, "Close button closes volume dialog");
         var old = System.Text.Json.JsonSerializer.Deserialize<LibrarySettings>("{}")!;
-        Check(old.MasterVolume == 100 && old.SongVolume == 100 && old.HitsoundVolume == 100, "older settings default to full volume");
+        Check(old.MasterVolume == 50 && old.SongVolume == 50 && old.HitsoundVolume == 50, "missing volume settings default to 50 percent");
         old.MasterVolume = -5; old.HitsoundVolume = 200;
         Check(old.MasterVolume == 0 && old.HitsoundVolume == 100, "saved values are bounded");
         void Set(int channel, int value)

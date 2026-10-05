@@ -123,11 +123,13 @@ public sealed partial class EditorView
 
     private bool TryBeginSelectionTransform(float x, float y)
     {
-        if (notesLocked || HitSelectedSliderControl(x, y)) return false;
+        if (notesLocked) return false;
         var bounds = SelectionTransformBounds;
         if (bounds.Width <= 0) return false;
         int side = SelectionScaleHandle(bounds, -1).Contains(x, y) ? -1
             : SelectionScaleHandle(bounds, 1).Contains(x, y) ? 1 : 0;
+        if (side == 0 && TryBeginSelectedSliderObjectDrag(x, y, dropletsOnly: true)) return true;
+        if (HitSelectedSliderControl(x, y)) return false;
         if (side == 0 && !bounds.Contains(x, y)) return false;
         if (side != 0 && selectionMapBounds is { } map && map.Right - map.Left < .001) return true;
         BeginObjectDrag(x, y, scaleSelection: side != 0);
