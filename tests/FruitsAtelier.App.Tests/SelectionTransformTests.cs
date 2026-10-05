@@ -73,6 +73,66 @@ internal static class SelectionTransformTests
         Near(300, ui.View.Document.Tracks.Single().Nodes[^1].X);
         SpecialSliders();
         TinyDropletBounds();
+        DropletPriority();
+    }
+
+    private static void DropletPriority()
+    {
+        foreach (var mode in Enum.GetValues<FruitsAtelier.App.Editor.SliderEditingMode>())
+        foreach (bool imported in new[] { false, true })
+        foreach (bool hidden in new[] { false, true })
+        foreach (var kind in new[] { CatchObjectKind.Droplet, CatchObjectKind.TinyDroplet })
+        {
+            var map = new MapDocument { DurationMs = 12000 };
+            Guid source;
+            if (imported)
+            {
+                var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'L', PixelLength = 240 };
+                slider.ControlPoints.AddRange([new(120, 192), new(360, 192)]);
+                map.ImportedSliders.Add(slider);
+                source = slider.Id;
+            }
+            else
+            {
+                var track = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = false };
+                track.Nodes.AddRange([new() { TimeMs = 1000, X = 120 }, new() { TimeMs = 3000, X = 360 }]);
+                map.Tracks.Add(track);
+                source = track.Id;
+            }
+            var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.Key('1');
+            if (hidden) ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
+            var original = ui.View.Document.DeepClone();
+            var baseline = ui.View.Conversion.Objects.Where(o => o.SourceId == source).ToArray();
+            var displayed = OsuBeatmapWriter.Serialize(map).PlayableObjects;
+            var target = displayed.Where(o => o.Kind == kind).OrderBy(o => Math.Abs(o.TimeMs - 1500)).First();
+            ui.ClickMap(target.TimeMs, target.X);
+            var point = ui.ScreenAt(target.TimeMs, target.X);
+            Check(ui.View.SelectionTransformBounds.Contains(point.X, point.Y), "Droplet is outside the selection box.");
+            ui.ClickMap(target.TimeMs, target.X);
+            Check(ui.Canvas.Circles.Any(c => !c.Filled && c.Color == 0xE7EBF2
+                && Math.Abs(c.X - point.X) < 1 && Math.Abs(c.Y - point.Y) < 1), "Box blocked droplet child selection.");
+            ui.DownMap(target.TimeMs, target.X); ui.MoveMap(target.TimeMs, target.X + 10); ui.UpMap(target.TimeMs, target.X + 10);
+            var after = CatchStreamConverter.Convert(ui.View.Document);
+            Check(after.Success, "Droplet drag produced invalid geometry.");
+            foreach (var old in baseline)
+            {
+                var current = after.Objects.Single(o => o.EventIndex == old.EventIndex);
+                Near(old.TimeMs, current.TimeMs);
+                if (imported && old.Kind == CatchObjectKind.TinyDroplet && old.EventIndex != target.EventIndex) continue;
+                double expected = old.EventIndex == target.EventIndex ? target.X + 10 : old.X;
+                Check(Math.Abs(expected - current.X) < .02,
+                    $"{mode}, imported={imported}, hidden={hidden}, {kind} #{target.EventIndex}: event #{old.EventIndex} expected X {expected}, got {current.X}.");
+            }
+            var moved = ui.View.Document.DeepClone();
+            Check(!original.ContentEquals(moved), "Droplet drag did not edit the slider.");
+            var movedTarget = OsuBeatmapWriter.Serialize(moved).PlayableObjects.Single(o => o.EventIndex == target.EventIndex);
+            ui.DownMap(movedTarget.TimeMs, movedTarget.X); ui.MoveMap(movedTarget.TimeMs, movedTarget.X + 5);
+            Check(ui.View.SelectedAnchorIds.Count == 0, "A new curve anchor stole the selected droplet's next drag.");
+            ui.Key(27); ui.UpMap(movedTarget.TimeMs, movedTarget.X + 5);
+            Check(moved.ContentEquals(ui.View.Document), "Cancelling a droplet drag changed the accepted geometry.");
+            ui.Key('Z', ctrl: true); Check(original.ContentEquals(ui.View.Document), "Droplet drag undo differs.");
+            ui.Key('Y', ctrl: true); Check(moved.ContentEquals(ui.View.Document), "Droplet drag redo differs.");
+        }
     }
 
     private static void TinyDropletBounds()

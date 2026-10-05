@@ -467,8 +467,12 @@ moving edge; individual events do not distance-snap. Handles stop before crossin
 the opposite side and at the playfield boundaries; stored stack width and adjustment
 limits also cap expansion. A zero-width pattern can move
 but cannot resize. Drag inside the box to translate all selected parents using the
-ordinary group-movement snap rules. Visible slider anchors and curve handles take
-priority, followed by box resizing/movement, then individual-event DS reshaping.
+ordinary group-movement snap rules. With droplet selection unlocked, droplets and
+tiny droplets in a single selected slider take priority over box movement and use
+individual-event reshaping. A nearby curve control takes priority when it is at
+least as close to the pointer, unless that droplet is already selected. Visible
+slider controls and box resize handles retain priority over box movement.
+Other points inside the box move the selected parents.
 Ctrl selection, clicks on event details and long-press actions remain available.
 For one selected slider, holding anywhere inside its box opens its action group;
 moving the pointer cancels the hold and continues the normal drag.
@@ -488,7 +492,7 @@ Distance snapping places fruits and the first slider draft point relative to the
 
 Drawing and reshaping a slider uses beat and horizontal grid snapping independently of DS. Slider endpoints, control points and Bezier handles are not constrained by DS presets or by the spacing of generated Fruit/Droplet events. Their X coordinates may extend beyond the 0–512 playfield while dragging or editing numeric values. The first draft point still distance-snaps relative to the previous source object. A completed slider remains selected in Slider mode, so its tail can be dragged immediately.
 
-When a Select-mode drag is outside the bounding box and visible slider controls, horizontal dragging of a slider head, tail or large droplet keeps its time and strictly snaps relative to the preceding large event in the same slider, including zero DS, even on a curved slider. Endpoint candidates account for the preceding droplets that move with the reshaped curve. A selected TinyDroplet instead snaps its displayed X relative to the preceding event in the same slider, including other tiny droplets. Its compensation policy still applies. Following events impose no DS preset or maximum-distance requirement on a selected-object drag. With no preceding reference, dragging follows horizontal Grid Snap. Candidate positions are tried in pointer-distance order; unrepresentable candidates are skipped, and if none is available, the last accepted position remains unchanged. DS takes precedence over horizontal Grid Snap when a preceding reference exists.
+When a Select-mode drag is outside the bounding box and visible slider controls, horizontal dragging of a slider head or tail keeps its time and strictly snaps relative to the preceding large event in the same slider, including zero DS, even on a curved slider. Droplet dragging also follows these rules inside the box. Endpoint candidates account for the preceding droplets that move with the reshaped curve. A selected TinyDroplet instead snaps its displayed X relative to the preceding event in the same slider, including other tiny droplets. Its compensation policy still applies. Following events impose no DS preset or maximum-distance requirement on a selected-object drag. With no preceding reference, dragging follows horizontal Grid Snap. Candidate positions are tried in pointer-distance order; unrepresentable candidates are skipped, and if none is available, the last accepted position remains unchanged. DS takes precedence over horizontal Grid Snap when a preceding reference exists.
 
 Changing DS settings, BPM, or tick rate does not reshape existing sliders.
 
