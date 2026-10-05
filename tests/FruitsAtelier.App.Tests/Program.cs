@@ -123,6 +123,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay autoplay notices, manual input and focus persistence", TestplayTests.AutoplaySwitching),
     ("Testplay autoplay speed switching and localized display", TestplayTests.AutoplaySpeed),
     ("Testplay quick retry and stepped autoplay speed preserve session boundaries", TestplayTests.RetryAndSteppedSpeed),
+    ("Testplay retry retains gameplay during reentrant audio and driver rendering", TestplayTests.RetryRendering),
     ("Catch rotations, banana arrival transforms and combo colours", TestplayTests.VisualTransformsAndColours),
     ("Unskinned Catch objects keep dark map colours bright", FallbackSkinTests.BrightComboColour),
     ("Testplay Escape opens the pause menu without repeated navigation", TestplayTests.EscapeReturnsToEditor),

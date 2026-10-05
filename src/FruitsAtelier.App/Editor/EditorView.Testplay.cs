@@ -14,6 +14,7 @@ public sealed partial class EditorView
     private bool testplaySpeedHeld;
     private bool testplayPauseHeld;
     private bool testplayRetryHeld;
+    private bool testplayRestarting;
     private bool testplayBookmarkHeld;
     private string? testplayAutoNotice;
     private double testplayAutoNoticeAt;
@@ -164,7 +165,7 @@ public sealed partial class EditorView
 
     private void AdvanceTestplay()
     {
-        if (testplay is null) return;
+        if (testplay is null || testplayRestarting) return;
         if (testplayResumeAt is double resume && TestplayRealtime >= resume)
         {
             testplayResumeAt = null;

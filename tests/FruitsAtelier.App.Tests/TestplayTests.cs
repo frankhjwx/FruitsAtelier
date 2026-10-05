@@ -3,6 +3,52 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class TestplayTests
 {
+    public static void RetryRendering()
+    {
+        foreach (bool paused in new[] { false, true })
+        {
+            var ui = new Ui(timeProvider: new ManualTime());
+            var map = new MapDocument(); map.Fruits.Add(new Fruit { TimeMs = 10000, X = 256 });
+            ui.LoadDocument(map);
+            ui.View.UpdateTransport(0, 20000, true, false, false, null, null);
+            bool observing = false;
+            var boundaries = new List<string>();
+            void PaintDuringRetry(string boundary)
+            {
+                if (!observing) return;
+                ui.Paint();
+                Check(ui.View.IsTestplaying && ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.hintQuickExit")),
+                    $"Retry rendered the editor during {boundary}");
+                boundaries.Add(boundary);
+            }
+            ui.View.RequestPausePlayback = () => PaintDuringRetry("audio pause");
+            ui.View.RequestSeek = _ => PaintDuringRetry("audio seek");
+            ui.View.RequestTogglePlayback = () => PaintDuringRetry("audio restart");
+            ui.View.RequestPrepareHitsound = _ => PaintDuringRetry("sample preparation");
+            ui.View.RequestRunTestplay = _ =>
+            {
+                PaintDuringRetry("driver creation");
+                return new RetryDriver(() => PaintDuringRetry("driver disposal"));
+            };
+            ui.View.StartTestplay();
+            if (paused) { ui.Key(27); ui.View.KeyUp(27); }
+            observing = true;
+            ui.Key(82, ctrl: true); ui.View.KeyUp(82);
+            observing = false;
+            Check(boundaries.Contains("driver disposal") && boundaries.Contains("sample preparation")
+                && boundaries.Contains("audio seek") && boundaries.Contains("audio restart")
+                && boundaries.Contains("driver creation"), "Retry must verify every reentrant setup boundary");
+            Check(ui.View.IsTestplaying && !ui.View.TestplayPaused && ui.View.Document.ContentEquals(map),
+                "Retry completes in gameplay without editing content");
+            ui.View.StopTestplay();
+        }
+    }
+
+    private sealed class RetryDriver(Action onDispose) : IDisposable
+    {
+        public void Dispose() => onDispose();
+    }
+
     public static void RetryAndSteppedSpeed()
     {
         var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
