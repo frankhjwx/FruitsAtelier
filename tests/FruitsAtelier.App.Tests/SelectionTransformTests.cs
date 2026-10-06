@@ -74,6 +74,58 @@ internal static class SelectionTransformTests
         SpecialSliders();
         TinyDropletBounds();
         DropletPriority();
+        SelectedEndpointPriority();
+    }
+
+    private static void SelectedEndpointPriority()
+    {
+        foreach (var mode in Enum.GetValues<FruitsAtelier.App.Editor.SliderEditingMode>())
+        foreach (bool imported in new[] { false, true })
+        foreach (bool hidden in new[] { false, true })
+        foreach (bool tail in new[] { false, true })
+        foreach (bool vertical in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 12000 };
+            if (imported)
+            {
+                var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'L', PixelLength = 240 };
+                slider.ControlPoints.AddRange([new(120, 192), new(360, 192)]);
+                map.ImportedSliders.Add(slider);
+            }
+            else
+            {
+                var track = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = false };
+                track.Nodes.AddRange([new() { TimeMs = 1000, X = 120 }, new() { TimeMs = 3000, X = 360 }]);
+                map.Tracks.Add(track);
+            }
+            var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.Key('1');
+            if (hidden) ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
+            var fruits = OsuBeatmapWriter.Serialize(map).PlayableObjects.Where(o => o.Kind == CatchObjectKind.Fruit).ToArray();
+            var target = tail ? fruits[^1] : fruits[0];
+            var authoredFruits = CatchStreamConverter.Convert(map).Objects.Where(o => o.Kind == CatchObjectKind.Fruit).ToArray();
+            var authoredTarget = tail ? authoredFruits[^1] : authoredFruits[0];
+            var opposite = tail ? authoredFruits[0] : authoredFruits[^1];
+            double pointerX = target.X + (tail ? -1 : 1) * CatchSize.FruitRadius(map.CircleSize) * .7;
+            ui.ClickMap(target.TimeMs, pointerX); ui.ClickMap(target.TimeMs, pointerX);
+            var p = ui.ScreenAt(target.TimeMs, target.X);
+            Check(ui.Canvas.Circles.Any(c => !c.Filled && c.Color == 0xE7EBF2
+                && Math.Abs(c.X - p.X) < 1 && Math.Abs(c.Y - p.Y) < 1), "Endpoint child was not selected inside its box.");
+            var before = ui.View.Document.DeepClone();
+            double wantedTime = target.TimeMs + (vertical ? 125 : 0);
+            ui.DownMap(target.TimeMs, pointerX); ui.MoveMap(wantedTime, pointerX + 10); ui.UpMap(wantedTime, pointerX + 10);
+            var moved = ui.View.Document.DeepClone();
+            var output = CatchStreamConverter.Convert(moved);
+            Check(output.Success, "Selected endpoint drag produced invalid geometry.");
+            var movedFruits = output.Objects.Where(o => o.Kind == CatchObjectKind.Fruit).ToArray();
+            var current = tail ? movedFruits[^1] : movedFruits[0];
+            var fixedEnd = tail ? movedFruits[0] : movedFruits[^1];
+            Near(opposite.TimeMs, fixedEnd.TimeMs); Near(opposite.X, fixedEnd.X);
+            Near(wantedTime, current.TimeMs);
+            // Horizontal child editing follows the displayed X; endpoint time editing starts from the authored anchor.
+            Near((vertical ? authoredTarget.X : target.X) + 10, current.X);
+            ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Selected endpoint drag undo differs.");
+            ui.Key('Y', ctrl: true); Check(moved.ContentEquals(ui.View.Document), "Selected endpoint drag redo differs.");
+        }
     }
 
     private static void DropletPriority()

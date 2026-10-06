@@ -120,9 +120,8 @@ internal static class AssistToolsTests
             var commands = ui.Canvas.Operations.Where(o => o.Clip == ui.View.CanvasPlotBounds).ToArray();
             int lastConnection = commands.Where(o => o.Segment is { Width: 4, Opacity: .65f }).Max(o => o.Order);
             var point = ui.ScreenAt(track.Nodes[0].TimeMs, track.Nodes[0].X);
-            var controls = commands.Where(o => mode == FruitsAtelier.App.Editor.SliderEditingMode.PenTool
-                ? o.Segment is { Width: 2 } line && Math.Abs(line.X1 - point.X) < .01 && Math.Abs(line.Y1 - (point.Y - 5.5f)) < .01
-                : o.Dot is { Radius: 5 } dot && Math.Abs(dot.X - point.X) < .01 && Math.Abs(dot.Y - point.Y) < .01).ToArray();
+            var controls = commands.Where(o => o.Fill is { Color: 0x171A20, Bounds: { Width: 12, Height: 12 } } fill
+                && Math.Abs(fill.Bounds.X + 6 - point.X) < .01 && Math.Abs(fill.Bounds.Y + 6 - point.Y) < .01).ToArray();
             Check(controls.Length > 0 && controls.All(o => o.Order > lastConnection), "Slider controls are hidden beneath movement analysis");
         }
         Strings.SetLanguage("en");
