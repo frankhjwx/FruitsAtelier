@@ -16,6 +16,11 @@ internal static class LibraryTests
             OptionalSongs(root);
             var view = new EditorView(); view.NewProject();
             view.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); view.LibrarySettings.Songs = songs;
+            string? firstExportName = null;
+            view.RequestWorkspaceExport = (overwrite, name) => { Check(!overwrite, "An unassociated export creates its target"); firstExportName = name; };
+            view.ShowWorkspaceExport();
+            Check(!view.ExportVisible && firstExportName == view.CurrentDifficultyName && view.WorkspaceSession is null,
+                "Unsaved new projects dispatch their first export directly with the current name");
             Check(view.SaveWorkspace(), "save creates workspace project");
             view.ChangeAudioPath(Path.Combine(songs, "missing.mp3"));
             view.SaveWorkspace();
@@ -29,8 +34,10 @@ internal static class LibraryTests
             Check(canvas.Lines.Any(l => l.X1 == 226 && l.X2 == 226 && l.Y1 == 96), "empty focused search shows a drawn caret");
             view.KeyDown(70, false, false); view.PointerDown(700, 480, 0, false, false); view.PointerUp(700, 480, 0);
             Check(!view.HasEditorProject && view.WorkspaceSession is null, "returning to library closes the editor project");
+            string? exportName = null;
+            view.RequestWorkspaceExport = (overwrite, name) => { Check(!overwrite, "First export creates the osu file"); exportName = name; };
             view.LoadWorkspace(WorkspaceProject.Open(savedDirectory)); view.ShowWorkspaceExport(); canvas.Clear(); view.Render(canvas, 980, 620);
-            Check(canvas.Texts.Any(t => t.Value == L.Get("library.exportNew")) && canvas.Texts.Any(t => t.Value == L.Get("library.exportOverride")), "explicit export modes");
+            Check(!view.ExportVisible && exportName == view.CurrentDifficultyName, "First Songs export uses the current name without an export dialog");
             view.CloseLibrary();
             Check(Directory.GetFiles(songs).Length == 0, "navigation and saving never write Songs");
             WaitForLibrary(view);
@@ -167,6 +174,7 @@ internal static class LibraryTests
     private static void ExportOverlay()
     {
         var view = new EditorView();
+        view.LibrarySettings.Songs = "";
         var canvas = new RecordingCanvas(); view.Render(canvas, 980, 620);
         var before = view.Document.DeepClone();
         var bounds = view.CanvasPlotBounds;

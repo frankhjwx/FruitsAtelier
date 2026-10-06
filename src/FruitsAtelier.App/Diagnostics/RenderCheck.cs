@@ -969,6 +969,8 @@ internal static class RenderCheck
             view.ShowError("bad-map.osu\n" + FruitsAtelier.Localization.Strings.Get("core.reader.importedParameters"));
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             view.KeyDown(13, false, false);
+            string exportSongs = view.LibrarySettings.Songs;
+            view.LibrarySettings.Songs = "";
             view.ShowWorkspaceExport();
             string exportLanguage = FruitsAtelier.Localization.Strings.Language;
             foreach (string language in FruitsAtelier.Localization.Strings.AvailableLanguages)
@@ -982,6 +984,7 @@ internal static class RenderCheck
             }
             FruitsAtelier.Localization.Strings.SetLanguage(exportLanguage);
             view.KeyDown(27, false, false);
+            view.LibrarySettings.Songs = exportSongs;
             var editorProject = view.CaptureProject();
             view.MarkSaved(); view.ShowLibrary();
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();

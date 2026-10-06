@@ -82,6 +82,9 @@ internal static class AudioProjectTests
                 Check(session.Project.Difficulties.Count == 1 && ui.View.CurrentDifficultyName == "Hard" && !ui.View.IsDirty, "One saved difficulty is created");
                 var reopened = WorkspaceProject.Open(session.Directory);
                 var map = reopened.Project.Difficulties.Single().Document;
+                Check(SongSetup.Get(map, "General", "Mode") == "2"
+                    && map.TimingPoints.Single().TimeMs == 0 && map.TimingPoints.Single().BeatLengthMs == 500,
+                    "Audio-created projects persist Catch mode and their initial red timing point");
                 Check(map.RandomizeNewSliders == (mode == 1) && map.RandomizeDropletStrength == 20 && map.RandomizeDropletSeed == 1337,
                     "audio-created catchproject persists its independent droplet defaults");
                 string title = mode == 2 ? "歌曲 / Song" : "Song Romanised";

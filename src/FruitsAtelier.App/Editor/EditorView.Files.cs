@@ -104,17 +104,33 @@ public sealed partial class EditorView
         Difficulties = difficulties.Select(d => new ProjectDifficulty { Id = d.Id, Name = d.Name, Document = d.History.Document.DeepClone() }).ToList()
     };
 
-    private MapDocument NewAuthoringDocument() => new()
+    private MapDocument NewAuthoringDocument()
     {
-        IsDemo = false, DerandomizeFSliderDroplets = LibrarySettings.DerandomizeNewProjects, RandomizeNewSliders = !LibrarySettings.DerandomizeNewProjects
-    };
+        var document = new MapDocument
+        {
+            IsDemo = false, DerandomizeFSliderDroplets = LibrarySettings.DerandomizeNewProjects, RandomizeNewSliders = !LibrarySettings.DerandomizeNewProjects
+        };
+        SongSetup.Set(document, "General", "Mode", "2");
+        foreach (var (key, value) in new[]
+        {
+            ("AudioLeadIn", "0"), ("PreviewTime", "-1"), ("Countdown", "1"), ("CountdownOffset", "0"),
+            ("SampleSet", "Normal"), ("StackLeniency", "0.7"), ("LetterboxInBreaks", "0"),
+            ("WidescreenStoryboard", "0"), ("EpilepsyWarning", "0")
+        }) SongSetup.Set(document, "General", key, value);
+        SongSetup.Set(document, "Metadata", "Title", document.Name);
+        SongSetup.Set(document, "Metadata", "TitleUnicode", document.Name);
+        SongSetup.Set(document, "Metadata", "Version", L.Get("project.defaultDifficulty", 1));
+        SongSetup.Set(document, "Metadata", "BeatmapID", "0");
+        SongSetup.Set(document, "Metadata", "BeatmapSetID", "-1");
+        SongSetup.Set(document, "Difficulty", "HPDrainRate", "5");
+        SongSetup.Set(document, "Difficulty", "OverallDifficulty", "5");
+        document.TimingPoints.Add(new TimingPoint { TimeMs = document.TimingOffsetMs, BeatLengthMs = document.BeatLengthMs, SourceOrder = 0 });
+        return document;
+    }
 
     public void NewProject()
     {
         var document = NewAuthoringDocument();
-        var metadata = new OsuSection { Name = "Metadata" };
-        metadata.Lines.Add("Version:" + L.Get("project.defaultDifficulty", 1));
-        document.OriginalSections.Add(metadata);
         LoadProject(BeatmapProject.FromDocuments([document]));
     }
 

@@ -212,8 +212,9 @@ samples show only the bank abbreviation in the list. Imported velocity and
 unrelated effect bits are preserved, while green-point BPM cells remain empty. Kiai updates the editor's existing Kiai indication and exports.
 
 Ctrl+P adds a red point at the playhead; Ctrl+Shift+P adds a green point, opening
-the draft window. Newly created, pasted or edited green offsets use integer
-milliseconds (fractional parts are truncated). Ctrl+I deletes the current section outside the window, or the
+the draft window. New red and green points truncate the playhead to integer
+milliseconds. Pasted or edited green offsets also truncate fractional parts.
+Ctrl+I deletes the current section outside the window, or the
 selected rows inside it. Ordinary deletion protects the first red point. The
 window supports Ctrl+C/X/V with `.osu` timing-row text; text fields retain normal
 text clipboard behavior. Ctrl+Shift+I inserts a slider control point on the curve

@@ -69,6 +69,25 @@ internal static class ContextRebaseTests
         Check(history.HasActiveTransaction && history.IsDirty, "Acknowledging a background snapshot retains an active newer edit.");
         history.Commit(); history.Undo();
         Check(!history.IsDirty, "Undo of the newer edit returns to the saved snapshot.");
+
+        var local = new MapDocument { IsDemo = false, BeatLengthMs = 437.5, TimingOffsetMs = 123.25 };
+        SongSetup.Set(local, "Metadata", "Title", "Local song");
+        var updated = local.DeepClone();
+        SongSetup.Set(updated, "Metadata", "Tags", "synchronized");
+        var localHistory = new EditorHistory(local);
+        localHistory.Begin("note"); localHistory.Document.Fruits.Add(new Fruit { TimeMs = 1000, X = 200 }); localHistory.Commit();
+        localHistory.RebaseSharedMetadata(WorkspaceSynchronization.PrepareContextRebase(local, updated));
+        Check(SongSetup.Get(localHistory.Document, "General", "Mode") == "2"
+            && SongSetup.Get(localHistory.Document, "Metadata", "Tags") == "synchronized"
+            && localHistory.Document.TimingPoints.Single().TimeMs == 123.25
+            && localHistory.Document.TimingPoints.Single().BeatLengthMs == 437.5,
+            "Raw-section-free authoring context rebases as Catch with its stored timing fallback");
+        localHistory.Undo();
+        Check(localHistory.Document.Fruits.Count == 0 && SongSetup.Get(localHistory.Document, "General", "Mode") == "2",
+            "Catch context remains valid in older raw-section-free undo snapshots");
+        localHistory.Redo();
+        Check(localHistory.Document.Fruits.Count == 1 && OsuBeatmapWriter.Serialize(localHistory.Document).ReadBack.Fruits.Single().X == 200,
+            "Rebased local authoring retains editable content and export through redo");
     }
 
     private static void Check(bool condition, string message)

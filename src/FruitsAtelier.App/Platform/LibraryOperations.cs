@@ -240,7 +240,8 @@ public static class LibraryOperations
     public static void Export(WorkspaceSession session, BeatmapProject project, WorkspaceExportPlan plan)
     {
         ProjectDifficulty? added = null;
-        if (plan.ExpectedHash is null)
+        var entry = session.Manifest.Difficulties.Single(d => d.Id == plan.DifficultyId);
+        if (plan.ExpectedHash is null && WorkspaceSynchronization.Target(entry) is not null)
         {
             var document = plan.Document.DeepClone();
             document.SourcePath = plan.Target;
@@ -251,6 +252,12 @@ public static class LibraryOperations
             else project.Difficulties.RemoveAt(originalIndex);
             project.Difficulties.Add(added);
             project.Validate();
+        }
+        else if (plan.ExpectedHash is null)
+        {
+            var difficulty = project.Difficulties.Single(d => d.Id == plan.DifficultyId);
+            difficulty.Document = plan.Document.DeepClone();
+            difficulty.Name = SongSetup.Get(plan.Document, "Metadata", "Version");
         }
         // All conversion and conflict checks have completed before touching Songs.
         string folder = Path.GetDirectoryName(plan.Target)!;

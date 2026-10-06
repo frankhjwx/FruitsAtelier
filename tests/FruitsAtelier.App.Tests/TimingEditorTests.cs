@@ -20,6 +20,18 @@ internal static class TimingEditorTests
                 ui.Key(27); Check(!ui.View.TimingSetupVisible && ui.View.Document.ContentEquals(map), "Escape cancels whole draft");
                 ui.Key(117); ui.Key('A', true); ui.Key(46); ui.Key(13);
                 Check(ui.View.Document.TimingPoints.Count == 1 && !ui.View.IsDirty, "First red survives multi-delete; unchanged confirm is clean");
+                ui.View.UpdateTransport(750.9, 10000, true, false, false, null, null);
+                ui.Key('P', ctrl: true);
+                Check(ui.View.TimingFields.Single(f => f.Key == "offset").Value == "750", "Red creation truncates fractional milliseconds");
+                ui.Key(13);
+                Check(ui.View.Document.TimingPoints.Any(p => p.Uninherited && p.TimeMs == 750), "Integer red offset commits to the document");
+                var redSaved = ui.View.Document.DeepClone();
+                Check(ProjectSerializer.Read(ProjectSerializer.Serialize(redSaved)).ContentEquals(redSaved)
+                    && OsuBeatmapWriter.Serialize(redSaved).ReadBack.TimingPoints.Any(p => p.Uninherited && p.TimeMs == 750),
+                    "New red offset persists in project and osu formats");
+                ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Red creation undoes as one edit");
+                ui.Key('Y', ctrl: true); Check(ui.View.Document.ContentEquals(redSaved), "Red creation redo retains the integer offset");
+                ui.Key('Z', ctrl: true);
                 ui.View.UpdateTransport(1000.9, 10000, true, false, false, null, null);
                 ui.Key('P', ctrl: true, shift: true); Check(ui.View.TimingSetupVisible, "Green shortcut opens setup");
                 Check(ui.View.TimingFields.All(f => f.Key is "offset" or "shift"), "Green timing page exposes offset and batch shift");

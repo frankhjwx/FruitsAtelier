@@ -15,6 +15,20 @@ The authoring model persists as UTF-8 JSON. Documents containing exact control c
 
 ## Projects and difficulties
 
+New blank and audio-based projects initialize Catch Mode 2, matching Title and
+TitleUnicode, the first difficulty's Version, BeatmapID 0 and BeatmapSetID -1.
+General defaults include no audio lead-in or preview point, normal samples, a
+normal countdown with zero offset, stack leniency 0.7, and disabled widescreen,
+letterbox and epilepsy-warning flags. HP/OD start at 5, and an explicit red point
+at 0 ms starts at 120 BPM. AR/CS, slider velocity, Tick Rate and DistanceSpacing
+retain their model defaults. Empty artist, creator, source and tags remain optional
+for blank projects; audio setup supplies its required metadata before publication.
+These values agree with the first export, avoiding synchronization conflicts from
+generated defaults. Older raw-section-free authoring snapshots receive Catch mode
+and their document title when synchronization reconstructs their context. Snapshots
+without timing points use their stored BPM and offset to reconstruct the initial
+red point, matching export.
+
 `BeatmapProject` stores a project Name and 1–256 `ProjectDifficulty` entries. Each difficulty contains its own Guid, Version display name, and complete `MapDocument`. Schema 2 uses a `Project` outer container and atomically saves all difficulties together. Schema 1's `Document` is automatically wrapped as a single-difficulty project. Each difficulty's resource paths are written and resolved relative to the project directory, retaining the older path safety checks. Project JSON is limited to 128 MiB of UTF-8 data per file, including workspace difficulty files and legacy single- or multi-difficulty projects.
 
 The editor maintains an independent `EditorHistory` per difficulty and accesses `Document` through the current difficulty. Undo affects only that difficulty; saving updates every history baseline. Adding a difficulty changes project structure rather than a difficulty's object undo stack and keeps the project dirty until saved. The active difficulty, tab scroll position, playhead, and viewport are session state and are not persisted. Opening selects the first difficulty; switching does not create content history. The project container does not force imported `.osu` difficulties to share audio or timing, avoiding overwriting source content.

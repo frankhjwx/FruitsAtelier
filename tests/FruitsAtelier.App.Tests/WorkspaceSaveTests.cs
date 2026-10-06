@@ -13,6 +13,7 @@ static class WorkspaceSaveTests
             foreach (var size in new[] { (980, 620), (1440, 900) })
             {
                 L.SetLanguage(locale);
+                ExportLocalDifficulty(size.Item1, size.Item2);
                 SaveConvertedSlidersAsNewDifficulty(size.Item1, size.Item2);
                 string root = Path.GetFullPath(Path.Combine("artifacts/tests/workspace-save", Guid.NewGuid().ToString("N")));
                 string songs = Path.Combine(root, "Songs"); Directory.CreateDirectory(songs);
@@ -37,9 +38,9 @@ static class WorkspaceSaveTests
                 ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui); ui.Key(27);
                 Check(!ui.View.DiscardConfirmationVisible && !ui.View.IsDirty, "Escape keeps the completed save");
                 ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui); ui.ClickText(L.Get("library.exportToSongs"));
-                Check(ui.View.ExportVisible && !ui.View.DiscardConfirmationVisible && exports == 0, "Consent opens export choices before writing Songs");
-                ui.Key(27);
-                Check(!ui.View.ExportVisible && !ui.View.IsDirty && ui.View.WorkspaceSession.Directory == directory, "Cancelling export preserves the workspace save");
+                Check(!ui.View.ExportVisible && !ui.View.DiscardConfirmationVisible && exports == 1, "First Songs export proceeds directly with the current difficulty name");
+                Check(!ui.View.IsDirty && ui.View.WorkspaceSession.Directory == directory, "First export retains the saved workspace");
+                exports = 0;
                 var entry = ui.View.WorkspaceSession.Manifest.Difficulties[0];
                 entry.ExportTarget = Path.Combine(songs, "deleted.osu"); entry.ExportHash = "old";
                 ui.Key('S', ctrl: true);
@@ -59,6 +60,71 @@ static class WorkspaceSaveTests
             }
         }
         finally { L.SetLanguage(language); }
+    }
+
+    private static void ExportLocalDifficulty(int width, int height)
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts/tests/local-songs-export", Guid.NewGuid().ToString("N")));
+        string songs = Path.Combine(root, "Songs"); Directory.CreateDirectory(songs);
+        var ui = new Ui(false); ui.Resize(width, height);
+        ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
+        ui.View.NewProject();
+        var initial = ui.View.Document;
+        Check(!ui.View.IsDirty && SongSetup.Get(initial, "General", "Mode") == "2"
+            && SongSetup.Get(initial, "Metadata", "Title") == initial.Name
+            && SongSetup.Get(initial, "Metadata", "TitleUnicode") == initial.Name
+            && SongSetup.Get(initial, "Metadata", "Version") == ui.View.CurrentDifficultyName
+            && SongSetup.Get(initial, "General", "PreviewTime") == "-1"
+            && SongSetup.Get(initial, "General", "Countdown") == "1"
+            && SongSetup.Get(initial, "Difficulty", "HPDrainRate") == "5"
+            && SongSetup.Get(initial, "Difficulty", "OverallDifficulty") == "5"
+            && initial.TimingPoints.Single().TimeMs == 0 && initial.TimingPoints.Single().BeatLengthMs == 500,
+            "New projects start clean with Catch metadata, song settings and an explicit red timing point");
+        Check(!WorkspaceSynchronization.HasFieldDifferences(initial, OsuBeatmapWriter.Serialize(initial, false).ReadBack),
+            "Initialized authoring fields agree with their exported defaults");
+        ui.View.RequestSave = ui.View.SaveCurrentDifficulty;
+        ui.View.RequestWorkspaceExport = (overwrite, name) =>
+        {
+            if (overwrite) ui.View.BeginWorkspaceSave(saved => { if (saved) Export(); });
+            else Export();
+            void Export()
+            {
+                var project = ui.View.CaptureProject();
+                var plan = WorkspaceExport.Plan(ui.View.WorkspaceSession!, project.Difficulties[ui.View.ActiveDifficultyIndex], songs, overwrite, name, false);
+                LibraryOperations.Export(ui.View.WorkspaceSession!, project, plan); ui.View.LibraryExportFinished(plan);
+            }
+        };
+        ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui);
+        var session = ui.View.WorkspaceSession!;
+        Guid id = session.Manifest.Difficulties.Single().Id;
+        string name = ui.View.CurrentDifficultyName;
+        var localFiles = Directory.GetFiles(session.Directory, "*.catchdiff").Select(Path.GetFileName).Order().ToArray();
+        ui.ClickText(L.Get("library.exportToSongs")); SynchronizationUiTests.Wait(ui);
+        Check(ui.View.CaptureProject().Difficulties.Count == 1 && ui.View.CaptureProject().Difficulties.Single().Id == id
+            && ui.View.CurrentDifficultyName == name && ui.View.CurrentDifficultyHasExport, "First Songs export binds the existing local difficulty");
+        Check(localFiles.SequenceEqual(Directory.GetFiles(session.Directory, "*.catchdiff").Select(Path.GetFileName).Order()),
+            "First Songs export retains the existing catchdiff files without a duplicate");
+        var reopened = WorkspaceProject.Open(session.Directory);
+        string target = reopened.Manifest.Difficulties.Single().ExportTarget!;
+        Check(reopened.Project.Difficulties.Single().Id == id && File.Exists(target), "Songs association survives restart");
+        ui.View.LoadWorkspace(reopened);
+        var history = (EditorHistory)ui.View.GetType().GetProperty("history", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
+        history.Begin("add local fruit"); ui.View.Document.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 }); history.Commit(); ui.Paint();
+        ui.View.ShowWorkspaceExport(); ui.Paint();
+        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("library.newDifficultyName")), "Linked export defaults to Update");
+        ui.ClickText(L.Get("library.exportUpdate", name)); SynchronizationUiTests.Wait(ui);
+        Check(!ui.View.SynchronizationVisible, "Update completes synchronization without a default metadata conflict");
+        Check(!ui.View.ExportVisible && !ui.View.IsDirty && OsuBeatmapReader.ReadFile(target).Fruits.Single().X == 100,
+            "Update completes and writes current content into the linked osu file");
+        history.Begin("move local fruit"); ui.View.Document.Fruits.Single().X = 200; history.Commit(); ui.Paint();
+        ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui);
+        Check(!ui.View.DiscardConfirmationVisible && !ui.View.ExportVisible && !ui.View.IsDirty
+            && OsuBeatmapReader.ReadFile(target).Fruits.Single().X == 200, "Subsequent Save updates Songs without export choices");
+        Check(WorkspaceProject.Open(session.Directory).Project.Difficulties.Single().Id == id
+            && Directory.GetFiles(songs, "*.osu", SearchOption.AllDirectories).Length == 1
+            && localFiles.SequenceEqual(Directory.GetFiles(session.Directory, "*.catchdiff").Select(Path.GetFileName).Order()),
+            "Repeated exports retain one osu file and one local difficulty");
+        ui.View.StopFileMonitoring();
     }
 
     private static void SaveConvertedSlidersAsNewDifficulty(int width, int height)

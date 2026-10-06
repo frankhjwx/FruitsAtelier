@@ -129,8 +129,14 @@ public sealed partial class EditorView
         if (!HasEditorProject || ExportVisible) return;
         if (!PrepareFileOperation()) return;
         if (AudioPlaying) RequestTogglePlayback?.Invoke();
-        exportName = CurrentDifficultyName + " (FruitsAtelier)";
-        exportMode = 0;
+        if (ExportOverwriteTarget is null && !string.IsNullOrWhiteSpace(LibrarySettings.Songs))
+        {
+            RequestWorkspaceExport?.Invoke(false, CurrentDifficultyName);
+            return;
+        }
+        exportName = ExportOverwriteTarget is null ? CurrentDifficultyName : CurrentDifficultyName + " (FruitsAtelier)";
+        exportMode = CurrentDifficultyHasExport && !string.IsNullOrWhiteSpace(LibrarySettings.Songs) && ExportOverwriteTarget is { } target
+            && WorkspaceProject.Within(LibrarySettings.Songs, target) ? 1 : 0;
         exportPage = true; LibraryVisible = false; librarySettingsOpen = false; updatesPage = false; libraryField = -1;
         menu = -1; contextItems.Clear(); hits.Clear(); fields.Clear();
     }
