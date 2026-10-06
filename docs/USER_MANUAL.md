@@ -44,7 +44,10 @@ The Timing menu can set the current position as the song preview point. A long y
 
 Choose **Timing Panel** from the **Details Panel** header dropdown, or press
 **F3**: edit BPM, offset and Slider Tick Rate, or tap with
-**T** during playback and apply the measured tempo. The metronome plays each beat;
+**T** during playback. The tenth tap applies BPM and offset automatically, and
+later taps continue refining them. BPM uses at most two decimal places and offset
+uses integer milliseconds. Space pauses at the exact audio position in Timing mode.
+The metronome plays each beat;
 hold **Ctrl** to hear the current Snap subdivisions. **F1** returns to Details. Notes stay visible while Timing plays only metronome
 ticks alongside the music.
 **F6 / Timing Setup** opens red/green control-point editing, sample settings,

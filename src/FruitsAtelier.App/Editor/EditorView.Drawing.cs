@@ -563,6 +563,7 @@ public sealed partial class EditorView
             if (end > start && end > 0 && start < TimelineDurationMs)
                 c.Fill(new(Math.Min(x1, overview.Right - 2), spanY, Math.Max(2, x2 - x1), spanHeight), color, 0, timelineMarkerOpacity);
         }
+        DrawTimelinePreviewMarker(c, overview, 0, TimelineDurationMs);
         for (int i = 0; i < timing.Length; i++)
         {
             var point = timing[i];
@@ -578,7 +579,7 @@ public sealed partial class EditorView
         float headX = TimelineHeadX;
         c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, 0xFFFFFF, 2);
         c.Fill(new(headX - 2, overview.Y - 5, 4, 6), 0xFFFFFF);
-        DrawTimelineLocationMarkers(c, overview, 0, TimelineDurationMs);
+        DrawTimelineBookmarks(c, overview, 0, TimelineDurationMs);
         DrawBookmarkToolbar(c);
     }
 

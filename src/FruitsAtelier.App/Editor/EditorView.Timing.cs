@@ -209,8 +209,8 @@ public sealed partial class EditorView
                 var p = entry.Point;
                 switch (key)
                 {
-                    case "offset": p.TimeMs = p.Uninherited ? value : Math.Truncate(value); break;
-                    case "bpm" when p.Uninherited: p.BeatLengthMs = 60000 / value; break;
+                    case "offset": p.TimeMs = p.Uninherited ? TimingPageValue(key, value) : Math.Truncate(value); break;
+                    case "bpm" when p.Uninherited: p.BeatLengthMs = 60000 / TimingPageValue(key, value); break;
                     case "meter" when p.Uninherited: p.Meter = (int)value; break;
                     case "volume": p.Volume = (int)Math.Round(value); break;
                     case "index": p.SampleIndex = (int)value; break;
@@ -548,6 +548,7 @@ public sealed partial class EditorView
         if (!AudioPlaying) { timingError = L.Get("timing.tapPlaying"); return; }
         if (timingTaps.Count > 0 && (time <= timingTaps[^1] || time - timingTaps[^1] > 3000)) timingTaps.Clear();
         timingTaps.Add(time); if (timingTaps.Count > 32) timingTaps.RemoveAt(0);
+        if (timingTaps.Count >= 10) ApplyTappedTiming();
     }
 
     private void ApplyTappedTiming()

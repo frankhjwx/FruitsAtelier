@@ -365,6 +365,7 @@ public sealed partial class EditorView
             float edgeX = X(edge.Start ? breaks[edge.Index].StartMs : breaks[edge.Index].EndMs);
             c.Line(edgeX, objectTimeline.Y + 2, edgeX, objectTimeline.Bottom - 2, 0xE8ECED, 2, .8f);
         }
+        DrawTimelinePreviewMarker(c, objectTimeline, start, end);
         foreach (var point in Document.TimingPoints)
         {
             if (point.TimeMs < start || point.TimeMs > end) continue;
@@ -375,7 +376,7 @@ public sealed partial class EditorView
         float head = X(playhead);
         c.Line(head, objectTimeline.Y, head, objectTimeline.Bottom, Gold, 2);
         c.Line(objectTimeline.X, objectTimeline.Bottom - 1, objectTimeline.Right, objectTimeline.Bottom - 1, Grid);
-        DrawTimelineLocationMarkers(c, objectTimeline, start, end);
+        DrawTimelineBookmarks(c, objectTimeline, start, end);
         c.Unclip();
     }
 

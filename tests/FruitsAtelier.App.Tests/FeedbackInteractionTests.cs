@@ -175,9 +175,15 @@ internal static class FeedbackInteractionTests
         var overview = ui.Canvas.Fills.Single(f => f.Color == 0x141922).Bounds;
         foreach (var bounds in new[] { overview, ui.View.ObjectTimelineBounds })
         {
-            Check(ui.Canvas.Fills.Any(f => f.Color == 0xFFD34A && f.Bounds.Y == bounds.Y + 2)
-                && ui.Canvas.Fills.Any(f => f.Color == 0x4B9EF5 && f.Bounds.Y == bounds.Bottom - 7),
-                "Coincident bookmark and preview heads are not visible on both timelines.");
+            var calls = ui.Canvas.PaintCalls;
+            int preview = calls.FindIndex(c => c.Line is { Color: 0xFFD34A, Y1: var y, Y2: var bottom }
+                && y == bounds.Y - 3 && bottom == bounds.Bottom + 2);
+            int bookmark = calls.FindIndex(c => c.Line is { Color: 0x4B9EF5, Y1: var y }
+                && y == bounds.Y + bounds.Height / 2);
+            Check(preview >= 0 && bookmark > preview && calls[preview].Line!.Value.X1 == calls[bookmark].Line!.Value.X1,
+                "Coincident bookmarks must draw above the full-height preview line on both timelines.");
+            Check(!ui.Canvas.Fills.Any(f => f.Color is 0xFFD34A or 0x4B9EF5),
+                "Timeline location markers must retain their line shapes.");
         }
         Check(ui.Canvas.Fills.Any(f => f.Color == 0xBCB1AE && f.Bounds.Y > overview.Y && f.Bounds.Y < overview.Bottom && f.Bounds.Width >= 2),
             "A short break vanished at full-song overview scale.");

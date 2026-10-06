@@ -77,6 +77,34 @@ internal static class FeedbackRenderCheck
                     throw new InvalidOperationException($"Native stream fruit drag did not preserve adjacent samples: plot={plot}, pointer={fruitX},{fruitY}, selected={view.SelectedObjectIds.Count}, status={view.StatusMessage}, events={string.Join(';', view.Conversion.Objects.Select(o => $"{o.TimeMs}:{o.X}"))}.");
                 view.KeyDown(90, true, false); Paint();
                 if (!view.Document.ContentEquals(streamMap)) throw new InvalidOperationException("Native stream fruit drag did not undo.");
+                var timingMap = new MapDocument { IsDemo = false, DurationMs = 20000 };
+                timingMap.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500, Uninherited = true });
+                view.LoadDocument(timingMap); view.KeyDown(114, false, false); Paint();
+                view.KeyDown(52, false, true);
+                int seeks = 0; view.RequestSeek = _ => seeks++;
+                view.RequestTogglePlayback = () => view.UpdateTransport(571.25, 20000, true, false, false, null, null);
+                view.UpdateTransport(550, 20000, true, true, false, null, null);
+                view.KeyDown(32, false, false); Paint();
+                if (view.PlayheadMs != 571.25 || seeks != 0 || !view.Document.ContentEquals(timingMap))
+                    throw new InvalidOperationException("Native Timing pause did not preserve the confirmed audio position.");
+                for (int i = 0; i < 11; i++)
+                {
+                    view.UpdateTransport(1000.6 + i * 500.4 + (i == 10 ? 10 : 0), 20000, true, true, false, null, null);
+                    view.KeyDown(84, false, false); view.KeyUp(84); Paint();
+                    if (i < 9 && !view.Document.ContentEquals(timingMap)) throw new InvalidOperationException("Native taps applied before ten samples.");
+                }
+                var red = view.Document.TimingPoints.Single(p => p.Uninherited);
+                if (red.TimeMs != 1001 || Math.Abs(60000 / red.BeatLengthMs - 119.66) > .000001)
+                    throw new InvalidOperationException("Native continued taps did not refine BPM and integer offset.");
+                var tapped = view.Document.DeepClone();
+                view.UpdateTransport(750.9, 20000, true, false, false, null, null);
+                view.KeyDown(117, false, false); view.KeyDown(36, false, false); Paint();
+                var offset = view.TimingFields.Single(f => f.Key == "offset").Bounds;
+                view.PointerDown(offset.X + 8, offset.Y + 61, 0, false, false);
+                view.PointerUp(offset.X + 8, offset.Y + 61, 0); Paint();
+                if (view.TimingFields.Single(f => f.Key == "offset").Value != "750" || !view.Document.ContentEquals(tapped))
+                    throw new InvalidOperationException("Native Use Current Time did not retain an integer draft offset.");
+                view.KeyDown(27, false, false);
                 void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
             }
         }

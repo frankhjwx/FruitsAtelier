@@ -81,7 +81,7 @@ public sealed partial class EditorView
             var row = new Rect(list.X + 3, list.Y + 32 + (i - timingScroll) * 28, list.Width - 12, 28);
             c.Fill(row, timingSelected.Contains(entry.Id) ? 0x35495B : i % 2 == 0 ? 0x222832u : Background);
             c.Circle(row.X + 6, row.Y + 14, 3, p.Uninherited ? Error : Accent);
-            string[] values = [Time(p.TimeMs), p.Uninherited ? TimingN(60000 / p.BeatLengthMs) : "",
+            string[] values = [Time(p.TimeMs), p.Uninherited ? TimingN(TimingPageValue("bpm", 60000 / p.BeatLengthMs)) : "",
                 p.Uninherited ? p.Meter + "/4" : "", (p.SampleSet switch { 1 => "N", 2 => "S", 3 => "D", _ => "–" }) + (p.SampleIndex == 0 ? "" : ":C" + p.SampleIndex),
                 p.Volume + "%", (p.Effects & 1) != 0 ? "✓" : ""];
             for (int k = 0; k < columns.Length; k++) c.Text(values[k], list.X + (k == 0 ? 15 : 9) + list.Width * columns[k], row.Y + 7, 11, Foreground,
@@ -137,12 +137,12 @@ public sealed partial class EditorView
         void Number(string key, Func<TimingPoint, double> get)
         {
             c.Text(L.Get($"timing.{key}"), r.X + 12, y + 8, 12, Foreground, 90);
-            TimingNumber(c, key, new(r.X + 106, y, r.Width - 118, 30), Common(get), v => SetTimingValues(key, v), () => get(points[0])); y += timingTab == 1 ? 34 : 45;
+            TimingNumber(c, key, new(r.X + 106, y, r.Width - 118, 30), Common(p => TimingPageValue(key, get(p))), v => SetTimingValues(key, v), () => get(points[0])); y += timingTab == 1 ? 34 : 45;
         }
         if (timingTab == 0)
         {
             Number("offset", p => p.TimeMs);
-            TimingButton(c, new(r.X + 12, y, r.Width - 24, 32), L.Get("timing.useCurrent"), () => SetTimingValues("offset", playhead)); y += 38;
+            TimingButton(c, new(r.X + 12, y, r.Width - 24, 32), L.Get("timing.useCurrent"), () => SetTimingValues("offset", Math.Truncate(playhead))); y += 38;
             c.Text(L.Get("timing.shiftSelected"), r.X + 12, y, 12, Foreground, r.Width - 24); y += 20;
             TimingNumber(c, "shift", new(r.X + 12, y, r.Width - 112, 30), TimingN(timingShiftMs), v => timingShiftMs = v);
             TimingButton(c, new(r.Right - 94, y, 82, 30), L.Get("timing.shiftApply"), () => ShiftSelectedTiming(timingShiftMs)); y += 38;

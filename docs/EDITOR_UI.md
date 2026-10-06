@@ -179,12 +179,16 @@ measure accent. Holding Ctrl follows lazer: Snap divisors divisible by three use
 three ticks per beat, other even divisors use two, and other divisors use one.
 The music clock controls tick times and visual indicators. Pause,
 seek, timing changes and leaving Timing cancel queued ticks. These controls are
-editor state and do not alter beatmap data. **Tap Here / T** collects up to 32 taps;
-**Apply timing** sets the red section's BPM and first-tap offset in one undo step.
+editor state and do not alter beatmap data. **Tap Here / T** collects up to 32 taps.
+The tenth tap automatically sets the red section's BPM and integer first-tap offset;
+each subsequent tap refines both values through undo history. BPM uses at most two
+decimal places. **Apply timing** can also apply a shorter measurement with at least two taps.
 **Reset taps** clears the measurement. Tap uses map time, including playback speed.
 
 **Timing Setup / F6** opens an application-modal **Timing and Control Points**
-window. Its draft is committed by OK as one undo step; Cancel, Escape or the close
+window. It displays and commits edited BPM values to at most two decimal places
+and offsets to integer milliseconds. **Use Current Time** takes the whole-millisecond
+part of the playback position. The draft is committed by OK as one undo step; Cancel, Escape or the close
 button discards it. Timing, Audio and Style pages edit the selected rows, while
 All, Timing Points and Inherited Points filter the list. Ctrl-click toggles rows;
 Shift-click selects a range. Ctrl+A selects visible rows. Mixed numeric values are
@@ -257,15 +261,16 @@ During playback and seeking, the play line stays at its configured height, initi
 
 ### Playback pause snapping
 
-With beat snapping enabled, pausing through Space, C or the Pause button aligns
+In Compose, with beat snapping enabled, pausing through Space, C or the Pause button aligns
 the confirmed audio position to the nearest current Snap grid line. An exact
 midpoint selects the later line. The audio seek, playhead and viewport use the
 same target, bounded by the audio duration. Note placement continues to use the
 mouse's snapped time, as shown by the placement preview.
 
 The alignment runs once after the pause is confirmed. A later seek, document
-change, loading or audio failure cancels it. Stop returns to zero; testplay,
-automatic pauses for dialogs and disabled beat snapping retain their existing
+change, loading or audio failure cancels it. Stop returns to zero.
+Timing mode preserves the exact confirmed audio position without snapping.
+Testplay, automatic pauses for dialogs and disabled beat snapping retain their existing
 pause behavior.
 
 ## Song Setup
@@ -441,7 +446,7 @@ key swaps the two bindings. **Apply** saves the bindings across restarts.
 
 The bottom overview shows red and green timing points above a white center line, continuous yellow kiai intervals and white break intervals centered on that line, and blue bookmarks extending down from it. The center line is behind the break and kiai intervals, which are behind timing points and bookmarks. These timeline marks use 80% opacity and colors tuned against osu!legacy. Hovering over the overview reveals a fixed bookmark toolbar above its left edge with Add, Remove, Previous, Next, and Reset actions. The toolbar stays visible while moving from the overview to its controls, and its tooltip appears above it. The toolbar uses an ImageGen-created background texture. The time display and separate Play, Pause, Stop, and Testplay controls sit to the left of the overview; Stop pauses audio and seeks to the start. Ctrl+B adds a bookmark at the playhead; Ctrl+Shift+B removes the nearest bookmark within two seconds. Ctrl+Left/Right seeks to the previous/next bookmark; Ctrl+Shift+Left/Right moves selected objects one X unit. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
 
-Both timelines draw nonnegative `[General] PreviewTime` as a yellow upper marker and bookmarks as blue lower markers. Separate marker heads keep coincident bookmarks, preview points and the playhead distinguishable. Red and green timing points meet the overview center line and also appear on the upper object timeline. Short overview spans retain a minimum two-DIP width. Break intervals are clipped to each visible range and shaded across the full height or width of the object timeline and canvas left time axis. The Break label appears only on the object timeline; the canvas left axis shows red timing labels, blue bookmark labels, and ordinary time labels in the default muted color. Red timing and blue bookmark lines span the canvas width like the playhead line. Markers sharing a pixel row are grouped for display, with spaced labels and hover details showing counts and time ranges; stored timestamps remain unchanged. The kiai fill uses a lighter orange. The Timing menu sets the preview point at the rounded playhead time through undo history. Insert Break Time sits between Movement Analysis and Snap; it inserts an undoable interval between the surrounding source objects, starting 200 ms after the previous object ends and ending when the next object's AR approach begins, if at least 400 ms remains and no break overlaps it. Double-click an upper timeline object to select it and seek to its start without editing content. During a slider endpoint or timeline-tail drag, wheel navigation, Ctrl+wheel Snap, Alt+wheel zoom and Space/C playback remain available; release commits one edit and Esc restores its starting content. The Snap slider remains on one row. The time display uses a fixed position for the duration so changing digits do not move it. The bookmark toolbar is left aligned and vertically centered in the strip above the overview; its buttons are inset from the panel edge and remain visible while the pointer is held over the overview.
+Both timelines draw nonnegative `[General] PreviewTime` as a full-height yellow line and bookmarks as blue lower lines. Preview lines draw before timing points, the playhead and bookmarks, so overlapping markers remain visible. Red and green timing points meet the overview center line and also appear on the upper object timeline. Short overview spans retain a minimum two-DIP width. Break intervals are clipped to each visible range and shaded across the full height or width of the object timeline and canvas left time axis. The Break label appears only on the object timeline; the canvas left axis shows red timing labels, blue bookmark labels, and ordinary time labels in the default muted color. Red timing and blue bookmark lines span the canvas width like the playhead line. Markers sharing a pixel row are grouped for display, with spaced labels and hover details showing counts and time ranges; stored timestamps remain unchanged. The kiai fill uses a lighter orange. The Timing menu sets the preview point at the rounded playhead time through undo history. Insert Break Time sits between Movement Analysis and Snap; it inserts an undoable interval between the surrounding source objects, starting 200 ms after the previous object ends and ending when the next object's AR approach begins, if at least 400 ms remains and no break overlaps it. Double-click an upper timeline object to select it and seek to its start without editing content. During a slider endpoint or timeline-tail drag, wheel navigation, Ctrl+wheel Snap, Alt+wheel zoom and Space/C playback remain available; release commits one edit and Esc restores its starting content. The Snap slider remains on one row. The time display uses a fixed position for the duration so changing digits do not move it. The bookmark toolbar is left aligned and vertically centered in the strip above the overview; its buttons are inset from the panel edge and remain visible while the pointer is held over the overview.
 
 During a kiai interval, a small badge appears at the upper-left of the editing plot. It brightens at the interval start and on every full beat from the active red timing point, then fades through the beat. Green timing points that preserve the kiai state do not restart the pulse. Its pulse follows map time, including seeking and timing edits.
 

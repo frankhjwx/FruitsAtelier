@@ -25,11 +25,13 @@ internal static class PauseSnapTests
             ui.Paint();
             if (gesture != 0) ui.Key(gesture);
             else PauseButton(ui);
-            Check(seeks.Count == 1 && Math.Abs(seeks[0] - expected) < 1e-7
-                && Math.Abs(ui.View.PlayheadMs - expected) < 1e-7 && !ui.View.AudioPlaying,
-                "Explicit pause snaps the confirmed position and seeks audio once.");
-            ui.View.UpdateTransport(expected, 5070, true, false, false, null, null);
-            Check(seeks.Count == 1, "Subsequent paused snapshots do not snap again.");
+            double target = timing ? position : expected;
+            int seekCount = timing ? 0 : 1;
+            Check(seeks.Count == seekCount && (timing || Math.Abs(seeks[0] - target) < 1e-7)
+                && Math.Abs(ui.View.PlayheadMs - target) < 1e-7 && !ui.View.AudioPlaying,
+                "Compose pauses snap once; Timing pauses retain the exact confirmed position.");
+            ui.View.UpdateTransport(target, 5070, true, false, false, null, null);
+            Check(seeks.Count == seekCount, "Subsequent paused snapshots do not snap again.");
             Check(ui.View.Document.ContentEquals(before) && !ui.View.IsDirty,
                 "Pause snapping does not edit beatmap content.");
             if (!timing && expected < 5070)

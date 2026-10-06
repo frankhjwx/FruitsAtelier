@@ -273,7 +273,7 @@ public sealed partial class EditorView
         if (!playing && pauseSnapDivisor is { } pauseDivisor)
         {
             pauseSnapDivisor = null;
-            if (snap && !LibraryVisible && !librarySettingsOpen && !SongSetupVisible && !TimingModal)
+            if (snap && !TimingPageVisible && !LibraryVisible && !librarySettingsOpen && !SongSetupVisible && !TimingModal)
                 SeekTo(Math.Clamp(TimingMap.Snap(Document, positionMs, pauseDivisor), 0, AudioDurationMs));
         }
     }
@@ -301,7 +301,7 @@ public sealed partial class EditorView
         if (AudioReady)
         {
             // Arm before the callback: hosts may publish the confirmed pause synchronously.
-            pauseSnapDivisor = AudioPlaying && snap ? divisor : null;
+            pauseSnapDivisor = AudioPlaying && snap && !TimingPageVisible ? divisor : null;
             RequestTogglePlayback?.Invoke();
         }
         else StatusMessage = AudioLoading ? L.Get("editor.audio.stillLoading") : L.Get("editor.audio.loadFromFileMenu");
