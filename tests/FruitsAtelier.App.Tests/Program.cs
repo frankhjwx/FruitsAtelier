@@ -1122,7 +1122,7 @@ sealed class RecordingCanvas : ICanvas
     public readonly record struct Dot(float X, float Y, float Radius, bool Filled, uint Color, float Opacity = 1);
     public readonly record struct Segment(float X1, float Y1, float X2, float Y2, uint Color, float Opacity, float Width = 1);
     public readonly record struct Outline(Rect Bounds, uint Color);
-    public readonly record struct Operation(int Order, Rect? Clip, Dot? Dot, Segment? Segment, Outline? Fill = null);
+    public readonly record struct Operation(int Order, Rect? Clip, Dot? Dot, Segment? Segment);
     public readonly record struct PaintCall(uint Color, float Opacity, Rect? FillBounds = null, Segment? Line = null);
     private readonly Stack<Rect> clipStack = new();
     public readonly record struct Texture(string Path, Rect Bounds, float Opacity);
@@ -1146,11 +1146,7 @@ sealed class RecordingCanvas : ICanvas
     public List<PaintCall> PaintCalls { get; } = [];
     public void Clear() { Fills.Clear(); Images.Clear(); Sprites.Clear(); Texts.Clear(); Clips.Clear(); Circles.Clear(); Lines.Clear(); Outlines.Clear(); Operations.Clear(); PaintCalls.Clear(); clipStack.Clear(); }
     public void Fill(Rect r, uint color, float radius = 0, float opacity = 1)
-    {
-        var fill = new Outline(r, color);
-        Fills.Add(fill); PaintCalls.Add(new(color, opacity, FillBounds: r));
-        Operations.Add(new(Operations.Count, clipStack.TryPeek(out var clip) ? clip : null, null, null, fill));
-    }
+    { Fills.Add(new(r, color)); PaintCalls.Add(new(color, opacity, FillBounds: r)); }
     public void Stroke(Rect r, uint color, float width = 1, float radius = 0) => Outlines.Add(new(r, color));
     public void Line(float x1, float y1, float x2, float y2, uint color, float width = 1, float opacity = 1)
     {

@@ -49,9 +49,9 @@ internal static class SliderInteractionTests
         Guid nodeId = track.Nodes[1].Id;
         ui.SelectTrack(track.Id);
         var saved = ui.View.Document.DeepClone();
-        Check(!SelectedAnchorAt(ui, 3000, 350), "Whole-object selection unexpectedly highlighted a point.");
+        Check(!DotAt(ui, 3000, 350, 3, 0xE7EBF2), "Whole-object selection unexpectedly highlighted a point.");
         ui.ClickMap(3000, 350);
-        Check(SelectedAnchorAt(ui, 3000, 350), "Selected control point has no visible square highlight.");
+        Check(DotAt(ui, 3000, 350, 3, 0xE7EBF2), "Selected control point has no visible center highlight.");
         Check(saved.ContentEquals(ui.View.Document), "Point selection changed curve content.");
         ui.DownMap(3000, 350); ui.MoveMap(3125, 330);
         CheckDragPreview(ui, true);
@@ -103,8 +103,9 @@ internal static class SliderInteractionTests
         Check(ui.View.ActiveTool == "Select" && ui.View.SelectedAnchorIds.SequenceEqual([node.Id]),
             "A single click on a selected FSlider anchor did not enter anchor editing.");
         var point = Screen(ui, node.TimeMs, node.X);
-        Check(ui.Canvas.Fills.Any(fill => fill.Color == 0xFF7F8D && fill.Bounds.Width == 6 && fill.Bounds.Height == 6
-            && Math.Abs(fill.Bounds.X + 3 - point.X) < .001 && Math.Abs(fill.Bounds.Y + 3 - point.Y) < .001),
+        Check(ui.Canvas.Lines.Any(line => line.Color == 0xFF7F8D
+            && (Math.Abs(line.X1 - point.X) < 0.001 || Math.Abs(line.X2 - point.X) < 0.001)
+            && (Math.Abs(line.Y1 - point.Y) < 8.1 || Math.Abs(line.Y2 - point.Y) < 8.1)),
             "The selected anchor does not use the distinct high-contrast colour.");
 
         double farTime = 2000;
@@ -416,13 +417,6 @@ internal static class SliderInteractionTests
 
     private static bool DotAt(Ui ui, double time, double x, double radius, uint color)
         => ui.Canvas.Circles.Any(c => At(ui, c, time, x) && c.Filled && c.Color == color && Math.Abs(c.Radius - radius) < 0.001);
-
-    private static bool SelectedAnchorAt(Ui ui, double time, double x)
-    {
-        var p = Screen(ui, time, x);
-        return ui.Canvas.Outlines.Any(o => o.Color == 0x59D3C3 && o.Bounds.Width == 16 && o.Bounds.Height == 16
-            && Math.Abs(o.Bounds.X + 8 - p.X) < .001 && Math.Abs(o.Bounds.Y + 8 - p.Y) < .001);
-    }
 
     private static void RightMap(Ui ui, double time, double x)
     {

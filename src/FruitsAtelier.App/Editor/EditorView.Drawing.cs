@@ -332,7 +332,8 @@ public sealed partial class EditorView
                     }
                     if (p.Y < plot.Y - 9 || p.Y > plot.Bottom + 9) continue;
                     bool nodeSelected = anchorSelection.Contains(node.Id);
-                    DrawSliderAnchor(c, p.X, p.Y, nodeSelected ? Error : color, nodeSelected, opacity);
+                    Diamond(c, p.X, p.Y, nodeSelected ? 8 : 5.5f, nodeSelected ? Error : color, opacity);
+                    if (nodeSelected) c.Circle(p.X, p.Y, 3, Foreground);
                     void DrawHandle(MapPoint offset, DragKind part)
                     {
                         if (offset == default) return;
@@ -791,16 +792,6 @@ public sealed partial class EditorView
         DrawInputText(c, new(r.X + 9, r.Y + 7, r.Width - 18, 18), focused ? editBuffer : timestamp ? Time(value) : Number(value), 12, focused, "numeric:" + index);
         fields.Add(new(r, label, value, apply, timestamp));
         y += 37;
-    }
-
-    private static void DrawSliderAnchor(ICanvas c, float x, float y, uint color, bool selected, float opacity = 1)
-    {
-        float size = selected ? 8 : 6;
-        var bounds = new Rect(x - size, y - size, size * 2, size * 2);
-        // An opaque backing separates editing controls from overlapping skin highlights.
-        c.Fill(bounds, Background);
-        c.StrokeOpacity(bounds, selected ? Accent : Foreground, 2, 0, opacity);
-        c.Fill(new(x - 3, y - 3, 6, 6), color, opacity: opacity);
     }
 
     private static void Diamond(ICanvas c, float x, float y, float size, uint color, float opacity = 1)

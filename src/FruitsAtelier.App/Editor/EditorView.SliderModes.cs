@@ -271,7 +271,8 @@ public sealed partial class EditorView
             if (p.Y < plot.Y - 9 || p.Y > plot.Bottom + 9) continue;
             bool selected = anchorSelection.Contains(vertices[i].Id);
             uint color = vertices[i].Type is null ? Foreground : Error;
-            DrawSliderAnchor(c, p.X, p.Y, color, selected);
+            c.Circle(p.X, p.Y, selected ? 7 : 5, color);
+            if (selected) c.Circle(p.X, p.Y, 10, Accent, false, 1.5f);
         }
     }
 
