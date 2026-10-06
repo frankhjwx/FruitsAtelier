@@ -560,7 +560,8 @@ public sealed partial class EditorView
         void DrawSpan(double start, double end, uint color)
         {
             float x1 = TimelineX(start), x2 = TimelineX(end);
-            if (x2 > x1) c.Fill(new(x1, spanY, x2 - x1, spanHeight), color, 0, timelineMarkerOpacity);
+            if (end > start && end > 0 && start < TimelineDurationMs)
+                c.Fill(new(Math.Min(x1, overview.Right - 2), spanY, Math.Max(2, x2 - x1), spanHeight), color, 0, timelineMarkerOpacity);
         }
         for (int i = 0; i < timing.Length; i++)
         {
@@ -568,16 +569,6 @@ public sealed partial class EditorView
             if (point.TimeMs < 0 || point.TimeMs > TimelineDurationMs) continue;
             float x = TimelineX(point.TimeMs);
             c.Line(x, overview.Y + 2, x, overview.Y + 20, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
-        }
-        foreach (int bookmark in AxisBookmarks())
-        {
-            float x = TimelineX(bookmark);
-            c.Line(x, overview.Y + 20, x, overview.Bottom - 1, 0x4B9EF5, 1, timelineMarkerOpacity);
-        }
-        if (OsuTimeline.PreviewTime(Document) is int previewTime && previewTime <= TimelineDurationMs)
-        {
-            float x = TimelineX(previewTime);
-            c.Line(x, overview.Y - 3, x, overview.Bottom + 2, 0xFFD34A, 2, timelineMarkerOpacity);
         }
         double visibleStart = Math.Clamp(viewStart, 0, TimelineDurationMs);
         double visibleEnd = Math.Clamp(viewStart + plot.Height / pixelsPerMs, visibleStart, TimelineDurationMs);
@@ -587,6 +578,7 @@ public sealed partial class EditorView
         float headX = TimelineHeadX;
         c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, 0xFFFFFF, 2);
         c.Fill(new(headX - 2, overview.Y - 5, 4, 6), 0xFFFFFF);
+        DrawTimelineLocationMarkers(c, overview, 0, TimelineDurationMs);
         DrawBookmarkToolbar(c);
     }
 
@@ -628,6 +620,8 @@ public sealed partial class EditorView
             Item(L.Get("ui.undoMenu"), Undo, history.CanUndo);
             Item(L.Get("ui.redoMenu"), Redo, history.CanRedo);
             Item(L.Get("history.menu"), ShowVersionHistory, WorkspaceSession is not null);
+            Item(L.Get("history.revertSave") + "  Ctrl+L", RequestPreviousSave, WorkspaceSession is not null && !VersionHistoryBusy);
+            Item(L.Get("history.togglePointCurve"), TogglePointCurve, SelectedTrack is not null && anchorSelection.Count == 1 && draftTrack == Guid.Empty && !notesLocked);
             Item(L.Get("ui.deleteMenu"), DeleteSelection, selection != Guid.Empty);
             Item(L.Get("editor.command.reverseSelection") + "  Ctrl+G", ReverseSelection, CanCopySelection && !notesLocked);
             Item(L.Get("editor.command.reversePath"), ReverseSelectedPath, SelectedTrack is not null && ClipboardInteractionReady && !notesLocked);

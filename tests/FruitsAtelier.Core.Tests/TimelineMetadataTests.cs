@@ -4,6 +4,7 @@ internal static class TimelineMetadataTests
 {
     public static void Run()
     {
+        DeletedSectionBreak();
         CachedBreakIntervals();
         FractionalBreakBoundary();
         const string source = "osu file format v14\n[General]\nMode:2\nPreviewTime:1500\n[Editor]\nBookmarks: 100, 300\n[Events]\n//Break Periods\n2,1000,2000\n0,0,background.jpg\n[TimingPoints]\n0,500,4,1,0,100,1,1\n[HitObjects]\n256,192,100,1,0,0:0:0:0:\n";
@@ -94,6 +95,30 @@ internal static class TimelineMetadataTests
             history.Commit(); fresh.Commit();
             Check(history.Document.ContentEquals(fresh.Document), "Warm break interval cache changed reconciliation after an edit or undo.");
         }
+    }
+
+    private static void DeletedSectionBreak()
+    {
+        var map = new MapDocument { DurationMs = 20000, ApproachRate = 9 };
+        map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 5000, X = 200 }, new() { TimeMs = 10000, X = 300 }]);
+        var history = new EditorHistory(map);
+        history.Begin("Delete middle section"); history.Document.Fruits.RemoveAt(1); history.Commit();
+        var expected = new BreakPeriod(1200, 10000 - (int)CatchScrollTiming.PreemptMs(map.ApproachRate));
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([expected]), "Deleting a section did not create its newly unoccupied break.");
+        history.Undo(); Check(history.Document.ContentEquals(map), "Undo did not restore the section and break together.");
+        history.Redo(); Check(OsuTimeline.Breaks(history.Document).SequenceEqual([expected]), "Redo lost the new break.");
+        var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(history.Document));
+        Check(OsuTimeline.Breaks(restored).SequenceEqual([expected]), "Gap break did not survive project persistence.");
+        var output = OsuBeatmapWriter.Serialize(history.Document);
+        Check(OsuTimeline.Breaks(output.ReadBack).SequenceEqual([expected]), "Gap break did not survive osu export.");
+        var overlapping = map.DeepClone();
+        overlapping.BananaShowers.Add(new() { TimeMs = 2000, EndTimeMs = 11000 });
+        history = new EditorHistory(overlapping);
+        history.Begin("Delete inside an occupied shower"); history.Document.Fruits.RemoveAt(1); history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).Count == 0, "Deletion created a break across an occupied interval.");
+        history = new EditorHistory(map);
+        history.Begin("Delete final object"); history.Document.Fruits.RemoveAt(2); history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).Count == 0, "Deletion created an unbounded trailing break.");
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }

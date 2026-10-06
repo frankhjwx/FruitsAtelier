@@ -854,6 +854,7 @@ internal static class RenderCheck
             AimodRenderCheck.Run(canvas, size.Item1, size.Item2);
             SynchronizationRenderCheck.Run(canvas, size.Item1, size.Item2);
             SliderDraftRenderCheck.Run(canvas, size.Item1, size.Item2);
+            FeedbackRenderCheck.Run(canvas, size.Item1, size.Item2);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             CheckPaletteHints(canvas, view, size.Item1, size.Item2);
             CheckSongSetup(canvas, view, size.Item1, size.Item2);

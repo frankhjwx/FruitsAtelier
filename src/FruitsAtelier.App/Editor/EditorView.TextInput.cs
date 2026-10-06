@@ -107,6 +107,7 @@ public sealed partial class EditorView
     private void FocusInput(string key, string value, float x, bool shift = false, bool selectAll = false)
     {
         if (selectAll) { SelectInput(key, value); return; }
+        if (key == "song:Tags") { FocusSongTags(value, x, mouseY, shift); return; }
         if (!textLayouts.TryGetValue(key, out var layout)) return;
         int position = value.Length;
         float target = x - layout.Left;

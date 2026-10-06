@@ -1,4 +1,8 @@
 {
+  "history.revertSave": "Revert to previous save",
+  "history.revertSavePrompt": "Restore the current difficulty to its previous saved version? Current edits can be recovered with Undo.",
+  "history.noPreviousSave": "No previous saved version is available.",
+  "history.togglePointCurve": "Toggle straight / curved point",
   "library.favourites": "Favourites",
   "library.addFavourite": "Add to Favourites",
   "library.removeFavourite": "Remove from Favourites",

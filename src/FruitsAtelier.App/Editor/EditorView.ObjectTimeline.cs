@@ -19,6 +19,7 @@ public sealed partial class EditorView
     private Guid tailId;
     private string? tailOriginalLine;
     private double tailStart, tailEnd, tailSpanDuration;
+    private double tailPointerOffset;
     private int breakEditIndex;
     private bool breakEditStart;
     private BreakPeriod breakEditOriginal, breakEditPreview;
@@ -35,7 +36,7 @@ public sealed partial class EditorView
 
     private void MoveTimelineTail(float x, bool shift)
     {
-        double end = tailEnd + (x - dragStartX) / objectTimelineScale;
+        double end = ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale - tailPointerOffset;
         if (Document.BananaShowers.FirstOrDefault(s => s.Id == tailId) is { } shower)
         {
             if (snap && !shift) end = TimingMap.Snap(Document, end, divisor);
@@ -374,6 +375,7 @@ public sealed partial class EditorView
         float head = X(playhead);
         c.Line(head, objectTimeline.Y, head, objectTimeline.Bottom, Gold, 2);
         c.Line(objectTimeline.X, objectTimeline.Bottom - 1, objectTimeline.Right, objectTimeline.Bottom - 1, Grid);
+        DrawTimelineLocationMarkers(c, objectTimeline, start, end);
         c.Unclip();
     }
 
@@ -400,6 +402,7 @@ public sealed partial class EditorView
                     ?? Document.ImportedSliders.FirstOrDefault(s => s.Id == item.Id)?.SpanCount ?? 1;
                 tailOriginalLine = Document.ImportedSliders.FirstOrDefault(s => s.Id == item.Id)?.OriginalLine;
                 tailId = item.Id; tailStart = source.Start; tailEnd = source.End;
+                tailPointerOffset = ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale - source.End;
                 tailSpanDuration = (source.End - source.Start) / spans;
                 if (tailSpanDuration > 0)
                 {

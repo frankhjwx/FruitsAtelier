@@ -1,4 +1,8 @@
 {
+  "history.revertSave": "Ibalik ang nakaraang save",
+  "history.revertSavePrompt": "Ibalik ang kasalukuyang difficulty sa nakaraang naka-save na bersyon? Maibabalik ang mga kasalukuyang pagbabago gamit ang Undo.",
+  "history.noPreviousSave": "Walang nakaraang naka-save na bersyon.",
+  "history.togglePointCurve": "Palitan ang tuwid / kurbadong punto",
   "library.favourites": "Mga paborito",
   "library.addFavourite": "Idagdag sa mga paborito",
   "library.removeFavourite": "Alisin sa mga paborito",

@@ -1,4 +1,8 @@
 {
+  "history.revertSave": "Pulihkan simpanan sebelumnya",
+  "history.revertSavePrompt": "Pulihkan difficulty ini ke versi tersimpan sebelumnya? Perubahan saat ini dapat dipulihkan dengan Urungkan.",
+  "history.noPreviousSave": "Tidak ada versi tersimpan sebelumnya.",
+  "history.togglePointCurve": "Alihkan titik lurus / melengkung",
   "library.favourites": "Favorit",
   "library.addFavourite": "Tambahkan ke favorit",
   "library.removeFavourite": "Hapus dari favorit",

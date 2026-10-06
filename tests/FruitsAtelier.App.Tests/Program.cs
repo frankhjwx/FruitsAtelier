@@ -34,6 +34,12 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Held quick retry uses 300 ms, cancels on release and retries once while paused", FeedbackInteractionTests.Retry),
+    ("Previous-save rollback requires history, confirmation and supports undo", FeedbackInteractionTests.PreviousSave),
+    ("Timeline navigation and history reveal offscreen changes", FeedbackInteractionTests.Navigation),
+    ("Slider endpoint drags retain navigation, playback and cancellation", FeedbackInteractionTests.TailNavigation),
+    ("Tags wrap with row-aware editing and droplet lock persists", FeedbackInteractionTests.TagsAndPreference),
+    ("Overlapping timeline markers and unmapped section breaks remain visible", FeedbackInteractionTests.MarkersAndBreak),
     ("Independent droplet defaults persist and initialize new projects and FSliders", DropletDefaultsTests.Run),
     ("Selection boxes scale and move consecutive parents with anchor priority and atomic undo", SelectionTransformTests.Run),
     ("Droplet randomization switches, setup drafts and Edit actions stay within one diff", DropletRandomizationTests.Run),
@@ -1045,6 +1051,11 @@ sealed class Ui
         Paint();
     }
     public void Type(string value) { foreach (char c in value) View.TextInput(c); }
+    public void TogglePointCurve()
+    {
+        ClickText(FruitsAtelier.Localization.Strings.Get("ui.edit"));
+        ClickText(FruitsAtelier.Localization.Strings.Get("history.togglePointCurve"));
+    }
     public void SelectTrack(Guid id)
     {
         Key('1');

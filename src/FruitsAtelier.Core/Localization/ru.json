@@ -1,4 +1,8 @@
 {
+  "history.revertSave": "Вернуть предыдущее сохранение",
+  "history.revertSavePrompt": "Восстановить предыдущую сохранённую версию текущей сложности? Текущие правки можно вернуть отменой.",
+  "history.noPreviousSave": "Предыдущая сохранённая версия недоступна.",
+  "history.togglePointCurve": "Переключить прямую / кривую точку",
   "library.favourites": "Избранное",
   "library.addFavourite": "Добавить в избранное",
   "library.removeFavourite": "Удалить из избранного",

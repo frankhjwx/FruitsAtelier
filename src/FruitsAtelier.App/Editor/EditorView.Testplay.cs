@@ -14,6 +14,8 @@ public sealed partial class EditorView
     private bool testplaySpeedHeld;
     private bool testplayPauseHeld;
     private bool testplayRetryHeld;
+    private double? testplayQuickRetryAt;
+    private bool testplayQuickRetryHeld;
     private bool testplayRestarting;
     private bool testplayBookmarkHeld;
     private string? testplayAutoNotice;
@@ -54,6 +56,8 @@ public sealed partial class EditorView
         testplaySpeedHeld = false;
         testplayPauseHeld = false;
         testplayRetryHeld = false;
+        testplayQuickRetryAt = null;
+        testplayQuickRetryHeld = false;
         testplayBookmarkHeld = false;
         testplayAutoNotice = null;
         testplayResumeAt = null;
@@ -115,6 +119,8 @@ public sealed partial class EditorView
         testplay?.Cancel();
         testplayDriver?.Dispose(); testplayDriver = null;
         testplay = null; testplayFrame = null;
+        testplayQuickRetryAt = null;
+        testplayQuickRetryHeld = false;
         testplayResumeAt = null;
         testplayAutoNotice = null;
         testplayBookmarkHeld = false;
@@ -166,6 +172,12 @@ public sealed partial class EditorView
     private void AdvanceTestplay()
     {
         if (testplay is null || testplayRestarting) return;
+        if (testplayQuickRetryAt is double retryAt && TestplayRealtime >= retryAt)
+        {
+            testplayQuickRetryAt = null;
+            RestartTestplay();
+            return;
+        }
         if (testplayResumeAt is double resume && TestplayRealtime >= resume)
         {
             testplayResumeAt = null;
@@ -208,6 +220,7 @@ public sealed partial class EditorView
         if (virtualKey == 114) testplaySpeedHeld = false;
         if (virtualKey == 80) testplayPauseHeld = false;
         if (virtualKey == 82) testplayRetryHeld = false;
+        if (virtualKey == 192) { testplayQuickRetryHeld = false; testplayQuickRetryAt = null; }
         if (virtualKey == 66) testplayBookmarkHeld = false;
         if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
         if (IsTestplaying && testplayDriver is null) AdvanceTestplay();

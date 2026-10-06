@@ -366,6 +366,7 @@ public sealed partial class EditorView
     private void RestoreSelectionAfterHistory(MapDocument before)
     {
         var unchanged = before.UnchangedObjectIds(Document).ToHashSet();
+        RevealHistoryChange(before, unchanged);
         if (selectedTrack != Guid.Empty && unchanged.Contains(selectedTrack) && objectSelection.Count == 0
             && SelectedTrack is { } track)
         {

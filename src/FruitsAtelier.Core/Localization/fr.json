@@ -1,4 +1,8 @@
 {
+  "history.revertSave": "Rétablir la sauvegarde précédente",
+  "history.revertSavePrompt": "Rétablir la version sauvegardée précédente de cette difficulté ? Les modifications actuelles peuvent être récupérées avec Annuler.",
+  "history.noPreviousSave": "Aucune version sauvegardée précédente disponible.",
+  "history.togglePointCurve": "Basculer le point droit / courbe",
   "library.favourites": "Favoris",
   "library.addFavourite": "Ajouter aux favoris",
   "library.removeFavourite": "Retirer des favoris",

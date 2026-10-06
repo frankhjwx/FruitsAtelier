@@ -1,4 +1,8 @@
 {
+  "history.revertSave": "คืนค่าการบันทึกก่อนหน้า",
+  "history.revertSavePrompt": "คืนค่าระดับความยากนี้เป็นเวอร์ชันที่บันทึกก่อนหน้าหรือไม่? สามารถกู้คืนการแก้ไขปัจจุบันด้วยการเลิกทำ",
+  "history.noPreviousSave": "ไม่มีเวอร์ชันที่บันทึกก่อนหน้า",
+  "history.togglePointCurve": "สลับจุดเส้นตรง / เส้นโค้ง",
   "library.favourites": "รายการโปรด",
   "library.addFavourite": "เพิ่มในรายการโปรด",
   "library.removeFavourite": "นำออกจากรายการโปรด",

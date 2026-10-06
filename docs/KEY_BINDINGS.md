@@ -25,6 +25,7 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 | Ctrl+O | Choose a difficulty in the current project. |
 | Ctrl+Shift+O | Open a supported beatmap, archive or project file. |
 | Ctrl+S | Save the project; also update linked exported difficulties. |
+| Ctrl+L | Confirm rollback of the current difficulty to its previous saved version. Requires a workspace save history; unavailable after only the first save. Undo restores the edits from before rollback. |
 | Ctrl+Alt+E | Open export choices from Compose or Timing, outside focused Timing fields and modal dialogs. |
 | Ctrl+Tab / Ctrl+Shift+Tab | Next / previous difficulty. |
 | F1 | Return from Timing to Compose / Details. |
@@ -59,7 +60,7 @@ Library. Finish a text edit with Enter before using page or file commands.
 
 Undo and redo keep the current tool. Changed or removed objects lose their selection;
 unchanged selected objects retain it. Restored objects are not automatically selected.
-When no history step is available, selection stays unchanged. Existing slider controls
+When all affected positions are outside the canvas, undo/redo reveals the nearest affected position. Visible changes keep the viewport in place. When no history step is available, selection stays unchanged. Existing slider controls
 are edited in Select; B / 3 clears selection and prepares a new FSlider.
 
 Object paste is confined to the same difficulty session and aligns the earliest
@@ -83,7 +84,7 @@ change. Other shortcuts may be blocked until the draft or drag ends.
 | V / End | Seek to the end of the last object by start order; if already at or after it, seek to song end. |
 | Left / Right | Seek earlier / later by one full beat during playback. While paused, move to the preceding / following Snap grid line, including timing boundaries. |
 | Shift+Left / Shift+Right | Seek four full beats during playback. While paused, move four Snap grid lines in the chosen direction. |
-| Up / Down | Previous / next timing point, including inherited points. |
+| Up / Down | Next / previous timing point, including inherited points. |
 | Ctrl+Up / Ctrl+Down | Increase / decrease speed by 25 percentage points, within 10%–150%. |
 | Ctrl+Shift+Up / Ctrl+Shift+Down | Increase / decrease speed by 5 percentage points. |
 | Ctrl+B | Add a bookmark at the playhead. |
@@ -122,7 +123,7 @@ Object sampleset selection is not bound to Shift+Q/W/E/R or Ctrl+Q/W/E/R.
 | Enter | Finish a slider draft. |
 | Esc | Cancel a draft or active gesture. |
 | Shift+F | Immediately open the long-press actions for a slider under the canvas pointer, or a selected slider visible on the canvas. Selection from the upper object timeline is supported; a selected target retains the complete selection. |
-| Ctrl+L | Toggle the selected control between straight and curved. |
+| Edit → Toggle straight / curved point | Toggle the selected control between straight and curved. |
 | Ctrl+Shift+I | Insert a control on the curve under the pointer in Compose. |
 | Ctrl+= / Ctrl+- | Add / remove one reverse on the selected FSlider. |
 | Ctrl+G | Reverse the selection in time, including each slider’s own path. A single FSlider retains its time range and repeats. |
@@ -145,7 +146,7 @@ Enter applies the merge; Esc cancels. Saving stores the resulting slider without
 the original objects; reopening cannot restore them, while session undo remains
 available.
 
-Ctrl+L, Ctrl+J and Ctrl+Shift+I have editor-specific meanings; do not assume
+Ctrl+L restores the previous saved version with confirmation. Ctrl+J and Ctrl+Shift+I have editor-specific meanings; do not assume
 osu!stable behavior. Ctrl++ (Ctrl+Shift+= on a US keyboard) and keypad plus/minus
 currently do not adjust reverses.
 
@@ -160,10 +161,11 @@ currently do not adjust reverses.
 | Alt+wheel over bottom overview | Adjust the selected volume channel by five percentage points and show the volume overlay. |
 | Alt+wheel over object timeline | Zoom that timeline independently. |
 | Alt+wheel over Timing waveform | Zoom the waveform time scale. Ctrl+wheel on the waveform currently does nothing. |
-| Ctrl+Alt+wheel over canvas or object timeline | Cycle the four tools. |
+| Ctrl+Alt+wheel over canvas or object timeline | Wheel down advances Select → Fruit → FSlider → Banana Shower; wheel up reverses this cycle. |
 | Middle-button drag over canvas | Pan the canvas. |
 | Ctrl+click object / Ctrl+marquee | Toggle selection / add objects to selection; slider control actions take priority when applicable. |
 | Shift+drag object in upper timeline | Move without beat snapping. |
+| Double-click an object in the upper timeline | Select it and seek to its start without changing content. |
 | Ctrl+click bottom overview | Toggle a bookmark at the clicked time; clicking near an existing bookmark removes it. |
 | Shift+drag bottom overview | Create a break interval. Esc cancels. |
 | Right-click a break in bottom overview | Remove that break. |
@@ -172,6 +174,8 @@ currently do not adjust reverses.
 | Ctrl+click within an editable slider's time range | Insert a control at the pointer; may change its shape. |
 | Shift while adjusting a DS preset or Prev DS slider | Use 0.01 steps instead of 0.1. |
 | Shift while dragging a Song Setup difficulty slider | Use 0.1 steps instead of whole units. |
+
+Slider endpoint and timeline-tail drags accept ordinary wheel navigation, Ctrl+wheel Snap and Alt+wheel zoom; Space/C still plays or pauses. Release commits one edit; Esc cancels it.
 
 Ctrl+Shift+wheel has no current canvas zoom binding. Alt+wheel over the canvas
 changes zoom rather than DS presets. For right-click drafting, deletion and
@@ -213,6 +217,7 @@ to Compose before moving selected objects.
 | Left / Right | Move catcher, by default. |
 | Hold Shift | Dash, by default. |
 | Tab | Toggle autoplay. |
+| Hold `~` / backtick for 300 ms | Retry once from this session's start, including its lead-in. Release early to cancel; available while running or paused. |
 | Ctrl+R | Retry from this session's start including its lead-in, retaining autoplay and speed. One retry per press; available while running or paused. |
 | F3 | During autoplay, toggle speed between 1.0x and 1.5x. |
 | Ctrl+Up / Ctrl+Down | During autoplay, increase / decrease speed by 25 percentage points, within 10%–150%. Works while paused too. |

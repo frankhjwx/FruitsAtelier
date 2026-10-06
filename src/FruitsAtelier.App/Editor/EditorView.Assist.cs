@@ -18,7 +18,8 @@ public sealed partial class EditorView
     public IReadOnlyList<Rect> AssistButtonBounds => assistButtons;
     public bool DistanceSnapEnabled => distanceSnap ^ altHeld;
     public bool NotesLocked => notesLocked;
-    private bool dropletSelectionLocked = true, notesLockFlyout;
+    private bool dropletSelectionLocked { get => LibrarySettings.LockDropletSelection; set => LibrarySettings.LockDropletSelection = value; }
+    private bool notesLockFlyout;
     public bool DropletSelectionLocked => dropletSelectionLocked;
     private bool EffectiveGridSnap => gridSnap ^ (shiftHeld && !altHeld);
     public (double? Previous, double? Next) DistanceReadout { get; private set; }
@@ -123,6 +124,7 @@ public sealed partial class EditorView
     private void ToggleDropletSelectionLock()
     {
         dropletSelectionLocked = !dropletSelectionLocked;
+        RequestViewPreference?.Invoke();
         if (dropletSelectionLocked) clickedCoordinate = null;
         if (dropletSelectionLocked && SelectedDistanceObject() is { Kind: CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet })
             distanceObject = null;

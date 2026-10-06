@@ -1,4 +1,8 @@
 {
+  "history.revertSave": "回復至上一個儲存版本",
+  "history.revertSavePrompt": "將目前難度恢復至前一次儲存的版本？目前修改可透過復原恢復。",
+  "history.noPreviousSave": "沒有可回復的上一個儲存版本。",
+  "history.togglePointCurve": "切換控制點直線／曲線",
   "library.favourites": "收藏",
   "library.addFavourite": "加入收藏",
   "library.removeFavourite": "取消收藏",

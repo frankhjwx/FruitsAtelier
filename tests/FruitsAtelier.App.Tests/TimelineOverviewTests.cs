@@ -198,7 +198,7 @@ internal static class TimelineOverviewTests
         var overview = ui.Canvas.Fills.Single(f => f.Color == 0x141922).Bounds;
         float previewX = overview.X + (float)(1800d / ui.View.TimelineDurationMs) * overview.Width;
         Check(ui.Canvas.Lines.Any(l => l.Color == 0xFFD34A && Math.Abs(l.X1 - previewX) < .01f
-            && l.Y1 < overview.Y && l.Y2 > overview.Bottom && l.Width == 2), "Preview marker must cross the full overview");
+            && l.Y1 == overview.Y + 2 && l.Y2 == overview.Y + overview.Height / 2 && l.Width == 2), "Preview marker must occupy the upper overview lane");
         var timeline = ui.View.ObjectTimelineBounds;
         var plot = ui.View.CanvasPlotBounds;
         foreach (uint color in new uint[] { 0xEA2222, 0x7BC600 })

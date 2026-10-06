@@ -55,7 +55,7 @@ explanations and feasibility assessment derive from this repository's code.
 
 | Keys / gesture | stable | FruitsAtelier |
 | --- | --- | --- |
-| Ctrl+L | Reload | Point curvature |
+| Ctrl+L | Reload | Confirm rollback to the previous saved version |
 | Ctrl+J | Vertical flip | Extend FSlider |
 | Ctrl+Shift+I | Import sample | Insert control in Compose |
 | Ctrl+Up/Down | Contextual nudge / navigation | Playback speed |
@@ -104,7 +104,7 @@ Sources: [shortcut operations](../src/FruitsAtelier.App/Editor/EditorView.Shortc
 
 | Candidate | Why it is not just a binding |
 | --- | --- |
-| Ctrl+L / Ctrl+Shift+L reload | Define project versus linked `.osu` authority, partial/full reload, unsaved confirmation and per-difficulty state. Ctrl+L must first move to another chord. |
+| Ctrl+Shift+L reload | Define project versus linked `.osu` authority and partial/full reload. Ctrl+L restores the prior workspace save with confirmation; it does not reload a linked `.osu`. |
 | Shift+Q/W/E/R and Ctrl+Q/W/E/R sample banks | Add selection-wide sample-bank editing, including imported source context and slider edge overrides, undo and export preservation. Timing-point bank controls do not implement object-bank edits. |
 | Ctrl+Shift+I sample import | Needs an import dialog, asset copying/name policy and persistence; also conflicts with control insertion. |
 | Ctrl+Shift+S scaling | Define separate X/time scaling, pivot, range validation and slider-handle/repeat behavior. |

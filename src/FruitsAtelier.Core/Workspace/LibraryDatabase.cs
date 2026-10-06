@@ -29,6 +29,7 @@ public sealed class LibrarySettings
     public bool DerandomizeDroplets { get; set; } = true;
     public bool DerandomizeNewProjects { get; set; } = true;
     public bool ReverseCanvasScroll { get; set; }
+    public bool LockDropletSelection { get; set; } = true;
     public bool LowLatencyDisplay { get; set; }
     public bool Fullscreen { get; set; }
     public uint StandIndicatorColour { get; set; } = DefaultStandIndicatorColour;

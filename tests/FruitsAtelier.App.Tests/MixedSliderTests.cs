@@ -27,8 +27,8 @@ internal static class MixedSliderTests
         track = ui.View.Document.Tracks.Single();
         ui.EditTrack(track.Id); ui.ClickMap(1500, ui.View.Document.Tracks.Single(t => t.Id == track.Id).Nodes[1].X);
         ui.ClickMap(1500, track.Nodes[1].X);
-        ui.Key('L', ctrl: true);
-        ui.Key('L', ctrl: true);
+        ui.TogglePointCurve();
+        ui.TogglePointCurve();
         Check(CurveMath.SegmentKind(track, 1) == CurveKind.Bezier, "The selected outgoing segment was not changed.");
 
         var samples = Enumerable.Range(0, 21).Select(i => CurveMath.PositionAtTime(track, 1500 + i * 25)).ToArray();
@@ -57,7 +57,7 @@ internal static class MixedSliderTests
         ui.DownMap(track.Nodes[0].TimeMs, track.Nodes[0].X); ui.MoveMap(track.Nodes[0].TimeMs, 155); ui.UpMap(track.Nodes[0].TimeMs, 155);
         Check(Math.Abs(track.Nodes[0].X - 155) < 0.001, "An imported slider node remained read-only.");
         bool wasCurved = CurvePointEditing.IsCurved(track, track.Nodes[0].Id);
-        ui.Key('L', ctrl: true);
+        ui.TogglePointCurve();
         Check(CurvePointEditing.IsCurved(track, track.Nodes[0].Id) != wasCurved, "Fitted control point cannot be edited.");
         var output = OsuBeatmapWriter.Serialize(ui.View.Document);
         Check(output.ReadBack.ImportedSliders.Single().SpanCount == 1 && output.ObjectSequenceMatches, "Edited FSlider did not survive osu export.");

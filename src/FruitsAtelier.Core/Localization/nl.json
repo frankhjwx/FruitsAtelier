@@ -1,4 +1,8 @@
 {
+  "history.revertSave": "Vorige opslag herstellen",
+  "history.revertSavePrompt": "Deze moeilijkheid herstellen naar de vorige opgeslagen versie? Je kunt de huidige wijzigingen terughalen met Ongedaan maken.",
+  "history.noPreviousSave": "Er is geen vorige opgeslagen versie beschikbaar.",
+  "history.togglePointCurve": "Recht / gebogen punt wisselen",
   "library.favourites": "Favorieten",
   "library.addFavourite": "Toevoegen aan favorieten",
   "library.removeFavourite": "Verwijderen uit favorieten",

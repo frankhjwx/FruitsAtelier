@@ -23,7 +23,9 @@ public static class OsuTimeline
     internal static void ReconcileBreaks(MapDocument before, MapDocument document, ImportedSliderLengthCache sliderLengths)
     {
         var periods = Breaks(document);
-        if (periods.Count == 0) return;
+        bool removedParents = document.Fruits.Count < before.Fruits.Count || document.Tracks.Count < before.Tracks.Count
+            || document.ImportedSliders.Count < before.ImportedSliders.Count || document.BananaShowers.Count < before.BananaShowers.Count;
+        if (periods.Count == 0 && !removedParents) return;
         var previous = ObjectIntervals(before, sliderLengths);
         var current = ObjectIntervals(document, sliderLengths);
         var changed = current.Where(pair => !previous.TryGetValue(pair.Key, out var old) || old != pair.Value)
@@ -87,6 +89,24 @@ public static class OsuTimeline
                 ReplaceBreak(document, period, remaining[0]);
                 foreach (var part in remaining.Skip(1)) AddBreak(document, part.StartMs, part.EndMs);
             }
+        }
+        if (!removedParents || occupied.Length < 2) return;
+        var removed = previous.Where(pair => !current.ContainsKey(pair.Key)).Select(pair => pair.Value).ToArray();
+        var reconciled = Breaks(document).ToList();
+        double previousEnd = occupied[0].End;
+        for (int i = 1; i < occupied.Length; i++)
+        {
+            var next = occupied[i];
+            int start = BreakStartAfter(previousEnd);
+            int end = (int)Math.Clamp(Math.Floor(next.Start - preempt), 0, int.MaxValue);
+            // Removing the last object in a section can leave no existing break to extend.
+            if ((long)end - start >= 650 && removed.Any(interval => interval.Start > previousEnd && interval.End < next.Start)
+                && !reconciled.Any(period => period.StartMs < end && period.EndMs > start))
+            {
+                AddBreak(document, start, end);
+                reconciled.Add(new(start, end));
+            }
+            previousEnd = Math.Max(previousEnd, next.End);
         }
     }
 

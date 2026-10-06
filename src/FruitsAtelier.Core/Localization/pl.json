@@ -1,4 +1,8 @@
 {
+  "history.revertSave": "Przywróć poprzedni zapis",
+  "history.revertSavePrompt": "Przywrócić poprzednią zapisaną wersję tego poziomu trudności? Bieżące zmiany można odzyskać przez Cofnij.",
+  "history.noPreviousSave": "Brak poprzedniej zapisanej wersji.",
+  "history.togglePointCurve": "Przełącz punkt prosty / zakrzywiony",
   "library.favourites": "Ulubione",
   "library.addFavourite": "Dodaj do ulubionych",
   "library.removeFavourite": "Usuń z ulubionych",

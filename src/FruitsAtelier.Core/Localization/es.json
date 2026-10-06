@@ -1,4 +1,8 @@
 {
+  "history.revertSave": "Restaurar el guardado anterior",
+  "history.revertSavePrompt": "¿Restaurar esta dificultad a su versión guardada anterior? Puedes recuperar los cambios actuales con Deshacer.",
+  "history.noPreviousSave": "No hay una versión guardada anterior.",
+  "history.togglePointCurve": "Alternar punto recto / curvo",
   "library.favourites": "Favoritos",
   "library.addFavourite": "Añadir a favoritos",
   "library.removeFavourite": "Quitar de favoritos",
