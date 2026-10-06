@@ -45,6 +45,11 @@ Drop one MP3, OGG or WAV onto the Library browser or editor to create a project.
 requires a song title, artist, mapper and difficulty name. Nothing is created until
 all four fields are filled and **Create** is confirmed; Cancel retains the previous
 project. Unsaved edits use the normal Save, Discard or Cancel prompt before setup.
+Title and artist each have separate original and romanised fields, using the same
+controls as Song Setup. Romanised fields are editable when the original contains
+non-ASCII characters. ASCII originals supply both spellings; leaving an editable
+romanised field blank also uses the original. Both spellings are retained in the
+saved project and optional Songs export.
 Audio is copied to a dedicated directory under `workspace/Resources`, so moving the
 original audio file does not break the saved project. Creation runs in the background and
 opens the saved project when complete.

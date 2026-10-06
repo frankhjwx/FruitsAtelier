@@ -187,8 +187,8 @@ internal static class RenderCheck
                 if (view.SongSetupVisible || !before.ContentEquals(view.Document))
                     throw new InvalidOperationException("Cancelling Song Setup changed map content.");
                 view.BeginAudioProject("diagnostic.mp3"); Paint();
-                if (!view.SongSetupVisible || view.SongSetupFieldBounds.Count != 4)
-                    throw new InvalidOperationException("Audio project setup must display four metadata fields.");
+                if (!view.SongSetupVisible || view.SongSetupFieldBounds.Count != 6)
+                    throw new InvalidOperationException("Audio project setup must display separate original and romanised metadata fields.");
                 foreach (var field in view.SongSetupFieldBounds.Values)
                     if (field.X < dialog.X || field.Right > dialog.Right || field.Bottom > dialog.Bottom - 60)
                         throw new InvalidOperationException("Audio project metadata exceeds its dialog bounds.");
