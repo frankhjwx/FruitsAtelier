@@ -180,8 +180,10 @@ three ticks per beat, other even divisors use two, and other divisors use one.
 The music clock controls tick times and visual indicators. Pause,
 seek, timing changes and leaving Timing cancel queued ticks. These controls are
 editor state and do not alter beatmap data. **Tap Here / T** collects up to 32 taps.
-The tenth tap automatically sets the red section's BPM and integer first-tap offset;
-each subsequent tap refines both values through undo history. BPM uses at most two
+The tenth tap automatically fits the red section's BPM and integer offset by least
+squares against tap times and beat indices; each subsequent tap refines both values
+through undo history. The latest 32 taps retain their original beat indices so the
+fitted section start stays relative to the beginning of the measurement. BPM uses at most two
 decimal places. **Apply timing** can also apply a shorter measurement with at least two taps.
 **Reset taps** clears the measurement. Tap uses map time, including playback speed.
 

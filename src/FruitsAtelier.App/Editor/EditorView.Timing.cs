@@ -53,6 +53,7 @@ public sealed partial class EditorView
         ? sliderMultiplierDraft ?? Document.EffectiveSliderMultiplier : Document.EffectiveSliderMultiplier;
     public bool SliderMultiplierValidationBusy => sliderMultiplierDraft is not null || sliderMultiplierValidation is not null;
     private readonly List<double> timingTaps = [];
+    private int timingTapFirstIndex;
     private bool timingTapHeld;
     private TimingPoint? timingResetPoint;
     private MapDocument? timingResetDocument;
@@ -547,18 +548,35 @@ public sealed partial class EditorView
         double time = transportSamplePosition + Math.Clamp(TestplayRealtime - transportSampleAt, 0, 250) * PlaybackSpeed;
         if (!AudioPlaying) { timingError = L.Get("timing.tapPlaying"); return; }
         if (timingTaps.Count > 0 && (time <= timingTaps[^1] || time - timingTaps[^1] > 3000)) timingTaps.Clear();
-        timingTaps.Add(time); if (timingTaps.Count > 32) timingTaps.RemoveAt(0);
+        if (timingTaps.Count == 0) timingTapFirstIndex = 0;
+        timingTaps.Add(time);
+        if (timingTaps.Count > 32) { timingTaps.RemoveAt(0); timingTapFirstIndex++; }
         if (timingTaps.Count >= 10) ApplyTappedTiming();
+    }
+
+    private (double BeatLength, double Offset) EstimateTappedTiming()
+    {
+        double meanIndex = (timingTaps.Count - 1) / 2d;
+        double meanTime = timingTaps.Average();
+        double covariance = 0, variance = 0;
+        for (int i = 0; i < timingTaps.Count; i++)
+        {
+            double index = i - meanIndex;
+            covariance += index * (timingTaps[i] - meanTime);
+            variance += index * index;
+        }
+        double beatLength = covariance / variance;
+        return (beatLength, meanTime - beatLength * (timingTapFirstIndex + meanIndex));
     }
 
     private void ApplyTappedTiming()
     {
         if (timingTaps.Count < 2) return;
-        double beatLength = (timingTaps[^1] - timingTaps[0]) / (timingTaps.Count - 1);
+        var (beatLength, offset) = EstimateTappedTiming();
         bool retiming = timingResetPoint is not null && ReferenceEquals(timingResetDocument, Document);
         var before = retiming ? null : TimingEditing.Current(Document, playhead, true);
         var point = retiming ? TimingEditing.Copy(timingResetPoint!) : before is null ? TimingEditing.Create(Document, timingTaps[0], false) : TimingEditing.Copy(before);
-        point.TimeMs = TimingPageValue("offset", timingTaps[0]);
+        point.TimeMs = TimingPageValue("offset", offset);
         point.BeatLengthMs = 60000 / TimingPageValue("bpm", 60000 / beatLength);
         var points = Document.TimingPoints.Select(p => p == before ? point : p).ToList(); if (before is null) points.Add(point);
         if (Edit(L.Get("timing.tap"), () => TimingEditing.Apply(Document, points, before is null ? [] : [(before, point)], new(Scale: timingMoveNotes, OffsetMarkers: timingMoveMarkers)))) timingResetPoint = null;

@@ -94,7 +94,7 @@ internal static class FeedbackRenderCheck
                     if (i < 9 && !view.Document.ContentEquals(timingMap)) throw new InvalidOperationException("Native taps applied before ten samples.");
                 }
                 var red = view.Document.TimingPoints.Single(p => p.Uninherited);
-                if (red.TimeMs != 1001 || Math.Abs(60000 / red.BeatLengthMs - 119.66) > .000001)
+                if (red.TimeMs != 999 || Math.Abs(60000 / red.BeatLengthMs - 119.80) > .000001)
                     throw new InvalidOperationException("Native continued taps did not refine BPM and integer offset.");
                 var tapped = view.Document.DeepClone();
                 view.UpdateTransport(750.9, 20000, true, false, false, null, null);

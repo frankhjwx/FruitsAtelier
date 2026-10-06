@@ -298,7 +298,7 @@ public sealed partial class EditorView
         TimingButton(c, new(r.X, y, 74, row * 2 + gap), L.Get("timing.tapReset"), () => timingTaps.Clear(), 2);
         y += row + gap;
         TimingButton(c, new(lampX, y, r.Width - 82, row), L.Get("timing.tap"), TapTiming, 1); y += row + gap;
-        TimingButton(c, new(r.X, y, r.Width, row), timingTaps.Count >= 2 ? L.Get("timing.tapResult", 60000 * (timingTaps.Count - 1) / (timingTaps[^1] - timingTaps[0]), timingTaps.Count) : L.Get("timing.tapApply"), ApplyTappedTiming, enabled: timingTaps.Count >= 2); y += row + gap;
+        TimingButton(c, new(r.X, y, r.Width, row), timingTaps.Count >= 2 ? L.Get("timing.tapResult", TimingPageValue("bpm", 60000 / EstimateTappedTiming().BeatLength), timingTaps.Count) : L.Get("timing.tapApply"), ApplyTappedTiming, enabled: timingTaps.Count >= 2); y += row + gap;
         void Number(string key, double value, Action<double> apply, bool enabled = true)
         {
             if (key == "sliderMultiplier")

@@ -58,7 +58,7 @@ internal static class TimingFeedbackTests
                 CheckTiming(tap, 1001, 119.90);
                 var firstResult = tap.View.Document.DeepClone();
                 tap.View.UpdateTransport(6014.6, 20000, true, true, false, null, null); tap.Key('T'); tap.View.KeyUp('T');
-                CheckTiming(tap, 1001, 119.66);
+                CheckTiming(tap, 999, 119.80);
                 var refined = tap.View.Document.DeepClone();
                 tap.Key('Z', ctrl: true); Check(tap.View.Document.ContentEquals(firstResult), "A refined tap result did not undo to the previous result.");
                 tap.Key('Z', ctrl: true); Check(tap.View.Document.ContentEquals(tappedMap), "Automatic timing did not undo to the original section.");
@@ -68,6 +68,21 @@ internal static class TimingFeedbackTests
                 Check(tap.View.Document.ContentEquals(refined), "A long gap did not restart tap collection before applying.");
                 tap.View.UpdateTransport(10200, 20000, true, false, false, null, null); tap.Key('T'); tap.View.KeyUp('T');
                 Check(tap.View.Document.ContentEquals(refined), "Paused taps changed timing.");
+
+                var rolling = new Ui(false, new Clock()); rolling.LoadDocument(Map()); rolling.Key(114);
+                for (int i = 0; i < 40; i++)
+                {
+                    rolling.View.UpdateTransport(1000.6 + i * 500.4, 30000, true, true, false, null, null);
+                    rolling.Key('T'); rolling.View.KeyUp('T');
+                }
+                CheckTiming(rolling, 1001, 119.90);
+                rolling.ClickText(L.Get("timing.tapReset"));
+                for (int i = 0; i < 10; i++)
+                {
+                    rolling.View.UpdateTransport(23000.6 + i * 500.4, 30000, true, true, false, null, null);
+                    rolling.Key('T'); rolling.View.KeyUp('T');
+                }
+                CheckTiming(rolling, 23001, 119.90);
 
                 var paused = new Ui(false, new Clock()); paused.LoadDocument(Map());
                 var seeks = new List<double>(); paused.View.RequestSeek = seeks.Add;
@@ -95,7 +110,7 @@ internal static class TimingFeedbackTests
     {
         var point = ui.View.Document.TimingPoints.Single(p => p.Uninherited);
         Check(point.TimeMs == offset && Math.Abs(60000 / point.BeatLengthMs - bpm) < 1e-8,
-            "Automatic taps did not set the estimated BPM and integer first-tap offset.");
+            "Automatic taps did not jointly fit BPM and integer offset.");
         Check(ui.View.Document.Fruits.Single().TimeMs == 6000,
             "Automatic taps moved notes while movement was disabled.");
     }
