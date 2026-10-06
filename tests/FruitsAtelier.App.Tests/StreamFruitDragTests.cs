@@ -57,8 +57,14 @@ internal static class StreamFruitDragTests
             "Box movement changed event time during a horizontal drag.");
         Check(Math.Abs(changed[^2].X - preceding.X - 80) < .001,
             "Box movement did not translate the preceding fruit.");
+        Check(changed.Length == fruits.Length && changed.Select((item, index) =>
+            Math.Abs(item.X - fruits[index].X - 80) < .001 && Math.Abs(item.TimeMs - fruits[index].TimeMs) < .001).All(matched => matched),
+            "Box movement did not translate every stream fruit without changing its time.");
+        var translated = childUi.View.Document.DeepClone();
         childUi.Key('Z', ctrl: true);
         Check(map.ContentEquals(childUi.View.Document), "Undo did not restore the stream box move.");
+        childUi.Key('Y', ctrl: true);
+        Check(translated.ContentEquals(childUi.View.Document), "Redo did not restore the complete stream box move.");
     }
 
     private static bool OuterRing(Ui ui, (float X, float Y) position)
