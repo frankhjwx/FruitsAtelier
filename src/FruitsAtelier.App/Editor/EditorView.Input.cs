@@ -77,6 +77,13 @@ public sealed partial class EditorView
             return;
         }
         if (legacyButtonSlider != Guid.Empty && !sliderConversionBounds.Contains(x, y)) legacyButtonSlider = Guid.Empty;
+        if (legacyButtonSlider != Guid.Empty && sliderConversionBounds.Contains(x, y))
+        {
+            // Popup actions own the pointer even when the canvas play line crosses them.
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         if (updatesPage)
         {
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
@@ -463,6 +470,7 @@ public sealed partial class EditorView
         if (drag == DragKind.Objects) { if (selectionScaleSide != 0) ScaleSelectedObjects(x); else MoveSelectedObjects(x, y, shift); return; }
         if (drag == DragKind.SliderObject)
         {
+            if (MoveStreamEndpoint(x, y)) return;
             if (!TryBeginSliderEndpointTimeDrag(y)) { MoveSliderObject(x); return; }
         }
         if (drag == DragKind.LegacyControl) { MoveLegacyPoints(x, y); return; }
@@ -725,6 +733,7 @@ public sealed partial class EditorView
 
     private bool NavigationDuringDrag => draftTrack == Guid.Empty && draftBanana == Guid.Empty
         && (drag is DragKind.TimelineTail or DragKind.BananaStart or DragKind.BananaEnd
+            || drag == DragKind.SliderObject && streamEndpointTimeDrag
             || drag is DragKind.Anchor or DragKind.LegacyControl && SelectedTrack is { Nodes.Count: > 1 } track
                 && (anchorSelection.Contains(track.Nodes[0].Id) || anchorSelection.Contains(track.Nodes[^1].Id)));
 

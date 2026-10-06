@@ -32,26 +32,27 @@ public static class DistanceSpacingEditing
         x = Math.Clamp(x, 0, 512);
         if (Math.Abs(x - target.X) < .00001) return;
         if (TryRandomizedTiny(document, target, x, compensateTinyDroplets, cache)) return;
-        if (target.Kind is not (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet))
-            throw new ArgumentException(L.Get("distance.unsupported"));
-
         var track = document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
             ?? throw new ArgumentException(L.Get("distance.unsupported"));
+        bool stream = track.StreamSnapDivisor is not null;
+        if (target.Kind is not (CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet)
+            && !(stream && target.Kind == CatchObjectKind.Fruit))
+            throw new ArgumentException(L.Get("distance.unsupported"));
         var before = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache);
         if (!before.Success) throw new ArgumentException(L.Get("coordinate.unreachable"));
         var siblings = before.Objects.Where(o => o.SourceId == target.SourceId).ToArray();
         var selected = siblings.FirstOrDefault(o => o.EventIndex == target.EventIndex);
         if (selected is null) throw new ArgumentException(L.Get("coordinate.unreachable"));
-        var slider = before.Sliders.Single(s => s.SourceId == track.Id);
+        var slider = stream ? null : before.Sliders.Single(s => s.SourceId == track.Id);
         double start = track.Nodes[0].TimeMs, duration = track.Nodes[^1].TimeMs - start;
-        var nested = LegacyCatchRules.CreateNested(start, duration, slider.Velocity,
+        var nested = slider is null ? null : LegacyCatchRules.CreateNested(start, duration, slider.Velocity,
             slider.TickDistance, slider.Length, track.SpanCount);
         // Uncompensated tiny droplets sample path progress, which differs from their rounded event time.
-        double SampleTime(ConvertedCatchObject item) => item.Kind == CatchObjectKind.TinyDroplet && !slider.TinyCompensationApplied
-            ? start + nested[item.EventIndex].Progress * duration
+        double SampleTime(ConvertedCatchObject item) => item.Kind == CatchObjectKind.TinyDroplet && slider is { TinyCompensationApplied: false }
+            ? start + nested![item.EventIndex].Progress * duration
             : CurveMath.FirstSpanTime(track, item.TimeMs);
         double time = SampleTime(selected);
-        // Repeated traversals share the same path sample, so their droplets move together.
+        // Repeated traversals share the same path sample, so linked events move together.
         var linkedEvents = siblings.Where(o => o.Kind == selected.Kind
             && Math.Abs(SampleTime(o) - time) < .000001).Select(o => o.EventIndex).ToHashSet();
         var times = siblings.Select(SampleTime)
@@ -71,7 +72,7 @@ public static class DistanceSpacingEditing
         left.OutgoingCurve = null; left.OutgoingKind = CurveKind.Linear; left.HandleOut = default;
         anchor.HandleIn = default; anchor.OutgoingCurve = null; anchor.OutgoingKind = CurveKind.Linear; anchor.HandleOut = default;
         right.HandleIn = default;
-        double pathX = selected.Kind == CatchObjectKind.TinyDroplet && !slider.TinyCompensationApplied
+        double pathX = selected.Kind == CatchObjectKind.TinyDroplet && slider is { TinyCompensationApplied: false }
             ? x - selected.RandomOffset : x;
         if (pathX is < 0 or > 512 || !CurveMath.TryMoveAnchor(track, anchor.Id, time, pathX, out _))
             throw new ArgumentException(L.Get("coordinate.unreachable"));

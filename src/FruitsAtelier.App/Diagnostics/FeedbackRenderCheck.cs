@@ -54,6 +54,29 @@ internal static class FeedbackRenderCheck
                 if (view.PlayheadMs != 1000) throw new InvalidOperationException("Native quick retry did not reset the session.");
                 view.KeyUp(192); view.StopTestplay();
                 if (!view.Document.ContentEquals(map)) throw new InvalidOperationException("Native feedback controls changed content.");
+                var streamMap = new MapDocument { IsDemo = false, DurationMs = 6000, BeatLengthMs = 400 };
+                var stream = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = 2 };
+                stream.Nodes.AddRange([new() { TimeMs = 1000, X = 200 }, new() { TimeMs = 1800, X = 200 }]);
+                streamMap.Tracks.Add(stream); view.LoadDocument(streamMap); Paint();
+                view.Wheel(view.CanvasPlotBounds.X, view.CanvasPlotBounds.Bottom,
+                    (float)(120 * Math.Log(.09 / view.PixelsPerMs) / Math.Log(1.16)), false, false, true); Paint();
+                var field = view.PlayfieldBounds; var plot = view.CanvasPlotBounds;
+                float panX = plot.X + plot.Width / 2, panY = plot.Y + plot.Height / 2;
+                double start = Math.Max(0, 1400 - plot.Height / 2 / view.PixelsPerMs);
+                float panEndY = panY + (float)((start - view.ViewStartMs) * view.PixelsPerMs);
+                view.PointerDown(panX, panY, 1, false, false);
+                view.PointerMove(panX, panEndY, false, false); view.PointerUp(panX, panEndY, 1); Paint();
+                float fruitX = field.X + field.Width * 200 / 512;
+                float fruitY = plot.Bottom - (float)((1400 - view.ViewStartMs) * view.PixelsPerMs);
+                for (int i = 0; i < 2; i++)
+                { view.PointerDown(fruitX, fruitY, 0, false, false); view.PointerUp(fruitX, fruitY, 0); Paint(); }
+                float movedX = fruitX + field.Width * 80 / 512;
+                view.PointerDown(fruitX, fruitY, 0, false, false);
+                view.PointerMove(movedX, fruitY, false, false); view.PointerUp(movedX, fruitY, 0); Paint();
+                if (view.Conversion.Objects.Any(o => Math.Abs(o.X - (o.TimeMs == 1400 ? 280 : 200)) > .001))
+                    throw new InvalidOperationException($"Native stream fruit drag did not preserve adjacent samples: plot={plot}, pointer={fruitX},{fruitY}, selected={view.SelectedObjectIds.Count}, status={view.StatusMessage}, events={string.Join(';', view.Conversion.Objects.Select(o => $"{o.TimeMs}:{o.X}"))}.");
+                view.KeyDown(90, true, false); Paint();
+                if (!view.Document.ContentEquals(streamMap)) throw new InvalidOperationException("Native stream fruit drag did not undo.");
                 void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
             }
         }

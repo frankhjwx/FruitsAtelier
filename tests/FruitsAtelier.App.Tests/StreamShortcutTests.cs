@@ -158,7 +158,8 @@ internal static class StreamShortcutTests
         ui.ClickText(L.Get("conversion.editTitle")); ui.Key(37); ui.Key(13);
         Check(ui.View.Document.Tracks.Single().StreamSnapDivisor == 12, "change snapping updates existing stream");
         ui.HoldMap(1000, 100); ui.ClickText(L.Get("stream.convertBack"));
-        Check(ui.View.Document.Tracks.Single().StreamSnapDivisor is null && ui.View.Conversion.Sliders.Count == 1, "restore keeps slider geometry and preview");
+        Check(ui.View.Document.Tracks.Single().StreamSnapDivisor is null && ui.View.Conversion.Sliders.Count == 1,
+            $"restore keeps slider geometry and preview: stream={ui.View.Document.Tracks.Single().StreamSnapDivisor}, sliders={ui.View.Conversion.Sliders.Count}, status={ui.View.StatusMessage}");
         ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
         ui.SelectTrack(id);
         var before = ui.View.Document.DeepClone();
