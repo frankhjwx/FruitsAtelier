@@ -15,8 +15,10 @@ internal static class AssistToolsTests
             var ui = new Ui(); ui.LoadDocument(map);
             var before = ui.View.Document.DeepClone();
             Check(!ui.View.MovementIncludesTinyDroplets, "Tiny analysis must start off");
-            ui.ClickText(Strings.Get("ui.view"));
-            ui.ClickText(Strings.Get("movement.analysis"));
+            var movementLabel = ui.Canvas.Texts.First(t => t.Value.Length > 0
+                && Strings.Get("movement.analysis").StartsWith(t.Value, StringComparison.Ordinal)
+                && t.Y >= 88 && t.Y < 117);
+            ui.Click(movementLabel.X + 4, movementLabel.Y + 5);
             RecordingCanvas.Segment[] Connections() => ui.Canvas.Operations
                 .Where(o => o.Clip == ui.View.CanvasPlotBounds && o.Segment is { Width: 4, Opacity: .65f })
                 .Select(o => o.Segment!.Value).ToArray();
