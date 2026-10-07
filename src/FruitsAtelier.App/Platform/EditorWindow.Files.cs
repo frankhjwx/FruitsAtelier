@@ -13,6 +13,27 @@ internal sealed partial class EditorWindow
 
     private void ConfigureFiles()
     {
+        view.SupportsAudioDiagnostics = true;
+        view.AudioDiagnosticStatus = () => !AudioDiagnosticLog.Requested ? "audioDiagnostic.inactive"
+            : AudioDiagnosticCapture.Failed || AppLog.Failed ? "audioDiagnostic.failed"
+            : AudioDiagnosticCapture.LimitReached || AppLog.LimitReached ? "audioDiagnostic.limit" : "audioDiagnostic.active";
+        view.CurrentAudioDiagnosticProfile = () => AudioDiagnosticProfile.Select(AudioDiagnosticLog.Requested, AudioDiagnosticCapture.Profile).Name;
+        view.RequestAudioDiagnosticMarker = () => audio.MarkDiagnosticIssue();
+        if (AudioDiagnosticLog.CaptureDirectory is { Length: > 0 } capture)
+        {
+            view.RequestAudioDiagnosticFolder = () => FileOperation(() =>
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(capture) { UseShellExecute = true }));
+            view.RequestAudioDiagnosticExport = () => AudioDiagnosticCapture.ExportAsync(capture, new
+            {
+                view.LibrarySettings.AudioDiagnostics, view.LibrarySettings.AudioDiagnosticProfile,
+                view.LibrarySettings.AudioDiagnosticFrames, view.LibrarySettings.LowLatencyDisplay,
+                view.LibrarySettings.MasterVolume, view.LibrarySettings.SongVolume, view.LibrarySettings.HitsoundVolume,
+                audio.PlaybackSpeed, audio.PositionMs, audio.IsPlaying,
+                editorLogDropped = AppLog.Dropped, editorLogFailed = AppLog.Failed,
+                editorLogLimitReached = AppLog.LimitReached,
+                displayOverride = Environment.GetEnvironmentVariable("FRUITSATELIER_DISPLAY_PROFILE")
+            });
+        }
         view.RequestSyncFile = answer => answer(MapFileDialog.Select(hwnd, false, L.Get("sync.chooseFile"), MapFileDialog.OsuFilter));
         view.RequestSyncAudio = answer => answer(MapFileDialog.Select(hwnd, false, L.Get("sync.chooseAudio"), MapFileDialog.AudioFilter));
         view.RequestPausePlayback = () => audio.Pause();

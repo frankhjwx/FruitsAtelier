@@ -577,6 +577,12 @@ internal static class RenderCheck
                         }
                         if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
                             throw new InvalidOperationException("Settings volume controls did not update shared percentages.");
+                        view.Wheel(settings.X + 300, settings.Y + 200, -480, false);
+                        canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                        view.Wheel(settings.X + 300, settings.Y + 200, -2400, false);
+                        canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                        view.Wheel(settings.X + 300, settings.Y + 200, 2400, false);
+                        canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                     }
                     if (category == 2)
                     {

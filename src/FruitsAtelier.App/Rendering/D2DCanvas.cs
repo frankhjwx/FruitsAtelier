@@ -71,10 +71,10 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     public D2DCanvas(nint hwnd, int width, int height, float dpi)
     {
         string? presentation = Environment.GetEnvironmentVariable("FRUITSATELIER_DISPLAY_PROFILE");
-        if (Audio.AudioDiagnosticLog.Requested && presentation is "vsync" or "immediate")
+        if (Audio.AudioDiagnosticLog.Requested && (presentation is "vsync" or "immediate" || Audio.AudioDiagnosticCapture.Frames))
         {
             displayDiagnostics = new Audio.AudioDiagnosticLog();
-            DiagnosticImmediatePresentation = presentation == "immediate";
+            DiagnosticImmediatePresentation = presentation == "immediate" ? true : presentation == "vsync" ? false : null;
         }
         try
         {

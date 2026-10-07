@@ -20,7 +20,7 @@ public sealed partial class EditorView
     private Rect cleanHistoryBounds, clearCacheBounds;
     private float WorkspaceContentHeight => 527 + StorageFolderCount * 20;
     private float GeneralContentHeight => (SupportsDisplayMode ? 458 : 314) + (SupportsFullscreen ? 108 : 0);
-    private float SettingsScrollableHeight => FirstRunSetupVisible ? firstRunContentHeight : settingsCategory == SettingsCategory.General ? GeneralContentHeight : WorkspaceContentHeight;
+    private float SettingsScrollableHeight => FirstRunSetupVisible ? firstRunContentHeight : settingsCategory == SettingsCategory.General ? GeneralContentHeight : settingsCategory == SettingsCategory.Audio ? audioSettingsContentHeight : WorkspaceContentHeight;
     private int StorageFolderCount => Math.Min(8, storageReport?.Folders.Count ?? 0);
     private string storageRoot = "", storageError = "";
     private bool storageReindex;
@@ -196,7 +196,7 @@ public sealed partial class EditorView
 
     private void ScrollStorage(float x, float y, float delta)
     {
-        if ((FirstRunSetupVisible || settingsCategory is SettingsCategory.Workspace or SettingsCategory.General) && workspaceScrollBounds.Contains(x, y))
+        if ((FirstRunSetupVisible || settingsCategory is SettingsCategory.Workspace or SettingsCategory.General or SettingsCategory.Audio) && workspaceScrollBounds.Contains(x, y))
         {
             libraryField = -1;
             workspaceScroll = Math.Clamp(workspaceScroll - delta / 120 * 64, 0, Math.Max(0, SettingsScrollableHeight - workspaceScrollBounds.Height));
@@ -205,7 +205,7 @@ public sealed partial class EditorView
 
     private bool BeginWorkspaceScroll(float x, float y, int button)
     {
-        if (!FirstRunSetupVisible && settingsCategory is not (SettingsCategory.Workspace or SettingsCategory.General) || SettingsScrollableHeight <= workspaceScrollBounds.Height || button != 0 || !workspaceScrollTrack.Contains(x, y)) return false;
+        if (!FirstRunSetupVisible && settingsCategory is not (SettingsCategory.Workspace or SettingsCategory.General or SettingsCategory.Audio) || SettingsScrollableHeight <= workspaceScrollBounds.Height || button != 0 || !workspaceScrollTrack.Contains(x, y)) return false;
         workspaceScrollGrab = workspaceScrollThumb.Contains(x, y) ? y - workspaceScrollThumb.Y : workspaceScrollThumb.Height / 2;
         workspaceScrollDragging = true; libraryField = -1; MoveWorkspaceScroll(y); return true;
     }

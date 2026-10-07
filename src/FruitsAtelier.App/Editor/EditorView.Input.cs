@@ -936,6 +936,7 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (AudioDiagnosticMarkerKeyDown(virtualKey, ctrl, shift)) return;
         if (FullscreenKeyDown(virtualKey, ctrl, shift)) return;
         if (VersionHistoryVisible) { VersionHistoryKey(virtualKey); return; }
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
@@ -1245,6 +1246,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        audioDiagnosticMarkerHeld = false;
         fullscreenShortcutHeld = false;
         deferredTestplay = false;
         placementCtrl = false; timingTapHeld = false; timingSnapDragging = false; panelMenuOpen = false;

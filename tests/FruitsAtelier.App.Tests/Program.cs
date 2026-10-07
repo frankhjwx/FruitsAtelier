@@ -6,6 +6,11 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 // Existing interaction fixtures use Chinese labels explicitly.
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
+if (args.Contains("--audio-diagnostics-settings-check"))
+{
+    try { AudioDiagnosticSettingsTests.Run(); SettingsPreferencesTests.Run(); SettingsTests.Layout(); Console.WriteLine("PASS Audio diagnostics and settings checks"); return 0; }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
 if (args.Contains("--first-run-setup-check"))
 {
@@ -74,6 +79,7 @@ var tests = new (string Name, Action Run)[]
     ("Fullscreen settings and Alt Enter preserve drafts, content and testplay", FullscreenSettingsTests.Run),
     ("Legacy slider editing converts silently with atomic drag, insertion and cancellation", ImplicitSliderEditingTests.Run),
     ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),
+    ("Release audio diagnostic settings persist, scroll and export without blocking", AudioDiagnosticSettingsTests.Run),
     ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),
     ("First-run setup persists preferences, isolates auditions and supports debug replay", FirstRunSetupTests.Run),
     ("Shortcut routing isolates Timing object nudges and preserves navigation", ShortcutRoutingTests.TimingPage),

@@ -1,6 +1,14 @@
 # Audio transport
 
-Windows audio diagnostics are opt-in through `audio-diagnostics.enabled` beside
+Windows release builds expose opt-in recording, output profiles, frame logs,
+issue markers and background report export in **Settings > Audio**. Apply and
+restart to activate recording/profile changes. Each run gets a capture folder,
+with a 64 MiB event-data budget shared by its loggers. Logger shutdown waits at
+most 250 ms. editor.log also writes through a bounded background queue, so slow
+filesystem or endpoint queries in diagnostic writers cannot hold transport
+replacement indefinitely. See the [capture instructions](../../../docs/AUDIO-DIAGNOSTICS.txt).
+
+Windows audio diagnostics are also opt-in through `audio-diagnostics.enabled` beside
 the application binary or `FRUITSATELIER_AUDIO_DIAGNOSTICS=1`. Each transport and
 hitsound bank writes its own timestamped JSONL file using a bounded background
 queue, with a 16 MiB file limit. Logs include default endpoint metadata, command

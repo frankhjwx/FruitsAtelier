@@ -16,12 +16,13 @@ internal sealed class AudioDiagnosticLog : IDisposable
     private long dropped;
     public bool Enabled { get; }
     public string? FilePath { get; }
-    internal static bool Requested => Environment.GetEnvironmentVariable("FRUITSATELIER_AUDIO_DIAGNOSTICS") == "1"
+    internal Task Completion => writer;
+    internal static bool Requested => AudioDiagnosticCapture.Enabled || Environment.GetEnvironmentVariable("FRUITSATELIER_AUDIO_DIAGNOSTICS") == "1"
         || File.Exists(Path.Combine(AppContext.BaseDirectory, "audio-diagnostics.enabled"));
     internal static string? CaptureDirectory => Requested
-        ? Environment.GetEnvironmentVariable("FRUITSATELIER_AUDIO_LOG_DIRECTORY") : null;
+        ? Environment.GetEnvironmentVariable("FRUITSATELIER_AUDIO_LOG_DIRECTORY") ?? AudioDiagnosticCapture.Directory : null;
 
-    internal AudioDiagnosticLog(string? directory = null)
+    internal AudioDiagnosticLog(string? directory = null, Task? writerGate = null)
     {
         Enabled = directory is not null || Requested;
         if (!Enabled) { writer = Task.CompletedTask; return; }
@@ -46,8 +47,12 @@ internal sealed class AudioDiagnosticLog : IDisposable
             runtime = RuntimeInformation.FrameworkDescription, processors = Environment.ProcessorCount,
             stopwatchFrequency = Stopwatch.Frequency, maximumBytes = MaximumBytes
         });
-        writer = Task.Run(WriteAsync);
-        AppLog.Write($"Audio diagnostics requested: {FilePath}; profile={Environment.GetEnvironmentVariable("FRUITSATELIER_AUDIO_PROFILE") ?? "event-10"}");
+        writer = Task.Run(async () =>
+        {
+            if (writerGate is not null) await writerGate;
+            await WriteAsync();
+        });
+        AppLog.Write($"Audio diagnostics requested: {FilePath}; profile={AudioDiagnosticCapture.Profile}");
     }
 
     public void Write(string kind, object data)
@@ -95,16 +100,25 @@ internal sealed class AudioDiagnosticLog : IDisposable
             {
                 if (stream.Position >= MaximumBytes)
                 {
+                    AudioDiagnosticCapture.FileLimitReached = true;
                     await text.WriteLineAsync(JsonSerializer.Serialize(new { kind = "sizeLimitReached", maximumBytes = MaximumBytes }));
                     entries.Writer.TryComplete();
                     return;
                 }
-                await text.WriteLineAsync(Serialize(entry));
+                string line = Serialize(entry);
+                if (!AudioDiagnosticCapture.Reserve(System.Text.Encoding.UTF8.GetByteCount(line) + 2))
+                {
+                    await text.WriteLineAsync(Serialize("captureLimitReached", new { }));
+                    entries.Writer.TryComplete();
+                    return;
+                }
+                await text.WriteLineAsync(line);
             }
             await text.WriteLineAsync(JsonSerializer.Serialize(new { kind = "logClosed", dropped = Interlocked.Read(ref dropped) }));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        catch (Exception ex)
         {
+            AudioDiagnosticCapture.Failed = true;
             AppLog.Write($"Audio diagnostics failed: {FilePath}; {ex}");
             entries!.Writer.TryComplete();
         }
@@ -113,6 +127,7 @@ internal sealed class AudioDiagnosticLog : IDisposable
     public void Dispose()
     {
         entries?.Writer.TryComplete();
-        writer.GetAwaiter().GetResult();
+        // A slow or disconnected destination must not hold the UI during transport replacement.
+        writer.Wait(TimeSpan.FromMilliseconds(250));
     }
 }

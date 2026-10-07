@@ -1,4 +1,50 @@
-FruitsAtelier - Windows audio lag diagnostic package
+FruitsAtelier - Audio delay diagnostics
+
+Standard Windows builds
+
+Open Settings > Audio > Audio delay diagnostics. Enable recording, choose an
+output test mode, click Apply, then restart the app. Recording and output mode
+are fixed for that run; the status distinguishes saved preferences from active
+recording. No special build or environment variables are required. Existing diagnostic
+launchers, environment overrides and enabling markers remain effective.
+
+Start with event-10, then compare event-50, poll-10 and poll-50 one run at a time.
+The values are requested shared-mode WASAPI buffers, not guaranteed device or
+acoustic latency. Reproduce play, pause/resume, seek and the affected speed.
+The existing music/hitsound volume controls can isolate either signal.
+
+Optional frame timing logs and the F/QPC/MAP overlay correlate rendering with
+audio snapshots. They follow General > Display mode; compare Default and Low
+latency there to investigate sound leading the image. Frame recording does not
+force a presentation mode. Testplay retains its own low-latency presentation.
+
+Press Ctrl+Shift+F8 when a delay occurs to mark it without pausing playback.
+You can also return to Settings > Audio and mark the recent issue.
+Opening Settings pauses playback; the marker records the current paused position
+and identifies the preceding events for review. Export the report ZIP, or open
+this run's log folder. Export runs in the background and snapshots active files;
+a final JSONL line may be incomplete. The report excludes source audio and maps.
+Logs can include device identifiers, filenames and editor error paths. Include
+what sounded wrong, approximate delay, wired/Bluetooth output, playback speed,
+and whether screen recording changes the result when sending the report.
+
+Repository builds store each run under artifacts/logs/audio-captures/. Distributed
+builds use %LOCALAPPDATA%/FruitsAtelier/logs/audio-captures/. Logs use a bounded
+nonblocking queue, a 16 MiB limit per JSONL file and a 64 MiB event-data budget per
+run. editor.log also uses a bounded background queue and a 16 MiB capture limit.
+Writing failures and limits appear in Settings. Closing a logger waits at
+most 250 ms for its background writer. Export has an 80 MiB input budget and
+includes only audio JSONL files, editor.log, capture.json and report instructions.
+The manifest records active output configuration, saved preferences, volumes and
+editor log queue losses or failures. Capture
+folders remain available until deleted by the user. Disable recording, Apply
+and restart after collecting the reports.
+
+Software clocks, read-ahead and presentation statistics cannot measure the
+physical delay between the device and audible speaker/headphone output. A phone
+recording of screen and speaker together helps compare perceived synchronization.
+
+Dedicated diagnostic package launchers
 
 Extract the whole ZIP to a writable folder. Close all other FruitsAtelier windows.
 Open current/ and double-click each launcher, one run at a time:

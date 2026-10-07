@@ -108,7 +108,7 @@ public sealed class AudioTransport : IDisposable
         string? diagnosticDirectory = null)
     {
         diagnostics = new AudioDiagnosticLog(diagnosticDirectory);
-        profile = AudioDiagnosticProfile.Select(diagnostics.Enabled, Environment.GetEnvironmentVariable("FRUITSATELIER_AUDIO_PROFILE"));
+        profile = AudioDiagnosticProfile.Select(diagnostics.Enabled, AudioDiagnosticCapture.Profile);
         if (diagnostics.Enabled) diagnostics.Write("outputConfiguration", new { profile.Name, profile.EventDriven, profile.BufferMs,
             injectedPlayer = createPlayer is not null, outputGain });
         this.outputGain = outputGain;
@@ -168,6 +168,17 @@ public sealed class AudioTransport : IDisposable
             playing = presented.IsPlaying, snapshotAgeMs = now - presented.PositionTimestampMs,
             maximumUpdateGapMs = maximumPresentationGapMs });
         maximumPresentationGapMs = 0;
+    }
+
+    internal void MarkDiagnosticIssue()
+    {
+        var snapshot = State;
+        diagnostics.Write("userReportedDelay", new
+        {
+            fileName = Path.GetFileName(snapshot.FilePath), snapshot.PositionMs, snapshot.DurationMs,
+            snapshot.IsPlaying, snapshot.PositionTimestampMs, snapshot.OutputBufferAheadMs, profile = profile.Name,
+            note = "User marked a perceived delay; this is not an acoustic measurement."
+        });
     }
 
     public void Load(string path) => _ = LoadAsync(path);

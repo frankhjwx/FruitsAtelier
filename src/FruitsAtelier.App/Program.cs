@@ -14,6 +14,13 @@ internal static class Program
             if (args.Length == 3 && args[0] == "--update-package-check") return Diagnostics.UpdatePackageCheck.Run(args[1], args[2]);
             if (args.Length == 2 && args[0] == "--package-check") return Diagnostics.PackageCheck.Run(args[1]);
             if (args.Contains("--m2-check")) return Diagnostics.M2Check.Run(args.Where(p => File.Exists(p) && Path.GetExtension(p).Equals(".osz", StringComparison.OrdinalIgnoreCase)));
+            if (!args.Contains("--render-check") && !args.Contains("--testplay-render-check") && !args.Contains("--profile-map"))
+            {
+                FruitsAtelier.Core.LibrarySettings diagnosticSettings;
+                try { diagnosticSettings = FruitsAtelier.Core.LibrarySettings.Load(); }
+                catch { diagnosticSettings = new(); }
+                Audio.AudioDiagnosticCapture.Configure(diagnosticSettings);
+            }
             L.SetLanguage(FruitsAtelier.Localization.LanguagePreference.ReadLanguage());
             using var window = new EditorWindow();
             if (args.Length is 2 or 3 && args[0] == "--profile-map") return window.Run(profileMap: args[1],
@@ -28,6 +35,7 @@ internal static class Program
                 Native.ShowError(0, L.Get("window.startFailed", exception.Message, AppLog.Path), L.Get("app.name"));
             return 1;
         }
+        finally { AppLog.Close(); }
     }
 }
 
@@ -36,6 +44,12 @@ internal static class AppLog
     // Background writers must never update the window's UI-thread counters.
     [ThreadStatic] internal static Editor.EditorPerformanceMetrics? Performance;
     public static string Path { get; } = FindPath();
+    private static readonly Audio.AsyncDiagnosticTextLog writer = new(Path,
+        Audio.AudioDiagnosticLog.Requested ? 16 * 1024 * 1024 : long.MaxValue);
+    internal static long Dropped => writer.Dropped;
+    internal static bool Failed => writer.Failed;
+    internal static bool LimitReached => writer.LimitReached;
+    internal static void Close() => writer.Dispose();
     private static string FindPath()
     {
         var root = new DirectoryInfo(AppContext.BaseDirectory);
@@ -48,9 +62,7 @@ internal static class AppLog
     public static void Write(string text)
     {
         long start = Performance?.Start() ?? 0;
-        try { Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!); File.AppendAllText(Path, $"{DateTimeOffset.Now:O} {text}{Environment.NewLine}"); }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
+        try { writer.Write($"{DateTimeOffset.Now:O} {text}{Environment.NewLine}"); }
         finally { Performance?.End(Editor.EditorPerformanceStage.LogWrite, start); }
     }
 }

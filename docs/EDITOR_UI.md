@@ -862,3 +862,20 @@ first-side change or subdivision change; Ctrl+Y or Ctrl+Shift+Z redoes it. Draft
 history stays inside the dialog. Confirming still creates one document undo step.
 Right-click a manual fruit marker on the left graph to remove its offset and
 recompute that fruit from the envelope. This removal is also undoable.
+
+## Audio delay diagnostics
+
+Windows release builds provide recording and output test controls in Settings >
+Audio. Enable recording, select event-driven or polling shared-mode WASAPI with a
+requested 10 or 50 ms buffer, Apply and restart. The current-run status stays
+separate from saved settings. Optional frame timing logs and a correlation overlay
+follow the General display mode. The Audio page scrolls while its navigation and
+Apply button stay fixed.
+
+Users can press Ctrl+Shift+F8 during playback to mark a delay without pausing,
+mark a recently noticed delay from Settings, open the current capture directory and
+export a ZIP while the app remains open. Export runs in the background and reports
+completion or failure on the page. Diagnostic preferences do not change beatmap
+content. The Mac Audio page identifies the WASAPI controls as Windows-only.
+See [Audio capture instructions](AUDIO-DIAGNOSTICS.txt) for test comparisons,
+collection limits and the distinction between software timing and acoustic delay.
