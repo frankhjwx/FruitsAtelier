@@ -4,6 +4,7 @@ internal static class StreamFruitDragTests
 {
     public static void EditEvents()
     {
+        AnchorPriority();
         foreach (int spans in new[] { 1, 2 })
         foreach (double selectedTime in spans == 1 ? new[] { 1400d } : new[] { 1400d, 2200d })
         {
@@ -62,6 +63,41 @@ internal static class StreamFruitDragTests
             ui.ClickMap(time, 200);
             ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
             return ui;
+        }
+    }
+
+    private static void AnchorPriority()
+    {
+        foreach (var mode in Enum.GetValues<FruitsAtelier.App.Editor.SliderEditingMode>())
+        foreach (bool selectionRect in new[] { true, false })
+        foreach (bool childSelected in new[] { true, false })
+        foreach (int anchorIndex in new[] { 0, 1, 2 })
+        {
+            var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 400 };
+            var track = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = 2 };
+            track.Nodes.AddRange([new() { TimeMs = 1000, X = 200 }, new() { TimeMs = 1400, X = 200 }, new() { TimeMs = 1800, X = 200 }]);
+            map.Tracks.Add(track);
+            var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.Key('1'); ui.Key('A', ctrl: true);
+            if (!selectionRect) ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.selectionRect"));
+            var anchor = track.Nodes[anchorIndex];
+            if (childSelected)
+            {
+                ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
+                ui.ClickMap(anchor.TimeMs, anchor.X);
+                ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
+            }
+            ui.DownMap(anchor.TimeMs, anchor.X);
+            Check(ui.View.SelectedAnchorIds.Contains(anchor.Id), $"{mode}: a stream circle took priority over its visible anchor.");
+            ui.MoveMap(anchor.TimeMs, 240); ui.UpMap(anchor.TimeMs, 240);
+            var changed = ui.View.Document.Tracks.Single();
+            Check(changed.Nodes.Count == 3 && Math.Abs(changed.Nodes[anchorIndex].X - 240) < .001
+                && changed.StreamSnapDivisor == 2, "Stream anchor drag did not reshape its existing curve.");
+            double neighbourTime = anchorIndex == 2 ? 1600 : 1200;
+            var neighbour = ui.View.Conversion.Objects.Single(o => o.SourceId == track.Id && Math.Abs(o.TimeMs - neighbourTime) < .001);
+            Check(Math.Abs(neighbour.X - 220) < .001, "Stream anchor drag did not update the neighbouring curve sample.");
+            var edited = ui.View.Document.DeepClone();
+            ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Stream anchor drag did not undo in one step.");
+            ui.Key('Y', ctrl: true); Check(edited.ContentEquals(ui.View.Document), "Stream anchor drag did not redo.");
         }
     }
 

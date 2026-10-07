@@ -18,6 +18,7 @@ public sealed partial class EditorView
     {
         var track = SelectedTrack;
         bool stream = track?.StreamSnapDivisor is not null;
+        if (stream && HitSelectedSliderControl(x, y)) return false;
         if (tool != Tool.Select || objectSelection.Count != 1
             || HitCatchObject(x, y) is not { Kind: CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet } target
             || !objectSelection.Contains(target.SourceId)
