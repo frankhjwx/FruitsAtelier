@@ -14,6 +14,7 @@ internal sealed partial class EditorWindow
     private void ConfigureFiles()
     {
         view.SupportsAudioDiagnostics = true;
+        view.RequestAudioDiagnosticRestart = RestartAudioSettings;
         view.AudioDiagnosticStatus = () => !AudioDiagnosticLog.Requested ? "audioDiagnostic.inactive"
             : AudioDiagnosticCapture.Failed || AppLog.Failed ? "audioDiagnostic.failed"
             : AudioDiagnosticCapture.LimitReached || AppLog.LimitReached ? "audioDiagnostic.limit" : "audioDiagnostic.active";

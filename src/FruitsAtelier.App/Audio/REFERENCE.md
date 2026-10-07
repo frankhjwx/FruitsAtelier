@@ -1,8 +1,10 @@
 # Audio transport
 
 Windows release builds expose opt-in recording, output profiles, frame logs,
-issue markers and background report export in **Settings > Audio**. Apply and
-restart to activate recording/profile changes. Each run gets a capture folder,
+issue markers and background report export in **Settings > Audio**. Apply saves
+pending project edits and restarts automatically when diagnostic options change,
+returning to the same Audio settings position with the project, difficulty and
+paused playhead restored. Each run gets a capture folder,
 with a 64 MiB event-data budget shared by its loggers. Logger shutdown waits at
 most 250 ms. editor.log also writes through a bounded background queue, so slow
 filesystem or endpoint queries in diagnostic writers cannot hold transport

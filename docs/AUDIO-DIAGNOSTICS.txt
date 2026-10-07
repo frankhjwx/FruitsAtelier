@@ -3,10 +3,12 @@ FruitsAtelier - Audio delay diagnostics
 Standard Windows builds
 
 Open Settings > Audio > Audio delay diagnostics. Enable recording, choose an
-output test mode, click Apply, then restart the app. Recording and output mode
+output test mode, then click Apply. The app saves pending project edits, restarts
+automatically, and returns to Settings > Audio at the retained scroll position, with the same project,
+difficulty and paused playback position. Recording and output mode
 are fixed for that run; the status distinguishes saved preferences from active
-recording. No special build or environment variables are required. Existing diagnostic
-launchers, environment overrides and enabling markers remain effective.
+recording. No special build or environment variables are required. Existing
+diagnostic launchers, environment overrides and enabling markers remain effective.
 
 Start with event-10, then compare event-50, poll-10 and poll-50 one run at a time.
 The values are requested shared-mode WASAPI buffers, not guaranteed device or
@@ -37,8 +39,8 @@ most 250 ms for its background writer. Export has an 80 MiB input budget and
 includes only audio JSONL files, editor.log, capture.json and report instructions.
 The manifest records active output configuration, saved preferences, volumes and
 editor log queue losses or failures. Capture
-folders remain available until deleted by the user. Disable recording, Apply
-and restart after collecting the reports.
+folders remain available until deleted by the user. Disable recording and Apply
+after collecting the reports; the app restarts automatically.
 
 Software clocks, read-ahead and presentation statistics cannot measure the
 physical delay between the device and audible speaker/headphone output. A phone

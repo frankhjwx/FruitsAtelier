@@ -158,6 +158,11 @@ output profiles, scrolling at narrow sizes, issue markers, asynchronous export
 and failure presentation, real-time marker key repeat handling, and unchanged map
 content in English and Chinese.
 Native Settings checks draw the Audio page throughout its scroll range.
+`App.Tests --audio-settings-restart-native-check <FruitsAtelier.App.exe>` opens two
+isolated silent native restore checks from serialized restart state, verifying
+Audio settings reopening from Library and editor, retained scroll position, and
+the editor’s active difficulty, paused time and speed. Settings tests verify the divider, deferred restart dispatch after
+successful persistence, retained scrolling and no restart for unchanged options.
 
 Settings preference regressions cover Audio sliders and the Appearance skin selector from both the Library and editor, shared values with the original controls, immediate persistence, menu dismissal, and unchanged beatmap content in English and Chinese. The Windows `--render-check` also exercises the Settings sliders and skin menu at its tested sizes and DPI values.
 

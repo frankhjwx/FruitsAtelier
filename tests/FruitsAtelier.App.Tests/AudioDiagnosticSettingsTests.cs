@@ -33,6 +33,11 @@ internal static class AudioDiagnosticSettingsTests
                 var before = ui.View.Document.DeepClone();
                 ui.View.OpenSettings(); ui.Paint();
                 ui.ClickText(L.Get("settings.audio"));
+                var skinSounds = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.skinSoundsOn"));
+                var diagnosticHeading = ui.Canvas.Texts.Single(t => t.Value == L.Get("audioDiagnostic.title"));
+                if (!ui.Canvas.Lines.Any(line => line.Y1 == line.Y2 && line.Y1 > skinSounds.Y
+                    && line.Y1 < diagnosticHeading.Y && line.X2 - line.X1 > 100))
+                    throw new Exception("Audio diagnostics section has no divider.");
                 void Reveal(string text)
                 {
                     var rect = ui.View.SettingsBounds;
@@ -51,7 +56,22 @@ internal static class AudioDiagnosticSettingsTests
                 Reveal(profile); ui.ClickText(profile); ui.ClickText(L.Get("audioDiagnostic.poll-50"));
                 Reveal(L.Get("audioDiagnostic.framesOff")); ui.ClickText(L.Get("audioDiagnostic.framesOff"));
                 string config = Path.Combine(root, "settings.json");
+                float restartedScroll = -1;
+                ui.View.RequestAudioDiagnosticRestart = scroll =>
+                {
+                    if (!ui.View.PrepareFileOperation()) throw new Exception("Settings did not close before restart.");
+                    restartedScroll = scroll;
+                };
+                float beforeRestartScroll = ui.View.AudioDiagnosticSettingsScroll;
                 ui.View.ApplySettings(config);
+                if (restartedScroll != beforeRestartScroll || ui.View.AudioDiagnosticSettingsVisible)
+                    throw new Exception("Apply did not request restart with the retained position.");
+                ui.View.OpenAudioDiagnosticSettings(restartedScroll); ui.Paint();
+                if (!ui.View.AudioDiagnosticSettingsVisible || Math.Abs(ui.View.AudioDiagnosticSettingsScroll - restartedScroll) > .1)
+                    throw new Exception("Restart did not restore the Audio settings position.");
+                restartedScroll = -1;
+                ui.View.ApplySettings(config, force: true);
+                if (restartedScroll >= 0) throw new Exception("Unchanged diagnostic settings restarted the app.");
                 var loaded = LibrarySettings.Load(config);
                 if (!loaded.AudioDiagnostics || !loaded.AudioDiagnosticFrames || loaded.AudioDiagnosticProfile != "poll-50")
                     throw new Exception("Audio diagnostic preferences did not survive reload.");

@@ -5,6 +5,21 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
+    internal bool AudioDiagnosticSettingsVisible => librarySettingsOpen && settingsCategory == SettingsCategory.Audio;
+    internal float AudioDiagnosticSettingsScroll => workspaceScroll;
+    public Action<float>? RequestAudioDiagnosticRestart { get; set; }
+    internal void OpenAudioDiagnosticSettings(float scroll)
+    {
+        OpenSettings();
+        settingsCategory = SettingsCategory.Audio;
+        workspaceScroll = Math.Max(0, scroll);
+        audioSettingsContentHeight = Math.Max(audioSettingsContentHeight, workspaceScroll + SettingsBounds.Height);
+    }
+    internal void RestoreAudioDiagnosticDifficulty(int index) => SwitchDifficultyCore(index, reloadAudio: false);
+    internal void RestoreAudioDiagnosticPosition(double positionMs) => SeekTo(positionMs);
+    private bool AudioDiagnosticSettingsChanged => draftAudioDiagnostics != LibrarySettings.AudioDiagnostics
+        || draftAudioDiagnosticFrames != LibrarySettings.AudioDiagnosticFrames
+        || draftAudioDiagnosticProfile != LibrarySettings.AudioDiagnosticProfile;
     public bool SupportsAudioDiagnostics { get; set; }
     public Func<string>? AudioDiagnosticStatus { get; set; }
     public Func<string>? CurrentAudioDiagnosticProfile { get; set; }
@@ -39,7 +54,8 @@ public sealed partial class EditorView
         SettingsButton(c, new(SettingsContentX, y, SettingsContentWidth, SettingsControlHeight),
             L.Get(LibrarySettings.UseSkinSounds ? "settings.skinSoundsOn" : "settings.skinSoundsOff"),
             ToggleSkinSounds, LibrarySettings.UseSkinSounds);
-        y += 56;
+        c.Line(SettingsContentX, y + 44, SettingsContentX + SettingsContentWidth, y + 44, Grid);
+        y += 64;
         c.Text(L.Get("audioDiagnostic.title"), SettingsContentX, y, SettingsSectionSize, Foreground, SettingsContentWidth, true);
         y += 32;
         if (SupportsAudioDiagnostics)

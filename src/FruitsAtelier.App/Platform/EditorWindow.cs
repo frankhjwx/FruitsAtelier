@@ -58,7 +58,7 @@ internal sealed partial class EditorWindow : IDisposable
         };
     }
 
-    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false, bool firstRunSetup = false)
+    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false, bool firstRunSetup = false, AudioSettingsRestartState? resumeAudio = null)
     {
         view.InitializeLibrary(!renderCheck && profileMap is null, renderCheck || profileMap is not null
             ? new FruitsAtelier.Core.LibrarySettings { Workspace = Path.Combine(Artifacts, "render-library") } : null, forceFirstRunSetup: firstRunSetup);
@@ -107,6 +107,20 @@ internal sealed partial class EditorWindow : IDisposable
         if (initialPath is not null) FileOperation(() => OpenPath(initialPath));
         if (renderCheck)
         {
+            if (resumeAudio is not null)
+            {
+                RestoreAudioSettings(resumeAudio);
+                canvas.Begin(); view.Render(canvas, client.Right * 96 / dpi, client.Bottom * 96 / dpi); canvas.End();
+                if (!view.AudioDiagnosticSettingsVisible || view.LibraryVisible != resumeAudio.LibraryVisible
+                    || view.ActiveDifficultyIndex != resumeAudio.Difficulty
+                    || Math.Abs(view.PlayheadMs - resumeAudio.PositionMs) > .01
+                    || view.PlaybackSpeed != resumeAudio.PlaybackSpeed
+                    || Math.Abs(view.AudioDiagnosticSettingsScroll - resumeAudio.Scroll) > .1)
+                    throw new InvalidOperationException("Audio settings restart did not restore its context.");
+                AppLog.Write("Audio settings resume check passed.");
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (testplayCheck)
             {
                 Diagnostics.TestplayRenderCheck.Run(canvas);
@@ -125,6 +139,7 @@ internal sealed partial class EditorWindow : IDisposable
             return 0;
         }
         ConfigureUpdates();
+        if (resumeAudio is not null) FileOperation(() => RestoreAudioSettings(resumeAudio));
         SetFullscreen(view.LibrarySettings.Fullscreen);
         UpdateTitle();
         view.RequestRunTestplay = session => new TestplayInputThread(hwnd, session, () => audio.State);

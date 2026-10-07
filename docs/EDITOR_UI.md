@@ -867,9 +867,14 @@ recompute that fruit from the envelope. This removal is also undoable.
 
 Windows release builds provide recording and output test controls in Settings >
 Audio. Enable recording, select event-driven or polling shared-mode WASAPI with a
-requested 10 or 50 ms buffer, Apply and restart. The current-run status stays
+requested 10 or 50 ms buffer, then click Apply. When diagnostic options change,
+the app saves pending project edits and restarts automatically, restoring the
+project, active difficulty, paused playhead and Audio page scroll position. Other
+preferences retain their usual Apply behavior. A divider separates diagnostics
+from the skin sample option. The current-run status stays
 separate from saved settings. Optional frame timing logs and a correlation overlay
-follow the General display mode. The Audio page scrolls while its navigation and
+follow the General display mode. The overlay sits near the bottom edge, below the transport timeline, with its
+text kept inside the window. The Audio page scrolls while its navigation and
 Apply button stay fixed.
 
 Users can press Ctrl+Shift+F8 during playback to mark a delay without pausing,

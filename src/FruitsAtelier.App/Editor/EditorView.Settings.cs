@@ -287,6 +287,8 @@ public sealed partial class EditorView
         if (!SettingsChanged && !force) return;
         try
         {
+            bool restartAudio = persist && AudioDiagnosticSettingsChanged && RequestAudioDiagnosticRestart is not null;
+            float audioScroll = workspaceScroll;
             var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
             settings.FirstRunSetupVersion = LibrarySettings.FirstRunSetupVersion;
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
@@ -334,6 +336,12 @@ public sealed partial class EditorView
             libraryField = bindingCapture = -1;
             libraryError = "";
             InitializeSkin();
+            if (restartAudio)
+            {
+                CloseSettings();
+                RequestAudioDiagnosticRestart?.Invoke(audioScroll);
+                return;
+            }
             if (!rootsChanged) return;
             EnableFileMonitoring();
             libraryRatings.Clear(); libraryBrowser?.Retire(); libraryBrowser = null; libraryDatabase = null; libraryResultsReady = false;
