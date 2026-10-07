@@ -179,12 +179,18 @@ measure accent. Holding Ctrl follows lazer: Snap divisors divisible by three use
 three ticks per beat, other even divisors use two, and other divisors use one.
 The music clock controls tick times and visual indicators. Pause,
 seek, timing changes and leaving Timing cancel queued ticks. These controls are
-editor state and do not alter beatmap data. **Tap Here / T** collects up to 32 taps;
-**Apply timing** sets the red section's BPM and first-tap offset in one undo step.
+editor state and do not alter beatmap data. **Tap Here / T** collects up to 32 taps.
+The tenth tap automatically fits the red section's BPM and integer offset by least
+squares against tap times and beat indices; each subsequent tap refines both values
+through undo history. The latest 32 taps retain their original beat indices so the
+fitted section start stays relative to the beginning of the measurement. BPM uses at most two
+decimal places. **Apply timing** can also apply a shorter measurement with at least two taps.
 **Reset taps** clears the measurement. Tap uses map time, including playback speed.
 
 **Timing Setup / F6** opens an application-modal **Timing and Control Points**
-window. Its draft is committed by OK as one undo step; Cancel, Escape or the close
+window. It displays and commits edited BPM values to at most two decimal places
+and offsets to integer milliseconds. **Use Current Time** takes the whole-millisecond
+part of the playback position. The draft is committed by OK as one undo step; Cancel, Escape or the close
 button discards it. Timing, Audio and Style pages edit the selected rows, while
 All, Timing Points and Inherited Points filter the list. Ctrl-click toggles rows;
 Shift-click selects a range. Ctrl+A selects visible rows. Mixed numeric values are
@@ -212,8 +218,9 @@ samples show only the bank abbreviation in the list. Imported velocity and
 unrelated effect bits are preserved, while green-point BPM cells remain empty. Kiai updates the editor's existing Kiai indication and exports.
 
 Ctrl+P adds a red point at the playhead; Ctrl+Shift+P adds a green point, opening
-the draft window. Newly created, pasted or edited green offsets use integer
-milliseconds (fractional parts are truncated). Ctrl+I deletes the current section outside the window, or the
+the draft window. New red and green points truncate the playhead to integer
+milliseconds. Pasted or edited green offsets also truncate fractional parts.
+Ctrl+I deletes the current section outside the window, or the
 selected rows inside it. Ordinary deletion protects the first red point. The
 window supports Ctrl+C/X/V with `.osu` timing-row text; text fields retain normal
 text clipboard behavior. Ctrl+Shift+I inserts a slider control point on the curve
@@ -256,18 +263,21 @@ During playback and seeking, the play line stays at its configured height, initi
 
 ### Playback pause snapping
 
-With beat snapping enabled, pausing through Space, C or the Pause button aligns
+In Compose, with beat snapping enabled, pausing through Space, C or the Pause button aligns
 the confirmed audio position to the nearest current Snap grid line. An exact
 midpoint selects the later line. The audio seek, playhead and viewport use the
 same target, bounded by the audio duration. Note placement continues to use the
 mouse's snapped time, as shown by the placement preview.
 
 The alignment runs once after the pause is confirmed. A later seek, document
-change, loading or audio failure cancels it. Stop returns to zero; testplay,
-automatic pauses for dialogs and disabled beat snapping retain their existing
+change, loading or audio failure cancels it. Stop returns to zero.
+Timing mode preserves the exact confirmed audio position without snapping.
+Testplay, automatic pauses for dialogs and disabled beat snapping retain their existing
 pause behavior.
 
 ## Song Setup
+
+Tags use a wrapped editable area. The dialog expands within the window for longer tag lists; the stored string remains a single metadata value. Clicking a wrapped row positions the caret on that row, and selection and clipboard operations span the complete value.
 
 Editor text fields share one caret and selection model, including Song Setup,
 Library search, settings paths, export names, time jump and numeric inputs.
@@ -436,13 +446,15 @@ key swaps the two bindings. **Apply** saves the bindings across restarts.
 
 ## Object timeline and playback speed
 
+In the upper object timeline, clicking a slider head, tail, or reverse marker selects that edge for Whistle, Finish, and Clap edits. Only the selected edge marker is highlighted. Clicking the slider body selects the whole slider for sound edits. Head/body movement and tail repeat resizing retain their existing drag behavior.
+
 The bottom overview shows red and green timing points above a white center line, continuous yellow kiai intervals and white break intervals centered on that line, and blue bookmarks extending down from it. The center line is behind the break and kiai intervals, which are behind timing points and bookmarks. These timeline marks use 80% opacity and colors tuned against osu!legacy. Hovering over the overview reveals a fixed bookmark toolbar above its left edge with Add, Remove, Previous, Next, and Reset actions. The toolbar stays visible while moving from the overview to its controls, and its tooltip appears above it. The toolbar uses an ImageGen-created background texture. The time display and separate Play, Pause, Stop, and Testplay controls sit to the left of the overview; Stop pauses audio and seeks to the start. Ctrl+B adds a bookmark at the playhead; Ctrl+Shift+B removes the nearest bookmark within two seconds. Ctrl+Left/Right seeks to the previous/next bookmark; Ctrl+Shift+Left/Right moves selected objects one X unit. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
 
-The overview draws `[General] PreviewTime` as a full-height yellow marker when it is nonnegative. Red and green timing points meet the center line, and bookmark markers start on it. The horizontal object timeline also shows red and green timing points. Break intervals are clipped to each visible range and shaded across the full height or width of the object timeline and canvas left time axis. The Break label appears only on the object timeline; the canvas left axis shows red timing labels, blue bookmark labels, and ordinary time labels in the default muted color. Red timing and blue bookmark lines span the canvas width like the playhead line. Markers sharing a pixel row are grouped for display, with spaced labels and hover details showing counts and time ranges; stored timestamps remain unchanged. The kiai fill uses a lighter orange. The Timing menu sets the preview point at the rounded playhead time through undo history. Insert Break Time sits between Movement Analysis and Snap; it inserts an undoable interval between the surrounding source objects, starting 200 ms after the previous object ends and ending when the next object's AR approach begins, if at least 400 ms remains and no break overlaps it. The Snap slider remains on one row. The time display uses a fixed position for the duration so changing digits do not move it. The bookmark toolbar is left aligned and vertically centered in the strip above the overview; its buttons are inset from the panel edge and remain visible while the pointer is held over the overview.
+Both timelines draw nonnegative `[General] PreviewTime` as a full-height yellow line and bookmarks as blue lower lines. Preview lines draw before timing points, the playhead and bookmarks, so overlapping markers remain visible. Red and green timing points meet the overview center line and also appear on the upper object timeline. Short overview spans retain a minimum two-DIP width. Break intervals are clipped to each visible range and shaded across the full height or width of the object timeline and canvas left time axis. The Break label appears only on the object timeline; the canvas left axis shows red timing labels, blue bookmark labels, and ordinary time labels in the default muted color. Red timing and blue bookmark lines span the canvas width like the playhead line. Markers sharing a pixel row are grouped for display, with spaced labels and hover details showing counts and time ranges; stored timestamps remain unchanged. The kiai fill uses a lighter orange. The Timing menu sets the preview point at the rounded playhead time through undo history. Insert Break Time sits between Movement Analysis and Snap; it inserts an undoable interval between the surrounding source objects, starting 200 ms after the previous object ends and ending when the next object's AR approach begins, if at least 400 ms remains and no break overlaps it. Double-click an upper timeline object to select it and seek to its start without editing content. During a slider endpoint or timeline-tail drag, wheel navigation, Ctrl+wheel Snap, Alt+wheel zoom and Space/C playback remain available; release commits one edit and Esc restores its starting content. The Snap slider remains on one row. The time display uses a fixed position for the duration so changing digits do not move it. The bookmark toolbar is left aligned and vertically centered in the strip above the overview; its buttons are inset from the panel edge and remain visible while the pointer is held over the overview.
 
 During a kiai interval, a small badge appears at the upper-left of the editing plot. It brightens at the interval start and on every full beat from the active red timing point, then fades through the beat. Green timing points that preserve the kiai state do not restart the pulse. Its pulse follows map time, including seeking and timing edits.
 
-Adding, pasting, moving, extending or removing notes around an existing break recalculates the affected interval when the edit commits. Breaks leave the next object's AR preempt time clear and resume at least 200 ms after the preceding object ends, including all slider repeats and banana-shower duration. An occupied break is shortened, split, or removed; generated pieces shorter than 650 ms are removed. Removing the note that split a break merges its remaining pieces. Unaffected break boundaries and other Events data are preserved. The note change and break adjustment share one undo step, and saving or exporting retains the updated intervals.
+Adding, pasting, moving, extending or removing notes around an existing break recalculates the affected interval when the edit commits. Breaks leave the next object's AR preempt time clear and resume at least 200 ms after the preceding object ends, including all slider repeats and banana-shower duration. An occupied break is shortened, split, or removed; generated pieces shorter than 650 ms are removed. Removing the note that split a break merges its remaining pieces. Deleting the last objects in a bounded section also creates a break for a newly vacated gap with at least 650 ms after the preceding object's recovery and before the next object's approach, even when no existing break remains. Overlapping occupied intervals prevent a break. Unaffected break boundaries and other Events data are preserved. The note change and break adjustment share one undo step, and saving or exporting retains the updated intervals.
 
 In the object timeline and canvas left time axis, each break has a grey core and lighter white and green transition regions extending to the adjacent source objects, without changing the stored break timestamps. Hovering a core edge in the object timeline shows a horizontal resize cursor. Dragging that edge snaps to the current beat subdivision when Snap is on and previews the new range; releasing commits one undoable edit, releasing with less than 400 ms remaining removes the break, and Esc cancels the preview.
 
@@ -488,7 +500,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Delete | Delete selected objects, or selected anchors in anchor-edit mode |
 | Ctrl+Z / Y | Undo / redo |
 | Right-click a note / edited point | Delete an object; a straight point becomes curved, a curved point is deleted; no context menu |
-| Ctrl+L | Toggle the selected point between straight and curved |
+| Ctrl+L | Confirm restoring the current difficulty to its previous saved version |
 | Ctrl+Shift+I | Insert a control point on the curve under the pointer |
 | Ctrl+D | Clone selected parents one measure after the last selected start |
 | Ctrl+A | Select all objects |
@@ -501,7 +513,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | C / Space / X | Pause or resume / pause or resume / play from song start |
 | Z / V (also End) | Jump to the first object's start / last object's end; repeat to reach song start / end |
 | Left / Right (Shift for 4×) | Seek backward / forward by one beat subdivision |
-| Up / Down | Seek previous / next timing point |
+| Up / Down | Seek next / previous timing point |
 | Ctrl+Up / Down | Increase / decrease playback speed by 25 percentage points, within 10%–150% |
 | Ctrl+Shift+Up / Down | Increase / decrease playback speed by 5 percentage points |
 | Ctrl+Shift+F | Open slider-to-stream snap confirmation |
@@ -538,6 +550,8 @@ moving the pointer cancels the hold and continues the normal drag.
 Each drag is one undo step; Esc or lost capture restores its starting content.
 Legacy Sliders convert to FSliders on the first movement. Horizontal resizing
 converts exact circular arcs to bounded Bezier approximations in the same transaction.
+
+Undo and redo reveal an affected position only when none of the affected positions is visible on the canvas. Deletion uses the removed position; restored notes and changed slider nodes use their resulting positions. Visible changes retain the viewport.
 
 Copy and cut write a legacy reference such as `02:27:094 (1,2,3) - ` to the system clipboard. Inside the editor, a separate snapshot retains complete objects for pattern pasting into the same difficulty session. Other difficulties and reopened projects cannot receive that pattern. Paste aligns the earliest start to the playhead, preserves other objects' relative times and positions, and assigns new IDs. Each batch move, delete, cut, or paste is one undo step.
 
@@ -583,11 +597,15 @@ A compact movement panel uses a consistent font size, aligned left/right readout
 
 **Slider Path** toggles slider path visibility. Its label stays fixed and the button highlights while enabled, matching the Movement Analysis toggle. The View menu exposes the same checked toggle.
 
-**Movement Analysis**, beside **Slider Path** in the canvas toolbar, toggles 4-DIP coloured connections above curves and behind objects on the editing canvas. The button highlights when enabled; the same toggle is also available under **View → Movement Analysis**. It is off by default and is a session display setting. Each consecutive Fruit/Droplet pair uses the same Stand, Walk, Dash, and HDash classification, using the Appearance indicator colours as the floating panel. Connections follow placement previews and content edits, retain full-sequence movement context across viewport edges, and skip simultaneous pairs and TinyDroplets. Banana shower and break intervals suppress entire connections and their DS labels whenever they overlap the pair, including links between fruits on opposite sides of an interval. Kiai intervals retain the connections and labels. Each Stand connection assumes its own departure-centre position; a sequence of Stand connections does not imply one shared standing position. Toggling the mode does not edit content or enter undo history. DS labels beside the connections use the same base-DPB formula as the floating panel. Each label has one fixed position to the right of the full connection midpoint, independent of viewport clipping. Intervals of 37.5 ms or less (a 1/8 beat at 200 BPM) omit DS labels. Longer intervals show labels wherever the fixed position fits inside the viewport without overlapping banana showers, the floating panel, or other labels. Fruit/droplet sprite bounds do not suppress labels because their transparent padding and glow overstate the occupied area. Labels do not move to alternate positions.
+**Selection Rect**, immediately right of **Slider Path**, toggles the selected-object bounding box and its move/scale interaction regions. It defaults to on and highlights while enabled. The choice lasts for the editor session and does not change selection, map content or undo history. The shorter Zoom slider leaves room for this button.
+
+Slider Path, Selection Rect and Movement Analysis use equal-width buttons. Long localized labels use a smaller font down to 10 DIP, then wrap onto two lines when needed in the compact toolbar. Wrapping prefers spaces and localized word-break hints. Text fitting measures the enabled button's font so toggling a button retains its layout; results are refreshed when the language or compact layout changes.
+
+**Movement Analysis**, beside **Selection Rect** in the canvas toolbar, toggles 4-DIP coloured connections above curves and behind objects on the editing canvas. The button highlights when enabled; the same toggle is also available under **View → Movement Analysis**. It is off by default and is a session display setting. Each consecutive Fruit/Droplet pair uses the same Stand, Walk, Dash, and HDash classification, using the Appearance indicator colours as the floating panel. Connections follow placement previews and content edits, retain full-sequence movement context across viewport edges, and skip simultaneous pairs and TinyDroplets. Banana shower and break intervals suppress entire connections and their DS labels whenever they overlap the pair, including links between fruits on opposite sides of an interval. Kiai intervals retain the connections and labels. Each Stand connection assumes its own departure-centre position; a sequence of Stand connections does not imply one shared standing position. Toggling the mode does not edit content or enter undo history. DS labels beside the connections use the same base-DPB formula as the floating panel. Each label has one fixed position to the right of the full connection midpoint, independent of viewport clipping. Intervals of 37.5 ms or less (a 1/8 beat at 200 BPM) omit DS labels. Longer intervals show labels wherever the fixed position fits inside the viewport without overlapping banana showers, the floating panel, or other labels. Fruit/droplet sprite bounds do not suppress labels because their transparent padding and glow overstate the occupied area. Labels do not move to alternate positions.
 
 In Select mode, New Combo toggles the selected parents. On the editing canvas, a fruit with this flag has an NC label beside it in every UI language. The label sits to the right when there is room and otherwise to the left; slider heads with the flag are labelled once. A pending New Combo fruit placement shows the same NC label beside its preview. The sound buttons toggle additions independently and support mixed multi-selection. Clicking a slider fruit targets that head, repeat or tail's hitsound; selecting the whole slider through its timeline body targets every edge. Droplet/tiny selections target the parent, whose edge sounds are editable; these children retain their existing tick/silent playback rules. Banana showers use their fixed banana sound and disable the three additions. In Fruit placement mode, or with no selection, buttons set pending flags for new objects. New Combo resets after placement; pending additions remain until changed or switching difficulty.
 
-Lock Notes prevents moving, reshaping or deleting existing objects, including timeline reverse edits. Selection, playback, New Combo and sound editing remain available. New objects can still be placed; undo/redo remains available. Hover Lock Notes to reveal **Lock Droplet Selection**. This independent toggle is enabled by default and excludes droplets and tiny droplets from canvas hit testing and box selection, and clears an active droplet child selection. Slider paths, controls, fruits and parent selection in the object timeline remain available. Grid Snap, Distance Snap and both lock switches are session settings; changing them alone does not dirty the difficulty.
+Lock Notes prevents moving, reshaping or deleting existing objects, including timeline reverse edits. Selection, playback, New Combo and sound editing remain available. New objects can still be placed; undo/redo remains available. Hover Lock Notes to reveal **Lock Droplet Selection**. This independent toggle is enabled by default and excludes droplets and tiny droplets from canvas hit testing and box selection, and clears an active droplet child selection. Slider paths, controls, fruits and parent selection in the object timeline remain available. Lock Droplet Selection is saved automatically as a user preference and restored after restarting. Changing these controls alone does not dirty the difficulty.
 
 The four left tool buttons show multiline operation hints. FSlider's hint follows the current editing mode. FSlider and Distance Snap display their hints above their hover buttons so the controls remain accessible.
 
@@ -607,7 +625,7 @@ In **pen tool mode**, press B or 3 to clear selection and start drawing. Click t
 
 Select an FSlider and click its controls, or double-click its track, to edit anchors in **Select**. Clicking an interior control on an already selected complete track also enters editing; visible slider fruits use the selection rules below. Drag anchors and handles directly on the canvas. Interior anchor dragging is free by default. Enable **View → Snap interior anchors** to snap interior anchor times to the selected beat subdivision. Head and tail anchors follow beat Snap. Invalid snapped endpoint moves keep their previous time rather than clamping between grid lines. Handles remain free, and the option does not change placement or whole-object snapping. Anchor times remain increasing; anchors and handles may extend beyond the playfield. Moving a pen draft anchor preserves its handle vectors, and the whole draft remains one undo step. Curve handles may extend before the start or after the end; the curve must define an unambiguous forward branch inside the slider time interval. Generated events still undergo normal conversion validation.
 
-In Select mode, the first click selects the whole slider; the second click on a head, tail or repeat selects that fruit with an individual outer ring. Horizontal dragging of the selected fruit changes its X while preserving its time. Dragging a selected FSlider fruit at a base-path endpoint vertically edits that red anchor in time and X, with endpoint beat snapping and a single undo step. This works in both editing modes, including paths with only two red anchors; the opposite endpoint stays fixed. Other slider events keep their time during dragging; repeated traversals share the same endpoint geometry. Legacy endpoint edits convert the owning slider to an FSlider inside the same undo step. Clicking outside a selected child returns to whole-slider selection; a subsequent outside click clears it. Dragging the body selects and moves the whole slider. In anchor edit mode, dragging an anchor changes that anchor. Ctrl+click at a new position inside the slider's time range inserts a curved anchor; Ctrl+click on an existing anchor makes it straight. Right-click a straight anchor to restore a curved anchor, then right-click the curved anchor to delete it. These rules apply in both editing modes, including points exposed in Select mode. In legacy mode, an interior straight anchor is a segment boundary; restoring it to curved merges it back into the control polygon. Right-click the slider body away from anchors to delete the parent. Ctrl+L also toggles the selected point, and Ctrl+Shift+I inserts on the curve under the pointer. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
+In Select mode, the first click selects the whole slider; the second click on a head, tail or repeat selects that fruit with an individual outer ring. Dragging that selected fruit inside the selection box edits the fruit instead of moving the whole slider. Horizontal dragging changes its X while preserving its time. Dragging a selected FSlider fruit at a base-path endpoint vertically edits that red anchor in time and X, with endpoint beat snapping and a single undo step. This works in both editing modes, including paths with only two red anchors; the opposite endpoint stays fixed. Other slider events keep their time during dragging; repeated traversals share the same endpoint geometry. Legacy endpoint edits convert the owning slider to an FSlider inside the same undo step. Clicking outside a selected child returns to whole-slider selection; a subsequent outside click clears it. Dragging the body selects and moves the whole slider. In anchor edit mode, dragging an anchor changes that anchor. Ctrl+click at a new position inside the slider's time range inserts a curved anchor; Ctrl+click on an existing anchor makes it straight. Right-click a straight anchor to restore a curved anchor, then right-click the curved anchor to delete it. These rules apply in both editing modes, including points exposed in Select mode. In legacy mode, an interior straight anchor is a segment boundary; restoring it to curved merges it back into the control polygon. Right-click the slider body away from anchors to delete the parent. Ctrl+L also toggles the selected point, and Ctrl+Shift+I inserts on the curve under the pointer. Ordinary insertion may change shape; the shape-preserving split action retains it. Batch deletion may include endpoints. Fewer than two remaining anchors deletes the complete track.
 
 Editing a selected Legacy Slider automatically converts that parent when inserting a control point or reshaping a child. Vertical head and first-span tail drags continue as FSlider anchor drags; Ctrl-click inserts at the pointer time and X, including away from the visible curve. Conversion and the edit share one undo step; Escape or lost capture restores the Legacy Slider. Selecting without moving preserves the imported representation. Double-clicking a slider also converts without confirmation. B / 3 selects the new-slider tool and does not convert the selected imported slider.
 
@@ -670,6 +688,7 @@ With N, left-click to set the start, then right-click at a later time to finish.
 | Ctrl+O | Choose a difficulty in the current project |
 | Ctrl+Shift+O | Open `.osz` / `.osu` / `.catchproj` |
 | Ctrl+S | Save current difficulty; workspace-only projects offer an optional Songs export after saving |
+| Ctrl+L | Confirm restoring the current difficulty to the preceding saved version; requires an earlier workspace save |
 | Ctrl+Alt+E | Export `.osu` |
 | Space | Play / pause |
 | Click, drag, or scroll the bottom timeline | Seek while preserving play/pause state |
@@ -691,7 +710,7 @@ The Skin selector to the left of **← Library** lists skins from the configured
 
 A separate row below the main toolbar displays Chrome-style difficulty tabs with the official Catch icon, Version, live No Mod stars, and an unsaved dot. Icon color follows stars. Active tabs have rounded top corners and spread outward at the bottom to join the content below. Tabs use actual text widths rather than filling the row. Tabs first use full difficulty names. When space is insufficient, up to eight tabs share the available width by shortening the longest names; more than eight tabs use compact names and a horizontally draggable strip. Arrow buttons and the wheel also scroll overflowing tabs. Stored names remain complete. Hovering a truncated tab shows its full name in a pointer-following tooltip that wraps and stays within the window. Click to switch; use arrows or the tab-row wheel when tabs overflow. Ctrl+Tab / Ctrl+Shift+Tab cycle and reveal the active tab. The **+** button opens the add/import menu. A new blank difficulty inherits the active difficulty's audio, timing, settings, and resource context but clears objects. Importing an `.osu` adds one file. Difficulties may reference different audio.
 
-Switching commits valid pending edits first; unfinished banana drafts or invalid input prevent switching. It pauses playback and retains each difficulty's playhead, time-viewport start, and undo/redo history. Selection and the active tool reset. Title/status dirty indicators cover the whole project, including hidden difficulties. One save writes every difficulty and updates baselines without clearing undo history. Unsaved confirmation on new/open/close applies to the whole project.
+Switching commits valid pending edits first; unfinished banana drafts or invalid input prevent switching. It pauses playback and retains each difficulty's playhead, time-viewport start, and undo/redo history. Selection and the active tool reset. Title/status dirty indicators cover the whole project, including hidden difficulties. One save writes every difficulty and updates baselines without clearing undo history. Ctrl+L and **Edit → Revert to previous save** restore only the active difficulty from the most recent prior save snapshot. A first save has no prior version. Synchronization and restore working copies are excluded. Confirmation retains an undo step and recovery copy of the current edits; saving the restored content remains a separate action. Unsaved confirmation on new/open/close applies to the whole project.
 
 `.osu` export applies to the active difficulty; suggested filenames include its name. Workspace project saving is described in [Workspace](WORKSPACE.md), and the compatible `.catchproj` format in [Project Model](PROJECT_MODEL.md). Resource paths remain references rather than embedded project-file contents.
 
@@ -745,15 +764,15 @@ The dialog separates its title, tabs, Snap and conversion switches with padding.
 The Snap value has a gap from the slider thumb. Stream and Stack show their
 controls and preview without the introductory or graph-instruction paragraphs.
 
-With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. A drag while the parent is selected moves the whole stream in time and X. A click without dragging on the selected stream fruit selects that event, marked by a bright outer ring; subsequent horizontal dragging inside the selection box moves the whole stream. Visible anchors take priority; individual-event reshaping is available outside the box. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in their long-press menu. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
+With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. Once the parent is selected, dragging a fruit edits its X position and marks that event with a bright outer ring. Middle-fruit edits preserve neighbouring samples and event times; repeated traversals sharing the same path sample move together. Head and tail fruits also support dragging in time. A repeated tail resizes its span duration and edits the endpoint of its final traversal. Drag the empty area inside the selection box to move the whole stream. Visible anchors and handles take priority over overlapping stream fruits, so dragging a control reshapes the parent curve. Hiding Slider Path lets the overlapping fruit be edited directly. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in their long-press menu. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. New Combo applies to the first fruit; object-level sound/sample settings apply to each fruit.
 
-The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Existing Ctrl+L point conversion, Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
+The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Ctrl+L restores the current difficulty's previous saved version after confirmation. Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
 
-Testplay lead-in is configured in Settings > Testplay, from 0 to 5 seconds in 0.5-second steps (default 1). Settings also offers a persistent Combo-count visibility toggle, without a keyboard shortcut. Holding the configured Dash key adds a bright white catcher layer while preserving the existing trails and Hyperdash tint. Starting testplay immediately begins audio and gameplay from the selected position minus the lead-in, clamped to zero. Esc opens the pause menu; F1 returns to the selected position.
+Testplay lead-in is configured in Settings > Testplay, from 0 to 5 seconds in 0.5-second steps (default 1). Settings also offers a persistent Combo-count visibility toggle, without a keyboard shortcut. Holding the configured Dash key adds a bright white catcher layer while preserving the existing trails and Hyperdash tint. Testplay starts at the selected position minus the lead-in. When that position reaches zero, opening preparation follows the [user manual](USER_MANUAL.md#testplay). Audio starts at the negative map position: Windows supplies silent PCM before the music, and macOS schedules the music node for zero while its output clock advances. The session uses the same interpolated audio clock throughout preparation and music. Pause, speed changes, retry and intro skips preserve negative transport positions. Hold the `~` / backtick key for 300 ms to retry once from the session start; releasing early cancels the retry. It also works while paused. Esc opens the pause menu; F1 returns to the selected position.
 
 Number keys 1–4 select Select, Fruit, FSlider and Banana Shower. During an FSlider draft they finish valid geometry, or cancel an insufficient draft, before switching tools; pressing 3 prepares another slider. Shift+1–9 changes Snap during drawing without moving placed points. F4 opens Song Setup. Left/Right seeks one full beat during playback. While paused, it moves to the preceding/following Snap grid line, including timing boundaries, so off-grid positions align in the chosen direction. Shift+Left/Right seeks four full beats during playback or four grid lines while paused, and Shift+1–9 changes Snap; other Shift variants do not invoke unmodified transport or nudge commands. Timing blocks horizontal object nudges and accepts Ctrl+Alt+E outside fields and dialogs. F6 row deletion requires Delete or Ctrl+I without Shift or Alt. The Settings language dropdown consumes keyboard input until Enter applies or Esc closes it.
 
-Ctrl+wheel doubles or halves the Snap divisor within supported choices on the canvas and timelines: 1→2→4→8→16 or 3→6→12. It stops at either end; 5, 7 and 9 stay unchanged because their doubles are unsupported. The Snap slider retains every subdivision. Shift+wheel seeks four times the normal wheel distance. Alt+wheel zooms the canvas or the upper object timeline under the pointer. Alt+wheel over the bottom timeline adjusts the currently selected Master, Music or Effect channel and displays the existing volume overlay. Ctrl+Alt+wheel cycles Select, Fruit, FSlider and Banana Shower over the canvas or upper timeline. Unsupported wheel modifier combinations do not seek. Ctrl+M enters its quick cycle at 1/3 when the current divisor is outside the four choices.
+Ctrl+wheel doubles or halves the Snap divisor within supported choices on the canvas and timelines: 1→2→4→8→16 or 3→6→12. It stops at either end; 5, 7 and 9 stay unchanged because their doubles are unsupported. The Snap slider retains every subdivision. Shift+wheel seeks four times the normal wheel distance. Alt+wheel zooms the canvas or the upper object timeline under the pointer. Alt+wheel over the bottom timeline adjusts the currently selected Master, Music or Effect channel and displays the existing volume overlay. Ctrl+Alt+wheel cycles Select, Fruit, FSlider and Banana Shower over the canvas or upper timeline: wheel down advances and wheel up reverses the cycle. Unsupported wheel modifier combinations do not seek. Ctrl+M enters its quick cycle at 1/3 when the current divisor is outside the four choices.
 
 ## Settings
 
@@ -845,3 +864,58 @@ first-side change or subdivision change; Ctrl+Y or Ctrl+Shift+Z redoes it. Draft
 history stays inside the dialog. Confirming still creates one document undo step.
 Right-click a manual fruit marker on the left graph to remove its offset and
 recompute that fruit from the envelope. This removal is also undoable.
+
+## Audio delay diagnostics
+
+Windows release builds provide recording and output test controls in Settings >
+Audio. Enable recording, select event-driven or polling shared-mode WASAPI with a
+requested 10 or 50 ms buffer, then click Apply. When diagnostic options change,
+the app saves pending project edits and restarts automatically, restoring the
+project, active difficulty, paused playhead and Audio page scroll position. Other
+preferences retain their usual Apply behavior. A divider separates diagnostics
+from the skin sample option. The current-run status stays
+separate from saved settings. Optional frame timing logs and a correlation overlay
+follow the General display mode. The overlay sits near the bottom edge, below the transport timeline, with its
+text kept inside the window. The Audio page scrolls while its navigation and
+Apply button stay fixed.
+
+Users can press Ctrl+Shift+F8 during playback to mark a delay without pausing,
+mark a recently noticed delay from Settings, open the current capture directory and
+export a ZIP while the app remains open. Export runs in the background and reports
+completion or failure on the page. Diagnostic preferences do not change beatmap
+content. The Mac Audio page identifies the WASAPI controls as Windows-only.
+See [Audio capture instructions](AUDIO-DIAGNOSTICS.txt) for test comparisons,
+collection limits and the distinction between software timing and acoustic delay.
+
+## Hitsound Copier (Beta)
+
+The Timing menu separates snap/metronome controls, current timing-section commands,
+setup tools, whole-map commands, and the preview point with dividers.
+
+Open **Timing → Hitsound Copier (Beta)** for a floating dialog. The tabs are external
+copy, same-set copy, and Clear from left to right. Choose Clear,
+an external osu!standard or Catch `.osu`, or another difficulty in the current set. Clear restores
+normal default samples and removes Whistle, Finish, Clap and custom object samples.
+Copy requires matching red timing times, BPM and meter (floating-point rounding is tolerated). Events match the nearest playable
+time; unmatched events on either side are silently skipped. Target SV is preserved. Source sample bank, index and volume changes appear as
+green timing points in FA and persist with the project. Copy overwrites the sample
+fields of existing timing points, including Kiai markers, while keeping target SV
+and Kiai state.
+
+External copying can include only the used hitsound files. Same-set copying shares
+existing resources. Conflicting numbered sample groups are renumbered; explicit
+files receive a distinct relative name. Existing files are preserved. Clearing can
+delete unshared referenced hitsound files while preserving music, storyboard samples
+and other difficulties' references. Unreadable sibling maps prevent file deletion.
+Deleted files are backed up under `.hitsound-copier-backups` with a path manifest.
+
+Check lists the matched event count and planned file changes; scroll the file
+list to inspect all paths. Apply overwrites the current difficulty in one undo step
+or creates a named difficulty from the current chart. A new difficulty preserves
+the original, including its files. Overwrite undo/redo restores associated file
+changes, retains files now shared by another difficulty, and rejects files modified
+externally after preview. An outdated content preview must be rebuilt before Apply. Legacy slider events
+cannot use explicit filenames or incompatible extra tick banks; preview explains
+these format constraints without applying a partial result.
+
+Select **All target Diffs** to copy to every difficulty in the current project, excluding the selected same-set source. Overwrite adds an undo step to each target; undo and redo work per Diff and retain audio files still used by other Diffs. Create new Diff creates a uniquely named copy of each target. Check validates every target before applying any changes and lists the aggregate matched-event count and shared file changes. Matches allow a time difference of up to 2ms; the nearest source wins, with the earlier event winning a tie.

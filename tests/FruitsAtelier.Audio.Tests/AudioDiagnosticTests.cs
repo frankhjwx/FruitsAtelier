@@ -22,6 +22,7 @@ internal static class AudioDiagnosticTests
         }, diagnosticDirectory: capture))
         {
             if (!await audio.LoadAsync(wave)) throw new Exception(audio.Error);
+            audio.MarkDiagnosticIssue();
             audio.SetPlaybackSpeed(.25); await audio.WaitForCommandsAsync();
             for (int i = 0; i < 5; i++)
             {
@@ -43,7 +44,7 @@ internal static class AudioDiagnosticTests
             if (!ended.Any(r => r.GetProperty("data").GetProperty("detail").GetProperty("Id").GetInt64() == id))
                 throw new Exception("Diagnostic command has no matching completion.");
         }
-        foreach (string kind in new[] { "environment", "outputConfiguration", "decodeBegin", "sourceIdentity", "outputInitialized", "commandBegin", "stopBegin", "stopEnd", "resetEnd", "presentation", "clock", "sourceRead", "firstDeviceProgress", "logClosed" })
+        foreach (string kind in new[] { "environment", "userReportedDelay", "outputConfiguration", "decodeBegin", "sourceIdentity", "outputInitialized", "commandBegin", "stopBegin", "stopEnd", "resetEnd", "presentation", "clock", "sourceRead", "firstDeviceProgress", "logClosed" })
             if (!records.Any(r => r.GetProperty("kind").GetString() == kind)) throw new Exception("Missing diagnostic event: " + kind);
         using (var source = File.OpenRead(wave))
         {
@@ -71,6 +72,23 @@ internal static class AudioDiagnosticTests
             throw new Exception("Low-speed diagnostics did not capture frames, processing time and pre-gain signal level.");
         if (File.ReadAllText(transportLog).Contains(wave.Replace("\\", "\\\\"))) throw new Exception("Diagnostic log contains the full source path.");
 
+        File.WriteAllText(Path.Combine(capture, "editor.log"), "capture metadata");
+        File.WriteAllText(Path.Combine(capture, "private-map.osu"), "not part of the report");
+        string report = await AudioDiagnosticCapture.ExportAsync(capture);
+        using (var archive = System.IO.Compression.ZipFile.OpenRead(report))
+        {
+            if (!archive.Entries.Any(e => e.Name == Path.GetFileName(transportLog))
+                || !archive.Entries.Any(e => e.Name == "editor.log")
+                || !archive.Entries.Any(e => e.Name == "capture.json")
+                || archive.Entries.Any(e => e.Name == "private-map.osu")) throw new Exception("Report included incorrect files.");
+        }
+        using (var active = new AudioDiagnosticLog(capture))
+        {
+            active.Write("liveExport", new { });
+            string liveReport = await AudioDiagnosticCapture.ExportAsync(capture);
+            using var archive = System.IO.Compression.ZipFile.OpenRead(liveReport);
+            if (archive.Entries.Count == 0) throw new Exception("Live log export failed.");
+        }
         string unsupported = Path.Combine(capture, "unsupported-alaw.wav");
         using (var writer = new WaveFileWriter(unsupported, WaveFormat.CreateALawFormat(8000, 1)))
             writer.Write(new byte[800], 0, 800);
@@ -87,6 +105,51 @@ internal static class AudioDiagnosticTests
         File.WriteAllText(blocked, "file");
         using (var audio = new AudioTransport(0, () => new PausePositionTests.BufferedPlayer(), diagnosticDirectory: blocked))
             if (!await audio.LoadAsync(wave)) throw new Exception("An unwritable log prevented audio loading.");
+        var gate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var delayedLog = new AudioDiagnosticLog(capture, gate.Task);
+        for (int i = 0; i < 3000; i++) delayedLog.Write("queuePressure", new { i });
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        delayedLog.Dispose();
+        if (timer.ElapsedMilliseconds > 1000) throw new Exception("A blocked diagnostic writer held shutdown.");
+        gate.SetResult(true);
+        await delayedLog.Completion.WaitAsync(TimeSpan.FromSeconds(10));
+        var closed = JsonSerializer.Deserialize<JsonElement>(File.ReadLines(delayedLog.FilePath!).Last());
+        if (closed.GetProperty("dropped").GetInt64() < 900) throw new Exception("Diagnostic queue was not bounded.");
+
+        var textGate = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var textLog = new AsyncDiagnosticTextLog(Path.Combine(capture, "blocked-editor.log"), writerGate: textGate.Task);
+        timer.Restart();
+        for (int i = 0; i < 3000; i++) textLog.Write("message\n");
+        if (timer.ElapsedMilliseconds > 1000 || textLog.Dropped < 900) throw new Exception("Editor log blocked a caller or exceeded its queue.");
+        timer.Restart(); textLog.Dispose();
+        if (timer.ElapsedMilliseconds > 1000) throw new Exception("Editor log blocked shutdown.");
+        textGate.SetResult(true);
+        await textLog.Completion.WaitAsync(TimeSpan.FromSeconds(10));
+        if (textLog.Failed || File.ReadAllLines(Path.Combine(capture, "blocked-editor.log")).Length != 2048)
+            throw new Exception("Editor log failed to drain accepted records.");
+        using (var denied = new AsyncDiagnosticTextLog(Path.Combine(blocked, "editor.log")))
+        {
+            denied.Write("message\n");
+            denied.Dispose();
+            if (!denied.Failed) throw new Exception("Editor log did not report a write failure.");
+        }
+
+        var limitedText = new AsyncDiagnosticTextLog(Path.Combine(capture, "limited-editor.log"), maximumBytes: 8);
+        limitedText.Write("short\n"); limitedText.Write("short\n"); limitedText.Dispose();
+        await limitedText.Completion.WaitAsync(TimeSpan.FromSeconds(10));
+        if (!limitedText.LimitReached || new FileInfo(Path.Combine(capture, "limited-editor.log")).Length > 8)
+            throw new Exception("Editor capture exceeded its byte limit.");
+
+        AudioDiagnosticCapture.Configure(new LibrarySettings { AudioDiagnostics = true,
+            AudioDiagnosticFrames = true, AudioDiagnosticProfile = "poll-50" });
+        if (!AudioDiagnosticLog.Requested || !AudioDiagnosticCapture.Frames
+            || AudioDiagnosticCapture.Profile != "poll-50" || AudioDiagnosticLog.CaptureDirectory is null)
+            throw new Exception("Saved settings did not activate release capture.");
+        using (var logger = new AudioDiagnosticLog()) logger.Write("settingsCapture", new { });
+        if (!Directory.GetFiles(AudioDiagnosticLog.CaptureDirectory, "audio-*.jsonl").Any())
+            throw new Exception("Release capture did not create its run folder.");
+        if (AudioDiagnosticCapture.Reserve(64 * 1024 * 1024 + 1) || !AudioDiagnosticCapture.LimitReached)
+            throw new Exception("Audio event capture exceeded its shared byte budget.");
         Console.WriteLine("PASS Audio diagnostic command correlation, pause positions, hitsound encoding, and unwritable log isolation");
     }
 }

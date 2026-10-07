@@ -8,12 +8,13 @@ public sealed partial class EditorView
     private Action<int>? discardConfirmation;
     private bool deleteProjectConfirmation;
     private bool offerSongsExport;
-    public bool DiscardConfirmationVisible => discardConfirmation is not null || pendingLanguage is not null || VersionHistoryVisible || SynchronizationVisible || SynchronizationBlocksInput;
+    public bool DiscardConfirmationVisible => discardConfirmation is not null || pendingLanguage is not null || VersionHistoryVisible || SynchronizationVisible || SynchronizationBlocksInput || previousSaveRestore is not null;
 
     public void ShowDiscardConfirmation(Action<int> answer)
     {
         if (DiscardConfirmationVisible) return;
         offerSongsExport = false;
+        previousSaveConfirmation = false;
         CancelInteraction(); menu = -1; contextItems.Clear();
         discardConfirmation = answer;
         hits.Clear(); fields.Clear();
@@ -27,6 +28,7 @@ public sealed partial class EditorView
 
     private void AnswerDiscard(int answer)
     {
+        if (previousSaveRestore is not null) return;
         if (pendingLanguage is not null) { AnswerLanguageNotice(answer == 6); return; }
         if (SynchronizationBlocksInput) return;
         if (VersionHistoryVisible) { if (versionRestoreTask is null) CloseVersionHistory(); return; }
@@ -35,6 +37,7 @@ public sealed partial class EditorView
         discardConfirmation = null;
         deleteProjectConfirmation = false;
         offerSongsExport = false;
+        previousSaveConfirmation = false;
         hits.Clear();
         callback?.Invoke(answer);
     }
@@ -59,6 +62,18 @@ public sealed partial class EditorView
         if (!DiscardConfirmationVisible) return;
         hits.Clear(); fields.Clear();
         if (pendingLanguage is not null) { DrawLanguageNotice(c); return; }
+        if (previousSaveConfirmation || previousSaveRestore is not null)
+        {
+            float left = (width - 500) / 2, top = (height - 180) / 2;
+            c.Fill(new(0, 0, width, height), Background, opacity: .65f);
+            c.Fill(new(left, top, 500, 180), Panel, 8);
+            c.Stroke(new(left, top, 500, 180), Accent, 2, 8);
+            c.Text(L.Get("history.revertSave"), left + 24, top + 24, 20, Foreground, 452, true);
+            c.Text(L.Get(previousSaveRestore is null ? "history.revertSavePrompt" : "history.restoring"), left + 24, top + 62, 14, Foreground, 452);
+            Button(c, new(left + 24, top + 116, 210, 40), L.Get("mac.cancel"), () => AnswerDiscard(2), true, previousSaveRestore is null);
+            Button(c, new(left + 266, top + 116, 210, 40), L.Get("history.revertSave"), () => AnswerDiscard(7), enabled: previousSaveRestore is null);
+            return;
+        }
         if (deleteProjectConfirmation)
         {
             float left = (width - 500) / 2, top = (height - 200) / 2;

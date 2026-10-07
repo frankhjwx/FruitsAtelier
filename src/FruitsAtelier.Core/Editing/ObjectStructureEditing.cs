@@ -35,6 +35,7 @@ public static class ObjectStructureEditing
             .OrderBy(p => p.Time).ThenBy(p => p.SourceOrder)
             .Select((p, index) => (p.Id, index)).ToDictionary(p => p.Id, p => p.index);
         var timing = new TimingMap.Lookup(document);
+        var samples = document.HitsoundOverrides.ToDictionary(s => (s.SourceId,s.EventIndex), s => s.Sample);
         (Fruit Fruit, int ParentOrder)[] fruits;
         try
         {
@@ -43,10 +44,21 @@ public static class ObjectStructureEditing
                 TimeMs = item.TimeMs, X = item.X, SourceOrder = track.SourceOrder,
                 OriginalLine = SliderFruitStream.FruitLine(track, item.EventIndex,
                     Math.Round(item.X, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture),
-                    Math.Round(item.TimeMs, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture))
+                    Math.Round(item.TimeMs, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture), samples.GetValueOrDefault((track.Id,item.EventIndex)))
             }, parentOrder[track.Id]))).ToArray();
         }
         catch (CatchConversionException ex) { throw new InvalidOperationException(ex.Message, ex); }
+        var expanded = fruits.GroupBy(p=>p.ParentOrder).ToDictionary(g=>g.Key,g=>g.Select(p=>p.Fruit).ToArray());
+        var removed = tracks.Select(t=>t.Id).ToHashSet();
+        var transferred = new List<EventHitsound>();
+        foreach(var sample in document.HitsoundOverrides.Where(s=>removed.Contains(s.SourceId)))
+        {
+            var children = expanded[parentOrder[sample.SourceId]];
+            if(sample.EventIndex < children.Length)
+                transferred.Add(new(children[sample.EventIndex].Id,0,sample.Sample));
+        }
+        document.HitsoundOverrides.RemoveAll(s=>removed.Contains(s.SourceId));
+        document.HitsoundOverrides.AddRange(transferred);
         document.Tracks.RemoveAll(t => tracks.Contains(t));
         // Expanded fruits retain the stream's parent traversal order at tied event times.
         var ordered = document.Fruits.Select(f => (Fruit: f, ParentOrder: parentOrder[f.Id])).Concat(fruits)

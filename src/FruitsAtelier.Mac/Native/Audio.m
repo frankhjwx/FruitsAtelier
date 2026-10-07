@@ -86,7 +86,7 @@ void fa_audio_close(void *handle) {
 void fa_audio_pause(void *handle) { pauseMusic((__bridge FAMusic *)handle); }
 void fa_audio_seek(void *handle, double seconds) {
     FAMusic *music = (__bridge FAMusic *)handle;
-    pauseMusic(music); music.position = fmax(0, fmin(duration(music), seconds));
+    pauseMusic(music); music.position = fmax(INT32_MIN / 1000.0, fmin(duration(music), seconds));
 }
 double fa_audio_position(void *handle) { return position((__bridge FAMusic *)handle); }
 double fa_audio_duration(void *handle) { return duration((__bridge FAMusic *)handle); }
@@ -98,14 +98,16 @@ void fa_audio_volume(void *handle, float volume) { [(__bridge FAMusic *)handle n
 double fa_audio_device_time(void *handle) { return hostTime(); }
 int fa_audio_play_at(void *handle, double time) {
     FAMusic *music = (__bridge FAMusic *)handle;
-    AVAudioFramePosition frame = (AVAudioFramePosition)llround(music.position * music.file.processingFormat.sampleRate);
+    AVAudioFramePosition frame = (AVAudioFramePosition)llround(fmax(0, music.position) * music.file.processingFormat.sampleRate);
     AVAudioFramePosition remaining = music.file.length - frame;
     if (remaining <= 0 || remaining > UINT32_MAX) return 0;
     NSError *error = nil;
     if (!music.engine.isRunning && ![music.engine startAndReturnError:&error]) return 0;
     [music.node scheduleSegment:music.file startingFrame:frame frameCount:(AVAudioFrameCount)remaining atTime:nil completionHandler:nil];
     music.start = time;
-    [music.node playAtTime:[AVAudioTime timeWithHostTime:[AVAudioTime hostTimeForSeconds:time]]];
+    // The output clock advances through preparation while the music node waits for map zero.
+    double audioStart = time + fmax(0, -music.position) / music.tempo.rate;
+    [music.node playAtTime:[AVAudioTime timeWithHostTime:[AVAudioTime hostTimeForSeconds:audioStart]]];
     music.playing = YES;
     return 1;
 }

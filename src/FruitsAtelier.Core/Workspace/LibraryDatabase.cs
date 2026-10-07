@@ -29,7 +29,16 @@ public sealed class LibrarySettings
     public bool DerandomizeDroplets { get; set; } = true;
     public bool DerandomizeNewProjects { get; set; } = true;
     public bool ReverseCanvasScroll { get; set; }
+    public bool LockDropletSelection { get; set; } = true;
     public bool LowLatencyDisplay { get; set; }
+    public bool AudioDiagnostics { get; set; }
+    public bool AudioDiagnosticFrames { get; set; }
+    private string audioDiagnosticProfile = "event-10";
+    public string AudioDiagnosticProfile
+    {
+        get => audioDiagnosticProfile;
+        set => audioDiagnosticProfile = value is "event-50" or "poll-10" or "poll-50" ? value : "event-10";
+    }
     public bool Fullscreen { get; set; }
     public uint StandIndicatorColour { get; set; } = DefaultStandIndicatorColour;
     public uint WalkIndicatorColour { get; set; } = DefaultWalkIndicatorColour;

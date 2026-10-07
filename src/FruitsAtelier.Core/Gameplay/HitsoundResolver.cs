@@ -11,9 +11,11 @@ public sealed class HitsoundResolver
     private readonly Dictionary<string, string> skinFiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly TimingPoint[] timing;
     private readonly int defaultSet;
+    private readonly Dictionary<(Guid, int), EventHitsound> overrides;
     private readonly Dictionary<Guid, CurveTrack> streams;
     public HitsoundResolver(MapDocument document, IReadOnlyList<ConvertedCatchObject> objects, IEnumerable<string>? skinFolders = null)
     {
+        overrides = document.HitsoundOverrides.ToDictionary(s => (s.SourceId, s.EventIndex), s => s);
         streams = document.Tracks.Where(t => t.StreamSnapDivisor is not null).ToDictionary(t => t.Id);
         lines = document.Fruits.Select(f => (f.Id, f.OriginalLine))
             .Concat(document.Tracks.Select(f => (f.Id, f.OriginalLine)))
@@ -55,10 +57,8 @@ public sealed class HitsoundResolver
             catch (UnauthorizedAccessException) { }
         }
     }
-    public IReadOnlyList<Hitsound> Resolve(ConvertedCatchObject item)
+    public HitSampleSettings Describe(ConvertedCatchObject item)
     {
-        if (item.Kind == CatchObjectKind.TinyDroplet) return Array.Empty<Hitsound>();
-        if (item.Kind == CatchObjectKind.Banana) return new[] { new Hitsound(item.Kind, HitsoundDefaults.Find(1, "catch-banana"), 1, "catch-banana") };
         // Resolve each audible event at its own time with legacy 5 ms sample leniency.
         double sampleTime = item.TimeMs + 5;
         int low = 0, high = timing.Length;
@@ -67,6 +67,17 @@ public sealed class HitsoundResolver
         int bank = point?.SampleSet is >= 1 and <= 3 ? point.SampleSet : defaultSet;
         int index = point?.SampleIndex ?? 0;
         int volume = point?.Volume ?? 100;
+        if (overrides.TryGetValue((item.SourceId, item.EventIndex), out var copied))
+        {
+            var sample = copied.Sample;
+            var fields = copied.InheritedFields;
+            int normal = fields.HasFlag(InheritedSampleFields.NormalSet) ? bank : sample.NormalSet;
+            return sample with {
+                NormalSet = normal,
+                AdditionSet = fields.HasFlag(InheritedSampleFields.AdditionSet) ? normal : sample.AdditionSet,
+                Index = fields.HasFlag(InheritedSampleFields.Index) ? index : sample.Index,
+                Volume = fields.HasFlag(InheritedSampleFields.Volume) ? volume : sample.Volume };
+        }
         int additions = 0, additionBank = 0;
         string? custom = null;
         if (lines.TryGetValue(item.SourceId, out string? line) && line is not null)
@@ -99,7 +110,50 @@ public sealed class HitsoundResolver
                 }
             }
         }
-        float gain = Math.Clamp(volume, 0, 100) / 100f;
+        return new(bank, additionBank is >= 1 and <= 3 ? additionBank : bank, Math.Max(0,index), Math.Clamp(volume,0,100), additions & 14, custom ?? "");
+    }
+
+    internal InheritedSampleFields InheritedFields(ConvertedCatchObject item)
+    {
+        if (overrides.TryGetValue((item.SourceId, item.EventIndex), out var copied)) return copied.InheritedFields;
+        if (!lines.TryGetValue(item.SourceId, out var line) || line is null) return InheritedSampleFields.All;
+        if (streams.TryGetValue(item.SourceId, out var stream)) line = SliderFruitStream.FruitLine(stream, item.EventIndex, "0", "0");
+        var p = line.Split(','); bool slider = (Number(p, 3) & 2) != 0;
+        var sample = At(p, slider ? 10 : 5).Split(':', 5);
+        int normal = Number(sample, 0), addition = Number(sample, 1);
+        if (slider && edges.TryGetValue((item.SourceId, item.EventIndex), out int edge))
+        {
+            var sets = At(p, 9).Split('|');
+            if (edge < sets.Length && sets[edge].Length > 0)
+            { var pair = sets[edge].Split(':'); normal = Number(pair, 0); addition = Number(pair, 1); }
+        }
+        var fields = InheritedSampleFields.All;
+        if (normal is >= 1 and <= 3) fields &= ~InheritedSampleFields.NormalSet;
+        if (addition is >= 1 and <= 3) fields &= ~InheritedSampleFields.AdditionSet;
+        if (!slider && Number(sample, 2) > 0) fields &= ~InheritedSampleFields.Index;
+        if (!slider && Number(sample, 3) > 0) fields &= ~InheritedSampleFields.Volume;
+        return fields;
+    }
+
+    internal HitSampleSettings AuthoredSample(ConvertedCatchObject item)
+    {
+        var sample = Describe(item);
+        var fields = InheritedFields(item);
+        return sample with {
+            NormalSet = fields.HasFlag(InheritedSampleFields.NormalSet) ? 0 : sample.NormalSet,
+            AdditionSet = fields.HasFlag(InheritedSampleFields.AdditionSet) ? 0 : sample.AdditionSet,
+            Index = fields.HasFlag(InheritedSampleFields.Index) ? 0 : sample.Index,
+            Volume = fields.HasFlag(InheritedSampleFields.Volume) ? 0 : sample.Volume };
+    }
+
+    public IReadOnlyList<Hitsound> Resolve(ConvertedCatchObject item)
+    {
+        if (item.Kind == CatchObjectKind.TinyDroplet) return [];
+        if (item.Kind == CatchObjectKind.Banana) return [new(item.Kind, HitsoundDefaults.Find(1, "catch-banana"), 1, "catch-banana")];
+        var sample = Describe(item);
+        int bank = sample.NormalSet, additionBank = sample.AdditionSet, index = sample.Index, additions = sample.Additions;
+        string custom = sample.FileName;
+        float gain = Math.Clamp(sample.Volume, 0, 100) / 100f;
         if (gain == 0) return Array.Empty<Hitsound>();
         int extra = additionBank is >= 1 and <= 3 ? additionBank : bank;
         if (item.Kind == CatchObjectKind.Droplet)

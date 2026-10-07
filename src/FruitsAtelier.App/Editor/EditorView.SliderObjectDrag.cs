@@ -12,18 +12,20 @@ public sealed partial class EditorView
     private int sliderObjectTrackIndex, sliderObjectImportIndex;
     private ConvertedCatchObject? sliderObjectDragPrevious;
     private ConvertedCatchObject? pendingStreamChildSelection;
+    private bool streamEndpointTimeDrag;
 
-    private bool TryBeginSelectedSliderObjectDrag(float x, float y, bool dropletsOnly = false)
+    private bool TryBeginSelectedSliderObjectDrag(float x, float y, bool requireSelectedFruit = false)
     {
+        var track = SelectedTrack;
+        bool stream = track?.StreamSnapDivisor is not null;
+        if (stream && HitSelectedSliderControl(x, y)) return false;
         if (tool != Tool.Select || objectSelection.Count != 1
             || HitCatchObject(x, y) is not { Kind: CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet } target
             || !objectSelection.Contains(target.SourceId)
-            || dropletsOnly && target.Kind == CatchObjectKind.Fruit
+            || requireSelectedFruit && target.Kind == CatchObjectKind.Fruit && !stream && distanceObject != (target.SourceId, target.EventIndex)
             || target.IsStandalone && (target.Kind != CatchObjectKind.Fruit
                 || !Document.Tracks.Any(track => track.Id == target.SourceId && track.StreamSnapDivisor is not null)))
             return false;
-        var track = SelectedTrack;
-        if (track?.StreamSnapDivisor is not null && distanceObject != (target.SourceId, target.EventIndex)) return false;
         if (target.Kind != CatchObjectKind.Fruit && track is not null && showTargets && distanceObject != (target.SourceId, target.EventIndex))
         {
             double distance = PointerDistance(new(target.TimeMs, target.X), x, y);
@@ -55,6 +57,7 @@ public sealed partial class EditorView
         if (sliderObjectTrackIndex >= 0) sliderObjectDragSource.Tracks.Add(Document.Tracks[sliderObjectTrackIndex]);
         if (sliderObjectImportIndex >= 0) sliderObjectDragSource.ImportedSliders.Add(Document.ImportedSliders[sliderObjectImportIndex]);
         sliderObjectDragShape = null;
+        streamEndpointTimeDrag = false;
         EnsureConversion();
         var large = conversion!.Objects.Where(item => item.SourceId == target.SourceId
             && (item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet
@@ -100,6 +103,41 @@ public sealed partial class EditorView
         sliderObjectDragTarget = null;
         sliderObjectDragSource = sliderObjectDragShape = null;
         sliderObjectDragPrevious = null;
+        return true;
+    }
+
+    private bool MoveStreamEndpoint(float x, float y)
+    {
+        if (sliderObjectDragTarget is not { Kind: CatchObjectKind.Fruit } target
+            || sliderObjectDragSource?.Tracks.FirstOrDefault() is not { StreamSnapDivisor: not null } source
+            || source.Nodes.Count < 2) return false;
+        bool head = Math.Abs(target.TimeMs - source.Nodes[0].TimeMs) < .001;
+        bool tail = Math.Abs(target.TimeMs - CurveMath.EndTimeMs(source)) < .001;
+        if ((!head && !tail) || !streamEndpointTimeDrag && Math.Abs(y - dragStartY) < 2) return false;
+        streamEndpointTimeDrag = true;
+        var pointer = Transform.ToMap(x, y);
+        var origin = Transform.ToMap(dragStartX, dragStartY);
+        double time = target.TimeMs + pointer.TimeMs - origin.TimeMs;
+        if (snap) time = TimingMap.Snap(Document, time, divisor);
+        time = Math.Clamp(time, 0, EditableDurationMs);
+        double wantedX = Math.Clamp(SnapX(sliderObjectPointerOriginX + pointer.X - origin.X), 0, 512);
+        var accepted = new MapDocument(); accepted.Tracks.Add(Document.Tracks.Single(t => t.Id == source.Id));
+        RestoreSliderObjectSource(sliderObjectDragSource);
+        var track = Document.Tracks.Single(t => t.Id == source.Id);
+        // A repeated tail changes the span duration; its X belongs to the final traversal's endpoint.
+        var xNode = head || track.SpanCount % 2 == 0 ? track.Nodes[0] : track.Nodes[^1];
+        var timeNode = head ? track.Nodes[0] : track.Nodes[^1];
+        double nodeTime = head ? time : source.Nodes[0].TimeMs + (time - source.Nodes[0].TimeMs) / source.SpanCount;
+        bool moved = CurveMath.TryMoveAnchor(track, xNode.Id, xNode.TimeMs, wantedX, out var error)
+            && CurveMath.TryMoveAnchor(track, timeNode.Id, nodeTime, timeNode.X, out error);
+        if (!moved || !CatchStreamConverter.Convert(Document, compensateTinyDroplets, editorConversionCache).Success)
+        {
+            RestoreSliderObjectSource(accepted);
+            StatusMessage = moved ? L.Get("coordinate.unreachable") : error;
+            return true;
+        }
+        Document.DurationMs = Math.Max(Document.DurationMs, CurveMath.EndTimeMs(track));
+        StatusMessage = L.Get("editor.status.anchorPosition", Time(time), Number(wantedX));
         return true;
     }
 
@@ -178,7 +216,11 @@ public sealed partial class EditorView
             PrepareSliderObjectShape(target);
             // Every candidate starts from the same fitted shape; only this source needs a copy.
             RestoreSliderObjectSource(sliderObjectDragShape!);
-            if (target.Kind == CatchObjectKind.Fruit)
+            var track = Document.Tracks.First(t => t.Id == target.SourceId);
+            double sampleTime = CurveMath.FirstSpanTime(track, target.TimeMs);
+            bool streamInterior = track.StreamSnapDivisor is not null
+                && sampleTime > track.Nodes[0].TimeMs + .001 && sampleTime < track.Nodes[^1].TimeMs - .001;
+            if (target.Kind == CatchObjectKind.Fruit && !streamInterior)
                 DistanceSpacingEditing.ApplyX(Document, target, x, compensateTinyDroplets, editorConversionCache);
             else DistanceSpacingEditing.ApplyIsolatedX(Document, target, x, compensateTinyDroplets, editorConversionCache);
             if (DistanceSnapEnabled)
@@ -224,7 +266,8 @@ public sealed partial class EditorView
     {
         var reference = sliderObjectDragPrevious;
         if (reference is null) return [];
-        if (target.Kind is CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet)
+        if (target.Kind is CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet
+            || sliderObjectDragShape!.Tracks[0].StreamSnapDivisor is not null)
             return StraightSliderCandidates(new(target.TimeMs, wantedX), new(reference.TimeMs, reference.X))
                 .Select(point => point.X);
 

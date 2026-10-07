@@ -378,4 +378,41 @@ internal static class ObjectTimelineTests
             if (ui.View.PlaybackSpeed != expected) throw new Exception("Faster shortcut skipped a speed or the upper limit.");
         }
     }
+    public static void EdgeSounds()
+    {
+        foreach (bool imported in new[]{false,true})
+        {
+            var map=OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,2,0,L|200:192,3,100,0|0|0|0,0:0|0:0|0:0|0:0,0:0:0:0:");
+            Guid id;
+            if(imported) id=map.ImportedSliders.Single().Id;
+            else
+            {
+                map.ImportedSliders.Clear();
+                var track=new CurveTrack { SpanCount=3 };
+                track.Nodes.Add(new Anchor {TimeMs=1000,X=100}); track.Nodes.Add(new Anchor {TimeMs=1500,X=200});
+                map.Tracks.Add(track); id=track.Id;
+            }
+            var ui=new Ui(); ui.LoadDocument(map);
+            ui.View.UpdateTransport(1750,10000,false,false,false,null,null); ui.Paint();
+            var r=ui.View.ObjectTimelineBounds;
+            float X(double time)=>r.X+(float)((time-ui.View.ObjectTimelineStartMs)*ui.View.ObjectTimelinePixelsPerMs);
+            var before=ui.View.Document.DeepClone();
+            for(int edge=0;edge<=3;edge++)
+            {
+                ui.Click(X(1000+500*edge),r.Y+27); ui.Paint();
+                if(!ui.View.Document.ContentEquals(before)) throw new Exception("Timeline edge selection edits content");
+                var selected=ui.Canvas.Circles.Where(c=>c.Radius==21 && c.Color==0x2866C6 && c.Y==r.Y+27).ToArray();
+                if(selected.Length!=1 || Math.Abs(selected[0].X-X(1000+500*edge))>.01) throw new Exception("Only selected sound edge is highlighted");
+                var clap=ui.View.AssistButtonBounds[3]; ui.Click(clap.X+clap.Width/2,clap.Y+clap.Height/2);
+                for(int other=0;other<=3;other++)
+                    if(ObjectFlags.Sounds(ui.View.Document,id,other).Single() != (other==edge ? 8 : 0)) throw new Exception("Timeline sound edit affects another edge");
+                ui.Key('Z',ctrl:true);
+                if(!ui.View.Document.ContentEquals(before)) throw new Exception("Edge sound undo failed");
+            }
+            ui.Click(X(1250),r.Y+27); ui.Paint();
+            var all=ui.View.AssistButtonBounds[3]; ui.Click(all.X+all.Width/2,all.Y+all.Height/2);
+            if(ObjectFlags.Sounds(ui.View.Document,id).Any(s=>s!=8)) throw new Exception("Timeline body must retain whole-slider sound edits");
+        }
+    }
+
 }

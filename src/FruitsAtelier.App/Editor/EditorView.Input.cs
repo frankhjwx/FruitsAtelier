@@ -42,6 +42,16 @@ public sealed partial class EditorView
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
         }
+        if (HitsoundCopierVisible)
+        {
+            mouseX = x; mouseY = y;
+            if (copierSourcesOpen && !copierSourceBounds.Contains(x,y)
+                && !HitsoundSourceSelectorBounds.Contains(x,y))
+                copierSourcesOpen=false;
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         ResetTextCaret();
         mouseX = x; mouseY = y;
         timingPointerShift = shift;
@@ -77,6 +87,13 @@ public sealed partial class EditorView
             return;
         }
         if (legacyButtonSlider != Guid.Empty && !sliderConversionBounds.Contains(x, y)) legacyButtonSlider = Guid.Empty;
+        if (legacyButtonSlider != Guid.Empty && sliderConversionBounds.Contains(x, y))
+        {
+            // Popup actions own the pointer even when the canvas play line crosses them.
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         if (updatesPage)
         {
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
@@ -405,9 +422,10 @@ public sealed partial class EditorView
         if (timingVolumeStart is not null) { UpdateTimingVolume(x); return; }
         if (TimingModal) { mouseX = x; mouseY = y; return; }
         if (volumePopoverDrag >= 0) return;
-        if (textSelecting) { MoveInputSelection(x); return; }
+        if (textSelecting) { mouseY = y; MoveInputSelection(x); return; }
         if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
         if (dsBaseDragging) { UpdateDistanceBase(x); return; }
+        if (HitsoundCopierVisible) { mouseX = x; mouseY = y; return; }
         if (SongSetupVisible) { mouseX = x; mouseY = y; MoveSongSetup(x, y, shift); return; }
         if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x, shift); return; }
         if (distanceDragging) { UpdateDistanceSlider(x, shift); return; }
@@ -463,6 +481,7 @@ public sealed partial class EditorView
         if (drag == DragKind.Objects) { if (selectionScaleSide != 0) ScaleSelectedObjects(x); else MoveSelectedObjects(x, y, shift); return; }
         if (drag == DragKind.SliderObject)
         {
+            if (MoveStreamEndpoint(x, y)) return;
             if (!TryBeginSliderEndpointTimeDrag(y)) { MoveSliderObject(x); return; }
         }
         if (drag == DragKind.LegacyControl) { MoveLegacyPoints(x, y); return; }
@@ -541,7 +560,8 @@ public sealed partial class EditorView
         if (EndVolumePopoverPointer(x, y, button)) return;
         if (workspaceScrollDragging && button == 0) { MoveWorkspaceScroll(y); workspaceScrollDragging = false; return; }
         if (settingsColourDrag != 0 && button == 0) { UpdateIndicatorColourDrag(x, y); settingsColourDrag = 0; return; }
-        if (textSelecting && button == 0) { MoveInputSelection(x); textSelecting = false; return; }
+        if (textSelecting && button == 0) { mouseY = y; MoveInputSelection(x); textSelecting = false; return; }
+        if (HitsoundCopierVisible) return;
         if (SongSetupVisible) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
         if (updatesPage) return;
@@ -631,6 +651,8 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (HitsoundCopierVisible) { PointerDown(x, y, 0, shift, ctrl); return; }
+
         if (AimodVisible) return;
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
@@ -675,6 +697,20 @@ public sealed partial class EditorView
         for (int i = 0; i < fields.Count; i++)
             if (fields[i].Bounds.Contains(x, y))
             { FocusField(i); SelectInput("numeric:" + i, editBuffer); return; }
+        if (objectTimeline.Contains(x, y) && menu < 0 && contextItems.Count == 0 && editField < 0
+            && draftTrack == Guid.Empty && draftBanana == Guid.Empty)
+        {
+            for (int i = timelineObjects.Count - 1; i >= 0; i--)
+            {
+                var item = timelineObjects[i];
+                if (!item.Bounds.Contains(x, y)) continue;
+                CancelInteraction();
+                SelectObjects([item.Id], item.Id);
+                SeekTo(item.Time);
+                return;
+            }
+            return;
+        }
         if (ctrl || tool == Tool.Fruit) { PointerDown(x, y, 0, shift, ctrl); return; }
         if (!LegacyMode && draftTrack != Guid.Empty && SelectedTrack is { } draft && Near(Point(draft.Nodes[^1]), x, y, 8))
         { draft.Nodes[^1].HandleOut = default; draftStraight = true; return; }
@@ -703,6 +739,25 @@ public sealed partial class EditorView
     }
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
+    {
+        if (HitsoundCopierVisible)
+        {
+            if(copierSourcesOpen) copierSourceScroll = Math.Max(0,copierSourceScroll-(int)(delta/120)*3);
+            else copierFileScroll = Math.Max(0,copierFileScroll-(int)(delta/120)*3);
+            return;
+        }
+        bool navigationDrag = NavigationDuringDrag;
+        WheelCore(x, y, delta, ctrl, shift, alt);
+        if (navigationDrag && NavigationDuringDrag) PointerMove(mouseX, mouseY, shift || shiftHeld, ctrl);
+    }
+
+    private bool NavigationDuringDrag => draftTrack == Guid.Empty && draftBanana == Guid.Empty
+        && (drag is DragKind.TimelineTail or DragKind.BananaStart or DragKind.BananaEnd
+            || drag == DragKind.SliderObject && streamEndpointTimeDrag
+            || drag is DragKind.Anchor or DragKind.LegacyControl && SelectedTrack is { Nodes.Count: > 1 } track
+                && (anchorSelection.Contains(track.Nodes[0].Id) || anchorSelection.Contains(track.Nodes[^1].Id)));
+
+    private void WheelCore(float x, float y, float delta, bool ctrl, bool shift, bool alt)
     {
         if (pendingLanguage is not null) return;
         if (languageMenuOpen)
@@ -741,6 +796,7 @@ public sealed partial class EditorView
         }
         shift |= shiftHeld;
         alt |= altHeld;
+        if (HitsoundCopierVisible) return;
         if (SongSetupVisible) return;
         if (DistanceSnapDialogVisible)
         {
@@ -784,7 +840,7 @@ public sealed partial class EditorView
             }
             return;
         }
-        if (drag != DragKind.None) return;
+        if (drag != DragKind.None && !NavigationDuringDrag) return;
         if (contextItems.Count > 0) { contextItems.Clear(); return; }
         if (assistPalette.Contains(x, y)) { assistScroll = Math.Clamp(assistScroll - delta / 120 * 64, 0, assistScrollLimit); return; }
         if (difficultyTabStrip.Contains(x, y))
@@ -803,10 +859,11 @@ public sealed partial class EditorView
         bool onOverview = overview.Contains(x, y);
         if ((onTimeline || onCanvas) && ctrl && alt && !shift)
         {
+            if (drag != DragKind.None) return;
             toolWheelRemainder += delta;
             int steps = (int)Math.Truncate(toolWheelRemainder / 120);
             toolWheelRemainder -= steps * 120;
-            if (steps != 0) ChangeTool((Tool)(((int)tool + ((steps % 4) + 4) % 4) % 4));
+            if (steps != 0) ChangeTool((Tool)(((int)tool + ((-steps % 4) + 4) % 4) % 4));
             return;
         }
         if ((onTimeline || onCanvas || onOverview) && ctrl && !alt && !shift)
@@ -900,6 +957,7 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (AudioDiagnosticMarkerKeyDown(virtualKey, ctrl, shift)) return;
         if (FullscreenKeyDown(virtualKey, ctrl, shift)) return;
         if (VersionHistoryVisible) { VersionHistoryKey(virtualKey); return; }
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
@@ -907,6 +965,7 @@ public sealed partial class EditorView
             NotifySynchronizationBlocked(); return;
         }
         if (DistanceKeyDown(virtualKey, ctrl, shift)) return;
+        if (HitsoundCopierVisible && !ErrorVisible && !DiscardConfirmationVisible) { HitsoundCopierKey(virtualKey, ctrl, shift); return; }
         placementCtrl = ctrl;
         if (virtualKey == 27 && legacyButtonSlider != Guid.Empty)
         { legacyButtonSlider = Guid.Empty; return; }
@@ -925,6 +984,11 @@ public sealed partial class EditorView
             else if (ctrl && !shift && !altHeld && virtualKey == 82)
             {
                 if (!testplayRetryHeld) { testplayRetryHeld = true; RestartTestplay(); }
+            }
+            else if (virtualKey == 192 && !ctrl && !altHeld)
+            {
+                if (!testplayQuickRetryHeld)
+                { testplayQuickRetryHeld = true; testplayQuickRetryAt = TestplayRealtime + 300; }
             }
             else if (ctrl && !altHeld && virtualKey is 38 or 40)
             {
@@ -994,7 +1058,7 @@ public sealed partial class EditorView
         }
         if (DiscardConfirmationVisible)
         {
-            if (virtualKey is 27 or 13) AnswerDiscard(virtualKey == 13 && pendingLanguage is not null ? 6 : 2);
+            if (virtualKey is 27 or 13) AnswerDiscard(virtualKey == 13 ? previousSaveConfirmation ? 7 : pendingLanguage is not null ? 6 : 2 : 2);
             return;
         }
         if (updatesPage) { if (virtualKey == 27) updatesPage = false; return; }
@@ -1121,7 +1185,7 @@ public sealed partial class EditorView
             else if (virtualKey == 86 && !shift) PasteSelection();
             else if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
             else if (virtualKey == 71 && !shift) ReverseSelection();
-            else if (virtualKey == 76 && !shift) TogglePointCurve();
+            else if (virtualKey == 76 && !shift) RequestPreviousSave();
             else if (virtualKey == 73 && !shift) DeleteCurrentTiming();
             else if (virtualKey == 73 && shift && plot.Contains(mouseX, mouseY) && HitSliderLocation(mouseX, mouseY) is { } location) InsertControlPoint(location);
             else if (virtualKey == 80) AddTimingPoint(shift);
@@ -1131,7 +1195,7 @@ public sealed partial class EditorView
             return;
         }
         if (ctrl || altHeld) return;
-        if (drag == DragKind.Marquee && !shift && virtualKey is 32 or 67)
+        if ((drag == DragKind.Marquee || NavigationDuringDrag) && !shift && virtualKey is 32 or 67)
         { TogglePlayback(); return; }
         if (drag != DragKind.None) return;
         contextItems.Clear();
@@ -1166,6 +1230,8 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (HitsoundCopierVisible) { if (!ErrorVisible && !DiscardConfirmationVisible && !char.IsControl(value)) PasteHitsoundName(value.ToString()); return; }
+
         if (AimodVisible) return;
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
@@ -1204,6 +1270,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        audioDiagnosticMarkerHeld = false;
         fullscreenShortcutHeld = false;
         deferredTestplay = false;
         placementCtrl = false; timingTapHeld = false; timingSnapDragging = false; panelMenuOpen = false;
@@ -1222,6 +1289,7 @@ public sealed partial class EditorView
         testplayEscapeConsumed = false;
         testplaySpeedHeld = false;
         testplayRetryHeld = false;
+        testplayQuickRetryHeld = false; testplayQuickRetryAt = null;
         streamSnapDragging = false; CancelStackDrag();
         CloseVolumePopover();
         sliderHoldId = legacyButtonSlider = Guid.Empty; noteHoldTarget = null;

@@ -22,7 +22,7 @@ public sealed partial class EditorView
     {
         get
         {
-            if (tool != Tool.Select || draftTrack != Guid.Empty || draftBanana != Guid.Empty || objectSelection.Count == 0)
+            if (!showSelectionRect || tool != Tool.Select || draftTrack != Guid.Empty || draftBanana != Guid.Empty || objectSelection.Count == 0)
                 return default;
             RefreshSelectionBounds();
             if (selectionMapBounds is not { } bounds) return default;
@@ -128,7 +128,7 @@ public sealed partial class EditorView
         if (bounds.Width <= 0) return false;
         int side = SelectionScaleHandle(bounds, -1).Contains(x, y) ? -1
             : SelectionScaleHandle(bounds, 1).Contains(x, y) ? 1 : 0;
-        if (side == 0 && TryBeginSelectedSliderObjectDrag(x, y, dropletsOnly: true)) return true;
+        if (side == 0 && TryBeginSelectedSliderObjectDrag(x, y, requireSelectedFruit: true)) return true;
         if (HitSelectedSliderControl(x, y)) return false;
         if (side == 0 && !bounds.Contains(x, y)) return false;
         if (side != 0 && selectionMapBounds is { } map && map.Right - map.Left < .001) return true;

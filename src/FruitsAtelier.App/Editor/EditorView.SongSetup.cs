@@ -27,7 +27,7 @@ public sealed partial class EditorView
     private static readonly string[] SongCountdownSpeeds = ["song.countdownOff", "song.countdownNormal", "song.countdownHalf", "song.countdownDouble"];
     internal Rect SongSetupButtonBounds => new(EditorSettingsButtonBounds.X - 126, 6, 120, 28);
     internal Rect SongSetupBounds => new((width - Math.Min(840, width - 32)) / 2,
-        (height - Math.Min(580, height - 32)) / 2, Math.Min(840, width - 32), Math.Min(580, height - 32));
+        (height - SongSetupHeight) / 2, Math.Min(840, width - 32), SongSetupHeight);
     internal IReadOnlyDictionary<string, Rect> SongSetupFieldBounds => songFieldBounds;
 
     internal void OpenSongSetup()
@@ -84,6 +84,7 @@ public sealed partial class EditorView
         if (!SongSetupVisible) return;
         if (audioProjectPath is not null) { DrawAudioProjectSetup(c); return; }
         hits.Clear(); fields.Clear(); songFieldBounds.Clear(); songSliders.Clear();
+        PrepareSongTags(c);
         var r = SongSetupBounds;
         c.Fill(new(0, 0, width, height), Background, opacity: .7f);
         c.Fill(r, Panel, 8); c.Stroke(r, Grid, radius: 8);
@@ -173,14 +174,16 @@ public sealed partial class EditorView
     {
         var r = SongSetupBounds;
         c.Text(L.Get($"song.{key}"), r.X + 22, y + 9, 13, SongFieldEnabled(key) ? Foreground : Muted, 206);
-        var box = new Rect(compact ? r.Right - 116 : r.X + 240, y, compact ? 94 : r.Width - 262, 32);
+        var box = new Rect(compact ? r.Right - 116 : r.X + 240, y, compact ? 94 : r.Width - 262,
+            key == "Tags" ? Math.Max(32, r.Bottom - 90 - y) : 32);
         songFieldBounds[key] = box;
         bool enabled = SongFieldEnabled(key), focused = enabled && songField == key;
         if (enabled || key is "RandomizeDropletStrength" or "RandomizeDropletSeed")
         { c.Fill(box, Surface, 4, enabled ? 1 : .45f); c.Stroke(box, focused ? Accent : Grid, radius: 4); }
         string value = !enabled && key is "Artist" or "Title" ? songValues[key + "Unicode"] : songValues[key];
         string inputKey = "song:" + key;
-        if (enabled) DrawInputText(c, new(box.X + 9, box.Y + 7, box.Width - 18, 20), value, 13, focused, inputKey);
+        if (key == "Tags") DrawSongTags(c, box, focused);
+        else if (enabled) DrawInputText(c, new(box.X + 9, box.Y + 7, box.Width - 18, 20), value, 13, focused, inputKey);
         else c.Text(value, box.X + 9, box.Y + 7, 13, key is "Artist" or "Title" ? 0xB8C2CEu : Muted, box.Width - 18);
         hits.Add(new(box, () => { songField = key; SongSetupInputSession++; FocusInput(inputKey, value, mouseX); }, enabled));
     }

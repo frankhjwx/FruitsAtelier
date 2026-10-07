@@ -45,7 +45,7 @@ public sealed partial class EditorView
                     : StepAlongBeatGrid(playhead, steps, divisor)); return true;
             case 38: case 40:
                 var times = Document.TimingPoints.Select(t => t.TimeMs).Distinct().Order().ToArray();
-                SeekTo(key == 38 ? times.Where(t => t < playhead).LastOrDefault(0) : times.FirstOrDefault(t => t > playhead, TimelineDurationMs)); return true;
+                SeekTo(key == 40 ? times.Where(t => t < playhead).LastOrDefault(0) : times.FirstOrDefault(t => t > playhead, TimelineDurationMs)); return true;
             case 74: case 75:
                 var ids = ClipboardSelectedParentIds();
                 double time = ClipboardParents(Document).Where(p => ids.Contains(p.Id)).Select(p => p.TimeMs).DefaultIfEmpty(playhead).Min();

@@ -36,6 +36,7 @@ public sealed partial class EditorView
         }
     }
     private bool ViewportFrozenByDrag => drag is DragKind.Objects or DragKind.SliderObject or DragKind.BananaStart or DragKind.BananaEnd
+        || NavigationDuringDrag
         || drag == DragKind.Marquee && !AudioPlaying;
     private sealed record SelectionSnapshot(Guid[] Objects, Guid[] Anchors, Guid Primary, Guid Track, DragKind Part);
     public IReadOnlyCollection<Guid> SelectedObjectIds => objectSelection.ToArray();

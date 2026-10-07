@@ -74,6 +74,113 @@ internal static class SelectionTransformTests
         SpecialSliders();
         TinyDropletBounds();
         DropletPriority();
+        SelectedEndpointPriority();
+        SelectionRectToggle();
+    }
+
+    private static void SelectionRectToggle()
+    {
+        string language = FruitsAtelier.Localization.Strings.Language;
+        try
+        {
+            foreach (string locale in FruitsAtelier.Localization.Strings.AvailableLanguages)
+            foreach (int width in new[] { 1100, 1440 })
+            {
+                FruitsAtelier.Localization.Strings.SetLanguage(locale);
+                var map = new MapDocument { DurationMs = 12000 };
+                map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 2000, X = 300 }]);
+                var ui = new Ui(); ui.LoadDocument(map); ui.Resize(width, ui.Height); ui.Key('1'); ui.Key('A', ctrl: true);
+                var bounds = ui.View.SelectionTransformBounds;
+                Check(bounds.Width > 0, "Selection rectangle must default to enabled.");
+                var original = ui.View.Document.DeepClone();
+                bool dirty = ui.View.IsDirty;
+                var selected = ui.View.SelectedObjectIds.ToArray();
+                var path = FirstLine("ui.sliderPathCurves");
+                var toggle = FirstLine("ui.selectionRect");
+                var movement = FirstLine("movement.analysis");
+                Check(toggle.X > path.X && toggle.X < movement.X, "Selection rectangle toolbar order differs.");
+                Check(path.MaxWidth == toggle.MaxWidth && toggle.MaxWidth == movement.MaxWidth, "Canvas toggles have unequal widths.");
+                foreach (var (key, first) in new[] { ("ui.sliderPathCurves", path), ("ui.selectionRect", toggle), ("movement.analysis", movement) })
+                {
+                    var lines = ui.Canvas.Texts.Where(t => t.X == first.X && t.Y >= 88 && t.Y < 117 && t.Value.Length > 0).ToArray();
+                    Check(lines.All(t => ((FruitsAtelier.App.Rendering.ICanvas)ui.Canvas).MeasureText(t.Value, t.Size, true) <= t.MaxWidth),
+                        $"{locale} toolbar label is clipped at {width} px.");
+                    Check(lines.All(t => t.Y + t.Size * 1.35f <= 117), "Two-line label exceeds its button height.");
+                    Check(lines.All(t => t.Size >= 10), "Toolbar label became too small to read.");
+                    string displayed = string.Concat(lines.Select(t => t.Value));
+                    Check(displayed.Replace(" ", "").Replace("\u200B", "") == FruitsAtelier.Localization.Strings.Get(key).Replace(" ", "").Replace("\u200B", ""),
+                        $"{locale} toolbar label lost text at {width} px.");
+                }
+                RecordingCanvas.Label FirstLine(string key)
+                {
+                    string value = FruitsAtelier.Localization.Strings.Get(key);
+                    return ui.Canvas.Texts.First(t => t.Value.Length > 0 && value.StartsWith(t.Value, StringComparison.Ordinal) && t.Y >= 88 && t.Y < 117);
+                }
+                ui.Click(toggle.X + 1, toggle.Y + 2);
+                Check(ui.View.SelectionTransformBounds.Width == 0 && !ui.Canvas.Outlines.Any(o => o.Color == 0x35ABC9),
+                    "Disabled selection rectangle is still drawn.");
+                ui.View.PointerMove(bounds.Right, bounds.Y + bounds.Height / 2, false, false);
+                Check(!ui.View.SelectionScaleCursor, "Hidden rectangle still exposes a scale cursor.");
+                ui.Click(toggle.X + 1, toggle.Y + 2);
+                Check(ui.View.SelectionTransformBounds == bounds, "Reenabled rectangle changed its bounds.");
+                Check(original.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty
+                    && selected.ToHashSet().SetEquals(ui.View.SelectedObjectIds), "Display toggle changed document or selection.");
+                ui.Key('Z', ctrl: true);
+                Check(original.ContentEquals(ui.View.Document), "Display toggle entered content history.");
+            }
+        }
+        finally { FruitsAtelier.Localization.Strings.SetLanguage(language); }
+    }
+
+    private static void SelectedEndpointPriority()
+    {
+        foreach (var mode in Enum.GetValues<FruitsAtelier.App.Editor.SliderEditingMode>())
+        foreach (bool imported in new[] { false, true })
+        foreach (bool hidden in new[] { false, true })
+        foreach (bool tail in new[] { false, true })
+        foreach (bool vertical in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 12000 };
+            if (imported)
+            {
+                var slider = new ImportedSlider { TimeMs = 1000, X = 120, Y = 192, PathType = 'L', PixelLength = 240 };
+                slider.ControlPoints.AddRange([new(120, 192), new(360, 192)]);
+                map.ImportedSliders.Add(slider);
+            }
+            else
+            {
+                var track = new CurveTrack { Kind = CurveKind.Linear, CompensateTinyDroplets = false };
+                track.Nodes.AddRange([new() { TimeMs = 1000, X = 120 }, new() { TimeMs = 3000, X = 360 }]);
+                map.Tracks.Add(track);
+            }
+            var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode); ui.Key('1');
+            if (hidden) ui.ClickText(FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
+            var fruits = OsuBeatmapWriter.Serialize(map).PlayableObjects.Where(o => o.Kind == CatchObjectKind.Fruit).ToArray();
+            var target = tail ? fruits[^1] : fruits[0];
+            var authoredFruits = CatchStreamConverter.Convert(map).Objects.Where(o => o.Kind == CatchObjectKind.Fruit).ToArray();
+            var authoredTarget = tail ? authoredFruits[^1] : authoredFruits[0];
+            var opposite = tail ? authoredFruits[0] : authoredFruits[^1];
+            double pointerX = target.X + (tail ? -1 : 1) * CatchSize.FruitRadius(map.CircleSize) * .7;
+            ui.ClickMap(target.TimeMs, pointerX); ui.ClickMap(target.TimeMs, pointerX);
+            var p = ui.ScreenAt(target.TimeMs, target.X);
+            Check(ui.Canvas.Circles.Any(c => !c.Filled && c.Color == 0xE7EBF2
+                && Math.Abs(c.X - p.X) < 1 && Math.Abs(c.Y - p.Y) < 1), "Endpoint child was not selected inside its box.");
+            var before = ui.View.Document.DeepClone();
+            double wantedTime = target.TimeMs + (vertical ? 125 : 0);
+            ui.DownMap(target.TimeMs, pointerX); ui.MoveMap(wantedTime, pointerX + 10); ui.UpMap(wantedTime, pointerX + 10);
+            var moved = ui.View.Document.DeepClone();
+            var output = CatchStreamConverter.Convert(moved);
+            Check(output.Success, "Selected endpoint drag produced invalid geometry.");
+            var movedFruits = output.Objects.Where(o => o.Kind == CatchObjectKind.Fruit).ToArray();
+            var current = tail ? movedFruits[^1] : movedFruits[0];
+            var fixedEnd = tail ? movedFruits[0] : movedFruits[^1];
+            Near(opposite.TimeMs, fixedEnd.TimeMs); Near(opposite.X, fixedEnd.X);
+            Near(wantedTime, current.TimeMs);
+            // Horizontal child editing follows the displayed X; endpoint time editing starts from the authored anchor.
+            Near((vertical ? authoredTarget.X : target.X) + 10, current.X);
+            ui.Key('Z', ctrl: true); Check(before.ContentEquals(ui.View.Document), "Selected endpoint drag undo differs.");
+            ui.Key('Y', ctrl: true); Check(moved.ContentEquals(ui.View.Document), "Selected endpoint drag redo differs.");
+        }
     }
 
     private static void DropletPriority()

@@ -77,11 +77,40 @@ static class HitsoundTests
             int oldCount = snapshot![0].Fruits.Count;
             preloadView.Document.Fruits.Add(new() { TimeMs = 1000 });
             Require(snapshot[0].Fruits.Count == oldCount, "Loader snapshots do not observe live editor changes");
+            CopiedTimingPlayback(root);
             Scheduler();
             ScheduledPlayback();
         }
         finally { Directory.Delete(root, true); }
     }
+    private static void CopiedTimingPlayback(string root)
+    {
+        static MapDocument Read(string objects) => OsuBeatmapReader.Read(
+            "osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:2\n[TimingPoints]\n0,500,4,2,2,50,1,0\n[HitObjects]\n" + objects);
+        var source = Read("100,192,1000,1,0,0:0:0:0:\n100,192,1250,1,8,0:0:0:0:\n100,192,1500,1,0,0:0:0:0:");
+        var target = Read("100,192,1000,2,0,L|200:192,1,100,0|0,0:0|0:0,0:0:0:0:");
+        var copied = HitsoundCopier.Copy(source, target).Document;
+        copied.SourcePath = Path.Combine(root, "copied.osu"); copied.AudioPath = "music.wav";
+        string sc1 = Path.Combine(root, "soft-slidertick.wav"), sc2 = Path.Combine(root, "soft-slidertick2.wav");
+        File.WriteAllBytes(sc1, [1]); File.WriteAllBytes(sc2, [2]);
+        var view = new EditorView(); view.LoadDocument(copied);
+        var queued = new List<Hitsound>(); int cancellations = 0;
+        view.RequestScheduleHitsound = (sound, time) => { if (time == 1250) queued.Add(sound); };
+        view.RequestStopHitsounds = () => { queued.Clear(); cancellations++; };
+        void Poll() => view.UpdateTransport(1200, 5000, true, true, false, null, "music.wav");
+        view.UpdateTransport(0, 5000, true, false, false, null, "music.wav");
+        view.PrimeScheduledHitsounds(1200);
+        Require(queued.Single().FilePath == sc2, "Copied tick initially queues SC2");
+        int before = cancellations;
+        view.Document.TimingPoints.Add(new() { TimeMs=1250, BeatLengthMs=-100, Uninherited=false, SampleSet=2, SampleIndex=1, Volume=70 });
+        Poll();
+        Require(cancellations > before && queued.Single().FilePath == sc1 && queued.Single().Volume == .7f,
+            "Editing sample timing cancels copied SC2 and queues current SC1 without rewriting overrides");
+        view.Document.TimingPoints.RemoveAll(p => p.TimeMs == 1250); Poll();
+        Require(queued.Single().FilePath == sc2 && queued.Single().Volume == .5f,
+            "Removing sample timing rebuilds the original copied tick playback");
+    }
+
     private static void Scheduler()
     {
         var document = new MapDocument { AudioPath = "music.wav" };

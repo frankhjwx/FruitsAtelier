@@ -2,10 +2,24 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+
 string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 // Existing interaction fixtures use Chinese labels explicitly.
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
+if (args.Contains("--hitsound-copier")) { HitsoundCopierUiTests.Run(); Console.WriteLine("PASS Hitsound Copier UI"); return 0; }
+#if WINDOWS
+if (args.Length == 2 && args[0] == "--audio-settings-restart-native-check")
+{
+    try { AudioSettingsRestartNativeTests.Run(args[1]); return 0; }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
+#endif
+if (args.Contains("--audio-diagnostics-settings-check"))
+{
+    try { AudioDiagnosticSettingsTests.Run(); SettingsPreferencesTests.Run(); SettingsTests.Layout(); Console.WriteLine("PASS Audio diagnostics and settings checks"); return 0; }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
 if (args.Contains("--first-run-setup-check"))
 {
@@ -34,6 +48,14 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Hitsound Copier modes, new Diff and undo", HitsoundCopierUiTests.Run),
+    ("Testplay opening preparation and audio boundary", TestplayTests.OpeningPreparation),
+    ("Held quick retry uses 300 ms, cancels on release and retries once while paused", FeedbackInteractionTests.Retry),
+    ("Previous-save rollback requires history, confirmation and supports undo", FeedbackInteractionTests.PreviousSave),
+    ("Timeline navigation and history reveal offscreen changes", FeedbackInteractionTests.Navigation),
+    ("Slider endpoint drags retain navigation, playback and cancellation", FeedbackInteractionTests.TailNavigation),
+    ("Tags wrap with row-aware editing and droplet lock persists", FeedbackInteractionTests.TagsAndPreference),
+    ("Overlapping timeline markers and unmapped section breaks remain visible", FeedbackInteractionTests.MarkersAndBreak),
     ("Independent droplet defaults persist and initialize new projects and FSliders", DropletDefaultsTests.Run),
     ("Selection boxes scale and move consecutive parents with anchor priority and atomic undo", SelectionTransformTests.Run),
     ("Droplet randomization switches, setup drafts and Edit actions stay within one diff", DropletRandomizationTests.Run),
@@ -68,13 +90,15 @@ var tests = new (string Name, Action Run)[]
     ("Fullscreen settings and Alt Enter preserve drafts, content and testplay", FullscreenSettingsTests.Run),
     ("Legacy slider editing converts silently with atomic drag, insertion and cancellation", ImplicitSliderEditingTests.Run),
     ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),
+    ("Release audio diagnostic settings persist, scroll and export without blocking", AudioDiagnosticSettingsTests.Run),
     ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),
     ("First-run setup persists preferences, isolates auditions and supports debug replay", FirstRunSetupTests.Run),
     ("Shortcut routing isolates Timing object nudges and preserves navigation", ShortcutRoutingTests.TimingPage),
     ("Shortcut routing rejects unsupported Compose and Timing modifiers", ShortcutRoutingTests.Modifiers),
     ("Arrow seeking uses whole beats during playback and subdivisions while paused", ShortcutRoutingTests.PlaybackSeeking),
     ("Paused arrows align off-grid positions and cross timing boundaries", ShortcutRoutingTests.PausedSeekingSnaps),
-    ("Explicit pause aligns transport and note placement with the Snap grid", PauseSnapTests.UserPause),
+    ("Compose pauses align with Snap while Timing pauses retain exact transport time", PauseSnapTests.UserPause),
+    ("Timing current-time offsets use integer milliseconds and taps apply after ten samples", TimingFeedbackTests.Run),
     ("Pause snapping waits for confirmation and isolates other transport operations", PauseSnapTests.PauseIsolation),
     ("Shortcut routing exports from Timing while retaining modal focus", ShortcutRoutingTests.Export),
     ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),
@@ -92,6 +116,7 @@ var tests = new (string Name, Action Run)[]
     ("New Combo grouping refreshes on first edit and undo/redo", ComboGroupingTests.Run),
     ("Completing an FSlider replaces only exact head fruit overlaps and undoes atomically", SliderHeadReplacementTests.OnCompletion),
     ("Final stream fruit accepts lower-half hit and box movement translates the stream", StreamFruitDragTests.Run),
+    ("Stream middle fruits edit isolated samples and endpoints drag with undo and cancellation", StreamFruitDragTests.EditEvents),
     ("Testplay lead-in starts early, returns to selection and persists settings", TestplayStartupDelayTests.LeadIn),
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
@@ -180,6 +205,7 @@ var tests = new (string Name, Action Run)[]
     ("Dash and hyperdash catcher effects follow map time", PreviewSidebarTests.DashEffects),
     ("Selected legacy slider long press offers an undoable conversion", PreviewSidebarTests.LegacyConversion),
     ("Hard Rock preview applies deterministic positions without changing source", PreviewSidebarTests.HardRock),
+    ("Timeline slider heads, tails and reverse points select independent sounds", ObjectTimelineTests.EdgeSounds),
     ("Timeline tails adjust reverses with undo and cancellation", ObjectTimelineTests.TailReverses),
     ("Timeline reverse circles follow spans, tail edits and undo", ObjectTimelineTests.ReverseMarkers),
     ("Timeline chronological stacking includes numbers and matches selection", ObjectTimelineTests.Stacking),
@@ -1045,6 +1071,11 @@ sealed class Ui
         Paint();
     }
     public void Type(string value) { foreach (char c in value) View.TextInput(c); }
+    public void TogglePointCurve()
+    {
+        ClickText(FruitsAtelier.Localization.Strings.Get("ui.edit"));
+        ClickText(FruitsAtelier.Localization.Strings.Get("history.togglePointCurve"));
+    }
     public void SelectTrack(Guid id)
     {
         Key('1');

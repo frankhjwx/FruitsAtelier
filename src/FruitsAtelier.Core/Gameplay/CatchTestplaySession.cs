@@ -37,7 +37,7 @@ public sealed class CatchTestplaySession
     public bool Ended { get { lock (gate) return ended; } }
     public double X { get { lock (gate) return game.X; } }
     public int Combo { get { lock (gate) return game.Combo; } }
-    public double TransportPosition { get { lock (gate) return WithAudio ? Math.Max(0, time - outputLead) : time; } }
+    public double TransportPosition { get { lock (gate) return time - outputLead; } }
     public bool UsesKey(int key) => key != 114 && (key == left || key == right || key == dash);
     private double Realtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
 
@@ -102,7 +102,7 @@ public sealed class CatchTestplaySession
             awaitingResume = WithAudio;
             resumePosition = target;
             resumeRequestedAt = Realtime;
-            clock.Restart(target, resumeRequestedAt, WithAudio);
+            clock.Restart(target, resumeRequestedAt, awaitingResume);
             return true;
         }
     }
@@ -125,10 +125,10 @@ public sealed class CatchTestplaySession
             {
                 awaitingResume = WithAudio;
                 resumeRequestedAt = Realtime;
-                resumePosition = WithAudio ? Math.Max(0, time - outputLead) : time;
+                resumePosition = time - outputLead;
                 clock.Restart(time, resumeRequestedAt, WithAudio);
             }
-            return WithAudio ? Math.Max(0, time - outputLead) : time;
+            return time - outputLead;
         }
     }
     public void ToggleAutoplay()

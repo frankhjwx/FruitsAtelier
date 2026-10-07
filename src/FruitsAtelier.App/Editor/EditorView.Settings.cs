@@ -9,6 +9,8 @@ public sealed partial class EditorView
 {
     private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, Updates }
     private SettingsCategory settingsCategory;
+    private bool draftAudioDiagnostics, draftAudioDiagnosticFrames;
+    private string draftAudioDiagnosticProfile = "event-10";
     private bool draftRomanisedMetadata;
     private bool draftDerandomizeDroplets;
     private bool draftDerandomizeNewProjects;
@@ -93,6 +95,9 @@ public sealed partial class EditorView
 
     private void ResetSettingsDrafts()
     {
+        draftAudioDiagnostics = LibrarySettings.AudioDiagnostics;
+        draftAudioDiagnosticFrames = LibrarySettings.AudioDiagnosticFrames;
+        draftAudioDiagnosticProfile = LibrarySettings.AudioDiagnosticProfile;
         draftWorkspace = LibrarySettings.Workspace;
         draftOsuRoot = LibrarySettings.OsuRoot;
         draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
@@ -116,7 +121,10 @@ public sealed partial class EditorView
 
     private bool SettingsRootsChanged => draftWorkspace != LibrarySettings.Workspace || draftOsuRoot != LibrarySettings.OsuRoot;
 
-    private bool SettingsChanged => draftForceBackgroundDim != LibrarySettings.ForceBackgroundDim || draftBackgroundDim != LibrarySettings.BackgroundDim || draftShowTestplayCombo != LibrarySettings.ShowTestplayCombo || draftWorkspace != LibrarySettings.Workspace ||
+    private bool SettingsChanged => draftAudioDiagnostics != LibrarySettings.AudioDiagnostics ||
+        draftAudioDiagnosticFrames != LibrarySettings.AudioDiagnosticFrames ||
+        draftAudioDiagnosticProfile != LibrarySettings.AudioDiagnosticProfile ||
+        draftForceBackgroundDim != LibrarySettings.ForceBackgroundDim || draftBackgroundDim != LibrarySettings.BackgroundDim || draftShowTestplayCombo != LibrarySettings.ShowTestplayCombo || draftWorkspace != LibrarySettings.Workspace ||
         draftOsuRoot != LibrarySettings.OsuRoot ||
         draftDefaultSkin != (LibrarySettings.DefaultSkin ?? "") ||
         draftRomanisedMetadata != LibrarySettings.RomanisedMetadata ||
@@ -249,10 +257,7 @@ public sealed partial class EditorView
                 DrawUpdates(c, SettingsContentX, true);
                 break;
             case SettingsCategory.Audio:
-                DrawVolumeControls(c);
-                SettingsButton(c, new(SettingsContentX, SettingsTop + 346, SettingsContentWidth, SettingsControlHeight),
-                    L.Get(LibrarySettings.UseSkinSounds ? "settings.skinSoundsOn" : "settings.skinSoundsOff"),
-                    ToggleSkinSounds, LibrarySettings.UseSkinSounds);
+                DrawAudioSettings(c);
                 break;
         }
         c.Line(SettingsContentX, r.Bottom - 86, r.Right - 24, r.Bottom - 86, Grid);
@@ -282,6 +287,8 @@ public sealed partial class EditorView
         if (!SettingsChanged && !force) return;
         try
         {
+            bool restartAudio = persist && AudioDiagnosticSettingsChanged && RequestAudioDiagnosticRestart is not null;
+            float audioScroll = workspaceScroll;
             var settings = new LibrarySettings { Workspace = draftWorkspace, OsuRoot = draftOsuRoot, SelectedSkin = LibrarySettings.SelectedSkin, DefaultSkin = string.IsNullOrWhiteSpace(draftDefaultSkin) ? null : Path.GetFullPath(draftDefaultSkin) };
             settings.FirstRunSetupVersion = LibrarySettings.FirstRunSetupVersion;
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
@@ -299,6 +306,9 @@ public sealed partial class EditorView
             settings.DashIndicatorColour = draftIndicatorColours[2]; settings.HyperDashIndicatorColour = draftIndicatorColours[3];
             settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;
             settings.UseSkinSounds = LibrarySettings.UseSkinSounds;
+            settings.AudioDiagnostics = draftAudioDiagnostics;
+            settings.AudioDiagnosticFrames = draftAudioDiagnosticFrames;
+            settings.AudioDiagnosticProfile = draftAudioDiagnosticProfile;
             settings.PlaybackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
             settings.CanvasZoom = LibrarySettings.CanvasZoom;
             settings.MapEditingPreferences = LibrarySettings.MapEditingPreferences;
@@ -326,6 +336,12 @@ public sealed partial class EditorView
             libraryField = bindingCapture = -1;
             libraryError = "";
             InitializeSkin();
+            if (restartAudio)
+            {
+                CloseSettings();
+                RequestAudioDiagnosticRestart?.Invoke(audioScroll);
+                return;
+            }
             if (!rootsChanged) return;
             EnableFileMonitoring();
             libraryRatings.Clear(); libraryBrowser?.Retire(); libraryBrowser = null; libraryDatabase = null; libraryResultsReady = false;

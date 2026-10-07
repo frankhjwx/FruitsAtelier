@@ -9,6 +9,13 @@ internal static class TimingEditingTests
         track.Nodes.AddRange([new Anchor { TimeMs = 500, X = 100, HandleOut = new(100, 20) }, new Anchor { TimeMs = 1000, X = 200, HandleIn = new(-100, -20) }]);
         map.Tracks.Add(track);
         var original = map.DeepClone();
+        foreach (double time in new[] { 1000.9, 1000.1, -12.9 })
+        foreach (bool inherited in new[] { false, true })
+        {
+            var created = TimingEditing.Create(map, time, inherited);
+            Check(created.TimeMs == Math.Truncate(time) && created.Uninherited == !inherited,
+                "New red and green timing points use integer milliseconds");
+        }
         var old = TimingEditing.Copy(map.TimingPoints[0]); var changed = TimingEditing.Copy(old);
         changed.TimeMs = 100; changed.BeatLengthMs = 250;
         TimingEditing.Apply(map, [changed, map.TimingPoints[1]], [(old, changed)], new(Scale: true, Bookmarks: true));

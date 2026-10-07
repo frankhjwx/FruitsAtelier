@@ -102,6 +102,7 @@ public sealed partial class EditorView
             testplay?.Cancel();
             testplayDriver?.Dispose(); testplayDriver = null;
             testplayResumeAt = null;
+            testplayQuickRetryAt = null;
             testplayAutoNotice = null;
             testplayTabHeld = testplaySpeedHeld = testplayPauseHeld = testplayBookmarkHeld = false;
             testplayMenuStartedAt = TestplayRealtime;

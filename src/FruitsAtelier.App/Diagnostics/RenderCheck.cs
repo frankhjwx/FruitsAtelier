@@ -187,8 +187,8 @@ internal static class RenderCheck
                 if (view.SongSetupVisible || !before.ContentEquals(view.Document))
                     throw new InvalidOperationException("Cancelling Song Setup changed map content.");
                 view.BeginAudioProject("diagnostic.mp3"); Paint();
-                if (!view.SongSetupVisible || view.SongSetupFieldBounds.Count != 4)
-                    throw new InvalidOperationException("Audio project setup must display four metadata fields.");
+                if (!view.SongSetupVisible || view.SongSetupFieldBounds.Count != 6)
+                    throw new InvalidOperationException("Audio project setup must display separate original and romanised metadata fields.");
                 foreach (var field in view.SongSetupFieldBounds.Values)
                     if (field.X < dialog.X || field.Right > dialog.Right || field.Bottom > dialog.Bottom - 60)
                         throw new InvalidOperationException("Audio project metadata exceeds its dialog bounds.");
@@ -577,6 +577,12 @@ internal static class RenderCheck
                         }
                         if (view.LibrarySettings.MasterVolume != 25 || view.LibrarySettings.SongVolume != 50 || view.LibrarySettings.HitsoundVolume != 75)
                             throw new InvalidOperationException("Settings volume controls did not update shared percentages.");
+                        view.Wheel(settings.X + 300, settings.Y + 200, -480, false);
+                        canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                        view.Wheel(settings.X + 300, settings.Y + 200, -2400, false);
+                        canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                        view.Wheel(settings.X + 300, settings.Y + 200, 2400, false);
+                        canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                     }
                     if (category == 2)
                     {
@@ -854,9 +860,11 @@ internal static class RenderCheck
             AimodRenderCheck.Run(canvas, size.Item1, size.Item2);
             SynchronizationRenderCheck.Run(canvas, size.Item1, size.Item2);
             SliderDraftRenderCheck.Run(canvas, size.Item1, size.Item2);
+            FeedbackRenderCheck.Run(canvas, size.Item1, size.Item2);
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             CheckPaletteHints(canvas, view, size.Item1, size.Item2);
             CheckSongSetup(canvas, view, size.Item1, size.Item2);
+            HitsoundCopierRenderCheck.Run(canvas,size.Item1,size.Item2);
             CheckTimingSetup(canvas, view, size.Item1, size.Item2);
             if (!view.MovementAnalysisEnabled)
             {
@@ -969,6 +977,8 @@ internal static class RenderCheck
             view.ShowError("bad-map.osu\n" + FruitsAtelier.Localization.Strings.Get("core.reader.importedParameters"));
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             view.KeyDown(13, false, false);
+            string exportSongs = view.LibrarySettings.Songs;
+            view.LibrarySettings.Songs = "";
             view.ShowWorkspaceExport();
             string exportLanguage = FruitsAtelier.Localization.Strings.Language;
             foreach (string language in FruitsAtelier.Localization.Strings.AvailableLanguages)
@@ -982,6 +992,7 @@ internal static class RenderCheck
             }
             FruitsAtelier.Localization.Strings.SetLanguage(exportLanguage);
             view.KeyDown(27, false, false);
+            view.LibrarySettings.Songs = exportSongs;
             var editorProject = view.CaptureProject();
             view.MarkSaved(); view.ShowLibrary();
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();

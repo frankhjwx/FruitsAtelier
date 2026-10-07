@@ -39,6 +39,7 @@ public sealed partial class EditorView
         project.Validate();
         CloseVersionHistory();
         CloseAimod();
+        CloseHitsoundCopier();
         CloseSongSetup();
         CloseTimingSetup(); TimingPageVisible = false;
         TimeJumpVisible = false;
@@ -104,17 +105,33 @@ public sealed partial class EditorView
         Difficulties = difficulties.Select(d => new ProjectDifficulty { Id = d.Id, Name = d.Name, Document = d.History.Document.DeepClone() }).ToList()
     };
 
-    private MapDocument NewAuthoringDocument() => new()
+    private MapDocument NewAuthoringDocument()
     {
-        IsDemo = false, DerandomizeFSliderDroplets = LibrarySettings.DerandomizeNewProjects, RandomizeNewSliders = !LibrarySettings.DerandomizeNewProjects
-    };
+        var document = new MapDocument
+        {
+            IsDemo = false, DerandomizeFSliderDroplets = LibrarySettings.DerandomizeNewProjects, RandomizeNewSliders = !LibrarySettings.DerandomizeNewProjects
+        };
+        SongSetup.Set(document, "General", "Mode", "2");
+        foreach (var (key, value) in new[]
+        {
+            ("AudioLeadIn", "0"), ("PreviewTime", "-1"), ("Countdown", "1"), ("CountdownOffset", "0"),
+            ("SampleSet", "Normal"), ("StackLeniency", "0.7"), ("LetterboxInBreaks", "0"),
+            ("WidescreenStoryboard", "0"), ("EpilepsyWarning", "0")
+        }) SongSetup.Set(document, "General", key, value);
+        SongSetup.Set(document, "Metadata", "Title", document.Name);
+        SongSetup.Set(document, "Metadata", "TitleUnicode", document.Name);
+        SongSetup.Set(document, "Metadata", "Version", L.Get("project.defaultDifficulty", 1));
+        SongSetup.Set(document, "Metadata", "BeatmapID", "0");
+        SongSetup.Set(document, "Metadata", "BeatmapSetID", "-1");
+        SongSetup.Set(document, "Difficulty", "HPDrainRate", "5");
+        SongSetup.Set(document, "Difficulty", "OverallDifficulty", "5");
+        document.TimingPoints.Add(new TimingPoint { TimeMs = document.TimingOffsetMs, BeatLengthMs = document.BeatLengthMs, SourceOrder = 0 });
+        return document;
+    }
 
     public void NewProject()
     {
         var document = NewAuthoringDocument();
-        var metadata = new OsuSection { Name = "Metadata" };
-        metadata.Lines.Add("Version:" + L.Get("project.defaultDifficulty", 1));
-        document.OriginalSections.Add(metadata);
         LoadProject(BeatmapProject.FromDocuments([document]));
     }
 
@@ -164,6 +181,7 @@ public sealed partial class EditorView
             : OsuBeatmapReader.Setting(document, "Metadata", "Version") ?? L.Get("project.defaultDifficulty", difficulties.Count + 1);
         if (imported is null)
         {
+            document.HitsoundOverrides.Clear();
             document.Fruits.Clear(); document.Tracks.Clear(); document.ImportedSliders.Clear(); document.BananaShowers.Clear();
             document.IsDemo = false;
             foreach (var section in document.OriginalSections.Where(s => s.Name == "HitObjects")) section.Lines.Clear();
@@ -195,10 +213,11 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
+        if (previousSaveRestore is not null) return false;
         if (AudioProjectCreating) return false;
         if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
         if (VersionHistoryVisible || SynchronizationVisible) return false;
-        if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal || AimodVisible) return false;
+        if (librarySettingsOpen || HitsoundCopierVisible || SongSetupVisible || DistanceSnapDialogVisible || TimingModal || AimodVisible) return false;
         if (!CommitTimingField()) return false;
         if (SliderMultiplierValidationBusy)
         { StatusMessage = L.Get("timing.sliderMultiplierChecking"); return false; }
@@ -256,7 +275,7 @@ public sealed partial class EditorView
         if (!playing && pauseSnapDivisor is { } pauseDivisor)
         {
             pauseSnapDivisor = null;
-            if (snap && !LibraryVisible && !librarySettingsOpen && !SongSetupVisible && !TimingModal)
+            if (snap && !TimingPageVisible && !LibraryVisible && !librarySettingsOpen && !SongSetupVisible && !TimingModal)
                 SeekTo(Math.Clamp(TimingMap.Snap(Document, positionMs, pauseDivisor), 0, AudioDurationMs));
         }
     }
@@ -284,7 +303,7 @@ public sealed partial class EditorView
         if (AudioReady)
         {
             // Arm before the callback: hosts may publish the confirmed pause synchronously.
-            pauseSnapDivisor = AudioPlaying && snap ? divisor : null;
+            pauseSnapDivisor = AudioPlaying && snap && !TimingPageVisible ? divisor : null;
             RequestTogglePlayback?.Invoke();
         }
         else StatusMessage = AudioLoading ? L.Get("editor.audio.stillLoading") : L.Get("editor.audio.loadFromFileMenu");

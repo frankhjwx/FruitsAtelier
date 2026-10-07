@@ -51,6 +51,7 @@ internal static class AudioProjectTests
                 Check(ui.View.CanDropFile(input), "Audio is accepted by the native drop filter");
                 ui.View.DropLibraryFiles([input]); ui.Paint();
                 Check(ui.View.SongSetupVisible && requests == 1, "Audio opens setup from Library and editor");
+                Check(ui.View.SongSetupFieldBounds.Count == 6, "Audio setup includes separate original and romanised title and artist fields");
                 ui.View.DropLibraryFiles([input]);
                 Check(requests == 1, "Setup rejects additional drops");
                 ui.Key(13);
@@ -61,6 +62,10 @@ internal static class AudioProjectTests
                 Check(!ui.View.SongSetupVisible && ui.View.Document.ContentEquals(before) && NoProject(workspace), "Cancel leaves original project and filesystem intact");
                 ui.View.DropLibraryFiles([input]); ui.Paint();
                 Set(ui, "TitleUnicode", "歌曲 / Song"); Set(ui, "ArtistUnicode", "艺术家"); Set(ui, "Creator", "Mapper");
+                if (mode != 2)
+                {
+                    Set(ui, "Title", " Song Romanised "); Set(ui, "Artist", " Artist Romanised ");
+                }
                 Set(ui, "Version", "   "); ui.Key(13);
                 Check(!ui.View.AudioProjectCreating && NoProject(workspace), "Whitespace difficulty is rejected");
                 Set(ui, "Version", "Hard");
@@ -77,9 +82,16 @@ internal static class AudioProjectTests
                 Check(session.Project.Difficulties.Count == 1 && ui.View.CurrentDifficultyName == "Hard" && !ui.View.IsDirty, "One saved difficulty is created");
                 var reopened = WorkspaceProject.Open(session.Directory);
                 var map = reopened.Project.Difficulties.Single().Document;
+                Check(SongSetup.Get(map, "General", "Mode") == "2"
+                    && map.TimingPoints.Single().TimeMs == 0 && map.TimingPoints.Single().BeatLengthMs == 500,
+                    "Audio-created projects persist Catch mode and their initial red timing point");
                 Check(map.RandomizeNewSliders == (mode == 1) && map.RandomizeDropletStrength == 20 && map.RandomizeDropletSeed == 1337,
                     "audio-created catchproject persists its independent droplet defaults");
-                Check(map.Name == "歌曲 / Song" && SongSetup.Get(map, "Metadata", "Artist") == "艺术家"
+                string title = mode == 2 ? "歌曲 / Song" : "Song Romanised";
+                string artist = mode == 2 ? "艺术家" : "Artist Romanised";
+                Check(map.Name == "歌曲 / Song" && SongSetup.Get(map, "Metadata", "TitleUnicode") == "歌曲 / Song"
+                    && SongSetup.Get(map, "Metadata", "ArtistUnicode") == "艺术家"
+                    && SongSetup.Get(map, "Metadata", "Title") == title && SongSetup.Get(map, "Metadata", "Artist") == artist
                     && SongSetup.Get(map, "Metadata", "Creator") == "Mapper", "Metadata survives reopening");
                 Check(map.AudioPath != input && File.ReadAllBytes(map.AudioPath!).SequenceEqual(File.ReadAllBytes(input)), "Local audio is an independent copy");
                 Check(Path.GetExtension(map.AudioPath!).Equals(Path.GetExtension(input), StringComparison.OrdinalIgnoreCase)
@@ -90,6 +102,9 @@ internal static class AudioProjectTests
                 {
                     Check(Directory.GetFiles(ui.View.LibrarySettings.Songs, "*.osu", SearchOption.AllDirectories).Length == 1, "Songs has exactly one difficulty");
                     var output = OsuBeatmapReader.ReadFile(entry.ExportTarget!);
+                    Check(SongSetup.Get(output, "Metadata", "Title") == title && SongSetup.Get(output, "Metadata", "Artist") == artist
+                        && SongSetup.Get(output, "Metadata", "TitleUnicode") == "歌曲 / Song"
+                        && SongSetup.Get(output, "Metadata", "ArtistUnicode") == "艺术家", "Songs export preserves both metadata spellings");
                     Check(File.Exists(output.AudioPath) && output.Fruits.Count == 0 && output.Tracks.Count == 0
                         && SongSetup.Get(output, "General", "Mode") == "2", "Songs contains playable Catch metadata and copied audio");
                     Check(entry.Sync is not null && entry.Source == entry.ExportTarget, "Export is linked for later saves");
@@ -109,6 +124,9 @@ internal static class AudioProjectTests
             Check(retry.View.SongSetupVisible && retry.View.WorkspaceSession is null && NoProject(retry.View.LibrarySettings.Workspace), "Unavailable Songs keeps the draft without a partial project");
             retry.ClickText(L.Get("audioProject.songs")); retry.Key(13); Wait(retry);
             Check(retry.View.WorkspaceSession is not null, "Failed creation can retry locally with the same fields");
+            var retryMap = WorkspaceProject.Open(retry.View.WorkspaceSession!.Directory).Project.Difficulties.Single().Document;
+            Check(SongSetup.Get(retryMap, "Metadata", "Title") == "Retry" && SongSetup.Get(retryMap, "Metadata", "Artist") == "Artist",
+                "ASCII original metadata supplies the disabled romanised fields");
             string copiedAudio = retry.View.Document.AudioPath!;
             File.Delete(source);
             Check(File.Exists(copiedAudio), "Removing the source MP3 does not break the project");

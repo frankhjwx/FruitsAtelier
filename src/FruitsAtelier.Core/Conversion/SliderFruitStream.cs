@@ -37,12 +37,14 @@ public static class SliderFruitStream
     }
 
     // A stream inherits the slider's object samples; only its first fruit starts a new combo.
-    public static string FruitLine(CurveTrack track, int index, string x, string time)
+    public static string FruitLine(CurveTrack track, int index, string x, string time, HitSampleSettings? copiedSample = null)
     {
         string[] source = track.OriginalLine?.Split(',') ?? [];
         int flags = source.Length > 3 && int.TryParse(source[3], out int value) ? value : 0;
         string sound = source.Length > 4 ? source[4] : "0";
         string sample = source.Length > 10 ? source[10] : "0:0:0:0:";
+        if (copiedSample is not null)
+        { sound = copiedSample.Additions.ToString(CultureInfo.InvariantCulture); sample = HitsoundCopier.SampleText(copiedSample); }
         int type = 1 | (index == 0 ? flags & (4 | 112) : 0);
         return $"{x},192,{time},{type.ToString(CultureInfo.InvariantCulture)},{sound},{sample}";
     }

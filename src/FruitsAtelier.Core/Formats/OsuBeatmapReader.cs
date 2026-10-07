@@ -206,6 +206,16 @@ public static class OsuBeatmapReader
             throw new InvalidDataException(L.Get("core.dpb.range"));
         if (document.SliderMultiplierOverride is { } sv && (!double.IsFinite(sv) || sv < SliderMultiplierEditing.Minimum || sv > SliderMultiplierEditing.Maximum))
             throw new InvalidDataException(L.Get("timing.sliderMultiplierRange"));
+        if (document.HitsoundOverrides.Any(o => o is null || o.EventIndex < 0 || o.Sample is null
+            || (o.InheritedFields & ~InheritedSampleFields.All) != 0
+            || o.Sample.NormalSet is < 1 or > 3 || o.Sample.AdditionSet is < 1 or > 3 || o.Sample.Index < 0
+            || o.Sample.Volume is < 0 or > 100 || (o.Sample.Additions & ~14) != 0
+            || o.Sample.FileName is null || Path.IsPathRooted(o.Sample.FileName)
+            || o.Sample.FileName.Replace('\\','/').Split('/').Contains("..")
+            || o.Sample.FileName.Any(c => char.IsControl(c) || c is ',' or ':')))
+            throw new InvalidDataException(L.Get("copier.invalidSamples"));
+        if (document.HitsoundOverrides.Select(o => (o.SourceId, o.EventIndex)).Distinct().Count() != document.HitsoundOverrides.Count)
+            throw new InvalidDataException(L.Get("copier.invalidSamples"));
         var ids = new HashSet<Guid>();
         foreach (var fruit in document.Fruits) { Id(fruit.Id); Time(fruit.TimeMs); X(fruit.X); }
         foreach (var track in document.Tracks)

@@ -71,10 +71,10 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     public D2DCanvas(nint hwnd, int width, int height, float dpi)
     {
         string? presentation = Environment.GetEnvironmentVariable("FRUITSATELIER_DISPLAY_PROFILE");
-        if (Audio.AudioDiagnosticLog.Requested && presentation is "vsync" or "immediate")
+        if (Audio.AudioDiagnosticLog.Requested && (presentation is "vsync" or "immediate" || Audio.AudioDiagnosticCapture.Frames))
         {
             displayDiagnostics = new Audio.AudioDiagnosticLog();
-            DiagnosticImmediatePresentation = presentation == "immediate";
+            DiagnosticImmediatePresentation = presentation == "immediate" ? true : presentation == "vsync" ? false : null;
         }
         try
         {
@@ -218,7 +218,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         diagnosticAudio = new { playheadMs, audio.PositionMs, audio.PositionTimestampMs,
             audio.IsPlaying, audio.OutputBufferAheadMs,
             frameSampleAgeMs = audio.PositionTimestampMs > 0 ? frameBeganMs - audio.PositionTimestampMs : (double?)null };
-        float y = height * 96 / dpi - 65;
+        float y = Math.Min(height * 96 / dpi - 24, height * 96 / dpi - 65 + 50 * 96 / dpi);
         Fill(new(8, y, 650, 24), 0x101010);
         Text(FormattableString.Invariant($"F {diagnosticFrame}  QPC {frameBeganMs:F1}  MAP {playheadMs:F1}  {(audio.IsPlaying ? "PLAY" : "PAUSE")}"),
             14, y + 4, 14, 0xFFFFFF, 640);

@@ -137,14 +137,14 @@ internal static class SliderInteractionTests
         ui.Key('Y', ctrl: true);
         Check(withCorner.ContentEquals(ui.View.Document), "Redo insertion changed its identity or handles.");
 
-        SelectNode(ui, nodeId); ui.Key('L', ctrl: true);
+        SelectNode(ui, nodeId); ui.TogglePointCurve();
         Check(ui.Anchor(nodeId).HandleIn != default || ui.Anchor(nodeId).HandleOut != default,
             "Converting a corner did not expose an editable handle.");
         Valid(ui);
         ui.Key('Z', ctrl: true);
         Check(withCorner.ContentEquals(ui.View.Document), "Undo point conversion changed another control point.");
         ui.Key('Y', ctrl: true);
-        SelectNode(ui, nodeId); ui.Key('L', ctrl: true);
+        SelectNode(ui, nodeId); ui.TogglePointCurve();
         Check(ui.Anchor(nodeId).HandleIn == default && ui.Anchor(nodeId).HandleOut == default,
             "Converting to a corner retained a handle.");
         RightNode(ui, nodeId);

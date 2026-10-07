@@ -75,7 +75,7 @@ internal static class VolumePopoverTests
         Check(!ui.View.VolumePopoverVisible && !ui.View.IsDirty && original.ContentEquals(ui.View.Document),
             "Popover failed to close without changing map content.");
 
-        ui.Key('B'); ui.ClickMap(1000, 100);
+        ui.Key(36); ui.Key('B'); ui.ClickMap(1000, 100);
         var draft = ui.View.Document.DeepClone();
         Check(draft.Tracks.Single().Nodes.Count == 1, "Draft fixture did not create one slider point.");
         ui.Click(button.X + button.Width / 2, button.Y + button.Height / 2);

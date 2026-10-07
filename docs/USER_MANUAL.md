@@ -44,7 +44,10 @@ The Timing menu can set the current position as the song preview point. A long y
 
 Choose **Timing Panel** from the **Details Panel** header dropdown, or press
 **F3**: edit BPM, offset and Slider Tick Rate, or tap with
-**T** during playback and apply the measured tempo. The metronome plays each beat;
+**T** during playback. The tenth tap applies BPM and offset automatically, and
+later taps continue refining them. BPM uses at most two decimal places and offset
+uses integer milliseconds. Space pauses at the exact audio position in Timing mode.
+The metronome plays each beat;
 hold **Ctrl** to hear the current Snap subdivisions. **F1** returns to Details. Notes stay visible while Timing plays only metronome
 ticks alongside the music.
 **F6 / Timing Setup** opens red/green control-point editing, sample settings,
@@ -83,7 +86,7 @@ Hold the mouse button on an imported slider until its actions appear, then choos
 
 ### Fruit streams and snapping
 
-Select sliders and press **Ctrl+Shift+F**, choose a beat subdivision, and confirm to create a fruit stream. It remains an editable slider shape in the project and exports as individual fruits. Click a stream fruit once to select the whole slider, which can then be dragged in time and X. Click a fruit again without dragging to select that event; its bright outer ring shows which fruit will move when dragged horizontally. Hold on a stream to change snapping or convert it back to a slider.
+Select sliders and press **Ctrl+Shift+F**, choose a beat subdivision, and confirm to create a fruit stream. It remains an editable slider shape in the project and exports as individual fruits. Click a stream fruit once to select the parent, then drag a fruit horizontally to edit its position. Middle fruits preserve their neighbouring samples and event times; the head and tail also support dragging in time. Drag the empty area of the selection box to move the whole stream in time and X. Hold on a stream to change snapping or convert it back to a slider.
 
 Beat Snap offers 1/1 through 1/9, plus 1/12 and 1/16. Grid Snap controls horizontal placement. Distance Snap spaces objects relative to the previous object; use Configure DS… to edit its multipliers, or hold Alt to temporarily invert snapping. New Combo and Whistle/Finish/Clap are available on the right toolbar. Selecting a slider edge lets you edit that edge's hitsound.
 
@@ -97,10 +100,10 @@ Open **Catch Preview** using the button on the right edge of the canvas. Drag th
 
 ### Try the map
 
-Press **F5** to testplay using the selected preview mod and speed. Testplay immediately begins one second before the current position by default; change the lead-in from 0 to 5 seconds in **Settings > Testplay keys**. A lead-in that reaches before the song starts begins at zero. Esc opens the pause menu; F1 returns to the selected position. Move with **Left / Right**, and hold **Shift** to dash. Catch fruits and droplets to build combo. **Tab** toggles autoplay; **Ctrl+P** pauses or resumes.
+Press **F5** to testplay using the selected preview mod and speed. Testplay begins one second before the current position by default; change the lead-in from 0 to 5 seconds in **Settings > Testplay keys**. When that position reaches the song's beginning, opening preparation provides at least two seconds of map time before the first playable object, or the configured lead-in or imported `AudioLeadIn` if longer. If the song's intro is too short, gameplay starts at negative time with silent audio. You can move and dash during preparation; the audio clock advances throughout, with music beginning continuously at zero. Preparation follows playback speed and is retained on retry. Esc opens the pause menu; F1 returns to the selected position. Move with **Left / Right**, and hold **Shift** to dash. Catch fruits and droplets to build combo. **Tab** toggles autoplay; **Ctrl+P** pauses or resumes.
 Press **Ctrl+B** during testplay to add a bookmark at the current position. The shortcut appears with the other testplay controls in the upper-left corner.
 
-Press **Ctrl+R** to retry from this testplay session's start, including its lead-in, retaining autoplay and speed. It works while running or paused, once per press. During autoplay, **Ctrl+Up/Down** adjusts speed by 25 percentage points and **Ctrl+Shift+Up/Down** by 5, within 10%–150%; these also work while paused. **F3** toggles autoplay speed between 1.0x and 1.5x.
+Hold **`~` / backtick for 300 ms** to retry once; releasing early cancels it. Press **Ctrl+R** to retry from this testplay session's start, including its lead-in, retaining autoplay and speed. It works while running or paused, once per press. During autoplay, **Ctrl+Up/Down** adjusts speed by 25 percentage points and **Ctrl+Shift+Up/Down** by 5, within 10%–150%; these also work while paused. **F3** toggles autoplay speed between 1.0x and 1.5x.
 
 During autoplay, press **F3** to switch between **1.0x** and **1.5x**. If the current speed is neither, the first press selects 1.0x. The upper-left corner shows the current speed on its own line and includes the F3 instruction.
 
@@ -167,7 +170,7 @@ Object paste works within the same difficulty session and aligns the earliest se
 | X / Home | Play from song start / seek to song start. |
 | Z / V (also End) | First object's start / last object's end; repeat for song start / end. |
 | Left / Right | Seek one beat subdivision; Shift multiplies by four. |
-| Up / Down | Previous / next timing point. |
+| Up / Down | Next / previous timing point. |
 | Ctrl+Up / Ctrl+Down | Increase / decrease playback speed by 25 percentage points (10%–150%). |
 | Ctrl+Shift+Up / Ctrl+Shift+Down | Increase / decrease playback speed by 5 percentage points. |
 | Wheel / middle-drag | Wheel up moves the playhead and canvas earlier; down moves both later by the same relative amount. Middle-drag pans the canvas. |
@@ -191,7 +194,7 @@ Object paste works within the same difficulty session and aligns the earliest se
 | Ctrl+P / Ctrl+Shift+P | Add a red / green timing point. |
 | Ctrl+I | Delete the current timing section. |
 | Ctrl+Shift+I | Insert a point on the curve under the pointer. |
-| Ctrl+L | Toggle the selected point between straight and curved. |
+| Ctrl+L | Confirm restoring the current difficulty to the previous saved version; unavailable after the first save. |
 | Ctrl+= / Ctrl+- | Add / remove a reverse. |
 | Ctrl+G | Reverse selection timing and each selected slider path. |
 | Ctrl+J | Extend the selected FSlider to the pointer. |

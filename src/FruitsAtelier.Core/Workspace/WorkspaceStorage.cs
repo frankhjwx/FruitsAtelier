@@ -317,10 +317,25 @@ public static class WorkspaceStorage
         while (pending.TryPop(out string? directory))
             foreach (string path in Directory.EnumerateFileSystemEntries(directory))
             {
-                WorkspaceProject.RejectLinks(path);
                 // Staging belongs to the compression worker and can disappear outside the save lock.
                 if (Path.GetFileName(directory) == ".sync-history" && Path.GetFileName(path) == ".compression") continue;
-                if (Directory.Exists(path)) pending.Push(path); else yield return new FileInfo(path);
+                FileInfo? file = null; bool isDirectory = false;
+                try
+                {
+                    WorkspaceProject.RejectLinks(path);
+                    isDirectory = Directory.Exists(path);
+                    if (!isDirectory)
+                    {
+                        file = new FileInfo(path); file.Refresh();
+                        if (!file.Exists) continue;
+                        _ = file.Length;
+                    }
+                }
+                catch (FileNotFoundException) { continue; }
+                catch (DirectoryNotFoundException) { continue; }
+                // SQLite sidecars can vanish between enumeration and metadata capture.
+                // Retain captured sizes for the rest of this accounting pass.
+                if (isDirectory) pending.Push(path); else yield return file!;
             }
     }
 }

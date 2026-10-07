@@ -1,6 +1,16 @@
 # Audio transport
 
-Windows audio diagnostics are opt-in through `audio-diagnostics.enabled` beside
+Windows release builds expose opt-in recording, output profiles, frame logs,
+issue markers and background report export in **Settings > Audio**. Apply saves
+pending project edits and restarts automatically when diagnostic options change,
+returning to the same Audio settings position with the project, difficulty and
+paused playhead restored. Each run gets a capture folder,
+with a 64 MiB event-data budget shared by its loggers. Logger shutdown waits at
+most 250 ms. editor.log also writes through a bounded background queue, so slow
+filesystem or endpoint queries in diagnostic writers cannot hold transport
+replacement indefinitely. See the [capture instructions](../../../docs/AUDIO-DIAGNOSTICS.txt).
+
+Windows audio diagnostics are also opt-in through `audio-diagnostics.enabled` beside
 the application binary or `FRUITSATELIER_AUDIO_DIAGNOSTICS=1`. Each transport and
 hitsound bank writes its own timestamped JSONL file using a bounded background
 queue, with a 16 MiB file limit. Logs include default endpoint metadata, command
@@ -52,6 +62,13 @@ sample, not independently a physical display latency measurement. See
 [DXGI frame statistics](https://learn.microsoft.com/en-us/windows/win32/api/dxgi/ns-dxgi-dxgi_frame_statistics).
 
 `AudioTransport` queues load, play, pause, seek and speed operations on one worker. The UI reads its immutable `State` snapshot; it does not call the decoder or output device. `LoadAsync` and `WaitForCommandsAsync` allow callers to await applied operations. `CanPlay` stays true while a loaded device is paused.
+
+Testplay can seek to a negative map position. The decoder remains at source frame
+zero while a bounded streaming provider supplies silence after tempo processing
+for the remaining preparation time divided by playback speed. Device position,
+PCM read-through and hitsound scheduling share the negative origin. Crossing zero
+continues through the same output session. Pause, seek and speed changes rebuild
+the remaining silence from the consumed map position.
 
 The output uses event-driven shared-mode `WasapiOut` with the system default device and 10 ms requested latency. MP3 decoding uses Windows Media Foundation; OGG Vorbis uses NVorbis; WAV uses NAudio's WAV reader. All streams are converted to 16-bit PCM before output. This version accepts mono and stereo audio.
 

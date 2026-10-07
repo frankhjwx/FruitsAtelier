@@ -32,7 +32,7 @@ This table defines the accepted editor feedback scope. The current user-facing b
 | Alt+wheel over upper timeline | Zoom object timeline. |
 | Ctrl+Alt+wheel over canvas/upper timeline | Cycle placement tools. |
 | Ctrl+= / Ctrl+− | Add / remove slider reverses. |
-| Ctrl+L / Ctrl+Shift+I / Ctrl+J | Point curve toggle / point insertion / slider extension. |
+| Ctrl+L / Ctrl+Shift+I / Ctrl+J | Confirm rollback to the previous saved version / point insertion / slider extension. |
 | Ctrl+G | Reverse selection time order and each selected slider path. A single FSlider reverses within its own interval. |
 | Ctrl+O / Ctrl+Shift+O | Choose difficulty / open file or project. |
 | Ctrl+Alt+E | Open export choices. |

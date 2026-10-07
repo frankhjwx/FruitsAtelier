@@ -7,6 +7,8 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private readonly List<BeatGridLine> canvasGrid = [];
+    private (string Language, bool Compact, Type CanvasType)? canvasToggleTextKey;
+    private readonly (string First, string? Second, float Size)[] canvasToggleText = new (string, string?, float)[3];
     private (double TimeMs, bool Active)[] kiaiTransitions = [];
 
     private void RefreshKiaiTransitions()
@@ -117,6 +119,7 @@ public sealed partial class EditorView
         DrawDistanceSnapDialog(c);
         DrawSongSetup(c);
         DrawTimingSetup(c);
+        DrawHitsoundCopier(c);
         DrawSettings(c);
         if (librarySettingsOpen) DrawContextMenu(c);
         if (librarySettingsOpen) DrawLanguageMenu(c);
@@ -151,17 +154,32 @@ public sealed partial class EditorView
         bool compactToolbar = toolbarRight < 900;
         float breakWidth = compactToolbar ? 115 : 140;
         float breakX = snapLeft - breakWidth - 5;
-        float movementX = breakX - 130;
-        float pathWidth = compactToolbar ? 100 : 150;
-        float pathX = movementX - pathWidth - 5;
+        float toggleWidth = compactToolbar ? 105 : 155;
+        float movementX = breakX - toggleWidth - 5;
+        float selectionX = movementX - toggleWidth - 5;
+        float pathX = selectionX - toggleWidth - 5;
         zoomSlider = new(leftPanel.Right + 74, canvas.Y + 4, Math.Max(30, pathX - 130 - leftPanel.Right), 29);
         float zoomX = zoomSlider.X + (float)(1 - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (1 - MinimumCanvasZoom) : 1) * zoomSlider.Width;
         c.Line(zoomSlider.X, canvas.Y + 19, zoomSlider.Right, canvas.Y + 19, Grid, 3);
         c.Line(zoomSlider.X, canvas.Y + 19, zoomX, canvas.Y + 19, Accent, 3);
         c.Circle(zoomX, canvas.Y + 19, 6, Accent);
-        c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + 8, canvas.Y + 13, 11, Foreground, 48);
-        Button(c, new(pathX, canvas.Y + 4, pathWidth, 29), L.Get("ui.sliderPathCurves"), () => showTargets = !showTargets, showTargets);
-        Button(c, new(movementX, canvas.Y + 4, 125, 29), L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, movementAnalysis);
+        c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + (compactToolbar ? 4 : 8), canvas.Y + 13, compactToolbar ? 10 : 11, Foreground, 48);
+        PrepareCanvasToggleText(c, compactToolbar, toggleWidth);
+        CanvasToggle(0, pathX, () => showTargets = !showTargets, showTargets);
+        CanvasToggle(1, selectionX, () => showSelectionRect = !showSelectionRect, showSelectionRect);
+        CanvasToggle(2, movementX, () => movementAnalysis = !movementAnalysis, movementAnalysis);
+        void CanvasToggle(int index, float x, Action action, bool active)
+        {
+            var bounds = new Rect(x, canvas.Y + 4, toggleWidth, 29);
+            Button(c, bounds, "", action, active);
+            var text = canvasToggleText[index];
+            float size = text.Size;
+            float lineHeight = size * 1.35f;
+            float y = bounds.Y + (bounds.Height - (text.Second is null ? size + 4 : lineHeight * 2)) / 2;
+            c.Text(text.First, x + 9, y, size, active ? Accent : Foreground, toggleWidth - 15, active);
+            if (text.Second is { } second)
+                c.Text(second, x + 9, y + lineHeight, size, active ? Accent : Foreground, toggleWidth - 15, active);
+        }
         DrawObjectTimeline(c);
         var breakButton = new Rect(breakX, canvas.Y + 4, breakWidth, 29);
         bool canInsertBreak = InsertBreakCandidate() is not null;
@@ -560,24 +578,16 @@ public sealed partial class EditorView
         void DrawSpan(double start, double end, uint color)
         {
             float x1 = TimelineX(start), x2 = TimelineX(end);
-            if (x2 > x1) c.Fill(new(x1, spanY, x2 - x1, spanHeight), color, 0, timelineMarkerOpacity);
+            if (end > start && end > 0 && start < TimelineDurationMs)
+                c.Fill(new(Math.Min(x1, overview.Right - 2), spanY, Math.Max(2, x2 - x1), spanHeight), color, 0, timelineMarkerOpacity);
         }
+        DrawTimelinePreviewMarker(c, overview, 0, TimelineDurationMs);
         for (int i = 0; i < timing.Length; i++)
         {
             var point = timing[i];
             if (point.TimeMs < 0 || point.TimeMs > TimelineDurationMs) continue;
             float x = TimelineX(point.TimeMs);
             c.Line(x, overview.Y + 2, x, overview.Y + 20, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
-        }
-        foreach (int bookmark in AxisBookmarks())
-        {
-            float x = TimelineX(bookmark);
-            c.Line(x, overview.Y + 20, x, overview.Bottom - 1, 0x4B9EF5, 1, timelineMarkerOpacity);
-        }
-        if (OsuTimeline.PreviewTime(Document) is int previewTime && previewTime <= TimelineDurationMs)
-        {
-            float x = TimelineX(previewTime);
-            c.Line(x, overview.Y - 3, x, overview.Bottom + 2, 0xFFD34A, 2, timelineMarkerOpacity);
         }
         double visibleStart = Math.Clamp(viewStart, 0, TimelineDurationMs);
         double visibleEnd = Math.Clamp(viewStart + plot.Height / pixelsPerMs, visibleStart, TimelineDurationMs);
@@ -587,6 +597,7 @@ public sealed partial class EditorView
         float headX = TimelineHeadX;
         c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, 0xFFFFFF, 2);
         c.Fill(new(headX - 2, overview.Y - 5, 4, 6), 0xFFFFFF);
+        DrawTimelineBookmarks(c, overview, 0, TimelineDurationMs);
         DrawBookmarkToolbar(c);
     }
 
@@ -628,6 +639,8 @@ public sealed partial class EditorView
             Item(L.Get("ui.undoMenu"), Undo, history.CanUndo);
             Item(L.Get("ui.redoMenu"), Redo, history.CanRedo);
             Item(L.Get("history.menu"), ShowVersionHistory, WorkspaceSession is not null);
+            Item(L.Get("history.revertSave") + "  Ctrl+L", RequestPreviousSave, WorkspaceSession is not null && !VersionHistoryBusy);
+            Item(L.Get("history.togglePointCurve"), TogglePointCurve, SelectedTrack is not null && anchorSelection.Count == 1 && draftTrack == Guid.Empty && !notesLocked);
             Item(L.Get("ui.deleteMenu"), DeleteSelection, selection != Guid.Empty);
             Item(L.Get("editor.command.reverseSelection") + "  Ctrl+G", ReverseSelection, CanCopySelection && !notesLocked);
             Item(L.Get("editor.command.reversePath"), ReverseSelectedPath, SelectedTrack is not null && ClipboardInteractionReady && !notesLocked);
@@ -646,16 +659,21 @@ public sealed partial class EditorView
         {
             Item(L.Get("timing.signature"), () => gridLevelMenuOpen = true);
             Item(L.Get("timing.metronome"), () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }, active: metronomeEnabled);
+            Separator();
             Item(L.Get("timing.addRed"), () => AddTimingPoint(false));
             Item(L.Get("timing.addGreen"), () => AddTimingPoint(true));
             Item(L.Get("timing.reset"), () => OpenTimingCommand("reset"));
             Item(L.Get("timing.delete"), DeleteCurrentTiming);
             Item(L.Get("timing.resnap"), () => ResnapTimingSection(false));
+            Separator();
             Item(L.Get("timing.setup"), OpenTimingSetup);
+            Item(L.Get("copier.title"), OpenHitsoundCopier);
+            Separator();
             Item(L.Get("timing.resnapAll"), () => ResnapTimingSection(true));
             Item(L.Get("timing.move"), () => OpenTimingCommand("move"));
             Item(L.Get("timing.recalculate"), () => Edit(L.Get("timing.recalculate"), () => TimingEditing.ResnapLengths(Document, divisor)));
             Item(L.Get("timing.deleteAll"), () => OpenTimingCommand("deleteAll"));
+            Separator();
             Item(L.Get("timeline.setPreviewPoint"), () => Edit(L.Get("timeline.setPreviewPoint"), () =>
                 SongSetup.Set(Document, "General", "PreviewTime",
                     ((int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue)).ToString(System.Globalization.CultureInfo.InvariantCulture))));
@@ -735,6 +753,38 @@ public sealed partial class EditorView
         void Item(string label, Action action, bool enabled = true, bool active = false)
             => items.Add((label, action, enabled, active, false));
         void Separator() => items.Add(("", () => { }, false, false, true));
+    }
+
+    private void PrepareCanvasToggleText(ICanvas c, bool compact, float buttonWidth)
+    {
+        var key = (L.Language, compact, c.GetType());
+        if (canvasToggleTextKey == key) return;
+        canvasToggleTextKey = key;
+        string[] keys = ["ui.sliderPathCurves", "ui.selectionRect", "movement.analysis"];
+        float size = compact ? 11 : 12, available = buttonWidth - 15;
+        for (int index = 0; index < keys.Length; index++)
+        {
+            string label = L.Get(keys[index]);
+            canvasToggleText[index] = (label, null, size);
+            if (c.MeasureText(label, size, true) <= available) continue;
+            canvasToggleText[index] = (label, null, 10);
+            if (c.MeasureText(label, 10, true) <= available) continue;
+            int bestSplit = 0;
+            float bestWidth = float.PositiveInfinity;
+            bool bestAtSpace = false;
+            foreach (int split in System.Globalization.StringInfo.ParseCombiningCharacters(label).Skip(1))
+            {
+                string first = label[..split].TrimEnd(' ', '\u200B'), second = label[split..].TrimStart(' ', '\u200B');
+                if (first.Length == 0 || second.Length == 0) continue;
+                float widest = Math.Max(c.MeasureText(first, 10, true), c.MeasureText(second, 10, true));
+                bool atSpace = char.IsWhiteSpace(label[split - 1]) || char.IsWhiteSpace(label[split])
+                    || label[split - 1] == '\u200B' || label[split] == '\u200B';
+                if (widest > available || bestAtSpace && !atSpace || bestAtSpace == atSpace && widest >= bestWidth) continue;
+                bestSplit = split; bestWidth = widest; bestAtSpace = atSpace;
+            }
+            if (bestSplit > 0)
+                canvasToggleText[index] = (label[..bestSplit].TrimEnd(' ', '\u200B'), label[bestSplit..].TrimStart(' ', '\u200B'), 10);
+        }
     }
 
     private void Button(ICanvas c, Rect r, string label, Action action, bool active = false, bool enabled = true, float fontSize = 12, bool? bold = null, float textPadding = 9, float textRightPadding = 6)

@@ -872,12 +872,18 @@ public static class WorkspaceSynchronization
             }
             else fields[section.Name + "/"] = string.Join("\n", section.Lines);
         }
+        // Older authoring snapshots can omit General; context reconstruction still needs Catch mode.
+        fields.TryAdd("General/Mode", "2");
+        fields.TryAdd("Metadata/Title", document.Name);
         fields["Difficulty/ApproachRate"] = document.ApproachRate.ToString("R", CultureInfo.InvariantCulture);
         fields["Difficulty/CircleSize"] = document.CircleSize.ToString("R", CultureInfo.InvariantCulture);
         fields["Difficulty/SliderMultiplier"] = document.EffectiveSliderMultiplier.ToString("R", CultureInfo.InvariantCulture);
         fields["Difficulty/SliderTickRate"] = document.SliderTickRate.ToString("R", CultureInfo.InvariantCulture);
         fields["Editor/DistanceSpacing"] = document.DistanceSpacing.ToString("R", CultureInfo.InvariantCulture);
-        fields["TimingPoints/"] = WorkspaceTimingSynchronization.Text(document.TimingPoints);
+        IEnumerable<TimingPoint> timing = document.TimingPoints;
+        if (document.TimingPoints.Count == 0)
+            timing = [new TimingPoint { TimeMs = document.TimingOffsetMs, BeatLengthMs = document.BeatLengthMs }];
+        fields["TimingPoints/"] = WorkspaceTimingSynchronization.Text(timing);
         return fields;
     }
     private static void ApplyFields(MapDocument target, Dictionary<string, string?> fields, string path)

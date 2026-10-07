@@ -19,6 +19,7 @@ public sealed partial class EditorView
     private Guid tailId;
     private string? tailOriginalLine;
     private double tailStart, tailEnd, tailSpanDuration;
+    private double tailPointerOffset;
     private int breakEditIndex;
     private bool breakEditStart;
     private BreakPeriod breakEditOriginal, breakEditPreview;
@@ -35,7 +36,7 @@ public sealed partial class EditorView
 
     private void MoveTimelineTail(float x, bool shift)
     {
-        double end = tailEnd + (x - dragStartX) / objectTimelineScale;
+        double end = ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale - tailPointerOffset;
         if (Document.BananaShowers.FirstOrDefault(s => s.Id == tailId) is { } shower)
         {
             if (snap && !shift) end = TimingMap.Snap(Document, end, divisor);
@@ -63,6 +64,7 @@ public sealed partial class EditorView
             }
             slider.SpanCount = spans;
         }
+        if (soundEdge is { } edge && edge.Id == tailId) soundEdge = (tailId, spans);
         Document.DurationMs = Math.Max(Document.DurationMs, tailStart + tailSpanDuration * spans);
     }
     public Rect ObjectTimelineBounds => objectTimeline;
@@ -320,17 +322,17 @@ public sealed partial class EditorView
             bool selected = IsObjectSelected(item.Id);
             uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true);
             float left = X(item.Start), right = X(item.End), cy = objectTimeline.Y + 27;
-            void Ring(float ringX, int? number = null)
+            void Ring(float ringX, int? number = null, int? edge = null)
             {
                 // Timeline endpoints use the combo marker, independently of gameplay slider textures.
                 FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin, ringX, cy, 38, color, number);
-                if (selected)
+                if (selected && (soundEdge is not { } picked || picked.Id != item.Id || picked.Edge == edge))
                 {
                     c.Circle(ringX, cy, 19, 0xFFA600, false, 3);
                     c.Circle(ringX, cy, 21, 0x2866C6, false, 2);
                 }
             }
-            if (right > left + 1) Ring(right);
+            if (right > left + 1) Ring(right, edge: item.Spans);
             if (item.Spans > 1 && item.End > item.Start)
             {
                 double spanDuration = (item.End - item.Start) / item.Spans;
@@ -339,7 +341,7 @@ public sealed partial class EditorView
                 for (int span = last; span >= first; span--)
                 {
                     float repeatX = X(item.Start + span * spanDuration);
-                    Ring(repeatX);
+                    Ring(repeatX, edge: span);
                     if (skin is null || !skin.DrawReverseArrow(c, repeatX, cy, 38))
                     {
                         c.Line(repeatX - 8, cy, repeatX + 4, cy, Foreground, 5);
@@ -348,7 +350,7 @@ public sealed partial class EditorView
                     }
                 }
             }
-            Ring(left, timelineNumbers[item.Id]);
+            Ring(left, timelineNumbers[item.Id], edge: 0);
         }
         foreach (var period in breaks)
         {
@@ -364,6 +366,7 @@ public sealed partial class EditorView
             float edgeX = X(edge.Start ? breaks[edge.Index].StartMs : breaks[edge.Index].EndMs);
             c.Line(edgeX, objectTimeline.Y + 2, edgeX, objectTimeline.Bottom - 2, 0xE8ECED, 2, .8f);
         }
+        DrawTimelinePreviewMarker(c, objectTimeline, start, end);
         foreach (var point in Document.TimingPoints)
         {
             if (point.TimeMs < start || point.TimeMs > end) continue;
@@ -374,6 +377,7 @@ public sealed partial class EditorView
         float head = X(playhead);
         c.Line(head, objectTimeline.Y, head, objectTimeline.Bottom, Gold, 2);
         c.Line(objectTimeline.X, objectTimeline.Bottom - 1, objectTimeline.Right, objectTimeline.Bottom - 1, Grid);
+        DrawTimelineBookmarks(c, objectTimeline, start, end);
         c.Unclip();
     }
 
@@ -393,6 +397,17 @@ public sealed partial class EditorView
             if (!item.Bounds.Contains(x, y)) continue;
             tool = Tool.Select;
             PickObject(item.Id, toggle);
+            soundEdge = null; distanceObject = null; clickedCoordinate = null;
+            var markerSource = timelineSources.First(o => o.Id == item.Id);
+            if (!markerSource.IsBanana && markerSource.End > markerSource.Start && markerSource.Spans > 0
+                && objectSelection.Count == 1 && objectSelection.Contains(item.Id) && Math.Abs(y-(objectTimeline.Y+27)) <= 19)
+            {
+                double spanDuration = (markerSource.End-markerSource.Start)/markerSource.Spans;
+                double time = ObjectTimelineStartMs+(x-objectTimeline.X)/objectTimelineScale;
+                int edge = (int)Math.Clamp(Math.Round((time-markerSource.Start)/spanDuration),0,markerSource.Spans);
+                double markerX = objectTimeline.X+(markerSource.Start+edge*spanDuration-ObjectTimelineStartMs)*objectTimelineScale;
+                if (Math.Abs(x-markerX)<=19) soundEdge = (item.Id,edge);
+            }
             if (!notesLocked && !toggle && IsTimelineTail(item, x, y))
             {
                 var source = timelineSources.First(o => o.Id == item.Id);
@@ -400,6 +415,7 @@ public sealed partial class EditorView
                     ?? Document.ImportedSliders.FirstOrDefault(s => s.Id == item.Id)?.SpanCount ?? 1;
                 tailOriginalLine = Document.ImportedSliders.FirstOrDefault(s => s.Id == item.Id)?.OriginalLine;
                 tailId = item.Id; tailStart = source.Start; tailEnd = source.End;
+                tailPointerOffset = ObjectTimelineStartMs + (x - objectTimeline.X) / objectTimelineScale - source.End;
                 tailSpanDuration = (source.End - source.Start) / spans;
                 if (tailSpanDuration > 0)
                 {

@@ -126,10 +126,16 @@ Use `Audio.Tests --vorbis-check [path.ogg]` to check OGG decoding, playback and
 paused/playing seeks. Without a path it uses the repository fixture; a supplied
 project audio copy is read without modifying it.
 
+`Audio.Tests --preroll-check` checks silent preparation PCM at multiple speeds and
+channel counts, negative device positions, pause/resume and continuous playback
+through zero using an injected output without opening an audio device.
+
 `Audio.Tests --diagnostic-check` validates command/event correlation, repeated
 pause positions with logging enabled, unsupported hitsound format identification,
-and continued loading when the diagnostic destination cannot be written. It uses
-an injected output and does not play sound. To capture real-device lifecycle
+issue markers without source-path disclosure, live report ZIP export excluding
+map files, bounded queues and byte budgets, limited shutdown waits with stalled
+writers, and continued loading when the diagnostic destination cannot be written.
+It uses an injected output and does not play sound. To capture real-device lifecycle
 checks, set `FRUITSATELIER_AUDIO_DIAGNOSTICS=1` before running `--lifecycle-check`.
 
 `Audio.Tests --pause-check` checks pause/resume PCM alignment with a blocked
@@ -150,6 +156,17 @@ The Windows `--render-check` injects nested timer and paint messages during audi
 replacement, verifying that difficulty switches retain paused and playing
 positions when the replacement audio becomes ready. This check uses a silent
 fixture and an injected output without opening an audio device.
+
+Audio diagnostic settings regressions cover deferred application, persistent
+output profiles, scrolling at narrow sizes, issue markers, asynchronous export
+and failure presentation, real-time marker key repeat handling, and unchanged map
+content in English and Chinese.
+Native Settings checks draw the Audio page throughout its scroll range.
+`App.Tests --audio-settings-restart-native-check <FruitsAtelier.App.exe>` opens two
+isolated silent native restore checks from serialized restart state, verifying
+Audio settings reopening from Library and editor, retained scroll position, and
+the editor’s active difficulty, paused time and speed. Settings tests verify the divider, deferred restart dispatch after
+successful persistence, retained scrolling and no restart for unchanged options.
 
 Settings preference regressions cover Audio sliders and the Appearance skin selector from both the Library and editor, shared values with the original controls, immediate persistence, menu dismissal, and unchanged beatmap content in English and Chinese. The Windows `--render-check` also exercises the Settings sliders and skin menu at its tested sizes and DPI values.
 

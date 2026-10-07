@@ -58,7 +58,7 @@ static class ComboGroupingTests
             Seek(0);
             ui.View.UpdateTransport(0, 5000, false, false, false, null, null);
             ui.View.StartTestplay();
-            clock.Advance(1300);
+            clock.Advance(1300 - ui.View.PlayheadMs);
             ui.Paint();
             Check(ui.View.TestplayCombo == 2, "Testplay did not catch the preceding fruits.");
             Check(ui.Canvas.Circles.Any(c => c.Color == 0xFFFFFF && c.Opacity < 1),

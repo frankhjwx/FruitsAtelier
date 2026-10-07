@@ -2,7 +2,7 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). All twelve schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides with timing inheritance use schema 15 (single difficulty) or 16 (multi-difficulty). Readers also accept the earlier schema 13/14 overrides. All sixteen schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
 
 ## Authoritative and derived data
 
@@ -15,6 +15,20 @@ The authoring model persists as UTF-8 JSON. Documents containing exact control c
 
 ## Projects and difficulties
 
+New blank and audio-based projects initialize Catch Mode 2, matching Title and
+TitleUnicode, the first difficulty's Version, BeatmapID 0 and BeatmapSetID -1.
+General defaults include no audio lead-in or preview point, normal samples, a
+normal countdown with zero offset, stack leniency 0.7, and disabled widescreen,
+letterbox and epilepsy-warning flags. HP/OD start at 5, and an explicit red point
+at 0 ms starts at 120 BPM. AR/CS, slider velocity, Tick Rate and DistanceSpacing
+retain their model defaults. Empty artist, creator, source and tags remain optional
+for blank projects; audio setup supplies its required metadata before publication.
+These values agree with the first export, avoiding synchronization conflicts from
+generated defaults. Older raw-section-free authoring snapshots receive Catch mode
+and their document title when synchronization reconstructs their context. Snapshots
+without timing points use their stored BPM and offset to reconstruct the initial
+red point, matching export.
+
 `BeatmapProject` stores a project Name and 1–256 `ProjectDifficulty` entries. Each difficulty contains its own Guid, Version display name, and complete `MapDocument`. Schema 2 uses a `Project` outer container and atomically saves all difficulties together. Schema 1's `Document` is automatically wrapped as a single-difficulty project. Each difficulty's resource paths are written and resolved relative to the project directory, retaining the older path safety checks. Project JSON is limited to 128 MiB of UTF-8 data per file, including workspace difficulty files and legacy single- or multi-difficulty projects.
 
 The editor maintains an independent `EditorHistory` per difficulty and accesses `Document` through the current difficulty. Undo affects only that difficulty; saving updates every history baseline. Adding a difficulty changes project structure rather than a difficulty's object undo stack and keeps the project dirty until saved. The active difficulty, tab scroll position, playhead, and viewport are session state and are not persisted. Opening selects the first difficulty; switching does not create content history. The project container does not force imported `.osu` difficulties to share audio or timing, avoiding overwriting source content.
@@ -25,6 +39,28 @@ change is needed. Shared metadata edits propagate only the changed keys to the
 other difficulty histories. Their saved baselines remain intact for dirty checks,
 and their local undo snapshots retain the shared values. The initiating undo
 transaction restores each difficulty's own previous shared values.
+
+## Event hitsounds
+
+`MapDocument.HitsoundOverrides` stores effective samples by parent ID and event
+index, including sample banks, additions, sample index, volume and explicit file.
+Slider fruit entries also retain their edge index for existing sound flag controls.
+The collection participates in cloning, dirty comparison, undo and project saves.
+Empty collections are omitted and retain the earlier schema selection.
+
+Hitsound Copier matches the nearest exported playable event within 2ms after checking matching
+red timing points. Source SV participates in event decoding. Copying leaves target
+geometry, red timing and SV intact. Source sample bank, index and volume changes
+are stored as visible authoring timing points; new green points use the target SV
+and effects. Unmatched audible events retain their initial sound through sample timing points. Export writes circle/stream object
+samples, slider edge banks and additions, and timing sample states while retaining
+the emitted SV and effects. Unmatched target events keep their sound at copy time and subsequently follow their timing inheritance.
+Copied samples retain which fields inherit timing. Playback resolves those fields
+from current timing at each event; export writes zero for inherited object/edge
+fields. Explicit object-specific samples remain intact. Projects store this
+inheritance in schemas 15/16; earlier copied samples default to timing inheritance.
+Explicit filenames on legacy slider events and incompatible per-tick extra banks
+are rejected during preview because the legacy representation cannot encode them.
 
 ## Concrete model
 

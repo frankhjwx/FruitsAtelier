@@ -60,7 +60,7 @@ public sealed partial class EditorView
     {
         pauseSnapDivisor = null;
         if (!AudioPlaying) return;
-        pauseSnapDivisor = snapToGrid && snap ? divisor : null;
+        pauseSnapDivisor = snapToGrid && snap && !TimingPageVisible ? divisor : null;
         if (RequestPausePlayback is not null) RequestPausePlayback();
         else RequestTogglePlayback?.Invoke();
     }

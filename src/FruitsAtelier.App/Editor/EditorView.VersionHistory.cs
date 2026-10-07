@@ -7,10 +7,12 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     public bool VersionHistoryVisible { get; private set; }
-    public bool VersionHistoryBusy => versionPending is not null || versionListTask is not null || versionReadTask is not null || versionPreviewTask is not null || versionRestoreTask is not null;
+    public bool VersionHistoryBusy => versionPending is not null || versionListTask is not null || versionReadTask is not null || versionPreviewTask is not null || versionRestoreTask is not null
+        || previousSaveRead is not null || previousSaveRestore is not null;
     private bool VersionHistoryNeedsRedraw => versionListTask is { IsCompleted: true } || versionReadTask is { IsCompleted: true }
         || versionPreviewTask is { IsCompleted: true } || versionRestoreTask is { IsCompleted: true }
-        || (versionPending is not null && versionBackground is { IsCompleted: true });
+        || (versionPending is not null && versionBackground is { IsCompleted: true })
+        || previousSaveRead is { IsCompleted: true } || previousSaveRestore is { IsCompleted: true };
     private Task? versionBackground;
     private Action? versionPending;
 
@@ -109,6 +111,7 @@ public sealed partial class EditorView
 
     private void PumpVersionHistory()
     {
+        PumpPreviousSave();
         if (versionPending is null && versionListTask is null && versionReadTask is null && versionPreviewTask is null
             && versionBackground is { IsCompleted: true } finished)
         { _ = finished.Exception; versionBackground = null; }
