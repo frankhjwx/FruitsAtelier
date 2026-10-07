@@ -623,6 +623,7 @@
   "ui.selectToolHint": "1 Выбор инструмента",
   "ui.selectedCount": "{0} {1} выбрано",
   "ui.sliderPathCurves": "Слайдер Путь",
+  "ui.selectionRect": "Рамка выбора",
   "ui.sixth": "1/6",
   "ui.skin": "Скин…",
   "ui.sliderHint": "B FSlider · Точки щелчка/перетаскивание маркеров",

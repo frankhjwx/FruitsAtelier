@@ -75,6 +75,45 @@ internal static class SelectionTransformTests
         TinyDropletBounds();
         DropletPriority();
         SelectedEndpointPriority();
+        SelectionRectToggle();
+    }
+
+    private static void SelectionRectToggle()
+    {
+        string language = FruitsAtelier.Localization.Strings.Language;
+        try
+        {
+            foreach (string locale in new[] { "en", "zh-CN" })
+            foreach (int width in new[] { 1100, 1440 })
+            {
+                FruitsAtelier.Localization.Strings.SetLanguage(locale);
+                var map = new MapDocument { DurationMs = 12000 };
+                map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 2000, X = 300 }]);
+                var ui = new Ui(); ui.LoadDocument(map); ui.Resize(width, ui.Height); ui.Key('1'); ui.Key('A', ctrl: true);
+                var bounds = ui.View.SelectionTransformBounds;
+                Check(bounds.Width > 0, "Selection rectangle must default to enabled.");
+                var original = ui.View.Document.DeepClone();
+                bool dirty = ui.View.IsDirty;
+                var selected = ui.View.SelectedObjectIds.ToArray();
+                string label = FruitsAtelier.Localization.Strings.Get("ui.selectionRect");
+                var path = ui.Canvas.Texts.Single(t => t.Value == FruitsAtelier.Localization.Strings.Get("ui.sliderPathCurves"));
+                var toggle = ui.Canvas.Texts.Single(t => t.Value == label);
+                var movement = ui.Canvas.Texts.Single(t => t.Value == FruitsAtelier.Localization.Strings.Get("movement.analysis"));
+                Check(toggle.X > path.X && toggle.X < movement.X && toggle.Y == path.Y, "Selection rectangle toolbar order differs.");
+                ui.ClickText(label);
+                Check(ui.View.SelectionTransformBounds.Width == 0 && !ui.Canvas.Outlines.Any(o => o.Color == 0x35ABC9),
+                    "Disabled selection rectangle is still drawn.");
+                ui.View.PointerMove(bounds.Right, bounds.Y + bounds.Height / 2, false, false);
+                Check(!ui.View.SelectionScaleCursor, "Hidden rectangle still exposes a scale cursor.");
+                ui.ClickText(label);
+                Check(ui.View.SelectionTransformBounds == bounds, "Reenabled rectangle changed its bounds.");
+                Check(original.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty
+                    && selected.ToHashSet().SetEquals(ui.View.SelectedObjectIds), "Display toggle changed document or selection.");
+                ui.Key('Z', ctrl: true);
+                Check(original.ContentEquals(ui.View.Document), "Display toggle entered content history.");
+            }
+        }
+        finally { FruitsAtelier.Localization.Strings.SetLanguage(language); }
     }
 
     private static void SelectedEndpointPriority()

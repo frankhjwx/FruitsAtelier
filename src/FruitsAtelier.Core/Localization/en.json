@@ -623,6 +623,7 @@
   "ui.selectToolHint": "1  Select tool",
   "ui.selectedCount": "{0} {1} selected",
   "ui.sliderPathCurves": "Slider Path",
+  "ui.selectionRect": "Selection Rect",
   "ui.sixth": "1/6",
   "ui.skin": "Skin…",
   "ui.sliderHint": "B  FSlider · Click points / Drag handles",

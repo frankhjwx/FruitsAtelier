@@ -623,6 +623,7 @@
   "ui.selectToolHint": "1 도구 선택",
   "ui.selectedCount": "{0} {1} 선택됨",
   "ui.sliderPathCurves": "슬라이더 경로",
+  "ui.selectionRect": "선택 테두리",
   "ui.sixth": "1/6",
   "ui.skin": "스킨…",
   "ui.sliderHint": "B FSlider · 클릭 포인트 / 드래그 핸들",

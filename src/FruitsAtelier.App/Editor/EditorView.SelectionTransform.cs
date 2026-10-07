@@ -22,7 +22,7 @@ public sealed partial class EditorView
     {
         get
         {
-            if (tool != Tool.Select || draftTrack != Guid.Empty || draftBanana != Guid.Empty || objectSelection.Count == 0)
+            if (!showSelectionRect || tool != Tool.Select || draftTrack != Guid.Empty || draftBanana != Guid.Empty || objectSelection.Count == 0)
                 return default;
             RefreshSelectionBounds();
             if (selectionMapBounds is not { } bounds) return default;
