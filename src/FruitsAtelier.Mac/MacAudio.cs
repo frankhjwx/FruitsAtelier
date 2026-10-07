@@ -137,7 +137,7 @@ public sealed class MacAudio : IDisposable
         {
             bool resume = playbackRequested && (DeviceTime(player) < playbackDeviceStart || Position(player) < Duration(player));
             PauseNative(player);
-            SeekNative(player, Math.Clamp(ms / 1000, 0, Duration(player)));
+            SeekNative(player, Math.Clamp(ms / 1000, int.MinValue / 1000d, Duration(player)));
             playbackRequested = false;
             if (resume) StartPlayback();
         }

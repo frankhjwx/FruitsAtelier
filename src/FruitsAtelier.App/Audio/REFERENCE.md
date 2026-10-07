@@ -63,6 +63,13 @@ sample, not independently a physical display latency measurement. See
 
 `AudioTransport` queues load, play, pause, seek and speed operations on one worker. The UI reads its immutable `State` snapshot; it does not call the decoder or output device. `LoadAsync` and `WaitForCommandsAsync` allow callers to await applied operations. `CanPlay` stays true while a loaded device is paused.
 
+Testplay can seek to a negative map position. The decoder remains at source frame
+zero while a bounded streaming provider supplies silence after tempo processing
+for the remaining preparation time divided by playback speed. Device position,
+PCM read-through and hitsound scheduling share the negative origin. Crossing zero
+continues through the same output session. Pause, seek and speed changes rebuild
+the remaining silence from the consumed map position.
+
 The output uses event-driven shared-mode `WasapiOut` with the system default device and 10 ms requested latency. MP3 decoding uses Windows Media Foundation; OGG Vorbis uses NVorbis; WAV uses NAudio's WAV reader. All streams are converted to 16-bit PCM before output. This version accepts mono and stereo audio.
 
 MP3 loading continuously decodes into a PCM cache before reporting ready. The cache uses 64 KiB chunks, a 512 MiB decoded-data limit, and cancellation checks between reads when another load supersedes it or the transport is disposed. A five-minute 44.1 kHz stereo track needs about 50 MiB. Seeking selects a complete frame; a fractional request rounds down by less than one sample frame. Cached PCM is released when the reader is disposed.

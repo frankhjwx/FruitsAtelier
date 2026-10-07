@@ -126,6 +126,10 @@ Use `Audio.Tests --vorbis-check [path.ogg]` to check OGG decoding, playback and
 paused/playing seeks. Without a path it uses the repository fixture; a supplied
 project audio copy is read without modifying it.
 
+`Audio.Tests --preroll-check` checks silent preparation PCM at multiple speeds and
+channel counts, negative device positions, pause/resume and continuous playback
+through zero using an injected output without opening an audio device.
+
 `Audio.Tests --diagnostic-check` validates command/event correlation, repeated
 pause positions with logging enabled, unsupported hitsound format identification,
 issue markers without source-path disclosure, live report ZIP export excluding

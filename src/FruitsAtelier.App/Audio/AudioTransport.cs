@@ -231,7 +231,7 @@ public sealed class AudioTransport : IDisposable
         lock (stateLock)
         {
             if (disposed != 0 || !state.CanPlay) return;
-            requestedPosition = Math.Clamp(positionMs, 0, state.DurationMs);
+            requestedPosition = Math.Clamp(positionMs, int.MinValue, state.DurationMs);
             long version = ++seekVersion;
             Volatile.Write(ref state, state with { PositionMs = requestedPosition });
             Enqueue(new(CommandKind.Seek, loadVersion, Position: requestedPosition, SeekVersion: version));
@@ -406,6 +406,8 @@ public sealed class AudioTransport : IDisposable
         ISampleProvider samples = reader!.ToSampleProvider();
         TempoSampleProvider? tempo = null;
         if (playbackSpeed != 1) samples = tempo = new TempoSampleProvider(samples, playbackSpeed, diagnostics.Enabled);
+        // Supply preparation at output rate so tempo processing cannot shift the first music frame.
+        if (basePosition < 0) samples = new PreRollSampleProvider(samples, -basePosition / playbackSpeed);
         samples = new PlaybackGain(samples, () => SongVolume);
         if (Hitsounds is not null) samples = Hitsounds.MixWithMusic(samples, basePosition, playbackSpeed);
         var buffered = new TrackedSampleProvider(samples, basePosition, playbackSpeed);
@@ -441,7 +443,7 @@ public sealed class AudioTransport : IDisposable
         if (requestedSeek != 0 && requestedSeek != Interlocked.Read(ref seekVersion)) return;
         // Stop and wait for the playback thread before moving the decoder; queued device buffers must not survive a seek.
         reader.CurrentTime = TimeSpan.FromMilliseconds(Math.Clamp(position, 0, duration));
-        basePosition = reader.CurrentTime.TotalMilliseconds;
+        basePosition = position < 0 ? position : reader.CurrentTime.TotalMilliseconds;
         output = CreateOutput();
         lock (stateLock)
             if (requestedSeek != 0 && loadedVersion == loadVersion && requestedSeek == seekVersion) appliedSeekVersion = requestedSeek;
@@ -509,7 +511,7 @@ public sealed class AudioTransport : IDisposable
                 sincePlayMs = AudioDiagnosticLog.NowMs - output.PlayBeganMs, deviceMs,
                 basePositionMs = basePosition, playbackSpeed, sourceReads = output.Probe?.Snapshot() });
         }
-        return Math.Clamp(basePosition + deviceMs * playbackSpeed, 0, duration);
+        return Math.Clamp(basePosition + deviceMs * playbackSpeed, Math.Min(0, basePosition), duration);
     }
 
     private void Publish(double position, bool playing)

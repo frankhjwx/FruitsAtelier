@@ -29,21 +29,6 @@ public sealed class CatchTestplaySession
     private bool waitingForDeviceProgress;
     private double resumePosition;
     private double outputLead;
-    private bool preparingAudio;
-    private bool audioStartPending;
-    public bool PreparingAudio { get { lock (gate) return preparingAudio; } }
-    public bool TryStartAudio()
-    {
-        lock (gate)
-        {
-            if (!audioStartPending || paused || ended) return false;
-            audioStartPending = preparingAudio = false;
-            awaitingResume = true;
-            resumePosition = 0;
-            resumeRequestedAt = Realtime;
-            return true;
-        }
-    }
     public bool Paused { get { lock (gate) return paused; } }
     public bool Autoplay { get { lock (gate) return autoplay; } }
     private Exception? error;
@@ -52,7 +37,7 @@ public sealed class CatchTestplaySession
     public bool Ended { get { lock (gate) return ended; } }
     public double X { get { lock (gate) return game.X; } }
     public int Combo { get { lock (gate) return game.Combo; } }
-    public double TransportPosition { get { lock (gate) return WithAudio ? Math.Max(0, time - outputLead) : time; } }
+    public double TransportPosition { get { lock (gate) return time - outputLead; } }
     public bool UsesKey(int key) => key != 114 && (key == left || key == right || key == dash);
     private double Realtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
 
@@ -63,7 +48,6 @@ public sealed class CatchTestplaySession
         this.game = game; this.clock = clock; time = start; startPosition = start; WithAudio = withAudio;
         audioStarted = audioPlaying; this.left = left; this.right = right; this.dash = dash;
         waitingForDeviceProgress = withAudio && !audioPlaying;
-        preparingAudio = withAudio && start < 0;
         this.timeProvider = timeProvider; this.comboEnds = comboEnds;
         plate = new(circleSize);
         game.Caught = caught;
@@ -78,11 +62,6 @@ public sealed class CatchTestplaySession
         {
             if (ended || !WithAudio) return;
             if (paused) return;
-            if (preparingAudio)
-            {
-                if (failed || !ready && !loading) { ended = true; keys.Clear(); }
-                return;
-            }
             if (awaitingResume)
             {
                 if (failed || !ready && !loading) { ended = true; keys.Clear(); return; }
@@ -95,7 +74,7 @@ public sealed class CatchTestplaySession
             { ended = true; keys.Clear(); return; }
             if (waitingForDeviceProgress)
             {
-                if (!playing || position <= Math.Max(0, startPosition)) return;
+                if (!playing || position <= startPosition) return;
                 waitingForDeviceProgress = false;
             }
             if (playing)
@@ -120,9 +99,7 @@ public sealed class CatchTestplaySession
             outputLead = 0;
             game.Advance(target, false, false, false, autoplay);
             waitingForDeviceProgress = false;
-            preparingAudio = WithAudio && target < 0;
-            audioStartPending = false;
-            awaitingResume = WithAudio && !preparingAudio;
+            awaitingResume = WithAudio;
             resumePosition = target;
             resumeRequestedAt = Realtime;
             clock.Restart(target, resumeRequestedAt, awaitingResume);
@@ -146,12 +123,12 @@ public sealed class CatchTestplaySession
             paused = !paused; keys.Clear();
             if (!paused)
             {
-                awaitingResume = WithAudio && !preparingAudio;
+                awaitingResume = WithAudio;
                 resumeRequestedAt = Realtime;
-                resumePosition = WithAudio ? Math.Max(0, time - outputLead) : time;
-                clock.Restart(time, resumeRequestedAt, WithAudio && !preparingAudio);
+                resumePosition = time - outputLead;
+                clock.Restart(time, resumeRequestedAt, WithAudio);
             }
-            return preparingAudio ? time : WithAudio ? Math.Max(0, time - outputLead) : time;
+            return time - outputLead;
         }
     }
     public void ToggleAutoplay()
@@ -184,16 +161,8 @@ public sealed class CatchTestplaySession
     }
     private void Advance()
     {
-        if (ended || paused || awaitingResume || WithAudio && !audioStarted && !preparingAudio || !clock.IsRunning) return;
+        if (ended || paused || awaitingResume || WithAudio && !audioStarted || !clock.IsRunning) return;
         time = clock.At(Realtime);
-        if (preparingAudio && time >= 0)
-        {
-            // Hold the audio boundary until the device advances; startup latency must not consume notes.
-            time = 0;
-            audioStartPending = true;
-            clock.Restart(0, Realtime, true);
-            return;
-        }
         game.Advance(time, keys.Contains(left), keys.Contains(right), keys.Contains(dash), autoplay);
         plate.Prune(time);
         if (game.Finished && !game.HasMissAnimations && !plate.HasTransientAt(time)) ended = true;

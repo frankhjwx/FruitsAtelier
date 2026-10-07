@@ -99,8 +99,8 @@ public sealed partial class EditorView
         double clockStart = audioAlreadyPlaying ? Math.Min(AudioDurationMs,
             transportSamplePosition + Math.Max(0, now - transportSampleAt) * PlaybackSpeed
             + CatchTestplaySession.LiveHitsoundLead(transportSampleLeadMs, PlaybackSpeed)) : testplayStart;
-        var clock = new CatchTestplayClock(clockStart, PlaybackSpeed, now, AudioReady && !audioAlreadyPlaying && clockStart >= 0);
-        if (AudioReady && clockStart >= 0) clock.Synchronize(clockStart, now, now);
+        var clock = new CatchTestplayClock(clockStart, PlaybackSpeed, now, AudioReady && !audioAlreadyPlaying);
+        if (AudioReady) clock.Synchronize(clockStart, now, now);
         testplay = new(session, clock, testplayStart, AudioReady, audioAlreadyPlaying, LibrarySettings.TestplayLeftKey,
             LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey, timeProvider, PreviewCircleSize, previewComboEnds,
             item =>
@@ -112,7 +112,7 @@ public sealed partial class EditorView
                 }
             });
         testplayFrame = testplay.Capture();
-        if (AudioReady && !audioAlreadyPlaying && testplayStart >= 0) { RequestSeek?.Invoke(testplayStart); RequestTogglePlayback?.Invoke(); }
+        if (AudioReady && !audioAlreadyPlaying) { RequestSeek?.Invoke(testplayStart); RequestTogglePlayback?.Invoke(); }
         try { if (testplay is not null) testplayDriver = RequestRunTestplay?.Invoke(testplay); }
         catch { StopTestplay(); throw; }
     }
@@ -170,7 +170,7 @@ public sealed partial class EditorView
                 if (RequestPausePlayback is not null) RequestPausePlayback();
                 else if (AudioPlaying) RequestTogglePlayback?.Invoke();
             }
-            else if (!testplay.PreparingAudio) { RequestSeek?.Invoke(time); RequestTogglePlayback?.Invoke(); }
+            else { RequestSeek?.Invoke(time); RequestTogglePlayback?.Invoke(); }
         }
         SetTestplayPauseLoop(TestplayPaused);
         if (TestplayPaused) PlayTestplayMenuSound("menuhit");
@@ -193,7 +193,6 @@ public sealed partial class EditorView
             if (testplay is null) return;
         }
         if (testplayDriver is null) testplay.Tick();
-        if (testplay.TryStartAudio()) { RequestSeek?.Invoke(0); RequestTogglePlayback?.Invoke(); }
         bool wasAutoplay = testplayFrame?.Autoplay ?? false;
         testplayFrame = testplay.Capture();
         if (wasAutoplay != testplayFrame.Autoplay)

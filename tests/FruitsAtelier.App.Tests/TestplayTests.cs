@@ -16,13 +16,22 @@ internal static class TestplayTests
             int starts = 0; var seeks = new List<double>();
             ui.View.RequestSeek = seeks.Add;
             ui.View.RequestTogglePlayback = () => starts++;
+            ui.View.RequestPausePlayback = () => { };
             ui.View.StartTestplay();
             double start = Math.Min(0, first - 2000);
+            double audioPosition = start;
+            void Advance(double milliseconds)
+            {
+                clock.Advance(milliseconds);
+                audioPosition += milliseconds * ui.View.PlaybackSpeed;
+                if (audio) ui.View.UpdateTransport(audioPosition, 20000, true, true, false, null, null);
+                ui.Paint();
+            }
             Near(start, ui.View.PlayheadMs);
             if (start < 0)
             {
-                Check(starts == 0, "Preparation keeps music stopped");
-                ui.Key(39); clock.Advance(100); ui.View.KeyUp(39); ui.Paint();
+                Check(starts == (audio ? 1 : 0), "Audio starts with the negative preparation timeline");
+                ui.Key(39); Advance(100); ui.View.KeyUp(39); ui.Paint();
                 Check(ui.View.TestplayCatcherX > 256, "Preparation accepts movement");
                 Near(start + 100, ui.View.PlayheadMs);
                 ui.Key('P', ctrl: true); ui.View.KeyUp('P');
@@ -30,13 +39,12 @@ internal static class TestplayTests
                 ui.Key('P', ctrl: true); ui.View.KeyUp('P');
                 clock.Advance(600); ui.Paint(); Near(start + 100, ui.View.PlayheadMs);
                 ui.View.SetPlaybackSpeed(1.5);
-                clock.Advance((-start - 100) / 1.5 + 1); ui.Paint(); Near(audio ? 0 : 1.5, ui.View.PlayheadMs);
+                Advance((-start - 100) / 1.5 + 1); Near(1.5, ui.View.PlayheadMs);
                 if (audio)
                 {
-                    Check(starts == 1 && seeks.SequenceEqual([0d]), "Music starts once at zero");
-                    clock.Advance(200); ui.Paint(); Near(0, ui.View.PlayheadMs);
-                    ui.View.UpdateTransport(1, 20000, true, true, false, null, null);
-                    Check(ui.View.PlayheadMs >= 1 && ui.View.PlayheadMs < 10, "Device progress releases the boundary");
+                    Check(starts == 2 && seeks.Count == 2 && seeks[0] == start && seeks[1] < 0,
+                        "Only entry and resume request audio; zero does not seek or restart");
+                    Advance(20); Near(31.5, ui.View.PlayheadMs);
                 }
                 ui.Key(82, ctrl: true); ui.View.KeyUp(82); Near(start, ui.View.PlayheadMs);
             }
@@ -54,19 +62,18 @@ internal static class TestplayTests
         var driverClock = new ManualTime();
         var note = new ConvertedCatchObject(Guid.NewGuid(), 0, CatchObjectKind.Fruit, 0, 256, 256, 256, 0);
         var driver = new CatchTestplaySession(new CatchTestplay([note, note with { TimeMs = 10000 }], 5, -4000),
-            new(-4000, 1, 0, false), -4000, true, false, 37, 39, 16, driverClock, 5, []);
+            new(-4000, 1, 0, true), -4000, true, false, 37, 39, 16, driverClock, 5, []);
         Check(driver.SkipIntro(-3000), "A negative skip target retains preparation");
-        driver.UpdateAudio(9000, 0, 20000, true, true, false, false);
+        driver.UpdateAudio(9000, -1, 20000, true, true, false, false);
         Near(-3000, driver.Capture().TimeMs);
-        driverClock.Advance(3000); driver.Tick();
+        driverClock.Advance(1); driver.UpdateAudio(-2999, 1, 20000, true, true, false, false);
+        driverClock.Advance(2989); driver.UpdateAudio(-10, 2990, 20000, true, true, false, false);
+        driverClock.Advance(10); driver.Tick();
         Near(0, driver.Capture().TimeMs);
-        Check(driver.Combo == 0 && driver.TryStartAudio() && !driver.TryStartAudio(),
-            "Worker ticks hold the zero-time note and expose one audio request");
-        driver.UpdateAudio(9000, 0, 20000, true, true, false, false);
-        Near(0, driver.Capture().TimeMs);
+        Check(driver.Combo == 1, "Worker ticks catch the zero-time note without waiting at zero");
         driverClock.Advance(10);
-        driver.UpdateAudio(1, 3010, 20000, true, true, false, false);
-        Check(driver.Combo == 1, "Fresh audio catches the zero-time note");
+        driver.UpdateAudio(10, 3010, 20000, true, true, false, false);
+        Near(10, driver.Capture().TimeMs);
 
         var skipUi = new Ui(timeProvider: new ManualTime());
         var skipMap = new MapDocument(); skipMap.Fruits.Add(new Fruit { TimeMs = 5000, X = 256 });
@@ -77,7 +84,7 @@ internal static class TestplayTests
         skipUi.View.RequestSeek = value => skipSeek = value;
         skipUi.View.RequestTogglePlayback = () => skipStarts++;
         skipUi.View.StartTestplay(); skipUi.Key(32);
-        Check(skipStarts == 1 && skipSeek == 2000, "Skipping preparation into positive time starts music");
+        Check(skipStarts == 1 && skipSeek == 2000, "Skipping preparation seeks the running audio timeline");
         skipUi.View.StopTestplay();
     }
 
