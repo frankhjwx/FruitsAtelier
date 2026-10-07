@@ -884,3 +884,27 @@ completion or failure on the page. Diagnostic preferences do not change beatmap
 content. The Mac Audio page identifies the WASAPI controls as Windows-only.
 See [Audio capture instructions](AUDIO-DIAGNOSTICS.txt) for test comparisons,
 collection limits and the distinction between software timing and acoustic delay.
+
+## Hitsound Copier (Beta)
+
+Open **Timing → Hitsound Copier (Beta)** for a floating dialog. Choose Clear,
+an external osu!standard or Catch `.osu`, or another difficulty in the current set. Clear restores
+normal default samples and removes Whistle, Finish, Clap and custom object samples.
+Copy requires identical red timing times, BPM and meter. Events match by playable
+time; unmatched events on either side are silently skipped. Target SV is preserved.
+
+External copying can include only the used hitsound files. Same-set copying shares
+existing resources. Conflicting numbered sample groups are renumbered; explicit
+files receive a distinct relative name. Existing files are preserved. Clearing can
+delete unshared referenced hitsound files while preserving music, storyboard samples
+and other difficulties' references. Unreadable sibling maps prevent file deletion.
+Deleted files are backed up under `.hitsound-copier-backups` with a path manifest.
+
+Preview lists the matched event count and planned file changes; scroll the file
+list to inspect all paths. Apply overwrites the current difficulty in one undo step
+or creates a named difficulty from the current chart. A new difficulty preserves
+the original, including its files. Overwrite undo/redo restores associated file
+changes, retains files now shared by another difficulty, and rejects files modified
+externally after preview. An outdated content preview must be rebuilt before Apply. Legacy slider events
+cannot use explicit filenames or incompatible extra tick banks; preview explains
+these format constraints without applying a partial result.

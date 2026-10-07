@@ -66,6 +66,12 @@ internal sealed partial class EditorWindow
         {
             ResetAudio(); projectPath = null; view.NewProject(); view.CloseLibrary();
         });
+        view.RequestHitsoundSource = () => FileOperation(() =>
+        {
+            string? path = MapFileDialog.Select(hwnd, false, L.Get("copier.choose"), MapFileDialog.OsuFilter);
+            if (path is not null) view.SetHitsoundSource(HitsoundCopier.ReadSource(path));
+        });
+        view.RequestPasteHitsoundName = () => view.PasteHitsoundName(Native.ReadClipboardText(hwnd));
         view.RequestImportDifficulty = () => FileOperation(() =>
         {
             if (!view.PrepareFileOperation()) return;

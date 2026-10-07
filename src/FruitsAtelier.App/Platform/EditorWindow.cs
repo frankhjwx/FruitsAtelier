@@ -58,7 +58,7 @@ internal sealed partial class EditorWindow : IDisposable
         };
     }
 
-    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false, bool firstRunSetup = false, AudioSettingsRestartState? resumeAudio = null)
+    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false, bool firstRunSetup = false, AudioSettingsRestartState? resumeAudio = null, bool hitsoundCopierCheck = false)
     {
         view.InitializeLibrary(!renderCheck && profileMap is null, renderCheck || profileMap is not null
             ? new FruitsAtelier.Core.LibrarySettings { Workspace = Path.Combine(Artifacts, "render-library") } : null, forceFirstRunSetup: firstRunSetup);
@@ -105,6 +105,17 @@ internal sealed partial class EditorWindow : IDisposable
             return 0;
         }
         if (initialPath is not null) FileOperation(() => OpenPath(initialPath));
+        if (hitsoundCopierCheck)
+        {
+            foreach(int testDpi in new[]{96,144,192})
+            foreach(var size in new[]{(1440,900),(980,620)})
+            {
+                canvas.Resize(size.Item1*testDpi/96,size.Item2*testDpi/96,testDpi);
+                Diagnostics.HitsoundCopierRenderCheck.Run(canvas,size.Item1,size.Item2);
+                AppLog.Write($"Hitsound Copier native rendering passed: {size.Item1}x{size.Item2}, DPI {testDpi}, English and Chinese.");
+            }
+            return 0;
+        }
         if (renderCheck)
         {
             if (resumeAudio is not null)

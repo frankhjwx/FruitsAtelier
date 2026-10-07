@@ -16,7 +16,7 @@ internal static class Program
             if (args.Contains("--m2-check")) return Diagnostics.M2Check.Run(args.Where(p => File.Exists(p) && Path.GetExtension(p).Equals(".osz", StringComparison.OrdinalIgnoreCase)));
             AudioSettingsRestartState? resumeAudio = args.Length == 2 && args[0] is "--resume-audio-settings" or "--audio-settings-resume-check"
                 ? EditorWindow.ReadAudioSettingsRestart(args[1]) : null;
-            if (!args.Contains("--render-check") && !args.Contains("--testplay-render-check") && !args.Contains("--profile-map") && !args.Contains("--audio-settings-resume-check"))
+            if (!args.Contains("--render-check") && !args.Contains("--hitsound-copier-render-check") && !args.Contains("--testplay-render-check") && !args.Contains("--profile-map") && !args.Contains("--audio-settings-resume-check"))
             {
                 FruitsAtelier.Core.LibrarySettings diagnosticSettings;
                 try { diagnosticSettings = FruitsAtelier.Core.LibrarySettings.Load(); }
@@ -27,13 +27,13 @@ internal static class Program
             using var window = new EditorWindow();
             if (args.Length is 2 or 3 && args[0] == "--profile-map") return window.Run(profileMap: args[1],
                 profileStartMs: args.Length == 3 ? double.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture) : 70000);
-            return window.Run(args.Contains("--render-check") || args.Contains("--testplay-render-check") || args.Contains("--audio-settings-resume-check"), resumeAudio is null ? args.FirstOrDefault(File.Exists) : null,
-                testplayCheck: args.Contains("--testplay-render-check"), firstRunSetup: args.Contains("--first-run-setup"), resumeAudio: resumeAudio);
+            return window.Run(args.Contains("--render-check") || args.Contains("--hitsound-copier-render-check") || args.Contains("--testplay-render-check") || args.Contains("--audio-settings-resume-check"), resumeAudio is null ? args.FirstOrDefault(File.Exists) : null,
+                testplayCheck: args.Contains("--testplay-render-check"), firstRunSetup: args.Contains("--first-run-setup"), resumeAudio: resumeAudio, hitsoundCopierCheck: args.Contains("--hitsound-copier-render-check"));
         }
         catch (Exception exception)
         {
             AppLog.Write(exception.ToString());
-            if (!args.Contains("--render-check") && !args.Contains("--testplay-render-check") && !args.Contains("--m2-check") && !args.Contains("--package-check") && !args.Contains("--profile-map") && !args.Contains("--audio-settings-resume-check"))
+            if (!args.Contains("--render-check") && !args.Contains("--hitsound-copier-render-check") && !args.Contains("--testplay-render-check") && !args.Contains("--m2-check") && !args.Contains("--package-check") && !args.Contains("--profile-map") && !args.Contains("--audio-settings-resume-check"))
                 Native.ShowError(0, L.Get("window.startFailed", exception.Message, AppLog.Path), L.Get("app.name"));
             return 1;
         }

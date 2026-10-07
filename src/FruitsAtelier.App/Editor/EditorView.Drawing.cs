@@ -119,6 +119,7 @@ public sealed partial class EditorView
         DrawDistanceSnapDialog(c);
         DrawSongSetup(c);
         DrawTimingSetup(c);
+        DrawHitsoundCopier(c);
         DrawSettings(c);
         if (librarySettingsOpen) DrawContextMenu(c);
         if (librarySettingsOpen) DrawLanguageMenu(c);
@@ -664,6 +665,7 @@ public sealed partial class EditorView
             Item(L.Get("timing.delete"), DeleteCurrentTiming);
             Item(L.Get("timing.resnap"), () => ResnapTimingSection(false));
             Item(L.Get("timing.setup"), OpenTimingSetup);
+            Item(L.Get("copier.title"), OpenHitsoundCopier);
             Item(L.Get("timing.resnapAll"), () => ResnapTimingSection(true));
             Item(L.Get("timing.move"), () => OpenTimingCommand("move"));
             Item(L.Get("timing.recalculate"), () => Edit(L.Get("timing.recalculate"), () => TimingEditing.ResnapLengths(Document, divisor)));

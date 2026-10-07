@@ -2,10 +2,12 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+
 string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 // Existing interaction fixtures use Chinese labels explicitly.
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
+if (args.Contains("--hitsound-copier")) { HitsoundCopierUiTests.Run(); Console.WriteLine("PASS Hitsound Copier UI"); return 0; }
 if (args.Length == 2 && args[0] == "--audio-settings-restart-native-check")
 {
     try { AudioSettingsRestartNativeTests.Run(args[1]); return 0; }
@@ -44,6 +46,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Hitsound Copier modes, new Diff and undo", HitsoundCopierUiTests.Run),
     ("Testplay opening preparation and audio boundary", TestplayTests.OpeningPreparation),
     ("Held quick retry uses 300 ms, cancels on release and retries once while paused", FeedbackInteractionTests.Retry),
     ("Previous-save rollback requires history, confirmation and supports undo", FeedbackInteractionTests.PreviousSave),

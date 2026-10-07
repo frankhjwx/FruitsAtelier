@@ -864,6 +864,7 @@ internal static class RenderCheck
             canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End();
             CheckPaletteHints(canvas, view, size.Item1, size.Item2);
             CheckSongSetup(canvas, view, size.Item1, size.Item2);
+            HitsoundCopierRenderCheck.Run(canvas,size.Item1,size.Item2);
             CheckTimingSetup(canvas, view, size.Item1, size.Item2);
             if (!view.MovementAnalysisEnabled)
             {

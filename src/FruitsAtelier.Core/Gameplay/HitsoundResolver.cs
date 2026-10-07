@@ -11,9 +11,11 @@ public sealed class HitsoundResolver
     private readonly Dictionary<string, string> skinFiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly TimingPoint[] timing;
     private readonly int defaultSet;
+    private readonly Dictionary<(Guid, int), HitSampleSettings> overrides;
     private readonly Dictionary<Guid, CurveTrack> streams;
     public HitsoundResolver(MapDocument document, IReadOnlyList<ConvertedCatchObject> objects, IEnumerable<string>? skinFolders = null)
     {
+        overrides = document.HitsoundOverrides.ToDictionary(s => (s.SourceId, s.EventIndex), s => s.Sample);
         streams = document.Tracks.Where(t => t.StreamSnapDivisor is not null).ToDictionary(t => t.Id);
         lines = document.Fruits.Select(f => (f.Id, f.OriginalLine))
             .Concat(document.Tracks.Select(f => (f.Id, f.OriginalLine)))
@@ -55,10 +57,9 @@ public sealed class HitsoundResolver
             catch (UnauthorizedAccessException) { }
         }
     }
-    public IReadOnlyList<Hitsound> Resolve(ConvertedCatchObject item)
+    public HitSampleSettings Describe(ConvertedCatchObject item)
     {
-        if (item.Kind == CatchObjectKind.TinyDroplet) return Array.Empty<Hitsound>();
-        if (item.Kind == CatchObjectKind.Banana) return new[] { new Hitsound(item.Kind, HitsoundDefaults.Find(1, "catch-banana"), 1, "catch-banana") };
+        if (overrides.TryGetValue((item.SourceId, item.EventIndex), out var sampleOverride)) return sampleOverride;
         // Resolve each audible event at its own time with legacy 5 ms sample leniency.
         double sampleTime = item.TimeMs + 5;
         int low = 0, high = timing.Length;
@@ -99,7 +100,17 @@ public sealed class HitsoundResolver
                 }
             }
         }
-        float gain = Math.Clamp(volume, 0, 100) / 100f;
+        return new(bank, additionBank is >= 1 and <= 3 ? additionBank : bank, Math.Max(0,index), Math.Clamp(volume,0,100), additions & 14, custom ?? "");
+    }
+
+    public IReadOnlyList<Hitsound> Resolve(ConvertedCatchObject item)
+    {
+        if (item.Kind == CatchObjectKind.TinyDroplet) return [];
+        if (item.Kind == CatchObjectKind.Banana) return [new(item.Kind, HitsoundDefaults.Find(1, "catch-banana"), 1, "catch-banana")];
+        var sample = Describe(item);
+        int bank = sample.NormalSet, additionBank = sample.AdditionSet, index = sample.Index, additions = sample.Additions;
+        string custom = sample.FileName;
+        float gain = Math.Clamp(sample.Volume, 0, 100) / 100f;
         if (gain == 0) return Array.Empty<Hitsound>();
         int extra = additionBank is >= 1 and <= 3 ? additionBank : bank;
         if (item.Kind == CatchObjectKind.Droplet)

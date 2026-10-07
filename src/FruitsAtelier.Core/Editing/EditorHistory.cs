@@ -90,7 +90,8 @@ public sealed class EditorHistory
         if (!undo.TryPop(out var change)) return;
         var previous = Document;
         Document = change.Before.DeepClone();
-        change.RestoreRelated?.Invoke(false, previous, Document);
+        try { change.RestoreRelated?.Invoke(false, previous, Document); }
+        catch { Document = previous; undo.Push(change); throw; }
         redo.Push(change);
     }
 
@@ -100,7 +101,8 @@ public sealed class EditorHistory
         if (!redo.TryPop(out var change)) return;
         var previous = Document;
         Document = change.After.DeepClone();
-        change.RestoreRelated?.Invoke(true, previous, Document);
+        try { change.RestoreRelated?.Invoke(true, previous, Document); }
+        catch { Document = previous; redo.Push(change); throw; }
         undo.Push(change);
     }
 

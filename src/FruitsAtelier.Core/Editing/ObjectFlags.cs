@@ -39,10 +39,12 @@ public static class ObjectFlags
         var source = Source(document, id);
         var fields = source.Line.Split(',');
         int sound = I(fields[4]);
-        if (source.Spans == 0) return [sound];
+        if (source.Spans == 0) return [document.HitsoundOverrides.FirstOrDefault(o => o.SourceId == id && o.EdgeIndex == 0)?.Sample.Additions ?? sound];
         string[] old = fields.Length > 8 ? fields[8].Split('|') : [];
         int[] values = Enumerable.Range(0, source.Spans + 1)
             .Select(i => i < old.Length && old[i].Length > 0 ? I(old[i]) : sound).ToArray();
+        foreach (var sample in document.HitsoundOverrides.Where(o => o.SourceId == id && o.EdgeIndex >= 0 && o.EdgeIndex < values.Length))
+            values[sample.EdgeIndex] = sample.Sample.Additions;
         return edge is { } index && index >= 0 && index < values.Length ? [values[index]] : values;
     }
 
@@ -63,6 +65,12 @@ public static class ObjectFlags
             if (edge is null || edge == 0) fields[4] = N(Apply(I(fields[4])));
         }
         source.Save(string.Join(',', fields));
+        for (int i = 0; i < document.HitsoundOverrides.Count; i++)
+        {
+            var sample = document.HitsoundOverrides[i];
+            if (sample.SourceId == id && (edge is null || sample.EdgeIndex == edge))
+                document.HitsoundOverrides[i] = sample with { Sample = sample.Sample with { Additions = Apply(sample.Sample.Additions) } };
+        }
         static string Numeric(int value) => value.ToString(CultureInfo.InvariantCulture);
     }
 }

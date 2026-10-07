@@ -42,6 +42,16 @@ public sealed partial class EditorView
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
         }
+        if (HitsoundCopierVisible)
+        {
+            mouseX = x; mouseY = y;
+            if (copierSourcesOpen && !copierSourceBounds.Contains(x,y)
+                && !HitsoundSourceSelectorBounds.Contains(x,y))
+                copierSourcesOpen=false;
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         ResetTextCaret();
         mouseX = x; mouseY = y;
         timingPointerShift = shift;
@@ -415,6 +425,7 @@ public sealed partial class EditorView
         if (textSelecting) { mouseY = y; MoveInputSelection(x); return; }
         if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
         if (dsBaseDragging) { UpdateDistanceBase(x); return; }
+        if (HitsoundCopierVisible) { mouseX = x; mouseY = y; return; }
         if (SongSetupVisible) { mouseX = x; mouseY = y; MoveSongSetup(x, y, shift); return; }
         if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x, shift); return; }
         if (distanceDragging) { UpdateDistanceSlider(x, shift); return; }
@@ -550,6 +561,7 @@ public sealed partial class EditorView
         if (workspaceScrollDragging && button == 0) { MoveWorkspaceScroll(y); workspaceScrollDragging = false; return; }
         if (settingsColourDrag != 0 && button == 0) { UpdateIndicatorColourDrag(x, y); settingsColourDrag = 0; return; }
         if (textSelecting && button == 0) { mouseY = y; MoveInputSelection(x); textSelecting = false; return; }
+        if (HitsoundCopierVisible) return;
         if (SongSetupVisible) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
         if (updatesPage) return;
@@ -639,6 +651,8 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (HitsoundCopierVisible) { PointerDown(x, y, 0, shift, ctrl); return; }
+
         if (AimodVisible) return;
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
@@ -726,6 +740,12 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (HitsoundCopierVisible)
+        {
+            if(copierSourcesOpen) copierSourceScroll = Math.Max(0,copierSourceScroll-(int)(delta/120)*3);
+            else copierFileScroll = Math.Max(0,copierFileScroll-(int)(delta/120)*3);
+            return;
+        }
         bool navigationDrag = NavigationDuringDrag;
         WheelCore(x, y, delta, ctrl, shift, alt);
         if (navigationDrag && NavigationDuringDrag) PointerMove(mouseX, mouseY, shift || shiftHeld, ctrl);
@@ -776,6 +796,7 @@ public sealed partial class EditorView
         }
         shift |= shiftHeld;
         alt |= altHeld;
+        if (HitsoundCopierVisible) return;
         if (SongSetupVisible) return;
         if (DistanceSnapDialogVisible)
         {
@@ -944,6 +965,7 @@ public sealed partial class EditorView
             NotifySynchronizationBlocked(); return;
         }
         if (DistanceKeyDown(virtualKey, ctrl, shift)) return;
+        if (HitsoundCopierVisible && !ErrorVisible && !DiscardConfirmationVisible) { HitsoundCopierKey(virtualKey, ctrl, shift); return; }
         placementCtrl = ctrl;
         if (virtualKey == 27 && legacyButtonSlider != Guid.Empty)
         { legacyButtonSlider = Guid.Empty; return; }
@@ -1208,6 +1230,8 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (HitsoundCopierVisible) { if (!ErrorVisible && !DiscardConfirmationVisible && !char.IsControl(value)) PasteHitsoundName(value.ToString()); return; }
+
         if (AimodVisible) return;
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {

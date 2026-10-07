@@ -125,6 +125,7 @@ public sealed partial class EditorView
         string key = textEditor.Field;
         string value = key switch
         {
+            "copier:name" => copierName,
             "time" => timeJumpText,
             "distance" => editBuffer,
             "ds:base" => dsBaseText,

@@ -2,7 +2,7 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). All twelve schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides use schema 13 (single difficulty) or 14 (multi-difficulty). All fourteen schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
 
 ## Authoritative and derived data
 
@@ -39,6 +39,22 @@ change is needed. Shared metadata edits propagate only the changed keys to the
 other difficulty histories. Their saved baselines remain intact for dirty checks,
 and their local undo snapshots retain the shared values. The initiating undo
 transaction restores each difficulty's own previous shared values.
+
+## Event hitsounds
+
+`MapDocument.HitsoundOverrides` stores effective samples by parent ID and event
+index, including sample banks, additions, sample index, volume and explicit file.
+Slider fruit entries also retain their edge index for existing sound flag controls.
+The collection participates in cloning, dirty comparison, undo and project saves.
+Empty collections are omitted and retain the earlier schema selection.
+
+Hitsound Copier matches exported playable event times after checking identical
+red timing points. Source SV participates in event decoding. Copying leaves target
+geometry, authoring timing and SV intact. Export writes circle/stream object
+samples, slider edge banks and additions, and timing sample states while retaining
+the emitted SV and effects. Unmatched target events keep their effective samples.
+Explicit filenames on legacy slider events and incompatible per-tick extra banks
+are rejected during preview because the legacy representation cannot encode them.
 
 ## Concrete model
 

@@ -39,6 +39,7 @@ public sealed partial class EditorView
         project.Validate();
         CloseVersionHistory();
         CloseAimod();
+        CloseHitsoundCopier();
         CloseSongSetup();
         CloseTimingSetup(); TimingPageVisible = false;
         TimeJumpVisible = false;
@@ -180,6 +181,7 @@ public sealed partial class EditorView
             : OsuBeatmapReader.Setting(document, "Metadata", "Version") ?? L.Get("project.defaultDifficulty", difficulties.Count + 1);
         if (imported is null)
         {
+            document.HitsoundOverrides.Clear();
             document.Fruits.Clear(); document.Tracks.Clear(); document.ImportedSliders.Clear(); document.BananaShowers.Clear();
             document.IsDemo = false;
             foreach (var section in document.OriginalSections.Where(s => s.Name == "HitObjects")) section.Lines.Clear();
@@ -215,7 +217,7 @@ public sealed partial class EditorView
         if (AudioProjectCreating) return false;
         if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
         if (VersionHistoryVisible || SynchronizationVisible) return false;
-        if (librarySettingsOpen || SongSetupVisible || DistanceSnapDialogVisible || TimingModal || AimodVisible) return false;
+        if (librarySettingsOpen || HitsoundCopierVisible || SongSetupVisible || DistanceSnapDialogVisible || TimingModal || AimodVisible) return false;
         if (!CommitTimingField()) return false;
         if (SliderMultiplierValidationBusy)
         { StatusMessage = L.Get("timing.sliderMultiplierChecking"); return false; }

@@ -172,6 +172,11 @@ public static class OsuBeatmapWriter
             lines.Add((slider.StartTimeMs, track.SourceOrder, slider.SourceId, string.Join(',', values)));
         }
         var timing = cache is null ? BuildTiming(document, generated) : cache.Timing(document, generated, BuildTiming);
+        if (document.HitsoundOverrides.Count > 0)
+        {
+            timing = timing.Select(p => p.DeepClone()).ToList();
+            HitsoundCopier.ApplyToExport(document, converted.Objects, lines, timing);
+        }
         var output = document.DeepClone();
         SetNumber(output, "Editor", "DistanceSpacing", document.DistanceSpacing);
         Set(output, "General", "Mode", "2");
