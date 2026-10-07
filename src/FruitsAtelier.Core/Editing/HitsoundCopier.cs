@@ -61,6 +61,8 @@ public static class HitsoundCopier
             .OrderBy(g => g.Key).Select(g => (Time: g.Key, Sample: sourceResolver.Describe(g.First()))).ToArray();
         var times = samples.Select(s => s.Time).ToArray();
         var result = target.DeepClone();
+        CopySampleTiming(source, target, result);
+        var targetResolver = new HitsoundResolver(target, targetEvents);
         var updates = result.HitsoundOverrides.ToDictionary(o => (o.SourceId, o.EventIndex));
         var edgeIndices = targetEvents.Where(o => o.Kind == CatchObjectKind.Fruit).GroupBy(o => o.SourceId)
             .SelectMany(g => g.Select((o, i) => (o.SourceId, o.EventIndex, Edge: o.IsStandalone ? 0 : i)))
@@ -72,10 +74,53 @@ public static class HitsoundCopier
                 updates[(item.SourceId, item.EventIndex)] = new(item.SourceId, item.EventIndex, samples[index].Sample, edgeIndices.GetValueOrDefault((item.SourceId,item.EventIndex), -1));
                 count++;
             }
+            else
+                updates[(item.SourceId, item.EventIndex)] = new(item.SourceId, item.EventIndex,
+                    targetResolver.Describe(item), edgeIndices.GetValueOrDefault((item.SourceId,item.EventIndex), -1));
         result.HitsoundOverrides.Clear(); result.HitsoundOverrides.AddRange(updates.Values);
         // Validate the actual legacy representation before exposing a successful copy.
         _ = OsuBeatmapWriter.Serialize(result, compensateTinyDroplets);
         return new(result, count);
+    }
+
+    private static void CopySampleTiming(MapDocument source, MapDocument target, MapDocument result)
+    {
+        int defaultBank = SongSetup.Get(source,"General","SampleSet").ToLowerInvariant() switch { "soft"=>2,"drum"=>3,_=>1 };
+        var changes = new List<(double Time, int Bank, int Index, int Volume)>();
+        if (!result.TimingPoints.Any(p=>p.Uninherited))
+            result.TimingPoints.Add(new TimingPoint { TimeMs=target.TimingOffsetMs, BeatLengthMs=target.BeatLengthMs, Uninherited=true });
+        foreach (var point in source.TimingPoints.OrderBy(p=>p.TimeMs).ThenBy(p=>p.SourceOrder).GroupBy(p=>p.TimeMs).Select(g=>g.Last()))
+        {
+            var sample = (Bank: point.SampleSet is >=1 and <=3 ? point.SampleSet : defaultBank,
+                Index: point.SampleIndex, Volume: point.Volume);
+            if (changes.Count == 0 || (changes[^1].Bank,changes[^1].Index,changes[^1].Volume) != sample)
+                changes.Add((point.TimeMs,sample.Bank,sample.Index,sample.Volume));
+        }
+        if (changes.Count == 0) changes.Add((source.TimingOffsetMs,defaultBank,0,100));
+        var times = changes.Select(p=>p.Time).ToArray();
+        foreach (var point in result.TimingPoints)
+        {
+            int index = Array.BinarySearch(times,point.TimeMs);
+            if (index < 0) index = ~index-1;
+            var sample = changes[Math.Max(0,index)];
+            point.SampleSet=sample.Bank; point.SampleIndex=sample.Index; point.Volume=sample.Volume; point.OriginalLine=null;
+        }
+        var lookup = new TimingMap.Lookup(target);
+        var existing = result.TimingPoints.Select(p=>p.TimeMs).ToHashSet();
+        var original = target.TimingPoints.OrderBy(p=>p.TimeMs).ThenBy(p=>p.SourceOrder).ToArray();
+        int prior=-1, order=result.TimingPoints.Select(p=>p.SourceOrder).DefaultIfEmpty(-1).Max()+1;
+        foreach (var sample in changes)
+        {
+            while(prior+1<original.Length && original[prior+1].TimeMs<=sample.Time) prior++;
+            if (!existing.Add(sample.Time)) continue;
+            var state=lookup.At(sample.Time);
+            result.TimingPoints.Add(new TimingPoint { TimeMs=sample.Time,Uninherited=false,
+                BeatLengthMs=state.GenerateTicks ? -100/state.SliderVelocityMultiplier : double.NaN,
+                Meter=state.Meter, Effects=prior>=0 ? original[prior].Effects : 0,
+                SampleSet=sample.Bank,SampleIndex=sample.Index,Volume=sample.Volume,SourceOrder=order++ });
+        }
+        var ordered=result.TimingPoints.OrderBy(p=>p.TimeMs).ThenBy(p=>p.SourceOrder).ToArray();
+        result.TimingPoints.Clear(); result.TimingPoints.AddRange(ordered);
     }
 
     // Equal-distance candidates use the earlier event; exact matches always win.
@@ -178,7 +223,7 @@ public static class HitsoundCopier
         (int Bank,int Index,int Volume) active = (defaultBank,0,100);
         foreach (var (item, sample) in sliderEvents.OrderBy(o => o.Event.TimeMs))
         {
-            double time = item.TimeMs + 5;
+            double time = Math.Floor(item.TimeMs);
             var state = lookup.At(time);
             while (priorIndex+1 < original.Length && original[priorIndex+1].TimeMs <= time)
             {
@@ -189,10 +234,16 @@ public static class HitsoundCopier
             if (active == desired) continue;
             active = desired;
             var prior = priorIndex >= 0 ? original[priorIndex] : null;
+            if (prior is not null && prior.TimeMs == time)
+            {
+                prior.SampleSet = sample.NormalSet; prior.SampleIndex = sample.Index; prior.Volume = sample.Volume;
+                prior.OriginalLine = null;
+                continue;
+            }
             timing.Add(new TimingPoint { TimeMs = time, Uninherited = false,
                 BeatLengthMs = state.GenerateTicks ? -100 / state.SliderVelocityMultiplier : double.NaN,
                 Meter = state.Meter, Effects = prior?.Effects ?? 0,
-                SampleSet = sample.NormalSet, SampleIndex = sample.Index, Volume = sample.Volume });
+                SampleSet = sample.NormalSet, SampleIndex = sample.Index, Volume = sample.Volume, SourceOrder = int.MaxValue });
         }
         var ordered = timing.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
         timing.Clear(); timing.AddRange(ordered);

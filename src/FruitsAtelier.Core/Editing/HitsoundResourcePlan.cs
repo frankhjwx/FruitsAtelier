@@ -101,6 +101,8 @@ public sealed class HitsoundResourcePlan
         for (int t = 0; t < targets.Length; t++)
         {
             var result = targets[t].Result; var matched = matches[t];
+            foreach (var point in result.TimingPoints)
+                if (indexRemap.TryGetValue(point.SampleIndex,out int newIndex)) { point.SampleIndex=newIndex; point.OriginalLine=null; }
             for (int i = 0; i < result.HitsoundOverrides.Count; i++)
             {
                 var item = result.HitsoundOverrides[i];

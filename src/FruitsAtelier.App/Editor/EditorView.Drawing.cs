@@ -659,17 +659,21 @@ public sealed partial class EditorView
         {
             Item(L.Get("timing.signature"), () => gridLevelMenuOpen = true);
             Item(L.Get("timing.metronome"), () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }, active: metronomeEnabled);
+            Separator();
             Item(L.Get("timing.addRed"), () => AddTimingPoint(false));
             Item(L.Get("timing.addGreen"), () => AddTimingPoint(true));
             Item(L.Get("timing.reset"), () => OpenTimingCommand("reset"));
             Item(L.Get("timing.delete"), DeleteCurrentTiming);
             Item(L.Get("timing.resnap"), () => ResnapTimingSection(false));
+            Separator();
             Item(L.Get("timing.setup"), OpenTimingSetup);
             Item(L.Get("copier.title"), OpenHitsoundCopier);
+            Separator();
             Item(L.Get("timing.resnapAll"), () => ResnapTimingSection(true));
             Item(L.Get("timing.move"), () => OpenTimingCommand("move"));
             Item(L.Get("timing.recalculate"), () => Edit(L.Get("timing.recalculate"), () => TimingEditing.ResnapLengths(Document, divisor)));
             Item(L.Get("timing.deleteAll"), () => OpenTimingCommand("deleteAll"));
+            Separator();
             Item(L.Get("timeline.setPreviewPoint"), () => Edit(L.Get("timeline.setPreviewPoint"), () =>
                 SongSetup.Set(Document, "General", "PreviewTime",
                     ((int)Math.Clamp(Math.Round(playhead), 0, int.MaxValue)).ToString(System.Globalization.CultureInfo.InvariantCulture))));

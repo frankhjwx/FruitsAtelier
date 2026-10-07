@@ -19,6 +19,8 @@ internal static class HitsoundCopierTests
         Check(result.Document.TimingPoints.Zip(target.TimingPoints).All(p => p.First.BeatLengthMs == p.Second.BeatLengthMs), "Do not import source SV");
         var exported = OsuBeatmapWriter.Serialize(result.Document);
         var parsed = OsuBeatmapReader.Read(exported.Text);
+        var atHead=parsed.TimingPoints.Where(p=>p.TimeMs<=1000).OrderBy(p=>p.TimeMs).ThenBy(p=>p.SourceOrder).Last();
+        Check(atHead.SampleIndex==2 && atHead.SampleSet==2 && atHead.Volume==70,"Slider sample state starts at its head, not five ms later");
         var events = CatchStreamConverter.Convert(parsed).Objects;
         var resolver = new HitsoundResolver(parsed, events);
         var head = resolver.Describe(events.Single(o => o.Kind == CatchObjectKind.Fruit && o.TimeMs == 1000));
@@ -48,7 +50,7 @@ internal static class HitsoundCopierTests
         var fruitTarget=Read("100,192,1250,1,0,0:0:0:0:\n100,192,1500,1,4,0:0:0:0:");
         var svCopy=HitsoundCopier.Copy(sourceSlider,fruitTarget);
         Check(svCopy.MatchedEvents==1, "Source SV determines real tail at 1250, not 1500");
-        Check(svCopy.Document.HitsoundOverrides.Single().Sample.Additions==8, "Source SV tail sound copied");
+        Check(svCopy.Document.HitsoundOverrides.Single(o=>o.SourceId==fruitTarget.Fruits[0].Id).Sample.Additions==8, "Source SV tail sound copied");
         var stream=target.DeepClone(); stream.ImportedSliders.Clear();
         var track=new CurveTrack { StreamSnapDivisor=2 }; track.Nodes.Add(new Anchor{TimeMs=1000,X=100}); track.Nodes.Add(new Anchor{TimeMs=1500,X=200}); stream.Tracks.Add(track);
         var streamCopy=HitsoundCopier.Copy(source,stream);
@@ -70,9 +72,9 @@ internal static class HitsoundCopierTests
         var target = Read("100,192,998,1,0,0:0:0:0:\n100,192,1002,1,0,0:0:0:0:\n100,192,1003,1,0,0:0:0:0:\n100,192,1004,1,0,0:0:0:0:\n100,192,1007,1,4,0:0:0:0:");
         var result = HitsoundCopier.Copy(source,target);
         Check(result.MatchedEvents==4,"Inclusive 2ms tolerance and reject outside window");
-        Check(result.Document.HitsoundOverrides.Select(o=>o.Sample.Additions).SequenceEqual(new[]{8,8,2,2}),
+        Check(result.Document.HitsoundOverrides.Take(4).Select(o=>o.Sample.Additions).SequenceEqual(new[]{8,8,2,2}),
             "Nearest source, earlier on tie, exact match preferred");
-        Check(!result.Document.HitsoundOverrides.Any(o=>o.SourceId==target.Fruits.Last().Id),"Unmatched target retained");
+        Check(result.Document.HitsoundOverrides.Single(o=>o.SourceId==target.Fruits.Last().Id).Sample.Additions==4,"Unmatched target retained");
         var rounded = Read("100,192,1000,1,0,0:0:0:0:","315,434.782608695652,4,1,0,100,1,0");
         var authored = rounded.DeepClone(); authored.TimingPoints[0].BeatLengthMs=60000.0/138;
         Check(HitsoundCopier.TimingMatches(rounded,authored),"Tolerate BPM round-trip precision at 138 BPM");
@@ -81,6 +83,24 @@ internal static class HitsoundCopierTests
         authored=rounded.DeepClone(); authored.TimingPoints[0].TimeMs+=1;
         Check(!HitsoundCopier.TimingMatches(rounded,authored),"Object tolerance does not loosen red timing offsets");
         Check(HitsoundCopier.Copy(Read(""),target).MatchedEvents==0,"Empty source skips all events");
+        var sc2=Read("100,192,45314,1,0,0:0:0:0:\n100,192,45532,1,8,0:0:0:0:",
+            "315,434.782608695652,4,2,0,100,1,0\n45314,-166.666666666667,4,2,2,50,0,0");
+        var rain=Read("100,192,45315,2,0,L|200:192,1,100,0|0,0:0|0:0,0:0:0:0:",
+            "315,434.7826086956522,4,2,0,100,1,0\n45315,-100,4,2,0,100,0,1\n45700,-100,4,2,0,80,0,0");
+        var copied=HitsoundCopier.Copy(sc2,rain).Document;
+        Check(copied.TimingPoints.Any(p=>p.TimeMs==45314 && !p.Uninherited && p.SampleSet==2 && p.SampleIndex==2 && p.Volume==50),
+            "Copied sample green point is present in FA authoring content");
+        Check(copied.TimingPoints.Where(p=>!p.Uninherited).All(p=>p.BeatLengthMs==-100),"Source SV is not copied");
+        var kiai=copied.TimingPoints.Single(p=>p.TimeMs==45315);
+        Check(kiai.SampleSet==2 && kiai.SampleIndex==2 && kiai.Volume==50 && kiai.Effects==1,
+            "Existing Soft Kiai point is overwritten to SC2 while retaining Kiai");
+        var kiaiEnd=copied.TimingPoints.Single(p=>p.TimeMs==45700);
+        Check(kiaiEnd.SampleIndex==2 && kiaiEnd.Volume==50 && kiaiEnd.Effects==0,"Kiai end receives source samples without toggling Kiai");
+        Check(ProjectSerializer.Read(ProjectSerializer.Serialize(copied)).ContentEquals(copied),"Sample green points persist");
+        var decoded=OsuBeatmapReader.Read(OsuBeatmapWriter.Serialize(copied).Text);
+        var state=decoded.TimingPoints.Where(p=>p.TimeMs<=45315).OrderBy(p=>p.TimeMs).ThenBy(p=>p.SourceOrder).Last();
+        Check(state.SampleSet==2 && state.SampleIndex==2 && state.Volume==50,"Rain SC2 sample timing retained at 45315");
+        Check(decoded.TimingPoints.Where(p=>p.TimeMs==45315 && !p.Uninherited).Count()==1,"Update existing slider head timing without duplicate green points");
     }
 
     private static void Resources()

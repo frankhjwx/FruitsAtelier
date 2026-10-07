@@ -15,10 +15,16 @@ internal static class HitsoundCopierUiTests
                 var target=new MapDocument { IsDemo=false };
                 target.Fruits.Add(new Fruit {TimeMs=1000,X=100,OriginalLine="100,192,1000,1,8,2:3:2:70:"});
                 SongSetup.Set(target,"Metadata","Version","Target");
-                var source=target.DeepClone(); source.Fruits[0].OriginalLine="100,192,1000,1,2,3:3:3:40:";
+                var source=target.DeepClone();
+                source.TimingPoints.Add(new TimingPoint { TimeMs=0, BeatLengthMs=source.BeatLengthMs, Uninherited=true });
+                source.TimingPoints.Add(new TimingPoint { TimeMs=500, BeatLengthMs=-50, Uninherited=false, SampleSet=3, SampleIndex=3, Volume=40 });
+                source.Fruits[0].OriginalLine="100,192,1000,1,2,3:3:3:40:";
                 var ui=new Ui(); ui.LoadDocument(target); var before=ui.View.Document.DeepClone();
                 ui.View.OpenHitsoundCopier(); ui.Paint();
                 Check(ui.Canvas.Texts.Any(t=>t.Value==L.Get("copier.title")),"Copier visible");
+                Check(ui.Canvas.Texts.Single(t=>t.Value==L.Get("copier.clear")).X > ui.Canvas.Texts.Single(t=>t.Value==L.Get("copier.set")).X,
+                    "Clear is the rightmost tab");
+                Check(!ui.Canvas.Texts.Any(t=>t.Value==L.Get("copier.clearHelp") || t.Value==L.Get("copier.matchHelp")),"No explanatory text");
                 ui.Key(90,ctrl:true); Check(ui.View.HitsoundCopierVisible,"Window blocks editing shortcuts");
                 ui.ClickText(L.Get("copier.preview")); ui.ClickText(L.Get("song.ok"));
                 Check(!ui.View.HitsoundCopierVisible && ObjectFlags.Sounds(ui.View.Document,ui.View.Document.Fruits[0].Id)[0]==0,"Clear applies and closes");
@@ -27,6 +33,9 @@ internal static class HitsoundCopierUiTests
                 ui.ClickText(L.Get("copier.preview")); ui.ClickText(L.Get("copier.newDiff")); ui.ClickText(L.Get("song.ok"));
                 Check(ui.View.CaptureProject().Difficulties.Count==2,"New Diff added");
                 Check(ui.View.Document.HitsoundOverrides.Single().Sample.Additions==2,"Copied sound on new Diff");
+                ui.View.OpenTimingSetup(); ui.Paint();
+                Check(ui.View.Document.TimingPoints.Any(p=>p.TimeMs==500 && !p.Uninherited && p.SampleIndex==3),"Copied sample green appears in Timing Setup content");
+                ui.Key(27);
                 Check(ui.View.CaptureProject().Difficulties[0].Document.ContentEquals(before),"Original Diff preserved");
                 ui.View.OpenHitsoundCopier(); ui.Paint(); ui.ClickText(L.Get("copier.set")); ui.ClickText(L.Get("copier.chooseDiff")); ui.Click(ui.View.HitsoundCopierBounds.X+32,ui.View.HitsoundCopierBounds.Y+154);
                 ui.ClickText(L.Get("copier.preview")); ui.ClickText(L.Get("song.ok"));

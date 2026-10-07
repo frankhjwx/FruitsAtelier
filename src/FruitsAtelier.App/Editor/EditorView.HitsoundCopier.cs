@@ -62,21 +62,19 @@ public sealed partial class EditorView
         c.Text(L.Get("copier.title"), r.X + 22, r.Y + 16, 19, Foreground, r.Width - 80, true);
         Button(c, new(r.Right - 54, r.Y + 10, 32, 28), "\u00d7", CloseHitsoundCopier);
         float w = (r.Width - 44) / 3;
-        string[] modes = ["copier.clear", "copier.external", "copier.set"];
+        string[] modes = ["copier.external", "copier.set", "copier.clear"];
         for (int i = 0; i < 3; i++)
         {
-            int mode = i;
+            int mode = new[] { 1, 2, 0 }[i];
             Button(c, new(r.X + 22 + i*w, r.Y + 58, w - 6, 32), L.Get(modes[i]), () =>
-            { copierMode = mode; copierSourcesOpen = false; copierFiles = false; copierSource = null; copierSourceIndex = -1; copierSourceName = ""; InvalidateHitsoundPlan(); }, copierMode == i);
+            { copierMode = mode; copierSourcesOpen = false; copierFiles = false; copierSource = null; copierSourceIndex = -1; copierSourceName = ""; InvalidateHitsoundPlan(); }, copierMode == mode);
         }
-        if (copierMode == 0)
-            c.Text(L.Get("copier.clearHelp"), r.X + 22, r.Y + 112, 13, Muted, r.Width - 44);
-        else if (copierMode == 1)
+        if (copierMode == 1)
         {
             Button(c, new(r.X + 22, r.Y + 106, 180, 30), L.Get("copier.choose"), () => RequestHitsoundSource?.Invoke());
             c.Text(copierSourceName, r.X + 212, r.Y + 113, 12, Foreground, r.Width - 234);
         }
-        else
+        else if (copierMode == 2)
         {
             var available = difficulties.Select((d,i) => i).Where(i => i != activeDifficulty).ToArray();
             string name = copierSourceIndex >= 0 ? difficulties[copierSourceIndex].Name : L.Get("copier.chooseDiff");
@@ -87,17 +85,13 @@ public sealed partial class EditorView
             TimingCheck(c, new(r.X + 22, r.Y + 152, r.Width - 44, 30),
                 copierMode == 0 ? "copier.deleteFiles" : "copier.copyFiles", copierFiles,
                 () => { copierFiles = !copierFiles; InvalidateHitsoundPlan(); });
-        if (copierMode != 0)
-            c.Text(L.Get("copier.matchHelp"), r.X + 22, r.Y + 192, 12, Muted, r.Width - 44);
         Button(c, new(r.X + 22, r.Y + 226, (r.Width-50)/2, 30), L.Get(copierAllTargets && copierMode != 0 ? "copier.overwriteAll" : "copier.overwrite"), () => { copierNewDiff = false; copierNameFocused = false; }, !copierNewDiff);
         Button(c, new(r.X + 28+(r.Width-50)/2, r.Y + 226, (r.Width-50)/2, 30), L.Get("copier.newDiff"), () => copierNewDiff = true, copierNewDiff);
         if (copierMode != 0)
             TimingCheck(c, new(r.X + 22, r.Y + 264, r.Width - 44, 30), "copier.allTargets", copierAllTargets,
                 () => { copierAllTargets = !copierAllTargets; copierNameFocused = false; InvalidateHitsoundPlan(); });
         copierNameBounds = new(r.X + 22, r.Y + 302, r.Width - 44, 30);
-        if (copierNewDiff && copierAllTargets && copierMode != 0)
-            c.Text(L.Get("copier.batchNames"), r.X+22, r.Y+308, 12, Muted, r.Width-44);
-        else if (copierNewDiff)
+        if (copierNewDiff && !(copierAllTargets && copierMode != 0))
         {
             c.Fill(copierNameBounds, Surface, 4);
             DrawInputText(c, new(copierNameBounds.X+8,copierNameBounds.Y+6,copierNameBounds.Width-16,20), copierName, 13, copierNameFocused, "copier:name");

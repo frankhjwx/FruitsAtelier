@@ -887,11 +887,18 @@ collection limits and the distinction between software timing and acoustic delay
 
 ## Hitsound Copier (Beta)
 
-Open **Timing → Hitsound Copier (Beta)** for a floating dialog. Choose Clear,
+The Timing menu separates snap/metronome controls, current timing-section commands,
+setup tools, whole-map commands, and the preview point with dividers.
+
+Open **Timing → Hitsound Copier (Beta)** for a floating dialog. The tabs are external
+copy, same-set copy, and Clear from left to right. Choose Clear,
 an external osu!standard or Catch `.osu`, or another difficulty in the current set. Clear restores
 normal default samples and removes Whistle, Finish, Clap and custom object samples.
 Copy requires matching red timing times, BPM and meter (floating-point rounding is tolerated). Events match the nearest playable
-time; unmatched events on either side are silently skipped. Target SV is preserved.
+time; unmatched events on either side are silently skipped. Target SV is preserved. Source sample bank, index and volume changes appear as
+green timing points in FA and persist with the project. Copy overwrites the sample
+fields of existing timing points, including Kiai markers, while keeping target SV
+and Kiai state.
 
 External copying can include only the used hitsound files. Same-set copying shares
 existing resources. Conflicting numbered sample groups are renumbered; explicit

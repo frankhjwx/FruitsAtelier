@@ -23,7 +23,7 @@ internal static class HitsoundCopierRenderCheck
                 var r=view.HitsoundCopierBounds;
                 if(!view.HitsoundCopierVisible || r.X<0 || r.Y<0 || r.Right>width || r.Bottom>height)
                     throw new InvalidOperationException("Hitsound Copier does not fit the native window.");
-                for(int mode=0;mode<3;mode++)
+                foreach(int mode in new[]{2,0,1})
                 {
                     float x=r.X+32+mode*(r.Width-44)/3,y=r.Y+70;
                     view.PointerDown(x,y,0,false,false);view.PointerUp(x,y,0);Paint();

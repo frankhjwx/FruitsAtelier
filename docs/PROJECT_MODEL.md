@@ -50,7 +50,9 @@ Empty collections are omitted and retain the earlier schema selection.
 
 Hitsound Copier matches the nearest exported playable event within 2ms after checking matching
 red timing points. Source SV participates in event decoding. Copying leaves target
-geometry, authoring timing and SV intact. Export writes circle/stream object
+geometry, red timing and SV intact. Source sample bank, index and volume changes
+are stored as visible authoring timing points; new green points use the target SV
+and effects. Unmatched audible events retain their prior settings through overrides. Export writes circle/stream object
 samples, slider edge banks and additions, and timing sample states while retaining
 the emitted SV and effects. Unmatched target events keep their effective samples.
 Explicit filenames on legacy slider events and incompatible per-tick extra banks

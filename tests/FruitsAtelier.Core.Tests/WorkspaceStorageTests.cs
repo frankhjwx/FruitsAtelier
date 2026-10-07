@@ -82,6 +82,34 @@ internal static class WorkspaceStorageTests
         Check(database.Search("").Count == 1, "external source indexed");
         database.ClearDerivedCache(); Check(database.Search("").Count == 0, "derived index cleared");
         database.Scan(); Check(database.Search("").Count == 1 && File.Exists(map), "source registration survives cache rebuilding");
+        TransientSidecars(Path.Combine(root,"transient"));
     }
+    private static void TransientSidecars(string root)
+    {
+        Directory.CreateDirectory(root);
+        File.WriteAllBytes(Path.Combine(root,"library.db"),new byte[4096]);
+        using var stop = new CancellationTokenSource();
+        var churn = Task.Run(() =>
+        {
+            while (!stop.IsCancellationRequested)
+                foreach (string name in new[]{"library.db-shm","library.db-wal"})
+                {
+                    string path=Path.Combine(root,name);
+                    File.WriteAllBytes(path,new byte[128]); File.Delete(path);
+                }
+        });
+        try
+        {
+            for(int i=0;i<100;i++)
+            {
+                var report=WorkspaceStorage.Inspect(root);
+                Check(report.TotalBytes>=4096 && report.TotalBytes==report.Categories.Sum(c=>c.Bytes)
+                    && report.TotalBytes==report.Folders.Sum(f=>f.Bytes),"Transient sidecars do not break accounting");
+                if(i%10==0) Check(WorkspaceStorage.Clean(root).TotalBytes>=4096,"Cleanup survives disappearing SQLite sidecars");
+            }
+        }
+        finally { stop.Cancel(); churn.GetAwaiter().GetResult(); }
+    }
+
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
 }
