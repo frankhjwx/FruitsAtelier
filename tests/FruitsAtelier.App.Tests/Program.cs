@@ -8,11 +8,13 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
 if (args.Contains("--hitsound-copier")) { HitsoundCopierUiTests.Run(); Console.WriteLine("PASS Hitsound Copier UI"); return 0; }
+#if WINDOWS
 if (args.Length == 2 && args[0] == "--audio-settings-restart-native-check")
 {
     try { AudioSettingsRestartNativeTests.Run(args[1]); return 0; }
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
+#endif
 if (args.Contains("--audio-diagnostics-settings-check"))
 {
     try { AudioDiagnosticSettingsTests.Run(); SettingsPreferencesTests.Run(); SettingsTests.Layout(); Console.WriteLine("PASS Audio diagnostics and settings checks"); return 0; }

@@ -1,3 +1,4 @@
+#if WINDOWS
 using System.Diagnostics;
 using System.Text.Json;
 using FruitsAtelier.App.Platform;
@@ -32,3 +33,4 @@ internal static class AudioSettingsRestartNativeTests
         }
     }
 }
+#endif
