@@ -64,8 +64,13 @@ public sealed partial class EditorView
 
     private void SkipTestplayIntro()
     {
+        bool startAudio = testplay?.PreparingAudio == true;
         if (!TestplaySkipVisible || testplay?.SkipIntro(testplayGameplayStart - 1000) != true) return;
-        if (testplayWithAudio) RequestSeek?.Invoke(testplayGameplayStart - 1000);
+        if (testplayWithAudio && testplayGameplayStart >= 1000)
+        {
+            RequestSeek?.Invoke(testplayGameplayStart - 1000);
+            if (startAudio) RequestTogglePlayback?.Invoke();
+        }
         PlayTestplayMenuSound("menuhit");
         AdvanceTestplay();
     }

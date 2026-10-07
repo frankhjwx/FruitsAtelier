@@ -44,6 +44,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Testplay opening preparation and audio boundary", TestplayTests.OpeningPreparation),
     ("Held quick retry uses 300 ms, cancels on release and retries once while paused", FeedbackInteractionTests.Retry),
     ("Previous-save rollback requires history, confirmation and supports undo", FeedbackInteractionTests.PreviousSave),
     ("Timeline navigation and history reveal offscreen changes", FeedbackInteractionTests.Navigation),

@@ -27,9 +27,9 @@ internal static class TestplayStartupDelayTests
         int sounds = 0;
         ui.View.RequestHitsound = _ => sounds++;
         ui.View.StartTestplay();
-        Check(ui.View.IsTestplaying && ui.View.PlayheadMs == 0, "Testplay did not start immediately from the lead-in position.");
+        Check(ui.View.IsTestplaying && ui.View.PlayheadMs == -1000, "Testplay did not provide two seconds before the first note.");
         clock.Advance(750); ui.Paint();
-        Check(ui.View.PlayheadMs == 750 && sounds == 0, "Lead-in did not advance gameplay before the selected position.");
+        Check(ui.View.PlayheadMs == -250 && sounds == 0, "Preparation did not advance gameplay before audio zero.");
         ui.Key(112);
         Check(!ui.View.IsTestplaying && ui.View.PlayheadMs == 500, "F1 did not return to the selected position.");
         ui.View.KeyUp(112);

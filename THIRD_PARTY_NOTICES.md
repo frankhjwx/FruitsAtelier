@@ -34,8 +34,8 @@ The editor owns its models, curve editing and transactions. Catch conversion and
 
 ## Catch algorithms and display calculations
 
-Testplay Skip, pause/resume and background dim behavior references
-`SkipOverlay.cs`, `MasterGameplayClockContainer.cs`, `PauseOverlay.cs`,
+Testplay opening preparation, Skip, pause/resume and background dim behavior references
+`DrawableRuleset.cs`, `SkipOverlay.cs`, `MasterGameplayClockContainer.cs`, `PauseOverlay.cs`,
 `GameplayMenuOverlay.cs`, `LegacyCursor.cs`, `LegacyCursorTrail.cs`,
 `CursorTrail.cs`, `DialogButton.cs`, `BreakTracker.cs`,
 `BreakOverlay.cs`, `BreakPeriod.cs`, `UserDimContainer.cs` and

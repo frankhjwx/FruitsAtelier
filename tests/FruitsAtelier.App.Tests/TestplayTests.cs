@@ -3,6 +3,84 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class TestplayTests
 {
+    public static void OpeningPreparation()
+    {
+        foreach (double first in new[] { 0d, 300, 2000, 5000 })
+        foreach (bool audio in new[] { false, true })
+        {
+            var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
+            var map = new MapDocument();
+            map.Fruits.AddRange([new Fruit { TimeMs = first, X = 256 }, new Fruit { TimeMs = 10000, X = 256 }]);
+            ui.LoadDocument(map);
+            ui.View.UpdateTransport(0, 20000, audio, false, false, null, null);
+            int starts = 0; var seeks = new List<double>();
+            ui.View.RequestSeek = seeks.Add;
+            ui.View.RequestTogglePlayback = () => starts++;
+            ui.View.StartTestplay();
+            double start = Math.Min(0, first - 2000);
+            Near(start, ui.View.PlayheadMs);
+            if (start < 0)
+            {
+                Check(starts == 0, "Preparation keeps music stopped");
+                ui.Key(39); clock.Advance(100); ui.View.KeyUp(39); ui.Paint();
+                Check(ui.View.TestplayCatcherX > 256, "Preparation accepts movement");
+                Near(start + 100, ui.View.PlayheadMs);
+                ui.Key('P', ctrl: true); ui.View.KeyUp('P');
+                clock.Advance(1000); ui.Paint(); Near(start + 100, ui.View.PlayheadMs);
+                ui.Key('P', ctrl: true); ui.View.KeyUp('P');
+                clock.Advance(600); ui.Paint(); Near(start + 100, ui.View.PlayheadMs);
+                ui.View.SetPlaybackSpeed(1.5);
+                clock.Advance((-start - 100) / 1.5 + 1); ui.Paint(); Near(audio ? 0 : 1.5, ui.View.PlayheadMs);
+                if (audio)
+                {
+                    Check(starts == 1 && seeks.SequenceEqual([0d]), "Music starts once at zero");
+                    clock.Advance(200); ui.Paint(); Near(0, ui.View.PlayheadMs);
+                    ui.View.UpdateTransport(1, 20000, true, true, false, null, null);
+                    Check(ui.View.PlayheadMs >= 1 && ui.View.PlayheadMs < 10, "Device progress releases the boundary");
+                }
+                ui.Key(82, ctrl: true); ui.View.KeyUp(82); Near(start, ui.View.PlayheadMs);
+            }
+            ui.View.StopTestplay();
+            Check(ui.View.Document.ContentEquals(map), "Preparation preserves content");
+        }
+        var settings = new Ui(timeProvider: new ManualTime());
+        var leadMap = new MapDocument(); leadMap.Fruits.Add(new Fruit { TimeMs = 300, X = 256 });
+        var general = new OsuSection { Name = "General" }; general.Lines.Add("AudioLeadIn: 4000");
+        leadMap.OriginalSections.Add(general); settings.LoadDocument(leadMap);
+        settings.View.StartTestplay(); Near(-3700, settings.View.PlayheadMs); settings.View.StopTestplay();
+        settings.View.LibrarySettings.TestplayStartupDelaySeconds = 5;
+        settings.View.StartTestplay(); Near(-4700, settings.View.PlayheadMs); settings.View.StopTestplay();
+
+        var driverClock = new ManualTime();
+        var note = new ConvertedCatchObject(Guid.NewGuid(), 0, CatchObjectKind.Fruit, 0, 256, 256, 256, 0);
+        var driver = new CatchTestplaySession(new CatchTestplay([note, note with { TimeMs = 10000 }], 5, -4000),
+            new(-4000, 1, 0, false), -4000, true, false, 37, 39, 16, driverClock, 5, []);
+        Check(driver.SkipIntro(-3000), "A negative skip target retains preparation");
+        driver.UpdateAudio(9000, 0, 20000, true, true, false, false);
+        Near(-3000, driver.Capture().TimeMs);
+        driverClock.Advance(3000); driver.Tick();
+        Near(0, driver.Capture().TimeMs);
+        Check(driver.Combo == 0 && driver.TryStartAudio() && !driver.TryStartAudio(),
+            "Worker ticks hold the zero-time note and expose one audio request");
+        driver.UpdateAudio(9000, 0, 20000, true, true, false, false);
+        Near(0, driver.Capture().TimeMs);
+        driverClock.Advance(10);
+        driver.UpdateAudio(1, 3010, 20000, true, true, false, false);
+        Check(driver.Combo == 1, "Fresh audio catches the zero-time note");
+
+        var skipUi = new Ui(timeProvider: new ManualTime());
+        var skipMap = new MapDocument(); skipMap.Fruits.Add(new Fruit { TimeMs = 5000, X = 256 });
+        var skipGeneral = new OsuSection { Name = "General" }; skipGeneral.Lines.Add("AudioLeadIn: 6000");
+        skipMap.OriginalSections.Add(skipGeneral); skipUi.LoadDocument(skipMap);
+        skipUi.View.UpdateTransport(0, 20000, true, false, false, null, null);
+        int skipStarts = 0; double skipSeek = -1;
+        skipUi.View.RequestSeek = value => skipSeek = value;
+        skipUi.View.RequestTogglePlayback = () => skipStarts++;
+        skipUi.View.StartTestplay(); skipUi.Key(32);
+        Check(skipStarts == 1 && skipSeek == 2000, "Skipping preparation into positive time starts music");
+        skipUi.View.StopTestplay();
+    }
+
     public static void RetryRendering()
     {
         foreach (bool paused in new[] { false, true })
@@ -214,7 +292,7 @@ internal static class TestplayTests
         ui.LoadDocument(map); var snapshot = map.DeepClone(); int sounds = 0;
         ui.View.RequestHitsound = _ => sounds++;
         ui.View.StartTestplay();
-        clock.Advance(500); ui.Paint();
+        clock.Advance(1500); ui.Paint();
         ui.Key(9); ui.Key(9);
         Check(ui.View.TestplayAutoplay && ui.View.PlayheadMs == 500, "Tab enables autoplay once without seeking");
         clock.Advance(100); ui.Paint();
@@ -259,7 +337,7 @@ internal static class TestplayTests
         colours.Lines.Add("Combo1 : 255,0,0"); colours.Lines.Add("Combo2 : 0,255,0"); colours.Lines.Add("Combo3 : 0,0,255");
         map.OriginalSections.Add(colours);
         ui.LoadDocument(map); ui.View.StartTestplay();
-        clock.Advance(1000); ui.Paint();
+        clock.Advance(2000); ui.Paint();
         Check(ui.Canvas.Circles.Any(c => c.Color == 0x99FF99 && c.Filled), "first combo keeps the beatmap hue in the brighter fallback palette");
         clock.Advance(1000); ui.Paint();
         Check(ui.Canvas.Circles.Count(c => c.Color == 0x99FF99 && c.Filled) >= 2, "objects in one combo retain their colour on the plate");
@@ -455,7 +533,7 @@ internal static class TestplayTests
         ui.View.LoadDocument(new MapDocument()); ui.Key(116); Check(!ui.View.IsTestplaying, "empty map exits immediately");
         ui.View.LoadDocument(map); ui.View.StartTestplay();
         Check(ui.View.IsTestplaying, "maps without audio use a silent clock");
-        clock.Advance(25); ui.Paint();
+        clock.Advance(1025); ui.Paint();
         Check(ui.View.PlayheadMs > 0 && ui.View.IsTestplaying, "silent clock advances through gaps");
         ui.View.StopTestplay(); Near(0, ui.View.PlayheadMs);
     }
@@ -664,7 +742,7 @@ internal static class TestplayTests
             new Fruit { TimeMs = 4000, X = 0 }, new Fruit { TimeMs = 10000, X = 256 }]);
         ui.LoadDocument(map); ui.View.StartTestplay(); ui.Paint();
         Check(ui.Canvas.Texts.All(t => !int.TryParse(t.Value, out _)), "testplay starts without a combo counter");
-        clock.Advance(1000); ui.Paint();
+        clock.Advance(2000); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value == "1") && ui.Canvas.Texts.All(t => !t.Value.EndsWith('x') || !int.TryParse(t.Value[..^1], out _)),
             "legacy combo uses digits without a multiplier suffix");
         clock.Advance(400); ui.Paint();

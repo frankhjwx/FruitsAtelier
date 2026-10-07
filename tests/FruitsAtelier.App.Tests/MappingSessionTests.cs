@@ -230,7 +230,7 @@ internal static class MappingSessionTests
         var ui = new Ui(timeProvider: clock); var map = Map();
         map.Fruits.AddRange([new() { TimeMs = 100, X = 256 }, new() { TimeMs = 5000, X = 256 }]);
         ui.LoadDocument(map); ui.Key(36); ui.View.LibrarySettings.TestplayDashKey = 'D';
-        ui.View.StartTestplay(); clock.Advance(120); ui.Paint();
+        ui.View.StartTestplay(); clock.Advance(2020); ui.Paint();
         Check(ui.View.TestplayCombo == 1, "Combo fixture did not catch.");
         clock.Advance(300); ui.Paint();
         Check(ui.Canvas.Texts.Any(t => t.Value == "1"), "Visible Combo counter missing.");
