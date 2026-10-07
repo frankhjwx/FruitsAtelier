@@ -5,7 +5,10 @@ namespace FruitsAtelier.Core;
 
 public sealed record HitSampleSettings(int NormalSet = 1, int AdditionSet = 1, int Index = 0,
     int Volume = 100, int Additions = 0, string FileName = "");
-public sealed record EventHitsound(Guid SourceId, int EventIndex, HitSampleSettings Sample, int EdgeIndex = 0);
+[Flags]
+public enum InheritedSampleFields { None = 0, NormalSet = 1, AdditionSet = 2, Index = 4, Volume = 8, All = 15 }
+public sealed record EventHitsound(Guid SourceId, int EventIndex, HitSampleSettings Sample, int EdgeIndex = 0,
+    InheritedSampleFields InheritedFields = InheritedSampleFields.All);
 public sealed record HitsoundCopyResult(MapDocument Document, int MatchedEvents);
 
 public static class HitsoundCopier
@@ -58,7 +61,7 @@ public static class HitsoundCopier
         var targetEvents = OsuBeatmapWriter.Serialize(target, compensateTinyDroplets).PlayableObjects;
         var sourceResolver = new HitsoundResolver(source, sourceEvents);
         var samples = sourceEvents.Where(Audible).GroupBy(o => o.TimeMs)
-            .OrderBy(g => g.Key).Select(g => (Time: g.Key, Sample: sourceResolver.Describe(g.First()))).ToArray();
+            .OrderBy(g => g.Key).Select(g => (Time: g.Key, Sample: sourceResolver.Describe(g.First()), Fields: sourceResolver.InheritedFields(g.First()))).ToArray();
         var times = samples.Select(s => s.Time).ToArray();
         var result = target.DeepClone();
         CopySampleTiming(source, target, result);
@@ -71,16 +74,57 @@ public static class HitsoundCopier
         foreach (var item in targetEvents.Where(Audible))
             if (NearestEvent(times, item.TimeMs) is var index && index >= 0)
             {
-                updates[(item.SourceId, item.EventIndex)] = new(item.SourceId, item.EventIndex, samples[index].Sample, edgeIndices.GetValueOrDefault((item.SourceId,item.EventIndex), -1));
+                var sample = samples[index].Sample;
+                var fields = samples[index].Fields;
+                if (item.Kind == CatchObjectKind.Droplet)
+                {
+                    fields |= InheritedSampleFields.NormalSet | InheritedSampleFields.Index | InheritedSampleFields.Volume;
+                    if (sample.AdditionSet == sample.NormalSet) fields |= InheritedSampleFields.AdditionSet;
+                }
+                updates[(item.SourceId, item.EventIndex)] = new(item.SourceId, item.EventIndex, sample, edgeIndices.GetValueOrDefault((item.SourceId,item.EventIndex), -1), fields);
                 count++;
             }
             else
                 updates[(item.SourceId, item.EventIndex)] = new(item.SourceId, item.EventIndex,
-                    targetResolver.Describe(item), edgeIndices.GetValueOrDefault((item.SourceId,item.EventIndex), -1));
+                    targetResolver.Describe(item), edgeIndices.GetValueOrDefault((item.SourceId,item.EventIndex), -1), targetResolver.InheritedFields(item));
         result.HitsoundOverrides.Clear(); result.HitsoundOverrides.AddRange(updates.Values);
+        MaterializeInheritedSamples(result, targetEvents);
         // Validate the actual legacy representation before exposing a successful copy.
         _ = OsuBeatmapWriter.Serialize(result, compensateTinyDroplets);
         return new(result, count);
+    }
+
+    private static void MaterializeInheritedSamples(MapDocument result, IReadOnlyList<ConvertedCatchObject> events)
+    {
+        var overrides = result.HitsoundOverrides.ToDictionary(o => (o.SourceId, o.EventIndex));
+        var lookup = new TimingMap.Lookup(result);
+        int order = result.TimingPoints.Select(p => p.SourceOrder).DefaultIfEmpty(-1).Max() + 1;
+        foreach (var item in events.Where(Audible).OrderBy(o => o.TimeMs))
+        {
+            var copied = overrides[(item.SourceId, item.EventIndex)];
+            var sample = copied.Sample; var fields = copied.InheritedFields;
+            var points = result.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
+            var prior = points.LastOrDefault(p => p.TimeMs <= item.TimeMs + 5) ?? points.FirstOrDefault();
+            int bank = prior?.SampleSet is >= 1 and <= 3 ? prior.SampleSet : 1;
+            int index = prior?.SampleIndex ?? 0, volume = prior?.Volume ?? 100;
+            int desiredBank = fields.HasFlag(InheritedSampleFields.NormalSet) ? sample.NormalSet : bank;
+            int desiredIndex = fields.HasFlag(InheritedSampleFields.Index) ? sample.Index : index;
+            int desiredVolume = fields.HasFlag(InheritedSampleFields.Volume) ? sample.Volume : volume;
+            if ((bank, index, volume) == (desiredBank, desiredIndex, desiredVolume)) continue;
+            double time = Math.Floor(item.TimeMs);
+            var point = points.LastOrDefault(p => p.TimeMs == time);
+            if (point is null)
+            {
+                var state = lookup.At(time);
+                point = new TimingPoint { TimeMs = time, Uninherited = false,
+                    BeatLengthMs = state.GenerateTicks ? -100 / state.SliderVelocityMultiplier : double.NaN,
+                    Meter = state.Meter, Effects = points.LastOrDefault(p => p.TimeMs <= time)?.Effects ?? 0, SourceOrder = order++ };
+                result.TimingPoints.Add(point);
+            }
+            point.SampleSet = desiredBank; point.SampleIndex = desiredIndex; point.Volume = desiredVolume; point.OriginalLine = null;
+        }
+        var ordered = result.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
+        result.TimingPoints.Clear(); result.TimingPoints.AddRange(ordered);
     }
 
     private static void CopySampleTiming(MapDocument source, MapDocument target, MapDocument result)
@@ -191,8 +235,7 @@ public static class HitsoundCopier
                 var item = standalone.GetValueOrDefault(line.SourceId)?.GetValueOrDefault(Math.Truncate(line.Time)) ?? items[0];
                 var sample = resolver.Describe(item);
                 Array.Resize(ref p, Math.Max(p.Length, 6));
-                p[4] = sample.Additions.ToString(CultureInfo.InvariantCulture); p[5] = SampleText(sample);
-                sliderEvents.Add((item, sample));
+                p[4] = sample.Additions.ToString(CultureInfo.InvariantCulture); p[5] = SampleText(resolver.AuthoredSample(item));
             }
             else
             {
@@ -210,7 +253,7 @@ public static class HitsoundCopier
                 p[4] = extra.Length == 0 ? "0" : "2";
                 p[10] = extra.Length == 0 ? "0:0:0:0:" : $"0:{extra[0]}:0:0:";
                 p[8] = string.Join('|', edges.Select(o => o.Sample.Additions));
-                p[9] = string.Join('|', edges.Select(o => $"{o.Sample.NormalSet}:{o.Sample.AdditionSet}"));
+                p[9] = string.Join('|', edges.Select(o => { var authored = resolver.AuthoredSample(o.Event); return $"{authored.NormalSet}:{authored.AdditionSet}"; }));
                 sliderEvents.AddRange(samples);
             }
             lines[i] = (line.Time, line.Order, line.SourceId, string.Join(',', p));
@@ -230,20 +273,21 @@ public static class HitsoundCopier
                 var point = original[++priorIndex];
                 active = (point.SampleSet is >=1 and <=3 ? point.SampleSet : defaultBank,point.SampleIndex,point.Volume);
             }
-            var desired = (sample.NormalSet,sample.Index,sample.Volume);
+            int bank = resolver.InheritedFields(item).HasFlag(InheritedSampleFields.NormalSet) ? sample.NormalSet : active.Bank;
+            var desired = (bank,sample.Index,sample.Volume);
             if (active == desired) continue;
             active = desired;
             var prior = priorIndex >= 0 ? original[priorIndex] : null;
             if (prior is not null && prior.TimeMs == time)
             {
-                prior.SampleSet = sample.NormalSet; prior.SampleIndex = sample.Index; prior.Volume = sample.Volume;
+                prior.SampleSet = bank; prior.SampleIndex = sample.Index; prior.Volume = sample.Volume;
                 prior.OriginalLine = null;
                 continue;
             }
             timing.Add(new TimingPoint { TimeMs = time, Uninherited = false,
                 BeatLengthMs = state.GenerateTicks ? -100 / state.SliderVelocityMultiplier : double.NaN,
                 Meter = state.Meter, Effects = prior?.Effects ?? 0,
-                SampleSet = sample.NormalSet, SampleIndex = sample.Index, Volume = sample.Volume, SourceOrder = int.MaxValue });
+                SampleSet = bank, SampleIndex = sample.Index, Volume = sample.Volume, SourceOrder = int.MaxValue });
         }
         var ordered = timing.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
         timing.Clear(); timing.AddRange(ordered);

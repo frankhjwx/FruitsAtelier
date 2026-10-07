@@ -207,6 +207,7 @@ public static class OsuBeatmapReader
         if (document.SliderMultiplierOverride is { } sv && (!double.IsFinite(sv) || sv < SliderMultiplierEditing.Minimum || sv > SliderMultiplierEditing.Maximum))
             throw new InvalidDataException(L.Get("timing.sliderMultiplierRange"));
         if (document.HitsoundOverrides.Any(o => o is null || o.EventIndex < 0 || o.Sample is null
+            || (o.InheritedFields & ~InheritedSampleFields.All) != 0
             || o.Sample.NormalSet is < 1 or > 3 || o.Sample.AdditionSet is < 1 or > 3 || o.Sample.Index < 0
             || o.Sample.Volume is < 0 or > 100 || (o.Sample.Additions & ~14) != 0
             || o.Sample.FileName is null || Path.IsPathRooted(o.Sample.FileName)

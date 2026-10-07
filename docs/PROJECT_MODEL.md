@@ -2,7 +2,7 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides use schema 13 (single difficulty) or 14 (multi-difficulty). All fourteen schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides with timing inheritance use schema 15 (single difficulty) or 16 (multi-difficulty). Readers also accept the earlier schema 13/14 overrides. All sixteen schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
 
 ## Authoritative and derived data
 
@@ -52,9 +52,13 @@ Hitsound Copier matches the nearest exported playable event within 2ms after che
 red timing points. Source SV participates in event decoding. Copying leaves target
 geometry, red timing and SV intact. Source sample bank, index and volume changes
 are stored as visible authoring timing points; new green points use the target SV
-and effects. Unmatched audible events retain their prior settings through overrides. Export writes circle/stream object
+and effects. Unmatched audible events retain their initial sound through sample timing points. Export writes circle/stream object
 samples, slider edge banks and additions, and timing sample states while retaining
-the emitted SV and effects. Unmatched target events keep their effective samples.
+the emitted SV and effects. Unmatched target events keep their sound at copy time and subsequently follow their timing inheritance.
+Copied samples retain which fields inherit timing. Playback resolves those fields
+from current timing at each event; export writes zero for inherited object/edge
+fields. Explicit object-specific samples remain intact. Projects store this
+inheritance in schemas 15/16; earlier copied samples default to timing inheritance.
 Explicit filenames on legacy slider events and incompatible per-tick extra banks
 are rejected during preview because the legacy representation cannot encode them.
 

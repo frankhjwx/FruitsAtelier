@@ -34,8 +34,27 @@ internal static class HitsoundCopierRenderCheck
                 view.KeyDown(27,false,false);Paint();
                 if(view.HitsoundCopierVisible || !view.Document.ContentEquals(map))
                     throw new InvalidOperationException("Cancelling Hitsound Copier changed map content.");
+                CheckTimelineEdges(view,Paint);
             }
         }
         finally{L.SetLanguage(language);}
     }
+    private static void CheckTimelineEdges(EditorView view,Action paint)
+    {
+        var map=OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,2,0,L|200:192,3,100,0|0|0|0,0:0|0:0|0:0|0:0,0:0:0:0:");
+        view.LoadDocument(map); view.UpdateTransport(1750,10000,false,false,false,null,null); paint();
+        var timeline=view.ObjectTimelineBounds; var id=map.ImportedSliders.Single().Id;
+        void Click(float x,float y) { view.PointerDown(x,y,0,false,false);view.PointerUp(x,y,0);paint(); }
+        for(int edge=0;edge<=3;edge++)
+        {
+            float x=timeline.X+(float)((1000+500*edge-view.ObjectTimelineStartMs)*view.ObjectTimelinePixelsPerMs);
+            Click(x,timeline.Y+27);
+            var clap=view.AssistButtonBounds[3]; Click(clap.X+clap.Width/2,clap.Y+clap.Height/2);
+            for(int other=0;other<=3;other++)
+                if(ObjectFlags.Sounds(view.Document,id,other).Single()!=(edge==other ? 8 : 0))
+                    throw new InvalidOperationException("Native timeline edge sound selection changed another edge.");
+            view.KeyDown('Z',true,false);paint();
+        }
+    }
+
 }

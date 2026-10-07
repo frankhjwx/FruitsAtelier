@@ -62,8 +62,59 @@ internal static class HitsoundCopierTests
         Check(broken.Fruits.Select(f=>ObjectFlags.Sounds(broken,f.Id)[0]).SequenceEqual(new[]{8,0,2,8}),"Breaking streams preserves copied sound flags");
         ObjectFlags.SetSound(result.Document,result.Document.ImportedSliders[0].Id,8,false,0);
         Check(!ObjectFlags.Sounds(result.Document,result.Document.ImportedSliders[0].Id,0).Any(s=>(s&8)!=0),"Existing sound controls update copied samples");
+        TimingEdits();
         Tolerance();
         Resources();
+    }
+
+    private static void TimingEdits()
+    {
+        var source=Read("100,192,1000,1,0,0:0:0:0:\n100,192,1250,1,8,0:0:0:0:\n100,192,1500,1,0,0:0:0:0:",
+            "0,500,4,2,2,50,1,0");
+        var target=Read("100,192,1000,2,0,L|200:192,1,100,0|0,0:0|0:0,0:0:0:0:");
+        var history=new EditorHistory(HitsoundCopier.Copy(source,target).Document);
+        var before=history.Document.DeepClone();
+        history.Begin("SC1");
+        history.Document.TimingPoints.Add(new TimingPoint { TimeMs=1250,BeatLengthMs=-100,Uninherited=false,SampleSet=2,SampleIndex=1,Volume=70,SourceOrder=10 });
+        history.Commit();
+        void CheckTick(MapDocument doc,int index,int volume)
+        {
+            var events=CatchStreamConverter.Convert(doc).Objects; var tick=events.Single(o=>o.Kind==CatchObjectKind.Droplet);
+            var sample=new HitsoundResolver(doc,events).Describe(tick);
+            Check(sample.Index==index && sample.Volume==volume,"Manual sample green overrides copied tick");
+        }
+        CheckTick(history.Document,1,70);
+        var copiedTick = history.Document.HitsoundOverrides.Single(o => o.EdgeIndex == -1);
+        Check(copiedTick.Sample.Index == 2, "Editing timing does not rewrite a cached resolved value");
+        var preview = history.Document.DeepClone();
+        var green = preview.TimingPoints.Single(p => p.TimeMs == 1250);
+        green.SampleSet = 3; green.SampleIndex = 3; green.Volume = 25;
+        CheckTick(preview,3,25);
+        var previewEvents = CatchStreamConverter.Convert(preview).Objects;
+        Check(new HitsoundResolver(preview,previewEvents).Describe(previewEvents.Single(o=>o.Kind==CatchObjectKind.Droplet)).NormalSet==3,
+            "Copied tick bank resolves current timing without a history commit");
+        CheckTick(ProjectSerializer.Read(ProjectSerializer.Serialize(preview)),3,25);
+        CheckTick(ProjectSerializer.ReadProject(ProjectSerializer.Serialize(preview)).Difficulties[0].Document,3,25);
+        string legacy = ProjectSerializer.Serialize(before).Replace("\"SchemaVersion\": 15", "\"SchemaVersion\": 13");
+        legacy = System.Text.RegularExpressions.Regex.Replace(legacy, @",\s*""InheritedFields"":\s*\d+", "");
+        var restored = ProjectSerializer.Read(legacy);
+        restored.TimingPoints.Add(new TimingPoint { TimeMs=1250,Uninherited=false,BeatLengthMs=-100,SampleSet=2,SampleIndex=1,Volume=70 });
+        CheckTick(restored,1,70);
+        CheckTick(OsuBeatmapReader.Read(OsuBeatmapWriter.Serialize(history.Document).Text),1,70);
+        history.Undo(); Check(history.Document.ContentEquals(before),"Sample timing undo restores copied overrides"); CheckTick(history.Document,2,50);
+        history.Redo(); CheckTick(history.Document,1,70);
+        var persisted = OsuBeatmapReader.Read(OsuBeatmapWriter.Serialize(history.Document).Text);
+        persisted.TimingPoints.Single(p=>p.TimeMs==1250).SampleIndex=3;
+        CheckTick(persisted,3,70);
+        var edgePreview = history.Document.DeepClone();
+        var lastGreen = edgePreview.TimingPoints.Single(p=>p.TimeMs==1250);
+        lastGreen.SampleSet=3; lastGreen.SampleIndex=3; lastGreen.Volume=25;
+        var edgeEvents=CatchStreamConverter.Convert(edgePreview).Objects;
+        var tailSample=new HitsoundResolver(edgePreview,edgeEvents).Describe(edgeEvents.Single(o=>o.Kind==CatchObjectKind.Fruit && o.TimeMs==1500));
+        Check(tailSample.NormalSet==3 && tailSample.AdditionSet==3 && tailSample.Index==3 && tailSample.Volume==25,
+            "Copied inherited tail follows every current sample timing field");
+        CheckTick(OsuBeatmapReader.Read(OsuBeatmapWriter.Serialize(edgePreview).Text),3,25);
+        history.Begin("Delete SC1"); history.Document.TimingPoints.RemoveAll(p=>p.TimeMs==1250); history.Commit(); CheckTick(history.Document,2,50);
     }
 
     private static void Tolerance()

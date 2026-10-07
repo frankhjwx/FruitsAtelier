@@ -203,6 +203,7 @@ var tests = new (string Name, Action Run)[]
     ("Dash and hyperdash catcher effects follow map time", PreviewSidebarTests.DashEffects),
     ("Selected legacy slider long press offers an undoable conversion", PreviewSidebarTests.LegacyConversion),
     ("Hard Rock preview applies deterministic positions without changing source", PreviewSidebarTests.HardRock),
+    ("Timeline slider heads, tails and reverse points select independent sounds", ObjectTimelineTests.EdgeSounds),
     ("Timeline tails adjust reverses with undo and cancellation", ObjectTimelineTests.TailReverses),
     ("Timeline reverse circles follow spans, tail edits and undo", ObjectTimelineTests.ReverseMarkers),
     ("Timeline chronological stacking includes numbers and matches selection", ObjectTimelineTests.Stacking),

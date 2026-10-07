@@ -316,7 +316,7 @@ internal static class AssistToolsTests
         ui.Key('Z', ctrl: true);
         ui.View.SetModifiers(false, false);
         var timeline = ui.View.ObjectTimelineBounds;
-        float x = timeline.X + (float)((1000 - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+        float x = timeline.X + (float)((1250 - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
         ui.Click(x, timeline.Y + 20); ui.Key('W');
         Check(ObjectFlags.Sounds(ui.View.Document, id).SequenceEqual(new[] { 2, 6, 10 }), "Whole-slider toggle failed");
         ui.Key('L'); var before = ui.View.Document.DeepClone(); ui.Key(187, ctrl: true);
