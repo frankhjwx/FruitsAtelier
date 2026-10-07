@@ -45,7 +45,10 @@ public static class HitsoundCopier
             ? d.TimingPoints.Where(p => p.Uninherited).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder)
                 .Select(p => (p.TimeMs, p.BeatLengthMs, p.Meter)).ToArray()
             : [(d.TimingOffsetMs, d.BeatLengthMs, 4)];
-        return Reds(source).SequenceEqual(Reds(target));
+        var a = Reds(source); var b = Reds(target);
+        return a.Length == b.Length && a.Zip(b).All(p =>
+            Math.Abs(p.First.Item1 - p.Second.Item1) <= 1e-7
+            && Math.Abs(p.First.Item2 - p.Second.Item2) <= 1e-7 && p.First.Item3 == p.Second.Item3);
     }
 
     public static HitsoundCopyResult Copy(MapDocument source, MapDocument target, bool compensateTinyDroplets = true)
@@ -55,7 +58,8 @@ public static class HitsoundCopier
         var targetEvents = OsuBeatmapWriter.Serialize(target, compensateTinyDroplets).PlayableObjects;
         var sourceResolver = new HitsoundResolver(source, sourceEvents);
         var samples = sourceEvents.Where(Audible).GroupBy(o => o.TimeMs)
-            .ToDictionary(g => g.Key, g => sourceResolver.Describe(g.First()));
+            .OrderBy(g => g.Key).Select(g => (Time: g.Key, Sample: sourceResolver.Describe(g.First()))).ToArray();
+        var times = samples.Select(s => s.Time).ToArray();
         var result = target.DeepClone();
         var updates = result.HitsoundOverrides.ToDictionary(o => (o.SourceId, o.EventIndex));
         var edgeIndices = targetEvents.Where(o => o.Kind == CatchObjectKind.Fruit).GroupBy(o => o.SourceId)
@@ -63,15 +67,27 @@ public static class HitsoundCopier
             .ToDictionary(o => (o.SourceId,o.EventIndex), o => o.Edge);
         int count = 0;
         foreach (var item in targetEvents.Where(Audible))
-            if (samples.TryGetValue(item.TimeMs, out var sample))
+            if (NearestEvent(times, item.TimeMs) is var index && index >= 0)
             {
-                updates[(item.SourceId, item.EventIndex)] = new(item.SourceId, item.EventIndex, sample, edgeIndices.GetValueOrDefault((item.SourceId,item.EventIndex), -1));
+                updates[(item.SourceId, item.EventIndex)] = new(item.SourceId, item.EventIndex, samples[index].Sample, edgeIndices.GetValueOrDefault((item.SourceId,item.EventIndex), -1));
                 count++;
             }
         result.HitsoundOverrides.Clear(); result.HitsoundOverrides.AddRange(updates.Values);
         // Validate the actual legacy representation before exposing a successful copy.
         _ = OsuBeatmapWriter.Serialize(result, compensateTinyDroplets);
         return new(result, count);
+    }
+
+    // Equal-distance candidates use the earlier event; exact matches always win.
+    internal static int NearestEvent(double[] times, double time)
+    {
+        int index = Array.BinarySearch(times, time);
+        if (index >= 0) return index;
+        int right = ~index, left = right - 1;
+        if (left < 0) index = right;
+        else if (right >= times.Length) index = left;
+        else index = time - times[left] <= times[right] - time ? left : right;
+        return index < times.Length && Math.Abs(times[index] - time) <= 2 ? index : -1;
     }
 
     public static MapDocument Clear(MapDocument target)

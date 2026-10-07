@@ -1240,10 +1240,10 @@
   "copier.chooseDiff": "选择 Diff",
   "copier.deleteFiles": "删除其他 Diff 未引用的音效文件",
   "copier.copyFiles": "附带音效文件",
-  "copier.matchHelp": "按相同时间复制音效，未匹配事件直接跳过，保留目标 SV。",
+  "copier.matchHelp": "匹配时间差不超过 2ms 的最近音效，跳过未匹配事件，保留目标 SV。",
   "copier.overwrite": "覆盖当前 Diff",
   "copier.newDiff": "新建 Diff",
-  "copier.preview": "预览",
+  "copier.preview": "检查",
   "copier.summary": "匹配 {0} 个事件 · 将更改 {1} 个音效文件",
   "copier.timingMismatch": "两张图的红线时间、BPM 和拍号必须完全一致。",
   "copier.sourceRequired": "请选择来源图或 Diff。",
@@ -1258,5 +1258,9 @@
   "copier.tickBanks": "Legacy slider 无法为各个 droplet 分别设置不同的附加采样音色。",
   "copier.defaultName": "{0} (Hitsounds)",
   "copier.stalePreview": "地图或共享资源已发生变化，请重新预览后再应用。",
-  "copier.audioOnly": "附带文件仅支持 WAV、OGG 和 MP3 音效采样。"
+  "copier.audioOnly": "附带文件仅支持 WAV、OGG 和 MP3 音效采样。",
+  "copier.allTargets": "所有目标 Diff",
+  "copier.overwriteAll": "覆盖所有目标 Diff",
+  "copier.batchNames": "每个目标将新建一个「原名 (Hitsounds)」Diff。",
+  "copier.batchSummary": "{0} 个目标 Diff，匹配 {1} 个音效事件，{2} 个文件变更。"
 }

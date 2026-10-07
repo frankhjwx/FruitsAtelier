@@ -12,17 +12,33 @@ public sealed class HitsoundResourcePlan
     public static HitsoundResourcePlan Empty => new();
     public IReadOnlyList<string> DisplayNames => changes.Select(c => c.Path).ToArray();
 
-    public static HitsoundResourcePlan Copy(MapDocument source, MapDocument result, MapDocument target, IEnumerable<MapDocument>? set = null)
+    public static HitsoundResourcePlan Copy(MapDocument source, MapDocument result, MapDocument target, IEnumerable<MapDocument>? set = null, bool compensateTinyDroplets = true)
+    {
+        return CopyGroup(source, [(result, target)], set ?? [target], compensateTinyDroplets);
+    }
+
+    public static HitsoundResourcePlan CopyBatch(MapDocument source,
+        IEnumerable<(MapDocument Result, MapDocument Target)> targets, IEnumerable<MapDocument> set, bool compensateTinyDroplets = true)
     {
         var plan = new HitsoundResourcePlan();
-        string destination = Root(target) ?? throw new InvalidOperationException(L.Get("copier.saveFirst"));
+        foreach (var group in targets.GroupBy(t => Root(t.Target), StringComparer.OrdinalIgnoreCase))
+            plan.changes.AddRange(CopyGroup(source, group.ToArray(), set, compensateTinyDroplets).changes);
+        return plan;
+    }
+
+    private static HitsoundResourcePlan CopyGroup(MapDocument source,
+        (MapDocument Result, MapDocument Target)[] targets, IEnumerable<MapDocument> set, bool compensateTinyDroplets)
+    {
+        var plan = new HitsoundResourcePlan();
+        string destination = Root(targets[0].Target) ?? throw new InvalidOperationException(L.Get("copier.saveFirst"));
         SafePath(destination,".hitsound-root");
-        var sourceEvents = OsuBeatmapWriter.Serialize(source).PlayableObjects;
+        var sourceEvents = OsuBeatmapWriter.Serialize(source, compensateTinyDroplets).PlayableObjects;
         var resolver = new HitsoundResolver(source, sourceEvents);
-        var times = sourceEvents.Where(HitsoundCopier.Audible).Select(o=>o.TimeMs).ToHashSet();
-        var matched = OsuBeatmapWriter.Serialize(target).PlayableObjects.Where(HitsoundCopier.Audible)
-            .Where(o=>times.Contains(o.TimeMs)).Select(o=>(o.SourceId,o.EventIndex)).ToHashSet();
-        var wanted = result.HitsoundOverrides.Where(o=>matched.Contains((o.SourceId,o.EventIndex))).Select(o => o.Sample).ToHashSet();
+        var times = sourceEvents.Where(HitsoundCopier.Audible).Select(o=>o.TimeMs).Distinct().Order().ToArray();
+        var matches = targets.Select(t => OsuBeatmapWriter.Serialize(t.Target, compensateTinyDroplets).PlayableObjects.Where(HitsoundCopier.Audible)
+            .Where(o=>HitsoundCopier.NearestEvent(times,o.TimeMs)>=0).Select(o=>(o.SourceId,o.EventIndex)).ToHashSet()).ToArray();
+        var wanted = targets.SelectMany((t,i) => t.Result.HitsoundOverrides
+            .Where(o=>matches[i].Contains((o.SourceId,o.EventIndex))).Select(o => o.Sample)).ToHashSet();
         var used = sourceEvents.Where(HitsoundCopier.Audible).Where(o => wanted.Contains(resolver.Describe(o))).ToArray();
         string sourceRoot = Root(source) ?? throw new InvalidOperationException(L.Get("copier.saveFirst"));
         SafePath(sourceRoot,".hitsound-root");
@@ -36,7 +52,7 @@ public sealed class HitsoundResourcePlan
         var reserved = Directory.EnumerateFiles(destination).Select(p => indexed.Match(Path.GetFileNameWithoutExtension(p)))
             .Where(m => m.Success).Select(m => m.Groups[3].Value.Length == 0 ? 1 : int.Parse(m.Groups[3].Value)).ToHashSet();
         reserved.UnionWith(numbered.Select(g => g.Key));
-        foreach(var document in set ?? [target])
+        foreach(var document in set)
         {
             reserved.UnionWith(document.TimingPoints.Select(p=>p.SampleIndex));
             reserved.UnionWith(document.HitsoundOverrides.Select(o=>o.Sample.Index));
@@ -82,14 +98,18 @@ public sealed class HitsoundResourcePlan
             }
             customRemap[item.FileName] = name; plan.AddCopy(to, bytes);
         }
-        for (int i = 0; i < result.HitsoundOverrides.Count; i++)
+        for (int t = 0; t < targets.Length; t++)
         {
-            var item = result.HitsoundOverrides[i];
-            if (!matched.Contains((item.SourceId,item.EventIndex))) continue;
-            int originalIndex = item.Sample.Index;
-            result.HitsoundOverrides[i] = item with { Sample = item.Sample with {
-                Index = indexRemap.GetValueOrDefault(originalIndex, item.Sample.Index),
-                FileName = customRemap.GetValueOrDefault(item.Sample.FileName, item.Sample.FileName) } };
+            var result = targets[t].Result; var matched = matches[t];
+            for (int i = 0; i < result.HitsoundOverrides.Count; i++)
+            {
+                var item = result.HitsoundOverrides[i];
+                if (!matched.Contains((item.SourceId,item.EventIndex))) continue;
+                int originalIndex = item.Sample.Index;
+                result.HitsoundOverrides[i] = item with { Sample = item.Sample with {
+                    Index = indexRemap.GetValueOrDefault(originalIndex, item.Sample.Index),
+                    FileName = customRemap.GetValueOrDefault(item.Sample.FileName, item.Sample.FileName) } };
+            }
         }
         return plan;
     }

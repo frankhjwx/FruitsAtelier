@@ -38,8 +38,39 @@ internal static class HitsoundCopierUiTests
                 Check(ui.View.HitsoundCopierVisible && ui.View.Document.Fruits[0].X==125,"Stale preview cannot overwrite newer edits");
                 ui.Key(27);
                 ui.View.OpenHitsoundCopier(); ui.Key(27); Check(!ui.View.HitsoundCopierVisible,"Escape closes");
+                Batch(source,target);
             }
         }
         finally { L.SetLanguage(language); }
     }
+    private static void Batch(MapDocument source,MapDocument target)
+    {
+        var other=target.DeepClone(); SongSetup.Set(other,"Metadata","Version","Other");
+        SongSetup.Set(source,"Metadata","Version","Source");
+        var ui=new Ui(); ui.View.LoadProject(BeatmapProject.FromDocuments([target,source,other])); ui.Paint();
+        var before=ui.View.CaptureProject();
+        ui.View.OpenHitsoundCopier(); ui.Paint(); ui.ClickText(L.Get("copier.set")); ui.ClickText(L.Get("copier.chooseDiff"));
+        ui.Click(ui.View.HitsoundCopierBounds.X+32,ui.View.HitsoundCopierBounds.Y+154);
+        ui.ClickText(L.Get("copier.allTargets")); ui.ClickText(L.Get("copier.preview")); ui.ClickText(L.Get("song.ok"));
+        var copied=ui.View.CaptureProject();
+        Check(copied.Difficulties[0].Document.HitsoundOverrides.Single().Sample.Additions==2
+            && copied.Difficulties[2].Document.HitsoundOverrides.Single().Sample.Additions==2,"All targets receive sounds");
+        Check(copied.Difficulties[1].Document.ContentEquals(before.Difficulties[1].Document),"Same-set source excluded");
+        ui.Key(90,ctrl:true); Check(ui.View.Document.ContentEquals(before.Difficulties[0].Document),"Active Diff batch undo");
+        ui.View.SwitchDifficulty(2); ui.Paint(); ui.Key(90,ctrl:true);
+        Check(ui.View.Document.ContentEquals(before.Difficulties[2].Document),"Other Diff batch undo");
+        ui.Key(89,ctrl:true); Check(ui.View.Document.HitsoundOverrides.Single().Sample.Additions==2,"Other Diff batch redo");
+        ui.View.OpenHitsoundCopier(); ui.Paint(); ui.ClickText(L.Get("copier.external")); ui.View.SetHitsoundSource(source); ui.Paint();
+        ui.ClickText(L.Get("copier.allTargets")); ui.ClickText(L.Get("copier.newDiff")); ui.ClickText(L.Get("copier.preview")); ui.ClickText(L.Get("song.ok"));
+        Check(ui.View.CaptureProject().Difficulties.Count==6,"External batch creates one Diff per target");
+        var names=ui.View.CaptureProject().Difficulties.Select(d=>d.Name).ToArray();
+        Check(names.Distinct(StringComparer.OrdinalIgnoreCase).Count()==6,"Batch names unique");
+        ui.View.LoadProject(before); ui.Paint();
+        ui.View.OpenHitsoundCopier(); ui.Paint(); ui.ClickText(L.Get("copier.external")); ui.View.SetHitsoundSource(source); ui.Paint();
+        ui.ClickText(L.Get("copier.allTargets")); ui.ClickText(L.Get("copier.preview"));
+        ui.View.CaptureProject(); ui.View.Document.Fruits[0].X=200; ui.ClickText(L.Get("song.ok"));
+        Check(ui.View.HitsoundCopierVisible && ui.View.CaptureProject().Difficulties[2].Document.HitsoundOverrides.Count==0,
+            "Stale batch applies no target changes"); ui.Key(27);
+    }
+
 }

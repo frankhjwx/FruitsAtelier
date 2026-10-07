@@ -1240,10 +1240,10 @@
   "copier.chooseDiff": "Choose difficulty",
   "copier.deleteFiles": "Delete unshared hitsound files",
   "copier.copyFiles": "Include hitsound files",
-  "copier.matchHelp": "Copy events at matching times. Unmatched events are skipped. Target SV is preserved.",
+  "copier.matchHelp": "Copy the nearest event within 2ms. Skip unmatched events. Preserve target SV.",
   "copier.overwrite": "Overwrite current Diff",
   "copier.newDiff": "Create new Diff",
-  "copier.preview": "Preview",
+  "copier.preview": "Check",
   "copier.summary": "{0} matched events · {1} hitsound files to change",
   "copier.timingMismatch": "The red timing points must have identical times, BPM and meter.",
   "copier.sourceRequired": "Choose a source map or difficulty.",
@@ -1258,5 +1258,9 @@
   "copier.tickBanks": "Legacy slider ticks cannot represent different extra sample banks per event.",
   "copier.defaultName": "{0} (Hitsounds)",
   "copier.stalePreview": "The map or shared resources changed. Preview again before applying.",
-  "copier.audioOnly": "Include files supports only WAV, OGG and MP3 hitsound samples."
+  "copier.audioOnly": "Include files supports only WAV, OGG and MP3 hitsound samples.",
+  "copier.allTargets": "All target Diffs",
+  "copier.overwriteAll": "Overwrite all target Diffs",
+  "copier.batchNames": "Create a new “original name (Hitsounds)” Diff for each target.",
+  "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes."
 }

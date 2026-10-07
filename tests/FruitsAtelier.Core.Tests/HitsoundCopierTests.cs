@@ -60,7 +60,27 @@ internal static class HitsoundCopierTests
         Check(broken.Fruits.Select(f=>ObjectFlags.Sounds(broken,f.Id)[0]).SequenceEqual(new[]{8,0,2,8}),"Breaking streams preserves copied sound flags");
         ObjectFlags.SetSound(result.Document,result.Document.ImportedSliders[0].Id,8,false,0);
         Check(!ObjectFlags.Sounds(result.Document,result.Document.ImportedSliders[0].Id,0).Any(s=>(s&8)!=0),"Existing sound controls update copied samples");
+        Tolerance();
         Resources();
+    }
+
+    private static void Tolerance()
+    {
+        var source = Read("100,192,1000,1,8,0:0:0:0:\n100,192,1004,1,2,0:0:0:0:");
+        var target = Read("100,192,998,1,0,0:0:0:0:\n100,192,1002,1,0,0:0:0:0:\n100,192,1003,1,0,0:0:0:0:\n100,192,1004,1,0,0:0:0:0:\n100,192,1007,1,4,0:0:0:0:");
+        var result = HitsoundCopier.Copy(source,target);
+        Check(result.MatchedEvents==4,"Inclusive 2ms tolerance and reject outside window");
+        Check(result.Document.HitsoundOverrides.Select(o=>o.Sample.Additions).SequenceEqual(new[]{8,8,2,2}),
+            "Nearest source, earlier on tie, exact match preferred");
+        Check(!result.Document.HitsoundOverrides.Any(o=>o.SourceId==target.Fruits.Last().Id),"Unmatched target retained");
+        var rounded = Read("100,192,1000,1,0,0:0:0:0:","315,434.782608695652,4,1,0,100,1,0");
+        var authored = rounded.DeepClone(); authored.TimingPoints[0].BeatLengthMs=60000.0/138;
+        Check(HitsoundCopier.TimingMatches(rounded,authored),"Tolerate BPM round-trip precision at 138 BPM");
+        authored.TimingPoints[0].BeatLengthMs+=.001;
+        Check(!HitsoundCopier.TimingMatches(rounded,authored),"Do not accept changed BPM");
+        authored=rounded.DeepClone(); authored.TimingPoints[0].TimeMs+=1;
+        Check(!HitsoundCopier.TimingMatches(rounded,authored),"Object tolerance does not loosen red timing offsets");
+        Check(HitsoundCopier.Copy(Read(""),target).MatchedEvents==0,"Empty source skips all events");
     }
 
     private static void Resources()
@@ -69,12 +89,19 @@ internal static class HitsoundCopierTests
         string a=Path.GetFullPath(Path.Combine(root,"source")), b=Path.GetFullPath(Path.Combine(root,"target"));
         Directory.CreateDirectory(a); Directory.CreateDirectory(b);
         var source=Read("100,192,1000,1,8,1:1:2:70:"); source.SourcePath=Path.Combine(a,"source.osu");
-        var target=Read("100,192,1000,1,0,0:0:0:0:"); target.SourcePath=Path.Combine(b,"target.osu");
+        var target=Read("100,192,1002,1,0,0:0:0:0:"); target.SourcePath=Path.Combine(b,"target.osu");
         File.WriteAllBytes(Path.Combine(a,"normal-hitnormal2.wav"),[1,2,3]);
         File.WriteAllBytes(Path.Combine(a,"normal-hitclap2.wav"),[4,5,6]);
         File.WriteAllBytes(Path.Combine(a,"song.mp3"),[7,8,9]);
         File.WriteAllBytes(Path.Combine(b,"normal-hitnormal2.wav"),[9,9]);
         var result=HitsoundCopier.Copy(source,target).Document;
+        var second=target.DeepClone(); second.Fruits[0].Id=Guid.NewGuid();
+        var secondResult=HitsoundCopier.Copy(source,second).Document;
+        var batchPlan=HitsoundResourcePlan.CopyBatch(source,[(result,target),(secondResult,second)],[target,second]);
+        Check(batchPlan.DisplayNames.Count==2 && result.HitsoundOverrides.Single().Sample.Index==secondResult.HitsoundOverrides.Single().Sample.Index,
+            "Batch shares one renumbered sample group and includes files for 2ms matches");
+        batchPlan.Apply(); batchPlan.Restore();
+        result=HitsoundCopier.Copy(source,target).Document;
         var plan=HitsoundResourcePlan.Copy(source,result,target); plan.Apply();
         int index=result.HitsoundOverrides.Single().Sample.Index;
         Check(index>2 && File.ReadAllBytes(Path.Combine(b,$"normal-hitnormal{index}.wav")).SequenceEqual(new byte[]{1,2,3}), "Renumber conflicting sample group");

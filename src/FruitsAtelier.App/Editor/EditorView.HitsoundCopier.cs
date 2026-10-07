@@ -11,9 +11,10 @@ public sealed partial class EditorView
     public Action? RequestHitsoundSource { get; set; }
     public Action? RequestPasteHitsoundName { get; set; }
     private int copierMode, copierSourceIndex = -1, copierFileScroll, copierSourceScroll;
-    private bool copierSourcesOpen, copierFiles, copierNewDiff, copierNameFocused;
+    private bool copierSourcesOpen, copierFiles, copierNewDiff, copierNameFocused, copierAllTargets;
     private string copierName = "", copierSourceName = "", copierError = "", copierSummary = "";
     private MapDocument? copierSource, copierResult;
+    private Dictionary<int, MapDocument>? copierResults;
     private Dictionary<Guid,MapDocument>? copierPreviewDocuments;
     private HitsoundResourcePlan? copierResources;
     private Rect copierNameBounds, copierSourceBounds;
@@ -27,7 +28,7 @@ public sealed partial class EditorView
         if (AudioPlaying) RequestPausePlayback?.Invoke();
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
         copierSourcesOpen = false; copierSourceScroll = copierFileScroll = 0;
-        copierMode = 0; copierFiles = copierNewDiff = copierNameFocused = false;
+        copierMode = 0; copierFiles = copierNewDiff = copierNameFocused = copierAllTargets = false;
         copierSourceIndex = -1; copierSource = copierResult = null; copierResources = null;
         copierName = L.Get("copier.defaultName",CurrentDifficultyName);
         copierSourceName = copierError = copierSummary = "";
@@ -50,7 +51,7 @@ public sealed partial class EditorView
     }
 
     private void InvalidateHitsoundPlan()
-    { copierResult = null; copierResources = null; copierPreviewDocuments = null; copierError = copierSummary = ""; copierFileScroll = 0; }
+    { copierResult = null; copierResults = null; copierResources = null; copierPreviewDocuments = null; copierError = copierSummary = ""; copierFileScroll = 0; }
 
     private void DrawHitsoundCopier(ICanvas c)
     {
@@ -88,23 +89,28 @@ public sealed partial class EditorView
                 () => { copierFiles = !copierFiles; InvalidateHitsoundPlan(); });
         if (copierMode != 0)
             c.Text(L.Get("copier.matchHelp"), r.X + 22, r.Y + 192, 12, Muted, r.Width - 44);
-        Button(c, new(r.X + 22, r.Y + 226, 180, 30), L.Get("copier.overwrite"), () => { copierNewDiff = false; copierNameFocused = false; }, !copierNewDiff);
-        Button(c, new(r.X + 212, r.Y + 226, 180, 30), L.Get("copier.newDiff"), () => copierNewDiff = true, copierNewDiff);
-        copierNameBounds = new(r.X + 22, r.Y + 268, r.Width - 44, 30);
-        if (copierNewDiff)
+        Button(c, new(r.X + 22, r.Y + 226, (r.Width-50)/2, 30), L.Get(copierAllTargets && copierMode != 0 ? "copier.overwriteAll" : "copier.overwrite"), () => { copierNewDiff = false; copierNameFocused = false; }, !copierNewDiff);
+        Button(c, new(r.X + 28+(r.Width-50)/2, r.Y + 226, (r.Width-50)/2, 30), L.Get("copier.newDiff"), () => copierNewDiff = true, copierNewDiff);
+        if (copierMode != 0)
+            TimingCheck(c, new(r.X + 22, r.Y + 264, r.Width - 44, 30), "copier.allTargets", copierAllTargets,
+                () => { copierAllTargets = !copierAllTargets; copierNameFocused = false; InvalidateHitsoundPlan(); });
+        copierNameBounds = new(r.X + 22, r.Y + 302, r.Width - 44, 30);
+        if (copierNewDiff && copierAllTargets && copierMode != 0)
+            c.Text(L.Get("copier.batchNames"), r.X+22, r.Y+308, 12, Muted, r.Width-44);
+        else if (copierNewDiff)
         {
             c.Fill(copierNameBounds, Surface, 4);
             DrawInputText(c, new(copierNameBounds.X+8,copierNameBounds.Y+6,copierNameBounds.Width-16,20), copierName, 13, copierNameFocused, "copier:name");
             hits.Add(new(copierNameBounds, () => { copierNameFocused = true; HitsoundCopierInputSession++; SelectInput("copier:name", copierName); }, true));
         }
-        c.Text(copierError.Length > 0 ? copierError : copierSummary, r.X + 22, r.Y + 314, 12,
+        c.Text(copierError.Length > 0 ? copierError : copierSummary, r.X + 22, r.Y + 346, 12,
             copierError.Length > 0 ? Error : Foreground, r.Width - 44);
         if (copierResources is { } resources)
         {
             var names = resources.DisplayNames;
-            copierFileScroll = Math.Clamp(copierFileScroll, 0, Math.Max(0,names.Count - 6));
-            for (int i = 0; i < Math.Min(6,names.Count - copierFileScroll); i++)
-                c.Text(names[copierFileScroll+i], r.X+22, r.Y+350+i*20, 11, Muted, r.Width-44);
+            copierFileScroll = Math.Clamp(copierFileScroll, 0, Math.Max(0,names.Count - 5));
+            for (int i = 0; i < Math.Min(5,names.Count - copierFileScroll); i++)
+                c.Text(names[copierFileScroll+i], r.X+22, r.Y+374+i*20, 11, Muted, r.Width-44);
         }
         Button(c, new(r.X + 22, r.Bottom - 48, 110, 32), L.Get("mac.cancel"), CloseHitsoundCopier);
         Button(c, new(r.Right - 330, r.Bottom - 48, 140, 32), L.Get("copier.preview"), PreviewHitsoundCopy);
@@ -137,47 +143,94 @@ public sealed partial class EditorView
             if (copierMode != 0 && copierSource is null) throw new InvalidOperationException(L.Get("copier.sourceRequired"));
             copierPreviewDocuments = difficulties.ToDictionary(d=>d.Id,d=>d.History.Document.DeepClone());
             int count = 0;
-            if (copierMode == 0) copierResult = HitsoundCopier.Clear(Document);
-            else { var result = HitsoundCopier.Copy(copierSource!, Document, compensateTinyDroplets); copierResult = result.Document; count = result.MatchedEvents; }
+            var targets = copierAllTargets && copierMode != 0
+                ? Enumerable.Range(0,difficulties.Count).Where(i => copierMode != 2 || i != copierSourceIndex).ToArray()
+                : [activeDifficulty];
+            copierResults = new();
+            foreach (int index in targets)
+            {
+                var target = difficulties[index].History.Document;
+                try
+                {
+                    if (copierMode == 0) copierResults[index] = HitsoundCopier.Clear(target);
+                    else
+                    {
+                        var result = HitsoundCopier.Copy(copierSource!, target, compensateTinyDroplets);
+                        copierResults[index] = result.Document; count += result.MatchedEvents;
+                    }
+                }
+                catch (Exception error) { throw new InvalidOperationException(difficulties[index].Name + ": " + error.Message, error); }
+            }
+            copierResult = copierResults.Values.First();
             copierResources = copierFiles ? copierMode == 0
                 ? HitsoundResourcePlan.Delete(Document, difficulties.Select(d => d.History.Document))
-                : HitsoundResourcePlan.Copy(copierSource!, copierResult, Document, difficulties.Select(d=>d.History.Document))
+                : HitsoundResourcePlan.CopyBatch(copierSource!, copierResults.Select(p => (p.Value, difficulties[p.Key].History.Document)),
+                    difficulties.Select(d=>d.History.Document), compensateTinyDroplets)
                 : HitsoundResourcePlan.Empty;
-            copierSummary = L.Get("copier.summary", count, copierResources.DisplayNames.Count);
+            copierSummary = copierAllTargets && copierMode != 0
+                ? L.Get("copier.batchSummary", copierResults.Count, count, copierResources.DisplayNames.Count)
+                : L.Get("copier.summary", count, copierResources.DisplayNames.Count);
         }
-        catch (Exception error) { copierResult = null; copierResources = null; copierPreviewDocuments = null; copierError = error.Message; }
+        catch (Exception error) { copierResults = null; copierResult = null; copierResources = null; copierPreviewDocuments = null; copierError = error.Message; }
     }
 
     internal void ApplyHitsoundCopy()
     {
-        if (copierResult is null || copierResources is null) return;
+        if (copierResult is null || copierResources is null || copierResults is null) return;
         if (copierPreviewDocuments is null || copierPreviewDocuments.Count != difficulties.Count
             || difficulties.Any(d=>!copierPreviewDocuments.TryGetValue(d.Id,out var before) || !before.ContentEquals(d.History.Document)))
         { InvalidateHitsoundPlan(); copierError=L.Get("copier.stalePreview"); return; }
-        if (copierNewDiff && (string.IsNullOrWhiteSpace(copierName) || copierName.Any(char.IsControl)
-            || difficulties.Any(d => d.Name.Equals(copierName.Trim(), StringComparison.OrdinalIgnoreCase)) || difficulties.Count >= 256))
-        { copierError = L.Get("copier.nameRequired"); return; }
+        var names = new Dictionary<int,string>();
+        var reserved = difficulties.Select(d=>d.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (copierNewDiff)
+        {
+            if (difficulties.Count + copierResults.Count > 256) { copierError = L.Get("copier.nameRequired"); return; }
+            foreach (int index in copierResults.Keys)
+            {
+                string name = copierAllTargets && copierMode != 0
+                    ? L.Get("copier.defaultName", difficulties[index].Name) : copierName.Trim();
+                if (string.IsNullOrWhiteSpace(name) || name.Any(char.IsControl)) { copierError = L.Get("copier.nameRequired"); return; }
+                if (copierAllTargets && copierMode != 0)
+                {
+                    string root = name; int suffix = 2;
+                    while (reserved.Contains(name)) name = root + " " + suffix++;
+                }
+                if (!reserved.Add(name)) { copierError = L.Get("copier.nameRequired"); return; }
+                names[index] = name;
+            }
+        }
         if (copierNewDiff && copierMode == 0 && copierFiles)
         { copierError = L.Get("copier.keepOriginalFiles"); return; }
-        var result = copierResult; var resources = copierResources; bool applied = false;
+        var results = copierResults; var resources = copierResources; bool applied = false;
         try
         {
             if (copierMode == 0 && copierFiles && !HitsoundResourcePlan.Delete(Document,difficulties.Select(d=>d.History.Document)).DisplayNames.SequenceEqual(resources.DisplayNames))
                 throw new IOException(L.Get("copier.stalePreview"));
+            foreach (var pair in results)
+            {
+                if (difficulties[pair.Key].History.HasActiveTransaction) throw new InvalidOperationException(L.Get("copier.stalePreview"));
+                OsuBeatmapReader.Validate(pair.Value);
+            }
             resources.Apply(); applied = true;
             if (copierNewDiff)
             {
-                SongSetup.Set(result, "Metadata", "Version", copierName.Trim());
-                SongSetup.Set(result, "Metadata", "BeatmapID", "0");
-                var added = new ProjectDifficulty { Name = copierName.Trim(), Document = result.DeepClone() };
-                difficulties.Add(new DifficultySession(added));
-                WorkspaceSession?.Manifest.Difficulties.Add(new WorkspaceDifficulty { Id = added.Id, Name = added.Name });
+                foreach (var pair in results)
+                {
+                    var result = pair.Value; string name = names[pair.Key];
+                    SongSetup.Set(result, "Metadata", "Version", name);
+                    SongSetup.Set(result, "Metadata", "BeatmapID", "0");
+                    var added = new ProjectDifficulty { Name = name, Document = result.DeepClone() };
+                    difficulties.Add(new DifficultySession(added));
+                    WorkspaceSession?.Manifest.Difficulties.Add(new WorkspaceDifficulty { Id = added.Id, Name = added.Name });
+                }
                 projectStructureDirty = true;
                 CloseHitsoundCopier(); SwitchDifficultyCore(difficulties.Count - 1, reloadAudio: true);
             }
             else
             {
-                history.RestoreVersion(L.Get("copier.title"), result, (redo, before, after) => { if (redo) resources.Apply(difficulties.Select(d=>d.History.Document)); else resources.Restore(difficulties.Select(d=>d.History.Document)); });
+                foreach (var pair in results)
+                    difficulties[pair.Key].History.RestoreVersion(L.Get("copier.title"), pair.Value,
+                        (redo, before, after) => { if (redo) resources.Apply(difficulties.Select(d=>d.History.Document)); else resources.Restore(difficulties.Select(d=>d.History.Document)); });
                 CloseHitsoundCopier(); convertedSnapshot = null;
             }
             ResetHitsounds(); PreloadProjectHitsounds();

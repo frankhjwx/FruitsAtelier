@@ -48,7 +48,7 @@ Slider fruit entries also retain their edge index for existing sound flag contro
 The collection participates in cloning, dirty comparison, undo and project saves.
 Empty collections are omitted and retain the earlier schema selection.
 
-Hitsound Copier matches exported playable event times after checking identical
+Hitsound Copier matches the nearest exported playable event within 2ms after checking matching
 red timing points. Source SV participates in event decoding. Copying leaves target
 geometry, authoring timing and SV intact. Export writes circle/stream object
 samples, slider edge banks and additions, and timing sample states while retaining

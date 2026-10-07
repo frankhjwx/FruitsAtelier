@@ -890,7 +890,7 @@ collection limits and the distinction between software timing and acoustic delay
 Open **Timing → Hitsound Copier (Beta)** for a floating dialog. Choose Clear,
 an external osu!standard or Catch `.osu`, or another difficulty in the current set. Clear restores
 normal default samples and removes Whistle, Finish, Clap and custom object samples.
-Copy requires identical red timing times, BPM and meter. Events match by playable
+Copy requires matching red timing times, BPM and meter (floating-point rounding is tolerated). Events match the nearest playable
 time; unmatched events on either side are silently skipped. Target SV is preserved.
 
 External copying can include only the used hitsound files. Same-set copying shares
@@ -900,7 +900,7 @@ delete unshared referenced hitsound files while preserving music, storyboard sam
 and other difficulties' references. Unreadable sibling maps prevent file deletion.
 Deleted files are backed up under `.hitsound-copier-backups` with a path manifest.
 
-Preview lists the matched event count and planned file changes; scroll the file
+Check lists the matched event count and planned file changes; scroll the file
 list to inspect all paths. Apply overwrites the current difficulty in one undo step
 or creates a named difficulty from the current chart. A new difficulty preserves
 the original, including its files. Overwrite undo/redo restores associated file
@@ -908,3 +908,5 @@ changes, retains files now shared by another difficulty, and rejects files modif
 externally after preview. An outdated content preview must be rebuilt before Apply. Legacy slider events
 cannot use explicit filenames or incompatible extra tick banks; preview explains
 these format constraints without applying a partial result.
+
+Select **All target Diffs** to copy to every difficulty in the current project, excluding the selected same-set source. Overwrite adds an undo step to each target; undo and redo work per Diff and retain audio files still used by other Diffs. Create new Diff creates a uniquely named copy of each target. Check validates every target before applying any changes and lists the aggregate matched-event count and shared file changes. Matches allow a time difference of up to 2ms; the nearest source wins, with the earlier event winning a tie.
