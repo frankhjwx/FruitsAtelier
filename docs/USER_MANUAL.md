@@ -111,7 +111,7 @@ During autoplay, press **F3** to switch between **1.0x** and **1.5x**. If the cu
 
 Beatmap backgrounds appear in preview and testplay; the editing canvas has an opaque backing. Adjust **Background dim** in **Settings > Testplay** or the pause menu; the default is 90%. During testplay breaks the background becomes brighter, then returns to the chosen dim. Skip and the pause menu use the selected skin's graphics, with default controls for missing components. Pause buttons enlarge on hover; Up/Down selection shows two arrows. The skin cursor and trail appear only while paused. Four flashing arrows warn of the upcoming start or end of a break. Disabling skin sounds uses packaged osu! menu and pause samples.
 
-Bindings accept letters, digits, punctuation (including `;`, `'`, `[` and `]`), arrow and navigation keys, Backspace, Enter, Space, Shift, Ctrl, Alt, lock keys, numpad keys, and F4–F24. Esc cancels capture; Tab and F1–F3 are reserved for testplay controls. Windows/Command, media and other system keys are not offered. Left and right modifier keys share a binding, as do main and numpad Enter. Numpad input follows Num Lock; punctuation labels use US keyboard names. OS shortcuts and Ctrl+P retain their normal behavior.
+Bindings accept letters, digits, punctuation (including `;`, `'`, `[` and `]`), arrow and navigation keys, Backspace, Enter, Space, Shift, Ctrl, Alt, lock keys, numpad keys, F4–F11, and F13–F24. Esc cancels capture; Tab and F1–F3 are reserved for testplay controls, and F12 is reserved for screenshots. Windows/Command, media and other system keys are not offered. Left and right modifier keys share a binding, as do main and numpad Enter. Numpad input follows Num Lock; punctuation labels use US keyboard names. OS shortcuts and Ctrl+P retain their normal behavior.
 
 ### Difficulties and project files
 
@@ -137,6 +137,10 @@ Version 0.9 does not provide video or storyboard playback. Imported timing and s
 See the [complete keyboard and mouse shortcut manual](KEY_BINDINGS.md) for context-specific bindings, dialogs and current limitations, and the [osu!stable compatibility review](KEY_BINDINGS_REVIEW.md) for differences and possible additions.
 
 Shortcuts below apply while editing, outside text fields and dialogs. On macOS, Command also works for Ctrl shortcuts; Backspace also deletes. Some Mac keyboards require Fn for function keys.
+
+### Screenshots
+
+Press **F12** to copy the current editor window content to the system clipboard as an image. Paste it into a chat or image editor. This also captures visible dialogs, Library, and testplay without pausing or leaving the current screen. Each press captures once; holding F12 does not repeatedly replace the clipboard.
 
 ### Files, selection and editing
 

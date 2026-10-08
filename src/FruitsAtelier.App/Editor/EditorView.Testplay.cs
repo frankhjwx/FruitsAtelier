@@ -221,6 +221,7 @@ public sealed partial class EditorView
 
     public void KeyUp(int virtualKey)
     {
+        if (virtualKey == 123) screenshotHeld = false;
         if (virtualKey == 119) audioDiagnosticMarkerHeld = false;
         if (virtualKey == 13) fullscreenShortcutHeld = false;
         if (virtualKey == 84) timingTapHeld = false;
@@ -339,9 +340,9 @@ public sealed partial class EditorView
     private int bindingCapture = -1;
     private int[] draftTestplayKeys = [37, 39, 16];
     public bool CapturingTestplayKey => bindingCapture >= 0 && librarySettingsOpen;
-    // Esc, Tab and F1–F3 belong to testplay controls; OS/media keys cannot reliably reach both hosts.
+    // Esc, Tab, F1–F3 and F12 belong to editor and testplay controls; OS/media keys cannot reliably reach both hosts.
     private static bool IsBindingKey(int key) => key is >= 65 and <= 90 or >= 48 and <= 57 or >= 33 and <= 40
-        or >= 96 and <= 111 or >= 115 and <= 135 or >= 186 and <= 192 or >= 219 and <= 223
+        or >= 96 and <= 111 or >= 115 and <= 122 or >= 124 and <= 135 or >= 186 and <= 192 or >= 219 and <= 223
         or 8 or 12 or 13 or 16 or 17 or 18 or 20 or 32 or 45 or 46 or 144 or 145 or 226;
     private static string KeyName(int key) => key switch
     {

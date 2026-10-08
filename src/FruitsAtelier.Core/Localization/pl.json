@@ -1262,5 +1262,7 @@
   "copier.allTargets": "All target Diffs",
   "copier.overwriteAll": "Overwrite all target Diffs",
   "copier.batchNames": "Create a new “original name (Hitsounds)” Diff for each target.",
-  "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes."
+  "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes.",
+  "screenshot.copied": "Zrzut ekranu skopiowano do schowka.",
+  "screenshot.failed": "Nie można skopiować zrzutu ekranu: {0}"
 }

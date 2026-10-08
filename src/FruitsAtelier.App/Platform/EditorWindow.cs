@@ -32,6 +32,7 @@ internal sealed partial class EditorWindow : IDisposable
         view.SupportsDisplayMode = true;
         view.SupportsFullscreen = true;
         view.RequestFullscreen = SetFullscreen;
+        view.RequestScreenshot = () => { screenshotPending = true; Invalidate(); };
         view.Performance.Enabled = true;
         AppLog.Performance = view.Performance;
         ConfigureFiles();
@@ -58,7 +59,7 @@ internal sealed partial class EditorWindow : IDisposable
         };
     }
 
-    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false, bool firstRunSetup = false, AudioSettingsRestartState? resumeAudio = null, bool hitsoundCopierCheck = false)
+    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false, bool firstRunSetup = false, AudioSettingsRestartState? resumeAudio = null, bool hitsoundCopierCheck = false, bool screenshotCheck = false)
     {
         view.InitializeLibrary(!renderCheck && profileMap is null, renderCheck || profileMap is not null
             ? new FruitsAtelier.Core.LibrarySettings { Workspace = Path.Combine(Artifacts, "render-library") } : null, forceFirstRunSetup: firstRunSetup);
@@ -118,6 +119,7 @@ internal sealed partial class EditorWindow : IDisposable
         }
         if (renderCheck)
         {
+            if (screenshotCheck) { CheckScreenshot(); Native.DestroyWindow(hwnd); return 0; }
             if (resumeAudio is not null)
             {
                 RestoreAudioSettings(resumeAudio);
@@ -338,7 +340,7 @@ internal sealed partial class EditorWindow : IDisposable
                         canvas.DrawDisplayDiagnostics(view.PlayheadMs, displayedAudioState ?? audio.State);
                         view.Performance.End(EditorPerformanceStage.ViewRender, phase);
                         phase = view.Performance.Start();
-                        framePending = !canvas.End(lowLatency: immediatePresentation);
+                        framePending = !canvas.End(lowLatency: immediatePresentation, capture: screenshotPending ? CopyScreenshot : null);
                         view.Performance.End(EditorPerformanceStage.Submit, phase);
                         view.Performance.Record(EditorPerformanceStage.Frame, renderTimer.Elapsed.TotalMilliseconds);
                         if (!framePending) RecordInputSubmission();

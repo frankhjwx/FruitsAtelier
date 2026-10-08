@@ -145,6 +145,12 @@ even when the device advances before the worker handles it.
 
 ## Window checks
 
+`FruitsAtelier.App.exe --screenshot-render-check` exercises F12 capture and reads
+the native clipboard image back at 96/144/192 DPI in editing and paused testplay.
+It verifies pixel dimensions, colour and row order, and writes bitmap previews and
+`report.json` under `artifacts/tests/screenshot-native/`. This check replaces the
+system clipboard with its captured image.
+
 `FruitsAtelier.App.exe --testplay-render-check` independently exercises background
 decoding, custom Skip and pause textures, mouse/Space skip, keyboard Retry/Back,
 and both languages at wide, narrow and portrait sizes with 96/144/192 DPI.

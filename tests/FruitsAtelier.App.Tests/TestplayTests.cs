@@ -692,7 +692,7 @@ internal static class TestplayTests
             (106, "Num *"), (107, "Num +"), (108, "Num Separator"), (109, "Num -"), (110, "Num ."),
             (111, "Num /"), (144, "Num Lock"), (145, "Scroll Lock")];
         keys = keys.Concat(Enumerable.Range(96, 10).Select(k => (k, $"Num {k - 96}")))
-            .Concat(Enumerable.Range(115, 21).Select(k => (k, $"F{k - 111}"))).ToArray();
+            .Concat(Enumerable.Range(115, 21).Where(k => k != 123).Select(k => (k, $"F{k - 111}"))).ToArray();
         string folder = Path.GetFullPath("artifacts/testplay-extended-settings");
         var ui = new Ui(); ui.View.InitializeLibrary(true, new LibrarySettings { Workspace = folder });
         ui.Paint(); ui.ClickText(L.Get("library.settings")); ui.ClickText(L.Get("settings.testplay"));
@@ -731,7 +731,7 @@ internal static class TestplayTests
         }
         ui.View.PointerDown(ui.View.SettingsBounds.X + 238, ui.View.SettingsBounds.Y + 200, 0, false, false); ui.View.PointerUp(ui.View.SettingsBounds.X + 238, ui.View.SettingsBounds.Y + 200, 0);
         int[] before = ((int[])draft.GetValue(ui.View)!).ToArray();
-        foreach (int key in new[] { 0, 9, 112, 113, 114, 91, 92, 173, 255 })
+        foreach (int key in new[] { 0, 9, 112, 113, 114, 123, 91, 92, 173, 255 })
         {
             ui.Key(key); ui.View.KeyUp(key);
             Check(ui.View.CapturingTestplayKey && before.SequenceEqual((int[])draft.GetValue(ui.View)!),

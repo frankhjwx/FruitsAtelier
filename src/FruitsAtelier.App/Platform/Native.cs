@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace FruitsAtelier.App.Platform;
 
-internal static class Native
+internal static partial class Native
 {
     [DllImport("shell32.dll")] internal static extern void DragAcceptFiles(nint window, bool accept);
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)] private static extern uint DragQueryFile(nint drop, uint index, System.Text.StringBuilder? path, uint capacity);
@@ -90,14 +90,14 @@ internal static class Native
     [StructLayout(LayoutKind.Sequential)]
     internal struct MinMaxInfo { internal Point Reserved, MaxSize, MaxPosition, MinTrackSize, MaxTrackSize; }
 
-    [DllImport("user32.dll")] internal static extern bool OpenClipboard(nint owner);
+    [DllImport("user32.dll", SetLastError = true)] internal static extern bool OpenClipboard(nint owner);
     [DllImport("user32.dll")] internal static extern bool CloseClipboard();
     [DllImport("user32.dll")] internal static extern nint GetClipboardData(uint format);
-    [DllImport("kernel32.dll")] internal static extern nint GlobalLock(nint memory);
+    [DllImport("kernel32.dll", SetLastError = true)] internal static extern nint GlobalLock(nint memory);
     [DllImport("kernel32.dll")] internal static extern bool GlobalUnlock(nint memory);
-    [DllImport("user32.dll")] private static extern bool EmptyClipboard();
-    [DllImport("user32.dll")] private static extern nint SetClipboardData(uint format, nint memory);
-    [DllImport("kernel32.dll")] private static extern nint GlobalAlloc(uint flags, nuint bytes);
+    [DllImport("user32.dll", SetLastError = true)] private static extern bool EmptyClipboard();
+    [DllImport("user32.dll", SetLastError = true)] private static extern nint SetClipboardData(uint format, nint memory);
+    [DllImport("kernel32.dll", SetLastError = true)] private static extern nint GlobalAlloc(uint flags, nuint bytes);
     [DllImport("kernel32.dll")] private static extern nint GlobalFree(nint memory);
     internal static void WriteClipboardText(nint owner, string text)
     {

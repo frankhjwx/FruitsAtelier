@@ -1262,5 +1262,7 @@
   "copier.allTargets": "All target Diffs",
   "copier.overwriteAll": "Overwrite all target Diffs",
   "copier.batchNames": "Create a new “original name (Hitsounds)” Diff for each target.",
-  "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes."
+  "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes.",
+  "screenshot.copied": "คัดลอกภาพหน้าจอไปยังคลิปบอร์ดแล้ว",
+  "screenshot.failed": "ไม่สามารถคัดลอกภาพหน้าจอได้: {0}"
 }

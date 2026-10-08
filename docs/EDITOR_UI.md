@@ -919,3 +919,7 @@ cannot use explicit filenames or incompatible extra tick banks; preview explains
 these format constraints without applying a partial result.
 
 Select **All target Diffs** to copy to every difficulty in the current project, excluding the selected same-set source. Overwrite adds an undo step to each target; undo and redo work per Diff and retain audio files still used by other Diffs. Create new Diff creates a uniquely named copy of each target. Check validates every target before applying any changes and lists the aggregate matched-event count and shared file changes. Matches allow a time difference of up to 2ms; the nearest source wins, with the earlier event winning a tie.
+
+## Clipboard screenshots
+
+F12 copies the current window content, including open dialogs and testplay, as an image on the system clipboard. Capture runs independently of content editing and undo history. Windows reads the completed render target before presentation; macOS renders the editor at the window's display scale and supplies native PNG clipboard data. The shortcut fires once per press and rearms on release or focus cancellation.

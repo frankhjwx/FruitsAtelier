@@ -48,6 +48,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("F12 screenshots repeat once and preserve dialogs, playback and content", ScreenshotTests.Shortcut),
     ("Hitsound Copier modes, new Diff and undo", HitsoundCopierUiTests.Run),
     ("Testplay opening preparation and audio boundary", TestplayTests.OpeningPreparation),
     ("Held quick retry dims over 250 ms, clicks once and cancels on release while running or paused", FeedbackInteractionTests.Retry),

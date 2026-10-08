@@ -38,7 +38,7 @@ public sealed class CatchTestplaySession
     public double X { get { lock (gate) return game.X; } }
     public int Combo { get { lock (gate) return game.Combo; } }
     public double TransportPosition { get { lock (gate) return time - outputLead; } }
-    public bool UsesKey(int key) => key != 114 && (key == left || key == right || key == dash);
+    public bool UsesKey(int key) => key is not (114 or 123) && (key == left || key == right || key == dash);
     private double Realtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
 
     public CatchTestplaySession(CatchTestplay game, CatchTestplayClock clock, double start, bool withAudio,
