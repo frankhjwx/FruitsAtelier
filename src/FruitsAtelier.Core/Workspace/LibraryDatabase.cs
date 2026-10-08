@@ -214,6 +214,7 @@ public sealed class LibraryDatabase
     private LibraryScan ScanRoot(string root, CancellationToken cancellation, Action<bool, bool> report)
     {
         using var db = Open();
+        int count = 0;
         var errors = new List<string>(); var seen = new HashSet<string>(StringComparer.Ordinal);
         var scannedDirectories = new HashSet<string>(StringComparer.Ordinal);
         var cached = new Dictionary<string, (long Stamp, long Size)>();
@@ -259,7 +260,7 @@ public sealed class LibraryDatabase
                     accepted = true;
                 }
                 catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException) { seen.Add(file); failed = true; errors.Add(file + ": " + e.Message); }
-                finally { report(accepted, failed); }
+                finally { if (accepted) count++; report(accepted, failed); }
             }
         }
         // Errors in another set must not retain deleted files in directories enumerated successfully.
@@ -270,7 +271,7 @@ public sealed class LibraryDatabase
                 command.CommandText = "DELETE FROM maps WHERE path=$p"; command.Parameters.AddWithValue("$p", path); command.ExecuteNonQuery();
                 Interlocked.Increment(ref revision);
             }
-        return new(seen.Count, errors);
+        return new(count, errors);
     }
 
     public void ReindexProjects() { lock (WorkspaceProject.Gate) ReindexProjectsLocked(); }
