@@ -529,29 +529,43 @@ public static class OsuBeatmapWriter
         var text = new StringBuilder("osu file format v14\r\n");
         foreach (var section in document.OriginalSections)
         {
-            if (section.Name == "Colours")
-            {
-                while (text.Length > 0 && char.IsWhiteSpace(text[^1])) text.Length--;
-                text.Append("\r\n\r\n");
-            }
-            if (section.Name.Length != 0) text.Append('[').Append(section.Name).Append("]\r\n");
+            if (section.Name.Length != 0) text.Append("\r\n[").Append(section.Name).Append("]\r\n");
             if (section.Name == "Metadata") WriteMetadata(text, section);
-            else foreach (string line in section.Lines) text.Append(line).Append("\r\n");
+            else
+            {
+                int first = 0, end = section.Lines.Count;
+                while (first < end && string.IsNullOrWhiteSpace(section.Lines[first])) first++;
+                while (end > first && string.IsNullOrWhiteSpace(section.Lines[end - 1])) end--;
+                for (int i = first; i < end; i++)
+                {
+                    string line = section.Lines[i];
+                    if (section.Name is "General" or "Editor" or "Difficulty" or "Colours")
+                    {
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        line = SettingLine(line, section.Name switch { "Colours" => " : ", "Difficulty" => ":", _ => ": " });
+                    }
+                    text.Append(line).Append("\r\n");
+                }
+            }
         }
         return text.ToString();
     }
 
     private static void WriteMetadata(StringBuilder text, OsuSection section)
     {
-        string[] keys = ["Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Source", "Tags", "BeatmapSetID", "Version", "BeatmapID"];
+        string[] keys = ["Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Version", "Source", "Tags", "BeatmapID", "BeatmapSetID"];
         string Key(string line) => line.Split(':', 2)[0].Trim();
-        foreach (string key in keys.Take(8))
-            foreach (string line in section.Lines.Where(line => Key(line) == key)) text.Append(line).Append("\r\n");
+        foreach (string key in keys)
+            foreach (string line in section.Lines.Where(line => Key(line) == key)) text.Append(SettingLine(line, ":")).Append("\r\n");
         foreach (string line in section.Lines.Where(line => !string.IsNullOrWhiteSpace(line) && !keys.Contains(Key(line))))
-            text.Append(line).Append("\r\n");
-        if (section.Lines.Any(line => Key(line) is "Version" or "BeatmapID")) text.Append("\r\n");
-        foreach (string key in keys.Skip(8))
-            foreach (string line in section.Lines.Where(line => Key(line) == key)) text.Append(line).Append("\r\n");
+            text.Append(SettingLine(line, ":")).Append("\r\n");
+    }
+
+    private static string SettingLine(string line, string separator)
+    {
+        int colon = line.IndexOf(':');
+        if (colon < 1 || !OsuBeatmapReader.IsDataLine(line.Trim())) return line;
+        return line[..colon].Trim() + separator + line[(colon + 1)..].Trim();
     }
 
     private static void ReplaceData(MapDocument document, string name, IEnumerable<string> data)

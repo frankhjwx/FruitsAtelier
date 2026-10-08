@@ -13,7 +13,7 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 - A confirmed Timing-panel SV override replaces exported SliderMultiplier and compensates inherited SV at red resets and green points. Export keeps the generated object lines and validates NM/HR playback before returning text. The authoring multiplier and DPB remain unchanged; see [Timing editing](EDITOR_UI.md#timing-editing).
 - Base-SV compensation starts at existing timing points. If a slider starts before all timing points, export writes its implicit BPM followed by the compensated green at that slider's head; it does not add an unused green at 0 ms.
 - Read and edit `[Editor] Bookmarks` and `[Events]` break periods as difficulty-local timeline content. Unrelated event lines retain their source text and order.
-- Preserve raw section text and unedited object lines; unsupported object types are errors.
+- Project files preserve raw source sections. `.osu` exports normalize section spacing and setting layout while retaining comments, unknown content, and unedited object lines; unsupported object types are errors.
 - Synchronization compares osu! save representations: truncated object start/end
   milliseconds, 15-significant-digit slider lengths and timing values, and implicit
   first-object/post-spinner combo boundaries. Events comparisons ignore comments,
@@ -63,11 +63,14 @@ These rules follow the [official format document](https://github.com/ppy/osu-wik
 
 The generator first produces a two-dimensional slider that satisfies its targets; the writer then serializes it. Serialization uses invariant culture with consistent newline and UTF-8 policies. Integer object times truncate toward zero, matching stable snapping as modeled by MapsetVerifier. Coordinates round midpoints away from zero. Generated SV points use the same truncated time as their slider heads. Beat grids calculate offsets from whole subdivision counts before dividing, retaining exact whole-millisecond grid points. Original unedited integer values remain unchanged.
 
-Metadata exports Title, TitleUnicode, Artist, ArtistUnicode, Creator, Source, Tags,
-and BeatmapSetID in that order, followed by any additional fields or comments.
-A blank line separates these from Version and BeatmapID, which end the section.
-Colours has exactly one preceding blank line. Timing data starts directly below
-its section header, with any retained comments before the data.
+Metadata exports Title, TitleUnicode, Artist, ArtistUnicode, Creator, Version,
+Source, Tags, BeatmapID, and BeatmapSetID in that order, followed by any additional
+fields or comments. Metadata fields are contiguous. The header and named sections
+are separated by exactly one blank line. Settings use stable's `key: value` style
+in General and Editor, `key:value` in Metadata and Difficulty, and `key : value`
+in Colours. Other section bodies retain their lines and internal spacing. Timing
+data starts directly below its section header, with any retained comments before
+the data.
 
 Output defaults to a new file. It validates all objects before writing a temporary file and safely replacing the destination. Failure preserves the original file. Hosts copy available associated resources and manage relative paths for exports across directories; missing song audio and same-name content conflicts are errors. Optional video, storyboard, background, and custom sample files may be absent; their original references are preserved.
 

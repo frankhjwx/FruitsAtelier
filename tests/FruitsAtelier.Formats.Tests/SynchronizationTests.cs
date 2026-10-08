@@ -486,11 +486,11 @@ internal static class SynchronizationTests
         yield return ("Sync: all section fields support additions, retained choices and deletions", () =>
         {
             foreach (var (section, line, key) in new[] {
-                ("General", "PreviewTime:1234", "General/PreviewTime"),
-                ("Editor", "Bookmarks:100,200", "Editor/Bookmarks"),
+                ("General", "PreviewTime: 1234", "General/PreviewTime"),
+                ("Editor", "Bookmarks: 100,200", "Editor/Bookmarks"),
                 ("Difficulty", "HPDrainRate:7", "Difficulty/HPDrainRate"),
                 ("Metadata", "CustomField:extra", "Metadata/CustomField"),
-                ("Colours", "Combo1:10,20,30", "Colours/Combo1"),
+                ("Colours", "Combo1 : 10,20,30", "Colours/Combo1"),
                 ("Events", "// storyboard\nSprite,Foreground,Centre,\"test.png\",320,240\n F,0,1000,2000,0,1", "Events/"),
                 ("CustomSection", "arbitrary:text\nunchanged payload", "CustomSection/") }) Run(f =>
             {

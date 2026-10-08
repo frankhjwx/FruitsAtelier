@@ -23,7 +23,7 @@ var tests = new (string Name, Action Run)[]
     ("Fractional banana endpoints preserve exported counts and downstream tiny compensation", BananaQuantizationTests.Run),
     ("Fractional FSlider heads preserve exported tiny counts, NM/HR RNG, editing and undo", FractionalSliderQuantizationTests.Run),
     ("Export keeps timing data below its header and a blank before Colours", TimingSectionSpacing),
-    ("Export orders metadata with difficulty identity at the end", MetadataLayout),
+    ("Export uses stable metadata order, setting spacing and section separation", MetadataLayout),
     ("Cached export matches full serialization across edits, order, RNG, timing and streams", WriteCacheTests.MatchesUncached),
     ("Equal-time/order fruits, streams and random parents retain converter order through export and undo", WriteCacheTests.StableParentOrder),
     ("v12, v13 and compatible v128 imports preserve gameplay, optional fields and v14 export", CompatibleVersions),
@@ -91,12 +91,19 @@ static void TimingSectionSpacing()
 }
 static void MetadataLayout()
 {
-    const string ordered = "Title:18sai\r\nTitleUnicode:18歳\r\nArtist:Goose house\r\nArtistUnicode:Goose house\r\nCreator:mingmichael\r\nSource:\r\nTags:tag\r\nBeatmapSetID:242856\r\n\r\nVersion:Rain (FruitsAtelier)\r\nBeatmapID:0\r\n";
-    var document = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Metadata]\n"
-        + string.Join('\n', ordered.Split("\r\n").Reverse()) + "\n[Difficulty]\nHPDrainRate:7\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n");
+    const string ordered = "Title:18sai\r\nTitleUnicode:18歳\r\nArtist:Goose house\r\nArtistUnicode:Goose house\r\nCreator:mingmichael\r\nVersion:Rain (FruitsAtelier)\r\nSource:\r\nTags:tag\r\nBeatmapID:0\r\nBeatmapSetID:242856\r\n";
+    var document = OsuBeatmapReader.Read("osu file format v14\n\n\n[General]\n\nMode:2\n\n[Editor]\nDistanceSpacing:0.6\n[Metadata]\n"
+        + string.Join('\n', ordered.Replace(":", " : ").Split("\r\n").Reverse())
+        + "\nExtraField : keep:this\n// retained metadata comment\n[Difficulty]\nHPDrainRate : 7\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[Colours]\nCombo1:0,128,255\n[HitObjects]\n");
+    var before = document.DeepClone();
     string text = OsuBeatmapWriter.Serialize(document).Text;
-    Check(text.Contains("[Metadata]\r\n" + ordered + "[Difficulty]"), "Metadata order or spacing differs from export layout");
+    Check(text.StartsWith("osu file format v14\r\n\r\n[General]\r\nMode: 2\r\n\r\n[Editor]\r\nDistanceSpacing: 0.6\r\n\r\n[Metadata]"),
+        "Header, sections and editor settings must use stable spacing");
+    Check(text.Contains("[Metadata]\r\n" + ordered + "ExtraField:keep:this\r\n// retained metadata comment\r\n\r\n[Difficulty]\r\nHPDrainRate:7"),
+        "Metadata order, retained fields or section spacing differs from stable layout");
+    Check(text.Contains("\r\n\r\n[Colours]\r\nCombo1 : 0,128,255\r\n\r\n[HitObjects]"), "Colour setting or section spacing differs from stable layout");
     Check(OsuBeatmapWriter.Serialize(OsuBeatmapReader.Read(text)).Text == text, "Metadata layout changes on repeated export");
+    Check(document.ContentEquals(before), "Export formatting changed authored content");
 }
 int failed = 0, skipped = 0;
 tests = tests.Concat(SynchronizationTests.Cases()).ToArray();
@@ -567,7 +574,7 @@ static void AudioReferences()
         var d = OsuBeatmapReader.Read(Fixture().Replace("TitleUnicode:测试曲", "TitleUnicode:"), Path.Combine(folder, "source.osu"));
         Equal("Fixture", d.Name);
         d.AudioPath = Path.Combine(folder, "replacement.mp3");
-        Check(OsuBeatmapWriter.Serialize(d).Text.Contains("AudioFilename:replacement.mp3"), "Changed audio path did not export");
+        Check(OsuBeatmapWriter.Serialize(d).Text.Contains("AudioFilename: replacement.mp3"), "Changed audio path did not export");
         d.AudioPath = "\\\\server\\audio.mp3";
         Throws(() => ProjectSerializer.Serialize(d), "UNC project resource");
     });
