@@ -41,27 +41,21 @@ public sealed class DropletRandomization
         (time - track.Nodes[0].TimeMs) / (CurveMath.EndTimeMs(track) - track.Nodes[0].TimeMs), 0, 1);
 
     internal static Func<double, double> Targets(MapDocument document, CurveTrack track,
-        IReadOnlyList<NestedCatchEvent> events, Func<double, double> curve, int firstEventIndex)
+        IReadOnlyList<NestedCatchEvent> events, Func<double, double> curve, CatchLegacyRandom random)
     {
         var targets = new Dictionary<double, double>();
         for (int index = 0; index < events.Count; index++)
         {
             var item = events[index];
+            if (item.Kind == CatchObjectKind.Droplet) random.Next();
             if (item.Kind != CatchObjectKind.TinyDroplet) continue;
             double progress = Progress(track, item.TimeMs);
-            double x = Math.Clamp(curve(item.TimeMs), 0, 512);
-            targets[item.TimeMs] = Math.Clamp(Math.Clamp(x + Offset(document.RandomizeDropletSeed,
-                firstEventIndex + index, document.RandomizeDropletStrength), 0, 512) + track.DropletRandomization!.AdjustmentAt(progress), 0, 512);
+            double pathTime = track.Nodes[0].TimeMs + item.Progress * (track.Nodes[^1].TimeMs - track.Nodes[0].TimeMs);
+            double x = Math.Clamp(curve(pathTime), 0, 512);
+            targets[item.TimeMs] = Math.Clamp(Math.Clamp(x + random.NextTinyOffset()
+                * document.RandomizeDropletStrength / 20, 0, 512) + track.DropletRandomization!.AdjustmentAt(progress), 0, 512);
         }
         return time => targets.TryGetValue(time, out double x) ? x : curve(time);
     }
 
-    // Every generated event advances the diff-wide sequence, including parents with their effect disabled.
-    private static double Offset(int seed, int eventIndex, double strength)
-    {
-        uint value = unchecked((uint)seed ^ (uint)eventIndex);
-        value ^= 0x9e3779b9; value ^= value >> 16; value = unchecked(value * 0x7feb352d);
-        value ^= value >> 15; value = unchecked(value * 0x846ca68b); value ^= value >> 16;
-        return ((int)(value % 40) - 20) * strength / 20;
-    }
 }

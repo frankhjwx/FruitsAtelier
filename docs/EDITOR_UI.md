@@ -99,10 +99,13 @@ provides **Randomization settings…** and **Reset manual droplet adjustments** 
 the selected FSlider. Batch operations exclude Legacy Sliders and slider-managed
 fruit streams. Parameters and switches remain local to the current difficulty.
 
-The random sequence continues across all generated objects in the difficulty,
+Strength 20 and Seed 1337 reproduce osu!'s native NM randomization when there are
+no manual corrections. Custom seeds use the same legacy RNG; Strength scales its
+offsets. The sequence continues across droplets, TinyDroplets and bananas,
 including sliders with their effect disabled. Identical sliders use different
-parts of the sequence. Adding or removing earlier objects changes later random
-offsets; unchanged content and Seed reproduce the same result.
+parts of the sequence. Adding or removing earlier RNG-consuming objects changes
+later offsets; ordinary NM fruits do not. Unchanged content and Seed reproduce
+the same result. HR gameplay applies osu!'s usual additional position rules.
 
 Randomization affects TinyDroplets. Drag a TinyDroplet in Select mode or edit its
 X coordinate to save a correction without changing the base curve. Unlock droplet

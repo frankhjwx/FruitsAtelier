@@ -32,6 +32,7 @@ public static class CatchStreamConverter
             .Concat(document.BananaShowers.Select(b => new Source(b.TimeMs, b.SourceOrder, null, null, null, b)))
             .OrderBy(s => s.TimeMs).ThenBy(s => s.SourceOrder);
         var rng = new CatchLegacyRandom(1337);
+        var effectRng = new CatchLegacyRandom(document.RandomizeDropletSeed);
         foreach (var source in parents)
         {
             Guid sourceId = source.Fruit?.Id ?? source.Track?.Id ?? source.ImportedSlider?.Id ?? source.BananaShower!.Id;
@@ -53,13 +54,12 @@ public static class CatchStreamConverter
             try
             {
                 var before = rng;
-                int firstEventIndex = objects.Count;
                 CatchLegacyRandom? hardRockBefore = source.Track is { StreamSnapDivisor: null } hrTrack && hardRockStates is not null
                     && hardRockStates.TryGetValue(hrTrack.Id, out var hrState) ? hrState : null;
-                if (cache is not null && cache.TryGet(source.Track, source.ImportedSlider, source.BananaShower, ref rng, firstEventIndex, hardRockBefore, out var cachedSlider, out var cachedObjects))
+                if (cache is not null && cache.TryGet(source.Track, source.ImportedSlider, source.BananaShower, ref rng, hardRockBefore, out var cachedSlider, out var cachedObjects))
                 {
                     if (cachedSlider is not null) sliders.Add(cachedSlider);
-                    objects.AddRange(cachedObjects); continue;
+                    objects.AddRange(cachedObjects); AdvanceEffectRandom(cachedObjects, ref effectRng); continue;
                 }
                 if (source.ImportedSlider is ImportedSlider imported)
                 {
@@ -67,8 +67,9 @@ public static class CatchStreamConverter
                     var convertedImport = ImportedSliderConverter.Convert(document, imported, ref candidateRng, timing ??= new(document));
                     sliders.Add(convertedImport.Slider);
                     objects.AddRange(convertedImport.Objects);
+                    AdvanceEffectRandom(convertedImport.Objects, ref effectRng);
                     rng = candidateRng;
-                    cache?.Store(null, imported, null, before, rng, convertedImport.Slider, convertedImport.Objects, firstEventIndex);
+                    cache?.Store(null, imported, null, before, rng, convertedImport.Slider, convertedImport.Objects);
                     continue;
                 }
                 if (source.BananaShower is BananaShower shower)
@@ -76,8 +77,9 @@ public static class CatchStreamConverter
                     var candidateRng = rng;
                     var bananas = ConvertBananas(shower, ref candidateRng);
                     objects.AddRange(bananas);
+                    AdvanceEffectRandom(bananas, ref effectRng);
                     rng = candidateRng;
-                    cache?.Store(null, null, shower, before, rng, null, bananas, firstEventIndex);
+                    cache?.Store(null, null, shower, before, rng, null, bananas);
                     continue;
                 }
                 var track = source.Track!;
@@ -86,14 +88,15 @@ public static class CatchStreamConverter
                 {
                     var stream = SliderFruitStream.Convert(document, track, timing ??= new(document));
                     objects.AddRange(stream);
-                    cache?.Store(track, null, null, before, rng, null, stream, firstEventIndex);
+                    cache?.Store(track, null, null, before, rng, null, stream);
                     continue;
                 }
                 var converted = ConvertTrack(document, track, document.DerandomizeFSliderDroplets || (track.CompensateTinyDroplets ?? compensateTinyDroplets),
-                    ref rng, (timing ??= new(document)).At(track.Nodes[0].TimeMs), firstEventIndex, cache?.PositionAtTime(track), hardRockBefore);
+                    ref rng, (timing ??= new(document)).At(track.Nodes[0].TimeMs), effectRng, cache?.PositionAtTime(track), hardRockBefore);
                 sliders.Add(converted.Slider);
                 objects.AddRange(converted.Objects);
-                cache?.Store(track, null, null, before, rng, converted.Slider, converted.Objects, firstEventIndex, hardRockBefore);
+                AdvanceEffectRandom(converted.Objects, ref effectRng);
+                cache?.Store(track, null, null, before, rng, converted.Slider, converted.Objects, hardRockBefore);
             }
             catch (CatchConversionException error)
             {
@@ -124,7 +127,7 @@ public static class CatchStreamConverter
     }
 
     private static TrackConversion ConvertTrack(MapDocument document, CurveTrack track, bool requestCompensation,
-        ref CatchLegacyRandom globalRng, TimingState timing, int firstEventIndex, Func<double, double>? positionAtTime = null, CatchLegacyRandom? hardRockBefore = null)
+        ref CatchLegacyRandom globalRng, TimingState timing, CatchLegacyRandom effectRng, Func<double, double>? positionAtTime = null, CatchLegacyRandom? hardRockBefore = null)
     {
         positionAtTime ??= time => CurveMath.PositionAtTime(track, time);
         double start = track.Nodes[0].TimeMs;
@@ -135,7 +138,10 @@ public static class CatchStreamConverter
             Math.Max(sv, LegacyCatchRules.MaximumPathLength * timing.BeatLengthMs
                 / (duration * 100 * document.SliderMultiplier) * (1 - 1e-7)));
         bool randomize = !document.DerandomizeFSliderDroplets && track.DropletRandomization is { Enabled: true };
-        bool compensate = randomize || requestCompensation;
+        // Native offsets must act on the base path, preserving repeat geometry and edge clamping.
+        bool nativeRandomize = randomize && document.RandomizeDropletStrength == 20 && document.RandomizeDropletSeed == 1337
+            && track.DropletRandomization!.Adjustments.Count == 0;
+        bool compensate = !nativeRandomize && (randomize || requestCompensation);
 
         for (int attempt = 0; attempt < 18; attempt++)
         {
@@ -156,9 +162,9 @@ public static class CatchStreamConverter
                 normalOffsets = nested.Select(item => item.RawOffset).ToArray();
                 LegacyCatchRules.ApplyRandomSequence(nested, ref hrRng);
             }
-            var targetAtTime = randomize ? DropletRandomization.Targets(document, track, nested, positionAtTime, firstEventIndex) : positionAtTime;
+            var targetAtTime = randomize ? DropletRandomization.Targets(document, track, nested, positionAtTime, effectRng) : positionAtTime;
             List<MapPoint> samples;
-            try { samples = Samples(track, nested, compensate, targetAtTime); }
+            try { samples = Samples(track, nested, compensate, nativeRandomize ? positionAtTime : targetAtTime); }
             catch (TinyConstraintException) when (compensate)
             {
                 if (sv < maximumSv)
@@ -285,6 +291,15 @@ public static class CatchStreamConverter
             catch (CatchConversionException) { }
         }
         return result;
+    }
+
+    private static void AdvanceEffectRandom(IReadOnlyList<ConvertedCatchObject> objects, ref CatchLegacyRandom random)
+    {
+        foreach (var item in objects)
+        {
+            if (item.Kind == CatchObjectKind.Banana) { random.Next(); random.Next(); random.Next(); random.Next(); }
+            else if (item.Kind is CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet) random.Next();
+        }
     }
 
     private static List<MapPoint> Samples(CurveTrack track, IReadOnlyList<NestedCatchEvent> nested, bool compensate, Func<double, double> positionAtTime)
