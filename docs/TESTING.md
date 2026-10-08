@@ -49,7 +49,7 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
-Test projects are console programs run with `dotnet run`. Format-export quantization, read-back, and edge-sample diagnostic checks iterate over every available language, verifying messages and parameters against localization tables rather than assuming the default UI language.
+Test projects are console programs run with `dotnet run`. Format-export quantization and read-back diagnostic checks iterate over every available language, verifying messages and parameters against localization tables rather than assuming the default UI language. Repeat-count checks verify preserved edge samples and silent default assignment to new edges in every language.
 
 After building the solution, run on Windows from the repository root:
 

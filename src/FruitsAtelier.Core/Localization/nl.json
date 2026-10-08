@@ -368,7 +368,6 @@
   "core.writer.sliderCount": "Het gegenereerde aantal Slider komt niet overeen met de geschreven tracks.",
   "core.writer.sourceOverwrite": "Opslaan in een nieuw .osu-bestand; de origineel geïmporteerde Beatmap mag niet worden overschreven.",
   "core.writer.spanMismatch": "Het gegenereerde aantal Slider-reeksen komt niet overeen met het geschreven nummer.",
-  "core.writer.spanSamples": "{0}: aantal overspanningen {1} → {2}. Kop-, staart- en overgebleven herhalingsmonsters worden bewaard; nieuwe herhalingsranden gebruiken standaardmonsters.",
   "core.writer.svCollision": "Gegenereerde Slider met hetzelfde gehele tijdstempel vereisen verschillende snelheidswaarden en kunnen niet zonder verlies worden geëxporteerd.",
   "core.writer.timingOrder": "Originele Timing-punten zijn niet chronologisch. Gegenereerde snelheidspunten kunnen niet veilig worden ingevoegd terwijl de volgorde behouden blijft.",
   "dialog.audioFilter": "Audio (MP3 / OGG / WAV)",

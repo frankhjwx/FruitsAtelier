@@ -368,7 +368,6 @@
   "core.writer.sliderCount": "產生的 滑條 計數與創作的曲目不符。",
   "core.writer.sourceOverwrite": "儲存到新的.osu檔案；不得覆蓋原來匯入的圖譜。",
   "core.writer.spanMismatch": "產生的 滑條 跨度計數與創作的曲目不符。",
-  "core.writer.spanSamples": "{0}：跨度計數 {1} → {2}。保留頭部、尾部和倖存的重複樣本；新的重複邊緣使用預設樣本。",
   "core.writer.svCollision": "在同一整數時間戳產生的 滑條 需要不同的速度值，且無法無損匯出。",
   "core.writer.timingOrder": "原版時間軸點不依時間順序排列。產生的速度點無法在保留其順序的同時安全插入。",
   "dialog.audioFilter": "音訊（MP3/OGG/WAV）",

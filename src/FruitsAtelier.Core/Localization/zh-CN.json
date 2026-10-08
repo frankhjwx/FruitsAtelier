@@ -368,7 +368,6 @@
   "core.writer.sliderCount": "生成 slider 数量与创作曲线不一致。",
   "core.writer.sourceOverwrite": "请另存为新的 .osu 文件；不能覆盖导入的原谱面。",
   "core.writer.spanMismatch": "输出 slider 的行程次数与 FSlider 不一致。",
-  "core.writer.spanSamples": "{0}：行程次数 {1} → {2}，保留首尾和仍存在的重复边缘样本，新增重复边缘使用默认样本。",
   "core.writer.svCollision": "同一整数时刻的生成 slider 需要不同速度，无法无损输出。",
   "core.writer.timingOrder": "原 timing 未按时间排列；保留原顺序时不能安全插入生成速度点。",
   "dialog.audioFilter": "音频 (MP3 / OGG / WAV)",

@@ -165,8 +165,6 @@ public static class OsuBeatmapWriter
             {
                 values[8] = ResizeEdges(values[8], slider.SpanCount, "0");
                 values[9] = ResizeEdges(values[9], slider.SpanCount, "0:0");
-                if (track.OriginalLine is not null)
-                    diagnostics.Add(L.Get("core.writer.spanSamples", track.Name, originalSpans, slider.SpanCount));
             }
             values[10] ??= "0:0:0:0:";
             lines.Add((slider.StartTimeMs, track.SourceOrder, slider.SourceId, string.Join(',', values)));

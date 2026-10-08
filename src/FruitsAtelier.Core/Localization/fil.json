@@ -368,7 +368,6 @@
   "core.writer.sliderCount": "Ang nabuong bilang ng Slider ay hindi tumutugma sa mga isinulat na track.",
   "core.writer.sourceOverwrite": "I-save sa isang bagong .osu file; hindi dapat ma-overwrite ang orihinal na imported na Beatmap.",
   "core.writer.spanMismatch": "Ang nabuong Slider span count ay hindi tumutugma sa authored track.",
-  "core.writer.spanSamples": "{0}: bilang ng span {1} → {2}. Ang ulo, buntot, at nakaligtas na mga umuulit na sample ay pinapanatili; ang mga bagong umuulit na gilid ay gumagamit ng mga default na sample.",
   "core.writer.svCollision": "Ang nabuong Mga Islayder sa parehong integer timestamp ay nangangailangan ng iba't ibang mga halaga ng bilis at hindi maaaring i-export nang walang pagkawala.",
   "core.writer.timingOrder": "Ang mga orihinal na Timing na puntos ay hindi kronolohiko. Ang mga nabuong speed point ay hindi maaaring maipasok nang ligtas habang pinapanatili ang kanilang order.",
   "dialog.audioFilter": "Audio (MP3 / OGG / WAV)",

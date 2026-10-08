@@ -368,7 +368,6 @@
   "core.writer.sliderCount": "The generated slider count does not match the authored tracks.",
   "core.writer.sourceOverwrite": "Save to a new .osu file; the original imported beatmap must not be overwritten.",
   "core.writer.spanMismatch": "The generated slider span count does not match the authored track.",
-  "core.writer.spanSamples": "{0}: span count {1} → {2}. Head, tail, and surviving repeat samples are preserved; new repeat edges use default samples.",
   "core.writer.svCollision": "Generated sliders at the same integer timestamp require different speed values and cannot be exported without loss.",
   "core.writer.timingOrder": "Original timing points are not chronological. Generated speed points cannot be inserted safely while preserving their order.",
   "dialog.audioFilter": "Audio (MP3 / OGG / WAV)",

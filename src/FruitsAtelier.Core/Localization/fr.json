@@ -368,7 +368,6 @@
   "core.writer.sliderCount": "Le nombre Slider généré ne correspond pas aux pistes créées.",
   "core.writer.sourceOverwrite": "Enregistrez dans un nouveau fichier .osu ; le Beatmap importé d'origine ne doit pas être écrasé.",
   "core.writer.spanMismatch": "Le nombre de travées Slider généré ne correspond pas à la piste créée.",
-  "core.writer.spanSamples": "{0} : nombre de travées {1} → {2}. Les échantillons de tête, de queue et de répétitions survivants sont préservés ; les nouvelles arêtes de répétition utilisent des échantillons par défaut.",
   "core.writer.svCollision": "Les Sliders générés avec le même horodatage entier nécessitent des valeurs de vitesse différentes et ne peuvent pas être exportés sans perte.",
   "core.writer.timingOrder": "Les points Timing d'origine ne sont pas chronologiques. Les points de vitesse générés ne peuvent pas être insérés en toute sécurité tout en préservant leur ordre.",
   "dialog.audioFilter": "Audio (MP3/OGG/WAV)",

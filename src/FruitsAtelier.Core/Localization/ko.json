@@ -368,7 +368,6 @@
   "core.writer.sliderCount": "생성된 슬라이더 개수가 작성된 트랙과 일치하지 않습니다.",
   "core.writer.sourceOverwrite": "새 .osu 파일에 저장합니다. 가져온 원본 비트맵를 덮어쓰면 안 됩니다.",
   "core.writer.spanMismatch": "생성된 슬라이더 범위 수가 작성된 트랙과 일치하지 않습니다.",
-  "core.writer.spanSamples": "{0}: 스팬 카운트 {1} → {2}. 머리, 꼬리 및 살아남은 반복 샘플은 보존됩니다. 새로운 반복 가장자리는 기본 샘플을 사용합니다.",
   "core.writer.svCollision": "동일한 정수 타임스탬프에서 생성된 슬라이더 갯수에는 다른 속도 값이 필요하며 손실 없이 내보낼 수 없습니다.",
   "core.writer.timingOrder": "원래 타이밍 포인트는 연대순이 아닙니다. 생성된 속도 포인트는 순서를 유지하면서 안전하게 삽입할 수 없습니다.",
   "dialog.audioFilter": "오디오(MP3/OGG/WAV)",

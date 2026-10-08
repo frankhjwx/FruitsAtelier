@@ -414,7 +414,7 @@ static void ChangedRepeatEdges()
 {
     var d = OsuBeatmapReader.Read(ConvertibleRepeatFixture());
     var edit = ImportedSliderEditing.ConvertToTrack(d, d.ImportedSliders.Single().Id);
-    int originalSpans = edit.Track.SpanCount;
+    int diagnosticCount = OsuBeatmapWriter.Serialize(d, false).Diagnostics.Count;
     edit.Track.SpanCount = 3;
     var result = OsuBeatmapWriter.Serialize(d, false);
     var slider = result.ReadBack.ImportedSliders.Single();
@@ -422,7 +422,7 @@ static void ChangedRepeatEdges()
     string[] fields = slider.OriginalLine!.Split(',');
     Equal("2|4|0|8", fields[8]); Equal("2:3|3:2|0:0|1:0", fields[9]); Equal("2:3:4:65:edge.wav", fields[10]);
     Check(result.ObjectSequenceMatches, "Repeat-count change lost generated events on export");
-    Check(result.Diagnostics.Contains(L.Get("core.writer.spanSamples", edit.Track.Name, originalSpans, slider.SpanCount)), "Changed repeat samples lack a diagnostic");
+    Equal(diagnosticCount, result.Diagnostics.Count);
 }
 
 static void RestoreSv()

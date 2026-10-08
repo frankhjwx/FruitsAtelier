@@ -368,7 +368,6 @@
   "core.writer.sliderCount": "El recuento de Slider generado no coincide con las pistas creadas.",
   "core.writer.sourceOverwrite": "Guárdelo en un nuevo archivo .osu; el Mapa original importado no debe sobrescribirse.",
   "core.writer.spanMismatch": "El recuento de tramos Slider generado no coincide con la pista creada.",
-  "core.writer.spanSamples": "{0}: recuento de tramos {1} → {2}. Se conservan la cabeza, la cola y las muestras repetidas supervivientes; Los nuevos bordes repetidos utilizan muestras predeterminadas.",
   "core.writer.svCollision": "El Sliders generado con la misma marca de tiempo entera requiere valores de velocidad diferentes y no se puede exportar sin pérdidas.",
   "core.writer.timingOrder": "Los puntos originales Tiempo no son cronológicos. Los puntos de velocidad generados no se pueden insertar de forma segura manteniendo su orden.",
   "dialog.audioFilter": "Audio (MP3/OGG/WAV)",

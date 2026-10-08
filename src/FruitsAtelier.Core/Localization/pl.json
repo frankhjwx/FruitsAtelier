@@ -368,7 +368,6 @@
   "core.writer.sliderCount": "Wygenerowana liczba Slider nie jest zgodna z autorskimi utworami.",
   "core.writer.sourceOverwrite": "Zapisz w nowym pliku .osu; oryginalnego importowanego Beatmapa nie można nadpisywać.",
   "core.writer.spanMismatch": "Wygenerowana liczba rozpiętości Slider nie jest zgodna z utworzoną ścieżką.",
-  "core.writer.spanSamples": "{0}: liczba rozpiętości {1} → {2}. Zachowano głowę, ogon i pozostałe próbki powtórzone; nowe powtarzające się krawędzie wykorzystują próbki domyślne.",
   "core.writer.svCollision": "Wygenerowany Slidery z tym samym całkowitym znacznikiem czasu wymaga różnych wartości prędkości i nie można go wyeksportować bez strat.",
   "core.writer.timingOrder": "Oryginalne punkty Rytmika nie są chronologiczne. Wygenerowanych punktów prędkości nie można bezpiecznie wstawiać, zachowując ich kolejność.",
   "dialog.audioFilter": "Dźwięk (MP3/OGG/WAV)",

@@ -368,7 +368,6 @@
   "core.writer.sliderCount": "Jumlah Slider yang dihasilkan tidak cocok dengan trek yang dibuat.",
   "core.writer.sourceOverwrite": "Simpan ke file .osu baru; Beatmap asli yang diimpor tidak boleh ditimpa.",
   "core.writer.spanMismatch": "Jumlah rentang Slider yang dihasilkan tidak cocok dengan track yang dibuat.",
-  "core.writer.spanSamples": "{0}: jumlah rentang {1} → {2}. Sampel kepala, ekor, dan sampel berulang yang masih hidup diawetkan; tepi berulang yang baru menggunakan sampel default.",
   "core.writer.svCollision": "Slider yang dihasilkan pada stempel waktu bilangan bulat yang sama memerlukan nilai kecepatan yang berbeda dan tidak dapat diekspor tanpa kehilangan.",
   "core.writer.timingOrder": "Poin Timing asli tidak kronologis. Titik kecepatan yang dihasilkan tidak dapat dimasukkan dengan aman sambil mempertahankan urutannya.",
   "dialog.audioFilter": "Audio (MP3/OGG/WAV)",
