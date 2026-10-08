@@ -221,6 +221,13 @@ public sealed partial class EditorView
     {
         if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return; }
         if (DiscardConfirmationVisible || ExportVisible || !PrepareFileOperation()) return;
+        var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id);
+        bool importedDifficulty = entry?.Source is not null || Document.SourcePath is { } source && Path.GetExtension(source).Equals(".osu", StringComparison.OrdinalIgnoreCase);
+        if (!string.IsNullOrWhiteSpace(LibrarySettings.Songs) && ProjectInSongs && entry?.ExportConfirmed != true && importedDifficulty)
+        {
+            ShowWorkspaceExport();
+            return;
+        }
         if (WorkspaceSession is { } syncSession && syncSession.Manifest.Difficulties.Any(d => WorkspaceSynchronization.Target(d) is not null) && !syncBypass)
         {
             syncDifficulty = difficulties[activeDifficulty].Id;
@@ -238,11 +245,9 @@ public sealed partial class EditorView
             });
             return;
         }
-        var entry = WorkspaceSession?.Manifest.Difficulties.FirstOrDefault(d => d.Id == difficulties[activeDifficulty].Id);
         if (CurrentDifficultyHasExport)
             RequestWorkspaceExport?.Invoke(true, CurrentDifficultyName);
-        else if (entry?.Source is not null || Document.SourcePath is { } source && Path.GetExtension(source).Equals(".osu", StringComparison.OrdinalIgnoreCase))
-            ShowWorkspaceExport();
+        else if (importedDifficulty) ShowWorkspaceExport();
         else BeginWorkspaceSave();
     }
     public void LoadWorkspace(WorkspaceSession session, bool checkAdditionalDifficulties = false)
@@ -274,7 +279,7 @@ public sealed partial class EditorView
     private long searchedLibraryRevision = -1;
     private void StartLibraryScan()
     {
-        if (scanTask is { IsCompleted: false }) return;
+        if (scanTask is { IsCompleted: false }) { libraryRescanRequested = true; return; }
         try
         {
             libraryRescanRequested = false;

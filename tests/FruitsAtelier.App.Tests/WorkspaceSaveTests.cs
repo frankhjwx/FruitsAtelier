@@ -15,6 +15,7 @@ static class WorkspaceSaveTests
                 L.SetLanguage(locale);
                 ExportLocalDifficulty(size.Item1, size.Item2);
                 SaveConvertedSlidersAsNewDifficulty(size.Item1, size.Item2);
+                SaveConvertedSlidersAsNewDifficulty(size.Item1, size.Item2, initialConversion: true);
                 string root = Path.GetFullPath(Path.Combine("artifacts/tests/workspace-save", Guid.NewGuid().ToString("N")));
                 string songs = Path.Combine(root, "Songs"); Directory.CreateDirectory(songs);
                 var ui = new Ui(false); ui.Resize(size.Item1, size.Item2);
@@ -127,7 +128,7 @@ static class WorkspaceSaveTests
         ui.View.StopFileMonitoring();
     }
 
-    private static void SaveConvertedSlidersAsNewDifficulty(int width, int height)
+    private static void SaveConvertedSlidersAsNewDifficulty(int width, int height, bool initialConversion = false)
     {
         string root = Path.GetFullPath(Path.Combine("artifacts/tests/save-new-difficulty", Guid.NewGuid().ToString("N")));
         string songs = Path.Combine(root, "Songs"), set = Path.Combine(songs, "18sai"); Directory.CreateDirectory(set);
@@ -136,12 +137,12 @@ static class WorkspaceSaveTests
         File.WriteAllText(source, originalOsu);
         var ui = new Ui(false); ui.Resize(width, height);
         ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
-        ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); ui.View.AnswerSliderImport(false); ui.Paint();
+        ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); ui.View.AnswerSliderImport(initialConversion); ui.Paint();
         var session = ui.View.WorkspaceSession!;
         Guid originalId = session.Manifest.Difficulties.Single().Id;
         string catchdiff = Path.Combine(session.Directory, session.Manifest.Difficulties.Single().File);
         string originalCatchdiff = File.ReadAllText(catchdiff);
-        ui.View.ConvertAllSliders(); ui.View.AnswerSliderImport(true);
+        if (!initialConversion) { ui.View.ConvertAllSliders(); ui.View.AnswerSliderImport(true); }
         var deadline = DateTime.UtcNow.AddSeconds(15);
         while (ui.View.SliderConversionBusy && DateTime.UtcNow < deadline) { ui.Paint(); Thread.Sleep(10); }
         Check(ui.View.Document.Tracks.Count == 1 && ui.View.Document.ImportedSliders.Count == 0 && ui.View.IsDirty, "Slider conversion is an unsaved edit");
@@ -153,15 +154,21 @@ static class WorkspaceSaveTests
             var plan = WorkspaceExport.Plan(ui.View.WorkspaceSession!, project.Difficulties[ui.View.ActiveDifficultyIndex], songs, overwrite, name, false);
             LibraryOperations.Export(ui.View.WorkspaceSession!, project, plan); ui.View.LibraryExportFinished(plan);
         };
-        ui.View.RefreshSynchronization(quiet: true); SynchronizationUiTests.Wait(ui);
-        Check(File.ReadAllText(source) == originalOsu && File.ReadAllText(catchdiff) == originalCatchdiff && ui.View.IsDirty,
-            "Background synchronization preserves unconfirmed source and authoring files");
-        var importedEntry = ui.View.WorkspaceSession!.Manifest.Difficulties.Single();
-        importedEntry.ExportTarget = source; importedEntry.ExportHash = WorkspaceProject.Hash(source);
-        ui.View.RefreshSynchronization(quiet: true); SynchronizationUiTests.Wait(ui);
-        Check(!ui.View.CurrentDifficultyHasExport && File.ReadAllText(source) == originalOsu && ui.View.IsDirty,
-            "An unconfirmed legacy export association cannot authorize background publication");
-        ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui);
+        if (!initialConversion)
+        {
+            ui.View.RefreshSynchronization(quiet: true); SynchronizationUiTests.Wait(ui);
+            Check(File.ReadAllText(source) == originalOsu && File.ReadAllText(catchdiff) == originalCatchdiff && ui.View.IsDirty,
+                "Background synchronization preserves unconfirmed source and authoring files");
+            var importedEntry = ui.View.WorkspaceSession!.Manifest.Difficulties.Single();
+            importedEntry.ExportTarget = source; importedEntry.ExportHash = WorkspaceProject.Hash(source);
+            ui.View.RefreshSynchronization(quiet: true); SynchronizationUiTests.Wait(ui);
+            Check(!ui.View.CurrentDifficultyHasExport && File.ReadAllText(source) == originalOsu && ui.View.IsDirty,
+                "An unconfirmed legacy export association cannot authorize background publication");
+        }
+        ui.Key('S', ctrl: true);
+        Check(ui.View.ExportVisible && !ui.View.SynchronizationBusy,
+            "Unconfirmed imported difficulty chooses its Songs target before starting a save or synchronization");
+        SynchronizationUiTests.Wait(ui);
         Check(ui.View.ExportVisible && ui.View.IsDirty && File.ReadAllText(source) == originalOsu && File.ReadAllText(catchdiff) == originalCatchdiff,
             "First save opens export choices before writing the source difficulty");
         ui.Key(27);

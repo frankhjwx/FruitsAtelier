@@ -215,6 +215,7 @@ public sealed class LibraryDatabase
     {
         using var db = Open();
         var errors = new List<string>(); var seen = new HashSet<string>(StringComparer.Ordinal);
+        var scannedDirectories = new HashSet<string>(StringComparer.Ordinal);
         var cached = new Dictionary<string, (long Stamp, long Size)>();
         using (var command = db.CreateCommand())
         {
@@ -232,6 +233,7 @@ public sealed class LibraryDatabase
                 foreach (var child in System.IO.Directory.EnumerateDirectories(directory))
                     if ((File.GetAttributes(child) & FileAttributes.ReparsePoint) == 0) directories.Push(child);
                 files = System.IO.Directory.GetFiles(directory).Where(p => Path.GetExtension(p).Equals(".osu", StringComparison.OrdinalIgnoreCase)).ToArray();
+                scannedDirectories.Add(directory);
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException) { errors.Add(directory + ": " + e.Message); continue; }
             foreach (var file in files)
@@ -256,13 +258,13 @@ public sealed class LibraryDatabase
                     Interlocked.Increment(ref revision);
                     accepted = true;
                 }
-                catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException) { failed = true; errors.Add(file + ": " + e.Message); }
+                catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException) { seen.Add(file); failed = true; errors.Add(file + ": " + e.Message); }
                 finally { report(accepted, failed); }
             }
         }
-        // Only prune on a complete scan; inaccessible subtrees must not erase cached maps.
-        if (errors.Count == 0)
-            foreach (var path in cached.Keys.Where(p => !seen.Contains(p)))
+        // Errors in another set must not retain deleted files in directories enumerated successfully.
+        foreach (var path in cached.Keys.Where(p => !seen.Contains(p)))
+            if (errors.Count == 0 || scannedDirectories.Contains(Path.GetDirectoryName(path)!))
             {
                 using var command = db.CreateCommand();
                 command.CommandText = "DELETE FROM maps WHERE path=$p"; command.Parameters.AddWithValue("$p", path); command.ExecuteNonQuery();
