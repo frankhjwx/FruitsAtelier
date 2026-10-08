@@ -72,6 +72,14 @@ in Colours. Other section bodies retain their lines and internal spacing. Timing
 data starts directly below its section header, with any retained comments before
 the data.
 
+Standard sections emit in General, Editor, Metadata, Difficulty, Events,
+TimingPoints, Colours, and HitObjects order. General, Editor, and Difficulty
+settings follow the official field order; combo colours sort by their numeric
+index before slider colours. Duplicate settings retain their source precedence,
+and unknown fields and comments follow known settings. Unknown sections retain
+their slots and relative source order. Timing points always sort chronologically,
+including exports without generated sliders; same-time points retain source order.
+
 Output defaults to a new file. It validates all objects before writing a temporary file and safely replacing the destination. Failure preserves the original file. Hosts copy available associated resources and manage relative paths for exports across directories; missing song audio and same-name content conflicts are errors. Optional video, storyboard, background, and custom sample files may be absent; their original references are preserved.
 
 Unedited sliders are not resampled. SV changes are checked against parameters affecting simultaneous and later objects; required restoration points are written and verified. `.osu` export and project saving maintain separate success states and dirty-state handling.

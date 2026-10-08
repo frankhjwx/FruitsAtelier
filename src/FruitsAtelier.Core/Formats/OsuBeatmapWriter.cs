@@ -79,6 +79,17 @@ public sealed class OsuWriteResult
 
 public static class OsuBeatmapWriter
 {
+    private static readonly string[] sectionOrder = ["General", "Editor", "Metadata", "Difficulty", "Events", "TimingPoints", "Colours", "HitObjects"];
+    private static readonly Dictionary<string, string[]> settingOrder = new(StringComparer.Ordinal)
+    {
+        ["General"] = ["AudioFilename", "AudioLeadIn", "AudioHash", "PreviewTime", "Countdown", "SampleSet", "StackLeniency", "Mode",
+            "LetterboxInBreaks", "StoryFireInFront", "UseSkinSprites", "AlwaysShowPlayfield", "OverlayPosition", "SkinPreference",
+            "EpilepsyWarning", "CountdownOffset", "SpecialStyle", "WidescreenStoryboard", "SamplesMatchPlaybackRate"],
+        ["Editor"] = ["Bookmarks", "DistanceSpacing", "BeatDivisor", "GridSize", "TimelineZoom"],
+        ["Metadata"] = ["Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Version", "Source", "Tags", "BeatmapID", "BeatmapSetID"],
+        ["Difficulty"] = ["HPDrainRate", "CircleSize", "OverallDifficulty", "ApproachRate", "SliderMultiplier", "SliderTickRate"],
+        ["Colours"] = ["SliderTrackOverride", "SliderBorder"]
+    };
     public static OsuWriteResult WriteFile(MapDocument document, string destination, bool compensateTinyDroplets = true)
     {
         if (document.SourcePath is not null && string.Equals(Path.GetFullPath(destination), Path.GetFullPath(document.SourcePath), StringComparison.OrdinalIgnoreCase))
@@ -289,9 +300,9 @@ public static class OsuBeatmapWriter
     {
         var original = document.TimingPoints.Select(t => t.DeepClone()).ToList();
         if (original.Count == 0) original.Add(new TimingPoint { TimeMs = document.TimingOffsetMs, BeatLengthMs = document.BeatLengthMs });
-        if (generated.Count == 0) return original;
         // Timing edits can append earlier points; stable sorting retains tied sample/SV precedence.
         original = original.OrderBy(p => p.TimeMs).ToList();
+        if (generated.Count == 0) return original;
         var emitted = new MapDocument { BeatLengthMs = document.BeatLengthMs, TimingOffsetMs = document.TimingOffsetMs };
         emitted.TimingPoints.AddRange(original.Select(t => t.DeepClone()));
         var originalLookup = new TimingMap.Lookup(document);
@@ -527,10 +538,13 @@ public static class OsuBeatmapWriter
     private static string SectionText(MapDocument document)
     {
         var text = new StringBuilder("osu file format v14\r\n");
-        foreach (var section in document.OriginalSections)
+        var standard = new Queue<OsuSection>(document.OriginalSections.Where(s => Array.IndexOf(sectionOrder, s.Name) >= 0)
+            .OrderBy(s => Array.IndexOf(sectionOrder, s.Name)));
+        foreach (var original in document.OriginalSections)
         {
+            var section = Array.IndexOf(sectionOrder, original.Name) >= 0 ? standard.Dequeue() : original;
             if (section.Name.Length != 0) text.Append("\r\n[").Append(section.Name).Append("]\r\n");
-            if (section.Name == "Metadata") WriteMetadata(text, section);
+            if (settingOrder.TryGetValue(section.Name, out var keys)) WriteSettings(text, section, keys);
             else
             {
                 int first = 0, end = section.Lines.Count;
@@ -539,11 +553,6 @@ public static class OsuBeatmapWriter
                 for (int i = first; i < end; i++)
                 {
                     string line = section.Lines[i];
-                    if (section.Name is "General" or "Editor" or "Difficulty" or "Colours")
-                    {
-                        if (string.IsNullOrWhiteSpace(line)) continue;
-                        line = SettingLine(line, section.Name switch { "Colours" => " : ", "Difficulty" => ":", _ => ": " });
-                    }
                     text.Append(line).Append("\r\n");
                 }
             }
@@ -551,14 +560,20 @@ public static class OsuBeatmapWriter
         return text.ToString();
     }
 
-    private static void WriteMetadata(StringBuilder text, OsuSection section)
+    private static void WriteSettings(StringBuilder text, OsuSection section, string[] keys)
     {
-        string[] keys = ["Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Version", "Source", "Tags", "BeatmapID", "BeatmapSetID"];
-        string Key(string line) => line.Split(':', 2)[0].Trim();
-        foreach (string key in keys)
-            foreach (string line in section.Lines.Where(line => Key(line) == key)) text.Append(SettingLine(line, ":")).Append("\r\n");
-        foreach (string line in section.Lines.Where(line => !string.IsNullOrWhiteSpace(line) && !keys.Contains(Key(line))))
-            text.Append(SettingLine(line, ":")).Append("\r\n");
+        string separator = section.Name switch { "Colours" => " : ", "Metadata" or "Difficulty" => ":", _ => ": " };
+        foreach (string line in section.Lines.Where(line => !string.IsNullOrWhiteSpace(line)).OrderBy(Order))
+            text.Append(SettingLine(line, separator)).Append("\r\n");
+
+        long Order(string line)
+        {
+            string key = line.Split(':', 2)[0].Trim();
+            if (section.Name == "Colours" && key.StartsWith("Combo", StringComparison.Ordinal)
+                && int.TryParse(key.AsSpan(5), NumberStyles.None, CultureInfo.InvariantCulture, out int combo)) return combo;
+            int index = Array.IndexOf(keys, key);
+            return index < 0 ? long.MaxValue : section.Name == "Colours" ? (long)int.MaxValue + index + 1 : index;
+        }
     }
 
     private static string SettingLine(string line, string separator)
