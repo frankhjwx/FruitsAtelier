@@ -13,27 +13,31 @@ public sealed partial class EditorView
     private int tabPressed;
     private readonly HashSet<int> truncatedTabs = [];
     private int[] difficultyTabOrder = [];
-    private bool difficultySortPending;
+    private bool difficultySortPending = true;
     private int[] DifficultyTabOrder
     {
         get
         {
             if (difficultyTabOrder.Length != difficulties.Count)
+            {
                 difficultyTabOrder = Enumerable.Range(0, difficulties.Count).ToArray();
+                difficultySortPending = true;
+            }
             return difficultyTabOrder;
         }
     }
 
-    public void SortDifficultiesByStarRating() => difficultySortPending = true;
-
     private void CompleteDifficultySort()
     {
+        var order = DifficultyTabOrder;
         if (!difficultySortPending || RatingEditInProgress || tabPointer) return;
         for (int i = 0; i < difficulties.Count; i++) _ = DifficultyRating(i);
         if (difficulties.Any(d => d.RatingTask is not null)) return;
-        difficultyTabOrder = DifficultyTabOrder.OrderBy(i => difficulties[i].RatingFailed
+        var sorted = order.OrderBy(i => difficulties[i].RatingFailed
             ? double.PositiveInfinity : difficulties[i].Stars ?? double.PositiveInfinity).ToArray();
         difficultySortPending = false;
+        if (sorted.SequenceEqual(order)) return;
+        difficultyTabOrder = sorted;
         firstDifficultyTab = 0; tabRemainder = 0; revealDifficultyTabs = true;
     }
 
@@ -87,8 +91,6 @@ public sealed partial class EditorView
         contextItems.Add(new(L.Get("project.openSongsFolder"), () => RequestOpenExternalPath?.Invoke(songsFolder!), Directory.Exists(songsFolder)));
         contextItems.Add(new(L.Get("sync.refresh"), () => { syncDifficulty = difficulty.Id; RefreshSynchronization(reviewResolved: true); }));
         contextItems.Add(new(L.Get("sync.delete"), () => ShowDeleteDifficulty(index)));
-        AddContextSeparator();
-        contextItems.Add(new(L.Get("project.sortStarsAscending"), SortDifficultiesByStarRating));
         float menuHeight = ContextMenuHeight;
         contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 240)), Math.Clamp(y, 0, Math.Max(0, height - menuHeight)), 240, menuHeight);
         return true;
@@ -132,8 +134,6 @@ public sealed partial class EditorView
             contextItems.Add(new(difficulties[i].Name, () => SwitchDifficulty(target), true,
                 Color: i == activeDifficulty ? Accent : null));
         }
-        AddContextSeparator();
-        contextItems.Add(new(L.Get("project.sortStarsAscending"), SortDifficultiesByStarRating));
         contextBounds = new(12, 88, 280, ContextMenuHeight);
     }
     private int visibleDifficultyTabs = 1;
@@ -152,7 +152,8 @@ public sealed partial class EditorView
             // Hidden tabs must also retire completed tasks, otherwise the host redraws forever.
             for (int i = 0; i < difficulties.Count; i++)
                 if (difficulties[i].RatingTask is { IsCompleted: true }) _ = DifficultyRating(i);
-            return difficultySortPending || difficulties.Any(d => d.RatingTask is not null) || RatingEditInProgress;
+            return difficultySortPending && HasEditorProject && !LibraryVisible
+                || difficulties.Any(d => d.RatingTask is not null) || RatingEditInProgress;
         }
     }
 
@@ -167,6 +168,7 @@ public sealed partial class EditorView
             && session.RatingSnapshot.ContentEquals(document);
         if (session.RatingTask is { IsCompleted: true } completed)
         {
+            difficultySortPending = true;
             session.RatingTask = null;
             if (!matches) session.RatingSnapshot = null;
             if (matches)
@@ -187,6 +189,7 @@ public sealed partial class EditorView
         if (index == activeDifficulty && RatingEditInProgress) return session.Stars ?? 0;
         if (session.RatingTask is null && !matches)
         {
+            difficultySortPending = true;
             var snapshot = document.DeepClone();
             bool compensation = compensateTinyDroplets;
             // The active editor has already produced immutable playable events for this snapshot.

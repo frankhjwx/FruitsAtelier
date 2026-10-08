@@ -181,7 +181,6 @@
   "library.openExisting": "프로젝트만 열기",
   "project.openOsu": ".osu 파일 열기",
   "project.openCatchdiff": ".catchdiff 파일 열기",
-  "project.sortStarsAscending": "SR 낮은 순으로 정렬",
   "project.openFolder": "폴더 열기",
   "project.openSongsFolder": "osu! 노래 폴더 열기",
   "library.resourceCheckFailed": "프로젝트 리소스를 확인할 수 없습니다: {0}",

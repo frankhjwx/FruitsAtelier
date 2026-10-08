@@ -181,7 +181,6 @@
   "library.openExisting": "Open project only",
   "project.openOsu": "Open .osu file",
   "project.openCatchdiff": "Open .catchdiff file",
-  "project.sortStarsAscending": "Sort by SR (low to high)",
   "project.openFolder": "Open folder",
   "project.openSongsFolder": "Open osu! Songs folder",
   "library.resourceCheckFailed": "Could not check project resources: {0}",

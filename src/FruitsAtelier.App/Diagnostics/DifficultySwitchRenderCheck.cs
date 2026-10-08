@@ -46,7 +46,6 @@ internal static class DifficultySwitchRenderCheck
             for (int round = 0; round < 3; round++)
             {
                 view.LoadProject(project); view.CloseLibrary(); Draw();
-                if (round == 1) view.SortDifficultiesByStarRating();
                 for (int i = 0; i < project.Difficulties.Count * 2; i++)
                 {
                     int index = i < project.Difficulties.Count ? i : project.Difficulties.Count * 2 - 1 - i;

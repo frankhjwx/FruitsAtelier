@@ -181,7 +181,6 @@
   "library.openExisting": "プロジェクトのみを開く",
   "project.openOsu": ".osu ファイルを開く",
   "project.openCatchdiff": ".catchdiff ファイルを開く",
-  "project.sortStarsAscending": "SR の低い順に並べ替え",
   "project.openFolder": "フォルダーを開く",
   "project.openSongsFolder": "osu! ソングフォルダーを開く",
   "library.resourceCheckFailed": "プロジェクト リソースをチェックできませんでした: {0}",

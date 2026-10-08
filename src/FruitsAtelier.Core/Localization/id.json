@@ -181,7 +181,6 @@
   "library.openExisting": "Buka proyek saja",
   "project.openOsu": "Buka berkas .osu",
   "project.openCatchdiff": "Buka berkas .catchdiff",
-  "project.sortStarsAscending": "Urutkan SR dari rendah ke tinggi",
   "project.openFolder": "Buka map",
   "project.openSongsFolder": "Buka folder Lagu osu!",
   "library.resourceCheckFailed": "Tidak dapat memeriksa sumber daya proyek: {0}",

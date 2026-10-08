@@ -181,7 +181,6 @@
   "library.openExisting": "Buksan ang proyekto lamang",
   "project.openOsu": "Buksan ang .osu file",
   "project.openCatchdiff": "Buksan ang .catchdiff file",
-  "project.sortStarsAscending": "Ayusin ayon sa SR (mababa pataas)",
   "project.openFolder": "Buksan ang folder",
   "project.openSongsFolder": "Buksan ang folder ng osu! Songs",
   "library.resourceCheckFailed": "Hindi masuri ang mga mapagkukunan ng proyekto: {0}",
