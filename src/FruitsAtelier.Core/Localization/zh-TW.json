@@ -1203,6 +1203,7 @@
   "setup.next": "下一步",
   "setup.finish": "完成設定",
   "setup.complete": "初次設定已完成",
+  "update.discordHint": "歡迎加入 Discord 提供建議和回饋",
   "setup.discordHint": "歡迎加入 FruitsAtelier Discord 社群！",
   "setup.discord": "加入 Discord",
   "setup.start": "開始使用 FruitsAtelier",

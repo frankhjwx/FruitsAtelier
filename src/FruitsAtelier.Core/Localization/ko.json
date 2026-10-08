@@ -1203,6 +1203,7 @@
   "setup.next": "다음",
   "setup.finish": "설정 완료",
   "setup.complete": "초기 설정 완료",
+  "update.discordHint": "Discord에 참여하여 제안과 피드백을 보내 주세요",
   "setup.discordHint": "FruitsAtelier Discord 커뮤니티에 오신 것을 환영합니다!",
   "setup.discord": "Discord 참여",
   "setup.start": "FruitsAtelier 시작",

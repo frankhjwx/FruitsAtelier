@@ -1203,6 +1203,7 @@
   "setup.next": "Dalej",
   "setup.finish": "Zakończ",
   "setup.complete": "Pierwsza konfiguracja zakończona",
+  "update.discordHint": "Dołącz do Discorda, aby podzielić się sugestiami i opiniami",
   "setup.discordHint": "Witamy w społeczności FruitsAtelier na Discordzie!",
   "setup.discord": "Dołącz do Discord",
   "setup.start": "Uruchom FruitsAtelier",

@@ -789,6 +789,8 @@ Categories are ordered General, Workspace, Appearance, Audio, Testplay, and
 Application updates (where supported). Appearance groups the active skin selector
 with the default skin archive and indicator colours. General includes metadata display and language.
 Active skin selection takes effect immediately and is saved automatically.
+Application updates ends with a divider, an invitation to share suggestions and
+feedback on Discord, and a Join Discord button using the first-time setup invite.
 General includes a Reverse canvas scrolling toggle, separated by a divider. It
 defaults to off and reverses ordinary and Shift+wheel time navigation over the
 canvas, including wheel navigation during marquee selection. Other panels and

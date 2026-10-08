@@ -1203,6 +1203,7 @@
   "setup.next": "次へ",
   "setup.finish": "設定を完了",
   "setup.complete": "初期設定が完了しました",
+  "update.discordHint": "Discord に参加して、ご提案やフィードバックをお寄せください",
   "setup.discordHint": "FruitsAtelier の Discord コミュニティへようこそ！",
   "setup.discord": "Discord に参加",
   "setup.start": "FruitsAtelier を始める",

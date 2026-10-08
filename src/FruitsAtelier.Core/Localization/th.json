@@ -1203,6 +1203,7 @@
   "setup.next": "ถัดไป",
   "setup.finish": "เสร็จสิ้น",
   "setup.complete": "ตั้งค่าครั้งแรกเสร็จแล้ว",
+  "update.discordHint": "เข้าร่วม Discord เพื่อแบ่งปันข้อเสนอแนะและความคิดเห็น",
   "setup.discordHint": "ยินดีต้อนรับสู่ชุมชน FruitsAtelier บน Discord!",
   "setup.discord": "เข้าร่วม Discord",
   "setup.start": "เริ่มใช้ FruitsAtelier",

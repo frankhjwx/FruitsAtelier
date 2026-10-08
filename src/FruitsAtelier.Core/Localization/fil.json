@@ -1203,6 +1203,7 @@
   "setup.next": "Susunod",
   "setup.finish": "Tapusin",
   "setup.complete": "Tapos na ang paunang setup",
+  "update.discordHint": "Sumali sa Discord para magbahagi ng mga mungkahi at feedback",
   "setup.discordHint": "Maligayang pagdating sa komunidad ng FruitsAtelier sa Discord!",
   "setup.discord": "Sumali sa Discord",
   "setup.start": "Simulan ang FruitsAtelier",

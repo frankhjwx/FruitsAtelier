@@ -1203,6 +1203,7 @@
   "setup.next": "Suivant",
   "setup.finish": "Terminer",
   "setup.complete": "Configuration initiale terminée",
+  "update.discordHint": "Rejoignez Discord pour partager vos suggestions et vos retours",
   "setup.discordHint": "Bienvenue dans la communauté Discord de FruitsAtelier !",
   "setup.discord": "Rejoindre Discord",
   "setup.start": "Démarrer FruitsAtelier",

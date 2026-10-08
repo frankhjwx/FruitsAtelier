@@ -69,6 +69,13 @@ public sealed partial class EditorView
             else RequestUpdateDownload?.Invoke();
         }, active: true);
         ActionButton(new(x, top + 350, embedded ? SettingsContentWidth : 220, 38), L.Get("update.notes"), () => RequestUpdateNotes?.Invoke());
+        if (embedded)
+        {
+            c.Line(x, top + 390, x + SettingsContentWidth, top + 390, Grid);
+            float joinY = SettingsParagraph(c, L.Get("update.discordHint"), top + 400);
+            ActionButton(new(x, joinY, SettingsContentWidth, SettingsControlHeight), L.Get("setup.discord"),
+                () => RequestSetupLink?.Invoke(DiscordInviteUrl));
+        }
         if (!embedded) c.Text(L.Get("update.saveHelp"), x, top + 410, 14, Muted, right - x - 32);
         if (!embedded) Button(c, new(x, 466, 200, 36), L.Get(LibraryVisible ? "update.back" : "library.editor"), () => updatesPage = false);
     }

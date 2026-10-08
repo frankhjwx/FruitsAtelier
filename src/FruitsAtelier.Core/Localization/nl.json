@@ -1203,6 +1203,7 @@
   "setup.next": "Volgende",
   "setup.finish": "Voltooien",
   "setup.complete": "Eerste instelling voltooid",
+  "update.discordHint": "Word lid van Discord om suggesties en feedback te delen",
   "setup.discordHint": "Welkom bij de FruitsAtelier-community op Discord!",
   "setup.discord": "Discord openen",
   "setup.start": "FruitsAtelier starten",
