@@ -59,7 +59,7 @@ internal sealed partial class EditorWindow : IDisposable
         };
     }
 
-    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false, bool firstRunSetup = false, AudioSettingsRestartState? resumeAudio = null, bool hitsoundCopierCheck = false, bool screenshotCheck = false)
+    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false, bool firstRunSetup = false, AudioSettingsRestartState? resumeAudio = null, bool hitsoundCopierCheck = false, bool screenshotCheck = false, string? difficultySwitchPath = null)
     {
         view.InitializeLibrary(!renderCheck && profileMap is null, renderCheck || profileMap is not null
             ? new FruitsAtelier.Core.LibrarySettings { Workspace = Path.Combine(Artifacts, "render-library") } : null, forceFirstRunSetup: firstRunSetup);
@@ -119,6 +119,12 @@ internal sealed partial class EditorWindow : IDisposable
         }
         if (renderCheck)
         {
+            if (difficultySwitchPath is not null)
+            {
+                Diagnostics.DifficultySwitchRenderCheck.Run(canvas, view, difficultySwitchPath, dpi);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (screenshotCheck) { CheckScreenshot(); Native.DestroyWindow(hwnd); return 0; }
             if (resumeAudio is not null)
             {

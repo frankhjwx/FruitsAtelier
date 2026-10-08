@@ -181,6 +181,7 @@
   "library.openExisting": "僅開啟項目",
   "project.openOsu": "開啟.osu文件",
   "project.openCatchdiff": "開啟.catchdiff文件",
+  "project.sortStarsAscending": "按 SR 從低到高排序",
   "project.openFolder": "打開資料夾",
   "project.openSongsFolder": "開啟osu!歌曲資料夾",
   "library.resourceCheckFailed": "無法檢查專案資源：{0}",

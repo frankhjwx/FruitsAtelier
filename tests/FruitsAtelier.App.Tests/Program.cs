@@ -21,6 +21,8 @@ if (args.Contains("--audio-diagnostics-settings-check"))
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Contains("--difficulty-sort-check")) { DifficultyTabTests.SortAscending(); Console.WriteLine("PASS Ascending difficulty sorting"); return 0; }
+if (args.Length == 2 && args[0] == "--difficulty-switch-performance") return DifficultySwitchPerformance.Run(args[1]);
 if (args.Contains("--first-run-setup-check"))
 {
     try { FirstRunSetupTests.Run(); SettingsTests.Layout(); TestplayStartupDelayTests.LeadIn(); Console.WriteLine("PASS First-run setup and settings layout"); return 0; }
@@ -287,6 +289,7 @@ var tests = new (string Name, Action Run)[]
     ("Library double-click replaces the demo with an unassociated imported map", LibraryOpenTests.Run),
     ("External folders and full OSZ resources persist across restarts", ExternalResourceTests.Run),
     ("Difficulty tabs adapt names to available width and show full-name tooltips", DifficultyTabTests.Layout),
+    ("Difficulty SR sorting preserves content, identity and keyboard navigation", DifficultyTabTests.SortAscending),
     ("Difficulty tab stars follow edits, undo and CS", DifficultyTabTests.Editing),
     ("Preview stars use cached NM, EZ and HR calculations", DifficultyTabTests.PreviewRatings),
     ("Star ratings refresh asynchronously without losing cached or newer results", DifficultyTabTests.AsyncRatings),

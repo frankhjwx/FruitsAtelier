@@ -12,6 +12,37 @@ public sealed partial class EditorView
     private bool tabPointer, tabMoved, tabOverflow;
     private int tabPressed;
     private readonly HashSet<int> truncatedTabs = [];
+    private int[] difficultyTabOrder = [];
+    private bool difficultySortPending;
+    private int[] DifficultyTabOrder
+    {
+        get
+        {
+            if (difficultyTabOrder.Length != difficulties.Count)
+                difficultyTabOrder = Enumerable.Range(0, difficulties.Count).ToArray();
+            return difficultyTabOrder;
+        }
+    }
+
+    public void SortDifficultiesByStarRating() => difficultySortPending = true;
+
+    private void CompleteDifficultySort()
+    {
+        if (!difficultySortPending || RatingEditInProgress || tabPointer) return;
+        for (int i = 0; i < difficulties.Count; i++) _ = DifficultyRating(i);
+        if (difficulties.Any(d => d.RatingTask is not null)) return;
+        difficultyTabOrder = DifficultyTabOrder.OrderBy(i => difficulties[i].RatingFailed
+            ? double.PositiveInfinity : difficulties[i].Stars ?? double.PositiveInfinity).ToArray();
+        difficultySortPending = false;
+        firstDifficultyTab = 0; tabRemainder = 0; revealDifficultyTabs = true;
+    }
+
+    private int AdjacentDifficulty(bool previous)
+    {
+        var order = DifficultyTabOrder;
+        int position = Array.IndexOf(order, activeDifficulty);
+        return order[(position + (previous ? order.Length - 1 : 1)) % order.Length];
+    }
 
     private bool BeginTabPointer(float x, float y)
     {
@@ -56,6 +87,8 @@ public sealed partial class EditorView
         contextItems.Add(new(L.Get("project.openSongsFolder"), () => RequestOpenExternalPath?.Invoke(songsFolder!), Directory.Exists(songsFolder)));
         contextItems.Add(new(L.Get("sync.refresh"), () => { syncDifficulty = difficulty.Id; RefreshSynchronization(reviewResolved: true); }));
         contextItems.Add(new(L.Get("sync.delete"), () => ShowDeleteDifficulty(index)));
+        AddContextSeparator();
+        contextItems.Add(new(L.Get("project.sortStarsAscending"), SortDifficultiesByStarRating));
         float menuHeight = ContextMenuHeight;
         contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 240)), Math.Clamp(y, 0, Math.Max(0, height - menuHeight)), 240, menuHeight);
         return true;
@@ -93,13 +126,15 @@ public sealed partial class EditorView
     private void OpenDifficultyChooser()
     {
         contextItems.Clear(); menu = -1;
-        for (int i = 0; i < difficulties.Count; i++)
+        foreach (int i in DifficultyTabOrder)
         {
             int target = i;
             contextItems.Add(new(difficulties[i].Name, () => SwitchDifficulty(target), true,
                 Color: i == activeDifficulty ? Accent : null));
         }
-        contextBounds = new(12, 88, 280, 12 + contextItems.Count * 32);
+        AddContextSeparator();
+        contextItems.Add(new(L.Get("project.sortStarsAscending"), SortDifficultiesByStarRating));
+        contextBounds = new(12, 88, 280, ContextMenuHeight);
     }
     private int visibleDifficultyTabs = 1;
     private static readonly string catchIconPath = Path.Combine(AppContext.BaseDirectory, "assets", "icons", "osu", "RulesetCatch.png");
@@ -117,7 +152,7 @@ public sealed partial class EditorView
             // Hidden tabs must also retire completed tasks, otherwise the host redraws forever.
             for (int i = 0; i < difficulties.Count; i++)
                 if (difficulties[i].RatingTask is { IsCompleted: true }) _ = DifficultyRating(i);
-            return difficulties.Any(d => d.RatingTask is not null) || RatingEditInProgress;
+            return difficultySortPending || difficulties.Any(d => d.RatingTask is not null) || RatingEditInProgress;
         }
     }
 
@@ -173,9 +208,10 @@ public sealed partial class EditorView
                         var hardRockObjects = ratingHardRockObjects;
                         if (objects is null)
                         {
-                            var converted = CatchStreamConverter.Convert(snapshot, compensation);
+                            var writeCache = new OsuWriteCache();
+                            var converted = writeCache.Convert(snapshot, compensation);
                             if (!converted.Success) return ((CatchDifficultyCurveResult Normal, double Easy, double HardRock)?)null;
-                            var exported = OsuBeatmapWriter.Serialize(snapshot, compensation);
+                            var exported = OsuBeatmapWriter.Serialize(snapshot, compensation, writeCache);
                             objects = exported.ObjectSequenceMatches ? exported.PlayableObjects : converted.Objects;
                             hardRockObjects = exported.ObjectSequenceMatches ? exported.PlayableHardRockObjects : CatchPreviewMods.HardRock(snapshot, converted);
                         }
@@ -258,12 +294,14 @@ public sealed partial class EditorView
 
     private void DrawDifficultyTabs(ICanvas c)
     {
+        CompleteDifficultySort();
+        var order = DifficultyTabOrder;
         difficultyTabTargets.Clear();
         difficultyTabStrip = new(12, 40, Math.Max(220, width - 24), 44);
         c.Fill(new(0, 40, width, 44), 0x191E26);
         c.Line(0, 83, width, 83, Grid);
         truncatedTabs.Clear();
-        string[] names = difficulties.Select(d => d.Name).ToArray();
+        string[] names = order.Select(i => difficulties[i].Name).ToArray();
         float[] widths = names.Select(name => (float)Math.Ceiling(c.MeasureText(name, 12, true)) + 102).ToArray();
         float budget = difficultyTabStrip.Width - 38 - (widths.Length - 1) * 6;
         if (widths.Sum() > budget)
@@ -287,7 +325,7 @@ public sealed partial class EditorView
         {
             widths[i] = Math.Min(widths[i], available);
             names[i] = FitTabName(c, names[i], widths[i] - 102);
-            if (names[i] != difficulties[i].Name) truncatedTabs.Add(i);
+            if (names[i] != difficulties[order[i]].Name) truncatedTabs.Add(order[i]);
         }
         tabWidths = widths; tabAvailable = available; tabOverflow = overflow;
         if (!overflow) { firstDifficultyTab = 0; tabRemainder = 0; }
@@ -306,8 +344,9 @@ public sealed partial class EditorView
         if (revealDifficultyTabs)
         {
             tabRemainder = 0;
-            if (activeDifficulty < firstDifficultyTab) firstDifficultyTab = activeDifficulty;
-            while (activeDifficulty >= firstDifficultyTab + CountVisible(firstDifficultyTab)) firstDifficultyTab++;
+            int activePosition = Array.IndexOf(order, activeDifficulty);
+            if (activePosition < firstDifficultyTab) firstDifficultyTab = activePosition;
+            while (activePosition >= firstDifficultyTab + CountVisible(firstDifficultyTab)) firstDifficultyTab++;
             revealDifficultyTabs = false;
         }
         visibleDifficultyTabs = CountVisible(firstDifficultyTab);
@@ -322,19 +361,19 @@ public sealed partial class EditorView
         x -= tabRemainder;
         for (int index = firstDifficultyTab; index < difficulties.Count && x < tabLeft + available; index++)
         {
-            int target = index;
-            bool active = index == activeDifficulty;
+            int target = order[index];
+            bool active = target == activeDifficulty;
             var rect = new Rect(x, 46, widths[index], 38);
             var hitRect = new Rect(Math.Max(tabLeft, rect.X), rect.Y, Math.Max(0, Math.Min(tabLeft + available, rect.Right) - Math.Max(tabLeft, rect.X)), rect.Height);
-            difficultyTabTargets.Add((hitRect, index));
-            double? stars = DifficultyRating(index);
+            difficultyTabTargets.Add((hitRect, target));
+            double? stars = DifficultyRating(target);
             uint colour = DifficultyColour(stars);
-            bool searching = SearchingReference(index);
-            bool missing = searching || DifficultySyncState(index) == WorkspaceSyncState.Missing;
+            bool searching = SearchingReference(target);
+            bool missing = searching || DifficultySyncState(target) == WorkspaceSyncState.Missing;
             if (missing) colour = 0xC4CAD2;
             bool hover = rect.Contains(mouseX, mouseY);
             if (active || hover) DrawChromeTab(c, rect, active ? Panel : 0x2B3542u);
-            else if (index + 1 != activeDifficulty) c.Line(rect.Right + 3, 56, rect.Right + 3, 73, Grid);
+            else if (index + 1 >= order.Length || order[index + 1] != activeDifficulty) c.Line(rect.Right + 3, 56, rect.Right + 3, 73, Grid);
             // A light backing keeps even the official black (9★+) icon readable on dark chrome.
             if (stars >= 6.7) c.Circle(x + 19, 62, 10, 0xE7EBF2);
             c.Image(catchIconPath, new(x + 9, 52, 20, 20), colour);
@@ -342,9 +381,9 @@ public sealed partial class EditorView
             if (missing) c.Text(L.Get(searching ? "sync.searchingReference" : "sync.missingBadge"), x + 36, 69, 9, 0x718092, rect.Width - 45);
             c.Text(stars is null ? L.Get("project.starsUnavailable") : L.Get("project.stars", stars.Value),
                 rect.Right - 59, 55, 10, active ? Foreground : Muted, 47);
-            if (RatingRefreshing(index)) DrawRatingSpinner(c, rect.Right - 9, 106);
-            else if (difficulties[index].RatingFailed) c.Text("!", rect.Right - 12, 54, 12, Error, 10, true);
-            else if (difficulties[index].History.IsDirty) c.Circle(rect.Right - 9, 62, 2.5f, Gold);
+            if (RatingRefreshing(target)) DrawRatingSpinner(c, rect.Right - 9, 106);
+            else if (difficulties[target].RatingFailed) c.Text("!", rect.Right - 12, 54, 12, Error, 10, true);
+            else if (difficulties[target].History.IsDirty) c.Circle(rect.Right - 9, 62, 2.5f, Gold);
             hits.Add(new(hitRect, () => SwitchDifficulty(target), true));
             x = rect.Right + 6;
         }

@@ -181,6 +181,7 @@
   "library.openExisting": "仅打开工程",
   "project.openOsu": "打开 .osu 文件",
   "project.openCatchdiff": "打开 .catchdiff 文件",
+  "project.sortStarsAscending": "按 SR 从低到高排序",
   "project.openFolder": "打开文件夹",
   "project.openSongsFolder": "打开 osu! 谱面文件夹",
   "library.resourceCheckFailed": "无法检查工程资源：{0}",

@@ -4,6 +4,53 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class DifficultyTabTests
 {
+    public static void SortAscending()
+    {
+        var hard = new MapDocument { IsDemo = false, DurationMs = 20000 };
+        for (int i = 0; i < 100; i++) hard.Fruits.Add(new() { TimeMs = 1000 + i * 100, X = i % 2 == 0 ? 20 : 490 });
+        var project = BeatmapProject.FromDocuments([hard, new() { IsDemo = false }, new() { IsDemo = false }]);
+        project.Difficulties[0].Name = "Hard";
+        project.Difficulties[1].Name = "Blank A";
+        project.Difficulties[2].Name = "Blank B";
+        var view = new EditorView(false); view.LoadProject(project);
+        var before = view.CaptureProject();
+        var canvas = new RecordingCanvas();
+        view.Render(canvas, 1440, 900);
+        var hardTab = canvas.Texts.Single(t => t.Value == "Hard" && t.Y == 54);
+        view.PointerDown(hardTab.X + 2, hardTab.Y + 2, 2, false, false);
+        view.PointerUp(hardTab.X + 2, hardTab.Y + 2, 2);
+        canvas.Clear(); view.Render(canvas, 1440, 900);
+        var sort = canvas.Texts.Single(t => t.Value == L.Get("project.sortStarsAscending"));
+        view.PointerDown(sort.X + 2, sort.Y + 2, 0, false, false);
+        view.PointerUp(sort.X + 2, sort.Y + 2, 0);
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        do
+        {
+            canvas.Clear(); view.Render(canvas, 1440, 900);
+            if (!view.StarRatingsRefreshing) break;
+            Thread.Sleep(10);
+        } while (DateTime.UtcNow < deadline);
+        Check(!view.StarRatingsRefreshing, "Sort waits for completed SR calculations");
+        var names = canvas.Texts.Where(t => t.Y == 54 && new[] { "Hard", "Blank A", "Blank B" }.Contains(t.Value))
+            .OrderBy(t => t.X).Select(t => t.Value).ToArray();
+        Check(names.SequenceEqual(new[] { "Blank A", "Blank B", "Hard" }), "Ascending SR keeps ties stable");
+        Check(view.ActiveDifficultyIndex == 0 && view.CurrentDifficultyName == "Hard", "Sorting retains active difficulty");
+        var after = view.CaptureProject();
+        Check(before.Difficulties.Zip(after.Difficulties).All(pair => pair.First.Id == pair.Second.Id
+            && pair.First.Document.ContentEquals(pair.Second.Document)) && !view.IsDirty, "Sorting preserves project content and storage order");
+        view.KeyDown(9, true, false); view.KeyUp(9);
+        Check(view.CurrentDifficultyName == "Blank A", "Ctrl Tab traverses displayed order");
+        view.KeyDown(9, true, true); view.KeyUp(9);
+        Check(view.CurrentDifficultyName == "Hard", "Ctrl Shift Tab traverses displayed order backwards");
+        var blank = canvas.Texts.Single(t => t.Value == "Blank B");
+        view.PointerDown(blank.X + 2, blank.Y + 2, 0, false, false);
+        view.PointerUp(blank.X + 2, blank.Y + 2, 0);
+        Check(view.CurrentDifficultyName == "Blank B", "Sorted tab clicks target the original difficulty");
+        view.LoadProject(project); canvas.Clear(); view.Render(canvas, 1440, 900);
+        Check(canvas.Texts.Single(t => t.Value == "Hard" && t.Y == 54).X
+            < canvas.Texts.Single(t => t.Value == "Blank A" && t.Y == 54).X, "New project clears presentation sorting");
+    }
+
     public static void Layout()
     {
         var project = BeatmapProject.FromDocuments(Enumerable.Range(0, 3).Select(_ => new MapDocument { IsDemo = false }));

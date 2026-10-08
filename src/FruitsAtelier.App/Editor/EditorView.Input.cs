@@ -1182,7 +1182,7 @@ public sealed partial class EditorView
             if (ClipboardInteractionReady && HandleLegacyShortcut(virtualKey, shift)) return;
             if (virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (virtualKey == 89) Redo();
-            else if (virtualKey == 9) SwitchDifficulty((activeDifficulty + (shift ? difficulties.Count - 1 : 1)) % difficulties.Count);
+            else if (virtualKey == 9) SwitchDifficulty(AdjacentDifficulty(shift));
             else if (virtualKey == 79) { if (shift) RequestOpen?.Invoke(); else OpenDifficultyChooser(); }
             else if (virtualKey == 83 && !shift) RequestSave?.Invoke();
             else if (virtualKey == 67 && !shift) CopySelection();

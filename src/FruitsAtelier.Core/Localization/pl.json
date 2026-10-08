@@ -181,6 +181,7 @@
   "library.openExisting": "Tylko otwarty projekt",
   "project.openOsu": "Otwórz plik .osu",
   "project.openCatchdiff": "Otwórz plik .catchdiff",
+  "project.sortStarsAscending": "Sortuj według SR rosnąco",
   "project.openFolder": "Otwórz folder",
   "project.openSongsFolder": "Otwórz folder utworów osu!",
   "library.resourceCheckFailed": "Nie można sprawdzić zasobów projektu: {0}",

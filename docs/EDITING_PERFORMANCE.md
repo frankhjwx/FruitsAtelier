@@ -120,6 +120,9 @@ The active difficulty rating worker can consume the immutable playable events
 already produced for the matching editor snapshot. Starting another uncached
 export in a worker still creates CPU and GC pressure that can stall UI frames.
 Do not share mutable conversion caches across workers.
+An inactive difficulty rating worker owns one write cache for its source conversion
+and export/read-back, reusing the source conversion within that calculation. The
+cache is released when the worker completes.
 
 Synchronization context rebasing prepares one metadata delta for the entire undo/redo history.
 Content-only saves retain each snapshot's existing sections and timing without

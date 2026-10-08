@@ -181,6 +181,7 @@
   "library.openExisting": "Только открытый проект",
   "project.openOsu": "Открыть файл .osu",
   "project.openCatchdiff": "Открыть файл .catchdiff",
+  "project.sortStarsAscending": "Сортировать по SR по возрастанию",
   "project.openFolder": "Открыть папку",
   "project.openSongsFolder": "Откройте папку «Песни» osu!.",
   "library.resourceCheckFailed": "Не удалось проверить ресурсы проекта: {0}.",

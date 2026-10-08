@@ -181,6 +181,7 @@
   "library.openExisting": "เปิดโครงการเท่านั้น",
   "project.openOsu": "เปิดไฟล์ .osu",
   "project.openCatchdiff": "เปิดไฟล์ .catchdiff",
+  "project.sortStarsAscending": "เรียงตาม SR จากน้อยไปมาก",
   "project.openFolder": "เปิดโฟลเดอร์",
   "project.openSongsFolder": "เปิดโฟลเดอร์เพลง osu!",
   "library.resourceCheckFailed": "ไม่สามารถตรวจสอบทรัพยากรโครงการ: {0}",

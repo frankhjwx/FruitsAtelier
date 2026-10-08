@@ -181,6 +181,7 @@
   "library.openExisting": "Alleen project openen",
   "project.openOsu": "Open het .osu-bestand",
   "project.openCatchdiff": "Open het .catchdiff-bestand",
+  "project.sortStarsAscending": "Sorteren op oplopende SR",
   "project.openFolder": "Map openen",
   "project.openSongsFolder": "Open de map osu! Nummers",
   "library.resourceCheckFailed": "Kan projectbronnen niet controleren: {0}",

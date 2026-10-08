@@ -254,6 +254,23 @@ After changing input or drawing, manually check affected operations, language sw
 
 ## Editing performance benchmark
 
+`App.Tests --difficulty-switch-performance <path.osz>` opens the set three times
+and switches through every difficulty forwards and backwards, entering and leaving
+testplay each time. It records editor switching, testplay frame CPU, allocations,
+Gen2 collections and retained heap. Windows additionally loads every audio file
+through the real transport with silent PCM output and reports load latency and
+process private memory. Gameplay uses an accelerated clock and `RecordingCanvas`;
+these measurements exclude GPU presentation and physical input latency. Imported
+fixtures and logs belong under `artifacts/`.
+
+On Windows, `FruitsAtelier.App.exe --difficulty-switch-render-check <path.osz>`
+repeats the same difficulty traversal with Direct2D and silent WASAPI music.
+Each testplay starts within the map and samples 30 submitted frames. It also
+exercises SR sorting and verifies unchanged content. Results are written to
+`artifacts/difficulty-switch/native.json`. This hidden-window check uses the UI
+simulation driver; it excludes physical display latency and dedicated input-thread
+dispatch, which are covered separately by the native testplay checks.
+
 Follow the [editing performance constraints](EDITING_PERFORMANCE.md) when changing
 interactive paths. For a read-only benchmark of an existing `.osu` map, run the App
 test executable with `--fruit-placement-performance <path.osu-or-catchdiff>`. It measures warm

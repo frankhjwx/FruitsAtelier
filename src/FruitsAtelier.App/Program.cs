@@ -9,6 +9,7 @@ internal static class Program
     private static int Main(string[] args)
     {
         bool screenshotCheck = args.Contains("--screenshot-render-check");
+        bool difficultySwitchCheck = args.Length == 2 && args[0] == "--difficulty-switch-render-check";
         Velopack.VelopackApp.Build().SetAutoApplyOnStartup(false).Run();
         try
         {
@@ -17,7 +18,7 @@ internal static class Program
             if (args.Contains("--m2-check")) return Diagnostics.M2Check.Run(args.Where(p => File.Exists(p) && Path.GetExtension(p).Equals(".osz", StringComparison.OrdinalIgnoreCase)));
             AudioSettingsRestartState? resumeAudio = args.Length == 2 && args[0] is "--resume-audio-settings" or "--audio-settings-resume-check"
                 ? EditorWindow.ReadAudioSettingsRestart(args[1]) : null;
-            if (!screenshotCheck && !args.Contains("--render-check") && !args.Contains("--hitsound-copier-render-check") && !args.Contains("--testplay-render-check") && !args.Contains("--profile-map") && !args.Contains("--audio-settings-resume-check"))
+            if (!difficultySwitchCheck && !screenshotCheck && !args.Contains("--render-check") && !args.Contains("--hitsound-copier-render-check") && !args.Contains("--testplay-render-check") && !args.Contains("--profile-map") && !args.Contains("--audio-settings-resume-check"))
             {
                 FruitsAtelier.Core.LibrarySettings diagnosticSettings;
                 try { diagnosticSettings = FruitsAtelier.Core.LibrarySettings.Load(); }
@@ -26,6 +27,7 @@ internal static class Program
             }
             L.SetLanguage(FruitsAtelier.Localization.LanguagePreference.ReadLanguage());
             using var window = new EditorWindow();
+            if (difficultySwitchCheck) return window.Run(renderCheck: true, difficultySwitchPath: args[1]);
             if (args.Length is 2 or 3 && args[0] == "--profile-map") return window.Run(profileMap: args[1],
                 profileStartMs: args.Length == 3 ? double.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture) : 70000);
             return window.Run(screenshotCheck || args.Contains("--render-check") || args.Contains("--hitsound-copier-render-check") || args.Contains("--testplay-render-check") || args.Contains("--audio-settings-resume-check"), resumeAudio is null ? args.FirstOrDefault(File.Exists) : null,
@@ -34,7 +36,7 @@ internal static class Program
         catch (Exception exception)
         {
             AppLog.Write(exception.ToString());
-            if (!screenshotCheck && !args.Contains("--render-check") && !args.Contains("--hitsound-copier-render-check") && !args.Contains("--testplay-render-check") && !args.Contains("--m2-check") && !args.Contains("--package-check") && !args.Contains("--profile-map") && !args.Contains("--audio-settings-resume-check"))
+            if (!difficultySwitchCheck && !screenshotCheck && !args.Contains("--render-check") && !args.Contains("--hitsound-copier-render-check") && !args.Contains("--testplay-render-check") && !args.Contains("--m2-check") && !args.Contains("--package-check") && !args.Contains("--profile-map") && !args.Contains("--audio-settings-resume-check"))
                 Native.ShowError(0, L.Get("window.startFailed", exception.Message, AppLog.Path), L.Get("app.name"));
             return 1;
         }
