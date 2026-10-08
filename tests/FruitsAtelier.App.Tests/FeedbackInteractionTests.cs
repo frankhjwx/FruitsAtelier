@@ -29,11 +29,11 @@ internal static class FeedbackInteractionTests
         clock.Advance(500); ui.Paint();
         ui.Key(192);
         Check(loops.SequenceEqual(["pause-loop"]), "Holding retry must start the pause loop immediately.");
-        clock.Advance(125); ui.Paint();
+        clock.Advance(150); ui.Paint();
         Check(Math.Abs(RetryDim() - .5f) < .001 && sounds.Count == 0, "Half-held retry must dim the whole window without a click.");
-        clock.Advance(124); ui.Key(192); ui.Paint();
+        clock.Advance(149); ui.Key(192); ui.Paint();
         Check(RetryDim() > .99f && sounds.Count == 0, "Retry must approach black before its deadline without a click.");
-        Check(ui.View.PlayheadMs == 5749, "Retry fired before 250 ms or key repeat reset its deadline.");
+        Check(ui.View.PlayheadMs == 5799, "Retry fired before 300 ms or key repeat reset its deadline.");
         Check(loops.Count == 1, "Key repeat restarted the pause loop.");
         clock.Advance(1); ui.Paint();
         Check(ui.View.IsTestplaying && ui.View.PlayheadMs == 5000 && ui.View.TestplayCombo == 0, "Held retry did not reset to the testplay start.");
@@ -55,9 +55,9 @@ internal static class FeedbackInteractionTests
         Check(ui.View.TestplayPaused && ui.Canvas.PaintCalls.Count(IsFullWindowDim) == pausedDimLayers
             && loops.Last() == "pause-loop" && sounds.Count == 0,
             "Cancelling a paused retry must retain the pause menu loop without a click.");
-        ui.Key(192); clock.Advance(125); ui.Paint();
+        ui.Key(192); clock.Advance(150); ui.Paint();
         Check(Math.Abs(RetryDim() - .5f) < .001, "Paused retry must dim the pause menu too.");
-        clock.Advance(125); ui.Paint();
+        clock.Advance(150); ui.Paint();
         Check(!ui.View.TestplayPaused && ui.View.PlayheadMs == 5000, "Held retry did not restart paused testplay.");
         Check(RetryDim() == 0 && sounds.SequenceEqual(["pause-retry-click"]), "Paused retry must clear dim and play its click once.");
         Check(loops.Last() is null, "Paused retry must stop the loop when gameplay restarts.");

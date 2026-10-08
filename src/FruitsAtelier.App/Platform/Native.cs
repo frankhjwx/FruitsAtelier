@@ -138,6 +138,7 @@ internal static partial class Native
     [DllImport("user32.dll")] internal static extern bool PostMessage(nint window, uint message, nuint wParam, nint lParam);
     [DllImport("user32.dll")] internal static extern bool TranslateMessage(ref Message message);
     [DllImport("imm32.dll")] internal static extern uint ImmGetVirtualKey(nint window);
+    [DllImport("user32.dll")] internal static extern uint MapVirtualKey(uint code, uint type);
     [DllImport("user32.dll")] internal static extern nint DispatchMessage(ref Message message);
     [DllImport("user32.dll")] internal static extern bool ShowWindow(nint hwnd, int command);
     [DllImport("user32.dll")] internal static extern bool UpdateWindow(nint hwnd);

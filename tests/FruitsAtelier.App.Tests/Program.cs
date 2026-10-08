@@ -51,7 +51,7 @@ var tests = new (string Name, Action Run)[]
     ("F12 screenshots repeat once and preserve dialogs, playback and content", ScreenshotTests.Shortcut),
     ("Hitsound Copier modes, new Diff and undo", HitsoundCopierUiTests.Run),
     ("Testplay opening preparation and audio boundary", TestplayTests.OpeningPreparation),
-    ("Held quick retry dims over 250 ms, clicks once and cancels on release while running or paused", FeedbackInteractionTests.Retry),
+    ("Held quick retry dims over 300 ms, clicks once and cancels on release while running or paused", FeedbackInteractionTests.Retry),
     ("Previous-save rollback requires history, confirmation and supports undo", FeedbackInteractionTests.PreviousSave),
     ("Timeline navigation and history reveal offscreen changes", FeedbackInteractionTests.Navigation),
     ("Slider endpoint drags retain navigation, playback and cancellation", FeedbackInteractionTests.TailNavigation),
@@ -171,6 +171,7 @@ var tests = new (string Name, Action Run)[]
     ("Update lifecycle, persistence and save-before-restart", UpdateTests.Lifecycle),
 #if WINDOWS
     ("GitHub update discovery recovers omitted assets and preserves download metadata", GithubReleaseSourceTests.Run),
+    ("Quick retry pause loop and restart click emit PCM through the real mixer", RetryAudioTests.Run),
 #endif
     ("Update settings and explicit installation controls", UpdateTests.Interface),
     ("Opening maps initializes position and duration without transient jumps", AudioFeedbackTests.OpeningTransport),

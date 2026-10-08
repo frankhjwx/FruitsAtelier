@@ -136,6 +136,7 @@ internal sealed partial class EditorWindow : IDisposable
             }
             if (testplayCheck)
             {
+                CheckTestplayKeyboard();
                 Diagnostics.TestplayRenderCheck.Run(canvas);
                 Native.DestroyWindow(hwnd);
                 return 0;
@@ -190,19 +191,7 @@ internal sealed partial class EditorWindow : IDisposable
             long inputStart = BeginInputSample(msg);
             try
             {
-                // TranslateMessage can let the IME consume editor shortcuts, even when WM_KEYDOWN still has the original key.
-                if (msg.Window == hwnd && msg.Id == 0x0100 && !view.IsEditingText && !view.CapturingTestplayKey && !view.IsTestplaying)
-                {
-                    uint key = msg.WParam == 0xE5 ? Native.ImmGetVirtualKey(hwnd) : (uint)msg.WParam;
-                    if (key is > 0 and < 0xE5)
-                    {
-                        view.SetModifiers(Native.Alt, Native.Shift);
-                        view.KeyDown((int)key, Native.Control, Native.Shift);
-                        if (!view.WantsCapture && Native.GetCapture() == hwnd) Native.ReleaseCapture();
-                        UpdateTitle(); Invalidate();
-                        continue;
-                    }
-                }
+                if (DispatchShortcutBeforeTranslation(msg)) continue;
                 Native.TranslateMessage(ref msg);
                 Native.DispatchMessage(ref msg);
             }
@@ -431,7 +420,7 @@ internal sealed partial class EditorWindow : IDisposable
                 Invalidate(); return 0;
             case 0x0100:
                 view.SetModifiers(Native.Alt, Native.Shift);
-                view.KeyDown((int)wParam, Native.Control, Native.Shift);
+                view.KeyDown((int)ResolveVirtualKey(wParam, lParam, down: true), Native.Control, Native.Shift);
                 if (!view.WantsCapture && Native.GetCapture() == window) Native.ReleaseCapture();
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0104: // WM_SYSKEYDOWN: Alt changes editor snapping without opening the system menu.
@@ -456,7 +445,7 @@ internal sealed partial class EditorWindow : IDisposable
                 break;
             case 0x0101: // WM_KEYUP
             case 0x0105: // WM_SYSKEYUP
-                view.KeyUp((int)wParam);
+                view.KeyUp((int)ResolveVirtualKey(wParam, lParam, down: false));
                 view.SetModifiers(Native.Alt, Native.Shift);
                 Invalidate();
                 if ((int)wParam is 0x12 or 0x10) return 0;

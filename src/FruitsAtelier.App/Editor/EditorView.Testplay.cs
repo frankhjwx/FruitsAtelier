@@ -14,7 +14,7 @@ public sealed partial class EditorView
     private bool testplaySpeedHeld;
     private bool testplayPauseHeld;
     private bool testplayRetryHeld;
-    private const double TestplayQuickRetryHoldMs = 250;
+    private const double TestplayQuickRetryHoldMs = 300;
     private double? testplayQuickRetryAt;
     private bool testplayQuickRetryHeld;
     private bool testplayRestarting;
@@ -184,8 +184,8 @@ public sealed partial class EditorView
         if (testplayQuickRetryAt is double retryAt && TestplayRealtime >= retryAt)
         {
             testplayQuickRetryAt = null;
-            PlayTestplayMenuSound("pause-retry-click");
             RestartTestplay();
+            PlayTestplayMenuSound("pause-retry-click");
             return;
         }
         if (testplayResumeAt is double resume && TestplayRealtime >= resume)
