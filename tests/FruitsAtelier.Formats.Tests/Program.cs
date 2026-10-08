@@ -21,6 +21,7 @@ var tests = new (string Name, Action Run)[]
     ("Version history preserves saved, unsaved and deleted authoring by project identity", VersionHistoryTests.Run),
 
     ("Fractional banana endpoints preserve exported counts and downstream tiny compensation", BananaQuantizationTests.Run),
+    ("Fractional FSlider heads preserve exported tiny counts, NM/HR RNG, editing and undo", FractionalSliderQuantizationTests.Run),
     ("Export keeps timing data below its header and a blank before Colours", TimingSectionSpacing),
     ("Export orders metadata with difficulty identity at the end", MetadataLayout),
     ("Cached export matches full serialization across edits, order, RNG, timing and streams", WriteCacheTests.MatchesUncached),

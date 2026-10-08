@@ -79,3 +79,9 @@ The writer holds the required SV through the head's next-millisecond lookup wind
 See [Building and Testing](TESTING.md) for tests and the [format module reference](../src/FruitsAtelier.Core/Formats/REFERENCE.md) for APIs and sources.
 
 FSlider generation evaluates the authoring curve at actual fruit, droplet, and tiny-droplet events. Only these event targets constrain path construction and required SV; intermediate anchors and Bezier curvature do not impose additional speed constraints. Tiny alignment retains its existing random-offset compensation and repeated-path compatibility rules. Connections between event targets may differ from the authoring curve without changing event positions or duration.
+
+FSlider tiny intervals use the exported integer head time when counting nested
+events. Their times are then mapped back to the precise authored origin for curve
+sampling and editing. This keeps tiny counts and NM/HR random consumption consistent
+with export at integer interval thresholds while retaining saved anchor times and
+span durations. Imported Legacy Sliders continue to use their retained source times.

@@ -46,7 +46,7 @@ public static class DistanceSpacingEditing
         var slider = stream ? null : before.Sliders.Single(s => s.SourceId == track.Id);
         double start = track.Nodes[0].TimeMs, duration = track.Nodes[^1].TimeMs - start;
         var nested = slider is null ? null : LegacyCatchRules.CreateNested(start, duration, slider.Velocity,
-            slider.TickDistance, slider.Length, track.SpanCount);
+            slider.TickDistance, slider.Length, track.SpanCount, quantizeStart: true);
         // Uncompensated tiny droplets sample path progress, which differs from their rounded event time.
         double SampleTime(ConvertedCatchObject item) => item.Kind == CatchObjectKind.TinyDroplet && slider is { TinyCompensationApplied: false }
             ? start + nested![item.EventIndex].Progress * duration

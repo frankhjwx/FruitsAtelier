@@ -151,7 +151,7 @@ public static class CatchStreamConverter
             if (!double.IsFinite(velocity) || velocity <= 0 || !double.IsFinite(length) || length <= 0
                 || !double.IsFinite(tickDistance) || tickDistance <= 0)
                 throw new CatchConversionException(L.Get("core.conversion.timingRange"));
-            var nested = LegacyCatchRules.CreateNested(start, duration, velocity, tickDistance, length, track.SpanCount);
+            var nested = LegacyCatchRules.CreateNested(start, duration, velocity, tickDistance, length, track.SpanCount, quantizeStart: true);
 
             // RNG follows each complete parent stream before the next parent, including overlapping streams.
             var candidateRng = globalRng;
@@ -271,7 +271,7 @@ public static class CatchStreamConverter
                         double velocity = LegacyCatchRules.Velocity(at.BeatLengthMs, document.SliderMultiplier, at.SliderVelocityMultiplier);
                         double duration = track.Nodes[^1].TimeMs - source.TimeMs;
                         var nested = LegacyCatchRules.CreateNested(source.TimeMs, duration, velocity,
-                            velocity * at.BeatLengthMs / document.SliderTickRate, duration * velocity, track.SpanCount);
+                            velocity * at.BeatLengthMs / document.SliderTickRate, duration * velocity, track.SpanCount, quantizeStart: true);
                         LegacyCatchRules.ApplyRandomSequence(nested, ref state.Random);
                         continue;
                     }
