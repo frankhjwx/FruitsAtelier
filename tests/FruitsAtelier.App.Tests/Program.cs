@@ -50,7 +50,7 @@ var tests = new (string Name, Action Run)[]
 {
     ("Hitsound Copier modes, new Diff and undo", HitsoundCopierUiTests.Run),
     ("Testplay opening preparation and audio boundary", TestplayTests.OpeningPreparation),
-    ("Held quick retry uses 300 ms, cancels on release and retries once while paused", FeedbackInteractionTests.Retry),
+    ("Held quick retry dims over 250 ms, clicks once and cancels on release while running or paused", FeedbackInteractionTests.Retry),
     ("Previous-save rollback requires history, confirmation and supports undo", FeedbackInteractionTests.PreviousSave),
     ("Timeline navigation and history reveal offscreen changes", FeedbackInteractionTests.Navigation),
     ("Slider endpoint drags retain navigation, playback and cancellation", FeedbackInteractionTests.TailNavigation),

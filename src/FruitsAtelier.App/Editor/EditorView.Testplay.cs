@@ -14,6 +14,7 @@ public sealed partial class EditorView
     private bool testplaySpeedHeld;
     private bool testplayPauseHeld;
     private bool testplayRetryHeld;
+    private const double TestplayQuickRetryHoldMs = 250;
     private double? testplayQuickRetryAt;
     private bool testplayQuickRetryHeld;
     private bool testplayRestarting;
@@ -183,6 +184,7 @@ public sealed partial class EditorView
         if (testplayQuickRetryAt is double retryAt && TestplayRealtime >= retryAt)
         {
             testplayQuickRetryAt = null;
+            PlayTestplayMenuSound("pause-retry-click");
             RestartTestplay();
             return;
         }
@@ -287,6 +289,9 @@ public sealed partial class EditorView
         DrawVolumePopover(c);
         DrawTestplayOverlays(c);
         DrawTestplayCursor(c);
+        if (testplayQuickRetryAt is double retryAt)
+            c.Fill(new(0, 0, width, height), 0,
+                opacity: (float)Math.Clamp(1 - (retryAt - TestplayRealtime) / TestplayQuickRetryHoldMs, 0, 1));
     }
 
     // ppy/osu 48c4800e: LegacyCatchComboCounter, LegacyRollingCounter and CatcherArea.

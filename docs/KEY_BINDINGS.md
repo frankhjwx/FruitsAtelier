@@ -217,7 +217,7 @@ to Compose before moving selected objects.
 | Left / Right | Move catcher, by default. |
 | Hold Shift | Dash, by default. |
 | Tab | Toggle autoplay. |
-| Hold `~` / backtick for 300 ms | Retry once from this session's start, including its lead-in. Release early to cancel; available while running or paused. |
+| Hold `~` / backtick for 250 ms | Dim the screen, then retry once from this session's start, including its lead-in, with the pause-menu Retry click. Release early to cancel; available while running or paused. |
 | Ctrl+R | Retry from this session's start including its lead-in, retaining autoplay and speed. One retry per press; available while running or paused. |
 | F3 | During autoplay, toggle speed between 1.0x and 1.5x. |
 | Ctrl+Up / Ctrl+Down | During autoplay, increase / decrease speed by 25 percentage points, within 10%–150%. Works while paused too. |

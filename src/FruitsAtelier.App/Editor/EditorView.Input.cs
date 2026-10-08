@@ -988,7 +988,7 @@ public sealed partial class EditorView
             else if (virtualKey == 192 && !ctrl && !altHeld)
             {
                 if (!testplayQuickRetryHeld)
-                { testplayQuickRetryHeld = true; testplayQuickRetryAt = TestplayRealtime + 300; }
+                { testplayQuickRetryHeld = true; testplayQuickRetryAt = TestplayRealtime + TestplayQuickRetryHoldMs; }
             }
             else if (ctrl && !altHeld && virtualKey is 38 or 40)
             {

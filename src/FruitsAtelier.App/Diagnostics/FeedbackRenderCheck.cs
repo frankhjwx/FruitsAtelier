@@ -48,8 +48,8 @@ internal static class FeedbackRenderCheck
                 view.LibrarySettings.TestplayStartupDelaySeconds = 0;
                 view.UpdateTransport(1000, 20000, false, false, false, null, null);
                 view.StartTestplay(); clock.Advance(500); Paint();
-                view.KeyDown(192, false, false); clock.Advance(299); Paint();
-                if (view.PlayheadMs != 1799) throw new InvalidOperationException("Native quick retry fired early.");
+                view.KeyDown(192, false, false); clock.Advance(249); Paint();
+                if (view.PlayheadMs != 1749) throw new InvalidOperationException("Native quick retry fired early.");
                 clock.Advance(1); Paint();
                 if (view.PlayheadMs != 1000) throw new InvalidOperationException("Native quick retry did not reset the session.");
                 view.KeyUp(192); view.StopTestplay();
