@@ -123,12 +123,12 @@ public sealed partial class EditorView
         if (!IsTestplaying) return;
         FinishBackgroundDimDrag();
         bool wasPaused = TestplayPaused;
+        testplayQuickRetryAt = null;
         SetTestplayPauseLoop(false);
         double returnTime = atCurrentPosition && testplay is not null ? testplay.TransportPosition : testplayReturnPosition;
         testplay?.Cancel();
         testplayDriver?.Dispose(); testplayDriver = null;
         testplay = null; testplayFrame = null;
-        testplayQuickRetryAt = null;
         testplayQuickRetryHeld = false;
         testplayResumeAt = null;
         testplayAutoNotice = null;
@@ -231,7 +231,7 @@ public sealed partial class EditorView
         if (virtualKey == 114) testplaySpeedHeld = false;
         if (virtualKey == 80) testplayPauseHeld = false;
         if (virtualKey == 82) testplayRetryHeld = false;
-        if (virtualKey == 192) { testplayQuickRetryHeld = false; testplayQuickRetryAt = null; }
+        if (virtualKey == 192) CancelTestplayQuickRetry();
         if (virtualKey == 66) testplayBookmarkHeld = false;
         if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
         if (IsTestplaying && testplayDriver is null) AdvanceTestplay();

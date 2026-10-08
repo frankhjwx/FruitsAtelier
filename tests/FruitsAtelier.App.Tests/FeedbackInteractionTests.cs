@@ -22,18 +22,23 @@ internal static class FeedbackInteractionTests
         ui.View.UpdateTransport(5000, 20000, true, false, false, null, null);
         ui.View.UpdateTransport(5000, 20000, false, false, false, null, null);
         var sounds = new List<string>();
+        var loops = new List<string?>();
         ui.View.RequestAuditionHitsound = sound => sounds.Add(sound.Name);
+        ui.View.RequestTestplayMenuLoop = sound => loops.Add(sound?.Name);
         ui.View.StartTestplay();
         clock.Advance(500); ui.Paint();
         ui.Key(192);
+        Check(loops.SequenceEqual(["pause-loop"]), "Holding retry must start the pause loop immediately.");
         clock.Advance(125); ui.Paint();
         Check(Math.Abs(RetryDim() - .5f) < .001 && sounds.Count == 0, "Half-held retry must dim the whole window without a click.");
         clock.Advance(124); ui.Key(192); ui.Paint();
         Check(RetryDim() > .99f && sounds.Count == 0, "Retry must approach black before its deadline without a click.");
         Check(ui.View.PlayheadMs == 5749, "Retry fired before 250 ms or key repeat reset its deadline.");
+        Check(loops.Count == 1, "Key repeat restarted the pause loop.");
         clock.Advance(1); ui.Paint();
         Check(ui.View.IsTestplaying && ui.View.PlayheadMs == 5000 && ui.View.TestplayCombo == 0, "Held retry did not reset to the testplay start.");
         Check(RetryDim() == 0 && sounds.SequenceEqual(["pause-retry-click"]), "Retry must clear the dim and play the pause Retry click once.");
+        Check(loops.Last() is null, "Completed retry must stop the pause loop.");
         clock.Advance(350); ui.Key(192);
         Check(ui.View.PlayheadMs == 5350, "A held retry restarted more than once.");
         Check(sounds.Count == 1, "A held retry repeated its click.");
@@ -41,23 +46,35 @@ internal static class FeedbackInteractionTests
         ui.Key(192); clock.Advance(200); ui.View.KeyUp(192); clock.Advance(200); ui.Paint();
         Check(ui.View.PlayheadMs == 5750, "A released short press still retried.");
         Check(RetryDim() == 0 && sounds.Count == 1, "Releasing early must remove dim without a retry click.");
+        Check(loops.Last() is null, "Releasing early must stop the retry loop.");
         ui.Key(27); ui.View.KeyUp(27);
         Check(ui.View.TestplayPaused, "Pause fixture failed.");
         sounds.Clear();
+        int pausedDimLayers = ui.Canvas.PaintCalls.Count(IsFullWindowDim);
+        ui.Key(192); clock.Advance(100); ui.View.KeyUp(192); ui.Paint();
+        Check(ui.View.TestplayPaused && ui.Canvas.PaintCalls.Count(IsFullWindowDim) == pausedDimLayers
+            && loops.Last() == "pause-loop" && sounds.Count == 0,
+            "Cancelling a paused retry must retain the pause menu loop without a click.");
         ui.Key(192); clock.Advance(125); ui.Paint();
         Check(Math.Abs(RetryDim() - .5f) < .001, "Paused retry must dim the pause menu too.");
         clock.Advance(125); ui.Paint();
         Check(!ui.View.TestplayPaused && ui.View.PlayheadMs == 5000, "Held retry did not restart paused testplay.");
         Check(RetryDim() == 0 && sounds.SequenceEqual(["pause-retry-click"]), "Paused retry must clear dim and play its click once.");
+        Check(loops.Last() is null, "Paused retry must stop the loop when gameplay restarts.");
         ui.View.KeyUp(192);
         ui.Key(192); ui.View.CancelInteraction(preserveTestplay: true); clock.Advance(350); ui.Paint();
         Check(ui.View.PlayheadMs == 5350, "Focus cancellation retained a pending retry.");
         Check(RetryDim() == 0 && sounds.Count == 1, "Focus cancellation retained dim or triggered a click.");
+        Check(loops.Last() is null, "Focus cancellation retained the retry loop.");
+        ui.Key(192);
         ui.View.StopTestplay();
+        Check(loops.Last() is null, "Leaving testplay retained the retry loop.");
 
         float RetryDim() => ui.Canvas.PaintCalls
-            .Where(call => call.Color == 0 && call.FillBounds == new FruitsAtelier.App.Rendering.Rect(0, 0, ui.Width, ui.Height))
+            .Where(IsFullWindowDim)
             .Select(call => call.Opacity).DefaultIfEmpty(0).Last();
+        bool IsFullWindowDim(RecordingCanvas.PaintCall call) => call.Color == 0
+            && call.FillBounds == new FruitsAtelier.App.Rendering.Rect(0, 0, ui.Width, ui.Height);
     }
 
     public static void PreviousSave()

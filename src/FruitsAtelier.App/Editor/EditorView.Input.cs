@@ -988,7 +988,11 @@ public sealed partial class EditorView
             else if (virtualKey == 192 && !ctrl && !altHeld)
             {
                 if (!testplayQuickRetryHeld)
-                { testplayQuickRetryHeld = true; testplayQuickRetryAt = TestplayRealtime + TestplayQuickRetryHoldMs; }
+                {
+                    testplayQuickRetryHeld = true;
+                    testplayQuickRetryAt = TestplayRealtime + TestplayQuickRetryHoldMs;
+                    if (!TestplayPauseMenuVisible) SetTestplayPauseLoop(true);
+                }
             }
             else if (ctrl && !altHeld && virtualKey is 38 or 40)
             {
@@ -1289,7 +1293,7 @@ public sealed partial class EditorView
         testplayEscapeConsumed = false;
         testplaySpeedHeld = false;
         testplayRetryHeld = false;
-        testplayQuickRetryHeld = false; testplayQuickRetryAt = null;
+        CancelTestplayQuickRetry();
         streamSnapDragging = false; CancelStackDrag();
         CloseVolumePopover();
         sliderHoldId = legacyButtonSlider = Guid.Empty; noteHoldTarget = null;
