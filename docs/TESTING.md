@@ -156,7 +156,9 @@ decoding, custom Skip and pause textures, mouse/Space skip, keyboard Retry/Back,
 and both languages at wide, narrow and portrait sizes with 96/144/192 DPI.
 It uses silent callbacks and writes `artifacts/tests/testplay-native/report.json`.
 It also checks testplay shortcut dispatch before IME translation, process-key
-press/release recovery, and 300 ms retry while running and paused.
+press/release recovery, and 300 ms held retry while running and paused followed by
+the 600 ms reaction countdown. Retry regressions verify frozen gameplay and delayed
+audio restart until the same deadline used by Continue.
 The shared App regressions additionally check dim transitions, frozen resume
 countdowns, stale audio samples after skip, content isolation and preferences.
 The Windows App retry PCM regression uses an injected silent output with the

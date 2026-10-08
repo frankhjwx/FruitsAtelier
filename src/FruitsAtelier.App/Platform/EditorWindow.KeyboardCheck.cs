@@ -37,14 +37,19 @@ internal sealed partial class EditorWindow
             if (clicks != 1 || looping)
                 throw new InvalidOperationException("IME retry failed to complete once after 300 ms.");
             Native.DispatchMessage(ref up);
+            Thread.Sleep(610);
+            canvas.Begin(); view.Render(canvas, 980, 620); canvas.End();
             view.KeyDown(27, false, false); view.KeyUp(27);
             if (!DispatchShortcutBeforeTranslation(down))
                 throw new InvalidOperationException("Paused testplay retry reached IME translation.");
             Thread.Sleep(310);
             canvas.Begin(); view.Render(canvas, 980, 620); canvas.End();
-            if (clicks != 2 || looping || view.TestplayPaused)
-                throw new InvalidOperationException("Paused IME retry did not restart gameplay.");
+            if (clicks != 2 || looping || !view.TestplayPaused || view.TestplayPauseMenuVisible)
+                throw new InvalidOperationException("Paused IME retry did not begin its reaction countdown.");
             Native.DispatchMessage(ref up);
+            Thread.Sleep(610);
+            canvas.Begin(); view.Render(canvas, 980, 620); canvas.End();
+            if (view.TestplayPaused) throw new InvalidOperationException("IME retry did not resume after its reaction countdown.");
             AppLog.Write("Testplay IME shortcut dispatch, physical release and 300 ms retry passed.");
         }
         finally

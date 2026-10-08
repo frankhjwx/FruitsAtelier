@@ -118,8 +118,9 @@ public sealed partial class EditorView
             PrepareTestplayMenuSounds();
             ResetHitsounds();
             playhead = testplayStart;
-            BeginTestplay(new CatchTestplay(PreviewObjects(), PreviewCircleSize, testplayStart), audioAlreadyPlaying: false);
+            BeginTestplay(new CatchTestplay(PreviewObjects(), PreviewCircleSize, testplayStart), audioAlreadyPlaying: false, startPaused: true);
             if (autoplay) testplay?.ToggleAutoplay();
+            BeginTestplayResume();
         }
         finally { testplayRestarting = false; }
         AdvanceTestplay();

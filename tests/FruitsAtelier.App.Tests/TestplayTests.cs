@@ -92,7 +92,8 @@ internal static class TestplayTests
     {
         foreach (bool paused in new[] { false, true })
         {
-            var ui = new Ui(timeProvider: new ManualTime());
+            var clock = new ManualTime();
+            var ui = new Ui(timeProvider: clock);
             var map = new MapDocument(); map.Fruits.Add(new Fruit { TimeMs = 10000, X = 256 });
             ui.LoadDocument(map);
             ui.View.UpdateTransport(0, 20000, true, false, false, null, null);
@@ -119,12 +120,51 @@ internal static class TestplayTests
             if (paused) { ui.Key(27); ui.View.KeyUp(27); }
             observing = true;
             ui.Key(82, ctrl: true); ui.View.KeyUp(82);
+            Check(ui.View.TestplayPaused, "Retry must prepare its replacement session paused");
+            clock.Advance(600); ui.Paint();
             observing = false;
             Check(boundaries.Contains("driver disposal") && boundaries.Contains("sample preparation")
                 && boundaries.Contains("audio seek") && boundaries.Contains("audio restart")
                 && boundaries.Contains("driver creation"), "Retry must verify every reentrant setup boundary");
             Check(ui.View.IsTestplaying && !ui.View.TestplayPaused && ui.View.Document.ContentEquals(map),
                 "Retry completes in gameplay without editing content");
+            ui.View.StopTestplay();
+        }
+    }
+
+    public static void RetryReactionTime()
+    {
+        foreach (int entry in new[] { 0, 1, 2, 3 })
+        {
+            var clock = new ManualTime();
+            var ui = new Ui(false, clock);
+            var map = new MapDocument { IsDemo = false, DurationMs = 20000 };
+            map.Fruits.AddRange([new() { TimeMs = 5100, X = 256 }, new() { TimeMs = 15000, X = 256 }]);
+            ui.LoadDocument(map);
+            ui.View.LibrarySettings.TestplayStartupDelaySeconds = 0;
+            ui.View.UpdateTransport(5000, 20000, true, false, false, null, null);
+            ui.View.UpdateTransport(5000, 20000, false, false, false, null, null);
+            CatchTestplaySession? driven = null;
+            ui.View.RequestRunTestplay = session => { driven = session; return new RetryDriver(() => { }); };
+            ui.View.StartTestplay(); ui.Key(9); ui.View.KeyUp(9);
+            if (entry >= 2) { ui.Key(27); ui.View.KeyUp(27); }
+            if (entry == 0) { ui.Key(82, ctrl: true); ui.View.KeyUp(82); }
+            if (entry == 1) { ui.Key(192); clock.Advance(300); ui.Paint(); ui.View.KeyUp(192); }
+            if (entry == 2) { ui.Key(40); ui.View.KeyUp(40); ui.Key(13); ui.View.KeyUp(13); }
+            if (entry == 3)
+            {
+                clock.Advance(300); ui.Paint();
+                ui.ClickText(L.Get("testplay.retry"));
+            }
+            Check(driven!.Paused && ui.View.TestplayPaused && !ui.View.TestplayPauseMenuVisible,
+                "Every retry entry must create a paused session with a reaction transition");
+            clock.Advance(599); driven.Tick(); ui.Paint();
+            Near(5000, ui.View.PlayheadMs);
+            Check(ui.View.TestplayCombo == 0 && ui.View.TestplayAutoplay, "Countdown must not judge nearby notes or reset autoplay");
+            clock.Advance(1); ui.Paint();
+            Check(!driven.Paused && !ui.View.TestplayPaused, "Every retry resumes at the 600 ms deadline");
+            clock.Advance(100); driven.Tick(); ui.Paint();
+            Check(ui.View.TestplayCombo == 1, "A nearby note must remain catchable after the reaction transition");
             ui.View.StopTestplay();
         }
     }
@@ -163,17 +203,21 @@ internal static class TestplayTests
         ui.View.SetPlaybackSpeed(1.25);
         ui.Key(82, ctrl: true);
         Near(2000, ui.View.PlayheadMs);
-        Check(ui.View.TestplayAutoplay && !ui.View.TestplayPaused, "Retry retains autoplay and starts running");
+        Check(ui.View.TestplayAutoplay && ui.View.TestplayPaused, "Retry retains autoplay during its reaction countdown");
+        clock.Advance(100); ui.Key(82, ctrl: true); Near(2000, ui.View.PlayheadMs);
+        clock.Advance(500); ui.Paint();
         clock.Advance(100); ui.Key(82, ctrl: true); Near(2125, ui.View.PlayheadMs);
         ui.View.KeyUp(82); ui.Key(82, ctrl: true); Near(2000, ui.View.PlayheadMs); ui.View.KeyUp(82);
+        clock.Advance(600); ui.Paint();
         ui.Key(27); ui.View.KeyUp(27); ui.Key(82, ctrl: true); ui.View.KeyUp(82);
-        Check(!ui.View.TestplayPaused, "Retry is available from the pause menu");
+        Check(ui.View.TestplayPaused && !ui.View.TestplayPauseMenuVisible, "Paused retry begins the reaction countdown");
         ui.Key(82, ctrl: true); ui.View.CancelInteraction(preserveTestplay: true);
         clock.Advance(100); ui.Key(82, ctrl: true); Near(2000, ui.View.PlayheadMs); ui.View.KeyUp(82);
         ui.Key(112); Near(3000, ui.View.PlayheadMs);
         Check(ui.View.Document.ContentEquals(before), "Retry and speed preserve content");
 
-        var audio = new Ui(timeProvider: new ManualTime()); audio.LoadDocument(map);
+        var audioClock = new ManualTime();
+        var audio = new Ui(timeProvider: audioClock); audio.LoadDocument(map);
         audio.View.LibrarySettings.TestplayStartupDelaySeconds = 1;
         audio.View.UpdateTransport(3000, 20000, true, false, false, null, null);
         var requests = new List<string>();
@@ -182,7 +226,12 @@ internal static class TestplayTests
         audio.View.RequestTogglePlayback = () => requests.Add("play");
         audio.View.StartTestplay(); requests.Clear();
         audio.Key(82, ctrl: true); audio.View.KeyUp(82);
-        Check(requests.SequenceEqual(["pause", "seek:2000", "play"]), "Running retry pauses audio before seeking and restarting");
+        Check(requests.SequenceEqual(["pause", "seek:2000"]), "Running retry pauses and seeks audio without starting it during the countdown");
+        audioClock.Advance(599); audio.Paint();
+        Check(requests.SequenceEqual(["pause", "seek:2000"]) && audio.View.TestplayPaused, "Retry started audio before the reaction deadline");
+        audioClock.Advance(1); audio.Paint();
+        Check(requests.SequenceEqual(["pause", "seek:2000", "seek:2000", "play"]) && !audio.View.TestplayPaused,
+            "Retry resumes audio and judgement together after 600 ms");
         audio.View.StopTestplay();
     }
 

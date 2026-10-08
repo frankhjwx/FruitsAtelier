@@ -39,6 +39,10 @@ internal static class FeedbackInteractionTests
         Check(ui.View.IsTestplaying && ui.View.PlayheadMs == 5000 && ui.View.TestplayCombo == 0, "Held retry did not reset to the testplay start.");
         Check(RetryDim() == 0 && sounds.SequenceEqual(["pause-retry-click"]), "Retry must clear the dim and play the pause Retry click once.");
         Check(loops.Last() is null, "Completed retry must stop the pause loop.");
+        clock.Advance(599); ui.Key(192);
+        Check(ui.View.TestplayPaused && ui.View.PlayheadMs == 5000, "Retry must retain its start throughout the reaction countdown.");
+        clock.Advance(1); ui.Paint();
+        Check(!ui.View.TestplayPaused, "Retry must resume after 600 ms.");
         clock.Advance(350); ui.Key(192);
         Check(ui.View.PlayheadMs == 5350, "A held retry restarted more than once.");
         Check(sounds.Count == 1, "A held retry repeated its click.");
@@ -58,10 +62,12 @@ internal static class FeedbackInteractionTests
         ui.Key(192); clock.Advance(150); ui.Paint();
         Check(Math.Abs(RetryDim() - .5f) < .001, "Paused retry must dim the pause menu too.");
         clock.Advance(150); ui.Paint();
-        Check(!ui.View.TestplayPaused && ui.View.PlayheadMs == 5000, "Held retry did not restart paused testplay.");
-        Check(RetryDim() == 0 && sounds.SequenceEqual(["pause-retry-click"]), "Paused retry must clear dim and play its click once.");
+        Check(ui.View.TestplayPaused && !ui.View.TestplayPauseMenuVisible && ui.View.PlayheadMs == 5000, "Held retry did not begin its reaction countdown from paused testplay.");
+        Check(sounds.SequenceEqual(["pause-retry-click"]), "Paused retry must play its click once as the menu fades.");
         Check(loops.Last() is null, "Paused retry must stop the loop when gameplay restarts.");
         ui.View.KeyUp(192);
+        clock.Advance(600); ui.Paint();
+        Check(RetryDim() == 0 && !ui.View.TestplayPaused, "Paused retry must clear dim when its reaction transition completes.");
         ui.Key(192); ui.View.CancelInteraction(preserveTestplay: true); clock.Advance(350); ui.Paint();
         Check(ui.View.PlayheadMs == 5350, "Focus cancellation retained a pending retry.");
         Check(RetryDim() == 0 && sounds.Count == 1, "Focus cancellation retained dim or triggered a click.");

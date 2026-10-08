@@ -88,7 +88,7 @@ public sealed partial class EditorView
         BeginTestplay(session, audioAlreadyPlaying: AudioPlaying && !restartAudio);
     }
 
-    private void BeginTestplay(CatchTestplay session, bool audioAlreadyPlaying)
+    private void BeginTestplay(CatchTestplay session, bool audioAlreadyPlaying, bool startPaused = false)
     {
         comboCurrent = comboPrevious = 0; comboChangedAt = double.NegativeInfinity;
         var resolver = new HitsoundResolver(Document, PreviewObjects(), HitsoundSkinFolders);
@@ -100,7 +100,7 @@ public sealed partial class EditorView
         double clockStart = audioAlreadyPlaying ? Math.Min(AudioDurationMs,
             transportSamplePosition + Math.Max(0, now - transportSampleAt) * PlaybackSpeed
             + CatchTestplaySession.LiveHitsoundLead(transportSampleLeadMs, PlaybackSpeed)) : testplayStart;
-        var clock = new CatchTestplayClock(clockStart, PlaybackSpeed, now, AudioReady && !audioAlreadyPlaying);
+        var clock = new CatchTestplayClock(clockStart, PlaybackSpeed, now, startPaused || AudioReady && !audioAlreadyPlaying);
         if (AudioReady) clock.Synchronize(clockStart, now, now);
         testplay = new(session, clock, testplayStart, AudioReady, audioAlreadyPlaying, LibrarySettings.TestplayLeftKey,
             LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey, timeProvider, PreviewCircleSize, previewComboEnds,
@@ -112,8 +112,13 @@ public sealed partial class EditorView
                     else playSound?.Invoke(sound);
                 }
             });
+        if (startPaused) testplay.TogglePause();
         testplayFrame = testplay.Capture();
-        if (AudioReady && !audioAlreadyPlaying) { RequestSeek?.Invoke(testplayStart); RequestTogglePlayback?.Invoke(); }
+        if (AudioReady && !audioAlreadyPlaying)
+        {
+            RequestSeek?.Invoke(testplayStart);
+            if (!startPaused) RequestTogglePlayback?.Invoke();
+        }
         try { if (testplay is not null) testplayDriver = RequestRunTestplay?.Invoke(testplay); }
         catch { StopTestplay(); throw; }
     }
@@ -148,12 +153,17 @@ public sealed partial class EditorView
         if (testplayResumeAt is not null) { testplayResumeAt = null; FadeTestplayMenu(1); SetTestplayPauseLoop(true); return; }
         if (TestplayPaused)
         {
-            FadeTestplayMenu(0);
-            testplayResumeAt = TestplayRealtime + TestplayMenuFadeMs;
-            SetTestplayPauseLoop(false);
+            BeginTestplayResume();
             return;
         }
         CompleteTestplayPauseToggle();
+    }
+
+    private void BeginTestplayResume()
+    {
+        FadeTestplayMenu(0);
+        testplayResumeAt = TestplayRealtime + TestplayMenuFadeMs;
+        SetTestplayPauseLoop(false);
     }
 
     private void CompleteTestplayPauseToggle()

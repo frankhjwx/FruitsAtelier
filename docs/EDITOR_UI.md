@@ -385,7 +385,9 @@ Mouse buttons use the same actions. Opening the menu fades it in over 300 ms whi
 music and judgement are already paused. Continue fades the pause menu out over 600 ms,
 then resumes music and judgement together. Esc cancels the fade back to the menu. Retry
 restarts at the session's original lead-in position, resetting judgement and combo
-while retaining autoplay. Back and F1 return to the selected editor position.
+while retaining autoplay. All retry shortcuts and menu actions then use the same
+600 ms reaction transition as Continue, with music and judgement held at the start
+until the transition completes. Back and F1 return to the selected editor position.
 Hover smoothly enlarges buttons; keyboard selection shows two skin arrows.
 The skin cursor and its trail appear only while paused. Running testplay hides
 both the skin cursor and system pointer. Intro and break-end warnings use four
