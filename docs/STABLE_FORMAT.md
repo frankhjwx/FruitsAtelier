@@ -11,6 +11,7 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
   an osu! editor preference and does not control FA's viewport.
 - New projects start with `[Difficulty] SliderMultiplier` 1.92 and editor DPB 192 px. Imported maps initially derive DPB as 100 × their stored SliderMultiplier. Subsequent DPB edits belong to the `.catchproj` editor configuration; `.osu` export retains SliderMultiplier and slider playback unchanged.
 - A confirmed Timing-panel SV override replaces exported SliderMultiplier and compensates inherited SV at red resets and green points. Export keeps the generated object lines and validates NM/HR playback before returning text. The authoring multiplier and DPB remain unchanged; see [Timing editing](EDITOR_UI.md#timing-editing).
+- Base-SV compensation starts at existing timing points. If a slider starts before all timing points, export writes its implicit BPM followed by the compensated green at that slider's head; it does not add an unused green at 0 ms.
 - Read and edit `[Editor] Bookmarks` and `[Events]` break periods as difficulty-local timeline content. Unrelated event lines retain their source text and order.
 - Preserve raw section text and unedited object lines; unsupported object types are errors.
 - Synchronization compares osu! save representations: truncated object start/end

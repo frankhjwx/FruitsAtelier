@@ -146,8 +146,15 @@ public static class SliderMultiplierEditing
             point.Uninherited = false; point.BeatLengthMs = BeatLength(100); point.OriginalLine = null;
             points.Add(point);
         }
-        if (points.Count == 0 || points.All(p => p.TimeMs > 0))
-            points.Add(new() { TimeMs = 0, Uninherited = false, BeatLengthMs = BeatLength(100) });
+        double firstSlider = candidate.ImportedSliders.Select(s => s.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min();
+        double firstTiming = originals.Select(p => p.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min();
+        if (firstSlider < firstTiming)
+        {
+            // Pre-timing sliders use the implicit first BPM; make it explicit before adding their SV compensation.
+            var initial = new TimingMap.Lookup(before.ReadBack).At(firstSlider);
+            points.Add(new() { TimeMs = firstSlider, BeatLengthMs = initial.BeatLengthMs, Meter = initial.Meter });
+            points.Add(new() { TimeMs = firstSlider, Uninherited = false, BeatLengthMs = BeatLength(100) });
+        }
         var ordered = points.OrderBy(p => p.TimeMs).ThenBy(p => p.Uninherited ? 0 : 1).ThenBy(p => p.SourceOrder).ToArray();
         candidate.TimingPoints.Clear(); candidate.TimingPoints.AddRange(ordered);
         return candidate;

@@ -45,6 +45,7 @@ var tests = new (string Name, Action Run)[]
     ("Converted Legacy repeat retains identity, object count and samples as a FSlider", PromotedRepeat),
     ("Changing promoted repeat count resizes edge samples without losing head or tail", () => EachLanguage(ChangedRepeatEdges)),
     ("Temporary SV restores following imported slider speed", RestoreSv),
+    ("Base SV overrides avoid unused leading greens and preserve pre-timing sliders", SliderTimingTests.BaseSvDoesNotAddLeadingInheritedPoint),
     ("Independent duration formula survives the head lookup window", SliderTimingTests.RestorationStaysOutsideHeadWindow),
     ("An isolated edited slider does not restore unused original SV", SliderTimingTests.IsolatedEditedSliderDoesNotRestoreUnusedSv),
     ("Same-time SV replaces greens while preserving red timing and effective samples", SliderTimingTests.SameTimeOverrideReplacesGreensAndPreservesRed),
