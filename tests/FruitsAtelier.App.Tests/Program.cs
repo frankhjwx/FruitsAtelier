@@ -21,6 +21,16 @@ if (args.Contains("--audio-diagnostics-settings-check"))
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Contains("--slider-draft-check"))
+{
+    try
+    {
+        DraftConversionTests.Run(); ToolPaletteTests.NoDuplicateDraftGhost();
+        ToolPaletteTests.DraftRemovalAndStraight(); ToolPaletteTests.SliderCombo();
+        Console.WriteLine("PASS Slider draft heads, previews, completion, cancellation, undo and export"); return 0;
+    }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 if (args.Contains("--difficulty-sort-check")) { DifficultyTabTests.SortAscending(); Console.WriteLine("PASS Ascending difficulty sorting"); return 0; }
 if (args.Length == 2 && args[0] == "--difficulty-switch-performance") return DifficultySwitchPerformance.Run(args[1]);
 if (args.Contains("--first-run-setup-check"))

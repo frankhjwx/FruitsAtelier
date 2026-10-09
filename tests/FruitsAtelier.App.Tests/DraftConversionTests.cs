@@ -7,6 +7,7 @@ internal static class DraftConversionTests
     private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
     public static void Run()
     {
+        PenHead();
         foreach (var mode in Enum.GetValues<SliderEditingMode>())
         {
             var map = DemoMap.Create();
@@ -70,6 +71,40 @@ internal static class DraftConversionTests
         while (ui.View.ConversionRefreshing && DateTime.UtcNow < deadline) { ui.Paint(); Thread.Sleep(1); }
         Check(!ui.View.ConversionRefreshing, "background conversion timed out");
         ui.Paint();
+    }
+
+    public static void PenHead()
+    {
+        var ui = new Ui(); ui.LoadDocument(new MapDocument { DurationMs = 12000 });
+        ui.View.SetSliderEditingMode(SliderEditingMode.PenTool); ui.Key('B');
+        var baseline = ui.View.Document.DeepClone();
+        ui.ClickMap(1000, 100);
+        var track = ui.View.Document.Tracks.Single();
+        AssertHead();
+        foreach (double x in new[] { 200d, 250, 300 })
+        {
+            ui.MoveMap(2000, x); AssertHead();
+        }
+        ui.ClickMap(2000, 300); AssertHead();
+        ui.MoveMap(2500, 350); AssertHead();
+        ui.Key(13); Wait(ui); AssertHead(); AssertExport(ui.View);
+        ui.Key('Z', ctrl: true); Wait(ui);
+        Check(baseline.ContentEquals(ui.View.Document), "pen head placement did not undo atomically");
+        ui.Key('Y', ctrl: true); Wait(ui); AssertHead(); AssertExport(ui.View);
+        ui.Key('B'); ui.ClickMap(3000, 100); ui.MoveMap(3500, 200);
+        ui.View.CancelInteraction(); ui.Paint();
+        Check(ui.View.Document.Tracks.Count == 1, "cancel retained the single-anchor draft");
+        Check(!ui.View.Conversion.Objects.Any(o => o.TimeMs == 3000), "cancel retained the provisional head");
+
+        void AssertHead()
+        {
+            var point = ui.ScreenAt(1000, 100);
+            Check(ui.View.Conversion.Objects.Count(o => o.SourceId == track.Id && o.TimeMs == 1000
+                && o.Kind == CatchObjectKind.Fruit) == 1, "pen draft head is missing or duplicated");
+            Check(ui.Canvas.Circles.Count(c => c.Filled && c.Radius > 8 && c.Opacity == 1
+                && Math.Abs(c.X - point.X) < 1 && Math.Abs(c.Y - point.Y) < 1) == 1,
+                "pen draft must draw its placed head once at full opacity");
+        }
     }
 
     private static OsuWriteResult? Export(EditorView view)

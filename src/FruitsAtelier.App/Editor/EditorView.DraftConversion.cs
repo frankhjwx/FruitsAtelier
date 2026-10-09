@@ -40,6 +40,12 @@ public sealed partial class EditorView
         };
         candidate.TimingPoints.AddRange(Document.TimingPoints);
         if (track.Nodes.Count >= 2) candidate.Tracks.Add(track);
+        else if (track.Nodes.Count == 1)
+        {
+            // A single anchor has no convertible slider yet, but its placed head remains visible.
+            var head = track.Nodes[0];
+            candidate.Fruits.Add(new Fruit { Id = track.Id, TimeMs = head.TimeMs, X = head.X });
+        }
         return candidate;
     }
 
