@@ -398,7 +398,7 @@ public sealed partial class EditorView
             DeleteSelectedObjects();
             return;
         }
-        if (tool == Tool.Fruit) { nextFruitNewCombo = !nextFruitNewCombo; StatusMessage = L.Get(nextFruitNewCombo ? "tools.newComboOn" : "tools.newComboOff"); }
+        if (tool is Tool.Fruit or Tool.Slider) { nextFruitNewCombo = !nextFruitNewCombo; StatusMessage = L.Get(nextFruitNewCombo ? "tools.newComboOn" : "tools.newComboOff"); }
     }
 
     private bool IsStraightPoint(CurveTrack track, Guid id)

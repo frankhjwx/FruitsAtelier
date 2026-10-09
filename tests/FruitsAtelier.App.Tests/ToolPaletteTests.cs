@@ -188,6 +188,48 @@ internal static class ToolPaletteTests
         Check(ui.View.NextFruitNewCombo && ui.View.Document.Fruits.Count == 1, "Playing right-click should arm a combo without deleting.");
     }
 
+    public static void SliderCombo()
+    {
+        foreach (var mode in Enum.GetValues<SliderEditingMode>())
+        {
+            var ui = Empty(); ui.View.SetSliderEditingMode(mode); ui.Key('B');
+            var before = ui.View.Document.DeepClone();
+            var conversion = ui.View.Conversion;
+            Right(ui, 1000, 100);
+            Check(ui.View.NextFruitNewCombo && !ui.View.IsDirty && before.ContentEquals(ui.View.Document),
+                "Slider New Combo arming changed content or history.");
+            Check(ReferenceEquals(conversion, ui.View.Conversion), "Slider New Combo arming rebuilt conversion.");
+            Right(ui, 1000, 100);
+            Check(!ui.View.NextFruitNewCombo, "Empty slider right-click did not toggle New Combo off.");
+            Right(ui, 1000, 100);
+            ui.ClickMap(1000, 100);
+            var track = ui.View.Document.Tracks.Single();
+            Check(!ui.View.NextFruitNewCombo && ObjectFlags.NewCombo(ui.View.Document, track.Id),
+                "Slider head did not consume the pending New Combo flag.");
+            ui.ClickMap(1500, 200); Right(ui, 2000, 250);
+            Check(!ui.View.NextFruitNewCombo && !ui.View.WantsCapture, "Finishing a slider armed New Combo.");
+            var saved = ui.View.Document.DeepClone();
+            var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(saved));
+            Check(ObjectFlags.NewCombo(restored, track.Id), "Slider project round-trip lost New Combo.");
+            var exported = OsuBeatmapWriter.Serialize(saved).ReadBack;
+            Check(ObjectFlags.NewCombo(exported, exported.ImportedSliders.Single().Id), "Slider export lost New Combo.");
+            ui.Key('Z', ctrl: true);
+            Check(before.ContentEquals(ui.View.Document), "New Combo slider did not undo in one step.");
+            ui.Key('Y', ctrl: true);
+            Check(saved.ContentEquals(ui.View.Document), "Redo lost the slider New Combo flag.");
+            Right(ui, 2500, 400);
+            Check(ui.View.NextFruitNewCombo && saved.ContentEquals(ui.View.Document),
+                "Empty right-click changed the selected slider instead of arming placement.");
+            ui.ClickMap(2500, 400); Right(ui, 3000, 450);
+            Check(ObjectFlags.NewCombo(ui.View.Document, track.Id)
+                && ObjectFlags.NewCombo(ui.View.Document, ui.View.Document.Tracks.Single(t => t.Id != track.Id).Id),
+                "Pending New Combo did not apply to the next slider.");
+            ui.ClickMap(3500, 100); Right(ui, 4000, 150);
+            Check(!ObjectFlags.NewCombo(ui.View.Document, ui.View.Document.Tracks.Single(t => t.Nodes[0].TimeMs == 3500).Id),
+                "New Combo leaked into a subsequent slider.");
+        }
+    }
+
     public static void ComboLabels()
     {
         var map = new MapDocument { DurationMs = 12000 };
