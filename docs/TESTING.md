@@ -143,6 +143,12 @@ in-flight clock read, seek/pause ordering and rapid resume, plus real-device WAV
 pause, seek and EOF replay. The paused position remains at the request snapshot
 even when the device advances before the worker handles it.
 
+`Audio.Tests --transition-check` verifies the pause/resume gain envelope across
+sample rates, channels and partial-frame reads. An injected buffered output checks
+that the device consumes the fade before stopping, paused seeks retain the resume
+fade, and queued pause/play/seek requests preserve playback intent. No physical
+audio device is used by this focused check.
+
 ## Window checks
 
 `FruitsAtelier.App.exe --screenshot-render-check` exercises F12 capture and reads

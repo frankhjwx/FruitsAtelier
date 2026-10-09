@@ -88,6 +88,8 @@ SoundTouch.Net changes song tempo at 10%, 25%, 50%, 75%, and 150% while preservi
 
 Timestamped hitsounds are mixed into the stretched music before the 16-bit conversion and output gain. They share its sample position and WASAPI buffer; the device-free tests compare event placement across output sample rates and channels. See [Hitsounds](../../../docs/HITSOUNDS.md).
 
+Pause applies a 5 ms linear fade to the mixed PCM and waits for the device clock to consume its end before stopping. The wait is bounded at 200 ms for stalled outputs. The displayed pause position freezes immediately at the request snapshot; the fade does not move the resume point. Resume applies a 5 ms fade-in, including when a paused seek replaces the output before playback starts. Gain changes use complete channel frames so stereo balance is preserved.
+
 Every Media Foundation decoder in this application is created through `MediaFoundationAudioReader`. Its shared lease owns startup and shuts down the process subsystem only after all active decode operations finish. Cached readers retain PCM without retaining a Media Foundation decoder. Additional Media Foundation users in this process must share that lifetime boundary.
 
 Fixed dependencies compatible with the application's .NET 8 target (NAudio and NVorbis are MIT licensed):

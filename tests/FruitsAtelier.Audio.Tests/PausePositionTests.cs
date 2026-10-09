@@ -32,7 +32,7 @@ internal static class PausePositionTests
             reader.CurrentTime = TimeSpan.FromMilliseconds(paused);
             var expected = new byte[players[^1].FirstBuffer.Length];
             new SampleToWaveProvider16(reader.ToSampleProvider()).Read(expected, 0, expected.Length);
-            if (!players[^1].FirstBuffer.SequenceEqual(expected)) throw new Exception("Resume used buffered read-ahead audio instead of the paused frame");
+            AssertResumedPcm(players[^1].FirstBuffer, expected, reader.WaveFormat);
         }
     }
 
@@ -73,8 +73,16 @@ internal static class PausePositionTests
             reader.CurrentTime = TimeSpan.FromMilliseconds(expected);
             var pcm = new byte[players[^1].FirstBuffer.Length];
             new SampleToWaveProvider16(reader.ToSampleProvider()).Read(pcm, 0, pcm.Length);
-            if (!players[^1].FirstBuffer.SequenceEqual(pcm)) throw new Exception($"{scenario}: resumed PCM starts at the wrong frame.");
+            AssertResumedPcm(players[^1].FirstBuffer, pcm, reader.WaveFormat);
         }
+    }
+
+    private static void AssertResumedPcm(byte[] actual, byte[] expected, WaveFormat format)
+    {
+        int rampBytes = (int)Math.Ceiling(format.SampleRate * .005) * format.BlockAlign;
+        if (actual.Take(format.BlockAlign).Any(b => b != 0)
+            || !actual.Skip(rampBytes).SequenceEqual(expected.Skip(rampBytes)))
+            throw new Exception("Resume did not start silently at the paused source frame and retain exact PCM after its short fade.");
     }
 
     internal sealed class BufferedPlayer : IWavePlayer, IWavePosition

@@ -18,6 +18,7 @@ using (var writer = new WaveFileWriter(wave, new WaveFormat(44100, 16, 2)))
 
 var tests = new (string Name, Func<Task> Run)[]
 {
+    ("Pause transitions smooth PCM and drain submitted fades before stopping", () => PlaybackTransitionTests.Run(wave)),
     ("Silent pre-roll preserves PCM, negative time and continuous device playback", () => PreRollTests.Run(wave)),
     ("MP3 timeline accounts for tagged encoder delay and untagged decoder delay", () => { Mp3TimelineTests.Run(); return Task.CompletedTask; }),
     ("Tempo preserves pitch, stereo and exact output duration", () => { PlaybackSpeedTests.PitchAndDuration(); return Task.CompletedTask; }),
@@ -47,13 +48,14 @@ if (args.Contains("--diagnostic-check"))
     await AudioDiagnosticTests.Run(wave, directory);
     return 0;
 }
-if (args.Contains("--speed-check")) tests = tests.Take(6).ToArray();
-if (args.Contains("--testplay-check")) tests = tests.Take(7).ToArray();
+if (args.Contains("--transition-check")) tests = tests.Where(test => test.Name.StartsWith("Pause transitions")).ToArray();
+if (args.Contains("--speed-check")) tests = tests.Take(7).ToArray();
+if (args.Contains("--testplay-check")) tests = tests.Take(8).ToArray();
 if (args.Contains("--lifecycle-check")) tests = tests.Where(test => test.Run == (Func<Task>)RepeatedLifecycle).ToArray();
 if (args.Contains("--preroll-check")) tests = tests.Where(test => test.Name.StartsWith("Silent pre-roll")).ToArray();
 if (args.Contains("--vorbis-check")) tests = tests.Where(test => test.Run == (Func<Task>)VorbisSample).ToArray();
 if (args.Contains("--recovery-check")) tests = tests.TakeLast(3).ToArray();
-if (args.Contains("--pause-check")) tests = tests.Where(test => test.Name.StartsWith("Pause and resume")
+if (args.Contains("--pause-check")) tests = tests.Where(test => test.Name.StartsWith("Pause transitions") || test.Name.StartsWith("Pause and resume")
     || test.Run == (Func<Task>)WavePlayback || test.Run == (Func<Task>)PlayingSeek || test.Run == (Func<Task>)EndAndReplay).ToArray();
 int passed = 0;
 foreach (var (name, test) in tests)
