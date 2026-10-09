@@ -7,6 +7,13 @@ namespace FruitsAtelier.App.Diagnostics;
 
 internal static class TestplayRenderCheck
 {
+    private sealed class Clock : TimeProvider
+    {
+        private long ticks;
+        public override long TimestampFrequency => 1000;
+        public override long GetTimestamp() => ticks;
+        public void Advance(int ms) => ticks += ms;
+    }
     internal static void Run(D2DCanvas canvas)
     {
         string language = L.Language;
@@ -24,7 +31,8 @@ internal static class TestplayRenderCheck
             {
                 L.SetLanguage(locale);
                 canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
-                var view = new EditorView();
+                var clock = new Clock();
+                var view = new EditorView(timeProvider: clock);
                 var map = new MapDocument { SourcePath = Path.Combine(folder, "map.osu") };
                 map.OriginalSections.Add(new OsuSection { Name = "Events", Lines = { "0,0,\"pause-overlay.png\",0,0", "2,12000,16000" } });
                 map.Fruits.AddRange([new Fruit { TimeMs = 10000, X = 256 }, new Fruit { TimeMs = 20000, X = 256 }]);
@@ -39,6 +47,10 @@ internal static class TestplayRenderCheck
                 if (!view.TestplayPauseMenuVisible) throw new InvalidOperationException("Native pause menu is missing.");
                 view.KeyDown(40, false, false); view.KeyUp(40);
                 view.KeyDown(13, false, false); view.KeyUp(13); Paint();
+                if (!view.TestplayPaused || view.TestplayPauseMenuVisible) throw new InvalidOperationException("Native Retry countdown is missing.");
+                clock.Advance(599); Paint();
+                if (!view.TestplayPaused) throw new InvalidOperationException("Native Retry resumed early.");
+                clock.Advance(1); Paint();
                 if (view.TestplayPaused || !view.TestplaySkipVisible) throw new InvalidOperationException("Native Retry failed.");
                 view.KeyDown(32, false, false); view.KeyUp(32); Paint();
                 if (view.TestplaySkipVisible) throw new InvalidOperationException("Native Space skip failed.");
@@ -48,6 +60,7 @@ internal static class TestplayRenderCheck
                 view.KeyDown(40, true, true); view.KeyUp(40); Paint();
                 if (view.PlaybackSpeed != 1.2) throw new InvalidOperationException("Native fine autoplay speed failed.");
                 view.KeyDown(82, true, false); Paint();
+                clock.Advance(600); Paint();
                 if (!view.TestplaySkipVisible || !view.TestplayAutoplay || view.PlaybackSpeed != 1.2)
                     throw new InvalidOperationException("Native quick Retry failed.");
                 view.KeyUp(82);

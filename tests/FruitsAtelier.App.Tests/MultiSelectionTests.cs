@@ -2,6 +2,71 @@ using FruitsAtelier.Core;
 
 internal static class MultiSelectionTests
 {
+    private sealed class ManualTime : TimeProvider
+    {
+        private long ticks;
+        public override long TimestampFrequency => 1000;
+        public override long GetTimestamp() => ticks;
+        public void Advance(int ms) => ticks += ms;
+    }
+
+    public static void NavigationDuringObjectDrag()
+    {
+        foreach (bool multiple in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 20000 };
+            map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 100 }, new Fruit { TimeMs = 2000, X = 300 }]);
+            var ui = Load(map);
+            ui.SetSnapDivisor(4);
+            ui.View.UpdateTransport(1500, 20000, true, false, false, null, "fixture.wav"); ui.Paint();
+            if (multiple) { ui.ClickMap(1000, 100); Click(ui, 2000, 300, ctrl: true); }
+            var start = Screen(ui, 1000, 100);
+            ui.View.PointerDown(start.X, start.Y, 0, false, false);
+            Check(ui.View.WantsCapture, "Object drag did not capture the pointer.");
+            ui.View.RequestTogglePlayback = () => ui.View.UpdateTransport(ui.View.PlayheadMs, 20000, true, !ui.View.AudioPlaying, false, null, "fixture.wav");
+            double before = ui.View.PlayheadMs;
+            ui.View.Wheel(start.X, start.Y, -120, false);
+            Near(before + 125, ui.View.PlayheadMs);
+            Check(ui.View.WantsCapture, "Wheel released the object drag.");
+            ui.View.Wheel(start.X, start.Y, 120, true);
+            Check(ui.View.SnapDivisor == 8, "Ctrl+wheel did not change Snap during object drag.");
+            double zoom = ui.View.PixelsPerMs;
+            ui.View.Wheel(start.X, start.Y, 120, false, alt: true);
+            Check(ui.View.PixelsPerMs > zoom && ui.View.WantsCapture,
+                $"Alt+wheel did not zoom during object drag: {zoom:R} -> {ui.View.PixelsPerMs:R}, pointer {start}, canvas {ui.View.CanvasPlotBounds}.");
+            ui.Key(32);
+            Check(ui.View.AudioPlaying && ui.View.WantsCapture, "Space did not start playback during object drag.");
+            ui.Key('C');
+            Check(!ui.View.AudioPlaying && ui.View.WantsCapture, "C did not pause playback during object drag.");
+            ui.View.PointerUp(start.X, start.Y, 0); ui.Paint();
+            Check(!ui.View.WantsCapture, "Object drag retained capture after release.");
+        }
+
+        var clock = new ManualTime();
+        var sliderMap = new MapDocument { DurationMs = 20000 };
+        var track = new CurveTrack { Kind = CurveKind.Linear };
+        track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 100 }, new Anchor { TimeMs = 2000, X = 300 }]);
+        sliderMap.Tracks.Add(track);
+        var sliderUi = new Ui(timeProvider: clock); sliderUi.LoadDocument(sliderMap); sliderUi.Paint();
+        sliderUi.View.UpdateTransport(1500, 20000, true, false, false, null, "fixture.wav"); sliderUi.Paint();
+        sliderUi.View.RequestTogglePlayback = () => sliderUi.View.UpdateTransport(sliderUi.View.PlayheadMs, 20000,
+            true, !sliderUi.View.AudioPlaying, false, null, "fixture.wav");
+        var pointer = Screen(sliderUi, 1500, 200);
+        sliderUi.View.PointerDown(pointer.X, pointer.Y, 0, false, false);
+        Check(sliderUi.View.SliderHoldNeedsRedraw, "Slider press did not start the long-press candidate.");
+        double sliderPlayhead = sliderUi.View.PlayheadMs;
+        sliderUi.View.Wheel(pointer.X, pointer.Y, -120, false);
+        Near(sliderPlayhead + 125, sliderUi.View.PlayheadMs);
+        clock.Advance(1100); sliderUi.Paint();
+        Check(!sliderUi.View.SliderHoldNeedsRedraw && sliderUi.View.StreamConversionBounds.Width == 0
+            && sliderUi.View.WantsCapture, "Wheel navigation opened slider long-press actions or ended its drag.");
+        sliderUi.Key(32);
+        Check(sliderUi.View.AudioPlaying && sliderUi.View.WantsCapture, "Slider drag blocked playback.");
+        sliderUi.Key('C');
+        Check(!sliderUi.View.AudioPlaying && sliderUi.View.WantsCapture, "Slider drag blocked pause.");
+        sliderUi.View.PointerUp(pointer.X, pointer.Y, 0); sliderUi.Paint();
+    }
+
     public static void ModesAndCtrlSelection()
     {
         var map = AnchorMap();

@@ -56,13 +56,18 @@ internal static class LegacyCatchRules
         return 100 * sliderMultiplier / (beatLength * (inheritedBeatLengthMagnitude / 100));
     }
 
-    public static List<NestedCatchEvent> CreateNested(double start, double duration, double velocity, double tickDistance, double length, int spanCount = 1)
+    public static List<NestedCatchEvent> CreateNested(double start, double duration, double velocity, double tickDistance, double length, int spanCount = 1,
+        bool quantizeStart = false)
     {
         if (length > MaximumPathLength)
             throw new CatchConversionException(L.Get("core.legacyRules.lengthLimit"));
         var nested = new List<NestedCatchEvent>();
         SliderEvent? previous = null;
-        foreach (var current in Events(start, duration, velocity, tickDistance, length, spanCount))
+        // FSlider export truncates its head. Count tiny intervals at that origin, then
+        // restore authored time so curve targets and editing retain sub-millisecond precision.
+        double eventStart = quantizeStart ? OsuBeatmapWriter.QuantizeTime(start) : start;
+        double timeOffset = start - eventStart;
+        foreach (var current in Events(eventStart, duration, velocity, tickDistance, length, spanCount))
         {
             if (previous is SliderEvent last)
             {
@@ -72,25 +77,25 @@ internal static class LegacyCatchRules
                     double spacing = interval;
                     while (spacing > 100) spacing /= 2;
                     for (double elapsed = spacing; elapsed < interval; elapsed += spacing)
-                        Add(new(CatchObjectKind.TinyDroplet, last.TimeMs + elapsed,
-                            last.Progress + elapsed / interval * (current.Progress - last.Progress)));
+                        Add(CatchObjectKind.TinyDroplet, last.TimeMs + elapsed,
+                            last.Progress + elapsed / interval * (current.Progress - last.Progress));
                 }
             }
 
             // LegacyLastTick does not create a fruit, but remains the origin for the last tiny interval.
             previous = current;
             if (current.Kind == SliderEventKind.Tick)
-                Add(new(CatchObjectKind.Droplet, current.TimeMs, current.Progress));
+                Add(CatchObjectKind.Droplet, current.TimeMs, current.Progress);
             else if (current.Kind is SliderEventKind.Head or SliderEventKind.Tail or SliderEventKind.Repeat)
-                Add(new(CatchObjectKind.Fruit, current.TimeMs, current.Progress));
+                Add(CatchObjectKind.Fruit, current.TimeMs, current.Progress);
         }
         return nested;
 
-        void Add(NestedCatchEvent item)
+        void Add(CatchObjectKind kind, double time, double progress)
         {
             if (nested.Count >= MaximumNestedObjects)
                 throw new CatchConversionException(L.Get("core.legacyRules.objectLimit"));
-            nested.Add(item);
+            nested.Add(new(kind, time + timeOffset, progress));
         }
     }
 

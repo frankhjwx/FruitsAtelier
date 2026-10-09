@@ -27,6 +27,10 @@ public sealed class CatchTestplay
     public double X { get; private set; } = 256;
     public bool FacingLeft { get; private set; }
     public int Combo { get; private set; }
+    public int Hit300 { get; private set; }
+    public int Hit100 { get; private set; }
+    public int Hit50 { get; private set; }
+    public int Misses { get; private set; }
     public bool Finished => next >= objects.Count;
     public int JudgedCount => next;
     public bool HyperDashing => automaticMovement ? automatic!.HyperDashingAt(time) : hyperSpeed > 1;
@@ -55,6 +59,13 @@ public sealed class CatchTestplay
             var item = objects[next];
             Move(item.TimeMs);
             bool caught = autoplay || item.X >= X - halfWidth && item.X <= X + halfWidth;
+            if (caught)
+            {
+                if (item.Kind == CatchObjectKind.Fruit) Hit300++;
+                else if (item.Kind == CatchObjectKind.Droplet) Hit100++;
+                else if (item.Kind == CatchObjectKind.TinyDroplet) Hit50++;
+            }
+            else if (item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet) Misses++;
             Judged?.Invoke(item, X, caught);
             if (caught) Caught?.Invoke(item);
             else missed.Enqueue(item);

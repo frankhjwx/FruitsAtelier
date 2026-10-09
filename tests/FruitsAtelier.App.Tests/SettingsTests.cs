@@ -1,4 +1,5 @@
 using FruitsAtelier.Core;
+using FruitsAtelier.App.Rendering;
 using L = FruitsAtelier.Localization.Strings;
 
 static class SettingsTests
@@ -8,7 +9,7 @@ static class SettingsTests
         string language = L.Language;
         try
         {
-            foreach (string locale in new[] { "en", "zh-CN" })
+            foreach (string locale in L.AvailableLanguages)
             foreach (var size in new[] { (1440, 900), (980, 620), (760, 580) })
             {
                 L.SetLanguage(locale);
@@ -18,6 +19,8 @@ static class SettingsTests
                 ui.View.LibrarySettings.OsuRoot = "";
                 ui.View.SupportsDisplayMode = true;
                 ui.View.RequestUpdateCheck = () => { };
+                var links = new List<string>();
+                ui.View.RequestSetupLink = links.Add;
                 ui.View.UpdateStatus = new(FruitsAtelier.App.Editor.UpdatePhase.Ready, "0.9.6", 100);
                 ui.View.OpenSettings(); ui.Paint();
                 foreach (string category in new[] { "settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "update.title" })
@@ -73,6 +76,37 @@ static class SettingsTests
                         var restart = ui.Canvas.Texts.Single(t => t.Value == L.Get("update.restart"));
                         Check(restart.X + restart.MaxWidth <= ui.View.SettingsBounds.Right - 32,
                             "update actions stay inside narrow content columns");
+                        var lead = ui.Canvas.Texts.Single(t => t.Value == "Yumeno Himiko");
+                        var period = ui.Canvas.Texts.Single(t => t.Value == "." && t.Y == lead.Y && t.X > lead.X);
+                        var website = ui.Canvas.Texts.Single(t => t.Value == L.Get("update.projectWebsite"));
+                        var github = ui.Canvas.Texts.Single(t => t.Value == L.Get("update.githubPage"));
+                        var join = ui.Canvas.Texts.Single(t => t.Value == L.Get("setup.discord"));
+                        if (locale == "en" && size.Item1 == 1440)
+                        {
+                            Check(L.Get("update.projectIntro") == "Fruits Atelier is a cutsom catch editor project by",
+                                "community introduction keeps the requested wording");
+                            var intro = ui.Canvas.Texts.Single(t => t.Value == L.Get("update.projectIntro"));
+                            Check(intro.Y == lead.Y && intro.X < lead.X, "project attribution reads as one sentence");
+                            Check(Math.Abs(lead.X - intro.X - ((ICanvas)ui.Canvas).MeasureText(intro.Value + " ", 12)) < .1f,
+                                "project attribution uses one normal space before the linked name");
+                        }
+                        Check(period.X == lead.X + ((ICanvas)ui.Canvas).MeasureText(lead.Value, 12),
+                            "project attribution ends with a period after the linked name");
+                        Check(lead.Y < join.Y && join.Y + 25 < ui.View.SettingsBounds.Bottom - 86,
+                            $"community links fit above the Settings footer: {locale}, {size}, join={join.Y}, footer={ui.View.SettingsBounds.Bottom - 86}");
+                        Check(website.X < github.X && github.X < join.X && website.Y == github.Y && github.Y == join.Y,
+                            "community buttons share a row in website, GitHub, Discord order");
+                        foreach (var label in new[] { website, github, join })
+                            Check(((ICanvas)ui.Canvas).MeasureText(label.Value, 13) <= label.MaxWidth,
+                                $"community button label fits: {locale}, {size}, {label.Value}");
+                        ui.ClickText("Yumeno Himiko");
+                        Check(links[^1] == "https://osu.ppy.sh/users/1806962", "project lead opens the osu! profile");
+                        ui.ClickText(L.Get("update.projectWebsite"));
+                        Check(links[^1] == "https://fruitsatelier.himiko.moe/", "project website button opens the site");
+                        ui.ClickText(L.Get("update.githubPage"));
+                        Check(links[^1] == "https://github.com/frankhjwx/FruitsAtelier", "GitHub button opens the project page");
+                        ui.ClickText(L.Get("setup.discord"));
+                        Check(links[^1] == "https://discord.gg/ur9QKs4EG2", "community button opens the Discord invite");
                     }
                 }
                 ui.Key(27);

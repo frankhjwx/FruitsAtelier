@@ -183,8 +183,8 @@ internal static class DropletRandomizationTests
         double[] Targets(IEnumerable<ConvertedCatchObject> objects) => objects
             .Where(o => o.SourceId == track.Id && o.Kind == CatchObjectKind.TinyDroplet).Select(o => o.X).ToArray();
         var expected = Targets(OsuBeatmapWriter.Serialize(candidate).PlayableObjects);
-        Check(Targets(preview).SequenceEqual(expected), "fruit hover uses the full diff counter and configured FX parameters");
-        Check(!expected.SequenceEqual(Targets(OsuBeatmapWriter.Serialize(map).PlayableObjects)), "earlier fruit preview advances downstream FX");
+        Check(Targets(preview).SequenceEqual(expected), "fruit hover preserves the configured legacy FX sequence");
+        Check(expected.SequenceEqual(Targets(OsuBeatmapWriter.Serialize(map).PlayableObjects)), "earlier NM fruit preview preserves downstream FX");
         Check(ui.View.Document.ContentEquals(map), "hover preserves beatmap content");
     }
     private static void Set(Ui ui, string key, string value)

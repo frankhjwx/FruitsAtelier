@@ -7,6 +7,8 @@ internal static class DraftConversionTests
     private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
     public static void Run()
     {
+        PenHead();
+        PenFinishMovement();
         foreach (var mode in Enum.GetValues<SliderEditingMode>())
         {
             var map = DemoMap.Create();
@@ -70,6 +72,83 @@ internal static class DraftConversionTests
         while (ui.View.ConversionRefreshing && DateTime.UtcNow < deadline) { ui.Paint(); Thread.Sleep(1); }
         Check(!ui.View.ConversionRefreshing, "background conversion timed out");
         ui.Paint();
+    }
+
+    public static void PenFinishMovement()
+    {
+        foreach (bool rightClick in new[] { true, false })
+        {
+            var ui = new Ui();
+            var map = new MapDocument { DurationMs = 12000 };
+            map.Fruits.Add(new Fruit { TimeMs = 3000, X = 250 });
+            ui.LoadDocument(map); ui.View.SetSliderEditingMode(SliderEditingMode.PenTool);
+            ui.ClickText(FruitsAtelier.Localization.Strings.Get("movement.analysis"));
+            ui.Key('B'); ui.ClickMap(1000, 100);
+            if (!rightClick) ui.ClickMap(2000, 300);
+            ui.MoveMap(2000, 300);
+            var before = Connections();
+            Check(before.Length > 0, "movement draft fixture has no connections");
+            // Hold publication to inspect the frames that display the completed provisional draft.
+            var workerField = typeof(EditorView).GetField("deferredConversionTask", Private)!;
+            var completionType = typeof(TaskCompletionSource<>).MakeGenericType(workerField.FieldType.GetGenericArguments());
+            var hold = Activator.CreateInstance(completionType)!;
+            workerField.SetValue(ui.View, completionType.GetProperty("Task")!.GetValue(hold));
+            if (rightClick)
+            {
+                var p = ui.ScreenAt(2000, 300);
+                ui.View.PointerDown(p.X, p.Y, 2, false, false); ui.View.PointerUp(p.X, p.Y, 2);
+            }
+            else ui.View.KeyDown(13, false, false);
+            for (int i = 0; i < 3; i++)
+            {
+                ui.Paint();
+                Check(before.SequenceEqual(Connections()), "pen completion flashed stale movement connections before publication");
+            }
+            workerField.SetValue(ui.View, null); Wait(ui); AssertExport(ui.View);
+            var after = Connections();
+            Check(before.Length == after.Length && before.Zip(after).All(pair =>
+                pair.First.Color == pair.Second.Color && Math.Abs(pair.First.X1 - pair.Second.X1) < 1
+                && Math.Abs(pair.First.Y1 - pair.Second.Y1) < 1 && Math.Abs(pair.First.X2 - pair.Second.X2) < 1
+                && Math.Abs(pair.First.Y2 - pair.Second.Y2) < 1),
+                "validated completion changed movement connections beyond export rounding");
+            ui.Key('Z', ctrl: true); Wait(ui);
+            Check(map.ContentEquals(ui.View.Document), "movement completion did not undo atomically");
+            RecordingCanvas.Segment[] Connections() => ui.Canvas.Lines.Where(l => l.Width == 4 && l.Opacity == .65f).ToArray();
+        }
+    }
+
+    public static void PenHead()
+    {
+        var ui = new Ui(); ui.LoadDocument(new MapDocument { DurationMs = 12000 });
+        ui.View.SetSliderEditingMode(SliderEditingMode.PenTool); ui.Key('B');
+        var baseline = ui.View.Document.DeepClone();
+        ui.ClickMap(1000, 100);
+        var track = ui.View.Document.Tracks.Single();
+        AssertHead();
+        foreach (double x in new[] { 200d, 250, 300 })
+        {
+            ui.MoveMap(2000, x); AssertHead();
+        }
+        ui.ClickMap(2000, 300); AssertHead();
+        ui.MoveMap(2500, 350); AssertHead();
+        ui.Key(13); Wait(ui); AssertHead(); AssertExport(ui.View);
+        ui.Key('Z', ctrl: true); Wait(ui);
+        Check(baseline.ContentEquals(ui.View.Document), "pen head placement did not undo atomically");
+        ui.Key('Y', ctrl: true); Wait(ui); AssertHead(); AssertExport(ui.View);
+        ui.Key('B'); ui.ClickMap(3000, 100); ui.MoveMap(3500, 200);
+        ui.View.CancelInteraction(); ui.Paint();
+        Check(ui.View.Document.Tracks.Count == 1, "cancel retained the single-anchor draft");
+        Check(!ui.View.Conversion.Objects.Any(o => o.TimeMs == 3000), "cancel retained the provisional head");
+
+        void AssertHead()
+        {
+            var point = ui.ScreenAt(1000, 100);
+            Check(ui.View.Conversion.Objects.Count(o => o.SourceId == track.Id && o.TimeMs == 1000
+                && o.Kind == CatchObjectKind.Fruit) == 1, "pen draft head is missing or duplicated");
+            Check(ui.Canvas.Circles.Count(c => c.Filled && c.Radius > 8 && c.Opacity == 1
+                && Math.Abs(c.X - point.X) < 1 && Math.Abs(c.Y - point.Y) < 1) == 1,
+                "pen draft must draw its placed head once at full opacity");
+        }
     }
 
     private static OsuWriteResult? Export(EditorView view)

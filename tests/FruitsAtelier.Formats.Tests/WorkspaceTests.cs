@@ -9,6 +9,7 @@ internal static class WorkspaceTests
         Directory.CreateDirectory(set);
         try
         {
+            PruneDeletedMaps(Path.Combine(root, "pruning"));
             string source = Path.Combine(set, "original.osu");
             File.WriteAllText(Path.Combine(set, "audio.mp3"), "fixture-audio");
             File.WriteAllText(Path.Combine(set, "bg.jpg"), "fixture-image");
@@ -98,6 +99,31 @@ internal static class WorkspaceTests
     }
     private static void Check(bool condition, string label) { if (!condition) throw new Exception(label); }
     private static void Reject(Action action) { try { action(); } catch (Exception e) when (e is IOException or InvalidOperationException) { return; } throw new Exception("Expected rejection"); }
+    private static void PruneDeletedMaps(string root)
+    {
+        string songs = Path.Combine(root, "Songs"), set = Path.Combine(songs, "set");
+        Directory.CreateDirectory(set);
+        string deleted = Path.Combine(set, "deleted.osu"), unreadable = Path.Combine(set, "unreadable.osu");
+        File.WriteAllText(deleted, Fixture()); File.WriteAllText(unreadable, Fixture());
+        var db = new LibraryDatabase(Path.Combine(root, "Workspace"), songs);
+        Check(db.Scan().Count == 2, "both deletion fixtures are initially indexed");
+        File.Delete(deleted);
+        File.AppendAllText(unreadable, "\n");
+        using (var locked = new FileStream(unreadable, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+        {
+            Check(db.Scan().Errors.Count > 0, "locked map reports a scan error");
+            Check(db.Search("").Single().Path == unreadable,
+                "deleted map is pruned while the unreadable map retains its cached metadata");
+            using var snapshot = db.SearchSnapshot("");
+            var row = snapshot.Page(0).Single();
+            Check(row.Count == 1 && snapshot.Difficulties(row, 0).Single().Path == unreadable,
+                "paged library counts and difficulty rows exclude the deleted map");
+        }
+        Directory.Delete(set, recursive: true);
+        db.Scan();
+        Check(db.Search("").Count == 0, "deleted set leaves no cached difficulty rows");
+    }
+
     private static string Fixture() => """
 osu file format v14
 [General]

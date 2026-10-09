@@ -14,7 +14,7 @@ using PixelFormat = Vortice.DCommon.PixelFormat;
 
 namespace FruitsAtelier.App.Rendering;
 
-public sealed class D2DCanvas : ICanvas, IDisposable
+public sealed partial class D2DCanvas : ICanvas, IDisposable
 {
     internal EditorPerformanceMetrics? Performance { get; init; }
     private readonly Audio.AudioDiagnosticLog? displayDiagnostics;
@@ -166,7 +166,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
     [DllImport("kernel32.dll")]
     private static extern uint WaitForSingleObject(SafeWaitHandle handle, uint milliseconds);
 
-    public bool End(bool lowLatency = false)
+    public bool End(bool lowLatency = false, Action? capture = null)
     {
         frameAcquired = false;
         while (clipDepth > 0) Unclip();
@@ -174,6 +174,7 @@ public sealed class D2DCanvas : ICanvas, IDisposable
         long drawStart = Performance?.Start() ?? 0;
         context!.EndDraw().CheckError();
         Performance?.End(EditorPerformanceStage.EndDraw, drawStart);
+        capture?.Invoke();
         double submitBeganMs = displayDiagnostics is null ? 0 : Audio.AudioDiagnosticLog.NowMs;
         long presentStart = Performance?.Start() ?? 0;
         var result = swapChain!.Present(lowLatency ? 0u : 1u, lowLatency ? PresentFlags.DoNotWait : PresentFlags.None);

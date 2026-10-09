@@ -4,7 +4,7 @@ namespace FruitsAtelier.Core;
 public sealed class CatchConversionCache
 {
     private sealed record Entry(CurveTrack? Track, ImportedSlider? Imported, BananaShower? Banana,
-        TimingState Timing, CatchLegacyRandom Before, CatchLegacyRandom After, GeneratedSlider? Slider, IReadOnlyList<ConvertedCatchObject> Objects, int FirstEventIndex, CatchLegacyRandom? HardRockBefore);
+        TimingState Timing, CatchLegacyRandom Before, CatchLegacyRandom After, GeneratedSlider? Slider, IReadOnlyList<ConvertedCatchObject> Objects, CatchLegacyRandom? HardRockBefore);
     private readonly Dictionary<Guid, Entry> entries = new();
     private sealed record TrackPositions(CurveTrack Snapshot, Dictionary<double, double> Values);
     private readonly Dictionary<Guid, TrackPositions> trackPositions = new();
@@ -43,13 +43,12 @@ public sealed class CatchConversionCache
         };
     }
     internal bool TryGet(CurveTrack? track, ImportedSlider? imported, BananaShower? banana, ref CatchLegacyRandom rng,
-        int firstEventIndex, CatchLegacyRandom? hardRockBefore, out GeneratedSlider? slider, out IReadOnlyList<ConvertedCatchObject> objects)
+        CatchLegacyRandom? hardRockBefore, out GeneratedSlider? slider, out IReadOnlyList<ConvertedCatchObject> objects)
     {
         Guid id = track?.Id ?? imported?.Id ?? banana!.Id; seen.Add(id);
         slider = null; objects = [];
         if (!entries.TryGetValue(id, out var entry) || !rng.SameState(entry.Before)
             || hardRockBefore is { } hr && (entry.HardRockBefore is not { } savedHr || !hr.SameState(savedHr))
-            || track is { StreamSnapDivisor: null, DropletRandomization.Enabled: true } && firstEventIndex != entry.FirstEventIndex
             || (track is not null ? entry.Track is null || !Equal(track, entry.Track)
                 : imported is not null ? entry.Imported is null || !Equal(imported, entry.Imported)
                 : entry.Banana is null || banana!.TimeMs != entry.Banana.TimeMs || banana.EndTimeMs != entry.Banana.EndTimeMs
@@ -60,10 +59,10 @@ public sealed class CatchConversionCache
         rng = entry.After; slider = entry.Slider; objects = entry.Objects; return true;
     }
     internal void Store(CurveTrack? track, ImportedSlider? imported, BananaShower? banana,
-        CatchLegacyRandom before, CatchLegacyRandom after, GeneratedSlider? slider, IReadOnlyList<ConvertedCatchObject> objects, int firstEventIndex, CatchLegacyRandom? hardRockBefore = null)
+        CatchLegacyRandom before, CatchLegacyRandom after, GeneratedSlider? slider, IReadOnlyList<ConvertedCatchObject> objects, CatchLegacyRandom? hardRockBefore = null)
     {
         entries[track?.Id ?? imported?.Id ?? banana!.Id] = new(track?.DeepClone(), imported?.DeepClone(), banana?.DeepClone(),
-            TimingAt(track, imported), before, after, slider, objects, firstEventIndex, hardRockBefore);
+            TimingAt(track, imported), before, after, slider, objects, hardRockBefore);
     }
 
     internal IReadOnlyList<ConvertedCatchObject>? ContextObjects(CurveTrack? track = null, ImportedSlider? imported = null, BananaShower? banana = null)

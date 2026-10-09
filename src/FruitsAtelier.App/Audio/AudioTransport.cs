@@ -37,12 +37,14 @@ public sealed class AudioTransport : IDisposable
         public DiagnosticWaveProvider? Probe { get; }
         public TempoSampleProvider? Tempo { get; }
         public TrackedSampleProvider? Buffered { get; }
+        public PlaybackTransition Transition { get; }
         public Exception? Error { get; private set; }
         public OutputSession(IWaveProvider source, Action wake, Func<IWavePlayer> createPlayer, AudioDiagnosticLog diagnostics,
-            TempoSampleProvider? tempo, TrackedSampleProvider? buffered)
+            TempoSampleProvider? tempo, TrackedSampleProvider? buffered, PlaybackTransition transition)
         {
             Tempo = tempo;
             Buffered = buffered;
+            Transition = transition;
             Player = createPlayer();
             if (diagnostics.Enabled) source = Probe = new DiagnosticWaveProvider(source, diagnostics, Id);
             Player.PlaybackStopped += (_, e) =>
@@ -95,7 +97,7 @@ public sealed class AudioTransport : IDisposable
     private double requestedPosition, basePosition, duration;
     private double playbackSpeed = 1, requestedSpeed = 1;
     public double PlaybackSpeed => Volatile.Read(ref playbackSpeed);
-    private bool playIntent;
+    private bool playIntent, resumeFadeIn;
     private bool requestedPlaying;
     private WaveStream? reader;
     private OutputSession? output;
@@ -279,8 +281,10 @@ public sealed class AudioTransport : IDisposable
                         {
                             case CommandKind.Load: await LoadCoreAsync(command); break;
                             case CommandKind.Play:
-                                if (reader is null || output is null) break;
+                                if (reader is null) break;
                                 playIntent = true;
+                                Interlocked.Exchange(ref appliedIntentVersion, command.IntentVersion);
+                                if (output is null) break;
                                 if (output.Started)
                                 {
                                     var playbackState = output.Player.PlaybackState;
@@ -290,14 +294,18 @@ public sealed class AudioTransport : IDisposable
                                 else if (basePosition >= duration - 0.5)
                                     await ResetOutputAsync(0);
                                 StartOutput();
-                                Interlocked.Exchange(ref appliedIntentVersion, command.IntentVersion);
                                 break;
                             case CommandKind.Pause:
                                 playIntent = false;
+                                // Paused seeks can replace this session before resume starts its envelope.
+                                resumeFadeIn = true;
                                 // WasapiOut.Pause leaves submitted buffers and the device clock running.
                                 // The request owns the pause point; the device can advance while this command waits.
                                 if (reader is not null)
+                                {
+                                    await FadeOutAsync();
                                     await ResetOutputAsync(command.Position, command.SeekVersion);
+                                }
                                 Interlocked.Exchange(ref appliedIntentVersion, command.IntentVersion);
                                 break;
                             case CommandKind.Speed:
@@ -355,6 +363,7 @@ public sealed class AudioTransport : IDisposable
     private async Task LoadCoreAsync(Command command)
     {
         playIntent = false;
+        resumeFadeIn = false;
         await ReleaseAudioAsync();
         loadedVersion = command.LoadVersion;
         loadedPath = command.Path;
@@ -410,10 +419,12 @@ public sealed class AudioTransport : IDisposable
         if (basePosition < 0) samples = new PreRollSampleProvider(samples, -basePosition / playbackSpeed);
         samples = new PlaybackGain(samples, () => SongVolume);
         if (Hitsounds is not null) samples = Hitsounds.MixWithMusic(samples, basePosition, playbackSpeed);
+        var transition = new PlaybackTransition(samples, resumeFadeIn);
+        samples = transition;
         var buffered = new TrackedSampleProvider(samples, basePosition, playbackSpeed);
         var pcm = new SampleToWaveProvider16(buffered) { Volume = outputGain };
         long version = loadedVersion;
-        var session = new OutputSession(pcm, () => commands.Writer.TryWrite(new(CommandKind.Refresh, version)), createPlayer, diagnostics, tempo, buffered);
+        var session = new OutputSession(pcm, () => commands.Writer.TryWrite(new(CommandKind.Refresh, version)), createPlayer, diagnostics, tempo, buffered, transition);
         if (diagnostics.Enabled) diagnostics.Write("outputCreated", new { session = session.Id,
             backend = session.Player.GetType().Name, outputFormat = session.Player.OutputWaveFormat.ToString(),
             sourceFormat = pcm.WaveFormat.ToString(), requestedLatencyMs = session.Player is WasapiOut ? profile.BufferMs : (int?)null,
@@ -462,6 +473,7 @@ public sealed class AudioTransport : IDisposable
         lastDeviceMs = 0;
         output.Player.Play();
         output.Started = true;
+        resumeFadeIn = false;
         TraceSnapshot("playEnd");
     }
 
@@ -542,6 +554,23 @@ public sealed class AudioTransport : IDisposable
                 Error = L.Get("audio.unavailable", L.Localized(exception.Message)) });
         }
         AppLog.Write(exception.ToString());
+    }
+
+    private async Task FadeOutAsync()
+    {
+        var current = output;
+        if (current is null || !current.Started || current.Stopped.Task.IsCompleted
+            || current.Player.PlaybackState != PlaybackState.Playing) return;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            double endMs = await current.Transition.FadeOut().WaitAsync(TimeSpan.FromMilliseconds(200), cancellation.Token);
+            // Submitted PCM runs ahead of the device; stopping at generation would cut off the fade itself.
+            while (!current.Stopped.Task.IsCompleted && watch.ElapsedMilliseconds < 200
+                && current.PositionBytes * 1000d / current.Player.OutputWaveFormat.AverageBytesPerSecond < endMs)
+                await Task.Delay(1, cancellation.Token);
+        }
+        catch (TimeoutException) { /* A stalled output must not hold queued transport commands indefinitely. */ }
     }
 
     private async Task ReleaseOutputAsync()

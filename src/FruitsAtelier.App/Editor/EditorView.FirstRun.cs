@@ -9,6 +9,7 @@ public enum SetupAudioCommand { Play, Pause, Stop }
 
 public sealed partial class EditorView
 {
+    private const string DiscordInviteUrl = "https://discord.gg/ur9QKs4EG2";
     private int firstRunStep = -1;
     private string? firstRunSettingsPath;
     private LibrarySettings? firstRunOriginalSettings;
@@ -134,7 +135,7 @@ public sealed partial class EditorView
             float discordY = y + 180;
             float joinWidth = Math.Clamp(c.MeasureText(L.Get("setup.discord"), SettingsTextSize) + 24, 140, 200);
             c.Text(L.Get("setup.discordHint"), x, discordY + 9, 14, Foreground, complete.Width - 80 - joinWidth);
-            SettingsButton(c, new(complete.Right - 32 - joinWidth, discordY, joinWidth, 36), L.Get("setup.discord"), () => RequestSetupLink?.Invoke("https://discord.gg/ur9QKs4EG2"));
+            SettingsButton(c, new(complete.Right - 32 - joinWidth, discordY, joinWidth, 36), L.Get("setup.discord"), () => RequestSetupLink?.Invoke(DiscordInviteUrl));
             float buttonWidth = (complete.Width - 76) / 2;
             SettingsButton(c, new(x, discordY + 100, buttonWidth, 36), L.Get("setup.start"), FinishFirstRun, active: true);
             SettingsButton(c, new(x + buttonWidth + 12, discordY + 100, buttonWidth, 36), L.Get("setup.exit"), ExitFirstRun);

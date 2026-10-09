@@ -20,6 +20,8 @@ public sealed partial class EditorView
     private int cachedPreviewMod = -1;
     private IReadOnlyList<ConvertedCatchObject> previewObjects = [];
     private HashSet<(Guid SourceId, int EventIndex)> previewHyperdash = [];
+    private int previewMaximumCombo, previewMaximumDroplets;
+    private double previewPlayLengthMs;
     public bool CatchPreviewVisible => catchPreviewVisible;
     public Rect PreviewToggleBounds { get; private set; }
     public Rect PreviewResizeBounds { get; private set; }
@@ -69,6 +71,9 @@ public sealed partial class EditorView
             previewObjects = previewMod == 2
                 ? playableExport?.PlayableHardRockObjects ?? CatchPreviewMods.HardRock(Document, conversion!)
                 : playableObjects;
+            previewMaximumCombo = previewObjects.Count(item => item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet);
+            previewMaximumDroplets = previewObjects.Count(item => item.Kind == CatchObjectKind.TinyDroplet);
+            previewPlayLengthMs = previewObjects.Count == 0 ? 0 : previewObjects[^1].TimeMs - previewObjects[0].TimeMs;
             previewHyperdash = HyperDashCalculator.GetHyperDashStarts(previewObjects, PreviewCircleSize);
             previewAutoplay = new(previewObjects, PreviewCircleSize);
             var parents = ClipboardParents(Document).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
@@ -106,7 +111,11 @@ public sealed partial class EditorView
     }
     private static readonly HashSet<(Guid SourceId, int EventIndex)> NoHyperdash = [];
     private void DrawPreviewPlate(ICanvas c, float fieldLeft, float fieldWidth, float catchY)
-        => DrawCaughtPlate(c, previewPlate!.At(playhead, PreviewCatcherX), fieldLeft, fieldWidth, catchY);
+    {
+        PreviewObjects();
+        PreviewCatcherX = previewAutoplay!.At(playhead).X;
+        DrawCaughtPlate(c, previewPlate!.At(playhead, PreviewCatcherX), fieldLeft, fieldWidth, catchY);
+    }
     private void DrawCaughtPlate(ICanvas c, IEnumerable<CatchPlateSprite> sprites, float fieldLeft, float fieldWidth, float catchY)
     {
         foreach (var sprite in sprites)

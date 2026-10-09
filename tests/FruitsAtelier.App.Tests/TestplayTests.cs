@@ -92,7 +92,8 @@ internal static class TestplayTests
     {
         foreach (bool paused in new[] { false, true })
         {
-            var ui = new Ui(timeProvider: new ManualTime());
+            var clock = new ManualTime();
+            var ui = new Ui(timeProvider: clock);
             var map = new MapDocument(); map.Fruits.Add(new Fruit { TimeMs = 10000, X = 256 });
             ui.LoadDocument(map);
             ui.View.UpdateTransport(0, 20000, true, false, false, null, null);
@@ -119,12 +120,51 @@ internal static class TestplayTests
             if (paused) { ui.Key(27); ui.View.KeyUp(27); }
             observing = true;
             ui.Key(82, ctrl: true); ui.View.KeyUp(82);
+            Check(ui.View.TestplayPaused, "Retry must prepare its replacement session paused");
+            clock.Advance(600); ui.Paint();
             observing = false;
             Check(boundaries.Contains("driver disposal") && boundaries.Contains("sample preparation")
                 && boundaries.Contains("audio seek") && boundaries.Contains("audio restart")
                 && boundaries.Contains("driver creation"), "Retry must verify every reentrant setup boundary");
             Check(ui.View.IsTestplaying && !ui.View.TestplayPaused && ui.View.Document.ContentEquals(map),
                 "Retry completes in gameplay without editing content");
+            ui.View.StopTestplay();
+        }
+    }
+
+    public static void RetryReactionTime()
+    {
+        foreach (int entry in new[] { 0, 1, 2, 3 })
+        {
+            var clock = new ManualTime();
+            var ui = new Ui(false, clock);
+            var map = new MapDocument { IsDemo = false, DurationMs = 20000 };
+            map.Fruits.AddRange([new() { TimeMs = 5100, X = 256 }, new() { TimeMs = 15000, X = 256 }]);
+            ui.LoadDocument(map);
+            ui.View.LibrarySettings.TestplayStartupDelaySeconds = 0;
+            ui.View.UpdateTransport(5000, 20000, true, false, false, null, null);
+            ui.View.UpdateTransport(5000, 20000, false, false, false, null, null);
+            CatchTestplaySession? driven = null;
+            ui.View.RequestRunTestplay = session => { driven = session; return new RetryDriver(() => { }); };
+            ui.View.StartTestplay(); ui.Key(9); ui.View.KeyUp(9);
+            if (entry >= 2) { ui.Key(27); ui.View.KeyUp(27); }
+            if (entry == 0) { ui.Key(82, ctrl: true); ui.View.KeyUp(82); }
+            if (entry == 1) { ui.Key(192); clock.Advance(300); ui.Paint(); ui.View.KeyUp(192); }
+            if (entry == 2) { ui.Key(40); ui.View.KeyUp(40); ui.Key(13); ui.View.KeyUp(13); }
+            if (entry == 3)
+            {
+                clock.Advance(300); ui.Paint();
+                ui.ClickText(L.Get("testplay.retry"));
+            }
+            Check(driven!.Paused && ui.View.TestplayPaused && !ui.View.TestplayPauseMenuVisible,
+                "Every retry entry must create a paused session with a reaction transition");
+            clock.Advance(599); driven.Tick(); ui.Paint();
+            Near(5000, ui.View.PlayheadMs);
+            Check(ui.View.TestplayCombo == 0 && ui.View.TestplayAutoplay, "Countdown must not judge nearby notes or reset autoplay");
+            clock.Advance(1); ui.Paint();
+            Check(!driven.Paused && !ui.View.TestplayPaused, "Every retry resumes at the 600 ms deadline");
+            clock.Advance(100); driven.Tick(); ui.Paint();
+            Check(ui.View.TestplayCombo == 1, "A nearby note must remain catchable after the reaction transition");
             ui.View.StopTestplay();
         }
     }
@@ -163,17 +203,21 @@ internal static class TestplayTests
         ui.View.SetPlaybackSpeed(1.25);
         ui.Key(82, ctrl: true);
         Near(2000, ui.View.PlayheadMs);
-        Check(ui.View.TestplayAutoplay && !ui.View.TestplayPaused, "Retry retains autoplay and starts running");
+        Check(ui.View.TestplayAutoplay && ui.View.TestplayPaused, "Retry retains autoplay during its reaction countdown");
+        clock.Advance(100); ui.Key(82, ctrl: true); Near(2000, ui.View.PlayheadMs);
+        clock.Advance(500); ui.Paint();
         clock.Advance(100); ui.Key(82, ctrl: true); Near(2125, ui.View.PlayheadMs);
         ui.View.KeyUp(82); ui.Key(82, ctrl: true); Near(2000, ui.View.PlayheadMs); ui.View.KeyUp(82);
+        clock.Advance(600); ui.Paint();
         ui.Key(27); ui.View.KeyUp(27); ui.Key(82, ctrl: true); ui.View.KeyUp(82);
-        Check(!ui.View.TestplayPaused, "Retry is available from the pause menu");
+        Check(ui.View.TestplayPaused && !ui.View.TestplayPauseMenuVisible, "Paused retry begins the reaction countdown");
         ui.Key(82, ctrl: true); ui.View.CancelInteraction(preserveTestplay: true);
         clock.Advance(100); ui.Key(82, ctrl: true); Near(2000, ui.View.PlayheadMs); ui.View.KeyUp(82);
         ui.Key(112); Near(3000, ui.View.PlayheadMs);
         Check(ui.View.Document.ContentEquals(before), "Retry and speed preserve content");
 
-        var audio = new Ui(timeProvider: new ManualTime()); audio.LoadDocument(map);
+        var audioClock = new ManualTime();
+        var audio = new Ui(timeProvider: audioClock); audio.LoadDocument(map);
         audio.View.LibrarySettings.TestplayStartupDelaySeconds = 1;
         audio.View.UpdateTransport(3000, 20000, true, false, false, null, null);
         var requests = new List<string>();
@@ -182,7 +226,12 @@ internal static class TestplayTests
         audio.View.RequestTogglePlayback = () => requests.Add("play");
         audio.View.StartTestplay(); requests.Clear();
         audio.Key(82, ctrl: true); audio.View.KeyUp(82);
-        Check(requests.SequenceEqual(["pause", "seek:2000", "play"]), "Running retry pauses audio before seeking and restarting");
+        Check(requests.SequenceEqual(["pause", "seek:2000"]), "Running retry pauses and seeks audio without starting it during the countdown");
+        audioClock.Advance(599); audio.Paint();
+        Check(requests.SequenceEqual(["pause", "seek:2000"]) && audio.View.TestplayPaused, "Retry started audio before the reaction deadline");
+        audioClock.Advance(1); audio.Paint();
+        Check(requests.SequenceEqual(["pause", "seek:2000", "seek:2000", "play"]) && !audio.View.TestplayPaused,
+            "Retry resumes audio and judgement together after 600 ms");
         audio.View.StopTestplay();
     }
 
@@ -202,6 +251,9 @@ internal static class TestplayTests
                 var requested = new List<double>(); ui.View.RequestPlaybackSpeed = requested.Add;
                 ui.View.StartTestplay();
                 ui.Key(114); ui.View.KeyUp(114); Near(initial, ui.View.PlaybackSpeed);
+                ui.Paint();
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.maximumCombo", 1))
+                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.maximumDroplets", 0)), "Full-map totals appear before autoplay starts");
                 Check(requested.Count == 0, "Manual F3 does not change audio speed");
                 ui.Key(9); ui.View.KeyUp(9);
                 clock.Advance(100); ui.Paint(); Near(100 * initial, ui.View.PlayheadMs);
@@ -210,9 +262,8 @@ internal static class TestplayTests
                 Near(next, ui.View.PlaybackSpeed); Near(100 * initial, ui.View.PlayheadMs);
                 Check(requested.SequenceEqual([next]), "F3 sends one audio speed change per press");
                 clock.Advance(100); ui.Paint(); Near(100 * (initial + next), ui.View.PlayheadMs);
-                var speed = ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.speed", next));
                 var hint = ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.hintSpeed"));
-                Check(speed.X == 12 && speed.Y == 12 && hint.Y >= speed.Y + 20, "Speed and instruction occupy separate upper-left rows");
+                Check(hint.Value == "F3: change autoplay speed" && hint.X == 12, "Testplay uses the osu shortcut text");
                 ui.View.KeyUp(114);
                 ui.Key('P', ctrl: true); ui.View.KeyUp('P');
                 double paused = ui.View.PlayheadMs;
@@ -440,6 +491,8 @@ internal static class TestplayTests
         clock.Advance(100); session.Tick();
         var missed = session.Capture();
         Check(missed.Plate.Length == 1 && missed.MissedObjects.Length == 1 && sounds == 1, "only catches enter the stack and emit sound without rendering");
+        Check(missed.Hit300 == 1 && missed.Misses == 1 && frozen.Hit300 == 1 && frozen.Misses == 0,
+            "Judgement counts survive effect snapshots without mutating previous frames");
         session.SetKey(39, true); clock.Advance(20); session.SetKey(39, false);
         Check(session.Capture().Plate[0].X > frozen.Plate[0].X && frozen.X == 256, "stack follows movement while detached snapshots stay unchanged");
         clock.Advance(280); session.Tick();
@@ -450,6 +503,24 @@ internal static class TestplayTests
         drop.Judge(notes[0], 256, true, false); drop.Judge(notes[^1], 256, false, true);
         var before = drop.At(500, 256).Single(); var after = drop.At(600, 400).Single();
         Check(after.Y > before.Y && after.X == before.X && after.Opacity < before.Opacity, "missed combo end drops the previous stack at its release position");
+        var uiClock = new ManualTime();
+        var ui = new Ui(timeProvider: uiClock);
+        var map = new MapDocument();
+        map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 256 }, new Fruit { TimeMs = 5000, X = 256 }]);
+        ui.LoadDocument(map); ui.OpenPreview(); ui.View.UpdateTransport(1100, 10000, true, false, false, null, null); ui.Paint();
+        AssertCatcherInFront();
+        ui.View.UpdateTransport(1100, 10000, false, false, false, null, null);
+        ui.View.LibrarySettings.TestplayStartupDelaySeconds = 1;
+        ui.View.StartTestplay(); uiClock.Advance(1000); ui.Paint();
+        AssertCatcherInFront();
+        void AssertCatcherInFront()
+        {
+            var commands = ui.Canvas.Operations.Where(op => op.Clip is { } clip &&
+                (ui.View.IsTestplaying || clip == ui.View.PreviewViewport)).ToArray();
+            var body = commands.First(op => op.Dot is { Color: 0xB5C9D0 });
+            Check(commands.Any(op => op.Dot is { Filled: true, Color: 0xFFFFFF } && op.Order < body.Order),
+                "Caught fruit is drawn before the catcher body in preview and testplay");
+        }
     }
     public static void MovementAndJudgement()
     {
@@ -462,6 +533,7 @@ internal static class TestplayTests
         game.Advance(300, false, true, true); Near(406, game.X); Check(game.Combo == 3, "dash catches fruit");
         game.Advance(400, true, true, false); Near(406, game.X); Check(game.Combo == 3, "tiny/banana misses preserve combo; opposing keys cancel");
         game.Advance(500, false, false, false); Check(game.Combo == 0 && game.Finished, "miss breaks combo and last judgement completes");
+        Check(game.Hit300 == 3 && game.Hit100 == 0 && game.Hit50 == 0 && game.Misses == 1, "Live counts exclude missed tiny droplets and bananas from Miss");
         game.Advance(2000, true, false, true); Near(0, game.X); Check(game.FacingLeft, "left movement flips catcher");
         game.Advance(3000, false, true, true); Near(512, game.X); Check(!game.FacingLeft, "right movement restores catcher");
 
@@ -692,7 +764,7 @@ internal static class TestplayTests
             (106, "Num *"), (107, "Num +"), (108, "Num Separator"), (109, "Num -"), (110, "Num ."),
             (111, "Num /"), (144, "Num Lock"), (145, "Scroll Lock")];
         keys = keys.Concat(Enumerable.Range(96, 10).Select(k => (k, $"Num {k - 96}")))
-            .Concat(Enumerable.Range(115, 21).Select(k => (k, $"F{k - 111}"))).ToArray();
+            .Concat(Enumerable.Range(115, 21).Where(k => k != 123).Select(k => (k, $"F{k - 111}"))).ToArray();
         string folder = Path.GetFullPath("artifacts/testplay-extended-settings");
         var ui = new Ui(); ui.View.InitializeLibrary(true, new LibrarySettings { Workspace = folder });
         ui.Paint(); ui.ClickText(L.Get("library.settings")); ui.ClickText(L.Get("settings.testplay"));
@@ -731,7 +803,7 @@ internal static class TestplayTests
         }
         ui.View.PointerDown(ui.View.SettingsBounds.X + 238, ui.View.SettingsBounds.Y + 200, 0, false, false); ui.View.PointerUp(ui.View.SettingsBounds.X + 238, ui.View.SettingsBounds.Y + 200, 0);
         int[] before = ((int[])draft.GetValue(ui.View)!).ToArray();
-        foreach (int key in new[] { 0, 9, 112, 113, 114, 91, 92, 173, 255 })
+        foreach (int key in new[] { 0, 9, 112, 113, 114, 123, 91, 92, 173, 255 })
         {
             ui.Key(key); ui.View.KeyUp(key);
             Check(ui.View.CapturingTestplayKey && before.SequenceEqual((int[])draft.GetValue(ui.View)!),

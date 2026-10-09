@@ -79,6 +79,11 @@ DoNotWait)` and a one-frame queue. GPU backpressure skips a draw. Mac processes 
 transitions on its UI thread and requests testplay redraws through Avalonia's
 display animation callback. Drawing frequency does not define input sampling.
 
+Windows dispatches editor and testplay shortcuts before IME message translation
+when no text field or key-binding capture is active. IME process-key messages
+recover their original virtual key before translation; releases use the physical
+scan code so held retry and other key latches can clear under a Chinese IME.
+
 Preview and testplay share `EditorView.Catcher` for the catcher body, geometric
 fallback, sprite facing and trail rendering. Automatic preview and live gameplay
 provide movement history as `CatchTrail` values; sprite selection, effect timing,

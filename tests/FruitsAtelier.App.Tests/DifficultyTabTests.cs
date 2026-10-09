@@ -4,6 +4,79 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class DifficultyTabTests
 {
+    public static void SortAscending()
+    {
+        Check(!new EditorView(false).StarRatingsRefreshing, "An empty editor does not request sorting redraws");
+        var hard = new MapDocument { IsDemo = false, DurationMs = 20000 };
+        for (int i = 0; i < 100; i++) hard.Fruits.Add(new() { TimeMs = 1000 + i * 100, X = i % 2 == 0 ? 20 : 490 });
+        var project = BeatmapProject.FromDocuments([hard, new() { IsDemo = false }, new() { IsDemo = false }]);
+        project.Difficulties[0].Name = "Hard";
+        project.Difficulties[1].Name = "Blank A";
+        project.Difficulties[2].Name = "Blank B";
+        var view = new EditorView(false); view.LoadProject(project);
+        var before = view.CaptureProject();
+        var canvas = new RecordingCanvas();
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        do
+        {
+            canvas.Clear(); view.Render(canvas, 1440, 900);
+            if (!view.StarRatingsRefreshing) break;
+            Thread.Sleep(10);
+        } while (DateTime.UtcNow < deadline);
+        Check(!view.StarRatingsRefreshing, "Automatic sorting waits for completed SR calculations");
+        var names = canvas.Texts.Where(t => t.Y == 54 && new[] { "Hard", "Blank A", "Blank B" }.Contains(t.Value))
+            .OrderBy(t => t.X).Select(t => t.Value).ToArray();
+        Check(names.SequenceEqual(new[] { "Blank A", "Blank B", "Hard" }), "Ascending SR keeps ties stable");
+        Check(view.ActiveDifficultyIndex == 0 && view.CurrentDifficultyName == "Hard", "Sorting retains active difficulty");
+        var after = view.CaptureProject();
+        Check(before.Difficulties.Zip(after.Difficulties).All(pair => pair.First.Id == pair.Second.Id
+            && pair.First.Document.ContentEquals(pair.Second.Document)) && !view.IsDirty, "Sorting preserves project content and storage order");
+        view.KeyDown(9, true, false); view.KeyUp(9);
+        Check(view.CurrentDifficultyName == "Blank A", "Ctrl Tab traverses displayed order");
+        view.KeyDown(9, true, true); view.KeyUp(9);
+        Check(view.CurrentDifficultyName == "Hard", "Ctrl Shift Tab traverses displayed order backwards");
+        var blank = canvas.Texts.Single(t => t.Value == "Blank B");
+        view.PointerDown(blank.X + 2, blank.Y + 2, 0, false, false);
+        view.PointerUp(blank.X + 2, blank.Y + 2, 0);
+        Check(view.CurrentDifficultyName == "Blank B", "Sorted tab clicks target the original difficulty");
+        view.SwitchDifficulty(0);
+        var history = (EditorHistory)typeof(EditorView).GetProperty("history",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(view)!;
+        history.Begin("Clear fruits"); view.Document.Fruits.Clear(); history.Commit();
+        Settle();
+        names = Names();
+        Check(names.SequenceEqual(new[] { "Blank A", "Blank B", "Hard" }), "Equal ratings retain display order after edits");
+        history.Undo(); Settle();
+        Check(Names().SequenceEqual(new[] { "Blank A", "Blank B", "Hard" }), "Undo refreshes automatic sorting");
+        view.SwitchDifficulty(1);
+        history = (EditorHistory)typeof(EditorView).GetProperty("history",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(view)!;
+        history.Begin("Add harder fruits");
+        for (int i = 0; i < 150; i++) view.Document.Fruits.Add(new() { TimeMs = 1000 + i * 50, X = i % 2 == 0 ? 0 : 512 });
+        history.Commit(); Settle();
+        Check(Names().SequenceEqual(new[] { "Blank B", "Hard", "Blank A" }), "SR changes automatically reorder tabs");
+        Check(view.ActiveDifficultyIndex == 1, "Automatic reordering keeps the edited difficulty active");
+        history.Undo(); Settle();
+        Check(Names().SequenceEqual(new[] { "Blank B", "Blank A", "Hard" }), "Undo automatically reorders by restored SR");
+        view.LoadProject(project); Settle();
+        Check(Names().SequenceEqual(new[] { "Blank A", "Blank B", "Hard" }), "Opening a project automatically sorts its difficulties");
+        Check(!view.StarRatingsRefreshing, "Completed sorting leaves the editor idle");
+
+        string[] Names() => canvas.Texts.Where(t => t.Y == 54 && new[] { "Hard", "Blank A", "Blank B" }.Contains(t.Value))
+            .OrderBy(t => t.X).Select(t => t.Value).ToArray();
+        void Settle()
+        {
+            var until = DateTime.UtcNow.AddSeconds(30);
+            do
+            {
+                canvas.Clear(); view.Render(canvas, 1440, 900);
+                if (!view.StarRatingsRefreshing) return;
+                Thread.Sleep(10);
+            } while (DateTime.UtcNow < until);
+            throw new Exception("Automatic SR sorting did not finish.");
+        }
+    }
+
     public static void Layout()
     {
         var project = BeatmapProject.FromDocuments(Enumerable.Range(0, 3).Select(_ => new MapDocument { IsDemo = false }));

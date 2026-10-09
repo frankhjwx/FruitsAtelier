@@ -49,7 +49,7 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
-Test projects are console programs run with `dotnet run`. Format-export quantization, read-back, and edge-sample diagnostic checks iterate over every available language, verifying messages and parameters against localization tables rather than assuming the default UI language.
+Test projects are console programs run with `dotnet run`. Format-export quantization and read-back diagnostic checks iterate over every available language, verifying messages and parameters against localization tables rather than assuming the default UI language. Repeat-count checks verify preserved edge samples and silent default assignment to new edges in every language.
 
 After building the solution, run on Windows from the repository root:
 
@@ -143,14 +143,33 @@ in-flight clock read, seek/pause ordering and rapid resume, plus real-device WAV
 pause, seek and EOF replay. The paused position remains at the request snapshot
 even when the device advances before the worker handles it.
 
+`Audio.Tests --transition-check` verifies the pause/resume gain envelope across
+sample rates, channels and partial-frame reads. An injected buffered output checks
+that the device consumes the fade before stopping, paused seeks retain the resume
+fade, and queued pause/play/seek requests preserve playback intent. No physical
+audio device is used by this focused check.
+
 ## Window checks
+
+`FruitsAtelier.App.exe --screenshot-render-check` exercises F12 capture and reads
+the native clipboard image back at 96/144/192 DPI in editing and paused testplay.
+It verifies pixel dimensions, colour and row order, and writes bitmap previews and
+`report.json` under `artifacts/tests/screenshot-native/`. This check replaces the
+system clipboard with its captured image.
 
 `FruitsAtelier.App.exe --testplay-render-check` independently exercises background
 decoding, custom Skip and pause textures, mouse/Space skip, keyboard Retry/Back,
 and both languages at wide, narrow and portrait sizes with 96/144/192 DPI.
 It uses silent callbacks and writes `artifacts/tests/testplay-native/report.json`.
+It also checks testplay shortcut dispatch before IME translation, process-key
+press/release recovery, and 300 ms held retry while running and paused followed by
+the 600 ms reaction countdown. Retry regressions verify frozen gameplay and delayed
+audio restart until the same deadline used by Continue.
 The shared App regressions additionally check dim transitions, frozen resume
 countdowns, stale audio samples after skip, content isolation and preferences.
+The Windows App retry PCM regression uses an injected silent output with the
+real hitsound mixer to verify the pause loop during the hold and the retry click
+after session audio reset.
 
 The Windows `--render-check` injects nested timer and paint messages during audio
 replacement, verifying that difficulty switches retain paused and playing
@@ -240,6 +259,23 @@ Shared Core and App regressions cover exact control-curve persistence, fixed AR 
 After changing input or drawing, manually check affected operations, language switching, window resizing, and file dialogs. Additional coverage is still needed for physical Windows window/audio behavior, Intel Mac, cross-display DPI, Mac MP3, and stable-client comparisons.
 
 ## Editing performance benchmark
+
+`App.Tests --difficulty-switch-performance <path.osz>` opens the set three times
+and switches through every difficulty forwards and backwards, entering and leaving
+testplay each time. It records editor switching, testplay frame CPU, allocations,
+Gen2 collections and retained heap. Windows additionally loads every audio file
+through the real transport with silent PCM output and reports load latency and
+process private memory. Gameplay uses an accelerated clock and `RecordingCanvas`;
+these measurements exclude GPU presentation and physical input latency. Imported
+fixtures and logs belong under `artifacts/`.
+
+On Windows, `FruitsAtelier.App.exe --difficulty-switch-render-check <path.osz>`
+repeats the same difficulty traversal with Direct2D and silent WASAPI music.
+Each testplay starts within the map and samples 30 submitted frames. It also
+exercises SR sorting and verifies unchanged content. Results are written to
+`artifacts/difficulty-switch/native.json`. This hidden-window check uses the UI
+simulation driver; it excludes physical display latency and dedicated input-thread
+dispatch, which are covered separately by the native testplay checks.
 
 Follow the [editing performance constraints](EDITING_PERFORMANCE.md) when changing
 interactive paths. For a read-only benchmark of an existing `.osu` map, run the App

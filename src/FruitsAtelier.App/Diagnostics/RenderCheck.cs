@@ -602,8 +602,8 @@ internal static class RenderCheck
                 view.RequestUpdateRestart = () => restartPrepared = view.PrepareFileOperation();
                 view.UpdateStatus = new(UpdatePhase.Ready, "0.9.1", 100);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
-                float restartX = view.SettingsBounds.X + 230 + 230;
-                float restartY = view.SettingsBounds.Y + 310;
+                float restartX = view.UpdateRestartButtonBounds.X + 8;
+                float restartY = view.UpdateRestartButtonBounds.Y + 8;
                 view.PointerDown(restartX, restartY, 0, false, false);
                 view.PointerUp(restartX, restartY, 0);
                 if (!restartPrepared) throw new InvalidOperationException("Update restart from Settings could not prepare saving.");

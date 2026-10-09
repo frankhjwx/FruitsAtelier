@@ -479,8 +479,8 @@ public sealed partial class EditorView
             c.Stroke(new(stage.X + 9, referenceTop, referenceWidth, referenceHeight), 0x2B3442);
         double scrollSpeed = CatchScrollTiming.PixelsPerMs(PreviewApproachRate, fieldWidth);
         double visibleAhead = (catchY - stage.Y + CatchSize.FruitDiameter(PreviewCircleSize) * fieldWidth / 512 * 1.2) / scrollSpeed;
-        DrawPreviewCatcher(c, fieldLeft, fieldWidth, catchY);
         DrawPreviewPlate(c, fieldLeft, fieldWidth, catchY);
+        DrawPreviewCatcher(c, fieldLeft, fieldWidth, catchY);
         foreach (var item in PreviewObjectsInRange(playhead, playhead + visibleAhead))
         {
             double remaining = item.TimeMs - playhead;

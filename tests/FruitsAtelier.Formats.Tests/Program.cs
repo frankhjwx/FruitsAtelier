@@ -21,10 +21,13 @@ var tests = new (string Name, Action Run)[]
     ("Version history preserves saved, unsaved and deleted authoring by project identity", VersionHistoryTests.Run),
 
     ("Fractional banana endpoints preserve exported counts and downstream tiny compensation", BananaQuantizationTests.Run),
+    ("Fractional FSlider heads preserve exported tiny counts, NM/HR RNG, editing and undo", FractionalSliderQuantizationTests.Run),
     ("Export keeps timing data below its header and a blank before Colours", TimingSectionSpacing),
-    ("Export orders metadata with difficulty identity at the end", MetadataLayout),
+    ("Export uses stable metadata order, setting spacing and section separation", MetadataLayout),
+    ("All standard sections and fields normalize without changing values or gameplay", StandardExportLayout),
     ("Cached export matches full serialization across edits, order, RNG, timing and streams", WriteCacheTests.MatchesUncached),
     ("Equal-time/order fruits, streams and random parents retain converter order through export and undo", WriteCacheTests.StableParentOrder),
+    ("Sliders beside fractional imported fruits preserve SV export, identities, project persistence and undo", WriteCacheTests.FractionalFruitBesideSlider),
     ("v12, v13 and compatible v128 imports preserve gameplay, optional fields and v14 export", CompatibleVersions),
     ("v128 rejects fractional coordinates and unsupported slider syntax", LazerExtensions),
     ("Workspace isolation, recovery, indexing and explicit export", WorkspaceTests.Run),
@@ -44,6 +47,7 @@ var tests = new (string Name, Action Run)[]
     ("Converted Legacy repeat retains identity, object count and samples as a FSlider", PromotedRepeat),
     ("Changing promoted repeat count resizes edge samples without losing head or tail", () => EachLanguage(ChangedRepeatEdges)),
     ("Temporary SV restores following imported slider speed", RestoreSv),
+    ("Base SV overrides avoid unused leading greens and preserve pre-timing sliders", SliderTimingTests.BaseSvDoesNotAddLeadingInheritedPoint),
     ("Independent duration formula survives the head lookup window", SliderTimingTests.RestorationStaysOutsideHeadWindow),
     ("An isolated edited slider does not restore unused original SV", SliderTimingTests.IsolatedEditedSliderDoesNotRestoreUnusedSv),
     ("Same-time SV replaces greens while preserving red timing and effective samples", SliderTimingTests.SameTimeOverrideReplacesGreensAndPreservesRed),
@@ -85,17 +89,121 @@ static void TimingSectionSpacing()
     Check(document.ContentEquals(before), "Export changed source content");
     document.OriginalSections.Insert(document.OriginalSections.FindIndex(section => section.Name == "Colours"),
         new OsuSection { Name = "Extra", Lines = { "Value:1", "", " ", "" } });
-    Check(OsuBeatmapWriter.Serialize(document).Text.Contains("Value:1\r\n\r\n[Colours]"), "Colours must have exactly one preceding blank regardless of preserved source spacing");
+    string withExtra = OsuBeatmapWriter.Serialize(document).Text;
+    Check(withExtra.Contains("Value:1\r\n\r\n[") && withExtra.Contains("\r\n\r\n[Colours]"),
+        "Sections must have exactly one separating blank regardless of preserved source spacing");
 }
 static void MetadataLayout()
 {
-    const string ordered = "Title:18sai\r\nTitleUnicode:18歳\r\nArtist:Goose house\r\nArtistUnicode:Goose house\r\nCreator:mingmichael\r\nSource:\r\nTags:tag\r\nBeatmapSetID:242856\r\n\r\nVersion:Rain (FruitsAtelier)\r\nBeatmapID:0\r\n";
-    var document = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Metadata]\n"
-        + string.Join('\n', ordered.Split("\r\n").Reverse()) + "\n[Difficulty]\nHPDrainRate:7\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n");
+    const string ordered = "Title:18sai\r\nTitleUnicode:18歳\r\nArtist:Goose house\r\nArtistUnicode:Goose house\r\nCreator:mingmichael\r\nVersion:Rain (FruitsAtelier)\r\nSource:\r\nTags:tag\r\nBeatmapID:0\r\nBeatmapSetID:242856\r\n";
+    var document = OsuBeatmapReader.Read("osu file format v14\n\n\n[General]\n\nMode:2\n\n[Editor]\nDistanceSpacing:0.6\n[Metadata]\n"
+        + string.Join('\n', ordered.Replace(":", " : ").Split("\r\n").Reverse())
+        + "\nExtraField : keep:this\n// retained metadata comment\n[Difficulty]\nHPDrainRate : 7\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[Colours]\nCombo1:0,128,255\n[HitObjects]\n");
+    var before = document.DeepClone();
     string text = OsuBeatmapWriter.Serialize(document).Text;
-    Check(text.Contains("[Metadata]\r\n" + ordered + "[Difficulty]"), "Metadata order or spacing differs from export layout");
+    Check(text.StartsWith("osu file format v14\r\n\r\n[General]\r\nMode: 2\r\n\r\n[Editor]\r\nDistanceSpacing: 0.6\r\n\r\n[Metadata]"),
+        "Header, sections and editor settings must use stable spacing");
+    Check(text.Contains("[Metadata]\r\n" + ordered + "ExtraField:keep:this\r\n// retained metadata comment\r\n\r\n[Difficulty]\r\nHPDrainRate:7"),
+        "Metadata order, retained fields or section spacing differs from stable layout");
+    Check(text.Contains("\r\n\r\n[Colours]\r\nCombo1 : 0,128,255\r\n\r\n[HitObjects]"), "Colour setting or section spacing differs from stable layout");
     Check(OsuBeatmapWriter.Serialize(OsuBeatmapReader.Read(text)).Text == text, "Metadata layout changes on repeated export");
+    Check(document.ContentEquals(before), "Export formatting changed authored content");
 }
+static void StandardExportLayout()
+{
+    const string source = """
+osu file format v14
+[General]
+AudioFilename: sub/song.mp3
+AudioLeadIn: 0
+AudioHash: retained
+PreviewTime: -1
+Countdown: 0
+SampleSet: Soft
+StackLeniency: 0.6
+Mode: 2
+LetterboxInBreaks: 1
+StoryFireInFront: 1
+UseSkinSprites: 0
+AlwaysShowPlayfield: 0
+OverlayPosition: NoChange
+SkinPreference: Default
+EpilepsyWarning: 0
+CountdownOffset: 0
+SpecialStyle: 0
+WidescreenStoryboard: 1
+SamplesMatchPlaybackRate: 1
+[Editor]
+Bookmarks: 100,200
+DistanceSpacing: 0.6
+BeatDivisor: 4
+GridSize: 8
+TimelineZoom: 1
+[Metadata]
+Title:Layout
+Version:Catch
+[Difficulty]
+HPDrainRate:5
+CircleSize:5
+OverallDifficulty:7.5
+ApproachRate:7.5
+SliderMultiplier:1.4
+SliderTickRate:2
+[Events]
+0,0,"cover.jpg",0,0
+Video,-3300,"video.avi"
+2,3000,4000
+Sprite,Foreground,Centre,"sprite.png",320,240
+ F,0,1000,2000,0,1
+[TimingPoints]
+0,500,4,2,1,70,1,0
+1000,-50,4,2,2,65,0,1
+1000,-80,4,1,3,55,0,1
+[Colours]
+Combo1 : 0,128,255
+Combo2 : 255,0,128
+Combo10 : 128,255,0
+SliderTrackOverride : 100,100,100
+SliderBorder : 255,255,255
+[HitObjects]
+123,176,250,21,8,2:3:4:80:custom.wav
+100,192,1800,6,2,L|250:192,2,150,2|4|8,2:3|3:2|1:0,2:3:4:65:edge.wav
+256,192,4500,12,0,4800,1:2:3:60:spinner.wav
+""";
+    var document = OsuBeatmapReader.Read(source);
+    var reference = OsuBeatmapWriter.Serialize(document);
+    foreach (var section in document.OriginalSections.Where(s => s.Name is "General" or "Editor" or "Metadata" or "Difficulty" or "Colours"))
+        Check(section.Lines.Where(l => !string.IsNullOrWhiteSpace(l)).SequenceEqual(
+            reference.ReadBack.OriginalSections.Single(s => s.Name == section.Name).Lines.Where(l => !string.IsNullOrWhiteSpace(l))),
+            $"Canonical {section.Name} field order or values changed");
+    document.OriginalSections.Reverse();
+    foreach (var section in document.OriginalSections.Where(s => s.Name is "General" or "Editor" or "Difficulty" or "Colours"))
+    {
+        var lines = section.Lines.Reverse().ToArray();
+        section.Lines.Clear(); section.Lines.AddRange(lines);
+    }
+    var head = document.TimingPoints[0];
+    document.TimingPoints.RemoveAt(0); document.TimingPoints.Add(head);
+    var before = document.DeepClone();
+    var actual = OsuBeatmapWriter.Serialize(document);
+    Check(actual.Text == reference.Text, "Scrambled sections, settings or timing changed canonical export");
+    Preserved(reference.ReadBack, actual.ReadBack);
+    Check(actual.ObjectSequenceMatches && actual.PlayableObjects.SequenceEqual(reference.PlayableObjects)
+        && actual.PlayableHardRockObjects.SequenceEqual(reference.PlayableHardRockObjects), "Layout changed NM/HR objects");
+    Check(document.ContentEquals(before), "Layout changed the source document");
+    Check(actual.Text == OsuBeatmapWriter.Serialize(OsuBeatmapReader.Read(actual.Text)).Text, "Canonical layout is not stable on repeated export");
+    var general = actual.ReadBack.OriginalSections.Single(s => s.Name == "General");
+    general.Lines.Insert(0, "Countdown: 1");
+    var duplicate = OsuBeatmapWriter.Serialize(actual.ReadBack).ReadBack;
+    Equal("0", OsuBeatmapReader.Setting(duplicate, "General", "Countdown"));
+    Check(duplicate.OriginalSections.Single(s => s.Name == "General").Lines.Contains("Countdown: 1"), "Duplicate setting was discarded");
+    var defaults = OsuBeatmapWriter.Serialize(new MapDocument()).ReadBack;
+    Equal("2", OsuBeatmapReader.Setting(defaults, "General", "Mode"));
+    Near(1.92, defaults.SliderMultiplier); Near(1, defaults.SliderTickRate);
+    Check(defaults.OriginalSections.Where(s => s.Name.Length > 0).Select(s => s.Name)
+        .SequenceEqual(new[] { "General", "Editor", "Metadata", "Difficulty", "TimingPoints", "HitObjects" }), "New map sections are out of order");
+}
+
 int failed = 0, skipped = 0;
 tests = tests.Concat(SynchronizationTests.Cases()).ToArray();
 foreach (var (name, run) in tests)
@@ -414,7 +522,7 @@ static void ChangedRepeatEdges()
 {
     var d = OsuBeatmapReader.Read(ConvertibleRepeatFixture());
     var edit = ImportedSliderEditing.ConvertToTrack(d, d.ImportedSliders.Single().Id);
-    int originalSpans = edit.Track.SpanCount;
+    int diagnosticCount = OsuBeatmapWriter.Serialize(d, false).Diagnostics.Count;
     edit.Track.SpanCount = 3;
     var result = OsuBeatmapWriter.Serialize(d, false);
     var slider = result.ReadBack.ImportedSliders.Single();
@@ -422,7 +530,7 @@ static void ChangedRepeatEdges()
     string[] fields = slider.OriginalLine!.Split(',');
     Equal("2|4|0|8", fields[8]); Equal("2:3|3:2|0:0|1:0", fields[9]); Equal("2:3:4:65:edge.wav", fields[10]);
     Check(result.ObjectSequenceMatches, "Repeat-count change lost generated events on export");
-    Check(result.Diagnostics.Contains(L.Get("core.writer.spanSamples", edit.Track.Name, originalSpans, slider.SpanCount)), "Changed repeat samples lack a diagnostic");
+    Equal(diagnosticCount, result.Diagnostics.Count);
 }
 
 static void RestoreSv()
@@ -565,7 +673,7 @@ static void AudioReferences()
         var d = OsuBeatmapReader.Read(Fixture().Replace("TitleUnicode:测试曲", "TitleUnicode:"), Path.Combine(folder, "source.osu"));
         Equal("Fixture", d.Name);
         d.AudioPath = Path.Combine(folder, "replacement.mp3");
-        Check(OsuBeatmapWriter.Serialize(d).Text.Contains("AudioFilename:replacement.mp3"), "Changed audio path did not export");
+        Check(OsuBeatmapWriter.Serialize(d).Text.Contains("AudioFilename: replacement.mp3"), "Changed audio path did not export");
         d.AudioPath = "\\\\server\\audio.mp3";
         Throws(() => ProjectSerializer.Serialize(d), "UNC project resource");
     });

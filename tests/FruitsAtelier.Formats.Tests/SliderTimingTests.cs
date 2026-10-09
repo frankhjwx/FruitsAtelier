@@ -372,6 +372,44 @@ internal static class SliderTimingTests
         }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
     }
 
+    public static void BaseSvDoesNotAddLeadingInheritedPoint()
+    {
+        foreach (double firstTiming in new[] { -500d, 0, 15290 })
+        foreach (bool earlySlider in new[] { false, true })
+        {
+            var document = Map();
+            document.SliderMultiplier = 2.1;
+            document.TimingPoints[0].TimeMs = firstTiming;
+            document.TimingPoints[0].BeatLengthMs = 60000d / 127;
+            document.TimingPoints[0].SampleSet = 2;
+            double head = earlySlider && firstTiming > 0 ? 1000 : Math.Max(1000, firstTiming + 1000);
+            AddImported(document, head, 210, 2);
+            document.Fruits.Add(new() { TimeMs = 500, X = 256 });
+            var snapshot = document.DeepClone();
+            var before = OsuBeatmapWriter.Serialize(document, false);
+            var after = SliderMultiplierEditing.Rebase(before, 3.6);
+            var raw = RawMap.Parse(after.Text);
+            Check(raw.Timing[0].Red, "Base SV export introduced a green before the first red.");
+            if (head >= firstTiming)
+                Check(raw.Timing.All(p => p.Time >= firstTiming) && raw.Timing.Count == 2,
+                    "Base SV export added timing before it was needed.");
+            else
+                Check(raw.Timing[0].Time == head && raw.Timing.Count == 4,
+                    "Pre-timing slider requires an explicit BPM and compensated SV at its head.");
+            Check(raw.Timing.Any(p => p.Red && p.Time == firstTiming && p.Fields[3] == "2"),
+                "Base SV export changed the original BPM or sample timing.");
+            foreach (int offset in new[] { 0, 1 })
+                Near(RawMap.Parse(before.Text).Duration(head, offset), raw.Duration(head, offset));
+            Check(after.ObjectSequenceMatches && before.PlayableObjects.Count == after.PlayableObjects.Count,
+                "Base SV export changed the playable sequence.");
+            Check(SliderMultiplierEditing.TryRebase(before, 3.6, out var fast, double.PositiveInfinity)
+                && fast!.Text == after.Text && fast.PlayableObjects.SequenceEqual(after.PlayableObjects)
+                && fast.PlayableHardRockObjects.SequenceEqual(after.PlayableHardRockObjects),
+                "Fast and full SV validation disagree on initial timing.");
+            Check(document.ContentEquals(snapshot), "Base SV export mutated authored timing.");
+        }
+    }
+
     private static MapDocument Map()
     {
         var document = new MapDocument { SliderMultiplier = 1, DurationMs = 10000 };

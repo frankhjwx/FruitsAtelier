@@ -53,7 +53,7 @@ public sealed partial class EditorView
         _ => CatchSize.FruitRadius(Document.CircleSize)
     };
 
-    private ConvertedCatchObject? HitCatchObject(float x, float y, Guid? sourceId = null)
+    private ConvertedCatchObject? HitCatchObject(float x, float y, Guid? sourceId = null, bool includeLockedDroplets = false)
     {
         EnsureConversion();
         ConvertedCatchObject? closest = null;
@@ -62,7 +62,7 @@ public sealed partial class EditorView
         double timeRadius = Math.Max(7, CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512) / pixelsPerMs;
         foreach (var item in ObjectsInTimeRange(pointerTime - timeRadius, pointerTime + timeRadius))
         {
-            if (!CanSelectCatchObject(item)) continue;
+            if (!includeLockedDroplets && !CanSelectCatchObject(item)) continue;
             if (sourceId is { } id && item.SourceId != id) continue;
             var point = new MapPoint(item.TimeMs, item.X);
             double candidateDistance = PointerDistance(point, x, y);
@@ -182,6 +182,16 @@ public sealed partial class EditorView
     {
         if (notesLocked) return;
         if (objectSelection.Count == 0) return;
+        EnsureConversion();
+        objectDragEventMinX = double.PositiveInfinity;
+        objectDragEventMaxX = double.NegativeInfinity;
+        foreach (var item in conversion!.Objects)
+        {
+            if (!objectSelection.Contains(item.SourceId)
+                || item.Kind is not (CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet)) continue;
+            objectDragEventMinX = Math.Min(objectDragEventMinX, item.X);
+            objectDragEventMaxX = Math.Max(objectDragEventMaxX, item.X);
+        }
         if (SelectedDistanceObject() is { } selectedChild
             && (!selectedChild.IsStandalone || Document.Tracks.Any(track => track.Id == selectedChild.SourceId && track.StreamSnapDivisor is not null)))
         { distanceObject = null; soundEdge = null; }
@@ -200,6 +210,7 @@ public sealed partial class EditorView
     private Dictionary<Guid, Fruit> dragFruits = [];
     private Dictionary<Guid, CurveTrack> dragTracks = [];
     private Dictionary<Guid, BananaShower> dragBananas = [];
+    private double objectDragEventMinX, objectDragEventMaxX;
     private bool PrepareObjectDrag()
     {
         if (objectDragStart is null) return false;
@@ -280,9 +291,9 @@ public sealed partial class EditorView
         if (double.IsFinite(minTime)) deltaTime = Math.Clamp(deltaTime, -minTime, EditableDurationMs - maxTime);
         else deltaTime = 0;
         if (objectDragTimeline) deltaX = 0;
-        else if (double.IsFinite(minX)) deltaX = Math.Clamp(SnapX(minX + deltaX) - minX, -minX, 512 - maxX);
+        else if (double.IsFinite(minX)) deltaX = ClampVisibleX(SnapX(minX + deltaX) - minX);
         else if (objectDragStart.Tracks.FirstOrDefault(t => objectSelection.Contains(t.Id)) is { } firstTrack)
-            deltaX = SnapX(firstTrack.Nodes[0].X + deltaX) - firstTrack.Nodes[0].X;
+            deltaX = ClampVisibleX(SnapX(firstTrack.Nodes[0].X + deltaX) - firstTrack.Nodes[0].X);
         else deltaX = 0;
 
         if (!objectDragTimeline && DistanceSnapEnabled && double.IsFinite(minTime))
@@ -294,7 +305,7 @@ public sealed partial class EditorView
             {
                 var target = SnapDistance(origin + new MapPoint(deltaTime, deltaX), objectSelection);
                 deltaX = SnapX(target.X) - origin.X;
-                if (double.IsFinite(minX)) deltaX = Math.Clamp(deltaX, -minX, 512 - maxX);
+                deltaX = ClampVisibleX(deltaX);
             }
         }
 
@@ -337,5 +348,12 @@ public sealed partial class EditorView
 
         void IncludeTime(double value) { minTime = Math.Min(minTime, value); maxTime = Math.Max(maxTime, value); }
         void IncludeX(double value) { minX = Math.Min(minX, value); maxX = Math.Max(maxX, value); }
+        double ClampVisibleX(double value)
+        {
+            double left = double.IsFinite(objectDragEventMinX) ? objectDragEventMinX : minX;
+            double right = double.IsFinite(objectDragEventMaxX) ? objectDragEventMaxX : maxX;
+            return double.IsFinite(left) && double.IsFinite(right) && right - left <= 512
+                ? Math.Clamp(value, -left, 512 - right) : 0;
+        }
     }
 }

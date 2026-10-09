@@ -99,10 +99,13 @@ provides **Randomization settings…** and **Reset manual droplet adjustments** 
 the selected FSlider. Batch operations exclude Legacy Sliders and slider-managed
 fruit streams. Parameters and switches remain local to the current difficulty.
 
-The random sequence continues across all generated objects in the difficulty,
+Strength 20 and Seed 1337 reproduce osu!'s native NM randomization when there are
+no manual corrections. Custom seeds use the same legacy RNG; Strength scales its
+offsets. The sequence continues across droplets, TinyDroplets and bananas,
 including sliders with their effect disabled. Identical sliders use different
-parts of the sequence. Adding or removing earlier objects changes later random
-offsets; unchanged content and Seed reproduce the same result.
+parts of the sequence. Adding or removing earlier RNG-consuming objects changes
+later offsets; ordinary NM fruits do not. Unchanged content and Seed reproduce
+the same result. HR gameplay applies osu!'s usual additional position rules.
 
 Randomization affects TinyDroplets. Drag a TinyDroplet in Select mode or edit its
 X coordinate to save a correction without changing the base curve. Unlock droplet
@@ -169,7 +172,8 @@ adjustment supersedes an older worker result and starts its own idle interval.
 One continuous adjustment commits as one undo step. File operations wait for
 the draft to be validated; retry after it completes.
 An intervening content edit invalidates the pending result. The change is applied only when exported NM/HR
-objects retain their kinds, times and positions within 0.001 ms/px. Changes that
+objects retain their kinds, times and positions within 0.001 ms/px. Timing Setup validates compensated export
+before committing when a base-SV override is active. Changes that
 require inherited SV outside 0.1–10 or cannot preserve playback report an error
 and leave the difficulty unchanged.
 
@@ -385,7 +389,9 @@ Mouse buttons use the same actions. Opening the menu fades it in over 300 ms whi
 music and judgement are already paused. Continue fades the pause menu out over 600 ms,
 then resumes music and judgement together. Esc cancels the fade back to the menu. Retry
 restarts at the session's original lead-in position, resetting judgement and combo
-while retaining autoplay. Back and F1 return to the selected editor position.
+while retaining autoplay. All retry shortcuts and menu actions then use the same
+600 ms reaction transition as Continue, with music and judgement held at the start
+until the transition completes. Back and F1 return to the selected editor position.
 Hover smoothly enlarges buttons; keyboard selection shows two skin arrows.
 The skin cursor and its trail appear only while paused. Running testplay hides
 both the skin cursor and system pointer. Intro and break-end warnings use four
@@ -420,7 +426,7 @@ testplay. Dash and hyperdash leave fading catcher trails. The combo uses the ski
 combo digits, pulses on catches and fades while idle or after a miss. Missed notes
 fall past the catcher and fade out over 250 ms.
 
-The upper-left corner shows the current testplay speed on its own line, followed by **Tab** (autoplay), **F3** (autoplay speed), **Ctrl+P** (pause/resume), **Ctrl+B** (add a bookmark), **F1** (exit to the testplay start), and **F2** (exit at the current position). During autoplay, F3 switches between 1.0x and 1.5x; from any other speed, the first press selects 1.0x. Holding F3 changes speed only once. Pausing freezes gameplay and music; resuming continues the same session.
+The upper-left corner groups the current map time and live 300/100/50/Miss counts above the star rating (when available), total play length, maximum combo and maximum droplets. Maximum combo counts Fruits and Droplets; maximum droplets counts TinyDroplets (50 judgements). Counts cover catches in the current session, with Miss counting missed Fruits and Droplets. Map totals cover the entire playable difficulty, including when starting partway through it. Unsupported storyboard load, timing-error and maximum-score statistics are omitted. This information panel uses the osu! English labels in every interface language. The shortcut hints appear below these statistics, including **Tab** (autoplay), **F3** (autoplay speed), **Ctrl+P** (pause/resume), **Ctrl+B** (add a bookmark), **F1** (exit to the testplay start), and **F2** (exit at the current position). During autoplay, F3 switches between 1.0x and 1.5x; from any other speed, the first press selects 1.0x. Holding F3 changes speed only once. Pausing freezes gameplay and music; resuming continues the same session.
 
 Pressing **F3** in manual mode shows a brief reminder to press **Tab** before changing speed.
 
@@ -430,6 +436,8 @@ also returns to manual control. A centered fading banner announces either change
 
 Each new testplay starts in manual mode. Losing window focus releases held keys while
 testplay and its music continue.
+
+The catcher body appears in front of caught plate objects in both preview and testplay.
 
 The right-side preview and testplay animate fruit rotation and banana rotation/size;
 the main editing canvas remains static. Fruit bases use beatmap combo colours when
@@ -487,7 +495,7 @@ The left palette has equally sized Select, Fruit, FSlider, and Banana buttons wi
 
 Snap offers 1/1, 1/2, 1/3, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9, 1/12 and 1/16; the default is 1/4.
 
-Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with its time snapped to the current beat subdivision. Hover previews recalculate incoming and outgoing hyperdash markers, including the unconfirmed slider endpoint in both editing modes. This temporary calculation affects canvas markers only; it does not add playback sounds, change saved content, or enter undo history. Fruit left-click places immediately, replacing all existing parent objects whose start times are within ±2 ms of the new fruit, regardless of horizontal position. Slider tails and nested fruits do not independently trigger replacement. Replacement and placement form one undo step; hover hyperdash previews use the same replacement rule. In Fruit mode, right-click empty canvas toggles **New combo** for the next fruit. During playback, right-click arms/toggles New combo even over a note; when paused, right-click on a note deletes it. The combo flag survives project saving, `.osu` export, copying, and undo/redo. It resets after placement or changing difficulty.
+Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with its time snapped to the current beat subdivision. Hover previews recalculate incoming and outgoing hyperdash markers, including the unconfirmed slider endpoint in both editing modes. This temporary calculation affects canvas markers only; it does not add playback sounds, change saved content, or enter undo history. Fruit left-click places immediately, replacing all existing parent objects whose start times are within ±2 ms of the new fruit, regardless of horizontal position. Slider tails and nested fruits do not independently trigger replacement. Replacement and placement form one undo step; hover hyperdash previews use the same replacement rule. In Fruit or FSlider mode, right-click empty canvas toggles **New combo** for the next object. While drawing an FSlider, right-click retains its point-removal and curve-completion actions. In Fruit mode during playback, right-click arms/toggles New combo even over a note; when paused, right-click on a note deletes it. The combo flag survives project saving, `.osu` export, copying, and undo/redo. It resets after placement or changing difficulty.
 
 | Input | Action |
 | --- | --- |
@@ -538,7 +546,9 @@ moving edge; individual events do not distance-snap. Handles stop before crossin
 the opposite side and at the playfield boundaries; stored stack width and adjustment
 limits also cap expansion. A zero-width pattern can move
 but cannot resize. Drag inside the box to translate all selected parents using the
-ordinary group-movement snap rules. With droplet selection unlocked, droplets and
+ordinary group-movement snap rules. Translation stops when the leftmost or rightmost
+generated Fruit or Droplet reaches X=0 or X=512; curve handles may remain outside
+the playfield. With droplet selection unlocked, droplets and
 tiny droplets in a single selected slider take priority over box movement and use
 individual-event reshaping. A nearby curve control takes priority when it is at
 least as close to the pointer, unless that droplet is already selected. Visible
@@ -605,7 +615,7 @@ Slider Path, Selection Rect and Movement Analysis use equal-width buttons. Long 
 
 In Select mode, New Combo toggles the selected parents. On the editing canvas, a fruit with this flag has an NC label beside it in every UI language. The label sits to the right when there is room and otherwise to the left; slider heads with the flag are labelled once. A pending New Combo fruit placement shows the same NC label beside its preview. The sound buttons toggle additions independently and support mixed multi-selection. Clicking a slider fruit targets that head, repeat or tail's hitsound; selecting the whole slider through its timeline body targets every edge. Droplet/tiny selections target the parent, whose edge sounds are editable; these children retain their existing tick/silent playback rules. Banana showers use their fixed banana sound and disable the three additions. In Fruit placement mode, or with no selection, buttons set pending flags for new objects. New Combo resets after placement; pending additions remain until changed or switching difficulty.
 
-Lock Notes prevents moving, reshaping or deleting existing objects, including timeline reverse edits. Selection, playback, New Combo and sound editing remain available. New objects can still be placed; undo/redo remains available. Hover Lock Notes to reveal **Lock Droplet Selection**. This independent toggle is enabled by default and excludes droplets and tiny droplets from canvas hit testing and box selection, and clears an active droplet child selection. Slider paths, controls, fruits and parent selection in the object timeline remain available. Lock Droplet Selection is saved automatically as a user preference and restored after restarting. Changing these controls alone does not dirty the difficulty.
+Lock Notes prevents moving, reshaping or deleting existing objects, including timeline reverse edits. Selection, playback, New Combo and sound editing remain available. New objects can still be placed; undo/redo remains available. Hover Lock Notes to reveal **Lock Droplet Selection**. This independent toggle is enabled by default and excludes droplets and tiny droplets from canvas hit testing and box selection, and clears an active droplet child selection. Clicking a locked droplet with the Pen slider tool selects its parent without starting a new anchor. Slider paths, controls, fruits and parent selection in the object timeline remain available. Lock Droplet Selection is saved automatically as a user preference and restored after restarting. Changing these controls alone does not dirty the difficulty.
 
 The four left tool buttons show multiline operation hints. FSlider's hint follows the current editing mode. FSlider and Distance Snap display their hints above their hover buttons so the controls remain accessible.
 
@@ -621,7 +631,7 @@ Absolute timestamps use `mm:ss:fff` (minutes, seconds, milliseconds), truncating
 
 Hover over **FSlider** to reveal two vertically stacked buttons on its right: **osu legacy mode** and **pen tool mode**. The default is osu legacy mode. The active mode is highlighted, and either can be selected with any tool active. The mode is a session setting: both tools edit the same FSlider objects, and changing modes does not change geometry or create undo history. New and existing sliders may be edited with either tool. Imported Legacy Sliders still require conversion to an editable FSlider.
 
-In **pen tool mode**, press B or 3 to clear selection and start drawing. Click to add curved anchors; Ctrl+click adds a straight segment. Hold and drag to pull direction handles. Click the last anchor again to begin a new curve section. Right-click a placed draft point to remove it, or right-click elsewhere to finish at that position. One track may mix straight and Bezier segments. Enter also finishes; Esc cancels the draft. Finishing keeps the FSlider placement tool active for another slider. Press 1 to select and edit existing objects.
+In **pen tool mode**, press B or 3 to clear selection and start drawing. Click to add curved anchors; Ctrl+click adds a straight segment. The first anchor and its preview follow Distance Snap within the playfield; later anchors follow the pointer without Distance Snap. Hold and drag to pull direction handles. The placed head fruit remains visible from the first anchor. Moving the pointer previews the next segment and its generated objects. Anchors and handles can extend beyond X=0–512 where the resulting path remains renderable. Click the last anchor again to begin a new curve section. Right-click a placed draft point to remove it, or right-click elsewhere to finish at that position. One track may mix straight and Bezier segments. Enter also finishes; Esc cancels the draft. Finishing keeps the final draft objects and Movement Analysis connections visible while background validation completes, and keeps the FSlider placement tool active for another slider. Press 1 to select and edit existing objects.
 
 Select an FSlider and click its controls, or double-click its track, to edit anchors in **Select**. Clicking an interior control on an already selected complete track also enters editing; visible slider fruits use the selection rules below. Drag anchors and handles directly on the canvas. Interior anchor dragging is free by default. Enable **View → Snap interior anchors** to snap interior anchor times to the selected beat subdivision. Head and tail anchors follow beat Snap. Invalid snapped endpoint moves keep their previous time rather than clamping between grid lines. Handles remain free, and the option does not change placement or whole-object snapping. Anchor times remain increasing; anchors and handles may extend beyond the playfield. Moving a pen draft anchor preserves its handle vectors, and the whole draft remains one undo step. Curve handles may extend before the start or after the end; the curve must define an unambiguous forward branch inside the slider time interval. Generated events still undergo normal conversion validation.
 
@@ -710,6 +720,13 @@ The Skin selector to the left of **← Library** lists skins from the configured
 
 A separate row below the main toolbar displays Chrome-style difficulty tabs with the official Catch icon, Version, live No Mod stars, and an unsaved dot. Icon color follows stars. Active tabs have rounded top corners and spread outward at the bottom to join the content below. Tabs use actual text widths rather than filling the row. Tabs first use full difficulty names. When space is insufficient, up to eight tabs share the available width by shortening the longest names; more than eight tabs use compact names and a horizontally draggable strip. Arrow buttons and the wheel also scroll overflowing tabs. Stored names remain complete. Hovering a truncated tab shows its full name in a pointer-following tooltip that wraps and stays within the window. Click to switch; use arrows or the tab-row wheel when tabs overflow. Ctrl+Tab / Ctrl+Shift+Tab cycle and reveal the active tab. The **+** button opens the add/import menu. A new blank difficulty inherits the active difficulty's audio, timing, settings, and resource context but clears objects. Importing an `.osu` adds one file. Difficulties may reference different audio.
 
+Difficulty tabs automatically sort by completed No Mod SR from low to high.
+Equal ratings retain their display order; failed ratings appear last. Calculation
+runs in the background, and completed rating changes refresh the order after
+edits and undo/redo. Sorting preserves the active difficulty, project storage
+order, content and undo history. Ctrl+Tab and Ctrl+Shift+Tab follow the displayed
+order.
+
 Switching commits valid pending edits first; unfinished banana drafts or invalid input prevent switching. It pauses playback and retains each difficulty's playhead, time-viewport start, and undo/redo history. Selection and the active tool reset. Title/status dirty indicators cover the whole project, including hidden difficulties. One save writes every difficulty and updates baselines without clearing undo history. Ctrl+L and **Edit → Revert to previous save** restore only the active difficulty from the most recent prior save snapshot. A first save has no prior version. Synchronization and restore working copies are excluded. Confirmation retains an undo step and recovery copy of the current edits; saving the restored content remains a separate action. Unsaved confirmation on new/open/close applies to the whole project.
 
 `.osu` export applies to the active difficulty; suggested filenames include its name. Workspace project saving is described in [Workspace](WORKSPACE.md), and the compatible `.catchproj` format in [Project Model](PROJECT_MODEL.md). Resource paths remain references rather than embedded project-file contents.
@@ -768,11 +785,12 @@ With **Break into Fruits** off, a confirmed stream remains one editable slider p
 
 The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Ctrl+L restores the current difficulty's previous saved version after confirmation. Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
 
-Testplay lead-in is configured in Settings > Testplay, from 0 to 5 seconds in 0.5-second steps (default 1). Settings also offers a persistent Combo-count visibility toggle, without a keyboard shortcut. Holding the configured Dash key adds a bright white catcher layer while preserving the existing trails and Hyperdash tint. Testplay starts at the selected position minus the lead-in. When that position reaches zero, opening preparation follows the [user manual](USER_MANUAL.md#testplay). Audio starts at the negative map position: Windows supplies silent PCM before the music, and macOS schedules the music node for zero while its output clock advances. The session uses the same interpolated audio clock throughout preparation and music. Pause, speed changes, retry and intro skips preserve negative transport positions. Hold the `~` / backtick key for 300 ms to retry once from the session start; releasing early cancels the retry. It also works while paused. Esc opens the pause menu; F1 returns to the selected position.
+Testplay lead-in is configured in Settings > Testplay, from 0 to 5 seconds in 0.5-second steps (default 1). Settings also offers a persistent Combo-count visibility toggle, without a keyboard shortcut. Holding the configured Dash key adds a bright white catcher layer while preserving the existing trails and Hyperdash tint. Testplay starts at the selected position minus the lead-in. When that position reaches zero, opening preparation follows the [user manual](USER_MANUAL.md#testplay). Audio starts at the negative map position: Windows supplies silent PCM before the music, and macOS schedules the music node for zero while its output clock advances. The session uses the same interpolated audio clock throughout preparation and music. Pause, speed changes, retry and intro skips preserve negative transport positions. Hold the `~` / backtick key for 300 ms to retry once from the session start. A black overlay gradually dims the whole window while the pause loop plays during the hold; completing it plays the pause-menu Retry click and clears the overlay at the session start. Releasing early cancels the retry and removes the overlay. It also works while paused. Esc opens the pause menu; F1 returns to the selected position.
 
 Number keys 1–4 select Select, Fruit, FSlider and Banana Shower. During an FSlider draft they finish valid geometry, or cancel an insufficient draft, before switching tools; pressing 3 prepares another slider. Shift+1–9 changes Snap during drawing without moving placed points. F4 opens Song Setup. Left/Right seeks one full beat during playback. While paused, it moves to the preceding/following Snap grid line, including timing boundaries, so off-grid positions align in the chosen direction. Shift+Left/Right seeks four full beats during playback or four grid lines while paused, and Shift+1–9 changes Snap; other Shift variants do not invoke unmodified transport or nudge commands. Timing blocks horizontal object nudges and accepts Ctrl+Alt+E outside fields and dialogs. F6 row deletion requires Delete or Ctrl+I without Shift or Alt. The Settings language dropdown consumes keyboard input until Enter applies or Esc closes it.
 
 Ctrl+wheel doubles or halves the Snap divisor within supported choices on the canvas and timelines: 1→2→4→8→16 or 3→6→12. It stops at either end; 5, 7 and 9 stay unchanged because their doubles are unsupported. The Snap slider retains every subdivision. Shift+wheel seeks four times the normal wheel distance. Alt+wheel zooms the canvas or the upper object timeline under the pointer. Alt+wheel over the bottom timeline adjusts the currently selected Master, Music or Effect channel and displays the existing volume overlay. Ctrl+Alt+wheel cycles Select, Fruit, FSlider and Banana Shower over the canvas or upper timeline: wheel down advances and wheel up reverses the cycle. Unsupported wheel modifier combinations do not seek. Ctrl+M enters its quick cycle at 1/3 when the current divisor is outside the four choices.
+While dragging one or more objects, ordinary wheel navigation, Ctrl+wheel Snap adjustment, Alt+wheel zoom, and Space/C playback control remain available. Wheel navigation cancels a pending slider long press without ending the drag.
 
 ## Settings
 
@@ -780,6 +798,11 @@ Categories are ordered General, Workspace, Appearance, Audio, Testplay, and
 Application updates (where supported). Appearance groups the active skin selector
 with the default skin archive and indicator colours. General includes metadata display and language.
 Active skin selection takes effect immediately and is saved automatically.
+Application updates ends with a divider and a community section. A single sentence
+identifies Fruits Atelier as a catch editor project by Yumeno Himiko and links the
+name to the osu! profile. Suggestions and feedback can be sent through osu! or the
+Join Discord button. Project Website, Github Page, and Join Discord share a row in
+that order; Join Discord uses the first-time setup invite.
 General includes a Reverse canvas scrolling toggle, separated by a divider. It
 defaults to off and reverses ordinary and Shift+wheel time navigation over the
 canvas, including wheel navigation during marquee selection. Other panels and
@@ -919,3 +942,7 @@ cannot use explicit filenames or incompatible extra tick banks; preview explains
 these format constraints without applying a partial result.
 
 Select **All target Diffs** to copy to every difficulty in the current project, excluding the selected same-set source. Overwrite adds an undo step to each target; undo and redo work per Diff and retain audio files still used by other Diffs. Create new Diff creates a uniquely named copy of each target. Check validates every target before applying any changes and lists the aggregate matched-event count and shared file changes. Matches allow a time difference of up to 2ms; the nearest source wins, with the earlier event winning a tie.
+
+## Clipboard screenshots
+
+F12 copies the current window content, including open dialogs and testplay, as an image on the system clipboard. Capture runs independently of content editing and undo history. Windows reads the completed render target before presentation; macOS renders the editor at the window's display scale and supplies native PNG clipboard data. The shortcut fires once per press and rearms on release or focus cancellation.

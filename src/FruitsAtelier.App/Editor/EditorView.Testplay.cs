@@ -14,6 +14,7 @@ public sealed partial class EditorView
     private bool testplaySpeedHeld;
     private bool testplayPauseHeld;
     private bool testplayRetryHeld;
+    private const double TestplayQuickRetryHoldMs = 300;
     private double? testplayQuickRetryAt;
     private bool testplayQuickRetryHeld;
     private bool testplayRestarting;
@@ -87,7 +88,7 @@ public sealed partial class EditorView
         BeginTestplay(session, audioAlreadyPlaying: AudioPlaying && !restartAudio);
     }
 
-    private void BeginTestplay(CatchTestplay session, bool audioAlreadyPlaying)
+    private void BeginTestplay(CatchTestplay session, bool audioAlreadyPlaying, bool startPaused = false)
     {
         comboCurrent = comboPrevious = 0; comboChangedAt = double.NegativeInfinity;
         var resolver = new HitsoundResolver(Document, PreviewObjects(), HitsoundSkinFolders);
@@ -99,7 +100,7 @@ public sealed partial class EditorView
         double clockStart = audioAlreadyPlaying ? Math.Min(AudioDurationMs,
             transportSamplePosition + Math.Max(0, now - transportSampleAt) * PlaybackSpeed
             + CatchTestplaySession.LiveHitsoundLead(transportSampleLeadMs, PlaybackSpeed)) : testplayStart;
-        var clock = new CatchTestplayClock(clockStart, PlaybackSpeed, now, AudioReady && !audioAlreadyPlaying);
+        var clock = new CatchTestplayClock(clockStart, PlaybackSpeed, now, startPaused || AudioReady && !audioAlreadyPlaying);
         if (AudioReady) clock.Synchronize(clockStart, now, now);
         testplay = new(session, clock, testplayStart, AudioReady, audioAlreadyPlaying, LibrarySettings.TestplayLeftKey,
             LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey, timeProvider, PreviewCircleSize, previewComboEnds,
@@ -111,8 +112,13 @@ public sealed partial class EditorView
                     else playSound?.Invoke(sound);
                 }
             });
+        if (startPaused) testplay.TogglePause();
         testplayFrame = testplay.Capture();
-        if (AudioReady && !audioAlreadyPlaying) { RequestSeek?.Invoke(testplayStart); RequestTogglePlayback?.Invoke(); }
+        if (AudioReady && !audioAlreadyPlaying)
+        {
+            RequestSeek?.Invoke(testplayStart);
+            if (!startPaused) RequestTogglePlayback?.Invoke();
+        }
         try { if (testplay is not null) testplayDriver = RequestRunTestplay?.Invoke(testplay); }
         catch { StopTestplay(); throw; }
     }
@@ -122,12 +128,12 @@ public sealed partial class EditorView
         if (!IsTestplaying) return;
         FinishBackgroundDimDrag();
         bool wasPaused = TestplayPaused;
+        testplayQuickRetryAt = null;
         SetTestplayPauseLoop(false);
         double returnTime = atCurrentPosition && testplay is not null ? testplay.TransportPosition : testplayReturnPosition;
         testplay?.Cancel();
         testplayDriver?.Dispose(); testplayDriver = null;
         testplay = null; testplayFrame = null;
-        testplayQuickRetryAt = null;
         testplayQuickRetryHeld = false;
         testplayResumeAt = null;
         testplayAutoNotice = null;
@@ -147,12 +153,17 @@ public sealed partial class EditorView
         if (testplayResumeAt is not null) { testplayResumeAt = null; FadeTestplayMenu(1); SetTestplayPauseLoop(true); return; }
         if (TestplayPaused)
         {
-            FadeTestplayMenu(0);
-            testplayResumeAt = TestplayRealtime + TestplayMenuFadeMs;
-            SetTestplayPauseLoop(false);
+            BeginTestplayResume();
             return;
         }
         CompleteTestplayPauseToggle();
+    }
+
+    private void BeginTestplayResume()
+    {
+        FadeTestplayMenu(0);
+        testplayResumeAt = TestplayRealtime + TestplayMenuFadeMs;
+        SetTestplayPauseLoop(false);
     }
 
     private void CompleteTestplayPauseToggle()
@@ -184,6 +195,7 @@ public sealed partial class EditorView
         {
             testplayQuickRetryAt = null;
             RestartTestplay();
+            PlayTestplayMenuSound("pause-retry-click");
             return;
         }
         if (testplayResumeAt is double resume && TestplayRealtime >= resume)
@@ -219,6 +231,7 @@ public sealed partial class EditorView
 
     public void KeyUp(int virtualKey)
     {
+        if (virtualKey == 123) screenshotHeld = false;
         if (virtualKey == 119) audioDiagnosticMarkerHeld = false;
         if (virtualKey == 13) fullscreenShortcutHeld = false;
         if (virtualKey == 84) timingTapHeld = false;
@@ -229,7 +242,7 @@ public sealed partial class EditorView
         if (virtualKey == 114) testplaySpeedHeld = false;
         if (virtualKey == 80) testplayPauseHeld = false;
         if (virtualKey == 82) testplayRetryHeld = false;
-        if (virtualKey == 192) { testplayQuickRetryHeld = false; testplayQuickRetryAt = null; }
+        if (virtualKey == 192) CancelTestplayQuickRetry();
         if (virtualKey == 66) testplayBookmarkHeld = false;
         if (testplayDriver is null) testplay?.SetKey(virtualKey, false);
         if (IsTestplaying && testplayDriver is null) AdvanceTestplay();
@@ -263,15 +276,12 @@ public sealed partial class EditorView
         uint tint = frame.HyperDashing ? HyperDashColour : 0xFFFFFF;
         foreach (var trail in frame.Trails)
             DrawCatcherTrail(c, trail, left, fieldWidth, catchY);
+        DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
         DrawCatcherBody(c, x, catchY, fieldWidth, tint, 1, false, frame.FacingLeft);
         if (frame.Dashing) DrawCatcherBody(c, x, catchY, fieldWidth, 0xFFFFFF, .65f, true, frame.FacingLeft, brighten: true);
-        DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
         if (LibrarySettings.ShowTestplayCombo) DrawTestplayCombo(c, x, catchY - 175 * fieldWidth / 512, fieldWidth / 512);
         c.Unclip();
-        c.Text(L.Get("testplay.speed", PlaybackSpeed), 12, 12, 13, 0xD6E5B5, Math.Max(100, width - 24));
-        string[] hints = ["testplay.hintAutoplay", "testplay.hintSpeed", "testplay.hintPause", "testplay.hintBookmark", "testplay.hintQuickExit", "testplay.hintCurrentExit"];
-        for (int i = 0; i < hints.Length; i++)
-            c.Text(L.Get(hints[i]), 12, 32 + i * 20, 13, 0xD6E5B5, Math.Max(100, width - 24));
+        DrawTestplayInformation(c, frame);
         if (testplayAutoNotice is { } notice)
         {
             double age = TestplayRealtime - testplayAutoNoticeAt;
@@ -287,6 +297,37 @@ public sealed partial class EditorView
         DrawVolumePopover(c);
         DrawTestplayOverlays(c);
         DrawTestplayCursor(c);
+        if (testplayQuickRetryAt is double retryAt)
+            c.Fill(new(0, 0, width, height), 0,
+                opacity: (float)Math.Clamp(1 - (retryAt - TestplayRealtime) / TestplayQuickRetryHoldMs, 0, 1));
+    }
+
+    private void DrawTestplayInformation(ICanvas c, CatchTestplayFrame frame)
+    {
+        float y = 12;
+        void Row(string text, uint colour = 0xD6E5B5)
+        {
+            c.Text(text, 12, y, 13, colour, Math.Max(100, width - 24));
+            y += 16;
+        }
+        long milliseconds = (long)Math.Abs(playhead);
+        string current = $"{(playhead < 0 ? "-" : "")}{milliseconds / 60000:00}:{milliseconds / 1000 % 60:00}:{milliseconds % 1000:000}";
+        Row(L.Get("testplay.current", current), 0xFFFFFF);
+        y += 8;
+        Row(L.Get("testplay.hit300", frame.Hit300), 0xFFFFFF);
+        Row(L.Get("testplay.hit100", frame.Hit100), 0xFFFFFF);
+        Row(L.Get("testplay.hit50", frame.Hit50), 0xFFFFFF);
+        Row(L.Get("testplay.misses", frame.Misses), 0xFFFFFF);
+        y += 16;
+        var session = difficulties[activeDifficulty];
+        double? stars = previewMod switch { 1 => session.EasyStars, 2 => session.HardRockStars, _ => session.Stars };
+        if (stars is double rating) Row(L.Get("testplay.stars", rating));
+        Row(L.Get("testplay.playLength", previewPlayLengthMs / 1000));
+        Row(L.Get("testplay.maximumCombo", previewMaximumCombo));
+        Row(L.Get("testplay.maximumDroplets", previewMaximumDroplets));
+        y += 16;
+        string[] hints = ["testplay.hintAutoplay", "testplay.hintBookmark", "testplay.hintPause", "testplay.hintQuickExit", "testplay.hintCurrentExit", "testplay.hintSpeed"];
+        foreach (string hint in hints) Row(L.Get(hint));
     }
 
     // ppy/osu 48c4800e: LegacyCatchComboCounter, LegacyRollingCounter and CatcherArea.
@@ -334,9 +375,9 @@ public sealed partial class EditorView
     private int bindingCapture = -1;
     private int[] draftTestplayKeys = [37, 39, 16];
     public bool CapturingTestplayKey => bindingCapture >= 0 && librarySettingsOpen;
-    // Esc, Tab and F1–F3 belong to testplay controls; OS/media keys cannot reliably reach both hosts.
+    // Esc, Tab, F1–F3 and F12 belong to editor and testplay controls; OS/media keys cannot reliably reach both hosts.
     private static bool IsBindingKey(int key) => key is >= 65 and <= 90 or >= 48 and <= 57 or >= 33 and <= 40
-        or >= 96 and <= 111 or >= 115 and <= 135 or >= 186 and <= 192 or >= 219 and <= 223
+        or >= 96 and <= 111 or >= 115 and <= 122 or >= 124 and <= 135 or >= 186 and <= 192 or >= 219 and <= 223
         or 8 or 12 or 13 or 16 or 17 or 18 or 20 or 32 or 45 or 46 or 144 or 145 or 226;
     private static string KeyName(int key) => key switch
     {

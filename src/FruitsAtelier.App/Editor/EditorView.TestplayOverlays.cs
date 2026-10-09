@@ -54,7 +54,16 @@ public sealed partial class EditorView
     }
 
     private void SetTestplayPauseLoop(bool play)
-        => RequestTestplayMenuLoop?.Invoke(play ? testplayMenuSounds.GetValueOrDefault("pause-loop") : null);
+        => RequestTestplayMenuLoop?.Invoke(play || testplayQuickRetryAt is not null
+            ? testplayMenuSounds.GetValueOrDefault("pause-loop") : null);
+
+    private void CancelTestplayQuickRetry()
+    {
+        bool pending = testplayQuickRetryAt is not null;
+        testplayQuickRetryHeld = false;
+        testplayQuickRetryAt = null;
+        if (pending && !TestplayPauseMenuVisible) SetTestplayPauseLoop(false);
+    }
 
     private void PlayTestplayMenuSound(string name, string fallback = "menuhit")
     {
@@ -98,19 +107,20 @@ public sealed partial class EditorView
                 else if (AudioPlaying) RequestTogglePlayback?.Invoke();
             }
             ResetTestplayPointer();
+            testplayQuickRetryAt = null;
             SetTestplayPauseLoop(false);
             testplay?.Cancel();
             testplayDriver?.Dispose(); testplayDriver = null;
             testplayResumeAt = null;
-            testplayQuickRetryAt = null;
             testplayAutoNotice = null;
             testplayTabHeld = testplaySpeedHeld = testplayPauseHeld = testplayBookmarkHeld = false;
             testplayMenuStartedAt = TestplayRealtime;
             PrepareTestplayMenuSounds();
             ResetHitsounds();
             playhead = testplayStart;
-            BeginTestplay(new CatchTestplay(PreviewObjects(), PreviewCircleSize, testplayStart), audioAlreadyPlaying: false);
+            BeginTestplay(new CatchTestplay(PreviewObjects(), PreviewCircleSize, testplayStart), audioAlreadyPlaying: false, startPaused: true);
             if (autoplay) testplay?.ToggleAutoplay();
+            BeginTestplayResume();
         }
         finally { testplayRestarting = false; }
         AdvanceTestplay();

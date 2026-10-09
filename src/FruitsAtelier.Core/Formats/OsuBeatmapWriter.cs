@@ -79,6 +79,17 @@ public sealed class OsuWriteResult
 
 public static class OsuBeatmapWriter
 {
+    private static readonly string[] sectionOrder = ["General", "Editor", "Metadata", "Difficulty", "Events", "TimingPoints", "Colours", "HitObjects"];
+    private static readonly Dictionary<string, string[]> settingOrder = new(StringComparer.Ordinal)
+    {
+        ["General"] = ["AudioFilename", "AudioLeadIn", "AudioHash", "PreviewTime", "Countdown", "SampleSet", "StackLeniency", "Mode",
+            "LetterboxInBreaks", "StoryFireInFront", "UseSkinSprites", "AlwaysShowPlayfield", "OverlayPosition", "SkinPreference",
+            "EpilepsyWarning", "CountdownOffset", "SpecialStyle", "WidescreenStoryboard", "SamplesMatchPlaybackRate"],
+        ["Editor"] = ["Bookmarks", "DistanceSpacing", "BeatDivisor", "GridSize", "TimelineZoom"],
+        ["Metadata"] = ["Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Version", "Source", "Tags", "BeatmapID", "BeatmapSetID"],
+        ["Difficulty"] = ["HPDrainRate", "CircleSize", "OverallDifficulty", "ApproachRate", "SliderMultiplier", "SliderTickRate"],
+        ["Colours"] = ["SliderTrackOverride", "SliderBorder"]
+    };
     public static OsuWriteResult WriteFile(MapDocument document, string destination, bool compensateTinyDroplets = true)
     {
         if (document.SourcePath is not null && string.Equals(Path.GetFullPath(destination), Path.GetFullPath(document.SourcePath), StringComparison.OrdinalIgnoreCase))
@@ -165,8 +176,6 @@ public static class OsuBeatmapWriter
             {
                 values[8] = ResizeEdges(values[8], slider.SpanCount, "0");
                 values[9] = ResizeEdges(values[9], slider.SpanCount, "0:0");
-                if (track.OriginalLine is not null)
-                    diagnostics.Add(L.Get("core.writer.spanSamples", track.Name, originalSpans, slider.SpanCount));
             }
             values[10] ??= "0:0:0:0:";
             lines.Add((slider.StartTimeMs, track.SourceOrder, slider.SourceId, string.Join(',', values)));
@@ -219,14 +228,30 @@ public static class OsuBeatmapWriter
             .Concat(readBack.ImportedSliders.Select(s => (s.Id, s.SourceOrder)))
             .Concat(readBack.BananaShowers.Select(s => (s.Id, s.SourceOrder)))
             .ToDictionary(p => p.Id, p => orderedLines[p.SourceOrder].SourceId);
+        var pairs = converted.Objects.Zip(reconverted.Objects).Select(p => (First: p.First, Second: p.Second)).ToArray();
         bool matches = converted.Objects.Count == reconverted.Objects.Count
-            && converted.Objects.Zip(reconverted.Objects).All(p => p.First.Kind == p.Second.Kind
-                && p.First.SourceId == sourceIds[p.Second.SourceId]
+            && pairs.All(p => p.First.Kind == p.Second.Kind && p.First.SourceId == sourceIds[p.Second.SourceId]
                 && (streamIds.ContainsKey(p.First.SourceId) || p.First.EventIndex == p.Second.EventIndex));
+        if (!matches && converted.Objects.Count == reconverted.Objects.Count)
+        {
+            var authoredEvents = converted.Objects.ToDictionary(o => (o.SourceId, o.EventIndex));
+            var streamEvents = readBack.Fruits.Where(f => streamIds.ContainsKey(sourceIds[f.Id]))
+                .GroupBy(f => sourceIds[f.Id])
+                .SelectMany(g => g.OrderBy(f => f.SourceOrder).Select((f, index) => (f.Id, Index: index)))
+                .ToDictionary(p => p.Id, p => p.Index);
+            // Integer slider heads can move ahead of unchanged fractional fruits; match identities in read-back order.
+            pairs = reconverted.Objects.Select(item =>
+            {
+                int index = streamEvents.GetValueOrDefault(item.SourceId, item.EventIndex);
+                authoredEvents.TryGetValue((sourceIds[item.SourceId], index), out var authored);
+                return (First: authored!, Second: item);
+            }).ToArray();
+            matches = pairs.All(p => p.First is not null && p.First.Kind == p.Second.Kind);
+        }
         double timeError = 0, xError = 0;
         if (matches)
         {
-            foreach (var pair in converted.Objects.Zip(reconverted.Objects))
+            foreach (var pair in pairs)
             {
                 timeError = Math.Max(timeError, Math.Abs(pair.First.TimeMs - pair.Second.TimeMs));
                 xError = Math.Max(xError, Math.Abs(pair.First.X - pair.Second.X));
@@ -242,7 +267,7 @@ public static class OsuBeatmapWriter
         if (document.AudioPath is not null || document.OriginalSections.Any(s => s.Name == "Events" && s.Lines.Any(l => OsuBeatmapReader.IsDataLine(l.Trim()))))
             diagnostics.Add(L.Get("core.writer.resources"));
         var playableObjects = matches
-            ? converted.Objects.Zip(reconverted.Objects).Select(pair => pair.Second with
+            ? pairs.Select(pair => pair.Second with
             {
                 SourceId = pair.First.SourceId,
                 EventIndex = pair.First.EventIndex,
@@ -250,7 +275,7 @@ public static class OsuBeatmapWriter
             }).ToArray()
             : [];
         var playableIds = matches
-            ? reconverted.Objects.Zip(converted.Objects).ToDictionary(pair => (pair.First.SourceId, pair.First.EventIndex), pair => (pair.Second.SourceId, pair.Second.EventIndex, pair.Second.IsStandalone))
+            ? pairs.ToDictionary(pair => (pair.Second.SourceId, pair.Second.EventIndex), pair => (pair.First.SourceId, pair.First.EventIndex, pair.First.IsStandalone))
             : [];
         var playableHardRockObjects = matches
             ? CatchPreviewMods.HardRock(readBack, reconverted)
@@ -291,9 +316,9 @@ public static class OsuBeatmapWriter
     {
         var original = document.TimingPoints.Select(t => t.DeepClone()).ToList();
         if (original.Count == 0) original.Add(new TimingPoint { TimeMs = document.TimingOffsetMs, BeatLengthMs = document.BeatLengthMs });
-        if (generated.Count == 0) return original;
         // Timing edits can append earlier points; stable sorting retains tied sample/SV precedence.
         original = original.OrderBy(p => p.TimeMs).ToList();
+        if (generated.Count == 0) return original;
         var emitted = new MapDocument { BeatLengthMs = document.BeatLengthMs, TimingOffsetMs = document.TimingOffsetMs };
         emitted.TimingPoints.AddRange(original.Select(t => t.DeepClone()));
         var originalLookup = new TimingMap.Lookup(document);
@@ -529,31 +554,49 @@ public static class OsuBeatmapWriter
     private static string SectionText(MapDocument document)
     {
         var text = new StringBuilder("osu file format v14\r\n");
-        foreach (var section in document.OriginalSections)
+        var standard = new Queue<OsuSection>(document.OriginalSections.Where(s => Array.IndexOf(sectionOrder, s.Name) >= 0)
+            .OrderBy(s => Array.IndexOf(sectionOrder, s.Name)));
+        foreach (var original in document.OriginalSections)
         {
-            if (section.Name == "Colours")
+            var section = Array.IndexOf(sectionOrder, original.Name) >= 0 ? standard.Dequeue() : original;
+            if (section.Name.Length != 0) text.Append("\r\n[").Append(section.Name).Append("]\r\n");
+            if (settingOrder.TryGetValue(section.Name, out var keys)) WriteSettings(text, section, keys);
+            else
             {
-                while (text.Length > 0 && char.IsWhiteSpace(text[^1])) text.Length--;
-                text.Append("\r\n\r\n");
+                int first = 0, end = section.Lines.Count;
+                while (first < end && string.IsNullOrWhiteSpace(section.Lines[first])) first++;
+                while (end > first && string.IsNullOrWhiteSpace(section.Lines[end - 1])) end--;
+                for (int i = first; i < end; i++)
+                {
+                    string line = section.Lines[i];
+                    text.Append(line).Append("\r\n");
+                }
             }
-            if (section.Name.Length != 0) text.Append('[').Append(section.Name).Append("]\r\n");
-            if (section.Name == "Metadata") WriteMetadata(text, section);
-            else foreach (string line in section.Lines) text.Append(line).Append("\r\n");
         }
         return text.ToString();
     }
 
-    private static void WriteMetadata(StringBuilder text, OsuSection section)
+    private static void WriteSettings(StringBuilder text, OsuSection section, string[] keys)
     {
-        string[] keys = ["Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Source", "Tags", "BeatmapSetID", "Version", "BeatmapID"];
-        string Key(string line) => line.Split(':', 2)[0].Trim();
-        foreach (string key in keys.Take(8))
-            foreach (string line in section.Lines.Where(line => Key(line) == key)) text.Append(line).Append("\r\n");
-        foreach (string line in section.Lines.Where(line => !string.IsNullOrWhiteSpace(line) && !keys.Contains(Key(line))))
-            text.Append(line).Append("\r\n");
-        if (section.Lines.Any(line => Key(line) is "Version" or "BeatmapID")) text.Append("\r\n");
-        foreach (string key in keys.Skip(8))
-            foreach (string line in section.Lines.Where(line => Key(line) == key)) text.Append(line).Append("\r\n");
+        string separator = section.Name switch { "Colours" => " : ", "Metadata" or "Difficulty" => ":", _ => ": " };
+        foreach (string line in section.Lines.Where(line => !string.IsNullOrWhiteSpace(line)).OrderBy(Order))
+            text.Append(SettingLine(line, separator)).Append("\r\n");
+
+        long Order(string line)
+        {
+            string key = line.Split(':', 2)[0].Trim();
+            if (section.Name == "Colours" && key.StartsWith("Combo", StringComparison.Ordinal)
+                && int.TryParse(key.AsSpan(5), NumberStyles.None, CultureInfo.InvariantCulture, out int combo)) return combo;
+            int index = Array.IndexOf(keys, key);
+            return index < 0 ? long.MaxValue : section.Name == "Colours" ? (long)int.MaxValue + index + 1 : index;
+        }
+    }
+
+    private static string SettingLine(string line, string separator)
+    {
+        int colon = line.IndexOf(':');
+        if (colon < 1 || !OsuBeatmapReader.IsDataLine(line.Trim())) return line;
+        return line[..colon].Trim() + separator + line[(colon + 1)..].Trim();
     }
 
     private static void ReplaceData(MapDocument document, string name, IEnumerable<string> data)

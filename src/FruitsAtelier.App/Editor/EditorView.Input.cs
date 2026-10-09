@@ -327,6 +327,9 @@ public sealed partial class EditorView
         }
         if (tool == Tool.Slider)
         {
+            if (draftTrack == Guid.Empty && dropletSelectionLocked
+                && HitCatchObject(x, y, includeLockedDroplets: true) is { Kind: CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet } lockedDroplet)
+            { PickObject(lockedDroplet.SourceId, false); return; }
             if (LegacyMode) PlaceLegacyPoint(x, y, ctrl); else AddCurveAnchor(x, y, ctrl);
             return;
         }
@@ -747,13 +750,15 @@ public sealed partial class EditorView
             return;
         }
         bool navigationDrag = NavigationDuringDrag;
+        // Wheel navigation moves the slider beneath a stationary pointer, so it ends the hold gesture.
+        if (navigationDrag && SliderHoldNeedsRedraw)
+        { sliderHoldId = Guid.Empty; noteHoldTarget = null; }
         WheelCore(x, y, delta, ctrl, shift, alt);
         if (navigationDrag && NavigationDuringDrag) PointerMove(mouseX, mouseY, shift || shiftHeld, ctrl);
     }
 
     private bool NavigationDuringDrag => draftTrack == Guid.Empty && draftBanana == Guid.Empty
-        && (drag is DragKind.TimelineTail or DragKind.BananaStart or DragKind.BananaEnd
-            || drag == DragKind.SliderObject && streamEndpointTimeDrag
+        && (drag is DragKind.Objects or DragKind.SliderObject or DragKind.TimelineTail or DragKind.BananaStart or DragKind.BananaEnd
             || drag is DragKind.Anchor or DragKind.LegacyControl && SelectedTrack is { Nodes.Count: > 1 } track
                 && (anchorSelection.Contains(track.Nodes[0].Id) || anchorSelection.Contains(track.Nodes[^1].Id)));
 
@@ -957,6 +962,7 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (ScreenshotKeyDown(virtualKey, ctrl, shift)) return;
         if (AudioDiagnosticMarkerKeyDown(virtualKey, ctrl, shift)) return;
         if (FullscreenKeyDown(virtualKey, ctrl, shift)) return;
         if (VersionHistoryVisible) { VersionHistoryKey(virtualKey); return; }
@@ -988,7 +994,11 @@ public sealed partial class EditorView
             else if (virtualKey == 192 && !ctrl && !altHeld)
             {
                 if (!testplayQuickRetryHeld)
-                { testplayQuickRetryHeld = true; testplayQuickRetryAt = TestplayRealtime + 300; }
+                {
+                    testplayQuickRetryHeld = true;
+                    testplayQuickRetryAt = TestplayRealtime + TestplayQuickRetryHoldMs;
+                    if (!TestplayPauseMenuVisible) SetTestplayPauseLoop(true);
+                }
             }
             else if (ctrl && !altHeld && virtualKey is 38 or 40)
             {
@@ -1177,7 +1187,7 @@ public sealed partial class EditorView
             if (ClipboardInteractionReady && HandleLegacyShortcut(virtualKey, shift)) return;
             if (virtualKey == 90) { if (shift) Redo(); else Undo(); }
             else if (virtualKey == 89) Redo();
-            else if (virtualKey == 9) SwitchDifficulty((activeDifficulty + (shift ? difficulties.Count - 1 : 1)) % difficulties.Count);
+            else if (virtualKey == 9) SwitchDifficulty(AdjacentDifficulty(shift));
             else if (virtualKey == 79) { if (shift) RequestOpen?.Invoke(); else OpenDifficultyChooser(); }
             else if (virtualKey == 83 && !shift) RequestSave?.Invoke();
             else if (virtualKey == 67 && !shift) CopySelection();
@@ -1272,6 +1282,7 @@ public sealed partial class EditorView
     {
         audioDiagnosticMarkerHeld = false;
         fullscreenShortcutHeld = false;
+        screenshotHeld = false;
         deferredTestplay = false;
         placementCtrl = false; timingTapHeld = false; timingSnapDragging = false; panelMenuOpen = false;
         EndTimingVolume(true);
@@ -1289,7 +1300,7 @@ public sealed partial class EditorView
         testplayEscapeConsumed = false;
         testplaySpeedHeld = false;
         testplayRetryHeld = false;
-        testplayQuickRetryHeld = false; testplayQuickRetryAt = null;
+        CancelTestplayQuickRetry();
         streamSnapDragging = false; CancelStackDrag();
         CloseVolumePopover();
         sliderHoldId = legacyButtonSlider = Guid.Empty; noteHoldTarget = null;
@@ -1328,9 +1339,7 @@ public sealed partial class EditorView
 
     private void AddCurveAnchor(float x, float y, bool straight = false)
     {
-        var p = draftTrack != Guid.Empty
-            ? MapAt(x, y, true, clampX: false)
-            : PlacementPoint(x, y);
+        var p = draftTrack == Guid.Empty ? PenStartPoint(x, y) : MapAt(x, y, true, clampX: false);
         CurveTrack track;
         if (draftTrack == Guid.Empty)
         {

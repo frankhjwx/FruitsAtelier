@@ -21,6 +21,18 @@ if (args.Contains("--audio-diagnostics-settings-check"))
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Contains("--slider-draft-check"))
+{
+    try
+    {
+        DraftConversionTests.Run(); ToolPaletteTests.NoDuplicateDraftGhost();
+        ToolPaletteTests.DraftRemovalAndStraight(); ToolPaletteTests.SliderCombo();
+        Console.WriteLine("PASS Slider draft heads, previews, completion, cancellation, undo and export"); return 0;
+    }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
+if (args.Contains("--difficulty-sort-check")) { DifficultyTabTests.SortAscending(); Console.WriteLine("PASS Ascending difficulty sorting"); return 0; }
+if (args.Length == 2 && args[0] == "--difficulty-switch-performance") return DifficultySwitchPerformance.Run(args[1]);
 if (args.Contains("--first-run-setup-check"))
 {
     try { FirstRunSetupTests.Run(); SettingsTests.Layout(); TestplayStartupDelayTests.LeadIn(); Console.WriteLine("PASS First-run setup and settings layout"); return 0; }
@@ -48,9 +60,10 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("F12 screenshots repeat once and preserve dialogs, playback and content", ScreenshotTests.Shortcut),
     ("Hitsound Copier modes, new Diff and undo", HitsoundCopierUiTests.Run),
     ("Testplay opening preparation and audio boundary", TestplayTests.OpeningPreparation),
-    ("Held quick retry uses 300 ms, cancels on release and retries once while paused", FeedbackInteractionTests.Retry),
+    ("Held quick retry dims over 300 ms, clicks once and cancels on release while running or paused", FeedbackInteractionTests.Retry),
     ("Previous-save rollback requires history, confirmation and supports undo", FeedbackInteractionTests.PreviousSave),
     ("Timeline navigation and history reveal offscreen changes", FeedbackInteractionTests.Navigation),
     ("Slider endpoint drags retain navigation, playback and cancellation", FeedbackInteractionTests.TailNavigation),
@@ -58,6 +71,7 @@ var tests = new (string Name, Action Run)[]
     ("Overlapping timeline markers and unmapped section breaks remain visible", FeedbackInteractionTests.MarkersAndBreak),
     ("Independent droplet defaults persist and initialize new projects and FSliders", DropletDefaultsTests.Run),
     ("Selection boxes scale and move consecutive parents with anchor priority and atomic undo", SelectionTransformTests.Run),
+    ("Selection drag bounds follow generated fruits and droplets while handles stay free", SelectionTransformTests.DragBoundsFollowPlayableObjects),
     ("Droplet randomization switches, setup drafts and Edit actions stay within one diff", DropletRandomizationTests.Run),
     ("Audio projects require metadata, copy audio and optionally link one Songs difficulty", AudioProjectTests.Run),
     ("Timing red insertion and deletion retain saving and slider export", TimingSaveFeedbackTests.Run),
@@ -156,6 +170,7 @@ var tests = new (string Name, Action Run)[]
     ("Testplay autoplay speed switching and localized display", TestplayTests.AutoplaySpeed),
     ("Testplay quick retry and stepped autoplay speed preserve session boundaries", TestplayTests.RetryAndSteppedSpeed),
     ("Testplay retry retains gameplay during reentrant audio and driver rendering", TestplayTests.RetryRendering),
+    ("Every testplay retry freezes driver judgement for the 600 ms Continue reaction transition", TestplayTests.RetryReactionTime),
     ("Catch rotations, banana arrival transforms and combo colours", TestplayTests.VisualTransformsAndColours),
     ("Unskinned Catch objects keep dark map colours bright", FallbackSkinTests.BrightComboColour),
     ("Testplay Escape opens the pause menu without repeated navigation", TestplayTests.EscapeReturnsToEditor),
@@ -170,6 +185,7 @@ var tests = new (string Name, Action Run)[]
     ("Update lifecycle, persistence and save-before-restart", UpdateTests.Lifecycle),
 #if WINDOWS
     ("GitHub update discovery recovers omitted assets and preserves download metadata", GithubReleaseSourceTests.Run),
+    ("Quick retry pause loop and restart click emit PCM through the real mixer", RetryAudioTests.Run),
 #endif
     ("Update settings and explicit installation controls", UpdateTests.Interface),
     ("Opening maps initializes position and duration without transient jumps", AudioFeedbackTests.OpeningTransport),
@@ -194,6 +210,7 @@ var tests = new (string Name, Action Run)[]
     ("Distance snapping moves selected groups by a shared offset", AssistToolsTests.GroupDistanceDrag),
     ("Combo, hitsound editing and note locking", AssistToolsTests.SoundsAndLocks),
     ("Droplet selection lock preserves slider editing and content", DropletSelectionLockTests.Selection),
+    ("Pen tool does not add an anchor on a locked droplet", DropletSelectionLockTests.PenToolDoesNotCreateAnchorOnLockedDroplet),
     ("Tool operation hints coexist with palette flyouts in both languages", DropletSelectionLockTests.Tooltips),
     ("Slider edge and whole-slider sounds survive conversion and export", AssistToolsTests.SliderSounds),
     ("Background resource checks refresh missing files and discard stale edits and projects", ResourcePollingTests.RefreshAndStaleResults),
@@ -223,11 +240,14 @@ var tests = new (string Name, Action Run)[]
     ("Tool palette is exclusive and placement ghosts snap at 60% opacity", ToolPaletteTests.PaletteAndGhost),
     ("Fruit and both slider modes preview incoming and outgoing hyperdash without committing", ToolPaletteTests.PlacementHyperdash),
     ("Fruit New combo survives project/osu round-trips and undo", ToolPaletteTests.FruitCombo),
+    ("Empty slider right-click arms New Combo in both modes with atomic undo and export", ToolPaletteTests.SliderCombo),
     ("Fruit placement replaces same-start parents within 2 ms in one undo step", ToolPaletteTests.FruitReplacement),
     ("Canvas labels New Combo fruits with NC in both languages", ToolPaletteTests.ComboLabels),
     ("Both slider modes support straight placement and draft point removal", ToolPaletteTests.DraftRemovalAndStraight),
     ("Repeated points, whole-slider deletion and banana completion", ToolPaletteTests.RepeatedPointAndWholeDelete),
     ("Legacy drafting and pen sliders coexist", SliderModeInteractionTests.LegacyDraftAndMixedModes),
+    ("Pen slider heads use Distance Snap while draft paths stay free", SliderModeInteractionTests.PenStartUsesDistanceSnap),
+    ("Pen drafts preview their next segment and allow anchors beyond the playfield", SliderModeInteractionTests.PenDraftPreviewAndOutsideAnchors),
     ("Mode switching and AR preserve curves until a real pen edit", SliderModeInteractionTests.SwitchArAndLocalPenEdit),
     ("Legacy insertion, deletion and double-click segmentation are undoable", SliderModeInteractionTests.InsertDeleteAndBoundary),
     ("Lazer placement and selected-slider controls avoid extra mode transitions", SliderModeInteractionTests.LazerPlacementAndSelection),
@@ -238,7 +258,7 @@ var tests = new (string Name, Action Run)[]
     ("Multiple distance snaps include zero and persist per-map configuration", DistanceSnapPresetTests.Snapping),
     ("Slider controls cross both playfield edges in both editing modes", SliderDistanceDragTests.OutsideControls),
     ("Slider anchors cross both playfield edges and preserve export and undo", SliderDistanceDragTests.OutsidePlayfield),
-    ("Slider drawing and shape editing ignore distance snap", DistanceSnapPresetTests.SliderEvents),
+    ("Slider draft paths and shape editing ignore distance snap", DistanceSnapPresetTests.SliderEvents),
     ("Segmented droplets snap without requiring matching presets on both sides", SliderDistanceDragTests.SegmentedDroplet),
     ("Droplet drag permits outgoing spacing beyond maximum DS", SliderDistanceDragTests.DropletOutgoingSpacing),
     ("Curve controls cross endpoint heights with and without DS", SliderDistanceDragTests.ControlOverhangs),
@@ -284,6 +304,7 @@ var tests = new (string Name, Action Run)[]
     ("Library double-click replaces the demo with an unassociated imported map", LibraryOpenTests.Run),
     ("External folders and full OSZ resources persist across restarts", ExternalResourceTests.Run),
     ("Difficulty tabs adapt names to available width and show full-name tooltips", DifficultyTabTests.Layout),
+    ("Difficulty SR sorting preserves content, identity and keyboard navigation", DifficultyTabTests.SortAscending),
     ("Difficulty tab stars follow edits, undo and CS", DifficultyTabTests.Editing),
     ("Preview stars use cached NM, EZ and HR calculations", DifficultyTabTests.PreviewRatings),
     ("Star ratings refresh asynchronously without losing cached or newer results", DifficultyTabTests.AsyncRatings),
@@ -381,6 +402,7 @@ var tests = new (string Name, Action Run)[]
     ("Anchor boxes delete endpoints and remove insufficient tracks atomically", MultiSelectionTests.AnchorBoxAndEndpointDelete),
     ("Canceling object and anchor boxes restores selection without history", MultiSelectionTests.SelectionCancellation),
     ("Playback marquee retains its start time while the viewport scrolls", MultiSelectionTests.PlaybackBoxTransform),
+    ("Object dragging keeps wheel, Snap, zoom and playback available without slider long press", MultiSelectionTests.NavigationDuringObjectDrag),
     ("Marquee wheel and edge scrolling preserve selection and bound speed", MarqueeScrollTests.WheelAndEdges),
     ("Language switching refreshes chrome without editing the map", LanguageTests.SwitchWithoutEditing),
     ("English batch menus and Core diagnostics use the same catalog", LanguageTests.EnglishMultiMenusAndDiagnostics)

@@ -64,6 +64,7 @@ internal static class DropletRandomizationTests
         map.Tracks[0].DropletRandomization!.Adjustments = null!;
         Check(!CatchStreamConverter.Convert(map, cache: cache).Success, "invalid corrections reject a cached conversion safely");
         DiffWideSequence();
+        NativeSequence();
         StrengthRange();
         var defaults = Fixture(); defaults.RandomizeNewSliders = true;
         Check(defaults.ContentEquals(defaults.DeepClone()) && defaults.ContentEquals(ProjectSerializer.Read(ProjectSerializer.Serialize(defaults)))
@@ -105,17 +106,61 @@ internal static class DropletRandomizationTests
         var history = new EditorHistory(map);
         history.Begin("insert fruit"); history.Document.Fruits.Add(new() { TimeMs = 100, X = 256 }); history.Commit();
         var shifted = CatchStreamConverter.Convert(history.Document, cache: cache);
-        Check(!wanted.SequenceEqual(Targets(shifted, second.Id))
-            && shifted.Objects.SequenceEqual(CatchStreamConverter.Convert(history.Document).Objects), "standalone fruit invalidates downstream FX without changing legacy RNG");
+        Check(wanted.SequenceEqual(Targets(shifted, second.Id))
+            && shifted.Objects.SequenceEqual(CatchStreamConverter.Convert(history.Document).Objects), "NM standalone fruit preserves downstream random offsets");
         history.Undo(); Check(CatchStreamConverter.Convert(history.Document, cache: cache).Objects.SequenceEqual(original.Objects), "undo restores global sequence");
         history.Redo(); Check(CatchStreamConverter.Convert(history.Document, cache: cache).Objects.SequenceEqual(shifted.Objects), "redo restores shifted sequence");
         first.DropletRandomization.Enabled = false;
-        Check(Targets(CatchStreamConverter.Convert(map, cache: cache), second.Id).SequenceEqual(wanted), "disabled sliders still advance the count");
+        Check(Targets(CatchStreamConverter.Convert(map, cache: cache), second.Id).SequenceEqual(wanted), "disabled sliders still consume native random draws");
         map.Tracks.Remove(first);
         var removed = CatchStreamConverter.Convert(map, cache: cache);
         Check(!Targets(removed, second.Id).SequenceEqual(wanted)
-            && removed.Objects.SequenceEqual(CatchStreamConverter.Convert(map).Objects), "parent removal shifts the count");
+            && removed.Objects.SequenceEqual(CatchStreamConverter.Convert(map).Objects), "parent removal shifts native random draws");
         Check(OsuBeatmapWriter.Serialize(map).ObjectSequenceMatches, "global sequence exports through read-back");
+    }
+
+    private static void NativeSequence()
+    {
+        var rng = new CatchLegacyRandom(1337);
+        Check(Enumerable.Range(0, 12).Select(_ => rng.NextTinyOffset()).SequenceEqual(new[] { -14, -10, -2, 15, 17, 1, 0, -14, -7, -11, -3, 14 }),
+            "legacy seed 1337 offsets retain ranged-draw truncation");
+        foreach (int spans in new[] { 1, 3 })
+        foreach (double x in new[] { 0d, 256d, 512d })
+        foreach (bool curved in new[] { false, true })
+        {
+            var map = Fixture();
+            var track = map.Tracks[0]; track.SpanCount = spans;
+            track.Nodes[0].X = x; track.Nodes[1].X = x;
+            if (curved)
+            {
+                track.Kind = CurveKind.Bezier;
+                track.Nodes[0].HandleOut = new(100, 500);
+                track.Nodes[1].HandleIn = new(-100, -500);
+                foreach (var node in track.Nodes) node.TimeMs += .25;
+            }
+            var preceding = track.DeepClone(); preceding.Id = Guid.NewGuid(); preceding.SpanCount = 1;
+            foreach (var node in preceding.Nodes) { node.Id = Guid.NewGuid(); node.TimeMs -= 1000; node.X = 256; }
+            map.Tracks.Insert(0, preceding);
+            map.BananaShowers.Add(new() { TimeMs = 0, EndTimeMs = 500 });
+            map.Fruits.AddRange([new() { TimeMs = 10, X = 256 }, new() { TimeMs = 100, X = 256 }]);
+            var nativeMap = map.DeepClone();
+            foreach (var item in nativeMap.Tracks) item.CompensateTinyDroplets = false;
+            var native = CatchStreamConverter.Convert(nativeMap, compensateTinyDroplets: false);
+            track.DropletRandomization = new() { Enabled = true };
+            var cache = new CatchConversionCache();
+            var actual = CatchStreamConverter.Convert(map, cache: cache);
+            Check(native.Success && actual.Success && actual.Objects.Where(o => o.SourceId == track.Id)
+                .Select(o => (o.Kind, o.TimeMs, o.X, o.PathX, o.RandomOffset))
+                .SequenceEqual(native.Objects.Where(o => o.SourceId == track.Id).Select(o => (o.Kind, o.TimeMs, o.X, o.PathX, o.RandomOffset))),
+                "default FX matches native positions, repeats and edge clamping after preceding parents");
+            Check(actual.Objects.SequenceEqual(CatchStreamConverter.Convert(map, cache: cache).Objects), "native FX cache restores both sequences");
+            var write = OsuBeatmapWriter.Serialize(map);
+            var nativeWrite = OsuBeatmapWriter.Serialize(nativeMap, compensateTinyDroplets: false);
+            Check(write.ObjectSequenceMatches && write.PlayableObjects.Where(o => o.SourceId == track.Id).Select(o => (o.EventIndex, o.X))
+                .SequenceEqual(nativeWrite.PlayableObjects.Where(o => o.SourceId == track.Id).Select(o => (o.EventIndex, o.X))), "native FX survives export read-back");
+            Check(write.PlayableHardRockObjects.Where(o => o.SourceId == track.Id).Select(o => (o.EventIndex, o.X))
+                .SequenceEqual(nativeWrite.PlayableHardRockObjects.Where(o => o.SourceId == track.Id).Select(o => (o.EventIndex, o.X))), "native FX preserves HR random consumption and positions");
+        }
     }
 
     public static MapDocument Fixture()

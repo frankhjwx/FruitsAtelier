@@ -32,6 +32,7 @@ internal sealed partial class EditorWindow : IDisposable
         view.SupportsDisplayMode = true;
         view.SupportsFullscreen = true;
         view.RequestFullscreen = SetFullscreen;
+        view.RequestScreenshot = () => { screenshotPending = true; Invalidate(); };
         view.Performance.Enabled = true;
         AppLog.Performance = view.Performance;
         ConfigureFiles();
@@ -58,7 +59,7 @@ internal sealed partial class EditorWindow : IDisposable
         };
     }
 
-    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false, bool firstRunSetup = false, AudioSettingsRestartState? resumeAudio = null, bool hitsoundCopierCheck = false)
+    public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false, bool firstRunSetup = false, AudioSettingsRestartState? resumeAudio = null, bool hitsoundCopierCheck = false, bool screenshotCheck = false, string? difficultySwitchPath = null)
     {
         view.InitializeLibrary(!renderCheck && profileMap is null, renderCheck || profileMap is not null
             ? new FruitsAtelier.Core.LibrarySettings { Workspace = Path.Combine(Artifacts, "render-library") } : null, forceFirstRunSetup: firstRunSetup);
@@ -118,6 +119,13 @@ internal sealed partial class EditorWindow : IDisposable
         }
         if (renderCheck)
         {
+            if (difficultySwitchPath is not null)
+            {
+                Diagnostics.DifficultySwitchRenderCheck.Run(canvas, view, difficultySwitchPath, dpi);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
+            if (screenshotCheck) { CheckScreenshot(); Native.DestroyWindow(hwnd); return 0; }
             if (resumeAudio is not null)
             {
                 RestoreAudioSettings(resumeAudio);
@@ -134,6 +142,7 @@ internal sealed partial class EditorWindow : IDisposable
             }
             if (testplayCheck)
             {
+                CheckTestplayKeyboard();
                 Diagnostics.TestplayRenderCheck.Run(canvas);
                 Native.DestroyWindow(hwnd);
                 return 0;
@@ -188,19 +197,7 @@ internal sealed partial class EditorWindow : IDisposable
             long inputStart = BeginInputSample(msg);
             try
             {
-                // TranslateMessage can let the IME consume editor shortcuts, even when WM_KEYDOWN still has the original key.
-                if (msg.Window == hwnd && msg.Id == 0x0100 && !view.IsEditingText && !view.CapturingTestplayKey && !view.IsTestplaying)
-                {
-                    uint key = msg.WParam == 0xE5 ? Native.ImmGetVirtualKey(hwnd) : (uint)msg.WParam;
-                    if (key is > 0 and < 0xE5)
-                    {
-                        view.SetModifiers(Native.Alt, Native.Shift);
-                        view.KeyDown((int)key, Native.Control, Native.Shift);
-                        if (!view.WantsCapture && Native.GetCapture() == hwnd) Native.ReleaseCapture();
-                        UpdateTitle(); Invalidate();
-                        continue;
-                    }
-                }
+                if (DispatchShortcutBeforeTranslation(msg)) continue;
                 Native.TranslateMessage(ref msg);
                 Native.DispatchMessage(ref msg);
             }
@@ -338,7 +335,7 @@ internal sealed partial class EditorWindow : IDisposable
                         canvas.DrawDisplayDiagnostics(view.PlayheadMs, displayedAudioState ?? audio.State);
                         view.Performance.End(EditorPerformanceStage.ViewRender, phase);
                         phase = view.Performance.Start();
-                        framePending = !canvas.End(lowLatency: immediatePresentation);
+                        framePending = !canvas.End(lowLatency: immediatePresentation, capture: screenshotPending ? CopyScreenshot : null);
                         view.Performance.End(EditorPerformanceStage.Submit, phase);
                         view.Performance.Record(EditorPerformanceStage.Frame, renderTimer.Elapsed.TotalMilliseconds);
                         if (!framePending) RecordInputSubmission();
@@ -429,7 +426,7 @@ internal sealed partial class EditorWindow : IDisposable
                 Invalidate(); return 0;
             case 0x0100:
                 view.SetModifiers(Native.Alt, Native.Shift);
-                view.KeyDown((int)wParam, Native.Control, Native.Shift);
+                view.KeyDown((int)ResolveVirtualKey(wParam, lParam, down: true), Native.Control, Native.Shift);
                 if (!view.WantsCapture && Native.GetCapture() == window) Native.ReleaseCapture();
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0104: // WM_SYSKEYDOWN: Alt changes editor snapping without opening the system menu.
@@ -454,7 +451,7 @@ internal sealed partial class EditorWindow : IDisposable
                 break;
             case 0x0101: // WM_KEYUP
             case 0x0105: // WM_SYSKEYUP
-                view.KeyUp((int)wParam);
+                view.KeyUp((int)ResolveVirtualKey(wParam, lParam, down: false));
                 view.SetModifiers(Native.Alt, Native.Shift);
                 Invalidate();
                 if ((int)wParam is 0x12 or 0x10) return 0;

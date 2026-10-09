@@ -94,6 +94,8 @@ public sealed partial class EditorView
     private Tool cachedPlacementTool;
     private bool placementCtrl, cachedPlacementCtrl;
     private ConvertedCatchObject? placementGhost;
+    private CurveTrack? placementDraftTrack;
+    private IReadOnlyList<ConvertedCatchObject> placementDraftEvents = [];
     private (double? Previous, double? Next) placementDistances;
     private IReadOnlyList<ConvertedCatchObject>? placementMovementObjects;
     private HashSet<(Guid SourceId, int EventIndex)> placementHyperdash = [];
@@ -106,6 +108,7 @@ public sealed partial class EditorView
         if (point is null || deferredConversion && draftTrack == Guid.Empty)
         {
             cachedPlacementPoint = null; placementGhost = null; placementMovementObjects = null; placementDistances = (null, null);
+            placementDraftTrack = null; placementDraftEvents = [];
             placementHyperdash = hyperdashObjects;
             return;
         }
@@ -114,6 +117,7 @@ public sealed partial class EditorView
         placementSource = conversion; cachedPlacementPoint = point;
         cachedPlacementTool = tool; cachedPlacementCtrl = placementCtrl;
         placementGhost = null; placementMovementObjects = null; placementHyperdash = hyperdashObjects;
+        placementDraftTrack = null; placementDraftEvents = [];
         placementDistances = (null, null);
         if ((tool == Tool.Fruit || draftTrack == Guid.Empty) && TryPreviewFruitPlacement(point.Value)) return;
         // Conversion reads its inputs; clone only the track whose uncommitted endpoint needs editing.
@@ -154,6 +158,12 @@ public sealed partial class EditorView
         if (!preview.Success) return;
         if (localDraft)
         {
+            if (!LegacyMode)
+            {
+                placementDraftTrack = candidate.Tracks.Single(t => t.Id == draftTrack);
+                double committedEnd = Document.Tracks.Single(t => t.Id == draftTrack).Nodes[^1].TimeMs;
+                placementDraftEvents = preview.Objects.Where(o => o.SourceId == draftTrack && o.TimeMs > committedEnd).ToArray();
+            }
             var merged = MergeDraftObjects(draftBaseObjects, preview.Objects);
             placementGhost = preview.Objects.LastOrDefault(o => o.SourceId == source && o.Kind == CatchObjectKind.Fruit);
             if (placementGhost is { } target) UpdatePlacementDistances(target, merged);
@@ -189,7 +199,9 @@ public sealed partial class EditorView
             || menu >= 0 || contextItems.Count > 0 || editField >= 0 || tool == Tool.Slider && draftTrack == Guid.Empty && SelectedTrack is not null) return null;
         if (tool == Tool.Slider && SelectedTrack is { } draft && draft.Id == draftTrack
             && (LegacyMode && legacyPreviewValid || draft.Nodes.Any(n => Near(Point(n), mouseX, mouseY, 8)))) return null;
-        var point = PlacementPoint(mouseX, mouseY);
+        var point = tool == Tool.Slider && !LegacyMode
+            ? draftTrack == Guid.Empty ? PenStartPoint(mouseX, mouseY) : MapAt(mouseX, mouseY, true, clampX: false)
+            : PlacementPoint(mouseX, mouseY);
         if (tool == Tool.Fruit && ObjectsInTimeRange(point.TimeMs - 1, point.TimeMs + 1)
             .Any(item => item.Kind == CatchObjectKind.Fruit && Math.Abs(item.X - point.X) < .01)) return null;
         return point;
@@ -205,6 +217,24 @@ public sealed partial class EditorView
             return;
         }
         if (PlacementGhostPoint() is not { } point) return;
+        if (placementDraftTrack is { Nodes.Count: >= 2 } previewTrack && draftTrack != Guid.Empty)
+        {
+            int segment = previewTrack.Nodes.Count - 2;
+            var previous = Screen(CurveMath.Evaluate(previewTrack, segment, 0));
+            uint colour = CurveMath.SegmentKind(previewTrack, segment) == CurveKind.Bezier ? Purple : Accent;
+            for (int i = 1; i <= 64; i++)
+            {
+                var current = Screen(CurveMath.Evaluate(previewTrack, segment, i / 64.0));
+                c.Line(previous.X, previous.Y, current.X, current.Y, colour, 2, .6f);
+                previous = current;
+            }
+            foreach (var item in placementDraftEvents)
+            {
+                var position = Screen(new(item.TimeMs, item.X));
+                if (position.Y >= plot.Y - 20 && position.Y <= plot.Bottom + 20)
+                    DrawCatchObject(c, item, position.X, position.Y, Playfield.Width, .6f, hyperStarts: placementHyperdash);
+            }
+        }
         var p = Screen(point);
         float diameter = CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512;
         bool hyper = placementGhost is { } ghost && placementHyperdash.Contains((ghost.SourceId, ghost.EventIndex));
@@ -368,7 +398,7 @@ public sealed partial class EditorView
             DeleteSelectedObjects();
             return;
         }
-        if (tool == Tool.Fruit) { nextFruitNewCombo = !nextFruitNewCombo; StatusMessage = L.Get(nextFruitNewCombo ? "tools.newComboOn" : "tools.newComboOff"); }
+        if (tool is Tool.Fruit or Tool.Slider) { nextFruitNewCombo = !nextFruitNewCombo; StatusMessage = L.Get(nextFruitNewCombo ? "tools.newComboOn" : "tools.newComboOff"); }
     }
 
     private bool IsStraightPoint(CurveTrack track, Guid id)

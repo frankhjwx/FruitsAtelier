@@ -58,6 +58,14 @@ public sealed partial class EditorView
         return point with { X = Math.Clamp(SnapX(point.X), 0, 512) };
     }
 
+    private MapPoint PenStartPoint(float x, float y)
+    {
+        var point = MapAt(x, y, true, clampX: false);
+        if (point.X is < 0 or > 512) { distanceOutside = false; return point; }
+        point = SnapDistance(point);
+        return point with { X = Math.Clamp(SnapX(point.X), 0, 512) };
+    }
+
     private Guid[] FlagTargets() => objectSelection.Count > 0 ? objectSelection.ToArray()
         : SelectedTrack is { } track && draftTrack == Guid.Empty ? [track.Id] : [];
     private int? SoundEdge(Guid id) => soundEdge is { } edge && edge.Id == id && FlagTargets().Length == 1 ? edge.Edge : null;

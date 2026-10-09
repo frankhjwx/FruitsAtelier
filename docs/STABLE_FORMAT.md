@@ -11,8 +11,9 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
   an osu! editor preference and does not control FA's viewport.
 - New projects start with `[Difficulty] SliderMultiplier` 1.92 and editor DPB 192 px. Imported maps initially derive DPB as 100 × their stored SliderMultiplier. Subsequent DPB edits belong to the `.catchproj` editor configuration; `.osu` export retains SliderMultiplier and slider playback unchanged.
 - A confirmed Timing-panel SV override replaces exported SliderMultiplier and compensates inherited SV at red resets and green points. Export keeps the generated object lines and validates NM/HR playback before returning text. The authoring multiplier and DPB remain unchanged; see [Timing editing](EDITOR_UI.md#timing-editing).
+- Base-SV compensation starts at existing timing points. If a slider starts before all timing points, export writes its implicit BPM followed by the compensated green at that slider's head; it does not add an unused green at 0 ms.
 - Read and edit `[Editor] Bookmarks` and `[Events]` break periods as difficulty-local timeline content. Unrelated event lines retain their source text and order.
-- Preserve raw section text and unedited object lines; unsupported object types are errors.
+- Project files preserve raw source sections. `.osu` exports normalize section spacing and setting layout while retaining comments, unknown content, and unedited object lines; unsupported object types are errors.
 - Synchronization compares osu! save representations: truncated object start/end
   milliseconds, 15-significant-digit slider lengths and timing values, and implicit
   first-object/post-spinner combo boundaries. Events comparisons ignore comments,
@@ -62,11 +63,24 @@ These rules follow the [official format document](https://github.com/ppy/osu-wik
 
 The generator first produces a two-dimensional slider that satisfies its targets; the writer then serializes it. Serialization uses invariant culture with consistent newline and UTF-8 policies. Integer object times truncate toward zero, matching stable snapping as modeled by MapsetVerifier. Coordinates round midpoints away from zero. Generated SV points use the same truncated time as their slider heads. Beat grids calculate offsets from whole subdivision counts before dividing, retaining exact whole-millisecond grid points. Original unedited integer values remain unchanged.
 
-Metadata exports Title, TitleUnicode, Artist, ArtistUnicode, Creator, Source, Tags,
-and BeatmapSetID in that order, followed by any additional fields or comments.
-A blank line separates these from Version and BeatmapID, which end the section.
-Colours has exactly one preceding blank line. Timing data starts directly below
-its section header, with any retained comments before the data.
+Read-back maps events by source and nested event identity when quantization changes their order. An integer slider head can precede an unchanged fractional fruit at the same authored time. Playable NM/HR output retains the actual exported order; this ordering change alone does not invalidate a base-SV override. Compensation failures report the affected object time and count or time/position changes where available, with guidance for changing SV or reporting an editing failure.
+
+Metadata exports Title, TitleUnicode, Artist, ArtistUnicode, Creator, Version,
+Source, Tags, BeatmapID, and BeatmapSetID in that order, followed by any additional
+fields or comments. Metadata fields are contiguous. The header and named sections
+are separated by exactly one blank line. Settings use stable's `key: value` style
+in General and Editor, `key:value` in Metadata and Difficulty, and `key : value`
+in Colours. Other section bodies retain their lines and internal spacing. Timing
+data starts directly below its section header, with any retained comments before
+the data.
+
+Standard sections emit in General, Editor, Metadata, Difficulty, Events,
+TimingPoints, Colours, and HitObjects order. General, Editor, and Difficulty
+settings follow the official field order; combo colours sort by their numeric
+index before slider colours. Duplicate settings retain their source precedence,
+and unknown fields and comments follow known settings. Unknown sections retain
+their slots and relative source order. Timing points always sort chronologically,
+including exports without generated sliders; same-time points retain source order.
 
 Output defaults to a new file. It validates all objects before writing a temporary file and safely replacing the destination. Failure preserves the original file. Hosts copy available associated resources and manage relative paths for exports across directories; missing song audio and same-name content conflicts are errors. Optional video, storyboard, background, and custom sample files may be absent; their original references are preserved.
 
@@ -79,3 +93,9 @@ The writer holds the required SV through the head's next-millisecond lookup wind
 See [Building and Testing](TESTING.md) for tests and the [format module reference](../src/FruitsAtelier.Core/Formats/REFERENCE.md) for APIs and sources.
 
 FSlider generation evaluates the authoring curve at actual fruit, droplet, and tiny-droplet events. Only these event targets constrain path construction and required SV; intermediate anchors and Bezier curvature do not impose additional speed constraints. Tiny alignment retains its existing random-offset compensation and repeated-path compatibility rules. Connections between event targets may differ from the authoring curve without changing event positions or duration.
+
+FSlider tiny intervals use the exported integer head time when counting nested
+events. Their times are then mapped back to the precise authored origin for curve
+sampling and editing. This keeps tiny counts and NM/HR random consumption consistent
+with export at integer interval thresholds while retaining saved anchor times and
+span durations. Imported Legacy Sliders continue to use their retained source times.

@@ -155,19 +155,21 @@ participate in deep cloning, content equality, history, persistence and cache
 invalidation. Slider-managed fruit streams retain dormant effects but do not apply
 them; imported Legacy Sliders retain their existing conversion rules.
 
-Randomization hashes the Seed and the TinyDroplet's index in the complete
-diff-wide generated event sequence. Parents follow conversion order; every fruit,
-droplet, tiny droplet and banana advances the counter, including disabled effects
-and slider-managed streams. A parent's complete nested sequence is counted before
-the next parent, before final time sorting. Earlier additions, removals and event
-count changes shift subsequent random targets. Cached parents retain their event
-counts, and active effects also validate their incoming index. The target first
-clamps the base curve, adds an integer-derived offset scaled by Strength, clamps, adds a matching manual
+Randomization uses the osu! legacy RNG initialized with Seed, in complete parent
+conversion order before final time sorting. Droplets and TinyDroplets consume one
+draw each; bananas consume four. Disabled effects still consume these draws.
+Standalone fruits and slider-managed fruit streams consume no NM randomness.
+Earlier changes to RNG-consuming events shift subsequent targets. Cached parents
+restore the normal RNG state and advance the effect RNG by their event kinds.
+The target first clamps the base curve at the event's path progress, adds the
+legacy integer offset scaled by Strength / 20, clamps, adds a matching manual
 adjustment, and clamps again. Fruits and ordinary Droplets retain their base
 targets. Strength zero removes the random contribution; saved manual adjustments
 still apply while the effect is enabled.
 
-Enabled effects request Tiny compensation against these targets, preserving the
+Strength 20 and Seed 1337 without manual adjustments use the normal uncompensated
+slider path and native osu! offsets, including repeat traversal and edge clamping.
+Other enabled effects request Tiny compensation against their targets, preserving the
 base anchors and handles. Shared repeat geometry, playfield edges and speed limits
 can require partial compensation. The normal legacy RNG still determines actual
 osu offsets and is consumed in complete parent order. Generated geometry encodes

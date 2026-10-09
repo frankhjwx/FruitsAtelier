@@ -103,7 +103,7 @@ Open **Catch Preview** using the button on the right edge of the canvas. Drag th
 Press **F5** to testplay using the selected preview mod and speed. Testplay begins one second before the current position by default; change the lead-in from 0 to 5 seconds in **Settings > Testplay keys**. When that position reaches the song's beginning, opening preparation provides at least two seconds of map time before the first playable object, or the configured lead-in or imported `AudioLeadIn` if longer. If the song's intro is too short, gameplay starts at negative time with silent audio. You can move and dash during preparation; the audio clock advances throughout, with music beginning continuously at zero. Preparation follows playback speed and is retained on retry. Esc opens the pause menu; F1 returns to the selected position. Move with **Left / Right**, and hold **Shift** to dash. Catch fruits and droplets to build combo. **Tab** toggles autoplay; **Ctrl+P** pauses or resumes.
 Press **Ctrl+B** during testplay to add a bookmark at the current position. The shortcut appears with the other testplay controls in the upper-left corner.
 
-Hold **`~` / backtick for 300 ms** to retry once; releasing early cancels it. Press **Ctrl+R** to retry from this testplay session's start, including its lead-in, retaining autoplay and speed. It works while running or paused, once per press. During autoplay, **Ctrl+Up/Down** adjusts speed by 25 percentage points and **Ctrl+Shift+Up/Down** by 5, within 10%–150%; these also work while paused. **F3** toggles autoplay speed between 1.0x and 1.5x.
+Hold **`~` / backtick for 300 ms** to retry once. The screen gradually dims and the pause loop plays during the hold, then the pause-menu Retry click plays as testplay restarts. Releasing early cancels it and removes the dim. Press **Ctrl+R** to retry from this testplay session's start, including its lead-in, retaining autoplay and speed. It works while running or paused, once per press. During autoplay, **Ctrl+Up/Down** adjusts speed by 25 percentage points and **Ctrl+Shift+Up/Down** by 5, within 10%–150%; these also work while paused. **F3** toggles autoplay speed between 1.0x and 1.5x.
 
 During autoplay, press **F3** to switch between **1.0x** and **1.5x**. If the current speed is neither, the first press selects 1.0x. The upper-left corner shows the current speed on its own line and includes the F3 instruction.
 
@@ -111,7 +111,7 @@ During autoplay, press **F3** to switch between **1.0x** and **1.5x**. If the cu
 
 Beatmap backgrounds appear in preview and testplay; the editing canvas has an opaque backing. Adjust **Background dim** in **Settings > Testplay** or the pause menu; the default is 90%. During testplay breaks the background becomes brighter, then returns to the chosen dim. Skip and the pause menu use the selected skin's graphics, with default controls for missing components. Pause buttons enlarge on hover; Up/Down selection shows two arrows. The skin cursor and trail appear only while paused. Four flashing arrows warn of the upcoming start or end of a break. Disabling skin sounds uses packaged osu! menu and pause samples.
 
-Bindings accept letters, digits, punctuation (including `;`, `'`, `[` and `]`), arrow and navigation keys, Backspace, Enter, Space, Shift, Ctrl, Alt, lock keys, numpad keys, and F4–F24. Esc cancels capture; Tab and F1–F3 are reserved for testplay controls. Windows/Command, media and other system keys are not offered. Left and right modifier keys share a binding, as do main and numpad Enter. Numpad input follows Num Lock; punctuation labels use US keyboard names. OS shortcuts and Ctrl+P retain their normal behavior.
+Bindings accept letters, digits, punctuation (including `;`, `'`, `[` and `]`), arrow and navigation keys, Backspace, Enter, Space, Shift, Ctrl, Alt, lock keys, numpad keys, F4–F11, and F13–F24. Esc cancels capture; Tab and F1–F3 are reserved for testplay controls, and F12 is reserved for screenshots. Windows/Command, media and other system keys are not offered. Left and right modifier keys share a binding, as do main and numpad Enter. Numpad input follows Num Lock; punctuation labels use US keyboard names. OS shortcuts and Ctrl+P retain their normal behavior.
 
 ### Difficulties and project files
 
@@ -137,6 +137,10 @@ Version 0.9 does not provide video or storyboard playback. Imported timing and s
 See the [complete keyboard and mouse shortcut manual](KEY_BINDINGS.md) for context-specific bindings, dialogs and current limitations, and the [osu!stable compatibility review](KEY_BINDINGS_REVIEW.md) for differences and possible additions.
 
 Shortcuts below apply while editing, outside text fields and dialogs. On macOS, Command also works for Ctrl shortcuts; Backspace also deletes. Some Mac keyboards require Fn for function keys.
+
+### Screenshots
+
+Press **F12** to copy the current editor window content to the system clipboard as an image. Paste it into a chat or image editor. This also captures visible dialogs, Library, and testplay without pausing or leaving the current screen. Each press captures once; holding F12 does not repeatedly replace the clipboard.
 
 ### Files, selection and editing
 

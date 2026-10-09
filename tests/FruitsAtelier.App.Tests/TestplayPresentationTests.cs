@@ -55,6 +55,11 @@ internal static class TestplayPresentationTests
                 clock.Advance(1676); ui.Paint(); clock.Advance(800); ui.Paint(); Near(.9, Dim(ui));
                 ui.View.KeyUp(27); ui.Key(27); ui.Key(40); ui.Key(13);
                 Near(0, ui.View.PlayheadMs); Check(ui.View.TestplayCombo == 0, "Retry resets score and returns to the session start");
+                Check(ui.View.TestplayPaused && !ui.View.TestplayPauseMenuVisible, "Menu Retry begins the Continue reaction transition");
+                clock.Advance(599); ui.Paint(); Near(0, ui.View.PlayheadMs);
+                Check(ui.View.TestplayPaused, "Menu Retry keeps judgement frozen before the deadline");
+                clock.Advance(1); ui.Paint();
+                Check(!ui.View.TestplayPaused, "Menu Retry resumes after 600 ms");
                 var skip = ui.View.TestplaySkipBounds;
                 ui.Click(skip.X + skip.Width / 2, skip.Y + skip.Height / 2); Near(7000, ui.View.PlayheadMs);
                 ui.View.KeyUp(27); ui.Key(27); ui.Key(38); ui.Key(13);

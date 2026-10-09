@@ -33,6 +33,7 @@ internal sealed partial class MacWindow : Window
         View.RequestAudioPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
         View.RequestViewPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
         View.SupportsFullscreen = true;
+        View.RequestScreenshot = CopyScreenshot;
         View.RequestFullscreen = enabled =>
         {
             if (View.FirstRunSetupVisible) return;

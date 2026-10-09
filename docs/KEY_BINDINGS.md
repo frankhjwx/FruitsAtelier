@@ -33,6 +33,7 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 | F4 | Open Song Setup. |
 | F5 | Start testplay at the playhead with the configured lead-in. |
 | F6 | Open Timing and Control Points. |
+| F12 | Copy the current editor window content to the system clipboard as an image, including visible dialogs or testplay. Paste it into a chat or image editor. |
 | Esc | Dismiss the current field, popup, menu or gesture first. From idle Compose, request return to Library; from Timing, return to Compose. Unsaved changes can prompt. |
 
 F2 has no Compose page action. It has a separate meaning during testplay.
@@ -217,7 +218,7 @@ to Compose before moving selected objects.
 | Left / Right | Move catcher, by default. |
 | Hold Shift | Dash, by default. |
 | Tab | Toggle autoplay. |
-| Hold `~` / backtick for 300 ms | Retry once from this session's start, including its lead-in. Release early to cancel; available while running or paused. |
+| Hold `~` / backtick for 300 ms | Dim the screen, then retry once from this session's start, including its lead-in, with the pause-menu Retry click. Release early to cancel; available while running or paused. |
 | Ctrl+R | Retry from this session's start including its lead-in, retaining autoplay and speed. One retry per press; available while running or paused. |
 | F3 | During autoplay, toggle speed between 1.0x and 1.5x. |
 | Ctrl+Up / Ctrl+Down | During autoplay, increase / decrease speed by 25 percentage points, within 10%–150%. Works while paused too. |
@@ -235,8 +236,8 @@ Combo visibility is configured in **Settings → Testplay keys** and has no shor
 
 Change movement and dash in **Settings → Testplay keys**: click a binding, press
 the new key, then Apply. Esc cancels capture; reusing an assigned key swaps the
-two assignments. Esc, Tab and F1–F3 are reserved. Supported keys include letters,
-digits, arrows/navigation keys, modifiers, keypad keys, punctuation and F4–F24.
+two assignments. Esc, Tab, F1–F3 and F12 are reserved. Supported keys include letters,
+digits, arrows/navigation keys, modifiers, keypad keys, punctuation, F4–F11 and F13–F24.
 OS/media keys are not supported. System shortcuts can intercept some combinations.
 Prefer bindings that do not overlap Ctrl+P, Ctrl+B, Ctrl+R, Ctrl+Up/Down or Alt+arrows while held.
 

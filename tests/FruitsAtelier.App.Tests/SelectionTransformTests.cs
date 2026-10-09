@@ -2,6 +2,37 @@ using FruitsAtelier.Core;
 
 internal static class SelectionTransformTests
 {
+    public static void DragBoundsFollowPlayableObjects()
+    {
+        var map = new MapDocument { DurationMs = 6000 };
+        var track = new CurveTrack { Kind = CurveKind.Bezier, CompensateTinyDroplets = false };
+        track.Nodes.AddRange([
+            new Anchor { TimeMs = 1000, X = 100, HandleOut = new(500, 350) },
+            new Anchor { TimeMs = 3000, X = 200, HandleIn = new(-500, 250) }
+        ]);
+        map.Tracks.Add(track);
+        var ui = new Ui(); ui.LoadDocument(map); ui.SelectTrack(track.Id); ui.Paint();
+        var original = ui.View.Document.DeepClone();
+        var box = ui.View.SelectionTransformBounds;
+        float x = box.X + box.Width / 2, y = box.Y + box.Height / 2;
+        float move = ui.View.PlayfieldBounds.Width * 240 / 512;
+        ui.View.PointerDown(x, y, 0, false, false);
+        ui.View.PointerMove(x + move, y, false, false);
+        ui.View.PointerUp(x + move, y, 0); ui.Paint();
+        var visible = CatchStreamConverter.Convert(ui.View.Document).Objects.Where(o => o.SourceId == track.Id).ToArray();
+        Check(visible.Length > 2 && visible.Max(o => o.X) <= 512 + .001,
+            "Selection drag moved a generated fruit or droplet beyond X=512.");
+        Check(ui.View.Document.Tracks.Single().Nodes[0].X + ui.View.Document.Tracks.Single().Nodes[0].HandleOut.X > 512,
+            "Selection drag incorrectly constrained a curve handle to the playfield.");
+        ui.Key('Z', ctrl: true); Check(original.ContentEquals(ui.View.Document), "Bounded selection drag did not undo.");
+        ui.View.PointerDown(x, y, 0, false, false);
+        ui.View.PointerMove(x - move, y, false, false);
+        ui.View.PointerUp(x - move, y, 0); ui.Paint();
+        visible = CatchStreamConverter.Convert(ui.View.Document).Objects.Where(o => o.SourceId == track.Id).ToArray();
+        Check(visible.Min(o => o.X) >= -.001,
+            "Selection drag moved a generated fruit or droplet beyond X=0.");
+    }
+
     public static void Run()
     {
         var map = new MapDocument { DurationMs = 12000 };

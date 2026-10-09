@@ -146,8 +146,15 @@ public static class SliderMultiplierEditing
             point.Uninherited = false; point.BeatLengthMs = BeatLength(100); point.OriginalLine = null;
             points.Add(point);
         }
-        if (points.Count == 0 || points.All(p => p.TimeMs > 0))
-            points.Add(new() { TimeMs = 0, Uninherited = false, BeatLengthMs = BeatLength(100) });
+        double firstSlider = candidate.ImportedSliders.Select(s => s.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min();
+        double firstTiming = originals.Select(p => p.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min();
+        if (firstSlider < firstTiming)
+        {
+            // Pre-timing sliders use the implicit first BPM; make it explicit before adding their SV compensation.
+            var initial = new TimingMap.Lookup(before.ReadBack).At(firstSlider);
+            points.Add(new() { TimeMs = firstSlider, BeatLengthMs = initial.BeatLengthMs, Meter = initial.Meter });
+            points.Add(new() { TimeMs = firstSlider, Uninherited = false, BeatLengthMs = BeatLength(100) });
+        }
         var ordered = points.OrderBy(p => p.TimeMs).ThenBy(p => p.Uninherited ? 0 : 1).ThenBy(p => p.SourceOrder).ToArray();
         candidate.TimingPoints.Clear(); candidate.TimingPoints.AddRange(ordered);
         return candidate;
@@ -190,14 +197,13 @@ public static class SliderMultiplierEditing
             }
             if (!fruitIdentities.TryGetValue(item.SourceId, out var original)
                 && !identities.TryGetValue((item.SourceId, item.EventIndex), out original))
-                throw new InvalidDataException(L.Get("timing.sliderMultiplierPreservation"));
+                throw CountChange(before.PlayableObjects, converted.Objects, item.SourceId, item.TimeMs);
             return item with { SourceId = original.SourceId, EventIndex = original.EventIndex, IsStandalone = original.IsStandalone };
         }
         var playable = converted.Objects.Select(Identity).ToArray();
         var playableHardRock = hardRock.Select(Identity).ToArray();
-        if (!Equivalent(before.PlayableObjects, playable, analysis?.Normal)
-            || !Equivalent(before.PlayableHardRockObjects, playableHardRock, analysis?.HardRock))
-            throw new InvalidDataException(L.Get("timing.sliderMultiplierPreservation"));
+        CheckEquivalent(before.PlayableObjects, playable, "NM", analysis?.Normal);
+        CheckEquivalent(before.PlayableHardRockObjects, playableHardRock, "HR", analysis?.HardRock);
         OsuBeatmapReader.SetDuration(readBack, converted.Sliders.Select(s => s.StartTimeMs + s.DurationMs));
         var ends = readBack.Fruits.Select(f => (Id: before.ObjectSources[f.SourceOrder], End: f.TimeMs))
             .Concat(converted.Sliders.Select(s => (Id: s.SourceId, End: s.StartTimeMs + s.DurationMs)))
@@ -221,13 +227,30 @@ public static class SliderMultiplierEditing
             throw new ArgumentException(L.Get("timing.sliderMultiplierRange"));
     }
 
-    private static bool Equivalent(IReadOnlyList<ConvertedCatchObject> before, IReadOnlyList<ConvertedCatchObject> after,
+    private static InvalidDataException CountChange(IReadOnlyList<ConvertedCatchObject> before,
+        IReadOnlyList<ConvertedCatchObject> after, Guid sourceId, double time)
+        => new(L.Get("timing.sliderMultiplierCountChange",
+            before.Where(o => o.SourceId == sourceId).Select(o => o.TimeMs).DefaultIfEmpty(time).Min(),
+            before.Count(o => o.SourceId == sourceId), after.Count(o => o.SourceId == sourceId)));
+
+    private static void CheckEquivalent(IReadOnlyList<ConvertedCatchObject> before, IReadOnlyList<ConvertedCatchObject> after,
+        string mode,
         Dictionary<(Guid, int), ConvertedCatchObject>? cached = null)
     {
-        if (before.Count != after.Count) return false;
         var expected = cached ?? before.ToDictionary(p => (p.SourceId, p.EventIndex));
-        return after.All(item => expected.TryGetValue((item.SourceId, item.EventIndex), out var original)
-            && original.Kind == item.Kind && Math.Abs(original.TimeMs - item.TimeMs) < .001
-            && Math.Abs(original.X - item.X) < .001);
+        if (before.Count != after.Count)
+        {
+            var parent = before.GroupBy(o => o.SourceId)
+                .First(g => g.Count() != after.Count(o => o.SourceId == g.Key));
+            throw CountChange(before, after, parent.Key, parent.First().TimeMs);
+        }
+        foreach (var item in after)
+        {
+            if (!expected.TryGetValue((item.SourceId, item.EventIndex), out var original) || original.Kind != item.Kind)
+                throw new InvalidDataException(L.Get("timing.sliderMultiplierPreservation"));
+            if (Math.Abs(original.TimeMs - item.TimeMs) >= .001 || Math.Abs(original.X - item.X) >= .001)
+                throw new InvalidDataException(L.Get("timing.sliderMultiplierPositionChange", original.TimeMs, mode,
+                    original.TimeMs, item.TimeMs, original.X, item.X));
+        }
     }
 }
