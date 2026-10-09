@@ -1339,7 +1339,7 @@ public sealed partial class EditorView
 
     private void AddCurveAnchor(float x, float y, bool straight = false)
     {
-        var p = MapAt(x, y, true, clampX: false);
+        var p = draftTrack == Guid.Empty ? PenStartPoint(x, y) : MapAt(x, y, true, clampX: false);
         CurveTrack track;
         if (draftTrack == Guid.Empty)
         {

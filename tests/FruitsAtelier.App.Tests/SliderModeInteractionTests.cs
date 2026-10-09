@@ -3,6 +3,35 @@ using FruitsAtelier.App.Editor;
 
 internal static class SliderModeInteractionTests
 {
+    public static void PenStartUsesDistanceSnap()
+    {
+        var map = new MapDocument { DurationMs = 5000 };
+        map.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 });
+        map.DistanceSnapRatios.Add(1);
+        var ui = new Ui(); ui.LoadDocument(map);
+        ui.View.SetSliderEditingMode(SliderEditingMode.PenTool); ui.Key('B'); ui.Key('Y');
+        Check(ui.View.DistanceSnapEnabled, "Distance Snap was not enabled for the Pen draft.");
+        ui.MoveMap(1500, 300); ui.Paint();
+        var snapped = ui.ScreenAt(1500, 292);
+        Check(ui.Canvas.Circles.Any(circle => circle.Filled && Math.Abs(circle.X - snapped.X) < 1
+            && Math.Abs(circle.Y - snapped.Y) < 1 && Math.Abs(circle.Opacity - .6f) < .001),
+            "Pen slider head preview did not use Distance Snap.");
+        ui.ClickMap(1500, 300);
+        Near(292, ui.View.Document.Tracks.Single().Nodes[0].X);
+        ui.ClickMap(2000, 400, ctrl: true);
+        Near(400, ui.View.Document.Tracks.Single().Nodes[^1].X);
+
+        var outside = new Ui(); outside.LoadDocument(map);
+        outside.View.SetSliderEditingMode(SliderEditingMode.PenTool); outside.Key('B'); outside.Key('Y');
+        float right = outside.View.PlayfieldBounds.Right + 20;
+        Check(right < outside.View.CanvasPlotBounds.Right, "Fixture lacks room beyond the playfield.");
+        var height = outside.ScreenAt(1500, 300).Y;
+        outside.View.PointerDown(right, height, 0, false, false);
+        outside.View.PointerUp(right, height, 0);
+        Check(outside.View.Document.Tracks.Single().Nodes[0].X > 512,
+            "Distance Snap pulled an outside Pen anchor into the playfield.");
+    }
+
     public static void PenDraftPreviewAndOutsideAnchors()
     {
         var ui = new Ui(); ui.LoadDocument(new MapDocument { DurationMs = 10000 });

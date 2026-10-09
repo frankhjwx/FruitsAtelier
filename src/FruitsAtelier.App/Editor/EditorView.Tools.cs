@@ -199,7 +199,8 @@ public sealed partial class EditorView
             || menu >= 0 || contextItems.Count > 0 || editField >= 0 || tool == Tool.Slider && draftTrack == Guid.Empty && SelectedTrack is not null) return null;
         if (tool == Tool.Slider && SelectedTrack is { } draft && draft.Id == draftTrack
             && (LegacyMode && legacyPreviewValid || draft.Nodes.Any(n => Near(Point(n), mouseX, mouseY, 8)))) return null;
-        var point = tool == Tool.Slider && !LegacyMode ? MapAt(mouseX, mouseY, true, clampX: false)
+        var point = tool == Tool.Slider && !LegacyMode
+            ? draftTrack == Guid.Empty ? PenStartPoint(mouseX, mouseY) : MapAt(mouseX, mouseY, true, clampX: false)
             : PlacementPoint(mouseX, mouseY);
         if (tool == Tool.Fruit && ObjectsInTimeRange(point.TimeMs - 1, point.TimeMs + 1)
             .Any(item => item.Kind == CatchObjectKind.Fruit && Math.Abs(item.X - point.X) < .01)) return null;
