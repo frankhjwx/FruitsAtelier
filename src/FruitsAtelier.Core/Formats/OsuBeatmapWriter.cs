@@ -228,14 +228,30 @@ public static class OsuBeatmapWriter
             .Concat(readBack.ImportedSliders.Select(s => (s.Id, s.SourceOrder)))
             .Concat(readBack.BananaShowers.Select(s => (s.Id, s.SourceOrder)))
             .ToDictionary(p => p.Id, p => orderedLines[p.SourceOrder].SourceId);
+        var pairs = converted.Objects.Zip(reconverted.Objects).Select(p => (First: p.First, Second: p.Second)).ToArray();
         bool matches = converted.Objects.Count == reconverted.Objects.Count
-            && converted.Objects.Zip(reconverted.Objects).All(p => p.First.Kind == p.Second.Kind
-                && p.First.SourceId == sourceIds[p.Second.SourceId]
+            && pairs.All(p => p.First.Kind == p.Second.Kind && p.First.SourceId == sourceIds[p.Second.SourceId]
                 && (streamIds.ContainsKey(p.First.SourceId) || p.First.EventIndex == p.Second.EventIndex));
+        if (!matches && converted.Objects.Count == reconverted.Objects.Count)
+        {
+            var authoredEvents = converted.Objects.ToDictionary(o => (o.SourceId, o.EventIndex));
+            var streamEvents = readBack.Fruits.Where(f => streamIds.ContainsKey(sourceIds[f.Id]))
+                .GroupBy(f => sourceIds[f.Id])
+                .SelectMany(g => g.OrderBy(f => f.SourceOrder).Select((f, index) => (f.Id, Index: index)))
+                .ToDictionary(p => p.Id, p => p.Index);
+            // Integer slider heads can move ahead of unchanged fractional fruits; match identities in read-back order.
+            pairs = reconverted.Objects.Select(item =>
+            {
+                int index = streamEvents.GetValueOrDefault(item.SourceId, item.EventIndex);
+                authoredEvents.TryGetValue((sourceIds[item.SourceId], index), out var authored);
+                return (First: authored!, Second: item);
+            }).ToArray();
+            matches = pairs.All(p => p.First is not null && p.First.Kind == p.Second.Kind);
+        }
         double timeError = 0, xError = 0;
         if (matches)
         {
-            foreach (var pair in converted.Objects.Zip(reconverted.Objects))
+            foreach (var pair in pairs)
             {
                 timeError = Math.Max(timeError, Math.Abs(pair.First.TimeMs - pair.Second.TimeMs));
                 xError = Math.Max(xError, Math.Abs(pair.First.X - pair.Second.X));
@@ -251,7 +267,7 @@ public static class OsuBeatmapWriter
         if (document.AudioPath is not null || document.OriginalSections.Any(s => s.Name == "Events" && s.Lines.Any(l => OsuBeatmapReader.IsDataLine(l.Trim()))))
             diagnostics.Add(L.Get("core.writer.resources"));
         var playableObjects = matches
-            ? converted.Objects.Zip(reconverted.Objects).Select(pair => pair.Second with
+            ? pairs.Select(pair => pair.Second with
             {
                 SourceId = pair.First.SourceId,
                 EventIndex = pair.First.EventIndex,
@@ -259,7 +275,7 @@ public static class OsuBeatmapWriter
             }).ToArray()
             : [];
         var playableIds = matches
-            ? reconverted.Objects.Zip(converted.Objects).ToDictionary(pair => (pair.First.SourceId, pair.First.EventIndex), pair => (pair.Second.SourceId, pair.Second.EventIndex, pair.Second.IsStandalone))
+            ? pairs.ToDictionary(pair => (pair.Second.SourceId, pair.Second.EventIndex), pair => (pair.First.SourceId, pair.First.EventIndex, pair.First.IsStandalone))
             : [];
         var playableHardRockObjects = matches
             ? CatchPreviewMods.HardRock(readBack, reconverted)

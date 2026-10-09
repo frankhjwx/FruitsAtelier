@@ -63,6 +63,8 @@ These rules follow the [official format document](https://github.com/ppy/osu-wik
 
 The generator first produces a two-dimensional slider that satisfies its targets; the writer then serializes it. Serialization uses invariant culture with consistent newline and UTF-8 policies. Integer object times truncate toward zero, matching stable snapping as modeled by MapsetVerifier. Coordinates round midpoints away from zero. Generated SV points use the same truncated time as their slider heads. Beat grids calculate offsets from whole subdivision counts before dividing, retaining exact whole-millisecond grid points. Original unedited integer values remain unchanged.
 
+Read-back maps events by source and nested event identity when quantization changes their order. An integer slider head can precede an unchanged fractional fruit at the same authored time. Playable NM/HR output retains the actual exported order; this ordering change alone does not invalidate a base-SV override. Compensation failures report the affected object time and count or time/position changes where available, with guidance for changing SV or reporting an editing failure.
+
 Metadata exports Title, TitleUnicode, Artist, ArtistUnicode, Creator, Version,
 Source, Tags, BeatmapID, and BeatmapSetID in that order, followed by any additional
 fields or comments. Metadata fields are contiguous. The header and named sections

@@ -164,7 +164,35 @@ internal static class SliderMultiplierTests
                 var roundingBefore = OsuBeatmapWriter.Serialize(rounding);
                 Check(!SliderMultiplierEditing.TryRebase(roundingBefore, 1.3, out _, double.PositiveInfinity), "Tiny count boundary requires full validation");
                 try { SliderMultiplierEditing.Rebase(roundingBefore, 1.3); throw new Exception("Changed tiny count accepted"); }
-                catch (System.IO.InvalidDataException) { }
+                catch (System.IO.InvalidDataException error)
+                {
+                    Check(error.Message.Contains("500") && error.Message != L.Get("timing.sliderMultiplierPreservation"),
+                        "Rejected SV reports the affected slider time and object-count change");
+                    var errorUi = new Ui(false); errorUi.LoadDocument(rounding); errorUi.Resize(980, 620);
+                    var errorSnapshot = errorUi.View.Document.DeepClone();
+                    errorUi.View.ShowError(error.Message); errorUi.Paint();
+                    Check(errorUi.View.ErrorVisible && errorUi.Canvas.Texts.Any(t => t.Value.Contains("500")),
+                        "SV failure keeps the affected slider time visible in the narrow error dialog");
+                    errorUi.Key(13);
+                    Check(!errorUi.View.ErrorVisible && errorUi.View.Document.ContentEquals(errorSnapshot),
+                        "Dismissing an SV failure preserves the project");
+                }
+                var positionBefore = OsuBeatmapWriter.Serialize(Fixture());
+                var displaced = positionBefore.PlayableObjects[0];
+                var invalidPosition = new OsuWriteResult
+                {
+                    Text = positionBefore.Text, ReadBack = positionBefore.ReadBack,
+                    ObjectSources = positionBefore.ObjectSources, Diagnostics = positionBefore.Diagnostics,
+                    ObjectSequenceMatches = true, PlayableHardRockObjects = positionBefore.PlayableHardRockObjects,
+                    PlayableObjects = positionBefore.PlayableObjects.Select((o, i) => i == 0 ? o with { X = o.X + 2 } : o).ToArray()
+                };
+                try { SliderMultiplierEditing.Rebase(invalidPosition, 1.3); throw new Exception("Changed position accepted"); }
+                catch (System.IO.InvalidDataException error)
+                {
+                    Check(error.Message == L.Get("timing.sliderMultiplierPositionChange", displaced.TimeMs, "NM",
+                        displaced.TimeMs, displaced.TimeMs, displaced.X + 2, displaced.X),
+                        "Rejected SV explains mode, affected time and before/after position");
+                }
                 var old = ProjectSerializer.Read("{\"SchemaVersion\":1,\"Document\":{\"SliderMultiplier\":1.4}}");
                 Check(!old.OverrideSliderMultiplier && old.SliderMultiplier == 1.4, "Older projects retain SV with editing locked");
             }

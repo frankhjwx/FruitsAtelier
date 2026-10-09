@@ -2,6 +2,53 @@ using FruitsAtelier.Core;
 
 internal static class WriteCacheTests
 {
+    public static void FractionalFruitBesideSlider()
+    {
+        foreach (bool stream in new[] { false, true })
+        {
+            var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:2\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n300,192,1000.75,1,0,0:0:0:0:\n");
+            SliderMultiplierEditing.Apply(map, 2.94);
+            var history = new EditorHistory(map);
+            var cache = new OsuWriteCache();
+            history.Begin("Place slider");
+            var track = new CurveTrack { Kind = CurveKind.Linear, SourceOrder = 1,
+                StreamSnapDivisor = stream ? 4 : null };
+            track.Nodes.AddRange([new() { TimeMs = 1000.75, X = 100 }, new() { TimeMs = 1501, X = 200 }]);
+            history.Document.Tracks.Add(track);
+            history.Commit();
+            Check(); Check();
+            history.Undo(); Check(); history.Redo(); Check();
+
+            void Check()
+            {
+                var document = history.Document;
+                var snapshot = document.DeepClone();
+                var baseline = document.DeepClone(); baseline.SliderMultiplierOverride = null;
+                var original = OsuBeatmapWriter.Serialize(baseline);
+                var output = OsuBeatmapWriter.Serialize(document, cache: cache);
+                var full = OsuBeatmapWriter.Serialize(document);
+                var restored = OsuBeatmapWriter.Serialize(ProjectSerializer.Read(ProjectSerializer.Serialize(document)));
+                if (!original.ObjectSequenceMatches || !output.ObjectSequenceMatches
+                    || output.Text != full.Text || output.Text != restored.Text
+                    || !output.PlayableObjects.SequenceEqual(full.PlayableObjects)
+                    || !output.PlayableHardRockObjects.SequenceEqual(full.PlayableHardRockObjects)
+                    || !document.ContentEquals(snapshot))
+                    throw new Exception("Placing a slider beside a fractional imported fruit blocked export or changed cached playback.");
+                foreach (var pair in new[] { (original.PlayableObjects, output.PlayableObjects), (original.PlayableHardRockObjects, output.PlayableHardRockObjects) })
+                {
+                    var expected = pair.Item1.ToDictionary(o => (o.SourceId, o.EventIndex));
+                    if (expected.Count != pair.Item2.Count || pair.Item2.Any(o =>
+                        !expected.TryGetValue((o.SourceId, o.EventIndex), out var before) || o.Kind != before.Kind
+                        || Math.Abs(o.TimeMs - before.TimeMs) >= .001 || Math.Abs(o.X - before.X) >= .001))
+                        throw new Exception("SV compensation changed fractional fruit or nested slider playback.");
+                }
+                if (document.Tracks.Count > 0 && !stream
+                    && output.PlayableObjects[0].SourceId != document.Tracks[0].Id)
+                    throw new Exception("Playable mapping did not retain actual read-back order.");
+            }
+        }
+    }
+
     public static int BenchmarkMultiplierEdits()
     {
         var map = new MapDocument { DurationMs = 2010000, SliderMultiplierOverride = 2 };
