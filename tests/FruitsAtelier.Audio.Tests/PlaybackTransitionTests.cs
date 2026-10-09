@@ -53,8 +53,9 @@ internal static class PlaybackTransitionTests
             await audio.WaitForCommandsAsync().WaitAsync(TimeSpan.FromSeconds(2));
             if (!active.StoppedAtSilence)
                 throw new Exception("Stop cut off the generated fade before the buffered device consumed it.");
-            if (Math.Abs(audio.PositionMs - position) > 1000d / 44100)
-                throw new Exception("Fade-out moved the saved pause point.");
+            // Decoder timestamps quantize to 100 ns ticks as well as whole sample frames.
+            if (Math.Abs(audio.PositionMs - position) > 1000d / 44100 + TimeSpan.FromTicks(1).TotalMilliseconds)
+                throw new Exception($"Fade-out moved the saved pause point: {position:R} -> {audio.PositionMs:R} ms at {speed:R}x.");
             audio.Seek(position + 100); await audio.WaitForCommandsAsync();
             audio.Play(); await audio.WaitForCommandsAsync();
             if (players[^1].FirstBuffer.Take(4).Any(v => v != 0)) throw new Exception("Resume starts with an abrupt nonzero PCM frame.");
