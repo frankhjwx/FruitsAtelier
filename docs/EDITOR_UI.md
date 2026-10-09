@@ -796,8 +796,11 @@ Categories are ordered General, Workspace, Appearance, Audio, Testplay, and
 Application updates (where supported). Appearance groups the active skin selector
 with the default skin archive and indicator colours. General includes metadata display and language.
 Active skin selection takes effect immediately and is saved automatically.
-Application updates ends with a divider, an invitation to share suggestions and
-feedback on Discord, and a Join Discord button using the first-time setup invite.
+Application updates ends with a divider and a community section. A single sentence
+identifies Fruits Atelier as a catch editor project by Yumeno Himiko and links the
+name to the osu! profile. Suggestions and feedback can be sent through osu! or the
+Join Discord button. Project Website, Github Page, and Join Discord share a row in
+that order; Join Discord uses the first-time setup invite.
 General includes a Reverse canvas scrolling toggle, separated by a divider. It
 defaults to off and reverses ordinary and Shift+wheel time navigation over the
 canvas, including wheel navigation during marquee selection. Other panels and

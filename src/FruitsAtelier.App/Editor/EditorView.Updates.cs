@@ -8,6 +8,9 @@ public sealed record UpdateStatus(UpdatePhase Phase, string Version = "", int Pr
 
 public sealed partial class EditorView
 {
+    private const string OsuProfileUrl = "https://osu.ppy.sh/users/1806962";
+    private const string ProjectWebsiteUrl = "https://fruitsatelier.himiko.moe/";
+    private const string GithubPageUrl = "https://github.com/frankhjwx/FruitsAtelier";
     public Action? RequestUpdateCheck { get; set; }
     public Action? RequestUpdateDownload { get; set; }
     public Action? RequestUpdateRestart { get; set; }
@@ -16,6 +19,9 @@ public sealed partial class EditorView
     public bool AutomaticUpdateChecks { get; set; } = true;
     public UpdateStatus UpdateStatus { get; set; } = new(UpdatePhase.Idle);
     private bool updatesPage;
+    private float UpdatesCompactness => Math.Clamp((680 - SettingsBounds.Height) / 124, 0, 1);
+    internal Rect UpdateRestartButtonBounds => new(SettingsContentX + 222, SettingsTop + 296 - 72 * UpdatesCompactness,
+        SettingsContentWidth - 222, SettingsControlHeight);
 
     private void OpenUpdates()
     {
@@ -37,14 +43,15 @@ public sealed partial class EditorView
         float top = embedded ? SettingsTop : 0;
         float right = embedded ? SettingsRight : width;
         float textSize = embedded ? SettingsTextSize : 15;
+        float compact = embedded ? UpdatesCompactness : 0;
         void ActionButton(Rect bounds, string label, Action action, bool active = false, bool enabled = true)
         {
             if (embedded) SettingsButton(c, bounds with { Height = SettingsControlHeight }, label, action, active, enabled);
             else Button(c, bounds, label, action, active, enabled);
         }
         if (!embedded) c.Text(L.Get("update.title"), x, 96, 22, Foreground, right - x - 32, true);
-        c.Text(L.Get("update.currentVersion", DisplayVersion), x, top + 144, textSize, Muted, right - x - 32);
-        ActionButton(new(x, top + 186, embedded ? SettingsContentWidth : 340, 36), L.Get(AutomaticUpdateChecks ? "update.automaticOn" : "update.automaticOff"), () =>
+        c.Text(L.Get("update.currentVersion", DisplayVersion), x, top + 144 - 28 * compact, textSize, Muted, right - x - 32);
+        ActionButton(new(x, top + 186 - 44 * compact, embedded ? SettingsContentWidth : 340, 36), L.Get(AutomaticUpdateChecks ? "update.automaticOn" : "update.automaticOff"), () =>
         { AutomaticUpdateChecks = !AutomaticUpdateChecks; RequestUpdatePreference?.Invoke(); }, AutomaticUpdateChecks);
         string key = UpdateStatus.Phase switch
         {
@@ -53,12 +60,12 @@ public sealed partial class EditorView
             UpdatePhase.Downloading => "update.downloading", UpdatePhase.Ready => "update.ready",
             UpdatePhase.Failed => "update.failed", _ => "update.help"
         };
-        c.Text(L.Get(key, UpdateStatus.Version, UpdateStatus.Progress), x, top + 246, textSize, Foreground, right - x - 32);
+        c.Text(L.Get(key, UpdateStatus.Version, UpdateStatus.Progress), x, top + 246 - 52 * compact, textSize, Foreground, right - x - 32);
         var phase = UpdateStatus.Phase;
-        ActionButton(new(x, top + 296, 210, 38), L.Get("update.check"), () => RequestUpdateCheck?.Invoke(), active: true,
+        ActionButton(new(x, top + 296 - 72 * compact, 210, 38), L.Get("update.check"), () => RequestUpdateCheck?.Invoke(), active: true,
             enabled: phase is not (UpdatePhase.Checking or UpdatePhase.Downloading or UpdatePhase.Unsupported));
         if (phase is UpdatePhase.Available or UpdatePhase.Ready)
-            ActionButton(new(x + 222, top + 296, embedded ? SettingsContentWidth - 222 : 320, 38), L.Get(phase == UpdatePhase.Ready ? "update.restart" : "update.download"), () =>
+            ActionButton(embedded ? UpdateRestartButtonBounds : new(x + 222, top + 296, 320, 38), L.Get(phase == UpdatePhase.Ready ? "update.restart" : "update.download"), () =>
         {
             if (phase == UpdatePhase.Ready)
             {
@@ -68,12 +75,47 @@ public sealed partial class EditorView
             }
             else RequestUpdateDownload?.Invoke();
         }, active: true);
-        ActionButton(new(x, top + 350, embedded ? SettingsContentWidth : 220, 38), L.Get("update.notes"), () => RequestUpdateNotes?.Invoke());
+        ActionButton(new(x, top + 350 - 84 * compact, embedded ? SettingsContentWidth : 220, 38), L.Get("update.notes"), () => RequestUpdateNotes?.Invoke());
         if (embedded)
         {
-            c.Line(x, top + 390, x + SettingsContentWidth, top + 390, Grid);
-            float joinY = SettingsParagraph(c, L.Get("update.discordHint"), top + 400);
-            ActionButton(new(x, joinY, SettingsContentWidth, SettingsControlHeight), L.Get("setup.discord"),
+            float dividerY = top + 400 - 96 * compact;
+            c.Line(x, dividerY, x + SettingsContentWidth, dividerY, Grid);
+            float introY = dividerY + 18;
+            string intro = L.Get("update.projectIntro");
+            const string name = "Yumeno Himiko";
+            float nameWidth = c.MeasureText(name, SettingsHintSize);
+            float introWidth = c.MeasureText(intro, SettingsHintSize);
+            float spaceWidth = c.MeasureText(" ", SettingsHintSize);
+            float periodWidth = c.MeasureText(".", SettingsHintSize);
+            if (introWidth + spaceWidth + nameWidth + periodWidth > SettingsContentWidth)
+            {
+                introY = SettingsParagraph(c, intro, introY);
+                introWidth = -spaceWidth;
+            }
+            else c.Text(intro, x, introY, SettingsHintSize, Muted, SettingsContentWidth);
+            float nameX = x + introWidth + spaceWidth;
+            c.Text(name, nameX, introY, SettingsHintSize, Accent, nameWidth + 1);
+            c.Text(".", nameX + nameWidth, introY, SettingsHintSize, Muted, periodWidth + 1);
+            c.Line(nameX, introY + SettingsHintSize + 2, nameX + nameWidth, introY + SettingsHintSize + 2, Accent);
+            hits.Add(new(new Rect(nameX, introY - 2, nameWidth, SettingsHintSize + 8),
+                () => RequestSetupLink?.Invoke(OsuProfileUrl), true));
+            float joinY = SettingsParagraph(c, L.Get("update.discordHint"), introY + 28) + 8;
+            string websiteLabel = L.Get("update.projectWebsite");
+            string githubLabel = L.Get("update.githubPage");
+            string discordLabel = L.Get("setup.discord");
+            const float buttonGap = 8;
+            float websiteWidth = c.MeasureText(websiteLabel, SettingsTextSize) + SettingsControlPadding * 2;
+            float githubWidth = c.MeasureText(githubLabel, SettingsTextSize) + SettingsControlPadding * 2;
+            float discordWidth = c.MeasureText(discordLabel, SettingsTextSize) + SettingsControlPadding * 2;
+            float extraWidth = (SettingsContentWidth - buttonGap * 2 - websiteWidth - githubWidth - discordWidth) / 3;
+            websiteWidth += extraWidth;
+            githubWidth += extraWidth;
+            discordWidth += extraWidth;
+            ActionButton(new(x, joinY, websiteWidth, SettingsControlHeight), websiteLabel,
+                () => RequestSetupLink?.Invoke(ProjectWebsiteUrl));
+            ActionButton(new(x + websiteWidth + buttonGap, joinY, githubWidth, SettingsControlHeight), githubLabel,
+                () => RequestSetupLink?.Invoke(GithubPageUrl));
+            ActionButton(new(x + websiteWidth + githubWidth + buttonGap * 2, joinY, discordWidth, SettingsControlHeight), discordLabel,
                 () => RequestSetupLink?.Invoke(DiscordInviteUrl));
         }
         if (!embedded) c.Text(L.Get("update.saveHelp"), x, top + 410, 14, Muted, right - x - 32);
