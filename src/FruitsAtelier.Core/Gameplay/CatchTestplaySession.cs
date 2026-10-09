@@ -4,7 +4,8 @@ public readonly record struct CatchComboChange(int Combo, ConvertedCatchObject O
 
 public sealed record CatchTestplayFrame(double TimeMs, double X, int Combo, bool FacingLeft, bool HyperDashing,
     bool Ended, Exception? Error, int JudgedCount, ConvertedCatchObject[] MissedObjects, CatchTrail[] Trails,
-    CatchComboChange[] ComboChanges, CatchPlateSprite[] Plate, bool Autoplay = false, bool Dashing = false);
+    CatchComboChange[] ComboChanges, CatchPlateSprite[] Plate, bool Autoplay = false, bool Dashing = false,
+    int Hit300 = 0, int Hit100 = 0, int Hit50 = 0, int Misses = 0);
 
 /// <summary>Serialises gameplay mutations; drawing consumes a detached snapshot without holding the lock.</summary>
 public sealed class CatchTestplaySession
@@ -173,7 +174,7 @@ public sealed class CatchTestplaySession
         {
             var frame = new CatchTestplayFrame(time, game.X, game.Combo, game.FacingLeft, game.HyperDashing,
                 ended, error, game.JudgedCount, game.MissedObjects.ToArray(), game.Trails.ToArray(), comboChanges.ToArray(),
-                plate.At(time, game.X).ToArray(), autoplay, keys.Contains(dash));
+                plate.At(time, game.X).ToArray(), autoplay, keys.Contains(dash), game.Hit300, game.Hit100, game.Hit50, game.Misses);
             comboChanges.Clear();
             return frame;
         }

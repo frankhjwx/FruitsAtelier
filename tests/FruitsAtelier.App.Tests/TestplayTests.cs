@@ -251,6 +251,9 @@ internal static class TestplayTests
                 var requested = new List<double>(); ui.View.RequestPlaybackSpeed = requested.Add;
                 ui.View.StartTestplay();
                 ui.Key(114); ui.View.KeyUp(114); Near(initial, ui.View.PlaybackSpeed);
+                ui.Paint();
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.maximumCombo", 1))
+                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("testplay.maximumDroplets", 0)), "Full-map totals appear before autoplay starts");
                 Check(requested.Count == 0, "Manual F3 does not change audio speed");
                 ui.Key(9); ui.View.KeyUp(9);
                 clock.Advance(100); ui.Paint(); Near(100 * initial, ui.View.PlayheadMs);
@@ -259,9 +262,8 @@ internal static class TestplayTests
                 Near(next, ui.View.PlaybackSpeed); Near(100 * initial, ui.View.PlayheadMs);
                 Check(requested.SequenceEqual([next]), "F3 sends one audio speed change per press");
                 clock.Advance(100); ui.Paint(); Near(100 * (initial + next), ui.View.PlayheadMs);
-                var speed = ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.speed", next));
                 var hint = ui.Canvas.Texts.Single(t => t.Value == L.Get("testplay.hintSpeed"));
-                Check(speed.X == 12 && speed.Y == 12 && hint.Y >= speed.Y + 20, "Speed and instruction occupy separate upper-left rows");
+                Check(hint.Value == "F3: change autoplay speed" && hint.X == 12, "Testplay uses the osu shortcut text");
                 ui.View.KeyUp(114);
                 ui.Key('P', ctrl: true); ui.View.KeyUp('P');
                 double paused = ui.View.PlayheadMs;
@@ -489,6 +491,8 @@ internal static class TestplayTests
         clock.Advance(100); session.Tick();
         var missed = session.Capture();
         Check(missed.Plate.Length == 1 && missed.MissedObjects.Length == 1 && sounds == 1, "only catches enter the stack and emit sound without rendering");
+        Check(missed.Hit300 == 1 && missed.Misses == 1 && frozen.Hit300 == 1 && frozen.Misses == 0,
+            "Judgement counts survive effect snapshots without mutating previous frames");
         session.SetKey(39, true); clock.Advance(20); session.SetKey(39, false);
         Check(session.Capture().Plate[0].X > frozen.Plate[0].X && frozen.X == 256, "stack follows movement while detached snapshots stay unchanged");
         clock.Advance(280); session.Tick();
@@ -499,6 +503,24 @@ internal static class TestplayTests
         drop.Judge(notes[0], 256, true, false); drop.Judge(notes[^1], 256, false, true);
         var before = drop.At(500, 256).Single(); var after = drop.At(600, 400).Single();
         Check(after.Y > before.Y && after.X == before.X && after.Opacity < before.Opacity, "missed combo end drops the previous stack at its release position");
+        var uiClock = new ManualTime();
+        var ui = new Ui(timeProvider: uiClock);
+        var map = new MapDocument();
+        map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 256 }, new Fruit { TimeMs = 5000, X = 256 }]);
+        ui.LoadDocument(map); ui.OpenPreview(); ui.View.UpdateTransport(1100, 10000, true, false, false, null, null); ui.Paint();
+        AssertCatcherInFront();
+        ui.View.UpdateTransport(1100, 10000, false, false, false, null, null);
+        ui.View.LibrarySettings.TestplayStartupDelaySeconds = 1;
+        ui.View.StartTestplay(); uiClock.Advance(1000); ui.Paint();
+        AssertCatcherInFront();
+        void AssertCatcherInFront()
+        {
+            var commands = ui.Canvas.Operations.Where(op => op.Clip is { } clip &&
+                (ui.View.IsTestplaying || clip == ui.View.PreviewViewport)).ToArray();
+            var body = commands.First(op => op.Dot is { Color: 0xB5C9D0 });
+            Check(commands.Any(op => op.Dot is { Filled: true, Color: 0xFFFFFF } && op.Order < body.Order),
+                "Caught fruit is drawn before the catcher body in preview and testplay");
+        }
     }
     public static void MovementAndJudgement()
     {
@@ -511,6 +533,7 @@ internal static class TestplayTests
         game.Advance(300, false, true, true); Near(406, game.X); Check(game.Combo == 3, "dash catches fruit");
         game.Advance(400, true, true, false); Near(406, game.X); Check(game.Combo == 3, "tiny/banana misses preserve combo; opposing keys cancel");
         game.Advance(500, false, false, false); Check(game.Combo == 0 && game.Finished, "miss breaks combo and last judgement completes");
+        Check(game.Hit300 == 3 && game.Hit100 == 0 && game.Hit50 == 0 && game.Misses == 1, "Live counts exclude missed tiny droplets and bananas from Miss");
         game.Advance(2000, true, false, true); Near(0, game.X); Check(game.FacingLeft, "left movement flips catcher");
         game.Advance(3000, false, true, true); Near(512, game.X); Check(!game.FacingLeft, "right movement restores catcher");
 

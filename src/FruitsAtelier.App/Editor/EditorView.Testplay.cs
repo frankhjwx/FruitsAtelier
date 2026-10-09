@@ -276,15 +276,12 @@ public sealed partial class EditorView
         uint tint = frame.HyperDashing ? HyperDashColour : 0xFFFFFF;
         foreach (var trail in frame.Trails)
             DrawCatcherTrail(c, trail, left, fieldWidth, catchY);
+        DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
         DrawCatcherBody(c, x, catchY, fieldWidth, tint, 1, false, frame.FacingLeft);
         if (frame.Dashing) DrawCatcherBody(c, x, catchY, fieldWidth, 0xFFFFFF, .65f, true, frame.FacingLeft, brighten: true);
-        DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
         if (LibrarySettings.ShowTestplayCombo) DrawTestplayCombo(c, x, catchY - 175 * fieldWidth / 512, fieldWidth / 512);
         c.Unclip();
-        c.Text(L.Get("testplay.speed", PlaybackSpeed), 12, 12, 13, 0xD6E5B5, Math.Max(100, width - 24));
-        string[] hints = ["testplay.hintAutoplay", "testplay.hintSpeed", "testplay.hintPause", "testplay.hintBookmark", "testplay.hintQuickExit", "testplay.hintCurrentExit"];
-        for (int i = 0; i < hints.Length; i++)
-            c.Text(L.Get(hints[i]), 12, 32 + i * 20, 13, 0xD6E5B5, Math.Max(100, width - 24));
+        DrawTestplayInformation(c, frame);
         if (testplayAutoNotice is { } notice)
         {
             double age = TestplayRealtime - testplayAutoNoticeAt;
@@ -303,6 +300,34 @@ public sealed partial class EditorView
         if (testplayQuickRetryAt is double retryAt)
             c.Fill(new(0, 0, width, height), 0,
                 opacity: (float)Math.Clamp(1 - (retryAt - TestplayRealtime) / TestplayQuickRetryHoldMs, 0, 1));
+    }
+
+    private void DrawTestplayInformation(ICanvas c, CatchTestplayFrame frame)
+    {
+        float y = 12;
+        void Row(string text, uint colour = 0xD6E5B5)
+        {
+            c.Text(text, 12, y, 13, colour, Math.Max(100, width - 24));
+            y += 16;
+        }
+        long milliseconds = (long)Math.Abs(playhead);
+        string current = $"{(playhead < 0 ? "-" : "")}{milliseconds / 60000:00}:{milliseconds / 1000 % 60:00}:{milliseconds % 1000:000}";
+        Row(L.Get("testplay.current", current), 0xFFFFFF);
+        y += 8;
+        Row(L.Get("testplay.hit300", frame.Hit300), 0xFFFFFF);
+        Row(L.Get("testplay.hit100", frame.Hit100), 0xFFFFFF);
+        Row(L.Get("testplay.hit50", frame.Hit50), 0xFFFFFF);
+        Row(L.Get("testplay.misses", frame.Misses), 0xFFFFFF);
+        y += 16;
+        var session = difficulties[activeDifficulty];
+        double? stars = previewMod switch { 1 => session.EasyStars, 2 => session.HardRockStars, _ => session.Stars };
+        if (stars is double rating) Row(L.Get("testplay.stars", rating));
+        Row(L.Get("testplay.playLength", previewPlayLengthMs / 1000));
+        Row(L.Get("testplay.maximumCombo", previewMaximumCombo));
+        Row(L.Get("testplay.maximumDroplets", previewMaximumDroplets));
+        y += 16;
+        string[] hints = ["testplay.hintAutoplay", "testplay.hintBookmark", "testplay.hintPause", "testplay.hintQuickExit", "testplay.hintCurrentExit", "testplay.hintSpeed"];
+        foreach (string hint in hints) Row(L.Get(hint));
     }
 
     // ppy/osu 48c4800e: LegacyCatchComboCounter, LegacyRollingCounter and CatcherArea.
