@@ -6,6 +6,7 @@ internal static class LibraryExitTests
 {
     public static void Run()
     {
+        SavedRatingRefreshes();
         string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-library-exit-" + Guid.NewGuid());
         var view = new EditorView();
         view.LibrarySettings.Workspace = root; view.LibrarySettings.Songs = "";
@@ -54,5 +55,56 @@ internal static class LibraryExitTests
             while (view.LibraryLoading && DateTime.UtcNow < deadline) Thread.Sleep(10);
             if (Directory.Exists(root)) Directory.Delete(root, true);
         }
+    }
+
+    private static void SavedRatingRefreshes()
+    {
+        string root = Path.GetFullPath(Path.Combine("artifacts", "tests", "library-rating", Guid.NewGuid().ToString()));
+        var document = new MapDocument { Name = "Rating refresh", IsDemo = false, DurationMs = 20000 };
+        for (int i = 0; i < 100; i++)
+            document.Fruits.Add(new Fruit { TimeMs = 1000 + i * 100, X = i % 2 == 0 ? 20 : 490 });
+        var view = new EditorView(loadDemo: false);
+        var canvas = new RecordingCanvas();
+        try
+        {
+            view.LoadProject(BeatmapProject.FromDocuments([document]));
+            view.LibrarySettings.Workspace = root;
+            view.LibrarySettings.Songs = "";
+            Check(view.SaveWorkspace(), "Initial rating project saves");
+            string directory = view.WorkspaceSession!.Directory;
+            view.ShowLibrary();
+            Settle();
+            string before = Rating();
+            Check(before != "0.00★" && before != "—", "Library displays the saved difficulty rating");
+
+            view.LoadWorkspace(WorkspaceProject.Open(directory));
+            var history = (EditorHistory)typeof(EditorView).GetProperty("history",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(view)!;
+            history.Begin("Clear fruits"); view.Document.Fruits.Clear(); history.Commit();
+            Check(view.SaveWorkspace(), "Edited rating project saves");
+            view.ShowLibrary();
+            Settle();
+            Check(Rating() == "0.00★", "Returning to Library shows the saved rating instead of its cached value");
+        }
+        finally
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+            while (view.LibraryLoading && DateTime.UtcNow < deadline) { canvas.Clear(); view.Render(canvas, 980, 620); Thread.Sleep(10); }
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+
+        string Rating() => canvas.Texts.Single(t => t.X == 898 && t.Value.EndsWith('★') || t.X == 898 && t.Value == "—").Value;
+        void Settle()
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(20);
+            while (DateTime.UtcNow < deadline)
+            {
+                canvas.Clear(); view.Render(canvas, 980, 620);
+                if (!view.LibraryLoading && canvas.Texts.Any(t => t.X == 898 && t.Value.EndsWith('★'))) return;
+                Thread.Sleep(10);
+            }
+            throw new Exception("Library rating did not settle");
+        }
+        void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
     }
 }

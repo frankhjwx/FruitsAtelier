@@ -24,7 +24,7 @@ public sealed partial class EditorView
     private bool libraryProjectsNeedReindex;
     private LibraryScanProgress? libraryScanProgress;
     private Task<LibraryBrowser>? searchTask;
-    private Task<Dictionary<string, double?>>? ratingTask;
+    private Task<(long Revision, Dictionary<string, double?> Ratings)>? ratingTask;
     private string searchTaskQuery = "", libraryQuery = "", libraryError = "", libraryNotice = "";
     private string runningSearchQuery = "";
     private string? runningSearchSelection;
@@ -37,6 +37,7 @@ public sealed partial class EditorView
     public int LibrarySetTotal => LibrarySetCount;
     private readonly List<(Rect Bounds, LibraryMap Map)> libraryCards = [];
     private Dictionary<string, double?> libraryRatings = [];
+    private long libraryRatingRevision;
     private string? selectedLibraryGroup;
     private bool librarySettingsOpen, libraryProjectsOnly, exportPage, resourcePage;
     private int libraryField = -1, libraryDiffScroll;
@@ -166,7 +167,7 @@ public sealed partial class EditorView
         var project = CaptureProject();
         if (WorkspaceSession is null) WorkspaceSession = WorkspaceProject.Create(LibrarySettings.Workspace, project, LibrarySettings.Songs);
         else WorkspaceProject.Save(WorkspaceSession, project);
-        MarkSaved(); CheckWorkspaceResources();
+        MarkSaved(); CheckWorkspaceResources(); InvalidateLibraryRatings();
         libraryProjectsNeedReindex = true; QueueLibrarySearch();
         SetNotice(L.Get("files.saved", WorkspaceSession.Directory));
         return true;
@@ -205,7 +206,7 @@ public sealed partial class EditorView
             foreach (var diff in WorkspaceSession.Project.Difficulties)
                 difficulties.FirstOrDefault(d => d.Id == diff.Id)?.History.MarkSaved(diff.Document);
             if (ResourceSnapshotMatches(WorkspaceSession.Project)) projectStructureDirty = false;
-            CheckWorkspaceResources(); libraryProjectsNeedReindex = true; QueueLibrarySearch();
+            CheckWorkspaceResources(); InvalidateLibraryRatings(); libraryProjectsNeedReindex = true; QueueLibrarySearch();
             SetNotice(L.Get("files.saved", WorkspaceSession.Directory));
             saved = true;
         }
@@ -282,6 +283,7 @@ public sealed partial class EditorView
         if (scanTask is { IsCompleted: false }) { libraryRescanRequested = true; return; }
         try
         {
+            InvalidateLibraryRatings();
             libraryRescanRequested = false;
             string workspace = LibrarySettings.Workspace, songs = LibrarySettings.Songs;
             Volatile.Write(ref scanningDatabase, null);
@@ -301,6 +303,7 @@ public sealed partial class EditorView
         catch (Exception e) { libraryError = e.Message; }
     }
     private void QueueLibrarySearch() { searchAfter = DateTime.UtcNow.AddMilliseconds(150); searchTaskQuery = "\0"; }
+    private void InvalidateLibraryRatings() { libraryRatingRevision++; libraryRatings.Clear(); }
     private void PumpLibrary()
     {
         PumpStorage();
@@ -366,8 +369,8 @@ public sealed partial class EditorView
         }
         if (ratingTask is { IsCompleted: true })
         {
-            if (ratingTask.IsCompletedSuccessfully)
-                foreach (var (path, stars) in ratingTask.Result)
+            if (ratingTask.IsCompletedSuccessfully && ratingTask.Result.Revision == libraryRatingRevision)
+                foreach (var (path, stars) in ratingTask.Result.Ratings)
                 {
                     if (libraryRatings.Count >= 512) libraryRatings.Remove(libraryRatings.Keys.First());
                     libraryRatings[path] = stars;
@@ -524,24 +527,28 @@ public sealed partial class EditorView
         DrawLibraryScrollbar(c, new(width - 16, 334, 8, count * 40), libraryDiffScroll, group.Count, count, true);
         if (ratingTask is null && !libraryPointerActive)
         {
-            if (pending.Count > 0) ratingTask = Task.Run(() =>
+            if (pending.Count > 0)
             {
-                var result = new Dictionary<string, double?>();
-                foreach (var entry in pending)
+                long revision = libraryRatingRevision;
+                ratingTask = Task.Run(() =>
                 {
-                    try
+                    var result = new Dictionary<string, double?>();
+                    foreach (var entry in pending)
                     {
-                        bool project = entry.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase);
-                        var d = project ? ProjectSerializer.ReadFile(entry.Path) : OsuBeatmapReader.ReadFile(entry.Path);
-                        var converted = CatchStreamConverter.Convert(d);
-                        var exported = project && converted.Success ? OsuBeatmapWriter.Serialize(d) : null;
-                        var objects = exported is { ObjectSequenceMatches: true } ? exported.PlayableObjects : converted.Objects;
-                        result[entry.Path] = converted.Success ? CatchDifficultyCalculator.Calculate(objects, d.CircleSize).StarRating : null;
+                        try
+                        {
+                            bool project = entry.Path.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase);
+                            var d = project ? ProjectSerializer.ReadFile(entry.Path) : OsuBeatmapReader.ReadFile(entry.Path);
+                            var converted = CatchStreamConverter.Convert(d);
+                            var exported = project && converted.Success ? OsuBeatmapWriter.Serialize(d) : null;
+                            var objects = exported is { ObjectSequenceMatches: true } ? exported.PlayableObjects : converted.Objects;
+                            result[entry.Path] = converted.Success ? CatchDifficultyCalculator.Calculate(objects, d.CircleSize).StarRating : null;
+                        }
+                        catch (Exception) { result[entry.Path] = null; }
                     }
-                    catch (Exception) { result[entry.Path] = null; }
-                }
-                return result;
-            });
+                    return (revision, result);
+                });
+            }
         }
     }
     private void LibraryTextField(ICanvas c, int index, string label, string value, float y)
