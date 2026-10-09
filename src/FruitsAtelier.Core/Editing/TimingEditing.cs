@@ -156,6 +156,8 @@ public static class TimingEditing
         OsuBeatmapReader.Validate(map);
         var errors = CurveMath.Validate(map);
         if (errors.Count > 0) throw new ArgumentException(errors[0]);
+        // A valid green point may exceed the exportable SV range after base-SV compensation.
+        if (map.SliderMultiplierOverride is not null) _ = OsuBeatmapWriter.Serialize(map);
     }
 
     private static void UpdateSliderSource(ImportedSlider slider, int column, double value)

@@ -172,7 +172,8 @@ adjustment supersedes an older worker result and starts its own idle interval.
 One continuous adjustment commits as one undo step. File operations wait for
 the draft to be validated; retry after it completes.
 An intervening content edit invalidates the pending result. The change is applied only when exported NM/HR
-objects retain their kinds, times and positions within 0.001 ms/px. Changes that
+objects retain their kinds, times and positions within 0.001 ms/px. Timing Setup validates compensated export
+before committing when a base-SV override is active. Changes that
 require inherited SV outside 0.1–10 or cannot preserve playback report an error
 and leave the difficulty unchanged.
 

@@ -132,6 +132,17 @@ internal static class SliderMultiplierTests
                 Check(!rejected.View.SliderMultiplierValidationBusy, "Maximum green SV rejects a downward adjustment immediately"); Wait(rejected);
                 Check(rejected.View.Document.EffectiveSliderMultiplier == 2 && rejected.View.IsEditingText,
                     "Rejected typed SV retains the last valid value and restores the draft field");
+                var timingWithOverride = Fixture();
+                timingWithOverride.TimingPoints.Add(new() { TimeMs = 500, Uninherited = false, BeatLengthMs = -100 });
+                SliderMultiplierEditing.Apply(timingWithOverride, 1.3);
+                var timingUi = new Ui(false); timingUi.LoadDocument(timingWithOverride); timingUi.Resize(980, 620);
+                timingUi.Key(117); timingUi.ClickText(L.Get("timing.green")); timingUi.Key('A', ctrl: true); timingUi.Key(46);
+                timingUi.View.PasteTimingText("500,-10,4,1,0,100,0,0", timingUi.View.TimingInputSession);
+                timingUi.Key(13);
+                Check(timingUi.View.TimingSetupVisible && timingUi.View.Document.ContentEquals(timingWithOverride),
+                    "Unexportable green SV is rejected before timing changes commit");
+                _ = OsuBeatmapWriter.Serialize(timingUi.View.Document);
+                timingUi.Key(27);
                 var slowest = Fixture(); slowest.TimingPoints.Add(new() { TimeMs = 0, Uninherited = false, BeatLengthMs = -1000 });
                 var slowBefore = OsuBeatmapWriter.Serialize(slowest);
                 try { SliderMultiplierEditing.CheckLimits(slowBefore, 3.6); throw new Exception("Minimum green SV accepted"); }
