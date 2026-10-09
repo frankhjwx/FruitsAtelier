@@ -3,6 +3,29 @@ using FruitsAtelier.App.Editor;
 
 internal static class SliderModeInteractionTests
 {
+    public static void PenDraftPreviewAndOutsideAnchors()
+    {
+        var ui = new Ui(); ui.LoadDocument(new MapDocument { DurationMs = 10000 });
+        ui.View.SetSliderEditingMode(SliderEditingMode.PenTool); ui.Key('B');
+        ui.ClickMap(1000, 200);
+        var hover = ui.ScreenAt(2000, 300);
+        ui.View.PointerMove(hover.X, hover.Y, false, false); ui.Paint();
+        Check(ui.Canvas.Lines.Any(line => Math.Abs(line.X2 - hover.X) < 1 && Math.Abs(line.Y2 - hover.Y) < 1
+            && Math.Abs(line.Opacity - .6f) < .001), "Pen draft did not preview the next path segment.");
+        var start = ui.ScreenAt(1000, 200);
+        Check(ui.Canvas.Circles.Any(circle => circle.Filled && Math.Abs(circle.Opacity - .6f) < .001
+            && circle.Y > hover.Y + 10 && circle.Y < start.Y - 10),
+            "Pen draft did not preview generated objects along the next segment.");
+        var right = ui.View.PlayfieldBounds.Right + 20;
+        Check(right < ui.View.CanvasPlotBounds.Right, "Fixture lacks canvas margin outside the playfield.");
+        ui.View.PointerDown(right, hover.Y, 0, false, false);
+        ui.View.PointerUp(right, hover.Y, 0); ui.Paint();
+        Check(ui.View.Document.Tracks.Single().Nodes[^1].X > 512,
+            "Pen draft anchor was clamped to the playfield edge.");
+        Check(CatchStreamConverter.Convert(ui.View.Document).Success,
+            "Pen draft beyond the playfield did not produce a renderable path.");
+    }
+
     public static void LegacyDraftAndMixedModes()
     {
         var ui = new Ui(); ui.LoadDocument(new MapDocument { DurationMs = 10000 });

@@ -4,6 +4,20 @@ using FruitsAtelier.Localization;
 
 internal static class DropletSelectionLockTests
 {
+    public static void PenToolDoesNotCreateAnchorOnLockedDroplet()
+    {
+        var map = new MapDocument { DurationMs = 5000, SliderTickRate = 1 };
+        var track = new CurveTrack { Kind = CurveKind.Linear };
+        track.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 120 }, new Anchor { TimeMs = 3000, X = 360 }]);
+        map.Tracks.Add(track);
+        var ui = new Ui(lockDropletSelection: true); ui.LoadDocument(map);
+        ui.View.SetSliderEditingMode(SliderEditingMode.PenTool); ui.Key('B');
+        var target = ui.View.Conversion.Objects.First(o => o.SourceId == track.Id && o.Kind == CatchObjectKind.Droplet);
+        ui.ClickMap(target.TimeMs, target.X);
+        Check(ui.View.Document.ContentEquals(map) && ui.View.Document.Tracks.Count == 1,
+            "Clicking a locked Pen-slider droplet created a draft anchor.");
+    }
+
     public static void Selection()
     {
         foreach (bool imported in new[] { false, true })

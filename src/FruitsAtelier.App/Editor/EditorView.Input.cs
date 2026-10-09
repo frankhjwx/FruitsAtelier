@@ -327,6 +327,9 @@ public sealed partial class EditorView
         }
         if (tool == Tool.Slider)
         {
+            if (draftTrack == Guid.Empty && dropletSelectionLocked
+                && HitCatchObject(x, y, includeLockedDroplets: true) is { Kind: CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet } lockedDroplet)
+            { PickObject(lockedDroplet.SourceId, false); return; }
             if (LegacyMode) PlaceLegacyPoint(x, y, ctrl); else AddCurveAnchor(x, y, ctrl);
             return;
         }
@@ -747,13 +750,15 @@ public sealed partial class EditorView
             return;
         }
         bool navigationDrag = NavigationDuringDrag;
+        // Wheel navigation moves the slider beneath a stationary pointer, so it ends the hold gesture.
+        if (navigationDrag && SliderHoldNeedsRedraw)
+        { sliderHoldId = Guid.Empty; noteHoldTarget = null; }
         WheelCore(x, y, delta, ctrl, shift, alt);
         if (navigationDrag && NavigationDuringDrag) PointerMove(mouseX, mouseY, shift || shiftHeld, ctrl);
     }
 
     private bool NavigationDuringDrag => draftTrack == Guid.Empty && draftBanana == Guid.Empty
-        && (drag is DragKind.TimelineTail or DragKind.BananaStart or DragKind.BananaEnd
-            || drag == DragKind.SliderObject && streamEndpointTimeDrag
+        && (drag is DragKind.Objects or DragKind.SliderObject or DragKind.TimelineTail or DragKind.BananaStart or DragKind.BananaEnd
             || drag is DragKind.Anchor or DragKind.LegacyControl && SelectedTrack is { Nodes.Count: > 1 } track
                 && (anchorSelection.Contains(track.Nodes[0].Id) || anchorSelection.Contains(track.Nodes[^1].Id)));
 
@@ -1334,9 +1339,7 @@ public sealed partial class EditorView
 
     private void AddCurveAnchor(float x, float y, bool straight = false)
     {
-        var p = draftTrack != Guid.Empty
-            ? MapAt(x, y, true, clampX: false)
-            : PlacementPoint(x, y);
+        var p = MapAt(x, y, true, clampX: false);
         CurveTrack track;
         if (draftTrack == Guid.Empty)
         {
