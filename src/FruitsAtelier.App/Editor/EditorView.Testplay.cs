@@ -327,7 +327,7 @@ public sealed partial class EditorView
         var session = difficulties[activeDifficulty];
         double? stars = previewMod switch { 1 => session.EasyStars, 2 => session.HardRockStars, _ => session.Stars };
         if (stars is double rating) Row(L.Get("testplay.stars", rating));
-        Row(L.Get("testplay.playLength", previewPlayLengthMs / 1000));
+        Row(L.Get("testplay.drainTime", previewDrainTime));
         Row(L.Get("testplay.maximumCombo", previewMaximumCombo));
         Row(L.Get("testplay.maximumDroplets", previewMaximumDroplets));
         y += 16;

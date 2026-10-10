@@ -21,7 +21,7 @@ public sealed partial class EditorView
     private IReadOnlyList<ConvertedCatchObject> previewObjects = [];
     private HashSet<(Guid SourceId, int EventIndex)> previewHyperdash = [];
     private int previewMaximumCombo, previewMaximumDroplets;
-    private double previewPlayLengthMs;
+    private string previewDrainTime = "0:00";
     public bool CatchPreviewVisible => catchPreviewVisible;
     public Rect PreviewToggleBounds { get; private set; }
     public Rect PreviewResizeBounds { get; private set; }
@@ -73,7 +73,7 @@ public sealed partial class EditorView
                 : playableObjects;
             previewMaximumCombo = previewObjects.Count(item => item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet);
             previewMaximumDroplets = previewObjects.Count(item => item.Kind == CatchObjectKind.TinyDroplet);
-            previewPlayLengthMs = previewObjects.Count == 0 ? 0 : previewObjects[^1].TimeMs - previewObjects[0].TimeMs;
+            previewDrainTime = PreviewDrainTime();
             previewHyperdash = HyperDashCalculator.GetHyperDashStarts(previewObjects, PreviewCircleSize);
             previewAutoplay = new(previewObjects, PreviewCircleSize);
             var parents = ClipboardParents(Document).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
@@ -86,6 +86,23 @@ public sealed partial class EditorView
             previewPlate = new(previewObjects, previewAutoplay, PreviewCircleSize, ends);
         }
         return previewObjects;
+    }
+    private string PreviewDrainTime()
+    {
+        RefreshTimelineSources();
+        if (previewObjects.Count == 0 || timelineStarts.Length == 0) return "0:00";
+        double start = timelineStarts[0], end = timelineEnds[^1];
+        double duration = end - start, countedUntil = start;
+        foreach (var period in breakPeriods)
+        {
+            double breakStart = Math.Max(countedUntil, period.StartMs);
+            double breakEnd = Math.Min(end, period.EndMs);
+            if (breakEnd <= breakStart) continue;
+            duration -= breakEnd - breakStart;
+            countedUntil = breakEnd;
+        }
+        long seconds = (long)Math.Max(0, Math.Floor(duration / 1000));
+        return FormattableString.Invariant($"{seconds / 60}:{seconds % 60:00}");
     }
     private IEnumerable<ConvertedCatchObject> PreviewObjectsInRange(double start, double end)
     {

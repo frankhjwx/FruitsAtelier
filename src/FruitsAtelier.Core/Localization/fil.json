@@ -123,7 +123,7 @@
   "testplay.hit50": "50 x {0}",
   "testplay.misses": "Miss x {0}",
   "testplay.stars": "Star Rating: {0:0.00}",
-  "testplay.playLength": "Total Play Length: {0:0}s",
+  "testplay.drainTime": "Total Drain Time: {0}",
   "testplay.maximumCombo": "Maximum Combo: {0}",
   "testplay.maximumDroplets": "Maximum Droplets: {0}",
   "testplay.hintSpeed": "F3: change autoplay speed",

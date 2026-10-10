@@ -174,6 +174,7 @@ var tests = new (string Name, Action Run)[]
     ("Catch rotations, banana arrival transforms and combo colours", TestplayTests.VisualTransformsAndColours),
     ("Unskinned Catch objects keep dark map colours bright", FallbackSkinTests.BrightComboColour),
     ("Testplay Escape opens the pause menu without repeated navigation", TestplayTests.EscapeReturnsToEditor),
+    ("Testplay drain time excludes intros, outros and breaks and includes complete object durations", TestplayPresentationTests.DrainTime),
     ("Testplay skip, pause menu, background and break dim", TestplayPresentationTests.ControlsAndBackground),
     ("Testplay caught stacks share preview effects and outlive final judgement", TestplayTests.LivePlate),
     ("Testplay input isolation and transport lifecycle", TestplayTests.EditorLifecycle),
