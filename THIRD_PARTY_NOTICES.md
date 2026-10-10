@@ -177,6 +177,9 @@ revision `48c4800e3ae4ee752452cdff83bd3787ccf3105f` (ppy Pty Ltd, MIT).
 Source files and the independently implemented editor behaviour are listed in
 [osu!lazer references](docs/LAZER_REFERENCE.md#upper-object-timeline).
 The retained upstream license is `src/FruitsAtelier.Core/Conversion/LICENCE.osu.txt`.
+Break reconciliation also references `EditorBeatmapProcessor.cs` and
+`Beatmaps/Timing/BreakPeriod.cs` at that same revision; the implementation is
+independent and preserves authored break intervals.
 No additional upstream artwork is bundled by this implementation.
 
 ## Default hitsound samples

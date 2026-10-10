@@ -78,6 +78,18 @@ Circle padding and the HitCircle font's 0.8 scale follow [OsuLegacySkinTransform
 
 Resource handling is documented in [Skinning reference](../src/FruitsAtelier.App/Skinning/REFERENCE.md).
 
+## Break reconciliation
+
+Break reconciliation references
+[`EditorBeatmapProcessor.autoGenerateBreaks`](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/EditorBeatmapProcessor.cs) and
+[`Beatmaps/Timing/BreakPeriod.cs`](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/Timing/BreakPeriod.cs) at revision
+`48c4800e3ae4ee752452cdff83bd3787ccf3105f`. Object-time and duration edits remove
+breaks outside the first start and maximum object end; overlapping durations use
+the maximum preceding end. Approach changes invalidate clearance. FA preserves
+valid authored intervals and reconciles them in the owning undo transaction,
+with 200 ms recovery, Catch AR preempt clearance and a 650 ms generated minimum.
+Manual insertion and resizing retain the editor's 400 ms threshold.
+
 ## Dependencies and licenses
 
 At this revision, [osu.Game.csproj](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/osu.Game.csproj) targets net8.0 but also depends on Realm, osu!framework, resources, and other components. This project does not reference that project.

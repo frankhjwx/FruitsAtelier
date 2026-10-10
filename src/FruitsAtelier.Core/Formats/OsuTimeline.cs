@@ -32,9 +32,16 @@ public static class OsuTimeline
             .Select(pair => pair.Value).ToArray();
         var vacated = previous.Where(pair => !current.TryGetValue(pair.Key, out var now) || now != pair.Value)
             .Select(pair => pair.Value).ToArray();
-        if (changed.Length == 0 && vacated.Length == 0) return;
+        bool approachChanged = before.ApproachRate != document.ApproachRate;
+        if (changed.Length == 0 && vacated.Length == 0 && !approachChanged) return;
         double preempt = CatchScrollTiming.PreemptMs(document.ApproachRate);
         var occupied = current.Values.OrderBy(interval => interval.Start).ToArray();
+        // A break needs objects on both sides, even when its boundaries were manually resized.
+        double firstStart = occupied.Length == 0 ? double.PositiveInfinity : occupied[0].Start;
+        double lastEnd = occupied.Length == 0 ? double.NegativeInfinity : occupied.Max(item => item.End);
+        foreach (var period in periods)
+            if (period.EndMs <= firstStart || period.StartMs >= lastEnd)
+                RemoveBreak(document, period);
         foreach (var interval in vacated)
         {
             int beforeNote = (int)Math.Clamp(Math.Floor(interval.Start - preempt), 0, int.MaxValue);
@@ -58,7 +65,7 @@ public static class OsuTimeline
             }
             else
             {
-                double? prior = occupied.Where(item => item.End <= interval.Start).Select(item => (double?)item.End).LastOrDefault();
+                double? prior = occupied.Where(item => item.End <= interval.Start).Select(item => (double?)item.End).Max();
                 if (prior is not null)
                     ReplaceBreak(document, right, new(
                         Math.Min(right.StartMs, BreakStartAfter(prior.Value)), right.EndMs));
@@ -66,7 +73,7 @@ public static class OsuTimeline
         }
         foreach (var period in Breaks(document))
         {
-            if (!changed.Any(interval => interval.Start - preempt < period.EndMs && interval.End + 200 > period.StartMs)
+            if (!approachChanged && !changed.Any(interval => interval.Start - preempt < period.EndMs && interval.End + 200 > period.StartMs)
                 && !vacated.Any(interval => interval.Start - preempt < period.EndMs && interval.End + 200 > period.StartMs)) continue;
             var remaining = new List<BreakPeriod>();
             int start = period.StartMs;
@@ -77,11 +84,12 @@ public static class OsuTimeline
                 if (afterNote <= start) continue;
                 if (beforeNote >= period.EndMs) break;
                 int end = Math.Min(beforeNote, period.EndMs);
-                if ((long)end - start >= 650) remaining.Add(new(start, end));
+                if ((long)end - start >= 650 && end > firstStart && start < lastEnd) remaining.Add(new(start, end));
                 start = Math.Max(start, afterNote);
                 if (start >= period.EndMs) break;
             }
-            if ((long)period.EndMs - start >= 650) remaining.Add(new(start, period.EndMs));
+            if ((long)period.EndMs - start >= 650 && period.EndMs > firstStart && start < lastEnd)
+                remaining.Add(new(start, period.EndMs));
             if (remaining.Count == 1 && remaining[0] == period) continue;
             if (remaining.Count == 0) RemoveBreak(document, period);
             else

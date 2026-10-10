@@ -54,7 +54,8 @@ internal static class SynchronizationUiTests
         string root = Path.GetFullPath(Path.Combine("artifacts/tests/sync-local-breaks", Guid.NewGuid().ToString("N")));
         string songs = Path.Combine(root, "Songs"), source = Path.Combine(songs, "set", "map.osu");
         Directory.CreateDirectory(Path.GetDirectoryName(source)!);
-        File.WriteAllText(source, Fixture.Replace("Mode:2", "Mode:2\nAudioFilename:music.wav"));
+        File.WriteAllText(source, Fixture.Replace("Mode:2", "Mode:2\nAudioFilename:music.wav")
+            + "300,192,14000,1,0,0:0:0:0:\n");
         File.WriteAllBytes(Path.Combine(Path.GetDirectoryName(source)!, "music.wav"), [1, 2, 3, 4]);
         ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace"); ui.View.LibrarySettings.Songs = songs;
         ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);

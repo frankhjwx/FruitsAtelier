@@ -7,6 +7,8 @@ internal static class TimelineMetadataTests
         DeletedSectionBreak();
         CachedBreakIntervals();
         FractionalBreakBoundary();
+        UnboundedBreaks();
+        ApproachAndOverlappingDurations();
         const string source = "osu file format v14\n[General]\nMode:2\nPreviewTime:1500\n[Editor]\nBookmarks: 100, 300\n[Events]\n//Break Periods\n2,1000,2000\n0,0,background.jpg\n[TimingPoints]\n0,500,4,1,0,100,1,1\n[HitObjects]\n256,192,100,1,0,0:0:0:0:\n";
         var document = OsuBeatmapReader.Read(source);
         Check(OsuTimeline.PreviewTime(document) == 1500, "Preview point was not read");
@@ -119,6 +121,93 @@ internal static class TimelineMetadataTests
         history = new EditorHistory(map);
         history.Begin("Delete final object"); history.Document.Fruits.RemoveAt(2); history.Commit();
         Check(OsuTimeline.Breaks(history.Document).Count == 0, "Deletion created an unbounded trailing break.");
+    }
+
+    private static void UnboundedBreaks()
+    {
+        foreach (bool leading in new[] { false, true })
+        foreach (bool resized in new[] { false, true })
+        foreach (bool move in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 20000, ApproachRate = 7 };
+            map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 11000, X = 300 }]);
+            OsuTimeline.AddBreak(map, resized ? 2000 : 1200, resized ? 9000 : 10100);
+            map.OriginalSections.Single().Lines.Add("// retained event comment");
+            var history = new EditorHistory(map);
+            history.Begin("Edit outer object");
+            int index = leading ? 0 : 1;
+            if (move) history.Document.Fruits[index].TimeMs = leading ? 12000 : 500;
+            else history.Document.Fruits.RemoveAt(index);
+            history.Commit();
+            Check(OsuTimeline.Breaks(history.Document).Count == 0, "An unbounded break survived an outer-object edit.");
+            Check(history.Document.OriginalSections.Single().Lines.Contains("// retained event comment"), "Break cleanup changed unrelated Events data.");
+            Check(OsuTimeline.Breaks(ProjectSerializer.Read(ProjectSerializer.Serialize(history.Document))).Count == 0,
+                "Project persistence restored an unbounded break.");
+            Check(OsuTimeline.Breaks(OsuBeatmapWriter.Serialize(history.Document).ReadBack).Count == 0,
+                "Export restored an unbounded break.");
+            history.Undo(); Check(map.ContentEquals(history.Document), "Outer-object edit and break cleanup did not undo together.");
+            history.Redo(); Check(OsuTimeline.Breaks(history.Document).Count == 0, "Redo restored an unbounded break.");
+        }
+        var empty = new MapDocument();
+        empty.Fruits.AddRange([new() { TimeMs = 1000 }, new() { TimeMs = 11000 }]);
+        OsuTimeline.AddBreak(empty, 1200, 9000);
+        var cleared = new EditorHistory(empty);
+        cleared.Begin("Clear objects"); cleared.Document.Fruits.Clear(); cleared.Commit();
+        Check(OsuTimeline.Breaks(cleared.Document).Count == 0, "Clearing all objects retained a break.");
+        foreach (int kind in new[] { 0, 1, 2 })
+        {
+            var map = new MapDocument { DurationMs = 20000, ApproachRate = 7 };
+            map.Fruits.Add(new() { TimeMs = 1000 });
+            if (kind == 0)
+            {
+                var track = new CurveTrack { Kind = CurveKind.Linear, SpanCount = 3 };
+                track.Nodes.AddRange([new() { TimeMs = 11000, X = 100 }, new() { TimeMs = 12000, X = 200 }]);
+                map.Tracks.Add(track);
+            }
+            else if (kind == 1)
+            {
+                var slider = new ImportedSlider { TimeMs = 11000, X = 100, Y = 192, PathType = 'L', PixelLength = 100, SpanCount = 3 };
+                slider.ControlPoints.AddRange([new(100, 192), new(200, 192)]);
+                map.ImportedSliders.Add(slider);
+            }
+            else map.BananaShowers.Add(new() { TimeMs = 11000, EndTimeMs = 14000 });
+            OsuTimeline.AddBreak(map, 1200, 10100);
+            var history = new EditorHistory(map);
+            history.Begin("Remove final duration object");
+            history.Document.Tracks.Clear(); history.Document.ImportedSliders.Clear(); history.Document.BananaShowers.Clear();
+            history.Commit();
+            Check(OsuTimeline.Breaks(history.Document).Count == 0, "Removing the final duration object retained a break.");
+            history.Undo(); Check(map.ContentEquals(history.Document), "Duration object and break did not undo together.");
+        }
+    }
+
+    private static void ApproachAndOverlappingDurations()
+    {
+        var map = new MapDocument { DurationMs = 20000, ApproachRate = 7 };
+        map.Fruits.AddRange([new() { TimeMs = 1000 }, new() { TimeMs = 7000 }]);
+        OsuTimeline.AddBreak(map, 1200, 6100);
+        var history = new EditorHistory(map);
+        history.Begin("Change approach rate"); history.Document.ApproachRate = 0; history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(1200, 5200)]),
+            "AR change left a break inside the next object's approach interval.");
+        history.Undo(); Check(map.ContentEquals(history.Document), "AR and break did not undo together.");
+        history.Redo(); Check(OsuTimeline.Breaks(history.Document).Single().EndMs == 5200, "Redo lost the AR break adjustment.");
+        map = new MapDocument { DurationMs = 5000, ApproachRate = 10 };
+        map.Fruits.AddRange([new() { TimeMs = 1000 }, new() { TimeMs = 3000 }]);
+        OsuTimeline.AddBreak(map, 1200, 2550);
+        history = new EditorHistory(map);
+        history.Begin("Lengthen approach beyond break"); history.Document.ApproachRate = 0; history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).Count == 0, "AR change retained a break with no usable clearance.");
+
+        map = new MapDocument { DurationMs = 20000, ApproachRate = 7 };
+        map.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 4000 });
+        map.Fruits.AddRange([new() { TimeMs = 2000 }, new() { TimeMs = 5000 }, new() { TimeMs = 15000 }]);
+        OsuTimeline.AddBreak(map, 5200, 14000);
+        history = new EditorHistory(map);
+        history.Begin("Delete after overlapping objects"); history.Document.Fruits.RemoveAt(1); history.Commit();
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(4200, 14000)]),
+            "Break extension did not use the maximum preceding object end.");
+        history.Undo(); Check(map.ContentEquals(history.Document), "Overlapping duration and break did not undo together.");
     }
 
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
