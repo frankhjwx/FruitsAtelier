@@ -137,6 +137,7 @@
   "testplay.autoplayExited": "자동재생 종료됨",
   "testplay.startupDelay": "테스트플레이 리드인",
   "testplay.startupDelayValue": "{0}",
+  "testplay.speed": "테스트플레이 속도",
   "axis.bookmarkCount": "{0} 북마크",
   "axis.bookmarkTime": "북마크 {0}",
   "axis.bookmarkRange": "{0} 북마크: {1}–{2}",

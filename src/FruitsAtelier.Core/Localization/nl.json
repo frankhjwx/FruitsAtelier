@@ -137,6 +137,7 @@
   "testplay.autoplayExited": "Autoplay afgesloten",
   "testplay.startupDelay": "Testplay-inleiding",
   "testplay.startupDelayValue": "{0} en",
+  "testplay.speed": "Testplaysnelheid",
   "axis.bookmarkCount": "{0}-bladwijzers",
   "axis.bookmarkTime": "Maak een bladwijzer van {0}",
   "axis.bookmarkRange": "{0}-bladwijzers: {1}–{2}",

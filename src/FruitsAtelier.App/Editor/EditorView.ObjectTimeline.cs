@@ -12,7 +12,8 @@ public sealed partial class EditorView
     private readonly List<(Guid Id, double Time, Rect Bounds)> timelineObjects = [];
     private CatchConversionResult? timelineConversion;
     private Guid timelineDraft;
-    private (Guid Id, double Start, double End, int SourceOrder, bool IsBanana, int Spans)[] timelineSources = [];
+    private const int TimelineStackLimit = 16;
+    private (Guid Id, double Start, double End, int SourceOrder, bool IsBanana, int Spans, int StackIndex, float StackOffset)[] timelineSources = [];
     private double[] timelineStarts = [], timelineEnds = [], timelinePrefixEnd = [];
     private Dictionary<Guid, int> timelineNumbers = [];
     private bool boxTimeline;
@@ -214,9 +215,9 @@ public sealed partial class EditorView
     private void AdjustPlaybackSpeed(int direction, bool fine)
         => SetPlaybackSpeed(Math.Clamp((Math.Round(PlaybackSpeed * 100) + direction * (fine ? 5 : 25)) / 100, .1, 1.5));
 
-    private Rect TimelineObjectBounds(double start, double end)
+    private Rect TimelineObjectBounds(double start, double end, float stackOffset)
         => new(objectTimeline.X + (float)((start - ObjectTimelineStartMs) * objectTimelineScale) - 19,
-            objectTimeline.Y + 8, (float)((end - start) * objectTimelineScale) + 38, 38);
+            objectTimeline.Y + 8 + stackOffset, (float)((end - start) * objectTimelineScale) + 38, 38);
 
     private void RefreshTimelineSources()
     {
@@ -245,7 +246,23 @@ public sealed partial class EditorView
             .Concat(Document.Tracks.Where(t => t.Nodes.Count > 0).Select(t => (t.Id, Start: t.Nodes[0].TimeMs, End: CurveMath.EndTimeMs(t), t.SourceOrder, IsBanana: false, Spans: t.SpanCount)))
             .Concat(Document.ImportedSliders.Select(s => (s.Id, Start: s.TimeMs, End: sliderEnds.TryGetValue(s.Id, out double endTime) ? endTime : ImportedSliderConverter.EndTimeMs(Document, s), s.SourceOrder, IsBanana: false, Spans: s.SpanCount)))
             .Concat(Document.BananaShowers.Select(s => (s.Id, Start: s.TimeMs, End: s.EndTimeMs, s.SourceOrder, IsBanana: true, Spans: 1)))
-            .OrderBy(o => o.Start).ThenBy(o => o.SourceOrder).ToArray();
+            .OrderBy(o => o.Start).ThenBy(o => o.SourceOrder)
+            .Select(o => (o.Id, o.Start, o.End, o.SourceOrder, o.IsBanana, o.Spans, StackIndex: 0, StackOffset: 0f)).ToArray();
+        for (int first = 0; first < timelineSources.Length;)
+        {
+            int last = first + 1;
+            while (last < timelineSources.Length && timelineSources[last].Start == timelineSources[first].Start) last++;
+            int layers = Math.Min(TimelineStackLimit, last - first);
+            // Fit the circles and selection rings inside the existing 64-DIP timeline.
+            float step = layers > 1 ? Math.Min(3, 22f / (layers - 1)) : 0;
+            float baseline = Math.Max(0, step * (layers - 1) - 6);
+            for (int i = first; i < last; i++)
+            {
+                timelineSources[i].StackIndex = i - first;
+                timelineSources[i].StackOffset = baseline - Math.Min(i - first, TimelineStackLimit - 1) * step;
+            }
+            first = last;
+        }
         timelineStarts = timelineSources.Select(item => item.Start).ToArray();
         timelineEnds = timelineSources.Select(item => item.End).Order().ToArray();
         timelinePrefixEnd = new double[timelineSources.Length];
@@ -293,11 +310,11 @@ public sealed partial class EditorView
             c.Line(X(tick.TimeMs), objectTimeline.Bottom - style.Height, X(tick.TimeMs), objectTimeline.Bottom,
                 style.Color, style.Width);
         }
-        var visibleItems = timelineSources.Where(item => item.End >= start - 20 / objectTimelineScale
+        var visibleItems = timelineSources.Where(item => item.StackIndex < TimelineStackLimit && item.End >= start - 20 / objectTimelineScale
             && item.Start <= end + 20 / objectTimelineScale)
-            .OrderByDescending(item => item.Start).ThenByDescending(item => item.End).ThenByDescending(item => item.SourceOrder).ToArray();
+            .OrderByDescending(item => item.Start).ThenByDescending(item => item.StackIndex).ToArray();
         foreach (var item in visibleItems)
-            timelineObjects.Add((item.Id, item.Start, TimelineObjectBounds(item.Start, item.End)));
+            timelineObjects.Add((item.Id, item.Start, TimelineObjectBounds(item.Start, item.End, item.StackOffset)));
         // Each object's body, circles and number share its chronological layer and hit order.
         for (int i = 0; i < visibleItems.Length; i++) { DrawBody(i); DrawMarkers(i); }
 
@@ -321,7 +338,7 @@ public sealed partial class EditorView
             var item = visibleItems[index];
             bool selected = IsObjectSelected(item.Id);
             uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true);
-            float left = X(item.Start), right = X(item.End), cy = objectTimeline.Y + 27;
+            float left = X(item.Start), right = X(item.End), cy = timelineObjects[index].Bounds.Y + 19;
             void Ring(float ringX, int? number = null, int? edge = null)
             {
                 // Timeline endpoints use the combo marker, independently of gameplay slider textures.
@@ -400,7 +417,7 @@ public sealed partial class EditorView
             soundEdge = null; distanceObject = null; clickedCoordinate = null;
             var markerSource = timelineSources.First(o => o.Id == item.Id);
             if (!markerSource.IsBanana && markerSource.End > markerSource.Start && markerSource.Spans > 0
-                && objectSelection.Count == 1 && objectSelection.Contains(item.Id) && Math.Abs(y-(objectTimeline.Y+27)) <= 19)
+                && objectSelection.Count == 1 && objectSelection.Contains(item.Id) && Math.Abs(y-(item.Bounds.Y+19)) <= 19)
             {
                 double spanDuration = (markerSource.End-markerSource.Start)/markerSource.Spans;
                 double time = ObjectTimelineStartMs+(x-objectTimeline.X)/objectTimelineScale;

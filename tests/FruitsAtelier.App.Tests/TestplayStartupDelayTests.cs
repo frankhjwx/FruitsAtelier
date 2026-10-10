@@ -2,6 +2,55 @@ using FruitsAtelier.Core;
 
 internal static class TestplayStartupDelayTests
 {
+    public static void IndependentSpeed()
+    {
+        var clock = new ManualTime();
+        var ui = new Ui(timeProvider: clock);
+        var map = new MapDocument { DurationMs = 20000 };
+        map.Fruits.Add(new() { TimeMs = 10000, X = 256 });
+        ui.LoadDocument(map);
+        ui.View.SetPlaybackSpeed(.5);
+        var requests = new List<double>(); ui.View.RequestPlaybackSpeed = requests.Add;
+        ui.View.StartTestplay();
+        Check(ui.View.PlaybackSpeed == 1 && requests.SequenceEqual(new[] { 1d }), "Testplay inherited the editor speed.");
+        clock.Advance(100); ui.Paint();
+        Check(ui.View.PlayheadMs == 100, "Silent testplay clock ignored its independent speed.");
+        ui.View.SetPlaybackSpeed(1.25);
+        ui.Key('R', ctrl: true); ui.View.KeyUp('R');
+        Check(ui.View.PlaybackSpeed == 1.25, "Retry lost the current testplay speed.");
+        ui.View.StopTestplay();
+        Check(ui.View.PlaybackSpeed == .5 && requests[^1] == .5 && ui.View.LibrarySettings.TestplaySpeed == 1,
+            "Testplay speed changes leaked into editor speed or saved settings.");
+        ui.View.OpenSettings(); ui.Paint();
+        ui.ClickText(FruitsAtelier.Localization.Strings.Get("settings.testplay"));
+        var bounds = ui.View.TestplaySpeedBounds;
+        for (int i = 0; i < 5; i++) ui.Click(bounds.X + 12, bounds.Y + 16);
+        Check(ui.View.LibrarySettings.TestplaySpeed == 1, "Speed setting escaped its draft.");
+        string path = Path.GetFullPath("artifacts/tests/testplay-speed-settings.json");
+        ui.View.ApplySettings(path);
+        Check(ui.View.LibrarySettings.TestplaySpeed == .75 && LibrarySettings.Load(path).TestplaySpeed == .75,
+            "Independent testplay speed did not persist.");
+        ui.Key(27); ui.View.StartTestplay();
+        Check(ui.View.IsTestplaying && ui.View.PlaybackSpeed == .75, "Configured testplay speed was not applied.");
+        ui.View.StopTestplay(true);
+        Check(ui.View.PlaybackSpeed == .5 && ui.View.Document.ContentEquals(map), "Exit failed to restore editor speed and content.");
+        var audioCalls = new List<string>();
+        ui.View.UpdateTransport(2000, 20000, true, true, false, null, null);
+        ui.View.RequestPausePlayback = () => audioCalls.Add("pause");
+        ui.View.RequestPlaybackSpeed = _ => audioCalls.Add("speed");
+        ui.View.RequestSeek = _ => audioCalls.Add("seek");
+        ui.View.RequestTogglePlayback = () => audioCalls.Add("play");
+        ui.View.StartTestplay();
+        Check(audioCalls.SequenceEqual(new[] { "pause", "speed", "seek", "play" }),
+            "Playing audio must restart at the independent speed before testplay resumes.");
+        ui.View.StopTestplay();
+        Check(ui.View.PlaybackSpeed == .5 && audioCalls.TakeLast(3).SequenceEqual(new[] { "pause", "speed", "seek" }),
+            "Audio exit failed to restore editor speed before seeking.");
+        Check(new LibrarySettings().TestplaySpeed == 1
+            && new LibrarySettings { TestplaySpeed = double.NaN }.TestplaySpeed == 1
+            && new LibrarySettings { TestplaySpeed = 0 }.TestplaySpeed == .1
+            && new LibrarySettings { TestplaySpeed = 2 }.TestplaySpeed == 1.5, "Testplay speed defaults or bounds are invalid.");
+    }
     public static void LeadIn()
     {
         var settingsUi = new Ui();

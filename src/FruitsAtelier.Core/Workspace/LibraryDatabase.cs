@@ -63,6 +63,12 @@ public sealed class LibrarySettings
     public int TestplayRightKey { get; set; } = 39;
     public int TestplayDashKey { get; set; } = 16;
     private double testplayStartupDelaySeconds = 1;
+    private double testplaySpeed = 1;
+    public double TestplaySpeed
+    {
+        get => testplaySpeed;
+        set => testplaySpeed = double.IsFinite(value) ? Math.Clamp(value, .1, 1.5) : 1;
+    }
     public double TestplayStartupDelaySeconds
     {
         get => testplayStartupDelaySeconds;

@@ -137,6 +137,7 @@
   "testplay.autoplayExited": "Wyszedł z gry automatycznej",
   "testplay.startupDelay": "Wprowadzenie do gry testowej",
   "testplay.startupDelayValue": "{0} s",
+  "testplay.speed": "Prędkość gry testowej",
   "axis.bookmarkCount": "Zakładki {0}",
   "axis.bookmarkTime": "Zakładka {0}",
   "axis.bookmarkRange": "Zakładki {0}: {1}–{2}",

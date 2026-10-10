@@ -137,6 +137,7 @@
   "testplay.autoplayExited": "自動再生を終了しました",
   "testplay.startupDelay": "テストプレイのリードイン",
   "testplay.startupDelayValue": "{0}",
+  "testplay.speed": "テストプレイ速度",
   "axis.bookmarkCount": "{0} ブックマーク",
   "axis.bookmarkTime": "ブックマーク {0}",
   "axis.bookmarkRange": "{0} ブックマーク: {1}–{2}",

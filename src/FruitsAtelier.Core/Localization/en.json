@@ -137,6 +137,7 @@
   "testplay.autoplayExited": "Exited autoplay",
   "testplay.startupDelay": "Testplay lead-in",
   "testplay.startupDelayValue": "{0} s",
+  "testplay.speed": "Testplay speed",
   "axis.bookmarkCount": "{0} bookmarks",
   "axis.bookmarkTime": "Bookmark {0}",
   "axis.bookmarkRange": "{0} bookmarks: {1}–{2}",

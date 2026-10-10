@@ -3,6 +3,77 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class ObjectTimelineTests
 {
+    public static void SimultaneousStacks()
+    {
+        foreach (int count in new[] { 4, 8, 16, 24 })
+        {
+            var map = new MapDocument { DurationMs = 10000 };
+            for (int i = 0; i < count; i++) map.Fruits.Add(new() { TimeMs = 1000, X = 100 + i, SourceOrder = i });
+            var ui = new Ui(false); ui.LoadDocument(map);
+            ui.View.UpdateTransport(1000, 10000, false, false, false, null, null); ui.Paint();
+            var r = ui.View.ObjectTimelineBounds;
+            var circles = ui.Canvas.Circles.Where(c => c.Radius == 19 && c.Filled && c.Y > r.Y && c.Y < r.Bottom).ToArray();
+            int layers = Math.Min(16, count);
+            if (r.Height != 64 || circles.Length != layers || circles.Select(c => c.Y).Distinct().Count() != layers
+                || circles.Any(c => c.Y - 21 < r.Y - .01 || c.Y + 21 > r.Bottom + .01))
+                throw new Exception("Simultaneous stack does not fit the unchanged timeline or exceeds the display limit.");
+            for (int i = 0; i < layers; i++)
+            {
+                var circle = circles[i];
+                ui.Click(circle.X, circle.Y - 18.5f);
+                if (!ui.View.SelectedObjectIds.SequenceEqual(new[] { map.Fruits[layers - i - 1].Id }))
+                    throw new Exception("Exposed stack layer selects another source.");
+            }
+            if (!ui.View.Document.ContentEquals(map) || ui.View.IsDirty) throw new Exception("Stack selection changed content.");
+            float x = circles[0].X;
+            ui.View.PointerDown(x - 30, r.Y + 1, 0, false, false);
+            ui.View.PointerMove(x + 30, r.Bottom - 1, false, false);
+            ui.View.PointerUp(x + 30, r.Bottom - 1, 0); ui.Paint();
+            if (ui.View.SelectedObjectIds.Count != count) throw new Exception("Marquee omitted hidden stack objects.");
+            ui.Key(46); ui.Key('Z', ctrl: true);
+            if (!ui.View.Document.ContentEquals(map)) throw new Exception("Stack delete and undo changed source content.");
+            ui.View.Document.Fruits[1].TimeMs = 1300; ui.Paint();
+            if (!ui.Canvas.Circles.Any(c => c.Radius == 19 && c.Filled && c.Y == r.Y + 27
+                && Math.Abs(c.X - (x + 300 * ui.View.ObjectTimelinePixelsPerMs)) < .01))
+                throw new Exception("Time edit retained a stale stack offset.");
+        }
+        foreach (bool imported in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500, SliderMultiplier = 1 };
+            for (int i = 0; i < 8; i++)
+            {
+                if (imported)
+                {
+                    var slider = new ImportedSlider { TimeMs = 1000, X = 100, Y = 192, PathType = 'L', PixelLength = 100, SpanCount = 2, SourceOrder = i };
+                    slider.ControlPoints.AddRange([new(100, 192), new(200, 192)]); map.ImportedSliders.Add(slider);
+                }
+                else
+                {
+                    var slider = new CurveTrack { Kind = CurveKind.Linear, SpanCount = 2, SourceOrder = i };
+                    slider.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1500, X = 200 }]); map.Tracks.Add(slider);
+                }
+            }
+            var ui = new Ui(false); ui.LoadDocument(map);
+            ui.View.UpdateTransport(1500, 10000, false, false, false, null, null); ui.Paint();
+            var r = ui.View.ObjectTimelineBounds;
+            float X(double t) => r.X + (float)((t - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+            float y = r.Y + 2.5f;
+            Guid last = imported ? map.ImportedSliders[^1].Id : map.Tracks[^1].Id;
+            ui.Click(X(1500), y);
+            if (!ui.View.SelectedObjectIds.SequenceEqual(new[] { last })
+                || !ui.Canvas.Circles.Any(c => c.Radius == 21 && c.Color == 0x2866C6 && Math.Abs(c.X - X(1500)) < .01 && c.Y == r.Y + 21))
+                throw new Exception("Stacked slider repeat did not select its shifted sound edge.");
+            ui.View.PointerMove(X(2000), y, false, false);
+            if (!ui.View.TimelineResizeCursor) throw new Exception("Stacked tail has no resize cursor.");
+            ui.View.PointerDown(X(2000), y, 0, false, false);
+            ui.View.PointerMove(X(2500), y, false, false);
+            ui.View.PointerUp(X(2500), y, 0); ui.Paint();
+            if ((imported ? ui.View.Document.ImportedSliders[^1].SpanCount : ui.View.Document.Tracks[^1].SpanCount) != 3)
+                throw new Exception("Stacked tail drag changed the wrong slider.");
+            ui.Key('Z', ctrl: true);
+            if (!ui.View.Document.ContentEquals(map)) throw new Exception("Stacked tail drag did not undo.");
+        }
+    }
     public static void SkinColours()
     {
         string folder = Path.GetFullPath(Path.Combine("artifacts/tests/timeline-skin", Guid.NewGuid().ToString("N")));

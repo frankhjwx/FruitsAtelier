@@ -137,6 +137,7 @@
   "testplay.autoplayExited": "已退出autoplay",
   "testplay.startupDelay": "试打提前量",
   "testplay.startupDelayValue": "{0} 秒",
+  "testplay.speed": "试打速度",
   "axis.bookmarkCount": "{0} 个书签",
   "axis.bookmarkTime": "书签 {0}",
   "axis.bookmarkRange": "{0} 个书签：{1}–{2}",

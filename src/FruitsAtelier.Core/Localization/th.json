@@ -137,6 +137,7 @@
   "testplay.autoplayExited": "ออกจากการเล่นอัตโนมัติแล้ว",
   "testplay.startupDelay": "ลีดอินในการทดสอบการเล่น",
   "testplay.startupDelayValue": "{0} เอส",
+  "testplay.speed": "ความเร็วทดสอบการเล่น",
   "axis.bookmarkCount": "บุ๊กมาร์ก {0}",
   "axis.bookmarkTime": "บุ๊คมาร์ค {0}",
   "axis.bookmarkRange": "บุ๊คมาร์ค {0}: {1}–{2}",

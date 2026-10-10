@@ -137,6 +137,7 @@
   "testplay.autoplayExited": "Lecture automatique quittée",
   "testplay.startupDelay": "Introduction au test",
   "testplay.startupDelayValue": "{0}s",
+  "testplay.speed": "Vitesse du test",
   "axis.bookmarkCount": "Signets {0}",
   "axis.bookmarkTime": "Marque-page {0}",
   "axis.bookmarkRange": "Signets {0} : {1}–{2}",

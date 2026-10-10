@@ -137,6 +137,7 @@
   "testplay.autoplayExited": "Lumabas sa autoplay",
   "testplay.startupDelay": "Testplay lead-in",
   "testplay.startupDelayValue": "{0} s",
+  "testplay.speed": "Bilis ng testplay",
   "axis.bookmarkCount": "{0} na mga bookmark",
   "axis.bookmarkTime": "I-bookmark ang {0}",
   "axis.bookmarkRange": "{0} na mga bookmark: {1}–{2}",

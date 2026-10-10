@@ -369,6 +369,12 @@ The top-bar **Settings** button is available in both Library and Editor. Setting
 
 ## Testplay
 
+**Settings > Testplay > Testplay speed** sets an independent starting speed from
+10% to 150% in 5% steps (default 100%). Apply saves it across launches. F5 uses this
+speed for music and gameplay; returning to the editor restores its previous speed.
+Autoplay speed shortcuts affect the current testplay session, including retries,
+without changing either the saved testplay preference or the editor speed.
+
 Beatmap backgrounds fill the Catch preview and testplay viewport
 without changing their aspect ratio. **Settings > Testplay > Background dim** and
 the pause menu adjust the persistent 0–100% dim preference (default 90%). In the pause
@@ -746,6 +752,12 @@ The bottom status bar shows current action feedback, such as save results or ope
 For FSliders, 0 reverses plays the path once, 1 returns once, and higher counts continue alternating. Use **Ctrl+= / Ctrl+−** to add/remove a reverse. With a completed FSlider selected, move the pointer to empty canvas at a time after its final end and press **Ctrl+J**. A new anchor is placed at the pointer position using the placement snap setting, with a straight segment from the base path endpoint. Existing segments remain unchanged. Extending a repeated slider lengthens its base path for every span; it does not append after the repeats. Each operation is undoable.
 
 In the object timeline, a slider tail displays a horizontal resize cursor. Drag it right to add reverses or left to remove them, down to one traversal. Each step equals one unchanged base-span duration. This works for FSliders and imported Legacy Sliders; release commits one undo step and Esc cancels.
+
+Objects with exactly the same start time stack upward in source order in the
+object timeline. Up to 16 objects are displayed, with compact spacing inside the
+existing timeline height. Slider bodies and all their markers share the offset.
+Clicking and dragging follow the displayed layers; box selection includes objects
+beyond the display limit. Stacking changes neither timestamps nor map content.
 
 ## Operation errors
 

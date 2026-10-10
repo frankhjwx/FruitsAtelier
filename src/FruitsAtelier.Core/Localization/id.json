@@ -137,6 +137,7 @@
   "testplay.autoplayExited": "Keluar dari putar otomatis",
   "testplay.startupDelay": "Uji coba pendahuluan",
   "testplay.startupDelayValue": "{0} dtk",
+  "testplay.speed": "Kecepatan uji coba",
   "axis.bookmarkCount": "penanda {0}",
   "axis.bookmarkTime": "Tandai {0}",
   "axis.bookmarkRange": "Penanda {0}: {1}–{2}",

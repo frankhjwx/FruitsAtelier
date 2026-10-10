@@ -26,6 +26,7 @@ public sealed partial class EditorView
     private double TestplayRealtime => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
     private double testplayStart;
     private double testplayReturnPosition;
+    private double testplayReturnSpeed;
     private bool testplayWithAudio;
     private double transportSampleAt, transportSamplePosition, transportSampleLeadMs;
     public bool IsTestplaying => testplay is not null;
@@ -77,12 +78,15 @@ public sealed partial class EditorView
         PrepareTestplayMenuSounds();
         testplayWithAudio = AudioReady;
         ResetHitsounds();
-        bool restartAudio = AudioReady && AudioPlaying && testplayStart < testplayReturnPosition;
+        testplayReturnSpeed = PlaybackSpeed;
+        bool restartAudio = AudioReady && AudioPlaying
+            && (testplayStart < testplayReturnPosition || PlaybackSpeed != LibrarySettings.TestplaySpeed);
         if (restartAudio)
         {
             if (RequestPausePlayback is not null) RequestPausePlayback();
             else RequestTogglePlayback?.Invoke();
         }
+        SetPlaybackSpeed(LibrarySettings.TestplaySpeed);
         playhead = testplayStart;
         FollowPlayhead();
         BeginTestplay(session, audioAlreadyPlaying: AudioPlaying && !restartAudio);
@@ -143,6 +147,7 @@ public sealed partial class EditorView
             if (RequestPausePlayback is not null) RequestPausePlayback();
             else if (AudioPlaying) RequestTogglePlayback?.Invoke();
         }
+        SetPlaybackSpeed(testplayReturnSpeed);
         SeekTo(returnTime);
         StatusMessage = L.Get("testplay.returned");
     }
@@ -396,6 +401,8 @@ public sealed partial class EditorView
         SettingsTop + 188, TestplaySettingsCellWidth - 12, SettingsControlHeight);
     internal Rect TestplayStartupDelayBounds => new(SettingsContentX + 270, SettingsTop + 260,
         TestplaySettingsCellWidth * 3 - 12 - 270, SettingsControlHeight);
+    internal Rect TestplaySpeedBounds => new(SettingsContentX + 270, SettingsTop + 300,
+        TestplaySettingsCellWidth * 3 - 12 - 270, SettingsControlHeight);
     private void DrawTestplayBindings(ICanvas c)
     {
         float cell = TestplaySettingsCellWidth;
@@ -415,6 +422,21 @@ public sealed partial class EditorView
         TimingButton(c, new(leadIn.Right - 24, leadIn.Y, 24, leadIn.Height), "›",
             () => draftTestplayStartupDelaySeconds = Math.Min(5, draftTestplayStartupDelaySeconds + .5),
             enabled: draftTestplayStartupDelaySeconds < 5, flatArrow: true);
+        var speed = TestplaySpeedBounds;
+        c.Text(L.Get("testplay.speed"), SettingsContentX, speed.Y + (speed.Height - 17) / 2,
+            SettingsTextSize, Foreground, 260, true);
+        var speedValue = new Rect(speed.X + 26, speed.Y, speed.Width - 52, speed.Height);
+        c.Fill(speedValue, Surface, 4); c.Stroke(speedValue, Grid, radius: 4);
+        string speedText = L.Get("ui.zoomPercent", draftTestplaySpeed * 100);
+        float speedWidth = c.MeasureText(speedText, SettingsTextSize);
+        c.Text(speedText, speedValue.X + (speedValue.Width - speedWidth) / 2,
+            speedValue.Y + (speedValue.Height - 17) / 2, SettingsTextSize, Foreground, speedWidth + 1);
+        TimingButton(c, new(speed.X, speed.Y, 24, speed.Height), "‹",
+            () => draftTestplaySpeed = Math.Max(.1, (Math.Round(draftTestplaySpeed * 100) - 5) / 100),
+            enabled: draftTestplaySpeed > .1, flatArrow: true);
+        TimingButton(c, new(speed.Right - 24, speed.Y, 24, speed.Height), "›",
+            () => draftTestplaySpeed = Math.Min(1.5, (Math.Round(draftTestplaySpeed * 100) + 5) / 100),
+            enabled: draftTestplaySpeed < 1.5, flatArrow: true);
         SettingsButton(c, new(SettingsContentX, SettingsTop + 336, Math.Min(280, SettingsContentWidth), SettingsControlHeight),
             L.Get(draftShowTestplayCombo ? "testplay.comboOn" : "testplay.comboOff"),
             () => draftShowTestplayCombo = !draftShowTestplayCombo, draftShowTestplayCombo);

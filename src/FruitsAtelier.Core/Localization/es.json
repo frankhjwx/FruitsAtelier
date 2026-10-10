@@ -137,6 +137,7 @@
   "testplay.autoplayExited": "Salió de la reproducción automática",
   "testplay.startupDelay": "Introducción al juego de prueba",
   "testplay.startupDelayValue": "{0} s",
+  "testplay.speed": "Velocidad de prueba",
   "axis.bookmarkCount": "Marcadores {0}",
   "axis.bookmarkTime": "Marcador {0}",
   "axis.bookmarkRange": "Marcadores {0}: {1}–{2}",

@@ -137,6 +137,7 @@
   "testplay.autoplayExited": "退出自動播放",
   "testplay.startupDelay": "試玩導入",
   "testplay.startupDelayValue": "{0} S",
+  "testplay.speed": "試玩速度",
   "axis.bookmarkCount": "{0} 書籤",
   "axis.bookmarkTime": "書籤 {0}",
   "axis.bookmarkRange": "{0} 書籤：{1}–{2}",

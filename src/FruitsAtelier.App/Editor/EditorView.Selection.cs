@@ -142,7 +142,7 @@ public sealed partial class EditorView
         {
             var ids = boxAdds ? selectionBeforeBox.Objects.ToHashSet() : [];
             foreach (var item in timelineSources)
-                if (Intersects(TimelineObjectBounds(item.Start, item.End), selectionBox)) ids.Add(item.Id);
+                if (Intersects(TimelineObjectBounds(item.Start, item.End, item.StackOffset), selectionBox)) ids.Add(item.Id);
             SelectObjects(ids);
         }
         else if (boxAnchors)

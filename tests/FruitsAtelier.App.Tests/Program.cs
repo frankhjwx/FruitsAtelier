@@ -226,6 +226,8 @@ var tests = new (string Name, Action Run)[]
     ("Timeline tails adjust reverses with undo and cancellation", ObjectTimelineTests.TailReverses),
     ("Timeline reverse circles follow spans, tail edits and undo", ObjectTimelineTests.ReverseMarkers),
     ("Timeline chronological stacking includes numbers and matches selection", ObjectTimelineTests.Stacking),
+    ("Timeline simultaneous stacks fit sixteen layers and preserve selection and undo", ObjectTimelineTests.SimultaneousStacks),
+    ("Testplay speed settings are independent of editor speed", TestplayStartupDelayTests.IndependentSpeed),
     ("Grid Level opens a checked View submenu", GridLevelMenuTests.Run),
     ("Playback reuses timing data and edits invalidate it", ObjectTimelineTests.TimingCacheInvalidation),
     ("Operation errors remain visible and isolate input on editor and library pages", OperationErrorTests.Run),

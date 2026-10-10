@@ -137,6 +137,7 @@
   "testplay.autoplayExited": "Вышел из автозапуска",
   "testplay.startupDelay": "Введение в тестовую игру",
   "testplay.startupDelayValue": "{0} с",
+  "testplay.speed": "Скорость тестовой игры",
   "axis.bookmarkCount": "Закладки {0}",
   "axis.bookmarkTime": "Закладка {0}",
   "axis.bookmarkRange": "Закладки {0}: {1}–{2}",
