@@ -10,6 +10,7 @@ internal static class PlaybackPlacementTests
         foreach (bool moved in new[] { false, true })
         foreach (bool cancel in new[] { false, true })
         foreach (bool initiallyPlaying in new[] { false, true })
+        foreach (bool editControls in new[] { false, true })
         {
             var map = new MapDocument { DurationMs = 20000, IsDemo = false };
             var fruit = new Fruit { TimeMs = 1000, X = 100 };
@@ -19,7 +20,7 @@ internal static class PlaybackPlacementTests
             var ui = new Ui(); ui.LoadDocument(map);
             ui.View.SetSliderEditingMode(mode);
             ui.View.UpdateTransport(1500, 20000, true, initiallyPlaying, false, null, "fixture.wav"); ui.Paint();
-            if (tail) ui.EditTrack(track.Id); else ui.Key('1');
+            if (tail && editControls) ui.EditTrack(track.Id); else ui.Key('1');
             var original = ui.View.Document.DeepClone();
             var pointer = ui.ScreenAt(tail ? 2000 : 1000, tail ? 300 : 100);
             ui.View.PointerDown(pointer.X, pointer.Y, 0, false, false);
@@ -31,16 +32,15 @@ internal static class PlaybackPlacementTests
             ui.View.UpdateTransport(1500, 20000, true, true, false, null, "fixture.wav");
             ui.View.UpdateTransport(2000, 20000, true, true, false, null, "fixture.wav"); ui.Paint();
             Near(beforeView + 500, ui.View.ViewStartMs);
-            Near(beforeTime + (moved ? 500 : 0), Time());
-            if (moved) Check(Math.Abs(y - ui.ScreenAt(Time(), tail ? 300 : 100).Y) <= ui.View.PixelsPerMs * 62.5 + .05,
+            Near(beforeTime + 500, Time());
+            Check(Math.Abs(y - ui.ScreenAt(Time(), tail ? 300 : 100).Y) <= ui.View.PixelsPerMs * 62.5 + .05,
                 "Playback lost the snapped object's pointer position.");
-            else Check(original.ContentEquals(ui.View.Document), "Playback edited a pressed object before drag threshold.");
             ui.View.UpdateTransport(2000, 20000, true, false, false, null, "fixture.wav");
             double paused = ui.View.ViewStartMs;
             ui.View.UpdateTransport(2500, 20000, true, false, false, null, "fixture.wav");
             Near(paused, ui.View.ViewStartMs);
             if (cancel) ui.View.CancelInteraction();
-            else { ui.View.PointerUp(pointer.X, y, 0); if (moved) ui.Key('Z', ctrl: true); }
+            else { ui.View.PointerUp(pointer.X, y, 0); ui.Key('Z', ctrl: true); }
             Check(original.ContentEquals(ui.View.Document), "Playback drag did not cancel or undo atomically.");
         }
     }
@@ -115,6 +115,63 @@ internal static class PlaybackPlacementTests
             Near(before + 500, ui.View.Document.BananaShowers.Single().EndTimeMs);
             ui.View.CancelInteraction();
             Check(baseline.ContentEquals(ui.View.Document), "Scrolling Banana endpoint did not cancel.");
+        }
+    }
+
+    public static void WheelStartsHeldDrag()
+    {
+        foreach (var mode in new[] { SliderEditingMode.PenTool, SliderEditingMode.OsuLegacy })
+        foreach (string kind in new[] { "fruit", "slider", "controls", "import", "banana", "timelineFruit", "timelineBanana" })
+        foreach (bool playing in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 20000, IsDemo = false };
+            var track = new CurveTrack { Kind = CurveKind.Linear };
+            track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 2000, X = 300 }]);
+            bool fruit = kind is "fruit" or "timelineFruit", banana = kind is "banana" or "timelineBanana";
+            if (fruit) map.Fruits.Add(new() { TimeMs = 1000, X = 100 });
+            else if (banana) map.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 2000 });
+            else if (kind == "import")
+            {
+                map.SliderMultiplier = 1.4;
+                var imported = new ImportedSlider { TimeMs = 1000, X = 100, Y = 192, PathType = 'L', PixelLength = 140 };
+                imported.ControlPoints.AddRange([new(100, 192), new(240, 192)]);
+                map.ImportedSliders.Add(imported);
+            }
+            else map.Tracks.Add(track);
+            var ui = new Ui(); ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode);
+            ui.View.UpdateTransport(1500, 20000, true, playing, false, null, "fixture.wav"); ui.Paint();
+            if (kind == "controls") ui.EditTrack(track.Id);
+            if (banana) ui.ClickMap(1500, 256);
+            var baseline = ui.View.Document.DeepClone();
+            double time = fruit ? 1000 : kind == "import" ? 1500 : 2000;
+            var p = ui.ScreenAt(time, fruit ? 100 : banana ? 256 : kind == "import" ? 240 : 300);
+            if (kind.StartsWith("timeline")) p = (TimelineX(ui, time), ui.View.ObjectTimelineBounds.Y + 27);
+            ui.View.PointerDown(p.X, p.Y, 0, false, false);
+            Check(ui.View.WantsCapture, $"{kind}: Hold did not capture.");
+            ui.View.UpdateTransport(1500, 20000, true, playing, false, null, "fixture.wav");
+            Check(baseline.ContentEquals(ui.View.Document), "An unchanged transport position edited the held object.");
+            double Time() => fruit ? ui.View.Document.Fruits.Single().TimeMs
+                : banana ? ui.View.Document.BananaShowers.Single().EndTimeMs : ui.View.Document.Tracks.Single().Nodes[^1].TimeMs;
+            double step = playing ? 500 : 125;
+            for (int i = 1; i <= 2; i++)
+            {
+                ui.View.Wheel(p.X, p.Y, -120, false); ui.Paint();
+                Near(time + step * i, Time());
+                Check(ui.View.WantsCapture, "Wheel navigation released the held drag.");
+            }
+            ui.View.PointerUp(p.X, p.Y, 0); ui.Key('Z', ctrl: true);
+            Check(baseline.ContentEquals(ui.View.Document), $"{kind}: Wheel edits did not undo atomically.");
+            ui.Key('Y', ctrl: true); Near(time + 2 * step, Time());
+        }
+        foreach (bool zoom in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 20000, IsDemo = false };
+            map.Fruits.Add(new() { TimeMs = 1000, X = 100 });
+            var ui = new Ui(); ui.LoadDocument(map);
+            var p = ui.ScreenAt(1000, 100); ui.View.PointerDown(p.X, p.Y, 0, false, false);
+            ui.View.Wheel(p.X, p.Y, 120, ctrl: !zoom, alt: zoom); ui.Paint();
+            Check(map.ContentEquals(ui.View.Document), "Snap or zoom wheel edited a held fruit.");
+            ui.View.CancelInteraction();
         }
     }
 

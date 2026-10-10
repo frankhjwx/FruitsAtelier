@@ -265,20 +265,7 @@ public sealed partial class EditorView
             playhead = Math.Clamp(positionMs, 0, TimelineDurationMs);
         double previousViewStart = viewStart;
         if (playing || ready && !wasReady) FollowPlayhead();
-        if (playing && NavigationDuringDrag && (viewStart != previousViewStart || playhead != previousPlayhead))
-        {
-            double scroll = viewStart - previousViewStart;
-            if (drag == DragKind.Objects)
-            {
-                // Both screen positions use the current transform, so their difference excludes playback scrolling.
-                if (dragMoved && selectionScaleSide == 0)
-                    objectDragFollowTime += objectDragTimeline ? playhead - previousPlayhead : scroll;
-            }
-            else if (!dragMoved)
-                dragOffset += new MapPoint(scroll, 0);
-            if (dragMoved && (drag != DragKind.Objects || selectionScaleSide == 0))
-                PointerMove(mouseX, mouseY, shiftHeld, placementCtrl);
-        }
+        if (playing) ContinueDragAfterNavigation(previousViewStart, previousPlayhead, shiftHeld, placementCtrl);
         if (testplay is not null && testplayWithAudio)
         {
             if (testplayDriver is null)

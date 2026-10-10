@@ -750,11 +750,33 @@ public sealed partial class EditorView
             return;
         }
         bool navigationDrag = NavigationDuringDrag;
+        double previousViewStart = viewStart, previousPlayhead = playhead;
         // Wheel navigation moves the slider beneath a stationary pointer, so it ends the hold gesture.
         if (navigationDrag && SliderHoldNeedsRedraw)
         { sliderHoldId = Guid.Empty; noteHoldTarget = null; }
         WheelCore(x, y, delta, ctrl, shift, alt);
-        if (navigationDrag && NavigationDuringDrag) PointerMove(mouseX, mouseY, shift || shiftHeld, ctrl);
+        if (navigationDrag && NavigationDuringDrag)
+        {
+            if (ctrl || alt || altHeld || !ContinueDragAfterNavigation(previousViewStart, previousPlayhead, shift || shiftHeld, ctrl))
+                PointerMove(mouseX, mouseY, shift || shiftHeld, ctrl);
+        }
+    }
+
+    private bool ContinueDragAfterNavigation(double previousViewStart, double previousPlayhead, bool shift, bool ctrl)
+    {
+        if (!NavigationDuringDrag || drag == DragKind.Objects && selectionScaleSide != 0) return false;
+        double scroll = viewStart - previousViewStart;
+        double time = drag == DragKind.TimelineTail || drag == DragKind.Objects && objectDragTimeline
+            ? playhead - previousPlayhead : scroll;
+        if (time == 0) return false;
+        sliderHoldId = Guid.Empty; noteHoldTarget = null;
+        if (drag == DragKind.SliderObject && TryBeginSliderEndpointTimeDrag(mouseY, navigation: true))
+            dragOffset -= new MapPoint(scroll, 0);
+        // Both screen positions use the current transform, so object movement needs the scroll delta separately.
+        if (drag == DragKind.Objects) objectDragFollowTime += time;
+        dragMoved = true;
+        PointerMove(mouseX, mouseY, shift, ctrl);
+        return true;
     }
 
     private bool NavigationDuringDrag => draftTrack == Guid.Empty && draftBanana == Guid.Empty

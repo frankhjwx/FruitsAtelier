@@ -468,8 +468,9 @@ or change the document.
 
 During object movement and slider or Banana endpoint dragging, playback keeps the
 canvas following the play line, including when resumed with the pointer held.
-An active drag follows the pointer as time advances; merely pressing an object
-does not edit it. Paused dragging keeps the viewport stable. Release commits one
+Holding an object enters dragging as soon as playback or wheel navigation moves
+its time beneath the pointer, even without mouse movement. Paused dragging keeps
+the viewport stable until wheel navigation. Release commits one
 edit; Esc or lost capture restores the gesture's starting content.
 
 In the upper object timeline, clicking a slider head, tail, or reverse marker selects that edge for Whistle, Finish, and Clap edits. Only the selected edge marker is highlighted. Clicking the slider body selects the whole slider for sound edits. Head/body movement and tail repeat resizing retain their existing drag behavior.
