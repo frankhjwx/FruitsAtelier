@@ -21,7 +21,7 @@ public sealed partial class EditorView
     private IReadOnlyList<ConvertedCatchObject> previewObjects = [];
     private HashSet<(Guid SourceId, int EventIndex)> previewHyperdash = [];
     private int previewMaximumCombo, previewMaximumDroplets;
-    private string previewDrainTime = "0:00";
+    private string previewDrainTime = "0:00 (0s)";
     public bool CatchPreviewVisible => catchPreviewVisible;
     public Rect PreviewToggleBounds { get; private set; }
     public Rect PreviewResizeBounds { get; private set; }
@@ -90,7 +90,7 @@ public sealed partial class EditorView
     private string PreviewDrainTime()
     {
         RefreshTimelineSources();
-        if (previewObjects.Count == 0 || timelineStarts.Length == 0) return "0:00";
+        if (previewObjects.Count == 0 || timelineStarts.Length == 0) return "0:00 (0s)";
         double start = timelineStarts[0], end = timelineEnds[^1];
         double duration = end - start, countedUntil = start;
         foreach (var period in breakPeriods)
@@ -102,7 +102,7 @@ public sealed partial class EditorView
             countedUntil = breakEnd;
         }
         long seconds = (long)Math.Max(0, Math.Floor(duration / 1000));
-        return FormattableString.Invariant($"{seconds / 60}:{seconds % 60:00}");
+        return FormattableString.Invariant($"{seconds / 60}:{seconds % 60:00} ({seconds}s)");
     }
     private IEnumerable<ConvertedCatchObject> PreviewObjectsInRange(double start, double end)
     {

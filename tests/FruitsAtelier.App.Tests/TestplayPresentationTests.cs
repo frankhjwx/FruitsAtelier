@@ -20,15 +20,15 @@ internal static class TestplayPresentationTests
                 OsuTimeline.AddBreak(map, 30000, 45000);
                 OsuTimeline.AddBreak(map, 0, 5000);
                 OsuTimeline.AddBreak(map, 225000, 230000);
-                Show(map, "3:05", 100000);
+                Show(map, "3:05 (185s)", 100000);
                 var history = (EditorHistory)typeof(FruitsAtelier.App.Editor.EditorView).GetProperty("history",
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(ui.View)!;
                 history.Begin("Add break"); OsuTimeline.AddBreak(history.Document, 60000, 70000); history.Commit();
                 ui.View.StartTestplay(); ui.Paint();
-                Check(ui.Canvas.Texts.Any(text => text.Value == "Total Drain Time: 2:55"), "Break edits did not refresh cached drain time.");
+                Check(ui.Canvas.Texts.Any(text => text.Value == "Total Drain Time: 2:55 (175s)"), "Break edits did not refresh cached drain time.");
                 ui.View.StopTestplay(); ui.Key('Z', ctrl: true);
                 ui.View.StartTestplay(); ui.Paint();
-                Check(ui.Canvas.Texts.Any(text => text.Value == "Total Drain Time: 3:05"), "Undo did not restore drain time.");
+                Check(ui.Canvas.Texts.Any(text => text.Value == "Total Drain Time: 3:05 (185s)"), "Undo did not restore drain time.");
                 ui.View.StopTestplay();
 
                 map = new MapDocument { DurationMs = 30000, IsDemo = false };
@@ -36,25 +36,25 @@ internal static class TestplayPresentationTests
                 var track = new CurveTrack { Kind = CurveKind.Linear, SpanCount = 2 };
                 track.Nodes.AddRange([new() { TimeMs = 12000, X = 100 }, new() { TimeMs = 17000, X = 200 }]);
                 map.Tracks.Add(track);
-                Show(map, "0:12");
+                Show(map, "0:12 (12s)");
                 map.Tracks.Clear();
                 var slider = new ImportedSlider { TimeMs = 12000, X = 100, Y = 192, PathType = 'L', PixelLength = 1400, SpanCount = 2 };
                 slider.ControlPoints.AddRange([new(100, 192), new(200, 192)]);
                 map.ImportedSliders.Add(slider);
                 map.SliderMultiplier = 1.4;
                 map.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500 });
-                Show(map, "0:12");
+                Show(map, "0:12 (12s)");
 
                 map = new MapDocument { DurationMs = 20000, IsDemo = false };
                 map.BananaShowers.Add(new() { TimeMs = 10000, EndTimeMs = 11000 });
-                Show(map, "0:01");
+                Show(map, "0:01 (1s)");
                 map.BananaShowers.Clear(); map.Fruits.Add(new() { TimeMs = 10000 });
-                Show(map, "0:00");
+                Show(map, "0:00 (0s)");
 
                 map = new MapDocument { DurationMs = 3700000, IsDemo = false };
                 map.Fruits.AddRange([new() { TimeMs = 10000 }, new() { TimeMs = 3670000 }]);
                 OsuTimeline.AddBreak(map, 100000, 101000);
-                Show(map, "60:59");
+                Show(map, "60:59 (3659s)");
 
                 void Show(MapDocument document, string expected, double position = 0)
                 {
