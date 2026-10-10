@@ -178,6 +178,7 @@ public sealed partial class EditorView
 
     private bool objectDragTimeline;
     private double objectDragTimelineScale;
+    private double objectDragFollowTime;
     private void BeginObjectDrag(float x, float y, bool timeline = false, bool scaleSelection = false)
     {
         if (notesLocked) return;
@@ -203,6 +204,7 @@ public sealed partial class EditorView
         objectDragPrepared = false;
         objectDragTimeline = timeline;
         objectDragTimelineScale = objectTimelineScale;
+        objectDragFollowTime = 0;
         drag = DragKind.Objects;
         BeginPointerDrag(x, y);
     }
@@ -259,6 +261,7 @@ public sealed partial class EditorView
         var startPointer = Transform.ToMap(dragStartX, dragStartY);
         var pointer = Transform.ToMap(x, y);
         double deltaTime = objectDragTimeline ? (x - dragStartX) / objectDragTimelineScale : pointer.TimeMs - startPointer.TimeMs;
+        deltaTime += objectDragFollowTime;
         double deltaX = objectDragTimeline ? 0 : pointer.X - startPointer.X;
         double minTime = double.PositiveInfinity, maxTime = double.NegativeInfinity;
         double minX = double.PositiveInfinity, maxX = double.NegativeInfinity;

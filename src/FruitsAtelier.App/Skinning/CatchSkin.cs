@@ -187,7 +187,7 @@ public sealed class CatchSkin
     }
 
     public static void DrawTimelineCircle(ICanvas canvas, CatchSkin? skin, float x, float y, float diameter,
-        uint colour, int? number = null, string prefix = "hitcircle")
+        uint colour, int? number = null, string prefix = "hitcircle", float opacity = 1)
     {
         // Legacy's 128px circle has 5px padding on each side; diameter is the visible track width.
         float circleScale = diameter / 118;
@@ -202,14 +202,14 @@ public sealed class CatchSkin
             {
                 float scale = Math.Min(circleScale / texture.Density, diameter * 2 / Math.Max(texture.PixelWidth, texture.PixelHeight));
                 float w = texture.PixelWidth * scale, h = texture.PixelHeight * scale;
-                if (canvas.Image(texture.FilePath, new(x - w / 2, y - h / 2, w, h), tint)) return true;
+                if (canvas.Image(texture.FilePath, new(x - w / 2, y - h / 2, w, h), tint, opacity: opacity)) return true;
             }
             return false;
         }
         if (!Texture(prefix, colour))
         {
-            canvas.Circle(x, y, diameter / 2, colour);
-            canvas.Circle(x, y, diameter / 2, 0xFFFFFF, false, 1.5f);
+            canvas.Circle(x, y, diameter / 2, colour, opacity: opacity);
+            canvas.Circle(x, y, diameter / 2, 0xFFFFFF, false, 1.5f, opacity);
         }
         bool above = skin?.OverlayAboveNumber ?? true;
         if (!above) Texture(prefix + "overlay", 0xFFFFFF);

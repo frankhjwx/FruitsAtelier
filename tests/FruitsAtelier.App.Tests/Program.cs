@@ -406,6 +406,9 @@ var tests = new (string Name, Action Run)[]
     ("Canceling object and anchor boxes restores selection without history", MultiSelectionTests.SelectionCancellation),
     ("Playback marquee retains its start time while the viewport scrolls", MultiSelectionTests.PlaybackBoxTransform),
     ("Object dragging keeps wheel, Snap, zoom and playback available without slider long press", MultiSelectionTests.NavigationDuringObjectDrag),
+    ("Playback follows active object and slider endpoint drags with atomic undo", PlaybackPlacementTests.DragFollowsPlayback),
+    ("Playback preserves grouped movement and Banana endpoints on canvas and timeline", PlaybackPlacementTests.GroupAndTimelinePlayback),
+    ("Timeline placement previews fruits, both slider modes and bananas without content edits", PlaybackPlacementTests.TimelinePlacement),
     ("Marquee wheel and edge scrolling preserve selection and bound speed", MarqueeScrollTests.WheelAndEdges),
     ("Language switching refreshes chrome without editing the map", LanguageTests.SwitchWithoutEditing),
     ("English batch menus and Core diagnostics use the same catalog", LanguageTests.EnglishMultiMenusAndDiagnostics)

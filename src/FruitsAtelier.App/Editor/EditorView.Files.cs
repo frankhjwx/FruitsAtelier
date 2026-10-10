@@ -257,12 +257,28 @@ public sealed partial class EditorView
         UpdateHitsounds(positionMs, ready && playing && !loading, filename);
         if (playing && drag == DragKind.PlaybackLine) CancelPlaybackLineDrag();
         bool wasReady = AudioReady;
+        double previousPlayhead = playhead;
         AudioReady = ready; AudioPlaying = playing; AudioLoading = loading;
         AudioDurationMs = double.IsFinite(durationMs) ? Math.Max(0, durationMs) : 0;
         AudioNotice = error ?? (loading ? L.Get("editor.audio.loading") : ready ? Path.GetFileName(filename) ?? L.Get("editor.audio.loaded") : L.Get("editor.audio.notLoaded"));
         if (ready && drag is not (DragKind.Timeline or DragKind.DifficultySeek) && !IsTestplaying)
             playhead = Math.Clamp(positionMs, 0, TimelineDurationMs);
+        double previousViewStart = viewStart;
         if (playing || ready && !wasReady) FollowPlayhead();
+        if (playing && NavigationDuringDrag && (viewStart != previousViewStart || playhead != previousPlayhead))
+        {
+            double scroll = viewStart - previousViewStart;
+            if (drag == DragKind.Objects)
+            {
+                // Both screen positions use the current transform, so their difference excludes playback scrolling.
+                if (dragMoved && selectionScaleSide == 0)
+                    objectDragFollowTime += objectDragTimeline ? playhead - previousPlayhead : scroll;
+            }
+            else if (!dragMoved)
+                dragOffset += new MapPoint(scroll, 0);
+            if (dragMoved && (drag != DragKind.Objects || selectionScaleSide == 0))
+                PointerMove(mouseX, mouseY, shiftHeld, placementCtrl);
+        }
         if (testplay is not null && testplayWithAudio)
         {
             if (testplayDriver is null)

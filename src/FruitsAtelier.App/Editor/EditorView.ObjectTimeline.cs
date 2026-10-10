@@ -274,6 +274,27 @@ public sealed partial class EditorView
         timelineDraft = draftTrack;
     }
 
+    private (Guid Id, double Start, double End, uint Color)? TimelinePlacementPreview()
+    {
+        if (!plot.Contains(mouseX, mouseY) || drag != DragKind.None || menu >= 0 || contextItems.Count > 0 || editField >= 0)
+            return null;
+        if (tool == Tool.Banana)
+        {
+            double time = MapAt(mouseX, mouseY, true).TimeMs;
+            if (Document.BananaShowers.FirstOrDefault(s => s.Id == draftBanana) is { } banana)
+                return (banana.Id, banana.TimeMs, Math.Max(banana.TimeMs, time), Gold);
+            return (placementId, time, time, Gold);
+        }
+        if (tool == Tool.Slider && SelectedTrack is { } track && track.Id == draftTrack)
+        {
+            var candidate = placementDraftTrack ?? track;
+            return (track.Id, candidate.Nodes[0].TimeMs, CurveMath.EndTimeMs(candidate), ComboColour(track.Id, useFallbackPalette: true));
+        }
+        if (PlacementGhostPoint() is { } point)
+            return (placementId, point.TimeMs, point.TimeMs, Foreground);
+        return null;
+    }
+
     private void DrawObjectTimeline(ICanvas c)
     {
         float top = canvas.Y + 38;
@@ -310,13 +331,24 @@ public sealed partial class EditorView
             c.Line(X(tick.TimeMs), objectTimeline.Bottom - style.Height, X(tick.TimeMs), objectTimeline.Bottom,
                 style.Color, style.Width);
         }
-        var visibleItems = timelineSources.Where(item => item.StackIndex < TimelineStackLimit && item.End >= start - 20 / objectTimelineScale
+        var placement = TimelinePlacementPreview();
+        var visibleItems = timelineSources.Where(item => item.Id != placement?.Id && item.StackIndex < TimelineStackLimit && item.End >= start - 20 / objectTimelineScale
             && item.Start <= end + 20 / objectTimelineScale)
             .OrderByDescending(item => item.Start).ThenByDescending(item => item.StackIndex).ToArray();
         foreach (var item in visibleItems)
             timelineObjects.Add((item.Id, item.Start, TimelineObjectBounds(item.Start, item.End, item.StackOffset)));
         // Each object's body, circles and number share its chronological layer and hit order.
         for (int i = 0; i < visibleItems.Length; i++) { DrawBody(i); DrawMarkers(i); }
+        if (placement is { } ghost && ghost.End >= start - 20 / objectTimelineScale && ghost.Start <= end + 20 / objectTimelineScale)
+        {
+            var bounds = TimelineObjectBounds(ghost.Start, ghost.End, 0);
+            if (ghost.End > ghost.Start) c.Fill(bounds, ghost.Color, 19, .35f);
+            FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin,
+                X(ghost.Start), bounds.Y + 19, 38, ghost.Color, opacity: .45f);
+            if (ghost.End > ghost.Start)
+                FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin,
+                    X(ghost.End), bounds.Y + 19, 38, ghost.Color, opacity: .45f);
+        }
 
         void DrawBody(int index)
         {

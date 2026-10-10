@@ -460,6 +460,18 @@ key swaps the two bindings. **Apply** saves the bindings across restarts.
 
 ## Object timeline and playback speed
 
+The upper timeline also shows translucent Fruit and slider placement markers,
+the candidate slider length in both Pen and Legacy modes, and the candidate
+Banana shower interval. These previews use the canvas's snapped placement times,
+disappear when the pointer leaves the canvas, and do not participate in selection
+or change the document.
+
+During object movement and slider or Banana endpoint dragging, playback keeps the
+canvas following the play line, including when resumed with the pointer held.
+An active drag follows the pointer as time advances; merely pressing an object
+does not edit it. Paused dragging keeps the viewport stable. Release commits one
+edit; Esc or lost capture restores the gesture's starting content.
+
 In the upper object timeline, clicking a slider head, tail, or reverse marker selects that edge for Whistle, Finish, and Clap edits. Only the selected edge marker is highlighted. Clicking the slider body selects the whole slider for sound edits. Head/body movement and tail repeat resizing retain their existing drag behavior.
 
 The bottom overview shows red and green timing points above a white center line, continuous yellow kiai intervals and white break intervals centered on that line, and blue bookmarks extending down from it. The center line is behind the break and kiai intervals, which are behind timing points and bookmarks. These timeline marks use 80% opacity and colors tuned against osu!legacy. Hovering over the overview reveals a fixed bookmark toolbar above its left edge with Add, Remove, Previous, Next, and Reset actions. The toolbar stays visible while moving from the overview to its controls, and its tooltip appears above it. The toolbar uses an ImageGen-created background texture. The time display and separate Play, Pause, Stop, and Testplay controls sit to the left of the overview; Stop pauses audio and seeks to the start. Ctrl+B adds a bookmark at the playhead; Ctrl+Shift+B removes the nearest bookmark within two seconds. Ctrl+Left/Right seeks to the previous/next bookmark; Ctrl+Shift+Left/Right moves selected objects one X unit. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
