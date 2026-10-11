@@ -35,6 +35,7 @@ public sealed partial class EditorView
             DurationMs = Document.DurationMs, BeatLengthMs = Document.BeatLengthMs,
             TimingOffsetMs = Document.TimingOffsetMs, ApproachRate = Document.ApproachRate,
             CircleSize = Document.CircleSize, SliderMultiplier = Document.SliderMultiplier,
+            SliderMultiplierOverride = Document.SliderMultiplierOverride,
             SliderTickRate = Document.SliderTickRate, DerandomizeDroplets = Document.DerandomizeDroplets,
             DerandomizeFSliderDroplets = Document.DerandomizeFSliderDroplets, DerandomizeDropletsForHardRock = Document.DerandomizeDropletsForHardRock, RandomizeDropletStrength = Document.RandomizeDropletStrength, RandomizeDropletSeed = Document.RandomizeDropletSeed
         };

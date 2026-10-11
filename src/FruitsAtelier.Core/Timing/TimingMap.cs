@@ -13,20 +13,24 @@ public static class TimingMap
         private readonly double[] times;
         private readonly TimingState[] states;
         private readonly TimingState initial;
-        private readonly double beatLengthMs, offsetMs;
+        private readonly double beatLengthMs, offsetMs, sourceMultiplier, effectiveMultiplier;
         private readonly TimingPoint[] inputPoints;
         internal double[] RedTimes { get; }
 
-        public Lookup(MapDocument document)
+        public Lookup(MapDocument document) : this(document, true) { }
+
+        internal Lookup(MapDocument document, bool applyMultiplierOverride)
         {
             beatLengthMs = document.BeatLengthMs; offsetMs = document.TimingOffsetMs;
+            sourceMultiplier = document.SliderMultiplier; effectiveMultiplier = document.EffectiveSliderMultiplier;
+            double ratio = applyMultiplierOverride ? sourceMultiplier / effectiveMultiplier : 1;
             inputPoints = document.TimingPoints.Select(p => p.DeepClone()).ToArray();
             var groups = Groups(document);
             var firstRed = groups.Select(g => g.Red).FirstOrDefault(p => p is not null);
             double beatLength = firstRed?.BeatLengthMs ?? document.BeatLengthMs;
             double offset = firstRed?.TimeMs ?? document.TimingOffsetMs;
             int meter = firstRed?.Meter ?? 4;
-            double sv = 1;
+            double sv = ratio == 1 ? 1 : 100 / SliderMultiplierEditing.ScaleBeatLength(100, ratio);
             bool generateTicks = true;
             initial = new(offset, beatLength, sv, generateTicks, meter);
             times = new double[groups.Length]; states = new TimingState[groups.Length];
@@ -41,6 +45,11 @@ public static class TimingMap
                 {
                     sv = difficulty.BeatLengthMs < 0 ? Math.Clamp(100 / -difficulty.BeatLengthMs,
                         LegacyCatchRules.MinimumSliderVelocityMultiplier, LegacyCatchRules.MaximumSliderVelocityMultiplier) : 1;
+                    if (ratio != 1 && !double.IsNaN(difficulty.BeatLengthMs))
+                    {
+                        double magnitude = difficulty.BeatLengthMs < 0 ? Math.Clamp((float)-difficulty.BeatLengthMs, 10, 1000) : 100;
+                        sv = 100 / SliderMultiplierEditing.ScaleBeatLength(magnitude, ratio);
+                    }
                     generateTicks = !double.IsNaN(difficulty.BeatLengthMs);
                 }
                 times[i] = group.TimeMs;
@@ -59,6 +68,7 @@ public static class TimingMap
         public bool MatchesTiming(MapDocument document)
         {
             if (beatLengthMs != document.BeatLengthMs || offsetMs != document.TimingOffsetMs
+                || sourceMultiplier != document.SliderMultiplier || effectiveMultiplier != document.EffectiveSliderMultiplier
                 || inputPoints.Length != document.TimingPoints.Count) return false;
             for (int i = 0; i < inputPoints.Length; i++)
                 if (!inputPoints[i].ContentEquals(document.TimingPoints[i])) return false;

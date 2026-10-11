@@ -10,24 +10,21 @@ public static class SliderMultiplierEditing
     {
         Validate(multiplier);
         if (multiplier == document.EffectiveSliderMultiplier) return;
-        var source = document.DeepClone(); source.SliderMultiplierOverride = null;
-        var before = OsuBeatmapWriter.Serialize(source, compensateTinyDroplets);
-        _ = Rebase(before, multiplier);
+        _ = ValidateChange(document, multiplier, compensateTinyDroplets);
         document.SliderMultiplierOverride = multiplier == document.SliderMultiplier ? null : multiplier;
     }
 
-    internal static OsuWriteResult Serialize(MapDocument document, double multiplier, bool compensateTinyDroplets, OsuWriteCache? cache)
+    public static OsuWriteResult ValidateChange(MapDocument document, double multiplier, bool compensateTinyDroplets = true, OsuWriteCache? cache = null)
     {
         Validate(multiplier);
-        if (cache?.Multiplier(document, compensateTinyDroplets) is { } cached) return cached;
-        var original = cache?.MultiplierBaseline(document, compensateTinyDroplets);
-        if (original is null)
-        {
-            var source = document.DeepClone(); source.SliderMultiplierOverride = null;
-            original = OsuBeatmapWriter.Serialize(source, compensateTinyDroplets, cache);
-        }
-        var result = Rebase(original, multiplier, cache);
-        cache?.RememberMultiplier(document, result, compensateTinyDroplets);
+        var before = OsuBeatmapWriter.Serialize(document, compensateTinyDroplets, cache);
+        var candidate = document.DeepClone();
+        candidate.SliderMultiplierOverride = multiplier == candidate.SliderMultiplier ? null : multiplier;
+        var result = OsuBeatmapWriter.Serialize(candidate, compensateTinyDroplets, cache);
+        if (!before.ObjectSequenceMatches || !result.ObjectSequenceMatches)
+            throw new InvalidDataException(L.Get("timing.sliderMultiplierPreservation"));
+        CheckEquivalent(before.PlayableObjects, result.PlayableObjects, "NM");
+        CheckEquivalent(before.PlayableHardRockObjects, result.PlayableHardRockObjects, "HR");
         return result;
     }
 
@@ -128,46 +125,51 @@ public static class SliderMultiplierEditing
     {
         CheckLimits(before, multiplier);
         var candidate = before.ReadBack.DeepClone();
+        RebaseTiming(candidate, multiplier, candidate.ImportedSliders.Select(s => s.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min());
+        return candidate;
+    }
+
+    internal static void RebaseTiming(MapDocument candidate, double multiplier, double firstSlider)
+    {
+        var initial = new TimingMap.Lookup(candidate).At(double.IsFinite(firstSlider) ? firstSlider : 0);
         double ratio = candidate.SliderMultiplier / multiplier;
         candidate.SliderMultiplier = multiplier;
+        candidate.SliderMultiplierOverride = null;
         var points = candidate.TimingPoints;
         var originals = points.Select(p => p.DeepClone()).ToArray();
         foreach (var point in points.Where(p => !p.Uninherited))
         {
             if (double.IsNaN(point.BeatLengthMs)) continue;
             double magnitude = point.BeatLengthMs < 0 ? Math.Clamp((float)-point.BeatLengthMs, 10, 1000) : 100;
-            point.BeatLengthMs = BeatLength(magnitude);
+            point.BeatLengthMs = -ScaleBeatLength(magnitude, ratio);
         }
         // Red points reset inherited SV. Compensate each reset without regenerating slider geometry.
         foreach (var group in originals.GroupBy(p => p.TimeMs))
         {
             if (group.Any(p => !p.Uninherited)) continue;
             var point = group.First().DeepClone();
-            point.Uninherited = false; point.BeatLengthMs = BeatLength(100); point.OriginalLine = null;
+            point.Uninherited = false; point.BeatLengthMs = -ScaleBeatLength(100, ratio); point.OriginalLine = null;
             points.Add(point);
         }
-        double firstSlider = candidate.ImportedSliders.Select(s => s.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min();
         double firstTiming = originals.Select(p => p.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min();
         if (firstSlider < firstTiming)
         {
             // Pre-timing sliders use the implicit first BPM; make it explicit before adding their SV compensation.
-            var initial = new TimingMap.Lookup(before.ReadBack).At(firstSlider);
             points.Add(new() { TimeMs = firstSlider, BeatLengthMs = initial.BeatLengthMs, Meter = initial.Meter });
-            points.Add(new() { TimeMs = firstSlider, Uninherited = false, BeatLengthMs = BeatLength(100) });
+            points.Add(new() { TimeMs = firstSlider, Uninherited = false, BeatLengthMs = -ScaleBeatLength(100, ratio) });
         }
         var ordered = points.OrderBy(p => p.TimeMs).ThenBy(p => p.Uninherited ? 0 : 1).ThenBy(p => p.SourceOrder).ToArray();
         candidate.TimingPoints.Clear(); candidate.TimingPoints.AddRange(ordered);
-        return candidate;
+    }
 
-        double BeatLength(double magnitude)
-        {
-            double scaled = magnitude / ratio;
-            if (scaled < 10 || scaled > 1000) throw new InvalidDataException(L.Get("timing.sliderMultiplierSvLimit"));
-            float rounded = (float)scaled;
-            // Stable rounds inherited beat lengths to float; avoid shortening exact-integer spans.
-            if (rounded < scaled) rounded = MathF.BitIncrement(rounded);
-            return -rounded;
-        }
+    internal static double ScaleBeatLength(double magnitude, double ratio)
+    {
+        double scaled = magnitude / ratio;
+        if (scaled < 10 || scaled > 1000) throw new InvalidDataException(L.Get("timing.sliderMultiplierSvLimit"));
+        float rounded = (float)scaled;
+        // Stable rounds inherited beat lengths to float; avoid shortening exact-integer spans.
+        if (rounded < scaled) rounded = MathF.BitIncrement(rounded);
+        return rounded;
     }
 
     private static OsuWriteResult Finish(OsuWriteResult before, string text, MapDocument readBack,

@@ -234,10 +234,10 @@ public sealed partial class EditorView
             foreach (var entry in selected)
             {
                 if (inherited && entry == first) continue;
-                var state = TimingMap.At(map, entry.Point.TimeMs);
+                var replacement = TimingEditing.Create(map, entry.Point.TimeMs, inherited);
                 entry.Point.Uninherited = !inherited;
                 if (inherited) entry.Point.TimeMs = Math.Truncate(entry.Point.TimeMs);
-                entry.Point.BeatLengthMs = inherited ? -100 / state.SliderVelocityMultiplier : state.BeatLengthMs;
+                entry.Point.BeatLengthMs = replacement.BeatLengthMs;
             }
         });
     }
@@ -468,20 +468,12 @@ public sealed partial class EditorView
         }
         var snapshot = sliderMultiplierValidationSnapshot;
         bool compensation = sliderMultiplierValidationCompensation;
-        var currentExport = editorWriteCache.MultiplierBaseline(Document, compensation);
         sliderMultiplierWorkerVersion = sliderMultiplierVersion;
         sliderMultiplierValidation = Task.Run(() =>
         {
             try
             {
-                var baseline = currentExport;
-                if (baseline is null)
-                {
-                    var source = snapshot.DeepClone(); source.SliderMultiplierOverride = null;
-                    baseline = OsuBeatmapWriter.Serialize(source, compensation);
-                }
-                var output = SliderMultiplierEditing.TryRebase(baseline, value, out var local, double.PositiveInfinity)
-                    ? local! : SliderMultiplierEditing.Rebase(baseline, value);
+                var output = SliderMultiplierEditing.ValidateChange(snapshot, value, compensation, new OsuWriteCache());
                 return new SliderMultiplierValidation(value, output, null);
             }
             catch (Exception ex) when (ex is ArgumentException or InvalidDataException or InvalidOperationException)

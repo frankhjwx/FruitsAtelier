@@ -18,6 +18,7 @@ if (args.Length == 2 && args[0] == "--import-roundtrip")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Current base SV governs slider editing, cached conversion, export and reload", UnifiedSliderMultiplierTests.Run),
     ("Version history preserves saved, unsaved and deleted authoring by project identity", VersionHistoryTests.Run),
 
     ("Fractional banana endpoints preserve exported counts and downstream tiny compensation", BananaQuantizationTests.Run),

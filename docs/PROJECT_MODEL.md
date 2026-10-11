@@ -96,14 +96,17 @@ The internal clipboard stores deep snapshots of selected complete parent objects
 Interface language and resources are not serialized in `.catchproj`. Built-in default names come from resources when creating objects. Existing Name values, imported metadata, and raw lines remain user data; switching languages does not rename them. Language changes invalidate conversion diagnostic caches without changing geometry or document history.
 
 `OverrideSliderMultiplier` unlocks base-SV editing in the Timing panel and defaults
-to false. `SliderMultiplierOverride` is nullable and stores the confirmed export
-base SV (0.4–3.6); `EffectiveSliderMultiplier` displays it, falling back to the
-authoring `SliderMultiplier`. These settings participate in cloning, dirty
+to false. `SliderMultiplierOverride` is nullable and stores the confirmed map
+base SV (0.4–3.6); `EffectiveSliderMultiplier` supplies it to editing, conversion
+and export, falling back to the stored `SliderMultiplier`. These settings participate in cloning, dirty
 comparison, project persistence and undo. Locking editing retains the override.
-Authoring conversion and DPB use the original multiplier. Export first generates
-the original geometry, then rebases the emitted base SV and inherited timing
-without changing object lines. NM/HR read-back validation checks object identities,
-kinds, times and positions. See [Timing editing](EDITOR_UI.md#timing-editing).
+Stored timing points retain their source basis for project compatibility. Timing
+lookups and exported timing compensate them into the current base, including red
+resets. FSlider generation uses that same base and inherited SV range 0.1–10;
+export writes its generated SV directly. Timing insertion retains the stored
+basis so compensation is applied once. DPB remains an independent distance-snap
+setting. Base-SV changes validate the candidate conversion and NM/HR read-back
+against the current playable objects before committing. See [Timing editing](EDITOR_UI.md#timing-editing).
 
 ## FSliders and Legacy Sliders
 

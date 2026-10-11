@@ -160,13 +160,14 @@ from 0.4 to 3.6. The value displays two decimal places. Turning the switch off
 locks editing and retains the confirmed value. The switch is saved in
 `.catchproj`, belongs to the current difficulty, and participates in undo/redo.
 Changing base SV preserves DPB and distance-snap presets and compensates inherited
-SV at export, including red-point resets, while retaining generated slider
-geometry. Cached exported green-point limits reject out-of-range compensation
+SV for conversion and export, including red-point resets. FSliders use the current
+base SV while editing and exporting, with the inherited multiplier limited to
+0.1–10. Cached exported green-point limits reject out-of-range compensation
 immediately in either direction. Valid adjustments update the displayed draft
 immediately and restart a one-second idle timer. The number and arrows remain
 available while waiting and during validation. Once the value stays unchanged
-for one second, a worker validates the latest draft using cached slider paths
-and local events, with full read-back validation for uncertain rounding.
+for one second, a worker converts and exports the latest draft at the requested
+base SV, validating its NM/HR playback against the confirmed map.
 The previous confirmed value remains active until validation succeeds. A new
 adjustment supersedes an older worker result and starts its own idle interval.
 One continuous adjustment commits as one undo step. File operations wait for

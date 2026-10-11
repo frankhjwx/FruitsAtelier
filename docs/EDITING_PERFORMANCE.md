@@ -50,9 +50,9 @@ cache owns a detached track snapshot and exact-time position memo per parent,
 invalidates it on track or conversion-setting changes, and prunes removed parents.
 Each memo retains at most 16,384 positions. Control-curve time queries prepare the
 segment's points and circular arc once for the complete binary search.
-SV-adjusted read-back owns separate conversion and parsed-line caches from the
-canonical export. Baseline matching compares authored content without cloning,
-ignoring only the override value and editing lock. Continuous SV input retains
+Authoring and read-back use the same effective base SV, with separate conversion
+and parsed-line caches. Baseline matching compares authored content without cloning,
+including the override value and ignoring only the editing lock. Continuous SV input retains
 one detached validation snapshot until its owning history or content changes.
 
 The write cache retains one emitted timing result, keyed by generated slider
@@ -86,23 +86,20 @@ Testplay requests wait for validated output. Save and export use their own autho
 snapshots, never the provisional preview. Cancellation restores the pre-draft
 preview; switching projects or difficulties retires the pending result.
 
-Base-SV confirmation reuses the editor write cache's canonical export before SV
-override. Cached minimum/maximum inherited beat-length magnitudes provide a
-constant-time range rejection, including compensated red resets. Local validation
-reuses read-back slider geometry and recomputes nested events only when velocity
-changes. Identical event kinds/counts preserve NM random offsets and downstream
-RNG consumption; the merged NM and recalculated HR sequences must still match.
+Base-SV input uses the editor's current exported snapshot for a constant-time
+range rejection from inherited beat-length bounds, including compensated red
+resets. Confirmation converts the confirmed and candidate snapshots on a detached
+worker with its own write cache. NM and HR object identities, kinds, times and
+positions must match before the new value commits.
 SV input updates a displayed draft and resets a one-second idle deadline; it does
 not change document content or invalidate conversion during continuous input.
-Validation starts on a detached worker only after that deadline. Cold profiles
-are prepared lazily there, so ordinary editing does not build SV event indexes.
+Validation starts on a detached worker only after that deadline.
 New input remains available during validation, supersedes the worker's result and
 restarts the deadline. Only the current, matching snapshot may commit, in one undo
-step. Full read-back validation remains a fallback and correctness oracle.
-Both paths keep generated geometry and do not rerun FSlider fitting for an SV step.
-Each write cache retains one canonical baseline and one validated override result,
-keyed by document content, Tiny compensation and language. The baseline ignores
-only the override value and editing-lock flag. Content edits invalidate pending
+step. FSlider fitting and export read-back use the candidate's effective base.
+Each write cache retains one current baseline and one validated override result,
+keyed by document content, effective base, Tiny compensation and language. The baseline ignores
+only the editing-lock flag. Content edits invalidate pending
 results; a successful result commits after active history transactions end and
 supplies the next render's export cache. Workers do not share mutable conversion
 caches with the UI.

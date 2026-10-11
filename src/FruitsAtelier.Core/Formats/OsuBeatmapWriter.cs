@@ -18,7 +18,8 @@ public sealed class OsuWriteCache
     public OsuWriteResult? MultiplierBaseline(MapDocument document, bool compensation)
     {
         if (multiplierBaselineSnapshot is null || multiplierBaselineCompensation != compensation || multiplierBaselineLanguage != L.Language) return null;
-        return multiplierBaselineSnapshot.ContentEquals(document, ignoreMultiplierOverride: true) ? multiplierBaseline : null;
+        return multiplierBaselineSnapshot.SliderMultiplierOverride == document.SliderMultiplierOverride
+            && multiplierBaselineSnapshot.ContentEquals(document, ignoreMultiplierOverride: true) ? multiplierBaseline : null;
     }
     internal void RememberBaseline(MapDocument document, OsuWriteResult output, bool compensation)
     {
@@ -102,8 +103,7 @@ public static class OsuBeatmapWriter
     public static OsuWriteResult Serialize(MapDocument document, bool compensateTinyDroplets = true, OsuWriteCache? cache = null)
     {
         OsuBeatmapReader.Validate(document);
-        if (document.SliderMultiplierOverride is { } multiplier)
-            return SliderMultiplierEditing.Serialize(document, multiplier, compensateTinyDroplets, cache);
+        if (cache?.Multiplier(document, compensateTinyDroplets) is { } cached) return cached;
         cache?.ParsedSliders.Begin();
         var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache?.Source);
         if (!converted.Success) throw new InvalidDataException(L.Get("core.writer.incompletePrefix") + string.Join(L.Get("core.diagnostics.separator"), converted.Diagnostics));
@@ -180,7 +180,17 @@ public static class OsuBeatmapWriter
             values[10] ??= "0:0:0:0:";
             lines.Add((slider.StartTimeMs, track.SourceOrder, slider.SourceId, string.Join(',', values)));
         }
-        var timing = cache is null ? BuildTiming(document, generated) : cache.Timing(document, generated, BuildTiming);
+        var timingDocument = document;
+        if (document.EffectiveSliderMultiplier != document.SliderMultiplier)
+        {
+            timingDocument = document.DeepClone();
+            if (timingDocument.TimingPoints.Count == 0)
+                timingDocument.TimingPoints.Add(new() { TimeMs = document.TimingOffsetMs, BeatLengthMs = document.BeatLengthMs });
+            double firstSlider = generated.Select(s => QuantizeTime(s.StartTimeMs))
+                .Concat(document.ImportedSliders.Select(s => s.TimeMs)).DefaultIfEmpty(double.PositiveInfinity).Min();
+            SliderMultiplierEditing.RebaseTiming(timingDocument, document.EffectiveSliderMultiplier, firstSlider);
+        }
+        var timing = cache is null ? BuildTiming(timingDocument, generated) : cache.Timing(timingDocument, generated, BuildTiming);
         if (document.HitsoundOverrides.Count > 0)
         {
             timing = timing.Select(p => p.DeepClone()).ToList();
@@ -201,7 +211,7 @@ public static class OsuBeatmapWriter
         if (OsuBeatmapReader.Setting(output, "Metadata", "Version") is null) Set(output, "Metadata", "Version", L.Get("core.names.defaultDifficulty"));
         SetNumber(output, "Difficulty", "ApproachRate", document.ApproachRate);
         SetNumber(output, "Difficulty", "CircleSize", document.CircleSize);
-        SetNumber(output, "Difficulty", "SliderMultiplier", document.SliderMultiplier);
+        SetNumber(output, "Difficulty", "SliderMultiplier", document.EffectiveSliderMultiplier);
         SetNumber(output, "Difficulty", "SliderTickRate", document.SliderTickRate);
         ReplaceData(output, "TimingPoints", timing.Select(TimingLine));
         // Time truncation is monotone; sorting before it retains current parent order when distinct times collapse.
@@ -306,6 +316,7 @@ public static class OsuBeatmapWriter
         };
         if (matches) result.MultiplierAnalysis = new(result, reconverted);
         cache?.RememberBaseline(document, result, compensateTinyDroplets);
+        if (document.SliderMultiplierOverride is not null) cache?.RememberMultiplier(document, result, compensateTinyDroplets);
         return result;
 
         string Coordinate(double value) { double rounded = Round(value); maxCoordinate = Math.Max(maxCoordinate, Math.Abs(rounded - value)); return Number(rounded); }

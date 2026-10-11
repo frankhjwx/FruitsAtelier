@@ -130,6 +130,7 @@ public sealed partial class EditorView
             DurationMs = Math.Max(Document.DurationMs, point.Value.TimeMs), BeatLengthMs = Document.BeatLengthMs,
             TimingOffsetMs = Document.TimingOffsetMs, ApproachRate = Document.ApproachRate,
             CircleSize = Document.CircleSize, SliderMultiplier = Document.SliderMultiplier, SliderTickRate = Document.SliderTickRate,
+            SliderMultiplierOverride = Document.SliderMultiplierOverride,
             RandomizeDropletStrength = Document.RandomizeDropletStrength, RandomizeDropletSeed = Document.RandomizeDropletSeed
         };
         bool localDraft = tool == Tool.Slider && draftTrack != Guid.Empty;

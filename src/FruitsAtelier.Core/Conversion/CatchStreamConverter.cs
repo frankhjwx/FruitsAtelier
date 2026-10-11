@@ -15,7 +15,7 @@ public static class CatchStreamConverter
         var parentOrders = new Dictionary<Guid, int>();
         bool success = true;
         if (!double.IsFinite(document.BeatLengthMs) || document.BeatLengthMs <= 0
-            || !double.IsFinite(document.SliderMultiplier) || document.SliderMultiplier <= 0
+            || !double.IsFinite(document.EffectiveSliderMultiplier) || document.EffectiveSliderMultiplier <= 0
             || !double.IsFinite(document.SliderTickRate) || document.SliderTickRate <= 0)
         {
             diagnostics.Add(L.Get("core.conversion.settings"));
@@ -136,7 +136,7 @@ public static class CatchStreamConverter
         // Inherited beat lengths round to float; leave room below the path-length limit.
         double maximumSv = Math.Min(LegacyCatchRules.MaximumSliderVelocityMultiplier,
             Math.Max(sv, LegacyCatchRules.MaximumPathLength * timing.BeatLengthMs
-                / (duration * 100 * document.SliderMultiplier) * (1 - 1e-7)));
+                / (duration * 100 * document.EffectiveSliderMultiplier) * (1 - 1e-7)));
         bool randomize = !document.DerandomizeFSliderDroplets && track.DropletRandomization is { Enabled: true };
         // Native offsets must act on the base path, preserving repeat geometry and edge clamping.
         bool nativeRandomize = randomize && document.RandomizeDropletStrength == 20 && document.RandomizeDropletSeed == 1337
@@ -145,7 +145,7 @@ public static class CatchStreamConverter
 
         for (int attempt = 0; attempt < 18; attempt++)
         {
-            double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.SliderMultiplier, sv);
+            double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, sv);
             double length = duration * velocity;
             double tickDistance = velocity * timing.BeatLengthMs / document.SliderTickRate;
             if (!double.IsFinite(velocity) || velocity <= 0 || !double.IsFinite(length) || length <= 0
@@ -183,7 +183,7 @@ public static class CatchStreamConverter
             {
                 if (sv < maximumSv)
                 {
-                    double requestedSv = requiredVelocity * timing.BeatLengthMs / (100 * document.SliderMultiplier);
+                    double requestedSv = requiredVelocity * timing.BeatLengthMs / (100 * document.EffectiveSliderMultiplier);
                     sv = Math.Min(maximumSv,
                         Math.Max(sv * 1.01, Math.Ceiling(requestedSv * 1.01 * 1_000_000) / 1_000_000));
                     continue;
@@ -268,7 +268,7 @@ public static class CatchStreamConverter
                     if (events is null)
                     {
                         var at = timing.At(source.TimeMs);
-                        double velocity = LegacyCatchRules.Velocity(at.BeatLengthMs, document.SliderMultiplier, at.SliderVelocityMultiplier);
+                        double velocity = LegacyCatchRules.Velocity(at.BeatLengthMs, document.EffectiveSliderMultiplier, at.SliderVelocityMultiplier);
                         double duration = track.Nodes[^1].TimeMs - source.TimeMs;
                         var nested = LegacyCatchRules.CreateNested(source.TimeMs, duration, velocity,
                             velocity * at.BeatLengthMs / document.SliderTickRate, duration * velocity, track.SpanCount, quantizeStart: true);
@@ -335,7 +335,7 @@ public static class CatchStreamConverter
         {
             DurationMs = document.DurationMs, BeatLengthMs = document.BeatLengthMs,
             TimingOffsetMs = document.TimingOffsetMs, ApproachRate = document.ApproachRate,
-            SliderMultiplier = document.SliderMultiplier, SliderTickRate = document.SliderTickRate
+            SliderMultiplier = document.EffectiveSliderMultiplier, SliderTickRate = document.SliderTickRate
         };
         validationDocument.Tracks.Add(track);
         var errors = CurveMath.Validate(validationDocument);
