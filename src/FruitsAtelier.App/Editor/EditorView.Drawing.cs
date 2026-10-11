@@ -244,7 +244,7 @@ public sealed partial class EditorView
             bool bar = line.IsMeasure;
             if (!beat && !line.IsTimingBoundary && step * pixelsPerMs < 7) continue;
             var style = GridStyle(line);
-            c.Line(playfield.X, y, playfield.Right, y, style.Color, style.Width, .35f);
+            c.Line(playfield.X, y, playfield.Right, y, style.Color, style.Width, bar ? .65f : .35f);
             if (!line.IsTimingBoundary && beat && (localTiming.BeatLengthMs * pixelsPerMs >= 25 || bar))
                 axisLabels.Add((y, time));
         }

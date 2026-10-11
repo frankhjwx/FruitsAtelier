@@ -328,7 +328,8 @@ public sealed partial class EditorView
         {
             if (!tick.IsBeat && renderedTiming.At(tick.TimeMs).BeatLengthMs / tick.Subdivision * objectTimelineScale < 5) continue;
             var style = GridStyle(tick);
-            c.Line(X(tick.TimeMs), objectTimeline.Bottom - style.Height, X(tick.TimeMs), objectTimeline.Bottom,
+            float height = tick.IsMeasure ? 30 : style.Height;
+            c.Line(X(tick.TimeMs), objectTimeline.Bottom - height, X(tick.TimeMs), objectTimeline.Bottom,
                 style.Color, style.Width);
         }
         var placement = TimelinePlacementPreview();

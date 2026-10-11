@@ -771,6 +771,9 @@ For FSliders, 0 reverses plays the path once, 1 returns once, and higher counts 
 
 In the object timeline, a slider tail displays a horizontal resize cursor. Drag it right to add reverses or left to remove them, down to one traversal. Each step equals one unchanged base-span duration. This works for FSliders and imported Legacy Sliders; release commits one undo step and Esc cancels.
 
+Measure starts use longer white ticks in the upper object timeline and brighter
+white grid lines on the main canvas to distinguish them from ordinary beats.
+
 Objects with exactly the same start time stack upward in source order in the
 object timeline. Up to 16 objects are displayed, with compact spacing inside the
 existing timeline height. Slider bodies and all their markers share the offset.
