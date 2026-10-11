@@ -86,6 +86,17 @@ Testplay requests wait for validated output. Save and export use their own autho
 snapshots, never the provisional preview. Cancellation restores the pre-draft
 preview; switching projects or difficulties retires the pending result.
 
+The object timeline retains Stream/Stack fruit times, stacking, combo numbers and
+event lookup entries for the current conversion snapshot. The colour presentation
+owns one combo-entry snapshot shared by numbering and preview combo ends. Content
+and NC edits refresh these snapshots; viewport changes reuse them. Drawing filters
+the cached chronological markers into a reusable visible buffer, preserving paint
+and hit order without allocating or sorting a new visible array each frame.
+Exact control-curve and internal NC snapshot comparisons use indexed lists to
+avoid allocating enumerators per track during conversion, dirty-state and rating
+checks. The transport overview retains sorted timing points with the Kiai
+presentation snapshot; content and timing edits rebuild it.
+
 Base-SV input uses the editor's current exported snapshot for a constant-time
 range rejection from inherited beat-length bounds, including compensated red
 resets. Confirmation converts the confirmed and candidate snapshots on a detached

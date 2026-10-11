@@ -17,6 +17,7 @@ if (args.Length == 2 && args[0] == "--benchmark-history")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Exact curve and internal NC snapshot comparisons avoid per-object allocation", CurveEvaluationTests.SnapshotEquality),
     ("Hitsound copy preserves timing, unmatched sounds, export and resource transactions", HitsoundCopierTests.Run),
     ("Map derandomization exports HR tiny droplets on authored paths", DropletDerandomizationTests.Run),
     ("Droplet FX preserves deterministic targets, manual edits, history, persistence and export", DropletRandomizationTests.Run),

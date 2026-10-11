@@ -231,6 +231,7 @@ public sealed partial class EditorView
             return;
         }
         if (!plot.Contains(x, y)) return;
+        timelineFruit = null;
         if (!ctrl && tool == Tool.Select && objectSelection.Count == 1 && SelectedDistanceObject() is { IsStandalone: false } selectedChild
             && !SelectionTransformBounds.Contains(x, y)
             && HitCatchObject(x, y)?.SourceId != selectedChild.SourceId && HitTrackPath(x, y) != selectedChild.SourceId

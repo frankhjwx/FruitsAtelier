@@ -44,7 +44,7 @@ public static class ObjectStructureEditing
                 TimeMs = item.TimeMs, X = item.X, SourceOrder = track.SourceOrder,
                 OriginalLine = SliderFruitStream.FruitLine(track, item.EventIndex,
                     Math.Round(item.X, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture),
-                    Math.Round(item.TimeMs, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture), samples.GetValueOrDefault((track.Id,item.EventIndex)))
+                    Math.Round(item.TimeMs, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture), samples.GetValueOrDefault((track.Id,item.EventIndex)), item.TimeMs)
             }, parentOrder[track.Id]))).ToArray();
         }
         catch (CatchConversionException ex) { throw new InvalidOperationException(ex.Message, ex); }

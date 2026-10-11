@@ -3,6 +3,122 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class ObjectTimelineTests
 {
+    public static void PatternNewCombo()
+    {
+        foreach (bool stack in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+            var track = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = 2, Stack = stack ? new() : null };
+            track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 2000, X = 200 }]);
+            map.Tracks.Add(track);
+            var ui = new Ui(false); ui.LoadDocument(map);
+            ui.View.UpdateTransport(1500, 6000, false, false, false, null, null); ui.Paint();
+            var r = ui.View.ObjectTimelineBounds;
+            float X(double time) => r.X + (float)((time - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+            string[] Numbers() => ui.Canvas.Texts.Where(t => t.Y >= r.Y && t.Y < r.Bottom && int.TryParse(t.Value, out _))
+                .OrderBy(t => t.X).Select(t => t.Value).ToArray();
+            var cache = new OsuWriteCache(); _ = OsuBeatmapWriter.Serialize(ui.View.Document, cache: cache);
+            ui.Click(X(1500), r.Y + 27); var conversion = ui.View.Conversion; ui.Key('Q');
+            var pattern = ui.View.Document.DeepClone();
+            if (!Numbers().SequenceEqual(new[] { "1", "2", "1", "2", "3" })
+                || !ReferenceEquals(conversion, ui.View.Conversion)
+                || ObjectFlags.NewCombo(ui.View.Document, track.Id)
+                || !ui.View.Document.Tracks[0].StreamNewComboOffsets.SequenceEqual(new[] { 500d }))
+                throw new Exception("Timeline NC did not apply only to the picked stream fruit without rebuilding geometry.");
+            var cached = OsuBeatmapWriter.Serialize(ui.View.Document, cache: cache);
+            var oracle = OsuBeatmapWriter.Serialize(ui.View.Document);
+            if (cached.Text != oracle.Text || !cached.ObjectSequenceMatches
+                || !cached.PlayableObjects.SequenceEqual(oracle.PlayableObjects)
+                || !ObjectFlags.NewCombo(cached.ReadBack, cached.ReadBack.Fruits.Single(f => f.TimeMs == 1500).Id))
+                throw new Exception("Stream NC export or cache invalidation lost the middle combo start.");
+            if (!ProjectSerializer.Read(ProjectSerializer.Serialize(pattern)).ContentEquals(pattern)
+                || !ProjectSerializer.ReadProject(ProjectSerializer.Serialize(BeatmapProject.FromDocuments([pattern]))).Difficulties[0].Document.ContentEquals(pattern))
+                throw new Exception("Single- or multi-difficulty project round trip lost internal NC offsets.");
+            var clone = pattern.DeepClone(); clone.Tracks[0].StreamNewComboOffsets.Clear();
+            if (clone.ContentEquals(pattern) || pattern.Tracks[0].StreamNewComboOffsets.Count != 1)
+                throw new Exception("Stream NC state is shared across snapshots or excluded from dirty comparison.");
+            var scaled = pattern.DeepClone(); TimingEditing.TransformObjects(scaled, time => (time, 2));
+            var scaledExport = OsuBeatmapWriter.Serialize(scaled).ReadBack;
+            if (!ObjectFlags.NewCombo(scaledExport, scaledExport.Fruits.Single(f => f.TimeMs == 2000).Id))
+                throw new Exception("Timing scaling did not move the internal NC with its fruit.");
+            ui.Key('Q');
+            if (ui.View.Document.Tracks[0].StreamNewComboOffsets.Count != 0 || !Numbers().SequenceEqual(new[] { "1", "2", "3", "4", "5" }))
+                throw new Exception("Toggling an internal NC off did not restore its combo sequence.");
+            ui.Key('Z', ctrl: true);
+            if (!ui.View.Document.ContentEquals(pattern)) throw new Exception("NC undo did not restore the pattern.");
+            ui.SelectTrack(track.Id); ui.Key('Q');
+            if (!ObjectFlags.NewCombo(ui.View.Document, track.Id) || !ui.View.Document.Tracks[0].StreamNewComboOffsets.SequenceEqual(new[] { 500d }))
+                throw new Exception("Canvas selection did not target the parent head's NC independently of internal starts.");
+            ui.Key('Z', ctrl: true);
+            ui.Click(X(1500), r.Y + 27);
+            ui.View.PointerDown(X(1500), r.Y + 27, 0, false, false);
+            ui.View.PointerMove(X(1750), r.Y + 27, false, false);
+            ui.View.PointerUp(X(1750), r.Y + 27, 0); ui.Paint();
+            if (ui.View.Document.Tracks[0].Nodes.Where((n, i) => n.TimeMs != track.Nodes[i].TimeMs + 250).Any()
+                || !ui.View.Document.Tracks[0].StreamNewComboOffsets.SequenceEqual(new[] { 500d }))
+                throw new Exception("Moving a picked timeline fruit did not move the whole pattern with its NC.");
+            ui.Key('Z', ctrl: true); ui.Click(X(1500), r.Y + 27); ui.Key(46);
+            if (ui.View.Document.Tracks.Count != 0 || ui.View.Conversion.Objects.Count != 0)
+                throw new Exception("Deleting a picked timeline fruit did not delete its whole pattern.");
+            ui.Key('Z', ctrl: true);
+            if (!ui.View.Document.ContentEquals(pattern)) throw new Exception("Whole-pattern deletion did not undo with NC intact.");
+            ui.SelectTrack(track.Id); ui.Key('F', ctrl: true, shift: true);
+            ui.ClickText(L.Get("stream.breakFruits")); ui.Key(13);
+            if (!ObjectFlags.NewCombo(ui.View.Document, ui.View.Document.Fruits.Single(f => f.TimeMs == 1500).Id)
+                || !Numbers().SequenceEqual(new[] { "1", "2", "1", "2", "3" }))
+                throw new Exception("Breaking the pattern did not retain its internal NC.");
+        }
+    }
+
+    public static void ConvertedPatterns()
+    {
+        foreach (bool stack in new[] { false, true })
+        foreach (int spans in new[] { 1, 2 })
+        {
+            var map = new MapDocument { DurationMs = 6000, BeatLengthMs = 500 };
+            var track = new CurveTrack { Kind = CurveKind.Linear, SpanCount = spans, StreamSnapDivisor = 2,
+                Stack = stack ? new() : null, SourceOrder = 1, OriginalLine = "100,192,1000,6,0,L|200:192,1,100" };
+            track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1430, X = 200 }]);
+            map.Tracks.Add(track);
+            map.Fruits.AddRange([new() { TimeMs = 900, X = 300, SourceOrder = 0 },
+                new() { TimeMs = 1250, X = 300, SourceOrder = 2, OriginalLine = "300,192,1250,5,0,0:0:0:0:" },
+                new() { TimeMs = 2200, X = 300, SourceOrder = 3 }]);
+            var ui = new Ui(false); ui.LoadDocument(map);
+            ui.View.UpdateTransport(1500, 6000, false, false, false, null, null); ui.Paint();
+            var r = ui.View.ObjectTimelineBounds;
+            float X(double time) => r.X + (float)((time - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+            RecordingCanvas.Label[] Labels() => ui.Canvas.Texts.Where(t => t.Y >= r.Y && t.Y < r.Bottom
+                && int.TryParse(t.Value, out _)).OrderBy(t => t.X).ThenBy(t => t.Y).ToArray();
+            var expectedTimes = new[] { 900d, 1000, 1250, 1250 }.Concat(spans == 2 ? new[] { 1500d, 1750 } : []).Append(2200).ToArray();
+            var expectedNumbers = spans == 2 ? new[] { "1", "1", "1", "2", "2", "3", "4" } : new[] { "1", "1", "1", "2", "2" };
+            var labels = Labels();
+            if (labels.Length != expectedTimes.Length || !labels.Select(t => t.Value).SequenceEqual(expectedNumbers)
+                || labels.Where((t, i) => Math.Abs(t.X + ((FruitsAtelier.App.Rendering.ICanvas)ui.Canvas).MeasureText(t.Value, 13) / 2 - X(expectedTimes[i])) > .01).Any())
+                throw new Exception("Converted timeline fruits have incorrect times, tied ordering or combo resets.");
+            if (ui.Canvas.Fills.Any(f => f.Bounds.Height is 19 or 38 && f.Bounds.Y >= r.Y && f.Bounds.Bottom <= r.Bottom))
+                throw new Exception("Stream or Stack timeline displayed a slider body instead of independent fruit markers.");
+            ui.Click(X(1250), r.Y + 27);
+            if (!ui.View.SelectedObjectIds.SequenceEqual(new[] { track.Id }) || !ui.View.Document.ContentEquals(map))
+                throw new Exception("Timeline stream fruit did not select its editable parent without changing content.");
+            ui.View.PointerMove(X(1250), r.Y + 27, false, false);
+            if (ui.View.TimelineResizeCursor) throw new Exception("Interior stream fruit exposes a slider-tail resize cursor.");
+            ui.Key('F', ctrl: true, shift: true); ui.ClickText(L.Get("stream.breakFruits")); ui.Key(13);
+            if (!Labels().Select(t => (t.Value, t.X, t.Y)).SequenceEqual(labels.Select(t => (t.Value, t.X, t.Y)))
+                || ui.Canvas.Fills.Any(f => f.Bounds.Height == 38 && f.Bounds.Y >= r.Y && f.Bounds.Bottom <= r.Bottom))
+                throw new Exception("Breaking a pattern changed its timeline fruit markers.");
+            ui.Key('Z', ctrl: true);
+            if (!ui.View.Document.ContentEquals(map) || !Labels().Select(t => t.Value).SequenceEqual(expectedNumbers))
+                throw new Exception("Undo did not restore the pattern timeline.");
+            ui.SelectTrack(track.Id); ui.HoldMap(1000, 100); ui.ClickText(L.Get("stream.convertBack"));
+            if (ui.View.Document.Tracks.Single().StreamSnapDivisor is not null
+                || Labels().Length != 4
+                || !ui.Canvas.Fills.Any(f => f.Bounds.Height == 38 && f.Bounds.Y == r.Y + 8))
+                throw new Exception("Converting back did not restore slider body and parent combo counting.");
+            ui.Key('Z', ctrl: true);
+            if (!Labels().Select(t => t.Value).SequenceEqual(expectedNumbers)) throw new Exception("Undo back-conversion retained stale timeline numbers.");
+        }
+    }
+
     public static void SimultaneousStacks()
     {
         foreach (int count in new[] { 4, 8, 16, 24 })
@@ -237,14 +353,21 @@ internal static class ObjectTimelineTests
         var field = typeof(FruitsAtelier.App.Editor.EditorView).GetField("renderedTiming", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
         TimingMap.Lookup Lookup() => (TimingMap.Lookup)field.GetValue(ui.View)!;
         var initial = Lookup();
+        var overviewField = typeof(FruitsAtelier.App.Editor.EditorView).GetField("overviewTiming", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        TimingPoint[] Overview() => (TimingPoint[])overviewField.GetValue(ui.View)!;
+        var overview = Overview();
         ui.View.UpdateTransport(1000, 10000, true, true, false, null, null); ui.Paint();
         if (!ReferenceEquals(initial, Lookup())) throw new Exception("Playback rebuilt unchanged timing data.");
+        if (!ReferenceEquals(overview, Overview())) throw new Exception("Playback rebuilt unchanged overview timing.");
         ui.View.Document.BeatLengthMs = 400; ui.Paint();
         if (ReferenceEquals(initial, Lookup()) || Lookup().At(1000).BeatLengthMs != 400) throw new Exception("Timing edit retained a stale lookup.");
         ui.View.Document.TimingPoints.Add(new() { TimeMs = 1000, BeatLengthMs = 300, Uninherited = true }); ui.Paint();
         if (Lookup().At(1000).BeatLengthMs != 300) throw new Exception("Inserted red point did not invalidate timing data.");
+        if (Overview().Count(p => p.TimeMs == 1000) != 2 || ReferenceEquals(overview, Overview()))
+            throw new Exception("Inserted timing point left stale overview markers.");
         ui.LoadDocument(map);
         if (Lookup().At(1000).BeatLengthMs != 500) throw new Exception("Document replacement reused another map's timing.");
+        if (Overview().Length != 2000) throw new Exception("Document replacement retained another map's overview markers.");
     }
 
     public static void ReverseMarkers()

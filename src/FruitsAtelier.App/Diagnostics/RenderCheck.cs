@@ -657,10 +657,12 @@ internal static class RenderCheck
         if (!double.IsFinite(startMs) || startMs < 0) throw new ArgumentOutOfRangeException(nameof(startMs));
         view.RequestPreloadHitsounds = null; view.RequestStopHitsounds = null;
         view.RequestScheduleHitsound = (_, _) => { }; view.RequestPrepareHitsound = _ => { };
-        var document = OsuBeatmapReader.ReadFile(path);
-        var documents = new[] { document }.Concat(Directory.EnumerateFiles(Path.GetDirectoryName(path)!, "*.osu")
+        bool osu = Path.GetExtension(path).Equals(".osu", StringComparison.OrdinalIgnoreCase);
+        var document = osu ? OsuBeatmapReader.ReadFile(path) : ProjectSerializer.ReadFile(path);
+        var documents = new[] { document }.Concat(Directory.EnumerateFiles(Path.GetDirectoryName(path)!, osu ? "*.osu" : "*.catchdiff")
             .Where(file => !Path.GetFullPath(file).Equals(Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase))
-            .Select(OsuBeatmapReader.ReadFile)).ToArray();
+            .Where(file => !Path.GetFileName(file).Equals("project.catchdiff", StringComparison.OrdinalIgnoreCase))
+            .Select(file => osu ? OsuBeatmapReader.ReadFile(file) : ProjectSerializer.ReadFile(file))).ToArray();
         var project = BeatmapProject.FromDocuments(documents);
         view.LoadWorkspace(new(Path.GetDirectoryName(path)!, new WorkspaceManifest { Name = project.Name }, project));
         var resourcesWatch = Stopwatch.StartNew();
@@ -670,7 +672,7 @@ internal static class RenderCheck
         void Draw() { canvas.Begin(); view.Render(canvas, 1440, 900); canvas.End(); }
         Draw();
         var cases = new List<object>();
-        for (int mode = 0; mode < 3; mode++)
+        for (int mode = 0; mode < 4; mode++)
         {
             if (mode == 1)
             {
@@ -685,6 +687,15 @@ internal static class RenderCheck
                 view.PointerDown(x, 193, 0, false, false); view.PointerUp(x, 193, 0);
                 Draw();
             }
+            if (mode == 3)
+            {
+                var toggle = view.PreviewToggleBounds;
+                view.PointerDown(toggle.X + 10, toggle.Y + 10, 0, false, false); view.PointerUp(toggle.X + 10, toggle.Y + 10, 0);
+                view.KeyDown('F', false, false);
+                var plot = view.CanvasPlotBounds;
+                view.PointerMove(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, false, false);
+                Draw();
+            }
             view.StartHitsounds(startMs);
             var frames = new List<double>(); var transport = new List<double>();
             var drawing = new List<double>();
@@ -695,7 +706,7 @@ internal static class RenderCheck
                 long allocated = GC.GetAllocatedBytesForCurrentThread();
                 int gen0 = GC.CollectionCount(0), gen1 = GC.CollectionCount(1), gen2 = GC.CollectionCount(2), decodes = canvas.ImageDecodeCount;
                 watch.Restart();
-                view.UpdateTransport(startMs + i * 1000d / 120, document.DurationMs, true, true, false, null, document.AudioPath);
+                view.UpdateTransport(startMs + (mode == 3 ? 0 : i * 1000d / 120), document.DurationMs, true, mode != 3, false, null, document.AudioPath);
                 double transportMs = watch.Elapsed.TotalMilliseconds;
                 if (i >= 20) transport.Add(transportMs);
                 watch.Restart(); canvas.Begin(); view.Render(canvas, 1440, 900);
@@ -709,7 +720,7 @@ internal static class RenderCheck
                     GC.CollectionCount(1) - gen1, GC.CollectionCount(2) - gen2, canvas.ImageDecodeCount - decodes));
             }
             frames.Sort(); transport.Sort(); drawing.Sort();
-            cases.Add(new { preview = mode == 0 ? "closed" : mode == 1 ? "NM" : "HR", ar = view.PreviewApproachRate,
+            cases.Add(new { preview = mode == 0 ? "closed" : mode == 1 ? "NM" : mode == 2 ? "HR" : "paused-hover", ar = view.PreviewApproachRate,
                 renderMedianMs = frames[1800], renderP95Ms = frames[3420], renderMaxMs = frames[^1],
                 drawingMedianMs = drawing[1800], drawingP95Ms = drawing[3420],
                 transportMedianMs = transport[1800], transportP95Ms = transport[3420], transportMaxMs = transport[^1], samples });
@@ -853,6 +864,11 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--object-timeline-render-check"))
+        {
+            ObjectTimelineRenderCheck.Run(canvas);
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--sample-banks-render-check"))
         {
             foreach (int dpi in new[] { 96, 144, 192 })

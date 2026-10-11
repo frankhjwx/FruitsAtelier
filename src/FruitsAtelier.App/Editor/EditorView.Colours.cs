@@ -6,29 +6,27 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private readonly Dictionary<Guid, (int Skin, int Beatmap)> comboIndices = [];
-    private readonly HashSet<Guid> newComboSources = [];
+    private readonly Dictionary<(Guid Id, int EventIndex), (int Skin, int Beatmap)> comboEventIndices = [];
+    private readonly HashSet<(Guid Id, int EventIndex)> newComboEvents = [];
     private uint[] beatmapColours = [];
 
     private void BuildComboColours()
     {
         comboIndices.Clear();
-        newComboSources.Clear();
-        var lines = Document.Fruits.Select(f => (f.Id, f.OriginalLine))
-            .Concat(Document.Tracks.Select(t => (t.Id, t.OriginalLine)))
-            .Concat(Document.ImportedSliders.Select(t => (t.Id, t.OriginalLine)))
-            .Concat(Document.BananaShowers.Select(t => (t.Id, t.OriginalLine))).ToDictionary(p => p.Id, p => p.OriginalLine);
-        var spinners = Document.BananaShowers.Select(s => s.Id).ToHashSet();
+        comboEventIndices.Clear();
+        newComboEvents.Clear();
+        comboEntries = BuildComboEntries().ToArray();
         int index = 0, offsets = 0;
         bool first = true, afterSpinner = false;
-        foreach (var parent in ClipboardParents(Document).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder))
+        foreach (var parent in ComboEntries())
         {
-            var parts = lines[parent.Id]?.Split(',');
-            int flags = parts is { Length: > 3 } && int.TryParse(parts[3], out int value) ? value : 0;
-            if ((flags & 4) != 0) newComboSources.Add(parent.Id);
-            bool spinner = spinners.Contains(parent.Id);
+            int flags = parent.Flags;
+            if ((flags & 4) != 0) newComboEvents.Add((parent.Id, parent.EventIndex));
+            bool spinner = parent.IsBanana;
             if (!spinner && (first || afterSpinner || (flags & 4) != 0))
             { index++; offsets += 1 + ((flags >> 4) & 7); }
-            comboIndices[parent.Id] = (index, offsets);
+            comboIndices.TryAdd(parent.Id, (index, offsets));
+            if (parent.EventIndex > 0) comboEventIndices[(parent.Id, parent.EventIndex)] = (index, offsets);
             first = false; afterSpinner = spinner;
         }
         var colours = new SortedDictionary<int, uint>();
@@ -48,7 +46,7 @@ public sealed partial class EditorView
     private uint ObjectColour(ConvertedCatchObject item)
     {
         if (item.Kind == CatchObjectKind.Banana) return CatchObjectVisual.BananaColour(item.TimeMs);
-        var indices = comboIndices.GetValueOrDefault(item.SourceId);
+        var indices = comboEventIndices.GetValueOrDefault((item.SourceId, item.EventIndex), comboIndices.GetValueOrDefault(item.SourceId));
         if (beatmapColours.Length > 0) return beatmapColours[indices.Beatmap % beatmapColours.Length];
         var colours = skin?.ComboColours;
         // Catch skin colours advance per parent; beatmap colours retain NC offsets.
@@ -56,9 +54,9 @@ public sealed partial class EditorView
         return colours is { Count: > 0 } ? colours[index % colours.Count] : 0xFFFFFF;
     }
 
-    private uint ComboColour(Guid sourceId, bool useFallbackPalette = false)
+    private uint ComboColour(Guid sourceId, bool useFallbackPalette = false, int eventIndex = 0)
     {
-        var indices = comboIndices.GetValueOrDefault(sourceId);
+        var indices = comboEventIndices.GetValueOrDefault((sourceId, eventIndex), comboIndices.GetValueOrDefault(sourceId));
         if (beatmapColours.Length > 0) return beatmapColours[indices.Beatmap % beatmapColours.Length];
         var colours = skin?.ComboColours;
         if (colours is { Count: > 0 }) return colours[indices.Skin % colours.Count];

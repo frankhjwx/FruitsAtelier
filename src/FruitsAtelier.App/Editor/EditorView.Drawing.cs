@@ -10,12 +10,14 @@ public sealed partial class EditorView
     private (string Language, bool Compact, Type CanvasType)? canvasToggleTextKey;
     private readonly (string First, string? Second, float Size)[] canvasToggleText = new (string, string?, float)[3];
     private (double TimeMs, bool Active)[] kiaiTransitions = [];
+    private TimingPoint[] overviewTiming = [];
 
     private void RefreshKiaiTransitions()
     {
         var transitions = new List<(double TimeMs, bool Active)>();
         bool active = false;
-        foreach (var group in Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).GroupBy(p => p.TimeMs))
+        overviewTiming = Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
+        foreach (var group in overviewTiming.GroupBy(p => p.TimeMs))
         {
             bool next = (group.Last().Effects & 1) != 0;
             if (next == active) continue;
@@ -393,7 +395,7 @@ public sealed partial class EditorView
             DrawCatchObject(c, item, p.X, p.Y, playfield.Width, previewTail ? .6f : 1, hyperStarts: placementHyperdash);
             if (IsObjectSelected(item.SourceId))
                 c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * playfield.Width / 512 + 3, Accent, false, 1.5f);
-            if (item.Kind == CatchObjectKind.Fruit && item.EventIndex == 0 && newComboSources.Contains(item.SourceId))
+            if (item.Kind == CatchObjectKind.Fruit && newComboEvents.Contains((item.SourceId, item.EventIndex)))
             {
                 if (comboLabelWidth == 0)
                     comboLabelWidth = c.MeasureText(comboLabel, 11);
@@ -553,7 +555,7 @@ public sealed partial class EditorView
         if (AudioLoading) return;
         const float timelineMarkerOpacity = .8f;
         float TimelineX(double time) => overview.X + (float)(Math.Clamp(time, 0, TimelineDurationMs) / TimelineDurationMs) * overview.Width;
-        var timing = Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
+        var timing = overviewTiming;
         c.Line(overview.X, overview.Y + 20, overview.Right, overview.Y + 20, 0xA0A0A0, 1, timelineMarkerOpacity);
         const float spanHeight = 12;
         float spanY = overview.Y + 20 - spanHeight / 2;

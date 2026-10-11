@@ -23,9 +23,14 @@ public sealed class ControlCurve
         copy.Controls = Controls.Select(p => p.DeepClone()).ToList();
         return copy;
     }
-    internal static bool Equal(ControlCurve? a, ControlCurve? b) => a is null ? b is null : b is not null
-        && a.Kind == b.Kind && a.ReferenceScale == b.ReferenceScale && a.Controls.Count == b.Controls.Count
-        && a.Controls.Zip(b.Controls).All(p => p.First.Id == p.Second.Id && p.First.Offset == p.Second.Offset);
+    internal static bool Equal(ControlCurve? a, ControlCurve? b)
+    {
+        if (a is null) return b is null;
+        if (b is null || a.Kind != b.Kind || a.ReferenceScale != b.ReferenceScale || a.Controls.Count != b.Controls.Count) return false;
+        for (int i = 0; i < a.Controls.Count; i++)
+            if (a.Controls[i].Id != b.Controls[i].Id || a.Controls[i].Offset != b.Controls[i].Offset) return false;
+        return true;
+    }
 }
 
 public static class ControlCurveMath

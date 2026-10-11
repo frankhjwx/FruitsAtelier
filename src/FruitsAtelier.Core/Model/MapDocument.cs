@@ -52,7 +52,10 @@ public sealed class CurveTrack
         if (a.Id != b.Id || a.Name != b.Name || a.Kind != b.Kind || a.SourceOrder != b.SourceOrder || a.Nodes.Count != b.Nodes.Count
             || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets
             || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
+            || a.StreamNewComboOffsets.Count != b.StreamNewComboOffsets.Count
             || !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization)) return false;
+        for (int j = 0; j < a.StreamNewComboOffsets.Count; j++)
+            if (a.StreamNewComboOffsets[j] != b.StreamNewComboOffsets[j]) return false;
         for (int j = 0; j < a.Nodes.Count; j++)
         {
             var an = a.Nodes[j]; var bn = b.Nodes[j];
@@ -72,6 +75,7 @@ public sealed class CurveTrack
         var copy = (CurveTrack)MemberwiseClone();
         copy.Nodes = Nodes.Select(n => n.DeepClone()).ToList();
         copy.Stack = Stack?.DeepClone();
+        copy.StreamNewComboOffsets = StreamNewComboOffsets.ToList();
         copy.DropletRandomization = DropletRandomization?.DeepClone();
         return copy;
     }
@@ -80,6 +84,7 @@ public sealed class CurveTrack
     public bool? CompensateTinyDroplets { get; set; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public int? StreamSnapDivisor { get; set; }
+    public List<double> StreamNewComboOffsets { get; private set; } = [];
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public StackEnvelope? Stack { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

@@ -101,6 +101,16 @@ public static class ObjectFlags
         source.Save(string.Join(',', fields));
     }
 
+    public static void SetStreamNewCombo(MapDocument document, Guid id, int eventIndex, double timeMs, bool enabled)
+    {
+        if (eventIndex == 0) { SetNewCombo(document, id, enabled); return; }
+        var track = document.Tracks.First(t => t.Id == id && t.StreamSnapDivisor is not null);
+        double offset = timeMs - track.Nodes[0].TimeMs;
+        if (!double.IsFinite(offset) || offset <= 0) throw new ArgumentOutOfRangeException(nameof(timeMs));
+        track.StreamNewComboOffsets.RemoveAll(at => Math.Abs(at - offset) < 1e-7);
+        if (enabled) { track.StreamNewComboOffsets.Add(offset); track.StreamNewComboOffsets.Sort(); }
+    }
+
     public static int[] Sounds(MapDocument document, Guid id, int? edge = null)
     {
         var source = Source(document, id);

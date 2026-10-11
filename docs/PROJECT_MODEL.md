@@ -138,6 +138,17 @@ FSliders retain the original parent Id, SourceOrder, OriginalLine, and SpanCount
 
 ## Derived conversion
 
+`CurveTrack.StreamNewComboOffsets` stores additional Stream/Stack NC starts as
+millisecond offsets from the parent head. The head uses `OriginalLine`'s NC flag.
+Offsets participate in deep cloning, content equality, undo and export cache
+invalidation; nonempty collections require project schemas 17/18, while older
+projects default to no internal NC starts. Whole-parent movement preserves the
+offsets, and timing transforms scale them with the parent duration. Only fruits
+sampled at a saved offset receive NC, so a subdivision change
+can temporarily omit a marker and restore it when that time is sampled again.
+Ordinary slider output uses only the head flag; retained offsets apply again when
+the parent is converted to Stream/Stack. Breaking transfers the flags to the fruits.
+
 ### Droplet randomization
 
 `MapDocument.RandomizeDropletStrength` is the TinyDroplet lateral randomization

@@ -27,6 +27,18 @@ if (args.Contains("--audio-diagnostics-settings-check"))
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Contains("--object-timeline-check"))
+{
+    try
+    {
+        ObjectTimelineTests.ConvertedPatterns(); ObjectTimelineTests.PatternNewCombo(); ObjectTimelineTests.SkinColours();
+        ObjectTimelineTests.SimultaneousStacks(); ObjectTimelineTests.Stacking();
+        ObjectTimelineTests.TimingCacheInvalidation();
+        ComboGroupingTests.Run();
+        Console.WriteLine("PASS Object timeline patterns, skins, stacking and undo"); return 0;
+    }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 if (args.Contains("--slider-draft-check"))
 {
     try
@@ -95,6 +107,8 @@ var tests = new (string Name, Action Run)[]
     ("Synchronization failures wrap and scroll without editing content", SynchronizationUiTests.FailureText),
     ("Section synchronization pages large Events and applies complete text", SynchronizationUiTests.SectionText),
     ("Timing synchronization reviews one green line amongst generated SV", SynchronizationUiTests.TimingRows),
+    ("Timeline converted patterns show independent fruits and combo numbers", ObjectTimelineTests.ConvertedPatterns),
+    ("Timeline pattern fruits edit internal NC while move and delete retain the whole parent", ObjectTimelineTests.PatternNewCombo),
     ("Timeline skin uses combo-coloured tracks and hitcircle endpoints", ObjectTimelineTests.SkinColours),
     ("Workspace storage settings show usage and clear caches without editing maps", StorageSettingsTests.Run),
     ("Mapping right-click deletes the marquee selection in one undo", MappingSessionTests.RightClickSelection),

@@ -49,6 +49,12 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --object-timeline-check` checks Stream/Stack fruit markers, combo
+numbering, internal NC, grouped movement/deletion, persistence, export and undo.
+On Windows, `FruitsAtelier.App.exe --render-check --object-timeline-render-check`
+runs the focused native checks and writes screenshots and CPU/allocation samples
+under `artifacts/tests/object-timeline-native` at 96, 144 and 192 DPI.
+
 Test projects are console programs run with `dotnet run`. Format-export quantization and read-back diagnostic checks iterate over every available language, verifying messages and parameters against localization tables rather than assuming the default UI language. Repeat-count checks verify preserved edge samples and silent default assignment to new edges in every language.
 
 After building the solution, run on Windows from the repository root:
@@ -396,9 +402,9 @@ GPU presentation and physical display latency are excluded.
 
 ## Playback rendering profile
 
-For a read-only CPU profile of an existing `.osu` file, run the App test executable with `--map-performance <path>`. It measures playback around 89 seconds at 32% Zoom and 1/16 Snap, reporting render median/p95, allocation per frame, rendering phases, and transport/hitsound scheduling with silent callbacks. The counting canvas excludes GPU and device submission.
+For a read-only CPU profile of an existing `.osu` or `.catchdiff` file, run the App test executable with `--map-performance <path>`. It measures playback around 89 seconds at 32% Zoom and 1/16 Snap, reporting render median/p95, allocation per frame, rendering phases, and transport/hitsound scheduling with silent callbacks. The counting canvas excludes GPU and device submission.
 
-On Windows, run `FruitsAtelier.App.exe --profile-map <path> [startMs]` in a hidden Direct2D window with the active default skin. It opens an in-memory workspace session for the selected `.osu` and sibling difficulties, including periodic resource checks, then measures thirty seconds from the supplied time (default 70000 ms) at 100% zoom and 1/4 snap with preview closed, NM, and HR. The report separates drawing submission, total rendering including `EndDraw`/`Present`, and silent transport updates. Per-frame samples include allocations, GC collections, and image decode counts to identify isolated stalls. It also measures document comparison time. The report is written to `artifacts/logs/playback-profile.json` in repository builds, or the application log directory in distributed builds. This is not a visible-screen FPS measurement. Neither profile saves or imports the map into the workspace, plays audio, or changes system volume.
+On Windows, run `FruitsAtelier.App.exe --profile-map <path> [startMs]` in a hidden Direct2D window with the active default skin. It opens an in-memory workspace session for the selected `.osu` or `.catchdiff` and sibling difficulties, including periodic resource checks, then samples 3,600 warmed frames per case from the supplied time (default 70000 ms) at 100% zoom and 1/4 snap with preview closed, NM, HR, and paused fruit hover. Playback advances thirty seconds per case. The report separates drawing submission, total rendering including `EndDraw`/`Present`, and silent transport updates. Per-frame samples include allocations, GC collections, and image decode counts to identify isolated stalls. It also measures document comparison time. The report is written to `artifacts/logs/playback-profile.json` in repository builds, or the application log directory in distributed builds. This is not a visible-screen FPS measurement. Neither profile saves or imports the map into the workspace, plays audio, or changes system volume.
 
 ## Imported slider corpus
 

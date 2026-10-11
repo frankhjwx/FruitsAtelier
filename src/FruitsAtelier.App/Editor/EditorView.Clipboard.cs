@@ -10,6 +10,7 @@ public sealed partial class EditorView
     private DifficultySession? clipboardDifficulty;
     public Action<string>? RequestCopyText { get; set; }
     public string ObjectClipboardText { get; private set; } = "";
+    private (Guid Id, int EventIndex, int Flags, bool IsBanana)[] comboEntries = [];
 
     private void StoreClipboard(MapDocument snapshot, string text)
     {
@@ -28,24 +29,72 @@ public sealed partial class EditorView
 
     private Dictionary<Guid, int> ComboNumbers()
     {
+        EnsureConversion();
+        var result = new Dictionary<Guid, int>();
+        int number = 0;
+        bool afterSpinner = false;
+        foreach (var item in ComboEntries())
+        {
+            if ((item.Flags & 4) != 0 || item.IsBanana || afterSpinner) number = 0;
+            result.TryAdd(item.Id, ++number);
+            afterSpinner = item.IsBanana;
+        }
+        return result;
+    }
+
+    private Dictionary<(Guid Id, int EventIndex), int> ComboEventNumbers()
+    {
+        var result = new Dictionary<(Guid, int), int>();
+        int number = 0;
+        bool afterSpinner = false;
+        foreach (var item in ComboEntries())
+        {
+            if ((item.Flags & 4) != 0 || item.IsBanana || afterSpinner) number = 0;
+            result[(item.Id, item.EventIndex)] = ++number;
+            afterSpinner = item.IsBanana;
+        }
+        return result;
+    }
+
+    private IReadOnlyList<(Guid Id, int EventIndex, int Flags, bool IsBanana)> ComboEntries() => comboEntries;
+
+    private IEnumerable<(Guid Id, int EventIndex, int Flags, bool IsBanana)> BuildComboEntries()
+    {
         var lines = Document.Fruits.Select(f => (f.Id, f.OriginalLine))
             .Concat(Document.Tracks.Select(t => (t.Id, t.OriginalLine)))
             .Concat(Document.ImportedSliders.Select(t => (t.Id, t.OriginalLine)))
             .Concat(Document.BananaShowers.Select(t => (t.Id, t.OriginalLine))).ToDictionary(p => p.Id, p => p.OriginalLine);
         var spinners = Document.BananaShowers.Select(s => s.Id).ToHashSet();
-        var result = new Dictionary<Guid, int>();
-        int number = 0;
-        bool afterSpinner = false;
-        foreach (var parent in ClipboardParents(Document).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder))
+        var streams = Document.Tracks.Where(t => t.StreamSnapDivisor is not null).ToDictionary(t => t.Id);
+        if (streams.Count == 0)
         {
-            var parts = lines[parent.Id]?.Split(',');
-            int flags = parts is { Length: > 3 } && int.TryParse(parts[3], out int value) ? value : 0;
-            bool spinner = spinners.Contains(parent.Id);
-            if ((flags & 4) != 0 || spinner || afterSpinner) number = 0;
-            result[parent.Id] = ++number;
-            afterSpinner = spinner;
+            foreach (var parent in ClipboardParents(Document).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder))
+            {
+                var parts = lines[parent.Id]?.Split(',');
+                int flags = parts is { Length: > 3 } && int.TryParse(parts[3], out int value) ? value : 0;
+                yield return (parent.Id, 0, flags, spinners.Contains(parent.Id));
+            }
+            yield break;
         }
-        return result;
+        var children = (conversion?.Objects ?? []).Where(o => streams.ContainsKey(o.SourceId)).GroupBy(o => o.SourceId)
+            .ToDictionary(g => g.Key, g => g.ToArray());
+        var entries = ClipboardParents(Document).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder)
+            .SelectMany((p, order) => children.TryGetValue(p.Id, out var events)
+                ? events.Select(o => (p.Id, o.EventIndex, o.TimeMs, p.SourceOrder, Order: order))
+                : [(p.Id, EventIndex: 0, p.TimeMs, p.SourceOrder, Order: order)])
+            .OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ThenBy(p => p.Order);
+        foreach (var parent in entries)
+        {
+            int flags;
+            if (parent.EventIndex > 0)
+                flags = SliderFruitStream.IsNewCombo(streams[parent.Id], parent.EventIndex, parent.TimeMs) ? 4 : 0;
+            else
+            {
+                var parts = lines[parent.Id]?.Split(',');
+                flags = parts is { Length: > 3 } && int.TryParse(parts[3], out int value) ? value : 0;
+            }
+            yield return (parent.Id, parent.EventIndex, flags, spinners.Contains(parent.Id));
+        }
     }
 
     private bool ClipboardInteractionReady => draftTrack == Guid.Empty && draftBanana == Guid.Empty && drag == DragKind.None && editField < 0;

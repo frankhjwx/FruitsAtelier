@@ -118,7 +118,7 @@ public static class OsuBeatmapWriter
         {
             var track = streamIds[item.SourceId];
             lines.Add((item.TimeMs, track.SourceOrder, track.Id,
-                SliderFruitStream.FruitLine(track, item.EventIndex, Coordinate(item.X), Time(item.TimeMs))));
+                SliderFruitStream.FruitLine(track, item.EventIndex, Coordinate(item.X), Time(item.TimeMs), timeMs: item.TimeMs)));
         }
         foreach (var fruit in document.Fruits)
         {

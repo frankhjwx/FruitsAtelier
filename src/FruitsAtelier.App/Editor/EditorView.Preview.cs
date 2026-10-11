@@ -76,12 +76,14 @@ public sealed partial class EditorView
             previewDrainTime = PreviewDrainTime();
             previewHyperdash = HyperDashCalculator.GetHyperDashStarts(previewObjects, PreviewCircleSize);
             previewAutoplay = new(previewObjects, PreviewCircleSize);
-            var parents = ClipboardParents(Document).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
-            var numbers = ComboNumbers();
+            var entries = ComboEntries().ToArray();
             var tails = previewObjects.GroupBy(item => item.SourceId).ToDictionary(group => group.Key, group => group.Last());
+            var streamIds = Document.Tracks.Where(t => t.StreamSnapDivisor is not null).Select(t => t.Id).ToHashSet();
+            var fruits = previewObjects.Where(o => streamIds.Contains(o.SourceId)).ToDictionary(o => (o.SourceId, o.EventIndex));
             var ends = previewComboEnds = new HashSet<(Guid, int)>();
-            for (int i = 0; i < parents.Length; i++)
-                if ((i == parents.Length - 1 || numbers[parents[i + 1].Id] == 1) && tails.TryGetValue(parents[i].Id, out var tail))
+            for (int i = 0; i < entries.Length; i++)
+                if ((i == entries.Length - 1 || (entries[i + 1].Flags & 4) != 0 || entries[i].IsBanana || entries[i + 1].IsBanana)
+                    && (fruits.TryGetValue((entries[i].Id, entries[i].EventIndex), out var tail) || tails.TryGetValue(entries[i].Id, out tail)))
                     ends.Add((tail.SourceId, tail.EventIndex));
             previewPlate = new(previewObjects, previewAutoplay, PreviewCircleSize, ends);
         }

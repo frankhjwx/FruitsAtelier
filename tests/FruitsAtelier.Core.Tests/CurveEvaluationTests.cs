@@ -2,6 +2,31 @@ using FruitsAtelier.Core;
 
 internal static class CurveEvaluationTests
 {
+    public static void SnapshotEquality()
+    {
+        var map = new MapDocument();
+        for (int i = 0; i < 600; i++)
+        {
+            var curve = new ControlCurve { Kind = ControlCurveKind.Bezier };
+            curve.Controls.Add(new() { Offset = new(200, 50) });
+            var track = new CurveTrack();
+            track.Nodes.AddRange([new() { TimeMs = i * 500, X = 100, OutgoingCurve = curve }, new() { TimeMs = i * 500 + 300, X = 200 }]);
+            track.StreamNewComboOffsets.Add(100);
+            map.Tracks.Add(track);
+        }
+        var snapshot = map.DeepClone();
+        for (int i = 0; i < 10; i++) _ = map.ContentEquals(snapshot);
+        long bytes = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 100; i++)
+            if (!map.ContentEquals(snapshot)) throw new Exception("Equal exact-curve snapshots differ.");
+        if (GC.GetAllocatedBytesForCurrentThread() - bytes > 64 * 1024)
+            throw new Exception("Unchanged curve comparisons allocate per track or control.");
+        snapshot.Tracks[599].Nodes[0].OutgoingCurve!.Controls[0].Offset = new(201, 50);
+        if (map.ContentEquals(snapshot)) throw new Exception("A control edit did not invalidate the snapshot.");
+        snapshot = map.DeepClone(); snapshot.Tracks[599].StreamNewComboOffsets[0] = 101;
+        if (map.ContentEquals(snapshot)) throw new Exception("An internal NC edit did not invalidate the snapshot.");
+    }
+
     public static void Run()
     {
         foreach (var kind in new[] { ControlCurveKind.Bezier, ControlCurveKind.CircularArc })

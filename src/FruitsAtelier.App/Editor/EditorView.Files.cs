@@ -84,7 +84,7 @@ public sealed partial class EditorView
         ResetDeferredConversion();
         pauseSnapDivisor = null;
         nextFruitNewCombo = false;
-        nextSounds = 0; soundEdge = null;
+        nextSounds = 0; soundEdge = null; timelineFruit = null;
         var document = Document;
         convertedSnapshot = null;
         Select(Guid.Empty);

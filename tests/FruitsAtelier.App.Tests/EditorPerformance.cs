@@ -260,7 +260,8 @@ internal static class EditorPerformance
     public static int RunMap(string path)
     {
         var watch = Stopwatch.StartNew();
-        var document = OsuBeatmapReader.ReadFile(path);
+        var document = Path.GetExtension(path).Equals(".osu", StringComparison.OrdinalIgnoreCase)
+            ? OsuBeatmapReader.ReadFile(path) : ProjectSerializer.ReadFile(path);
         Console.WriteLine($"Read: {watch.Elapsed.TotalMilliseconds:F1} ms; sliders={document.ImportedSliders.Count}; timing={document.TimingPoints.Count}");
         var view = new EditorView();
         watch.Restart(); view.LoadDocument(document);

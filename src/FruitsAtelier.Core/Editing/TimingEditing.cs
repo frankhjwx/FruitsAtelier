@@ -114,6 +114,7 @@ public static class TimingEditing
 
     private static void TransformTrack(CurveTrack track, double origin, double target, double scale)
     {
+        for (int i = 0; i < track.StreamNewComboOffsets.Count; i++) track.StreamNewComboOffsets[i] *= scale;
         foreach (var node in track.Nodes)
         {
             node.TimeMs = target + (node.TimeMs - origin) * scale;

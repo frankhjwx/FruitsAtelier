@@ -228,6 +228,7 @@ public static class OsuBeatmapReader
             if (track.Kind is not (CurveKind.Linear or CurveKind.Bezier) || track.Nodes.Count < 2)
                 throw new InvalidDataException(L.Get("core.reader.incompleteCurve"));
             foreach (var node in track.Nodes) { Id(node.Id); Time(node.TimeMs); }
+            foreach (double offset in track.StreamNewComboOffsets) Time(offset);
         }
         foreach (var slider in document.ImportedSliders)
         {
