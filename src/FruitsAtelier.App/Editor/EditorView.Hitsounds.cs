@@ -100,12 +100,25 @@ public sealed partial class EditorView
         bool scheduled = RequestScheduleHitsound is not null;
         double end = scheduled ? position + HitsoundLookaheadMs : position;
         int low = FirstAfter(objects, scheduled ? scheduledThrough ?? start : start);
+        double? lastBananaTime = null;
         for (int i = low; i < objects.Count && objects[i].TimeMs <= end; i++)
+        {
+            if (!ShouldPlayCatchHitsound(objects[i], ref lastBananaTime)) continue;
             foreach (var sound in resolvedHitsounds[i])
                 if (scheduled) RequestScheduleHitsound!(sound, objects[i].TimeMs);
                 else RequestHitsound!(sound);
+        }
         if (scheduled) scheduledThrough = end;
         if (position + 500 >= preparedThrough) PrepareUpcoming(position);
+    }
+
+    private static bool ShouldPlayCatchHitsound(ConvertedCatchObject item, ref double? lastBananaTime)
+    {
+        if (item.Kind != CatchObjectKind.Banana) return true;
+        // Stacked showers share one banana sample at each timestamp to avoid summed gain.
+        if (lastBananaTime == item.TimeMs) return false;
+        lastBananaTime = item.TimeMs;
+        return true;
     }
 
     private CatchConversionResult GetHitsoundConversion()

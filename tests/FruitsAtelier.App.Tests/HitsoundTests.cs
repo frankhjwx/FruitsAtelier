@@ -80,8 +80,76 @@ static class HitsoundTests
             CopiedTimingPlayback(root);
             Scheduler();
             ScheduledPlayback();
+            StackedBananas();
         }
         finally { Directory.Delete(root, true); }
+    }
+    private static void StackedBananas()
+    {
+        var map = new MapDocument { AudioPath = "music.wav", DurationMs = 5000 };
+        map.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 2000 });
+        map.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 2000 });
+        map.BananaShowers.Add(new() { TimeMs = 1025, EndTimeMs = 2025 });
+        map.Fruits.Add(new() { TimeMs = 1100, X = 256 });
+        map.Fruits.Add(new() { TimeMs = 1100, X = 256 });
+        foreach (bool scheduled in new[] { false, true })
+        {
+            var view = new EditorView(); view.LoadDocument(map);
+            int expected = view.Conversion.Objects.Where(o => o.Kind == CatchObjectKind.Banana)
+                .Select(o => o.TimeMs).Distinct().Count();
+            var sounds = new List<Hitsound>();
+            if (scheduled) view.RequestScheduleHitsound = (sound, _) => sounds.Add(sound);
+            else view.RequestHitsound = sounds.Add;
+            void Replay()
+            {
+                view.ResetHitsounds(); view.StartHitsounds(900);
+                for (int time = 900; time <= 2300; time += 50)
+                    view.UpdateTransport(time, 5000, true, true, false, null, "music.wav");
+            }
+            Replay();
+            Require(sounds.Count(s => s.Kind == CatchObjectKind.Banana) == expected,
+                "Stacked and offset showers play one banana sample per timestamp");
+            Require(sounds.Count(s => s.Kind == CatchObjectKind.Fruit) == 2,
+                "Simultaneous fruits retain both hitsounds");
+            Replay();
+            Require(sounds.Count(s => s.Kind == CatchObjectKind.Banana) == expected * 2,
+                "Seeking rearms all banana timestamps");
+        }
+
+        foreach (bool autoplay in new[] { false, true })
+        {
+            var caught = new List<ConvertedCatchObject>();
+            var game = new CatchTestplay(OsuBeatmapWriter.Serialize(map).PlayableObjects, map.CircleSize, 0);
+            game.Caught = caught.Add; game.Advance(2500, false, false, false, autoplay);
+            int bananaTimes = caught.Where(o => o.Kind == CatchObjectKind.Banana)
+                .Select(o => o.TimeMs).Distinct().Count();
+            Require(bananaTimes > 0, "Fixture must catch bananas during manual play and autoplay");
+            var clock = new BananaTime();
+            var ui = new Ui(timeProvider: clock);
+            var silentMap = map.DeepClone(); silentMap.AudioPath = null;
+            ui.LoadDocument(silentMap);
+            ui.View.LibrarySettings.TestplaySpeed = 1;
+            var caughtSounds = new List<Hitsound>(); ui.View.RequestHitsound = caughtSounds.Add;
+            for (int replay = 1; replay <= 2; replay++)
+            {
+                ui.View.StartTestplay();
+                if (autoplay) { ui.Key(9); ui.View.KeyUp(9); }
+                clock.Advance(4000); ui.Paint();
+                Require(caughtSounds.Count(s => s.Kind == CatchObjectKind.Banana) == bananaTimes * replay,
+                    $"Testplay and replay play one sample per caught banana timestamp, including after misses: autoplay={autoplay}, replay={replay}, expected={bananaTimes * replay}, actual={caughtSounds.Count(s => s.Kind == CatchObjectKind.Banana)}, playhead={ui.View.PlayheadMs}");
+                Require(caughtSounds.Count(s => s.Kind == CatchObjectKind.Fruit) == 2 * replay,
+                    "Testplay preserves simultaneous fruit sounds");
+                ui.View.StopTestplay();
+            }
+        }
+    }
+
+    private sealed class BananaTime : TimeProvider
+    {
+        private long milliseconds;
+        public override long TimestampFrequency => 1000;
+        public override long GetTimestamp() => milliseconds;
+        public void Advance(long value) => milliseconds += value;
     }
     private static void CopiedTimingPlayback(string root)
     {

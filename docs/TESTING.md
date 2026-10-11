@@ -116,6 +116,9 @@ The repository contains synthetic format fixtures, older `.catchproj` compatibil
 - A full Windows `Audio.Tests` run needs a default audio device and MP3 fixtures under `artifacts/beatmaps`. `--recovery-check` runs only injected output-failure checks; `--lifecycle-check` runs only playback lifecycle checks.
 - Tests using a specific default skin or user project depend on uncommitted local files. Check test output for skipped cases.
 
+`App.Tests --hitsound-check` checks sample resolution, preview scheduling and
+stacked banana sounds in manual Testplay, autoplay and replay without device audio.
+
 Automated device tests output silent PCM; sample comparisons happen before muting. Run Windows audio tests with:
 
 ```powershell

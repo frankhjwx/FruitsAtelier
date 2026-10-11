@@ -100,6 +100,7 @@ public sealed partial class EditorView
         foreach (var sound in sounds.Values.SelectMany(s => s).Distinct()) RequestPrepareHitsound?.Invoke(sound);
         var playSound = RequestHitsound;
         var scheduleSound = OperatingSystem.IsWindows() && AudioReady ? RequestScheduleHitsound : null;
+        double? lastBananaTime = null;
         double now = TestplayRealtime;
         double clockStart = audioAlreadyPlaying ? Math.Min(AudioDurationMs,
             transportSamplePosition + Math.Max(0, now - transportSampleAt) * PlaybackSpeed
@@ -110,6 +111,7 @@ public sealed partial class EditorView
             LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey, timeProvider, PreviewCircleSize, previewComboEnds,
             item =>
             {
+                if (!ShouldPlayCatchHitsound(item, ref lastBananaTime)) return;
                 foreach (var sound in sounds[(item.SourceId, item.EventIndex)])
                 {
                     if (scheduleSound is not null) scheduleSound(sound, item.TimeMs);
