@@ -778,7 +778,9 @@ white grid lines on the main canvas to distinguish them from ordinary beats.
 give its vertical space to the canvas. With the timeline hidden, **Reveal near
 the top** optionally expands it when the pointer enters the first 12 DIP below
 the canvas toolbar. It stays expanded while the pointer is within the timeline
-strip or an editing drag is active, and collapses after the pointer leaves.
+strip, and collapses after the pointer leaves. Expansion and collapse animate
+over 180 ms, smoothly returning space to or taking space from the canvas.
+An active editing drag pauses the transition to keep interaction coordinates fixed.
 These preferences persist across launches without changing beatmap content.
 The Timing page's waveform remains available independently.
 

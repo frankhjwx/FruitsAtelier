@@ -74,7 +74,7 @@ public sealed partial class EditorView
         leftPanel = new(0, 84, leftWidth, bodyHeight);
         canvas = new(108 + leftWidth, 84, Math.Max(120, width - rightWidth - leftWidth - 109), bodyHeight);
         UpdateObjectTimelineVisibility();
-        float timelineHeight = TimingPageVisible || ObjectTimelineExpanded ? 72 : 0;
+        float timelineHeight = TimingPageVisible ? 72 : objectTimelineHeight;
         plot = new(canvas.X + 70, canvas.Y + 68 + timelineHeight, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 80 - timelineHeight));
         overview = new(220, height - 77, Math.Max(100, width - 248), 40);
         canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, 1);

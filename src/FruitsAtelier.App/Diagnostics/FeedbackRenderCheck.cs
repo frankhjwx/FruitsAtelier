@@ -48,9 +48,17 @@ internal static class FeedbackRenderCheck
                     throw new InvalidOperationException("Native hidden timeline did not reclaim canvas space.");
                 view.LibrarySettings.RevealObjectTimelineOnHover = true;
                 view.PointerMove(timeline.X + 100, timeline.Y, false, false); Paint();
+                clock.Advance(60); Paint();
+                if (view.CanvasPlotBounds.Y <= expandedPlot.Y - 72 || view.CanvasPlotBounds.Y >= expandedPlot.Y)
+                    throw new InvalidOperationException("Native timeline expansion skipped its intermediate layout.");
+                clock.Advance(120); Paint();
                 if (view.ObjectTimelineBounds != timeline || view.CanvasPlotBounds != expandedPlot)
                     throw new InvalidOperationException("Native hover reveal did not restore the timeline layout.");
                 view.PointerMove(expandedPlot.X + 100, expandedPlot.Bottom - 20, false, false); Paint();
+                clock.Advance(60); Paint();
+                if (view.CanvasPlotBounds.Y <= expandedPlot.Y - 72 || view.CanvasPlotBounds.Y >= expandedPlot.Y)
+                    throw new InvalidOperationException("Native timeline collapse skipped its intermediate layout.");
+                clock.Advance(120); Paint();
                 if (view.ObjectTimelineBounds.Height != 0 || !view.Document.ContentEquals(map) || view.IsDirty)
                     throw new InvalidOperationException("Native hover collapse changed content or retained the timeline.");
                 view.OpenSettings(); Paint();

@@ -67,9 +67,18 @@ internal static class ObjectTimelineVisibilityTests
         finally { L.SetLanguage(language); }
     }
 
+    private sealed class Clock : TimeProvider
+    {
+        private long ticks;
+        public override long TimestampFrequency => 1000;
+        public override long GetTimestamp() => ticks;
+        public void Advance(int ms) => ticks += ms;
+    }
+
     public static void HoverAndDrag()
     {
-        var ui = new Ui(false);
+        var clock = new Clock();
+        var ui = new Ui(false, clock);
         var map = new MapDocument { DurationMs = 10000 };
         map.Fruits.Add(new() { TimeMs = 1000, X = 128 });
         ui.LoadDocument(map);
@@ -85,6 +94,22 @@ internal static class ObjectTimelineVisibilityTests
         var conversionField = typeof(FruitsAtelier.App.Editor.EditorView).GetField("conversion",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
         object? conversion = conversionField.GetValue(ui.View);
+        Move(timeline.X + 100, timeline.Y, false);
+        Check(ui.Plot == hiddenPlot && ui.View.ObjectTimelineNeedsRedraw,
+            "Hover expansion must begin without jumping and request stationary-pointer frames.");
+        clock.Advance(60); ui.Paint();
+        var partialPlot = ui.Plot;
+        Check(partialPlot.Y > hiddenPlot.Y && partialPlot.Y < hiddenPlot.Y + 72
+            && partialPlot.Bottom == hiddenPlot.Bottom && ui.View.ObjectTimelineBounds.Height < 64,
+            "Expansion must progressively reveal the timeline and preserve the canvas bottom.");
+        Move(hiddenPlot.X, hiddenPlot.Bottom - 20, false);
+        Check(ui.Plot == partialPlot, "Reversing an animation must preserve its current height.");
+        clock.Advance(60); ui.Paint();
+        Check(ui.Plot.Y < partialPlot.Y && ui.Plot.Y > hiddenPlot.Y && ui.View.ObjectTimelineNeedsRedraw,
+            "Collapse must animate through intermediate heights.");
+        clock.Advance(180); ui.Paint();
+        Check(ui.Plot == hiddenPlot && !ui.View.ObjectTimelineNeedsRedraw,
+            "A completed collapse must stop requesting animation frames.");
         for (int i = 0; i < 10; i++)
         {
             Move(timeline.X + 100, timeline.Y);
@@ -99,6 +124,22 @@ internal static class ObjectTimelineVisibilityTests
         Check(ReferenceEquals(conversion, conversionField.GetValue(ui.View)) && !ui.View.IsDirty,
             "Hover reveal must reuse conversion and preserve history.");
 
+        Move(timeline.X + 100, timeline.Y, false);
+        clock.Advance(60); ui.Paint();
+        partialPlot = ui.Plot;
+        float partialX = timeline.X + (float)((1000 - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
+        ui.View.PointerDown(partialX, timeline.Y + 27, 0, false, false);
+        Move(partialX + 18, hiddenPlot.Bottom - 20, false);
+        clock.Advance(1000); ui.Paint();
+        Check(ui.Plot == partialPlot && !ui.View.ObjectTimelineNeedsRedraw
+            && ui.View.SelectedObjectIds.Contains(map.Fruits[0].Id),
+            "Grabbing a partially revealed note must pause the animation at the rendered coordinates.");
+        ui.Key(27); ui.View.KeyUp(27);
+        Check(ui.Plot == partialPlot, "Ending a paused drag must resume without a layout jump.");
+        clock.Advance(180); ui.Paint();
+        Check(ui.Plot == hiddenPlot && original.ContentEquals(ui.View.Document),
+            "Cancelling an animated timeline drag must restore content and finish collapsing.");
+
         Move(timeline.X + timeline.Width / 2, timeline.Y);
         float x = timeline.X + (float)((1000 - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
         float y = timeline.Y + 27;
@@ -106,7 +147,7 @@ internal static class ObjectTimelineVisibilityTests
         Move(x + 18, hiddenPlot.Bottom - 20);
         Check(ui.View.ObjectTimelineBounds.Height == 64 && ui.View.SelectedObjectIds.Contains(map.Fruits[0].Id),
             "Timeline dragging must retain the expanded layout outside its strip.");
-        ui.Key(27);
+        ui.Key(27); clock.Advance(180); ui.Paint();
         Check(ui.View.ObjectTimelineBounds.Height == 0 && original.ContentEquals(ui.View.Document),
             "Cancelling a timeline drag must restore content and collapse outside the strip.");
         ui.View.KeyUp(27);
@@ -120,7 +161,11 @@ internal static class ObjectTimelineVisibilityTests
         Check(ui.View.TimingPageVisible && ui.View.ObjectTimelineBounds.Height == 0,
             "Timing waveform must remain independent of the upper timeline preference.");
 
-        void Move(float mx, float my) { ui.View.PointerMove(mx, my, false, false); ui.Paint(); }
+        void Move(float mx, float my, bool settle = true)
+        {
+            ui.View.PointerMove(mx, my, false, false); ui.Paint();
+            if (settle) { clock.Advance(180); ui.Paint(); }
+        }
     }
 
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
