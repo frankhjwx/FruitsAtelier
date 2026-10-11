@@ -22,7 +22,7 @@ public sealed partial class EditorView
         top += 100;
         const float selectorsHeight = 93;
         float toolbarBottom = canvas.Y + 38;
-        DrawSampleBankSelectors(c, toolbarBottom + (top - toolbarBottom - selectorsHeight) / 2);
+        DrawSampleBankSelectors(c, toolbarBottom + (top - toolbarBottom - selectorsHeight) / 2 + 20);
         for (int i = 0; i < 4; i++)
         {
             var mode = (Tool)i;

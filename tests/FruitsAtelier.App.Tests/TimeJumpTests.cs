@@ -13,7 +13,7 @@ internal static class TimeJumpTests
         {
             ui.Resize(size.Item1, size.Item2);
             var buttons = ui.View.ToolButtonBounds;
-            Near((ui.View.ObjectTimelineBounds.Y - 4 + buttons[0].Y) / 2,
+            Near((ui.View.ObjectTimelineBounds.Y - 4 + buttons[0].Y) / 2 + 20,
                 (ui.View.SamplesetBounds.Y - 17 + ui.View.AdditionsBounds.Bottom) / 2);
             Check(ui.View.AdditionsBounds.Bottom < buttons[0].Y, "Sample selectors leave space above Select");
             Near(ui.Height - 120 + 20.5, ui.View.TimeDisplayBounds.Y + ui.View.TimeDisplayBounds.Height / 2);
