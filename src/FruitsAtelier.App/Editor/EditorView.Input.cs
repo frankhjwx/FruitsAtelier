@@ -1034,6 +1034,7 @@ public sealed partial class EditorView
             }
             else if (TestplayMenuKey(virtualKey)) return;
             else if (virtualKey is 38 or 40 && !ctrl && !shift && !altHeld
+                && !testplay!.UsesKey(virtualKey)
                 && AdjustVolumeShortcut(virtualKey, true)) return;
             else if (virtualKey == 32 && !ctrl && !shift && !altHeld && TestplaySkipVisible) SkipTestplayIntro();
             else if (ctrl && virtualKey == 66)

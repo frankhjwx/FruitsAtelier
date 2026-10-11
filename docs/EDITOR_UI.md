@@ -503,10 +503,10 @@ The transport offers **10%, 25%, 50%, 75%, 100%, and 150%** playback speed. Only
 
 In the editor, the status-bar **Volume** button or **View → Volume** opens three vertical bars, ordered Master, Music and Effect from left to right, from 0% to 100%. Alt+Left/Right selects a channel; Alt+Up/Down opens the controls and changes the selected channel by five percentage points. The shortcuts also show the controls during testplay and take precedence over catcher movement. The controls fade in over 120 ms, wait 800 ms after interaction, then fade out over 150 ms. Hovering, dragging or holding an adjustment key keeps them visible; Esc dismisses them in the editor. Changes apply immediately and persist after mouse release or a keyboard adjustment. Master multiplies both channels; Music and Effect independently control music and preview/testplay samples. Opening the controls preserves active drawing drafts. Muting does not pause playback or change the beatmap.
 
-During active testplay, plain Up/Down also opens the volume controls and adjusts
-the selected channel by five percentage points. The pause menu retains Up/Down
-navigation. Channel selection, fading and all other testplay controls keep the
-same behavior as with the existing volume shortcuts.
+During active testplay, plain Up/Down opens the volume controls and adjusts the
+selected channel by five percentage points only when the key is not bound to
+catcher movement or dash. The pause menu retains Up/Down navigation. Catcher
+movement keys do not extend the volume controls' inactivity timeout.
 
 ## Tools and selection
 

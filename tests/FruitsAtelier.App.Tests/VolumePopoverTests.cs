@@ -106,6 +106,65 @@ internal static class VolumePopoverTests
         float Opacity() => ui.Canvas.PaintCalls.Last(call => call.FillBounds == ui.View.VolumePopoverBounds).Opacity;
     }
 
+    public static void GameplayBindingsAndFade()
+    {
+        foreach (int arrow in new[] { 38, 40 })
+        foreach (int action in new[] { 0, 1, 2 })
+        {
+            var clock = new ManualClock();
+            var ui = new Ui(timeProvider: clock);
+            int[] keys = [37, 39, 16];
+            keys[action] = arrow;
+            var settings = new LibrarySettings { TestplayLeftKey = keys[0], TestplayRightKey = keys[1],
+                TestplayDashKey = keys[2], TestplayStartupDelaySeconds = 0, MasterVolume = 50 };
+            ui.View.InitializeLibrary(false, settings);
+            var map = new MapDocument { DurationMs = 5000 };
+            map.Fruits.Add(new Fruit { TimeMs = 3000, X = 256 });
+            ui.LoadDocument(map);
+            ui.View.StartTestplay();
+            if (action == 2) ui.Key(keys[1]);
+            ui.Key(arrow);
+            clock.Advance(100); ui.Paint();
+            double expected = action == 0 ? 206 : action == 1 ? 306 : 356;
+            Check(Math.Abs(ui.View.TestplayCatcherX - expected) < .01 && settings.MasterVolume == 50
+                && !ui.View.VolumePopoverVisible, "Bound Up/Down did not control movement or dash exclusively.");
+            ui.View.KeyUp(arrow);
+            if (action == 2) ui.View.KeyUp(keys[1]);
+            ui.View.StopTestplay();
+        }
+
+        var fadeClock = new ManualClock();
+        var fadeUi = new Ui(timeProvider: fadeClock);
+        fadeUi.View.InitializeLibrary(false, new LibrarySettings { TestplayStartupDelaySeconds = 0 });
+        var fadeMap = new MapDocument { DurationMs = 10000 };
+        fadeMap.Fruits.Add(new Fruit { TimeMs = 9000, X = 256 });
+        fadeUi.LoadDocument(fadeMap);
+        fadeUi.View.StartTestplay();
+        fadeUi.Key(38); fadeUi.View.KeyUp(38);
+        for (int i = 0; i < 3; i++)
+        {
+            fadeClock.Advance(300);
+            int key = i % 2 == 0 ? 37 : 39;
+            fadeUi.Key(key); fadeUi.View.KeyUp(key); fadeUi.Paint();
+        }
+        fadeClock.Advance(50); fadeUi.Paint();
+        Check(!fadeUi.View.VolumePopoverVisible, "Catcher movement extended the volume inactivity timeout.");
+
+        fadeUi.Key(38);
+        fadeClock.Advance(300);
+        fadeUi.View.SetModifiers(false, false);
+        fadeUi.Key(37); fadeUi.View.KeyUp(37);
+        fadeClock.Advance(1000); fadeUi.Paint();
+        Check(fadeUi.View.VolumePopoverVisible, "Movement key release cancelled a held volume adjustment.");
+        fadeUi.Key(40); fadeUi.View.KeyUp(38);
+        fadeClock.Advance(1000); fadeUi.Paint();
+        Check(fadeUi.View.VolumePopoverVisible, "Releasing one adjustment cancelled another held adjustment.");
+        fadeUi.View.KeyUp(40);
+        fadeClock.Advance(950); fadeUi.Paint();
+        Check(!fadeUi.View.VolumePopoverVisible, "Volume controls did not fade after the last adjustment released.");
+        fadeUi.View.StopTestplay();
+    }
+
     public static void TestplayShortcuts()
     {
         var clock = new ManualClock();

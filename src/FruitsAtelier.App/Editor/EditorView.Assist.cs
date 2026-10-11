@@ -26,8 +26,8 @@ public sealed partial class EditorView
 
     public void SetModifiers(bool alt, bool shift)
     {
+        if (altHeld && !alt) volumeShortcutKeys.Clear();
         altHeld = alt; shiftHeld = shift;
-        if (!alt) volumeShortcutHeld = false;
         if (dsSliderDrag >= 0) UpdateDistanceSnapSlider(dsDragX, shift);
     }
 
