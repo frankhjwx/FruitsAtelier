@@ -19,8 +19,10 @@ public sealed partial class EditorView
         toolButtons.Clear();
         float size = Math.Min(96, Math.Max(0, plot.Height - 100) / 4);
         float top = plot.Y + (plot.Height - size * 4 - 100) / 2;
-        DrawSampleBankSelectors(c, top);
         top += 100;
+        const float selectorsHeight = 93;
+        float toolbarBottom = canvas.Y + 38;
+        DrawSampleBankSelectors(c, toolbarBottom + (top - toolbarBottom - selectorsHeight) / 2);
         for (int i = 0; i < 4; i++)
         {
             var mode = (Tool)i;
