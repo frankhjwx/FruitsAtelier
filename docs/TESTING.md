@@ -154,6 +154,11 @@ audio device is used by this focused check.
 
 ## Window checks
 
+`FruitsAtelier.App.exe --render-check --sample-banks-render-check` runs the focused
+tool-palette checks in English and Chinese at both window sizes and 96/144/192 DPI.
+It checks menu dismissal and unchanged document content, and captures the Sampleset
+and Additions menus under `artifacts/tests/sample-banks`.
+
 `FruitsAtelier.App.exe --screenshot-render-check` exercises F12 capture and reads
 the native clipboard image back at 96/144/192 DPI in editing and paused testplay.
 It verifies pixel dimensions, colour and row order, and writes bitmap previews and

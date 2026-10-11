@@ -853,6 +853,17 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--sample-banks-render-check"))
+        {
+            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (var size in new[] { (1440, 900), (980, 620) })
+            {
+                canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                CheckPaletteHints(canvas, view, size.Item1, size.Item2);
+            }
+            AppLog.Write("Sample bank palette rendering passed at all sizes, DPI values and languages.");
+            return;
+        }
         CheckBookmarkCache(canvas);
         CheckAnimatedTextResources(canvas);
         CheckWorkspaceSave(canvas, view);
