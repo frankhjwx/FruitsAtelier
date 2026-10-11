@@ -25,6 +25,73 @@ public static class ObjectFlags
 
     public static bool NewCombo(MapDocument document, Guid id) => (I(Source(document, id).Line.Split(',')[3]) & 4) != 0;
 
+    public static int[] SampleBanks(MapDocument document, Guid id, bool additions, int? edge = null)
+    {
+        var source = Source(document, id);
+        var fields = source.Line.Split(',');
+        int column = additions ? 1 : 0;
+        int sampleIndex = source.Spans > 0 ? 10 : (I(fields[3]) & 8) != 0 ? 6 : 5;
+        int Bank(string text)
+        {
+            var parts = text.Split(':');
+            return parts.Length > column ? Math.Clamp(I(parts[column]), 0, 3) : 0;
+        }
+        int bank = fields.Length > sampleIndex ? Bank(fields[sampleIndex]) : 0;
+        bool stream = document.Tracks.Any(t => t.Id == id && t.StreamSnapDivisor is not null);
+        string[] sets = !stream && source.Spans > 0 && fields.Length > 9 ? fields[9].Split('|') : [];
+        var values = Enumerable.Range(0, stream ? 1 : source.Spans + 1).Select(i => i < sets.Length && sets[i].Length > 0 ? Bank(sets[i]) : bank).ToArray();
+        var inherited = additions ? InheritedSampleFields.AdditionSet : InheritedSampleFields.NormalSet;
+        foreach (var sample in document.HitsoundOverrides.Where(o => o.SourceId == id && (edge is null || o.EdgeIndex == edge)))
+        {
+            int value = sample.InheritedFields.HasFlag(inherited) ? 0 : additions ? sample.Sample.AdditionSet : sample.Sample.NormalSet;
+            if (sample.EdgeIndex >= 0 && sample.EdgeIndex < values.Length) values[sample.EdgeIndex] = value;
+        }
+        if (edge is { } index && index >= 0 && index < values.Length) return [values[index]];
+        return values.Concat(document.HitsoundOverrides.Where(o => o.SourceId == id && (o.EdgeIndex < 0 || o.EdgeIndex >= values.Length))
+            .Select(o => o.InheritedFields.HasFlag(inherited) ? 0 : additions ? o.Sample.AdditionSet : o.Sample.NormalSet)).ToArray();
+    }
+
+    public static void SetSampleBank(MapDocument document, Guid id, bool additions, int bank, int? edge = null)
+    {
+        if (bank is < 0 or > 3) throw new ArgumentOutOfRangeException(nameof(bank));
+        var source = Source(document, id);
+        var fields = source.Line.Split(',');
+        int column = additions ? 1 : 0;
+        string Set(string? text, int length)
+        {
+            var parts = (text ?? "").Split(':', length);
+            int oldLength = parts.Length;
+            Array.Resize(ref parts, length);
+            for (int i = 0; i < length; i++) if (i >= oldLength || string.IsNullOrEmpty(parts[i])) parts[i] = i == 4 ? "" : "0";
+            parts[column] = bank.ToString(CultureInfo.InvariantCulture);
+            return string.Join(':', parts);
+        }
+        int sampleIndex = source.Spans > 0 ? 10 : (I(fields[3]) & 8) != 0 ? 6 : 5;
+        if (fields.Length <= sampleIndex) Array.Resize(ref fields, sampleIndex + 1);
+        if (source.Spans > 0)
+        {
+            var sets = fields[9]?.Split('|') ?? [];
+            string fallback = string.Join(':', (fields[10] ?? "0:0").Split(':').Take(2));
+            var result = Enumerable.Range(0, source.Spans + 1).Select(i => i < sets.Length && sets[i].Length > 0 ? sets[i] : fallback).ToArray();
+            for (int i = 0; i < result.Length; i++) if (edge is null || edge == i) result[i] = Set(result[i], 2);
+            fields[9] = string.Join('|', result);
+            fields[8] ??= string.Join('|', Enumerable.Repeat(fields[4], result.Length));
+        }
+        if (edge is null || source.Spans == 0) fields[sampleIndex] = Set(fields[sampleIndex], 5);
+        source.Save(string.Join(',', fields));
+        var inherited = additions ? InheritedSampleFields.AdditionSet : InheritedSampleFields.NormalSet;
+        for (int i = 0; i < document.HitsoundOverrides.Count; i++)
+        {
+            var item = document.HitsoundOverrides[i];
+            if (item.SourceId != id || edge is not null && item.EdgeIndex != edge) continue;
+            document.HitsoundOverrides[i] = item with
+            {
+                Sample = additions ? item.Sample with { AdditionSet = Math.Max(1, bank) } : item.Sample with { NormalSet = Math.Max(1, bank) },
+                InheritedFields = bank == 0 ? item.InheritedFields | inherited : item.InheritedFields & ~inherited
+            };
+        }
+    }
+
     public static void SetNewCombo(MapDocument document, Guid id, bool enabled)
     {
         var source = Source(document, id);

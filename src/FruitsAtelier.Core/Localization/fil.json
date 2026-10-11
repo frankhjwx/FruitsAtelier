@@ -1,4 +1,8 @@
 {
+  "samples.sampleset": "Sampleset",
+  "samples.additions": "Additions",
+  "samples.auto": "Auto",
+  "samples.change": "Palitan ang sample set",
   "history.revertSave": "Ibalik ang nakaraang save",
   "history.revertSavePrompt": "Ibalik ang kasalukuyang difficulty sa nakaraang naka-save na bersyon? Maibabalik ang mga kasalukuyang pagbabago gamit ang Undo.",
   "history.noPreviousSave": "Walang nakaraang naka-save na bersyon.",

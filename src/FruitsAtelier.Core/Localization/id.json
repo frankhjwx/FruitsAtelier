@@ -1,4 +1,8 @@
 {
+  "samples.sampleset": "Sampleset",
+  "samples.additions": "Additions",
+  "samples.auto": "Otomatis",
+  "samples.change": "Ubah set sampel",
   "history.revertSave": "Pulihkan simpanan sebelumnya",
   "history.revertSavePrompt": "Pulihkan difficulty ini ke versi tersimpan sebelumnya? Perubahan saat ini dapat dipulihkan dengan Urungkan.",
   "history.noPreviousSave": "Tidak ada versi tersimpan sebelumnya.",

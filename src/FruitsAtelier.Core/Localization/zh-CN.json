@@ -1,4 +1,8 @@
 {
+  "samples.sampleset": "Sampleset",
+  "samples.additions": "Additions",
+  "samples.auto": "自动",
+  "samples.change": "修改音效组",
   "history.revertSave": "回退到上一个保存版本",
   "history.revertSavePrompt": "将当前难度恢复到前一次保存的版本？当前修改可通过撤销恢复。",
   "history.noPreviousSave": "没有可回退的上一个保存版本。",

@@ -1,4 +1,8 @@
 {
+  "samples.sampleset": "Sampleset",
+  "samples.additions": "Additions",
+  "samples.auto": "Auto",
+  "samples.change": "Zmień zestaw dźwięków",
   "history.revertSave": "Przywróć poprzedni zapis",
   "history.revertSavePrompt": "Przywrócić poprzednią zapisaną wersję tego poziomu trudności? Bieżące zmiany można odzyskać przez Cofnij.",
   "history.noPreviousSave": "Brak poprzedniej zapisanej wersji.",

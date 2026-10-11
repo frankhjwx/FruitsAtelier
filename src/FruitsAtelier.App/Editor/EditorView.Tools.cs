@@ -17,8 +17,10 @@ public sealed partial class EditorView
     private void DrawToolPalette(ICanvas c)
     {
         toolButtons.Clear();
-        float size = Math.Min(96, plot.Height / 4);
-        float top = plot.Y + (plot.Height - size * 4) / 2;
+        float size = Math.Min(96, Math.Max(0, plot.Height - 100) / 4);
+        float top = plot.Y + (plot.Height - size * 4 - 100) / 2;
+        DrawSampleBankSelectors(c, top);
+        top += 100;
         for (int i = 0; i < 4; i++)
         {
             var mode = (Tool)i;

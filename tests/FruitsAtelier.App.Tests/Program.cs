@@ -8,6 +8,7 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
 if (args.Contains("--hitsound-copier")) { HitsoundCopierUiTests.Run(); Console.WriteLine("PASS Hitsound Copier UI"); return 0; }
+if (args.Contains("--sample-banks")) { SampleBankTests.Run(); Console.WriteLine("PASS sample bank editing"); return 0; }
 if (args.Contains("--hitsound-check"))
 {
     try { HitsoundTests.Run(); Console.WriteLine("PASS Catch hitsound playback checks"); return 0; }

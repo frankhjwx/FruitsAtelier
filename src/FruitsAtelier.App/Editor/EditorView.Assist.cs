@@ -118,6 +118,8 @@ public sealed partial class EditorView
 
     private void ApplyPlacementFlags(Guid id)
     {
+        if (nextNormalBank != 0) ObjectFlags.SetSampleBank(Document, id, false, nextNormalBank);
+        if (nextAdditionBank != 0) ObjectFlags.SetSampleBank(Document, id, true, nextAdditionBank);
         if (nextFruitNewCombo) ObjectFlags.SetNewCombo(Document, id, true);
         foreach (int flag in new[] { 2, 4, 8 }) if ((nextSounds & flag) != 0) ObjectFlags.SetSound(Document, id, flag, true);
         nextFruitNewCombo = false;

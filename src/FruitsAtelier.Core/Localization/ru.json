@@ -1,4 +1,8 @@
 {
+  "samples.sampleset": "Sampleset",
+  "samples.additions": "Additions",
+  "samples.auto": "Авто",
+  "samples.change": "Изменить набор звуков",
   "history.revertSave": "Вернуть предыдущее сохранение",
   "history.revertSavePrompt": "Восстановить предыдущую сохранённую версию текущей сложности? Текущие правки можно вернуть отменой.",
   "history.noPreviousSave": "Предыдущая сохранённая версия недоступна.",

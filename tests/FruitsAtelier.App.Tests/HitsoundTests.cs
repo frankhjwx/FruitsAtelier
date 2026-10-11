@@ -5,6 +5,7 @@ static class HitsoundTests
 {
     public static void Run()
     {
+        SampleBankTests.Run();
         string root = Path.Combine(Path.GetTempPath(), "fruits-hitsounds-" + Guid.NewGuid());
         Directory.CreateDirectory(root);
         try

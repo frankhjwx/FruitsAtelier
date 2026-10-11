@@ -1,4 +1,8 @@
 {
+  "samples.sampleset": "Sampleset",
+  "samples.additions": "Additions",
+  "samples.auto": "อัตโนมัติ",
+  "samples.change": "เปลี่ยนชุดเสียง",
   "history.revertSave": "คืนค่าการบันทึกก่อนหน้า",
   "history.revertSavePrompt": "คืนค่าระดับความยากนี้เป็นเวอร์ชันที่บันทึกก่อนหน้าหรือไม่? สามารถกู้คืนการแก้ไขปัจจุบันด้วยการเลิกทำ",
   "history.noPreviousSave": "ไม่มีเวอร์ชันที่บันทึกก่อนหน้า",

@@ -1,4 +1,8 @@
 {
+  "samples.sampleset": "Sampleset",
+  "samples.additions": "Additions",
+  "samples.auto": "自動",
+  "samples.change": "サンプルセットを変更",
   "history.revertSave": "前の保存に戻す",
   "history.revertSavePrompt": "現在の難易度を前の保存版に戻しますか？現在の編集は元に戻す操作で復元できます。",
   "history.noPreviousSave": "前の保存版はありません。",

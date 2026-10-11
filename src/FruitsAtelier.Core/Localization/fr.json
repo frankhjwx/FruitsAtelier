@@ -1,4 +1,8 @@
 {
+  "samples.sampleset": "Sampleset",
+  "samples.additions": "Additions",
+  "samples.auto": "Auto",
+  "samples.change": "Modifier le jeu de sons",
   "history.revertSave": "Rétablir la sauvegarde précédente",
   "history.revertSavePrompt": "Rétablir la version sauvegardée précédente de cette difficulté ? Les modifications actuelles peuvent être récupérées avec Annuler.",
   "history.noPreviousSave": "Aucune version sauvegardée précédente disponible.",

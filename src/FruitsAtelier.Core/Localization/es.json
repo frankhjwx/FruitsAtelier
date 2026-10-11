@@ -1,4 +1,8 @@
 {
+  "samples.sampleset": "Sampleset",
+  "samples.additions": "Additions",
+  "samples.auto": "Auto",
+  "samples.change": "Cambiar conjunto de sonidos",
   "history.revertSave": "Restaurar el guardado anterior",
   "history.revertSavePrompt": "¿Restaurar esta dificultad a su versión guardada anterior? Puedes recuperar los cambios actuales con Deshacer.",
   "history.noPreviousSave": "No hay una versión guardada anterior.",

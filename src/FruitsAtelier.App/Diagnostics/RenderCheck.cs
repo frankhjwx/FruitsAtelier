@@ -20,6 +20,27 @@ internal static class RenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 FruitsAtelier.Localization.Strings.SetLanguage(locale); Paint();
+                foreach (var selector in new[] { view.SamplesetBounds, view.AdditionsBounds })
+                {
+                    if (selector.Bottom > view.ToolButtonBounds[0].Y)
+                        throw new InvalidOperationException("Sample selector overlaps the tool palette.");
+                    view.PointerDown(selector.X + 12, selector.Y + 12, 0, false, false);
+                    view.PointerUp(selector.X + 12, selector.Y + 12, 0); Paint();
+                    canvas.Begin(); view.Render(canvas, width, height);
+                    canvas.End(capture: () =>
+                    {
+                        var frame = canvas.CapturePixels();
+                        string directory = System.IO.Path.GetFullPath("artifacts/tests/sample-banks");
+                        Directory.CreateDirectory(directory);
+                        string name = selector == view.SamplesetBounds ? "sampleset" : "additions";
+                        using var writer = new BinaryWriter(File.Create(System.IO.Path.Combine(directory, $"{name}-{locale}-{frame.Width}x{frame.Height}.bmp")));
+                        writer.Write((ushort)0x4D42); writer.Write(54 + frame.Pixels.Length); writer.Write(0); writer.Write(54);
+                        writer.Write(40); writer.Write(frame.Width); writer.Write(-frame.Height);
+                        writer.Write((ushort)1); writer.Write((ushort)32); writer.Write(0); writer.Write(frame.Pixels.Length);
+                        writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(frame.Pixels);
+                    });
+                    view.KeyDown(27, false, false); Paint();
+                }
                 foreach (var button in view.ToolButtonBounds.ToArray())
                 {
                     view.PointerMove(button.X + button.Width / 2, button.Y + button.Height / 2, false, false); Paint();

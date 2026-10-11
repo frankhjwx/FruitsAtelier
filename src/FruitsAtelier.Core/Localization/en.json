@@ -1,4 +1,8 @@
 {
+  "samples.sampleset": "Sampleset",
+  "samples.additions": "Additions",
+  "samples.auto": "Auto",
+  "samples.change": "Change sample set",
   "history.revertSave": "Revert to previous save",
   "history.revertSavePrompt": "Restore the current difficulty to its previous saved version? Current edits can be recovered with Undo.",
   "history.noPreviousSave": "No previous saved version is available.",
