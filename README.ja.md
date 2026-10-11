@@ -10,9 +10,9 @@ Windows と macOS 向けの独立した osu!catch ビートマップエディタ
 
 **現在のバージョン：0.9.9**
 
-![FruitsAtelier の編集キャンバス、オブジェクトタイムライン、Catch プレビュー](website/public/assets/eureka.png)
+![FruitsAtelier の編集キャンバス、オブジェクトタイムライン、Catch プレビュー](assets/screenshots/twin-bloom.png)
 
-*Σvreka — Halv vs. kuro · Ascendance [Chronosync]。*
+*Gardens — Twin Bloom · Yumeno Himiko [Double Radiance]。*
 
 ## 次の Catch ビートマップを作ろう
 

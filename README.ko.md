@@ -10,9 +10,9 @@ Windows와 macOS에서 사용할 수 있는 독립 osu!catch 비트맵 편집기
 
 **현재 버전: 0.9.9**
 
-![FruitsAtelier의 편집 캔버스, 오브젝트 타임라인, Catch 미리 보기](website/public/assets/eureka.png)
+![FruitsAtelier의 편집 캔버스, 오브젝트 타임라인, Catch 미리 보기](assets/screenshots/twin-bloom.png)
 
-*Σvreka — Halv vs. kuro · Ascendance [Chronosync].*
+*Gardens — Twin Bloom · Yumeno Himiko [Double Radiance].*
 
 ## 다음 Catch 비트맵을 만들어 보세요
 

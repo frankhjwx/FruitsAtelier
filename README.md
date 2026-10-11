@@ -10,9 +10,9 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 
 **Current version: 0.9.9**
 
-![FruitsAtelier's editing canvas, object timeline, and Catch preview](website/public/assets/eureka.png)
+![FruitsAtelier's editing canvas, object timeline, and Catch preview](assets/screenshots/twin-bloom.png)
 
-*Σvreka — Halv vs. kuro · Ascendance [Chronosync].*
+*Gardens — Twin Bloom · Yumeno Himiko [Double Radiance].*
 
 ## Make your next Catch beatmap
 

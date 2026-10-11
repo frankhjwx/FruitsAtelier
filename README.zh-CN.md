@@ -10,9 +10,9 @@
 
 **当前版本：0.9.9**
 
-![水果工坊的编辑画布、物件时间轴与 Catch 预览](website/public/assets/eureka.png)
+![水果工坊的编辑画布、物件时间轴与 Catch 预览](assets/screenshots/twin-bloom.png)
 
-*Σvreka — Halv vs. kuro · Ascendance [Chronosync]。*
+*Gardens — Twin Bloom · Yumeno Himiko [Double Radiance]。*
 
 ## 制作你的下一张 Catch 谱面
 
