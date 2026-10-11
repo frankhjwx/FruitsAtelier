@@ -8,7 +8,7 @@ Windows と macOS 向けの独立した osu!catch ビートマップエディタ
 
 [公式サイト](https://fruitsatelier.himiko.moe/) · [ダウンロード](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**現在のバージョン：0.9.9**
+**現在のバージョン：1.0.0 Beta**
 
 ![FruitsAtelier の編集キャンバス、オブジェクトタイムライン、Catch プレビュー](assets/screenshots/twin-bloom.png)
 
@@ -32,7 +32,7 @@ Windows と macOS 向けの独立した osu!catch ビートマップエディタ
 - **移動表示と分析。** 前後のオブジェクトとの間隔を読み取り、Stand・Walk・Dash・Hyperdash の接続をキャンバスで確認できます。曲全体の Movement strain グラフから負荷の高い区間へ移動できます。AiMod はオブジェクトの開始時刻の重複を検出します。
 - **編集可能なストリームとスタック。** 曲線に沿って指定の拍分割でフルーツを生成したり、幅の変化を設定して左右交互のスタックを作成したりできます。親曲線や個別のフルーツを編集し、独立したフルーツに分割することもできます。どちらも hit circle として出力されます。
 
-Catch の `.osu` は v12–v14 と stable 互換の lazer v128 を読み込み、v14 で出力します。0.9 では動画とストーリーボードの再生に対応していません。
+Catch の `.osu` は v12–v14 と stable 互換の lazer v128 を読み込み、v14 で出力します。1.0.0 Beta では動画とストーリーボードの再生に対応していません。
 
 ## はじめに
 
@@ -64,7 +64,7 @@ bash scripts/Install-Mac-SDK.sh
 
 ワークスペースの `.catchdiff` に編集データを保存します。旧形式の `.catchproj` も開けます。プロジェクトフォルダー全体と参照する素材を保管してください。バージョン履歴ではスナップショットを比較し、難易度を復元できます。保持期間は通常 30 日、各プロジェクトは 100 ラウンドまでです。詳しくは[同期と復元（英語）](docs/SYNCHRONIZATION.md)を参照してください。
 
-[Discord](https://discord.gg/Dwe7bshYHY) に参加して、アルファ版のテストやフィードバックにご協力ください。不具合は [GitHub Issues](https://github.com/frankhjwx/FruitsAtelier/issues) へ報告するか、[osu! で私に連絡](https://osu.ppy.sh/users/1806962)してください。
+[Discord](https://discord.gg/Dwe7bshYHY) に参加して、ベータ版のテストやフィードバックにご協力ください。不具合は [GitHub Issues](https://github.com/frankhjwx/FruitsAtelier/issues) へ報告するか、[osu! で私に連絡](https://osu.ppy.sh/users/1806962)してください。
 
 ## 開発
 

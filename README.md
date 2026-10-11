@@ -8,7 +8,7 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 
 [Website](https://fruitsatelier.himiko.moe/) · [Download](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**Current version: 0.9.9**
+**Current version: 1.0.0 Beta**
 
 ![FruitsAtelier's editing canvas, object timeline, and Catch preview](assets/screenshots/twin-bloom.png)
 
@@ -32,7 +32,7 @@ An independent osu!catch beatmap editor for Windows and macOS. Find a track, sha
 - **Movement indicators and analysis.** Read incoming and outgoing spacing and see Stand, Walk, Dash, and Hyperdash connections on the canvas. Use the whole-song Movement strain graph to find and jump to demanding sections. AiMod checks overlapping object starts.
 - **Editable streams and stacks.** Turn a slider curve into a fruit stream at a chosen beat subdivision, or an alternating stack with a variable width envelope. Keep the parent curve editable, adjust individual fruits, or separate the pattern into independent fruits. Both export as hit circles.
 
-Catch `.osu` import supports versions 12–14 and stable-compatible lazer v128; export uses version 14. Video and storyboard playback are not available in 0.9.
+Catch `.osu` import supports versions 12–14 and stable-compatible lazer v128; export uses version 14. Video and storyboard playback are not available in 1.0.0 Beta.
 
 ## Get started
 
@@ -64,7 +64,7 @@ After linking a difficulty through export, **Ctrl+S also updates its linked `.os
 
 Workspace `.catchdiff` files retain authoring data; older `.catchproj` projects can also be opened. Keep the complete project folder and referenced resources. Version history lets you compare snapshots and restore a difficulty; its retention policy normally limits history to 30 days and 100 rounds per project. See [synchronization and recovery](docs/SYNCHRONIZATION.md) for details.
 
-Join [Discord](https://discord.gg/Dwe7bshYHY) to test the alpha and share feedback. Report bugs on [GitHub Issues](https://github.com/frankhjwx/FruitsAtelier/issues), or [contact me on osu!](https://osu.ppy.sh/users/1806962).
+Join [Discord](https://discord.gg/Dwe7bshYHY) to test the beta and share feedback. Report bugs on [GitHub Issues](https://github.com/frankhjwx/FruitsAtelier/issues), or [contact me on osu!](https://osu.ppy.sh/users/1806962).
 
 ## Development
 

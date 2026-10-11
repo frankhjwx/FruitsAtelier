@@ -8,7 +8,7 @@ Windows와 macOS에서 사용할 수 있는 독립 osu!catch 비트맵 편집기
 
 [공식 웹사이트](https://fruitsatelier.himiko.moe/) · [다운로드](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**현재 버전: 0.9.9**
+**현재 버전: 1.0.0 Beta**
 
 ![FruitsAtelier의 편집 캔버스, 오브젝트 타임라인, Catch 미리 보기](assets/screenshots/twin-bloom.png)
 
@@ -32,7 +32,7 @@ Windows와 macOS에서 사용할 수 있는 독립 osu!catch 비트맵 편집기
 - **이동 표시와 분석.** 앞뒤 오브젝트 간격과 Stand·Walk·Dash·Hyperdash 연결을 캔버스에서 확인하세요. 곡 전체의 Movement strain 그래프로 이동 부담이 큰 구간을 찾아 바로 이동할 수 있습니다. AiMod는 오브젝트 시작 시간의 겹침을 검사합니다.
 - **편집 가능한 스트림과 스택.** 곡선을 따라 지정한 비트 분할로 과일 스트림을 만들거나, 폭 변화를 설정해 좌우로 번갈아 배치되는 스택을 만들 수 있습니다. 부모 곡선과 개별 과일을 편집하거나 독립된 과일로 분리할 수도 있습니다. 둘 다 hit circle로 내보냅니다.
 
-Catch `.osu`는 v12–v14 및 stable과 호환되는 lazer v128을 읽을 수 있으며, v14로 내보냅니다. 0.9에서는 동영상과 스토리보드 재생을 지원하지 않습니다.
+Catch `.osu`는 v12–v14 및 stable과 호환되는 lazer v128을 읽을 수 있으며, v14로 내보냅니다. 1.0.0 Beta에서는 동영상과 스토리보드 재생을 지원하지 않습니다.
 
 ## 시작하기
 
@@ -64,7 +64,7 @@ bash scripts/Install-Mac-SDK.sh
 
 작업 공간의 `.catchdiff` 파일에 편집 데이터를 보관하며, 이전 형식인 `.catchproj`도 열 수 있습니다. 전체 프로젝트 폴더와 참조 리소스를 함께 보관하세요. 버전 기록에서 스냅샷을 비교하고 난이도를 복원할 수 있으며, 보관 정책은 일반적으로 30일과 프로젝트당 100라운드로 제한됩니다. 자세한 내용은 [동기화와 복구(영어)](docs/SYNCHRONIZATION.md)를 참고하세요.
 
-[Discord](https://discord.gg/Dwe7bshYHY)에 참여해 알파 버전을 테스트하고 의견을 나눠 주세요. 버그는 [GitHub Issues](https://github.com/frankhjwx/FruitsAtelier/issues)에 보고하거나 [osu!에서 저에게 연락해 주세요](https://osu.ppy.sh/users/1806962).
+[Discord](https://discord.gg/Dwe7bshYHY)에 참여해 베타 버전을 테스트하고 의견을 나눠 주세요. 버그는 [GitHub Issues](https://github.com/frankhjwx/FruitsAtelier/issues)에 보고하거나 [osu!에서 저에게 연락해 주세요](https://osu.ppy.sh/users/1806962).
 
 ## 개발
 
