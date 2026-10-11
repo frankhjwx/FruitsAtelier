@@ -158,6 +158,8 @@ var tests = new (string Name, Action Run)[]
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
     ("Settings layout preserves labels and aligns controls in narrow windows", SettingsTests.Layout),
+    ("Upper timeline settings persist, cancel and reclaim canvas space", ObjectTimelineVisibilityTests.Preferences),
+    ("Upper timeline hover reveal preserves caches and active drag coordinates", ObjectTimelineVisibilityTests.HoverAndDrag),
     ("Appearance indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
     ("Stack preview retains full outlines and edits individual fruits horizontally", StackDialogTests.ManualFruits),
     ("Stack draft history undoes fruit drags and removing manual knots", StackDialogTests.DraftHistory),

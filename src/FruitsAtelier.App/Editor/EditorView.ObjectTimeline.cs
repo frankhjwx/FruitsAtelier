@@ -7,6 +7,22 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private Rect objectTimeline;
+    private bool objectTimelineHoverVisible;
+    private bool ObjectTimelineExpanded => !LibrarySettings.HideObjectTimeline || objectTimelineHoverVisible;
+
+    private void UpdateObjectTimelineVisibility()
+    {
+        if (!LibrarySettings.HideObjectTimeline || !LibrarySettings.RevealObjectTimelineOnHover || TimingPageVisible)
+        {
+            objectTimelineHoverVisible = false;
+            return;
+        }
+        // Keep the editing layout fixed until the current pointer drag finishes.
+        if (drag != DragKind.None) return;
+        float top = canvas.Y + 38;
+        objectTimelineHoverVisible = !librarySettingsOpen && mouseX >= leftPanel.Right && mouseX < canvas.Right
+            && mouseY >= top && mouseY < top + (objectTimelineHoverVisible ? 72 : 12);
+    }
     private readonly List<BeatGridLine> timelineGrid = [];
     private double objectTimelineScale = .18;
     private readonly List<(Guid Id, double Time, Rect Bounds)> timelineObjects = [];
@@ -297,16 +313,21 @@ public sealed partial class EditorView
 
     private void DrawObjectTimeline(ICanvas c)
     {
+        timelineObjects.Clear();
+        RefreshTimelineSources();
+        if (!ObjectTimelineExpanded)
+        {
+            objectTimeline = default;
+            return;
+        }
         float top = canvas.Y + 38;
         objectTimeline = new(leftPanel.Right + 42, top + 4, Math.Max(30, canvas.Right - leftPanel.Right - 54), 64);
-        timelineObjects.Clear();
         c.Fill(new(0, top, canvas.Right, 72), Background);
         Button(c, new(leftPanel.Right + 7, top + 5, 29, 28), L.Get("ui.timelineZoomIn"), () => ZoomObjectTimeline(1.25));
         Button(c, new(leftPanel.Right + 7, top + 37, 29, 28), L.Get("ui.timelineZoomOut"), () => ZoomObjectTimeline(.8));
         double start = ObjectTimelineStartMs;
         double end = start + objectTimeline.Width / objectTimelineScale;
         float X(double time) => objectTimeline.X + (float)((time - start) * objectTimelineScale);
-        RefreshTimelineSources();
         c.Clip(objectTimeline);
         var breaks = DisplayedBreaks();
         for (int i = 0; i < breaks.Length; i++)

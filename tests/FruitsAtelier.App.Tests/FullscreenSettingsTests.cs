@@ -73,8 +73,12 @@ internal static class FullscreenSettingsTests
     private static void ScrollToFullscreen(Ui ui)
     {
         var bounds = ui.View.SettingsBounds;
-        ui.View.Wheel(bounds.X + 300, bounds.Y + 200, -1200, false); ui.Paint();
         var control = ui.Canvas.Texts.Single(t => t.Value == L.Get(ui.View.LibrarySettings.Fullscreen ? "settings.fullscreenOn" : "settings.fullscreenOff"));
+        for (int step = 0; step < 20 && (control.Y < bounds.Y + 116 || control.Y >= bounds.Bottom - 86); step++)
+        {
+            ui.View.Wheel(bounds.X + 300, bounds.Y + 200, control.Y < bounds.Y + 116 ? 120 : -120, false); ui.Paint();
+            control = ui.Canvas.Texts.Single(t => t.Value == L.Get(ui.View.LibrarySettings.Fullscreen ? "settings.fullscreenOn" : "settings.fullscreenOff"));
+        }
         Check(control.Y >= bounds.Y + 116 && control.Y < bounds.Bottom - 86, "Fullscreen is not reachable in General.");
     }
 
