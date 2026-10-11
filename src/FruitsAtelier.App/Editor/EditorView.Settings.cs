@@ -21,6 +21,7 @@ public sealed partial class EditorView
     private bool draftFullscreen, fullscreenShortcutHeld;
     private bool draftReverseCanvasScroll;
     private double draftTestplayStartupDelaySeconds;
+    private double draftTestplaySpeed;
     private bool draftShowTestplayCombo;
     private int draftBackgroundDim;
     private bool draftForceBackgroundDim;
@@ -114,6 +115,7 @@ public sealed partial class EditorView
         settingsColourIndex = -1; settingsColourDrag = 0; settingsColourHex = settingsColourError = "";
         draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
         draftTestplayStartupDelaySeconds = LibrarySettings.TestplayStartupDelaySeconds;
+        draftTestplaySpeed = LibrarySettings.TestplaySpeed;
         draftShowTestplayCombo = LibrarySettings.ShowTestplayCombo;
         draftBackgroundDim = LibrarySettings.BackgroundDim;
         draftForceBackgroundDim = LibrarySettings.ForceBackgroundDim;
@@ -140,7 +142,8 @@ public sealed partial class EditorView
         draftTestplayKeys[0] != LibrarySettings.TestplayLeftKey ||
         draftTestplayKeys[1] != LibrarySettings.TestplayRightKey ||
         draftTestplayKeys[2] != LibrarySettings.TestplayDashKey ||
-        draftTestplayStartupDelaySeconds != LibrarySettings.TestplayStartupDelaySeconds;
+        draftTestplayStartupDelaySeconds != LibrarySettings.TestplayStartupDelaySeconds ||
+        draftTestplaySpeed != LibrarySettings.TestplaySpeed;
 
     private void CloseSettings()
     {
@@ -293,6 +296,7 @@ public sealed partial class EditorView
             settings.FirstRunSetupVersion = LibrarySettings.FirstRunSetupVersion;
             settings.TestplayLeftKey = draftTestplayKeys[0]; settings.TestplayRightKey = draftTestplayKeys[1]; settings.TestplayDashKey = draftTestplayKeys[2];
             settings.TestplayStartupDelaySeconds = draftTestplayStartupDelaySeconds;
+            settings.TestplaySpeed = draftTestplaySpeed;
             settings.ShowTestplayCombo = draftShowTestplayCombo;
             settings.BackgroundDim = draftBackgroundDim;
             settings.ForceBackgroundDim = draftForceBackgroundDim;

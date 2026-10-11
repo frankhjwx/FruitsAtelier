@@ -53,7 +53,7 @@ try {
         throw 'A normal release must not contain the audio diagnostic enabling marker.'
     }
     if ($UserManual) { Copy-Item -LiteralPath $UserManual -Destination (Join-Path $payload 'FruitsAtelier-User-Manual.pdf') }
-    foreach ($required in @('FruitsAtelier.App.exe', 'coreclr.dll', 'hostfxr.dll', 'hostpolicy.dll', 'THIRD_PARTY_NOTICES.md')) {
+    foreach ($required in @('FruitsAtelier.App.exe', 'coreclr.dll', 'hostfxr.dll', 'hostpolicy.dll', 'THIRD_PARTY_NOTICES.md', 'LICENSE')) {
         if (!(Test-Path -LiteralPath (Join-Path $payload $required))) { throw "Missing package file: $required" }
     }
     if (Test-Path -LiteralPath (Join-Path $payload 'assets/skins/default.osk')) { throw 'Local private skin must not be distributed.' }

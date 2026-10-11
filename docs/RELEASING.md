@@ -18,13 +18,13 @@ From the repository root, using PowerShell 7 and the SDK pinned in `global.json`
 
 ```powershell
 ./scripts/Publish-Windows.ps1
-./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-0.9.9-win-x64.zip
+./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.0.0-win-x64.zip
 ```
 
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
 `.zip.sha256` checksum, plus a Velopack full `.nupkg` and
 `releases.win-x64.json` update feed. The default version comes from `Directory.Build.props`
-(currently 0.9.9); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
+(currently 1.0.0); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
 the local checkout had uncommitted changes. Executable version metadata uses the
 same version and commit. Release builds run from the clean tagged commit.
 The window title displays this version beside the application name, omitting the
@@ -112,7 +112,7 @@ A package built locally from `dev` is a preflight check; the tag workflow builds
 the published artifacts.
 
 1. On `dev`, commit and push the reviewed changes. Set `Directory.Build.props` to
-   the release version, update the version shown in both READMEs and this guide,
+   the release version, update the version shown in all four READMEs and this guide,
    and add user-facing notes at `docs/releases/vMAJOR.MINOR.PATCH.md` (use the full
    tag for prereleases). Keep both release lock files committed. Run the relevant
    checks in [Building and Testing](TESTING.md), and wait for the **Desktop

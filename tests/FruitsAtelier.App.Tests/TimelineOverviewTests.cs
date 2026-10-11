@@ -85,10 +85,12 @@ internal static class TimelineOverviewTests
         var timeline = ui.View.ObjectTimelineBounds;
         float x = timeline.X + (float)((1000 - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
         float y = timeline.Y + 27;
-        Check(ui.Canvas.Circles.Count(c => c.Radius == 19 && c.X == x && c.Y == y && c.Color == 0xFFFFFF) == 2,
-            "Stacked objects must retain both white circle outlines");
+        Check(ui.Canvas.Circles.Where(c => c.Radius == 19 && c.X == x && c.Color == 0xFFFFFF
+            && c.Y >= timeline.Y && c.Y <= timeline.Bottom).Select(c => c.Y).SequenceEqual(new[] { y - 3, y }),
+            "Stacked objects must retain white outlines on their separate vertical layers");
         ui.Click(x, y); ui.Paint();
-        var rings = ui.Canvas.Circles.Where(c => !c.Filled && c.Radius == 19 && c.X == x && c.Y == y).ToArray();
+        var rings = ui.Canvas.Circles.Where(c => !c.Filled && c.Radius == 19 && c.X == x
+            && c.Y >= timeline.Y && c.Y <= timeline.Bottom).ToArray();
         Check(rings.Length == 3 && rings[^1].Color == 0xFFA600 && ui.View.SelectedObjectIds.Contains(map.Fruits[0].Id),
             "Selection highlights the foremost source object without changing chronological order");
     }

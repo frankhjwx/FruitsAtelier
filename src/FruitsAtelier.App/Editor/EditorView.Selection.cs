@@ -35,9 +35,9 @@ public sealed partial class EditorView
             return direction > 0 && playhead < TimelineDurationMs || direction < 0 && playhead > 0;
         }
     }
-    private bool ViewportFrozenByDrag => drag is DragKind.Objects or DragKind.SliderObject or DragKind.BananaStart or DragKind.BananaEnd
-        || NavigationDuringDrag
-        || drag == DragKind.Marquee && !AudioPlaying;
+    private bool ViewportFrozenByDrag => drag == DragKind.Objects && selectionScaleSide != 0
+        || !AudioPlaying && (drag is DragKind.Objects or DragKind.SliderObject or DragKind.BananaStart or DragKind.BananaEnd
+            || NavigationDuringDrag || drag == DragKind.Marquee);
     private sealed record SelectionSnapshot(Guid[] Objects, Guid[] Anchors, Guid Primary, Guid Track, DragKind Part);
     public IReadOnlyCollection<Guid> SelectedObjectIds => objectSelection.ToArray();
     public IReadOnlyCollection<Guid> SelectedAnchorIds => anchorSelection.ToArray();
@@ -142,7 +142,7 @@ public sealed partial class EditorView
         {
             var ids = boxAdds ? selectionBeforeBox.Objects.ToHashSet() : [];
             foreach (var item in timelineSources)
-                if (Intersects(TimelineObjectBounds(item.Start, item.End), selectionBox)) ids.Add(item.Id);
+                if (Intersects(TimelineObjectBounds(item.Start, item.End, item.StackOffset), selectionBox)) ids.Add(item.Id);
             SelectObjects(ids);
         }
         else if (boxAnchors)
@@ -168,8 +168,9 @@ public sealed partial class EditorView
             foreach (var item in ObjectsInTimeRange(start, end))
             {
                 if (!CanSelectCatchObject(item)) continue;
-                var bounds = CatchHitBounds(item);
-                if (Intersects(bounds, selectionBox)) ids.Add(item.SourceId);
+                var point = Screen(new(item.TimeMs, item.X));
+                if (point.X >= selectionBox.X && point.X <= selectionBox.Right
+                    && point.Y >= selectionBox.Y && point.Y <= selectionBox.Bottom) ids.Add(item.SourceId);
             }
             SelectObjects(ids);
         }
@@ -214,17 +215,6 @@ public sealed partial class EditorView
         c.Clip(boxTimeline ? objectTimeline : plot);
         c.Stroke(selectionBox, Accent, 1.5f);
         c.Unclip();
-    }
-
-    private Rect CatchHitBounds(ConvertedCatchObject item)
-    {
-        var point = Screen(new(item.TimeMs, item.X));
-        float scale = Playfield.Width / 512;
-        var sprite = skin?.Bounds(SkinObjectKind(item.Kind), skinIndices.GetValueOrDefault(item.SourceId),
-            point.X, point.Y, CatchSize.FruitDiameter(Document.CircleSize) * scale);
-        float halfWidth = Math.Max(7, sprite?.Width / 2 ?? ObjectRadius(item.Kind) * scale);
-        float halfHeight = Math.Max(7, sprite?.Height / 2 ?? ObjectRadius(item.Kind) * scale);
-        return new(point.X - halfWidth, point.Y - halfHeight, halfWidth * 2, halfHeight * 2);
     }
 
     private static bool Intersects(Rect a, Rect b) => a.X <= b.Right && a.Right >= b.X && a.Y <= b.Bottom && a.Bottom >= b.Y;

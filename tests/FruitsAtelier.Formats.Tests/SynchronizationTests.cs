@@ -131,6 +131,7 @@ internal static class SynchronizationTests
         }));
         yield return ("Sync: FA content writes back against the resolved external version", () => Run(f =>
         {
+            f.Diff.Document.Fruits.Add(new() { TimeMs = 14000, X = 300 });
             OsuTimeline.AddBreak(f.Diff.Document, 4000, 10000);
             OsuTimeline.AddBookmark(f.Diff.Document, 5000);
             f.Diff.Document.TimingPoints.Add(new TimingPoint { TimeMs = 500, BeatLengthMs = -100, Uninherited = false });

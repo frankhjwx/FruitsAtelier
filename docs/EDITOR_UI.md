@@ -369,6 +369,12 @@ The top-bar **Settings** button is available in both Library and Editor. Setting
 
 ## Testplay
 
+**Settings > Testplay > Testplay speed** sets an independent starting speed from
+10% to 150% in 5% steps (default 100%). Apply saves it across launches. F5 uses this
+speed for music and gameplay; returning to the editor restores its previous speed.
+Autoplay speed shortcuts affect the current testplay session, including retries,
+without changing either the saved testplay preference or the editor speed.
+
 Beatmap backgrounds fill the Catch preview and testplay viewport
 without changing their aspect ratio. **Settings > Testplay > Background dim** and
 the pause menu adjust the persistent 0–100% dim preference (default 90%). In the pause
@@ -426,7 +432,7 @@ testplay. Dash and hyperdash leave fading catcher trails. The combo uses the ski
 combo digits, pulses on catches and fades while idle or after a miss. Missed notes
 fall past the catcher and fade out over 250 ms.
 
-The upper-left corner groups the current map time and live 300/100/50/Miss counts above the star rating (when available), total play length, maximum combo and maximum droplets. Maximum combo counts Fruits and Droplets; maximum droplets counts TinyDroplets (50 judgements). Counts cover catches in the current session, with Miss counting missed Fruits and Droplets. Map totals cover the entire playable difficulty, including when starting partway through it. Unsupported storyboard load, timing-error and maximum-score statistics are omitted. This information panel uses the osu! English labels in every interface language. The shortcut hints appear below these statistics, including **Tab** (autoplay), **F3** (autoplay speed), **Ctrl+P** (pause/resume), **Ctrl+B** (add a bookmark), **F1** (exit to the testplay start), and **F2** (exit at the current position). During autoplay, F3 switches between 1.0x and 1.5x; from any other speed, the first press selects 1.0x. Holding F3 changes speed only once. Pausing freezes gameplay and music; resuming continues the same session.
+The upper-left corner groups the current map time and live 300/100/50/Miss counts above the star rating (when available), total drain time (minutes:seconds followed by total seconds in parentheses, for example `3:05 (185s)`), maximum combo and maximum droplets. Maximum combo counts Fruits and Droplets; maximum droplets counts TinyDroplets (50 judgements). Counts cover catches in the current session, with Miss counting missed Fruits and Droplets. Map totals cover the entire playable difficulty, including when starting partway through it. Drain time runs from the first object start to the maximum object end, including slider repeats and banana-shower duration, minus the break intervals within that range. Unmapped intros and outros are excluded. Unsupported storyboard load, timing-error and maximum-score statistics are omitted. This information panel uses the osu! English labels in every interface language. The shortcut hints appear below these statistics, including **Tab** (autoplay), **F3** (autoplay speed), **Ctrl+P** (pause/resume), **Ctrl+B** (add a bookmark), **F1** (exit to the testplay start), and **F2** (exit at the current position). During autoplay, F3 switches between 1.0x and 1.5x; from any other speed, the first press selects 1.0x. Holding F3 changes speed only once. Pausing freezes gameplay and music; resuming continues the same session.
 
 Pressing **F3** in manual mode shows a brief reminder to press **Tab** before changing speed.
 
@@ -454,6 +460,19 @@ key swaps the two bindings. **Apply** saves the bindings across restarts.
 
 ## Object timeline and playback speed
 
+The upper timeline also shows translucent Fruit and slider placement markers,
+the candidate slider length in both Pen and Legacy modes, and the candidate
+Banana shower interval. These previews use the canvas's snapped placement times,
+disappear when the pointer leaves the canvas, and do not participate in selection
+or change the document.
+
+During object movement and slider or Banana endpoint dragging, playback keeps the
+canvas following the play line, including when resumed with the pointer held.
+Holding an object enters dragging as soon as playback or wheel navigation moves
+its time beneath the pointer, even without mouse movement. Paused dragging keeps
+the viewport stable until wheel navigation. Release commits one
+edit; Esc or lost capture restores the gesture's starting content.
+
 In the upper object timeline, clicking a slider head, tail, or reverse marker selects that edge for Whistle, Finish, and Clap edits. Only the selected edge marker is highlighted. Clicking the slider body selects the whole slider for sound edits. Head/body movement and tail repeat resizing retain their existing drag behavior.
 
 The bottom overview shows red and green timing points above a white center line, continuous yellow kiai intervals and white break intervals centered on that line, and blue bookmarks extending down from it. The center line is behind the break and kiai intervals, which are behind timing points and bookmarks. These timeline marks use 80% opacity and colors tuned against osu!legacy. Hovering over the overview reveals a fixed bookmark toolbar above its left edge with Add, Remove, Previous, Next, and Reset actions. The toolbar stays visible while moving from the overview to its controls, and its tooltip appears above it. The toolbar uses an ImageGen-created background texture. The time display and separate Play, Pause, Stop, and Testplay controls sit to the left of the overview; Stop pauses audio and seeks to the start. Ctrl+B adds a bookmark at the playhead; Ctrl+Shift+B removes the nearest bookmark within two seconds. Ctrl+Left/Right seeks to the previous/next bookmark; Ctrl+Shift+Left/Right moves selected objects one X unit. Ctrl-click adds or removes a bookmark at the clicked time; clicking within five pixels of an existing bookmark removes it. Shift-drag across the overview adds a break interval, and right-click inside a break removes it. These edits are undoable and persist in the `.osu` `[Editor] Bookmarks` and `[Events]` sections. Esc cancels an in-progress break drag.
@@ -462,7 +481,7 @@ Both timelines draw nonnegative `[General] PreviewTime` as a full-height yellow 
 
 During a kiai interval, a small badge appears at the upper-left of the editing plot. It brightens at the interval start and on every full beat from the active red timing point, then fades through the beat. Green timing points that preserve the kiai state do not restart the pulse. Its pulse follows map time, including seeking and timing edits.
 
-Adding, pasting, moving, extending or removing notes around an existing break recalculates the affected interval when the edit commits. Breaks leave the next object's AR preempt time clear and resume at least 200 ms after the preceding object ends, including all slider repeats and banana-shower duration. An occupied break is shortened, split, or removed; generated pieces shorter than 650 ms are removed. Removing the note that split a break merges its remaining pieces. Deleting the last objects in a bounded section also creates a break for a newly vacated gap with at least 650 ms after the preceding object's recovery and before the next object's approach, even when no existing break remains. Overlapping occupied intervals prevent a break. Unaffected break boundaries and other Events data are preserved. The note change and break adjustment share one undo step, and saving or exporting retains the updated intervals.
+Adding, pasting, moving, extending or removing notes around an existing break recalculates the affected interval when the edit commits. Breaks leave the next object's AR preempt time clear and resume at least 200 ms after the preceding object ends, including all slider repeats and banana-shower duration. An occupied break is shortened, split, or removed; generated pieces shorter than 650 ms are removed. Removing the note that split a break merges its remaining pieces. Deleting the last objects in a bounded section also creates a break for a newly vacated gap with at least 650 ms after the preceding object's recovery and before the next object's approach, even when no existing break remains. Overlapping occupied intervals prevent a break. After object-time or duration edits, breaks before the first object or after the maximum object end are removed, including manually resized intervals. Approach-rate edits reconcile breaks against the new approach time. Extensions use the maximum preceding object end so overlapping long objects remain clear. Unaffected valid break boundaries and other Events data are preserved. The note change and break adjustment share one undo step, and saving or exporting retains the updated intervals.
 
 In the object timeline and canvas left time axis, each break has a grey core and lighter white and green transition regions extending to the adjacent source objects, without changing the stored break timestamps. Hovering a core edge in the object timeline shows a horizontal resize cursor. Dragging that edge snaps to the current beat subdivision when Snap is on and previews the new range; releasing commits one undoable edit, releasing with less than 400 ms remaining removes the break, and Esc cancels the preview.
 
@@ -490,6 +509,11 @@ navigation. Channel selection, fading and all other testplay controls keep the
 same behavior as with the existing volume shortcuts.
 
 ## Tools and selection
+
+Canvas box selection includes an object when its centre lies inside or on the
+selection rectangle. Slider and banana-shower parents are selected when an
+eligible child object's centre is enclosed. Selection is independent of sprite
+size and skin artwork.
 
 The left palette has equally sized Select, Fruit, FSlider, and Banana buttons with transparent outer margins. The four-button group is vertically centred beside the canvas plot. The active icon is fully opaque; the other three use 45% opacity. Labels share one font size. Clicking FSlider starts placement; B also enters control editing for a selected slider. Finishing placement keeps the current tool active.
 
@@ -746,6 +770,12 @@ The bottom status bar shows current action feedback, such as save results or ope
 For FSliders, 0 reverses plays the path once, 1 returns once, and higher counts continue alternating. Use **Ctrl+= / Ctrl+−** to add/remove a reverse. With a completed FSlider selected, move the pointer to empty canvas at a time after its final end and press **Ctrl+J**. A new anchor is placed at the pointer position using the placement snap setting, with a straight segment from the base path endpoint. Existing segments remain unchanged. Extending a repeated slider lengthens its base path for every span; it does not append after the repeats. Each operation is undoable.
 
 In the object timeline, a slider tail displays a horizontal resize cursor. Drag it right to add reverses or left to remove them, down to one traversal. Each step equals one unchanged base-span duration. This works for FSliders and imported Legacy Sliders; release commits one undo step and Esc cancels.
+
+Objects with exactly the same start time stack upward in source order in the
+object timeline. Up to 16 objects are displayed, with compact spacing inside the
+existing timeline height. Slider bodies and all their markers share the offset.
+Clicking and dragging follow the displayed layers; box selection includes objects
+beyond the display limit. Stacking changes neither timestamps nor map content.
 
 ## Operation errors
 

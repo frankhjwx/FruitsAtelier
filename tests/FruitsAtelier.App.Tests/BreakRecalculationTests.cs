@@ -36,7 +36,7 @@ internal static class BreakRecalculationTests
         Check(OsuTimeline.Breaks(history.Document).SequenceEqual(OsuTimeline.Breaks(map)), "Horizontal editing rewrote a break.");
         history.Undo();
         history.Begin("Move into break"); history.Document.Fruits[0].TimeMs = 3000; history.Commit();
-        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(1200, 2100), new BreakPeriod(3200, 6000)]),
+        Check(OsuTimeline.Breaks(history.Document).SequenceEqual([new BreakPeriod(3200, 6000)]),
             "Moving an existing note into a break did not update it.");
         history.Undo();
         history.Begin("Short remnants"); history.Document.Fruits.Add(new() { TimeMs = 2000, X = 100 });
@@ -46,6 +46,26 @@ internal static class BreakRecalculationTests
 
     public static void RemovalAndNearbyPlacement()
     {
+        var ui = new Ui(overview: false);
+        var appended = new MapDocument { DurationMs = 20000, IsDemo = false, ApproachRate = 7 };
+        appended.Fruits.Add(new() { TimeMs = 1000, X = 200 });
+        ui.LoadDocument(appended);
+        ui.Resize(1440, 1800);
+        ui.View.UpdateTransport(11000, 20000, true, false, false, null, null); ui.Paint();
+        ui.Key('2'); ui.ClickMap(11000, 240);
+        var final = ui.View.Document.Fruits.Single(fruit => fruit.TimeMs == 11000);
+        ui.View.UpdateTransport(6000, 20000, true, false, false, null, null); ui.Paint();
+        ui.ClickText(FruitsAtelier.Localization.Strings.Get("timeline.insertBreak"));
+        Check(OsuTimeline.Breaks(ui.View.Document).Count == 1, "The appended note did not allow a bounded break.");
+        ui.View.UpdateTransport(11000, 20000, true, false, false, null, null); ui.Paint();
+        ui.Key('1'); ui.ClickFruit(final.Id); ui.Key(46);
+        Check(OsuTimeline.Breaks(ui.View.Document).Count == 0, "Deleting the appended note retained its break.");
+        ui.Key('Z', ctrl: true);
+        Check(ui.View.Document.Fruits.Any(fruit => fruit.Id == final.Id) && OsuTimeline.Breaks(ui.View.Document).Count == 1,
+            "Undo did not restore the appended note and break together.");
+        ui.Key('Y', ctrl: true);
+        Check(OsuTimeline.Breaks(ui.View.Document).Count == 0, "Redo retained the appended note's break.");
+
         var map = Map();
         var history = new EditorHistory(map);
         history.Begin("Split break");

@@ -89,8 +89,54 @@ internal static class ObjectStructureRenderCheck
                     throw new InvalidOperationException($"Native selection box handle did not scale the slider: tail={view.Document.Tracks.Single().Nodes[^1].X}, box={box}, plot={view.CanvasPlotBounds}, status={view.StatusMessage}.");
                 view.KeyDown(90, true, false); Paint();
                 if (!view.Document.ContentEquals(document)) throw new InvalidOperationException("Native selection scale undo failed.");
+                var stacked = new MapDocument { DurationMs = 10000 };
+                for (int i = 0; i < 24; i++)
+                {
+                    stacked.Fruits.Add(new() { TimeMs = 1000, X = 256, SourceOrder = i });
+                    if (i >= 8) continue;
+                    var stackedSlider = new CurveTrack { Kind = CurveKind.Linear, SourceOrder = 24 + i, SpanCount = 2 };
+                    stackedSlider.Nodes.AddRange([new() { TimeMs = 2000, X = 100 }, new() { TimeMs = 2250, X = 200 }]);
+                    stacked.Tracks.Add(stackedSlider);
+                }
+                view.LoadDocument(stacked);
+                view.UpdateTransport(1750, 10000, false, false, false, null, null); Paint();
+                if (view.ObjectTimelineBounds.Height != 64) throw new InvalidOperationException("Stacking resized the timeline.");
+                Capture("stacks");
+                var timeline = view.ObjectTimelineBounds;
+                float headX = timeline.X + (float)((2000 - view.ObjectTimelineStartMs) * view.ObjectTimelinePixelsPerMs);
+                Click(headX, timeline.Y + 2.5f);
+                if (!view.SelectedObjectIds.SequenceEqual(new[] { stacked.Tracks[^1].Id }))
+                    throw new InvalidOperationException("Native stacked slider selection missed the exposed layer.");
+                view.SetPlaybackSpeed(.5); view.StartTestplay();
+                if (!view.IsTestplaying || view.PlaybackSpeed != 1) throw new InvalidOperationException("Native testplay inherited editor speed.");
+                view.StopTestplay();
+                if (view.PlaybackSpeed != .5) throw new InvalidOperationException("Native testplay did not restore editor speed.");
+                view.OpenSettings(); Paint();
+                var settings = view.SettingsBounds;
+                Click(settings.X + 40, settings.Y + 96 + 4 * 48);
+                Capture("testplay-settings");
+                var speed = view.TestplaySpeedBounds;
+                Click(speed.X + 12, speed.Y + 16);
+                view.ApplySettings(persist: false);
+                if (view.LibrarySettings.TestplaySpeed != .95 || view.PlaybackSpeed != .5 || !view.Document.ContentEquals(stacked))
+                    throw new InvalidOperationException("Native independent speed setting changed editor state.");
                 void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
                 void Click(float x, float y) { view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint(); }
+                void Capture(string name)
+                {
+                    canvas.Begin(); view.Render(canvas, width, height);
+                    canvas.End(capture: () =>
+                    {
+                        var frame = canvas.CapturePixels();
+                        string directory = Path.GetFullPath("artifacts/tests/timeline-stacks");
+                        Directory.CreateDirectory(directory);
+                        using var writer = new BinaryWriter(File.Create(Path.Combine(directory, $"{name}-{locale}-{frame.Width}x{frame.Height}.bmp")));
+                        writer.Write((ushort)0x4D42); writer.Write(54 + frame.Pixels.Length); writer.Write(0); writer.Write(54);
+                        writer.Write(40); writer.Write(frame.Width); writer.Write(-frame.Height);
+                        writer.Write((ushort)1); writer.Write((ushort)32); writer.Write(0); writer.Write(frame.Pixels.Length);
+                        writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(frame.Pixels);
+                    });
+                }
             }
         }
         finally { L.SetLanguage(language); }

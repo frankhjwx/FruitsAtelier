@@ -16,4 +16,4 @@ Vector and PNG/ICO generation: run `scripts/Generate-Branding.cjs` with Node.js 
 iconutil -c icns artifacts/branding/app-icon.iconset -o assets/branding/app-icon.icns
 ```
 
-The desktop projects bundle the standalone mark and application icons. Windows embeds ICO in the executable and uses it for the window; the macOS publishing script installs ICNS and localized application display names. Both README pages use the corresponding horizontal SVG wordmark.
+The desktop projects bundle the standalone mark and application icons. Windows embeds ICO in the executable and uses it for the window; the macOS publishing script installs ICNS and localized application display names. The Chinese README uses the Chinese horizontal SVG wordmark; the English, Japanese, and Korean READMEs use the English wordmark.

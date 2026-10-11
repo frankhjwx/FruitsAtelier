@@ -248,6 +248,7 @@ internal static class TestplayTests
                 var map = new MapDocument(); map.Fruits.Add(new Fruit { TimeMs = 10000, X = 256 });
                 ui.LoadDocument(map); var before = ui.View.Document.DeepClone();
                 ui.View.SetPlaybackSpeed(initial);
+                ui.View.LibrarySettings.TestplaySpeed = initial;
                 var requested = new List<double>(); ui.View.RequestPlaybackSpeed = requested.Add;
                 ui.View.StartTestplay();
                 ui.Key(114); ui.View.KeyUp(114); Near(initial, ui.View.PlaybackSpeed);

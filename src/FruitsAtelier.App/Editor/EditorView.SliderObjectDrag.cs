@@ -70,9 +70,9 @@ public sealed partial class EditorView
         BeginPointerDrag(x, y);
     }
 
-    private bool TryBeginSliderEndpointTimeDrag(float y)
+    private bool TryBeginSliderEndpointTimeDrag(float y, bool navigation = false)
     {
-        if (Math.Abs(y - dragStartY) < 2 || sliderObjectDragTarget is not { Kind: CatchObjectKind.Fruit } target) return false;
+        if (!navigation && Math.Abs(y - dragStartY) < 2 || sliderObjectDragTarget is not { Kind: CatchObjectKind.Fruit } target) return false;
         var source = sliderObjectDragSource?.Tracks.FirstOrDefault();
         bool imported = source is null && sliderObjectDragSource?.ImportedSliders.Count > 0;
         if (imported)
