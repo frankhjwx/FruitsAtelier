@@ -4,7 +4,7 @@ FruitsAtelier's original source code is licensed under the [MIT License](LICENSE
 The third-party code, libraries, and assets described below retain their own
 licenses. The project license does not replace their notices or grant additional
 rights to those resources. Community-tool acknowledgements are listed in the
-[README credits](README.md#credits-and-license).
+[README credits](README.md#credits).
 
 ## Localization terminology
 
