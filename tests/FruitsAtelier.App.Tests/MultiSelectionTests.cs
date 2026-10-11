@@ -108,6 +108,30 @@ internal static class MultiSelectionTests
         Check(baseline.ContentEquals(ui.View.Document), "New Slider creation altered the previously selected curve.");
     }
 
+    public static void ObjectBoxCenters()
+    {
+        foreach (float cs in new[] { 4f, 10f })
+        foreach (int horizontal in new[] { -1, 1 })
+        foreach (int vertical in new[] { -1, 1 })
+        foreach (int offset in new[] { -1, 0, 1 })
+        {
+            var map = new MapDocument { DurationMs = 20000, CircleSize = cs };
+            var fruit = new Fruit { TimeMs = 1500, X = 256 };
+            map.Fruits.Add(fruit);
+            var ui = Load(map);
+            var baseline = ui.View.Document.DeepClone();
+            var center = Screen(ui, fruit.TimeMs, fruit.X);
+            float startX = center.X + horizontal * 80, startY = center.Y + vertical * 80;
+            float endX = center.X - horizontal * offset, endY = center.Y - vertical * offset;
+            ui.View.PointerDown(startX, startY, 0, false, false); ui.Paint();
+            ui.View.PointerMove(endX, endY, false, false); ui.Paint();
+            ui.View.PointerUp(endX, endY, 0); ui.Paint();
+            Objects(ui, offset >= 0 ? [fruit.Id] : []);
+            Check(baseline.ContentEquals(ui.View.Document) && !ui.View.IsDirty && !ui.View.WantsCapture,
+                "Center-based box selection changed content or retained pointer capture.");
+        }
+    }
+
     public static void ObjectBoxAndParentDedup()
     {
         foreach (bool imported in new[] { false, true })

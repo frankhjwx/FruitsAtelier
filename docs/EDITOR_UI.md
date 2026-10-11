@@ -510,6 +510,11 @@ same behavior as with the existing volume shortcuts.
 
 ## Tools and selection
 
+Canvas box selection includes an object when its centre lies inside or on the
+selection rectangle. Slider and banana-shower parents are selected when an
+eligible child object's centre is enclosed. Selection is independent of sprite
+size and skin artwork.
+
 The left palette has equally sized Select, Fruit, FSlider, and Banana buttons with transparent outer margins. The four-button group is vertically centred beside the canvas plot. The active icon is fully opaque; the other three use 45% opacity. Labels share one font size. Clicking FSlider starts placement; B also enters control editing for a selected slider. Finishing placement keeps the current tool active.
 
 Snap offers 1/1, 1/2, 1/3, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9, 1/12 and 1/16; the default is 1/4.

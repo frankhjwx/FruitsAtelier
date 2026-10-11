@@ -400,6 +400,7 @@ var tests = new (string Name, Action Run)[]
     ("A later overflowing pasted object rolls back the entire batch", ClipboardMultiTests.OverflowPasteRollsBackBatch),
     ("Invalid batch members cannot partially copy or cut", ClipboardMultiTests.InvalidMemberRejectsWholeCopyAndCut),
     ("Object and anchor Ctrl selections respect the active mode", MultiSelectionTests.ModesAndCtrlSelection),
+    ("Canvas object boxes contain centers across sizes, edges and drag directions", MultiSelectionTests.ObjectBoxCenters),
     ("Object boxes deduplicate generated slider children in Select mode", MultiSelectionTests.ObjectBoxAndParentDedup),
     ("Multi-selection clipboard shortcuts and deletion preserve batch transactions", MultiSelectionTests.BatchClipboardDelete),
     ("Anchor boxes delete endpoints and remove insufficient tracks atomically", MultiSelectionTests.AnchorBoxAndEndpointDelete),
