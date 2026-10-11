@@ -29,8 +29,6 @@ public sealed class LibrarySettings
     public bool DerandomizeDroplets { get; set; } = true;
     public bool DerandomizeNewProjects { get; set; } = true;
     public bool ReverseCanvasScroll { get; set; }
-    public bool HideObjectTimeline { get; set; }
-    public bool RevealObjectTimelineOnHover { get; set; }
     public bool LockDropletSelection { get; set; } = true;
     public bool LowLatencyDisplay { get; set; }
     public bool AudioDiagnostics { get; set; }

@@ -7,53 +7,6 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private Rect objectTimeline;
-    private bool objectTimelineHoverVisible;
-    private float objectTimelineHeight = 72, objectTimelineAnimationFrom = 72, objectTimelineAnimationTarget = 72;
-    private double objectTimelineAnimationAt;
-    private bool objectTimelineWasHidden, objectTimelineAnimationPaused;
-    private const double ObjectTimelineAnimationMs = 180;
-    public bool ObjectTimelineNeedsRedraw => !TimingPageVisible && drag == DragKind.None
-        && objectTimelineHeight != objectTimelineAnimationTarget;
-
-    private void UpdateObjectTimelineVisibility()
-    {
-        double now = timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
-        if (!LibrarySettings.HideObjectTimeline || !LibrarySettings.RevealObjectTimelineOnHover || TimingPageVisible
-            || objectTimelineWasHidden != LibrarySettings.HideObjectTimeline)
-        {
-            objectTimelineWasHidden = LibrarySettings.HideObjectTimeline;
-            objectTimelineHoverVisible = objectTimelineAnimationPaused = false;
-            objectTimelineHeight = objectTimelineAnimationFrom = objectTimelineAnimationTarget = LibrarySettings.HideObjectTimeline ? 0 : 72;
-            objectTimelineAnimationAt = now;
-            return;
-        }
-        // Freeze the rendered layout during a drag so its hit coordinates stay fixed.
-        if (drag != DragKind.None)
-        {
-            objectTimelineAnimationPaused = true;
-            return;
-        }
-        if (objectTimelineAnimationPaused)
-        {
-            objectTimelineAnimationFrom = objectTimelineHeight;
-            objectTimelineAnimationAt = now;
-            objectTimelineAnimationPaused = false;
-        }
-        float progress = (float)Math.Clamp((now - objectTimelineAnimationAt) / ObjectTimelineAnimationMs, 0, 1);
-        float eased = 1 - MathF.Pow(1 - progress, 3);
-        objectTimelineHeight = progress >= 1 ? objectTimelineAnimationTarget
-            : objectTimelineAnimationFrom + (objectTimelineAnimationTarget - objectTimelineAnimationFrom) * eased;
-        float top = canvas.Y + 38;
-        objectTimelineHoverVisible = !librarySettingsOpen && mouseX >= leftPanel.Right && mouseX < canvas.Right
-            && mouseY >= top && mouseY < top + (objectTimelineHoverVisible ? 72 : 12);
-        float target = objectTimelineHoverVisible ? 72 : 0;
-        if (target != objectTimelineAnimationTarget)
-        {
-            objectTimelineAnimationFrom = objectTimelineHeight;
-            objectTimelineAnimationTarget = target;
-            objectTimelineAnimationAt = now;
-        }
-    }
     private readonly List<BeatGridLine> timelineGrid = [];
     private double objectTimelineScale = .18;
     private readonly List<(Guid Id, double Time, Rect Bounds)> timelineObjects = [];
@@ -344,27 +297,16 @@ public sealed partial class EditorView
 
     private void DrawObjectTimeline(ICanvas c)
     {
-        timelineObjects.Clear();
-        RefreshTimelineSources();
-        if (objectTimelineHeight <= 0)
-        {
-            objectTimeline = default;
-            return;
-        }
         float top = canvas.Y + 38;
         objectTimeline = new(leftPanel.Right + 42, top + 4, Math.Max(30, canvas.Right - leftPanel.Right - 54), 64);
-        c.Clip(new(0, top, canvas.Right, objectTimelineHeight));
+        timelineObjects.Clear();
         c.Fill(new(0, top, canvas.Right, 72), Background);
         Button(c, new(leftPanel.Right + 7, top + 5, 29, 28), L.Get("ui.timelineZoomIn"), () => ZoomObjectTimeline(1.25));
         Button(c, new(leftPanel.Right + 7, top + 37, 29, 28), L.Get("ui.timelineZoomOut"), () => ZoomObjectTimeline(.8));
-        for (int i = hits.Count - 2; i < hits.Count; i++)
-        {
-            var bounds = hits[i].Bounds;
-            hits[i] = hits[i] with { Bounds = bounds with { Height = Math.Clamp(top + objectTimelineHeight - bounds.Y, 0, bounds.Height) } };
-        }
         double start = ObjectTimelineStartMs;
         double end = start + objectTimeline.Width / objectTimelineScale;
         float X(double time) => objectTimeline.X + (float)((time - start) * objectTimelineScale);
+        RefreshTimelineSources();
         c.Clip(objectTimeline);
         var breaks = DisplayedBreaks();
         for (int i = 0; i < breaks.Length; i++)
@@ -487,8 +429,6 @@ public sealed partial class EditorView
         c.Line(objectTimeline.X, objectTimeline.Bottom - 1, objectTimeline.Right, objectTimeline.Bottom - 1, Grid);
         DrawTimelineBookmarks(c, objectTimeline, start, end);
         c.Unclip();
-        c.Unclip();
-        objectTimeline = objectTimeline with { Height = Math.Clamp(objectTimelineHeight - 4, 0, 64) };
     }
 
     private void ZoomObjectTimeline(double factor)

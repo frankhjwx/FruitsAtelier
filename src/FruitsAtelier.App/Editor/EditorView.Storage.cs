@@ -19,7 +19,7 @@ public sealed partial class EditorView
     private bool workspaceScrollDragging;
     private Rect cleanHistoryBounds, clearCacheBounds;
     private float WorkspaceContentHeight => 527 + StorageFolderCount * 20;
-    private float GeneralContentHeight => (SupportsDisplayMode ? 554 : 410) + (SupportsFullscreen ? 108 : 0);
+    private float GeneralContentHeight => (SupportsDisplayMode ? 458 : 314) + (SupportsFullscreen ? 108 : 0);
     private float SettingsScrollableHeight => FirstRunSetupVisible ? firstRunContentHeight : settingsCategory == SettingsCategory.General ? GeneralContentHeight : settingsCategory == SettingsCategory.Audio ? audioSettingsContentHeight : WorkspaceContentHeight;
     private int StorageFolderCount => Math.Min(8, storageReport?.Folders.Count ?? 0);
     private string storageRoot = "", storageError = "";

@@ -127,8 +127,8 @@ internal sealed class EditorControl : Control, IDisposable
         using var canvas = new MacCanvas(context, images);
         View.Render(canvas, (float)Bounds.Width, (float)Bounds.Height);
         UpdatePointerCursor();
-        if (View.IsTestplaying || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.VolumePopoverNeedsRedraw || View.ObjectTimelineNeedsRedraw)
-            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.VolumePopoverNeedsRedraw || View.ObjectTimelineNeedsRedraw) InvalidateVisual(); });
+        if (View.IsTestplaying || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.VolumePopoverNeedsRedraw)
+            TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.VolumePopoverNeedsRedraw) InvalidateVisual(); });
     }
     private StandardCursorType? pointerCursorType;
     private void UpdatePointerCursor()

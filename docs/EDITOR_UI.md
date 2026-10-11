@@ -774,16 +774,6 @@ In the object timeline, a slider tail displays a horizontal resize cursor. Drag 
 Measure starts use longer white ticks in the upper object timeline and brighter
 white grid lines on the main canvas to distinguish them from ordinary beats.
 
-**Settings → General → Upper timeline** can hide the upper object timeline and
-give its vertical space to the canvas. With the timeline hidden, **Reveal near
-the top** optionally expands it when the pointer enters the first 12 DIP below
-the canvas toolbar. It stays expanded while the pointer is within the timeline
-strip, and collapses after the pointer leaves. Expansion and collapse animate
-over 180 ms, smoothly returning space to or taking space from the canvas.
-An active editing drag pauses the transition to keep interaction coordinates fixed.
-These preferences persist across launches without changing beatmap content.
-The Timing page's waveform remains available independently.
-
 Objects with exactly the same start time stack upward in source order in the
 object timeline. Up to 16 objects are displayed, with compact spacing inside the
 existing timeline height. Slider bodies and all their markers share the offset.

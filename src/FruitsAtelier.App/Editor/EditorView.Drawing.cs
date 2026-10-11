@@ -73,9 +73,7 @@ public sealed partial class EditorView
         rightPanel = new(width - (expandedPanel ? rightWidth : 340), 84, expandedPanel ? rightWidth : 340, expandedPanel ? bodyHeight : 38);
         leftPanel = new(0, 84, leftWidth, bodyHeight);
         canvas = new(108 + leftWidth, 84, Math.Max(120, width - rightWidth - leftWidth - 109), bodyHeight);
-        UpdateObjectTimelineVisibility();
-        float timelineHeight = TimingPageVisible ? 72 : objectTimelineHeight;
-        plot = new(canvas.X + 70, canvas.Y + 68 + timelineHeight, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 80 - timelineHeight));
+        plot = new(canvas.X + 70, canvas.Y + 140, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 152));
         overview = new(220, height - 77, Math.Max(100, width - 248), 40);
         canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, 1);
         pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
@@ -199,13 +197,13 @@ public sealed partial class EditorView
         c.Circle(snapX, snapCenterY, 6, Accent);
         c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, snapTextY, 11, Foreground, 40);
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
-        c.Text(L.Get("ui.timeAxis"), canvas.X + 11, plot.Y - 20, 10, Muted, 43);
+        c.Text(L.Get("ui.timeAxis"), canvas.X + 11, canvas.Y + 120, 10, Muted, 43);
         var playfield = Playfield;
         c.Fill(new(canvas.X, plot.Y, canvas.Width, plot.Height), Background);
         for (int x = 0; x <= 512; x += 128)
         {
             float sx = Screen(new(0, x)).X;
-            c.Text(x.ToString(), sx - 9, plot.Y - 20, 10, Muted, 30);
+            c.Text(x.ToString(), sx - 9, canvas.Y + 120, 10, Muted, 30);
             c.Line(sx, plot.Y, sx, plot.Bottom, x == 256 ? 0x3C4653u : 0x262D37u);
         }
         if (EffectiveGridSnap)

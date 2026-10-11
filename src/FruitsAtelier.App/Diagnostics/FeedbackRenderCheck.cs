@@ -40,31 +40,6 @@ internal static class FeedbackRenderCheck
                 view.PointerDoubleClick(x, timeline.Y + 27, false, false); Paint();
                 if (view.PlayheadMs != 1000 || !view.SelectedObjectIds.Contains(map.Fruits[0].Id) || !view.Document.ContentEquals(map))
                     throw new InvalidOperationException("Native upper timeline double-click navigation failed.");
-                var expandedPlot = view.CanvasPlotBounds;
-                view.LibrarySettings.HideObjectTimeline = true;
-                Paint();
-                if (view.ObjectTimelineBounds.Height != 0 || view.CanvasPlotBounds.Y != expandedPlot.Y - 72
-                    || view.CanvasPlotBounds.Height != expandedPlot.Height + 72)
-                    throw new InvalidOperationException("Native hidden timeline did not reclaim canvas space.");
-                view.LibrarySettings.RevealObjectTimelineOnHover = true;
-                view.PointerMove(timeline.X + 100, timeline.Y, false, false); Paint();
-                clock.Advance(60); Paint();
-                if (view.CanvasPlotBounds.Y <= expandedPlot.Y - 72 || view.CanvasPlotBounds.Y >= expandedPlot.Y)
-                    throw new InvalidOperationException("Native timeline expansion skipped its intermediate layout.");
-                clock.Advance(120); Paint();
-                if (view.ObjectTimelineBounds != timeline || view.CanvasPlotBounds != expandedPlot)
-                    throw new InvalidOperationException("Native hover reveal did not restore the timeline layout.");
-                view.PointerMove(expandedPlot.X + 100, expandedPlot.Bottom - 20, false, false); Paint();
-                clock.Advance(60); Paint();
-                if (view.CanvasPlotBounds.Y <= expandedPlot.Y - 72 || view.CanvasPlotBounds.Y >= expandedPlot.Y)
-                    throw new InvalidOperationException("Native timeline collapse skipped its intermediate layout.");
-                clock.Advance(120); Paint();
-                if (view.ObjectTimelineBounds.Height != 0 || !view.Document.ContentEquals(map) || view.IsDirty)
-                    throw new InvalidOperationException("Native hover collapse changed content or retained the timeline.");
-                view.OpenSettings(); Paint();
-                view.KeyDown(27, false, false); view.KeyUp(27);
-                view.LibrarySettings.HideObjectTimeline = view.LibrarySettings.RevealObjectTimelineOnHover = false;
-                Paint();
                 view.OpenSongSetup(); Paint();
                 var tags = view.SongSetupFieldBounds["Tags"];
                 if (tags.Height <= 32 || tags.Bottom > view.SongSetupBounds.Bottom - 80)

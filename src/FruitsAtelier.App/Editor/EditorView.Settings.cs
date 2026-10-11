@@ -20,7 +20,6 @@ public sealed partial class EditorView
     public Action<bool>? RequestFullscreen { get; set; }
     private bool draftFullscreen, fullscreenShortcutHeld;
     private bool draftReverseCanvasScroll;
-    private bool draftHideObjectTimeline, draftRevealObjectTimelineOnHover;
     private double draftTestplayStartupDelaySeconds;
     private double draftTestplaySpeed;
     private bool draftShowTestplayCombo;
@@ -107,8 +106,6 @@ public sealed partial class EditorView
         draftDerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
         draftDerandomizeNewProjects = LibrarySettings.DerandomizeNewProjects;
         draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
-        draftHideObjectTimeline = LibrarySettings.HideObjectTimeline;
-        draftRevealObjectTimelineOnHover = LibrarySettings.RevealObjectTimelineOnHover;
         draftLowLatencyDisplay = LibrarySettings.LowLatencyDisplay;
         draftFullscreen = LibrarySettings.Fullscreen;
         draftIndicatorColours[0] = LibrarySettings.StandIndicatorColour;
@@ -138,8 +135,6 @@ public sealed partial class EditorView
         draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
         draftFullscreen != LibrarySettings.Fullscreen ||
         draftReverseCanvasScroll != LibrarySettings.ReverseCanvasScroll ||
-        draftHideObjectTimeline != LibrarySettings.HideObjectTimeline ||
-        draftRevealObjectTimelineOnHover != LibrarySettings.RevealObjectTimelineOnHover ||
         draftIndicatorColours[0] != LibrarySettings.StandIndicatorColour ||
         draftIndicatorColours[1] != LibrarySettings.WalkIndicatorColour ||
         draftIndicatorColours[2] != LibrarySettings.DashIndicatorColour ||
@@ -237,20 +232,13 @@ public sealed partial class EditorView
                 SettingsButton(c, new(SettingsContentX, scrollTop + 20, scrollWidth, 32),
                     L.Get(draftReverseCanvasScroll ? "settings.reverseCanvasScrollOn" : "settings.reverseCanvasScrollOff"),
                     () => draftReverseCanvasScroll = !draftReverseCanvasScroll, draftReverseCanvasScroll);
-                SettingsButton(c, new(SettingsContentX, scrollTop + 68, scrollWidth, 32),
-                    L.Get(draftHideObjectTimeline ? "settings.upperTimelineHidden" : "settings.upperTimelineVisible"),
-                    () => draftHideObjectTimeline = !draftHideObjectTimeline, draftHideObjectTimeline);
-                SettingsButton(c, new(SettingsContentX, scrollTop + 116, scrollWidth, 32),
-                    L.Get(draftRevealObjectTimelineOnHover ? "settings.upperTimelineHoverOn" : "settings.upperTimelineHoverOff"),
-                    () => draftRevealObjectTimelineOnHover = !draftRevealObjectTimelineOnHover,
-                    draftRevealObjectTimelineOnHover, enabled: draftHideObjectTimeline);
-                c.Line(SettingsContentX, scrollTop + 168, SettingsContentX + scrollWidth, scrollTop + 168, Grid);
-                c.Text(L.Get("settings.dropletDefaults"), SettingsContentX, scrollTop + 180, SettingsSectionSize, Foreground,
+                c.Line(SettingsContentX, scrollTop + 72, SettingsContentX + scrollWidth, scrollTop + 72, Grid);
+                c.Text(L.Get("settings.dropletDefaults"), SettingsContentX, scrollTop + 84, SettingsSectionSize, Foreground,
                     SettingsContentWidth, true);
-                SettingsButton(c, new(SettingsContentX, scrollTop + 214, SettingsContentWidth, 32),
+                SettingsButton(c, new(SettingsContentX, scrollTop + 118, SettingsContentWidth, 32),
                     L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
                     () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
-                SettingsButton(c, new(SettingsContentX, scrollTop + 262, SettingsContentWidth, 32),
+                SettingsButton(c, new(SettingsContentX, scrollTop + 166, SettingsContentWidth, 32),
                     L.Get(draftDerandomizeNewProjects ? "settings.newProjectDerandomizeOn" : "settings.newProjectDerandomizeOff"),
                     () => draftDerandomizeNewProjects = !draftDerandomizeNewProjects, draftDerandomizeNewProjects);
                 c.Unclip();
@@ -318,8 +306,6 @@ public sealed partial class EditorView
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
             settings.Fullscreen = draftFullscreen;
             settings.ReverseCanvasScroll = draftReverseCanvasScroll;
-            settings.HideObjectTimeline = draftHideObjectTimeline;
-            settings.RevealObjectTimelineOnHover = draftRevealObjectTimelineOnHover;
             settings.StandIndicatorColour = draftIndicatorColours[0]; settings.WalkIndicatorColour = draftIndicatorColours[1];
             settings.DashIndicatorColour = draftIndicatorColours[2]; settings.HyperDashIndicatorColour = draftIndicatorColours[3];
             settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;
