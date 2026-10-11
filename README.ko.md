@@ -76,3 +76,11 @@ C# 12와 .NET 8을 사용합니다. Windows 소스 빌드는 `global.json`에 �
 - [현지화](docs/LOCALIZATION.md) · [서드 파티 라이선스](THIRD_PARTY_NOTICES.md)
 
 기술 문서와 사용자 설명서는 영어로 관리합니다.
+
+## 크레딧과 라이선스
+
+- [ppy/osu](https://github.com/ppy/osu) — osu!catch 알고리즘 및 변환, 게임플레이, 난이도 계산, 호환성 동작의 참고 자료.
+- [Exsper/osucatch-editor-realtimeviewer](https://github.com/Exsper/osucatch-editor-realtimeviewer) — 매핑 중 실시간 Catch 게임플레이 미리 보기의 영감.
+- [Phob144/DropletDerandomizer](https://github.com/Phob144/DropletDerandomizer) — 드롭렛 무작위화 보정과 Catch 슬라이더 패턴 제작의 영감.
+
+FruitsAtelier의 자체 소스 코드는 [MIT 라이선스](LICENSE)로 공개합니다. 서드 파티 코드와 리소스는 각자의 라이선스를 유지합니다. 출처 표기와 보관된 라이선스 문서는 [서드 파티 고지](THIRD_PARTY_NOTICES.md)를 참고하세요. 포함된 CC BY-NC 4.0 osu! 리소스의 비상업적 사용 제한은 유지되며, SoundTouch.Net은 LGPL-2.1-or-later를 따릅니다.

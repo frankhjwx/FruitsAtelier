@@ -76,3 +76,11 @@ bash scripts/Install-Mac-SDK.sh
 - [本地化维护](docs/LOCALIZATION.md) · [第三方许可](THIRD_PARTY_NOTICES.md)
 
 技术文档与用户手册以英文维护。
+
+## 致谢与许可
+
+- [ppy/osu](https://github.com/ppy/osu)：提供 osu!catch 算法，以及转换、游玩、难度计算与兼容行为的参考。
+- [Exsper/osucatch-editor-realtimeviewer](https://github.com/Exsper/osucatch-editor-realtimeviewer)：为作图时的实时 Catch 游玩预览提供灵感。
+- [Phob144/DropletDerandomizer](https://github.com/Phob144/DropletDerandomizer)：为水滴去随机化与 Catch 滑条编排提供灵感。
+
+FruitsAtelier 的原创源代码采用 [MIT 许可证](LICENSE)。第三方代码与资源保留各自许可，署名与保留的许可文本详见[第三方声明](THIRD_PARTY_NOTICES.md)。其中，随项目提供的 CC BY-NC 4.0 osu! 资源仍有非商业限制，SoundTouch.Net 仍采用 LGPL-2.1-or-later。

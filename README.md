@@ -76,3 +76,11 @@ The editor uses C# 12 and .NET 8. Windows source builds use SDK **10.0.400**, pi
 - [Localization](docs/LOCALIZATION.md) · [Third-party licenses](THIRD_PARTY_NOTICES.md)
 
 Technical documentation and the user manual are maintained in English.
+
+## Credits and license
+
+- [ppy/osu](https://github.com/ppy/osu) — osu!catch algorithms and reference behavior for conversion, gameplay, difficulty calculation, and compatibility.
+- [Exsper/osucatch-editor-realtimeviewer](https://github.com/Exsper/osucatch-editor-realtimeviewer) — inspiration for real-time Catch gameplay preview while mapping.
+- [Phob144/DropletDerandomizer](https://github.com/Phob144/DropletDerandomizer) — inspiration for droplet derandomization and authoring Catch slider patterns.
+
+FruitsAtelier's original source code is licensed under the [MIT License](LICENSE). Third-party code and assets retain their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md) for attribution and retained license texts. In particular, the included osu! resources under CC BY-NC 4.0 retain their non-commercial restriction, and SoundTouch.Net remains under LGPL-2.1-or-later.

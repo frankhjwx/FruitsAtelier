@@ -76,3 +76,11 @@ C# 12 と .NET 8 を使用しています。Windows のソースビルドには 
 - [ローカライズ](docs/LOCALIZATION.md) · [サードパーティのライセンス](THIRD_PARTY_NOTICES.md)
 
 技術文書とユーザーマニュアルは英語で管理しています。
+
+## クレジットとライセンス
+
+- [ppy/osu](https://github.com/ppy/osu) — osu!catch のアルゴリズムと、変換・ゲームプレイ・難易度計算・互換性に関する動作の参考。
+- [Exsper/osucatch-editor-realtimeviewer](https://github.com/Exsper/osucatch-editor-realtimeviewer) — マッピング中のリアルタイム Catch プレビューの着想。
+- [Phob144/DropletDerandomizer](https://github.com/Phob144/DropletDerandomizer) — ドロップレットのランダム化補正と Catch スライダーパターン作成の着想。
+
+FruitsAtelier 独自のソースコードは [MIT ライセンス](LICENSE)で公開しています。第三者のコードと素材は、それぞれのライセンスを保持します。帰属表示と保存されたライセンス文書は[サードパーティの通知](THIRD_PARTY_NOTICES.md)を参照してください。同梱の CC BY-NC 4.0 の osu! リソースには非営利の制限が引き続き適用され、SoundTouch.Net は LGPL-2.1-or-later のままです。
