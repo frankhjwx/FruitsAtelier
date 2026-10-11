@@ -2,7 +2,7 @@
 
 Application GUI text, status messages, and Core user diagnostics come from `FruitsAtelier.Localization.Strings`. The first launch defaults to `en`, independently of the operating system language. The current-language button beside the fixed **Language** label in **Settings → General** opens a dropdown listing every available language by its native name, with a check beside the current choice. Select with the mouse or Up/Down and Enter; Esc dismisses the dropdown. The selection is saved in `FruitsAtelier/language.json` under the system application-data directory and restored on subsequent launches; missing or damaged settings fall back to English. Existing beatmap titles, object names, skin names, and user file contents are data and are not translated or rewritten when switching languages.
 
-English is the project and documentation baseline. Maintain technical documentation and AI-facing instructions in English without parallel Chinese copies. Keep `README.zh-CN.md` as the Chinese user entry point. Other Chinese text belongs in translation resources or examples specifically explaining localization.
+English is the project and documentation baseline. Maintain technical documentation and AI-facing instructions in English. Keep `README.zh-CN.md`, `README.ja.md`, and `README.ko.md` as translated user entry points, aligned with `README.md`. Other translated text belongs in localization resources or examples specifically explaining localization.
 
 ## Language tables and new entries
 

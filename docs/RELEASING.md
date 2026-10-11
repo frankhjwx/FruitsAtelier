@@ -112,7 +112,7 @@ A package built locally from `dev` is a preflight check; the tag workflow builds
 the published artifacts.
 
 1. On `dev`, commit and push the reviewed changes. Set `Directory.Build.props` to
-   the release version, update the version shown in both READMEs and this guide,
+   the release version, update the version shown in all four READMEs and this guide,
    and add user-facing notes at `docs/releases/vMAJOR.MINOR.PATCH.md` (use the full
    tag for prereleases). Keep both release lock files committed. Run the relevant
    checks in [Building and Testing](TESTING.md), and wait for the **Desktop
