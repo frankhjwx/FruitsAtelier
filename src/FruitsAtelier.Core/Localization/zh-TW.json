@@ -1295,5 +1295,6 @@
   "settings.canvasGridLine": "網格線",
   "settings.canvasCentreLine": "中心線",
   "settings.canvasGridOpacity": "不透明度：{0}%",
-  "settings.canvasGridReset": "重設網格"
+  "settings.canvasGridReset": "重設網格",
+  "settings.canvasBackgroundDimLabel": "Background Dim"
 }

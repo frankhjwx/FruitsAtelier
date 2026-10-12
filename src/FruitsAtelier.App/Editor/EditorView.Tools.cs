@@ -200,6 +200,7 @@ public sealed partial class EditorView
 
     private MapPoint? PlacementGhostPoint()
     {
+        if (PointerOverCanvasBackgroundDim) return null;
         if (tool is not (Tool.Fruit or Tool.Slider) || !plot.Contains(mouseX, mouseY) || drag != DragKind.None
             || menu >= 0 || contextItems.Count > 0 || editField >= 0 || tool == Tool.Slider && draftTrack == Guid.Empty && SelectedTrack is not null) return null;
         if (tool == Tool.Slider && SelectedTrack is { } draft && draft.Id == draftTrack
@@ -214,6 +215,7 @@ public sealed partial class EditorView
 
     private void DrawPlacementGhost(ICanvas c)
     {
+        if (PointerOverCanvasBackgroundDim) return;
         if (tool == Tool.Banana && plot.Contains(mouseX, mouseY) && drag == DragKind.None
             && menu < 0 && contextItems.Count == 0 && editField < 0)
         {

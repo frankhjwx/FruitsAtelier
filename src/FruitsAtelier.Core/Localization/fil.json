@@ -1295,5 +1295,6 @@
   "settings.canvasGridLine": "Mga grid line",
   "settings.canvasCentreLine": "Gitnang linya",
   "settings.canvasGridOpacity": "Opacity: {0}%",
-  "settings.canvasGridReset": "I-reset ang grid"
+  "settings.canvasGridReset": "I-reset ang grid",
+  "settings.canvasBackgroundDimLabel": "Background Dim"
 }

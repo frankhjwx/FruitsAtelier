@@ -18,6 +18,7 @@ public sealed partial class EditorView
     {
         if (WantsCapture) return;
         mouseX = mouseY = -1;
+        AdvanceCanvasBackgroundDim();
     }
 
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
@@ -123,6 +124,7 @@ public sealed partial class EditorView
         if (drag != DragKind.None) return;
         if (TimingPageVisible && menu < 0 && contextItems.Count == 0 && WaveformBounds.Contains(x, y))
         { TimingWaveformPointer(x, y, button); return; }
+        if (BeginCanvasBackgroundDimPointer(x, y, button)) return;
         if (menu < 0 && contextItems.Count == 0 && MovementPanelPointerDown(x, y, button)) return;
         if (menu < 0 && contextItems.Count == 0 && DistancePointerDown(x, y, button, shift)) return;
         if (button == 2 && DifficultyTabContext(x, y)) return;
@@ -422,6 +424,7 @@ public sealed partial class EditorView
         if (AimodVisible) { mouseX = x; mouseY = y; return; }
         if (SynchronizationBlocksInput) return;
         MoveVolumePopoverPointer(x, y);
+        if (MoveCanvasBackgroundDimPointer(x, y)) return;
         if (backgroundDimDragging) { mouseX = x; mouseY = y; UpdateBackgroundDimDrag(x); return; }
         if (timingSnapDragging) { SetTimingSnap(x); return; }
         if (timingScrollDragging) { UpdateTimingScroll(y); return; }
@@ -566,6 +569,7 @@ public sealed partial class EditorView
         if (AimodVisible) return;
         testplayCursorPressed = false;
         if (SynchronizationBlocksInput) return;
+        if (EndCanvasBackgroundDimPointer(x, y, button)) return;
         if (backgroundDimDragging && button == 0) { UpdateBackgroundDimDrag(x); FinishBackgroundDimDrag(); return; }
         if (timingSnapDragging) { SetTimingSnap(x); timingSnapDragging = false; return; }
         if (timingScrollDragging && button == 0) { UpdateTimingScroll(y); timingScrollDragging = false; return; }
@@ -665,6 +669,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (CanUseCanvasBackgroundDim && CanvasBackgroundDimBounds.Contains(x, y)) return;
         if (HitsoundCopierVisible) { PointerDown(x, y, 0, shift, ctrl); return; }
 
         if (AimodVisible) return;
@@ -1334,6 +1339,7 @@ public sealed partial class EditorView
         workspaceScrollDragging = false;
         FinishVolumeDrag();
         FinishBackgroundDimDrag();
+        HideCanvasBackgroundDim();
         testplayEscapeConsumed = false;
         testplaySpeedHeld = false;
         testplayRetryHeld = false;

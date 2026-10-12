@@ -1295,5 +1295,6 @@
   "settings.canvasGridLine": "격자선",
   "settings.canvasCentreLine": "중앙선",
   "settings.canvasGridOpacity": "불투명도: {0}%",
-  "settings.canvasGridReset": "격자 초기화"
+  "settings.canvasGridReset": "격자 초기화",
+  "settings.canvasBackgroundDimLabel": "Background Dim"
 }

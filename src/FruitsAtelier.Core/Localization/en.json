@@ -1295,5 +1295,6 @@
   "settings.canvasGridLine": "Grid lines",
   "settings.canvasCentreLine": "Centre line",
   "settings.canvasGridOpacity": "Opacity: {0}%",
-  "settings.canvasGridReset": "Reset grid"
+  "settings.canvasGridReset": "Reset grid",
+  "settings.canvasBackgroundDimLabel": "Background Dim"
 }

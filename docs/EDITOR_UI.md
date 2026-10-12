@@ -1007,3 +1007,10 @@ of ten and the minus/plus buttons adjust by five. **Reset grid** restores the
 original colours and 100% opacity. These preferences affect all vertical X-axis
 lines. Horizontal time lines keep their existing appearance. Changes remain
 drafts until Apply and do not change beatmap content. Short settings windows scroll to reach the grid controls.
+
+The canvas has a **Background Dim** slider in its lower-left corner. It is hidden
+until the pointer approaches, then fades in over 150 ms. After the pointer leaves,
+it stays visible for one second and fades out over 150 ms. Dragging keeps it visible
+and adjusts the mapping background immediately; release saves the preference.
+The control remains fixed in screen coordinates when zooming or scrolling. It does
+not change beatmap content or preview/testplay dim, and modal dialogs hide it.

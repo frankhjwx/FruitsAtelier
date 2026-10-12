@@ -1295,5 +1295,6 @@
   "settings.canvasGridLine": "Rasterlijnen",
   "settings.canvasCentreLine": "Middenlijn",
   "settings.canvasGridOpacity": "Dekking: {0}%",
-  "settings.canvasGridReset": "Raster herstellen"
+  "settings.canvasGridReset": "Raster herstellen",
+  "settings.canvasBackgroundDimLabel": "Background Dim"
 }

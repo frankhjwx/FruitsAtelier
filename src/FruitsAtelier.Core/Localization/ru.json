@@ -1295,5 +1295,6 @@
   "settings.canvasGridLine": "Линии сетки",
   "settings.canvasCentreLine": "Центральная линия",
   "settings.canvasGridOpacity": "Непрозрачность: {0}%",
-  "settings.canvasGridReset": "Сбросить сетку"
+  "settings.canvasGridReset": "Сбросить сетку",
+  "settings.canvasBackgroundDimLabel": "Background Dim"
 }

@@ -1295,5 +1295,6 @@
   "settings.canvasGridLine": "グリッド線",
   "settings.canvasCentreLine": "中央線",
   "settings.canvasGridOpacity": "不透明度: {0}%",
-  "settings.canvasGridReset": "グリッドをリセット"
+  "settings.canvasGridReset": "グリッドをリセット",
+  "settings.canvasBackgroundDimLabel": "Background Dim"
 }

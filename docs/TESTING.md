@@ -53,8 +53,9 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 independent dim drafts and persistence, image-drop replacement confirmation,
 filename collisions, retained images, undo/redo and project/export references.
 It also checks local maps after reopening, X-axis grid colour/opacity drafts,
-reset and persistence, unchanged horizontal lines, and settings layouts and
-testplay background controls. On Windows, run `FruitsAtelier.App.exe --render-check
+reset and persistence, unchanged horizontal lines, the canvas dim control’s
+fade timing, pointer capture, preference saving and zoom-independent bounds,
+and settings layouts and testplay background controls. On Windows, run `FruitsAtelier.App.exe --render-check
 --mapping-canvas-render-check` for native background caching, settings and
 replacement-dialog screenshots under `artifacts/tests/mapping-canvas-native`.
 

@@ -46,6 +46,7 @@ public sealed partial class EditorView
         this.height = height;
         hits.Clear(); fields.Clear();
         distanceLabelBounds.Clear(); PreviousDistanceFieldBounds = NextDistanceFieldBounds = XCoordinateFieldBounds = null;
+        AdvanceCanvasBackgroundDim();
         if (IsTestplaying)
         {
             AdvanceTestplay();
@@ -103,6 +104,7 @@ public sealed partial class EditorView
             DrawLegacyConversionButton(c);
             DrawMovementOverlay(c);
             DrawKiaiBadge(c);
+            DrawCanvasBackgroundDim(c);
         }
         DrawTransport(c);
         DrawStatus(c);

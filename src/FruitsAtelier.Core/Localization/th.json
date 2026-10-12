@@ -1295,5 +1295,6 @@
   "settings.canvasGridLine": "เส้นกริด",
   "settings.canvasCentreLine": "เส้นกึ่งกลาง",
   "settings.canvasGridOpacity": "ความทึบ: {0}%",
-  "settings.canvasGridReset": "รีเซ็ตกริด"
+  "settings.canvasGridReset": "รีเซ็ตกริด",
+  "settings.canvasBackgroundDimLabel": "Background Dim"
 }

@@ -1295,5 +1295,6 @@
   "settings.canvasGridLine": "Líneas de cuadrícula",
   "settings.canvasCentreLine": "Línea central",
   "settings.canvasGridOpacity": "Opacidad: {0}%",
-  "settings.canvasGridReset": "Restablecer cuadrícula"
+  "settings.canvasGridReset": "Restablecer cuadrícula",
+  "settings.canvasBackgroundDimLabel": "Background Dim"
 }

@@ -1295,5 +1295,6 @@
   "settings.canvasGridLine": "Lignes de grille",
   "settings.canvasCentreLine": "Ligne centrale",
   "settings.canvasGridOpacity": "Opacité : {0}%",
-  "settings.canvasGridReset": "Réinitialiser la grille"
+  "settings.canvasGridReset": "Réinitialiser la grille",
+  "settings.canvasBackgroundDimLabel": "Background Dim"
 }

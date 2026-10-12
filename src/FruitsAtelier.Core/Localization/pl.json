@@ -1295,5 +1295,6 @@
   "settings.canvasGridLine": "Linie siatki",
   "settings.canvasCentreLine": "Linia środkowa",
   "settings.canvasGridOpacity": "Nieprzezroczystość: {0}%",
-  "settings.canvasGridReset": "Resetuj siatkę"
+  "settings.canvasGridReset": "Resetuj siatkę",
+  "settings.canvasBackgroundDimLabel": "Background Dim"
 }
