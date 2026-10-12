@@ -23,7 +23,7 @@ internal sealed class SliderGeometry
     public static SliderGeometry Create(IReadOnlyList<MapPoint> samples, double velocity)
     {
         var points = new List<SliderPathPoint> { new(samples[0].X, 192) };
-        int direction = 1;
+        int direction = -1;
         for (int i = 1; i < samples.Count; i++)
         {
             var a = samples[i - 1]; var b = samples[i];

@@ -3,6 +3,7 @@ using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
 
 if (args.Contains("--benchmark-sv-edits")) return WriteCacheTests.BenchmarkMultiplierEdits();
+if (args.Contains("--generated-slider-path-check")) { GeneratedSliderPathTests.Run(); Console.WriteLine("PASS Generated slider paths"); return 0; }
 
 if (args.Length == 2 && args[0] == "--import-roundtrip")
 {
@@ -18,6 +19,7 @@ if (args.Length == 2 && args[0] == "--import-roundtrip")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Generated sliders start upwards and export Bezier red anchors with equivalent NM/HR playback", GeneratedSliderPathTests.Run),
     ("Current base SV governs slider editing, cached conversion, export and reload", UnifiedSliderMultiplierTests.Run),
     ("Version history preserves saved, unsaved and deleted authoring by project identity", VersionHistoryTests.Run),
 
@@ -420,7 +422,7 @@ static void CurveExport()
     var r = OsuBeatmapWriter.Serialize(d);
     Check(d.ContentEquals(before), "Export mutated authoring model");
     Equal(1, r.ReadBack.ImportedSliders.Count); Equal(0, r.ReadBack.Tracks.Count);
-    Equal('L', r.ReadBack.ImportedSliders[0].PathType); Equal(1, r.ReadBack.ImportedSliders[0].SpanCount);
+    Equal('B', r.ReadBack.ImportedSliders[0].PathType); Equal(1, r.ReadBack.ImportedSliders[0].SpanCount);
     Check(r.MaxCoordinateQuantization <= 0.5, "Unexpected integer error");
     Check(r.ObjectSequenceMatches, "Reconversion changed object sequence");
     Check(r.Diagnostics.Contains(L.Get("core.writer.rounding", r.MaxTimeQuantizationMs.ToString("R", CultureInfo.InvariantCulture), r.MaxCoordinateQuantization.ToString("R", CultureInfo.InvariantCulture))), "No quantization report");

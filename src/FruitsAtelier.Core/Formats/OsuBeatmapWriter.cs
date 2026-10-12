@@ -164,7 +164,15 @@ public static class OsuBeatmapWriter
             var track = tracks[slider.SourceId];
             if (slider.SpanCount != track.SpanCount) throw new InvalidDataException(L.Get("core.writer.spanMismatch"));
             var first = slider.Path[0];
-            string path = "L|" + string.Join('|', slider.Path.Skip(1).Select(p => Coordinate(p.X) + ":" + Coordinate(p.GeometryY)));
+            var pathBuilder = new StringBuilder("B");
+            for (int i = 1; i < slider.Path.Count; i++)
+            {
+                string point = Coordinate(slider.Path[i].X) + ":" + Coordinate(slider.Path[i].GeometryY);
+                pathBuilder.Append('|').Append(point);
+                // Repeated internal anchors delimit straight Bezier segments in stable.
+                if (i < slider.Path.Count - 1) pathBuilder.Append('|').Append(point);
+            }
+            string path = pathBuilder.ToString();
             string[] values = track.OriginalLine?.Split(',') ?? ["0", "192", "0", "2", "0", "L", "1", "0", "0|0", "0:0|0:0", "0:0:0:0:"];
             if (values.Length < 8 || (OsuBeatmapReader.Integer(values[3]) & (1 | 2 | 8 | 128)) != 2)
                 throw new InvalidDataException(L.Get("core.writer.originalObject"));

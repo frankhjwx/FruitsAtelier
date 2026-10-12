@@ -15,6 +15,7 @@ Adapted portions retain the upstream MIT licence in `LICENCE.osu.txt`.
 | `osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapProcessor.cs` | HR fruit offset state and tiny-droplet export compensation, seed 1337, complete-parent RNG traversal, droplet rotation draws, TinyDroplet X offsets and clamping |
 | `osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmap.cs` | Stable time ordering after flattening parent objects |
 | `osu.Game.Rulesets.Catch/Objects/JuiceStreamPath.cs` | Time–X velocity bound and Pythagorean construction of a linear slider path within geometric Y bounds |
+| `osu.Game/Rulesets/Objects/BezierConverter.cs` | Straight segments exported as legacy Bezier paths with repeated internal anchors |
 | `osu.Game/Rulesets/Objects/SliderPath.cs` | Arc-length lookup of the resulting linear path |
 | `osu.Game/Rulesets/Objects/Legacy/ConvertHitObjectParser.cs` | v12–v14 duplicate-point segmentation, collinear perfect curves, float-to-integer coordinates |
 | `osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs` | Red/green timing precedence, inherited SV and NaN tick metadata |
@@ -43,7 +44,7 @@ and whether every tiny target met the internal tolerance.
 Each authoring track stores one traversal and an explicit span count. Individual
 segments can be linear or Bezier; a nullable outgoing kind inherits the track's
 default. The generated polyline uses double coordinates. Geometric
-Y folds at playfield boundaries do not add slider repeats or Catch ticks.
+Y starts at 192 and initially travels upwards when vertical travel is nonzero. Vertical travel continues until folding at Y=1/383. These folds do not add slider repeats or Catch ticks.
 Imported paths use float vector approximation and declared-length
 shortening/extension, preserving the no-extension rule for equal final points.
 Repeat spans retain the original path while reversing progress; repeat fruit
