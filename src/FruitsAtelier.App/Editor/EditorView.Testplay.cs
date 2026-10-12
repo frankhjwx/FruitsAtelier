@@ -295,7 +295,7 @@ public sealed partial class EditorView
             float opacity = (float)Math.Clamp(Math.Min(age / 180, (1300 - age) / 300), 0, 1);
             if (opacity > 0)
             {
-                var bar = new Rect(stage.X, height / 2f - 30, stage.Width, 60);
+                var bar = new Rect(0, height / 2f - 30, width, 60);
                 c.Fill(bar, 0, opacity: .72f * opacity);
                 c.TextOpacity(notice, width / 2f - c.MeasureText(notice, 20) / 2, bar.Y + 18,
                     20, 0xE6F2FF, stage.Width, true, opacity);
