@@ -85,7 +85,8 @@ public static partial class ProjectSerializer
     {
         // SV owns the base distance; older projects could store an independent DPB.
         if (document.DistancePerBeat != 100 * document.EffectiveSliderMultiplier)
-            document.DistancePerBeatOverride = 100 * document.EffectiveSliderMultiplier;
+            document.DistancePerBeatOverride = document.SliderMultiplierOverride is null
+                ? null : 100 * document.EffectiveSliderMultiplier;
     }
 
     public static MapDocument ReadFile(string path)

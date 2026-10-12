@@ -231,6 +231,9 @@ internal static class SliderMultiplierTests
         Check(loaded.EffectiveSliderMultiplier == 1.3 && loaded.DistancePerBeat == 130, "Loading legacy conflicts gives SV precedence");
         loaded = ProjectSerializer.Read("{\"SchemaVersion\":1,\"Document\":{\"SliderMultiplier\":1.4,\"DistancePerBeatOverride\":350}}");
         Check(loaded.DistancePerBeat == 140, "Original SV also takes precedence over legacy DPB");
+        loaded = ProjectSerializer.Read("{\"SchemaVersion\":1,\"Document\":{\"SliderMultiplier\":0.2,\"DistancePerBeatOverride\":350}}");
+        Check(loaded.DistancePerBeat == 20 && loaded.DistancePerBeatOverride is null,
+            "Conflict loading preserves imported SV outside the editing range");
     }
 
     private static void Equivalent(OsuWriteResult before, OsuWriteResult after)
