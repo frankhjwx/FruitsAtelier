@@ -772,6 +772,9 @@ internal static class RenderCheck
                 var panel = view.MovementOverlayBounds!.Value;
                 var beforePanelDrag = view.Document.DeepClone();
                 view.PointerDown(panel.X + 8, panel.Y + 8, 0, false, false);
+                Paint();
+                if (view.IsEditingText || view.DistanceSliderBounds is not null)
+                    throw new InvalidOperationException("Native indicator press opened numeric controls before release.");
                 view.PointerMove(panel.X + 38, panel.Y - 32, false, false); Paint();
                 view.PointerUp(panel.X + 38, panel.Y - 32, 0); Paint();
                 if (view.MovementOverlayBounds is not { } moved || Math.Abs(moved.X - panel.X - 30) > .01

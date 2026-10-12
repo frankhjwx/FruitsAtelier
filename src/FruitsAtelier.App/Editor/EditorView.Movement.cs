@@ -23,7 +23,7 @@ public sealed partial class EditorView
     private bool movementPanelPointer, movementPanelMoved;
     private float movementPanelPointerX, movementPanelPointerY, movementPanelStartX, movementPanelStartY;
 
-    private bool MovementPanelPointerDown(float x, float y, int button, bool shift)
+    private bool MovementPanelPointerDown(float x, float y, int button)
     {
         if (MovementOverlayBounds is not { } panel || !panel.Contains(x, y)) return false;
         if (button == 2)
@@ -38,19 +38,13 @@ public sealed partial class EditorView
         movementPanelPointer = true; movementPanelMoved = false;
         movementPanelPointerX = x; movementPanelPointerY = y;
         movementPanelStartX = panel.X; movementPanelStartY = panel.Y;
-        DistancePointerDown(x, y, button, shift);
         return true;
     }
 
     private void MoveMovementPanel(float x, float y)
     {
         if (!movementPanelMoved && Math.Abs(x - movementPanelPointerX) < 3 && Math.Abs(y - movementPanelPointerY) < 3) return;
-        if (!movementPanelMoved)
-        {
-            // A click still opens the numeric editor; crossing the drag threshold only moves the panel.
-            FinishDistanceEdit(true); textSelecting = false;
-            movementPanelMoved = true;
-        }
+        movementPanelMoved = true;
         if (MovementOverlayBounds is not { } panel) return;
         movementPanelPosition = (Math.Clamp(movementPanelStartX + x - movementPanelPointerX, plot.X, plot.Right - panel.Width),
             Math.Clamp(movementPanelStartY + y - movementPanelPointerY, plot.Y, plot.Bottom - panel.Height));

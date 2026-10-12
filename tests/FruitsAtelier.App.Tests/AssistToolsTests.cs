@@ -155,14 +155,20 @@ internal static class AssistToolsTests
         var defaultPanel = ui.View.MovementOverlayBounds!.Value;
         float panelX = defaultPanel.X + 15, panelY = defaultPanel.Y + 12;
         ui.View.PointerDown(panelX, panelY, 0, false, false);
+        ui.Paint();
+        Check(!ui.View.IsEditingText && ui.View.DistanceSliderBounds is null, "Panel press flashed DS editing controls");
+        ui.View.PointerMove(panelX + 1, panelY + 1, false, false); ui.Paint();
+        Check(!ui.View.IsEditingText && ui.View.DistanceSliderBounds is null, "Subthreshold movement flashed DS editing controls");
         Check(ui.View.WantsCapture, "Panel drag did not capture pointer");
         ui.View.PointerMove(panelX + 80, panelY - 100, false, false); ui.Paint();
+        Check(!ui.View.IsEditingText && ui.View.DistanceSliderBounds is null, "Panel drag opened DS editing controls");
         ui.View.PointerUp(panelX + 80, panelY - 100, 0); ui.Paint();
         var movedPanel = ui.View.MovementOverlayBounds!.Value;
         Near(defaultPanel.X + 80, movedPanel.X); Near(defaultPanel.Y - 100, movedPanel.Y);
         Check(original.ContentEquals(ui.View.Document), "Panel drag changed content");
         Check(!ui.View.WantsCapture, "Panel drag retained pointer capture");
-        ui.View.PointerDown(movedPanel.X + 15, movedPanel.Y + 12, 0, false, false);
+        ui.View.PointerDown(movedPanel.X + 15, movedPanel.Y + 65, 0, false, false); ui.Paint();
+        Check(!ui.View.IsEditingText, "Panel press flashed X editing controls");
         ui.View.PointerMove(-1000, -1000, false, false); ui.Paint();
         ui.View.PointerUp(-1000, -1000, 0); ui.Paint();
         var clampedPanel = ui.View.MovementOverlayBounds!.Value;
@@ -171,6 +177,11 @@ internal static class AssistToolsTests
         ui.ClickText(Strings.Get("movement.resetPosition"));
         Check(ui.View.MovementOverlayBounds == defaultPanel, "Panel reset did not restore default position");
         Check(original.ContentEquals(ui.View.Document), "Panel reset changed content");
+        ui.View.PointerDown(defaultPanel.X + 15, defaultPanel.Y + 65, 0, false, false); ui.Paint();
+        Check(!ui.View.IsEditingText, "Coordinate editing began before release");
+        ui.View.PointerUp(defaultPanel.X + 15, defaultPanel.Y + 65, 0); ui.Paint();
+        Check(ui.View.IsEditingText, "Coordinate click did not open its numeric editor");
+        ui.View.CancelInteraction(); ui.Paint();
         foreach (string language in new[] { "en", "zh-CN" })
         {
             Strings.SetLanguage(language); ui.Resize(980, 620);

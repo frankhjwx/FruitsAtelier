@@ -123,7 +123,7 @@ public sealed partial class EditorView
         if (drag != DragKind.None) return;
         if (TimingPageVisible && menu < 0 && contextItems.Count == 0 && WaveformBounds.Contains(x, y))
         { TimingWaveformPointer(x, y, button); return; }
-        if (menu < 0 && contextItems.Count == 0 && MovementPanelPointerDown(x, y, button, shift)) return;
+        if (menu < 0 && contextItems.Count == 0 && MovementPanelPointerDown(x, y, button)) return;
         if (menu < 0 && contextItems.Count == 0 && DistancePointerDown(x, y, button, shift)) return;
         if (button == 2 && DifficultyTabContext(x, y)) return;
         if (menu >= 0 && button != 0) { menu = -1; return; }
@@ -558,7 +558,10 @@ public sealed partial class EditorView
         if (movementPanelPointer && button == 0)
         {
             MoveMovementPanel(x, y); movementPanelPointer = false;
-            if (movementPanelMoved) return;
+            // Wait for release to distinguish a numeric-field click from a panel drag.
+            if (!movementPanelMoved) DistancePointerDown(movementPanelPointerX, movementPanelPointerY, button, shift);
+            textSelecting = false;
+            return;
         }
         if (AimodVisible) return;
         testplayCursorPressed = false;
