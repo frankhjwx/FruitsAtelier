@@ -15,8 +15,9 @@ public sealed class LibrarySettings
         get => FirstRunSetupVersion >= CurrentFirstRunSetupVersion;
         set => FirstRunSetupVersion = value ? CurrentFirstRunSetupVersion : 0;
     }
-    public const uint DefaultCanvasGridColour = 0x262D37;
-    public const uint DefaultCanvasCentreLineColour = 0x3C4653;
+    public const uint DefaultCanvasGridColour = 0x8F8F8F;
+    public const uint DefaultCanvasCentreLineColour = 0xFFFFFF;
+    public const int DefaultCanvasGridOpacity = 40;
     public const uint DefaultStandIndicatorColour = 0xC0C0C0;
     public const uint DefaultWalkIndicatorColour = 0x63B99D;
     public const uint DefaultDashIndicatorColour = 0xD6B365;
@@ -56,7 +57,7 @@ public sealed class LibrarySettings
     public bool ForceBackgroundDim { get; set; }
     public uint CanvasGridColour { get; set; } = DefaultCanvasGridColour;
     public uint CanvasCentreLineColour { get; set; } = DefaultCanvasCentreLineColour;
-    private int canvasGridOpacity = 100;
+    private int canvasGridOpacity = DefaultCanvasGridOpacity;
     public int CanvasGridOpacity { get => canvasGridOpacity; set => canvasGridOpacity = Math.Clamp(value, 0, 100); }
     private int mappingCanvasBackgroundDim = 90;
     public int MappingCanvasBackgroundDim { get => mappingCanvasBackgroundDim; set => mappingCanvasBackgroundDim = Math.Clamp(value, 0, 100); }

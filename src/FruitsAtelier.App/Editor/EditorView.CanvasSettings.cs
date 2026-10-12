@@ -26,7 +26,7 @@ public sealed partial class EditorView
         {
             draftSettingsColours[4] = LibrarySettings.DefaultCanvasGridColour;
             draftSettingsColours[5] = LibrarySettings.DefaultCanvasCentreLineColour;
-            draftCanvasGridOpacity = 100;
+            draftCanvasGridOpacity = LibrarySettings.DefaultCanvasGridOpacity;
         });
         float cellWidth = (available - 12) / 2;
         string[] names = ["settings.canvasGridLine", "settings.canvasCentreLine"];

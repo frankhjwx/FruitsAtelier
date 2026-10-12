@@ -1008,7 +1008,7 @@ lines (including Grid Snap subdivisions) and the X=256 centre line, using the
 colour palette or HEX input.
 Their shared opacity ranges from 0% to 100%; the percentage menu selects multiples
 of ten and the minus/plus buttons adjust by five. **Reset grid** restores the
-original colours and 100% opacity. These preferences affect all vertical X-axis
+default grid colour `#8F8F8F`, centre-line colour `#FFFFFF` and 40% opacity. These preferences affect all vertical X-axis
 lines. Horizontal time lines keep their existing appearance. Changes remain
 drafts until Apply and do not change beatmap content. Short settings windows scroll to reach the grid controls.
 
