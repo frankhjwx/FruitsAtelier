@@ -20,7 +20,7 @@ internal static class SliderMultiplierTests
                 if (i % 25 == 0) map.TimingPoints.Add(new() { TimeMs = i * 2000, BeatLengthMs = i % 50 == 0 ? 500 : 400 });
             }
             var ui = new Ui(false); ui.LoadDocument(map);
-            ui.View.OpenDistanceSnapDialog(); ui.Paint(); ui.ClickText(L.Get("ui.dpb"));
+            ui.View.OpenDistanceSnapDialog(); ui.Paint(); ui.ClickText(L.Get("ui.sv"));
             long now = 0; ui.View.SliderMultiplierClock = () => now;
             for (int step = 0; step < 8; step++)
             {
@@ -195,16 +195,16 @@ internal static class SliderMultiplierTests
         ui.Click(link.X + 8, link.Y + 8);
         Check(ui.View.DistanceSnapDialogVisible, "Timing entry opens DS configuration");
         var original = ui.View.Document.DeepClone();
-        ui.ClickText(L.Get("ui.dpb"));
+        ui.ClickText(L.Get("ui.sv"));
         Check(ui.Canvas.Texts.Any(t => t.Value == "2"), "DPB 200 converts to SV 2");
-        ui.ClickText("SV");
+        ui.ClickText(L.Get("ui.dpb"));
         Check(ui.Canvas.Texts.Any(t => t.Value == "200"), "SV converts back to DPB without content changes");
         ui.ClickText(L.Get("library.apply"));
         Check(ui.View.Document.ContentEquals(original), "Unit-only Apply does not add a content edit");
-        ui.View.OpenDistanceSnapDialog(); ui.Paint(); ui.ClickText(L.Get("ui.dpb"));
-        Set(ui, "1.3"); ui.ClickText(L.Get("ui.sv"));
+        ui.View.OpenDistanceSnapDialog(); ui.Paint(); ui.ClickText(L.Get("ui.sv"));
+        Set(ui, "1.3"); ui.ClickText(L.Get("ui.dpb"));
         Check(ui.Canvas.Texts.Any(t => t.Value == "130"), "Edited SV converts to DPB in the same draft");
-        ui.ClickText(L.Get("ui.dpb")); ui.ClickText(L.Get("library.apply"));
+        ui.ClickText(L.Get("ui.sv")); ui.ClickText(L.Get("library.apply"));
         Check(ui.View.SliderMultiplierValidationBusy && !ui.View.PrepareFileOperation(), "SV Apply waits for background validation");
         Wait(ui);
         Check(!ui.View.DistanceSnapDialogVisible && ui.View.Document.EffectiveSliderMultiplier == 1.3

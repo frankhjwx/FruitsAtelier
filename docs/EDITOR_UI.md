@@ -153,9 +153,9 @@ section, including its start and excluding the next red point. BPM changes do no
 move these markers; the audio preview point stays fixed. The option starts off.
 Offset buttons step by 2 ms, Ctrl by 1 ms and Shift by 10 ms.
 
-Below Slider Tick Rate, **Looking For Slider Velocity? You can adjust it here**
-opens **Configure DS…**. Its upper section edits the difficulty's base SV and DPB
-through one numeric field. Click the SV/DPB button to switch units; DPB equals
+Below Slider Tick Rate, the single **Slider Velocity** row has an **Adjust**
+button that opens **Configure DS…**. Its upper section edits the difficulty's base SV and DPB
+through one numeric field. Select the visible **SV** or **DPB** buttons beside the field to switch units; DPB equals
 100 × SV. Switching units does not edit content. SV accepts 0.4–3.6, equivalent
 to DPB 40–360 px, independently of reference Snap and BPM.
 

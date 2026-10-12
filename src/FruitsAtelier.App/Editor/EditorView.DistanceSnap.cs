@@ -32,6 +32,8 @@ public sealed partial class EditorView
     internal Rect DistanceSnapTrackBounds { get; private set; }
     internal Rect DistanceSnapBaseTrackBounds { get; private set; }
     internal Rect DistanceSnapBaseFieldBounds { get; private set; }
+    internal Rect DistanceSnapSvUnitBounds { get; private set; }
+    internal Rect DistanceSnapDpbUnitBounds { get; private set; }
     internal Rect DistanceSnapPreviewBounds { get; private set; }
     internal IReadOnlyList<MapPoint> DistanceSnapPreviewFruits => dsPreviewFruits;
     private readonly List<MapPoint> dsPreviewFruits = [];
@@ -301,9 +303,16 @@ public sealed partial class EditorView
             dsBaseDragPresets = dsDraft.ToList();
             UpdateDistanceBase(mouseX);
         }, true));
-        Button(c, new(r.X + 4, r.Y + 80, 48, 30), dsBaseSv ? L.Get("ui.sv") : L.Get("ui.dpb"), ToggleDistanceBaseUnit,
-            enabled: !dsBaseEdited || DistanceBaseValue(dsBaseText) is not null);
-        DistanceSnapBaseFieldBounds = new(r.X + 60, r.Y + 80, 106, 30);
+        DistanceSnapSvUnitBounds = new(r.X + 4, r.Y + 80, 48, 30);
+        DistanceSnapDpbUnitBounds = new(r.X + 56, r.Y + 80, 48, 30);
+        bool unitEnabled = !dsBaseEdited || DistanceBaseValue(dsBaseText) is not null;
+        foreach (var unit in new[] { (DistanceSnapSvUnitBounds, true, "ui.sv"), (DistanceSnapDpbUnitBounds, false, "ui.dpb") })
+        {
+            c.Fill(unit.Item1, Surface, 4); c.Stroke(unit.Item1, Grid, radius: 4);
+            Button(c, unit.Item1, L.Get(unit.Item3), () => { if (dsBaseSv != unit.Item2) ToggleDistanceBaseUnit(); },
+                active: dsBaseSv == unit.Item2, enabled: unitEnabled, textPadding: 12);
+        }
+        DistanceSnapBaseFieldBounds = new(r.X + 112, r.Y + 80, 106, 30);
         var field = DistanceSnapBaseFieldBounds;
         c.Fill(field, Surface, 4);
         c.Stroke(field, DistanceBaseValue(dsBaseText) is null ? Error : dsBaseFocused ? Accent : Grid, radius: 4);

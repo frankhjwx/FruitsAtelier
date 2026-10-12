@@ -400,6 +400,11 @@ Legacy and are reported. Neither command saves the supplied map.
 
 ## Base SV validation benchmark
 
+Run `FruitsAtelier.App.exe --render-check --sv-ds-render-check` for focused native
+checks of the Timing **Adjust** entry and DS **SV / DPB** buttons. It checks both
+languages, window sizes and 96/144/192 DPI, including Apply and undo, and captures
+each unit mode under `artifacts/tests/sv-ds-native`.
+
 Run `dotnet run --no-build --project tests/FruitsAtelier.App.Tests -c Release -- --sv-performance`
 to measure SV/DPB draft input and Apply validation on 100 and 1,000 imported
 Bezier sliders with repeats and BPM changes. Eight draft adjustments arrive

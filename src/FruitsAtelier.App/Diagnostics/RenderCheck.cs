@@ -112,6 +112,24 @@ internal static class RenderCheck
         view.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(peaks, 1));
         var original = view.Document.DeepClone();
         void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
+        void Capture(string state, string lang)
+        {
+            if (!Environment.GetCommandLineArgs().Contains("--sv-ds-render-check")) return;
+            canvas.Begin(); view.Render(canvas, width, height);
+            canvas.End(capture: () =>
+            {
+                var frame = canvas.CapturePixels();
+                string folder = Path.GetFullPath("artifacts/tests/sv-ds-native");
+                Directory.CreateDirectory(folder);
+                using var output = new BinaryWriter(File.Create(Path.Combine(folder, $"{state}-{lang}-{frame.Width}x{frame.Height}.bmp")));
+                output.Write((ushort)0x4D42); output.Write(54 + frame.Pixels.Length);
+                output.Write(0); output.Write(54); output.Write(40);
+                output.Write(frame.Width); output.Write(-frame.Height);
+                output.Write((ushort)1); output.Write((ushort)32); output.Write(0);
+                output.Write(frame.Pixels.Length); output.Write(0); output.Write(0); output.Write(0); output.Write(0);
+                output.Write(frame.Pixels);
+            });
+        }
         try
         {
             foreach (string lang in new[] { "en", "zh-CN" })
@@ -122,15 +140,25 @@ internal static class RenderCheck
                 var svRow = view.TimingSliderVelocityLinkBounds;
                 if (svRow.Bottom > height || view.TimingFields.Any(f => f.Key == "page.sliderMultiplier"))
                     throw new InvalidOperationException("SV navigation must fit the Timing panel.");
+                Capture("timing", lang);
                 view.PointerDown(svRow.X + 8, svRow.Y + 10, 0, false, false);
                 view.PointerUp(svRow.X + 8, svRow.Y + 10, 0); Paint();
                 if (!view.DistanceSnapDialogVisible) throw new InvalidOperationException("SV entry did not open DS.");
+                var unit = view.DistanceSnapDpbUnitBounds;
+                view.PointerDown(unit.X + 10, unit.Y + 10, 0, false, false);
+                view.PointerUp(unit.X + 10, unit.Y + 10, 0); Paint();
+                Capture("dpb", lang);
+                unit = view.DistanceSnapSvUnitBounds;
+                view.PointerDown(unit.X + 10, unit.Y + 10, 0, false, false);
+                view.PointerUp(unit.X + 10, unit.Y + 10, 0); Paint();
+                Capture("sv", lang);
                 var svField = view.DistanceSnapBaseFieldBounds;
-                double nextDpb = (view.Document.EffectiveSliderMultiplier + .01) * 100;
+                double nextSv = view.Document.EffectiveSliderMultiplier + .01;
+                double nextDpb = nextSv * 100;
                 view.PointerDown(svField.X + 10, svField.Y + 10, 0, false, false);
                 view.PointerUp(svField.X + 10, svField.Y + 10, 0);
                 view.KeyDown(65, true, false);
-                view.PasteFieldText(nextDpb.ToString(System.Globalization.CultureInfo.InvariantCulture)); Paint();
+                view.PasteFieldText(nextSv.ToString(System.Globalization.CultureInfo.InvariantCulture)); Paint();
                 view.KeyDown(13, false, false);
                 float applyX = (width + Math.Min(1040, width - 32)) / 2f - 60;
                 float applyY = (height + Math.Min(640, height - 32)) / 2f - 30;
@@ -892,6 +920,18 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--sv-ds-render-check"))
+        {
+            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (var size in new[] { (1440, 900), (980, 620) })
+            {
+                view.LoadDocument(DemoMap.Create()); view.CloseLibrary();
+                canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                CheckTimingSetup(canvas, view, size.Item1, size.Item2);
+            }
+            AppLog.Write("SV/DPB controls passed at all sizes, DPI values and languages.");
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--mapping-canvas-render-check"))
         {
             MappingCanvasRenderCheck.Run(canvas);

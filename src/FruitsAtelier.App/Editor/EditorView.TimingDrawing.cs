@@ -323,13 +323,10 @@ public sealed partial class EditorView
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.moveNotes", timingMoveNotes, () => timingMoveNotes = !timingMoveNotes); y += row + gap;
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.moveMarkers", timingMoveMarkers, () => timingMoveMarkers = !timingMoveMarkers); y += row + gap;
         Number("tickRate", Document.SliderTickRate, v => { if (v < .5 || v > 8) throw new ArgumentException(L.Get("timing.range")); Edit(L.Get("timing.edit"), () => Document.SliderTickRate = v); });
-        TimingSliderVelocityLinkBounds = new(r.X, y, r.Width, row * 2);
-        var link = TimingSliderVelocityLinkBounds;
-        c.Fill(link, Surface, 4); c.Stroke(link, Grid, radius: 4);
-        var linkLines = WrapSyncText(c, L.Get("timing.sliderVelocityLink"), link.Width - 20);
-        for (int i = 0; i < linkLines.Length; i++)
-            c.Text(linkLines[i].Text, link.X + 10, link.Y + 8 + i * 16, 12, Accent, link.Width - 20);
-        hits.Add(new(link, OpenDistanceSnapDialog, true)); y += row * 2 + gap;
+        c.Text(L.Get("timing.sliderVelocity"), r.X, y + 7, 12, Foreground, 95);
+        TimingSliderVelocityLinkBounds = new(r.X + 100, y, r.Width - 100, row);
+        TimingButton(c, TimingSliderVelocityLinkBounds, L.Get("timing.adjustSliderVelocity"), OpenDistanceSnapDialog);
+        y += row + gap;
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.metronome", metronomeEnabled, () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }); y += row + gap;
         TimingButton(c, new(r.X, y, r.Width, row), L.Get("timing.setup"), OpenTimingSetup); y += row + gap;
         c.Text(timingError.Length > 0 ? timingError : sliderMultiplierValidation is not null

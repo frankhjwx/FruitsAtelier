@@ -69,17 +69,17 @@ public sealed partial class EditorView
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
         }
-        if (TimingModal) { TimingPointerDown(x, y, button); return; }
-        if (!LibraryVisible && !SongSetupVisible && panelMenuOpen) { PanelPointerDown(x, y); return; }
-        if (TimingPageVisible && !SongSetupVisible && menu < 0 && rightPanel.Contains(x, y)) { TimingPointerDown(x, y, button); return; }
-        if (BeginVolumePopoverPointer(x, y, button)) return;
-        if (SongSetupVisible) { SongSetupPointerDown(x, y, button, shift); return; }
         if (DistanceSnapDialogVisible)
         {
             dsSliderShift = shift;
             DistanceSnapPointerDown(x, y, button);
             return;
         }
+        if (TimingModal) { TimingPointerDown(x, y, button); return; }
+        if (!LibraryVisible && !SongSetupVisible && panelMenuOpen) { PanelPointerDown(x, y); return; }
+        if (TimingPageVisible && !SongSetupVisible && menu < 0 && rightPanel.Contains(x, y)) { TimingPointerDown(x, y, button); return; }
+        if (BeginVolumePopoverPointer(x, y, button)) return;
+        if (SongSetupVisible) { SongSetupPointerDown(x, y, button, shift); return; }
         if (VolumeDialogVisible)
         {
             if (BeginWorkspaceScroll(x, y, button) || BeginVolumeDrag(x, y, button)) return;
