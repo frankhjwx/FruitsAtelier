@@ -1290,5 +1290,10 @@
   "background.oneFile": "배경 이미지를 한 번에 하나씩 드롭하세요.",
   "background.replacePrompt": "현재 배경 이미지를 교체하시겠습니까?",
   "background.keepOld": "이전 이미지 파일은 보존됩니다.",
-  "background.replace": "배경 교체"
+  "background.replace": "배경 교체",
+  "settings.canvasGridColours": "X축 격자",
+  "settings.canvasGridLine": "격자선",
+  "settings.canvasCentreLine": "중앙선",
+  "settings.canvasGridOpacity": "불투명도: {0}%",
+  "settings.canvasGridReset": "격자 초기화"
 }

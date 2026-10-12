@@ -11,7 +11,7 @@ if (args.Contains("--mapping-canvas-check"))
 {
     try
     {
-        MappingCanvasBackgroundTests.Run(); SettingsTests.Layout(); SettingsTests.IndicatorColours();
+        MappingCanvasBackgroundTests.Run(); CanvasGridSettingsTests.Run(); SettingsTests.Layout(); SettingsTests.IndicatorColours();
         DisplaySettingsTests.Run(); TestplayPresentationTests.ControlsAndBackground();
         Console.WriteLine("PASS Mapping canvas backgrounds, preferences, replacement and presentation checks"); return 0;
     }
@@ -184,6 +184,7 @@ var tests = new (string Name, Action Run)[]
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
     ("Settings layout preserves labels and aligns controls in narrow windows", SettingsTests.Layout),
+    ("Mapping canvas X-axis grid colours and opacity preserve horizontal lines and content", CanvasGridSettingsTests.Run),
     ("Mapping canvas backgrounds, image replacement and preferences", MappingCanvasBackgroundTests.Run),
     ("Mapping Canvas indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
     ("Stack preview retains full outlines and edits individual fruits horizontally", StackDialogTests.ManualFruits),

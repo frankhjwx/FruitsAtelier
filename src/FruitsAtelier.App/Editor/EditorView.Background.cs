@@ -16,9 +16,10 @@ public sealed partial class EditorView
 
     private bool BeginBackgroundDimDrag(float x, float y, int button)
     {
+        if (librarySettingsOpen && settingsColourIndex >= 0) return false;
         bool visible = backgroundDimSliderDraft
             ? librarySettingsOpen && settingsCategory == (backgroundDimMappingCanvas ? SettingsCategory.MappingCanvas : SettingsCategory.Testplay) : TestplayPauseMenuVisible;
-        if (FirstRunSetupVisible && !workspaceScrollBounds.Contains(x, y)) return false;
+        if ((FirstRunSetupVisible || librarySettingsOpen && settingsCategory == SettingsCategory.MappingCanvas) && !workspaceScrollBounds.Contains(x, y)) return false;
         if (!visible || button != 0 || backgroundDimSliderBounds.Width <= 0 || !backgroundDimSliderBounds.Contains(x, y)) return false;
         backgroundDimDragging = true;
         backgroundDimDragDraft = backgroundDimSliderDraft;

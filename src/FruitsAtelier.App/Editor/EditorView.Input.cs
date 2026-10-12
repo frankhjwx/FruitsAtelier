@@ -57,7 +57,7 @@ public sealed partial class EditorView
         timingPointerShift = shift;
         if (librarySettingsOpen)
         {
-            if (LanguagePointerDown(x, y, button) || BeginIndicatorColourDrag(x, y, button)) return;
+            if (LanguagePointerDown(x, y, button) || BeginSettingsColourDrag(x, y, button)) return;
             if (contextItems.Count > 0)
             {
                 if (button == 0) ActivateContextMenu(x, y); else contextItems.Clear();
@@ -111,7 +111,7 @@ public sealed partial class EditorView
             return;
         }
         if (LanguagePointerDown(x, y, button)) return;
-        if (BeginIndicatorColourDrag(x, y, button)) return;
+        if (BeginSettingsColourDrag(x, y, button)) return;
         if (SliderDialogVisible)
         {
             if (button == 0) for (int i = sliderDialogHits.Count - 1; i >= 0; i--)
@@ -440,7 +440,7 @@ public sealed partial class EditorView
         mouseX = x; mouseY = y;
         if (IsTestplaying) { TestplayPointerMove(x, y); return; }
         if (workspaceScrollDragging) { MoveWorkspaceScroll(y); return; }
-        if (settingsColourDrag != 0) { UpdateIndicatorColourDrag(x, y); return; }
+        if (settingsColourDrag != 0) { UpdateSettingsColourDrag(x, y); return; }
         if (updatesPage) return;
         if (sliderHoldConsumed) return;
         if (SliderHoldNeedsRedraw && (Math.Abs(x - sliderHoldX) >= 2 || Math.Abs(y - sliderHoldY) >= 2)) { sliderHoldId = Guid.Empty; noteHoldTarget = null; }
@@ -573,7 +573,7 @@ public sealed partial class EditorView
         if (TimingModal) return;
         if (EndVolumePopoverPointer(x, y, button)) return;
         if (workspaceScrollDragging && button == 0) { MoveWorkspaceScroll(y); workspaceScrollDragging = false; return; }
-        if (settingsColourDrag != 0 && button == 0) { UpdateIndicatorColourDrag(x, y); settingsColourDrag = 0; return; }
+        if (settingsColourDrag != 0 && button == 0) { UpdateSettingsColourDrag(x, y); settingsColourDrag = 0; return; }
         if (textSelecting && button == 0) { mouseY = y; MoveInputSelection(x); textSelecting = false; return; }
         if (HitsoundCopierVisible) return;
         if (SongSetupVisible) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }

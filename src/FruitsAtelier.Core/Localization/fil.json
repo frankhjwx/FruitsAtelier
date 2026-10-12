@@ -1290,5 +1290,10 @@
   "background.oneFile": "Mag-drop ng isang background image sa bawat pagkakataon.",
   "background.replacePrompt": "Palitan ang kasalukuyang background image?",
   "background.keepOld": "Pananatilihin ang lumang image file.",
-  "background.replace": "Palitan ang background"
+  "background.replace": "Palitan ang background",
+  "settings.canvasGridColours": "X-axis grid",
+  "settings.canvasGridLine": "Mga grid line",
+  "settings.canvasCentreLine": "Gitnang linya",
+  "settings.canvasGridOpacity": "Opacity: {0}%",
+  "settings.canvasGridReset": "I-reset ang grid"
 }

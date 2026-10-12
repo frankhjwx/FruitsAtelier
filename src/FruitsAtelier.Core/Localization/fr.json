@@ -1290,5 +1290,10 @@
   "background.oneFile": "Déposez une seule image de fond à la fois.",
   "background.replacePrompt": "Remplacer l’image de fond actuelle ?",
   "background.keepOld": "Le fichier de l’image précédente sera conservé.",
-  "background.replace": "Remplacer le fond"
+  "background.replace": "Remplacer le fond",
+  "settings.canvasGridColours": "Grille de l’axe X",
+  "settings.canvasGridLine": "Lignes de grille",
+  "settings.canvasCentreLine": "Ligne centrale",
+  "settings.canvasGridOpacity": "Opacité : {0}%",
+  "settings.canvasGridReset": "Réinitialiser la grille"
 }

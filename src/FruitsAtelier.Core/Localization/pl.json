@@ -1290,5 +1290,10 @@
   "background.oneFile": "Przeciągaj po jednym obrazie tła.",
   "background.replacePrompt": "Zastąpić bieżący obraz tła?",
   "background.keepOld": "Poprzedni plik obrazu zostanie zachowany.",
-  "background.replace": "Zastąp tło"
+  "background.replace": "Zastąp tło",
+  "settings.canvasGridColours": "Siatka osi X",
+  "settings.canvasGridLine": "Linie siatki",
+  "settings.canvasCentreLine": "Linia środkowa",
+  "settings.canvasGridOpacity": "Nieprzezroczystość: {0}%",
+  "settings.canvasGridReset": "Resetuj siatkę"
 }

@@ -1290,5 +1290,10 @@
   "background.oneFile": "Перетаскивайте по одному фоновому изображению.",
   "background.replacePrompt": "Заменить текущее фоновое изображение?",
   "background.keepOld": "Предыдущий файл изображения будет сохранён.",
-  "background.replace": "Заменить фон"
+  "background.replace": "Заменить фон",
+  "settings.canvasGridColours": "Сетка оси X",
+  "settings.canvasGridLine": "Линии сетки",
+  "settings.canvasCentreLine": "Центральная линия",
+  "settings.canvasGridOpacity": "Непрозрачность: {0}%",
+  "settings.canvasGridReset": "Сбросить сетку"
 }

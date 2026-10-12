@@ -1290,5 +1290,10 @@
   "background.oneFile": "Seret satu gambar latar setiap kali.",
   "background.replacePrompt": "Ganti gambar latar saat ini?",
   "background.keepOld": "Berkas gambar sebelumnya akan tetap disimpan.",
-  "background.replace": "Ganti latar"
+  "background.replace": "Ganti latar",
+  "settings.canvasGridColours": "Grid sumbu X",
+  "settings.canvasGridLine": "Garis grid",
+  "settings.canvasCentreLine": "Garis tengah",
+  "settings.canvasGridOpacity": "Opasitas: {0}%",
+  "settings.canvasGridReset": "Reset grid"
 }

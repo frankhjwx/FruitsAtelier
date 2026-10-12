@@ -1290,5 +1290,10 @@
   "background.oneFile": "请每次拖入一张背景图片。",
   "background.replacePrompt": "是否替换当前背景图片？",
   "background.keepOld": "旧的图片文件将保留。",
-  "background.replace": "替换背景"
+  "background.replace": "替换背景",
+  "settings.canvasGridColours": "X 轴网格",
+  "settings.canvasGridLine": "网格线",
+  "settings.canvasCentreLine": "中心线",
+  "settings.canvasGridOpacity": "不透明度：{0}%",
+  "settings.canvasGridReset": "重置网格"
 }

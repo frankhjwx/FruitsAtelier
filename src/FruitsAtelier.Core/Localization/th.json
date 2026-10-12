@@ -1290,5 +1290,10 @@
   "background.oneFile": "ลากภาพพื้นหลังเข้ามาครั้งละหนึ่งภาพ",
   "background.replacePrompt": "ต้องการแทนที่ภาพพื้นหลังปัจจุบันหรือไม่?",
   "background.keepOld": "ไฟล์ภาพเดิมจะถูกเก็บไว้",
-  "background.replace": "แทนที่พื้นหลัง"
+  "background.replace": "แทนที่พื้นหลัง",
+  "settings.canvasGridColours": "เส้นกริดแกน X",
+  "settings.canvasGridLine": "เส้นกริด",
+  "settings.canvasCentreLine": "เส้นกึ่งกลาง",
+  "settings.canvasGridOpacity": "ความทึบ: {0}%",
+  "settings.canvasGridReset": "รีเซ็ตกริด"
 }

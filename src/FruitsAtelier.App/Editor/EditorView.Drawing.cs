@@ -208,11 +208,14 @@ public sealed partial class EditorView
         {
             float sx = Screen(new(0, x)).X;
             c.Text(x.ToString(), sx - 9, canvas.Y + 120, 10, Muted, 30);
-            c.Line(sx, plot.Y, sx, plot.Bottom, x == 256 ? 0x3C4653u : 0x262D37u);
+            c.Line(sx, plot.Y, sx, plot.Bottom, x == 256 ? LibrarySettings.CanvasCentreLineColour : LibrarySettings.CanvasGridColour,
+                opacity: LibrarySettings.CanvasGridOpacity / 100f);
         }
         if (EffectiveGridSnap)
             for (int x = gridSize; x < 512; x += gridSize)
             {
+                // Subdivision lines must not paint over the configured base lines.
+                if (x % 128 == 0) continue;
                 float sx = Screen(new(0, x)).X;
                 c.Line(sx, plot.Y, sx, plot.Bottom, 0x262D37);
         }

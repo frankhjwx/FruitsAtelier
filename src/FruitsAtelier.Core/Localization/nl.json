@@ -1290,5 +1290,10 @@
   "background.oneFile": "Sleep één achtergrondafbeelding tegelijk.",
   "background.replacePrompt": "De huidige achtergrondafbeelding vervangen?",
   "background.keepOld": "Het vorige afbeeldingsbestand blijft behouden.",
-  "background.replace": "Achtergrond vervangen"
+  "background.replace": "Achtergrond vervangen",
+  "settings.canvasGridColours": "Raster van de X-as",
+  "settings.canvasGridLine": "Rasterlijnen",
+  "settings.canvasCentreLine": "Middenlijn",
+  "settings.canvasGridOpacity": "Dekking: {0}%",
+  "settings.canvasGridReset": "Raster herstellen"
 }

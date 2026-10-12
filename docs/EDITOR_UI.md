@@ -990,7 +990,7 @@ F12 copies the current window content, including open dialogs and testplay, as a
 The main mapping canvas displays the current difficulty's background, fitted to
 its visible drawing area independently of zoom and scrolling. **Settings → Mapping
 Canvas** provides a separate Background Dim preference (90% by default), reverse
-canvas scrolling and movement indicator colours. Preview and testplay background
+canvas scrolling, movement indicator colours and X-axis grid appearance. Preview and testplay background
 dim remain independent.
 
 Drop a PNG, JPEG or BMP image into the editor to set the current difficulty's
@@ -998,3 +998,12 @@ background. An existing background requires replacement confirmation. Images
 outside the map directory are copied there; conflicting filenames receive a numeric
 suffix. Previous image files remain on disk. Changing the background is undoable
 and its Events reference is included in project saves and osu! exports.
+
+The **X-axis grid** section lets you pick separate colours for the four ordinary
+vertical lines and the X=256 centre line, using the colour palette or HEX input.
+Their shared opacity ranges from 0% to 100%; the percentage menu selects multiples
+of ten and the minus/plus buttons adjust by five. **Reset grid** restores the
+original colours and 100% opacity. These preferences affect only the five base
+X-axis lines. Horizontal time lines and additional Grid Snap subdivision lines
+keep their existing appearance. Changes remain drafts until Apply and do not
+change beatmap content. Short settings windows scroll to reach the grid controls.

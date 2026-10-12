@@ -23,9 +23,9 @@ public sealed partial class EditorView
     private double draftTestplayStartupDelaySeconds;
     private double draftTestplaySpeed;
     private bool draftShowTestplayCombo;
-    private int draftBackgroundDim, draftMappingCanvasBackgroundDim;
+    private int draftBackgroundDim, draftMappingCanvasBackgroundDim, draftCanvasGridOpacity;
     private bool draftForceBackgroundDim;
-    private readonly uint[] draftIndicatorColours = new uint[4];
+    private readonly uint[] draftSettingsColours = new uint[6];
     private int settingsColourIndex = -1;
     private uint settingsColourOriginal;
     private string settingsColourHex = "", settingsColourError = "";
@@ -108,10 +108,13 @@ public sealed partial class EditorView
         draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
         draftLowLatencyDisplay = LibrarySettings.LowLatencyDisplay;
         draftFullscreen = LibrarySettings.Fullscreen;
-        draftIndicatorColours[0] = LibrarySettings.StandIndicatorColour;
-        draftIndicatorColours[1] = LibrarySettings.WalkIndicatorColour;
-        draftIndicatorColours[2] = LibrarySettings.DashIndicatorColour;
-        draftIndicatorColours[3] = LibrarySettings.HyperDashIndicatorColour;
+        draftSettingsColours[0] = LibrarySettings.StandIndicatorColour;
+        draftSettingsColours[1] = LibrarySettings.WalkIndicatorColour;
+        draftSettingsColours[2] = LibrarySettings.DashIndicatorColour;
+        draftSettingsColours[3] = LibrarySettings.HyperDashIndicatorColour;
+        draftSettingsColours[4] = LibrarySettings.CanvasGridColour;
+        draftSettingsColours[5] = LibrarySettings.CanvasCentreLineColour;
+        draftCanvasGridOpacity = LibrarySettings.CanvasGridOpacity;
         settingsColourIndex = -1; settingsColourDrag = 0; settingsColourHex = settingsColourError = "";
         draftTestplayKeys = [LibrarySettings.TestplayLeftKey, LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey];
         draftTestplayStartupDelaySeconds = LibrarySettings.TestplayStartupDelaySeconds;
@@ -125,6 +128,9 @@ public sealed partial class EditorView
     private bool SettingsRootsChanged => draftWorkspace != LibrarySettings.Workspace || draftOsuRoot != LibrarySettings.OsuRoot;
 
     private bool SettingsChanged => draftMappingCanvasBackgroundDim != LibrarySettings.MappingCanvasBackgroundDim ||
+        draftSettingsColours[4] != LibrarySettings.CanvasGridColour ||
+        draftSettingsColours[5] != LibrarySettings.CanvasCentreLineColour ||
+        draftCanvasGridOpacity != LibrarySettings.CanvasGridOpacity ||
         draftAudioDiagnostics != LibrarySettings.AudioDiagnostics ||
         draftAudioDiagnosticFrames != LibrarySettings.AudioDiagnosticFrames ||
         draftAudioDiagnosticProfile != LibrarySettings.AudioDiagnosticProfile ||
@@ -137,10 +143,10 @@ public sealed partial class EditorView
         draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
         draftFullscreen != LibrarySettings.Fullscreen ||
         draftReverseCanvasScroll != LibrarySettings.ReverseCanvasScroll ||
-        draftIndicatorColours[0] != LibrarySettings.StandIndicatorColour ||
-        draftIndicatorColours[1] != LibrarySettings.WalkIndicatorColour ||
-        draftIndicatorColours[2] != LibrarySettings.DashIndicatorColour ||
-        draftIndicatorColours[3] != LibrarySettings.HyperDashIndicatorColour ||
+        draftSettingsColours[0] != LibrarySettings.StandIndicatorColour ||
+        draftSettingsColours[1] != LibrarySettings.WalkIndicatorColour ||
+        draftSettingsColours[2] != LibrarySettings.DashIndicatorColour ||
+        draftSettingsColours[3] != LibrarySettings.HyperDashIndicatorColour ||
         draftTestplayKeys[0] != LibrarySettings.TestplayLeftKey ||
         draftTestplayKeys[1] != LibrarySettings.TestplayRightKey ||
         draftTestplayKeys[2] != LibrarySettings.TestplayDashKey ||
@@ -251,11 +257,7 @@ public sealed partial class EditorView
                 LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, SettingsTop + 184);
                 break;
             case SettingsCategory.MappingCanvas:
-                DrawBackgroundDimSetting(c, new(SettingsContentX, SettingsTop + 128, Math.Min(360, SettingsContentWidth), SettingsControlHeight), true, mappingCanvas: true);
-                SettingsButton(c, new(SettingsContentX, SettingsTop + 184, SettingsContentWidth, 32),
-                    L.Get(draftReverseCanvasScroll ? "settings.reverseCanvasScrollOn" : "settings.reverseCanvasScrollOff"),
-                    () => draftReverseCanvasScroll = !draftReverseCanvasScroll, draftReverseCanvasScroll);
-                DrawIndicatorColours(c);
+                DrawMappingCanvasSettings(c);
                 break;
             case SettingsCategory.Testplay:
                 DrawTestplayBindings(c);
@@ -272,7 +274,7 @@ public sealed partial class EditorView
         bool canApply = SettingsChanged && (!SettingsRootsChanged || scanTask is null && searchTask is null);
         SettingsButton(c, new(SettingsContentX, r.Bottom - 64, 200, SettingsControlHeight), L.Get("library.apply"), () => ApplySettings(),
             active: canApply, enabled: canApply);
-        if (settingsColourIndex >= 0) DrawIndicatorColourPicker(c);
+        if (settingsColourIndex >= 0) DrawSettingsColourPicker(c);
         if (settingsCategory == SettingsCategory.Workspace) DrawStorageTooltip(c);
     }
 
@@ -304,6 +306,9 @@ public sealed partial class EditorView
             settings.ShowTestplayCombo = draftShowTestplayCombo;
             settings.BackgroundDim = draftBackgroundDim;
             settings.MappingCanvasBackgroundDim = draftMappingCanvasBackgroundDim;
+            settings.CanvasGridColour = draftSettingsColours[4];
+            settings.CanvasCentreLineColour = draftSettingsColours[5];
+            settings.CanvasGridOpacity = draftCanvasGridOpacity;
             settings.ForceBackgroundDim = draftForceBackgroundDim;
             settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.DerandomizeDroplets = draftDerandomizeDroplets;
@@ -311,8 +316,8 @@ public sealed partial class EditorView
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
             settings.Fullscreen = draftFullscreen;
             settings.ReverseCanvasScroll = draftReverseCanvasScroll;
-            settings.StandIndicatorColour = draftIndicatorColours[0]; settings.WalkIndicatorColour = draftIndicatorColours[1];
-            settings.DashIndicatorColour = draftIndicatorColours[2]; settings.HyperDashIndicatorColour = draftIndicatorColours[3];
+            settings.StandIndicatorColour = draftSettingsColours[0]; settings.WalkIndicatorColour = draftSettingsColours[1];
+            settings.DashIndicatorColour = draftSettingsColours[2]; settings.HyperDashIndicatorColour = draftSettingsColours[3];
             settings.MasterVolume = LibrarySettings.MasterVolume; settings.SongVolume = LibrarySettings.SongVolume; settings.HitsoundVolume = LibrarySettings.HitsoundVolume;
             settings.UseSkinSounds = LibrarySettings.UseSkinSounds;
             settings.AudioDiagnostics = draftAudioDiagnostics;
@@ -386,67 +391,67 @@ public sealed partial class EditorView
     {
         float available = SettingsContentWidth;
         float cellWidth = (available - 12) / 2;
-        c.Text(L.Get("settings.indicatorColours"), SettingsContentX, SettingsTop + 270, SettingsSectionSize, Foreground, available - 190, true);
+        c.Text(L.Get("settings.indicatorColours"), SettingsContentX, MappingCanvasSettingsTop + 270, SettingsSectionSize, Foreground, available - 190, true);
         string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
         for (int i = 0; i < 4; i++)
         {
             int index = i;
-            var bounds = new Rect(SettingsContentX + i % 2 * (cellWidth + 12), SettingsTop + 308 + i / 2 * 44, cellWidth, SettingsControlHeight);
+            var bounds = new Rect(SettingsContentX + i % 2 * (cellWidth + 12), MappingCanvasSettingsTop + 308 + i / 2 * 44, cellWidth, SettingsControlHeight);
             c.Fill(bounds, Surface, 4);
             c.Stroke(bounds, Grid, radius: 4);
             var swatch = new Rect(bounds.X + 7, bounds.Y + 6, 20, 20);
-            c.Fill(swatch, draftIndicatorColours[i], 3); c.Stroke(swatch, Grid, radius: 3);
+            c.Fill(swatch, draftSettingsColours[i], 3); c.Stroke(swatch, Grid, radius: 3);
             c.Text(L.Get(names[i]), bounds.X + 36, bounds.Y + 7.5f, SettingsTextSize, Foreground, cellWidth - 116);
-            c.Text($"#{draftIndicatorColours[i]:X6}", bounds.Right - 82, bounds.Y + 7.5f, SettingsTextSize, Muted, 76);
-            hits.Add(new(bounds, () => OpenIndicatorColourPicker(index), true));
+            c.Text($"#{draftSettingsColours[i]:X6}", bounds.Right - 82, bounds.Y + 7.5f, SettingsTextSize, Muted, 76);
+            hits.Add(new(bounds, () => OpenSettingsColourPicker(index), true));
         }
-        SettingsButton(c, new(SettingsContentX + available - 174, SettingsTop + 264, 174, SettingsControlHeight), L.Get("settings.indicatorReset"), () =>
+        SettingsButton(c, new(SettingsContentX + available - 174, MappingCanvasSettingsTop + 264, 174, SettingsControlHeight), L.Get("settings.indicatorReset"), () =>
         {
-            draftIndicatorColours[0] = FruitsAtelier.Core.LibrarySettings.DefaultStandIndicatorColour;
-            draftIndicatorColours[1] = FruitsAtelier.Core.LibrarySettings.DefaultWalkIndicatorColour;
-            draftIndicatorColours[2] = FruitsAtelier.Core.LibrarySettings.DefaultDashIndicatorColour;
-            draftIndicatorColours[3] = FruitsAtelier.Core.LibrarySettings.DefaultHyperDashIndicatorColour;
+            draftSettingsColours[0] = FruitsAtelier.Core.LibrarySettings.DefaultStandIndicatorColour;
+            draftSettingsColours[1] = FruitsAtelier.Core.LibrarySettings.DefaultWalkIndicatorColour;
+            draftSettingsColours[2] = FruitsAtelier.Core.LibrarySettings.DefaultDashIndicatorColour;
+            draftSettingsColours[3] = FruitsAtelier.Core.LibrarySettings.DefaultHyperDashIndicatorColour;
         });
     }
 
-    private void OpenIndicatorColourPicker(int index)
+    private void OpenSettingsColourPicker(int index)
     {
         settingsColourIndex = index;
-        settingsColourOriginal = draftIndicatorColours[index];
-        settingsColourHex = $"#{draftIndicatorColours[index]:X6}";
+        settingsColourOriginal = draftSettingsColours[index];
+        settingsColourHex = $"#{draftSettingsColours[index]:X6}";
         settingsColourError = "";
-        (settingsHue, settingsSaturation, settingsValue) = ColourToHsv(draftIndicatorColours[index], settingsHue);
+        (settingsHue, settingsSaturation, settingsValue) = ColourToHsv(draftSettingsColours[index], settingsHue);
         libraryField = -1;
     }
 
-    private void CancelIndicatorColourPicker()
+    private void CancelSettingsColourPicker()
     {
-        draftIndicatorColours[settingsColourIndex] = settingsColourOriginal;
+        draftSettingsColours[settingsColourIndex] = settingsColourOriginal;
         settingsColourIndex = -1;
         settingsColourDrag = 0;
         libraryField = -1;
     }
 
-    private void SetIndicatorColour(uint colour)
+    private void SetSettingsColour(uint colour)
     {
-        draftIndicatorColours[settingsColourIndex] = colour;
+        draftSettingsColours[settingsColourIndex] = colour;
         settingsColourHex = $"#{colour:X6}";
         settingsColourError = "";
         (settingsHue, settingsSaturation, settingsValue) = ColourToHsv(colour, settingsHue);
         libraryField = -1;
     }
 
-    private bool BeginIndicatorColourDrag(float x, float y, int button)
+    private bool BeginSettingsColourDrag(float x, float y, int button)
     {
         if (settingsColourIndex < 0 || button != 0) return false;
         settingsColourDrag = settingsPalette.Contains(x, y) ? 1 : settingsHueTrack.Contains(x, y) ? 2 : 0;
         if (settingsColourDrag == 0) return false;
         libraryField = -1;
-        UpdateIndicatorColourDrag(x, y);
+        UpdateSettingsColourDrag(x, y);
         return true;
     }
 
-    private void UpdateIndicatorColourDrag(float x, float y)
+    private void UpdateSettingsColourDrag(float x, float y)
     {
         if (settingsColourDrag == 1)
         {
@@ -457,28 +462,28 @@ public sealed partial class EditorView
             settingsHue = Math.Clamp((x - settingsHueTrack.X) / settingsHueTrack.Width, 0, .999999) * 360;
         else return;
         uint colour = SongHsv(settingsHue, settingsSaturation, settingsValue);
-        draftIndicatorColours[settingsColourIndex] = colour;
+        draftSettingsColours[settingsColourIndex] = colour;
         settingsColourHex = $"#{colour:X6}";
         settingsColourError = "";
     }
 
-    private bool CommitIndicatorColourHex()
+    private bool CommitSettingsColourHex()
     {
         string value = settingsColourHex.Trim().TrimStart('#');
         if (value.Length != 6 || !uint.TryParse(value, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint colour))
         { settingsColourError = L.Get("song.invalidHex"); return false; }
-        SetIndicatorColour(colour);
+        SetSettingsColour(colour);
         return true;
     }
 
-    private void DrawIndicatorColourPicker(ICanvas c)
+    private void DrawSettingsColourPicker(ICanvas c)
     {
         var screen = new Rect(0, 0, width, height);
         c.Fill(screen, 0x000000, opacity: .72f);
         hits.Add(new(screen, () => { }, true));
         var dialog = new Rect((width - 560) / 2, (height - 430) / 2, 560, 430);
         c.Fill(dialog, Panel, 8); c.Stroke(dialog, Grid, radius: 8);
-        string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
+        string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash", "settings.canvasGridLine", "settings.canvasCentreLine"];
         c.Text(L.Get(names[settingsColourIndex]), dialog.X + 20, dialog.Y + 17, 18, Foreground, 300, true);
         settingsPalette = new(dialog.X + 20, dialog.Y + 58, dialog.Width - 40, 216);
         for (int row = 0; row < 24; row++)
@@ -495,17 +500,17 @@ public sealed partial class EditorView
         c.Stroke(new(hueX - 3, settingsHueTrack.Y - 2, 6, 26), Foreground, 2);
         c.Text(L.Get("settings.indicatorHex"), dialog.X + 68, dialog.Y + 330, 13, Foreground, 120);
         var preview = new Rect(dialog.X + 20, dialog.Y + 350, 38, 38);
-        c.Fill(preview, draftIndicatorColours[settingsColourIndex], 4); c.Stroke(preview, Grid, radius: 4);
+        c.Fill(preview, draftSettingsColours[settingsColourIndex], 4); c.Stroke(preview, Grid, radius: 4);
         var hexField = new Rect(dialog.X + 68, dialog.Y + 350, 170, 38);
         c.Fill(hexField, Surface, 4); c.Stroke(hexField, libraryField == 5 ? Accent : Grid, radius: 4);
         DrawInputText(c, new(hexField.X + 10, hexField.Y + 10, hexField.Width - 20, 18),
             settingsColourHex, SettingsTextSize, libraryField == 5, "library:5");
         hits.Add(new(hexField, () => { libraryField = 5; FocusInput("library:5", settingsColourHex, mouseX); }, true));
         c.Text(settingsColourError, dialog.X + 20, dialog.Y + 397, 12, Error, 230);
-        SettingsButton(c, new(dialog.Right - 276, dialog.Bottom - 55, 120, SettingsControlHeight), L.Get("settings.indicatorCancel"), CancelIndicatorColourPicker);
+        SettingsButton(c, new(dialog.Right - 276, dialog.Bottom - 55, 120, SettingsControlHeight), L.Get("settings.indicatorCancel"), CancelSettingsColourPicker);
         SettingsButton(c, new(dialog.Right - 144, dialog.Bottom - 55, 120, SettingsControlHeight), L.Get("settings.indicatorDone"), () =>
         {
-            if (!CommitIndicatorColourHex()) return;
+            if (!CommitSettingsColourHex()) return;
             settingsColourIndex = -1; libraryField = -1;
         });
     }

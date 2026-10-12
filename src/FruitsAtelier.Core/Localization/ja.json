@@ -1290,5 +1290,10 @@
   "background.oneFile": "背景画像は一度に1枚ずつドロップしてください。",
   "background.replacePrompt": "現在の背景画像を置き換えますか？",
   "background.keepOld": "以前の画像ファイルは保持されます。",
-  "background.replace": "背景を置き換える"
+  "background.replace": "背景を置き換える",
+  "settings.canvasGridColours": "X軸グリッド",
+  "settings.canvasGridLine": "グリッド線",
+  "settings.canvasCentreLine": "中央線",
+  "settings.canvasGridOpacity": "不透明度: {0}%",
+  "settings.canvasGridReset": "グリッドをリセット"
 }

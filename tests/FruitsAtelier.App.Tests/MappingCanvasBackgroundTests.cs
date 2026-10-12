@@ -51,7 +51,7 @@ static class MappingCanvasBackgroundTests
                 ui.View.LibrarySettings.Workspace = root;
                 ui.View.LibrarySettings.BackgroundDim = 35;
                 ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.mappingCanvas"));
-                var minus = ui.Canvas.Texts.Single(t => t.Value == "−" && t.X > ui.View.SettingsBounds.X + 230);
+                var minus = ui.Canvas.Texts.Where(t => t.Value == "−" && t.X > ui.View.SettingsBounds.X + 230).OrderBy(t => t.Y).First();
                 ui.Click(minus.X + 2, minus.Y + 2);
                 Check(ui.View.LibrarySettings.MappingCanvasBackgroundDim == 90, "Draft applied before Apply.");
                 ui.Key(27); ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.mappingCanvas"));

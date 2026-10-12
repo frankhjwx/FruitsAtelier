@@ -1290,5 +1290,10 @@
   "background.oneFile": "Drop one background image at a time.",
   "background.replacePrompt": "Replace the current background image?",
   "background.keepOld": "The previous image file will be kept.",
-  "background.replace": "Replace background"
+  "background.replace": "Replace background",
+  "settings.canvasGridColours": "X-axis grid",
+  "settings.canvasGridLine": "Grid lines",
+  "settings.canvasCentreLine": "Centre line",
+  "settings.canvasGridOpacity": "Opacity: {0}%",
+  "settings.canvasGridReset": "Reset grid"
 }

@@ -25,6 +25,9 @@ internal static class MappingCanvasRenderCheck
                 var view = new EditorView();
                 view.Document.SourcePath = Path.Combine(folder, "map.osu");
                 view.LibrarySettings.MappingCanvasBackgroundDim = 40;
+                view.LibrarySettings.CanvasGridColour = 0x66DDFF;
+                view.LibrarySettings.CanvasCentreLineColour = 0xFFE088;
+                view.LibrarySettings.CanvasGridOpacity = 65;
                 view.DropLibraryFiles([image]);
                 Paint("canvas");
                 int decodes = canvas.ImageDecodeCount;
@@ -40,6 +43,11 @@ internal static class MappingCanvasRenderCheck
                 Paint("settings");
                 Click(settings.X + 230 + 180, settings.Y + 144);
                 Paint("settings-dim");
+                view.Wheel(settings.X + 300, settings.Y + 200, -1200, false); Paint("grid-settings");
+                float scroll = Math.Max(0, 424 - (settings.Height - 208));
+                Click(settings.X + 230 + 100, settings.Y + 448 - scroll + 16);
+                Paint("grid-colour");
+                view.KeyDown(27, false, false); Paint();
                 view.KeyDown(27, false, false); Paint();
                 view.DropLibraryFiles([image]); Paint("replace");
                 if (!view.DiscardConfirmationVisible) throw new InvalidOperationException("Native replacement did not open confirmation.");
