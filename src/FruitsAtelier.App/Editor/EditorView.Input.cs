@@ -123,6 +123,7 @@ public sealed partial class EditorView
         if (drag != DragKind.None) return;
         if (TimingPageVisible && menu < 0 && contextItems.Count == 0 && WaveformBounds.Contains(x, y))
         { TimingWaveformPointer(x, y, button); return; }
+        if (menu < 0 && contextItems.Count == 0 && MovementPanelPointerDown(x, y, button, shift)) return;
         if (menu < 0 && contextItems.Count == 0 && DistancePointerDown(x, y, button, shift)) return;
         if (button == 2 && DifficultyTabContext(x, y)) return;
         if (menu >= 0 && button != 0) { menu = -1; return; }
@@ -417,6 +418,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (movementPanelPointer) { MoveMovementPanel(x, y); return; }
         if (AimodVisible) { mouseX = x; mouseY = y; return; }
         if (SynchronizationBlocksInput) return;
         MoveVolumePopoverPointer(x, y);
@@ -553,6 +555,11 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        if (movementPanelPointer && button == 0)
+        {
+            MoveMovementPanel(x, y); movementPanelPointer = false;
+            if (movementPanelMoved) return;
+        }
         if (AimodVisible) return;
         testplayCursorPressed = false;
         if (SynchronizationBlocksInput) return;
@@ -1231,6 +1238,8 @@ public sealed partial class EditorView
         if (ctrl || altHeld) return;
         if ((drag == DragKind.Marquee || NavigationDuringDrag) && !shift && virtualKey is 32 or 67)
         { TogglePlayback(); return; }
+        if ((drag == DragKind.Marquee || NavigationDuringDrag) && !shift && virtualKey is 90 or 86)
+        { HandleLegacyKey(virtualKey, false); return; }
         if (drag != DragKind.None) return;
         contextItems.Clear();
         if (draftTrack != Guid.Empty && !shift && virtualKey is >= 49 and <= 52)
@@ -1314,6 +1323,7 @@ public sealed partial class EditorView
         pendingStreamChildSelection = null;
         pendingImplicitSliderConversions.Clear();
         textSelecting = false;
+        movementPanelPointer = false;
         songDrag = -1;
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();

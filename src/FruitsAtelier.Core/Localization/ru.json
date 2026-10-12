@@ -865,6 +865,7 @@
   "movement.walk": "Walk",
   "movement.dash": "Dash",
   "movement.hyperdash": "HDash",
+  "movement.resetPosition": "Сбросить положение",
   "distance.previousField": "Предыдущий ДС",
   "coordinate.x": "координата X",
   "coordinate.readout": "X: {0}",

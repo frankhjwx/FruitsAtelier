@@ -865,6 +865,7 @@
   "movement.walk": "Walk",
   "movement.dash": "Dash",
   "movement.hyperdash": "HDash",
+  "movement.resetPosition": "I-reset ang posisyon",
   "distance.previousField": "Nakaraang DS",
   "coordinate.x": "X coordinate",
   "coordinate.readout": "X: {0}",

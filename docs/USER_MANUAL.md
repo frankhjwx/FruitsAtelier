@@ -172,7 +172,7 @@ Object paste works within the same difficulty session and aligns the earliest se
 | --- | --- |
 | Space / C | Play or pause. |
 | X / Home | Play from song start / seek to song start. |
-| Z / V (also End) | First object's start / last object's end; repeat for song start / end. |
+| Z / V (also End) | First object's start / last object's end; repeat for song start / end. Z/V also work while box-selecting or dragging objects. |
 | Left / Right | Seek one beat subdivision; Shift multiplies by four. |
 | Up / Down | Next / previous timing point. |
 | Ctrl+Up / Ctrl+Down | Increase / decrease playback speed by 25 percentage points (10%–150%). |

@@ -34,10 +34,10 @@ public sealed partial class EditorView
             case 88: SeekTo(0); if (!AudioPlaying) TogglePlayback(); return true;
             case 90:
                 double first = ClipboardParents(Document).Select(p => p.TimeMs).DefaultIfEmpty(0).Min();
-                SeekTo(playhead <= first ? 0 : first); return true;
+                SeekObjectBoundary(playhead <= first ? 0 : first); return true;
             case 35: case 86:
                 double last = LastObjectEndMs();
-                SeekTo(playhead >= last ? AudioReady && AudioDurationMs > 0 ? AudioDurationMs : TimelineDurationMs : last); return true;
+                SeekObjectBoundary(playhead >= last ? AudioReady && AudioDurationMs > 0 ? AudioDurationMs : TimelineDurationMs : last); return true;
             case 37: case 39:
                 int steps = (key == 37 ? -1 : 1) * (shift ? 4 : 1);
                 SeekTo(AudioPlaying
@@ -52,6 +52,19 @@ public sealed partial class EditorView
                 NudgeSelection((key == 74 ? -1 : 1) * TimingMap.At(Document, time).BeatLengthMs / divisor, 0); return true;
             default: return false;
         }
+    }
+
+    private void SeekObjectBoundary(double time)
+    {
+        if (drag == DragKind.Marquee) { ScrollBoxTo(time); return; }
+        double previousViewStart = viewStart, previousPlayhead = playhead;
+        SeekTo(time);
+        if (!NavigationDuringDrag) return;
+        viewStart = previousViewStart + playhead - previousPlayhead;
+        pinPlayhead = false;
+        ClampView();
+        if (!ContinueDragAfterNavigation(previousViewStart, previousPlayhead, shiftHeld, false))
+            PointerMove(mouseX, mouseY, shiftHeld, false);
     }
 
     private double LastObjectEndMs()

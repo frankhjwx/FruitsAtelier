@@ -865,6 +865,7 @@
   "movement.walk": "Walk",
   "movement.dash": "Dash",
   "movement.hyperdash": "HDash",
+  "movement.resetPosition": "Resetuj pozycję",
   "distance.previousField": "Poprzedni DS",
   "coordinate.x": "Współrzędna X",
   "coordinate.readout": "X: {0}",

@@ -152,6 +152,25 @@ internal static class AssistToolsTests
             Check(ui.View.MovementReadout.Next?.Mode == CatchMovementMode.Stand, "Outgoing Stand missing");
         }
         ui.Key('1'); ui.ClickMap(2000, 310);
+        var defaultPanel = ui.View.MovementOverlayBounds!.Value;
+        float panelX = defaultPanel.X + 15, panelY = defaultPanel.Y + 12;
+        ui.View.PointerDown(panelX, panelY, 0, false, false);
+        Check(ui.View.WantsCapture, "Panel drag did not capture pointer");
+        ui.View.PointerMove(panelX + 80, panelY - 100, false, false); ui.Paint();
+        ui.View.PointerUp(panelX + 80, panelY - 100, 0); ui.Paint();
+        var movedPanel = ui.View.MovementOverlayBounds!.Value;
+        Near(defaultPanel.X + 80, movedPanel.X); Near(defaultPanel.Y - 100, movedPanel.Y);
+        Check(original.ContentEquals(ui.View.Document), "Panel drag changed content");
+        Check(!ui.View.WantsCapture, "Panel drag retained pointer capture");
+        ui.View.PointerDown(movedPanel.X + 15, movedPanel.Y + 12, 0, false, false);
+        ui.View.PointerMove(-1000, -1000, false, false); ui.Paint();
+        ui.View.PointerUp(-1000, -1000, 0); ui.Paint();
+        var clampedPanel = ui.View.MovementOverlayBounds!.Value;
+        Near(ui.View.CanvasPlotBounds.X, clampedPanel.X); Near(ui.View.CanvasPlotBounds.Y, clampedPanel.Y);
+        ui.View.PointerDown(clampedPanel.X + 15, clampedPanel.Y + 12, 2, false, false); ui.Paint();
+        ui.ClickText(Strings.Get("movement.resetPosition"));
+        Check(ui.View.MovementOverlayBounds == defaultPanel, "Panel reset did not restore default position");
+        Check(original.ContentEquals(ui.View.Document), "Panel reset changed content");
         foreach (string language in new[] { "en", "zh-CN" })
         {
             Strings.SetLanguage(language); ui.Resize(980, 620);

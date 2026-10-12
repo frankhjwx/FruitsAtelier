@@ -84,6 +84,7 @@ var tests = new (string Name, Action Run)[]
     ("Held quick retry dims over 300 ms, clicks once and cancels on release while running or paused", FeedbackInteractionTests.Retry),
     ("Previous-save rollback requires history, confirmation and supports undo", FeedbackInteractionTests.PreviousSave),
     ("Timeline navigation and history reveal offscreen changes", FeedbackInteractionTests.Navigation),
+    ("Z/V seek map boundaries during selection and object dragging", ShortcutRoutingTests.ObjectBoundarySeeking),
     ("Slider endpoint drags retain navigation, playback and cancellation", FeedbackInteractionTests.TailNavigation),
     ("Tags wrap with row-aware editing and droplet lock persists", FeedbackInteractionTests.TagsAndPreference),
     ("Overlapping timeline markers and unmapped section breaks remain visible", FeedbackInteractionTests.MarkersAndBreak),
@@ -609,6 +610,10 @@ static void EscapeDrag()
 static void CaptureCancellation()
 {
     var ui = new Ui();
+    var plot = ui.View.CanvasPlotBounds;
+    ui.View.PointerDown(plot.X + 10, plot.Y + 150, 1, false, false);
+    ui.View.PointerMove(plot.X + 10, plot.Y + 30, false, false);
+    ui.View.PointerUp(plot.X + 10, plot.Y + 30, 1); ui.Paint();
     var id = ui.View.Document.Fruits[0].Id;
     ui.DownMap(250, 96);
     ui.MoveMap(550, 240);

@@ -459,6 +459,13 @@ internal static class RenderCheck
                 view.UpdateTransport(1000, 6000, true, false, false, null, null);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 var field = view.PlayfieldBounds; var plot = view.CanvasPlotBounds;
+                if (view.MovementOverlayBounds is { } indicator)
+                {
+                    view.PointerDown(indicator.X + 8, indicator.Y + 8, 0, false, false);
+                    view.PointerMove(indicator.X + 8, plot.Y + 20, false, false);
+                    view.PointerUp(indicator.X + 8, plot.Y + 20, 0);
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                }
                 float headX = field.X + 100f / 512 * field.Width;
                 float headY = plot.Bottom - (float)((1000 - view.ViewStartMs) * view.PixelsPerMs);
                 view.PointerDown(headX, headY, 0, false, false);
@@ -762,6 +769,19 @@ internal static class RenderCheck
                 float y = view.CanvasPlotBounds.Bottom - (float)((1500 - view.ViewStartMs) * view.PixelsPerMs);
                 view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint();
                 var input = view.PreviousDistanceFieldBounds ?? throw new InvalidOperationException("DS input missing.");
+                var panel = view.MovementOverlayBounds!.Value;
+                var beforePanelDrag = view.Document.DeepClone();
+                view.PointerDown(panel.X + 8, panel.Y + 8, 0, false, false);
+                view.PointerMove(panel.X + 38, panel.Y - 32, false, false); Paint();
+                view.PointerUp(panel.X + 38, panel.Y - 32, 0); Paint();
+                if (view.MovementOverlayBounds is not { } moved || Math.Abs(moved.X - panel.X - 30) > .01
+                    || Math.Abs(moved.Y - panel.Y + 40) > .01 || !beforePanelDrag.ContentEquals(view.Document))
+                    throw new InvalidOperationException("Native indicator drag failed.");
+                view.PointerDown(moved.X + 8, moved.Y + 8, 2, false, false); Paint();
+                view.PointerDown(moved.X + 20, moved.Y + 25, 0, false, false);
+                view.PointerUp(moved.X + 20, moved.Y + 25, 0); Paint();
+                if (view.MovementOverlayBounds != panel || !beforePanelDrag.ContentEquals(view.Document))
+                    throw new InvalidOperationException("Native indicator reset failed.");
                 view.PointerDown(input.X + 8, input.Y + 8, 0, false, false);
                 view.PointerUp(input.X + 8, input.Y + 8, 0); Paint();
                 view.KeyDown('A', true, false);

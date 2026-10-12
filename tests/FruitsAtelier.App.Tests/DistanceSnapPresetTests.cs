@@ -219,6 +219,11 @@ internal static class DistanceSnapPresetTests
         map.Fruits.Add(new Fruit { TimeMs = first, X = 113.4 });
         map.Fruits.Add(new Fruit { TimeMs = last, X = 396.9 });
         var ui = new Ui(); ui.LoadDocument(map); ui.Key('Y'); ui.Key('2');
+        // Keep the placement target clear of the interactive movement panel.
+        var plot = ui.View.CanvasPlotBounds;
+        ui.View.PointerDown(plot.X + 10, plot.Y + 150, 1, false, false);
+        ui.View.PointerMove(plot.X + 10, plot.Y + 30, false, false);
+        ui.View.PointerUp(plot.X + 10, plot.Y + 30, 1); ui.Paint();
         ui.MoveMap(middle, 208); var preview = ui.View.DistanceReadout;
         Check(preview.Previous is { } p && Math.Abs(p - 1.89) < 1e-6
             && preview.Next is { } n && Math.Abs(n - 1.89) < 1e-6 && ui.View.EqualDistanceHighlighted,
