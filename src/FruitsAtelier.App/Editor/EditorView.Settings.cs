@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, Updates }
+    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, Updates }
     private SettingsCategory settingsCategory;
     private bool draftAudioDiagnostics, draftAudioDiagnosticFrames;
     private string draftAudioDiagnosticProfile = "event-10";
@@ -23,7 +23,7 @@ public sealed partial class EditorView
     private double draftTestplayStartupDelaySeconds;
     private double draftTestplaySpeed;
     private bool draftShowTestplayCombo;
-    private int draftBackgroundDim;
+    private int draftBackgroundDim, draftMappingCanvasBackgroundDim;
     private bool draftForceBackgroundDim;
     private readonly uint[] draftIndicatorColours = new uint[4];
     private int settingsColourIndex = -1;
@@ -118,12 +118,14 @@ public sealed partial class EditorView
         draftTestplaySpeed = LibrarySettings.TestplaySpeed;
         draftShowTestplayCombo = LibrarySettings.ShowTestplayCombo;
         draftBackgroundDim = LibrarySettings.BackgroundDim;
+        draftMappingCanvasBackgroundDim = LibrarySettings.MappingCanvasBackgroundDim;
         draftForceBackgroundDim = LibrarySettings.ForceBackgroundDim;
     }
 
     private bool SettingsRootsChanged => draftWorkspace != LibrarySettings.Workspace || draftOsuRoot != LibrarySettings.OsuRoot;
 
-    private bool SettingsChanged => draftAudioDiagnostics != LibrarySettings.AudioDiagnostics ||
+    private bool SettingsChanged => draftMappingCanvasBackgroundDim != LibrarySettings.MappingCanvasBackgroundDim ||
+        draftAudioDiagnostics != LibrarySettings.AudioDiagnostics ||
         draftAudioDiagnosticFrames != LibrarySettings.AudioDiagnosticFrames ||
         draftAudioDiagnosticProfile != LibrarySettings.AudioDiagnosticProfile ||
         draftForceBackgroundDim != LibrarySettings.ForceBackgroundDim || draftBackgroundDim != LibrarySettings.BackgroundDim || draftShowTestplayCombo != LibrarySettings.ShowTestplayCombo || draftWorkspace != LibrarySettings.Workspace ||
@@ -170,7 +172,7 @@ public sealed partial class EditorView
         c.Text(L.Get("library.settings"), r.X + 20, r.Y + 16, 19, Foreground, r.Width - 80, true);
         SettingsButton(c, new(r.Right - 48, r.Y + 10, 32, 28), "×", CloseSettings);
         c.Line(r.X + 214, r.Y + 56, r.X + 214, r.Bottom - 20, Grid);
-        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "update.title"];
+        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "update.title"];
         for (int i = 0; i < categories.Length; i++)
         {
             var category = (SettingsCategory)i;
@@ -229,16 +231,12 @@ public sealed partial class EditorView
                 float scrollTop = fullscreenTop + (SupportsFullscreen ? 108 : 0);
                 float scrollWidth = SettingsContentWidth;
                 c.Line(SettingsContentX, scrollTop, SettingsContentX + scrollWidth, scrollTop, Grid);
-                SettingsButton(c, new(SettingsContentX, scrollTop + 20, scrollWidth, 32),
-                    L.Get(draftReverseCanvasScroll ? "settings.reverseCanvasScrollOn" : "settings.reverseCanvasScrollOff"),
-                    () => draftReverseCanvasScroll = !draftReverseCanvasScroll, draftReverseCanvasScroll);
-                c.Line(SettingsContentX, scrollTop + 72, SettingsContentX + scrollWidth, scrollTop + 72, Grid);
-                c.Text(L.Get("settings.dropletDefaults"), SettingsContentX, scrollTop + 84, SettingsSectionSize, Foreground,
+                c.Text(L.Get("settings.dropletDefaults"), SettingsContentX, scrollTop + 12, SettingsSectionSize, Foreground,
                     SettingsContentWidth, true);
-                SettingsButton(c, new(SettingsContentX, scrollTop + 118, SettingsContentWidth, 32),
+                SettingsButton(c, new(SettingsContentX, scrollTop + 46, SettingsContentWidth, 32),
                     L.Get(draftDerandomizeDroplets ? "settings.derandomizeOn" : "settings.derandomizeOff"),
                     () => draftDerandomizeDroplets = !draftDerandomizeDroplets, draftDerandomizeDroplets);
-                SettingsButton(c, new(SettingsContentX, scrollTop + 166, SettingsContentWidth, 32),
+                SettingsButton(c, new(SettingsContentX, scrollTop + 94, SettingsContentWidth, 32),
                     L.Get(draftDerandomizeNewProjects ? "settings.newProjectDerandomizeOn" : "settings.newProjectDerandomizeOff"),
                     () => draftDerandomizeNewProjects = !draftDerandomizeNewProjects, draftDerandomizeNewProjects);
                 c.Unclip();
@@ -251,6 +249,12 @@ public sealed partial class EditorView
             case SettingsCategory.Appearance:
                 DrawSkinSelector(c, SettingsSkinSelectorBounds);
                 LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, SettingsTop + 184);
+                break;
+            case SettingsCategory.MappingCanvas:
+                DrawBackgroundDimSetting(c, new(SettingsContentX, SettingsTop + 128, Math.Min(360, SettingsContentWidth), SettingsControlHeight), true, mappingCanvas: true);
+                SettingsButton(c, new(SettingsContentX, SettingsTop + 184, SettingsContentWidth, 32),
+                    L.Get(draftReverseCanvasScroll ? "settings.reverseCanvasScrollOn" : "settings.reverseCanvasScrollOff"),
+                    () => draftReverseCanvasScroll = !draftReverseCanvasScroll, draftReverseCanvasScroll);
                 DrawIndicatorColours(c);
                 break;
             case SettingsCategory.Testplay:
@@ -299,6 +303,7 @@ public sealed partial class EditorView
             settings.TestplaySpeed = draftTestplaySpeed;
             settings.ShowTestplayCombo = draftShowTestplayCombo;
             settings.BackgroundDim = draftBackgroundDim;
+            settings.MappingCanvasBackgroundDim = draftMappingCanvasBackgroundDim;
             settings.ForceBackgroundDim = draftForceBackgroundDim;
             settings.RomanisedMetadata = draftRomanisedMetadata;
             settings.DerandomizeDroplets = draftDerandomizeDroplets;

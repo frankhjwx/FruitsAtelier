@@ -201,7 +201,9 @@ public sealed partial class EditorView
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
         c.Text(L.Get("ui.timeAxis"), canvas.X + 11, canvas.Y + 120, 10, Muted, 43);
         var playfield = Playfield;
-        c.Fill(new(canvas.X, plot.Y, canvas.Width, plot.Height), Background);
+        var backgroundBounds = new Rect(canvas.X, plot.Y, canvas.Width, plot.Height);
+        c.Fill(backgroundBounds, Background);
+        DrawBeatmapBackground(c, backgroundBounds, LibrarySettings.MappingCanvasBackgroundDim / 100f, mappingCanvas: true);
         for (int x = 0; x <= 512; x += 128)
         {
             float sx = Screen(new(0, x)).X;

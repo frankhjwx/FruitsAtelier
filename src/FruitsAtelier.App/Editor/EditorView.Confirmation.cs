@@ -6,7 +6,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private Action<int>? discardConfirmation;
-    private bool deleteProjectConfirmation;
+    private bool deleteProjectConfirmation, replaceBackgroundConfirmation;
     private bool offerSongsExport;
     public bool DiscardConfirmationVisible => discardConfirmation is not null || pendingLanguage is not null || VersionHistoryVisible || SynchronizationVisible || SynchronizationBlocksInput || previousSaveRestore is not null;
 
@@ -36,6 +36,7 @@ public sealed partial class EditorView
         var callback = discardConfirmation;
         discardConfirmation = null;
         deleteProjectConfirmation = false;
+        replaceBackgroundConfirmation = false;
         offerSongsExport = false;
         previousSaveConfirmation = false;
         hits.Clear();
@@ -72,6 +73,18 @@ public sealed partial class EditorView
             c.Text(L.Get(previousSaveRestore is null ? "history.revertSavePrompt" : "history.restoring"), left + 24, top + 62, 14, Foreground, 452);
             Button(c, new(left + 24, top + 116, 210, 40), L.Get("mac.cancel"), () => AnswerDiscard(2), true, previousSaveRestore is null);
             Button(c, new(left + 266, top + 116, 210, 40), L.Get("history.revertSave"), () => AnswerDiscard(7), enabled: previousSaveRestore is null);
+            return;
+        }
+        if (replaceBackgroundConfirmation)
+        {
+            float left = (width - 500) / 2, top = (height - 180) / 2;
+            c.Fill(new(0, 0, width, height), Background, opacity: .65f);
+            c.Fill(new(left, top, 500, 180), Panel, 8);
+            c.Stroke(new(left, top, 500, 180), Accent, 2, 8);
+            c.Text(L.Get("background.replacePrompt"), left + 24, top + 24, 18, Foreground, 452, true);
+            c.Text(L.Get("background.keepOld"), left + 24, top + 66, 13, Muted, 452);
+            Button(c, new(left + 24, top + 116, 210, 40), L.Get("mac.cancel"), () => AnswerDiscard(2), true);
+            Button(c, new(left + 266, top + 116, 210, 40), L.Get("background.replace"), () => AnswerDiscard(7));
             return;
         }
         if (deleteProjectConfirmation)

@@ -1285,5 +1285,10 @@
   "copier.batchNames": "Create a new “original name (Hitsounds)” Diff for each target.",
   "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes.",
   "screenshot.copied": "Tangkapan layar disalin ke papan klip.",
-  "screenshot.failed": "Tidak dapat menyalin tangkapan layar: {0}"
+  "screenshot.failed": "Tidak dapat menyalin tangkapan layar: {0}",
+  "settings.mappingCanvas": "Kanvas Mapping",
+  "background.oneFile": "Seret satu gambar latar setiap kali.",
+  "background.replacePrompt": "Ganti gambar latar saat ini?",
+  "background.keepOld": "Berkas gambar sebelumnya akan tetap disimpan.",
+  "background.replace": "Ganti latar"
 }

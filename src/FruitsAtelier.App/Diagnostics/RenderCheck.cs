@@ -892,6 +892,11 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--mapping-canvas-render-check"))
+        {
+            MappingCanvasRenderCheck.Run(canvas);
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--object-timeline-render-check"))
         {
             ObjectTimelineRenderCheck.Run(canvas);

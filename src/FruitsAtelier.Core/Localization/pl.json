@@ -1285,5 +1285,10 @@
   "copier.batchNames": "Create a new “original name (Hitsounds)” Diff for each target.",
   "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes.",
   "screenshot.copied": "Zrzut ekranu skopiowano do schowka.",
-  "screenshot.failed": "Nie można skopiować zrzutu ekranu: {0}"
+  "screenshot.failed": "Nie można skopiować zrzutu ekranu: {0}",
+  "settings.mappingCanvas": "Obszar mapowania",
+  "background.oneFile": "Przeciągaj po jednym obrazie tła.",
+  "background.replacePrompt": "Zastąpić bieżący obraz tła?",
+  "background.keepOld": "Poprzedni plik obrazu zostanie zachowany.",
+  "background.replace": "Zastąp tło"
 }

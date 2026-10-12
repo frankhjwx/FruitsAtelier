@@ -52,6 +52,8 @@ public sealed class LibrarySettings
     }
     public bool ShowTestplayCombo { get; set; } = true;
     public bool ForceBackgroundDim { get; set; }
+    private int mappingCanvasBackgroundDim = 90;
+    public int MappingCanvasBackgroundDim { get => mappingCanvasBackgroundDim; set => mappingCanvasBackgroundDim = Math.Clamp(value, 0, 100); }
     private int backgroundDim = 90;
     public int BackgroundDim { get => backgroundDim; set => backgroundDim = Math.Clamp(value, 0, 100); }
     public Dictionary<Guid, MapEditingPreferences> MapEditingPreferences { get; set; } = [];

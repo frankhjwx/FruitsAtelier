@@ -49,6 +49,14 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --mapping-canvas-check` verifies zoom-independent background bounds,
+independent dim drafts and persistence, image-drop replacement confirmation,
+filename collisions, retained images, undo/redo and project/export references.
+It also checks local maps after reopening and the settings layouts and testplay
+background controls. On Windows, run `FruitsAtelier.App.exe --render-check
+--mapping-canvas-render-check` for native background caching, settings and
+replacement-dialog screenshots under `artifacts/tests/mapping-canvas-native`.
+
 `App.Tests --object-timeline-check` checks Stream/Stack fruit markers, combo
 numbering, internal NC, grouped movement/deletion, persistence, export and undo.
 On Windows, `FruitsAtelier.App.exe --render-check --object-timeline-render-check`

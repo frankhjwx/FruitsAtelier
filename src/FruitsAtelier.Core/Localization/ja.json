@@ -1285,5 +1285,10 @@
   "copier.batchNames": "Create a new “original name (Hitsounds)” Diff for each target.",
   "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes.",
   "screenshot.copied": "スクリーンショットをクリップボードにコピーしました。",
-  "screenshot.failed": "スクリーンショットをコピーできません：{0}"
+  "screenshot.failed": "スクリーンショットをコピーできません：{0}",
+  "settings.mappingCanvas": "マッピングキャンバス",
+  "background.oneFile": "背景画像は一度に1枚ずつドロップしてください。",
+  "background.replacePrompt": "現在の背景画像を置き換えますか？",
+  "background.keepOld": "以前の画像ファイルは保持されます。",
+  "background.replace": "背景を置き換える"
 }

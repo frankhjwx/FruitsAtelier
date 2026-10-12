@@ -1285,5 +1285,10 @@
   "copier.batchNames": "Create a new “original name (Hitsounds)” Diff for each target.",
   "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes.",
   "screenshot.copied": "Снимок экрана скопирован в буфер обмена.",
-  "screenshot.failed": "Не удалось скопировать снимок экрана: {0}"
+  "screenshot.failed": "Не удалось скопировать снимок экрана: {0}",
+  "settings.mappingCanvas": "Холст карты",
+  "background.oneFile": "Перетаскивайте по одному фоновому изображению.",
+  "background.replacePrompt": "Заменить текущее фоновое изображение?",
+  "background.keepOld": "Предыдущий файл изображения будет сохранён.",
+  "background.replace": "Заменить фон"
 }

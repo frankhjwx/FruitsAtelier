@@ -1285,5 +1285,10 @@
   "copier.batchNames": "Create a new “original name (Hitsounds)” Diff for each target.",
   "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes.",
   "screenshot.copied": "Schermafbeelding naar het klembord gekopieerd.",
-  "screenshot.failed": "Kan de schermafbeelding niet kopiëren: {0}"
+  "screenshot.failed": "Kan de schermafbeelding niet kopiëren: {0}",
+  "settings.mappingCanvas": "Mappingcanvas",
+  "background.oneFile": "Sleep één achtergrondafbeelding tegelijk.",
+  "background.replacePrompt": "De huidige achtergrondafbeelding vervangen?",
+  "background.keepOld": "Het vorige afbeeldingsbestand blijft behouden.",
+  "background.replace": "Achtergrond vervangen"
 }

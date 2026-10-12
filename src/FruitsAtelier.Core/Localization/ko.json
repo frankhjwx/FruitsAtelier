@@ -1285,5 +1285,10 @@
   "copier.batchNames": "Create a new “original name (Hitsounds)” Diff for each target.",
   "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes.",
   "screenshot.copied": "스크린샷을 클립보드에 복사했습니다.",
-  "screenshot.failed": "스크린샷을 복사할 수 없습니다: {0}"
+  "screenshot.failed": "스크린샷을 복사할 수 없습니다: {0}",
+  "settings.mappingCanvas": "매핑 캔버스",
+  "background.oneFile": "배경 이미지를 한 번에 하나씩 드롭하세요.",
+  "background.replacePrompt": "현재 배경 이미지를 교체하시겠습니까?",
+  "background.keepOld": "이전 이미지 파일은 보존됩니다.",
+  "background.replace": "배경 교체"
 }

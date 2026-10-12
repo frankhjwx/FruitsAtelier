@@ -21,10 +21,10 @@ internal static class DisplaySettingsTests
                 ui.View.LibrarySettings.Workspace = root;
                 var original = ui.View.Document.DeepClone();
                 bool dirty = ui.View.IsDirty;
-                ui.View.OpenSettings(); ui.Paint();
+                ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.mappingCanvas"));
                 ui.ClickText(L.Get("settings.reverseCanvasScrollOff"));
                 Check(!ui.View.LibrarySettings.ReverseCanvasScroll, "Scroll draft applied before Apply.");
-                ui.Key(27); ui.View.OpenSettings(); ui.Paint();
+                ui.Key(27); ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.mappingCanvas"));
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.reverseCanvasScrollOff")), "Closing retained an unapplied scroll draft.");
                 ui.ClickText(L.Get("settings.reverseCanvasScrollOff"));
                 ui.ClickText(L.Get("settings.appearance")); ui.ClickText(L.Get("settings.general"));

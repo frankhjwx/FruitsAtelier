@@ -7,6 +7,16 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 // Existing interaction fixtures use Chinese labels explicitly.
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
+if (args.Contains("--mapping-canvas-check"))
+{
+    try
+    {
+        MappingCanvasBackgroundTests.Run(); SettingsTests.Layout(); SettingsTests.IndicatorColours();
+        DisplaySettingsTests.Run(); TestplayPresentationTests.ControlsAndBackground();
+        Console.WriteLine("PASS Mapping canvas backgrounds, preferences, replacement and presentation checks"); return 0;
+    }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 if (args.Contains("--hitsound-copier")) { HitsoundCopierUiTests.Run(); Console.WriteLine("PASS Hitsound Copier UI"); return 0; }
 if (args.Contains("--sample-banks")) { SampleBankTests.Run(); Console.WriteLine("PASS sample bank editing"); return 0; }
 if (args.Contains("--hitsound-check"))
@@ -174,7 +184,8 @@ var tests = new (string Name, Action Run)[]
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
     ("Settings layout preserves labels and aligns controls in narrow windows", SettingsTests.Layout),
-    ("Appearance indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
+    ("Mapping canvas backgrounds, image replacement and preferences", MappingCanvasBackgroundTests.Run),
+    ("Mapping Canvas indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
     ("Stack preview retains full outlines and edits individual fruits horizontally", StackDialogTests.ManualFruits),
     ("Stack draft history undoes fruit drags and removing manual knots", StackDialogTests.DraftHistory),
     ("Stack numeric controls edit percentages and pixels with editable endpoints", StackDialogTests.Numeric),

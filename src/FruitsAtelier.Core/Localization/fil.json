@@ -1285,5 +1285,10 @@
   "copier.batchNames": "Create a new “original name (Hitsounds)” Diff for each target.",
   "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes.",
   "screenshot.copied": "Nakopya ang screenshot sa clipboard.",
-  "screenshot.failed": "Hindi makopya ang screenshot: {0}"
+  "screenshot.failed": "Hindi makopya ang screenshot: {0}",
+  "settings.mappingCanvas": "Mapping Canvas",
+  "background.oneFile": "Mag-drop ng isang background image sa bawat pagkakataon.",
+  "background.replacePrompt": "Palitan ang kasalukuyang background image?",
+  "background.keepOld": "Pananatilihin ang lumang image file.",
+  "background.replace": "Palitan ang background"
 }

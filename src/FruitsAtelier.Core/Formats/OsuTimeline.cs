@@ -20,6 +20,20 @@ public static class OsuTimeline
         return null;
     }
 
+    public static void SetBackgroundFilename(MapDocument document, string filename)
+    {
+        OsuBeatmapReader.ValidateOsuResourceReference(filename);
+        foreach (var section in document.OriginalSections.Where(s => s.Name == "Events"))
+            for (int i = section.Lines.Count - 1; i >= 0; i--)
+            {
+                var parts = WorkspaceProject.Csv(section.Lines[i]);
+                if (parts.Length >= 3 && parts[0] is "0" or "Background") section.Lines.RemoveAt(i);
+            }
+        var events = document.OriginalSections.FirstOrDefault(s => s.Name == "Events");
+        if (events is null) { events = new OsuSection { Name = "Events" }; document.OriginalSections.Add(events); }
+        events.Lines.Insert(0, $"0,0,\"{filename}\",0,0");
+    }
+
     internal static void ReconcileBreaks(MapDocument before, MapDocument document, ImportedSliderLengthCache sliderLengths)
     {
         var periods = Breaks(document);

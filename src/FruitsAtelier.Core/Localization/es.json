@@ -1285,5 +1285,10 @@
   "copier.batchNames": "Create a new “original name (Hitsounds)” Diff for each target.",
   "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes.",
   "screenshot.copied": "Captura copiada al portapapeles.",
-  "screenshot.failed": "No se puede copiar la captura: {0}"
+  "screenshot.failed": "No se puede copiar la captura: {0}",
+  "settings.mappingCanvas": "Lienzo de mapeo",
+  "background.oneFile": "Arrastra una imagen de fondo a la vez.",
+  "background.replacePrompt": "¿Reemplazar la imagen de fondo actual?",
+  "background.keepOld": "Se conservará el archivo de la imagen anterior.",
+  "background.replace": "Reemplazar fondo"
 }

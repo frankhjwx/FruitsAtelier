@@ -1285,5 +1285,10 @@
   "copier.batchNames": "每个目标将新建一个「原名 (Hitsounds)」Diff。",
   "copier.batchSummary": "{0} 个目标 Diff，匹配 {1} 个音效事件，{2} 个文件变更。",
   "screenshot.copied": "截图已复制到剪贴板。",
-  "screenshot.failed": "无法复制截图：{0}"
+  "screenshot.failed": "无法复制截图：{0}",
+  "settings.mappingCanvas": "Mapping Canvas",
+  "background.oneFile": "请每次拖入一张背景图片。",
+  "background.replacePrompt": "是否替换当前背景图片？",
+  "background.keepOld": "旧的图片文件将保留。",
+  "background.replace": "替换背景"
 }

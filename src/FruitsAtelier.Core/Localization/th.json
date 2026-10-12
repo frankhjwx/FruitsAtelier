@@ -1285,5 +1285,10 @@
   "copier.batchNames": "Create a new “original name (Hitsounds)” Diff for each target.",
   "copier.batchSummary": "{0} target Diffs, {1} matched events, {2} file changes.",
   "screenshot.copied": "คัดลอกภาพหน้าจอไปยังคลิปบอร์ดแล้ว",
-  "screenshot.failed": "ไม่สามารถคัดลอกภาพหน้าจอได้: {0}"
+  "screenshot.failed": "ไม่สามารถคัดลอกภาพหน้าจอได้: {0}",
+  "settings.mappingCanvas": "แคนวาสสร้างแมป",
+  "background.oneFile": "ลากภาพพื้นหลังเข้ามาครั้งละหนึ่งภาพ",
+  "background.replacePrompt": "ต้องการแทนที่ภาพพื้นหลังปัจจุบันหรือไม่?",
+  "background.keepOld": "ไฟล์ภาพเดิมจะถูกเก็บไว้",
+  "background.replace": "แทนที่พื้นหลัง"
 }
