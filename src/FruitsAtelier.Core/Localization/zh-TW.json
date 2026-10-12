@@ -30,6 +30,7 @@
   "history.title": "版本歷史",
   "history.help": "選擇版本，然後選擇難度。在恢復之前比較當前地圖和歷史地圖。",
   "history.empty": "該項目沒有保留版本。",
+  "library.opening": "正在開啟專案…",
   "history.loading": "載入歷史記錄...",
   "history.failed": "無法讀取或還原此版本：{0}",
   "history.restore": "恢復這個難度",

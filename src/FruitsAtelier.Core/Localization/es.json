@@ -30,6 +30,7 @@
   "history.title": "Historial de versiones",
   "history.help": "Seleccione una versión, luego una dificultad. Compare los mapas actuales e históricos antes de restaurar.",
   "history.empty": "No se conservan versiones para este proyecto.",
+  "library.opening": "Abriendo proyecto…",
   "history.loading": "Cargando historial…",
   "history.failed": "No se puede leer ni restaurar esta versión: {0}",
   "history.restore": "Restaurar esta dificultad",

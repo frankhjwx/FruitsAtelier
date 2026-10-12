@@ -30,6 +30,7 @@
   "history.title": "Kasaysayan ng bersyon",
   "history.help": "Pumili ng isang bersyon, pagkatapos ay isang kahirapan. Ihambing ang kasalukuyan at makasaysayang mga mapa bago ibalik.",
   "history.empty": "Walang mga nananatiling bersyon para sa proyektong ito.",
+  "library.opening": "Binubuksan ang proyekto…",
   "history.loading": "Nilo-load ang history...",
   "history.failed": "Hindi mabasa o maibalik ang bersyong ito: {0}",
   "history.restore": "Ibalik ang kahirapan na ito",

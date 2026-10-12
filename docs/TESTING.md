@@ -49,6 +49,11 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --library-opening-check` verifies that opening a library project while
+the workspace gate is held leaves rendering responsive, blocks duplicate opens
+and competing operations, publishes once, retains the document on failure, and
+retires results after a project replacement.
+
 `App.Tests --mapping-canvas-check` verifies zoom-independent background bounds,
 independent dim drafts and persistence, image-drop replacement confirmation,
 filename collisions, retained images, undo/redo and project/export references.
@@ -169,6 +174,12 @@ fade, and queued pause/play/seek requests preserve playback intent. No physical
 audio device is used by this focused check.
 
 ## Window checks
+
+`FruitsAtelier.App.exe --render-check --library-opening-render-check` holds the
+workspace project gate while a library open is pending. It verifies native
+loading frames, input isolation and UI-thread publication in English and Chinese
+at two window sizes and 96/144/192 DPI. Fixtures stay under
+`artifacts/tests/library-opening`.
 
 `FruitsAtelier.App.exe --render-check --sample-banks-render-check` runs the focused
 tool-palette checks in English and Chinese at both window sizes and 96/144/192 DPI.

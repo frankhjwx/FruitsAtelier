@@ -41,6 +41,12 @@ their source image version changes.
 
 `Core/Workspace` provides project-directory transactions, SQLite indexing, metadata scanning, resource-reference diagnostics, and explicit export plans. Shared `EditorView.Library` implements the library/settings pages, and `EditorView.Export` draws the modal export overlay above the editor; platform hosts handle folder selection, audio changes, and resource export. Library scanning and star calculations run in the background. The UI reads committed maps during scanning and completed star results. See [Workspace](WORKSPACE.md).
 
+Opening a library project runs on a background worker on both platforms. The library
+shows a loading overlay and blocks further content operations until the result is
+published on the UI thread. Waiting for workspace maintenance's project lock does
+not block window painting or message handling. Failed opens retain the current
+project and display the error.
+
 ## Editing and conversion
 
 Hosts map input to DIP coordinates before passing it to `EditorView`. Content changes commit through `EditorHistory` transactions; a drag, batch operation, or curve draft becomes one undo step. Selection and viewport are separate session state.

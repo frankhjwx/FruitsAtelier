@@ -30,6 +30,7 @@
   "history.title": "历史版本回溯",
   "history.help": "选择一个历史版本，再选择其中的难度。对照当前与历史谱面后恢复。",
   "history.empty": "此项目没有保留的历史版本。",
+  "library.opening": "正在打开项目…",
   "history.loading": "正在加载历史版本…",
   "history.failed": "无法读取或恢复此版本：{0}",
   "history.restore": "恢复此难度",

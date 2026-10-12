@@ -7,6 +7,12 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 // Existing interaction fixtures use Chinese labels explicitly.
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
+if (args.Contains("--library-opening-check"))
+{
+    try { LibraryOpeningTests.Run(); Console.WriteLine("PASS Library opening responsiveness, publication and failure checks"); return 0; }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
+
 if (args.Contains("--mapping-canvas-check"))
 {
     try
@@ -331,6 +337,7 @@ var tests = new (string Name, Action Run)[]
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),
     ("Fresh process defaults to English", () => { if (startupLanguage != "en") throw new Exception("Default language must be English"); }),
     ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),
+    ("Library opening keeps UI responsive while workspace maintenance holds the project gate", LibraryOpeningTests.Run),
     ("Workspace library isolates input, saving and export", LibraryTests.Run),
     ("Library navigation preserves position, supports dragging and returns with Escape", LibraryNavigationTests.Run),
     ("Library favourites persist, filter songs and projects, and toggle from the first context action", LibraryFavouriteTests.Run),

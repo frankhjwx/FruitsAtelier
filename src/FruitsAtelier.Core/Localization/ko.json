@@ -30,6 +30,7 @@
   "history.title": "버전 기록",
   "history.help": "버전을 선택한 다음 난이도를 선택하세요. 복원하기 전에 현재 지도와 과거 지도를 비교하세요.",
   "history.empty": "이 프로젝트에 보관된 버전이 없습니다.",
+  "library.opening": "프로젝트 여는 중…",
   "history.loading": "기록 로드 중…",
   "history.failed": "이 버전을 읽거나 복원할 수 없습니다: {0}",
   "history.restore": "이 어려움을 복원",

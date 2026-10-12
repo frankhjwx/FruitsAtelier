@@ -45,6 +45,7 @@ public sealed partial class EditorView
 
     private void DrawDiscardConfirmation(ICanvas c)
     {
+        if (LibraryOpening) { DrawSynchronizationWait(c); return; }
         if (SynchronizationWaitVisible) { DrawSynchronizationWait(c); return; }
         if (SynchronizationBlocksInput)
         {

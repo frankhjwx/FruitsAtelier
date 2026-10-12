@@ -33,6 +33,7 @@ public sealed partial class EditorView
         PumpWorkspaceSave();
         PumpSynchronizationWait();
         PumpAudioProject();
+        PumpLibraryOpen();
         if (ConversionNeedsRedraw) PumpDeferredConversion();
         CompleteSliderMultiplierValidation();
         RefreshLanguage();

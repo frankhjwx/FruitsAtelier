@@ -119,6 +119,12 @@ internal sealed partial class EditorWindow : IDisposable
         }
         if (renderCheck)
         {
+            if (Environment.GetCommandLineArgs().Contains("--library-opening-render-check"))
+            {
+                Diagnostics.LibraryOpeningRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (difficultySwitchPath is not null)
             {
                 Diagnostics.DifficultySwitchRenderCheck.Run(canvas, view, difficultySwitchPath, dpi);

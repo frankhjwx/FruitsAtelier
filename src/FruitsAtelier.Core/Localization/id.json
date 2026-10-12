@@ -30,6 +30,7 @@
   "history.title": "Riwayat versi",
   "history.help": "Pilih versi, lalu tingkat kesulitan. Bandingkan peta saat ini dan peta historis sebelum memulihkan.",
   "history.empty": "Tidak ada versi yang dipertahankan untuk proyek ini.",
+  "library.opening": "Membuka proyek…",
   "history.loading": "Memuat riwayat…",
   "history.failed": "Tidak dapat membaca atau memulihkan versi ini: {0}",
   "history.restore": "Kembalikan kesulitan ini",

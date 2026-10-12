@@ -78,6 +78,7 @@ public sealed partial class EditorView
     }
     public void ShowLibrary()
     {
+        if (LibraryOpening) return;
         if (WaitForSynchronization(ready => { if (ready) ShowLibrary(); })) return;
         if (DiscardConfirmationVisible || !PrepareFileOperation()) return;
         if (HasEditorProject && IsDirty)

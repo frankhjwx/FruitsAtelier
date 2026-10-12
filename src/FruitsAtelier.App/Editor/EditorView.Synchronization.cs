@@ -12,7 +12,7 @@ public sealed partial class EditorView
     private SyncRetry? syncRetry;
     private Task<SyncResult>? syncTask;
     private readonly HashSet<Guid> syncSearching = [];
-    private bool SynchronizationBlocksInput => AudioProjectCreating || workspaceSaveTask is not null && workspaceSaveBlocksInput || syncCommitTask is not null && !syncCommitAllowsEditing;
+    private bool SynchronizationBlocksInput => LibraryOpening || AudioProjectCreating || workspaceSaveTask is not null && workspaceSaveBlocksInput || syncCommitTask is not null && !syncCommitAllowsEditing;
     private bool syncCommitAllowsEditing;
     private bool syncCommitCompletesSave;
     private bool SearchingReference(int index) => syncTask is not null && index >= 0 && index < difficulties.Count && syncSearching.Contains(difficulties[index].Id);
@@ -36,8 +36,8 @@ public sealed partial class EditorView
     private IReadOnlyList<WorkspaceClaim> syncClaims = [];
     private string syncFailure = "";
     public bool SynchronizationVisible => syncPage is not null and not "checking";
-    public bool SynchronizationBusy => syncRetry is not null || workspaceSaveTask is not null || syncTask is not null || syncCommitTask is not null;
-    public bool SynchronizationNeedsRedraw => SynchronizationWaitVisible || syncRetry is { } retry && DateTime.UtcNow >= retry.After || workspaceSaveTask is { IsCompleted: true } || VersionHistoryNeedsRedraw || syncTask is { IsCompleted: true } || syncCommitTask is { IsCompleted: true } || SynchronizationVisible && syncPreviewTask is { IsCompleted: true }
+    public bool SynchronizationBusy => LibraryOpening || syncRetry is not null || workspaceSaveTask is not null || syncTask is not null || syncCommitTask is not null;
+    public bool SynchronizationNeedsRedraw => LibraryOpening || SynchronizationWaitVisible || syncRetry is { } retry && DateTime.UtcNow >= retry.After || workspaceSaveTask is { IsCompleted: true } || VersionHistoryNeedsRedraw || syncTask is { IsCompleted: true } || syncCommitTask is { IsCompleted: true } || SynchronizationVisible && syncPreviewTask is { IsCompleted: true }
         || fileMonitor?.IsReady(DateTime.UtcNow) == true
         || WorkspaceSession is not null && !SynchronizationVisible && (fileSyncPending || !LibraryVisible && DateTime.UtcNow >= nextSyncCheck);
     public WorkspaceSyncState DifficultySyncState(int index) => index >= 0 && index < difficulties.Count

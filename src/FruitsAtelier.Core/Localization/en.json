@@ -30,6 +30,7 @@
   "history.title": "Version history",
   "history.help": "Select a version, then a difficulty. Compare the current and historical maps before restoring.",
   "history.empty": "No retained versions for this project.",
+  "library.opening": "Opening project…",
   "history.loading": "Loading history…",
   "history.failed": "Unable to read or restore this version: {0}",
   "history.restore": "Restore this difficulty",

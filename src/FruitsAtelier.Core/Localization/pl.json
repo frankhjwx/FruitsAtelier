@@ -30,6 +30,7 @@
   "history.title": "Historia wersji",
   "history.help": "Wybierz wersję, a następnie poziom trudności. Przed przywróceniem porównaj mapy aktualne i historyczne.",
   "history.empty": "Brak zachowanych wersji tego projektu.",
+  "library.opening": "Otwieranie projektu…",
   "history.loading": "Ładowanie historii…",
   "history.failed": "Nie można odczytać ani przywrócić tej wersji: {0}",
   "history.restore": "Przywróć tę trudność",

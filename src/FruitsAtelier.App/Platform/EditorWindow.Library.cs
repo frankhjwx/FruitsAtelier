@@ -49,8 +49,10 @@ internal sealed partial class EditorWindow
             if (view.TryResumeLibraryProject(map)) return;
             ConfirmDiscard(() =>
             {
-                view.LoadWorkspace(LibraryOperations.Open(map, view.LibrarySettings), checkAdditionalDifficulties: true);
-                ResetAudio(); if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath);
+                view.BeginLibraryOpen(map, () =>
+                {
+                    ResetAudio(); if (!string.IsNullOrWhiteSpace(view.Document.AudioPath)) audio.Load(view.Document.AudioPath);
+                });
             });
         });
         view.RequestLibraryDelete = map =>

@@ -93,9 +93,10 @@ internal sealed partial class MacWindow
         {
             if (View.TryResumeLibraryProject(map)) return;
             if (!await ConfirmDiscard()) return;
-            var session = await Task.Run(() => LibraryOperations.Open(map, View.LibrarySettings));
-            View.LoadWorkspace(session, checkAdditionalDifficulties: true);
-            await audio.LoadAsync(View.Document.AudioPath); PollAudio();
+            View.BeginLibraryOpen(map, () => RunFile(async () =>
+            {
+                await audio.LoadAsync(View.Document.AudioPath); PollAudio();
+            }));
         });
         View.RequestLibraryDelete = map =>
         {

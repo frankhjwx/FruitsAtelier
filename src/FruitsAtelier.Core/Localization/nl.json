@@ -30,6 +30,7 @@
   "history.title": "Versiegeschiedenis",
   "history.help": "Selecteer een versie en vervolgens een moeilijkheidsgraad. Vergelijk de huidige en historische kaarten voordat u ze restaureert.",
   "history.empty": "Geen bewaarde versies voor dit project.",
+  "library.opening": "Project openen…",
   "history.loading": "Geschiedenis laden…",
   "history.failed": "Kan deze versie niet lezen of herstellen: {0}",
   "history.restore": "Herstel deze moeilijkheid",
