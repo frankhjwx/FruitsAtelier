@@ -993,6 +993,9 @@ Canvas** provides a separate Background Dim preference (90% by default), reverse
 canvas scrolling, movement indicator colours and X-axis grid appearance. Preview and testplay background
 dim remain independent.
 
+Mapping canvas dim blends the image toward the canvas's original dark blue
+background colour (#171A20).
+
 Drop a PNG, JPEG or BMP image into the editor to set the current difficulty's
 background. An existing background requires replacement confirmation. Images
 outside the map directory are copied there; conflicting filenames receive a numeric

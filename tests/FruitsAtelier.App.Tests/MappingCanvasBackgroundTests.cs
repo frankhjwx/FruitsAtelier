@@ -63,7 +63,7 @@ static class MappingCanvasBackgroundTests
                 ui.View.ApplySettings(settings); ui.Key(27);
                 Check(LibrarySettings.Load(settings).MappingCanvasBackgroundDim == 50 && ui.View.LibrarySettings.BackgroundDim == 35, "Canvas dim was not saved independently.");
                 Check(snapshot.ContentEquals(ui.View.Document), "Settings changed map content.");
-                Check(ui.Canvas.PaintCalls.Any(p => p.Color == 0 && p.FillBounds == texture.Bounds && Math.Abs(p.Opacity - .5f) < .001), "Canvas did not apply its dim.");
+                Check(ui.Canvas.PaintCalls.Any(p => p.Color == 0x171A20 && p.FillBounds == texture.Bounds && Math.Abs(p.Opacity - .5f) < .001), "Canvas did not apply its dark blue dim.");
             }
 
             var local = new Ui(false); local.LoadDocument(new MapDocument());
