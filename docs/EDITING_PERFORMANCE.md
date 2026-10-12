@@ -102,12 +102,11 @@ range rejection from inherited beat-length bounds, including compensated red
 resets. Confirmation converts the confirmed and candidate snapshots on a detached
 worker with its own write cache. NM and HR object identities, kinds, times and
 positions must match before the new value commits.
-SV input updates a displayed draft and resets a one-second idle deadline; it does
-not change document content or invalidate conversion during continuous input.
-Validation starts on a detached worker only after that deadline.
-New input remains available during validation, supersedes the worker's result and
-restarts the deadline. Only the current, matching snapshot may commit, in one undo
-step. FSlider fitting and export read-back use the candidate's effective base.
+SV/DPB input in Configure DS updates a local draft without changing content or
+invalidating conversion. Apply queues detached validation; draft controls stay
+inactive until it completes, while Cancel discards the pending result. Only the
+current, matching snapshot may commit SV, DPB and DS presets in one undo step.
+FSlider fitting and export read-back use the candidate's effective base.
 Each write cache retains one current baseline and one validated override result,
 keyed by document content, effective base, Tiny compensation and language. The baseline ignores
 only the editing-lock flag. Content edits invalidate pending

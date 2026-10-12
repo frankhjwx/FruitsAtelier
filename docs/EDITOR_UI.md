@@ -153,30 +153,21 @@ section, including its start and excluding the next red point. BPM changes do no
 move these markers; the audio preview point stays fixed. The option starts off.
 Offset buttons step by 2 ms, Ctrl by 1 ms and Shift by 10 ms.
 
-Below Slider Tick Rate, **Override SV** unlocks the difficulty's base slider
-velocity (SliderMultiplier) on a separate row. It starts off for new and older
-projects. Use the arrows for 0.1 steps, hold Ctrl for 0.01 steps, or type a value
-from 0.4 to 3.6. The value displays two decimal places. Turning the switch off
-locks editing and retains the confirmed value. The switch is saved in
-`.catchproj`, belongs to the current difficulty, and participates in undo/redo.
-Changing base SV preserves DPB and distance-snap presets and compensates inherited
-SV for conversion and export, including red-point resets. FSliders use the current
-base SV while editing and exporting, with the inherited multiplier limited to
-0.1–10. Cached exported green-point limits reject out-of-range compensation
-immediately in either direction. Valid adjustments update the displayed draft
-immediately and restart a one-second idle timer. The number and arrows remain
-available while waiting and during validation. Once the value stays unchanged
-for one second, a worker converts and exports the latest draft at the requested
-base SV, validating its NM/HR playback against the confirmed map.
-The previous confirmed value remains active until validation succeeds. A new
-adjustment supersedes an older worker result and starts its own idle interval.
-One continuous adjustment commits as one undo step. File operations wait for
-the draft to be validated; retry after it completes.
-An intervening content edit invalidates the pending result. The change is applied only when exported NM/HR
-objects retain their kinds, times and positions within 0.001 ms/px. Timing Setup validates compensated export
-before committing when a base-SV override is active. Changes that
-require inherited SV outside 0.1–10 or cannot preserve playback report an error
-and leave the difficulty unchanged.
+Below Slider Tick Rate, **Looking For Slider Velocity? You can adjust it here**
+opens **Configure DS…**. Its upper section edits the difficulty's base SV and DPB
+through one numeric field. Click the SV/DPB button to switch units; DPB equals
+100 × SV. Switching units does not edit content. SV accepts 0.4–3.6, equivalent
+to DPB 40–360 px, independently of reference Snap and BPM.
+
+Apply validates a changed base SV on a detached worker before committing SV,
+DPB and rescaled DS presets in one undo step. Cancel discards the entire draft,
+including pending validation. The previous confirmed value remains active until
+validation succeeds. Inherited SV compensation, including red-point resets,
+must stay within 0.1–10 and preserve exported NM/HR object kinds, times and
+positions within 0.001 ms/px. Invalid compensation leaves the difficulty unchanged
+and displays its error in the dialog. Loading a project resolves conflicting
+legacy DPB values using the effective SV. Timing Setup validates compensated
+export before committing when a base-SV override is active.
 
 In Timing mode, object hitsounds are suppressed and the sound-flag palette is
 disabled. During playback, **Metronome Clicks** schedules one tick per beat, with a distinct
@@ -608,7 +599,7 @@ Changing DS settings, BPM, or tick rate does not reshape existing sliders.
 
 **Collinear snap**, in its own row below the presets and a horizontal divider in Configure DS, is on by default and is saved with the current difficulty through Apply/Cancel and undo. While DS is active, it adds a candidate at the current time on the straight line from the preceding object's final tail to the following object's head. The nearest candidate wins alongside the DS presets and implicit zero; missing neighbours or overlapping intervals add no candidate. Placement and whole-object dragging use this candidate, excluding dragged objects from the neighbours. With Grid Snap enabled, the chosen X rounds to the nearest horizontal grid position; with Grid Snap disabled, it retains the exact collinear coordinate. Hover over the row for a detailed explanation of neighbour selection, DS candidates and Grid Snap. The preview canvas uses the draft option immediately. This option does not constrain a slider's internal curve or add a shortcut.
 
-The upper-left section sets the 1.0x Distance Per Beat (DPB) from 32 px up to the distance at the end of the four-colour reference bar. New difficulties default to 192 px with SliderMultiplier 1.92; imported difficulties initially show `100 ×` their stored [Difficulty] SliderMultiplier. Changing DPB affects the editor's distance snapping and readouts while retaining the stored SliderMultiplier and existing slider playback. The DPB override is saved in `.catchproj` and is not exported to `.osu`. Drag the Stand/Walk/Dash/HDash bar to choose a whole-pixel value. The bar uses the same four equal Stand/Walk/Dash/HDash regions as the preset reference below; its 1.0x marker and drag positions use the same movement distance limits at the selected beat subdivision. The upper limit follows the selected reference Snap and timing, so all four movement regions remain reachable. A separate Grid Snap switch row and the 4/8/16/32 px level row below the numeric field control only DPB drag rounding; they start from the editor grid settings on first opening and then remain independent for the editor session. The level row is dimmed and unavailable while this Grid Snap switch is off. With Grid Snap enabled here, dragging moves in the selected step; the numeric field accepts any value in range, including decimals. The base distance is independent of BPM, while its speed in milliseconds follows the active red timing point. Existing preset multipliers rescale with draft DPB changes so their pixel distances stay fixed; the preview uses the draft DPB immediately. Apply stores the base distance and rescaled presets together as one undoable difficulty edit; Cancel leaves both unchanged.
+The upper-left section sets base SV or its equivalent 1.0x Distance Per Beat (DPB), with SV limits 0.4–3.6 (DPB 40–360 px). New difficulties default to 192 px with SliderMultiplier 1.92; imported difficulties initially show `100 ×` their stored [Difficulty] SliderMultiplier. Changing the base value updates DPB and effective SliderMultiplier together while preserving existing slider playback through validated inherited SV compensation. The DPB override is saved in `.catchproj`; `.osu` export uses the effective SliderMultiplier and compensated timing. Drag the Stand/Walk/Dash/HDash bar to choose a whole-pixel value. The bar uses the same four equal Stand/Walk/Dash/HDash regions as the preset reference below; its 1.0x marker and drag positions use the same movement distance limits at the selected beat subdivision. Both dragging and numeric entry enforce the SV limits, independently of the selected reference Snap and timing. A separate Grid Snap switch row and the 4/8/16/32 px level row below the numeric field control only DPB drag rounding; they start from the editor grid settings on first opening and then remain independent for the editor session. The level row is dimmed and unavailable while this Grid Snap switch is off. With Grid Snap enabled here, dragging moves in the selected step; the numeric field accepts any value in range, including decimals. The base distance is independent of BPM, while its speed in milliseconds follows the active red timing point. Existing preset multipliers rescale with draft DPB changes so their pixel distances stay fixed; the preview uses the draft DPB immediately. Apply stores the base distance and rescaled presets together as one undoable difficulty edit; Cancel leaves both unchanged.
 
 The right side is a fixed four-beat canvas: Snap 1/4 shows 16 intervals and 17 horizontal lines, including the white closing line at the end of the fourth beat, which also accepts fruit placement. Time increases upward. Left-click to place fruits with beat and distance snapping relative to the preceding preview fruit; right-click a fruit to remove it. A hollow marker shows the next placement. Each consecutive pair shows its actual DS in a translucent black label centred on the connection midpoint, including zero. **Show DS**, beside Reset, toggles all preview DS labels while retaining fruits, connections and skin-coloured hyperdash starts. It defaults to off and retains its choice while the editor remains open. Its border matches the DS interval colour used by the preset badges; simultaneous fruits show a dash because their DS is undefined. A DS label is red when its value is no longer among the available presets (including implicit zero). A fruit that starts a hyperdash uses the skin HyperDashFruit colour. Classification uses the complete preview sequence and includes the prospective placement, updating when fruits are added or removed. This canvas does not pan or scroll, and it does not create sliders. Preview fruits are temporary and never become beatmap content, even when applying the DS configuration. The preview Snap slider starts at the editor's current divisor and offers the same fixed choices: 1, 2, 3, 4, 5, 6, 7, 8, 9, 12 and 16. It updates the reference and grid without changing editor Snap or existing preview fruit beat positions. Esc or lost capture cancels an active Snap drag. BPM is taken from the playhead at dialog entry and has no separate control. **Reset**, beside the preview Snap slider, clears all placed preview fruits without changing presets or Snap. Reopening resets the preview.
 

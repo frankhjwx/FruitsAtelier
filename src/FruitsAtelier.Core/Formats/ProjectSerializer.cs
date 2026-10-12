@@ -63,6 +63,7 @@ public static partial class ProjectSerializer
         if (file?.SchemaVersion is not (1 or 3 or 5 or 7 or 9 or 11 or 13 or 15 or 17) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
         var document = file.Document;
         NormalizeRandomizationStrength(document);
+        NormalizeBaseDistance(document);
         RejectNetworkPath(document.AudioPath);
         RejectNetworkPath(document.SourcePath);
         if (projectPath is not null)
@@ -78,6 +79,13 @@ public static partial class ProjectSerializer
     {
         // Earlier droplet FX projects allowed strengths up to 512.
         if (document.RandomizeDropletStrength is > 100 and <= 512) document.RandomizeDropletStrength = 100;
+    }
+
+    private static void NormalizeBaseDistance(MapDocument document)
+    {
+        // SV owns the base distance; older projects could store an independent DPB.
+        if (document.DistancePerBeat != 100 * document.EffectiveSliderMultiplier)
+            document.DistancePerBeatOverride = 100 * document.EffectiveSliderMultiplier;
     }
 
     public static MapDocument ReadFile(string path)

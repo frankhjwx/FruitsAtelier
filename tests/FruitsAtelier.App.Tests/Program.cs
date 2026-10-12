@@ -1,4 +1,4 @@
-using FruitsAtelier.App.Editor;
+﻿using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
@@ -138,7 +138,7 @@ var tests = new (string Name, Action Run)[]
     ("Shortcut routing exports from Timing while retaining modal focus", ShortcutRoutingTests.Export),
     ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),
     ("Timing setup drafts, shortcuts, clipboard, undo and narrow bilingual layout", TimingEditorTests.Run),
-    ("Timing base SV override preserves gameplay, DPB, precision, persistence and undo", SliderMultiplierTests.Run),
+    ("Timing SV entry and DS unit switching preserve gameplay, persistence and undo", SliderMultiplierTests.Run),
     ("Timing metronome schedules beat and Ctrl snap ticks without duplicate playback", TimingEditorTests.Metronome),
     ("Timing waveform zoom, cached audio and red-line selection", TimingEditorTests.Waveform),
     ("Wheel modifiers distinguish snapping zoom and navigation", WheelGestureTests.Run),
@@ -299,8 +299,8 @@ var tests = new (string Name, Action Run)[]
     ("Break recalculation respects slider duration and cancellation", BreakRecalculationTests.DurationAndCancellation),
     ("Removing break notes merges intervals and nearby notes shorten them", BreakRecalculationTests.RemovalAndNearbyPlacement),
     ("Distance per beat uses grid drag, numeric entry, export and undo", DistanceSnapPresetTests.BaseDistance),
-    ("Editor DPB preserves existing slider playback and imported multiplier", DistanceSnapPresetTests.ExistingSliderPreservation),
-    ("DPB input and bar use the reference distance range", DistanceSnapPresetTests.DynamicBaseRange),
+    ("Unified SV and DPB preserve existing slider playback", DistanceSnapPresetTests.ExistingSliderPreservation),
+    ("SV limits govern DPB input independently of reference timing", DistanceSnapPresetTests.DynamicBaseRange),
     ("DPB changes preserve preset pixel distances", DistanceSnapPresetTests.PresetDistancePreservation),
     ("Distance snap configuration supports modal editing and eight presets", DistanceSnapPresetTests.Dialog),
     ("Anchor dragging defaults to free time with independent opt-in snapping", AnchorSnapTests.Dragging),

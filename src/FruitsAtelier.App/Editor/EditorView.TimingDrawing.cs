@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 using L = FruitsAtelier.Localization.Strings;
@@ -301,24 +301,17 @@ public sealed partial class EditorView
         TimingButton(c, new(r.X, y, r.Width, row), timingTaps.Count >= 2 ? L.Get("timing.tapResult", TimingPageValue("bpm", 60000 / EstimateTappedTiming().BeatLength), timingTaps.Count) : L.Get("timing.tapApply"), ApplyTappedTiming, enabled: timingTaps.Count >= 2); y += row + gap;
         void Number(string key, double value, Action<double> apply, bool enabled = true)
         {
-            if (key == "sliderMultiplier")
-            {
-                TimingSliderMultiplierBounds = new(r.X, y, r.Width, row);
-                TimingCheck(c, new(r.X - 7, y, 107, row), "timing.overrideSv", Document.OverrideSliderMultiplier,
-                    () => Edit(L.Get("timing.overrideSv"), () => Document.OverrideSliderMultiplier = !Document.OverrideSliderMultiplier), enabled: !SliderMultiplierValidationBusy);
-            }
-            else c.Text(L.Get($"timing.{key}"), r.X, y + 7, 12, Foreground, 95);
+            c.Text(L.Get($"timing.{key}"), r.X, y + 7, 12, Foreground, 95);
             var input = new Rect(r.X + 100, y, r.Width - 100, row);
             c.Image(Path.Combine(AppContext.BaseDirectory, "assets", "ui", "timing", "controls.png"), input, source: new Rect(80, 80, 1096, 192), opacity: enabled ? 1 : .35f);
             TimingNumber(c, "page." + key, new(input.X + 26, y, input.Width - 52, row),
-                key == "sliderMultiplier" ? value.ToString("0.00", CultureInfo.InvariantCulture) : TimingN(TimingPageValue(key, value)), apply, enabled: enabled);
+                TimingN(TimingPageValue(key, value)), apply, enabled: enabled);
             void Step(int direction)
             {
                 var current = SnapTiming().At(playhead);
-                double number = key == "bpm" ? 60000 / (timingResetPoint?.BeatLengthMs ?? current.BeatLengthMs) : key == "offset" ? timingResetPoint?.TimeMs ?? current.OffsetMs : key == "sliderMultiplier" ? DisplaySliderMultiplier : Document.SliderTickRate;
-                double step = key == "bpm" ? placementCtrl ? .25 : timingPointerShift ? 5 : 1 : key == "offset" ? placementCtrl ? 1 : timingPointerShift ? 10 : 2 : key == "sliderMultiplier" ? placementCtrl ? .01 : .1 : 1;
+                double number = key == "bpm" ? 60000 / (timingResetPoint?.BeatLengthMs ?? current.BeatLengthMs) : key == "offset" ? timingResetPoint?.TimeMs ?? current.OffsetMs : Document.SliderTickRate;
+                double step = key == "bpm" ? placementCtrl ? .25 : timingPointerShift ? 5 : 1 : key == "offset" ? placementCtrl ? 1 : timingPointerShift ? 10 : 2 : 1;
                 double next = TimingPageValue(key, number) + direction * step;
-                if (key == "sliderMultiplier") next = Math.Clamp(Math.Round(next, 2), SliderMultiplierEditing.Minimum, SliderMultiplierEditing.Maximum);
                 try { apply(next); } catch (ArgumentException ex) { timingError = ex.Message; }
             }
             TimingButton(c, new(input.X, y, 24, row), "‹", () => Step(-1), enabled: enabled);
@@ -330,7 +323,13 @@ public sealed partial class EditorView
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.moveNotes", timingMoveNotes, () => timingMoveNotes = !timingMoveNotes); y += row + gap;
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.moveMarkers", timingMoveMarkers, () => timingMoveMarkers = !timingMoveMarkers); y += row + gap;
         Number("tickRate", Document.SliderTickRate, v => { if (v < .5 || v > 8) throw new ArgumentException(L.Get("timing.range")); Edit(L.Get("timing.edit"), () => Document.SliderTickRate = v); });
-        Number("sliderMultiplier", DisplaySliderMultiplier, ChangeSliderMultiplier, Document.OverrideSliderMultiplier);
+        TimingSliderVelocityLinkBounds = new(r.X, y, r.Width, row * 2);
+        var link = TimingSliderVelocityLinkBounds;
+        c.Fill(link, Surface, 4); c.Stroke(link, Grid, radius: 4);
+        var linkLines = WrapSyncText(c, L.Get("timing.sliderVelocityLink"), link.Width - 20);
+        for (int i = 0; i < linkLines.Length; i++)
+            c.Text(linkLines[i].Text, link.X + 10, link.Y + 8 + i * 16, 12, Accent, link.Width - 20);
+        hits.Add(new(link, OpenDistanceSnapDialog, true)); y += row * 2 + gap;
         TimingCheck(c, new(r.X, y, r.Width, row), "timing.metronome", metronomeEnabled, () => { metronomeEnabled = !metronomeEnabled; ResetHitsounds(); }); y += row + gap;
         TimingButton(c, new(r.X, y, r.Width, row), L.Get("timing.setup"), OpenTimingSetup); y += row + gap;
         c.Text(timingError.Length > 0 ? timingError : sliderMultiplierValidation is not null

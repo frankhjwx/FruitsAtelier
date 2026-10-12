@@ -20,30 +20,29 @@ internal static class SliderMultiplierTests
                 if (i % 25 == 0) map.TimingPoints.Add(new() { TimeMs = i * 2000, BeatLengthMs = i % 50 == 0 ? 500 : 400 });
             }
             var ui = new Ui(false); ui.LoadDocument(map);
-            ui.Key(114); ui.ClickText(L.Get("timing.overrideSv"));
+            ui.View.OpenDistanceSnapDialog(); ui.Paint(); ui.ClickText(L.Get("ui.dpb"));
             long now = 0; ui.View.SliderMultiplierClock = () => now;
             for (int step = 0; step < 8; step++)
             {
                 now = step * 100;
-                var field = ui.View.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
                 long bytes = GC.GetAllocatedBytesForCurrentThread();
                 long processBytes = GC.GetTotalAllocatedBytes();
                 var watch = System.Diagnostics.Stopwatch.StartNew();
-                ui.View.PointerDown(field.Bounds.Right + 14, field.Bounds.Y + 8, 0, false, true);
+                Set(ui, Math.Round(1.92 + .01 * (step + 1), 2).ToString(System.Globalization.CultureInfo.InvariantCulture));
                 double dispatchMs = watch.Elapsed.TotalMilliseconds;
                 bool workerStarted = taskField.GetValue(ui.View) is not null;
-                ui.View.PointerUp(field.Bounds.Right + 14, field.Bounds.Y + 8, 0); ui.Paint();
+                ui.Paint();
                 samples.Add(new { sliders = count, step, dispatchMs, totalMs = watch.Elapsed.TotalMilliseconds,
                     allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - bytes,
                     processAllocatedBytes = GC.GetTotalAllocatedBytes() - processBytes, workerStarted,
                     sv = ui.View.Document.EffectiveSliderMultiplier });
                 Check(ui.View.Document.EffectiveSliderMultiplier == 1.92
-                    && ui.View.TimingFields.Single(f => f.Key == "page.sliderMultiplier").Value == Math.Round(1.92 + .01 * (step + 1), 2).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+                    && ui.Canvas.Texts.Any(t => t.Value == Math.Round(1.92 + .01 * (step + 1), 2).ToString(System.Globalization.CultureInfo.InvariantCulture)),
                     "Continuous SV benchmark keeps conversion on the confirmed value");
             }
-            var completion = System.Diagnostics.Stopwatch.StartNew(); Wait(ui);
-            samples.Add(new { sliders = count, phase = "idle-validation", completionMs = completion.Elapsed.TotalMilliseconds, simulatedIdleMs = 1000 });
-            Check(ui.View.Document.EffectiveSliderMultiplier == 2, "SV benchmark applies the final value after idle");
+            ui.ClickText(L.Get("library.apply")); var completion = System.Diagnostics.Stopwatch.StartNew(); Wait(ui);
+            samples.Add(new { sliders = count, phase = "apply-validation", completionMs = completion.Elapsed.TotalMilliseconds });
+            Check(ui.View.Document.EffectiveSliderMultiplier == 2, "SV benchmark applies the confirmed draft");
         }
         System.IO.Directory.CreateDirectory("artifacts/sv");
         string report = System.Text.Json.JsonSerializer.Serialize(samples, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
@@ -59,58 +58,7 @@ internal static class SliderMultiplierTests
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(locale);
-                var map = Fixture();
-                var ui = new Ui(false); ui.LoadDocument(map); ui.Resize(980, 620);
-                ui.ClickText(L.Get("timing.detailsPanel") + " ▾"); ui.ClickText(L.Get("timing.panel"));
-                Check(!ui.View.Document.OverrideSliderMultiplier && ui.View.TimingFields.All(f => f.Key != "page.sliderMultiplier"), "SV starts locked");
-                var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("timing.overrideSv"));
-                ui.Click(label.X + 4, label.Y + 5);
-                var field = ui.View.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
-                Check(field.Value == "2.00", "SV displays two decimals in its own row");
-                ClickArrow(ui, field.Bounds.Right + 14, field.Bounds.Y + 8, false);
-                Check(ui.View.Document.EffectiveSliderMultiplier == 2.1, "SV arrow steps by 0.1");
-                ClickArrow(ui, field.Bounds.X - 14, field.Bounds.Y + 8, true);
-                Check(ui.View.Document.EffectiveSliderMultiplier == 2.09, "Ctrl SV arrow steps by 0.01");
-                var changed = ui.View.Document.DeepClone();
-                Check(changed.DistancePerBeat == map.DistancePerBeat && ProjectSerializer.Read(ProjectSerializer.Serialize(changed)).ContentEquals(changed), "SV preserves DPB and persists");
-                ui.Key('Z', ctrl: true); Check(ui.View.Document.EffectiveSliderMultiplier == 2.1, "SV undo");
-                ui.Key('Y', ctrl: true); Check(ui.View.Document.ContentEquals(changed), "SV redo");
-                Set(ui, "3.61"); ui.Key(13);
-                Check(ui.View.Document.ContentEquals(changed), "Invalid SV is atomic");
-                ui.Key(27);
-                ui.ClickText(L.Get("timing.overrideSv"));
-                Check(!ui.View.Document.OverrideSliderMultiplier && ui.View.Document.EffectiveSliderMultiplier == 2.09, "Locking SV retains its value");
-                Check(ui.View.TimingFields.All(f => f.Key != "page.sliderMultiplier"), "Locked SV cannot receive text input");
-                ui.ClickText(L.Get("timing.overrideSv"));
-                var pendingField = ui.View.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
-                var owner = (EditorHistory)typeof(FruitsAtelier.App.Editor.EditorView).GetProperty("history",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(ui.View)!;
-                owner.Begin("Concurrent edit");
-                ui.View.PointerDown(pendingField.Bounds.Right + 14, pendingField.Bounds.Y + 8, 0, false, true);
-                Check(ui.View.SliderMultiplierValidationBusy && !ui.View.PrepareFileOperation(), "Pending SV validation keeps file operations on the confirmed value");
-                owner.Cancel();
-                ui.View.Document.Fruits.Add(new() { TimeMs = 6000, X = 200 });
-                ui.View.PointerUp(pendingField.Bounds.Right + 14, pendingField.Bounds.Y + 8, 0); Wait(ui);
-                Check(ui.View.Document.EffectiveSliderMultiplier == 2.09 && ui.View.Document.Fruits.Count == 1,
-                    "Stale SV validation never overwrites subsequent content edits");
-                Set(ui, "1.3"); ui.Key(13); Wait(ui);
-                Check(ui.View.Document.EffectiveSliderMultiplier == 1.3, "Typed SV applies after background validation");
-                var outputCache = new OsuWriteCache();
-                var output = OsuBeatmapWriter.Serialize(ui.View.Document, cache: outputCache);
-                Check(output.Text == OsuBeatmapWriter.Serialize(ui.View.Document).Text, "Cached SV output matches fresh serialization");
-                ui.View.Document.Fruits[0].X = 210;
-                Check(OsuBeatmapWriter.Serialize(ui.View.Document, cache: outputCache).Text
-                    == OsuBeatmapWriter.Serialize(ui.View.Document).Text, "Content edits invalidate override output");
-                pendingField = ui.View.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
-                owner.Begin("Concurrent edit");
-                ui.View.PointerDown(pendingField.Bounds.Right + 14, pendingField.Bounds.Y + 8, 0, false, true);
-                AdvanceIdle(ui); ui.Paint();
-                var validation = (System.Threading.Tasks.Task)typeof(FruitsAtelier.App.Editor.EditorView).GetField("sliderMultiplierValidation",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(ui.View)!;
-                Check(validation.Wait(10000), "SV worker finishes during an active transaction");
-                ui.Paint(); Check(ui.View.SliderMultiplierValidationBusy, "SV completion waits for active history transactions");
-                owner.Cancel(); ui.View.PointerUp(pendingField.Bounds.Right + 14, pendingField.Bounds.Y + 8, 0); Wait(ui);
-                Check(ui.View.Document.EffectiveSliderMultiplier == 1.31, "SV commits after the active transaction ends");
+                DialogChanges();
                 foreach (double value in new[] { .4, 3.6, 1.3 })
                 {
                     var test = Fixture(); var before = OsuBeatmapWriter.Serialize(test);
@@ -127,11 +75,6 @@ internal static class SliderMultiplierTests
                 var original = limited.DeepClone();
                 try { SliderMultiplierEditing.Apply(limited, .4); throw new Exception("SV limit accepted"); }
                 catch (System.IO.InvalidDataException) { Check(limited.ContentEquals(original), "Unrepresentable SV leaves map intact"); }
-                var rejected = new Ui(false); rejected.LoadDocument(limited); rejected.Key(114);
-                rejected.ClickText(L.Get("timing.overrideSv")); Set(rejected, ".4"); rejected.Key(13);
-                Check(!rejected.View.SliderMultiplierValidationBusy, "Maximum green SV rejects a downward adjustment immediately"); Wait(rejected);
-                Check(rejected.View.Document.EffectiveSliderMultiplier == 2 && rejected.View.IsEditingText,
-                    "Rejected typed SV retains the last valid value and restores the draft field");
                 var timingWithOverride = Fixture();
                 timingWithOverride.TimingPoints.Add(new() { TimeMs = 500, Uninherited = false, BeatLengthMs = -100 });
                 SliderMultiplierEditing.Apply(timingWithOverride, 1.3);
@@ -157,7 +100,7 @@ internal static class SliderMultiplierTests
                 Check(SliderMultiplierEditing.TryRebase(authoredBefore, 1.3, out var authoredFast, double.PositiveInfinity), "Generated slider geometry supports local SV validation");
                 Equivalent(OsuBeatmapWriter.Serialize(authored), authoredFast!);
                 FastBoundaryCases();
-                DebouncedChanges();
+
                 var rounding = new MapDocument { IsDemo = false, SliderMultiplier = 1.4 };
                 var shortRepeat = new ImportedSlider { TimeMs = 500, X = 100, Y = 192, PixelLength = 28.2799999, SpanCount = 2, PathType = 'L' };
                 shortRepeat.ControlPoints.AddRange([new(100, 192), new(200, 192)]); rounding.ImportedSliders.Add(shortRepeat);
@@ -224,15 +167,9 @@ internal static class SliderMultiplierTests
 
     private static void Set(Ui ui, string value)
     {
-        var field = ui.View.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
-        ui.Click(field.Bounds.X + 5, field.Bounds.Y + 5); ui.Key('A', ctrl: true);
-        ui.View.PasteTimingText(value, ui.View.TimingInputSession); ui.Paint();
-    }
-
-    private static void ClickArrow(Ui ui, float x, float y, bool ctrl)
-    {
-        ui.View.PointerDown(x, y, 0, false, ctrl); ui.View.PointerUp(x, y, 0); ui.Paint();
-        Wait(ui);
+        var field = ui.View.DistanceSnapBaseFieldBounds;
+        ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
+        ui.View.PasteFieldText(value); ui.Paint(); ui.Key(13);
     }
 
     private static void Wait(Ui ui)
@@ -250,45 +187,50 @@ internal static class SliderMultiplierTests
         ui.View.SliderMultiplierClock = () => now + 1000;
     }
 
-    private static void DebouncedChanges()
+    private static void DialogChanges()
     {
-        var ui = new Ui(false); ui.LoadDocument(Fixture()); ui.Key(114); ui.ClickText(L.Get("timing.overrideSv"));
-        long now = 0; ui.View.SliderMultiplierClock = () => now;
-        var before = ui.View.Document.DeepClone();
-        var conversionField = typeof(FruitsAtelier.App.Editor.EditorView).GetField("conversion",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        var beforeConversion = conversionField.GetValue(ui.View);
-        var taskField = typeof(FruitsAtelier.App.Editor.EditorView).GetField("sliderMultiplierValidation",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
-        void Step()
-        {
-            var field = ui.View.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
-            ui.View.PointerDown(field.Bounds.Right + 14, field.Bounds.Y + 8, 0, false, true);
-            ui.View.PointerUp(field.Bounds.Right + 14, field.Bounds.Y + 8, 0); ui.Paint();
-        }
-        Step(); now = 900; Step(); now = 1899; ui.Paint();
-        Check(ui.View.TimingFields.Single(f => f.Key == "page.sliderMultiplier").Value == "2.02"
-            && ui.View.Document.ContentEquals(before) && taskField.GetValue(ui.View) is null
-            && ReferenceEquals(beforeConversion, conversionField.GetValue(ui.View)),
-            "Continuous SV changes update the display and reset the one-second idle timer without conversion");
-        Check(!ui.View.PrepareFileOperation(), "Saving waits for the displayed SV draft to be validated");
-        now = 1900; ui.Paint();
-        var worker = (System.Threading.Tasks.Task)taskField.GetValue(ui.View)!;
-        Check(worker.Wait(10000), "Idle SV validation finishes");
-        now = 1950; Step(); ui.Paint();
-        Check(ui.View.Document.ContentEquals(before) && ui.View.TimingFields.Single(f => f.Key == "page.sliderMultiplier").Value == "2.03",
-            "A new SV edit supersedes a finished worker before its result commits");
-        now = 2949; ui.Paint(); Check(taskField.GetValue(ui.View) is null, "Superseded SV waits for its own idle interval");
-        now = 2950; ui.Paint(); Wait(ui);
-        Check(ui.View.Document.EffectiveSliderMultiplier == 2.03, "Idle SV validation applies only the latest requested value");
-        ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(before), "A continuous SV adjustment is one undo step");
-        ui.Key('Y', ctrl: true); Check(ui.View.Document.EffectiveSliderMultiplier == 2.03, "Continuous SV redo restores the final value");
-        Step();
-        var field = ui.View.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
-        ui.View.PointerDown(field.Bounds.X - 14, field.Bounds.Y + 8, 0, false, true);
-        ui.View.PointerUp(field.Bounds.X - 14, field.Bounds.Y + 8, 0); ui.Paint();
-        Check(!ui.View.SliderMultiplierValidationBusy && ui.View.Document.EffectiveSliderMultiplier == 2.03,
-            "Returning to the confirmed SV cancels the idle draft without conversion");
+        var ui = new Ui(false); ui.LoadDocument(Fixture()); ui.Resize(980, 620); ui.Key(114);
+        Check(ui.View.TimingFields.All(f => f.Key != "page.sliderMultiplier"), "Timing contains only the SV navigation entry");
+        var link = ui.View.TimingSliderVelocityLinkBounds;
+        ui.Click(link.X + 8, link.Y + 8);
+        Check(ui.View.DistanceSnapDialogVisible, "Timing entry opens DS configuration");
+        var original = ui.View.Document.DeepClone();
+        ui.ClickText(L.Get("ui.dpb"));
+        Check(ui.Canvas.Texts.Any(t => t.Value == "2"), "DPB 200 converts to SV 2");
+        ui.ClickText("SV");
+        Check(ui.Canvas.Texts.Any(t => t.Value == "200"), "SV converts back to DPB without content changes");
+        ui.ClickText(L.Get("library.apply"));
+        Check(ui.View.Document.ContentEquals(original), "Unit-only Apply does not add a content edit");
+        ui.View.OpenDistanceSnapDialog(); ui.Paint(); ui.ClickText(L.Get("ui.dpb"));
+        Set(ui, "1.3"); ui.ClickText(L.Get("ui.sv"));
+        Check(ui.Canvas.Texts.Any(t => t.Value == "130"), "Edited SV converts to DPB in the same draft");
+        ui.ClickText(L.Get("ui.dpb")); ui.ClickText(L.Get("library.apply"));
+        Check(ui.View.SliderMultiplierValidationBusy && !ui.View.PrepareFileOperation(), "SV Apply waits for background validation");
+        Wait(ui);
+        Check(!ui.View.DistanceSnapDialogVisible && ui.View.Document.EffectiveSliderMultiplier == 1.3
+            && ui.View.Document.DistancePerBeat == 130, "Apply commits SV and DPB together");
+        Equivalent(OsuBeatmapWriter.Serialize(original), OsuBeatmapWriter.Serialize(ui.View.Document));
+        var confirmed = ui.View.Document.DeepClone();
+        Check(ProjectSerializer.Read(ProjectSerializer.Serialize(confirmed)).ContentEquals(confirmed), "Unified values persist");
+        ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(original), "SV and DPB undo together");
+        ui.Key('Y', ctrl: true); Check(ui.View.Document.ContentEquals(confirmed), "SV and DPB redo together");
+        ui.View.OpenDistanceSnapDialog(); ui.Paint(); Set(ui, "3.61"); ui.ClickText(L.Get("library.apply"));
+        Check(!ui.View.SliderMultiplierValidationBusy && ui.View.Document.ContentEquals(confirmed), "Invalid SV remains a draft");
+        Set(ui, "1.4"); ui.ClickText(L.Get("library.apply")); ui.Key(27); Wait(ui);
+        Check(ui.View.Document.ContentEquals(confirmed), "Cancel discards pending SV validation");
+        ui.View.OpenDistanceSnapDialog(); ui.Paint(); Set(ui, "1.4"); ui.ClickText(L.Get("library.apply"));
+        ui.View.Document.Fruits.Add(new() { TimeMs = 6000, X = 200 }); Wait(ui);
+        Check(ui.View.Document.EffectiveSliderMultiplier == 1.3 && ui.View.Document.Fruits.Count == 1, "Stale validation cannot overwrite later content");
+        ui.Key(27);
+        var limited = Fixture(); limited.TimingPoints.Add(new() { TimeMs = 0, Uninherited = false, BeatLengthMs = -10 });
+        var rejected = new Ui(false); rejected.LoadDocument(limited); rejected.View.OpenDistanceSnapDialog(); rejected.Paint();
+        Set(rejected, "40"); rejected.ClickText(L.Get("library.apply")); Wait(rejected);
+        Check(rejected.View.DistanceSnapDialogVisible && rejected.View.Document.ContentEquals(limited), "Unrepresentable compensation rejects the entire draft");
+        var conflict = Fixture(); conflict.SliderMultiplierOverride = 1.3; conflict.DistancePerBeatOverride = 350;
+        var loaded = ProjectSerializer.Read(ProjectSerializer.Serialize(conflict));
+        Check(loaded.EffectiveSliderMultiplier == 1.3 && loaded.DistancePerBeat == 130, "Loading legacy conflicts gives SV precedence");
+        loaded = ProjectSerializer.Read("{\"SchemaVersion\":1,\"Document\":{\"SliderMultiplier\":1.4,\"DistancePerBeatOverride\":350}}");
+        Check(loaded.DistancePerBeat == 140, "Original SV also takes precedence over legacy DPB");
     }
 
     private static void Equivalent(OsuWriteResult before, OsuWriteResult after)

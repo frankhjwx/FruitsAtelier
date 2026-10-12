@@ -1,4 +1,4 @@
-using FruitsAtelier.App.Rendering;
+﻿using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 using L = FruitsAtelier.Localization.Strings;
 
@@ -18,6 +18,10 @@ public sealed partial class EditorView
     private double dsBaseDraft, dsBaseDragStart;
     private double dsBaseOpeningValue;
     private bool dsBaseEdited, dsBaseDragEdited;
+    private bool dsBaseSv;
+    private string dsBaseError = "";
+    private sealed record DistanceSnapApply(double Base, double[] Ratios, bool Collinear);
+    private DistanceSnapApply? dsPendingApply;
     private string dsBaseText = "", dsBaseDragText = "", dsBaseOpeningText = "";
     private List<double> dsBaseDragPresets = [];
     private Rect dsDragBounds;
@@ -64,10 +68,11 @@ public sealed partial class EditorView
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
         dsDraft = Document.DistanceSnapRatios.ToList();
         dsCollinear = Document.DistanceSnapCollinear;
-        dsBaseDraft = Document.DistancePerBeat;
+        dsBaseDraft = 100 * Document.EffectiveSliderMultiplier;
         dsBaseOpeningValue = dsBaseDraft;
-        dsBaseText = dsBaseOpeningText = dsBaseDraft.ToString("0.##########", System.Globalization.CultureInfo.InvariantCulture);
         dsBaseEdited = false;
+        dsBaseError = "";
+        dsBaseText = dsBaseOpeningText = DistanceBaseText(dsBaseDraft);
         if (!dsGridInitialized) { dsGridSnap = gridSnap; dsGridSize = gridSize; dsGridInitialized = true; }
         dsSliderDrag = -1; dsSnapDragging = dsBaseDragging = dsBaseFocused = false;
         dsBpm = 60000 / TimingMap.At(Document, playhead).BeatLengthMs;
@@ -78,12 +83,20 @@ public sealed partial class EditorView
 
     private void CloseDistanceSnapDialog()
     {
+        if (dsPendingApply is not null)
+        {
+            dsPendingApply = null;
+            sliderMultiplierVersion++;
+            sliderMultiplierDraft = null;
+            sliderMultiplierValidationSnapshot = null; sliderMultiplierValidationOwner = null;
+        }
         DistanceSnapDialogVisible = false; dsSliderDrag = -1; dsSnapDragging = dsBaseDragging = dsBaseFocused = false;
         hits.Clear(); fields.Clear();
     }
 
     private void DistanceSnapKey(int key, bool ctrl, bool shift)
     {
+        if (dsPendingApply is not null) { if (key == 27) CloseDistanceSnapDialog(); return; }
         if (dsBaseFocused)
         {
             if (key is 13 or 27) { dsBaseFocused = false; return; }
@@ -164,30 +177,76 @@ public sealed partial class EditorView
         Button(c, new(r.Right - 196, r.Bottom - 44, 80, 30), L.Get("mac.cancel"), CloseDistanceSnapDialog);
         double? editedBase = DistanceBaseValue(dsBaseText);
         bool validBase = !dsBaseEdited || editedBase is not null;
-        Button(c, new(r.Right - 108, r.Bottom - 44, 88, 30), L.Get("library.apply"), () =>
+        Button(c, new(r.Right - 108, r.Bottom - 44, 88, 30), L.Get("library.apply"), ApplyDistanceSnap,
+            enabled: validBase && !SliderMultiplierValidationBusy);
+        c.Text(dsPendingApply is not null ? L.Get("timing.sliderMultiplierChecking") : dsBaseError,
+            r.X + 20, r.Bottom - 42, 11, dsPendingApply is not null ? Muted : Error, r.Width - 230);
+        if (dsPendingApply is not null)
         {
-            if (Edit(L.Get("ds.title"), () =>
-            {
-                Document.DistanceSnapCollinear = dsCollinear;
-                Document.DistanceSnapRatios.Clear();
-                Document.DistanceSnapRatios.AddRange(dsDraft.Order());
-                if (dsBaseEdited && editedBase is { } dpb && dpb != Document.DistancePerBeat)
-                    Document.DistancePerBeatOverride = dpb;
-            })) CloseDistanceSnapDialog();
-        }, enabled: validBase);
+            hits.Clear(); fields.Clear();
+            hits.Add(new(new(r.Right - 196, r.Bottom - 44, 80, 30), CloseDistanceSnapDialog, true));
+        }
         if (collinearRow.Contains(mouseX, mouseY))
             DrawPaletteTooltip(c, L.Get("ds.collinearTip"), collinearSwitch, left: false, above: false);
     }
 
-    private double DistanceBaseMaximum() => DistanceSnapLimits()[4] * dsBaseDraft;
+    private double DistanceBaseMaximum() => SliderMultiplierEditing.Maximum * 100;
+    private static double DistanceBaseMinimum => SliderMultiplierEditing.Minimum * 100;
+    private string DistanceBaseText(double value)
+        => (dsBaseSv ? value / 100 : value).ToString("0.##########", System.Globalization.CultureInfo.InvariantCulture);
+
+    private void ToggleDistanceBaseUnit()
+    {
+        if (dsBaseEdited && DistanceBaseValue(dsBaseText) is null) return;
+        dsBaseSv = !dsBaseSv;
+        dsBaseText = DistanceBaseText(dsBaseDraft);
+        dsBaseOpeningText = DistanceBaseText(dsBaseOpeningValue);
+        dsBaseFocused = false;
+    }
+
+    private void ApplyDistanceSnap()
+    {
+        if (SliderMultiplierValidationBusy) return;
+        var draft = new DistanceSnapApply(dsBaseDraft, dsDraft.Order().ToArray(), dsCollinear);
+        if (dsBaseEdited && DistanceBaseValue(dsBaseText) is null) return;
+        if (dsBaseEdited && dsBaseDraft != Document.DistancePerBeat
+            && dsBaseDraft / 100 != Document.EffectiveSliderMultiplier)
+        {
+            try
+            {
+                ChangeSliderMultiplier(dsBaseDraft / 100);
+                sliderMultiplierDeadline = SliderMultiplierClock();
+                dsPendingApply = draft;
+                dsBaseFocused = false;
+            }
+            catch (ArgumentException ex) { dsBaseError = ex.Message; }
+            return;
+        }
+        if (Edit(L.Get("ds.title"), () => CommitDistanceSnap(draft))) CloseDistanceSnapDialog();
+    }
+
+    private void CommitDistanceSnap(DistanceSnapApply draft)
+    {
+        Document.DistanceSnapCollinear = draft.Collinear;
+        Document.DistanceSnapRatios.Clear();
+        Document.DistanceSnapRatios.AddRange(draft.Ratios);
+        if (dsBaseEdited && draft.Base != Document.DistancePerBeat)
+        {
+            Document.DistancePerBeatOverride = draft.Base;
+            Document.OverrideSliderMultiplier = true;
+            Document.SliderMultiplierOverride = draft.Base / 100 == Document.SliderMultiplier ? null : draft.Base / 100;
+        }
+    }
 
     private double? DistanceBaseValue(string text)
         => double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value)
-            && double.IsFinite(value) && value >= 32 && value <= DistanceBaseMaximum() ? value : null;
+            && double.IsFinite(value) && value >= (dsBaseSv ? SliderMultiplierEditing.Minimum : DistanceBaseMinimum)
+            && value <= (dsBaseSv ? SliderMultiplierEditing.Maximum : DistanceBaseMaximum()) ? dsBaseSv ? value * 100 : value : null;
 
     private void SetDistanceBaseText(string text)
     {
         dsBaseText = text;
+        dsBaseError = "";
         dsBaseEdited = text != dsBaseOpeningText;
         if (!dsBaseEdited) SetDistanceBaseDraft(dsBaseOpeningValue);
         else if (DistanceBaseValue(text) is { } value) SetDistanceBaseDraft(value);
@@ -209,11 +268,11 @@ public sealed partial class EditorView
         int segment = Math.Min(3, (int)position);
         double ratio = limits[segment] + (limits[segment + 1] - limits[segment]) * (position - segment);
         double maximum = DistanceBaseMaximum();
-        double value = Math.Clamp(ratio * dsBaseDraft, 32, maximum);
+        double value = Math.Clamp(ratio * dsBaseDraft, DistanceBaseMinimum, maximum);
         value = dsGridSnap ? Math.Clamp(Math.Round(value / dsGridSize, MidpointRounding.AwayFromZero) * dsGridSize,
-                32, Math.Floor(maximum / dsGridSize) * dsGridSize)
+                Math.Ceiling(DistanceBaseMinimum / dsGridSize) * dsGridSize, Math.Floor(maximum / dsGridSize) * dsGridSize)
             : Math.Round(value, MidpointRounding.AwayFromZero);
-        dsBaseText = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        dsBaseText = DistanceBaseText(value);
         dsBaseEdited = dsBaseText != dsBaseOpeningText;
         SetDistanceBaseDraft(dsBaseEdited ? value : dsBaseOpeningValue);
     }
@@ -242,15 +301,17 @@ public sealed partial class EditorView
             dsBaseDragPresets = dsDraft.ToList();
             UpdateDistanceBase(mouseX);
         }, true));
-        c.Text(L.Get("ui.dpb"), r.X + 4, r.Y + 87, 12, Foreground, 48);
+        Button(c, new(r.X + 4, r.Y + 80, 48, 30), dsBaseSv ? L.Get("ui.sv") : L.Get("ui.dpb"), ToggleDistanceBaseUnit,
+            enabled: !dsBaseEdited || DistanceBaseValue(dsBaseText) is not null);
         DistanceSnapBaseFieldBounds = new(r.X + 60, r.Y + 80, 106, 30);
         var field = DistanceSnapBaseFieldBounds;
         c.Fill(field, Surface, 4);
         c.Stroke(field, DistanceBaseValue(dsBaseText) is null ? Error : dsBaseFocused ? Accent : Grid, radius: 4);
         DrawInputText(c, new(field.X + 9, field.Y + 5, field.Width - 18, 20), dsBaseText, 13, dsBaseFocused, "ds:base");
         hits.Add(new(field, () => { dsBaseFocused = true; FocusInput("ds:base", dsBaseText, mouseX); }, true));
-        c.Text(L.Get("ui.pixelUnit"), field.Right + 8, field.Y + 8, 12, Muted, 26);
-        c.Text(L.Get("ds.baseRange", Number(DistanceBaseMaximum())), field.Right + 44, field.Y + 8,
+        c.Text(dsBaseSv ? "" : L.Get("ui.pixelUnit"), field.Right + 8, field.Y + 8, 12, Muted, 26);
+        c.Text(L.Get("ds.baseRange", Number(dsBaseSv ? SliderMultiplierEditing.Minimum : DistanceBaseMinimum),
+            Number(dsBaseSv ? SliderMultiplierEditing.Maximum : DistanceBaseMaximum())), field.Right + 44, field.Y + 8,
             11, Muted, r.Right - field.Right - 48);
         var gridRow = new Rect(r.X + 4, r.Y + 116, r.Width - 8, 32);
         c.Text(L.Get("ui.gridSnap"), gridRow.X, gridRow.Y + 8, 12, Foreground, 126);
@@ -362,6 +423,12 @@ public sealed partial class EditorView
 
     private void DistanceSnapPointerDown(float x, float y, int button)
     {
+        if (dsPendingApply is not null)
+        {
+            if (button == 0) foreach (var hit in hits)
+                if (hit.Enabled && hit.Bounds.Contains(x, y)) { hit.Action(); break; }
+            return;
+        }
         if (dsSliderDrag >= 0 || dsSnapDragging || dsBaseDragging) return;
         if (!DistanceSnapBaseFieldBounds.Contains(x, y)) dsBaseFocused = false;
         if (button == 2)

@@ -79,7 +79,7 @@ Raw section lines retain independent mutable storage in document snapshots. Unch
 | ImportedSlider | Id, TimeMs, X / Y, PathType, ControlPoints, SpanCount, PixelLength, SourceOrder, OriginalLine |
 | BananaShower | Id, TimeMs, EndTimeMs, SourceOrder, OriginalLine |
 
-Difficulty includes ApproachRate, CircleSize, SliderMultiplier, and SliderTickRate. `DistancePerBeatOverride` is a nullable editor-only distance-snap baseline in `.catchproj`; when absent, effective DPB is `100 × SliderMultiplier`. New maps therefore start at DPB 192 px with SliderMultiplier 1.92, while imported maps initially use their original multiplier. Changing DPB sets the override and rescales DS preset multipliers by old DPB / new DPB to preserve their pixel distances, without changing slider conversion or `.osu` export. Older projects without the override continue to derive DPB from their stored SliderMultiplier. DistanceSpacing is a per-difficulty editor multiplier (0.1–6, default 1), included in cloning, dirty comparison, undo and project persistence. `DistanceSnapRatios` stores up to eight finite non-negative multipliers for the difficulty. It defaults to an empty list in older projects and participates in cloning, dirty comparison, undo and project persistence. Zero DS is always implicit; an explicitly added zero-valued preset is also stored so it remains available for dragging. An empty preset list snaps only to zero and does not use the legacy DistanceSpacing value. Neither DPB overrides nor custom DS lists are exported to `.osu`; see [Editing Controls](EDITOR_UI.md#distance-spacing-and-object-flags). Demo defaults are duration 30000 ms, beat length 500 ms, offset=0, AR=8, CS=5, SliderMultiplier=1.92 (DPB 192), and SliderTickRate=1. MapDocument's BeatLengthMs / TimingOffsetMs are fallbacks when no red timing point exists; real beatmaps retain all timing points.
+Difficulty includes ApproachRate, CircleSize, SliderMultiplier, and SliderTickRate. `DistancePerBeatOverride` retains the distance-snap baseline in `.catchproj`. Project loading resolves legacy conflicts to `100 × EffectiveSliderMultiplier`. The DS panel presents SV and DPB as two units of the same value. Applying a base change updates both and rescales DS preset multipliers by old DPB / new DPB to preserve their pixel distances, after validating slider playback and inherited SV compensation. New maps start at DPB 192 px with SliderMultiplier 1.92; imported maps use their original multiplier. DistanceSpacing is a per-difficulty editor multiplier (0.1–6, default 1), included in cloning, dirty comparison, undo and project persistence. `DistanceSnapRatios` stores up to eight finite non-negative multipliers for the difficulty. It defaults to an empty list in older projects and participates in cloning, dirty comparison, undo and project persistence. Zero DS is always implicit; an explicitly added zero-valued preset is also stored so it remains available for dragging. An empty preset list snaps only to zero and does not use the legacy DistanceSpacing value. Neither DPB overrides nor custom DS lists are exported to `.osu`; see [Editing Controls](EDITOR_UI.md#distance-spacing-and-object-flags). Demo defaults are duration 30000 ms, beat length 500 ms, offset=0, AR=8, CS=5, SliderMultiplier=1.92 (DPB 192), and SliderTickRate=1. MapDocument's BeatLengthMs / TimingOffsetMs are fallbacks when no red timing point exists; real beatmaps retain all timing points.
 
 Import initially derives `.osu` `DurationMs` from the last object. Once associated audio is decoded, a longer audio duration becomes available for placement, numeric editing, and dragging. Loading and navigation do not modify the document. The first object edit beyond the original range extends `DurationMs` within the same user transaction.
 
@@ -95,18 +95,19 @@ The internal clipboard stores deep snapshots of selected complete parent objects
 
 Interface language and resources are not serialized in `.catchproj`. Built-in default names come from resources when creating objects. Existing Name values, imported metadata, and raw lines remain user data; switching languages does not rename them. Language changes invalidate conversion diagnostic caches without changing geometry or document history.
 
-`OverrideSliderMultiplier` unlocks base-SV editing in the Timing panel and defaults
-to false. `SliderMultiplierOverride` is nullable and stores the confirmed map
-base SV (0.4–3.6); `EffectiveSliderMultiplier` supplies it to editing, conversion
-and export, falling back to the stored `SliderMultiplier`. These settings participate in cloning, dirty
-comparison, project persistence and undo. Locking editing retains the override.
-Stored timing points retain their source basis for project compatibility. Timing
-lookups and exported timing compensate them into the current base, including red
-resets. FSlider generation uses that same base and inherited SV range 0.1–10;
-export writes its generated SV directly. Timing insertion retains the stored
-basis so compensation is applied once. DPB remains an independent distance-snap
-setting. Base-SV changes validate the candidate conversion and NM/HR read-back
-against the current playable objects before committing. See [Timing editing](EDITOR_UI.md#timing-editing).
+`SliderMultiplierOverride` is nullable and stores the confirmed map base SV;
+`EffectiveSliderMultiplier` supplies it to editing, conversion and export,
+falling back to the stored `SliderMultiplier`. The DS panel accepts SV 0.4–3.6
+and updates DPB to 100 × SV in the same transaction. `OverrideSliderMultiplier`
+is retained for project compatibility and enabled when the panel changes the
+base value. These fields participate in cloning, dirty comparison, persistence
+and undo. Stored timing points retain their source basis. Timing lookups and
+exported timing compensate them into the current base, including red resets.
+FSlider generation uses that same base and inherited SV range 0.1–10; export
+writes its generated SV directly. Timing insertion retains the stored basis so
+compensation is applied once. Base changes validate the candidate conversion
+and NM/HR read-back against the current playable objects before committing.
+See [Timing editing](EDITOR_UI.md#timing-editing).
 
 ## FSliders and Legacy Sliders
 

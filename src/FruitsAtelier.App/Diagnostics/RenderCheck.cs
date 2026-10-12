@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
@@ -119,26 +119,31 @@ internal static class RenderCheck
                 FruitsAtelier.Localization.Strings.SetLanguage(lang); Paint();
                 view.KeyDown(114, false, false); Paint();
                 if (!view.TimingPageVisible) throw new InvalidOperationException("F3 failed to open timing page.");
-                var svRow = view.TimingSliderMultiplierBounds;
+                var svRow = view.TimingSliderVelocityLinkBounds;
                 if (svRow.Bottom > height || view.TimingFields.Any(f => f.Key == "page.sliderMultiplier"))
-                    throw new InvalidOperationException("Base SV must start locked and fit the Timing panel.");
+                    throw new InvalidOperationException("SV navigation must fit the Timing panel.");
                 view.PointerDown(svRow.X + 8, svRow.Y + 10, 0, false, false);
                 view.PointerUp(svRow.X + 8, svRow.Y + 10, 0); Paint();
-                var svField = view.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
-                if (!view.Document.OverrideSliderMultiplier || svField.Bounds.Bottom != svRow.Bottom)
-                    throw new InvalidOperationException("Base SV override did not unlock its row.");
-                double previousSv = view.Document.EffectiveSliderMultiplier;
-                view.PointerDown(svField.Bounds.Right + 14, svField.Bounds.Y + 10, 0, false, true);
-                view.PointerUp(svField.Bounds.Right + 14, svField.Bounds.Y + 10, 0); Paint();
+                if (!view.DistanceSnapDialogVisible) throw new InvalidOperationException("SV entry did not open DS.");
+                var svField = view.DistanceSnapBaseFieldBounds;
+                double nextDpb = (view.Document.EffectiveSliderMultiplier + .01) * 100;
+                view.PointerDown(svField.X + 10, svField.Y + 10, 0, false, false);
+                view.PointerUp(svField.X + 10, svField.Y + 10, 0);
+                view.KeyDown(65, true, false);
+                view.PasteFieldText(nextDpb.ToString(System.Globalization.CultureInfo.InvariantCulture)); Paint();
+                view.KeyDown(13, false, false);
+                float applyX = (width + Math.Min(1040, width - 32)) / 2f - 60;
+                float applyY = (height + Math.Min(640, height - 32)) / 2f - 30;
+                view.PointerDown(applyX, applyY, 0, false, false); view.PointerUp(applyX, applyY, 0); Paint();
                 var svWait = Stopwatch.StartNew();
                 while (view.SliderMultiplierValidationBusy && svWait.ElapsedMilliseconds < 10000)
                 { Thread.Sleep(1); Paint(); }
-                if (Math.Abs(view.Document.EffectiveSliderMultiplier - Math.Round(previousSv + .01, 2)) > 1e-9)
-                    throw new InvalidOperationException($"Base SV Ctrl arrow did not step by 0.01: {previousSv} -> {view.Document.EffectiveSliderMultiplier}; {view.StatusMessage}");
-                view.KeyDown(90, true, false); view.KeyDown(90, true, false); Paint();
+                if (Math.Abs(view.Document.DistancePerBeat - nextDpb) > 1e-9 || view.DistanceSnapDialogVisible)
+                    throw new InvalidOperationException("Unified base SV did not apply.");
+                view.KeyDown(90, true, false); Paint();
                 if (!view.Document.ContentEquals(original))
                     throw new InvalidOperationException("Base SV native undo did not restore the difficulty.");
-                AppLog.Write($"Timing base SV native check passed: {lang}, {width}x{height}");
+                AppLog.Write($"Unified base SV native check passed: {lang}, {width}x{height}");
                 view.PointerMove(350, height - 55, false, false); Paint();
                 int decodes = canvas.ImageDecodeCount;
                 for (int frame = 0; frame < 12; frame++)

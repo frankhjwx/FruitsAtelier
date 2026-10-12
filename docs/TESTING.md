@@ -82,7 +82,7 @@ bash scripts/Test-Mac.sh --native-only        # Mac input/audio checks only
 The opt-in `App.Tests --performance-scheduling` benchmark measures Timing frames
 and Stream setup with synthetic data. `Formats.Tests --benchmark-sv-edits` measures
 ordinary edits with an SV override and compares every export against uncached NM/HR
-output. `App.Tests --sv-performance` measures continuous SV input and idle validation.
+output. `App.Tests --sv-performance` measures SV/DPB draft input and Apply validation.
 Run the same fixtures and build configuration before and after an optimization;
 capture console JSON in `artifacts/`. These are CPU/allocation measurements, not GPU
 presentation or physical input latency.
@@ -391,14 +391,14 @@ Legacy and are reported. Neither command saves the supplied map.
 ## Base SV validation benchmark
 
 Run `dotnet run --no-build --project tests/FruitsAtelier.App.Tests -c Release -- --sv-performance`
-to measure continuous base-SV adjustment on 100 and 1,000 imported Bezier sliders
-with repeats and BPM changes. Eight adjustments arrive 100 ms apart using an
-injected clock. The report separates pointer dispatch plus painting during the
-burst from validation after a simulated one-second idle interval, and records
-current-thread and process-wide allocations. Regressions verify the deadline
-restarts, conversion stays cached during input, superseded workers cannot commit,
-and the final value produces one undo step. The counting canvas measures CPU work;
-GPU presentation and physical display latency are excluded.
+to measure SV/DPB draft input and Apply validation on 100 and 1,000 imported
+Bezier sliders with repeats and BPM changes. Eight draft adjustments arrive
+100 ms apart. The report separates input plus painting during the burst from
+background validation after Apply, and records current-thread and process-wide
+allocations. Regressions verify unit switching, SV limits, conflict loading,
+playback preservation, cancellation, stale-result rejection and atomic undo.
+The counting canvas measures CPU work; GPU presentation and physical display
+latency are excluded.
 
 ## Playback rendering profile
 
