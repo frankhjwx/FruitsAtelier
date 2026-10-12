@@ -217,7 +217,8 @@ public sealed partial class EditorView
                 // Subdivision lines must not paint over the configured base lines.
                 if (x % 128 == 0) continue;
                 float sx = Screen(new(0, x)).X;
-                c.Line(sx, plot.Y, sx, plot.Bottom, 0x262D37);
+                c.Line(sx, plot.Y, sx, plot.Bottom, LibrarySettings.CanvasGridColour,
+                    opacity: LibrarySettings.CanvasGridOpacity / 100f);
         }
         c.Clip(new(canvas.X, plot.Y, canvas.Width, plot.Height));
         double axisStart = viewStart, axisEnd = viewStart + plot.Height / pixelsPerMs;

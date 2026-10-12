@@ -21,10 +21,14 @@ static class CanvasGridSettingsTests
             {
                 L.SetLanguage(locale);
                 var ui = new Ui(false); ui.View.LibrarySettings.Workspace = root;
+                var gridButton = ui.View.AssistButtonBounds[4];
+                ui.Click(gridButton.X + 10, gridButton.Y + 10);
                 var original = ui.View.Document.DeepClone(); bool dirty = ui.View.IsDirty;
                 var horizontal = ui.Canvas.Lines.Where(l => l.Y1 == l.Y2).ToArray();
                 var vertical = GridLines(ui);
                 Check(vertical.Length == 5, "Fixture did not expose the five X-axis lines.");
+                var subdivisions = SubdivisionLines(ui);
+                Check(subdivisions.Length > 0, "Fixture did not expose Grid Snap subdivision lines.");
                 Open(); Colour("settings.canvasGridLine", "123456"); Colour("settings.canvasCentreLine", "ABCDEF");
                 Check(ui.View.LibrarySettings.CanvasGridColour == defaults.CanvasGridColour, "Colour draft applied early.");
                 ui.Key(27); Open();
@@ -39,6 +43,9 @@ static class CanvasGridSettingsTests
                 var updated = GridLines(ui);
                 Check(updated.Count(l => l.Color == 0x123456) == 4 && updated.Count(l => l.Color == 0xABCDEF) == 1
                     && updated.All(l => Math.Abs(l.Opacity - .4f) < .001), "Canvas did not apply grid colour and opacity.");
+                var updatedSubdivisions = SubdivisionLines(ui);
+                Check(updatedSubdivisions.Length == subdivisions.Length && updatedSubdivisions.All(l => l.Color == 0x123456
+                    && Math.Abs(l.Opacity - .4f) < .001), "Grid Snap subdivisions did not apply colour and opacity.");
                 Check(horizontal.SequenceEqual(ui.Canvas.Lines.Where(l => l.Y1 == l.Y2)), "Grid preferences changed horizontal lines.");
                 Check(original.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty, "Grid preferences edited map content.");
                 ui.Resize(760, 580); Open();
@@ -71,6 +78,13 @@ static class CanvasGridSettingsTests
             && t.Y == ui.Plot.Y - 20).Select(t => t.X + 9).ToArray();
         return ui.Canvas.Lines.Where(l => l.X1 == l.X2 && l.Y1 == ui.Plot.Y && l.Y2 == ui.Plot.Bottom
             && positions.Contains(l.X1)).ToArray();
+    }
+
+    private static RecordingCanvas.Segment[] SubdivisionLines(Ui ui)
+    {
+        var basePositions = GridLines(ui).Select(l => l.X1).ToArray();
+        return ui.Canvas.Lines.Where(l => l.X1 == l.X2 && l.Y1 == ui.Plot.Y && l.Y2 == ui.Plot.Bottom
+            && !basePositions.Contains(l.X1)).ToArray();
     }
 
     private static void Check(bool value, string message)

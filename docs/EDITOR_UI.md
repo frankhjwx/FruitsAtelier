@@ -999,11 +999,11 @@ outside the map directory are copied there; conflicting filenames receive a nume
 suffix. Previous image files remain on disk. Changing the background is undoable
 and its Events reference is included in project saves and osu! exports.
 
-The **X-axis grid** section lets you pick separate colours for the four ordinary
-vertical lines and the X=256 centre line, using the colour palette or HEX input.
+The **X-axis grid** section lets you pick separate colours for ordinary vertical
+lines (including Grid Snap subdivisions) and the X=256 centre line, using the
+colour palette or HEX input.
 Their shared opacity ranges from 0% to 100%; the percentage menu selects multiples
 of ten and the minus/plus buttons adjust by five. **Reset grid** restores the
-original colours and 100% opacity. These preferences affect only the five base
-X-axis lines. Horizontal time lines and additional Grid Snap subdivision lines
-keep their existing appearance. Changes remain drafts until Apply and do not
-change beatmap content. Short settings windows scroll to reach the grid controls.
+original colours and 100% opacity. These preferences affect all vertical X-axis
+lines. Horizontal time lines keep their existing appearance. Changes remain
+drafts until Apply and do not change beatmap content. Short settings windows scroll to reach the grid controls.

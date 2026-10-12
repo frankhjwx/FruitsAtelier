@@ -30,6 +30,7 @@ internal static class MappingCanvasRenderCheck
                 view.LibrarySettings.CanvasGridOpacity = 65;
                 view.DropLibraryFiles([image]);
                 Paint("canvas");
+                view.SetModifiers(false, true); Paint("grid-snap"); view.SetModifiers(false, false);
                 int decodes = canvas.ImageDecodeCount;
                 var plot = view.CanvasPlotBounds;
                 view.Wheel(plot.X + 10, plot.Y + 10, -240, false, false, true);
