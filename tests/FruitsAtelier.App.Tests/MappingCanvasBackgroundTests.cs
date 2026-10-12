@@ -29,6 +29,11 @@ static class MappingCanvasBackgroundTests
                 Check(first != "background.png" && File.ReadAllText(old) == "old image", "Name collision overwrote the old image.");
                 Check(File.ReadAllText(Path.Combine(map, first)) == "new image", "Dropped image was not copied.");
                 var texture = ui.Canvas.Images.Single(t => t.Path == Path.Combine(map, first));
+                var timeline = ui.View.ObjectTimelineBounds;
+                Check(texture.Bounds.Contains(timeline.X, timeline.Y) && texture.Bounds.Right >= timeline.Right
+                    && texture.Bounds.Bottom >= timeline.Bottom, "Background did not cover the upper object timeline.");
+                Check(ui.View.ToolButtonBounds.All(button => texture.Bounds.Contains(button.X, button.Y)
+                    && texture.Bounds.Right >= button.Right && texture.Bounds.Bottom >= button.Bottom), "Background did not cover all four tool buttons.");
                 ui.View.Wheel(ui.Plot.X + 10, ui.Plot.Y + 10, 120, false, false, true); ui.Paint();
                 Check(ui.Canvas.Images.Single(t => t.Path == texture.Path).Bounds == texture.Bounds, "Zoom resized the background.");
                 ui.View.Wheel(ui.Plot.X + 10, ui.Plot.Y + 10, 120, false); ui.Paint();

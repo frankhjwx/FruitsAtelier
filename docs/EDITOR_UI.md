@@ -987,8 +987,9 @@ F12 copies the current window content, including open dialogs and testplay, as a
 
 ## Mapping Canvas background
 
-The main mapping canvas displays the current difficulty's background, fitted to
-its visible drawing area independently of zoom and scrolling. **Settings → Mapping
+The main mapping canvas displays the current difficulty's background across its
+drawing area, upper object timeline and left tool palette. The image fits this
+combined area independently of zoom and scrolling. **Settings → Mapping
 Canvas** provides a separate Background Dim preference (90% by default), reverse
 canvas scrolling, movement indicator colours and X-axis grid appearance. Preview and testplay background
 dim remain independent.
