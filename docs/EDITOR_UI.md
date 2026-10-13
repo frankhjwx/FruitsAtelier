@@ -858,7 +858,9 @@ an explicit conversion entry first; standalone fruits are not handled. The panel
 reuses the conversion dialog's parameter controls without its right-hand preview.
 Changes remain a draft until Apply, which creates one content undo step. Cancel,
 selection changes and document changes discard the draft. Short docks scroll with
-the mouse wheel. Ctrl+Shift+F continues to open the existing dialog.
+the mouse wheel. Existing patterns also offer a button below Apply/Cancel to restore
+ordinary slider or banana shower output, preserving parent geometry and timing in
+one undo step. Ctrl+Shift+F continues to open the existing dialog.
 
 **Notes** is a multiline project-wide text editor, shared across difficulties. It
 supports text selection, copy/paste and independent text undo/redo while focused.

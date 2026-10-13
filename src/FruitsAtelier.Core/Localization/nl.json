@@ -118,6 +118,7 @@
   "stream.changeSnap": "Verander het snappen",
   "stream.changeSnapMenu": "Wijzig het snappen… Ctrl+Shift+F",
   "stream.convertBack": "Converteer terug naar Slider",
+  "bananaEdit.convertBack": "Bananenregen herstellen",
   "stream.saveSnap": "Toepassen",
   "stream.confirm": "Converteren",
   "stream.description": "Kies de maatverdeling voor snapping. Opsplitsen maakt afzonderlijke Fruit-objecten die je onafhankelijk kunt bewerken.",

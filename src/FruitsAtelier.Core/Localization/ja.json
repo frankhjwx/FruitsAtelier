@@ -118,6 +118,7 @@
   "stream.changeSnap": "スナップの変更",
   "stream.changeSnapMenu": "スナップを変更します… Ctrl+Shift+F",
   "stream.convertBack": "スライダー に変換し直す",
+  "bananaEdit.convertBack": "バナナシャワーに戻す",
   "stream.saveSnap": "申し込む",
   "stream.confirm": "変換する",
   "stream.description": "拍へのスナップを選択します。分割すると、個別に編集できる Fruit が作成されます。",

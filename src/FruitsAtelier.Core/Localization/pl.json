@@ -118,6 +118,7 @@
   "stream.changeSnap": "Zmień przyciąganie",
   "stream.changeSnapMenu": "Zmień przyciąganie… Ctrl+Shift+F",
   "stream.convertBack": "Konwertuj z powrotem na Slider",
+  "bananaEdit.convertBack": "Przywróć deszcz bananów",
   "stream.saveSnap": "Zastosuj",
   "stream.confirm": "Konwertuj",
   "stream.description": "Wybierz podział rytmiczny. Rozdzielenie tworzy osobne owoce, które można edytować niezależnie.",

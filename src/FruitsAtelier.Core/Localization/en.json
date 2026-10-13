@@ -118,6 +118,7 @@
   "stream.changeSnap": "Change snapping",
   "stream.changeSnapMenu": "Change snapping…  Ctrl+Shift+F",
   "stream.convertBack": "Convert back to slider",
+  "bananaEdit.convertBack": "Restore banana shower",
   "stream.saveSnap": "Apply",
   "stream.confirm": "Convert",
   "stream.description": "Choose beat snap. Break into Fruits creates independent editable fruits.",

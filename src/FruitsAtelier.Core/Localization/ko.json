@@ -118,6 +118,7 @@
   "stream.changeSnap": "스냅 변경",
   "stream.changeSnapMenu": "스냅 변경… Ctrl+Shift+F",
   "stream.convertBack": "슬라이더로 다시 변환",
+  "bananaEdit.convertBack": "바나나 샤워로 되돌리기",
   "stream.saveSnap": "적용",
   "stream.confirm": "변환",
   "stream.description": "박자 스냅을 선택하세요. 분리하면 각각 편집할 수 있는 Fruit가 생성됩니다.",

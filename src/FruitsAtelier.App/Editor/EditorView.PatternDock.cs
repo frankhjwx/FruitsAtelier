@@ -12,7 +12,8 @@ public sealed partial class EditorView
     private MapDocument? patternDockSnapshot;
     private Rect patternDockBounds;
     private float patternDockScroll;
-    private float PatternDockContentHeight => patternDockKind == 2 ? patternDockBounds.Width < 260 ? 576 : 490 : 440;
+    private float PatternDockContentHeight => (patternDockKind == 2 ? patternDockBounds.Width < 260 ? 576 : 490 : 440)
+        + (patternDockExisting ? 40 : 0);
     private bool PatternDockEditing => DockContentInputAvailable && !notesLocked && PanelVisible(DockPanel.PatternEditor) && patternDockKind != 0
         && !StreamDialogVisible && !BananaEditVisible && !TimingPageVisible;
     private void ResetPatternDock()
@@ -83,7 +84,11 @@ public sealed partial class EditorView
         c.Clip(bounds);
         c.Text(L.Get(patternDockKind == 2 ? "dock.bananaStack" : stackMode ? "conversion.stackTab" : "conversion.streamTab"),
             content.X, content.Y + 20, 14, Foreground, content.Width, true);
-        if (patternDockKind == 2) DrawBananaEdit(c, content); else DrawStackDialog(c, content);
+        var controls = new Rect(content.X, content.Y, content.Width, content.Height - (existing ? 40 : 0));
+        if (patternDockKind == 2) DrawBananaEdit(c, controls); else DrawStackDialog(c, controls);
+        if (existing)
+            Button(c, new(content.X, content.Bottom - 36, content.Width, 30),
+                L.Get(bananas ? "bananaEdit.convertBack" : "stream.convertBack"), ConvertPatternDockBack);
         c.Unclip();
         if (contentHeight > bounds.Height)
         {
@@ -93,6 +98,20 @@ public sealed partial class EditorView
         // Offscreen controls must not receive clicks through the canvas or timeline.
         for (int i = hits.Count - 1; i >= firstHit; i--)
             if (hits[i].Bounds.Y < bounds.Y || hits[i].Bounds.Bottom > bounds.Bottom) hits.RemoveAt(i);
+    }
+    private void ConvertPatternDockBack()
+    {
+        if (!PatternDockEditing || !ClipboardInteractionReady) return;
+        if (patternDockKind == 2)
+        {
+            var ids = ClipboardSelectedParentIds();
+            if (!Edit(L.Get("bananaEdit.convertBack"), () =>
+            {
+                foreach (var shower in Document.BananaShowers.Where(s => ids.Contains(s.Id))) shower.Pattern = null;
+            })) return;
+        }
+        else ConvertStreamsBack();
+        ResetPatternDock();
     }
     private bool PatternDockPointer(float x, float y, int button)
     {

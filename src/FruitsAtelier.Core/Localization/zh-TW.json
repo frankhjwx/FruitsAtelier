@@ -118,6 +118,7 @@
   "stream.changeSnap": "改變捕捉",
   "stream.changeSnapMenu": "更改捕捉... Ctrl+Shift+F",
   "stream.convertBack": "轉換回 滑條",
+  "bananaEdit.convertBack": "轉回 banana shower",
   "stream.saveSnap": "申請",
   "stream.confirm": "轉換",
   "stream.description": "選擇節拍對齊。拆分操作會產生可獨立編輯的 Fruit。",

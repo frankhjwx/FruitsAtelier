@@ -65,6 +65,13 @@ internal static class PatternNotesTests
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.Tracks[0].Stack is null, "Stack dock apply is one undo transaction");
                 ui.Key('Y', ctrl: true); ui.SelectTrack(track.Id);
                 Check(ui.View.StackGraphBounds.Width > 0 && !ui.View.StreamDialogVisible, "Existing stack automatically reloads after redo");
+                var stackSnapshot = ui.View.Document.DeepClone();
+                ui.ClickText(L.Get("stream.convertBack"));
+                Check(ui.View.Document.ContentEquals(map) && ui.Canvas.Texts.Any(t => t.Value == L.Get("dock.convertPrompt")),
+                    "Dock restores the original slider and shows conversion entry");
+                ui.Key('Z', ctrl: true);
+                Check(ui.View.Document.ContentEquals(stackSnapshot), "Restoring slider undoes in one step");
+                ui.SelectTrack(track.Id);
                 ui.ClickText(L.Get("stream.breakFruits")); ui.ClickText(L.Get("library.apply"));
                 Check(ui.View.Document.Tracks.Count == 0 && ui.Canvas.Texts.Any(t => t.Value == L.Get("dock.patternSelection")),
                     "Broken fruits no longer expose pattern editing");
@@ -89,6 +96,12 @@ internal static class PatternNotesTests
                 Check(ui.View.BananaNumeratorBounds[0].Y < beforeScroll.Y
                     && ui.Canvas.Texts.Any(t => t.Value == L.Get("library.apply")), "Narrow banana dock scrolls to its apply controls");
                 Check(ui.View.BananaNumeratorBounds[0].Width > 0 && !ui.View.BananaEditVisible, "Existing banana stack opens directly in dock");
+                var bananaSnapshot = ui.View.Document.DeepClone();
+                ui.ClickText(L.Get("bananaEdit.convertBack"));
+                Check(ui.View.Document.ContentEquals(bananaMap) && ui.Canvas.Texts.Any(t => t.Value == L.Get("dock.convertPrompt")),
+                    "Dock restores the original banana shower in a narrow panel");
+                ui.Key('Z', ctrl: true);
+                Check(ui.View.Document.ContentEquals(bananaSnapshot), "Restoring banana shower undoes in one step");
                 void WaitBanana()
                 {
                     var end = DateTime.UtcNow.AddSeconds(20);

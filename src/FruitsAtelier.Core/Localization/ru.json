@@ -118,6 +118,7 @@
   "stream.changeSnap": "Изменить привязку",
   "stream.changeSnapMenu": "Изменить привязку… Ctrl+Shift+F",
   "stream.convertBack": "Конвертировать обратно в Слайдер",
+  "bananaEdit.convertBack": "Вернуть банановый дождь",
   "stream.saveSnap": "Применить",
   "stream.confirm": "Конвертировать",
   "stream.description": "Выберите привязку к долям. Разделение создаёт отдельные фрукты, каждый из которых можно редактировать.",

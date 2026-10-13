@@ -118,6 +118,7 @@
   "stream.changeSnap": "调整节拍细分",
   "stream.changeSnapMenu": "调整节拍细分…  Ctrl+Shift+F",
   "stream.convertBack": "转回 slider",
+  "bananaEdit.convertBack": "转回 banana shower",
   "stream.saveSnap": "应用",
   "stream.confirm": "确认转换",
   "stream.description": "选择节拍吸附。拆分操作会生成可独立编辑的 Fruit。",

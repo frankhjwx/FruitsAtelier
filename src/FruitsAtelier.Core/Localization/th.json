@@ -118,6 +118,7 @@
   "stream.changeSnap": "เปลี่ยนการสแนป",
   "stream.changeSnapMenu": "เปลี่ยนการสแนป… Ctrl+Shift+F",
   "stream.convertBack": "แปลงกลับเป็น สไลเดอร์",
+  "bananaEdit.convertBack": "คืนค่าฝนกล้วย",
   "stream.saveSnap": "สมัคร",
   "stream.confirm": "แปลง",
   "stream.description": "เลือกการแบ่งจังหวะสำหรับการจัดแนว การแยกจะสร้าง Fruit ที่แก้ไขได้อย่างอิสระ",

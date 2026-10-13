@@ -118,6 +118,7 @@
   "stream.changeSnap": "Cambiar ajuste",
   "stream.changeSnapMenu": "Cambiar ajuste… Ctrl+Shift+F",
   "stream.convertBack": "Convertir de nuevo a Slider",
+  "bananaEdit.convertBack": "Restaurar lluvia de bananas",
   "stream.saveSnap": "Aplicar",
   "stream.confirm": "Convertir",
   "stream.description": "Elige la subdivisión rítmica. La separación crea objetos Fruit que se pueden editar de forma independiente.",

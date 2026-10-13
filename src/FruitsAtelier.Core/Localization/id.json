@@ -118,6 +118,7 @@
   "stream.changeSnap": "Ubah gertakan",
   "stream.changeSnapMenu": "Ubah gertakan… Ctrl+Shift+F",
   "stream.convertBack": "Konversikan kembali ke Slider",
+  "bananaEdit.convertBack": "Pulihkan banana shower",
   "stream.saveSnap": "Terapkan",
   "stream.confirm": "Mengkonversi",
   "stream.description": "Pilih pembagian ketukan untuk snap. Pemisahan menghasilkan objek Fruit yang dapat diedit secara terpisah.",
