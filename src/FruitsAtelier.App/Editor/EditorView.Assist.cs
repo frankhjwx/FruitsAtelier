@@ -26,8 +26,8 @@ public sealed partial class EditorView
 
     public void SetModifiers(bool alt, bool shift)
     {
+        if (altHeld && !alt) volumeShortcutKeys.Clear();
         altHeld = alt; shiftHeld = shift;
-        if (!alt) volumeShortcutHeld = false;
         if (dsSliderDrag >= 0) UpdateDistanceSnapSlider(dsDragX, shift);
     }
 
@@ -54,14 +54,17 @@ public sealed partial class EditorView
 
     private MapPoint PlacementPoint(float x, float y)
     {
-        var point = SnapDistance(MapAt(x, y, true));
+        var point = MapAt(x, y, true);
+        if (TrySnapToObject(point, Transform.ToMap(x, y).X, out var aligned)) return aligned;
+        point = SnapDistance(point);
         return point with { X = Math.Clamp(SnapX(point.X), 0, 512) };
     }
 
     private MapPoint PenStartPoint(float x, float y)
     {
         var point = MapAt(x, y, true, clampX: false);
-        if (point.X is < 0 or > 512) { distanceOutside = false; return point; }
+        if (point.X is < 0 or > 512) { objectSnapTarget = null; distanceOutside = false; return point; }
+        if (TrySnapToObject(point, Transform.ToMap(x, y).X, out var aligned)) return aligned;
         point = SnapDistance(point);
         return point with { X = Math.Clamp(SnapX(point.X), 0, 512) };
     }
@@ -89,11 +92,18 @@ public sealed partial class EditorView
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty) return;
         var ids = FlagTargets();
         if (tool == Tool.Fruit || ids.Length == 0) { nextFruitNewCombo = !nextFruitNewCombo; return; }
-        bool enabled = !ids.All(id => ObjectFlags.NewCombo(Document, id));
+        var fruit = SelectedTimelineFruit();
+        bool enabled = fruit is not null
+            ? !SliderFruitStream.IsNewCombo(Document.Tracks.First(t => t.Id == fruit.SourceId), fruit.EventIndex, fruit.TimeMs)
+            : !ids.All(id => ObjectFlags.NewCombo(Document, id));
         bool conversionCurrent = conversion is not null && convertedSnapshot is not null
             && convertedSnapshot.ContentEquals(Document) && convertedWithCompensation == compensateTinyDroplets
             && !contentDragPreview;
-        if (Edit(L.Get("assist.comboChange"), () => { foreach (var id in ids) ObjectFlags.SetNewCombo(Document, id, enabled); })
+        if (Edit(L.Get("assist.comboChange"), () =>
+        {
+            if (fruit is not null) ObjectFlags.SetStreamNewCombo(Document, fruit.SourceId, fruit.EventIndex, fruit.TimeMs, enabled);
+            else foreach (var id in ids) ObjectFlags.SetNewCombo(Document, id, enabled);
+        })
             && conversionCurrent)
         {
             // The flag changes combo grouping but not the converted catch object stream.
@@ -118,6 +128,8 @@ public sealed partial class EditorView
 
     private void ApplyPlacementFlags(Guid id)
     {
+        if (nextNormalBank != 0) ObjectFlags.SetSampleBank(Document, id, false, nextNormalBank);
+        if (nextAdditionBank != 0) ObjectFlags.SetSampleBank(Document, id, true, nextAdditionBank);
         if (nextFruitNewCombo) ObjectFlags.SetNewCombo(Document, id, true);
         foreach (int flag in new[] { 2, 4, 8 }) if ((nextSounds & flag) != 0) ObjectFlags.SetSound(Document, id, flag, true);
         nextFruitNewCombo = false;
@@ -193,7 +205,10 @@ public sealed partial class EditorView
         var ids = FlagTargets();
         bool placement = tool == Tool.Fruit || ids.Length == 0;
         var sounds = ids.Where(id => !Document.BananaShowers.Any(b => b.Id == id)).SelectMany(id => ObjectFlags.Sounds(Document, id, SoundEdge(id))).ToArray();
-        bool combo = placement ? nextFruitNewCombo : ids.All(id => ObjectFlags.NewCombo(Document, id));
+        var selectedFruit = SelectedTimelineFruit();
+        bool combo = placement ? nextFruitNewCombo : selectedFruit is not null
+            ? newComboEvents.Contains((selectedFruit.SourceId, selectedFruit.EventIndex))
+            : ids.All(id => ObjectFlags.NewCombo(Document, id));
         bool[] active = [combo, false, false, false, EffectiveGridSnap, DistanceSnapEnabled, notesLocked];
         for (int i = 1; i <= 3; i++) active[i] = placement ? (nextSounds & (1 << i)) != 0 : sounds.Length > 0 && sounds.All(s => (s & (1 << i)) != 0);
         int hovered = -1;

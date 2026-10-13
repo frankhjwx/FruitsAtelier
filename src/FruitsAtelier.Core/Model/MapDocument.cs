@@ -52,7 +52,10 @@ public sealed class CurveTrack
         if (a.Id != b.Id || a.Name != b.Name || a.Kind != b.Kind || a.SourceOrder != b.SourceOrder || a.Nodes.Count != b.Nodes.Count
             || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets
             || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
+            || a.StreamNewComboOffsets.Count != b.StreamNewComboOffsets.Count
             || !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization)) return false;
+        for (int j = 0; j < a.StreamNewComboOffsets.Count; j++)
+            if (a.StreamNewComboOffsets[j] != b.StreamNewComboOffsets[j]) return false;
         for (int j = 0; j < a.Nodes.Count; j++)
         {
             var an = a.Nodes[j]; var bn = b.Nodes[j];
@@ -72,6 +75,7 @@ public sealed class CurveTrack
         var copy = (CurveTrack)MemberwiseClone();
         copy.Nodes = Nodes.Select(n => n.DeepClone()).ToList();
         copy.Stack = Stack?.DeepClone();
+        copy.StreamNewComboOffsets = StreamNewComboOffsets.ToList();
         copy.DropletRandomization = DropletRandomization?.DeepClone();
         return copy;
     }
@@ -80,6 +84,7 @@ public sealed class CurveTrack
     public bool? CompensateTinyDroplets { get; set; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public int? StreamSnapDivisor { get; set; }
+    public List<double> StreamNewComboOffsets { get; private set; } = [];
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public StackEnvelope? Stack { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -144,10 +149,12 @@ public sealed class BananaShower
     public string? OriginalLine { get; set; }
     public double TimeMs { get; set; }
     public double EndTimeMs { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public BananaShowerPattern? Pattern { get; set; }
 
     internal BananaShower DeepClone() => (BananaShower)MemberwiseClone();
     internal bool ContentEquals(BananaShower other) => Id == other.Id && SourceOrder == other.SourceOrder
-        && OriginalLine == other.OriginalLine && TimeMs == other.TimeMs && EndTimeMs == other.EndTimeMs;
+        && OriginalLine == other.OriginalLine && TimeMs == other.TimeMs && EndTimeMs == other.EndTimeMs && Pattern == other.Pattern;
 }
 
 public sealed partial class MapDocument
@@ -170,6 +177,8 @@ public sealed partial class MapDocument
     [JsonIgnore]
     public double DistancePerBeat => DistancePerBeatOverride ?? 100 * SliderMultiplier;
     public double SliderTickRate { get; set; } = 1;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool LegacySliderTicks { get; set; }
     public double DistanceSpacing { get; set; } = 1;
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? DerandomizeDroplets { get; set; }
@@ -202,7 +211,7 @@ public sealed partial class MapDocument
             DistanceSnapCollinear = DistanceSnapCollinear,
             RandomizeDropletStrength = RandomizeDropletStrength, RandomizeDropletSeed = RandomizeDropletSeed,
             DerandomizeFSliderDroplets = DerandomizeFSliderDroplets, DerandomizeDropletsForHardRock = DerandomizeDropletsForHardRock, RandomizeNewSliders = RandomizeNewSliders,
-            SliderTickRate = SliderTickRate, DistanceSpacing = DistanceSpacing, DerandomizeDroplets = DerandomizeDroplets
+            SliderTickRate = SliderTickRate, LegacySliderTicks = LegacySliderTicks, DistanceSpacing = DistanceSpacing, DerandomizeDroplets = DerandomizeDroplets
         };
         copy.DistanceSnapRatios.AddRange(DistanceSnapRatios);
         copy.HitsoundOverrides.AddRange(HitsoundOverrides);
@@ -242,6 +251,7 @@ public sealed partial class MapDocument
             || (!ignoreMultiplierOverride && (OverrideSliderMultiplier != other.OverrideSliderMultiplier
                 || SliderMultiplierOverride != other.SliderMultiplierOverride))
             || DistancePerBeatOverride != other.DistancePerBeatOverride || SliderTickRate != other.SliderTickRate
+            || LegacySliderTicks != other.LegacySliderTicks
             || DistanceSnapCollinear != other.DistanceSnapCollinear
             || RandomizeDropletStrength != other.RandomizeDropletStrength || RandomizeDropletSeed != other.RandomizeDropletSeed
             || DerandomizeFSliderDroplets != other.DerandomizeFSliderDroplets || DerandomizeDropletsForHardRock != other.DerandomizeDropletsForHardRock || RandomizeNewSliders != other.RandomizeNewSliders

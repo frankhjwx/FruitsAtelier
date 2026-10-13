@@ -59,7 +59,7 @@ public sealed partial class EditorView
         ConvertedCatchObject? closest = null;
         double distance = double.PositiveInfinity;
         double pointerTime = viewStart + (plot.Bottom - y) / pixelsPerMs;
-        double timeRadius = Math.Max(7, CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512) / pixelsPerMs;
+        double timeRadius = Math.Max(7, CatchSize.FruitDiameter(Document.CircleSize) * CanvasObjectWidth / 512) / pixelsPerMs;
         foreach (var item in ObjectsInTimeRange(pointerTime - timeRadius, pointerTime + timeRadius))
         {
             if (!includeLockedDroplets && !CanSelectCatchObject(item)) continue;
@@ -67,7 +67,7 @@ public sealed partial class EditorView
             var point = new MapPoint(item.TimeMs, item.X);
             double candidateDistance = PointerDistance(point, x, y);
             var p = Screen(point);
-            float scale = Playfield.Width / 512;
+            float scale = CanvasObjectWidth / 512;
             var bounds = skin?.Bounds(SkinObjectKind(item.Kind), skinIndices.GetValueOrDefault(item.SourceId),
                 p.X, p.Y, CatchSize.FruitDiameter(Document.CircleSize) * scale);
             bool hit = bounds is { } b

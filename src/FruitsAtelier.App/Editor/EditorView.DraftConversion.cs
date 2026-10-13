@@ -12,7 +12,7 @@ public sealed partial class EditorView
     private CatchConversionCache draftConversionCache = new();
     private bool deferredConversion, deferredTestplay;
     public bool ConversionRefreshing => deferredConversion;
-    public bool ConversionNeedsRedraw => deferredConversion || deferredConversionTask is { IsCompleted: true };
+    public bool ConversionNeedsRedraw => BananaEditVisible && bananaEditJob is { IsCompleted: true } || deferredConversion || deferredConversionTask is { IsCompleted: true };
     private Task<DeferredConversion>? deferredConversionTask;
     private sealed record DeferredConversion(MapDocument Snapshot, EditorHistory Owner, bool Compensation,
         string Language, OsuWriteCache Cache, CatchConversionResult Conversion, OsuWriteResult? Export);
@@ -35,7 +35,8 @@ public sealed partial class EditorView
             DurationMs = Document.DurationMs, BeatLengthMs = Document.BeatLengthMs,
             TimingOffsetMs = Document.TimingOffsetMs, ApproachRate = Document.ApproachRate,
             CircleSize = Document.CircleSize, SliderMultiplier = Document.SliderMultiplier,
-            SliderTickRate = Document.SliderTickRate, DerandomizeDroplets = Document.DerandomizeDroplets,
+            SliderMultiplierOverride = Document.SliderMultiplierOverride,
+            LegacySliderTicks = Document.LegacySliderTicks, SliderTickRate = Document.SliderTickRate, DerandomizeDroplets = Document.DerandomizeDroplets,
             DerandomizeFSliderDroplets = Document.DerandomizeFSliderDroplets, DerandomizeDropletsForHardRock = Document.DerandomizeDropletsForHardRock, RandomizeDropletStrength = Document.RandomizeDropletStrength, RandomizeDropletSeed = Document.RandomizeDropletSeed
         };
         candidate.TimingPoints.AddRange(Document.TimingPoints);

@@ -7,7 +7,7 @@ public static class ImportedSliderConverter
     {
         var path = new ImportedSliderGeometry(slider);
         var timing = TimingMap.At(document, slider.TimeMs);
-        return path.Distance / LegacyCatchRules.Velocity(timing.BeatLengthMs, document.SliderMultiplier, timing.SliderVelocityMultiplier) * slider.SpanCount;
+        return path.Distance / LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier) * slider.SpanCount;
     }
 
     public static double EndTimeMs(MapDocument document, ImportedSlider slider) => slider.TimeMs + DurationMs(document, slider);
@@ -16,7 +16,7 @@ public static class ImportedSliderConverter
     {
         var path = new ImportedSliderGeometry(slider);
         var timing = TimingMap.At(document, slider.TimeMs);
-        double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.SliderMultiplier, timing.SliderVelocityMultiplier);
+        double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier);
         double spanDuration = path.Distance / velocity;
         if (spanDuration <= 0) return Math.Clamp((float)slider.X, 0, 512);
         double spanProgress = Math.Clamp((time - slider.TimeMs) / spanDuration, 0, slider.SpanCount);
@@ -36,9 +36,9 @@ public static class ImportedSliderConverter
             throw new CatchConversionException(L.Get("core.importConverter.parameters"));
         var path = new ImportedSliderGeometry(slider);
         var timing = lookup.At(slider.TimeMs);
-        double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.SliderMultiplier, timing.SliderVelocityMultiplier);
+        double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier);
         double duration = path.Distance / velocity;
-        double tickDistance = velocity * timing.BeatLengthMs / document.SliderTickRate;
+        double tickDistance = LegacyCatchRules.TickDistance(document, velocity, timing.BeatLengthMs, timing.SliderVelocityMultiplier);
         if (!double.IsFinite(duration) || duration <= 0 || slider.TimeMs + duration * slider.SpanCount > int.MaxValue)
             throw new CatchConversionException(L.Get("core.importConverter.duration"));
         var nested = LegacyCatchRules.CreateNested(slider.TimeMs, duration, velocity, tickDistance, path.Distance, slider.SpanCount);

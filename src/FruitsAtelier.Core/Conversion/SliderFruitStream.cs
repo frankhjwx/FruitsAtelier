@@ -10,7 +10,7 @@ public static class SliderFruitStream
 
     public static IReadOnlyList<ConvertedCatchObject> Convert(MapDocument document, CurveTrack track, TimingMap.Lookup timing)
     {
-        if (track.StreamSnapDivisor is not (>= 1 and <= 16))
+        if (track.StreamSnapDivisor is not (>= 1 and <= 16 or 24 or 32 or 48))
             throw new CatchConversionException(L.Get("stream.invalidSnap"));
         if (track.Stack is { IsValid: false }) throw new CatchConversionException(L.Get("stack.invalid"));
         double start = track.Nodes[0].TimeMs, end = CurveMath.EndTimeMs(track);
@@ -36,8 +36,15 @@ public static class SliderFruitStream
         return result;
     }
 
-    // A stream inherits the slider's object samples; only its first fruit starts a new combo.
-    public static string FruitLine(CurveTrack track, int index, string x, string time, HitSampleSettings? copiedSample = null)
+    public static bool IsNewCombo(CurveTrack track, int index, double timeMs)
+    {
+        if (index > 0) return track.StreamNewComboOffsets.Any(offset => Math.Abs(timeMs - track.Nodes[0].TimeMs - offset) < 1e-7);
+        string[] fields = track.OriginalLine?.Split(',') ?? [];
+        return fields.Length > 3 && int.TryParse(fields[3], out int flags) && (flags & 4) != 0;
+    }
+
+    // Stream fruits inherit object samples; additional combo starts follow their time offset from the head.
+    public static string FruitLine(CurveTrack track, int index, string x, string time, HitSampleSettings? copiedSample = null, double? timeMs = null)
     {
         string[] source = track.OriginalLine?.Split(',') ?? [];
         int flags = source.Length > 3 && int.TryParse(source[3], out int value) ? value : 0;
@@ -46,6 +53,7 @@ public static class SliderFruitStream
         if (copiedSample is not null)
         { sound = copiedSample.Additions.ToString(CultureInfo.InvariantCulture); sample = HitsoundCopier.SampleText(copiedSample); }
         int type = 1 | (index == 0 ? flags & (4 | 112) : 0);
+        if (index > 0 && timeMs is { } at && IsNewCombo(track, index, at)) type |= 4;
         return $"{x},192,{time},{type.ToString(CultureInfo.InvariantCulture)},{sound},{sample}";
     }
 }

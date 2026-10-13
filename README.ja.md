@@ -8,7 +8,7 @@ Windows と macOS 向けの独立した osu!catch ビートマップエディタ
 
 [公式サイト](https://fruitsatelier.himiko.moe/) · [ダウンロード](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**現在のバージョン：1.0.0 Beta**
+**現在のバージョン：1.0.1 Beta**
 
 ![FruitsAtelier の編集キャンバス、オブジェクトタイムライン、Catch プレビュー](assets/screenshots/twin-bloom.png)
 
@@ -32,7 +32,7 @@ Windows と macOS 向けの独立した osu!catch ビートマップエディタ
 - **移動表示と分析。** 前後のオブジェクトとの間隔を読み取り、Stand・Walk・Dash・Hyperdash の接続をキャンバスで確認できます。曲全体の Movement strain グラフから負荷の高い区間へ移動できます。AiMod はオブジェクトの開始時刻の重複を検出します。
 - **編集可能なストリームとスタック。** 曲線に沿って指定の拍分割でフルーツを生成したり、幅の変化を設定して左右交互のスタックを作成したりできます。親曲線や個別のフルーツを編集し、独立したフルーツに分割することもできます。どちらも hit circle として出力されます。
 
-Catch の `.osu` は v12–v14 と stable 互換の lazer v128 を読み込み、v14 で出力します。1.0.0 Beta では動画とストーリーボードの再生に対応していません。
+Catch の `.osu` は v7–v14 と stable 互換の lazer v128 を読み込めます。v7 の譜面は旧スライダーティックの規則を保つため v7 で出力し、それ以外は v14 で出力します。1.0.1 Beta では動画とストーリーボードの再生に対応していません。
 
 ## はじめに
 

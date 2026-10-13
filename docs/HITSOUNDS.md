@@ -14,9 +14,29 @@ window stops active hitsound voices. Seeking does not play the skipped interval.
 | Tiny droplet / slider body | Silent; no looping slide or whistle sound |
 | Banana | Packaged Catch banana sample |
 
+Bananas at the same timestamp share one sample in preview and Testplay, so stacked
+banana showers do not amplify the sound. Testplay plays it when any banana at that
+timestamp is caught; each banana still has its own visual and judgement.
+
 The right toolbar edits Whistle, Finish and Clap flags for fruits and slider edges through undoable transactions. Whole-slider selection applies an addition to all edges; clicking a slider fruit scopes it to that edge. ObjectFlags updates the preserved stable columns while retaining sample banks, volume, custom filenames and unrelated flags. Editing and export controls are described in [Editing controls](EDITOR_UI.md#distance-spacing-and-object-flags).
 
 ## Sample selection
+
+The **Sampleset** and **Additions** dropdowns above the four editing tools offer
+Auto, Normal, Soft and Drum. Sampleset selects the base sound bank; Additions selects
+the bank for Whistle, Finish and Clap. Auto on Sampleset inherits timing, while Auto
+on Additions follows the base bank. These selectors do not change sample volume.
+Selected objects show their authored settings; differing values display Auto without
+rewriting them. Choosing a value applies it in one undo step. A selected slider fruit
+targets its edge; a whole-slider selection updates all edges and the object bank.
+Existing custom indices, volumes, filenames and hitsound flags are retained, including
+copied hitsound overrides. With no selection, or with the Fruit tool active, the
+dropdowns set defaults for newly placed fruits and sliders. They are disabled during
+an unfinished object and for banana showers, which use the fixed Catch banana sound.
+
+The menus close on selection, an outside click or Escape. The shared editor implements
+the same controls on Windows and macOS. The underlying fields follow the
+[osu! sample format](https://osu.ppy.sh/wiki/en/Client/File_formats/osu_(file_format)#custom-hit-samples).
 
 **Settings → Audio → Use skin's sound samples** is enabled by default. Disabling it
 skips both the selected and configured default skin's audio and uses packaged samples

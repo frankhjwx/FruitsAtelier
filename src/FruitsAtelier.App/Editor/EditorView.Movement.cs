@@ -19,6 +19,36 @@ public sealed partial class EditorView
     private bool movementAnalysis { get => EditingPreferences.MovementAnalysis; set { EditingPreferences.MovementAnalysis = value; SaveMapEditingPreferences(); } }
     public bool MovementIncludesTinyDroplets => movementIncludeTinyDroplets;
     public bool MovementAnalysisEnabled => movementAnalysis;
+    private (float X, float Y)? movementPanelPosition;
+    private bool movementPanelPointer, movementPanelMoved;
+    private float movementPanelPointerX, movementPanelPointerY, movementPanelStartX, movementPanelStartY;
+
+    private bool MovementPanelPointerDown(float x, float y, int button)
+    {
+        if (MovementOverlayBounds is not { } panel || !panel.Contains(x, y)) return false;
+        if (button == 2)
+        {
+            contextItems.Clear(); menu = -1;
+            contextItems.Add(new(L.Get("movement.resetPosition"), () => movementPanelPosition = null));
+            contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 240)),
+                Math.Clamp(y, 0, Math.Max(0, height - ContextMenuHeight)), 240, ContextMenuHeight);
+            return true;
+        }
+        if (button != 0 || DistanceEditing) return false;
+        movementPanelPointer = true; movementPanelMoved = false;
+        movementPanelPointerX = x; movementPanelPointerY = y;
+        movementPanelStartX = panel.X; movementPanelStartY = panel.Y;
+        return true;
+    }
+
+    private void MoveMovementPanel(float x, float y)
+    {
+        if (!movementPanelMoved && Math.Abs(x - movementPanelPointerX) < 3 && Math.Abs(y - movementPanelPointerY) < 3) return;
+        movementPanelMoved = true;
+        if (MovementOverlayBounds is not { } panel) return;
+        movementPanelPosition = (Math.Clamp(movementPanelStartX + x - movementPanelPointerX, plot.X, plot.Right - panel.Width),
+            Math.Clamp(movementPanelStartY + y - movementPanelPointerY, plot.Y, plot.Bottom - panel.Height));
+    }
 
     private void EnsureMovementStates(IReadOnlyList<ConvertedCatchObject> objects, bool includeTiny = false)
     {
@@ -126,6 +156,9 @@ public sealed partial class EditorView
         if (panelWidth < 180 || plot.Height < MovementPanelHeight + 20) return;
         var r = new Rect(Math.Clamp(Playfield.X + Playfield.Width / 2 - panelWidth / 2, plot.X + 6, plot.Right - panelWidth - 6),
             plot.Bottom - MovementPanelHeight - 8, panelWidth, MovementPanelHeight);
+        if (movementPanelPosition is { } position)
+            r = r with { X = Math.Clamp(position.X, plot.X, plot.Right - panelWidth),
+                Y = Math.Clamp(position.Y, plot.Y, plot.Bottom - MovementPanelHeight) };
         MovementOverlayBounds = r;
         c.Fill(r, 0x171C24, 6, .82f);
         c.Stroke(r, 0x424D5C, 1, 6);

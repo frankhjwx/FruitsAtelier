@@ -16,9 +16,11 @@ public sealed partial class EditorView
     public Rect StackPreviewBounds { get; private set; }
     private float stackPreviewBottom, stackPreviewRadius;
     private double stackPreviewScrollMs;
+    private double stackPreviewZoom = 1;
     private float StackPreviewContentWidth => (float)Math.Max(1,
         (StackPreviewBounds.Width - 12) / (1 + 2 * CatchSize.FruitRadius(Document.CircleSize) / 512));
-    private double StackPreviewScale => CatchScrollTiming.PixelsPerMs(Document.ApproachRate, StackPreviewContentWidth);
+    internal double StackPreviewScale => stackPreviewZoom * CatchScrollTiming.PixelsPerMs(Document.ApproachRate, StackPreviewContentWidth);
+    internal double StackPreviewVisibleStart => (stackPreviewSource?.Nodes[0].TimeMs ?? 0) + stackPreviewScrollMs;
     private double StackPreviewScrollMaximum => stackPreviewSource is null ? 0 : Math.Max(0,
         CurveMath.EndTimeMs(stackPreviewSource) - stackPreviewSource.Nodes[0].TimeMs
         - Math.Max(0, StackPreviewBounds.Height - 2 * (stackPreviewRadius + 2)) / StackPreviewScale);
@@ -36,6 +38,14 @@ public sealed partial class EditorView
     {
         if (stackPointDragging >= 0 || stackFruitDragging >= 0 || streamSnapDragging) return;
         stackPreviewScrollMs = Math.Clamp(stackPreviewScrollMs + delta / 120 * 64 / StackPreviewScale, 0, StackPreviewScrollMaximum);
+    }
+    private void ZoomConversionPreview(float delta, float y)
+    {
+        if (stackPointDragging >= 0 || stackFruitDragging >= 0 || streamSnapDragging) return;
+        double offset = Math.Clamp(stackPreviewBottom - y, 0, StackPreviewBounds.Height);
+        double time = stackPreviewScrollMs + offset / StackPreviewScale;
+        stackPreviewZoom = Math.Clamp(stackPreviewZoom * Math.Pow(1.2, delta / 120), .125, 8);
+        stackPreviewScrollMs = Math.Clamp(time - offset / StackPreviewScale, 0, StackPreviewScrollMaximum);
     }
     private int stackFruitDragging = -1, stackSelectedFruit = -1;
     private bool stackFruitGraphDragging;
@@ -224,7 +234,7 @@ public sealed partial class EditorView
             var fruit = stackPreview[i];
             var p = Screen(new(fruit.TimeMs, fruit.X));
             if (!plot.Contains(p.X, p.Y)) continue;
-            DrawCatchObject(c, fruit, p.X, p.Y, Playfield.Width, .65f);
+            DrawCatchObject(c, fruit, p.X, p.Y, CanvasObjectWidth, .65f);
         }
         c.Unclip();
         hits.Clear();

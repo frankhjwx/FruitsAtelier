@@ -42,6 +42,7 @@ public sealed partial class EditorView
     private static readonly string[] SyncTabOrder = ["General", "Editor", "Metadata", "Difficulty", "Events", "Timing", "Colours", "Objects"];
     private static readonly Dictionary<string, string[]> SyncFieldOrder = new()
     {
+        ["Format"] = ["Version"],
         ["General"] = ["AudioFilename", "AudioLeadIn", "AudioHash", "PreviewTime", "Countdown", "SampleSet", "StackLeniency", "Mode", "LetterboxInBreaks", "StoryFireInFront", "UseSkinSprites", "AlwaysShowPlayfield", "OverlayPosition", "SkinPreference", "EpilepsyWarning", "CountdownOffset", "SpecialStyle", "WidescreenStoryboard", "SamplesMatchPlaybackRate"],
         ["Editor"] = ["Bookmarks", "DistanceSpacing", "BeatDivisor", "GridSize", "TimelineZoom"],
         ["Metadata"] = ["Title", "TitleUnicode", "Artist", "ArtistUnicode", "Creator", "Version", "Source", "Tags", "BeatmapID", "BeatmapSetID"],

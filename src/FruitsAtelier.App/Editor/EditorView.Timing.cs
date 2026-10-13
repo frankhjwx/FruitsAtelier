@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 using L = FruitsAtelier.Localization.Strings;
@@ -40,7 +40,7 @@ public sealed partial class EditorView
     private Rect timingVolumeTrack;
     private TimingEntry[]? timingVolumeStart;
     internal IReadOnlyList<(string Key, Rect Bounds, string Value, Action<double> Apply)> TimingFields => timingFields;
-    internal Rect TimingSliderMultiplierBounds { get; private set; }
+    internal Rect TimingSliderVelocityLinkBounds { get; private set; }
     private sealed record SliderMultiplierValidation(double Value, OsuWriteResult? Output, string? Error);
     private Task<SliderMultiplierValidation>? sliderMultiplierValidation;
     private MapDocument? sliderMultiplierValidationSnapshot;
@@ -234,10 +234,10 @@ public sealed partial class EditorView
             foreach (var entry in selected)
             {
                 if (inherited && entry == first) continue;
-                var state = TimingMap.At(map, entry.Point.TimeMs);
+                var replacement = TimingEditing.Create(map, entry.Point.TimeMs, inherited);
                 entry.Point.Uninherited = !inherited;
                 if (inherited) entry.Point.TimeMs = Math.Truncate(entry.Point.TimeMs);
-                entry.Point.BeatLengthMs = inherited ? -100 / state.SliderVelocityMultiplier : state.BeatLengthMs;
+                entry.Point.BeatLengthMs = replacement.BeatLengthMs;
             }
         });
     }
@@ -428,7 +428,6 @@ public sealed partial class EditorView
 
     private void ChangeSliderMultiplier(double value)
     {
-        if (!Document.OverrideSliderMultiplier) return;
         if (!double.IsFinite(value) || value < SliderMultiplierEditing.Minimum || value > SliderMultiplierEditing.Maximum)
             throw new ArgumentException(L.Get("timing.sliderMultiplierRange"));
         if (value == DisplaySliderMultiplier) return;
@@ -464,24 +463,16 @@ public sealed partial class EditorView
             || sliderMultiplierValidationCompensation != compensateTinyDroplets)
         {
             sliderMultiplierDraft = null; sliderMultiplierValidationSnapshot = null; sliderMultiplierValidationOwner = null;
-            timingError = L.Get("timing.sliderMultiplierChanged"); return;
+            timingError = dsBaseError = L.Get("timing.sliderMultiplierChanged"); dsPendingApply = null; return;
         }
         var snapshot = sliderMultiplierValidationSnapshot;
         bool compensation = sliderMultiplierValidationCompensation;
-        var currentExport = editorWriteCache.MultiplierBaseline(Document, compensation);
         sliderMultiplierWorkerVersion = sliderMultiplierVersion;
         sliderMultiplierValidation = Task.Run(() =>
         {
             try
             {
-                var baseline = currentExport;
-                if (baseline is null)
-                {
-                    var source = snapshot.DeepClone(); source.SliderMultiplierOverride = null;
-                    baseline = OsuBeatmapWriter.Serialize(source, compensation);
-                }
-                var output = SliderMultiplierEditing.TryRebase(baseline, value, out var local, double.PositiveInfinity)
-                    ? local! : SliderMultiplierEditing.Rebase(baseline, value);
+                var output = SliderMultiplierEditing.ValidateChange(snapshot, value, compensation, new OsuWriteCache());
                 return new SliderMultiplierValidation(value, output, null);
             }
             catch (Exception ex) when (ex is ArgumentException or InvalidDataException or InvalidOperationException)
@@ -501,10 +492,16 @@ public sealed partial class EditorView
             && sliderMultiplierValidationSnapshot!.ContentEquals(Document)
             && sliderMultiplierValidationCompensation == compensateTinyDroplets;
         sliderMultiplierDraft = null; sliderMultiplierValidationSnapshot = null; sliderMultiplierValidationOwner = null;
-        if (!current) { timingError = L.Get("timing.sliderMultiplierChanged"); return; }
+        if (!current)
+        {
+            timingError = dsBaseError = L.Get("timing.sliderMultiplierChanged");
+            dsPendingApply = null;
+            return;
+        }
         if (result.Error is { } error)
         {
             timingError = error;
+            if (dsPendingApply is not null) { dsBaseError = error; dsPendingApply = null; return; }
             if (sliderMultiplierValidationText && TimingPageVisible && !TimingModal && timingField.Length == 0)
             {
                 timingField = "page.sliderMultiplier"; timingText = result.Value.ToString(CultureInfo.InvariantCulture);
@@ -518,11 +515,17 @@ public sealed partial class EditorView
 
     private void ApplySliderMultiplier(double value, OsuWriteResult output, bool compensation)
     {
-        if (!Edit(L.Get("timing.overrideSv"), () =>
+        if (!Edit(L.Get(dsPendingApply is not null ? "ds.title" : "timing.overrideSv"), () =>
         {
             Document.SliderMultiplierOverride = value == Document.SliderMultiplier ? null : value;
+            if (dsPendingApply is { } draft) CommitDistanceSnap(draft);
             editorWriteCache.RememberMultiplier(Document, output, compensation);
-        })) { timingError = StatusMessage; return; }
+        })) { timingError = dsBaseError = StatusMessage; dsPendingApply = null; return; }
+        if (dsPendingApply is { } applied)
+        {
+            CommitObjectSnapPreferences(applied);
+            dsPendingApply = null; CloseDistanceSnapDialog();
+        }
         timingError = ""; ResetHitsounds();
     }
 

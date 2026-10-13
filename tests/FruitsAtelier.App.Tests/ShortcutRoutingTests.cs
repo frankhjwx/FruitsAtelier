@@ -3,6 +3,43 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class ShortcutRoutingTests
 {
+    public static void ObjectBoundarySeeking()
+    {
+        foreach (bool playing in new[] { false, true })
+        foreach (int key in new[] { (int)'Z', (int)'V' })
+        foreach (bool held in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 10000, IsDemo = false };
+            map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 2000, X = 256 }, new() { TimeMs = 3000, X = 400 }]);
+            var ui = new Ui(); ui.LoadDocument(map);
+            ui.View.UpdateTransport(2000, 10000, true, playing, false, null, null); ui.Paint();
+            var before = ui.View.Document.DeepClone();
+            double requested = -1;
+            ui.View.RequestSeek = time => requested = time;
+            ui.ClickMap(2000, 256);
+            if (held) ui.DownMap(2000, 256);
+            double target = key == 'Z' ? 1000 : 3000;
+            ui.Key(key);
+            Check(ui.View.PlayheadMs == target && requested == target && ui.View.AudioPlaying == playing,
+                "Z/V must seek map boundaries while selected or dragging without changing playback.");
+            Check(ui.View.SelectedObjectIds.Contains(map.Fruits[1].Id), "Boundary seeking lost the selected object.");
+            if (held)
+            {
+                Check(ui.View.WantsCapture && Math.Abs(ui.Fruit(map.Fruits[1].Id).TimeMs - target) < .001,
+                    "Boundary navigation must move the held object with the viewport.");
+                ui.View.CancelInteraction(); ui.Paint();
+            }
+            Check(before.ContentEquals(ui.View.Document), "Selection seeking or cancelled dragging changed content.");
+            var area = ui.View.CanvasPlotBounds;
+            ui.View.PointerDown(area.X + 10, area.Y + 20, 0, false, false);
+            ui.View.PointerMove(area.X + 20, area.Y + 40, false, false);
+            ui.Key(key);
+            Check(ui.View.WantsCapture && requested == (key == 'Z' ? 0 : 10000), "Z/V repeat did not seek the song boundary during box selection.");
+            ui.View.CancelInteraction();
+            Check(before.ContentEquals(ui.View.Document), "Box boundary navigation changed content.");
+        }
+    }
+
     public static void PlaybackSeeking()
     {
         var ui = new Ui();

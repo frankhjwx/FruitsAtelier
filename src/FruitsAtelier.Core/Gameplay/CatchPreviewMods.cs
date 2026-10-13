@@ -7,6 +7,8 @@ public static class CatchPreviewMods
 {
     public static IReadOnlyList<ConvertedCatchObject> HardRock(MapDocument document, CatchConversionResult conversion)
     {
+        if (conversion.BananaExpansion is { } expansion)
+            return expansion.Remap(HardRock(expansion.Document, conversion.BananaSourceConversion!));
         var state = new CatchHardRockState();
         var imported = document.ImportedSliders.ToDictionary(slider => slider.Id);
         var paths = conversion.Sliders.ToDictionary(slider => slider.SourceId);

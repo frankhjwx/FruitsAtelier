@@ -31,6 +31,19 @@ a time or position can still flatten a complete imported slider path.
 - Refresh content-dependent data at its owning edit boundary. Viewport, selection,
   language and hover changes must not create content history or invalidate geometry.
 
+The slider speed badge reuses the current conversion and timing lookup. Its
+per-editor cache retains only the last inspected parent, keyed by conversion
+identity, parent ID and tiny-droplet inclusion. A new selection scans only the
+parent's time interval; unchanged painting and hover reuse the values. It does
+not initiate conversion or export, including while a slider draft is active.
+
+Object snap retains one time-sorted fruit target array per editor, keyed by the
+current authoring conversion identity. A new conversion replaces the array, so
+content edits, undo and document replacement refresh its positions. Pointer
+placement reuses the owned timing lookup to calculate the musical search window,
+then binary-searches its first fruit and visits only that interval. Viewport and
+preference changes reuse target data; subsequent slider draft points do not query it.
+
 ## Full-map work and cache ownership
 
 `OsuBeatmapWriter.Serialize` validates, converts, emits text, parses it again,
@@ -50,9 +63,9 @@ cache owns a detached track snapshot and exact-time position memo per parent,
 invalidates it on track or conversion-setting changes, and prunes removed parents.
 Each memo retains at most 16,384 positions. Control-curve time queries prepare the
 segment's points and circular arc once for the complete binary search.
-SV-adjusted read-back owns separate conversion and parsed-line caches from the
-canonical export. Baseline matching compares authored content without cloning,
-ignoring only the override value and editing lock. Continuous SV input retains
+Authoring and read-back use the same effective base SV, with separate conversion
+and parsed-line caches. Baseline matching compares authored content without cloning,
+including the override value and ignoring only the editing lock. Continuous SV input retains
 one detached validation snapshot until its owning history or content changes.
 
 The write cache retains one emitted timing result, keyed by generated slider
@@ -86,23 +99,30 @@ Testplay requests wait for validated output. Save and export use their own autho
 snapshots, never the provisional preview. Cancellation restores the pre-draft
 preview; switching projects or difficulties retires the pending result.
 
-Base-SV confirmation reuses the editor write cache's canonical export before SV
-override. Cached minimum/maximum inherited beat-length magnitudes provide a
-constant-time range rejection, including compensated red resets. Local validation
-reuses read-back slider geometry and recomputes nested events only when velocity
-changes. Identical event kinds/counts preserve NM random offsets and downstream
-RNG consumption; the merged NM and recalculated HR sequences must still match.
-SV input updates a displayed draft and resets a one-second idle deadline; it does
-not change document content or invalidate conversion during continuous input.
-Validation starts on a detached worker only after that deadline. Cold profiles
-are prepared lazily there, so ordinary editing does not build SV event indexes.
-New input remains available during validation, supersedes the worker's result and
-restarts the deadline. Only the current, matching snapshot may commit, in one undo
-step. Full read-back validation remains a fallback and correctness oracle.
-Both paths keep generated geometry and do not rerun FSlider fitting for an SV step.
-Each write cache retains one canonical baseline and one validated override result,
-keyed by document content, Tiny compensation and language. The baseline ignores
-only the override value and editing-lock flag. Content edits invalidate pending
+The object timeline retains Stream/Stack fruit times, stacking, combo numbers and
+event lookup entries for the current conversion snapshot. The colour presentation
+owns one combo-entry snapshot shared by numbering and preview combo ends. Content
+and NC edits refresh these snapshots; viewport changes reuse them. Drawing filters
+the cached chronological markers into a reusable visible buffer, preserving paint
+and hit order without allocating or sorting a new visible array each frame.
+Exact control-curve and internal NC snapshot comparisons use indexed lists to
+avoid allocating enumerators per track during conversion, dirty-state and rating
+checks. The transport overview retains sorted timing points with the Kiai
+presentation snapshot; content and timing edits rebuild it.
+
+Base-SV input uses the editor's current exported snapshot for a constant-time
+range rejection from inherited beat-length bounds, including compensated red
+resets. Confirmation converts the confirmed and candidate snapshots on a detached
+worker with its own write cache. NM and HR object identities, kinds, times and
+positions must match before the new value commits.
+SV/DPB input in Configure DS updates a local draft without changing content or
+invalidating conversion. Apply queues detached validation; draft controls stay
+inactive until it completes, while Cancel discards the pending result. Only the
+current, matching snapshot may commit SV, DPB and DS presets in one undo step.
+FSlider fitting and export read-back use the candidate's effective base.
+Each write cache retains one current baseline and one validated override result,
+keyed by document content, effective base, Tiny compensation and language. The baseline ignores
+only the editing-lock flag. Content edits invalidate pending
 results; a successful result commits after active history transactions end and
 supplies the next render's export cache. Workers do not share mutable conversion
 caches with the UI.

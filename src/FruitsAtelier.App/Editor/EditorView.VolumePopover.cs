@@ -8,12 +8,12 @@ public sealed partial class EditorView
     private bool volumePopoverOpen;
     private double volumePopoverOpenedMs, volumePopoverTouchedMs;
     private int volumePopoverDrag = -1;
-    private bool volumeShortcutHeld;
+    private readonly HashSet<int> volumeShortcutKeys = [];
     private int volumeChannel;
     private bool CanUseVolumePopover => !LibraryVisible && !ExportVisible && !updatesPage
         && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible
         && !SongSetupVisible && !DistanceSnapDialogVisible && !VolumeDialogVisible && !AimodVisible
-        && !TimeJumpVisible && !StreamDialogVisible && !MergeDialogVisible && !IsEditingText && drag == DragKind.None;
+        && !TimeJumpVisible && !BananaEditVisible && !StreamDialogVisible && !MergeDialogVisible && !IsEditingText && drag == DragKind.None;
 
     private double VolumeNowMs => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;
     public Rect VolumeButtonBounds => new(width - 95, height - 27, 88, 26);
@@ -36,7 +36,7 @@ public sealed partial class EditorView
     }
 
     public bool VolumePopoverNeedsRedraw => VolumePopoverVisible && volumePopoverDrag < 0
-        && !volumeShortcutHeld && !VolumePopoverBounds.Contains(mouseX, mouseY)
+        && volumeShortcutKeys.Count == 0 && !VolumePopoverBounds.Contains(mouseX, mouseY)
         && (IsTestplaying || !VolumeButtonBounds.Contains(mouseX, mouseY))
         || volumePopoverOpen && VolumePopoverOpacity < 1;
 
@@ -56,7 +56,7 @@ public sealed partial class EditorView
     {
         if (!volumePopoverOpen) return;
         if (!CanUseVolumePopover) { CloseVolumePopover(); return; }
-        if (volumePopoverDrag >= 0 || volumeShortcutHeld
+        if (volumePopoverDrag >= 0 || volumeShortcutKeys.Count > 0
             || VolumePopoverBounds.Contains(mouseX, mouseY)
             || !IsTestplaying && VolumeButtonBounds.Contains(mouseX, mouseY))
             volumePopoverTouchedMs = VolumeNowMs;
@@ -76,7 +76,7 @@ public sealed partial class EditorView
     {
         EndVolumePopoverPointer(mouseX, mouseY, 0);
         volumePopoverOpen = false;
-        volumeShortcutHeld = false;
+        volumeShortcutKeys.Clear();
     }
 
     public bool BeginVolumePopoverPointer(float x, float y, int button)
@@ -161,7 +161,7 @@ public sealed partial class EditorView
         if (!alt || !CanUseVolumePopover || key is not (37 or 38 or 39 or 40)) return false;
         if (!volumePopoverOpen) OpenVolumePopover();
         if (!volumePopoverOpen) return false;
-        volumeShortcutHeld = true;
+        volumeShortcutKeys.Add(key);
         if (key == 37) volumeChannel = Math.Max(0, volumeChannel - 1);
         else if (key == 39) volumeChannel = Math.Min(2, volumeChannel + 1);
         else
@@ -186,8 +186,7 @@ public sealed partial class EditorView
 
     public void ReleaseVolumeShortcut(int key)
     {
-        if (key is not (37 or 38 or 39 or 40)) return;
-        volumeShortcutHeld = false;
+        if (!volumeShortcutKeys.Remove(key)) return;
         volumePopoverTouchedMs = VolumeNowMs;
     }
 

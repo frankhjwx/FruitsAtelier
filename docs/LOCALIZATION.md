@@ -26,6 +26,12 @@ Hitsound sample names **Hit**, **Whistle**, **Finish**, and **Clap** retain thei
 English spelling in every language table. The setup headings **Audio Test** and
 **Hitsound Test** also retain their English spelling.
 
+## English-only acknowledgements
+
+The `acknowledgements.*` entries intentionally contain the same English text in every
+language table. The startup notice, consent checkbox, buttons and save-failure message
+remain English regardless of the selected interface language.
+
 ## Adding a language
 
 Add a UTF-8 `<culture>.json` file under `src/FruitsAtelier.Core/Localization`, such as `fr-FR.json`. Copy every key from the main table and translate its string, including the language button label. Use a valid culture name for the filename.

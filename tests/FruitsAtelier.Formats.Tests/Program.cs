@@ -3,6 +3,8 @@ using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
 
 if (args.Contains("--benchmark-sv-edits")) return WriteCacheTests.BenchmarkMultiplierEdits();
+if (args.Contains("--legacy-v7-check")) { LegacyV7Tests.Run(); Console.WriteLine("PASS v7 tick rules, persistence, editing and export"); return 0; }
+if (args.Contains("--generated-slider-path-check")) { GeneratedSliderPathTests.Run(); Console.WriteLine("PASS Generated slider paths"); return 0; }
 
 if (args.Length == 2 && args[0] == "--import-roundtrip")
 {
@@ -12,14 +14,19 @@ if (args.Length == 2 && args[0] == "--import-roundtrip")
     var exported = OsuBeatmapWriter.Serialize(restored);
     Preserved(imported, exported.ReadBack);
     Check(exported.ObjectSequenceMatches && exported.MaxConvertedXError == 0 && exported.MaxConvertedTimeErrorMs == 0, "Import/export changed Catch objects");
-    Console.WriteLine($"PASS {Path.GetFileName(args[1])}: {imported.Fruits.Count} fruits, {imported.ImportedSliders.Count} sliders, {imported.BananaShowers.Count} showers; project and v14 export preserve content");
+    Console.WriteLine($"PASS {Path.GetFileName(args[1])}: {imported.Fruits.Count} fruits, {imported.ImportedSliders.Count} sliders, {imported.BananaShowers.Count} showers; project and v{(imported.LegacySliderTicks ? 7 : 14)} export preserve content");
     return 0;
 }
 
+if (args.Contains("--banana-pattern-check")) { BananaPatternTests.Run(); Console.WriteLine("PASS Banana patterns"); return 0; }
+
 var tests = new (string Name, Action Run)[]
 {
+    ("Generated sliders start upwards and export Bezier red anchors with equivalent NM/HR playback", GeneratedSliderPathTests.Run),
+    ("Current base SV governs slider editing, cached conversion, export and reload", UnifiedSliderMultiplierTests.Run),
     ("Version history preserves saved, unsaved and deleted authoring by project identity", VersionHistoryTests.Run),
 
+    ("Banana patterns preserve grouped editing, project data and exported NM/HR RNG", BananaPatternTests.Run),
     ("Fractional banana endpoints preserve exported counts and downstream tiny compensation", BananaQuantizationTests.Run),
     ("Fractional FSlider heads preserve exported tiny counts, NM/HR RNG, editing and undo", FractionalSliderQuantizationTests.Run),
     ("Export keeps timing data below its header and a blank before Colours", TimingSectionSpacing),
@@ -28,7 +35,9 @@ var tests = new (string Name, Action Run)[]
     ("Cached export matches full serialization across edits, order, RNG, timing and streams", WriteCacheTests.MatchesUncached),
     ("Equal-time/order fruits, streams and random parents retain converter order through export and undo", WriteCacheTests.StableParentOrder),
     ("Sliders beside fractional imported fruits preserve SV export, identities, project persistence and undo", WriteCacheTests.FractionalFruitBesideSlider),
-    ("v12, v13 and compatible v128 imports preserve gameplay, optional fields and v14 export", CompatibleVersions),
+    ("v8 through v14 and compatible v128 imports preserve gameplay, optional fields and v14 export", CompatibleVersions),
+    ("v8 through v14 preserve inherited SV tick spacing and legacy coordinates", LegacyVersionTiming),
+    ("v7 preserves legacy ticks, RNG, project rules and generated slider exports", LegacyV7Tests.Run),
     ("v128 rejects fractional coordinates and unsupported slider syntax", LazerExtensions),
     ("Workspace isolation, recovery, indexing and explicit export", WorkspaceTests.Run),
     ("Multi-difficulty projects preserve content, history and compatibility", MultiProjectTests.Run),
@@ -303,7 +312,7 @@ static void OriginalRoundTrip()
 
 static void CompatibleVersions()
 {
-    foreach (int version in new[] { 12, 13, 128 })
+    foreach (int version in new[] { 8, 9, 10, 11, 12, 13, 14, 128 })
     foreach (bool optional in new[] { false, true })
     {
         string text = Fixture();
@@ -323,6 +332,34 @@ static void CompatibleVersions()
         Preserved(document, result.ReadBack);
         Check(result.ObjectSequenceMatches, "Old-format export changed object sequence");
         Near(0, result.MaxConvertedXError); Near(0, result.MaxConvertedTimeErrorMs);
+    }
+}
+
+static void LegacyVersionTiming()
+{
+    foreach (int version in Enumerable.Range(8, 7))
+    {
+        string text = $"osu file format v{version}\n[General]\nMode:2\n[Difficulty]\nOverallDifficulty:7\nSliderMultiplier:1.4\nSliderTickRate:2\n"
+            + "[TimingPoints]\n0,500\n0,-50,4,1,0,100,0,0\n[HitObjects]\n100.9,192.9,1000,2,0,L|380.9:192.9,2,280\n";
+        var document = OsuBeatmapReader.Read(text);
+        Near(7, document.ApproachRate);
+        var slider = document.ImportedSliders.Single();
+        Near(100, slider.X); Near(192, slider.Y);
+        Near(380, slider.ControlPoints[1].X); Near(192, slider.ControlPoints[1].GeometryY);
+        var converted = CatchStreamConverter.Convert(document);
+        Check(converted.Success, "Legacy slider conversion failed");
+        Check(converted.Objects.Where(o => o.Kind == CatchObjectKind.Fruit).Select(o => (o.TimeMs, o.X))
+            .SequenceEqual(new[] { (1000d, 100d), (1500d, 380d), (2000d, 100d) }), "Legacy slider timing or repeats changed");
+        Check(converted.Objects.Where(o => o.Kind == CatchObjectKind.Droplet).Select(o => (o.TimeMs, o.X))
+            .SequenceEqual(new[] { (1250d, 240d), (1750d, 240d) }), "v8+ ticks must include inherited SV in their spacing");
+        var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(document));
+        var result = OsuBeatmapWriter.Serialize(restored);
+        Preserved(document, result.ReadBack);
+        var reference = OsuBeatmapWriter.Serialize(OsuBeatmapReader.Read(text.Replace($"format v{version}\n", "format v14\n")));
+        Check(result.ObjectSequenceMatches
+            && result.PlayableObjects.Select(o => o with { SourceId = Guid.Empty }).SequenceEqual(reference.PlayableObjects.Select(o => o with { SourceId = Guid.Empty }))
+            && result.PlayableHardRockObjects.Select(o => o with { SourceId = Guid.Empty }).SequenceEqual(reference.PlayableHardRockObjects.Select(o => o with { SourceId = Guid.Empty })),
+            "Legacy version changed NM/HR playback");
     }
 }
 
@@ -419,7 +456,7 @@ static void CurveExport()
     var r = OsuBeatmapWriter.Serialize(d);
     Check(d.ContentEquals(before), "Export mutated authoring model");
     Equal(1, r.ReadBack.ImportedSliders.Count); Equal(0, r.ReadBack.Tracks.Count);
-    Equal('L', r.ReadBack.ImportedSliders[0].PathType); Equal(1, r.ReadBack.ImportedSliders[0].SpanCount);
+    Equal('B', r.ReadBack.ImportedSliders[0].PathType); Equal(1, r.ReadBack.ImportedSliders[0].SpanCount);
     Check(r.MaxCoordinateQuantization <= 0.5, "Unexpected integer error");
     Check(r.ObjectSequenceMatches, "Reconversion changed object sequence");
     Check(r.Diagnostics.Contains(L.Get("core.writer.rounding", r.MaxTimeQuantizationMs.ToString("R", CultureInfo.InvariantCulture), r.MaxCoordinateQuantization.ToString("R", CultureInfo.InvariantCulture))), "No quantization report");
@@ -624,7 +661,7 @@ static void InvalidProjects()
 static void InvalidBeatmaps()
 {
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("Mode: 2", "Mode: 0")), "non-Catch input");
-    foreach (string version in new[] { "v11", "v15", "v127", "v129", "v12x", "v128x" })
+    foreach (string version in new[] { "v6", "v15", "v127", "v129", "v7x", "v8x", "v08", "v12x", "v128x" })
         Throws(() => OsuBeatmapReader.Read(Fixture().Replace("format v14", "format " + version)), "unsupported version");
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("250,21,8", "250,128,8")), "unknown object");
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("-100,500,4", "-100,NaN,4")), "NaN red timing");

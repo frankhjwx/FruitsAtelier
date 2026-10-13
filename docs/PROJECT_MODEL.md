@@ -2,7 +2,7 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides with timing inheritance use schema 15 (single difficulty) or 16 (multi-difficulty). Readers also accept the earlier schema 13/14 overrides. All sixteen schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v12–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing and v14 writing. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides with timing inheritance use schema 15 (single difficulty) or 16 (multi-difficulty). Readers also accept the earlier schema 13/14 overrides. Per-fruit stream combos use schema 17/18. Documents retaining v7 slider tick rules use schema 19/20. Banana shower patterns use schema 21/22. All twenty-two schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v7–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing, retaining v7 on export for v7 maps and using v14 otherwise. Authored content, imported context, and derived output remain separate.
 
 ## Authoritative and derived data
 
@@ -77,15 +77,15 @@ Raw section lines retain independent mutable storage in document snapshots. Unch
 | MapPoint | Double TimeMs and X; handles store offsets relative to anchors |
 | TimingPoint | TimeMs, BeatLengthMs, Meter, Uninherited, sample/volume/effect fields, SourceOrder, OriginalLine |
 | ImportedSlider | Id, TimeMs, X / Y, PathType, ControlPoints, SpanCount, PixelLength, SourceOrder, OriginalLine |
-| BananaShower | Id, TimeMs, EndTimeMs, SourceOrder, OriginalLine |
+| BananaShower | Id, TimeMs, EndTimeMs, SourceOrder, OriginalLine, optional immutable Pattern |
 
-Difficulty includes ApproachRate, CircleSize, SliderMultiplier, and SliderTickRate. `DistancePerBeatOverride` is a nullable editor-only distance-snap baseline in `.catchproj`; when absent, effective DPB is `100 × SliderMultiplier`. New maps therefore start at DPB 192 px with SliderMultiplier 1.92, while imported maps initially use their original multiplier. Changing DPB sets the override and rescales DS preset multipliers by old DPB / new DPB to preserve their pixel distances, without changing slider conversion or `.osu` export. Older projects without the override continue to derive DPB from their stored SliderMultiplier. DistanceSpacing is a per-difficulty editor multiplier (0.1–6, default 1), included in cloning, dirty comparison, undo and project persistence. `DistanceSnapRatios` stores up to eight finite non-negative multipliers for the difficulty. It defaults to an empty list in older projects and participates in cloning, dirty comparison, undo and project persistence. Zero DS is always implicit; an explicitly added zero-valued preset is also stored so it remains available for dragging. An empty preset list snaps only to zero and does not use the legacy DistanceSpacing value. Neither DPB overrides nor custom DS lists are exported to `.osu`; see [Editing Controls](EDITOR_UI.md#distance-spacing-and-object-flags). Demo defaults are duration 30000 ms, beat length 500 ms, offset=0, AR=8, CS=5, SliderMultiplier=1.92 (DPB 192), and SliderTickRate=1. MapDocument's BeatLengthMs / TimingOffsetMs are fallbacks when no red timing point exists; real beatmaps retain all timing points.
+Difficulty includes ApproachRate, CircleSize, SliderMultiplier, and SliderTickRate. `DistancePerBeatOverride` retains the distance-snap baseline in `.catchproj`. Project loading resolves legacy conflicts to `100 × EffectiveSliderMultiplier`. The DS panel presents SV and DPB as two units of the same value. Applying a base change updates both and rescales DS preset multipliers by old DPB / new DPB to preserve their pixel distances, after validating slider playback and inherited SV compensation. New maps start at DPB 192 px with SliderMultiplier 1.92; imported maps use their original multiplier. DistanceSpacing is a per-difficulty editor multiplier (0.1–6, default 1), included in cloning, dirty comparison, undo and project persistence. `DistanceSnapRatios` stores up to eight finite non-negative multipliers for the difficulty. It defaults to an empty list in older projects and participates in cloning, dirty comparison, undo and project persistence. Zero DS is always implicit; an explicitly added zero-valued preset is also stored so it remains available for dragging. An empty preset list snaps only to zero and does not use the legacy DistanceSpacing value. Neither DPB overrides nor custom DS lists are exported to `.osu`; see [Editing Controls](EDITOR_UI.md#distance-spacing-and-object-flags). Demo defaults are duration 30000 ms, beat length 500 ms, offset=0, AR=8, CS=5, SliderMultiplier=1.92 (DPB 192), and SliderTickRate=1. MapDocument's BeatLengthMs / TimingOffsetMs are fallbacks when no red timing point exists; real beatmaps retain all timing points.
 
 Import initially derives `.osu` `DurationMs` from the last object. Once associated audio is decoded, a longer audio duration becomes available for placement, numeric editing, and dragging. Loading and navigation do not modify the document. The first object edit beyond the original range extends `DurationMs` within the same user transaction.
 
 Authoritative time is double-precision milliseconds; beat snapping does not round early. TimingMap queries the active red point's BPM / offset / Meter and inherited SV. Grid and snapping use local beat spacing and red-point boundaries; green points do not reset phase. Each slider locks its start timing, so timing changes along its path do not alter velocity. Changing snapping does not alter existing objects or SliderTickRate. Anchor dragging has an independent, default-off session checkbox and uses the selected beat divisor only when enabled.
 
-Gameplay-derived timing uses the exported osu v14 read-back event stream. The writer rounds authored object times and coordinates where required by the file format, reads the output, and maps converted events back to their editor `(SourceId, EventIndex)`. Canvas objects, hyperdash, movement analysis, preview, TestPlay and ratings consume this playable stream. Authoring anchors, beat snapping and editable curve geometry retain their double-precision values. An incomplete draft uses the direct conversion until it can be exported.
+Gameplay-derived timing uses the exported osu read-back event stream. The writer rounds authored object times and coordinates where required by the file format, reads the output, and maps converted events back to their editor `(SourceId, EventIndex)`. Canvas objects, hyperdash, movement analysis, preview, TestPlay and ratings consume this playable stream. Authoring anchors, beat snapping and editable curve geometry retain their double-precision values. An incomplete draft uses the direct conversion until it can be exported.
 
 EditorHistory uses deep copies for transactions, undo, and dirty comparisons, preserving object IDs, segment types, span counts, Tiny overrides, raw lines, and timing. Saving updates the baseline without clearing undo/redo. ContentEquals invalidates the view's conversion cache. A New Combo toggle retains the playable object stream and refreshes combo grouping and labels because the flag does not change catch event times or positions. Batch Legacy conversion uses an independent background snapshot and validates its source snapshot before applying results. Cancelling an active drag or draft restores the complete transaction; later field edits locate objects by ID to avoid writing into stale snapshots.
 
@@ -95,15 +95,23 @@ The internal clipboard stores deep snapshots of selected complete parent objects
 
 Interface language and resources are not serialized in `.catchproj`. Built-in default names come from resources when creating objects. Existing Name values, imported metadata, and raw lines remain user data; switching languages does not rename them. Language changes invalidate conversion diagnostic caches without changing geometry or document history.
 
-`OverrideSliderMultiplier` unlocks base-SV editing in the Timing panel and defaults
-to false. `SliderMultiplierOverride` is nullable and stores the confirmed export
-base SV (0.4–3.6); `EffectiveSliderMultiplier` displays it, falling back to the
-authoring `SliderMultiplier`. These settings participate in cloning, dirty
-comparison, project persistence and undo. Locking editing retains the override.
-Authoring conversion and DPB use the original multiplier. Export first generates
-the original geometry, then rebases the emitted base SV and inherited timing
-without changing object lines. NM/HR read-back validation checks object identities,
-kinds, times and positions. See [Timing editing](EDITOR_UI.md#timing-editing).
+`SliderMultiplierOverride` is nullable and stores the confirmed map base SV;
+`EffectiveSliderMultiplier` supplies it to editing, conversion and export,
+falling back to the stored `SliderMultiplier`. The DS panel accepts SV 0.4–3.6
+and updates DPB to 100 × SV in the same transaction. `OverrideSliderMultiplier`
+is retained for project compatibility and enabled when the panel changes the
+base value. These fields participate in cloning, dirty comparison, persistence
+and undo. Stored timing points retain their source basis. Timing lookups and
+exported timing compensate them into the current base, including red resets.
+Exact inherited SV compensation is required at retained Legacy Slider heads.
+Other timing states are bounded to 0.1–10 before FSliders solve their generated
+SV, so unused extreme green points do not block saving. Timing sample and effect
+fields remain at their original times.
+FSlider generation uses that same base and inherited SV range 0.1–10; export
+writes its generated SV directly. Timing insertion retains the stored basis so
+compensation is applied once. Base changes validate the candidate conversion
+and NM/HR read-back against the current playable objects before committing.
+See [Timing editing](EDITOR_UI.md#timing-editing).
 
 ## FSliders and Legacy Sliders
 
@@ -134,6 +142,17 @@ Batch conversion validates in the complete beatmap context, retrying after align
 FSliders retain the original parent Id, SourceOrder, OriginalLine, and SpanCount. Nodes define the first span; repeats share them with reversed evaluation. `SpanCount=1` is a single traversal. `CompensateTinyDroplets=true` requests exact alignment where possible and partial compensation where repeat or speed constraints prevent it. A saved `false` explicitly disables compensation; existing tracks with that value are not automatically changed. `null` preserves the old-project session-toggle behavior. Banana showers store editable start/end times. Their X=0–512 canvas rectangle and top/bottom handles edit that range; individual banana positions are not saved.
 
 ## Derived conversion
+
+`CurveTrack.StreamNewComboOffsets` stores additional Stream/Stack NC starts as
+millisecond offsets from the parent head. The head uses `OriginalLine`'s NC flag.
+Offsets participate in deep cloning, content equality, undo and export cache
+invalidation; nonempty collections require project schemas 17/18, while older
+projects default to no internal NC starts. Whole-parent movement preserves the
+offsets, and timing transforms scale them with the parent duration. Only fruits
+sampled at a saved offset receive NC, so a subdivision change
+can temporarily omit a marker and restore it when that time is sampled again.
+Ordinary slider output uses only the head flag; retained offsets apply again when
+the parent is converted to Stream/Stack. Breaking transfers the flags to the fruits.
 
 ### Droplet randomization
 
@@ -229,7 +248,7 @@ and exported read-back apply the ordinary osu HR rules to the generated geometry
 
 `.catchproj` saves nodes, handles, optional exact OutgoingCurve controls and reference ratios, OutgoingKind, default track Kind, SpanCount, OriginalLine, CompensateTinyDroplets, difficulty, complete timing, and resource references. It excludes undo history, derived objects, and GPU caches. Older projects default to OutgoingKind=null, SpanCount=1, and Tiny override=null. Reading validates schema, IDs, model boundaries, and curve constraints, rejecting unsupported fields and versions. Inherited NaN uses named JSON floating-point representation. Saving replaces a same-directory temporary file and stores resource paths relative to the project directory without copying audio.
 
-`.osu` accepts v12–v14 and stable-compatible lazer v128 / Mode=2 and emits v14 / Mode=2; see [stable File Contract](STABLE_FORMAT.md). Legacy Sliders retain original lines. FSliders encode integer time and path coordinates, preserve SpanCount, and insert/restore inherited SV as needed. Legacy-converted FSliders reuse original type/hitsound/sample fields. Span-count edits preserve surviving edge samples; new edges receive defaults and a diagnostic. Incompatible same-time SV conflicts fail explicitly. Export read-back compares the full object sequence, times, and X; quantization can introduce errors or sequence changes.
+`.osu` accepts v7–v14 and stable-compatible lazer v128 / Mode=2 and emits v7 for maps retaining legacy slider ticks or v14 otherwise, always with Mode=2; see [stable File Contract](STABLE_FORMAT.md). Legacy Sliders retain original lines. FSliders encode integer time and path coordinates, preserve SpanCount, and insert/restore inherited SV as needed. Legacy-converted FSliders reuse original type/hitsound/sample fields. Span-count edits preserve surviving edge samples; new edges receive defaults and a diagnostic. Incompatible same-time SV conflicts fail explicitly. Export read-back compares the full object sequence, times, and X; quantization can introduce errors or sequence changes.
 
 Project saving and `.osu` export are independent; exporting cannot replace saving authoring intent. Video and storyboard playback are unsupported. Preserving raw section text alone does not mean its referenced assets have been packaged; workspace archive retention is described separately in [Workspace](WORKSPACE.md).
 
@@ -256,3 +275,20 @@ absent flags default to false to preserve existing randomization behavior. New
 blank/audio projects initialize the gate from the General new-project preference.
 The nullable `DerandomizeDroplets` field continues to hold the Legacy conversion
 choice independently of these compensation settings.
+
+## Banana shower patterns
+
+A banana shower may store `BananaShowerPattern` with independent integer length
+and gap numerators and snap divisors. The length is positive; the gap may be zero.
+Fractions represent beats and integrate across red timing changes. Derived short
+showers start at the parent head, alternate length and empty gap, and clip the
+last occupied segment to the parent tail. No extra segment starts at the tail.
+Segments shorter than 2 ms, before or after export quantization, are omitted.
+The authored range remains authoritative even when it ends inside a gap.
+
+The parent keeps one identity for selection, transforms, clipboard and undo.
+Short showers have deterministic derived identities for conversion caching and
+participate individually in chronological RNG traversal. Playable bananas map
+back to unique event indices on the parent. Project JSON stores the pattern and
+range; `.osu` export writes ordinary individual spinners. Reimporting `.osu`
+therefore does not recover the authoring group.

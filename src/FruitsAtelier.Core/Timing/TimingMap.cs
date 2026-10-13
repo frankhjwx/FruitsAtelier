@@ -13,20 +13,38 @@ public static class TimingMap
         private readonly double[] times;
         private readonly TimingState[] states;
         private readonly TimingState initial;
-        private readonly double beatLengthMs, offsetMs;
+        private readonly double beatLengthMs, offsetMs, sourceMultiplier, effectiveMultiplier;
         private readonly TimingPoint[] inputPoints;
+        private readonly double[]? importedHeads;
         internal double[] RedTimes { get; }
 
-        public Lookup(MapDocument document)
+        public Lookup(MapDocument document) : this(document, true) { }
+
+        internal Lookup(MapDocument document, bool applyMultiplierOverride)
         {
             beatLengthMs = document.BeatLengthMs; offsetMs = document.TimingOffsetMs;
+            sourceMultiplier = document.SliderMultiplier; effectiveMultiplier = document.EffectiveSliderMultiplier;
+            double ratio = applyMultiplierOverride ? sourceMultiplier / effectiveMultiplier : 1;
             inputPoints = document.TimingPoints.Select(p => p.DeepClone()).ToArray();
             var groups = Groups(document);
+            HashSet<int>? requiredStates = null;
+            if (ratio != 1)
+            {
+                requiredStates = [];
+                importedHeads = document.ImportedSliders.Select(s => s.TimeMs).ToArray();
+                var boundaries = groups.Select(g => g.TimeMs).ToArray();
+                foreach (double head in importedHeads)
+                {
+                    int index = Array.BinarySearch(boundaries, head);
+                    requiredStates.Add(index < 0 ? ~index - 1 : index);
+                }
+            }
             var firstRed = groups.Select(g => g.Red).FirstOrDefault(p => p is not null);
             double beatLength = firstRed?.BeatLengthMs ?? document.BeatLengthMs;
             double offset = firstRed?.TimeMs ?? document.TimingOffsetMs;
             int meter = firstRed?.Meter ?? 4;
-            double sv = 1;
+            // Only retained Legacy heads require exact compensation; FSliders solve their own legal SV.
+            double sv = ratio == 1 ? 1 : 100 / SliderMultiplierEditing.ScaleBeatLength(100, ratio, requiredStates!.Contains(-1));
             bool generateTicks = true;
             initial = new(offset, beatLength, sv, generateTicks, meter);
             times = new double[groups.Length]; states = new TimingState[groups.Length];
@@ -41,6 +59,11 @@ public static class TimingMap
                 {
                     sv = difficulty.BeatLengthMs < 0 ? Math.Clamp(100 / -difficulty.BeatLengthMs,
                         LegacyCatchRules.MinimumSliderVelocityMultiplier, LegacyCatchRules.MaximumSliderVelocityMultiplier) : 1;
+                    if (ratio != 1 && !double.IsNaN(difficulty.BeatLengthMs))
+                    {
+                        double magnitude = difficulty.BeatLengthMs < 0 ? Math.Clamp((float)-difficulty.BeatLengthMs, 10, 1000) : 100;
+                        sv = 100 / SliderMultiplierEditing.ScaleBeatLength(magnitude, ratio, requiredStates!.Contains(i));
+                    }
                     generateTicks = !double.IsNaN(difficulty.BeatLengthMs);
                 }
                 times[i] = group.TimeMs;
@@ -59,13 +82,39 @@ public static class TimingMap
         public bool MatchesTiming(MapDocument document)
         {
             if (beatLengthMs != document.BeatLengthMs || offsetMs != document.TimingOffsetMs
+                || sourceMultiplier != document.SliderMultiplier || effectiveMultiplier != document.EffectiveSliderMultiplier
                 || inputPoints.Length != document.TimingPoints.Count) return false;
+            if (importedHeads is not null && !importedHeads.SequenceEqual(document.ImportedSliders.Select(s => s.TimeMs))) return false;
             for (int i = 0; i < inputPoints.Length; i++)
                 if (!inputPoints[i].ContentEquals(document.TimingPoints[i])) return false;
             return true;
         }
 
         public double Snap(double time, int divisor) => TimingMap.Snap(this, time, divisor);
+
+        public double OffsetBeats(double time, double beats)
+        {
+            if (!double.IsFinite(time) || !double.IsFinite(beats)) throw new ArgumentOutOfRangeException(nameof(time));
+            bool earlier = beats < 0;
+            double remaining = Math.Abs(beats);
+            int boundary = Array.BinarySearch(RedTimes, time);
+            if (boundary < 0) boundary = ~boundary - 1;
+            else if (earlier) boundary--;
+            while (remaining > 0)
+            {
+                double next = earlier ? boundary >= 0 ? RedTimes[boundary] : double.NegativeInfinity
+                    : boundary + 1 < RedTimes.Length ? RedTimes[boundary + 1] : double.PositiveInfinity;
+                var state = At(earlier ? Math.BitDecrement(time) : time);
+                double length = state.BeatLengthMs;
+                if (!double.IsFinite(length) || length <= 0) throw new ArgumentOutOfRangeException(nameof(time));
+                double available = Math.Abs(next - time) / length;
+                if (remaining <= available) return time + (earlier ? -1 : 1) * remaining * length;
+                remaining -= available;
+                time = next;
+                boundary += earlier ? -1 : 1;
+            }
+            return time;
+        }
 
         public IEnumerable<BeatGridLine> Grid(double start, double end, int divisor)
         {

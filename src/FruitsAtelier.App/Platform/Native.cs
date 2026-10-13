@@ -156,6 +156,7 @@ internal static partial class Native
     [DllImport("user32.dll")] internal static extern nint MonitorFromWindow(nint hwnd, uint flags);
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] internal static extern bool GetMonitorInfo(nint monitor, ref MonitorInfo info);
     [DllImport("user32.dll")] internal static extern bool InvalidateRect(nint hwnd, nint rect, bool erase);
+    [DllImport("user32.dll")] internal static extern bool RedrawWindow(nint hwnd, nint updateRect, nint updateRegion, uint flags);
     [DllImport("user32.dll")] internal static extern bool ValidateRect(nint hwnd, nint rect);
     [DllImport("user32.dll")] internal static extern bool GetUpdateRect(nint hwnd, out Rectangle rect, bool erase);
     [DllImport("user32.dll")] internal static extern nint BeginPaint(nint hwnd, out Paint paint);

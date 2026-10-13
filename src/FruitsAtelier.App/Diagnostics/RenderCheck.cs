@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
@@ -20,6 +20,27 @@ internal static class RenderCheck
             foreach (string locale in new[] { "en", "zh-CN" })
             {
                 FruitsAtelier.Localization.Strings.SetLanguage(locale); Paint();
+                foreach (var selector in new[] { view.SamplesetBounds, view.AdditionsBounds })
+                {
+                    if (selector.Bottom > view.ToolButtonBounds[0].Y)
+                        throw new InvalidOperationException("Sample selector overlaps the tool palette.");
+                    view.PointerDown(selector.X + 12, selector.Y + 12, 0, false, false);
+                    view.PointerUp(selector.X + 12, selector.Y + 12, 0); Paint();
+                    canvas.Begin(); view.Render(canvas, width, height);
+                    canvas.End(capture: () =>
+                    {
+                        var frame = canvas.CapturePixels();
+                        string directory = System.IO.Path.GetFullPath("artifacts/tests/sample-banks");
+                        Directory.CreateDirectory(directory);
+                        string name = selector == view.SamplesetBounds ? "sampleset" : "additions";
+                        using var writer = new BinaryWriter(File.Create(System.IO.Path.Combine(directory, $"{name}-{locale}-{frame.Width}x{frame.Height}.bmp")));
+                        writer.Write((ushort)0x4D42); writer.Write(54 + frame.Pixels.Length); writer.Write(0); writer.Write(54);
+                        writer.Write(40); writer.Write(frame.Width); writer.Write(-frame.Height);
+                        writer.Write((ushort)1); writer.Write((ushort)32); writer.Write(0); writer.Write(frame.Pixels.Length);
+                        writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(frame.Pixels);
+                    });
+                    view.KeyDown(27, false, false); Paint();
+                }
                 foreach (var button in view.ToolButtonBounds.ToArray())
                 {
                     view.PointerMove(button.X + button.Width / 2, button.Y + button.Height / 2, false, false); Paint();
@@ -91,6 +112,24 @@ internal static class RenderCheck
         view.RequestWaveform = (_, _) => Task.FromResult(new AudioWaveform(peaks, 1));
         var original = view.Document.DeepClone();
         void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
+        void Capture(string state, string lang)
+        {
+            if (!Environment.GetCommandLineArgs().Contains("--sv-ds-render-check")) return;
+            canvas.Begin(); view.Render(canvas, width, height);
+            canvas.End(capture: () =>
+            {
+                var frame = canvas.CapturePixels();
+                string folder = Path.GetFullPath("artifacts/tests/sv-ds-native");
+                Directory.CreateDirectory(folder);
+                using var output = new BinaryWriter(File.Create(Path.Combine(folder, $"{state}-{lang}-{frame.Width}x{frame.Height}.bmp")));
+                output.Write((ushort)0x4D42); output.Write(54 + frame.Pixels.Length);
+                output.Write(0); output.Write(54); output.Write(40);
+                output.Write(frame.Width); output.Write(-frame.Height);
+                output.Write((ushort)1); output.Write((ushort)32); output.Write(0);
+                output.Write(frame.Pixels.Length); output.Write(0); output.Write(0); output.Write(0); output.Write(0);
+                output.Write(frame.Pixels);
+            });
+        }
         try
         {
             foreach (string lang in new[] { "en", "zh-CN" })
@@ -98,26 +137,41 @@ internal static class RenderCheck
                 FruitsAtelier.Localization.Strings.SetLanguage(lang); Paint();
                 view.KeyDown(114, false, false); Paint();
                 if (!view.TimingPageVisible) throw new InvalidOperationException("F3 failed to open timing page.");
-                var svRow = view.TimingSliderMultiplierBounds;
+                var svRow = view.TimingSliderVelocityLinkBounds;
                 if (svRow.Bottom > height || view.TimingFields.Any(f => f.Key == "page.sliderMultiplier"))
-                    throw new InvalidOperationException("Base SV must start locked and fit the Timing panel.");
+                    throw new InvalidOperationException("SV navigation must fit the Timing panel.");
+                Capture("timing", lang);
                 view.PointerDown(svRow.X + 8, svRow.Y + 10, 0, false, false);
                 view.PointerUp(svRow.X + 8, svRow.Y + 10, 0); Paint();
-                var svField = view.TimingFields.Single(f => f.Key == "page.sliderMultiplier");
-                if (!view.Document.OverrideSliderMultiplier || svField.Bounds.Bottom != svRow.Bottom)
-                    throw new InvalidOperationException("Base SV override did not unlock its row.");
-                double previousSv = view.Document.EffectiveSliderMultiplier;
-                view.PointerDown(svField.Bounds.Right + 14, svField.Bounds.Y + 10, 0, false, true);
-                view.PointerUp(svField.Bounds.Right + 14, svField.Bounds.Y + 10, 0); Paint();
+                if (!view.DistanceSnapDialogVisible) throw new InvalidOperationException("SV entry did not open DS.");
+                var unit = view.DistanceSnapDpbUnitBounds;
+                view.PointerDown(unit.X + 10, unit.Y + 10, 0, false, false);
+                view.PointerUp(unit.X + 10, unit.Y + 10, 0); Paint();
+                Capture("dpb", lang);
+                unit = view.DistanceSnapSvUnitBounds;
+                view.PointerDown(unit.X + 10, unit.Y + 10, 0, false, false);
+                view.PointerUp(unit.X + 10, unit.Y + 10, 0); Paint();
+                Capture("sv", lang);
+                var svField = view.DistanceSnapBaseFieldBounds;
+                double nextSv = view.Document.EffectiveSliderMultiplier + .01;
+                double nextDpb = nextSv * 100;
+                view.PointerDown(svField.X + 10, svField.Y + 10, 0, false, false);
+                view.PointerUp(svField.X + 10, svField.Y + 10, 0);
+                view.KeyDown(65, true, false);
+                view.PasteFieldText(nextSv.ToString(System.Globalization.CultureInfo.InvariantCulture)); Paint();
+                view.KeyDown(13, false, false);
+                float applyX = (width + Math.Min(1040, width - 32)) / 2f - 60;
+                float applyY = (height + Math.Min(640, height - 32)) / 2f - 30;
+                view.PointerDown(applyX, applyY, 0, false, false); view.PointerUp(applyX, applyY, 0); Paint();
                 var svWait = Stopwatch.StartNew();
                 while (view.SliderMultiplierValidationBusy && svWait.ElapsedMilliseconds < 10000)
                 { Thread.Sleep(1); Paint(); }
-                if (Math.Abs(view.Document.EffectiveSliderMultiplier - Math.Round(previousSv + .01, 2)) > 1e-9)
-                    throw new InvalidOperationException($"Base SV Ctrl arrow did not step by 0.01: {previousSv} -> {view.Document.EffectiveSliderMultiplier}; {view.StatusMessage}");
-                view.KeyDown(90, true, false); view.KeyDown(90, true, false); Paint();
+                if (Math.Abs(view.Document.DistancePerBeat - nextDpb) > 1e-9 || view.DistanceSnapDialogVisible)
+                    throw new InvalidOperationException("Unified base SV did not apply.");
+                view.KeyDown(90, true, false); Paint();
                 if (!view.Document.ContentEquals(original))
                     throw new InvalidOperationException("Base SV native undo did not restore the difficulty.");
-                AppLog.Write($"Timing base SV native check passed: {lang}, {width}x{height}");
+                AppLog.Write($"Unified base SV native check passed: {lang}, {width}x{height}");
                 view.PointerMove(350, height - 55, false, false); Paint();
                 int decodes = canvas.ImageDecodeCount;
                 for (int frame = 0; frame < 12; frame++)
@@ -438,6 +492,13 @@ internal static class RenderCheck
                 view.UpdateTransport(1000, 6000, true, false, false, null, null);
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 var field = view.PlayfieldBounds; var plot = view.CanvasPlotBounds;
+                if (view.MovementOverlayBounds is { } indicator)
+                {
+                    view.PointerDown(indicator.X + 8, indicator.Y + 8, 0, false, false);
+                    view.PointerMove(indicator.X + 8, plot.Y + 20, false, false);
+                    view.PointerUp(indicator.X + 8, plot.Y + 20, 0);
+                    canvas.Begin(); view.Render(canvas, width, height); canvas.End();
+                }
                 float headX = field.X + 100f / 512 * field.Width;
                 float headY = plot.Bottom - (float)((1000 - view.ViewStartMs) * view.PixelsPerMs);
                 view.PointerDown(headX, headY, 0, false, false);
@@ -552,7 +613,7 @@ internal static class RenderCheck
                 view.OpenSettings();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 var settings = view.SettingsBounds;
-                foreach (int category in new[] { 0, 1, 2, 3, 4, 5 })
+                foreach (int category in new[] { 0, 1, 2, 3, 4, 5, 6, 7 })
                 {
                     float sx = settings.X + 40, sy = settings.Y + 96 + category * 48;
                     view.PointerDown(sx, sy, 0, false, false); view.PointerUp(sx, sy, 0);
@@ -636,10 +697,12 @@ internal static class RenderCheck
         if (!double.IsFinite(startMs) || startMs < 0) throw new ArgumentOutOfRangeException(nameof(startMs));
         view.RequestPreloadHitsounds = null; view.RequestStopHitsounds = null;
         view.RequestScheduleHitsound = (_, _) => { }; view.RequestPrepareHitsound = _ => { };
-        var document = OsuBeatmapReader.ReadFile(path);
-        var documents = new[] { document }.Concat(Directory.EnumerateFiles(Path.GetDirectoryName(path)!, "*.osu")
+        bool osu = Path.GetExtension(path).Equals(".osu", StringComparison.OrdinalIgnoreCase);
+        var document = osu ? OsuBeatmapReader.ReadFile(path) : ProjectSerializer.ReadFile(path);
+        var documents = new[] { document }.Concat(Directory.EnumerateFiles(Path.GetDirectoryName(path)!, osu ? "*.osu" : "*.catchdiff")
             .Where(file => !Path.GetFullPath(file).Equals(Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase))
-            .Select(OsuBeatmapReader.ReadFile)).ToArray();
+            .Where(file => !Path.GetFileName(file).Equals("project.catchdiff", StringComparison.OrdinalIgnoreCase))
+            .Select(file => osu ? OsuBeatmapReader.ReadFile(file) : ProjectSerializer.ReadFile(file))).ToArray();
         var project = BeatmapProject.FromDocuments(documents);
         view.LoadWorkspace(new(Path.GetDirectoryName(path)!, new WorkspaceManifest { Name = project.Name }, project));
         var resourcesWatch = Stopwatch.StartNew();
@@ -649,7 +712,7 @@ internal static class RenderCheck
         void Draw() { canvas.Begin(); view.Render(canvas, 1440, 900); canvas.End(); }
         Draw();
         var cases = new List<object>();
-        for (int mode = 0; mode < 3; mode++)
+        for (int mode = 0; mode < 4; mode++)
         {
             if (mode == 1)
             {
@@ -664,6 +727,15 @@ internal static class RenderCheck
                 view.PointerDown(x, 193, 0, false, false); view.PointerUp(x, 193, 0);
                 Draw();
             }
+            if (mode == 3)
+            {
+                var toggle = view.PreviewToggleBounds;
+                view.PointerDown(toggle.X + 10, toggle.Y + 10, 0, false, false); view.PointerUp(toggle.X + 10, toggle.Y + 10, 0);
+                view.KeyDown('F', false, false);
+                var plot = view.CanvasPlotBounds;
+                view.PointerMove(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, false, false);
+                Draw();
+            }
             view.StartHitsounds(startMs);
             var frames = new List<double>(); var transport = new List<double>();
             var drawing = new List<double>();
@@ -674,7 +746,7 @@ internal static class RenderCheck
                 long allocated = GC.GetAllocatedBytesForCurrentThread();
                 int gen0 = GC.CollectionCount(0), gen1 = GC.CollectionCount(1), gen2 = GC.CollectionCount(2), decodes = canvas.ImageDecodeCount;
                 watch.Restart();
-                view.UpdateTransport(startMs + i * 1000d / 120, document.DurationMs, true, true, false, null, document.AudioPath);
+                view.UpdateTransport(startMs + (mode == 3 ? 0 : i * 1000d / 120), document.DurationMs, true, mode != 3, false, null, document.AudioPath);
                 double transportMs = watch.Elapsed.TotalMilliseconds;
                 if (i >= 20) transport.Add(transportMs);
                 watch.Restart(); canvas.Begin(); view.Render(canvas, 1440, 900);
@@ -688,7 +760,7 @@ internal static class RenderCheck
                     GC.CollectionCount(1) - gen1, GC.CollectionCount(2) - gen2, canvas.ImageDecodeCount - decodes));
             }
             frames.Sort(); transport.Sort(); drawing.Sort();
-            cases.Add(new { preview = mode == 0 ? "closed" : mode == 1 ? "NM" : "HR", ar = view.PreviewApproachRate,
+            cases.Add(new { preview = mode == 0 ? "closed" : mode == 1 ? "NM" : mode == 2 ? "HR" : "paused-hover", ar = view.PreviewApproachRate,
                 renderMedianMs = frames[1800], renderP95Ms = frames[3420], renderMaxMs = frames[^1],
                 drawingMedianMs = drawing[1800], drawingP95Ms = drawing[3420],
                 transportMedianMs = transport[1800], transportP95Ms = transport[3420], transportMaxMs = transport[^1], samples });
@@ -730,6 +802,22 @@ internal static class RenderCheck
                 float y = view.CanvasPlotBounds.Bottom - (float)((1500 - view.ViewStartMs) * view.PixelsPerMs);
                 view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint();
                 var input = view.PreviousDistanceFieldBounds ?? throw new InvalidOperationException("DS input missing.");
+                var panel = view.MovementOverlayBounds!.Value;
+                var beforePanelDrag = view.Document.DeepClone();
+                view.PointerDown(panel.X + 8, panel.Y + 8, 0, false, false);
+                Paint();
+                if (view.IsEditingText || view.DistanceSliderBounds is not null)
+                    throw new InvalidOperationException("Native indicator press opened numeric controls before release.");
+                view.PointerMove(panel.X + 38, panel.Y - 32, false, false); Paint();
+                view.PointerUp(panel.X + 38, panel.Y - 32, 0); Paint();
+                if (view.MovementOverlayBounds is not { } moved || Math.Abs(moved.X - panel.X - 30) > .01
+                    || Math.Abs(moved.Y - panel.Y + 40) > .01 || !beforePanelDrag.ContentEquals(view.Document))
+                    throw new InvalidOperationException("Native indicator drag failed.");
+                view.PointerDown(moved.X + 8, moved.Y + 8, 2, false, false); Paint();
+                view.PointerDown(moved.X + 20, moved.Y + 25, 0, false, false);
+                view.PointerUp(moved.X + 20, moved.Y + 25, 0); Paint();
+                if (view.MovementOverlayBounds != panel || !beforePanelDrag.ContentEquals(view.Document))
+                    throw new InvalidOperationException("Native indicator reset failed.");
                 view.PointerDown(input.X + 8, input.Y + 8, 0, false, false);
                 view.PointerUp(input.X + 8, input.Y + 8, 0); Paint();
                 view.KeyDown('A', true, false);
@@ -832,6 +920,101 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--canvas-scale-render-check"))
+        {
+            CanvasScaleRenderCheck.Run(canvas);
+            return;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--experimental-snap-render-check"))
+        {
+            string language = FruitsAtelier.Localization.Strings.Language;
+            string folder = Path.GetFullPath("artifacts/tests/experimental-snap-native");
+            Directory.CreateDirectory(folder);
+            try
+            {
+                foreach (string locale in new[] { "en", "zh-CN" })
+                foreach (int dpi in new[] { 96, 144, 192 })
+                foreach (var size in new[] { (760, 580), (1440, 900) })
+                {
+                    FruitsAtelier.Localization.Strings.SetLanguage(locale);
+                    var editor = new EditorView(false);
+                    editor.LoadDocument(DemoMap.Create());
+                    canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                    void Paint(string? name = null)
+                    {
+                        canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);
+                        canvas.End(capture: name is null ? null : () =>
+                        {
+                            var frame = canvas.CapturePixels();
+                            using var writer = new BinaryWriter(File.Create(Path.Combine(folder, $"{name}-{locale}-{size.Item1}x{size.Item2}-{dpi}.bmp")));
+                            writer.Write((ushort)0x4D42); writer.Write(54 + frame.Pixels.Length); writer.Write(0); writer.Write(54);
+                            writer.Write(40); writer.Write(frame.Width); writer.Write(-frame.Height);
+                            writer.Write((ushort)1); writer.Write((ushort)32); writer.Write(0); writer.Write(frame.Pixels.Length);
+                            writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(frame.Pixels);
+                        });
+                    }
+                    Paint(); editor.OpenSettings(); Paint();
+                    var r = editor.SettingsBounds;
+                    editor.PointerDown(r.X + 40, r.Y + 96 + 6 * 48, 0, false, false);
+                    editor.PointerUp(r.X + 40, r.Y + 96 + 6 * 48, 0); Paint("off");
+                    editor.PointerDown(r.X + 250, r.Y + 175, 0, false, false);
+                    editor.PointerUp(r.X + 250, r.Y + 175, 0); Paint("on");
+                    editor.ApplySettings(persist: false); editor.KeyDown(27, false, false); Paint();
+                    if (!editor.LibrarySettings.ExperimentalSnapDivisions || editor.IsDirty)
+                        throw new InvalidOperationException("Native experimental snap toggle failed or changed content.");
+                    var snapBounds = editor.SnapSliderBounds;
+                    editor.PointerDown(snapBounds.Right - 31, snapBounds.Y + snapBounds.Height / 2, 0, false, false);
+                    editor.PointerUp(snapBounds.Right - 31, snapBounds.Y + snapBounds.Height / 2, 0); Paint("snap48");
+                    if (editor.SnapDivisor != 48) throw new InvalidOperationException("Native snap bar did not reach 1/48.");
+                }
+            }
+            finally { FruitsAtelier.Localization.Strings.SetLanguage(language); }
+            AppLog.Write("Experimental snap native settings and sliders passed at all sizes, DPI values and languages.");
+            return;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--slider-speed-render-check"))
+        {
+            SliderSpeedRenderCheck.Run(canvas);
+            return;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--object-snap-render-check"))
+        {
+            ObjectSnapRenderCheck.Run(canvas);
+            return;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--sv-ds-render-check"))
+        {
+            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (var size in new[] { (1440, 900), (980, 620) })
+            {
+                view.LoadDocument(DemoMap.Create()); view.CloseLibrary();
+                canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                CheckTimingSetup(canvas, view, size.Item1, size.Item2);
+            }
+            AppLog.Write("SV/DPB controls passed at all sizes, DPI values and languages.");
+            return;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--mapping-canvas-render-check"))
+        {
+            MappingCanvasRenderCheck.Run(canvas);
+            return;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--object-timeline-render-check"))
+        {
+            ObjectTimelineRenderCheck.Run(canvas);
+            return;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--sample-banks-render-check"))
+        {
+            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (var size in new[] { (1440, 900), (980, 620) })
+            {
+                canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                CheckPaletteHints(canvas, view, size.Item1, size.Item2);
+            }
+            AppLog.Write("Sample bank palette rendering passed at all sizes, DPI values and languages.");
+            return;
+        }
         CheckBookmarkCache(canvas);
         CheckAnimatedTextResources(canvas);
         CheckWorkspaceSave(canvas, view);

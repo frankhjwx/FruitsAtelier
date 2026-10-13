@@ -66,9 +66,16 @@ internal sealed partial class MacWindow
             if (archive is not null) View.SetDefaultSkinArchive(archive);
         });
         View.RequestOpenExternalPath = path => RunFile(() => { LibraryOperations.OpenExternalPath(path); return Task.CompletedTask; });
+        string? acknowledgementsPreviewPath = Program.Arguments.Contains("--acknowledgements-preview")
+            ? Path.Combine(MacPaths.Artifacts, "tests", "acknowledgements-preview", Guid.NewGuid().ToString("N") + ".json") : null;
         View.InitializeLibrary(show, smokeCheck ? new LibrarySettings { Workspace = Path.Combine(MacPaths.Artifacts, "macos-check", "startup-workspace") } : null,
-            forceFirstRunSetup: Program.Arguments.Contains("--first-run-setup"));
-        if (View.FirstRunSetupVisible) { SystemDecorations = Avalonia.Controls.SystemDecorations.None; MinWidth = 640; MinHeight = 400; Width = 880; Height = 620; }
+            forceFirstRunSetup: Program.Arguments.Contains("--first-run-setup"), requireAcknowledgements: !smokeCheck,
+            acknowledgementsPath: acknowledgementsPreviewPath);
+        if (View.StartupDialogVisible)
+        {
+            SystemDecorations = Avalonia.Controls.SystemDecorations.None; MinWidth = 640; MinHeight = 440;
+            Width = View.AcknowledgementsVisible ? 820 : 880; Height = View.AcknowledgementsVisible ? 740 : 620;
+        }
         View.RequestLibraryFolder = workspace => RunFile(async () =>
         {
             var folders = await StorageProvider.OpenFolderPickerAsync(new() { Title = L.Get(workspace ? "library.workspace" : "library.songs"), AllowMultiple = false });
@@ -93,9 +100,10 @@ internal sealed partial class MacWindow
         {
             if (View.TryResumeLibraryProject(map)) return;
             if (!await ConfirmDiscard()) return;
-            var session = await Task.Run(() => LibraryOperations.Open(map, View.LibrarySettings));
-            View.LoadWorkspace(session, checkAdditionalDifficulties: true);
-            await audio.LoadAsync(View.Document.AudioPath); PollAudio();
+            View.BeginLibraryOpen(map, () => RunFile(async () =>
+            {
+                await audio.LoadAsync(View.Document.AudioPath); PollAudio();
+            }));
         });
         View.RequestLibraryDelete = map =>
         {

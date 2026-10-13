@@ -37,6 +37,8 @@ public sealed class GeneratedSlider
 
 public sealed class CatchConversionResult
 {
+    internal BananaShowerExpansion? BananaExpansion { get; init; }
+    internal CatchConversionResult? BananaSourceConversion { get; init; }
     public required IReadOnlyList<GeneratedSlider> Sliders { get; init; }
     public required IReadOnlyList<ConvertedCatchObject> Objects { get; init; }
     public required IReadOnlyList<string> Diagnostics { get; init; }

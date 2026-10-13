@@ -19,7 +19,6 @@ internal sealed class TestplayInputThread : IDisposable
     private readonly Native.WindowProc procedure;
     private readonly Dictionary<(nint Device, ushort Scan, ushort Extended), int> pressed = [];
     private readonly HashSet<(nint Device, ushort Scan, ushort Extended)> altPressed = [];
-    private readonly HashSet<(nint Device, ushort Scan, ushort Extended)> volumeModifiers = [];
     private nint window;
     private Exception? startupError;
     private volatile bool stopping;
@@ -61,7 +60,7 @@ internal sealed class TestplayInputThread : IDisposable
                     Native.DispatchMessage(ref message);
                 if (!diagnostic && Native.GetForegroundWindow() != owner)
                 {
-                    pressed.Clear(); altPressed.Clear(); volumeModifiers.Clear();
+                    pressed.Clear(); altPressed.Clear();
                     session.ReleaseKeys();
                 }
                 if (pacer.FrameDue)
@@ -112,18 +111,6 @@ internal sealed class TestplayInputThread : IDisposable
                                 if (session.UsesKey(shortcutKey) && IsTestplayShortcut(shortcutKey)) session.SetKey(shortcutKey, false);
                         }
                     }
-                    if (key is 0x10 or 0x11)
-                    {
-                        if (down) volumeModifiers.Add(physical);
-                        else volumeModifiers.Remove(physical);
-                        if (volumeModifiers.Count == 0)
-                        {
-                            foreach (var held in pressed.Where(pair => pair.Value is 38 or 40).Select(pair => pair.Key).ToArray())
-                                pressed.Remove(held);
-                            foreach (int arrow in new[] { 38, 40 })
-                                if (session.UsesKey(arrow)) session.SetKey(arrow, false);
-                        }
-                    }
                     if (key == 0x12)
                     {
                         if (down)
@@ -140,8 +127,7 @@ internal sealed class TestplayInputThread : IDisposable
                     if (key != 27 && session.UsesKey(key))
                     {
                         if (key is 13 or 37 or 38 or 39 or 40 && altPressed.Count > 0
-                            || IsTestplayShortcut(key)
-                            || key is 38 or 40 && volumeModifiers.Count == 0) pressed.Remove(physical);
+                            || IsTestplayShortcut(key)) pressed.Remove(physical);
                         else if (down) pressed.TryAdd(physical, key);
                         else pressed.Remove(physical);
                         UpdateAudio(); session.SetKey(key, pressed.ContainsValue(key));

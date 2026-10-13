@@ -7,6 +7,7 @@ internal static class DraftConversionTests
     private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
     public static void Run()
     {
+        CurrentBaseSv();
         PenHead();
         PenFinishMovement();
         foreach (var mode in Enum.GetValues<SliderEditingMode>())
@@ -64,6 +65,25 @@ internal static class DraftConversionTests
             Check(!ui.View.ConversionRefreshing && ui.View.Conversion.Objects.Count == 0,
                 "retired worker overwrote a new project");
         }
+    }
+
+    private static void CurrentBaseSv()
+    {
+        var map = new MapDocument
+        {
+            DurationMs = 10000, BeatLengthMs = 588.235294117647,
+            SliderMultiplier = 1.4, SliderMultiplierOverride = 2.94, SliderTickRate = 2
+        };
+        var ui = new Ui(false); ui.LoadDocument(map);
+        ui.Key('B'); ui.ClickMap(1000, 20); ui.MoveMap(1200, 512);
+        Check(ui.View.Conversion.Success, "override draft preview uses the current base SV");
+        ui.ClickMap(1200, 512, ctrl: true); ui.Key(13); Wait(ui);
+        Check(ui.View.Document.Tracks.Count == 1 && ui.View.Conversion.Success,
+            "completed override slider uses the same base as its draft");
+        AssertExport(ui.View);
+        ui.Key('Z', ctrl: true); Wait(ui);
+        Check(ui.View.Document.ContentEquals(map), "override draft undo preserves the map");
+        ui.View.NewProject();
     }
 
     public static void Wait(Ui ui)

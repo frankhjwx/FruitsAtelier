@@ -18,10 +18,10 @@ internal sealed class SliderMultiplierAnalysis
         Conversion = conversion;
         details = new(() => new(baseline, conversion));
         var map = baseline.ReadBack;
-        var magnitudes = map.TimingPoints.Where(p => !p.Uninherited && !double.IsNaN(p.BeatLengthMs))
-            .Select(p => p.BeatLengthMs < 0 ? Math.Clamp((float)-p.BeatLengthMs, 10, 1000) : 100).ToList();
-        if (map.TimingPoints.Count == 0 || map.TimingPoints.All(p => p.TimeMs > 0)
-            || map.TimingPoints.GroupBy(p => p.TimeMs).Any(g => g.All(p => p.Uninherited))) magnitudes.Add(100);
+        var timing = new TimingMap.Lookup(map);
+        var magnitudes = map.ImportedSliders.Select(s => timing.At(s.TimeMs))
+            .Where(state => state.GenerateTicks)
+            .Select(state => Math.Clamp((float)(100 / state.SliderVelocityMultiplier), 10, 1000)).ToList();
         Minimum = magnitudes.Count == 0 ? double.NegativeInfinity : 10 * map.SliderMultiplier / magnitudes.Min();
         Maximum = magnitudes.Count == 0 ? double.PositiveInfinity : 1000 * map.SliderMultiplier / magnitudes.Max();
     }

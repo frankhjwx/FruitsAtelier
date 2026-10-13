@@ -9,6 +9,15 @@ internal sealed partial class EditorWindow
     private AudioTransport audio = new();
     private readonly HitsoundPlayer hitsounds = new(AppLog.Write);
     private string? projectPath;
+    private Action? pendingStartupFiles;
+
+    private void CompleteStartupFiles()
+    {
+        if (view.AcknowledgementsVisible || view.FirstRunSetupVisible) return;
+        var pending = pendingStartupFiles;
+        pendingStartupFiles = null;
+        pending?.Invoke();
+    }
     private static string Artifacts => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(AppLog.Path)!, ".."));
 
     private void ConfigureFiles()
@@ -41,7 +50,15 @@ internal sealed partial class EditorWindow
         audio.Hitsounds = hitsounds;
         view.RequestAudioVolume = (song, hit) => { audio.SongVolume = song; if (setupAudio is not null) setupAudio.SongVolume = song; hitsounds.Volume = hit; };
         view.RequestSetupAudio = ControlSetupAudio;
-        view.RequestSetupFinished = () => { FitEditorWindow(); SetFullscreen(view.LibrarySettings.Fullscreen); };
+        view.RequestSetupFinished = () => TransitionStartupWindow(() =>
+        {
+            CompleteStartupFiles(); FitEditorWindow(); SetFullscreen(view.LibrarySettings.Fullscreen);
+        });
+        view.RequestAcknowledgementsAccepted = () => TransitionStartupWindow(() =>
+        {
+            if (view.FirstRunSetupVisible) FitSetupWindow();
+            else { CompleteStartupFiles(); FitEditorWindow(); SetFullscreen(view.LibrarySettings.Fullscreen); }
+        });
         view.RequestSetupLink = url => FileOperation(() => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }));
         view.RequestAudioPreference = () => FileOperation(() => view.LibrarySettings.Save());
         view.RequestViewPreference = () => FileOperation(() => view.LibrarySettings.Save());

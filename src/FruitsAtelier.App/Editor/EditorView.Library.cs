@@ -48,20 +48,28 @@ public sealed partial class EditorView
     private DateTime searchAfter, nextLibraryScan = DateTime.MinValue, nextResourceCheck;
     private IReadOnlyList<string> resourceErrors = [];
 
-    public void InitializeLibrary(bool show, LibrarySettings? settings = null, bool forceFirstRunSetup = false)
+    public void InitializeLibrary(bool show, LibrarySettings? settings = null, bool forceFirstRunSetup = false,
+        bool requireAcknowledgements = false, string? acknowledgementsPath = null)
     {
         try { LibrarySettings = settings ?? LibrarySettings.Load(); }
         catch (Exception e) { libraryError = e.Message; }
         RestoreMapEditingPreferences();
         playbackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
         canvasZoom = LibrarySettings.CanvasZoom;
+        canvasTimeZoom = LibrarySettings.CanvasTimeZoom;
         objectTimelineScale = LibrarySettings.ObjectTimelineScale;
         waveformSpanMs = LibrarySettings.WaveformSpanMs;
         ApplyAudioVolume();
         draftWorkspace = LibrarySettings.Workspace; draftOsuRoot = LibrarySettings.OsuRoot; draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         LibraryVisible = show;
         librarySettingsOpen = false; updatesPage = false;
-        if (forceFirstRunSetup || show && settings is null && !LibrarySettings.FirstRunSetupCompleted)
+        if (requireAcknowledgements && BeginAcknowledgements(() => CompleteLibraryInitialization(settings, forceFirstRunSetup), acknowledgementsPath)) return;
+        CompleteLibraryInitialization(settings, forceFirstRunSetup);
+    }
+
+    private void CompleteLibraryInitialization(LibrarySettings? settings, bool forceFirstRunSetup)
+    {
+        if (forceFirstRunSetup || settings is null && !LibrarySettings.FirstRunSetupCompleted)
         {
             BeginFirstRunSetup();
             return;
@@ -78,6 +86,7 @@ public sealed partial class EditorView
     }
     public void ShowLibrary()
     {
+        if (LibraryOpening) return;
         if (WaitForSynchronization(ready => { if (ready) ShowLibrary(); })) return;
         if (DiscardConfirmationVisible || !PrepareFileOperation()) return;
         if (HasEditorProject && IsDirty)
@@ -601,7 +610,7 @@ public sealed partial class EditorView
     private void LibraryKey(int key, bool ctrl, bool shift)
     {
         if (updatesPage) { if (key == 27) updatesPage = false; return; }
-        if (key == 27 && settingsColourIndex >= 0) { CancelIndicatorColourPicker(); return; }
+        if (key == 27 && settingsColourIndex >= 0) { CancelSettingsColourPicker(); return; }
         if (key == 27) FinishVolumeDrag();
         if (key == 27) { if (contextItems.Count > 0) contextItems.Clear(); else if (libraryField >= 0) libraryField = -1; else if (librarySettingsOpen) CloseSettings(); else resourcePage = false; return; }
         if (key == 116) { if (!FirstRunSetupVisible) StartLibraryScan(); return; }
@@ -611,7 +620,7 @@ public sealed partial class EditorView
         if (libraryField < 0) return;
         if (key == 13 && libraryField == 5)
         {
-            if (CommitIndicatorColourHex()) { settingsColourIndex = -1; libraryField = -1; }
+            if (CommitSettingsColourHex()) { settingsColourIndex = -1; libraryField = -1; }
             return;
         }
         if (ctrl && key == 86) { RequestPasteLibrary?.Invoke(); return; }

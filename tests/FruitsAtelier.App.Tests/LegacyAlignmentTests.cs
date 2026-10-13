@@ -28,6 +28,10 @@ internal static class LegacyAlignmentTests
         Check(!ui.View.CanPasteSelection, "Reopening a map does not reuse another session's clipboard");
 
         ui.LoadDocument(new MapDocument { DurationMs = 10000 });
+        ui.View.OpenDistanceSnapDialog(); ui.Paint();
+        var objectSnap = ui.View.ObjectSnapToggleBounds;
+        ui.Click(objectSnap.X + 8, objectSnap.Y + 8);
+        ui.ClickText(L.Get("library.apply"));
         ui.Key('T'); ui.Key('F');
         foreach (int spacing in new[] { 4, 8, 16, 32 })
         {

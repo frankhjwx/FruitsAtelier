@@ -15,6 +15,9 @@ public sealed class LibrarySettings
         get => FirstRunSetupVersion >= CurrentFirstRunSetupVersion;
         set => FirstRunSetupVersion = value ? CurrentFirstRunSetupVersion : 0;
     }
+    public const uint DefaultCanvasGridColour = 0x8F8F8F;
+    public const uint DefaultCanvasCentreLineColour = 0xFFFFFF;
+    public const int DefaultCanvasGridOpacity = 40;
     public const uint DefaultStandIndicatorColour = 0xC0C0C0;
     public const uint DefaultWalkIndicatorColour = 0x63B99D;
     public const uint DefaultDashIndicatorColour = 0xD6B365;
@@ -28,6 +31,7 @@ public sealed class LibrarySettings
     public bool RomanisedMetadata { get; set; } = true;
     public bool DerandomizeDroplets { get; set; } = true;
     public bool DerandomizeNewProjects { get; set; } = true;
+    public bool ExperimentalSnapDivisions { get; set; }
     public bool ReverseCanvasScroll { get; set; }
     public bool LockDropletSelection { get; set; } = true;
     public bool LowLatencyDisplay { get; set; }
@@ -52,12 +56,21 @@ public sealed class LibrarySettings
     }
     public bool ShowTestplayCombo { get; set; } = true;
     public bool ForceBackgroundDim { get; set; }
+    public uint CanvasGridColour { get; set; } = DefaultCanvasGridColour;
+    public uint CanvasCentreLineColour { get; set; } = DefaultCanvasCentreLineColour;
+    private int canvasGridOpacity = DefaultCanvasGridOpacity;
+    public int CanvasGridOpacity { get => canvasGridOpacity; set => canvasGridOpacity = Math.Clamp(value, 0, 100); }
+    private int mappingCanvasBackgroundDim = 90;
+    public int MappingCanvasBackgroundDim { get => mappingCanvasBackgroundDim; set => mappingCanvasBackgroundDim = Math.Clamp(value, 0, 100); }
     private int backgroundDim = 90;
     public int BackgroundDim { get => backgroundDim; set => backgroundDim = Math.Clamp(value, 0, 100); }
     public Dictionary<Guid, MapEditingPreferences> MapEditingPreferences { get; set; } = [];
     private double canvasZoom = .6, objectTimelineScale = .18, waveformSpanMs = 10000;
-    public double CanvasZoom { get => canvasZoom; set => canvasZoom = double.IsFinite(value) ? Math.Clamp(value, .01, 1) : .6; }
-    public double ObjectTimelineScale { get => objectTimelineScale; set => objectTimelineScale = double.IsFinite(value) ? Math.Clamp(value, .025, 1.5) : .18; }
+    public double CanvasZoom { get => canvasZoom; set => canvasZoom = double.IsFinite(value) ? Math.Clamp(value, .01, 2) : .6; }
+    private double canvasTimeZoom = .6;
+    public bool UniformCanvasScale { get; set; } = true;
+    public double CanvasTimeZoom { get => canvasTimeZoom; set => canvasTimeZoom = double.IsFinite(value) ? Math.Clamp(value, .01, 2) : .6; }
+    public double ObjectTimelineScale { get => objectTimelineScale; set => objectTimelineScale = double.IsFinite(value) ? Math.Clamp(value, .025, 16) : .18; }
     public double WaveformSpanMs { get => waveformSpanMs; set => waveformSpanMs = double.IsFinite(value) ? Math.Clamp(value, 100, int.MaxValue * 2d) : 10000; }
     public int TestplayLeftKey { get; set; } = 37;
     public int TestplayRightKey { get; set; } = 39;
@@ -113,8 +126,13 @@ public sealed class LibrarySettings
 
 public sealed class MapEditingPreferences
 {
+    public const int MaximumObjectSnapBeats = 4;
     public bool GridSnap { get; set; }
     public bool DistanceSnap { get; set; }
+    public bool ObjectSnap { get; set; } = true;
+    private int objectSnapEarlierBeats = 2, objectSnapLaterBeats = 1;
+    public int ObjectSnapEarlierBeats { get => objectSnapEarlierBeats; set => objectSnapEarlierBeats = Math.Clamp(value, 0, MaximumObjectSnapBeats); }
+    public int ObjectSnapLaterBeats { get => objectSnapLaterBeats; set => objectSnapLaterBeats = Math.Clamp(value, 0, MaximumObjectSnapBeats); }
     public bool MovementAnalysis { get; set; }
     private int gridLevel = 4;
     public int GridLevel { get => gridLevel; set => gridLevel = value is 4 or 8 or 16 or 32 ? value : 4; }

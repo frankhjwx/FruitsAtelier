@@ -11,7 +11,7 @@ internal sealed partial class EditorWindow
 
     private void SetFullscreen(bool enabled)
     {
-        if (hwnd == 0 || fullscreen == enabled || view.FirstRunSetupVisible) return;
+        if (hwnd == 0 || fullscreen == enabled || view.FirstRunSetupVisible || view.AcknowledgementsVisible) return;
         if (enabled)
         {
             windowedPlacement = new() { Length = (uint)Marshal.SizeOf<Native.WindowPlacement>() };
@@ -38,6 +38,6 @@ internal sealed partial class EditorWindow
         if (!Native.GetMonitorInfo(Native.MonitorFromWindow(hwnd, 2), ref info)) throw new Win32Exception();
         var bounds = info.Monitor;
         Native.SetWindowPos(hwnd, 0, bounds.Left, bounds.Top, bounds.Right - bounds.Left,
-            bounds.Bottom - bounds.Top, 0x0004 | 0x0010 | 0x0020);
+            bounds.Bottom - bounds.Top, 0x0004 | 0x0010 | 0x0020 | (startupWindowTransition ? 0x0008u | 0x0100u : 0));
     }
 }

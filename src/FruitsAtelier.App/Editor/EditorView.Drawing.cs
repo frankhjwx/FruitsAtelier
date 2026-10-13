@@ -7,15 +7,17 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private readonly List<BeatGridLine> canvasGrid = [];
-    private (string Language, bool Compact, Type CanvasType)? canvasToggleTextKey;
+    private (string Language, bool Compact, float Width, Type CanvasType)? canvasToggleTextKey;
     private readonly (string First, string? Second, float Size)[] canvasToggleText = new (string, string?, float)[3];
     private (double TimeMs, bool Active)[] kiaiTransitions = [];
+    private TimingPoint[] overviewTiming = [];
 
     private void RefreshKiaiTransitions()
     {
         var transitions = new List<(double TimeMs, bool Active)>();
         bool active = false;
-        foreach (var group in Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).GroupBy(p => p.TimeMs))
+        overviewTiming = Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
+        foreach (var group in overviewTiming.GroupBy(p => p.TimeMs))
         {
             bool next = (group.Last().Effects & 1) != 0;
             if (next == active) continue;
@@ -27,10 +29,18 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        if (AcknowledgementsVisible)
+        {
+            this.width = width; this.height = height;
+            hits.Clear(); fields.Clear();
+            DrawAcknowledgements(c);
+            return;
+        }
         historyCompressionPaused = !LibraryVisible || SyncInteractionActive || AudioPlaying || SynchronizationBusy;
         PumpWorkspaceSave();
         PumpSynchronizationWait();
         PumpAudioProject();
+        PumpLibraryOpen();
         if (ConversionNeedsRedraw) PumpDeferredConversion();
         CompleteSliderMultiplierValidation();
         RefreshLanguage();
@@ -43,7 +53,9 @@ public sealed partial class EditorView
         this.width = width;
         this.height = height;
         hits.Clear(); fields.Clear();
+        SliderSpeedReadout = null; SliderSpeedReadoutBounds = null;
         distanceLabelBounds.Clear(); PreviousDistanceFieldBounds = NextDistanceFieldBounds = XCoordinateFieldBounds = null;
+        AdvanceCanvasBackgroundDim();
         if (IsTestplaying)
         {
             AdvanceTestplay();
@@ -75,14 +87,19 @@ public sealed partial class EditorView
         canvas = new(108 + leftWidth, 84, Math.Max(120, width - rightWidth - leftWidth - 109), bodyHeight);
         plot = new(canvas.X + 70, canvas.Y + 140, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 152));
         overview = new(220, height - 77, Math.Max(100, width - 248), 40);
-        canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, 1);
-        pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
+        canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, MaximumCanvasZoom);
+        canvasTimeZoom = UniformCanvasScale ? canvasZoom : Math.Clamp(canvasTimeZoom, MinimumCanvasZoom, 2);
+        ClampCanvasPan();
+        pixelsPerMs = CanvasPixelsPerMs;
         ClampView();
         EnsureConversion();
         AdvanceBoxScroll();
         UpdatePlacementHyperdash();
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
         c.Fill(new(0, 0, width, height), Background);
+        if (!TimingPageVisible)
+            DrawBeatmapBackground(c, new(leftPanel.Right, canvas.Y + 38,
+                canvas.Right - leftPanel.Right, plot.Bottom - canvas.Y - 38), LibrarySettings.MappingCanvasBackgroundDim / 100f, mappingCanvas: true);
         DrawChrome(c);
         if (TimingPageVisible) DrawTimingWaveform(c);
         else
@@ -100,7 +117,9 @@ public sealed partial class EditorView
         {
             DrawLegacyConversionButton(c);
             DrawMovementOverlay(c);
+            DrawSliderSpeedReadout(c);
             DrawKiaiBadge(c);
+            DrawCanvasBackgroundDim(c);
         }
         DrawTransport(c);
         DrawStatus(c);
@@ -113,6 +132,7 @@ public sealed partial class EditorView
         DrawExportOverlay(c);
         DrawTimeJump(c);
         DrawStreamDialog(c);
+        DrawBananaEdit(c);
         DrawMergeDialog(c);
         DrawVolumeDialog(c);
         DrawVolumePopover(c);
@@ -149,21 +169,29 @@ public sealed partial class EditorView
         axisTooltip = null;
         float toolbarRight = rightPanel.X;
         c.Fill(new(0, canvas.Y, toolbarRight, 38), 0x1C2129);
-        c.Text(L.Get("ui.canvasZoom"), leftPanel.Right + 16, canvas.Y + 13, 11, Muted, 48);
         float snapLeft = toolbarRight - 158;
         bool compactToolbar = toolbarRight < 900;
+        bool narrowZoom = compactToolbar;
+        if (UniformCanvasScale || !narrowZoom) c.Text(L.Get("ui.canvasZoom"), leftPanel.Right + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
         float breakWidth = compactToolbar ? 115 : 140;
         float breakX = snapLeft - breakWidth - 5;
-        float toggleWidth = compactToolbar ? 105 : 155;
+        float toggleWidth = compactToolbar ? toolbarRight < 700 ? 75 : 105 : 155;
         float movementX = breakX - toggleWidth - 5;
         float selectionX = movementX - toggleWidth - 5;
         float pathX = selectionX - toggleWidth - 5;
-        zoomSlider = new(leftPanel.Right + 74, canvas.Y + 4, Math.Max(30, pathX - 130 - leftPanel.Right), 29);
-        float zoomX = zoomSlider.X + (float)(1 - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (1 - MinimumCanvasZoom) : 1) * zoomSlider.Width;
-        c.Line(zoomSlider.X, canvas.Y + 19, zoomSlider.Right, canvas.Y + 19, Grid, 3);
-        c.Line(zoomSlider.X, canvas.Y + 19, zoomX, canvas.Y + 19, Accent, 3);
-        c.Circle(zoomX, canvas.Y + 19, 6, Accent);
-        c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + (compactToolbar ? 4 : 8), canvas.Y + 13, compactToolbar ? 10 : 11, Foreground, 48);
+        zoomSlider = new(leftPanel.Right + (narrowZoom ? 8 : 74), canvas.Y + 4,
+            Math.Max(30, pathX - (narrowZoom ? 70 : 154) - leftPanel.Right), 29);
+        DrawCanvasScaleLock(c);
+        if (UniformCanvasScale)
+        {
+            float zoomX = zoomSlider.X + (float)(MaximumCanvasZoom - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom) : 1) * zoomSlider.Width;
+            float zoomY = canvas.Y + (narrowZoom ? 27 : 19);
+            c.Line(zoomSlider.X, zoomY, zoomSlider.Right, zoomY, Grid, 3);
+            c.Line(zoomSlider.X, zoomY, zoomX, zoomY, Accent, 3);
+            c.Circle(zoomX, zoomY, 6, Accent);
+            c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + (compactToolbar ? 4 : 8), canvas.Y + (narrowZoom ? 4 : 13), compactToolbar ? 10 : 11, Foreground, narrowZoom ? 32 : 48);
+        }
+        else DrawCanvasAxisZoom(c);
         PrepareCanvasToggleText(c, compactToolbar, toggleWidth);
         CanvasToggle(0, pathX, () => showTargets = !showTargets, showTargets);
         CanvasToggle(1, selectionX, () => showSelectionRect = !showSelectionRect, showSelectionRect);
@@ -199,19 +227,24 @@ public sealed partial class EditorView
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
         c.Text(L.Get("ui.timeAxis"), canvas.X + 11, canvas.Y + 120, 10, Muted, 43);
         var playfield = Playfield;
-        c.Fill(new(canvas.X, plot.Y, canvas.Width, plot.Height), Background);
+        c.Clip(new(plot.X - 16, canvas.Y + 118, plot.Width + 32, plot.Bottom - canvas.Y - 118));
         for (int x = 0; x <= 512; x += 128)
         {
             float sx = Screen(new(0, x)).X;
             c.Text(x.ToString(), sx - 9, canvas.Y + 120, 10, Muted, 30);
-            c.Line(sx, plot.Y, sx, plot.Bottom, x == 256 ? 0x3C4653u : 0x262D37u);
+            c.Line(sx, plot.Y, sx, plot.Bottom, x == 256 ? LibrarySettings.CanvasCentreLineColour : LibrarySettings.CanvasGridColour,
+                opacity: LibrarySettings.CanvasGridOpacity / 100f);
         }
         if (EffectiveGridSnap)
             for (int x = gridSize; x < 512; x += gridSize)
             {
+                // Subdivision lines must not paint over the configured base lines.
+                if (x % 128 == 0) continue;
                 float sx = Screen(new(0, x)).X;
-                c.Line(sx, plot.Y, sx, plot.Bottom, 0x262D37);
+                c.Line(sx, plot.Y, sx, plot.Bottom, LibrarySettings.CanvasGridColour,
+                    opacity: LibrarySettings.CanvasGridOpacity / 100f);
         }
+        c.Unclip();
         c.Clip(new(canvas.X, plot.Y, canvas.Width, plot.Height));
         double axisStart = viewStart, axisEnd = viewStart + plot.Height / pixelsPerMs;
         var canvasBreaks = DisplayedBreaks();
@@ -244,7 +277,7 @@ public sealed partial class EditorView
             bool bar = line.IsMeasure;
             if (!beat && !line.IsTimingBoundary && step * pixelsPerMs < 7) continue;
             var style = GridStyle(line);
-            c.Line(playfield.X, y, playfield.Right, y, style.Color, style.Width, .35f);
+            c.Line(playfield.X, y, playfield.Right, y, style.Color, style.Width, bar ? .65f : .35f);
             if (!line.IsTimingBoundary && beat && (localTiming.BeatLengthMs * pixelsPerMs >= 25 || bar))
                 axisLabels.Add((y, time));
         }
@@ -264,7 +297,17 @@ public sealed partial class EditorView
             var bounds = BananaRectangle(shower);
             if (bounds.Bottom < plot.Y - 8 || bounds.Y > plot.Bottom + 8) continue;
             bool selected = objectSelection.Count == 1 && objectSelection.Contains(shower.Id);
-            c.Fill(bounds, selected ? 0x2B291Fu : 0x211F1Bu);
+            if (bananaSegments.TryGetValue(shower.Id, out var segments))
+            {
+                foreach (var segment in segments)
+                {
+                    var part = BananaRectangle(segment);
+                    if (part.Bottom < plot.Y || part.Y > plot.Bottom) continue;
+                    c.Fill(part, selected ? 0x2B291Fu : 0x211F1Bu);
+                    c.Stroke(part, 0x8C7445u);
+                }
+            }
+            else c.Fill(bounds, selected ? 0x2B291Fu : 0x211F1Bu);
             c.Stroke(bounds, selected ? Gold : 0x8C7445u, selected ? 2 : 1);
             if (selected)
             {
@@ -379,21 +422,21 @@ public sealed partial class EditorView
         var playfield = Playfield;
         const string comboLabel = "NC";
         float comboLabelWidth = 0;
-        double margin = CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512 * 1.5 / pixelsPerMs;
+        double margin = CatchSize.FruitRadius(Document.CircleSize) * CanvasObjectWidth / 512 * 1.5 / pixelsPerMs;
         foreach (var item in ObjectsInTimeRange(viewStart - margin, viewStart + plot.Height / pixelsPerMs + margin))
         {
             if (StreamDialogVisible && streamTargets.Contains(item.SourceId)) continue;
             var p = Screen(new(item.TimeMs, item.X));
-            float radius = (float)(CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512);
+            float radius = (float)(CatchSize.FruitRadius(Document.CircleSize) * CanvasObjectWidth / 512);
             if (p.Y < plot.Y - radius * 1.5f || p.Y > plot.Bottom + radius * 1.5f) continue;
             bool previewTail = LegacyMode && legacyPreviewValid && item.SourceId == draftTrack
                 && SelectedTrack is { } draftSlider && legacyDraft is { Count: > 0 }
                 && draftSlider.Nodes[^1].TimeMs > legacyDraft[^1].Point.TimeMs
                 && Math.Abs(item.TimeMs - draftSlider.Nodes[^1].TimeMs) < 1;
-            DrawCatchObject(c, item, p.X, p.Y, playfield.Width, previewTail ? .6f : 1, hyperStarts: placementHyperdash);
+            DrawCatchObject(c, item, p.X, p.Y, CanvasObjectWidth, previewTail ? .6f : 1, hyperStarts: placementHyperdash);
             if (IsObjectSelected(item.SourceId))
-                c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * playfield.Width / 512 + 3, Accent, false, 1.5f);
-            if (item.Kind == CatchObjectKind.Fruit && item.EventIndex == 0 && newComboSources.Contains(item.SourceId))
+                c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * CanvasObjectWidth / 512 + 3, Accent, false, 1.5f);
+            if (item.Kind == CatchObjectKind.Fruit && newComboEvents.Contains((item.SourceId, item.EventIndex)))
             {
                 if (comboLabelWidth == 0)
                     comboLabelWidth = c.MeasureText(comboLabel, 11);
@@ -553,7 +596,7 @@ public sealed partial class EditorView
         if (AudioLoading) return;
         const float timelineMarkerOpacity = .8f;
         float TimelineX(double time) => overview.X + (float)(Math.Clamp(time, 0, TimelineDurationMs) / TimelineDurationMs) * overview.Width;
-        var timing = Document.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
+        var timing = overviewTiming;
         c.Line(overview.X, overview.Y + 20, overview.Right, overview.Y + 20, 0xA0A0A0, 1, timelineMarkerOpacity);
         const float spanHeight = 12;
         float spanY = overview.Y + 20 - spanHeight / 2;
@@ -648,6 +691,7 @@ public sealed partial class EditorView
             Item(L.Get("ui.cutMenu"), () => CutSelection(), CanCopySelection);
             Item(L.Get("ui.copyMenu"), () => CopySelection(), CanCopySelection);
             Item(L.Get("ui.pasteMenu"), () => PasteSelection(), CanPasteSelection);
+            if (CanEditBananas) Item(L.Get("bananaEdit.title") + "  Ctrl+F", OpenBananaEdit, !notesLocked);
             Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), OpenStreamDialog, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
@@ -757,7 +801,7 @@ public sealed partial class EditorView
 
     private void PrepareCanvasToggleText(ICanvas c, bool compact, float buttonWidth)
     {
-        var key = (L.Language, compact, c.GetType());
+        var key = (L.Language, compact, buttonWidth, c.GetType());
         if (canvasToggleTextKey == key) return;
         canvasToggleTextKey = key;
         string[] keys = ["ui.sliderPathCurves", "ui.selectionRect", "movement.analysis"];

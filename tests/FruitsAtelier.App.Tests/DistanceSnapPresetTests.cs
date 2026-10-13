@@ -53,19 +53,19 @@ internal static class DistanceSnapPresetTests
         var field = ui.View.DistanceSnapBaseFieldBounds;
         ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
         ui.View.PasteFieldText("0"); ui.Paint();
-        ui.ClickText(Strings.Get("library.apply"));
+        ui.ClickText(Strings.Get("library.apply")); WaitBase(ui);
         Check(ui.View.DistanceSnapDialogVisible && ui.View.Document.SliderMultiplier == 1.4,
             "Out-of-range manual DPB must not apply.");
         ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
         ui.View.PasteFieldText("73.25"); ui.Paint();
-        ui.ClickText(Strings.Get("library.apply"));
+        ui.ClickText(Strings.Get("library.apply")); WaitBase(ui);
         Check(!ui.View.DistanceSnapDialogVisible && Math.Abs(ui.View.Document.DistancePerBeat - 73.25) < .000001
-            && ui.View.Document.SliderMultiplier == 1.4,
-            "Manual DPB should change the editor base distance without changing the imported slider multiplier.");
+            && ui.View.Document.EffectiveSliderMultiplier == .7325,
+            "Manual DPB updates the effective SV.");
         Check(Math.Abs(ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document)).DistancePerBeat - 73.25) < .000001,
             "Project save lost DPB.");
-        Check(Math.Abs(OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack.SliderMultiplier - 1.4) < .000001,
-            "osu export changed the imported slider multiplier.");
+        Check(Math.Abs(OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack.SliderMultiplier - .7325) < .000001,
+            "osu export uses the requested SV.");
         ui.Key('Z', ctrl: true);
         Check(Math.Abs(ui.View.Document.DistancePerBeat - 140) < .000001, "DPB Apply did not undo.");
         ui.Key('Y', ctrl: true);
@@ -74,7 +74,7 @@ internal static class DistanceSnapPresetTests
 
     public static void ExistingSliderPreservation()
     {
-        const string source = "osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n0,-11.1111111111111,4,1,0,100,0,0\n[HitObjects]\n100,192,1000,2,0,L|240:192,1,140\n";
+        const string source = "osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1.4\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n0,-50,4,1,0,100,0,0\n[HitObjects]\n100,192,1000,2,0,L|240:192,1,140\n";
         var imported = OsuBeatmapReader.Read(source);
         var before = CatchStreamConverter.Convert(imported);
         Check(before.Success && imported.DistancePerBeat == 140, "Imported slider or its original DPB did not load.");
@@ -83,23 +83,22 @@ internal static class DistanceSnapPresetTests
         ui.View.OpenDistanceSnapDialog(); ui.Paint();
         var field = ui.View.DistanceSnapBaseFieldBounds;
         ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
-        ui.View.PasteFieldText("32"); ui.Paint();
-        ui.ClickText(Strings.Get("library.apply"));
-        Check(ui.View.Document.DistancePerBeat == 32 && ui.View.Document.SliderMultiplier == 1.4,
-            "Editing DPB changed the imported slider multiplier.");
+        ui.View.PasteFieldText("40"); ui.Paint();
+        ui.ClickText(Strings.Get("library.apply")); WaitBase(ui);
+        Check(ui.View.Document.DistancePerBeat == 40 && ui.View.Document.SliderMultiplier == 1.4,
+            "DPB sets the requested reference distance.");
         var after = CatchStreamConverter.Convert(ui.View.Document);
-        Check(after.Success && before.Sliders.Single().DurationMs == after.Sliders.Single().DurationMs
-            && before.Objects.Select(o => (o.Kind, o.TimeMs, o.X)).SequenceEqual(after.Objects.Select(o => (o.Kind, o.TimeMs, o.X))),
+        Check(after.Success && Math.Abs(before.Sliders.Single().DurationMs - after.Sliders.Single().DurationMs) < .001
+            && EquivalentObjects(before.Objects, after.Objects),
             "Editing DPB changed the imported slider's playable objects.");
-        Check(Math.Abs(DistanceSnap.BaseVelocity(ui.View.Document, 1000) - .064) < 1e-9,
-            "Distance Snap did not use the independent DPB.");
+        Check(Math.Abs(DistanceSnap.BaseVelocity(ui.View.Document, 1000) - .08) < 1e-9,
+            "Distance Snap did not use the unified DPB.");
         var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document));
-        Check(restored.DistancePerBeat == 32 && restored.SliderMultiplier == 1.4,
-            "Project persistence mixed editor DPB with the slider multiplier.");
+        Check(restored.DistancePerBeat == 40 && restored.EffectiveSliderMultiplier == .4,
+            "Project persistence lost the unified SV/DPB.");
         var exported = OsuBeatmapWriter.Serialize(ui.View.Document).ReadBack;
-        Check(exported.SliderMultiplier == 1.4
-            && CatchStreamConverter.Convert(exported).Objects.Select(o => (o.Kind, o.TimeMs, o.X))
-                .SequenceEqual(before.Objects.Select(o => (o.Kind, o.TimeMs, o.X))),
+        Check(exported.SliderMultiplier == .4
+            && EquivalentObjects(CatchStreamConverter.Convert(exported).Objects, before.Objects),
             "osu export changed an existing slider after editing DPB.");
         Check(ProjectSerializer.Read("{\"SchemaVersion\":1,\"Document\":{\"SliderMultiplier\":1.4}}")
             .DistancePerBeat == 140, "Older projects should derive DPB from their stored slider multiplier.");
@@ -126,42 +125,41 @@ internal static class DistanceSnapPresetTests
             "Editing only DS presets rounded or overwrote the imported DPB baseline.");
     }
 
+    private static bool EquivalentObjects(IReadOnlyList<ConvertedCatchObject> before, IReadOnlyList<ConvertedCatchObject> after)
+        => before.Count == after.Count && before.Zip(after).All(pair => pair.First.Kind == pair.Second.Kind
+            && Math.Abs(pair.First.TimeMs - pair.Second.TimeMs) < .001 && Math.Abs(pair.First.X - pair.Second.X) < .001);
+
     public static void DynamicBaseRange()
     {
-        var ui = new Ui(false);
-        ui.LoadDocument(new MapDocument { IsDemo = false });
-        ui.View.OpenDistanceSnapDialog(); ui.Paint();
-        Check(ui.View.SnapDivisor == 4, "Unexpected default reference Snap.");
-        Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.baseRange", "2048")),
-            "The current DPB range should be visible beside the input.");
-        var field = ui.View.DistanceSnapBaseFieldBounds;
-        ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
-        ui.View.PasteFieldText("2048"); ui.Paint();
-        ui.ClickText(Strings.Get("library.apply"));
-        Check(!ui.View.DistanceSnapDialogVisible && ui.View.Document.DistancePerBeat == 2048,
-            "The DPB field should accept the reference bar's upper limit beyond 512 px.");
-        ui.View.OpenDistanceSnapDialog(); ui.Paint();
-        ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
-        ui.View.PasteFieldText("2049"); ui.Paint();
-        ui.ClickText(Strings.Get("library.apply"));
-        Check(ui.View.DistanceSnapDialogVisible && ui.View.Document.DistancePerBeat == 2048,
-            "The DPB field accepted a value beyond the reference bar.");
-        var track = ui.View.DistanceSnapBaseTrackBounds;
-        ui.View.PointerDown(track.X, track.Y + 12, 0, false, false);
-        ui.View.PointerUp(track.X, track.Y + 12, 0); ui.Paint();
-        ui.ClickText(Strings.Get("library.apply"));
-        Check(ui.View.Document.DistancePerBeat == 32, "The DPB bar should stop at its 32 px minimum.");
-        var slow = new Ui(false);
-        slow.LoadDocument(new MapDocument { IsDemo = false, BeatLengthMs = 4000 });
-        slow.View.OpenDistanceSnapDialog(); slow.Paint();
-        var slowTrack = slow.View.DistanceSnapBaseTrackBounds;
-        slow.View.PointerDown(slowTrack.Right - 1, slowTrack.Y + 12, 0, false, false);
-        slow.View.PointerUp(slowTrack.Right - 1, slowTrack.Y + 12, 0); slow.Paint();
-        Check(slow.Canvas.Lines.Any(l => Math.Abs(l.X1 - slowTrack.Right) < 2 && l.Y1 == slowTrack.Y - 4),
-            "The upper bar should retain a usable HDash region when Dash exceeds 512 px.");
-        slow.ClickText(Strings.Get("library.apply"));
-        Check(slow.View.Document.DistancePerBeat > 512,
-            "The upper bar should accept DPB values beyond a playfield width on slow maps.");
+        foreach (double beat in new[] { 500d, 4000d })
+        {
+            var ui = new Ui(false); ui.LoadDocument(new MapDocument { IsDemo = false, BeatLengthMs = beat });
+            ui.View.OpenDistanceSnapDialog(); ui.Paint();
+            Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("ds.baseRange", "40", "360")), "DPB range follows SV limits");
+            void Set(string value)
+            {
+                var field = ui.View.DistanceSnapBaseFieldBounds;
+                ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true); ui.View.PasteFieldText(value); ui.Paint(); ui.Key(13);
+            }
+            Set("361"); ui.ClickText(Strings.Get("library.apply"));
+            Check(ui.View.DistanceSnapDialogVisible && ui.View.Document.DistancePerBeat == 192, "Upper limit rejects values over 360");
+            Set("360"); ui.ClickText(Strings.Get("library.apply")); WaitBase(ui);
+            Check(ui.View.Document.DistancePerBeat == 360, "DPB maximum is 360 at every BPM");
+            ui.View.OpenDistanceSnapDialog(); ui.Paint(); Set("39"); ui.ClickText(Strings.Get("library.apply"));
+            Check(ui.View.DistanceSnapDialogVisible && ui.View.Document.DistancePerBeat == 360, "Lower limit rejects values below 40");
+            Set("40"); ui.ClickText(Strings.Get("library.apply")); WaitBase(ui);
+            Check(ui.View.Document.DistancePerBeat == 40, "DPB minimum is 40");
+        }
+    }
+
+    private static void WaitBase(Ui ui)
+    {
+        long now = ui.View.SliderMultiplierClock(); ui.View.SliderMultiplierClock = () => now + 1000;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        while (ui.View.SliderMultiplierValidationBusy && watch.ElapsedMilliseconds < 10000)
+        { ui.Paint(); System.Threading.Thread.Sleep(1); }
+        ui.Paint();
+        Check(!ui.View.SliderMultiplierValidationBusy, "Base SV validation completes");
     }
 
     public static void PresetDistancePreservation()
@@ -178,7 +176,7 @@ internal static class DistanceSnapPresetTests
         var field = ui.View.DistanceSnapBaseFieldBounds;
         ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true);
         ui.View.PasteFieldText("96"); ui.Paint();
-        ui.ClickText(Strings.Get("library.apply"));
+        ui.ClickText(Strings.Get("library.apply")); WaitBase(ui);
         Check(ui.View.Document.DistancePerBeat == 96
             && ui.View.Document.DistanceSnapRatios.SequenceEqual([1.5, 3.0])
             && ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document)).DistanceSnapRatios.SequenceEqual([1.5, 3.0]),
@@ -201,7 +199,7 @@ internal static class DistanceSnapPresetTests
             ui.View.PointerUp(badge.X + 2, badge.Y + 2, 2); ui.Paint();
             Check(ui.View.DistanceSnapPointerBounds.Count == 3 && map.DistanceSnapRatios.Count == 4,
                 "Badge deletion did not remove just one draft preset.");
-            ui.ClickText(Strings.Get("library.apply"));
+            ui.ClickText(Strings.Get("library.apply")); WaitBase(ui);
             Check(ui.View.Document.DistanceSnapRatios.SequenceEqual([.9, 1.3, 2.6]),
                 "Sorted badge deleted the wrong preset or all duplicate values.");
             ui.Key('Z', ctrl: true);
@@ -219,6 +217,11 @@ internal static class DistanceSnapPresetTests
         map.Fruits.Add(new Fruit { TimeMs = first, X = 113.4 });
         map.Fruits.Add(new Fruit { TimeMs = last, X = 396.9 });
         var ui = new Ui(); ui.LoadDocument(map); ui.Key('Y'); ui.Key('2');
+        // Keep the placement target clear of the interactive movement panel.
+        var plot = ui.View.CanvasPlotBounds;
+        ui.View.PointerDown(plot.X + 10, plot.Y + 150, 1, false, false);
+        ui.View.PointerMove(plot.X + 10, plot.Y + 30, false, false);
+        ui.View.PointerUp(plot.X + 10, plot.Y + 30, 1); ui.Paint();
         ui.MoveMap(middle, 208); var preview = ui.View.DistanceReadout;
         Check(preview.Previous is { } p && Math.Abs(p - 1.89) < 1e-6
             && preview.Next is { } n && Math.Abs(n - 1.89) < 1e-6 && ui.View.EqualDistanceHighlighted,
@@ -277,7 +280,7 @@ internal static class DistanceSnapPresetTests
             ui.ClickText(Strings.Get("mac.cancel"));
             Check(ui.View.Document.DistanceSnapCollinear, "Cancel changed collinear snap.");
             ui.View.OpenDistanceSnapDialog(); ui.Paint(); ui.ClickText(Strings.Get("ds.collinear"));
-            ui.ClickText(Strings.Get("library.apply"));
+            ui.ClickText(Strings.Get("library.apply")); WaitBase(ui);
             Check(!ui.View.Document.DistanceSnapCollinear, "Apply did not store collinear snap.");
             ui.Key('Z', ctrl: true);
             Check(ui.View.Document.DistanceSnapCollinear, "Collinear setting did not undo.");
@@ -387,7 +390,8 @@ internal static class DistanceSnapPresetTests
                 Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("assist.ratio", boundary / unit)), "Reference transition differs from a fresh departure.");
             Check(!ui.View.IsEditingText, "Preview settings entered input mode without a click.");
             var preview = ui.View.DistanceSnapPreviewBounds;
-            Check(ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2) == 17, "Quarter snap did not show sixteen intervals and the closing line.");
+            Check(ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2
+                && l.Y1 >= preview.Y && l.Y1 <= preview.Bottom) == 17, "Quarter snap did not show sixteen intervals and the closing line.");
             ui.Click(preview.X + 50, preview.Bottom - 12);
             ui.Click(preview.X + 140, preview.Bottom - 12 - (preview.Height - 24) / 16);
             Check(ui.View.DistanceSnapPreviewFruits.Count == 2
@@ -454,15 +458,18 @@ internal static class DistanceSnapPresetTests
                 Check(ui.View.WantsCapture, "Snap slider did not capture input.");
                 ui.View.PointerMove(x, subdivision.Y + 15, false, false);
                 ui.View.PointerUp(x, subdivision.Y + 15, 0); ui.Paint();
-                Check(!ui.View.WantsCapture && ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2) == 4 * divisors[i] + 1,
+                Check(!ui.View.WantsCapture && ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2
+                    && l.Y1 >= preview.Y && l.Y1 <= preview.Bottom) == 4 * divisors[i] + 1,
                     "Snap slider did not select a supported divisor or draw the final line.");
             }
             ui.View.PointerDown(subdivision.X + 7, subdivision.Y + 15, 0, false, false);
             ui.Key(27); ui.View.PointerUp(subdivision.X + 7, subdivision.Y + 15, 0); ui.Paint();
-            Check(ui.View.DistanceSnapDialogVisible && ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2) == 65, "Escape did not restore the preview Snap.");
+            Check(ui.View.DistanceSnapDialogVisible && ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2
+                && l.Y1 >= preview.Y && l.Y1 <= preview.Bottom) == 65, "Escape did not restore the preview Snap.");
             ui.View.PointerDown(subdivision.X + 7, subdivision.Y + 15, 0, false, false);
             ui.View.CancelInteraction(); ui.Paint();
-            Check(!ui.View.WantsCapture && ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2) == 65, "Lost capture did not restore Snap.");
+            Check(!ui.View.WantsCapture && ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2
+                && l.Y1 >= preview.Y && l.Y1 <= preview.Bottom) == 65, "Lost capture did not restore Snap.");
             Check(ui.View.SnapDivisor == 4 && baseline.ContentEquals(ui.View.Document), "Preview Snap changed editor settings or content.");
 
             for (int i = 1; i < 9; i++) ui.ClickText(Strings.Get("ds.add"));
@@ -475,7 +482,7 @@ internal static class DistanceSnapPresetTests
             pointer = ui.View.DistanceSnapPointerBounds.Last();
             ui.View.PointerDown(pointer.X + 8, pointer.Y + 8, 2, false, false); ui.Paint();
             Check(ui.View.DistanceSnapPointerBounds.Count == 7, "Right click did not delete an arrow.");
-            ui.ClickText(Strings.Get("library.apply"));
+            ui.ClickText(Strings.Get("library.apply")); WaitBase(ui);
             Check(!ui.View.DistanceSnapDialogVisible && ui.View.Document.DistanceSnapRatios.Count == 7, "Apply failed.");
             Check(ui.View.Document.DistanceSnapRatios.SequenceEqual(ui.View.Document.DistanceSnapRatios.Order()), "Applied values are not sorted.");
             var configured = ui.View.Document.DeepClone(); configured.DistanceSnapRatios.Clear();
@@ -483,7 +490,10 @@ internal static class DistanceSnapPresetTests
             ui.Key('Z', ctrl: true); Check(ui.View.Document.DistanceSnapRatios.Count == 0, "Apply did not undo as one step.");
             ui.Key('Y', ctrl: true); Check(ui.View.Document.DistanceSnapRatios.Count == 7, "Apply did not redo.");
             ui.Resize(960, 640); ui.View.OpenDistanceSnapDialog(); ui.Paint();
-            Check(ui.View.DistanceSnapPreviewFruits.Count == 0 && ui.Canvas.Lines.Count(l => l.X1 == ui.View.DistanceSnapPreviewBounds.X && l.X2 == ui.View.DistanceSnapPreviewBounds.Right && l.Y1 == l.Y2) == 17, "Reopening did not reset the preview to editor settings.");
+            Check(ui.View.DistanceSnapPreviewFruits.Count == 0 && ui.Canvas.Lines.Count(l => l.X1 == ui.View.DistanceSnapPreviewBounds.X
+                && l.X2 == ui.View.DistanceSnapPreviewBounds.Right && l.Y1 == l.Y2
+                && l.Y1 >= ui.View.DistanceSnapPreviewBounds.Y && l.Y1 <= ui.View.DistanceSnapPreviewBounds.Bottom) == 17,
+                "Reopening did not reset the preview to editor settings.");
             pointer = ui.View.DistanceSnapPointerBounds.Last();
             ui.View.PointerDown(pointer.X + 8, pointer.Y + 8, 2, false, false); ui.Paint();
             ui.ClickText(Strings.Get("mac.cancel"));

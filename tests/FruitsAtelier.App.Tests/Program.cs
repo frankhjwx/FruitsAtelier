@@ -2,12 +2,58 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Contains("--object-snap-check")) { ObjectSnapTests.Run(); Console.WriteLine("PASS Object snap ranges, placement and preferences"); return 0; }
+
+
+if (args.Contains("--experimental-snap-check")) { ExperimentalSnapTests.Run(); Console.WriteLine("PASS Experimental snap settings, wheel and Stream/Stack"); return 0; }
+
+if (args.Contains("--independent-scale-check")) { IndependentCanvasScaleTests.Run(); Console.WriteLine("PASS Independent canvas scales, pan, persistence and timeline limits"); return 0; }
 
 string startupLanguage = FruitsAtelier.Localization.Strings.Language;
+if (args.Contains("--acknowledgements-check"))
+{
+    try { AcknowledgementsTests.Run(); FirstRunSetupTests.Run(); Console.WriteLine("PASS Acknowledgements and first-run setup"); return 0; }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
+if (args.Contains("--legacy-v7-check"))
+{
+    SynchronizationUiTests.LegacyFormat(); ExternalResourceTests.Run();
+    Console.WriteLine("PASS v7 format review and mixed-version OSZ import"); return 0;
+}
 // Existing interaction fixtures use Chinese labels explicitly.
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
+if (args.Contains("--banana-edit-check")) { BananaEditTests.Run(); StackDialogTests.Run(); Console.WriteLine("PASS Banana edit dialog and grouped gestures"); return 0; }
+
+if (args.Contains("--slider-speed-check"))
+{
+    try { SliderSpeedReadoutTests.Run(); Console.WriteLine("PASS Slider speed readout and free editing"); return 0; }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
+
+if (args.Contains("--library-opening-check"))
+{
+    try { LibraryOpeningTests.Run(); Console.WriteLine("PASS Library opening responsiveness, publication and failure checks"); return 0; }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
+
+if (args.Contains("--mapping-canvas-check"))
+{
+    try
+    {
+        MappingCanvasBackgroundTests.Run(); CanvasGridSettingsTests.Run(); CanvasBackgroundDimControlTests.Run(); SettingsTests.Layout(); SettingsTests.IndicatorColours();
+        DisplaySettingsTests.Run(); TestplayPresentationTests.ControlsAndBackground();
+        Console.WriteLine("PASS Mapping canvas backgrounds, preferences, replacement and presentation checks"); return 0;
+    }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 if (args.Contains("--hitsound-copier")) { HitsoundCopierUiTests.Run(); Console.WriteLine("PASS Hitsound Copier UI"); return 0; }
+if (args.Contains("--sample-banks")) { SampleBankTests.Run(); Console.WriteLine("PASS sample bank editing"); return 0; }
+if (args.Contains("--hitsound-check"))
+{
+    try { HitsoundTests.Run(); Console.WriteLine("PASS Catch hitsound playback checks"); return 0; }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 #if WINDOWS
 if (args.Length == 2 && args[0] == "--audio-settings-restart-native-check")
 {
@@ -21,6 +67,18 @@ if (args.Contains("--audio-diagnostics-settings-check"))
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Contains("--object-timeline-check"))
+{
+    try
+    {
+        ObjectTimelineTests.ConvertedPatterns(); ObjectTimelineTests.PatternNewCombo(); ObjectTimelineTests.SkinColours();
+        ObjectTimelineTests.SimultaneousStacks(); ObjectTimelineTests.Stacking();
+        ObjectTimelineTests.TimingCacheInvalidation();
+        ComboGroupingTests.Run();
+        Console.WriteLine("PASS Object timeline patterns, skins, stacking and undo"); return 0;
+    }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 if (args.Contains("--slider-draft-check"))
 {
     try
@@ -39,6 +97,7 @@ if (args.Contains("--first-run-setup-check"))
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
 if (args.Contains("--sv-performance")) return SliderMultiplierTests.Performance();
+if (args.Contains("--sv-check")) { SliderMultiplierTests.Run(); Console.WriteLine("PASS Base SV compensation, playback, persistence and undo"); return 0; }
 if (args.Contains("--performance-scheduling")) return PerformanceSchedulingTests.Benchmark();
 if (args.Length == 2 && args[0] == "--fruit-placement-performance") return EditorPerformance.RunFruitPlacement(args[1]);
 if (args.Length == 2 && args[0] == "--testplay-edit-performance") return EditorPerformance.RunTestplayEditing(args[1]);
@@ -60,12 +119,14 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Banana shower dialog previews exported RNG and edits grouped ranges", BananaEditTests.Run),
     ("F12 screenshots repeat once and preserve dialogs, playback and content", ScreenshotTests.Shortcut),
     ("Hitsound Copier modes, new Diff and undo", HitsoundCopierUiTests.Run),
     ("Testplay opening preparation and audio boundary", TestplayTests.OpeningPreparation),
     ("Held quick retry dims over 300 ms, clicks once and cancels on release while running or paused", FeedbackInteractionTests.Retry),
     ("Previous-save rollback requires history, confirmation and supports undo", FeedbackInteractionTests.PreviousSave),
     ("Timeline navigation and history reveal offscreen changes", FeedbackInteractionTests.Navigation),
+    ("Z/V seek map boundaries during selection and object dragging", ShortcutRoutingTests.ObjectBoundarySeeking),
     ("Slider endpoint drags retain navigation, playback and cancellation", FeedbackInteractionTests.TailNavigation),
     ("Tags wrap with row-aware editing and droplet lock persists", FeedbackInteractionTests.TagsAndPreference),
     ("Overlapping timeline markers and unmapped section breaks remain visible", FeedbackInteractionTests.MarkersAndBreak),
@@ -89,6 +150,8 @@ var tests = new (string Name, Action Run)[]
     ("Synchronization failures wrap and scroll without editing content", SynchronizationUiTests.FailureText),
     ("Section synchronization pages large Events and applies complete text", SynchronizationUiTests.SectionText),
     ("Timing synchronization reviews one green line amongst generated SV", SynchronizationUiTests.TimingRows),
+    ("Timeline converted patterns show independent fruits and combo numbers", ObjectTimelineTests.ConvertedPatterns),
+    ("Timeline pattern fruits edit internal NC while move and delete retain the whole parent", ObjectTimelineTests.PatternNewCombo),
     ("Timeline skin uses combo-coloured tracks and hitcircle endpoints", ObjectTimelineTests.SkinColours),
     ("Workspace storage settings show usage and clear caches without editing maps", StorageSettingsTests.Run),
     ("Mapping right-click deletes the marquee selection in one undo", MappingSessionTests.RightClickSelection),
@@ -98,6 +161,7 @@ var tests = new (string Name, Action Run)[]
     ("Mapping marquee playback and banana timeline resizing", MappingSessionTests.MarqueeAndBanana),
     ("Mapping independent zoom and Combo preferences", MappingSessionTests.Preferences),
     ("Mapping per-difficulty editing preferences survive restart", MappingSessionTests.MapPreferences),
+    ("Object snap follows musical ranges and preserves time and preferences", ObjectSnapTests.Run),
     ("Mapping Combo visibility and configured dash brightness", MappingSessionTests.TestplayDisplay),
     ("Clearing internal slider nodes preserves endpoints and batch undo", ClearSliderNodesTests.Run),
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
@@ -107,6 +171,7 @@ var tests = new (string Name, Action Run)[]
     ("Release audio diagnostic settings persist, scroll and export without blocking", AudioDiagnosticSettingsTests.Run),
     ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),
     ("First-run setup persists preferences, isolates auditions and supports debug replay", FirstRunSetupTests.Run),
+    ("Acknowledgements require explicit persisted consent before startup", AcknowledgementsTests.Run),
     ("Shortcut routing isolates Timing object nudges and preserves navigation", ShortcutRoutingTests.TimingPage),
     ("Shortcut routing rejects unsupported Compose and Timing modifiers", ShortcutRoutingTests.Modifiers),
     ("Arrow seeking uses whole beats during playback and subdivisions while paused", ShortcutRoutingTests.PlaybackSeeking),
@@ -117,7 +182,7 @@ var tests = new (string Name, Action Run)[]
     ("Shortcut routing exports from Timing while retaining modal focus", ShortcutRoutingTests.Export),
     ("Shortcut routing prioritizes language dropdown navigation", ShortcutRoutingTests.LanguageMenu),
     ("Timing setup drafts, shortcuts, clipboard, undo and narrow bilingual layout", TimingEditorTests.Run),
-    ("Timing base SV override preserves gameplay, DPB, precision, persistence and undo", SliderMultiplierTests.Run),
+    ("Timing SV entry and DS unit switching preserve gameplay, persistence and undo", SliderMultiplierTests.Run),
     ("Timing metronome schedules beat and Ctrl snap ticks without duplicate playback", TimingEditorTests.Metronome),
     ("Timing waveform zoom, cached audio and red-line selection", TimingEditorTests.Waveform),
     ("Wheel modifiers distinguish snapping zoom and navigation", WheelGestureTests.Run),
@@ -126,6 +191,7 @@ var tests = new (string Name, Action Run)[]
     ("Draft tools and editor shortcuts respect modifiers", DraftToolShortcutsTests.Run),
     ("Volume popover buttons, bars, keyboard and fade", VolumePopoverTests.Run),
     ("Testplay Alt arrows show volume controls without moving the catcher", VolumePopoverTests.TestplayShortcuts),
+    ("Testplay bound arrows control gameplay and movement preserves volume fading", VolumePopoverTests.GameplayBindingsAndFade),
     ("Testplay volume bars accept clicks and drags after keyboard and wheel shortcuts", VolumePopoverTests.TestplayPointer),
     ("New Combo grouping refreshes on first edit and undo/redo", ComboGroupingTests.Run),
     ("Completing an FSlider replaces only exact head fruit overlaps and undoes atomically", SliderHeadReplacementTests.OnCompletion),
@@ -151,8 +217,12 @@ var tests = new (string Name, Action Run)[]
     ("Map and HR derandomization drafts disable FX controls and support history", DropletDerandomizationTests.Run),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
+    ("Experimental snap settings, wheel and Stream/Stack", ExperimentalSnapTests.Run),
     ("Settings layout preserves labels and aligns controls in narrow windows", SettingsTests.Layout),
-    ("Appearance indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
+    ("Canvas background dim control fades, captures dragging and remains independent of zoom", CanvasBackgroundDimControlTests.Run),
+    ("Mapping canvas X-axis grid colours and opacity preserve horizontal lines and content", CanvasGridSettingsTests.Run),
+    ("Mapping canvas backgrounds, image replacement and preferences", MappingCanvasBackgroundTests.Run),
+    ("Mapping Canvas indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
     ("Stack preview retains full outlines and edits individual fruits horizontally", StackDialogTests.ManualFruits),
     ("Stack draft history undoes fruit drags and removing manual knots", StackDialogTests.DraftHistory),
     ("Stack numeric controls edit percentages and pixels with editable endpoints", StackDialogTests.Numeric),
@@ -202,6 +272,7 @@ var tests = new (string Name, Action Run)[]
     ("DS numeric fields use base SV, preserve direction and support undo", DistanceEditingTests.NumericFields),
     ("X coordinate input clamps, previews and supports undo", DistanceEditingTests.XCoordinate),
     ("DS edits selected slider heads, tails and droplets", DistanceEditingTests.SliderPoints),
+    ("Slider speed readout follows conversion, editing and history", SliderSpeedReadoutTests.Run),
     ("Movement DS labels use base SV and avoid collisions", DistanceEditingTests.Labels),
     ("Movement Analysis toggles all four connection colours without editing content", AssistToolsTests.MovementAnalysis),
     ("Movement Analysis optionally includes tiny droplets without editing content", AssistToolsTests.TinyMovementDisplay),
@@ -277,8 +348,8 @@ var tests = new (string Name, Action Run)[]
     ("Break recalculation respects slider duration and cancellation", BreakRecalculationTests.DurationAndCancellation),
     ("Removing break notes merges intervals and nearby notes shorten them", BreakRecalculationTests.RemovalAndNearbyPlacement),
     ("Distance per beat uses grid drag, numeric entry, export and undo", DistanceSnapPresetTests.BaseDistance),
-    ("Editor DPB preserves existing slider playback and imported multiplier", DistanceSnapPresetTests.ExistingSliderPreservation),
-    ("DPB input and bar use the reference distance range", DistanceSnapPresetTests.DynamicBaseRange),
+    ("Unified SV and DPB preserve existing slider playback", DistanceSnapPresetTests.ExistingSliderPreservation),
+    ("SV limits govern DPB input independently of reference timing", DistanceSnapPresetTests.DynamicBaseRange),
     ("DPB changes preserve preset pixel distances", DistanceSnapPresetTests.PresetDistancePreservation),
     ("Distance snap configuration supports modal editing and eight presets", DistanceSnapPresetTests.Dialog),
     ("Anchor dragging defaults to free time with independent opt-in snapping", AnchorSnapTests.Dragging),
@@ -296,6 +367,7 @@ var tests = new (string Name, Action Run)[]
     ("Import prompts and batch slider conversion preserve scope, history and cancellation", SliderBatchTests.Run),
     ("Fresh process defaults to English", () => { if (startupLanguage != "en") throw new Exception("Default language must be English"); }),
     ("Language preferences persist and preview uses one AR/CS/NM line", LanguageTests.PreferencesAndPreview),
+    ("Library opening keeps UI responsive while workspace maintenance holds the project gate", LibraryOpeningTests.Run),
     ("Workspace library isolates input, saving and export", LibraryTests.Run),
     ("Library navigation preserves position, supports dragging and returns with Escape", LibraryNavigationTests.Run),
     ("Library favourites persist, filter songs and projects, and toggle from the first context action", LibraryFavouriteTests.Run),
@@ -306,6 +378,7 @@ var tests = new (string Name, Action Run)[]
     ("Library double-click opens only visible project cards through the host", LibraryDoubleClickTests.Run),
     ("Library double-click replaces the demo with an unassociated imported map", LibraryOpenTests.Run),
     ("External folders and full OSZ resources persist across restarts", ExternalResourceTests.Run),
+    ("v7 format changes require a choice and retain tick rules through synchronization", SynchronizationUiTests.LegacyFormat),
     ("Difficulty tabs adapt names to available width and show full-name tooltips", DifficultyTabTests.Layout),
     ("Difficulty SR sorting preserves content, identity and keyboard navigation", DifficultyTabTests.SortAscending),
     ("Difficulty tab stars follow edits, undo and CS", DifficultyTabTests.Editing),
@@ -356,6 +429,7 @@ var tests = new (string Name, Action Run)[]
     ("Playing timeline marquee anchors time and retains offscreen selection", ObjectTimelineTests.PlaybackMarquee),
     ("Beat colors and widths agree on canvas and timeline across divisors", ObjectTimelineTests.GridColors),
     ("Playback speed buttons work in both languages without editing content", ObjectTimelineTests.SpeedControls),
+    ("Independent canvas scales, pan, persistence and timeline limits", IndependentCanvasScaleTests.Run),
     ("Canvas starts at 60% and retains remembered zoom while enforcing minimum width", CanvasZoomTests.DefaultsAndReset),
     ("Zoom slider and wheel share scale, bounds and content isolation", CanvasZoomTests.SliderAndWheel),
     ("Zoom slider fits both languages and preserves playback following", CanvasZoomTests.PlaybackAndLanguages),
@@ -588,6 +662,10 @@ static void EscapeDrag()
 static void CaptureCancellation()
 {
     var ui = new Ui();
+    var plot = ui.View.CanvasPlotBounds;
+    ui.View.PointerDown(plot.X + 10, plot.Y + 150, 1, false, false);
+    ui.View.PointerMove(plot.X + 10, plot.Y + 30, false, false);
+    ui.View.PointerUp(plot.X + 10, plot.Y + 30, 1); ui.Paint();
     var id = ui.View.Document.Fruits[0].Id;
     ui.DownMap(250, 96);
     ui.MoveMap(550, 240);
@@ -1069,8 +1147,10 @@ sealed class Ui
     }
     private void ShowFixtureOverview()
     {
-        // Keep multi-second editing fixtures visible at the minimum supported canvas width.
+        // Keep fine pointer gestures above the drag threshold while showing multi-second fixtures.
         View.Wheel(Plot.X, Plot.Bottom, (float)(120 * Math.Log(0.09 / View.PixelsPerMs) / Math.Log(1.16)), false, false, true);
+        if (Plot.Width < 256)
+            View.Wheel(Plot.X, Plot.Bottom, (float)(120 * Math.Log(256 / Plot.Width) / Math.Log(1.16)), false, false, true);
         height = Math.Max(height, (float)(400 + 8000 * View.PixelsPerMs));
         Paint();
         float panY = Plot.Bottom - 1;

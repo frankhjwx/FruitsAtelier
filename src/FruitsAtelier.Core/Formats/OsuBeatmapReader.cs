@@ -41,9 +41,11 @@ public static class OsuBeatmapReader
             if (!header)
             {
                 if (trimmed.Length == 0) continue;
-                if (trimmed is not ("osu file format v12" or "osu file format v13" or "osu file format v14" or "osu file format v128"))
+                if (trimmed is not ("osu file format v7" or "osu file format v8" or "osu file format v9" or "osu file format v10" or "osu file format v11"
+                    or "osu file format v12" or "osu file format v13" or "osu file format v14" or "osu file format v128"))
                     throw new InvalidDataException(L.Get("core.reader.formatVersion"));
                 lazer = trimmed == "osu file format v128";
+                document.LegacySliderTicks = trimmed == "osu file format v7";
                 header = true;
                 continue;
             }
@@ -224,10 +226,11 @@ public static class OsuBeatmapReader
             if (track.DropletRandomization is { IsValid: false }) throw new InvalidDataException(L.Get("randomize.invalid"));
             if (track.Stack is { } stack && (track.StreamSnapDivisor is null || !stack.IsValid))
                 throw new InvalidDataException(L.Get("stack.invalid"));
-            if (track.StreamSnapDivisor is < 1 or > 16) throw new InvalidDataException(L.Get("stream.invalidSnap"));
+            if (track.StreamSnapDivisor is not (null or >= 1 and <= 16 or 24 or 32 or 48)) throw new InvalidDataException(L.Get("stream.invalidSnap"));
             if (track.Kind is not (CurveKind.Linear or CurveKind.Bezier) || track.Nodes.Count < 2)
                 throw new InvalidDataException(L.Get("core.reader.incompleteCurve"));
             foreach (var node in track.Nodes) { Id(node.Id); Time(node.TimeMs); }
+            foreach (double offset in track.StreamNewComboOffsets) Time(offset);
         }
         foreach (var slider in document.ImportedSliders)
         {
@@ -239,7 +242,7 @@ public static class OsuBeatmapReader
                 throw new InvalidDataException(L.Get("core.reader.importedParameters"));
         }
         foreach (var shower in document.BananaShowers)
-        { Id(shower.Id); Time(shower.TimeMs); Time(shower.EndTimeMs); if (shower.EndTimeMs < shower.TimeMs) throw new InvalidDataException(L.Get("core.reader.bananaEnd")); }
+        { Id(shower.Id); Time(shower.TimeMs); Time(shower.EndTimeMs); shower.Pattern?.Validate(); if (shower.EndTimeMs < shower.TimeMs) throw new InvalidDataException(L.Get("core.reader.bananaEnd")); }
         foreach (var timing in document.TimingPoints) ValidateTiming(timing);
         var errors = CurveMath.Validate(document, int.MaxValue);
         if (errors.Count != 0) throw new InvalidDataException(string.Join(L.Get("core.diagnostics.separator"), errors));

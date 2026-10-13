@@ -37,12 +37,16 @@ public sealed partial class EditorView
     public void LoadProject(BeatmapProject project)
     {
         project.Validate();
+        if (libraryOpenTask is { } retiredOpen)
+            _ = retiredOpen.ContinueWith(t => { _ = t.Exception; }, TaskScheduler.Default);
+        libraryOpenTask = null; libraryOpenCompleted = null;
         CloseVersionHistory();
         CloseAimod();
         CloseHitsoundCopier();
         CloseSongSetup();
         CloseTimingSetup(); TimingPageVisible = false;
         TimeJumpVisible = false;
+        CloseBananaEdit(); bananaSegments.Clear();
         StreamDialogVisible = false;
         MergeDialogVisible = false;
         CloseVolumeDialog();
@@ -84,7 +88,7 @@ public sealed partial class EditorView
         ResetDeferredConversion();
         pauseSnapDivisor = null;
         nextFruitNewCombo = false;
-        nextSounds = 0; soundEdge = null;
+        nextSounds = 0; soundEdge = null; timelineFruit = null;
         var document = Document;
         convertedSnapshot = null;
         Select(Guid.Empty);
@@ -214,8 +218,9 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
+        if (AcknowledgementsVisible) return false;
         if (previousSaveRestore is not null) return false;
-        if (AudioProjectCreating) return false;
+        if (LibraryOpening || AudioProjectCreating) return false;
         if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
         if (VersionHistoryVisible || SynchronizationVisible) return false;
         if (librarySettingsOpen || HitsoundCopierVisible || SongSetupVisible || DistanceSnapDialogVisible || TimingModal || AimodVisible) return false;

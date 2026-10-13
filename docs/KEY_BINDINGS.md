@@ -113,8 +113,10 @@ open it. Enter seeks; Esc cancels. Volume shortcuts also work during testplay.
 | Q | Toggle New Combo for the selection or placement state. |
 | W / E / R | Toggle Whistle / Finish / Clap for the selection or placement state. |
 
-The full Snap choices are 1/1–1/9, 1/12 and 1/16. The last two are accessible from
-the Snap slider or Ctrl+wheel. Beat snapping is independent of Slider Tick Rate.
+The standard Snap choices are 1/1–1/9, 1/12 and 1/16. The last two are accessible from
+the Snap slider or Ctrl+wheel. [Settings → Experimental](EDITOR_UI.md#settings)
+adds 1/24, 1/32 and 1/48; Ctrl+wheel can reach them within their doubling/halving
+families. Beat snapping is independent of Slider Tick Rate.
 Object sampleset selection is not bound to Shift+Q/W/E/R or Ctrl+Q/W/E/R.
 
 ## Slider editing
@@ -158,12 +160,12 @@ currently do not adjust reverses.
 | Wheel over canvas, object timeline or overview | Up seeks earlier; down seeks later. One notch is a Snap subdivision while paused, or a whole beat while playing. |
 | Shift+wheel | Seek four times the normal wheel distance. During marquee selection, wheel seeking remains single-step. |
 | Ctrl+wheel over canvas or either timeline | Double / halve the current divisor within supported choices, stopping at the family boundary. |
-| Alt+wheel over canvas | Zoom around the pointer's time. |
+| Alt+wheel over canvas | Scale X and Y together around the pointer's time, including when uniform scaling is unlocked. |
 | Alt+wheel over bottom overview | Adjust the selected volume channel by five percentage points and show the volume overlay. |
 | Alt+wheel over object timeline | Zoom that timeline independently. |
 | Alt+wheel over Timing waveform | Zoom the waveform time scale. Ctrl+wheel on the waveform currently does nothing. |
 | Ctrl+Alt+wheel over canvas or object timeline | Wheel down advances Select → Fruit → FSlider → Banana Shower; wheel up reverses this cycle. |
-| Middle-button drag over canvas | Pan the canvas. |
+| Middle-button drag over canvas | Pan vertically; also pan horizontally when uniform scaling is unlocked. |
 | Ctrl+click object / Ctrl+marquee | Toggle selection / add objects to selection; slider control actions take priority when applicable. |
 | Shift+drag object in upper timeline | Move without beat snapping. |
 | Double-click an object in the upper timeline | Select it and seek to its start without changing content. |
@@ -273,6 +275,8 @@ Text fields do not currently implement word navigation/deletion or general text
 undo/redo. Dialogs consume background editing keys. Some Compose page/file keys
 are processed before its numeric-field handler, so explicitly commit the field
 before invoking those commands.
+
+Unlocking canvas Zoom shows two persistent toolbar sliders, X above Y, each up to 200%. Object drawing and hit regions are capped at 100%. See [canvas scaling](EDITOR_UI.md#workspace).
 
 ## References
 

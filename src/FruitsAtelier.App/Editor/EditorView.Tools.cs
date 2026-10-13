@@ -17,8 +17,12 @@ public sealed partial class EditorView
     private void DrawToolPalette(ICanvas c)
     {
         toolButtons.Clear();
-        float size = Math.Min(96, plot.Height / 4);
-        float top = plot.Y + (plot.Height - size * 4) / 2;
+        float size = Math.Min(96, Math.Max(0, plot.Height - 100) / 4);
+        float top = plot.Y + (plot.Height - size * 4 - 100) / 2;
+        top += 100;
+        const float selectorsHeight = 93;
+        float toolbarBottom = canvas.Y + 38;
+        DrawSampleBankSelectors(c, toolbarBottom + (top - toolbarBottom - selectorsHeight) / 2 + 20);
         for (int i = 0; i < 4; i++)
         {
             var mode = (Tool)i;
@@ -125,7 +129,8 @@ public sealed partial class EditorView
         {
             DurationMs = Math.Max(Document.DurationMs, point.Value.TimeMs), BeatLengthMs = Document.BeatLengthMs,
             TimingOffsetMs = Document.TimingOffsetMs, ApproachRate = Document.ApproachRate,
-            CircleSize = Document.CircleSize, SliderMultiplier = Document.SliderMultiplier, SliderTickRate = Document.SliderTickRate,
+            CircleSize = Document.CircleSize, SliderMultiplier = Document.SliderMultiplier, LegacySliderTicks = Document.LegacySliderTicks, SliderTickRate = Document.SliderTickRate,
+            SliderMultiplierOverride = Document.SliderMultiplierOverride,
             RandomizeDropletStrength = Document.RandomizeDropletStrength, RandomizeDropletSeed = Document.RandomizeDropletSeed
         };
         bool localDraft = tool == Tool.Slider && draftTrack != Guid.Empty;
@@ -195,6 +200,7 @@ public sealed partial class EditorView
 
     private MapPoint? PlacementGhostPoint()
     {
+        if (PointerOverCanvasBackgroundDim) return null;
         if (tool is not (Tool.Fruit or Tool.Slider) || !plot.Contains(mouseX, mouseY) || drag != DragKind.None
             || menu >= 0 || contextItems.Count > 0 || editField >= 0 || tool == Tool.Slider && draftTrack == Guid.Empty && SelectedTrack is not null) return null;
         if (tool == Tool.Slider && SelectedTrack is { } draft && draft.Id == draftTrack
@@ -209,6 +215,7 @@ public sealed partial class EditorView
 
     private void DrawPlacementGhost(ICanvas c)
     {
+        if (PointerOverCanvasBackgroundDim) return;
         if (tool == Tool.Banana && plot.Contains(mouseX, mouseY) && drag == DragKind.None
             && menu < 0 && contextItems.Count == 0 && editField < 0)
         {
@@ -217,6 +224,7 @@ public sealed partial class EditorView
             return;
         }
         if (PlacementGhostPoint() is not { } point) return;
+        DrawObjectSnapGuide(c, point);
         if (placementDraftTrack is { Nodes.Count: >= 2 } previewTrack && draftTrack != Guid.Empty)
         {
             int segment = previewTrack.Nodes.Count - 2;
@@ -232,11 +240,11 @@ public sealed partial class EditorView
             {
                 var position = Screen(new(item.TimeMs, item.X));
                 if (position.Y >= plot.Y - 20 && position.Y <= plot.Bottom + 20)
-                    DrawCatchObject(c, item, position.X, position.Y, Playfield.Width, .6f, hyperStarts: placementHyperdash);
+                    DrawCatchObject(c, item, position.X, position.Y, CanvasObjectWidth, .6f, hyperStarts: placementHyperdash);
             }
         }
         var p = Screen(point);
-        float diameter = CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512;
+        float diameter = CatchSize.FruitDiameter(Document.CircleSize) * CanvasObjectWidth / 512;
         bool hyper = placementGhost is { } ghost && placementHyperdash.Contains((ghost.SourceId, ghost.EventIndex));
         uint? glow = hyper ? HyperDashFruitColour : null;
         if (skin is null || !skin.Draw(c, CatchSkinObject.Fruit, 0, p.X, p.Y, diameter, opacity: .6f, hyperColour: glow))

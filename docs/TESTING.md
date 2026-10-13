@@ -49,6 +49,49 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --object-snap-check` verifies full-beat search ranges across BPM changes
+and independently of meter, bidirectional fruit and slider-start placement, exact X priority over Grid
+and Distance Snap, undo, hover isolation, default preferences and Apply/Cancel.
+On Windows, `FruitsAtelier.App.exe --render-check --object-snap-render-check`
+checks native placement and configuration in English and Chinese at two window
+sizes and three DPI settings, saving captures under `artifacts/tests/object-snap-native`.
+
+`App.Tests --acknowledgements-check` verifies English-only consent, disabled
+confirmation, cancellation, scrolling, startup blocking, persistent notice
+revisions and failed saves, alongside first-time setup. On Windows,
+`FruitsAtelier.App.exe --render-check --acknowledgements-render-check` captures
+the unchecked, scrolled and checked dialog at three sizes and DPI settings under
+`artifacts/tests/acknowledgements-native` without changing personal consent.
+It also checks that Confirm presents the destination frame synchronously for
+both setup and editor paths, including low-latency and fullscreen preferences.
+
+`App.Tests --slider-speed-check` checks the Slider SV and maximum DS readout,
+unrestricted editing, repeated paths, tiny inclusion, draft cancellation and undo.
+`FruitsAtelier.App --render-check --slider-speed-render-check` checks selected and
+draft readouts in English and Chinese at two window sizes and three DPI settings,
+with screenshots under `artifacts/tests/slider-speed-native`.
+
+`App.Tests --library-opening-check` verifies that opening a library project while
+the workspace gate is held leaves rendering responsive, blocks duplicate opens
+and competing operations, publishes once, retains the document on failure, and
+retires results after a project replacement.
+
+`App.Tests --mapping-canvas-check` verifies zoom-independent background bounds,
+independent dim drafts and persistence, image-drop replacement confirmation,
+filename collisions, retained images, undo/redo and project/export references.
+It also checks local maps after reopening, X-axis grid colour/opacity drafts,
+reset and persistence, unchanged horizontal lines, the canvas dim control’s
+fade timing, pointer capture, preference saving and zoom-independent bounds,
+and settings layouts and testplay background controls. On Windows, run `FruitsAtelier.App.exe --render-check
+--mapping-canvas-render-check` for native background caching, settings and
+replacement-dialog screenshots under `artifacts/tests/mapping-canvas-native`.
+
+`App.Tests --object-timeline-check` checks Stream/Stack fruit markers, combo
+numbering, internal NC, grouped movement/deletion, persistence, export and undo.
+On Windows, `FruitsAtelier.App.exe --render-check --object-timeline-render-check`
+runs the focused native checks and writes screenshots and CPU/allocation samples
+under `artifacts/tests/object-timeline-native` at 96, 144 and 192 DPI.
+
 Test projects are console programs run with `dotnet run`. Format-export quantization and read-back diagnostic checks iterate over every available language, verifying messages and parameters against localization tables rather than assuming the default UI language. Repeat-count checks verify preserved edge samples and silent default assignment to new edges in every language.
 
 After building the solution, run on Windows from the repository root:
@@ -76,7 +119,9 @@ bash scripts/Test-Mac.sh --native-only        # Mac input/audio checks only
 The opt-in `App.Tests --performance-scheduling` benchmark measures Timing frames
 and Stream setup with synthetic data. `Formats.Tests --benchmark-sv-edits` measures
 ordinary edits with an SV override and compares every export against uncached NM/HR
-output. `App.Tests --sv-performance` measures continuous SV input and idle validation.
+output. `App.Tests --sv-performance` measures SV/DPB draft input and Apply validation.
+`App.Tests --sv-check` checks base SV compensation at Legacy heads, unused extreme
+timing, FSlider generation, NM/HR playback, cache equivalence, persistence and undo.
 Run the same fixtures and build configuration before and after an optimization;
 capture console JSON in `artifacts/`. These are CPU/allocation measurements, not GPU
 presentation or physical input latency.
@@ -107,7 +152,7 @@ Run `dotnet run --project tests/FruitsAtelier.SkinArchive.Tests -c Release -- --
 to validate a user-owned skin archive and load its textures. The source archive is read-only;
 the extracted cache stays under `artifacts/tests/skin-archive/external`.
 
-To check an individual supported `.osu` without modifying it, run the Formats test executable with `--import-roundtrip <path>`. This verifies project persistence and v14 export preserve raw object/timing lines and the converted Catch sequence, times and positions.
+To check an individual supported `.osu` without modifying it, run the Formats test executable with `--import-roundtrip <path>`. This verifies project persistence and v7/v14 export preserve raw object/timing lines and the converted Catch sequence, times and positions.
 
 The repository contains synthetic format fixtures, older `.catchproj` compatibility fixtures, and OGG audio fixtures. These checks additionally require local resources:
 
@@ -115,6 +160,9 @@ The repository contains synthetic format fixtures, older `.catchproj` compatibil
 - Core's `--fixtures` option enables additional real-beatmap checks.
 - A full Windows `Audio.Tests` run needs a default audio device and MP3 fixtures under `artifacts/beatmaps`. `--recovery-check` runs only injected output-failure checks; `--lifecycle-check` runs only playback lifecycle checks.
 - Tests using a specific default skin or user project depend on uncommitted local files. Check test output for skipped cases.
+
+`App.Tests --hitsound-check` checks sample resolution, preview scheduling and
+stacked banana sounds in manual Testplay, autoplay and replay without device audio.
 
 Automated device tests output silent PCM; sample comparisons happen before muting. Run Windows audio tests with:
 
@@ -150,6 +198,17 @@ fade, and queued pause/play/seek requests preserve playback intent. No physical
 audio device is used by this focused check.
 
 ## Window checks
+
+`FruitsAtelier.App.exe --render-check --library-opening-render-check` holds the
+workspace project gate while a library open is pending. It verifies native
+loading frames, input isolation and UI-thread publication in English and Chinese
+at two window sizes and 96/144/192 DPI. Fixtures stay under
+`artifacts/tests/library-opening`.
+
+`FruitsAtelier.App.exe --render-check --sample-banks-render-check` runs the focused
+tool-palette checks in English and Chinese at both window sizes and 96/144/192 DPI.
+It checks menu dismissal and unchanged document content, and captures the Sampleset
+and Additions menus under `artifacts/tests/sample-banks`.
 
 `FruitsAtelier.App.exe --screenshot-render-check` exercises F12 capture and reads
 the native clipboard image back at 96/144/192 DPI in editing and paused testplay.
@@ -376,21 +435,26 @@ Legacy and are reported. Neither command saves the supplied map.
 
 ## Base SV validation benchmark
 
+Run `FruitsAtelier.App.exe --render-check --sv-ds-render-check` for focused native
+checks of the Timing **Adjust** entry and DS **SV / DPB** buttons. It checks both
+languages, window sizes and 96/144/192 DPI, including Apply and undo, and captures
+each unit mode under `artifacts/tests/sv-ds-native`.
+
 Run `dotnet run --no-build --project tests/FruitsAtelier.App.Tests -c Release -- --sv-performance`
-to measure continuous base-SV adjustment on 100 and 1,000 imported Bezier sliders
-with repeats and BPM changes. Eight adjustments arrive 100 ms apart using an
-injected clock. The report separates pointer dispatch plus painting during the
-burst from validation after a simulated one-second idle interval, and records
-current-thread and process-wide allocations. Regressions verify the deadline
-restarts, conversion stays cached during input, superseded workers cannot commit,
-and the final value produces one undo step. The counting canvas measures CPU work;
-GPU presentation and physical display latency are excluded.
+to measure SV/DPB draft input and Apply validation on 100 and 1,000 imported
+Bezier sliders with repeats and BPM changes. Eight draft adjustments arrive
+100 ms apart. The report separates input plus painting during the burst from
+background validation after Apply, and records current-thread and process-wide
+allocations. Regressions verify unit switching, SV limits, conflict loading,
+playback preservation, cancellation, stale-result rejection and atomic undo.
+The counting canvas measures CPU work; GPU presentation and physical display
+latency are excluded.
 
 ## Playback rendering profile
 
-For a read-only CPU profile of an existing `.osu` file, run the App test executable with `--map-performance <path>`. It measures playback around 89 seconds at 32% Zoom and 1/16 Snap, reporting render median/p95, allocation per frame, rendering phases, and transport/hitsound scheduling with silent callbacks. The counting canvas excludes GPU and device submission.
+For a read-only CPU profile of an existing `.osu` or `.catchdiff` file, run the App test executable with `--map-performance <path>`. It measures playback around 89 seconds at 32% Zoom and 1/16 Snap, reporting render median/p95, allocation per frame, rendering phases, and transport/hitsound scheduling with silent callbacks. The counting canvas excludes GPU and device submission.
 
-On Windows, run `FruitsAtelier.App.exe --profile-map <path> [startMs]` in a hidden Direct2D window with the active default skin. It opens an in-memory workspace session for the selected `.osu` and sibling difficulties, including periodic resource checks, then measures thirty seconds from the supplied time (default 70000 ms) at 100% zoom and 1/4 snap with preview closed, NM, and HR. The report separates drawing submission, total rendering including `EndDraw`/`Present`, and silent transport updates. Per-frame samples include allocations, GC collections, and image decode counts to identify isolated stalls. It also measures document comparison time. The report is written to `artifacts/logs/playback-profile.json` in repository builds, or the application log directory in distributed builds. This is not a visible-screen FPS measurement. Neither profile saves or imports the map into the workspace, plays audio, or changes system volume.
+On Windows, run `FruitsAtelier.App.exe --profile-map <path> [startMs]` in a hidden Direct2D window with the active default skin. It opens an in-memory workspace session for the selected `.osu` or `.catchdiff` and sibling difficulties, including periodic resource checks, then samples 3,600 warmed frames per case from the supplied time (default 70000 ms) at 100% zoom and 1/4 snap with preview closed, NM, HR, and paused fruit hover. Playback advances thirty seconds per case. The report separates drawing submission, total rendering including `EndDraw`/`Present`, and silent transport updates. Per-frame samples include allocations, GC collections, and image decode counts to identify isolated stalls. It also measures document comparison time. The report is written to `artifacts/logs/playback-profile.json` in repository builds, or the application log directory in distributed builds. This is not a visible-screen FPS measurement. Neither profile saves or imports the map into the workspace, plays audio, or changes system volume.
 
 ## Imported slider corpus
 
@@ -505,3 +569,33 @@ selective restoration, save/restart and undo/redo. Native `--render-check` draws
 browser and restores a deleted difficulty in both languages at its tested window
 sizes and DPI values. The editing benchmark verifies ordinary interactions while
 version-history work remains outside the pointer and paint paths.
+
+## Banana shower patterns
+
+`App.Tests --experimental-snap-check` checks the optional 1/24, 1/32 and 1/48
+settings, cancellation/persistence, Ctrl+wheel families, Stream/Stack conversion,
+Banana Shower fractions, export, project reopening and undo. On Windows,
+`FruitsAtelier.App.exe --render-check --experimental-snap-render-check` captures
+the settings and extended snap bar in English and Chinese at two window sizes
+and three DPI settings under `artifacts/tests/experimental-snap-native`.
+
+`Formats.Tests --banana-pattern-check` checks fraction boundaries, red-line
+changes, grouped identities, persistence, undo, cache equivalence, exported NM/HR
+randomness and base-SV changes with overlapping random parents.
+`App.Tests --banana-edit-check` checks Ctrl+F, the full-map preview, draft
+validation/cancellation, grouped range dragging, clipboard and undo.
+On Windows, `FruitsAtelier.App.exe --render-check --banana-edit-render-check`
+checks the native dialog, division lists and grouped canvas in English and Chinese
+at three DPI settings and two window sizes. Captures and CPU/allocation samples
+are written under `artifacts/tests/banana-edit/native`.
+
+## Independent viewport scaling
+
+`App.Tests --independent-scale-check` checks the locked zoom behavior, independent
+inline X/Y layout and limits, the 100% object-size and hit-region cap, smaller
+minimum width, horizontal pan bounds, persisted preferences,
+fruit dragging and undo, and experimental upper-timeline limits.
+`FruitsAtelier.App.exe --render-check --canvas-scale-render-check` captures the
+lock, X/Y controls, 200% scale, horizontal pan and dense 1/48 timeline in English
+and Chinese at two sizes and three DPI values under
+`artifacts/tests/canvas-scale-native`.

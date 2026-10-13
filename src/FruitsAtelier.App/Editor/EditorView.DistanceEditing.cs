@@ -254,7 +254,7 @@ public sealed partial class EditorView
         if (SelectedDistanceObject() is not { Kind: CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet } tick
             || tick.IsStandalone && !Document.Tracks.Any(track => track.Id == tick.SourceId && track.StreamSnapDivisor is not null)) return;
         var p = Screen(new(tick.TimeMs, tick.X));
-        float radius = Math.Max(6, ObjectRadius(tick.Kind) * Playfield.Width / 512);
+        float radius = Math.Max(6, ObjectRadius(tick.Kind) * CanvasObjectWidth / 512);
         c.Circle(p.X, p.Y, radius + 3, Accent, false, 2);
         c.Circle(p.X, p.Y, radius + 7, Foreground, false, 2.5f);
     }

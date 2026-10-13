@@ -47,7 +47,7 @@ public sealed partial class EditorView
 
     private void SelectObjects(IEnumerable<Guid> ids, Guid primary = default)
     {
-        soundEdge = null; distanceObject = null; clickedCoordinate = null;
+        soundEdge = null; distanceObject = null; clickedCoordinate = null; timelineFruit = null;
         var selected = ids.Distinct().ToArray();
         if (temporarySnapSource != Guid.Empty && (selected.Length != 1 || selected[0] != temporarySnapSource)) RestoreTemporarySnap();
         objectSelection.Clear(); objectSelection.UnionWith(selected);
@@ -62,7 +62,7 @@ public sealed partial class EditorView
     {
         if (draftTrack == Guid.Empty) tool = Tool.Select;
         RestoreTemporarySnap();
-        soundEdge = null; distanceObject = null; clickedCoordinate = null;
+        soundEdge = null; distanceObject = null; clickedCoordinate = null; timelineFruit = null;
         var validIds = LegacyMode ? SliderControlEditing.Vertices(track).Select(v => v.Id).ToHashSet() : track.Nodes.Select(n => n.Id).ToHashSet();
         var selected = ids.Where(validIds.Contains).Distinct().ToArray();
         objectSelection.Clear(); anchorSelection.Clear(); anchorSelection.UnionWith(selected);
@@ -95,6 +95,7 @@ public sealed partial class EditorView
 
     private void BeginBox(float x, float y, bool additive, bool anchors)
     {
+        timelineFruit = null;
         boxTimeline = false;
         selectionBeforeBox = new(objectSelection.ToArray(), anchorSelection.ToArray(), selection, selectedTrack, selectedPart);
         boxAdds = additive; boxAnchors = anchors;
@@ -162,7 +163,7 @@ public sealed partial class EditorView
         {
             var ids = boxAdds ? selectionBeforeBox.Objects.ToHashSet() : [];
             EnsureConversion();
-            double padding = CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512 / pixelsPerMs;
+            double padding = CatchSize.FruitDiameter(Document.CircleSize) * CanvasObjectWidth / 512 / pixelsPerMs;
             double start = viewStart + (plot.Bottom - selectionBox.Bottom) / pixelsPerMs - padding;
             double end = viewStart + (plot.Bottom - selectionBox.Y) / pixelsPerMs + padding;
             foreach (var item in ObjectsInTimeRange(start, end))

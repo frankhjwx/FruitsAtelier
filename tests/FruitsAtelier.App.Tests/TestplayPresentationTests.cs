@@ -93,7 +93,7 @@ internal static class TestplayPresentationTests
                 ui.View.RequestAuditionHitsound = sound => sounds.Add(sound.Name ?? "");
                 ui.View.RequestTestplayMenuLoop = sound => loops.Add(sound is not null);
                 Check(ui.View.LibrarySettings.BackgroundDim == 90, "Default dim is 90%");
-                Check(!ui.Canvas.Images.Any(i => i.Path == Path.Combine(folder, "background,photo.jpg")), "Editing canvas has an opaque backing");
+                Check(ui.Canvas.Images.Any(i => i.Path == Path.Combine(folder, "background,photo.jpg")), "Editing canvas resolves the quoted background path");
                 ui.View.StartTestplay(); ui.Paint();
                 Check(ui.Canvas.Images.Any(i => i.Path == Path.Combine(folder, "background,photo.jpg")), "Testplay resolves the quoted background path");
                 Check(ui.View.TestplaySkipVisible, "Long intro offers Skip");

@@ -39,7 +39,7 @@ public sealed partial class EditorView
     public void StartTestplay()
     {
         if (IsTestplaying || !HasEditorProject || LibraryVisible || ExportVisible || ErrorVisible ||
-            DiscardConfirmationVisible || SliderDialogVisible || TimeJumpVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
+            DiscardConfirmationVisible || SliderDialogVisible || TimeJumpVisible || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible || IsEditingText ||
             drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty || AudioLoading || AimodVisible) return;
         EnsureConversion();
         if (deferredConversion)
@@ -100,6 +100,7 @@ public sealed partial class EditorView
         foreach (var sound in sounds.Values.SelectMany(s => s).Distinct()) RequestPrepareHitsound?.Invoke(sound);
         var playSound = RequestHitsound;
         var scheduleSound = OperatingSystem.IsWindows() && AudioReady ? RequestScheduleHitsound : null;
+        double? lastBananaTime = null;
         double now = TestplayRealtime;
         double clockStart = audioAlreadyPlaying ? Math.Min(AudioDurationMs,
             transportSamplePosition + Math.Max(0, now - transportSampleAt) * PlaybackSpeed
@@ -110,6 +111,7 @@ public sealed partial class EditorView
             LibrarySettings.TestplayRightKey, LibrarySettings.TestplayDashKey, timeProvider, PreviewCircleSize, previewComboEnds,
             item =>
             {
+                if (!ShouldPlayCatchHitsound(item, ref lastBananaTime)) return;
                 foreach (var sound in sounds[(item.SourceId, item.EventIndex)])
                 {
                     if (scheduleSound is not null) scheduleSound(sound, item.TimeMs);
@@ -293,7 +295,7 @@ public sealed partial class EditorView
             float opacity = (float)Math.Clamp(Math.Min(age / 180, (1300 - age) / 300), 0, 1);
             if (opacity > 0)
             {
-                var bar = new Rect(stage.X, height / 2f - 30, stage.Width, 60);
+                var bar = new Rect(0, height / 2f - 30, width, 60);
                 c.Fill(bar, 0, opacity: .72f * opacity);
                 c.TextOpacity(notice, width / 2f - c.MeasureText(notice, 20) / 2, bar.Y + 18,
                     20, 0xE6F2FF, stage.Width, true, opacity);

@@ -10,10 +10,11 @@ internal sealed partial class MacWindow
         var work = Screens.ScreenFromWindow(this)?.WorkingArea;
         double scale = RenderScaling;
         double availableWidth = work?.Width ?? 1920, availableHeight = work?.Height ?? 1080;
-        var size = setup ? EditorView.FirstRunWindowSize(availableWidth, availableHeight, scale)
+        var size = setup && View.AcknowledgementsVisible ? EditorView.AcknowledgementsWindowSize(availableWidth, availableHeight, scale)
+            : setup ? EditorView.FirstRunWindowSize(availableWidth, availableHeight, scale)
             : (Width: Math.Min(1440, availableWidth / scale - 32), Height: Math.Min(900, availableHeight / scale - 32));
         MinWidth = setup ? Math.Min(640, size.Width) : 980;
-        MinHeight = setup ? Math.Min(400, size.Height) : 620;
+        MinHeight = setup ? Math.Min(View.AcknowledgementsVisible ? 440 : 400, size.Height) : 620;
         Width = size.Width; Height = size.Height;
         if (work is { } area) Position = new Avalonia.PixelPoint(area.X + (area.Width - (int)(Width * scale)) / 2,
             area.Y + (area.Height - (int)(Height * scale)) / 2);

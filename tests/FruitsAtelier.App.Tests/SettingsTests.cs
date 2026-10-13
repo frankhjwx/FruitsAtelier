@@ -23,7 +23,7 @@ static class SettingsTests
                 ui.View.RequestSetupLink = links.Add;
                 ui.View.UpdateStatus = new(FruitsAtelier.App.Editor.UpdatePhase.Ready, "0.9.6", 100);
                 ui.View.OpenSettings(); ui.Paint();
-                foreach (string category in new[] { "settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "update.title" })
+                foreach (string category in new[] { "settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "settings.experimental", "update.title" })
                 {
                     var navigation = ui.Canvas.Texts.Single(t => t.Value == L.Get(category) && t.X < ui.View.SettingsBounds.X + 230);
                     ui.Click(navigation.X + 2, navigation.Y + 2);
@@ -35,8 +35,7 @@ static class SettingsTests
                     {
                         var heading = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.dropletDefaults"));
                         Check(heading.Size == 16 && heading.Bold, "section headings use the shared size");
-                        var reverseScroll = ui.Canvas.Texts.Single(t => t.Value == L.Get("settings.reverseCanvasScrollOff"));
-                        Check(heading.Y > reverseScroll.Y, "droplet defaults appear after the other General preferences");
+                        Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.reverseCanvasScrollOff")), "Canvas scrolling belongs to Mapping Canvas.");
                         foreach (string key in new[] { "settings.derandomizeOn", "settings.newProjectDerandomizeOn" })
                         {
                             var label = ui.Canvas.Texts.Single(t => t.Value == L.Get(key));
@@ -127,8 +126,8 @@ static class SettingsTests
                 map.Fruits.Add(new Fruit { TimeMs = time, X = x });
             ui.LoadDocument(map);
             var original = ui.View.Document.DeepClone();
-            ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.appearance"));
-            Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.indicatorColours")), "Appearance omitted indicator colours.");
+            ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.mappingCanvas"));
+            Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("settings.indicatorColours")), "Mapping Canvas omitted indicator colours.");
             Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("ui.language") || t.Value == L.Get("settings.romanisedLabel")),
                 "Language and metadata display belong to General.");
             string[] names = ["movement.stand", "movement.walk", "movement.dash", "movement.hyperdash"];
@@ -177,7 +176,7 @@ static class SettingsTests
             var saved = LibrarySettings.Load(path);
             Check(saved.StandIndicatorColour == 0x112233 && saved.WalkIndicatorColour == 0x445566
                 && saved.DashIndicatorColour == 0x778899 && saved.HyperDashIndicatorColour == 0xAABBCC,
-                "Appearance did not persist all four indicator colours.");
+                "Mapping Canvas did not persist all four indicator colours.");
             ui.Click(ui.View.SettingsBounds.Right - 32, ui.View.SettingsBounds.Y + 24);
             ui.ClickText(L.Get("movement.analysis"));
             foreach (uint colour in new uint[] { 0x112233, 0x445566, 0x778899, 0xAABBCC })
@@ -190,7 +189,7 @@ static class SettingsTests
                     $"Distance Snap reference did not use custom indicator colour {colour:X6}.");
             ui.Key(27);
             Check(original.ContentEquals(ui.View.Document), "Changing indicator colours edited the beatmap.");
-            ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.appearance"));
+            ui.View.OpenSettings(); ui.Paint(); ui.ClickText(L.Get("settings.mappingCanvas"));
             ui.ClickText(L.Get("settings.indicatorReset"));
             ui.View.ApplySettings(path);
             saved = LibrarySettings.Load(path);

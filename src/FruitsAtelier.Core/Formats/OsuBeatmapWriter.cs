@@ -18,7 +18,8 @@ public sealed class OsuWriteCache
     public OsuWriteResult? MultiplierBaseline(MapDocument document, bool compensation)
     {
         if (multiplierBaselineSnapshot is null || multiplierBaselineCompensation != compensation || multiplierBaselineLanguage != L.Language) return null;
-        return multiplierBaselineSnapshot.ContentEquals(document, ignoreMultiplierOverride: true) ? multiplierBaseline : null;
+        return multiplierBaselineSnapshot.SliderMultiplierOverride == document.SliderMultiplierOverride
+            && multiplierBaselineSnapshot.ContentEquals(document, ignoreMultiplierOverride: true) ? multiplierBaseline : null;
     }
     internal void RememberBaseline(MapDocument document, OsuWriteResult output, bool compensation)
     {
@@ -102,8 +103,10 @@ public static class OsuBeatmapWriter
     public static OsuWriteResult Serialize(MapDocument document, bool compensateTinyDroplets = true, OsuWriteCache? cache = null)
     {
         OsuBeatmapReader.Validate(document);
-        if (document.SliderMultiplierOverride is { } multiplier)
-            return SliderMultiplierEditing.Serialize(document, multiplier, compensateTinyDroplets, cache);
+        if (cache?.Multiplier(document, compensateTinyDroplets) is { } cached) return cached;
+        var authoring = document;
+        var bananaExpansion = BananaShowerExpansion.Create(document);
+        if (bananaExpansion is not null) document = bananaExpansion.Document;
         cache?.ParsedSliders.Begin();
         var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache?.Source);
         if (!converted.Success) throw new InvalidDataException(L.Get("core.writer.incompletePrefix") + string.Join(L.Get("core.diagnostics.separator"), converted.Diagnostics));
@@ -118,7 +121,7 @@ public static class OsuBeatmapWriter
         {
             var track = streamIds[item.SourceId];
             lines.Add((item.TimeMs, track.SourceOrder, track.Id,
-                SliderFruitStream.FruitLine(track, item.EventIndex, Coordinate(item.X), Time(item.TimeMs))));
+                SliderFruitStream.FruitLine(track, item.EventIndex, Coordinate(item.X), Time(item.TimeMs), timeMs: item.TimeMs)));
         }
         foreach (var fruit in document.Fruits)
         {
@@ -164,7 +167,15 @@ public static class OsuBeatmapWriter
             var track = tracks[slider.SourceId];
             if (slider.SpanCount != track.SpanCount) throw new InvalidDataException(L.Get("core.writer.spanMismatch"));
             var first = slider.Path[0];
-            string path = "L|" + string.Join('|', slider.Path.Skip(1).Select(p => Coordinate(p.X) + ":" + Coordinate(p.GeometryY)));
+            var pathBuilder = new StringBuilder("B");
+            for (int i = 1; i < slider.Path.Count; i++)
+            {
+                string point = Coordinate(slider.Path[i].X) + ":" + Coordinate(slider.Path[i].GeometryY);
+                pathBuilder.Append('|').Append(point);
+                // Repeated internal anchors delimit straight Bezier segments in stable.
+                if (i < slider.Path.Count - 1) pathBuilder.Append('|').Append(point);
+            }
+            string path = pathBuilder.ToString();
             string[] values = track.OriginalLine?.Split(',') ?? ["0", "192", "0", "2", "0", "L", "1", "0", "0|0", "0:0|0:0", "0:0:0:0:"];
             if (values.Length < 8 || (OsuBeatmapReader.Integer(values[3]) & (1 | 2 | 8 | 128)) != 2)
                 throw new InvalidDataException(L.Get("core.writer.originalObject"));
@@ -180,7 +191,17 @@ public static class OsuBeatmapWriter
             values[10] ??= "0:0:0:0:";
             lines.Add((slider.StartTimeMs, track.SourceOrder, slider.SourceId, string.Join(',', values)));
         }
-        var timing = cache is null ? BuildTiming(document, generated) : cache.Timing(document, generated, BuildTiming);
+        var timingDocument = document;
+        if (document.EffectiveSliderMultiplier != document.SliderMultiplier)
+        {
+            timingDocument = document.DeepClone();
+            if (timingDocument.TimingPoints.Count == 0)
+                timingDocument.TimingPoints.Add(new() { TimeMs = document.TimingOffsetMs, BeatLengthMs = document.BeatLengthMs });
+            double firstSlider = generated.Select(s => QuantizeTime(s.StartTimeMs))
+                .Concat(document.ImportedSliders.Select(s => s.TimeMs)).DefaultIfEmpty(double.PositiveInfinity).Min();
+            SliderMultiplierEditing.RebaseTiming(timingDocument, document.EffectiveSliderMultiplier, firstSlider);
+        }
+        var timing = cache is null ? BuildTiming(timingDocument, generated) : cache.Timing(timingDocument, generated, BuildTiming);
         if (document.HitsoundOverrides.Count > 0)
         {
             timing = timing.Select(p => p.DeepClone()).ToList();
@@ -201,7 +222,7 @@ public static class OsuBeatmapWriter
         if (OsuBeatmapReader.Setting(output, "Metadata", "Version") is null) Set(output, "Metadata", "Version", L.Get("core.names.defaultDifficulty"));
         SetNumber(output, "Difficulty", "ApproachRate", document.ApproachRate);
         SetNumber(output, "Difficulty", "CircleSize", document.CircleSize);
-        SetNumber(output, "Difficulty", "SliderMultiplier", document.SliderMultiplier);
+        SetNumber(output, "Difficulty", "SliderMultiplier", document.EffectiveSliderMultiplier);
         SetNumber(output, "Difficulty", "SliderTickRate", document.SliderTickRate);
         ReplaceData(output, "TimingPoints", timing.Select(TimingLine));
         // Time truncation is monotone; sorting before it retains current parent order when distinct times collapse.
@@ -298,14 +319,17 @@ public static class OsuBeatmapWriter
             : [];
         var result = new OsuWriteResult
         {
-            Text = serialized, ReadBack = readBack, Diagnostics = diagnostics, ObjectSources = orderedLines.Select(l => l.SourceId).ToArray(),
+            Text = serialized, ReadBack = readBack, Diagnostics = diagnostics, ObjectSources = orderedLines.Select(l => bananaExpansion?.Parent(l.SourceId) ?? l.SourceId).ToArray(),
             MaxTimeQuantizationMs = maxTime, MaxCoordinateQuantization = maxCoordinate,
             MaxConvertedTimeErrorMs = timeError, MaxConvertedXError = xError, ObjectSequenceMatches = matches,
-            PlayableObjects = playableObjects, PlayableHardRockObjects = playableHardRockObjects,
-            PlayableEndTimes = playableEndTimes
+            PlayableObjects = bananaExpansion?.Remap(playableObjects) ?? playableObjects,
+            PlayableHardRockObjects = bananaExpansion?.Remap(playableHardRockObjects) ?? playableHardRockObjects,
+            PlayableEndTimes = bananaExpansion is null ? playableEndTimes : playableEndTimes
+                .GroupBy(p => bananaExpansion.Parent(p.Key)).ToDictionary(g => g.Key, g => g.Max(p => p.Value))
         };
         if (matches) result.MultiplierAnalysis = new(result, reconverted);
-        cache?.RememberBaseline(document, result, compensateTinyDroplets);
+        cache?.RememberBaseline(authoring, result, compensateTinyDroplets);
+        if (document.SliderMultiplierOverride is not null) cache?.RememberMultiplier(authoring, result, compensateTinyDroplets);
         return result;
 
         string Coordinate(double value) { double rounded = Round(value); maxCoordinate = Math.Max(maxCoordinate, Math.Abs(rounded - value)); return Number(rounded); }
@@ -553,7 +577,7 @@ public static class OsuBeatmapWriter
 
     private static string SectionText(MapDocument document)
     {
-        var text = new StringBuilder("osu file format v14\r\n");
+        var text = new StringBuilder(document.LegacySliderTicks ? "osu file format v7\r\n" : "osu file format v14\r\n");
         var standard = new Queue<OsuSection>(document.OriginalSections.Where(s => Array.IndexOf(sectionOrder, s.Name) >= 0)
             .OrderBy(s => Array.IndexOf(sectionOrder, s.Name)));
         foreach (var original in document.OriginalSections)

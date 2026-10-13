@@ -18,7 +18,8 @@ public static class TimingEditing
     public static TimingPoint Create(MapDocument map, double time, bool inherited)
     {
         var point = Current(map, time)?.DeepClone() ?? new TimingPoint();
-        var state = TimingMap.At(map, time);
+        // Timing points are stored in the source basis; the lookup applies the current base for playback.
+        var state = new TimingMap.Lookup(map, applyMultiplierOverride: false).At(time);
         point.TimeMs = Math.Truncate(time); point.Uninherited = !inherited;
         point.BeatLengthMs = inherited ? -100 / state.SliderVelocityMultiplier : state.BeatLengthMs;
         point.Meter = state.Meter; point.OriginalLine = null;
@@ -113,6 +114,7 @@ public static class TimingEditing
 
     private static void TransformTrack(CurveTrack track, double origin, double target, double scale)
     {
+        for (int i = 0; i < track.StreamNewComboOffsets.Count; i++) track.StreamNewComboOffsets[i] *= scale;
         foreach (var node in track.Nodes)
         {
             node.TimeMs = target + (node.TimeMs - origin) * scale;
@@ -139,7 +141,7 @@ public static class TimingEditing
             var state = TimingMap.At(map, slider.TimeMs);
             double oldEnd = ImportedSliderConverter.EndTimeMs(map, slider);
             double duration = Math.Max(state.BeatLengthMs / divisor, TimingMap.Snap(map, oldEnd, divisor) - slider.TimeMs);
-            slider.PixelLength = duration / slider.SpanCount * 100 * map.SliderMultiplier * state.SliderVelocityMultiplier / state.BeatLengthMs;
+            slider.PixelLength = duration / slider.SpanCount * 100 * map.EffectiveSliderMultiplier * state.SliderVelocityMultiplier / state.BeatLengthMs;
             UpdateSliderSource(slider, 7, slider.PixelLength);
         }
         foreach (var track in map.Tracks.Where(t => t.Nodes.Count >= 2))

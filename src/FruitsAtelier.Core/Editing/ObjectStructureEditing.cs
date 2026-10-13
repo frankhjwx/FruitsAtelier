@@ -7,6 +7,18 @@ public sealed record SliderMergeSelection(Guid[] Ids, bool AllowsLinear, string?
 
 public static class ObjectStructureEditing
 {
+    public static Guid[] BreakBananaShowers(MapDocument document, IEnumerable<Guid> selection)
+    {
+        var selected = selection.ToHashSet();
+        var timing = new TimingMap.Lookup(document);
+        var children = document.BananaShowers.Where(s => selected.Contains(s.Id) && s.Pattern is not null)
+            .ToDictionary(s => s.Id, s => BananaShowerPattern.Segments(s, timing));
+        var showers = document.BananaShowers.SelectMany(s => children.TryGetValue(s.Id, out var parts) ? parts : [s]).ToArray();
+        document.BananaShowers.Clear(); document.BananaShowers.AddRange(showers);
+        document.HitsoundOverrides.RemoveAll(h => children.ContainsKey(h.SourceId));
+        return children.Values.SelectMany(s => s).Select(s => s.Id).ToArray();
+    }
+
     public static SliderMergeSelection MergeSelection(MapDocument document, IEnumerable<Guid> selection)
     {
         var selected = selection.ToHashSet();
@@ -44,7 +56,7 @@ public static class ObjectStructureEditing
                 TimeMs = item.TimeMs, X = item.X, SourceOrder = track.SourceOrder,
                 OriginalLine = SliderFruitStream.FruitLine(track, item.EventIndex,
                     Math.Round(item.X, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture),
-                    Math.Round(item.TimeMs, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture), samples.GetValueOrDefault((track.Id,item.EventIndex)))
+                    Math.Round(item.TimeMs, MidpointRounding.AwayFromZero).ToString(CultureInfo.InvariantCulture), samples.GetValueOrDefault((track.Id,item.EventIndex)), item.TimeMs)
             }, parentOrder[track.Id]))).ToArray();
         }
         catch (CatchConversionException ex) { throw new InvalidOperationException(ex.Message, ex); }

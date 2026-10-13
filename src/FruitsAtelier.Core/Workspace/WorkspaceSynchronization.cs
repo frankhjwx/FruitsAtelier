@@ -884,12 +884,14 @@ public static class WorkspaceSynchronization
         if (document.TimingPoints.Count == 0)
             timing = [new TimingPoint { TimeMs = document.TimingOffsetMs, BeatLengthMs = document.BeatLengthMs }];
         fields["TimingPoints/"] = WorkspaceTimingSynchronization.Text(timing);
+        if (document.LegacySliderTicks) fields["Format/Version"] = "7";
         return fields;
     }
     private static void ApplyFields(MapDocument target, Dictionary<string, string?> fields, string path)
     {
-        var text = new StringBuilder("osu file format v14\n");
-        foreach (var group in fields.Where(p => p.Value is not null).GroupBy(p => p.Key.Split('/')[0]))
+        bool legacyTicks = fields.GetValueOrDefault("Format/Version") == "7";
+        var text = new StringBuilder(legacyTicks ? "osu file format v7\n" : "osu file format v14\n");
+        foreach (var group in fields.Where(p => p.Value is not null && p.Key != "Format/Version").GroupBy(p => p.Key.Split('/')[0]))
         {
             text.Append('[').Append(group.Key).Append("]\n");
             foreach (var pair in group) text.Append(pair.Key[(pair.Key.IndexOf('/') + 1)..] is { Length: > 0 } key ? key + ":" + pair.Value : pair.Value).Append('\n');
@@ -900,6 +902,7 @@ public static class WorkspaceSynchronization
         if (target.EffectiveSliderMultiplier != parsed.SliderMultiplier)
         { target.SliderMultiplierOverride = null; target.SliderMultiplier = parsed.SliderMultiplier; }
         target.SliderTickRate = parsed.SliderTickRate; target.DistanceSpacing = parsed.DistanceSpacing;
+        target.LegacySliderTicks = parsed.LegacySliderTicks;
         target.TimingPoints.Clear(); target.TimingPoints.AddRange(parsed.TimingPoints);
         target.BeatLengthMs = parsed.BeatLengthMs; target.TimingOffsetMs = parsed.TimingOffsetMs;
         target.AudioPath = parsed.AudioPath;

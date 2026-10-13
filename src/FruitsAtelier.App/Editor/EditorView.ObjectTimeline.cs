@@ -14,8 +14,19 @@ public sealed partial class EditorView
     private Guid timelineDraft;
     private const int TimelineStackLimit = 16;
     private (Guid Id, double Start, double End, int SourceOrder, bool IsBanana, int Spans, int StackIndex, float StackOffset)[] timelineSources = [];
+    private (Guid Id, double Start, double End, int SourceOrder, bool IsBanana, int Spans, int StackIndex, float StackOffset, int EventIndex)[] timelineMarkers = [];
+    private readonly List<(Guid Id, double Start, double End, int SourceOrder, bool IsBanana, int Spans, int StackIndex, float StackOffset, int EventIndex)> timelineVisibleMarkers = [];
+    private HashSet<Guid> timelinePatterns = [];
+    private Dictionary<(Guid Id, int EventIndex), ConvertedCatchObject> timelinePatternEvents = [];
+    private Dictionary<(Guid Id, int EventIndex), int> timelineEventNumbers = [];
+    private (Guid Id, int EventIndex)? timelineFruit;
+    private ConvertedCatchObject? SelectedTimelineFruit()
+    {
+        if (timelineFruit is not { } picked || objectSelection.Count != 1 || !objectSelection.Contains(picked.Id)) return null;
+        RefreshTimelineSources();
+        return timelinePatternEvents.GetValueOrDefault((picked.Id, picked.EventIndex));
+    }
     private double[] timelineStarts = [], timelineEnds = [], timelinePrefixEnd = [];
-    private Dictionary<Guid, int> timelineNumbers = [];
     private bool boxTimeline;
     private Guid tailId;
     private string? tailOriginalLine;
@@ -27,7 +38,7 @@ public sealed partial class EditorView
     private BreakPeriod[] breakPeriods = [];
     private bool IsTimelineTail((Guid Id, double Time, Rect Bounds) item, float x, float y)
         => item.Bounds.Contains(x, y) && Math.Abs(x - (item.Bounds.Right - 19)) <= 10
-        && (Document.Tracks.Any(t => t.Id == item.Id && t.Nodes.Count > 1)
+        && (Document.Tracks.Any(t => t.Id == item.Id && t.Nodes.Count > 1 && t.StreamSnapDivisor is null)
             || Document.ImportedSliders.Any(s => s.Id == item.Id)
             || Document.BananaShowers.Any(s => s.Id == item.Id));
     public bool TimelineResizeCursor => !TimeJumpVisible && !LibraryVisible && !ExportVisible && !SliderDialogVisible && !DiscardConfirmationVisible && !ErrorVisible
@@ -230,6 +241,8 @@ public sealed partial class EditorView
             {
                 // Only this draft's tail changes; preserve the committed parent order and combo numbers.
                 timelineSources[index].End = CurveMath.EndTimeMs(draft);
+                int marker = Array.FindIndex(timelineMarkers, item => item.Id == draftTrack);
+                if (marker >= 0) timelineMarkers[marker].End = timelineSources[index].End;
                 for (int i = 0; i < timelineSources.Length; i++)
                 {
                     timelineEnds[i] = timelineSources[i].End;
@@ -248,18 +261,28 @@ public sealed partial class EditorView
             .Concat(Document.BananaShowers.Select(s => (s.Id, Start: s.TimeMs, End: s.EndTimeMs, s.SourceOrder, IsBanana: true, Spans: 1)))
             .OrderBy(o => o.Start).ThenBy(o => o.SourceOrder)
             .Select(o => (o.Id, o.Start, o.End, o.SourceOrder, o.IsBanana, o.Spans, StackIndex: 0, StackOffset: 0f)).ToArray();
-        for (int first = 0; first < timelineSources.Length;)
+        timelinePatterns = Document.Tracks.Where(t => t.StreamSnapDivisor is not null).Select(t => t.Id).ToHashSet();
+        var patterns = timelineSources.Where(s => timelinePatterns.Contains(s.Id)).ToDictionary(s => s.Id);
+        timelinePatternEvents = conversion.Objects.Where(o => patterns.ContainsKey(o.SourceId)).ToDictionary(o => (o.SourceId, o.EventIndex));
+        var ordinaryMarkers = timelineSources.Where(s => !timelinePatterns.Contains(s.Id))
+            .Select(s => (s.Id, s.Start, s.End, s.SourceOrder, s.IsBanana, s.Spans, s.StackIndex, s.StackOffset, EventIndex: 0));
+        timelineMarkers = timelinePatterns.Count == 0 ? ordinaryMarkers.ToArray() : ordinaryMarkers
+            .Concat(timelinePatternEvents.Values.Select(o =>
+                (Id: o.SourceId, Start: o.TimeMs, End: o.TimeMs, patterns[o.SourceId].SourceOrder,
+                    IsBanana: false, Spans: 1, StackIndex: 0, StackOffset: 0f, o.EventIndex)))
+            .OrderBy(s => s.Start).ThenBy(s => s.SourceOrder).ThenBy(s => timelinePatterns.Contains(s.Id) ? patterns[s.Id].Start : s.Start).ToArray();
+        for (int first = 0; first < timelineMarkers.Length;)
         {
             int last = first + 1;
-            while (last < timelineSources.Length && timelineSources[last].Start == timelineSources[first].Start) last++;
+            while (last < timelineMarkers.Length && timelineMarkers[last].Start == timelineMarkers[first].Start) last++;
             int layers = Math.Min(TimelineStackLimit, last - first);
             // Fit the circles and selection rings inside the existing 64-DIP timeline.
             float step = layers > 1 ? Math.Min(3, 22f / (layers - 1)) : 0;
             float baseline = Math.Max(0, step * (layers - 1) - 6);
             for (int i = first; i < last; i++)
             {
-                timelineSources[i].StackIndex = i - first;
-                timelineSources[i].StackOffset = baseline - Math.Min(i - first, TimelineStackLimit - 1) * step;
+                timelineMarkers[i].StackIndex = i - first;
+                timelineMarkers[i].StackOffset = baseline - Math.Min(i - first, TimelineStackLimit - 1) * step;
             }
             first = last;
         }
@@ -269,7 +292,19 @@ public sealed partial class EditorView
         double latestEnd = double.NegativeInfinity;
         for (int i = 0; i < timelineSources.Length; i++)
             timelinePrefixEnd[i] = latestEnd = Math.Max(latestEnd, timelineSources[i].End);
-        timelineNumbers = ComboNumbers();
+        var heads = timelinePatterns.Count > 0 ? timelineMarkers.Where(s => s.EventIndex == 0).ToDictionary(s => s.Id) : null;
+        for (int i = 0; i < timelineSources.Length; i++)
+            if (heads is null)
+            {
+                timelineSources[i].StackIndex = timelineMarkers[i].StackIndex;
+                timelineSources[i].StackOffset = timelineMarkers[i].StackOffset;
+            }
+            else if (heads.TryGetValue(timelineSources[i].Id, out var head))
+            {
+                timelineSources[i].StackIndex = head.StackIndex;
+                timelineSources[i].StackOffset = head.StackOffset;
+            }
+        timelineEventNumbers = ComboEventNumbers();
         timelineConversion = conversion;
         timelineDraft = draftTrack;
     }
@@ -300,9 +335,9 @@ public sealed partial class EditorView
         float top = canvas.Y + 38;
         objectTimeline = new(leftPanel.Right + 42, top + 4, Math.Max(30, canvas.Right - leftPanel.Right - 54), 64);
         timelineObjects.Clear();
-        c.Fill(new(0, top, canvas.Right, 72), Background);
         Button(c, new(leftPanel.Right + 7, top + 5, 29, 28), L.Get("ui.timelineZoomIn"), () => ZoomObjectTimeline(1.25));
         Button(c, new(leftPanel.Right + 7, top + 37, 29, 28), L.Get("ui.timelineZoomOut"), () => ZoomObjectTimeline(.8));
+        objectTimelineScale = Math.Clamp(objectTimelineScale, .025, MaximumObjectTimelineScale);
         double start = ObjectTimelineStartMs;
         double end = start + objectTimeline.Width / objectTimelineScale;
         float X(double time) => objectTimeline.X + (float)((time - start) * objectTimelineScale);
@@ -328,17 +363,25 @@ public sealed partial class EditorView
         {
             if (!tick.IsBeat && renderedTiming.At(tick.TimeMs).BeatLengthMs / tick.Subdivision * objectTimelineScale < 5) continue;
             var style = GridStyle(tick);
-            c.Line(X(tick.TimeMs), objectTimeline.Bottom - style.Height, X(tick.TimeMs), objectTimeline.Bottom,
+            float height = tick.IsMeasure ? 30 : style.Height;
+            c.Line(X(tick.TimeMs), objectTimeline.Bottom - height, X(tick.TimeMs), objectTimeline.Bottom,
                 style.Color, style.Width);
         }
         var placement = TimelinePlacementPreview();
-        var visibleItems = timelineSources.Where(item => item.Id != placement?.Id && item.StackIndex < TimelineStackLimit && item.End >= start - 20 / objectTimelineScale
-            && item.Start <= end + 20 / objectTimelineScale)
-            .OrderByDescending(item => item.Start).ThenByDescending(item => item.StackIndex).ToArray();
+        double visibleStartMs = start - 20 / objectTimelineScale, visibleEndMs = end + 20 / objectTimelineScale;
+        var visibleItems = timelineVisibleMarkers;
+        visibleItems.Clear();
+        // Cached chronological order also defines painting and hit order; reuse the visible buffer each frame.
+        for (int i = timelineMarkers.Length - 1; i >= 0; i--)
+        {
+            var item = timelineMarkers[i];
+            if (item.Id != placement?.Id && item.StackIndex < TimelineStackLimit && item.End >= visibleStartMs && item.Start <= visibleEndMs)
+                visibleItems.Add(item);
+        }
         foreach (var item in visibleItems)
             timelineObjects.Add((item.Id, item.Start, TimelineObjectBounds(item.Start, item.End, item.StackOffset)));
         // Each object's body, circles and number share its chronological layer and hit order.
-        for (int i = 0; i < visibleItems.Length; i++) { DrawBody(i); DrawMarkers(i); }
+        for (int i = 0; i < visibleItems.Count; i++) { DrawBody(i); DrawMarkers(i); }
         if (placement is { } ghost && ghost.End >= start - 20 / objectTimelineScale && ghost.Start <= end + 20 / objectTimelineScale)
         {
             var bounds = TimelineObjectBounds(ghost.Start, ghost.End, 0);
@@ -355,9 +398,18 @@ public sealed partial class EditorView
             var item = visibleItems[index];
             if (item.End <= item.Start) return;
             bool selected = IsObjectSelected(item.Id);
-            uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true);
+            uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true, eventIndex: item.EventIndex);
             var bounds = timelineObjects[index].Bounds;
-            c.Fill(bounds, color, 19, .7f);
+            if (item.IsBanana && bananaSegments.TryGetValue(item.Id, out var segments))
+            {
+                foreach (var segment in segments)
+                {
+                    float from = X(segment.TimeMs), to = X(segment.EndTimeMs);
+                    if (to < objectTimeline.X || from > objectTimeline.Right) continue;
+                    c.Fill(new(from, bounds.Y + 3, Math.Max(1, to - from), bounds.Height - 6), color, 2, .7f);
+                }
+            }
+            else c.Fill(bounds, color, 19, .7f);
             if (item.IsBanana)
             {
                 c.Stroke(bounds, 0xFFFFFF, 1.5f, 19);
@@ -369,7 +421,7 @@ public sealed partial class EditorView
         {
             var item = visibleItems[index];
             bool selected = IsObjectSelected(item.Id);
-            uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true);
+            uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true, eventIndex: item.EventIndex);
             float left = X(item.Start), right = X(item.End), cy = timelineObjects[index].Bounds.Y + 19;
             void Ring(float ringX, int? number = null, int? edge = null)
             {
@@ -380,6 +432,7 @@ public sealed partial class EditorView
                     c.Circle(ringX, cy, 19, 0xFFA600, false, 3);
                     c.Circle(ringX, cy, 21, 0x2866C6, false, 2);
                 }
+                if (timelineFruit == (item.Id, item.EventIndex)) c.Circle(ringX, cy, 21, Gold, false, 2);
             }
             if (right > left + 1) Ring(right, edge: item.Spans);
             if (item.Spans > 1 && item.End > item.Start)
@@ -399,7 +452,7 @@ public sealed partial class EditorView
                     }
                 }
             }
-            Ring(left, timelineNumbers[item.Id], edge: 0);
+            Ring(left, timelineEventNumbers[(item.Id, item.EventIndex)], edge: timelinePatterns.Contains(item.Id) ? null : 0);
         }
         foreach (var period in breaks)
         {
@@ -432,7 +485,7 @@ public sealed partial class EditorView
 
     private void ZoomObjectTimeline(double factor)
     {
-        objectTimelineScale = Math.Clamp(objectTimelineScale * factor, .025, 1.5);
+        objectTimelineScale = Math.Clamp(objectTimelineScale * factor, .025, MaximumObjectTimelineScale);
         LibrarySettings.ObjectTimelineScale = objectTimelineScale;
         RequestViewPreference?.Invoke();
     }
@@ -447,8 +500,10 @@ public sealed partial class EditorView
             tool = Tool.Select;
             PickObject(item.Id, toggle);
             soundEdge = null; distanceObject = null; clickedCoordinate = null;
+            timelineFruit = timelinePatterns.Contains(item.Id) && objectSelection.Count == 1 && objectSelection.Contains(item.Id)
+                ? (item.Id, timelineMarkers.First(m => m.Id == item.Id && m.Start == item.Time).EventIndex) : null;
             var markerSource = timelineSources.First(o => o.Id == item.Id);
-            if (!markerSource.IsBanana && markerSource.End > markerSource.Start && markerSource.Spans > 0
+            if (!markerSource.IsBanana && !timelinePatterns.Contains(item.Id) && markerSource.End > markerSource.Start && markerSource.Spans > 0
                 && objectSelection.Count == 1 && objectSelection.Contains(item.Id) && Math.Abs(y-(item.Bounds.Y+19)) <= 19)
             {
                 double spanDuration = (markerSource.End-markerSource.Start)/markerSource.Spans;
