@@ -341,7 +341,7 @@
   "core.reader.endRange": "De eindtijd van de Beatmap ligt buiten het bewerkbare bereik.",
   "core.reader.fileLimit": "Het Beatmap-bestand overschrijdt de limiet van 32 MiB.",
   "core.reader.finiteNumber": "Numerieke waarden moeten eindig zijn.",
-  "core.reader.formatVersion": "Ondersteunde importformaten zijn osu-bestandsformaten v12, v13, v14 en stabiel-compatibel v128. Exporteren gebruikt v14.",
+  "core.reader.formatVersion": "Ondersteunde importformaten zijn osu-bestandsformaten v8–v14 en stabiel-compatibel v128. Exporteren gebruikt v14.",
   "core.reader.lazerCoordinates": "Deze lazer Beatmap gebruikt fractionele coördinaten, die niet worden ondersteund voor import. Exporteer het eerst in een osu!stable-compatibel formaat.",
   "core.reader.header": "De Beatmap heeft geen header voor het osu-bestandsformaat.",
   "core.reader.importedParameters": "Verouderde Slider-parameters zijn ongeldig.",

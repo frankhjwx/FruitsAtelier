@@ -341,7 +341,7 @@
   "core.reader.endRange": "La hora de finalización de Mapa está fuera del rango editable.",
   "core.reader.fileLimit": "El archivo Mapa supera el límite de 32 MiB.",
   "core.reader.finiteNumber": "Los valores numéricos deben ser finitos.",
-  "core.reader.formatVersion": "Los formatos de importación admitidos son el formato de archivo osu v12, v13, v14 y el v128 compatible con stable. La exportación utiliza v14.",
+  "core.reader.formatVersion": "Los formatos de importación admitidos son el formato de archivo osu v8–v14 y el v128 compatible con stable. La exportación utiliza v14.",
   "core.reader.lazerCoordinates": "Este láser Mapa utiliza coordenadas fraccionarias, que no se admiten para la importación. Exportarlo primero en formato compatible con osu!stable.",
   "core.reader.header": "El Mapa no tiene encabezado de formato de archivo osu.",
   "core.reader.importedParameters": "Los parámetros heredados de Slider no son válidos.",

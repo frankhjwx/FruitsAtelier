@@ -341,7 +341,7 @@
   "core.reader.endRange": "비트맵 종료 시간이 편집 가능한 범위를 벗어났습니다.",
   "core.reader.fileLimit": "비트맵 파일이 32MiB 제한을 초과합니다.",
   "core.reader.finiteNumber": "숫자 값은 유한해야 합니다.",
-  "core.reader.formatVersion": "지원되는 가져오기 형식은 osu 파일 형식 v12, v13, v14 및 안정 호환 v128입니다. 내보내기는 v14를 사용합니다.",
+  "core.reader.formatVersion": "지원되는 가져오기 형식은 osu 파일 형식 v8–v14 및 안정 호환 v128입니다. 내보내기는 v14를 사용합니다.",
   "core.reader.lazerCoordinates": "이 레이저 비트맵는 가져오기가 지원되지 않는 분수 좌표를 사용합니다. 먼저 osu!stable 호환 형식으로 내보내세요.",
   "core.reader.header": "비트맵에는 osu 파일 형식 헤더가 없습니다.",
   "core.reader.importedParameters": "레거시 슬라이더 매개변수가 유효하지 않습니다.",

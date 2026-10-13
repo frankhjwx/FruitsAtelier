@@ -4,7 +4,7 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 
 ## Input and output
 
-- Accept v12, v13, v14 and stable-compatible lazer v128 / Mode=2; export v14. The reader rejects other format versions and unsupported object types.
+- Accept v8 through v14 and stable-compatible lazer v128 / Mode=2; export v14. The reader rejects other format versions and unsupported object types.
 - Preserve General, Editor, Metadata, Difficulty, Events, TimingPoints, Colours, HitObjects, and audio/sample references.
 - Import/export `[Editor] DistanceSpacing` as the per-difficulty spacing multiplier.
 - Synchronization accepts osu!'s `Editor/TimelineZoom` without a conflict; it is
@@ -43,7 +43,7 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 
 Lazer v128 imports use the same supported object and timing fields. They require integer-valued coordinates after float parsing and ordinary L/B/C/P slider paths. Fractional coordinates, explicit mixed path segments and B-spline degree syntax are rejected; these need a stable-compatible export before import. This prevents interpreting lazer's fractional coordinates with stable's integer truncation. Project saves preserve accepted raw fields, and export still writes v14. See the pinned [ConvertHitObjectParser](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Rulesets/Objects/Legacy/ConvertHitObjectParser.cs) for the coordinate and path syntax boundaries.
 
-Versions 12–14 share the Catch timing, slider tick and legacy coordinate rules used here. Import preserves raw sections and object/sample fields; saving an editor project retains that content, and `.osu` export emits a v14 header. Older timing-offset and tick-generation rules (before v5 and v8 respectively) are outside the supported input range. These boundaries were checked against the pinned [LegacyBeatmapDecoder](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs) and [CatchBeatmapConverter](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapConverter.cs).
+Versions 8–14 share the Catch timing, slider tick and legacy coordinate rules used here. Import preserves raw sections and object/sample fields; saving an editor project retains that content, and `.osu` export emits a v14 header. Older timing-offset and tick-generation rules (before v5 and v8 respectively) are outside the supported input range. These boundaries were checked against the pinned [LegacyBeatmapDecoder](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs) and [CatchBeatmapConverter](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapConverter.cs).
 
 | Item | Representation |
 | --- | --- |

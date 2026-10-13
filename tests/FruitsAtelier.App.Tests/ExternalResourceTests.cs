@@ -52,10 +52,11 @@ internal static class ExternalResourceTests
             {
                 zip.CreateEntry("set/empty/");
                 Add(zip, "set/Rain.osu", Map("Archive song", "Rain").Replace("format v14", "format v128"));
-                Add(zip, "set/Cup.osu", Map("Archive song", "Cup").Replace("format v14", "format v128"));
+                Add(zip, "set/Cup.osu", Map("Archive song", "Cup").Replace("format v14", "format v8"));
                 foreach (string name in new[] { "audio.ogg", "background.jpg", "video.mp4", "scene.osb", "notes.txt", "nested/effect.wav" }) Add(zip, "set/" + name, name);
             }
             var imported = LibraryOperations.ImportPath(archive, settings);
+            Check(imported.Project.Difficulties.Count == 2, "mixed v8/v128 archive imports every Catch difficulty");
             string resources = Path.GetDirectoryName(imported.Project.Difficulties[0].Document.SourcePath!)!;
             Check(WorkspaceProject.Within(Path.Combine(settings.Workspace, "Resources"), resources), "archive resources persist inside workspace Resources");
             Check(Directory.Exists(Path.Combine(resources, "empty")), "empty archive directories retained");

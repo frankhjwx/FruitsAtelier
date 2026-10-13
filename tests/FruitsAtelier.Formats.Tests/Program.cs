@@ -31,7 +31,8 @@ var tests = new (string Name, Action Run)[]
     ("Cached export matches full serialization across edits, order, RNG, timing and streams", WriteCacheTests.MatchesUncached),
     ("Equal-time/order fruits, streams and random parents retain converter order through export and undo", WriteCacheTests.StableParentOrder),
     ("Sliders beside fractional imported fruits preserve SV export, identities, project persistence and undo", WriteCacheTests.FractionalFruitBesideSlider),
-    ("v12, v13 and compatible v128 imports preserve gameplay, optional fields and v14 export", CompatibleVersions),
+    ("v8 through v14 and compatible v128 imports preserve gameplay, optional fields and v14 export", CompatibleVersions),
+    ("v8 through v14 preserve inherited SV tick spacing and legacy coordinates", LegacyVersionTiming),
     ("v128 rejects fractional coordinates and unsupported slider syntax", LazerExtensions),
     ("Workspace isolation, recovery, indexing and explicit export", WorkspaceTests.Run),
     ("Multi-difficulty projects preserve content, history and compatibility", MultiProjectTests.Run),
@@ -306,7 +307,7 @@ static void OriginalRoundTrip()
 
 static void CompatibleVersions()
 {
-    foreach (int version in new[] { 12, 13, 128 })
+    foreach (int version in new[] { 8, 9, 10, 11, 12, 13, 14, 128 })
     foreach (bool optional in new[] { false, true })
     {
         string text = Fixture();
@@ -326,6 +327,34 @@ static void CompatibleVersions()
         Preserved(document, result.ReadBack);
         Check(result.ObjectSequenceMatches, "Old-format export changed object sequence");
         Near(0, result.MaxConvertedXError); Near(0, result.MaxConvertedTimeErrorMs);
+    }
+}
+
+static void LegacyVersionTiming()
+{
+    foreach (int version in Enumerable.Range(8, 7))
+    {
+        string text = $"osu file format v{version}\n[General]\nMode:2\n[Difficulty]\nOverallDifficulty:7\nSliderMultiplier:1.4\nSliderTickRate:2\n"
+            + "[TimingPoints]\n0,500\n0,-50,4,1,0,100,0,0\n[HitObjects]\n100.9,192.9,1000,2,0,L|380.9:192.9,2,280\n";
+        var document = OsuBeatmapReader.Read(text);
+        Near(7, document.ApproachRate);
+        var slider = document.ImportedSliders.Single();
+        Near(100, slider.X); Near(192, slider.Y);
+        Near(380, slider.ControlPoints[1].X); Near(192, slider.ControlPoints[1].GeometryY);
+        var converted = CatchStreamConverter.Convert(document);
+        Check(converted.Success, "Legacy slider conversion failed");
+        Check(converted.Objects.Where(o => o.Kind == CatchObjectKind.Fruit).Select(o => (o.TimeMs, o.X))
+            .SequenceEqual(new[] { (1000d, 100d), (1500d, 380d), (2000d, 100d) }), "Legacy slider timing or repeats changed");
+        Check(converted.Objects.Where(o => o.Kind == CatchObjectKind.Droplet).Select(o => (o.TimeMs, o.X))
+            .SequenceEqual(new[] { (1250d, 240d), (1750d, 240d) }), "v8+ ticks must include inherited SV in their spacing");
+        var restored = ProjectSerializer.Read(ProjectSerializer.Serialize(document));
+        var result = OsuBeatmapWriter.Serialize(restored);
+        Preserved(document, result.ReadBack);
+        var reference = OsuBeatmapWriter.Serialize(OsuBeatmapReader.Read(text.Replace($"format v{version}\n", "format v14\n")));
+        Check(result.ObjectSequenceMatches
+            && result.PlayableObjects.Select(o => o with { SourceId = Guid.Empty }).SequenceEqual(reference.PlayableObjects.Select(o => o with { SourceId = Guid.Empty }))
+            && result.PlayableHardRockObjects.Select(o => o with { SourceId = Guid.Empty }).SequenceEqual(reference.PlayableHardRockObjects.Select(o => o with { SourceId = Guid.Empty })),
+            "Legacy version changed NM/HR playback");
     }
 }
 
@@ -627,7 +656,7 @@ static void InvalidProjects()
 static void InvalidBeatmaps()
 {
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("Mode: 2", "Mode: 0")), "non-Catch input");
-    foreach (string version in new[] { "v11", "v15", "v127", "v129", "v12x", "v128x" })
+    foreach (string version in new[] { "v7", "v15", "v127", "v129", "v8x", "v08", "v12x", "v128x" })
         Throws(() => OsuBeatmapReader.Read(Fixture().Replace("format v14", "format " + version)), "unsupported version");
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("250,21,8", "250,128,8")), "unknown object");
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("-100,500,4", "-100,NaN,4")), "NaN red timing");
