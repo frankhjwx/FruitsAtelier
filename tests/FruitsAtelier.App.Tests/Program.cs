@@ -4,6 +4,11 @@ using FruitsAtelier.Core;
 
 
 string startupLanguage = FruitsAtelier.Localization.Strings.Language;
+if (args.Contains("--acknowledgements-check"))
+{
+    try { AcknowledgementsTests.Run(); FirstRunSetupTests.Run(); Console.WriteLine("PASS Acknowledgements and first-run setup"); return 0; }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
 if (args.Contains("--legacy-v7-check"))
 {
     SynchronizationUiTests.LegacyFormat(); ExternalResourceTests.Run();
@@ -156,6 +161,7 @@ var tests = new (string Name, Action Run)[]
     ("Release audio diagnostic settings persist, scroll and export without blocking", AudioDiagnosticSettingsTests.Run),
     ("Settings audio and skin controls share preferences with original entry points", SettingsPreferencesTests.Run),
     ("First-run setup persists preferences, isolates auditions and supports debug replay", FirstRunSetupTests.Run),
+    ("Acknowledgements require explicit persisted consent before startup", AcknowledgementsTests.Run),
     ("Shortcut routing isolates Timing object nudges and preserves navigation", ShortcutRoutingTests.TimingPage),
     ("Shortcut routing rejects unsupported Compose and Timing modifiers", ShortcutRoutingTests.Modifiers),
     ("Arrow seeking uses whole beats during playback and subdivisions while paused", ShortcutRoutingTests.PlaybackSeeking),

@@ -613,7 +613,7 @@ internal static class RenderCheck
                 view.OpenSettings();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 var settings = view.SettingsBounds;
-                foreach (int category in new[] { 0, 1, 2, 3, 4, 5 })
+                foreach (int category in new[] { 0, 1, 2, 3, 4, 5, 6 })
                 {
                     float sx = settings.X + 40, sy = settings.Y + 96 + category * 48;
                     view.PointerDown(sx, sy, 0, false, false); view.PointerUp(sx, sy, 0);

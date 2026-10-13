@@ -29,6 +29,13 @@ public sealed partial class EditorView
 
     public void Render(ICanvas c, float width, float height)
     {
+        if (AcknowledgementsVisible)
+        {
+            this.width = width; this.height = height;
+            hits.Clear(); fields.Clear();
+            DrawAcknowledgements(c);
+            return;
+        }
         historyCompressionPaused = !LibraryVisible || SyncInteractionActive || AudioPlaying || SynchronizationBusy;
         PumpWorkspaceSave();
         PumpSynchronizationWait();

@@ -217,6 +217,7 @@ public sealed partial class EditorView
 
     public bool PrepareFileOperation()
     {
+        if (AcknowledgementsVisible) return false;
         if (previousSaveRestore is not null) return false;
         if (LibraryOpening || AudioProjectCreating) return false;
         if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }

@@ -1,5 +1,38 @@
 # Editing Controls
 
+## Acknowledgements
+
+Normal Windows and macOS launches require confirmation of the current
+acknowledgements before starting the library or opening a supplied beatmap.
+The English-only notice fills its own compact, borderless startup window,
+bounded to 820 × 740 logical pixels and 85% of the monitor work area after DPI
+scaling. Drag its header to move it. It has a scrollable text box, a read-and-agree checkbox,
+and Cancel / Confirm buttons. Confirm is disabled until checked; cancelling,
+Escape or closing the window exits. Mouse wheel, scrollbar dragging, arrow keys,
+Page Up/Down and Home/End scroll the text; Tab navigates the text box, checkbox
+and enabled buttons, with Space or Enter activating the focused checkbox.
+
+The notice revision is saved atomically in `FruitsAtelier/acknowledgements.json`
+under the system application-data directory. It is independent of first-time
+setup and application versions. Missing, unreadable, damaged or different-revision
+records require confirmation; a failed save keeps the modal open. Increment
+`AcknowledgementsPreference.CurrentVersion` when revising the notice to require
+all users to confirm the updated text. Existing users retain their setup preferences.
+New users proceed from confirmation to first-time setup, then enter the main
+editor; existing users enter the main editor directly after confirmation.
+On Windows, startup transitions change window bounds and decorations together
+and synchronously present the final-size content before returning to input.
+See [the user manual](USER_MANUAL.md#acknowledgements-and-community-use) for the
+notice's scope and community-use requirement.
+
+Run [Run-Acknowledgements-Debug.cmd](../Run-Acknowledgements-Debug.cmd) on Windows
+to build and open the notice on every launch. Each launch builds to a separate
+directory under `artifacts/acknowledgements-debug`, allowing an earlier preview
+to remain open. The `--acknowledgements-preview`
+option uses a new isolated confirmation file under `artifacts/tests/acknowledgements-preview`
+each time and preserves the normal confirmation record. On macOS, use
+`./Run-Editor-Mac.command --acknowledgements-preview`.
+
 ## First-time setup
 
 Startup opens a five-step setup guide when the saved setup version is missing or

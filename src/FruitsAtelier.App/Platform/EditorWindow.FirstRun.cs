@@ -22,23 +22,39 @@ internal sealed partial class EditorWindow
 
     private void FitSetupWindow() => FitWindow(setup: true);
     private void FitEditorWindow() => FitWindow(setup: false);
+    private bool startupWindowTransition;
+
+    private void TransitionStartupWindow(Action transition)
+    {
+        startupWindowTransition = true;
+        try
+        {
+            // Geometry changes can pump messages; present only after the final client size is ready.
+            using (new NativeModalScope(hwnd)) transition();
+            Native.RedrawWindow(hwnd, 0, 0, 0x0001 | 0x0020 | 0x0100 | 0x0400);
+        }
+        finally { startupWindowTransition = false; }
+    }
+
     // Hidden swap chains need not signal frame readiness, so decoration changes must preserve visibility.
     internal static uint FirstRunWindowStyle(uint currentStyle, bool setup)
         => (currentStyle & ~(Native.WindowStyle | 0x80000000u)) | (setup ? 0x80000000u : Native.WindowStyle);
     private void FitWindow(bool setup)
     {
         var work = CurrentWorkArea();
-        var size = setup ? EditorView.FirstRunWindowSize(work.Right - work.Left, work.Bottom - work.Top, dpi / 96d)
+        var size = setup && view.AcknowledgementsVisible ? EditorView.AcknowledgementsWindowSize(work.Right - work.Left, work.Bottom - work.Top, dpi / 96d)
+            : setup ? EditorView.FirstRunWindowSize(work.Right - work.Left, work.Bottom - work.Top, dpi / 96d)
             : (Width: 1440d, Height: 900d);
         var rect = new Native.Rectangle { Right = (int)(size.Width * dpi / 96), Bottom = (int)(size.Height * dpi / 96) };
         uint currentStyle = (uint)Native.GetWindowLongPtr(hwnd, -16);
         uint style = FirstRunWindowStyle(currentStyle, setup);
-        Native.SetWindowLongPtr(hwnd, -16, (nint)style);
+        if (currentStyle != style) Native.SetWindowLongPtr(hwnd, -16, (nint)style);
         Native.AdjustWindowRectExForDpi(ref rect, style, false, 0, (uint)dpi);
         int w = Math.Min(rect.Right - rect.Left, setup ? (int)((work.Right - work.Left) * .85) : work.Right - work.Left - 32);
         int h = Math.Min(rect.Bottom - rect.Top, setup ? (int)((work.Bottom - work.Top) * .85) : work.Bottom - work.Top - 32);
         Native.SetWindowPos(hwnd, 0, work.Left + (work.Right - work.Left - w) / 2,
-            work.Top + (work.Bottom - work.Top - h) / 2, w, h, 0x0004 | 0x0010 | 0x0020);
+            work.Top + (work.Bottom - work.Top - h) / 2, w, h,
+            0x0004 | 0x0010 | 0x0020 | (startupWindowTransition ? 0x0008u | 0x0100u : 0));
     }
 
     private AudioTransport? setupAudio;

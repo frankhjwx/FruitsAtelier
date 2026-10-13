@@ -49,6 +49,15 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --acknowledgements-check` verifies English-only consent, disabled
+confirmation, cancellation, scrolling, startup blocking, persistent notice
+revisions and failed saves, alongside first-time setup. On Windows,
+`FruitsAtelier.App.exe --render-check --acknowledgements-render-check` captures
+the unchecked, scrolled and checked dialog at three sizes and DPI settings under
+`artifacts/tests/acknowledgements-native` without changing personal consent.
+It also checks that Confirm presents the destination frame synchronously for
+both setup and editor paths, including low-latency and fullscreen preferences.
+
 `App.Tests --slider-speed-check` checks the Slider SV and maximum DS readout,
 unrestricted editing, repeated paths, tiny inclusion, draft cancellation and undo.
 `FruitsAtelier.App --render-check --slider-speed-render-check` checks selected and

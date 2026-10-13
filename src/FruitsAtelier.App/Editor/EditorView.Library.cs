@@ -48,7 +48,8 @@ public sealed partial class EditorView
     private DateTime searchAfter, nextLibraryScan = DateTime.MinValue, nextResourceCheck;
     private IReadOnlyList<string> resourceErrors = [];
 
-    public void InitializeLibrary(bool show, LibrarySettings? settings = null, bool forceFirstRunSetup = false)
+    public void InitializeLibrary(bool show, LibrarySettings? settings = null, bool forceFirstRunSetup = false,
+        bool requireAcknowledgements = false, string? acknowledgementsPath = null)
     {
         try { LibrarySettings = settings ?? LibrarySettings.Load(); }
         catch (Exception e) { libraryError = e.Message; }
@@ -61,7 +62,13 @@ public sealed partial class EditorView
         draftWorkspace = LibrarySettings.Workspace; draftOsuRoot = LibrarySettings.OsuRoot; draftDefaultSkin = LibrarySettings.DefaultSkin ?? "";
         LibraryVisible = show;
         librarySettingsOpen = false; updatesPage = false;
-        if (forceFirstRunSetup || show && settings is null && !LibrarySettings.FirstRunSetupCompleted)
+        if (requireAcknowledgements && BeginAcknowledgements(() => CompleteLibraryInitialization(settings, forceFirstRunSetup), acknowledgementsPath)) return;
+        CompleteLibraryInitialization(settings, forceFirstRunSetup);
+    }
+
+    private void CompleteLibraryInitialization(LibrarySettings? settings, bool forceFirstRunSetup)
+    {
+        if (forceFirstRunSetup || settings is null && !LibrarySettings.FirstRunSetupCompleted)
         {
             BeginFirstRunSetup();
             return;

@@ -61,8 +61,17 @@ internal sealed partial class EditorWindow : IDisposable
 
     public int Run(bool renderCheck = false, string? initialPath = null, string? profileMap = null, double profileStartMs = 70000, bool testplayCheck = false, bool firstRunSetup = false, AudioSettingsRestartState? resumeAudio = null, bool hitsoundCopierCheck = false, bool screenshotCheck = false, string? difficultySwitchPath = null)
     {
+        string? acknowledgementsPreviewPath = Environment.GetCommandLineArgs().Contains("--acknowledgements-preview")
+            ? Path.Combine(Artifacts, "tests", "acknowledgements-preview", Guid.NewGuid().ToString("N") + ".json") : null;
         view.InitializeLibrary(!renderCheck && profileMap is null, renderCheck || profileMap is not null
-            ? new FruitsAtelier.Core.LibrarySettings { Workspace = Path.Combine(Artifacts, "render-library") } : null, forceFirstRunSetup: firstRunSetup);
+            ? new FruitsAtelier.Core.LibrarySettings { Workspace = Path.Combine(Artifacts, "render-library") } : null,
+            forceFirstRunSetup: firstRunSetup, requireAcknowledgements: !renderCheck && profileMap is null,
+            acknowledgementsPath: acknowledgementsPreviewPath);
+        pendingStartupFiles = () =>
+        {
+            if (initialPath is not null) FileOperation(() => OpenPath(initialPath));
+            if (resumeAudio is not null) FileOperation(() => RestoreAudioSettings(resumeAudio));
+        };
         view.InitializeSkin();
         var instance = Native.GetModuleHandle(null);
         var className = "FruitsAtelier." + Environment.ProcessId;
@@ -79,14 +88,15 @@ internal sealed partial class EditorWindow : IDisposable
         if (Native.RegisterClassEx(ref windowClass) == 0) throw new Win32Exception();
         dpi = Native.GetDpiForSystem();
         Native.SystemParametersInfo(0x0030, 0, out var work, 0);
-        var desired = view.FirstRunSetupVisible
-            ? EditorView.FirstRunWindowSize(work.Right - work.Left, work.Bottom - work.Top, dpi / 96d)
+        var desired = view.AcknowledgementsVisible
+            ? EditorView.AcknowledgementsWindowSize(work.Right - work.Left, work.Bottom - work.Top, dpi / 96d)
+            : view.FirstRunSetupVisible ? EditorView.FirstRunWindowSize(work.Right - work.Left, work.Bottom - work.Top, dpi / 96d)
             : (Width: 1440d, Height: 900d);
         var rect = new Native.Rectangle { Right = (int)(desired.Width * dpi / 96), Bottom = (int)(desired.Height * dpi / 96) };
-        uint startupStyle = view.FirstRunSetupVisible ? 0x80000000u : Native.WindowStyle;
+        uint startupStyle = view.StartupDialogVisible ? 0x80000000u : Native.WindowStyle;
         Native.AdjustWindowRectExForDpi(ref rect, startupStyle, false, 0, (uint)dpi);
-        int width = Math.Min(rect.Right - rect.Left, view.FirstRunSetupVisible ? (int)((work.Right - work.Left) * .85) : work.Right - work.Left - 32);
-        int height = Math.Min(rect.Bottom - rect.Top, view.FirstRunSetupVisible ? (int)((work.Bottom - work.Top) * .85) : work.Bottom - work.Top - 32);
+        int width = Math.Min(rect.Right - rect.Left, view.StartupDialogVisible ? (int)((work.Right - work.Left) * .85) : work.Right - work.Left - 32);
+        int height = Math.Min(rect.Bottom - rect.Top, view.StartupDialogVisible ? (int)((work.Bottom - work.Top) * .85) : work.Bottom - work.Top - 32);
         hwnd = Native.CreateWindowEx(0, className, view.WindowTitle, startupStyle,
             work.Left + (work.Right - work.Left - width) / 2, work.Top + (work.Bottom - work.Top - height) / 2,
             width, height, 0, 0, instance, 0);
@@ -105,7 +115,7 @@ internal sealed partial class EditorWindow : IDisposable
             Native.DestroyWindow(hwnd);
             return 0;
         }
-        if (initialPath is not null) FileOperation(() => OpenPath(initialPath));
+        if (renderCheck && initialPath is not null) FileOperation(() => OpenPath(initialPath));
         if (hitsoundCopierCheck)
         {
             foreach(int testDpi in new[]{96,144,192})
@@ -119,6 +129,13 @@ internal sealed partial class EditorWindow : IDisposable
         }
         if (renderCheck)
         {
+            if (Environment.GetCommandLineArgs().Contains("--acknowledgements-render-check"))
+            {
+                CheckAcknowledgementsWindow();
+                Diagnostics.AcknowledgementsRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--library-opening-render-check"))
             {
                 Diagnostics.LibraryOpeningRenderCheck.Run(canvas);
@@ -165,7 +182,7 @@ internal sealed partial class EditorWindow : IDisposable
             return 0;
         }
         ConfigureUpdates();
-        if (resumeAudio is not null) FileOperation(() => RestoreAudioSettings(resumeAudio));
+        CompleteStartupFiles();
         SetFullscreen(view.LibrarySettings.Fullscreen);
         UpdateTitle();
         view.RequestRunTestplay = session => new TestplayInputThread(hwnd, session, () => audio.State);
@@ -232,6 +249,7 @@ internal sealed partial class EditorWindow : IDisposable
     }
     private void Close()
     {
+        if (view.AcknowledgementsVisible) { Native.DestroyWindow(hwnd); return; }
         view.CancelFirstRunSetup();
         ConfirmDiscard(() => { view.SaveLibraryMemory(); Native.DestroyWindow(hwnd); });
     }
@@ -294,10 +312,10 @@ internal sealed partial class EditorWindow : IDisposable
         float y = (short)(((long)lParam >> 16) & 0xFFFF) * 96f / dpi;
         switch (message)
         {
-            case 0x0084 when view.FirstRunSetupVisible: // WM_NCHITTEST
+            case 0x0084 when view.StartupDialogVisible: // WM_NCHITTEST
                 var setupPoint = new Native.Point { X = (short)((long)lParam & 0xFFFF), Y = (short)(((long)lParam >> 16) & 0xFFFF) };
                 Native.ScreenToClient(window, ref setupPoint);
-                return view.FirstRunHeaderDraggable && setupPoint.Y >= 0 && setupPoint.Y * 96f / dpi < (view.FirstRunSetupComplete ? 32 : 60) ? 2 : 1;
+                return view.StartupHeaderDraggable && setupPoint.Y >= 0 && setupPoint.Y * 96f / dpi < (view.FirstRunSetupComplete ? 32 : 60) ? 2 : 1;
             case updateStatusChangedMessage:
                 Invalidate();
                 return 0;
@@ -323,7 +341,7 @@ internal sealed partial class EditorWindow : IDisposable
                         view.Performance.End(EditorPerformanceStage.Poll, phase);
                         phase = view.Performance.Start();
                         canvas.Resize(rect.Right, rect.Bottom, dpi);
-                        bool immediatePresentation = ImmediatePresentation;
+                        bool immediatePresentation = ImmediatePresentation && !startupWindowTransition;
                         // BeginPaint consumes the invalid region even when DXGI cannot accept a frame yet.
                         // Keep that repaint pending so a paused editor also retries when the slot is ready.
                         framePending = true;
@@ -379,7 +397,7 @@ internal sealed partial class EditorWindow : IDisposable
                 if (Native.GetCapture() == window) Native.ReleaseCapture();
                 dpi = (uint)wParam & 0xFFFF;
                 var suggested = Marshal.PtrToStructure<Native.Rectangle>(lParam);
-                if (view.FirstRunSetupVisible) FitSetupWindow();
+                if (view.StartupDialogVisible) FitSetupWindow();
                 else if (fullscreen) FitFullscreenMonitor();
                 else Native.SetWindowPos(window, 0, suggested.Left, suggested.Top, suggested.Right - suggested.Left,
                     suggested.Bottom - suggested.Top, 0x0004 | 0x0010);
@@ -388,7 +406,7 @@ internal sealed partial class EditorWindow : IDisposable
             case 0x0024: // WM_GETMINMAXINFO
                 var minMax = Marshal.PtrToStructure<Native.MinMaxInfo>(lParam);
                 minMax.MinTrackSize = fullscreen ? new Native.Point { X = 1, Y = 1 }
-                    : view.FirstRunSetupVisible ? SetupMinimumTrackSize()
+                    : view.StartupDialogVisible ? SetupMinimumTrackSize()
                     : new Native.Point { X = (int)(980 * dpi / 96), Y = (int)(620 * dpi / 96) };
                 Marshal.StructureToPtr(minMax, lParam, false); return 0;
             case 0x0201:

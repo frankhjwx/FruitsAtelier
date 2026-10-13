@@ -23,6 +23,7 @@ public sealed partial class EditorView
 
     public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
+        if (AcknowledgementsVisible) { AcknowledgementsPointerDown(x, y, button); return; }
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
             if (button == 0 && HeaderNavigationBounds.Contains(x, y)) ShowLibrary();
@@ -420,6 +421,12 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (AcknowledgementsVisible)
+        {
+            mouseX = x; mouseY = y;
+            if (acknowledgementsScrollDragging) MoveAcknowledgementsScroll(y);
+            return;
+        }
         if (movementPanelPointer) { MoveMovementPanel(x, y); return; }
         if (AimodVisible) { mouseX = x; mouseY = y; return; }
         if (SynchronizationBlocksInput) return;
@@ -558,6 +565,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        if (AcknowledgementsVisible) { acknowledgementsScrollDragging = false; return; }
         if (movementPanelPointer && button == 0)
         {
             MoveMovementPanel(x, y); movementPanelPointer = false;
@@ -669,6 +677,7 @@ public sealed partial class EditorView
 
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
+        if (AcknowledgementsVisible) return;
         if (CanUseCanvasBackgroundDim && CanvasBackgroundDimBounds.Contains(x, y)) return;
         if (HitsoundCopierVisible) { PointerDown(x, y, 0, shift, ctrl); return; }
 
@@ -759,6 +768,11 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (AcknowledgementsVisible)
+        {
+            if (acknowledgementsTextBounds.Contains(x, y)) { acknowledgementsScroll -= delta / 120 * 66; ClampAcknowledgementsScroll(); }
+            return;
+        }
         if (HitsoundCopierVisible)
         {
             if(copierSourcesOpen) copierSourceScroll = Math.Max(0,copierSourceScroll-(int)(delta/120)*3);
@@ -1000,6 +1014,7 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (AcknowledgementsVisible) { AcknowledgementsKey(virtualKey, ctrl, shift); return; }
         if (ScreenshotKeyDown(virtualKey, ctrl, shift)) return;
         if (AudioDiagnosticMarkerKeyDown(virtualKey, ctrl, shift)) return;
         if (FullscreenKeyDown(virtualKey, ctrl, shift)) return;
@@ -1281,6 +1296,7 @@ public sealed partial class EditorView
 
     public void TextInput(char value)
     {
+        if (AcknowledgementsVisible) return;
         if (HitsoundCopierVisible) { if (!ErrorVisible && !DiscardConfirmationVisible && !char.IsControl(value)) PasteHitsoundName(value.ToString()); return; }
 
         if (AimodVisible) return;
@@ -1321,6 +1337,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        acknowledgementsScrollDragging = false;
         audioDiagnosticMarkerHeld = false;
         fullscreenShortcutHeld = false;
         screenshotHeld = false;

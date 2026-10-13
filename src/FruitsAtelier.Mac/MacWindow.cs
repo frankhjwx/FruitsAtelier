@@ -17,6 +17,7 @@ internal sealed partial class MacWindow : Window
     private readonly MacHitsoundPlayer hitsounds;
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(16) };
     private string? projectPath;
+    private string? pendingStartupPath;
     private bool busy, allowClose;
     private int playbackRequest;
     private WindowState windowedState;
@@ -24,11 +25,18 @@ internal sealed partial class MacWindow : Window
     private FruitsAtelier.App.Editor.EditorView View => editor.View;
     public MacWindow(string? initialPath, bool smokeCheck)
     {
+        pendingStartupPath = initialPath;
         audio = new(smokeCheck);
         hitsounds = new(smokeCheck);
         View.RequestAudioVolume = (song, hit) => { audio.SetVolume(song); setupAudio?.SetVolume(song); hitsounds.SetVolume(hit); };
         View.RequestSetupAudio = ControlSetupAudio;
-        View.RequestSetupFinished = () => { ResizeForSetup(false); View.RequestFullscreen?.Invoke(View.LibrarySettings.Fullscreen); };
+        View.RequestSetupFinished = () => { ResizeForSetup(false); CompleteStartupFile(); View.RequestFullscreen?.Invoke(View.LibrarySettings.Fullscreen); };
+        View.RequestAcknowledgementsAccepted = () =>
+        {
+            if (View.FirstRunSetupVisible) ResizeForSetup(true);
+            else { ResizeForSetup(false); CompleteStartupFile(); View.RequestFullscreen?.Invoke(View.LibrarySettings.Fullscreen); }
+            editor.Refresh();
+        };
         View.RequestSetupLink = url => RunFile(() => { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("/usr/bin/open") { ArgumentList = { url } }); return Task.CompletedTask; });
         View.RequestAudioPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
         View.RequestViewPreference = () => RunFile(() => { View.LibrarySettings.Save(); return Task.CompletedTask; });
@@ -36,7 +44,7 @@ internal sealed partial class MacWindow : Window
         View.RequestScreenshot = CopyScreenshot;
         View.RequestFullscreen = enabled =>
         {
-            if (View.FirstRunSetupVisible) return;
+            if (View.FirstRunSetupVisible || View.AcknowledgementsVisible) return;
             if (enabled && WindowState != WindowState.FullScreen)
             {
                 windowedState = WindowState;
@@ -69,7 +77,7 @@ internal sealed partial class MacWindow : Window
         Content = editor; Title = View.WindowTitle;
         AddHandler(PointerPressedEvent, (_, e) =>
         {
-            if (View.FirstRunHeaderDraggable && e.GetPosition(this).Y < (View.FirstRunSetupComplete ? 32 : 60) &&
+            if (View.StartupHeaderDraggable && e.GetPosition(this).Y < (View.FirstRunSetupComplete ? 32 : 60) &&
                 e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             { BeginMoveDrag(e); e.Handled = true; }
         }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
@@ -128,13 +136,13 @@ internal sealed partial class MacWindow : Window
         timer.Tick += (_, _) => PollAudio();
         Opened += async (_, _) =>
         {
-            if (View.FirstRunSetupVisible) ResizeForSetup(true);
+            if (View.StartupDialogVisible) ResizeForSetup(true);
             if (!smokeCheck) View.RequestFullscreen(View.LibrarySettings.Fullscreen);
             fullscreenInitialized = true;
             MacPaths.Log($"Native macOS window opened: {Bounds}, scaling={RenderScaling}");
             timer.Start(); editor.Focus();
             View.InitializeSkin();
-            if (initialPath is not null) RunFile(() => OpenPath(initialPath));
+            CompleteStartupFile();
             if (smokeCheck)
             {
                 try
@@ -149,6 +157,7 @@ internal sealed partial class MacWindow : Window
         };
         Closing += (_, e) =>
         {
+            if (View.AcknowledgementsVisible) { allowClose = true; return; }
             View.CancelFirstRunSetup();
             if (allowClose) return;
             e.Cancel = true;
@@ -159,6 +168,13 @@ internal sealed partial class MacWindow : Window
         Deactivated += (_, _) => { View.SetTextInputFocus(false); View.CancelInteraction(preserveTestplay: true); editor.Refresh(); };
     }
     private void UpdateTitle() => Title = View.WindowTitle;
+    private void CompleteStartupFile()
+    {
+        if (View.AcknowledgementsVisible || View.FirstRunSetupVisible || pendingStartupPath is null) return;
+        string path = pendingStartupPath;
+        pendingStartupPath = null;
+        RunFile(() => OpenPath(path));
+    }
     private void PollAudio()
     {
         PollSetupAudio();
