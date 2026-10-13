@@ -113,8 +113,10 @@ open it. Enter seeks; Esc cancels. Volume shortcuts also work during testplay.
 | Q | Toggle New Combo for the selection or placement state. |
 | W / E / R | Toggle Whistle / Finish / Clap for the selection or placement state. |
 
-The full Snap choices are 1/1–1/9, 1/12 and 1/16. The last two are accessible from
-the Snap slider or Ctrl+wheel. Beat snapping is independent of Slider Tick Rate.
+The standard Snap choices are 1/1–1/9, 1/12 and 1/16. The last two are accessible from
+the Snap slider or Ctrl+wheel. [Settings → Experimental](EDITOR_UI.md#settings)
+adds 1/24, 1/32 and 1/48; Ctrl+wheel can reach them within their doubling/halving
+families. Beat snapping is independent of Slider Tick Rate.
 Object sampleset selection is not bound to Shift+Q/W/E/R or Ctrl+Q/W/E/R.
 
 ## Slider editing

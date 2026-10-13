@@ -161,12 +161,6 @@ an unfinished curve restores the previous preview and leaves no undo entry.
 **Details Panel** in the right header opens a dropdown with **Details Panel** and
 **Timing Panel**. **F3** selects Timing; **F1** returns to Details. Timing replaces
 the note canvas with a horizontal audio waveform and a centered playback cursor.
-**Settings → Experimental** can enable 1/24, 1/32 and 1/48 snap divisions.
-The preference defaults to Off and takes effect after Apply. It extends beat snap,
-Timing and Distance Snap controls, note beat-position detection, and Stream/Stack
-conversion and Banana Shower length/gap lists. Disabling it returns active editor snap controls to at most 1/16;
-saved Stream/Stack content retains its division.
-
 Ctrl+wheel changes Snap within its doubling/halving family (for example 1/3, 1/6,
 1/12, and experimentally 1/24 and 1/48; the 1/4 family reaches 1/32), stopping at either end. Alt+wheel zooms its time scale; click to seek or click
 a red line to edit it.
@@ -355,6 +349,13 @@ options are preserved in project saves and
 Audio, Advanced and preferred-skin controls are not part of Song Setup.
 
 ## Settings
+
+**Settings → Experimental** can enable 1/24, 1/32 and 1/48 snap divisions.
+The preference defaults to Off and takes effect after Apply. It extends beat snap,
+Timing and Distance Snap controls, note beat-position detection, and Stream/Stack
+conversion and Banana Shower length/gap lists. Disabling it returns active editor
+snap controls to at most 1/16;
+saved Stream/Stack content retains its division.
 
 On Windows, **General → Display mode** uses a dropdown with a check beside the
 current draft choice, offering **Vertical sync (default)** and
@@ -549,6 +550,7 @@ size and skin artwork.
 The left palette has equally sized Select, Fruit, FSlider, and Banana buttons with transparent outer margins. The four-button group is vertically centred beside the canvas plot. The active icon is fully opaque; the other three use 45% opacity. Labels share one font size. Clicking FSlider starts placement; B also enters control editing for a selected slider. Finishing placement keeps the current tool active.
 
 Snap offers 1/1, 1/2, 1/3, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9, 1/12 and 1/16; the default is 1/4.
+Enable **Settings → Experimental** to add 1/24, 1/32 and 1/48.
 
 Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with its time snapped to the current beat subdivision. Hover previews recalculate incoming and outgoing hyperdash markers, including the unconfirmed slider endpoint in both editing modes. This temporary calculation affects canvas markers only; it does not add playback sounds, change saved content, or enter undo history. Fruit left-click places immediately, replacing all existing parent objects whose start times are within ±2 ms of the new fruit, regardless of horizontal position. Slider tails and nested fruits do not independently trigger replacement. Replacement and placement form one undo step; hover hyperdash previews use the same replacement rule. In Fruit or FSlider mode, right-click empty canvas toggles **New combo** for the next object. While drawing an FSlider, right-click retains its point-removal and curve-completion actions. In Fruit mode during playback, right-click arms/toggles New combo even over a note; when paused, right-click on a note deletes it. The combo flag survives project saving, `.osu` export, copying, and undo/redo. It resets after placement or changing difficulty.
 
@@ -852,7 +854,7 @@ Its generated catch events can differ from the original objects. The dialog warn
 that saving retains only the merged slider: reopening cannot recover the original
 objects because project files do not store undo history.
 
-Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press an FSlider to reveal **Convert to Stream/Stack**; imported Legacy Sliders offer **Convert to FSlider** above it. Ordinary sliders open the shared dialog on Stream; existing streams and stacks open their corresponding tab. The snap slider has the same subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**. Enter confirms; Esc cancels; arrow keys change the choice.
+Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press an FSlider to reveal **Convert to Stream/Stack**; imported Legacy Sliders offer **Convert to FSlider** above it. Ordinary sliders open the shared dialog on Stream; existing streams and stacks open their corresponding tab. The snap slider has the same subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**, plus the enabled experimental divisions. Enter confirms; Esc cancels; arrow keys change the choice.
 
 The dialog separates its title, tabs, Snap and conversion switches with padding.
 The Snap value has a gap from the slider thumb. Stream and Stack show their
@@ -866,7 +868,7 @@ Testplay lead-in is configured in Settings > Testplay, from 0 to 5 seconds in 0.
 
 Number keys 1–4 select Select, Fruit, FSlider and Banana Shower. During an FSlider draft they finish valid geometry, or cancel an insufficient draft, before switching tools; pressing 3 prepares another slider. Shift+1–9 changes Snap during drawing without moving placed points. F4 opens Song Setup. Left/Right seeks one full beat during playback. While paused, it moves to the preceding/following Snap grid line, including timing boundaries, so off-grid positions align in the chosen direction. Shift+Left/Right seeks four full beats during playback or four grid lines while paused, and Shift+1–9 changes Snap; other Shift variants do not invoke unmodified transport or nudge commands. Timing blocks horizontal object nudges and accepts Ctrl+Alt+E outside fields and dialogs. F6 row deletion requires Delete or Ctrl+I without Shift or Alt. The Settings language dropdown consumes keyboard input until Enter applies or Esc closes it.
 
-Ctrl+wheel doubles or halves the Snap divisor within supported choices on the canvas and timelines: 1→2→4→8→16 or 3→6→12. It stops at either end; 5, 7 and 9 stay unchanged because their doubles are unsupported. The Snap slider retains every subdivision. Shift+wheel seeks four times the normal wheel distance. Alt+wheel zooms the canvas or the upper object timeline under the pointer. Alt+wheel over the bottom timeline adjusts the currently selected Master, Music or Effect channel and displays the existing volume overlay. Ctrl+Alt+wheel cycles Select, Fruit, FSlider and Banana Shower over the canvas or upper timeline: wheel down advances and wheel up reverses the cycle. Unsupported wheel modifier combinations do not seek. Ctrl+M enters its quick cycle at 1/3 when the current divisor is outside the four choices.
+Ctrl+wheel doubles or halves the Snap divisor within supported choices on the canvas and timelines: 1→2→4→8→16 or 3→6→12. Enabling the experimental divisions extends these families to 1→2→4→8→16→32 and 3→6→12→24→48. It stops at either end; 5, 7 and 9 stay unchanged because their doubles are unsupported. The Snap slider retains every subdivision. Shift+wheel seeks four times the normal wheel distance. Alt+wheel zooms the canvas or the upper object timeline under the pointer. Alt+wheel over the bottom timeline adjusts the currently selected Master, Music or Effect channel and displays the existing volume overlay. Ctrl+Alt+wheel cycles Select, Fruit, FSlider and Banana Shower over the canvas or upper timeline: wheel down advances and wheel up reverses the cycle. Unsupported wheel modifier combinations do not seek. Ctrl+M enters its quick cycle at 1/3 when the current divisor is outside the four choices.
 While dragging one or more objects, ordinary wheel navigation, Ctrl+wheel Snap adjustment, Alt+wheel zoom, and Space/C playback control remain available. Wheel navigation cancels a pending slider long press without ending the drag.
 
 ## Settings

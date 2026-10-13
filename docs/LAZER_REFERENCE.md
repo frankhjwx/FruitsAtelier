@@ -12,7 +12,7 @@ This project implements its own stable `.osu` reader/writer; see [stable File Co
 
 | Source | Responsibility | Use in this project |
 | --- | --- | --- |
-| [BindableBeatDivisor](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/BindableBeatDivisor.cs) | Defines divisor presets including 4 and 6. | The slider offers 1/1, 1/2, 1/3, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9, 1/12, and 1/16, ending at 1/16. |
+| [BindableBeatDivisor](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/BindableBeatDivisor.cs) | Defines divisor presets including 4 and 6. | The slider offers 1/1, 1/2, 1/3, 1/4, 1/5, 1/6, 1/7, 1/8, 1/9, 1/12, and 1/16 by default; [experimental snap settings](EDITOR_UI.md#settings) extend the available divisions. |
 | [BeatDivisorPresetCollection](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/Compose/Components/BeatDivisorPresetCollection.cs) | Regular presets include 1, 2, 4, 8, 16; triplet presets include 1, 3, 6, 12. | Reference for grid grouping rather than a mandatory UI copy. |
 | [EditorClock.SeekSnapped](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Screens/Edit/EditorClock.cs) | Snaps using current timing offset and beat length/divisor, accounting for the next timing boundary. | Reference for timing boundaries; an independent snapping service serves grid and object editing. |
 | [FruitPlacementBlueprint](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Edit/Blueprints/FruitPlacementBlueprint.cs) | Uses composer snapping results and handles lateral position on placement. | Reference for fruit placement, implemented with this project's coordinates and commands. |
@@ -63,7 +63,7 @@ The implementation uses this project's document transactions, FSlider time geome
 shared canvas and timestamped audio mixer. Metronome samples are procedurally
 generated locally. Ctrl follows `computeSpedUpDivisor`: three ticks per beat for
 Snap divisors divisible by three, two for other even divisors, otherwise one. User-facing
-behavior is documented in [Editing Controls](EDITOR_UI.md#timing-editing).
+behavior is documented in [Editing Controls](EDITOR_UI.md#settings).
 
 ## Upper object timeline
 
