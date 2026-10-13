@@ -48,6 +48,18 @@ internal static class DockingRenderCheck
                 editor.KeyDown(27, false, false); Paint();
                 if (!map.ContentEquals(editor.Document) || editor.IsDirty || editor.WantsCapture)
                     throw new InvalidOperationException("Docking modified content or retained capture.");
+                Click(editor.DockTabBounds(EditorView.DockPanel.Notes));
+                Click(editor.NotesBounds); editor.PasteFieldText(L.Get("dock.notesHint") + "\nReview the ending pattern.\nKeep this note across difficulties."); Paint("notes");
+                var patternMap = new MapDocument { DurationMs = 10000 };
+                var patternTrack = new CurveTrack { Kind = CurveKind.Linear, StreamSnapDivisor = 8, Stack = new() };
+                patternTrack.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 256 }, new Anchor { TimeMs = 2000, X = 256 }]);
+                patternMap.Tracks.Add(patternTrack);
+                editor.LoadDocument(patternMap); editor.KeyDown(65, true, false); Paint();
+                Click(new(268, 6, 70, 28)); Click(new(274, 259, 270, 31)); Paint("stack-dock");
+                patternMap = new MapDocument { DurationMs = 10000 };
+                patternMap.BananaShowers.Add(new() { TimeMs = 1000, EndTimeMs = 3000, Pattern = new() });
+                editor.LoadDocument(patternMap); editor.KeyDown(65, true, false); Paint("banana-dock");
+                editor.Wheel(size.Item1 - 60, 400, -1200, false, false); Paint("banana-dock-scrolled");
                 void Click(Rect r)
                 { editor.PointerDown(r.X + 10, r.Y + 10, 0, false, false); editor.PointerUp(r.X + 10, r.Y + 10, 0); Paint(); }
                 void Drag(EditorView.DockPanel panel, float x, float y, string name)

@@ -112,7 +112,7 @@ public sealed partial class EditorView
         if (workspaceSaveTask is not null) return;
         if (syncRetry is { } retry && DateTime.UtcNow >= retry.After && !SyncInteractionActive)
         {
-            if (!ResourceSnapshotMatches(retry.Snapshot))
+            if (retry.Snapshot.Notes != projectNotes || !ResourceSnapshotMatches(retry.Snapshot))
                 syncRetry = retry with { Snapshot = CaptureProject(), After = DateTime.UtcNow.AddMilliseconds(500) };
             else
             {
@@ -170,7 +170,7 @@ public sealed partial class EditorView
                             }
                         }
                     }
-                    WorkspaceSession = session; projectStructureDirty = false;
+                    WorkspaceSession = session; savedProjectNotes = session.Project.Notes; projectStructureDirty = false;
                     if (!localCommit) convertedSnapshot = null;
                     resourceSnapshot = null; resourceReferences = null;
                     libraryProjectsNeedReindex = true; QueueLibrarySearch(); CheckWorkspaceResources();
@@ -227,7 +227,7 @@ public sealed partial class EditorView
                 }
                 if (result.Stamp != ManifestStamp(result.Session.Manifest))
                 { syncPage = null; RefreshSynchronization(afterSynchronization); return; }
-                if (!ResourceSnapshotMatches(result.Snapshot) || reviewResolved != result.ReviewResolved)
+                if (result.Snapshot.Notes != projectNotes || !ResourceSnapshotMatches(result.Snapshot) || reviewResolved != result.ReviewResolved)
                 { syncRetry = new(result, CaptureProject(), DateTime.UtcNow.AddMilliseconds(500)); return; }
                 if (result.Quiet && result.Scan.Difficulties.Any(s => s.State == WorkspaceSyncState.Unavailable)
                     && unreadableSyncRetries++ < 2)

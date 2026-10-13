@@ -71,6 +71,9 @@ public sealed partial class EditorView
     public void PasteFieldText(string text, string? expectedField = null)
     {
         if (expectedField is not null && textEditor.Field != expectedField) return;
+        if (NotesFocused) { InsertNotes(text); return; }
+        if (PatternDockEditing && patternDockKind == 2 && bananaEditField >= 0) { BananaEditText(text); return; }
+        if (PatternDockEditing && patternDockKind == 1 && stackNumericField >= 0) { StackNumericText(text); return; }
         if (BananaEditVisible) { BananaEditText(text); return; }
         if (StreamDialogVisible && stackMode) { StackNumericText(text); return; }
         if (DistanceSnapDialogVisible && dsBaseFocused)

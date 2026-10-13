@@ -1347,5 +1347,11 @@
   "dock.resetLayout": "Resetuj układ",
   "dock.panels": "Panele",
   "dock.closeTab": "Zamknij kartę",
-  "dock.addTab": "Dodaj {0}"
+  "dock.addTab": "Dodaj {0}",
+  "dock.notes": "Notatki",
+  "dock.patternSelection": "Wybierz Stream, Stack, Banana Stack, slider lub deszcz bananów.",
+  "dock.convertPrompt": "Przekształć zaznaczenie, aby edytować wzór.",
+  "dock.notesHint": "Wpisz notatki projektu…",
+  "dock.patternEditor": "Stream/Stack",
+  "dock.bananaStack": "Banana Stack"
 }

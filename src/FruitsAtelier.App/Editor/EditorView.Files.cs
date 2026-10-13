@@ -78,6 +78,8 @@ public sealed partial class EditorView
         RestoreMapEditingPreferences();
         tabPointer = false; tabRemainder = 0; revealDifficultyTabs = true;
         ProjectName = project.Name;
+        projectNotes = savedProjectNotes = project.Notes; notesFocused = false; notesScroll = 0;
+        notesUndo.Clear(); notesRedo.Clear(); ResetPatternDock();
         projectStructureDirty = false;
         ResetDifficultyView();
         PreloadProjectHitsounds();
@@ -106,7 +108,7 @@ public sealed partial class EditorView
 
     public BeatmapProject CaptureProject() => new()
     {
-        Name = ProjectName,
+        Name = ProjectName, Notes = projectNotes,
         Difficulties = difficulties.Select(d => new ProjectDifficulty { Id = d.Id, Name = d.Name, Document = d.History.Document.DeepClone() }).ToList()
     };
 
@@ -211,7 +213,7 @@ public sealed partial class EditorView
     public void MarkSaved()
     {
         foreach (var difficulty in difficulties) difficulty.History.MarkSaved();
-        projectStructureDirty = false;
+        projectStructureDirty = false; savedProjectNotes = projectNotes;
     }
 
     public void ChangeAudioPath(string path) => Edit(L.Get("editor.command.changeAudio"), () => Document.AudioPath = path);

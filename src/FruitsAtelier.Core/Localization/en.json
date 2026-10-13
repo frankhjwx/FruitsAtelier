@@ -1347,5 +1347,11 @@
   "dock.resetLayout": "Reset layout",
   "dock.panels": "Panels",
   "dock.closeTab": "Close tab",
-  "dock.addTab": "Add {0}"
+  "dock.addTab": "Add {0}",
+  "dock.notes": "Notes",
+  "dock.patternSelection": "Select a Stream, Stack, Banana Stack, slider or banana shower.",
+  "dock.convertPrompt": "Convert this selection to edit its pattern.",
+  "dock.notesHint": "Write project notes here…",
+  "dock.patternEditor": "Stream/Stack",
+  "dock.bananaStack": "Banana Stack"
 }

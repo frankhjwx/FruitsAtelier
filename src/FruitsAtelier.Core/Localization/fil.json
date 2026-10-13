@@ -1347,5 +1347,11 @@
   "dock.resetLayout": "I-reset ang layout",
   "dock.panels": "Mga panel",
   "dock.closeTab": "Isara ang tab",
-  "dock.addTab": "Idagdag ang {0}"
+  "dock.addTab": "Idagdag ang {0}",
+  "dock.notes": "Mga tala",
+  "dock.patternSelection": "Pumili ng Stream, Stack, Banana Stack, slider o banana shower.",
+  "dock.convertPrompt": "I-convert ang napili upang i-edit ang pattern.",
+  "dock.notesHint": "Isulat ang mga tala ng proyekto…",
+  "dock.patternEditor": "Stream/Stack",
+  "dock.bananaStack": "Banana Stack"
 }

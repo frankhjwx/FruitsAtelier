@@ -5,7 +5,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    internal enum DockPanel { MovementStrain, Preview }
+    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes }
     private sealed class DockGroup(DockPanel panel, float width)
     {
         public readonly List<DockPanel> Panels = [panel];
@@ -16,7 +16,9 @@ public sealed partial class EditorView
     private sealed class DockWorkspace
     {
         public readonly DockGroup Left = new(DockPanel.MovementStrain, DifficultyCurveWidth);
-        public readonly DockGroup Right = new(DockPanel.Preview, 360);
+        public readonly DockGroup Right = CreateRightDock();
+        private static DockGroup CreateRightDock()
+        { var group = new DockGroup(DockPanel.Preview, 360); group.Panels.Add(DockPanel.Notes); return group; }
         public (float X, float Y)? MovementPosition;
         public int PreviewMod, PreviewDisplayMode;
     }
@@ -25,6 +27,11 @@ public sealed partial class EditorView
     private DockWorkspace DockWorkspaceState => TimingPageVisible ? timingDockWorkspace : mappingDockWorkspace;
     private DockGroup PanelGroup(DockPanel panel) => DockWorkspaceState.Left.Panels.Contains(panel)
         ? DockWorkspaceState.Left : DockWorkspaceState.Right;
+    private bool DockContentInputAvailable => !ErrorVisible && !DiscardConfirmationVisible && !LibraryVisible
+        && !ExportVisible && !SongSetupVisible && !SliderDialogVisible && !TimeJumpVisible && !TimingModal
+        && !BananaEditVisible && !StreamDialogVisible && !MergeDialogVisible && !VolumeDialogVisible
+        && !DistanceSnapDialogVisible && !AimodVisible && !HitsoundCopierVisible && !VersionHistoryVisible
+        && !IsTestplaying && !SynchronizationBlocksInput && !SynchronizationWaitVisible;
     private bool PanelVisible(DockPanel panel) => !TimingPageVisible && DockPanelExists(panel) && !PanelGroup(panel).Collapsed
         && PanelGroup(panel).Active == panel;
     private Rect DockBounds(bool left) => new(left ? leftPanel.X : rightPanel.X, canvas.Y + 38,
@@ -53,7 +60,11 @@ public sealed partial class EditorView
         return panels;
     }
     internal Rect DockTabBounds(DockPanel panel) => dockTabs.FirstOrDefault(t => t.Panel == panel).Bounds;
-    private static string DockTitle(DockPanel panel) => L.Get(panel == DockPanel.Preview ? "dock.preview" : "difficulty.curve.title");
+    private static string DockTitle(DockPanel panel) => L.Get(panel switch
+    {
+        DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
+        DockPanel.Notes => "dock.notes", _ => "difficulty.curve.title"
+    });
 
     private bool DockPanelExists(DockPanel panel) => DockWorkspaceState.Left.Panels.Contains(panel)
         || DockWorkspaceState.Right.Panels.Contains(panel);
@@ -77,6 +88,7 @@ public sealed partial class EditorView
         state.Left.Panels.Clear(); state.Right.Panels.Clear();
         state.Left.Width = DifficultyCurveWidth; state.Right.Width = 360;
         AddDockPanel(DockPanel.MovementStrain, true); AddDockPanel(DockPanel.Preview, false);
+        state.Right.Panels.Add(DockPanel.Notes);
     }
     private bool DockTabContext(float x, float y)
     {
@@ -131,7 +143,8 @@ public sealed partial class EditorView
             var toggle = new Rect(left ? leftPanel.Right - 22 : (group.Collapsed ? width : rightPanel.X) - 22,
                 canvas.Y + canvas.Height / 2 - 22, 22, 44);
             foreach (var panel in group.Panels)
-                if (panel == DockPanel.MovementStrain) DifficultyCurveToggleBounds = toggle; else PreviewToggleBounds = toggle;
+                if (panel == DockPanel.MovementStrain) DifficultyCurveToggleBounds = toggle;
+                else if (panel == DockPanel.Preview) PreviewToggleBounds = toggle;
             if (!group.Collapsed && bounds.Width > 0)
             {
                 c.Fill(bounds, Panel);
@@ -162,6 +175,10 @@ public sealed partial class EditorView
                         Math.Max(0, bounds.Width - 40), Math.Max(0, bounds.Height - 78));
                     DrawDifficultyCurve(c, DifficultyCurveGraphBounds);
                 }
+                else if (group.Active == DockPanel.PatternEditor)
+                    DrawPatternDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                else if (group.Active == DockPanel.Notes)
+                    DrawNotesDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                 else
                 {
                     DrawPreview(c, new(bounds.X + 16, bounds.Y + 38, Math.Max(0, bounds.Width - 32), Math.Max(0, bounds.Height - 52)));

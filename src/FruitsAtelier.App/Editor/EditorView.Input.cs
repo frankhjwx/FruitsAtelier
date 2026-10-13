@@ -130,6 +130,8 @@ public sealed partial class EditorView
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
         if (BeginDockPointer(x, y, button)) return;
+        if (NotesPointer(x, y, button, shift)) return;
+        if (PatternDockPointer(x, y, button)) return;
         if (CanvasScalePointerDown(x, y, button)) return;
         if (TimingPageVisible && menu < 0 && contextItems.Count == 0 && WaveformBounds.Contains(x, y))
         { TimingWaveformPointer(x, y, button); return; }
@@ -434,6 +436,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (notesSelecting) { PositionNotesCaret(x, y, true); return; }
         if (dockPressed is not null) { MoveDockPointer(x, y); return; }
         if (AcknowledgementsVisible)
         {
@@ -468,9 +471,9 @@ public sealed partial class EditorView
         if (updatesPage) return;
         if (sliderHoldConsumed) return;
         if (SliderHoldNeedsRedraw && (Math.Abs(x - sliderHoldX) >= 2 || Math.Abs(y - sliderHoldY) >= 2)) { sliderHoldId = Guid.Empty; noteHoldTarget = null; }
-        if (StreamDialogVisible && stackFruitDragging >= 0) { MoveStackFruit(x, y); return; }
-        if (StreamDialogVisible && stackPointDragging >= 0) { MoveStackPoint(x, y); return; }
-        if (StreamDialogVisible && streamSnapDragging) { SetStreamSnap(x); return; }
+        if ((StreamDialogVisible || PatternDockEditing) && stackFruitDragging >= 0) { MoveStackFruit(x, y); return; }
+        if ((StreamDialogVisible || PatternDockEditing) && stackPointDragging >= 0) { MoveStackPoint(x, y); return; }
+        if ((StreamDialogVisible || PatternDockEditing) && streamSnapDragging) { SetStreamSnap(x); return; }
         if (TimeJumpVisible || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
@@ -579,6 +582,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        if (notesSelecting && button == 0) { PositionNotesCaret(x, y, true); notesSelecting = false; return; }
         if (dockPressed is not null && button == 0) { EndDockPointer(x, y); return; }
         if (AcknowledgementsVisible) { acknowledgementsScrollDragging = false; return; }
         if (movementPanelPointer && button == 0)
@@ -622,11 +626,11 @@ public sealed partial class EditorView
             if (!tabMoved) SwitchDifficulty(tabPressed);
             return;
         }
-        if (StreamDialogVisible && stackFruitDragging >= 0 && button == 0)
+        if ((StreamDialogVisible || PatternDockEditing) && stackFruitDragging >= 0 && button == 0)
         { MoveStackFruit(x, y); stackFruitDragging = -1; RecordStackDraft(); return; }
-        if (StreamDialogVisible && stackPointDragging >= 0 && button == 0)
+        if ((StreamDialogVisible || PatternDockEditing) && stackPointDragging >= 0 && button == 0)
         { MoveStackPoint(x, y); stackPointDragging = -1; RecordStackDraft(); return; }
-        if (StreamDialogVisible && streamSnapDragging && button == 0)
+        if ((StreamDialogVisible || PatternDockEditing) && streamSnapDragging && button == 0)
         { SetStreamSnap(x); streamSnapDragging = false; if (stackMode) RecordStackDraft(); return; }
         if (TimeJumpVisible || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
@@ -855,6 +859,13 @@ public sealed partial class EditorView
         if (TimingModal)
         { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
         if (HandleVolumePopoverWheel(x, y, delta)) return;
+        if (DockContentInputAvailable && PanelVisible(DockPanel.Notes) && NotesBounds.Contains(x, y))
+        { notesScroll = Math.Max(0, notesScroll - delta / 120 * 60); return; }
+        if (DockContentInputAvailable && PanelVisible(DockPanel.PatternEditor) && patternDockBounds.Contains(x, y))
+        {
+            patternDockScroll = Math.Clamp(patternDockScroll - delta / 120 * 36, 0,
+                Math.Max(0, PatternDockContentHeight - patternDockBounds.Height)); return;
+        }
         if (BananaEditVisible)
         {
             if (BananaPreviewBounds.Contains(x, y))
@@ -1165,6 +1176,8 @@ public sealed partial class EditorView
         if (AimodVisible) { if (virtualKey == 27) CloseAimod(); return; }
         if (BananaEditVisible) { BananaEditKey(virtualKey, ctrl, shift); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey, ctrl, shift); return; }
+        if (PatternDockKey(virtualKey, ctrl, shift)) return;
+        if (NotesKey(virtualKey, ctrl, shift)) return;
         if (MergeDialogVisible)
         {
             if (virtualKey == 27) MergeDialogVisible = false;
@@ -1349,6 +1362,9 @@ public sealed partial class EditorView
                 SetDistanceBaseText(InsertInput("ds:base", dsBaseText, value.ToString(), 16));
             return;
         }
+        if (NotesFocused && !char.IsControl(value)) { InsertNotes(value.ToString()); return; }
+        if (PatternDockEditing && patternDockKind == 2 && bananaEditField >= 0) { BananaEditText(value.ToString()); return; }
+        if (PatternDockEditing && patternDockKind == 1 && stackNumericField >= 0) { StackNumericText(value.ToString()); return; }
         if (BananaEditVisible) { BananaEditText(value.ToString()); return; }
         if (StreamDialogVisible && stackMode) { StackNumericText(value.ToString()); return; }
         if (DistanceEditing) { DistanceTextInput(value); return; }
@@ -1375,6 +1391,7 @@ public sealed partial class EditorView
     public void CancelInteraction(bool preserveTestplay = false)
     {
         EndTimelineScrub();
+        notesSelecting = false;
         dockPressed = null; dockDragging = false;
         canvasScaleAxis = -1;
         acknowledgementsScrollDragging = false;

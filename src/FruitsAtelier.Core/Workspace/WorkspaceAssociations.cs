@@ -119,7 +119,7 @@ public static class WorkspaceAssociations
                 if (WorkspaceProject.Hash(path!) != hash) { File.Delete(journal); throw new IOException(L.Get("library.exportConflict", path)); }
                 File.Delete(path!);
             }
-            var remaining = new BeatmapProject { Name = project.Name };
+            var remaining = new BeatmapProject { Name = project.Name, Notes = project.Notes };
             remaining.Difficulties.AddRange(project.Difficulties.Where(d => d.Id != id));
             try
             {

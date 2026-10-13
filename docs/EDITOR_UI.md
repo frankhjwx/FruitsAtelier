@@ -826,7 +826,9 @@ side-panel placement. In Timing, the middle section contains the waveform label
 and Snap. The canvas and side docks sit below this row, with the transport timeline
 at the bottom.
 
-Mapping Panel provides two side dock areas for Movement Strain and Preview.
+Mapping Panel provides two side dock areas. The default groups contain Movement
+Strain on the left and Preview followed by Notes on the right. Stream/Stack is
+available from Layout and is hidden by default.
 Drag a named tab to either side to move it; dropping into an occupied area combines
 the panels into one tab group. Click a tab to select its content, or drag within
 the tab strip to reorder it. Empty sides remain drop targets at the window edge.
@@ -847,8 +849,22 @@ The **Layout** menu next to **View** lists the side-dock arrangement, a layout r
 and available panels. A check marks each existing panel, including collapsed groups;
 clicking it removes that panel, and clicking an unchecked panel restores it on its
 default side. Right-click a dock tab to close it or add an absent panel to that group.
-Each panel can exist only once. Reset restores both panels on their default sides,
+Each panel can exist only once. Reset restores the default panels on their default sides,
 expanded with their default widths. Layout controls are locked in Timing Panel.
+
+**Stream/Stack** follows the current selection. Existing Streams, Stacks and Banana
+Stacks load their parameters automatically. Plain sliders and banana showers show
+an explicit conversion entry first; standalone fruits are not handled. The panel
+reuses the conversion dialog's parameter controls without its right-hand preview.
+Changes remain a draft until Apply, which creates one content undo step. Cancel,
+selection changes and document changes discard the draft. Short docks scroll with
+the mouse wheel. Ctrl+Shift+F continues to open the existing dialog.
+
+**Notes** is a multiline project-wide text editor, shared across difficulties. It
+supports text selection, copy/paste and independent text undo/redo while focused.
+Notes changes mark the project dirty and are saved with the project, including
+workspace manifests and compatibility project files. Closing or moving its tab
+does not delete the notes. Notes are not exported to `.osu` files.
 
 The language dropdown in **Settings → General** lists the supported languages. Selecting a non-English language opens an AI-assisted machine translation notice before applying and saving it. Menu shortcut hints align to the right edge of each row. Existing beatmap titles and object names retain their values. The main canvas can hide curves and nodes. Catch Preview displays gameplay objects.
 

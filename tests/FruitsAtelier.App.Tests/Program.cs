@@ -2,6 +2,8 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Contains("--pattern-notes-check")) { PatternNotesTests.Run(); Console.WriteLine("PASS Pattern and Notes dock editing and persistence"); return 0; }
+
 if (args.Contains("--docking-check"))
 {
     DockingTests.Run(); DifficultyCurveSidebarTests.LayoutAndSeeking(); PreviewSidebarTests.DisplayModesAndOverscan();
@@ -296,6 +298,7 @@ var tests = new (string Name, Action Run)[]
     ("Background resource checks refresh missing files and discard stale edits and projects", ResourcePollingTests.RefreshAndStaleResults),
     ("Preview drawer, mods, resizing and aligned shortcuts preserve content", PreviewSidebarTests.Sidebar),
     ("Docking and independent Mapping/Timing workspaces", DockingTests.Run),
+    ("Pattern editing and project Notes docks", PatternNotesTests.Run),
     ("Difficulty curve panel resizes, seeks, and preserves canvas width", DifficultyCurveSidebarTests.LayoutAndSeeking),
     ("Preview aspect modes, Fit height and edge overscan", PreviewSidebarTests.DisplayModesAndOverscan),
     ("Automatic catcher movement and seeking", PreviewSidebarTests.AutomaticCatcher),

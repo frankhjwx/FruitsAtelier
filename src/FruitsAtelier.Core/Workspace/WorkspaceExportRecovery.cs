@@ -21,7 +21,7 @@ public static class WorkspaceExportRecovery
         entry.Sync = WorkspaceSynchronization.Capture(plan.Target, difficulty.Document, session.Directory, plan.Output.Text, plan.Output.ObjectSources, entry.Sync);
         var recoveredProject = new BeatmapProject
         {
-            Name = project.Name,
+            Name = project.Name, Notes = project.Notes,
             Difficulties = project.Difficulties.Select(d => new ProjectDifficulty
             {
                 Id = d.Id, Name = d.Name, Document = d.Id == owner ? d.Document.DeepClone() : d.Document

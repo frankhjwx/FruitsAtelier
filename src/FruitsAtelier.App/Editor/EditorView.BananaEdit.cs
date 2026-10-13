@@ -62,7 +62,7 @@ public sealed partial class EditorView
 
     private void PumpBananaPreview()
     {
-        if (!BananaEditVisible) return;
+        if (!BananaEditVisible && patternDockKind != 2) return;
         if (bananaEditJob is { IsCompleted: false }) return;
         if (bananaEditJob is { } job)
         {
@@ -150,18 +150,24 @@ public sealed partial class EditorView
     }
     private double BananaPreviewScrollMaximum => bananaEditSegments.Count == 0 ? 0 : Math.Max(0,
         bananaEditSegments[^1].EndTimeMs - bananaEditSegments[0].TimeMs - (BananaPreviewBounds.Height - 32) / BananaPreviewScale);
-    private void DrawBananaEdit(ICanvas c)
+    private void DrawBananaEdit(ICanvas c, Rect? dock = null)
     {
-        if (!BananaEditVisible) return;
-        PumpBananaPreview(); hits.Clear();
+        if (dock is null && !BananaEditVisible) return;
+        PumpBananaPreview(); if (dock is null) hits.Clear();
         float w = Math.Min(760, width - 32), h = Math.Min(530, height - 32), x = (width - w) / 2, y = (height - h) / 2;
-        float col = (w - 68) / 2, left = x + 24, right = left + col + 20;
-        c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Grid, radius: 8);
-        c.Text(L.Get("bananaEdit.title"), left, y + 20, 16, Foreground, w - 48, true);
+        if (dock is { } area) { x = area.X - 24; y = area.Y; w = area.Width + 48; h = Math.Max(490, area.Height); }
+        float col = dock is null ? (w - 68) / 2 : w - 48, left = x + 24, right = left + col + 20;
+        bool narrowDock = dock is not null && col < 260;
+        float extra = narrowDock ? 86 : 0;
+        if (dock is null)
+        {
+            c.Fill(new(x, y, w, h), Panel, 8); c.Stroke(new(x, y, w, h), Grid, radius: 8);
+            c.Text(L.Get("bananaEdit.title"), left, y + 20, 16, Foreground, w - 48, true);
+        }
         c.Text(L.Get("bananaEdit.beats"), left, y + 60, 12, Muted, col);
         for (int i = 0; i < 2; i++)
         {
-            int field = i; float row = y + 104, groupWidth = (col - 20) / 2, gx = left + i * (groupWidth + 20);
+            int field = i; float row = y + 104 + (narrowDock ? i * 86 : 0), groupWidth = narrowDock ? col : (col - 20) / 2, gx = left + (narrowDock ? 0 : i * (groupWidth + 20));
             c.Text(L.Get(i == 0 ? "bananaEdit.length" : "bananaEdit.gap"), gx, row, 12, Foreground, groupWidth);
             var bounds = BananaNumeratorBounds[i] = new(gx, row + 26, (groupWidth - 20) / 2, 32);
             c.Fill(bounds, Surface, 4); c.Stroke(bounds, bananaEditField == i ? Accent : Grid, radius: 4);
@@ -181,41 +187,45 @@ public sealed partial class EditorView
         long cycleDivisor = bananaEditPattern.LengthDivisor * bananaEditPattern.GapDivisor;
         long a = cycleNumerator, b = cycleDivisor;
         while (b != 0) (a, b) = (b, a % b);
-        c.Text(L.Get("bananaEdit.cycle", cycleNumerator / a, cycleDivisor / a), left, y + 194, 12, Foreground, col);
-        c.Text(L.Get("bananaEdit.count", bananaEditSegments.Count), left, y + 226, 12, Muted, col);
-        c.Text(L.Get("bananaEdit.arrangement", bananaEditSegments.Count, Math.Max(0, bananaEditSegments.Count - 1)), left, y + 252, 11, Muted, col);
-        if (bananaEditExactFit) c.Text(L.Get("bananaEdit.exactFit"), left, y + 286, 13, Accent, col, true);
-        ToggleSwitch(c, new(left, y + 326, col, 32), L.Get("bananaEdit.split"), bananaSplit, () => bananaSplit = !bananaSplit);
-        BananaPreviewBounds = new(right, y + 90, col, h - 170);
-        c.Text(L.Get("ui.preview"), right, y + 60, 12, Foreground, col);
-        c.Fill(BananaPreviewBounds, Surface); c.Stroke(BananaPreviewBounds, Grid);
-        bananaEditScroll = Math.Clamp(bananaEditScroll, 0, BananaPreviewScrollMaximum);
-        if (bananaEditSegments.Count > 0 && bananaEditReady == bananaEditPattern)
+        c.Text(L.Get("bananaEdit.cycle", cycleNumerator / a, cycleDivisor / a), left, y + extra + 194, 12, Foreground, col);
+        c.Text(L.Get("bananaEdit.count", bananaEditSegments.Count), left, y + extra + 226, 12, Muted, col);
+        c.Text(L.Get("bananaEdit.arrangement", bananaEditSegments.Count, Math.Max(0, bananaEditSegments.Count - 1)), left, y + extra + 252, 11, Muted, col);
+        if (bananaEditExactFit) c.Text(L.Get("bananaEdit.exactFit"), left, y + extra + 286, 13, Accent, col, true);
+        ToggleSwitch(c, new(left, y + extra + 326, col, 32), L.Get("bananaEdit.split"), bananaSplit, () => bananaSplit = !bananaSplit);
+        if (dock is null)
         {
-            double start = bananaEditSegments[0].TimeMs + bananaEditScroll;
-            float Y(double time) => BananaPreviewBounds.Bottom - 16 - (float)((time - start) * BananaPreviewScale);
-            c.Clip(BananaPreviewBounds);
-            foreach (var segment in bananaEditSegments)
+            BananaPreviewBounds = new(right, y + 90, col, h - 170);
+            c.Text(L.Get("ui.preview"), right, y + 60, 12, Foreground, col);
+            c.Fill(BananaPreviewBounds, Surface); c.Stroke(BananaPreviewBounds, Grid);
+            bananaEditScroll = Math.Clamp(bananaEditScroll, 0, BananaPreviewScrollMaximum);
+            if (bananaEditSegments.Count > 0 && bananaEditReady == bananaEditPattern)
             {
-                float top = Y(segment.EndTimeMs), bottom = Y(segment.TimeMs);
-                if (bottom < BananaPreviewBounds.Y || top > BananaPreviewBounds.Bottom) continue;
-                c.Fill(new(right + 1, top, col - 2, Math.Max(1, bottom - top)), Gold, opacity: .08f);
-                c.Line(right, top, right + col, top, Gold, opacity: .5f);
-                c.Line(right, bottom, right + col, bottom, Gold, opacity: .5f);
+                double start = bananaEditSegments[0].TimeMs + bananaEditScroll;
+                float Y(double time) => BananaPreviewBounds.Bottom - 16 - (float)((time - start) * BananaPreviewScale);
+                c.Clip(BananaPreviewBounds);
+                foreach (var segment in bananaEditSegments)
+                {
+                    float top = Y(segment.EndTimeMs), bottom = Y(segment.TimeMs);
+                    if (bottom < BananaPreviewBounds.Y || top > BananaPreviewBounds.Bottom) continue;
+                    c.Fill(new(right + 1, top, col - 2, Math.Max(1, bottom - top)), Gold, opacity: .08f);
+                    c.Line(right, top, right + col, top, Gold, opacity: .5f);
+                    c.Line(right, bottom, right + col, bottom, Gold, opacity: .5f);
+                }
+                foreach (var banana in bananaEditPreview)
+                {
+                    float by = Y(banana.TimeMs);
+                    if (by < BananaPreviewBounds.Y - 20 || by > BananaPreviewBounds.Bottom + 20) continue;
+                    DrawCatchObject(c, banana, right + 12 + (float)(banana.X / 512) * (col - 24), by, col - 24, 1);
+                }
+                c.Unclip();
             }
-            foreach (var banana in bananaEditPreview)
-            {
-                float by = Y(banana.TimeMs);
-                if (by < BananaPreviewBounds.Y - 20 || by > BananaPreviewBounds.Bottom + 20) continue;
-                DrawCatchObject(c, banana, right + 12 + (float)(banana.X / 512) * (col - 24), by, col - 24, 1);
-            }
-            c.Unclip();
+            if (bananaEditJob is not null) c.Text(L.Get("bananaEdit.calculating"), right + 10, y + 105, 12, Muted, col - 20);
+            c.Text(L.Get("conversion.scroll"), right, BananaPreviewBounds.Bottom + 7, 10, Muted, col);
         }
-        if (bananaEditJob is not null) c.Text(L.Get("bananaEdit.calculating"), right + 10, y + 105, 12, Muted, col - 20);
-        c.Text(L.Get("conversion.scroll"), right, BananaPreviewBounds.Bottom + 7, 10, Muted, col);
+        else BananaPreviewBounds = default;
         if (bananaEditError.Length > 0 || bananaNumericError.Length > 0) c.Text(bananaNumericError.Length > 0 ? bananaNumericError : bananaEditError, left, y + h - 74, 11, Error, w - 48);
-        Button(c, new(x + w - 200, y + h - 44, 80, 30), L.Get("mac.cancel"), CloseBananaEdit);
-        Button(c, new(x + w - 112, y + h - 44, 88, 30), L.Get("stream.confirm"), ApplyBananaEdit,
+        Button(c, new(dock is null ? x + w - 200 : left, y + h - 44, dock is null ? 80 : (col - 8) / 2, 30), L.Get("mac.cancel"), () => { if (dock is null) CloseBananaEdit(); else ResetPatternDock(); });
+        Button(c, new(dock is null ? x + w - 112 : left + (col + 8) / 2, y + h - 44, dock is null ? 88 : (col - 8) / 2, 30), L.Get(dock is null ? "stream.confirm" : "library.apply"), () => { ApplyBananaEdit(); if (dock is not null && bananaEditSnapshot is null) ResetPatternDock(); },
             enabled: bananaEditReady == bananaEditPattern && bananaEditError.Length == 0);
         if (bananaEditDropdown >= 0)
         {

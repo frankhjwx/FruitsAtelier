@@ -1347,5 +1347,11 @@
   "dock.resetLayout": "Atur ulang tata letak",
   "dock.panels": "Panel",
   "dock.closeTab": "Tutup tab",
-  "dock.addTab": "Tambahkan {0}"
+  "dock.addTab": "Tambahkan {0}",
+  "dock.notes": "Catatan",
+  "dock.patternSelection": "Pilih Stream, Stack, Banana Stack, slider, atau hujan pisang.",
+  "dock.convertPrompt": "Konversi pilihan untuk mengedit polanya.",
+  "dock.notesHint": "Tulis catatan proyek…",
+  "dock.patternEditor": "Stream/Stack",
+  "dock.bananaStack": "Banana Stack"
 }

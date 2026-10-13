@@ -1347,5 +1347,11 @@
   "dock.resetLayout": "รีเซ็ตเค้าโครง",
   "dock.panels": "แผง",
   "dock.closeTab": "ปิดแท็บ",
-  "dock.addTab": "เพิ่ม {0}"
+  "dock.addTab": "เพิ่ม {0}",
+  "dock.notes": "บันทึก",
+  "dock.patternSelection": "เลือก Stream, Stack, Banana Stack, สไลเดอร์ หรือฝนกล้วย",
+  "dock.convertPrompt": "แปลงรายการที่เลือกเพื่อแก้ไขรูปแบบ",
+  "dock.notesHint": "เขียนบันทึกโปรเจกต์ที่นี่…",
+  "dock.patternEditor": "Stream/Stack",
+  "dock.bananaStack": "Banana Stack"
 }

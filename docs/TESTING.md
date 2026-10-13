@@ -49,6 +49,10 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --pattern-notes-check` verifies nonmodal pattern conversion and editing,
+selection changes, application and undo, independent notes input, and project and
+workspace notes roundtrips. Native docking checks also capture these panels.
+
 `App.Tests --docking-check` exercises cross-side moves, tab groups, cancellation,
 live tab ordering, symmetric dock resizing, Layout and context-menu panel management,
 and independent Mapping/Timing layouts in English and Chinese,

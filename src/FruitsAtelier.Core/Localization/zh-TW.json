@@ -1347,5 +1347,11 @@
   "dock.resetLayout": "重設佈局",
   "dock.panels": "面板",
   "dock.closeTab": "關閉頁籤",
-  "dock.addTab": "新增 {0}"
+  "dock.addTab": "新增 {0}",
+  "dock.notes": "筆記",
+  "dock.patternSelection": "選擇 Stream、Stack、Banana Stack、滑條或香蕉雨。",
+  "dock.convertPrompt": "轉換目前選擇後即可編輯參數。",
+  "dock.notesHint": "在此記錄專案筆記…",
+  "dock.patternEditor": "Stream/Stack",
+  "dock.bananaStack": "Banana Stack"
 }

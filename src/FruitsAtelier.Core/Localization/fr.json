@@ -1347,5 +1347,11 @@
   "dock.resetLayout": "Réinitialiser la disposition",
   "dock.panels": "Panneaux",
   "dock.closeTab": "Fermer cet onglet",
-  "dock.addTab": "Ajouter {0}"
+  "dock.addTab": "Ajouter {0}",
+  "dock.notes": "Notes",
+  "dock.patternSelection": "Sélectionnez un Stream, Stack, Banana Stack, slider ou une pluie de bananes.",
+  "dock.convertPrompt": "Convertissez la sélection pour modifier son motif.",
+  "dock.notesHint": "Notes du projet…",
+  "dock.patternEditor": "Stream/Stack",
+  "dock.bananaStack": "Banana Stack"
 }
