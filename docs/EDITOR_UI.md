@@ -1,11 +1,22 @@
 # Editing Controls
 
+## Interface size
+
+On Windows, the editor scales uniformly with its client pixel dimensions, using
+2520 × 1575 at 175% as the reference: the original 1440 × 900 logical startup
+window. This preserves its text, buttons and layout proportions. Equal client dimensions give
+equal text, button and icon sizes regardless of monitor or Windows display scale.
+Different aspect ratios fit the reference into the available width and height;
+the remaining space extends the editing area. Compact startup dialogs fit their
+own layout dimensions. Native title bars and file dialogs follow Windows display
+settings; macOS uses its native display scaling.
+
 ## Acknowledgements
 
 Normal Windows and macOS launches require confirmation of the current
 acknowledgements before starting the library or opening a supplied beatmap.
 The English-only notice fills its own compact, borderless startup window,
-bounded to 820 × 740 logical pixels and 85% of the monitor work area after DPI
+bounded to 820 × 740 logical pixels and 85% of the monitor work area after UI
 scaling. Drag its header to move it. It has a scrollable text box, a read-and-agree checkbox,
 and Cancel / Confirm buttons. Confirm is disabled until checked; cancelling,
 Escape or closing the window exits. Mouse wheel, scrollbar dragging, arrow keys,
@@ -41,7 +52,7 @@ release that introduces setup. Completing the guide saves its version, so later
 normal launches open the editor directly.
 
 The guide uses a compact window, targeting 880 × 620 logical pixels and bounded
-to 85% of the screen work area after DPI scaling. Its filled arrow-shaped tabs
+to 85% of the screen work area after UI scaling. Its filled arrow-shaped tabs
 cover folders, language and romanised artist/title display; skin and skin sounds;
 volume; Slider Droplets; and testplay. Artist/title display appears below Language
 on the first page. Inactive tabs alternate two similar colours and join into a
@@ -398,7 +409,7 @@ across launches; changing them does not modify existing beatmap content or a
 map's saved Legacy conversion choice. Batch randomization actions affect current
 FSliders without changing the default for future ones.
 
-Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries; its content scrolls when the window is too short, with the page title and Apply fixed. Combo count and Dim Background in Testplay use compact buttons; the Background dim row matches their width. Navigation retains its larger click targets. The same dimensions apply on both desktop platforms and scale with DPI. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
+Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries; its content scrolls when the window is too short, with the page title and Apply fixed. Combo count and Dim Background in Testplay use compact buttons; the Background dim row matches their width. Navigation retains its larger click targets. The same logical dimensions apply on both desktop platforms and follow their interface scaling. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
 
 The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Testplay, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** is enabled only while unapplied changes exist. Ordinary preferences can be applied during library scanning or searching; changes to library paths wait for those tasks to finish. It saves them, stays in the current settings category, and becomes disabled again; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport. **General → Romanised artist / title** defaults to On and controls Library cards, Library details, and the editor window title. Off prefers the Unicode metadata; either mode falls back to the other spelling when its preferred field is empty. Apply persists the preference without changing beatmap data, filenames, or search matching.
 

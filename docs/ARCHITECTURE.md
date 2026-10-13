@@ -51,6 +51,17 @@ project and display the error.
 
 Hosts map input to DIP coordinates before passing it to `EditorView`. Content changes commit through `EditorHistory` transactions; a drag, batch operation, or curve draft becomes one undo step. Selection and viewport are separate session state.
 
+The Windows host derives its drawing, layout and pointer scale from client pixel
+dimensions: 168 DPI (175%) multiplied by the smaller of width / 2520 and height / 1575.
+This preserves the original 175% appearance of the 1440 × 900 logical startup window.
+Equal client dimensions produce equal UI sizes regardless of monitor DPI. Compact
+startup windows instead fit their own 820 × 740 or 880 × 620 logical layouts.
+Monitor DPI applies only to native window decorations and dialogs.
+`WM_GETDPISCALEDSIZE` preserves the pending client pixel size across monitor DPI
+changes by adjusting only the non-client frame. Initial window sizes and minimum
+bounds are proportional to monitor resolution and bounded by its work area. macOS retains
+Avalonia's native scaling.
+
 The conversion cache compares document snapshots and Tiny compensation settings. Changes trigger synchronous conversion of the full document before viewport culling. The editor also caches the exported osu read-back events for gameplay displays; their times and coordinates reflect file quantization while mapped source identities retain editing links. Language changes rebuild diagnostic caches. RNG and hyperdash use the complete playable object sequence.
 
 The canvas and object timeline share an immutable timing lookup built alongside the conversion snapshot. It sorts timing groups once and uses binary search for local BPM, meter and SV. Playback reuses it; content changes, undo and document replacement rebuild it. Grid drawing must not rebuild timing groups for each visible tick.

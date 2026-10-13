@@ -16,8 +16,17 @@ internal sealed partial class EditorWindow
     private Native.Point SetupMinimumTrackSize()
     {
         var work = CurrentWorkArea();
-        return new() { X = Math.Min((int)(640 * dpi / 96), (int)((work.Right - work.Left) * .85)),
-            Y = Math.Min((int)(440 * dpi / 96), (int)((work.Bottom - work.Top) * .85)) };
+        float scale = InitialUiDpi() / 96;
+        return new() { X = Math.Min((int)(640 * scale), (int)((work.Right - work.Left) * .85)),
+            Y = Math.Min((int)(440 * scale), (int)((work.Bottom - work.Top) * .85)) };
+    }
+
+    private Native.Point EditorMinimumTrackSize()
+    {
+        var work = CurrentWorkArea();
+        float scale = InitialUiDpi() / 96;
+        return new() { X = Math.Min((int)(980 * scale), work.Right - work.Left),
+            Y = Math.Min((int)(620 * scale), work.Bottom - work.Top) };
     }
 
     private void FitSetupWindow() => FitWindow(setup: true);
@@ -42,10 +51,11 @@ internal sealed partial class EditorWindow
     private void FitWindow(bool setup)
     {
         var work = CurrentWorkArea();
-        var size = setup && view.AcknowledgementsVisible ? EditorView.AcknowledgementsWindowSize(work.Right - work.Left, work.Bottom - work.Top, dpi / 96d)
-            : setup ? EditorView.FirstRunWindowSize(work.Right - work.Left, work.Bottom - work.Top, dpi / 96d)
+        float initialUiDpi = InitialUiDpi();
+        var size = setup && view.AcknowledgementsVisible ? EditorView.AcknowledgementsWindowSize(work.Right - work.Left, work.Bottom - work.Top, initialUiDpi / 96d)
+            : setup ? EditorView.FirstRunWindowSize(work.Right - work.Left, work.Bottom - work.Top, initialUiDpi / 96d)
             : (Width: 1440d, Height: 900d);
-        var rect = new Native.Rectangle { Right = (int)(size.Width * dpi / 96), Bottom = (int)(size.Height * dpi / 96) };
+        var rect = new Native.Rectangle { Right = (int)(size.Width * initialUiDpi / 96), Bottom = (int)(size.Height * initialUiDpi / 96) };
         uint currentStyle = (uint)Native.GetWindowLongPtr(hwnd, -16);
         uint style = FirstRunWindowStyle(currentStyle, setup);
         if (currentStyle != style) Native.SetWindowLongPtr(hwnd, -16, (nint)style);

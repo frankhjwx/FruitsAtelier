@@ -49,6 +49,15 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`FruitsAtelier.App.exe --render-check --dpi-render-check` checks window client
+scaling at the 2520 × 1575 reference window, 3840 × 2160, 2560 × 1440,
+1920 × 1080 and 1920 × 1200. The reference must retain 175% rendering. It injects
+96/120/144/168/192/240 DPI notifications, compares native menu pixels at equal
+client dimensions, and exercises button clicks, slider dragging, wheel input
+and non-client frame sizing in English and Chinese. Captures and results are
+written to `artifacts/tests/dpi-native`. These checks use real Direct2D rendering
+with simulated DPI notifications; they do not change Windows display settings.
+
 `App.Tests --object-snap-check` verifies full-beat search ranges across BPM changes
 and independently of meter, bidirectional fruit and slider-start placement, exact X priority over Grid
 and Distance Snap, undo, hover isolation, default preferences and Apply/Cancel.

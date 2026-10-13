@@ -13,6 +13,7 @@ internal sealed partial class EditorWindow : IDisposable
     private readonly EditorView view = new(loadDemo: false);
     private D2DCanvas? canvas;
     private nint hwnd;
+    private float uiDpi = 168;
     private float dpi = 96;
     private bool failed, disposed, painting, recoveringRenderer;
     private bool framePending;
@@ -88,11 +89,12 @@ internal sealed partial class EditorWindow : IDisposable
         if (Native.RegisterClassEx(ref windowClass) == 0) throw new Win32Exception();
         dpi = Native.GetDpiForSystem();
         Native.SystemParametersInfo(0x0030, 0, out var work, 0);
+        float initialUiDpi = InitialUiDpi();
         var desired = view.AcknowledgementsVisible
-            ? EditorView.AcknowledgementsWindowSize(work.Right - work.Left, work.Bottom - work.Top, dpi / 96d)
-            : view.FirstRunSetupVisible ? EditorView.FirstRunWindowSize(work.Right - work.Left, work.Bottom - work.Top, dpi / 96d)
+            ? EditorView.AcknowledgementsWindowSize(work.Right - work.Left, work.Bottom - work.Top, initialUiDpi / 96d)
+            : view.FirstRunSetupVisible ? EditorView.FirstRunWindowSize(work.Right - work.Left, work.Bottom - work.Top, initialUiDpi / 96d)
             : (Width: 1440d, Height: 900d);
-        var rect = new Native.Rectangle { Right = (int)(desired.Width * dpi / 96), Bottom = (int)(desired.Height * dpi / 96) };
+        var rect = new Native.Rectangle { Right = (int)(desired.Width * initialUiDpi / 96), Bottom = (int)(desired.Height * initialUiDpi / 96) };
         uint startupStyle = view.StartupDialogVisible ? 0x80000000u : Native.WindowStyle;
         Native.AdjustWindowRectExForDpi(ref rect, startupStyle, false, 0, (uint)dpi);
         int width = Math.Min(rect.Right - rect.Left, view.StartupDialogVisible ? (int)((work.Right - work.Left) * .85) : work.Right - work.Left - 32);
@@ -106,12 +108,13 @@ internal sealed partial class EditorWindow : IDisposable
         int dark = 1;
         Native.DwmSetWindowAttribute(hwnd, 20, ref dark, 4);
         Native.GetClientRect(hwnd, out var client);
-        canvas = new D2DCanvas(hwnd, client.Right, client.Bottom, dpi) { Performance = view.Performance };
+        RefreshUiScale(hwnd);
+        canvas = new D2DCanvas(hwnd, client.Right, client.Bottom, uiDpi) { Performance = view.Performance };
         AppLog.Write($"Window ready. Adapter={canvas.AdapterName}; DPI={dpi}; Client={client.Right}x{client.Bottom}");
         AppLog.Write($"UI diagnostics enabled. Version={typeof(EditorView).Assembly.GetName().Version}; Runtime={Environment.Version}; OS={Environment.OSVersion}; Process={Environment.ProcessId}");
         if (profileMap is not null)
         {
-            Diagnostics.RenderCheck.ProfileMap(canvas, view, profileMap, dpi, profileStartMs);
+            Diagnostics.RenderCheck.ProfileMap(canvas, view, profileMap, uiDpi, profileStartMs);
             Native.DestroyWindow(hwnd);
             return 0;
         }
@@ -129,6 +132,16 @@ internal sealed partial class EditorWindow : IDisposable
         }
         if (renderCheck)
         {
+            if (Environment.GetCommandLineArgs().Contains("--dpi-render-check"))
+            {
+                CheckDpiScaling();
+                Native.ShowWindow(hwnd, 0);
+                CheckSetupWindow();
+                CheckAcknowledgementsWindow();
+                CheckFullscreen();
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--banana-edit-render-check"))
             {
                 Diagnostics.BananaEditRenderCheck.Run(canvas);
@@ -150,7 +163,7 @@ internal sealed partial class EditorWindow : IDisposable
             }
             if (difficultySwitchPath is not null)
             {
-                Diagnostics.DifficultySwitchRenderCheck.Run(canvas, view, difficultySwitchPath, dpi);
+                Diagnostics.DifficultySwitchRenderCheck.Run(canvas, view, difficultySwitchPath, uiDpi);
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
@@ -158,7 +171,7 @@ internal sealed partial class EditorWindow : IDisposable
             if (resumeAudio is not null)
             {
                 RestoreAudioSettings(resumeAudio);
-                canvas.Begin(); view.Render(canvas, client.Right * 96 / dpi, client.Bottom * 96 / dpi); canvas.End();
+                canvas.Begin(); view.Render(canvas, client.Right * 96 / uiDpi, client.Bottom * 96 / uiDpi); canvas.End();
                 if (!view.AudioDiagnosticSettingsVisible || view.LibraryVisible != resumeAudio.LibraryVisible
                     || view.ActiveDifficultyIndex != resumeAudio.Difficulty
                     || Math.Abs(view.PlayheadMs - resumeAudio.PositionMs) > .01
@@ -286,7 +299,7 @@ internal sealed partial class EditorWindow : IDisposable
                     {
                         canvas?.Dispose(); canvas = null;
                         Native.GetClientRect(window, out var size);
-                        canvas = new D2DCanvas(window, Math.Max(1, size.Right), Math.Max(1, size.Bottom), dpi) { Performance = view.Performance };
+                        canvas = new D2DCanvas(window, Math.Max(1, size.Right), Math.Max(1, size.Bottom), uiDpi) { Performance = view.Performance };
                         view.ShowError(L.Get("window.operationFailed", L.Localized(exception.Message)));
                         AppLog.Write("Renderer recreated after paint failure; document retained.");
                         failed = false;
@@ -314,14 +327,14 @@ internal sealed partial class EditorWindow : IDisposable
 
     private nint HandleMessage(nint window, uint message, nuint wParam, nint lParam)
     {
-        float x = (short)((long)lParam & 0xFFFF) * 96f / dpi;
-        float y = (short)(((long)lParam >> 16) & 0xFFFF) * 96f / dpi;
+        float x = (short)((long)lParam & 0xFFFF) * 96f / uiDpi;
+        float y = (short)(((long)lParam >> 16) & 0xFFFF) * 96f / uiDpi;
         switch (message)
         {
             case 0x0084 when view.StartupDialogVisible: // WM_NCHITTEST
                 var setupPoint = new Native.Point { X = (short)((long)lParam & 0xFFFF), Y = (short)(((long)lParam >> 16) & 0xFFFF) };
                 Native.ScreenToClient(window, ref setupPoint);
-                return view.StartupHeaderDraggable && setupPoint.Y >= 0 && setupPoint.Y * 96f / dpi < (view.FirstRunSetupComplete ? 32 : 60) ? 2 : 1;
+                return view.StartupHeaderDraggable && setupPoint.Y >= 0 && setupPoint.Y * 96f / uiDpi < (view.FirstRunSetupComplete ? 32 : 60) ? 2 : 1;
             case updateStatusChangedMessage:
                 Invalidate();
                 return 0;
@@ -339,6 +352,7 @@ internal sealed partial class EditorWindow : IDisposable
                     Native.GetClientRect(window, out var rect);
                     if (canvas is not null && rect.Right > 0 && rect.Bottom > 0 && !Native.IsIconic(window))
                     {
+                        RefreshUiScale(window);
                         RecordFrameGap();
                         // Continuous repainting can starve WM_TIMER, including update status polling.
                         renderTimer.Restart();
@@ -346,7 +360,7 @@ internal sealed partial class EditorWindow : IDisposable
                         PollUpdates(); PollAudio();
                         view.Performance.End(EditorPerformanceStage.Poll, phase);
                         phase = view.Performance.Start();
-                        canvas.Resize(rect.Right, rect.Bottom, dpi);
+                        canvas.Resize(rect.Right, rect.Bottom, uiDpi);
                         bool immediatePresentation = ImmediatePresentation && !startupWindowTransition;
                         // BeginPaint consumes the invalid region even when DXGI cannot accept a frame yet.
                         // Keep that repaint pending so a paused editor also retries when the slot is ready.
@@ -355,7 +369,7 @@ internal sealed partial class EditorWindow : IDisposable
                         canvas.Begin();
                         view.Performance.End(EditorPerformanceStage.PrepareFrame, phase);
                         phase = view.Performance.Start();
-                        view.Render(canvas, rect.Right * 96 / dpi, rect.Bottom * 96 / dpi);
+                        view.Render(canvas, rect.Right * 96 / uiDpi, rect.Bottom * 96 / uiDpi);
                         if (testplayCursorMode != view.TestplayUsesCursor)
                         {
                             testplayCursorMode = view.TestplayUsesCursor;
@@ -397,7 +411,20 @@ internal sealed partial class EditorWindow : IDisposable
                 if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
                     || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
                 return 0;
-            case 0x0005: Invalidate(); return 0;
+            case 0x0005: RefreshUiScale(window); Invalidate(); return 0; // WM_SIZE
+            case 0x02E4: // WM_GETDPISCALEDSIZE
+                var pendingSize = Marshal.PtrToStructure<Native.Point>(lParam);
+                uint style = (uint)Native.GetWindowLongPtr(window, -16);
+                uint extendedStyle = (uint)Native.GetWindowLongPtr(window, -20);
+                var oldFrame = new Native.Rectangle();
+                var newFrame = new Native.Rectangle();
+                Native.AdjustWindowRectExForDpi(ref oldFrame, style, false, extendedStyle, (uint)dpi);
+                Native.AdjustWindowRectExForDpi(ref newFrame, style, false, extendedStyle, (uint)wParam);
+                // Preserve the pending client pixel size, including a simultaneous user resize.
+                pendingSize.X += newFrame.Right - newFrame.Left - (oldFrame.Right - oldFrame.Left);
+                pendingSize.Y += newFrame.Bottom - newFrame.Top - (oldFrame.Bottom - oldFrame.Top);
+                Marshal.StructureToPtr(pendingSize, lParam, false);
+                return 1;
             case 0x02E0: // WM_DPICHANGED
                 view.CancelInteraction();
                 if (Native.GetCapture() == window) Native.ReleaseCapture();
@@ -413,7 +440,7 @@ internal sealed partial class EditorWindow : IDisposable
                 var minMax = Marshal.PtrToStructure<Native.MinMaxInfo>(lParam);
                 minMax.MinTrackSize = fullscreen ? new Native.Point { X = 1, Y = 1 }
                     : view.StartupDialogVisible ? SetupMinimumTrackSize()
-                    : new Native.Point { X = (int)(980 * dpi / 96), Y = (int)(620 * dpi / 96) };
+                    : EditorMinimumTrackSize();
                 Marshal.StructureToPtr(minMax, lParam, false); return 0;
             case 0x0201:
             case 0x0204:
@@ -451,7 +478,7 @@ internal sealed partial class EditorWindow : IDisposable
                 view.SetModifiers(Native.Alt, Native.Shift);
                 var point = new Native.Point { X = (short)((long)lParam & 0xFFFF), Y = (short)(((long)lParam >> 16) & 0xFFFF) };
                 Native.ScreenToClient(window, ref point);
-                view.Wheel(point.X * 96f / dpi, point.Y * 96f / dpi, (short)((ulong)wParam >> 16),
+                view.Wheel(point.X * 96f / uiDpi, point.Y * 96f / uiDpi, (short)((ulong)wParam >> 16),
                     (wParam & 0x0008) != 0, Native.Shift, Native.Alt);
                 Invalidate(); return 0;
             case 0x0100:
