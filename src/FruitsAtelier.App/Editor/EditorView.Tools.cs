@@ -224,6 +224,7 @@ public sealed partial class EditorView
             return;
         }
         if (PlacementGhostPoint() is not { } point) return;
+        DrawObjectSnapGuide(c, point);
         if (placementDraftTrack is { Nodes.Count: >= 2 } previewTrack && draftTrack != Guid.Empty)
         {
             int segment = previewTrack.Nodes.Count - 2;

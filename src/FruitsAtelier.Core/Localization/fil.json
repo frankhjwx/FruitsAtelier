@@ -1,4 +1,9 @@
 {
+  "ds.objectSnap": "Pag-snap sa object",
+  "ds.objectEarlier": "Mas maaga",
+  "ds.objectLater": "Mas huli",
+  "ds.objectBeats": "{0} beat",
+  "ds.objectSnapTip": "Itinatapat ang X sa malapit na prutas nang hindi binabago ang oras ng paglalagay. Naghahanap bago at pagkatapos ayon sa bilang ng beat (mga pagitan ng 1/1 Snap) at BPM. Nauuna sa grid at distance snap. I-save gamit ang Apply para sa bawat difficulty.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",

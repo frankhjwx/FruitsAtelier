@@ -1,4 +1,9 @@
 {
+  "ds.objectSnap": "오브젝트 스냅",
+  "ds.objectEarlier": "이전 시간",
+  "ds.objectLater": "이후 시간",
+  "ds.objectBeats": "{0} 박",
+  "ds.objectSnapTip": "배치 시간을 유지하며 가까운 과일의 X 좌표에 맞춥니다. BPM 변화를 따라 설정한 박 수(1/1 Snap 간격)만큼 앞뒤로 검색합니다. 격자 및 거리 스냅보다 우선합니다. 적용하면 난이도별 편집 설정으로 저장됩니다.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "자동",

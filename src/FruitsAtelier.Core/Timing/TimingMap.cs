@@ -92,6 +92,30 @@ public static class TimingMap
 
         public double Snap(double time, int divisor) => TimingMap.Snap(this, time, divisor);
 
+        public double OffsetBeats(double time, double beats)
+        {
+            if (!double.IsFinite(time) || !double.IsFinite(beats)) throw new ArgumentOutOfRangeException(nameof(time));
+            bool earlier = beats < 0;
+            double remaining = Math.Abs(beats);
+            int boundary = Array.BinarySearch(RedTimes, time);
+            if (boundary < 0) boundary = ~boundary - 1;
+            else if (earlier) boundary--;
+            while (remaining > 0)
+            {
+                double next = earlier ? boundary >= 0 ? RedTimes[boundary] : double.NegativeInfinity
+                    : boundary + 1 < RedTimes.Length ? RedTimes[boundary + 1] : double.PositiveInfinity;
+                var state = At(earlier ? Math.BitDecrement(time) : time);
+                double length = state.BeatLengthMs;
+                if (!double.IsFinite(length) || length <= 0) throw new ArgumentOutOfRangeException(nameof(time));
+                double available = Math.Abs(next - time) / length;
+                if (remaining <= available) return time + (earlier ? -1 : 1) * remaining * length;
+                remaining -= available;
+                time = next;
+                boundary += earlier ? -1 : 1;
+            }
+            return time;
+        }
+
         public IEnumerable<BeatGridLine> Grid(double start, double end, int divisor)
         {
             var lines = new List<BeatGridLine>();

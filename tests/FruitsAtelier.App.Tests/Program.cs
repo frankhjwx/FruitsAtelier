@@ -2,6 +2,8 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Contains("--object-snap-check")) { ObjectSnapTests.Run(); Console.WriteLine("PASS Object snap ranges, placement and preferences"); return 0; }
+
 
 if (args.Contains("--experimental-snap-check")) { ExperimentalSnapTests.Run(); Console.WriteLine("PASS Experimental snap settings, wheel and Stream/Stack"); return 0; }
 
@@ -159,6 +161,7 @@ var tests = new (string Name, Action Run)[]
     ("Mapping marquee playback and banana timeline resizing", MappingSessionTests.MarqueeAndBanana),
     ("Mapping independent zoom and Combo preferences", MappingSessionTests.Preferences),
     ("Mapping per-difficulty editing preferences survive restart", MappingSessionTests.MapPreferences),
+    ("Object snap follows musical ranges and preserves time and preferences", ObjectSnapTests.Run),
     ("Mapping Combo visibility and configured dash brightness", MappingSessionTests.TestplayDisplay),
     ("Clearing internal slider nodes preserves endpoints and batch undo", ClearSliderNodesTests.Run),
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),

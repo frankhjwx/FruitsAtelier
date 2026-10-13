@@ -49,6 +49,13 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --object-snap-check` verifies full-beat search ranges across BPM changes
+and independently of meter, bidirectional fruit and slider-start placement, exact X priority over Grid
+and Distance Snap, undo, hover isolation, default preferences and Apply/Cancel.
+On Windows, `FruitsAtelier.App.exe --render-check --object-snap-render-check`
+checks native placement and configuration in English and Chinese at two window
+sizes and three DPI settings, saving captures under `artifacts/tests/object-snap-native`.
+
 `App.Tests --acknowledgements-check` verifies English-only consent, disabled
 confirmation, cancellation, scrolling, startup blocking, persistent notice
 revisions and failed saves, alongside first-time setup. On Windows,

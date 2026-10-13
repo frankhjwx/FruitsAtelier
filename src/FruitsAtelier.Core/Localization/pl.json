@@ -1,4 +1,9 @@
 {
+  "ds.objectSnap": "Przyciąganie do obiektów",
+  "ds.objectEarlier": "Wcześniej",
+  "ds.objectLater": "Później",
+  "ds.objectBeats": "{0} uderz.",
+  "ds.objectSnapTip": "Wyrównuje X do pobliskich owoców bez zmiany czasu umieszczenia. Szuka w obu kierunkach o ustawioną liczbę uderzeń (odstępy 1/1 Snap), uwzględniając BPM. Ma pierwszeństwo przed siatką i przyciąganiem według odległości. Zastosuj zapisuje ustawienie dla poziomu trudności.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",

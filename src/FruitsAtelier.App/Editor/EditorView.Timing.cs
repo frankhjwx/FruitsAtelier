@@ -521,7 +521,11 @@ public sealed partial class EditorView
             if (dsPendingApply is { } draft) CommitDistanceSnap(draft);
             editorWriteCache.RememberMultiplier(Document, output, compensation);
         })) { timingError = dsBaseError = StatusMessage; dsPendingApply = null; return; }
-        if (dsPendingApply is not null) { dsPendingApply = null; CloseDistanceSnapDialog(); }
+        if (dsPendingApply is { } applied)
+        {
+            CommitObjectSnapPreferences(applied);
+            dsPendingApply = null; CloseDistanceSnapDialog();
+        }
         timingError = ""; ResetHitsounds();
     }
 

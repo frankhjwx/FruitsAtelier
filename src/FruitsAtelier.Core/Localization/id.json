@@ -1,4 +1,9 @@
 {
+  "ds.objectSnap": "Snap objek",
+  "ds.objectEarlier": "Waktu sebelumnya",
+  "ds.objectLater": "Waktu sesudahnya",
+  "ds.objectBeats": "{0} ketuk",
+  "ds.objectSnapTip": "Menyelaraskan X ke buah terdekat tanpa mengubah waktu penempatan. Mencari ke kedua arah sesuai jumlah ketuk (interval 1/1 Snap) serta perubahan BPM. Diprioritaskan atas snap kisi dan jarak. Terapkan menyimpan preferensi ini per tingkat kesulitan.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Otomatis",

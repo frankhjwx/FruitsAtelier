@@ -1,4 +1,9 @@
 {
+  "ds.objectSnap": "Object snap",
+  "ds.objectEarlier": "Earlier time",
+  "ds.objectLater": "Later time",
+  "ds.objectBeats": "{0} beats",
+  "ds.objectSnapTip": "Aligns X to nearby fruits while keeping placement time. Searches earlier and later by the configured number of full beats (1/1 Snap intervals), following BPM changes. Takes priority over Grid Snap and Distance Snap. Apply saves this editing preference per difficulty.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",

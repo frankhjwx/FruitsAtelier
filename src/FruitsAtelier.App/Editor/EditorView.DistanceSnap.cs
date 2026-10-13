@@ -12,6 +12,11 @@ public sealed partial class EditorView
     private int dsGridSize = 4;
     internal (bool Enabled, int Size) EditorGridSettings => (gridSnap, gridSize);
     private bool dsShowValues, dsCollinear;
+    private bool dsObjectSnap;
+    private int dsObjectEarlier, dsObjectLater;
+    internal Rect ObjectSnapToggleBounds { get; private set; }
+    internal Rect ObjectSnapEarlierPlusBounds { get; private set; }
+    internal Rect ObjectSnapLaterPlusBounds { get; private set; }
     private List<double> dsDraft = [];
     private int dsSliderDrag = -1, dsSnapDragStart;
     private double dsDragStart;
@@ -20,7 +25,8 @@ public sealed partial class EditorView
     private bool dsBaseEdited, dsBaseDragEdited;
     private bool dsBaseSv;
     private string dsBaseError = "";
-    private sealed record DistanceSnapApply(double Base, double[] Ratios, bool Collinear);
+    private sealed record DistanceSnapApply(double Base, double[] Ratios, bool Collinear,
+        bool ObjectSnap, int EarlierBeats, int LaterBeats);
     private DistanceSnapApply? dsPendingApply;
     private string dsBaseText = "", dsBaseDragText = "", dsBaseOpeningText = "";
     private List<double> dsBaseDragPresets = [];
@@ -70,6 +76,7 @@ public sealed partial class EditorView
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
         dsDraft = Document.DistanceSnapRatios.ToList();
         dsCollinear = Document.DistanceSnapCollinear;
+        (dsObjectSnap, dsObjectEarlier, dsObjectLater) = ObjectSnapSettings;
         dsBaseDraft = 100 * Document.EffectiveSliderMultiplier;
         dsBaseOpeningValue = dsBaseDraft;
         dsBaseEdited = false;
@@ -166,8 +173,9 @@ public sealed partial class EditorView
         Button(c, new(r.Right - 80, r.Y + 60, 64, 29), L.Get("ds.reset"), dsPreviewFruits.Clear);
         Button(c, new(r.Right - 176, r.Y + 60, 88, 29), L.Get("ds.showValues"),
             () => dsShowValues = !dsShowValues, dsShowValues);
-        DistanceSnapPreviewBounds = new(split + 16, r.Y + 108, r.Right - split - 32, r.Height - 180);
+        DistanceSnapPreviewBounds = new(split + 16, r.Y + 108, r.Right - split - 32, r.Height - 286);
         DrawDistanceSnapPreview(c);
+        DrawObjectSnapConfiguration(c, new(split + 16, r.Bottom - 168, r.Right - split - 32, 104));
         float collinearY = dsDraft.Count == 0 ? r.Y + 480 : textY + 44;
         c.Line(r.X + 20, collinearY, split - 16, collinearY, Grid);
         var collinearRow = new Rect(r.X + 20, collinearY + 10, split - r.X - 36, 32);
@@ -209,7 +217,8 @@ public sealed partial class EditorView
     private void ApplyDistanceSnap()
     {
         if (SliderMultiplierValidationBusy) return;
-        var draft = new DistanceSnapApply(dsBaseDraft, dsDraft.Order().ToArray(), dsCollinear);
+        var draft = new DistanceSnapApply(dsBaseDraft, dsDraft.Order().ToArray(), dsCollinear,
+            dsObjectSnap, dsObjectEarlier, dsObjectLater);
         if (dsBaseEdited && DistanceBaseValue(dsBaseText) is null) return;
         if (dsBaseEdited && dsBaseDraft != Document.DistancePerBeat
             && dsBaseDraft / 100 != Document.EffectiveSliderMultiplier)
@@ -224,7 +233,47 @@ public sealed partial class EditorView
             catch (ArgumentException ex) { dsBaseError = ex.Message; }
             return;
         }
-        if (Edit(L.Get("ds.title"), () => CommitDistanceSnap(draft))) CloseDistanceSnapDialog();
+        if (Edit(L.Get("ds.title"), () => CommitDistanceSnap(draft)))
+        {
+            CommitObjectSnapPreferences(draft);
+            CloseDistanceSnapDialog();
+        }
+    }
+
+    private void CommitObjectSnapPreferences(DistanceSnapApply draft)
+    {
+        EditingPreferences.ObjectSnap = draft.ObjectSnap;
+        EditingPreferences.ObjectSnapEarlierBeats = draft.EarlierBeats;
+        EditingPreferences.ObjectSnapLaterBeats = draft.LaterBeats;
+        objectSnapTarget = null;
+        SaveMapEditingPreferences();
+    }
+
+    private void DrawObjectSnapConfiguration(ICanvas c, Rect r)
+    {
+        c.Line(r.X, r.Y, r.Right, r.Y, Grid);
+        ObjectSnapToggleBounds = new(r.X, r.Y + 6, r.Width, 28);
+        c.Text(L.Get("ds.objectSnap"), r.X, r.Y + 14, 12, Foreground, r.Width - 54, true);
+        var toggle = new Rect(r.Right - 46, r.Y + 8, 46, 24);
+        c.Fill(toggle, dsObjectSnap ? 0x417D77u : 0x46515Fu, 12);
+        c.Circle(toggle.X + (dsObjectSnap ? 34 : 12), toggle.Y + 12, 9, 0xF0F3F6);
+        hits.Add(new(ObjectSnapToggleBounds, () => dsObjectSnap = !dsObjectSnap, true));
+        ObjectSnapEarlierPlusBounds = Row(r.Y + 38, "ds.objectEarlier", dsObjectEarlier,
+            () => dsObjectEarlier = Math.Max(0, dsObjectEarlier - 1), () => dsObjectEarlier = Math.Min(MapEditingPreferences.MaximumObjectSnapBeats, dsObjectEarlier + 1));
+        ObjectSnapLaterPlusBounds = Row(r.Y + 70, "ds.objectLater", dsObjectLater,
+            () => dsObjectLater = Math.Max(0, dsObjectLater - 1), () => dsObjectLater = Math.Min(MapEditingPreferences.MaximumObjectSnapBeats, dsObjectLater + 1));
+        if (ObjectSnapToggleBounds.Contains(mouseX, mouseY))
+            DrawPaletteTooltip(c, L.Get("ds.objectSnapTip"), toggle, left: true, above: true);
+
+        Rect Row(float y, string key, int value, Action decrease, Action increase)
+        {
+            c.Text(L.Get(key), r.X, y + 7, 11, dsObjectSnap ? Foreground : Muted, Math.Max(0, r.Width - 134));
+            Button(c, new(r.Right - 130, y, 26, 26), "−", decrease, enabled: dsObjectSnap && value > 0);
+            c.Text(L.Get("ds.objectBeats", value), r.Right - 98, y + 7, 11, Foreground, 66);
+            var plus = new Rect(r.Right - 26, y, 26, 26);
+            Button(c, plus, "+", increase, enabled: dsObjectSnap && value < MapEditingPreferences.MaximumObjectSnapBeats);
+            return plus;
+        }
     }
 
     private void CommitDistanceSnap(DistanceSnapApply draft)

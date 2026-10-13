@@ -1,4 +1,9 @@
 {
+  "ds.objectSnap": "สแนปวัตถุ",
+  "ds.objectEarlier": "เวลาก่อนหน้า",
+  "ds.objectLater": "เวลาถัดไป",
+  "ds.objectBeats": "{0} จังหวะ",
+  "ds.objectSnapTip": "จัด X ให้ตรงกับผลไม้ใกล้เคียงโดยคงเวลาวางไว้ ค้นหาก่อนและหลังตามจำนวนจังหวะเต็ม (ช่วง 1/1 Snap) ที่ตั้งไว้ โดยติดตามการเปลี่ยน BPM มีลำดับก่อนสแนปกริดและระยะทาง กดใช้เพื่อบันทึกค่าการแก้ไขแยกตามระดับความยาก",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "อัตโนมัติ",

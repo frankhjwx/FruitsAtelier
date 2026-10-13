@@ -390,7 +390,8 @@ internal static class DistanceSnapPresetTests
                 Check(ui.Canvas.Texts.Any(t => t.Value == Strings.Get("assist.ratio", boundary / unit)), "Reference transition differs from a fresh departure.");
             Check(!ui.View.IsEditingText, "Preview settings entered input mode without a click.");
             var preview = ui.View.DistanceSnapPreviewBounds;
-            Check(ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2) == 17, "Quarter snap did not show sixteen intervals and the closing line.");
+            Check(ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2
+                && l.Y1 >= preview.Y && l.Y1 <= preview.Bottom) == 17, "Quarter snap did not show sixteen intervals and the closing line.");
             ui.Click(preview.X + 50, preview.Bottom - 12);
             ui.Click(preview.X + 140, preview.Bottom - 12 - (preview.Height - 24) / 16);
             Check(ui.View.DistanceSnapPreviewFruits.Count == 2
@@ -457,15 +458,18 @@ internal static class DistanceSnapPresetTests
                 Check(ui.View.WantsCapture, "Snap slider did not capture input.");
                 ui.View.PointerMove(x, subdivision.Y + 15, false, false);
                 ui.View.PointerUp(x, subdivision.Y + 15, 0); ui.Paint();
-                Check(!ui.View.WantsCapture && ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2) == 4 * divisors[i] + 1,
+                Check(!ui.View.WantsCapture && ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2
+                    && l.Y1 >= preview.Y && l.Y1 <= preview.Bottom) == 4 * divisors[i] + 1,
                     "Snap slider did not select a supported divisor or draw the final line.");
             }
             ui.View.PointerDown(subdivision.X + 7, subdivision.Y + 15, 0, false, false);
             ui.Key(27); ui.View.PointerUp(subdivision.X + 7, subdivision.Y + 15, 0); ui.Paint();
-            Check(ui.View.DistanceSnapDialogVisible && ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2) == 65, "Escape did not restore the preview Snap.");
+            Check(ui.View.DistanceSnapDialogVisible && ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2
+                && l.Y1 >= preview.Y && l.Y1 <= preview.Bottom) == 65, "Escape did not restore the preview Snap.");
             ui.View.PointerDown(subdivision.X + 7, subdivision.Y + 15, 0, false, false);
             ui.View.CancelInteraction(); ui.Paint();
-            Check(!ui.View.WantsCapture && ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2) == 65, "Lost capture did not restore Snap.");
+            Check(!ui.View.WantsCapture && ui.Canvas.Lines.Count(l => l.X1 == preview.X && l.X2 == preview.Right && l.Y1 == l.Y2
+                && l.Y1 >= preview.Y && l.Y1 <= preview.Bottom) == 65, "Lost capture did not restore Snap.");
             Check(ui.View.SnapDivisor == 4 && baseline.ContentEquals(ui.View.Document), "Preview Snap changed editor settings or content.");
 
             for (int i = 1; i < 9; i++) ui.ClickText(Strings.Get("ds.add"));
@@ -486,7 +490,10 @@ internal static class DistanceSnapPresetTests
             ui.Key('Z', ctrl: true); Check(ui.View.Document.DistanceSnapRatios.Count == 0, "Apply did not undo as one step.");
             ui.Key('Y', ctrl: true); Check(ui.View.Document.DistanceSnapRatios.Count == 7, "Apply did not redo.");
             ui.Resize(960, 640); ui.View.OpenDistanceSnapDialog(); ui.Paint();
-            Check(ui.View.DistanceSnapPreviewFruits.Count == 0 && ui.Canvas.Lines.Count(l => l.X1 == ui.View.DistanceSnapPreviewBounds.X && l.X2 == ui.View.DistanceSnapPreviewBounds.Right && l.Y1 == l.Y2) == 17, "Reopening did not reset the preview to editor settings.");
+            Check(ui.View.DistanceSnapPreviewFruits.Count == 0 && ui.Canvas.Lines.Count(l => l.X1 == ui.View.DistanceSnapPreviewBounds.X
+                && l.X2 == ui.View.DistanceSnapPreviewBounds.Right && l.Y1 == l.Y2
+                && l.Y1 >= ui.View.DistanceSnapPreviewBounds.Y && l.Y1 <= ui.View.DistanceSnapPreviewBounds.Bottom) == 17,
+                "Reopening did not reset the preview to editor settings.");
             pointer = ui.View.DistanceSnapPointerBounds.Last();
             ui.View.PointerDown(pointer.X + 8, pointer.Y + 8, 2, false, false); ui.Paint();
             ui.ClickText(Strings.Get("mac.cancel"));

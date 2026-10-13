@@ -977,6 +977,11 @@ internal static class RenderCheck
             SliderSpeedRenderCheck.Run(canvas);
             return;
         }
+        if (Environment.GetCommandLineArgs().Contains("--object-snap-render-check"))
+        {
+            ObjectSnapRenderCheck.Run(canvas);
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--sv-ds-render-check"))
         {
             foreach (int dpi in new[] { 96, 144, 192 })

@@ -37,6 +37,13 @@ identity, parent ID and tiny-droplet inclusion. A new selection scans only the
 parent's time interval; unchanged painting and hover reuse the values. It does
 not initiate conversion or export, including while a slider draft is active.
 
+Object snap retains one time-sorted fruit target array per editor, keyed by the
+current authoring conversion identity. A new conversion replaces the array, so
+content edits, undo and document replacement refresh its positions. Pointer
+placement reuses the owned timing lookup to calculate the musical search window,
+then binary-searches its first fruit and visits only that interval. Viewport and
+preference changes reuse target data; subsequent slider draft points do not query it.
+
 ## Full-map work and cache ownership
 
 `OsuBeatmapWriter.Serialize` validates, converts, emits text, parses it again,

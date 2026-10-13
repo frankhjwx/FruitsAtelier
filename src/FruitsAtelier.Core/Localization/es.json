@@ -1,4 +1,9 @@
 {
+  "ds.objectSnap": "Ajuste a objetos",
+  "ds.objectEarlier": "Tiempo anterior",
+  "ds.objectLater": "Tiempo posterior",
+  "ds.objectBeats": "{0} pulsos",
+  "ds.objectSnapTip": "Alinea X con frutas cercanas sin cambiar el tiempo de colocación. Busca antes y después según los pulsos configurados (intervalos de 1/1 Snap) y los cambios de BPM. Tiene prioridad sobre la cuadrícula y el ajuste por distancia. Aplicar guarda esta preferencia por dificultad.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",

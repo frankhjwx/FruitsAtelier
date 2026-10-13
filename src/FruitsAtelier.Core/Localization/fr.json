@@ -1,4 +1,9 @@
 {
+  "ds.objectSnap": "Alignement sur les objets",
+  "ds.objectEarlier": "Avant",
+  "ds.objectLater": "Après",
+  "ds.objectBeats": "{0} temps",
+  "ds.objectSnapTip": "Aligne X sur les fruits proches sans changer le temps de placement. Recherche avant et après selon le nombre de temps configuré (intervalles de 1/1 Snap), en suivant le BPM. Prioritaire sur la grille et l’alignement par distance. Appliquer enregistre ce réglage par difficulté.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",
