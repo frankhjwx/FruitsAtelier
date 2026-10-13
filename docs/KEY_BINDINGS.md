@@ -160,7 +160,7 @@ currently do not adjust reverses.
 | Wheel over canvas, object timeline or overview | Up seeks earlier; down seeks later. One notch is a Snap subdivision while paused, or a whole beat while playing. |
 | Shift+wheel | Seek four times the normal wheel distance. During marquee selection, wheel seeking remains single-step. |
 | Ctrl+wheel over canvas or either timeline | Double / halve the current divisor within supported choices, stopping at the family boundary. |
-| Alt+wheel over canvas | Zoom around the pointer's time; adjust only Y when uniform scaling is unlocked. |
+| Alt+wheel over canvas | Scale X and Y together around the pointer's time, including when uniform scaling is unlocked. |
 | Alt+wheel over bottom overview | Adjust the selected volume channel by five percentage points and show the volume overlay. |
 | Alt+wheel over object timeline | Zoom that timeline independently. |
 | Alt+wheel over Timing waveform | Zoom the waveform time scale. Ctrl+wheel on the waveform currently does nothing. |

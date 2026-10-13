@@ -69,9 +69,12 @@ internal static class IndependentCanvasScaleTests
             ui.View.PointerDown(x, y, 1, false, false); ui.View.PointerMove(x - 20000, y, false, false);
             ui.View.PointerUp(x - 20000, y, 1); ui.Paint();
             Check(ui.Plot.Right + 54.4 * ui.Plot.Width / 512 >= plot.Right - 1, "Horizontal pan remains within the padded playfield");
-            double currentX = ui.View.CanvasZoom;
+            Axis(1, (float)((1 - minimum) / (2 - minimum)));
+            double currentX = ui.View.CanvasZoom, currentY = ui.View.CanvasTimeZoom;
+            double anchoredTime = ui.View.ViewStartMs + (plot.Bottom - y) / ui.View.PixelsPerMs;
             ui.View.Wheel(x, y, -120, false, false, true); ui.Paint();
-            Near(currentX, ui.View.CanvasZoom); Near(2 / 1.16, ui.View.CanvasTimeZoom);
+            Near(currentX / 1.16, ui.View.CanvasZoom); Near(currentY / 1.16, ui.View.CanvasTimeZoom);
+            Near(anchoredTime, ui.View.ViewStartMs + (plot.Bottom - y) / ui.View.PixelsPerMs);
             ui.View.PointerDown(x, y, 1, false, false); ui.View.PointerMove(x + 20000, y, false, false);
             ui.View.PointerUp(x + 20000, y, 1); ui.Paint();
             double panOffset = (plot.X + plot.Right - ui.Plot.X - ui.Plot.Right) / 2;
@@ -87,7 +90,7 @@ internal static class IndependentCanvasScaleTests
             string config = Path.Combine(root, "settings.json"); ui.View.LibrarySettings.Save(config);
             var saved = LibrarySettings.Load(config);
             Check(!saved.UniformCanvasScale, "Unlocked state survives saving");
-            Near(2, saved.CanvasZoom); Near(2 / 1.16, saved.CanvasTimeZoom);
+            Near(currentX / 1.16, saved.CanvasZoom); Near(currentY / 1.16, saved.CanvasTimeZoom);
             ui.View.OpenSettings(); ui.Paint(); ui.View.ApplySettings(config, force: true); ui.Key(27);
             Check(!LibrarySettings.Load(config).UniformCanvasScale, "Settings Apply retains independent scales");
             lockBounds = ui.View.CanvasScaleLockBounds; ui.Click(lockBounds.X + 10, lockBounds.Y + 10);

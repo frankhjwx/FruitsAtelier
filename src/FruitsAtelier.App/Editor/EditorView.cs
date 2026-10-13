@@ -268,7 +268,7 @@ public sealed partial class EditorView
 
     private void ZoomCanvasAt(float y, double factor)
     {
-        SetCanvasScales(UniformCanvasScale ? canvasZoom * factor : canvasZoom, CanvasTimeZoom * factor, y);
+        SetCanvasScales(canvasZoom * factor, CanvasTimeZoom * factor, y);
         SaveCanvasScale();
     }
 
