@@ -4,6 +4,40 @@ using L = FruitsAtelier.Localization.Strings;
 
 internal static class SynchronizationUiTests
 {
+    public static void LegacyFormat()
+    {
+        string language = L.Language;
+        try
+        {
+            foreach (string current in new[] { "en", "zh-CN" })
+            foreach (int width in new[] { 980, 1440 })
+            foreach (bool acceptExternal in new[] { false, true })
+            {
+                L.SetLanguage(current);
+                string root = Path.GetFullPath(Path.Combine("artifacts/tests/legacy-format-ui", Guid.NewGuid().ToString("N")));
+                string source = Path.Combine(root, "Songs", "set", "map.osu");
+                Directory.CreateDirectory(Path.GetDirectoryName(source)!);
+                File.WriteAllText(source, Fixture.Replace("format v14", "format v7"));
+                var ui = new Ui(false); ui.Resize(width, 900);
+                ui.View.LibrarySettings.Workspace = Path.Combine(root, "Workspace");
+                ui.View.LibrarySettings.Songs = Path.Combine(root, "Songs");
+                ui.View.LoadWorkspace(LibraryOperations.ImportPath(source, ui.View.LibrarySettings)); Wait(ui);
+                try
+                {
+                    File.WriteAllText(source, Fixture);
+                    ui.View.RefreshSynchronization(); Wait(ui);
+                    Check(ui.View.SynchronizationVisible && ui.Canvas.Texts.Any(t => t.Value.StartsWith("Version · ")),
+                        "header-only tick changes show a format choice");
+                    SelectSyncField(ui, "Version", acceptExternal); ui.ClickText(L.Get("sync.applyChoices")); Wait(ui);
+                    Check(ui.View.Document.LegacySliderTicks == !acceptExternal,
+                        "the selected format controls slider tick rules");
+                }
+                finally { ui.View.StopFileMonitoring(); }
+            }
+        }
+        finally { L.SetLanguage(language); }
+    }
+
     public static void PlaybackSave()
     {
         var ui = new Ui(false);

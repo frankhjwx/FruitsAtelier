@@ -1,10 +1,10 @@
 # stable .osu File Contract
 
-The project implements its own `.osu` reader/writer for the beatmap format used by osu!stable. Output uses `osu file format v14` and Catch `Mode: 2`. Fields follow the [official osu! format documentation](https://osu.ppy.sh/wiki/en/Client/File_formats/osu_%28file_format%29).
+The project implements its own `.osu` reader/writer for the beatmap format used by osu!stable. Output retains `osu file format v7` for maps using legacy slider ticks and uses v14 for other maps, with Catch `Mode: 2`. Fields follow the [official osu! format documentation](https://osu.ppy.sh/wiki/en/Client/File_formats/osu_%28file_format%29).
 
 ## Input and output
 
-- Accept v8 through v14 and stable-compatible lazer v128 / Mode=2; export v14. The reader rejects other format versions and unsupported object types.
+- Accept v7 through v14 and stable-compatible lazer v128 / Mode=2. Export retains v7 tick semantics for imported v7 maps; other maps export as v14. The reader rejects other format versions and unsupported object types.
 - Preserve General, Editor, Metadata, Difficulty, Events, TimingPoints, Colours, HitObjects, and audio/sample references.
 - Import/export `[Editor] DistanceSpacing` as the per-difficulty spacing multiplier.
 - Synchronization accepts osu!'s `Editor/TimelineZoom` without a conflict; it is
@@ -43,7 +43,7 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 
 Lazer v128 imports use the same supported object and timing fields. They require integer-valued coordinates after float parsing and ordinary L/B/C/P slider paths. Fractional coordinates, explicit mixed path segments and B-spline degree syntax are rejected; these need a stable-compatible export before import. This prevents interpreting lazer's fractional coordinates with stable's integer truncation. Project saves preserve accepted raw fields, and export still writes v14. See the pinned [ConvertHitObjectParser](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Rulesets/Objects/Legacy/ConvertHitObjectParser.cs) for the coordinate and path syntax boundaries.
 
-Versions 8–14 share the Catch timing, slider tick and legacy coordinate rules used here. Import preserves raw sections and object/sample fields; saving an editor project retains that content, and `.osu` export emits a v14 header. Older timing-offset and tick-generation rules (before v5 and v8 respectively) are outside the supported input range. These boundaries were checked against the pinned [LegacyBeatmapDecoder](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs) and [CatchBeatmapConverter](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapConverter.cs).
+Versions 8–14 share the Catch timing and slider tick rules used here. Version 7 additionally multiplies tick distance by the reciprocal of inherited SV, so changing only its header can change droplets and downstream RNG. Imported v7 maps retain this rule through project saves, undo, conversion caches, new FSliders and v7 export. New maps and other supported imports use v14 export. Synchronization reviews changes between these tick rules as `Format/Version`; this comparison field is not written as an `.osu` section. Import preserves raw sections and object/sample fields. All supported stable versions use the same legacy coordinate rules; the timing offset for versions below v5 remains outside the supported input range. These boundaries follow the pinned [LegacyBeatmapDecoder](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs) and [CatchBeatmapConverter](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapConverter.cs).
 
 | Item | Representation |
 | --- | --- |

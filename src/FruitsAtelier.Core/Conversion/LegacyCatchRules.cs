@@ -56,6 +56,13 @@ internal static class LegacyCatchRules
         return 100 * sliderMultiplier / (beatLength * (inheritedBeatLengthMagnitude / 100));
     }
 
+    internal static double TickDistance(MapDocument document, double velocity, double beatLength, double sv)
+    {
+        // Before v8, inherited SV changes tick frequency as well as slider speed.
+        double multiplier = document.LegacySliderTicks ? 1 / sv : 1;
+        return velocity * beatLength / document.SliderTickRate * multiplier;
+    }
+
     public static List<NestedCatchEvent> CreateNested(double start, double duration, double velocity, double tickDistance, double length, int spanCount = 1,
         bool quantizeStart = false)
     {

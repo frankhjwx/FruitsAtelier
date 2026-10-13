@@ -341,7 +341,7 @@
   "core.reader.endRange": "圖譜 結束時間超出可編輯範圍。",
   "core.reader.fileLimit": "圖譜 檔案超出了 32 MiB 限制。",
   "core.reader.finiteNumber": "數值必須是有限的。",
-  "core.reader.formatVersion": "支援的匯入格式為 osu 檔案格式 v8–v14 和穩定相容的 v128。匯出使用 v14。",
+  "core.reader.formatVersion": "支援匯入 osu 檔案格式 v7–v14 及相容 stable 的 v128。v7 圖譜匯出保留 v7，其餘匯出為 v14。",
   "core.reader.lazerCoordinates": "此雷射圖譜使用小數座標，不支援導入。首先以 osu!stable 相容格式匯出。",
   "core.reader.header": "圖譜 沒有 osu 檔案格式標頭。",
   "core.reader.importedParameters": "舊版 滑條 參數無效。",

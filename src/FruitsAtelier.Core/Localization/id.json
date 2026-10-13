@@ -341,7 +341,7 @@
   "core.reader.endRange": "Waktu berakhir Beatmap berada di luar rentang yang dapat diedit.",
   "core.reader.fileLimit": "File Beatmap melebihi batas 32 MiB.",
   "core.reader.finiteNumber": "Nilai numerik harus terbatas.",
-  "core.reader.formatVersion": "Format impor yang didukung adalah format file osu v8–v14 dan v128 yang kompatibel dengan stabil. Ekspor menggunakan v14.",
+  "core.reader.formatVersion": "Format osu v7–v14 dan v128 yang kompatibel dengan stable didukung. Map v7 tetap diekspor sebagai v7; map lainnya menggunakan v14.",
   "core.reader.lazerCoordinates": "Lazer Beatmap ini menggunakan koordinat pecahan, yang tidak didukung untuk impor. Ekspor terlebih dahulu dalam format yang kompatibel dengan osu!stable.",
   "core.reader.header": "Beatmap tidak memiliki header format file osu.",
   "core.reader.importedParameters": "Parameter Slider lama tidak valid.",

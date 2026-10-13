@@ -341,7 +341,7 @@
   "core.reader.endRange": "Czas zakończenia Beatmapa jest poza zakresem edytowalnym.",
   "core.reader.fileLimit": "Plik Beatmapa przekracza limit 32 MiB.",
   "core.reader.finiteNumber": "Wartości numeryczne muszą być skończone.",
-  "core.reader.formatVersion": "Obsługiwane formaty importu to format pliku osu v8–v14 i stabilna wersja v128. Eksport wykorzystuje wersję 14.",
+  "core.reader.formatVersion": "Obsługiwane formaty importu to osu v7–v14 i v128 zgodny ze stable. Mapy v7 są eksportowane jako v7, a pozostałe jako v14.",
   "core.reader.lazerCoordinates": "Ten laser Beatmapa wykorzystuje współrzędne ułamkowe, których import nie jest obsługiwany. Najpierw wyeksportuj go w formacie zgodnym z osu!stable.",
   "core.reader.header": "Beatmapa nie ma nagłówka w formacie pliku osu.",
   "core.reader.importedParameters": "Starsze parametry Slider są nieprawidłowe.",

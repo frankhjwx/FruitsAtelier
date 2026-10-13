@@ -41,10 +41,11 @@ public static class OsuBeatmapReader
             if (!header)
             {
                 if (trimmed.Length == 0) continue;
-                if (trimmed is not ("osu file format v8" or "osu file format v9" or "osu file format v10" or "osu file format v11"
+                if (trimmed is not ("osu file format v7" or "osu file format v8" or "osu file format v9" or "osu file format v10" or "osu file format v11"
                     or "osu file format v12" or "osu file format v13" or "osu file format v14" or "osu file format v128"))
                     throw new InvalidDataException(L.Get("core.reader.formatVersion"));
                 lazer = trimmed == "osu file format v128";
+                document.LegacySliderTicks = trimmed == "osu file format v7";
                 header = true;
                 continue;
             }

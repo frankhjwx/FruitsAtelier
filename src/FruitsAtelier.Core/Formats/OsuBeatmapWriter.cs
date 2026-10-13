@@ -572,7 +572,7 @@ public static class OsuBeatmapWriter
 
     private static string SectionText(MapDocument document)
     {
-        var text = new StringBuilder("osu file format v14\r\n");
+        var text = new StringBuilder(document.LegacySliderTicks ? "osu file format v7\r\n" : "osu file format v14\r\n");
         var standard = new Queue<OsuSection>(document.OriginalSections.Where(s => Array.IndexOf(sectionOrder, s.Name) >= 0)
             .OrderBy(s => Array.IndexOf(sectionOrder, s.Name)));
         foreach (var original in document.OriginalSections)

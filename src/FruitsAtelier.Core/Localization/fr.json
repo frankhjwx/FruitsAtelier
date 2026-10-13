@@ -341,7 +341,7 @@
   "core.reader.endRange": "L'heure de fin Beatmap se situe en dehors de la plage modifiable.",
   "core.reader.fileLimit": "Le fichier Beatmap dépasse la limite de 32 Mio.",
   "core.reader.finiteNumber": "Les valeurs numériques doivent être finies.",
-  "core.reader.formatVersion": "Les formats d'importation pris en charge sont les formats de fichier osu v8–v14 et v128 compatible stable. L'exportation utilise la v14.",
+  "core.reader.formatVersion": "Les formats osu v7–v14 et v128 compatible stable sont pris en charge. Les maps v7 restent en v7 lors de leur export ; les autres utilisent v14.",
   "core.reader.lazerCoordinates": "Ce laser Beatmap utilise des coordonnées fractionnaires, qui ne sont pas prises en charge pour l'importation. Exportez-le d'abord au format compatible osu!stable.",
   "core.reader.header": "Le Beatmap n'a pas d'en-tête de format de fichier osu.",
   "core.reader.importedParameters": "Les paramètres Slider hérités ne sont pas valides.",

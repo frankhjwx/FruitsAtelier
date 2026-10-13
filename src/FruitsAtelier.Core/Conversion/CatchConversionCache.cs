@@ -9,13 +9,13 @@ public sealed class CatchConversionCache
     private sealed record TrackPositions(CurveTrack Snapshot, Dictionary<double, double> Values);
     private readonly Dictionary<Guid, TrackPositions> trackPositions = new();
     private readonly HashSet<Guid> seen = new();
-    private (double, double, double, double, double, double, bool, double, int, bool, bool, double) settings;
+    private (double, double, double, double, double, double, bool, double, int, bool, bool, double, bool) settings;
     private TimingMap.Lookup? timing;
     internal void Begin(MapDocument document, bool compensation)
     {
         var current = (document.DurationMs, document.BeatLengthMs, document.TimingOffsetMs, document.ApproachRate,
             document.SliderMultiplier, document.SliderTickRate, compensation, document.RandomizeDropletStrength, document.RandomizeDropletSeed, document.DerandomizeFSliderDroplets, document.DerandomizeDropletsForHardRock,
-            document.EffectiveSliderMultiplier);
+            document.EffectiveSliderMultiplier, document.LegacySliderTicks);
         if (current != settings)
         {
             entries.Clear(); trackPositions.Clear(); settings = current;

@@ -231,7 +231,7 @@ public sealed partial class EditorView
             DurationMs = Document.DurationMs, BeatLengthMs = Document.BeatLengthMs, TimingOffsetMs = Document.TimingOffsetMs,
             ApproachRate = Document.ApproachRate, CircleSize = Document.CircleSize,
             SliderMultiplier = Document.SliderMultiplier, SliderMultiplierOverride = Document.SliderMultiplierOverride,
-            SliderTickRate = Document.SliderTickRate
+            LegacySliderTicks = Document.LegacySliderTicks, SliderTickRate = Document.SliderTickRate
         };
         var ids = ClipboardSelectedParentIds();
         selected.Fruits.AddRange(Document.Fruits.Where(f => ids.Contains(f.Id)));

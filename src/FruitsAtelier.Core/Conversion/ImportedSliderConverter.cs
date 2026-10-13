@@ -38,7 +38,7 @@ public static class ImportedSliderConverter
         var timing = lookup.At(slider.TimeMs);
         double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier);
         double duration = path.Distance / velocity;
-        double tickDistance = velocity * timing.BeatLengthMs / document.SliderTickRate;
+        double tickDistance = LegacyCatchRules.TickDistance(document, velocity, timing.BeatLengthMs, timing.SliderVelocityMultiplier);
         if (!double.IsFinite(duration) || duration <= 0 || slider.TimeMs + duration * slider.SpanCount > int.MaxValue)
             throw new CatchConversionException(L.Get("core.importConverter.duration"));
         var nested = LegacyCatchRules.CreateNested(slider.TimeMs, duration, velocity, tickDistance, path.Distance, slider.SpanCount);

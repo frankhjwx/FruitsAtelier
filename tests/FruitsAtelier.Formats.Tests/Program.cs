@@ -3,6 +3,7 @@ using System.Globalization;
 using L = FruitsAtelier.Localization.Strings;
 
 if (args.Contains("--benchmark-sv-edits")) return WriteCacheTests.BenchmarkMultiplierEdits();
+if (args.Contains("--legacy-v7-check")) { LegacyV7Tests.Run(); Console.WriteLine("PASS v7 tick rules, persistence, editing and export"); return 0; }
 if (args.Contains("--generated-slider-path-check")) { GeneratedSliderPathTests.Run(); Console.WriteLine("PASS Generated slider paths"); return 0; }
 
 if (args.Length == 2 && args[0] == "--import-roundtrip")
@@ -13,7 +14,7 @@ if (args.Length == 2 && args[0] == "--import-roundtrip")
     var exported = OsuBeatmapWriter.Serialize(restored);
     Preserved(imported, exported.ReadBack);
     Check(exported.ObjectSequenceMatches && exported.MaxConvertedXError == 0 && exported.MaxConvertedTimeErrorMs == 0, "Import/export changed Catch objects");
-    Console.WriteLine($"PASS {Path.GetFileName(args[1])}: {imported.Fruits.Count} fruits, {imported.ImportedSliders.Count} sliders, {imported.BananaShowers.Count} showers; project and v14 export preserve content");
+    Console.WriteLine($"PASS {Path.GetFileName(args[1])}: {imported.Fruits.Count} fruits, {imported.ImportedSliders.Count} sliders, {imported.BananaShowers.Count} showers; project and v{(imported.LegacySliderTicks ? 7 : 14)} export preserve content");
     return 0;
 }
 
@@ -33,6 +34,7 @@ var tests = new (string Name, Action Run)[]
     ("Sliders beside fractional imported fruits preserve SV export, identities, project persistence and undo", WriteCacheTests.FractionalFruitBesideSlider),
     ("v8 through v14 and compatible v128 imports preserve gameplay, optional fields and v14 export", CompatibleVersions),
     ("v8 through v14 preserve inherited SV tick spacing and legacy coordinates", LegacyVersionTiming),
+    ("v7 preserves legacy ticks, RNG, project rules and generated slider exports", LegacyV7Tests.Run),
     ("v128 rejects fractional coordinates and unsupported slider syntax", LazerExtensions),
     ("Workspace isolation, recovery, indexing and explicit export", WorkspaceTests.Run),
     ("Multi-difficulty projects preserve content, history and compatibility", MultiProjectTests.Run),
@@ -656,7 +658,7 @@ static void InvalidProjects()
 static void InvalidBeatmaps()
 {
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("Mode: 2", "Mode: 0")), "non-Catch input");
-    foreach (string version in new[] { "v7", "v15", "v127", "v129", "v8x", "v08", "v12x", "v128x" })
+    foreach (string version in new[] { "v6", "v15", "v127", "v129", "v7x", "v8x", "v08", "v12x", "v128x" })
         Throws(() => OsuBeatmapReader.Read(Fixture().Replace("format v14", "format " + version)), "unsupported version");
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("250,21,8", "250,128,8")), "unknown object");
     Throws(() => OsuBeatmapReader.Read(Fixture().Replace("-100,500,4", "-100,NaN,4")), "NaN red timing");

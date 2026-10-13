@@ -175,6 +175,8 @@ public sealed partial class MapDocument
     [JsonIgnore]
     public double DistancePerBeat => DistancePerBeatOverride ?? 100 * SliderMultiplier;
     public double SliderTickRate { get; set; } = 1;
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool LegacySliderTicks { get; set; }
     public double DistanceSpacing { get; set; } = 1;
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? DerandomizeDroplets { get; set; }
@@ -207,7 +209,7 @@ public sealed partial class MapDocument
             DistanceSnapCollinear = DistanceSnapCollinear,
             RandomizeDropletStrength = RandomizeDropletStrength, RandomizeDropletSeed = RandomizeDropletSeed,
             DerandomizeFSliderDroplets = DerandomizeFSliderDroplets, DerandomizeDropletsForHardRock = DerandomizeDropletsForHardRock, RandomizeNewSliders = RandomizeNewSliders,
-            SliderTickRate = SliderTickRate, DistanceSpacing = DistanceSpacing, DerandomizeDroplets = DerandomizeDroplets
+            SliderTickRate = SliderTickRate, LegacySliderTicks = LegacySliderTicks, DistanceSpacing = DistanceSpacing, DerandomizeDroplets = DerandomizeDroplets
         };
         copy.DistanceSnapRatios.AddRange(DistanceSnapRatios);
         copy.HitsoundOverrides.AddRange(HitsoundOverrides);
@@ -247,6 +249,7 @@ public sealed partial class MapDocument
             || (!ignoreMultiplierOverride && (OverrideSliderMultiplier != other.OverrideSliderMultiplier
                 || SliderMultiplierOverride != other.SliderMultiplierOverride))
             || DistancePerBeatOverride != other.DistancePerBeatOverride || SliderTickRate != other.SliderTickRate
+            || LegacySliderTicks != other.LegacySliderTicks
             || DistanceSnapCollinear != other.DistanceSnapCollinear
             || RandomizeDropletStrength != other.RandomizeDropletStrength || RandomizeDropletSeed != other.RandomizeDropletSeed
             || DerandomizeFSliderDroplets != other.DerandomizeFSliderDroplets || DerandomizeDropletsForHardRock != other.DerandomizeDropletsForHardRock || RandomizeNewSliders != other.RandomizeNewSliders

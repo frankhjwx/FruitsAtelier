@@ -23,6 +23,8 @@ public static class CatchStreamConverter
         }
 
         TimingMap.Lookup? timing = null;
+        if (document.LegacySliderTicks && document.DerandomizeFSliderDroplets && document.DerandomizeDropletsForHardRock)
+            cache ??= new CatchConversionCache();
         cache?.Begin(document, compensateTinyDroplets);
         Dictionary<Guid, CatchLegacyRandom>? hardRockStates = document.DerandomizeFSliderDroplets && document.DerandomizeDropletsForHardRock
             ? HardRockRandomStates(document, cache, timing ??= new(document)) : null;
@@ -147,7 +149,7 @@ public static class CatchStreamConverter
         {
             double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, sv);
             double length = duration * velocity;
-            double tickDistance = velocity * timing.BeatLengthMs / document.SliderTickRate;
+            double tickDistance = LegacyCatchRules.TickDistance(document, velocity, timing.BeatLengthMs, sv);
             if (!double.IsFinite(velocity) || velocity <= 0 || !double.IsFinite(length) || length <= 0
                 || !double.IsFinite(tickDistance) || tickDistance <= 0)
                 throw new CatchConversionException(L.Get("core.conversion.timingRange"));
@@ -250,6 +252,8 @@ public static class CatchStreamConverter
         sources.AddRange(document.BananaShowers.Select(shower => new Source(shower.TimeMs, shower.SourceOrder, null, null, null, shower)));
         var result = new Dictionary<Guid, CatchLegacyRandom>();
         var state = new CatchHardRockState();
+        var normalRandom = new CatchLegacyRandom(1337);
+        var effectRandom = new CatchLegacyRandom(document.RandomizeDropletSeed);
         foreach (var source in sources.OrderBy(s => s.TimeMs).ThenBy(s => s.SourceOrder).ThenBy(s => s.ParentStartTime ?? s.TimeMs))
         {
             if (source.Fruit is { } fruit)
@@ -261,7 +265,38 @@ public static class CatchStreamConverter
             try
             {
                 IReadOnlyList<ConvertedCatchObject>? events = cache?.ContextObjects(source.Track, source.ImportedSlider, source.BananaShower);
-                if (source.Track is { } track)
+                if (document.LegacySliderTicks)
+                {
+                    // v7 tick counts depend on the fitted SV; reuse the actual fit in the main pass.
+                    CatchLegacyRandom? hardRockBefore = source.Track is null ? null : state.Random;
+                    if (source.Track is { } legacyTrack)
+                    {
+                        result[legacyTrack.Id] = state.Random;
+                        state.Slider((float)Math.Round(legacyTrack.Nodes[^1].X, MidpointRounding.AwayFromZero), OsuBeatmapWriter.QuantizeTime(source.TimeMs));
+                    }
+                    else if (source.ImportedSlider is { } legacyImport)
+                        state.Slider(legacyImport.ControlPoints.Count > 0 ? (float)legacyImport.ControlPoints[^1].X : (float)legacyImport.X, OsuBeatmapWriter.QuantizeTime(source.TimeMs));
+                    var before = normalRandom;
+                    if (!cache!.TryGet(source.Track, source.ImportedSlider, source.BananaShower, ref normalRandom, hardRockBefore, out var fitted, out events))
+                    {
+                        if (source.Track is { } authored)
+                        {
+                            ValidateTrack(document, authored);
+                            var conversion = ConvertTrack(document, authored, true, ref normalRandom, timing.At(source.TimeMs), effectRandom,
+                                cache.PositionAtTime(authored), hardRockBefore);
+                            fitted = conversion.Slider; events = conversion.Objects;
+                        }
+                        else if (source.ImportedSlider is { } importedSlider)
+                        {
+                            var conversion = ImportedSliderConverter.Convert(document, importedSlider, ref normalRandom, timing);
+                            fitted = conversion.Slider; events = conversion.Objects;
+                        }
+                        else events = ConvertBananas(source.BananaShower!, ref normalRandom);
+                        cache.Store(source.Track, source.ImportedSlider, source.BananaShower, before, normalRandom, fitted, events, hardRockBefore);
+                    }
+                    AdvanceEffectRandom(events, ref effectRandom);
+                }
+                else if (source.Track is { } track)
                 {
                     result[track.Id] = state.Random;
                     state.Slider((float)Math.Round(track.Nodes[^1].X, MidpointRounding.AwayFromZero), OsuBeatmapWriter.QuantizeTime(source.TimeMs));
@@ -271,7 +306,7 @@ public static class CatchStreamConverter
                         double velocity = LegacyCatchRules.Velocity(at.BeatLengthMs, document.EffectiveSliderMultiplier, at.SliderVelocityMultiplier);
                         double duration = track.Nodes[^1].TimeMs - source.TimeMs;
                         var nested = LegacyCatchRules.CreateNested(source.TimeMs, duration, velocity,
-                            velocity * at.BeatLengthMs / document.SliderTickRate, duration * velocity, track.SpanCount, quantizeStart: true);
+                            LegacyCatchRules.TickDistance(document, velocity, at.BeatLengthMs, at.SliderVelocityMultiplier), duration * velocity, track.SpanCount, quantizeStart: true);
                         LegacyCatchRules.ApplyRandomSequence(nested, ref state.Random);
                         continue;
                     }
@@ -335,7 +370,7 @@ public static class CatchStreamConverter
         {
             DurationMs = document.DurationMs, BeatLengthMs = document.BeatLengthMs,
             TimingOffsetMs = document.TimingOffsetMs, ApproachRate = document.ApproachRate,
-            SliderMultiplier = document.EffectiveSliderMultiplier, SliderTickRate = document.SliderTickRate
+            SliderMultiplier = document.EffectiveSliderMultiplier, SliderTickRate = document.SliderTickRate, LegacySliderTicks = document.LegacySliderTicks
         };
         validationDocument.Tracks.Add(track);
         var errors = CurveMath.Validate(validationDocument);

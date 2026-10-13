@@ -75,13 +75,13 @@ public static class SliderMultiplierEditing
             var import = analysis.Imports[slider.SourceId];
             var state = timing.At(import.TimeMs);
             double velocity = LegacyCatchRules.Velocity(state.BeatLengthMs, multiplier, state.SliderVelocityMultiplier);
-            if (velocity == slider.Velocity) { sliders.Add(slider); continue; }
+            double tickDistance = LegacyCatchRules.TickDistance(candidate, velocity, state.BeatLengthMs, state.SliderVelocityMultiplier);
+            if (velocity == slider.Velocity && tickDistance == slider.TickDistance) { sliders.Add(slider); continue; }
             if (slider.ImportedGeometry is not { } path || slider.ImportedOffsets is not { } offsets) return false;
             var previous = analysis.Objects[slider.SourceId];
             if (double.IsFinite(budgetMs) && previous.Length > 1024) return false;
             double duration = path.Distance / velocity;
             if (!double.IsFinite(duration) || duration <= 0 || import.TimeMs + duration * import.SpanCount > int.MaxValue) return false;
-            double tickDistance = velocity * state.BeatLengthMs / candidate.SliderTickRate;
             List<NestedCatchEvent> nested;
             try { nested = LegacyCatchRules.CreateNested(import.TimeMs, duration, velocity, tickDistance, path.Distance, import.SpanCount); }
             catch (CatchConversionException) { return false; }

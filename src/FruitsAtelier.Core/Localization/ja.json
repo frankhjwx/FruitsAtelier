@@ -341,7 +341,7 @@
   "core.reader.endRange": "譜面 の終了時刻が編集可能範囲外です。",
   "core.reader.fileLimit": "譜面 ファイルが 32 MiB 制限を超えています。",
   "core.reader.finiteNumber": "数値は有限でなければなりません。",
-  "core.reader.formatVersion": "サポートされているインポート形式は、osu ファイル形式 v8–v14、および安定互換性のある v128 です。エクスポートでは v14 を使用します。",
+  "core.reader.formatVersion": "osu ファイル形式 v7–v14 と stable 互換の v128 を読み込めます。v7 の譜面は v7、それ以外は v14 で出力します。",
   "core.reader.lazerCoordinates": "この Lazer 譜面 は小数座標を使用していますが、インポートではサポートされていません。まずはosu!stable互換形式でエクスポートしてください。",
   "core.reader.header": "譜面 には osu ファイル形式ヘッダーがありません。",
   "core.reader.importedParameters": "従来の スライダー パラメータは無効です。",

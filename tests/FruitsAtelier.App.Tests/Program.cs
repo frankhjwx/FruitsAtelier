@@ -4,6 +4,11 @@ using FruitsAtelier.Core;
 
 
 string startupLanguage = FruitsAtelier.Localization.Strings.Language;
+if (args.Contains("--legacy-v7-check"))
+{
+    SynchronizationUiTests.LegacyFormat(); ExternalResourceTests.Run();
+    Console.WriteLine("PASS v7 format review and mixed-version OSZ import"); return 0;
+}
 // Existing interaction fixtures use Chinese labels explicitly.
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
@@ -356,6 +361,7 @@ var tests = new (string Name, Action Run)[]
     ("Library double-click opens only visible project cards through the host", LibraryDoubleClickTests.Run),
     ("Library double-click replaces the demo with an unassociated imported map", LibraryOpenTests.Run),
     ("External folders and full OSZ resources persist across restarts", ExternalResourceTests.Run),
+    ("v7 format changes require a choice and retain tick rules through synchronization", SynchronizationUiTests.LegacyFormat),
     ("Difficulty tabs adapt names to available width and show full-name tooltips", DifficultyTabTests.Layout),
     ("Difficulty SR sorting preserves content, identity and keyboard navigation", DifficultyTabTests.SortAscending),
     ("Difficulty tab stars follow edits, undo and CS", DifficultyTabTests.Editing),

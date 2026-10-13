@@ -341,7 +341,7 @@
   "core.reader.endRange": "Ang oras ng pagtatapos ng Beatmap ay nasa labas ng nae-edit na hanay.",
   "core.reader.fileLimit": "Ang Beatmap file ay lumampas sa 32 MiB na limitasyon.",
   "core.reader.finiteNumber": "Ang mga numerong halaga ay dapat na may hangganan.",
-  "core.reader.formatVersion": "Ang mga sinusuportahang format ng pag-import ay osu file format v8–v14 at stable-compatible v128. Ang pag-export ay gumagamit ng v14.",
+  "core.reader.formatVersion": "Sinusuportahan ang osu file format v7–v14 at stable-compatible v128. Nananatiling v7 ang mga v7 map sa pag-export; v14 ang iba.",
   "core.reader.lazerCoordinates": "Gumagamit ang lazer Beatmap na ito ng mga fractional na coordinate, na hindi sinusuportahan para sa pag-import. I-export muna ito sa osu!stable-compatible na format.",
   "core.reader.header": "Ang Beatmap ay walang osu file format header.",
   "core.reader.importedParameters": "Ang mga legacy na Slider na mga parameter ay hindi wasto.",
