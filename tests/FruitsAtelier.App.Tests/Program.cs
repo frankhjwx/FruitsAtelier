@@ -5,6 +5,8 @@ using FruitsAtelier.Core;
 
 if (args.Contains("--experimental-snap-check")) { ExperimentalSnapTests.Run(); Console.WriteLine("PASS Experimental snap settings, wheel and Stream/Stack"); return 0; }
 
+if (args.Contains("--independent-scale-check")) { IndependentCanvasScaleTests.Run(); Console.WriteLine("PASS Independent canvas scales, pan, persistence and timeline limits"); return 0; }
+
 string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 if (args.Contains("--acknowledgements-check"))
 {
@@ -424,6 +426,7 @@ var tests = new (string Name, Action Run)[]
     ("Playing timeline marquee anchors time and retains offscreen selection", ObjectTimelineTests.PlaybackMarquee),
     ("Beat colors and widths agree on canvas and timeline across divisors", ObjectTimelineTests.GridColors),
     ("Playback speed buttons work in both languages without editing content", ObjectTimelineTests.SpeedControls),
+    ("Independent canvas scales, pan, persistence and timeline limits", IndependentCanvasScaleTests.Run),
     ("Canvas starts at 60% and retains remembered zoom while enforcing minimum width", CanvasZoomTests.DefaultsAndReset),
     ("Zoom slider and wheel share scale, bounds and content isolation", CanvasZoomTests.SliderAndWheel),
     ("Zoom slider fits both languages and preserves playback following", CanvasZoomTests.PlaybackAndLanguages),
@@ -1141,8 +1144,10 @@ sealed class Ui
     }
     private void ShowFixtureOverview()
     {
-        // Keep multi-second editing fixtures visible at the minimum supported canvas width.
+        // Keep fine pointer gestures above the drag threshold while showing multi-second fixtures.
         View.Wheel(Plot.X, Plot.Bottom, (float)(120 * Math.Log(0.09 / View.PixelsPerMs) / Math.Log(1.16)), false, false, true);
+        if (Plot.Width < 256)
+            View.Wheel(Plot.X, Plot.Bottom, (float)(120 * Math.Log(256 / Plot.Width) / Math.Log(1.16)), false, false, true);
         height = Math.Max(height, (float)(400 + 8000 * View.PixelsPerMs));
         Paint();
         float panY = Plot.Bottom - 1;

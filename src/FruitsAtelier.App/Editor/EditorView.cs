@@ -48,7 +48,7 @@ public sealed partial class EditorView
     private Rect canvas, plot, rightPanel, leftPanel, overview, snapSlider, zoomSlider;
     private double viewStart, pixelsPerMs = 0.09, playhead = 1500;
     private double canvasZoom = .6;
-    public const float MinimumPlayfieldWidth = 256;
+    public const float MinimumPlayfieldWidth = 192;
     public double CanvasZoom => canvasZoom;
     private CatchSkin? skin;
     private uint HyperDashFruitColour => skin?.HyperDashFruitColour ?? 0xFF0000;
@@ -218,7 +218,7 @@ public sealed partial class EditorView
         get
         {
             float margin = (plot.Width - 512 * PlayfieldScale) / 2;
-            return new(plot.X + margin, plot.Y, 512 * PlayfieldScale, plot.Height);
+            return new(plot.X + margin + (float)canvasPanX, plot.Y, 512 * PlayfieldScale, plot.Height);
         }
     }
     private TimelineTransform Transform => new(Playfield.X, plot.Bottom, Playfield.Width, viewStart, pixelsPerMs);
@@ -248,8 +248,10 @@ public sealed partial class EditorView
     {
         pinPlayhead = true;
         canvasZoom = LibrarySettings.CanvasZoom;
+        canvasTimeZoom = LibrarySettings.CanvasTimeZoom;
+        canvasPanX = 0;
         viewStart = 0;
-        if (Playfield.Width > 0) pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
+        if (Playfield.Width > 0) pixelsPerMs = CanvasPixelsPerMs;
         if (AudioPlaying) FollowPlayhead();
     }
 
@@ -266,22 +268,16 @@ public sealed partial class EditorView
 
     private void ZoomCanvasAt(float y, double factor)
     {
-        y = Math.Clamp(y, plot.Y, plot.Bottom);
-        double anchorTime = Transform.ToMap(Playfield.X, y).TimeMs;
-        canvasZoom = Math.Clamp(canvasZoom * factor, MinimumCanvasZoom, 1);
-        LibrarySettings.CanvasZoom = canvasZoom;
-        if (drag != DragKind.CanvasZoom) RequestViewPreference?.Invoke();
-        pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
-        viewStart = anchorTime - (plot.Bottom - y) / pixelsPerMs;
-        ClampView();
+        SetCanvasScales(UniformCanvasScale ? canvasZoom * factor : canvasZoom, CanvasTimeZoom * factor, y);
+        SaveCanvasScale();
     }
 
     private void SetCanvasZoom(float x)
     {
-        double scale = MinimumCanvasZoom + Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1) * (1 - MinimumCanvasZoom);
+        double scale = MinimumCanvasZoom + Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1) * (MaximumCanvasZoom - MinimumCanvasZoom);
         // The slider has no canvas pointer anchor: keep the viewport centre stable while paused.
         if (!AudioPlaying) pinPlayhead = false;
-        ZoomCanvasAt(plot.Y + plot.Height / 2, scale / canvasZoom);
+        SetCanvasScales(scale, UniformCanvasScale ? scale : canvasTimeZoom, plot.Y + plot.Height / 2);
         StatusMessage = L.Get("editor.status.canvasZoom", canvasZoom * 100);
     }
 

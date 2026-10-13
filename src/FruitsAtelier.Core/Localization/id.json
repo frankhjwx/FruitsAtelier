@@ -1332,5 +1332,7 @@
   "bananaEdit.split": "Split into separate bananas",
   "bananaEdit.tooShort": "No showers of at least 2 ms fit in the selected range.",
   "settings.experimental": "Eksperimental",
-  "settings.experimentalSnapDivisions": "[Experimental] Aktifkan snap 1/24, 1/32 dan 1/48"
+  "settings.experimentalSnapDivisions": "[Experimental] Aktifkan snap 1/24, 1/32 dan 1/48",
+  "ui.uniformScale": "Skala seragam (klik untuk membuka kunci)",
+  "ui.independentScale": "Skala X/Y terpisah"
 }

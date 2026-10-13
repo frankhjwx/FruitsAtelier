@@ -56,6 +56,7 @@ public sealed partial class EditorView
         RestoreMapEditingPreferences();
         playbackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
         canvasZoom = LibrarySettings.CanvasZoom;
+        canvasTimeZoom = LibrarySettings.CanvasTimeZoom;
         objectTimelineScale = LibrarySettings.ObjectTimelineScale;
         waveformSpanMs = LibrarySettings.WaveformSpanMs;
         ApplyAudioVolume();

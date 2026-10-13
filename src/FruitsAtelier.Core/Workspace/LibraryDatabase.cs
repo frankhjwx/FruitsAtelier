@@ -66,8 +66,11 @@ public sealed class LibrarySettings
     public int BackgroundDim { get => backgroundDim; set => backgroundDim = Math.Clamp(value, 0, 100); }
     public Dictionary<Guid, MapEditingPreferences> MapEditingPreferences { get; set; } = [];
     private double canvasZoom = .6, objectTimelineScale = .18, waveformSpanMs = 10000;
-    public double CanvasZoom { get => canvasZoom; set => canvasZoom = double.IsFinite(value) ? Math.Clamp(value, .01, 1) : .6; }
-    public double ObjectTimelineScale { get => objectTimelineScale; set => objectTimelineScale = double.IsFinite(value) ? Math.Clamp(value, .025, 1.5) : .18; }
+    public double CanvasZoom { get => canvasZoom; set => canvasZoom = double.IsFinite(value) ? Math.Clamp(value, .01, 2) : .6; }
+    private double canvasTimeZoom = .6;
+    public bool UniformCanvasScale { get; set; } = true;
+    public double CanvasTimeZoom { get => canvasTimeZoom; set => canvasTimeZoom = double.IsFinite(value) ? Math.Clamp(value, .01, 2) : .6; }
+    public double ObjectTimelineScale { get => objectTimelineScale; set => objectTimelineScale = double.IsFinite(value) ? Math.Clamp(value, .025, 16) : .18; }
     public double WaveformSpanMs { get => waveformSpanMs; set => waveformSpanMs = double.IsFinite(value) ? Math.Clamp(value, 100, int.MaxValue * 2d) : 10000; }
     public int TestplayLeftKey { get; set; } = 37;
     public int TestplayRightKey { get; set; } = 39;

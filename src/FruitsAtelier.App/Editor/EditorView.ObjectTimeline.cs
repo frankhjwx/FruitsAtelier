@@ -337,6 +337,7 @@ public sealed partial class EditorView
         timelineObjects.Clear();
         Button(c, new(leftPanel.Right + 7, top + 5, 29, 28), L.Get("ui.timelineZoomIn"), () => ZoomObjectTimeline(1.25));
         Button(c, new(leftPanel.Right + 7, top + 37, 29, 28), L.Get("ui.timelineZoomOut"), () => ZoomObjectTimeline(.8));
+        objectTimelineScale = Math.Clamp(objectTimelineScale, .025, MaximumObjectTimelineScale);
         double start = ObjectTimelineStartMs;
         double end = start + objectTimeline.Width / objectTimelineScale;
         float X(double time) => objectTimeline.X + (float)((time - start) * objectTimelineScale);
@@ -484,7 +485,7 @@ public sealed partial class EditorView
 
     private void ZoomObjectTimeline(double factor)
     {
-        objectTimelineScale = Math.Clamp(objectTimelineScale * factor, .025, 1.5);
+        objectTimelineScale = Math.Clamp(objectTimelineScale * factor, .025, MaximumObjectTimelineScale);
         LibrarySettings.ObjectTimelineScale = objectTimelineScale;
         RequestViewPreference?.Invoke();
     }

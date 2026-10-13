@@ -129,6 +129,7 @@ public sealed partial class EditorView
         if (LibraryVisible && LibraryPointerDown(x, y, button)) return;
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
+        if (CanvasScalePointerDown(x, y, button)) return;
         if (TimingPageVisible && menu < 0 && contextItems.Count == 0 && WaveformBounds.Contains(x, y))
         { TimingWaveformPointer(x, y, button); return; }
         if (BeginCanvasBackgroundDimPointer(x, y, button)) return;
@@ -159,6 +160,7 @@ public sealed partial class EditorView
         if (button == 1 && canvas.Contains(x, y))
         {
             if (!AudioPlaying) pinPlayhead = false;
+            dragStartX = x; panStartX = canvasPanX;
             drag = DragKind.Pan; dragStartY = y; dragStartTime = AudioPlaying ? playhead : viewStart; return;
         }
         if (button != 0) return;
@@ -469,6 +471,7 @@ public sealed partial class EditorView
         if (librarySettingsOpen || ExportVisible || languageMenuOpen) return;
         if (LibraryVisible) { MoveLibraryPointer(y); return; }
         if (tabPointer) { MoveTabPointer(x); return; }
+        if (canvasScalePopup && drag != DragKind.CanvasZoom) return;
         if (drag == DragKind.PreviewResize)
         {
             previewWidth = Math.Clamp(width - x, MinimumPreviewWidth,
@@ -482,11 +485,12 @@ public sealed partial class EditorView
             return;
         }
         if (drag == DragKind.PlaybackLine) { MovePlaybackLine(y); return; }
-        if (drag == DragKind.CanvasZoom) { SetCanvasZoom(x); return; }
+        if (drag == DragKind.CanvasZoom) { if (canvasScaleAxis >= 0) SetCanvasAxisZoom(x); else SetCanvasZoom(x); return; }
         if (drag == DragKind.SnapDivisor) { SetSnapDivisor(x); return; }
         if (drag == DragKind.Marquee) { MoveBox(x, y); return; }
         if (drag == DragKind.Pan)
         {
+            canvasPanX = panStartX + x - dragStartX; ClampCanvasPan();
             double panTime = dragStartTime + (y - dragStartY) / pixelsPerMs;
             if (AudioPlaying) SeekTo(panTime);
             else { viewStart = panTime; ClampView(); }
@@ -643,7 +647,7 @@ public sealed partial class EditorView
         if (drag == DragKind.DifficultySeek) { drag = DragKind.None; return; }
         if (drag == DragKind.PlaybackLine) { FinishPlaybackLineDrag(); return; }
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
-        if (drag == DragKind.CanvasZoom) RequestViewPreference?.Invoke();
+        if (drag == DragKind.CanvasZoom) { canvasScaleAxis = -1; SaveCanvasScale(); }
         if (draftTrack == Guid.Empty && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
         {
             if (Document.DerandomizeDroplets is null && Document.Tracks.Any(track => pendingImplicitSliderConversions.Contains(track.Id)))
@@ -774,6 +778,7 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
+        if (canvasScalePopup) return;
         if (AcknowledgementsVisible)
         {
             if (acknowledgementsTextBounds.Contains(x, y)) { acknowledgementsScroll -= delta / 120 * 66; ClampAcknowledgementsScroll(); }
@@ -1224,6 +1229,7 @@ public sealed partial class EditorView
         }
         if (virtualKey == 27)
         {
+            if (canvasScalePopup) { canvasScalePopup = false; canvasScaleAxis = -1; drag = DragKind.None; SaveCanvasScale(); return; }
             if (VolumePopoverVisible) { CloseVolumePopover(); return; }
             if (contextItems.Count > 0) { contextItems.Clear(); return; }
             if (drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty) CancelInteraction();
@@ -1359,6 +1365,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        canvasScalePopup = false; canvasScaleAxis = -1;
         acknowledgementsScrollDragging = false;
         audioDiagnosticMarkerHeld = false;
         fullscreenShortcutHeld = false;

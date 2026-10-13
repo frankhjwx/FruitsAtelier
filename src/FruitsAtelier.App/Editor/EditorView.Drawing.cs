@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private readonly List<BeatGridLine> canvasGrid = [];
-    private (string Language, bool Compact, Type CanvasType)? canvasToggleTextKey;
+    private (string Language, bool Compact, float Width, Type CanvasType)? canvasToggleTextKey;
     private readonly (string First, string? Second, float Size)[] canvasToggleText = new (string, string?, float)[3];
     private (double TimeMs, bool Active)[] kiaiTransitions = [];
     private TimingPoint[] overviewTiming = [];
@@ -87,8 +87,10 @@ public sealed partial class EditorView
         canvas = new(108 + leftWidth, 84, Math.Max(120, width - rightWidth - leftWidth - 109), bodyHeight);
         plot = new(canvas.X + 70, canvas.Y + 140, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 152));
         overview = new(220, height - 77, Math.Max(100, width - 248), 40);
-        canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, 1);
-        pixelsPerMs = CatchScrollTiming.PixelsPerMs(Document.ApproachRate, Playfield.Width);
+        canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, MaximumCanvasZoom);
+        canvasTimeZoom = UniformCanvasScale ? canvasZoom : Math.Clamp(canvasTimeZoom, MinimumCanvasZoom, 2);
+        ClampCanvasPan();
+        pixelsPerMs = CanvasPixelsPerMs;
         ClampView();
         EnsureConversion();
         AdvanceBoxScroll();
@@ -125,6 +127,7 @@ public sealed partial class EditorView
         if (menu >= 0) DrawMenu(c);
         if (!librarySettingsOpen) DrawContextMenu(c);
         if (!librarySettingsOpen) DrawLanguageMenu(c);
+        DrawCanvasScalePopup(c);
         DrawPanelMenu(c);
         DrawSliderDialog(c);
         DrawExportOverlay(c);
@@ -167,21 +170,25 @@ public sealed partial class EditorView
         axisTooltip = null;
         float toolbarRight = rightPanel.X;
         c.Fill(new(0, canvas.Y, toolbarRight, 38), 0x1C2129);
-        c.Text(L.Get("ui.canvasZoom"), leftPanel.Right + 16, canvas.Y + 13, 11, Muted, 48);
         float snapLeft = toolbarRight - 158;
         bool compactToolbar = toolbarRight < 900;
+        bool narrowZoom = compactToolbar;
+        c.Text(L.Get("ui.canvasZoom"), leftPanel.Right + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
         float breakWidth = compactToolbar ? 115 : 140;
         float breakX = snapLeft - breakWidth - 5;
-        float toggleWidth = compactToolbar ? 105 : 155;
+        float toggleWidth = compactToolbar ? toolbarRight < 700 ? 75 : 105 : 155;
         float movementX = breakX - toggleWidth - 5;
         float selectionX = movementX - toggleWidth - 5;
         float pathX = selectionX - toggleWidth - 5;
-        zoomSlider = new(leftPanel.Right + 74, canvas.Y + 4, Math.Max(30, pathX - 130 - leftPanel.Right), 29);
-        float zoomX = zoomSlider.X + (float)(1 - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (1 - MinimumCanvasZoom) : 1) * zoomSlider.Width;
-        c.Line(zoomSlider.X, canvas.Y + 19, zoomSlider.Right, canvas.Y + 19, Grid, 3);
-        c.Line(zoomSlider.X, canvas.Y + 19, zoomX, canvas.Y + 19, Accent, 3);
-        c.Circle(zoomX, canvas.Y + 19, 6, Accent);
-        c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + (compactToolbar ? 4 : 8), canvas.Y + 13, compactToolbar ? 10 : 11, Foreground, 48);
+        zoomSlider = new(leftPanel.Right + (narrowZoom ? 8 : 74), canvas.Y + 4,
+            Math.Max(30, pathX - (narrowZoom ? 70 : 154) - leftPanel.Right), 29);
+        float zoomX = zoomSlider.X + (float)(MaximumCanvasZoom - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom) : 1) * zoomSlider.Width;
+        float zoomY = canvas.Y + (narrowZoom ? 27 : 19);
+        c.Line(zoomSlider.X, zoomY, zoomSlider.Right, zoomY, Grid, 3);
+        c.Line(zoomSlider.X, zoomY, zoomX, zoomY, Accent, 3);
+        c.Circle(zoomX, zoomY, 6, Accent);
+        c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + (compactToolbar ? 4 : 8), canvas.Y + (narrowZoom ? 4 : 13), compactToolbar ? 10 : 11, Foreground, narrowZoom ? 32 : 48);
+        DrawCanvasScaleLock(c);
         PrepareCanvasToggleText(c, compactToolbar, toggleWidth);
         CanvasToggle(0, pathX, () => showTargets = !showTargets, showTargets);
         CanvasToggle(1, selectionX, () => showSelectionRect = !showSelectionRect, showSelectionRect);
@@ -217,6 +224,7 @@ public sealed partial class EditorView
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
         c.Text(L.Get("ui.timeAxis"), canvas.X + 11, canvas.Y + 120, 10, Muted, 43);
         var playfield = Playfield;
+        c.Clip(new(plot.X - 16, canvas.Y + 118, plot.Width + 32, plot.Bottom - canvas.Y - 118));
         for (int x = 0; x <= 512; x += 128)
         {
             float sx = Screen(new(0, x)).X;
@@ -233,6 +241,7 @@ public sealed partial class EditorView
                 c.Line(sx, plot.Y, sx, plot.Bottom, LibrarySettings.CanvasGridColour,
                     opacity: LibrarySettings.CanvasGridOpacity / 100f);
         }
+        c.Unclip();
         c.Clip(new(canvas.X, plot.Y, canvas.Width, plot.Height));
         double axisStart = viewStart, axisEnd = viewStart + plot.Height / pixelsPerMs;
         var canvasBreaks = DisplayedBreaks();
@@ -789,7 +798,7 @@ public sealed partial class EditorView
 
     private void PrepareCanvasToggleText(ICanvas c, bool compact, float buttonWidth)
     {
-        var key = (L.Language, compact, c.GetType());
+        var key = (L.Language, compact, buttonWidth, c.GetType());
         if (canvasToggleTextKey == key) return;
         canvasToggleTextKey = key;
         string[] keys = ["ui.sliderPathCurves", "ui.selectionRect", "movement.analysis"];

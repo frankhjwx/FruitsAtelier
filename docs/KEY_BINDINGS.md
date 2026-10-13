@@ -160,12 +160,12 @@ currently do not adjust reverses.
 | Wheel over canvas, object timeline or overview | Up seeks earlier; down seeks later. One notch is a Snap subdivision while paused, or a whole beat while playing. |
 | Shift+wheel | Seek four times the normal wheel distance. During marquee selection, wheel seeking remains single-step. |
 | Ctrl+wheel over canvas or either timeline | Double / halve the current divisor within supported choices, stopping at the family boundary. |
-| Alt+wheel over canvas | Zoom around the pointer's time. |
+| Alt+wheel over canvas | Zoom around the pointer's time; adjust only Y when uniform scaling is unlocked. |
 | Alt+wheel over bottom overview | Adjust the selected volume channel by five percentage points and show the volume overlay. |
 | Alt+wheel over object timeline | Zoom that timeline independently. |
 | Alt+wheel over Timing waveform | Zoom the waveform time scale. Ctrl+wheel on the waveform currently does nothing. |
 | Ctrl+Alt+wheel over canvas or object timeline | Wheel down advances Select → Fruit → FSlider → Banana Shower; wheel up reverses this cycle. |
-| Middle-button drag over canvas | Pan the canvas. |
+| Middle-button drag over canvas | Pan vertically; also pan horizontally when uniform scaling is unlocked. |
 | Ctrl+click object / Ctrl+marquee | Toggle selection / add objects to selection; slider control actions take priority when applicable. |
 | Shift+drag object in upper timeline | Move without beat snapping. |
 | Double-click an object in the upper timeline | Select it and seek to its start without changing content. |
@@ -275,6 +275,8 @@ Text fields do not currently implement word navigation/deletion or general text
 undo/redo. Dialogs consume background editing keys. Some Compose page/file keys
 are processed before its numeric-field handler, so explicitly commit the field
 before invoking those commands.
+
+The canvas Zoom lock opens independent X/Y controls up to 200%. The toolbar Zoom slider controls X while unlocked. See [canvas scaling](EDITOR_UI.md#workspace).
 
 ## References
 

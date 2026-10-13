@@ -581,3 +581,13 @@ On Windows, `FruitsAtelier.App.exe --render-check --banana-edit-render-check`
 checks the native dialog, division lists and grouped canvas in English and Chinese
 at three DPI settings and two window sizes. Captures and CPU/allocation samples
 are written under `artifacts/tests/banana-edit/native`.
+
+## Independent viewport scaling
+
+`App.Tests --independent-scale-check` checks the locked zoom behavior, independent
+X/Y limits, smaller minimum width, horizontal pan bounds, persisted preferences,
+fruit dragging and undo, and experimental upper-timeline limits.
+`FruitsAtelier.App.exe --render-check --canvas-scale-render-check` captures the
+lock, X/Y controls, 200% scale, horizontal pan and dense 1/48 timeline in English
+and Chinese at two sizes and three DPI values under
+`artifacts/tests/canvas-scale-native`.

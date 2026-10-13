@@ -920,6 +920,11 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--canvas-scale-render-check"))
+        {
+            CanvasScaleRenderCheck.Run(canvas);
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--experimental-snap-render-check"))
         {
             string language = FruitsAtelier.Localization.Strings.Language;

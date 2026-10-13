@@ -1332,5 +1332,7 @@
   "bananaEdit.split": "Split into separate bananas",
   "bananaEdit.tooShort": "No showers of at least 2 ms fit in the selected range.",
   "settings.experimental": "Eksperimental",
-  "settings.experimentalSnapDivisions": "[Experimental] Paganahin ang 1/24, 1/32 at 1/48 snap"
+  "settings.experimentalSnapDivisions": "[Experimental] Paganahin ang 1/24, 1/32 at 1/48 snap",
+  "ui.uniformScale": "Pantay na scale (i-click para i-unlock)",
+  "ui.independentScale": "Hiwalay na X/Y scale"
 }

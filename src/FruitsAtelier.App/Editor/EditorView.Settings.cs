@@ -335,6 +335,8 @@ public sealed partial class EditorView
             settings.AudioDiagnosticProfile = draftAudioDiagnosticProfile;
             settings.PlaybackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
             settings.CanvasZoom = LibrarySettings.CanvasZoom;
+            settings.CanvasTimeZoom = LibrarySettings.CanvasTimeZoom;
+            settings.UniformCanvasScale = LibrarySettings.UniformCanvasScale;
             settings.MapEditingPreferences = LibrarySettings.MapEditingPreferences;
             settings.ObjectTimelineScale = LibrarySettings.ObjectTimelineScale;
             settings.WaveformSpanMs = LibrarySettings.WaveformSpanMs;
