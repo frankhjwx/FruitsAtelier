@@ -118,7 +118,7 @@
   "stream.description": "Piliin ang paghahati ng beat para sa snap. Ang paghahati ay lumilikha ng mga Fruit na maaaring i-edit nang magkakahiwalay.",
   "stream.apply": "I-convert sa Stream",
   "stream.menu": "Slider hanggang Stream… Ctrl+Shift+F",
-  "stream.invalidSnap": "Ang Stream snap ay dapat nasa pagitan ng 1/1 at 1/16.",
+  "stream.invalidSnap": "Hindi suportadong snap division para sa stream.",
   "stream.tooMany": "Ang Stream na ito ay maglalaman ng masyadong maraming Fruit.",
   "shortcut.mirror": "I-flip nang pahalang",
   "testplay.hintAutoplay": "Tab: autoplay",
@@ -1330,5 +1330,7 @@
   "bananaEdit.arrangement": "{0} showers + {1} gaps",
   "bananaEdit.exactFit": "Perfect fit",
   "bananaEdit.split": "Split into separate bananas",
-  "bananaEdit.tooShort": "No showers of at least 2 ms fit in the selected range."
+  "bananaEdit.tooShort": "No showers of at least 2 ms fit in the selected range.",
+  "settings.experimental": "Eksperimental",
+  "settings.experimentalSnapDivisions": "[Experimental] Paganahin ang 1/24, 1/32 at 1/48 snap"
 }

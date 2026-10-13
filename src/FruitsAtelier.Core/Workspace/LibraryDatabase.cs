@@ -31,6 +31,7 @@ public sealed class LibrarySettings
     public bool RomanisedMetadata { get; set; } = true;
     public bool DerandomizeDroplets { get; set; } = true;
     public bool DerandomizeNewProjects { get; set; } = true;
+    public bool ExperimentalSnapDivisions { get; set; }
     public bool ReverseCanvasScroll { get; set; }
     public bool LockDropletSelection { get; set; } = true;
     public bool LowLatencyDisplay { get; set; }

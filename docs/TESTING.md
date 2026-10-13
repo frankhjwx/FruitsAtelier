@@ -565,6 +565,13 @@ version-history work remains outside the pointer and paint paths.
 
 ## Banana shower patterns
 
+`App.Tests --experimental-snap-check` checks the optional 1/24, 1/32 and 1/48
+settings, cancellation/persistence, Ctrl+wheel families, Stream/Stack conversion,
+Banana Shower fractions, export, project reopening and undo. On Windows,
+`FruitsAtelier.App.exe --render-check --experimental-snap-render-check` captures
+the settings and extended snap bar in English and Chinese at two window sizes
+and three DPI settings under `artifacts/tests/experimental-snap-native`.
+
 `Formats.Tests --banana-pattern-check` checks fraction boundaries, red-line
 changes, grouped identities, persistence, undo, cache equivalence, exported NM/HR
 randomness and base-SV changes with overlapping random parents.

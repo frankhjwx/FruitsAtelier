@@ -23,7 +23,7 @@ static class SettingsTests
                 ui.View.RequestSetupLink = links.Add;
                 ui.View.UpdateStatus = new(FruitsAtelier.App.Editor.UpdatePhase.Ready, "0.9.6", 100);
                 ui.View.OpenSettings(); ui.Paint();
-                foreach (string category in new[] { "settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "update.title" })
+                foreach (string category in new[] { "settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "settings.experimental", "update.title" })
                 {
                     var navigation = ui.Canvas.Texts.Single(t => t.Value == L.Get(category) && t.X < ui.View.SettingsBounds.X + 230);
                     ui.Click(navigation.X + 2, navigation.Y + 2);

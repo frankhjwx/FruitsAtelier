@@ -226,7 +226,7 @@ public static class OsuBeatmapReader
             if (track.DropletRandomization is { IsValid: false }) throw new InvalidDataException(L.Get("randomize.invalid"));
             if (track.Stack is { } stack && (track.StreamSnapDivisor is null || !stack.IsValid))
                 throw new InvalidDataException(L.Get("stack.invalid"));
-            if (track.StreamSnapDivisor is < 1 or > 16) throw new InvalidDataException(L.Get("stream.invalidSnap"));
+            if (track.StreamSnapDivisor is not (null or >= 1 and <= 16 or 24 or 32 or 48)) throw new InvalidDataException(L.Get("stream.invalidSnap"));
             if (track.Kind is not (CurveKind.Linear or CurveKind.Bezier) || track.Nodes.Count < 2)
                 throw new InvalidDataException(L.Get("core.reader.incompleteCurve"));
             foreach (var node in track.Nodes) { Id(node.Id); Time(node.TimeMs); }

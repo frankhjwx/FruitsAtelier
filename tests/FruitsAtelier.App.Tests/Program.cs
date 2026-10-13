@@ -1,7 +1,9 @@
-﻿using FruitsAtelier.App.Editor;
+using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+
+if (args.Contains("--experimental-snap-check")) { ExperimentalSnapTests.Run(); Console.WriteLine("PASS Experimental snap settings, wheel and Stream/Stack"); return 0; }
 
 string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 if (args.Contains("--acknowledgements-check"))
@@ -210,6 +212,7 @@ var tests = new (string Name, Action Run)[]
     ("Map and HR derandomization drafts disable FX controls and support history", DropletDerandomizationTests.Run),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
+    ("Experimental snap settings, wheel and Stream/Stack", ExperimentalSnapTests.Run),
     ("Settings layout preserves labels and aligns controls in narrow windows", SettingsTests.Layout),
     ("Canvas background dim control fades, captures dragging and remains independent of zoom", CanvasBackgroundDimControlTests.Run),
     ("Mapping canvas X-axis grid colours and opacity preserve horizontal lines and content", CanvasGridSettingsTests.Run),

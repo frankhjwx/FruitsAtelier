@@ -76,7 +76,9 @@ public sealed partial class EditorView
     private bool snap = true;
     private bool anchorSnap;
     public bool AnchorSnapEnabled => anchorSnap;
-    private static readonly int[] SnapDivisors = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
+    private static readonly int[] StandardSnapDivisors = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
+    private static readonly int[] ExtendedSnapDivisors = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16, 24, 32, 48];
+    private int[] SnapDivisors => LibrarySettings.ExperimentalSnapDivisions ? ExtendedSnapDivisors : StandardSnapDivisors;
     // Keep edge room stable while CS is edited; 54.4 is the CS=0 fruit radius.
     private const float PlayfieldPadding = 54.4f;
     private int divisor = 4, menu = -1, editField = -1;

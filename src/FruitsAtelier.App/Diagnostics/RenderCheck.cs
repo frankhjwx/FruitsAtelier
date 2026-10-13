@@ -613,7 +613,7 @@ internal static class RenderCheck
                 view.OpenSettings();
                 canvas.Begin(); view.Render(canvas, width, height); canvas.End();
                 var settings = view.SettingsBounds;
-                foreach (int category in new[] { 0, 1, 2, 3, 4, 5, 6 })
+                foreach (int category in new[] { 0, 1, 2, 3, 4, 5, 6, 7 })
                 {
                     float sx = settings.X + 40, sy = settings.Y + 96 + category * 48;
                     view.PointerDown(sx, sy, 0, false, false); view.PointerUp(sx, sy, 0);
@@ -920,6 +920,53 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--experimental-snap-render-check"))
+        {
+            string language = FruitsAtelier.Localization.Strings.Language;
+            string folder = Path.GetFullPath("artifacts/tests/experimental-snap-native");
+            Directory.CreateDirectory(folder);
+            try
+            {
+                foreach (string locale in new[] { "en", "zh-CN" })
+                foreach (int dpi in new[] { 96, 144, 192 })
+                foreach (var size in new[] { (760, 580), (1440, 900) })
+                {
+                    FruitsAtelier.Localization.Strings.SetLanguage(locale);
+                    var editor = new EditorView(false);
+                    editor.LoadDocument(DemoMap.Create());
+                    canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                    void Paint(string? name = null)
+                    {
+                        canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);
+                        canvas.End(capture: name is null ? null : () =>
+                        {
+                            var frame = canvas.CapturePixels();
+                            using var writer = new BinaryWriter(File.Create(Path.Combine(folder, $"{name}-{locale}-{size.Item1}x{size.Item2}-{dpi}.bmp")));
+                            writer.Write((ushort)0x4D42); writer.Write(54 + frame.Pixels.Length); writer.Write(0); writer.Write(54);
+                            writer.Write(40); writer.Write(frame.Width); writer.Write(-frame.Height);
+                            writer.Write((ushort)1); writer.Write((ushort)32); writer.Write(0); writer.Write(frame.Pixels.Length);
+                            writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(frame.Pixels);
+                        });
+                    }
+                    Paint(); editor.OpenSettings(); Paint();
+                    var r = editor.SettingsBounds;
+                    editor.PointerDown(r.X + 40, r.Y + 96 + 6 * 48, 0, false, false);
+                    editor.PointerUp(r.X + 40, r.Y + 96 + 6 * 48, 0); Paint("off");
+                    editor.PointerDown(r.X + 250, r.Y + 175, 0, false, false);
+                    editor.PointerUp(r.X + 250, r.Y + 175, 0); Paint("on");
+                    editor.ApplySettings(persist: false); editor.KeyDown(27, false, false); Paint();
+                    if (!editor.LibrarySettings.ExperimentalSnapDivisions || editor.IsDirty)
+                        throw new InvalidOperationException("Native experimental snap toggle failed or changed content.");
+                    var snapBounds = editor.SnapSliderBounds;
+                    editor.PointerDown(snapBounds.Right - 31, snapBounds.Y + snapBounds.Height / 2, 0, false, false);
+                    editor.PointerUp(snapBounds.Right - 31, snapBounds.Y + snapBounds.Height / 2, 0); Paint("snap48");
+                    if (editor.SnapDivisor != 48) throw new InvalidOperationException("Native snap bar did not reach 1/48.");
+                }
+            }
+            finally { FruitsAtelier.Localization.Strings.SetLanguage(language); }
+            AppLog.Write("Experimental snap native settings and sliders passed at all sizes, DPI values and languages.");
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--slider-speed-render-check"))
         {
             SliderSpeedRenderCheck.Run(canvas);

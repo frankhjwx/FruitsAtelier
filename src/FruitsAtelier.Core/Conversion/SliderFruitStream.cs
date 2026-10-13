@@ -10,7 +10,7 @@ public static class SliderFruitStream
 
     public static IReadOnlyList<ConvertedCatchObject> Convert(MapDocument document, CurveTrack track, TimingMap.Lookup timing)
     {
-        if (track.StreamSnapDivisor is not (>= 1 and <= 16))
+        if (track.StreamSnapDivisor is not (>= 1 and <= 16 or 24 or 32 or 48))
             throw new CatchConversionException(L.Get("stream.invalidSnap"));
         if (track.Stack is { IsValid: false }) throw new CatchConversionException(L.Get("stack.invalid"));
         double start = track.Nodes[0].TimeMs, end = CurveMath.EndTimeMs(track);

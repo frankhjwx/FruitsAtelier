@@ -7,7 +7,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, Updates }
+    private enum SettingsCategory { General, Workspace, Appearance, Audio, Testplay, MappingCanvas, Experimental, Updates }
     private SettingsCategory settingsCategory;
     private bool draftAudioDiagnostics, draftAudioDiagnosticFrames;
     private string draftAudioDiagnosticProfile = "event-10";
@@ -19,6 +19,7 @@ public sealed partial class EditorView
     public bool SupportsFullscreen { get; set; }
     public Action<bool>? RequestFullscreen { get; set; }
     private bool draftFullscreen, fullscreenShortcutHeld;
+    private bool draftExperimentalSnapDivisions;
     private bool draftReverseCanvasScroll;
     private double draftTestplayStartupDelaySeconds;
     private double draftTestplaySpeed;
@@ -105,6 +106,7 @@ public sealed partial class EditorView
         draftRomanisedMetadata = LibrarySettings.RomanisedMetadata;
         draftDerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
         draftDerandomizeNewProjects = LibrarySettings.DerandomizeNewProjects;
+        draftExperimentalSnapDivisions = LibrarySettings.ExperimentalSnapDivisions;
         draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
         draftLowLatencyDisplay = LibrarySettings.LowLatencyDisplay;
         draftFullscreen = LibrarySettings.Fullscreen;
@@ -142,6 +144,7 @@ public sealed partial class EditorView
         draftDerandomizeNewProjects != LibrarySettings.DerandomizeNewProjects ||
         draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
         draftFullscreen != LibrarySettings.Fullscreen ||
+        draftExperimentalSnapDivisions != LibrarySettings.ExperimentalSnapDivisions ||
         draftReverseCanvasScroll != LibrarySettings.ReverseCanvasScroll ||
         draftSettingsColours[0] != LibrarySettings.StandIndicatorColour ||
         draftSettingsColours[1] != LibrarySettings.WalkIndicatorColour ||
@@ -178,7 +181,7 @@ public sealed partial class EditorView
         c.Text(L.Get("library.settings"), r.X + 20, r.Y + 16, 19, Foreground, r.Width - 80, true);
         SettingsButton(c, new(r.Right - 48, r.Y + 10, 32, 28), "×", CloseSettings);
         c.Line(r.X + 214, r.Y + 56, r.X + 214, r.Bottom - 20, Grid);
-        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "update.title"];
+        string[] categories = ["settings.general", "settings.workspace", "settings.appearance", "settings.audio", "settings.testplay", "settings.mappingCanvas", "settings.experimental", "update.title"];
         for (int i = 0; i < categories.Length; i++)
         {
             var category = (SettingsCategory)i;
@@ -256,6 +259,12 @@ public sealed partial class EditorView
                 DrawSkinSelector(c, SettingsSkinSelectorBounds);
                 LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, SettingsTop + 184);
                 break;
+            case SettingsCategory.Experimental:
+                float snapToggleTop = SettingsParagraph(c, L.Get("settings.experimentalSnapDivisions"), SettingsTop + 128, SettingsTextSize);
+                SettingsButton(c, new(SettingsContentX, snapToggleTop + 12, SettingsContentWidth, SettingsControlHeight),
+                    L.Get(draftExperimentalSnapDivisions ? "settings.romanisedOn" : "settings.romanisedOff"),
+                    () => draftExperimentalSnapDivisions = !draftExperimentalSnapDivisions, draftExperimentalSnapDivisions);
+                break;
             case SettingsCategory.MappingCanvas:
                 DrawMappingCanvasSettings(c);
                 break;
@@ -315,6 +324,7 @@ public sealed partial class EditorView
             settings.DerandomizeNewProjects = draftDerandomizeNewProjects;
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
             settings.Fullscreen = draftFullscreen;
+            settings.ExperimentalSnapDivisions = draftExperimentalSnapDivisions;
             settings.ReverseCanvasScroll = draftReverseCanvasScroll;
             settings.StandIndicatorColour = draftSettingsColours[0]; settings.WalkIndicatorColour = draftSettingsColours[1];
             settings.DashIndicatorColour = draftSettingsColours[2]; settings.HyperDashIndicatorColour = draftSettingsColours[3];
@@ -345,6 +355,13 @@ public sealed partial class EditorView
             }
             bool fullscreenChanged = settings.Fullscreen != LibrarySettings.Fullscreen;
             SaveLibraryMemory(); LibrarySettings = settings;
+            if (!settings.ExperimentalSnapDivisions)
+            {
+                RestoreTemporarySnap();
+                divisor = Math.Min(divisor, 16);
+                dsSnap = Math.Min(dsSnap, 16);
+                timingSnap = Math.Min(timingSnap, 16);
+            }
             ResetSettingsDrafts();
             if (fullscreenChanged) RequestFullscreen?.Invoke(settings.Fullscreen);
             libraryField = bindingCapture = -1;

@@ -161,8 +161,14 @@ an unfinished curve restores the previous preview and leaves no undo entry.
 **Details Panel** in the right header opens a dropdown with **Details Panel** and
 **Timing Panel**. **F3** selects Timing; **F1** returns to Details. Timing replaces
 the note canvas with a horizontal audio waveform and a centered playback cursor.
+**Settings → Experimental** can enable 1/24, 1/32 and 1/48 snap divisions.
+The preference defaults to Off and takes effect after Apply. It extends beat snap,
+Timing and Distance Snap controls, note beat-position detection, and Stream/Stack
+conversion and Banana Shower length/gap lists. Disabling it returns active editor snap controls to at most 1/16;
+saved Stream/Stack content retains its division.
+
 Ctrl+wheel changes Snap within its doubling/halving family (for example 1/3, 1/6,
-1/12), stopping at either end. Alt+wheel zooms its time scale; click to seek or click
+1/12, and experimentally 1/24 and 1/48; the 1/4 family reaches 1/32), stopping at either end. Alt+wheel zooms its time scale; click to seek or click
 a red line to edit it.
 Only red timing points and their BPM labels appear on the waveform. Nearby BPM
 labels use up to four rows. Every label remains visible, allowing overlap when all

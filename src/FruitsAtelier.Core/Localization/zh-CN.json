@@ -118,7 +118,7 @@
   "stream.description": "选择节拍吸附。拆分操作会生成可独立编辑的 Fruit。",
   "stream.apply": "转 Stream",
   "stream.menu": "Slider 转 Stream…  Ctrl+Shift+F",
-  "stream.invalidSnap": "Stream 的 snap 必须在 1/1 到 1/16 之间。",
+  "stream.invalidSnap": "不支持的 stream snap 档位。",
   "stream.tooMany": "此 Stream 生成的 fruit 数量过多。",
   "shortcut.mirror": "水平翻转",
   "testplay.hintAutoplay": "Tab: autoplay",
@@ -1330,5 +1330,7 @@
   "bananaEdit.arrangement": "{0} 段香蕉雨 + {1} 段间隔",
   "bananaEdit.exactFit": "完美嵌入",
   "bananaEdit.split": "拆分为独立香蕉雨",
-  "bananaEdit.tooShort": "所选范围内无法生成长度至少为 2 ms 的香蕉雨。"
+  "bananaEdit.tooShort": "所选范围内无法生成长度至少为 2 ms 的香蕉雨。",
+  "settings.experimental": "实验性功能",
+  "settings.experimentalSnapDivisions": "[Experimental] 开放支持 1/24、1/32 以及 1/48 snap"
 }
