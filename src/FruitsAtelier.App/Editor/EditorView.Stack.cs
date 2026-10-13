@@ -139,6 +139,7 @@ public sealed partial class EditorView
         try
         {
             stackPreview = SliderFruitStream.Convert(Document, stackPreviewSource, stackTiming!); streamError = "";
+            RefreshPatternCanvasPreview();
             stackManualFruitIndices.Clear();
             for (int i = 0; i < stackPreview.Count; i++)
                 if (Math.Abs(stackDraft.AdjustmentAt(StackFruitProgressAt(i))) > 1e-8)

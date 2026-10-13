@@ -12,6 +12,52 @@ public sealed partial class EditorView
     private MapDocument? patternDockSnapshot;
     private Rect patternDockBounds;
     private float patternDockScroll;
+    private CurveTrack[] patternPreviewTracks = [];
+    private IReadOnlyList<ConvertedCatchObject> patternCanvasPreview = [];
+    private bool PatternCanvasPreviewActive
+    {
+        get
+        {
+            if (!PatternDockEditing || !ReferenceEquals(patternDockSnapshot, convertedSnapshot)) return false;
+            var selected = ClipboardSelectedParentIds();
+            return patternDockTargets.Length == selected.Count && patternDockTargets.All(selected.Contains)
+                && (patternDockKind == 1 ? streamError.Length == 0 : BananaPreviewReady && bananaEditError.Length == 0);
+        }
+    }
+
+    internal IEnumerable<ConvertedCatchObject> PatternCanvasObjects(double start, double end)
+    {
+        bool preview = PatternCanvasPreviewActive;
+        if (!preview || patternDockKind == 1)
+            foreach (var item in ObjectsInTimeRange(start, end))
+                if (!preview || !patternDockTargets.Contains(item.SourceId)) yield return item;
+        if (!preview) yield break;
+        int low = 0, high = patternCanvasPreview.Count;
+        while (low < high)
+        {
+            int mid = (low + high) / 2;
+            if (patternCanvasPreview[mid].TimeMs < start) low = mid + 1; else high = mid;
+        }
+        for (int i = low; i < patternCanvasPreview.Count && patternCanvasPreview[i].TimeMs <= end; i++)
+            yield return patternCanvasPreview[i];
+    }
+
+    private void RefreshPatternCanvasPreview()
+    {
+        var objects = new List<ConvertedCatchObject>();
+        foreach (var track in patternPreviewTracks)
+        {
+            if (track.Id == stackPreviewSource?.Id)
+            {
+                objects.AddRange(stackPreview);
+                continue;
+            }
+            track.StreamSnapDivisor = StreamSnapDivisor;
+            track.Stack = stackMode ? stackDraft : null;
+            objects.AddRange(SliderFruitStream.Convert(Document, track, stackTiming!));
+        }
+        patternCanvasPreview = objects.OrderBy(o => o.TimeMs).ToArray();
+    }
     private float PatternDockContentHeight => (patternDockKind == 2 ? patternDockBounds.Width < 260 ? 576 : 490 : 440)
         + (patternDockExisting ? 40 : 0);
     private bool PatternDockEditing => DockContentInputAvailable && !notesLocked && PanelVisible(DockPanel.PatternEditor) && patternDockKind != 0
@@ -19,6 +65,7 @@ public sealed partial class EditorView
     private void ResetPatternDock()
     {
         patternDockKind = 0; patternDockConvert = false; patternDockSnapshot = null;
+        patternPreviewTracks = []; patternCanvasPreview = [];
         stackNumericField = bananaEditField = bananaEditDropdown = -1;
         streamSnapDragging = false; CancelStackDrag();
         CloseBananaEdit();

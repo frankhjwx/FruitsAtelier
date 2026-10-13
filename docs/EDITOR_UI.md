@@ -856,7 +856,10 @@ expanded with their default widths. Layout controls are locked in Timing Panel.
 Stacks load their parameters automatically. Plain sliders and banana showers show
 an explicit conversion entry first; standalone fruits are not handled. The panel
 reuses the conversion dialog's parameter controls without its right-hand preview.
-Changes remain a draft until Apply, which creates one content undo step. Cancel,
+The main canvas previews draft fruit positions as parameters change, replacing
+the selected parents' committed fruit display. Banana previews reuse the validated
+asynchronous output. Changes remain a draft until Apply, which creates one content
+undo step and retains the result. Cancel restores the committed canvas display;
 selection changes and document changes discard the draft. Short docks scroll with
 the mouse wheel. Existing patterns also offer a button below Apply/Cancel to restore
 ordinary slider or banana shower output, preserving parent geometry and timing in

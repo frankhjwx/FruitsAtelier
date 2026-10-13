@@ -71,6 +71,7 @@ public sealed partial class EditorView
             {
                 bananaEditReady = bananaEditRequested;
                 bananaEditError = result.Error;
+                patternCanvasPreview = result.Output?.PlayableObjects ?? [];
                 bananaEditPreview = result.Output?.PlayableObjects.Where(o => o.SourceId == bananaEditTargets[0]).ToArray() ?? [];
             }
         }

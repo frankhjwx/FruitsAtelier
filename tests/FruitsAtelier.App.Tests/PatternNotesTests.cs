@@ -51,6 +51,8 @@ internal static class PatternNotesTests
                 ui.ClickText(L.Get("dock.layout")); ui.ClickText(L.Get("dock.patternEditor"));
                 Check(!ui.View.StreamDialogVisible && ui.Canvas.Texts.Any(t => t.Value == L.Get("dock.convertPrompt")),
                     "Plain sliders require conversion before dock editing");
+                var originalCanvas = ui.View.PatternCanvasObjects(0, 10000).ToArray();
+                var committedConversion = ui.View.Conversion;
                 ui.ClickText(L.Get("conversion.title"));
                 Check(ui.View.StreamSnapBounds.Width > 0 && ui.View.StackPreviewBounds.Width == 0 && !ui.View.StreamDialogVisible,
                     "Dock exposes conversion controls without modal or preview");
@@ -60,6 +62,17 @@ internal static class PatternNotesTests
                 ui.View.PointerMove(graph.Right, graph.Bottom - graph.Height / 2, false, false);
                 ui.View.PointerUp(graph.Right, graph.Bottom - graph.Height / 2, 0); ui.Paint();
                 Check(ui.View.Document.Tracks[0].Stack is null, "Dock draft does not mutate content before Apply");
+                var draftCanvas = ui.View.PatternCanvasObjects(0, 10000).ToArray();
+                Check(draftCanvas.Length > 2 && draftCanvas.Any(o => Math.Abs(o.X - 256) > 1),
+                    "Stack parameter changes preview fruit positions on the main canvas");
+                Check(ReferenceEquals(ui.View.Conversion, committedConversion), "Canvas draft retains committed conversion");
+                ui.ClickText(L.Get("mac.cancel"));
+                Check(ui.View.PatternCanvasObjects(0, 10000).SequenceEqual(originalCanvas), "Cancel restores canvas objects");
+                ui.ClickText(L.Get("conversion.title")); ui.ClickText(L.Get("conversion.stackTab"));
+                graph = ui.View.StackGraphBounds;
+                ui.View.PointerDown(graph.Right, graph.Bottom, 0, false, false);
+                ui.View.PointerMove(graph.Right, graph.Bottom - graph.Height / 2, false, false);
+                ui.View.PointerUp(graph.Right, graph.Bottom - graph.Height / 2, 0); ui.Paint();
                 ui.ClickText(L.Get("library.apply"));
                 Check(ui.View.Document.Tracks[0].Stack?.Points[^1].Distance == 16, "Dock applies stack envelope: " + ui.View.Document.Tracks[0].Stack?.Points[^1].Distance + " / " + ui.View.StatusMessage);
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.Tracks[0].Stack is null, "Stack dock apply is one undo transaction");
@@ -82,8 +95,19 @@ internal static class PatternNotesTests
                 ui.ClickText(L.Get("bananaEdit.title"));
                 WaitBanana();
                 Check(!ui.View.BananaEditVisible && ui.View.BananaPreviewBounds.Width == 0, "Banana dock omits modal preview");
+                Check(ui.View.PatternCanvasObjects(0, 10000).SequenceEqual(ui.View.BananaEditPreview)
+                    && ui.View.Document.ContentEquals(bananaMap), "Banana canvas previews the draft without changing content");
+                ui.ClickText(L.Get("mac.cancel"));
+                Check(ui.View.Document.ContentEquals(bananaMap)
+                    && !ui.View.PatternCanvasObjects(0, 10000).SequenceEqual(ui.View.BananaEditPreview),
+                    "Banana Cancel restores committed canvas output");
+                ui.ClickText(L.Get("bananaEdit.title")); WaitBanana();
+                var bananaDraft = ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X, o.Kind)).ToArray();
                 ui.ClickText(L.Get("library.apply"));
                 Check(ui.View.Document.BananaShowers.Single().Pattern is not null, "Banana dock applies pattern");
+                WaitBanana();
+                Check(ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X, o.Kind)).SequenceEqual(bananaDraft),
+                    "Banana Apply retains previewed positions");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.BananaShowers.Single().Pattern is null, "Banana pattern undoes");
                 ui.Key('Y', ctrl: true); ui.Key('A', ctrl: true); WaitBanana();
                 ui.Resize(980, 620);
@@ -102,6 +126,16 @@ internal static class PatternNotesTests
                     "Dock restores the original banana shower in a narrow panel");
                 ui.Key('Z', ctrl: true);
                 Check(ui.View.Document.ContentEquals(bananaSnapshot), "Restoring banana shower undoes in one step");
+                var multiple = map.DeepClone();
+                var secondTrack = track.DeepClone(); secondTrack.Id = Guid.NewGuid();
+                foreach (var node in secondTrack.Nodes) { node.Id = Guid.NewGuid(); node.TimeMs += 3000; }
+                multiple.Tracks.Add(secondTrack);
+                ui.LoadDocument(multiple); ui.Key('A', ctrl: true); ui.Paint();
+                ui.ClickText(L.Get("conversion.title"));
+                var multiplePreview = ui.View.PatternCanvasObjects(0, 10000).ToArray();
+                Check(multiplePreview.Select(o => o.SourceId).Distinct().Count() == 2
+                    && multiplePreview.All(o => o.Kind == CatchObjectKind.Fruit)
+                    && ui.View.Document.ContentEquals(multiple), "Canvas previews every selected slider without committing");
                 void WaitBanana()
                 {
                     var end = DateTime.UtcNow.AddSeconds(20);

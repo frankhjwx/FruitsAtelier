@@ -418,7 +418,7 @@ public sealed partial class EditorView
         const string comboLabel = "NC";
         float comboLabelWidth = 0;
         double margin = CatchSize.FruitRadius(Document.CircleSize) * CanvasObjectWidth / 512 * 1.5 / pixelsPerMs;
-        foreach (var item in ObjectsInTimeRange(viewStart - margin, viewStart + plot.Height / pixelsPerMs + margin))
+        foreach (var item in PatternCanvasObjects(viewStart - margin, viewStart + plot.Height / pixelsPerMs + margin))
         {
             if (StreamDialogVisible && streamTargets.Contains(item.SourceId)) continue;
             var p = Screen(new(item.TimeMs, item.X));
