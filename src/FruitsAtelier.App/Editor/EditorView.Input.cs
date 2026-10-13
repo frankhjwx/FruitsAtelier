@@ -84,7 +84,7 @@ public sealed partial class EditorView
         }
         if (TimingModal) { TimingPointerDown(x, y, button); return; }
         if (!LibraryVisible && !SongSetupVisible && panelMenuOpen) { PanelPointerDown(x, y); return; }
-        if (TimingPageVisible && !SongSetupVisible && menu < 0 && rightPanel.Contains(x, y)) { TimingPointerDown(x, y, button); return; }
+        if (TimingPageVisible && !SongSetupVisible && menu < 0 && y >= 122 && rightPanel.Contains(x, y)) { TimingPointerDown(x, y, button); return; }
         if (BeginVolumePopoverPointer(x, y, button)) return;
         if (SongSetupVisible) { SongSetupPointerDown(x, y, button, shift); return; }
         if (VolumeDialogVisible)
@@ -129,6 +129,7 @@ public sealed partial class EditorView
         if (LibraryVisible && LibraryPointerDown(x, y, button)) return;
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
+        if (BeginDockPointer(x, y, button)) return;
         if (CanvasScalePointerDown(x, y, button)) return;
         if (TimingPageVisible && menu < 0 && contextItems.Count == 0 && WaveformBounds.Contains(x, y))
         { TimingWaveformPointer(x, y, button); return; }
@@ -182,11 +183,9 @@ public sealed partial class EditorView
             if (sameHeader) return;
             if (y >= 39) return;
         }
-        if (catchPreviewVisible && PreviewResizeBounds.Contains(x, y)) { drag = DragKind.PreviewResize; return; }
-        if (DifficultyCurveToggleBounds.Contains(x, y)) { difficultyCurveVisible = !difficultyCurveVisible; return; }
+        if (!TimingPageVisible && PreviewResizeBounds.Contains(x, y)) { drag = DragKind.PreviewResize; return; }
         if (difficultyCurveVisible && DifficultyCurveGraphBounds.Contains(x, y))
         { drag = DragKind.DifficultySeek; SeekDifficultyCurve(y); return; }
-        if (difficultyCurveVisible && leftPanel.Contains(x, y)) return;
         if (BeginPlaybackLineDrag(x, y)) return;
         if (zoomSlider.Contains(x, y))
         {
@@ -429,6 +428,7 @@ public sealed partial class EditorView
 
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
+        if (dockPressed is not null) { MoveDockPointer(x, y); return; }
         if (AcknowledgementsVisible)
         {
             mouseX = x; mouseY = y;
@@ -473,8 +473,7 @@ public sealed partial class EditorView
         if (tabPointer) { MoveTabPointer(x); return; }
         if (drag == DragKind.PreviewResize)
         {
-            previewWidth = Math.Clamp(width - x, MinimumPreviewWidth,
-                Math.Max(MinimumPreviewWidth, width - 109 - leftPanel.Width - (MinimumPlayfieldWidth + 198)));
+            ResizePreviewDock(x);
             return;
         }
         if (drag == DragKind.DifficultySeek) { SeekDifficultyCurve(y); return; }
@@ -574,6 +573,7 @@ public sealed partial class EditorView
 
     public void PointerUp(float x, float y, int button, bool shift = false)
     {
+        if (dockPressed is not null && button == 0) { EndDockPointer(x, y); return; }
         if (AcknowledgementsVisible) { acknowledgementsScrollDragging = false; return; }
         if (movementPanelPointer && button == 0)
         {
@@ -1035,6 +1035,11 @@ public sealed partial class EditorView
 
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
+        if (dockPressed is not null)
+        {
+            if (virtualKey == 27) { dockPressed = null; dockDragging = false; }
+            return;
+        }
         if (AcknowledgementsVisible) { AcknowledgementsKey(virtualKey, ctrl, shift); return; }
         if (ScreenshotKeyDown(virtualKey, ctrl, shift)) return;
         if (AudioDiagnosticMarkerKeyDown(virtualKey, ctrl, shift)) return;
@@ -1362,6 +1367,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        dockPressed = null; dockDragging = false;
         canvasScaleAxis = -1;
         acknowledgementsScrollDragging = false;
         audioDiagnosticMarkerHeld = false;

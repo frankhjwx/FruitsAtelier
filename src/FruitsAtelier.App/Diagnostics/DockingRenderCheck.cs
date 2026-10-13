@@ -1,0 +1,69 @@
+using FruitsAtelier.App.Editor;
+using FruitsAtelier.App.Rendering;
+using FruitsAtelier.Core;
+using L = FruitsAtelier.Localization.Strings;
+
+namespace FruitsAtelier.App.Diagnostics;
+
+internal static class DockingRenderCheck
+{
+    internal static void Run(D2DCanvas canvas)
+    {
+        string language = L.Language;
+        string folder = Path.GetFullPath("artifacts/tests/docking-native");
+        Directory.CreateDirectory(folder);
+        try
+        {
+            foreach (string locale in new[] { "en", "zh-CN" })
+            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (var size in new[] { (980, 620), (1440, 900) })
+            {
+                L.SetLanguage(locale);
+                var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500 };
+                map.Fruits.AddRange(Enumerable.Range(0, 24).Select(i => new Fruit { TimeMs = i * 350, X = i % 2 == 0 ? 100 : 400 }));
+                var editor = new EditorView(false);
+                editor.LoadDocument(map);
+                editor.UpdateTransport(1500, 10000, true, false, false, null, null);
+                canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                Paint(); Click(editor.DifficultyCurveToggleBounds); Click(editor.PreviewToggleBounds); Paint("separate");
+                Drag(EditorView.DockPanel.MovementStrain, size.Item1 - 60, 220, "drag-right"); Paint("merged-right");
+                Click(editor.DockTabBounds(EditorView.DockPanel.Preview)); Paint("preview-tab");
+                Drag(EditorView.DockPanel.Preview, 8, 220, "drag-left"); Paint("swapped");
+                var preview = editor.PreviewViewport;
+                editor.KeyDown(114, false, false); Paint("timing");
+                if (!editor.TimingPageVisible || editor.DockTabBounds(EditorView.DockPanel.Preview).Width > 0)
+                    throw new InvalidOperationException("Timing exposed a draggable tab.");
+                editor.KeyDown(27, false, false); Paint("mapping-restored");
+                if (editor.TimingPageVisible || editor.PreviewViewport != preview)
+                    throw new InvalidOperationException("Mapping layout did not restore.");
+                Drag(EditorView.DockPanel.MovementStrain, 60, 220, "drag-merge-left"); Paint("merged-left");
+                if (!map.ContentEquals(editor.Document) || editor.IsDirty || editor.WantsCapture)
+                    throw new InvalidOperationException("Docking modified content or retained capture.");
+                void Click(Rect r)
+                { editor.PointerDown(r.X + 10, r.Y + 10, 0, false, false); editor.PointerUp(r.X + 10, r.Y + 10, 0); Paint(); }
+                void Drag(EditorView.DockPanel panel, float x, float y, string name)
+                {
+                    var tab = editor.DockTabBounds(panel);
+                    editor.PointerDown(tab.X + 10, tab.Y + 10, 0, false, false);
+                    editor.PointerMove(x, y, false, false); Paint(name);
+                    editor.PointerUp(x, y, 0); Paint();
+                }
+                void Paint(string? name = null)
+                {
+                    canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);
+                    canvas.End(capture: name is null ? null : () =>
+                    {
+                        var frame = canvas.CapturePixels();
+                        using var output = new BinaryWriter(File.Create(Path.Combine(folder, $"{name}-{locale}-{size.Item1}x{size.Item2}-{dpi}.bmp")));
+                        output.Write((ushort)0x4D42); output.Write(54 + frame.Pixels.Length); output.Write(0); output.Write(54);
+                        output.Write(40); output.Write(frame.Width); output.Write(-frame.Height);
+                        output.Write((ushort)1); output.Write((ushort)32); output.Write(0); output.Write(frame.Pixels.Length);
+                        output.Write(0); output.Write(0); output.Write(0); output.Write(0); output.Write(frame.Pixels);
+                    });
+                }
+            }
+        }
+        finally { L.SetLanguage(language); }
+        AppLog.Write("Docking and independent Mapping/Timing workspace native checks passed.");
+    }
+}

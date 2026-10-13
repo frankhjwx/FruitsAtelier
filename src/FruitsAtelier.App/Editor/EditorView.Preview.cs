@@ -6,11 +6,10 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private bool catchPreviewVisible;
-    private float previewWidth = 360;
+    private bool catchPreviewVisible => PanelVisible(DockPanel.Preview);
     private const float MinimumPreviewWidth = 344;
-    private int previewMod;
-    private int previewDisplayMode;
+    private int previewMod { get => DockWorkspaceState.PreviewMod; set => DockWorkspaceState.PreviewMod = value; }
+    private int previewDisplayMode { get => DockWorkspaceState.PreviewDisplayMode; set => DockWorkspaceState.PreviewDisplayMode = value; }
     private CatchAutoPreview? previewAutoplay;
     private CatchPlatePreview? previewPlate;
     private HashSet<(Guid SourceId, int EventIndex)> previewComboEnds = [];
@@ -26,7 +25,7 @@ public sealed partial class EditorView
     public Rect PreviewToggleBounds { get; private set; }
     public Rect PreviewResizeBounds { get; private set; }
     public bool PreviewResizeCursor => !TimeJumpVisible && !LibraryVisible && !ExportVisible && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible && !languageMenuOpen && menu < 0
-        && catchPreviewVisible && (drag == DragKind.PreviewResize || PreviewResizeBounds.Contains(mouseX, mouseY));
+        && !TimingPageVisible && dockPressed is null && (drag == DragKind.PreviewResize || PreviewResizeBounds.Contains(mouseX, mouseY));
     public Rect LegacyConversionBounds { get; private set; }
     public double PreviewApproachRate => previewMod switch { 1 => Document.ApproachRate * .5, 2 => Math.Min(10, Document.ApproachRate * 1.4), _ => Document.ApproachRate };
     public double PreviewCircleSize => previewMod switch { 1 => Document.CircleSize * .5, 2 => Math.Min(10, Document.CircleSize * 1.3), _ => Document.CircleSize };
@@ -39,19 +38,6 @@ public sealed partial class EditorView
         }
     }
     private string PreviewModName => previewMod switch { 1 => "EZ", 2 => "HR", _ => "NM" };
-    private void DrawPreviewSidebar(ICanvas c)
-    {
-        PreviewResizeBounds = catchPreviewVisible ? new(rightPanel.X - 4, rightPanel.Y + 38, 8, rightPanel.Height - 38) : default;
-        float edge = catchPreviewVisible ? rightPanel.X : width;
-        PreviewToggleBounds = new(edge - 22, canvas.Y + canvas.Height / 2 - 22, 22, 44);
-        if (catchPreviewVisible)
-        {
-            DrawPreview(c, new(rightPanel.X + 16, rightPanel.Y + 56, rightPanel.Width - 32, rightPanel.Height - 70));
-            c.Fill(new(rightPanel.X - 1, rightPanel.Y + 38, 2, rightPanel.Height - 38), PreviewResizeBounds.Contains(mouseX, mouseY) || drag == DragKind.PreviewResize ? Accent : Grid);
-        }
-        c.Fill(PreviewToggleBounds, Surface, 5);
-        Button(c, PreviewToggleBounds, catchPreviewVisible ? "›" : "‹", () => catchPreviewVisible = !catchPreviewVisible);
-    }
     private void DrawPreviewMods(ICanvas c, Rect r)
     {
         string[] keys = ["preview.normal", "preview.easy", "preview.hardRock"];

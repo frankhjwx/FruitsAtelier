@@ -19,7 +19,8 @@ public sealed partial class EditorView
     private bool movementAnalysis { get => EditingPreferences.MovementAnalysis; set { EditingPreferences.MovementAnalysis = value; SaveMapEditingPreferences(); } }
     public bool MovementIncludesTinyDroplets => movementIncludeTinyDroplets;
     public bool MovementAnalysisEnabled => movementAnalysis;
-    private (float X, float Y)? movementPanelPosition;
+    private (float X, float Y)? movementPanelPosition
+    { get => DockWorkspaceState.MovementPosition; set => DockWorkspaceState.MovementPosition = value; }
     private bool movementPanelPointer, movementPanelMoved;
     private float movementPanelPointerX, movementPanelPointerY, movementPanelStartX, movementPanelStartY;
 

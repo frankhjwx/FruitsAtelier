@@ -24,7 +24,7 @@ internal static class DifficultyCurveSidebarTests
             "Open curve toggle retains the hover highlight");
         ui.OpenPreview();
         var panel = ui.View.DifficultyCurvePanelBounds;
-        Check(panel.X == 0 && panel.Y == 84 && panel.Height == ui.View.PreviewResizeBounds.Bottom - panel.Y
+        Check(panel.X == 0 && panel.Y == 122 && panel.Height == ui.View.PreviewResizeBounds.Bottom - panel.Y
             && panel.Width == 280 && ui.View.DifficultyCurveToggleBounds.Right < ui.View.ToolButtonBounds[0].X,
             "Fixed-width curve panel matches preview height and sits left of the four tool buttons");
         Check(ui.View.CanvasPlotBounds.Width >= EditorView.MinimumPlayfieldWidth,

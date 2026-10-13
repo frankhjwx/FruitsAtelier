@@ -242,7 +242,7 @@ public sealed partial class EditorView
     private void DrawPanelMenu(ICanvas c)
     {
         if (!panelMenuOpen) return;
-        panelMenuBounds = new(rightPanel.X + 8, rightPanel.Y + 36, 180, 76);
+        panelMenuBounds = new(WorkspaceSelectorBounds.X, WorkspaceSelectorBounds.Bottom + 2, 180, 76);
         c.Fill(panelMenuBounds, Surface, 4); c.Stroke(panelMenuBounds, Muted, radius: 4);
         Button(c, new(panelMenuBounds.X + 4, panelMenuBounds.Y + 4, 172, 32), L.Get("timing.detailsPanel"), () => ShowTimingPage(false), !TimingPageVisible);
         Button(c, new(panelMenuBounds.X + 4, panelMenuBounds.Y + 40, 172, 32), L.Get("timing.panel"), () => ShowTimingPage(true), TimingPageVisible);

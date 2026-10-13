@@ -11,6 +11,9 @@ public sealed partial class EditorView
     private readonly (string First, string? Second, float Size)[] canvasToggleText = new (string, string?, float)[3];
     private (double TimeMs, bool Active)[] kiaiTransitions = [];
     private TimingPoint[] overviewTiming = [];
+    internal Rect WorkspaceSelectorBounds => new(8, 88, 132, 30);
+    internal Rect CanvasToolbarBounds => new(148, 84, Math.Max(0, width - 356), 38);
+    internal Rect WorkspaceStatsBounds => new(width - 208, 84, 208, 38);
 
     private void RefreshKiaiTransitions()
     {
@@ -74,17 +77,7 @@ public sealed partial class EditorView
             && syncComparisons.ContainsKey(syncDifficulty)) { DrawSynchronization(c); return; }
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
         if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); return; }
-        bool expandedPanel = catchPreviewVisible || TimingPageVisible;
-        const float minimumCanvasWidth = MinimumPlayfieldWidth + 198;
-        const float collapsedCurveWidth = 24;
-        float leftWidth = difficultyCurveVisible
-            ? Math.Min(DifficultyCurveWidth, Math.Max(collapsedCurveWidth, width - 109 - minimumCanvasWidth))
-            : collapsedCurveWidth;
-        float rightWidth = expandedPanel ? Math.Clamp(previewWidth, 0, Math.Max(0, width - 109 - leftWidth - minimumCanvasWidth)) : 0;
-        float bodyHeight = Math.Max(180, height - 204);
-        rightPanel = new(width - (expandedPanel ? rightWidth : 340), 84, expandedPanel ? rightWidth : 340, expandedPanel ? bodyHeight : 38);
-        leftPanel = new(0, 84, leftWidth, bodyHeight);
-        canvas = new(108 + leftWidth, 84, Math.Max(120, width - rightWidth - leftWidth - 109), bodyHeight);
+        LayoutDockPanels();
         plot = new(canvas.X + 70, canvas.Y + 140, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 152));
         overview = new(220, height - 77, Math.Max(100, width - 248), 40);
         canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, MaximumCanvasZoom);
@@ -111,8 +104,7 @@ public sealed partial class EditorView
             DrawSelectionBox(c);
         }
         DrawInspector(c);
-        if (!TimingPageVisible) DrawDifficultySidebar(c);
-        if (TimingPageVisible) DrawTimingPage(c); else DrawPreviewSidebar(c);
+        if (TimingPageVisible) DrawTimingPage(c); else DrawDockPanels(c);
         if (!TimingPageVisible)
         {
             DrawLegacyConversionButton(c);
@@ -124,6 +116,7 @@ public sealed partial class EditorView
         DrawTransport(c);
         DrawStatus(c);
         DrawUpdateNotice(c);
+        DrawDockDrag(c);
         if (menu >= 0) DrawMenu(c);
         if (!librarySettingsOpen) DrawContextMenu(c);
         if (!librarySettingsOpen) DrawLanguageMenu(c);
@@ -167,20 +160,21 @@ public sealed partial class EditorView
     private void DrawCanvas(ICanvas c)
     {
         axisTooltip = null;
-        float toolbarRight = rightPanel.X;
+        float toolbarRight = CanvasToolbarBounds.Right;
+        float toolbarLeft = CanvasToolbarBounds.X;
         c.Fill(new(0, canvas.Y, toolbarRight, 38), 0x1C2129);
         float snapLeft = toolbarRight - 158;
-        bool compactToolbar = toolbarRight < 900;
+        bool compactToolbar = CanvasToolbarBounds.Width < 900;
         bool narrowZoom = compactToolbar;
-        if (UniformCanvasScale || !narrowZoom) c.Text(L.Get("ui.canvasZoom"), leftPanel.Right + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
+        if (UniformCanvasScale || !narrowZoom) c.Text(L.Get("ui.canvasZoom"), toolbarLeft + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
         float breakWidth = compactToolbar ? 115 : 140;
         float breakX = snapLeft - breakWidth - 5;
-        float toggleWidth = compactToolbar ? toolbarRight < 700 ? 75 : 105 : 155;
+        float toggleWidth = compactToolbar ? CanvasToolbarBounds.Width < 700 ? 75 : 105 : 155;
         float movementX = breakX - toggleWidth - 5;
         float selectionX = movementX - toggleWidth - 5;
         float pathX = selectionX - toggleWidth - 5;
-        zoomSlider = new(leftPanel.Right + (narrowZoom ? 8 : 74), canvas.Y + 4,
-            Math.Max(30, pathX - (narrowZoom ? 70 : 154) - leftPanel.Right), 29);
+        zoomSlider = new(toolbarLeft + (narrowZoom ? 8 : 74), canvas.Y + 4,
+            Math.Max(30, pathX - (narrowZoom ? 70 : 154) - toolbarLeft), 29);
         DrawCanvasScaleLock(c);
         if (UniformCanvasScale)
         {
@@ -450,17 +444,19 @@ public sealed partial class EditorView
 
     private void DrawInspector(ICanvas c)
     {
-        c.Fill(rightPanel, Panel);
-        c.Line(rightPanel.X, rightPanel.Y, rightPanel.X, rightPanel.Bottom, Grid);
-        c.Line(rightPanel.X, rightPanel.Y + 38, rightPanel.Right, rightPanel.Y + 38, Grid);
-        float x = rightPanel.X + 16;
-        float rowY = rightPanel.Y + 11;
-        Button(c, new(x - 8, rightPanel.Y + 4, 130, 30), L.Get(TimingPageVisible ? "timing.panel" : "timing.detailsPanel") + " ▾", () => panelMenuOpen = !panelMenuOpen);
-        float statX = x + 132;
+        if (TimingPageVisible) c.Fill(new(rightPanel.X, 122, rightPanel.Width, Math.Max(0, rightPanel.Height - 38)), Panel);
+        c.Fill(new(0, 84, CanvasToolbarBounds.X, 38), Panel);
+        c.Fill(WorkspaceStatsBounds, Panel);
+        c.Line(CanvasToolbarBounds.X, 84, CanvasToolbarBounds.X, 122, Grid);
+        c.Line(WorkspaceStatsBounds.X, 84, WorkspaceStatsBounds.X, 122, Grid);
+        c.Line(0, 122, width, 122, Grid);
+        float rowY = 95;
+        Button(c, WorkspaceSelectorBounds, L.Get(TimingPageVisible ? "timing.panel" : "timing.detailsPanel") + " ▾", () => panelMenuOpen = !panelMenuOpen);
+        float statX = WorkspaceStatsBounds.X + 12;
         c.Text($"{L.Get("ui.ar")} {Number(Document.ApproachRate)}", statX, rowY, 12, Muted, 48);
         c.Text($"{L.Get("ui.cs")} {Number(Document.CircleSize)}", statX + 50, rowY, 12, Muted, 48);
         c.Text($"{L.Get("ui.dpb")} {Number(Document.DistancePerBeat)}px", statX + 100, rowY, 12, Muted,
-            Math.Max(0, rightPanel.Right - statX - 108));
+            Math.Max(0, width - statX - 108));
     }
 
     private (CurveTrack Track, Anchor Node) ResolveAnchor(Guid trackId, Guid nodeId)
@@ -487,7 +483,6 @@ public sealed partial class EditorView
 
     private void DrawPreview(ICanvas c, Rect r)
     {
-        c.Text(L.Get("ui.preview"), r.X, r.Y, 13, Foreground, r.Width, true);
         string stars = L.Get("preview.stars", PreviewStarRating);
         float starWidth = c.MeasureText(stars, 10), indicatorWidth = 14;
         float starX = r.Right - starWidth - indicatorWidth;

@@ -132,6 +132,12 @@ internal sealed partial class EditorWindow : IDisposable
         }
         if (renderCheck)
         {
+            if (Environment.GetCommandLineArgs().Contains("--docking-render-check"))
+            {
+                Diagnostics.DockingRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--dpi-render-check"))
             {
                 CheckDpiScaling();

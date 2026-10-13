@@ -2,6 +2,14 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Contains("--docking-check"))
+{
+    DockingTests.Run(); DifficultyCurveSidebarTests.LayoutAndSeeking(); PreviewSidebarTests.DisplayModesAndOverscan();
+    CanvasZoomTests.DefaultsAndReset(); CanvasZoomTests.SliderAndWheel(); CanvasZoomTests.PlaybackAndLanguages();
+    MainCurveSelectionOpacity();
+    Console.WriteLine("PASS Docking, workspace toolbar, isolation and sidebars"); return 0;
+}
+
 if (args.Contains("--object-snap-check")) { ObjectSnapTests.Run(); Console.WriteLine("PASS Object snap ranges, placement and preferences"); return 0; }
 
 
@@ -287,6 +295,7 @@ var tests = new (string Name, Action Run)[]
     ("Slider edge and whole-slider sounds survive conversion and export", AssistToolsTests.SliderSounds),
     ("Background resource checks refresh missing files and discard stale edits and projects", ResourcePollingTests.RefreshAndStaleResults),
     ("Preview drawer, mods, resizing and aligned shortcuts preserve content", PreviewSidebarTests.Sidebar),
+    ("Docking and independent Mapping/Timing workspaces", DockingTests.Run),
     ("Difficulty curve panel resizes, seeks, and preserves canvas width", DifficultyCurveSidebarTests.LayoutAndSeeking),
     ("Preview aspect modes, Fit height and edge overscan", PreviewSidebarTests.DisplayModesAndOverscan),
     ("Automatic catcher movement and seeking", PreviewSidebarTests.AutomaticCatcher),
@@ -1057,9 +1066,8 @@ static void MainCurveSelectionOpacity()
 
 static IEnumerable<RecordingCanvas.Operation> ViewCommands(Ui ui, bool preview)
 {
-    Rect plot = ui.Plot;
     Rect canvasPlot = ui.View.CanvasPlotBounds;
-    return ui.Canvas.Operations.Where(c => c.Clip is { } clip && (preview ? clip.X > plot.Right : clip == canvasPlot));
+    return ui.Canvas.Operations.Where(c => c.Clip is { } clip && (preview ? clip == ui.View.PreviewViewport : clip == canvasPlot));
 }
 
 static IEnumerable<RecordingCanvas.Operation> CurveCommands(Ui ui, bool preview)

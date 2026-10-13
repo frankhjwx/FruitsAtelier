@@ -49,6 +49,13 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --docking-check` exercises cross-side moves, tab groups, cancellation,
+preview resizing and independent Mapping/Timing layouts in English and Chinese,
+alongside the existing sidebar rendering and seeking checks.
+`FruitsAtelier.App.exe --render-check --docking-render-check` runs the native
+Direct2D gestures at two window sizes and three DPI values. Screenshots are
+written under `artifacts/tests/docking-native`.
+
 `FruitsAtelier.App.exe --render-check --dpi-render-check` checks window client
 scaling at the 2520 × 1575 reference window, 3840 × 2160, 2560 × 1440,
 1920 × 1080 and 1920 × 1200. The reference must retain 175% rendering. It injects

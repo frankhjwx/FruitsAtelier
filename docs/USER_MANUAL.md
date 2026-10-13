@@ -52,7 +52,7 @@ The main canvas shows horizontal placement and note timing; later notes are high
 
 The Timing menu can set the current position as the song preview point. A long yellow line marks it on the bottom timeline. Red and green timing marks appear on the upper object timeline, while shaded break intervals appear there and on the canvas's left time axis. To insert a break, place the playhead between two objects with enough space and click **Insert Break Time** next to Movement Analysis. Undo removes the inserted break.
 
-Choose **Timing Panel** from the **Details Panel** header dropdown, or press
+Choose **Timing Panel** from the **Mapping Panel** dropdown at the left of the workspace toolbar, or press
 **F3**: edit BPM, offset and Slider Tick Rate, or tap with
 **T** during playback. The tenth tap applies BPM and offset automatically, and
 later taps continue refining them. BPM uses at most two decimal places and offset
