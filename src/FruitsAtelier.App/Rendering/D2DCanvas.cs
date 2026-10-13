@@ -367,7 +367,8 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
             if (fill)
             {
                 float scale = Math.Max(destination.Width / image.Width, destination.Height / image.Height);
-                float w = destination.Width / scale, h = destination.Height / scale;
+                // Division can round a full-image crop past the source edge.
+                float w = Math.Min(image.Width, destination.Width / scale), h = Math.Min(image.Height, destination.Height / scale);
                 region = new((image.Width - w) / 2, (image.Height - h) / 2, w, h);
             }
             if (!ValidRectangle(region) || region.X < 0 || region.Y < 0 || region.Right > image.Width || region.Bottom > image.Height) return false;

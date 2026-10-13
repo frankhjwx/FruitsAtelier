@@ -85,6 +85,8 @@ fade timing, pointer capture, preference saving and zoom-independent bounds,
 and settings layouts and testplay background controls. On Windows, run `FruitsAtelier.App.exe --render-check
 --mapping-canvas-render-check` for native background caching, settings and
 replacement-dialog screenshots under `artifacts/tests/mapping-canvas-native`.
+The native check also verifies background pixels across repeated preview toggles
+and window sizes, including image dimensions that expose crop-rounding errors.
 
 `App.Tests --object-timeline-check` checks Stream/Stack fruit markers, combo
 numbering, internal NC, grouped movement/deletion, persistence, export and undo.
