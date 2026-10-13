@@ -50,6 +50,60 @@ internal static class SliderMultiplierTests
         return 0;
     }
 
+    private static void UnusedTimingLimits()
+    {
+        foreach (double magnitude in new[] { 10d, 1000 })
+        foreach (double value in new[] { .4, 3.6 })
+        {
+            var map = Fixture();
+            // The first point is shadowed before any slider; the last point is after all slider heads.
+            map.TimingPoints.Add(new() { TimeMs = 0, Uninherited = false, BeatLengthMs = -magnitude, SampleSet = 3, Volume = 35 });
+            map.TimingPoints.Add(new() { TimeMs = 100, Uninherited = false, BeatLengthMs = -100 });
+            map.TimingPoints.Add(new() { TimeMs = 3000, Uninherited = false, BeatLengthMs = -magnitude, SampleSet = 2, Volume = 45 });
+            var before = OsuBeatmapWriter.Serialize(map);
+            var cache = new OsuWriteCache();
+            var history = new EditorHistory(map);
+            history.Begin("Change base SV");
+            SliderMultiplierEditing.Apply(history.Document, value);
+            history.Commit();
+            Verify(); history.Undo(); Verify(); history.Redo(); Verify();
+            Check(SliderMultiplierEditing.TryRebase(before, value, out var fast, double.PositiveInfinity),
+                "Unused extreme timing does not block fast base SV validation");
+            Equivalent(before, fast!);
+            Check(fast!.Text == OsuBeatmapWriter.Serialize(history.Document).Text, "Fast and full unused timing compensation agree");
+
+            void Verify()
+            {
+                var output = OsuBeatmapWriter.Serialize(history.Document, cache: cache);
+                var full = OsuBeatmapWriter.Serialize(history.Document);
+                var restored = OsuBeatmapWriter.Serialize(ProjectSerializer.Read(ProjectSerializer.Serialize(history.Document)));
+                Equivalent(before, output);
+                Check(output.Text == full.Text && output.Text == restored.Text, "Unused timing survives cache, persistence and undo");
+                Check(output.ReadBack.TimingPoints.Any(p => p.TimeMs == 3000 && p.SampleSet == 2 && p.Volume == 45),
+                    "Unused SV compensation retains sample timing");
+            }
+        }
+
+        var authored = new MapDocument { IsDemo = false, SliderMultiplier = 2 };
+        authored.TimingPoints.Add(new() { TimeMs = 0, BeatLengthMs = 500 });
+        authored.TimingPoints.Add(new() { TimeMs = 0, Uninherited = false, BeatLengthMs = -10 });
+        authored.SliderMultiplierOverride = .4;
+        var track = new CurveTrack { Kind = CurveKind.Linear };
+        track.Nodes.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 2000, X = 200 }]);
+        authored.Tracks.Add(track);
+        var result = OsuBeatmapWriter.Serialize(authored);
+        Check(result.ObjectSequenceMatches && result.ReadBack.ImportedSliders.Count == 1,
+            "FSlider solves a legal SV when its source timing compensation exceeds the range");
+        var lookup = new TimingMap.Lookup(authored);
+        var retained = new ImportedSlider { TimeMs = 1000, X = 100, Y = 192, PixelLength = 200, PathType = 'L' };
+        retained.ControlPoints.AddRange([new(100, 192), new(300, 192)]);
+        authored.ImportedSliders.Add(retained);
+        Check(!lookup.MatchesTiming(authored), "Adding a Legacy head invalidates compensation requirements");
+        try { _ = OsuBeatmapWriter.Serialize(authored); throw new Exception("Required Legacy compensation accepted"); }
+        catch (System.IO.InvalidDataException error)
+        { Check(error.Message == L.Get("timing.sliderMultiplierSvLimit"), "Legacy head retains the exact compensation limit"); }
+    }
+
     public static void Run()
     {
         string language = L.Language;
@@ -59,6 +113,7 @@ internal static class SliderMultiplierTests
             {
                 L.SetLanguage(locale);
                 DialogChanges();
+                UnusedTimingLimits();
                 foreach (double value in new[] { .4, 3.6, 1.3 })
                 {
                     var test = Fixture(); var before = OsuBeatmapWriter.Serialize(test);

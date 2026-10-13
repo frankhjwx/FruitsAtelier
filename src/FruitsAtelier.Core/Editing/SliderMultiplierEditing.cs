@@ -137,18 +137,19 @@ public static class SliderMultiplierEditing
         candidate.SliderMultiplierOverride = null;
         var points = candidate.TimingPoints;
         var originals = points.Select(p => p.DeepClone()).ToArray();
+        // The lookup validates retained Legacy heads; unused states may saturate before generated SV overrides them.
         foreach (var point in points.Where(p => !p.Uninherited))
         {
             if (double.IsNaN(point.BeatLengthMs)) continue;
             double magnitude = point.BeatLengthMs < 0 ? Math.Clamp((float)-point.BeatLengthMs, 10, 1000) : 100;
-            point.BeatLengthMs = -ScaleBeatLength(magnitude, ratio);
+            point.BeatLengthMs = -ScaleBeatLength(magnitude, ratio, requireRepresentable: false);
         }
         // Red points reset inherited SV. Compensate each reset without regenerating slider geometry.
         foreach (var group in originals.GroupBy(p => p.TimeMs))
         {
             if (group.Any(p => !p.Uninherited)) continue;
             var point = group.First().DeepClone();
-            point.Uninherited = false; point.BeatLengthMs = -ScaleBeatLength(100, ratio); point.OriginalLine = null;
+            point.Uninherited = false; point.BeatLengthMs = -ScaleBeatLength(100, ratio, requireRepresentable: false); point.OriginalLine = null;
             points.Add(point);
         }
         double firstTiming = originals.Select(p => p.TimeMs).DefaultIfEmpty(double.PositiveInfinity).Min();
@@ -156,16 +157,17 @@ public static class SliderMultiplierEditing
         {
             // Pre-timing sliders use the implicit first BPM; make it explicit before adding their SV compensation.
             points.Add(new() { TimeMs = firstSlider, BeatLengthMs = initial.BeatLengthMs, Meter = initial.Meter });
-            points.Add(new() { TimeMs = firstSlider, Uninherited = false, BeatLengthMs = -ScaleBeatLength(100, ratio) });
+            points.Add(new() { TimeMs = firstSlider, Uninherited = false, BeatLengthMs = -ScaleBeatLength(100, ratio, requireRepresentable: false) });
         }
         var ordered = points.OrderBy(p => p.TimeMs).ThenBy(p => p.Uninherited ? 0 : 1).ThenBy(p => p.SourceOrder).ToArray();
         candidate.TimingPoints.Clear(); candidate.TimingPoints.AddRange(ordered);
     }
 
-    internal static double ScaleBeatLength(double magnitude, double ratio)
+    internal static double ScaleBeatLength(double magnitude, double ratio, bool requireRepresentable = true)
     {
         double scaled = magnitude / ratio;
-        if (scaled < 10 || scaled > 1000) throw new InvalidDataException(L.Get("timing.sliderMultiplierSvLimit"));
+        if (requireRepresentable && (scaled < 10 || scaled > 1000)) throw new InvalidDataException(L.Get("timing.sliderMultiplierSvLimit"));
+        scaled = Math.Clamp(scaled, 10, 1000);
         float rounded = (float)scaled;
         // Stable rounds inherited beat lengths to float; avoid shortening exact-integer spans.
         if (rounded < scaled) rounded = MathF.BitIncrement(rounded);

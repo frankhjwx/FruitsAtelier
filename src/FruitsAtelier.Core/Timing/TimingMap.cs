@@ -15,6 +15,7 @@ public static class TimingMap
         private readonly TimingState initial;
         private readonly double beatLengthMs, offsetMs, sourceMultiplier, effectiveMultiplier;
         private readonly TimingPoint[] inputPoints;
+        private readonly double[]? importedHeads;
         internal double[] RedTimes { get; }
 
         public Lookup(MapDocument document) : this(document, true) { }
@@ -26,11 +27,24 @@ public static class TimingMap
             double ratio = applyMultiplierOverride ? sourceMultiplier / effectiveMultiplier : 1;
             inputPoints = document.TimingPoints.Select(p => p.DeepClone()).ToArray();
             var groups = Groups(document);
+            HashSet<int>? requiredStates = null;
+            if (ratio != 1)
+            {
+                requiredStates = [];
+                importedHeads = document.ImportedSliders.Select(s => s.TimeMs).ToArray();
+                var boundaries = groups.Select(g => g.TimeMs).ToArray();
+                foreach (double head in importedHeads)
+                {
+                    int index = Array.BinarySearch(boundaries, head);
+                    requiredStates.Add(index < 0 ? ~index - 1 : index);
+                }
+            }
             var firstRed = groups.Select(g => g.Red).FirstOrDefault(p => p is not null);
             double beatLength = firstRed?.BeatLengthMs ?? document.BeatLengthMs;
             double offset = firstRed?.TimeMs ?? document.TimingOffsetMs;
             int meter = firstRed?.Meter ?? 4;
-            double sv = ratio == 1 ? 1 : 100 / SliderMultiplierEditing.ScaleBeatLength(100, ratio);
+            // Only retained Legacy heads require exact compensation; FSliders solve their own legal SV.
+            double sv = ratio == 1 ? 1 : 100 / SliderMultiplierEditing.ScaleBeatLength(100, ratio, requiredStates!.Contains(-1));
             bool generateTicks = true;
             initial = new(offset, beatLength, sv, generateTicks, meter);
             times = new double[groups.Length]; states = new TimingState[groups.Length];
@@ -48,7 +62,7 @@ public static class TimingMap
                     if (ratio != 1 && !double.IsNaN(difficulty.BeatLengthMs))
                     {
                         double magnitude = difficulty.BeatLengthMs < 0 ? Math.Clamp((float)-difficulty.BeatLengthMs, 10, 1000) : 100;
-                        sv = 100 / SliderMultiplierEditing.ScaleBeatLength(magnitude, ratio);
+                        sv = 100 / SliderMultiplierEditing.ScaleBeatLength(magnitude, ratio, requiredStates!.Contains(i));
                     }
                     generateTicks = !double.IsNaN(difficulty.BeatLengthMs);
                 }
@@ -70,6 +84,7 @@ public static class TimingMap
             if (beatLengthMs != document.BeatLengthMs || offsetMs != document.TimingOffsetMs
                 || sourceMultiplier != document.SliderMultiplier || effectiveMultiplier != document.EffectiveSliderMultiplier
                 || inputPoints.Length != document.TimingPoints.Count) return false;
+            if (importedHeads is not null && !importedHeads.SequenceEqual(document.ImportedSliders.Select(s => s.TimeMs))) return false;
             for (int i = 0; i < inputPoints.Length; i++)
                 if (!inputPoints[i].ContentEquals(document.TimingPoints[i])) return false;
             return true;

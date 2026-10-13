@@ -73,6 +73,7 @@ if (args.Contains("--first-run-setup-check"))
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
 if (args.Contains("--sv-performance")) return SliderMultiplierTests.Performance();
+if (args.Contains("--sv-check")) { SliderMultiplierTests.Run(); Console.WriteLine("PASS Base SV compensation, playback, persistence and undo"); return 0; }
 if (args.Contains("--performance-scheduling")) return PerformanceSchedulingTests.Benchmark();
 if (args.Length == 2 && args[0] == "--fruit-placement-performance") return EditorPerformance.RunFruitPlacement(args[1]);
 if (args.Length == 2 && args[0] == "--testplay-edit-performance") return EditorPerformance.RunTestplayEditing(args[1]);

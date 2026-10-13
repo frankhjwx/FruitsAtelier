@@ -98,6 +98,8 @@ The opt-in `App.Tests --performance-scheduling` benchmark measures Timing frames
 and Stream setup with synthetic data. `Formats.Tests --benchmark-sv-edits` measures
 ordinary edits with an SV override and compares every export against uncached NM/HR
 output. `App.Tests --sv-performance` measures SV/DPB draft input and Apply validation.
+`App.Tests --sv-check` checks base SV compensation at Legacy heads, unused extreme
+timing, FSlider generation, NM/HR playback, cache equivalence, persistence and undo.
 Run the same fixtures and build configuration before and after an optimization;
 capture console JSON in `artifacts/`. These are CPU/allocation measurements, not GPU
 presentation or physical input latency.

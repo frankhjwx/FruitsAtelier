@@ -103,6 +103,10 @@ is retained for project compatibility and enabled when the panel changes the
 base value. These fields participate in cloning, dirty comparison, persistence
 and undo. Stored timing points retain their source basis. Timing lookups and
 exported timing compensate them into the current base, including red resets.
+Exact inherited SV compensation is required at retained Legacy Slider heads.
+Other timing states are bounded to 0.1–10 before FSliders solve their generated
+SV, so unused extreme green points do not block saving. Timing sample and effect
+fields remain at their original times.
 FSlider generation uses that same base and inherited SV range 0.1–10; export
 writes its generated SV directly. Timing insertion retains the stored basis so
 compensation is applied once. Base changes validate the candidate conversion
