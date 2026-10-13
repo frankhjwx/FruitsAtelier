@@ -1298,5 +1298,8 @@
   "settings.canvasCentreLine": "Gitnang linya",
   "settings.canvasGridOpacity": "Opacity: {0}%",
   "settings.canvasGridReset": "I-reset ang grid",
-  "settings.canvasBackgroundDimLabel": "Background Dim"
+  "settings.canvasBackgroundDimLabel": "Background Dim",
+  "sliderSpeed.sv": "SV: {0}",
+  "sliderSpeed.maxDs": "Max DS: {0}",
+  "sliderSpeed.maxDsTiny": "Max DS (+tiny): {0}"
 }

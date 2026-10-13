@@ -613,6 +613,19 @@ The bottom row displays a compact readout such as **X: 185** for the selected fr
 
 **View → Include tiny droplets** controls whether Movement Analysis connections and DS labels include tiny droplets. It starts off and only changes the analysis display; gameplay hyperdash indicators, snapping, selection locks and beatmap content remain unchanged.
 
+A selected slider or active slider draft shows a compact speed badge beside the
+movement panel. **SV** is the generated slider's inherited SV multiplier relative
+to the map's base SV. **Max DS** is the largest horizontal DS between consecutive
+fruits and droplets within that slider, including its repeated traversals. It uses
+the current conversion's positions and times and the same departure-time base
+velocity as other DS readouts; unrelated objects are excluded. **Include tiny
+droplets** adds tiny droplets to this measurement and changes the label to
+**Max DS (+tiny)**. These are event-to-event speeds, not the curve's instantaneous
+derivative. SV can exceed Max DS because geometric path travel and tiny compensation
+also contribute to the generated slider speed. Values update while drawing and
+dragging; incomplete or failed conversions show a dash. Streams, standalone fruits
+and multiple selected parents do not show this badge. The display is read-only.
+
 For a clicked or selected tiny droplet, Prev and Next display movement classifications and DS ratios to its immediate neighbours, including other tiny droplets. A missing neighbour or zero time interval displays a dash. These tiny-droplet distance values are read-only.
 
 With droplet selection unlocked, clicking a droplet or tiny droplet displays its X coordinate, including when the click selects its parent slider. Clicking that child again selects the specific event and shows a bright outer ring above curves and movement lines. The coordinate readout alone does not change selection, dragging or the parent geometry. Lock droplet selection blocks droplet selection and coordinate inspection. In Select mode, a click closer to the droplet than nearby controls selects the droplet; an already selected droplet remains draggable after its curve gains an anchor. Horizontal dragging changes the selected event's X and recalculates the curve. Droplets of the same kind that share that path sample on repeated traversals move together; other events remain fixed, and all event times are preserved. The curve between the adjacent event samples becomes linear, replacing any intervening anchors and handles while retaining the curve outside that interval. TinyDroplet sampling follows the slider's compensation policy. Unreachable positions clamp to the last valid X. One drag is one undoable edit. Dragging a selected Legacy Slider droplet or tiny droplet converts its parent to an FSlider automatically within the same undo step. The ring follows live edits and is visible with Movement Analysis on or off.

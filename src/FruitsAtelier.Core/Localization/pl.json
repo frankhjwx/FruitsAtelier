@@ -1298,5 +1298,8 @@
   "settings.canvasCentreLine": "Linia środkowa",
   "settings.canvasGridOpacity": "Nieprzezroczystość: {0}%",
   "settings.canvasGridReset": "Resetuj siatkę",
-  "settings.canvasBackgroundDimLabel": "Background Dim"
+  "settings.canvasBackgroundDimLabel": "Background Dim",
+  "sliderSpeed.sv": "SV: {0}",
+  "sliderSpeed.maxDs": "Maks. DS: {0}",
+  "sliderSpeed.maxDsTiny": "Maks. DS (+tiny): {0}"
 }

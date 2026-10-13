@@ -1298,5 +1298,8 @@
   "settings.canvasCentreLine": "中心线",
   "settings.canvasGridOpacity": "不透明度：{0}%",
   "settings.canvasGridReset": "重置网格",
-  "settings.canvasBackgroundDimLabel": "Background Dim"
+  "settings.canvasBackgroundDimLabel": "Background Dim",
+  "sliderSpeed.sv": "SV：{0}",
+  "sliderSpeed.maxDs": "最大 DS：{0}",
+  "sliderSpeed.maxDsTiny": "最大 DS（含 tiny）：{0}"
 }

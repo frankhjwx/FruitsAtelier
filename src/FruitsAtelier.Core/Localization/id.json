@@ -1298,5 +1298,8 @@
   "settings.canvasCentreLine": "Garis tengah",
   "settings.canvasGridOpacity": "Opasitas: {0}%",
   "settings.canvasGridReset": "Reset grid",
-  "settings.canvasBackgroundDimLabel": "Background Dim"
+  "settings.canvasBackgroundDimLabel": "Background Dim",
+  "sliderSpeed.sv": "SV: {0}",
+  "sliderSpeed.maxDs": "DS maks.: {0}",
+  "sliderSpeed.maxDsTiny": "DS maks. (+tiny): {0}"
 }

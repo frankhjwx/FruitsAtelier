@@ -31,6 +31,12 @@ a time or position can still flatten a complete imported slider path.
 - Refresh content-dependent data at its owning edit boundary. Viewport, selection,
   language and hover changes must not create content history or invalidate geometry.
 
+The slider speed badge reuses the current conversion and timing lookup. Its
+per-editor cache retains only the last inspected parent, keyed by conversion
+identity, parent ID and tiny-droplet inclusion. A new selection scans only the
+parent's time interval; unchanged painting and hover reuse the values. It does
+not initiate conversion or export, including while a slider draft is active.
+
 ## Full-map work and cache ownership
 
 `OsuBeatmapWriter.Serialize` validates, converts, emits text, parses it again,

@@ -49,6 +49,12 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --slider-speed-check` checks the Slider SV and maximum DS readout,
+unrestricted editing, repeated paths, tiny inclusion, draft cancellation and undo.
+`FruitsAtelier.App --render-check --slider-speed-render-check` checks selected and
+draft readouts in English and Chinese at two window sizes and three DPI settings,
+with screenshots under `artifacts/tests/slider-speed-native`.
+
 `App.Tests --library-opening-check` verifies that opening a library project while
 the workspace gate is held leaves rendering responsive, blocks duplicate opens
 and competing operations, publishes once, retains the document on failure, and

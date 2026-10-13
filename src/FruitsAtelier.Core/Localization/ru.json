@@ -1298,5 +1298,8 @@
   "settings.canvasCentreLine": "Центральная линия",
   "settings.canvasGridOpacity": "Непрозрачность: {0}%",
   "settings.canvasGridReset": "Сбросить сетку",
-  "settings.canvasBackgroundDimLabel": "Background Dim"
+  "settings.canvasBackgroundDimLabel": "Background Dim",
+  "sliderSpeed.sv": "SV: {0}",
+  "sliderSpeed.maxDs": "Макс. DS: {0}",
+  "sliderSpeed.maxDsTiny": "Макс. DS (+tiny): {0}"
 }

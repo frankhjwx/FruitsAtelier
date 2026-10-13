@@ -1298,5 +1298,8 @@
   "settings.canvasCentreLine": "Ligne centrale",
   "settings.canvasGridOpacity": "Opacité : {0}%",
   "settings.canvasGridReset": "Réinitialiser la grille",
-  "settings.canvasBackgroundDimLabel": "Background Dim"
+  "settings.canvasBackgroundDimLabel": "Background Dim",
+  "sliderSpeed.sv": "SV : {0}",
+  "sliderSpeed.maxDs": "DS max. : {0}",
+  "sliderSpeed.maxDsTiny": "DS max. (+tiny) : {0}"
 }

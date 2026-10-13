@@ -1298,5 +1298,8 @@
   "settings.canvasCentreLine": "중앙선",
   "settings.canvasGridOpacity": "불투명도: {0}%",
   "settings.canvasGridReset": "격자 초기화",
-  "settings.canvasBackgroundDimLabel": "Background Dim"
+  "settings.canvasBackgroundDimLabel": "Background Dim",
+  "sliderSpeed.sv": "SV: {0}",
+  "sliderSpeed.maxDs": "최대 DS: {0}",
+  "sliderSpeed.maxDsTiny": "최대 DS (tiny 포함): {0}"
 }

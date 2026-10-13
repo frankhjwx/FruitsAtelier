@@ -7,6 +7,12 @@ string startupLanguage = FruitsAtelier.Localization.Strings.Language;
 // Existing interaction fixtures use Chinese labels explicitly.
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
+if (args.Contains("--slider-speed-check"))
+{
+    try { SliderSpeedReadoutTests.Run(); Console.WriteLine("PASS Slider speed readout and free editing"); return 0; }
+    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
+}
+
 if (args.Contains("--library-opening-check"))
 {
     try { LibraryOpeningTests.Run(); Console.WriteLine("PASS Library opening responsiveness, publication and failure checks"); return 0; }
@@ -244,6 +250,7 @@ var tests = new (string Name, Action Run)[]
     ("DS numeric fields use base SV, preserve direction and support undo", DistanceEditingTests.NumericFields),
     ("X coordinate input clamps, previews and supports undo", DistanceEditingTests.XCoordinate),
     ("DS edits selected slider heads, tails and droplets", DistanceEditingTests.SliderPoints),
+    ("Slider speed readout follows conversion, editing and history", SliderSpeedReadoutTests.Run),
     ("Movement DS labels use base SV and avoid collisions", DistanceEditingTests.Labels),
     ("Movement Analysis toggles all four connection colours without editing content", AssistToolsTests.MovementAnalysis),
     ("Movement Analysis optionally includes tiny droplets without editing content", AssistToolsTests.TinyMovementDisplay),
