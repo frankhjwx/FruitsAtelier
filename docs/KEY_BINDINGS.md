@@ -276,7 +276,7 @@ undo/redo. Dialogs consume background editing keys. Some Compose page/file keys
 are processed before its numeric-field handler, so explicitly commit the field
 before invoking those commands.
 
-The canvas Zoom lock opens independent X/Y controls up to 200%. The toolbar Zoom slider controls X while unlocked. See [canvas scaling](EDITOR_UI.md#workspace).
+Unlocking canvas Zoom shows two persistent toolbar sliders, X above Y, each up to 200%. Object drawing and hit regions are capped at 100%. See [canvas scaling](EDITOR_UI.md#workspace).
 
 ## References
 

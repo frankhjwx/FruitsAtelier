@@ -21,21 +21,45 @@ internal static class IndependentCanvasScaleTests
             var lockBounds = ui.View.CanvasScaleLockBounds;
             ui.Click(lockBounds.X + 10, lockBounds.Y + 10);
             Check(!ui.View.UniformCanvasScale, "Lock icon enables independent scaling");
+            var xBounds = ui.View.CanvasAxisZoomBounds(0);
+            var yBounds = ui.View.CanvasAxisZoomBounds(1);
+            Check(xBounds.X >= ui.View.ZoomSliderBounds.X && xBounds.Right <= ui.View.ZoomSliderBounds.Right
+                && xBounds.Bottom <= yBounds.Y && yBounds.Bottom <= ui.View.ZoomSliderBounds.Bottom + 1,
+                "X/Y controls remain directly within the Zoom toolbar area");
+            double initialX = ui.View.CanvasZoom, initialY = ui.View.CanvasTimeZoom;
+            ui.Click(ui.View.ZoomSliderBounds.X + 2, yBounds.Y + yBounds.Height / 2);
+            Near(initialX, ui.View.CanvasZoom); Near(initialY, ui.View.CanvasTimeZoom);
             void Axis(int axis, float fraction)
             {
                 var r = ui.View.CanvasAxisZoomBounds(axis);
-                ui.View.PointerDown(r.X + r.Width / 2, r.Y + 14, 0, false, false);
+                ui.View.PointerDown(r.X + r.Width / 2, r.Y + r.Height / 2, 0, false, false);
                 Check(ui.View.WantsCapture, "Independent axis slider captures");
-                ui.View.PointerMove(r.X + r.Width * fraction, r.Y + 14, false, false);
-                ui.View.PointerUp(r.X + r.Width * fraction, r.Y + 14, 0); ui.Paint();
+                ui.View.PointerMove(r.X + r.Width * fraction, r.Y + r.Height / 2, false, false);
+                ui.View.PointerUp(r.X + r.Width * fraction, r.Y + r.Height / 2, 0); ui.Paint();
             }
             Axis(0, 1); Near(2, ui.View.CanvasZoom); Near(startTime, ui.View.PixelsPerMs);
             Check(ui.Plot.Width > startWidth, "X scaling expands map positions");
             double wide = ui.Plot.Width; Axis(1, 1);
             Near(wide, ui.Plot.Width); Near(2, ui.View.CanvasTimeZoom);
             Check(ui.View.PixelsPerMs > startTime, "Y scaling expands time independently");
+            double fullWidth = ui.Plot.Width / ui.View.CanvasZoom;
+            double minimum = 192 / fullWidth;
+            Axis(0, (float)((1 - minimum) / (2 - minimum)));
+            ui.View.UpdateTransport(1000, 30000, true, true, false, null, "fixture.wav"); ui.Paint();
+            ui.View.UpdateTransport(1000, 30000, true, false, false, null, "fixture.wav"); ui.Paint();
+            float Radius()
+            {
+                var p = ui.ScreenAt(1000, 256);
+                return ui.Canvas.Circles.Single(c => c.Filled && c.Color == 0xFFFFFF
+                    && Math.Abs(c.X - p.X) < .01 && Math.Abs(c.Y - p.Y) < .01).Radius;
+            }
+            float radius100 = Radius();
+            Axis(0, 1); Near(radius100, Radius());
+            var centre = ui.ScreenAt(1000, 256);
+            ui.Key('1'); ui.Click(centre.X + radius100 * 1.4f, centre.Y);
+            Check(ui.View.SelectedObjectIds.Count == 0, "Hit testing respects the 100% object size cap");
             Axis(0, 0); Near(192, ui.Plot.Width); Near(2, ui.View.CanvasTimeZoom);
-            Axis(0, 1); ui.Key(27);
+            Axis(0, 1);
             var plot = ui.View.CanvasPlotBounds;
             double originalX = ui.Plot.X, originalStart = ui.View.ViewStartMs;
             float x = plot.X + plot.Width / 2, y = plot.Y + plot.Height / 2;

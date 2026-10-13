@@ -8,15 +8,13 @@ public sealed partial class EditorView
 {
     private double canvasTimeZoom = .6;
     private double canvasPanX, panStartX;
-    private bool canvasScalePopup;
     private int canvasScaleAxis = -1;
     public bool UniformCanvasScale => LibrarySettings.UniformCanvasScale;
     public double CanvasTimeZoom => UniformCanvasScale ? canvasZoom : canvasTimeZoom;
     public Rect CanvasScaleLockBounds { get; private set; }
-    internal Rect CanvasScalePopupBounds => new(zoomSlider.X,
-        canvas.Y + 42, Math.Min(300, width - zoomSlider.X - 12), 122);
-    internal Rect CanvasAxisZoomBounds(int axis) => new(CanvasScalePopupBounds.X + 44,
-        CanvasScalePopupBounds.Y + 43 + axis * 40, CanvasScalePopupBounds.Width - 108, 28);
+    internal Rect CanvasAxisZoomBounds(int axis) => new(zoomSlider.X + 12,
+        zoomSlider.Y + axis * 15, Math.Max(1, zoomSlider.Width - 12), 15);
+    private float CanvasObjectWidth => Math.Min(Playfield.Width, FullPlayfieldWidth);
     private double MaximumCanvasZoom => UniformCanvasScale ? 1 : 2;
     private double MaximumObjectTimelineScale => LibrarySettings.ExperimentalSnapDivisions ? 16 : 1.5;
     private double CanvasPixelsPerMs => CatchScrollTiming.PixelsPerMs(Document.ApproachRate, FullPlayfieldWidth * CanvasTimeZoom);
@@ -49,7 +47,6 @@ public sealed partial class EditorView
     private void ToggleUniformCanvasScale()
     {
         LibrarySettings.UniformCanvasScale = !UniformCanvasScale;
-        canvasScalePopup = !UniformCanvasScale;
         if (UniformCanvasScale) SetCanvasScales(canvasZoom, canvasZoom, plot.Y + plot.Height / 2);
         else canvasTimeZoom = canvasZoom;
         SaveCanvasScale();
@@ -59,16 +56,11 @@ public sealed partial class EditorView
     {
         if (TimingPageVisible || LibraryVisible || StreamDialogVisible) return false;
         if (button == 0 && CanvasScaleLockBounds.Contains(x, y)) { ToggleUniformCanvasScale(); return true; }
-        if (!UniformCanvasScale && button == 0 && new Rect(zoomSlider.Right, canvas.Y + 4, CanvasScaleLockBounds.X - zoomSlider.Right, 29).Contains(x, y))
-        { canvasScalePopup = !canvasScalePopup; return true; }
-        if (!canvasScalePopup) return false;
-        if (button == 0)
+        if (!UniformCanvasScale && button == 0)
             for (int axis = 0; axis < 2; axis++)
                 if (CanvasAxisZoomBounds(axis).Contains(x, y))
                 { canvasScaleAxis = axis; drag = DragKind.CanvasZoom; SetCanvasAxisZoom(x); return true; }
-        bool inside = CanvasScalePopupBounds.Contains(x, y);
-        if (!inside) canvasScalePopup = false;
-        return true;
+        return !UniformCanvasScale && zoomSlider.Contains(x, y);
     }
 
     private void SetCanvasAxisZoom(float x)
@@ -90,27 +82,25 @@ public sealed partial class EditorView
         c.Line(x + 2 + offset, y, x + 2 + offset, y - 6, color, 1.5f);
         c.Line(x + 2 + offset, y - 6, x + 10 + offset, y - 6, color, 1.5f);
         c.Line(x + 10 + offset, y - 6, x + 10 + offset, y - (UniformCanvasScale ? 0 : 3), color, 1.5f);
-        if (CanvasScaleLockBounds.Contains(mouseX, mouseY) && !canvasScalePopup)
+        if (CanvasScaleLockBounds.Contains(mouseX, mouseY))
             c.Text(L.Get(UniformCanvasScale ? "ui.uniformScale" : "ui.independentScale"),
                 zoomSlider.X, canvas.Y + 42, 11, Foreground, 300);
     }
 
-    private void DrawCanvasScalePopup(ICanvas c)
+    private void DrawCanvasAxisZoom(ICanvas c)
     {
-        if (!canvasScalePopup || UniformCanvasScale || TimingPageVisible || LibraryVisible || librarySettingsOpen) return;
-        var r = CanvasScalePopupBounds;
-        c.Fill(r, Panel, 5); c.Stroke(r, Grid, radius: 5);
-        c.Text(L.Get("ui.independentScale"), r.X + 12, r.Y + 12, 12, Foreground, r.Width - 24);
         for (int axis = 0; axis < 2; axis++)
         {
             var slider = CanvasAxisZoomBounds(axis);
             double value = axis == 0 ? canvasZoom : canvasTimeZoom;
             float end = slider.X + (float)((value - MinimumCanvasZoom) / (2 - MinimumCanvasZoom)) * slider.Width;
-            c.Text(axis == 0 ? "X" : "Y", r.X + 14, slider.Y + 7, 12, Foreground, 24);
-            c.Line(slider.X, slider.Y + 14, slider.Right, slider.Y + 14, Grid, 3);
-            c.Line(slider.X, slider.Y + 14, end, slider.Y + 14, Accent, 3);
-            c.Circle(end, slider.Y + 14, 5, Accent);
-            c.Text(L.Get("ui.zoomPercent", value * 100), slider.Right + 8, slider.Y + 7, 11, Foreground, 52);
+            float y = slider.Y + slider.Height / 2;
+            c.Text(axis == 0 ? "X" : "Y", zoomSlider.X, slider.Y + 1, 9, Muted, 10);
+            c.Line(slider.X, y, slider.Right, y, Grid, 2);
+            c.Line(slider.X, y, end, y, Accent, 2);
+            c.Circle(end, y, 3.5f, Accent);
+            c.Text(L.Get("ui.zoomPercent", value * 100), slider.Right + 4, slider.Y + 1, 9, Foreground,
+                CanvasScaleLockBounds.X - slider.Right - 4);
         }
     }
 }

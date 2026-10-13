@@ -127,7 +127,6 @@ public sealed partial class EditorView
         if (menu >= 0) DrawMenu(c);
         if (!librarySettingsOpen) DrawContextMenu(c);
         if (!librarySettingsOpen) DrawLanguageMenu(c);
-        DrawCanvasScalePopup(c);
         DrawPanelMenu(c);
         DrawSliderDialog(c);
         DrawExportOverlay(c);
@@ -173,7 +172,7 @@ public sealed partial class EditorView
         float snapLeft = toolbarRight - 158;
         bool compactToolbar = toolbarRight < 900;
         bool narrowZoom = compactToolbar;
-        c.Text(L.Get("ui.canvasZoom"), leftPanel.Right + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
+        if (UniformCanvasScale || !narrowZoom) c.Text(L.Get("ui.canvasZoom"), leftPanel.Right + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
         float breakWidth = compactToolbar ? 115 : 140;
         float breakX = snapLeft - breakWidth - 5;
         float toggleWidth = compactToolbar ? toolbarRight < 700 ? 75 : 105 : 155;
@@ -182,13 +181,17 @@ public sealed partial class EditorView
         float pathX = selectionX - toggleWidth - 5;
         zoomSlider = new(leftPanel.Right + (narrowZoom ? 8 : 74), canvas.Y + 4,
             Math.Max(30, pathX - (narrowZoom ? 70 : 154) - leftPanel.Right), 29);
-        float zoomX = zoomSlider.X + (float)(MaximumCanvasZoom - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom) : 1) * zoomSlider.Width;
-        float zoomY = canvas.Y + (narrowZoom ? 27 : 19);
-        c.Line(zoomSlider.X, zoomY, zoomSlider.Right, zoomY, Grid, 3);
-        c.Line(zoomSlider.X, zoomY, zoomX, zoomY, Accent, 3);
-        c.Circle(zoomX, zoomY, 6, Accent);
-        c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + (compactToolbar ? 4 : 8), canvas.Y + (narrowZoom ? 4 : 13), compactToolbar ? 10 : 11, Foreground, narrowZoom ? 32 : 48);
         DrawCanvasScaleLock(c);
+        if (UniformCanvasScale)
+        {
+            float zoomX = zoomSlider.X + (float)(MaximumCanvasZoom - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom) : 1) * zoomSlider.Width;
+            float zoomY = canvas.Y + (narrowZoom ? 27 : 19);
+            c.Line(zoomSlider.X, zoomY, zoomSlider.Right, zoomY, Grid, 3);
+            c.Line(zoomSlider.X, zoomY, zoomX, zoomY, Accent, 3);
+            c.Circle(zoomX, zoomY, 6, Accent);
+            c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + (compactToolbar ? 4 : 8), canvas.Y + (narrowZoom ? 4 : 13), compactToolbar ? 10 : 11, Foreground, narrowZoom ? 32 : 48);
+        }
+        else DrawCanvasAxisZoom(c);
         PrepareCanvasToggleText(c, compactToolbar, toggleWidth);
         CanvasToggle(0, pathX, () => showTargets = !showTargets, showTargets);
         CanvasToggle(1, selectionX, () => showSelectionRect = !showSelectionRect, showSelectionRect);
@@ -419,20 +422,20 @@ public sealed partial class EditorView
         var playfield = Playfield;
         const string comboLabel = "NC";
         float comboLabelWidth = 0;
-        double margin = CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512 * 1.5 / pixelsPerMs;
+        double margin = CatchSize.FruitRadius(Document.CircleSize) * CanvasObjectWidth / 512 * 1.5 / pixelsPerMs;
         foreach (var item in ObjectsInTimeRange(viewStart - margin, viewStart + plot.Height / pixelsPerMs + margin))
         {
             if (StreamDialogVisible && streamTargets.Contains(item.SourceId)) continue;
             var p = Screen(new(item.TimeMs, item.X));
-            float radius = (float)(CatchSize.FruitRadius(Document.CircleSize) * playfield.Width / 512);
+            float radius = (float)(CatchSize.FruitRadius(Document.CircleSize) * CanvasObjectWidth / 512);
             if (p.Y < plot.Y - radius * 1.5f || p.Y > plot.Bottom + radius * 1.5f) continue;
             bool previewTail = LegacyMode && legacyPreviewValid && item.SourceId == draftTrack
                 && SelectedTrack is { } draftSlider && legacyDraft is { Count: > 0 }
                 && draftSlider.Nodes[^1].TimeMs > legacyDraft[^1].Point.TimeMs
                 && Math.Abs(item.TimeMs - draftSlider.Nodes[^1].TimeMs) < 1;
-            DrawCatchObject(c, item, p.X, p.Y, playfield.Width, previewTail ? .6f : 1, hyperStarts: placementHyperdash);
+            DrawCatchObject(c, item, p.X, p.Y, CanvasObjectWidth, previewTail ? .6f : 1, hyperStarts: placementHyperdash);
             if (IsObjectSelected(item.SourceId))
-                c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * playfield.Width / 512 + 3, Accent, false, 1.5f);
+                c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * CanvasObjectWidth / 512 + 3, Accent, false, 1.5f);
             if (item.Kind == CatchObjectKind.Fruit && newComboEvents.Contains((item.SourceId, item.EventIndex)))
             {
                 if (comboLabelWidth == 0)

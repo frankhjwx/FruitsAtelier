@@ -234,7 +234,7 @@ public sealed partial class EditorView
             var fruit = stackPreview[i];
             var p = Screen(new(fruit.TimeMs, fruit.X));
             if (!plot.Contains(p.X, p.Y)) continue;
-            DrawCatchObject(c, fruit, p.X, p.Y, Playfield.Width, .65f);
+            DrawCatchObject(c, fruit, p.X, p.Y, CanvasObjectWidth, .65f);
         }
         c.Unclip();
         hits.Clear();

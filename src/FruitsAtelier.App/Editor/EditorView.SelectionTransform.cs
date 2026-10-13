@@ -11,7 +11,7 @@ public sealed partial class EditorView
     private double selectionBoundsCircleSize = double.NaN;
     private readonly HashSet<Guid> selectionBoundsIds = [];
     private (double Left, double Right, double Start, double End)? selectionMapBounds;
-    private double selectionVisualLeft, selectionVisualRight;
+    private (double Left, double Right) selectionFruitX, selectionDropletX, selectionTinyDropletX;
     private double selectionFruitStart, selectionFruitEnd, selectionDropletStart, selectionDropletEnd;
     private double selectionTinyDropletStart, selectionTinyDropletEnd;
     private int selectionScaleSide;
@@ -26,17 +26,20 @@ public sealed partial class EditorView
                 return default;
             RefreshSelectionBounds();
             if (selectionMapBounds is not { } bounds) return default;
-            var a = Screen(new(bounds.Start, selectionVisualLeft));
-            var b = Screen(new(bounds.End, selectionVisualRight));
+            var a = Screen(new(bounds.Start, bounds.Left));
+            var b = Screen(new(bounds.End, bounds.Right));
+            float left = a.X, right = b.X;
             float top = Math.Min(a.Y, b.Y), bottom = Math.Max(a.Y, b.Y);
-            Include(CatchObjectKind.Fruit, selectionFruitStart, selectionFruitEnd);
-            Include(CatchObjectKind.Droplet, selectionDropletStart, selectionDropletEnd);
-            Include(CatchObjectKind.TinyDroplet, selectionTinyDropletStart, selectionTinyDropletEnd);
-            return new(a.X, top, b.X - a.X, bottom - top);
-            void Include(CatchObjectKind kind, double start, double end)
+            Include(CatchObjectKind.Fruit, selectionFruitStart, selectionFruitEnd, selectionFruitX);
+            Include(CatchObjectKind.Droplet, selectionDropletStart, selectionDropletEnd, selectionDropletX);
+            Include(CatchObjectKind.TinyDroplet, selectionTinyDropletStart, selectionTinyDropletEnd, selectionTinyDropletX);
+            return new(left, top, right - left, bottom - top);
+            void Include(CatchObjectKind kind, double start, double end, (double Left, double Right) x)
             {
                 if (!double.IsFinite(start)) return;
-                float radius = ObjectRadius(kind) * Playfield.Width / 512;
+                float radius = ObjectRadius(kind) * CanvasObjectWidth / 512;
+                left = Math.Min(left, Screen(new(0, x.Left)).X - radius);
+                right = Math.Max(right, Screen(new(0, x.Right)).X + radius);
                 top = Math.Min(top, Screen(new(end, 0)).Y - radius);
                 bottom = Math.Max(bottom, Screen(new(start, 0)).Y + radius);
             }
@@ -62,22 +65,23 @@ public sealed partial class EditorView
         double start = timelineSources[first].Start, end = start;
         for (int i = first; i <= last; i++) end = Math.Max(end, timelineSources[i].End);
         double left = double.PositiveInfinity, right = double.NegativeInfinity;
-        selectionVisualLeft = selectionFruitStart = selectionDropletStart = selectionTinyDropletStart = double.PositiveInfinity;
-        selectionVisualRight = selectionFruitEnd = selectionDropletEnd = selectionTinyDropletEnd = double.NegativeInfinity;
+        selectionFruitStart = selectionDropletStart = selectionTinyDropletStart = double.PositiveInfinity;
+        selectionFruitEnd = selectionDropletEnd = selectionTinyDropletEnd = double.NegativeInfinity;
+        selectionFruitX = selectionDropletX = selectionTinyDropletX = (double.PositiveInfinity, double.NegativeInfinity);
         // Read-back rounds object times; include the rounded endpoints around the authored interval.
         foreach (var item in ObjectsInTimeRange(start - 1, end + 1))
         {
             if (!objectSelection.Contains(item.SourceId) || item.Kind is not (CatchObjectKind.Fruit or CatchObjectKind.Droplet or CatchObjectKind.TinyDroplet)) continue;
             left = Math.Min(left, item.X); right = Math.Max(right, item.X);
-            double radius = ObjectRadius(item.Kind);
-            selectionVisualLeft = Math.Min(selectionVisualLeft, item.X - radius);
-            selectionVisualRight = Math.Max(selectionVisualRight, item.X + radius);
             if (item.Kind == CatchObjectKind.Fruit)
-            { selectionFruitStart = Math.Min(selectionFruitStart, item.TimeMs); selectionFruitEnd = Math.Max(selectionFruitEnd, item.TimeMs); }
+            { selectionFruitStart = Math.Min(selectionFruitStart, item.TimeMs); selectionFruitEnd = Math.Max(selectionFruitEnd, item.TimeMs);
+                selectionFruitX = (Math.Min(selectionFruitX.Left, item.X), Math.Max(selectionFruitX.Right, item.X)); }
             else if (item.Kind == CatchObjectKind.Droplet)
-            { selectionDropletStart = Math.Min(selectionDropletStart, item.TimeMs); selectionDropletEnd = Math.Max(selectionDropletEnd, item.TimeMs); }
+            { selectionDropletStart = Math.Min(selectionDropletStart, item.TimeMs); selectionDropletEnd = Math.Max(selectionDropletEnd, item.TimeMs);
+                selectionDropletX = (Math.Min(selectionDropletX.Left, item.X), Math.Max(selectionDropletX.Right, item.X)); }
             else
-            { selectionTinyDropletStart = Math.Min(selectionTinyDropletStart, item.TimeMs); selectionTinyDropletEnd = Math.Max(selectionTinyDropletEnd, item.TimeMs); }
+            { selectionTinyDropletStart = Math.Min(selectionTinyDropletStart, item.TimeMs); selectionTinyDropletEnd = Math.Max(selectionTinyDropletEnd, item.TimeMs);
+                selectionTinyDropletX = (Math.Min(selectionTinyDropletX.Left, item.X), Math.Max(selectionTinyDropletX.Right, item.X)); }
         }
         if (!double.IsFinite(left)) return;
         selectionMapBounds = (left, right, start, end);

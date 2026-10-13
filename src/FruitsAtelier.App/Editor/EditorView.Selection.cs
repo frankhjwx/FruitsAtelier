@@ -163,7 +163,7 @@ public sealed partial class EditorView
         {
             var ids = boxAdds ? selectionBeforeBox.Objects.ToHashSet() : [];
             EnsureConversion();
-            double padding = CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512 / pixelsPerMs;
+            double padding = CatchSize.FruitDiameter(Document.CircleSize) * CanvasObjectWidth / 512 / pixelsPerMs;
             double start = viewStart + (plot.Bottom - selectionBox.Bottom) / pixelsPerMs - padding;
             double end = viewStart + (plot.Bottom - selectionBox.Y) / pixelsPerMs + padding;
             foreach (var item in ObjectsInTimeRange(start, end))

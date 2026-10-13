@@ -471,7 +471,6 @@ public sealed partial class EditorView
         if (librarySettingsOpen || ExportVisible || languageMenuOpen) return;
         if (LibraryVisible) { MoveLibraryPointer(y); return; }
         if (tabPointer) { MoveTabPointer(x); return; }
-        if (canvasScalePopup && drag != DragKind.CanvasZoom) return;
         if (drag == DragKind.PreviewResize)
         {
             previewWidth = Math.Clamp(width - x, MinimumPreviewWidth,
@@ -778,7 +777,6 @@ public sealed partial class EditorView
 
     public void Wheel(float x, float y, float delta, bool ctrl, bool shift = false, bool alt = false)
     {
-        if (canvasScalePopup) return;
         if (AcknowledgementsVisible)
         {
             if (acknowledgementsTextBounds.Contains(x, y)) { acknowledgementsScroll -= delta / 120 * 66; ClampAcknowledgementsScroll(); }
@@ -1229,7 +1227,6 @@ public sealed partial class EditorView
         }
         if (virtualKey == 27)
         {
-            if (canvasScalePopup) { canvasScalePopup = false; canvasScaleAxis = -1; drag = DragKind.None; SaveCanvasScale(); return; }
             if (VolumePopoverVisible) { CloseVolumePopover(); return; }
             if (contextItems.Count > 0) { contextItems.Clear(); return; }
             if (drag != DragKind.None || draftTrack != Guid.Empty || draftBanana != Guid.Empty) CancelInteraction();
@@ -1365,7 +1362,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
-        canvasScalePopup = false; canvasScaleAxis = -1;
+        canvasScaleAxis = -1;
         acknowledgementsScrollDragging = false;
         audioDiagnosticMarkerHeld = false;
         fullscreenShortcutHeld = false;

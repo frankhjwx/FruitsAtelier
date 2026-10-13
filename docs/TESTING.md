@@ -585,7 +585,8 @@ are written under `artifacts/tests/banana-edit/native`.
 ## Independent viewport scaling
 
 `App.Tests --independent-scale-check` checks the locked zoom behavior, independent
-X/Y limits, smaller minimum width, horizontal pan bounds, persisted preferences,
+inline X/Y layout and limits, the 100% object-size and hit-region cap, smaller
+minimum width, horizontal pan bounds, persisted preferences,
 fruit dragging and undo, and experimental upper-timeline limits.
 `FruitsAtelier.App.exe --render-check --canvas-scale-render-check` captures the
 lock, X/Y controls, 200% scale, horizontal pan and dense 1/48 timeline in English

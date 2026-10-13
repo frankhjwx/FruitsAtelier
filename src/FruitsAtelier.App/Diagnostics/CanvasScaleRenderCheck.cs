@@ -35,11 +35,11 @@ internal static class CanvasScaleRenderCheck
                 for (int axis = 0; axis < 2; axis++)
                 {
                     var slider = editor.CanvasAxisZoomBounds(axis);
-                    editor.PointerDown(slider.X + slider.Width / 2, slider.Y + 14, 0, false, false);
-                    editor.PointerMove(slider.Right, slider.Y + 14, false, false);
-                    editor.PointerUp(slider.Right, slider.Y + 14, 0); Paint();
+                    editor.PointerDown(slider.X + slider.Width / 2, slider.Y + slider.Height / 2, 0, false, false);
+                    editor.PointerMove(slider.Right, slider.Y + slider.Height / 2, false, false);
+                    editor.PointerUp(slider.Right, slider.Y + slider.Height / 2, 0); Paint();
                 }
-                Paint("scale200"); editor.KeyDown(27, false, false); Paint();
+                Paint("scale200");
                 var plot = editor.CanvasPlotBounds;
                 editor.PointerDown(plot.X + 50, plot.Y + 50, 1, false, false);
                 editor.PointerMove(plot.X + 250, plot.Y + 50, false, false);

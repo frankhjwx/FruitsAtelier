@@ -239,11 +239,11 @@ public sealed partial class EditorView
             {
                 var position = Screen(new(item.TimeMs, item.X));
                 if (position.Y >= plot.Y - 20 && position.Y <= plot.Bottom + 20)
-                    DrawCatchObject(c, item, position.X, position.Y, Playfield.Width, .6f, hyperStarts: placementHyperdash);
+                    DrawCatchObject(c, item, position.X, position.Y, CanvasObjectWidth, .6f, hyperStarts: placementHyperdash);
             }
         }
         var p = Screen(point);
-        float diameter = CatchSize.FruitDiameter(Document.CircleSize) * Playfield.Width / 512;
+        float diameter = CatchSize.FruitDiameter(Document.CircleSize) * CanvasObjectWidth / 512;
         bool hyper = placementGhost is { } ghost && placementHyperdash.Contains((ghost.SourceId, ghost.EventIndex));
         uint? glow = hyper ? HyperDashFruitColour : null;
         if (skin is null || !skin.Draw(c, CatchSkinObject.Fruit, 0, p.X, p.Y, diameter, opacity: .6f, hyperColour: glow))
