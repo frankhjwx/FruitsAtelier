@@ -25,7 +25,7 @@ public sealed partial class EditorView
     private DockWorkspace DockWorkspaceState => TimingPageVisible ? timingDockWorkspace : mappingDockWorkspace;
     private DockGroup PanelGroup(DockPanel panel) => DockWorkspaceState.Left.Panels.Contains(panel)
         ? DockWorkspaceState.Left : DockWorkspaceState.Right;
-    private bool PanelVisible(DockPanel panel) => !TimingPageVisible && !PanelGroup(panel).Collapsed
+    private bool PanelVisible(DockPanel panel) => !TimingPageVisible && DockPanelExists(panel) && !PanelGroup(panel).Collapsed
         && PanelGroup(panel).Active == panel;
     private Rect DockBounds(bool left) => new(left ? leftPanel.X : rightPanel.X, canvas.Y + 38,
         left ? leftPanel.Width : rightPanel.Width, Math.Max(0, canvas.Height - 38));
@@ -34,8 +34,70 @@ public sealed partial class EditorView
     private DockPanel? dockPressed;
     private bool dockDragging;
     private float dockStartX, dockStartY;
+    private Rect leftDockResizeBounds, rightDockResizeBounds;
+    private bool dockResizeLeft;
+    private int dockReorderIndex;
+    private readonly List<(DockPanel Panel, Rect Bounds)> dockOriginalTabs = [];
+    private const float MinimumDockWidth = 180;
+    private float MaximumDockWidth => Math.Max(MinimumDockWidth, (width - 109 - (MinimumPlayfieldWidth + 198)) / 2);
+    internal Rect DockResizeBounds(bool left) => left ? leftDockResizeBounds : rightDockResizeBounds;
+    private bool DockReordering => dockDragging && dockPressed is { } panel
+        && DockDropSide(mouseX, mouseY) is { } left
+        && ReferenceEquals(PanelGroup(panel), left ? DockWorkspaceState.Left : DockWorkspaceState.Right);
+    private List<DockPanel> DisplayDockPanels(DockGroup group)
+    {
+        if (!DockReordering || dockPressed is not { } panel || !group.Panels.Contains(panel)) return group.Panels;
+        var panels = new List<DockPanel>(group.Panels);
+        panels.Remove(panel);
+        panels.Insert(Math.Clamp(dockReorderIndex, 0, panels.Count), panel);
+        return panels;
+    }
     internal Rect DockTabBounds(DockPanel panel) => dockTabs.FirstOrDefault(t => t.Panel == panel).Bounds;
     private static string DockTitle(DockPanel panel) => L.Get(panel == DockPanel.Preview ? "dock.preview" : "difficulty.curve.title");
+
+    private bool DockPanelExists(DockPanel panel) => DockWorkspaceState.Left.Panels.Contains(panel)
+        || DockWorkspaceState.Right.Panels.Contains(panel);
+    private void RemoveDockPanel(DockPanel panel)
+    {
+        if (!DockPanelExists(panel)) return;
+        var group = PanelGroup(panel);
+        group.Panels.Remove(panel);
+        if (group.Active == panel && group.Panels.Count > 0) group.Active = group.Panels[0];
+    }
+    private void AddDockPanel(DockPanel panel, bool left)
+    {
+        if (TimingPageVisible || DockPanelExists(panel)) return;
+        var group = left ? DockWorkspaceState.Left : DockWorkspaceState.Right;
+        group.Panels.Add(panel); group.Active = panel; group.Collapsed = false;
+    }
+    private void ResetDockLayout()
+    {
+        if (TimingPageVisible) return;
+        var state = DockWorkspaceState;
+        state.Left.Panels.Clear(); state.Right.Panels.Clear();
+        state.Left.Width = DifficultyCurveWidth; state.Right.Width = 360;
+        AddDockPanel(DockPanel.MovementStrain, true); AddDockPanel(DockPanel.Preview, false);
+    }
+    private bool DockTabContext(float x, float y)
+    {
+        if (TimingPageVisible) return false;
+        var tab = dockTabs.FirstOrDefault(t => t.Bounds.Contains(x, y));
+        if (tab.Bounds.Width <= 0) return false;
+        if (editField >= 0 && !CommitField()) return true;
+        bool left = ReferenceEquals(PanelGroup(tab.Panel), DockWorkspaceState.Left);
+        contextItems.Clear(); menu = -1;
+        contextItems.Add(new(L.Get("dock.closeTab"), () => RemoveDockPanel(tab.Panel)));
+        AddContextSeparator();
+        foreach (var panel in Enum.GetValues<DockPanel>())
+        {
+            bool exists = DockPanelExists(panel);
+            contextItems.Add(new((exists ? "✓ " : "") + L.Get("dock.addTab", DockTitle(panel)),
+                () => AddDockPanel(panel, left), !exists));
+        }
+        contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 282)),
+            Math.Clamp(y, 0, Math.Max(0, height - ContextMenuHeight)), 282, ContextMenuHeight);
+        return true;
+    }
 
     private void LayoutDockPanels()
     {
@@ -44,13 +106,16 @@ public sealed partial class EditorView
         float available = Math.Max(24, width - 109 - minimumCanvasWidth);
         bool leftOpen = !state.Left.Collapsed && state.Left.Panels.Count > 0;
         bool rightOpen = TimingPageVisible || !state.Right.Collapsed && state.Right.Panels.Count > 0;
-        float leftWidth = leftOpen ? Math.Min(state.Left.Width, available) : 24;
-        float rightWidth = rightOpen ? Math.Min(Math.Max(MinimumPreviewWidth, state.Right.Width), Math.Max(0, available - leftWidth)) : 0;
+        float leftWidth = leftOpen ? Math.Clamp(state.Left.Width, MinimumDockWidth, MaximumDockWidth) : 24;
+        float rightWidth = rightOpen ? TimingPageVisible
+            ? Math.Min(Math.Max(MinimumPreviewWidth, state.Right.Width), Math.Max(0, available - leftWidth))
+            : Math.Clamp(state.Right.Width, MinimumDockWidth, MaximumDockWidth) : 0;
         float bodyHeight = Math.Max(180, height - 204);
         leftPanel = new(0, 84, leftWidth, bodyHeight);
         rightPanel = new(width - (rightOpen ? rightWidth : 340), 84, rightOpen ? rightWidth : 340, rightOpen ? bodyHeight : 38);
         canvas = new(108 + leftWidth, 84, Math.Max(120, width - rightWidth - leftWidth - 109), bodyHeight);
         dockTabs.Clear();
+        leftDockResizeBounds = rightDockResizeBounds = default;
         DifficultyCurveToggleBounds = DifficultyCurveGraphBounds = PreviewToggleBounds = PreviewResizeBounds = PreviewViewport = default;
         MovementOverlayBounds = null;
     }
@@ -74,7 +139,7 @@ public sealed partial class EditorView
                 c.Fill(new(bounds.X, bounds.Y, bounds.Width, 38), Background);
                 float x = bounds.X + 6;
                 float available = Math.Max(0, bounds.Width - 12);
-                foreach (var panel in group.Panels)
+                foreach (var panel in DisplayDockPanels(group))
                 {
                     string title = DockTitle(panel);
                     float tabWidth = Math.Min(c.MeasureText(title, 12, true) + 24, available / group.Panels.Count);
@@ -102,13 +167,12 @@ public sealed partial class EditorView
                     DrawPreview(c, new(bounds.X + 16, bounds.Y + 38, Math.Max(0, bounds.Width - 32), Math.Max(0, bounds.Height - 52)));
                 }
                 c.Unclip();
-                if (group.Panels.Contains(DockPanel.Preview))
-                {
-                    float edge = left ? bounds.Right : bounds.X;
-                    PreviewResizeBounds = new(edge - 4, Math.Max(122, bounds.Y), 8, bounds.Bottom - Math.Max(122, bounds.Y));
-                    c.Fill(new(edge - 1, PreviewResizeBounds.Y, 2, PreviewResizeBounds.Height),
-                        PreviewResizeBounds.Contains(mouseX, mouseY) || drag == DragKind.PreviewResize ? Accent : Grid);
-                }
+                float edge = left ? bounds.Right : bounds.X;
+                var resize = new Rect(edge - 4, bounds.Y, 8, bounds.Height);
+                if (left) leftDockResizeBounds = resize; else rightDockResizeBounds = resize;
+                if (group.Panels.Contains(DockPanel.Preview)) PreviewResizeBounds = resize;
+                c.Fill(new(edge - 1, resize.Y, 2, resize.Height),
+                    resize.Contains(mouseX, mouseY) || drag == DragKind.PreviewResize && dockResizeLeft == left ? Accent : Grid);
             }
             c.Fill(toggle, Surface, 5);
             Button(c, toggle, left == group.Collapsed ? "›" : "‹", () => group.Collapsed = !group.Collapsed);
@@ -123,6 +187,9 @@ public sealed partial class EditorView
             if (!tab.Bounds.Contains(x, y)) continue;
             if (editField >= 0 && !CommitField()) return true;
             dockPressed = tab.Panel; dockDragging = false; dockStartX = x; dockStartY = y;
+            dockOriginalTabs.Clear();
+            dockOriginalTabs.AddRange(dockTabs.Where(t => PanelGroup(tab.Panel).Panels.Contains(t.Panel)));
+            dockReorderIndex = PanelGroup(tab.Panel).Panels.IndexOf(tab.Panel);
             return true;
         }
         return false;
@@ -132,6 +199,8 @@ public sealed partial class EditorView
     {
         mouseX = x; mouseY = y;
         if (Math.Abs(x - dockStartX) >= 4 || Math.Abs(y - dockStartY) >= 4) dockDragging = true;
+        if (DockReordering)
+            dockReorderIndex = dockOriginalTabs.Count(t => t.Panel != dockPressed && x > t.Bounds.X + t.Bounds.Width / 2);
     }
 
     private bool? DockDropSide(float x, float y)
@@ -154,15 +223,13 @@ public sealed partial class EditorView
             {
                 var destination = left ? DockWorkspaceState.Left : DockWorkspaceState.Right;
                 var before = dockTabs.FirstOrDefault(t => t.Bounds.Contains(x, y));
-                int originalIndex = source.Panels.IndexOf(panel);
                 source.Panels.Remove(panel);
                 if (source.Panels.Count > 0 && source.Active == panel) source.Active = source.Panels[0];
-                int index = before.Bounds.Width > 0
-                    ? before.Panel == panel && ReferenceEquals(source, destination) ? originalIndex : destination.Panels.IndexOf(before.Panel)
+                int index = ReferenceEquals(source, destination) ? dockReorderIndex : before.Bounds.Width > 0
+                    ? destination.Panels.IndexOf(before.Panel)
                     : -1;
                 if (index >= 0) destination.Panels.Insert(index, panel); else destination.Panels.Add(panel);
                 destination.Active = panel; destination.Collapsed = false;
-                if (panel == DockPanel.Preview) destination.Width = Math.Max(MinimumPreviewWidth, destination.Width);
             }
         }
         dockPressed = null; dockDragging = false;
@@ -171,6 +238,7 @@ public sealed partial class EditorView
     private void DrawDockDrag(ICanvas c)
     {
         if (!dockDragging || dockPressed is not { } panel || TimingPageVisible) return;
+        if (DockReordering) return;
         foreach (bool left in new[] { true, false })
         {
             var group = left ? DockWorkspaceState.Left : DockWorkspaceState.Right;
@@ -189,10 +257,7 @@ public sealed partial class EditorView
 
     private void ResizePreviewDock(float x)
     {
-        var group = PanelGroup(DockPanel.Preview);
-        bool left = ReferenceEquals(group, DockWorkspaceState.Left);
-        float otherWidth = left ? Math.Max(0, width - canvas.Right - 1) : leftPanel.Width;
-        group.Width = Math.Clamp(left ? x : width - x, MinimumPreviewWidth,
-            Math.Max(MinimumPreviewWidth, width - 109 - otherWidth - (MinimumPlayfieldWidth + 198)));
+        var group = dockResizeLeft ? DockWorkspaceState.Left : DockWorkspaceState.Right;
+        group.Width = Math.Clamp(dockResizeLeft ? x : width - x, MinimumDockWidth, MaximumDockWidth);
     }
 }

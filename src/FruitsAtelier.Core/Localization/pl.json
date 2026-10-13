@@ -1340,5 +1340,12 @@
   "settings.experimental": "Eksperymentalne",
   "settings.experimentalSnapDivisions": "[Experimental] Włącz snap 1/24, 1/32 i 1/48",
   "ui.uniformScale": "Jednolita skala (kliknij, aby odblokować)",
-  "ui.independentScale": "Niezależna skala X/Y"
+  "ui.independentScale": "Niezależna skala X/Y",
+  "dock.layout": "Układ",
+  "dock.arrangement": "Rozmieszczenie",
+  "dock.defaultLayout": "Panele boczne",
+  "dock.resetLayout": "Resetuj układ",
+  "dock.panels": "Panele",
+  "dock.closeTab": "Zamknij kartę",
+  "dock.addTab": "Dodaj {0}"
 }

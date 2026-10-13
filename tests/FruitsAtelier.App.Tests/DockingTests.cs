@@ -19,6 +19,11 @@ internal static class DockingTests
                 var baseline = ui.View.Document.DeepClone();
                 Click(ui.View.DifficultyCurveToggleBounds); ui.OpenPreview();
                 CheckToolbar();
+                ResizeDock(true, 0); ResizeDock(false, 0);
+                Check(DockWidth(true) == DockWidth(false), "Both docks share the same minimum width");
+                ResizeDock(true, 2000); ResizeDock(false, 2000);
+                Check(DockWidth(true) == DockWidth(false), "Both docks share the same maximum width");
+                ResizeDock(true, 280); ResizeDock(false, 360);
                 Drag(EditorView.DockPanel.MovementStrain, ui.Width - 80, 200);
                 Check(ui.View.DifficultyCurvePanelBounds.X > ui.Plot.Right && ui.View.DifficultyCurveVisible
                     && !ui.View.CatchPreviewVisible, "Strain merges on the right and becomes active");
@@ -49,6 +54,9 @@ internal static class DockingTests
                 Check(ui.View.TimingPageVisible && ui.View.DockTabBounds(EditorView.DockPanel.Preview).Width == 0
                     && ui.View.PreviewViewport.Width == 0 && ui.View.DifficultyCurveGraphBounds.Width == 0, "Timing retains its fixed view without stale dock targets");
                 var timingPlot = ui.Plot;
+                ui.ClickText(L.Get("dock.layout")); ui.ClickText(L.Get("dock.resetLayout"));
+                Check(ui.View.TimingPageVisible && ui.Plot == timingPlot, "Timing locks Layout reset");
+                ui.Key(27);
                 ui.View.PointerDown(tab.X + 10, tab.Y + 10, 0, false, false);
                 ui.View.PointerMove(ui.Width - 50, 200, false, false);
                 ui.View.PointerUp(ui.Width - 50, 200, 0); ui.Paint();
@@ -59,6 +67,14 @@ internal static class DockingTests
                 Check(ui.View.DifficultyCurvePanelBounds.X == 0 && ui.View.DifficultyCurveVisible, "Strain also merges into the left group");
                 var merged = ui.View.DockTabBounds(EditorView.DockPanel.MovementStrain);
                 var previewTab = ui.View.DockTabBounds(EditorView.DockPanel.Preview);
+                ui.View.PointerDown(merged.X + 10, merged.Y + 10, 0, false, false);
+                ui.View.PointerMove(previewTab.X + 5, previewTab.Y + 10, false, false); ui.Paint();
+                Check(ui.View.DockTabBounds(EditorView.DockPanel.MovementStrain).X < ui.View.DockTabBounds(EditorView.DockPanel.Preview).X,
+                    "Reordered tabs preview before pointer release");
+                Check(!ui.Canvas.PaintCalls.Any(p => p.Color == 0x59D3C3 && p.FillBounds is { } r && r.Height > 100 && p.Opacity == .2f),
+                    "Same-dock reorder has no full dock overlay");
+                ui.View.CancelInteraction(); ui.Paint();
+                Check(ui.View.DockTabBounds(EditorView.DockPanel.MovementStrain) == merged, "Cancel restores original tab order");
                 Drag(EditorView.DockPanel.MovementStrain, previewTab.X + 5, previewTab.Y + 10);
                 Check(ui.View.DockTabBounds(EditorView.DockPanel.MovementStrain).X < ui.View.DockTabBounds(EditorView.DockPanel.Preview).X,
                     "Tabs reorder within a group");
@@ -86,6 +102,44 @@ internal static class DockingTests
                 Check(ui.View.SnapDivisor == 16, "Timing snap remains interactive in the shared toolbar");
                 ui.ClickText(L.Get("timing.panel") + " ▾"); ui.ClickText(L.Get("timing.detailsPanel"));
                 Check(!ui.View.TimingPageVisible, "Left toolbar selector switches views in a narrow window");
+
+                ui.ClickText(L.Get("dock.layout"));
+                Check(ui.Canvas.Texts.Any(t => t.Value == "✓ " + L.Get("dock.preview")), "Layout checks existing tabs");
+                ui.ClickText("✓ " + L.Get("dock.preview"));
+                Check(!ui.View.CatchPreviewVisible && ui.View.DockTabBounds(EditorView.DockPanel.Preview).Width == 0,
+                    "Layout removes a tab without showing stale content");
+                var strainTab = ui.View.DockTabBounds(EditorView.DockPanel.MovementStrain);
+                ui.View.PointerDown(strainTab.X + 10, strainTab.Y + 10, 2, false, false); ui.Paint();
+                ui.ClickText(L.Get("dock.addTab", L.Get("dock.preview")));
+                Check(ui.View.CatchPreviewVisible && ui.View.PreviewViewport.Right < ui.Plot.X, "Context menu adds an absent tab to its dock");
+                var addedTab = ui.View.DockTabBounds(EditorView.DockPanel.Preview);
+                ui.View.PointerDown(addedTab.X + 10, addedTab.Y + 10, 2, false, false); ui.Paint();
+                ui.ClickText("✓ " + L.Get("dock.addTab", L.Get("dock.preview")));
+                Check(ui.View.DockTabBounds(EditorView.DockPanel.Preview) == addedTab, "Existing tabs cannot be duplicated");
+                ui.View.PointerDown(addedTab.X + 10, addedTab.Y + 10, 2, false, false); ui.Paint();
+                ui.ClickText(L.Get("dock.closeTab"));
+                Check(!ui.View.CatchPreviewVisible && ui.View.DifficultyCurveVisible, "Closing active tab selects its neighbour");
+                strainTab = ui.View.DockTabBounds(EditorView.DockPanel.MovementStrain);
+                ui.View.PointerDown(strainTab.X + 10, strainTab.Y + 10, 2, false, false); ui.Paint();
+                ui.ClickText(L.Get("dock.closeTab"));
+                Check(!ui.View.CatchPreviewVisible && !ui.View.DifficultyCurveVisible
+                    && ui.View.DockResizeBounds(true).Width == 0 && ui.View.DockResizeBounds(false).Width == 0,
+                    "Closing the last tabs clears both dock hit targets");
+                ui.ClickText(L.Get("dock.layout")); ui.ClickText(L.Get("dock.resetLayout"));
+                Check(ui.View.CatchPreviewVisible && ui.View.DifficultyCurveVisible && ui.View.PreviewViewport.X > ui.Plot.Right,
+                    "Reset restores separate expanded docks");
+                Check(ui.View.Document.ContentEquals(baseline) && !ui.View.IsDirty, "Layout management preserves content");
+
+                float DockWidth(bool left) => left ? ui.View.DockResizeBounds(true).X + 4 : ui.Width - ui.View.DockResizeBounds(false).X - 4;
+                void ResizeDock(bool left, float targetWidth)
+                {
+                    var handle = ui.View.DockResizeBounds(left);
+                    float x = left ? targetWidth : ui.Width - targetWidth;
+                    ui.View.PointerDown(handle.X + 4, handle.Y + 60, 0, false, false);
+                    Check(ui.View.WantsCapture, "Both dock splitters capture resize gestures");
+                    ui.View.PointerMove(x, handle.Y + 60, false, false);
+                    ui.View.PointerUp(x, handle.Y + 60, 0); ui.Paint();
+                }
 
                 void CheckToolbar()
                 {

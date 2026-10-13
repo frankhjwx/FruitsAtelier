@@ -1340,5 +1340,12 @@
   "settings.experimental": "ฟีเจอร์ทดลอง",
   "settings.experimentalSnapDivisions": "[Experimental] เปิดใช้ snap 1/24, 1/32 และ 1/48",
   "ui.uniformScale": "สเกลเท่ากัน (คลิกเพื่อปลดล็อก)",
-  "ui.independentScale": "สเกล X/Y แยกกัน"
+  "ui.independentScale": "สเกล X/Y แยกกัน",
+  "dock.layout": "เค้าโครง",
+  "dock.arrangement": "การจัดวาง",
+  "dock.defaultLayout": "แผงด้านข้าง",
+  "dock.resetLayout": "รีเซ็ตเค้าโครง",
+  "dock.panels": "แผง",
+  "dock.closeTab": "ปิดแท็บ",
+  "dock.addTab": "เพิ่ม {0}"
 }

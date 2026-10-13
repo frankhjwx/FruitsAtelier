@@ -1340,5 +1340,12 @@
   "settings.experimental": "Experimental",
   "settings.experimentalSnapDivisions": "[Experimental] Activar snap de 1/24, 1/32 y 1/48",
   "ui.uniformScale": "Escala uniforme (clic para desbloquear)",
-  "ui.independentScale": "Escala X/Y independiente"
+  "ui.independentScale": "Escala X/Y independiente",
+  "dock.layout": "Diseño",
+  "dock.arrangement": "Distribución",
+  "dock.defaultLayout": "Paneles laterales",
+  "dock.resetLayout": "Restablecer diseño",
+  "dock.panels": "Paneles",
+  "dock.closeTab": "Cerrar pestaña",
+  "dock.addTab": "Añadir {0}"
 }

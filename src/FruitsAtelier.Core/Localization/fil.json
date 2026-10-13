@@ -1340,5 +1340,12 @@
   "settings.experimental": "Eksperimental",
   "settings.experimentalSnapDivisions": "[Experimental] Paganahin ang 1/24, 1/32 at 1/48 snap",
   "ui.uniformScale": "Pantay na scale (i-click para i-unlock)",
-  "ui.independentScale": "Hiwalay na X/Y scale"
+  "ui.independentScale": "Hiwalay na X/Y scale",
+  "dock.layout": "Layout",
+  "dock.arrangement": "Pagkakaayos",
+  "dock.defaultLayout": "Mga panel sa gilid",
+  "dock.resetLayout": "I-reset ang layout",
+  "dock.panels": "Mga panel",
+  "dock.closeTab": "Isara ang tab",
+  "dock.addTab": "Idagdag ang {0}"
 }

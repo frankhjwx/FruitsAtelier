@@ -136,6 +136,7 @@ public sealed partial class EditorView
         if (BeginCanvasBackgroundDimPointer(x, y, button)) return;
         if (menu < 0 && contextItems.Count == 0 && MovementPanelPointerDown(x, y, button)) return;
         if (menu < 0 && contextItems.Count == 0 && DistancePointerDown(x, y, button, shift)) return;
+        if (button == 2 && DockTabContext(x, y)) return;
         if (button == 2 && DifficultyTabContext(x, y)) return;
         if (menu >= 0 && button != 0) { menu = -1; return; }
         if (button == 2)
@@ -176,14 +177,18 @@ public sealed partial class EditorView
                     if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); return; }
                 return;
             }
-            bool sameHeader = menu == 4
-                ? new FruitsAtelier.App.Rendering.Rect(268, 6, 70, 28).Contains(x, y)
+            bool sameHeader = menu is 4 or 5
+                ? new FruitsAtelier.App.Rendering.Rect(menu == 4 ? 341 : 268, 6, 70, 28).Contains(x, y)
                 : menu < 3 && new FruitsAtelier.App.Rendering.Rect(109 + menu * 53, 6, 50, 28).Contains(x, y);
             menu = -1;
             if (sameHeader) return;
             if (y >= 39) return;
         }
-        if (!TimingPageVisible && PreviewResizeBounds.Contains(x, y)) { drag = DragKind.PreviewResize; return; }
+        if (!TimingPageVisible && (leftDockResizeBounds.Contains(x, y) || rightDockResizeBounds.Contains(x, y)))
+        {
+            dockResizeLeft = leftDockResizeBounds.Contains(x, y);
+            drag = DragKind.PreviewResize; return;
+        }
         if (difficultyCurveVisible && DifficultyCurveGraphBounds.Contains(x, y))
         { drag = DragKind.DifficultySeek; SeekDifficultyCurve(y); return; }
         if (BeginPlaybackLineDrag(x, y)) return;

@@ -828,13 +828,23 @@ the panels into one tab group. Click a tab to select its content, or drag within
 the tab strip to reorder it. Empty sides remain drop targets at the window edge.
 Only the side areas accept drops. Escape, lost capture and drops on the canvas
 leave the layout unchanged. The side arrow collapses or expands the whole group;
-a group containing Preview can be resized at its canvas-facing border.
+both dock groups can be resized at their canvas-facing borders with the same minimum
+and maximum widths, independently of their tabs. Reordering tabs within a group
+previews the resulting order without a dock overlay. Preview options stack vertically
+in narrow docks.
 
 The fixed Mapping Panel / Timing Panel selector switches workspaces. During the
 editor session each workspace independently retains panel placement, tab order,
 active tabs, collapsed groups, widths, preview options and the movement readout's
 position. Timing Panel keeps its fixed waveform and timing-controls layout and
 does not expose dock dragging. Layout changes do not change beatmap content or undo.
+
+The **Layout** menu next to **View** lists the side-dock arrangement, a layout reset,
+and available panels. A check marks each existing panel, including collapsed groups;
+clicking it removes that panel, and clicking an unchecked panel restores it on its
+default side. Right-click a dock tab to close it or add an absent panel to that group.
+Each panel can exist only once. Reset restores both panels on their default sides,
+expanded with their default widths. Layout controls are locked in Timing Panel.
 
 The language dropdown in **Settings → General** lists the supported languages. Selecting a non-English language opens an AI-assisted machine translation notice before applying and saving it. Menu shortcut hints align to the right edge of each row. Existing beatmap titles and object names retain their values. The main canvas can hide curves and nodes. Catch Preview displays gameplay objects.
 

@@ -1340,5 +1340,12 @@
   "settings.experimental": "Экспериментальные функции",
   "settings.experimentalSnapDivisions": "[Experimental] Включить привязку 1/24, 1/32 и 1/48",
   "ui.uniformScale": "Одинаковый масштаб (нажмите для разблокировки)",
-  "ui.independentScale": "Независимый масштаб X/Y"
+  "ui.independentScale": "Независимый масштаб X/Y",
+  "dock.layout": "Макет",
+  "dock.arrangement": "Расположение",
+  "dock.defaultLayout": "Боковые панели",
+  "dock.resetLayout": "Сбросить макет",
+  "dock.panels": "Панели",
+  "dock.closeTab": "Закрыть вкладку",
+  "dock.addTab": "Добавить {0}"
 }

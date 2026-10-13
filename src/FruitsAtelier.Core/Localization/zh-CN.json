@@ -1340,5 +1340,12 @@
   "settings.experimental": "实验性功能",
   "settings.experimentalSnapDivisions": "[Experimental] 开放支持 1/24、1/32 以及 1/48 snap",
   "ui.uniformScale": "等比缩放（点击解锁）",
-  "ui.independentScale": "独立 X/Y 缩放"
+  "ui.independentScale": "独立 X/Y 缩放",
+  "dock.layout": "布局",
+  "dock.arrangement": "排版方式",
+  "dock.defaultLayout": "两侧停靠",
+  "dock.resetLayout": "重置布局",
+  "dock.panels": "面板",
+  "dock.closeTab": "关闭页签",
+  "dock.addTab": "添加 {0}"
 }

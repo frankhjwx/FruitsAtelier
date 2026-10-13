@@ -50,7 +50,8 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 ## Automated regressions
 
 `App.Tests --docking-check` exercises cross-side moves, tab groups, cancellation,
-preview resizing and independent Mapping/Timing layouts in English and Chinese,
+live tab ordering, symmetric dock resizing, Layout and context-menu panel management,
+and independent Mapping/Timing layouts in English and Chinese,
 alongside the existing sidebar rendering and seeking checks.
 `FruitsAtelier.App.exe --render-check --docking-render-check` runs the native
 Direct2D gestures at two window sizes and three DPI values. Screenshots are

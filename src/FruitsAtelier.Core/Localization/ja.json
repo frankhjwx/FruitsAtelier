@@ -1340,5 +1340,12 @@
   "settings.experimental": "実験的機能",
   "settings.experimentalSnapDivisions": "[Experimental] 1/24、1/32、1/48 のスナップを有効にする",
   "ui.uniformScale": "等比拡大縮小（クリックで解除）",
-  "ui.independentScale": "X/Y 個別拡大縮小"
+  "ui.independentScale": "X/Y 個別拡大縮小",
+  "dock.layout": "レイアウト",
+  "dock.arrangement": "配置",
+  "dock.defaultLayout": "左右ドック",
+  "dock.resetLayout": "レイアウトをリセット",
+  "dock.panels": "パネル",
+  "dock.closeTab": "タブを閉じる",
+  "dock.addTab": "{0} を追加"
 }

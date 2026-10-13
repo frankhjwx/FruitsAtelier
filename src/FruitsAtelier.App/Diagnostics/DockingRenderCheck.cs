@@ -37,6 +37,15 @@ internal static class DockingRenderCheck
                 if (editor.TimingPageVisible || editor.PreviewViewport != preview)
                     throw new InvalidOperationException("Mapping layout did not restore.");
                 Drag(EditorView.DockPanel.MovementStrain, 60, 220, "drag-merge-left"); Paint("merged-left");
+                var firstTab = editor.DockTabBounds(EditorView.DockPanel.Preview);
+                Drag(EditorView.DockPanel.MovementStrain, firstTab.X + 5, firstTab.Y + 10, "reorder-preview"); Paint("reordered");
+                var handle = editor.DockResizeBounds(true);
+                editor.PointerDown(handle.X + 4, handle.Y + 60, 0, false, false);
+                editor.PointerMove(180, handle.Y + 60, false, false);
+                editor.PointerUp(180, handle.Y + 60, 0); Paint("minimum-left");
+                Click(editor.DockTabBounds(EditorView.DockPanel.Preview)); Paint("minimum-preview");
+                editor.PointerDown(280, 18, 0, false, false); editor.PointerUp(280, 18, 0); Paint("layout-menu");
+                editor.KeyDown(27, false, false); Paint();
                 if (!map.ContentEquals(editor.Document) || editor.IsDirty || editor.WantsCapture)
                     throw new InvalidOperationException("Docking modified content or retained capture.");
                 void Click(Rect r)

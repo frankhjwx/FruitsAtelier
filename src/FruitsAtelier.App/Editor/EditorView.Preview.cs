@@ -25,7 +25,7 @@ public sealed partial class EditorView
     public Rect PreviewToggleBounds { get; private set; }
     public Rect PreviewResizeBounds { get; private set; }
     public bool PreviewResizeCursor => !TimeJumpVisible && !LibraryVisible && !ExportVisible && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible && !languageMenuOpen && menu < 0
-        && !TimingPageVisible && dockPressed is null && (drag == DragKind.PreviewResize || PreviewResizeBounds.Contains(mouseX, mouseY));
+        && !TimingPageVisible && dockPressed is null && (drag == DragKind.PreviewResize || leftDockResizeBounds.Contains(mouseX, mouseY) || rightDockResizeBounds.Contains(mouseX, mouseY));
     public Rect LegacyConversionBounds { get; private set; }
     public double PreviewApproachRate => previewMod switch { 1 => Document.ApproachRate * .5, 2 => Math.Min(10, Document.ApproachRate * 1.4), _ => Document.ApproachRate };
     public double PreviewCircleSize => previewMod switch { 1 => Document.CircleSize * .5, 2 => Math.Min(10, Document.CircleSize * 1.3), _ => Document.CircleSize };
@@ -41,12 +41,13 @@ public sealed partial class EditorView
     private void DrawPreviewMods(ICanvas c, Rect r)
     {
         string[] keys = ["preview.normal", "preview.easy", "preview.hardRock"];
-        c.Text(L.Get("preview.mode"), r.X, r.Y + 50, 10, Muted, 65);
-        float start = r.X + 66, buttonWidth = (r.Width - 66) / 3;
+        bool narrow = r.Width < 260;
+        c.Text(L.Get("preview.mode"), r.X, r.Y + (narrow ? 43 : 50), 10, Muted, narrow ? r.Width : 65);
+        float start = r.X + (narrow ? 0 : 66), buttonWidth = narrow ? r.Width : (r.Width - 66) / 3;
         for (int i = 0; i < keys.Length; i++)
         {
             int mod = i;
-            Button(c, new(start + i * buttonWidth, r.Y + 43, buttonWidth - 3, 26), L.Get(keys[i]), () => previewMod = mod, previewMod == mod);
+            Button(c, new(start + (narrow ? 0 : i * buttonWidth), r.Y + (narrow ? 60 + i * 28 : 43), buttonWidth - 3, 26), L.Get(keys[i]), () => previewMod = mod, previewMod == mod);
         }
     }
     private IReadOnlyList<ConvertedCatchObject> PreviewObjects()
@@ -106,12 +107,13 @@ public sealed partial class EditorView
     private void DrawPreviewDisplayModes(ICanvas c, Rect r)
     {
         string[] keys = ["preview.ratio43", "preview.ratio169", "preview.fit"];
-        c.Text(L.Get("preview.resolution"), r.X, r.Y + 81, 10, Muted, 65);
-        float start = r.X + 66, buttonWidth = (r.Width - 66) / 3;
+        bool narrow = r.Width < 260;
+        c.Text(L.Get("preview.resolution"), r.X, r.Y + (narrow ? 150 : 81), 10, Muted, narrow ? r.Width : 65);
+        float start = r.X + (narrow ? 0 : 66), buttonWidth = narrow ? r.Width / 3 : (r.Width - 66) / 3;
         for (int i = 0; i < keys.Length; i++)
         {
             int mode = i;
-            Button(c, new(start + i * buttonWidth, r.Y + 74, buttonWidth - 3, 26), L.Get(keys[i]), () => previewDisplayMode = mode, previewDisplayMode == mode);
+            Button(c, new(start + i * buttonWidth, r.Y + (narrow ? 167 : 74), buttonWidth - 3, 26), L.Get(keys[i]), () => previewDisplayMode = mode, previewDisplayMode == mode);
         }
     }
     private static readonly HashSet<(Guid SourceId, int EventIndex)> NoHyperdash = [];

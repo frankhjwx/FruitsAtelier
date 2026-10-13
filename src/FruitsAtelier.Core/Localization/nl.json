@@ -1340,5 +1340,12 @@
   "settings.experimental": "Experimenteel",
   "settings.experimentalSnapDivisions": "[Experimental] Snap 1/24, 1/32 en 1/48 inschakelen",
   "ui.uniformScale": "Uniforme schaal (klik om te ontgrendelen)",
-  "ui.independentScale": "Onafhankelijke X/Y-schaal"
+  "ui.independentScale": "Onafhankelijke X/Y-schaal",
+  "dock.layout": "Indeling",
+  "dock.arrangement": "Rangschikking",
+  "dock.defaultLayout": "Zijpanelen",
+  "dock.resetLayout": "Indeling herstellen",
+  "dock.panels": "Panelen",
+  "dock.closeTab": "Tabblad sluiten",
+  "dock.addTab": "{0} toevoegen"
 }

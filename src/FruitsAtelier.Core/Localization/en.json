@@ -1340,5 +1340,12 @@
   "settings.experimental": "Experimental",
   "settings.experimentalSnapDivisions": "[Experimental] Enable 1/24, 1/32 and 1/48 snap",
   "ui.uniformScale": "Uniform scale (click to unlock)",
-  "ui.independentScale": "Independent X/Y scale"
+  "ui.independentScale": "Independent X/Y scale",
+  "dock.layout": "Layout",
+  "dock.arrangement": "Arrangement",
+  "dock.defaultLayout": "Side docks",
+  "dock.resetLayout": "Reset layout",
+  "dock.panels": "Panels",
+  "dock.closeTab": "Close tab",
+  "dock.addTab": "Add {0}"
 }

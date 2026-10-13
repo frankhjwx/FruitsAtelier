@@ -26,7 +26,7 @@ internal static class DifficultyCurveSidebarTests
         var panel = ui.View.DifficultyCurvePanelBounds;
         Check(panel.X == 0 && panel.Y == 122 && panel.Height == ui.View.PreviewResizeBounds.Bottom - panel.Y
             && panel.Width == 280 && ui.View.DifficultyCurveToggleBounds.Right < ui.View.ToolButtonBounds[0].X,
-            "Fixed-width curve panel matches preview height and sits left of the four tool buttons");
+            "Default curve panel matches preview height and sits left of the four tool buttons");
         Check(ui.View.CanvasPlotBounds.Width >= EditorView.MinimumPlayfieldWidth,
             "Both panels leave the canvas playfield usable");
         var graph = ui.View.DifficultyCurveGraphBounds;
@@ -52,15 +52,15 @@ internal static class DifficultyCurveSidebarTests
             "Dragging outside the graph seeks continuously and releases capture");
         float originalWidth = ui.View.DifficultyCurvePanelBounds.Width;
         ui.View.PointerDown(panel.Right - 1, panel.Y + 60, 0, false, false);
-        Check(!ui.View.WantsCapture, "Curve border does not capture a resize drag");
+        Check(ui.View.WantsCapture, "Curve border captures a resize drag");
         ui.View.PointerMove(panel.Right + 44, panel.Y + 60, false, false);
         ui.View.PointerUp(panel.Right + 44, panel.Y + 60, 0);
         ui.Paint();
-        Check(ui.View.DifficultyCurvePanelBounds.Width == originalWidth,
-            "Curve width remains fixed after dragging its border");
+        Check(ui.View.DifficultyCurvePanelBounds.Width == originalWidth + 44,
+            "Curve border resizes the left dock");
         ui.Resize(1100, 800);
-        Check(ui.View.DifficultyCurvePanelBounds.Width == originalWidth,
-            "Curve width remains fixed when the preview and window are resized");
+        Check(ui.View.DifficultyCurvePanelBounds.Width <= originalWidth + 44,
+            "Dock width fits the resized window");
         Check(ui.View.CanvasPlotBounds.Width >= EditorView.MinimumPlayfieldWidth,
             "Narrow windows retain the minimum playfield width");
         Check(ui.View.Document.ContentEquals(baseline) && !ui.View.IsDirty,

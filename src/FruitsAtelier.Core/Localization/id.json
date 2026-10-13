@@ -1340,5 +1340,12 @@
   "settings.experimental": "Eksperimental",
   "settings.experimentalSnapDivisions": "[Experimental] Aktifkan snap 1/24, 1/32 dan 1/48",
   "ui.uniformScale": "Skala seragam (klik untuk membuka kunci)",
-  "ui.independentScale": "Skala X/Y terpisah"
+  "ui.independentScale": "Skala X/Y terpisah",
+  "dock.layout": "Tata letak",
+  "dock.arrangement": "Susunan",
+  "dock.defaultLayout": "Panel samping",
+  "dock.resetLayout": "Atur ulang tata letak",
+  "dock.panels": "Panel",
+  "dock.closeTab": "Tutup tab",
+  "dock.addTab": "Tambahkan {0}"
 }

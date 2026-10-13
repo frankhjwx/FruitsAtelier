@@ -148,7 +148,8 @@ public sealed partial class EditorView
         Button(c, new(109, 6, 50, 28), L.Get("ui.file"), () => menu = menu == 0 ? -1 : 0, menu == 0);
         Button(c, new(162, 6, 50, 28), L.Get("ui.edit"), () => menu = menu == 1 ? -1 : 1, menu == 1);
         Button(c, new(215, 6, 50, 28), L.Get("ui.view"), () => { gridLevelMenuOpen = false; menu = menu == 2 ? -1 : 2; }, menu == 2);
-        Button(c, new(268, 6, 70, 28), L.Get("timeline.timingMenu"), () => menu = menu == 4 ? -1 : 4, menu == 4);
+        Button(c, new(268, 6, 70, 28), L.Get("dock.layout"), () => menu = menu == 5 ? -1 : 5, menu == 5);
+        Button(c, new(341, 6, 70, 28), L.Get("timeline.timingMenu"), () => menu = menu == 4 ? -1 : 4, menu == 4);
         DrawDifficultyTabs(c);
         Button(c, SongSetupButtonBounds, L.Get("song.title"), OpenSongSetup);
         Button(c, EditorSettingsButtonBounds, L.Get("library.settings"), OpenSettings);
@@ -492,7 +493,8 @@ public sealed partial class EditorView
         else if (CurrentStarRatingFailed) c.Text("!", r.Right - 10, r.Y + 23, 10, Error, 10, true);
         DrawPreviewMods(c, r);
         DrawPreviewDisplayModes(c, r);
-        Rect stage = new(r.X, r.Y + 107, r.Width, Math.Max(12, r.Height - 113));
+        float optionsHeight = r.Width < 260 ? 200 : 107;
+        Rect stage = new(r.X, r.Y + optionsHeight, r.Width, Math.Max(12, r.Height - optionsHeight - 6));
         if (previewDisplayMode != 2)
         {
             float aspect = previewDisplayMode == 0 ? 4f / 3 : 16f / 9;
@@ -694,6 +696,23 @@ public sealed partial class EditorView
             Item(L.Get("slider.clearInternalNodes"), ClearSliderNodes, CanClearSliderNodes);
             Item(L.Get("aimod.title"), ShowAimod, ClipboardInteractionReady);
         }
+        else if (menu == 5)
+        {
+            Item(L.Get("dock.arrangement"), () => { }, false);
+            Item("✓ " + L.Get("dock.defaultLayout"), () => { }, false, true);
+            Item(L.Get("dock.resetLayout"), ResetDockLayout, !TimingPageVisible);
+            Separator();
+            Item(L.Get("dock.panels"), () => { }, false);
+            foreach (var panel in Enum.GetValues<DockPanel>())
+            {
+                bool exists = DockPanelExists(panel);
+                Item((exists ? "✓ " : "") + DockTitle(panel), () =>
+                {
+                    if (DockPanelExists(panel)) RemoveDockPanel(panel);
+                    else AddDockPanel(panel, panel == DockPanel.MovementStrain);
+                }, !TimingPageVisible, exists);
+            }
+        }
         else if (menu == 4)
         {
             Item(L.Get("timing.signature"), () => gridLevelMenuOpen = true);
@@ -740,7 +759,7 @@ public sealed partial class EditorView
             Item(L.Get("timing.page"), () => ShowTimingPage(true));
             Item(L.Get("timing.setup"), OpenTimingSetup);
         }
-        float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : menu == 4 ? 268 : 109 + menu * 53;
+        float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : menu == 4 ? 341 : menu == 5 ? 268 : 109 + menu * 53;
         float top = menu == 3 ? difficultyAddButton.Bottom + 4 : 38;
         MenuBounds = new(x, top, 282, 14 + items.Sum(item => item.Separator ? 10 : 34) - 3);
         var rect = MenuBounds;

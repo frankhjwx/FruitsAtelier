@@ -1340,5 +1340,12 @@
   "settings.experimental": "실험적 기능",
   "settings.experimentalSnapDivisions": "[Experimental] 1/24, 1/32, 1/48 스냅 활성화",
   "ui.uniformScale": "균일 배율 (클릭하여 잠금 해제)",
-  "ui.independentScale": "독립 X/Y 배율"
+  "ui.independentScale": "독립 X/Y 배율",
+  "dock.layout": "레이아웃",
+  "dock.arrangement": "배치",
+  "dock.defaultLayout": "양쪽 도킹",
+  "dock.resetLayout": "레이아웃 초기화",
+  "dock.panels": "패널",
+  "dock.closeTab": "탭 닫기",
+  "dock.addTab": "{0} 추가"
 }
