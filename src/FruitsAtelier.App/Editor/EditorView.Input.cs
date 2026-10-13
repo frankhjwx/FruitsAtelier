@@ -242,6 +242,7 @@ public sealed partial class EditorView
             drag = DragKind.Timeline;
             dragStartX = x;
             timelineMsPerDip = TimelineDurationMs / overview.Width;
+            BeginTimelineScrub();
             if (!grabbedHead) SeekTo(Math.Clamp(((double)x - overview.X) / overview.Width, 0, 1) * TimelineDurationMs);
             dragStartTime = playhead;
             return;
@@ -648,6 +649,7 @@ public sealed partial class EditorView
             return;
         }
         PointerMove(x, y, shift, false);
+        if (drag == DragKind.Timeline) { drag = DragKind.None; EndTimelineScrub(); return; }
         if (drag == DragKind.DifficultySeek) { drag = DragKind.None; return; }
         if (drag == DragKind.PlaybackLine) { FinishPlaybackLineDrag(); return; }
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
@@ -1372,6 +1374,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        EndTimelineScrub();
         dockPressed = null; dockDragging = false;
         canvasScaleAxis = -1;
         acknowledgementsScrollDragging = false;

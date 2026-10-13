@@ -809,6 +809,10 @@ With N, left-click to set the start, then right-click at a later time to finish.
 | Click, drag, or scroll the bottom timeline | Seek while preserving play/pause state |
 | Home | Return to the start |
 
+Dragging the bottom timeline pauses audio while the pointer holds the time, then
+resumes from the selected position on release if playback was active before the drag.
+Dragging while paused keeps playback paused.
+
 The File menu can replace MP3 / OGG / WAV audio. Manual seeking and editing remain available without playable audio. Save the editor project to retain editable data; further changes after `.osu` export still require a project save.
 
 Text inputs show a blinking caret at the end of the text and highlight the full selection after Ctrl+A (Command+A on macOS). Typing replaces the selection; library fields also support pasting text. Long focused text scrolls horizontally to keep its end visible.
