@@ -57,6 +57,12 @@ public sealed partial class EditorView
         ResetTextCaret();
         mouseX = x; mouseY = y;
         timingPointerShift = shift;
+        if (BananaEditVisible)
+        {
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
         if (librarySettingsOpen)
         {
             if (LanguagePointerDown(x, y, button) || BeginSettingsColourDrag(x, y, button)) return;
@@ -457,7 +463,7 @@ public sealed partial class EditorView
         if (StreamDialogVisible && stackFruitDragging >= 0) { MoveStackFruit(x, y); return; }
         if (StreamDialogVisible && stackPointDragging >= 0) { MoveStackPoint(x, y); return; }
         if (StreamDialogVisible && streamSnapDragging) { SetStreamSnap(x); return; }
-        if (TimeJumpVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
+        if (TimeJumpVisible || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (librarySettingsOpen || ExportVisible || languageMenuOpen) return;
@@ -613,7 +619,7 @@ public sealed partial class EditorView
         { MoveStackPoint(x, y); stackPointDragging = -1; RecordStackDraft(); return; }
         if (StreamDialogVisible && streamSnapDragging && button == 0)
         { SetStreamSnap(x); streamSnapDragging = false; if (stackMode) RecordStackDraft(); return; }
-        if (TimeJumpVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
+        if (TimeJumpVisible || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
         if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
@@ -715,7 +721,7 @@ public sealed partial class EditorView
         if (updatesPage) return;
         if (IsTestplaying) return;
         if (notesLocked && plot.Contains(x, y)) { PointerDown(x, y, 0, shift, ctrl); return; }
-        if (StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
+        if (BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (TimeJumpVisible) { if (TimeJumpInputBounds.Contains(x, y)) SelectInput("time", timeJumpText); return; }
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
@@ -839,6 +845,23 @@ public sealed partial class EditorView
         if (TimingModal)
         { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
         if (HandleVolumePopoverWheel(x, y, delta)) return;
+        if (BananaEditVisible)
+        {
+            if (BananaPreviewBounds.Contains(x, y))
+            {
+                if (alt || altHeld) ZoomBananaPreview(delta, y);
+                else bananaEditScroll = Math.Clamp(bananaEditScroll + delta / 120 * 64 / BananaPreviewScale, 0, BananaPreviewScrollMaximum);
+            }
+            return;
+        }
+        if (StreamDialogVisible)
+        {
+            if (StackPreviewBounds.Contains(x, y))
+            {
+                if (alt || altHeld) ZoomConversionPreview(delta, y); else ScrollConversionPreview(delta);
+            }
+            return;
+        }
         if (TimingPageVisible && WaveformBounds.Contains(x, y) && !SongSetupVisible && !LibraryVisible)
         {
             if ((alt || altHeld) && !ctrl && !shift && !shiftHeld)
@@ -863,11 +886,6 @@ public sealed partial class EditorView
         if (IsTestplaying)
         {
             if (alt && !ctrl && !shift) AdjustVolumeWheel(delta);
-            return;
-        }
-        if (StreamDialogVisible)
-        {
-            if (StackPreviewBounds.Contains(x, y)) ScrollConversionPreview(delta);
             return;
         }
         if (TimeJumpVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
@@ -1130,6 +1148,7 @@ public sealed partial class EditorView
         if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl, shift); return; }
         if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
         if (AimodVisible) { if (virtualKey == 27) CloseAimod(); return; }
+        if (BananaEditVisible) { BananaEditKey(virtualKey, ctrl, shift); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey, ctrl, shift); return; }
         if (MergeDialogVisible)
         {
@@ -1175,6 +1194,8 @@ public sealed partial class EditorView
         }
         if (ctrl && altHeld && !shift && virtualKey == 69 && drag == DragKind.None)
         { RequestExport?.Invoke(); return; }
+        if (ctrl && !shift && !altHeld && virtualKey == 70 && CanEditBananas)
+        { OpenBananaEdit(); return; }
         if (ctrl && shift && !altHeld && virtualKey is 65 or 70 or 77)
         {
             if (!dragMoved && draftTrack == Guid.Empty && draftBanana == Guid.Empty
@@ -1313,10 +1334,11 @@ public sealed partial class EditorView
                 SetDistanceBaseText(InsertInput("ds:base", dsBaseText, value.ToString(), 16));
             return;
         }
+        if (BananaEditVisible) { BananaEditText(value.ToString()); return; }
         if (StreamDialogVisible && stackMode) { StackNumericText(value.ToString()); return; }
         if (DistanceEditing) { DistanceTextInput(value); return; }
         if (updatesPage) return;
-        if (StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
+        if (BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (IsTestplaying || CapturingTestplayKey) return;
         if (languageMenuOpen) return;
         ResetTextCaret();

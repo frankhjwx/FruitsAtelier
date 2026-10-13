@@ -18,12 +18,15 @@ if (args.Length == 2 && args[0] == "--import-roundtrip")
     return 0;
 }
 
+if (args.Contains("--banana-pattern-check")) { BananaPatternTests.Run(); Console.WriteLine("PASS Banana patterns"); return 0; }
+
 var tests = new (string Name, Action Run)[]
 {
     ("Generated sliders start upwards and export Bezier red anchors with equivalent NM/HR playback", GeneratedSliderPathTests.Run),
     ("Current base SV governs slider editing, cached conversion, export and reload", UnifiedSliderMultiplierTests.Run),
     ("Version history preserves saved, unsaved and deleted authoring by project identity", VersionHistoryTests.Run),
 
+    ("Banana patterns preserve grouped editing, project data and exported NM/HR RNG", BananaPatternTests.Run),
     ("Fractional banana endpoints preserve exported counts and downstream tiny compensation", BananaQuantizationTests.Run),
     ("Fractional FSlider heads preserve exported tiny counts, NM/HR RNG, editing and undo", FractionalSliderQuantizationTests.Run),
     ("Export keeps timing data below its header and a blank before Colours", TimingSectionSpacing),

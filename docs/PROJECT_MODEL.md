@@ -2,7 +2,7 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides with timing inheritance use schema 15 (single difficulty) or 16 (multi-difficulty). Readers also accept the earlier schema 13/14 overrides. Per-fruit stream combos use schema 17/18. Documents retaining v7 slider tick rules use schema 19/20. All twenty schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v7–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing, retaining v7 on export for v7 maps and using v14 otherwise. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides with timing inheritance use schema 15 (single difficulty) or 16 (multi-difficulty). Readers also accept the earlier schema 13/14 overrides. Per-fruit stream combos use schema 17/18. Documents retaining v7 slider tick rules use schema 19/20. Banana shower patterns use schema 21/22. All twenty-two schemas are readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v7–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing, retaining v7 on export for v7 maps and using v14 otherwise. Authored content, imported context, and derived output remain separate.
 
 ## Authoritative and derived data
 
@@ -77,7 +77,7 @@ Raw section lines retain independent mutable storage in document snapshots. Unch
 | MapPoint | Double TimeMs and X; handles store offsets relative to anchors |
 | TimingPoint | TimeMs, BeatLengthMs, Meter, Uninherited, sample/volume/effect fields, SourceOrder, OriginalLine |
 | ImportedSlider | Id, TimeMs, X / Y, PathType, ControlPoints, SpanCount, PixelLength, SourceOrder, OriginalLine |
-| BananaShower | Id, TimeMs, EndTimeMs, SourceOrder, OriginalLine |
+| BananaShower | Id, TimeMs, EndTimeMs, SourceOrder, OriginalLine, optional immutable Pattern |
 
 Difficulty includes ApproachRate, CircleSize, SliderMultiplier, and SliderTickRate. `DistancePerBeatOverride` retains the distance-snap baseline in `.catchproj`. Project loading resolves legacy conflicts to `100 × EffectiveSliderMultiplier`. The DS panel presents SV and DPB as two units of the same value. Applying a base change updates both and rescales DS preset multipliers by old DPB / new DPB to preserve their pixel distances, after validating slider playback and inherited SV compensation. New maps start at DPB 192 px with SliderMultiplier 1.92; imported maps use their original multiplier. DistanceSpacing is a per-difficulty editor multiplier (0.1–6, default 1), included in cloning, dirty comparison, undo and project persistence. `DistanceSnapRatios` stores up to eight finite non-negative multipliers for the difficulty. It defaults to an empty list in older projects and participates in cloning, dirty comparison, undo and project persistence. Zero DS is always implicit; an explicitly added zero-valued preset is also stored so it remains available for dragging. An empty preset list snaps only to zero and does not use the legacy DistanceSpacing value. Neither DPB overrides nor custom DS lists are exported to `.osu`; see [Editing Controls](EDITOR_UI.md#distance-spacing-and-object-flags). Demo defaults are duration 30000 ms, beat length 500 ms, offset=0, AR=8, CS=5, SliderMultiplier=1.92 (DPB 192), and SliderTickRate=1. MapDocument's BeatLengthMs / TimingOffsetMs are fallbacks when no red timing point exists; real beatmaps retain all timing points.
 
@@ -275,3 +275,20 @@ absent flags default to false to preserve existing randomization behavior. New
 blank/audio projects initialize the gate from the General new-project preference.
 The nullable `DerandomizeDroplets` field continues to hold the Legacy conversion
 choice independently of these compensation settings.
+
+## Banana shower patterns
+
+A banana shower may store `BananaShowerPattern` with independent integer length
+and gap numerators and snap divisors. The length is positive; the gap may be zero.
+Fractions represent beats and integrate across red timing changes. Derived short
+showers start at the parent head, alternate length and empty gap, and clip the
+last occupied segment to the parent tail. No extra segment starts at the tail.
+Segments shorter than 2 ms, before or after export quantization, are omitted.
+The authored range remains authoritative even when it ends inside a gap.
+
+The parent keeps one identity for selection, transforms, clipboard and undo.
+Short showers have deterministic derived identities for conversion caching and
+participate individually in chronological RNG traversal. Playable bananas map
+back to unique event indices on the parent. Project JSON stores the pattern and
+range; `.osu` export writes ordinary individual spinners. Reimporting `.osu`
+therefore does not recover the authoring group.

@@ -104,6 +104,9 @@ public static class OsuBeatmapWriter
     {
         OsuBeatmapReader.Validate(document);
         if (cache?.Multiplier(document, compensateTinyDroplets) is { } cached) return cached;
+        var authoring = document;
+        var bananaExpansion = BananaShowerExpansion.Create(document);
+        if (bananaExpansion is not null) document = bananaExpansion.Document;
         cache?.ParsedSliders.Begin();
         var converted = CatchStreamConverter.Convert(document, compensateTinyDroplets, cache?.Source);
         if (!converted.Success) throw new InvalidDataException(L.Get("core.writer.incompletePrefix") + string.Join(L.Get("core.diagnostics.separator"), converted.Diagnostics));
@@ -316,15 +319,17 @@ public static class OsuBeatmapWriter
             : [];
         var result = new OsuWriteResult
         {
-            Text = serialized, ReadBack = readBack, Diagnostics = diagnostics, ObjectSources = orderedLines.Select(l => l.SourceId).ToArray(),
+            Text = serialized, ReadBack = readBack, Diagnostics = diagnostics, ObjectSources = orderedLines.Select(l => bananaExpansion?.Parent(l.SourceId) ?? l.SourceId).ToArray(),
             MaxTimeQuantizationMs = maxTime, MaxCoordinateQuantization = maxCoordinate,
             MaxConvertedTimeErrorMs = timeError, MaxConvertedXError = xError, ObjectSequenceMatches = matches,
-            PlayableObjects = playableObjects, PlayableHardRockObjects = playableHardRockObjects,
-            PlayableEndTimes = playableEndTimes
+            PlayableObjects = bananaExpansion?.Remap(playableObjects) ?? playableObjects,
+            PlayableHardRockObjects = bananaExpansion?.Remap(playableHardRockObjects) ?? playableHardRockObjects,
+            PlayableEndTimes = bananaExpansion is null ? playableEndTimes : playableEndTimes
+                .GroupBy(p => bananaExpansion.Parent(p.Key)).ToDictionary(g => g.Key, g => g.Max(p => p.Value))
         };
         if (matches) result.MultiplierAnalysis = new(result, reconverted);
-        cache?.RememberBaseline(document, result, compensateTinyDroplets);
-        if (document.SliderMultiplierOverride is not null) cache?.RememberMultiplier(document, result, compensateTinyDroplets);
+        cache?.RememberBaseline(authoring, result, compensateTinyDroplets);
+        if (document.SliderMultiplierOverride is not null) cache?.RememberMultiplier(authoring, result, compensateTinyDroplets);
         return result;
 
         string Coordinate(double value) { double rounded = Round(value); maxCoordinate = Math.Max(maxCoordinate, Math.Abs(rounded - value)); return Number(rounded); }

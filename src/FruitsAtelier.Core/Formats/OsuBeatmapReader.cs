@@ -242,7 +242,7 @@ public static class OsuBeatmapReader
                 throw new InvalidDataException(L.Get("core.reader.importedParameters"));
         }
         foreach (var shower in document.BananaShowers)
-        { Id(shower.Id); Time(shower.TimeMs); Time(shower.EndTimeMs); if (shower.EndTimeMs < shower.TimeMs) throw new InvalidDataException(L.Get("core.reader.bananaEnd")); }
+        { Id(shower.Id); Time(shower.TimeMs); Time(shower.EndTimeMs); shower.Pattern?.Validate(); if (shower.EndTimeMs < shower.TimeMs) throw new InvalidDataException(L.Get("core.reader.bananaEnd")); }
         foreach (var timing in document.TimingPoints) ValidateTiming(timing);
         var errors = CurveMath.Validate(document, int.MaxValue);
         if (errors.Count != 0) throw new InvalidDataException(string.Join(L.Get("core.diagnostics.separator"), errors));

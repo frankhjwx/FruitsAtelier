@@ -562,3 +562,15 @@ selective restoration, save/restart and undo/redo. Native `--render-check` draws
 browser and restores a deleted difficulty in both languages at its tested window
 sizes and DPI values. The editing benchmark verifies ordinary interactions while
 version-history work remains outside the pointer and paint paths.
+
+## Banana shower patterns
+
+`Formats.Tests --banana-pattern-check` checks fraction boundaries, red-line
+changes, grouped identities, persistence, undo, cache equivalence, exported NM/HR
+randomness and base-SV changes with overlapping random parents.
+`App.Tests --banana-edit-check` checks Ctrl+F, the full-map preview, draft
+validation/cancellation, grouped range dragging, clipboard and undo.
+On Windows, `FruitsAtelier.App.exe --render-check --banana-edit-render-check`
+checks the native dialog, division lists and grouped canvas in English and Chinese
+at three DPI settings and two window sizes. Captures and CPU/allocation samples
+are written under `artifacts/tests/banana-edit/native`.

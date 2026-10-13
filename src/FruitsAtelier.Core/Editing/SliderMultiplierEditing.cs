@@ -42,7 +42,8 @@ public static class SliderMultiplierEditing
         try { readBack = OsuBeatmapReader.Read(text, candidate.SourcePath, inferDuration: false, cache?.MultiplierParsedSliders); }
         finally { cache?.MultiplierParsedSliders.End(); }
         foreach (var slider in readBack.ImportedSliders) slider.Id = before.ObjectSources[slider.SourceOrder];
-        foreach (var shower in readBack.BananaShowers) shower.Id = before.ObjectSources[shower.SourceOrder];
+        var bananaIds = before.ReadBack.BananaShowers.ToDictionary(s => s.SourceOrder, s => s.Id);
+        foreach (var shower in readBack.BananaShowers) shower.Id = bananaIds[shower.SourceOrder];
         var converted = CatchStreamConverter.Convert(readBack, false, cache?.MultiplierReadBack);
         var hardRock = converted.Success ? CatchPreviewMods.HardRock(readBack, converted) : [];
         return Finish(before, text, readBack, converted, hardRock);
@@ -199,6 +200,8 @@ public static class SliderMultiplierEditing
                 var identity = analysis.Identities[(item.SourceId, item.EventIndex)];
                 return item with { SourceId = identity.SourceId, EventIndex = identity.EventIndex, IsStandalone = identity.IsStandalone };
             }
+            if (item.Kind == CatchObjectKind.Banana && before.MultiplierAnalysis?.Identities.TryGetValue((item.SourceId, item.EventIndex), out var banana) == true)
+                return item with { SourceId = banana.SourceId, EventIndex = banana.EventIndex };
             if (!fruitIdentities.TryGetValue(item.SourceId, out var original)
                 && !identities.TryGetValue((item.SourceId, item.EventIndex), out original))
                 throw CountChange(before.PlayableObjects, converted.Objects, item.SourceId, item.TimeMs);
@@ -211,9 +214,9 @@ public static class SliderMultiplierEditing
         OsuBeatmapReader.SetDuration(readBack, converted.Sliders.Select(s => s.StartTimeMs + s.DurationMs));
         var ends = readBack.Fruits.Select(f => (Id: before.ObjectSources[f.SourceOrder], End: f.TimeMs))
             .Concat(converted.Sliders.Select(s => (Id: s.SourceId, End: s.StartTimeMs + s.DurationMs)))
-            .Concat(readBack.BananaShowers.Select(s => (Id: s.Id, End: s.EndTimeMs)))
+            .Concat(readBack.BananaShowers.Select(s => (Id: before.ObjectSources[s.SourceOrder], End: s.EndTimeMs)))
             .GroupBy(p => p.Id).ToDictionary(g => g.Key, g => g.Max(p => p.End));
-        return new()
+        var result = new OsuWriteResult
         {
             Text = text, ReadBack = readBack, ObjectSources = before.ObjectSources, Diagnostics = before.Diagnostics,
             ObjectSequenceMatches = true, PlayableObjects = playable,
@@ -222,6 +225,8 @@ public static class SliderMultiplierEditing
             MaxConvertedTimeErrorMs = before.MaxConvertedTimeErrorMs,
             MaxConvertedXError = before.MaxConvertedXError
         };
+        result.MultiplierAnalysis = new(result, converted);
+        return result;
 
     }
 

@@ -1064,3 +1064,39 @@ it stays visible for one second and fades out over 150 ms. Dragging keeps it vis
 and adjusts the mapping background immediately; release saves the preference.
 The control remains fixed in screen coordinates when zooming or scrolling. It does
 not change beatmap content or preview/testplay dim, and modal dialogs hide it.
+
+## Banana Shower Edit Window
+
+Select a banana shower (spinner) and press **Ctrl+F**, or use the Edit menu.
+**Ctrl+Shift+F** also opens this window for a selection containing only banana
+showers. Set each short shower's length and the empty gap after it as separate
+beat fractions. Numerators are editable integers; denominator lists use the
+editor's supported snap divisions. For example, length **1/16** and gap **3/16**
+start one short shower every **4/16** beats. A zero gap creates adjacent showers.
+Segments shorter than **2 ms**, including a clipped tail, are omitted from preview,
+count and export. Confirmation is unavailable if a selected shower would produce
+no valid segments.
+
+The right preview shows the first selected shower using the complete candidate
+beatmap's exported Normal-mode banana times and positions, including preceding
+objects' RNG consumption. Each segment shows both boundary lines. Length and Gap
+share one row, with the total beats per group and group count below (including a
+clipped final group). **Perfect fit** appears only when N complete showers plus
+N−1 gaps exactly fill the selected range, without clipping the last shower or
+leaving a trailing gap. Scroll over the preview to inspect later segments. Preview
+calculation runs in the background; confirmation becomes available when it
+finishes. Enter commits a numeric field; Confirm applies the settings to all
+selected banana showers in one undo step. Cancel or Escape discards the draft.
+
+The canvas and object timeline display the segments as one selectable group.
+Enable **Split into separate bananas** before confirming to turn the short showers
+into independently selectable and editable objects instead. Splitting is one undo
+step and preserves the exported banana sequence. With the option off, move, copy
+or delete the group as a whole. Drag its original head or tail to
+regenerate the segments within the new range; the final short shower is clipped
+at the tail. Reopen the window to change the fractions. See the
+[data model](PROJECT_MODEL.md#banana-shower-patterns) for persistence and export.
+
+The right previews in Stream, Stack and Banana Shower Edit support **Alt + mouse
+wheel** to zoom the time axis around the pointer. Ordinary wheel input scrolls.
+Zoom is local to the dialog and does not change object timing or create undo history.

@@ -105,7 +105,7 @@
   "conversion.editTitle": "編輯Stream/Stack",
   "conversion.editMenu": "編輯Stream/Stack…Ctrl+Shift+F",
   "conversion.menu": "轉換為 Stream/Stack…Ctrl+Shift+F",
-  "conversion.scroll": "捲動查看完整圖案",
+  "conversion.scroll": "滾輪捲動 · Alt＋滾輪縮放",
   "conversion.streamTab": "Stream",
   "conversion.stackTab": "Stack",
   "stream.title": "將 滑條 轉換為 Stream",
@@ -1317,5 +1317,18 @@
   "acknowledgements.agree": "I have read and agree to the acknowledgements above.",
   "acknowledgements.cancel": "Cancel",
   "acknowledgements.confirm": "Confirm",
-  "acknowledgements.saveFailed": "Your confirmation could not be saved. Please try again or cancel."
+  "acknowledgements.saveFailed": "Your confirmation could not be saved. Please try again or cancel.",
+  "bananaEdit.title": "Banana Shower Edit Window",
+  "bananaEdit.beats": "Length and gap (beats)",
+  "bananaEdit.length": "Length",
+  "bananaEdit.gap": "Gap",
+  "bananaEdit.calculating": "Calculating beatmap preview…",
+  "bananaEdit.invalid": "Use a positive integer length and a non-negative integer gap.",
+  "bananaEdit.limit": "A banana group can contain at most 10,000 showers.",
+  "bananaEdit.cycle": "每組總時長：{0}/{1} 拍",
+  "bananaEdit.count": "共 {0} 組",
+  "bananaEdit.arrangement": "{0} 段香蕉雨 + {1} 段間隔",
+  "bananaEdit.exactFit": "完美嵌入",
+  "bananaEdit.split": "拆分為獨立香蕉雨",
+  "bananaEdit.tooShort": "所選範圍內無法產生長度至少為 2 ms 的香蕉雨。"
 }

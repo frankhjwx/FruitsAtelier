@@ -48,7 +48,7 @@ public static partial class ProjectSerializer
             if (copy.AudioPath is not null && Path.IsPathFullyQualified(copy.AudioPath)) copy.AudioPath = Path.GetRelativePath(directory, copy.AudioPath);
             if (copy.SourcePath is not null && Path.IsPathFullyQualified(copy.SourcePath)) copy.SourcePath = Path.GetRelativePath(directory, copy.SourcePath);
         }
-        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = copy.LegacySliderTicks ? 19 : HasStreamCombos(copy) ? 17 : copy.HitsoundOverrides.Count > 0 ? 15 : HasDerandomization(copy) ? 11 : HasRandomization(copy) ? 9 : HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, options);
+        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = HasBananaPatterns(copy) ? 21 : copy.LegacySliderTicks ? 19 : HasStreamCombos(copy) ? 17 : copy.HitsoundOverrides.Count > 0 ? 15 : HasDerandomization(copy) ? 11 : HasRandomization(copy) ? 9 : HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, options);
         if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumFileBytes)
             throw new InvalidDataException(L.Get("core.project.writeLimit"));
         return text;
@@ -60,7 +60,7 @@ public static partial class ProjectSerializer
         ProjectFile? file;
         try { file = JsonSerializer.Deserialize<ProjectFile>(text, options); }
         catch (JsonException error) { throw new InvalidDataException(L.Get("core.project.invalidJson"), error); }
-        if (file?.SchemaVersion is not (1 or 3 or 5 or 7 or 9 or 11 or 13 or 15 or 17 or 19) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
+        if (file?.SchemaVersion is not (1 or 3 or 5 or 7 or 9 or 11 or 13 or 15 or 17 or 19 or 21) || file.Document is null) throw new InvalidDataException(L.Get("core.project.schema"));
         var document = file.Document;
         NormalizeRandomizationStrength(document);
         NormalizeBaseDistance(document);
@@ -107,6 +107,7 @@ public static partial class ProjectSerializer
     private static bool HasDerandomization(MapDocument document) => document.DerandomizeFSliderDroplets || document.DerandomizeDropletsForHardRock;
     private static bool HasRandomization(MapDocument document) => document.RandomizeDropletStrength != 20
         || document.RandomizeDropletSeed != 1337 || document.RandomizeNewSliders || document.Tracks.Any(t => t.DropletRandomization is not null);
+    private static bool HasBananaPatterns(MapDocument document) => document.BananaShowers.Any(s => s.Pattern is not null);
     private static bool HasStreams(MapDocument document) => document.Tracks.Any(t => t.StreamSnapDivisor is not null);
     private static bool HasStreamCombos(MapDocument document) => document.Tracks.Any(t => t.StreamNewComboOffsets.Count > 0);
 

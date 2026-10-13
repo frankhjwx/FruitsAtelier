@@ -66,7 +66,7 @@ public sealed partial class EditorView
             .Concat(Document.BananaShowers.Select(t => (t.Id, t.OriginalLine))).ToDictionary(p => p.Id, p => p.OriginalLine);
         var spinners = Document.BananaShowers.Select(s => s.Id).ToHashSet();
         var streams = Document.Tracks.Where(t => t.StreamSnapDivisor is not null).ToDictionary(t => t.Id);
-        if (streams.Count == 0)
+        if (streams.Count == 0 && bananaSegments.Count == 0)
         {
             foreach (var parent in ClipboardParents(Document).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder))
             {
@@ -77,7 +77,8 @@ public sealed partial class EditorView
             yield break;
         }
         var children = (conversion?.Objects ?? []).Where(o => streams.ContainsKey(o.SourceId)).GroupBy(o => o.SourceId)
-            .ToDictionary(g => g.Key, g => g.ToArray());
+            .ToDictionary(g => g.Key, g => g.Select(o => (o.EventIndex, o.TimeMs)).ToArray());
+        foreach (var group in bananaSegments) children[group.Key] = group.Value.Select((s, i) => (EventIndex: i, s.TimeMs)).ToArray();
         var entries = ClipboardParents(Document).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder)
             .SelectMany((p, order) => children.TryGetValue(p.Id, out var events)
                 ? events.Select(o => (p.Id, o.EventIndex, o.TimeMs, p.SourceOrder, Order: order))
@@ -86,8 +87,8 @@ public sealed partial class EditorView
         foreach (var parent in entries)
         {
             int flags;
-            if (parent.EventIndex > 0)
-                flags = SliderFruitStream.IsNewCombo(streams[parent.Id], parent.EventIndex, parent.TimeMs) ? 4 : 0;
+            if (parent.EventIndex > 0 && streams.TryGetValue(parent.Id, out var stream))
+                flags = SliderFruitStream.IsNewCombo(stream, parent.EventIndex, parent.TimeMs) ? 4 : 0;
             else
             {
                 var parts = lines[parent.Id]?.Split(',');

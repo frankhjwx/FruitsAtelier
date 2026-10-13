@@ -42,6 +42,7 @@ public sealed partial class EditorView
         stackSnap = stackPreviewSource?.Stack is null ? 16 : StreamSnapDivisor;
         streamSnap = StreamSnapDivisor;
         stackPreviewScrollMs = 0;
+        stackPreviewZoom = 1;
         stackNumericField = -1; stackNumericError = "";
         stackInitialized = false;
         RefreshStackPreview();
@@ -73,6 +74,7 @@ public sealed partial class EditorView
 
     private void OpenStreamDialog()
     {
+        if (CanEditBananas) { OpenBananaEdit(); return; }
         if (notesLocked) { StatusMessage = L.Get("assist.locked"); return; }
         if (!CanConvertStream) { StatusMessage = L.Get("stream.selectSlider"); return; }
         streamTargets = ClipboardSelectedParentIds().Where(id => Document.Tracks.Any(t => t.Id == id)

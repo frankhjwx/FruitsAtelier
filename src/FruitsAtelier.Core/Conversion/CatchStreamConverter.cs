@@ -8,6 +8,15 @@ public static class CatchStreamConverter
     public static CatchConversionResult Convert(MapDocument document, bool compensateTinyDroplets = true, CatchConversionCache? cache = null)
     {
         ArgumentNullException.ThrowIfNull(document);
+        try
+        {
+            if (BananaShowerExpansion.Create(document) is { } expansion)
+                return expansion.Remap(Convert(expansion.Document, compensateTinyDroplets, cache));
+        }
+        catch (InvalidDataException error)
+        {
+            return new() { Sliders = [], Objects = [], Diagnostics = [error.Message], Success = false };
+        }
         var sliders = new List<GeneratedSlider>();
         var objects = new List<ConvertedCatchObject>();
         var diagnostics = new List<string>();

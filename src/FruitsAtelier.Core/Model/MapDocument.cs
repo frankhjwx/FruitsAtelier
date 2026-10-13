@@ -149,10 +149,12 @@ public sealed class BananaShower
     public string? OriginalLine { get; set; }
     public double TimeMs { get; set; }
     public double EndTimeMs { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public BananaShowerPattern? Pattern { get; set; }
 
     internal BananaShower DeepClone() => (BananaShower)MemberwiseClone();
     internal bool ContentEquals(BananaShower other) => Id == other.Id && SourceOrder == other.SourceOrder
-        && OriginalLine == other.OriginalLine && TimeMs == other.TimeMs && EndTimeMs == other.EndTimeMs;
+        && OriginalLine == other.OriginalLine && TimeMs == other.TimeMs && EndTimeMs == other.EndTimeMs && Pattern == other.Pattern;
 }
 
 public sealed partial class MapDocument

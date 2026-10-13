@@ -130,6 +130,7 @@ public sealed partial class EditorView
         DrawExportOverlay(c);
         DrawTimeJump(c);
         DrawStreamDialog(c);
+        DrawBananaEdit(c);
         DrawMergeDialog(c);
         DrawVolumeDialog(c);
         DrawVolumePopover(c);
@@ -284,7 +285,17 @@ public sealed partial class EditorView
             var bounds = BananaRectangle(shower);
             if (bounds.Bottom < plot.Y - 8 || bounds.Y > plot.Bottom + 8) continue;
             bool selected = objectSelection.Count == 1 && objectSelection.Contains(shower.Id);
-            c.Fill(bounds, selected ? 0x2B291Fu : 0x211F1Bu);
+            if (bananaSegments.TryGetValue(shower.Id, out var segments))
+            {
+                foreach (var segment in segments)
+                {
+                    var part = BananaRectangle(segment);
+                    if (part.Bottom < plot.Y || part.Y > plot.Bottom) continue;
+                    c.Fill(part, selected ? 0x2B291Fu : 0x211F1Bu);
+                    c.Stroke(part, 0x8C7445u);
+                }
+            }
+            else c.Fill(bounds, selected ? 0x2B291Fu : 0x211F1Bu);
             c.Stroke(bounds, selected ? Gold : 0x8C7445u, selected ? 2 : 1);
             if (selected)
             {
@@ -668,6 +679,7 @@ public sealed partial class EditorView
             Item(L.Get("ui.cutMenu"), () => CutSelection(), CanCopySelection);
             Item(L.Get("ui.copyMenu"), () => CopySelection(), CanCopySelection);
             Item(L.Get("ui.pasteMenu"), () => PasteSelection(), CanPasteSelection);
+            if (CanEditBananas) Item(L.Get("bananaEdit.title") + "  Ctrl+F", OpenBananaEdit, !notesLocked);
             Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), OpenStreamDialog, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);

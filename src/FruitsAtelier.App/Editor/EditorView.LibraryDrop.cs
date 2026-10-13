@@ -7,7 +7,7 @@ public sealed partial class EditorView
     public bool CanDropAudio => !AcknowledgementsVisible && !librarySettingsOpen && !resourcePage && !updatesPage && !IsTestplaying
         && !ExportVisible && !ErrorVisible && !DiscardConfirmationVisible && !SongSetupVisible
         && !SliderDialogVisible && !SynchronizationVisible && !VersionHistoryVisible && !TimingModal
-        && !AimodVisible && !DistanceSnapDialogVisible && !VolumeDialogVisible && !StreamDialogVisible
+        && !AimodVisible && !DistanceSnapDialogVisible && !VolumeDialogVisible && !BananaEditVisible && !StreamDialogVisible
         && !MergeDialogVisible && !SynchronizationBlocksInput;
     public bool CanDropLibraryFiles => !AcknowledgementsVisible && LibraryVisible && !librarySettingsOpen && !resourcePage && !updatesPage
         && !ExportVisible && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible && !SongSetupVisible;

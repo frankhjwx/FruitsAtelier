@@ -399,7 +399,16 @@ public sealed partial class EditorView
             bool selected = IsObjectSelected(item.Id);
             uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true, eventIndex: item.EventIndex);
             var bounds = timelineObjects[index].Bounds;
-            c.Fill(bounds, color, 19, .7f);
+            if (item.IsBanana && bananaSegments.TryGetValue(item.Id, out var segments))
+            {
+                foreach (var segment in segments)
+                {
+                    float from = X(segment.TimeMs), to = X(segment.EndTimeMs);
+                    if (to < objectTimeline.X || from > objectTimeline.Right) continue;
+                    c.Fill(new(from, bounds.Y + 3, Math.Max(1, to - from), bounds.Height - 6), color, 2, .7f);
+                }
+            }
+            else c.Fill(bounds, color, 19, .7f);
             if (item.IsBanana)
             {
                 c.Stroke(bounds, 0xFFFFFF, 1.5f, 19);

@@ -279,7 +279,7 @@ public sealed partial class EditorView
         bool stream = SelectedStreamsOnly;
         bool randomize = ids.Count == 1 && RandomizeSelectedTrack is { } randomizeTrack && ids.Contains(randomizeTrack.Id);
         bool merge = holdMergeAllowed;
-        if (!ids.Contains(id) || tool is not (Tool.Select or Tool.Slider) || draftTrack != Guid.Empty || drag != DragKind.None || menu >= 0 || ExportVisible || SliderDialogVisible || StreamDialogVisible || MergeDialogVisible || TimeJumpVisible || DistanceSnapDialogVisible)
+        if (!ids.Contains(id) || tool is not (Tool.Select or Tool.Slider) || draftTrack != Guid.Empty || drag != DragKind.None || menu >= 0 || ExportVisible || SliderDialogVisible || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || TimeJumpVisible || DistanceSnapDialogVisible)
         { LegacyConversionBounds = StreamConversionBounds = default; legacyButtonSlider = Guid.Empty; return; }
         int count = (imported ? 1 : 0) + (slider ? 2 : 0) + (stream ? 2 : 0) + (merge ? 1 : 0) + (randomize ? 1 : 0);
         if (count == 0) { LegacyConversionBounds = StreamConversionBounds = default; return; }

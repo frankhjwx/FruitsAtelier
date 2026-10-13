@@ -17,6 +17,8 @@ if (args.Contains("--legacy-v7-check"))
 // Existing interaction fixtures use Chinese labels explicitly.
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
+if (args.Contains("--banana-edit-check")) { BananaEditTests.Run(); StackDialogTests.Run(); Console.WriteLine("PASS Banana edit dialog and grouped gestures"); return 0; }
+
 if (args.Contains("--slider-speed-check"))
 {
     try { SliderSpeedReadoutTests.Run(); Console.WriteLine("PASS Slider speed readout and free editing"); return 0; }
@@ -111,6 +113,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Banana shower dialog previews exported RNG and edits grouped ranges", BananaEditTests.Run),
     ("F12 screenshots repeat once and preserve dialogs, playback and content", ScreenshotTests.Shortcut),
     ("Hitsound Copier modes, new Diff and undo", HitsoundCopierUiTests.Run),
     ("Testplay opening preparation and audio boundary", TestplayTests.OpeningPreparation),

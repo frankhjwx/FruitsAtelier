@@ -129,6 +129,12 @@ internal sealed partial class EditorWindow : IDisposable
         }
         if (renderCheck)
         {
+            if (Environment.GetCommandLineArgs().Contains("--banana-edit-render-check"))
+            {
+                Diagnostics.BananaEditRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--acknowledgements-render-check"))
             {
                 CheckAcknowledgementsWindow();
