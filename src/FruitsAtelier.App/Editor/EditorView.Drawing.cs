@@ -659,7 +659,7 @@ public sealed partial class EditorView
     private void DrawMenu(ICanvas c)
     {
         menuHitStart = hits.Count;
-        var items = new List<(string Label, Action Action, bool Enabled, bool Active, bool Separator)>();
+        var items = new List<(string Label, Action Action, bool Enabled, bool Active, bool Separator, bool Heading)>();
         if (menu == 0)
         {
             Item(L.Get("project.new"), () => RequestNewProject?.Invoke());
@@ -698,11 +698,11 @@ public sealed partial class EditorView
         }
         else if (menu == 5)
         {
-            Item(L.Get("dock.arrangement"), () => { }, false);
+            Heading(L.Get("dock.arrangement"));
             Item("✓ " + L.Get("dock.defaultLayout"), () => { }, false, true);
             Item(L.Get("dock.resetLayout"), ResetDockLayout, !TimingPageVisible);
             Separator();
-            Item(L.Get("dock.panels"), () => { }, false);
+            Heading(L.Get("dock.panels"));
             foreach (var panel in Enum.GetValues<DockPanel>())
             {
                 bool exists = DockPanelExists(panel);
@@ -779,6 +779,12 @@ public sealed partial class EditorView
                 y += 10;
                 continue;
             }
+            if (item.Heading)
+            {
+                c.Text(item.Label, rect.X + 15, y + 8, 12, Foreground, rect.Width - 30, true);
+                y += 34;
+                continue;
+            }
             bool submenu = (menu == 2 || menu == 4) && y == rect.Y + 7;
             Button(c, new(rect.X + 6, y, rect.Width - 12, 31), item.Label,
                 () => { if (!submenu) menu = -1; item.Action(); }, item.Active || submenu && gridLevelMenuOpen, item.Enabled);
@@ -809,8 +815,9 @@ public sealed partial class EditorView
             }
         }
         void Item(string label, Action action, bool enabled = true, bool active = false)
-            => items.Add((label, action, enabled, active, false));
-        void Separator() => items.Add(("", () => { }, false, false, true));
+            => items.Add((label, action, enabled, active, false, false));
+        void Heading(string label) => items.Add((label, () => { }, false, false, false, true));
+        void Separator() => items.Add(("", () => { }, false, false, true, false));
     }
 
     private void PrepareCanvasToggleText(ICanvas c, bool compact, float buttonWidth)
