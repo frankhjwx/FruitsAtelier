@@ -8,7 +8,7 @@ internal static class LibraryOpeningTests
 {
     public static void Run()
     {
-        string root = Path.Combine(Path.GetTempPath(), "atelier-open-" + Guid.NewGuid());
+        string root = Path.Combine(OperatingSystem.IsMacOS() ? "/private/tmp" : Path.GetTempPath(), "atelier-open-" + Guid.NewGuid());
         Directory.CreateDirectory(root);
         try
         {
