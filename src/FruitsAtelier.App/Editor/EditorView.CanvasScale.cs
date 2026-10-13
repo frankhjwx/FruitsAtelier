@@ -54,7 +54,7 @@ public sealed partial class EditorView
 
     private bool CanvasScalePointerDown(float x, float y, int button)
     {
-        if (TimingPageVisible || LibraryVisible || StreamDialogVisible) return false;
+        if (TimingPageVisible || LibraryVisible || StreamDialogVisible || menu >= 0 || contextItems.Count > 0) return false;
         if (button == 0 && CanvasScaleLockBounds.Contains(x, y)) { ToggleUniformCanvasScale(); return true; }
         if (!UniformCanvasScale && button == 0)
             for (int axis = 0; axis < 2; axis++)
@@ -82,7 +82,7 @@ public sealed partial class EditorView
         c.Line(x + 2 + offset, y, x + 2 + offset, y - 6, color, 1.5f);
         c.Line(x + 2 + offset, y - 6, x + 10 + offset, y - 6, color, 1.5f);
         c.Line(x + 10 + offset, y - 6, x + 10 + offset, y - (UniformCanvasScale ? 0 : 3), color, 1.5f);
-        if (CanvasScaleLockBounds.Contains(mouseX, mouseY))
+        if (menu < 0 && contextItems.Count == 0 && CanvasScaleLockBounds.Contains(mouseX, mouseY))
             c.Text(L.Get(UniformCanvasScale ? "ui.uniformScale" : "ui.independentScale"),
                 zoomSlider.X, canvas.Y + 42, 11, Foreground, 300);
     }

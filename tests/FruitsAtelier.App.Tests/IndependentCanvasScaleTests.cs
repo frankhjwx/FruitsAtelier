@@ -5,6 +5,7 @@ internal static class IndependentCanvasScaleTests
 {
     public static void Run()
     {
+        MenuPriority();
         CanvasZoomTests.DefaultsAndReset(); CanvasZoomTests.SliderAndWheel(); CanvasZoomTests.PlaybackAndLanguages();
         SelectionTransformTests.Run(); MappingSessionTests.Preferences();
         NoteSnapTests.SliderObjectDragging(); MixedSliderTests.Import();
@@ -104,6 +105,31 @@ internal static class IndependentCanvasScaleTests
             ui.View.Wheel(timeline.X + 20, timeline.Y + 20, 12000, false, false, true); ui.Paint(); Near(16, ui.View.ObjectTimelinePixelsPerMs);
             ui.View.LibrarySettings.ExperimentalSnapDivisions = false; ui.Paint(); Near(1.5, ui.View.ObjectTimelinePixelsPerMs);
             Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty && !ui.View.WantsCapture, "Viewport controls preserve content and release capture");
+        }
+    }
+    private static void MenuPriority()
+    {
+        foreach (string locale in new[] { "en", "zh-CN" })
+        foreach (bool locked in new[] { true, false })
+        foreach (bool onLock in new[] { true, false })
+        {
+            L.SetLanguage(locale);
+            var ui = new Ui(false);
+            if (!locked)
+            {
+                var toggle = ui.View.CanvasScaleLockBounds;
+                ui.Click(toggle.X + 10, toggle.Y + 12);
+            }
+            var add = ui.Canvas.Texts.Single(t => t.Value == "+" && t.Y < 84);
+            ui.Click(add.X + 4, add.Y + 4);
+            Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("project.add")), "Add difficulty menu is open");
+            var control = onLock ? ui.View.CanvasScaleLockBounds : ui.View.CanvasAxisZoomBounds(0);
+            float x = onLock ? control.X + 10 : control.Right - 10;
+            float y = control.Y + control.Height / 2;
+            ui.Click(x, y);
+            Check(ui.View.DifficultyCount == 2, "Covered Zoom controls must let Add blank difficulty handle the click");
+            Check(ui.View.UniformCanvasScale == locked && !ui.View.WantsCapture,
+                "Menu clicks preserve the scale lock and do not start a Zoom drag");
         }
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
