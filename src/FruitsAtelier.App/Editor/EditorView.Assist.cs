@@ -52,6 +52,21 @@ public sealed partial class EditorView
         return DistanceSnap.SnapMultiple(point, PreviousReference(point.TimeMs, excluded), Document.DistanceSnapRatios, out distanceOutside, next);
     }
 
+    private bool TryDistanceSnap(MapPoint point, DistanceSnap.Reference[] references, ISet<Guid>? excluded,
+        double minX, double maxX, out MapPoint result)
+    {
+        result = point; distanceOutside = false;
+        if (!DistanceSnapEnabled) return false;
+        var previous = references.LastOrDefault(r => r.Id != draftTrack && r.Start.TimeMs <= point.TimeMs
+            && excluded?.Contains(r.Id) != true);
+        if (previous is null || point.TimeMs <= previous.End.TimeMs) return false;
+        var next = Document.DistanceSnapCollinear ? references.FirstOrDefault(r => r.Id != draftTrack
+            && r.Start.TimeMs > point.TimeMs && excluded?.Contains(r.Id) != true) : null;
+        result = DistanceSnap.SnapMultiple(point, previous, Document.DistanceSnapRatios, out distanceOutside, next,
+            minX, maxX, EffectiveGridSnap ? gridSize : 0);
+        return !distanceOutside;
+    }
+
     private MapPoint PlacementPoint(float x, float y)
     {
         var point = MapAt(x, y, true);

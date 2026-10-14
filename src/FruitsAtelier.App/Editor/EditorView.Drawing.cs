@@ -405,6 +405,8 @@ public sealed partial class EditorView
         DrawSelectionTransform(c, background: false);
         DrawSelectedDistanceTick(c);
         DrawPlacementGhost(c);
+        if (drag == DragKind.Objects && !objectDragTimeline && objectDragSnapPoint is { } snapPoint)
+            DrawObjectSnapGuide(c, snapPoint);
         float headY = Screen(new(playhead, 0)).Y;
         c.Line(plot.X, headY, plot.Right, headY, Gold, 1.5f);
         c.Fill(new(plot.X, headY - 3, 5, 6), Gold);

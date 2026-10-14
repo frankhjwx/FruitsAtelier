@@ -17,7 +17,7 @@
   "ds.objectEarlier": "Eerder",
   "ds.objectLater": "Later",
   "ds.objectBeats": "{0} tellen",
-  "ds.objectSnapTip": "Lijnt X uit op nabije vruchten en behoudt de plaatsingstijd. Zoekt eerder en later binnen het ingestelde aantal tellen (1/1 Snap-intervallen), met BPM-wijzigingen. Heeft voorrang op raster- en afstandsuitlijning. Toepassen bewaart deze voorkeur per moeilijkheid.",
+  "ds.objectSnapTip": "Bij het verplaatsen van objecten of een hele slider lijnt de eerste of laatste vrucht uit en verschuift de hele selectie samen. Lijnt X uit op nabije vruchten en behoudt de plaatsingstijd. Zoekt eerder en later binnen het ingestelde aantal tellen (1/1 Snap-intervallen), met BPM-wijzigingen. Bij plaatsing heeft dit voorrang op raster- en afstandsuitlijning. Bij het verslepen van hele objecten met DS actief wint de dichtstbijzijnde object-, DS- of collineaire positie. Toepassen bewaart deze voorkeur per moeilijkheid.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",

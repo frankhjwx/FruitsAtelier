@@ -686,6 +686,7 @@ public sealed partial class EditorView
         {
             selectionScaleSide = 0;
             objectDragStart = null;
+            EndObjectDragSnap();
             dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
             objectDragPrepared = false;
             if (AudioPlaying || pinPlayhead) FollowPlayhead();
@@ -1466,6 +1467,7 @@ public sealed partial class EditorView
         sliderObjectDragPrevious = null;
         selectionScaleSide = 0;
         objectDragStart = null;
+        EndObjectDragSnap();
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         objectDragPrepared = false;
         draftTrack = Guid.Empty;

@@ -17,7 +17,7 @@
   "ds.objectEarlier": "Wcześniej",
   "ds.objectLater": "Później",
   "ds.objectBeats": "{0} uderz.",
-  "ds.objectSnapTip": "Wyrównuje X do pobliskich owoców bez zmiany czasu umieszczenia. Szuka w obu kierunkach o ustawioną liczbę uderzeń (odstępy 1/1 Snap), uwzględniając BPM. Ma pierwszeństwo przed siatką i przyciąganiem według odległości. Zastosuj zapisuje ustawienie dla poziomu trudności.",
+  "ds.objectSnapTip": "Przy przesuwaniu obiektów lub całego slidera przyciąga pierwszy albo ostatni owoc i przesuwa całe zaznaczenie razem. Wyrównuje X do pobliskich owoców bez zmiany czasu umieszczenia. Szuka w obu kierunkach o ustawioną liczbę uderzeń (odstępy 1/1 Snap), uwzględniając BPM. Przy umieszczaniu ma pierwszeństwo przed siatką i przyciąganiem według odległości. Podczas przesuwania całych obiektów z aktywnym DS wygrywa najbliższa pozycja obiektu, DS lub współliniowa. Zastosuj zapisuje ustawienie dla poziomu trudności.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",

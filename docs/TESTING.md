@@ -84,6 +84,9 @@ with simulated DPI notifications; they do not change Windows display settings.
 `App.Tests --object-snap-check` verifies full-beat search ranges across BPM changes
 and independently of meter, bidirectional fruit and slider-start placement, exact X priority over Grid
 and Distance Snap, undo, hover isolation, default preferences and Apply/Cancel.
+Whole-object checks sweep horizontally in both directions with DS, object and
+collinear candidates, with Grid Snap on/off, and verify ordering, export,
+cancellation and one-step undo/redo.
 On Windows, `FruitsAtelier.App.exe --render-check --object-snap-render-check`
 checks native placement and configuration in English and Chinese at two window
 sizes and three DPI settings, saving captures under `artifacts/tests/object-snap-native`.

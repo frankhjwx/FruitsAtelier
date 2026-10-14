@@ -17,7 +17,7 @@
   "ds.objectEarlier": "Mas maaga",
   "ds.objectLater": "Mas huli",
   "ds.objectBeats": "{0} beat",
-  "ds.objectSnapTip": "Itinatapat ang X sa malapit na prutas nang hindi binabago ang oras ng paglalagay. Naghahanap bago at pagkatapos ayon sa bilang ng beat (mga pagitan ng 1/1 Snap) at BPM. Nauuna sa grid at distance snap. I-save gamit ang Apply para sa bawat difficulty.",
+  "ds.objectSnapTip": "Kapag inililipat ang mga object o buong slider, itinatapat ang una o huling prutas at sabay na inililipat ang napili. Itinatapat ang X sa malapit na prutas nang hindi binabago ang oras ng paglalagay. Naghahanap bago at pagkatapos ayon sa bilang ng beat (mga pagitan ng 1/1 Snap) at BPM. Sa paglalagay, nauuna sa grid at distance snap. Kapag buong object ang hinihila habang aktibo ang DS, pinipili ang pinakamalapit na posisyon mula sa object, DS, o collinear snap. I-save gamit ang Apply para sa bawat difficulty.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",

@@ -37,6 +37,14 @@ content edits, undo and document replacement refresh its positions. Pointer
 placement reuses the owned timing lookup to calculate the musical search window,
 then binary-searches its first fruit and visits only that interval. Viewport and
 preference changes reuse target data; subsequent slider draft points do not query it.
+Whole-object dragging retains the gesture's fruit array and its first/last selected
+fruit coordinates. Each pointer update searches just those two time windows,
+excluding the selected source parents, without rebuilding conversion or flattening
+slider paths. Release, cancellation and failed preparation discard the gesture
+snapshot. Alignment is bounded by the complete selection's playable X extents.
+The gesture also retains its DS reference array. DS presets, collinear positions
+and object alignments compete against the raw horizontal offset before applying
+the winning offset; pointer updates do not rebuild DS references from moved content.
 
 ## Full-map work and cache ownership
 

@@ -185,6 +185,7 @@ public sealed partial class EditorView
         if (objectSelection.Count == 0) return;
         EnsureConversion();
         objectDragEventMinX = double.PositiveInfinity;
+        BeginObjectDragSnap();
         objectDragEventMaxX = double.NegativeInfinity;
         foreach (var item in conversion!.Objects)
         {
@@ -247,6 +248,7 @@ public sealed partial class EditorView
             {
                 history.Cancel();
                 objectDragStart = null;
+                EndObjectDragSnap();
                 drag = DragKind.None;
                 StatusMessage = error.Message;
                 return false;
@@ -293,24 +295,15 @@ public sealed partial class EditorView
             deltaTime = TimingMap.Snap(Document, minTime + deltaTime, divisor) - minTime;
         if (double.IsFinite(minTime)) deltaTime = Math.Clamp(deltaTime, -minTime, EditableDurationMs - maxTime);
         else deltaTime = 0;
-        if (objectDragTimeline) deltaX = 0;
+        double snappedDeltaX = deltaX;
+        bool assistedSnapped = !objectDragTimeline && TrySnapDraggedObjects(deltaTime, deltaX,
+            ClampVisibleX(double.NegativeInfinity), ClampVisibleX(double.PositiveInfinity), out snappedDeltaX);
+        if (assistedSnapped) deltaX = snappedDeltaX;
+        else if (objectDragTimeline) deltaX = 0;
         else if (double.IsFinite(minX)) deltaX = ClampVisibleX(SnapX(minX + deltaX) - minX);
         else if (objectDragStart.Tracks.FirstOrDefault(t => objectSelection.Contains(t.Id)) is { } firstTrack)
             deltaX = ClampVisibleX(SnapX(firstTrack.Nodes[0].X + deltaX) - firstTrack.Nodes[0].X);
         else deltaX = 0;
-
-        if (!objectDragTimeline && DistanceSnapEnabled && double.IsFinite(minTime))
-        {
-            var first = objectDragStart.Fruits.Where(f => objectSelection.Contains(f.Id)).Select(f => new MapPoint(f.TimeMs, f.X))
-                .Concat(objectDragStart.Tracks.Where(t => objectSelection.Contains(t.Id)).Select(t => Point(t.Nodes[0])))
-                .OrderBy(p => p.TimeMs).Cast<MapPoint?>().FirstOrDefault();
-            if (first is { } origin)
-            {
-                var target = SnapDistance(origin + new MapPoint(deltaTime, deltaX), objectSelection);
-                deltaX = SnapX(target.X) - origin.X;
-                deltaX = ClampVisibleX(deltaX);
-            }
-        }
 
         foreach (var source in objectDragStart.Fruits.Where(item => objectSelection.Contains(item.Id)))
         {

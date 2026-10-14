@@ -17,7 +17,7 @@
   "ds.objectEarlier": "Avant",
   "ds.objectLater": "Après",
   "ds.objectBeats": "{0} temps",
-  "ds.objectSnapTip": "Aligne X sur les fruits proches sans changer le temps de placement. Recherche avant et après selon le nombre de temps configuré (intervalles de 1/1 Snap), en suivant le BPM. Prioritaire sur la grille et l’alignement par distance. Appliquer enregistre ce réglage par difficulté.",
+  "ds.objectSnapTip": "Lors du déplacement d’objets ou d’un slider entier, aligne le premier ou le dernier fruit et déplace toute la sélection. Aligne X sur les fruits proches sans changer le temps de placement. Recherche avant et après selon le nombre de temps configuré (intervalles de 1/1 Snap), en suivant le BPM. Au placement, prioritaire sur la grille et l’alignement par distance. Lors du déplacement complet avec DS actif, choisit la position la plus proche parmi les objets, DS et l’alignement colinéaire. Appliquer enregistre ce réglage par difficulté.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",

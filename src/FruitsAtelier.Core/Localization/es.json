@@ -17,7 +17,7 @@
   "ds.objectEarlier": "Tiempo anterior",
   "ds.objectLater": "Tiempo posterior",
   "ds.objectBeats": "{0} pulsos",
-  "ds.objectSnapTip": "Alinea X con frutas cercanas sin cambiar el tiempo de colocación. Busca antes y después según los pulsos configurados (intervalos de 1/1 Snap) y los cambios de BPM. Tiene prioridad sobre la cuadrícula y el ajuste por distancia. Aplicar guarda esta preferencia por dificultad.",
+  "ds.objectSnapTip": "Al mover objetos o un slider completo, ajusta la primera o la última fruta y desplaza toda la selección. Alinea X con frutas cercanas sin cambiar el tiempo de colocación. Busca antes y después según los pulsos configurados (intervalos de 1/1 Snap) y los cambios de BPM. Al colocar, tiene prioridad sobre la cuadrícula y el ajuste por distancia. Al arrastrar objetos completos con DS activo, gana la posición más cercana entre objetos, DS y alineación colineal. Aplicar guarda esta preferencia por dificultad.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "Auto",

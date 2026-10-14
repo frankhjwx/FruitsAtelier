@@ -17,7 +17,7 @@
   "ds.objectEarlier": "이전 시간",
   "ds.objectLater": "이후 시간",
   "ds.objectBeats": "{0} 박",
-  "ds.objectSnapTip": "배치 시간을 유지하며 가까운 과일의 X 좌표에 맞춥니다. BPM 변화를 따라 설정한 박 수(1/1 Snap 간격)만큼 앞뒤로 검색합니다. 격자 및 거리 스냅보다 우선합니다. 적용하면 난이도별 편집 설정으로 저장됩니다.",
+  "ds.objectSnapTip": "기존 오브젝트나 슬라이더 전체를 옮길 때 첫 번째 또는 마지막 과일을 맞추고 선택 항목을 함께 이동합니다. 배치 시간을 유지하며 가까운 과일의 X 좌표에 맞춥니다. BPM 변화를 따라 설정한 박 수(1/1 Snap 간격)만큼 앞뒤로 검색합니다. 배치 시 격자 및 거리 스냅보다 우선합니다. DS가 켜진 전체 이동에서는 오브젝트, DS, 공선 위치 중 가장 가까운 후보를 선택합니다. 적용하면 난이도별 편집 설정으로 저장됩니다.",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "자동",

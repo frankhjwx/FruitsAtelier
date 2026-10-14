@@ -663,8 +663,28 @@ of the raw pointer. The nearest X wins, then the nearest time, then the conversi
 stable event order. An object snap retains the target's exact authored X and takes
 priority over Grid Snap and Distance Snap. A mint guide highlights the target when
 visible and shows horizontal alignment. Subsequent slider control points retain
-their existing placement rules. Apply saves the switch and ranges as per-difficulty
-editing preferences; Cancel discards their drafts. These preferences survive restart
+their existing placement rules.
+
+Whole-object canvas dragging uses the first and last selected
+fruit in chronological order as probes; a single fruit has one probe. For a slider,
+the last probe is its final repeat endpoint. Selected source parents are excluded
+from targets, including all their nested objects. Each probe searches around its
+moved time using the configured earlier/later beat ranges. The smallest horizontal
+correction wins, with time distance breaking ties. The whole selection receives
+one X offset, preserving spacing, curve geometry and the drag's Beat Snap time
+offset. Candidates that would move any selected playable object outside X=0–512
+are skipped. While DS is active, object alignments, DS presets (including zero)
+and the collinear position compete by horizontal distance from the raw pointer.
+Object alignments use the complete configured time window without a six-DIP
+capture limit; this keeps the candidate order stable during a horizontal sweep.
+Equal corrections prefer an exact object alignment; remaining object ties use
+time distance and stable event order. DS and collinear positions follow Grid Snap
+before the distance comparison; object alignments retain their exact X and show
+the alignment guide.
+With DS inactive, object alignment retains the six-DIP capture limit.
+Timeline dragging, scaling and individual
+slider control/event edits retain their existing rules. Apply saves the switch and
+ranges as per-difficulty editing preferences; Cancel discards their drafts. These preferences survive restart
 without changing beatmap content, undo history or exported files. The DS preview
 continues to demonstrate distance and collinear snapping.
 

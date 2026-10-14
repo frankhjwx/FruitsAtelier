@@ -5,24 +5,34 @@ public static class DistanceSnap
 {
     public const int MaximumPresets = 8;
 
-    public static MapPoint SnapMultiple(MapPoint point, Reference? previous, IReadOnlyList<double> presets, out bool outside, Reference? next = null)
+    public static MapPoint SnapMultiple(MapPoint point, Reference? previous, IReadOnlyList<double> presets, out bool outside, Reference? next = null,
+        double minX = 0, double maxX = 512, double gridSize = 0)
     {
         outside = false;
         if (previous is null || point.TimeMs <= previous.End.TimeMs) return point;
-        double nearest = previous.End.X is >= 0 and <= 512 ? Math.Abs(point.X - previous.End.X) : double.PositiveInfinity;
-        var result = double.IsFinite(nearest) ? point with { X = previous.End.X } : point;
+        minX = Math.Max(0, minX); maxX = Math.Min(512, maxX);
+        double nearest = double.PositiveInfinity;
+        var result = point;
+        Consider(previous.End.X);
         foreach (var preset in presets.Take(MaximumPresets))
         {
             if (!double.IsFinite(preset) || preset <= 0) continue;
             double distance = (point.TimeMs - previous.End.TimeMs) * previous.Velocity * preset;
             foreach (double x in new[] { previous.End.X - distance, previous.End.X + distance })
-                if (x is >= 0 and <= 512 && Math.Abs(point.X - x) < nearest)
-                { nearest = Math.Abs(point.X - x); result = point with { X = x }; }
+                Consider(x);
         }
-        if (CollinearX(point.TimeMs, previous, next) is { } aligned && Math.Abs(point.X - aligned) < nearest)
-        { nearest = Math.Abs(point.X - aligned); result = point with { X = aligned }; }
+        if (CollinearX(point.TimeMs, previous, next) is { } aligned) Consider(aligned);
         outside = double.IsPositiveInfinity(nearest);
         return result;
+
+        void Consider(double x)
+        {
+            if (!double.IsFinite(x) || x < minX || x > maxX) return;
+            if (gridSize > 0) x = Math.Clamp(Math.Round(x / gridSize, MidpointRounding.AwayFromZero) * gridSize, minX, maxX);
+            double distance = Math.Abs(point.X - x);
+            if (distance >= nearest) return;
+            nearest = distance; result = point with { X = x };
+        }
     }
 
     public static double? CollinearX(double time, Reference? previous, Reference? next)

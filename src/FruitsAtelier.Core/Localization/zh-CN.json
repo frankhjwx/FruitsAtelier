@@ -17,7 +17,7 @@
   "ds.objectEarlier": "向前（较早）",
   "ds.objectLater": "向后（较晚）",
   "ds.objectBeats": "{0} 拍",
-  "ds.objectSnapTip": "将 X 对齐到附近水果，保留放置时间。按配置的完整拍数（1/1 Snap 间隔）向前后搜索，跟随 BPM 变化。优先于网格吸附和距离吸附。点击 Apply 后按难度保存此编辑偏好。",
+  "ds.objectSnapTip": "拖动已有对象或整条滑条时，用首尾水果吸附，并整体平移选中内容。将 X 对齐到附近水果，保留放置时间。按配置的完整拍数（1/1 Snap 间隔）向前后搜索，跟随 BPM 变化。放置时优先于网格吸附和距离吸附。整体拖动且 DS 开启时，统一选择最近的对象、DS 或共线位置。点击 Apply 后按难度保存此编辑偏好。",
   "samples.sampleset": "Sampleset",
   "samples.additions": "Additions",
   "samples.auto": "自动",
