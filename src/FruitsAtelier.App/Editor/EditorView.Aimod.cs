@@ -107,7 +107,7 @@ public sealed partial class EditorView
         c.Text(L.Get("aimod.counts", AimodIssues.Count(i => i.Severity == AimodSeverity.Warning), AimodIssues.Count(i => i.Severity == AimodSeverity.Error)),
             r.X + 4, r.Y + 34, 12, Foreground, r.Width - 8);
         if (r.Width > 560)
-            Button(c, new(r.Right - 240, r.Y + 28, 240, 26), L.Get(aimodDistanceSnap ? "aimod.distanceOn" : "aimod.distanceOff"),
+            ToggleSwitch(c, new(r.Right - 240, r.Y + 28, 240, 26), L.Get("aimod.distanceSnap"), aimodDistanceSnap,
                 () => { aimodDistanceSnap = !aimodDistanceSnap; RefreshAimod(); });
         int columns = r.Width < 240 ? 2 : r.Width < 600 ? 3 : 6;
         int tabRows = 6 / columns;
