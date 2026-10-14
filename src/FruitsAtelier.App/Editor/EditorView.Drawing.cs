@@ -298,11 +298,11 @@ public sealed partial class EditorView
                 {
                     var part = BananaRectangle(segment);
                     if (part.Bottom < plot.Y || part.Y > plot.Bottom) continue;
-                    c.Fill(part, selected ? 0x2B291Fu : 0x211F1Bu);
+                    c.Fill(part, selected ? 0x2B291Fu : 0x211F1Bu, opacity: .6f);
                     c.Stroke(part, 0x8C7445u);
                 }
             }
-            else c.Fill(bounds, selected ? 0x2B291Fu : 0x211F1Bu);
+            else c.Fill(bounds, selected ? 0x2B291Fu : 0x211F1Bu, opacity: .6f);
             c.Stroke(bounds, selected ? Gold : 0x8C7445u, selected ? 2 : 1);
             if (selected)
             {
@@ -318,7 +318,7 @@ public sealed partial class EditorView
             float startY = Screen(new(draft.TimeMs, 256)).Y;
             double cursorTime = plot.Contains(mouseX, mouseY) ? MapAt(mouseX, mouseY, true).TimeMs : draft.TimeMs;
             float cursorY = Screen(new(Math.Max(draft.TimeMs, cursorTime), 256)).Y;
-            c.Fill(new(playfield.X, Math.Min(startY, cursorY), playfield.Width, Math.Abs(startY - cursorY)), 0x29251B);
+            c.Fill(new(playfield.X, Math.Min(startY, cursorY), playfield.Width, Math.Abs(startY - cursorY)), 0x29251B, opacity: .6f);
             c.Line(playfield.X, startY, playfield.Right, startY, Gold, 2);
             c.Line(playfield.X, cursorY, playfield.Right, cursorY, Gold, 1);
         }
