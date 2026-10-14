@@ -1252,8 +1252,8 @@ public sealed partial class EditorView
                 && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.LegacyControl)
             { history.Commit(); drag = DragKind.None; sliderHoldConsumed = false; }
             if (editField >= 0 && !CommitField()) return;
-            if (virtualKey == 77) OpenMergeDialog();
-            else OpenStreamDialog();
+            if (virtualKey == 77) ShowMergeInspector();
+            else ShowPatternDock();
             return;
         }
         if (editField >= 0)

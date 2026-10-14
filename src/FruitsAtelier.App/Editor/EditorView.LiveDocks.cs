@@ -48,7 +48,7 @@ public sealed partial class EditorView
         { patternDockKind = 2; OpenBananaEdit(); BananaEditVisible = false; liveBananaBaseline = bananaEditPattern; }
         else
         {
-            OpenStreamDialog(); StreamDialogVisible = false; patternDockKind = 1;
+            InitializeStreamEditor(); StreamDialogVisible = false; patternDockKind = 1;
             livePatternSnap = StreamSnapDivisor; livePatternStack = stackMode; liveStackBaseline = stackDraft.DeepClone();
         }
     }

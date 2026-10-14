@@ -188,13 +188,20 @@ public sealed partial class EditorView
             foreach (var source in timelineSources)
             {
                 if (!objectSelection.Contains(source.Id) || source.End < viewStart || source.Start > visibleEnd
-                    || !Document.Tracks.Any(t => t.Id == source.Id) && !Document.ImportedSliders.Any(t => t.Id == source.Id)) continue;
+                    || !Document.Tracks.Any(t => t.Id == source.Id) && !Document.ImportedSliders.Any(t => t.Id == source.Id)
+                        && !(objectSelection.Count > 1 && Document.Fruits.Any(f => f.Id == source.Id))) continue;
                 if (tool == Tool.Slider && SelectedTrack?.Id != source.Id) continue;
                 sliderHoldId = source.Id;
                 var position = Screen(new(Math.Clamp(source.Start, viewStart, visibleEnd), 256));
                 sliderHoldX = position.X; sliderHoldY = position.Y;
                 break;
             }
+        }
+        if (sliderHoldId == Guid.Empty && objectSelection.Count > 0)
+        {
+            sliderHoldId = objectSelection.FirstOrDefault(id => Document.Tracks.Any(t => t.Id == id)
+                || Document.ImportedSliders.Any(s => s.Id == id) || objectSelection.Count > 1 && Document.Fruits.Any(f => f.Id == id));
+            sliderHoldX = plot.X + plot.Width / 2; sliderHoldY = plot.Y + plot.Height / 2;
         }
         if (sliderHoldId == Guid.Empty) return;
         contextItems.Clear();
@@ -205,7 +212,12 @@ public sealed partial class EditorView
     private void OpenSliderActions(Guid id)
     {
         if (!objectSelection.Contains(id)) SelectObjects([id]);
-        ShowSliderInspector();
+        RefreshSliderInspector();
+        menu = -1; contextItems.Clear();
+        foreach (var action in SliderInspectorActions())
+            contextItems.Add(new(action.Label, action.Action, action.Enabled, SliderAction: action.Kind));
+        contextBounds = new(Math.Clamp(sliderHoldX, 0, Math.Max(0, width - 280)),
+            Math.Clamp(sliderHoldY, 0, Math.Max(0, height - ContextMenuHeight)), 280, ContextMenuHeight);
     }
 
     private void DrawSliderHold(ICanvas c)

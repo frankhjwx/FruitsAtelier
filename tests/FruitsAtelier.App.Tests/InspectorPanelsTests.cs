@@ -31,14 +31,7 @@ internal static class InspectorPanelsTests
                 Check(startLabel.Y == endLabel.Y && startLabel.X < endLabel.X, "Start and end share a horizontal row");
                 var viewport = ui.View.SliderInspectorViewport;
                 ui.View.Wheel(viewport.X + 10, viewport.Y + 20, -1200, false, true); ui.Paint();
-                Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("inspector.end")).X < endLabel.X && ui.View.Document.ContentEquals(map), "Shift-wheel scrolls overflowing inspector content without changing the map");
-                ui.View.Wheel(viewport.X + 10, viewport.Y + 20, 1200, false, true); ui.Paint();
-                ui.View.PointerDown(viewport.X + 10, viewport.Bottom - 6, 0, false, false);
-                Check(ui.View.WantsCapture, "Horizontal scrollbar captures pointer");
-                ui.View.PointerMove(viewport.X + 60, viewport.Bottom - 6, false, false); ui.Paint();
-                Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("inspector.end")).X < endLabel.X, "Dragging the scrollbar moves content");
-                ui.View.PointerUp(viewport.X + 60, viewport.Bottom - 6, 0); ui.Paint();
-                Check(!ui.View.WantsCapture, "Horizontal scrollbar releases pointer");
+                Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("inspector.end")).X == endLabel.X && ui.View.Document.ContentEquals(map), "Inspector fits the panel without horizontal scrolling");
                 var committed = ui.View.Conversion;
                 for (int i = 0; i < 10; i++) ui.Paint();
                 Check(ReferenceEquals(committed, ui.View.Conversion) && ui.View.Document.ContentEquals(map), "Inspector repaint preserves conversion and content");

@@ -124,9 +124,7 @@ public sealed partial class EditorView
         DrawSliderDialog(c);
         DrawExportOverlay(c);
         DrawTimeJump(c);
-        DrawStreamDialog(c);
         DrawBananaEdit(c);
-        DrawMergeDialog(c);
         DrawVolumeDialog(c);
         DrawVolumePopover(c);
         DrawDistanceSnapDialog(c);
@@ -690,7 +688,7 @@ public sealed partial class EditorView
             Item(L.Get("ui.copyMenu"), () => CopySelection(), CanCopySelection);
             Item(L.Get("ui.pasteMenu"), () => PasteSelection(), CanPasteSelection);
             if (CanEditBananas) Item(L.Get("bananaEdit.title") + "  Ctrl+F", OpenBananaEdit, !notesLocked);
-            Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), OpenStreamDialog, CanConvertStream && !notesLocked);
+            Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), ShowPatternDock, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
             Item(L.Get("randomize.title"), ShowRandomDock, ClipboardInteractionReady);
@@ -855,6 +853,7 @@ public sealed partial class EditorView
 
     private void Button(ICanvas c, Rect r, string label, Action action, bool active = false, bool enabled = true, float fontSize = 12, bool? bold = null, float textPadding = 9, float textRightPadding = 6)
     {
+        if (drawingDockContent) { c.Fill(r, Surface, 4); c.Stroke(r, Grid, radius: 4); }
         bool textBold = bold ?? active;
         bool hover = enabled && r.Contains(mouseX, mouseY);
         if (hover) c.Fill(r, active ? 0x3A6260u : 0x3D495Au, 4);

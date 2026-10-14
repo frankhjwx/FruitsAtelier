@@ -919,6 +919,13 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--conversion-docks-render-check"))
+        {
+            canvas.Resize(1440, 900, 96);
+            ConversionDockRenderCheck.Run(canvas);
+            AppLog.Write("Conversion dock rendering checks passed.");
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--aimod-render-check"))
         {
             foreach (int dpi in new[] { 96, 144, 192 })

@@ -654,3 +654,5 @@ fruit dragging and undo, and experimental upper-timeline limits.
 lock, X/Y controls, 200% scale, horizontal pan and dense 1/48 timeline in English
 and Chinese at two sizes and three DPI values under
 `artifacts/tests/canvas-scale-native`.
+
+`App.Tests --conversion-docks-check` verifies direct conversion shortcuts, object action menus, live editing and merge undo. `FruitsAtelier.App.exe --render-check --conversion-docks-render-check` captures the English/Chinese layouts at narrow and standard dock widths under `artifacts/tests/conversion-docks`.

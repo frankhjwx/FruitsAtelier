@@ -2,6 +2,8 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Contains("--conversion-docks-check")) { ConversionDockShortcutTests.Run(); PatternNotesTests.Run(); Console.WriteLine("PASS Conversion dock shortcuts, action menus and live editing"); return 0; }
+
 if (args.Contains("--aimod-check")) { AimodTests.Run(); AimodTests.TableAndDock(); ObjectStructureTests.StreamsAndAnchors(); Console.WriteLine("PASS AiMod UI, table, docking and shortcut"); return 0; }
 
 if (args.Contains("--group-drag-boundary-check")) { GroupDragBoundaryTests.Run(); Console.WriteLine("PASS Group drag boundaries, conversion, export and undo"); return 0; }
@@ -228,6 +230,7 @@ var tests = new (string Name, Action Run)[]
     ("Song Setup docks, scrolls and applies cancellable drafts", SongDockTests.Run),
     ("Dock layout settings restore across editor restarts", DockPersistenceTests.Run),
     ("Slider Inspector metrics and immediate randomization edits", InspectorPanelsTests.Run),
+    ("Conversion dock shortcuts, object action menus and merge undo", ConversionDockShortcutTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
     ("Workspace saves and linked synchronization persist before optional Songs export", WorkspaceSaveTests.Run),
     ("Metadata merge rows share a page and highlight unresolved, retained and selected text", SynchronizationUiTests.MetadataRows),

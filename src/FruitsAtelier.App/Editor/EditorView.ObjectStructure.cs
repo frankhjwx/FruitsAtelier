@@ -43,17 +43,14 @@ public sealed partial class EditorView
         if (!converted.Success) throw new InvalidOperationException(string.Join(L.Get("editor.diagnostics.separator"), converted.Diagnostics));
     }
 
-    private void OpenMergeDialog()
+    private bool inspectorMergeExpanded;
+    private void ShowMergeInspector()
     {
         if (!ClipboardInteractionReady || notesLocked) return;
-        var chosen = ObjectStructureEditing.MergeSelection(Document, ClipboardSelectedParentIds());
-        if (chosen.Error is not null) { StatusMessage = chosen.Error; return; }
-        mergeTargets = chosen.Ids; mergeAllowsLinear = chosen.AllowsLinear;
-        mergeCurved = !mergeAllowsLinear; mergeError = "";
-        menu = -1; contextItems.Clear(); languageMenuOpen = false;
-        MergeDialogVisible = true;
+        ShowSliderInspector(); RefreshSliderInspector();
+        inspectorMergeExpanded = true;
+        inspectorScroll = float.MaxValue;
     }
-
     private void ApplyMerge()
     {
         Guid id = Guid.Empty;
@@ -63,20 +60,41 @@ public sealed partial class EditorView
         else mergeError = L.Get("merge.failed", StatusMessage);
     }
 
-    private void DrawMergeDialog(ICanvas c)
+    private (string Text, float Width, string[] Lines) mergeWarningLayout;
+    private string[] MergeWarningLines(ICanvas c, float width)
     {
-        if (!MergeDialogVisible) return;
-        hits.Clear();
-        float w = Math.Min(560, width - 32), x = (width - w) / 2, y = (height - 324) / 2;
-        c.Fill(new(x, y, w, 324), Panel, 8); c.Stroke(new(x, y, w, 324), Grid, radius: 8);
-        c.Text(L.Get("merge.title"), x + 18, y + 17, 16, Foreground, w - 36, true);
-        c.Text(L.Get("merge.description"), x + 18, y + 49, 12, Muted, w - 36);
-        float choiceWidth = (w - 42) / 2;
-        if (mergeAllowsLinear) Button(c, new(x + 18, y + 99, choiceWidth, 32), L.Get("merge.linear"), () => mergeCurved = false, !mergeCurved);
-        Button(c, new(x + (mergeAllowsLinear ? 24 + choiceWidth : 18), y + 99, choiceWidth, 32), L.Get("merge.curved"), () => mergeCurved = true, mergeCurved);
-        c.Text(L.Get("merge.saveWarning"), x + 18, y + 149, 12, Error, w - 36);
-        if (mergeError.Length > 0) c.Text(mergeError, x + 18, y + 218, 11, Error, w - 36);
-        Button(c, new(x + w - 194, y + 274, 80, 32), L.Get("mac.cancel"), () => MergeDialogVisible = false);
-        Button(c, new(x + w - 106, y + 274, 88, 32), L.Get("merge.confirm"), ApplyMerge, true);
+        string text = L.Get("merge.saveWarning");
+        if (mergeWarningLayout.Text == text && mergeWarningLayout.Width == width) return mergeWarningLayout.Lines;
+        var lines = new List<string>();
+        while (text.Length > 0)
+        {
+            int count = 1;
+            while (count < text.Length && c.MeasureText(text[..(count + 1)], 13) <= width) count++;
+            int space = text.LastIndexOf(' ', count - 1, count);
+            if (count < text.Length && space > 0) count = space;
+            lines.Add(text[..count]); text = text[count..].TrimStart();
+        }
+        mergeWarningLayout = (L.Get("merge.saveWarning"), width, lines.ToArray());
+        return mergeWarningLayout.Lines;
+    }
+    private float MergeControlsHeight(ICanvas c, float width)
+        => (width < 280 && mergeAllowsLinear ? 138 : 100) + MergeWarningLines(c, width).Length * 20
+            + (mergeError.Length > 0 ? WrapSyncText(c, mergeError, width).Length * 20 + 8 : 0);
+
+    private void DrawMergeControls(ICanvas c, Rect r, bool enabled)
+    {
+        c.Text(L.Get("merge.title"), r.X, r.Y + 4, 13, Foreground, r.Width, true);
+        bool vertical = r.Width < 280;
+        float choiceWidth = vertical ? r.Width : (r.Width - 8) / 2;
+        if (mergeAllowsLinear) Button(c, new(r.X, r.Y + 28, choiceWidth, 30), L.Get("merge.linear"), () => mergeCurved = false, !mergeCurved, enabled);
+        Button(c, new(r.X + (mergeAllowsLinear && !vertical ? choiceWidth + 8 : 0), r.Y + (mergeAllowsLinear && vertical ? 66 : 28), mergeAllowsLinear ? choiceWidth : r.Width, 30),
+            L.Get("merge.curved"), () => mergeCurved = true, mergeCurved, enabled);
+        float y = r.Y + (mergeAllowsLinear && vertical ? 104 : 66);
+        foreach (string line in MergeWarningLines(c, r.Width))
+        { c.Text(line, r.X, y, 13, Muted, r.Width); y += 20; }
+        if (mergeError.Length > 0)
+            foreach (var line in WrapSyncText(c, mergeError, r.Width))
+            { c.Text(line.Text, r.X, y, 13, Error, r.Width); y += 20; }
+        Button(c, new(r.X, y + 4, r.Width, 30), L.Get("merge.confirm"), ApplyMerge, true, enabled);
     }
 }

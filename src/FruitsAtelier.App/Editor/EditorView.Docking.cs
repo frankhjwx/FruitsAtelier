@@ -43,6 +43,7 @@ public sealed partial class EditorView
     private readonly List<(DockPanel Panel, Rect Bounds)> dockAllTabs = [];
     private DockPanel? dockPressed;
     private bool dockDragging;
+    private bool drawingDockContent;
     private float dockStartX, dockStartY;
     private Rect leftDockResizeBounds, rightDockResizeBounds;
     private bool dockResizeLeft;
@@ -214,28 +215,33 @@ public sealed partial class EditorView
                     Button(c, new(bounds.Right - 26, bounds.Y + 6, 24, 32), "›", () => group.TabScroll = Math.Min(total - strip.Width, group.TabScroll + strip.Width * .7f), enabled: group.TabScroll < total - strip.Width);
                 }
                 c.Line(bounds.X, bounds.Y + 38, bounds.Right, bounds.Y + 38, Grid);
-                if (group.Active == DockPanel.MovementStrain)
+                drawingDockContent = true;
+                try
                 {
-                    DifficultyCurveGraphBounds = new(bounds.X + 18, bounds.Y + 58,
-                        Math.Max(0, bounds.Width - 40), Math.Max(0, bounds.Height - 78));
-                    DrawDifficultyCurve(c, DifficultyCurveGraphBounds);
-                }
-                else if (group.Active == DockPanel.PatternEditor)
-                    DrawPatternDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
-                else if (group.Active == DockPanel.RandomizeDroplets)
-                    DrawRandomDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
-                else if (group.Active == DockPanel.SliderInspector)
-                    DrawSliderInspector(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
-                else if (group.Active == DockPanel.SongSetup)
-                    DrawSongDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
-                else if (group.Active == DockPanel.Aimod)
-                    DrawAimodPanel(c, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 50)));
-                else if (group.Active == DockPanel.Notes)
-                    DrawNotesDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
-                else
-                {
-                    DrawPreview(c, new(bounds.X + 16, bounds.Y + 38, Math.Max(0, bounds.Width - 32), Math.Max(0, bounds.Height - 52)));
-                }
+                    if (group.Active == DockPanel.MovementStrain)
+                    {
+                        DifficultyCurveGraphBounds = new(bounds.X + 18, bounds.Y + 58,
+                            Math.Max(0, bounds.Width - 40), Math.Max(0, bounds.Height - 78));
+                        DrawDifficultyCurve(c, DifficultyCurveGraphBounds);
+                    }
+                    else if (group.Active == DockPanel.PatternEditor)
+                        DrawPatternDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                    else if (group.Active == DockPanel.RandomizeDroplets)
+                        DrawRandomDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                    else if (group.Active == DockPanel.SliderInspector)
+                        DrawSliderInspector(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                    else if (group.Active == DockPanel.SongSetup)
+                        DrawSongDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                    else if (group.Active == DockPanel.Aimod)
+                        DrawAimodPanel(c, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 50)));
+                    else if (group.Active == DockPanel.Notes)
+                        DrawNotesDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                    else
+                    {
+                        DrawPreview(c, new(bounds.X + 16, bounds.Y + 38, Math.Max(0, bounds.Width - 32), Math.Max(0, bounds.Height - 52)));
+                    }
+                    }
+                finally { drawingDockContent = false; }
                 c.Unclip();
                 float edge = left ? bounds.Right : bounds.X;
                 var resize = new Rect(edge - 4, bounds.Y, 8, bounds.Height);

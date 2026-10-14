@@ -604,7 +604,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Up / Down | Seek next / previous timing point |
 | Ctrl+Up / Down | Increase / decrease playback speed by 25 percentage points, within 10%–150% |
 | Ctrl+Shift+Up / Down | Increase / decrease playback speed by 5 percentage points |
-| Ctrl+Shift+F | Open slider-to-stream snap confirmation |
+| Ctrl+Shift+F | Open and focus the Stream/Stack dock |
 | Ctrl+= / Ctrl+− | Add / remove one reverse |
 | Ctrl+J | Extend the selected FSlider to the pointer |
 | Esc | Cancel an active drag, box selection, draft, or text input |
@@ -882,7 +882,7 @@ dirty and support undo. Graph and snap drags preview while moving and commit whe
 released. Break into Fruits and Break into Bananas are explicit action buttons;
 clicking one splits the pattern immediately in one undo step. Existing patterns
 also offer a button to restore ordinary slider or banana shower output. Short
-docks scroll with the mouse wheel. Ctrl+Shift+F retains the existing modal dialog.
+docks scroll with the mouse wheel. Ctrl+Shift+F opens and focuses this dock, adding it when closed. An empty selection shows selection guidance. Panel buttons retain their background and border when idle.
 
 **Notes** is a multiline project-wide text editor, shared across difficulties. It
 supports text selection, copy/paste and independent text undo/redo while focused.
@@ -950,7 +950,7 @@ stream's fruit positions, times, combo flags and sample settings, and forms one
 undo step.
 
 Select at least two consecutive circles or sliders and long-press one of them,
-then choose **Merge into slider** in Slider Inspector, or press **Ctrl+Shift+M**. Consecutive means no
+then choose **Merge into slider** from the action list, or press **Ctrl+Shift+M**. This opens and focuses Slider Inspector, adding the tab when needed; choose the path type and apply the merge within the panel. Consecutive means no
 circle or slider is omitted between the earliest and latest selected starts in
 time/source order. A selected banana shower blocks merging. The dialog offers
 straight segments or a curved path; when any selected slider has a curved path,
@@ -964,13 +964,13 @@ Its generated catch events can differ from the original objects. The dialog warn
 that saving retains only the merged slider: reopening cannot recover the original
 objects because project files do not store undo history.
 
-Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press a slider to open Slider Inspector; its conversion action converts the selection and opens the Stream/Stack dock. Imported Legacy Sliders also offer **Convert to FSlider**. The Edit entry and keyboard shortcut open the shared dialog. Ordinary sliders open the shared dialog on Stream; existing streams and stacks open their corresponding tab. The snap slider has the same subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**, plus the enabled experimental divisions. Enter confirms; Esc cancels; arrow keys change the choice.
+Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**, to open the Stream/Stack dock. Long-press an object in a selection or press **Shift+F** to show the compact action list first; choosing a conversion action opens its dock. Imported Legacy Sliders also offer **Convert to FSlider**. Existing streams and stacks retain their saved mode. Changes in the dock apply immediately and support undo.
 
 The dialog separates its title, tabs, Snap and conversion switches with padding.
 The Snap value has a gap from the slider thumb. Stream and Stack show their
 controls and preview without the introductory or graph-instruction paragraphs.
 
-With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. Once the parent is selected, dragging a fruit edits its X position and marks that event with a bright outer ring. Middle-fruit edits preserve neighbouring samples and event times; repeated traversals sharing the same path sample move together. Head and tail fruits also support dragging in time. A repeated tail resizes its span duration and edits the endpoint of its final traversal. Drag the empty area inside the selection box to move the whole stream. Visible anchors and handles take priority over overlapping stream fruits, so dragging a control reshapes the parent curve. Hiding Slider Path lets the overlapping fruit be edited directly. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in Slider Inspector. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. Parent-level New Combo applies to the first fruit; internal fruit NC is edited in the upper timeline. Object-level sound/sample settings apply to each fruit.
+With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. Once the parent is selected, dragging a fruit edits its X position and marks that event with a bright outer ring. Middle-fruit edits preserve neighbouring samples and event times; repeated traversals sharing the same path sample move together. Head and tail fruits also support dragging in time. A repeated tail resizes its span duration and edits the endpoint of its final traversal. Drag the empty area inside the selection box to move the whole stream. Visible anchors and handles take priority over overlapping stream fruits, so dragging a control reshapes the parent curve. Hiding Slider Path lets the overlapping fruit be edited directly. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in Slider Inspector. The Stream/Stack dock changes their subdivision immediately with undo support; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. Parent-level New Combo applies to the first fruit; internal fruit NC is edited in the upper timeline. Object-level sound/sample settings apply to each fruit.
 
 The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Ctrl+L restores the current difficulty's previous saved version after confirmation. Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
 
@@ -1007,29 +1007,15 @@ or colour picker. Language changes take effect immediately.
 
 ## Stream and Stack conversion
 
-Select sliders and choose **Convert to Stream/Stack** from Edit or Slider Inspector, or press **Ctrl+Shift+F**. Existing streams and stacks use **Edit Stream/Stack**
-for the menu, button and dialog title. Existing streams open on **Stream**, and
-existing stacks open on **Stack**, retaining their saved subdivision. Ordinary
-sliders open on **Stream**. A mixed Stream/Stack selection follows its first
-target's mode and preview.
-In the modal dialog, the **Stream** and **Stack** tabs both preview the generated fruits. Stack enables
-curve and individual-fruit editing; switching tabs retains each tab's subdivision
-and the Stack draft. Tab switches modes when no numeric input is active. Confirm
-applies the active tab; Stream clears an existing Stack envelope. Cancel discards
-both drafts.
+Select sliders and choose **Convert to Stream/Stack** from Edit, Slider Inspector,
+or the compact object action list, or press **Ctrl+Shift+F**. The Stream/Stack dock
+opens and receives focus. Existing streams and stacks retain their mode and snap;
+ordinary sliders convert to Stream. A mixed Stream/Stack selection follows its
+first target. Repeating the shortcut keeps the existing dock and parameters.
 
-Both tabs share equal-width left and right columns. Snap and **Break into Fruits**
-are on the left; Stack also keeps its distance curve and numeric fields there.
-The right column contains the preview in both modes. The shared **Break into Fruits**
-switch retains its value across tabs and confirms either mode as independent fruits.
-
-Both previews use the current map's AR and CS, scaling time and X by the inner
-playfield width. Side margins fit the full fruit outline at X=0 and X=512 and
-leave room for the scrollbar. Hit testing and horizontal dragging use the same
-inner playfield. Roll the mouse wheel over the preview to inspect long patterns; wheel up
-views later times and wheel down views earlier times, independently of Reverse
-canvas scrolling. The position indicator follows the visible interval.
-Scrolling does not change content or undo.
+The dock previews the result on the main canvas. Switching Stream/Stack and changing
+parameters apply through undoable edits; graph and snap drags commit on release.
+**Break into Fruits** is an explicit action. Short panels scroll vertically.
 
 The Stack tab retains the source curve and samples
 independent fruits with the selected stream subdivision, using the head BPM across
@@ -1044,8 +1030,7 @@ interpolation joins points without overshooting their distance values. The right
 preview updates immediately; generation alternates sides and clamps final X to
 0–512. Actual DS follows the generated positions and time intervals.
 
-Confirm applies all selected sliders as one undo step. Cancel or Esc discards the
-draft. Reopen the action to edit a saved stack. Conversion back to a slider clears
+Valid changes apply to all selected sliders and support undo. Reopen the dock to edit a saved stack. Conversion back to a slider clears
 the envelope and retains the centre geometry. Project files retain the editable
 parent and envelope; osu export writes independent hit circles.
 
@@ -1061,16 +1046,9 @@ whole-parent selections use the head's NC flag. Internal NC starts reset subsequ
 timeline numbers and colours, persist in projects and export on the corresponding
 hit circles. Break into Fruits retains them.
 
-In the stack dialog's right preview, drag a fruit horizontally to adjust only that
-fruit. Its time stays fixed, and the highlighted outline marks the selected fruit.
-Manual adjustments are added to the clamped envelope result and persist with the
-editable parent. The left distance curve reflects each adjusted fruit and shows a
-control point at its fixed time. Drag that point vertically to edit its distance. Envelope changes retain these adjustments. Changing subdivision
-uses an adjustment only when a generated fruit has the same normalized time;
-returning to the previous subdivision restores its adjusted fruits. Cancel and lost
-capture restore the draft, and confirmation groups all adjustments into one undo
-step. The preview leaves room for complete first and last fruit outlines, including their
-stroke, at the corresponding scroll limits.
+Stack geometry and generated fruits are previewed on the main canvas. The distance
+curve and numeric fields remain in the dock. Parameter changes preserve the
+editable parent and apply through document undo history.
 
 Select an envelope point to edit **Time (%)** and **Width (px)** numerically.
 Enter or Tab accepts the value; Escape cancels the text edit. Interior times must
@@ -1083,9 +1061,8 @@ New stacks default to 1/16 subdivision and reach their width over the first 2% o
 the duration, returning to zero over the final 2%. Existing stacks retain their
 subdivision. Endpoint widths can be edited in the graph or numeric fields.
 
-Within the stack editor, Ctrl+Z undoes a completed drag, numeric edit, point removal,
-first-side change or subdivision change; Ctrl+Y or Ctrl+Shift+Z redoes it. Draft
-history stays inside the dialog. Confirming still creates one document undo step.
+Completed dock edits use document undo history. Ctrl+Z undoes a committed edit;
+Ctrl+Y or Ctrl+Shift+Z redoes it.
 Right-click a manual fruit marker on the left graph to remove its offset and
 recompute that fruit from the envelope. This removal is also undoable.
 
@@ -1185,8 +1162,8 @@ not change beatmap content or preview/testplay dim, and modal dialogs hide it.
 ## Banana Shower Edit Window
 
 Select a banana shower (spinner) and press **Ctrl+F**, or use the Edit menu.
-**Ctrl+Shift+F** also opens this window for a selection containing only banana
-showers. Set each short shower's length and the empty gap after it as separate
+**Ctrl+Shift+F** opens the Stream/Stack dock for a selection containing only banana
+showers; its controls apply valid changes immediately with undo support. Set each short shower's length and the empty gap after it as separate
 beat fractions. Numerators are editable integers; denominator lists use the
 editor's supported snap divisions. For example, length **1/16** and gap **3/16**
 start one short shower every **4/16** beats. A zero gap creates adjacent showers.
@@ -1220,8 +1197,9 @@ Zoom is local to the dialog and does not change object timing or create undo his
 
 ## Slider Inspector
 
-Open Slider Inspector from Layout or long-press a selected slider (Shift+F also
-opens it). It follows the current selection and shows type, start/end times,
+Open Slider Inspector from Layout. Long-press an object in a selection or press
+Shift+F to open its compact action list; choosing an editing function opens the
+corresponding dock. Ctrl+Shift+M focuses the merge controls in Slider Inspector. It follows the current selection and shows type, start/end times,
 duration, spans, control-point count, exported SV and exported path length.
 Multiple sliders show value ranges. Managed streams and stacks have no exported
 slider SV. These properties are read-only.
@@ -1236,8 +1214,10 @@ The action area contains conversion, clearing internal anchors, stream breaking
 and reversion, merging, and the Randomize droplets entry. Stream/Stack and
 randomization edits open their dock panels and update the map directly.
 
-Inspector properties use two columns; operation buttons each occupy a full row. Start/end times use osu! editor
-format (`03:37:063`). A horizontal scrollbar appears when the content exceeds the
-dock width; drag it or use Shift+wheel to reach the rest of the content.
+Inspector properties use two columns, switching to one in narrow docks. A mixed
+selection shows its count in a single header row. Operation buttons occupy full
+rows with a persistent background and border, matching Settings. Start/end times
+use osu! editor format (`03:37:063`). Content fits the dock width and scrolls
+vertically when needed. Merge path choices stack vertically in narrow docks.
 Dock tab names retain their natural width. When tabs overflow, left/right arrows
 scroll the tab strip; selecting a panel through Layout reveals its active tab.

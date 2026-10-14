@@ -8,7 +8,7 @@ public sealed partial class EditorView
 {
     private readonly List<ContextItem> contextItems = [];
     private Rect contextBounds;
-    private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "", uint? Color = null, bool Separator = false, bool Heading = false, bool Active = false);
+    private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "", uint? Color = null, bool Separator = false, bool Heading = false, bool Active = false, int SliderAction = 0);
     private float ContextMenuHeight => 12 + contextItems.Sum(item => item.Separator ? 10 : 32);
     private void AddContextSeparator() => contextItems.Add(new("", () => { }, Enabled: false, Separator: true));
     private sealed record SliderLocation(Guid Id, double FirstSpanTimeMs);
@@ -23,6 +23,8 @@ public sealed partial class EditorView
         {
             var item = contextItems[i];
             var rect = ContextItemBounds(i);
+            if (item.SliderAction == 1) LegacyConversionBounds = rect;
+            if (item.SliderAction == 2) StreamConversionBounds = rect;
             if (item.Separator) { c.Line(rect.X + 9, rect.Y + 4, rect.Right - 9, rect.Y + 4, Grid); continue; }
             if (item.Heading)
             {
