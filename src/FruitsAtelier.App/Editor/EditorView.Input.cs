@@ -852,7 +852,7 @@ public sealed partial class EditorView
         if (AimodVisible)
         {
             if (aimodListBounds.Contains(x, y)) aimodFirst = Math.Clamp(aimodFirst - (int)(delta / 120) * 3,
-                0, Math.Max(0, AimodErrors.Count - aimodVisibleRows));
+                0, Math.Max(0, aimodRows.Count - aimodVisibleRows));
             return;
         }
         if (VersionHistoryVisible) { ScrollVersionHistory(x, y, delta, ctrl); return; }
@@ -1246,14 +1246,13 @@ public sealed partial class EditorView
         { RequestExport?.Invoke(); return; }
         if (ctrl && !shift && !altHeld && virtualKey == 70 && CanEditBananas)
         { OpenBananaEdit(); return; }
-        if (ctrl && shift && !altHeld && virtualKey is 65 or 70 or 77)
+        if (ctrl && shift && !altHeld && virtualKey is 70 or 77)
         {
             if (!dragMoved && draftTrack == Guid.Empty && draftBanana == Guid.Empty
                 && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.LegacyControl)
             { history.Commit(); drag = DragKind.None; sliderHoldConsumed = false; }
             if (editField >= 0 && !CommitField()) return;
-            if (virtualKey == 65) ClearSelectedInternalAnchors();
-            else if (virtualKey == 77) OpenMergeDialog();
+            if (virtualKey == 77) OpenMergeDialog();
             else OpenStreamDialog();
             return;
         }
@@ -1281,6 +1280,7 @@ public sealed partial class EditorView
             else ShowLibrary();
             return;
         }
+        if (ctrl && shift && !altHeld && virtualKey == 65) { ShowAimod(); return; }
         if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift)) return;
         if (virtualKey == 70 && shift && !ctrl && !altHeld)
         {

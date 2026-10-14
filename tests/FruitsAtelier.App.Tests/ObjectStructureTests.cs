@@ -59,7 +59,8 @@ internal static class ObjectStructureTests
                     && t.Nodes[^1].Id == map.Tracks.First(s => s.Id == t.Id).Nodes[^1].Id), "endpoint identities are retained");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "batch clear has one undo step");
                 ui.Key('A', ctrl: true); ui.Key('A', ctrl: true, shift: true);
-                Check(ui.View.Document.Tracks.All(t => t.Nodes.Count == 2), "clear shortcut applies to all selected sliders");
+                Check(ui.View.AimodVisible && ui.View.Document.ContentEquals(map), "AiMod shortcut preserves selected slider anchors");
+                ui.Key(27);
             }
         }
         finally { L.SetLanguage(language); }

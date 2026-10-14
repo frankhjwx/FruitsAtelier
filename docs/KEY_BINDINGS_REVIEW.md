@@ -113,7 +113,7 @@ Sources: [shortcut operations](../src/FruitsAtelier.App/Editor/EditorView.Shortc
 
 ### No matching feature today
 
-F2 Design, I sprite library, Design W/A/S/D, Ctrl+Shift+A AiMod, Ctrl+, / Ctrl+.
+F2 Design, I sprite library, Design W/A/S/D, Ctrl+, / Ctrl+.
 rotation, Ctrl+Shift+R rotation dialog, Ctrl+Shift+D polygon generation, and Ctrl+J
 geometric vertical flip need new functionality. In this editor the vertical axis
 is time, so geometric rotation/vertical flipping cannot safely be mapped onto

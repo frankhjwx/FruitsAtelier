@@ -91,16 +91,16 @@ Replay changes also remain a draft until Finish.
 
 ## AiMod
 
-Open **Edit → AiMod** to check the current difficulty for overlapping notes.
-It reports an error for adjacent object starts less than 10 ms apart, regardless
-of horizontal position. Exactly 10 ms is allowed. Fruits, authored and imported
-sliders, streams and banana showers each contribute their editable object's start;
-nested slider fruits, droplets, tiny droplets and bananas are excluded.
+Open **Edit → AiMod** or press **Ctrl+Shift+A** to inspect the current difficulty.
+The report separates information, warnings and errors into Compose, Design,
+Timing, Meta and Mapset categories. Click a timed result to jump to its position;
+object diagnostics also select the corresponding editable objects. **Refresh**
+reruns the check. Paging and the mouse wheel browse longer lists.
 
-Click a result to select both objects and jump to the first start time. **Refresh**
-reruns the check; paging and the mouse wheel browse longer lists. Checking and
-navigating do not change content or undo history. Close the dialog to edit the map,
-then reopen it to check the current state. AiMod currently reports only overlaps.
+Analysis uses the exported Catch objects, including generated Stream/Stack
+objects, and does not modify content or undo history. Resource checks run in the
+background. Close the dialog before editing. See [AiMod checks](AIMOD.md) for the
+rule scope and stable compatibility details.
 
 See the [shortcut manual](KEY_BINDINGS.md) for the complete keyboard reference and the [compatibility review](KEY_BINDINGS_REVIEW.md) for known differences and gaps.
 
@@ -784,8 +784,8 @@ repeat count, stream snap and object metadata. One undo restores the whole batch
 No selection is required. The command is disabled for locked notes, unfinished
 gestures, or a difficulty without internal FSlider controls. Convert imported Legacy Sliders to FSliders first.
 
-For selected sliders, use **Clear internal anchors** in Slider Inspector or
-**Ctrl+Shift+A**. This applies the same endpoint-only path to the selected sliders
+For selected sliders, use **Clear internal anchors** in Slider Inspector.
+This applies the same endpoint-only path to the selected sliders
 in one undo step, converting selected Legacy Sliders first. Holding a selected
 slider retains the complete selection for the batch operation.
 

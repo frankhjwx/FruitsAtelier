@@ -49,6 +49,14 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`Core.Tests --aimod-check` and `App.Tests --aimod-check` cover AiMod rules,
+resource checks, read-only navigation, localization and Ctrl+Shift+A. Run
+`Core.Tests --aimod-twin-bloom <path.osu>` against the matching local Twin Bloom
+fixture to compare stable screenshot findings and category/severity totals.
+`FruitsAtelier.App.exe --render-check --aimod-render-check` checks the native
+dialog at multiple sizes and DPI values and captures English/Chinese reports
+under `artifacts/tests/aimod-native`.
+
 `App.Tests --group-drag-boundary-check` checks fractional fruit selections dragged
 to either playfield edge, preserving conversion, export, relative spacing,
 undo/redo and cancellation.

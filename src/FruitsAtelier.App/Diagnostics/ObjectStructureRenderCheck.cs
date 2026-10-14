@@ -42,9 +42,10 @@ internal static class ObjectStructureRenderCheck
                     throw new InvalidOperationException("Native merge dialog passed through input.");
                 view.KeyDown(39, false, false); view.KeyDown(13, false, false); Paint();
                 if (view.MergeDialogVisible || view.Document.Tracks.Count != 1) throw new InvalidOperationException("Native merge confirmation failed.");
+                var merged = view.Document.DeepClone();
                 view.KeyDown(65, true, true); Paint();
-                if (view.Document.Tracks.Single().Nodes.Count != 2) throw new InvalidOperationException("Native clear shortcut failed.");
-                view.KeyDown(90, true, false); view.KeyDown(90, true, false); Paint();
+                if (!view.AimodVisible || !view.Document.ContentEquals(merged)) throw new InvalidOperationException("Native AiMod shortcut changed slider controls.");
+                view.KeyDown(27, false, false); view.KeyDown(90, true, false); Paint();
                 if (view.Document.Fruits.Count != 5) throw new InvalidOperationException("Native structure undo failed.");
                 view.KeyDown(90, true, false); Paint();
                 view.UpdateTransport(1000, 30000, true, false, false, null, null); Paint();

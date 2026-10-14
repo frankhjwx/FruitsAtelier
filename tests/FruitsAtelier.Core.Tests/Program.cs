@@ -1,5 +1,19 @@
 using FruitsAtelier.Core;
 
+if (args.Length == 2 && args[0] == "--aimod-twin-bloom") { AimodReportTests.TwinBloom(args[1]); return 0; }
+if (args.Contains("--aimod-check")) { AimodTests.Run(); AimodReportTests.Run(); Console.WriteLine("PASS AiMod rules"); return 0; }
+
+if (args.Length >= 2 && args[0] == "--aimod-report")
+{
+    var map = OsuBeatmapReader.ReadFile(args[1]);
+    var report = Aimod.Analyze(map);
+    foreach (var group in report.GroupBy(i => (i.Category, i.Severity, i.Code))) Console.WriteLine($"{group.Key}: {group.Count()}");
+    Console.WriteLine($"Total: {report.Count}; warnings: {report.Count(i => i.Severity == AimodSeverity.Warning)}; errors: {report.Count(i => i.Severity == AimodSeverity.Error)}");
+    if (args.Length > 2) File.WriteAllText(args[2], System.Text.Json.JsonSerializer.Serialize(report, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+    return 0;
+}
+
+
 if (args.Contains("--hitsound-copier")) { HitsoundCopierTests.Run(); Console.WriteLine("PASS Hitsound Copier"); return 0; }
 
 if (args.Length == 2 && args[0] == "--slider-corpus") return ImportedSliderCorpus.Run(args[1]);
@@ -34,6 +48,7 @@ var tests = new (string Name, Action Run)[]
     ("Exported milliseconds and coordinates determine hyperdash", SliderStreamTests.ExportedMillisecondsDriveHyperdash),
     ("Source section snapshots detect all writes, undo and project round trips", SourceSectionTests.SnapshotsAndWrites),
     ("Breaks and bookmarks edit source sections and survive history", TimelineMetadataTests.Run),
+    ("AiMod report rules, resources and stable timing", AimodReportTests.Run),
     ("AiMod finds adjacent object starts strictly below 10 ms without changing content", AimodTests.Run),
     ("Prepared curve queries exactly match independent repeated segment evaluation", CurveEvaluationTests.Run),
     ("Grid fractions and measure starts follow active meter changes", TimingLookupTests.SubdivisionsAndMeasures),

@@ -919,6 +919,17 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--aimod-render-check"))
+        {
+            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (var size in new[] { (1440, 900), (800, 600) })
+            {
+                canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                AimodRenderCheck.Run(canvas, size.Item1, size.Item2, dpi);
+            }
+            AppLog.Write("AiMod native input and rendering checks passed.");
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--canvas-scale-render-check"))
         {
             CanvasScaleRenderCheck.Run(canvas);

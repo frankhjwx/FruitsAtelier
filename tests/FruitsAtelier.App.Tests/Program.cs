@@ -2,6 +2,8 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Contains("--aimod-check")) { AimodTests.Run(); ObjectStructureTests.StreamsAndAnchors(); Console.WriteLine("PASS AiMod UI and shortcut"); return 0; }
+
 if (args.Contains("--group-drag-boundary-check")) { GroupDragBoundaryTests.Run(); Console.WriteLine("PASS Group drag boundaries, conversion, export and undo"); return 0; }
 
 if (args.Contains("--inspector-panels-check")) { InspectorPanelsTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS Inspector metrics, live panel edits and Song Setup categories"); return 0; }

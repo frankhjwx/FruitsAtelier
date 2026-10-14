@@ -2,7 +2,7 @@ namespace FruitsAtelier.Core;
 
 public readonly record struct NoteOverlap(Guid FirstId, Guid SecondId, double FirstTimeMs, double SecondTimeMs);
 
-public static class Aimod
+public static partial class Aimod
 {
     public static IReadOnlyList<NoteOverlap> FindOverlaps(MapDocument document)
     {

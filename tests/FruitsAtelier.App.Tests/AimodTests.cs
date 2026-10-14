@@ -29,7 +29,9 @@ internal static class AimodTests
                     && ui.View.SelectedObjectIds.ToHashSet().SetEquals(map.Fruits.Select(f => f.Id)), "Error must locate and select both objects.");
                 Check(map.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty, "Navigation must not edit content.");
                 ui.Key(46);
-                ui.View.ShowAimod(); ui.Paint();
+                ui.Key('A', ctrl: true, shift: true); ui.Paint();
+                Check(ui.View.AimodVisible, "Ctrl+Shift+A opens AiMod");
+                ui.ClickText(L.Get("aimod.tabCompose", 0));
                 Check(ui.View.AimodErrors.Count == 0 && ui.Canvas.Texts.Any(t => t.Value == L.Get("aimod.empty")), "Reopening must inspect current content.");
                 ui.Key(27); ui.Key('Z', ctrl: true);
                 Check(map.ContentEquals(ui.View.Document), "AiMod must leave deletion undo intact.");
