@@ -14,6 +14,10 @@ public sealed partial class EditorView
     private readonly Stack<string> notesUndo = new(), notesRedo = new();
     private readonly List<(int Start, string Text, int[] Positions, float[] Widths)> notesLines = [];
     private (string Text, float Width, Type Canvas)? notesLayout;
+    private readonly List<(Rect Bounds, NotesObjectReference Reference)> notesReferenceHits = [];
+    private NotesObjectReference? notesPressedReference;
+    private float notesPressX, notesPressY;
+    internal IReadOnlyList<Rect> NotesReferenceBounds => notesReferenceHits.Select(h => h.Bounds).ToArray();
     private void SetNotes(string value, bool record = true)
     {
         if (projectNotes == value) return;
@@ -33,6 +37,7 @@ public sealed partial class EditorView
     private void DrawNotesDock(ICanvas c, Rect bounds)
     {
         NotesBounds = bounds;
+        notesReferenceHits.Clear();
         c.Fill(bounds, Surface, 4); c.Stroke(bounds, NotesFocused ? Accent : Grid, radius: 4);
         float lineWidth = Math.Max(16, bounds.Width - 16);
         if (notesLayout != (projectNotes, lineWidth, c.GetType()))
@@ -74,7 +79,24 @@ public sealed partial class EditorView
                 float left = At(textEditor.Start - line.Start), right = At(textEditor.End - line.Start);
                 c.Fill(new(bounds.X + 8 + left, y, Math.Max(2, right - left), 20), Accent, opacity: .25f);
             }
-            c.Text(line.Text, bounds.X + 8, y, 12, Foreground, lineWidth);
+            int drawn = 0;
+            foreach (var reference in NotesReferences())
+            {
+                int start = Math.Max(line.Start, reference.Start), end = Math.Min(line.Start + line.Text.Length, reference.End);
+                if (end <= start) continue;
+                int localStart = start - line.Start;
+                if (localStart > drawn)
+                    c.Text(line.Text[drawn..localStart], bounds.X + 8 + At(drawn), y, 12, Foreground, lineWidth - At(drawn));
+                float left = At(start - line.Start), right = At(end - line.Start);
+                var link = new Rect(bounds.X + 8 + left, y, right - left, 18);
+                c.Text(projectNotes[start..end], link.X, y, 12, Accent, link.Width + 1);
+                c.Line(link.X, y + 17, link.Right, y + 17, Accent);
+                float top = Math.Max(link.Y, bounds.Y + 6), bottom = Math.Min(link.Bottom, bounds.Bottom - 6);
+                if (bottom > top) notesReferenceHits.Add((new(link.X, top, link.Width, bottom - top), reference));
+                drawn = end - line.Start;
+            }
+            if (drawn < line.Text.Length)
+                c.Text(line.Text[drawn..], bounds.X + 8 + At(drawn), y, 12, Foreground, lineWidth - At(drawn));
             if (NotesFocused && i == NotesCaretLine())
             {
                 float caret = bounds.X + 8 + At(textEditor.Caret - line.Start);
@@ -91,6 +113,7 @@ public sealed partial class EditorView
     }
     private void PositionNotesCaret(float x, float y, bool shift)
     {
+        if (notesSelecting && (Math.Abs(x - notesPressX) >= 4 || Math.Abs(y - notesPressY) >= 4)) notesPressedReference = null;
         if (notesLines.Count == 0) return;
         var line = notesLines[Math.Clamp((int)((y - NotesBounds.Y - 8 + notesScroll) / 20), 0, notesLines.Count - 1)];
         float desired = x - NotesBounds.X - 8;
@@ -102,13 +125,27 @@ public sealed partial class EditorView
     {
         if (menu >= 0 || contextItems.Count > 0) return false;
         if (!PanelVisible(DockPanel.Notes) || !NotesBounds.Contains(x, y)) { notesFocused = false; return false; }
-        if (button == 0) { notesFocused = notesSelecting = true; PositionNotesCaret(x, y, shift); }
+        if (button == 0)
+        {
+            notesPressedReference = shift ? null : notesReferenceHits.FirstOrDefault(h => h.Bounds.Contains(x, y)).Reference;
+            notesPressX = x; notesPressY = y;
+            notesFocused = notesSelecting = true; PositionNotesCaret(x, y, shift);
+        }
         return true;
+    }
+    private void FinishNotesSelection(float x, float y)
+    {
+        PositionNotesCaret(x, y, true); notesSelecting = false;
+        var reference = notesPressedReference; notesPressedReference = null;
+        if (reference is not null && Math.Abs(x - notesPressX) < 4 && Math.Abs(y - notesPressY) < 4
+            && notesReferenceHits.Any(h => h.Reference == reference && h.Bounds.Contains(x, y)))
+            LocateNotesReference(reference);
     }
     private bool NotesKey(int key, bool ctrl, bool shift)
     {
         if (!NotesFocused || menu >= 0 || contextItems.Count > 0) return false;
         if (ctrl && key == 83) return false;
+        if (ctrl && key == 86) { RequestPasteField?.Invoke(); return true; }
         if (key == 27) { notesFocused = false; return true; }
         if (ctrl && key is 90 or 89)
         {

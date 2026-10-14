@@ -890,6 +890,14 @@ Notes changes mark the project dirty and are saved with the project, including
 workspace manifests and compatibility project files. Closing or moving its tab
 does not delete the notes. Notes are not exported to `.osu` files.
 
+Copy selected map objects with Ctrl+C and paste into Notes with Ctrl+V. Notes keeps
+exactly the external plain-text reference format, for example `00:12:345 (1,2) - `.
+The timestamp and object numbers appear as an underlined link. Click to seek and
+select matching objects in the current difficulty; drag to select and copy the
+text instead. References are reconstructed from saved text, including wrapped
+lines. If no matching objects remain, navigation still seeks to the timestamp.
+Notes editing has its own undo/redo; clicking references does not edit the map.
+
 The language dropdown in **Settings → General** lists the supported languages. Selecting a non-English language opens an AI-assisted machine translation notice before applying and saving it. Menu shortcut hints align to the right edge of each row. Existing beatmap titles and object names retain their values. The main canvas can hide curves and nodes. Catch Preview displays gameplay objects.
 
 The Skin selector to the left of **← Library** lists skins from the configured osu!stable `Skins` folder and offers `.osk` import. Imported archives and extracted Catch assets are kept under `workspace/Skins`; imported entries use gold text and an Imported label. Skin selection persists independently of beatmap edits. Library Settings accepts a user-owned default skin `.osk` file; each missing or unreadable custom image falls back to the default skin independently, then to geometric rendering. Long lists provide previous/next pages. Missing skins or textures fall back to basic shapes; see [Skins](../assets/skins/README.md). Drawing and hit-test sizes are described in [Catch Rendering and Conversion](CATCH_RENDERING.md).

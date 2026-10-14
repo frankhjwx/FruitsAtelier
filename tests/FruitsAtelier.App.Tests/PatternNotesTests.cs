@@ -6,6 +6,7 @@ internal static class PatternNotesTests
 {
     public static void Run()
     {
+        NotesReferenceTests.Run();
         string language = L.Language;
         try
         {
