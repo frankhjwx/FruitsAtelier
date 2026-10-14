@@ -54,6 +54,9 @@ resource checks, read-only navigation, localization, Ctrl+Shift+A, table column
 resizing/reordering, selection/copy and dock attachment. Run
 `Core.Tests --aimod-twin-bloom <path.osu>` against the matching local Twin Bloom
 fixture to compare stable screenshot findings and category/severity totals.
+`Core.Tests --aimod-ethanol <path.osu>` checks the Ethanol difficulty
+`Usok ng Sigarilyo at Amoy ng Ethanol.` against stable's messages, timestamps,
+category totals and overlapping source-object pairs.
 `FruitsAtelier.App.exe --render-check --aimod-render-check` checks the native
 dock panels and continuous scrolling at multiple sizes and DPI values and captures English/Chinese reports
 under `artifacts/tests/aimod-native`.

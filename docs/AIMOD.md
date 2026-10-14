@@ -8,7 +8,7 @@ snapshot: Refresh updates it, and checking or navigating never creates an edit.
 
 | Category | Checks |
 | --- | --- |
-| Compose | Adjacent object starts less than 10 ms apart; unsnapped starts and ends; uncommon snap divisors. |
+| Compose | Less than 10 ms between the previous object's end and the next object's start, using integer milliseconds and including slider repeats; unsnapped starts and ends; uncommon snap divisors. |
 | Design | Missing background and referenced resources; background/video dimensions, skin image dimensions and short storyboard lifetimes. |
 | Timing | Map/audio length, quiet sections, duplicate points, inherited points before timing, first-point Kiai, Kiai snapping and intervals, missing preview point. |
 | Meta | Drain length, stack leniency and non-ASCII romanised artist/title. |

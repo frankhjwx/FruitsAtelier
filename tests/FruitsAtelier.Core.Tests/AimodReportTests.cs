@@ -5,6 +5,7 @@ internal static class AimodReportTests
 {
     public static void Run()
     {
+        OverlapBoundaries();
         var map = new MapDocument();
         map.TimingPoints.Add(new() { BeatLengthMs = 480 });
         map.Fruits.AddRange([new() { TimeMs = 0, X = 100 }, new() { TimeMs = 96, X = 200 }, new() { TimeMs = 40000, X = 300 }]);
@@ -49,6 +50,50 @@ internal static class AimodReportTests
         Check(!Aimod.Analyze(medium).Any(i => i.Code is "muchKiai" or "muchKiaiTv"), "Stable does not apply Kiai ratios between 90 and 180 seconds");
         medium.TimingPoints.Add(new() { TimeMs = -500, BeatLengthMs = -100, Uninherited = false });
         Check(Aimod.Analyze(medium).Any(i => i.Code == "inheritedBeforeTiming"), "Inherited timing requires a preceding red point");
+    }
+
+    private static void OverlapBoundaries()
+    {
+        var map = new MapDocument { SliderMultiplier = 1 };
+        map.TimingPoints.Add(new() { BeatLengthMs = 500 });
+        var slider = new ImportedSlider { TimeMs = 1000, PixelLength = 100.3, SpanCount = 2 };
+        slider.ControlPoints.AddRange([new(0, 192), new(200, 192)]);
+        map.ImportedSliders.Add(slider);
+        var fruit = new Fruit { TimeMs = 2001 };
+        map.Fruits.Add(fruit);
+        // Two 501.5 ms spans end at 2003; the head alone is nowhere near the next fruit.
+        var issue = Aimod.Analyze(map).Single(i => i.Code == "overlap");
+        Check(issue.TimeMs == 2002 && issue.ObjectIds!.ToHashSet().SetEquals([slider.Id, fruit.Id]),
+            "Repeated slider tail overlap locates the integer midpoint and selects both source objects");
+        slider.SpanCount = 1; slider.PixelLength = 100.19;
+        fruit.TimeMs = 1510;
+        Check(!Aimod.Analyze(map).Any(i => i.Code == "overlap"), "A fractional tail at 1500.95 truncates before the strict 10 ms test");
+        fruit.TimeMs = 1509;
+        Check(Aimod.Analyze(map).Single(i => i.Code == "overlap").TimeMs == 1505,
+            "Nine milliseconds reports a midpoint rounded toward the next start");
+        fruit.TimeMs = 1499;
+        Check(Aimod.Analyze(map).Single(i => i.Code == "overlap").TimeMs == 1499,
+            "One millisecond of tail overlap remains an error");
+    }
+
+    public static void Ethanol(string path)
+    {
+        var map = OsuBeatmapReader.ReadFile(path);
+        var before = map.DeepClone();
+        var report = Aimod.Analyze(map).Concat(Aimod.AnalyzeResources(map)).ToArray();
+        (string Code, int Time)[] expected = [("overlap", 34472), ("overlap", 118661),
+            ("unsnappedEnd", 119410), ("unsnappedEnd", 160522), ("unsnappedEnd", 160902), ("shortKiai", 195351)];
+        Check(report.Select(i => (i.Code, (int)i.TimeMs!)).SequenceEqual(expected), "All six Ethanol messages and timestamps match stable");
+        Check(report.Count(i => i.Severity == AimodSeverity.Warning) == 4
+            && report.Count(i => i.Severity == AimodSeverity.Error) == 2, "Ethanol has four warnings and two errors");
+        Check(report.Count(i => i.Category == AimodCategory.Compose) == 5
+            && report.Count(i => i.Category == AimodCategory.Timing) == 1, "Ethanol category totals");
+        foreach (var (first, second) in new[] { (34086d, 34471d), (117350d, 117913d) })
+            Check(report.Any(i => i.Code == "overlap" && i.ObjectIds!.ToHashSet().SetEquals(
+                map.ImportedSliders.Where(s => s.TimeMs == first || s.TimeMs == second).Select(s => s.Id))),
+                "Ethanol overlap selects the two original sliders");
+        Check(before.ContentEquals(map), "Ethanol remains unchanged");
+        Console.WriteLine("PASS Ethanol: 6 results, 5 Compose, 1 Timing, 4 warnings, 2 errors; all messages and timestamps match.");
     }
 
     public static void TwinBloom(string path)

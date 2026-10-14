@@ -40,7 +40,7 @@ public static partial class Aimod
         }
         foreach (var overlap in FindOverlaps(map))
             Add(AimodCategory.Compose, AimodSeverity.Error, overlap.FirstTimeMs == overlap.SecondTimeMs ? "simultaneous" : "overlap",
-                overlap.FirstTimeMs, [.. Ids(overlap.FirstId), .. Ids(overlap.SecondId)]);
+                overlap.TimeMs, [.. Ids(overlap.FirstId), .. Ids(overlap.SecondId)]);
         foreach (var fruit in map.Fruits) Snap(fruit.TimeMs, fruit.Id, false);
         foreach (var slider in map.ImportedSliders)
         {

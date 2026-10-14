@@ -1,6 +1,7 @@
 using FruitsAtelier.Core;
 
 if (args.Length == 2 && args[0] == "--aimod-twin-bloom") { AimodReportTests.TwinBloom(args[1]); return 0; }
+if (args.Length == 2 && args[0] == "--aimod-ethanol") { AimodReportTests.Ethanol(args[1]); return 0; }
 if (args.Contains("--aimod-check")) { AimodTests.Run(); AimodReportTests.Run(); Console.WriteLine("PASS AiMod rules"); return 0; }
 
 if (args.Length >= 2 && args[0] == "--aimod-report")
@@ -49,7 +50,7 @@ var tests = new (string Name, Action Run)[]
     ("Source section snapshots detect all writes, undo and project round trips", SourceSectionTests.SnapshotsAndWrites),
     ("Breaks and bookmarks edit source sections and survive history", TimelineMetadataTests.Run),
     ("AiMod report rules, resources and stable timing", AimodReportTests.Run),
-    ("AiMod finds adjacent object starts strictly below 10 ms without changing content", AimodTests.Run),
+    ("AiMod finds adjacent object boundaries strictly below 10 ms without changing content", AimodTests.Run),
     ("Prepared curve queries exactly match independent repeated segment evaluation", CurveEvaluationTests.Run),
     ("Grid fractions and measure starts follow active meter changes", TimingLookupTests.SubdivisionsAndMeasures),
     ("Timing lookup preserves boundary precedence and owns its snapshot", TimingLookupTests.BoundariesAndSnapshot),

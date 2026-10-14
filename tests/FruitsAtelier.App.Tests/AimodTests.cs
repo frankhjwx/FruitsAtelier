@@ -27,7 +27,7 @@ internal static class AimodTests
                 var overlapRow = ui.View.AimodRowBounds(0);
                 ui.View.PointerDown(overlapRow.Right - 10, overlapRow.Y + 10, 0, false, false);
                 ui.View.PointerUp(overlapRow.Right - 10, overlapRow.Y + 10, 0); ui.Key(13);
-                Check(ui.View.AimodVisible && ui.View.PlayheadMs == 1000
+                Check(ui.View.AimodVisible && ui.View.PlayheadMs == 1003
                     && ui.View.SelectedObjectIds.ToHashSet().SetEquals(map.Fruits.Select(f => f.Id)), "Error must locate and select both objects.");
                 Check(map.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty, "Navigation must not edit content.");
                 ui.Key(46);
@@ -62,7 +62,7 @@ internal static class AimodTests
                 var firstRow = ui.View.AimodRowBounds(0);
                 ui.View.PointerDown(firstRow.Right - 10, firstRow.Y + 10, 0, false, false);
                 ui.View.PointerUp(firstRow.Right - 10, firstRow.Y + 10, 0); ui.Key('C', ctrl: true);
-                Check(copied.StartsWith(L.Get("aimod.columnTime") + "\t") && copied.Contains(L.Get("aimod.overlap")) && copied.Contains("00:01:000") && ui.View.AimodVisible, "Time is first and selected rows copy complete values without navigating");
+                Check(copied.StartsWith(L.Get("aimod.columnTime") + "\t") && copied.Contains(L.Get("aimod.overlap")) && copied.Contains("00:01:003") && ui.View.AimodVisible, "Time is first and selected rows copy complete values without navigating");
                 var secondRow = ui.View.AimodRowBounds(1);
                 ui.View.PointerDown(secondRow.X + 15, secondRow.Y + 10, 0, true, false);
                 ui.View.PointerUp(secondRow.X + 15, secondRow.Y + 10, 0); ui.Key('C', ctrl: true);

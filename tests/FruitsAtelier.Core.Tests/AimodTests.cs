@@ -16,9 +16,9 @@ internal static class AimodTests
         map.Fruits.Add(new() { TimeMs = 3000, X = 200 });
         var before = map.DeepClone();
         var errors = Aimod.FindOverlaps(map);
-        if (errors.Count != 4 || errors[0].SecondTimeMs - errors[0].FirstTimeMs >= 10
+        if (errors.Count != 5 || errors[0].SecondTimeMs - errors[0].FirstTimeMs >= 10
             || errors[2].FirstId != track.Id || errors[2].SecondId != imported.Id
-            || errors[3].SecondId != banana.Id || errors.Any(e => e.SecondTimeMs == 3000)
+            || errors[3].SecondId != banana.Id || errors[4].FirstId != banana.Id || errors[4].TimeMs != 3000
             || !before.ContentEquals(map)) throw new Exception("AiMod scope, strict threshold, chronological order or read-only behavior changed.");
         var dense = new MapDocument();
         for (int i = 0; i < 10000; i++) dense.Fruits.Add(new() { TimeMs = 1000 });
