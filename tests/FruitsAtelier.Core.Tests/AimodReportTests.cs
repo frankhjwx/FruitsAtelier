@@ -99,6 +99,13 @@ internal static class AimodReportTests
         File.WriteAllText(Path.Combine(root, "broken.mp4"), "invalid video");
         map.OriginalSections.Single(s => s.Name == "Events").Lines.Add("Video,0,broken.mp4");
         Check(Aimod.AnalyzeResources(map).Any(i => i.Code == "unreadableMedia"), "Unreadable video does not suppress other findings");
+        File.WriteAllBytes(Path.Combine(root, "Video.flv"), [70, 76, 86, 1, 1, 0, 0, 0, 9, 0, 0, 0, 0]);
+        map.OriginalSections.Single(s => s.Name == "Events").Lines.Add("Video,0,Video.flv");
+        Check(!Aimod.AnalyzeResources(map).Any(i => i.Code == "unreadableMedia" && (string)i.Arguments[0] == "Video.flv"),
+            "Unsupported video formats are skipped");
+        SongSetup.Set(map, "General", "AudioFilename", "Video.flv");
+        Check(Aimod.AnalyzeResources(map).Any(i => i.Code == "unreadableMedia" && (string)i.Arguments[0] == "Video.flv"),
+            "Unsupported audio still reports unreadable metadata");
         File.WriteAllBytes(Path.Combine(root, "broken.mp4"), []);
         File.WriteAllBytes(Path.Combine(root, "video.avi"), Video());
         map.OriginalSections.Single(s => s.Name == "Events").Lines.Add("Video,0,video.avi");

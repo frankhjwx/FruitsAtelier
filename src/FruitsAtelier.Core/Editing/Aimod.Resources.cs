@@ -50,7 +50,7 @@ public static partial class Aimod
             {
                 if (VideoDimensionIssue(properties.VideoWidth, properties.VideoHeight) is string code)
                     issues.Add(new(AimodCategory.Design, AimodSeverity.Warning, code));
-            });
+            }, skipUnsupportedVideo: true);
         if (!string.IsNullOrEmpty(audio) && File.Exists(Path.Combine(root, audio)))
             ReadMedia(audio, properties =>
             {
@@ -100,9 +100,10 @@ public static partial class Aimod
             }
         return issues;
 
-        void ReadMedia(string name, Action<TagLib.Properties> inspect)
+        void ReadMedia(string name, Action<TagLib.Properties> inspect, bool skipUnsupportedVideo = false)
         {
             try { using var media = TagLib.File.Create(Path.Combine(root, name)); inspect(media.Properties); }
+            catch (TagLib.UnsupportedFormatException) when (skipUnsupportedVideo) { }
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or TagLib.CorruptFileException or TagLib.UnsupportedFormatException)
             { issues.Add(new(AimodCategory.Design, AimodSeverity.Warning, "unreadableMedia", Arguments: [name])); }
         }
