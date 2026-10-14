@@ -12,7 +12,7 @@ public sealed partial class EditorView
         public DockPanel Active = panel;
         public bool Collapsed = true;
         public float Width = width;
-        public float TabScroll;
+        public float TabScroll, TabViewportWidth;
         public DockPanel? Revealed;
     }
     private sealed class DockWorkspace
@@ -49,7 +49,8 @@ public sealed partial class EditorView
     private int dockReorderIndex;
     private readonly List<(DockPanel Panel, Rect Bounds)> dockOriginalTabs = [];
     private const float MinimumDockWidth = 180;
-    private float MaximumDockWidth => Math.Max(MinimumDockWidth, (width - 109 - (MinimumPlayfieldWidth + 198)) / 2);
+    private float AvailableDockWidth => Math.Max(24, width - 109 - (MinimumPlayfieldWidth + 198));
+    private float MaximumDockWidth => Math.Max(MinimumDockWidth, width * .45f);
     internal Rect DockResizeBounds(bool left) => left ? leftDockResizeBounds : rightDockResizeBounds;
     private bool DockReordering => dockDragging && dockPressed is { } panel
         && DockDropSide(mouseX, mouseY) is { } left
@@ -118,15 +119,27 @@ public sealed partial class EditorView
 
     private void LayoutDockPanels()
     {
-        const float minimumCanvasWidth = MinimumPlayfieldWidth + 198;
         var state = DockWorkspaceState;
-        float available = Math.Max(24, width - 109 - minimumCanvasWidth);
+        float available = AvailableDockWidth;
         bool leftOpen = !state.Left.Collapsed && state.Left.Panels.Count > 0;
         bool rightOpen = TimingPageVisible || !state.Right.Collapsed && state.Right.Panels.Count > 0;
         float leftWidth = leftOpen ? Math.Clamp(state.Left.Width, MinimumDockWidth, MaximumDockWidth) : 24;
         float rightWidth = rightOpen ? TimingPageVisible
             ? Math.Min(Math.Max(MinimumPreviewWidth, state.Right.Width), Math.Max(0, available - leftWidth))
             : Math.Clamp(state.Right.Width, MinimumDockWidth, MaximumDockWidth) : 0;
+        if (!TimingPageVisible && leftWidth + rightWidth > available)
+        {
+            if (dockResizeLeft)
+            {
+                rightWidth = rightOpen ? Math.Max(MinimumDockWidth, available - leftWidth) : 0;
+                leftWidth = leftOpen ? Math.Max(MinimumDockWidth, Math.Min(leftWidth, available - rightWidth)) : 24;
+            }
+            else
+            {
+                leftWidth = leftOpen ? Math.Max(MinimumDockWidth, available - rightWidth) : 24;
+                rightWidth = rightOpen ? Math.Max(MinimumDockWidth, Math.Min(rightWidth, available - leftWidth)) : 0;
+            }
+        }
         float bodyHeight = Math.Max(180, height - 204);
         leftPanel = new(0, 84, leftWidth, bodyHeight);
         rightPanel = new(width - (rightOpen ? rightWidth : 340), 84, rightOpen ? rightWidth : 340, rightOpen ? bodyHeight : 38);
@@ -161,12 +174,12 @@ public sealed partial class EditorView
                 float arrows = overflow ? 24 : 0;
                 var strip = new Rect(bounds.X + 6 + arrows, bounds.Y + 6, bounds.Width - 12 - arrows * 2, 32);
                 group.TabScroll = Math.Clamp(group.TabScroll, 0, Math.Max(0, total - strip.Width));
-                if (group.Revealed != group.Active && !dockDragging)
+                if ((group.Revealed != group.Active || group.TabViewportWidth != strip.Width) && !dockDragging)
                 {
                     float start = panels.TakeWhile(p => p != group.Active).Sum(p => c.MeasureText(DockTitle(p), 12, true) + 24);
                     float end = start + c.MeasureText(DockTitle(group.Active), 12, true) + 24;
                     group.TabScroll = Math.Clamp(start < group.TabScroll ? start : end > group.TabScroll + strip.Width ? end - strip.Width : group.TabScroll, 0, Math.Max(0, total - strip.Width));
-                    group.Revealed = group.Active;
+                    group.Revealed = group.Active; group.TabViewportWidth = strip.Width;
                 }
                 c.Clip(strip);
                 float x = strip.X - group.TabScroll;
@@ -308,6 +321,11 @@ public sealed partial class EditorView
     private void ResizePreviewDock(float x)
     {
         var group = dockResizeLeft ? DockWorkspaceState.Left : DockWorkspaceState.Right;
-        group.Width = Math.Clamp(dockResizeLeft ? x : width - x, MinimumDockWidth, MaximumDockWidth);
+        var other = dockResizeLeft ? DockWorkspaceState.Right : DockWorkspaceState.Left;
+        bool otherOpen = !other.Collapsed && other.Panels.Count > 0;
+        float otherMinimum = otherOpen ? MinimumDockWidth : dockResizeLeft ? 0 : 24;
+        float maximum = Math.Max(MinimumDockWidth, Math.Min(MaximumDockWidth, AvailableDockWidth - otherMinimum));
+        group.Width = Math.Clamp(dockResizeLeft ? x : width - x, MinimumDockWidth, maximum);
+        if (otherOpen) other.Width = Math.Max(MinimumDockWidth, Math.Min(other.Width, AvailableDockWidth - group.Width));
     }
 }

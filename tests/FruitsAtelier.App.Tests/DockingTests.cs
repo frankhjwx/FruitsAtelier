@@ -22,8 +22,16 @@ internal static class DockingTests
                 CheckToolbar();
                 ResizeDock(true, 0); ResizeDock(false, 0);
                 Check(DockWidth(true) == DockWidth(false), "Both docks share the same minimum width");
-                ResizeDock(true, 2000); ResizeDock(false, 2000);
-                Check(DockWidth(true) == DockWidth(false), "Both docks share the same maximum width");
+                ResizeDock(true, 2000);
+                float leftMaximum = DockWidth(true);
+                ResizeDock(false, 2000);
+                Check(Math.Abs(leftMaximum - DockWidth(false)) < .1f, "Both docks can reach the same maximum width");
+                Check(DockWidth(false) >= ui.Width * .44f && DockWidth(true) < leftMaximum,
+                    "Widening the right dock reaches the requested range and narrows the left dock");
+                Check(ui.View.CanvasPlotBounds.Width >= EditorView.MinimumPlayfieldWidth - .1f, "Expanded docks preserve the canvas minimum");
+                ResizeDock(true, 2000);
+                Check(Math.Abs(DockWidth(true) - leftMaximum) < .1f && DockWidth(false) < leftMaximum,
+                    "Widening the left dock reciprocally narrows the right dock");
                 ResizeDock(true, 280); ResizeDock(false, 360);
                 Drag(EditorView.DockPanel.MovementStrain, ui.Width - 80, 200);
                 Check(ui.View.DifficultyCurvePanelBounds.X > ui.Plot.Right && ui.View.DifficultyCurveVisible

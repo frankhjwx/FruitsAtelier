@@ -56,7 +56,6 @@ public sealed partial class EditorView
         this.width = width;
         this.height = height;
         hits.Clear(); fields.Clear();
-        SliderSpeedReadout = null; SliderSpeedReadoutBounds = null;
         LegacyConversionBounds = StreamConversionBounds = default;
         distanceLabelBounds.Clear(); PreviousDistanceFieldBounds = NextDistanceFieldBounds = XCoordinateFieldBounds = null;
         AdvanceCanvasBackgroundDim();
@@ -111,7 +110,6 @@ public sealed partial class EditorView
         {
             DrawSliderHold(c);
             DrawMovementOverlay(c);
-            DrawSliderSpeedReadout(c);
             DrawKiaiBadge(c);
             DrawCanvasBackgroundDim(c);
         }

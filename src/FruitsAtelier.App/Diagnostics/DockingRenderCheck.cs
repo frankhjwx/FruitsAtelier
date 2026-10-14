@@ -103,6 +103,10 @@ internal static class DockingRenderCheck
                 Paint("random-preview");
                 var randomBounds = editor.RandomDockViewport;
                 editor.Wheel(randomBounds.X + 10, randomBounds.Y + 40, -12000, false, false); Paint("random-scrolled");
+                var wideHandle = editor.DockResizeBounds(false);
+                editor.PointerDown(wideHandle.X + 4, wideHandle.Y + 60, 0, false, false);
+                editor.PointerMove(size.Item1 * .55f, wideHandle.Y + 60, false, false);
+                editor.PointerUp(size.Item1 * .55f, wideHandle.Y + 60, 0); Paint("wide-right-dock");
                 void Paint(string? name = null)
                 {
                     canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);

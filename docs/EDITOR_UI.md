@@ -682,18 +682,8 @@ The bottom row displays a compact readout such as **X: 185** for the selected fr
 
 **View → Include tiny droplets** controls whether Movement Analysis connections and DS labels include tiny droplets. It starts off and only changes the analysis display; gameplay hyperdash indicators, snapping, selection locks and beatmap content remain unchanged.
 
-A selected slider or active slider draft shows a compact speed badge beside the
-movement panel. **SV** is the generated slider's inherited SV multiplier relative
-to the map's base SV. **Max DS** is the largest horizontal DS between consecutive
-fruits and droplets within that slider, including its repeated traversals. It uses
-the current conversion's positions and times and the same departure-time base
-velocity as other DS readouts; unrelated objects are excluded. **Include tiny
-droplets** adds tiny droplets to this measurement and changes the label to
-**Max DS (+tiny)**. These are event-to-event speeds, not the curve's instantaneous
-derivative. SV can exceed Max DS because geometric path travel and tiny compensation
-also contribute to the generated slider speed. Values update while drawing and
-dragging; incomplete or failed conversions show a dash. Streams, standalone fruits
-and multiple selected parents do not show this badge. The display is read-only.
+Slider SV and maximum DS are available in Slider Inspector. The movement panel
+shows the previous/next object indicators without a separate slider speed badge.
 
 For a clicked or selected tiny droplet, Prev and Next display movement classifications and DS ratios to its immediate neighbours, including other tiny droplets. A missing neighbour or zero time interval displays a dash. These tiny-droplet distance values are read-only.
 
@@ -828,7 +818,9 @@ the tab strip to reorder it. Empty sides remain drop targets at the window edge.
 Only the side areas accept drops. Escape, lost capture and drops on the canvas
 leave the layout unchanged. The side arrow collapses or expands the whole group;
 both dock groups can be resized at their canvas-facing borders with the same minimum
-and maximum widths, independently of their tabs. Reordering tabs within a group
+and maximum widths, independently of their tabs. Each side can reach 45% of the
+window width. Widening one side beyond the combined dock budget narrows the other
+side down to its minimum; the canvas retains its minimum usable width. Reordering tabs within a group
 previews the resulting order without a dock overlay. Preview options stack vertically
 in narrow docks.
 

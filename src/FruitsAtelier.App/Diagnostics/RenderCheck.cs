@@ -971,11 +971,7 @@ internal static class RenderCheck
             AppLog.Write("Experimental snap native settings and sliders passed at all sizes, DPI values and languages.");
             return;
         }
-        if (Environment.GetCommandLineArgs().Contains("--slider-speed-render-check"))
-        {
-            SliderSpeedRenderCheck.Run(canvas);
-            return;
-        }
+
         if (Environment.GetCommandLineArgs().Contains("--object-snap-render-check"))
         {
             ObjectSnapRenderCheck.Run(canvas);

@@ -93,12 +93,6 @@ the unchecked, scrolled and checked dialog at three sizes and DPI settings under
 It also checks that Confirm presents the destination frame synchronously for
 both setup and editor paths, including low-latency and fullscreen preferences.
 
-`App.Tests --slider-speed-check` checks the Slider SV and maximum DS readout,
-unrestricted editing, repeated paths, tiny inclusion, draft cancellation and undo.
-`FruitsAtelier.App --render-check --slider-speed-render-check` checks selected and
-draft readouts in English and Chinese at two window sizes and three DPI settings,
-with screenshots under `artifacts/tests/slider-speed-native`.
-
 `App.Tests --library-opening-check` verifies that opening a library project while
 the workspace gate is held leaves rendering responsive, blocks duplicate opens
 and competing operations, publishes once, retains the document on failure, and
