@@ -20,7 +20,13 @@ public sealed partial class EditorView
     {
         if (!HasEditorProject || LibraryVisible || IsTestplaying || SynchronizationVisible || !ClipboardInteractionReady) return;
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
-        AimodVisible = true;
+        if (DockPanelExists(DockPanel.Aimod) && !TimingPageVisible)
+        {
+            PanelGroup(DockPanel.Aimod).Active = DockPanel.Aimod;
+            PanelGroup(DockPanel.Aimod).Collapsed = false;
+        }
+        else AimodVisible = true;
+        aimodFocused = true;
         RefreshAimod();
         hits.Clear(); fields.Clear();
     }
@@ -28,6 +34,7 @@ public sealed partial class EditorView
     private void RefreshAimod()
     {
         EnsureConversion();
+        aimodSnapshot = convertedSnapshot;
         AimodErrors = Aimod.FindOverlaps(Document);
         try
         {
@@ -48,77 +55,113 @@ public sealed partial class EditorView
     private void FilterAimod()
     {
         aimodRows = AimodIssues.Where(i => aimodCategory is null || i.Category == aimodCategory).ToArray();
-        aimodFirst = 0;
+        aimodFirst = 0; aimodSelected.Clear(); aimodSelectionAnchor = -1;
     }
 
     private void CloseAimod()
     {
         aimodResourceTask = null; AimodVisible = false; AimodErrors = []; AimodIssues = []; aimodRows = []; aimodFirst = 0;
+        aimodSnapshot = null; aimodFocused = false; aimodGesture = AimodGesture.None; aimodSelected.Clear();
         hits.Clear();
     }
 
     private void LocateAimodIssue(AimodIssue issue)
     {
         if (issue.TimeMs is not double time) return;
-        CloseAimod();
+        if (AimodVisible) CloseAimod();
+        else aimodFocused = false;
         tool = Tool.Select;
         if (issue.ObjectIds is { Length: > 0 } ids) SelectObjects(ids, ids[0]);
         SeekTo(time);
     }
 
+    private void PumpAimodResources()
+    {
+        if (aimodResourceTask is not { IsCompleted: true } completed) return;
+        aimodResourceTask = null;
+        var extra = completed.IsCompletedSuccessfully ? completed.Result
+            : new[] { new AimodIssue(AimodCategory.Design, AimodSeverity.Error, "checkFailed", Arguments: [completed.Exception!.GetBaseException().Message]) };
+        var selected = aimodSelected.Where(i => i < aimodRows.Count).Select(i => aimodRows[i]).ToHashSet();
+        AimodIssues = AimodIssues.Concat(extra).OrderBy(i => i.Category).ThenBy(i => i.TimeMs ?? (i.Code == "previewUnset" ? double.MaxValue : double.MinValue)).ToArray();
+        aimodRows = AimodIssues.Where(i => aimodCategory is null || i.Category == aimodCategory).ToArray();
+        aimodSelected.Clear();
+        for (int i = 0; i < aimodRows.Count; i++) if (selected.Contains(aimodRows[i])) aimodSelected.Add(i);
+    }
+
+    private Rect aimodFloatingBounds;
+    private Rect aimodPanelBounds, aimodTitleBounds, aimodResizeBounds;
+    private MapDocument? aimodSnapshot;
+    private bool aimodFocused;
+    internal bool AimodDocked => PanelVisible(DockPanel.Aimod);
+    internal Rect AimodPanelBounds => aimodPanelBounds;
+
+    private void AttachAimod(bool left)
+    {
+        AimodVisible = false;
+        AddDockPanel(DockPanel.Aimod, left);
+        var group = PanelGroup(DockPanel.Aimod);
+        group.Active = DockPanel.Aimod; group.Collapsed = false;
+        aimodFocused = true; hits.Clear(); fields.Clear();
+    }
+
+    private void DetachAimod()
+    {
+        RemoveDockPanel(DockPanel.Aimod);
+        AimodVisible = true; aimodFocused = true;
+        hits.Clear(); fields.Clear();
+    }
+
     private void DrawAimod(ICanvas c)
     {
         if (!AimodVisible) return;
-        if (aimodResourceTask is { IsCompleted: true } completed)
-        {
-            aimodResourceTask = null;
-            var extra = completed.IsCompletedSuccessfully ? completed.Result
-                : new[] { new AimodIssue(AimodCategory.Design, AimodSeverity.Error, "checkFailed", Arguments: [completed.Exception!.GetBaseException().Message]) };
-            AimodIssues = AimodIssues.Concat(extra).OrderBy(i => i.Category).ThenBy(i => i.TimeMs ?? (i.Code == "previewUnset" ? double.MaxValue : double.MinValue)).ToArray();
-            FilterAimod();
-        }
         hits.Clear(); fields.Clear();
-        float w = Math.Min(860, width - 32), h = Math.Min(540, height - 48);
-        var r = new Rect((width - w) / 2, (height - h) / 2, w, h);
-        c.Fill(new(0, 34, width, height - 34), 0x000000, opacity: .35f);
-        c.Fill(r, Panel, 8); c.Stroke(r, Grid, radius: 8);
-        c.Text(L.Get("aimod.title"), r.X + 20, r.Y + 17, 18, Foreground, w - 200, true);
-        Button(c, new(r.Right - 184, r.Y + 10, 80, 32), L.Get("aimod.refresh"), RefreshAimod);
-        Button(c, new(r.Right - 96, r.Y + 10, 80, 32), L.Get("ui.close"), CloseAimod);
-        c.Text(L.Get("aimod.reportSummary", CurrentDifficultyName, AimodIssues.Count(i => i.Severity == AimodSeverity.Warning), AimodIssues.Count(i => i.Severity == AimodSeverity.Error)), r.X + 20, r.Y + 57, 14,
-            AimodErrors.Count > 0 ? Error : Foreground, w - 40);
-        Button(c, new(r.X + 16, r.Y + 82, 260, 28), L.Get(aimodDistanceSnap ? "aimod.distanceOn" : "aimod.distanceOff"),
-            () => { aimodDistanceSnap = !aimodDistanceSnap; RefreshAimod(); });
-        if (aimodResourceTask is not null)
-            c.Text(L.Get("aimod.checkingResources"), r.X + 290, r.Y + 88, 12, Muted, w - 310);
+        float w = Math.Min(aimodFloatingBounds.Width > 0 ? aimodFloatingBounds.Width : 900, width - 32);
+        float h = Math.Min(aimodFloatingBounds.Height > 0 ? aimodFloatingBounds.Height : 560, height - 48);
+        float x = aimodFloatingBounds.Width > 0 ? Math.Clamp(aimodFloatingBounds.X, 0, width - w) : (width - w) / 2;
+        float y = aimodFloatingBounds.Height > 0 ? Math.Clamp(aimodFloatingBounds.Y, 34, height - h) : (height - h) / 2;
+        aimodFloatingBounds = new(x, y, w, h);
+        c.Fill(new(0, 34, width, height - 34), 0x000000, opacity: .25f);
+        c.Fill(aimodFloatingBounds, Panel, 6); c.Stroke(aimodFloatingBounds, Grid, radius: 6);
+        aimodTitleBounds = new(x + 8, y + 4, w - 92, 32);
+        c.Text(L.Get("aimod.title") + " · " + CurrentDifficultyName, x + 16, y + 10, 16, Foreground, w - 120, true);
+        Button(c, new(x + w - 80, y + 4, 72, 30), L.Get("ui.close"), CloseAimod);
+        DrawAimodPanel(c, new(x + 12, y + 40, w - 24, h - 52), false);
+        aimodResizeBounds = new(x + w - 14, y + h - 14, 14, 14);
+        c.Line(x + w - 12, y + h - 3, x + w - 3, y + h - 12, Muted);
+    }
+
+    private void DrawAimodPanel(ICanvas c, Rect r, bool docked)
+    {
+        PumpAimodResources();
+        aimodPanelBounds = r;
+        float buttonWidth = Math.Min(100, (r.Width - 8) / 3);
+        Button(c, new(r.X, r.Y, buttonWidth, 28), L.Get("aimod.refresh"), RefreshAimod);
+        Button(c, new(r.X + buttonWidth + 4, r.Y, buttonWidth, 28), L.Get("aimod.copy"), CopyAimodSelection, enabled: aimodSelected.Count > 0);
+        Button(c, new(r.X + (buttonWidth + 4) * 2, r.Y, buttonWidth, 28), L.Get(docked ? "aimod.detach" : "aimod.attach"),
+            () => { if (docked) DetachAimod(); else AttachAimod(false); }, enabled: !TimingPageVisible);
+        c.Text(L.Get("aimod.counts", AimodIssues.Count(i => i.Severity == AimodSeverity.Warning), AimodIssues.Count(i => i.Severity == AimodSeverity.Error)),
+            r.X + 4, r.Y + 34, 12, Foreground, r.Width - 8);
+        if (r.Width > 560)
+            Button(c, new(r.Right - 240, r.Y + 28, 240, 26), L.Get(aimodDistanceSnap ? "aimod.distanceOn" : "aimod.distanceOff"),
+                () => { aimodDistanceSnap = !aimodDistanceSnap; RefreshAimod(); });
+        int columns = r.Width < 240 ? 2 : r.Width < 600 ? 3 : 6;
+        int tabRows = 6 / columns;
         for (int tab = 0; tab < 6; tab++)
         {
             AimodCategory? category = tab == 0 ? null : (AimodCategory)(tab - 1);
             int count = category is null ? AimodIssues.Count : AimodIssues.Count(i => i.Category == category);
-            Button(c, new(r.X + 16 + tab * (w - 32) / 6, r.Y + 116, (w - 32) / 6 - 3, 28),
-                L.Get("aimod.tab" + (category?.ToString() ?? "All"), count), () => { aimodCategory = category; FilterAimod(); }, active: category == aimodCategory);
+            Button(c, new(r.X + tab % columns * r.Width / columns, r.Y + 58 + tab / columns * 28, r.Width / columns - 2, 26),
+                L.Get("aimod.tab" + (category?.ToString() ?? "All"), count), () => { aimodCategory = category; FilterAimod(); }, active: category == aimodCategory,
+                fontSize: r.Width / columns < 100 ? 10 : 12, textPadding: 5, textRightPadding: 3);
         }
-        aimodListBounds = new(r.X + 16, r.Y + 154, w - 32, h - 212);
-        aimodVisibleRows = Math.Max(1, (int)(aimodListBounds.Height / 44));
-        aimodFirst = Math.Clamp(aimodFirst, 0, Math.Max(0, aimodRows.Count - aimodVisibleRows));
-        if (aimodRows.Count == 0)
-            c.Text(L.Get("aimod.empty"), aimodListBounds.X + 12, aimodListBounds.Y + 16, 14, Foreground, aimodListBounds.Width - 24);
-        for (int row = 0; row < aimodVisibleRows && aimodFirst + row < aimodRows.Count; row++)
-        {
-            var issue = aimodRows[aimodFirst + row];
-            var bounds = new Rect(aimodListBounds.X, aimodListBounds.Y + row * 44, aimodListBounds.Width, 42);
-            c.Fill(bounds, bounds.Contains(mouseX, mouseY) ? Surface : Panel, 3);
-            uint colour = issue.Severity == AimodSeverity.Error ? Error : issue.Severity == AimodSeverity.Warning ? 0xE3AD42u : Foreground;
-            c.Text(issue.Message, bounds.X + 10, bounds.Y + 4, 13, colour, bounds.Width - 20);
-            c.Text(L.Get("aimod.severity" + issue.Severity), bounds.X + 10, bounds.Y + 23, 11, colour, 110);
-            if (issue.TimeMs is double time)
-                c.Text(Time(Math.Truncate(time)), bounds.X + 130, bounds.Y + 23, 12, Accent, bounds.Width - 140);
-            hits.Add(new(bounds, () => LocateAimodIssue(issue), true));
-        }
-        Button(c, new(r.X + 16, r.Bottom - 44, 44, 30), "‹", () => aimodFirst = Math.Max(0, aimodFirst - aimodVisibleRows), enabled: aimodFirst > 0);
-        Button(c, new(r.X + 66, r.Bottom - 44, 44, 30), "›", () => aimodFirst += aimodVisibleRows,
-            enabled: aimodFirst + aimodVisibleRows < aimodRows.Count);
-        c.Text(L.Get("aimod.range", aimodRows.Count == 0 ? 0 : aimodFirst + 1,
-            Math.Min(aimodRows.Count, aimodFirst + aimodVisibleRows), aimodRows.Count), r.X + 124, r.Bottom - 36, 12, Muted, w - 144);
+        float tableY = r.Y + 64 + tabRows * 28;
+        DrawAimodTable(c, new(r.X, tableY, r.Width, Math.Max(40, r.Bottom - tableY - 62)));
+        Button(c, new(r.X, r.Bottom - 56, 28, 26), "‹", () => aimodFirst = Math.Max(0, aimodFirst - aimodVisibleRows), enabled: aimodFirst > 0);
+        Button(c, new(r.X + 30, r.Bottom - 56, 28, 26), "›", () => aimodFirst += aimodVisibleRows, enabled: aimodFirst + aimodVisibleRows < aimodRows.Count);
+        c.Text(L.Get("aimod.range", aimodRows.Count == 0 ? 0 : aimodFirst + 1, Math.Min(aimodRows.Count, aimodFirst + aimodVisibleRows), aimodRows.Count),
+            r.X + 64, r.Bottom - 50, 12, Muted, r.Width - 68);
+        string status = aimodResourceTask is not null ? "aimod.checkingResources" : aimodSnapshot is null || !ReferenceEquals(aimodSnapshot, convertedSnapshot)
+            ? "aimod.refreshHint" : "aimod.selectHint";
+        c.Text(L.Get(status), r.X + 4, r.Bottom - 22, 11, Muted, r.Width - 8);
     }
 }

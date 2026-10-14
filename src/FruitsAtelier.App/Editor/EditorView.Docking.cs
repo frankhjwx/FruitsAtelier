@@ -5,7 +5,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector }
+    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector, Aimod }
     private sealed class DockGroup(DockPanel panel, float width)
     {
         public readonly List<DockPanel> Panels = [panel];
@@ -66,7 +66,7 @@ public sealed partial class EditorView
     internal Rect DockTabBounds(DockPanel panel) => dockTabs.FirstOrDefault(t => t.Panel == panel).Bounds;
     private static string DockTitle(DockPanel panel) => L.Get(panel switch
     {
-        DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
+        DockPanel.Aimod => "aimod.title", DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
         DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title",
         DockPanel.RandomizeDroplets => "randomize.title", DockPanel.SliderInspector => "inspector.title", _ => "difficulty.curve.title"
     });
@@ -85,6 +85,7 @@ public sealed partial class EditorView
         if (TimingPageVisible || DockPanelExists(panel)) return;
         var group = left ? DockWorkspaceState.Left : DockWorkspaceState.Right;
         group.Panels.Add(panel); group.Active = panel; group.Collapsed = false;
+        if (panel == DockPanel.Aimod) RefreshAimod();
     }
     private void ResetDockLayout()
     {
@@ -227,6 +228,8 @@ public sealed partial class EditorView
                     DrawSliderInspector(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                 else if (group.Active == DockPanel.SongSetup)
                     DrawSongDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                else if (group.Active == DockPanel.Aimod)
+                    DrawAimodPanel(c, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 50)), true);
                 else if (group.Active == DockPanel.Notes)
                     DrawNotesDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                 else
@@ -298,6 +301,7 @@ public sealed partial class EditorView
                 if (index >= 0) destination.Panels.Insert(index, panel); else destination.Panels.Add(panel);
                 destination.Active = panel; destination.Collapsed = false;
             }
+            else if (panel == DockPanel.Aimod) DetachAimod();
         }
         dockPressed = null; dockDragging = false;
     }

@@ -1415,5 +1415,14 @@
   "aimod.largeBackground": "Background image is larger than 2560x1440.",
   "aimod.unreadableImage": "Could not read image: {0}",
   "aimod.checkFailed": "Could not check the beatmap: {0}",
-  "aimod.checkingResources": "Checking resources…"
+  "aimod.checkingResources": "Checking resources…",
+  "aimod.copy": "Copy",
+  "aimod.attach": "Attach",
+  "aimod.detach": "Float",
+  "aimod.counts": "Warnings: {0}    Errors: {1}",
+  "aimod.columnSeverity": "Level",
+  "aimod.columnInformation": "Information",
+  "aimod.columnTime": "Time",
+  "aimod.refreshHint": "Refresh to check this difficulty.",
+  "aimod.selectHint": "Select rows to copy · Click a time or press Enter to locate"
 }

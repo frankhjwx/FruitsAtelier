@@ -2,7 +2,7 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
-if (args.Contains("--aimod-check")) { AimodTests.Run(); ObjectStructureTests.StreamsAndAnchors(); Console.WriteLine("PASS AiMod UI and shortcut"); return 0; }
+if (args.Contains("--aimod-check")) { AimodTests.Run(); AimodTests.TableAndDock(); ObjectStructureTests.StreamsAndAnchors(); Console.WriteLine("PASS AiMod UI, table, docking and shortcut"); return 0; }
 
 if (args.Contains("--group-drag-boundary-check")) { GroupDragBoundaryTests.Run(); Console.WriteLine("PASS Group drag boundaries, conversion, export and undo"); return 0; }
 
@@ -163,6 +163,7 @@ var tests = new (string Name, Action Run)[]
     ("Slider drafts defer full-map conversion and publish only matching validated snapshots", DraftConversionTests.Run),
     ("Synchronization category tabs explain object changes and preserve choices", SyncTabsTests.Run),
     ("AiMod checks object starts, isolates input, navigates errors and preserves undo", AimodTests.Run),
+    ("AiMod table resizes, reorders, copies and docks without content edits", AimodTests.TableAndDock),
     ("Background workspace saves isolate input and acknowledge only their snapshot", PerformanceSchedulingTests.Save),
     ("Blocked operations show synchronization progress only on demand", SynchronizationWaitTests.Run),
     ("Native testplay copies state at render while retaining the driver clock", PerformanceSchedulingTests.NativeTestplayCapture),

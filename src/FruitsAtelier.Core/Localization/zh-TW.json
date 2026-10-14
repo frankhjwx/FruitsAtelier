@@ -1415,5 +1415,14 @@
   "aimod.largeBackground": "背景图片大于 2560×1440。",
   "aimod.unreadableImage": "无法读取图片：{0}",
   "aimod.checkFailed": "无法检查谱面：{0}",
-  "aimod.checkingResources": "正在检查资源……"
+  "aimod.checkingResources": "正在检查资源……",
+  "aimod.copy": "複製",
+  "aimod.attach": "停靠",
+  "aimod.detach": "浮動",
+  "aimod.counts": "警告：{0}    錯誤：{1}",
+  "aimod.columnSeverity": "級別",
+  "aimod.columnInformation": "資訊",
+  "aimod.columnTime": "時間",
+  "aimod.refreshHint": "請重新整理以檢查目前難度。",
+  "aimod.selectHint": "選取行可複製 · 點擊時間或按 Enter 定位"
 }

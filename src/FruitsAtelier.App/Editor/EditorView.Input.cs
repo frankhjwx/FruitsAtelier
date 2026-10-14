@@ -29,13 +29,7 @@ public sealed partial class EditorView
             if (button == 0 && HeaderNavigationBounds.Contains(x, y)) ShowLibrary();
             NotifySynchronizationBlocked(); return;
         }
-        if (AimodVisible)
-        {
-            mouseX = x; mouseY = y;
-            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
-                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
-            return;
-        }
+        if (AimodVisible && AimodPointer(x, y, button, shift, ctrl)) return;
         placementCtrl = ctrl;
         if (IsTestplaying) { TestplayPointerDown(x, y, button); return; }
         if (ErrorVisible || DiscardConfirmationVisible)
@@ -123,6 +117,7 @@ public sealed partial class EditorView
         if (drag != DragKind.None) return;
         if (BeginDockHorizontal(x, y, button)) return;
         if (BeginDockPointer(x, y, button)) return;
+        if (AimodPointer(x, y, button, shift, ctrl)) return;
         if (RandomDockPointer(x, y, button)) return;
         if (DockContentInputAvailable && PanelVisible(DockPanel.SliderInspector) && menu < 0 && contextItems.Count == 0 && inspectorBounds.Contains(x, y))
         {
@@ -437,6 +432,7 @@ public sealed partial class EditorView
 
     private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (aimodGesture != AimodGesture.None) { MoveAimodPointer(x, y); return; }
         if (notesSelecting) { PositionNotesCaret(x, y, true); return; }
         if (dockPressed is not null) { MoveDockPointer(x, y); return; }
         if (AcknowledgementsVisible)
@@ -585,6 +581,7 @@ public sealed partial class EditorView
 
     private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (aimodGesture != AimodGesture.None && button == 0) { EndAimodPointer(x, y); return; }
         if (notesSelecting && button == 0) { PositionNotesCaret(x, y, true); notesSelecting = false; return; }
         if (dockPressed is not null && button == 0) { EndDockPointer(x, y); return; }
         if (AcknowledgementsVisible) { acknowledgementsScrollDragging = false; return; }
@@ -704,6 +701,12 @@ public sealed partial class EditorView
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
         if (AcknowledgementsVisible) return;
+        if (AimodVisible || AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
+        {
+            var row = aimodRowBounds.FirstOrDefault(r => r.Bounds.Contains(x, y));
+            if (row.Bounds.Height > 0) LocateAimodIssue(aimodRows[row.Index]);
+            return;
+        }
         if (CanUseCanvasBackgroundDim && CanvasBackgroundDimBounds.Contains(x, y)) return;
         if (HitsoundCopierVisible) { PointerDown(x, y, 0, shift, ctrl); return; }
 
@@ -849,9 +852,11 @@ public sealed partial class EditorView
                 0, Math.Max(0, L.AvailableLanguages.Count - languageVisibleRows));
             return;
         }
-        if (AimodVisible)
+        if (AimodVisible || AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
-            if (aimodListBounds.Contains(x, y)) aimodFirst = Math.Clamp(aimodFirst - (int)(delta / 120) * 3,
+            if (aimodScrollTrack.Contains(x, y) || shiftHeld)
+                aimodScrollX = Math.Clamp(aimodScrollX - delta / 120 * 48, 0, Math.Max(0, aimodColumns.Sum(col => aimodColumnWidths[col]) - aimodListBounds.Width));
+            else if (aimodListBounds.Contains(x, y)) aimodFirst = Math.Clamp(aimodFirst - (int)(delta / 120) * 3,
                 0, Math.Max(0, aimodRows.Count - aimodVisibleRows));
             return;
         }
@@ -1184,7 +1189,7 @@ public sealed partial class EditorView
         if (SongSetupVisible) { SongSetupKey(virtualKey, ctrl, shift); return; }
         if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl, shift); return; }
         if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
-        if (AimodVisible) { if (virtualKey == 27) CloseAimod(); return; }
+        if (AimodKey(virtualKey, ctrl, shift)) return;
         if (BananaEditVisible) { BananaEditKey(virtualKey, ctrl, shift); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey, ctrl, shift); return; }
         if (PatternDockKey(virtualKey, ctrl, shift)) return;
@@ -1415,7 +1420,7 @@ public sealed partial class EditorView
     public void CancelInteraction(bool preserveTestplay = false)
     {
         EndTimelineScrub();
-        notesSelecting = false;
+        notesSelecting = false; CancelAimodGesture(); aimodFocused = false;
         dockPressed = null; dockDragging = false;
         canvasScaleAxis = -1;
         acknowledgementsScrollDragging = false;

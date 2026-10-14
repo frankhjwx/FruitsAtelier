@@ -87,6 +87,7 @@ public sealed partial class EditorView
 
     private void ResetDifficultyView()
     {
+        CloseAimod();
         ResetDeferredConversion();
         pauseSnapDivisor = null;
         nextFruitNewCombo = false;

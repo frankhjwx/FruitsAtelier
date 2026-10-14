@@ -93,14 +93,28 @@ Replay changes also remain a draft until Finish.
 
 Open **Edit → AiMod** or press **Ctrl+Shift+A** to inspect the current difficulty.
 The report separates information, warnings and errors into Compose, Design,
-Timing, Meta and Mapset categories. Click a timed result to jump to its position;
-object diagnostics also select the corresponding editable objects. **Refresh**
-reruns the check. Paging and the mouse wheel browse longer lists.
+Timing, Meta and Mapset categories. Drag column boundaries to resize them, or drag
+headers to reorder columns. Long messages wrap; the horizontal scrollbar and
+Shift+wheel reveal columns outside a narrow panel.
 
-Analysis uses the exported Catch objects, including generated Stream/Stack
-objects, and does not modify content or undo history. Resource checks run in the
-background. Close the dialog before editing. See [AiMod checks](AIMOD.md) for the
-rule scope and stable compatibility details.
+Click rows to select them, use Ctrl-click or Shift-click for multiple rows, and
+press **Ctrl+C** or **Copy** to copy complete values as tab-separated text with
+headers. **Ctrl+A** selects all rows in the current category. Click a timestamp,
+double-click a row or press Enter to locate it; object findings also select their
+editable parents. **Refresh** (or F5 while the report has focus) reruns checks.
+Paging and the mouse wheel browse longer reports.
+
+**Attach** puts AiMod in a side dock, where the editor remains usable. Drag its
+tab to either dock, reorder it with other tabs, or use **Float** to return to a
+floating panel. Drag the floating title to move it or onto a side dock to attach;
+drag its lower-right corner to resize. Dock placement persists with the workspace
+layout. Ctrl+Shift+A focuses and refreshes an attached report. Editing makes the
+report a stale snapshot; its footer asks for a refresh. Switching difficulties
+clears the old results.
+
+Analysis uses exported Catch objects, including generated Stream/Stack objects,
+and does not modify content or undo history. Resource checks run in the background.
+See [AiMod checks](AIMOD.md) for the rule scope and stable compatibility details.
 
 See the [shortcut manual](KEY_BINDINGS.md) for the complete keyboard reference and the [compatibility review](KEY_BINDINGS_REVIEW.md) for known differences and gaps.
 
