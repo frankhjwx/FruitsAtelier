@@ -21,7 +21,7 @@ internal static class SongSetupTests
                 SongSetup.Set(second, "Metadata", "Source", "Original source");
                 var ui = new Ui(false); ui.Resize(980, 620);
                 ui.View.LoadProject(BeatmapProject.FromDocuments([map, second])); ui.Paint();
-                ui.ClickText(L.Get("song.title"));
+                ui.View.OpenSongSetup(); ui.Paint();
                 var romanised = ui.View.SongSetupFieldBounds["Artist"];
                 Check(!ui.Canvas.Outlines.Any(outline => outline.Bounds == romanised)
                     && ui.Canvas.Texts.Any(text => text.Value == "Artist" && text.Color == 0xB8C2CE),
@@ -36,7 +36,7 @@ internal static class SongSetupTests
                 ui.Key('F'); ui.ClickMap(100, 250); ui.Key('1');
                 Check(ui.View.Document.Fruits.Count == 1, "Create an independent difficulty undo step");
                 ui.View.SwitchDifficulty(0); ui.Paint();
-                ui.ClickText(L.Get("song.title"));
+                ui.View.OpenSongSetup(); ui.Paint();
                 Set(ui, "ArtistUnicode", "艺术家"); Set(ui, "Artist", "Artist Romanised");
                 Set(ui, "TitleUnicode", "歌曲"); Set(ui, "Title", "Song Romanised");
                 Set(ui, "Creator", "Mapper"); Set(ui, "Source", "Source"); Set(ui, "Tags", "tag one"); Set(ui, "Version", "Normal");
@@ -75,19 +75,19 @@ internal static class SongSetupTests
                 Check(SongSetup.Get(ui.View.CaptureProject().Difficulties[1].Document, "Metadata", "Title") == "Song", "Undo restores shared metadata");
                 Check(SongSetup.Get(ui.View.CaptureProject().Difficulties[1].Document, "Metadata", "Source") == "Original source", "Undo restores each sibling's original value");
                 ui.Key('Y', ctrl: true); Check(ui.View.Document.ContentEquals(edited), "Redo restores setup");
-                ui.ClickText(L.Get("song.title")); ui.ClickText(L.Get("song.difficulty")); Set(ui, "CircleSize", "NaN"); ui.ClickText(L.Get("song.ok"));
+                ui.View.OpenSongSetup(); ui.Paint(); ui.ClickText(L.Get("song.difficulty")); Set(ui, "CircleSize", "NaN"); ui.ClickText(L.Get("song.ok"));
                 Check(ui.View.SongSetupVisible && ui.View.Document.ContentEquals(edited), "Invalid draft cannot partly apply");
                 ui.Key(27); Check(!ui.View.SongSetupVisible && ui.View.Document.ContentEquals(edited), "Cancel discards all drafts");
-                ui.ClickText(L.Get("song.title")); Set(ui, "TitleUnicode", "English title"); ui.ClickText(L.Get("song.ok"));
+                ui.View.OpenSongSetup(); ui.Paint(); Set(ui, "TitleUnicode", "English title"); ui.ClickText(L.Get("song.ok"));
                 Check(SongSetup.Get(ui.View.Document, "Metadata", "Title") == "English title", "English title keeps romanised value aligned");
                 ui.View.SwitchDifficulty(1); ui.Paint();
-                ui.ClickText(L.Get("song.title")); Set(ui, "TitleUnicode", "Latest title"); ui.ClickText(L.Get("song.ok"));
+                ui.View.OpenSongSetup(); ui.Paint(); Set(ui, "TitleUnicode", "Latest title"); ui.ClickText(L.Get("song.ok"));
                 ui.View.SwitchDifficulty(0); ui.Paint(); ui.Key('Z', ctrl: true);
                 Check(ui.View.CaptureProject().Difficulties.All(d => SongSetup.Get(d.Document, "Metadata", "Title") == "Latest title"),
                     "Undoing an older setup cannot split shared metadata after another difficulty edits it");
                 ui.View.SwitchDifficulty(1); ui.Paint(); ui.Key('Z', ctrl: true);
                 Check(ui.View.CaptureProject().Difficulties.All(d => SongSetup.Get(d.Document, "Metadata", "Title") == "English title"), "Latest shared edit undoes coherently");
-                ui.ClickText(L.Get("song.title")); ui.ClickText(L.Get("song.colours")); ui.ClickText(L.Get("song.customColours"));
+                ui.View.OpenSongSetup(); ui.Paint(); ui.ClickText(L.Get("song.colours")); ui.ClickText(L.Get("song.customColours"));
                 Set(ui, "Hex", "bad hex"); ui.ClickText(L.Get("song.ok"));
                 Check(ui.View.SongSetupVisible && SongSetup.Colours(ui.View.Document).Length == 0, "Invalid HEX cannot apply");
                 ui.Key(27);

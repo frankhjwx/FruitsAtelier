@@ -151,7 +151,6 @@ public sealed partial class EditorView
         Button(c, new(268, 6, 70, 28), L.Get("dock.layout"), () => menu = menu == 5 ? -1 : 5, menu == 5);
         Button(c, new(341, 6, 70, 28), L.Get("timeline.timingMenu"), () => menu = menu == 4 ? -1 : 4, menu == 4);
         DrawDifficultyTabs(c);
-        Button(c, SongSetupButtonBounds, L.Get("song.title"), OpenSongSetup);
         Button(c, EditorSettingsButtonBounds, L.Get("library.settings"), OpenSettings);
         DrawSkinSelector(c);
         Button(c, HeaderNavigationBounds, L.Get("library.back"), ShowLibrary);

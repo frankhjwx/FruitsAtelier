@@ -50,7 +50,7 @@ public sealed partial class EditorView
             Edit(L.Get("randomize.resetAdjustments"), () => Document.Tracks.Single(t => t.Id == id).DropletRandomization?.Adjustments.Clear());
         }, CanRandomizeDroplets && RandomizeSelectedTrack?.DropletRandomization?.Adjustments.Count > 0));
         AddContextSeparator();
-        contextItems.Add(new(L.Get("randomize.settings"), () => { OpenSongSetup(); songTab = 4; }));
+        contextItems.Add(new(L.Get("randomize.settings"), () => { ShowSongDock(); songTab = 4; }));
         contextBounds = new(Math.Clamp(mouseX, 8, Math.Max(8, width - 308)),
             Math.Clamp(mouseY, 8, Math.Max(8, height - ContextMenuHeight - 8)), 300, ContextMenuHeight);
     }

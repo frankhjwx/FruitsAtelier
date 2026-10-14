@@ -5,7 +5,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes }
+    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup }
     private sealed class DockGroup(DockPanel panel, float width)
     {
         public readonly List<DockPanel> Panels = [panel];
@@ -18,7 +18,7 @@ public sealed partial class EditorView
         public readonly DockGroup Left = new(DockPanel.MovementStrain, DifficultyCurveWidth);
         public readonly DockGroup Right = CreateRightDock();
         private static DockGroup CreateRightDock()
-        { var group = new DockGroup(DockPanel.Preview, 360); group.Panels.Add(DockPanel.Notes); return group; }
+        { var group = new DockGroup(DockPanel.Preview, 360); group.Panels.AddRange([DockPanel.Notes, DockPanel.SongSetup]); return group; }
         public (float X, float Y)? MovementPosition;
         public int PreviewMod, PreviewDisplayMode;
     }
@@ -63,7 +63,7 @@ public sealed partial class EditorView
     private static string DockTitle(DockPanel panel) => L.Get(panel switch
     {
         DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
-        DockPanel.Notes => "dock.notes", _ => "difficulty.curve.title"
+        DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title", _ => "difficulty.curve.title"
     });
 
     private bool DockPanelExists(DockPanel panel) => DockWorkspaceState.Left.Panels.Contains(panel)
@@ -89,6 +89,7 @@ public sealed partial class EditorView
         state.Left.Width = DifficultyCurveWidth; state.Right.Width = 360;
         AddDockPanel(DockPanel.MovementStrain, true); AddDockPanel(DockPanel.Preview, false);
         state.Right.Panels.Add(DockPanel.Notes);
+        state.Right.Panels.Add(DockPanel.SongSetup);
     }
     private bool DockTabContext(float x, float y)
     {
@@ -177,6 +178,8 @@ public sealed partial class EditorView
                 }
                 else if (group.Active == DockPanel.PatternEditor)
                     DrawPatternDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                else if (group.Active == DockPanel.SongSetup)
+                    DrawSongDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                 else if (group.Active == DockPanel.Notes)
                     DrawNotesDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                 else

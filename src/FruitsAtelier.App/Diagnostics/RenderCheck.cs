@@ -217,9 +217,8 @@ internal static class RenderCheck
                 void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
                 void Click(float x, float y) { view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint(); }
                 Paint();
-                var button = view.SongSetupButtonBounds;
-                Click(button.X + 10, button.Y + 10);
-                if (!view.SongSetupVisible) throw new InvalidOperationException("Song Setup did not open from the header.");
+                view.OpenSongSetup(); Paint();
+                if (!view.SongSetupVisible) throw new InvalidOperationException("Song Setup did not initialize.");
                 var dialog = view.SongSetupBounds;
                 for (int tab = 0; tab < 5; tab++)
                 {

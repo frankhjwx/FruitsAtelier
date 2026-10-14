@@ -331,10 +331,14 @@ Copy, cut and paste operate on the selected range and caret position. Keyboard
 focus changes can request select-all explicitly, such as Tab between Song Setup
 fields.
 
-The **Song Setup** button immediately left of Settings opens a modal with General,
-Difficulty, Colors and Design tabs. **OK** applies the draft in one undo step;
-Cancel or Esc discards it. Playback pauses when opening the dialog. Editor
-shortcuts, seeking and object input are blocked until it closes.
+**Song Setup** is a dock tab, initially after Notes on the right. Use **Layout**
+to show or close it, or press **F4** to select it. It can move between either side
+and share a tab group with other panels. General, Difficulty, Colors, Design and
+Randomize droplets use a vertically scrolling form that adapts to dock width.
+**Apply** commits the draft in one undo step; Cancel discards it. The tab stays
+open after either action. Editing a field captures text shortcuts; clicking the
+canvas returns input to the editor. Difficulty or document changes reload the
+form from the current content. Opening this panel does not pause playback.
 
 General edits artist, title, creator, source and tags across every difficulty in
 the project. Non-ASCII artist/title text enables a separate romanised field;
@@ -354,7 +358,7 @@ it, or remove a selected color while retaining at least one. Disabling custom
 colors removes the beatmap combo overrides, allowing the normal skin fallback.
 The canvas, preview and testplay use the confirmed palette.
 
-Design selects countdown speed (off, normal, half or double) from a dropdown and
+Design selects countdown speed (off, normal, half or double) from four choices and
 stores a non-negative countdown offset in beats. Switches control widescreen
 storyboard support, letterboxing in breaks and the flashing-light warning. These
 options are preserved in project saves and
@@ -827,7 +831,7 @@ and Snap. The canvas and side docks sit below this row, with the transport timel
 at the bottom.
 
 Mapping Panel provides two side dock areas. The default groups contain Movement
-Strain on the left and Preview followed by Notes on the right. Stream/Stack is
+Strain on the left and Preview, Notes and Song Setup on the right. Stream/Stack is
 available from Layout and is hidden by default.
 Drag a named tab to either side to move it; dropping into an occupied area combines
 the panels into one tab group. Click a tab to select its content, or drag within

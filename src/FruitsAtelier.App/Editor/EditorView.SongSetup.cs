@@ -25,7 +25,6 @@ public sealed partial class EditorView
     private static readonly string[] SongDifficulty = ["HPDrainRate", "CircleSize", "ApproachRate", "OverallDifficulty"];
     private static readonly string[] SongDesign = ["Countdown", "CountdownOffset", "WidescreenStoryboard", "LetterboxInBreaks", "EpilepsyWarning"];
     private static readonly string[] SongCountdownSpeeds = ["song.countdownOff", "song.countdownNormal", "song.countdownHalf", "song.countdownDouble"];
-    internal Rect SongSetupButtonBounds => new(EditorSettingsButtonBounds.X - 126, 6, 120, 28);
     internal Rect SongSetupBounds => new((width - Math.Min(840, width - 32)) / 2,
         (height - SongSetupHeight) / 2, Math.Min(840, width - 32), SongSetupHeight);
     internal IReadOnlyDictionary<string, Rect> SongSetupFieldBounds => songFieldBounds;
@@ -35,6 +34,12 @@ public sealed partial class EditorView
         if (LibraryVisible || IsTestplaying || !HasEditorProject || !PrepareFileOperation()) return;
         if (AudioPlaying) RequestPausePlayback?.Invoke();
         menu = -1; languageMenuOpen = false; contextItems.Clear();
+        InitializeSongSetup();
+        SongSetupVisible = true; hits.Clear(); fields.Clear();
+    }
+
+    private void InitializeSongSetup()
+    {
         songValues.Clear(); songInitial.Clear(); songField = songError = "";
         songRandomizeAll = null;
         songDerandomizeDroplets = Document.DerandomizeFSliderDroplets;
@@ -58,12 +63,12 @@ public sealed partial class EditorView
         songCustomColours = songColours.Count > 0;
         if (!songCustomColours) songColours.AddRange(new uint[] { 0xFFC000, 0x00CA00, 0x127CFF, 0xF21839 });
         SelectSongColour(0);
-        SongSetupVisible = true; hits.Clear(); fields.Clear();
     }
 
     private void CloseSongSetup()
     {
         audioProjectPath = null;
+        songDockSnapshot = null;
         SongSetupVisible = false; songField = ""; songDrag = -1; songCountdownOpen = false; SongSetupInputSession++;
         hits.Clear(); fields.Clear();
     }
@@ -172,10 +177,11 @@ public sealed partial class EditorView
 
     private void SongTextField(ICanvas c, string key, float y, bool compact = false)
     {
-        var r = SongSetupBounds;
-        c.Text(L.Get($"song.{key}"), r.X + 22, y + 9, 13, SongFieldEnabled(key) ? Foreground : Muted, 206);
+        var r = drawingSongDock ? songDockBounds : SongSetupBounds;
+        c.Text(L.Get($"song.{key}"), drawingSongDock ? r.X : r.X + 22, y + 9, 13, SongFieldEnabled(key) ? Foreground : Muted, drawingSongDock ? r.Width : 206);
         var box = new Rect(compact ? r.Right - 116 : r.X + 240, y, compact ? 94 : r.Width - 262,
             key == "Tags" ? Math.Max(32, r.Bottom - 90 - y) : 32);
+        if (drawingSongDock) box = new(r.X, y + 30, r.Width, key == "Tags" ? Math.Max(64, songTagRows.Count * (songTagSize + 5) + 14) : 32);
         songFieldBounds[key] = box;
         bool enabled = SongFieldEnabled(key), focused = enabled && songField == key;
         if (enabled || key is "RandomizeDropletStrength" or "RandomizeDropletSeed")
@@ -193,6 +199,7 @@ public sealed partial class EditorView
         SongTextField(c, key, y, compact: true);
         var r = SongSetupBounds;
         var track = new Rect(r.X + 240, y + 9, r.Width - 378, 20);
+        if (drawingSongDock) track = new(songDockBounds.X + 7, y + 76, Math.Max(1, songDockBounds.Width - 14), 20);
         double.TryParse(songValues[key], NumberStyles.Float, CultureInfo.InvariantCulture, out double value);
         c.Line(track.X, track.Y + 10, track.Right, track.Y + 10, Grid, 4);
         for (int step = 0; step <= 10; step++)
@@ -328,6 +335,9 @@ public sealed partial class EditorView
                 int index = Array.IndexOf(keys, songField);
                 songField = keys[index < 0 ? shift ? keys.Length - 1 : 0 : (index + (shift ? keys.Length - 1 : 1)) % keys.Length];
                 FocusInput("song:" + songField, songValues[songField], 0, selectAll: true); SongSetupInputSession++;
+                if (SongDockEditing && songFieldBounds.TryGetValue(songField, out var field))
+                    songDockScroll = Math.Clamp(songDockScroll + (field.Y < songDockBounds.Y ? field.Y - songDockBounds.Y
+                        : Math.Max(0, field.Bottom - songDockBounds.Bottom)), 0, Math.Max(0, songDockContentHeight - songDockBounds.Height));
             }
             return;
         }
@@ -340,7 +350,7 @@ public sealed partial class EditorView
 
     public void PasteSongSetupText(string text, int session)
     {
-        if (!SongSetupVisible || AudioProjectCreating || ErrorVisible || DiscardConfirmationVisible || session != SongSetupInputSession
+        if ((!SongSetupVisible && !SongDockEditing) || AudioProjectCreating || ErrorVisible || DiscardConfirmationVisible || session != SongSetupInputSession
             || songField.Length == 0 || !SongFieldEnabled(songField)) return;
         text = new string(text.Where(c => !char.IsControl(c)).ToArray());
         string value = InsertInput("song:" + songField, songValues[songField], text, 4096);

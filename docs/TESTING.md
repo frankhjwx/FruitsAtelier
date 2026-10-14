@@ -528,6 +528,11 @@ scope, combo reference numbers, horizontal grids, and timestamp precision.
 
 The feedback regressions cover V/End navigation, scroll direction, persistent independent volume controls, skin sample precedence and cache upgrades, and compatible versus conflicting close SV timing. Windows PCM checks verify live and scheduled hitsound gain separately from song gain; headless Mac CI exercises the native mixer with no audio device. Native window checks exercise all three volume sliders in both languages.
 
+`App.Tests --song-dock-check` covers docked Song Setup, narrow-panel scrolling,
+field focus, left docking, Apply/Cancel, undo and retained Timing layouts, together
+with the existing metadata and randomization checks. Native docking captures
+include every Song Setup category and its scrolled controls.
+
 Song Setup regressions cover shared metadata, independent difficulty settings,
 romanised fields, modal isolation, cancellation, undo/redo, palette HEX input and
 project/`.osu` persistence. Native window checks open all four tabs in both

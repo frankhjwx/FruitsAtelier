@@ -130,6 +130,7 @@ public sealed partial class EditorView
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
         if (BeginDockPointer(x, y, button)) return;
+        if (SongDockPointer(x, y, button, shift)) return;
         if (NotesPointer(x, y, button, shift)) return;
         if (PatternDockPointer(x, y, button)) return;
         if (CanvasScalePointerDown(x, y, button)) return;
@@ -459,7 +460,7 @@ public sealed partial class EditorView
         if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
         if (dsBaseDragging) { UpdateDistanceBase(x); return; }
         if (HitsoundCopierVisible) { mouseX = x; mouseY = y; return; }
-        if (SongSetupVisible) { mouseX = x; mouseY = y; MoveSongSetup(x, y, shift); return; }
+        if (SongSetupVisible || SongDockEditing && songDrag >= 0) { mouseX = x; mouseY = y; MoveSongSetup(x, y, shift); return; }
         if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x, shift); return; }
         if (distanceDragging) { UpdateDistanceSlider(x, shift); return; }
         placementCtrl = ctrl;
@@ -607,7 +608,7 @@ public sealed partial class EditorView
         if (settingsColourDrag != 0 && button == 0) { UpdateSettingsColourDrag(x, y); settingsColourDrag = 0; return; }
         if (textSelecting && button == 0) { mouseY = y; MoveInputSelection(x); textSelecting = false; return; }
         if (HitsoundCopierVisible) return;
-        if (SongSetupVisible) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }
+        if (SongSetupVisible || songDrag >= 0) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
         if (updatesPage) return;
         if (dsSnapDragging && button == 0) { SetDistanceSnapSubdivision(x); dsSnapDragging = false; return; }
@@ -718,7 +719,7 @@ public sealed partial class EditorView
             { timingField = field.Key; timingText = field.Value; timingFieldApply = field.Apply; SelectInput("timing:" + field.Key, timingText); }
             return;
         }
-        if (SongSetupVisible)
+        if (SongSetupVisible || SongDockEditing && songDockBounds.Contains(x, y))
         {
             foreach (var pair in songFieldBounds)
                 if (pair.Value.Contains(x, y) && SongFieldEnabled(pair.Key))
@@ -859,6 +860,8 @@ public sealed partial class EditorView
         if (TimingModal)
         { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
         if (HandleVolumePopoverWheel(x, y, delta)) return;
+        if (SongDockEditing && songDockBounds.Contains(x, y))
+        { songDockScroll = Math.Clamp(songDockScroll - delta / 120 * 48, 0, Math.Max(0, songDockContentHeight - songDockBounds.Height)); return; }
         if (DockContentInputAvailable && PanelVisible(DockPanel.Notes) && NotesBounds.Contains(x, y))
         { notesScroll = Math.Max(0, notesScroll - delta / 120 * 60); return; }
         if (DockContentInputAvailable && PanelVisible(DockPanel.PatternEditor) && patternDockBounds.Contains(x, y))
@@ -1177,6 +1180,7 @@ public sealed partial class EditorView
         if (BananaEditVisible) { BananaEditKey(virtualKey, ctrl, shift); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey, ctrl, shift); return; }
         if (PatternDockKey(virtualKey, ctrl, shift)) return;
+        if (SongDockFocused && !(ctrl && virtualKey == 'S')) { SongSetupKey(virtualKey, ctrl, shift); return; }
         if (NotesKey(virtualKey, ctrl, shift)) return;
         if (MergeDialogVisible)
         {
@@ -1213,7 +1217,7 @@ public sealed partial class EditorView
         if (virtualKey == 117 && !ctrl && !shift && !altHeld) { OpenTimingSetup(); return; }
         if (virtualKey == 114 && !ctrl && !shift && !altHeld) { ShowTimingPage(true); return; }
         if (virtualKey == 115 && !ctrl && !shift && !altHeld && drag == DragKind.None)
-        { OpenSongSetup(); return; }
+        { ShowSongDock(); return; }
         if (virtualKey == 116 && !ctrl && !shift && !altHeld) { StartTestplay(); return; }
         if (ctrl && !shift && !altHeld && virtualKey == 83 && drag == DragKind.None)
         {
@@ -1363,6 +1367,7 @@ public sealed partial class EditorView
             return;
         }
         if (NotesFocused && !char.IsControl(value)) { InsertNotes(value.ToString()); return; }
+        if (SongDockFocused && !char.IsControl(value)) { PasteSongSetupText(value.ToString(), SongSetupInputSession); return; }
         if (PatternDockEditing && patternDockKind == 2 && bananaEditField >= 0) { BananaEditText(value.ToString()); return; }
         if (PatternDockEditing && patternDockKind == 1 && stackNumericField >= 0) { StackNumericText(value.ToString()); return; }
         if (BananaEditVisible) { BananaEditText(value.ToString()); return; }

@@ -213,9 +213,9 @@ internal static class ShortcutRoutingTests
         ui.Key(27); ui.Key(117); ExportKey();
         Check(exports == 2 && ui.View.TimingSetupVisible, "Export must not escape the F6 modal.");
         ui.Key(27); ui.Key(115); ExportKey();
-        Check(exports == 2 && ui.View.SongSetupVisible, "Export must not escape Song Setup.");
+        Check(exports == 3 && ui.View.TimingPageVisible && !ui.View.SongSetupVisible, "F4 retains the locked Timing workspace and export routing.");
         ui.Key(27); ExportKey();
-        Check(exports == 3, "Closing the modal restores Timing export.");
+        Check(exports == 4, "Returning to Mapping retains export routing.");
     }
 
     public static void LanguageMenu()

@@ -69,6 +69,21 @@ internal static class DockingRenderCheck
                     editor.PointerMove(x, y, false, false); Paint(name);
                     editor.PointerUp(x, y, 0); Paint();
                 }
+                editor.ShowSongDock(); Paint();
+                for (int category = 0; category < 5; category++)
+                {
+                    editor.ShowSongDock(); Paint();
+                    var songBounds = editor.SongDockViewport;
+                    int columns = songBounds.Width < 280 ? 1 : 2;
+                    Click(new(songBounds.X + category % columns * (songBounds.Width + 6) / 2,
+                        songBounds.Y + category / columns * 38, 30, 30));
+                    Paint($"song-dock-{category}");
+                    editor.Wheel(songBounds.X + 20, songBounds.Y + 80, -12000, false, false);
+                    Paint($"song-dock-{category}-scrolled");
+                    foreach (var field in editor.SongSetupFieldBounds.Values)
+                        if (field.Width <= 0 || field.X < songBounds.X || field.Right > songBounds.Right + .1f)
+                            throw new InvalidOperationException("Song dock field exceeds its width.");
+                }
                 void Paint(string? name = null)
                 {
                     canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);
