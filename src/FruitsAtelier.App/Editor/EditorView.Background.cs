@@ -118,7 +118,7 @@ public sealed partial class EditorView
     {
         if (!mappingCanvas && LibrarySettings.ForceBackgroundDim) { c.Fill(bounds, 0); return; }
         if (beatmapBackground is not null && c.BackgroundImage(beatmapBackground, bounds))
-            c.Fill(bounds, mappingCanvas ? Background : 0, opacity: dim);
+            c.DimBackground(bounds, mappingCanvas ? Background : 0, dim);
     }
 
     private void DrawBackgroundDimSetting(ICanvas c, Rect bounds, bool draft, float opacity = 1, bool mappingCanvas = false)

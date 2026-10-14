@@ -25,6 +25,7 @@ internal static class MappingCanvasRenderCheck
         try
         {
             CheckBackgroundPreviewToggle(canvas, folder);
+            CheckBackgroundDimEdges(canvas, folder);
             foreach (string locale in new[] { "en", "zh-CN" })
             foreach (var size in new[] { (1440, 900), (980, 620), (760, 580) })
             foreach (int dpi in new[] { 96, 144, 192 })
@@ -145,6 +146,36 @@ internal static class MappingCanvasRenderCheck
                 if (view.IsDirty || !document.ContentEquals(view.Document) || view.LibrarySettings.MappingCanvasBackgroundDim != 0)
                     throw new InvalidOperationException("Preview toggling changed background preferences or map content.");
             }
+        }
+    }
+
+    private static void CheckBackgroundDimEdges(D2DCanvas canvas, string folder)
+    {
+        string image = Path.Combine(folder, "dim-white.bmp");
+        WriteBitmap(image, 32, 32, Enumerable.Repeat((byte)255, 32 * 32 * 4).ToArray());
+        foreach (int dpi in new[] { 96, 120, 144, 168, 192 })
+        foreach (float fraction in new[] { .25f, .5f, .75f })
+        {
+            canvas.Resize(320, 240, dpi);
+            var bounds = new Rect(20 + fraction, 20 + fraction, 100, 80);
+            canvas.Begin();
+            canvas.Fill(new(0, 0, 320, 240), 0);
+            if (!canvas.BackgroundImage(image, bounds)) throw new InvalidOperationException("Dim fixture did not load.");
+            canvas.DimBackground(bounds, 0, .9f);
+            canvas.End(capture: () =>
+            {
+                var frame = canvas.CapturePixels();
+                WriteBitmap(Path.Combine(folder, $"dim-edge-{dpi}-{fraction}.bmp"), frame.Width, frame.Height, frame.Pixels);
+                int left = (int)Math.Floor(bounds.X * dpi / 96), right = (int)Math.Ceiling(bounds.Right * dpi / 96);
+                int top = (int)Math.Floor(bounds.Y * dpi / 96), bottom = (int)Math.Ceiling(bounds.Bottom * dpi / 96);
+                for (int y = top; y < bottom; y++)
+                for (int x = left; x < right; x++)
+                {
+                    int offset = (y * frame.Width + x) * 4;
+                    if (frame.Pixels[offset] > 27 || frame.Pixels[offset + 1] > 27 || frame.Pixels[offset + 2] > 27)
+                        throw new InvalidOperationException($"Background dim leaked at ({x}, {y}), {dpi} DPI, fraction={fraction}.");
+                }
+            });
         }
     }
 

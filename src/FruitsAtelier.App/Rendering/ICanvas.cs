@@ -32,6 +32,7 @@ public interface ICanvas
         => additive ? AdditiveImage(filePath, destination, tint, opacity) : Image(filePath, destination, tint, opacity: opacity);
     bool Thumbnail(string filePath, Rect destination) => false;
     bool BackgroundImage(string filePath, Rect destination) => Image(filePath, destination);
+    void DimBackground(Rect bounds, uint color, float opacity) => Fill(bounds, color, opacity: opacity);
     void Clip(Rect r);
     void Unclip();
 }
