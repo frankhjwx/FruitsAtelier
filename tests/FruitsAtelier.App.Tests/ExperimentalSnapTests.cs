@@ -54,12 +54,11 @@ internal static class ExperimentalSnapTests
                 track.Nodes.AddRange([new Anchor { TimeMs = 960, X = 100 }, new Anchor { TimeMs = 1440, X = 300 }]);
                 map.Tracks.Add(track); ui.LoadDocument(map); ui.Key('1'); ui.Key('A', ctrl: true);
                 SetSnap(division); ui.Key('F', ctrl: true, shift: true);
-                Check(ui.View.StreamDialogVisible && ui.View.StreamSnapDivisor == division, $"Stream retains extended division: {division}, visible={ui.View.StreamDialogVisible}, snap={ui.View.StreamSnapDivisor}, selected={ui.View.SelectedObjectIds.Count}, status={ui.View.StatusMessage}");
-                if (stack) ui.ClickText(L.Get("conversion.stackTab"));
+                Check(!ui.View.StreamDialogVisible && ui.View.StreamSnapBounds.Width > 0 && ui.View.StreamSnapDivisor == division, $"Stream retains extended division: {division}, visible={ui.View.StreamDialogVisible}, snap={ui.View.StreamSnapDivisor}, selected={ui.View.SelectedObjectIds.Count}, status={ui.View.StatusMessage}");
+                if (stack) ui.ConversionMode(true);
                 var r = ui.View.StreamSnapBounds;
                 int index = division == 24 ? 11 : division == 32 ? 12 : 13;
                 ui.Click(r.X + 7 + index / 13f * (r.Width - 62), r.Y + r.Height / 2);
-                ui.Key(13);
                 Check(!ui.View.StreamDialogVisible && ui.View.Document.Tracks.Single().StreamSnapDivisor == division, "Extended conversion commits");
                 Check((ui.View.Document.Tracks.Single().Stack is not null) == stack, "Conversion mode preserved");
                 var conversion = CatchStreamConverter.Convert(ui.View.Document);
@@ -67,7 +66,8 @@ internal static class ExperimentalSnapTests
                 var exported = OsuBeatmapWriter.Serialize(ui.View.Document);
                 Check(exported.ObjectSequenceMatches && exported.ReadBack.Fruits.Count == division + 1, "Extended export matches gameplay");
                 Check(ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document)).ContentEquals(ui.View.Document), "Extended snap survives project reopen");
-                ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Conversion undoes in one step");
+                if (stack) { ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true); }
+                ui.Key('Z', ctrl: true); Check(map.ContentEquals(ui.View.Document), "Undo restores the original slider after live mode and snap edits");
             }
             foreach (int division in new[] { 24, 32, 48 })
             {

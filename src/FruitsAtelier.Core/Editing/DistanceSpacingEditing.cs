@@ -43,6 +43,17 @@ public static class DistanceSpacingEditing
         var siblings = before.Objects.Where(o => o.SourceId == target.SourceId).ToArray();
         var selected = siblings.FirstOrDefault(o => o.EventIndex == target.EventIndex);
         if (selected is null) throw new ArgumentException(L.Get("coordinate.unreachable"));
+        if (stream && track.Stack is { } stack)
+        {
+            double progress = (selected.TimeMs - track.Nodes[0].TimeMs)
+                / (CurveMath.EndTimeMs(track) - track.Nodes[0].TimeMs);
+            double center = CurveMath.PositionAtTime(track, selected.TimeMs);
+            double side = (selected.EventIndex % 2 == 0) == stack.StartLeft ? -1 : 1;
+            double baseX = Math.Clamp(center + side * stack.DistanceAt(progress), 0, 512);
+            // Stack offsets belong to individual events, independent of the repeated center path.
+            stack.SetAdjustment(progress, x - baseX);
+            return;
+        }
         var slider = stream ? null : before.Sliders.Single(s => s.SourceId == track.Id);
         double start = track.Nodes[0].TimeMs, duration = track.Nodes[^1].TimeMs - start;
         var nested = slider is null ? null : LegacyCatchRules.CreateNested(start, duration, slider.Velocity,

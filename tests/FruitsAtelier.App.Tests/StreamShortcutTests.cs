@@ -31,10 +31,10 @@ internal static class StreamShortcutTests
         ui = new Ui(timeProvider: clock); ui.LoadDocument(map);
         ui.SelectTrack(track.Id); ui.DownMap(1000, 100);
         ui.Key('F', ctrl: true, shift: true);
-        Check(ui.View.StreamDialogVisible, "shortcut works during stationary control-point selection");
+        Check(!ui.View.StreamDialogVisible && ui.View.StreamSnapBounds.Width > 0, "shortcut works during stationary control-point selection");
         ui.View.PointerUp(0, 0, 0); ui.Key(27);
         ui.Key('F', ctrl: true, shift: true);
-        Check(ui.View.StreamDialogVisible, "shortcut works for selected controls after release");
+        Check(!ui.View.StreamDialogVisible && ui.View.StreamSnapBounds.Width > 0, "shortcut works for selected controls after release");
         ui.Key(27);
     }
 
@@ -47,9 +47,9 @@ internal static class StreamShortcutTests
             if (!imported) ImportedSliderEditing.ConvertToTrack(map, id);
             var ui = new Ui(); ui.LoadDocument(map); ui.Key('1'); ui.MoveMap(1000, 100);
             ui.Key('F', shift: true); ui.Paint();
-            Check(ui.View.DockTabBounds(FruitsAtelier.App.Editor.EditorView.DockPanel.SliderInspector).Width > 0
+            Check(ui.View.StreamConversionBounds.Width > 0
                 && ui.View.SelectedObjectIds.Contains(id) && !ui.View.WantsCapture && ui.View.Document.ContentEquals(map),
-                "Shift+F selects the slider and opens Inspector without editing");
+                "Shift+F selects the slider and opens the action list without editing");
             ui.ClickText(L.Get("conversion.title"));
             Check(!ui.View.StreamDialogVisible && ui.View.StreamSnapBounds.Width > 0 && ui.View.Document.Tracks.Single().StreamSnapDivisor is not null,
                 "Inspector conversion opens the live Stream/Stack dock");
@@ -76,14 +76,14 @@ internal static class StreamShortcutTests
         ui.View.PointerMove(snap.Right - 31, snap.Y + 15, false, false);
         ui.View.PointerUp(snap.Right - 31, snap.Y + 15, 0); ui.Paint();
         Check(!ui.View.WantsCapture && ui.View.StreamSnapDivisor == 16, "snap slider reaches last supported division");
-        ui.Key(37); Check(ui.View.StreamSnapDivisor == 12, "keyboard skips unsupported subdivisions");
-        ui.Key(37); Check(ui.View.StreamSnapDivisor == 9, "keyboard skips 1/11 and 1/10");
-        ui.Key(39); ui.Key(39); ui.Key(13);
+        ui.StreamSnap(12); Check(ui.View.StreamSnapDivisor == 12, "dock selects supported subdivisions");
+        ui.StreamSnap(9); Check(ui.View.StreamSnapDivisor == 9, "dock selects 1/9");
+        ui.StreamSnap(16);
         Check(ui.View.Document.ImportedSliders.Count == 0 && ui.View.Document.Tracks.Single().StreamSnapDivisor == 16, "confirmation converts imported slider in one edit");
         Guid id = ui.View.Document.Tracks.Single().Id;
         Check(ui.View.Conversion.Objects.All(o => o.Kind == CatchObjectKind.Fruit), "preview contains only fruit");
-        ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "undo restores imported source");
-        ui.Key('Y', ctrl: true); Check(ui.View.Document.Tracks.Single().StreamSnapDivisor == 16, "redo restores stream");
+        for (int i = 0; i < 5; i++) ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Undo restores the imported source after each live snap change");
+        for (int i = 0; i < 5; i++) ui.Key('Y', ctrl: true); Check(ui.View.Document.Tracks.Single().StreamSnapDivisor == 16, "redo restores stream");
         ui.Key('A', ctrl: true); ui.Key('K');
         Check(ui.View.Document.Tracks.Single().Nodes[0].TimeMs == 1125, "stream nudge moves its slider parent");
         ui.Key('H', ctrl: true); Check(ui.View.Document.Tracks.Single().Nodes[0].X == 412, "stream horizontal flip preserves geometry owner");
@@ -100,9 +100,9 @@ internal static class StreamShortcutTests
         Check(ui.View.StreamConversionBounds.Width > 0 && ui.View.LegacyConversionBounds.Width == 0, "stream long press offers its actions");
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("conversion.editTitle"))
             && ui.Canvas.Texts.Any(t => t.Value == L.Get("stream.convertBack")), "stream has conversion and restore actions");
-        ui.Key('F', ctrl: true, shift: true); ui.Key(37); ui.Key(13);
+        ui.Key('F', ctrl: true, shift: true); ui.StreamSnap(12);
         Check(ui.View.Document.Tracks.Single().StreamSnapDivisor == 12, "change snapping updates existing stream");
-        ui.HoldMap(1000, 100); ui.ClickText(L.Get("stream.convertBack"));
+        ui.HoldMap(1000, 100); ui.ClickObjectAction(L.Get("stream.convertBack"));
         Check(ui.View.Document.Tracks.Single().StreamSnapDivisor is null && ui.View.Conversion.Sliders.Count == 1,
             $"restore keeps slider geometry and preview: stream={ui.View.Document.Tracks.Single().StreamSnapDivisor}, sliders={ui.View.Conversion.Sliders.Count}, status={ui.View.StatusMessage}");
         ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true);
@@ -125,9 +125,9 @@ internal static class StreamShortcutTests
             float x = box.X + box.Width * u, y = box.Y + box.Height * v;
             ui.View.PointerDown(x, y, 0, false, false); clock.Advance(1000); ui.Paint();
             ui.View.PointerUp(x, y, 0); ui.Paint();
-            Check(ui.View.DockTabBounds(FruitsAtelier.App.Editor.EditorView.DockPanel.SliderInspector).Width > 0
-                && !ui.View.WantsCapture && ui.View.Document.ContentEquals(map), "Selection-box hold opens Inspector without edits");
-            Check((ui.View.LegacyConversionBounds.Width > 0) == imported, "Inspector exposes the matching conversion");
+            Check(ui.View.StreamConversionBounds.Width > 0
+                && !ui.View.WantsCapture && ui.View.Document.ContentEquals(map), "Selection-box hold opens the action list without edits");
+            Check((ui.View.LegacyConversionBounds.Width > 0) == imported, "Action list exposes the matching conversion");
         }
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }

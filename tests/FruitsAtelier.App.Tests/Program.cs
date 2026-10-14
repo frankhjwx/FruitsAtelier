@@ -43,7 +43,7 @@ if (args.Contains("--legacy-v7-check"))
 // Existing interaction fixtures use Chinese labels explicitly.
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
-if (args.Contains("--banana-edit-check")) { BananaEditTests.Run(); StackDialogTests.Run(); Console.WriteLine("PASS Banana edit dialog and grouped gestures"); return 0; }
+if (args.Contains("--banana-edit-check")) { BananaEditTests.Run(); StackDockTests.Run(); Console.WriteLine("PASS Banana edit dialog and grouped gestures"); return 0; }
 
 if (args.Contains("--library-opening-check"))
 {
@@ -256,15 +256,15 @@ var tests = new (string Name, Action Run)[]
     ("Mapping canvas X-axis grid colours and opacity preserve horizontal lines and content", CanvasGridSettingsTests.Run),
     ("Mapping canvas backgrounds, image replacement and preferences", MappingCanvasBackgroundTests.Run),
     ("Mapping Canvas indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
-    ("Stack preview retains full outlines and edits individual fruits horizontally", StackDialogTests.ManualFruits),
-    ("Stack draft history undoes fruit drags and removing manual knots", StackDialogTests.DraftHistory),
-    ("Stack numeric controls edit percentages and pixels with editable endpoints", StackDialogTests.Numeric),
-    ("Stack dialog edits envelopes locally and confirms with undo", StackDialogTests.Run),
-    ("Slider stream confirmation, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
+    ("Stack canvas edits individual fruits horizontally", StackDockTests.ManualFruits),
+    ("Stack graph additions and removals use document undo", StackDockTests.DraftHistory),
+    ("Stack numeric controls apply exact values and reject invalid input", StackDockTests.Numeric),
+    ("Stack dock commits modes and graph gestures with undo", StackDockTests.Run),
+    ("Slider stream live controls, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
     ("Slider long press progress, cancellation and control-point shortcut", StreamShortcutTests.HoldAndShortcut),
     ("Single-slider selection box long press opens actions throughout its bounds", StreamShortcutTests.HoldInSelectionBox),
     ("Stream breaking and batch internal anchor clearing", ObjectStructureTests.StreamsAndAnchors),
-    ("Consecutive object merge dialog, restrictions, errors and undo", ObjectStructureTests.MergeUi),
+    ("Consecutive object merge controls, restrictions, errors and undo", ObjectStructureTests.MergeUi),
     ("Mixed slider merge preserves repeated and exact curve paths", ObjectStructureTests.MixedPaths),
     ("Testplay pause, resume and legacy exit shortcuts", TestplayTests.PauseAndExitShortcuts),
     ("Testplay bookmark shortcuts edit at the live position", TestplayTests.BookmarksDuringTestplay),
@@ -1242,8 +1242,24 @@ sealed class Ui
         if ((text == FruitsAtelier.Localization.Strings.Get("ui.resetView") || text == FruitsAtelier.Localization.Strings.Get("ui.anchorSnap")) && !Canvas.Texts.Any(t => t.Value == text))
             ClickText(FruitsAtelier.Localization.Strings.Get("ui.view"));
         string visible = text.Split("  ", 2)[0];
-        var label = Canvas.Texts.Single(t => t.Value == visible);
+        var label = Canvas.Texts.Single(t => t.Value == (Canvas.Texts.Any(t => t.Value == text) ? text : visible));
         Click(label.X + 4, label.Y + 5);
+    }
+    public void ClickObjectAction(string text)
+    {
+        var label = Canvas.Texts.Last(t => t.Value == text);
+        Click(label.X + 4, label.Y + 5);
+    }
+    public void ConversionMode(bool stack)
+    {
+        var label = Canvas.Texts.Last(t => t.Value == FruitsAtelier.Localization.Strings.Get(stack ? "conversion.stackTab" : "conversion.streamTab"));
+        Click(label.X + 4, label.Y + 5);
+    }
+    public void StreamSnap(int divisor)
+    {
+        int[] values = View.LibrarySettings.ExperimentalSnapDivisions ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16, 24, 32, 48] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
+        var r = View.StreamSnapBounds;
+        Click(r.X + 7 + Array.IndexOf(values, divisor) / (float)(values.Length - 1) * (r.Width - 62), r.Y + r.Height / 2);
     }
     public void FocusField(string text)
     {

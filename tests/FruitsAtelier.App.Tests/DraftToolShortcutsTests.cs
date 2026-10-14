@@ -70,8 +70,7 @@ static class DraftToolShortcutsTests
         ui.View.SetModifiers(false, false);
         Check(exported == 1, "Ctrl+Alt+E must export.");
         ui.Key(115);
-        Check(ui.View.SongSetupVisible, "F4 must open Song Setup.");
-        ui.Key(27);
+        Check(!ui.View.SongSetupVisible && ui.View.DockTabBounds(FruitsAtelier.App.Editor.EditorView.DockPanel.SongSetup).Width > 0, "F4 focuses docked Song Setup.");
         ui.Key(38, ctrl: true);
         Check(Math.Abs(ui.View.PlaybackSpeed - 1.25) < .001, "Ctrl+Up must add 25 percentage points.");
         ui.Key(40, ctrl: true, shift: true);

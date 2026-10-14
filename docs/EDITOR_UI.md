@@ -884,6 +884,10 @@ clicking one splits the pattern immediately in one undo step. Existing patterns
 also offer a button to restore ordinary slider or banana shower output. Short
 docks scroll with the mouse wheel. Ctrl+Shift+F opens and focuses this dock, adding it when closed. An empty selection shows selection guidance. Panel buttons retain their background and border when idle.
 
+Dragging an interior Stack fruit on the canvas edits its individual horizontal
+offset. Its time, neighbouring fruits and center path remain unchanged, including
+other traversals of a repeated path. The edit supports undo and project persistence.
+
 **Notes** is a multiline project-wide text editor, shared across difficulties. It
 supports text selection, copy/paste and independent text undo/redo while focused.
 Notes changes mark the project dirty and are saved with the project, including

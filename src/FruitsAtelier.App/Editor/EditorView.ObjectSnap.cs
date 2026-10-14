@@ -75,11 +75,15 @@ public sealed partial class EditorView
         objectDragSnapFruits = objectSnapFruits;
         objectDragSnapFirst = objectDragSnapLast = objectDragSnapPoint = null;
         objectSnapTarget = null;
+        var authoredFruits = Document.Fruits.Where(f => objectSelection.Contains(f.Id)).ToDictionary(f => f.Id);
         foreach (var fruit in objectDragSnapFruits)
         {
             if (!objectSelection.Contains(fruit.SourceId)) continue;
-            objectDragSnapFirst ??= new(fruit.TimeMs, fruit.X);
-            objectDragSnapLast = new(fruit.TimeMs, fruit.X);
+            // Standalone drag offsets are applied to authoring coordinates, before float conversion.
+            var point = authoredFruits.TryGetValue(fruit.SourceId, out var authored)
+                ? new MapPoint(authored.TimeMs, authored.X) : new MapPoint(fruit.TimeMs, fruit.X);
+            objectDragSnapFirst ??= point;
+            objectDragSnapLast = point;
         }
     }
 

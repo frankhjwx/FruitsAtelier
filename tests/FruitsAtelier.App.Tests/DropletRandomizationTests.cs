@@ -148,7 +148,7 @@ internal static class DropletRandomizationTests
                 ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode);
                 ui.ClickMap(1000, 256); ui.HoldMap(1000, 256, clock.Advance);
                 Check(ui.View.Document.ContentEquals(map), "opening long-press actions leaves content unchanged");
-                Check(ui.View.DockTabBounds(FruitsAtelier.App.Editor.EditorView.DockPanel.SliderInspector).Width > 0, "Long press opens Slider Inspector");
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.title")), "Long press offers droplet randomization");
                 ClickRandomTitle(ui);
                 ui.ClickText(L.Get("randomize.enableSelected")); Wait();
 

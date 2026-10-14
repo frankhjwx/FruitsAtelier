@@ -55,7 +55,7 @@ internal static class PatternNotesTests
                 ui.ClickText(L.Get("conversion.title"));
                 Check(ui.View.Document.Tracks[0].StreamSnapDivisor is not null, "Conversion button commits a managed stream");
                 Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("library.apply") || t.Value == L.Get("mac.cancel")), "Pattern panel has no confirmation controls");
-                ui.ClickText(L.Get("conversion.stackTab"));
+                ui.ConversionMode(true);
                 Check(ui.View.Document.Tracks[0].Stack is not null, "Stack mode changes content immediately");
                 var stackSnapshot = ui.View.Document.DeepClone();
                 ui.ClickText(L.Get("stream.convertBack"));

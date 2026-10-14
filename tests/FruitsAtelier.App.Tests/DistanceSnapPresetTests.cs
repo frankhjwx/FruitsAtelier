@@ -267,7 +267,7 @@ internal static class DistanceSnapPresetTests
         ui.Key('Y', ctrl: true); ui.Key('1');
         ui.DownMap(1250, expected); ui.MoveMap(1500, 300); ui.UpMap(1500, 300);
         Check(ui.View.Document.Fruits.Any(f => f.TimeMs == 1500 && Math.Abs(f.X - (100 + 602 / 3.0)) < 1e-9),
-            "Dragging included the selected fruit as a neighbour or rounded collinear X.");
+            "Dragging excludes the selected fruit and retains exact collinear X.");
         ui.Key('T'); ui.Key('2'); ui.ClickMap(1375, 252);
         double gridX = Math.Round(250.5 / ui.View.EditorGridSettings.Size, MidpointRounding.AwayFromZero) * ui.View.EditorGridSettings.Size;
         Check(ui.View.Document.Fruits.Any(f => f.TimeMs == 1375 && f.X == gridX),
