@@ -95,7 +95,12 @@ public sealed partial class EditorView
         inspectorRows.Add(("inspector.end", TimeRange(ends)));
         inspectorRows.Add(("inspector.duration", Range(ends.Zip(starts, (end, start) => end - start)) + " ms"));
         inspectorRows.Add(("inspector.spans", Range(tracks.Select(t => (double)t.SpanCount).Concat(imported.Select(t => (double)t.SpanCount)))));
-        inspectorRows.Add(("inspector.controls", Range(tracks.Select(t => (double)t.Nodes.Count).Concat(imported.Select(t => (double)t.ControlPoints.Count)))));
+        var derandomization = tracks.Where(t => t.StreamSnapDivisor is null)
+            .Select(t => Document.DerandomizeFSliderDroplets || t.DropletRandomization is not { Enabled: true })
+            .Concat(imported.Select(_ => false)).Distinct().ToArray();
+        inspectorRows.Add(("inspector.derandomization", derandomization.Length == 0 ? "—"
+            : derandomization.Length > 1 ? L.Get("inspector.mixed")
+            : L.Get(derandomization[0] ? "inspector.on" : "inspector.off")));
         if (playableExport is { } exported)
         {
             var exportedTiming = new TimingMap.Lookup(exported.ReadBack);

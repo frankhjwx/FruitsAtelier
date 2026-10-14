@@ -142,9 +142,12 @@ effect becomes visible when it is disabled.
 
 The panel can enable or disable randomization for selected ordinary FSliders or
 all ordinary FSliders, and reset selected sliders' manual droplet adjustments.
-Selected overrides take precedence over the all-slider setting. These operations
-exclude Legacy Sliders and managed streams. Settings belong to the current
-difficulty. Reset strength sets the map value to 20.
+Each command affects its current targets once. These operations exclude Legacy
+Sliders and managed streams. Settings belong to the current difficulty.
+Strength uses a numeric field and slider on one row, with Reset strength directly
+below it to restore 20. Selected-slider and all-slider buttons execute immediately
+and do not retain an active state. Slider Inspector shows the effective
+derandomization state, or Mixed when the selected sliders differ.
 
 Strength 20 and Seed 1337 reproduce osu!'s native NM randomization when there are
 no manual corrections. Custom seeds use the same legacy RNG; Strength scales its

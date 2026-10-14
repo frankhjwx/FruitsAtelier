@@ -62,10 +62,57 @@ internal static class InspectorPanelsTests
                 ui.Key(27); ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Randomization edit undoes in one step");
                 ui.Paint(); Wait(); SetStrength("101");
                 Check(!ui.View.RandomDockValid && ui.View.Document.ContentEquals(map), "Invalid strength cannot change content");
+                RandomActions();
                 ui.View.ShowSongDock(); ui.Paint();
                 var song = ui.View.SongDockViewport;
                 ui.Click(song.X + 3 * ((song.Width - 9) / 4 + 3) + 5, song.Y + 10);
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("song.countdownOff")), "Horizontal category buttons select Design");
+                void RandomActions()
+                {
+                    var second = track.DeepClone(); second.Id = Guid.NewGuid();
+                    foreach (var node in second.Nodes) { node.Id = Guid.NewGuid(); node.TimeMs += 3500; }
+                    second.DropletRandomization = null;
+                    var actionMap = map.DeepClone(); actionMap.Tracks[0].DropletRandomization!.Adjustments.Add(new(.5, 5)); actionMap.Tracks.Add(second);
+                    ui.Resize(1440, 900); ui.LoadDocument(actionMap); ui.Key('1'); ui.Key('A', ctrl: true);
+                    ui.View.ShowSliderInspector(); ui.Paint();
+                    Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.mixed"))
+                        && !ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.controls")), "Inspector shows mixed derandomization without control count");
+                    ui.View.ShowRandomDock(); ui.Paint();
+                    foreach (string key in new[] { "randomize.enableSelected", "randomize.disableSelected", "randomize.resetAdjustments" })
+                        Check(ui.Canvas.Texts.Single(t => t.Value == L.Get(key)).Color != 0x5B6777u, "Selected-slider commands are enabled for multiple selection");
+                    ui.ClickText(L.Get("randomize.resetAdjustments")); Wait();
+                    Check(ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 0, "Manual adjustment reset executes immediately");
+                    ui.Key('Z', ctrl: true); ui.Paint(); Wait();
+                    Check(ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 1, "Manual adjustment reset undoes in one step");
+                    ui.Key('A', ctrl: true); ui.Paint();
+                    ui.ClickText(L.Get("randomize.enableSelected")); Wait();
+                    Check(ui.View.Document.Tracks.All(t => t.DropletRandomization is { Enabled: true })
+                        && ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 1, "Selected action includes multiple sliders without repeating reset");
+                    ui.ClickText(L.Get("randomize.disableAll")); Wait();
+                    Check(!ui.Canvas.Texts.Single(t => t.Value == L.Get("randomize.disableAll")).Bold,
+                        "All-slider command does not retain an active state");
+                    ui.ClickText(L.Get("randomize.enableSelected")); Wait();
+                    Check(ui.View.Document.Tracks.All(t => t.DropletRandomization is { Enabled: true }), "All-slider command does not override subsequent selected action");
+                    ui.ClickMap(500, 450); ui.SelectTrack(track.Id); ui.View.ShowRandomDock(); ui.Paint();
+                    ui.ClickText(L.Get("randomize.disableSelected")); Wait();
+                    Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: false }
+                        && ui.View.Document.Tracks[1].DropletRandomization is { Enabled: true }, "Single-slider command retains other sliders");
+                    ui.ClickText(L.Get("randomize.enableSelected")); Wait();
+                    var before = ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X)).ToArray();
+                    ui.ClickText(L.Get("randomize.derandomizeOff")); Wait();
+                    Check(ui.View.Document.DerandomizeFSliderDroplets && !before.SequenceEqual(ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X))),
+                        "Derandomization toggle immediately updates canvas");
+                    ui.ClickText(L.Get("randomize.derandomizeOn")); Wait();
+                    Check(before.SequenceEqual(ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X))), "Turning derandomization off restores randomization");
+                    var field = ui.View.RandomDockValueBounds(0);
+                    ui.Click(field.X + 8, field.Y + 12); ui.Key('A', ctrl: true); ui.View.PasteFieldText("101"); ui.Paint();
+                    ui.ClickText(L.Get("randomize.derandomizeOff"));
+                    Check(ui.View.Document.DerandomizeFSliderDroplets && ui.View.Document.RandomizeDropletStrength == 20,
+                        "Invalid numeric draft does not block a derandomization toggle");
+                    ui.ClickText(L.Get("randomize.resetStrength")); Wait();
+                    ui.Key(27); ui.View.ShowSliderInspector(); ui.Paint();
+                    Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.on")), "Inspector reflects effective derandomization");
+                }
                 void SetStrength(string value)
                 {
                     var b = ui.View.RandomDockViewport; ui.View.Wheel(b.X + 10, b.Y + 40, 12000, false, false); ui.Paint();
