@@ -179,10 +179,12 @@ public sealed partial class EditorView
     private void SongTextField(ICanvas c, string key, float y, bool compact = false)
     {
         var r = drawingSongDock ? songDockBounds : SongSetupBounds;
-        c.Text(L.Get($"song.{key}"), drawingSongDock ? r.X : r.X + 22, y + 9, 13, SongFieldEnabled(key) ? Foreground : Muted, drawingSongDock ? r.Width : 206);
+        c.Text(L.Get($"song.{key}"), drawingSongDock ? r.X : r.X + 22, y + 9, 13, SongFieldEnabled(key) ? Foreground : Muted, drawingSongDock ? r.Width : 206,
+            bold: SongDifficulty.Contains(key));
         var box = new Rect(compact ? r.Right - 116 : r.X + 240, y, compact ? 94 : r.Width - 262,
             key == "Tags" ? Math.Max(32, r.Bottom - 90 - y) : 32);
         if (drawingSongDock) box = new(r.X, y + 30, r.Width, key == "Tags" ? Math.Max(64, songTagRows.Count * (songTagSize + 5) + 14) : 32);
+        if (drawingSongDock && compact) box = new(r.Right - 64, y + 30, 64, 32);
         songFieldBounds[key] = box;
         bool enabled = SongFieldEnabled(key), focused = enabled && songField == key;
         if (enabled || key is "RandomizeDropletStrength" or "RandomizeDropletSeed")
@@ -200,7 +202,7 @@ public sealed partial class EditorView
         SongTextField(c, key, y, compact: true);
         var r = SongSetupBounds;
         var track = new Rect(r.X + 240, y + 9, r.Width - 378, 20);
-        if (drawingSongDock) track = new(songDockBounds.X + 7, y + 76, Math.Max(1, songDockBounds.Width - 14), 20);
+        if (drawingSongDock) track = new(songDockBounds.X + 7, y + 36, Math.Max(1, songDockBounds.Width - 91), 20);
         double.TryParse(songValues[key], NumberStyles.Float, CultureInfo.InvariantCulture, out double value);
         c.Line(track.X, track.Y + 10, track.Right, track.Y + 10, Grid, 4);
         for (int step = 0; step <= 10; step++)

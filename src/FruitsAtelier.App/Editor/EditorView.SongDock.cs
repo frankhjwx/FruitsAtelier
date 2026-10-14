@@ -40,7 +40,7 @@ public sealed partial class EditorView
         songTab = Math.Clamp(songTab, 0, 3);
         const float categoryHeight = 44;
         float bodyHeight = songTab switch { 0 => 7 * 72 + Math.Max(64, songTagRows.Count * (songTagSize + 5) + 14) + 38,
-            1 => 440, 2 => 650, 3 => 320, _ => 470 };
+            1 => SongDifficulty.Length * 82, 2 => 650, 3 => 320, _ => 470 };
         songDockContentHeight = categoryHeight + bodyHeight + 32;
         songDockScroll = Math.Clamp(songDockScroll, 0, Math.Max(0, songDockContentHeight - bounds.Height));
         float y = bounds.Y - songDockScroll;
@@ -59,7 +59,7 @@ public sealed partial class EditorView
         if (songTab == 0)
             for (int i = 0; i < SongMetadata.Length; i++) SongTextField(c, SongMetadata[i], y + i * 72);
         else if (songTab == 1)
-            for (int i = 0; i < SongDifficulty.Length; i++) SongRangeSlider(c, SongDifficulty[i], y + i * 110, 10);
+            for (int i = 0; i < SongDifficulty.Length; i++) SongRangeSlider(c, SongDifficulty[i], y + i * 82, 10);
         else if (songTab == 2) DrawSongDockColours(c, y);
         else if (songTab == 3)
         {
