@@ -87,6 +87,8 @@ Placement previews share their hyperdash calculation with the movement readout.
 The ordered playable merge input is retained only for one exported snapshot.
 An unstarted slider uses the same standalone ghost calculation as a fruit without
 applying fruit replacement rules. Unmappable export sequences retain full validation.
+Placement ordering maps read-back parents through the export's source identities;
+grouped banana events use their containing exported segment's start time.
 
 An active FSlider draft converts only its own track, merging provisional visual
 events with the unchanged committed preview. Pen hover likewise uses a single-track

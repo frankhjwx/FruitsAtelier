@@ -288,10 +288,19 @@ public sealed partial class EditorView
         placementGhost = new(placementId, 0, CatchObjectKind.Fruit, time, x, x, x, 0, true);
         if (!ReferenceEquals(placementOrderSource, playableExport))
         {
-            var starts = playableExport.ReadBack.ImportedSliders.Select(s => (s.Id, s.TimeMs))
-                .Concat(playableExport.ReadBack.BananaShowers.Select(s => (s.Id, s.TimeMs)))
-                .ToDictionary(s => s.Id, s => s.TimeMs);
-            placementOrder = playableObjects.Select(o => (Object: o, ParentTime: o.IsStandalone ? o.TimeMs : starts[o.SourceId]))
+            // Grouped banana events retain the authoring parent ID while read-back contains separate segments.
+            var starts = playableExport.ReadBack.ImportedSliders.Select(s => (s.SourceOrder, s.TimeMs))
+                .Concat(playableExport.ReadBack.BananaShowers.Select(s => (s.SourceOrder, s.TimeMs)))
+                .GroupBy(s => playableExport.ObjectSources[s.SourceOrder])
+                .ToDictionary(g => g.Key, g => g.Select(s => s.TimeMs).Order().ToArray());
+            double ParentTime(ConvertedCatchObject item)
+            {
+                if (item.IsStandalone) return item.TimeMs;
+                var times = starts[item.SourceId];
+                int index = Array.BinarySearch(times, item.TimeMs);
+                return times[index >= 0 ? index : Math.Max(0, ~index - 1)];
+            }
+            placementOrder = playableObjects.Select(o => (Object: o, ParentTime: ParentTime(o)))
                 .OrderBy(o => o.Object.TimeMs).ThenBy(o => o.ParentTime).ToArray();
             placementOrderSource = playableExport;
         }
@@ -300,6 +309,8 @@ public sealed partial class EditorView
         foreach (var (item, parentTime) in placementOrder)
         {
             if (removed.Contains(item.SourceId)) continue;
+            // A split banana head can tie the candidate without tying its authored group head.
+            if (!item.IsStandalone && item.TimeMs == time && parentTime == time) return false;
             if (!inserted && (item.TimeMs > time || item.TimeMs == time && parentTime > time))
             { merged.Add(placementGhost); inserted = true; }
             merged.Add(item);
