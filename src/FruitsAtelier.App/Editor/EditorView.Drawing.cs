@@ -293,9 +293,10 @@ public sealed partial class EditorView
             bool selected = objectSelection.Count == 1 && objectSelection.Contains(shower.Id);
             if (bananaSegments.TryGetValue(shower.Id, out var segments))
             {
-                foreach (var segment in segments)
+                for (int segmentIndex = FirstVisibleBananaSegment(segments, axisStart);
+                    segmentIndex < segments.Count && segments[segmentIndex].TimeMs <= axisEnd; segmentIndex++)
                 {
-                    var part = BananaRectangle(segment);
+                    var part = BananaRectangle(segments[segmentIndex]);
                     if (part.Bottom < plot.Y || part.Y > plot.Bottom) continue;
                     c.Fill(part, selected ? 0x2B291Fu : 0x211F1Bu, opacity: .6f);
                     c.Stroke(part, 0x8C7445u);

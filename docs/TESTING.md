@@ -110,6 +110,12 @@ replacement-dialog screenshots under `artifacts/tests/mapping-canvas-native`.
 The native check also verifies background pixels across repeated preview toggles
 and window sizes, including image dimensions that expose crop-rounding errors.
 
+`App.Tests --timeline-range-check` compares indexed marker visibility and banana
+segment clipping with full scans, checks tied ordering, overlapping long objects,
+snapshot replacement and draft tail updates, and runs selection, pattern and undo
+regressions. It prints cold index setup and warm query CPU/allocation measurements
+for a synthetic 100,000-marker timeline; these exclude rendering and audio latency.
+
 `App.Tests --object-timeline-check` checks Stream/Stack fruit markers, combo
 numbering, internal NC, grouped movement/deletion, persistence, export and undo.
 On Windows, `FruitsAtelier.App.exe --render-check --object-timeline-render-check`

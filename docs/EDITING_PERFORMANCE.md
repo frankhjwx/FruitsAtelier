@@ -96,7 +96,12 @@ preview; switching projects or difficulties retires the pending result.
 The object timeline retains Stream/Stack fruit times, stacking, combo numbers and
 event lookup entries for the current conversion snapshot. The colour presentation
 owns one combo-entry snapshot shared by numbering and preview combo ends. Content
-and NC edits refresh these snapshots; viewport changes reuse them. Drawing filters
+and NC edits refresh these snapshots; viewport changes reuse them. Drawing queries
+a snapshot-owned maximum-end range index, retaining overlapping long
+objects while skipping offscreen markers. Draft tail changes update their indexed end;
+viewport and selection changes reuse it. Banana pattern segments are ordered and
+non-overlapping, so drawing binary-searches the first visible segment and stops
+after the visible interval. Drawing filters
 the cached chronological markers into a reusable visible buffer, preserving paint
 and hit order without allocating or sorting a new visible array each frame.
 Exact control-curve and internal NC snapshot comparisons use indexed lists to

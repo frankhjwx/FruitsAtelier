@@ -75,6 +75,17 @@ if (args.Contains("--audio-diagnostics-settings-check"))
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Contains("--timeline-range-check"))
+{
+    TimelineRangeTests.Run(); BananaEditTests.Run();
+    ObjectTimelineTests.PatternNewCombo(); ObjectTimelineTests.SimultaneousStacks();
+    ObjectTimelineTests.SkinColours(); ObjectTimelineTests.Stacking();
+    ObjectTimelineTests.TimingCacheInvalidation(); ObjectTimelineTests.CachedDurationsFollowEdits();
+    ObjectTimelineTests.ReverseMarkers(); ObjectTimelineTests.TailReverses();
+    ObjectTimelineTests.NavigationAndSelection(); ObjectTimelineTests.BoxAndDelete();
+    ObjectTimelineTests.PlaybackMarquee(); ObjectTimelineTests.MoveAndNavigate();
+    Console.WriteLine("PASS Indexed timeline visibility, banana segments, selection, tails and undo"); return 0;
+}
 if (args.Contains("--object-timeline-check"))
 {
     try
@@ -318,6 +329,7 @@ var tests = new (string Name, Action Run)[]
     ("Legacy clipboard and horizontal grid preserve pattern scope", LegacyAlignmentTests.ClipboardAndGrid),
     ("Legacy timestamps and read-only details preserve precision", LegacyAlignmentTests.TimestampAndReadOnly),
     ("Legacy samples use event timing and edge leniency", LegacyAlignmentTests.Samples),
+    ("Timeline indexed visibility matches full scans", TimelineRangeTests.Run),
     ("Cached timeline durations follow timing, repeat and document changes", ObjectTimelineTests.CachedDurationsFollowEdits),
     ("Selected-slider body drag, point drag and two-stage right-click follow the same rules in both modes", ToolPaletteTests.SelectedSliderControls),
     ("Timeline layout, centered numbers, box selection and deletion", ObjectTimelineTests.BoxAndDelete),

@@ -16,6 +16,18 @@ public sealed partial class EditorView
             try { bananaSegments[shower.Id] = BananaShowerPattern.Segments(shower, timing); }
             catch (InvalidDataException) { }
     }
+    internal static int FirstVisibleBananaSegment(IReadOnlyList<BananaShower> segments, double from)
+    {
+        int first = 0, after = segments.Count;
+        while (first < after)
+        {
+            int middle = first + (after - first) / 2;
+            if (segments[middle].EndTimeMs < from) first = middle + 1;
+            else after = middle;
+        }
+        return first;
+    }
+
     public bool BananaEditVisible { get; private set; }
     internal bool BananaPreviewReady => bananaEditReady == bananaEditPattern && bananaEditJob is null;
     internal Rect BananaPreviewBounds { get; private set; }
