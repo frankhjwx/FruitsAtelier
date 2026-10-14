@@ -49,6 +49,10 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --group-drag-boundary-check` checks fractional fruit selections dragged
+to either playfield edge, preserving conversion, export, relative spacing,
+undo/redo and cancellation.
+
 `App.Tests --inspector-panels-check` covers exported Inspector metrics including
 tiny droplets, base-SV normalization across BPM changes, immediate randomization edits,
 undo, numeric validation, horizontal overflow and Song Setup category buttons.

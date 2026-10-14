@@ -2,6 +2,8 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Contains("--group-drag-boundary-check")) { GroupDragBoundaryTests.Run(); Console.WriteLine("PASS Group drag boundaries, conversion, export and undo"); return 0; }
+
 if (args.Contains("--inspector-panels-check")) { InspectorPanelsTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS Inspector metrics, live panel edits and Song Setup categories"); return 0; }
 
 if (args.Contains("--song-dock-check")) { SongDockTests.Run(); SongSetupTests.Run(); DropletRandomizationTests.Run(); Console.WriteLine("PASS Song Setup dock, metadata, colours and randomization"); return 0; }
@@ -152,6 +154,7 @@ var tests = new (string Name, Action Run)[]
     ("Independent droplet defaults persist and initialize new projects and FSliders", DropletDefaultsTests.Run),
     ("Selection boxes scale and move consecutive parents with anchor priority and atomic undo", SelectionTransformTests.Run),
     ("Selection drag bounds follow generated fruits and droplets while handles stay free", SelectionTransformTests.DragBoundsFollowPlayableObjects),
+    ("Fractional group drag boundaries preserve fruits, export and undo", GroupDragBoundaryTests.Run),
     ("Droplet randomization switches, setup drafts and Edit actions stay within one diff", DropletRandomizationTests.Run),
     ("Audio projects require metadata, copy audio and optionally link one Songs difficulty", AudioProjectTests.Run),
     ("Timing red insertion and deletion retain saving and slider export", TimingSaveFeedbackTests.Run),

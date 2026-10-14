@@ -353,8 +353,9 @@ public sealed partial class EditorView
         void IncludeX(double value) { minX = Math.Min(minX, value); maxX = Math.Max(maxX, value); }
         double ClampVisibleX(double value)
         {
-            double left = double.IsFinite(objectDragEventMinX) ? objectDragEventMinX : minX;
-            double right = double.IsFinite(objectDragEventMaxX) ? objectDragEventMaxX : maxX;
+            // Playable coordinates use float precision; authored fruits must also remain in bounds.
+            double left = Math.Min(objectDragEventMinX, minX);
+            double right = Math.Max(objectDragEventMaxX, maxX);
             return double.IsFinite(left) && double.IsFinite(right) && right - left <= 512
                 ? Math.Clamp(value, -left, 512 - right) : 0;
         }
