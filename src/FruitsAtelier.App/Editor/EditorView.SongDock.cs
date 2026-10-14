@@ -35,9 +35,9 @@ public sealed partial class EditorView
         songDockBounds = bounds; drawingSongDock = true;
         songFieldBounds.Clear(); songSliders.Clear();
         PrepareSongTags(c);
-        string[] tabs = ["song.general", "song.difficulty", "song.colours", "song.design", "randomize.title"];
-        int columns = bounds.Width < 280 ? 1 : 2;
-        float categoryHeight = (tabs.Length + columns - 1) / columns * 38 + 12;
+        string[] tabs = ["song.general", "song.difficulty", "song.colours", "song.design"];
+        songTab = Math.Clamp(songTab, 0, 3);
+        const float categoryHeight = 44;
         float bodyHeight = songTab switch { 0 => 7 * 72 + Math.Max(64, songTagRows.Count * (songTagSize + 5) + 14) + 38,
             1 => 440, 2 => 650, 3 => 320, _ => 470 };
         songDockContentHeight = categoryHeight + bodyHeight + 92;
@@ -46,12 +46,17 @@ public sealed partial class EditorView
         int firstHit = hits.Count;
         c.Clip(bounds);
         float column = (bounds.Width - 6) / 2;
-        for (int i = 0; i < tabs.Length; i++)
+        Button(c, new(bounds.X, y, bounds.Width, 32), L.Get(tabs[songTab]) + " ▾", () =>
         {
-            int tab = i;
-            Button(c, new(bounds.X + i % columns * (column + 6), y + i / columns * 38, columns == 1 ? bounds.Width : column, 32), L.Get(tabs[i]), () =>
-            { songTab = tab; songField = songError = ""; songDockScroll = 0; SongSetupInputSession++; }, songTab == i, fontSize: 12);
-        }
+            contextItems.Clear();
+            for (int i = 0; i < tabs.Length; i++)
+            {
+                int tab = i;
+                contextItems.Add(new(L.Get(tabs[i]), () =>
+                { songTab = tab; songField = songError = ""; songDockScroll = 0; SongSetupInputSession++; }));
+            }
+            contextBounds = new(bounds.X, Math.Clamp(bounds.Y + 34, 0, Math.Max(0, height - ContextMenuHeight)), bounds.Width, ContextMenuHeight);
+        }, fontSize: 12);
         y += categoryHeight;
         if (songTab == 0)
             for (int i = 0; i < SongMetadata.Length; i++) SongTextField(c, SongMetadata[i], y + i * 72);
@@ -73,21 +78,6 @@ public sealed partial class EditorView
                 ToggleSwitch(c, new(bounds.X, y + 162 + (i - 2) * 50, bounds.Width, 38), L.Get($"song.{key}"), enabled,
                     () => songValues[key] = enabled ? "0" : "1");
             }
-        }
-        else
-        {
-            Button(c, new(bounds.X, y, bounds.Width, 40), L.Get(songDerandomizeDroplets ? "randomize.derandomizeOn" : "randomize.derandomizeOff"),
-                () => { songDerandomizeDroplets = !songDerandomizeDroplets; songField = ""; SongSetupInputSession++; }, songDerandomizeDroplets, !notesLocked, fontSize: 12);
-            Button(c, new(bounds.X, y + 48, bounds.Width, 40), L.Get(songDerandomizeHardRock ? "randomize.derandomizeHrOn" : "randomize.derandomizeHrOff"),
-                () => songDerandomizeHardRock = !songDerandomizeHardRock, songDerandomizeHardRock, !notesLocked && songDerandomizeDroplets, fontSize: 12);
-            SongRangeSlider(c, "RandomizeDropletStrength", y + 102, 100);
-            Button(c, new(bounds.X, y + 210, bounds.Width, 32), L.Get("randomize.resetStrength"),
-                () => songValues["RandomizeDropletStrength"] = "20", enabled: !songDerandomizeDroplets, fontSize: 12);
-            SongTextField(c, "RandomizeDropletSeed", y + 252);
-            Button(c, new(bounds.X, y + 330, bounds.Width, 40), L.Get("randomize.enableAll"), () => songRandomizeAll = true,
-                songRandomizeAll == true, !notesLocked && !songDerandomizeDroplets, fontSize: 12);
-            Button(c, new(bounds.X, y + 380, bounds.Width, 40), L.Get("randomize.disableAll"), () => songRandomizeAll = false,
-                songRandomizeAll == false, !notesLocked && !songDerandomizeDroplets, fontSize: 12);
         }
         y += bodyHeight;
         c.Text(songError, bounds.X, y + 4, 12, Error, bounds.Width);

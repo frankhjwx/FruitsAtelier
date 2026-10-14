@@ -57,6 +57,7 @@ public sealed partial class EditorView
         this.height = height;
         hits.Clear(); fields.Clear();
         SliderSpeedReadout = null; SliderSpeedReadoutBounds = null;
+        LegacyConversionBounds = StreamConversionBounds = default;
         distanceLabelBounds.Clear(); PreviousDistanceFieldBounds = NextDistanceFieldBounds = XCoordinateFieldBounds = null;
         AdvanceCanvasBackgroundDim();
         if (IsTestplaying)
@@ -86,6 +87,7 @@ public sealed partial class EditorView
         pixelsPerMs = CanvasPixelsPerMs;
         ClampView();
         EnsureConversion();
+        PumpRandomDock();
         AdvanceBoxScroll();
         UpdatePlacementHyperdash();
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
@@ -107,7 +109,7 @@ public sealed partial class EditorView
         if (TimingPageVisible) DrawTimingPage(c); else DrawDockPanels(c);
         if (!TimingPageVisible)
         {
-            DrawLegacyConversionButton(c);
+            DrawSliderHold(c);
             DrawMovementOverlay(c);
             DrawSliderSpeedReadout(c);
             DrawKiaiBadge(c);
@@ -691,7 +693,7 @@ public sealed partial class EditorView
             Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), OpenStreamDialog, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
-            Item(L.Get("randomize.title"), OpenDropletRandomizationMenu, CanRandomizeDroplets);
+            Item(L.Get("randomize.title"), ShowRandomDock, ClipboardInteractionReady);
             Item(L.Get("slider.clearInternalNodes"), ClearSliderNodes, CanClearSliderNodes);
             Item(L.Get("aimod.title"), ShowAimod, ClipboardInteractionReady);
         }

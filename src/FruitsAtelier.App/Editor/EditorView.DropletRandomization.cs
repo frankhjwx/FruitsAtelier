@@ -34,24 +34,4 @@ public sealed partial class EditorView
         Edit(L.Get("randomize.title"), () => SetDropletRandomization(Document.Tracks.Single(t => t.Id == id), enabled));
     }
 
-    private void OpenDropletRandomizationMenu()
-    {
-        contextItems.Clear();
-        contextItems.Add(new(L.Get("randomize.enableAll"), () => RandomizeAllDroplets(true), CanRandomizeDroplets));
-        contextItems.Add(new(L.Get("randomize.disableAll"), () => RandomizeAllDroplets(false), CanRandomizeDroplets));
-        AddContextSeparator();
-        contextItems.Add(new(L.Get(RandomizeSelectedTrack?.DropletRandomization is { Enabled: true }
-            ? "randomize.disableSelected" : "randomize.enableSelected"), ToggleSelectedDropletRandomization,
-            CanRandomizeDroplets && RandomizeSelectedTrack is not null));
-        contextItems.Add(new(L.Get("randomize.resetAdjustments"), () =>
-        {
-            if (RandomizeSelectedTrack is not { } selected) return;
-            Guid id = selected.Id;
-            Edit(L.Get("randomize.resetAdjustments"), () => Document.Tracks.Single(t => t.Id == id).DropletRandomization?.Adjustments.Clear());
-        }, CanRandomizeDroplets && RandomizeSelectedTrack?.DropletRandomization?.Adjustments.Count > 0));
-        AddContextSeparator();
-        contextItems.Add(new(L.Get("randomize.settings"), () => { ShowSongDock(); songTab = 4; }));
-        contextBounds = new(Math.Clamp(mouseX, 8, Math.Max(8, width - 308)),
-            Math.Clamp(mouseY, 8, Math.Max(8, height - ContextMenuHeight - 8)), 300, ContextMenuHeight);
-    }
 }

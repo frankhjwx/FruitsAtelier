@@ -20,7 +20,7 @@ public sealed partial class EditorView
         {
             fruits = ObjectStructureEditing.BreakStreams(Document, ids);
             ValidateStructureConversion();
-        })) { SelectObjects(fruits); tool = Tool.Select; legacyButtonSlider = Guid.Empty; }
+        })) { SelectObjects(fruits); tool = Tool.Select; }
     }
 
     private void ClearSelectedInternalAnchors()
@@ -34,7 +34,7 @@ public sealed partial class EditorView
                 ConvertImportedSlider(id);
             foreach (var track in Document.Tracks.Where(t => ids.Contains(t.Id))) ObjectStructureEditing.ClearInternalAnchors(track);
             ValidateStructureConversion();
-        })) { SelectObjects(ids); legacyButtonSlider = Guid.Empty; }
+        })) { SelectObjects(ids); }
     }
 
     private void ValidateStructureConversion()
@@ -51,7 +51,7 @@ public sealed partial class EditorView
         mergeTargets = chosen.Ids; mergeAllowsLinear = chosen.AllowsLinear;
         mergeCurved = !mergeAllowsLinear; mergeError = "";
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
-        MergeDialogVisible = true; legacyButtonSlider = Guid.Empty;
+        MergeDialogVisible = true;
     }
 
     private void ApplyMerge()

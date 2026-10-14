@@ -49,6 +49,13 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`App.Tests --inspector-panels-check` covers exported Inspector metrics including
+tiny droplets, base-SV normalization across BPM changes, randomization preview,
+Cancel/Apply/undo, numeric validation and the Song Setup category dropdown.
+Native docking checks capture Inspector and Randomize droplets at both sizes and
+all three DPI values.
+
+
 `App.Tests --pattern-notes-check` verifies nonmodal pattern conversion and editing,
 selection changes, application and undo, independent notes input, and project and
 workspace notes roundtrips. Native docking checks also capture these panels.

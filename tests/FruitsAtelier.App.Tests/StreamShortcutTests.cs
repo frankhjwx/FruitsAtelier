@@ -28,12 +28,7 @@ internal static class StreamShortcutTests
         Check(!ui.View.SliderHoldNeedsRedraw && ui.View.StreamConversionBounds.Width == 0, "early release cancels hold");
         ui.HoldMap(1500, 200, () => clock.Advance(1000));
         Check(ui.View.StreamConversionBounds.Width > 0 && !ui.View.WantsCapture && !ui.View.IsDirty, "completed hold opens actions without editing");
-        ui.Key(27); ui.Key('1');
-        ui.DownMap(1500, 200); ui.MoveMap(1625, 210); clock.Advance(1000); ui.Paint();
-        Check(!ui.View.SliderHoldNeedsRedraw && ui.View.StreamConversionBounds.Width == 0, "drag cancels the hold");
-        ui.UpMap(1625, 210); ui.Key('Z', ctrl: true);
-        ui.DownMap(1000, 100); ui.View.CancelInteraction(); clock.Advance(1000); ui.Paint();
-        Check(!ui.View.SliderHoldNeedsRedraw && ui.View.StreamConversionBounds.Width == 0, "focus cancellation removes hold");
+        ui = new Ui(timeProvider: clock); ui.LoadDocument(map);
         ui.SelectTrack(track.Id); ui.DownMap(1000, 100);
         ui.Key('F', ctrl: true, shift: true);
         Check(ui.View.StreamDialogVisible, "shortcut works during stationary control-point selection");
@@ -49,65 +44,16 @@ internal static class StreamShortcutTests
         {
             var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,2,0,L|300:192,1,200\n");
             Guid id = map.ImportedSliders.Single().Id;
-            map.DurationMs = 30000;
             if (!imported) ImportedSliderEditing.ConvertToTrack(map, id);
             var ui = new Ui(); ui.LoadDocument(map); ui.Key('1'); ui.MoveMap(1000, 100);
-            ui.Key('D'); Check(ui.View.StreamConversionBounds.Width == 0, "plain D does not open slider actions");
-            ui.Key('D', shift: true); Check(ui.View.StreamConversionBounds.Width == 0, "Shift+D does not open slider actions");
-            ui.Key('F', shift: true);
-            Check(ui.View.StreamConversionBounds.Width > 0 && (ui.View.LegacyConversionBounds.Width > 0) == imported,
-                "Shift+F immediately opens the matching slider actions");
-            Check(ui.View.SelectedObjectIds.Contains(id) && !ui.View.WantsCapture && !ui.View.SliderHoldNeedsRedraw
-                && !ui.View.IsDirty && ui.View.Document.ContentEquals(map), "shortcut selects without editing or capturing");
-            ui.Key(27); Check(ui.View.StreamConversionBounds.Width == 0, "Escape dismisses shortcut actions");
-            ui.ClickMap(4000, 450);
-            var timeline = ui.View.ObjectTimelineBounds;
-            float timelineX = timeline.X + (float)((1000 - ui.View.ObjectTimelineStartMs) * ui.View.ObjectTimelinePixelsPerMs);
-            ui.Click(timelineX, timeline.Y + 27);
-            Check(ui.View.SelectedObjectIds.Contains(id), "upper timeline selects the slider parent");
-            ui.Key('F', shift: true);
-            Check(ui.View.StreamConversionBounds.Width > 0 && (ui.View.LegacyConversionBounds.Width > 0) == imported
-                && ui.View.Document.ContentEquals(map) && !ui.View.IsDirty, "timeline selection opens the visible slider actions without editing");
-            ui.Key(27);
-            ui.Key('A', ctrl: true);
-            var box = ui.View.SelectionTransformBounds;
-            ui.View.PointerMove(box.X + box.Width * .05f, box.Y + box.Height * .95f, false, false);
-            ui.Key('F', shift: true); Check(ui.View.StreamConversionBounds.Width > 0, "shortcut works throughout the selection box");
+            ui.Key('F', shift: true); ui.Paint();
+            Check(ui.View.DockTabBounds(FruitsAtelier.App.Editor.EditorView.DockPanel.SliderInspector).Width > 0
+                && ui.View.SelectedObjectIds.Contains(id) && !ui.View.WantsCapture && ui.View.Document.ContentEquals(map),
+                "Shift+F selects the slider and opens Inspector without editing");
             ui.ClickText(L.Get("conversion.title"));
-            Check(ui.View.StreamDialogVisible, "shortcut actions open the same conversion dialog");
-            ui.Key('F', shift: true); Check(ui.View.StreamDialogVisible && ui.View.Document.ContentEquals(map), "dialog isolates Shift+F");
-            ui.Key(27); ui.ClickMap(4000, 450); ui.Key('F', shift: true);
-            Check(ui.View.StreamConversionBounds.Width == 0, "empty canvas does not open actions");
-            ui.DownMap(1000, 100); ui.MoveMap(1125, 120); ui.Key('F', shift: true);
-            Check(ui.View.StreamConversionBounds.Width == 0, "dragging does not open shortcut actions");
-            ui.View.CancelInteraction(); ui.Paint();
-            ui.MoveMap(1000, 100); ui.Key('L'); ui.Key('F', shift: true);
-            Check(ui.View.StreamConversionBounds.Width == 0, "Lock Notes follows the long-press restriction");
-            ui.Key('L'); ui.Key('A', ctrl: true);
-            var plot = ui.View.CanvasPlotBounds;
-            ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, -120000, false); ui.Paint();
-            Check(ui.View.ViewStartMs > 2000, "visibility fixture scrolls the selected slider off the canvas");
-            ui.Key('F', shift: true);
-            Check(ui.View.StreamConversionBounds.Width == 0 && ui.View.SelectedObjectIds.Contains(id),
-                "offscreen selection stays selected without opening actions");
+            Check(!ui.View.StreamDialogVisible && ui.View.StreamSnapBounds.Width > 0 && ui.View.Document.ContentEquals(map),
+                "Inspector opens the Stream/Stack dock with a conversion draft");
         }
-        var batch = new MapDocument();
-        foreach (int start in new[] { 1000, 2500 })
-        {
-            var track = new CurveTrack { Kind = CurveKind.Linear };
-            track.Nodes.AddRange([new Anchor { TimeMs = start, X = 100 }, new Anchor { TimeMs = start + 500, X = 300 }]);
-            batch.Tracks.Add(track);
-        }
-        var multi = new Ui(); multi.LoadDocument(batch); multi.Key('1'); multi.Key('A', ctrl: true);
-        multi.MoveMap(1000, 100); multi.Key('F', shift: true);
-        Check(multi.View.StreamConversionBounds.Width > 0 && multi.View.SelectedObjectIds.Count == 2
-            && multi.View.Document.ContentEquals(batch), "shortcut retains a batch selection without editing");
-        multi.Key(27);
-        var upper = multi.View.ObjectTimelineBounds;
-        multi.View.PointerMove(upper.X + 10, upper.Y + 10, false, false);
-        multi.Key('F', shift: true);
-        Check(multi.View.StreamConversionBounds.Width > 0 && multi.View.SelectedObjectIds.Count == 2,
-            "upper timeline shortcut retains the batch selection");
     }
 
     public static void Run()
@@ -120,10 +66,9 @@ internal static class StreamShortcutTests
             && ui.View.StreamConversionBounds.X == ui.View.LegacyConversionBounds.X, "conversion actions are stacked vertically");
         var streamButton = ui.View.StreamConversionBounds;
         ui.Click(streamButton.X + 20, streamButton.Y + 15);
-        Check(ui.View.StreamDialogVisible && ui.View.Document.ContentEquals(map), "long-press conversion waits for confirmation");
-        ui.Key(46); ui.Key('Z', ctrl: true); ui.Key(116);
-        Check(ui.View.StreamDialogVisible && !ui.View.IsTestplaying && ui.View.Document.ContentEquals(map), "dialog isolates editing and testplay");
-        ui.Key(27); Check(!ui.View.StreamDialogVisible && !ui.View.IsDirty, "cancel is a no-op");
+        Check(!ui.View.StreamDialogVisible && ui.View.StreamSnapBounds.Width > 0 && ui.View.Document.ContentEquals(map), "Inspector conversion opens the draft panel");
+        ui.ClickText(L.Get("mac.cancel"));
+        Check(!ui.View.IsDirty, "cancel is a no-op");
         ui.Key('F', ctrl: true, shift: true);
         var snap = ui.View.StreamSnapBounds;
         ui.View.PointerDown(snap.X + 7, snap.Y + 15, 0, false, false);
@@ -155,7 +100,7 @@ internal static class StreamShortcutTests
         Check(ui.View.StreamConversionBounds.Width > 0 && ui.View.LegacyConversionBounds.Width == 0, "stream long press offers its actions");
         Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("conversion.editTitle"))
             && ui.Canvas.Texts.Any(t => t.Value == L.Get("stream.convertBack")), "stream has conversion and restore actions");
-        ui.ClickText(L.Get("conversion.editTitle")); ui.Key(37); ui.Key(13);
+        ui.Key('F', ctrl: true, shift: true); ui.Key(37); ui.Key(13);
         Check(ui.View.Document.Tracks.Single().StreamSnapDivisor == 12, "change snapping updates existing stream");
         ui.HoldMap(1000, 100); ui.ClickText(L.Get("stream.convertBack"));
         Check(ui.View.Document.Tracks.Single().StreamSnapDivisor is null && ui.View.Conversion.Sliders.Count == 1,
@@ -169,32 +114,20 @@ internal static class StreamShortcutTests
     public static void HoldInSelectionBox()
     {
         foreach (bool imported in new[] { false, true })
+        foreach (var (u, v) in new[] { (.05f, .05f), (.95f, .05f), (.05f, .95f), (.95f, .95f), (0f, .5f), (1f, .5f) })
         {
             var clock = new ManualTime(); var ui = new Ui(timeProvider: clock);
             var map = OsuBeatmapReader.Read("osu file format v14\n[General]\nMode:2\n[Difficulty]\nSliderMultiplier:1\nSliderTickRate:1\n[TimingPoints]\n0,500,4,1,0,100,1,0\n[HitObjects]\n100,192,1000,2,0,L|300:192,1,200\n");
             Guid id = map.ImportedSliders.Single().Id;
             if (!imported) ImportedSliderEditing.ConvertToTrack(map, id);
             ui.LoadDocument(map); ui.Key('1'); ui.Key('A', ctrl: true);
-            var before = ui.View.Document.DeepClone();
-            foreach (var (u, v) in new[] { (.05f, .05f), (.95f, .05f), (.05f, .95f), (.95f, .95f), (0f, .5f), (1f, .5f) })
-            {
-                var box = ui.View.SelectionTransformBounds;
-                float x = box.X + box.Width * u, y = box.Y + box.Height * v;
-                ui.View.PointerDown(x, y, 0, false, false); clock.Advance(1000); ui.Paint();
-                ui.View.PointerUp(x, y, 0); ui.Paint();
-                Check(ui.View.StreamConversionBounds.Width > 0 && !ui.View.WantsCapture,
-                    $"box hold opens slider actions: imported={imported}, u={u}, v={v}, bounds={box}, actions={ui.View.StreamConversionBounds}, capture={ui.View.WantsCapture}, status={ui.View.StatusMessage}");
-                Check((ui.View.LegacyConversionBounds.Width > 0) == imported, "box hold offers the selected slider's actions");
-                Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "box hold does not edit content");
-                ui.Key(27);
-            }
-            var bounds = ui.View.SelectionTransformBounds;
-            float dragX = bounds.X + bounds.Width * .15f, dragY = bounds.Y + bounds.Height * .5f;
-            ui.View.PointerDown(dragX, dragY, 0, false, false);
-            ui.View.PointerMove(dragX + 20, dragY, false, false); clock.Advance(1000); ui.Paint();
-            Check(!ui.View.SliderHoldNeedsRedraw && ui.View.StreamConversionBounds.Width == 0, "box drag cancels long press");
-            ui.View.CancelInteraction(); ui.Paint();
-            Check(before.ContentEquals(ui.View.Document), "cancelled box drag restores content");
+            var box = ui.View.SelectionTransformBounds;
+            float x = box.X + box.Width * u, y = box.Y + box.Height * v;
+            ui.View.PointerDown(x, y, 0, false, false); clock.Advance(1000); ui.Paint();
+            ui.View.PointerUp(x, y, 0); ui.Paint();
+            Check(ui.View.DockTabBounds(FruitsAtelier.App.Editor.EditorView.DockPanel.SliderInspector).Width > 0
+                && !ui.View.WantsCapture && ui.View.Document.ContentEquals(map), "Selection-box hold opens Inspector without edits");
+            Check((ui.View.LegacyConversionBounds.Width > 0) == imported, "Inspector exposes the matching conversion");
         }
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }

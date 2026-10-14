@@ -70,13 +70,12 @@ internal static class DockingRenderCheck
                     editor.PointerUp(x, y, 0); Paint();
                 }
                 editor.ShowSongDock(); Paint();
-                for (int category = 0; category < 5; category++)
+                for (int category = 0; category < 4; category++)
                 {
                     editor.ShowSongDock(); Paint();
                     var songBounds = editor.SongDockViewport;
-                    int columns = songBounds.Width < 280 ? 1 : 2;
-                    Click(new(songBounds.X + category % columns * (songBounds.Width + 6) / 2,
-                        songBounds.Y + category / columns * 38, 30, 30));
+                    Click(new(songBounds.X, songBounds.Y, 30, 30));
+                    Click(new(songBounds.X + 6, songBounds.Y + 34 + 6 + category * 32, 30, 30));
                     Paint($"song-dock-{category}");
                     editor.Wheel(songBounds.X + 20, songBounds.Y + 80, -12000, false, false);
                     Paint($"song-dock-{category}-scrolled");
@@ -84,6 +83,24 @@ internal static class DockingRenderCheck
                         if (field.Width <= 0 || field.X < songBounds.X || field.Right > songBounds.Right + .1f)
                             throw new InvalidOperationException("Song dock field exceeds its width.");
                 }
+                var inspectorMap = new MapDocument { DurationMs = 10000, SliderMultiplier = 1.92 };
+                var inspectorTrack = new CurveTrack { Kind = CurveKind.Linear, DropletRandomization = new() { Enabled = true } };
+                inspectorTrack.Nodes.AddRange([new Anchor { TimeMs = 1000, X = 100 }, new Anchor { TimeMs = 3000, X = 300 }]);
+                inspectorMap.Tracks.Add(inspectorTrack);
+                editor.LoadDocument(inspectorMap); editor.KeyDown(65, true, false);
+                editor.ShowSliderInspector(); Paint("inspector");
+                var inspectorBounds = editor.SliderInspectorViewport;
+                editor.Wheel(inspectorBounds.X + 10, inspectorBounds.Y + 40, -12000, false, false); Paint("inspector-scrolled");
+                editor.ShowRandomDock(); Paint();
+                var randomField = editor.RandomDockValueBounds(0); Click(randomField);
+                editor.KeyDown(65, true, false); editor.PasteFieldText("70"); Paint();
+                var deadline = DateTime.UtcNow.AddSeconds(30);
+                while (!editor.RandomPreviewReady && DateTime.UtcNow < deadline) { Thread.Sleep(5); Paint(); }
+                if (!editor.RandomPreviewReady || !editor.Document.ContentEquals(inspectorMap))
+                    throw new InvalidOperationException("Random draft did not preserve content or complete preview.");
+                Paint("random-preview");
+                var randomBounds = editor.RandomDockViewport;
+                editor.Wheel(randomBounds.X + 10, randomBounds.Y + 40, -12000, false, false); Paint("random-scrolled");
                 void Paint(string? name = null)
                 {
                     canvas.Begin(); editor.Render(canvas, size.Item1, size.Item2);

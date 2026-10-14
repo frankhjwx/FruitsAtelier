@@ -38,10 +38,10 @@ internal static class SongDockTests
                 Bottom(); ui.ClickText(L.Get("library.apply"));
                 Check(ui.View.Document.Name == "Updated title" && !ui.View.SongSetupVisible, "Apply commits without opening a modal");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Dock Apply undoes in one step");
-                ui.View.ShowSongDock(); ui.Paint(); ui.ClickText(L.Get("song.difficulty"));
+                ui.View.ShowSongDock(); ui.Paint(); ui.ClickText(L.Get("song.general") + " ▾"); ui.ClickText(L.Get("song.difficulty"));
                 Set("CircleSize", "4.5"); Bottom(); ui.ClickText(L.Get("library.apply"));
                 Check(ui.View.Document.CircleSize == 4.5, "Dock difficulty fields apply");
-                ui.View.ShowSongDock(); ui.Paint(); ui.ClickText(L.Get("song.colours"));
+                ui.View.ShowSongDock(); ui.Paint(); ui.ClickText(L.Get("song.general") + " ▾"); ui.ClickText(L.Get("song.colours"));
                 ui.ClickText(L.Get("song.customColours")); Set("Hex", "#123ABC");
                 Bottom(); ui.ClickText(L.Get("library.apply"));
                 Check(SongSetup.Colours(ui.View.Document)[0] == 0x123ABC, "Dock palette HEX applies");

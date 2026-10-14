@@ -112,36 +112,25 @@ preferences start with all three switches off and Grid Level Tiny (4 px).
 
 ## Droplet randomization
 
-**Song Setup → Randomize droplets** starts with **Derandomize droplets: On/Off**.
-On compensates ordinary FSlider TinyDroplets to their authored path and disables
-Strength, Seed, reset, batch actions and per-slider randomization editing. The
-existing FX switches and manual adjustments are retained; Off restores them.
-**Derandomize for HR Mode** selects HR compensation while derandomization is On.
-Export then compensates HR's random sequence, including preceding fruit stacks,
-streams, sliders and bananas, so HR TinyDroplets follow the authored path. Normal
-mode TinyDroplets may shift. Fruit and ordinary droplet targets stay unchanged;
-Legacy Sliders retain their original geometry. Shared repeat geometry, boundaries
-and integer export coordinates retain the existing compensation limits. Both
-preferences apply to the current difficulty and support Apply, Cancel and undo.
+**Randomize droplets** is an independent dock tab, opened from Layout,
+Edit → Randomize droplets, or Slider Inspector. Strength (0–100 playfield pixels),
+a signed 32-bit Seed, derandomization and HR compensation are draft settings.
+The canvas previews the exported result while parameters change. **Apply** commits
+all changes as one undo step; **Cancel** restores the saved settings. Changing
+selection or document reloads the draft. Closing or hiding the tab ends its preview.
+
+**Derandomize droplets** compensates ordinary FSlider TinyDroplets to the authored
+path. The stored per-slider switches and manual adjustments are retained. Turning
+it off restores their effect. **Derandomize for HR Mode** uses HR compensation.
 Changing the map switch also sets the default for subsequently drawn FSliders.
+Parameters can be edited while derandomization is enabled; their randomization
+effect becomes visible when it is disabled.
 
-The page configures Strength (0–100 playfield pixels)
-and a signed 32-bit Seed for the current difficulty. Drag the Strength slider or
-type a numeric value; **Reset strength (20)** restores its default in the dialog
-draft. Confirm to apply or cancel to discard changes. **Enable randomization for all FSliders** and
-**Disable randomization for all FSliders** set the switches of existing ordinary FSliders when the
-dialog is confirmed. Cancel discards the draft. The same batch actions are
-available under **Edit → Randomize droplets**, where they apply immediately in
-one undo step. Neither action creates a persistent master switch or changes the
-initial state of subsequently created FSliders, which follows the difficulty's
-saved new-slider default.
-
-Select one ordinary FSlider and use **Edit → Randomize droplets → Enable
-randomization / Disable randomization** to change only its switch. Long-pressing a
-single ordinary FSlider offers the same switch. The Edit menu also
-provides **Randomization settings…** and **Reset manual droplet adjustments** for
-the selected FSlider. Batch operations exclude Legacy Sliders and slider-managed
-fruit streams. Parameters and switches remain local to the current difficulty.
+The panel can enable or disable randomization for selected ordinary FSliders or
+all ordinary FSliders, and reset selected sliders' manual droplet adjustments.
+Selected overrides take precedence over the all-slider draft. These operations
+exclude Legacy Sliders and managed streams. Settings belong to the current
+difficulty. Reset strength restores 20 in the draft.
 
 Strength 20 and Seed 1337 reproduce osu!'s native NM randomization when there are
 no manual corrections. Custom seeds use the same legacy RNG; Strength scales its
@@ -333,8 +322,8 @@ fields.
 
 **Song Setup** is a dock tab, initially after Notes on the right. Use **Layout**
 to show or close it, or press **F4** to select it. It can move between either side
-and share a tab group with other panels. General, Difficulty, Colors, Design and
-Randomize droplets use a vertically scrolling form that adapts to dock width.
+and share a tab group with other panels. General, Difficulty, Colors and Design are selected from a dropdown.
+Each category uses a vertically scrolling form that adapts to dock width.
 **Apply** commits the draft in one undo step; Cancel discards it. The tab stays
 open after either action. Editing a field captures text shortcuts; clicking the
 canvas returns input to the editor. Difficulty or document changes reload the
@@ -785,7 +774,7 @@ repeat count, stream snap and object metadata. One undo restores the whole batch
 No selection is required. The command is disabled for locked notes, unfinished
 gestures, or a difficulty without internal FSlider controls. Convert imported Legacy Sliders to FSliders first.
 
-For selected sliders, use **Clear internal anchors** in the long-press menu or
+For selected sliders, use **Clear internal anchors** in Slider Inspector or
 **Ctrl+Shift+A**. This applies the same endpoint-only path to the selected sliders
 in one undo step, converting selected Legacy Sliders first. Holding a selected
 slider retains the complete selection for the batch operation.
@@ -930,12 +919,12 @@ Recoverable file-operation errors appear inside the editor window on both the ca
 The conversion dialog includes **Break into Fruits**, off by
 default. Enabling it replaces the slider parent with independent fruits at the
 chosen snap, each editable separately. Existing streams offer **Break into Fruits**
-directly below **Edit Stream/Stack** in the long-press menu. Breaking preserves the
+directly below **Edit Stream/Stack** in Slider Inspector. Breaking preserves the
 stream's fruit positions, times, combo flags and sample settings, and forms one
 undo step.
 
 Select at least two consecutive circles or sliders and long-press one of them,
-or press **Ctrl+Shift+M**, to open **Merge into slider**. Consecutive means no
+then choose **Merge into slider** in Slider Inspector, or press **Ctrl+Shift+M**. Consecutive means no
 circle or slider is omitted between the earliest and latest selected starts in
 time/source order. A selected banana shower blocks merging. The dialog offers
 straight segments or a curved path; when any selected slider has a curved path,
@@ -949,13 +938,13 @@ Its generated catch events can differ from the original objects. The dialog warn
 that saving retains only the merged slider: reopening cannot recover the original
 objects because project files do not store undo history.
 
-Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press an FSlider to reveal **Convert to Stream/Stack**; imported Legacy Sliders offer **Convert to FSlider** above it. Ordinary sliders open the shared dialog on Stream; existing streams and stacks open their corresponding tab. The snap slider has the same subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**, plus the enabled experimental divisions. Enter confirms; Esc cancels; arrow keys change the choice.
+Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press a slider to open Slider Inspector; its conversion action opens the Stream/Stack dock draft. Imported Legacy Sliders also offer **Convert to FSlider**. The Edit entry and keyboard shortcut open the shared dialog. Ordinary sliders open the shared dialog on Stream; existing streams and stacks open their corresponding tab. The snap slider has the same subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**, plus the enabled experimental divisions. Enter confirms; Esc cancels; arrow keys change the choice.
 
 The dialog separates its title, tabs, Snap and conversion switches with padding.
 The Snap value has a gap from the slider thumb. Stream and Stack show their
 controls and preview without the introductory or graph-instruction paragraphs.
 
-With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. Once the parent is selected, dragging a fruit edits its X position and marks that event with a bright outer ring. Middle-fruit edits preserve neighbouring samples and event times; repeated traversals sharing the same path sample move together. Head and tail fruits also support dragging in time. A repeated tail resizes its span duration and edits the endpoint of its final traversal. Drag the empty area inside the selection box to move the whole stream. Visible anchors and handles take priority over overlapping stream fruits, so dragging a control reshapes the parent curve. Hiding Slider Path lets the overlapping fruit be edited directly. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in their long-press menu. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. Parent-level New Combo applies to the first fruit; internal fruit NC is edited in the upper timeline. Object-level sound/sample settings apply to each fruit.
+With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. Once the parent is selected, dragging a fruit edits its X position and marks that event with a bright outer ring. Middle-fruit edits preserve neighbouring samples and event times; repeated traversals sharing the same path sample move together. Head and tail fruits also support dragging in time. A repeated tail resizes its span duration and edits the endpoint of its final traversal. Drag the empty area inside the selection box to move the whole stream. Visible anchors and handles take priority over overlapping stream fruits, so dragging a control reshapes the parent curve. Hiding Slider Path lets the overlapping fruit be edited directly. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in Slider Inspector. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. Parent-level New Combo applies to the first fruit; internal fruit NC is edited in the upper timeline. Object-level sound/sample settings apply to each fruit.
 
 The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Ctrl+L restores the current difficulty's previous saved version after confirmation. Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
 
@@ -992,8 +981,7 @@ or colour picker. Language changes take effect immediately.
 
 ## Stream and Stack conversion
 
-Select sliders and choose **Convert to Stream/Stack** from Edit or the long-press
-menu, or press **Ctrl+Shift+F**. Existing streams and stacks use **Edit Stream/Stack**
+Select sliders and choose **Convert to Stream/Stack** from Edit or Slider Inspector, or press **Ctrl+Shift+F**. Existing streams and stacks use **Edit Stream/Stack**
 for the menu, button and dialog title. Existing streams open on **Stream**, and
 existing stacks open on **Stack**, retaining their saved subdivision. Ordinary
 sliders open on **Stream**. A mixed Stream/Stack selection follows its first
@@ -1203,3 +1191,22 @@ at the tail. Reopen the window to change the fractions. See the
 The right previews in Stream, Stack and Banana Shower Edit support **Alt + mouse
 wheel** to zoom the time axis around the pointer. Ordinary wheel input scrolls.
 Zoom is local to the dialog and does not change object timing or create undo history.
+
+## Slider Inspector
+
+Open Slider Inspector from Layout or long-press a selected slider (Shift+F also
+opens it). It follows the current selection and shows type, start/end times,
+duration, spans, control-point count, exported SV and exported path length.
+Multiple sliders show value ranges. Managed streams and stacks have no exported
+slider SV. These properties are read-only.
+
+**Max DS (including tiny droplets)** always includes tiny droplets. **Peak
+horizontal speed** is expressed relative to the map's base SV/DPB, shown directly
+below it: 0.50× at a base of 1.92× SV / 192 DPB means half that base horizontal
+speed. It uses adjacent exported catch events, including tiny droplets, and
+integrates the base speed across BPM changes. The timestamp button seeks to the
+peak interval's ending event. No raw displacement/time formula is displayed.
+
+The action area contains conversion, clearing internal anchors, stream breaking
+and reversion, merging, and the Randomize droplets entry. Stream/Stack and
+randomization edits open their dock drafts; Apply commits and Cancel discards.

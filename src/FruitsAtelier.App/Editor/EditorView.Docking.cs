@@ -5,7 +5,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup }
+    internal enum DockPanel { MovementStrain, Preview, PatternEditor, Notes, SongSetup, RandomizeDroplets, SliderInspector }
     private sealed class DockGroup(DockPanel panel, float width)
     {
         public readonly List<DockPanel> Panels = [panel];
@@ -63,7 +63,8 @@ public sealed partial class EditorView
     private static string DockTitle(DockPanel panel) => L.Get(panel switch
     {
         DockPanel.Preview => "dock.preview", DockPanel.PatternEditor => "dock.patternEditor",
-        DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title", _ => "difficulty.curve.title"
+        DockPanel.Notes => "dock.notes", DockPanel.SongSetup => "song.title",
+        DockPanel.RandomizeDroplets => "randomize.title", DockPanel.SliderInspector => "inspector.title", _ => "difficulty.curve.title"
     });
 
     private bool DockPanelExists(DockPanel panel) => DockWorkspaceState.Left.Panels.Contains(panel)
@@ -178,6 +179,10 @@ public sealed partial class EditorView
                 }
                 else if (group.Active == DockPanel.PatternEditor)
                     DrawPatternDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                else if (group.Active == DockPanel.RandomizeDroplets)
+                    DrawRandomDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
+                else if (group.Active == DockPanel.SliderInspector)
+                    DrawSliderInspector(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                 else if (group.Active == DockPanel.SongSetup)
                     DrawSongDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                 else if (group.Active == DockPanel.Notes)

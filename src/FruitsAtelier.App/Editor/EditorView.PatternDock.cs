@@ -27,6 +27,13 @@ public sealed partial class EditorView
 
     internal IEnumerable<ConvertedCatchObject> PatternCanvasObjects(double start, double end)
     {
+        if (RandomPreviewReady && randomPreview is { } randomObjects)
+        {
+            int left = 0, right = randomObjects.Count;
+            while (left < right) { int mid = (left + right) / 2; if (randomObjects[mid].TimeMs < start) left = mid + 1; else right = mid; }
+            for (int i = left; i < randomObjects.Count && randomObjects[i].TimeMs <= end; i++) yield return randomObjects[i];
+            yield break;
+        }
         bool preview = PatternCanvasPreviewActive;
         if (!preview || patternDockKind == 1)
             foreach (var item in ObjectsInTimeRange(start, end))

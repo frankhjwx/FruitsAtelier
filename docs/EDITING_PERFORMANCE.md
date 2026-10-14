@@ -204,3 +204,17 @@ Before handing off an editing change:
 4. Keep benchmark outputs, profiles and screenshots in ignored `artifacts/`.
    Record measured results and remaining limitations in the task, not as permanent
    performance guarantees in this document.
+
+## Dock inspector and randomization drafts
+
+Slider Inspector caches rows by committed conversion snapshot, playable-export
+identity and selected parent IDs. It reads the existing exported events and timing
+lookup; repainting does not export or convert. Tiny droplets are always included
+in its peak DS and horizontal-speed calculations.
+
+Randomize droplets validates a detached document on a background task with its
+own OsuWriteCache. Unchanged drafts reuse the result; parameter changes coalesce
+while validation is running. Results publish only for the requested draft in the
+current document/selection session. Replacing the session detaches its worker and
+cache. The canvas uses validated preview objects without replacing committed
+conversion or creating undo history; Apply performs one editing transaction.
