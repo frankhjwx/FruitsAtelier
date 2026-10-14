@@ -1703,7 +1703,7 @@ public sealed partial class EditorView
     {
         var document = Document;
         try { PointerDownCore(x, y, button, shift, ctrl); }
-        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
     }
     public void PointerMove(float x, float y, bool shift, bool ctrl)
     {
@@ -1715,13 +1715,13 @@ public sealed partial class EditorView
     {
         var document = Document;
         try { PointerUpCore(x, y, button, shift); }
-        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
     }
     public void KeyDown(int virtualKey, bool ctrl, bool shift)
     {
         var document = Document;
         try { KeyDownCore(virtualKey, ctrl, shift); }
-        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
     }
     public void TextInput(char value)
     {

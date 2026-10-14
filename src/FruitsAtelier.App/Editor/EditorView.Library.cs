@@ -54,6 +54,7 @@ public sealed partial class EditorView
         try { LibrarySettings = settings ?? LibrarySettings.Load(); }
         catch (Exception e) { libraryError = e.Message; }
         RestoreMapEditingPreferences();
+        RestoreDockLayouts();
         playbackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
         canvasZoom = LibrarySettings.CanvasZoom;
         canvasTimeZoom = LibrarySettings.CanvasTimeZoom;

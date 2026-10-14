@@ -67,6 +67,7 @@ workspace notes roundtrips. Native docking checks also capture these panels.
 `App.Tests --docking-check` exercises cross-side moves, tab groups, cancellation,
 live tab ordering, symmetric dock resizing, Layout and context-menu panel management,
 and independent Mapping/Timing layouts in English and Chinese,
+including settings-file roundtrips, restart restoration and invalid layout entries,
 alongside the existing sidebar rendering and seeking checks.
 `FruitsAtelier.App.exe --render-check --docking-render-check` runs the native
 Direct2D gestures at two window sizes and three DPI values. Screenshots are

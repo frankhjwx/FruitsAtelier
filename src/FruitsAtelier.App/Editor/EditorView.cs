@@ -32,6 +32,7 @@ public sealed partial class EditorView
         this.timeProvider = timeProvider ?? TimeProvider.System;
         difficulties = BeatmapProject.FromDocuments([loadDemo ? DemoMap.Create() : new MapDocument { IsDemo = false }])
             .Difficulties.Select(d => new DifficultySession(d)).ToList();
+        RestoreDockLayouts();
         HasEditorProject = loadDemo;
         if (!loadDemo) { ProjectName = ""; StatusMessage = ""; playhead = 0; }
     }

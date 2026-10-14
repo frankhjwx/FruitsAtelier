@@ -844,10 +844,10 @@ side down to its minimum; the canvas retains its minimum usable width. Reorderin
 previews the resulting order without a dock overlay. Preview options stack vertically
 in narrow docks.
 
-The fixed Mapping Panel / Timing Panel selector switches workspaces. During the
-editor session each workspace independently retains panel placement, tab order,
+The fixed Mapping Panel / Timing Panel selector switches workspaces. Each workspace independently retains panel placement, tab order,
 active tabs, collapsed groups, widths, preview options and the movement readout's
-position. Timing Panel keeps its fixed waveform and timing-controls layout and
+position. Layout changes are saved in user preferences after completed actions
+and restored when the editor restarts, independently of project saves. Timing Panel keeps its fixed waveform and timing-controls layout and
 does not expose dock dragging. Layout changes do not change beatmap content or undo.
 
 The **Layout** menu next to **View** lists the side-dock arrangement, a layout reset,

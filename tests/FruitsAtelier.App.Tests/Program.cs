@@ -12,7 +12,7 @@ if (args.Contains("--pattern-notes-check")) { PatternNotesTests.Run(); Console.W
 
 if (args.Contains("--docking-check"))
 {
-    DockingTests.Run(); DifficultyCurveSidebarTests.LayoutAndSeeking(); PreviewSidebarTests.DisplayModesAndOverscan();
+    DockingTests.Run(); DockPersistenceTests.Run(); DifficultyCurveSidebarTests.LayoutAndSeeking(); PreviewSidebarTests.DisplayModesAndOverscan();
     CanvasZoomTests.DefaultsAndReset(); CanvasZoomTests.SliderAndWheel(); CanvasZoomTests.PlaybackAndLanguages();
     MainCurveSelectionOpacity();
     Console.WriteLine("PASS Docking, workspace toolbar, isolation and sidebars"); return 0;
@@ -223,6 +223,7 @@ var tests = new (string Name, Action Run)[]
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
     ("Song Setup docks, scrolls and applies cancellable drafts", SongDockTests.Run),
+    ("Dock layout settings restore across editor restarts", DockPersistenceTests.Run),
     ("Slider Inspector metrics and immediate randomization edits", InspectorPanelsTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
     ("Workspace saves and linked synchronization persist before optional Songs export", WorkspaceSaveTests.Run),

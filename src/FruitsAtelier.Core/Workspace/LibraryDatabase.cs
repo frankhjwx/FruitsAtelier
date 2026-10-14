@@ -7,6 +7,7 @@ namespace FruitsAtelier.Core;
 
 public sealed class LibrarySettings
 {
+    public EditorDockLayouts? DockLayouts { get; set; }
     public const int CurrentFirstRunSetupVersion = 1;
     public int FirstRunSetupVersion { get; set; }
     [System.Text.Json.Serialization.JsonIgnore]
