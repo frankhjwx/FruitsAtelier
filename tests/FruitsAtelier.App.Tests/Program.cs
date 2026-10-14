@@ -162,7 +162,7 @@ var tests = new (string Name, Action Run)[]
     ("Timing red insertion and deletion retain saving and slider export", TimingSaveFeedbackTests.Run),
     ("Slider drafts defer full-map conversion and publish only matching validated snapshots", DraftConversionTests.Run),
     ("Synchronization category tabs explain object changes and preserve choices", SyncTabsTests.Run),
-    ("AiMod checks object starts, isolates input, navigates errors and preserves undo", AimodTests.Run),
+    ("AiMod panel checks objects, scopes focused input, navigates errors and preserves undo", AimodTests.Run),
     ("AiMod table resizes, reorders, copies and docks without content edits", AimodTests.TableAndDock),
     ("Background workspace saves isolate input and acknowledge only their snapshot", PerformanceSchedulingTests.Save),
     ("Blocked operations show synchronization progress only on demand", SynchronizationWaitTests.Run),

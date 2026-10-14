@@ -9,13 +9,16 @@ snapshot: Refresh updates it, and checking or navigating never creates an edit.
 | Category | Checks |
 | --- | --- |
 | Compose | Adjacent object starts less than 10 ms apart; unsnapped starts and ends; uncommon snap divisors. |
-| Design | Missing background and referenced resources; oversized background images. |
-| Timing | Map length, quiet timing sections, duplicate timing points, Kiai snapping and intervals, missing preview point. |
+| Design | Missing background and referenced resources; background/video dimensions, skin image dimensions and short storyboard lifetimes. |
+| Timing | Map/audio length, quiet sections, duplicate points, inherited points before timing, first-point Kiai, Kiai snapping and intervals, missing preview point. |
 | Meta | Drain length, stack leniency and non-ASCII romanised artist/title. |
 | Mapset | Shared metadata, audio settings and uninherited timing differences between loaded difficulties. |
 
 Resource existence and PNG/JPEG/GIF header checks run on a document snapshot in a
-worker. The editor consumes only completed results; rendering performs no file I/O.
+worker. Shared `.osb` files, variables, animation frames, loops and compound
+commands participate in resource and storyboard checks. Media properties use
+TagLibSharp 2.3.0 without decoding playback; unreadable or unsupported media is
+reported instead of silently passing. The editor consumes only completed results; rendering performs no file I/O.
 Mapset checks use loaded difficulties, not an online submission service.
 
 ## Stable compatibility
@@ -34,8 +37,11 @@ and the Compose rows visible in the supplied screenshots. Unseen Compose rows
 have not been individually compared against stable.
 
 This is a Catch report, not a validator for the other three game modes or all
-ranking criteria. Video dimensions, storyboard strobing and skin dimensions are
-not currently inspected. The wiki's inactive bitrate checks are not emitted.
+ranking criteria. Video warnings require both dimensions to exceed stable's thresholds, with
+1280×720 tested before 1024×768. Skin checks cover hitcircle, hitcircleoverlay,
+approachcircle and reversearrow PNGs (128×128, or 256×256 for `@2x`). More than
+five storyboard objects with lifetimes under 100 ms suggest an epilepsy warning;
+sample events are excluded. The wiki's inactive bitrate checks are not emitted.
 
 ## References
 

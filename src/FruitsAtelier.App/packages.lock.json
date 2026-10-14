@@ -187,6 +187,11 @@
         "resolved": "4.5.0",
         "contentHash": "okurQJO6NRE/apDIP23ajJ0hpiNmJ+f0BwOlB/cSqTLQlw5upkf+5+96+iG2Jw40G1fCVCyPz/FhIABUjMR+RQ=="
       },
+      "TagLibSharp": {
+        "type": "Transitive",
+        "resolved": "2.3.0",
+        "contentHash": "Qo4z6ZjnIfbR3Us1Za5M2vQ97OWZPmODvVmepxZ8XW0UIVLGdO2T63/N3b23kCcyiwuIe0TQvMEQG8wUCCD1mA=="
+      },
       "Vortice.DirectX": {
         "type": "Transitive",
         "resolved": "3.6.2",
@@ -205,7 +210,8 @@
       "fruitsatelier.core": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Data.Sqlite": "[8.0.22, )"
+          "Microsoft.Data.Sqlite": "[8.0.22, )",
+          "TagLibSharp": "[2.3.0, )"
         }
       }
     }

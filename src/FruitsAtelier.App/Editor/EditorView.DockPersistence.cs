@@ -39,6 +39,7 @@ public sealed partial class EditorView
             Restore(timingDockWorkspace, layouts.Timing);
         }
         savedDockLayout = JsonSerializer.Serialize(CaptureDockLayouts());
+        RefreshLoadedAimod();
     }
     private static void Restore(DockWorkspace workspace, DockWorkspaceLayout? layout)
     {

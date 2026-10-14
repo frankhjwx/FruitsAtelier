@@ -12,7 +12,7 @@ public sealed partial class EditorView
     private int volumeChannel;
     private bool CanUseVolumePopover => !LibraryVisible && !ExportVisible && !updatesPage
         && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible
-        && !SongSetupVisible && !DistanceSnapDialogVisible && !VolumeDialogVisible && !AimodVisible
+        && !SongSetupVisible && !DistanceSnapDialogVisible && !VolumeDialogVisible
         && !TimeJumpVisible && !BananaEditVisible && !StreamDialogVisible && !MergeDialogVisible && !IsEditingText && drag == DragKind.None;
 
     private double VolumeNowMs => timeProvider.GetTimestamp() * 1000d / timeProvider.TimestampFrequency;

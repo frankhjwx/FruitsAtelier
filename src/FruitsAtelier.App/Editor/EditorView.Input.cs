@@ -29,7 +29,6 @@ public sealed partial class EditorView
             if (button == 0 && HeaderNavigationBounds.Contains(x, y)) ShowLibrary();
             NotifySynchronizationBlocked(); return;
         }
-        if (AimodVisible && AimodPointer(x, y, button, shift, ctrl)) return;
         placementCtrl = ctrl;
         if (IsTestplaying) { TestplayPointerDown(x, y, button); return; }
         if (ErrorVisible || DiscardConfirmationVisible)
@@ -442,7 +441,6 @@ public sealed partial class EditorView
             return;
         }
         if (movementPanelPointer) { MoveMovementPanel(x, y); return; }
-        if (AimodVisible) { mouseX = x; mouseY = y; return; }
         if (SynchronizationBlocksInput) return;
         MoveVolumePopoverPointer(x, y);
         if (MoveCanvasBackgroundDimPointer(x, y)) return;
@@ -593,7 +591,6 @@ public sealed partial class EditorView
             textSelecting = false;
             return;
         }
-        if (AimodVisible) return;
         testplayCursorPressed = false;
         if (SynchronizationBlocksInput) return;
         if (EndCanvasBackgroundDimPointer(x, y, button)) return;
@@ -701,7 +698,7 @@ public sealed partial class EditorView
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
         if (AcknowledgementsVisible) return;
-        if (AimodVisible || AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
+        if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
             var row = aimodRowBounds.FirstOrDefault(r => r.Bounds.Contains(x, y));
             if (row.Bounds.Height > 0) LocateAimodIssue(aimodRows[row.Index]);
@@ -710,7 +707,6 @@ public sealed partial class EditorView
         if (CanUseCanvasBackgroundDim && CanvasBackgroundDimBounds.Contains(x, y)) return;
         if (HitsoundCopierVisible) { PointerDown(x, y, 0, shift, ctrl); return; }
 
-        if (AimodVisible) return;
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
             NotifySynchronizationBlocked(); return;
@@ -852,12 +848,11 @@ public sealed partial class EditorView
                 0, Math.Max(0, L.AvailableLanguages.Count - languageVisibleRows));
             return;
         }
-        if (AimodVisible || AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
+        if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
             if (aimodScrollTrack.Contains(x, y) || shiftHeld)
                 aimodScrollX = Math.Clamp(aimodScrollX - delta / 120 * 48, 0, Math.Max(0, aimodColumns.Sum(col => aimodColumnWidths[col]) - aimodListBounds.Width));
-            else if (aimodListBounds.Contains(x, y)) aimodFirst = Math.Clamp(aimodFirst - (int)(delta / 120) * 3,
-                0, Math.Max(0, aimodRows.Count - aimodVisibleRows));
+            else if (aimodListBounds.Contains(x, y)) ScrollAimod(-delta / 120 * 60);
             return;
         }
         if (VersionHistoryVisible) { ScrollVersionHistory(x, y, delta, ctrl); return; }
@@ -1375,7 +1370,6 @@ public sealed partial class EditorView
         if (AcknowledgementsVisible) return;
         if (HitsoundCopierVisible) { if (!ErrorVisible && !DiscardConfirmationVisible && !char.IsControl(value)) PasteHitsoundName(value.ToString()); return; }
 
-        if (AimodVisible) return;
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
             NotifySynchronizationBlocked(); return;

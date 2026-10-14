@@ -105,6 +105,7 @@ public sealed partial class EditorView
         AudioNotice = L.Get(AudioLoading ? "editor.audio.loading" : "editor.audio.notLoaded");
         pinPlayhead = true;
         StatusMessage = L.Get("editor.status.documentOpened", document.Name, document.TimingPoints.Count);
+        RefreshLoadedAimod();
     }
 
     public BeatmapProject CaptureProject() => new()
@@ -226,7 +227,7 @@ public sealed partial class EditorView
         if (LibraryOpening || AudioProjectCreating) return false;
         if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
         if (VersionHistoryVisible || SynchronizationVisible) return false;
-        if (librarySettingsOpen || HitsoundCopierVisible || SongSetupVisible || DistanceSnapDialogVisible || TimingModal || AimodVisible) return false;
+        if (librarySettingsOpen || HitsoundCopierVisible || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
         if (!CommitTimingField()) return false;
         if (SliderMultiplierValidationBusy)
         { StatusMessage = L.Get("timing.sliderMultiplierChecking"); return false; }

@@ -32,7 +32,7 @@ public sealed partial class EditorView
     private bool DockContentInputAvailable => !ErrorVisible && !DiscardConfirmationVisible && !LibraryVisible
         && !ExportVisible && !SongSetupVisible && !SliderDialogVisible && !TimeJumpVisible && !TimingModal
         && !BananaEditVisible && !StreamDialogVisible && !MergeDialogVisible && !VolumeDialogVisible
-        && !DistanceSnapDialogVisible && !AimodVisible && !HitsoundCopierVisible && !VersionHistoryVisible
+        && !DistanceSnapDialogVisible && !HitsoundCopierVisible && !VersionHistoryVisible
         && !IsTestplaying && !SynchronizationBlocksInput && !SynchronizationWaitVisible;
     private bool PanelVisible(DockPanel panel) => !TimingPageVisible && DockPanelExists(panel) && !PanelGroup(panel).Collapsed
         && PanelGroup(panel).Active == panel;
@@ -229,7 +229,7 @@ public sealed partial class EditorView
                 else if (group.Active == DockPanel.SongSetup)
                     DrawSongDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                 else if (group.Active == DockPanel.Aimod)
-                    DrawAimodPanel(c, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 50)), true);
+                    DrawAimodPanel(c, new(bounds.X + 8, bounds.Y + 44, Math.Max(0, bounds.Width - 16), Math.Max(0, bounds.Height - 50)));
                 else if (group.Active == DockPanel.Notes)
                     DrawNotesDock(c, new(bounds.X + 12, bounds.Y + 44, Math.Max(0, bounds.Width - 24), Math.Max(0, bounds.Height - 50)));
                 else
@@ -301,7 +301,6 @@ public sealed partial class EditorView
                 if (index >= 0) destination.Panels.Insert(index, panel); else destination.Panels.Add(panel);
                 destination.Active = panel; destination.Collapsed = false;
             }
-            else if (panel == DockPanel.Aimod) DetachAimod();
         }
         dockPressed = null; dockDragging = false;
     }

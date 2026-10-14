@@ -102,15 +102,15 @@ press **Ctrl+C** or **Copy** to copy complete values as tab-separated text with
 headers. **Ctrl+A** selects all rows in the current category. Click a timestamp,
 double-click a row or press Enter to locate it; object findings also select their
 editable parents. **Refresh** (or F5 while the report has focus) reruns checks.
-Paging and the mouse wheel browse longer reports.
+The time column is leftmost by default. Drag the vertical scrollbar or use the
+mouse wheel to scroll the report continuously.
 
-**Attach** puts AiMod in a side dock, where the editor remains usable. Drag its
-tab to either dock, reorder it with other tabs, or use **Float** to return to a
-floating panel. Drag the floating title to move it or onto a side dock to attach;
-drag its lower-right corner to resize. Dock placement persists with the workspace
-layout. Ctrl+Shift+A focuses and refreshes an attached report. Editing makes the
-report a stale snapshot; its footer asks for a refresh. Switching difficulties
-clears the old results.
+AiMod opens directly as a side panel. Drag its tab to either dock or reorder it
+with other tabs. Dock placement persists with the workspace layout. Ctrl+Shift+A
+focuses and refreshes the panel. Editing makes the report a stale snapshot; its
+footer asks for a refresh. A restored AiMod panel automatically checks once the
+map is loaded. Switching difficulties replaces the report with a check of the
+new difficulty; painting and resizing do not rerun analysis.
 
 Analysis uses exported Catch objects, including generated Stream/Stack objects,
 and does not modify content or undo history. Resource checks run in the background.

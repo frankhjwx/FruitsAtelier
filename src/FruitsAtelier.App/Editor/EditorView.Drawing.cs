@@ -136,9 +136,8 @@ public sealed partial class EditorView
         DrawSettings(c);
         if (librarySettingsOpen) DrawContextMenu(c);
         if (librarySettingsOpen) DrawLanguageMenu(c);
-        DrawAimod(c);
         DrawDiscardConfirmation(c);
-        if (!librarySettingsOpen && !AimodVisible) DrawDifficultyTooltip(c);
+        if (!librarySettingsOpen) DrawDifficultyTooltip(c);
     }
 
     private void DrawChrome(ICanvas c)

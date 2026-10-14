@@ -27,6 +27,7 @@ public static partial class Aimod
             .OrderBy(x => x.TimeMs).ThenBy(x => x.SourceOrder).ToArray();
         var sourceIds = sources.Select((s, i) => (s.Id, Source: i < export.ObjectSources.Count ? export.ObjectSources[i] : s.Id))
             .ToDictionary(x => x.Id, x => x.Source);
+        var ends = sources.ToDictionary(s => s.Id, s => s.TimeMs);
         Guid[] Ids(Guid id) => [sourceIds.GetValueOrDefault(id, id)];
         void Add(AimodCategory category, AimodSeverity severity, string code, double? time = null, Guid[]? ids = null, params object[] args)
             => issues.Add(new(category, severity, code, time, ids, args));
@@ -48,15 +49,16 @@ public static partial class Aimod
             double end = slider.TimeMs + slider.PixelLength * slider.SpanCount * state.BeatLengthMs
                 / (100 * map.EffectiveSliderMultiplier * state.SliderVelocityMultiplier);
             Snap(end, slider.Id, true);
-
+            ends[slider.Id] = end;
         }
         foreach (var shower in map.BananaShowers)
         {
             Snap(shower.TimeMs, shower.Id, false); Snap(shower.EndTimeMs, shower.Id, true);
+            ends[shower.Id] = shower.EndTimeMs;
         }
         // Stable's Catch Compose pass does not apply standard-mode geometry or distance checks.
         _ = checkDistanceSnap;
-        CheckTiming(document, map, timing, sources.Select(s => s.TimeMs).ToArray(), issues);
+        CheckTiming(document, map, timing, sources.Select(s => s.TimeMs).ToArray(), sources.Length == 0 ? 0 : ends[sources[^1].Id], issues);
         if (OsuTimeline.BackgroundFilename(document) is null)
             Add(AimodCategory.Design, AimodSeverity.Error, "noBackground");
         if (sources.Length > 0)
@@ -107,19 +109,29 @@ public static partial class Aimod
     }
     private static double Number(string value) => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double n) ? n : 0;
 
-    private static void CheckTiming(MapDocument original, MapDocument map, TimingMap.Lookup lookup, double[] times, List<AimodIssue> issues)
+    private static void CheckTiming(MapDocument original, MapDocument map, TimingMap.Lookup lookup, double[] times, double lastEnd, List<AimodIssue> issues)
     {
         void Add(string code, double? time = null, AimodSeverity severity = AimodSeverity.Warning, params object[] args)
             => issues.Add(new(AimodCategory.Timing, severity, code, time, null, args));
         if (times.Length == 0) return;
-        double length = times[^1] - times[0];
+        double length = lastEnd - times[0];
         if (length > 360000) Add("longMap");
         else if (length < 45000) Add("shortMap");
         var points = map.TimingPoints.OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).ToArray();
         int quiet = points.Count(p => p.Volume < 5);
         if (quiet > 0) Add(quiet == points.Length ? "allQuiet" : "someQuiet", severity: quiet == points.Length ? AimodSeverity.Error : AimodSeverity.Warning, args: [quiet, points.Length]);
-        for (int i = 1; i < points.Length; i++)
-            if (points[i].TimeMs == points[i - 1].TimeMs && points[i].Uninherited == points[i - 1].Uninherited) Add("duplicateTiming", points[i].TimeMs);
+        var sameTime = new HashSet<(double, bool)>();
+        bool redSeen = false;
+        foreach (var point in points)
+        {
+            if (!redSeen)
+            {
+                if (!point.Uninherited) Add("inheritedBeforeTiming", point.TimeMs, AimodSeverity.Error);
+                else if ((point.Effects & 1) != 0) Add("firstTimingKiai", point.TimeMs, AimodSeverity.Error);
+            }
+            redSeen |= point.Uninherited;
+            if (!sameTime.Add((point.TimeMs, point.Uninherited))) Add("duplicateTiming", point.TimeMs);
+        }
         bool active = false; double start = 0, total = 0, previousEnd = 0;
         foreach (var p in points)
         {
@@ -141,9 +153,9 @@ public static partial class Aimod
             }
             active = on;
         }
-        if (active) { Add("openKiai", start); total += Math.Max(0, times[^1] - start); }
-        bool tv = SongSetup.Get(map, "Metadata", "Title").Contains("TV Size", StringComparison.OrdinalIgnoreCase);
-        if (total > length * (tv ? .5 : 1d / 3)) Add(tv ? "muchKiaiTv" : "muchKiai");
+        if (active) { Add("openKiai", start); total += Math.Max(0, lastEnd - start); }
+        if (length > 180000 && total > length / 3) Add("muchKiai");
+        else if (length < 90000 && total > length / 2) Add("muchKiaiTv");
         if (Number(SongSetup.Get(original, "General", "PreviewTime", "-1")) < 0) Add("previewUnset");
     }
 }

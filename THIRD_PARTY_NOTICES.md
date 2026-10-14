@@ -31,6 +31,7 @@ The application uses the following NuGet packages, pinned by project files and `
 | NAudio.Core / NAudio.WinMM / NAudio.Wasapi | 2.2.1 | MIT |
 | NAudio.Vorbis | 1.5.0 | MIT |
 | NVorbis | 0.10.4 | MIT |
+| TagLibSharp | 2.3.0 | LGPL-2.1-only |
 
 Package metadata is available in the restored package `.nuspec` files under `artifacts/packages`. Windows builds use the installed .NET 8 runtime; the self-contained macOS bundle includes it. Audio source references and limits are recorded in [Audio/REFERENCE.md](src/FruitsAtelier.App/Audio/REFERENCE.md); licence texts in `Audio/Licenses` are copied to builds.
 
@@ -228,3 +229,13 @@ application code license.
 `assets/setup/campus-after-class.wav` is the user-supplied
 `01 BGM_CAMPUS_AFTER_CLASS_V1.wav`, used unmodified for the setup music audition.
 It is separate from the application code license.
+
+## Media metadata
+
+AiMod reads audio duration and video dimensions using the unmodified TagLibSharp
+2.3.0 NuGet assembly (copyright Brian Nickel and contributors), dynamically linked
+as `TagLibSharp.dll`. Its [source release](https://github.com/mono/taglib-sharp/tree/b5ae84f2e84087bf160bb0471420200dd2b5d809)
+is pinned to `b5ae84f2e84087bf160bb0471420200dd2b5d809` (TaglibSharp-2.3.0.0).
+The LGPL 2.1 text in `src/FruitsAtelier.Core/Licenses/TagLibSharp.txt` is copied to
+application outputs. Users may replace that library with a compatible modified
+build; no media metadata is written by AiMod.

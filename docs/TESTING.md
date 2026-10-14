@@ -55,7 +55,7 @@ resizing/reordering, selection/copy and dock attachment. Run
 `Core.Tests --aimod-twin-bloom <path.osu>` against the matching local Twin Bloom
 fixture to compare stable screenshot findings and category/severity totals.
 `FruitsAtelier.App.exe --render-check --aimod-render-check` checks the native
-floating and attached panels at multiple sizes and DPI values and captures English/Chinese reports
+dock panels and continuous scrolling at multiple sizes and DPI values and captures English/Chinese reports
 under `artifacts/tests/aimod-native`.
 
 `App.Tests --group-drag-boundary-check` checks fractional fruit selections dragged

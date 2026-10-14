@@ -6,7 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    public bool AimodVisible { get; private set; }
+    public bool AimodVisible => PanelVisible(DockPanel.Aimod);
     public IReadOnlyList<NoteOverlap> AimodErrors { get; private set; } = [];
     public IReadOnlyList<AimodIssue> AimodIssues { get; private set; } = [];
     private IReadOnlyList<AimodIssue> aimodRows = [];
@@ -20,14 +20,13 @@ public sealed partial class EditorView
     {
         if (!HasEditorProject || LibraryVisible || IsTestplaying || SynchronizationVisible || !ClipboardInteractionReady) return;
         menu = -1; contextItems.Clear(); languageMenuOpen = false;
-        if (DockPanelExists(DockPanel.Aimod) && !TimingPageVisible)
-        {
-            PanelGroup(DockPanel.Aimod).Active = DockPanel.Aimod;
-            PanelGroup(DockPanel.Aimod).Collapsed = false;
-        }
-        else AimodVisible = true;
+        if (TimingPageVisible) ShowTimingPage(false);
+        bool existed = DockPanelExists(DockPanel.Aimod);
+        AddDockPanel(DockPanel.Aimod, false);
+        PanelGroup(DockPanel.Aimod).Active = DockPanel.Aimod;
+        PanelGroup(DockPanel.Aimod).Collapsed = false;
         aimodFocused = true;
-        RefreshAimod();
+        if (existed) RefreshAimod();
         hits.Clear(); fields.Clear();
     }
 
@@ -49,27 +48,30 @@ public sealed partial class EditorView
             aimodResourceTask = null;
         }
         FilterAimod();
-        aimodFirst = 0;
+        aimodFirst = 0; aimodScrollY = 0;
+    }
+
+    private void RefreshLoadedAimod()
+    {
+        if (HasEditorProject && DockPanelExists(DockPanel.Aimod) && aimodSnapshot is null) RefreshAimod();
     }
 
     private void FilterAimod()
     {
         aimodRows = AimodIssues.Where(i => aimodCategory is null || i.Category == aimodCategory).ToArray();
-        aimodFirst = 0; aimodSelected.Clear(); aimodSelectionAnchor = -1;
+        aimodFirst = 0; aimodScrollY = 0; aimodSelected.Clear(); aimodSelectionAnchor = -1;
     }
 
     private void CloseAimod()
     {
-        aimodResourceTask = null; AimodVisible = false; AimodErrors = []; AimodIssues = []; aimodRows = []; aimodFirst = 0;
+        aimodResourceTask = null; AimodErrors = []; AimodIssues = []; aimodRows = []; aimodFirst = 0; aimodScrollY = 0;
         aimodSnapshot = null; aimodFocused = false; aimodGesture = AimodGesture.None; aimodSelected.Clear();
-        hits.Clear();
     }
 
     private void LocateAimodIssue(AimodIssue issue)
     {
         if (issue.TimeMs is not double time) return;
-        if (AimodVisible) CloseAimod();
-        else aimodFocused = false;
+        aimodFocused = false;
         tool = Tool.Select;
         if (issue.ObjectIds is { Length: > 0 } ids) SelectObjects(ids, ids[0]);
         SeekTo(time);
@@ -88,57 +90,20 @@ public sealed partial class EditorView
         for (int i = 0; i < aimodRows.Count; i++) if (selected.Contains(aimodRows[i])) aimodSelected.Add(i);
     }
 
-    private Rect aimodFloatingBounds;
-    private Rect aimodPanelBounds, aimodTitleBounds, aimodResizeBounds;
+    private Rect aimodPanelBounds;
     private MapDocument? aimodSnapshot;
     private bool aimodFocused;
-    internal bool AimodDocked => PanelVisible(DockPanel.Aimod);
+    internal bool AimodDocked => AimodVisible;
     internal Rect AimodPanelBounds => aimodPanelBounds;
 
-    private void AttachAimod(bool left)
-    {
-        AimodVisible = false;
-        AddDockPanel(DockPanel.Aimod, left);
-        var group = PanelGroup(DockPanel.Aimod);
-        group.Active = DockPanel.Aimod; group.Collapsed = false;
-        aimodFocused = true; hits.Clear(); fields.Clear();
-    }
-
-    private void DetachAimod()
-    {
-        RemoveDockPanel(DockPanel.Aimod);
-        AimodVisible = true; aimodFocused = true;
-        hits.Clear(); fields.Clear();
-    }
-
-    private void DrawAimod(ICanvas c)
-    {
-        if (!AimodVisible) return;
-        hits.Clear(); fields.Clear();
-        float w = Math.Min(aimodFloatingBounds.Width > 0 ? aimodFloatingBounds.Width : 900, width - 32);
-        float h = Math.Min(aimodFloatingBounds.Height > 0 ? aimodFloatingBounds.Height : 560, height - 48);
-        float x = aimodFloatingBounds.Width > 0 ? Math.Clamp(aimodFloatingBounds.X, 0, width - w) : (width - w) / 2;
-        float y = aimodFloatingBounds.Height > 0 ? Math.Clamp(aimodFloatingBounds.Y, 34, height - h) : (height - h) / 2;
-        aimodFloatingBounds = new(x, y, w, h);
-        c.Fill(new(0, 34, width, height - 34), 0x000000, opacity: .25f);
-        c.Fill(aimodFloatingBounds, Panel, 6); c.Stroke(aimodFloatingBounds, Grid, radius: 6);
-        aimodTitleBounds = new(x + 8, y + 4, w - 92, 32);
-        c.Text(L.Get("aimod.title") + " · " + CurrentDifficultyName, x + 16, y + 10, 16, Foreground, w - 120, true);
-        Button(c, new(x + w - 80, y + 4, 72, 30), L.Get("ui.close"), CloseAimod);
-        DrawAimodPanel(c, new(x + 12, y + 40, w - 24, h - 52), false);
-        aimodResizeBounds = new(x + w - 14, y + h - 14, 14, 14);
-        c.Line(x + w - 12, y + h - 3, x + w - 3, y + h - 12, Muted);
-    }
-
-    private void DrawAimodPanel(ICanvas c, Rect r, bool docked)
+    private void DrawAimodPanel(ICanvas c, Rect r)
     {
         PumpAimodResources();
         aimodPanelBounds = r;
         float buttonWidth = Math.Min(100, (r.Width - 8) / 3);
         Button(c, new(r.X, r.Y, buttonWidth, 28), L.Get("aimod.refresh"), RefreshAimod);
         Button(c, new(r.X + buttonWidth + 4, r.Y, buttonWidth, 28), L.Get("aimod.copy"), CopyAimodSelection, enabled: aimodSelected.Count > 0);
-        Button(c, new(r.X + (buttonWidth + 4) * 2, r.Y, buttonWidth, 28), L.Get(docked ? "aimod.detach" : "aimod.attach"),
-            () => { if (docked) DetachAimod(); else AttachAimod(false); }, enabled: !TimingPageVisible);
+        Button(c, new(r.X + (buttonWidth + 4) * 2, r.Y, buttonWidth, 28), L.Get("ui.close"), () => RemoveDockPanel(DockPanel.Aimod));
         c.Text(L.Get("aimod.counts", AimodIssues.Count(i => i.Severity == AimodSeverity.Warning), AimodIssues.Count(i => i.Severity == AimodSeverity.Error)),
             r.X + 4, r.Y + 34, 12, Foreground, r.Width - 8);
         if (r.Width > 560)
@@ -155,11 +120,7 @@ public sealed partial class EditorView
                 fontSize: r.Width / columns < 100 ? 10 : 12, textPadding: 5, textRightPadding: 3);
         }
         float tableY = r.Y + 64 + tabRows * 28;
-        DrawAimodTable(c, new(r.X, tableY, r.Width, Math.Max(40, r.Bottom - tableY - 62)));
-        Button(c, new(r.X, r.Bottom - 56, 28, 26), "‹", () => aimodFirst = Math.Max(0, aimodFirst - aimodVisibleRows), enabled: aimodFirst > 0);
-        Button(c, new(r.X + 30, r.Bottom - 56, 28, 26), "›", () => aimodFirst += aimodVisibleRows, enabled: aimodFirst + aimodVisibleRows < aimodRows.Count);
-        c.Text(L.Get("aimod.range", aimodRows.Count == 0 ? 0 : aimodFirst + 1, Math.Min(aimodRows.Count, aimodFirst + aimodVisibleRows), aimodRows.Count),
-            r.X + 64, r.Bottom - 50, 12, Muted, r.Width - 68);
+        DrawAimodTable(c, new(r.X, tableY, r.Width, Math.Max(40, r.Bottom - tableY - 38)));
         string status = aimodResourceTask is not null ? "aimod.checkingResources" : aimodSnapshot is null || !ReferenceEquals(aimodSnapshot, convertedSnapshot)
             ? "aimod.refreshHint" : "aimod.selectHint";
         c.Text(L.Get(status), r.X + 4, r.Bottom - 22, 11, Muted, r.Width - 8);

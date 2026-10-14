@@ -30,6 +30,25 @@ internal static class AimodReportTests
         foreach (var point in map.TimingPoints) point.Volume = 0;
         Check(Aimod.Analyze(map).Any(i => i.Code == "allQuiet" && i.Severity == AimodSeverity.Error), "Silent timing sections");
         Resources();
+        Check(Aimod.VideoDimensionIssue(1280, 720) is null && Aimod.VideoDimensionIssue(1920, 720) is null
+            && Aimod.VideoDimensionIssue(1024, 1000) is null, "Stable video dimensions require both axes to exceed the limit");
+        Check(Aimod.VideoDimensionIssue(1280, 960) == "largeVideoStandard"
+            && Aimod.VideoDimensionIssue(1920, 1080) == "largeVideoWide", "Video threshold priority");
+        Check(Aimod.ShortStoryboardEvents(["Sprite,Foreground,Centre,a.png,0,0", " F,0,0,99,1"]) == 1, "Short sprite lifetime");
+        Check(Aimod.ShortStoryboardEvents(["Sprite,Foreground,Centre,a.png,0,0", " F,0,0,100,1",
+            "Sample,0,0,a.wav,100"]) == 0, "100 ms boundary and samples excluded");
+        Check(Aimod.ShortStoryboardEvents(["Sprite,Foreground,Centre,a.png,0,0", " L,1000,3", "  F,0,0,40,1,0"]) == 0,
+            "Loop lifetime includes every repetition");
+        Check(Aimod.ShortStoryboardEvents(["Sprite,Foreground,Centre,a.png,0,0", " F,0,0,40,0,1,0,1"]) == 0,
+            "Compound commands extend the lifetime");
+        var medium = new MapDocument();
+        medium.Fruits.AddRange([new() { TimeMs = 0 }, new() { TimeMs = 100000 }]);
+        medium.TimingPoints.AddRange([new() { TimeMs = 0, BeatLengthMs = 500 },
+            new() { TimeMs = 500, BeatLengthMs = -100, Uninherited = false, Effects = 1 },
+            new() { TimeMs = 99000, BeatLengthMs = -100, Uninherited = false }]);
+        Check(!Aimod.Analyze(medium).Any(i => i.Code is "muchKiai" or "muchKiaiTv"), "Stable does not apply Kiai ratios between 90 and 180 seconds");
+        medium.TimingPoints.Add(new() { TimeMs = -500, BeatLengthMs = -100, Uninherited = false });
+        Check(Aimod.Analyze(medium).Any(i => i.Code == "inheritedBeforeTiming"), "Inherited timing requires a preceding red point");
     }
 
     public static void TwinBloom(string path)
@@ -67,6 +86,51 @@ internal static class AimodReportTests
         System.Buffers.Binary.BinaryPrimitives.WriteInt32BigEndian(png.AsSpan(20, 4), 1600);
         File.WriteAllBytes(Path.Combine(root, "missing.png"), png);
         Check(Aimod.AnalyzeResources(map).Single().Code == "largeBackground", "Oversized background");
+        File.WriteAllBytes(Path.Combine(root, "hitcircle@2x.png"), png);
+        Check(Aimod.AnalyzeResources(map).Any(i => i.Code == "skinDimensions" && i.Severity == AimodSeverity.Error
+            && (int)i.Arguments[1] == 256), "Retina skin image dimensions");
+        File.Delete(Path.Combine(root, "hitcircle@2x.png"));
+        string storyboard = "[Variables]\n$img=missing.png\n[Events]\n" + string.Join('\n', Enumerable.Range(0, 6)
+            .Select(i => $"Sprite,Foreground,Centre,\"$img\",320,240\n F,0,{i * 100},{i * 100 + 99},1"));
+        File.WriteAllText(Path.Combine(root, "shared.osb"), storyboard);
+        Check(Aimod.AnalyzeResources(map).Count(i => i.Code == "epilepsy") == 1, "Shared storyboard and variables");
+        SongSetup.Set(map, "General", "EpilepsyWarning", "1");
+        Check(!Aimod.AnalyzeResources(map).Any(i => i.Code == "epilepsy"), "Explicit warning suppresses diagnostic");
+        File.WriteAllText(Path.Combine(root, "broken.mp4"), "invalid video");
+        map.OriginalSections.Single(s => s.Name == "Events").Lines.Add("Video,0,broken.mp4");
+        Check(Aimod.AnalyzeResources(map).Any(i => i.Code == "unreadableMedia"), "Unreadable video does not suppress other findings");
+        File.WriteAllBytes(Path.Combine(root, "broken.mp4"), []);
+        File.WriteAllBytes(Path.Combine(root, "video.avi"), Video());
+        map.OriginalSections.Single(s => s.Name == "Events").Lines.Add("Video,0,video.avi");
+        Check(Aimod.AnalyzeResources(map).Any(i => i.Code == "largeVideoWide"), "Video dimensions are read from the actual media header");
+        SongSetup.Set(map, "General", "AudioFilename", "audio.wav");
+        using (var writer = new BinaryWriter(File.Create(Path.Combine(root, "audio.wav"))))
+        {
+            int data = 8000 * 2 * 60;
+            writer.Write("RIFF"u8); writer.Write(36 + data); writer.Write("WAVEfmt "u8); writer.Write(16);
+            writer.Write((short)1); writer.Write((short)1); writer.Write(8000); writer.Write(16000);
+            writer.Write((short)2); writer.Write((short)16); writer.Write("data"u8); writer.Write(data); writer.Write(new byte[data]);
+        }
+        map.Fruits.AddRange([new() { TimeMs = 10000 }, new() { TimeMs = 49000 }]);
+        Check(Aimod.AnalyzeResources(map).Any(i => i.Code == "longAudio"), "Audio mapped ratio below 80 percent");
+        map.Fruits[1].TimeMs = 50000;
+        Check(!Aimod.AnalyzeResources(map).Any(i => i.Code == "longAudio"), "Exactly 80 percent is permitted");
+    }
+    private static byte[] Video()
+    {
+        static byte[] Chunk(string name, byte[] data)
+        {
+            using var output = new MemoryStream(); using var writer = new BinaryWriter(output);
+            writer.Write(System.Text.Encoding.ASCII.GetBytes(name)); writer.Write(data.Length); writer.Write(data);
+            if ((data.Length & 1) != 0) writer.Write((byte)0);
+            return output.ToArray();
+        }
+        static void Int(byte[] data, int offset, int value) => System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(offset), value);
+        byte[] main = new byte[56]; Int(main, 0, 1000000); Int(main, 16, 1); Int(main, 24, 1); Int(main, 32, 1920); Int(main, 36, 1080);
+        byte[] stream = new byte[56]; "vidsDIB "u8.CopyTo(stream); Int(stream, 20, 1); Int(stream, 24, 1); Int(stream, 32, 1);
+        byte[] bitmap = new byte[40]; Int(bitmap, 0, 40); Int(bitmap, 4, 1920); Int(bitmap, 8, 1080); bitmap[12] = 1; bitmap[14] = 24;
+        return Chunk("RIFF", [.. "AVI "u8, .. Chunk("LIST", [.. "hdrl"u8, .. Chunk("avih", main),
+            .. Chunk("LIST", [.. "strl"u8, .. Chunk("strh", stream), .. Chunk("strf", bitmap)])]), .. Chunk("LIST", [.. "movi"u8])]);
     }
     private static string Key(AimodIssue issue) => $"{issue.Category}/{issue.Severity}/{issue.Code}/{issue.TimeMs}";
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
