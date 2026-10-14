@@ -15,7 +15,6 @@ public sealed partial class EditorView
     private bool inspectorMerge, inspectorHasSliders, inspectorOnlySliders;
     internal double? InspectorPeakRatio { get; private set; }
     internal double? InspectorMaxDs { get; private set; }
-    private double inspectorPeakTime;
     internal Rect SliderInspectorViewport => inspectorBounds;
 
     internal void ShowSliderInspector()
@@ -102,7 +101,7 @@ public sealed partial class EditorView
                 var ds = BaseDistanceRatio(from, item);
                 if (ds is { } d && (InspectorMaxDs is null || d > InspectorMaxDs)) InspectorMaxDs = d;
                 var speed = HorizontalSpeedRatio(Document, timing, boundaries, from, item);
-                if (speed is { } v && (InspectorPeakRatio is null || v > InspectorPeakRatio)) { InspectorPeakRatio = v; inspectorPeakTime = item.TimeMs; }
+                if (speed is { } v && (InspectorPeakRatio is null || v > InspectorPeakRatio)) InspectorPeakRatio = v;
             }
             previous[item.SourceId] = item;
         }
@@ -125,7 +124,6 @@ public sealed partial class EditorView
         float x = bounds.X - horizontal.Offset, contentWidth = horizontal.ContentWidth, cell = (contentWidth - 16) / 2;
         var actions = new List<(string Label, System.Action Action, bool Enabled, int Kind)>();
         bool enabled = ClipboardInteractionReady && !notesLocked;
-        if (InspectorPeakRatio is not null) actions.Add((L.Get("inspector.locate", Time(inspectorPeakTime)), () => SeekTo(inspectorPeakTime), true, 0));
         if (inspectorTargets.Length == 1 && Document.ImportedSliders.Any(s => s.Id == inspectorTargets[0]))
             actions.Add((L.Get("preview.convertSlider"), () => EditImportedSlider(inspectorTargets[0]), enabled, 1));
         if (inspectorHasSliders)

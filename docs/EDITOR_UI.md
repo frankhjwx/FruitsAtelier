@@ -1198,12 +1198,11 @@ duration, spans, control-point count, exported SV and exported path length.
 Multiple sliders show value ranges. Managed streams and stacks have no exported
 slider SV. These properties are read-only.
 
-**Max DS (including tiny droplets)** always includes tiny droplets. **Peak
+**Max DS** always includes tiny droplets. **Peak
 horizontal speed** is expressed relative to the map's base SV/DPB, shown directly
 below it: 0.50× at a base of 1.92× SV / 192 DPB means half that base horizontal
 speed. It uses adjacent exported catch events, including tiny droplets, and
-integrates the base speed across BPM changes. The timestamp button seeks to the
-peak interval's ending event. No raw displacement/time formula is displayed.
+integrates the base speed across BPM changes. No raw displacement/time formula is displayed.
 
 The action area contains conversion, clearing internal anchors, stream breaking
 and reversion, merging, and the Randomize droplets entry. Stream/Stack and
