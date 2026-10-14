@@ -75,6 +75,7 @@ public sealed partial class EditorView
         difficulties.AddRange(project.Difficulties.Select(d => new DifficultySession(d)));
         activeDifficulty = firstDifficultyTab = 0;
         difficultyTabOrder = []; difficultySortPending = true;
+        difficultyTabsManuallyOrdered = false; pinnedDifficulties.Clear();
         RestoreMapEditingPreferences();
         tabPointer = false; tabRemainder = 0; revealDifficultyTabs = true;
         ProjectName = project.Name;

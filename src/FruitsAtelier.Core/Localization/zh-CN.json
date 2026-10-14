@@ -1428,5 +1428,7 @@
   "aimod.unreadableMedia": "无法读取媒体属性：{0}",
   "aimod.skinDimensions": "{0} 的尺寸必须为 {1}x{1}",
   "aimod.inheritedBeforeTiming": "首个非继承时间点之前存在继承时间点。",
-  "aimod.firstTimingKiai": "首个非继承时间点开启了 Kiai。"
+  "aimod.firstTimingKiai": "首个非继承时间点开启了 Kiai。",
+  "project.pinDifficulty": "置顶难度",
+  "project.unpinDifficulty": "取消置顶难度"
 }

@@ -906,14 +906,20 @@ The Skin selector to the left of **← Library** lists skins from the configured
 
 **File → New project** creates a project with one blank difficulty. Opening `.osz` loads all Catch (Mode=2) difficulties into one project and skips other modes. A damaged Catch file does not replace the current project. Opening a single `.osu` or older `.catchproj` creates a single-difficulty project.
 
-A separate row below the main toolbar displays Chrome-style difficulty tabs with the official Catch icon, Version, live No Mod stars, and an unsaved dot. Icon color follows stars. Active tabs have rounded top corners and spread outward at the bottom to join the content below. Tabs use actual text widths rather than filling the row. Tabs first use full difficulty names. When space is insufficient, up to eight tabs share the available width by shortening the longest names; more than eight tabs use compact names and a horizontally draggable strip. Arrow buttons and the wheel also scroll overflowing tabs. Stored names remain complete. Hovering a truncated tab shows its full name in a pointer-following tooltip that wraps and stays within the window. Click to switch; use arrows or the tab-row wheel when tabs overflow. Ctrl+Tab / Ctrl+Shift+Tab cycle and reveal the active tab. The **+** button opens the add/import menu. A new blank difficulty inherits the active difficulty's audio, timing, settings, and resource context but clears objects. Importing an `.osu` adds one file. Difficulties may reference different audio.
+A separate row below the main toolbar displays Chrome-style difficulty tabs with the official Catch icon, Version, live No Mod stars, and an unsaved dot. Icon color follows stars. Active tabs have rounded top corners and spread outward at the bottom to join the content below. Tabs use actual text widths rather than filling the row. Tabs first use full difficulty names. When space is insufficient, up to eight tabs share the available width by shortening the longest names; more than eight tabs use compact names and a horizontally scrollable strip. Arrow buttons and the wheel also scroll overflowing tabs. Stored names remain complete. Hovering a truncated tab shows its full name in a pointer-following tooltip that wraps and stays within the window. Click to switch; use arrows or the tab-row wheel when tabs overflow. Ctrl+Tab / Ctrl+Shift+Tab cycle and reveal the active tab. The **+** button opens the add/import menu. A new blank difficulty inherits the active difficulty's audio, timing, settings, and resource context but clears objects. Importing an `.osu` adds one file. Difficulties may reference different audio.
 
-Difficulty tabs automatically sort by completed No Mod SR from low to high.
-Equal ratings retain their display order; failed ratings appear last. Calculation
-runs in the background, and completed rating changes refresh the order after
-edits and undo/redo. Sorting preserves the active difficulty, project storage
-order, content and undo history. Ctrl+Tab and Ctrl+Shift+Tab follow the displayed
-order.
+Difficulty tabs initially sort by completed No Mod SR from low to high.
+Equal ratings retain their display order; failed ratings appear last. Drag a tab
+horizontally to reorder it, with live feedback; dragging near either edge scrolls
+an overflowing strip. Escape or lost pointer capture restores the previous order.
+After a manual reorder, rating changes from edits and undo/redo preserve that order.
+Right-click a tab and choose **Pin difficulty** or **Unpin difficulty**. Pinned tabs
+show a pushpin icon to the left of the Catch icon and always precede ordinary tabs.
+Each group can be reordered independently. Tab order and pins last for the open
+project session. Opening a
+project restores automatic sorting. These display preferences preserve the active
+difficulty, project storage order, content and undo history. Ctrl+Tab and
+Ctrl+Shift+Tab follow the displayed order.
 
 Switching commits valid pending edits first; unfinished banana drafts or invalid input prevent switching. It pauses playback and retains each difficulty's playhead, time-viewport start, and undo/redo history. Selection and the active tool reset. Title/status dirty indicators cover the whole project, including hidden difficulties. One save writes every difficulty and updates baselines without clearing undo history. Ctrl+L and **Edit → Revert to previous save** restore only the active difficulty from the most recent prior save snapshot. A first save has no prior version. Synchronization and restore working copies are excluded. Confirmation retains an undo step and recovery copy of the current edits; saving the restored content remains a separate action. Unsaved confirmation on new/open/close applies to the whole project.
 

@@ -77,6 +77,7 @@ internal static class ProjectTests
             view.Render(canvas, 980, 620);
             var second = canvas.Texts.Single(t => t.Value == project.Difficulties[1].Name);
             view.PointerDown(second.X + 2, second.Y + 2, 0, false, false);
+            view.PointerUp(second.X + 2, second.Y + 2, 0);
             Check(view.ActiveDifficultyIndex == 1 && !view.IsDirty, "tab switches without editing");
         }
         finally { Directory.Delete(folder, true); }

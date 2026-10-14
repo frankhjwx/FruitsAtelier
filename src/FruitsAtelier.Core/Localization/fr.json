@@ -1428,5 +1428,7 @@
   "aimod.unreadableMedia": "Could not inspect media properties: {0}",
   "aimod.skinDimensions": "{0}’s dimensions must be {1}x{1}",
   "aimod.inheritedBeforeTiming": "An inherited timing point occurs before the first uninherited timing point.",
-  "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point."
+  "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point.",
+  "project.pinDifficulty": "Épingler la difficulté",
+  "project.unpinDifficulty": "Désépingler la difficulté"
 }

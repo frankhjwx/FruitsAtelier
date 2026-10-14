@@ -656,3 +656,10 @@ and Chinese at two sizes and three DPI values under
 `artifacts/tests/canvas-scale-native`.
 
 `App.Tests --conversion-docks-check` verifies direct conversion shortcuts, object action menus, live editing and merge undo. `FruitsAtelier.App.exe --render-check --conversion-docks-render-check` captures the English/Chinese layouts at narrow and standard dock widths under `artifacts/tests/conversion-docks`.
+
+`App.Tests --difficulty-tabs-check` verifies initial SR sorting, manual tab ordering,
+pin/unpin, group boundaries, cancellation, rating refresh, keyboard navigation,
+new difficulties and overflow in English and Chinese.
+`FruitsAtelier.App.exe --render-check --difficulty-tabs-render-check` checks native
+dragging and pinned tabs at two sizes and three DPI values in both languages,
+with captures under `artifacts/tests/difficulty-tabs-native`.

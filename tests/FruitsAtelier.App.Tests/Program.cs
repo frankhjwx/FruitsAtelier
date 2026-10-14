@@ -114,6 +114,8 @@ if (args.Contains("--slider-draft-check"))
     }
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
+if (args.Contains("--difficulty-tabs-check")) { DifficultyTabTests.SortAscending(); DifficultyTabTests.ReorderAndPin(); DifficultyTabTests.Layout(); DifficultyTabTests.Overflow(); ProjectTests.Run(); Console.WriteLine("PASS Difficulty tab sorting, dragging, pins and overflow"); return 0; }
+
 if (args.Contains("--difficulty-sort-check")) { DifficultyTabTests.SortAscending(); Console.WriteLine("PASS Ascending difficulty sorting"); return 0; }
 if (args.Length == 2 && args[0] == "--difficulty-switch-performance") return DifficultySwitchPerformance.Run(args[1]);
 if (args.Contains("--first-run-setup-check"))
@@ -414,6 +416,7 @@ var tests = new (string Name, Action Run)[]
     ("v7 format changes require a choice and retain tick rules through synchronization", SynchronizationUiTests.LegacyFormat),
     ("Difficulty tabs adapt names to available width and show full-name tooltips", DifficultyTabTests.Layout),
     ("Difficulty SR sorting preserves content, identity and keyboard navigation", DifficultyTabTests.SortAscending),
+    ("Difficulty tab dragging and pins retain display order and content", DifficultyTabTests.ReorderAndPin),
     ("Difficulty tab stars follow edits, undo and CS", DifficultyTabTests.Editing),
     ("Preview stars use cached NM, EZ and HR calculations", DifficultyTabTests.PreviewRatings),
     ("Star ratings refresh asynchronously without losing cached or newer results", DifficultyTabTests.AsyncRatings),

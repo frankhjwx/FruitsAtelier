@@ -621,7 +621,7 @@ public sealed partial class EditorView
         if (IsTestplaying) return;
         if (tabPointer && button == 0)
         {
-            MoveTabPointer(x); tabPointer = false;
+            MoveTabPointer(x); FinishTabPointer(cancel: false);
             if (!tabMoved) SwitchDifficulty(tabPressed);
             return;
         }
@@ -1071,6 +1071,11 @@ public sealed partial class EditorView
             if (virtualKey == 27) { dockPressed = null; dockDragging = false; }
             return;
         }
+        if (tabPointer)
+        {
+            if (virtualKey == 27) FinishTabPointer(cancel: true);
+            return;
+        }
         if (AcknowledgementsVisible) { AcknowledgementsKey(virtualKey, ctrl, shift); return; }
         if (ScreenshotKeyDown(virtualKey, ctrl, shift)) return;
         if (AudioDiagnosticMarkerKeyDown(virtualKey, ctrl, shift)) return;
@@ -1450,7 +1455,7 @@ public sealed partial class EditorView
         else StopTestplay();
         bindingCapture = -1;
         SetModifiers(false, false);
-        tabPointer = false;
+        FinishTabPointer(cancel: true);
         if (libraryPointerActive) { libraryPointerActive = false; libraryPressedMap = null; RememberLibraryPosition(); }
         if (drag == DragKind.Marquee) { CancelBox(); contextItems.Clear(); return; }
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
