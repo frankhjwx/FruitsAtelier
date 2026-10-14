@@ -39,6 +39,7 @@ internal static class ToolPaletteTests
 
     public static void PlacementHyperdash()
     {
+        GroupedBananaPlacement();
         var tied = Empty();
         var tiedMap = new MapDocument { DurationMs = 12000 };
         tiedMap.Fruits.Add(new() { TimeMs = 1000, X = 220 });
@@ -130,6 +131,48 @@ internal static class ToolPaletteTests
             Check(GlowAt(ui, tail.X, tail.Y, .42f), "Slider draft tail did not preview its outgoing hyperdash.");
             ui.Key(27);
             Check(ui.View.Document.ContentEquals(map) && !ui.View.IsDirty, "Cancelling a slider preview changed the map.");
+        }
+    }
+
+    private static void GroupedBananaPlacement()
+    {
+        foreach (int tool in new[] { 'F', 'B' })
+        {
+            var map = new MapDocument { DurationMs = 12000 };
+            var removed = new Fruit { TimeMs = 1000, X = 100 };
+            map.Fruits.Add(removed);
+            map.BananaShowers.Add(new() { TimeMs = 2000, EndTimeMs = 4000, Pattern = new() });
+            var ui = Empty(); ui.LoadDocument(map);
+            ui.Key('1'); ui.ClickFruit(removed.Id); ui.Key(46);
+            var deleted = ui.View.Document.DeepClone();
+            ui.Key(tool);
+            foreach (double time in new[] { 1250d, 2250, 2500, 3000 })
+            {
+                ui.MoveMap(time, 450);
+                Check(deleted.ContentEquals(ui.View.Document), "Grouped banana placement hover changed content.");
+                var preview = (IReadOnlyList<ConvertedCatchObject>)typeof(EditorView).GetField("placementMovementObjects",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ui.View)!;
+                var ghost = preview.Single(o => !deleted.BananaShowers.Any(s => s.Id == o.SourceId));
+                var candidate = deleted.DeepClone();
+                candidate.Fruits.Add(new() { Id = ghost.SourceId, TimeMs = ghost.TimeMs, X = ghost.X });
+                var expected = OsuBeatmapWriter.Serialize(candidate).PlayableObjects;
+                Check(preview.SequenceEqual(expected),
+                    $"Grouped banana placement preview differs from full export at {time}: " +
+                    string.Join("; ", preview.Zip(expected).Where(p => p.First != p.Second).Take(2)));
+            }
+            ui.View.ShowError("test recovery"); ui.Paint();
+            ui.ClickText(FruitsAtelier.Localization.Strings.Get("mac.ok"));
+            ui.MoveMap(1500, 400);
+            Check(!ui.View.ErrorVisible, "Dismissed error reopened during placement.");
+            if (tool == 'F')
+            {
+                ui.ClickMap(1500, 400);
+                var placed = ui.View.Document.DeepClone();
+                ui.Key('Z', ctrl: true);
+                Check(deleted.ContentEquals(ui.View.Document), "Placement undo lost grouped bananas.");
+                ui.Key('Y', ctrl: true);
+                Check(placed.ContentEquals(ui.View.Document), "Placement redo changed grouped bananas.");
+            }
         }
     }
 

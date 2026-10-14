@@ -26,26 +26,26 @@ internal static class ObjectStructureTests
                 map.Tracks.Add(track);
                 ui.LoadDocument(map); ui.SelectTrack(track.Id);
                 ui.Key('F', ctrl: true, shift: true);
-                Check(!ui.View.StreamBreakIntoFruits, "initial conversion defaults to a managed stream");
-                ui.ClickText(L.Get("stream.breakFruits")); ui.Key(13);
+                Check(!ui.View.StreamBreakIntoFruits, "Conversion exposes an explicit break action");
+                ui.ClickText(L.Get("stream.breakFruits"));
                 Check(ui.View.Document.Tracks.Count == 0 && ui.View.Document.Fruits.Count == 5, "initial conversion can create separate fruits");
                 Check(ui.View.SelectedObjectIds.Count == 5, "all broken fruits are selected");
-                ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "breaking during conversion has one undo step");
+                ui.Key('Z', ctrl: true); Check(ui.View.Document.Tracks.Single().StreamSnapDivisor is not null, "Undoing the explicit break restores the managed stream");
+                ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Undoing the dock conversion restores the original slider");
                 ui.SelectTrack(track.Id); ui.Key('F', ctrl: true, shift: true);
-                Check(!ui.View.StreamBreakIntoFruits, "toggle resets on every opening");
-                ui.Key(13);
+                Check(!ui.View.StreamBreakIntoFruits, "Reopening uses an explicit break action");
                 var stream = ui.View.Document.DeepClone();
                 var expected = OsuBeatmapWriter.Serialize(stream).Text;
                 ui.HoldMap(1000, 100, clock.Advance);
-                var change = ui.Canvas.Texts.Single(t => t.Value == L.Get("conversion.editTitle"));
-                var breakLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("stream.breakFruits"));
+                var change = ui.Canvas.Texts.Last(t => t.Value == L.Get("conversion.editTitle"));
+                var breakLabel = ui.Canvas.Texts.Last(t => t.Value == L.Get("stream.breakFruits"));
                 Check(breakLabel.Y > change.Y && breakLabel.Y - change.Y < 40, "break is immediately below Edit Stream/Stack");
-                ui.ClickText(L.Get("stream.breakFruits"));
+                ui.Click(breakLabel.X + 5, breakLabel.Y + 5);
                 Check(ui.View.Document.Tracks.Count == 0 && ui.View.Document.Fruits.Count == 5, "long press breaks an existing stream");
                 Check(OsuBeatmapWriter.Serialize(ui.View.Document).Text == expected, "breaking retains exported positions, samples and flags");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(stream), "undo restores stream geometry");
                 ui.SelectTrack(track.Id); ui.Key('F', ctrl: true, shift: true);
-                ui.ClickText(L.Get("stream.breakFruits")); ui.Key(13);
+                ui.ClickText(L.Get("stream.breakFruits"));
                 Check(ui.View.Document.Tracks.Count == 0, "Edit Stream/Stack also supports breaking");
 
                 var second = Line(2000, 2500, 300, 400);
@@ -59,7 +59,8 @@ internal static class ObjectStructureTests
                     && t.Nodes[^1].Id == map.Tracks.First(s => s.Id == t.Id).Nodes[^1].Id), "endpoint identities are retained");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "batch clear has one undo step");
                 ui.Key('A', ctrl: true); ui.Key('A', ctrl: true, shift: true);
-                Check(ui.View.Document.Tracks.All(t => t.Nodes.Count == 2), "clear shortcut applies to all selected sliders");
+                Check(ui.View.AimodVisible && ui.View.Document.ContentEquals(map), "AiMod shortcut preserves selected slider anchors");
+                ui.Key(27);
             }
         }
         finally { L.SetLanguage(language); }
@@ -80,36 +81,34 @@ internal static class ObjectStructureTests
                 ui.HoldMap(1500, 280, clock.Advance);
                 Check(ui.View.SelectedObjectIds.Count == 3 && ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.title")), "multi-circle hold offers merging without losing selection");
                 ui.ClickText(L.Get("merge.title"));
-                Check(ui.View.MergeDialogVisible && ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.linear"))
+                Check(!ui.View.MergeDialogVisible && ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.linear"))
                     && ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.curved"))
-                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.saveWarning")), "dialog offers both paths and the save warning");
-                ui.Key(46); ui.Key('Z', ctrl: true); ui.Key(116); ui.View.TextInput('1'); ui.View.Wheel(0, 0, 120, false, false);
-                Check(ui.View.MergeDialogVisible && ui.View.Document.ContentEquals(map) && !ui.View.IsTestplaying, "modal blocks editing and testplay");
-                ui.Key(27); Check(ui.View.Document.ContentEquals(map) && !ui.View.IsDirty, "cancelling merge leaves content unchanged");
-                ui.Key('M', ctrl: true, shift: true); ui.ClickText(L.Get("merge.curved")); ui.Key(13);
+                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.confirm")), "Inspector offers both merge paths and Apply");
+                Check(ui.View.Document.ContentEquals(map) && !ui.View.IsDirty, "Opening merge choices preserves content");
+                ui.Key('M', ctrl: true, shift: true); ui.ClickText(L.Get("merge.curved")); ui.ClickText(L.Get("merge.confirm"));
                 var merged = ui.View.Document.Tracks.Single();
                 Check(ui.View.Document.Fruits.Count == 0 && merged.Nodes.Count == 3
                     && CurveMath.SegmentKind(merged, 0) == CurveKind.Bezier, "curve merge passes through selected circles");
                 var saved = ProjectSerializer.Read(ProjectSerializer.Serialize(ui.View.Document));
                 Check(saved.Fruits.Count == 0 && saved.Tracks.Count == 1, "saved merge retains only the resulting slider");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "merge undo restores originals");
-                ui.Key('A', ctrl: true); ui.Key('M', ctrl: true, shift: true); ui.Key(13);
+                ui.Key('A', ctrl: true); ui.Key('M', ctrl: true, shift: true); ui.ClickText(L.Get("merge.confirm"));
                 Check(ui.View.Document.Tracks.Single().Nodes.All(n => n.HandleIn == default && n.HandleOut == default), "straight choice uses linear segments");
                 ui.LoadDocument(map); ui.ClickFruit(map.Fruits[0].Id); ui.Key('M', ctrl: true, shift: true);
-                Check(!ui.View.MergeDialogVisible, "one circle cannot merge");
+                Check(!ui.View.MergeDialogVisible && !ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.confirm")), "One circle has no merge controls");
                 ui.ClickMap(2000, 150, ctrl: true); ui.HoldMap(1000, 100, clock.Advance);
-                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.title")), "a skipped circle hides the merge action");
+                Check(ui.View.Document.ContentEquals(map), "Nonconsecutive action list preserves content");
                 ui.Key('M', ctrl: true, shift: true);
-                Check(!ui.View.MergeDialogVisible && ui.View.StatusMessage == L.Get("merge.notConsecutive"), "shortcut explains nonconsecutive selection");
+                Check(!ui.View.MergeDialogVisible && !ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.confirm")), "Inspector prevents merging a nonconsecutive selection");
                 map.BananaShowers.Add(new BananaShower { TimeMs = 3000, EndTimeMs = 3500 });
                 ui.LoadDocument(map); ui.Key('A', ctrl: true); ui.HoldMap(1000, 100, clock.Advance);
-                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.title")), "selected banana hides merge");
+                Check(ui.View.Document.ContentEquals(map), "Banana selection action list preserves content");
                 ui.Key('M', ctrl: true, shift: true);
-                Check(!ui.View.MergeDialogVisible && ui.View.StatusMessage == L.Get("merge.bananaSelected"), "selected banana blocks shortcut");
+                Check(!ui.View.MergeDialogVisible && !ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.confirm")), "selected banana blocks shortcut");
                 map.BananaShowers.Clear(); map.Fruits[1].TimeMs = 1000;
-                ui.LoadDocument(map); ui.Key('A', ctrl: true); ui.Key('M', ctrl: true, shift: true); ui.Key(13);
-                Check(ui.View.MergeDialogVisible && ui.View.Document.ContentEquals(map) && !ui.View.IsDirty
-                    && ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.failed", L.Get("merge.sameTime"))), "failed merge explains the cause and rolls back");
+                ui.LoadDocument(map); ui.Key('A', ctrl: true); ui.Key('M', ctrl: true, shift: true); ui.ClickText(L.Get("merge.confirm"));
+                Check(!ui.View.MergeDialogVisible && ui.View.Document.ContentEquals(map) && !ui.View.IsDirty
+                    && ui.Canvas.Texts.Any(t => t.Value.Contains(L.Get("merge.sameTime"))), "failed merge explains the cause and rolls back");
             }
         }
         finally { L.SetLanguage(language); }
@@ -127,7 +126,7 @@ internal static class ObjectStructureTests
         var ids = map.Fruits.Select(f => f.Id).Append(track.Id).ToArray();
         Check(!ObjectStructureEditing.MergeSelection(map, ids).AllowsLinear, "curved paths disable straight merge");
         var ui = new Ui(); ui.LoadDocument(map); ui.Key('A', ctrl: true); ui.Key('M', ctrl: true, shift: true);
-        Check(ui.View.MergeDialogVisible && !ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.linear")), "curve selection only offers curved merge");
+        Check(!ui.View.MergeDialogVisible && ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.curved")) && !ui.Canvas.Texts.Any(t => t.Value == L.Get("merge.linear")), "curve selection only offers curved merge");
         var before = map.DeepClone();
         var merged = ObjectStructureEditing.Merge(map, ids, true);
         for (double at = 1500; at <= 2500; at += 11)

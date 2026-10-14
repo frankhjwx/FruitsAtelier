@@ -8,7 +8,7 @@ public sealed partial class EditorView
 {
     private readonly List<ContextItem> contextItems = [];
     private Rect contextBounds;
-    private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "", uint? Color = null, bool Separator = false);
+    private sealed record ContextItem(string Label, Action Action, bool Enabled = true, string Shortcut = "", uint? Color = null, bool Separator = false, bool Heading = false, bool Active = false, int SliderAction = 0);
     private float ContextMenuHeight => 12 + contextItems.Sum(item => item.Separator ? 10 : 32);
     private void AddContextSeparator() => contextItems.Add(new("", () => { }, Enabled: false, Separator: true));
     private sealed record SliderLocation(Guid Id, double FirstSpanTimeMs);
@@ -23,9 +23,22 @@ public sealed partial class EditorView
         {
             var item = contextItems[i];
             var rect = ContextItemBounds(i);
+            if (item.SliderAction == 1) LegacyConversionBounds = rect;
+            if (item.SliderAction == 2) StreamConversionBounds = rect;
             if (item.Separator) { c.Line(rect.X + 9, rect.Y + 4, rect.Right - 9, rect.Y + 4, Grid); continue; }
-            if (item.Enabled && rect.Contains(mouseX, mouseY)) c.Fill(rect, 0x343E4D, 4);
-            c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, item.Enabled ? item.Color ?? Foreground : 0x5B6777, rect.Width - (item.Shortcut.Length > 0 ? 90 : 18));
+            if (item.Heading)
+            {
+                c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, Foreground, rect.Width - 18, true);
+                continue;
+            }
+            bool hover = item.Enabled && rect.Contains(mouseX, mouseY);
+            if (item.Active)
+            {
+                c.Fill(rect, hover ? 0x3A6260u : 0x31494Bu, 4);
+                c.Stroke(rect, 0x477E7B, 1, 4);
+            }
+            else if (hover) c.Fill(rect, 0x343E4D, 4);
+            c.Text(item.Label, rect.X + 9, rect.Y + 7, 12, item.Enabled ? item.Color ?? (item.Active ? Accent : Foreground) : 0x5B6777, rect.Width - (item.Shortcut.Length > 0 ? 90 : 18), item.Active);
             string shortcut = item.Shortcut;
             if (shortcut.Length > 0)
             {

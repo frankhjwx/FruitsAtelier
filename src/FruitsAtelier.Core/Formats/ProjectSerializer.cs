@@ -24,6 +24,8 @@ public static partial class ProjectSerializer
         MaxDepth = 64,
         TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { info =>
         {
+            if (info.Type == typeof(BeatmapProject))
+                info.Properties.First(p => p.Name == nameof(BeatmapProject.Notes)).ShouldSerialize = (_, value) => ((string)value!).Length > 0;
             if (info.Type == typeof(CurveTrack))
                 info.Properties.First(p => p.Name == nameof(CurveTrack.StreamNewComboOffsets)).ShouldSerialize = (_, value) => ((List<double>)value!).Count > 0;
             if (info.Type != typeof(MapDocument)) return;

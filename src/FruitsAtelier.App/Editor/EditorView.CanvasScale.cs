@@ -74,7 +74,7 @@ public sealed partial class EditorView
 
     private void DrawCanvasScaleLock(ICanvas c)
     {
-        CanvasScaleLockBounds = new(zoomSlider.Right + (rightPanel.X < 900 ? 32 : 48), canvas.Y + 6, 22, 26);
+        CanvasScaleLockBounds = new(zoomSlider.Right + (CanvasToolbarBounds.Width < 900 ? 32 : 48), canvas.Y + 6, 22, 26);
         float x = CanvasScaleLockBounds.X + 5, y = CanvasScaleLockBounds.Y + 11;
         uint color = UniformCanvasScale ? Muted : Accent;
         c.Stroke(new(x, y, 12, 10), color, 1.5f, 2);

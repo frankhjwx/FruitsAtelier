@@ -8,7 +8,7 @@
 
 [官网](https://fruitsatelier.himiko.moe/) · [下载](https://github.com/frankhjwx/FruitsAtelier/releases/latest) · [Discord](https://discord.gg/Dwe7bshYHY)
 
-**当前版本：1.0.1 Beta**
+**当前版本：1.0.2 Beta**
 
 ![水果工坊的编辑画布、物件时间轴与 Catch 预览](assets/screenshots/twin-bloom.png)
 
@@ -29,10 +29,10 @@
 - **直接编辑水滴**：选择滑条内的单个水果或水滴，水平拖动或输入 X 坐标，并用网格吸附、距离吸附调整间距。
 - **随机化与去随机化**：针对 NM 或 HR 补偿 TinyDroplet 的随机偏移，也可自定义随机强度与种子。针对 HR 去随机化时，可切换两种预览检查结果。
 - **DPB 与距离吸附**：用 Distance Per Beat（每拍距离）定义水平间距基准，同时配置最多八档距离吸附。节拍吸附控制时间，网格吸附控制水平位置。
-- **移动指示与分析**：查看前后物件间距，在画布上识别站立、走路、冲刺和超级冲刺连接。通过全曲 Movement strain 曲线定位运动负荷较高的段落；AiMod 可检查物件起始时间重叠。
+- **移动指示与分析**：查看前后物件间距，在画布上识别站立、走路、冲刺和超级冲刺连接。通过全曲 Movement strain 曲线定位运动负荷较高的段落；AiMod 可检查接水果物件吸附、计时、资源和谱面集元数据。
 - **可编辑的 Stream 与 Stack**：沿滑条曲线按指定节拍细分生成水果串，或用宽度包络生成交替排列的叠果。保留可编辑的父曲线，调整单个水果，或拆分成独立水果；两者均导出为 hit circle。
 
-支持读取 v7–v14 及兼容 stable 的 lazer v128 Catch `.osu`。v7 谱面导出保留 v7，以保留旧版滑条水滴规则；其余导出为 v14。1.0.1 Beta 暂不提供视频与故事板播放。
+支持读取 v7–v14 及兼容 stable 的 lazer v128 Catch `.osu`。v7 谱面导出保留 v7，以保留旧版滑条水滴规则；其余导出为 v14。1.0.2 Beta 暂不提供视频与故事板播放。
 
 ## 开始使用
 

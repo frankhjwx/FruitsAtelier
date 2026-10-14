@@ -21,8 +21,8 @@ public sealed partial class EditorView
 
     internal void OpenStackDialog()
     {
-        OpenStreamDialog();
-        if (!StreamDialogVisible) return;
+        ShowPatternDock();
+        if (patternDockKind != 1) return;
         SetConversionMode(true);
     }
 
@@ -45,6 +45,8 @@ public sealed partial class EditorView
         stackPreviewZoom = 1;
         stackNumericField = -1; stackNumericError = "";
         stackInitialized = false;
+        patternPreviewTracks = streamTargets.Select(id => Document.Tracks.FirstOrDefault(t => t.Id == id)?.DeepClone()
+            ?? ImportedSliderEditing.ConvertToTrack(Document.DeepClone(), id).Track).ToArray();
         RefreshStackPreview();
     }
 
@@ -72,7 +74,7 @@ public sealed partial class EditorView
         ResetStackHistory();
     }
 
-    private void OpenStreamDialog()
+    private void InitializeStreamEditor()
     {
         if (CanEditBananas) { OpenBananaEdit(); return; }
         if (notesLocked) { StatusMessage = L.Get("assist.locked"); return; }

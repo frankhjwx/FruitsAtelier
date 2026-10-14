@@ -16,6 +16,8 @@ public sealed partial class EditorView
     private (Guid Id, double Start, double End, int SourceOrder, bool IsBanana, int Spans, int StackIndex, float StackOffset)[] timelineSources = [];
     private (Guid Id, double Start, double End, int SourceOrder, bool IsBanana, int Spans, int StackIndex, float StackOffset, int EventIndex)[] timelineMarkers = [];
     private readonly List<(Guid Id, double Start, double End, int SourceOrder, bool IsBanana, int Spans, int StackIndex, float StackOffset, int EventIndex)> timelineVisibleMarkers = [];
+    private readonly TimelineVisibleRange timelineMarkerRange = new();
+    private readonly List<int> timelineVisibleIndices = [];
     private HashSet<Guid> timelinePatterns = [];
     private Dictionary<(Guid Id, int EventIndex), ConvertedCatchObject> timelinePatternEvents = [];
     private Dictionary<(Guid Id, int EventIndex), int> timelineEventNumbers = [];
@@ -249,6 +251,8 @@ public sealed partial class EditorView
                     timelinePrefixEnd[i] = Math.Max(i == 0 ? double.NegativeInfinity : timelinePrefixEnd[i - 1], timelineSources[i].End);
                 }
                 Array.Sort(timelineEnds);
+                if (marker >= 0) timelineMarkerRange.UpdateEnd(marker, timelineMarkers[marker].StackIndex < TimelineStackLimit
+                    ? timelineMarkers[marker].End : double.NegativeInfinity);
                 timelineConversion = conversion;
                 return;
             }
@@ -304,10 +308,15 @@ public sealed partial class EditorView
                 timelineSources[i].StackIndex = head.StackIndex;
                 timelineSources[i].StackOffset = head.StackOffset;
             }
+        RefreshTimelineMarkerRange();
         timelineEventNumbers = ComboEventNumbers();
         timelineConversion = conversion;
         timelineDraft = draftTrack;
     }
+
+    private void RefreshTimelineMarkerRange()
+        => timelineMarkerRange.Rebuild(timelineMarkers.Select(item => item.Start).ToArray(),
+            timelineMarkers.Select(item => item.StackIndex < TimelineStackLimit ? item.End : double.NegativeInfinity).ToArray());
 
     private (Guid Id, double Start, double End, uint Color)? TimelinePlacementPreview()
     {
@@ -372,7 +381,8 @@ public sealed partial class EditorView
         var visibleItems = timelineVisibleMarkers;
         visibleItems.Clear();
         // Cached chronological order also defines painting and hit order; reuse the visible buffer each frame.
-        for (int i = timelineMarkers.Length - 1; i >= 0; i--)
+        timelineMarkerRange.Fill(visibleStartMs, visibleEndMs, timelineVisibleIndices);
+        foreach (int i in timelineVisibleIndices)
         {
             var item = timelineMarkers[i];
             if (item.Id != placement?.Id && item.StackIndex < TimelineStackLimit && item.End >= visibleStartMs && item.Start <= visibleEndMs)
@@ -402,8 +412,10 @@ public sealed partial class EditorView
             var bounds = timelineObjects[index].Bounds;
             if (item.IsBanana && bananaSegments.TryGetValue(item.Id, out var segments))
             {
-                foreach (var segment in segments)
+                for (int segmentIndex = FirstVisibleBananaSegment(segments, start);
+                    segmentIndex < segments.Count && segments[segmentIndex].TimeMs <= end; segmentIndex++)
                 {
+                    var segment = segments[segmentIndex];
                     float from = X(segment.TimeMs), to = X(segment.EndTimeMs);
                     if (to < objectTimeline.X || from > objectTimeline.Right) continue;
                     c.Fill(new(from, bounds.Y + 3, Math.Max(1, to - from), bounds.Height - 6), color, 2, .7f);

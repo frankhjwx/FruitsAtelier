@@ -21,20 +21,13 @@ public sealed partial class EditorView
         AdvanceCanvasBackgroundDim();
     }
 
-    public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
+    private void PointerDownCore(float x, float y, int button, bool shift, bool ctrl)
     {
         if (AcknowledgementsVisible) { AcknowledgementsPointerDown(x, y, button); return; }
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
             if (button == 0 && HeaderNavigationBounds.Contains(x, y)) ShowLibrary();
             NotifySynchronizationBlocked(); return;
-        }
-        if (AimodVisible)
-        {
-            mouseX = x; mouseY = y;
-            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
-                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
-            return;
         }
         placementCtrl = ctrl;
         if (IsTestplaying) { TestplayPointerDown(x, y, button); return; }
@@ -84,20 +77,12 @@ public sealed partial class EditorView
         }
         if (TimingModal) { TimingPointerDown(x, y, button); return; }
         if (!LibraryVisible && !SongSetupVisible && panelMenuOpen) { PanelPointerDown(x, y); return; }
-        if (TimingPageVisible && !SongSetupVisible && menu < 0 && rightPanel.Contains(x, y)) { TimingPointerDown(x, y, button); return; }
+        if (TimingPageVisible && !SongSetupVisible && menu < 0 && y >= 122 && rightPanel.Contains(x, y)) { TimingPointerDown(x, y, button); return; }
         if (BeginVolumePopoverPointer(x, y, button)) return;
         if (SongSetupVisible) { SongSetupPointerDown(x, y, button, shift); return; }
         if (VolumeDialogVisible)
         {
             if (BeginWorkspaceScroll(x, y, button) || BeginVolumeDrag(x, y, button)) return;
-            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
-                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
-            return;
-        }
-        if (legacyButtonSlider != Guid.Empty && !sliderConversionBounds.Contains(x, y)) legacyButtonSlider = Guid.Empty;
-        if (legacyButtonSlider != Guid.Empty && sliderConversionBounds.Contains(x, y))
-        {
-            // Popup actions own the pointer even when the canvas play line crosses them.
             if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
                 if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
             return;
@@ -129,12 +114,26 @@ public sealed partial class EditorView
         if (LibraryVisible && LibraryPointerDown(x, y, button)) return;
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
+        if (BeginDockHorizontal(x, y, button)) return;
+        if (BeginDockPointer(x, y, button)) return;
+        if (AimodPointer(x, y, button, shift, ctrl)) return;
+        if (RandomDockPointer(x, y, button)) return;
+        if (DockContentInputAvailable && PanelVisible(DockPanel.SliderInspector) && menu < 0 && contextItems.Count == 0 && inspectorBounds.Contains(x, y))
+        {
+            if (button == 0) for (int i = hits.Count - 1; i >= 0; i--)
+                if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; }
+            return;
+        }
+        if (SongDockPointer(x, y, button, shift)) return;
+        if (NotesPointer(x, y, button, shift)) return;
+        if (PatternDockPointer(x, y, button)) return;
         if (CanvasScalePointerDown(x, y, button)) return;
         if (TimingPageVisible && menu < 0 && contextItems.Count == 0 && WaveformBounds.Contains(x, y))
         { TimingWaveformPointer(x, y, button); return; }
         if (BeginCanvasBackgroundDimPointer(x, y, button)) return;
         if (menu < 0 && contextItems.Count == 0 && MovementPanelPointerDown(x, y, button)) return;
         if (menu < 0 && contextItems.Count == 0 && DistancePointerDown(x, y, button, shift)) return;
+        if (button == 2 && DockTabContext(x, y)) return;
         if (button == 2 && DifficultyTabContext(x, y)) return;
         if (menu >= 0 && button != 0) { menu = -1; return; }
         if (button == 2)
@@ -175,18 +174,20 @@ public sealed partial class EditorView
                     if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); return; }
                 return;
             }
-            bool sameHeader = menu == 4
-                ? new FruitsAtelier.App.Rendering.Rect(268, 6, 70, 28).Contains(x, y)
+            bool sameHeader = menu is 4 or 5
+                ? new FruitsAtelier.App.Rendering.Rect(menu == 4 ? 341 : 268, 6, 70, 28).Contains(x, y)
                 : menu < 3 && new FruitsAtelier.App.Rendering.Rect(109 + menu * 53, 6, 50, 28).Contains(x, y);
             menu = -1;
             if (sameHeader) return;
             if (y >= 39) return;
         }
-        if (catchPreviewVisible && PreviewResizeBounds.Contains(x, y)) { drag = DragKind.PreviewResize; return; }
-        if (DifficultyCurveToggleBounds.Contains(x, y)) { difficultyCurveVisible = !difficultyCurveVisible; return; }
+        if (!TimingPageVisible && (leftDockResizeBounds.Contains(x, y) || rightDockResizeBounds.Contains(x, y)))
+        {
+            dockResizeLeft = leftDockResizeBounds.Contains(x, y);
+            drag = DragKind.PreviewResize; return;
+        }
         if (difficultyCurveVisible && DifficultyCurveGraphBounds.Contains(x, y))
         { drag = DragKind.DifficultySeek; SeekDifficultyCurve(y); return; }
-        if (difficultyCurveVisible && leftPanel.Contains(x, y)) return;
         if (BeginPlaybackLineDrag(x, y)) return;
         if (zoomSlider.Contains(x, y))
         {
@@ -238,6 +239,7 @@ public sealed partial class EditorView
             drag = DragKind.Timeline;
             dragStartX = x;
             timelineMsPerDip = TimelineDurationMs / overview.Width;
+            BeginTimelineScrub();
             if (!grabbedHead) SeekTo(Math.Clamp(((double)x - overview.X) / overview.Width, 0, 1) * TimelineDurationMs);
             dragStartTime = playhead;
             return;
@@ -427,8 +429,11 @@ public sealed partial class EditorView
         BeginBox(x, y, ctrl, false);
     }
 
-    public void PointerMove(float x, float y, bool shift, bool ctrl)
+    private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
+        if (aimodGesture != AimodGesture.None) { MoveAimodPointer(x, y); return; }
+        if (notesSelecting) { PositionNotesCaret(x, y, true); return; }
+        if (dockPressed is not null) { MoveDockPointer(x, y); return; }
         if (AcknowledgementsVisible)
         {
             mouseX = x; mouseY = y;
@@ -436,7 +441,6 @@ public sealed partial class EditorView
             return;
         }
         if (movementPanelPointer) { MoveMovementPanel(x, y); return; }
-        if (AimodVisible) { mouseX = x; mouseY = y; return; }
         if (SynchronizationBlocksInput) return;
         MoveVolumePopoverPointer(x, y);
         if (MoveCanvasBackgroundDimPointer(x, y)) return;
@@ -450,7 +454,9 @@ public sealed partial class EditorView
         if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
         if (dsBaseDragging) { UpdateDistanceBase(x); return; }
         if (HitsoundCopierVisible) { mouseX = x; mouseY = y; return; }
-        if (SongSetupVisible) { mouseX = x; mouseY = y; MoveSongSetup(x, y, shift); return; }
+        if (dockHorizontalDrag is not null) { MoveDockHorizontal(x); return; }
+        if (randomDragging) { MoveRandomStrength(x); return; }
+        if (SongSetupVisible || SongDockEditing && songDrag >= 0) { mouseX = x; mouseY = y; MoveSongSetup(x, y, shift); return; }
         if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x, shift); return; }
         if (distanceDragging) { UpdateDistanceSlider(x, shift); return; }
         placementCtrl = ctrl;
@@ -462,9 +468,9 @@ public sealed partial class EditorView
         if (updatesPage) return;
         if (sliderHoldConsumed) return;
         if (SliderHoldNeedsRedraw && (Math.Abs(x - sliderHoldX) >= 2 || Math.Abs(y - sliderHoldY) >= 2)) { sliderHoldId = Guid.Empty; noteHoldTarget = null; }
-        if (StreamDialogVisible && stackFruitDragging >= 0) { MoveStackFruit(x, y); return; }
-        if (StreamDialogVisible && stackPointDragging >= 0) { MoveStackPoint(x, y); return; }
-        if (StreamDialogVisible && streamSnapDragging) { SetStreamSnap(x); return; }
+        if ((StreamDialogVisible || PatternDockEditing) && stackFruitDragging >= 0) { MoveStackFruit(x, y); return; }
+        if ((StreamDialogVisible || PatternDockEditing) && stackPointDragging >= 0) { MoveStackPoint(x, y); return; }
+        if ((StreamDialogVisible || PatternDockEditing) && streamSnapDragging) { SetStreamSnap(x); return; }
         if (TimeJumpVisible || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
         if (SliderDialogVisible) return;
@@ -473,8 +479,7 @@ public sealed partial class EditorView
         if (tabPointer) { MoveTabPointer(x); return; }
         if (drag == DragKind.PreviewResize)
         {
-            previewWidth = Math.Clamp(width - x, MinimumPreviewWidth,
-                Math.Max(MinimumPreviewWidth, width - 109 - leftPanel.Width - (MinimumPlayfieldWidth + 198)));
+            ResizePreviewDock(x);
             return;
         }
         if (drag == DragKind.DifficultySeek) { SeekDifficultyCurve(y); return; }
@@ -572,8 +577,11 @@ public sealed partial class EditorView
         }
     }
 
-    public void PointerUp(float x, float y, int button, bool shift = false)
+    private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
+        if (aimodGesture != AimodGesture.None && button == 0) { EndAimodPointer(x, y); return; }
+        if (notesSelecting && button == 0) { FinishNotesSelection(x, y); return; }
+        if (dockPressed is not null && button == 0) { EndDockPointer(x, y); return; }
         if (AcknowledgementsVisible) { acknowledgementsScrollDragging = false; return; }
         if (movementPanelPointer && button == 0)
         {
@@ -583,7 +591,6 @@ public sealed partial class EditorView
             textSelecting = false;
             return;
         }
-        if (AimodVisible) return;
         testplayCursorPressed = false;
         if (SynchronizationBlocksInput) return;
         if (EndCanvasBackgroundDimPointer(x, y, button)) return;
@@ -597,7 +604,9 @@ public sealed partial class EditorView
         if (settingsColourDrag != 0 && button == 0) { UpdateSettingsColourDrag(x, y); settingsColourDrag = 0; return; }
         if (textSelecting && button == 0) { mouseY = y; MoveInputSelection(x); textSelecting = false; return; }
         if (HitsoundCopierVisible) return;
-        if (SongSetupVisible) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }
+        if (dockHorizontalDrag is not null && button == 0) { MoveDockHorizontal(x); dockHorizontalDrag = null; return; }
+        if (randomDragging && button == 0) { MoveRandomStrength(x); randomDragging = false; return; }
+        if (SongSetupVisible || songDrag >= 0) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
         if (updatesPage) return;
         if (dsSnapDragging && button == 0) { SetDistanceSnapSubdivision(x); dsSnapDragging = false; return; }
@@ -612,15 +621,15 @@ public sealed partial class EditorView
         if (IsTestplaying) return;
         if (tabPointer && button == 0)
         {
-            MoveTabPointer(x); tabPointer = false;
+            MoveTabPointer(x); FinishTabPointer(cancel: false);
             if (!tabMoved) SwitchDifficulty(tabPressed);
             return;
         }
-        if (StreamDialogVisible && stackFruitDragging >= 0 && button == 0)
+        if ((StreamDialogVisible || PatternDockEditing) && stackFruitDragging >= 0 && button == 0)
         { MoveStackFruit(x, y); stackFruitDragging = -1; RecordStackDraft(); return; }
-        if (StreamDialogVisible && stackPointDragging >= 0 && button == 0)
+        if ((StreamDialogVisible || PatternDockEditing) && stackPointDragging >= 0 && button == 0)
         { MoveStackPoint(x, y); stackPointDragging = -1; RecordStackDraft(); return; }
-        if (StreamDialogVisible && streamSnapDragging && button == 0)
+        if ((StreamDialogVisible || PatternDockEditing) && streamSnapDragging && button == 0)
         { SetStreamSnap(x); streamSnapDragging = false; if (stackMode) RecordStackDraft(); return; }
         if (TimeJumpVisible || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || VolumeDialogVisible || DistanceSnapDialogVisible) return;
         if (ErrorVisible || DiscardConfirmationVisible) return;
@@ -643,6 +652,7 @@ public sealed partial class EditorView
             return;
         }
         PointerMove(x, y, shift, false);
+        if (drag == DragKind.Timeline) { drag = DragKind.None; EndTimelineScrub(); return; }
         if (drag == DragKind.DifficultySeek) { drag = DragKind.None; return; }
         if (drag == DragKind.PlaybackLine) { FinishPlaybackLineDrag(); return; }
         if (drag == DragKind.Marquee) { FinishBox(x, y); return; }
@@ -670,6 +680,7 @@ public sealed partial class EditorView
         {
             selectionScaleSide = 0;
             objectDragStart = null;
+            EndObjectDragSnap();
             dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
             objectDragPrepared = false;
             if (AudioPlaying || pinPlayhead) FollowPlayhead();
@@ -687,10 +698,15 @@ public sealed partial class EditorView
     public void PointerDoubleClick(float x, float y, bool shift, bool ctrl)
     {
         if (AcknowledgementsVisible) return;
+        if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
+        {
+            var row = aimodRowBounds.FirstOrDefault(r => r.Bounds.Contains(x, y));
+            if (row.Bounds.Height > 0) LocateAimodIssue(aimodRows[row.Index]);
+            return;
+        }
         if (CanUseCanvasBackgroundDim && CanvasBackgroundDimBounds.Contains(x, y)) return;
         if (HitsoundCopierVisible) { PointerDown(x, y, 0, shift, ctrl); return; }
 
-        if (AimodVisible) return;
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
             NotifySynchronizationBlocked(); return;
@@ -707,7 +723,7 @@ public sealed partial class EditorView
             { timingField = field.Key; timingText = field.Value; timingFieldApply = field.Apply; SelectInput("timing:" + field.Key, timingText); }
             return;
         }
-        if (SongSetupVisible)
+        if (SongSetupVisible || SongDockEditing && songDockBounds.Contains(x, y))
         {
             foreach (var pair in songFieldBounds)
                 if (pair.Value.Contains(x, y) && SongFieldEnabled(pair.Key))
@@ -832,10 +848,11 @@ public sealed partial class EditorView
                 0, Math.Max(0, L.AvailableLanguages.Count - languageVisibleRows));
             return;
         }
-        if (AimodVisible)
+        if (AimodDocked && DockContentInputAvailable && aimodPanelBounds.Contains(x, y))
         {
-            if (aimodListBounds.Contains(x, y)) aimodFirst = Math.Clamp(aimodFirst - (int)(delta / 120) * 3,
-                0, Math.Max(0, AimodErrors.Count - aimodVisibleRows));
+            if (aimodScrollTrack.Contains(x, y) || shiftHeld)
+                aimodScrollX = Math.Clamp(aimodScrollX - delta / 120 * 48, 0, Math.Max(0, aimodColumns.Sum(col => aimodColumnWidths[col]) - aimodListBounds.Width));
+            else if (aimodListBounds.Contains(x, y)) ScrollAimod(-delta / 120 * 60);
             return;
         }
         if (VersionHistoryVisible) { ScrollVersionHistory(x, y, delta, ctrl); return; }
@@ -848,6 +865,20 @@ public sealed partial class EditorView
         if (TimingModal)
         { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
         if (HandleVolumePopoverWheel(x, y, delta)) return;
+        if (WheelDockHorizontal(x, y, delta, shift)) return;
+        if (RandomDockEditing && randomBounds.Contains(x, y))
+        { randomScroll = Math.Clamp(randomScroll - delta / 120 * 48, 0, Math.Max(0, RandomContentHeight - randomBounds.Height)); return; }
+        if (DockContentInputAvailable && PanelVisible(DockPanel.SliderInspector) && inspectorBounds.Contains(x, y))
+        { inspectorScroll = Math.Clamp(inspectorScroll - delta / 120 * 48, 0, Math.Max(0, inspectorContentHeight - (dockHorizontal.TryGetValue(DockPanel.SliderInspector, out var horizontal) ? horizontal.Viewport.Height : inspectorBounds.Height))); return; }
+        if (SongDockEditing && songDockBounds.Contains(x, y))
+        { songDockScroll = Math.Clamp(songDockScroll - delta / 120 * 48, 0, Math.Max(0, songDockContentHeight - songDockBounds.Height)); return; }
+        if (DockContentInputAvailable && PanelVisible(DockPanel.Notes) && NotesBounds.Contains(x, y))
+        { notesScroll = Math.Max(0, notesScroll - delta / 120 * 60); return; }
+        if (DockContentInputAvailable && PanelVisible(DockPanel.PatternEditor) && patternDockBounds.Contains(x, y))
+        {
+            patternDockScroll = Math.Clamp(patternDockScroll - delta / 120 * 36, 0,
+                Math.Max(0, PatternDockContentHeight - patternDockBounds.Height)); return;
+        }
         if (BananaEditVisible)
         {
             if (BananaPreviewBounds.Contains(x, y))
@@ -1033,8 +1064,18 @@ public sealed partial class EditorView
         return target;
     }
 
-    public void KeyDown(int virtualKey, bool ctrl, bool shift)
+    private void KeyDownCore(int virtualKey, bool ctrl, bool shift)
     {
+        if (dockPressed is not null)
+        {
+            if (virtualKey == 27) { dockPressed = null; dockDragging = false; }
+            return;
+        }
+        if (tabPointer)
+        {
+            if (virtualKey == 27) FinishTabPointer(cancel: true);
+            return;
+        }
         if (AcknowledgementsVisible) { AcknowledgementsKey(virtualKey, ctrl, shift); return; }
         if (ScreenshotKeyDown(virtualKey, ctrl, shift)) return;
         if (AudioDiagnosticMarkerKeyDown(virtualKey, ctrl, shift)) return;
@@ -1047,9 +1088,7 @@ public sealed partial class EditorView
         if (DistanceKeyDown(virtualKey, ctrl, shift)) return;
         if (HitsoundCopierVisible && !ErrorVisible && !DiscardConfirmationVisible) { HitsoundCopierKey(virtualKey, ctrl, shift); return; }
         placementCtrl = ctrl;
-        if (virtualKey == 27 && legacyButtonSlider != Guid.Empty)
-        { legacyButtonSlider = Guid.Empty; return; }
-        sliderHoldId = legacyButtonSlider = Guid.Empty; noteHoldTarget = null;
+        sliderHoldId = Guid.Empty; noteHoldTarget = null;
         if (virtualKey == 27 && testplayEscapeConsumed) return;
         if (IsTestplaying)
         {
@@ -1150,9 +1189,22 @@ public sealed partial class EditorView
         if (SongSetupVisible) { SongSetupKey(virtualKey, ctrl, shift); return; }
         if (DistanceSnapDialogVisible) { DistanceSnapKey(virtualKey, ctrl, shift); return; }
         if (VolumeDialogVisible) { if (virtualKey == 27) CloseVolumeDialog(); return; }
-        if (AimodVisible) { if (virtualKey == 27) CloseAimod(); return; }
+        if (AimodKey(virtualKey, ctrl, shift)) return;
         if (BananaEditVisible) { BananaEditKey(virtualKey, ctrl, shift); return; }
         if (StreamDialogVisible) { StreamKey(virtualKey, ctrl, shift); return; }
+        if (PatternDockKey(virtualKey, ctrl, shift)) return;
+        if (RandomDockFocused && !(ctrl && virtualKey == 'S'))
+        {
+            if (virtualKey == 27) { randomField = -1; return; }
+            if (virtualKey == 13) { CommitRandomDock(); return; }
+            InputKey("random:" + randomField, ref randomNumbers[randomField], virtualKey, ctrl, shift, 16, RequestPasteField); return;
+        }
+        if (SongDockFocused && !(ctrl && virtualKey == 'S'))
+        {
+            if (virtualKey is 13 or 27) { songField = ""; return; }
+            SongSetupKey(virtualKey, ctrl, shift); return;
+        }
+        if (NotesKey(virtualKey, ctrl, shift)) return;
         if (MergeDialogVisible)
         {
             if (virtualKey == 27) MergeDialogVisible = false;
@@ -1188,7 +1240,7 @@ public sealed partial class EditorView
         if (virtualKey == 117 && !ctrl && !shift && !altHeld) { OpenTimingSetup(); return; }
         if (virtualKey == 114 && !ctrl && !shift && !altHeld) { ShowTimingPage(true); return; }
         if (virtualKey == 115 && !ctrl && !shift && !altHeld && drag == DragKind.None)
-        { OpenSongSetup(); return; }
+        { ShowSongDock(); return; }
         if (virtualKey == 116 && !ctrl && !shift && !altHeld) { StartTestplay(); return; }
         if (ctrl && !shift && !altHeld && virtualKey == 83 && drag == DragKind.None)
         {
@@ -1199,15 +1251,14 @@ public sealed partial class EditorView
         { RequestExport?.Invoke(); return; }
         if (ctrl && !shift && !altHeld && virtualKey == 70 && CanEditBananas)
         { OpenBananaEdit(); return; }
-        if (ctrl && shift && !altHeld && virtualKey is 65 or 70 or 77)
+        if (ctrl && shift && !altHeld && virtualKey is 70 or 77)
         {
             if (!dragMoved && draftTrack == Guid.Empty && draftBanana == Guid.Empty
                 && drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.LegacyControl)
             { history.Commit(); drag = DragKind.None; sliderHoldConsumed = false; }
             if (editField >= 0 && !CommitField()) return;
-            if (virtualKey == 65) ClearSelectedInternalAnchors();
-            else if (virtualKey == 77) OpenMergeDialog();
-            else OpenStreamDialog();
+            if (virtualKey == 77) ShowMergeInspector();
+            else ShowPatternDock();
             return;
         }
         if (editField >= 0)
@@ -1234,6 +1285,7 @@ public sealed partial class EditorView
             else ShowLibrary();
             return;
         }
+        if (ctrl && shift && !altHeld && virtualKey == 65) { ShowAimod(); return; }
         if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift)) return;
         if (virtualKey == 70 && shift && !ctrl && !altHeld)
         {
@@ -1318,12 +1370,11 @@ public sealed partial class EditorView
         }
     }
 
-    public void TextInput(char value)
+    private void TextInputCore(char value)
     {
         if (AcknowledgementsVisible) return;
         if (HitsoundCopierVisible) { if (!ErrorVisible && !DiscardConfirmationVisible && !char.IsControl(value)) PasteHitsoundName(value.ToString()); return; }
 
-        if (AimodVisible) return;
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
         {
             NotifySynchronizationBlocked(); return;
@@ -1337,6 +1388,11 @@ public sealed partial class EditorView
                 SetDistanceBaseText(InsertInput("ds:base", dsBaseText, value.ToString(), 16));
             return;
         }
+        if (NotesFocused && !char.IsControl(value)) { InsertNotes(value.ToString()); return; }
+        if (RandomDockFocused && !char.IsControl(value)) { RandomDockText(value.ToString()); return; }
+        if (SongDockFocused && !char.IsControl(value)) { PasteSongSetupText(value.ToString(), SongSetupInputSession); return; }
+        if (PatternDockEditing && patternDockKind == 2 && bananaEditField >= 0) { BananaEditText(value.ToString()); return; }
+        if (PatternDockEditing && patternDockKind == 1 && stackNumericField >= 0) { StackNumericText(value.ToString()); return; }
         if (BananaEditVisible) { BananaEditText(value.ToString()); return; }
         if (StreamDialogVisible && stackMode) { StackNumericText(value.ToString()); return; }
         if (DistanceEditing) { DistanceTextInput(value); return; }
@@ -1362,6 +1418,9 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        EndTimelineScrub();
+        notesSelecting = false; CancelAimodGesture(); aimodFocused = false;
+        dockPressed = null; dockDragging = false;
         canvasScaleAxis = -1;
         acknowledgementsScrollDragging = false;
         audioDiagnosticMarkerHeld = false;
@@ -1376,6 +1435,7 @@ public sealed partial class EditorView
         textSelecting = false;
         movementPanelPointer = false;
         songDrag = -1;
+        randomDragging = false; dockHorizontalDrag = null;
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
         FinishDistanceEdit(true);
@@ -1389,13 +1449,13 @@ public sealed partial class EditorView
         CancelTestplayQuickRetry();
         streamSnapDragging = false; CancelStackDrag();
         CloseVolumePopover();
-        sliderHoldId = legacyButtonSlider = Guid.Empty; noteHoldTarget = null;
+        sliderHoldId = Guid.Empty; noteHoldTarget = null;
         sliderHoldConsumed = false;
         if (preserveTestplay) testplay?.ReleaseKeys();
         else StopTestplay();
         bindingCapture = -1;
         SetModifiers(false, false);
-        tabPointer = false;
+        FinishTabPointer(cancel: true);
         if (libraryPointerActive) { libraryPointerActive = false; libraryPressedMap = null; RememberLibraryPosition(); }
         if (drag == DragKind.Marquee) { CancelBox(); contextItems.Clear(); return; }
         if (draftTrack != Guid.Empty || draftBanana != Guid.Empty || drag is DragKind.Objects or DragKind.SliderObject or DragKind.Anchor or DragKind.HandleIn or DragKind.HandleOut or DragKind.BananaStart or DragKind.BananaEnd or DragKind.LegacyControl or DragKind.TimelineTail)
@@ -1411,6 +1471,7 @@ public sealed partial class EditorView
         sliderObjectDragPrevious = null;
         selectionScaleSide = 0;
         objectDragStart = null;
+        EndObjectDragSnap();
         dragFruits.Clear(); dragTracks.Clear(); dragBananas.Clear();
         objectDragPrepared = false;
         draftTrack = Guid.Empty;
@@ -1641,5 +1702,35 @@ public sealed partial class EditorView
             else high = middle;
         }
         apply(start + (desired - start) * low);
+    }
+    public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
+    {
+        var document = Document;
+        try { PointerDownCore(x, y, button, shift, ctrl); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
+    }
+    public void PointerMove(float x, float y, bool shift, bool ctrl)
+    {
+        var document = Document;
+        try { PointerMoveCore(x, y, shift, ctrl); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
+    }
+    public void PointerUp(float x, float y, int button, bool shift = false)
+    {
+        var document = Document;
+        try { PointerUpCore(x, y, button, shift); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
+    }
+    public void KeyDown(int virtualKey, bool ctrl, bool shift)
+    {
+        var document = Document;
+        try { KeyDownCore(virtualKey, ctrl, shift); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); SaveDockLayoutIfChanged(); }
+    }
+    public void TextInput(char value)
+    {
+        var document = Document;
+        try { TextInputCore(value); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
     }
 }

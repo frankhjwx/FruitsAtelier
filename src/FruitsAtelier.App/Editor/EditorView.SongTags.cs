@@ -15,7 +15,7 @@ public sealed partial class EditorView
     private void PrepareSongTags(ICanvas c)
     {
         string value = songValues.GetValueOrDefault("Tags", "");
-        float availableWidth = Math.Max(20, Math.Min(840, width - 32) - 280);
+        float availableWidth = Math.Max(20, drawingSongDock ? songDockBounds.Width - 18 : Math.Min(840, width - 32) - 280);
         if (songTagText == value && songTagWidth == availableWidth && songTagWindowHeight == height) return;
         songTagText = value; songTagWidth = availableWidth; songTagWindowHeight = height;
         songTagSize = 13;

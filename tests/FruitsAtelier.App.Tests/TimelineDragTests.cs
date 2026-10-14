@@ -2,6 +2,7 @@ internal static class TimelineDragTests
 {
     public static void ReturnToStart()
     {
+        PlaybackHold();
         foreach (float grabOffset in new[] { -2f, -0.125f, 0f, 0.125f, 2f })
         {
             var ui = new Ui();
@@ -25,6 +26,52 @@ internal static class TimelineDragTests
             Equal(original, ui.View.PlayheadMs, "Releasing changed the restored time");
             if (ui.View.WantsCapture || ui.View.IsDirty || !snapshot.ContentEquals(ui.View.Document))
                 throw new Exception("Timeline drag affected capture or document content.");
+        }
+    }
+
+    private static void PlaybackHold()
+    {
+        foreach (bool initiallyPlaying in new[] { true, false })
+        foreach (bool grabHead in new[] { true, false })
+        foreach (bool cancel in new[] { true, false })
+        foreach (bool publishPause in new[] { true, false })
+        {
+            var ui = new Ui();
+            const double duration = 180000;
+            double position = 12345.678;
+            bool playing = initiallyPlaying;
+            int pauses = 0, resumes = 0;
+            void Poll() => ui.View.UpdateTransport(position, duration, true, playing, false, null, "song.mp3");
+            ui.View.RequestPausePlayback = () => { pauses++; playing = false; if (publishPause) Poll(); };
+            ui.View.RequestTogglePlayback = () => { resumes++; playing = !playing; Poll(); };
+            ui.View.RequestSeek = time => { position = time; Poll(); };
+            Poll(); ui.Paint();
+            var snapshot = ui.View.Document.DeepClone();
+            var head = ui.Canvas.Lines.Single(l => l.Color == 0xFFFFFF && l.X1 == l.X2 && l.Y1 > ui.Plot.Bottom);
+            float x = grabHead ? head.X1 : 816, y = head.Y1 + 12;
+            ui.View.PointerDown(x, y, 0, false, false);
+            if (playing || pauses != (initiallyPlaying ? 1 : 0))
+                throw new Exception("Timeline grab must pause active audio without starting paused audio.");
+            if (grabHead) Equal(12345.678, ui.View.PlayheadMs, "Grabbing a playing head changed its time");
+            if (publishPause) ui.View.PointerMove(x - 30, y, false, false);
+            double held = ui.View.PlayheadMs;
+            for (int tick = 0; tick < (publishPause ? 10 : 0); tick++)
+            {
+                if (playing) position += 100;
+                Poll(); ui.Paint();
+                Equal(held, position, "Audio advanced while the pointer held a timeline position");
+                Equal(held, ui.View.PlayheadMs, "Held timeline position drifted");
+            }
+            if (cancel) ui.View.CancelInteraction();
+            else ui.View.PointerUp(publishPause ? x - 30 : x, y, 0);
+            if (playing != initiallyPlaying || resumes != (initiallyPlaying ? 1 : 0))
+                throw new Exception("Ending a timeline drag must restore its original playback state once.");
+            Equal(held, position, "Playback resumed from a different time");
+            if (playing) { position += 100; Poll(); Equal(position, ui.View.PlayheadMs, "Released playback no longer follows audio"); }
+            ui.View.CancelInteraction();
+            if (resumes != (initiallyPlaying ? 1 : 0) || ui.View.WantsCapture
+                || !snapshot.ContentEquals(ui.View.Document) || ui.View.IsDirty)
+                throw new Exception("Timeline scrub repeated playback restoration or changed content.");
         }
     }
 

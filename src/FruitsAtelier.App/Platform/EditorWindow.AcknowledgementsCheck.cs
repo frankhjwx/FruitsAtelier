@@ -43,23 +43,23 @@ internal sealed partial class EditorWindow
         Native.GetWindowRect(hwnd, out var bounds);
         Native.GetClientRect(hwnd, out var client);
         var work = CurrentWorkArea();
-        var expected = EditorView.AcknowledgementsWindowSize(work.Right - work.Left, work.Bottom - work.Top, dpi / 96d);
+        var expected = EditorView.AcknowledgementsWindowSize(work.Right - work.Left, work.Bottom - work.Top, InitialUiDpi() / 96d);
         if ((Native.GetWindowLongPtr(hwnd, -16) & (nint)Native.WindowStyle) != 0
             || bounds.Right - bounds.Left != client.Right || bounds.Bottom - bounds.Top != client.Bottom
-            || Math.Abs(client.Right - expected.Width * dpi / 96) > 1
-            || Math.Abs(client.Bottom - expected.Height * dpi / 96) > 1)
+            || Math.Abs(client.Right - expected.Width * InitialUiDpi() / 96) > 1
+            || Math.Abs(client.Bottom - expected.Height * InitialUiDpi() / 96) > 1)
             throw new InvalidOperationException("Acknowledgements must occupy a compact undecorated window.");
 
         nint HitAt(int y) => HandleMessage(hwnd, 0x0084, 0,
             (nint)(((long)(ushort)(bounds.Top + y) << 16) | (ushort)(bounds.Left + 20)));
-        if (HitAt(20) != 2 || HitAt((int)(120 * dpi / 96)) != 1)
+        if (HitAt(20) != 2 || HitAt((int)(120 * uiDpi / 96)) != 1)
             throw new InvalidOperationException("Acknowledgements must drag only from their header.");
-        canvas!.Resize(client.Right, client.Bottom, dpi);
-        canvas.Begin(); view.Render(canvas, client.Right * 96 / dpi, client.Bottom * 96 / dpi); canvas.End();
+        canvas!.Resize(client.Right, client.Bottom, uiDpi);
+        canvas.Begin(); view.Render(canvas, client.Right * 96 / uiDpi, client.Bottom * 96 / uiDpi); canvas.End();
         Click(view.AcknowledgementsConfirmBounds);
         if (!view.AcknowledgementsVisible || File.Exists(path)) throw new InvalidOperationException("Unchecked native confirmation must remain blocked.");
         Click(view.AcknowledgementsCheckboxBounds);
-        canvas.Begin(); view.Render(canvas, client.Right * 96 / dpi, client.Bottom * 96 / dpi); canvas.End();
+        canvas.Begin(); view.Render(canvas, client.Right * 96 / uiDpi, client.Bottom * 96 / uiDpi); canvas.End();
         int before = frames;
         pendingStartupFiles = () =>
         {
@@ -97,7 +97,7 @@ internal sealed partial class EditorWindow
 
         void Click(FruitsAtelier.App.Rendering.Rect r)
         {
-            int x = (int)((r.X + 8) * dpi / 96), y = (int)((r.Y + 8) * dpi / 96);
+            int x = (int)((r.X + 8) * uiDpi / 96), y = (int)((r.Y + 8) * uiDpi / 96);
             nint position = (nint)(((long)(ushort)y << 16) | (ushort)x);
             HandleMessage(hwnd, 0x0201, 1, position);
             HandleMessage(hwnd, 0x0202, 0, position);

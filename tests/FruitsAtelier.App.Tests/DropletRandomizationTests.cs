@@ -24,11 +24,11 @@ internal static class DropletRandomizationTests
                 var ui = new Ui(); ui.LoadDocument(map);
                 ui.View.LoadProject(BeatmapProject.FromDocuments([map, map.DeepClone()])); ui.Paint();
                 var before = ui.View.Document.DeepClone();
-                ui.View.OpenSongSetup(); ui.Paint(); ui.ClickText(L.Get("randomize.title"));
+                ui.View.OpenSongSetup(); ui.Paint(); ClickRandomTitle(ui);
                 ui.ClickText(L.Get("randomize.enableAll"));
                 Check(ui.View.Document.ContentEquals(before), "setup batch remains a cancellable draft");
                 ui.Key(27); Check(ui.View.Document.ContentEquals(before), "cancel preserves switches");
-                ui.View.OpenSongSetup(); ui.Paint(); ui.ClickText(L.Get("randomize.title"));
+                ui.View.OpenSongSetup(); ui.Paint(); ClickRandomTitle(ui);
                 Set(ui, "RandomizeDropletStrength", "12"); Set(ui, "RandomizeDropletSeed", "-123");
                 ui.ClickText(L.Get("randomize.enableAll")); ui.ClickText(L.Get("song.ok"));
                 Check(ui.View.Document.RandomizeDropletStrength == 12 && ui.View.Document.RandomizeDropletSeed == -123, "parameters committed");
@@ -41,17 +41,17 @@ internal static class DropletRandomizationTests
                 ui.ClickMap(1000, 256); ui.View.ToggleSelectedDropletRandomization(); ui.Paint();
                 Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: false }
                     && ui.View.Document.Tracks[1].DropletRandomization is { Enabled: true }, "individual switch is independent");
-                ui.ClickText(L.Get("ui.edit")); ui.ClickText(L.Get("randomize.title")); ui.ClickText(L.Get("randomize.enableAll"));
+                ui.ClickText(L.Get("ui.edit")); ClickRandomTitle(ui); ui.ClickText(L.Get("randomize.enableAll"));
                 Check(ui.View.Document.Tracks.Take(2).All(t => t.DropletRandomization is { Enabled: true }), "Edit batch enable entry");
-                ui.ClickText(L.Get("ui.edit")); ui.ClickText(L.Get("randomize.title")); ui.ClickText(L.Get("randomize.disableAll"));
+                ui.ClickText(L.Get("ui.edit")); ClickRandomTitle(ui); ui.ClickText(L.Get("randomize.disableAll"));
                 Check(ui.View.Document.Tracks.Take(2).All(t => t.DropletRandomization is { Enabled: false }), "Edit batch disable entry");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.Tracks.Take(2).All(t => t.DropletRandomization is { Enabled: true }), "batch has one undo step");
-                ui.View.OpenSongSetup(); ui.Paint(); ui.ClickText(L.Get("randomize.title"));
+                ui.View.OpenSongSetup(); ui.Paint(); ClickRandomTitle(ui);
                 Set(ui, "RandomizeDropletSeed", "1.5"); ui.ClickText(L.Get("song.ok"));
                 Check(ui.View.SongSetupVisible && ui.View.Document.RandomizeDropletSeed == -123, "invalid seed cannot apply partially"); ui.Key(27);
                 foreach (var size in new[] { (980, 620), (760, 580) })
                 {
-                    ui.Resize(size.Item1, size.Item2); ui.View.OpenSongSetup(); ui.Paint(); ui.ClickText(L.Get("randomize.title"));
+                    ui.Resize(size.Item1, size.Item2); ui.View.OpenSongSetup(); ui.Paint(); ClickRandomTitle(ui);
                     foreach (var bounds in ui.View.SongSetupFieldBounds.Values)
                         Check(bounds.X >= 0 && bounds.Right <= ui.Width && bounds.Y >= 0 && bounds.Bottom <= ui.Height, "fields fit window");
                     ui.Key(27);
@@ -89,7 +89,7 @@ internal static class DropletRandomizationTests
                 L.SetLanguage(locale);
                 var map = new MapDocument { IsDemo = false, RandomizeDropletStrength = 12, RandomizeDropletSeed = -123 };
                 var ui = new Ui(); ui.LoadDocument(map); ui.Resize(size.Item1, size.Item2);
-                void Open() { ui.View.OpenSongSetup(); ui.Paint(); ui.ClickText(L.Get("randomize.title")); }
+                void Open() { ui.View.OpenSongSetup(); ui.Paint(); ClickRandomTitle(ui); }
                 Open();
                 var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
                 var sliders = (IReadOnlyList<(FruitsAtelier.App.Rendering.Rect Bounds, string Key, double Maximum)>)
@@ -148,16 +148,18 @@ internal static class DropletRandomizationTests
                 ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode);
                 ui.ClickMap(1000, 256); ui.HoldMap(1000, 256, clock.Advance);
                 Check(ui.View.Document.ContentEquals(map), "opening long-press actions leaves content unchanged");
-                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.enableSelected")),
-                    $"long-press offers enable in {locale}/{mode}: {string.Join(" | ", ui.Canvas.Texts.Select(t => t.Value).TakeLast(20))}");
-                ui.ClickText(L.Get("randomize.enableSelected"));
-                Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: true }, "long-press enables the selected ordinary FSlider");
-                ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "long-press switch undoes in one step");
-                ui.Key('Y', ctrl: true);
-                ui.HoldMap(1000, 256, clock.Advance); ui.ClickText(L.Get("randomize.disableSelected"));
-                Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: false }, "long-press label follows enabled state and disables FX");
-                ui.Key('Z', ctrl: true);
-                Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: true }, "disable undoes independently");
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.title")), "Long press offers droplet randomization");
+                ClickRandomTitle(ui);
+                ui.ClickText(L.Get("randomize.enableSelected")); Wait();
+
+                Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: true }, "The panel enables the selected FSlider immediately");
+                ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Randomization edits in one undo step");
+                void Wait()
+                {
+                    var end = DateTime.UtcNow.AddSeconds(30);
+                    while (!ui.View.RandomDockValid && DateTime.UtcNow < end) { Thread.Sleep(5); ui.Paint(); }
+                    Check(ui.View.RandomDockValid, "Randomization preview completes");
+                }
                 ui.Key(27);
                 var streamMap = map.DeepClone(); streamMap.Tracks[0].StreamSnapDivisor = 4;
                 ui.LoadDocument(streamMap); ui.HoldMap(1000, 256, clock.Advance);
@@ -191,6 +193,11 @@ internal static class DropletRandomizationTests
     {
         var box = ui.View.SongSetupFieldBounds[key]; ui.Click(box.X + 5, box.Y + 5); ui.Key('A', ctrl: true);
         ui.View.PasteSongSetupText(value, ui.View.SongSetupInputSession); ui.Paint();
+    }
+    private static void ClickRandomTitle(Ui ui)
+    {
+        var label = ui.Canvas.Texts.Last(t => t.Value == L.Get("randomize.title"));
+        ui.Click(label.X + 4, label.Y + 4);
     }
     private static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
 }

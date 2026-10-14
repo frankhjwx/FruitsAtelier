@@ -4,6 +4,7 @@ namespace FruitsAtelier.Core;
 public sealed class BeatmapProject
 {
     public string Name { get; set; } = L.Get("core.names.untitled");
+    public string Notes { get; set; } = "";
     public List<ProjectDifficulty> Difficulties { get; set; } = [];
 
     public static BeatmapProject FromDocuments(IEnumerable<MapDocument> documents)
@@ -23,7 +24,7 @@ public sealed class BeatmapProject
 
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(Name) || Difficulties is null || Difficulties.Count is < 1 or > 256
+        if (Notes is null || Notes.Length > 65536 || string.IsNullOrWhiteSpace(Name) || Difficulties is null || Difficulties.Count is < 1 or > 256
             || Difficulties.Any(d => d is null || d.Id == Guid.Empty || string.IsNullOrWhiteSpace(d.Name) || d.Document is null)
             || Difficulties.Select(d => d.Id).Distinct().Count() != Difficulties.Count)
             throw new InvalidDataException(L.Get("project.invalid"));

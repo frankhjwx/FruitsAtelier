@@ -217,9 +217,8 @@ internal static class RenderCheck
                 void Paint() { canvas.Begin(); view.Render(canvas, width, height); canvas.End(); }
                 void Click(float x, float y) { view.PointerDown(x, y, 0, false, false); view.PointerUp(x, y, 0); Paint(); }
                 Paint();
-                var button = view.SongSetupButtonBounds;
-                Click(button.X + 10, button.Y + 10);
-                if (!view.SongSetupVisible) throw new InvalidOperationException("Song Setup did not open from the header.");
+                view.OpenSongSetup(); Paint();
+                if (!view.SongSetupVisible) throw new InvalidOperationException("Song Setup did not initialize.");
                 var dialog = view.SongSetupBounds;
                 for (int tab = 0; tab < 5; tab++)
                 {
@@ -920,6 +919,24 @@ internal static class RenderCheck
 
     internal static void Run(D2DCanvas canvas, EditorView view, nint window)
     {
+        if (Environment.GetCommandLineArgs().Contains("--conversion-docks-render-check"))
+        {
+            canvas.Resize(1440, 900, 96);
+            ConversionDockRenderCheck.Run(canvas);
+            AppLog.Write("Conversion dock rendering checks passed.");
+            return;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--aimod-render-check"))
+        {
+            foreach (int dpi in new[] { 96, 144, 192 })
+            foreach (var size in new[] { (1440, 900), (800, 600) })
+            {
+                canvas.Resize(size.Item1 * dpi / 96, size.Item2 * dpi / 96, dpi);
+                AimodRenderCheck.Run(canvas, size.Item1, size.Item2, dpi);
+            }
+            AppLog.Write("AiMod native input and rendering checks passed.");
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--canvas-scale-render-check"))
         {
             CanvasScaleRenderCheck.Run(canvas);
@@ -972,11 +989,7 @@ internal static class RenderCheck
             AppLog.Write("Experimental snap native settings and sliders passed at all sizes, DPI values and languages.");
             return;
         }
-        if (Environment.GetCommandLineArgs().Contains("--slider-speed-render-check"))
-        {
-            SliderSpeedRenderCheck.Run(canvas);
-            return;
-        }
+
         if (Environment.GetCommandLineArgs().Contains("--object-snap-render-check"))
         {
             ObjectSnapRenderCheck.Run(canvas);

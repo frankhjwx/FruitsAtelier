@@ -6,11 +6,10 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private bool catchPreviewVisible;
-    private float previewWidth = 360;
+    private bool catchPreviewVisible => PanelVisible(DockPanel.Preview);
     private const float MinimumPreviewWidth = 344;
-    private int previewMod;
-    private int previewDisplayMode;
+    private int previewMod { get => DockWorkspaceState.PreviewMod; set => DockWorkspaceState.PreviewMod = value; }
+    private int previewDisplayMode { get => DockWorkspaceState.PreviewDisplayMode; set => DockWorkspaceState.PreviewDisplayMode = value; }
     private CatchAutoPreview? previewAutoplay;
     private CatchPlatePreview? previewPlate;
     private HashSet<(Guid SourceId, int EventIndex)> previewComboEnds = [];
@@ -26,7 +25,7 @@ public sealed partial class EditorView
     public Rect PreviewToggleBounds { get; private set; }
     public Rect PreviewResizeBounds { get; private set; }
     public bool PreviewResizeCursor => !TimeJumpVisible && !LibraryVisible && !ExportVisible && !ErrorVisible && !DiscardConfirmationVisible && !SliderDialogVisible && !languageMenuOpen && menu < 0
-        && catchPreviewVisible && (drag == DragKind.PreviewResize || PreviewResizeBounds.Contains(mouseX, mouseY));
+        && !TimingPageVisible && dockPressed is null && (drag == DragKind.PreviewResize || leftDockResizeBounds.Contains(mouseX, mouseY) || rightDockResizeBounds.Contains(mouseX, mouseY));
     public Rect LegacyConversionBounds { get; private set; }
     public double PreviewApproachRate => previewMod switch { 1 => Document.ApproachRate * .5, 2 => Math.Min(10, Document.ApproachRate * 1.4), _ => Document.ApproachRate };
     public double PreviewCircleSize => previewMod switch { 1 => Document.CircleSize * .5, 2 => Math.Min(10, Document.CircleSize * 1.3), _ => Document.CircleSize };
@@ -39,28 +38,16 @@ public sealed partial class EditorView
         }
     }
     private string PreviewModName => previewMod switch { 1 => "EZ", 2 => "HR", _ => "NM" };
-    private void DrawPreviewSidebar(ICanvas c)
-    {
-        PreviewResizeBounds = catchPreviewVisible ? new(rightPanel.X - 4, rightPanel.Y + 38, 8, rightPanel.Height - 38) : default;
-        float edge = catchPreviewVisible ? rightPanel.X : width;
-        PreviewToggleBounds = new(edge - 22, canvas.Y + canvas.Height / 2 - 22, 22, 44);
-        if (catchPreviewVisible)
-        {
-            DrawPreview(c, new(rightPanel.X + 16, rightPanel.Y + 56, rightPanel.Width - 32, rightPanel.Height - 70));
-            c.Fill(new(rightPanel.X - 1, rightPanel.Y + 38, 2, rightPanel.Height - 38), PreviewResizeBounds.Contains(mouseX, mouseY) || drag == DragKind.PreviewResize ? Accent : Grid);
-        }
-        c.Fill(PreviewToggleBounds, Surface, 5);
-        Button(c, PreviewToggleBounds, catchPreviewVisible ? "›" : "‹", () => catchPreviewVisible = !catchPreviewVisible);
-    }
     private void DrawPreviewMods(ICanvas c, Rect r)
     {
         string[] keys = ["preview.normal", "preview.easy", "preview.hardRock"];
-        c.Text(L.Get("preview.mode"), r.X, r.Y + 50, 10, Muted, 65);
-        float start = r.X + 66, buttonWidth = (r.Width - 66) / 3;
+        bool narrow = r.Width < 260;
+        c.Text(L.Get("preview.mode"), r.X, r.Y + (narrow ? 43 : 50), 10, Muted, narrow ? r.Width : 65);
+        float start = r.X + (narrow ? 0 : 66), buttonWidth = narrow ? r.Width : (r.Width - 66) / 3;
         for (int i = 0; i < keys.Length; i++)
         {
             int mod = i;
-            Button(c, new(start + i * buttonWidth, r.Y + 43, buttonWidth - 3, 26), L.Get(keys[i]), () => previewMod = mod, previewMod == mod);
+            Button(c, new(start + (narrow ? 0 : i * buttonWidth), r.Y + (narrow ? 60 + i * 28 : 43), buttonWidth - 3, 26), L.Get(keys[i]), () => previewMod = mod, previewMod == mod);
         }
     }
     private IReadOnlyList<ConvertedCatchObject> PreviewObjects()
@@ -120,12 +107,13 @@ public sealed partial class EditorView
     private void DrawPreviewDisplayModes(ICanvas c, Rect r)
     {
         string[] keys = ["preview.ratio43", "preview.ratio169", "preview.fit"];
-        c.Text(L.Get("preview.resolution"), r.X, r.Y + 81, 10, Muted, 65);
-        float start = r.X + 66, buttonWidth = (r.Width - 66) / 3;
+        bool narrow = r.Width < 260;
+        c.Text(L.Get("preview.resolution"), r.X, r.Y + (narrow ? 150 : 81), 10, Muted, narrow ? r.Width : 65);
+        float start = r.X + (narrow ? 0 : 66), buttonWidth = narrow ? r.Width / 3 : (r.Width - 66) / 3;
         for (int i = 0; i < keys.Length; i++)
         {
             int mode = i;
-            Button(c, new(start + i * buttonWidth, r.Y + 74, buttonWidth - 3, 26), L.Get(keys[i]), () => previewDisplayMode = mode, previewDisplayMode == mode);
+            Button(c, new(start + i * buttonWidth, r.Y + (narrow ? 167 : 74), buttonWidth - 3, 26), L.Get(keys[i]), () => previewDisplayMode = mode, previewDisplayMode == mode);
         }
     }
     private static readonly HashSet<(Guid SourceId, int EventIndex)> NoHyperdash = [];
@@ -163,12 +151,10 @@ public sealed partial class EditorView
         float tint = (float)previewAutoplay.HyperTintAt(playhead);
         if (tint > .001f) DrawCatcherBody(c, x, catchY, fieldWidth, hyperColour, tint, false, previewAutoplay.FacingLeftAt(playhead));
     }
-    private Guid legacyButtonSlider;
     private Guid sliderHoldId;
     private float sliderHoldX, sliderHoldY;
     private double sliderHoldStart;
     private bool sliderHoldConsumed;
-    private bool holdMergeAllowed;
     private ConvertedCatchObject? noteHoldTarget;
     public bool SliderHoldNeedsRedraw => sliderHoldId != Guid.Empty || noteHoldTarget is not null;
     private void BeginSliderHold(float x, float y, bool modified)
@@ -202,13 +188,20 @@ public sealed partial class EditorView
             foreach (var source in timelineSources)
             {
                 if (!objectSelection.Contains(source.Id) || source.End < viewStart || source.Start > visibleEnd
-                    || !Document.Tracks.Any(t => t.Id == source.Id) && !Document.ImportedSliders.Any(t => t.Id == source.Id)) continue;
+                    || !Document.Tracks.Any(t => t.Id == source.Id) && !Document.ImportedSliders.Any(t => t.Id == source.Id)
+                        && !(objectSelection.Count > 1 && Document.Fruits.Any(f => f.Id == source.Id))) continue;
                 if (tool == Tool.Slider && SelectedTrack?.Id != source.Id) continue;
                 sliderHoldId = source.Id;
                 var position = Screen(new(Math.Clamp(source.Start, viewStart, visibleEnd), 256));
                 sliderHoldX = position.X; sliderHoldY = position.Y;
                 break;
             }
+        }
+        if (sliderHoldId == Guid.Empty && objectSelection.Count > 0)
+        {
+            sliderHoldId = objectSelection.FirstOrDefault(id => Document.Tracks.Any(t => t.Id == id)
+                || Document.ImportedSliders.Any(s => s.Id == id) || objectSelection.Count > 1 && Document.Fruits.Any(f => f.Id == id));
+            sliderHoldX = plot.X + plot.Width / 2; sliderHoldY = plot.Y + plot.Height / 2;
         }
         if (sliderHoldId == Guid.Empty) return;
         contextItems.Clear();
@@ -219,9 +212,12 @@ public sealed partial class EditorView
     private void OpenSliderActions(Guid id)
     {
         if (!objectSelection.Contains(id)) SelectObjects([id]);
-        holdMergeAllowed = ObjectStructureEditing.MergeSelection(Document, ClipboardSelectedParentIds()).Error is null;
-        legacyButtonSlider = id;
-        sliderConversionBounds = default;
+        RefreshSliderInspector();
+        menu = -1; contextItems.Clear();
+        foreach (var action in SliderInspectorActions())
+            contextItems.Add(new(action.Label, action.Action, action.Enabled, SliderAction: action.Kind));
+        contextBounds = new(Math.Clamp(sliderHoldX, 0, Math.Max(0, width - 280)),
+            Math.Clamp(sliderHoldY, 0, Math.Max(0, height - ContextMenuHeight)), 280, ContextMenuHeight);
     }
 
     private void DrawSliderHold(ICanvas c)
@@ -267,55 +263,4 @@ public sealed partial class EditorView
         }
     }
     public Rect StreamConversionBounds { get; private set; }
-    private Rect sliderConversionBounds;
-    private void DrawLegacyConversionButton(ICanvas c)
-    {
-        DrawSliderHold(c);
-        Guid id = legacyButtonSlider;
-        if (id == Guid.Empty) { LegacyConversionBounds = StreamConversionBounds = default; return; }
-        var ids = ClipboardSelectedParentIds();
-        bool imported = ids.Count == 1 && Document.ImportedSliders.Any(t => ids.Contains(t.Id));
-        bool slider = Document.Tracks.Any(t => ids.Contains(t.Id)) || Document.ImportedSliders.Any(t => ids.Contains(t.Id));
-        bool stream = SelectedStreamsOnly;
-        bool randomize = ids.Count == 1 && RandomizeSelectedTrack is { } randomizeTrack && ids.Contains(randomizeTrack.Id);
-        bool merge = holdMergeAllowed;
-        if (!ids.Contains(id) || tool is not (Tool.Select or Tool.Slider) || draftTrack != Guid.Empty || drag != DragKind.None || menu >= 0 || ExportVisible || SliderDialogVisible || BananaEditVisible || StreamDialogVisible || MergeDialogVisible || TimeJumpVisible || DistanceSnapDialogVisible)
-        { LegacyConversionBounds = StreamConversionBounds = default; legacyButtonSlider = Guid.Empty; return; }
-        int count = (imported ? 1 : 0) + (slider ? 2 : 0) + (stream ? 2 : 0) + (merge ? 1 : 0) + (randomize ? 1 : 0);
-        if (count == 0) { LegacyConversionBounds = StreamConversionBounds = default; return; }
-        float buttonWidth = 260;
-        float buttonHeight = count * 36 - 4;
-        if (sliderConversionBounds.Width != buttonWidth || sliderConversionBounds.Height != buttonHeight)
-        {
-            float w = buttonWidth;
-            sliderConversionBounds = new(Math.Clamp(sliderHoldX + 24, plot.X, Math.Max(plot.X, plot.Right - w)), Math.Clamp(sliderHoldY + 24, plot.Y, plot.Bottom - buttonHeight), w, buttonHeight);
-        }
-        legacyButtonSlider = id;
-        var r = sliderConversionBounds;
-        LegacyConversionBounds = imported ? new(r.X, r.Y, 224, 32) : default;
-        StreamConversionBounds = slider ? new(r.X, imported ? r.Y + 36 : r.Y, r.Width, 32) : default;
-        c.Fill(r, Surface, 4);
-        if (imported) Button(c, LegacyConversionBounds, L.Get("preview.convertSlider"), () => EditImportedSlider(id));
-        float row = imported ? r.Y + 36 : r.Y;
-        if (slider)
-        {
-            StreamConversionBounds = new(r.X, row, r.Width, 32);
-            Button(c, StreamConversionBounds, L.Get(stream ? "conversion.editTitle" : "conversion.title"), OpenStreamDialog, enabled: !notesLocked);
-            row += 36;
-        }
-        if (stream)
-        {
-            Button(c, new(r.X, row, r.Width, 32), L.Get("stream.breakFruits"), BreakSelectedStreams, enabled: !notesLocked); row += 36;
-            Button(c, new(r.X, row, r.Width, 32), L.Get("stream.convertBack"), ConvertStreamsBack, enabled: !notesLocked); row += 36;
-        }
-        if (slider)
-        { Button(c, new(r.X, row, r.Width, 32), L.Get("slider.clearInternal"), ClearSelectedInternalAnchors, enabled: !notesLocked); row += 36; }
-        if (randomize)
-        {
-            Button(c, new(r.X, row, r.Width, 32), L.Get(RandomizeSelectedTrack!.DropletRandomization is { Enabled: true }
-                ? "randomize.disableSelected" : "randomize.enableSelected"), ToggleSelectedDropletRandomization, enabled: CanRandomizeDroplets);
-            row += 36;
-        }
-        if (merge) Button(c, new(r.X, row, r.Width, 32), L.Get("merge.title"), OpenMergeDialog, enabled: !notesLocked);
-    }
 }

@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Content Include="Fixtures/aimod-twin-bloom.json" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="../../src/FruitsAtelier.Core/FruitsAtelier.Core.csproj" />
   </ItemGroup>
 </Project>

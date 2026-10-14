@@ -13,14 +13,14 @@ public static partial class ProjectSerializer
     public static string Serialize(BeatmapProject project, string? projectPath = null)
     {
         project.Validate();
-        var copy = new BeatmapProject { Name = project.Name };
+        var copy = new BeatmapProject { Name = project.Name, Notes = project.Notes };
         foreach (var diff in project.Difficulties)
         {
             // Reuse schema 1's validation and relative resource path handling.
             var document = Read(Serialize(diff.Document, projectPath));
             copy.Difficulties.Add(new ProjectDifficulty { Id = diff.Id, Name = diff.Name, Document = document });
         }
-        string text = JsonSerializer.Serialize(new MultiProjectFile { SchemaVersion = copy.Difficulties.Any(d => HasBananaPatterns(d.Document)) ? 22 : copy.Difficulties.Any(d => d.Document.LegacySliderTicks) ? 20 : copy.Difficulties.Any(d => HasStreamCombos(d.Document)) ? 18 : copy.Difficulties.Any(d => d.Document.HitsoundOverrides.Count > 0) ? 16 : copy.Difficulties.Any(d => HasDerandomization(d.Document)) ? 12 : copy.Difficulties.Any(d => HasRandomization(d.Document)) ? 10 : copy.Difficulties.Any(d => HasStacks(d.Document)) ? 8 : copy.Difficulties.Any(d => HasStreams(d.Document)) ? 6 : copy.Difficulties.Any(d => HasControlCurves(d.Document)) ? 4 : 2, Project = copy }, options);
+        string text = JsonSerializer.Serialize(new MultiProjectFile { SchemaVersion = copy.Notes.Length > 0 ? 24 : copy.Difficulties.Any(d => HasBananaPatterns(d.Document)) ? 22 : copy.Difficulties.Any(d => d.Document.LegacySliderTicks) ? 20 : copy.Difficulties.Any(d => HasStreamCombos(d.Document)) ? 18 : copy.Difficulties.Any(d => d.Document.HitsoundOverrides.Count > 0) ? 16 : copy.Difficulties.Any(d => HasDerandomization(d.Document)) ? 12 : copy.Difficulties.Any(d => HasRandomization(d.Document)) ? 10 : copy.Difficulties.Any(d => HasStacks(d.Document)) ? 8 : copy.Difficulties.Any(d => HasStreams(d.Document)) ? 6 : copy.Difficulties.Any(d => HasControlCurves(d.Document)) ? 4 : 2, Project = copy }, options);
         if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumFileBytes)
             throw new InvalidDataException(L.Get("core.project.writeLimit"));
         return text;
@@ -37,7 +37,7 @@ public static partial class ProjectSerializer
             if (json.RootElement.TryGetProperty("SchemaVersion", out var version) && version.TryGetInt32(out int schema) && schema is 1 or 3 or 5 or 7 or 9 or 11 or 13 or 15 or 17 or 19 or 21)
                 return BeatmapProject.FromDocuments([Read(text, projectPath)]);
             var file = JsonSerializer.Deserialize<MultiProjectFile>(text, options);
-            if (file?.SchemaVersion is not (2 or 4 or 6 or 8 or 10 or 12 or 14 or 16 or 18 or 20 or 22) || file.Project is null) throw new InvalidDataException(L.Get("core.project.schema"));
+            if (file?.SchemaVersion is not (2 or 4 or 6 or 8 or 10 or 12 or 14 or 16 or 18 or 20 or 22 or 24) || file.Project is null) throw new InvalidDataException(L.Get("core.project.schema"));
             foreach (var diff in file.Project.Difficulties ?? [])
                 if (diff?.Document is { } document)
                 {

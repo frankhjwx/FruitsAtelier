@@ -10,6 +10,7 @@ public sealed class WorkspaceManifest
     public int SchemaVersion { get; set; } = 1;
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "";
+    public string Notes { get; set; } = "";
     public string? SongsRoot { get; set; }
     public string? SourceDirectory { get; set; }
     public string? ExternalSourceDirectory { get; set; }
@@ -44,7 +45,7 @@ public static class WorkspaceProject
     public const string ManifestName = "project.catchdiff";
     public static WorkspaceManifest SnapshotManifest(WorkspaceManifest manifest) => new()
     {
-        SchemaVersion = manifest.SchemaVersion, Id = manifest.Id, Name = manifest.Name, SongsRoot = manifest.SongsRoot,
+        SchemaVersion = manifest.SchemaVersion, Id = manifest.Id, Name = manifest.Name, Notes = manifest.Notes, SongsRoot = manifest.SongsRoot,
         SourceDirectory = manifest.SourceDirectory, ExternalSourceDirectory = manifest.ExternalSourceDirectory,
         Difficulties = manifest.Difficulties.Select(e => new WorkspaceDifficulty
         {
@@ -115,7 +116,7 @@ public static class WorkspaceProject
                 if (database.ProjectForSource(folder) is { } existing)
                     throw new InvalidOperationException(L.Get("library.sourceAlreadyLinked", existing));
         }
-        var manifest = new WorkspaceManifest { Name = project.Name, SongsRoot = string.IsNullOrWhiteSpace(songsRoot) ? null : Path.GetFullPath(songsRoot) };
+        var manifest = new WorkspaceManifest { Name = project.Name, Notes = project.Notes, SongsRoot = string.IsNullOrWhiteSpace(songsRoot) ? null : Path.GetFullPath(songsRoot) };
         var source = project.Difficulties.Select(d => d.Document.SourcePath).FirstOrDefault(p => p is not null && manifest.SongsRoot is not null && Within(manifest.SongsRoot, p));
         if (source is not null) manifest.SourceDirectory = Path.GetRelativePath(songsRoot, Path.GetDirectoryName(source)!);
         if (source is null && project.Difficulties.Select(d => d.Document.SourcePath).FirstOrDefault(p => p is not null) is { } external)
@@ -135,7 +136,7 @@ public static class WorkspaceProject
         WorkspaceExportRecovery.Recover(directory);
         RejectLinks(directory);
         var manifest = ReadManifest(directory);
-        var project = new BeatmapProject { Name = manifest.Name };
+        var project = new BeatmapProject { Name = manifest.Name, Notes = manifest.Notes };
         foreach (var entry in manifest.Difficulties)
         {
             if (Path.GetFileName(entry.File) != entry.File || entry.File == ManifestName || !entry.File.EndsWith(".catchdiff", StringComparison.OrdinalIgnoreCase))
@@ -223,9 +224,9 @@ public static class WorkspaceProject
                 // Encode relative paths against the final location, not the staging folder.
                 AtomicFile.Write(Path.Combine(staging, name), ProjectSerializer.Serialize(diff.Document, Path.Combine(directory, name)));
             }
-            var manifest = new WorkspaceManifest { Id = session.Manifest.Id, Name = project.Name, SongsRoot = session.Manifest.SongsRoot,
+            var manifest = new WorkspaceManifest { Id = session.Manifest.Id, Name = project.Name, Notes = project.Notes, SongsRoot = session.Manifest.SongsRoot,
                 SourceDirectory = session.Manifest.SourceDirectory, ExternalSourceDirectory = session.Manifest.ExternalSourceDirectory, Difficulties = entries };
-            var persisted = new WorkspaceManifest { Id = manifest.Id, Name = manifest.Name, SongsRoot = manifest.SongsRoot,
+            var persisted = new WorkspaceManifest { Id = manifest.Id, Name = manifest.Name, Notes = manifest.Notes, SongsRoot = manifest.SongsRoot,
                 SourceDirectory = manifest.SourceDirectory, ExternalSourceDirectory = manifest.ExternalSourceDirectory,
                 Difficulties = entries.Select(e => new WorkspaceDifficulty { Id = e.Id, Name = e.Name, File = e.File,
                     Source = e.Source, SourceHash = e.SourceHash, ExportTarget = e.ExportTarget, ExportHash = e.ExportHash, ExportConfirmed = e.ExportConfirmed, SyncFile = e.SyncFile }).ToList() };
@@ -233,7 +234,7 @@ public static class WorkspaceProject
             if (System.IO.Directory.Exists(directory)) System.IO.Directory.Move(directory, previous);
             try { System.IO.Directory.Move(staging, directory); }
             catch { if (System.IO.Directory.Exists(previous)) System.IO.Directory.Move(previous, directory); throw; }
-            session.Manifest.Name = project.Name; session.Manifest.Difficulties = entries;
+            session.Manifest.Name = project.Name; session.Manifest.Notes = project.Notes; session.Manifest.Difficulties = entries;
             if (System.IO.Directory.Exists(previous)) System.IO.Directory.Delete(previous, true);
         }
         finally { if (System.IO.Directory.Exists(staging)) System.IO.Directory.Delete(staging, true); }

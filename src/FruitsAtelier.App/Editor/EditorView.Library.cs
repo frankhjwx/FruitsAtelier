@@ -54,6 +54,7 @@ public sealed partial class EditorView
         try { LibrarySettings = settings ?? LibrarySettings.Load(); }
         catch (Exception e) { libraryError = e.Message; }
         RestoreMapEditingPreferences();
+        RestoreDockLayouts();
         playbackLineFromBottom = LibrarySettings.PlaybackLineFromBottom;
         canvasZoom = LibrarySettings.CanvasZoom;
         canvasTimeZoom = LibrarySettings.CanvasTimeZoom;
@@ -212,6 +213,7 @@ public sealed partial class EditorView
         try
         {
             WorkspaceSession = task.GetAwaiter().GetResult();
+            savedProjectNotes = WorkspaceSession.Project.Notes;
             foreach (var diff in WorkspaceSession.Project.Difficulties)
                 difficulties.FirstOrDefault(d => d.Id == diff.Id)?.History.MarkSaved(diff.Document);
             if (ResourceSnapshotMatches(WorkspaceSession.Project)) projectStructureDirty = false;

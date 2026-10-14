@@ -77,6 +77,82 @@ internal static class DifficultyTabTests
         }
     }
 
+    public static void ReorderAndPin()
+    {
+        string language = L.Language;
+        try
+        {
+            foreach (string locale in new[] { "en", "zh-CN" })
+            {
+                L.SetLanguage(locale);
+                var project = BeatmapProject.FromDocuments(Enumerable.Range(0, 4).Select(_ => new MapDocument { IsDemo = false }));
+                for (int i = 0; i < 4; i++) project.Difficulties[i].Name = "Tab " + i;
+                var view = new EditorView(false); view.LoadProject(project);
+                var baseline = view.CaptureProject();
+                var canvas = new RecordingCanvas();
+                Settle();
+                Drag("Tab 3", "Tab 0", cancel: true);
+                Check(Names().SequenceEqual(new[] { "Tab 0", "Tab 1", "Tab 2", "Tab 3" }), "Escape restores the initial tab order");
+                Drag("Tab 3", "Tab 0", lostCapture: true);
+                Check(Names().SequenceEqual(new[] { "Tab 0", "Tab 1", "Tab 2", "Tab 3" }), "Lost capture restores the initial tab order");
+                Drag("Tab 3", "Tab 0");
+                Check(Names().SequenceEqual(new[] { "Tab 3", "Tab 0", "Tab 1", "Tab 2" }), "Nonoverflow tabs reorder live and retain order on release");
+                Pin("Tab 2"); Pin("Tab 1");
+                Check(Names().Take(2).SequenceEqual(new[] { "Tab 2", "Tab 1" }), "Pinned tabs precede ordinary tabs");
+                Drag("Tab 0", "Tab 2");
+                Check(Names().Take(2).SequenceEqual(new[] { "Tab 2", "Tab 1" }), "Ordinary tabs cannot cross the pinned group");
+                Drag("Tab 1", "Tab 2");
+                Check(Names().Take(2).SequenceEqual(new[] { "Tab 1", "Tab 2" }), "Pinned tabs can reorder within their group");
+                Pin("Tab 1", unpin: true);
+                Check(Names()[0] == "Tab 2" && Names()[1] == "Tab 1", "Unpin moves the tab behind the pinned group");
+                Check(!view.IsDirty, "Reordering and pinning leave the project clean");
+                var retained = Names();
+                view.Document.Fruits.Add(new() { X = 20, TimeMs = 1000 }); Settle();
+                Check(Names().SequenceEqual(retained), "Rating refresh preserves manual order and pins");
+                view.Document.Fruits.Clear(); Settle();
+                view.KeyDown(9, true, false); view.KeyUp(9);
+                Check(view.CurrentDifficultyName == "Tab 3", "Keyboard navigation follows the manually ordered strip");
+                view.AddDifficulty(); Paint(); Settle();
+                Check(Names().SequenceEqual(retained), "Adding a difficulty retains existing order and pins");
+                Check(baseline.Difficulties.Zip(view.CaptureProject().Difficulties).All(pair => pair.First.Id == pair.Second.Id
+                    && pair.First.Document.ContentEquals(pair.Second.Document)), "Tab preferences preserve storage identities and map content");
+                view.LoadProject(project); Settle();
+                Check(Names().SequenceEqual(new[] { "Tab 0", "Tab 1", "Tab 2", "Tab 3" }) && !view.IsDirty, "Opening a project resets session tab preferences");
+
+                void Paint() { canvas.Clear(); view.Render(canvas, 1440, 900); }
+                string[] Names() => canvas.Texts.Where(t => t.Y == 54 && t.Value.StartsWith("Tab ")).OrderBy(t => t.X).Select(t => t.Value).ToArray();
+                void Settle()
+                {
+                    var deadline = DateTime.UtcNow.AddSeconds(30);
+                    do { Paint(); if (!view.StarRatingsRefreshing) return; Thread.Sleep(10); } while (DateTime.UtcNow < deadline);
+                    throw new Exception("Tab rating refresh did not complete.");
+                }
+                void Drag(string source, string destination, bool cancel = false, bool lostCapture = false)
+                {
+                    Paint();
+                    var start = canvas.Texts.Single(t => t.Y == 54 && t.Value == source);
+                    var end = canvas.Texts.Single(t => t.Y == 54 && t.Value == destination);
+                    view.PointerDown(start.X + 2, 62, 0, false, false);
+                    view.PointerMove(end.X - 25, 62, false, false); Paint();
+                    Check(view.WantsCapture, "Reorder captures the pointer");
+                    if (cancel) { view.KeyDown(27, false, false); view.KeyUp(27); }
+                    if (lostCapture) view.CancelInteraction();
+                    view.PointerUp(end.X - 25, 62, 0); Paint();
+                    Check(!view.WantsCapture, "Release and Escape end pointer capture");
+                }
+                void Pin(string name, bool unpin = false)
+                {
+                    Paint(); var tab = canvas.Texts.Single(t => t.Y == 54 && t.Value == name);
+                    view.PointerDown(tab.X + 2, 62, 2, false, false); Paint();
+                    var action = canvas.Texts.Single(t => t.Value == L.Get(unpin ? "project.unpinDifficulty" : "project.pinDifficulty"));
+                    view.PointerDown(action.X + 2, action.Y + 2, 0, false, false);
+                    view.PointerUp(action.X + 2, action.Y + 2, 0); Paint();
+                }
+            }
+        }
+        finally { L.SetLanguage(language); }
+    }
+
     public static void Layout()
     {
         var project = BeatmapProject.FromDocuments(Enumerable.Range(0, 3).Select(_ => new MapDocument { IsDemo = false }));
@@ -222,10 +298,15 @@ internal static class DifficultyTabTests
         Check(view.ActiveDifficultyIndex == 0 && canvas.Texts.Any(t => t.Value == "Diff 0"), "Keyboard wraps and reveals current tab");
         var first = canvas.Texts.Single(t => t.Value == "Diff 0");
         view.PointerDown(first.X + 60, first.Y + 2, 0, false, false);
-        view.PointerMove(first.X - 140, first.Y + 2, false, false);
+        for (int i = 0; i < 80; i++)
+        {
+            view.PointerMove(920, 62, false, false);
+            canvas.Clear(); view.Render(canvas, 980, 620);
+        }
+        view.PointerUp(920, 62, 0);
         canvas.Clear(); view.Render(canvas, 980, 620);
-        view.PointerUp(first.X - 140, first.Y + 2, 0);
-        Check(view.ActiveDifficultyIndex == 0 && !view.IsDirty && !canvas.Texts.Any(t => t.Value == "Diff 0"), "Dragging scrolls tabs without switching or editing difficulties");
+        Check(view.ActiveDifficultyIndex == 0 && !view.IsDirty && canvas.Texts.Any(t => t.Value == "Diff 11"),
+            "Dragging at the overflow edge reveals distant tabs without switching or editing difficulties");
         var plus = canvas.Texts.Single(t => t.Value == "+" && t.Y < 128);
         view.PointerDown(plus.X + 2, plus.Y + 2, 0, false, false); canvas.Clear(); view.Render(canvas, 980, 620);
         var add = canvas.Texts.Single(t => t.Value == L.Get("project.add"));

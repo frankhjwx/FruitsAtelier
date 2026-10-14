@@ -6,7 +6,7 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private bool difficultyCurveVisible;
+    private bool difficultyCurveVisible => PanelVisible(DockPanel.MovementStrain);
     private const float DifficultyCurveWidth = 280;
     private IReadOnlyList<CatchStrainSample>? cachedCurveSamples;
     private double[] curveRows = [];
@@ -14,31 +14,9 @@ public sealed partial class EditorView
     private double curveMaximum, cachedCurveDuration;
     private int cachedCurveHeight;
     public bool DifficultyCurveVisible => difficultyCurveVisible;
-    public Rect DifficultyCurvePanelBounds => leftPanel;
+    public Rect DifficultyCurvePanelBounds => PanelBounds(DockPanel.MovementStrain);
     public Rect DifficultyCurveToggleBounds { get; private set; }
     public Rect DifficultyCurveGraphBounds { get; private set; }
-
-    private void DrawDifficultySidebar(ICanvas c)
-    {
-        DifficultyCurveToggleBounds = new(leftPanel.Right - 22, leftPanel.Y + leftPanel.Height / 2 - 22, 22, 44);
-        DifficultyCurveGraphBounds = default;
-        if (difficultyCurveVisible && leftPanel.Width > 0)
-        {
-            c.Fill(leftPanel, Panel);
-            c.Line(leftPanel.X, leftPanel.Y, leftPanel.X, leftPanel.Bottom, Grid);
-            c.Line(leftPanel.X, leftPanel.Y + 38, leftPanel.Right, leftPanel.Y + 38, Grid);
-            c.Text(L.Get("difficulty.curve.title"), leftPanel.X + 16, leftPanel.Y + 12, 13, Foreground,
-                Math.Max(0, leftPanel.Width - 32), true);
-            var graph = new Rect(leftPanel.X + 18, leftPanel.Y + 58,
-                Math.Max(0, leftPanel.Width - 40), Math.Max(0, leftPanel.Height - 78));
-            DifficultyCurveGraphBounds = graph;
-            DrawDifficultyCurve(c, graph);
-            c.Fill(new(leftPanel.Right - 1, leftPanel.Y + 38, 2, leftPanel.Height - 38), Grid);
-        }
-        c.Fill(DifficultyCurveToggleBounds, Surface, 5);
-        Button(c, DifficultyCurveToggleBounds, difficultyCurveVisible ? "‹" : "›",
-            () => difficultyCurveVisible = !difficultyCurveVisible);
-    }
 
     private void DrawDifficultyCurve(ICanvas c, Rect graph)
     {

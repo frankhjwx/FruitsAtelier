@@ -31,18 +31,21 @@ a time or position can still flatten a complete imported slider path.
 - Refresh content-dependent data at its owning edit boundary. Viewport, selection,
   language and hover changes must not create content history or invalidate geometry.
 
-The slider speed badge reuses the current conversion and timing lookup. Its
-per-editor cache retains only the last inspected parent, keyed by conversion
-identity, parent ID and tiny-droplet inclusion. A new selection scans only the
-parent's time interval; unchanged painting and hover reuse the values. It does
-not initiate conversion or export, including while a slider draft is active.
-
 Object snap retains one time-sorted fruit target array per editor, keyed by the
 current authoring conversion identity. A new conversion replaces the array, so
 content edits, undo and document replacement refresh its positions. Pointer
 placement reuses the owned timing lookup to calculate the musical search window,
 then binary-searches its first fruit and visits only that interval. Viewport and
 preference changes reuse target data; subsequent slider draft points do not query it.
+Whole-object dragging retains the gesture's fruit array and its first/last selected
+fruit coordinates. Standalone fruit origins use authoring coordinates so applying
+the offset does not introduce converted float rounding. Each pointer update searches just those two time windows,
+excluding the selected source parents, without rebuilding conversion or flattening
+slider paths. Release, cancellation and failed preparation discard the gesture
+snapshot. Alignment is bounded by the complete selection's playable X extents.
+The gesture also retains its DS reference array. DS presets, collinear positions
+and object alignments compete against the raw horizontal offset before applying
+the winning offset; pointer updates do not rebuild DS references from moved content.
 
 ## Full-map work and cache ownership
 
@@ -85,6 +88,8 @@ Placement previews share their hyperdash calculation with the movement readout.
 The ordered playable merge input is retained only for one exported snapshot.
 An unstarted slider uses the same standalone ghost calculation as a fruit without
 applying fruit replacement rules. Unmappable export sequences retain full validation.
+Placement ordering maps read-back parents through the export's source identities;
+grouped banana events use their containing exported segment's start time.
 
 An active FSlider draft converts only its own track, merging provisional visual
 events with the unchanged committed preview. Pen hover likewise uses a single-track
@@ -102,7 +107,12 @@ preview; switching projects or difficulties retires the pending result.
 The object timeline retains Stream/Stack fruit times, stacking, combo numbers and
 event lookup entries for the current conversion snapshot. The colour presentation
 owns one combo-entry snapshot shared by numbering and preview combo ends. Content
-and NC edits refresh these snapshots; viewport changes reuse them. Drawing filters
+and NC edits refresh these snapshots; viewport changes reuse them. Drawing queries
+a snapshot-owned maximum-end range index, retaining overlapping long
+objects while skipping offscreen markers. Draft tail changes update their indexed end;
+viewport and selection changes reuse it. Banana pattern segments are ordered and
+non-overlapping, so drawing binary-searches the first visible segment and stops
+after the visible interval. Drawing filters
 the cached chronological markers into a reusable visible buffer, preserving paint
 and hit order without allocating or sorting a new visible array each frame.
 Exact control-curve and internal NC snapshot comparisons use indexed lists to
@@ -204,3 +214,21 @@ Before handing off an editing change:
 4. Keep benchmark outputs, profiles and screenshots in ignored `artifacts/`.
    Record measured results and remaining limitations in the task, not as permanent
    performance guarantees in this document.
+
+## Dock inspectors and live editing
+
+Slider Inspector caches rows by committed conversion snapshot, playable-export
+identity and selected parent IDs. It reads existing exported events and timing;
+repainting and horizontal scrolling do not export or convert. Tiny droplets are
+always included in its peak DS and horizontal-speed calculations.
+
+Song Setup, Stream/Stack and Randomize droplets commit valid changes at input
+boundaries through editing transactions. Unchanged values do not create edits.
+Graph and snap drags retain their candidate preview until pointer release. Local
+edit snapshots preserve focus when committed conversion catches up; external
+changes and undo reload the panel. Randomization uses the editor's committed
+conversion pipeline rather than starting a separate export for each repaint.
+
+DockHorizontal owns per-panel content width, viewport clipping and scrollbar
+input. Panels with a minimum content width can reuse it without tying their
+content geometry to the resizable dock width.

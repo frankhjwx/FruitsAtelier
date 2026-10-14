@@ -12,14 +12,13 @@ internal static class PreviewSidebarTests
         for (int i = 0; i < 100; i++) map.Fruits.Add(new Fruit { TimeMs = i * 100, X = 256 });
         ui.LoadDocument(map); ui.Resize(1440, 700); ui.OpenPreview();
         float headerY = ui.View.PreviewResizeBounds.Y, splitX = ui.View.PreviewResizeBounds.X + 4;
-        Check(ui.Canvas.Lines.Any(line => line.X1 == 0 && line.X2 == splitX && line.Y1 == headerY && line.Y2 == headerY)
-            && ui.Canvas.Lines.Any(line => line.X1 == splitX && line.X2 == ui.Width && line.Y1 == headerY && line.Y2 == headerY),
-            "Canvas toolbar and Details header must end on the same row.");
+        Check(ui.Canvas.Lines.Any(line => line.X1 == 0 && line.X2 == ui.Width && line.Y1 == headerY && line.Y2 == headerY),
+            "The workspace toolbar spans the complete row above both docks.");
         float labelY = ui.Canvas.Texts.Single(t => t.Value == L.Get("timing.detailsPanel") + " ▾").Y;
         Check(Math.Abs(labelY - ui.Canvas.Texts.Single(t => t.Value == L.Get("movement.analysis")).Y) <= 1
             && ui.Canvas.Texts.Where(t => t.X >= splitX && t.Y < headerY
                 && (t.Value.StartsWith("AR ") || t.Value.StartsWith("CS ") || t.Value.StartsWith("DPB ")))
-                .All(t => t.Y == labelY), "Details and its values must align vertically with the canvas toolbar.");
+                .All(t => t.Y == labelY), "Mapping and its values must align vertically with the canvas toolbar.");
         Near(4d / 3, ui.View.PreviewViewport.Width / ui.View.PreviewViewport.Height);
         CheckStandardViewport();
         ui.ClickText("16:9");

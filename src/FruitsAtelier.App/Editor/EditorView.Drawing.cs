@@ -11,6 +11,9 @@ public sealed partial class EditorView
     private readonly (string First, string? Second, float Size)[] canvasToggleText = new (string, string?, float)[3];
     private (double TimeMs, bool Active)[] kiaiTransitions = [];
     private TimingPoint[] overviewTiming = [];
+    internal Rect WorkspaceSelectorBounds => new(8, 88, 132, 30);
+    internal Rect CanvasToolbarBounds => new(148, 84, Math.Max(0, width - 356), 38);
+    internal Rect WorkspaceStatsBounds => new(width - 208, 84, 208, 38);
 
     private void RefreshKiaiTransitions()
     {
@@ -53,7 +56,7 @@ public sealed partial class EditorView
         this.width = width;
         this.height = height;
         hits.Clear(); fields.Clear();
-        SliderSpeedReadout = null; SliderSpeedReadoutBounds = null;
+        LegacyConversionBounds = StreamConversionBounds = default;
         distanceLabelBounds.Clear(); PreviousDistanceFieldBounds = NextDistanceFieldBounds = XCoordinateFieldBounds = null;
         AdvanceCanvasBackgroundDim();
         if (IsTestplaying)
@@ -74,17 +77,7 @@ public sealed partial class EditorView
             && syncComparisons.ContainsKey(syncDifficulty)) { DrawSynchronization(c); return; }
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
         if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); return; }
-        bool expandedPanel = catchPreviewVisible || TimingPageVisible;
-        const float minimumCanvasWidth = MinimumPlayfieldWidth + 198;
-        const float collapsedCurveWidth = 24;
-        float leftWidth = difficultyCurveVisible
-            ? Math.Min(DifficultyCurveWidth, Math.Max(collapsedCurveWidth, width - 109 - minimumCanvasWidth))
-            : collapsedCurveWidth;
-        float rightWidth = expandedPanel ? Math.Clamp(previewWidth, 0, Math.Max(0, width - 109 - leftWidth - minimumCanvasWidth)) : 0;
-        float bodyHeight = Math.Max(180, height - 204);
-        rightPanel = new(width - (expandedPanel ? rightWidth : 340), 84, expandedPanel ? rightWidth : 340, expandedPanel ? bodyHeight : 38);
-        leftPanel = new(0, 84, leftWidth, bodyHeight);
-        canvas = new(108 + leftWidth, 84, Math.Max(120, width - rightWidth - leftWidth - 109), bodyHeight);
+        LayoutDockPanels();
         plot = new(canvas.X + 70, canvas.Y + 140, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 152));
         overview = new(220, height - 77, Math.Max(100, width - 248), 40);
         canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, MaximumCanvasZoom);
@@ -93,6 +86,7 @@ public sealed partial class EditorView
         pixelsPerMs = CanvasPixelsPerMs;
         ClampView();
         EnsureConversion();
+        PumpRandomDock();
         AdvanceBoxScroll();
         UpdatePlacementHyperdash();
         if (drag == DragKind.Marquee && dragMoved) MoveBox(mouseX, mouseY);
@@ -111,19 +105,18 @@ public sealed partial class EditorView
             DrawSelectionBox(c);
         }
         DrawInspector(c);
-        if (!TimingPageVisible) DrawDifficultySidebar(c);
-        if (TimingPageVisible) DrawTimingPage(c); else DrawPreviewSidebar(c);
+        if (TimingPageVisible) DrawTimingPage(c); else DrawDockPanels(c);
         if (!TimingPageVisible)
         {
-            DrawLegacyConversionButton(c);
+            DrawSliderHold(c);
             DrawMovementOverlay(c);
-            DrawSliderSpeedReadout(c);
             DrawKiaiBadge(c);
             DrawCanvasBackgroundDim(c);
         }
         DrawTransport(c);
         DrawStatus(c);
         DrawUpdateNotice(c);
+        DrawDockDrag(c);
         if (menu >= 0) DrawMenu(c);
         if (!librarySettingsOpen) DrawContextMenu(c);
         if (!librarySettingsOpen) DrawLanguageMenu(c);
@@ -131,9 +124,7 @@ public sealed partial class EditorView
         DrawSliderDialog(c);
         DrawExportOverlay(c);
         DrawTimeJump(c);
-        DrawStreamDialog(c);
         DrawBananaEdit(c);
-        DrawMergeDialog(c);
         DrawVolumeDialog(c);
         DrawVolumePopover(c);
         DrawDistanceSnapDialog(c);
@@ -143,9 +134,8 @@ public sealed partial class EditorView
         DrawSettings(c);
         if (librarySettingsOpen) DrawContextMenu(c);
         if (librarySettingsOpen) DrawLanguageMenu(c);
-        DrawAimod(c);
         DrawDiscardConfirmation(c);
-        if (!librarySettingsOpen && !AimodVisible) DrawDifficultyTooltip(c);
+        if (!librarySettingsOpen) DrawDifficultyTooltip(c);
     }
 
     private void DrawChrome(ICanvas c)
@@ -155,9 +145,9 @@ public sealed partial class EditorView
         Button(c, new(109, 6, 50, 28), L.Get("ui.file"), () => menu = menu == 0 ? -1 : 0, menu == 0);
         Button(c, new(162, 6, 50, 28), L.Get("ui.edit"), () => menu = menu == 1 ? -1 : 1, menu == 1);
         Button(c, new(215, 6, 50, 28), L.Get("ui.view"), () => { gridLevelMenuOpen = false; menu = menu == 2 ? -1 : 2; }, menu == 2);
-        Button(c, new(268, 6, 70, 28), L.Get("timeline.timingMenu"), () => menu = menu == 4 ? -1 : 4, menu == 4);
+        Button(c, new(268, 6, 70, 28), L.Get("dock.layout"), () => menu = menu == 5 ? -1 : 5, menu == 5);
+        Button(c, new(341, 6, 70, 28), L.Get("timeline.timingMenu"), () => menu = menu == 4 ? -1 : 4, menu == 4);
         DrawDifficultyTabs(c);
-        Button(c, SongSetupButtonBounds, L.Get("song.title"), OpenSongSetup);
         Button(c, EditorSettingsButtonBounds, L.Get("library.settings"), OpenSettings);
         DrawSkinSelector(c);
         Button(c, HeaderNavigationBounds, L.Get("library.back"), ShowLibrary);
@@ -167,20 +157,21 @@ public sealed partial class EditorView
     private void DrawCanvas(ICanvas c)
     {
         axisTooltip = null;
-        float toolbarRight = rightPanel.X;
+        float toolbarRight = CanvasToolbarBounds.Right;
+        float toolbarLeft = CanvasToolbarBounds.X;
         c.Fill(new(0, canvas.Y, toolbarRight, 38), 0x1C2129);
         float snapLeft = toolbarRight - 158;
-        bool compactToolbar = toolbarRight < 900;
+        bool compactToolbar = CanvasToolbarBounds.Width < 900;
         bool narrowZoom = compactToolbar;
-        if (UniformCanvasScale || !narrowZoom) c.Text(L.Get("ui.canvasZoom"), leftPanel.Right + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
+        if (UniformCanvasScale || !narrowZoom) c.Text(L.Get("ui.canvasZoom"), toolbarLeft + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
         float breakWidth = compactToolbar ? 115 : 140;
         float breakX = snapLeft - breakWidth - 5;
-        float toggleWidth = compactToolbar ? toolbarRight < 700 ? 75 : 105 : 155;
+        float toggleWidth = compactToolbar ? CanvasToolbarBounds.Width < 700 ? 75 : 105 : 155;
         float movementX = breakX - toggleWidth - 5;
         float selectionX = movementX - toggleWidth - 5;
         float pathX = selectionX - toggleWidth - 5;
-        zoomSlider = new(leftPanel.Right + (narrowZoom ? 8 : 74), canvas.Y + 4,
-            Math.Max(30, pathX - (narrowZoom ? 70 : 154) - leftPanel.Right), 29);
+        zoomSlider = new(toolbarLeft + (narrowZoom ? 8 : 74), canvas.Y + 4,
+            Math.Max(30, pathX - (narrowZoom ? 70 : 154) - toolbarLeft), 29);
         DrawCanvasScaleLock(c);
         if (UniformCanvasScale)
         {
@@ -299,15 +290,16 @@ public sealed partial class EditorView
             bool selected = objectSelection.Count == 1 && objectSelection.Contains(shower.Id);
             if (bananaSegments.TryGetValue(shower.Id, out var segments))
             {
-                foreach (var segment in segments)
+                for (int segmentIndex = FirstVisibleBananaSegment(segments, axisStart);
+                    segmentIndex < segments.Count && segments[segmentIndex].TimeMs <= axisEnd; segmentIndex++)
                 {
-                    var part = BananaRectangle(segment);
+                    var part = BananaRectangle(segments[segmentIndex]);
                     if (part.Bottom < plot.Y || part.Y > plot.Bottom) continue;
-                    c.Fill(part, selected ? 0x2B291Fu : 0x211F1Bu);
+                    c.Fill(part, selected ? 0x2B291Fu : 0x211F1Bu, opacity: .6f);
                     c.Stroke(part, 0x8C7445u);
                 }
             }
-            else c.Fill(bounds, selected ? 0x2B291Fu : 0x211F1Bu);
+            else c.Fill(bounds, selected ? 0x2B291Fu : 0x211F1Bu, opacity: .6f);
             c.Stroke(bounds, selected ? Gold : 0x8C7445u, selected ? 2 : 1);
             if (selected)
             {
@@ -323,7 +315,7 @@ public sealed partial class EditorView
             float startY = Screen(new(draft.TimeMs, 256)).Y;
             double cursorTime = plot.Contains(mouseX, mouseY) ? MapAt(mouseX, mouseY, true).TimeMs : draft.TimeMs;
             float cursorY = Screen(new(Math.Max(draft.TimeMs, cursorTime), 256)).Y;
-            c.Fill(new(playfield.X, Math.Min(startY, cursorY), playfield.Width, Math.Abs(startY - cursorY)), 0x29251B);
+            c.Fill(new(playfield.X, Math.Min(startY, cursorY), playfield.Width, Math.Abs(startY - cursorY)), 0x29251B, opacity: .6f);
             c.Line(playfield.X, startY, playfield.Right, startY, Gold, 2);
             c.Line(playfield.X, cursorY, playfield.Right, cursorY, Gold, 1);
         }
@@ -410,6 +402,8 @@ public sealed partial class EditorView
         DrawSelectionTransform(c, background: false);
         DrawSelectedDistanceTick(c);
         DrawPlacementGhost(c);
+        if (drag == DragKind.Objects && !objectDragTimeline && objectDragSnapPoint is { } snapPoint)
+            DrawObjectSnapGuide(c, snapPoint);
         float headY = Screen(new(playhead, 0)).Y;
         c.Line(plot.X, headY, plot.Right, headY, Gold, 1.5f);
         c.Fill(new(plot.X, headY - 3, 5, 6), Gold);
@@ -423,7 +417,7 @@ public sealed partial class EditorView
         const string comboLabel = "NC";
         float comboLabelWidth = 0;
         double margin = CatchSize.FruitRadius(Document.CircleSize) * CanvasObjectWidth / 512 * 1.5 / pixelsPerMs;
-        foreach (var item in ObjectsInTimeRange(viewStart - margin, viewStart + plot.Height / pixelsPerMs + margin))
+        foreach (var item in PatternCanvasObjects(viewStart - margin, viewStart + plot.Height / pixelsPerMs + margin))
         {
             if (StreamDialogVisible && streamTargets.Contains(item.SourceId)) continue;
             var p = Screen(new(item.TimeMs, item.X));
@@ -450,17 +444,19 @@ public sealed partial class EditorView
 
     private void DrawInspector(ICanvas c)
     {
-        c.Fill(rightPanel, Panel);
-        c.Line(rightPanel.X, rightPanel.Y, rightPanel.X, rightPanel.Bottom, Grid);
-        c.Line(rightPanel.X, rightPanel.Y + 38, rightPanel.Right, rightPanel.Y + 38, Grid);
-        float x = rightPanel.X + 16;
-        float rowY = rightPanel.Y + 11;
-        Button(c, new(x - 8, rightPanel.Y + 4, 130, 30), L.Get(TimingPageVisible ? "timing.panel" : "timing.detailsPanel") + " ▾", () => panelMenuOpen = !panelMenuOpen);
-        float statX = x + 132;
+        if (TimingPageVisible) c.Fill(new(rightPanel.X, 122, rightPanel.Width, Math.Max(0, rightPanel.Height - 38)), Panel);
+        c.Fill(new(0, 84, CanvasToolbarBounds.X, 38), Panel);
+        c.Fill(WorkspaceStatsBounds, Panel);
+        c.Line(CanvasToolbarBounds.X, 84, CanvasToolbarBounds.X, 122, Grid);
+        c.Line(WorkspaceStatsBounds.X, 84, WorkspaceStatsBounds.X, 122, Grid);
+        c.Line(0, 122, width, 122, Grid);
+        float rowY = 95;
+        Button(c, WorkspaceSelectorBounds, L.Get(TimingPageVisible ? "timing.panel" : "timing.detailsPanel") + " ▾", () => panelMenuOpen = !panelMenuOpen);
+        float statX = WorkspaceStatsBounds.X + 12;
         c.Text($"{L.Get("ui.ar")} {Number(Document.ApproachRate)}", statX, rowY, 12, Muted, 48);
         c.Text($"{L.Get("ui.cs")} {Number(Document.CircleSize)}", statX + 50, rowY, 12, Muted, 48);
         c.Text($"{L.Get("ui.dpb")} {Number(Document.DistancePerBeat)}px", statX + 100, rowY, 12, Muted,
-            Math.Max(0, rightPanel.Right - statX - 108));
+            Math.Max(0, width - statX - 108));
     }
 
     private (CurveTrack Track, Anchor Node) ResolveAnchor(Guid trackId, Guid nodeId)
@@ -487,7 +483,6 @@ public sealed partial class EditorView
 
     private void DrawPreview(ICanvas c, Rect r)
     {
-        c.Text(L.Get("ui.preview"), r.X, r.Y, 13, Foreground, r.Width, true);
         string stars = L.Get("preview.stars", PreviewStarRating);
         float starWidth = c.MeasureText(stars, 10), indicatorWidth = 14;
         float starX = r.Right - starWidth - indicatorWidth;
@@ -497,7 +492,8 @@ public sealed partial class EditorView
         else if (CurrentStarRatingFailed) c.Text("!", r.Right - 10, r.Y + 23, 10, Error, 10, true);
         DrawPreviewMods(c, r);
         DrawPreviewDisplayModes(c, r);
-        Rect stage = new(r.X, r.Y + 107, r.Width, Math.Max(12, r.Height - 113));
+        float optionsHeight = r.Width < 260 ? 200 : 107;
+        Rect stage = new(r.X, r.Y + optionsHeight, r.Width, Math.Max(12, r.Height - optionsHeight - 6));
         if (previewDisplayMode != 2)
         {
             float aspect = previewDisplayMode == 0 ? 4f / 3 : 16f / 9;
@@ -662,7 +658,7 @@ public sealed partial class EditorView
     private void DrawMenu(ICanvas c)
     {
         menuHitStart = hits.Count;
-        var items = new List<(string Label, Action Action, bool Enabled, bool Active, bool Separator)>();
+        var items = new List<(string Label, Action Action, bool Enabled, bool Active, bool Separator, bool Heading)>();
         if (menu == 0)
         {
             Item(L.Get("project.new"), () => RequestNewProject?.Invoke());
@@ -692,12 +688,29 @@ public sealed partial class EditorView
             Item(L.Get("ui.copyMenu"), () => CopySelection(), CanCopySelection);
             Item(L.Get("ui.pasteMenu"), () => PasteSelection(), CanPasteSelection);
             if (CanEditBananas) Item(L.Get("bananaEdit.title") + "  Ctrl+F", OpenBananaEdit, !notesLocked);
-            Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), OpenStreamDialog, CanConvertStream && !notesLocked);
+            Item(L.Get(SelectedStreamsOnly ? "conversion.editMenu" : "conversion.menu"), ShowPatternDock, CanConvertStream && !notesLocked);
             if (SelectedStreamsOnly) Item(L.Get("stream.convertBack"), ConvertStreamsBack, ClipboardInteractionReady && !notesLocked);
             Item(L.Get("sliderBatch.menu"), ConvertAllSliders, Document.ImportedSliders.Count > 0 && !SliderConversionBusy);
-            Item(L.Get("randomize.title"), OpenDropletRandomizationMenu, CanRandomizeDroplets);
+            Item(L.Get("randomize.title"), ShowRandomDock, ClipboardInteractionReady);
             Item(L.Get("slider.clearInternalNodes"), ClearSliderNodes, CanClearSliderNodes);
             Item(L.Get("aimod.title"), ShowAimod, ClipboardInteractionReady);
+        }
+        else if (menu == 5)
+        {
+            Heading(L.Get("dock.arrangement"));
+            Item("✓ " + L.Get("dock.defaultLayout"), () => { }, false, true);
+            Item(L.Get("dock.resetLayout"), ResetDockLayout, !TimingPageVisible);
+            Separator();
+            Heading(L.Get("dock.panels"));
+            foreach (var panel in Enum.GetValues<DockPanel>())
+            {
+                bool exists = DockPanelExists(panel);
+                Item((exists ? "✓ " : "") + DockTitle(panel), () =>
+                {
+                    if (DockPanelExists(panel)) RemoveDockPanel(panel);
+                    else AddDockPanel(panel, panel == DockPanel.MovementStrain);
+                }, !TimingPageVisible, exists);
+            }
         }
         else if (menu == 4)
         {
@@ -745,7 +758,7 @@ public sealed partial class EditorView
             Item(L.Get("timing.page"), () => ShowTimingPage(true));
             Item(L.Get("timing.setup"), OpenTimingSetup);
         }
-        float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : menu == 4 ? 268 : 109 + menu * 53;
+        float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : menu == 4 ? 341 : menu == 5 ? 268 : 109 + menu * 53;
         float top = menu == 3 ? difficultyAddButton.Bottom + 4 : 38;
         MenuBounds = new(x, top, 282, 14 + items.Sum(item => item.Separator ? 10 : 34) - 3);
         var rect = MenuBounds;
@@ -763,6 +776,12 @@ public sealed partial class EditorView
             {
                 c.Line(rect.X + 9, y + 3, rect.Right - 9, y + 3, Grid);
                 y += 10;
+                continue;
+            }
+            if (item.Heading)
+            {
+                c.Text(item.Label, rect.X + 15, y + 8, 12, Foreground, rect.Width - 30, true);
+                y += 34;
                 continue;
             }
             bool submenu = (menu == 2 || menu == 4) && y == rect.Y + 7;
@@ -795,8 +814,9 @@ public sealed partial class EditorView
             }
         }
         void Item(string label, Action action, bool enabled = true, bool active = false)
-            => items.Add((label, action, enabled, active, false));
-        void Separator() => items.Add(("", () => { }, false, false, true));
+            => items.Add((label, action, enabled, active, false, false));
+        void Heading(string label) => items.Add((label, () => { }, false, false, false, true));
+        void Separator() => items.Add(("", () => { }, false, false, true, false));
     }
 
     private void PrepareCanvasToggleText(ICanvas c, bool compact, float buttonWidth)
@@ -833,6 +853,7 @@ public sealed partial class EditorView
 
     private void Button(ICanvas c, Rect r, string label, Action action, bool active = false, bool enabled = true, float fontSize = 12, bool? bold = null, float textPadding = 9, float textRightPadding = 6)
     {
+        if (drawingDockContent) { c.Fill(r, Surface, 4); c.Stroke(r, Grid, radius: 4); }
         bool textBold = bold ?? active;
         bool hover = enabled && r.Contains(mouseX, mouseY);
         if (hover) c.Fill(r, active ? 0x3A6260u : 0x3D495Au, 4);

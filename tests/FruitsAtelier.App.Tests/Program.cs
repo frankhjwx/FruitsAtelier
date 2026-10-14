@@ -2,6 +2,26 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Contains("--conversion-docks-check")) { ConversionDockShortcutTests.Run(); PatternNotesTests.Run(); Console.WriteLine("PASS Conversion dock shortcuts, action menus and live editing"); return 0; }
+
+if (args.Contains("--aimod-check")) { AimodTests.Run(); AimodTests.TableAndDock(); ObjectStructureTests.StreamsAndAnchors(); Console.WriteLine("PASS AiMod UI, table, docking and shortcut"); return 0; }
+
+if (args.Contains("--group-drag-boundary-check")) { GroupDragBoundaryTests.Run(); Console.WriteLine("PASS Group drag boundaries, conversion, export and undo"); return 0; }
+
+if (args.Contains("--inspector-panels-check")) { InspectorPanelsTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS Inspector metrics, live panel edits and Song Setup categories"); return 0; }
+
+if (args.Contains("--song-dock-check")) { SongDockTests.Run(); SongSetupTests.Run(); DropletRandomizationTests.Run(); Console.WriteLine("PASS Song Setup dock, metadata, colours and randomization"); return 0; }
+
+if (args.Contains("--pattern-notes-check")) { PatternNotesTests.Run(); Console.WriteLine("PASS Pattern and Notes dock editing and persistence"); return 0; }
+
+if (args.Contains("--docking-check"))
+{
+    DockingTests.Run(); DockPersistenceTests.Run(); DifficultyCurveSidebarTests.LayoutAndSeeking(); PreviewSidebarTests.DisplayModesAndOverscan();
+    CanvasZoomTests.DefaultsAndReset(); CanvasZoomTests.SliderAndWheel(); CanvasZoomTests.PlaybackAndLanguages();
+    MainCurveSelectionOpacity();
+    Console.WriteLine("PASS Docking, workspace toolbar, isolation and sidebars"); return 0;
+}
+
 if (args.Contains("--object-snap-check")) { ObjectSnapTests.Run(); Console.WriteLine("PASS Object snap ranges, placement and preferences"); return 0; }
 
 
@@ -23,13 +43,7 @@ if (args.Contains("--legacy-v7-check"))
 // Existing interaction fixtures use Chinese labels explicitly.
 FruitsAtelier.Localization.Strings.SetLanguage("zh-CN");
 
-if (args.Contains("--banana-edit-check")) { BananaEditTests.Run(); StackDialogTests.Run(); Console.WriteLine("PASS Banana edit dialog and grouped gestures"); return 0; }
-
-if (args.Contains("--slider-speed-check"))
-{
-    try { SliderSpeedReadoutTests.Run(); Console.WriteLine("PASS Slider speed readout and free editing"); return 0; }
-    catch (Exception error) { Console.Error.WriteLine(error); return 1; }
-}
+if (args.Contains("--banana-edit-check")) { BananaEditTests.Run(); StackDockTests.Run(); Console.WriteLine("PASS Banana edit dialog and grouped gestures"); return 0; }
 
 if (args.Contains("--library-opening-check"))
 {
@@ -67,6 +81,17 @@ if (args.Contains("--audio-diagnostics-settings-check"))
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
 if (args.Contains("--benchmark-editing")) return EditorPerformance.Run();
+if (args.Contains("--timeline-range-check"))
+{
+    TimelineRangeTests.Run(); BananaEditTests.Run();
+    ObjectTimelineTests.PatternNewCombo(); ObjectTimelineTests.SimultaneousStacks();
+    ObjectTimelineTests.SkinColours(); ObjectTimelineTests.Stacking();
+    ObjectTimelineTests.TimingCacheInvalidation(); ObjectTimelineTests.CachedDurationsFollowEdits();
+    ObjectTimelineTests.ReverseMarkers(); ObjectTimelineTests.TailReverses();
+    ObjectTimelineTests.NavigationAndSelection(); ObjectTimelineTests.BoxAndDelete();
+    ObjectTimelineTests.PlaybackMarquee(); ObjectTimelineTests.MoveAndNavigate();
+    Console.WriteLine("PASS Indexed timeline visibility, banana segments, selection, tails and undo"); return 0;
+}
 if (args.Contains("--object-timeline-check"))
 {
     try
@@ -89,6 +114,8 @@ if (args.Contains("--slider-draft-check"))
     }
     catch (Exception error) { Console.Error.WriteLine(error); return 1; }
 }
+if (args.Contains("--difficulty-tabs-check")) { DifficultyTabTests.SortAscending(); DifficultyTabTests.ReorderAndPin(); DifficultyTabTests.Layout(); DifficultyTabTests.Overflow(); ProjectTests.Run(); Console.WriteLine("PASS Difficulty tab sorting, dragging, pins and overflow"); return 0; }
+
 if (args.Contains("--difficulty-sort-check")) { DifficultyTabTests.SortAscending(); Console.WriteLine("PASS Ascending difficulty sorting"); return 0; }
 if (args.Length == 2 && args[0] == "--difficulty-switch-performance") return DifficultySwitchPerformance.Run(args[1]);
 if (args.Contains("--first-run-setup-check"))
@@ -133,12 +160,14 @@ var tests = new (string Name, Action Run)[]
     ("Independent droplet defaults persist and initialize new projects and FSliders", DropletDefaultsTests.Run),
     ("Selection boxes scale and move consecutive parents with anchor priority and atomic undo", SelectionTransformTests.Run),
     ("Selection drag bounds follow generated fruits and droplets while handles stay free", SelectionTransformTests.DragBoundsFollowPlayableObjects),
+    ("Fractional group drag boundaries preserve fruits, export and undo", GroupDragBoundaryTests.Run),
     ("Droplet randomization switches, setup drafts and Edit actions stay within one diff", DropletRandomizationTests.Run),
     ("Audio projects require metadata, copy audio and optionally link one Songs difficulty", AudioProjectTests.Run),
     ("Timing red insertion and deletion retain saving and slider export", TimingSaveFeedbackTests.Run),
     ("Slider drafts defer full-map conversion and publish only matching validated snapshots", DraftConversionTests.Run),
     ("Synchronization category tabs explain object changes and preserve choices", SyncTabsTests.Run),
-    ("AiMod checks object starts, isolates input, navigates errors and preserves undo", AimodTests.Run),
+    ("AiMod panel checks objects, scopes focused input, navigates errors and preserves undo", AimodTests.Run),
+    ("AiMod table resizes, reorders, copies and docks without content edits", AimodTests.TableAndDock),
     ("Background workspace saves isolate input and acknowledge only their snapshot", PerformanceSchedulingTests.Save),
     ("Blocked operations show synchronization progress only on demand", SynchronizationWaitTests.Run),
     ("Native testplay copies state at render while retaining the driver clock", PerformanceSchedulingTests.NativeTestplayCapture),
@@ -200,6 +229,10 @@ var tests = new (string Name, Action Run)[]
     ("Testplay lead-in starts early, returns to selection and persists settings", TestplayStartupDelayTests.LeadIn),
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
+    ("Song Setup docks, scrolls and applies cancellable drafts", SongDockTests.Run),
+    ("Dock layout settings restore across editor restarts", DockPersistenceTests.Run),
+    ("Slider Inspector metrics and immediate randomization edits", InspectorPanelsTests.Run),
+    ("Conversion dock shortcuts, object action menus and merge undo", ConversionDockShortcutTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
     ("Workspace saves and linked synchronization persist before optional Songs export", WorkspaceSaveTests.Run),
     ("Metadata merge rows share a page and highlight unresolved, retained and selected text", SynchronizationUiTests.MetadataRows),
@@ -223,15 +256,15 @@ var tests = new (string Name, Action Run)[]
     ("Mapping canvas X-axis grid colours and opacity preserve horizontal lines and content", CanvasGridSettingsTests.Run),
     ("Mapping canvas backgrounds, image replacement and preferences", MappingCanvasBackgroundTests.Run),
     ("Mapping Canvas indicator colours persist and reset without editing the map", SettingsTests.IndicatorColours),
-    ("Stack preview retains full outlines and edits individual fruits horizontally", StackDialogTests.ManualFruits),
-    ("Stack draft history undoes fruit drags and removing manual knots", StackDialogTests.DraftHistory),
-    ("Stack numeric controls edit percentages and pixels with editable endpoints", StackDialogTests.Numeric),
-    ("Stack dialog edits envelopes locally and confirms with undo", StackDialogTests.Run),
-    ("Slider stream confirmation, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
+    ("Stack canvas edits individual fruits horizontally", StackDockTests.ManualFruits),
+    ("Stack graph additions and removals use document undo", StackDockTests.DraftHistory),
+    ("Stack numeric controls apply exact values and reject invalid input", StackDockTests.Numeric),
+    ("Stack dock commits modes and graph gestures with undo", StackDockTests.Run),
+    ("Slider stream live controls, long-press menu, undo and legacy shortcuts", StreamShortcutTests.Run),
     ("Slider long press progress, cancellation and control-point shortcut", StreamShortcutTests.HoldAndShortcut),
     ("Single-slider selection box long press opens actions throughout its bounds", StreamShortcutTests.HoldInSelectionBox),
     ("Stream breaking and batch internal anchor clearing", ObjectStructureTests.StreamsAndAnchors),
-    ("Consecutive object merge dialog, restrictions, errors and undo", ObjectStructureTests.MergeUi),
+    ("Consecutive object merge controls, restrictions, errors and undo", ObjectStructureTests.MergeUi),
     ("Mixed slider merge preserves repeated and exact curve paths", ObjectStructureTests.MixedPaths),
     ("Testplay pause, resume and legacy exit shortcuts", TestplayTests.PauseAndExitShortcuts),
     ("Testplay bookmark shortcuts edit at the live position", TestplayTests.BookmarksDuringTestplay),
@@ -272,7 +305,6 @@ var tests = new (string Name, Action Run)[]
     ("DS numeric fields use base SV, preserve direction and support undo", DistanceEditingTests.NumericFields),
     ("X coordinate input clamps, previews and supports undo", DistanceEditingTests.XCoordinate),
     ("DS edits selected slider heads, tails and droplets", DistanceEditingTests.SliderPoints),
-    ("Slider speed readout follows conversion, editing and history", SliderSpeedReadoutTests.Run),
     ("Movement DS labels use base SV and avoid collisions", DistanceEditingTests.Labels),
     ("Movement Analysis toggles all four connection colours without editing content", AssistToolsTests.MovementAnalysis),
     ("Movement Analysis optionally includes tiny droplets without editing content", AssistToolsTests.TinyMovementDisplay),
@@ -287,6 +319,8 @@ var tests = new (string Name, Action Run)[]
     ("Slider edge and whole-slider sounds survive conversion and export", AssistToolsTests.SliderSounds),
     ("Background resource checks refresh missing files and discard stale edits and projects", ResourcePollingTests.RefreshAndStaleResults),
     ("Preview drawer, mods, resizing and aligned shortcuts preserve content", PreviewSidebarTests.Sidebar),
+    ("Docking and independent Mapping/Timing workspaces", DockingTests.Run),
+    ("Pattern editing and project Notes docks", PatternNotesTests.Run),
     ("Difficulty curve panel resizes, seeks, and preserves canvas width", DifficultyCurveSidebarTests.LayoutAndSeeking),
     ("Preview aspect modes, Fit height and edge overscan", PreviewSidebarTests.DisplayModesAndOverscan),
     ("Automatic catcher movement and seeking", PreviewSidebarTests.AutomaticCatcher),
@@ -307,6 +341,7 @@ var tests = new (string Name, Action Run)[]
     ("Legacy clipboard and horizontal grid preserve pattern scope", LegacyAlignmentTests.ClipboardAndGrid),
     ("Legacy timestamps and read-only details preserve precision", LegacyAlignmentTests.TimestampAndReadOnly),
     ("Legacy samples use event timing and edge leniency", LegacyAlignmentTests.Samples),
+    ("Timeline indexed visibility matches full scans", TimelineRangeTests.Run),
     ("Cached timeline durations follow timing, repeat and document changes", ObjectTimelineTests.CachedDurationsFollowEdits),
     ("Selected-slider body drag, point drag and two-stage right-click follow the same rules in both modes", ToolPaletteTests.SelectedSliderControls),
     ("Timeline layout, centered numbers, box selection and deletion", ObjectTimelineTests.BoxAndDelete),
@@ -381,6 +416,7 @@ var tests = new (string Name, Action Run)[]
     ("v7 format changes require a choice and retain tick rules through synchronization", SynchronizationUiTests.LegacyFormat),
     ("Difficulty tabs adapt names to available width and show full-name tooltips", DifficultyTabTests.Layout),
     ("Difficulty SR sorting preserves content, identity and keyboard navigation", DifficultyTabTests.SortAscending),
+    ("Difficulty tab dragging and pins retain display order and content", DifficultyTabTests.ReorderAndPin),
     ("Difficulty tab stars follow edits, undo and CS", DifficultyTabTests.Editing),
     ("Preview stars use cached NM, EZ and HR calculations", DifficultyTabTests.PreviewRatings),
     ("Star ratings refresh asynchronously without losing cached or newer results", DifficultyTabTests.AsyncRatings),
@@ -1057,9 +1093,8 @@ static void MainCurveSelectionOpacity()
 
 static IEnumerable<RecordingCanvas.Operation> ViewCommands(Ui ui, bool preview)
 {
-    Rect plot = ui.Plot;
     Rect canvasPlot = ui.View.CanvasPlotBounds;
-    return ui.Canvas.Operations.Where(c => c.Clip is { } clip && (preview ? clip.X > plot.Right : clip == canvasPlot));
+    return ui.Canvas.Operations.Where(c => c.Clip is { } clip && (preview ? clip == ui.View.PreviewViewport : clip == canvasPlot));
 }
 
 static IEnumerable<RecordingCanvas.Operation> CurveCommands(Ui ui, bool preview)
@@ -1207,8 +1242,24 @@ sealed class Ui
         if ((text == FruitsAtelier.Localization.Strings.Get("ui.resetView") || text == FruitsAtelier.Localization.Strings.Get("ui.anchorSnap")) && !Canvas.Texts.Any(t => t.Value == text))
             ClickText(FruitsAtelier.Localization.Strings.Get("ui.view"));
         string visible = text.Split("  ", 2)[0];
-        var label = Canvas.Texts.Single(t => t.Value == visible);
+        var label = Canvas.Texts.Single(t => t.Value == (Canvas.Texts.Any(t => t.Value == text) ? text : visible));
         Click(label.X + 4, label.Y + 5);
+    }
+    public void ClickObjectAction(string text)
+    {
+        var label = Canvas.Texts.Last(t => t.Value == text);
+        Click(label.X + 4, label.Y + 5);
+    }
+    public void ConversionMode(bool stack)
+    {
+        var label = Canvas.Texts.Last(t => t.Value == FruitsAtelier.Localization.Strings.Get(stack ? "conversion.stackTab" : "conversion.streamTab"));
+        Click(label.X + 4, label.Y + 5);
+    }
+    public void StreamSnap(int divisor)
+    {
+        int[] values = View.LibrarySettings.ExperimentalSnapDivisions ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16, 24, 32, 48] : [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16];
+        var r = View.StreamSnapBounds;
+        Click(r.X + 7 + Array.IndexOf(values, divisor) / (float)(values.Length - 1) * (r.Width - 62), r.Y + r.Height / 2);
     }
     public void FocusField(string text)
     {

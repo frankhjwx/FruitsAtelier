@@ -626,7 +626,7 @@ public static class WorkspaceSynchronization
             if (WorkspaceHistoryFile.Compressible(path)) WorkspaceHistoryFile.Write(copy, File.ReadAllBytes(path));
             else File.Copy(path, copy);
         }
-        var saved = new BeatmapProject { Name = session.Manifest.Name };
+        var saved = new BeatmapProject { Name = session.Manifest.Name, Notes = session.Manifest.Notes };
         var manifest = WorkspaceProject.ReadManifest(session.Directory);
         foreach (var entry in manifest.Difficulties)
         {

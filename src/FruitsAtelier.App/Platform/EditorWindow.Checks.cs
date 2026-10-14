@@ -22,7 +22,7 @@ internal sealed partial class EditorWindow
                 throw new InvalidOperationException("Setup window must have no decorations and fit its monitor work area.");
             nint HitAt(int y) => HandleMessage(hwnd, 0x0084, 0,
                 (nint)(((long)(ushort)(bounds.Top + y) << 16) | (ushort)(bounds.Left + 20)));
-            if (HitAt(20) != 2 || HitAt((int)(120 * dpi / 96)) != 1)
+            if (HitAt(20) != 2 || HitAt((int)(120 * uiDpi / 96)) != 1)
                 throw new InvalidOperationException("Only the setup header should move the borderless window.");
             view.CancelFirstRunSetup(); FitEditorWindow();
             if ((Native.GetWindowLongPtr(hwnd, -16) & 0x10000000) == 0)

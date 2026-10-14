@@ -34,7 +34,7 @@ internal static class BananaEditTests
         Check(ui.View.BananaEditVisible && ui.View.Document.ContentEquals(map), "Invalid duration cannot apply");
         SetNumber(0, "2"); ui.Key(13); Wait();
         ui.Key(27); Check(ui.View.Document.ContentEquals(map) && !ui.View.IsDirty, "Cancel discards preview");
-        ui.Key('F', ctrl: true, shift: true); Wait(); ui.ClickText(L.Get("stream.confirm"));
+        ui.Key('F', ctrl: true); Wait(); ui.ClickText(L.Get("stream.confirm"));
         Check(!ui.View.BananaEditVisible && ui.View.Document.BananaShowers[1].Pattern == new BananaShowerPattern(), "Apply group");
         Check(ui.View.SelectedObjectIds.SequenceEqual(new[] { shower.Id }), "One selected parent");
         var grouped = ui.View.Document.DeepClone();
@@ -83,19 +83,17 @@ internal static class BananaEditTests
     {
         foreach (bool stack in new[] { false, true })
         {
-            var ui = new Ui(); var map = new MapDocument { DurationMs = 30000 };
+            var ui = new Ui(false); var map = new MapDocument { DurationMs = 30000 };
             var track = new CurveTrack(); track.Nodes.AddRange([new() { TimeMs = 1000, X = 256 }, new() { TimeMs = 21000, X = 256 }]);
             map.Tracks.Add(track); ui.LoadDocument(map); ui.SelectTrack(track.Id); ui.Key('F', ctrl: true, shift: true);
-            if (stack) ui.ClickText(L.Get("conversion.stackTab"));
-            var bounds = ui.View.StackPreviewBounds; double scale = ui.View.StackPreviewScale;
-            ui.View.Wheel(bounds.X + 20, bounds.Y + 80, 120, false); ui.Paint();
-            double start = ui.View.StackPreviewVisibleStart;
-            ui.View.Wheel(bounds.X + 20, bounds.Y + 80, 120, false, false, true); ui.Paint();
-            Check(ui.View.StackPreviewScale > scale && ui.View.StackPreviewVisibleStart > start, "Stream/Stack zoom anchors the pointer");
-            ui.View.Wheel(bounds.X + 20, bounds.Y + 80, -120, false, false, true); ui.Paint();
-            Check(Math.Abs(ui.View.StackPreviewScale - scale) < .0001 && Math.Abs(ui.View.StackPreviewVisibleStart - start) < .001
-                && ui.View.Document.ContentEquals(map) && !ui.View.IsDirty, "Stream/Stack zoom round trip preserves content");
-            ui.Key(27);
+            if (stack) ui.ConversionMode(true);
+            var accepted = ui.View.Document.DeepClone();
+            var point = ui.ScreenAt(1500, 256);
+            double scale = ui.View.CanvasTimeZoom;
+            ui.View.Wheel(point.X, point.Y, 120, false, false, true); ui.Paint();
+            Check(ui.View.CanvasTimeZoom > scale && ui.View.Document.ContentEquals(accepted), "Canvas zoom preserves live pattern content");
+            ui.View.Wheel(point.X, point.Y, -120, false, false, true); ui.Paint();
+            Check(Math.Abs(ui.View.CanvasTimeZoom - scale) < .001 && ui.View.Document.ContentEquals(accepted), "Pattern canvas zoom round trip");
         }
     }
     private static void Check(bool value, string message) { if (!value) throw new Exception(message); }

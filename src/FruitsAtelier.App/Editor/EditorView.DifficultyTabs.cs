@@ -7,20 +7,28 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private int firstDifficultyTab;
-    private float tabRemainder, tabDragX, tabDragStartOffset, tabAvailable;
+    private float tabRemainder, tabDragX, tabAvailable;
     private float[] tabWidths = [];
     private bool tabPointer, tabMoved, tabOverflow;
     private int tabPressed;
     private readonly HashSet<int> truncatedTabs = [];
     private int[] difficultyTabOrder = [];
     private bool difficultySortPending = true;
+    private bool difficultyTabsManuallyOrdered;
+    private readonly HashSet<Guid> pinnedDifficulties = [];
+    private int[]? tabOrderBeforeDrag;
+    private int tabFirstBeforeDrag;
+    private float tabRemainderBeforeDrag;
+    private bool IsDifficultyPinned(int index) => pinnedDifficulties.Contains(difficulties[index].Id);
     private int[] DifficultyTabOrder
     {
         get
         {
             if (difficultyTabOrder.Length != difficulties.Count)
             {
-                difficultyTabOrder = Enumerable.Range(0, difficulties.Count).ToArray();
+                difficultyTabOrder = difficultyTabOrder.Where(i => i < difficulties.Count)
+                    .Concat(Enumerable.Range(0, difficulties.Count).Except(difficultyTabOrder))
+                    .OrderByDescending(IsDifficultyPinned).ToArray();
                 difficultySortPending = true;
             }
             return difficultyTabOrder;
@@ -33,8 +41,9 @@ public sealed partial class EditorView
         if (!difficultySortPending || RatingEditInProgress || tabPointer) return;
         for (int i = 0; i < difficulties.Count; i++) _ = DifficultyRating(i);
         if (difficulties.Any(d => d.RatingTask is not null)) return;
-        var sorted = order.OrderBy(i => difficulties[i].RatingFailed
-            ? double.PositiveInfinity : difficulties[i].Stars ?? double.PositiveInfinity).ToArray();
+        var sorted = difficultyTabsManuallyOrdered ? order : order.OrderByDescending(IsDifficultyPinned)
+            .ThenBy(i => difficulties[i].RatingFailed
+                ? double.PositiveInfinity : difficulties[i].Stars ?? double.PositiveInfinity).ToArray();
         difficultySortPending = false;
         if (sorted.SequenceEqual(order)) return;
         difficultyTabOrder = sorted;
@@ -48,27 +57,75 @@ public sealed partial class EditorView
         return order[(position + (previous ? order.Length - 1 : 1)) % order.Length];
     }
 
+    private void ToggleDifficultyPin(int index)
+    {
+        if (!pinnedDifficulties.Remove(difficulties[index].Id)) pinnedDifficulties.Add(difficulties[index].Id);
+        difficultyTabOrder = DifficultyTabOrder.OrderByDescending(IsDifficultyPinned).ToArray();
+        difficultySortPending = true;
+        firstDifficultyTab = 0; tabRemainder = 0; revealDifficultyTabs = false;
+    }
+
     private bool BeginTabPointer(float x, float y)
     {
-        if (!tabOverflow || menu >= 0 || contextItems.Count > 0) return false;
+        if (menu >= 0 || contextItems.Count > 0) return false;
         int hit = difficultyTabTargets.FindIndex(t => t.Bounds.Contains(x, y));
-        if (hit < 0) return false;
+        if (hit < 0 || !CommitField()) return false;
         tabPointer = true; tabMoved = false; tabPressed = difficultyTabTargets[hit].Index;
-        tabDragX = x; tabDragStartOffset = tabWidths.Take(firstDifficultyTab).Sum(w => w + 6) + tabRemainder;
+        tabDragX = x; tabOrderBeforeDrag = (int[])DifficultyTabOrder.Clone();
+        tabFirstBeforeDrag = firstDifficultyTab; tabRemainderBeforeDrag = tabRemainder;
         return true;
     }
+
     private void MoveTabPointer(float x)
     {
         if (Math.Abs(x - tabDragX) > 4) tabMoved = true;
         if (!tabMoved) return;
-        float offset = Math.Clamp(tabDragStartOffset + tabDragX - x, 0, Math.Max(0, tabWidths.Sum(w => w + 6) - 6 - tabAvailable));
-        firstDifficultyTab = 0;
-        while (firstDifficultyTab < tabWidths.Length - 1 && offset >= tabWidths[firstDifficultyTab] + 6)
-            offset -= tabWidths[firstDifficultyTab++] + 6;
-        tabRemainder = offset; revealDifficultyTabs = false;
+        if (tabOverflow && difficultyTabTargets.Count > 0)
+        {
+            float left = difficultyTabStrip.X + 32, right = left + tabAvailable;
+            float offset = tabWidths.Take(firstDifficultyTab).Sum(w => w + 6) + tabRemainder;
+            offset = Math.Clamp(offset + (x < left + 20 ? -24 : x > right - 20 ? 24 : 0),
+                0, Math.Max(0, tabWidths.Sum(w => w + 6) - 6 - tabAvailable));
+            firstDifficultyTab = 0;
+            while (firstDifficultyTab < tabWidths.Length - 1 && offset >= tabWidths[firstDifficultyTab] + 6)
+                offset -= tabWidths[firstDifficultyTab++] + 6;
+            tabRemainder = offset;
+        }
+        var order = DifficultyTabOrder.ToList();
+        int from = order.IndexOf(tabPressed), to = from;
+        foreach (var target in difficultyTabTargets)
+        {
+            if (target.Index == tabPressed || IsDifficultyPinned(target.Index) != IsDifficultyPinned(tabPressed)) continue;
+            int position = order.IndexOf(target.Index);
+            float centre = target.Bounds.X + target.Bounds.Width / 2;
+            if (position < from && x < centre) { to = position; break; }
+            if (position > from && x > centre) to = position;
+        }
+        if (to != from)
+        {
+            order.RemoveAt(from); order.Insert(to, tabPressed);
+            difficultyTabOrder = order.ToArray();
+        }
+        revealDifficultyTabs = false;
     }
+
+    private void FinishTabPointer(bool cancel)
+    {
+        if (!tabPointer) return;
+        if (cancel && tabOrderBeforeDrag is not null)
+        {
+            difficultyTabOrder = tabOrderBeforeDrag;
+            firstDifficultyTab = tabFirstBeforeDrag; tabRemainder = tabRemainderBeforeDrag;
+        }
+        else if (tabMoved && tabOrderBeforeDrag is not null && !DifficultyTabOrder.SequenceEqual(tabOrderBeforeDrag))
+            difficultyTabsManuallyOrdered = true;
+        tabPointer = false; tabOrderBeforeDrag = null;
+    }
+
     public Action<string>? RequestOpenExternalPath { get; set; }
     private readonly List<(Rect Bounds, int Index)> difficultyTabTargets = [];
+
+    internal Rect DifficultyTabBounds(int index) => difficultyTabTargets.FirstOrDefault(t => t.Index == index).Bounds;
 
     private bool DifficultyTabContext(float x, float y)
     {
@@ -83,6 +140,8 @@ public sealed partial class EditorView
         string? songsFolder = (osu ?? entry?.ExportTarget) is { } source ? Path.GetDirectoryName(source) : null;
         contextItems.Clear(); menu = -1;
         int index = difficultyTabTargets[target].Index;
+        contextItems.Add(new(L.Get(IsDifficultyPinned(index) ? "project.unpinDifficulty" : "project.pinDifficulty"), () => ToggleDifficultyPin(index)));
+        AddContextSeparator();
         contextItems.Add(new(L.Get("project.openCatchdiff"), () => RequestOpenExternalPath?.Invoke(catchdiff!), File.Exists(catchdiff)));
         contextItems.Add(new(L.Get("project.openFolder"), () => RequestOpenExternalPath?.Invoke(folder!), Directory.Exists(folder)));
         contextItems.Add(new(L.Get("sync.deleteLocal"), () => ShowDeleteDifficulty(index, localOnly: true), File.Exists(osu)));
@@ -295,6 +354,20 @@ public sealed partial class EditorView
         }
     }
 
+    private static void DrawDifficultyPin(ICanvas c, float x, float y, uint colour)
+    {
+        const float stroke = 1.4f;
+        c.Line(x + 3, y + 1, x + 11, y + 1, colour, stroke);
+        c.Line(x + 4, y + 1, x + 5, y + 7, colour, stroke);
+        c.Line(x + 10, y + 1, x + 9, y + 7, colour, stroke);
+        c.Line(x + 5, y + 7, x + 2, y + 10, colour, stroke);
+        c.Line(x + 9, y + 7, x + 12, y + 10, colour, stroke);
+        c.Line(x + 2, y + 10, x + 2, y + 12, colour, stroke);
+        c.Line(x + 12, y + 10, x + 12, y + 12, colour, stroke);
+        c.Line(x + 2, y + 12, x + 12, y + 12, colour, stroke);
+        c.Line(x + 7, y + 12, x + 7, y + 17, colour, stroke);
+    }
+
     private void DrawDifficultyTabs(ICanvas c)
     {
         CompleteDifficultySort();
@@ -305,12 +378,13 @@ public sealed partial class EditorView
         c.Line(0, 83, width, 83, Grid);
         truncatedTabs.Clear();
         string[] names = order.Select(i => difficulties[i].Name).ToArray();
-        float[] widths = names.Select(name => (float)Math.Ceiling(c.MeasureText(name, 12, true)) + 102).ToArray();
+        float[] pinPadding = order.Select(i => IsDifficultyPinned(i) ? 20f : 0f).ToArray();
+        float[] widths = names.Select((name, i) => (float)Math.Ceiling(c.MeasureText(name, 12, true)) + 102 + pinPadding[i]).ToArray();
         float budget = difficultyTabStrip.Width - 38 - (widths.Length - 1) * 6;
         if (widths.Sum() > budget)
         {
             if (difficulties.Count > 8)
-                for (int i = 0; i < names.Length; i++) widths[i] = Math.Min(widths[i], (float)Math.Ceiling(c.MeasureText(TabName(names[i]), 12, true)) + 102);
+                for (int i = 0; i < names.Length; i++) widths[i] = Math.Min(widths[i], (float)Math.Ceiling(c.MeasureText(TabName(names[i]), 12, true)) + 102 + pinPadding[i]);
             else
             {
                 float low = 132, high = widths.Max();
@@ -327,7 +401,7 @@ public sealed partial class EditorView
         for (int i = 0; i < widths.Length; i++)
         {
             widths[i] = Math.Min(widths[i], available);
-            names[i] = FitTabName(c, names[i], widths[i] - 102);
+            names[i] = FitTabName(c, names[i], widths[i] - 102 - pinPadding[i]);
             if (names[i] != difficulties[order[i]].Name) truncatedTabs.Add(order[i]);
         }
         tabWidths = widths; tabAvailable = available; tabOverflow = overflow;
@@ -375,13 +449,18 @@ public sealed partial class EditorView
             bool missing = searching || DifficultySyncState(target) == WorkspaceSyncState.Missing;
             if (missing) colour = 0xC4CAD2;
             bool hover = rect.Contains(mouseX, mouseY);
+            if (tabPointer && tabMoved && target == tabPressed) c.Fill(rect, 0x2B3542);
             if (active || hover) DrawChromeTab(c, rect, active ? Panel : 0x2B3542u);
             else if (index + 1 >= order.Length || order[index + 1] != activeDifficulty) c.Line(rect.Right + 3, 56, rect.Right + 3, 73, Grid);
+            float iconX = x + 9 + pinPadding[index];
+            if (IsDifficultyPinned(target)) DrawDifficultyPin(c, x + 8, 53, active ? Foreground : Muted);
             // A light backing keeps even the official black (9★+) icon readable on dark chrome.
-            if (stars >= 6.7) c.Circle(x + 19, 62, 10, 0xE7EBF2);
-            c.Image(catchIconPath, new(x + 9, 52, 20, 20), colour);
-            c.Text(names[index], x + 36, 54, 12, missing ? 0x718092u : active ? Foreground : Muted, rect.Width - 101, active);
-            if (missing) c.Text(L.Get(searching ? "sync.searchingReference" : "sync.missingBadge"), x + 36, 69, 9, 0x718092, rect.Width - 45);
+            if (stars >= 6.7) c.Circle(iconX + 10, 62, 10, 0xE7EBF2);
+            c.Image(catchIconPath, new(iconX, 52, 20, 20), colour);
+            c.Text(names[index], x + 36 + pinPadding[index], 54, 12, missing ? 0x718092u : active ? Foreground : Muted,
+                rect.Width - 101 - pinPadding[index], active);
+            if (missing) c.Text(L.Get(searching ? "sync.searchingReference" : "sync.missingBadge"),
+                x + 36 + pinPadding[index], 69, 9, 0x718092, rect.Width - 45 - pinPadding[index]);
             c.Text(stars is null ? L.Get("project.starsUnavailable") : L.Get("project.stars", stars.Value),
                 rect.Right - 59, 55, 10, active ? Foreground : Muted, 47);
             if (RatingRefreshing(target)) DrawRatingSpinner(c, rect.Right - 9, 106);

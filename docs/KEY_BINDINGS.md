@@ -32,6 +32,7 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
 | F3 | Open the Timing page. |
 | F4 | Open Song Setup. |
 | F5 | Start testplay at the playhead with the configured lead-in. |
+| Ctrl+Shift+A | Open AiMod for the current difficulty. |
 | F6 | Open Timing and Control Points. |
 | F12 | Copy the current editor window content to the system clipboard as an image, including visible dialogs or testplay. Paste it into a chat or image editor. |
 | Esc | Dismiss the current field, popup, menu or gesture first. From idle Compose, request return to Library; from Timing, return to Compose. Unsaved changes can prompt. |
@@ -131,9 +132,8 @@ Object sampleset selection is not bound to Shift+Q/W/E/R or Ctrl+Q/W/E/R.
 | Ctrl+= / Ctrl+- | Add / remove one reverse on the selected FSlider. |
 | Ctrl+G | Reverse the selection in time, including each slider’s own path. A single FSlider retains its time range and repeats. |
 | Ctrl+J | Extend the selected FSlider to the pointer at a valid later canvas time. |
-| Ctrl+Shift+F | Open Convert to Stream/Stack. Existing Stream/Stack selections open their corresponding tab; ordinary sliders start on Stream. |
-| Ctrl+Shift+A | Clear internal anchors and controls from selected sliders, keeping their endpoints. |
-| Ctrl+Shift+M | Open Merge into slider for at least two consecutive circles/sliders. |
+| Ctrl+Shift+F | Open/focus the Stream/Stack dock, adding it if closed. Existing patterns retain their mode; ordinary sliders start on Stream. |
+| Ctrl+Shift+M | Open/focus merge controls in Slider Inspector. Select at least two consecutive circles/sliders to merge. |
 
 In the conversion dialog, Tab switches Stream/Stack outside numeric fields.
 Roll the wheel over the preview to scroll long patterns. Left/Up and Right/Down

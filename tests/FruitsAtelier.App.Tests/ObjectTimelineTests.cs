@@ -63,7 +63,7 @@ internal static class ObjectTimelineTests
             ui.Key('Z', ctrl: true);
             if (!ui.View.Document.ContentEquals(pattern)) throw new Exception("Whole-pattern deletion did not undo with NC intact.");
             ui.SelectTrack(track.Id); ui.Key('F', ctrl: true, shift: true);
-            ui.ClickText(L.Get("stream.breakFruits")); ui.Key(13);
+            ui.ClickText(L.Get("stream.breakFruits"));
             if (!ObjectFlags.NewCombo(ui.View.Document, ui.View.Document.Fruits.Single(f => f.TimeMs == 1500).Id)
                 || !Numbers().SequenceEqual(new[] { "1", "2", "1", "2", "3" }))
                 throw new Exception("Breaking the pattern did not retain its internal NC.");
@@ -102,14 +102,14 @@ internal static class ObjectTimelineTests
                 throw new Exception("Timeline stream fruit did not select its editable parent without changing content.");
             ui.View.PointerMove(X(1250), r.Y + 27, false, false);
             if (ui.View.TimelineResizeCursor) throw new Exception("Interior stream fruit exposes a slider-tail resize cursor.");
-            ui.Key('F', ctrl: true, shift: true); ui.ClickText(L.Get("stream.breakFruits")); ui.Key(13);
+            ui.Key('F', ctrl: true, shift: true); r = ui.View.ObjectTimelineBounds; labels = Labels(); ui.ClickText(L.Get("stream.breakFruits"));
             if (!Labels().Select(t => (t.Value, t.X, t.Y)).SequenceEqual(labels.Select(t => (t.Value, t.X, t.Y)))
                 || ui.Canvas.Fills.Any(f => f.Bounds.Height == 38 && f.Bounds.Y >= r.Y && f.Bounds.Bottom <= r.Bottom))
                 throw new Exception("Breaking a pattern changed its timeline fruit markers.");
             ui.Key('Z', ctrl: true);
             if (!ui.View.Document.ContentEquals(map) || !Labels().Select(t => t.Value).SequenceEqual(expectedNumbers))
                 throw new Exception("Undo did not restore the pattern timeline.");
-            ui.SelectTrack(track.Id); ui.HoldMap(1000, 100); ui.ClickText(L.Get("stream.convertBack"));
+            ui.SelectTrack(track.Id); ui.HoldMap(1000, 100); ui.ClickObjectAction(L.Get("stream.convertBack"));
             if (ui.View.Document.Tracks.Single().StreamSnapDivisor is not null
                 || Labels().Length != 4
                 || !ui.Canvas.Fills.Any(f => f.Bounds.Height == 38 && f.Bounds.Y == r.Y + 8))

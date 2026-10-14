@@ -49,9 +49,57 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 ## Automated regressions
 
+`Core.Tests --aimod-check` and `App.Tests --aimod-check` cover AiMod rules,
+resource checks, read-only navigation, localization, Ctrl+Shift+A, table column
+resizing/reordering, selection/copy and dock attachment. Run
+`Core.Tests --aimod-twin-bloom <path.osu>` against the matching local Twin Bloom
+fixture to compare stable screenshot findings and category/severity totals.
+`Core.Tests --aimod-ethanol <path.osu>` checks the Ethanol difficulty
+`Usok ng Sigarilyo at Amoy ng Ethanol.` against stable's messages, timestamps,
+category totals and overlapping source-object pairs.
+`FruitsAtelier.App.exe --render-check --aimod-render-check` checks the native
+dock panels and continuous scrolling at multiple sizes and DPI values and captures English/Chinese reports
+under `artifacts/tests/aimod-native`.
+
+`App.Tests --group-drag-boundary-check` checks fractional fruit selections dragged
+to either playfield edge, preserving conversion, export, relative spacing,
+undo/redo and cancellation.
+
+`App.Tests --inspector-panels-check` covers exported Inspector metrics including
+tiny droplets, base-SV normalization across BPM changes, immediate randomization edits,
+undo, numeric validation, horizontal overflow and Song Setup category buttons.
+Native docking checks capture Inspector and Randomize droplets at both sizes and
+all three DPI values.
+
+
+`App.Tests --pattern-notes-check` verifies nonmodal pattern conversion and editing,
+selection changes, immediate edits and splitting, undo, independent notes input, and project and
+workspace notes roundtrips. Native docking checks also capture these panels.
+
+`App.Tests --docking-check` exercises cross-side moves, tab groups, cancellation,
+live tab ordering, symmetric dock resizing, Layout and context-menu panel management,
+and independent Mapping/Timing layouts in English and Chinese,
+including settings-file roundtrips, restart restoration and invalid layout entries,
+alongside the existing sidebar rendering and seeking checks.
+`FruitsAtelier.App.exe --render-check --docking-render-check` runs the native
+Direct2D gestures at two window sizes and three DPI values. Screenshots are
+written under `artifacts/tests/docking-native`.
+
+`FruitsAtelier.App.exe --render-check --dpi-render-check` checks window client
+scaling at the 2520 × 1575 reference window, 3840 × 2160, 2560 × 1440,
+1920 × 1080 and 1920 × 1200. The reference must retain 175% rendering. It injects
+96/120/144/168/192/240 DPI notifications, compares native menu pixels at equal
+client dimensions, and exercises button clicks, slider dragging, wheel input
+and non-client frame sizing in English and Chinese. Captures and results are
+written to `artifacts/tests/dpi-native`. These checks use real Direct2D rendering
+with simulated DPI notifications; they do not change Windows display settings.
+
 `App.Tests --object-snap-check` verifies full-beat search ranges across BPM changes
 and independently of meter, bidirectional fruit and slider-start placement, exact X priority over Grid
 and Distance Snap, undo, hover isolation, default preferences and Apply/Cancel.
+Whole-object checks sweep horizontally in both directions with DS, object and
+collinear candidates, with Grid Snap on/off, and verify ordering, export,
+cancellation and one-step undo/redo.
 On Windows, `FruitsAtelier.App.exe --render-check --object-snap-render-check`
 checks native placement and configuration in English and Chinese at two window
 sizes and three DPI settings, saving captures under `artifacts/tests/object-snap-native`.
@@ -64,12 +112,6 @@ the unchecked, scrolled and checked dialog at three sizes and DPI settings under
 `artifacts/tests/acknowledgements-native` without changing personal consent.
 It also checks that Confirm presents the destination frame synchronously for
 both setup and editor paths, including low-latency and fullscreen preferences.
-
-`App.Tests --slider-speed-check` checks the Slider SV and maximum DS readout,
-unrestricted editing, repeated paths, tiny inclusion, draft cancellation and undo.
-`FruitsAtelier.App --render-check --slider-speed-render-check` checks selected and
-draft readouts in English and Chinese at two window sizes and three DPI settings,
-with screenshots under `artifacts/tests/slider-speed-native`.
 
 `App.Tests --library-opening-check` verifies that opening a library project while
 the workspace gate is held leaves rendering responsive, blocks duplicate opens
@@ -85,6 +127,14 @@ fade timing, pointer capture, preference saving and zoom-independent bounds,
 and settings layouts and testplay background controls. On Windows, run `FruitsAtelier.App.exe --render-check
 --mapping-canvas-render-check` for native background caching, settings and
 replacement-dialog screenshots under `artifacts/tests/mapping-canvas-native`.
+The native check also verifies background pixels across repeated preview toggles
+and window sizes, including image dimensions that expose crop-rounding errors.
+
+`App.Tests --timeline-range-check` compares indexed marker visibility and banana
+segment clipping with full scans, checks tied ordering, overlapping long objects,
+snapshot replacement and draft tail updates, and runs selection, pattern and undo
+regressions. It prints cold index setup and warm query CPU/allocation measurements
+for a synthetic 100,000-marker timeline; these exclude rendering and audio latency.
 
 `App.Tests --object-timeline-check` checks Stream/Stack fruit markers, combo
 numbering, internal NC, grouped movement/deletion, persistence, export and undo.
@@ -505,6 +555,11 @@ scope, combo reference numbers, horizontal grids, and timestamp precision.
 
 The feedback regressions cover V/End navigation, scroll direction, persistent independent volume controls, skin sample precedence and cache upgrades, and compatible versus conflicting close SV timing. Windows PCM checks verify live and scheduled hitsound gain separately from song gain; headless Mac CI exercises the native mixer with no audio device. Native window checks exercise all three volume sliders in both languages.
 
+`App.Tests --song-dock-check` covers docked Song Setup, narrow-panel scrolling,
+field focus, left docking, immediate edits, undo and retained Timing layouts, together
+with the existing metadata and randomization checks. Native docking captures
+include every Song Setup category and its scrolled controls.
+
 Song Setup regressions cover shared metadata, independent difficulty settings,
 romanised fields, modal isolation, cancellation, undo/redo, palette HEX input and
 project/`.osu` persistence. Native window checks open all four tabs in both
@@ -599,3 +654,12 @@ fruit dragging and undo, and experimental upper-timeline limits.
 lock, X/Y controls, 200% scale, horizontal pan and dense 1/48 timeline in English
 and Chinese at two sizes and three DPI values under
 `artifacts/tests/canvas-scale-native`.
+
+`App.Tests --conversion-docks-check` verifies direct conversion shortcuts, object action menus, live editing and merge undo. `FruitsAtelier.App.exe --render-check --conversion-docks-render-check` captures the English/Chinese layouts at narrow and standard dock widths under `artifacts/tests/conversion-docks`.
+
+`App.Tests --difficulty-tabs-check` verifies initial SR sorting, manual tab ordering,
+pin/unpin, group boundaries, cancellation, rating refresh, keyboard navigation,
+new difficulties and overflow in English and Chinese.
+`FruitsAtelier.App.exe --render-check --difficulty-tabs-render-check` checks native
+dragging and pinned tabs at two sizes and three DPI values in both languages,
+with captures under `artifacts/tests/difficulty-tabs-native`.

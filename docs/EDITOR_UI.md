@@ -1,11 +1,22 @@
 # Editing Controls
 
+## Interface size
+
+On Windows, the editor scales uniformly with its client pixel dimensions, using
+2520 × 1575 at 175% as the reference: the original 1440 × 900 logical startup
+window. This preserves its text, buttons and layout proportions. Equal client dimensions give
+equal text, button and icon sizes regardless of monitor or Windows display scale.
+Different aspect ratios fit the reference into the available width and height;
+the remaining space extends the editing area. Compact startup dialogs fit their
+own layout dimensions. Native title bars and file dialogs follow Windows display
+settings; macOS uses its native display scaling.
+
 ## Acknowledgements
 
 Normal Windows and macOS launches require confirmation of the current
 acknowledgements before starting the library or opening a supplied beatmap.
 The English-only notice fills its own compact, borderless startup window,
-bounded to 820 × 740 logical pixels and 85% of the monitor work area after DPI
+bounded to 820 × 740 logical pixels and 85% of the monitor work area after UI
 scaling. Drag its header to move it. It has a scrollable text box, a read-and-agree checkbox,
 and Cancel / Confirm buttons. Confirm is disabled until checked; cancelling,
 Escape or closing the window exits. Mouse wheel, scrollbar dragging, arrow keys,
@@ -41,7 +52,7 @@ release that introduces setup. Completing the guide saves its version, so later
 normal launches open the editor directly.
 
 The guide uses a compact window, targeting 880 × 620 logical pixels and bounded
-to 85% of the screen work area after DPI scaling. Its filled arrow-shaped tabs
+to 85% of the screen work area after UI scaling. Its filled arrow-shaped tabs
 cover folders, language and romanised artist/title display; skin and skin sounds;
 volume; Slider Droplets; and testplay. Artist/title display appears below Language
 on the first page. Inactive tabs alternate two similar colours and join into a
@@ -80,16 +91,30 @@ Replay changes also remain a draft until Finish.
 
 ## AiMod
 
-Open **Edit → AiMod** to check the current difficulty for overlapping notes.
-It reports an error for adjacent object starts less than 10 ms apart, regardless
-of horizontal position. Exactly 10 ms is allowed. Fruits, authored and imported
-sliders, streams and banana showers each contribute their editable object's start;
-nested slider fruits, droplets, tiny droplets and bananas are excluded.
+Open **Edit → AiMod** or press **Ctrl+Shift+A** to inspect the current difficulty.
+The report separates information, warnings and errors into Compose, Design,
+Timing, Meta and Mapset categories. Drag column boundaries to resize them, or drag
+headers to reorder columns. Long messages wrap; the horizontal scrollbar and
+Shift+wheel reveal columns outside a narrow panel.
 
-Click a result to select both objects and jump to the first start time. **Refresh**
-reruns the check; paging and the mouse wheel browse longer lists. Checking and
-navigating do not change content or undo history. Close the dialog to edit the map,
-then reopen it to check the current state. AiMod currently reports only overlaps.
+Click rows to select them, use Ctrl-click or Shift-click for multiple rows, and
+press **Ctrl+C** or **Copy** to copy complete values as tab-separated text with
+headers. **Ctrl+A** selects all rows in the current category. Click a timestamp,
+double-click a row or press Enter to locate it; object findings also select their
+editable parents. **Refresh** (or F5 while the report has focus) reruns checks.
+The time column is leftmost by default. Drag the vertical scrollbar or use the
+mouse wheel to scroll the report continuously.
+
+AiMod opens directly as a side panel. Drag its tab to either dock or reorder it
+with other tabs. Dock placement persists with the workspace layout. Ctrl+Shift+A
+focuses and refreshes the panel. Editing makes the report a stale snapshot; its
+footer asks for a refresh. A restored AiMod panel automatically checks once the
+map is loaded. Switching difficulties replaces the report with a check of the
+new difficulty; painting and resizing do not rerun analysis.
+
+Analysis uses exported Catch objects, including generated Stream/Stack objects,
+and does not modify content or undo history. Resource checks run in the background.
+See [AiMod checks](AIMOD.md) for the rule scope and stable compatibility details.
 
 See the [shortcut manual](KEY_BINDINGS.md) for the complete keyboard reference and the [compatibility review](KEY_BINDINGS_REVIEW.md) for known differences and gaps.
 
@@ -101,36 +126,25 @@ preferences start with all three switches off and Grid Level Tiny (4 px).
 
 ## Droplet randomization
 
-**Song Setup → Randomize droplets** starts with **Derandomize droplets: On/Off**.
-On compensates ordinary FSlider TinyDroplets to their authored path and disables
-Strength, Seed, reset, batch actions and per-slider randomization editing. The
-existing FX switches and manual adjustments are retained; Off restores them.
-**Derandomize for HR Mode** selects HR compensation while derandomization is On.
-Export then compensates HR's random sequence, including preceding fruit stacks,
-streams, sliders and bananas, so HR TinyDroplets follow the authored path. Normal
-mode TinyDroplets may shift. Fruit and ordinary droplet targets stay unchanged;
-Legacy Sliders retain their original geometry. Shared repeat geometry, boundaries
-and integer export coordinates retain the existing compensation limits. Both
-preferences apply to the current difficulty and support Apply, Cancel and undo.
+**Randomize droplets** is an independent dock tab, opened from Layout,
+Edit → Randomize droplets, or Slider Inspector. Strength (0–100 playfield pixels),
+a signed 32-bit Seed, derandomization and HR compensation update the current map
+as soon as valid values are entered. Changes mark the project dirty, update the
+canvas and support undo. Save the project normally; the panel has no Apply or
+Cancel controls. Invalid numeric input leaves the last valid map value intact.
+
+**Derandomize droplets** compensates ordinary FSlider TinyDroplets to the authored
+path. The stored per-slider switches and manual adjustments are retained. Turning
+it off restores their effect. **Derandomize for HR Mode** uses HR compensation.
 Changing the map switch also sets the default for subsequently drawn FSliders.
+Parameters can be edited while derandomization is enabled; their randomization
+effect becomes visible when it is disabled.
 
-The page configures Strength (0–100 playfield pixels)
-and a signed 32-bit Seed for the current difficulty. Drag the Strength slider or
-type a numeric value; **Reset strength (20)** restores its default in the dialog
-draft. Confirm to apply or cancel to discard changes. **Enable randomization for all FSliders** and
-**Disable randomization for all FSliders** set the switches of existing ordinary FSliders when the
-dialog is confirmed. Cancel discards the draft. The same batch actions are
-available under **Edit → Randomize droplets**, where they apply immediately in
-one undo step. Neither action creates a persistent master switch or changes the
-initial state of subsequently created FSliders, which follows the difficulty's
-saved new-slider default.
-
-Select one ordinary FSlider and use **Edit → Randomize droplets → Enable
-randomization / Disable randomization** to change only its switch. Long-pressing a
-single ordinary FSlider offers the same switch. The Edit menu also
-provides **Randomization settings…** and **Reset manual droplet adjustments** for
-the selected FSlider. Batch operations exclude Legacy Sliders and slider-managed
-fruit streams. Parameters and switches remain local to the current difficulty.
+The panel can enable or disable randomization for selected ordinary FSliders or
+all ordinary FSliders, and reset selected sliders' manual droplet adjustments.
+Selected overrides take precedence over the all-slider setting. These operations
+exclude Legacy Sliders and managed streams. Settings belong to the current
+difficulty. Reset strength sets the map value to 20.
 
 Strength 20 and Seed 1337 reproduce osu!'s native NM randomization when there are
 no manual corrections. Custom seeds use the same legacy RNG; Strength scales its
@@ -158,8 +172,8 @@ an unfinished curve restores the previous preview and leaves no undo entry.
 
 ## Timing editing
 
-**Details Panel** in the right header opens a dropdown with **Details Panel** and
-**Timing Panel**. **F3** selects Timing; **F1** returns to Details. Timing replaces
+**Mapping Panel** at the left of the workspace toolbar opens a dropdown with **Mapping Panel** and
+**Timing Panel**. **F3** selects Timing; **F1** returns to Mapping. Timing replaces
 the note canvas with a horizontal audio waveform and a centered playback cursor.
 Ctrl+wheel changes Snap within its doubling/halving family (for example 1/3, 1/6,
 1/12, and experimentally 1/24 and 1/48; the 1/4 family reaches 1/32), stopping at either end. Alt+wheel zooms its time scale; click to seek or click
@@ -282,13 +296,13 @@ The **View** menu groups grid and snapping, view navigation, display, movement a
 
 The time–X canvas occupies the main area, read-only AR/CS/DPB are at the upper right, and time navigation is at the bottom. Select objects directly on the canvas. Playfield X spans `0..512`; time increases upward. Startup opens the Library without loading a demo beatmap. Open a beatmap set to enter the editor. The window title identifies the active difficulty as `Artist - Title (Mapper) [Diffname]`; the menu row does not repeat the project title. The compact **← Library** button at the top right returns to the library. Esc first dismisses an active menu, field, dialog, or gesture; otherwise it requests a return to the library. Unsaved changes prompt for Save, Discard, or Cancel before closing the editor; Cancel or a failed save keeps the editor open. See [Workspace](WORKSPACE.md) for navigation and position memory.
 
-The Details header shows read-only beatmap AR, CS, and Distance Per Beat (DPB) in pixels. Catch Preview starts collapsed; the small button at the center of the canvas’s right edge opens it at the upper right. Drag the sidebar’s left boundary to resize it, and use the edge button to close it. NM, Easy and Hard Rock select preview-only difficulty and position rules; see [Catch rendering](CATCH_RENDERING.md). The preview uses its effective AR for falling speed. The main canvas uses the beatmap's AR timing ratio; its **Zoom** slider changes the displayed width of X=0..512 and scales object sizes and time spacing together. Zooming out shows more notes vertically without changing their coordinates, map AR, or CS. The playfield stays horizontally centered, from a minimum **192 DIP** wide to the full available width with CS0 edge padding while locked. Percentages are relative to that available width; resizing preserves the zoom percentage except when the minimum width requires clamping. **Zoom initially defaults to 60%.** The lock beside its percentage keeps X and Y scaling uniform. Click to unlock: the Zoom area displays two independent rows, X above Y, each reaching 200%. Both sliders stay directly in the toolbar. Alt+wheel scales X and Y together around the pointer's time, including while unlocked; the manual toolbar sliders adjust only their corresponding axis. Middle-button dragging also pans horizontally when the enlarged playfield exceeds the viewport, with bounds including edge padding. Locking again aligns Y to X, caps the uniform scale at 100%, and recentres the playfield. Object sprite sizes, selection rings and their hit regions stop growing at 100%, while coordinate spacing continues to scale up to 200%. Scale values and the lock state persist across restarts; horizontal pan is session state.
+The Mapping header shows read-only beatmap AR, CS, and Distance Per Beat (DPB) in pixels. Catch Preview starts collapsed; the small button at the center of the canvas’s right edge opens it at the upper right. Drag the sidebar’s canvas-facing boundary to resize it, and use the edge button to collapse its group. See [panel docking](#display-settings) for moving and grouping sidebars. NM, Easy and Hard Rock select preview-only difficulty and position rules; see [Catch rendering](CATCH_RENDERING.md). The preview uses its effective AR for falling speed. The main canvas uses the beatmap's AR timing ratio; its **Zoom** slider changes the displayed width of X=0..512 and scales object sizes and time spacing together. Zooming out shows more notes vertically without changing their coordinates, map AR, or CS. The playfield stays horizontally centered, from a minimum **192 DIP** wide to the full available width with CS0 edge padding while locked. Percentages are relative to that available width; resizing preserves the zoom percentage except when the minimum width requires clamping. **Zoom initially defaults to 60%.** The lock beside its percentage keeps X and Y scaling uniform. Click to unlock: the Zoom area displays two independent rows, X above Y, each reaching 200%. Both sliders stay directly in the toolbar. Alt+wheel scales X and Y together around the pointer's time, including while unlocked; the manual toolbar sliders adjust only their corresponding axis. Middle-button dragging also pans horizontally when the enlarged playfield exceeds the viewport, with bounds including edge padding. Locking again aligns Y to X, caps the uniform scale at 100%, and recentres the playfield. Object sprite sizes, selection rings and their hit regions stop growing at 100%, while coordinate spacing continues to scale up to 200%. Scale values and the lock state persist across restarts; horizontal pan is session state.
 
 Canvas zoom, upper object-timeline scale and Timing waveform scale are remembered independently across restarts and difficulties. **View → Reset view** uses the remembered canvas zoom and follows the playhead. Each wheel notch moves one full beat (1/1) during playback or one current Snap subdivision while paused: up to the preceding grid line and down to the following one, independent of zoom. Canvas scrolling shifts the viewport and playhead by the same relative amount, even while paused; each clamps at its bounds. Off-grid positions move to the adjacent grid line in the scroll direction, and BPM changes use the grid on the corresponding side of the timing boundary. High-resolution wheel input accumulates until it reaches one notch. Drag with the middle button to pan, and Alt+scroll to scale around the pointer's time. When paused, slider zoom preserves the viewport's center time; during playback, it preserves the play line.
 
 `Catch Preview` offers 4:3, 16:9 and Fit display modes. Fit uses the entire available sidebar height, revealing more future notes as the window grows vertically. Drag the sidebar divider to adjust width. Objects retain their proportions, and an automatic catcher follows playback and seeking. Mode and Resolution controls stay above the picture; 4:3 and 16:9 pictures are centred in the remaining area. Caught fruit remains on the plate. Completing a combo group scatters the stack; seeking restores the plate effects.
 
-The arrow to the left of the four tool buttons opens a whole-map **Movement strain** sidebar. It is 280 DIP wide at normal window sizes and has the same height as Catch Preview. Time increases upward in its vertical curve, matching the canvas; an amber marker shows the shared playback position. Click or drag in the graph to seek continuously. The left sidebar and Catch Preview can be open together. A very narrow window may compress the sidebars to preserve at least 256 DIP for the central playfield. Sidebar visibility is session display state and does not edit the beatmap.
+The arrow to the left of the four tool buttons opens a whole-map **Movement strain** sidebar. Its default left dock is 280 DIP wide at normal window sizes. Time increases upward in its vertical curve, matching the canvas; an amber marker shows the shared playback position. Click or drag in the graph to seek continuously. The left sidebar and Catch Preview can be open together. A very narrow window may compress the sidebars to preserve at least 192 DIP for the central playfield. Sidebar visibility is session display state and does not edit the beatmap.
 
 During playback and seeking, the play line stays at its configured height, initially 25% above the bottom of the drawing area. While paused, drag its leftmost yellow handle vertically to set that height between 5% and 95% of the drawing area. The current time stays unchanged and canvas content scrolls with the line. Playback disables handle dragging and uses the chosen height. The height is saved as a global view preference when the drag finishes and restored after restarting the editor. It is retained across resizing and difficulty switches without editing map content or undo history. Esc or lost capture cancels a drag. Left-button marquee selection on the canvas and object timeline keeps playback scrolling and accepts wheel navigation while held. Space or C can start or pause playback without releasing the selection. The start stays anchored to its original map time while the other end follows the pointer, so the box grows during scrolling even with a stationary pointer. Within 24 DIP of the canvas's top/bottom edge or the object timeline's left/right edge, a dragged selection automatically scrolls toward that edge, gradually increasing to 1200 DIP per second on the canvas or 600 DIP per second on the object timeline. Moving back inside, releasing the button, cancelling, or reaching the map boundary stops automatic scrolling. Objects inside the time range remain selected after they move outside the viewport. Paused middle-button panning is free; canvas wheel navigation preserves the current playhead-to-viewport offset, while playback and other seeking resume following.
 
@@ -320,10 +334,14 @@ Copy, cut and paste operate on the selected range and caret position. Keyboard
 focus changes can request select-all explicitly, such as Tab between Song Setup
 fields.
 
-The **Song Setup** button immediately left of Settings opens a modal with General,
-Difficulty, Colors and Design tabs. **OK** applies the draft in one undo step;
-Cancel or Esc discards it. Playback pauses when opening the dialog. Editor
-shortcuts, seeking and object input are blocked until it closes.
+**Song Setup** is a dock tab, initially after Notes on the right. Use **Layout**
+to show or close it, or press **F4** to select it. It can move between either side
+and share a tab group with other panels. General, Difficulty, Colors and Design
+use four horizontal category buttons; narrow panels abbreviate their labels.
+Each category scrolls vertically. Valid edits immediately update the map and mark
+the project dirty, preserving field focus. There are no Apply/Cancel buttons.
+Use normal project saving and undo. Difficulty or document changes reload the
+form from current content. Opening this panel does not pause playback.
 
 General edits artist, title, creator, source and tags across every difficulty in
 the project. Non-ASCII artist/title text enables a separate romanised field;
@@ -343,7 +361,7 @@ it, or remove a selected color while retaining at least one. Disabling custom
 colors removes the beatmap combo overrides, allowing the normal skin fallback.
 The canvas, preview and testplay use the confirmed palette.
 
-Design selects countdown speed (off, normal, half or double) from a dropdown and
+Design selects countdown speed (off, normal, half or double) from four choices and
 stores a non-negative countdown offset in beats. Switches control widescreen
 storyboard support, letterboxing in breaks and the flashing-light warning. These
 options are preserved in project saves and
@@ -398,7 +416,7 @@ across launches; changing them does not modify existing beatmap content or a
 map's saved Legacy conversion choice. Batch randomization actions affect current
 FSliders without changing the default for future ones.
 
-Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries; its content scrolls when the window is too short, with the page title and Apply fixed. Combo count and Dim Background in Testplay use compact buttons; the Background dim row matches their width. Navigation retains its larger click targets. The same dimensions apply on both desktop platforms and scale with DPI. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
+Settings pages share a full-width content column, 24 DIP page headings, 16 DIP section headings, 13 DIP labels, values and actions, and 12 DIP hints. Standard controls are 32 DIP high, with 12 DIP horizontal text padding, 4 DIP corner radii, and matching surface fills and borders. Field labels sit above inputs; related controls align within their rows. General uses 16 DIP gaps between related options and wider spacing around section boundaries; its content scrolls when the window is too short, with the page title and Apply fixed. Combo count and Dim Background in Testplay use compact buttons; the Background dim row matches their width. Navigation retains its larger click targets. The same logical dimensions apply on both desktop platforms and follow their interface scaling. Field and group labels are bold; control values keep a regular weight in both active and inactive states. Secondary text uses the muted colour. In General, Romanised artist / title and Language use fixed labels on the left with aligned, separate value buttons on the right.
 
 The top-bar **Settings** button is available in both Library and Editor. Settings uses a left category sidebar and a right panel for Workspace, Appearance, Testplay, and Updates (when supported by the host). Switching categories retains pending path and key changes. **Apply** is enabled only while unapplied changes exist. Ordinary preferences can be applied during library scanning or searching; changes to library paths wait for those tasks to finish. It saves them, stays in the current settings category, and becomes disabled again; the top-right return button or Esc closes settings without applying those drafts. Esc first dismisses active text or key capture. Update preferences save immediately. Opening settings pauses playback and retains the editor document, undo history, selection, and viewport. **General → Romanised artist / title** defaults to On and controls Library cards, Library details, and the editor window title. Off prefers the Unicode metadata; either mode falls back to the other spelling when its preferred field is empty. Apply persists the preference without changing beatmap data, filenames, or search matching.
 
@@ -522,7 +540,7 @@ Adding, pasting, moving, extending or removing notes around an existing break re
 
 In the object timeline and canvas left time axis, each break has a grey core and lighter white and green transition regions extending to the adjacent source objects, without changing the stored break timestamps. Hovering a core edge in the object timeline shows a horizontal resize cursor. Dragging that edge snaps to the current beat subdivision when Snap is on and previews the new range; releasing commits one undoable edit, releasing with less than 400 ms remaining removes the break, and Esc cancels the preview.
 
-Fruit and slider shapes on the upper object timeline use standard osu! circle and slider-endpoint skin resources, tinted with the beatmap or skin combo colour. Numbers use the skin's HitCircle font and overlay-order setting; missing resources have geometric/text fallbacks. Banana showers remain gold. Each object's body, endpoints, reverse arrows and number occupy one chronological layer: earlier starts cover later starts, with earlier ends and source order breaking ties. Selected objects retain this order and show orange rings with blue outer rings. Clicking and deleting use the same front-to-back order. Slider tracks honour SliderTrackOverride and have no separate perimeter; their white edges come from the endpoint artwork. Circle textures account for legacy transparent padding, and HitCircle font glyphs use the legacy 0.8 scale. Timing point markers use the same time-to-X coordinate as note centers. Insert Break Time uses the same text size as Movement Analysis; the Details header places AR, CS, and DPB in fixed columns on one baseline.
+Fruit and slider shapes on the upper object timeline use standard osu! circle and slider-endpoint skin resources, tinted with the beatmap or skin combo colour. Numbers use the skin's HitCircle font and overlay-order setting; missing resources have geometric/text fallbacks. Banana showers remain gold. Each object's body, endpoints, reverse arrows and number occupy one chronological layer: earlier starts cover later starts, with earlier ends and source order breaking ties. Selected objects retain this order and show orange rings with blue outer rings. Clicking and deleting use the same front-to-back order. Slider tracks honour SliderTrackOverride and have no separate perimeter; their white edges come from the endpoint artwork. Circle textures account for legacy transparent padding, and HitCircle font glyphs use the legacy 0.8 scale. Timing point markers use the same time-to-X coordinate as note centers. Insert Break Time uses the same text size as Movement Analysis; the Mapping header places AR, CS, and DPB in fixed columns on one baseline.
 
 In testplay, Ctrl+B adds a bookmark at the live testplay time and Ctrl+Shift+B removes the nearest bookmark within two seconds. These commands enter undo history and consume the B key before gameplay input.
 
@@ -586,7 +604,7 @@ Fruit and FSlider placement display a 60%-opaque fruit under the pointer, with i
 | Up / Down | Seek next / previous timing point |
 | Ctrl+Up / Down | Increase / decrease playback speed by 25 percentage points, within 10%–150% |
 | Ctrl+Shift+Up / Down | Increase / decrease playback speed by 5 percentage points |
-| Ctrl+Shift+F | Open slider-to-stream snap confirmation |
+| Ctrl+Shift+F | Open and focus the Stream/Stack dock |
 | Ctrl+= / Ctrl+− | Add / remove one reverse |
 | Ctrl+J | Extend the selected FSlider to the pointer |
 | Esc | Cancel an active drag, box selection, draft, or text input |
@@ -659,8 +677,28 @@ of the raw pointer. The nearest X wins, then the nearest time, then the conversi
 stable event order. An object snap retains the target's exact authored X and takes
 priority over Grid Snap and Distance Snap. A mint guide highlights the target when
 visible and shows horizontal alignment. Subsequent slider control points retain
-their existing placement rules. Apply saves the switch and ranges as per-difficulty
-editing preferences; Cancel discards their drafts. These preferences survive restart
+their existing placement rules.
+
+Whole-object canvas dragging uses the first and last selected
+fruit in chronological order as probes; a single fruit has one probe. For a slider,
+the last probe is its final repeat endpoint. Selected source parents are excluded
+from targets, including all their nested objects. Each probe searches around its
+moved time using the configured earlier/later beat ranges. The smallest horizontal
+correction wins, with time distance breaking ties. The whole selection receives
+one X offset, preserving spacing, curve geometry and the drag's Beat Snap time
+offset. Candidates that would move any selected playable object outside X=0–512
+are skipped. While DS is active, object alignments, DS presets (including zero)
+and the collinear position compete by horizontal distance from the raw pointer.
+Object alignments use the complete configured time window without a six-DIP
+capture limit; this keeps the candidate order stable during a horizontal sweep.
+Equal corrections prefer an exact object alignment; remaining object ties use
+time distance and stable event order. DS and collinear positions follow Grid Snap
+before the distance comparison; object alignments retain their exact X and show
+the alignment guide.
+With DS inactive, object alignment retains the six-DIP capture limit.
+Timeline dragging, scaling and individual
+slider control/event edits retain their existing rules. Apply saves the switch and
+ranges as per-difficulty editing preferences; Cancel discards their drafts. These preferences survive restart
 without changing beatmap content, undo history or exported files. The DS preview
 continues to demonstrate distance and collinear snapping.
 
@@ -678,18 +716,8 @@ The bottom row displays a compact readout such as **X: 185** for the selected fr
 
 **View → Include tiny droplets** controls whether Movement Analysis connections and DS labels include tiny droplets. It starts off and only changes the analysis display; gameplay hyperdash indicators, snapping, selection locks and beatmap content remain unchanged.
 
-A selected slider or active slider draft shows a compact speed badge beside the
-movement panel. **SV** is the generated slider's inherited SV multiplier relative
-to the map's base SV. **Max DS** is the largest horizontal DS between consecutive
-fruits and droplets within that slider, including its repeated traversals. It uses
-the current conversion's positions and times and the same departure-time base
-velocity as other DS readouts; unrelated objects are excluded. **Include tiny
-droplets** adds tiny droplets to this measurement and changes the label to
-**Max DS (+tiny)**. These are event-to-event speeds, not the curve's instantaneous
-derivative. SV can exceed Max DS because geometric path travel and tiny compensation
-also contribute to the generated slider speed. Values update while drawing and
-dragging; incomplete or failed conversions show a dash. Streams, standalone fruits
-and multiple selected parents do not show this badge. The display is read-only.
+Slider SV and maximum DS are available in Slider Inspector. The movement panel
+shows the previous/next object indicators without a separate slider speed badge.
 
 For a clicked or selected tiny droplet, Prev and Next display movement classifications and DS ratios to its immediate neighbours, including other tiny droplets. A missing neighbour or zero time interval displays a dash. These tiny-droplet distance values are read-only.
 
@@ -770,8 +798,8 @@ repeat count, stream snap and object metadata. One undo restores the whole batch
 No selection is required. The command is disabled for locked notes, unfinished
 gestures, or a difficulty without internal FSlider controls. Convert imported Legacy Sliders to FSliders first.
 
-For selected sliders, use **Clear internal anchors** in the long-press menu or
-**Ctrl+Shift+A**. This applies the same endpoint-only path to the selected sliders
+For selected sliders, use **Clear internal anchors** in Slider Inspector.
+This applies the same endpoint-only path to the selected sliders
 in one undo step, converting selected Legacy Sliders first. Holding a selected
 slider retains the complete selection for the batch operation.
 
@@ -798,11 +826,81 @@ With N, left-click to set the start, then right-click at a later time to finish.
 | Click, drag, or scroll the bottom timeline | Seek while preserving play/pause state |
 | Home | Return to the start |
 
+Dragging the bottom timeline pauses audio while the pointer holds the time, then
+resumes from the selected position on release if playback was active before the drag.
+Dragging while paused keeps playback paused.
+
 The File menu can replace MP3 / OGG / WAV audio. Manual seeking and editing remain available without playable audio. Save the editor project to retain editable data; further changes after `.osu` export still require a project save.
 
 Text inputs show a blinking caret at the end of the text and highlight the full selection after Ctrl+A (Command+A on macOS). Typing replaces the selection; library fields also support pasting text. Long focused text scrolls horizontally to keep its end visible.
 
 ## Display settings
+
+The workspace toolbar has three sections separated by vertical rules: the
+Mapping Panel / Timing Panel dropdown at the left; Zoom, canvas buttons and Snap
+in the middle; and AR, CS and DPB at the right. Its geometry is independent of
+side-panel placement. In Timing, the middle section contains the waveform label
+and Snap. The canvas and side docks sit below this row, with the transport timeline
+at the bottom.
+
+Mapping Panel provides two side dock areas. The default groups contain Movement
+Strain on the left and Preview, Notes and Song Setup on the right. Stream/Stack is
+available from Layout and is hidden by default.
+Drag a named tab to either side to move it; dropping into an occupied area combines
+the panels into one tab group. Click a tab to select its content, or drag within
+the tab strip to reorder it. Empty sides remain drop targets at the window edge.
+Only the side areas accept drops. Escape, lost capture and drops on the canvas
+leave the layout unchanged. The side arrow collapses or expands the whole group;
+both dock groups can be resized at their canvas-facing borders with the same minimum
+and maximum widths, independently of their tabs. Each side can reach 45% of the
+window width. Widening one side beyond the combined dock budget narrows the other
+side down to its minimum; the canvas retains its minimum usable width. Reordering tabs within a group
+previews the resulting order without a dock overlay. Preview options stack vertically
+in narrow docks.
+
+The fixed Mapping Panel / Timing Panel selector switches workspaces. Each workspace independently retains panel placement, tab order,
+active tabs, collapsed groups, widths, preview options and the movement readout's
+position. Layout changes are saved in user preferences after completed actions
+and restored when the editor restarts, independently of project saves. Timing Panel keeps its fixed waveform and timing-controls layout and
+does not expose dock dragging. Layout changes do not change beatmap content or undo.
+
+The **Layout** menu next to **View** lists the side-dock arrangement, a layout reset,
+and available panels. A check marks each existing panel, including collapsed groups;
+clicking it removes that panel, and clicking an unchecked panel restores it on its
+default side. Right-click a dock tab for **Close tab** and a **Panels** checklist. Checked panels
+use the same teal highlight as Layout; clicking one closes it, including panels on
+the opposite side. Clicking an unchecked panel adds it to the right-clicked group.
+Each panel can exist only once. Reset restores the default panels on their default sides,
+expanded with their default widths. Layout controls are locked in Timing Panel.
+
+**Stream/Stack** follows the current selection. Existing Streams, Stacks and Banana
+Stacks load their parameters automatically. Plain sliders and banana showers show
+an explicit conversion entry first; standalone fruits are not handled. The panel
+reuses the conversion dialog's parameter controls without its right-hand preview.
+Valid parameter changes immediately update the selected patterns, mark the map
+dirty and support undo. Graph and snap drags preview while moving and commit when
+released. Break into Fruits and Break into Bananas are explicit action buttons;
+clicking one splits the pattern immediately in one undo step. Existing patterns
+also offer a button to restore ordinary slider or banana shower output. Short
+docks scroll with the mouse wheel. Ctrl+Shift+F opens and focuses this dock, adding it when closed. An empty selection shows selection guidance. Panel buttons retain their background and border when idle.
+
+Dragging an interior Stack fruit on the canvas edits its individual horizontal
+offset. Its time, neighbouring fruits and center path remain unchanged, including
+other traversals of a repeated path. The edit supports undo and project persistence.
+
+**Notes** is a multiline project-wide text editor, shared across difficulties. It
+supports text selection, copy/paste and independent text undo/redo while focused.
+Notes changes mark the project dirty and are saved with the project, including
+workspace manifests and compatibility project files. Closing or moving its tab
+does not delete the notes. Notes are not exported to `.osu` files.
+
+Copy selected map objects with Ctrl+C and paste into Notes with Ctrl+V. Notes keeps
+exactly the external plain-text reference format, for example `00:12:345 (1,2) - `.
+The timestamp and object numbers appear as an underlined link. Click to seek and
+select matching objects in the current difficulty; drag to select and copy the
+text instead. References are reconstructed from saved text, including wrapped
+lines. If no matching objects remain, navigation still seeks to the timestamp.
+Notes editing has its own undo/redo; clicking references does not edit the map.
 
 The language dropdown in **Settings → General** lists the supported languages. Selecting a non-English language opens an AI-assisted machine translation notice before applying and saving it. Menu shortcut hints align to the right edge of each row. Existing beatmap titles and object names retain their values. The main canvas can hide curves and nodes. Catch Preview displays gameplay objects.
 
@@ -812,14 +910,20 @@ The Skin selector to the left of **← Library** lists skins from the configured
 
 **File → New project** creates a project with one blank difficulty. Opening `.osz` loads all Catch (Mode=2) difficulties into one project and skips other modes. A damaged Catch file does not replace the current project. Opening a single `.osu` or older `.catchproj` creates a single-difficulty project.
 
-A separate row below the main toolbar displays Chrome-style difficulty tabs with the official Catch icon, Version, live No Mod stars, and an unsaved dot. Icon color follows stars. Active tabs have rounded top corners and spread outward at the bottom to join the content below. Tabs use actual text widths rather than filling the row. Tabs first use full difficulty names. When space is insufficient, up to eight tabs share the available width by shortening the longest names; more than eight tabs use compact names and a horizontally draggable strip. Arrow buttons and the wheel also scroll overflowing tabs. Stored names remain complete. Hovering a truncated tab shows its full name in a pointer-following tooltip that wraps and stays within the window. Click to switch; use arrows or the tab-row wheel when tabs overflow. Ctrl+Tab / Ctrl+Shift+Tab cycle and reveal the active tab. The **+** button opens the add/import menu. A new blank difficulty inherits the active difficulty's audio, timing, settings, and resource context but clears objects. Importing an `.osu` adds one file. Difficulties may reference different audio.
+A separate row below the main toolbar displays Chrome-style difficulty tabs with the official Catch icon, Version, live No Mod stars, and an unsaved dot. Icon color follows stars. Active tabs have rounded top corners and spread outward at the bottom to join the content below. Tabs use actual text widths rather than filling the row. Tabs first use full difficulty names. When space is insufficient, up to eight tabs share the available width by shortening the longest names; more than eight tabs use compact names and a horizontally scrollable strip. Arrow buttons and the wheel also scroll overflowing tabs. Stored names remain complete. Hovering a truncated tab shows its full name in a pointer-following tooltip that wraps and stays within the window. Click to switch; use arrows or the tab-row wheel when tabs overflow. Ctrl+Tab / Ctrl+Shift+Tab cycle and reveal the active tab. The **+** button opens the add/import menu. A new blank difficulty inherits the active difficulty's audio, timing, settings, and resource context but clears objects. Importing an `.osu` adds one file. Difficulties may reference different audio.
 
-Difficulty tabs automatically sort by completed No Mod SR from low to high.
-Equal ratings retain their display order; failed ratings appear last. Calculation
-runs in the background, and completed rating changes refresh the order after
-edits and undo/redo. Sorting preserves the active difficulty, project storage
-order, content and undo history. Ctrl+Tab and Ctrl+Shift+Tab follow the displayed
-order.
+Difficulty tabs initially sort by completed No Mod SR from low to high.
+Equal ratings retain their display order; failed ratings appear last. Drag a tab
+horizontally to reorder it, with live feedback; dragging near either edge scrolls
+an overflowing strip. Escape or lost pointer capture restores the previous order.
+After a manual reorder, rating changes from edits and undo/redo preserve that order.
+Right-click a tab and choose **Pin difficulty** or **Unpin difficulty**. Pinned tabs
+show a pushpin icon to the left of the Catch icon and always precede ordinary tabs.
+Each group can be reordered independently. Tab order and pins last for the open
+project session. Opening a
+project restores automatic sorting. These display preferences preserve the active
+difficulty, project storage order, content and undo history. Ctrl+Tab and
+Ctrl+Shift+Tab follow the displayed order.
 
 Switching commits valid pending edits first; unfinished banana drafts or invalid input prevent switching. It pauses playback and retains each difficulty's playhead, time-viewport start, and undo/redo history. Selection and the active tool reset. Title/status dirty indicators cover the whole project, including hidden difficulties. One save writes every difficulty and updates baselines without clearing undo history. Ctrl+L and **Edit → Revert to previous save** restore only the active difficulty from the most recent prior save snapshot. A first save has no prior version. Synchronization and restore working copies are excluded. Confirmation retains an undo step and recovery copy of the current edits; saving the restored content remains a separate action. Unsaved confirmation on new/open/close applies to the whole project.
 
@@ -859,12 +963,12 @@ Recoverable file-operation errors appear inside the editor window on both the ca
 The conversion dialog includes **Break into Fruits**, off by
 default. Enabling it replaces the slider parent with independent fruits at the
 chosen snap, each editable separately. Existing streams offer **Break into Fruits**
-directly below **Edit Stream/Stack** in the long-press menu. Breaking preserves the
+directly below **Edit Stream/Stack** in Slider Inspector. Breaking preserves the
 stream's fruit positions, times, combo flags and sample settings, and forms one
 undo step.
 
 Select at least two consecutive circles or sliders and long-press one of them,
-or press **Ctrl+Shift+M**, to open **Merge into slider**. Consecutive means no
+then choose **Merge into slider** from the action list, or press **Ctrl+Shift+M**. This opens and focuses Slider Inspector, adding the tab when needed; choose the path type and apply the merge within the panel. Consecutive means no
 circle or slider is omitted between the earliest and latest selected starts in
 time/source order. A selected banana shower blocks merging. The dialog offers
 straight segments or a curved path; when any selected slider has a curved path,
@@ -878,13 +982,13 @@ Its generated catch events can differ from the original objects. The dialog warn
 that saving retains only the merged slider: reopening cannot recover the original
 objects because project files do not store undo history.
 
-Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press an FSlider to reveal **Convert to Stream/Stack**; imported Legacy Sliders offer **Convert to FSlider** above it. Ordinary sliders open the shared dialog on Stream; existing streams and stacks open their corresponding tab. The snap slider has the same subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**, plus the enabled experimental divisions. Enter confirms; Esc cancels; arrow keys change the choice.
+Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**, to open the Stream/Stack dock. Long-press an object in a selection or press **Shift+F** to show the compact action list first; choosing a conversion action opens its dock. Imported Legacy Sliders also offer **Convert to FSlider**. Existing streams and stacks retain their saved mode. Changes in the dock apply immediately and support undo.
 
 The dialog separates its title, tabs, Snap and conversion switches with padding.
 The Snap value has a gap from the slider thumb. Stream and Stack show their
 controls and preview without the introductory or graph-instruction paragraphs.
 
-With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. Once the parent is selected, dragging a fruit edits its X position and marks that event with a bright outer ring. Middle-fruit edits preserve neighbouring samples and event times; repeated traversals sharing the same path sample move together. Head and tail fruits also support dragging in time. A repeated tail resizes its span duration and edits the endpoint of its final traversal. Drag the empty area inside the selection box to move the whole stream. Visible anchors and handles take priority over overlapping stream fruits, so dragging a control reshapes the parent curve. Hiding Slider Path lets the overlapping fruit be edited directly. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in their long-press menu. The shared dialog also changes their subdivision. Changing snap requires confirmation; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. Parent-level New Combo applies to the first fruit; internal fruit NC is edited in the upper timeline. Object-level sound/sample settings apply to each fruit.
+With **Break into Fruits** off, a confirmed stream remains one editable slider parent with its anchors, handles and repeats. The first click on a stream fruit selects its parent. Once the parent is selected, dragging a fruit edits its X position and marks that event with a bright outer ring. Middle-fruit edits preserve neighbouring samples and event times; repeated traversals sharing the same path sample move together. Head and tail fruits also support dragging in time. A repeated tail resizes its span duration and edits the endpoint of its final traversal. Drag the empty area inside the selection box to move the whole stream. Visible anchors and handles take priority over overlapping stream fruits, so dragging a control reshapes the parent curve. Hiding Slider Path lets the overlapping fruit be edited directly. Dragging, reshaping, cloning, saving and undo retain the stream snap. Existing streams offer **Edit Stream/Stack** above **Convert back to slider** in Slider Inspector. The Stream/Stack dock changes their subdivision immediately with undo support; converting back restores ordinary slider output while retaining geometry and supports undo. Preview and testplay display independent fruits, and `.osu` export writes hit circles. Sampling starts at the slider head, uses its starting BPM across all spans, and includes the tail only when it falls on that subdivision. Parent-level New Combo applies to the first fruit; internal fruit NC is edited in the upper timeline. Object-level sound/sample settings apply to each fruit.
 
 The keyboard aliases above follow the [legacy shortcut reference](https://osu.ppy.sh/wiki/en/Client/Keyboard_shortcuts) where supported. Ctrl+L restores the current difficulty's previous saved version after confirmation. Ctrl+Shift+I point insertion, Ctrl+J extension, Ctrl+Alt+E export and Alt+wheel canvas zoom remain editor-specific bindings; V and End provide last-note navigation. Geometric rotation dialogs are not available.
 
@@ -921,30 +1025,15 @@ or colour picker. Language changes take effect immediately.
 
 ## Stream and Stack conversion
 
-Select sliders and choose **Convert to Stream/Stack** from Edit or the long-press
-menu, or press **Ctrl+Shift+F**. Existing streams and stacks use **Edit Stream/Stack**
-for the menu, button and dialog title. Existing streams open on **Stream**, and
-existing stacks open on **Stack**, retaining their saved subdivision. Ordinary
-sliders open on **Stream**. A mixed Stream/Stack selection follows its first
-target's mode and preview.
-The **Stream** and **Stack** tabs both preview the generated fruits. Stack enables
-curve and individual-fruit editing; switching tabs retains each tab's subdivision
-and the Stack draft. Tab switches modes when no numeric input is active. Confirm
-applies the active tab; Stream clears an existing Stack envelope. Cancel discards
-both drafts.
+Select sliders and choose **Convert to Stream/Stack** from Edit, Slider Inspector,
+or the compact object action list, or press **Ctrl+Shift+F**. The Stream/Stack dock
+opens and receives focus. Existing streams and stacks retain their mode and snap;
+ordinary sliders convert to Stream. A mixed Stream/Stack selection follows its
+first target. Repeating the shortcut keeps the existing dock and parameters.
 
-Both tabs share equal-width left and right columns. Snap and **Break into Fruits**
-are on the left; Stack also keeps its distance curve and numeric fields there.
-The right column contains the preview in both modes. The shared **Break into Fruits**
-switch retains its value across tabs and confirms either mode as independent fruits.
-
-Both previews use the current map's AR and CS, scaling time and X by the inner
-playfield width. Side margins fit the full fruit outline at X=0 and X=512 and
-leave room for the scrollbar. Hit testing and horizontal dragging use the same
-inner playfield. Roll the mouse wheel over the preview to inspect long patterns; wheel up
-views later times and wheel down views earlier times, independently of Reverse
-canvas scrolling. The position indicator follows the visible interval.
-Scrolling does not change content or undo.
+The dock previews the result on the main canvas. Switching Stream/Stack and changing
+parameters apply through undoable edits; graph and snap drags commit on release.
+**Break into Fruits** is an explicit action. Short panels scroll vertically.
 
 The Stack tab retains the source curve and samples
 independent fruits with the selected stream subdivision, using the head BPM across
@@ -959,8 +1048,7 @@ interpolation joins points without overshooting their distance values. The right
 preview updates immediately; generation alternates sides and clamps final X to
 0–512. Actual DS follows the generated positions and time intervals.
 
-Confirm applies all selected sliders as one undo step. Cancel or Esc discards the
-draft. Reopen the action to edit a saved stack. Conversion back to a slider clears
+Valid changes apply to all selected sliders and support undo. Reopen the dock to edit a saved stack. Conversion back to a slider clears
 the envelope and retains the centre geometry. Project files retain the editable
 parent and envelope; osu export writes independent hit circles.
 
@@ -976,16 +1064,9 @@ whole-parent selections use the head's NC flag. Internal NC starts reset subsequ
 timeline numbers and colours, persist in projects and export on the corresponding
 hit circles. Break into Fruits retains them.
 
-In the stack dialog's right preview, drag a fruit horizontally to adjust only that
-fruit. Its time stays fixed, and the highlighted outline marks the selected fruit.
-Manual adjustments are added to the clamped envelope result and persist with the
-editable parent. The left distance curve reflects each adjusted fruit and shows a
-control point at its fixed time. Drag that point vertically to edit its distance. Envelope changes retain these adjustments. Changing subdivision
-uses an adjustment only when a generated fruit has the same normalized time;
-returning to the previous subdivision restores its adjusted fruits. Cancel and lost
-capture restore the draft, and confirmation groups all adjustments into one undo
-step. The preview leaves room for complete first and last fruit outlines, including their
-stroke, at the corresponding scroll limits.
+Stack geometry and generated fruits are previewed on the main canvas. The distance
+curve and numeric fields remain in the dock. Parameter changes preserve the
+editable parent and apply through document undo history.
 
 Select an envelope point to edit **Time (%)** and **Width (px)** numerically.
 Enter or Tab accepts the value; Escape cancels the text edit. Interior times must
@@ -998,9 +1079,8 @@ New stacks default to 1/16 subdivision and reach their width over the first 2% o
 the duration, returning to zero over the final 2%. Existing stacks retain their
 subdivision. Endpoint widths can be edited in the graph or numeric fields.
 
-Within the stack editor, Ctrl+Z undoes a completed drag, numeric edit, point removal,
-first-side change or subdivision change; Ctrl+Y or Ctrl+Shift+Z redoes it. Draft
-history stays inside the dialog. Confirming still creates one document undo step.
+Completed dock edits use document undo history. Ctrl+Z undoes a committed edit;
+Ctrl+Y or Ctrl+Shift+Z redoes it.
 Right-click a manual fruit marker on the left graph to remove its offset and
 recompute that fruit from the envelope. This removal is also undoable.
 
@@ -1100,8 +1180,8 @@ not change beatmap content or preview/testplay dim, and modal dialogs hide it.
 ## Banana Shower Edit Window
 
 Select a banana shower (spinner) and press **Ctrl+F**, or use the Edit menu.
-**Ctrl+Shift+F** also opens this window for a selection containing only banana
-showers. Set each short shower's length and the empty gap after it as separate
+**Ctrl+Shift+F** opens the Stream/Stack dock for a selection containing only banana
+showers; its controls apply valid changes immediately with undo support. Set each short shower's length and the empty gap after it as separate
 beat fractions. Numerators are editable integers; denominator lists use the
 editor's supported snap divisions. For example, length **1/16** and gap **3/16**
 start one short shower every **4/16** beats. A zero gap creates adjacent showers.
@@ -1132,3 +1212,30 @@ at the tail. Reopen the window to change the fractions. See the
 The right previews in Stream, Stack and Banana Shower Edit support **Alt + mouse
 wheel** to zoom the time axis around the pointer. Ordinary wheel input scrolls.
 Zoom is local to the dialog and does not change object timing or create undo history.
+
+## Slider Inspector
+
+Open Slider Inspector from Layout. Long-press an object in a selection or press
+Shift+F to open its compact action list; choosing an editing function opens the
+corresponding dock. Ctrl+Shift+M focuses the merge controls in Slider Inspector. It follows the current selection and shows type, start/end times,
+duration, spans, control-point count, exported SV and exported path length.
+Multiple sliders show value ranges. Managed streams and stacks have no exported
+slider SV. These properties are read-only.
+
+**Max DS** always includes tiny droplets. **Peak
+horizontal speed** is expressed relative to the map's base SV/DPB, shown directly
+below it: 0.50× at a base of 1.92× SV / 192 DPB means half that base horizontal
+speed. It uses adjacent exported catch events, including tiny droplets, and
+integrates the base speed across BPM changes. No raw displacement/time formula is displayed.
+
+The action area contains conversion, clearing internal anchors, stream breaking
+and reversion, merging, and the Randomize droplets entry. Stream/Stack and
+randomization edits open their dock panels and update the map directly.
+
+Inspector properties use two columns, switching to one in narrow docks. A mixed
+selection shows its count in a single header row. Operation buttons occupy full
+rows with a persistent background and border, matching Settings. Start/end times
+use osu! editor format (`03:37:063`). Content fits the dock width and scrolls
+vertically when needed. Merge path choices stack vertically in narrow docks.
+Dock tab names retain their natural width. When tabs overflow, left/right arrows
+scroll the tab strip; selecting a panel through Layout reveals its active tab.

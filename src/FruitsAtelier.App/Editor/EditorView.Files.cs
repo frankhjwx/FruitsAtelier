@@ -75,9 +75,12 @@ public sealed partial class EditorView
         difficulties.AddRange(project.Difficulties.Select(d => new DifficultySession(d)));
         activeDifficulty = firstDifficultyTab = 0;
         difficultyTabOrder = []; difficultySortPending = true;
+        difficultyTabsManuallyOrdered = false; pinnedDifficulties.Clear();
         RestoreMapEditingPreferences();
         tabPointer = false; tabRemainder = 0; revealDifficultyTabs = true;
         ProjectName = project.Name;
+        projectNotes = savedProjectNotes = project.Notes; notesFocused = false; notesScroll = 0;
+        notesUndo.Clear(); notesRedo.Clear(); ResetPatternDock();
         projectStructureDirty = false;
         ResetDifficultyView();
         PreloadProjectHitsounds();
@@ -85,6 +88,7 @@ public sealed partial class EditorView
 
     private void ResetDifficultyView()
     {
+        CloseAimod();
         ResetDeferredConversion();
         pauseSnapDivisor = null;
         nextFruitNewCombo = false;
@@ -102,11 +106,12 @@ public sealed partial class EditorView
         AudioNotice = L.Get(AudioLoading ? "editor.audio.loading" : "editor.audio.notLoaded");
         pinPlayhead = true;
         StatusMessage = L.Get("editor.status.documentOpened", document.Name, document.TimingPoints.Count);
+        RefreshLoadedAimod();
     }
 
     public BeatmapProject CaptureProject() => new()
     {
-        Name = ProjectName,
+        Name = ProjectName, Notes = projectNotes,
         Difficulties = difficulties.Select(d => new ProjectDifficulty { Id = d.Id, Name = d.Name, Document = d.History.Document.DeepClone() }).ToList()
     };
 
@@ -211,7 +216,7 @@ public sealed partial class EditorView
     public void MarkSaved()
     {
         foreach (var difficulty in difficulties) difficulty.History.MarkSaved();
-        projectStructureDirty = false;
+        projectStructureDirty = false; savedProjectNotes = projectNotes;
     }
 
     public void ChangeAudioPath(string path) => Edit(L.Get("editor.command.changeAudio"), () => Document.AudioPath = path);
@@ -223,7 +228,7 @@ public sealed partial class EditorView
         if (LibraryOpening || AudioProjectCreating) return false;
         if (workspaceSaveTask is not null || syncCommitTask is not null) { NotifySynchronizationBlocked(); return false; }
         if (VersionHistoryVisible || SynchronizationVisible) return false;
-        if (librarySettingsOpen || HitsoundCopierVisible || SongSetupVisible || DistanceSnapDialogVisible || TimingModal || AimodVisible) return false;
+        if (librarySettingsOpen || HitsoundCopierVisible || SongSetupVisible || DistanceSnapDialogVisible || TimingModal) return false;
         if (!CommitTimingField()) return false;
         if (SliderMultiplierValidationBusy)
         { StatusMessage = L.Get("timing.sliderMultiplierChecking"); return false; }

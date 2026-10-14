@@ -307,6 +307,21 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     public bool BackgroundImage(string filePath, Rect destination)
         => DrawImage(filePath, destination, 0xFFFFFF, null, 1, true);
 
+    public void DimBackground(Rect bounds, uint color, float opacity)
+    {
+        var previous = context!.AntialiasMode;
+        try
+        {
+            // Cover every device pixel touched by the bitmap's fractional destination edges.
+            float scale = dpi / 96;
+            float left = MathF.Floor(bounds.X * scale) / scale, top = MathF.Floor(bounds.Y * scale) / scale;
+            float right = MathF.Ceiling(bounds.Right * scale) / scale, bottom = MathF.Ceiling(bounds.Bottom * scale) / scale;
+            context.AntialiasMode = AntialiasMode.Aliased;
+            Fill(new(left, top, right - left, bottom - top), color, opacity: opacity);
+        }
+        finally { context.AntialiasMode = previous; }
+    }
+
     private bool DrawImage(string filePath, Rect destination, uint tint, Rect? source, float opacity, bool fill)
     {
         if (!ValidRectangle(destination)) return false;
@@ -367,7 +382,8 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
             if (fill)
             {
                 float scale = Math.Max(destination.Width / image.Width, destination.Height / image.Height);
-                float w = destination.Width / scale, h = destination.Height / scale;
+                // Division can round a full-image crop past the source edge.
+                float w = Math.Min(image.Width, destination.Width / scale), h = Math.Min(image.Height, destination.Height / scale);
                 region = new((image.Width - w) / 2, (image.Height - h) / 2, w, h);
             }
             if (!ValidRectangle(region) || region.X < 0 || region.Y < 0 || region.Right > image.Width || region.Bottom > image.Height) return false;

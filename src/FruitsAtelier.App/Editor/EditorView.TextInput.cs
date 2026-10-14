@@ -68,9 +68,13 @@ public sealed partial class EditorView
     private bool textSelecting;
     public string ActiveTextInputField => textEditor.Field;
     public Action? RequestPasteField { get; set; }
-    public void PasteFieldText(string text, string? expectedField = null)
+    private void PasteFieldTextCore(string text, string? expectedField = null)
     {
         if (expectedField is not null && textEditor.Field != expectedField) return;
+        if (NotesFocused) { InsertNotes(text); return; }
+        if (RandomDockFocused) { RandomDockText(text); return; }
+        if (PatternDockEditing && patternDockKind == 2 && bananaEditField >= 0) { BananaEditText(text); return; }
+        if (PatternDockEditing && patternDockKind == 1 && stackNumericField >= 0) { StackNumericText(text); return; }
         if (BananaEditVisible) { BananaEditText(text); return; }
         if (StreamDialogVisible && stackMode) { StackNumericText(text); return; }
         if (DistanceSnapDialogVisible && dsBaseFocused)
@@ -132,6 +136,7 @@ public sealed partial class EditorView
             "ds:base" => dsBaseText,
             "stack:0" or "stack:1" => stackNumericText,
             _ when key.StartsWith("song:") => songValues.GetValueOrDefault(key[5..], ""),
+            "random:0" => randomNumbers[0], "random:1" => randomNumbers[1],
             _ when key.StartsWith("library:") => LibraryFieldValue,
             _ when key.StartsWith("numeric:") => editBuffer,
             _ => ""
@@ -204,5 +209,11 @@ public sealed partial class EditorView
                 c.Line(left + caretWidth, content.Y + 1, left + caretWidth, content.Bottom - 1, Foreground);
         }
         c.Unclip();
+    }
+    public void PasteFieldText(string text, string? expectedField = null)
+    {
+        var document = Document;
+        try { PasteFieldTextCore(text, expectedField); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
     }
 }
