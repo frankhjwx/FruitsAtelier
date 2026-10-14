@@ -106,11 +106,15 @@ public sealed partial class EditorView
         contextItems.Clear(); menu = -1;
         contextItems.Add(new(L.Get("dock.closeTab"), () => RemoveDockPanel(tab.Panel)));
         AddContextSeparator();
+        contextItems.Add(new(L.Get("dock.panels"), () => { }, Enabled: false, Heading: true));
         foreach (var panel in Enum.GetValues<DockPanel>())
         {
             bool exists = DockPanelExists(panel);
-            contextItems.Add(new((exists ? "✓ " : "") + L.Get("dock.addTab", DockTitle(panel)),
-                () => AddDockPanel(panel, left), !exists));
+            contextItems.Add(new((exists ? "✓ " : "") + DockTitle(panel), () =>
+            {
+                if (DockPanelExists(panel)) RemoveDockPanel(panel);
+                else AddDockPanel(panel, left);
+            }, Active: exists));
         }
         contextBounds = new(Math.Clamp(x, 0, Math.Max(0, width - 282)),
             Math.Clamp(y, 0, Math.Max(0, height - ContextMenuHeight)), 282, ContextMenuHeight);

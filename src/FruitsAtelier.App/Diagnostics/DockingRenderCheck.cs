@@ -48,6 +48,9 @@ internal static class DockingRenderCheck
                 editor.KeyDown(27, false, false); Paint();
                 if (!map.ContentEquals(editor.Document) || editor.IsDirty || editor.WantsCapture)
                     throw new InvalidOperationException("Docking modified content or retained capture.");
+                var contextTab = editor.DockTabBounds(EditorView.DockPanel.Preview);
+                editor.PointerDown(contextTab.X + 10, contextTab.Y + 10, 2, false, false); Paint("dock-context");
+                editor.KeyDown(27, false, false); Paint();
                 Click(editor.DockTabBounds(EditorView.DockPanel.Notes));
                 Click(editor.NotesBounds); editor.PasteFieldText(L.Get("dock.notesHint") + "\nReview the ending pattern.\nKeep this note across difficulties."); Paint("notes");
                 var patternMap = new MapDocument { DurationMs = 10000 };

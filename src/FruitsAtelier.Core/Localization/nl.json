@@ -1359,7 +1359,6 @@
   "dock.resetLayout": "Indeling herstellen",
   "dock.panels": "Panelen",
   "dock.closeTab": "Tabblad sluiten",
-  "dock.addTab": "{0} toevoegen",
   "dock.notes": "Notities",
   "dock.patternSelection": "Selecteer een Stream, Stack, Banana Stack, slider of bananenregen.",
   "dock.convertPrompt": "Converteer de selectie om het patroon te bewerken.",

@@ -1359,7 +1359,6 @@
   "dock.resetLayout": "Сбросить макет",
   "dock.panels": "Панели",
   "dock.closeTab": "Закрыть вкладку",
-  "dock.addTab": "Добавить {0}",
   "dock.notes": "Заметки",
   "dock.patternSelection": "Выберите Stream, Stack, Banana Stack, слайдер или банановый дождь.",
   "dock.convertPrompt": "Преобразуйте выделение для редактирования.",

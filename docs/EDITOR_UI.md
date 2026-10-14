@@ -853,7 +853,9 @@ does not expose dock dragging. Layout changes do not change beatmap content or u
 The **Layout** menu next to **View** lists the side-dock arrangement, a layout reset,
 and available panels. A check marks each existing panel, including collapsed groups;
 clicking it removes that panel, and clicking an unchecked panel restores it on its
-default side. Right-click a dock tab to close it or add an absent panel to that group.
+default side. Right-click a dock tab for **Close tab** and a **Panels** checklist. Checked panels
+use the same teal highlight as Layout; clicking one closes it, including panels on
+the opposite side. Clicking an unchecked panel adds it to the right-clicked group.
 Each panel can exist only once. Reset restores the default panels on their default sides,
 expanded with their default widths. Layout controls are locked in Timing Panel.
 

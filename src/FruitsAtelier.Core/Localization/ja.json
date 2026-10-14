@@ -1359,7 +1359,6 @@
   "dock.resetLayout": "レイアウトをリセット",
   "dock.panels": "パネル",
   "dock.closeTab": "タブを閉じる",
-  "dock.addTab": "{0} を追加",
   "dock.notes": "ノート",
   "dock.patternSelection": "Stream、Stack、Banana Stack、スライダーまたはバナナシャワーを選択してください。",
   "dock.convertPrompt": "選択したオブジェクトを変換して編集します。",

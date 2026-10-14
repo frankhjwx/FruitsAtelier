@@ -1359,7 +1359,6 @@
   "dock.resetLayout": "重置布局",
   "dock.panels": "面板",
   "dock.closeTab": "关闭页签",
-  "dock.addTab": "添加 {0}",
   "dock.notes": "笔记",
   "dock.patternSelection": "选择 Stream、Stack、Banana Stack、滑条或香蕉雨。",
   "dock.convertPrompt": "转换当前选择后即可编辑参数。",

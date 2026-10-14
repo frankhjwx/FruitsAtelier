@@ -1359,7 +1359,6 @@
   "dock.resetLayout": "레이아웃 초기화",
   "dock.panels": "패널",
   "dock.closeTab": "탭 닫기",
-  "dock.addTab": "{0} 추가",
   "dock.notes": "메모",
   "dock.patternSelection": "Stream, Stack, Banana Stack, 슬라이더 또는 바나나 샤워를 선택하세요.",
   "dock.convertPrompt": "선택한 오브젝트를 변환하여 편집합니다.",

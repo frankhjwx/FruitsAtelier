@@ -1359,7 +1359,6 @@
   "dock.resetLayout": "Restablecer diseño",
   "dock.panels": "Paneles",
   "dock.closeTab": "Cerrar pestaña",
-  "dock.addTab": "Añadir {0}",
   "dock.notes": "Notas",
   "dock.patternSelection": "Selecciona un Stream, Stack, Banana Stack, slider o lluvia de bananas.",
   "dock.convertPrompt": "Convierte la selección para editar su patrón.",
