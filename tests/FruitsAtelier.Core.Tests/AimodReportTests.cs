@@ -164,9 +164,11 @@ internal static class AimodReportTests
             writer.Write((short)2); writer.Write((short)16); writer.Write("data"u8); writer.Write(data); writer.Write(new byte[data]);
         }
         map.Fruits.AddRange([new() { TimeMs = 10000 }, new() { TimeMs = 49000 }]);
-        Check(Aimod.AnalyzeResources(map).Any(i => i.Code == "longAudio"), "Audio mapped ratio below 80 percent");
+        Check(!Aimod.AnalyzeResources(map).Any(i => i.Code == "longAudio"), "Resource metadata does not estimate audio length");
+        Check(!Aimod.Analyze(map).Any(i => i.Code == "longAudio"), "Audio length waits for a supplied playback duration");
+        Check(Aimod.Analyze(map, audioDurationMs: 60000).Any(i => i.Code == "longAudio"), "Audio mapped ratio below 80 percent");
         map.Fruits[1].TimeMs = 50000;
-        Check(!Aimod.AnalyzeResources(map).Any(i => i.Code == "longAudio"), "Exactly 80 percent is permitted");
+        Check(!Aimod.Analyze(map, audioDurationMs: 60000).Any(i => i.Code == "longAudio"), "Exactly 80 percent is permitted");
     }
     private static byte[] Video()
     {

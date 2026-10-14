@@ -52,19 +52,7 @@ public static partial class Aimod
                     issues.Add(new(AimodCategory.Design, AimodSeverity.Warning, code));
             }, skipUnsupportedVideo: true);
         if (!string.IsNullOrEmpty(audio) && File.Exists(Path.Combine(root, audio)))
-            ReadMedia(audio, properties =>
-            {
-                var exported = OsuBeatmapWriter.Serialize(document).ReadBack;
-                var timing = new TimingMap.Lookup(exported);
-                var objects = exported.Fruits.Select(f => (Start: f.TimeMs, End: f.TimeMs))
-                    .Concat(exported.BananaShowers.Select(b => (b.TimeMs, b.EndTimeMs)))
-                    .Concat(exported.ImportedSliders.Select(s => (s.TimeMs, s.TimeMs + s.PixelLength * s.SpanCount * timing.At(s.TimeMs).BeatLengthMs
-                        / (100 * exported.EffectiveSliderMultiplier * timing.At(s.TimeMs).SliderVelocityMultiplier))))
-                    .OrderBy(o => o.Item1).ToArray();
-                if (objects.Length > 0 && properties.Duration.TotalMilliseconds > objects[0].Item1
-                    && (objects[^1].Item2 - objects[0].Item1) / (properties.Duration.TotalMilliseconds - objects[0].Item1) < .8)
-                    issues.Add(new(AimodCategory.Timing, AimodSeverity.Warning, "longAudio"));
-            });
+            ReadMedia(audio, _ => { });
         foreach (string reference in references)
         {
             string path = Path.Combine(root, reference);

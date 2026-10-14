@@ -270,6 +270,7 @@ public sealed partial class EditorView
         double previousPlayhead = playhead;
         AudioReady = ready; AudioPlaying = playing; AudioLoading = loading;
         AudioDurationMs = double.IsFinite(durationMs) ? Math.Max(0, durationMs) : 0;
+        RefreshAimodAudio();
         AudioNotice = error ?? (loading ? L.Get("editor.audio.loading") : ready ? Path.GetFileName(filename) ?? L.Get("editor.audio.loaded") : L.Get("editor.audio.notLoaded"));
         if (ready && drag is not (DragKind.Timeline or DragKind.DifficultySeek) && !IsTestplaying)
             playhead = Math.Clamp(positionMs, 0, TimelineDurationMs);

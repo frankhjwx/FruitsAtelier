@@ -16,9 +16,12 @@ snapshot: Refresh updates it, and checking or navigating never creates an edit.
 
 Resource existence and PNG/JPEG/GIF header checks run on a document snapshot in a
 worker. Shared `.osb` files, variables, animation frames, loops and compound
-commands participate in resource and storyboard checks. Media properties use
-TagLibSharp 2.3.0 without decoding playback. Unsupported video formats, including
-FLV, are skipped while the editor lacks support. Unreadable supported videos and
+commands participate in resource and storyboard checks. Video dimensions and media
+readability use TagLibSharp 2.3.0 without decoding playback. Audio length uses the
+loaded playback duration shared with the timeline, rather than a metadata bitrate
+estimate. The editor refreshes the report when that duration becomes available;
+audio-length checks wait while playback audio is unavailable. Unsupported video
+formats, including FLV, are skipped while the editor lacks support. Unreadable supported videos and
 unreadable or unsupported audio still produce diagnostics. The editor consumes
 only completed results; rendering performs no file I/O.
 Mapset checks use loaded difficulties, not an online submission service.

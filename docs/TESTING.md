@@ -51,7 +51,9 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 `Core.Tests --aimod-check` and `App.Tests --aimod-check` cover AiMod rules,
 resource checks, read-only navigation, localization, Ctrl+Shift+A, table column
-resizing/reordering, selection/copy and dock attachment. Run
+resizing/reordering, selection/copy and dock attachment.
+Audio-length regressions cover playback-duration reuse, delayed loading, reloads
+and the 80 percent boundary without rechecking on playback-position updates. Run
 `Core.Tests --aimod-twin-bloom <path.osu>` against the matching local Twin Bloom
 fixture to compare stable screenshot findings and category/severity totals.
 `Core.Tests --aimod-ethanol <path.osu>` checks the Ethanol difficulty

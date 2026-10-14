@@ -232,7 +232,7 @@ It is separate from the application code license.
 
 ## Media metadata
 
-AiMod reads audio duration and video dimensions using the unmodified TagLibSharp
+AiMod checks media readability and video dimensions using the unmodified TagLibSharp
 2.3.0 NuGet assembly (copyright Brian Nickel and contributors), dynamically linked
 as `TagLibSharp.dll`. Its [source release](https://github.com/mono/taglib-sharp/tree/b5ae84f2e84087bf160bb0471420200dd2b5d809)
 is pinned to `b5ae84f2e84087bf160bb0471420200dd2b5d809` (TaglibSharp-2.3.0.0).
