@@ -35,24 +35,15 @@ internal static class DropletRandomizationTests
                 Check(ui.View.Document.Tracks.Take(2).All(t => t.DropletRandomization is { Enabled: true })
                     && ui.View.Document.Tracks[2].DropletRandomization is null, "batch affects ordinary FSliders only");
                 Check(ui.View.CaptureProject().Difficulties[1].Document.ContentEquals(map), "batch and parameters stay on current diff");
-                void ApplyRandom()
-                {
-                    var deadline = DateTime.UtcNow.AddSeconds(30);
-                    while (!ui.View.RandomPreviewReady && DateTime.UtcNow < deadline) { Thread.Sleep(5); ui.Paint(); }
-                    Check(ui.View.RandomPreviewReady, "Random draft becomes ready");
-                    var bounds = ui.View.RandomDockViewport;
-                    ui.View.Wheel(bounds.X + 10, bounds.Y + 40, -12000, false, false); ui.Paint();
-                    ui.ClickText(L.Get("library.apply"));
-                }
                 var enabled = ui.View.Document.DeepClone();
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(before), "setup undoes atomically");
                 ui.Key('Y', ctrl: true); Check(ui.View.Document.ContentEquals(enabled), "setup redo");
                 ui.ClickMap(1000, 256); ui.View.ToggleSelectedDropletRandomization(); ui.Paint();
                 Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: false }
                     && ui.View.Document.Tracks[1].DropletRandomization is { Enabled: true }, "individual switch is independent");
-                ui.ClickText(L.Get("ui.edit")); ClickRandomTitle(ui); ui.ClickText(L.Get("randomize.enableAll")); ApplyRandom();
+                ui.ClickText(L.Get("ui.edit")); ClickRandomTitle(ui); ui.ClickText(L.Get("randomize.enableAll"));
                 Check(ui.View.Document.Tracks.Take(2).All(t => t.DropletRandomization is { Enabled: true }), "Edit batch enable entry");
-                ui.ClickText(L.Get("ui.edit")); ClickRandomTitle(ui); ui.ClickText(L.Get("randomize.disableAll")); ApplyRandom();
+                ui.ClickText(L.Get("ui.edit")); ClickRandomTitle(ui); ui.ClickText(L.Get("randomize.disableAll"));
                 Check(ui.View.Document.Tracks.Take(2).All(t => t.DropletRandomization is { Enabled: false }), "Edit batch disable entry");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.Tracks.Take(2).All(t => t.DropletRandomization is { Enabled: true }), "batch has one undo step");
                 ui.View.OpenSongSetup(); ui.Paint(); ClickRandomTitle(ui);
@@ -160,15 +151,14 @@ internal static class DropletRandomizationTests
                 Check(ui.View.DockTabBounds(FruitsAtelier.App.Editor.EditorView.DockPanel.SliderInspector).Width > 0, "Long press opens Slider Inspector");
                 ClickRandomTitle(ui);
                 ui.ClickText(L.Get("randomize.enableSelected")); Wait();
-                Check(ui.View.Document.ContentEquals(map), "Randomization selection remains a draft");
-                ui.ClickText(L.Get("library.apply"));
-                Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: true }, "Apply enables the selected FSlider");
-                ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Randomization applies in one undo step");
+
+                Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: true }, "The panel enables the selected FSlider immediately");
+                ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Randomization edits in one undo step");
                 void Wait()
                 {
                     var end = DateTime.UtcNow.AddSeconds(30);
-                    while (!ui.View.RandomPreviewReady && DateTime.UtcNow < end) { Thread.Sleep(5); ui.Paint(); }
-                    Check(ui.View.RandomPreviewReady, "Randomization preview completes");
+                    while (!ui.View.RandomDockValid && DateTime.UtcNow < end) { Thread.Sleep(5); ui.Paint(); }
+                    Check(ui.View.RandomDockValid, "Randomization preview completes");
                 }
                 ui.Key(27);
                 var streamMap = map.DeepClone(); streamMap.Tracks[0].StreamSnapDivisor = 4;

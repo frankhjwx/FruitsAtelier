@@ -63,6 +63,7 @@ public sealed partial class EditorView
         songCustomColours = songColours.Count > 0;
         if (!songCustomColours) songColours.AddRange(new uint[] { 0xFFC000, 0x00CA00, 0x127CFF, 0xF21839 });
         SelectSongColour(0);
+        liveSongColours = [.. songColours]; liveSongCustom = songCustomColours;
     }
 
     private void CloseSongSetup()
@@ -274,7 +275,13 @@ public sealed partial class EditorView
             OsuBeatmapReader.Validate(Document);
         }, RestoreRelated)) { songError = StatusMessage; return; }
         RestoreRelated(true, original, Document);
-        CloseSongSetup();
+        if (committingLiveSong)
+        {
+            foreach (var pair in songValues) songInitial[pair.Key] = pair.Value;
+            liveSongColours = [.. songColours]; liveSongCustom = songCustomColours;
+            liveSongSnapshot = Document.DeepClone(); songError = "";
+        }
+        else CloseSongSetup();
     }
 
     private void SongSetupPointerDown(float x, float y, int button, bool shift)
@@ -356,5 +363,6 @@ public sealed partial class EditorView
         string value = InsertInput("song:" + songField, songValues[songField], text, 4096);
         songValues[songField] = value; songError = "";
         if (songField == "Hex" && value.TrimStart('#').Length == 6) CommitSongHex();
+        CommitLiveDockEdits();
     }
 }

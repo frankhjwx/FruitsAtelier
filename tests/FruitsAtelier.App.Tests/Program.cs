@@ -2,7 +2,7 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
-if (args.Contains("--inspector-panels-check")) { InspectorPanelsTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS Inspector metrics, randomization drafts and Song Setup dropdown"); return 0; }
+if (args.Contains("--inspector-panels-check")) { InspectorPanelsTests.Run(); SongDockTests.Run(); Console.WriteLine("PASS Inspector metrics, live panel edits and Song Setup categories"); return 0; }
 
 if (args.Contains("--song-dock-check")) { SongDockTests.Run(); SongSetupTests.Run(); DropletRandomizationTests.Run(); Console.WriteLine("PASS Song Setup dock, metadata, colours and randomization"); return 0; }
 
@@ -215,7 +215,7 @@ var tests = new (string Name, Action Run)[]
     ("Empty canvas clicks clear selection without seeking", EmptyCanvasTests.Run),
     ("Song Setup shares metadata and preserves difficulty scope, undo and exports", SongSetupTests.Run),
     ("Song Setup docks, scrolls and applies cancellable drafts", SongDockTests.Run),
-    ("Slider Inspector metrics and independent randomization drafts", InspectorPanelsTests.Run),
+    ("Slider Inspector metrics and immediate randomization edits", InspectorPanelsTests.Run),
     ("Paused canvas play-line dragging preserves time and clamps its fixed height", PlaybackLineTests.Run),
     ("Workspace saves and linked synchronization persist before optional Songs export", WorkspaceSaveTests.Run),
     ("Metadata merge rows share a page and highlight unresolved, retained and selected text", SynchronizationUiTests.MetadataRows),

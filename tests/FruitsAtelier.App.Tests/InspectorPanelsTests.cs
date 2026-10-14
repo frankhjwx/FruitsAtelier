@@ -25,6 +25,20 @@ internal static class InspectorPanelsTests
                 double expected = objects.Zip(objects.Skip(1), (a, b) => DistanceSnap.Ratio(new(a.TimeMs, a.X), new(b.TimeMs, b.X), 192d / 500)).Max() ?? 0;
                 Check(Math.Abs(ui.View.InspectorMaxDs!.Value - expected) < 1e-9 && Math.Abs(ui.View.InspectorPeakRatio!.Value - expected) < 1e-9,
                     "Peak horizontal speed and max DS include exported tiny droplets and use base DPB");
+                Check(ui.Canvas.Texts.Any(t => t.Value == "00:01:000") && ui.Canvas.Texts.Any(t => t.Value == "00:03:000"), "Inspector timestamps use osu formatting");
+                var startLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("inspector.start"));
+                var endLabel = ui.Canvas.Texts.Single(t => t.Value == L.Get("inspector.end"));
+                Check(startLabel.Y == endLabel.Y && startLabel.X < endLabel.X, "Start and end share a horizontal row");
+                var viewport = ui.View.SliderInspectorViewport;
+                ui.View.Wheel(viewport.X + 10, viewport.Y + 20, -1200, false, true); ui.Paint();
+                Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("inspector.end")).X < endLabel.X && ui.View.Document.ContentEquals(map), "Shift-wheel scrolls overflowing inspector content without changing the map");
+                ui.View.Wheel(viewport.X + 10, viewport.Y + 20, 1200, false, true); ui.Paint();
+                ui.View.PointerDown(viewport.X + 10, viewport.Bottom - 6, 0, false, false);
+                Check(ui.View.WantsCapture, "Horizontal scrollbar captures pointer");
+                ui.View.PointerMove(viewport.X + 60, viewport.Bottom - 6, false, false); ui.Paint();
+                Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("inspector.end")).X < endLabel.X, "Dragging the scrollbar moves content");
+                ui.View.PointerUp(viewport.X + 60, viewport.Bottom - 6, 0); ui.Paint();
+                Check(!ui.View.WantsCapture, "Horizontal scrollbar releases pointer");
                 var committed = ui.View.Conversion;
                 for (int i = 0; i < 10; i++) ui.Paint();
                 Check(ReferenceEquals(committed, ui.View.Conversion) && ui.View.Document.ContentEquals(map), "Inspector repaint preserves conversion and content");
@@ -36,25 +50,29 @@ internal static class InspectorPanelsTests
                 Check(EditorView.HorizontalSpeedRatio(timingMap, new(timingMap), [0, 250], firstObject, to with { X = 144 }) == .5,
                     "Peak normalization integrates the base speed across BPM boundaries");
                 ui.View.ShowRandomDock(); ui.Paint(); Wait();
+                var resize = ui.View.DockResizeBounds(false);
+                ui.View.PointerDown(resize.X + 4, resize.Y + 60, 0, false, false);
+                ui.View.PointerMove(ui.Width - 180, resize.Y + 60, false, false);
+                ui.View.PointerUp(ui.Width - 180, resize.Y + 60, 0); ui.Paint();
+                var leftArrow = ui.Canvas.Texts.First(t => t.Value == "‹" && t.X > ui.Width / 2 && t.Y < ui.View.RandomDockViewport.Y);
+                ui.Click(leftArrow.X + 2, leftArrow.Y + 2);
+                for (int i = 0; i < 6 && ui.View.DockTabBounds(EditorView.DockPanel.Preview).Width == 0; i++)
+                { ui.Click(leftArrow.X + 2, leftArrow.Y + 2); }
+                Check(ui.View.DockTabBounds(EditorView.DockPanel.Preview).Width > 0, "Dock arrow reveals overflowing tabs");
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.title")), "Dock titles retain full text");
                 var baseline = ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X)).ToArray();
                 SetStrength("70"); Wait();
                 var preview = ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X)).ToArray();
-                Check(!preview.SequenceEqual(baseline) && ui.View.Document.ContentEquals(map) && ReferenceEquals(committed, ui.View.Conversion),
-                    "Randomization changes preview without changing content or conversion");
-                Bottom(); ui.ClickText(L.Get("mac.cancel")); Wait();
-                Check(ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X)).SequenceEqual(baseline), "Cancel restores original randomization");
-                SetStrength("70"); Wait(); Bottom(); ui.ClickText(L.Get("library.apply")); Wait();
-                Check(ui.View.Document.RandomizeDropletStrength == 70
-                    && ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X)).SequenceEqual(preview), "Apply retains preview output");
-                ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Randomization Apply is one undo step");
+                Check(!preview.SequenceEqual(baseline) && ui.View.Document.RandomizeDropletStrength == 70 && ui.View.IsDirty,
+                    "Randomization edits immediately update content and canvas");
+                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("library.apply") || t.Value == L.Get("mac.cancel")), "Random panel has no confirmation controls");
+                ui.Key(27); ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Randomization edit undoes in one step");
                 ui.Paint(); Wait(); SetStrength("101");
-                Check(!ui.View.RandomPreviewReady && ui.View.Document.ContentEquals(map), "Invalid strength cannot apply");
+                Check(!ui.View.RandomDockValid && ui.View.Document.ContentEquals(map), "Invalid strength cannot change content");
                 ui.View.ShowSongDock(); ui.Paint();
-                ui.ClickText(L.Get("song.general") + " ▾");
-                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.title") && t.Y >= ui.View.SongDockViewport.Y), "Song Setup dropdown has no randomization category");
-                ui.ClickText(L.Get("song.design"));
-                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("song.design") + " ▾"), "Dropdown selects a Song Setup category");
-                void Bottom() { var b = ui.View.RandomDockViewport; ui.View.Wheel(b.X + 10, b.Y + 40, -12000, false, false); ui.Paint(); }
+                var song = ui.View.SongDockViewport;
+                ui.Click(song.X + 3 * ((song.Width - 9) / 4 + 3) + 5, song.Y + 10);
+                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("song.countdownOff")), "Horizontal category buttons select Design");
                 void SetStrength(string value)
                 {
                     var b = ui.View.RandomDockViewport; ui.View.Wheel(b.X + 10, b.Y + 40, 12000, false, false); ui.Paint();
@@ -63,8 +81,8 @@ internal static class InspectorPanelsTests
                 void Wait()
                 {
                     var end = DateTime.UtcNow.AddSeconds(30);
-                    while (!ui.View.RandomPreviewReady && DateTime.UtcNow < end) { Thread.Sleep(5); ui.Paint(); }
-                    Check(ui.View.RandomPreviewReady, "Randomization validation completes");
+                    while (!ui.View.RandomDockValid && DateTime.UtcNow < end) { Thread.Sleep(5); ui.Paint(); }
+                    Check(ui.View.RandomDockValid, "Randomization validation completes");
                 }
             }
         }

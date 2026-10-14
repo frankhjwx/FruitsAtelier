@@ -51,8 +51,8 @@ internal static class StreamShortcutTests
                 && ui.View.SelectedObjectIds.Contains(id) && !ui.View.WantsCapture && ui.View.Document.ContentEquals(map),
                 "Shift+F selects the slider and opens Inspector without editing");
             ui.ClickText(L.Get("conversion.title"));
-            Check(!ui.View.StreamDialogVisible && ui.View.StreamSnapBounds.Width > 0 && ui.View.Document.ContentEquals(map),
-                "Inspector opens the Stream/Stack dock with a conversion draft");
+            Check(!ui.View.StreamDialogVisible && ui.View.StreamSnapBounds.Width > 0 && ui.View.Document.Tracks.Single().StreamSnapDivisor is not null,
+                "Inspector conversion opens the live Stream/Stack dock");
         }
     }
 
@@ -62,13 +62,13 @@ internal static class StreamShortcutTests
         var ui = new Ui(); ui.LoadDocument(map);
         ui.HoldMap(1000, 100);
         Check(ui.View.LegacyConversionBounds.Width > 0 && ui.View.StreamConversionBounds.Width > 0, "legacy long press offers both conversions");
-        Check(ui.View.StreamConversionBounds.Y > ui.View.LegacyConversionBounds.Bottom
-            && ui.View.StreamConversionBounds.X == ui.View.LegacyConversionBounds.X, "conversion actions are stacked vertically");
+        Check(ui.View.StreamConversionBounds.Y >= ui.View.LegacyConversionBounds.Y, "Conversion actions use the compact grid");
         var streamButton = ui.View.StreamConversionBounds;
         ui.Click(streamButton.X + 20, streamButton.Y + 15);
-        Check(!ui.View.StreamDialogVisible && ui.View.StreamSnapBounds.Width > 0 && ui.View.Document.ContentEquals(map), "Inspector conversion opens the draft panel");
-        ui.ClickText(L.Get("mac.cancel"));
-        Check(!ui.View.IsDirty, "cancel is a no-op");
+        Check(!ui.View.StreamDialogVisible && ui.View.StreamSnapBounds.Width > 0 && ui.View.Document.Tracks.Single().StreamSnapDivisor is not null, "Inspector conversion opens the draft panel");
+        ui.Key('Z', ctrl: true);
+        Check(!ui.View.IsDirty, "Immediate conversion undoes");
+        ui.Key('A', ctrl: true);
         ui.Key('F', ctrl: true, shift: true);
         var snap = ui.View.StreamSnapBounds;
         ui.View.PointerDown(snap.X + 7, snap.Y + 15, 0, false, false);

@@ -68,7 +68,7 @@ public sealed partial class EditorView
     private bool textSelecting;
     public string ActiveTextInputField => textEditor.Field;
     public Action? RequestPasteField { get; set; }
-    public void PasteFieldText(string text, string? expectedField = null)
+    private void PasteFieldTextCore(string text, string? expectedField = null)
     {
         if (expectedField is not null && textEditor.Field != expectedField) return;
         if (NotesFocused) { InsertNotes(text); return; }
@@ -209,5 +209,11 @@ public sealed partial class EditorView
                 c.Line(left + caretWidth, content.Y + 1, left + caretWidth, content.Bottom - 1, Foreground);
         }
         c.Unclip();
+    }
+    public void PasteFieldText(string text, string? expectedField = null)
+    {
+        var document = Document;
+        try { PasteFieldTextCore(text, expectedField); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
     }
 }

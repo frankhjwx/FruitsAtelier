@@ -27,13 +27,6 @@ public sealed partial class EditorView
 
     internal IEnumerable<ConvertedCatchObject> PatternCanvasObjects(double start, double end)
     {
-        if (RandomPreviewReady && randomPreview is { } randomObjects)
-        {
-            int left = 0, right = randomObjects.Count;
-            while (left < right) { int mid = (left + right) / 2; if (randomObjects[mid].TimeMs < start) left = mid + 1; else right = mid; }
-            for (int i = left; i < randomObjects.Count && randomObjects[i].TimeMs <= end; i++) yield return randomObjects[i];
-            yield break;
-        }
         bool preview = PatternCanvasPreviewActive;
         if (!preview || patternDockKind == 1)
             foreach (var item in ObjectsInTimeRange(start, end))
@@ -71,6 +64,7 @@ public sealed partial class EditorView
         && !StreamDialogVisible && !BananaEditVisible && !TimingPageVisible;
     private void ResetPatternDock()
     {
+        livePatternConvert = false; livePatternSnapshot = null;
         patternDockKind = 0; patternDockConvert = false; patternDockSnapshot = null;
         patternPreviewTracks = []; patternCanvasPreview = [];
         stackNumericField = bananaEditField = bananaEditDropdown = -1;
@@ -88,6 +82,7 @@ public sealed partial class EditorView
         stackGraph = StackPreviewBounds = StreamSnapBounds = StackPercentFieldBounds = StackDistanceFieldBounds = BananaPreviewBounds = default;
         Array.Clear(BananaNumeratorBounds);
         var selected = ClipboardSelectedParentIds();
+        AdoptLiveDock(ref patternDockSnapshot, ref livePatternSnapshot);
         bool changed = !ReferenceEquals(patternDockSnapshot, convertedSnapshot)
             || selected.Count != patternDockTargets.Length || patternDockTargets.Any(id => !selected.Contains(id));
         if (changed)
@@ -117,20 +112,10 @@ public sealed partial class EditorView
         {
             c.Text(L.Get("dock.convertPrompt"), bounds.X, bounds.Y + 16, 12, Foreground, bounds.Width);
             Button(c, new(bounds.X, bounds.Y + 68, bounds.Width, 34),
-                L.Get(bananas ? "bananaEdit.title" : "conversion.title"), () => patternDockConvert = true);
+                L.Get(bananas ? "bananaEdit.title" : "conversion.title"), () => { patternDockConvert = true; InitializePatternDock(); livePatternConvert = true; });
             return;
         }
-        if (patternDockKind == 0)
-        {
-            if (bananas)
-            {
-                patternDockKind = 2; OpenBananaEdit(); BananaEditVisible = false;
-            }
-            else
-            {
-                OpenStreamDialog(); StreamDialogVisible = false; patternDockKind = 1;
-            }
-        }
+        if (patternDockKind == 0) InitializePatternDock();
         float contentHeight = Math.Max(PatternDockContentHeight, bounds.Height);
         patternDockScroll = Math.Clamp(patternDockScroll, 0, contentHeight - bounds.Height);
         var content = new Rect(bounds.X, bounds.Y - patternDockScroll, bounds.Width, contentHeight);

@@ -74,8 +74,7 @@ internal static class DockingRenderCheck
                 {
                     editor.ShowSongDock(); Paint();
                     var songBounds = editor.SongDockViewport;
-                    Click(new(songBounds.X, songBounds.Y, 30, 30));
-                    Click(new(songBounds.X + 6, songBounds.Y + 34 + 6 + category * 32, 30, 30));
+                    Click(new(songBounds.X + category * ((songBounds.Width - 9) / 4 + 3), songBounds.Y, 20, 30));
                     Paint($"song-dock-{category}");
                     editor.Wheel(songBounds.X + 20, songBounds.Y + 80, -12000, false, false);
                     Paint($"song-dock-{category}-scrolled");
@@ -89,15 +88,18 @@ internal static class DockingRenderCheck
                 inspectorMap.Tracks.Add(inspectorTrack);
                 editor.LoadDocument(inspectorMap); editor.KeyDown(65, true, false);
                 editor.ShowSliderInspector(); Paint("inspector");
+                var horizontalBounds = editor.SliderInspectorViewport;
+                editor.Wheel(horizontalBounds.X + 10, horizontalBounds.Y + 20, -1200, false, true); Paint("inspector-horizontal");
+                editor.Wheel(horizontalBounds.X + 10, horizontalBounds.Y + 20, 1200, false, true); Paint();
                 var inspectorBounds = editor.SliderInspectorViewport;
                 editor.Wheel(inspectorBounds.X + 10, inspectorBounds.Y + 40, -12000, false, false); Paint("inspector-scrolled");
                 editor.ShowRandomDock(); Paint();
                 var randomField = editor.RandomDockValueBounds(0); Click(randomField);
                 editor.KeyDown(65, true, false); editor.PasteFieldText("70"); Paint();
                 var deadline = DateTime.UtcNow.AddSeconds(30);
-                while (!editor.RandomPreviewReady && DateTime.UtcNow < deadline) { Thread.Sleep(5); Paint(); }
-                if (!editor.RandomPreviewReady || !editor.Document.ContentEquals(inspectorMap))
-                    throw new InvalidOperationException("Random draft did not preserve content or complete preview.");
+                while (!editor.RandomDockValid && DateTime.UtcNow < deadline) { Thread.Sleep(5); Paint(); }
+                if (!editor.RandomDockValid || editor.Document.RandomizeDropletStrength != 70)
+                    throw new InvalidOperationException("Random panel did not update content.");
                 Paint("random-preview");
                 var randomBounds = editor.RandomDockViewport;
                 editor.Wheel(randomBounds.X + 10, randomBounds.Y + 40, -12000, false, false); Paint("random-scrolled");

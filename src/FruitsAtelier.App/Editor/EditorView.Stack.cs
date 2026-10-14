@@ -261,7 +261,8 @@ public sealed partial class EditorView
         c.Line(left, y + 126, right, y + 126, Accent, 2);
         c.Circle(left + Array.IndexOf(SnapDivisors, StreamSnapDivisor) / (float)(SnapDivisors.Length - 1) * (right - left), y + 126, 6, Accent);
         c.Text(L.Get("ui.snapDivisor", StreamSnapDivisor), right + 16, y + 120, 10, Foreground, 36);
-        ToggleSwitch(c, new(leftX, y + 158, columnWidth, 32), L.Get("stream.breakFruits"), StreamBreakIntoFruits,
+        if (dock is not null) Button(c, new(leftX, y + 158, columnWidth, 32), L.Get("stream.breakFruits"), BreakSelectedStreams);
+        else ToggleSwitch(c, new(leftX, y + 158, columnWidth, 32), L.Get("stream.breakFruits"), StreamBreakIntoFruits,
             () => StreamBreakIntoFruits = !StreamBreakIntoFruits);
         if (stackMode)
         {
@@ -335,7 +336,10 @@ public sealed partial class EditorView
         }
         else StackPreviewBounds = default;
         if (streamError.Length > 0) c.Text(streamError, x + 24, y + h - 111, 10, Error, w - 48);
+        if (dock is null)
+        {
         Button(c, new(dock is null ? x + w - 200 : leftX, y + h - 44, dock is null ? 80 : (columnWidth - 8) / 2, 30), L.Get("mac.cancel"), () => { if (dock is not null) ResetPatternDock(); else { StreamDialogVisible = false; stackPointDragging = stackFruitDragging = -1; } });
         Button(c, new(dock is null ? x + w - 112 : leftX + (columnWidth + 8) / 2, y + h - 44, dock is null ? 88 : (columnWidth - 8) / 2, 30), L.Get(dock is null ? "stream.confirm" : "library.apply"), () => { ApplyStream(); if (dock is not null && streamError.Length == 0) ResetPatternDock(); }, true);
+        }
     }
 }

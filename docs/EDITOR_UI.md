@@ -114,10 +114,10 @@ preferences start with all three switches off and Grid Level Tiny (4 px).
 
 **Randomize droplets** is an independent dock tab, opened from Layout,
 Edit → Randomize droplets, or Slider Inspector. Strength (0–100 playfield pixels),
-a signed 32-bit Seed, derandomization and HR compensation are draft settings.
-The canvas previews the exported result while parameters change. **Apply** commits
-all changes as one undo step; **Cancel** restores the saved settings. Changing
-selection or document reloads the draft. Closing or hiding the tab ends its preview.
+a signed 32-bit Seed, derandomization and HR compensation update the current map
+as soon as valid values are entered. Changes mark the project dirty, update the
+canvas and support undo. Save the project normally; the panel has no Apply or
+Cancel controls. Invalid numeric input leaves the last valid map value intact.
 
 **Derandomize droplets** compensates ordinary FSlider TinyDroplets to the authored
 path. The stored per-slider switches and manual adjustments are retained. Turning
@@ -128,9 +128,9 @@ effect becomes visible when it is disabled.
 
 The panel can enable or disable randomization for selected ordinary FSliders or
 all ordinary FSliders, and reset selected sliders' manual droplet adjustments.
-Selected overrides take precedence over the all-slider draft. These operations
+Selected overrides take precedence over the all-slider setting. These operations
 exclude Legacy Sliders and managed streams. Settings belong to the current
-difficulty. Reset strength restores 20 in the draft.
+difficulty. Reset strength sets the map value to 20.
 
 Strength 20 and Seed 1337 reproduce osu!'s native NM randomization when there are
 no manual corrections. Custom seeds use the same legacy RNG; Strength scales its
@@ -322,12 +322,12 @@ fields.
 
 **Song Setup** is a dock tab, initially after Notes on the right. Use **Layout**
 to show or close it, or press **F4** to select it. It can move between either side
-and share a tab group with other panels. General, Difficulty, Colors and Design are selected from a dropdown.
-Each category uses a vertically scrolling form that adapts to dock width.
-**Apply** commits the draft in one undo step; Cancel discards it. The tab stays
-open after either action. Editing a field captures text shortcuts; clicking the
-canvas returns input to the editor. Difficulty or document changes reload the
-form from the current content. Opening this panel does not pause playback.
+and share a tab group with other panels. General, Difficulty, Colors and Design
+use four horizontal category buttons; narrow panels abbreviate their labels.
+Each category scrolls vertically. Valid edits immediately update the map and mark
+the project dirty, preserving field focus. There are no Apply/Cancel buttons.
+Use normal project saving and undo. Difficulty or document changes reload the
+form from current content. Opening this panel does not pause playback.
 
 General edits artist, title, creator, source and tags across every difficulty in
 the project. Non-ASCII artist/title text enables a separate romanised field;
@@ -849,14 +849,12 @@ expanded with their default widths. Layout controls are locked in Timing Panel.
 Stacks load their parameters automatically. Plain sliders and banana showers show
 an explicit conversion entry first; standalone fruits are not handled. The panel
 reuses the conversion dialog's parameter controls without its right-hand preview.
-The main canvas previews draft fruit positions as parameters change, replacing
-the selected parents' committed fruit display. Banana previews reuse the validated
-asynchronous output. Changes remain a draft until Apply, which creates one content
-undo step and retains the result. Cancel restores the committed canvas display;
-selection changes and document changes discard the draft. Short docks scroll with
-the mouse wheel. Existing patterns also offer a button below Apply/Cancel to restore
-ordinary slider or banana shower output, preserving parent geometry and timing in
-one undo step. Ctrl+Shift+F continues to open the existing dialog.
+Valid parameter changes immediately update the selected patterns, mark the map
+dirty and support undo. Graph and snap drags preview while moving and commit when
+released. Break into Fruits and Break into Bananas are explicit action buttons;
+clicking one splits the pattern immediately in one undo step. Existing patterns
+also offer a button to restore ordinary slider or banana shower output. Short
+docks scroll with the mouse wheel. Ctrl+Shift+F retains the existing modal dialog.
 
 **Notes** is a multiline project-wide text editor, shared across difficulties. It
 supports text selection, copy/paste and independent text undo/redo while focused.
@@ -938,7 +936,7 @@ Its generated catch events can differ from the original objects. The dialog warn
 that saving retains only the merged slider: reopening cannot recover the original
 objects because project files do not store undo history.
 
-Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press a slider to open Slider Inspector; its conversion action opens the Stream/Stack dock draft. Imported Legacy Sliders also offer **Convert to FSlider**. The Edit entry and keyboard shortcut open the shared dialog. Ordinary sliders open the shared dialog on Stream; existing streams and stacks open their corresponding tab. The snap slider has the same subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**, plus the enabled experimental divisions. Enter confirms; Esc cancels; arrow keys change the choice.
+Select one or more sliders and press **Ctrl+Shift+F**, or use **Edit → Convert to Stream/Stack**. Long-press a slider to open Slider Inspector; its conversion action converts the selection and opens the Stream/Stack dock. Imported Legacy Sliders also offer **Convert to FSlider**. The Edit entry and keyboard shortcut open the shared dialog. Ordinary sliders open the shared dialog on Stream; existing streams and stacks open their corresponding tab. The snap slider has the same subdivisions as the main toolbar: **1/1–1/9, 1/12 and 1/16**, plus the enabled experimental divisions. Enter confirms; Esc cancels; arrow keys change the choice.
 
 The dialog separates its title, tabs, Snap and conversion switches with padding.
 The Snap value has a gap from the slider thumb. Stream and Stack show their
@@ -986,7 +984,7 @@ for the menu, button and dialog title. Existing streams open on **Stream**, and
 existing stacks open on **Stack**, retaining their saved subdivision. Ordinary
 sliders open on **Stream**. A mixed Stream/Stack selection follows its first
 target's mode and preview.
-The **Stream** and **Stack** tabs both preview the generated fruits. Stack enables
+In the modal dialog, the **Stream** and **Stack** tabs both preview the generated fruits. Stack enables
 curve and individual-fruit editing; switching tabs retains each tab's subdivision
 and the Stack draft. Tab switches modes when no numeric input is active. Confirm
 applies the active tab; Stream clears an existing Stack envelope. Cancel discards
@@ -1209,4 +1207,10 @@ peak interval's ending event. No raw displacement/time formula is displayed.
 
 The action area contains conversion, clearing internal anchors, stream breaking
 and reversion, merging, and the Randomize droplets entry. Stream/Stack and
-randomization edits open their dock drafts; Apply commits and Cancel discards.
+randomization edits open their dock panels and update the map directly.
+
+Inspector properties use two columns; operation buttons each occupy a full row. Start/end times use osu! editor
+format (`03:37:063`). A horizontal scrollbar appears when the content exceeds the
+dock width; drag it or use Shift+wheel to reach the rest of the content.
+Dock tab names retain their natural width. When tabs overflow, left/right arrows
+scroll the tab strip; selecting a panel through Layout reveals its active tab.

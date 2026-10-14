@@ -50,14 +50,14 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 ## Automated regressions
 
 `App.Tests --inspector-panels-check` covers exported Inspector metrics including
-tiny droplets, base-SV normalization across BPM changes, randomization preview,
-Cancel/Apply/undo, numeric validation and the Song Setup category dropdown.
+tiny droplets, base-SV normalization across BPM changes, immediate randomization edits,
+undo, numeric validation, horizontal overflow and Song Setup category buttons.
 Native docking checks capture Inspector and Randomize droplets at both sizes and
 all three DPI values.
 
 
 `App.Tests --pattern-notes-check` verifies nonmodal pattern conversion and editing,
-selection changes, application and undo, independent notes input, and project and
+selection changes, immediate edits and splitting, undo, independent notes input, and project and
 workspace notes roundtrips. Native docking checks also capture these panels.
 
 `App.Tests --docking-check` exercises cross-side moves, tab groups, cancellation,
@@ -536,7 +536,7 @@ scope, combo reference numbers, horizontal grids, and timestamp precision.
 The feedback regressions cover V/End navigation, scroll direction, persistent independent volume controls, skin sample precedence and cache upgrades, and compatible versus conflicting close SV timing. Windows PCM checks verify live and scheduled hitsound gain separately from song gain; headless Mac CI exercises the native mixer with no audio device. Native window checks exercise all three volume sliders in both languages.
 
 `App.Tests --song-dock-check` covers docked Song Setup, narrow-panel scrolling,
-field focus, left docking, Apply/Cancel, undo and retained Timing layouts, together
+field focus, left docking, immediate edits, undo and retained Timing layouts, together
 with the existing metadata and randomization checks. Native docking captures
 include every Song Setup category and its scrolled controls.
 

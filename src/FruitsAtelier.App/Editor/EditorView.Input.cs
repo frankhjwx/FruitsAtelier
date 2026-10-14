@@ -21,7 +21,7 @@ public sealed partial class EditorView
         AdvanceCanvasBackgroundDim();
     }
 
-    public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
+    private void PointerDownCore(float x, float y, int button, bool shift, bool ctrl)
     {
         if (AcknowledgementsVisible) { AcknowledgementsPointerDown(x, y, button); return; }
         if (SynchronizationBlocksInput || SynchronizationWaitVisible)
@@ -121,6 +121,7 @@ public sealed partial class EditorView
         if (LibraryVisible && LibraryPointerDown(x, y, button)) return;
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
+        if (BeginDockHorizontal(x, y, button)) return;
         if (BeginDockPointer(x, y, button)) return;
         if (RandomDockPointer(x, y, button)) return;
         if (DockContentInputAvailable && PanelVisible(DockPanel.SliderInspector) && menu < 0 && contextItems.Count == 0 && inspectorBounds.Contains(x, y))
@@ -434,7 +435,7 @@ public sealed partial class EditorView
         BeginBox(x, y, ctrl, false);
     }
 
-    public void PointerMove(float x, float y, bool shift, bool ctrl)
+    private void PointerMoveCore(float x, float y, bool shift, bool ctrl)
     {
         if (notesSelecting) { PositionNotesCaret(x, y, true); return; }
         if (dockPressed is not null) { MoveDockPointer(x, y); return; }
@@ -459,6 +460,7 @@ public sealed partial class EditorView
         if (dsSnapDragging) { SetDistanceSnapSubdivision(x); return; }
         if (dsBaseDragging) { UpdateDistanceBase(x); return; }
         if (HitsoundCopierVisible) { mouseX = x; mouseY = y; return; }
+        if (dockHorizontalDrag is not null) { MoveDockHorizontal(x); return; }
         if (randomDragging) { MoveRandomStrength(x); return; }
         if (SongSetupVisible || SongDockEditing && songDrag >= 0) { mouseX = x; mouseY = y; MoveSongSetup(x, y, shift); return; }
         if (dsSliderDrag >= 0) { UpdateDistanceSnapSlider(x, shift); return; }
@@ -581,7 +583,7 @@ public sealed partial class EditorView
         }
     }
 
-    public void PointerUp(float x, float y, int button, bool shift = false)
+    private void PointerUpCore(float x, float y, int button, bool shift = false)
     {
         if (notesSelecting && button == 0) { PositionNotesCaret(x, y, true); notesSelecting = false; return; }
         if (dockPressed is not null && button == 0) { EndDockPointer(x, y); return; }
@@ -608,6 +610,7 @@ public sealed partial class EditorView
         if (settingsColourDrag != 0 && button == 0) { UpdateSettingsColourDrag(x, y); settingsColourDrag = 0; return; }
         if (textSelecting && button == 0) { mouseY = y; MoveInputSelection(x); textSelecting = false; return; }
         if (HitsoundCopierVisible) return;
+        if (dockHorizontalDrag is not null && button == 0) { MoveDockHorizontal(x); dockHorizontalDrag = null; return; }
         if (randomDragging && button == 0) { MoveRandomStrength(x); randomDragging = false; return; }
         if (SongSetupVisible || songDrag >= 0) { if (button == 0) { MoveSongSetup(x, y, shiftHeld); songDrag = -1; } return; }
         if (distanceDragging && button == 0) { UpdateDistanceSlider(x, shiftHeld); distanceDragging = false; return; }
@@ -861,10 +864,11 @@ public sealed partial class EditorView
         if (TimingModal)
         { if (TimingSetupVisible && timingListBounds.Contains(x, y)) timingScroll = Math.Max(0, timingScroll - (int)(delta / 120) * 3); return; }
         if (HandleVolumePopoverWheel(x, y, delta)) return;
+        if (WheelDockHorizontal(x, y, delta, shift)) return;
         if (RandomDockEditing && randomBounds.Contains(x, y))
         { randomScroll = Math.Clamp(randomScroll - delta / 120 * 48, 0, Math.Max(0, RandomContentHeight - randomBounds.Height)); return; }
         if (DockContentInputAvailable && PanelVisible(DockPanel.SliderInspector) && inspectorBounds.Contains(x, y))
-        { inspectorScroll = Math.Clamp(inspectorScroll - delta / 120 * 48, 0, Math.Max(0, inspectorContentHeight - inspectorBounds.Height)); return; }
+        { inspectorScroll = Math.Clamp(inspectorScroll - delta / 120 * 48, 0, Math.Max(0, inspectorContentHeight - (dockHorizontal.TryGetValue(DockPanel.SliderInspector, out var horizontal) ? horizontal.Viewport.Height : inspectorBounds.Height))); return; }
         if (SongDockEditing && songDockBounds.Contains(x, y))
         { songDockScroll = Math.Clamp(songDockScroll - delta / 120 * 48, 0, Math.Max(0, songDockContentHeight - songDockBounds.Height)); return; }
         if (DockContentInputAvailable && PanelVisible(DockPanel.Notes) && NotesBounds.Contains(x, y))
@@ -1059,7 +1063,7 @@ public sealed partial class EditorView
         return target;
     }
 
-    public void KeyDown(int virtualKey, bool ctrl, bool shift)
+    private void KeyDownCore(int virtualKey, bool ctrl, bool shift)
     {
         if (dockPressed is not null)
         {
@@ -1185,11 +1189,15 @@ public sealed partial class EditorView
         if (PatternDockKey(virtualKey, ctrl, shift)) return;
         if (RandomDockFocused && !(ctrl && virtualKey == 'S'))
         {
-            if (virtualKey == 27) { randomDockSnapshot = null; return; }
-            if (virtualKey == 13) { ApplyRandomDock(); return; }
+            if (virtualKey == 27) { randomField = -1; return; }
+            if (virtualKey == 13) { CommitRandomDock(); return; }
             InputKey("random:" + randomField, ref randomNumbers[randomField], virtualKey, ctrl, shift, 16, RequestPasteField); return;
         }
-        if (SongDockFocused && !(ctrl && virtualKey == 'S')) { SongSetupKey(virtualKey, ctrl, shift); return; }
+        if (SongDockFocused && !(ctrl && virtualKey == 'S'))
+        {
+            if (virtualKey is 13 or 27) { songField = ""; return; }
+            SongSetupKey(virtualKey, ctrl, shift); return;
+        }
         if (NotesKey(virtualKey, ctrl, shift)) return;
         if (MergeDialogVisible)
         {
@@ -1356,7 +1364,7 @@ public sealed partial class EditorView
         }
     }
 
-    public void TextInput(char value)
+    private void TextInputCore(char value)
     {
         if (AcknowledgementsVisible) return;
         if (HitsoundCopierVisible) { if (!ErrorVisible && !DiscardConfirmationVisible && !char.IsControl(value)) PasteHitsoundName(value.ToString()); return; }
@@ -1422,7 +1430,7 @@ public sealed partial class EditorView
         textSelecting = false;
         movementPanelPointer = false;
         songDrag = -1;
-        randomDragging = false;
+        randomDragging = false; dockHorizontalDrag = null;
         CancelPlaybackLineDrag();
         CancelDistanceSnapDrag();
         FinishDistanceEdit(true);
@@ -1688,5 +1696,35 @@ public sealed partial class EditorView
             else high = middle;
         }
         apply(start + (desired - start) * low);
+    }
+    public void PointerDown(float x, float y, int button, bool shift, bool ctrl)
+    {
+        var document = Document;
+        try { PointerDownCore(x, y, button, shift, ctrl); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
+    }
+    public void PointerMove(float x, float y, bool shift, bool ctrl)
+    {
+        var document = Document;
+        try { PointerMoveCore(x, y, shift, ctrl); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
+    }
+    public void PointerUp(float x, float y, int button, bool shift = false)
+    {
+        var document = Document;
+        try { PointerUpCore(x, y, button, shift); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
+    }
+    public void KeyDown(int virtualKey, bool ctrl, bool shift)
+    {
+        var document = Document;
+        try { KeyDownCore(virtualKey, ctrl, shift); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
+    }
+    public void TextInput(char value)
+    {
+        var document = Document;
+        try { TextInputCore(value); }
+        finally { if (ReferenceEquals(document, Document)) CommitLiveDockEdits(); else InvalidateLiveDocks(); }
     }
 }

@@ -205,16 +205,20 @@ Before handing off an editing change:
    Record measured results and remaining limitations in the task, not as permanent
    performance guarantees in this document.
 
-## Dock inspector and randomization drafts
+## Dock inspectors and live editing
 
 Slider Inspector caches rows by committed conversion snapshot, playable-export
-identity and selected parent IDs. It reads the existing exported events and timing
-lookup; repainting does not export or convert. Tiny droplets are always included
-in its peak DS and horizontal-speed calculations.
+identity and selected parent IDs. It reads existing exported events and timing;
+repainting and horizontal scrolling do not export or convert. Tiny droplets are
+always included in its peak DS and horizontal-speed calculations.
 
-Randomize droplets validates a detached document on a background task with its
-own OsuWriteCache. Unchanged drafts reuse the result; parameter changes coalesce
-while validation is running. Results publish only for the requested draft in the
-current document/selection session. Replacing the session detaches its worker and
-cache. The canvas uses validated preview objects without replacing committed
-conversion or creating undo history; Apply performs one editing transaction.
+Song Setup, Stream/Stack and Randomize droplets commit valid changes at input
+boundaries through editing transactions. Unchanged values do not create edits.
+Graph and snap drags retain their candidate preview until pointer release. Local
+edit snapshots preserve focus when committed conversion catches up; external
+changes and undo reload the panel. Randomization uses the editor's committed
+conversion pipeline rather than starting a separate export for each repaint.
+
+DockHorizontal owns per-panel content width, viewport clipping and scrollbar
+input. Panels with a minimum content width can reuse it without tying their
+content geometry to the resizable dock width.

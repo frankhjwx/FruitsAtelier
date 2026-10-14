@@ -29,22 +29,24 @@ internal static class SongDockTests
                 Check(!ui.View.SongSetupVisible && ui.View.DockTabBounds(EditorView.DockPanel.SongSetup).Width > 0,
                     "F4 selects docked Song Setup without a modal");
                 Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("song.title") && t.Y < 40), "Header Song Setup entry is removed");
-                var conversion = ui.View.Conversion;
-                Set("TitleUnicode", "Draft title");
-                Check(ui.View.Document.ContentEquals(map) && ReferenceEquals(ui.View.Conversion, conversion), "Typing is an isolated draft");
-                Bottom(); ui.ClickText(L.Get("mac.cancel"));
-                Check(ui.View.Document.ContentEquals(map), "Cancel preserves content");
+                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("library.apply") || t.Value == L.Get("mac.cancel")), "Song dock has no confirmation controls");
                 Set("TitleUnicode", "Updated title");
-                Bottom(); ui.ClickText(L.Get("library.apply"));
-                Check(ui.View.Document.Name == "Updated title" && !ui.View.SongSetupVisible, "Apply commits without opening a modal");
-                ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Dock Apply undoes in one step");
-                ui.View.ShowSongDock(); ui.Paint(); ui.ClickText(L.Get("song.general") + " ▾"); ui.ClickText(L.Get("song.difficulty"));
-                Set("CircleSize", "4.5"); Bottom(); ui.ClickText(L.Get("library.apply"));
-                Check(ui.View.Document.CircleSize == 4.5, "Dock difficulty fields apply");
-                ui.View.ShowSongDock(); ui.Paint(); ui.ClickText(L.Get("song.general") + " ▾"); ui.ClickText(L.Get("song.colours"));
+                ui.Type("!");
+                Check(ui.View.Document.Name == "Updated title!", "Typing retains focus after conversion refresh");
+                ui.Key(8);
+                Check(ui.View.Document.Name == "Updated title" && ui.View.IsDirty && !ui.View.SongSetupVisible, "Typing edits and dirties the map immediately");
+                ui.Key(27); ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true); ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Song edit undoes in one step");
+                ui.View.ShowSongDock(); ui.Paint(); Category(1);
+                Set("CircleSize", "4.5");
+                Check(ui.View.Document.CircleSize == 4.5, "Dock difficulty fields update immediately");
+                ui.View.ShowSongDock(); ui.Paint(); Category(2);
                 ui.ClickText(L.Get("song.customColours")); Set("Hex", "#123ABC");
-                Bottom(); ui.ClickText(L.Get("library.apply"));
-                Check(SongSetup.Colours(ui.View.Document)[0] == 0x123ABC, "Dock palette HEX applies");
+                Check(SongSetup.Colours(ui.View.Document)[0] == 0x123ABC, "Dock palette HEX updates immediately");
+                void Category(int index)
+                {
+                    var bounds = ui.View.SongDockViewport;
+                    ui.Click(bounds.X + index * ((bounds.Width - 9) / 4 + 3) + 5, bounds.Y + 10);
+                }
                 ui.View.ShowSongDock(); ui.Paint();
                 var tab = ui.View.DockTabBounds(EditorView.DockPanel.SongSetup);
                 ui.View.PointerDown(tab.X + 10, tab.Y + 10, 0, false, false);
@@ -55,7 +57,6 @@ internal static class SongDockTests
                 Check(ui.View.Document.ContentEquals(before) && ui.View.DockTabBounds(EditorView.DockPanel.SongSetup).X < ui.Width / 2,
                     "Timing switch retains layout and content");
 
-                void Bottom() { ui.View.Wheel(ui.Width - 60, 350, -12000, false, false); ui.Paint(); }
                 void Set(string key, string value)
                 {
                     ui.View.Wheel(ui.Width - 60, 350, 12000, false, false); ui.Paint();

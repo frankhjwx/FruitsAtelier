@@ -192,7 +192,8 @@ public sealed partial class EditorView
         c.Text(L.Get("bananaEdit.count", bananaEditSegments.Count), left, y + extra + 226, 12, Muted, col);
         c.Text(L.Get("bananaEdit.arrangement", bananaEditSegments.Count, Math.Max(0, bananaEditSegments.Count - 1)), left, y + extra + 252, 11, Muted, col);
         if (bananaEditExactFit) c.Text(L.Get("bananaEdit.exactFit"), left, y + extra + 286, 13, Accent, col, true);
-        ToggleSwitch(c, new(left, y + extra + 326, col, 32), L.Get("bananaEdit.split"), bananaSplit, () => bananaSplit = !bananaSplit);
+        if (dock is not null) Button(c, new(left, y + extra + 326, col, 32), L.Get("bananaEdit.split"), BreakLiveBananas);
+        else ToggleSwitch(c, new(left, y + extra + 326, col, 32), L.Get("bananaEdit.split"), bananaSplit, () => bananaSplit = !bananaSplit);
         if (dock is null)
         {
             BananaPreviewBounds = new(right, y + 90, col, h - 170);
@@ -225,9 +226,12 @@ public sealed partial class EditorView
         }
         else BananaPreviewBounds = default;
         if (bananaEditError.Length > 0 || bananaNumericError.Length > 0) c.Text(bananaNumericError.Length > 0 ? bananaNumericError : bananaEditError, left, y + h - 74, 11, Error, w - 48);
+        if (dock is null)
+        {
         Button(c, new(dock is null ? x + w - 200 : left, y + h - 44, dock is null ? 80 : (col - 8) / 2, 30), L.Get("mac.cancel"), () => { if (dock is null) CloseBananaEdit(); else ResetPatternDock(); });
         Button(c, new(dock is null ? x + w - 112 : left + (col + 8) / 2, y + h - 44, dock is null ? 88 : (col - 8) / 2, 30), L.Get(dock is null ? "stream.confirm" : "library.apply"), () => { ApplyBananaEdit(); if (dock is not null && bananaEditSnapshot is null) ResetPatternDock(); },
             enabled: bananaEditReady == bananaEditPattern && bananaEditError.Length == 0);
+        }
         if (bananaEditDropdown >= 0)
         {
             int field = bananaEditDropdown;

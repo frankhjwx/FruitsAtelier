@@ -12,6 +12,8 @@ public sealed partial class EditorView
         public DockPanel Active = panel;
         public bool Collapsed = true;
         public float Width = width;
+        public float TabScroll;
+        public DockPanel? Revealed;
     }
     private sealed class DockWorkspace
     {
@@ -38,6 +40,7 @@ public sealed partial class EditorView
         left ? leftPanel.Width : rightPanel.Width, Math.Max(0, canvas.Height - 38));
     private Rect PanelBounds(DockPanel panel) => DockBounds(ReferenceEquals(PanelGroup(panel), DockWorkspaceState.Left));
     private readonly List<(DockPanel Panel, Rect Bounds)> dockTabs = [];
+    private readonly List<(DockPanel Panel, Rect Bounds)> dockAllTabs = [];
     private DockPanel? dockPressed;
     private bool dockDragging;
     private float dockStartX, dockStartY;
@@ -128,7 +131,7 @@ public sealed partial class EditorView
         leftPanel = new(0, 84, leftWidth, bodyHeight);
         rightPanel = new(width - (rightOpen ? rightWidth : 340), 84, rightOpen ? rightWidth : 340, rightOpen ? bodyHeight : 38);
         canvas = new(108 + leftWidth, 84, Math.Max(120, width - rightWidth - leftWidth - 109), bodyHeight);
-        dockTabs.Clear();
+        dockTabs.Clear(); dockAllTabs.Clear();
         leftDockResizeBounds = rightDockResizeBounds = default;
         DifficultyCurveToggleBounds = DifficultyCurveGraphBounds = PreviewToggleBounds = PreviewResizeBounds = PreviewViewport = default;
         MovementOverlayBounds = null;
@@ -152,14 +155,30 @@ public sealed partial class EditorView
                 c.Fill(bounds, Panel);
                 c.Clip(bounds);
                 c.Fill(new(bounds.X, bounds.Y, bounds.Width, 38), Background);
-                float x = bounds.X + 6;
+                var panels = DisplayDockPanels(group);
+                float total = panels.Sum(p => c.MeasureText(DockTitle(p), 12, true) + 24);
+                bool overflow = total > bounds.Width - 12;
+                float arrows = overflow ? 24 : 0;
+                var strip = new Rect(bounds.X + 6 + arrows, bounds.Y + 6, bounds.Width - 12 - arrows * 2, 32);
+                group.TabScroll = Math.Clamp(group.TabScroll, 0, Math.Max(0, total - strip.Width));
+                if (group.Revealed != group.Active && !dockDragging)
+                {
+                    float start = panels.TakeWhile(p => p != group.Active).Sum(p => c.MeasureText(DockTitle(p), 12, true) + 24);
+                    float end = start + c.MeasureText(DockTitle(group.Active), 12, true) + 24;
+                    group.TabScroll = Math.Clamp(start < group.TabScroll ? start : end > group.TabScroll + strip.Width ? end - strip.Width : group.TabScroll, 0, Math.Max(0, total - strip.Width));
+                    group.Revealed = group.Active;
+                }
+                c.Clip(strip);
+                float x = strip.X - group.TabScroll;
                 float available = Math.Max(0, bounds.Width - 12);
-                foreach (var panel in DisplayDockPanels(group))
+                foreach (var panel in panels)
                 {
                     string title = DockTitle(panel);
-                    float tabWidth = Math.Min(c.MeasureText(title, 12, true) + 24, available / group.Panels.Count);
+                    float tabWidth = c.MeasureText(title, 12, true) + 24;
                     var tab = new Rect(x, bounds.Y + 6, tabWidth, 32);
-                    dockTabs.Add((panel, tab));
+                    dockAllTabs.Add((panel, tab));
+                    float clippedX = Math.Max(tab.X, strip.X), clippedRight = Math.Min(tab.Right, strip.Right);
+                    if (clippedRight > clippedX) dockTabs.Add((panel, new(clippedX, tab.Y, clippedRight - clippedX, tab.Height)));
                     bool selected = group.Active == panel;
                     if (selected || tab.Contains(mouseX, mouseY))
                     {
@@ -169,6 +188,12 @@ public sealed partial class EditorView
                     c.Text(title, tab.X + 10, tab.Y + 8, 12, selected ? Foreground : Muted, Math.Max(0, tab.Width - 20), selected);
                     if (selected) c.Line(tab.X + 10, tab.Bottom - 1, tab.Right - 10, tab.Bottom - 1, Accent, 2);
                     x += tabWidth;
+                }
+                c.Unclip();
+                if (overflow)
+                {
+                    Button(c, new(bounds.X + 2, bounds.Y + 6, 24, 32), "‹", () => group.TabScroll = Math.Max(0, group.TabScroll - strip.Width * .7f), enabled: group.TabScroll > 0);
+                    Button(c, new(bounds.Right - 26, bounds.Y + 6, 24, 32), "›", () => group.TabScroll = Math.Min(total - strip.Width, group.TabScroll + strip.Width * .7f), enabled: group.TabScroll < total - strip.Width);
                 }
                 c.Line(bounds.X, bounds.Y + 38, bounds.Right, bounds.Y + 38, Grid);
                 if (group.Active == DockPanel.MovementStrain)
@@ -213,7 +238,7 @@ public sealed partial class EditorView
             if (editField >= 0 && !CommitField()) return true;
             dockPressed = tab.Panel; dockDragging = false; dockStartX = x; dockStartY = y;
             dockOriginalTabs.Clear();
-            dockOriginalTabs.AddRange(dockTabs.Where(t => PanelGroup(tab.Panel).Panels.Contains(t.Panel)));
+            dockOriginalTabs.AddRange(dockAllTabs.Where(t => PanelGroup(tab.Panel).Panels.Contains(t.Panel)));
             dockReorderIndex = PanelGroup(tab.Panel).Panels.IndexOf(tab.Panel);
             return true;
         }

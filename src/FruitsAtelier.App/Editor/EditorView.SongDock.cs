@@ -28,6 +28,7 @@ public sealed partial class EditorView
     private void DrawSongDock(ICanvas c, Rect bounds)
     {
         if (SongSetupVisible) return;
+        AdoptLiveDock(ref songDockSnapshot, ref liveSongSnapshot);
         if (!ReferenceEquals(songDockSnapshot, convertedSnapshot))
         {
             InitializeSongSetup(); songDockSnapshot = convertedSnapshot; songDockScroll = 0;
@@ -40,23 +41,20 @@ public sealed partial class EditorView
         const float categoryHeight = 44;
         float bodyHeight = songTab switch { 0 => 7 * 72 + Math.Max(64, songTagRows.Count * (songTagSize + 5) + 14) + 38,
             1 => 440, 2 => 650, 3 => 320, _ => 470 };
-        songDockContentHeight = categoryHeight + bodyHeight + 92;
+        songDockContentHeight = categoryHeight + bodyHeight + 32;
         songDockScroll = Math.Clamp(songDockScroll, 0, Math.Max(0, songDockContentHeight - bounds.Height));
         float y = bounds.Y - songDockScroll;
         int firstHit = hits.Count;
         c.Clip(bounds);
         float column = (bounds.Width - 6) / 2;
-        Button(c, new(bounds.X, y, bounds.Width, 32), L.Get(tabs[songTab]) + " ▾", () =>
+        float categoryWidth = (bounds.Width - 9) / 4;
+        for (int i = 0; i < tabs.Length; i++)
         {
-            contextItems.Clear();
-            for (int i = 0; i < tabs.Length; i++)
-            {
-                int tab = i;
-                contextItems.Add(new(L.Get(tabs[i]), () =>
-                { songTab = tab; songField = songError = ""; songDockScroll = 0; SongSetupInputSession++; }));
-            }
-            contextBounds = new(bounds.X, Math.Clamp(bounds.Y + 34, 0, Math.Max(0, height - ContextMenuHeight)), bounds.Width, ContextMenuHeight);
-        }, fontSize: 12);
+            int tab = i;
+            Button(c, new(bounds.X + i * (categoryWidth + 3), y, categoryWidth, 32),
+                FitTabName(c, L.Get(tabs[i]), Math.Max(1, categoryWidth - 16)),
+                () => { songTab = tab; songField = songError = ""; songDockScroll = 0; SongSetupInputSession++; }, active: songTab == tab, fontSize: 12);
+        }
         y += categoryHeight;
         if (songTab == 0)
             for (int i = 0; i < SongMetadata.Length; i++) SongTextField(c, SongMetadata[i], y + i * 72);
@@ -81,8 +79,6 @@ public sealed partial class EditorView
         }
         y += bodyHeight;
         c.Text(songError, bounds.X, y + 4, 12, Error, bounds.Width);
-        Button(c, new(bounds.X, y + 46, column, 32), L.Get("mac.cancel"), CloseSongSetup);
-        Button(c, new(bounds.X + column + 6, y + 46, column, 32), L.Get("library.apply"), ApplySongSetup, true);
         c.Unclip(); drawingSongDock = false;
         for (int i = hits.Count - 1; i >= firstHit; i--)
             if (hits[i].Bounds.Y < bounds.Y || hits[i].Bounds.Bottom > bounds.Bottom) hits.RemoveAt(i);

@@ -31,6 +31,7 @@ public sealed partial class EditorView
         ResetPatternDock(); menu = -1; contextItems.Clear();
         patternDockSnapshot = convertedSnapshot; patternDockTargets = ClipboardSelectedParentIds().ToArray();
         patternDockSliders = true; patternDockBananas = false; patternDockExisting = SelectedStreamsOnly; patternDockConvert = true;
+        InitializePatternDock(); livePatternConvert = !patternDockExisting;
     }
     internal static double? HorizontalSpeedRatio(MapDocument document, TimingMap.Lookup timing, double[] boundaries, ConvertedCatchObject from, ConvertedCatchObject to)
     {
@@ -78,8 +79,8 @@ public sealed partial class EditorView
         inspectorRows.Add(("inspector.selection", ids.Count.ToString()));
         inspectorRows.Add(("inspector.type", string.Join(" / ", tracks.Select(t => t.StreamSnapDivisor is null ? "FSlider" : t.Stack is null ? "Stream" : "Stack")
             .Concat(imported.Select(_ => "Legacy Slider")).Distinct())));
-        inspectorRows.Add(("inspector.start", Range(starts) + " ms"));
-        inspectorRows.Add(("inspector.end", Range(ends) + " ms"));
+        inspectorRows.Add(("inspector.start", TimeRange(starts)));
+        inspectorRows.Add(("inspector.end", TimeRange(ends)));
         inspectorRows.Add(("inspector.duration", Range(ends.Zip(starts, (end, start) => end - start)) + " ms"));
         inspectorRows.Add(("inspector.spans", Range(tracks.Select(t => (double)t.SpanCount).Concat(imported.Select(t => (double)t.SpanCount)))));
         inspectorRows.Add(("inspector.controls", Range(tracks.Select(t => (double)t.Nodes.Count).Concat(imported.Select(t => (double)t.ControlPoints.Count)))));
@@ -109,40 +110,65 @@ public sealed partial class EditorView
         inspectorRows.Add(("inspector.peak", InspectorPeakRatio is { } peak ? peak.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "×" : "—"));
         inspectorRows.Add(("inspector.base", $"{Document.DistancePerBeat / 100:0.##}× SV · {Document.DistancePerBeat:0.##} DPB"));
     }
+    private static string TimeRange(IEnumerable<double> values)
+    {
+        var data = values.ToArray();
+        return data.Length == 0 ? "—" : data.Min() == data.Max() ? Time(data[0]) : Time(data.Min()) + " – " + Time(data.Max());
+    }
     private void DrawSliderInspector(ICanvas c, Rect bounds)
     {
         if (!DockContentInputAvailable) return;
         inspectorBounds = bounds; RefreshSliderInspector();
         if (inspectorRows.Count == 0) { c.Text(L.Get("inspector.select"), bounds.X, bounds.Y + 12, 12, Muted, bounds.Width); return; }
-        inspectorContentHeight = inspectorRows.Count * 48 + 330;
-        inspectorScroll = Math.Clamp(inspectorScroll, 0, Math.Max(0, inspectorContentHeight - bounds.Height));
-        float y = bounds.Y - inspectorScroll;
-        int firstHit = hits.Count; c.Clip(bounds);
-        foreach (var row in inspectorRows)
-        { c.Text(L.Get(row.Key), bounds.X, y, 11, Muted, bounds.Width); c.Text(row.Value, bounds.X, y + 19, 13, Foreground, bounds.Width); y += 48; }
-        if (InspectorPeakRatio is not null)
-            Action(L.Get("inspector.locate", Time(inspectorPeakTime)), () => SeekTo(inspectorPeakTime));
+        var horizontal = PrepareDockHorizontal(DockPanel.SliderInspector, bounds, 440);
+        var viewport = horizontal.Viewport;
+        float x = bounds.X - horizontal.Offset, contentWidth = horizontal.ContentWidth, cell = (contentWidth - 16) / 2;
+        var actions = new List<(string Label, System.Action Action, bool Enabled, int Kind)>();
         bool enabled = ClipboardInteractionReady && !notesLocked;
+        if (InspectorPeakRatio is not null) actions.Add((L.Get("inspector.locate", Time(inspectorPeakTime)), () => SeekTo(inspectorPeakTime), true, 0));
         if (inspectorTargets.Length == 1 && Document.ImportedSliders.Any(s => s.Id == inspectorTargets[0]))
-        { LegacyConversionBounds = new(bounds.X, y, bounds.Width, 32); Action(L.Get("preview.convertSlider"), () => EditImportedSlider(inspectorTargets[0]), enabled); }
+            actions.Add((L.Get("preview.convertSlider"), () => EditImportedSlider(inspectorTargets[0]), enabled, 1));
         if (inspectorHasSliders)
         {
-        StreamConversionBounds = new(bounds.X, y, bounds.Width, 32);
-        Action(L.Get(SelectedStreamsOnly ? "conversion.editTitle" : "conversion.title"), ShowPatternDock, enabled && inspectorOnlySliders);
-        if (SelectedStreamsOnly)
-        { Action(L.Get("stream.breakFruits"), BreakSelectedStreams, enabled); Action(L.Get("stream.convertBack"), ConvertStreamsBack, enabled); }
-        Action(L.Get("slider.clearInternal"), ClearSelectedInternalAnchors, CanClearSliderNodes);
-        Action(L.Get("randomize.title"), ShowRandomDock, enabled && Document.Tracks.Any(t => inspectorTargets.Contains(t.Id) && t.StreamSnapDivisor is null));
+            actions.Add((L.Get(SelectedStreamsOnly ? "conversion.editTitle" : "conversion.title"), ShowPatternDock, enabled && inspectorOnlySliders, 2));
+            if (SelectedStreamsOnly)
+            {
+                actions.Add((L.Get("stream.breakFruits"), BreakSelectedStreams, enabled, 0));
+                actions.Add((L.Get("stream.convertBack"), ConvertStreamsBack, enabled, 0));
+            }
+            actions.Add((L.Get("slider.clearInternal"), ClearSelectedInternalAnchors, CanClearSliderNodes, 0));
+            actions.Add((L.Get("randomize.title"), ShowRandomDock, enabled && Document.Tracks.Any(t => inspectorTargets.Contains(t.Id) && t.StreamSnapDivisor is null), 0));
         }
-        Action(L.Get("merge.title"), OpenMergeDialog, enabled && inspectorMerge);
-        c.Unclip();
-        for (int i = hits.Count - 1; i >= firstHit; i--) if (hits[i].Bounds.Y < bounds.Y || hits[i].Bounds.Bottom > bounds.Bottom) hits.RemoveAt(i);
-        if (inspectorContentHeight > bounds.Height)
+        actions.Add((L.Get("merge.title"), OpenMergeDialog, enabled && inspectorMerge, 0));
+        float metricsHeight = (inspectorRows.Count + 1) / 2 * 44;
+        inspectorContentHeight = metricsHeight + 10 + actions.Count * 38;
+        inspectorScroll = Math.Clamp(inspectorScroll, 0, Math.Max(0, inspectorContentHeight - viewport.Height));
+        float y = bounds.Y - inspectorScroll;
+        int firstHit = hits.Count; c.Clip(viewport);
+        for (int i = 0; i < inspectorRows.Count; i++)
         {
-            float thumb = Math.Max(20, bounds.Height * bounds.Height / inspectorContentHeight);
-            c.Fill(new(bounds.Right + 5, bounds.Y + inspectorScroll / (inspectorContentHeight - bounds.Height) * (bounds.Height - thumb), 3, thumb), Muted, 1);
+            var row = inspectorRows[i]; float px = x + i % 2 * (cell + 16), py = y + i / 2 * 44;
+            c.Text(L.Get(row.Key), px, py, 11, Muted, cell);
+            c.Text(row.Value, px, py + 18, 13, Foreground, cell);
         }
-        void Action(string label, System.Action action, bool available = true)
-        { Button(c, new(bounds.X, y, bounds.Width, 32), label, action, enabled: available, fontSize: 12); y += 38; }
+        for (int i = 0; i < actions.Count; i++)
+        {
+            var action = actions[i]; var box = new Rect(x, y + metricsHeight + 10 + i * 38, contentWidth, 32);
+            if (action.Kind == 1) LegacyConversionBounds = box;
+            if (action.Kind == 2) StreamConversionBounds = box;
+            Button(c, box, action.Label, action.Action, enabled: action.Enabled, fontSize: 12);
+        }
+        c.Unclip();
+        for (int i = hits.Count - 1; i >= firstHit; i--)
+        {
+            var box = hits[i].Bounds;
+            if (box.Y < viewport.Y || box.Bottom > viewport.Bottom || box.Right <= viewport.X || box.X >= viewport.Right) hits.RemoveAt(i);
+        }
+        if (inspectorContentHeight > viewport.Height)
+        {
+            float thumb = Math.Max(20, viewport.Height * viewport.Height / inspectorContentHeight);
+            c.Fill(new(bounds.Right + 5, bounds.Y + inspectorScroll / (inspectorContentHeight - viewport.Height) * (viewport.Height - thumb), 3, thumb), Muted, 1);
+        }
+        DrawDockHorizontal(c, horizontal);
     }
 }

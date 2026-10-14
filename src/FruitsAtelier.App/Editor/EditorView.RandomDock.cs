@@ -17,18 +17,15 @@ public sealed partial class EditorView
     private Rect randomBounds, randomStrengthBounds;
     private float randomScroll;
     private bool randomDragging;
-    private RandomDraft? randomRequested, randomReady;
-    private Task<(OsuWriteResult? Output, string Error)>? randomJob;
-    private OsuWriteCache randomCache = new();
-    private IReadOnlyList<ConvertedCatchObject>? randomPreview;
+    private RandomDraft? randomBaseline;
     private string randomError = "";
-    private const float RandomContentHeight = 650;
+    private const float RandomContentHeight = 552;
     internal Rect RandomDockViewport => randomBounds;
     internal Rect RandomDockValueBounds(int field) => new(randomBounds.X, randomBounds.Y - randomScroll + 118 + field * 124, randomBounds.Width, 32);
     private bool RandomDockEditing => DockContentInputAvailable && PanelVisible(DockPanel.RandomizeDroplets)
         && ReferenceEquals(randomDockSnapshot, convertedSnapshot);
     private bool RandomDockFocused => RandomDockEditing && randomField >= 0;
-    internal bool RandomPreviewReady => RandomDockEditing && randomPreview is not null && randomReady == ReadRandomDraft();
+    internal bool RandomDockValid => RandomDockEditing && ReadRandomDraft() is not null;
 
     internal void ShowRandomDock()
     {
@@ -59,6 +56,7 @@ public sealed partial class EditorView
     private void PumpRandomDock()
     {
         if (!DockContentInputAvailable || !PanelVisible(DockPanel.RandomizeDroplets)) return;
+        AdoptLiveDock(ref randomDockSnapshot, ref liveRandomSnapshot);
         var selected = ClipboardSelectedParentIds();
         if (!ReferenceEquals(randomDockSnapshot, convertedSnapshot) || selected.Count != randomDockTargets.Length || randomDockTargets.Any(id => !selected.Contains(id)))
         {
@@ -66,34 +64,15 @@ public sealed partial class EditorView
             randomDerandomize = Document.DerandomizeFSliderDroplets; randomHardRock = Document.DerandomizeDropletsForHardRock;
             randomNumbers = [Document.RandomizeDropletStrength.ToString(CultureInfo.InvariantCulture), Document.RandomizeDropletSeed.ToString(CultureInfo.InvariantCulture)];
             randomAll = randomSelected = null; randomReset = false; randomField = -1; randomDragging = false; randomScroll = 0;
-            randomJob = null; randomReady = randomRequested = null; randomPreview = null; randomCache = new(); randomError = "";
+            randomBaseline = ReadRandomDraft(); randomError = "";
         }
-        var draft = ReadRandomDraft();
-        if (draft is null) { randomError = L.Get("randomize.invalid"); return; }
-        if (randomJob is { IsCompleted: false }) return;
-        if (randomJob is { } job)
-        {
-            var result = job.GetAwaiter().GetResult(); randomJob = null;
-            if (randomRequested == draft) { randomReady = draft; randomPreview = result.Output?.PlayableObjects; randomError = result.Error; }
-        }
-        if (randomReady == draft) { if (randomPreview is not null) randomError = ""; return; }
-        var candidate = Document.DeepClone(); SetRandomDraft(candidate, draft);
-        randomRequested = draft; randomError = "";
-        var cache = randomCache; bool compensate = compensateTinyDroplets;
-        randomJob = Task.Run(() =>
-        {
-            try
-            {
-                var output = OsuBeatmapWriter.Serialize(candidate, compensate, cache);
-                return output.ObjectSequenceMatches ? (output, "") : ((OsuWriteResult?)null, string.Join("\n", output.Diagnostics));
-            }
-            catch (Exception error) { return ((OsuWriteResult?)null, error.Message); }
-        });
+        randomError = ReadRandomDraft() is null ? L.Get("randomize.invalid") : "";
     }
-    private void ApplyRandomDock()
+    private void CommitRandomDock()
     {
-        if (!RandomPreviewReady || notesLocked || ReadRandomDraft() is not { } draft) return;
-        if (Edit(L.Get("randomize.title"), () => SetRandomDraft(Document, draft))) randomDockSnapshot = null;
+        if (!RandomDockEditing || notesLocked || ReadRandomDraft() is not { } draft || draft == randomBaseline) return;
+        if (Edit(L.Get("randomize.title"), () => SetRandomDraft(Document, draft)))
+        { randomBaseline = draft; liveRandomSnapshot = Document.DeepClone(); }
     }
     private void DrawRandomDock(ICanvas c, Rect bounds)
     {
@@ -125,9 +104,6 @@ public sealed partial class EditorView
         Button(c, new(bounds.X, y + 448, bounds.Width, 32), L.Get("randomize.enableAll"), () => randomAll = true, randomAll == true, fontSize: 12);
         Button(c, new(bounds.X, y + 486, bounds.Width, 32), L.Get("randomize.disableAll"), () => randomAll = false, randomAll == false, fontSize: 12);
         c.Text(randomError, bounds.X, y + 530, 12, Error, bounds.Width);
-        float half = (bounds.Width - 8) / 2;
-        Button(c, new(bounds.X, y + 604, half, 32), L.Get("mac.cancel"), () => randomDockSnapshot = null);
-        Button(c, new(bounds.X + half + 8, y + 604, half, 32), L.Get("library.apply"), ApplyRandomDock, true, RandomPreviewReady && !notesLocked);
         c.Unclip();
         for (int i = hits.Count - 1; i >= firstHit; i--) if (hits[i].Bounds.Y < bounds.Y || hits[i].Bounds.Bottom > bounds.Bottom) hits.RemoveAt(i);
         if (RandomContentHeight > bounds.Height)
