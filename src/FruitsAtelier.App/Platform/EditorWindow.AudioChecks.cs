@@ -8,7 +8,9 @@ internal sealed partial class EditorWindow
 {
     private void CheckDifficultyAudioReset()
     {
-        string path = Path.Combine(Artifacts, "audio-switch-check.wav");
+        string directory = Path.Combine(Artifacts, "tests", "audio-switch-native");
+        Directory.CreateDirectory(directory);
+        string path = Path.Combine(directory, "audio-switch-check.wav");
         using (var writer = new WaveFileWriter(path, new WaveFormat(44100, 16, 2)))
             writer.Write(new byte[44100 * 4 * 4], 0, 44100 * 4 * 4);
         var previousAudio = audio;
