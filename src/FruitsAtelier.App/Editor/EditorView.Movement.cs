@@ -96,6 +96,7 @@ public sealed partial class EditorView
     {
         if (!movementAnalysis) return;
         var objects = placementMovementObjects ?? playableObjects;
+        var movementBreaks = MovementBreakPeriods();
         EnsureMovementStates(objects, movementIncludeTinyDroplets);
         double endTime = PresentationViewStart + plot.Height / pixelsPerMs;
         for (int i = FirstVisibleMovement(objects); i < movementIndices.Length; i++)
@@ -106,7 +107,7 @@ public sealed partial class EditorView
             if (from.TimeMs > endTime) break;
             if (movementStates[departure].Movement is not { } movement) continue;
             if (Document.BananaShowers.Any(shower => shower.TimeMs <= to.TimeMs && shower.EndTimeMs >= from.TimeMs)
-                || breakPeriods.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
+                || movementBreaks.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
             // Clip in map time so long connections keep their slope without oversized screen coordinates.
             double start = Math.Max(PresentationViewStart, from.TimeMs), end = Math.Min(endTime, to.TimeMs);
             if (end <= start) continue;

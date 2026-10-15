@@ -267,14 +267,18 @@ public sealed partial class EditorView
     private double distanceLayoutScale, distanceLayoutWidth, distanceLayoutDpb;
     private string distanceLayoutLanguage = "";
     private bool distanceLayoutIncludeTiny, distanceLayoutLazer;
+    private IReadOnlyList<BreakPeriod>? distanceLayoutBreaks;
 
     private void EnsureDistanceLabelLayout(ICanvas c, IReadOnlyList<ConvertedCatchObject> objects)
     {
+        var movementBreaks = MovementBreakPeriods();
         if (ReferenceEquals(distanceLayoutSource, objects) && ReferenceEquals(distanceLayoutAuthoredSource, conversion!.Objects)
             && ReferenceEquals(distanceLayoutTiming, renderedTiming)
             && distanceLayoutScale == pixelsPerMs && distanceLayoutWidth == Playfield.Width
             && distanceLayoutDpb == Document.DistancePerBeat && distanceLayoutLanguage == L.Language
-            && distanceLayoutIncludeTiny == movementIncludeTinyDroplets && distanceLayoutLazer == IsLazerEditing) return;
+            && distanceLayoutIncludeTiny == movementIncludeTinyDroplets && distanceLayoutLazer == IsLazerEditing
+            && ReferenceEquals(distanceLayoutBreaks, movementBreaks)) return;
+        distanceLayoutBreaks = movementBreaks;
         distanceLayoutSource = objects; distanceLayoutTiming = renderedTiming;
         distanceLayoutAuthoredSource = conversion!.Objects;
         distanceLayoutScale = pixelsPerMs; distanceLayoutWidth = Playfield.Width;
@@ -291,7 +295,7 @@ public sealed partial class EditorView
             var to = objects[movementIndices[i]];
             if (to.TimeMs - from.TimeMs <= 37.5
                 || Document.BananaShowers.Any(s => s.TimeMs <= to.TimeMs && s.EndTimeMs >= from.TimeMs)
-                || breakPeriods.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
+                || movementBreaks.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
             // Keep labels aligned with playable connections while measuring authored spacing, like the inspector.
             var authoredFrom = authored.GetValueOrDefault((from.SourceId, from.EventIndex), from);
             var authoredTo = authored.GetValueOrDefault((to.SourceId, to.EventIndex), to);
@@ -339,7 +343,6 @@ public sealed partial class EditorView
         {
             var label = distanceLayout[i];
             if (label.Time > endTime) break;
-            if (breakPeriods.Any(period => label.Time >= period.StartMs && label.Time <= period.EndMs)) continue;
             var bounds = new Rect(Playfield.X + label.X,
                 Screen(new(label.Time, 0)).Y - 9, label.Width, 18);
             if (bounds.X < plot.X || bounds.Right > plot.Right || bounds.Y < plot.Y || bounds.Bottom > plot.Bottom

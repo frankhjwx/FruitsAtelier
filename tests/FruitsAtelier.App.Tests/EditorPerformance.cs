@@ -59,11 +59,12 @@ internal static class EditorPerformance
         public void Advance(double value) => milliseconds += value;
     }
 
-    public static int RunFruitPlacement(string path)
+    public static int RunFruitPlacement(string path, bool movement = false)
     {
         var document = Path.GetExtension(path).Equals(".osu", StringComparison.OrdinalIgnoreCase)
             ? OsuBeatmapReader.ReadFile(path) : ProjectSerializer.ReadFile(path);
         var ui = new Ui(); ui.LoadDocument(document); ui.Key('F');
+        if (movement) ui.ClickText(FruitsAtelier.Localization.Strings.Get("movement.analysis"));
         Console.WriteLine($"Fruit placement: fruits={document.Fruits.Count}, sliders={document.ImportedSliders.Count}, bananas={document.BananaShowers.Count}");
         var conversionCache = new CatchConversionCache();
         var writeCache = new OsuWriteCache();
@@ -111,6 +112,7 @@ internal static class EditorPerformance
         foreach (bool grid in new[] { false, true })
         {
             var playback = new Ui(); playback.LoadDocument(document); playback.Key(key);
+            if (movement) playback.ClickText(FruitsAtelier.Localization.Strings.Get("movement.analysis"));
             playback.View.UpdateTransport(30000, document.DurationMs, true, true, false, null, document.AudioPath);
             playback.Paint();
             var plot = playback.View.CanvasPlotBounds;

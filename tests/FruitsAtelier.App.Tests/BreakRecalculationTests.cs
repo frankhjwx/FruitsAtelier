@@ -2,6 +2,38 @@ using FruitsAtelier.Core;
 
 internal static class BreakRecalculationTests
 {
+    public static void MovementPreview()
+    {
+        foreach (bool lazer in new[] { false, true })
+        {
+            var map = new MapDocument { DurationMs = 8000, IsDemo = false, ApproachRate = 5, BeatLengthMs = 500 };
+            map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 100 }, new Fruit { TimeMs = 7000, X = 300 }]);
+            OsuTimeline.AddBreak(map, 1200, 5800);
+            var ui = new Ui(false);
+            ui.View.LibrarySettings.LazerEditing = lazer;
+            ui.LoadDocument(map);
+            ui.View.UpdateTransport(1000, 8000, true, false, false, null, null);
+            ui.ClickText(FruitsAtelier.Localization.Strings.Get("movement.analysis"));
+            ui.Key('2'); ui.MoveMap(2000, 250);
+            const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var method = typeof(FruitsAtelier.App.Editor.EditorView).GetMethod("MovementBreakPeriods", flags)!;
+            var projected = (IReadOnlyList<BreakPeriod>)method.Invoke(ui.View, null)!;
+            Check(projected.SequenceEqual([new BreakPeriod(2200, 5800)]), "Placement preview must shrink the break before drawing movement.");
+            Check(ReferenceEquals(projected, method.Invoke(ui.View, null)), "Unchanged preview must reuse projected breaks.");
+            Check(map.ContentEquals(ui.View.Document), "Hover must not mutate notes or breaks.");
+            Check(ui.View.DistanceLabelBounds.Count > 0, "Old break must not suppress the candidate's incoming speed label.");
+            Check(ui.Canvas.Lines.Any(line => line.Width == 4 && Math.Abs(line.Opacity - .65f) < .001),
+                "Old break must not suppress the candidate's incoming movement connection.");
+            ui.ClickMap(2000, 250);
+            Check(OsuTimeline.Breaks(ui.View.Document).SequenceEqual(projected), "Committed placement must match projected breaks.");
+            ui.Key('Z', ctrl: true);
+            Check(map.ContentEquals(ui.View.Document), "Undo restores both the note and the original break.");
+            ui.Key('1'); ui.Paint();
+            Check(((IReadOnlyList<BreakPeriod>)method.Invoke(ui.View, null)!).SequenceEqual(OsuTimeline.Breaks(map)),
+                "Ending placement must restore committed break filtering.");
+        }
+    }
+
     public static void Placement()
     {
         var map = Map();

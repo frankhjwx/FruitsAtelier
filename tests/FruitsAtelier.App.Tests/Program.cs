@@ -2,6 +2,15 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Length == 2 && args[0] == "--movement-placement-performance") return EditorPerformance.RunFruitPlacement(args[1], movement: true);
+
+if (args.Contains("--break-preview-check"))
+{
+    BreakRecalculationTests.MovementPreview(); BreakRecalculationTests.Placement();
+    BreakRecalculationTests.DurationAndCancellation(); BreakRecalculationTests.RemovalAndNearbyPlacement();
+    Console.WriteLine("PASS Break projection, movement preview, placement and undo"); return 0;
+}
+
 if (args.Contains("--timeline-layout-check"))
 {
     TimelineLayoutTests.Run(); TimelineOverviewTests.TransportControls(); TimelineOverviewTests.Run(); TimelineOverviewTests.DetailMarkers();
@@ -424,6 +433,7 @@ var tests = new (string Name, Action Run)[]
     ("Slider DS allows a first draft handle before events exist", SliderDistanceDragTests.FirstDraftHandle),
     ("Fractional folded slider tails edit their source event", SliderDistanceDragTests.FractionalFoldedTail),
     ("Note placement recalculates breaks and exports with one undo", BreakRecalculationTests.Placement),
+    ("Placement movement previews use reconciled breaks without editing content", BreakRecalculationTests.MovementPreview),
     ("Break recalculation respects slider duration and cancellation", BreakRecalculationTests.DurationAndCancellation),
     ("Removing break notes merges intervals and nearby notes shorten them", BreakRecalculationTests.RemovalAndNearbyPlacement),
     ("Distance per beat uses grid drag, numeric entry, export and undo", DistanceSnapPresetTests.BaseDistance),

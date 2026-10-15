@@ -633,6 +633,11 @@ version-history work remains outside the pointer and paint paths.
 
 ## Experimental lazer editing
 
+`App.Tests --break-preview-check` compares placement movement overlays with
+committed Break reconciliation and checks cancellation and undo in both modes.
+`App.Tests --movement-placement-performance <path.osu>` runs the placement
+benchmark with Movement Analysis enabled, including projected Break filtering.
+
 `App.Tests --distance-snap-check` exercises the shared Mapping/lazer configuration
 layout, base velocity edits and undo, preset persistence, and interactive preview.
 

@@ -54,6 +54,9 @@ colours follow the current map's Stand/Walk/Dash/HDash analysis and configured
 movement colours, with short gradients at category transitions.
 Movement Analysis connection labels show logical pixels per millisecond in lazer mode;
 Mapping retains DS ratios. These speed labels are independent of base SV.
+Placement connections and labels use the Break ranges that would result from
+placing the candidate note, including shrinking, splitting or removing a Break.
+Hovering does not change the map; cancellation restores the committed ranges.
 The lazer configuration opens with a 1/4 preview subdivision at the current BPM.
 **Show DS guides** defaults to on and is saved globally; turning it off hides
 canvas guide lines while retaining distance snapping.

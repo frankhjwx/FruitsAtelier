@@ -9,6 +9,7 @@ internal static class TimelineMetadataTests
         FractionalBreakBoundary();
         UnboundedBreaks();
         ApproachAndOverlappingDurations();
+        ProjectedBreaks();
         const string source = "osu file format v14\n[General]\nMode:2\nPreviewTime:1500\n[Editor]\nBookmarks: 100, 300\n[Events]\n//Break Periods\n2,1000,2000\n0,0,background.jpg\n[TimingPoints]\n0,500,4,1,0,100,1,1\n[HitObjects]\n256,192,100,1,0,0:0:0:0:\n";
         var document = OsuBeatmapReader.Read(source);
         Check(OsuTimeline.PreviewTime(document) == 1500, "Preview point was not read");
@@ -43,6 +44,61 @@ internal static class TimelineMetadataTests
             && OsuTimeline.Breaks(exported).SequenceEqual([new BreakPeriod(3200, 3800)])
             && events.Lines[breakLine].EndsWith("// keep this comment", StringComparison.Ordinal),
             "Resizing a break must preserve its Events line and comment");
+    }
+
+    private static void ProjectedBreaks()
+    {
+        foreach (int scenario in Enumerable.Range(0, 8))
+        {
+            var map = new MapDocument { DurationMs = 15000, ApproachRate = 5 };
+            map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 10000, X = 200 }]);
+            if (scenario == 3) map.Fruits.Add(new() { TimeMs = 5000, X = 300 });
+            if (scenario == 3)
+            {
+                OsuTimeline.AddBreak(map, 1200, 3800);
+                OsuTimeline.AddBreak(map, 5200, 8800);
+            }
+            else if (scenario != 7) OsuTimeline.AddBreak(map, 1200, 8800);
+            if (scenario == 7) map.Fruits.Add(new() { TimeMs = 5000, X = 300 });
+            var markerSection = new OsuSection { Name = "Events" };
+            markerSection.Lines.Add("// retained projection marker");
+            map.OriginalSections.Add(markerSection);
+            var source = map.DeepClone();
+            var history = new EditorHistory(map);
+            history.Begin("Edit occupied interval");
+            switch (scenario)
+            {
+                case 0: history.Document.Fruits.Add(new() { TimeMs = 5000, X = 250 }); break;
+                case 1: history.Document.Fruits.Add(new() { TimeMs = 2000, X = 250 }); break;
+                case 2: history.Document.BananaShowers.Add(new() { TimeMs = 1500.75, EndTimeMs = 8500.75 }); break;
+                case 3: history.Document.Fruits.RemoveAt(2); break;
+                case 4: history.Document.Fruits[1].TimeMs = 4000; break;
+                case 5: history.Document.Fruits.Clear(); break;
+                case 6: history.Document.ApproachRate = 0; break;
+                case 7: history.Document.Fruits.RemoveAt(2); break;
+            }
+            var periods = OsuTimeline.Breaks(source);
+            var unchanged = periods.ToArray();
+            var previous = Intervals(source);
+            var current = Intervals(history.Document);
+            bool removedParents = history.Document.Fruits.Count < source.Fruits.Count
+                || history.Document.BananaShowers.Count < source.BananaShowers.Count;
+            var projected = OsuTimeline.ReconcileBreaks(periods, previous, current,
+                CatchScrollTiming.PreemptMs(history.Document.ApproachRate), source.ApproachRate != history.Document.ApproachRate, removedParents);
+            Check(periods.SequenceEqual(unchanged) && source.ContentEquals(map), "Break projection mutated its source");
+            history.Commit();
+            Check(projected.SequenceEqual(OsuTimeline.Breaks(history.Document)), "Projected breaks differ from the editing transaction");
+            Check(history.Document.OriginalSections.SelectMany(section => section.Lines).Contains("// retained projection marker"),
+                "Break reconciliation changed unrelated Events lines");
+            if (scenario == 0) Check(projected.Count == 2, "Placing in a break should split it");
+            if (scenario == 2) Check(projected.Count == 0, "An occupied break should be removed");
+            if (scenario is 3 or 7) Check(projected.SequenceEqual([new BreakPeriod(1200, 8800)]), "Removing a middle object should join the vacant gap");
+        }
+
+        static Dictionary<Guid, (double Start, double End)> Intervals(MapDocument document)
+            => document.Fruits.Select(item => (item.Id, Start: item.TimeMs, End: item.TimeMs))
+                .Concat(document.BananaShowers.Select(item => (item.Id, Start: item.TimeMs, End: item.EndTimeMs)))
+                .ToDictionary(item => item.Id, item => (item.Start, item.End));
     }
 
     private static void FractionalBreakBoundary()

@@ -49,6 +49,12 @@ the winning offset; pointer updates do not rebuild DS references from moved cont
 
 ## Full-map work and cache ownership
 
+Placement movement overlays project break reconciliation from cached parent
+intervals and the candidate interval. They share the transaction's break algorithm
+without cloning a document or exporting the map. The interval cache follows the
+conversion snapshot; projected breaks follow the placement snapshot, committed
+break array and AR. Leaving placement restores committed break filtering.
+
 Lazer distance guide colours retain a sorted playable fruit/droplet array and
 movement prefix contexts, keyed by playable snapshot identity, CS and excluded
 selected parents. Guide sampling binary-searches the preceding event and evaluates
