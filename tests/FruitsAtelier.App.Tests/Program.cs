@@ -2,6 +2,26 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Length == 2 && args[0] == "--movement-placement-performance") return EditorPerformance.RunFruitPlacement(args[1], movement: true);
+
+if (args.Contains("--break-preview-check"))
+{
+    BreakRecalculationTests.MovementPreview(); BreakRecalculationTests.Placement();
+    BreakRecalculationTests.DurationAndCancellation(); BreakRecalculationTests.RemovalAndNearbyPlacement();
+    Console.WriteLine("PASS Break projection, movement preview, placement and undo"); return 0;
+}
+
+if (args.Contains("--timeline-layout-check"))
+{
+    TimelineLayoutTests.Run(); TimelineOverviewTests.TransportControls(); TimelineOverviewTests.Run(); TimelineOverviewTests.DetailMarkers();
+    ObjectTimelineTests.SpeedControls(); ObjectTimelineTests.SimultaneousStacks(); ObjectTimelineTests.NavigationAndSelection(); TimeJumpTests.Run();
+    MappingSessionTests.SnapAndVolume(); WheelGestureTests.Run();
+    TimelineDragTests.ReturnToStart(); TimelineDragTests.ClickAndLimits();
+    Console.WriteLine("PASS Resizable timelines, compact transport, speed selector and input"); return 0;
+}
+
+if (args.Contains("--ui-scale-check")) { UiScaleTests.Run(); SettingsTests.Layout(); DisplaySettingsTests.Run(); Console.WriteLine("PASS UI scale preferences, layout and input"); return 0; }
+
 if (args.Contains("--conversion-docks-check")) { ConversionDockShortcutTests.Run(); PatternNotesTests.Run(); Console.WriteLine("PASS Conversion dock shortcuts, action menus and live editing"); return 0; }
 
 if (args.Contains("--aimod-check")) { AimodTests.Run(); AimodTests.TableAndDock(); ObjectStructureTests.StreamsAndAnchors(); Console.WriteLine("PASS AiMod UI, table, docking and shortcut"); return 0; }
@@ -22,6 +42,15 @@ if (args.Contains("--docking-check"))
     Console.WriteLine("PASS Docking, workspace toolbar, isolation and sidebars"); return 0;
 }
 
+if (args.Contains("--distance-snap-check"))
+{
+    DistanceSnapPresetTests.DeletePresetBadge(); DistanceSnapPresetTests.Collinear();
+    DistanceSnapPresetTests.Snapping(); DistanceSnapPresetTests.BaseDistance();
+    DistanceSnapPresetTests.ExistingSliderPreservation(); DistanceSnapPresetTests.DynamicBaseRange();
+    DistanceSnapPresetTests.PresetDistancePreservation(); DistanceSnapPresetTests.Dialog();
+    LazerDistanceSettingsTests.Run();
+    Console.WriteLine("PASS Mapping and lazer distance snap configuration, persistence and preview"); return 0;
+}
 if (args.Contains("--object-snap-check")) { ObjectSnapTests.Run(); Console.WriteLine("PASS Object snap ranges, placement and preferences"); return 0; }
 
 
@@ -130,6 +159,7 @@ if (args.Length == 2 && args[0] == "--fruit-placement-performance") return Edito
 if (args.Length == 2 && args[0] == "--testplay-edit-performance") return EditorPerformance.RunTestplayEditing(args[1]);
 if (args.Length > 0 && args[0] == "--benchmark-library") return LibraryScaleTests.Benchmark(args.Length > 1 ? args[1] : null);
 if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
+if (args.Length == 2 && args[0] == "--lazer-map-performance") return EditorPerformance.RunMap(args[1], lazer: true);
 if (args.Length == 2 && args[0] == "--slider-drag-performance") return EditorPerformance.RunSliderDrag(args[1]);
 if (args.Length == 2 && args[0] == "--slider-draft-performance")
 {
@@ -144,8 +174,30 @@ if (args.Length == 2 && args[0] == "--anchor-drag-performance")
 
 if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.InspectMap(args[1]);
 
+if (args.Contains("--lazer-editing-check"))
+{
+    LazerSettingsTests.Run();
+    LazerDistanceSettingsTests.Run();
+    LazerInputTests.NavigationAndBindings();
+    LazerInputTests.SeekAndDivisorFamilies();
+    LazerInputTests.MouseDeletionAndContext();
+    LazerInputTests.DragSnappingAndHiddenHits();
+    LazerPresentationTests.Run();
+    LazerCanvasTests.Run();
+    Console.WriteLine("PASS Lazer editing settings, input, presentation, catcher and guides");
+    return 0;
+}
+
 var tests = new (string Name, Action Run)[]
 {
+    ("Lazer editing mode preserves settings and explicit lighting policy", LazerSettingsTests.Run),
+    ("Lazer shortcuts retain independent mapping behavior", LazerInputTests.NavigationAndBindings),
+    ("Lazer seeks and divisor families follow the editor clock", LazerInputTests.SeekAndDivisorFamilies),
+    ("Lazer pointer actions support context menus and undoable quick deletion", LazerInputTests.MouseDeletionAndContext),
+    ("Lazer placement and dragging use fixed-speed guides and visible hits", LazerInputTests.DragSnappingAndHiddenHits),
+    ("Lazer presentation interpolates without extra audio seeks or content changes", LazerPresentationTests.Run),
+    ("Lazer canvas draws catcher, lighting and distance guides", LazerCanvasTests.Run),
+    ("Lazer DS speed preferences are global and preserve fixed guides", LazerDistanceSettingsTests.Run),
     ("Banana shower dialog previews exported RNG and edits grouped ranges", BananaEditTests.Run),
     ("F12 screenshots repeat once and preserve dialogs, playback and content", ScreenshotTests.Shortcut),
     ("Hitsound Copier modes, new Diff and undo", HitsoundCopierUiTests.Run),
@@ -161,7 +213,7 @@ var tests = new (string Name, Action Run)[]
     ("Selection boxes scale and move consecutive parents with anchor priority and atomic undo", SelectionTransformTests.Run),
     ("Selection drag bounds follow generated fruits and droplets while handles stay free", SelectionTransformTests.DragBoundsFollowPlayableObjects),
     ("Fractional group drag boundaries preserve fruits, export and undo", GroupDragBoundaryTests.Run),
-    ("Droplet randomization switches, setup drafts and Edit actions stay within one diff", DropletRandomizationTests.Run),
+    ("Droplet mode actions, setup drafts and manual corrections stay within one diff", DropletRandomizationTests.Run),
     ("Audio projects require metadata, copy audio and optionally link one Songs difficulty", AudioProjectTests.Run),
     ("Timing red insertion and deletion retain saving and slider export", TimingSaveFeedbackTests.Run),
     ("Slider drafts defer full-map conversion and publish only matching validated snapshots", DraftConversionTests.Run),
@@ -194,6 +246,7 @@ var tests = new (string Name, Action Run)[]
     ("Mapping Combo visibility and configured dash brightness", MappingSessionTests.TestplayDisplay),
     ("Clearing internal slider nodes preserves endpoints and batch undo", ClearSliderNodesTests.Run),
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
+    ("UI scale defaults, steps, draft cancellation and persistence preserve content", UiScaleTests.Run),
     ("Fullscreen settings and Alt Enter preserve drafts, content and testplay", FullscreenSettingsTests.Run),
     ("Legacy slider editing converts silently with atomic drag, insertion and cancellation", ImplicitSliderEditingTests.Run),
     ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),
@@ -247,7 +300,7 @@ var tests = new (string Name, Action Run)[]
     ("Deleted copied difficulties remain missing without prompting duplicate cleanup", SynchronizationUiTests.DeletedCopiesRemainMissing),
     ("Library archive drops preserve Songs and report source/export presence", LibraryImportTests.Run),
     ("Romanised metadata defaults, display, fallback and persistence", LibraryImportTests.Metadata),
-    ("Map and HR derandomization drafts disable FX controls and support history", DropletDerandomizationTests.Run),
+    ("Map droplet defaults and compensation target preserve drafts and support history", DropletDerandomizationTests.Run),
     ("Settings categories preserve drafts and return to their originating screen", SettingsTests.Navigation),
     ("Settings Apply stays in category and tracks unapplied changes", SettingsTests.ApplyState),
     ("Experimental snap settings, wheel and Stream/Stack", ExperimentalSnapTests.Run),
@@ -380,6 +433,7 @@ var tests = new (string Name, Action Run)[]
     ("Slider DS allows a first draft handle before events exist", SliderDistanceDragTests.FirstDraftHandle),
     ("Fractional folded slider tails edit their source event", SliderDistanceDragTests.FractionalFoldedTail),
     ("Note placement recalculates breaks and exports with one undo", BreakRecalculationTests.Placement),
+    ("Placement movement previews use reconciled breaks without editing content", BreakRecalculationTests.MovementPreview),
     ("Break recalculation respects slider duration and cancellation", BreakRecalculationTests.DurationAndCancellation),
     ("Removing break notes merges intervals and nearby notes shorten them", BreakRecalculationTests.RemovalAndNearbyPlacement),
     ("Distance per beat uses grid drag, numeric entry, export and undo", DistanceSnapPresetTests.BaseDistance),
@@ -464,7 +518,8 @@ var tests = new (string Name, Action Run)[]
     ("Object timeline selects without seeking and scales independently", ObjectTimelineTests.NavigationAndSelection),
     ("Playing timeline marquee anchors time and retains offscreen selection", ObjectTimelineTests.PlaybackMarquee),
     ("Beat colors and widths agree on canvas and timeline across divisors", ObjectTimelineTests.GridColors),
-    ("Playback speed buttons work in both languages without editing content", ObjectTimelineTests.SpeedControls),
+    ("Playback speed selector works in both languages without editing content", ObjectTimelineTests.SpeedControls),
+    ("Timeline resizing preserves layout, preferences, cancellation and content", TimelineLayoutTests.Run),
     ("Independent canvas scales, pan, persistence and timeline limits", IndependentCanvasScaleTests.Run),
     ("Canvas starts at 60% and retains remembered zoom while enforcing minimum width", CanvasZoomTests.DefaultsAndReset),
     ("Zoom slider and wheel share scale, bounds and content isolation", CanvasZoomTests.SliderAndWheel),

@@ -43,6 +43,7 @@ public sealed class Anchor
 }
 
 public enum CurveKind { Linear, Bezier }
+public enum SliderDropletMode { FollowMap, Derandomize, Randomize }
 
 public sealed class CurveTrack
 {
@@ -50,7 +51,7 @@ public sealed class CurveTrack
     {
         var a = this; var b = other;
         if (a.Id != b.Id || a.Name != b.Name || a.Kind != b.Kind || a.SourceOrder != b.SourceOrder || a.Nodes.Count != b.Nodes.Count
-            || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets
+            || a.DropletMode != b.DropletMode || a.SpanCount != b.SpanCount || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets
             || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
             || a.StreamNewComboOffsets.Count != b.StreamNewComboOffsets.Count
             || !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization)) return false;
@@ -89,6 +90,17 @@ public sealed class CurveTrack
     public StackEnvelope? Stack { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public DropletRandomization? DropletRandomization { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SliderDropletMode? DropletMode { get; set; }
+
+    public bool RandomizesDroplets(MapDocument document) => DropletMode switch
+    {
+        SliderDropletMode.FollowMap => !document.DerandomizeFSliderDroplets,
+        SliderDropletMode.Randomize => true,
+        SliderDropletMode.Derandomize => false,
+        // Missing modes retain the global override used by older project files.
+        _ => !document.DerandomizeFSliderDroplets && DropletRandomization is { Enabled: true }
+    };
 }
 
 public sealed class TimingPoint

@@ -104,7 +104,7 @@ Beat Snap offers 1/1 through 1/9, plus 1/12 and 1/16. [Settings → Experimental
 
 ### Listen and preview
 
-Press **Space** to play or pause. Playback speeds are 10%, 25%, 50%, 75%, 100% and 150%, with music pitch preserved. Hitsounds include beatmap samples and slider ticks. Editing and navigation remain available without playable audio.
+Press **Space** to play or pause. Select the percentage beside **Playback speed**, immediately left of **Volume** at the bottom, to choose 10%, 25%, 50%, 75%, 100% or 150%, with music pitch preserved. Hitsounds include beatmap samples and slider ticks. Editing and navigation remain available without playable audio.
 
 Open **Catch Preview** using the button on the right edge of the canvas. Drag the divider to resize it. Choose 4:3, 16:9 or Fit, and NM, Easy or Hard Rock. These preview settings do not change the saved beatmap. Choose an osu!stable skin or import an `.osk`; missing images fall back to the default appearance.
 

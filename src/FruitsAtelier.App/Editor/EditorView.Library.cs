@@ -186,17 +186,18 @@ public sealed partial class EditorView
     private Action<bool>? workspaceSaveCompleted;
     private bool workspaceSaveBlocksInput;
 
-    public bool BeginWorkspaceSave(Action<bool>? completed = null)
+    public bool BeginWorkspaceSave(Action<bool>? completed = null, bool songsExportOfferShown = false)
     {
         if (!PrepareFileOperation()) return false;
         var project = CaptureProject();
         var session = WorkspaceSession is { } current ? DetachedSession(current, project) : null;
+        if (session is not null && songsExportOfferShown) session.Manifest.SongsExportOfferShown = true;
         string workspace = LibrarySettings.Workspace, songs = LibrarySettings.Songs;
         workspaceSaveCompleted = completed;
         workspaceSaveBlocksInput = completed is not null;
         workspaceSaveTask = Task.Run(() =>
         {
-            if (session is null) return WorkspaceProject.Create(workspace, project, songs);
+            if (session is null) return WorkspaceProject.Create(workspace, project, songs, songsExportOfferShown);
             WorkspaceProject.Save(session, project);
             return session;
         });
@@ -249,12 +250,13 @@ public sealed partial class EditorView
         if (string.IsNullOrWhiteSpace(LibrarySettings.Songs)) { BeginWorkspaceSave(); return; }
         if (!ProjectInSongs)
         {
+            if (WorkspaceSession?.Manifest.SongsExportOfferShown == true) { BeginWorkspaceSave(); return; }
             BeginWorkspaceSave(saved =>
             {
                 if (!saved) return;
                 ShowDiscardConfirmation(answer => { if (answer == 6) ShowWorkspaceExport(); });
                 offerSongsExport = true;
-            });
+            }, songsExportOfferShown: true);
             return;
         }
         if (CurrentDifficultyHasExport)

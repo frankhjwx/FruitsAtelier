@@ -2,6 +2,12 @@
 
 ## Interface size
 
+**Settings → Appearance → UI scale** adjusts the whole interface from 50% to
+200% in 25% steps. The default 150% retains the reference size described below.
+Apply activates and saves the choice without restarting; closing Settings discards
+unapplied changes. Drawing and pointer coordinates use the same scale on both
+platforms. Compact startup dialogs retain their fitted layout size.
+
 On Windows, the editor scales uniformly with its client pixel dimensions, using
 2520 × 1575 at 175% as the reference: the original 1440 × 900 logical startup
 window. This preserves its text, buttons and layout proportions. Equal client dimensions give
@@ -10,6 +16,70 @@ Different aspect ratios fit the reference into the available width and height;
 the remaining space extends the editing area. Compact startup dialogs fit their
 own layout dimensions. Native title bars and file dialogs follow Windows display
 settings; macOS uses its native display scaling.
+
+## Experimental lazer editing
+
+**Settings → Experimental → lazer editing** enables the alternative Compose
+interaction mode after Apply. Closing Settings discards an unapplied mode change.
+The mode is a global editor preference; switching it preserves beatmap content,
+undo history, testplay key assignments, canvas scaling, scroll preferences and the
+saved Mapping playback-line height.
+
+The lazer canvas shows an automatic catcher at a fixed judgement line. The line
+stays 10% above the bottom of the plot; catcher artwork below the canvas is clipped.
+White corner brackets mark the normal gameplay visibility range above the catcher:
+their bottom follows the catch line, and their top projects the visible time from
+Catch Preview's 4:3 Fit reference into the canvas time scale. The Zoom slider and Alt+wheel over the canvas
+scale both axes together with easing, keeping the catch line fixed. The lock defaults
+to linked axes capped at 100%. Unlocking shows independent X/Y sliders up to 200%;
+locking again aligns Y to X and caps both at 100%. These lazer zoom settings are
+session-only and separate from saved Mapping preferences. Middle-button
+dragging pans horizontally to inspect the enlarged screen without seeking. Caught objects
+disappear from the canvas when their timestamp is reached; they do not
+accumulate on this canvas. Catch Preview and testplay retain their plate stacks.
+Missed overlap objects continue below the line while fading over 250 ms.
+Speed presets display perfect-walk and perfect-dash guides from the last prior
+eligible object at 0.5 and 1 playfield units per millisecond, together with a
+vertical stand guide. Placement and selection show these guides while Distance
+Snap is enabled.
+
+Distance Snap → Configure offers **Distance Snap presets** and **Global speed presets**
+buttons on the same row, sized to their full labels. Hovering either button shows
+its units and storage scope above it. Mapping defaults to DS and lazer defaults to Speed;
+each editing mode remembers its choice across maps and restarts. DS presets stay
+with the map, while Speed presets are global. Apply saves the choice and edited
+presets; Cancel discards pending changes in both tabs. The fixed 0.5 and 1.0
+speed entries use bold text and cannot be moved or deleted. Speed mode lets
+you add up to eight custom speeds above zero through 3.0. Values are logical
+playfield pixels per millisecond (0.5 = 500 pixels/second), independent of SV.
+The existing preset arrows and Add control edit these speeds; right-click a
+custom marker to remove it. Apply saves these presets globally across maps and
+restarts. The upper SV/DPB controls still edit the current map's base velocity.
+Guide colours follow the current map's Stand/Walk/Dash/HDash analysis and configured
+movement colours, with short gradients at category transitions.
+Movement Analysis connection labels follow the selected preset system: logical
+pixels per millisecond for Speed and DS ratios for DS. Speed is independent of base SV.
+Slider Inspector shows one metric for this choice: Peak horizontal speed in px/ms
+for Speed mode, or Max DS as a ratio for DS mode.
+Placement connections and labels use the Break ranges that would result from
+placing the candidate note, including shrinking, splitting or removing a Break.
+Hovering does not change the map; cancellation restores the committed ranges.
+Speed configuration opens with a 1/4 preview subdivision at the current BPM.
+**Show DS guides** appears only for Global speed presets, defaults to on and is saved
+globally; turning it off hides canvas guide lines while retaining distance snapping.
+**Collinear snap** is available in both preset systems and adds alignment between
+the preceding and following objects to the placement and dragging candidates.
+
+The upper object timeline has a separate lazer zoom: Alt+wheel animates its
+visible time range over 200 ms. It starts at 6000 ms and ranges from 500 to
+10000 ms, bounded by song length. Mapping's saved timeline scale is preserved.
+
+The skin selector's **Hit lighting** choice applies to the canvas, Catch Preview
+and testplay. **Follow mode** enables it in lazer editing and disables it in
+Mapping; **On** and **Off** override that choice. Selecting an option saves it
+immediately. Applying other Settings preserves the current lighting choice.
+Keyboard and mouse differences are listed in the
+[shortcut manual](KEY_BINDINGS.md#experimental-lazer-editing).
 
 ## Acknowledgements
 
@@ -126,25 +196,27 @@ preferences start with all three switches off and Grid Level Tiny (4 px).
 
 ## Droplet randomization
 
-**Randomize droplets** is an independent dock tab, opened from Layout,
-Edit → Randomize droplets, or Slider Inspector. Strength (0–100 playfield pixels),
-a signed 32-bit Seed, derandomization and HR compensation update the current map
-as soon as valid values are entered. Changes mark the project dirty, update the
-canvas and support undo. Save the project normally; the panel has no Apply or
-Cancel controls. Invalid numeric input leaves the last valid map value intact.
+**Droplet Settings** is an independent dock tab opened from Layout or Edit.
+It contains only current-difficulty settings: the default droplet mode
+(Derandomize or Randomize), Strength (0–100 playfield pixels), a signed 32-bit
+Seed, and the NM/HR compensation target. Valid edits apply immediately with undo;
+invalid numeric input leaves the last valid value intact. Strength has a numeric
+field and slider, plus Reset strength to restore 20.
 
-**Derandomize droplets** compensates ordinary FSlider TinyDroplets to the authored
-path. The stored per-slider switches and manual adjustments are retained. Turning
-it off restores their effect. **Derandomize for HR Mode** uses HR compensation.
-Changing the map switch also sets the default for subsequently drawn FSliders.
-Parameters can be edited while derandomization is enabled; their randomization
-effect becomes visible when it is disabled.
+New projects default to derandomization, configurable in General settings. Newly
+drawn FSliders use **Follow map**. In **Slider Inspector**, **Droplet mode** selects
+Follow map, Derandomize or Randomize for the selected ordinary FSliders without
+switching tabs. Explicit modes take precedence over the difficulty default.
+Multiple differing modes display Mixed; choosing a mode applies it to all eligible
+selected sliders in one undo step. Legacy Sliders and managed Stream/Stack objects
+are excluded. The effective mode is displayed with the Inspector metrics.
 
-The panel can enable or disable randomization for selected ordinary FSliders or
-all ordinary FSliders, and reset selected sliders' manual droplet adjustments.
-Selected overrides take precedence over the all-slider setting. These operations
-exclude Legacy Sliders and managed streams. Settings belong to the current
-difficulty. Reset strength sets the map value to 20.
+**Reset manual droplet adjustments** shows the selected sliders' correction count
+and is enabled only when corrections exist. It clears only those corrections,
+without changing modes. Mode switches preserve corrections; they apply only while
+randomization is effective. The reset label identifies wholly inactive corrections.
+Existing project sliders retain their previous output until edited: old enabled
+effects follow the map default, and old disabled effects remain derandomized.
 
 Strength 20 and Seed 1337 reproduce osu!'s native NM randomization when there are
 no manual corrections. Custom seeds use the same legacy RNG; Strength scales its
@@ -534,6 +606,15 @@ The bottom overview shows red and green timing points above a white center line,
 
 Both timelines draw nonnegative `[General] PreviewTime` as a full-height yellow line and bookmarks as blue lower lines. Preview lines draw before timing points, the playhead and bookmarks, so overlapping markers remain visible. Red and green timing points meet the overview center line and also appear on the upper object timeline. Short overview spans retain a minimum two-DIP width. Break intervals are clipped to each visible range and shaded across the full height or width of the object timeline and canvas left time axis. The Break label appears only on the object timeline; the canvas left axis shows red timing labels, blue bookmark labels, and ordinary time labels in the default muted color. Red timing and blue bookmark lines span the canvas width like the playhead line. Markers sharing a pixel row are grouped for display, with spaced labels and hover details showing counts and time ranges; stored timestamps remain unchanged. The kiai fill uses a lighter orange. The Timing menu sets the preview point at the rounded playhead time through undo history. Insert Break Time sits between Movement Analysis and Snap; it inserts an undoable interval between the surrounding source objects, starting 200 ms after the previous object ends and ending when the next object's AR approach begins, if at least 400 ms remains and no break overlaps it. Double-click an upper timeline object to select it and seek to its start without editing content. During a slider endpoint or timeline-tail drag, wheel navigation, Ctrl+wheel Snap, Alt+wheel zoom and Space/C playback remain available; release commits one edit and Esc restores its starting content. The Snap slider remains on one row. The time display uses a fixed position for the duration so changing digits do not move it. The bookmark toolbar is left aligned and vertically centered in the strip above the overview; its buttons are inset from the panel edge and remain visible while the pointer is held over the overview.
 
+Drag the divider below the upper object timeline or above the bottom overview to
+adjust their heights. Each ranges from 50% to 100% of its original height: 32–64
+DIP for the upper timeline and 20–40 DIP for the overview. The timestamp and
+playback controls retain their sizes; the transport row always reserves at least
+the controls' 32-DIP height. Upper timeline markers and their hit regions shrink
+together. Releasing saves the heights as view
+preferences; Esc or lost pointer capture restores the previous height. Resizing
+does not edit beatmap content or create undo entries.
+
 During a kiai interval, a small badge appears at the upper-left of the editing plot. It brightens at the interval start and on every full beat from the active red timing point, then fades through the beat. Green timing points that preserve the kiai state do not restart the pulse. Its pulse follows map time, including seeking and timing edits.
 
 Adding, pasting, moving, extending or removing notes around an existing break recalculates the affected interval when the edit commits. Breaks leave the next object's AR preempt time clear and resume at least 200 ms after the preceding object ends, including all slider repeats and banana-shower duration. An occupied break is shortened, split, or removed; generated pieces shorter than 650 ms are removed. Removing the note that split a break merges its remaining pieces. Deleting the last objects in a bounded section also creates a break for a newly vacated gap with at least 650 ms after the preceding object's recovery and before the next object's approach, even when no existing break remains. Overlapping occupied intervals prevent a break. After object-time or duration edits, breaks before the first object or after the maximum object end are removed, including manually resized intervals. Approach-rate edits reconcile breaks against the new approach time. Extensions use the maximum preceding object end so overlapping long objects remain clear. Unaffected valid break boundaries and other Events data are preserved. The note change and break adjustment share one undo step, and saving or exporting retains the updated intervals.
@@ -552,9 +633,9 @@ The row beneath Zoom spans both the left tools and canvas columns. It is a horiz
 
 A single click on empty canvas space clears selection without changing playback time, both paused and playing.
 
-The playback button and timestamp block are vertically centred in the transport bar. Click the current timestamp to open Jump to time with its value selected. Copy/Paste buttons and Ctrl+C/Ctrl+V (Cmd on macOS) use the system clipboard; Ctrl+A selects the full input. Enter or Jump seeks without beat snapping, and Escape cancels. Inputs accept `mm:ss:ms`, milliseconds, or an osu! timestamp reference such as `03:03:311 (2,3) -`. Invalid input keeps the dialog open; times beyond the track clamp to its end. The dialog blocks background editing and does not change beatmap content.
+The timestamp block sits left of Play, Pause, Stop and Testplay on the same transport row, followed by the overview timeline. Click the current timestamp to open Jump to time with its value selected. Copy/Paste buttons and Ctrl+C/Ctrl+V (Cmd on macOS) use the system clipboard; Ctrl+A selects the full input. Enter or Jump seeks without beat snapping, and Escape cancels. Inputs accept `mm:ss:ms`, milliseconds, or an osu! timestamp reference such as `03:03:311 (2,3) -`. Invalid input keeps the dialog open; times beyond the track clamp to its end. The dialog blocks background editing and does not change beatmap content.
 
-The transport offers **10%, 25%, 50%, 75%, 100%, and 150%** playback speed. Only song tempo changes, with pitch preserved. Hitsounds keep their original pitch and real-time duration, with trigger times mapped to the music clock. Changing speed preserves the map position and play/pause state. This setting does not edit or export beatmap timing.
+The bottom status bar places a static **Playback speed** label and a compact percentage selector immediately left of **Volume**. The selector offers **10%, 25%, 50%, 75%, 100%, and 150%** playback speed. Only song tempo changes, with pitch preserved. Hitsounds keep their original pitch and real-time duration, with trigger times mapped to the music clock. Changing speed preserves the map position and play/pause state. This setting does not edit or export beatmap timing.
 
 In the editor, the status-bar **Volume** button or **View → Volume** opens three vertical bars, ordered Master, Music and Effect from left to right, from 0% to 100%. Alt+Left/Right selects a channel; Alt+Up/Down opens the controls and changes the selected channel by five percentage points. The shortcuts also show the controls during testplay and take precedence over catcher movement. The controls fade in over 120 ms, wait 800 ms after interaction, then fade out over 150 ms. Hovering, dragging or holding an adjustment key keeps them visible; Esc dismisses them in the editor. Changes apply immediately and persist after mouse release or a keyboard adjustment. Master multiplies both channels; Music and Effect independently control music and preview/testplay samples. Opening the controls preserves active drawing drafts. Muting does not pause playback or change the beatmap.
 
@@ -1229,8 +1310,9 @@ speed. It uses adjacent exported catch events, including tiny droplets, and
 integrates the base speed across BPM changes. No raw displacement/time formula is displayed.
 
 The action area contains conversion, clearing internal anchors, stream breaking
-and reversion, merging, and the Randomize droplets entry. Stream/Stack and
-randomization edits open their dock panels and update the map directly.
+and reversion, merging, and the droplet mode and manual-adjustment controls.
+Stream/Stack opens its dock panel. Droplet mode selection and correction reset
+apply directly in Slider Inspector; see [Droplet randomization](#droplet-randomization).
 
 Inspector properties use two columns, switching to one in narrow docks. A mixed
 selection shows its count in a single header row. Operation buttons occupy full

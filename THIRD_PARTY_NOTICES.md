@@ -127,9 +127,35 @@ osu! behavior. The original UI classes are not bundled. FruitsAtelier's time–X
 curve representation, AR reference geometry, pen conversion and shared-mode
 transactions are implemented in Core and the shared editor.
 
+## Experimental lazer editing references
+
+Experimental editor controls, clock transitions, Catch canvas presentation and
+hit lighting reference MIT-licensed
+[ppy/osu revision 7318ef41b01bdc618d1bc1ec86de617223705077](https://github.com/ppy/osu/tree/7318ef41b01bdc618d1bc1ec86de617223705077):
+`osu.Game/Screens/Edit/EditorClock.cs`,
+`osu.Game/Input/Bindings/GlobalActionContainer.cs`,
+`osu.Game/Screens/Edit/Compose/Components/EditorSelectionHandler.cs`,
+`osu.Game/Screens/Edit/Compose/Components/Timeline/Timeline.cs`,
+`osu.Game/Screens/Edit/Compose/Components/Timeline/ZoomableScrollContainer.cs`,
+`osu.Game.Rulesets.Catch/Edit/CatchEditorPlayfield.cs`,
+`CatchEditorPlayfieldAdjustmentContainer.cs`, `CatchDistanceSnapGrid.cs`,
+`CatchDistanceSnapProvider.cs`, and
+`osu.Game.Rulesets.Catch/Skinning/Legacy/LegacyHitExplosion.cs`.
+The existing MIT notice above and retained
+`src/FruitsAtelier.Core/Conversion/LICENCE.osu.txt` apply to adaptations from this
+revision. No osu! host or framework runtime is bundled.
+
+The unmodified classic hit-lighting textures
+`osu.Game.Resources/Skins/Legacy/scoreboard-explosion-1@2x.png` and
+`scoreboard-explosion-2@2x.png` come from ppy/osu-resources revision
+`d8d01c29ce0f298159aea3644b947d8b4a1882a2`, copyright ppy Pty Ltd and
+contributors, under CC BY-NC 4.0. Their attribution, hashes and retained licence
+are in [assets/ui/catch](assets/ui/catch/README.md). These assets retain their
+licence independently of the MIT-licensed implementation.
+
 ## User-supplied skin assets
 
-No default skin artwork is distributed in this repository. `assets/skins/default.osk` is an optional, Git-ignored local archive; when present, it is copied to local build outputs. Artwork rights remain with their respective owners. Permission to use an archive locally is not a grant to publicly redistribute the artwork; confirm the applicable resource licence before distributing a build containing it. Without a skin, the editor uses geometric fallback rendering. Importing an `.osk` never executes its contents.
+No default skin archive is distributed in this repository. The built-in classic hit-lighting textures are documented separately above. `assets/skins/default.osk` is an optional, Git-ignored local archive; when present, it is copied to local build outputs. Artwork rights remain with their respective owners. Permission to use an archive locally is not a grant to publicly redistribute the artwork; confirm the applicable resource licence before distributing a build containing it. Without a skin, the editor uses geometric fallback rendering. Importing an `.osk` never executes its contents.
 
 ## macOS host dependencies
 
@@ -232,7 +258,7 @@ It is separate from the application code license.
 
 ## Media metadata
 
-AiMod reads audio duration and video dimensions using the unmodified TagLibSharp
+AiMod checks media readability and video dimensions using the unmodified TagLibSharp
 2.3.0 NuGet assembly (copyright Brian Nickel and contributors), dynamically linked
 as `TagLibSharp.dll`. Its [source release](https://github.com/mono/taglib-sharp/tree/b5ae84f2e84087bf160bb0471420200dd2b5d809)
 is pinned to `b5ae84f2e84087bf160bb0471420200dd2b5d809` (TaglibSharp-2.3.0.0).

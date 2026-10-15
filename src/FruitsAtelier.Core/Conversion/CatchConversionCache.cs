@@ -85,7 +85,7 @@ public sealed class CatchConversionCache
             || a.OriginalLine != b.OriginalLine || a.CompensateTinyDroplets != b.CompensateTinyDroplets || a.Nodes.Count != b.Nodes.Count
             || a.StreamSnapDivisor != b.StreamSnapDivisor || !StackEnvelope.Equal(a.Stack, b.Stack)
             || !a.StreamNewComboOffsets.SequenceEqual(b.StreamNewComboOffsets)
-            || includeRandomization && !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization)) return false;
+            || includeRandomization && (a.DropletMode != b.DropletMode || !DropletRandomization.Equal(a.DropletRandomization, b.DropletRandomization))) return false;
         for (int i = 0; i < a.Nodes.Count; i++)
         {
             var x = a.Nodes[i]; var y = b.Nodes[i];

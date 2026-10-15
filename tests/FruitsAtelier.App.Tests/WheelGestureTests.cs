@@ -12,7 +12,8 @@ static class WheelGestureTests
         var timeline = ui.View.ObjectTimelineBounds;
         float cx = canvas.X + canvas.Width / 2, cy = canvas.Y + canvas.Height / 2;
         float tx = timeline.X + 100, ty = timeline.Y + 20;
-        float ox = 320, oy = ui.Height - 57;
+        var overview = ui.Canvas.Fills.Single(f => f.Color == 0x141922).Bounds;
+        float ox = overview.X + overview.Width / 2, oy = overview.Y + overview.Height / 2;
 
         int initial = ui.View.SnapDivisor;
         ui.View.Wheel(cx, cy, 120, true);

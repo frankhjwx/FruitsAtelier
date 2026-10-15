@@ -12,6 +12,7 @@ public sealed class WorkspaceManifest
     public string Name { get; set; } = "";
     public string Notes { get; set; } = "";
     public string? SongsRoot { get; set; }
+    public bool SongsExportOfferShown { get; set; }
     public string? SourceDirectory { get; set; }
     public string? ExternalSourceDirectory { get; set; }
     public List<WorkspaceDifficulty> Difficulties { get; set; } = [];
@@ -47,6 +48,7 @@ public static class WorkspaceProject
     {
         SchemaVersion = manifest.SchemaVersion, Id = manifest.Id, Name = manifest.Name, Notes = manifest.Notes, SongsRoot = manifest.SongsRoot,
         SourceDirectory = manifest.SourceDirectory, ExternalSourceDirectory = manifest.ExternalSourceDirectory,
+        SongsExportOfferShown = manifest.SongsExportOfferShown,
         Difficulties = manifest.Difficulties.Select(e => new WorkspaceDifficulty
         {
             Id = e.Id, Name = e.Name, File = e.File, Source = e.Source, SourceHash = e.SourceHash,
@@ -100,11 +102,11 @@ public static class WorkspaceProject
         if (Within(songs, workspace) || Within(workspace, songs)) throw new InvalidOperationException(L.Get("library.rootsOverlap"));
     }
 
-    public static WorkspaceSession Create(string workspace, BeatmapProject project, string songsRoot)
+    public static WorkspaceSession Create(string workspace, BeatmapProject project, string songsRoot, bool songsExportOfferShown = false)
     {
-        lock (Gate) return CreateLocked(workspace, project, songsRoot);
+        lock (Gate) return CreateLocked(workspace, project, songsRoot, songsExportOfferShown);
     }
-    private static WorkspaceSession CreateLocked(string workspace, BeatmapProject project, string songsRoot)
+    private static WorkspaceSession CreateLocked(string workspace, BeatmapProject project, string songsRoot, bool songsExportOfferShown)
     {
         ValidateRoots(workspace, songsRoot, false);
         var sources = project.Difficulties.Select(d => d.Document.SourcePath).Where(p => p is not null)
@@ -116,7 +118,8 @@ public static class WorkspaceProject
                 if (database.ProjectForSource(folder) is { } existing)
                     throw new InvalidOperationException(L.Get("library.sourceAlreadyLinked", existing));
         }
-        var manifest = new WorkspaceManifest { Name = project.Name, Notes = project.Notes, SongsRoot = string.IsNullOrWhiteSpace(songsRoot) ? null : Path.GetFullPath(songsRoot) };
+        var manifest = new WorkspaceManifest { Name = project.Name, Notes = project.Notes, SongsRoot = string.IsNullOrWhiteSpace(songsRoot) ? null : Path.GetFullPath(songsRoot),
+            SongsExportOfferShown = songsExportOfferShown };
         var source = project.Difficulties.Select(d => d.Document.SourcePath).FirstOrDefault(p => p is not null && manifest.SongsRoot is not null && Within(manifest.SongsRoot, p));
         if (source is not null) manifest.SourceDirectory = Path.GetRelativePath(songsRoot, Path.GetDirectoryName(source)!);
         if (source is null && project.Difficulties.Select(d => d.Document.SourcePath).FirstOrDefault(p => p is not null) is { } external)
@@ -225,8 +228,10 @@ public static class WorkspaceProject
                 AtomicFile.Write(Path.Combine(staging, name), ProjectSerializer.Serialize(diff.Document, Path.Combine(directory, name)));
             }
             var manifest = new WorkspaceManifest { Id = session.Manifest.Id, Name = project.Name, Notes = project.Notes, SongsRoot = session.Manifest.SongsRoot,
+                SongsExportOfferShown = session.Manifest.SongsExportOfferShown,
                 SourceDirectory = session.Manifest.SourceDirectory, ExternalSourceDirectory = session.Manifest.ExternalSourceDirectory, Difficulties = entries };
             var persisted = new WorkspaceManifest { Id = manifest.Id, Name = manifest.Name, Notes = manifest.Notes, SongsRoot = manifest.SongsRoot,
+                SongsExportOfferShown = manifest.SongsExportOfferShown,
                 SourceDirectory = manifest.SourceDirectory, ExternalSourceDirectory = manifest.ExternalSourceDirectory,
                 Difficulties = entries.Select(e => new WorkspaceDifficulty { Id = e.Id, Name = e.Name, File = e.File,
                     Source = e.Source, SourceHash = e.SourceHash, ExportTarget = e.ExportTarget, ExportHash = e.ExportHash, ExportConfirmed = e.ExportConfirmed, SyncFile = e.SyncFile }).ToList() };

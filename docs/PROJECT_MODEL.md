@@ -2,7 +2,7 @@
 
 Default saves use [workspace project directories](WORKSPACE.md): a `project.catchdiff` manifest and separate difficulty files. The `.catchproj` schema 1/2 descriptions below cover the retained compatibility format and document encoding.
 
-The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides with timing inheritance use schema 15 (single difficulty) or 16 (multi-difficulty). Readers also accept the earlier schema 13/14 overrides. Per-fruit stream combos use schema 17/18. Documents retaining v7 slider tick rules use schema 19/20. Banana shower patterns use schema 21/22. Project-level notes use multi-difficulty schema 24; empty notes retain the document-derived schema. All preceding schemas remain readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v7–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing, retaining v7 on export for v7 maps and using v14 otherwise. Authored content, imported context, and derived output remain separate.
+The authoring model persists as UTF-8 JSON. Documents containing exact control curves use schema 3 (single difficulty) or schema 4 (multi-difficulty `.catchproj`); ordinary pen-only documents continue to use schema 1/2. Documents containing slider fruit streams use schema 5 (single difficulty) or 6 (multi-difficulty). Stack envelopes use schema 7 (single difficulty) or 8 (multi-difficulty). Droplet randomization effects or non-default randomization parameters use schema 9 (single difficulty) or 10 (multi-difficulty). Map droplet derandomization and HR compensation use schema 11 (single difficulty) or 12 (multi-difficulty). Event hitsound overrides with timing inheritance use schema 15 (single difficulty) or 16 (multi-difficulty). Readers also accept the earlier schema 13/14 overrides. Per-fruit stream combos use schema 17/18. Documents retaining v7 slider tick rules use schema 19/20. Banana shower patterns use schema 21/22. Project-level notes use multi-difficulty schema 24; empty notes retain the document-derived schema. Per-slider droplet modes use schema 25 (single difficulty) or 26 (multi-difficulty). All preceding schemas remain readable. Older applications reject the newer schemas rather than silently discarding authoring data. The project implements stable v7–v14 and stable-compatible lazer v128 / Mode=2 `.osu` parsing, retaining v7 on export for v7 maps and using v14 otherwise. Authored content, imported context, and derived output remain separate.
 
 ## Authoritative and derived data
 
@@ -161,16 +161,19 @@ amplitude in playfield pixels (0–100, default 20). Earlier project files with 
 strengths above 100 are capped at 100 when loaded. `RandomizeDropletSeed` is a signed
 32-bit integer, default 1337. Each ordinary FSlider can retain a
 `DropletRandomization` with its own `Enabled` flag and sorted normalized-time
-`Adjustments`. `RandomizeNewSliders` captures a difficulty's default for newly
-drawn FSliders. It starts false for older projects. New projects capture the
-independent General preference: turning off new-project derandomization sets it
-true and initializes ordinary randomization with Strength 20 and Seed 1337.
-The saved flag survives deep cloning, content equality and single/multi project
-round trips; its true value requires schema 9/10 or later even in an empty project. False
-is omitted for older-schema compatibility. Legacy conversion uses its separate
-saved policy and application preference. Batch switches do not change this flag.
-These fields
-participate in deep cloning, content equality, history, persistence and cache
+`Adjustments`. `CurveTrack.DropletMode` is FollowMap, Derandomize or Randomize. Newly drawn
+FSliders use FollowMap, resolved against `DerandomizeFSliderDroplets` on the current
+difficulty. Explicit modes override that default. A missing mode retains the
+older resolution: the map derandomization switch overrides the stored effect's
+Enabled flag. This preserves old project output without rewriting content on load.
+The Inspector presents old enabled effects as FollowMap and disabled effects as
+Derandomize. The nullable mode is cloned, compared, validated and included in
+conversion-cache identity. Non-null modes require schema 25/26; earlier readers
+reject them. `RandomizeNewSliders` remains persisted for compatibility; new drawing
+uses FollowMap. New projects capture the independent General derandomization
+preference, which defaults to on. Legacy conversion uses its separate saved policy
+and application preference.
+These fields participate in deep cloning, content equality, history, persistence and cache
 invalidation. Slider-managed fruit streams retain dormant effects but do not apply
 them; imported Legacy Sliders retain their existing conversion rules.
 
@@ -184,7 +187,7 @@ The target first clamps the base curve at the event's path progress, adds the
 legacy integer offset scaled by Strength / 20, clamps, adds a matching manual
 adjustment, and clamps again. Fruits and ordinary Droplets retain their base
 targets. Strength zero removes the random contribution; saved manual adjustments
-still apply while the effect is enabled.
+still apply while the resolved mode is Randomize.
 
 Strength 20 and Seed 1337 without manual adjustments use the normal uncompensated
 slider path and native osu! offsets, including repeat traversal and edge clamping.
@@ -197,9 +200,9 @@ the effect for `.osu` export; only project files retain editable effect paramete
 Dragging a randomized TinyDroplet or editing its X stores an offset at its
 normalized event time. A candidate must reach the requested X and preserve its
 sibling event positions, otherwise the editor rejects it. Timing/subdivision edits
-retain unmatched adjustments without applying them. Disabling the effect retains
-its corrections and restores the ordinary conversion of the base curve; enabling
-it again restores matching corrections. Copy/paste retains the effect and its
+retain unmatched adjustments without applying them. Selecting Derandomize retains
+corrections and restores compensation to the base curve; selecting Randomize
+again restores matching corrections. Copy/paste retains the effect and its
 normalized adjustments.
 
 ### Conversion flow

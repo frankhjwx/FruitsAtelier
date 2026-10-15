@@ -78,13 +78,17 @@ public sealed partial class EditorView
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
         if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); return; }
         LayoutDockPanels();
-        plot = new(canvas.X + 70, canvas.Y + 140, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 152));
-        overview = new(220, height - 77, Math.Max(100, width - 248), 40);
-        canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, MaximumCanvasZoom);
-        canvasTimeZoom = UniformCanvasScale ? canvasZoom : Math.Clamp(canvasTimeZoom, MinimumCanvasZoom, 2);
+        plot = new(canvas.X + 70, canvas.Y + 76 + ObjectTimelineHeight, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 88 - ObjectTimelineHeight));
+        overview = new(420, TransportTop + 10 + (TransportRowHeight - OverviewHeight) / 2, Math.Max(100, width - 448), OverviewHeight);
+        if (!IsLazerEditing)
+        {
+            canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, MaximumCanvasZoom);
+            canvasTimeZoom = UniformCanvasScale ? canvasZoom : Math.Clamp(canvasTimeZoom, MinimumCanvasZoom, 2);
+        }
         ClampCanvasPan();
         pixelsPerMs = CanvasPixelsPerMs;
         ClampView();
+        AdvanceLazerPresentationGesture();
         EnsureConversion();
         PumpRandomDock();
         AdvanceBoxScroll();
@@ -114,6 +118,7 @@ public sealed partial class EditorView
             DrawCanvasBackgroundDim(c);
         }
         DrawTransport(c);
+        DrawTimelineResizers(c);
         DrawStatus(c);
         DrawUpdateNotice(c);
         DrawDockDrag(c);
@@ -175,12 +180,14 @@ public sealed partial class EditorView
         DrawCanvasScaleLock(c);
         if (UniformCanvasScale)
         {
-            float zoomX = zoomSlider.X + (float)(MaximumCanvasZoom - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom) : 1) * zoomSlider.Width;
+            float progress = IsLazerEditing ? (float)((lazerZoomTarget - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom))
+                : (float)(MaximumCanvasZoom - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom) : 1);
+            float zoomX = zoomSlider.X + progress * zoomSlider.Width;
             float zoomY = canvas.Y + (narrowZoom ? 27 : 19);
             c.Line(zoomSlider.X, zoomY, zoomSlider.Right, zoomY, Grid, 3);
             c.Line(zoomSlider.X, zoomY, zoomX, zoomY, Accent, 3);
             c.Circle(zoomX, zoomY, 6, Accent);
-            c.Text(L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + (compactToolbar ? 4 : 8), canvas.Y + (narrowZoom ? 4 : 13), compactToolbar ? 10 : 11, Foreground, narrowZoom ? 32 : 48);
+            c.Text(L.Get("ui.zoomPercent", (IsLazerEditing ? lazerZoomTarget : canvasZoom) * 100), zoomSlider.Right + (compactToolbar ? 4 : 8), canvas.Y + (narrowZoom ? 4 : 13), compactToolbar ? 10 : 11, Foreground, narrowZoom ? 32 : 48);
         }
         else DrawCanvasAxisZoom(c);
         PrepareCanvasToggleText(c, compactToolbar, toggleWidth);
@@ -216,13 +223,13 @@ public sealed partial class EditorView
         c.Circle(snapX, snapCenterY, 6, Accent);
         c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, snapTextY, 11, Foreground, 40);
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
-        c.Text(L.Get("ui.timeAxis"), canvas.X + 11, canvas.Y + 120, 10, Muted, 43);
+        c.Text(L.Get("ui.timeAxis"), canvas.X + 11, plot.Y - 20, 10, Muted, 43);
         var playfield = Playfield;
-        c.Clip(new(plot.X - 16, canvas.Y + 118, plot.Width + 32, plot.Bottom - canvas.Y - 118));
+        c.Clip(new(plot.X - 16, plot.Y - 22, plot.Width + 32, plot.Height + 22));
         for (int x = 0; x <= 512; x += 128)
         {
             float sx = Screen(new(0, x)).X;
-            c.Text(x.ToString(), sx - 9, canvas.Y + 120, 10, Muted, 30);
+            c.Text(x.ToString(), sx - 9, plot.Y - 20, 10, Muted, 30);
             c.Line(sx, plot.Y, sx, plot.Bottom, x == 256 ? LibrarySettings.CanvasCentreLineColour : LibrarySettings.CanvasGridColour,
                 opacity: LibrarySettings.CanvasGridOpacity / 100f);
         }
@@ -237,7 +244,7 @@ public sealed partial class EditorView
         }
         c.Unclip();
         c.Clip(new(canvas.X, plot.Y, canvas.Width, plot.Height));
-        double axisStart = viewStart, axisEnd = viewStart + plot.Height / pixelsPerMs;
+        double axisStart = PresentationViewStart, axisEnd = PresentationViewStart + plot.Height / pixelsPerMs;
         var canvasBreaks = DisplayedBreaks();
         for (int i = 0; i < canvasBreaks.Length; i++)
         {
@@ -257,7 +264,7 @@ public sealed partial class EditorView
         }
         List<float> axisLabelRows = [];
         List<(float Y, double Time)> axisLabels = [];
-        renderedTiming!.FillGrid(viewStart, viewStart + plot.Height / pixelsPerMs, divisor, canvasGrid);
+        renderedTiming!.FillGrid(PresentationViewStart, PresentationViewStart + plot.Height / pixelsPerMs, divisor, canvasGrid);
         foreach (var line in canvasGrid)
         {
             double time = line.TimeMs;
@@ -320,11 +327,12 @@ public sealed partial class EditorView
             c.Line(playfield.X, cursorY, playfield.Right, cursorY, Gold, 1);
         }
         DrawSelectionTransform(c, background: true);
+        DrawLazerDistanceGuides(c);
         if (!movementAnalysis) DrawCanvasCatchObjects(c);
         if (showTargets)
         {
-            DrawImportedCurves(c, playfield.X, playfield.Width, plot.Bottom, viewStart, pixelsPerMs,
-                viewStart, viewStart + plot.Height / pixelsPerMs);
+            DrawImportedCurves(c, playfield.X, playfield.Width, plot.Bottom, PresentationViewStart, pixelsPerMs,
+                PresentationViewStart, PresentationViewStart + plot.Height / pixelsPerMs);
             foreach (var track in Document.Tracks)
             {
                 bool selected = IsObjectSelected(track.Id);
@@ -333,13 +341,13 @@ public sealed partial class EditorView
                 {
                     double spanDuration = track.Nodes[^1].TimeMs - track.Nodes[0].TimeMs;
                     double spanStart = track.Nodes[0].TimeMs + span * spanDuration;
-                    if (spanStart + spanDuration < viewStart || spanStart > viewStart + plot.Height / pixelsPerMs) continue;
+                    if (spanStart + spanDuration < PresentationViewStart || spanStart > PresentationViewStart + plot.Height / pixelsPerMs) continue;
                     double DisplayTime(double time) => track.Nodes[0].TimeMs + span * spanDuration
                         + (span % 2 == 0 ? time - track.Nodes[0].TimeMs : track.Nodes[^1].TimeMs - time);
                     for (int s = 0; s < track.Nodes.Count - 1; s++)
                     {
                         double segmentStart = DisplayTime(track.Nodes[s].TimeMs), segmentEnd = DisplayTime(track.Nodes[s + 1].TimeMs);
-                        if (Math.Max(segmentStart, segmentEnd) < viewStart || Math.Min(segmentStart, segmentEnd) > viewStart + plot.Height / pixelsPerMs) continue;
+                        if (Math.Max(segmentStart, segmentEnd) < PresentationViewStart || Math.Min(segmentStart, segmentEnd) > PresentationViewStart + plot.Height / pixelsPerMs) continue;
                         var first = CurveMath.Evaluate(track, s, 0);
                         var previous = Screen(new(DisplayTime(first.TimeMs), first.X));
                         uint segmentColour = CurveMath.SegmentKind(track, s) == CurveKind.Bezier ? Purple : Accent;
@@ -404,21 +412,26 @@ public sealed partial class EditorView
         DrawPlacementGhost(c);
         if (drag == DragKind.Objects && !objectDragTimeline && objectDragSnapPoint is { } snapPoint)
             DrawObjectSnapGuide(c, snapPoint);
-        float headY = Screen(new(playhead, 0)).Y;
+        float headY = Screen(new(LazerPresentationTime, 0)).Y;
         c.Line(plot.X, headY, plot.Right, headY, Gold, 1.5f);
         c.Fill(new(plot.X, headY - 3, 5, 6), Gold);
+        DrawLazerCanvasCatcher(c);
+        DrawLazerPlayfieldCorners(c);
         c.Unclip();
         DrawPendingAxisTooltip(c);
     }
 
     private void DrawCanvasCatchObjects(ICanvas c)
     {
+        if (IsLazerEditing) EnsureLazerCanvasVisuals();
         var playfield = Playfield;
         const string comboLabel = "NC";
         float comboLabelWidth = 0;
         double margin = CatchSize.FruitRadius(Document.CircleSize) * CanvasObjectWidth / 512 * 1.5 / pixelsPerMs;
-        foreach (var item in PatternCanvasObjects(viewStart - margin, viewStart + plot.Height / pixelsPerMs + margin))
+        foreach (var item in PatternCanvasObjects(PresentationViewStart - margin, PresentationViewStart + plot.Height / pixelsPerMs + margin))
         {
+            float opacity = IsLazerEditing ? LazerCanvasObjectOpacity(item) : 1;
+            if (opacity <= 0) continue;
             if (StreamDialogVisible && streamTargets.Contains(item.SourceId)) continue;
             var p = Screen(new(item.TimeMs, item.X));
             float radius = (float)(CatchSize.FruitRadius(Document.CircleSize) * CanvasObjectWidth / 512);
@@ -427,7 +440,8 @@ public sealed partial class EditorView
                 && SelectedTrack is { } draftSlider && legacyDraft is { Count: > 0 }
                 && draftSlider.Nodes[^1].TimeMs > legacyDraft[^1].Point.TimeMs
                 && Math.Abs(item.TimeMs - draftSlider.Nodes[^1].TimeMs) < 1;
-            DrawCatchObject(c, item, p.X, p.Y, CanvasObjectWidth, previewTail ? .6f : 1, hyperStarts: placementHyperdash);
+            DrawCatchObject(c, item, p.X, p.Y, CanvasObjectWidth, opacity * (previewTail ? .6f : 1), hyperStarts: placementHyperdash,
+                animated: IsLazerEditing, presentationTime: LazerPresentationTime, approachRate: Document.ApproachRate);
             if (IsObjectSelected(item.SourceId))
                 c.Circle(p.X, p.Y, ObjectRadius(item.Kind) * CanvasObjectWidth / 512 + 3, Accent, false, 1.5f);
             if (item.Kind == CatchObjectKind.Fruit && newComboEvents.Contains((item.SourceId, item.EventIndex)))
@@ -520,9 +534,9 @@ public sealed partial class EditorView
         double visibleAhead = (catchY - stage.Y + CatchSize.FruitDiameter(PreviewCircleSize) * fieldWidth / 512 * 1.2) / scrollSpeed;
         DrawPreviewPlate(c, fieldLeft, fieldWidth, catchY);
         DrawPreviewCatcher(c, fieldLeft, fieldWidth, catchY);
-        foreach (var item in PreviewObjectsInRange(playhead, playhead + visibleAhead))
+        foreach (var item in PreviewObjectsInRange(LazerPresentationTime, LazerPresentationTime + visibleAhead))
         {
-            double remaining = item.TimeMs - playhead;
+            double remaining = item.TimeMs - LazerPresentationTime;
             if (remaining < 0) continue;
             float y = catchY - (float)(remaining * scrollSpeed);
             DrawCatchObject(c, item, fieldLeft + (float)(item.X / 512) * fieldWidth, y, fieldWidth, circleSize: PreviewCircleSize, hyperStarts: previewHyperdash, animated: true);
@@ -565,37 +579,31 @@ public sealed partial class EditorView
 
     private void DrawTransport(ICanvas c)
     {
-        float top = height - 120;
-        c.Fill(new(0, top, width, 92), 0x20252E);
+        float top = TransportTop;
+        c.Fill(new(0, top, width, height - 28 - top), 0x20252E);
         c.Line(0, top, width, top, Grid);
-        TimeDisplayBounds = new(16, top + 7, 188, 27);
+        float timeY = overview.Y + (overview.Height - 27) / 2;
+        TimeDisplayBounds = new(16, timeY, 188, 27);
         if (TimeDisplayBounds.Contains(mouseX, mouseY)) c.Fill(TimeDisplayBounds, Surface, 4);
-        string currentTime = Time(playhead);
-        c.Text(currentTime, 20, top + 10, 17, Foreground, 102, true);
-        const float durationX = 125;
-        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), durationX, top + 14, 11, Muted,
+        string currentTime = Time(LazerPresentationTime);
+        c.Text(currentTime, 20, timeY + 3, 17, Foreground, 83, true);
+        const float durationX = 105;
+        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), durationX, timeY + 3, 17, Muted,
             Math.Max(0, TimeDisplayBounds.Right - durationX));
         hits.Add(new(TimeDisplayBounds, OpenTimeJump, true));
         if (TimeDisplayBounds.Contains(mouseX, mouseY) && !TimeJumpVisible)
             c.Text(L.Get("timeJump.title"), 20, top - 20, 12, Foreground, 200);
-        if (!AudioReady) c.Text(AudioNotice, 16, top + 79, 10, Gold, 192);
-
-        float rateX = overview.Right - 404;
+        if (!AudioReady) c.Text(AudioNotice, 16, height - 39, 10, Gold, 192);
         DrawTransportControls(c);
-        c.Text(L.Get("ui.playbackSpeed"), rateX, top + 12, 11, Muted, 104);
-        foreach (double rate in PlaybackRates)
-        {
-            Button(c, new(rateX + 104, top + 3, 48, 28), L.Get("ui.zoomPercent", rate * 100), () => SetPlaybackSpeed(rate), PlaybackSpeed == rate);
-            rateX += 50;
-        }
         c.Fill(overview, 0x141922, 4);
         if (AudioLoading) return;
         const float timelineMarkerOpacity = .8f;
         float TimelineX(double time) => overview.X + (float)(Math.Clamp(time, 0, TimelineDurationMs) / TimelineDurationMs) * overview.Width;
         var timing = overviewTiming;
-        c.Line(overview.X, overview.Y + 20, overview.Right, overview.Y + 20, 0xA0A0A0, 1, timelineMarkerOpacity);
-        const float spanHeight = 12;
-        float spanY = overview.Y + 20 - spanHeight / 2;
+        float centerY = overview.Y + overview.Height / 2;
+        c.Line(overview.X, centerY, overview.Right, centerY, 0xA0A0A0, 1, timelineMarkerOpacity);
+        float spanHeight = Math.Min(12, overview.Height * .6f);
+        float spanY = centerY - spanHeight / 2;
         double? kiaiStart = null;
         foreach (var transition in kiaiTransitions)
         {
@@ -626,14 +634,14 @@ public sealed partial class EditorView
             var point = timing[i];
             if (point.TimeMs < 0 || point.TimeMs > TimelineDurationMs) continue;
             float x = TimelineX(point.TimeMs);
-            c.Line(x, overview.Y + 2, x, overview.Y + 20, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
+            c.Line(x, overview.Y + 2, x, centerY, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
         }
-        double visibleStart = Math.Clamp(viewStart, 0, TimelineDurationMs);
-        double visibleEnd = Math.Clamp(viewStart + plot.Height / pixelsPerMs, visibleStart, TimelineDurationMs);
+        double visibleStart = Math.Clamp(PresentationViewStart, 0, TimelineDurationMs);
+        double visibleEnd = Math.Clamp(PresentationViewStart + plot.Height / pixelsPerMs, visibleStart, TimelineDurationMs);
         float viewX = overview.X + (float)(visibleStart / TimelineDurationMs) * overview.Width;
         float viewWidth = (float)((visibleEnd - visibleStart) / TimelineDurationMs) * overview.Width;
         c.Stroke(new(viewX, overview.Y + 1, viewWidth, overview.Height - 2), 0x71849A, 1, 3);
-        float headX = TimelineHeadX;
+        float headX = IsLazerEditing ? TimelineX(LazerPresentationTime) : TimelineHeadX;
         c.Line(headX, overview.Y - 3, headX, overview.Bottom + 2, 0xFFFFFF, 2);
         c.Fill(new(headX - 2, overview.Y - 5, 4, 6), 0xFFFFFF);
         DrawTimelineBookmarks(c, overview, 0, TimelineDurationMs);
@@ -646,7 +654,8 @@ public sealed partial class EditorView
         c.Circle(13, height - 14, 3, IsDirty ? Gold : Accent);
         string notice = workspaceSaveTask is not null ? L.Get("files.saving") : SynchronizationBusy ? L.Get(syncCommitTask is not null ? "sync.applying" : "sync.checking")
             : deferredConversion ? L.Get("editor.status.convertingSlider") : conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
-        c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 145));
+        float speedLabelX = DrawPlaybackSpeedSelector(c);
+        c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(0, speedLabelX - 33));
         DrawVolumeButton(c);
     }
 
@@ -738,7 +747,7 @@ public sealed partial class EditorView
         else
         {
             Item(L.Get("ui.gridLevel", L.Get("ui.grid" + gridSize)), () => gridLevelMenuOpen = true);
-            Item(L.Get("ui.gridSnap"), () => gridSnap = !gridSnap, active: gridSnap);
+            Item(L.Get("ui.gridSnap"), () => gridSnap = !gridSnap, enabled: !UsesSpeedDistanceSnap, active: !UsesSpeedDistanceSnap && gridSnap);
             Item(L.Get("ui.anchorSnap"), () => anchorSnap = !anchorSnap, active: anchorSnap);
             Separator();
             Item(L.Get("ui.resetView"), ResetView);
@@ -755,7 +764,7 @@ public sealed partial class EditorView
             Item(L.Get("movement.analysis"), () => movementAnalysis = !movementAnalysis, active: movementAnalysis);
             Item(L.Get("movement.includeTiny"), () => movementIncludeTinyDroplets = !movementIncludeTinyDroplets, active: movementIncludeTinyDroplets);
             Separator();
-            Item(L.Get("timing.page"), () => ShowTimingPage(true));
+            Item(L.Get(IsLazerEditing ? "timing.pageLazer" : "timing.page"), () => ShowTimingPage(true));
             Item(L.Get("timing.setup"), OpenTimingSetup);
         }
         float x = menu == 3 ? Math.Min(difficultyAddButton.X, width - 288) : menu == 4 ? 341 : menu == 5 ? 268 : 109 + menu * 53;

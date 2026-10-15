@@ -53,7 +53,11 @@ public sealed partial class EditorView
         }
         for (int i = 0; i < toolButtons.Count; i++)
             if (toolButtons[i].Contains(mouseX, mouseY))
-                DrawPaletteTooltip(c, L.Get(i switch
+                DrawPaletteTooltip(c, L.Get(IsLazerEditing && i < 3 ? i switch
+                {
+                    0 => "tools.hint.lazerSelect", 1 => "tools.hint.lazerFruit",
+                    _ => LegacyMode ? "tools.hint.lazerSliderLegacy" : "tools.hint.lazerSliderPen"
+                } : i switch
                 {
                     0 => "tools.hint.select", 1 => "tools.hint.fruit",
                     2 => LegacyMode ? "tools.hint.sliderLegacy" : "tools.hint.sliderPen",
@@ -61,9 +65,9 @@ public sealed partial class EditorView
                 }), toolButtons[i], left: false, above: i == 2);
     }
 
-    private void DrawPaletteTooltip(ICanvas c, string text, Rect button, bool left, bool above)
+    private void DrawPaletteTooltip(ICanvas c, string text, Rect button, bool left, bool above, bool centered = false)
     {
-        float maxWidth = Math.Max(80, Math.Min(620, left ? button.X - 24 : width - button.Right - 24));
+        float maxWidth = Math.Max(80, Math.Min(620, centered ? width - 48 : left ? button.X - 24 : width - button.Right - 24));
         var lines = new List<string>();
         foreach (string paragraph in text.Split('\n'))
         {
@@ -81,7 +85,8 @@ public sealed partial class EditorView
         }
         float w = lines.Max(line => c.MeasureText(line, 11)) + 16;
         float h = lines.Count * 16 + 12;
-        float x = left ? button.X - w - 6 : button.Right + 6;
+        float x = centered ? Math.Clamp(button.X + (button.Width - w) / 2, 8, width - w - 8)
+            : left ? button.X - w - 6 : button.Right + 6;
         float y = Math.Clamp(above ? button.Y - h - 4 : button.Y, 84, height - h - 8);
         c.Fill(new(x, y, w, h), Surface, 4);
         for (int i = 0; i < lines.Count; i++) c.Text(lines[i], x + 8, y + 6 + i * 16, 11, Foreground, w - 16);
@@ -274,7 +279,7 @@ public sealed partial class EditorView
     {
         bool replace = tool == Tool.Fruit;
         if (playableExport is null
-            || Document.Tracks.Any(t => t.StreamSnapDivisor is null && t.DropletRandomization is { Enabled: true }
+            || Document.Tracks.Any(t => t.StreamSnapDivisor is null && t.RandomizesDroplets(Document)
                 && t.Nodes.Count > 0 && t.Nodes[0].TimeMs >= point.TimeMs - 2)
             || Document.Tracks.Any(t => t.Nodes.Count > 0 && Math.Abs(t.Nodes[0].TimeMs - point.TimeMs) <= 2)
             || Document.ImportedSliders.Any(s => Math.Abs(s.TimeMs - point.TimeMs) <= 2)

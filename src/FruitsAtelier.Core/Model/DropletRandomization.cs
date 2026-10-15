@@ -53,7 +53,7 @@ public sealed class DropletRandomization
             double pathTime = track.Nodes[0].TimeMs + item.Progress * (track.Nodes[^1].TimeMs - track.Nodes[0].TimeMs);
             double x = Math.Clamp(curve(pathTime), 0, 512);
             targets[item.TimeMs] = Math.Clamp(Math.Clamp(x + random.NextTinyOffset()
-                * document.RandomizeDropletStrength / 20, 0, 512) + track.DropletRandomization!.AdjustmentAt(progress), 0, 512);
+                * document.RandomizeDropletStrength / 20, 0, 512) + (track.DropletRandomization?.AdjustmentAt(progress) ?? 0), 0, 512);
         }
         return time => targets.TryGetValue(time, out double x) ? x : curve(time);
     }

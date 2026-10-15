@@ -884,7 +884,7 @@ internal static class RenderCheck
         void Paint() { canvas.Begin(); view.Render(canvas, 1440, 900); canvas.End(); }
     }
 
-    private static void CheckWorkspaceSave(D2DCanvas canvas, EditorView view)
+    internal static void CheckWorkspaceSave(D2DCanvas canvas, EditorView view)
     {
         var original = view.CaptureProject();
         string songs = view.LibrarySettings.Songs, language = FruitsAtelier.Localization.Strings.Language;
@@ -907,6 +907,13 @@ internal static class RenderCheck
                 view.KeyDown(27, false, false);
                 if (view.ExportVisible || view.DiscardConfirmationVisible)
                     throw new InvalidOperationException("Dismissing the Songs offer did not finish the workspace save.");
+                view.LoadWorkspace(WorkspaceProject.Open(view.WorkspaceSession.Directory));
+                view.SaveCurrentDifficulty();
+                deadline.Restart();
+                while (view.SynchronizationBusy && deadline.Elapsed.TotalSeconds < 15)
+                { canvas.Begin(); view.Render(canvas, size.Item1, size.Item2); canvas.End(); Thread.Sleep(5); }
+                if (view.SynchronizationBusy || view.ExportVisible || view.DiscardConfirmationVisible || view.IsDirty)
+                    throw new InvalidOperationException("Saving a reopened workspace repeated the Songs export offer.");
             }
         }
         finally
@@ -935,6 +942,11 @@ internal static class RenderCheck
                 AimodRenderCheck.Run(canvas, size.Item1, size.Item2, dpi);
             }
             AppLog.Write("AiMod native input and rendering checks passed.");
+            return;
+        }
+        if (Environment.GetCommandLineArgs().Contains("--lazer-editing-render-check"))
+        {
+            LazerEditingRenderCheck.Run(canvas);
             return;
         }
         if (Environment.GetCommandLineArgs().Contains("--canvas-scale-render-check"))

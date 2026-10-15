@@ -69,6 +69,7 @@ public sealed partial class EditorView
 
     private void BeginObjectDragSnap()
     {
+        CaptureLazerGestureDistance();
         RefreshObjectSnapFruits();
         EnsureDistanceReferences();
         objectDragDistanceReferences = distanceReferences;
@@ -93,6 +94,13 @@ public sealed partial class EditorView
         objectDragSnapPoint = null; objectSnapTarget = null;
         if (objectDragSnapFirst is not { } first) return false;
         var rawPoint = new MapPoint(first.TimeMs + deltaTime, first.X + rawDeltaX);
+        if (UsesSpeedDistanceSnap)
+        {
+            if (!TryLazerGestureDistanceSnap(rawPoint, out var lazerPoint, objectSelection,
+                first.X + minDeltaX, first.X + maxDeltaX)) return false;
+            deltaX = lazerPoint.X - first.X;
+            return true;
+        }
         bool distanceSnapped = TryDistanceSnap(rawPoint, objectDragDistanceReferences, objectSelection,
             first.X + minDeltaX, first.X + maxDeltaX, out var distancePoint);
         if (distanceSnapped) deltaX = distancePoint.X - first.X;
@@ -127,6 +135,7 @@ public sealed partial class EditorView
         objectDragDistanceReferences = [];
         objectDragSnapFirst = objectDragSnapLast = objectDragSnapPoint = null;
         objectSnapTarget = null;
+        lazerGestureDistance = null;
     }
 
     private void DrawObjectSnapGuide(FruitsAtelier.App.Rendering.ICanvas c, MapPoint point)

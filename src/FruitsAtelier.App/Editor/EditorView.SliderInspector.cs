@@ -9,10 +9,12 @@ public sealed partial class EditorView
     private OsuWriteResult? inspectorExport;
     private MapDocument? inspectorSnapshot;
     private Guid[] inspectorTargets = [];
+    private HashSet<Guid> inspectorTargetSet = [];
     private readonly List<(string Key, string Value)> inspectorRows = [];
     private Rect inspectorBounds;
     private float inspectorScroll, inspectorContentHeight;
     private bool inspectorMerge, inspectorHasSliders, inspectorOnlySliders;
+    private bool inspectorSpeedMode;
     internal double? InspectorPeakRatio { get; private set; }
     internal double? InspectorMaxDs { get; private set; }
     internal Rect SliderInspectorViewport => inspectorBounds;
@@ -60,8 +62,10 @@ public sealed partial class EditorView
     {
         var ids = ClipboardSelectedParentIds();
         if (ReferenceEquals(inspectorSnapshot, convertedSnapshot) && ReferenceEquals(inspectorExport, playableExport)
+            && inspectorSpeedMode == UsesSpeedDistanceSnap
             && inspectorTargets.Length == ids.Count && inspectorTargets.All(ids.Contains)) return;
-        inspectorSnapshot = convertedSnapshot; inspectorExport = playableExport; inspectorTargets = ids.ToArray();
+        inspectorSpeedMode = UsesSpeedDistanceSnap;
+        inspectorSnapshot = convertedSnapshot; inspectorExport = playableExport; inspectorTargets = ids.ToArray(); inspectorTargetSet = ids;
         var merge = ObjectStructureEditing.MergeSelection(Document, ids);
         mergeTargets = merge.Ids; mergeAllowsLinear = merge.AllowsLinear; mergeCurved = !mergeAllowsLinear; mergeError = "";
         inspectorMergeExpanded = false;
@@ -95,7 +99,12 @@ public sealed partial class EditorView
         inspectorRows.Add(("inspector.end", TimeRange(ends)));
         inspectorRows.Add(("inspector.duration", Range(ends.Zip(starts, (end, start) => end - start)) + " ms"));
         inspectorRows.Add(("inspector.spans", Range(tracks.Select(t => (double)t.SpanCount).Concat(imported.Select(t => (double)t.SpanCount)))));
-        inspectorRows.Add(("inspector.controls", Range(tracks.Select(t => (double)t.Nodes.Count).Concat(imported.Select(t => (double)t.ControlPoints.Count)))));
+        var derandomization = tracks.Where(t => t.StreamSnapDivisor is null)
+            .Select(t => !t.RandomizesDroplets(Document))
+            .Concat(imported.Select(_ => false)).Distinct().ToArray();
+        inspectorRows.Add(("inspector.dropletEffective", derandomization.Length == 0 ? "—"
+            : derandomization.Length > 1 ? L.Get("inspector.mixed")
+            : L.Get(derandomization[0] ? "droplet.mode.Derandomize" : "droplet.mode.Randomize")));
         if (playableExport is { } exported)
         {
             var exportedTiming = new TimingMap.Lookup(exported.ReadBack);
@@ -111,15 +120,21 @@ public sealed partial class EditorView
             if (!ids.Contains(item.SourceId) || item.Kind == CatchObjectKind.Banana) continue;
             if (previous.TryGetValue(item.SourceId, out var from))
             {
-                var ds = BaseDistanceRatio(from, item);
+                double? horizontalSpeed = item.TimeMs > from.TimeMs
+                    ? Math.Abs(item.X - from.X) / (item.TimeMs - from.TimeMs) : null;
+                var ds = inspectorSpeedMode ? horizontalSpeed : BaseDistanceRatio(from, item);
                 if (ds is { } d && (InspectorMaxDs is null || d > InspectorMaxDs)) InspectorMaxDs = d;
-                var speed = HorizontalSpeedRatio(Document, timing, boundaries, from, item);
+                var speed = inspectorSpeedMode ? horizontalSpeed : HorizontalSpeedRatio(Document, timing, boundaries, from, item);
                 if (speed is { } v && (InspectorPeakRatio is null || v > InspectorPeakRatio)) InspectorPeakRatio = v;
             }
             previous[item.SourceId] = item;
         }
-        inspectorRows.Add(("inspector.maxDs", InspectorMaxDs is { } maxDs ? maxDs.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "×" : "—"));
-        inspectorRows.Add(("inspector.peak", InspectorPeakRatio is { } peak ? peak.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "×" : "—"));
+        string Metric(double? value) => value is { } number
+            ? inspectorSpeedMode ? L.Get("ds.lazerSpeed", number)
+                : number.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "×" : "—";
+        inspectorRows.Add(inspectorSpeedMode
+            ? ("inspector.peak", Metric(InspectorPeakRatio))
+            : ("inspector.maxDs", Metric(InspectorMaxDs)));
         inspectorRows.Add(("inspector.base", $"{Document.DistancePerBeat / 100:0.##}× SV · {Document.DistancePerBeat:0.##} DPB"));
     }
     private static string TimeRange(IEnumerable<double> values)
@@ -142,11 +157,57 @@ public sealed partial class EditorView
                 actions.Add((L.Get("stream.convertBack"), ConvertStreamsBack, enabled, 0));
             }
             actions.Add((L.Get("slider.clearInternal"), ClearSelectedInternalAnchors, CanClearSliderNodes, 0));
-            actions.Add((L.Get("randomize.title"), ShowRandomDock, enabled && Document.Tracks.Any(t => inspectorTargets.Contains(t.Id) && t.StreamSnapDivisor is null), 0));
+            var dropletTracks = InspectorDropletTracks();
+            if (dropletTracks.Length > 0)
+            {
+                var modes = dropletTracks.Select(InspectorDropletMode).Distinct().ToArray();
+                string mode = modes.Length == 1 ? L.Get("droplet.mode." + modes[0]) : L.Get("inspector.mixed");
+                actions.Add((L.Get("inspector.dropletMode", mode), OpenInspectorDropletMenu, enabled, 0));
+                int adjustments = dropletTracks.Sum(t => t.DropletRandomization?.Adjustments.Count ?? 0);
+                actions.Add((L.Get(adjustments > 0 && dropletTracks.Where(t => t.DropletRandomization?.Adjustments.Count > 0).All(t => !t.RandomizesDroplets(Document))
+                    ? "inspector.resetDropletsInactive" : "inspector.resetDroplets", adjustments), ResetInspectorDroplets, enabled && adjustments > 0, 0));
+            }
         }
         actions.Add((L.Get("merge.title"), ShowMergeInspector, enabled && inspectorMerge, 0));
         return actions;
     }
+    private CurveTrack[] InspectorDropletTracks() => Document.Tracks
+        .Where(t => t.StreamSnapDivisor is null && inspectorTargetSet.Contains(t.Id)).ToArray();
+
+    private SliderDropletMode InspectorDropletMode(CurveTrack track) => track.DropletMode
+        ?? (track.DropletRandomization is { Enabled: true } ? SliderDropletMode.FollowMap : SliderDropletMode.Derandomize);
+
+    private void OpenInspectorDropletMenu()
+    {
+        var targets = InspectorDropletTracks().Select(t => t.Id).ToHashSet();
+        var modes = InspectorDropletTracks().Select(InspectorDropletMode).Distinct().ToArray();
+        menu = -1; languageMenuOpen = false; contextItems.Clear();
+        foreach (var mode in Enum.GetValues<SliderDropletMode>())
+            contextItems.Add(new(L.Get("droplet.mode." + mode), () =>
+            {
+                if (!ClipboardInteractionReady || notesLocked) return;
+                Edit(L.Get("inspector.dropletMode", L.Get("droplet.mode." + mode)), () =>
+                {
+                    foreach (var track in Document.Tracks.Where(t => t.StreamSnapDivisor is null && targets.Contains(t.Id)))
+                        track.DropletMode = mode;
+                });
+            }, Active: modes.Length == 1 && modes[0] == mode));
+        float menuWidth = Math.Min(280, width), menuHeight = ContextMenuHeight;
+        contextBounds = new(Math.Clamp(mouseX, 0, width - menuWidth),
+            Math.Clamp(mouseY + 4, 0, Math.Max(0, height - menuHeight)), menuWidth, menuHeight);
+    }
+
+    private void ResetInspectorDroplets()
+    {
+        if (!ClipboardInteractionReady || notesLocked) return;
+        var targets = InspectorDropletTracks().Select(t => t.Id).ToHashSet();
+        Edit(L.Get("randomize.resetAdjustments"), () =>
+        {
+            foreach (var track in Document.Tracks.Where(t => t.StreamSnapDivisor is null && targets.Contains(t.Id)))
+                track.DropletRandomization?.Adjustments.Clear();
+        });
+    }
+
     private void DrawSliderInspector(ICanvas c, Rect bounds)
     {
         if (!DockContentInputAvailable) return;

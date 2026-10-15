@@ -17,7 +17,7 @@ public sealed partial class EditorView
     private TimingMap.Lookup? waveformTiming;
     private (double TimeMs, double BeatLengthMs)[] waveformRedPoints = [];
     public bool WaveformNeedsRedraw => TimingPageVisible && waveformTask is { IsCompleted: true };
-    internal Rect WaveformBounds => new(16, 150, Math.Max(80, rightPanel.X - 32), Math.Max(100, height - 280));
+    internal Rect WaveformBounds => new(16, 150, Math.Max(80, rightPanel.X - 32), Math.Max(100, TransportTop - 160));
 
     internal float WaveformGridTop => WaveformBounds.Y + WaveformBounds.Height * .34f;
     internal float WaveformRulerY => WaveformBounds.Y + WaveformBounds.Height * .66f;

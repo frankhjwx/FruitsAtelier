@@ -49,6 +49,18 @@ the winning offset; pointer updates do not rebuild DS references from moved cont
 
 ## Full-map work and cache ownership
 
+Placement movement overlays project break reconciliation from cached parent
+intervals and the candidate interval. They share the transaction's break algorithm
+without cloning a document or exporting the map. The interval cache follows the
+conversion snapshot; projected breaks follow the placement snapshot, committed
+break array and AR. Leaving placement restores committed break filtering.
+
+Lazer distance guide colours retain a sorted playable fruit/droplet array and
+movement prefix contexts, keyed by playable snapshot identity, CS and excluded
+selected parents. Guide sampling binary-searches the preceding event and evaluates
+one candidate using its cached context. Viewport movement and colour preferences
+reuse these contexts; changing content, CS or the excluded parents rebuilds them.
+
 `OsuBeatmapWriter.Serialize` validates, converts, emits text, parses it again,
 reconverts the quantized map and computes playable NM/HR events and diagnostics.
 It is not a cheap accessor. Explicit export needs this validation. The committed
@@ -222,7 +234,7 @@ identity and selected parent IDs. It reads existing exported events and timing;
 repainting and horizontal scrolling do not export or convert. Tiny droplets are
 always included in its peak DS and horizontal-speed calculations.
 
-Song Setup, Stream/Stack and Randomize droplets commit valid changes at input
+Song Setup, Stream/Stack and Droplet Settings commit valid changes at input
 boundaries through editing transactions. Unchanged values do not create edits.
 Graph and snap drags retain their candidate preview until pointer release. Local
 edit snapshots preserve focus when committed conversion catches up; external

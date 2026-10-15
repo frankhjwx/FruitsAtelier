@@ -5,7 +5,10 @@ public readonly record struct CatchComboChange(int Combo, ConvertedCatchObject O
 public sealed record CatchTestplayFrame(double TimeMs, double X, int Combo, bool FacingLeft, bool HyperDashing,
     bool Ended, Exception? Error, int JudgedCount, ConvertedCatchObject[] MissedObjects, CatchTrail[] Trails,
     CatchComboChange[] ComboChanges, CatchPlateSprite[] Plate, bool Autoplay = false, bool Dashing = false,
-    int Hit300 = 0, int Hit100 = 0, int Hit50 = 0, int Misses = 0);
+    int Hit300 = 0, int Hit100 = 0, int Hit50 = 0, int Misses = 0)
+{
+    public CatchLightingEvent[] Lighting { get; init; } = [];
+}
 
 /// <summary>Serialises gameplay mutations; drawing consumes a detached snapshot without holding the lock.</summary>
 public sealed class CatchTestplaySession
@@ -19,6 +22,7 @@ public sealed class CatchTestplaySession
     private readonly TimeProvider timeProvider;
     private readonly HashSet<int> keys = [];
     private readonly List<CatchComboChange> comboChanges = [];
+    private readonly List<CatchLightingEvent> lighting = [];
     private readonly int left, right, dash;
     private readonly CatchPlate plate;
     private readonly HashSet<(Guid SourceId, int EventIndex)> comboEnds;
@@ -53,7 +57,12 @@ public sealed class CatchTestplaySession
         plate = new(circleSize);
         game.Caught = caught;
         game.ComboChanged = (value, item) => comboChanges.Add(new(value, item));
-        game.Judged = (item, x, hit) => plate.Judge(item, x, hit, this.comboEnds.Contains((item.SourceId, item.EventIndex)));
+        game.Judged = (item, x, hit) =>
+        {
+            plate.Judge(item, x, hit, this.comboEnds.Contains((item.SourceId, item.EventIndex)));
+            if (hit) lighting.Add(new(item, item.X - x,
+                game.Combo + (item.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet ? 1 : 0)));
+        };
     }
 
     public void UpdateAudio(double position, double sampledAt, double duration, bool ready, bool playing,
@@ -166,6 +175,10 @@ public sealed class CatchTestplaySession
         time = clock.At(Realtime);
         game.Advance(time, keys.Contains(left), keys.Contains(right), keys.Contains(dash), autoplay);
         plate.Prune(time);
+        int expiredLighting = 0;
+        while (expiredLighting < lighting.Count && time - lighting[expiredLighting].Object.TimeMs >= CatchHitLighting.Lifetime)
+            expiredLighting++;
+        if (expiredLighting > 0) lighting.RemoveRange(0, expiredLighting);
         if (game.Finished && !game.HasMissAnimations && !plate.HasTransientAt(time)) ended = true;
     }
     public CatchTestplayFrame Capture()
@@ -174,7 +187,8 @@ public sealed class CatchTestplaySession
         {
             var frame = new CatchTestplayFrame(time, game.X, game.Combo, game.FacingLeft, game.HyperDashing,
                 ended, error, game.JudgedCount, game.MissedObjects.ToArray(), game.Trails.ToArray(), comboChanges.ToArray(),
-                plate.At(time, game.X).ToArray(), autoplay, keys.Contains(dash), game.Hit300, game.Hit100, game.Hit50, game.Misses);
+                plate.At(time, game.X).ToArray(), autoplay, keys.Contains(dash), game.Hit300, game.Hit100, game.Hit50, game.Misses)
+            { Lighting = lighting.ToArray() };
             comboChanges.Clear();
             return frame;
         }

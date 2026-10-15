@@ -81,7 +81,9 @@ internal static class MappingSessionTests
     {
         var ui = new Ui(); ui.LoadDocument(Map());
         var plot = ui.View.CanvasPlotBounds; var timeline = ui.View.ObjectTimelineBounds;
-        foreach (var point in new[] { (plot.X + 50, plot.Y + 100), (timeline.X + 50, timeline.Y + 20), (320f, ui.Height - 57) })
+        var overview = ui.Canvas.Fills.Single(f => f.Color == 0x141922).Bounds;
+        float overviewX = overview.X + overview.Width / 2, overviewY = overview.Y + overview.Height / 2;
+        foreach (var point in new[] { (plot.X + 50, plot.Y + 100), (timeline.X + 50, timeline.Y + 20), (overviewX, overviewY) })
         {
             ui.SetSnapDivisor(4);
             foreach (int expected in new[] { 8, 16, 16 }) { ui.View.Wheel(point.Item1, point.Item2, 120, true); Check(ui.View.SnapDivisor == expected, "Binary Snap progression failed."); }
@@ -95,7 +97,7 @@ internal static class MappingSessionTests
         var baseline = ui.View.Document.DeepClone();
         ui.View.LibrarySettings.MasterVolume = ui.View.LibrarySettings.SongVolume = ui.View.LibrarySettings.HitsoundVolume = 50;
         ui.View.AdjustVolumeShortcut(39, true); ui.View.ReleaseVolumeShortcut(39);
-        ui.View.Wheel(320, ui.Height - 57, 120, false, alt: true);
+        ui.View.Wheel(overviewX, overviewY, 120, false, alt: true);
         Check(ui.View.LibrarySettings.SongVolume == 55 && ui.View.LibrarySettings.MasterVolume == 50 && ui.View.LibrarySettings.HitsoundVolume == 50, "Overview wheel did not adjust the selected Music channel.");
         Check(ui.View.VolumePopoverVisible && baseline.ContentEquals(ui.View.Document), "Volume failed to show or edited content.");
     }

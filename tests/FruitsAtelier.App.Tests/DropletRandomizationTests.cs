@@ -25,27 +25,18 @@ internal static class DropletRandomizationTests
                 ui.View.LoadProject(BeatmapProject.FromDocuments([map, map.DeepClone()])); ui.Paint();
                 var before = ui.View.Document.DeepClone();
                 ui.View.OpenSongSetup(); ui.Paint(); ClickRandomTitle(ui);
-                ui.ClickText(L.Get("randomize.enableAll"));
-                Check(ui.View.Document.ContentEquals(before), "setup batch remains a cancellable draft");
+                Check(ui.View.Document.ContentEquals(before), "setup settings remain a cancellable draft");
                 ui.Key(27); Check(ui.View.Document.ContentEquals(before), "cancel preserves switches");
                 ui.View.OpenSongSetup(); ui.Paint(); ClickRandomTitle(ui);
                 Set(ui, "RandomizeDropletStrength", "12"); Set(ui, "RandomizeDropletSeed", "-123");
-                ui.ClickText(L.Get("randomize.enableAll")); ui.ClickText(L.Get("song.ok"));
+                ui.ClickText(L.Get("song.ok"));
                 Check(ui.View.Document.RandomizeDropletStrength == 12 && ui.View.Document.RandomizeDropletSeed == -123, "parameters committed");
-                Check(ui.View.Document.Tracks.Take(2).All(t => t.DropletRandomization is { Enabled: true })
-                    && ui.View.Document.Tracks[2].DropletRandomization is null, "batch affects ordinary FSliders only");
-                Check(ui.View.CaptureProject().Difficulties[1].Document.ContentEquals(map), "batch and parameters stay on current diff");
+                Check(ui.View.Document.Tracks.Take(2).All(t => t.DropletRandomization is null)
+                    && ui.View.Document.Tracks[2].DropletRandomization is null, "global parameters leave object modes unchanged");
+                Check(ui.View.CaptureProject().Difficulties[1].Document.ContentEquals(map), "parameters stay on current diff");
                 var enabled = ui.View.Document.DeepClone();
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(before), "setup undoes atomically");
                 ui.Key('Y', ctrl: true); Check(ui.View.Document.ContentEquals(enabled), "setup redo");
-                ui.ClickMap(1000, 256); ui.View.ToggleSelectedDropletRandomization(); ui.Paint();
-                Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: false }
-                    && ui.View.Document.Tracks[1].DropletRandomization is { Enabled: true }, "individual switch is independent");
-                ui.ClickText(L.Get("ui.edit")); ClickRandomTitle(ui); ui.ClickText(L.Get("randomize.enableAll"));
-                Check(ui.View.Document.Tracks.Take(2).All(t => t.DropletRandomization is { Enabled: true }), "Edit batch enable entry");
-                ui.ClickText(L.Get("ui.edit")); ClickRandomTitle(ui); ui.ClickText(L.Get("randomize.disableAll"));
-                Check(ui.View.Document.Tracks.Take(2).All(t => t.DropletRandomization is { Enabled: false }), "Edit batch disable entry");
-                ui.Key('Z', ctrl: true); Check(ui.View.Document.Tracks.Take(2).All(t => t.DropletRandomization is { Enabled: true }), "batch has one undo step");
                 ui.View.OpenSongSetup(); ui.Paint(); ClickRandomTitle(ui);
                 Set(ui, "RandomizeDropletSeed", "1.5"); ui.ClickText(L.Get("song.ok"));
                 Check(ui.View.SongSetupVisible && ui.View.Document.RandomizeDropletSeed == -123, "invalid seed cannot apply partially"); ui.Key(27);
@@ -59,7 +50,8 @@ internal static class DropletRandomizationTests
                 foreach (var mode in Enum.GetValues<FruitsAtelier.App.Editor.SliderEditingMode>())
                 {
                     var dragMap = map.DeepClone(); dragMap.Tracks.RemoveRange(1, 2);
-                    dragMap.Tracks[0].DropletRandomization = new() { Enabled = true };
+                    dragMap.DerandomizeFSliderDroplets = true;
+                    dragMap.Tracks[0].DropletMode = SliderDropletMode.Randomize;
                     var dragUi = new Ui(); dragUi.LoadDocument(dragMap); dragUi.View.SetSliderEditingMode(mode); dragUi.Paint();
                     var target = OsuBeatmapWriter.Serialize(dragMap).PlayableObjects.First(o => o.Kind == CatchObjectKind.TinyDroplet);
                     dragUi.ClickMap(target.TimeMs, target.X);
@@ -148,22 +140,16 @@ internal static class DropletRandomizationTests
                 ui.LoadDocument(map); ui.View.SetSliderEditingMode(mode);
                 ui.ClickMap(1000, 256); ui.HoldMap(1000, 256, clock.Advance);
                 Check(ui.View.Document.ContentEquals(map), "opening long-press actions leaves content unchanged");
-                Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.title")), "Long press offers droplet randomization");
-                ClickRandomTitle(ui);
-                ui.ClickText(L.Get("randomize.enableSelected")); Wait();
-
-                Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: true }, "The panel enables the selected FSlider immediately");
+                ui.ClickText(L.Get("inspector.dropletMode", L.Get("droplet.mode.Derandomize")));
+                ui.ClickText(L.Get("droplet.mode.Randomize"));
+                var end = DateTime.UtcNow.AddSeconds(30);
+                do { Thread.Sleep(5); ui.Paint(); } while (ui.View.ConversionRefreshing && DateTime.UtcNow < end);
+                Check(ui.View.Document.Tracks[0].RandomizesDroplets(ui.View.Document), "Long-press mode selection applies directly");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Randomization edits in one undo step");
-                void Wait()
-                {
-                    var end = DateTime.UtcNow.AddSeconds(30);
-                    while (!ui.View.RandomDockValid && DateTime.UtcNow < end) { Thread.Sleep(5); ui.Paint(); }
-                    Check(ui.View.RandomDockValid, "Randomization preview completes");
-                }
                 ui.Key(27);
                 var streamMap = map.DeepClone(); streamMap.Tracks[0].StreamSnapDivisor = 4;
                 ui.LoadDocument(streamMap); ui.HoldMap(1000, 256, clock.Advance);
-                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.enableSelected") || t.Value == L.Get("randomize.disableSelected")),
+                Check(!ui.Canvas.Texts.Any(t => Enum.GetValues<SliderDropletMode>().Any(m => t.Value == L.Get("inspector.dropletMode", L.Get("droplet.mode." + m)))),
                     "slider-managed fruit streams do not offer randomization");
             }
         }

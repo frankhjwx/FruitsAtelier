@@ -5,6 +5,8 @@ using L = FruitsAtelier.Localization.Strings;
 
 namespace FruitsAtelier.Core;
 
+public enum CatchHitLightingMode { FollowMode, On, Off }
+
 public sealed class LibrarySettings
 {
     public EditorDockLayouts? DockLayouts { get; set; }
@@ -33,9 +35,38 @@ public sealed class LibrarySettings
     public bool DerandomizeDroplets { get; set; } = true;
     public bool DerandomizeNewProjects { get; set; } = true;
     public bool ExperimentalSnapDivisions { get; set; }
+    public bool LazerEditing { get; set; }
+    public bool MappingSpeedDistanceSnap { get; set; }
+    public bool LazerSpeedDistanceSnap { get; set; } = true;
+    public bool LazerDistanceGuidesVisible { get; set; } = true;
+    // Immutable snapshots let canvas guides cache the combined fixed and custom speeds by identity.
+    private IReadOnlyList<double> lazerDistanceCustomSpeeds = Array.AsReadOnly(Array.Empty<double>());
+    public IReadOnlyList<double> LazerDistanceCustomSpeeds
+    {
+        get => lazerDistanceCustomSpeeds;
+        set => lazerDistanceCustomSpeeds = Array.AsReadOnly((value ?? []).Where(speed => double.IsFinite(speed)
+            && speed > 0 && speed <= 3 && speed != .5 && speed != 1).Distinct().Order().Take(DistanceSnap.MaximumPresets).ToArray());
+    }
+    private CatchHitLightingMode catchHitLighting;
+    public CatchHitLightingMode CatchHitLighting
+    {
+        get => catchHitLighting;
+        set => catchHitLighting = Enum.IsDefined(value) ? value : CatchHitLightingMode.FollowMode;
+    }
     public bool ReverseCanvasScroll { get; set; }
     public bool LockDropletSelection { get; set; } = true;
     public bool LowLatencyDisplay { get; set; }
+    public const int DefaultUiScalePercent = 150;
+    public const int MinimumUiScalePercent = 50;
+    public const int MaximumUiScalePercent = 200;
+    public const int UiScaleStep = 25;
+    private int uiScalePercent = DefaultUiScalePercent;
+    public int UiScalePercent
+    {
+        get => uiScalePercent;
+        set => uiScalePercent = Math.Clamp((int)Math.Round(value / (double)UiScaleStep),
+            MinimumUiScalePercent / UiScaleStep, MaximumUiScalePercent / UiScaleStep) * UiScaleStep;
+    }
     public bool AudioDiagnostics { get; set; }
     public bool AudioDiagnosticFrames { get; set; }
     private string audioDiagnosticProfile = "event-10";
@@ -72,6 +103,9 @@ public sealed class LibrarySettings
     public bool UniformCanvasScale { get; set; } = true;
     public double CanvasTimeZoom { get => canvasTimeZoom; set => canvasTimeZoom = double.IsFinite(value) ? Math.Clamp(value, .01, 2) : .6; }
     public double ObjectTimelineScale { get => objectTimelineScale; set => objectTimelineScale = double.IsFinite(value) ? Math.Clamp(value, .025, 16) : .18; }
+    private float objectTimelineHeight = 64, overviewTimelineHeight = 40;
+    public float ObjectTimelineHeight { get => objectTimelineHeight; set => objectTimelineHeight = float.IsFinite(value) ? Math.Clamp(value, 32, 64) : 64; }
+    public float OverviewTimelineHeight { get => overviewTimelineHeight; set => overviewTimelineHeight = float.IsFinite(value) ? Math.Clamp(value, 20, 40) : 40; }
     public double WaveformSpanMs { get => waveformSpanMs; set => waveformSpanMs = double.IsFinite(value) ? Math.Clamp(value, 100, int.MaxValue * 2d) : 10000; }
     public int TestplayLeftKey { get; set; } = 37;
     public int TestplayRightKey { get; set; } = 39;

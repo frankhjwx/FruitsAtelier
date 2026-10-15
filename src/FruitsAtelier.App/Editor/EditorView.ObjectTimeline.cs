@@ -8,7 +8,12 @@ public sealed partial class EditorView
 {
     private Rect objectTimeline;
     private readonly List<BeatGridLine> timelineGrid = [];
-    private double objectTimelineScale = .18;
+    private double mappingObjectTimelineScale = .18;
+    private double objectTimelineScale
+    {
+        get => IsLazerEditing ? LazerTimelineScale : mappingObjectTimelineScale;
+        set => mappingObjectTimelineScale = value;
+    }
     private readonly List<(Guid Id, double Time, Rect Bounds)> timelineObjects = [];
     private CatchConversionResult? timelineConversion;
     private Guid timelineDraft;
@@ -39,7 +44,7 @@ public sealed partial class EditorView
     private BreakPeriod breakEditOriginal, breakEditPreview;
     private BreakPeriod[] breakPeriods = [];
     private bool IsTimelineTail((Guid Id, double Time, Rect Bounds) item, float x, float y)
-        => item.Bounds.Contains(x, y) && Math.Abs(x - (item.Bounds.Right - 19)) <= 10
+        => item.Bounds.Contains(x, y) && Math.Abs(x - (item.Bounds.Right - item.Bounds.Height / 2)) <= Math.Min(10, item.Bounds.Height / 2)
         && (Document.Tracks.Any(t => t.Id == item.Id && t.Nodes.Count > 1 && t.StreamSnapDivisor is null)
             || Document.ImportedSliders.Any(s => s.Id == item.Id)
             || Document.BananaShowers.Any(s => s.Id == item.Id));
@@ -83,7 +88,7 @@ public sealed partial class EditorView
     }
     public Rect ObjectTimelineBounds => objectTimeline;
     public double ObjectTimelinePixelsPerMs => objectTimelineScale;
-    public double ObjectTimelineStartMs => playhead - objectTimeline.Width / objectTimelineScale / 2;
+    public double ObjectTimelineStartMs => LazerPresentationTime - objectTimeline.Width / objectTimelineScale / 2;
     private static readonly double[] PlaybackRates = [.1, .25, .5, .75, 1, 1.5];
     public double PlaybackSpeed { get; private set; } = 1;
     public Action<double>? RequestPlaybackSpeed { get; set; }
@@ -229,8 +234,10 @@ public sealed partial class EditorView
         => SetPlaybackSpeed(Math.Clamp((Math.Round(PlaybackSpeed * 100) + direction * (fine ? 5 : 25)) / 100, .1, 1.5));
 
     private Rect TimelineObjectBounds(double start, double end, float stackOffset)
-        => new(objectTimeline.X + (float)((start - ObjectTimelineStartMs) * objectTimelineScale) - 19,
-            objectTimeline.Y + 8 + stackOffset, (float)((end - start) * objectTimelineScale) + 38, 38);
+        => new(objectTimeline.X + (float)((start - ObjectTimelineStartMs) * objectTimelineScale) - 19 * TimelineMarkerScale,
+            objectTimeline.Y + (8 + stackOffset) * TimelineMarkerScale,
+            (float)((end - start) * objectTimelineScale) + 38 * TimelineMarkerScale, 38 * TimelineMarkerScale);
+    private float TimelineMarkerScale => objectTimeline.Height / 64;
 
     private void RefreshTimelineSources()
     {
@@ -280,7 +287,7 @@ public sealed partial class EditorView
             int last = first + 1;
             while (last < timelineMarkers.Length && timelineMarkers[last].Start == timelineMarkers[first].Start) last++;
             int layers = Math.Min(TimelineStackLimit, last - first);
-            // Fit the circles and selection rings inside the existing 64-DIP timeline.
+            // Cache offsets at the reference height; drawing maps them into the current panel height.
             float step = layers > 1 ? Math.Min(3, 22f / (layers - 1)) : 0;
             float baseline = Math.Max(0, step * (layers - 1) - 6);
             for (int i = first; i < last; i++)
@@ -342,11 +349,21 @@ public sealed partial class EditorView
     private void DrawObjectTimeline(ICanvas c)
     {
         float top = canvas.Y + 38;
-        objectTimeline = new(leftPanel.Right + 42, top + 4, Math.Max(30, canvas.Right - leftPanel.Right - 54), 64);
+        objectTimeline = new(leftPanel.Right + 42, top + 4, Math.Max(30, canvas.Right - leftPanel.Right - 54), ObjectTimelineHeight);
         timelineObjects.Clear();
-        Button(c, new(leftPanel.Right + 7, top + 5, 29, 28), L.Get("ui.timelineZoomIn"), () => ZoomObjectTimeline(1.25));
-        Button(c, new(leftPanel.Right + 7, top + 37, 29, 28), L.Get("ui.timelineZoomOut"), () => ZoomObjectTimeline(.8));
-        objectTimelineScale = Math.Clamp(objectTimelineScale, .025, MaximumObjectTimelineScale);
+        float zoomHeight = Math.Max(14, (objectTimeline.Height - 8) / 2);
+        if (objectTimeline.Height < 40)
+        {
+            float halfWidth = 20;
+            Button(c, new(leftPanel.Right, top + 4, halfWidth, objectTimeline.Height), L.Get("ui.timelineZoomIn"), () => ZoomObjectTimeline(1.25), fontSize: 10, textPadding: 5);
+            Button(c, new(leftPanel.Right + halfWidth, top + 4, halfWidth, objectTimeline.Height), L.Get("ui.timelineZoomOut"), () => ZoomObjectTimeline(.8), fontSize: 10, textPadding: 5);
+        }
+        else
+        {
+            Button(c, new(leftPanel.Right + 7, top + 5, 29, zoomHeight), L.Get("ui.timelineZoomIn"), () => ZoomObjectTimeline(1.25));
+            Button(c, new(leftPanel.Right + 7, top + 9 + zoomHeight, 29, zoomHeight), L.Get("ui.timelineZoomOut"), () => ZoomObjectTimeline(.8));
+        }
+        if (!IsLazerEditing) objectTimelineScale = Math.Clamp(objectTimelineScale, .025, MaximumObjectTimelineScale);
         double start = ObjectTimelineStartMs;
         double end = start + objectTimeline.Width / objectTimelineScale;
         float X(double time) => objectTimeline.X + (float)((time - start) * objectTimelineScale);
@@ -372,7 +389,7 @@ public sealed partial class EditorView
         {
             if (!tick.IsBeat && renderedTiming.At(tick.TimeMs).BeatLengthMs / tick.Subdivision * objectTimelineScale < 5) continue;
             var style = GridStyle(tick);
-            float height = tick.IsMeasure ? 30 : style.Height;
+            float height = (tick.IsMeasure ? 30 : style.Height) * TimelineMarkerScale;
             c.Line(X(tick.TimeMs), objectTimeline.Bottom - height, X(tick.TimeMs), objectTimeline.Bottom,
                 style.Color, style.Width);
         }
@@ -395,12 +412,12 @@ public sealed partial class EditorView
         if (placement is { } ghost && ghost.End >= start - 20 / objectTimelineScale && ghost.Start <= end + 20 / objectTimelineScale)
         {
             var bounds = TimelineObjectBounds(ghost.Start, ghost.End, 0);
-            if (ghost.End > ghost.Start) c.Fill(bounds, ghost.Color, 19, .35f);
+            if (ghost.End > ghost.Start) c.Fill(bounds, ghost.Color, bounds.Height / 2, .35f);
             FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin,
-                X(ghost.Start), bounds.Y + 19, 38, ghost.Color, opacity: .45f);
+                X(ghost.Start), bounds.Y + bounds.Height / 2, bounds.Height, ghost.Color, opacity: .45f);
             if (ghost.End > ghost.Start)
                 FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin,
-                    X(ghost.End), bounds.Y + 19, 38, ghost.Color, opacity: .45f);
+                    X(ghost.End), bounds.Y + bounds.Height / 2, bounds.Height, ghost.Color, opacity: .45f);
         }
 
         void DrawBody(int index)
@@ -418,14 +435,14 @@ public sealed partial class EditorView
                     var segment = segments[segmentIndex];
                     float from = X(segment.TimeMs), to = X(segment.EndTimeMs);
                     if (to < objectTimeline.X || from > objectTimeline.Right) continue;
-                    c.Fill(new(from, bounds.Y + 3, Math.Max(1, to - from), bounds.Height - 6), color, 2, .7f);
+                    c.Fill(new(from, bounds.Y + 3 * TimelineMarkerScale, Math.Max(1, to - from), bounds.Height - 6 * TimelineMarkerScale), color, 2, .7f);
                 }
             }
-            else c.Fill(bounds, color, 19, .7f);
+            else c.Fill(bounds, color, bounds.Height / 2, .7f);
             if (item.IsBanana)
             {
-                c.Stroke(bounds, 0xFFFFFF, 1.5f, 19);
-                if (selected) c.Stroke(bounds, 0x2866C6, 2, 19);
+                c.Stroke(bounds, 0xFFFFFF, 1.5f, bounds.Height / 2);
+                if (selected) c.Stroke(bounds, 0x2866C6, 2, bounds.Height / 2);
             }
         }
 
@@ -434,17 +451,17 @@ public sealed partial class EditorView
             var item = visibleItems[index];
             bool selected = IsObjectSelected(item.Id);
             uint color = item.IsBanana ? Gold : ComboColour(item.Id, useFallbackPalette: true, eventIndex: item.EventIndex);
-            float left = X(item.Start), right = X(item.End), cy = timelineObjects[index].Bounds.Y + 19;
+            float left = X(item.Start), right = X(item.End), cy = timelineObjects[index].Bounds.Y + timelineObjects[index].Bounds.Height / 2;
             void Ring(float ringX, int? number = null, int? edge = null)
             {
                 // Timeline endpoints use the combo marker, independently of gameplay slider textures.
-                FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin, ringX, cy, 38, color, number);
+                FruitsAtelier.App.Skinning.CatchSkin.DrawTimelineCircle(c, skin ?? defaultSkin, ringX, cy, 38 * TimelineMarkerScale, color, number);
                 if (selected && (soundEdge is not { } picked || picked.Id != item.Id || picked.Edge == edge))
                 {
-                    c.Circle(ringX, cy, 19, 0xFFA600, false, 3);
-                    c.Circle(ringX, cy, 21, 0x2866C6, false, 2);
+                    c.Circle(ringX, cy, 19 * TimelineMarkerScale, 0xFFA600, false, Math.Max(1, 3 * TimelineMarkerScale));
+                    c.Circle(ringX, cy, 21 * TimelineMarkerScale, 0x2866C6, false, Math.Max(1, 2 * TimelineMarkerScale));
                 }
-                if (timelineFruit == (item.Id, item.EventIndex)) c.Circle(ringX, cy, 21, Gold, false, 2);
+                if (timelineFruit == (item.Id, item.EventIndex)) c.Circle(ringX, cy, 21 * TimelineMarkerScale, Gold, false, Math.Max(1, 2 * TimelineMarkerScale));
             }
             if (right > left + 1) Ring(right, edge: item.Spans);
             if (item.Spans > 1 && item.End > item.Start)
@@ -456,11 +473,11 @@ public sealed partial class EditorView
                 {
                     float repeatX = X(item.Start + span * spanDuration);
                     Ring(repeatX, edge: span);
-                    if (skin is null || !skin.DrawReverseArrow(c, repeatX, cy, 38))
+                    if (skin is null || !skin.DrawReverseArrow(c, repeatX, cy, 38 * TimelineMarkerScale))
                     {
-                        c.Line(repeatX - 8, cy, repeatX + 4, cy, Foreground, 5);
-                        c.Line(repeatX + 1, cy - 6, repeatX + 8, cy, Foreground, 3);
-                        c.Line(repeatX + 8, cy, repeatX + 1, cy + 6, Foreground, 3);
+                        c.Line(repeatX - 8 * TimelineMarkerScale, cy, repeatX + 4 * TimelineMarkerScale, cy, Foreground, Math.Max(1, 5 * TimelineMarkerScale));
+                        c.Line(repeatX + TimelineMarkerScale, cy - 6 * TimelineMarkerScale, repeatX + 8 * TimelineMarkerScale, cy, Foreground, Math.Max(1, 3 * TimelineMarkerScale));
+                        c.Line(repeatX + 8 * TimelineMarkerScale, cy, repeatX + TimelineMarkerScale, cy + 6 * TimelineMarkerScale, Foreground, Math.Max(1, 3 * TimelineMarkerScale));
                     }
                 }
             }
@@ -470,7 +487,7 @@ public sealed partial class EditorView
         {
             double visibleStart = Math.Max(start, period.StartMs), visibleEnd = Math.Min(end, period.EndMs);
             if ((visibleEnd - visibleStart) * objectTimelineScale >= 48)
-                c.Text(L.Get("timeline.breakLabel"), X(visibleStart) + 8, objectTimeline.Y + 19, 14,
+                c.Text(L.Get("timeline.breakLabel"), X(visibleStart) + 8, objectTimeline.Y + 19 * TimelineMarkerScale, 14 * TimelineMarkerScale,
                     Foreground, X(visibleEnd) - X(visibleStart) - 12);
         }
         (int Index, bool Start)? highlightedEdge = drag == DragKind.BreakEdge
@@ -488,7 +505,7 @@ public sealed partial class EditorView
             c.Line(x, objectTimeline.Y, x, objectTimeline.Bottom - 1,
                 point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, .8f);
         }
-        float head = X(playhead);
+        float head = X(LazerPresentationTime);
         c.Line(head, objectTimeline.Y, head, objectTimeline.Bottom, Gold, 2);
         c.Line(objectTimeline.X, objectTimeline.Bottom - 1, objectTimeline.Right, objectTimeline.Bottom - 1, Grid);
         DrawTimelineBookmarks(c, objectTimeline, start, end);
@@ -497,6 +514,11 @@ public sealed partial class EditorView
 
     private void ZoomObjectTimeline(double factor)
     {
+        if (IsLazerEditing)
+        {
+            ZoomLazerTimeline(Math.Log(factor) / Math.Log(1.25));
+            return;
+        }
         objectTimelineScale = Math.Clamp(objectTimelineScale * factor, .025, MaximumObjectTimelineScale);
         LibrarySettings.ObjectTimelineScale = objectTimelineScale;
         RequestViewPreference?.Invoke();
@@ -516,13 +538,13 @@ public sealed partial class EditorView
                 ? (item.Id, timelineMarkers.First(m => m.Id == item.Id && m.Start == item.Time).EventIndex) : null;
             var markerSource = timelineSources.First(o => o.Id == item.Id);
             if (!markerSource.IsBanana && !timelinePatterns.Contains(item.Id) && markerSource.End > markerSource.Start && markerSource.Spans > 0
-                && objectSelection.Count == 1 && objectSelection.Contains(item.Id) && Math.Abs(y-(item.Bounds.Y+19)) <= 19)
+                && objectSelection.Count == 1 && objectSelection.Contains(item.Id) && Math.Abs(y-(item.Bounds.Y+item.Bounds.Height/2)) <= item.Bounds.Height/2)
             {
                 double spanDuration = (markerSource.End-markerSource.Start)/markerSource.Spans;
                 double time = ObjectTimelineStartMs+(x-objectTimeline.X)/objectTimelineScale;
                 int edge = (int)Math.Clamp(Math.Round((time-markerSource.Start)/spanDuration),0,markerSource.Spans);
                 double markerX = objectTimeline.X+(markerSource.Start+edge*spanDuration-ObjectTimelineStartMs)*objectTimelineScale;
-                if (Math.Abs(x-markerX)<=19) soundEdge = (item.Id,edge);
+                if (Math.Abs(x-markerX)<=item.Bounds.Height/2) soundEdge = (item.Id,edge);
             }
             if (!notesLocked && !toggle && IsTimelineTail(item, x, y))
             {

@@ -266,20 +266,25 @@ public sealed partial class EditorView
     private IReadOnlyList<ConvertedCatchObject>? distanceLayoutAuthoredSource;
     private double distanceLayoutScale, distanceLayoutWidth, distanceLayoutDpb;
     private string distanceLayoutLanguage = "";
-    private bool distanceLayoutIncludeTiny;
+    private bool distanceLayoutIncludeTiny, distanceLayoutSpeed;
+    private IReadOnlyList<BreakPeriod>? distanceLayoutBreaks;
 
     private void EnsureDistanceLabelLayout(ICanvas c, IReadOnlyList<ConvertedCatchObject> objects)
     {
+        var movementBreaks = MovementBreakPeriods();
         if (ReferenceEquals(distanceLayoutSource, objects) && ReferenceEquals(distanceLayoutAuthoredSource, conversion!.Objects)
             && ReferenceEquals(distanceLayoutTiming, renderedTiming)
             && distanceLayoutScale == pixelsPerMs && distanceLayoutWidth == Playfield.Width
             && distanceLayoutDpb == Document.DistancePerBeat && distanceLayoutLanguage == L.Language
-            && distanceLayoutIncludeTiny == movementIncludeTinyDroplets) return;
+            && distanceLayoutIncludeTiny == movementIncludeTinyDroplets && distanceLayoutSpeed == UsesSpeedDistanceSnap
+            && ReferenceEquals(distanceLayoutBreaks, movementBreaks)) return;
+        distanceLayoutBreaks = movementBreaks;
         distanceLayoutSource = objects; distanceLayoutTiming = renderedTiming;
         distanceLayoutAuthoredSource = conversion!.Objects;
         distanceLayoutScale = pixelsPerMs; distanceLayoutWidth = Playfield.Width;
         distanceLayoutDpb = Document.DistancePerBeat; distanceLayoutLanguage = L.Language;
         distanceLayoutIncludeTiny = movementIncludeTinyDroplets;
+        distanceLayoutSpeed = UsesSpeedDistanceSnap;
         distanceLayout.Clear();
         var nearby = new List<DistanceLabel>();
         var authored = conversion!.Objects.ToDictionary(o => (o.SourceId, o.EventIndex));
@@ -290,16 +295,20 @@ public sealed partial class EditorView
             var to = objects[movementIndices[i]];
             if (to.TimeMs - from.TimeMs <= 37.5
                 || Document.BananaShowers.Any(s => s.TimeMs <= to.TimeMs && s.EndTimeMs >= from.TimeMs)
-                || breakPeriods.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
+                || movementBreaks.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
             // Keep labels aligned with playable connections while measuring authored spacing, like the inspector.
-            double? spacing = placementGhost is { } ghost && placementMovementObjects is not null
+            var authoredFrom = authored.GetValueOrDefault((from.SourceId, from.EventIndex), from);
+            var authoredTo = authored.GetValueOrDefault((to.SourceId, to.EventIndex), to);
+            double? spacing = UsesSpeedDistanceSnap
+                ? authoredTo.TimeMs > authoredFrom.TimeMs
+                    ? Math.Abs(authoredTo.X - authoredFrom.X) / (authoredTo.TimeMs - authoredFrom.TimeMs) : null
+                : placementGhost is { } ghost && placementMovementObjects is not null
                 && (to.SourceId, to.EventIndex) == (ghost.SourceId, ghost.EventIndex) ? placementDistances.Previous
                 : placementGhost is { } nextGhost && placementMovementObjects is not null
                 && (from.SourceId, from.EventIndex) == (nextGhost.SourceId, nextGhost.EventIndex) ? placementDistances.Next
-                : BaseDistanceRatio(authored.GetValueOrDefault((from.SourceId, from.EventIndex), from),
-                    authored.GetValueOrDefault((to.SourceId, to.EventIndex), to));
+                : BaseDistanceRatio(authoredFrom, authoredTo);
             if (spacing is not { } ratio) continue;
-            string text = L.Get("assist.ratio", ratio);
+            string text = L.Get(UsesSpeedDistanceSnap ? "ds.lazerSpeed" : "assist.ratio", ratio);
             var label = new DistanceLabel((from.TimeMs + to.TimeMs) / 2,
                 (float)((from.X + to.X) / 2 / 512 * Playfield.Width) + 8, c.MeasureText(text, 11) + 8, text);
             nearby.RemoveAll(other => (label.Time - other.Time) * pixelsPerMs > 21);
@@ -315,7 +324,7 @@ public sealed partial class EditorView
         var objects = placementMovementObjects ?? playableObjects;
         EnsureMovementStates(objects, movementIncludeTinyDroplets);
         EnsureDistanceLabelLayout(c, objects);
-        double endTime = viewStart + plot.Height / pixelsPerMs;
+        double endTime = PresentationViewStart + plot.Height / pixelsPerMs;
         var occupied = new List<Rect>();
         if (PlacementGhostPoint() is not null || FlagTargets().Length == 1)
         {
@@ -328,15 +337,14 @@ public sealed partial class EditorView
         while (low < high)
         {
             int mid = low + (high - low) / 2;
-            if (distanceLayout[mid].Time < viewStart) low = mid + 1; else high = mid;
+            if (distanceLayout[mid].Time < PresentationViewStart) low = mid + 1; else high = mid;
         }
         for (int i = low; i < distanceLayout.Count; i++)
         {
             var label = distanceLayout[i];
             if (label.Time > endTime) break;
-            if (breakPeriods.Any(period => label.Time >= period.StartMs && label.Time <= period.EndMs)) continue;
             var bounds = new Rect(Playfield.X + label.X,
-                plot.Bottom - (float)((label.Time - viewStart) * pixelsPerMs) - 9, label.Width, 18);
+                Screen(new(label.Time, 0)).Y - 9, label.Width, 18);
             if (bounds.X < plot.X || bounds.Right > plot.Right || bounds.Y < plot.Y || bounds.Bottom > plot.Bottom
                 || occupied.Any(r => Intersects(r, bounds))) continue;
             c.Fill(bounds, Background, 3, .8f);

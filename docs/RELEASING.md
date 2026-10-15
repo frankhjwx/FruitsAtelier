@@ -18,13 +18,13 @@ From the repository root, using PowerShell 7 and the SDK pinned in `global.json`
 
 ```powershell
 ./scripts/Publish-Windows.ps1
-./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.0.2-win-x64.zip
+./scripts/Test-WindowsPackage.ps1 -Archive artifacts/releases/FruitsAtelier-1.0.3-win-x64.zip
 ```
 
 The outputs are `artifacts/releases/FruitsAtelier-VERSION-win-x64.zip` and its
 `.zip.sha256` checksum, plus a Velopack full `.nupkg` and
 `releases.win-x64.json` update feed. The default version comes from `Directory.Build.props`
-(currently 1.0.2); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
+(currently 1.0.3); `-Version` overrides it for a tagged release. `build-info.json` records the version, source commit, SDK, RID, and whether
 the local checkout had uncommitted changes. Executable version metadata uses the
 same version and commit. Release builds run from the clean tagged commit.
 The window title displays this version beside the application name, omitting the
@@ -212,6 +212,33 @@ runtime, loads native SQLite, validates embedded localization and assets, decode
 the packaged hitsounds, and exercises tempo processing and map conversion without
 producing sound. It does not certify every GPU/audio-driver combination. Verify
 window rendering and audio on a Windows machine before choosing a release tag.
+
+## Discord announcement
+
+After each GitHub release passes publication and download verification, provide
+an English Discord announcement in a fenced `markdown` block in the release
+handoff. Keep the copyable message at or below **2,000 characters**, counting
+Markdown, spaces, newlines and URLs (excluding the surrounding code fence).
+Check its length before delivery. Save a copy under
+`artifacts/release-<tag>/announcement.md`; generated announcements stay out of Git.
+The maintainer copies the message to Discord.
+
+Use the following order, matching the established announcements:
+
+1. A bold version link: `**[<tag> Release](<GitHub release URL>)**`.
+2. `**FruitsAtelier <tag> Beta** is now available! :tangerine:`. Match the
+   release notes' product label; include Beta only while the product uses it.
+3. `**What's new**` with concise, user-facing bullets and bold feature names.
+4. `**Fixes & improvements**` with the most useful fixes. Omit an empty section.
+5. `**Download / Update**` with the release's fixed-name **Windows x64 ZIP**
+   link, extraction and launch instructions, and a reminder to keep `Update.exe`
+   and `current/` together. Include **Settings → Application updates**, then
+   download, save, and restart only after verifying discovery by an older stable
+   installation.
+6. `Feedback and bug reports are welcome!`
+
+Base every claim on the released diff and verified assets. Prioritize highlights
+and shorten bullets to fit the limit; the release link supplies the full notes.
 
 ## Update integration check
 

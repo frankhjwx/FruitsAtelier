@@ -21,7 +21,7 @@ public sealed partial class EditorView
     private bool dropletSelectionLocked { get => LibrarySettings.LockDropletSelection; set => LibrarySettings.LockDropletSelection = value; }
     private bool notesLockFlyout;
     public bool DropletSelectionLocked => dropletSelectionLocked;
-    private bool EffectiveGridSnap => gridSnap ^ (shiftHeld && !altHeld);
+    private bool EffectiveGridSnap => !UsesSpeedDistanceSnap && (gridSnap ^ (shiftHeld && !altHeld));
     public (double? Previous, double? Next) DistanceReadout { get; private set; }
 
     public void SetModifiers(bool alt, bool shift)
@@ -45,6 +45,7 @@ public sealed partial class EditorView
     private MapPoint SnapDistance(MapPoint point, ISet<Guid>? excluded = null)
     {
         distanceOutside = false;
+        if (UsesSpeedDistanceSnap) return TryLazerDistanceSnap(point, out var lazerPoint, excluded) ? lazerPoint : point;
         if (!DistanceSnapEnabled) return point;
         EnsureDistanceReferences();
         var next = Document.DistanceSnapCollinear ? distanceReferences.FirstOrDefault(r =>
@@ -56,6 +57,7 @@ public sealed partial class EditorView
         double minX, double maxX, out MapPoint result)
     {
         result = point; distanceOutside = false;
+        if (UsesSpeedDistanceSnap) return TryLazerDistanceSnap(point, out result, excluded, minX, maxX);
         if (!DistanceSnapEnabled) return false;
         var previous = references.LastOrDefault(r => r.Id != draftTrack && r.Start.TimeMs <= point.TimeMs
             && excluded?.Contains(r.Id) != true);
@@ -69,6 +71,7 @@ public sealed partial class EditorView
 
     private MapPoint PlacementPoint(float x, float y)
     {
+        if (UsesSpeedDistanceSnap) return LazerPlacementPoint(x, y);
         var point = MapAt(x, y, true);
         if (TrySnapToObject(point, Transform.ToMap(x, y).X, out var aligned)) return aligned;
         point = SnapDistance(point);
@@ -77,6 +80,7 @@ public sealed partial class EditorView
 
     private MapPoint PenStartPoint(float x, float y)
     {
+        if (UsesSpeedDistanceSnap) return LazerPlacementPoint(x, y);
         var point = MapAt(x, y, true, clampX: false);
         if (point.X is < 0 or > 512) { objectSnapTarget = null; distanceOutside = false; return point; }
         if (TrySnapToObject(point, Transform.ToMap(x, y).X, out var aligned)) return aligned;
@@ -224,7 +228,7 @@ public sealed partial class EditorView
         bool combo = placement ? nextFruitNewCombo : selectedFruit is not null
             ? newComboEvents.Contains((selectedFruit.SourceId, selectedFruit.EventIndex))
             : ids.All(id => ObjectFlags.NewCombo(Document, id));
-        bool[] active = [combo, false, false, false, EffectiveGridSnap, DistanceSnapEnabled, notesLocked];
+        bool[] active = [combo, false, false, false, !UsesSpeedDistanceSnap && EffectiveGridSnap, DistanceSnapEnabled, notesLocked];
         for (int i = 1; i <= 3; i++) active[i] = placement ? (nextSounds & (1 << i)) != 0 : sounds.Length > 0 && sounds.All(s => (s & (1 << i)) != 0);
         int hovered = -1;
         c.Clip(assistPalette);
@@ -234,6 +238,7 @@ public sealed partial class EditorView
             assistButtons.Add(r);
             if (!Intersects(r, assistPalette)) continue;
             bool enabled = i is 4 or 5 || draftTrack == Guid.Empty && draftBanana == Guid.Empty;
+            if (i == 4 && UsesSpeedDistanceSnap) enabled = false;
             if (i is >= 1 and <= 3 && (TimingPageVisible || tool == Tool.Banana || !placement && sounds.Length == 0)) enabled = false;
             float opacity = !enabled ? .25f : active[i] ? 1 : .45f;
             bool mixed = i is >= 1 and <= 3 && !placement && !active[i] && sounds.Any(s => (s & (1 << i)) != 0);
@@ -270,6 +275,8 @@ public sealed partial class EditorView
         {
             string tip = hovered is >= 1 and <= 3 && !placement && soundEdge is { } edge && ids.Length == 1
                 ? L.Get("assist.edge", edge.Edge + 1) : L.Get(hints[hovered]);
+            if (UsesSpeedDistanceSnap && hovered is 4 or 5)
+                tip = L.Get(hovered == 4 ? "assist.lazerGridHint" : "assist.lazerDistanceHint");
             DrawPaletteTooltip(c, tip, assistButtons[hovered], left: true, above: hovered is 5 or 6);
         }
         static uint Dim(uint color, float opacity)

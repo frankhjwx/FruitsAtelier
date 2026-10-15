@@ -12,9 +12,12 @@ public sealed class CatchAutoPreview
     private readonly bool[] facingLeft;
     private readonly CatchHyperInterval[] hyperIntervals;
     private readonly (double Time, double From, double To)[] tintChanges;
-    public CatchAutoPreview(IReadOnlyList<ConvertedCatchObject> objects, double circleSize)
+    private readonly bool lazerEditor;
+    public CatchAutoPreview(IReadOnlyList<ConvertedCatchObject> objects, double circleSize,
+        IReadOnlyList<ConvertedCatchObject>? parentTraversal = null, bool lazerEditor = false)
     {
-        var result = new List<CatchAutoFrame> { new(0, 256, false) };
+        this.lazerEditor = lazerEditor;
+        List<CatchAutoFrame> result = lazerEditor ? [] : [new(0, 256, false)];
         var hyper = HyperDashCalculator.GetHyperDashStarts(objects, circleSize);
         var states = HyperDashCalculator.Calculate(objects, circleSize);
         var intervals = new List<CatchHyperInterval>();
@@ -36,34 +39,38 @@ public sealed class CatchAutoPreview
             changes.Add((at, from, to));
         }
         double position = 256, time = 0, halfWidth = CatchSize.CatchWidth(circleSize) / 2;
-        foreach (var item in objects)
+        foreach (var item in parentTraversal ?? objects)
         {
+            double targetX = lazerEditor ? (float)item.X : item.X;
             double available = item.TimeMs - time;
             if (available < 0) continue;
-            double distance = Math.Abs(item.X - position);
+            double distance = lazerEditor ? Math.Abs((float)targetX - (float)position) : Math.Abs(targetX - position);
             double speed = distance == 0 ? 0 : distance / available;
             if (distance < halfWidth)
             {
                 Add(item.TimeMs, position); time = item.TimeMs; continue;
             }
-            if (speed > 1) { Add(time, position, true); Add(item.TimeMs, item.X); }
+            if (speed > 1) { if (!lazerEditor) Add(time, position, true); Add(item.TimeMs, targetX); }
             else if (hyper.Contains((item.SourceId, item.EventIndex)))
             {
-                Add(time, position); Add(item.TimeMs, item.X);
+                Add(time, position); Add(item.TimeMs, targetX);
             }
             else if (speed > .5)
             {
                 double dashTime = (distance / .5 - available) / 2;
-                Add(Math.Min(item.TimeMs, time + 1), position, true);
-                Add(time + dashTime, position + (item.X - position) * dashTime / available);
-                Add(item.TimeMs, item.X);
+                Add(lazerEditor ? time + 1 : Math.Min(item.TimeMs, time + 1), position, true);
+                Add(time + dashTime, lazerEditor
+                    ? (float)position + ((float)targetX - (float)position) * (float)(dashTime / available)
+                    : position + (targetX - position) * dashTime / available);
+                Add(item.TimeMs, targetX);
             }
             else
             {
-                Add(item.TimeMs - distance / .5, position); Add(item.TimeMs, item.X);
+                Add(item.TimeMs - distance / .5, position); Add(item.TimeMs, targetX);
             }
-            position = item.X; time = item.TimeMs;
+            position = targetX; time = item.TimeMs;
         }
+        if (result.Count == 0) result.Add(new(0, 256, false));
         frames = result.OrderBy(frame => frame.TimeMs).ToArray();
         facingLeft = new bool[frames.Length];
         for (int i = 1; i < frames.Length; i++)
@@ -106,7 +113,8 @@ public sealed class CatchAutoPreview
         if (low == frames.Length) return from;
         var to = frames[low];
         double progress = (time - from.TimeMs) / (to.TimeMs - from.TimeMs);
-        return new(time, from.X + (to.X - from.X) * progress, from.Dashing);
+        double x = from.X + (to.X - from.X) * progress;
+        return new(time, lazerEditor ? (float)x : x, from.Dashing);
     }
 
     public bool FacingLeftAt(double time)

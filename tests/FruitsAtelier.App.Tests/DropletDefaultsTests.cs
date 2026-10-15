@@ -61,13 +61,15 @@ internal static class DropletDefaultsTests
                     ui.LoadDocument(saved.Difficulties.Single().Document); ui.View.SetSliderEditingMode(mode);
                     ui.Key('B'); ui.ClickMap(1000, 256); ui.ClickMap(3000, 256, ctrl: true); ui.Key(13);
                     Wait(ui);
-                    Check((ui.View.Document.Tracks.Single().DropletRandomization is { Enabled: true }) == !derandomize,
+                    Check(ui.View.Document.Tracks.Single().DropletMode == SliderDropletMode.FollowMap
+                        && ui.View.Document.Tracks.Single().RandomizesDroplets(ui.View.Document) == !derandomize,
                         "new FSliders follow the saved project default in both drawing modes");
                     ui.Key('Z', ctrl: true); Wait(ui);
                     Check(ui.View.Document.Tracks.Count == 0 && ui.View.Document.RandomizeNewSliders == !derandomize,
                         "drawing undo preserves project defaults");
                     ui.Key('Y', ctrl: true); Wait(ui);
-                    Check((ui.View.Document.Tracks.Single().DropletRandomization is { Enabled: true }) == !derandomize,
+                    Check(ui.View.Document.Tracks.Single().DropletMode == SliderDropletMode.FollowMap
+                        && ui.View.Document.Tracks.Single().RandomizesDroplets(ui.View.Document) == !derandomize,
                         "drawing redo preserves the captured slider switch");
                 }
                 ui.LoadDocument(before); ui.View.LibrarySettings.DerandomizeNewProjects = false;

@@ -62,6 +62,13 @@ changes by adjusting only the non-client frame. Initial window sizes and minimum
 bounds are proportional to monitor resolution and bounded by its work area. macOS retains
 Avalonia's native scaling.
 
+The saved `LibrarySettings.UiScalePercent` multiplies the normal editor scale by
+its value / 150 on both hosts. It defaults to 150 and supports 50–200 in steps of
+25. Windows applies it to the client-derived drawing DPI; macOS transforms its
+drawing context and divides pointer coordinates and layout dimensions by the same
+factor. Startup dialogs retain their fitted scale. Settings applies this preference
+without changing document content or undo history.
+
 The conversion cache compares document snapshots and Tiny compensation settings. Changes trigger synchronous conversion of the full document before viewport culling. The editor also caches the exported osu read-back events for gameplay displays; their times and coordinates reflect file quantization while mapped source identities retain editing links. Language changes rebuild diagnostic caches. RNG and hyperdash use the complete playable object sequence.
 
 The canvas and object timeline share an immutable timing lookup built alongside the conversion snapshot. It sorts timing groups once and uses binary search for local BPM, meter and SV. Playback reuses it; content changes, undo and document replacement rebuild it. Grid drawing must not rebuild timing groups for each visible tick.

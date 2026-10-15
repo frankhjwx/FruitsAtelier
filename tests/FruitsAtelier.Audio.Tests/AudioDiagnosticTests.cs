@@ -35,7 +35,7 @@ internal static class AudioDiagnosticTests
             }
         }
         string transportLog = Directory.GetFiles(capture, "audio-*.jsonl").Single();
-        var records = File.ReadLines(transportLog).Select(line => JsonSerializer.Deserialize<JsonElement>(line)).ToArray();
+        var records = await ReadClosedLog(transportLog);
         var queued = records.Where(r => r.GetProperty("kind").GetString() == "commandQueued").ToArray();
         var ended = records.Where(r => r.GetProperty("kind").GetString() == "commandEnd").ToArray();
         foreach (var request in queued)
@@ -94,8 +94,8 @@ internal static class AudioDiagnosticTests
             writer.Write(new byte[800], 0, 800);
         using (var hitsounds = new HitsoundPlayer(diagnosticDirectory: capture))
             hitsounds.Prepare(new Hitsound(CatchObjectKind.Fruit, unsupported, 1));
-        var failed = Directory.GetFiles(capture, "audio-*.jsonl").SelectMany(File.ReadLines)
-            .Select(line => JsonSerializer.Deserialize<JsonElement>(line))
+        var captured = await Task.WhenAll(Directory.GetFiles(capture, "audio-*.jsonl").Select(ReadClosedLog));
+        var failed = captured.SelectMany(records => records)
             .Single(r => r.GetProperty("kind").GetString() == "hitsoundDecodeFailed");
         if (failed.GetProperty("data").GetProperty("fileName").GetString() != "unsupported-alaw.wav"
             || !failed.GetProperty("data").GetProperty("sourceFormat").GetString()!.Contains("ALaw"))
@@ -151,5 +151,29 @@ internal static class AudioDiagnosticTests
         if (AudioDiagnosticCapture.Reserve(64 * 1024 * 1024 + 1) || !AudioDiagnosticCapture.LimitReached)
             throw new Exception("Audio event capture exceeded its shared byte budget.");
         Console.WriteLine("PASS Audio diagnostic command correlation, pause positions, hitsound encoding, and unwritable log isolation");
+    }
+
+    private static async Task<JsonElement[]> ReadClosedLog(string path)
+    {
+        // Disposal bounds its wait so a slow diagnostic destination cannot hold the UI.
+        var timeout = System.Diagnostics.Stopwatch.StartNew();
+        while (true)
+        {
+            try
+            {
+                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using var reader = new StreamReader(stream);
+                string text = await reader.ReadToEndAsync();
+                if (text.EndsWith('\n'))
+                {
+                    var records = text.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(line => JsonSerializer.Deserialize<JsonElement>(line)).ToArray();
+                    if (records.Length > 0 && records[^1].GetProperty("kind").GetString() == "logClosed") return records;
+                }
+            }
+            catch (IOException) { }
+            if (timeout.Elapsed > TimeSpan.FromSeconds(10)) throw new TimeoutException("Diagnostic log did not close: " + path);
+            await Task.Delay(25);
+        }
     }
 }

@@ -5,24 +5,27 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private void DrawCatcherTrail(ICanvas c, CatchTrail trail, float fieldLeft, float fieldWidth, float catchY)
+    private void DrawCatcherTrail(ICanvas c, CatchTrail trail, float fieldLeft, float fieldWidth, float catchY,
+        double? presentationTime = null, double? circleSize = null)
     {
-        float age = (float)(playhead - trail.TimeMs);
+        float age = (float)((presentationTime ?? LazerPresentationTime) - trail.TimeMs);
         float progress = Math.Clamp(age / (trail.AfterImage ? 1200 : 800), 0, 1);
         float eased = progress * progress;
         uint colour = trail.AfterImage ? HyperDashAfterImageColour : trail.Hyper ? HyperDashColour : 0xFFFFFF;
         DrawCatcherBody(c, fieldLeft + (float)trail.X * fieldWidth / 512,
             catchY - (trail.AfterImage ? 10 * eased * fieldWidth / 512 : 0),
             fieldWidth * (trail.AfterImage ? .95f + .25f * eased : 1), colour,
-            trail.AfterImage ? 1 - progress : .4f * MathF.Pow(1 - progress, 5), true, trail.FacingLeft);
+            trail.AfterImage ? 1 - progress : .4f * MathF.Pow(1 - progress, 5), true, trail.FacingLeft,
+            circleSize: circleSize);
     }
 
     private void DrawCatcherBody(ICanvas c, float bodyX, float plateY, float drawWidth, uint color,
-        float opacity, bool additive, bool facingLeft, bool brighten = false)
+        float opacity, bool additive, bool facingLeft, bool brighten = false, double? circleSize = null)
     {
         if (opacity <= 0) return;
-        if (skin?.DrawCatcher(c, bodyX, plateY, drawWidth, PreviewCircleSize, color, opacity, additive, facingLeft) == true) return;
-        float size = CatchSize.CatcherWidth(PreviewCircleSize) * drawWidth / 512;
+        double cs = circleSize ?? PreviewCircleSize;
+        if (skin?.DrawCatcher(c, bodyX, plateY, drawWidth, cs, color, opacity, additive, facingLeft) == true) return;
+        float size = CatchSize.CatcherWidth(cs) * drawWidth / 512;
         if (color == 0xFFFFFF && !brighten) color = 0xB5C9D0;
         float plateHeight = Math.Max(2, size * .055f);
         if (opacity == 1) c.Fill(new(bodyX - size / 2, plateY, size, plateHeight), color, 2);

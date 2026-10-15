@@ -132,6 +132,15 @@ internal sealed partial class EditorWindow : IDisposable
         }
         if (renderCheck)
         {
+            if (Environment.GetCommandLineArgs().Contains("--workspace-save-render-check"))
+            {
+                view.RequestViewPreference = null;
+                view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
+                Diagnostics.RenderCheck.CheckWorkspaceSave(canvas, view);
+                AppLog.Write("Workspace save native checks passed in English and Chinese at both window sizes.");
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--difficulty-tabs-render-check"))
             {
                 Diagnostics.DifficultyTabsRenderCheck.Run(canvas);
@@ -141,6 +150,12 @@ internal sealed partial class EditorWindow : IDisposable
             if (Environment.GetCommandLineArgs().Contains("--docking-render-check"))
             {
                 Diagnostics.DockingRenderCheck.Run(canvas);
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
+            if (Environment.GetCommandLineArgs().Contains("--ui-scale-render-check") || Environment.GetCommandLineArgs().Contains("--timeline-layout-render-check"))
+            {
+                CheckUiScale(timelineLayout: Environment.GetCommandLineArgs().Contains("--timeline-layout-render-check"));
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
@@ -421,7 +436,7 @@ internal sealed partial class EditorWindow : IDisposable
                 PollUpdates(); PollAudio();
                 view.Performance.End(EditorPerformanceStage.Poll, pollStart);
                 if ((view.TextCaretNeedsRedraw || view.SliderHoldNeedsRedraw || view.MarqueeScrollNeedsRedraw
-                    || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
+                    || view.LazerPresentationNeedsRedraw || view.CanvasBackgroundDimNeedsRedraw || view.VolumePopoverNeedsRedraw || view.WaveformNeedsRedraw || view.ConversionNeedsRedraw || view.SynchronizationNeedsRedraw) && !Native.IsIconic(window)) Invalidate();
                 return 0;
             case 0x0005: RefreshUiScale(window); Invalidate(); return 0; // WM_SIZE
             case 0x02E4: // WM_GETDPISCALEDSIZE
@@ -469,7 +484,7 @@ internal sealed partial class EditorWindow : IDisposable
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0020: // WM_SETCURSOR
                 if ((lParam.ToInt64() & 0xffff) == 1)
-                { Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512))); return 1; }
+                { Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelinePanelResizeCursor ? 32645 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512))); return 1; }
                 break;
             case 0x02A3: // WM_MOUSELEAVE
                 view.PointerLeave(); Invalidate(); return 0;
@@ -478,7 +493,7 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.TrackMouseEvent(ref tracking);
                 view.SetModifiers(Native.Alt, Native.Shift);
                 view.PointerMove(x, y, Native.Shift, Native.Control);
-                Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512)));
+                Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelinePanelResizeCursor ? 32645 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512)));
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0202:
             case 0x0205:

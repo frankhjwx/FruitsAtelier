@@ -15,7 +15,7 @@ public static partial class Aimod
 {
     // Analysis is explicit: callers may pass their committed export to avoid rebuilding geometry.
     public static IReadOnlyList<AimodIssue> Analyze(MapDocument document, OsuWriteResult? export = null,
-        bool checkDistanceSnap = false, IEnumerable<MapDocument>? otherDifficulties = null)
+        bool checkDistanceSnap = false, IEnumerable<MapDocument>? otherDifficulties = null, double? audioDurationMs = null)
     {
         export ??= OsuBeatmapWriter.Serialize(document);
         var map = export.ReadBack;
@@ -63,6 +63,9 @@ public static partial class Aimod
             Add(AimodCategory.Design, AimodSeverity.Error, "noBackground");
         if (sources.Length > 0)
         {
+            if (audioDurationMs is double duration && double.IsFinite(duration) && duration > sources[0].TimeMs
+                && (ends[sources[^1].Id] - sources[0].TimeMs) / (duration - sources[0].TimeMs) < .8)
+                Add(AimodCategory.Timing, AimodSeverity.Warning, "longAudio");
             double drain = sources[^1].TimeMs - sources[0].TimeMs;
             foreach (var period in OsuTimeline.Breaks(map))
                 drain -= Math.Max(0, Math.Min(sources[^1].TimeMs, period.EndMs) - Math.Max(sources[0].TimeMs, period.StartMs));

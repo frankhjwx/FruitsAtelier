@@ -86,7 +86,7 @@ public sealed partial class EditorView
         while (low < high)
         {
             int middle = low + (high - low) / 2;
-            if (objects[movementIndices[middle]].TimeMs < viewStart) low = middle + 1;
+            if (objects[movementIndices[middle]].TimeMs < PresentationViewStart) low = middle + 1;
             else high = middle;
         }
         return low;
@@ -96,8 +96,9 @@ public sealed partial class EditorView
     {
         if (!movementAnalysis) return;
         var objects = placementMovementObjects ?? playableObjects;
+        var movementBreaks = MovementBreakPeriods();
         EnsureMovementStates(objects, movementIncludeTinyDroplets);
-        double endTime = viewStart + plot.Height / pixelsPerMs;
+        double endTime = PresentationViewStart + plot.Height / pixelsPerMs;
         for (int i = FirstVisibleMovement(objects); i < movementIndices.Length; i++)
         {
             int departure = movementIndices[i - 1];
@@ -106,9 +107,9 @@ public sealed partial class EditorView
             if (from.TimeMs > endTime) break;
             if (movementStates[departure].Movement is not { } movement) continue;
             if (Document.BananaShowers.Any(shower => shower.TimeMs <= to.TimeMs && shower.EndTimeMs >= from.TimeMs)
-                || breakPeriods.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
+                || movementBreaks.Any(period => period.StartMs <= to.TimeMs && period.EndMs >= from.TimeMs)) continue;
             // Clip in map time so long connections keep their slope without oversized screen coordinates.
-            double start = Math.Max(viewStart, from.TimeMs), end = Math.Min(endTime, to.TimeMs);
+            double start = Math.Max(PresentationViewStart, from.TimeMs), end = Math.Min(endTime, to.TimeMs);
             if (end <= start) continue;
             double XAt(double time) => from.X + (to.X - from.X) * ((time - from.TimeMs) / (to.TimeMs - from.TimeMs));
             Segment(start, end);

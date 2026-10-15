@@ -12,6 +12,7 @@ internal static class AimodTests
             foreach (string language in new[] { "en", "zh-CN" })
             {
                 L.SetLanguage(language);
+                AudioDuration();
                 var map = new MapDocument { DurationMs = 10000 };
                 map.Fruits.AddRange([new() { TimeMs = 1000, X = 100 }, new() { TimeMs = 1005, X = 400 }]);
                 var ui = new Ui(); ui.LoadDocument(map);
@@ -44,6 +45,27 @@ internal static class AimodTests
             }
         }
         finally { L.SetLanguage(previous); }
+    }
+
+    private static void AudioDuration()
+    {
+        var map = new MapDocument { AudioPath = "song.mp3", DurationMs = 59000 };
+        map.Fruits.AddRange([new() { TimeMs = 1000 }, new() { TimeMs = 59000 }]);
+        var ui = new Ui(); ui.LoadDocument(map); ui.View.ShowAimod();
+        Check(!ui.View.AimodIssues.Any(i => i.Code == "longAudio"), "Loading audio does not produce an estimated length warning");
+        ui.View.UpdateTransport(0, 60000, true, false, false, null, map.AudioPath);
+        Check(!ui.View.AimodIssues.Any(i => i.Code == "longAudio"), "AiMod uses the same loaded duration as the timeline");
+        var issues = ui.View.AimodIssues;
+        ui.View.UpdateTransport(1000, 60000, true, true, false, null, map.AudioPath);
+        Check(ReferenceEquals(issues, ui.View.AimodIssues), "Playback position changes do not rerun AiMod");
+        ui.View.UpdateTransport(1000, 120000, true, false, false, null, map.AudioPath);
+        Check(ui.View.AimodIssues.Count(i => i.Code == "longAudio") == 1, "A changed playback duration updates the audio-length finding");
+        ui.View.UpdateTransport(0, 0, false, false, true, null, map.AudioPath);
+        Check(!ui.View.AimodIssues.Any(i => i.Code == "longAudio"), "Reloading audio clears the previous duration finding");
+        ui.View.UpdateTransport(0, 60000, true, false, false, null, map.AudioPath);
+        Check(!ui.View.AimodIssues.Any(i => i.Code == "longAudio") && map.ContentEquals(ui.View.Document) && !ui.View.IsDirty,
+            "Completing audio reload refreshes the report without content edits");
+        ui.View.NewProject();
     }
 
     public static void TableAndDock()

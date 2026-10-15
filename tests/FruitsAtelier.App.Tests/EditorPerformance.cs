@@ -59,11 +59,12 @@ internal static class EditorPerformance
         public void Advance(double value) => milliseconds += value;
     }
 
-    public static int RunFruitPlacement(string path)
+    public static int RunFruitPlacement(string path, bool movement = false)
     {
         var document = Path.GetExtension(path).Equals(".osu", StringComparison.OrdinalIgnoreCase)
             ? OsuBeatmapReader.ReadFile(path) : ProjectSerializer.ReadFile(path);
         var ui = new Ui(); ui.LoadDocument(document); ui.Key('F');
+        if (movement) ui.ClickText(FruitsAtelier.Localization.Strings.Get("movement.analysis"));
         Console.WriteLine($"Fruit placement: fruits={document.Fruits.Count}, sliders={document.ImportedSliders.Count}, bananas={document.BananaShowers.Count}");
         var conversionCache = new CatchConversionCache();
         var writeCache = new OsuWriteCache();
@@ -111,6 +112,7 @@ internal static class EditorPerformance
         foreach (bool grid in new[] { false, true })
         {
             var playback = new Ui(); playback.LoadDocument(document); playback.Key(key);
+            if (movement) playback.ClickText(FruitsAtelier.Localization.Strings.Get("movement.analysis"));
             playback.View.UpdateTransport(30000, document.DurationMs, true, true, false, null, document.AudioPath);
             playback.Paint();
             var plot = playback.View.CanvasPlotBounds;
@@ -257,13 +259,14 @@ internal static class EditorPerformance
         return 0;
     }
 
-    public static int RunMap(string path)
+    public static int RunMap(string path, bool lazer = false)
     {
         var watch = Stopwatch.StartNew();
         var document = Path.GetExtension(path).Equals(".osu", StringComparison.OrdinalIgnoreCase)
             ? OsuBeatmapReader.ReadFile(path) : ProjectSerializer.ReadFile(path);
         Console.WriteLine($"Read: {watch.Elapsed.TotalMilliseconds:F1} ms; sliders={document.ImportedSliders.Count}; timing={document.TimingPoints.Count}");
         var view = new EditorView();
+        view.LibrarySettings.LazerEditing = lazer;
         watch.Restart(); view.LoadDocument(document);
         Console.WriteLine($"LoadDocument: {watch.Elapsed.TotalMilliseconds:F1} ms");
         watch.Restart(); _ = view.Conversion;
@@ -303,6 +306,24 @@ internal static class EditorPerformance
             for (int i = 0; i < 40; i++) { watch.Restart(); run(); samples.Add(watch.Elapsed.TotalMilliseconds); }
             samples.Sort();
             Console.WriteLine($"  {phase}: median={samples[20]:F3} p95={samples[38]:F3} ms; allocated={(GC.GetAllocatedBytesForCurrentThread() - bytes) / 40 / 1024} KiB/call");
+        }
+        if (lazer)
+        {
+            view.LibrarySettings.LazerDistanceCustomSpeeds = [.25, .75, 1.25, 1.5, 1.75, 2, 2.5, 3];
+            if (!view.DistanceSnapEnabled) view.KeyDown('T', false, false);
+            view.KeyDown('2', false, false);
+            var plot = view.CanvasPlotBounds;
+            view.PointerMove(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, false, false);
+            for (int i = 0; i < 20; i++) view.Render(canvas, 1440, 900);
+            if (view.LazerDistanceGuideCount == 0) throw new Exception("Guide benchmark requires visible guides.");
+            frames.Clear();
+            allocated = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 120; i++)
+            {
+                watch.Restart(); view.Render(canvas, 1440, 900); frames.Add(watch.Elapsed.TotalMilliseconds);
+            }
+            frames.Sort();
+            Console.WriteLine($"Maximum custom DS guides: median={frames[60]:F3} p95={frames[114]:F3} ms; allocations={(GC.GetAllocatedBytesForCurrentThread() - allocated) / 120 / 1024} KiB/frame");
         }
         view.NewProject();
         return 0;

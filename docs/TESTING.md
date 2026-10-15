@@ -51,7 +51,9 @@ Windows distribution uses the self-contained ZIP and extracted-executable check 
 
 `Core.Tests --aimod-check` and `App.Tests --aimod-check` cover AiMod rules,
 resource checks, read-only navigation, localization, Ctrl+Shift+A, table column
-resizing/reordering, selection/copy and dock attachment. Run
+resizing/reordering, selection/copy and dock attachment.
+Audio-length regressions cover playback-duration reuse, delayed loading, reloads
+and the 80 percent boundary without rechecking on playback-position updates. Run
 `Core.Tests --aimod-twin-bloom <path.osu>` against the matching local Twin Bloom
 fixture to compare stable screenshot findings and category/severity totals.
 `Core.Tests --aimod-ethanol <path.osu>` checks the Ethanol difficulty
@@ -68,7 +70,10 @@ undo/redo and cancellation.
 `App.Tests --inspector-panels-check` covers exported Inspector metrics including
 tiny droplets, base-SV normalization across BPM changes, immediate randomization edits,
 undo, numeric validation, horizontal overflow and Song Setup category buttons.
-Native docking checks capture Inspector and Randomize droplets at both sizes and
+The checks include mixed-mode selection, mode overrides, correction retention and
+reset, and undo/redo. `Core.Tests --droplet-modes-check` checks mixed modes, cache
+invalidation, schema 25/26 roundtrips, and v7/v14 NM/HR export.
+Native docking checks capture Inspector and Droplet Settings at both sizes and
 all three DPI values.
 
 
@@ -248,6 +253,10 @@ fade, and queued pause/play/seek requests preserve playback intent. No physical
 audio device is used by this focused check.
 
 ## Window checks
+
+`FruitsAtelier.App.exe --render-check --workspace-save-render-check` verifies the
+once-per-project Songs export offer and repeated saves after reopening, in English
+and Chinese at two window sizes. Its workspace fixtures stay under `artifacts/`.
 
 `FruitsAtelier.App.exe --render-check --library-opening-render-check` holds the
 workspace project gate while a library open is pending. It verifies native
@@ -625,6 +634,43 @@ browser and restores a deleted difficulty in both languages at its tested window
 sizes and DPI values. The editing benchmark verifies ordinary interactions while
 version-history work remains outside the pointer and paint paths.
 
+## Experimental lazer editing
+
+`App.Tests --break-preview-check` compares placement movement overlays with
+committed Break reconciliation and checks cancellation and undo in both modes.
+`App.Tests --movement-placement-performance <path.osu>` runs the placement
+benchmark with Movement Analysis enabled, including projected Break filtering.
+
+`App.Tests --distance-snap-check` exercises the shared Mapping/lazer configuration
+layout, base velocity edits and undo, preset persistence, and interactive preview.
+
+`App.Tests --lazer-editing-check` covers the experimental mode and shared hit
+lighting settings, including missing-field defaults, draft cancellation,
+persistence, mode switching, retained Mapping preferences and content isolation.
+The focused input, canvas and presentation regressions exercise the supported
+lazer bindings, seek/scroll transitions, catcher drawing, caught-object removal,
+movement guides and lighting boundaries. Lazer DS regressions cover global speed
+persistence, fixed presets, preview interactions and map-dependent movement
+colours with blended transitions. Core prefix-context regressions compare the
+shared candidate evaluator with an independent full-sequence reference.
+
+On Windows, run `FruitsAtelier.App.exe --render-check --lazer-editing-render-check`
+for native Direct2D settings and canvas checks. The harness switches modes through
+the settings controls, checks retained playback-line preferences and document
+content, and captures canvas, preview, hit-lighting choices and Distance Snap
+guides in English and Chinese at two logical window sizes and 96/144/192 DPI.
+Images are written under `artifacts/tests/lazer-editing-native`. These checks
+exercise the native renderer; they do not measure physical display latency or
+audio-device timing.
+
+For an optional read-only comparison on a representative `.osu` or `.catchdiff`,
+run `App.Tests --lazer-map-performance <path>` alongside the existing
+`--map-performance <path>` command. It enables lazer editing for the same
+counting-canvas playback profile, reporting CPU time and allocations without
+native GPU submission or physical display-latency measurements. The lazer profile
+also measures visible guides with the maximum eight custom speeds after warming
+their movement context cache.
+
 ## Banana shower patterns
 
 `App.Tests --experimental-snap-check` checks the optional 1/24, 1/32 and 1/48
@@ -645,6 +691,21 @@ at three DPI settings and two window sizes. Captures and CPU/allocation samples
 are written under `artifacts/tests/banana-edit/native`.
 
 ## Independent viewport scaling
+
+`App.Tests --timeline-layout-check` checks both timelines' 50–100% height limits,
+saved view preferences, cancellation, minimum-height selection and seeking,
+transport alignment and the static playback-speed label with its percentage
+selector. `FruitsAtelier.App.exe --render-check --timeline-layout-render-check`
+exercises resizing and speed selection at every UI-scale step in English and
+Chinese at two client resolutions. Captures, including minimum heights, are
+stored under `artifacts/tests/timeline-layout-native`.
+
+`App.Tests --ui-scale-check` checks the 150% default, supported 25% steps,
+settings normalization, draft cancellation, persistence, layout and content isolation.
+`FruitsAtelier.App.exe --render-check --ui-scale-render-check` exercises every
+UI-scale step in English and Chinese at two client resolutions, including native
+settings selection, drawing, clicks, dragging and wheel input. Captures are stored
+under `artifacts/tests/ui-scale-native`.
 
 `App.Tests --independent-scale-check` checks the locked zoom behavior, independent
 inline X/Y layout and limits, the 100% object-size and hit-region cap, smaller

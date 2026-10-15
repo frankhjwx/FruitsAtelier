@@ -35,6 +35,31 @@ internal static class InspectorPanelsTests
                 var committed = ui.View.Conversion;
                 for (int i = 0; i < 10; i++) ui.Paint();
                 Check(ReferenceEquals(committed, ui.View.Conversion) && ui.View.Document.ContentEquals(map), "Inspector repaint preserves conversion and content");
+                double expectedSpeed = objects.Zip(objects.Skip(1), (a, b) => b.TimeMs > a.TimeMs
+                    ? Math.Abs(b.X - a.X) / (b.TimeMs - a.TimeMs) : 0).Max();
+                foreach (bool lazer in new[] { false, true })
+                foreach (bool speedMode in new[] { true, false })
+                {
+                    ui.View.LibrarySettings.LazerEditing = lazer;
+                    ui.View.LibrarySettings.MappingSpeedDistanceSnap = speedMode;
+                    ui.View.LibrarySettings.LazerSpeedDistanceSnap = speedMode;
+                    ui.Paint();
+                    double value = speedMode ? expectedSpeed : expected;
+                    Check(Math.Abs(ui.View.InspectorMaxDs!.Value - value) < 1e-9
+                        && Math.Abs(ui.View.InspectorPeakRatio!.Value - value) < 1e-9,
+                        "Both inspector metrics refresh immediately with the selected preset units in either editor.");
+                    string formatted = speedMode ? L.Get("ds.lazerSpeed", value)
+                        : value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "×";
+                    Check(ui.Canvas.Texts.Any(t => t.Value == formatted)
+                        && ui.Canvas.Texts.Count(t => t.Value == L.Get(speedMode ? "inspector.peak" : "inspector.maxDs")) == 1
+                        && !ui.Canvas.Texts.Any(t => t.Value == L.Get(speedMode ? "inspector.maxDs" : "inspector.peak")),
+                        "Inspector shows only Peak horizontal speed in Speed mode or Max DS in DS mode.");
+                    Check(ReferenceEquals(committed, ui.View.Conversion) && ui.View.Document.ContentEquals(map),
+                        "Changing inspector units must reuse conversion and preserve map content.");
+                }
+                ui.View.LibrarySettings.LazerEditing = false;
+                ui.View.LibrarySettings.LazerSpeedDistanceSnap = true;
+                ui.Paint();
                 var firstObject = new ConvertedCatchObject(track.Id, 0, CatchObjectKind.Fruit, 0, 0, 0, 0, 0);
                 var to = firstObject with { TimeMs = 500, X = 96 };
                 Check(EditorView.HorizontalSpeedRatio(map, new(map), [], firstObject, to) == .5, "96 DPB is 0.5 times a 192 DPB base");
@@ -62,10 +87,69 @@ internal static class InspectorPanelsTests
                 ui.Key(27); ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "Randomization edit undoes in one step");
                 ui.Paint(); Wait(); SetStrength("101");
                 Check(!ui.View.RandomDockValid && ui.View.Document.ContentEquals(map), "Invalid strength cannot change content");
+                RandomActions();
                 ui.View.ShowSongDock(); ui.Paint();
                 var song = ui.View.SongDockViewport;
                 ui.Click(song.X + 3 * ((song.Width - 9) / 4 + 3) + 5, song.Y + 10);
                 Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("song.countdownOff")), "Horizontal category buttons select Design");
+                void RandomActions()
+                {
+                    var second = track.DeepClone(); second.Id = Guid.NewGuid();
+                    foreach (var node in second.Nodes) { node.Id = Guid.NewGuid(); node.TimeMs += 3500; }
+                    second.DropletRandomization = null;
+                    var actionMap = map.DeepClone(); actionMap.Tracks[0].DropletRandomization!.Adjustments.Add(new(.5, 5)); actionMap.Tracks.Add(second);
+                    ui.Resize(1440, 900); ui.LoadDocument(actionMap); ui.Key('1'); ui.Key('A', ctrl: true);
+                    ui.View.ShowSliderInspector(); ui.Paint();
+                    Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.mixed"))
+                        && !ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.controls")), "Inspector shows mixed derandomization without control count");
+                    Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.title") && t.Y >= ui.View.SliderInspectorViewport.Y), "Inspector has no tab-jump action");
+                    var inspector = ui.View.SliderInspectorViewport;
+                    ui.View.Wheel(inspector.X + 10, inspector.Y + 40, -12000, false, false); ui.Paint();
+                    ui.ClickText(L.Get("inspector.resetDroplets", 1)); WaitInspector();
+                    Check(ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 0, "Inspector resets selected corrections immediately");
+                    ui.Key('Z', ctrl: true); ui.Paint(); WaitInspector();
+                    Check(ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 1, "Reset undoes in one step");
+                    ui.Key('A', ctrl: true); ui.Paint();
+                    ChooseMode(L.Get("inspector.mixed"), SliderDropletMode.Randomize);
+                    Check(ui.View.Document.Tracks.All(t => t.RandomizesDroplets(ui.View.Document))
+                        && ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 1, "Multi-selection mode retains corrections");
+                    ui.Key('Z', ctrl: true); WaitInspector();
+                    Check(ui.View.Document.ContentEquals(actionMap), "Multi-selection mode undoes atomically");
+                    ui.Key('Y', ctrl: true); WaitInspector();
+                    ui.Key('A', ctrl: true); ui.Paint();
+                    ChooseMode(L.Get("droplet.mode.Randomize"), SliderDropletMode.FollowMap);
+                    ui.View.ShowRandomDock(); ui.Paint(); Wait();
+                    Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.enableSelected")
+                        || t.Value == L.Get("randomize.disableAll") || t.Value == L.Get("randomize.resetAdjustments")), "Global panel contains only difficulty settings");
+                    ui.ClickText(L.Get("randomize.derandomizeOff")); Wait();
+                    Check(ui.View.Document.Tracks.All(t => !t.RandomizesDroplets(ui.View.Document)), "Follow map resolves the global default");
+                    ui.View.ShowSliderInspector(); ui.Paint();
+                    ChooseMode(L.Get("droplet.mode.FollowMap"), SliderDropletMode.Randomize);
+                    Check(ui.View.Document.DerandomizeFSliderDroplets && ui.View.Document.Tracks.All(t => t.RandomizesDroplets(ui.View.Document)),
+                        "Random override works while the global default is derandomized");
+                    ui.ClickMap(500, 450); ui.SelectTrack(track.Id); ui.View.ShowSliderInspector(); ui.Paint();
+                    ChooseMode(L.Get("droplet.mode.Randomize"), SliderDropletMode.Derandomize);
+                    Check(!ui.View.Document.Tracks[0].RandomizesDroplets(ui.View.Document)
+                        && ui.View.Document.Tracks[1].RandomizesDroplets(ui.View.Document), "Single override retains the other slider");
+                    Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.resetDropletsInactive", 1)), "Inactive corrections remain visible");
+                    ChooseMode(L.Get("droplet.mode.Derandomize"), SliderDropletMode.Randomize);
+                    Check(ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 1, "Switching modes retains manual corrections");
+                    void ChooseMode(string current, SliderDropletMode mode)
+                    {
+                        var b = ui.View.SliderInspectorViewport;
+                        ui.View.Wheel(b.X + 10, b.Y + 40, -12000, false, false); ui.Paint();
+                        string label = L.Get("inspector.dropletMode", current);
+                        ui.ClickText(label);
+                        ui.ClickText(L.Get("droplet.mode." + mode)); WaitInspector();
+                        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.dropletMode", L.Get("droplet.mode." + mode))), "Mode changes stay in Inspector");
+                    }
+                    void WaitInspector()
+                    {
+                        var end = DateTime.UtcNow.AddSeconds(30);
+                        do { Thread.Sleep(5); ui.Paint(); } while (ui.View.ConversionRefreshing && DateTime.UtcNow < end);
+                        Check(!ui.View.ConversionRefreshing, "Inspector conversion completes");
+                    }
+                }
                 void SetStrength(string value)
                 {
                     var b = ui.View.RandomDockViewport; ui.View.Wheel(b.X + 10, b.Y + 40, 12000, false, false); ui.Paint();

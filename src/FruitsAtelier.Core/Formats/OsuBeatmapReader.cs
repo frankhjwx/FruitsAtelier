@@ -223,7 +223,7 @@ public static class OsuBeatmapReader
         foreach (var track in document.Tracks)
         {
             Id(track.Id);
-            if (track.DropletRandomization is { IsValid: false }) throw new InvalidDataException(L.Get("randomize.invalid"));
+            if (track.DropletMode is { } mode && !Enum.IsDefined(mode) || track.DropletRandomization is { IsValid: false }) throw new InvalidDataException(L.Get("randomize.invalid"));
             if (track.Stack is { } stack && (track.StreamSnapDivisor is null || !stack.IsValid))
                 throw new InvalidDataException(L.Get("stack.invalid"));
             if (track.StreamSnapDivisor is not (null or >= 1 and <= 16 or 24 or 32 or 48)) throw new InvalidDataException(L.Get("stream.invalidSnap"));

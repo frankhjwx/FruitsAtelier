@@ -91,6 +91,10 @@ internal static class DockingRenderCheck
                 inspectorMap.Tracks.Add(inspectorTrack);
                 editor.LoadDocument(inspectorMap); editor.KeyDown(65, true, false);
                 editor.ShowSliderInspector(); Paint("inspector");
+                editor.LibrarySettings.MappingSpeedDistanceSnap = true;
+                Paint("inspector-speed");
+                editor.LibrarySettings.MappingSpeedDistanceSnap = false;
+                Paint();
                 var horizontalBounds = editor.SliderInspectorViewport;
                 editor.Wheel(horizontalBounds.X + 10, horizontalBounds.Y + 20, -1200, false, true); Paint("inspector-horizontal");
                 editor.Wheel(horizontalBounds.X + 10, horizontalBounds.Y + 20, 1200, false, true); Paint();

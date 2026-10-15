@@ -232,8 +232,10 @@ internal static class TimelineOverviewTests
         var area = ui.Canvas.Fills.Single(f => f.Color == 0x141922).Bounds;
         var test = ui.View.TestplayButtonBounds;
         Check(test.Right < area.X && test.Y >= area.Y && test.Bottom <= area.Bottom, "Transport controls must sit left of the timeline");
-        Check(ui.View.TimeDisplayBounds.Bottom < test.Y, "Time display must sit above transport controls");
-        var currentLabel = ui.Canvas.Texts.Single(t => t.X == 20 && t.Y == ui.Height - 110);
+        Check(ui.View.TimeDisplayBounds.Right < ui.View.TransportButtonBounds(0).X, "Time display must sit left of transport controls");
+        Check(Math.Abs(ui.View.TimeDisplayBounds.Y + ui.View.TimeDisplayBounds.Height / 2 - test.Y - test.Height / 2) < .01,
+            "Time display and transport controls must share a row");
+        var currentLabel = ui.Canvas.Texts.Single(t => t.X == 20 && t.Y == ui.View.TimeDisplayBounds.Y + 3);
         var durationLabel = ui.Canvas.Texts.Single(t => t.Value.StartsWith("/ ") && t.X > currentLabel.X && t.X < 210);
         Check(Math.Abs(currentLabel.Y - durationLabel.Y) <= 4, "Time display should use one line");
         float durationX = durationLabel.X;

@@ -17,6 +17,53 @@ and proposed additions, see the [compatibility review](KEY_BINDINGS_REVIEW.md).
   placement, flags and undo/redo.
 - Only testplay movement and dash bindings are configurable in Settings.
 
+## Experimental lazer editing
+
+Enable **Settings → Experimental → lazer editing**, then Apply, to use these
+Compose overrides. The remaining tables describe Mapping controls. Existing
+FruitsAtelier commands without a conflicting lazer assignment remain available;
+testplay and focused text/dialog controls retain their own bindings. Testplay key
+assignments and Mapping view preferences are preserved when switching modes.
+
+| Input | lazer Compose action |
+| --- | --- |
+| T / Y | Toggle Distance Snap. Y remains an alias. |
+| Alt+Left / Alt+Right | Seek previous / next bookmark. |
+| Ctrl+Left / Ctrl+Right | Move selected objects by one X unit; with no selection, seek the previous / next parent start. |
+| Ctrl+Shift+Left / Ctrl+Shift+Right | Seek previous / next sample point: slider head, first-span midpoint, reverses and tail, or the neighbouring parent's tail/start. Samples are edited through the existing sample controls. |
+| Up / Down | Previous / next timing point. Backward navigation while playing allows one second at the current playback rate. |
+| F3 / F4 | Open Timing / Song Setup. |
+| - / = | Compress / expand canvas time spacing without changing its horizontal scale; available in both editing modes. |
+| Shift+Q/W/E/R | Set the normal sampleset to Auto / Normal / Soft / Drum. |
+| Alt+Q/W/E/R | Set the additions sampleset to Auto / Normal / Soft / Drum. |
+| Ctrl+J | Reserved; use the slider's menu action to extend it. |
+| Ctrl+wheel | Cycle beat-divisor presets within the current family. |
+| Shift+1–9 | Select the corresponding divisor family. |
+| Wheel / Left / Right | Seek along the lazer beat grid; Shift uses a coarser lattice. Playback seeks use the upstream BPM-dependent seek-distance adjustment. |
+| Z / V | Seek first object / maximum object end; pressing at that boundary seeks song start / end. |
+| Right-click object | Open its context menu. |
+| Right-click during an FSlider draft | Finish the draft. |
+| Shift+right-click object | Delete the object. Middle-click also deletes on the object timeline. |
+| Middle-button drag on canvas | Pan horizontally without seeking, bounded by the enlarged game screen. |
+| Middle-button drag on empty object timeline | Marquee selection. |
+| Shift+click object timeline | Select the full range from the selection pivot; Ctrl adds it to the current selection. |
+| Alt+wheel over canvas | Scale both axes together around the fixed catch line, with 200 ms easing; 25%–100% while locked, up to 200% when unlocked. |
+| Ctrl+Alt+wheel | No Compose action. |
+
+Ctrl+wheel uses the common family `1, 2, 4, 8, 16`, the triplet family
+`1, 3, 6, 12`, or the integer divisors of a selected custom divisor. Short paused
+seeks ease over 300 ms; running playback and jumps beyond 5000 ms seek immediately.
+These view and navigation operations do not alter beatmap AR or content.
+
+Alt+wheel over the upper object timeline changes its normalized zoom by 0.02 of
+the allowed range per notch, easing over 200 ms. The visible range starts at
+6000 ms and is limited to 500–10000 ms, bounded by song length. Mapping retains
+its separately saved timeline scale.
+
+Fruit/FSlider/Banana aliases F/B/N, Ctrl+M, Ctrl+G, Shift+F and the Stream/Stack
+and merge shortcuts retain their FruitsAtelier functions. Commands that lose a
+Compose shortcut remain accessible through their existing menus and controls.
+
 ## Files and pages
 
 | Keys | Action |

@@ -13,6 +13,7 @@ public sealed partial class EditorView
     private AimodCategory? aimodCategory;
     private bool aimodDistanceSnap;
     private Task<IReadOnlyList<AimodIssue>>? aimodResourceTask;
+    private double? aimodAudioDurationMs;
     private int aimodFirst, aimodVisibleRows = 1;
     private Rect aimodListBounds;
 
@@ -34,11 +35,12 @@ public sealed partial class EditorView
     {
         EnsureConversion();
         aimodSnapshot = convertedSnapshot;
+        aimodAudioDurationMs = ReadyAimodAudioDurationMs;
         AimodErrors = Aimod.FindOverlaps(Document);
         try
         {
             AimodIssues = Aimod.Analyze(Document, playableExport, aimodDistanceSnap,
-                difficulties.Where(d => d.History.Document != Document).Select(d => d.History.Document));
+                difficulties.Where(d => d.History.Document != Document).Select(d => d.History.Document), aimodAudioDurationMs);
             var snapshot = Document.DeepClone();
             aimodResourceTask = Task.Run(() => Aimod.AnalyzeResources(snapshot));
         }
@@ -56,6 +58,14 @@ public sealed partial class EditorView
         if (HasEditorProject && DockPanelExists(DockPanel.Aimod) && aimodSnapshot is null) RefreshAimod();
     }
 
+    private double? ReadyAimodAudioDurationMs => AudioReady && !AudioLoading && AudioDurationMs > 0 ? AudioDurationMs : null;
+
+    private void RefreshAimodAudio()
+    {
+        // Audio finishes loading after restored dock reports have already been initialized.
+        if (aimodSnapshot is not null && aimodAudioDurationMs != ReadyAimodAudioDurationMs) RefreshAimod();
+    }
+
     private void FilterAimod()
     {
         aimodRows = AimodIssues.Where(i => aimodCategory is null || i.Category == aimodCategory).ToArray();
@@ -66,6 +76,7 @@ public sealed partial class EditorView
     {
         aimodResourceTask = null; AimodErrors = []; AimodIssues = []; aimodRows = []; aimodFirst = 0; aimodScrollY = 0;
         aimodSnapshot = null; aimodFocused = false; aimodGesture = AimodGesture.None; aimodSelected.Clear();
+        aimodAudioDurationMs = null;
     }
 
     private void LocateAimodIssue(AimodIssue issue)
