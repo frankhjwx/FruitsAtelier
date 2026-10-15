@@ -132,6 +132,15 @@ internal sealed partial class EditorWindow : IDisposable
         }
         if (renderCheck)
         {
+            if (Environment.GetCommandLineArgs().Contains("--workspace-save-render-check"))
+            {
+                view.RequestViewPreference = null;
+                view.LoadDocument(FruitsAtelier.Core.DemoMap.Create()); view.CloseLibrary();
+                Diagnostics.RenderCheck.CheckWorkspaceSave(canvas, view);
+                AppLog.Write("Workspace save native checks passed in English and Chinese at both window sizes.");
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--difficulty-tabs-render-check"))
             {
                 Diagnostics.DifficultyTabsRenderCheck.Run(canvas);

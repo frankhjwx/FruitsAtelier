@@ -251,6 +251,10 @@ audio device is used by this focused check.
 
 ## Window checks
 
+`FruitsAtelier.App.exe --render-check --workspace-save-render-check` verifies the
+once-per-project Songs export offer and repeated saves after reopening, in English
+and Chinese at two window sizes. Its workspace fixtures stay under `artifacts/`.
+
 `FruitsAtelier.App.exe --render-check --library-opening-render-check` holds the
 workspace project gate while a library open is pending. It verifies native
 loading frames, input isolation and UI-thread publication in English and Chinese

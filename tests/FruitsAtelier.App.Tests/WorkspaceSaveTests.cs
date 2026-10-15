@@ -36,9 +36,13 @@ static class WorkspaceSaveTests
                 ui.ClickText(L.Get("library.workspaceOnly"));
                 Check(!ui.View.DiscardConfirmationVisible && !ui.View.ExportVisible && Directory.GetFiles(songs, "*", SearchOption.AllDirectories).Length == 0,
                     "Keeping the workspace completes save without touching Songs");
-                ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui); ui.Key(27);
-                Check(!ui.View.DiscardConfirmationVisible && !ui.View.IsDirty, "Escape keeps the completed save");
-                ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui); ui.ClickText(L.Get("library.exportToSongs"));
+                ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui);
+                Check(!ui.View.DiscardConfirmationVisible && !ui.View.IsDirty, "Repeated save skips the optional export prompt");
+                ui.View.LoadWorkspace(WorkspaceProject.Open(directory));
+                ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui);
+                Check(!ui.View.DiscardConfirmationVisible && !ui.View.ExportVisible && !ui.View.IsDirty && exports == 0,
+                    "Reopened workspace retains the dismissed export offer");
+                ui.View.ShowWorkspaceExport(); ui.Paint();
                 Check(!ui.View.ExportVisible && !ui.View.DiscardConfirmationVisible && exports == 1, "First Songs export proceeds directly with the current difficulty name");
                 Check(!ui.View.IsDirty && ui.View.WorkspaceSession.Directory == directory, "First export retains the saved workspace");
                 exports = 0;
@@ -50,10 +54,19 @@ static class WorkspaceSaveTests
                 Check(ui.View.SynchronizationVisible && exports == 0, "Missing linked exports require resolution before export");
                 ui.Key(27);
                 ui.View.NewProject(); ui.View.CloseLibrary();
+                ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui);
+                Check(ui.View.DiscardConfirmationVisible, "Another local project receives its own export offer");
+                ui.Key(27);
+                ui.View.LoadWorkspace(WorkspaceProject.Open(ui.View.WorkspaceSession!.Directory));
+                ui.Key('S', ctrl: true); SynchronizationUiTests.Wait(ui);
+                Check(!ui.View.DiscardConfirmationVisible && !ui.View.ExportVisible && exports == 0,
+                    "Escape dismisses the export offer across reopen and repeated save");
+                ui.View.NewProject(); ui.View.CloseLibrary();
                 ui.View.LibrarySettings.Songs = "";
                 ui.Key('S', ctrl: true);
                 SynchronizationUiTests.Wait(ui);
                 Check(!ui.View.DiscardConfirmationVisible && !ui.View.ExportVisible, "Unconfigured Songs saves to workspace directly");
+                Check(!ui.View.WorkspaceSession!.Manifest.SongsExportOfferShown, "Saving without Songs leaves the export offer available");
                 ui.Key('S', ctrl: true, shift: true);
                 Check(ui.View.WorkspaceSession is not null && exports == 0, "Local save does not export");
                 ui.ClickText(L.Get("ui.file"));
