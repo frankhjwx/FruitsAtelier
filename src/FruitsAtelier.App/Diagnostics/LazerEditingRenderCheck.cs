@@ -79,6 +79,12 @@ internal static class LazerEditingRenderCheck
                 editor.LibrarySettings.LazerDistanceCustomSpeeds = [.25, .75, 1.3, 1.5, 1.75, 2, 2.5, 3];
                 editor.OpenDistanceSnapDialog();
                 Paint("distance-settings");
+                var presetTab = editor.DistanceSnapDsModeBounds;
+                Click(presetTab.X + 5, presetTab.Y + 5);
+                Paint("distance-settings-ds");
+                presetTab = editor.DistanceSnapSpeedModeBounds;
+                Click(presetTab.X + 5, presetTab.Y + 5);
+                Paint("distance-settings-speed");
                 editor.KeyDown(27, false, false);
                 if (!editor.DistanceSnapEnabled) editor.KeyDown('T', false, false);
                 editor.KeyDown('2', false, false);

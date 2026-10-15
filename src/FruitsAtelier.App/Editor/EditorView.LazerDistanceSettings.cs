@@ -21,10 +21,19 @@ public sealed partial class EditorView
         }
     }
 
-    private int DistanceSnapPresetLimit => DistanceSnap.MaximumPresets + (IsLazerEditing ? 2 : 0);
-    private bool DistanceSnapPresetFixed(int index) => IsLazerEditing && index < 2;
-    private string DistanceSnapPresetText(double value) => L.Get(IsLazerEditing ? "ds.lazerValue" : "ds.ratio", value);
-    private double DistanceSnapPreviewVelocity => IsLazerEditing ? 60000 / dsBpm : dsBaseDraft;
+    internal bool UsesSpeedDistanceSnap => IsLazerEditing ? LibrarySettings.LazerSpeedDistanceSnap : LibrarySettings.MappingSpeedDistanceSnap;
+
+    private void SetDistanceSnapPresetMode(bool speed)
+    {
+        CancelDistanceSnapDrag();
+        dsSpeedMode = speed;
+        dsDraft = speed ? dsSpeedDraft : dsRatioDraft;
+    }
+
+    private int DistanceSnapPresetLimit => DistanceSnap.MaximumPresets + (dsSpeedMode ? 2 : 0);
+    private bool DistanceSnapPresetFixed(int index) => dsSpeedMode && index < 2;
+    private string DistanceSnapPresetText(double value) => L.Get(dsSpeedMode ? "ds.lazerValue" : "ds.ratio", value);
+    private double DistanceSnapPreviewVelocity => dsSpeedMode ? 60000 / dsBpm : dsBaseDraft;
 
     private double[] LazerDistanceSnapLimits()
     {

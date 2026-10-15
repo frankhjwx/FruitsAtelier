@@ -56,7 +56,7 @@ internal static class LazerDistanceSettingsTests
                 var fixedPointer = ui.View.DistanceSnapPointerBounds[0];
                 ui.View.PointerDown(fixedPointer.X + 8, fixedPointer.Y + 8, 0, false, false);
                 ui.View.PointerMove(track.Right, track.Y + 8, false, false); ui.View.PointerUp(track.Right, track.Y + 8, 0); ui.Paint();
-                Check(ui.Canvas.Texts.Any(text => text.Value == L.Get("ds.lazerFixed", .5)), "Fixed guide arrows cannot be moved.");
+                Check(ui.Canvas.Texts.Any(text => text.Value == L.Get("ds.lazerValue", .5) && text.Bold), "Fixed guide arrows cannot be moved.");
                 ui.ClickText(L.Get("ds.add"));
                 Check(ui.View.DistanceSnapPointerBounds.Count == 3 && ui.View.LazerDistanceSpeeds.SequenceEqual([.5, 1d]), "Add must create a local custom speed draft.");
                 Drag(1.25, cancel: true);
@@ -80,9 +80,16 @@ internal static class LazerDistanceSettingsTests
                 ui.View.OpenDistanceSnapDialog(); ui.Paint();
                 var field = ui.View.DistanceSnapBaseFieldBounds;
                 ui.Click(field.X + 10, field.Y + 10); ui.Key('A', ctrl: true); ui.View.PasteFieldText("200"); ui.Paint();
+                ui.ClickText(L.Get("ds.dsPresets"));
+                Check(ui.Canvas.Texts.Any(text => text.Value == L.Get("ds.ratio", .72))
+                    && ui.Canvas.Texts.Any(text => text.Value == L.Get("ds.ratio", 1.44)),
+                    "Editing base SV with Speed presets selected must also rescale the coexisting DS draft.");
+                ui.ClickText(L.Get("ds.speedPresets"));
+                Check(before.ContentEquals(ui.View.Document) && ui.View.LazerDistanceSpeeds.SequenceEqual([.5, 1, 1.25]),
+                    "Base SV and coexisting preset drafts must remain uncommitted before Apply.");
                 ui.ClickText(L.Get("library.apply")); WaitBase(ui);
                 Check(ui.View.Document.DistancePerBeat == 200 && ui.View.LazerDistanceSpeeds.SequenceEqual([.5, 1, 1.25])
-                    && ui.View.Document.DistanceSnapRatios.SequenceEqual([.75, 1.5]), "Base SV edits must retain custom speeds and mapping DS presets.");
+                    && ui.View.Document.DistanceSnapRatios.SequenceEqual([.72, 1.44]), "Base SV edits must preserve custom speeds and commit the rescaled DS draft.");
                 ui.Key('Z', ctrl: true);
                 Check(before.ContentEquals(ui.View.Document) && ui.View.LazerDistanceSpeeds.SequenceEqual([.5, 1, 1.25]), "Base SV undo must preserve global speed preferences.");
                 ui.View.OpenSettings(); ui.Paint(); ui.View.ApplySettings(path); ui.Paint(); ui.Key(27);
@@ -131,6 +138,78 @@ internal static class LazerDistanceSettingsTests
             }
         }
         finally { L.SetLanguage(language); }
+        PresetModes(root);
+    }
+
+    private static void PresetModes(string root)
+    {
+        const string DsKey = "ds.dsPresets", SpeedKey = "ds.speedPresets";
+        foreach (bool lazer in new[] { false, true })
+        {
+            var ui = new Ui(false);
+            ui.View.LibrarySettings.LazerEditing = lazer;
+            ui.View.LibrarySettings.Workspace = Path.Combine(root, "modes-" + lazer);
+            ui.View.LibrarySettings.OsuRoot = "";
+            string path = Path.Combine(root, "modes-" + lazer + ".json");
+            ui.View.RequestViewPreference = () => ui.View.LibrarySettings.Save(path);
+            var map = new MapDocument { DurationMs = 4000, IsDemo = false };
+            map.DistanceSnapRatios.AddRange([1.3, .9, 1.3]);
+            ui.LoadDocument(map);
+            var before = ui.View.Document.DeepClone();
+            bool dirty = ui.View.IsDirty;
+            Check(ui.View.UsesSpeedDistanceSnap == lazer, "Mapping must default to DS and lazer to Speed presets.");
+            ui.View.OpenDistanceSnapDialog(); ui.Paint();
+            Check((bool)typeof(EditorView).GetField("dsSpeedMode", Private)!.GetValue(ui.View)! == lazer,
+                "The dialog must restore the current editor's selected preset mode.");
+            Check(ui.View.DistanceSnapDsModeBounds.Y == ui.View.DistanceSnapSpeedModeBounds.Y,
+                "DS and Speed preset selectors must share one row.");
+            ui.ClickText(L.Get(DsKey)); ui.ClickText(L.Get("ds.add"));
+            Check(ui.View.DistanceSnapPointerBounds.Count == 4, "DS draft must allow its existing preset edits.");
+            ui.ClickText(L.Get(SpeedKey)); ui.ClickText(L.Get("ds.add"));
+            Check(ui.View.DistanceSnapPointerBounds.Count == 3, "Speed draft must allow a separate custom preset.");
+            bool objectBefore = (bool)typeof(EditorView).GetField("dsObjectSnap", Private)!.GetValue(ui.View)!;
+            Click(ui.View.ObjectSnapToggleBounds);
+            Check((bool)typeof(EditorView).GetField("dsObjectSnap", Private)!.GetValue(ui.View)! == objectBefore,
+                "Object snap configuration must be inactive in Speed mode.");
+            ui.ClickText(L.Get(DsKey));
+            Check(ui.View.DistanceSnapPointerBounds.Count == 4, "Switching tabs must preserve the DS draft.");
+            Click(ui.View.ObjectSnapToggleBounds);
+            Check((bool)typeof(EditorView).GetField("dsObjectSnap", Private)!.GetValue(ui.View)! != objectBefore,
+                "DS mode must support object snap configuration in either editing mode.");
+            ui.ClickText(L.Get(SpeedKey));
+            Check(ui.View.DistanceSnapPointerBounds.Count == 3 && ui.View.UsesSpeedDistanceSnap == lazer,
+                "Switching tabs must preserve the Speed draft and leave the applied mode unchanged.");
+            ui.ClickText(L.Get("mac.cancel"));
+            Check(before.ContentEquals(ui.View.Document) && ui.View.LazerDistanceSpeeds.SequenceEqual([.5, 1d])
+                && ui.View.UsesSpeedDistanceSnap == lazer, "Cancel must discard both drafts and mode selection.");
+            ui.View.OpenDistanceSnapDialog(); ui.Paint();
+            ui.ClickText(L.Get(lazer ? DsKey : SpeedKey)); ui.ClickText(L.Get("library.apply"));
+            Check(ui.View.UsesSpeedDistanceSnap != lazer && before.ContentEquals(ui.View.Document) && ui.View.IsDirty == dirty,
+                "Applying only a mode selection must preserve exact map presets and dirty state.");
+            var restored = LibrarySettings.Load(path);
+            Check(restored.MappingSpeedDistanceSnap == !lazer && restored.LazerSpeedDistanceSnap == !lazer,
+                "The current editor's mode selection must persist independently.");
+            ui.LoadDocument(new MapDocument { DurationMs = 2000, IsDemo = false });
+            Check(ui.View.UsesSpeedDistanceSnap != lazer, "Mode selection must be global across maps.");
+            ui.LoadDocument(map);
+            ui.View.OpenDistanceSnapDialog(); ui.Paint();
+            ui.ClickText(L.Get(DsKey)); ui.ClickText(L.Get("ds.add"));
+            ui.ClickText(L.Get(SpeedKey)); ui.ClickText(L.Get("ds.add"));
+            ui.ClickText(L.Get("library.apply"));
+            Check(ui.View.Document.DistanceSnapRatios.SequenceEqual([0, .9, 1.3, 1.3]) && ui.View.IsDirty
+                && ui.View.LibrarySettings.LazerDistanceCustomSpeeds.SequenceEqual([.1]),
+                "Apply must commit both edited drafts, with map DS content and global speed preferences.");
+            ui.Key('Z', ctrl: true);
+            Check(before.ContentEquals(ui.View.Document) && ui.View.UsesSpeedDistanceSnap
+                && ui.View.LibrarySettings.LazerDistanceCustomSpeeds.SequenceEqual([.1]),
+                "Undo must restore edited map DS while retaining global speed preferences and mode selection.");
+            ui.View.OpenSettings(); ui.Paint(); ui.View.ApplySettings(path); ui.Paint(); ui.Key(27);
+            Check(ui.View.UsesSpeedDistanceSnap && ui.View.LibrarySettings.MappingSpeedDistanceSnap == !lazer
+                && ui.View.LibrarySettings.LazerSpeedDistanceSnap,
+                "General settings Apply must preserve both editor mode preferences.");
+
+            void Click(FruitsAtelier.App.Rendering.Rect bounds) => ui.Click(bounds.X + 8, bounds.Y + 8);
+        }
     }
 
     private static void WaitBase(Ui ui)

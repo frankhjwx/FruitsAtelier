@@ -122,8 +122,8 @@ public sealed partial class EditorView
         if (snap) time = TimingMap.Snap(Document, time, divisor);
         time = Math.Clamp(time, 0, EditableDurationMs);
         double rawX = sliderObjectPointerOriginX + pointer.X - origin.X;
-        double wantedX = Math.Clamp(IsLazerEditing ? rawX : SnapX(rawX), 0, 512);
-        if (IsLazerEditing && TryLazerGestureDistanceSnap(new(time, wantedX), out var lazerPoint, objectSelection)) wantedX = lazerPoint.X;
+        double wantedX = Math.Clamp(UsesSpeedDistanceSnap ? rawX : SnapX(rawX), 0, 512);
+        if (UsesSpeedDistanceSnap && TryLazerGestureDistanceSnap(new(time, wantedX), out var lazerPoint, objectSelection)) wantedX = lazerPoint.X;
         var accepted = new MapDocument(); accepted.Tracks.Add(Document.Tracks.Single(t => t.Id == source.Id));
         RestoreSliderObjectSource(sliderObjectDragSource);
         var track = Document.Tracks.Single(t => t.Id == source.Id);
@@ -159,9 +159,9 @@ public sealed partial class EditorView
             return;
         }
         double rawX = Math.Clamp(sliderObjectPointerOriginX + (x - dragStartX) / Playfield.Width * 512, 0, 512);
-        bool strict = !IsLazerEditing && DistanceSnapEnabled && sliderObjectDragPrevious is not null;
-        double wantedX = strict || IsLazerEditing ? rawX : Math.Clamp(SnapX(rawX), 0, 512);
-        if (IsLazerEditing && TryLazerGestureDistanceSnap(new(target.TimeMs, wantedX), out var lazerPoint, objectSelection)) wantedX = lazerPoint.X;
+        bool strict = !UsesSpeedDistanceSnap && DistanceSnapEnabled && sliderObjectDragPrevious is not null;
+        double wantedX = strict || UsesSpeedDistanceSnap ? rawX : Math.Clamp(SnapX(rawX), 0, 512);
+        if (UsesSpeedDistanceSnap && TryLazerGestureDistanceSnap(new(target.TimeMs, wantedX), out var lazerPoint, objectSelection)) wantedX = lazerPoint.X;
         if (strict)
         {
             var acceptedSource = new MapDocument();
@@ -192,7 +192,7 @@ public sealed partial class EditorView
             double blockedX = wantedX;
             for (int i = 0; i < 12 && Math.Abs(blockedX - acceptedX) > .001; i++)
             {
-                double middle = IsLazerEditing ? (acceptedX + blockedX) / 2 : SnapX((acceptedX + blockedX) / 2);
+                double middle = UsesSpeedDistanceSnap ? (acceptedX + blockedX) / 2 : SnapX((acceptedX + blockedX) / 2);
                 if (Math.Abs(middle - acceptedX) < .00001 || Math.Abs(middle - blockedX) < .00001) break;
                 if (TrySliderObjectPosition(target, middle)) acceptedX = middle;
                 else blockedX = middle;
@@ -227,7 +227,7 @@ public sealed partial class EditorView
             if (target.Kind == CatchObjectKind.Fruit && !streamInterior)
                 DistanceSpacingEditing.ApplyX(Document, target, x, compensateTinyDroplets, editorConversionCache);
             else DistanceSpacingEditing.ApplyIsolatedX(Document, target, x, compensateTinyDroplets, editorConversionCache);
-            if (DistanceSnapEnabled && !IsLazerEditing)
+            if (DistanceSnapEnabled && !UsesSpeedDistanceSnap)
             {
                 var result = CatchStreamConverter.Convert(Document, compensateTinyDroplets, editorConversionCache);
                 if (!StrictSliderObjectResult(target, result))

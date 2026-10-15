@@ -237,7 +237,7 @@ public sealed partial class EditorView
 
     private void CaptureLazerGestureDistance()
     {
-        if (!IsLazerEditing) { lazerGestureDistance = null; return; }
+        if (!UsesSpeedDistanceSnap) { lazerGestureDistance = null; return; }
         EnsureLazerDistanceReferences();
         lazerGestureDistance = new(lazerDistanceReferences, new Dictionary<Guid, double>(lazerDistanceParentEnds));
     }
@@ -254,7 +254,7 @@ public sealed partial class EditorView
         ISet<Guid>? excluded = null, double minX = 0, double maxX = 512)
     {
         snapped = candidate;
-        if (!IsLazerEditing || !DistanceSnapEnabled || lazerGestureDistance is not { } snapshot) return false;
+        if (!UsesSpeedDistanceSnap || !DistanceSnapEnabled || lazerGestureDistance is not { } snapshot) return false;
         var source = FindLazerDistanceReference(candidate.TimeMs, snapshot.References, snapshot.Ends, excluded);
         return SnapLazerDistanceFromSource(candidate, source, minX, maxX, out snapped);
     }
@@ -263,7 +263,7 @@ public sealed partial class EditorView
         ISet<Guid>? excluded = null, double minX = 0, double maxX = 512)
     {
         snapped = candidate;
-        if (!IsLazerEditing || !DistanceSnapEnabled || draftTrack != Guid.Empty) return false;
+        if (!UsesSpeedDistanceSnap || !DistanceSnapEnabled || draftTrack != Guid.Empty) return false;
         var source = LazerDistanceSnapSource(candidate.TimeMs, excluded);
         return SnapLazerDistanceFromSource(candidate, source, minX, maxX, out snapped);
     }
@@ -289,7 +289,7 @@ public sealed partial class EditorView
     private void DrawLazerDistanceGuides(ICanvas c)
     {
         LazerDistanceGuideCount = 0;
-        if (!IsLazerEditing || !DistanceSnapEnabled || !LibrarySettings.LazerDistanceGuidesVisible) return;
+        if (!UsesSpeedDistanceSnap || !DistanceSnapEnabled || !LibrarySettings.LazerDistanceGuidesVisible) return;
         double time;
         ISet<Guid>? excluded = null;
         if (tool == Tool.Select)

@@ -69,7 +69,7 @@ public sealed partial class EditorView
         {
             var from = Screen(Point(runStart));
             var to = Screen(Point(until));
-            c.Line(from.X, from.Y, to.X, to.Y, runColour, 4 * LazerCanvasScale, .5f);
+            c.Line(from.X, from.Y, to.X, to.Y, runColour, 4 * Playfield.Width / 512, .5f);
         }
 
         uint ColourAt(double time)

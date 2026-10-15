@@ -38,26 +38,31 @@ dragging pans horizontally to inspect the enlarged screen without seeking. Caugh
 disappear from the canvas when their timestamp is reached; they do not
 accumulate on this canvas. Catch Preview and testplay retain their plate stacks.
 Missed overlap objects continue below the line while fading over 250 ms.
-Distance Snap displays perfect-walk and perfect-dash guides from the last prior
+Speed presets display perfect-walk and perfect-dash guides from the last prior
 eligible object at 0.5 and 1 playfield units per millisecond, together with a
 vertical stand guide. Placement and selection show these guides while Distance
 Snap is enabled.
 
-Distance Snap → Configure keeps the built-in 0.5 and 1.0 speeds fixed and lets
+Distance Snap → Configure offers **Distance Snap presets** and **Global speed presets**
+buttons on the same row, sized to their full labels. Hovering either button shows
+its units and storage scope above it. Mapping defaults to DS and lazer defaults to Speed;
+each editing mode remembers its choice across maps and restarts. DS presets stay
+with the map, while Speed presets are global. Apply saves the choice and edited
+presets; Cancel discards pending changes in both tabs. The fixed 0.5 and 1.0
+speed entries use bold text and cannot be moved or deleted. Speed mode lets
 you add up to eight custom speeds above zero through 3.0. Values are logical
 playfield pixels per millisecond (0.5 = 500 pixels/second), independent of SV.
 The existing preset arrows and Add control edit these speeds; right-click a
 custom marker to remove it. Apply saves these presets globally across maps and
 restarts. The upper SV/DPB controls still edit the current map's base velocity.
-Guide
-colours follow the current map's Stand/Walk/Dash/HDash analysis and configured
+Guide colours follow the current map's Stand/Walk/Dash/HDash analysis and configured
 movement colours, with short gradients at category transitions.
-Movement Analysis connection labels show logical pixels per millisecond in lazer mode;
-Mapping retains DS ratios. These speed labels are independent of base SV.
+Movement Analysis connection labels follow the selected preset system: logical
+pixels per millisecond for Speed and DS ratios for DS. Speed is independent of base SV.
 Placement connections and labels use the Break ranges that would result from
 placing the candidate note, including shrinking, splitting or removing a Break.
 Hovering does not change the map; cancellation restores the committed ranges.
-The lazer configuration opens with a 1/4 preview subdivision at the current BPM.
+Speed configuration opens with a 1/4 preview subdivision at the current BPM.
 **Show DS guides** defaults to on and is saved globally; turning it off hides
 canvas guide lines while retaining distance snapping.
 

@@ -357,6 +357,8 @@ public sealed partial class EditorView
             settings.Fullscreen = draftFullscreen;
             settings.ExperimentalSnapDivisions = draftExperimentalSnapDivisions;
             settings.LazerEditing = draftLazerEditing;
+            settings.MappingSpeedDistanceSnap = LibrarySettings.MappingSpeedDistanceSnap;
+            settings.LazerSpeedDistanceSnap = LibrarySettings.LazerSpeedDistanceSnap;
             settings.LazerDistanceCustomSpeeds = LibrarySettings.LazerDistanceCustomSpeeds;
             settings.LazerDistanceGuidesVisible = LibrarySettings.LazerDistanceGuidesVisible;
             settings.CatchHitLighting = LibrarySettings.CatchHitLighting;

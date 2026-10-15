@@ -94,7 +94,7 @@ public sealed partial class EditorView
         objectDragSnapPoint = null; objectSnapTarget = null;
         if (objectDragSnapFirst is not { } first) return false;
         var rawPoint = new MapPoint(first.TimeMs + deltaTime, first.X + rawDeltaX);
-        if (IsLazerEditing)
+        if (UsesSpeedDistanceSnap)
         {
             if (!TryLazerGestureDistanceSnap(rawPoint, out var lazerPoint, objectSelection,
                 first.X + minDeltaX, first.X + maxDeltaX)) return false;

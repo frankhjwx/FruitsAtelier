@@ -36,6 +36,8 @@ public sealed class LibrarySettings
     public bool DerandomizeNewProjects { get; set; } = true;
     public bool ExperimentalSnapDivisions { get; set; }
     public bool LazerEditing { get; set; }
+    public bool MappingSpeedDistanceSnap { get; set; }
+    public bool LazerSpeedDistanceSnap { get; set; } = true;
     public bool LazerDistanceGuidesVisible { get; set; } = true;
     // Immutable snapshots let canvas guides cache the combined fixed and custom speeds by identity.
     private IReadOnlyList<double> lazerDistanceCustomSpeeds = Array.AsReadOnly(Array.Empty<double>());

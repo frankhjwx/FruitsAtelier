@@ -76,7 +76,7 @@ between 0.35 and 1.125, and both components use additive tinting. The existing
 legacy sprite renderer also supplies this effect for the geometric catcher
 fallback; Argon and default-skin glow variants are not implemented.
 
-With Distance Snap enabled, the lazer canvas displays perfect-walk and
+With Distance Snap enabled and Speed presets selected, either canvas displays perfect-walk and
 perfect-dash movement guides from the last prior eligible object, using 0.5 and
 1 playfield units per millisecond respectively. These are movement distances in
 the time–X plane, independent of conversion and beat snapping division. A vertical
@@ -98,8 +98,8 @@ including its incoming direction and excess allowance and the map's CS. A speed
 above 1.0 is not necessarily a hyperdash. Short screen-space gradients blend
 category transitions along each guide.
 
-Lazer placement keeps beat snapping and uses these movement guides in
-place of Mapping's horizontal grid and object-alignment candidates. Whole-object
+Speed placement keeps beat snapping and uses these movement guides in
+place of DS mode's horizontal grid and object-alignment candidates. Whole-object
 dragging retains its guide reference at gesture start. Slider-event and stream
 endpoint horizontal movement also uses these guides, while the existing
 FSlider geometry and control-point solver remains in use. Invisible caught

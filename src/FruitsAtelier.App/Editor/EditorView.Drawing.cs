@@ -747,7 +747,7 @@ public sealed partial class EditorView
         else
         {
             Item(L.Get("ui.gridLevel", L.Get("ui.grid" + gridSize)), () => gridLevelMenuOpen = true);
-            Item(L.Get("ui.gridSnap"), () => gridSnap = !gridSnap, enabled: !IsLazerEditing, active: !IsLazerEditing && gridSnap);
+            Item(L.Get("ui.gridSnap"), () => gridSnap = !gridSnap, enabled: !UsesSpeedDistanceSnap, active: !UsesSpeedDistanceSnap && gridSnap);
             Item(L.Get("ui.anchorSnap"), () => anchorSnap = !anchorSnap, active: anchorSnap);
             Separator();
             Item(L.Get("ui.resetView"), ResetView);

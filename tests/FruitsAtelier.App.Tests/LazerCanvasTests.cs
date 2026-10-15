@@ -6,6 +6,7 @@ internal static class LazerCanvasTests
 {
     public static void Run()
     {
+        IndependentDistanceModes();
         MovementSpeedLabels();
         CustomGuidesAndMovementColours();
         var ui = new Ui(overview: false);
@@ -82,6 +83,31 @@ internal static class LazerCanvasTests
 
         object? Invoke(string name, params object?[] arguments)
             => typeof(EditorView).GetMethod(name, Private)!.Invoke(ui.View, arguments);
+    }
+
+    private static void IndependentDistanceModes()
+    {
+        var ui = new Ui(false);
+        var map = new MapDocument { DurationMs = 4000, BeatLengthMs = 500, DistancePerBeatOverride = 250 };
+        map.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 });
+        map.DistanceSnapRatios.Add(2);
+        ui.LoadDocument(map);
+        typeof(EditorView).GetProperty("distanceSnap", Private)!.SetValue(ui.View, true);
+        foreach (bool lazer in new[] { false, true })
+        foreach (bool speed in new[] { false, true })
+        {
+            ui.View.LibrarySettings.LazerEditing = lazer;
+            ui.View.LibrarySettings.MappingSpeedDistanceSnap = speed;
+            ui.View.LibrarySettings.LazerSpeedDistanceSnap = speed;
+            ui.Paint();
+            var snapped = (MapPoint)typeof(EditorView).GetMethod("SnapDistance", Private)!
+                .Invoke(ui.View, [new MapPoint(1200, 204), null])!;
+            Check(Math.Abs(snapped.X - (speed ? 200 : 300)) < .001,
+                "Both editors must snap with the selected DS or speed preset system.");
+            ui.Key(lazer ? '2' : 'F'); ui.MoveMap(1200, 204);
+            Check(speed ? ui.View.LazerDistanceGuideCount > 0 : ui.View.LazerDistanceGuideCount == 0,
+                "Speed guides must follow the selected preset system in either editor.");
+        }
     }
 
     private static void MovementSpeedLabels()
