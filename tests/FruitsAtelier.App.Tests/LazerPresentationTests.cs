@@ -86,9 +86,10 @@ internal static class LazerPresentationTests
         Near(timeBeforeZoom, ui.View.PlayheadMs);
         Near(mappingZoom, ui.View.LibrarySettings.CanvasZoom);
         var reference = ui.View.LazerGameScreenBounds;
-        Near(4d / 3, reference.Width / reference.Height, .00001);
         Near(ui.View.PlayfieldBounds.Width, reference.Width * .8, .001);
-        Near(catchY, reference.Y + reference.Height * .15 + 340 * ui.View.PlayfieldBounds.Width / 512, .001);
+        Near(catchY, reference.Bottom, .001);
+        double gameVisibleTime = (480 * .15 + 340) / CatchScrollTiming.PixelsPerMs(ui.View.Document.ApproachRate, 512);
+        Near(gameVisibleTime, reference.Height / ui.View.PixelsPerMs, .001);
         ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + 10, 1200, false, false, true);
         clock.Milliseconds += 200; ui.Paint();
         double beforePan = ui.View.PlayfieldBounds.X;
@@ -105,6 +106,9 @@ internal static class LazerPresentationTests
         SetAxis(1, 1.5);
         Near(initialWidth * .75, ui.View.PlayfieldBounds.Width, .001);
         Near(speedBeforeZoom * 1.5, ui.View.PixelsPerMs, .00001);
+        reference = ui.View.LazerGameScreenBounds;
+        Near(catchY, reference.Bottom, .001);
+        Near(gameVisibleTime, reference.Height / ui.View.PixelsPerMs, .001);
         SetAxis(0, 2);
         ToggleLock();
         clock.Milliseconds += 200; ui.Paint();

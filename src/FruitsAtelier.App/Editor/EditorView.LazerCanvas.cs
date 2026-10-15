@@ -43,8 +43,11 @@ public sealed partial class EditorView
         {
             var field = Playfield;
             float screenWidth = field.Width / .8f, screenHeight = screenWidth * .75f;
-            float top = LazerCatchLineY - screenHeight * .15f - 340 * field.Width / 512;
-            return new(field.X - (screenWidth - field.Width) / 2, top, screenWidth, screenHeight);
+            double gameCatchOffset = screenHeight * .15 + CatchScrollTiming.CatchY * field.Width / 512;
+            double visibleTime = gameCatchOffset / CatchScrollTiming.PixelsPerMs(Document.ApproachRate, field.Width);
+            // Project the gameplay time window into the editor's independent time scale.
+            float height = (float)(visibleTime * pixelsPerMs);
+            return new(field.X - (screenWidth - field.Width) / 2, LazerCatchLineY - height, screenWidth, height);
         }
     }
 

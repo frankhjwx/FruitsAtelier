@@ -33,10 +33,13 @@ Caught Fruits and Bananas remain on the plate at half size with deterministic co
 The experimental lazer editing preference adds an automatic catcher to the main
 canvas at a fixed judgement line at `plotTop + 0.9 × plotHeight`.
 The catcher extends below that line and is clipped at the canvas bottom.
-White corner brackets mark the complete 4:3 game screen using the same proportions
-as Catch Preview's Fit reference. Screen width is `fieldWidth / 0.8`, height is
-three quarters of that width, and its top is
-`catchLineY - 0.15 × screenHeight - 340 × fieldWidth / 512`.
+White corner brackets project the normal 4:3 gameplay screen above its catcher
+into the editor. Their bottom is the catch line and width is `fieldWidth / 0.8`.
+The top uses the same visible time as Catch Preview's Fit reference:
+`(0.15 × gameScreenHeight + 340 × fieldWidth / 512) / gameplayPixelsPerMs`.
+Multiplying that time by the editor's pixels per millisecond gives the bracket
+height. Independent Y zoom and editor scroll speed therefore preserve the
+gameplay visibility cutoff; the catcher body is below the brackets.
 It uses the cached playable object sequence;
 successfully caught objects are omitted at and after their timestamp. Missed
 overlap objects continue falling below the line and fade over 250 ms. This canvas does not

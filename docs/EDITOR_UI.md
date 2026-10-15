@@ -27,8 +27,9 @@ saved Mapping playback-line height.
 
 The lazer canvas shows an automatic catcher at a fixed judgement line. The line
 stays 10% above the bottom of the plot; catcher artwork below the canvas is clipped.
-White corner brackets mark the complete 4:3 game screen, using the same proportions
-as Catch Preview's Fit reference. The Zoom slider and Alt+wheel over the canvas
+White corner brackets mark the normal gameplay visibility range above the catcher:
+their bottom follows the catch line, and their top projects the visible time from
+Catch Preview's 4:3 Fit reference into the canvas time scale. The Zoom slider and Alt+wheel over the canvas
 scale both axes together with easing, keeping the catch line fixed. The lock defaults
 to linked axes capped at 100%. Unlocking shows independent X/Y sliders up to 200%;
 locking again aligns Y to X and caps both at 100%. These lazer zoom settings are
