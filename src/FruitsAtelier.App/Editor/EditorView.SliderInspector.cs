@@ -131,8 +131,9 @@ public sealed partial class EditorView
         string Metric(double? value) => value is { } number
             ? inspectorSpeedMode ? L.Get("ds.lazerSpeed", number)
                 : number.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "×" : "—";
-        inspectorRows.Add(("inspector.maxDs", Metric(InspectorMaxDs)));
-        inspectorRows.Add(("inspector.peak", Metric(InspectorPeakRatio)));
+        inspectorRows.Add(inspectorSpeedMode
+            ? ("inspector.peak", Metric(InspectorPeakRatio))
+            : ("inspector.maxDs", Metric(InspectorMaxDs)));
         inspectorRows.Add(("inspector.base", $"{Document.DistancePerBeat / 100:0.##}× SV · {Document.DistancePerBeat:0.##} DPB"));
     }
     private static string TimeRange(IEnumerable<double> values)

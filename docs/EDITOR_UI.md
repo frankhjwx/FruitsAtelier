@@ -59,8 +59,8 @@ Guide colours follow the current map's Stand/Walk/Dash/HDash analysis and config
 movement colours, with short gradients at category transitions.
 Movement Analysis connection labels follow the selected preset system: logical
 pixels per millisecond for Speed and DS ratios for DS. Speed is independent of base SV.
-Slider Inspector's Max DS and Peak horizontal speed also follow this choice,
-showing px/ms in Speed mode and their existing ratios in DS mode.
+Slider Inspector shows one metric for this choice: Peak horizontal speed in px/ms
+for Speed mode, or Max DS as a ratio for DS mode.
 Placement connections and labels use the Break ranges that would result from
 placing the candidate note, including shrinking, splitting or removing a Break.
 Hovering does not change the map; cancellation restores the committed ranges.

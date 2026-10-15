@@ -50,8 +50,10 @@ internal static class InspectorPanelsTests
                         "Both inspector metrics refresh immediately with the selected preset units in either editor.");
                     string formatted = speedMode ? L.Get("ds.lazerSpeed", value)
                         : value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "×";
-                    Check(ui.Canvas.Texts.Count(t => t.Value == formatted) >= 2,
-                        "Both inspector rows show px/ms for Speed and multipliers for DS.");
+                    Check(ui.Canvas.Texts.Any(t => t.Value == formatted)
+                        && ui.Canvas.Texts.Count(t => t.Value == L.Get(speedMode ? "inspector.peak" : "inspector.maxDs")) == 1
+                        && !ui.Canvas.Texts.Any(t => t.Value == L.Get(speedMode ? "inspector.maxDs" : "inspector.peak")),
+                        "Inspector shows only Peak horizontal speed in Speed mode or Max DS in DS mode.");
                     Check(ReferenceEquals(committed, ui.View.Conversion) && ui.View.Document.ContentEquals(map),
                         "Changing inspector units must reuse conversion and preserve map content.");
                 }
