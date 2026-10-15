@@ -32,7 +32,8 @@ assignments and Mapping view preferences are preserved when switching modes.
 | Ctrl+Left / Ctrl+Right | Move selected objects by one X unit; with no selection, seek the previous / next parent start. |
 | Ctrl+Shift+Left / Ctrl+Shift+Right | Seek previous / next sample point: slider head, first-span midpoint, reverses and tail, or the neighbouring parent's tail/start. Samples are edited through the existing sample controls. |
 | Up / Down | Previous / next timing point. Backward navigation while playing allows one second at the current playback rate. |
-| F3 / F4 | Decrease / increase Catch canvas scroll speed. Timing page function keys retain their page meanings. |
+| F3 / F4 | Open Timing / Song Setup. |
+| - / = | Compress / expand canvas time spacing without changing its horizontal scale; available in both editing modes. |
 | Shift+Q/W/E/R | Set the normal sampleset to Auto / Normal / Soft / Drum. |
 | Alt+Q/W/E/R | Set the additions sampleset to Auto / Normal / Soft / Drum. |
 | Ctrl+J | Reserved; use the slider's menu action to extend it. |
@@ -52,8 +53,7 @@ assignments and Mapping view preferences are preserved when switching modes.
 Ctrl+wheel uses the common family `1, 2, 4, 8, 16`, the triplet family
 `1, 3, 6, 12`, or the integer divisors of a selected custom divisor. Short paused
 seeks ease over 300 ms; running playback and jumps beyond 5000 ms seek immediately.
-F3/F4 scroll-speed changes ease over 200 ms. These are view and navigation
-operations; they do not alter beatmap AR or content.
+These view and navigation operations do not alter beatmap AR or content.
 
 Alt+wheel over the upper object timeline changes its normalized zoom by 0.02 of
 the allowed range per notch, easing over 200 ms. The visible range starts at

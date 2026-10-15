@@ -52,12 +52,6 @@ internal static class LazerPresentationTests
             var field = ui.View.PlayfieldBounds;
             Near(ui.View.LazerCanvasScale * 512, field.Width, .001);
         }
-        double initialSpeed = ui.View.PixelsPerMs;
-        ui.Key(114);
-        clock.Milliseconds += 100; ui.Paint();
-        Near(initialSpeed / 1.96875, ui.View.PixelsPerMs, .00001);
-        clock.Milliseconds += 100; ui.Paint();
-        Near(initialSpeed / 2, ui.View.PixelsPerMs, .00001);
         double initialTimeline = ui.View.ObjectTimelinePixelsPerMs;
         double savedTimeline = ui.View.LibrarySettings.ObjectTimelineScale;
         var timeline = ui.View.ObjectTimelineBounds;
@@ -131,6 +125,7 @@ internal static class LazerPresentationTests
         Check(!ui.View.LazerPresentationNeedsRedraw, "Starting then pausing must retire the old seek transform.");
         WheelSeekingKeepsDraggedObjectUnderPointer();
         MovementLabelsFollowPresentation();
+        ScrollKeysPreserveWidth();
 
         void Seek(double target) => typeof(EditorView).GetMethod("SeekLazerSmoothlyTo", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(ui.View, [target]);
         void ToggleLock()
@@ -170,6 +165,32 @@ internal static class LazerPresentationTests
         double delta = (ui.View.LazerPresentationTime - 1000) * ui.View.PixelsPerMs;
         Near(initialY + delta, ui.View.DistanceLabelBounds.Single().Y, .001);
         Check(ui.View.LazerPresentationTime < 1200, "Movement labels are checked during the seek transition.");
+    }
+
+    private static void ScrollKeysPreserveWidth()
+    {
+        foreach (bool lazer in new[] { false, true })
+        {
+            var clock = new Clock();
+            var ui = new Ui(false, clock);
+            ui.LoadDocument(new MapDocument { DurationMs = 10000, ApproachRate = 5 });
+            ui.View.LibrarySettings.LazerEditing = lazer;
+            ui.View.UpdateTransport(1000, 10000, true, false, false, null, null);
+            ui.Paint();
+            double width = ui.View.PlayfieldBounds.Width, speed = ui.View.PixelsPerMs;
+            var before = ui.View.Document.DeepClone();
+            ui.Key(189);
+            clock.Milliseconds += 100; ui.Paint();
+            Near(speed / 1.96875, ui.View.PixelsPerMs, .00001);
+            clock.Milliseconds += 100; ui.Paint();
+            Near(speed / 2, ui.View.PixelsPerMs, .00001);
+            Near(width, ui.View.PlayfieldBounds.Width, .001);
+            ui.Key(187);
+            clock.Milliseconds += 200; ui.Paint();
+            Near(speed, ui.View.PixelsPerMs, .00001);
+            Near(1000, ui.View.PlayheadMs);
+            Check(ui.View.Document.ContentEquals(before), "Canvas stretch must preserve beatmap content in both modes.");
+        }
     }
 
     private static void WheelSeekingKeepsDraggedObjectUnderPointer()

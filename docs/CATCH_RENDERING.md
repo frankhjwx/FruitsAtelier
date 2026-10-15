@@ -38,7 +38,7 @@ into the editor. Their bottom is the catch line and width is `fieldWidth / 0.8`.
 The top uses the same visible time as Catch Preview's Fit reference:
 `(0.15 × gameScreenHeight + 340 × fieldWidth / 512) / gameplayPixelsPerMs`.
 Multiplying that time by the editor's pixels per millisecond gives the bracket
-height. Independent Y zoom and editor scroll speed therefore preserve the
+height. Independent Y zoom therefore preserves the
 gameplay visibility cutoff; the catcher body is below the brackets.
 It uses the cached playable object sequence;
 successfully caught objects are omitted at and after their timestamp. Missed
@@ -56,8 +56,12 @@ around the fixed catch line, preserving current time and saved Mapping preferenc
 Middle-button dragging pans horizontally without seeking;
 pan is bounded by the game-screen width and recentres as zoom is reduced.
 Its time scale is `384 × baseScale × verticalZoom / preemptMs / scrollMultiplier`, using the
-untruncated AR preempt. The session scroll multiplier ranges from 1 to 10;
-larger values show more future time. F3 slows scrolling and F4 speeds it up.
+untruncated AR preempt. In both editing modes, `-` increases the session scroll
+multiplier by one (up to 10), compressing time spacing, and `=` decreases it
+(down to 1), expanding time spacing. This uses 200 ms OutQuint easing, preserving
+the playhead and horizontal scale. Numeric fields retain ordinary text input;
+Ctrl+- and Ctrl+= retain their slider-reverse actions. F3 opens Timing and F4
+opens Song Setup.
 
 Hit lighting has one global **Follow mode / On / Off** preference in the skin
 selector. Follow mode is enabled for lazer editing and disabled for Mapping.
@@ -99,7 +103,7 @@ objects do not intercept canvas hits.
 Paused short navigation seeks interpolate for 300 ms with OutQuint easing.
 Playback and jumps beyond 5000 ms seek immediately. Repeated navigation targets
 the already requested destination while drawing catches up; rendering does not
-submit additional audio seeks. Scroll-speed changes use a separate 200 ms
+submit additional audio seeks. Zoom changes use a separate 200 ms
 OutQuint transition. This presentation state is reset at document and mode
 boundaries, keeping the saved Mapping view preferences independent.
 

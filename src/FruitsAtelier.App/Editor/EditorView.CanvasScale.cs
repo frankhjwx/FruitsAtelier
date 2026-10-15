@@ -9,6 +9,9 @@ public sealed partial class EditorView
     private double canvasTimeZoom = .6;
     private double canvasPanX, panStartX;
     private int canvasScaleAxis = -1;
+    private double canvasScrollFrom = 1, canvasScrollTarget = 1, canvasScrollStarted = double.NegativeInfinity;
+    private double CanvasScrollMultiplier => LazerEase(canvasScrollFrom, canvasScrollTarget, canvasScrollStarted, 200);
+    private bool CanvasScrollNeedsRedraw => TestplayRealtime < canvasScrollStarted + 200;
     public bool UniformCanvasScale => IsLazerEditing ? lazerUniformScale : LibrarySettings.UniformCanvasScale;
     public double CanvasTimeZoom => UniformCanvasScale ? canvasZoom : canvasTimeZoom;
     public Rect CanvasScaleLockBounds { get; private set; }
@@ -17,9 +20,20 @@ public sealed partial class EditorView
     private float CanvasObjectWidth => IsLazerEditing ? Playfield.Width : Math.Min(Playfield.Width, FullPlayfieldWidth);
     private double MaximumCanvasZoom => UniformCanvasScale ? 1 : 2;
     private double MaximumObjectTimelineScale => LibrarySettings.ExperimentalSnapDivisions ? 16 : 1.5;
-    private double CanvasPixelsPerMs => IsLazerEditing
-        ? 384 * LazerTimeScale / LazerPreempt / LazerScrollMultiplier
-        : CatchScrollTiming.PixelsPerMs(Document.ApproachRate, FullPlayfieldWidth * CanvasTimeZoom);
+    private double CanvasPixelsPerMs => (IsLazerEditing
+        ? 384 * LazerTimeScale / LazerPreempt
+        : CatchScrollTiming.PixelsPerMs(Document.ApproachRate, FullPlayfieldWidth * CanvasTimeZoom)) / CanvasScrollMultiplier;
+
+    private void AdjustCanvasScrollSpeed(bool increase)
+    {
+        double next = Math.Clamp(canvasScrollTarget + (increase ? -1 : 1), 1, 10);
+        if (next == canvasScrollTarget) return;
+        canvasScrollFrom = CanvasScrollMultiplier;
+        canvasScrollTarget = next;
+        canvasScrollStarted = TestplayRealtime;
+        pinPlayhead = true;
+        StatusMessage = L.Get("ui.lazerScrollSpeed") + $" {1 / next:0.##}×";
+    }
 
     private void SaveCanvasScale()
     {

@@ -17,11 +17,6 @@ public sealed partial class EditorView
             if (drag == DragKind.None) SeekBookmark(key == 39);
             return true;
         }
-        if (!TimingPageVisible && !ctrl && !altHeld && !shift && key is 114 or 115)
-        {
-            if (drag == DragKind.None) AdjustLazerScrollSpeed(key == 115);
-            return true;
-        }
         if (!ctrl && (shift && !altHeld || altHeld && !shift) && key is 81 or 87 or 69 or 82)
         {
             if (drag == DragKind.None && !TimingPageVisible)

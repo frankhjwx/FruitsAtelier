@@ -33,6 +33,11 @@ internal static class LazerInputTests
         ui.Key(39);
         ui.View.SetModifiers(false, false);
         Check(ui.View.PlayheadMs == 2500, "Alt+Right seeks a bookmark instead of selecting a volume meter.");
+        ui.Key(114);
+        Check(ui.View.TimingPageVisible, "Lazer F3 switches to Timing.");
+        ui.Key(115);
+        ui.Paint();
+        Check(!ui.View.TimingPageVisible && ui.View.SongDockViewport.Width > 0, "Lazer F4 switches from Timing to Song Setup.");
     }
 
     public static void SeekAndDivisorFamilies()

@@ -5,7 +5,6 @@ namespace FruitsAtelier.App.Editor;
 public sealed partial class EditorView
 {
     private double lazerSeekFrom, lazerSeekTo, lazerSeekStarted = double.NegativeInfinity;
-    private double lazerScrollFrom = 1, lazerScrollTarget = 1, lazerScrollStarted = double.NegativeInfinity;
     private double lastLazerPresentationTime, lastLazerViewStart;
     private bool lazerPresentationInitialized;
     private double lazerTimelineFrom = 1d / 6000, lazerTimelineTarget = 1d / 6000;
@@ -36,20 +35,17 @@ public sealed partial class EditorView
         * LazerEase(lazerTimeZoomFrom, lazerTimeZoomTarget, lazerZoomStarted, 200);
     private double EffectivePlaybackLineFromBottom => IsLazerEditing
         ? (plot.Bottom - LazerCatchLineY) / Math.Max(1, plot.Height) : playbackLineFromBottom;
-    private double LazerScrollMultiplier => LazerEase(lazerScrollFrom, lazerScrollTarget, lazerScrollStarted, 200);
     private double LazerPreempt => Document.ApproachRate <= 5
         ? 1800 - Document.ApproachRate * 120 : 1200 - (Document.ApproachRate - 5) * 150;
-    public bool LazerPresentationNeedsRedraw => IsLazerEditing && !IsTestplaying &&
+    public bool LazerPresentationNeedsRedraw => !IsTestplaying && (CanvasScrollNeedsRedraw || IsLazerEditing &&
         ((!AudioPlaying && playhead == lazerSeekTo && TestplayRealtime < lazerSeekStarted + 300)
-         || TestplayRealtime < lazerScrollStarted + 200 || TestplayRealtime < lazerTimelineStarted + 200
-         || TestplayRealtime < lazerZoomStarted + 200);
+         || TestplayRealtime < lazerTimelineStarted + 200
+         || TestplayRealtime < lazerZoomStarted + 200));
 
     private void ResetLazerPresentation()
     {
         lazerSeekStarted = double.NegativeInfinity;
         lazerSeekFrom = lazerSeekTo = playhead;
-        lazerScrollStarted = double.NegativeInfinity;
-        lazerScrollFrom = lazerScrollTarget;
         lazerTimelineStarted = double.NegativeInfinity;
         lazerTimelineFrom = lazerTimelineTarget;
         lazerZoomStarted = double.NegativeInfinity;
@@ -81,20 +77,6 @@ public sealed partial class EditorView
         lazerSeekFrom = from;
         lazerSeekTo = playhead;
         lazerSeekStarted = TestplayRealtime;
-    }
-
-    private void AdjustLazerScrollSpeed(bool increase)
-    {
-        SetLazerScrollMultiplier(lazerScrollTarget + (increase ? -1 : 1));
-    }
-
-    private void SetLazerScrollMultiplier(double value)
-    {
-        double next = Math.Clamp(value, 1, 10);
-        if (next == lazerScrollTarget) return;
-        lazerScrollFrom = LazerScrollMultiplier;
-        lazerScrollTarget = next;
-        lazerScrollStarted = TestplayRealtime;
     }
 
     private void ZoomLazerTimeline(double notches)

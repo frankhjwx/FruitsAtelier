@@ -1257,9 +1257,9 @@ public sealed partial class EditorView
         if (librarySettingsOpen || LibraryVisible) { LibraryKey(virtualKey, ctrl, shift); return; }
         if (TimingKey(virtualKey, ctrl, shift)) return;
         if (virtualKey == 117 && !ctrl && !shift && !altHeld) { OpenTimingSetup(); return; }
-        if (virtualKey == 114 && !ctrl && !shift && !altHeld && (!IsLazerEditing || TimingPageVisible)) { ShowTimingPage(true); return; }
-        if (virtualKey == 115 && !ctrl && !shift && !altHeld && drag == DragKind.None && (!IsLazerEditing || TimingPageVisible))
-        { ShowSongDock(); return; }
+        if (virtualKey == 114 && !ctrl && !shift && !altHeld) { ShowTimingPage(true); return; }
+        if (virtualKey == 115 && !ctrl && !shift && !altHeld && drag == DragKind.None)
+        { if (IsLazerEditing && TimingPageVisible) ShowTimingPage(false); ShowSongDock(); return; }
         if (virtualKey == 116 && !ctrl && !shift && !altHeld) { StartTestplay(); return; }
         if (ctrl && !shift && !altHeld && virtualKey == 83 && drag == DragKind.None)
         {
@@ -1305,6 +1305,12 @@ public sealed partial class EditorView
             return;
         }
         if (ctrl && shift && !altHeld && virtualKey == 65) { ShowAimod(); return; }
+        if (!TimingPageVisible && !ctrl && !shift && !altHeld && virtualKey is 189 or 187)
+        {
+            if (drag == DragKind.None && menu < 0 && contextItems.Count == 0)
+                AdjustCanvasScrollSpeed(virtualKey == 187);
+            return;
+        }
         if (IsLazerEditing && HandleLazerKey(virtualKey, ctrl, shift)) return;
         if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift)) return;
         if (virtualKey == 70 && shift && !ctrl && !altHeld)
