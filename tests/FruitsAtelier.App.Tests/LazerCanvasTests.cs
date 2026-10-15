@@ -7,6 +7,7 @@ internal static class LazerCanvasTests
     public static void Run()
     {
         IndependentDistanceModes();
+        SpeedCollinear();
         MovementSpeedLabels();
         CustomGuidesAndMovementColours();
         var ui = new Ui(overview: false);
@@ -107,6 +108,40 @@ internal static class LazerCanvasTests
             ui.Key(lazer ? '2' : 'F'); ui.MoveMap(1200, 204);
             Check(speed ? ui.View.LazerDistanceGuideCount > 0 : ui.View.LazerDistanceGuideCount == 0,
                 "Speed guides must follow the selected preset system in either editor.");
+        }
+    }
+
+    private static void SpeedCollinear()
+    {
+        foreach (bool lazer in new[] { false, true })
+        {
+            var ui = new Ui(false);
+            ui.View.LibrarySettings.LazerEditing = lazer;
+            ui.View.LibrarySettings.MappingSpeedDistanceSnap = true;
+            ui.View.LibrarySettings.LazerDistanceGuidesVisible = false;
+            var map = new MapDocument { DurationMs = 4000, DistanceSnapCollinear = true };
+            var next = new Fruit { TimeMs = 2000, X = 350 };
+            map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 100 }, next]);
+            ui.LoadDocument(map);
+            typeof(EditorView).GetProperty("distanceSnap", Private)!.SetValue(ui.View, true);
+            Check(Math.Abs(Snap(false, null, 0).X - 150) < .001,
+                "Speed placement must offer collinear snapping even with guide visibility off.");
+            typeof(EditorView).GetMethod("CaptureLazerGestureDistance", Private)!.Invoke(ui.View, null);
+            Check(Math.Abs(Snap(true, null, 0).X - 150) < .001,
+                "Speed dragging must use the captured adjacent references for collinear snapping.");
+            Check(Math.Abs(Snap(true, new HashSet<Guid> { next.Id }, 0).X - 150) > .001,
+                "Selected objects must not act as collinear targets.");
+            Check(Snap(true, null, 160).X != 150, "Collinear candidates must respect group movement bounds.");
+            ui.View.Document.DistanceSnapCollinear = false;
+            Check(Snap(false, null, 0).X != 150, "Disabling collinear snapping must leave speed guides in effect.");
+
+            MapPoint Snap(bool gesture, ISet<Guid>? excluded, double minX)
+            {
+                object?[] args = [new MapPoint(1200, 152), default(MapPoint), excluded, minX, 512d];
+                typeof(EditorView).GetMethod(gesture ? "TryLazerGestureDistanceSnap" : "TryLazerDistanceSnap", Private)!
+                    .Invoke(ui.View, args);
+                return (MapPoint)args[1]!;
+            }
         }
     }
 

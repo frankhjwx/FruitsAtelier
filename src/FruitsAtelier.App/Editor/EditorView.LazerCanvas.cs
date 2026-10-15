@@ -242,6 +242,20 @@ public sealed partial class EditorView
         lazerGestureDistance = new(lazerDistanceReferences, new Dictionary<Guid, double>(lazerDistanceParentEnds));
     }
 
+    private DistanceSnap.Reference? LazerCollinearTarget(double time, DistanceSnap.Reference[] references, ISet<Guid>? excluded)
+    {
+        if (!Document.DistanceSnapCollinear) return null;
+        int lo = 0, hi = references.Length;
+        while (lo < hi)
+        {
+            int mid = (lo + hi) / 2;
+            if (references[mid].Start.TimeMs <= time) lo = mid + 1; else hi = mid;
+        }
+        for (int i = lo; i < references.Length; i++)
+            if (references[i].Id != draftTrack && excluded?.Contains(references[i].Id) != true) return references[i];
+        return null;
+    }
+
     private MapPoint LazerPlacementPoint(float x, float y)
     {
         var point = Transform.ToMap(x, y);
@@ -256,7 +270,8 @@ public sealed partial class EditorView
         snapped = candidate;
         if (!UsesSpeedDistanceSnap || !DistanceSnapEnabled || lazerGestureDistance is not { } snapshot) return false;
         var source = FindLazerDistanceReference(candidate.TimeMs, snapshot.References, snapshot.Ends, excluded);
-        return SnapLazerDistanceFromSource(candidate, source, minX, maxX, out snapped);
+        return SnapLazerDistanceFromSource(candidate, source, minX, maxX, out snapped,
+            LazerCollinearTarget(candidate.TimeMs, snapshot.References, excluded));
     }
 
     private bool TryLazerDistanceSnap(MapPoint candidate, out MapPoint snapped,
@@ -265,11 +280,12 @@ public sealed partial class EditorView
         snapped = candidate;
         if (!UsesSpeedDistanceSnap || !DistanceSnapEnabled || draftTrack != Guid.Empty) return false;
         var source = LazerDistanceSnapSource(candidate.TimeMs, excluded);
-        return SnapLazerDistanceFromSource(candidate, source, minX, maxX, out snapped);
+        return SnapLazerDistanceFromSource(candidate, source, minX, maxX, out snapped,
+            LazerCollinearTarget(candidate.TimeMs, lazerDistanceReferences, excluded));
     }
 
     private bool SnapLazerDistanceFromSource(MapPoint candidate, DistanceSnap.Reference? source,
-        double minX, double maxX, out MapPoint snapped)
+        double minX, double maxX, out MapPoint snapped, DistanceSnap.Reference? next)
     {
         snapped = candidate;
         if (source is null) return false;
@@ -282,6 +298,12 @@ public sealed partial class EditorView
             if (distance >= best) continue;
             best = distance;
             snapped = candidate with { X = x };
+        }
+        if (DistanceSnap.CollinearX(candidate.TimeMs, source, next) is { } aligned
+            && aligned >= minX && aligned <= maxX)
+        {
+            double distance = Math.Abs(aligned - candidate.X) * Playfield.Width / 512;
+            if (distance < best) { best = distance; snapped = candidate with { X = aligned }; }
         }
         return best < 50;
     }

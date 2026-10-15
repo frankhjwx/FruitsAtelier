@@ -139,6 +139,7 @@ internal static class LazerDistanceSettingsTests
         }
         finally { L.SetLanguage(language); }
         PresetModes(root);
+        CollinearInBothModes();
     }
 
     private static void PresetModes(string root)
@@ -209,6 +210,57 @@ internal static class LazerDistanceSettingsTests
                 "General settings Apply must preserve both editor mode preferences.");
 
             void Click(FruitsAtelier.App.Rendering.Rect bounds) => ui.Click(bounds.X + 8, bounds.Y + 8);
+        }
+    }
+
+    private static void CollinearInBothModes()
+    {
+        foreach (bool speed in new[] { false, true })
+        {
+            var ui = new Ui(false);
+            ui.View.LibrarySettings.LazerEditing = true;
+            ui.View.LibrarySettings.LazerSpeedDistanceSnap = speed;
+            var map = new MapDocument { DurationMs = 4000, IsDemo = false, BeatLengthMs = 500, DistanceSnapCollinear = true };
+            map.DistanceSnapRatios.Add(1);
+            ui.LoadDocument(map); ui.View.OpenDistanceSnapDialog(); ui.Paint();
+            Check(ui.Canvas.Texts.Any(text => text.Value == L.Get("ds.collinear"))
+                && ui.Canvas.Texts.Any(text => text.Value == L.Get("ds.showGuides")) == speed,
+                "Collinear snap must appear in both preset systems; guide visibility belongs only to Speed presets.");
+            if (speed)
+                Check(ui.Canvas.Texts.Single(text => text.Value == L.Get("ds.collinear")).Y
+                    == ui.Canvas.Texts.Single(text => text.Value == L.Get("ds.showGuides")).Y,
+                    "Speed mode's independent collinear and guide controls must share a compact row.");
+            SeedPreview();
+            Check(Math.Abs(Candidate().X - 200) < .001, "Both preview systems must support collinear interpolation.");
+            ui.ClickText(L.Get("ds.collinear"));
+            Check(Math.Abs(Candidate().X - 200) > 1 && ui.View.Document.DistanceSnapCollinear,
+                "The collinear toggle must change only the preview draft before Apply.");
+            if (speed) ui.ClickText(L.Get("ds.showGuides"));
+            ui.ClickText(L.Get("mac.cancel"));
+            Check(ui.View.Document.DistanceSnapCollinear && ui.View.LibrarySettings.LazerDistanceGuidesVisible,
+                "Cancel must discard both collinear and guide visibility changes.");
+            ui.View.OpenDistanceSnapDialog(); ui.Paint();
+            ui.ClickText(L.Get("ds.collinear"));
+            if (speed) ui.ClickText(L.Get("ds.showGuides"));
+            ui.ClickText(L.Get("library.apply"));
+            Check(!ui.View.Document.DistanceSnapCollinear && ui.View.LibrarySettings.LazerDistanceGuidesVisible == !speed,
+                "Apply must save map collinear snapping independently from Speed guide visibility.");
+            ui.Key('Z', ctrl: true);
+            Check(ui.View.Document.DistanceSnapCollinear && ui.View.LibrarySettings.LazerDistanceGuidesVisible == !speed,
+                "Undo must restore map collinear snapping while retaining the global guide preference.");
+
+            void SeedPreview()
+            {
+                var fruits = (List<MapPoint>)typeof(EditorView).GetField("dsPreviewFruits", Private)!.GetValue(ui.View)!;
+                fruits.AddRange([new(0, 100), new(2, 300)]);
+            }
+            MapPoint Candidate()
+            {
+                var preview = ui.View.DistanceSnapPreviewBounds;
+                float x = preview.X + 10 + 201f / 512 * (preview.Width - 20);
+                float y = preview.Bottom - 12 - (preview.Height - 24) / 4;
+                return (MapPoint)typeof(EditorView).GetMethod("DistanceSnapPreviewCandidate", Private)!.Invoke(ui.View, [x, y])!;
+            }
         }
     }
 

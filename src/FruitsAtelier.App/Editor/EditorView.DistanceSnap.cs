@@ -194,13 +194,23 @@ public sealed partial class EditorView
         DrawObjectSnapConfiguration(c, new(split + 16, r.Bottom - 168, r.Right - split - 32, 104));
         float collinearY = dsDraft.Count == 0 ? r.Y + 480 : textY + 44;
         c.Line(r.X + 20, collinearY, split - 16, collinearY, Grid);
-        var collinearRow = new Rect(r.X + 20, collinearY + 10, split - r.X - 36, 32);
-        c.Text(L.Get(dsSpeedMode ? "ds.showGuides" : "ds.collinear"), collinearRow.X, collinearRow.Y + 8, 12, Foreground, 126);
+        float toggleWidth = split - r.X - 36;
+        if (dsSpeedMode) toggleWidth = (toggleWidth - 12) / 2;
+        var collinearRow = new Rect(r.X + 20, collinearY + 10, toggleWidth, 32);
+        c.Text(L.Get("ds.collinear"), collinearRow.X, collinearRow.Y + 8, 12, Foreground, 126);
         var collinearSwitch = new Rect(collinearRow.X + 136, collinearRow.Y + 4, 46, 24);
-        bool enabled = dsSpeedMode ? dsShowGuides : dsCollinear;
-        c.Fill(collinearSwitch, enabled ? 0x417D77u : 0x46515Fu, 12);
-        c.Circle(collinearSwitch.X + (enabled ? 34 : 12), collinearSwitch.Y + 12, 9, 0xF0F3F6);
-        hits.Add(new(collinearRow, () => { if (dsSpeedMode) dsShowGuides = !dsShowGuides; else dsCollinear = !dsCollinear; }, true));
+        c.Fill(collinearSwitch, dsCollinear ? 0x417D77u : 0x46515Fu, 12);
+        c.Circle(collinearSwitch.X + (dsCollinear ? 34 : 12), collinearSwitch.Y + 12, 9, 0xF0F3F6);
+        hits.Add(new(collinearRow, () => dsCollinear = !dsCollinear, true));
+        if (dsSpeedMode)
+        {
+            var guidesRow = new Rect(collinearRow.Right + 12, collinearRow.Y, toggleWidth, 32);
+            c.Text(L.Get("ds.showGuides"), guidesRow.X, guidesRow.Y + 8, 12, Foreground, 126);
+            var guidesSwitch = new Rect(guidesRow.X + 136, guidesRow.Y + 4, 46, 24);
+            c.Fill(guidesSwitch, dsShowGuides ? 0x417D77u : 0x46515Fu, 12);
+            c.Circle(guidesSwitch.X + (dsShowGuides ? 34 : 12), guidesSwitch.Y + 12, 9, 0xF0F3F6);
+            hits.Add(new(guidesRow, () => dsShowGuides = !dsShowGuides, true));
+        }
         Button(c, new(r.Right - 196, r.Bottom - 44, 80, 30), L.Get("mac.cancel"), CloseDistanceSnapDialog);
         double? editedBase = DistanceBaseValue(dsBaseText);
         bool validBase = !dsBaseEdited || editedBase is not null;
@@ -213,7 +223,7 @@ public sealed partial class EditorView
             hits.Clear(); fields.Clear();
             hits.Add(new(new(r.Right - 196, r.Bottom - 44, 80, 30), CloseDistanceSnapDialog, true));
         }
-        if (!dsSpeedMode && collinearRow.Contains(mouseX, mouseY))
+        if (collinearRow.Contains(mouseX, mouseY))
             DrawPaletteTooltip(c, L.Get("ds.collinearTip"), collinearSwitch, left: false, above: false);
         if (DistanceSnapDsModeBounds.Contains(mouseX, mouseY))
             DrawPaletteTooltip(c, L.Get("ds.dsPresetsTip"), DistanceSnapDsModeBounds, left: false, above: true, centered: true);
@@ -511,7 +521,7 @@ public sealed partial class EditorView
         var previous = dsPreviewFruits.Where(f => f.TimeMs < beat).OrderByDescending(f => f.TimeMs).ThenBy(f => Math.Abs(f.X - px)).ToArray();
         // Preview time is measured in beats, so speed presets use milliseconds per beat as their reference velocity.
         DistanceSnap.Reference? reference = previous.Length == 0 ? null : new(Guid.Empty, previous[0], previous[0], DistanceSnapPreviewVelocity, 0);
-        var next = !dsSpeedMode && dsCollinear ? dsPreviewFruits.Where(f => f.TimeMs > beat).OrderBy(f => f.TimeMs)
+        var next = dsCollinear ? dsPreviewFruits.Where(f => f.TimeMs > beat).OrderBy(f => f.TimeMs)
             .Cast<MapPoint?>().FirstOrDefault() : null;
         var nextReference = next is { } following ? new DistanceSnap.Reference(Guid.Empty, following, following, DistanceSnapPreviewVelocity, 0) : null;
         return DistanceSnap.SnapMultiple(point, reference, dsDraft, out _, nextReference);

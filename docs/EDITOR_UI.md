@@ -63,8 +63,10 @@ Placement connections and labels use the Break ranges that would result from
 placing the candidate note, including shrinking, splitting or removing a Break.
 Hovering does not change the map; cancellation restores the committed ranges.
 Speed configuration opens with a 1/4 preview subdivision at the current BPM.
-**Show DS guides** defaults to on and is saved globally; turning it off hides
-canvas guide lines while retaining distance snapping.
+**Show DS guides** appears only for Global speed presets, defaults to on and is saved
+globally; turning it off hides canvas guide lines while retaining distance snapping.
+**Collinear snap** is available in both preset systems and adds alignment between
+the preceding and following objects to the placement and dragging candidates.
 
 The upper object timeline has a separate lazer zoom: Alt+wheel animates its
 visible time range over 200 ms. It starts at 6000 ms and ranges from 500 to
