@@ -70,7 +70,10 @@ undo/redo and cancellation.
 `App.Tests --inspector-panels-check` covers exported Inspector metrics including
 tiny droplets, base-SV normalization across BPM changes, immediate randomization edits,
 undo, numeric validation, horizontal overflow and Song Setup category buttons.
-Native docking checks capture Inspector and Randomize droplets at both sizes and
+The checks include mixed-mode selection, mode overrides, correction retention and
+reset, and undo/redo. `Core.Tests --droplet-modes-check` checks mixed modes, cache
+invalidation, schema 25/26 roundtrips, and v7/v14 NM/HR export.
+Native docking checks capture Inspector and Droplet Settings at both sizes and
 all three DPI values.
 
 

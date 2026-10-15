@@ -12,6 +12,7 @@ public sealed partial class EditorView
     public int SongSetupInputSession { get; private set; }
     private int songTab, songColour, songDrag = -1;
     private bool songCountdownOpen;
+    private bool songDerandomizeDroplets, songDerandomizeHardRock;
     private string songField = "", songError = "";
     private bool songCustomColours;
     private double songHue, songSaturation, songValue;
@@ -41,7 +42,6 @@ public sealed partial class EditorView
     private void InitializeSongSetup()
     {
         songValues.Clear(); songInitial.Clear(); songField = songError = "";
-        songRandomizeAll = null;
         songDerandomizeDroplets = Document.DerandomizeFSliderDroplets;
         songDerandomizeHardRock = Document.DerandomizeDropletsForHardRock;
         songTab = songColour = 0; songDrag = -1; songCountdownOpen = false; SongSetupInputSession++;
@@ -80,7 +80,7 @@ public sealed partial class EditorView
         "Artist" => NeedsRomanisation(songValues["ArtistUnicode"]),
         "Title" => NeedsRomanisation(songValues["TitleUnicode"]),
         "Hex" => songCustomColours,
-        "RandomizeDropletStrength" or "RandomizeDropletSeed" => !songDerandomizeDroplets,
+        "RandomizeDropletStrength" or "RandomizeDropletSeed" => !notesLocked,
         "CountdownOffset" => songValues["Countdown"] != "0",
         _ => true
     };
@@ -128,18 +128,14 @@ public sealed partial class EditorView
             Button(c, new(r.X + 22, r.Y + 160, r.Width - 44, 32),
                 L.Get(songDerandomizeHardRock ? "randomize.derandomizeHrOn" : "randomize.derandomizeHrOff"),
                 () => songDerandomizeHardRock = !songDerandomizeHardRock,
-                songDerandomizeHardRock, !notesLocked && songDerandomizeDroplets, fontSize: 13);
+                songDerandomizeHardRock, !notesLocked, fontSize: 13);
             SongRangeSlider(c, "RandomizeDropletStrength", r.Y + 216, 100);
             Button(c, new(r.X + 240, r.Y + 260, r.Width - 262, 32), L.Get("randomize.resetStrength"), () =>
             {
                 songValues["RandomizeDropletStrength"] = "20";
                 songField = songError = ""; SongSetupInputSession++;
-            }, enabled: !songDerandomizeDroplets);
+            }, enabled: !notesLocked);
             SongTextField(c, "RandomizeDropletSeed", r.Y + 308);
-            float buttonWidth = (r.Width - 56) / 2;
-            Button(c, new(r.X + 22, r.Y + 364, buttonWidth, 34), L.Get("randomize.enableAll"), () => songRandomizeAll = true, songRandomizeAll == true, !notesLocked && !songDerandomizeDroplets, fontSize: 13);
-            Button(c, new(r.X + 34 + buttonWidth, r.Y + 364, buttonWidth, 34), L.Get("randomize.disableAll"), () => songRandomizeAll = false, songRandomizeAll == false, !notesLocked && !songDerandomizeDroplets, fontSize: 13);
-
         }
         else
         {
@@ -270,8 +266,7 @@ public sealed partial class EditorView
             Document.DerandomizeDropletsForHardRock = songDerandomizeHardRock;
             Document.RandomizeDropletStrength = randomStrength;
             Document.RandomizeDropletSeed = randomSeed;
-            if (!songDerandomizeDroplets && songRandomizeAll is { } all)
-                foreach (var track in Document.Tracks.Where(t => t.StreamSnapDivisor is null)) SetDropletRandomization(track, all);
+
             foreach (string key in SongDesign.Where(k => songValues[k] != songInitial[k])) SongSetup.Set(Document, "General", key, songValues[key]);
             SongSetup.SetColours(Document, songCustomColours ? songColours : Array.Empty<uint>());
             OsuBeatmapReader.Validate(Document);

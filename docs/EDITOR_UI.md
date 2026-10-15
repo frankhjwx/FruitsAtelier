@@ -196,28 +196,27 @@ preferences start with all three switches off and Grid Level Tiny (4 px).
 
 ## Droplet randomization
 
-**Randomize droplets** is an independent dock tab, opened from Layout,
-Edit → Randomize droplets, or Slider Inspector. Strength (0–100 playfield pixels),
-a signed 32-bit Seed, derandomization and HR compensation update the current map
-as soon as valid values are entered. Changes mark the project dirty, update the
-canvas and support undo. Save the project normally; the panel has no Apply or
-Cancel controls. Invalid numeric input leaves the last valid map value intact.
+**Droplet Settings** is an independent dock tab opened from Layout or Edit.
+It contains only current-difficulty settings: the default droplet mode
+(Derandomize or Randomize), Strength (0–100 playfield pixels), a signed 32-bit
+Seed, and the NM/HR compensation target. Valid edits apply immediately with undo;
+invalid numeric input leaves the last valid value intact. Strength has a numeric
+field and slider, plus Reset strength to restore 20.
 
-**Derandomize droplets** compensates ordinary FSlider TinyDroplets to the authored
-path. The stored per-slider switches and manual adjustments are retained. Turning
-it off restores their effect. **Derandomize for HR Mode** uses HR compensation.
-Changing the map switch also sets the default for subsequently drawn FSliders.
-Parameters can be edited while derandomization is enabled; their randomization
-effect becomes visible when it is disabled.
+New projects default to derandomization, configurable in General settings. Newly
+drawn FSliders use **Follow map**. In **Slider Inspector**, **Droplet mode** selects
+Follow map, Derandomize or Randomize for the selected ordinary FSliders without
+switching tabs. Explicit modes take precedence over the difficulty default.
+Multiple differing modes display Mixed; choosing a mode applies it to all eligible
+selected sliders in one undo step. Legacy Sliders and managed Stream/Stack objects
+are excluded. The effective mode is displayed with the Inspector metrics.
 
-The panel can enable or disable randomization for selected ordinary FSliders or
-all ordinary FSliders, and reset selected sliders' manual droplet adjustments.
-Each command affects its current targets once. These operations exclude Legacy
-Sliders and managed streams. Settings belong to the current difficulty.
-Strength uses a numeric field and slider on one row, with Reset strength directly
-below it to restore 20. Selected-slider and all-slider buttons execute immediately
-and do not retain an active state. Slider Inspector shows the effective
-derandomization state, or Mixed when the selected sliders differ.
+**Reset manual droplet adjustments** shows the selected sliders' correction count
+and is enabled only when corrections exist. It clears only those corrections,
+without changing modes. Mode switches preserve corrections; they apply only while
+randomization is effective. The reset label identifies wholly inactive corrections.
+Existing project sliders retain their previous output until edited: old enabled
+effects follow the map default, and old disabled effects remain derandomized.
 
 Strength 20 and Seed 1337 reproduce osu!'s native NM randomization when there are
 no manual corrections. Custom seeds use the same legacy RNG; Strength scales its
@@ -1311,8 +1310,9 @@ speed. It uses adjacent exported catch events, including tiny droplets, and
 integrates the base speed across BPM changes. No raw displacement/time formula is displayed.
 
 The action area contains conversion, clearing internal anchors, stream breaking
-and reversion, merging, and the Randomize droplets entry. Stream/Stack and
-randomization edits open their dock panels and update the map directly.
+and reversion, merging, and the droplet mode and manual-adjustment controls.
+Stream/Stack opens its dock panel. Droplet mode selection and correction reset
+apply directly in Slider Inspector; see [Droplet randomization](#droplet-randomization).
 
 Inspector properties use two columns, switching to one in narrow docks. A mixed
 selection shows its count in a single header row. Operation buttons occupy full

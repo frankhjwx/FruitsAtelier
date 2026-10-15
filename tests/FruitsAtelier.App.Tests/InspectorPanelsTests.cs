@@ -102,41 +102,53 @@ internal static class InspectorPanelsTests
                     ui.View.ShowSliderInspector(); ui.Paint();
                     Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.mixed"))
                         && !ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.controls")), "Inspector shows mixed derandomization without control count");
-                    ui.View.ShowRandomDock(); ui.Paint();
-                    foreach (string key in new[] { "randomize.enableSelected", "randomize.disableSelected", "randomize.resetAdjustments" })
-                        Check(ui.Canvas.Texts.Single(t => t.Value == L.Get(key)).Color != 0x5B6777u, "Selected-slider commands are enabled for multiple selection");
-                    ui.ClickText(L.Get("randomize.resetAdjustments")); Wait();
-                    Check(ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 0, "Manual adjustment reset executes immediately");
-                    ui.Key('Z', ctrl: true); ui.Paint(); Wait();
-                    Check(ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 1, "Manual adjustment reset undoes in one step");
+                    Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.title") && t.Y >= ui.View.SliderInspectorViewport.Y), "Inspector has no tab-jump action");
+                    var inspector = ui.View.SliderInspectorViewport;
+                    ui.View.Wheel(inspector.X + 10, inspector.Y + 40, -12000, false, false); ui.Paint();
+                    ui.ClickText(L.Get("inspector.resetDroplets", 1)); WaitInspector();
+                    Check(ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 0, "Inspector resets selected corrections immediately");
+                    ui.Key('Z', ctrl: true); ui.Paint(); WaitInspector();
+                    Check(ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 1, "Reset undoes in one step");
                     ui.Key('A', ctrl: true); ui.Paint();
-                    ui.ClickText(L.Get("randomize.enableSelected")); Wait();
-                    Check(ui.View.Document.Tracks.All(t => t.DropletRandomization is { Enabled: true })
-                        && ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 1, "Selected action includes multiple sliders without repeating reset");
-                    ui.ClickText(L.Get("randomize.disableAll")); Wait();
-                    Check(!ui.Canvas.Texts.Single(t => t.Value == L.Get("randomize.disableAll")).Bold,
-                        "All-slider command does not retain an active state");
-                    ui.ClickText(L.Get("randomize.enableSelected")); Wait();
-                    Check(ui.View.Document.Tracks.All(t => t.DropletRandomization is { Enabled: true }), "All-slider command does not override subsequent selected action");
-                    ui.ClickMap(500, 450); ui.SelectTrack(track.Id); ui.View.ShowRandomDock(); ui.Paint();
-                    ui.ClickText(L.Get("randomize.disableSelected")); Wait();
-                    Check(ui.View.Document.Tracks[0].DropletRandomization is { Enabled: false }
-                        && ui.View.Document.Tracks[1].DropletRandomization is { Enabled: true }, "Single-slider command retains other sliders");
-                    ui.ClickText(L.Get("randomize.enableSelected")); Wait();
-                    var before = ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X)).ToArray();
+                    ChooseMode(L.Get("inspector.mixed"), SliderDropletMode.Randomize);
+                    Check(ui.View.Document.Tracks.All(t => t.RandomizesDroplets(ui.View.Document))
+                        && ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 1, "Multi-selection mode retains corrections");
+                    ui.Key('Z', ctrl: true); WaitInspector();
+                    Check(ui.View.Document.ContentEquals(actionMap), "Multi-selection mode undoes atomically");
+                    ui.Key('Y', ctrl: true); WaitInspector();
+                    ui.Key('A', ctrl: true); ui.Paint();
+                    ChooseMode(L.Get("droplet.mode.Randomize"), SliderDropletMode.FollowMap);
+                    ui.View.ShowRandomDock(); ui.Paint(); Wait();
+                    Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.enableSelected")
+                        || t.Value == L.Get("randomize.disableAll") || t.Value == L.Get("randomize.resetAdjustments")), "Global panel contains only difficulty settings");
                     ui.ClickText(L.Get("randomize.derandomizeOff")); Wait();
-                    Check(ui.View.Document.DerandomizeFSliderDroplets && !before.SequenceEqual(ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X))),
-                        "Derandomization toggle immediately updates canvas");
-                    ui.ClickText(L.Get("randomize.derandomizeOn")); Wait();
-                    Check(before.SequenceEqual(ui.View.PatternCanvasObjects(0, 10000).Select(o => (o.TimeMs, o.X))), "Turning derandomization off restores randomization");
-                    var field = ui.View.RandomDockValueBounds(0);
-                    ui.Click(field.X + 8, field.Y + 12); ui.Key('A', ctrl: true); ui.View.PasteFieldText("101"); ui.Paint();
-                    ui.ClickText(L.Get("randomize.derandomizeOff"));
-                    Check(ui.View.Document.DerandomizeFSliderDroplets && ui.View.Document.RandomizeDropletStrength == 20,
-                        "Invalid numeric draft does not block a derandomization toggle");
-                    ui.ClickText(L.Get("randomize.resetStrength")); Wait();
-                    ui.Key(27); ui.View.ShowSliderInspector(); ui.Paint();
-                    Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.on")), "Inspector reflects effective derandomization");
+                    Check(ui.View.Document.Tracks.All(t => !t.RandomizesDroplets(ui.View.Document)), "Follow map resolves the global default");
+                    ui.View.ShowSliderInspector(); ui.Paint();
+                    ChooseMode(L.Get("droplet.mode.FollowMap"), SliderDropletMode.Randomize);
+                    Check(ui.View.Document.DerandomizeFSliderDroplets && ui.View.Document.Tracks.All(t => t.RandomizesDroplets(ui.View.Document)),
+                        "Random override works while the global default is derandomized");
+                    ui.ClickMap(500, 450); ui.SelectTrack(track.Id); ui.View.ShowSliderInspector(); ui.Paint();
+                    ChooseMode(L.Get("droplet.mode.Randomize"), SliderDropletMode.Derandomize);
+                    Check(!ui.View.Document.Tracks[0].RandomizesDroplets(ui.View.Document)
+                        && ui.View.Document.Tracks[1].RandomizesDroplets(ui.View.Document), "Single override retains the other slider");
+                    Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.resetDropletsInactive", 1)), "Inactive corrections remain visible");
+                    ChooseMode(L.Get("droplet.mode.Derandomize"), SliderDropletMode.Randomize);
+                    Check(ui.View.Document.Tracks[0].DropletRandomization!.Adjustments.Count == 1, "Switching modes retains manual corrections");
+                    void ChooseMode(string current, SliderDropletMode mode)
+                    {
+                        var b = ui.View.SliderInspectorViewport;
+                        ui.View.Wheel(b.X + 10, b.Y + 40, -12000, false, false); ui.Paint();
+                        string label = L.Get("inspector.dropletMode", current);
+                        ui.ClickText(label);
+                        ui.ClickText(L.Get("droplet.mode." + mode)); WaitInspector();
+                        Check(ui.Canvas.Texts.Any(t => t.Value == L.Get("inspector.dropletMode", L.Get("droplet.mode." + mode))), "Mode changes stay in Inspector");
+                    }
+                    void WaitInspector()
+                    {
+                        var end = DateTime.UtcNow.AddSeconds(30);
+                        do { Thread.Sleep(5); ui.Paint(); } while (ui.View.ConversionRefreshing && DateTime.UtcNow < end);
+                        Check(!ui.View.ConversionRefreshing, "Inspector conversion completes");
+                    }
                 }
                 void SetStrength(string value)
                 {

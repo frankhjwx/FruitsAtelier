@@ -9,7 +9,6 @@ public sealed partial class EditorView
 {
     private sealed record RandomDraft(bool Derandomize, bool HardRock, double Strength, int Seed);
     private MapDocument? randomDockSnapshot;
-    private Guid[] randomDockTargets = [];
     private bool randomDerandomize, randomHardRock;
     private string[] randomNumbers = ["20", "0"];
     private int randomField = -1;
@@ -18,7 +17,7 @@ public sealed partial class EditorView
     private bool randomDragging;
     private RandomDraft? randomBaseline;
     private string randomError = "";
-    private const float RandomContentHeight = 488;
+    private const float RandomContentHeight = 290;
     internal Rect RandomDockViewport => randomBounds;
     internal Rect RandomDockValueBounds(int field) => new(randomBounds.X, randomBounds.Y - randomScroll + (field == 0 ? 118 : 220),
         field == 0 ? Math.Min(78, randomBounds.Width * .35f) : randomBounds.Width, 32);
@@ -51,10 +50,9 @@ public sealed partial class EditorView
     {
         if (!DockContentInputAvailable || !PanelVisible(DockPanel.RandomizeDroplets)) return;
         AdoptLiveDock(ref randomDockSnapshot, ref liveRandomSnapshot);
-        var selected = ClipboardSelectedParentIds();
-        if (!ReferenceEquals(randomDockSnapshot, convertedSnapshot) || selected.Count != randomDockTargets.Length || randomDockTargets.Any(id => !selected.Contains(id)))
+        if (!ReferenceEquals(randomDockSnapshot, convertedSnapshot))
         {
-            randomDockSnapshot = convertedSnapshot; randomDockTargets = selected.ToArray();
+            randomDockSnapshot = convertedSnapshot;
             randomDerandomize = Document.DerandomizeFSliderDroplets; randomHardRock = Document.DerandomizeDropletsForHardRock;
             randomNumbers = [Document.RandomizeDropletStrength.ToString(CultureInfo.InvariantCulture), Document.RandomizeDropletSeed.ToString(CultureInfo.InvariantCulture)];
             randomField = -1; randomDragging = false; randomScroll = 0;
@@ -78,16 +76,6 @@ public sealed partial class EditorView
             liveRandomSnapshot = Document.DeepClone();
         }
     }
-    private void RandomDockSelectionAction(bool? enabled) => RunRandomDockAction(() =>
-    {
-        foreach (var track in Document.Tracks.Where(t => t.StreamSnapDivisor is null && randomDockTargets.Contains(t.Id)))
-            if (enabled is { } value) SetDropletRandomization(track, value);
-            else track.DropletRandomization?.Adjustments.Clear();
-    });
-    private void RandomDockAllAction(bool enabled) => RunRandomDockAction(() =>
-    {
-        foreach (var track in Document.Tracks.Where(t => t.StreamSnapDivisor is null)) SetDropletRandomization(track, enabled);
-    });
     private void DrawRandomDock(ICanvas c, Rect bounds)
     {
         randomBounds = bounds;
@@ -117,13 +105,7 @@ public sealed partial class EditorView
         if (double.TryParse(randomNumbers[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double strength))
             c.Circle(randomStrengthBounds.X + (float)Math.Clamp(strength / 100, 0, 1) * randomStrengthBounds.Width, randomStrengthBounds.Y + 12, 7, Accent);
         Button(c, new(bounds.X, y + 158, bounds.Width, 30), L.Get("randomize.resetStrength"), () => RunRandomDockAction(() => { randomNumbers[0] = "20"; Document.RandomizeDropletStrength = 20; }), enabled: editable, fontSize: 12);
-        bool hasSelected = Document.Tracks.Any(t => t.StreamSnapDivisor is null && randomDockTargets.Contains(t.Id));
-        Button(c, new(bounds.X, y + 266, bounds.Width, 32), L.Get("randomize.enableSelected"), () => RandomDockSelectionAction(true), enabled: editable && hasSelected, fontSize: 12);
-        Button(c, new(bounds.X, y + 304, bounds.Width, 32), L.Get("randomize.disableSelected"), () => RandomDockSelectionAction(false), enabled: editable && hasSelected, fontSize: 12);
-        Button(c, new(bounds.X, y + 342, bounds.Width, 32), L.Get("randomize.resetAdjustments"), () => RandomDockSelectionAction(null), enabled: editable && hasSelected, fontSize: 12);
-        Button(c, new(bounds.X, y + 382, bounds.Width, 32), L.Get("randomize.enableAll"), () => RandomDockAllAction(true), enabled: editable, fontSize: 12);
-        Button(c, new(bounds.X, y + 420, bounds.Width, 32), L.Get("randomize.disableAll"), () => RandomDockAllAction(false), enabled: editable, fontSize: 12);
-        c.Text(randomError, bounds.X, y + 464, 12, Error, bounds.Width);
+        c.Text(randomError, bounds.X, y + 266, 12, Error, bounds.Width);
         c.Unclip();
         for (int i = hits.Count - 1; i >= firstHit; i--) if (hits[i].Bounds.Y < bounds.Y || hits[i].Bounds.Bottom > bounds.Bottom) hits.RemoveAt(i);
         if (RandomContentHeight > bounds.Height)

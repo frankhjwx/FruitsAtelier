@@ -234,7 +234,7 @@ identity and selected parent IDs. It reads existing exported events and timing;
 repainting and horizontal scrolling do not export or convert. Tiny droplets are
 always included in its peak DS and horizontal-speed calculations.
 
-Song Setup, Stream/Stack and Randomize droplets commit valid changes at input
+Song Setup, Stream/Stack and Droplet Settings commit valid changes at input
 boundaries through editing transactions. Unchanged values do not create edits.
 Graph and snap drags retain their candidate preview until pointer release. Local
 edit snapshots preserve focus when committed conversion catches up; external

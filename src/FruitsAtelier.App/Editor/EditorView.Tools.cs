@@ -279,7 +279,7 @@ public sealed partial class EditorView
     {
         bool replace = tool == Tool.Fruit;
         if (playableExport is null
-            || Document.Tracks.Any(t => t.StreamSnapDivisor is null && t.DropletRandomization is { Enabled: true }
+            || Document.Tracks.Any(t => t.StreamSnapDivisor is null && t.RandomizesDroplets(Document)
                 && t.Nodes.Count > 0 && t.Nodes[0].TimeMs >= point.TimeMs - 2)
             || Document.Tracks.Any(t => t.Nodes.Count > 0 && Math.Abs(t.Nodes[0].TimeMs - point.TimeMs) <= 2)
             || Document.ImportedSliders.Any(s => Math.Abs(s.TimeMs - point.TimeMs) <= 2)

@@ -139,12 +139,13 @@ public static class DistanceSpacingEditing
     private static bool TryRandomizedTiny(MapDocument document, ConvertedCatchObject target, double x,
         bool compensate, CatchConversionCache? cache)
     {
-        if (document.DerandomizeFSliderDroplets || target.Kind != CatchObjectKind.TinyDroplet || document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
-            is not { DropletRandomization: { Enabled: true } effect } track) return false;
+        if (target.Kind != CatchObjectKind.TinyDroplet || document.Tracks.FirstOrDefault(t => t.Id == target.SourceId)
+            is not { } track || !track.RandomizesDroplets(document)) return false;
         var before = CatchStreamConverter.Convert(document, compensate, cache);
         var selected = before.Objects.FirstOrDefault(o => o.SourceId == target.SourceId && o.EventIndex == target.EventIndex);
         if (!before.Success || selected is null) throw new ArgumentException(L.Get("coordinate.unreachable"));
         double progress = DropletRandomization.Progress(track, selected.TimeMs);
+        var effect = track.DropletRandomization ??= new();
         effect.SetAdjustment(progress, Math.Clamp(effect.AdjustmentAt(progress) + x - selected.TargetX, -512, 512));
         var after = CatchStreamConverter.Convert(document, compensate, cache);
         var updated = after.Objects.FirstOrDefault(o => o.SourceId == target.SourceId && o.EventIndex == target.EventIndex);

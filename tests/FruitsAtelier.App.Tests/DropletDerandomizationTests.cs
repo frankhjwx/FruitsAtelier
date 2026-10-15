@@ -19,27 +19,25 @@ internal static class DropletDerandomizationTests
                 void Open() { ui.View.OpenSongSetup(); ui.Paint(); ui.ClickText(L.Get("randomize.title")); }
                 Open();
                 Check(!ui.Canvas.Texts.Any(t => t.Value.StartsWith("Strength is")), "Randomize page omits the explanatory footer");
-                Check(ui.Canvas.Texts.Single(t => t.Value == L.Get("randomize.enableAll")).Size == 13, "batch actions use larger text");
+                Check(!ui.Canvas.Texts.Any(t => t.Value == L.Get("randomize.enableAll")), "settings omit object batch commands");
                 ui.ClickText(L.Get("randomize.derandomizeOff"));
                 var seed = ui.View.SongSetupFieldBounds["RandomizeDropletSeed"];
                 ui.Click(seed.X + 10, seed.Y + 12); ui.Key('A', ctrl: true); ui.View.PasteSongSetupText("999", ui.View.SongSetupInputSession); ui.Paint();
-                ui.ClickText(L.Get("randomize.resetStrength")); ui.ClickText(L.Get("randomize.disableAll"));
-                Check(ui.View.Document.ContentEquals(map), "disabled randomization controls do not commit or mutate the document");
-                Check(ui.Canvas.Texts.Any(t => t.Value == "37") && ui.Canvas.Texts.Any(t => t.Value == "-123"), "disabled fields retain their values");
+                ui.ClickText(L.Get("randomize.resetStrength"));
+                Check(ui.View.Document.ContentEquals(map), "parameter drafts do not mutate the document");
+                Check(ui.Canvas.Texts.Any(t => t.Value == "20") && ui.Canvas.Texts.Any(t => t.Value == "999"), "parameters remain editable under a derandomized default");
                 ui.ClickText(L.Get("randomize.derandomizeHrOff")); ui.Key(27);
                 Check(ui.View.Document.ContentEquals(map), "Cancel discards map and HR derandomization drafts");
                 Open(); ui.ClickText(L.Get("randomize.derandomizeOff")); ui.ClickText(L.Get("randomize.derandomizeHrOff")); ui.ClickText(L.Get("song.ok"));
                 Check(ui.View.Document.DerandomizeFSliderDroplets && ui.View.Document.DerandomizeDropletsForHardRock
-                    && ui.View.Document.Tracks[0].DropletRandomization is { Enabled: true }, "Apply saves both gates while retaining FX state");
-                Check(ui.View.Document.RandomizeDropletStrength == 37 && ui.View.Document.RandomizeDropletSeed == -123, "disabled parameters stay unchanged");
+                    && ui.View.Document.Tracks[0].DropletRandomization is { Enabled: true }, "Apply saves the map default and compensation target while retaining FX state");
+                Check(ui.View.Document.RandomizeDropletStrength == 37 && ui.View.Document.RandomizeDropletSeed == -123, "unedited parameters stay unchanged");
                 var committed = ui.View.Document.DeepClone();
-                ui.View.RandomizeAllDroplets(false);
-                Check(ui.View.Document.ContentEquals(committed), "Edit batch commands respect the map gate");
                 ui.Key('Z', ctrl: true); Check(ui.View.Document.ContentEquals(map), "both preferences commit as one undo step");
                 ui.Key('Y', ctrl: true); Check(ui.View.Document.ContentEquals(committed), "both preferences support redo");
                 Open(); ui.ClickText(L.Get("randomize.derandomizeOn")); ui.ClickText(L.Get("song.ok"));
                 Check(!ui.View.Document.DerandomizeFSliderDroplets && ui.View.Document.RandomizeNewSliders
-                    && ui.View.Document.Tracks[0].DropletRandomization is { Enabled: true }, "turning the gate off restores FX and enables the new-slider default");
+                    && ui.View.Document.Tracks[0].DropletRandomization is { Enabled: true }, "randomized default restores inherited FX");
             }
         }
         finally { L.SetLanguage(language); }

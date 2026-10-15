@@ -22,7 +22,7 @@ public static class CatchStreamConverter
         var diagnostics = new List<string>();
         var parentStarts = new Dictionary<Guid, double>();
         var parentOrders = new Dictionary<Guid, int>();
-        bool success = true;
+        bool success = true, hardRockCompensation = false;
         if (!double.IsFinite(document.BeatLengthMs) || document.BeatLengthMs <= 0
             || !double.IsFinite(document.EffectiveSliderMultiplier) || document.EffectiveSliderMultiplier <= 0
             || !double.IsFinite(document.SliderTickRate) || document.SliderTickRate <= 0)
@@ -32,10 +32,12 @@ public static class CatchStreamConverter
         }
 
         TimingMap.Lookup? timing = null;
-        if (document.LegacySliderTicks && document.DerandomizeFSliderDroplets && document.DerandomizeDropletsForHardRock)
+        hardRockCompensation = document.DerandomizeDropletsForHardRock
+            && (document.DerandomizeFSliderDroplets || document.Tracks.Any(t => t.StreamSnapDivisor is null && t.DropletMode is not null && !t.RandomizesDroplets(document)));
+        if (document.LegacySliderTicks && hardRockCompensation)
             cache ??= new CatchConversionCache();
         cache?.Begin(document, compensateTinyDroplets);
-        Dictionary<Guid, CatchLegacyRandom>? hardRockStates = document.DerandomizeFSliderDroplets && document.DerandomizeDropletsForHardRock
+        Dictionary<Guid, CatchLegacyRandom>? hardRockStates = hardRockCompensation
             ? HardRockRandomStates(document, cache, timing ??= new(document)) : null;
         var parents = document.Fruits.Select(f => new Source(f.TimeMs, f.SourceOrder, f, null, null, null))
             .Concat(document.Tracks.Select(t => new Source(t.Nodes.Count > 0 ? t.Nodes[0].TimeMs : 0, t.SourceOrder, null, t, null, null)))
@@ -65,7 +67,7 @@ public static class CatchStreamConverter
             try
             {
                 var before = rng;
-                CatchLegacyRandom? hardRockBefore = source.Track is { StreamSnapDivisor: null } hrTrack && hardRockStates is not null
+                CatchLegacyRandom? hardRockBefore = source.Track is { StreamSnapDivisor: null } hrTrack && UsesHardRockCompensation(document, hrTrack) && hardRockStates is not null
                     && hardRockStates.TryGetValue(hrTrack.Id, out var hrState) ? hrState : null;
                 if (cache is not null && cache.TryGet(source.Track, source.ImportedSlider, source.BananaShower, ref rng, hardRockBefore, out var cachedSlider, out var cachedObjects))
                 {
@@ -102,7 +104,9 @@ public static class CatchStreamConverter
                     cache?.Store(track, null, null, before, rng, null, stream);
                     continue;
                 }
-                var converted = ConvertTrack(document, track, document.DerandomizeFSliderDroplets || (track.CompensateTinyDroplets ?? compensateTinyDroplets),
+                bool compensate = track.DropletMode is not null ? !track.RandomizesDroplets(document)
+                    : document.DerandomizeFSliderDroplets || (track.CompensateTinyDroplets ?? compensateTinyDroplets);
+                var converted = ConvertTrack(document, track, compensate,
                     ref rng, (timing ??= new(document)).At(track.Nodes[0].TimeMs), effectRng, cache?.PositionAtTime(track), hardRockBefore);
                 sliders.Add(converted.Slider);
                 objects.AddRange(converted.Objects);
@@ -131,11 +135,15 @@ public static class CatchStreamConverter
             Diagnostics = diagnostics.ToArray(),
             Success = success && (sliders.Count > 0 || objects.Count > 0 || diagnostics.Count == 0),
             MaxTickError = objects.Where(o => o.Kind is CatchObjectKind.Fruit or CatchObjectKind.Droplet).Select(o => Math.Abs(o.X - o.TargetX)).DefaultIfEmpty().Max(),
-            MaxTinyError = document.DerandomizeFSliderDroplets && document.DerandomizeDropletsForHardRock
+            MaxTinyError = hardRockCompensation
                 ? sliders.Select(slider => slider.MaxTinyError).DefaultIfEmpty().Max()
                 : objects.Where(o => o.Kind == CatchObjectKind.TinyDroplet).Select(o => Math.Abs(o.X - o.TargetX)).DefaultIfEmpty().Max()
         };
     }
+
+    private static bool UsesHardRockCompensation(MapDocument document, CurveTrack track) =>
+        document.DerandomizeDropletsForHardRock && !track.RandomizesDroplets(document)
+        && (track.DropletMode is not null || document.DerandomizeFSliderDroplets);
 
     private static TrackConversion ConvertTrack(MapDocument document, CurveTrack track, bool requestCompensation,
         ref CatchLegacyRandom globalRng, TimingState timing, CatchLegacyRandom effectRng, Func<double, double>? positionAtTime = null, CatchLegacyRandom? hardRockBefore = null)
@@ -148,10 +156,10 @@ public static class CatchStreamConverter
         double maximumSv = Math.Min(LegacyCatchRules.MaximumSliderVelocityMultiplier,
             Math.Max(sv, LegacyCatchRules.MaximumPathLength * timing.BeatLengthMs
                 / (duration * 100 * document.EffectiveSliderMultiplier) * (1 - 1e-7)));
-        bool randomize = !document.DerandomizeFSliderDroplets && track.DropletRandomization is { Enabled: true };
+        bool randomize = track.RandomizesDroplets(document);
         // Native offsets must act on the base path, preserving repeat geometry and edge clamping.
         bool nativeRandomize = randomize && document.RandomizeDropletStrength == 20 && document.RandomizeDropletSeed == 1337
-            && track.DropletRandomization!.Adjustments.Count == 0;
+            && (track.DropletRandomization?.Adjustments.Count ?? 0) == 0;
         bool compensate = !nativeRandomize && (randomize || requestCompensation);
 
         for (int attempt = 0; attempt < 18; attempt++)
@@ -277,7 +285,7 @@ public static class CatchStreamConverter
                 if (document.LegacySliderTicks)
                 {
                     // v7 tick counts depend on the fitted SV; reuse the actual fit in the main pass.
-                    CatchLegacyRandom? hardRockBefore = source.Track is null ? null : state.Random;
+                    CatchLegacyRandom? hardRockBefore = source.Track is null || !UsesHardRockCompensation(document, source.Track) ? null : state.Random;
                     if (source.Track is { } legacyTrack)
                     {
                         result[legacyTrack.Id] = state.Random;
@@ -373,6 +381,7 @@ public static class CatchStreamConverter
     private static void ValidateTrack(MapDocument document, CurveTrack track)
     {
         if (!double.IsFinite(document.RandomizeDropletStrength) || document.RandomizeDropletStrength is < 0 or > 100
+            || track.DropletMode is { } mode && !Enum.IsDefined(mode)
             || track.DropletRandomization is { IsValid: false })
             throw new CatchConversionException(L.Get("randomize.invalid"));
         var validationDocument = new MapDocument

@@ -15,6 +15,8 @@ if (args.Length >= 2 && args[0] == "--aimod-report")
 }
 
 
+if (args.Contains("--droplet-modes-check")) { SliderDropletModeTests.Run(); Console.WriteLine("PASS Slider droplet modes, cache, persistence, undo and NM/HR export"); return 0; }
+
 if (args.Contains("--hitsound-copier")) { HitsoundCopierTests.Run(); Console.WriteLine("PASS Hitsound Copier"); return 0; }
 
 if (args.Length == 2 && args[0] == "--slider-corpus") return ImportedSliderCorpus.Run(args[1]);
@@ -36,6 +38,7 @@ var tests = new (string Name, Action Run)[]
     ("Catch lighting follows successful judgements and classic animation timing", CatchLightingTests.Run),
     ("Exact curve and internal NC snapshot comparisons avoid per-object allocation", CurveEvaluationTests.SnapshotEquality),
     ("Hitsound copy preserves timing, unmatched sounds, export and resource transactions", HitsoundCopierTests.Run),
+    ("Slider droplet overrides preserve defaults, caches, persistence and NM/HR export", SliderDropletModeTests.Run),
     ("Map derandomization exports HR tiny droplets on authored paths", DropletDerandomizationTests.Run),
     ("Droplet FX preserves deterministic targets, manual edits, history, persistence and export", DropletRandomizationTests.Run),
     ("Binary recovery history preserves bytes, rejects corruption and retains audio", HistoryCompressionTests.Run),
