@@ -13,6 +13,7 @@ public sealed partial class EditorView
     private Rect inspectorBounds;
     private float inspectorScroll, inspectorContentHeight;
     private bool inspectorMerge, inspectorHasSliders, inspectorOnlySliders;
+    private bool inspectorSpeedMode;
     internal double? InspectorPeakRatio { get; private set; }
     internal double? InspectorMaxDs { get; private set; }
     internal Rect SliderInspectorViewport => inspectorBounds;
@@ -60,7 +61,9 @@ public sealed partial class EditorView
     {
         var ids = ClipboardSelectedParentIds();
         if (ReferenceEquals(inspectorSnapshot, convertedSnapshot) && ReferenceEquals(inspectorExport, playableExport)
+            && inspectorSpeedMode == UsesSpeedDistanceSnap
             && inspectorTargets.Length == ids.Count && inspectorTargets.All(ids.Contains)) return;
+        inspectorSpeedMode = UsesSpeedDistanceSnap;
         inspectorSnapshot = convertedSnapshot; inspectorExport = playableExport; inspectorTargets = ids.ToArray();
         var merge = ObjectStructureEditing.MergeSelection(Document, ids);
         mergeTargets = merge.Ids; mergeAllowsLinear = merge.AllowsLinear; mergeCurved = !mergeAllowsLinear; mergeError = "";
@@ -116,15 +119,20 @@ public sealed partial class EditorView
             if (!ids.Contains(item.SourceId) || item.Kind == CatchObjectKind.Banana) continue;
             if (previous.TryGetValue(item.SourceId, out var from))
             {
-                var ds = BaseDistanceRatio(from, item);
+                double? horizontalSpeed = item.TimeMs > from.TimeMs
+                    ? Math.Abs(item.X - from.X) / (item.TimeMs - from.TimeMs) : null;
+                var ds = inspectorSpeedMode ? horizontalSpeed : BaseDistanceRatio(from, item);
                 if (ds is { } d && (InspectorMaxDs is null || d > InspectorMaxDs)) InspectorMaxDs = d;
-                var speed = HorizontalSpeedRatio(Document, timing, boundaries, from, item);
+                var speed = inspectorSpeedMode ? horizontalSpeed : HorizontalSpeedRatio(Document, timing, boundaries, from, item);
                 if (speed is { } v && (InspectorPeakRatio is null || v > InspectorPeakRatio)) InspectorPeakRatio = v;
             }
             previous[item.SourceId] = item;
         }
-        inspectorRows.Add(("inspector.maxDs", InspectorMaxDs is { } maxDs ? maxDs.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "×" : "—"));
-        inspectorRows.Add(("inspector.peak", InspectorPeakRatio is { } peak ? peak.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "×" : "—"));
+        string Metric(double? value) => value is { } number
+            ? inspectorSpeedMode ? L.Get("ds.lazerSpeed", number)
+                : number.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "×" : "—";
+        inspectorRows.Add(("inspector.maxDs", Metric(InspectorMaxDs)));
+        inspectorRows.Add(("inspector.peak", Metric(InspectorPeakRatio)));
         inspectorRows.Add(("inspector.base", $"{Document.DistancePerBeat / 100:0.##}× SV · {Document.DistancePerBeat:0.##} DPB"));
     }
     private static string TimeRange(IEnumerable<double> values)

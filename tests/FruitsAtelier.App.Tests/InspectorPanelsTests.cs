@@ -35,6 +35,29 @@ internal static class InspectorPanelsTests
                 var committed = ui.View.Conversion;
                 for (int i = 0; i < 10; i++) ui.Paint();
                 Check(ReferenceEquals(committed, ui.View.Conversion) && ui.View.Document.ContentEquals(map), "Inspector repaint preserves conversion and content");
+                double expectedSpeed = objects.Zip(objects.Skip(1), (a, b) => b.TimeMs > a.TimeMs
+                    ? Math.Abs(b.X - a.X) / (b.TimeMs - a.TimeMs) : 0).Max();
+                foreach (bool lazer in new[] { false, true })
+                foreach (bool speedMode in new[] { true, false })
+                {
+                    ui.View.LibrarySettings.LazerEditing = lazer;
+                    ui.View.LibrarySettings.MappingSpeedDistanceSnap = speedMode;
+                    ui.View.LibrarySettings.LazerSpeedDistanceSnap = speedMode;
+                    ui.Paint();
+                    double value = speedMode ? expectedSpeed : expected;
+                    Check(Math.Abs(ui.View.InspectorMaxDs!.Value - value) < 1e-9
+                        && Math.Abs(ui.View.InspectorPeakRatio!.Value - value) < 1e-9,
+                        "Both inspector metrics refresh immediately with the selected preset units in either editor.");
+                    string formatted = speedMode ? L.Get("ds.lazerSpeed", value)
+                        : value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + "×";
+                    Check(ui.Canvas.Texts.Count(t => t.Value == formatted) >= 2,
+                        "Both inspector rows show px/ms for Speed and multipliers for DS.");
+                    Check(ReferenceEquals(committed, ui.View.Conversion) && ui.View.Document.ContentEquals(map),
+                        "Changing inspector units must reuse conversion and preserve map content.");
+                }
+                ui.View.LibrarySettings.LazerEditing = false;
+                ui.View.LibrarySettings.LazerSpeedDistanceSnap = true;
+                ui.Paint();
                 var firstObject = new ConvertedCatchObject(track.Id, 0, CatchObjectKind.Fruit, 0, 0, 0, 0, 0);
                 var to = firstObject with { TimeMs = 500, X = 96 };
                 Check(EditorView.HorizontalSpeedRatio(map, new(map), [], firstObject, to) == .5, "96 DPB is 0.5 times a 192 DPB base");
