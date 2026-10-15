@@ -1448,5 +1448,9 @@
   "tools.hint.lazerSelect": "Pilih dan ubah not. Ctrl+klik: tambahkan. Klik kanan: menu. Klik tengah atau Shift+kanan: hapus. Seret tengah di ruang kosong: seleksi.",
   "tools.hint.lazerFruit": "Klik kiri: tempatkan buah. Klik kanan objek: menu. Klik tengah atau Shift+kanan: hapus.",
   "tools.hint.lazerSliderLegacy": "Klik kiri: mulai slider atau tambah titik. Kanan: selesaikan. Klik titik yang sama lagi: segmen baru.",
-  "tools.hint.lazerSliderPen": "Klik kiri: mulai slider atau tambah jangkar. Seret: bentuk kurva; Ctrl+klik: jangkar lurus. Kanan: selesaikan."
+  "tools.hint.lazerSliderPen": "Klik kiri: mulai slider atau tambah jangkar. Seret: bentuk kurva; Ctrl+klik: jangkar lurus. Kanan: selesaikan.",
+  "ds.lazerSpeed": "{0:0.##} px/ms",
+  "ds.lazerFixed": "{0:0.0} (tetap)",
+  "ds.lazerPresetsTitle": "Preset kecepatan global (osu! px/ms)",
+  "ds.lazerValue": "{0:0.##}"
 }

@@ -1448,5 +1448,9 @@
   "tools.hint.lazerSelect": "Pumili at mag-edit ng nota. Ctrl+click: idagdag. Kanan: menu. Gitna o Shift+kanan: burahin. Gitnang drag sa bakante: pagpili.",
   "tools.hint.lazerFruit": "Kaliwang click: maglagay ng prutas. Kanan sa object: menu. Gitna o Shift+kanan: burahin.",
   "tools.hint.lazerSliderLegacy": "Kaliwa: simulan ang slider o magdagdag ng punto. Kanan: tapusin. Ulitin sa parehong punto: bagong bahagi.",
-  "tools.hint.lazerSliderPen": "Kaliwa: simulan ang slider o magdagdag ng anchor. Drag: hugis; Ctrl+click: tuwid na anchor. Kanan: tapusin."
+  "tools.hint.lazerSliderPen": "Kaliwa: simulan ang slider o magdagdag ng anchor. Drag: hugis; Ctrl+click: tuwid na anchor. Kanan: tapusin.",
+  "ds.lazerSpeed": "{0:0.##} px/ms",
+  "ds.lazerFixed": "{0:0.0} (nakatakda)",
+  "ds.lazerPresetsTitle": "Mga global na bilis (osu! px/ms)",
+  "ds.lazerValue": "{0:0.##}"
 }

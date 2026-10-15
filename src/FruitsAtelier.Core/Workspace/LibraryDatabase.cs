@@ -36,6 +36,14 @@ public sealed class LibrarySettings
     public bool DerandomizeNewProjects { get; set; } = true;
     public bool ExperimentalSnapDivisions { get; set; }
     public bool LazerEditing { get; set; }
+    // Immutable snapshots let canvas guides cache the combined fixed and custom speeds by identity.
+    private IReadOnlyList<double> lazerDistanceCustomSpeeds = Array.AsReadOnly(Array.Empty<double>());
+    public IReadOnlyList<double> LazerDistanceCustomSpeeds
+    {
+        get => lazerDistanceCustomSpeeds;
+        set => lazerDistanceCustomSpeeds = Array.AsReadOnly((value ?? []).Where(speed => double.IsFinite(speed)
+            && speed > 0 && speed <= 3 && speed != .5 && speed != 1).Distinct().Order().Take(DistanceSnap.MaximumPresets).ToArray());
+    }
     private CatchHitLightingMode catchHitLighting;
     public CatchHitLightingMode CatchHitLighting
     {

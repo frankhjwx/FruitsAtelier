@@ -43,6 +43,16 @@ eligible object at 0.5 and 1 playfield units per millisecond, together with a
 vertical stand guide. Placement and selection show these guides while Distance
 Snap is enabled.
 
+Distance Snap → Configure keeps the built-in 0.5 and 1.0 speeds fixed and lets
+you add up to eight custom speeds above zero through 3.0. Values are logical
+playfield pixels per millisecond (0.5 = 500 pixels/second), independent of SV.
+The existing preset arrows and Add control edit these speeds; right-click a
+custom marker to remove it. Apply saves these presets globally across maps and
+restarts. The upper SV/DPB controls still edit the current map's base velocity.
+Guide
+colours follow the current map's Stand/Walk/Dash/HDash analysis and configured
+movement colours, with short gradients at category transitions.
+
 The upper object timeline has a separate lazer zoom: Alt+wheel animates its
 visible time range over 200 ms. It starts at 6000 ms and ranges from 500 to
 10000 ms, bounded by song length. Mapping's saved timeline scale is preserved.

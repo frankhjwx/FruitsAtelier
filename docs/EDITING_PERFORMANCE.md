@@ -49,6 +49,12 @@ the winning offset; pointer updates do not rebuild DS references from moved cont
 
 ## Full-map work and cache ownership
 
+Lazer distance guide colours retain a sorted playable fruit/droplet array and
+movement prefix contexts, keyed by playable snapshot identity, CS and excluded
+selected parents. Guide sampling binary-searches the preceding event and evaluates
+one candidate using its cached context. Viewport movement and colour preferences
+reuse these contexts; changing content, CS or the excluded parents rebuilds them.
+
 `OsuBeatmapWriter.Serialize` validates, converts, emits text, parses it again,
 reconverts the quantized map and computes playable NM/HR events and diagnostics.
 It is not a cheap accessor. Explicit export needs this validation. The committed

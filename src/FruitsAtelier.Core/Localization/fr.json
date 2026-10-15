@@ -1448,5 +1448,9 @@
   "tools.hint.lazerSelect": "Sélectionner et modifier. Ctrl+clic : ajouter. Clic droit : menu. Clic milieu ou Maj+droit : supprimer. Glisser au milieu dans le vide : rectangle.",
   "tools.hint.lazerFruit": "Clic gauche : fruit. Clic droit sur un objet : menu. Clic milieu ou Maj+droit : supprimer.",
   "tools.hint.lazerSliderLegacy": "Clic gauche : commencer un slider ou ajouter un point. Droit : terminer. Recliquez un point pour un nouveau segment.",
-  "tools.hint.lazerSliderPen": "Clic gauche : commencer un slider ou ajouter une ancre. Glisser : courber ; Ctrl+clic : ancre droite. Droit : terminer."
+  "tools.hint.lazerSliderPen": "Clic gauche : commencer un slider ou ajouter une ancre. Glisser : courber ; Ctrl+clic : ancre droite. Droit : terminer.",
+  "ds.lazerSpeed": "{0:0.##} px/ms",
+  "ds.lazerFixed": "{0:0.0} (fixe)",
+  "ds.lazerPresetsTitle": "Vitesses globales (osu! px/ms)",
+  "ds.lazerValue": "{0:0.##}"
 }

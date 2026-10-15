@@ -1448,5 +1448,9 @@
   "tools.hint.lazerSelect": "Selecteer en wijzig noten. Ctrl+klik: toevoegen. Rechts: menu. Midden of Shift+rechts: verwijderen. Middensleep op lege ruimte: selectiekader.",
   "tools.hint.lazerFruit": "Links: fruit plaatsen. Rechts op object: menu. Midden of Shift+rechts: verwijderen.",
   "tools.hint.lazerSliderLegacy": "Links: slider starten of punt toevoegen. Rechts: voltooien. Op hetzelfde punt klikken: nieuw segment.",
-  "tools.hint.lazerSliderPen": "Links: slider starten of anker toevoegen. Slepen: krommen; Ctrl+klik: recht anker. Rechts: voltooien."
+  "tools.hint.lazerSliderPen": "Links: slider starten of anker toevoegen. Slepen: krommen; Ctrl+klik: recht anker. Rechts: voltooien.",
+  "ds.lazerSpeed": "{0:0.##} px/ms",
+  "ds.lazerFixed": "{0:0.0} (vast)",
+  "ds.lazerPresetsTitle": "Globale snelheden (osu! px/ms)",
+  "ds.lazerValue": "{0:0.##}"
 }

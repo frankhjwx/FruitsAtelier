@@ -1448,5 +1448,9 @@
   "tools.hint.lazerSelect": "Selecciona y modifica notas. Ctrl+clic: añadir. Clic derecho: menú. Clic central o Mayús+derecho: borrar. Arrastre central en vacío: selección.",
   "tools.hint.lazerFruit": "Clic izquierdo: fruta. Clic derecho en objeto: menú. Clic central o Mayús+derecho: borrar.",
   "tools.hint.lazerSliderLegacy": "Clic izquierdo: iniciar slider o añadir punto. Derecho: finalizar. Repetir clic en un punto: nuevo tramo.",
-  "tools.hint.lazerSliderPen": "Clic izquierdo: iniciar slider o añadir ancla. Arrastra para curvar; Ctrl+clic: ancla recta. Derecho: finalizar."
+  "tools.hint.lazerSliderPen": "Clic izquierdo: iniciar slider o añadir ancla. Arrastra para curvar; Ctrl+clic: ancla recta. Derecho: finalizar.",
+  "ds.lazerSpeed": "{0:0.##} px/ms",
+  "ds.lazerFixed": "{0:0.0} (fija)",
+  "ds.lazerPresetsTitle": "Velocidades globales (osu! px/ms)",
+  "ds.lazerValue": "{0:0.##}"
 }

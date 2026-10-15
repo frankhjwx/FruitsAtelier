@@ -305,6 +305,24 @@ internal static class EditorPerformance
             samples.Sort();
             Console.WriteLine($"  {phase}: median={samples[20]:F3} p95={samples[38]:F3} ms; allocated={(GC.GetAllocatedBytesForCurrentThread() - bytes) / 40 / 1024} KiB/call");
         }
+        if (lazer)
+        {
+            view.LibrarySettings.LazerDistanceCustomSpeeds = [.25, .75, 1.25, 1.5, 1.75, 2, 2.5, 3];
+            if (!view.DistanceSnapEnabled) view.KeyDown('T', false, false);
+            view.KeyDown('2', false, false);
+            var plot = view.CanvasPlotBounds;
+            view.PointerMove(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, false, false);
+            for (int i = 0; i < 20; i++) view.Render(canvas, 1440, 900);
+            if (view.LazerDistanceGuideCount == 0) throw new Exception("Guide benchmark requires visible guides.");
+            frames.Clear();
+            allocated = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 120; i++)
+            {
+                watch.Restart(); view.Render(canvas, 1440, 900); frames.Add(watch.Elapsed.TotalMilliseconds);
+            }
+            frames.Sort();
+            Console.WriteLine($"Maximum custom DS guides: median={frames[60]:F3} p95={frames[114]:F3} ms; allocations={(GC.GetAllocatedBytesForCurrentThread() - allocated) / 120 / 1024} KiB/frame");
+        }
         view.NewProject();
         return 0;
     }

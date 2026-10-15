@@ -17,7 +17,28 @@ public sealed partial class EditorView
     private readonly Dictionary<Guid, double> lazerDistanceParentEnds = [];
     private sealed record LazerDistanceSnapshot(DistanceSnap.Reference[] References, IReadOnlyDictionary<Guid, double> Ends);
     private LazerDistanceSnapshot? lazerGestureDistance;
-    private static readonly double[] LazerGuideVelocities = [0, 1, -1, .5, -.5];
+    private IReadOnlyList<double>? lazerGuideSpeedSource;
+    private double[] lazerGuideVelocities = [];
+    private double[] LazerGuideVelocities
+    {
+        get
+        {
+            var speeds = LazerDistanceSpeeds;
+            if (!ReferenceEquals(lazerGuideSpeedSource, speeds))
+            {
+                lazerGuideSpeedSource = speeds;
+                lazerGuideVelocities = new double[1 + speeds.Count * 2];
+                // Preserve the default dash-before-walk tie order for snapping.
+                int index = 1;
+                for (int i = speeds.Count - 1; i >= 0; i--)
+                {
+                    lazerGuideVelocities[index++] = speeds[i];
+                    lazerGuideVelocities[index++] = -speeds[i];
+                }
+            }
+            return lazerGuideVelocities;
+        }
+    }
     internal int LazerDistanceGuideCount { get; private set; }
 
     private void DrawLazerPlayfieldCorners(ICanvas c)
@@ -287,16 +308,15 @@ public sealed partial class EditorView
         if (!double.IsFinite(time)) return;
         var source = LazerDistanceSnapSource(time, excluded);
         if (source is null) return;
+        EnsureLazerGuideMovement(excluded);
         double topTime = Transform.ToMap(Playfield.X, plot.Y).TimeMs;
         foreach (double velocity in LazerGuideVelocities)
         {
             double end = Math.Min(topTime, source.End.TimeMs + (velocity > 0 ? (512 - source.End.X) / velocity
                 : velocity < 0 ? source.End.X / -velocity : 1024));
             end = Math.Max(end, source.End.TimeMs);
-            var from = Screen(source.End);
-            var to = Screen(new(end, source.End.X + (end - source.End.TimeMs) * velocity));
             if (end > source.End.TimeMs) LazerDistanceGuideCount++;
-            c.Line(from.X, from.Y, to.X, to.Y, 0xFFFFFF, 4 * LazerCanvasScale, .5f);
+            DrawLazerColouredGuide(c, source.End, velocity, end);
         }
     }
 }

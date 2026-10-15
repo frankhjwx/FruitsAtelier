@@ -1448,5 +1448,9 @@
   "tools.hint.lazerSelect": "Select and modify notes. Ctrl+click: add to selection. Right-click: object menu. Middle-click or Shift+right-click: delete. Middle-drag empty space: marquee.",
   "tools.hint.lazerFruit": "Left-click: place fruit. Right-click object: menu. Middle-click or Shift+right-click object: delete.",
   "tools.hint.lazerSliderLegacy": "Left-click: start slider or add point. Right-click: finish slider. Click the same point again to start a new curve section.",
-  "tools.hint.lazerSliderPen": "Left-click: start slider or add anchor. Drag to shape; Ctrl+click: straight anchor. Right-click: finish slider."
+  "tools.hint.lazerSliderPen": "Left-click: start slider or add anchor. Drag to shape; Ctrl+click: straight anchor. Right-click: finish slider.",
+  "ds.lazerSpeed": "{0:0.##} px/ms",
+  "ds.lazerFixed": "{0:0.0} (fixed)",
+  "ds.lazerPresetsTitle": "Global speed presets (osu! px/ms)",
+  "ds.lazerValue": "{0:0.##}"
 }

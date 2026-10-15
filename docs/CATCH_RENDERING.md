@@ -90,13 +90,18 @@ hides them.
 Distance Snap chooses the nearest guide X at the candidate's snapped time within
 50 screen units, including the stand guide. Selection dragging excludes its own
 parents. Guides stop at the top or either horizontal playfield boundary; the
-stand guide extends at most 1024 ms. They use half-opacity white strokes scaled
-with the field.
+stand guide extends at most 1024 ms. Global custom speeds supplement the fixed
+0.5 and 1.0 presets, up to 3.0 logical pixels per millisecond. Strokes use the
+configured movement colours at half opacity and scale with the field. Each
+candidate position is evaluated against the preceding playable fruit or droplet,
+including its incoming direction and excess allowance and the map's CS. A speed
+above 1.0 is not necessarily a hyperdash. Short screen-space gradients blend
+category transitions along each guide.
 
-Lazer placement keeps beat snapping and uses these fixed movement guides in
+Lazer placement keeps beat snapping and uses these movement guides in
 place of Mapping's horizontal grid and object-alignment candidates. Whole-object
 dragging retains its guide reference at gesture start. Slider-event and stream
-endpoint horizontal movement also uses the fixed guides, while the existing
+endpoint horizontal movement also uses these guides, while the existing
 FSlider geometry and control-point solver remains in use. Invisible caught
 objects do not intercept canvas hits.
 

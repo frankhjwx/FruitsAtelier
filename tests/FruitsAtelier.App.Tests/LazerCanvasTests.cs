@@ -6,6 +6,7 @@ internal static class LazerCanvasTests
 {
     public static void Run()
     {
+        CustomGuidesAndMovementColours();
         var ui = new Ui(overview: false);
         ui.View.LibrarySettings.LazerEditing = true;
         var map = new MapDocument { DurationMs = 4000, IsDemo = false, ApproachRate = 5, CircleSize = 5 };
@@ -80,6 +81,41 @@ internal static class LazerCanvasTests
 
         object? Invoke(string name, params object?[] arguments)
             => typeof(EditorView).GetMethod(name, Private)!.Invoke(ui.View, arguments);
+    }
+
+    private static void CustomGuidesAndMovementColours()
+    {
+        var ui = new Ui(overview: false);
+        var map = new MapDocument { DurationMs = 4000, ApproachRate = 5, CircleSize = 5 };
+        map.Fruits.Add(new Fruit { TimeMs = 1000, X = 100 });
+        ui.View.LoadDocument(map);
+        ui.View.LibrarySettings.LazerEditing = true;
+        ui.View.LibrarySettings.LazerDistanceCustomSpeeds = new[] { 1.3, 3d };
+        ui.View.UpdateTransport(1000, 4000, true, false, false, null, null);
+        ui.Paint();
+        typeof(EditorView).GetProperty("distanceSnap", Private)!.SetValue(ui.View, true);
+        typeof(EditorView).GetMethod("EnsureLazerGuideMovement", Private)!.Invoke(ui.View, [null]);
+        Check(ui.View.LazerGuideMovementAt(1020, 126) == CatchMovementMode.Stand, "A fast guide starts within standing reach.");
+        Check(ui.View.LazerGuideMovementAt(1040, 152) == CatchMovementMode.Walk, "Guide colours use catch-edge walking reach.");
+        Check(ui.View.LazerGuideMovementAt(1100, 230) == CatchMovementMode.Dash, "A speed above 1 can require only a regular dash.");
+        Check(ui.View.LazerGuideMovementAt(1200, 360) == CatchMovementMode.HyperDash, "The same speed becomes hyperdash later along the guide.");
+        object?[] snap = [new MapPoint(1200, 362), default(MapPoint), null, 0d, 512d];
+        Check((bool)typeof(EditorView).GetMethod("TryLazerDistanceSnap", Private)!.Invoke(ui.View, snap)!
+            && Math.Abs(((MapPoint)snap[1]!).X - 360) < .001, "Custom speed guides participate in snapping.");
+        ui.View.LibrarySettings.StandIndicatorColour = 0x102030;
+        ui.View.LibrarySettings.WalkIndicatorColour = 0x406050;
+        ui.View.LibrarySettings.DashIndicatorColour = 0xA08010;
+        ui.View.LibrarySettings.HyperDashIndicatorColour = 0xE02050;
+        ui.Canvas.Clear();
+        typeof(EditorView).GetMethod("DrawLazerColouredGuide", Private)!.Invoke(ui.View, [ui.Canvas, new MapPoint(1000, 100), 1.3d, 1300d]);
+        var colours = ui.Canvas.Lines.Select(p => p.Color).ToHashSet();
+        uint[] categories = [0x102030, 0x406050, 0xA08010, 0xE02050];
+        Check(categories.All(colours.Contains), "Guide drawing follows all four configured movement colours.");
+        Check(colours.Except(categories).Any(), "Movement category boundaries contain blended transition colours.");
+        ui.View.Document.CircleSize = 10;
+        ui.Paint();
+        typeof(EditorView).GetMethod("EnsureLazerGuideMovement", Private)!.Invoke(ui.View, [null]);
+        Check(ui.View.LazerGuideMovementAt(1100, 230) == CatchMovementMode.HyperDash, "Guide context refreshes when CS changes.");
     }
 
     private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;

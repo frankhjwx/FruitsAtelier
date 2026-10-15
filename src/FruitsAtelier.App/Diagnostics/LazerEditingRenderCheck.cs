@@ -76,6 +76,10 @@ internal static class LazerEditingRenderCheck
                     Paint("lighting-" + mode);
                 }
                 editor.LibrarySettings.CatchHitLighting = CatchHitLightingMode.FollowMode;
+                editor.LibrarySettings.LazerDistanceCustomSpeeds = [.25, .75, 1.3, 1.5, 1.75, 2, 2.5, 3];
+                editor.OpenDistanceSnapDialog();
+                Paint("distance-settings");
+                editor.KeyDown(27, false, false);
                 if (!editor.DistanceSnapEnabled) editor.KeyDown('T', false, false);
                 editor.KeyDown('2', false, false);
                 editor.UpdateTransport(1250, 10000, true, false, false, null, null);

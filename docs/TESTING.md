@@ -633,12 +633,18 @@ version-history work remains outside the pointer and paint paths.
 
 ## Experimental lazer editing
 
+`App.Tests --distance-snap-check` exercises the shared Mapping/lazer configuration
+layout, base velocity edits and undo, preset persistence, and interactive preview.
+
 `App.Tests --lazer-editing-check` covers the experimental mode and shared hit
 lighting settings, including missing-field defaults, draft cancellation,
 persistence, mode switching, retained Mapping preferences and content isolation.
 The focused input, canvas and presentation regressions exercise the supported
 lazer bindings, seek/scroll transitions, catcher drawing, caught-object removal,
-movement guides and lighting boundaries.
+movement guides and lighting boundaries. Lazer DS regressions cover global speed
+persistence, fixed presets, preview interactions and map-dependent movement
+colours with blended transitions. Core prefix-context regressions compare the
+shared candidate evaluator with an independent full-sequence reference.
 
 On Windows, run `FruitsAtelier.App.exe --render-check --lazer-editing-render-check`
 for native Direct2D settings and canvas checks. The harness switches modes through
@@ -653,7 +659,9 @@ For an optional read-only comparison on a representative `.osu` or `.catchdiff`,
 run `App.Tests --lazer-map-performance <path>` alongside the existing
 `--map-performance <path>` command. It enables lazer editing for the same
 counting-canvas playback profile, reporting CPU time and allocations without
-native GPU submission or physical display-latency measurements.
+native GPU submission or physical display-latency measurements. The lazer profile
+also measures visible guides with the maximum eight custom speeds after warming
+their movement context cache.
 
 ## Banana shower patterns
 

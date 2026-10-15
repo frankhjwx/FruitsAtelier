@@ -1448,5 +1448,9 @@
   "tools.hint.lazerSelect": "選取並修改物件。Ctrl+點擊：加入選取。右鍵：物件選單。中鍵或 Shift+右鍵：刪除。在空白處中鍵拖曳：框選。",
   "tools.hint.lazerFruit": "左鍵：放置水果。右鍵物件：選單。中鍵或 Shift+右鍵物件：刪除。",
   "tools.hint.lazerSliderLegacy": "左鍵：開始滑條或新增控制點。右鍵：完成滑條。再次點擊同一控制點以開始新曲線段。",
-  "tools.hint.lazerSliderPen": "左鍵：開始滑條或新增錨點。拖曳調整曲線；Ctrl+點擊：直線錨點。右鍵：完成滑條。"
+  "tools.hint.lazerSliderPen": "左鍵：開始滑條或新增錨點。拖曳調整曲線；Ctrl+點擊：直線錨點。右鍵：完成滑條。",
+  "ds.lazerSpeed": "{0:0.##} 像素/毫秒",
+  "ds.lazerFixed": "{0:0.0}（固定）",
+  "ds.lazerPresetsTitle": "全域速度預設（osu! 像素/毫秒）",
+  "ds.lazerValue": "{0:0.##}"
 }

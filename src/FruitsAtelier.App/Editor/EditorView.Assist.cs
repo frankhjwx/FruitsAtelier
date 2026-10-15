@@ -269,8 +269,7 @@ public sealed partial class EditorView
             float thumbHeight = plot.Height * plot.Height / (7 * size);
             c.Fill(new(assistPalette.Right + 2, plot.Y + (plot.Height - thumbHeight) * assistScroll / assistScrollLimit, 3, thumbHeight), Muted, 1);
         }
-        if (IsLazerEditing) distanceSnapFlyout = false;
-        else DrawDistanceSnapFlyout(c);
+        DrawDistanceSnapFlyout(c);
         DrawNotesLockFlyout(c);
         if (hovered >= 0)
         {

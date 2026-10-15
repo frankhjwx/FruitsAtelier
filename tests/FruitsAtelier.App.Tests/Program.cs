@@ -33,6 +33,15 @@ if (args.Contains("--docking-check"))
     Console.WriteLine("PASS Docking, workspace toolbar, isolation and sidebars"); return 0;
 }
 
+if (args.Contains("--distance-snap-check"))
+{
+    DistanceSnapPresetTests.DeletePresetBadge(); DistanceSnapPresetTests.Collinear();
+    DistanceSnapPresetTests.Snapping(); DistanceSnapPresetTests.BaseDistance();
+    DistanceSnapPresetTests.ExistingSliderPreservation(); DistanceSnapPresetTests.DynamicBaseRange();
+    DistanceSnapPresetTests.PresetDistancePreservation(); DistanceSnapPresetTests.Dialog();
+    LazerDistanceSettingsTests.Run();
+    Console.WriteLine("PASS Mapping and lazer distance snap configuration, persistence and preview"); return 0;
+}
 if (args.Contains("--object-snap-check")) { ObjectSnapTests.Run(); Console.WriteLine("PASS Object snap ranges, placement and preferences"); return 0; }
 
 
@@ -159,6 +168,7 @@ if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.I
 if (args.Contains("--lazer-editing-check"))
 {
     LazerSettingsTests.Run();
+    LazerDistanceSettingsTests.Run();
     LazerInputTests.NavigationAndBindings();
     LazerInputTests.SeekAndDivisorFamilies();
     LazerInputTests.MouseDeletionAndContext();
@@ -178,6 +188,7 @@ var tests = new (string Name, Action Run)[]
     ("Lazer placement and dragging use fixed-speed guides and visible hits", LazerInputTests.DragSnappingAndHiddenHits),
     ("Lazer presentation interpolates without extra audio seeks or content changes", LazerPresentationTests.Run),
     ("Lazer canvas draws catcher, lighting and distance guides", LazerCanvasTests.Run),
+    ("Lazer DS speed preferences are global and preserve fixed guides", LazerDistanceSettingsTests.Run),
     ("Banana shower dialog previews exported RNG and edits grouped ranges", BananaEditTests.Run),
     ("F12 screenshots repeat once and preserve dialogs, playback and content", ScreenshotTests.Shortcut),
     ("Hitsound Copier modes, new Diff and undo", HitsoundCopierUiTests.Run),

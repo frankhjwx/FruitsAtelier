@@ -1448,5 +1448,9 @@
   "tools.hint.lazerSelect": "노트를 선택하고 수정합니다. Ctrl+클릭: 선택 추가. 오른쪽 클릭: 메뉴. 가운데 클릭 또는 Shift+오른쪽 클릭: 삭제. 빈 공간 가운데 드래그: 영역 선택.",
   "tools.hint.lazerFruit": "왼쪽 클릭: 과일 배치. 오브젝트 오른쪽 클릭: 메뉴. 가운데 클릭 또는 Shift+오른쪽 클릭: 삭제.",
   "tools.hint.lazerSliderLegacy": "왼쪽 클릭: 슬라이더 시작, 점 추가. 오른쪽 클릭: 완료. 같은 점 다시 클릭: 새 곡선 구간.",
-  "tools.hint.lazerSliderPen": "왼쪽 클릭: 슬라이더 시작, 앵커 추가. 드래그: 곡선 조정. Ctrl+클릭: 직선 앵커. 오른쪽 클릭: 완료."
+  "tools.hint.lazerSliderPen": "왼쪽 클릭: 슬라이더 시작, 앵커 추가. 드래그: 곡선 조정. Ctrl+클릭: 직선 앵커. 오른쪽 클릭: 완료.",
+  "ds.lazerSpeed": "{0:0.##} px/ms",
+  "ds.lazerFixed": "{0:0.0} (고정)",
+  "ds.lazerPresetsTitle": "전역 속도 프리셋 (osu! px/ms)",
+  "ds.lazerValue": "{0:0.##}"
 }

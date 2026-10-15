@@ -32,6 +32,7 @@ if (args.Length == 2 && args[0] == "--benchmark-history")
 
 var tests = new (string Name, Action Run)[]
 {
+    ("Movement prefix contexts preserve full-sequence hyperdash thresholds", HyperDashContextTests.Run),
     ("Catch lighting follows successful judgements and classic animation timing", CatchLightingTests.Run),
     ("Exact curve and internal NC snapshot comparisons avoid per-object allocation", CurveEvaluationTests.SnapshotEquality),
     ("Hitsound copy preserves timing, unmatched sounds, export and resource transactions", HitsoundCopierTests.Run),

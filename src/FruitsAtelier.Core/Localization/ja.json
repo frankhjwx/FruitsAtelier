@@ -1448,5 +1448,9 @@
   "tools.hint.lazerSelect": "ノーツを選択・編集。Ctrl+クリック：選択に追加。右クリック：メニュー。中クリックまたは Shift+右クリック：削除。空白を中ドラッグ：範囲選択。",
   "tools.hint.lazerFruit": "左クリック：フルーツを配置。オブジェクトを右クリック：メニュー。中クリックまたは Shift+右クリック：削除。",
   "tools.hint.lazerSliderLegacy": "左クリック：スライダーを開始、点を追加。右クリック：完了。同じ点を再クリック：新しい曲線区間。",
-  "tools.hint.lazerSliderPen": "左クリック：スライダーを開始、アンカーを追加。ドラッグ：曲線調整。Ctrl+クリック：直線アンカー。右クリック：完了。"
+  "tools.hint.lazerSliderPen": "左クリック：スライダーを開始、アンカーを追加。ドラッグ：曲線調整。Ctrl+クリック：直線アンカー。右クリック：完了。",
+  "ds.lazerSpeed": "{0:0.##} px/ms",
+  "ds.lazerFixed": "{0:0.0}（固定）",
+  "ds.lazerPresetsTitle": "グローバル速度プリセット (osu! px/ms)",
+  "ds.lazerValue": "{0:0.##}"
 }

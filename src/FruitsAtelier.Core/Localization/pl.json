@@ -1448,5 +1448,9 @@
   "tools.hint.lazerSelect": "Wybór i edycja nut. Ctrl+klik: dodaj. Prawy: menu. Środkowy lub Shift+prawy: usuń. Środkowe przeciągnięcie pustego miejsca: ramka.",
   "tools.hint.lazerFruit": "Lewy klik: owoc. Prawy na obiekcie: menu. Środkowy lub Shift+prawy: usuń.",
   "tools.hint.lazerSliderLegacy": "Lewy klik: rozpocznij slider lub dodaj punkt. Prawy: zakończ. Ponowny klik punktu: nowy segment.",
-  "tools.hint.lazerSliderPen": "Lewy klik: rozpocznij slider lub dodaj węzeł. Przeciągnij: krzywa; Ctrl+klik: prosty węzeł. Prawy: zakończ."
+  "tools.hint.lazerSliderPen": "Lewy klik: rozpocznij slider lub dodaj węzeł. Przeciągnij: krzywa; Ctrl+klik: prosty węzeł. Prawy: zakończ.",
+  "ds.lazerSpeed": "{0:0.##} px/ms",
+  "ds.lazerFixed": "{0:0.0} (stała)",
+  "ds.lazerPresetsTitle": "Globalne prędkości (osu! px/ms)",
+  "ds.lazerValue": "{0:0.##}"
 }
