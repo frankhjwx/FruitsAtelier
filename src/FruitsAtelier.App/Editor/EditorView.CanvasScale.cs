@@ -30,6 +30,12 @@ public sealed partial class EditorView
 
     private void ClampCanvasPan()
     {
+        if (IsLazerEditing)
+        {
+            double lazerLimit = Math.Max(0, (512 * LazerCanvasScale / .8 - plot.Width) / 2);
+            lazerPanX = Math.Clamp(lazerPanX, -lazerLimit, lazerLimit);
+            return;
+        }
         double limit = Math.Max(0, (FullPlayfieldWidth * canvasZoom * (512 + PlayfieldPadding * 2) / 512 - plot.Width) / 2);
         canvasPanX = UniformCanvasScale ? 0 : Math.Clamp(canvasPanX, -limit, limit);
     }

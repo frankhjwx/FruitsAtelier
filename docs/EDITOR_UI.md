@@ -26,8 +26,11 @@ undo history, testplay key assignments, canvas scaling, scroll preferences and t
 saved Mapping playback-line height.
 
 The lazer canvas shows an automatic catcher at a fixed judgement line. The line
-starts 10% above the bottom of the plot and moves upward when needed to reserve
-room for the complete catcher artwork. Caught objects
+stays 10% above the bottom of the plot; catcher artwork below the canvas is clipped.
+White corner brackets mark the complete 4:3 game screen, using the same proportions
+as Catch Preview's Fit reference. The Zoom slider and Alt+wheel over the canvas
+scale both axes together with easing, keeping the catch line fixed. Middle-button
+dragging pans horizontally to inspect the enlarged screen without seeking. Caught objects
 disappear from the canvas when their timestamp is reached; they do not
 accumulate on this canvas. Catch Preview and testplay retain their plate stacks.
 Missed overlap objects continue below the line while fading over 250 ms.

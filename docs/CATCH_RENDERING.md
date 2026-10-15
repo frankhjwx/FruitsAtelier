@@ -31,12 +31,12 @@ Caught Fruits and Bananas remain on the plate at half size with deterministic co
 ## Experimental lazer canvas
 
 The experimental lazer editing preference adds an automatic catcher to the main
-canvas at a fixed judgement line. Its initial Y is
-`plotTop + 0.9 × plotHeight`; the line moves upward to at most
-`plotBottom − catcherHeightBelowPlate − 2 DIP` so the full catcher fits inside
-the canvas. The skin supplies that height; geometric fallback uses
-`0.915 × catcherWidth × fieldScale`. The line is clamped to the plot's top.
-This layout allowance reserves catcher space within FruitsAtelier's canvas.
+canvas at a fixed judgement line at `plotTop + 0.9 × plotHeight`.
+The catcher extends below that line and is clipped at the canvas bottom.
+White corner brackets mark the complete 4:3 game screen using the same proportions
+as Catch Preview's Fit reference. Screen width is `fieldWidth / 0.8`, height is
+three quarters of that width, and its top is
+`catchLineY - 0.15 × screenHeight - 340 × fieldWidth / 512`.
 It uses the cached playable object sequence;
 successfully caught objects are omitted at and after their timestamp. Missed
 overlap objects continue falling below the line and fade over 250 ms. This canvas does not
@@ -44,7 +44,13 @@ draw a caught-object stack. Preview and testplay continue to render their existi
 plate trajectories. The saved Mapping playback-line ratio remains independent
 of the lazer line and is restored when returning to Mapping.
 
-The lazer field scale is `min(0.8 × plotWidth / 512, 0.9 × plotHeight / 384)`.
+The lazer field scale is `min(0.8 × plotWidth / 512, 0.9 × plotHeight / 384)`
+multiplied by the session canvas zoom. Alt+wheel over the canvas changes this
+zoom by a factor of 1.16 per notch, from 25% to 200%, with 200 ms OutQuint easing.
+Horizontal positions and time spacing scale together around the fixed catch line;
+the current time and saved Mapping zoom are preserved. The toolbar Zoom slider
+controls the same value. Middle-button dragging pans horizontally without seeking;
+pan is bounded by the game-screen width and recentres as zoom is reduced.
 Its time scale is `384 × fieldScale / preemptMs / scrollMultiplier`, using the
 untruncated AR preempt. The session scroll multiplier ranges from 1 to 10;
 larger values show more future time. F3 slows scrolling and F4 speeds it up.

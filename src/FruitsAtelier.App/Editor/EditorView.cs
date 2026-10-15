@@ -219,7 +219,7 @@ public sealed partial class EditorView
         get
         {
             float margin = (plot.Width - 512 * PlayfieldScale) / 2;
-            return new(plot.X + margin + (IsLazerEditing ? 0 : (float)canvasPanX), plot.Y, 512 * PlayfieldScale, plot.Height);
+            return new(plot.X + margin + (float)(IsLazerEditing ? lazerPanX : canvasPanX), plot.Y, 512 * PlayfieldScale, plot.Height);
         }
     }
     private TimelineTransform Transform => new(Playfield.X, plot.Bottom, Playfield.Width, PresentationViewStart, pixelsPerMs);
@@ -277,7 +277,7 @@ public sealed partial class EditorView
     {
         if (IsLazerEditing)
         {
-            SetLazerScrollMultiplier(10 - 9 * Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1));
+            SetLazerCanvasZoom(.25 + 1.75 * Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1));
             return;
         }
         double scale = MinimumCanvasZoom + Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1) * (MaximumCanvasZoom - MinimumCanvasZoom);

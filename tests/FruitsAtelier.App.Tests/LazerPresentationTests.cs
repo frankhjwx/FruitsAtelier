@@ -47,8 +47,8 @@ internal static class LazerPresentationTests
             ui.Resize(size.Item1, size.Item2);
             Near(ui.View.LazerCatchLineY,
                 ui.View.CanvasPlotBounds.Bottom - (ui.View.PlayheadMs - ui.View.ViewStartMs) * ui.View.PixelsPerMs, .001);
-            Check(ui.View.LazerCatchLineY + .915 * CatchSize.CatcherWidth(ui.View.Document.CircleSize)
-                * ui.View.LazerCanvasScale <= ui.View.CanvasPlotBounds.Bottom, "The complete catcher must fit above the transport.");
+            Near(ui.View.CanvasPlotBounds.Y + ui.View.CanvasPlotBounds.Height * .9,
+                ui.View.LazerCatchLineY, .001);
             var field = ui.View.PlayfieldBounds;
             Near(ui.View.LazerCanvasScale * 512, field.Width, .001);
         }
@@ -69,6 +69,31 @@ internal static class LazerPresentationTests
         clock.Milliseconds += 100; ui.Paint();
         Near(initialTimeline + zoomIncrease, ui.View.ObjectTimelinePixelsPerMs);
         Near(savedTimeline, ui.View.LibrarySettings.ObjectTimelineScale);
+        double initialWidth = ui.View.PlayfieldBounds.Width, speedBeforeZoom = ui.View.PixelsPerMs;
+        double catchY = ui.View.LazerCatchLineY, timeBeforeZoom = ui.View.PlayheadMs;
+        double mappingZoom = ui.View.LibrarySettings.CanvasZoom;
+        var plot = ui.View.CanvasPlotBounds;
+        ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + 10, 120, false, false, true);
+        clock.Milliseconds += 200; ui.Paint();
+        Near(initialWidth * 1.16, ui.View.PlayfieldBounds.Width, .001);
+        Near(speedBeforeZoom * 1.16, ui.View.PixelsPerMs, .00001);
+        Near(catchY, ui.View.LazerCatchLineY);
+        Near(timeBeforeZoom, ui.View.PlayheadMs);
+        Near(mappingZoom, ui.View.LibrarySettings.CanvasZoom);
+        var reference = ui.View.LazerGameScreenBounds;
+        Near(4d / 3, reference.Width / reference.Height, .00001);
+        Near(ui.View.PlayfieldBounds.Width, reference.Width * .8, .001);
+        Near(catchY, reference.Y + reference.Height * .15 + 340 * ui.View.PlayfieldBounds.Width / 512, .001);
+        ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + 10, 1200, false, false, true);
+        clock.Milliseconds += 200; ui.Paint();
+        double beforePan = ui.View.PlayfieldBounds.X;
+        ui.View.PointerDown(plot.X + plot.Width / 2, plot.Y + 10, 1, false, false);
+        ui.View.PointerMove(plot.X + plot.Width / 2 + 30, plot.Y + 50, false, false);
+        ui.View.PointerUp(plot.X + plot.Width / 2 + 30, plot.Y + 50, 1);
+        ui.Paint();
+        Near(beforePan + 30, ui.View.PlayfieldBounds.X, .001);
+        Near(timeBeforeZoom, ui.View.PlayheadMs);
+        Near(catchY, ui.View.LazerCatchLineY);
         Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Presentation must not edit beatmap content.");
         ui.View.LibrarySettings.LazerEditing = false;
         Seek(7200);

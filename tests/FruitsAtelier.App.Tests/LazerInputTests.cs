@@ -73,7 +73,10 @@ internal static class LazerInputTests
         ui.Key(27);
         ui.View.PointerDown(x, y, 1, false, false);
         ui.View.PointerUp(x, y, 1);
-        Check(ui.View.Document.Fruits.Count == before.Fruits.Count - 1, "Lazer middle-click quick deletes the hovered object.");
+        Check(ui.View.Document.ContentEquals(before), "Lazer canvas middle-click reserves horizontal panning without deleting objects.");
+        ui.View.PointerDown(x, y, 2, true, false);
+        ui.View.PointerUp(x, y, 2);
+        Check(ui.View.Document.Fruits.Count == before.Fruits.Count - 1, "Lazer Shift-right-click quick deletes the hovered object.");
         ui.Key('Z', ctrl: true);
         Check(ui.View.Document.ContentEquals(before), "Quick deletion is undoable.");
     }

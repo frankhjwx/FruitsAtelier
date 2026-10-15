@@ -20,6 +20,34 @@ public sealed partial class EditorView
     private static readonly double[] LazerGuideVelocities = [0, 1, -1, .5, -.5];
     internal int LazerDistanceGuideCount { get; private set; }
 
+    private void DrawLazerPlayfieldCorners(ICanvas c)
+    {
+        if (!IsLazerEditing) return;
+        var field = LazerGameScreenBounds;
+        float arm = 24 * LazerCanvasScale, stroke = 2 * LazerCanvasScale;
+        Corner(field.X, field.Y, 1, 1);
+        Corner(field.Right, field.Y, -1, 1);
+        Corner(field.X, field.Bottom, 1, -1);
+        Corner(field.Right, field.Bottom, -1, -1);
+
+        void Corner(float x, float y, int dx, int dy)
+        {
+            c.Line(x, y, x + dx * arm, y, 0xFFFFFF, stroke);
+            c.Line(x, y, x, y + dy * arm, 0xFFFFFF, stroke);
+        }
+    }
+
+    internal Rect LazerGameScreenBounds
+    {
+        get
+        {
+            var field = Playfield;
+            float screenWidth = field.Width / .8f, screenHeight = screenWidth * .75f;
+            float top = LazerCatchLineY - screenHeight * .15f - 340 * field.Width / 512;
+            return new(field.X - (screenWidth - field.Width) / 2, top, screenWidth, screenHeight);
+        }
+    }
+
     private static CatchLightingEvent[] BuildLighting(IReadOnlyList<ConvertedCatchObject> objects, CatchAutoPreview autoplay,
         double? circleSize = null)
     {

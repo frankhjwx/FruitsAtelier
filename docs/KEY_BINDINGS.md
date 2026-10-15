@@ -42,10 +42,12 @@ assignments and Mapping view preferences are preserved when switching modes.
 | Z / V | Seek first object / maximum object end; pressing at that boundary seeks song start / end. |
 | Right-click object | Open its context menu. |
 | Right-click during an FSlider draft | Finish the draft. |
-| Middle-click / Shift+right-click object | Delete the object. |
-| Middle-button drag on empty canvas or object timeline | Marquee selection. |
+| Shift+right-click object | Delete the object. Middle-click also deletes on the object timeline. |
+| Middle-button drag on canvas | Pan horizontally without seeking, bounded by the enlarged game screen. |
+| Middle-button drag on empty object timeline | Marquee selection. |
 | Shift+click object timeline | Select the full range from the selection pivot; Ctrl adds it to the current selection. |
-| Alt+wheel over canvas / Ctrl+Alt+wheel | No Compose action. Alt+wheel over the object timeline still zooms that timeline. |
+| Alt+wheel over canvas | Scale both axes together around the fixed catch line, with 200 ms easing; session range 25%–200%. |
+| Ctrl+Alt+wheel | No Compose action. |
 
 Ctrl+wheel uses the common family `1, 2, 4, 8, 16`, the triplet family
 `1, 3, 6, 12`, or the integer divisors of a selected custom divisor. Short paused

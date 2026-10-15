@@ -498,6 +498,12 @@ public sealed partial class EditorView
         if (drag == DragKind.Marquee) { MoveBox(x, y); return; }
         if (drag == DragKind.Pan)
         {
+            if (IsLazerEditing)
+            {
+                lazerPanX = panStartX + x - dragStartX;
+                ClampCanvasPan();
+                return;
+            }
             canvasPanX = panStartX + x - dragStartX; ClampCanvasPan();
             double panTime = dragStartTime + (y - dragStartY) / pixelsPerMs;
             if (AudioPlaying) SeekTo(panTime);

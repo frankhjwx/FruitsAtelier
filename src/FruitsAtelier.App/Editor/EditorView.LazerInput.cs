@@ -168,7 +168,13 @@ public sealed partial class EditorView
         if (!timeline && !canvasArea && !summary) return false;
         if (ctrl && alt) return true;
         if (ctrl) { if (!shift) AdjustLazerSnapWheel(delta); return true; }
-        if (alt) return canvasArea;
+        if (alt)
+        {
+            if (shift) return timeline || canvasArea;
+            if (timeline) { ZoomLazerTimeline(delta / 120); return true; }
+            if (canvasArea) { ZoomLazerCanvas(delta / 120); return true; }
+            return false;
+        }
         lazerWheelRemainder += delta / 120;
         int steps = (int)Math.Truncate(lazerWheelRemainder);
         lazerWheelRemainder -= steps;
@@ -179,6 +185,13 @@ public sealed partial class EditorView
     private bool HandleLazerPointerDown(float x, float y, int button, bool shift, bool ctrl)
     {
         if (menu >= 0 || contextItems.Count > 0 || editField >= 0 || !plot.Contains(x, y) && !objectTimeline.Contains(x, y)) return false;
+        if (button == 1 && plot.Contains(x, y))
+        {
+            dragStartX = x;
+            panStartX = lazerPanX;
+            drag = DragKind.Pan;
+            return true;
+        }
         if (draftTrack != Guid.Empty)
         {
             if (button != 2 || !plot.Contains(x, y)) return false;

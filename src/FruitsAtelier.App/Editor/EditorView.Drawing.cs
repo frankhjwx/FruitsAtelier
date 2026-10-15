@@ -165,7 +165,7 @@ public sealed partial class EditorView
         float snapLeft = toolbarRight - 158;
         bool compactToolbar = CanvasToolbarBounds.Width < 900;
         bool narrowZoom = compactToolbar;
-        if (IsLazerEditing || UniformCanvasScale || !narrowZoom) c.Text(L.Get(IsLazerEditing ? "ui.lazerScrollSpeed" : "ui.canvasZoom"), toolbarLeft + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, IsLazerEditing ? 100 : 48);
+        if (IsLazerEditing || UniformCanvasScale || !narrowZoom) c.Text(L.Get("ui.canvasZoom"), toolbarLeft + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
         float breakWidth = compactToolbar ? 115 : 140;
         float breakX = snapLeft - breakWidth - 5;
         float toggleWidth = compactToolbar ? CanvasToolbarBounds.Width < 700 ? 75 : 105 : 155;
@@ -177,16 +177,14 @@ public sealed partial class EditorView
         if (!IsLazerEditing) DrawCanvasScaleLock(c);
         if (IsLazerEditing || UniformCanvasScale)
         {
-            if (IsLazerEditing && !narrowZoom)
-                zoomSlider = zoomSlider with { X = toolbarLeft + 110, Width = Math.Max(30, zoomSlider.Right - toolbarLeft - 110) };
-            float progress = IsLazerEditing ? (float)((10 - lazerScrollTarget) / 9)
+            float progress = IsLazerEditing ? (float)((lazerZoomTarget - .25) / 1.75)
                 : (float)(MaximumCanvasZoom - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom) : 1);
             float zoomX = zoomSlider.X + progress * zoomSlider.Width;
             float zoomY = canvas.Y + (narrowZoom ? 27 : 19);
             c.Line(zoomSlider.X, zoomY, zoomSlider.Right, zoomY, Grid, 3);
             c.Line(zoomSlider.X, zoomY, zoomX, zoomY, Accent, 3);
             c.Circle(zoomX, zoomY, 6, Accent);
-            c.Text(IsLazerEditing ? $"{lazerScrollTarget:0.##}×" : L.Get("ui.zoomPercent", canvasZoom * 100), zoomSlider.Right + (compactToolbar ? 4 : 8), canvas.Y + (narrowZoom ? 4 : 13), compactToolbar ? 10 : 11, Foreground, narrowZoom ? 32 : 48);
+            c.Text(L.Get("ui.zoomPercent", (IsLazerEditing ? lazerZoomTarget : canvasZoom) * 100), zoomSlider.Right + (compactToolbar ? 4 : 8), canvas.Y + (narrowZoom ? 4 : 13), compactToolbar ? 10 : 11, Foreground, narrowZoom ? 32 : 48);
         }
         else DrawCanvasAxisZoom(c);
         PrepareCanvasToggleText(c, compactToolbar, toggleWidth);
@@ -415,6 +413,7 @@ public sealed partial class EditorView
         c.Line(plot.X, headY, plot.Right, headY, Gold, 1.5f);
         c.Fill(new(plot.X, headY - 3, 5, 6), Gold);
         DrawLazerCanvasCatcher(c);
+        DrawLazerPlayfieldCorners(c);
         c.Unclip();
         DrawPendingAxisTooltip(c);
     }
