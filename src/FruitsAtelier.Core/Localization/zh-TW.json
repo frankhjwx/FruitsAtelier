@@ -922,6 +922,8 @@
   "settings.displayDelayHint": "音訊延遲或聲音/影像不匹配？",
   "settings.displayChangeHint": "嘗試更改此選項。",
   "settings.derandomizeOff": "Legacy slider 轉 FSlider 時啟用去隨機化：關閉",
+  "settings.uiScale": "介面縮放",
+  "settings.uiScaleHint": "150% 為預設尺寸。按下套用後調整介面大小。",
   "settings.appearance": "外觀",
   "settings.skins": "Skin",
   "settings.immediatePreferences": "變更會立即套用並自動儲存。",

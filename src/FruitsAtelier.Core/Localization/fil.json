@@ -922,6 +922,8 @@
   "settings.displayDelayHint": "Pagkaantala ng audio o hindi pagkakatugma ng tunog / larawan?",
   "settings.displayChangeHint": "Subukang baguhin ang opsyong ito.",
   "settings.derandomizeOff": "I-enable ang derandomization sa Legacy slider → FSlider conversion: Naka-off",
+  "settings.uiScale": "Sukat ng UI",
+  "settings.uiScaleHint": "150% ang default na sukat. Ilapat upang baguhin ang laki ng interface.",
   "settings.appearance": "Hitsura",
   "settings.skins": "Mga Skin",
   "settings.immediatePreferences": "Nalalapat kaagad ang mga pagbabago at awtomatikong nai-save.",

@@ -2,6 +2,8 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Contains("--ui-scale-check")) { UiScaleTests.Run(); SettingsTests.Layout(); DisplaySettingsTests.Run(); Console.WriteLine("PASS UI scale preferences, layout and input"); return 0; }
+
 if (args.Contains("--conversion-docks-check")) { ConversionDockShortcutTests.Run(); PatternNotesTests.Run(); Console.WriteLine("PASS Conversion dock shortcuts, action menus and live editing"); return 0; }
 
 if (args.Contains("--aimod-check")) { AimodTests.Run(); AimodTests.TableAndDock(); ObjectStructureTests.StreamsAndAnchors(); Console.WriteLine("PASS AiMod UI, table, docking and shortcut"); return 0; }
@@ -194,6 +196,7 @@ var tests = new (string Name, Action Run)[]
     ("Mapping Combo visibility and configured dash brightness", MappingSessionTests.TestplayDisplay),
     ("Clearing internal slider nodes preserves endpoints and batch undo", ClearSliderNodesTests.Run),
     ("Display settings persist, cancel drafts and preserve beatmap content", DisplaySettingsTests.Run),
+    ("UI scale defaults, steps, draft cancellation and persistence preserve content", UiScaleTests.Run),
     ("Fullscreen settings and Alt Enter preserve drafts, content and testplay", FullscreenSettingsTests.Run),
     ("Legacy slider editing converts silently with atomic drag, insertion and cancellation", ImplicitSliderEditingTests.Run),
     ("Performance diagnostics aggregate slow intervals without changing editor content", PerformanceMetricsTests.Run),

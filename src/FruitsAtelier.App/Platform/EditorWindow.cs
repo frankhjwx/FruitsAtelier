@@ -153,6 +153,12 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
+            if (Environment.GetCommandLineArgs().Contains("--ui-scale-render-check"))
+            {
+                CheckUiScale();
+                Native.DestroyWindow(hwnd);
+                return 0;
+            }
             if (Environment.GetCommandLineArgs().Contains("--dpi-render-check"))
             {
                 CheckDpiScaling();

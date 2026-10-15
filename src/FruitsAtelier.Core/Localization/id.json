@@ -922,6 +922,8 @@
   "settings.displayDelayHint": "Keterlambatan audio atau ketidakcocokan suara/gambar?",
   "settings.displayChangeHint": "Coba ubah opsi ini.",
   "settings.derandomizeOff": "Aktifkan derandomisasi saat mengonversi Legacy slider ke FSlider: Nonaktif",
+  "settings.uiScale": "Skala UI",
+  "settings.uiScaleHint": "150% adalah ukuran bawaan. Terapkan untuk mengubah ukuran antarmuka.",
   "settings.appearance": "Penampilan",
   "settings.skins": "Skin",
   "settings.immediatePreferences": "Perubahan segera berlaku dan disimpan secara otomatis.",

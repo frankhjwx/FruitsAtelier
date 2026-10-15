@@ -34,6 +34,8 @@ internal sealed class EditorControl : Control, IDisposable
     internal EditorView View { get; } = new(loadDemo: false);
     private readonly ImageCache images = new();
     internal Action? Changed;
+    private float uiScale = 1;
+    private Point EditorPoint(PointerEventArgs e) => e.GetPosition(this) / uiScale;
     public EditorControl()
     {
         Focusable = true; ClipToBounds = true;
@@ -124,8 +126,10 @@ internal sealed class EditorControl : Control, IDisposable
     public override void Render(DrawingContext context)
     {
         base.Render(context);
+        uiScale = View.UiScaleFactor;
+        using var transform = context.PushTransform(Matrix.CreateScale(uiScale, uiScale));
         using var canvas = new MacCanvas(context, images);
-        View.Render(canvas, (float)Bounds.Width, (float)Bounds.Height);
+        View.Render(canvas, (float)Bounds.Width / uiScale, (float)Bounds.Height / uiScale);
         UpdatePointerCursor();
         if (View.IsTestplaying || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.VolumePopoverNeedsRedraw)
             TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => { if (View.IsTestplaying || View.SliderHoldNeedsRedraw || View.MarqueeScrollNeedsRedraw || View.CanvasBackgroundDimNeedsRedraw || View.VolumePopoverNeedsRedraw) InvalidateVisual(); });
@@ -145,7 +149,7 @@ internal sealed class EditorControl : Control, IDisposable
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-        Focus(); var p = e.GetPosition(this); var state = e.GetCurrentPoint(this).Properties;
+        Focus(); var p = EditorPoint(e); var state = e.GetCurrentPoint(this).Properties;
         int button = state.IsRightButtonPressed ? 2 : state.IsMiddleButtonPressed ? 1 : 0;
         if (e.ClickCount == 2 && button == 0) View.PointerDoubleClick((float)p.X, (float)p.Y, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
         else View.PointerDown((float)p.X, (float)p.Y, button, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
@@ -155,7 +159,7 @@ internal sealed class EditorControl : Control, IDisposable
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-        var p = e.GetPosition(this);
+        var p = EditorPoint(e);
         View.PointerMove((float)p.X, (float)p.Y, e.KeyModifiers.HasFlag(KeyModifiers.Shift), MacInput.Control(e.KeyModifiers));
         UpdatePointerCursor();
         Refresh();
@@ -167,7 +171,7 @@ internal sealed class EditorControl : Control, IDisposable
     }
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        var p = e.GetPosition(this);
+        var p = EditorPoint(e);
         View.PointerUp((float)p.X, (float)p.Y, e.InitialPressMouseButton == MouseButton.Right ? 2 : e.InitialPressMouseButton == MouseButton.Middle ? 1 : 0,
             e.KeyModifiers.HasFlag(KeyModifiers.Shift));
         if (!View.WantsCapture) e.Pointer.Capture(null);
@@ -177,7 +181,7 @@ internal sealed class EditorControl : Control, IDisposable
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         View.SetModifiers(e.KeyModifiers.HasFlag(KeyModifiers.Alt), e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-        var p = e.GetPosition(this); View.Wheel((float)p.X, (float)p.Y, (float)e.Delta.Y * 120,
+        var p = EditorPoint(e); View.Wheel((float)p.X, (float)p.Y, (float)e.Delta.Y * 120,
             MacInput.Control(e.KeyModifiers), e.KeyModifiers.HasFlag(KeyModifiers.Shift), e.KeyModifiers.HasFlag(KeyModifiers.Alt));
         e.Handled = true; Refresh();
     }

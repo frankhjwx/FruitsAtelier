@@ -652,6 +652,13 @@ are written under `artifacts/tests/banana-edit/native`.
 
 ## Independent viewport scaling
 
+`App.Tests --ui-scale-check` checks the 150% default, supported 25% steps,
+settings normalization, draft cancellation, persistence, layout and content isolation.
+`FruitsAtelier.App.exe --render-check --ui-scale-render-check` exercises every
+UI-scale step in English and Chinese at two client resolutions, including native
+settings selection, drawing, clicks, dragging and wheel input. Captures are stored
+under `artifacts/tests/ui-scale-native`.
+
 `App.Tests --independent-scale-check` checks the locked zoom behavior, independent
 inline X/Y layout and limits, the 100% object-size and hit-region cap, smaller
 minimum width, horizontal pan bounds, persisted preferences,

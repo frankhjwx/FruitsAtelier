@@ -22,7 +22,7 @@ internal sealed partial class EditorWindow
         // The editor reference is its 1440 × 900 logical startup window rendered at 175%.
         float next = view.AcknowledgementsVisible ? 96 * Math.Min(client.Right / 820f, client.Bottom / 740f)
             : view.FirstRunSetupVisible ? 96 * Math.Min(client.Right / 880f, client.Bottom / 620f)
-            : ClientUiDpi(client.Right, client.Bottom);
+            : ClientUiDpi(client.Right, client.Bottom) * view.UiScaleFactor;
         uiDpi = next;
     }
 }

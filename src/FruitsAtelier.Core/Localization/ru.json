@@ -922,6 +922,8 @@
   "settings.displayDelayHint": "Задержка звука или несоответствие звука/изображения?",
   "settings.displayChangeHint": "Попробуйте изменить эту опцию.",
   "settings.derandomizeOff": "Включить дерандомизацию при конвертации Legacy slider в FSlider: Выкл.",
+  "settings.uiScale": "Масштаб интерфейса",
+  "settings.uiScaleHint": "150% — размер по умолчанию. Нажмите «Применить», чтобы изменить размер интерфейса.",
   "settings.appearance": "Внешний вид",
   "settings.skins": "Скины",
   "settings.immediatePreferences": "Изменения применяются немедленно и сохраняются автоматически.",

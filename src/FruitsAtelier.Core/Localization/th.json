@@ -922,6 +922,8 @@
   "settings.displayDelayHint": "ความล่าช้าของเสียงหรือเสียง / ภาพไม่ตรงกัน?",
   "settings.displayChangeHint": "ลองเปลี่ยนตัวเลือกนี้",
   "settings.derandomizeOff": "เปิดการยกเลิกการสุ่มเมื่อแปลง Legacy slider เป็น FSlider: ปิด",
+  "settings.uiScale": "ขนาด UI",
+  "settings.uiScaleHint": "150% คือขนาดเริ่มต้น กดนำไปใช้เพื่อปรับขนาดอินเทอร์เฟซ",
   "settings.appearance": "ลักษณะที่ปรากฏ",
   "settings.skins": "สกิน",
   "settings.immediatePreferences": "การเปลี่ยนแปลงมีผลทันทีและจะถูกบันทึกโดยอัตโนมัติ",

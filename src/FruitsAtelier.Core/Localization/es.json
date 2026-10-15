@@ -922,6 +922,8 @@
   "settings.displayDelayHint": "¿Retraso de audio o discrepancia entre sonido e imagen?",
   "settings.displayChangeHint": "Intente cambiar esta opción.",
   "settings.derandomizeOff": "Habilitar desaleatorización al convertir Legacy slider a FSlider: No",
+  "settings.uiScale": "Escala de la interfaz",
+  "settings.uiScaleHint": "150% es el tamaño predeterminado. Aplica para cambiar el tamaño de la interfaz.",
   "settings.appearance": "Apariencia",
   "settings.skins": "Skins",
   "settings.immediatePreferences": "Los cambios se aplican inmediatamente y se guardan automáticamente.",

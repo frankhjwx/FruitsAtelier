@@ -16,6 +16,8 @@ public sealed partial class EditorView
     private bool draftDerandomizeNewProjects;
     public bool SupportsDisplayMode { get; set; }
     private bool draftLowLatencyDisplay;
+    private int draftUiScalePercent;
+    public float UiScaleFactor => StartupDialogVisible ? 1 : LibrarySettings.UiScalePercent / (float)FruitsAtelier.Core.LibrarySettings.DefaultUiScalePercent;
     public bool SupportsFullscreen { get; set; }
     public Action<bool>? RequestFullscreen { get; set; }
     private bool draftFullscreen, fullscreenShortcutHeld;
@@ -109,6 +111,7 @@ public sealed partial class EditorView
         draftExperimentalSnapDivisions = LibrarySettings.ExperimentalSnapDivisions;
         draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
         draftLowLatencyDisplay = LibrarySettings.LowLatencyDisplay;
+        draftUiScalePercent = LibrarySettings.UiScalePercent;
         draftFullscreen = LibrarySettings.Fullscreen;
         draftSettingsColours[0] = LibrarySettings.StandIndicatorColour;
         draftSettingsColours[1] = LibrarySettings.WalkIndicatorColour;
@@ -143,6 +146,7 @@ public sealed partial class EditorView
         draftDerandomizeDroplets != LibrarySettings.DerandomizeDroplets ||
         draftDerandomizeNewProjects != LibrarySettings.DerandomizeNewProjects ||
         draftLowLatencyDisplay != LibrarySettings.LowLatencyDisplay ||
+        draftUiScalePercent != LibrarySettings.UiScalePercent ||
         draftFullscreen != LibrarySettings.Fullscreen ||
         draftExperimentalSnapDivisions != LibrarySettings.ExperimentalSnapDivisions ||
         draftReverseCanvasScroll != LibrarySettings.ReverseCanvasScroll ||
@@ -258,6 +262,10 @@ public sealed partial class EditorView
             case SettingsCategory.Appearance:
                 DrawSkinSelector(c, SettingsSkinSelectorBounds);
                 LibraryTextField(c, 4, L.Get("skin.defaultArchive"), draftDefaultSkin, SettingsTop + 184);
+                c.Text(L.Get("settings.uiScale"), SettingsContentX, SettingsTop + 278, SettingsTextSize, Foreground, SettingsContentWidth, true);
+                var scaleBounds = new Rect(SettingsContentX, SettingsTop + 306, SettingsContentWidth, SettingsControlHeight);
+                SettingsButton(c, scaleBounds, $"{draftUiScalePercent}% ▾", () => OpenUiScaleMenu(scaleBounds));
+                SettingsParagraph(c, L.Get("settings.uiScaleHint"), SettingsTop + 350);
                 break;
             case SettingsCategory.Experimental:
                 float snapToggleTop = SettingsParagraph(c, L.Get("settings.experimentalSnapDivisions"), SettingsTop + 128, SettingsTextSize);
@@ -285,6 +293,20 @@ public sealed partial class EditorView
             active: canApply, enabled: canApply);
         if (settingsColourIndex >= 0) DrawSettingsColourPicker(c);
         if (settingsCategory == SettingsCategory.Workspace) DrawStorageTooltip(c);
+    }
+
+    private void OpenUiScaleMenu(Rect bounds)
+    {
+        languageMenuOpen = false; menu = -1; contextItems.Clear();
+        libraryField = bindingCapture = -1;
+        for (int percent = FruitsAtelier.Core.LibrarySettings.MinimumUiScalePercent;
+            percent <= FruitsAtelier.Core.LibrarySettings.MaximumUiScalePercent; percent += FruitsAtelier.Core.LibrarySettings.UiScaleStep)
+        {
+            int value = percent;
+            contextItems.Add(new((draftUiScalePercent == value ? "✓ " : "") + $"{value}%", () => draftUiScalePercent = value));
+        }
+        float menuHeight = 12 + contextItems.Count * 32;
+        contextBounds = new(bounds.X, Math.Clamp(bounds.Bottom + 4, 0, Math.Max(0, height - menuHeight)), bounds.Width, menuHeight);
     }
 
     private void OpenDisplayModeMenu(Rect bounds)
@@ -323,6 +345,7 @@ public sealed partial class EditorView
             settings.DerandomizeDroplets = draftDerandomizeDroplets;
             settings.DerandomizeNewProjects = draftDerandomizeNewProjects;
             settings.LowLatencyDisplay = draftLowLatencyDisplay;
+            settings.UiScalePercent = draftUiScalePercent;
             settings.Fullscreen = draftFullscreen;
             settings.ExperimentalSnapDivisions = draftExperimentalSnapDivisions;
             settings.ReverseCanvasScroll = draftReverseCanvasScroll;

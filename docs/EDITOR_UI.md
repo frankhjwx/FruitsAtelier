@@ -2,6 +2,12 @@
 
 ## Interface size
 
+**Settings → Appearance → UI scale** adjusts the whole interface from 50% to
+200% in 25% steps. The default 150% retains the reference size described below.
+Apply activates and saves the choice without restarting; closing Settings discards
+unapplied changes. Drawing and pointer coordinates use the same scale on both
+platforms. Compact startup dialogs retain their fitted layout size.
+
 On Windows, the editor scales uniformly with its client pixel dimensions, using
 2520 × 1575 at 175% as the reference: the original 1440 × 900 logical startup
 window. This preserves its text, buttons and layout proportions. Equal client dimensions give

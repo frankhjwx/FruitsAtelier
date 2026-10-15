@@ -36,6 +36,17 @@ public sealed class LibrarySettings
     public bool ReverseCanvasScroll { get; set; }
     public bool LockDropletSelection { get; set; } = true;
     public bool LowLatencyDisplay { get; set; }
+    public const int DefaultUiScalePercent = 150;
+    public const int MinimumUiScalePercent = 50;
+    public const int MaximumUiScalePercent = 200;
+    public const int UiScaleStep = 25;
+    private int uiScalePercent = DefaultUiScalePercent;
+    public int UiScalePercent
+    {
+        get => uiScalePercent;
+        set => uiScalePercent = Math.Clamp((int)Math.Round(value / (double)UiScaleStep),
+            MinimumUiScalePercent / UiScaleStep, MaximumUiScalePercent / UiScaleStep) * UiScaleStep;
+    }
     public bool AudioDiagnostics { get; set; }
     public bool AudioDiagnosticFrames { get; set; }
     private string audioDiagnosticProfile = "event-10";
