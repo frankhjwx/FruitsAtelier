@@ -1452,5 +1452,6 @@
   "ds.lazerSpeed": "{0:0.##} px/ms",
   "ds.lazerFixed": "{0:0.0} (고정)",
   "ds.lazerPresetsTitle": "전역 속도 프리셋 (osu! px/ms)",
-  "ds.lazerValue": "{0:0.##}"
+  "ds.lazerValue": "{0:0.##}",
+  "ds.showGuides": "DS 가이드 표시"
 }

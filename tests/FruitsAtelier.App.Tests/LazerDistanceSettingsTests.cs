@@ -27,11 +27,18 @@ internal static class LazerDistanceSettingsTests
                 ui.View.RequestViewPreference = () => { saves++; ui.View.LibrarySettings.Save(path); };
                 var map = new MapDocument { DurationMs = 4000, IsDemo = false, BeatLengthMs = 500, CircleSize = 5 };
                 map.DistanceSnapRatios.AddRange([.75, 1.5]);
-                ui.LoadDocument(map); ui.SetSnapDivisor(4);
+                ui.LoadDocument(map); ui.SetSnapDivisor(8);
                 var before = ui.View.Document.DeepClone();
                 bool dirty = ui.View.IsDirty;
                 var cached = ui.View.LazerDistanceSpeeds;
                 Check(cached.SequenceEqual([.5, 1d]) && ReferenceEquals(cached, ui.View.LazerDistanceSpeeds), "Speed reads must reuse the fixed-guide snapshot.");
+                ui.View.OpenDistanceSnapDialog(); ui.Paint();
+                Check((int)typeof(EditorView).GetField("dsSnap", Private)!.GetValue(ui.View)! == 4,
+                    "Lazer configuration defaults to quarter-beat preview independently of editor snap.");
+                Check(ui.View.LibrarySettings.LazerDistanceGuidesVisible, "DS guide visibility defaults to on.");
+                ui.ClickText(L.Get("ds.showGuides"));
+                ui.ClickText(L.Get("mac.cancel"));
+                Check(ui.View.LibrarySettings.LazerDistanceGuidesVisible, "Cancel preserves guide visibility.");
                 ui.View.OpenDistanceSnapDialog(); ui.Paint();
                 var track = ui.View.DistanceSnapTrackBounds;
                 var preview = ui.View.DistanceSnapPreviewBounds;
@@ -80,6 +87,12 @@ internal static class LazerDistanceSettingsTests
                 Check(before.ContentEquals(ui.View.Document) && ui.View.LazerDistanceSpeeds.SequenceEqual([.5, 1, 1.25]), "Base SV undo must preserve global speed preferences.");
                 ui.View.OpenSettings(); ui.Paint(); ui.View.ApplySettings(path); ui.Paint(); ui.Key(27);
                 Check(ui.View.LazerDistanceSpeeds.SequenceEqual([.5, 1, 1.25]), "Unrelated settings must preserve global speeds.");
+                ui.View.OpenDistanceSnapDialog(); ui.Paint(); ui.ClickText(L.Get("ds.showGuides"));
+                ui.ClickText(L.Get("library.apply"));
+                Check(!ui.View.LibrarySettings.LazerDistanceGuidesVisible && !LibrarySettings.Load(path).LazerDistanceGuidesVisible,
+                    "Guide visibility persists globally.");
+                ui.View.OpenSettings(); ui.Paint(); ui.View.ApplySettings(path); ui.Paint(); ui.Key(27);
+                Check(!ui.View.LibrarySettings.LazerDistanceGuidesVisible, "Unrelated settings preserve hidden guides.");
                 ui.View.OpenDistanceSnapDialog(); ui.Paint();
                 var arrow = ui.View.DistanceSnapPointerBounds[2]; RightClick(arrow.X + 8, arrow.Y + 8);
                 ui.ClickText(L.Get("library.apply"));

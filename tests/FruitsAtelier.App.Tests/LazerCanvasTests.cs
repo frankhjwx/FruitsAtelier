@@ -6,6 +6,7 @@ internal static class LazerCanvasTests
 {
     public static void Run()
     {
+        MovementSpeedLabels();
         CustomGuidesAndMovementColours();
         var ui = new Ui(overview: false);
         ui.View.LibrarySettings.LazerEditing = true;
@@ -81,6 +82,27 @@ internal static class LazerCanvasTests
 
         object? Invoke(string name, params object?[] arguments)
             => typeof(EditorView).GetMethod(name, Private)!.Invoke(ui.View, arguments);
+    }
+
+    private static void MovementSpeedLabels()
+    {
+        var ui = new Ui(false);
+        var map = new MapDocument { DurationMs = 4000, BeatLengthMs = 500, ApproachRate = 5 };
+        map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 100 }, new Fruit { TimeMs = 1500, X = 350 }]);
+        ui.View.LibrarySettings.LazerEditing = true;
+        ui.LoadDocument(map);
+        ui.View.UpdateTransport(1000, 4000, true, false, false, null, null);
+        ui.ClickText(FruitsAtelier.Localization.Strings.Get("movement.analysis"));
+        string speed = FruitsAtelier.Localization.Strings.Get("ds.lazerSpeed", .5);
+        Check(ui.Canvas.Texts.Any(t => t.Value == speed), "Lazer movement labels must show logical pixels per millisecond.");
+        ui.View.Document.DistancePerBeatOverride = 250;
+        ui.Paint();
+        Check(ui.Canvas.Texts.Any(t => t.Value == speed), "Movement speed must be independent of base SV.");
+        ui.View.LibrarySettings.LazerEditing = false;
+        ui.Paint();
+        Check(ui.Canvas.Texts.All(t => t.Value != speed)
+            && ui.Canvas.Texts.Any(t => t.Value == FruitsAtelier.Localization.Strings.Get("assist.ratio", 1)),
+            "Switching back to Mapping must restore DS ratio labels.");
     }
 
     private static void CustomGuidesAndMovementColours()

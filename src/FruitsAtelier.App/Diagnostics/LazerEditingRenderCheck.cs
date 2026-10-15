@@ -92,6 +92,10 @@ internal static class LazerEditingRenderCheck
                 Paint("distance-snap");
                 if (!editor.DistanceSnapEnabled || editor.PlayheadMs != 1250 || editor.LazerDistanceGuideCount == 0)
                     throw new InvalidOperationException("Native distance-snap capture must contain active guides at the requested map time.");
+                editor.LibrarySettings.LazerDistanceGuidesVisible = false;
+                Paint("distance-guides-hidden");
+                if (!editor.DistanceSnapEnabled || editor.LazerDistanceGuideCount != 0)
+                    throw new InvalidOperationException("Hidden guides must retain distance snapping.");
                 editor.OpenSettings(); Paint();
                 settings = editor.SettingsBounds;
                 Click(settings.X + 40, settings.Y + 96 + 6 * 48);

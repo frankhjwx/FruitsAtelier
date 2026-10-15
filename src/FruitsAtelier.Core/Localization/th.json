@@ -1452,5 +1452,6 @@
   "ds.lazerSpeed": "{0:0.##} px/ms",
   "ds.lazerFixed": "{0:0.0} (คงที่)",
   "ds.lazerPresetsTitle": "ความเร็วส่วนกลาง (osu! px/ms)",
-  "ds.lazerValue": "{0:0.##}"
+  "ds.lazerValue": "{0:0.##}",
+  "ds.showGuides": "แสดงเส้นช่วย DS"
 }

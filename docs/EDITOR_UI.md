@@ -52,6 +52,11 @@ restarts. The upper SV/DPB controls still edit the current map's base velocity.
 Guide
 colours follow the current map's Stand/Walk/Dash/HDash analysis and configured
 movement colours, with short gradients at category transitions.
+Movement Analysis connection labels show logical pixels per millisecond in lazer mode;
+Mapping retains DS ratios. These speed labels are independent of base SV.
+The lazer configuration opens with a 1/4 preview subdivision at the current BPM.
+**Show DS guides** defaults to on and is saved globally; turning it off hides
+canvas guide lines while retaining distance snapping.
 
 The upper object timeline has a separate lazer zoom: Alt+wheel animates its
 visible time range over 200 ms. It starts at 6000 ms and ranges from 500 to

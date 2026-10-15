@@ -11,7 +11,7 @@ public sealed partial class EditorView
     private bool dsGridInitialized, dsGridSnap;
     private int dsGridSize = 4;
     internal (bool Enabled, int Size) EditorGridSettings => (gridSnap, gridSize);
-    private bool dsShowValues, dsCollinear;
+    private bool dsShowValues, dsCollinear, dsShowGuides;
     private bool dsObjectSnap;
     private int dsObjectEarlier, dsObjectLater;
     internal Rect ObjectSnapToggleBounds { get; private set; }
@@ -26,7 +26,7 @@ public sealed partial class EditorView
     private bool dsBaseSv;
     private string dsBaseError = "";
     private sealed record DistanceSnapApply(double Base, double[] Ratios, bool Collinear,
-        bool ObjectSnap, int EarlierBeats, int LaterBeats);
+        bool ObjectSnap, int EarlierBeats, int LaterBeats, bool ShowGuides);
     private DistanceSnapApply? dsPendingApply;
     private string dsBaseText = "", dsBaseDragText = "", dsBaseOpeningText = "";
     private List<double> dsBaseDragPresets = [];
@@ -77,6 +77,7 @@ public sealed partial class EditorView
         dsDraft = IsLazerEditing ? new[] { .5, 1d }.Concat(LibrarySettings.LazerDistanceCustomSpeeds).ToList()
             : Document.DistanceSnapRatios.ToList();
         dsCollinear = Document.DistanceSnapCollinear;
+        dsShowGuides = LibrarySettings.LazerDistanceGuidesVisible;
         (dsObjectSnap, dsObjectEarlier, dsObjectLater) = ObjectSnapSettings;
         dsBaseDraft = 100 * Document.EffectiveSliderMultiplier;
         dsBaseOpeningValue = dsBaseDraft;
@@ -86,7 +87,7 @@ public sealed partial class EditorView
         if (!dsGridInitialized) { dsGridSnap = gridSnap; dsGridSize = gridSize; dsGridInitialized = true; }
         dsSliderDrag = -1; dsSnapDragging = dsBaseDragging = dsBaseFocused = false;
         dsBpm = 60000 / TimingMap.At(Document, playhead).BeatLengthMs;
-        dsSnap = divisor; dsReferenceTime = playhead; dsPreviewFruits.Clear();
+        dsSnap = IsLazerEditing ? 4 : divisor; dsReferenceTime = playhead; dsPreviewFruits.Clear();
         DistanceSnapDialogVisible = true;
         hits.Clear(); fields.Clear();
     }
@@ -181,11 +182,12 @@ public sealed partial class EditorView
         float collinearY = dsDraft.Count == 0 ? r.Y + 480 : textY + 44;
         c.Line(r.X + 20, collinearY, split - 16, collinearY, Grid);
         var collinearRow = new Rect(r.X + 20, collinearY + 10, split - r.X - 36, 32);
-        c.Text(L.Get("ds.collinear"), collinearRow.X, collinearRow.Y + 8, 12, IsLazerEditing ? Muted : Foreground, 126);
+        c.Text(L.Get(IsLazerEditing ? "ds.showGuides" : "ds.collinear"), collinearRow.X, collinearRow.Y + 8, 12, Foreground, 126);
         var collinearSwitch = new Rect(collinearRow.X + 136, collinearRow.Y + 4, 46, 24);
-        c.Fill(collinearSwitch, !IsLazerEditing && dsCollinear ? 0x417D77u : 0x46515Fu, 12);
-        c.Circle(collinearSwitch.X + (!IsLazerEditing && dsCollinear ? 34 : 12), collinearSwitch.Y + 12, 9, 0xF0F3F6);
-        hits.Add(new(collinearRow, () => dsCollinear = !dsCollinear, !IsLazerEditing));
+        bool enabled = IsLazerEditing ? dsShowGuides : dsCollinear;
+        c.Fill(collinearSwitch, enabled ? 0x417D77u : 0x46515Fu, 12);
+        c.Circle(collinearSwitch.X + (enabled ? 34 : 12), collinearSwitch.Y + 12, 9, 0xF0F3F6);
+        hits.Add(new(collinearRow, () => { if (IsLazerEditing) dsShowGuides = !dsShowGuides; else dsCollinear = !dsCollinear; }, true));
         Button(c, new(r.Right - 196, r.Bottom - 44, 80, 30), L.Get("mac.cancel"), CloseDistanceSnapDialog);
         double? editedBase = DistanceBaseValue(dsBaseText);
         bool validBase = !dsBaseEdited || editedBase is not null;
@@ -220,7 +222,7 @@ public sealed partial class EditorView
     {
         if (SliderMultiplierValidationBusy) return;
         var draft = new DistanceSnapApply(dsBaseDraft, dsDraft.Order().ToArray(), dsCollinear,
-            dsObjectSnap, dsObjectEarlier, dsObjectLater);
+            dsObjectSnap, dsObjectEarlier, dsObjectLater, dsShowGuides);
         if (dsBaseEdited && DistanceBaseValue(dsBaseText) is null) return;
         if (dsBaseEdited && dsBaseDraft != Document.DistancePerBeat
             && dsBaseDraft / 100 != Document.EffectiveSliderMultiplier)
@@ -253,6 +255,7 @@ public sealed partial class EditorView
         if (IsLazerEditing)
         {
             LibrarySettings.LazerDistanceCustomSpeeds = draft.Ratios;
+            LibrarySettings.LazerDistanceGuidesVisible = draft.ShowGuides;
             RequestViewPreference?.Invoke();
             return;
         }

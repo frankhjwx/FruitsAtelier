@@ -289,7 +289,7 @@ public sealed partial class EditorView
     private void DrawLazerDistanceGuides(ICanvas c)
     {
         LazerDistanceGuideCount = 0;
-        if (!IsLazerEditing || !DistanceSnapEnabled) return;
+        if (!IsLazerEditing || !DistanceSnapEnabled || !LibrarySettings.LazerDistanceGuidesVisible) return;
         double time;
         ISet<Guid>? excluded = null;
         if (tool == Tool.Select)

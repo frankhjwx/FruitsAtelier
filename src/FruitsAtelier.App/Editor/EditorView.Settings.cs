@@ -358,6 +358,7 @@ public sealed partial class EditorView
             settings.ExperimentalSnapDivisions = draftExperimentalSnapDivisions;
             settings.LazerEditing = draftLazerEditing;
             settings.LazerDistanceCustomSpeeds = LibrarySettings.LazerDistanceCustomSpeeds;
+            settings.LazerDistanceGuidesVisible = LibrarySettings.LazerDistanceGuidesVisible;
             settings.CatchHitLighting = LibrarySettings.CatchHitLighting;
             settings.ReverseCanvasScroll = draftReverseCanvasScroll;
             settings.StandIndicatorColour = draftSettingsColours[0]; settings.WalkIndicatorColour = draftSettingsColours[1];

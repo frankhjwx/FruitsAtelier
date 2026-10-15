@@ -1452,5 +1452,6 @@
   "ds.lazerSpeed": "{0:0.##} px/ms",
   "ds.lazerFixed": "{0:0.0} (fixe)",
   "ds.lazerPresetsTitle": "Vitesses globales (osu! px/ms)",
-  "ds.lazerValue": "{0:0.##}"
+  "ds.lazerValue": "{0:0.##}",
+  "ds.showGuides": "Afficher les guides DS"
 }
