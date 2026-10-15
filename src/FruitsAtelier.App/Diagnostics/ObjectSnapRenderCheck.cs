@@ -23,6 +23,7 @@ internal static class ObjectSnapRenderCheck
                 var map = new MapDocument { DurationMs = 8000, BeatLengthMs = 500 };
                 map.Fruits.Add(new() { TimeMs = 100, X = 256.25 });
                 var view = new EditorView(false); view.LoadDocument(map); view.CloseLibrary(); Paint();
+                EnableObjectSnap();
                 view.KeyDown(70, false, false); Paint();
                 float px = view.PlayfieldBounds.X + 258 * view.PlayfieldBounds.Width / 512;
                 float py = view.CanvasPlotBounds.Bottom - (float)((250 - view.ViewStartMs) * view.PixelsPerMs);
@@ -39,6 +40,7 @@ internal static class ObjectSnapRenderCheck
                 var last = new Fruit { TimeMs = 250, X = 300 };
                 group.Fruits.AddRange([first, last, new() { TimeMs = 0, X = 385.4 }]);
                 view.LoadDocument(group); Paint(); view.KeyDown(49, false, false);
+                EnableObjectSnap();
                 ClickFruit(first, false); ClickFruit(last, true);
                 var start = Position(first.TimeMs, first.X);
                 var end = Position(first.TimeMs, 182);
@@ -58,6 +60,7 @@ internal static class ObjectSnapRenderCheck
                     new() { TimeMs = 500, X = 400 }, new() { TimeMs = 0, X = 280 }]);
                 ordered.DistanceSnapRatios.AddRange([.5, 1, 1.8]);
                 view.LoadDocument(ordered); Paint(); view.KeyDown(89, false, false);
+                EnableObjectSnap();
                 start = Position(moving.TimeMs, moving.X);
                 view.PointerDown(start.X, start.Y, 0, false, false);
                 end = Position(moving.TimeMs, 480);
@@ -75,6 +78,7 @@ internal static class ObjectSnapRenderCheck
                 view.PointerUp(end.X, end.Y, 0); Paint(); view.KeyDown(90, true, false); Paint();
                 if (!ordered.ContentEquals(view.Document)) throw new InvalidOperationException("Native ordered drag failed undo.");
                 view.LoadDocument(group); Paint();
+                EnableObjectSnap();
                 view.PointerMove(0, 0, false, false); view.OpenDistanceSnapDialog(); Paint();
                 if (view.ObjectSnapSettings != (true, 2, 1) || view.ObjectSnapLaterPlusBounds.Bottom > size.Item2)
                     throw new InvalidOperationException("Native object snap defaults or dialog bounds are invalid.");
@@ -94,6 +98,19 @@ internal static class ObjectSnapRenderCheck
                 {
                     var p = Position(fruit.TimeMs, fruit.X);
                     view.PointerDown(p.X, p.Y, 0, false, ctrl); view.PointerUp(p.X, p.Y, 0); Paint();
+                }
+
+                void EnableObjectSnap()
+                {
+                    if (view.ObjectSnapSettings.Enabled) return;
+                    view.OpenDistanceSnapDialog(); Paint();
+                    var toggle = view.ObjectSnapToggleBounds;
+                    view.PointerDown(toggle.X + 10, toggle.Y + 10, 0, false, false);
+                    view.PointerUp(toggle.X + 10, toggle.Y + 10, 0); Paint();
+                    var dialog = view.DistanceSnapDialogBounds;
+                    var apply = new Rect(dialog.Right - 108, dialog.Bottom - 44, 88, 30);
+                    view.PointerDown(apply.X + 10, apply.Y + 10, 0, false, false);
+                    view.PointerUp(apply.X + 10, apply.Y + 10, 0); Paint();
                 }
 
                 void Paint(string? name = null)

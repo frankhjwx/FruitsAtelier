@@ -164,7 +164,7 @@ public sealed class MapEditingPreferences
     public const int MaximumObjectSnapBeats = 4;
     public bool GridSnap { get; set; }
     public bool DistanceSnap { get; set; }
-    public bool ObjectSnap { get; set; } = true;
+    public bool ObjectSnap { get; set; }
     private int objectSnapEarlierBeats = 2, objectSnapLaterBeats = 1;
     public int ObjectSnapEarlierBeats { get => objectSnapEarlierBeats; set => objectSnapEarlierBeats = Math.Clamp(value, 0, MaximumObjectSnapBeats); }
     public int ObjectSnapLaterBeats { get => objectSnapLaterBeats; set => objectSnapLaterBeats = Math.Clamp(value, 0, MaximumObjectSnapBeats); }

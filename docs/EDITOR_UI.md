@@ -744,7 +744,7 @@ Changing DS settings, BPM, or tick rate does not reshape existing sliders.
 
 **Collinear snap**, in its own row below the presets and a horizontal divider in Configure DS, is on by default and is saved with the current difficulty through Apply/Cancel and undo. While DS is active, it adds a candidate at the current time on the straight line from the preceding object's final tail to the following object's head. The nearest candidate wins alongside the DS presets and implicit zero; missing neighbours or overlapping intervals add no candidate. Placement and whole-object dragging use this candidate, excluding dragged objects from the neighbours. With Grid Snap enabled, the chosen X rounds to the nearest horizontal grid position; with Grid Snap disabled, it retains the exact collinear coordinate. Hover over the row for a detailed explanation of neighbour selection, DS candidates and Grid Snap. The preview canvas uses the draft option immediately. This option does not constrain a slider's internal curve or add a shortcut.
 
-**Object snap**, below the Configure DS preview, is enabled by default independently
+**Object snap**, below the Configure DS preview, is disabled by default and operates independently
 of Distance Snap. Fruit placement and the first point of either slider tool align X
 to a nearby fruit, including slider heads, tails, repeats and Stream/Stack fruits,
 while retaining the placement's Beat Snap time. Droplets, tiny droplets and bananas

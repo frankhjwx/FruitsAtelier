@@ -57,7 +57,7 @@ public sealed partial class EditorView
     });
     internal Rect DistanceSnapSubdivisionBounds { get; private set; }
     private float dsDragX;
-    private Rect DistanceSnapDialogBounds => new((width - Math.Min(1040, width - 32)) / 2,
+    internal Rect DistanceSnapDialogBounds => new((width - Math.Min(1040, width - 32)) / 2,
         (height - Math.Min(640, height - 32)) / 2, Math.Min(1040, width - 32), Math.Min(640, height - 32));
 
     private void DrawDistanceSnapFlyout(ICanvas c)
