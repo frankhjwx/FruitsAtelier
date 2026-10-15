@@ -586,9 +586,9 @@ public sealed partial class EditorView
         TimeDisplayBounds = new(16, timeY, 188, 27);
         if (TimeDisplayBounds.Contains(mouseX, mouseY)) c.Fill(TimeDisplayBounds, Surface, 4);
         string currentTime = Time(LazerPresentationTime);
-        c.Text(currentTime, 20, timeY + 3, 17, Foreground, 102, true);
-        const float durationX = 125;
-        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), durationX, timeY + 7, 11, Muted,
+        c.Text(currentTime, 20, timeY + 3, 17, Foreground, 83, true);
+        const float durationX = 105;
+        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), durationX, timeY + 3, 17, Muted,
             Math.Max(0, TimeDisplayBounds.Right - durationX));
         hits.Add(new(TimeDisplayBounds, OpenTimeJump, true));
         if (TimeDisplayBounds.Contains(mouseX, mouseY) && !TimeJumpVisible)
