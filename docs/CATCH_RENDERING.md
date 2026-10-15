@@ -28,6 +28,84 @@ Catcher dash trails sample map time every 16 ms and fade from 0.4 opacity over 8
 
 Caught Fruits and Bananas remain on the plate at half size with deterministic collision-separated offsets; Droplets eject immediately and TinyDroplets do not stack. At the last converted event of the parent before a New Combo (and at the final parent), the stack explodes: 250 ms upward, 500 ms downward, horizontal spreading and a 750 ms fade. Plate batches and transient droplets are cached and queried by time so seeks restore them without replaying all prior frames. Stack offset randomness is deterministic for preview rather than sharing the runtime random generator. Source rules: Catcher.cs, CaughtObject.cs, CaughtDroplet.cs and CatchBeatmapProcessor.cs at the pinned revision.
 
+## Experimental lazer canvas
+
+The experimental lazer editing preference adds an automatic catcher to the main
+canvas at a fixed judgement line. Its initial Y is
+`plotTop + 0.9 × plotHeight`; the line moves upward to at most
+`plotBottom − catcherHeightBelowPlate − 2 DIP` so the full catcher fits inside
+the canvas. The skin supplies that height; geometric fallback uses
+`0.915 × catcherWidth × fieldScale`. The line is clamped to the plot's top.
+This layout allowance reserves catcher space within FruitsAtelier's canvas.
+It uses the cached playable object sequence;
+successfully caught objects are omitted at and after their timestamp. Missed
+overlap objects continue falling below the line and fade over 250 ms. This canvas does not
+draw a caught-object stack. Preview and testplay continue to render their existing
+plate trajectories. The saved Mapping playback-line ratio remains independent
+of the lazer line and is restored when returning to Mapping.
+
+The lazer field scale is `min(0.8 × plotWidth / 512, 0.9 × plotHeight / 384)`.
+Its time scale is `384 × fieldScale / preemptMs / scrollMultiplier`, using the
+untruncated AR preempt. The session scroll multiplier ranges from 1 to 10;
+larger values show more future time. F3 slows scrolling and F4 speeds it up.
+
+Hit lighting has one global **Follow mode / On / Off** preference in the skin
+selector. Follow mode is enabled for lazer editing and disabled for Mapping.
+Preview and canvas use seekable autoplay catches; testplay uses successful live
+judgements. Repainting does not create additional catches, and missed objects do
+not produce catch lighting.
+
+Lighting uses the classic two-texture `LegacyHitExplosion` animation: a 300 ms
+tall flash with a 160 ms OutQuad expansion and a 700 ms wide flash with a 500 ms
+OutQuad expansion. Droplets omit the tall component. Combo scaling is clamped
+between 0.35 and 1.125, and both components use additive tinting. The existing
+legacy sprite renderer also supplies this effect for the geometric catcher
+fallback; Argon and default-skin glow variants are not implemented.
+
+With Distance Snap enabled, the lazer canvas displays perfect-walk and
+perfect-dash movement guides from the last prior eligible object, using 0.5 and
+1 playfield units per millisecond respectively. These are movement distances in
+the time–X plane, independent of conversion and beat snapping division. A vertical
+stand guide shares the reference. The reference is the most
+recent preceding parent whose full duration has ended, excluding the current
+draft and selected parents; slider references use their last non-tiny,
+non-banana converted object. Guides appear during Fruit/FSlider placement or
+with a selection, and are clipped to the playfield. Turning Distance Snap off
+hides them.
+
+Distance Snap chooses the nearest guide X at the candidate's snapped time within
+50 screen units, including the stand guide. Selection dragging excludes its own
+parents. Guides stop at the top or either horizontal playfield boundary; the
+stand guide extends at most 1024 ms. They use half-opacity white strokes scaled
+with the field.
+
+Lazer placement keeps beat snapping and uses these fixed movement guides in
+place of Mapping's horizontal grid and object-alignment candidates. Whole-object
+dragging retains its guide reference at gesture start. Slider-event and stream
+endpoint horizontal movement also uses the fixed guides, while the existing
+FSlider geometry and control-point solver remains in use. Invisible caught
+objects do not intercept canvas hits.
+
+Paused short navigation seeks interpolate for 300 ms with OutQuint easing.
+Playback and jumps beyond 5000 ms seek immediately. Repeated navigation targets
+the already requested destination while drawing catches up; rendering does not
+submit additional audio seeks. Scroll-speed changes use a separate 200 ms
+OutQuint transition. This presentation state is reset at document and mode
+boundaries, keeping the saved Mapping view preferences independent.
+
+Upper object-timeline zoom uses a separate normalized scale, initially
+`1 / 6000 ms`. Its range is `1 / min(songLength, 10000 ms)` through
+`1 / min(songLength, 500 ms)`; songs shorter than the limits cap the visible
+range. Each Alt+wheel notch moves the target by 0.02 of that scale range and
+interpolates for 200 ms with OutQuint easing. Resizing derives pixels per
+millisecond from the current timeline width. Mapping's persisted
+`ObjectTimelineScale` is independent of this session zoom.
+
+The upstream editor clock and Catch editor presentation references are pinned to
+[ppy/osu revision 7318ef41b01bdc618d1bc1ec86de617223705077](https://github.com/ppy/osu/tree/7318ef41b01bdc618d1bc1ec86de617223705077).
+The adaptation keeps the application's native hosts and audio backends; see
+[third-party notices](../THIRD_PARTY_NOTICES.md#experimental-lazer-editing-references).
+
 ## CS and skin sizing
 
 CatchScale follows legacy CircleSize, retaining float arithmetic boundaries:

@@ -1436,5 +1436,17 @@
   "aimod.inheritedBeforeTiming": "An inherited timing point occurs before the first uninherited timing point.",
   "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point.",
   "project.pinDifficulty": "I-pin ang difficulty",
-  "project.unpinDifficulty": "I-unpin ang difficulty"
+  "project.unpinDifficulty": "I-unpin ang difficulty",
+  "settings.lazerEditing": "Pag-edit ng lazer: {0}",
+  "skin.hitLightingFollowMode": "Kislap sa pagsalo: sundin ang mode",
+  "skin.hitLightingOn": "Kislap sa pagsalo: naka-on",
+  "skin.hitLightingOff": "Kislap sa pagsalo: naka-off",
+  "ui.lazerScrollSpeed": "Bilis ng pag-scroll",
+  "assist.lazerGridHint": "Hindi ginagamit ang grid snap sa lazer. Nananatili ang setting ng Mapping.",
+  "assist.lazerDistanceHint": "Distance Snap (T / Y); hawakan ang Alt upang baligtarin. Mga gabay sa pagtayo, paglakad at pagtakbo.",
+  "timing.pageLazer": "Timing",
+  "tools.hint.lazerSelect": "Pumili at mag-edit ng nota. Ctrl+click: idagdag. Kanan: menu. Gitna o Shift+kanan: burahin. Gitnang drag sa bakante: pagpili.",
+  "tools.hint.lazerFruit": "Kaliwang click: maglagay ng prutas. Kanan sa object: menu. Gitna o Shift+kanan: burahin.",
+  "tools.hint.lazerSliderLegacy": "Kaliwa: simulan ang slider o magdagdag ng punto. Kanan: tapusin. Ulitin sa parehong punto: bagong bahagi.",
+  "tools.hint.lazerSliderPen": "Kaliwa: simulan ang slider o magdagdag ng anchor. Drag: hugis; Ctrl+click: tuwid na anchor. Kanan: tapusin."
 }

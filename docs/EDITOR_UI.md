@@ -17,6 +17,36 @@ the remaining space extends the editing area. Compact startup dialogs fit their
 own layout dimensions. Native title bars and file dialogs follow Windows display
 settings; macOS uses its native display scaling.
 
+## Experimental lazer editing
+
+**Settings → Experimental → lazer editing** enables the alternative Compose
+interaction mode after Apply. Closing Settings discards an unapplied mode change.
+The mode is a global editor preference; switching it preserves beatmap content,
+undo history, testplay key assignments, canvas scaling, scroll preferences and the
+saved Mapping playback-line height.
+
+The lazer canvas shows an automatic catcher at a fixed judgement line. The line
+starts 10% above the bottom of the plot and moves upward when needed to reserve
+room for the complete catcher artwork. Caught objects
+disappear from the canvas when their timestamp is reached; they do not
+accumulate on this canvas. Catch Preview and testplay retain their plate stacks.
+Missed overlap objects continue below the line while fading over 250 ms.
+Distance Snap displays perfect-walk and perfect-dash guides from the last prior
+eligible object at 0.5 and 1 playfield units per millisecond, together with a
+vertical stand guide. Placement and selection show these guides while Distance
+Snap is enabled.
+
+The upper object timeline has a separate lazer zoom: Alt+wheel animates its
+visible time range over 200 ms. It starts at 6000 ms and ranges from 500 to
+10000 ms, bounded by song length. Mapping's saved timeline scale is preserved.
+
+The skin selector's **Hit lighting** choice applies to the canvas, Catch Preview
+and testplay. **Follow mode** enables it in lazer editing and disables it in
+Mapping; **On** and **Off** override that choice. Selecting an option saves it
+immediately. Applying other Settings preserves the current lighting choice.
+Keyboard and mouse differences are listed in the
+[shortcut manual](KEY_BINDINGS.md#experimental-lazer-editing).
+
 ## Acknowledgements
 
 Normal Windows and macOS launches require confirmation of the current

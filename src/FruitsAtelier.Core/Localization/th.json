@@ -1436,5 +1436,17 @@
   "aimod.inheritedBeforeTiming": "An inherited timing point occurs before the first uninherited timing point.",
   "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point.",
   "project.pinDifficulty": "ปักหมุดระดับความยาก",
-  "project.unpinDifficulty": "เลิกปักหมุดระดับความยาก"
+  "project.unpinDifficulty": "เลิกปักหมุดระดับความยาก",
+  "settings.lazerEditing": "การแก้ไขแบบ lazer: {0}",
+  "skin.hitLightingFollowMode": "แสงเมื่อรับผลไม้: ตามโหมด",
+  "skin.hitLightingOn": "แสงเมื่อรับผลไม้: เปิด",
+  "skin.hitLightingOff": "แสงเมื่อรับผลไม้: ปิด",
+  "ui.lazerScrollSpeed": "ความเร็วการเลื่อน",
+  "assist.lazerGridHint": "โหมด lazer ไม่ใช้การยึดกริด โดยเก็บการตั้งค่า Mapping ไว้",
+  "assist.lazerDistanceHint": "ยึดระยะ (T / Y); กด Alt ค้างเพื่อสลับ ใช้เส้นช่วยยืน เดิน และวิ่ง",
+  "timing.pageLazer": "จังหวะ",
+  "tools.hint.lazerSelect": "เลือกและแก้ไขโน้ต Ctrl+คลิก: เพิ่มการเลือก คลิกขวา: เมนู คลิกกลางหรือ Shift+ขวา: ลบ ลากกลางบนพื้นที่ว่าง: เลือกกรอบ",
+  "tools.hint.lazerFruit": "คลิกซ้าย: วางผลไม้ คลิกขวาวัตถุ: เมนู คลิกกลางหรือ Shift+ขวา: ลบ",
+  "tools.hint.lazerSliderLegacy": "คลิกซ้าย: เริ่มสไลเดอร์หรือเพิ่มจุด คลิกขวา: เสร็จสิ้น คลิกจุดเดิมซ้ำ: ส่วนโค้งใหม่",
+  "tools.hint.lazerSliderPen": "คลิกซ้าย: เริ่มสไลเดอร์หรือเพิ่มจุดยึด ลากเพื่อปรับโค้ง Ctrl+คลิก: จุดตรง คลิกขวา: เสร็จสิ้น"
 }

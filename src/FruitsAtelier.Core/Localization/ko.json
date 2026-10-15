@@ -1436,5 +1436,17 @@
   "aimod.inheritedBeforeTiming": "An inherited timing point occurs before the first uninherited timing point.",
   "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point.",
   "project.pinDifficulty": "난이도 고정",
-  "project.unpinDifficulty": "난이도 고정 해제"
+  "project.unpinDifficulty": "난이도 고정 해제",
+  "settings.lazerEditing": "lazer 편집: {0}",
+  "skin.hitLightingFollowMode": "캐치 발광: 모드 따르기",
+  "skin.hitLightingOn": "캐치 발광: 켜기",
+  "skin.hitLightingOff": "캐치 발광: 끄기",
+  "ui.lazerScrollSpeed": "스크롤 속도",
+  "assist.lazerGridHint": "lazer 편집에서는 격자 스냅을 사용하지 않습니다. Mapping 설정은 유지됩니다.",
+  "assist.lazerDistanceHint": "거리 스냅(T / Y). Alt를 누르면 반전됩니다. 정지, 걷기, 대시 가이드를 사용합니다.",
+  "timing.pageLazer": "타이밍",
+  "tools.hint.lazerSelect": "노트를 선택하고 수정합니다. Ctrl+클릭: 선택 추가. 오른쪽 클릭: 메뉴. 가운데 클릭 또는 Shift+오른쪽 클릭: 삭제. 빈 공간 가운데 드래그: 영역 선택.",
+  "tools.hint.lazerFruit": "왼쪽 클릭: 과일 배치. 오브젝트 오른쪽 클릭: 메뉴. 가운데 클릭 또는 Shift+오른쪽 클릭: 삭제.",
+  "tools.hint.lazerSliderLegacy": "왼쪽 클릭: 슬라이더 시작, 점 추가. 오른쪽 클릭: 완료. 같은 점 다시 클릭: 새 곡선 구간.",
+  "tools.hint.lazerSliderPen": "왼쪽 클릭: 슬라이더 시작, 앵커 추가. 드래그: 곡선 조정. Ctrl+클릭: 직선 앵커. 오른쪽 클릭: 완료."
 }

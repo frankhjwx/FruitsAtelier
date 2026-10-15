@@ -1,0 +1,87 @@
+using System.Reflection;
+using FruitsAtelier.App.Editor;
+using FruitsAtelier.Core;
+
+internal static class LazerCanvasTests
+{
+    public static void Run()
+    {
+        var ui = new Ui(overview: false);
+        ui.View.LibrarySettings.LazerEditing = true;
+        var map = new MapDocument { DurationMs = 4000, IsDemo = false, ApproachRate = 5, CircleSize = 5 };
+        map.Fruits.AddRange([new Fruit { TimeMs = 1000, X = 256 }, new Fruit { TimeMs = 2000, X = 400 }]);
+        ui.View.LoadDocument(map);
+        ui.Paint();
+        ui.View.UpdateTransport(1000, 4000, true, false, false, null, null);
+        ui.Paint();
+        ui.Canvas.Clear();
+        Invoke("DrawCanvasCatchObjects", ui.Canvas);
+        float radius = CatchSize.FruitRadius(5) * ui.View.PlayfieldBounds.Width / 512;
+        Check(ui.Canvas.Circles.Count(circle => circle.Filled && Math.Abs(circle.Radius - radius) < .001) == 1,
+            "Caught canvas fruit must vanish at its timestamp, leaving only future fruit.");
+        ui.Canvas.Clear();
+        Invoke("DrawLazerCanvasCatcher", ui.Canvas);
+        Check(ui.Canvas.Images.Any(image => image.Path.EndsWith("scoreboard-explosion-2@2x.png")),
+            "Canvas catch emits the classic tall flash.");
+        Check(!ui.Canvas.Circles.Any(circle => circle.Filled && Math.Abs(circle.Radius - radius / 2) < .001),
+            "Canvas catcher does not draw a plate stack.");
+        ui.View.LibrarySettings.CatchHitLighting = CatchHitLightingMode.Off;
+        ui.Canvas.Clear(); Invoke("DrawLazerCanvasCatcher", ui.Canvas);
+        Check(!ui.Canvas.Images.Any(image => image.Path.Contains("scoreboard-explosion")), "Off suppresses hit lighting.");
+        ui.View.LibrarySettings.CatchHitLighting = CatchHitLightingMode.On;
+        ui.View.UpdateTransport(1700, 4000, true, false, false, null, null);
+        ui.Paint(); ui.Canvas.Clear(); Invoke("DrawLazerCanvasCatcher", ui.Canvas);
+        Check(!ui.Canvas.Images.Any(image => image.Path.Contains("scoreboard-explosion")), "Expired flashes do not reappear.");
+        ui.View.UpdateTransport(1100, 4000, true, false, false, null, null);
+        ui.Paint(); ui.Canvas.Clear(); Invoke("DrawLazerCanvasCatcher", ui.Canvas);
+        Check(ui.Canvas.Images.Any(image => image.Path.Contains("scoreboard-explosion")), "Backward seek reconstructs catch lighting.");
+
+        typeof(EditorView).GetProperty("distanceSnap", Private)!.SetValue(ui.View, true);
+        var source = Invoke("LazerDistanceSnapSource", 1500d, null) as DistanceSnap.Reference;
+        Check(source is { End.TimeMs: 1000, End.X: 256 }, "Distance guide uses the preceding completed fruit.");
+        var snap = typeof(EditorView).GetMethod("TryLazerDistanceSnap", Private)!;
+        object?[] arguments = [new MapPoint(1200, 360), default(MapPoint), null, 0d, 512d];
+        Check((bool)snap.Invoke(ui.View, arguments)! && Math.Abs(((MapPoint)arguments[1]!).X - 356) < .001,
+            "Walk guide snaps 200 ms forward by 100 playfield units.");
+        arguments = [new MapPoint(1200, 460), default(MapPoint), null, 0d, 512d];
+        Check((bool)snap.Invoke(ui.View, arguments)! && Math.Abs(((MapPoint)arguments[1]!).X - 456) < .001,
+            "Dash guide snaps 200 ms forward by 200 playfield units.");
+        Check(Invoke("LazerDistanceSnapSource", 1000d, null) is null,
+            "A guide reference must finish strictly before the target.");
+
+        var first = new ConvertedCatchObject(Guid.NewGuid(), 0, CatchObjectKind.Fruit, 1000, 256, 256, 256, 0);
+        var overlap = first with { SourceId = Guid.NewGuid(), TimeMs = 1500, X = 0 };
+        var tail = first with { EventIndex = 1, TimeMs = 2000, X = 512 };
+        ConvertedCatchObject[] objects = [first, overlap, tail];
+        var autoplay = new CatchAutoPreview(objects, 5, [first, tail, overlap], lazerEditor: true);
+        var lighting = (CatchLightingEvent[])typeof(EditorView).GetMethod("BuildLighting", BindingFlags.NonPublic | BindingFlags.Static)!
+            .Invoke(null, [objects, autoplay, 5d])!;
+        Check(lighting.All(entry => entry.Object != overlap), "Missed overlapping objects must not emit a canvas flash.");
+        var caught = (Dictionary<(Guid, int), bool>)typeof(EditorView).GetField("lazerCaught", Private)!.GetValue(ui.View)!;
+        var current = ui.View.Document.Fruits[0];
+        caught[(current.Id, 0)] = false;
+        var converted = new ConvertedCatchObject(current.Id, 0, CatchObjectKind.Fruit, current.TimeMs, current.X, current.X, current.X, 0);
+        float opacity = (float)Invoke("LazerCanvasObjectOpacity", converted)!;
+        Check(Math.Abs(opacity - .6f) < .001f, "Missed canvas fruit fades over 250 ms below the catcher.");
+
+        var patterned = new MapDocument { DurationMs = 4000, IsDemo = false, BeatLengthMs = 500 };
+        patterned.BananaShowers.Add(new BananaShower
+        {
+            TimeMs = 1000.75, EndTimeMs = 2200.75,
+            Pattern = new BananaShowerPattern(1, 2, 1, 2)
+        });
+        patterned.Fruits.Add(new Fruit { TimeMs = 1300, X = 256 });
+        ui.View.LoadDocument(patterned); ui.Paint();
+        var traversal = (ConvertedCatchObject[])Invoke("BuildLazerAutoplayTraversal")!;
+        Check(traversal.Count(item => item.Kind == CatchObjectKind.Banana) > 3,
+            "Pattern fixture contains multiple bananas within each segment.");
+        Check(traversal.Select(item => item.TimeMs).SequenceEqual(traversal.Select(item => item.TimeMs).Order()),
+            "Patterned shower traversal groups bananas by containing segment, retaining intervening parents.");
+
+        object? Invoke(string name, params object?[] arguments)
+            => typeof(EditorView).GetMethod(name, Private)!.Invoke(ui.View, arguments);
+    }
+
+    private const BindingFlags Private = BindingFlags.Instance | BindingFlags.NonPublic;
+    private static void Check(bool value, string message) { if (!value) throw new Exception(message); }
+}

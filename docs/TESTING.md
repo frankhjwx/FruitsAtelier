@@ -631,6 +631,30 @@ browser and restores a deleted difficulty in both languages at its tested window
 sizes and DPI values. The editing benchmark verifies ordinary interactions while
 version-history work remains outside the pointer and paint paths.
 
+## Experimental lazer editing
+
+`App.Tests --lazer-editing-check` covers the experimental mode and shared hit
+lighting settings, including missing-field defaults, draft cancellation,
+persistence, mode switching, retained Mapping preferences and content isolation.
+The focused input, canvas and presentation regressions exercise the supported
+lazer bindings, seek/scroll transitions, catcher drawing, caught-object removal,
+movement guides and lighting boundaries.
+
+On Windows, run `FruitsAtelier.App.exe --render-check --lazer-editing-render-check`
+for native Direct2D settings and canvas checks. The harness switches modes through
+the settings controls, checks retained playback-line preferences and document
+content, and captures canvas, preview, hit-lighting choices and Distance Snap
+guides in English and Chinese at two logical window sizes and 96/144/192 DPI.
+Images are written under `artifacts/tests/lazer-editing-native`. These checks
+exercise the native renderer; they do not measure physical display latency or
+audio-device timing.
+
+For an optional read-only comparison on a representative `.osu` or `.catchdiff`,
+run `App.Tests --lazer-map-performance <path>` alongside the existing
+`--map-performance <path>` command. It enables lazer editing for the same
+counting-canvas playback profile, reporting CPU time and allocations without
+native GPU submission or physical display-latency measurements.
+
 ## Banana shower patterns
 
 `App.Tests --experimental-snap-check` checks the optional 1/24, 1/32 and 1/48

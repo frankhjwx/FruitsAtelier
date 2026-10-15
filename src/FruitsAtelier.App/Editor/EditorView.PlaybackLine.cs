@@ -12,6 +12,7 @@ public sealed partial class EditorView
 
     private bool BeginPlaybackLineDrag(float x, float y)
     {
+        if (IsLazerEditing) return false;
         if (!plot.Contains(x, y) || !PlaybackLineHandleBounds.Contains(x, y)) return false;
         if (AudioPlaying || draftTrack != Guid.Empty || draftBanana != Guid.Empty) return true;
         playbackLineDragRatio = playbackLineFromBottom;

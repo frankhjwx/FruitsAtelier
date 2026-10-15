@@ -8,7 +8,12 @@ public sealed partial class EditorView
 {
     private Rect objectTimeline;
     private readonly List<BeatGridLine> timelineGrid = [];
-    private double objectTimelineScale = .18;
+    private double mappingObjectTimelineScale = .18;
+    private double objectTimelineScale
+    {
+        get => IsLazerEditing ? LazerTimelineScale : mappingObjectTimelineScale;
+        set => mappingObjectTimelineScale = value;
+    }
     private readonly List<(Guid Id, double Time, Rect Bounds)> timelineObjects = [];
     private CatchConversionResult? timelineConversion;
     private Guid timelineDraft;
@@ -83,7 +88,7 @@ public sealed partial class EditorView
     }
     public Rect ObjectTimelineBounds => objectTimeline;
     public double ObjectTimelinePixelsPerMs => objectTimelineScale;
-    public double ObjectTimelineStartMs => playhead - objectTimeline.Width / objectTimelineScale / 2;
+    public double ObjectTimelineStartMs => LazerPresentationTime - objectTimeline.Width / objectTimelineScale / 2;
     private static readonly double[] PlaybackRates = [.1, .25, .5, .75, 1, 1.5];
     public double PlaybackSpeed { get; private set; } = 1;
     public Action<double>? RequestPlaybackSpeed { get; set; }
@@ -358,7 +363,7 @@ public sealed partial class EditorView
             Button(c, new(leftPanel.Right + 7, top + 5, 29, zoomHeight), L.Get("ui.timelineZoomIn"), () => ZoomObjectTimeline(1.25));
             Button(c, new(leftPanel.Right + 7, top + 9 + zoomHeight, 29, zoomHeight), L.Get("ui.timelineZoomOut"), () => ZoomObjectTimeline(.8));
         }
-        objectTimelineScale = Math.Clamp(objectTimelineScale, .025, MaximumObjectTimelineScale);
+        if (!IsLazerEditing) objectTimelineScale = Math.Clamp(objectTimelineScale, .025, MaximumObjectTimelineScale);
         double start = ObjectTimelineStartMs;
         double end = start + objectTimeline.Width / objectTimelineScale;
         float X(double time) => objectTimeline.X + (float)((time - start) * objectTimelineScale);
@@ -500,7 +505,7 @@ public sealed partial class EditorView
             c.Line(x, objectTimeline.Y, x, objectTimeline.Bottom - 1,
                 point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, .8f);
         }
-        float head = X(playhead);
+        float head = X(LazerPresentationTime);
         c.Line(head, objectTimeline.Y, head, objectTimeline.Bottom, Gold, 2);
         c.Line(objectTimeline.X, objectTimeline.Bottom - 1, objectTimeline.Right, objectTimeline.Bottom - 1, Grid);
         DrawTimelineBookmarks(c, objectTimeline, start, end);
@@ -509,6 +514,11 @@ public sealed partial class EditorView
 
     private void ZoomObjectTimeline(double factor)
     {
+        if (IsLazerEditing)
+        {
+            ZoomLazerTimeline(Math.Log(factor) / Math.Log(1.25));
+            return;
+        }
         objectTimelineScale = Math.Clamp(objectTimelineScale * factor, .025, MaximumObjectTimelineScale);
         LibrarySettings.ObjectTimelineScale = objectTimelineScale;
         RequestViewPreference?.Invoke();

@@ -14,10 +14,12 @@ public sealed partial class EditorView
     public Rect CanvasScaleLockBounds { get; private set; }
     internal Rect CanvasAxisZoomBounds(int axis) => new(zoomSlider.X + 12,
         zoomSlider.Y + axis * 15, Math.Max(1, zoomSlider.Width - 12), 15);
-    private float CanvasObjectWidth => Math.Min(Playfield.Width, FullPlayfieldWidth);
+    private float CanvasObjectWidth => IsLazerEditing ? Playfield.Width : Math.Min(Playfield.Width, FullPlayfieldWidth);
     private double MaximumCanvasZoom => UniformCanvasScale ? 1 : 2;
     private double MaximumObjectTimelineScale => LibrarySettings.ExperimentalSnapDivisions ? 16 : 1.5;
-    private double CanvasPixelsPerMs => CatchScrollTiming.PixelsPerMs(Document.ApproachRate, FullPlayfieldWidth * CanvasTimeZoom);
+    private double CanvasPixelsPerMs => IsLazerEditing
+        ? 384 * LazerCanvasScale / LazerPreempt / LazerScrollMultiplier
+        : CatchScrollTiming.PixelsPerMs(Document.ApproachRate, FullPlayfieldWidth * CanvasTimeZoom);
 
     private void SaveCanvasScale()
     {
@@ -54,6 +56,7 @@ public sealed partial class EditorView
 
     private bool CanvasScalePointerDown(float x, float y, int button)
     {
+        if (IsLazerEditing) return false;
         if (TimingPageVisible || LibraryVisible || StreamDialogVisible || menu >= 0 || contextItems.Count > 0) return false;
         if (button == 0 && CanvasScaleLockBounds.Contains(x, y)) { ToggleUniformCanvasScale(); return true; }
         if (!UniformCanvasScale && button == 0)

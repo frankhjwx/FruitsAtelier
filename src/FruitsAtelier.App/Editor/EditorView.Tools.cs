@@ -53,7 +53,11 @@ public sealed partial class EditorView
         }
         for (int i = 0; i < toolButtons.Count; i++)
             if (toolButtons[i].Contains(mouseX, mouseY))
-                DrawPaletteTooltip(c, L.Get(i switch
+                DrawPaletteTooltip(c, L.Get(IsLazerEditing && i < 3 ? i switch
+                {
+                    0 => "tools.hint.lazerSelect", 1 => "tools.hint.lazerFruit",
+                    _ => LegacyMode ? "tools.hint.lazerSliderLegacy" : "tools.hint.lazerSliderPen"
+                } : i switch
                 {
                     0 => "tools.hint.select", 1 => "tools.hint.fruit",
                     2 => LegacyMode ? "tools.hint.sliderLegacy" : "tools.hint.sliderPen",

@@ -1436,5 +1436,17 @@
   "aimod.inheritedBeforeTiming": "An inherited timing point occurs before the first uninherited timing point.",
   "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point.",
   "project.pinDifficulty": "Sematkan difficulty",
-  "project.unpinDifficulty": "Lepas sematan difficulty"
+  "project.unpinDifficulty": "Lepas sematan difficulty",
+  "settings.lazerEditing": "Penyuntingan lazer: {0}",
+  "skin.hitLightingFollowMode": "Kilatan tangkapan: ikuti mode",
+  "skin.hitLightingOn": "Kilatan tangkapan: aktif",
+  "skin.hitLightingOff": "Kilatan tangkapan: nonaktif",
+  "ui.lazerScrollSpeed": "Kecepatan gulir",
+  "assist.lazerGridHint": "Kisi tidak digunakan dalam penyuntingan lazer. Pengaturan Mapping tetap disimpan.",
+  "assist.lazerDistanceHint": "Jepret jarak (T / Y); tahan Alt untuk membalik. Panduan diam, berjalan, dan lari.",
+  "timing.pageLazer": "Timing",
+  "tools.hint.lazerSelect": "Pilih dan ubah not. Ctrl+klik: tambahkan. Klik kanan: menu. Klik tengah atau Shift+kanan: hapus. Seret tengah di ruang kosong: seleksi.",
+  "tools.hint.lazerFruit": "Klik kiri: tempatkan buah. Klik kanan objek: menu. Klik tengah atau Shift+kanan: hapus.",
+  "tools.hint.lazerSliderLegacy": "Klik kiri: mulai slider atau tambah titik. Kanan: selesaikan. Klik titik yang sama lagi: segmen baru.",
+  "tools.hint.lazerSliderPen": "Klik kiri: mulai slider atau tambah jangkar. Seret: bentuk kurva; Ctrl+klik: jangkar lurus. Kanan: selesaikan."
 }

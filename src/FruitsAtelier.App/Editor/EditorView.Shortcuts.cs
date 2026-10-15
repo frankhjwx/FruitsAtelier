@@ -59,7 +59,7 @@ public sealed partial class EditorView
         if (drag == DragKind.Marquee) { ScrollBoxTo(time); return; }
         double previousViewStart = viewStart, previousPlayhead = playhead;
         SeekTo(time);
-        if (!NavigationDuringDrag) return;
+        if (!NavigationDuringDrag || IsLazerEditing) return;
         viewStart = previousViewStart + playhead - previousPlayhead;
         pinPlayhead = false;
         ClampView();

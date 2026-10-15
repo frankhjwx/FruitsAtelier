@@ -100,6 +100,7 @@ public sealed partial class EditorView
         menu = -1;
         ResetView();
         playhead = viewStart = 0;
+        ResetLazerPresentation();
         AudioReady = AudioPlaying = false;
         initializeTransport = AudioLoading = !string.IsNullOrWhiteSpace(document.AudioPath);
         AudioDurationMs = 0;
@@ -267,6 +268,7 @@ public sealed partial class EditorView
         UpdateHitsounds(positionMs, ready && playing && !loading, filename);
         if (playing && drag == DragKind.PlaybackLine) CancelPlaybackLineDrag();
         bool wasReady = AudioReady;
+        if (playing && !AudioPlaying) lazerSeekStarted = double.NegativeInfinity;
         double previousPlayhead = playhead;
         AudioReady = ready; AudioPlaying = playing; AudioLoading = loading;
         AudioDurationMs = double.IsFinite(durationMs) ? Math.Max(0, durationMs) : 0;
@@ -276,7 +278,7 @@ public sealed partial class EditorView
             playhead = Math.Clamp(positionMs, 0, TimelineDurationMs);
         double previousViewStart = viewStart;
         if (playing || ready && !wasReady) FollowPlayhead();
-        if (playing) ContinueDragAfterNavigation(previousViewStart, previousPlayhead, shiftHeld, placementCtrl);
+        if (playing && !IsLazerEditing) ContinueDragAfterNavigation(previousViewStart, previousPlayhead, shiftHeld, placementCtrl);
         if (testplay is not null && testplayWithAudio)
         {
             if (testplayDriver is null)
@@ -297,6 +299,7 @@ public sealed partial class EditorView
 
     private void SeekTo(double time)
     {
+        lazerSeekStarted = double.NegativeInfinity;
         pauseSnapDivisor = null;
         wheelPlayhead = double.NaN;
         playhead = Math.Clamp(time, 0, TimelineDurationMs);
@@ -308,17 +311,19 @@ public sealed partial class EditorView
 
     private void FollowPlayhead()
     {
-        if (ViewportFrozenByDrag) return;
+        if (ViewportFrozenByDrag && !IsLazerEditing) return;
         pinPlayhead = true;
-        viewStart = playhead - plot.Height * playbackLineFromBottom / pixelsPerMs;
+        viewStart = playhead - plot.Height * EffectivePlaybackLineFromBottom / pixelsPerMs;
     }
 
     private void TogglePlayback()
     {
         if (AudioReady)
         {
+            if (IsLazerEditing && !AudioPlaying && TestplayRealtime < lazerSeekStarted + 300)
+                SeekTo(LazerPresentationTime);
             // Arm before the callback: hosts may publish the confirmed pause synchronously.
-            pauseSnapDivisor = AudioPlaying && snap && !TimingPageVisible ? divisor : null;
+            pauseSnapDivisor = !IsLazerEditing && AudioPlaying && snap && !TimingPageVisible ? divisor : null;
             RequestTogglePlayback?.Invoke();
         }
         else StatusMessage = AudioLoading ? L.Get("editor.audio.stillLoading") : L.Get("editor.audio.loadFromFileMenu");

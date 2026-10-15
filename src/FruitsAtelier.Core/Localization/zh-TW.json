@@ -1436,5 +1436,17 @@
   "aimod.inheritedBeforeTiming": "An inherited timing point occurs before the first uninherited timing point.",
   "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point.",
   "project.pinDifficulty": "釘選難度",
-  "project.unpinDifficulty": "取消釘選難度"
+  "project.unpinDifficulty": "取消釘選難度",
+  "settings.lazerEditing": "lazer 編輯：{0}",
+  "skin.hitLightingFollowMode": "接盤閃光：跟隨模式",
+  "skin.hitLightingOn": "接盤閃光：開啟",
+  "skin.hitLightingOff": "接盤閃光：關閉",
+  "ui.lazerScrollSpeed": "捲動速度",
+  "assist.lazerGridHint": "lazer 編輯不使用網格吸附。保留 Mapping 模式的設定。",
+  "assist.lazerDistanceHint": "間距吸附（T / Y）；按住 Alt 暫時反轉。使用站立、完美走位及完美跑位輔助線。",
+  "timing.pageLazer": "Timing",
+  "tools.hint.lazerSelect": "選取並修改物件。Ctrl+點擊：加入選取。右鍵：物件選單。中鍵或 Shift+右鍵：刪除。在空白處中鍵拖曳：框選。",
+  "tools.hint.lazerFruit": "左鍵：放置水果。右鍵物件：選單。中鍵或 Shift+右鍵物件：刪除。",
+  "tools.hint.lazerSliderLegacy": "左鍵：開始滑條或新增控制點。右鍵：完成滑條。再次點擊同一控制點以開始新曲線段。",
+  "tools.hint.lazerSliderPen": "左鍵：開始滑條或新增錨點。拖曳調整曲線；Ctrl+點擊：直線錨點。右鍵：完成滑條。"
 }

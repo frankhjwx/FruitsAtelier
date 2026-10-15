@@ -366,6 +366,7 @@ public sealed partial class EditorView
         }
         if (timingCommand.Length > 0)
         { if (key == 27) CloseTimingSetup(); else if (key == 13) ApplyTimingCommand(); return true; }
+        if (IsLazerEditing && (key is 37 or 38 or 39 or 40 || shift && key is >= 49 and <= 57)) return false;
         if (key == 84 && !ctrl && !shift) { if (!timingTapHeld) TapTiming(); timingTapHeld = true; return true; }
         if (key == 27 && panelMenuOpen) { panelMenuOpen = false; return true; }
         if (key == 27 && menu >= 0) { menu = -1; return true; }

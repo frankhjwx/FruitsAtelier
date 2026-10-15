@@ -38,5 +38,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="../../assets/ui/timing/*.png" Link="assets/ui/timing/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../assets/ui/catch/*" Link="assets/ui/catch/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

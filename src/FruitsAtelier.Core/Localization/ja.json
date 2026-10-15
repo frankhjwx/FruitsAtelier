@@ -1436,5 +1436,17 @@
   "aimod.inheritedBeforeTiming": "An inherited timing point occurs before the first uninherited timing point.",
   "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point.",
   "project.pinDifficulty": "難易度をピン留め",
-  "project.unpinDifficulty": "難易度のピン留めを解除"
+  "project.unpinDifficulty": "難易度のピン留めを解除",
+  "settings.lazerEditing": "lazer 編集：{0}",
+  "skin.hitLightingFollowMode": "キャッチ時の発光：モードに従う",
+  "skin.hitLightingOn": "キャッチ時の発光：オン",
+  "skin.hitLightingOff": "キャッチ時の発光：オフ",
+  "ui.lazerScrollSpeed": "スクロール速度",
+  "assist.lazerGridHint": "lazer 編集ではグリッドスナップを使いません。Mapping の設定は保持されます。",
+  "assist.lazerDistanceHint": "距離スナップ（T / Y）。Alt を押して反転。静止・歩行・ダッシュのガイドを使います。",
+  "timing.pageLazer": "タイミング",
+  "tools.hint.lazerSelect": "ノーツを選択・編集。Ctrl+クリック：選択に追加。右クリック：メニュー。中クリックまたは Shift+右クリック：削除。空白を中ドラッグ：範囲選択。",
+  "tools.hint.lazerFruit": "左クリック：フルーツを配置。オブジェクトを右クリック：メニュー。中クリックまたは Shift+右クリック：削除。",
+  "tools.hint.lazerSliderLegacy": "左クリック：スライダーを開始、点を追加。右クリック：完了。同じ点を再クリック：新しい曲線区間。",
+  "tools.hint.lazerSliderPen": "左クリック：スライダーを開始、アンカーを追加。ドラッグ：曲線調整。Ctrl+クリック：直線アンカー。右クリック：完了。"
 }

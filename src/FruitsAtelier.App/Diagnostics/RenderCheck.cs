@@ -944,6 +944,11 @@ internal static class RenderCheck
             AppLog.Write("AiMod native input and rendering checks passed.");
             return;
         }
+        if (Environment.GetCommandLineArgs().Contains("--lazer-editing-render-check"))
+        {
+            LazerEditingRenderCheck.Run(canvas);
+            return;
+        }
         if (Environment.GetCommandLineArgs().Contains("--canvas-scale-render-check"))
         {
             CanvasScaleRenderCheck.Run(canvas);

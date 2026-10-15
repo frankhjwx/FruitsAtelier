@@ -42,6 +42,7 @@ public sealed partial class EditorView
     {
         sliderObjectPointerOriginX = target.X;
         EnsureConversion();
+        CaptureLazerGestureDistance();
         // Hit testing uses exported coordinates. Editing needs the authored event's
         // exact time and X, particularly when a fractional tail rounds past its anchor.
         target = conversion!.Objects.FirstOrDefault(item => item.SourceId == target.SourceId
@@ -120,7 +121,9 @@ public sealed partial class EditorView
         double time = target.TimeMs + pointer.TimeMs - origin.TimeMs;
         if (snap) time = TimingMap.Snap(Document, time, divisor);
         time = Math.Clamp(time, 0, EditableDurationMs);
-        double wantedX = Math.Clamp(SnapX(sliderObjectPointerOriginX + pointer.X - origin.X), 0, 512);
+        double rawX = sliderObjectPointerOriginX + pointer.X - origin.X;
+        double wantedX = Math.Clamp(IsLazerEditing ? rawX : SnapX(rawX), 0, 512);
+        if (IsLazerEditing && TryLazerGestureDistanceSnap(new(time, wantedX), out var lazerPoint, objectSelection)) wantedX = lazerPoint.X;
         var accepted = new MapDocument(); accepted.Tracks.Add(Document.Tracks.Single(t => t.Id == source.Id));
         RestoreSliderObjectSource(sliderObjectDragSource);
         var track = Document.Tracks.Single(t => t.Id == source.Id);
@@ -156,8 +159,9 @@ public sealed partial class EditorView
             return;
         }
         double rawX = Math.Clamp(sliderObjectPointerOriginX + (x - dragStartX) / Playfield.Width * 512, 0, 512);
-        bool strict = DistanceSnapEnabled && sliderObjectDragPrevious is not null;
-        double wantedX = strict ? rawX : Math.Clamp(SnapX(rawX), 0, 512);
+        bool strict = !IsLazerEditing && DistanceSnapEnabled && sliderObjectDragPrevious is not null;
+        double wantedX = strict || IsLazerEditing ? rawX : Math.Clamp(SnapX(rawX), 0, 512);
+        if (IsLazerEditing && TryLazerGestureDistanceSnap(new(target.TimeMs, wantedX), out var lazerPoint, objectSelection)) wantedX = lazerPoint.X;
         if (strict)
         {
             var acceptedSource = new MapDocument();
@@ -188,7 +192,7 @@ public sealed partial class EditorView
             double blockedX = wantedX;
             for (int i = 0; i < 12 && Math.Abs(blockedX - acceptedX) > .001; i++)
             {
-                double middle = SnapX((acceptedX + blockedX) / 2);
+                double middle = IsLazerEditing ? (acceptedX + blockedX) / 2 : SnapX((acceptedX + blockedX) / 2);
                 if (Math.Abs(middle - acceptedX) < .00001 || Math.Abs(middle - blockedX) < .00001) break;
                 if (TrySliderObjectPosition(target, middle)) acceptedX = middle;
                 else blockedX = middle;
@@ -223,7 +227,7 @@ public sealed partial class EditorView
             if (target.Kind == CatchObjectKind.Fruit && !streamInterior)
                 DistanceSpacingEditing.ApplyX(Document, target, x, compensateTinyDroplets, editorConversionCache);
             else DistanceSpacingEditing.ApplyIsolatedX(Document, target, x, compensateTinyDroplets, editorConversionCache);
-            if (DistanceSnapEnabled)
+            if (DistanceSnapEnabled && !IsLazerEditing)
             {
                 var result = CatchStreamConverter.Convert(Document, compensateTinyDroplets, editorConversionCache);
                 if (!StrictSliderObjectResult(target, result))

@@ -7,12 +7,12 @@ namespace FruitsAtelier.App.Editor;
 
 public sealed partial class EditorView
 {
-    private void DrawCatchObject(ICanvas c, ConvertedCatchObject item, float x, float y, float fieldWidth, float opacity = 1, double? circleSize = null, HashSet<(Guid SourceId, int EventIndex)>? hyperStarts = null, bool animated = false, bool caught = false, uint? colourOverride = null, int? skinIndexOverride = null)
+    private void DrawCatchObject(ICanvas c, ConvertedCatchObject item, float x, float y, float fieldWidth, float opacity = 1, double? circleSize = null, HashSet<(Guid SourceId, int EventIndex)>? hyperStarts = null, bool animated = false, bool caught = false, uint? colourOverride = null, int? skinIndexOverride = null, double? presentationTime = null, double? approachRate = null)
     {
         float scale = fieldWidth / 512;
         double cs = circleSize ?? Document.CircleSize;
         float diameter = CatchSize.FruitDiameter(cs) * scale;
-        var visual = animated ? CatchObjectVisual.At(item, playhead, PreviewApproachRate, caught) : new CatchObjectVisual(0, 1);
+        var visual = animated ? CatchObjectVisual.At(item, presentationTime ?? LazerPresentationTime, approachRate ?? PreviewApproachRate, caught) : new CatchObjectVisual(0, 1);
         diameter *= visual.Scale;
         uint colour = colourOverride ?? ObjectColour(item);
         bool hyper = (hyperStarts ?? hyperdashObjects).Contains((item.SourceId, item.EventIndex));
@@ -56,12 +56,14 @@ public sealed partial class EditorView
     private ConvertedCatchObject? HitCatchObject(float x, float y, Guid? sourceId = null, bool includeLockedDroplets = false)
     {
         EnsureConversion();
+        if (IsLazerEditing) EnsureLazerCanvasVisuals();
         ConvertedCatchObject? closest = null;
         double distance = double.PositiveInfinity;
-        double pointerTime = viewStart + (plot.Bottom - y) / pixelsPerMs;
+        double pointerTime = IsLazerEditing ? Transform.ToMap(x, y).TimeMs : viewStart + (plot.Bottom - y) / pixelsPerMs;
         double timeRadius = Math.Max(7, CatchSize.FruitDiameter(Document.CircleSize) * CanvasObjectWidth / 512) / pixelsPerMs;
         foreach (var item in ObjectsInTimeRange(pointerTime - timeRadius, pointerTime + timeRadius))
         {
+            if (IsLazerEditing && LazerCanvasObjectOpacity(item) <= .001f) continue;
             if (!includeLockedDroplets && !CanSelectCatchObject(item)) continue;
             if (sourceId is { } id && item.SourceId != id) continue;
             var point = new MapPoint(item.TimeMs, item.X);
@@ -300,6 +302,7 @@ public sealed partial class EditorView
             ClampVisibleX(double.NegativeInfinity), ClampVisibleX(double.PositiveInfinity), out snappedDeltaX);
         if (assistedSnapped) deltaX = snappedDeltaX;
         else if (objectDragTimeline) deltaX = 0;
+        else if (IsLazerEditing) deltaX = ClampVisibleX(deltaX);
         else if (double.IsFinite(minX)) deltaX = ClampVisibleX(SnapX(minX + deltaX) - minX);
         else if (objectDragStart.Tracks.FirstOrDefault(t => objectSelection.Contains(t.Id)) is { } firstTrack)
             deltaX = ClampVisibleX(SnapX(firstTrack.Nodes[0].X + deltaX) - firstTrack.Nodes[0].X);

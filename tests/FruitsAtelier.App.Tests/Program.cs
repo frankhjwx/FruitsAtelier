@@ -141,6 +141,7 @@ if (args.Length == 2 && args[0] == "--fruit-placement-performance") return Edito
 if (args.Length == 2 && args[0] == "--testplay-edit-performance") return EditorPerformance.RunTestplayEditing(args[1]);
 if (args.Length > 0 && args[0] == "--benchmark-library") return LibraryScaleTests.Benchmark(args.Length > 1 ? args[1] : null);
 if (args.Length == 2 && args[0] == "--map-performance") return EditorPerformance.RunMap(args[1]);
+if (args.Length == 2 && args[0] == "--lazer-map-performance") return EditorPerformance.RunMap(args[1], lazer: true);
 if (args.Length == 2 && args[0] == "--slider-drag-performance") return EditorPerformance.RunSliderDrag(args[1]);
 if (args.Length == 2 && args[0] == "--slider-draft-performance")
 {
@@ -155,8 +156,28 @@ if (args.Length == 2 && args[0] == "--anchor-drag-performance")
 
 if (args.Length == 2 && args[0] == "--legacy-map") return LegacyAlignmentTests.InspectMap(args[1]);
 
+if (args.Contains("--lazer-editing-check"))
+{
+    LazerSettingsTests.Run();
+    LazerInputTests.NavigationAndBindings();
+    LazerInputTests.SeekAndDivisorFamilies();
+    LazerInputTests.MouseDeletionAndContext();
+    LazerInputTests.DragSnappingAndHiddenHits();
+    LazerPresentationTests.Run();
+    LazerCanvasTests.Run();
+    Console.WriteLine("PASS Lazer editing settings, input, presentation, catcher and guides");
+    return 0;
+}
+
 var tests = new (string Name, Action Run)[]
 {
+    ("Lazer editing mode preserves settings and explicit lighting policy", LazerSettingsTests.Run),
+    ("Lazer shortcuts retain independent mapping behavior", LazerInputTests.NavigationAndBindings),
+    ("Lazer seeks and divisor families follow the editor clock", LazerInputTests.SeekAndDivisorFamilies),
+    ("Lazer pointer actions support context menus and undoable quick deletion", LazerInputTests.MouseDeletionAndContext),
+    ("Lazer placement and dragging use fixed-speed guides and visible hits", LazerInputTests.DragSnappingAndHiddenHits),
+    ("Lazer presentation interpolates without extra audio seeks or content changes", LazerPresentationTests.Run),
+    ("Lazer canvas draws catcher, lighting and distance guides", LazerCanvasTests.Run),
     ("Banana shower dialog previews exported RNG and edits grouped ranges", BananaEditTests.Run),
     ("F12 screenshots repeat once and preserve dialogs, playback and content", ScreenshotTests.Shortcut),
     ("Hitsound Copier modes, new Diff and undo", HitsoundCopierUiTests.Run),

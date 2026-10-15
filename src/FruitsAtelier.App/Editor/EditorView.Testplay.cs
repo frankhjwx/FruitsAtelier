@@ -48,6 +48,8 @@ public sealed partial class EditorView
             return;
         }
         if (!conversion!.Success) return;
+        if (IsLazerEditing && !AudioPlaying && TestplayRealtime < lazerSeekStarted + 300)
+            SeekTo(LazerPresentationTime);
         testplayReturnPosition = playhead;
         testplayStart = Math.Max(0, playhead - LibrarySettings.TestplayStartupDelaySeconds * 1000d);
         if (testplayStart == 0 && PreviewObjects().FirstOrDefault() is { } first)
@@ -286,6 +288,7 @@ public sealed partial class EditorView
         DrawCaughtPlate(c, frame.Plate, left, fieldWidth, catchY);
         DrawCatcherBody(c, x, catchY, fieldWidth, tint, 1, false, frame.FacingLeft);
         if (frame.Dashing) DrawCatcherBody(c, x, catchY, fieldWidth, 0xFFFFFF, .65f, true, frame.FacingLeft, brighten: true);
+        DrawCatchLighting(c, frame.Lighting, playhead, x, fieldWidth, catchY, PreviewCircleSize);
         if (LibrarySettings.ShowTestplayCombo) DrawTestplayCombo(c, x, catchY - 175 * fieldWidth / 512, fieldWidth / 512);
         c.Unclip();
         DrawTestplayInformation(c, frame);

@@ -1436,5 +1436,17 @@
   "aimod.inheritedBeforeTiming": "An inherited timing point occurs before the first uninherited timing point.",
   "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point.",
   "project.pinDifficulty": "Épingler la difficulté",
-  "project.unpinDifficulty": "Désépingler la difficulté"
+  "project.unpinDifficulty": "Désépingler la difficulté",
+  "settings.lazerEditing": "Édition lazer : {0}",
+  "skin.hitLightingFollowMode": "Éclat de capture : selon le mode",
+  "skin.hitLightingOn": "Éclat de capture : activé",
+  "skin.hitLightingOff": "Éclat de capture : désactivé",
+  "ui.lazerScrollSpeed": "Vitesse de défilement",
+  "assist.lazerGridHint": "La grille ne sert pas en édition lazer. Le réglage Mapping est conservé.",
+  "assist.lazerDistanceHint": "Alignement de distance (T / Y) ; maintenir Alt pour inverser. Guides de repos, marche et course.",
+  "timing.pageLazer": "Timing",
+  "tools.hint.lazerSelect": "Sélectionner et modifier. Ctrl+clic : ajouter. Clic droit : menu. Clic milieu ou Maj+droit : supprimer. Glisser au milieu dans le vide : rectangle.",
+  "tools.hint.lazerFruit": "Clic gauche : fruit. Clic droit sur un objet : menu. Clic milieu ou Maj+droit : supprimer.",
+  "tools.hint.lazerSliderLegacy": "Clic gauche : commencer un slider ou ajouter un point. Droit : terminer. Recliquez un point pour un nouveau segment.",
+  "tools.hint.lazerSliderPen": "Clic gauche : commencer un slider ou ajouter une ancre. Glisser : courber ; Ctrl+clic : ancre droite. Droit : terminer."
 }

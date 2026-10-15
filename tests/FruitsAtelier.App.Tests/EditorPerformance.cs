@@ -257,13 +257,14 @@ internal static class EditorPerformance
         return 0;
     }
 
-    public static int RunMap(string path)
+    public static int RunMap(string path, bool lazer = false)
     {
         var watch = Stopwatch.StartNew();
         var document = Path.GetExtension(path).Equals(".osu", StringComparison.OrdinalIgnoreCase)
             ? OsuBeatmapReader.ReadFile(path) : ProjectSerializer.ReadFile(path);
         Console.WriteLine($"Read: {watch.Elapsed.TotalMilliseconds:F1} ms; sliders={document.ImportedSliders.Count}; timing={document.TimingPoints.Count}");
         var view = new EditorView();
+        view.LibrarySettings.LazerEditing = lazer;
         watch.Restart(); view.LoadDocument(document);
         Console.WriteLine($"LoadDocument: {watch.Elapsed.TotalMilliseconds:F1} ms");
         watch.Restart(); _ = view.Conversion;

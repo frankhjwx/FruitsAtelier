@@ -137,6 +137,7 @@ public sealed partial class EditorView
         if (button == 2 && DockTabContext(x, y)) return;
         if (button == 2 && DifficultyTabContext(x, y)) return;
         if (menu >= 0 && button != 0) { menu = -1; return; }
+        if (IsLazerEditing && HandleLazerPointerDown(x, y, button, shift, ctrl)) return;
         if (button == 2)
         {
             if (editField >= 0 && !CommitField()) return;
@@ -217,6 +218,7 @@ public sealed partial class EditorView
             }
         if (objectTimeline.Contains(x, y))
         {
+            if (IsLazerEditing && HandleLazerTimelineRange(x, y, shift, ctrl)) return;
             if (!ctrl && !shift && BeginBreakEdge(x, y)) return;
             BeginObjectTimeline(x, y, ctrl); return;
         }
@@ -638,6 +640,8 @@ public sealed partial class EditorView
         if (SliderDialogVisible) return;
         if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
         if (librarySettingsOpen || ExportVisible) return;
+        if (IsLazerEditing && lazerMiddleMarquee && button == 1 && drag == DragKind.Marquee)
+        { lazerMiddleMarquee = false; PointerMove(x, y, shiftHeld, false); FinishBox(x, y); return; }
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
         if (drag == DragKind.TimelinePanelResize) { MoveTimelinePanelResize(y); FinishTimelinePanelResize(cancel: false); return; }
         if (drag == DragKind.Break)
@@ -813,6 +817,7 @@ public sealed partial class EditorView
         if (navigationDrag && SliderHoldNeedsRedraw)
         { sliderHoldId = Guid.Empty; noteHoldTarget = null; }
         WheelCore(x, y, delta, ctrl, shift, alt);
+        if (IsLazerEditing) return;
         if (navigationDrag && NavigationDuringDrag)
         {
             if (ctrl || alt || altHeld || !ContinueDragAfterNavigation(previousViewStart, previousPlayhead, shift || shiftHeld, ctrl))
@@ -907,8 +912,10 @@ public sealed partial class EditorView
                 LibrarySettings.WaveformSpanMs = waveformSpanMs;
                 RequestViewPreference?.Invoke();
             }
-            else if (ctrl && !alt && !altHeld && !shift && !shiftHeld) AdjustSnapWheel(delta);
-            else if (!alt && !altHeld && !ctrl) SeekByWheel(-delta / 120 * (shift ? 4 : 1), 0);
+            else if (ctrl && !alt && !altHeld && !shift && !shiftHeld)
+            { if (IsLazerEditing) AdjustLazerSnapWheel(delta); else AdjustSnapWheel(delta); }
+            else if (!alt && !altHeld && !ctrl)
+            { if (IsLazerEditing) HandleLazerWheel(x, y, delta, false, shift || shiftHeld, false, false, true, false); else SeekByWheel(-delta / 120 * (shift ? 4 : 1), 0); }
             return;
         }
         shift |= shiftHeld;
@@ -944,6 +951,8 @@ public sealed partial class EditorView
         }
         if (drag == DragKind.Marquee)
         {
+            if (IsLazerEditing && HandleLazerWheel(x, y, delta, ctrl, shift, alt, objectTimeline.Contains(x, y), canvas.Contains(x, y), false))
+            { MoveBox(x, y); return; }
             if (!ctrl && (canvas.Contains(x, y) || objectTimeline.Contains(x, y)))
             {
                 mouseX = x; mouseY = y;
@@ -969,6 +978,7 @@ public sealed partial class EditorView
         bool onTimeline = objectTimeline.Contains(x, y);
         bool onCanvas = canvas.Contains(x, y);
         bool onOverview = overview.Contains(x, y);
+        if (IsLazerEditing && HandleLazerWheel(x, y, delta, ctrl, shift, alt, onTimeline, onCanvas, onOverview)) return;
         if ((onTimeline || onCanvas) && ctrl && alt && !shift)
         {
             if (drag != DragKind.None) return;
@@ -1241,8 +1251,8 @@ public sealed partial class EditorView
         if (librarySettingsOpen || LibraryVisible) { LibraryKey(virtualKey, ctrl, shift); return; }
         if (TimingKey(virtualKey, ctrl, shift)) return;
         if (virtualKey == 117 && !ctrl && !shift && !altHeld) { OpenTimingSetup(); return; }
-        if (virtualKey == 114 && !ctrl && !shift && !altHeld) { ShowTimingPage(true); return; }
-        if (virtualKey == 115 && !ctrl && !shift && !altHeld && drag == DragKind.None)
+        if (virtualKey == 114 && !ctrl && !shift && !altHeld && (!IsLazerEditing || TimingPageVisible)) { ShowTimingPage(true); return; }
+        if (virtualKey == 115 && !ctrl && !shift && !altHeld && drag == DragKind.None && (!IsLazerEditing || TimingPageVisible))
         { ShowSongDock(); return; }
         if (virtualKey == 116 && !ctrl && !shift && !altHeld) { StartTestplay(); return; }
         if (ctrl && !shift && !altHeld && virtualKey == 83 && drag == DragKind.None)
@@ -1289,6 +1299,7 @@ public sealed partial class EditorView
             return;
         }
         if (ctrl && shift && !altHeld && virtualKey == 65) { ShowAimod(); return; }
+        if (IsLazerEditing && HandleLazerKey(virtualKey, ctrl, shift)) return;
         if (AdjustVolumeShortcut(virtualKey, altHeld && !ctrl && !shift)) return;
         if (virtualKey == 70 && shift && !ctrl && !altHeld)
         {
@@ -1432,6 +1443,7 @@ public sealed partial class EditorView
         screenshotHeld = false;
         deferredTestplay = false;
         placementCtrl = false; timingTapHeld = false; timingSnapDragging = false; panelMenuOpen = false;
+        lazerMiddleMarquee = false;
         EndTimingVolume(true);
         timingScrollDragging = false;
         pendingStreamChildSelection = null;

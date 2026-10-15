@@ -1436,5 +1436,17 @@
   "aimod.inheritedBeforeTiming": "An inherited timing point occurs before the first uninherited timing point.",
   "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point.",
   "project.pinDifficulty": "Moeilijkheid vastzetten",
-  "project.unpinDifficulty": "Moeilijkheid losmaken"
+  "project.unpinDifficulty": "Moeilijkheid losmaken",
+  "settings.lazerEditing": "lazer-bewerking: {0}",
+  "skin.hitLightingFollowMode": "Vangflits: modus volgen",
+  "skin.hitLightingOn": "Vangflits: aan",
+  "skin.hitLightingOff": "Vangflits: uit",
+  "ui.lazerScrollSpeed": "Scrollsnelheid",
+  "assist.lazerGridHint": "lazer gebruikt geen rasteruitlijning. De Mapping-instelling blijft bewaard.",
+  "assist.lazerDistanceHint": "Afstandsuitlijning (T / Y); houd Alt vast om om te keren. Hulplijnen voor staan, lopen en sprinten.",
+  "timing.pageLazer": "Timing",
+  "tools.hint.lazerSelect": "Selecteer en wijzig noten. Ctrl+klik: toevoegen. Rechts: menu. Midden of Shift+rechts: verwijderen. Middensleep op lege ruimte: selectiekader.",
+  "tools.hint.lazerFruit": "Links: fruit plaatsen. Rechts op object: menu. Midden of Shift+rechts: verwijderen.",
+  "tools.hint.lazerSliderLegacy": "Links: slider starten of punt toevoegen. Rechts: voltooien. Op hetzelfde punt klikken: nieuw segment.",
+  "tools.hint.lazerSliderPen": "Links: slider starten of anker toevoegen. Slepen: krommen; Ctrl+klik: recht anker. Rechts: voltooien."
 }

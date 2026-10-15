@@ -5,6 +5,8 @@ using L = FruitsAtelier.Localization.Strings;
 
 namespace FruitsAtelier.Core;
 
+public enum CatchHitLightingMode { FollowMode, On, Off }
+
 public sealed class LibrarySettings
 {
     public EditorDockLayouts? DockLayouts { get; set; }
@@ -33,6 +35,13 @@ public sealed class LibrarySettings
     public bool DerandomizeDroplets { get; set; } = true;
     public bool DerandomizeNewProjects { get; set; } = true;
     public bool ExperimentalSnapDivisions { get; set; }
+    public bool LazerEditing { get; set; }
+    private CatchHitLightingMode catchHitLighting;
+    public CatchHitLightingMode CatchHitLighting
+    {
+        get => catchHitLighting;
+        set => catchHitLighting = Enum.IsDefined(value) ? value : CatchHitLightingMode.FollowMode;
+    }
     public bool ReverseCanvasScroll { get; set; }
     public bool LockDropletSelection { get; set; } = true;
     public bool LowLatencyDisplay { get; set; }

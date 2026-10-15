@@ -1436,5 +1436,17 @@
   "aimod.inheritedBeforeTiming": "An inherited timing point occurs before the first uninherited timing point.",
   "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point.",
   "project.pinDifficulty": "Fijar dificultad",
-  "project.unpinDifficulty": "Desfijar dificultad"
+  "project.unpinDifficulty": "Desfijar dificultad",
+  "settings.lazerEditing": "Edición lazer: {0}",
+  "skin.hitLightingFollowMode": "Destello al atrapar: según el modo",
+  "skin.hitLightingOn": "Destello al atrapar: activado",
+  "skin.hitLightingOff": "Destello al atrapar: desactivado",
+  "ui.lazerScrollSpeed": "Velocidad de desplazamiento",
+  "assist.lazerGridHint": "lazer no usa el ajuste a cuadrícula. Se conserva la preferencia de Mapping.",
+  "assist.lazerDistanceHint": "Ajuste de distancia (T / Y); mantén Alt para invertir. Guías de reposo, caminata y carrera.",
+  "timing.pageLazer": "Timing",
+  "tools.hint.lazerSelect": "Selecciona y modifica notas. Ctrl+clic: añadir. Clic derecho: menú. Clic central o Mayús+derecho: borrar. Arrastre central en vacío: selección.",
+  "tools.hint.lazerFruit": "Clic izquierdo: fruta. Clic derecho en objeto: menú. Clic central o Mayús+derecho: borrar.",
+  "tools.hint.lazerSliderLegacy": "Clic izquierdo: iniciar slider o añadir punto. Derecho: finalizar. Repetir clic en un punto: nuevo tramo.",
+  "tools.hint.lazerSliderPen": "Clic izquierdo: iniciar slider o añadir ancla. Arrastra para curvar; Ctrl+clic: ancla recta. Derecho: finalizar."
 }

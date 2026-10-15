@@ -1436,5 +1436,17 @@
   "aimod.inheritedBeforeTiming": "An inherited timing point occurs before the first uninherited timing point.",
   "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point.",
   "project.pinDifficulty": "Закрепить сложность",
-  "project.unpinDifficulty": "Открепить сложность"
+  "project.unpinDifficulty": "Открепить сложность",
+  "settings.lazerEditing": "Редактирование lazer: {0}",
+  "skin.hitLightingFollowMode": "Подсветка ловли: по режиму",
+  "skin.hitLightingOn": "Подсветка ловли: вкл.",
+  "skin.hitLightingOff": "Подсветка ловли: выкл.",
+  "ui.lazerScrollSpeed": "Скорость прокрутки",
+  "assist.lazerGridHint": "Привязка к сетке не используется в lazer. Настройка Mapping сохраняется.",
+  "assist.lazerDistanceHint": "Привязка расстояния (T / Y); Alt временно меняет состояние. Направляющие стояния, ходьбы и рывка.",
+  "timing.pageLazer": "Тайминг",
+  "tools.hint.lazerSelect": "Выбор и изменение нот. Ctrl+щелчок: добавить. Правая кнопка: меню. Средняя или Shift+правая: удалить. Средняя по пустому месту: рамка.",
+  "tools.hint.lazerFruit": "Левая кнопка: фрукт. Правая по объекту: меню. Средняя или Shift+правая: удалить.",
+  "tools.hint.lazerSliderLegacy": "Левая кнопка: начать слайдер, добавить точку. Правая: завершить. Повторный щелчок по точке: новый сегмент.",
+  "tools.hint.lazerSliderPen": "Левая кнопка: начать слайдер, добавить узел. Перетаскивание: форма. Ctrl+щелчок: прямой узел. Правая: завершить."
 }

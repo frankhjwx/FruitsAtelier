@@ -1436,5 +1436,17 @@
   "aimod.inheritedBeforeTiming": "An inherited timing point occurs before the first uninherited timing point.",
   "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point.",
   "project.pinDifficulty": "Przypnij poziom trudności",
-  "project.unpinDifficulty": "Odepnij poziom trudności"
+  "project.unpinDifficulty": "Odepnij poziom trudności",
+  "settings.lazerEditing": "Edycja lazer: {0}",
+  "skin.hitLightingFollowMode": "Błysk przy łapaniu: według trybu",
+  "skin.hitLightingOn": "Błysk przy łapaniu: włączony",
+  "skin.hitLightingOff": "Błysk przy łapaniu: wyłączony",
+  "ui.lazerScrollSpeed": "Prędkość przewijania",
+  "assist.lazerGridHint": "Siatka nie jest używana w edycji lazer. Ustawienie Mapping pozostaje zapisane.",
+  "assist.lazerDistanceHint": "Przyciąganie odległości (T / Y); Alt odwraca stan. Prowadnice stania, chodu i biegu.",
+  "timing.pageLazer": "Timing",
+  "tools.hint.lazerSelect": "Wybór i edycja nut. Ctrl+klik: dodaj. Prawy: menu. Środkowy lub Shift+prawy: usuń. Środkowe przeciągnięcie pustego miejsca: ramka.",
+  "tools.hint.lazerFruit": "Lewy klik: owoc. Prawy na obiekcie: menu. Środkowy lub Shift+prawy: usuń.",
+  "tools.hint.lazerSliderLegacy": "Lewy klik: rozpocznij slider lub dodaj punkt. Prawy: zakończ. Ponowny klik punktu: nowy segment.",
+  "tools.hint.lazerSliderPen": "Lewy klik: rozpocznij slider lub dodaj węzeł. Przeciągnij: krzywa; Ctrl+klik: prosty węzeł. Prawy: zakończ."
 }

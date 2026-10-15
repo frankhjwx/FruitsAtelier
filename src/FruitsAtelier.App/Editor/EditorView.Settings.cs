@@ -22,6 +22,8 @@ public sealed partial class EditorView
     public Action<bool>? RequestFullscreen { get; set; }
     private bool draftFullscreen, fullscreenShortcutHeld;
     private bool draftExperimentalSnapDivisions;
+    private bool draftLazerEditing;
+    internal Rect LazerEditingToggleBounds { get; private set; }
     private bool draftReverseCanvasScroll;
     private double draftTestplayStartupDelaySeconds;
     private double draftTestplaySpeed;
@@ -109,6 +111,7 @@ public sealed partial class EditorView
         draftDerandomizeDroplets = LibrarySettings.DerandomizeDroplets;
         draftDerandomizeNewProjects = LibrarySettings.DerandomizeNewProjects;
         draftExperimentalSnapDivisions = LibrarySettings.ExperimentalSnapDivisions;
+        draftLazerEditing = LibrarySettings.LazerEditing;
         draftReverseCanvasScroll = LibrarySettings.ReverseCanvasScroll;
         draftLowLatencyDisplay = LibrarySettings.LowLatencyDisplay;
         draftUiScalePercent = LibrarySettings.UiScalePercent;
@@ -149,6 +152,7 @@ public sealed partial class EditorView
         draftUiScalePercent != LibrarySettings.UiScalePercent ||
         draftFullscreen != LibrarySettings.Fullscreen ||
         draftExperimentalSnapDivisions != LibrarySettings.ExperimentalSnapDivisions ||
+        draftLazerEditing != LibrarySettings.LazerEditing ||
         draftReverseCanvasScroll != LibrarySettings.ReverseCanvasScroll ||
         draftSettingsColours[0] != LibrarySettings.StandIndicatorColour ||
         draftSettingsColours[1] != LibrarySettings.WalkIndicatorColour ||
@@ -272,6 +276,10 @@ public sealed partial class EditorView
                 SettingsButton(c, new(SettingsContentX, snapToggleTop + 12, SettingsContentWidth, SettingsControlHeight),
                     L.Get(draftExperimentalSnapDivisions ? "settings.romanisedOn" : "settings.romanisedOff"),
                     () => draftExperimentalSnapDivisions = !draftExperimentalSnapDivisions, draftExperimentalSnapDivisions);
+                LazerEditingToggleBounds = new(SettingsContentX, snapToggleTop + 76, SettingsContentWidth, SettingsControlHeight);
+                SettingsButton(c, LazerEditingToggleBounds,
+                    L.Get("settings.lazerEditing", L.Get(draftLazerEditing ? "settings.romanisedOn" : "settings.romanisedOff")),
+                    () => draftLazerEditing = !draftLazerEditing, draftLazerEditing);
                 break;
             case SettingsCategory.MappingCanvas:
                 DrawMappingCanvasSettings(c);
@@ -348,6 +356,8 @@ public sealed partial class EditorView
             settings.UiScalePercent = draftUiScalePercent;
             settings.Fullscreen = draftFullscreen;
             settings.ExperimentalSnapDivisions = draftExperimentalSnapDivisions;
+            settings.LazerEditing = draftLazerEditing;
+            settings.CatchHitLighting = LibrarySettings.CatchHitLighting;
             settings.ReverseCanvasScroll = draftReverseCanvasScroll;
             settings.StandIndicatorColour = draftSettingsColours[0]; settings.WalkIndicatorColour = draftSettingsColours[1];
             settings.DashIndicatorColour = draftSettingsColours[2]; settings.HyperDashIndicatorColour = draftSettingsColours[3];
@@ -381,7 +391,10 @@ public sealed partial class EditorView
                 InitializeSkin(); return;
             }
             bool fullscreenChanged = settings.Fullscreen != LibrarySettings.Fullscreen;
+            bool lazerEditingChanged = settings.LazerEditing != LibrarySettings.LazerEditing;
+            if (lazerEditingChanged) CancelInteraction();
             SaveLibraryMemory(); LibrarySettings = settings;
+            if (lazerEditingChanged) ResetLazerPresentation();
             if (!settings.ExperimentalSnapDivisions)
             {
                 RestoreTemporarySnap();

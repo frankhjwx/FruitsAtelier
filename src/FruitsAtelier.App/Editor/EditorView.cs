@@ -213,16 +213,16 @@ public sealed partial class EditorView
     private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp);
     private float FullPlayfieldWidth => plot.Width * 512 / (512 + PlayfieldPadding * 2);
     private double MinimumCanvasZoom => Math.Min(1, MinimumPlayfieldWidth / Math.Max(1, FullPlayfieldWidth));
-    private float PlayfieldScale => FullPlayfieldWidth * (float)canvasZoom / 512;
+    private float PlayfieldScale => IsLazerEditing ? LazerCanvasScale : FullPlayfieldWidth * (float)canvasZoom / 512;
     private Rect Playfield
     {
         get
         {
             float margin = (plot.Width - 512 * PlayfieldScale) / 2;
-            return new(plot.X + margin + (float)canvasPanX, plot.Y, 512 * PlayfieldScale, plot.Height);
+            return new(plot.X + margin + (IsLazerEditing ? 0 : (float)canvasPanX), plot.Y, 512 * PlayfieldScale, plot.Height);
         }
     }
-    private TimelineTransform Transform => new(Playfield.X, plot.Bottom, Playfield.Width, viewStart, pixelsPerMs);
+    private TimelineTransform Transform => new(Playfield.X, plot.Bottom, Playfield.Width, PresentationViewStart, pixelsPerMs);
     private Fruit? SelectedFruit => Document.Fruits.FirstOrDefault(f => f.Id == selection);
     private CurveTrack? SelectedTrack => Document.Tracks.FirstOrDefault(t => t.Id == selectedTrack || t.Id == selection);
     private Anchor? SelectedAnchor => SelectedTrack?.Nodes.FirstOrDefault(n => n.Id == selection);
@@ -258,10 +258,10 @@ public sealed partial class EditorView
 
     private void ClampView()
     {
-        if (ViewportFrozenByDrag) return;
-        if (AudioPlaying || pinPlayhead) { FollowPlayhead(); return; }
+        if (ViewportFrozenByDrag && !IsLazerEditing) return;
+        if (IsLazerEditing || AudioPlaying || pinPlayhead) { FollowPlayhead(); return; }
         // Blank time before the start and after the end keeps the playback line fixed at both endpoints.
-        double padding = plot.Height * playbackLineFromBottom / pixelsPerMs;
+        double padding = plot.Height * EffectivePlaybackLineFromBottom / pixelsPerMs;
         viewStart = Math.Clamp(viewStart, -padding, Math.Max(-padding, TimelineDurationMs - padding));
         // Float pointer deltas can leave a sub-microsecond remainder when navigating back to zero.
         if (Math.Abs(viewStart) < 0.001) viewStart = 0;
@@ -275,6 +275,11 @@ public sealed partial class EditorView
 
     private void SetCanvasZoom(float x)
     {
+        if (IsLazerEditing)
+        {
+            SetLazerScrollMultiplier(10 - 9 * Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1));
+            return;
+        }
         double scale = MinimumCanvasZoom + Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1) * (MaximumCanvasZoom - MinimumCanvasZoom);
         // The slider has no canvas pointer anchor: keep the viewport centre stable while paused.
         if (!AudioPlaying) pinPlayhead = false;

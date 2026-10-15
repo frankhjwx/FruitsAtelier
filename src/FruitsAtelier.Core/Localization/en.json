@@ -1436,5 +1436,17 @@
   "aimod.inheritedBeforeTiming": "An inherited timing point occurs before the first uninherited timing point.",
   "aimod.firstTimingKiai": "Kiai is enabled on the first uninherited timing point.",
   "project.pinDifficulty": "Pin difficulty",
-  "project.unpinDifficulty": "Unpin difficulty"
+  "project.unpinDifficulty": "Unpin difficulty",
+  "settings.lazerEditing": "lazer editing: {0}",
+  "skin.hitLightingFollowMode": "Hit lighting: Follow mode",
+  "skin.hitLightingOn": "Hit lighting: On",
+  "skin.hitLightingOff": "Hit lighting: Off",
+  "ui.lazerScrollSpeed": "Scroll speed",
+  "assist.lazerGridHint": "Grid Snap is unused in lazer editing. The Mapping preference is retained.",
+  "assist.lazerDistanceHint": "Distance Snap (T / Y); hold Alt to invert. Uses stand, perfect-walk and perfect-dash guides.",
+  "timing.pageLazer": "Timing",
+  "tools.hint.lazerSelect": "Select and modify notes. Ctrl+click: add to selection. Right-click: object menu. Middle-click or Shift+right-click: delete. Middle-drag empty space: marquee.",
+  "tools.hint.lazerFruit": "Left-click: place fruit. Right-click object: menu. Middle-click or Shift+right-click object: delete.",
+  "tools.hint.lazerSliderLegacy": "Left-click: start slider or add point. Right-click: finish slider. Click the same point again to start a new curve section.",
+  "tools.hint.lazerSliderPen": "Left-click: start slider or add anchor. Drag to shape; Ctrl+click: straight anchor. Right-click: finish slider."
 }

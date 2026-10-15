@@ -63,6 +63,7 @@ public sealed partial class EditorView
             previewDrainTime = PreviewDrainTime();
             previewHyperdash = HyperDashCalculator.GetHyperDashStarts(previewObjects, PreviewCircleSize);
             previewAutoplay = new(previewObjects, PreviewCircleSize);
+            previewLighting = BuildLighting(previewObjects, previewAutoplay);
             var entries = ComboEntries().ToArray();
             var tails = previewObjects.GroupBy(item => item.SourceId).ToDictionary(group => group.Key, group => group.Last());
             var streamIds = Document.Tracks.Where(t => t.StreamSnapDivisor is not null).Select(t => t.Id).ToHashSet();
@@ -120,8 +121,8 @@ public sealed partial class EditorView
     private void DrawPreviewPlate(ICanvas c, float fieldLeft, float fieldWidth, float catchY)
     {
         PreviewObjects();
-        PreviewCatcherX = previewAutoplay!.At(playhead).X;
-        DrawCaughtPlate(c, previewPlate!.At(playhead, PreviewCatcherX), fieldLeft, fieldWidth, catchY);
+        PreviewCatcherX = previewAutoplay!.At(LazerPresentationTime).X;
+        DrawCaughtPlate(c, previewPlate!.At(LazerPresentationTime, PreviewCatcherX), fieldLeft, fieldWidth, catchY);
     }
     private void DrawCaughtPlate(ICanvas c, IEnumerable<CatchPlateSprite> sprites, float fieldLeft, float fieldWidth, float catchY)
     {
@@ -133,23 +134,24 @@ public sealed partial class EditorView
     private void DrawPreviewCatcher(ICanvas c, float fieldLeft, float fieldWidth, float catchY)
     {
         PreviewObjects();
-        var frame = previewAutoplay!.At(playhead);
+        var frame = previewAutoplay!.At(LazerPresentationTime);
         PreviewCatcherX = frame.X;
         float x = fieldLeft + (float)(frame.X / 512) * fieldWidth;
         uint hyperColour = HyperDashColour;
         // Sample map time, not render history, so pause, seek and playback speed produce identical trails.
-        for (double at = Math.Max(0, Math.Ceiling((playhead - 800) / 16) * 16); at <= playhead; at += 16)
+        for (double at = Math.Max(0, Math.Ceiling((LazerPresentationTime - 800) / 16) * 16); at <= LazerPresentationTime; at += 16)
         {
             var past = previewAutoplay.At(at);
             bool hyper = previewAutoplay.HyperDashingAt(at);
             if (!past.Dashing && !hyper) continue;
             DrawCatcherTrail(c, new(at, past.X, previewAutoplay.FacingLeftAt(at), hyper, false), fieldLeft, fieldWidth, catchY);
         }
-        foreach (double start in previewAutoplay.HyperStarts(playhead - 1200, playhead))
+        foreach (double start in previewAutoplay.HyperStarts(LazerPresentationTime - 1200, LazerPresentationTime))
             DrawCatcherTrail(c, new(start, previewAutoplay.At(start).X, previewAutoplay.FacingLeftAt(start), true, true), fieldLeft, fieldWidth, catchY);
-        DrawCatcherBody(c, x, catchY, fieldWidth, 0xFFFFFF, 1, false, previewAutoplay.FacingLeftAt(playhead));
-        float tint = (float)previewAutoplay.HyperTintAt(playhead);
-        if (tint > .001f) DrawCatcherBody(c, x, catchY, fieldWidth, hyperColour, tint, false, previewAutoplay.FacingLeftAt(playhead));
+        DrawCatcherBody(c, x, catchY, fieldWidth, 0xFFFFFF, 1, false, previewAutoplay.FacingLeftAt(LazerPresentationTime));
+        float tint = (float)previewAutoplay.HyperTintAt(LazerPresentationTime);
+        if (tint > .001f) DrawCatcherBody(c, x, catchY, fieldWidth, hyperColour, tint, false, previewAutoplay.FacingLeftAt(LazerPresentationTime));
+        DrawCatchLighting(c, previewLighting, LazerPresentationTime, x, fieldWidth, catchY, PreviewCircleSize);
     }
     private Guid sliderHoldId;
     private float sliderHoldX, sliderHoldY;
