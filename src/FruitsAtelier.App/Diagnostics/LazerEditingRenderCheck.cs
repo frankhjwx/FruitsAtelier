@@ -45,11 +45,16 @@ internal static class LazerEditingRenderCheck
                 editor.UpdateTransport(1250, 10000, true, false, false, null, null);
                 Paint("canvas");
                 var zoom = editor.ZoomSliderBounds;
-                Click(zoom.X + zoom.Width * (.6f - .25f) / 1.75f, zoom.Y + zoom.Height / 2);
+                Click(zoom.X + zoom.Width * (.6f - .25f) / .75f, zoom.Y + zoom.Height / 2);
                 Thread.Sleep(220);
                 Paint("game-screen-frame");
-                zoom = editor.ZoomSliderBounds;
-                Click(zoom.Right, zoom.Y + zoom.Height / 2);
+                var scaleLock = editor.CanvasScaleLockBounds;
+                Click(scaleLock.X + 5, scaleLock.Y + 5);
+                for (int axis = 0; axis < 2; axis++)
+                {
+                    zoom = editor.CanvasAxisZoomBounds(axis);
+                    Click(zoom.Right - .01f, zoom.Y + zoom.Height / 2);
+                }
                 Thread.Sleep(220);
                 Paint();
                 var panPlot = editor.CanvasPlotBounds;
@@ -58,8 +63,8 @@ internal static class LazerEditingRenderCheck
                 editor.PointerMove(panX + 30, panY, false, false);
                 editor.PointerUp(panX + 30, panY, 1);
                 Paint("horizontal-pan");
-                zoom = editor.ZoomSliderBounds;
-                Click(zoom.X + zoom.Width * .75f / 1.75f, zoom.Y + zoom.Height / 2);
+                scaleLock = editor.CanvasScaleLockBounds;
+                Click(scaleLock.X + 5, scaleLock.Y + 5);
                 Thread.Sleep(220);
                 Paint();
                 var preview = editor.PreviewToggleBounds;

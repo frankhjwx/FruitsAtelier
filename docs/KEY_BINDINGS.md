@@ -46,7 +46,7 @@ assignments and Mapping view preferences are preserved when switching modes.
 | Middle-button drag on canvas | Pan horizontally without seeking, bounded by the enlarged game screen. |
 | Middle-button drag on empty object timeline | Marquee selection. |
 | Shift+click object timeline | Select the full range from the selection pivot; Ctrl adds it to the current selection. |
-| Alt+wheel over canvas | Scale both axes together around the fixed catch line, with 200 ms easing; session range 25%–200%. |
+| Alt+wheel over canvas | Scale both axes together around the fixed catch line, with 200 ms easing; 25%–100% while locked, up to 200% when unlocked. |
 | Ctrl+Alt+wheel | No Compose action. |
 
 Ctrl+wheel uses the common family `1, 2, 4, 8, 16`, the triplet family

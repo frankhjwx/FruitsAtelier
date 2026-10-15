@@ -45,13 +45,14 @@ plate trajectories. The saved Mapping playback-line ratio remains independent
 of the lazer line and is restored when returning to Mapping.
 
 The lazer field scale is `min(0.8 × plotWidth / 512, 0.9 × plotHeight / 384)`
-multiplied by the session canvas zoom. Alt+wheel over the canvas changes this
-zoom by a factor of 1.16 per notch, from 25% to 200%, with 200 ms OutQuint easing.
-Horizontal positions and time spacing scale together around the fixed catch line;
-the current time and saved Mapping zoom are preserved. The toolbar Zoom slider
-controls the same value. Middle-button dragging pans horizontally without seeking;
+multiplied by the session horizontal zoom. Zoom starts locked at 100%, with a
+25%–100% range. Unlocking shows separate X and Y sliders, each reaching 200%.
+Locking again aligns Y to X and caps both at 100%. Alt+wheel scales both axes by
+1.16 per notch, including while unlocked. Changes use 200 ms OutQuint easing
+around the fixed catch line, preserving current time and saved Mapping preferences.
+Middle-button dragging pans horizontally without seeking;
 pan is bounded by the game-screen width and recentres as zoom is reduced.
-Its time scale is `384 × fieldScale / preemptMs / scrollMultiplier`, using the
+Its time scale is `384 × baseScale × verticalZoom / preemptMs / scrollMultiplier`, using the
 untruncated AR preempt. The session scroll multiplier ranges from 1 to 10;
 larger values show more future time. F3 slows scrolling and F4 speeds it up.
 

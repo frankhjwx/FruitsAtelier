@@ -11,6 +11,8 @@ public sealed partial class EditorView
     private double lazerTimelineFrom = 1d / 6000, lazerTimelineTarget = 1d / 6000;
     private double lazerTimelineStarted = double.NegativeInfinity;
     private double lazerZoomFrom = 1, lazerZoomTarget = 1, lazerZoomStarted = double.NegativeInfinity;
+    private double lazerTimeZoomFrom = 1, lazerTimeZoomTarget = 1;
+    private bool lazerUniformScale = true;
     private double lazerPanX;
     private double LazerTimelineMinimum => 1 / Math.Min(Math.Max(1, TimelineDurationMs), 10000);
     private double LazerTimelineMaximum => 1 / Math.Min(Math.Max(1, TimelineDurationMs), 500);
@@ -27,8 +29,11 @@ public sealed partial class EditorView
         ? LazerEase(lazerSeekFrom, lazerSeekTo, lazerSeekStarted, 300) : playhead;
     private double PresentationViewStart => IsLazerEditing ? viewStart + LazerPresentationTime - playhead : viewStart;
     internal float LazerCatchLineY => plot.Y + plot.Height * .9f;
-    internal float LazerCanvasScale => Math.Min(plot.Width * .8f / 512, plot.Height * .9f / 384)
+    private float LazerBaseScale => Math.Min(plot.Width * .8f / 512, plot.Height * .9f / 384);
+    internal float LazerCanvasScale => LazerBaseScale
         * (float)LazerEase(lazerZoomFrom, lazerZoomTarget, lazerZoomStarted, 200);
+    private double LazerTimeScale => LazerBaseScale
+        * LazerEase(lazerTimeZoomFrom, lazerTimeZoomTarget, lazerZoomStarted, 200);
     private double EffectivePlaybackLineFromBottom => IsLazerEditing
         ? (plot.Bottom - LazerCatchLineY) / Math.Max(1, plot.Height) : playbackLineFromBottom;
     private double LazerScrollMultiplier => LazerEase(lazerScrollFrom, lazerScrollTarget, lazerScrollStarted, 200);
@@ -49,6 +54,7 @@ public sealed partial class EditorView
         lazerTimelineFrom = lazerTimelineTarget;
         lazerZoomStarted = double.NegativeInfinity;
         lazerZoomFrom = lazerZoomTarget;
+        lazerTimeZoomFrom = lazerTimeZoomTarget;
         lazerPresentationInitialized = false;
         if (plot.Height > 0 && pixelsPerMs > 0) FollowPlayhead();
     }
@@ -103,14 +109,21 @@ public sealed partial class EditorView
     }
 
     private void ZoomLazerCanvas(double notches)
-        => SetLazerCanvasZoom(lazerZoomTarget * Math.Pow(1.16, notches));
+        => SetLazerCanvasScales(lazerZoomTarget * Math.Pow(1.16, notches),
+            lazerTimeZoomTarget * Math.Pow(1.16, notches));
 
     private void SetLazerCanvasZoom(double value)
+        => SetLazerCanvasScales(value, value);
+
+    private void SetLazerCanvasScales(double horizontal, double vertical)
     {
-        double next = Math.Clamp(value, .25, 2);
-        if (next == lazerZoomTarget) return;
+        double next = Math.Clamp(horizontal, MinimumCanvasZoom, MaximumCanvasZoom);
+        double nextTime = UniformCanvasScale ? next : Math.Clamp(vertical, MinimumCanvasZoom, 2);
+        if (next == lazerZoomTarget && nextTime == lazerTimeZoomTarget) return;
         lazerZoomFrom = LazerEase(lazerZoomFrom, lazerZoomTarget, lazerZoomStarted, 200);
+        lazerTimeZoomFrom = LazerEase(lazerTimeZoomFrom, lazerTimeZoomTarget, lazerZoomStarted, 200);
         lazerZoomTarget = next;
+        lazerTimeZoomTarget = nextTime;
         lazerZoomStarted = TestplayRealtime;
     }
 }

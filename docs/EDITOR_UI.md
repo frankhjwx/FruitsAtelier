@@ -29,7 +29,10 @@ The lazer canvas shows an automatic catcher at a fixed judgement line. The line
 stays 10% above the bottom of the plot; catcher artwork below the canvas is clipped.
 White corner brackets mark the complete 4:3 game screen, using the same proportions
 as Catch Preview's Fit reference. The Zoom slider and Alt+wheel over the canvas
-scale both axes together with easing, keeping the catch line fixed. Middle-button
+scale both axes together with easing, keeping the catch line fixed. The lock defaults
+to linked axes capped at 100%. Unlocking shows independent X/Y sliders up to 200%;
+locking again aligns Y to X and caps both at 100%. These lazer zoom settings are
+session-only and separate from saved Mapping preferences. Middle-button
 dragging pans horizontally to inspect the enlarged screen without seeking. Caught objects
 disappear from the canvas when their timestamp is reached; they do not
 accumulate on this canvas. Catch Preview and testplay retain their plate stacks.

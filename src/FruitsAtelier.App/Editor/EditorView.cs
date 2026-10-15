@@ -212,7 +212,7 @@ public sealed partial class EditorView
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
     private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp);
     private float FullPlayfieldWidth => plot.Width * 512 / (512 + PlayfieldPadding * 2);
-    private double MinimumCanvasZoom => Math.Min(1, MinimumPlayfieldWidth / Math.Max(1, FullPlayfieldWidth));
+    private double MinimumCanvasZoom => IsLazerEditing ? .25 : Math.Min(1, MinimumPlayfieldWidth / Math.Max(1, FullPlayfieldWidth));
     private float PlayfieldScale => IsLazerEditing ? LazerCanvasScale : FullPlayfieldWidth * (float)canvasZoom / 512;
     private Rect Playfield
     {
@@ -277,7 +277,8 @@ public sealed partial class EditorView
     {
         if (IsLazerEditing)
         {
-            SetLazerCanvasZoom(.25 + 1.75 * Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1));
+            SetLazerCanvasZoom(MinimumCanvasZoom + (MaximumCanvasZoom - MinimumCanvasZoom)
+                * Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1));
             return;
         }
         double scale = MinimumCanvasZoom + Math.Clamp((x - zoomSlider.X) / zoomSlider.Width, 0, 1) * (MaximumCanvasZoom - MinimumCanvasZoom);

@@ -80,8 +80,11 @@ public sealed partial class EditorView
         LayoutDockPanels();
         plot = new(canvas.X + 70, canvas.Y + 76 + ObjectTimelineHeight, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 88 - ObjectTimelineHeight));
         overview = new(420, TransportTop + 10 + (TransportRowHeight - OverviewHeight) / 2, Math.Max(100, width - 448), OverviewHeight);
-        canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, MaximumCanvasZoom);
-        canvasTimeZoom = UniformCanvasScale ? canvasZoom : Math.Clamp(canvasTimeZoom, MinimumCanvasZoom, 2);
+        if (!IsLazerEditing)
+        {
+            canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, MaximumCanvasZoom);
+            canvasTimeZoom = UniformCanvasScale ? canvasZoom : Math.Clamp(canvasTimeZoom, MinimumCanvasZoom, 2);
+        }
         ClampCanvasPan();
         pixelsPerMs = CanvasPixelsPerMs;
         ClampView();
@@ -165,7 +168,7 @@ public sealed partial class EditorView
         float snapLeft = toolbarRight - 158;
         bool compactToolbar = CanvasToolbarBounds.Width < 900;
         bool narrowZoom = compactToolbar;
-        if (IsLazerEditing || UniformCanvasScale || !narrowZoom) c.Text(L.Get("ui.canvasZoom"), toolbarLeft + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
+        if (UniformCanvasScale || !narrowZoom) c.Text(L.Get("ui.canvasZoom"), toolbarLeft + (narrowZoom ? 8 : 16), canvas.Y + (narrowZoom ? 4 : 13), 11, Muted, 48);
         float breakWidth = compactToolbar ? 115 : 140;
         float breakX = snapLeft - breakWidth - 5;
         float toggleWidth = compactToolbar ? CanvasToolbarBounds.Width < 700 ? 75 : 105 : 155;
@@ -174,10 +177,10 @@ public sealed partial class EditorView
         float pathX = selectionX - toggleWidth - 5;
         zoomSlider = new(toolbarLeft + (narrowZoom ? 8 : 74), canvas.Y + 4,
             Math.Max(30, pathX - (narrowZoom ? 70 : 154) - toolbarLeft), 29);
-        if (!IsLazerEditing) DrawCanvasScaleLock(c);
-        if (IsLazerEditing || UniformCanvasScale)
+        DrawCanvasScaleLock(c);
+        if (UniformCanvasScale)
         {
-            float progress = IsLazerEditing ? (float)((lazerZoomTarget - .25) / 1.75)
+            float progress = IsLazerEditing ? (float)((lazerZoomTarget - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom))
                 : (float)(MaximumCanvasZoom - MinimumCanvasZoom > 0 ? (canvasZoom - MinimumCanvasZoom) / (MaximumCanvasZoom - MinimumCanvasZoom) : 1);
             float zoomX = zoomSlider.X + progress * zoomSlider.Width;
             float zoomY = canvas.Y + (narrowZoom ? 27 : 19);

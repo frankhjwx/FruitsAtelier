@@ -73,6 +73,11 @@ internal static class LazerPresentationTests
         double catchY = ui.View.LazerCatchLineY, timeBeforeZoom = ui.View.PlayheadMs;
         double mappingZoom = ui.View.LibrarySettings.CanvasZoom;
         var plot = ui.View.CanvasPlotBounds;
+        Check(ui.View.UniformCanvasScale, "Lazer zoom starts locked.");
+        ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + 10, 120, false, false, true);
+        clock.Milliseconds += 200; ui.Paint();
+        Near(initialWidth, ui.View.PlayfieldBounds.Width, .001);
+        ToggleLock();
         ui.View.Wheel(plot.X + plot.Width / 2, plot.Y + 10, 120, false, false, true);
         clock.Milliseconds += 200; ui.Paint();
         Near(initialWidth * 1.16, ui.View.PlayfieldBounds.Width, .001);
@@ -94,6 +99,18 @@ internal static class LazerPresentationTests
         Near(beforePan + 30, ui.View.PlayfieldBounds.X, .001);
         Near(timeBeforeZoom, ui.View.PlayheadMs);
         Near(catchY, ui.View.LazerCatchLineY);
+        SetAxis(0, .75);
+        Near(initialWidth * .75, ui.View.PlayfieldBounds.Width, .001);
+        Near(speedBeforeZoom * 2, ui.View.PixelsPerMs, .00001);
+        SetAxis(1, 1.5);
+        Near(initialWidth * .75, ui.View.PlayfieldBounds.Width, .001);
+        Near(speedBeforeZoom * 1.5, ui.View.PixelsPerMs, .00001);
+        SetAxis(0, 2);
+        ToggleLock();
+        clock.Milliseconds += 200; ui.Paint();
+        Near(initialWidth, ui.View.PlayfieldBounds.Width, .001);
+        Near(speedBeforeZoom, ui.View.PixelsPerMs, .00001);
+        Near(mappingZoom, ui.View.LibrarySettings.CanvasZoom);
         Check(before.ContentEquals(ui.View.Document) && !ui.View.IsDirty, "Presentation must not edit beatmap content.");
         ui.View.LibrarySettings.LazerEditing = false;
         Seek(7200);
@@ -109,8 +126,46 @@ internal static class LazerPresentationTests
         Near(displayed, ui.View.LazerPresentationTime);
         Check(!ui.View.LazerPresentationNeedsRedraw, "Starting then pausing must retire the old seek transform.");
         WheelSeekingKeepsDraggedObjectUnderPointer();
+        MovementLabelsFollowPresentation();
 
         void Seek(double target) => typeof(EditorView).GetMethod("SeekLazerSmoothlyTo", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(ui.View, [target]);
+        void ToggleLock()
+        {
+            var r = ui.View.CanvasScaleLockBounds;
+            ui.View.PointerDown(r.X + 5, r.Y + 5, 0, false, false);
+            ui.View.PointerUp(r.X + 5, r.Y + 5, 0);
+            ui.Paint();
+        }
+        void SetAxis(int axis, double value)
+        {
+            var r = ui.View.CanvasAxisZoomBounds(axis);
+            float x = Math.Min(r.Right - .01f, r.X + r.Width * (float)((value - .25) / 1.75));
+            ui.View.PointerDown(x, r.Y + r.Height / 2, 0, false, false);
+            ui.View.PointerUp(x, r.Y + r.Height / 2, 0);
+            clock.Milliseconds += 200; ui.Paint();
+        }
+    }
+
+    private static void MovementLabelsFollowPresentation()
+    {
+        var clock = new Clock();
+        var ui = new Ui(false, clock);
+        var map = new MapDocument { DurationMs = 10000, BeatLengthMs = 500, ApproachRate = 5 };
+        map.Fruits.AddRange([new Fruit { TimeMs = 1400, X = 160 }, new Fruit { TimeMs = 1800, X = 260 }]);
+        ui.View.LoadDocument(map);
+        ui.View.LibrarySettings.LazerEditing = true;
+        const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Instance;
+        typeof(EditorView).GetProperty("movementAnalysis", flags)!.SetValue(ui.View, true);
+        ui.View.UpdateTransport(1000, 10000, true, false, false, null, null);
+        ui.Paint();
+        double initialY = ui.View.DistanceLabelBounds.Single().Y;
+        typeof(EditorView).GetMethod("SeekLazerSmoothlyTo", flags)!.Invoke(ui.View, [1200d]);
+        ui.Paint();
+        Near(initialY, ui.View.DistanceLabelBounds.Single().Y, .001);
+        clock.Milliseconds += 75; ui.Paint();
+        double delta = (ui.View.LazerPresentationTime - 1000) * ui.View.PixelsPerMs;
+        Near(initialY + delta, ui.View.DistanceLabelBounds.Single().Y, .001);
+        Check(ui.View.LazerPresentationTime < 1200, "Movement labels are checked during the seek transition.");
     }
 
     private static void WheelSeekingKeepsDraggedObjectUnderPointer()

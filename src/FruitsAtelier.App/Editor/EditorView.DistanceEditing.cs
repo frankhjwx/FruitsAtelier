@@ -315,7 +315,7 @@ public sealed partial class EditorView
         var objects = placementMovementObjects ?? playableObjects;
         EnsureMovementStates(objects, movementIncludeTinyDroplets);
         EnsureDistanceLabelLayout(c, objects);
-        double endTime = viewStart + plot.Height / pixelsPerMs;
+        double endTime = PresentationViewStart + plot.Height / pixelsPerMs;
         var occupied = new List<Rect>();
         if (PlacementGhostPoint() is not null || FlagTargets().Length == 1)
         {
@@ -328,7 +328,7 @@ public sealed partial class EditorView
         while (low < high)
         {
             int mid = low + (high - low) / 2;
-            if (distanceLayout[mid].Time < viewStart) low = mid + 1; else high = mid;
+            if (distanceLayout[mid].Time < PresentationViewStart) low = mid + 1; else high = mid;
         }
         for (int i = low; i < distanceLayout.Count; i++)
         {
@@ -336,7 +336,7 @@ public sealed partial class EditorView
             if (label.Time > endTime) break;
             if (breakPeriods.Any(period => label.Time >= period.StartMs && label.Time <= period.EndMs)) continue;
             var bounds = new Rect(Playfield.X + label.X,
-                plot.Bottom - (float)((label.Time - viewStart) * pixelsPerMs) - 9, label.Width, 18);
+                Screen(new(label.Time, 0)).Y - 9, label.Width, 18);
             if (bounds.X < plot.X || bounds.Right > plot.Right || bounds.Y < plot.Y || bounds.Bottom > plot.Bottom
                 || occupied.Any(r => Intersects(r, bounds))) continue;
             c.Fill(bounds, Background, 3, .8f);

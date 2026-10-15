@@ -9,7 +9,7 @@ public sealed partial class EditorView
     private double canvasTimeZoom = .6;
     private double canvasPanX, panStartX;
     private int canvasScaleAxis = -1;
-    public bool UniformCanvasScale => LibrarySettings.UniformCanvasScale;
+    public bool UniformCanvasScale => IsLazerEditing ? lazerUniformScale : LibrarySettings.UniformCanvasScale;
     public double CanvasTimeZoom => UniformCanvasScale ? canvasZoom : canvasTimeZoom;
     public Rect CanvasScaleLockBounds { get; private set; }
     internal Rect CanvasAxisZoomBounds(int axis) => new(zoomSlider.X + 12,
@@ -18,11 +18,12 @@ public sealed partial class EditorView
     private double MaximumCanvasZoom => UniformCanvasScale ? 1 : 2;
     private double MaximumObjectTimelineScale => LibrarySettings.ExperimentalSnapDivisions ? 16 : 1.5;
     private double CanvasPixelsPerMs => IsLazerEditing
-        ? 384 * LazerCanvasScale / LazerPreempt / LazerScrollMultiplier
+        ? 384 * LazerTimeScale / LazerPreempt / LazerScrollMultiplier
         : CatchScrollTiming.PixelsPerMs(Document.ApproachRate, FullPlayfieldWidth * CanvasTimeZoom);
 
     private void SaveCanvasScale()
     {
+        if (IsLazerEditing) return;
         LibrarySettings.CanvasZoom = canvasZoom;
         LibrarySettings.CanvasTimeZoom = canvasTimeZoom;
         RequestViewPreference?.Invoke();
@@ -54,6 +55,12 @@ public sealed partial class EditorView
 
     private void ToggleUniformCanvasScale()
     {
+        if (IsLazerEditing)
+        {
+            lazerUniformScale = !lazerUniformScale;
+            if (lazerUniformScale) SetLazerCanvasZoom(lazerZoomTarget);
+            return;
+        }
         LibrarySettings.UniformCanvasScale = !UniformCanvasScale;
         if (UniformCanvasScale) SetCanvasScales(canvasZoom, canvasZoom, plot.Y + plot.Height / 2);
         else canvasTimeZoom = canvasZoom;
@@ -62,7 +69,6 @@ public sealed partial class EditorView
 
     private bool CanvasScalePointerDown(float x, float y, int button)
     {
-        if (IsLazerEditing) return false;
         if (TimingPageVisible || LibraryVisible || StreamDialogVisible || menu >= 0 || contextItems.Count > 0) return false;
         if (button == 0 && CanvasScaleLockBounds.Contains(x, y)) { ToggleUniformCanvasScale(); return true; }
         if (!UniformCanvasScale && button == 0)
@@ -76,6 +82,12 @@ public sealed partial class EditorView
     {
         var r = CanvasAxisZoomBounds(canvasScaleAxis);
         double value = MinimumCanvasZoom + Math.Clamp((x - r.X) / r.Width, 0, 1) * (2 - MinimumCanvasZoom);
+        if (IsLazerEditing)
+        {
+            SetLazerCanvasScales(canvasScaleAxis == 0 ? value : lazerZoomTarget,
+                canvasScaleAxis == 1 ? value : lazerTimeZoomTarget);
+            return;
+        }
         if (!AudioPlaying) pinPlayhead = false;
         SetCanvasScales(canvasScaleAxis == 0 ? value : canvasZoom,
             canvasScaleAxis == 1 ? value : canvasTimeZoom, plot.Y + plot.Height / 2);
@@ -101,7 +113,8 @@ public sealed partial class EditorView
         for (int axis = 0; axis < 2; axis++)
         {
             var slider = CanvasAxisZoomBounds(axis);
-            double value = axis == 0 ? canvasZoom : canvasTimeZoom;
+            double value = IsLazerEditing ? axis == 0 ? lazerZoomTarget : lazerTimeZoomTarget
+                : axis == 0 ? canvasZoom : canvasTimeZoom;
             float end = slider.X + (float)((value - MinimumCanvasZoom) / (2 - MinimumCanvasZoom)) * slider.Width;
             float y = slider.Y + slider.Height / 2;
             c.Text(axis == 0 ? "X" : "Y", zoomSlider.X, slider.Y + 1, 9, Muted, 10);
