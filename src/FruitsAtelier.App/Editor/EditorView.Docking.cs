@@ -146,7 +146,7 @@ public sealed partial class EditorView
                 rightWidth = rightOpen ? Math.Max(MinimumDockWidth, Math.Min(rightWidth, available - leftWidth)) : 0;
             }
         }
-        float bodyHeight = Math.Max(180, height - 204);
+        float bodyHeight = Math.Max(180, TransportTop - 84);
         leftPanel = new(0, 84, leftWidth, bodyHeight);
         rightPanel = new(width - (rightOpen ? rightWidth : 340), 84, rightOpen ? rightWidth : 340, rightOpen ? bodyHeight : 38);
         canvas = new(108 + leftWidth, 84, Math.Max(120, width - rightWidth - leftWidth - 109), bodyHeight);

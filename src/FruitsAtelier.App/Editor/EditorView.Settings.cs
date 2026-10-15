@@ -362,6 +362,8 @@ public sealed partial class EditorView
             settings.UniformCanvasScale = LibrarySettings.UniformCanvasScale;
             settings.MapEditingPreferences = LibrarySettings.MapEditingPreferences;
             settings.ObjectTimelineScale = LibrarySettings.ObjectTimelineScale;
+            settings.ObjectTimelineHeight = LibrarySettings.ObjectTimelineHeight;
+            settings.OverviewTimelineHeight = LibrarySettings.OverviewTimelineHeight;
             settings.WaveformSpanMs = LibrarySettings.WaveformSpanMs;
             if (settings.DefaultSkin is { } archive) settings.DefaultSkin = StoreSkinArchive(settings.Workspace, archive).Archive;
             bool rootsChanged = settings.Workspace != LibrarySettings.Workspace || settings.OsuRoot != LibrarySettings.OsuRoot;

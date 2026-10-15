@@ -208,7 +208,7 @@ public sealed partial class EditorView
     }
 
     private enum Tool { Select, Fruit, Slider, Banana }
-    private enum DragKind { None, PlaybackLine, Objects, SliderObject, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Break, BreakEdge, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail, PreviewResize, DifficultySeek }
+    private enum DragKind { None, PlaybackLine, Objects, SliderObject, Anchor, HandleIn, HandleOut, DraftHandle, BananaStart, BananaEnd, Pan, Timeline, Break, BreakEdge, Marquee, SnapDivisor, CanvasZoom, LegacyControl, TimelineTail, PreviewResize, DifficultySeek, TimelinePanelResize }
     private sealed record HitArea(Rect Bounds, Action Action, bool Enabled);
     private sealed record NumericField(Rect Bounds, string Label, double Value, Action<double> Apply, bool Timestamp);
     private float FullPlayfieldWidth => plot.Width * 512 / (512 + PlayfieldPadding * 2);

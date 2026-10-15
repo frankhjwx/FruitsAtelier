@@ -78,8 +78,8 @@ public sealed partial class EditorView
         if (updatesPage) { c.Fill(new(0, 0, width, height), Background); DrawUpdates(c); DrawDiscardConfirmation(c); return; }
         if (LibraryVisible) { DrawLibrary(c); if (!librarySettingsOpen) DrawUpdateNotice(c); DrawSettings(c); DrawContextMenu(c); DrawLanguageMenu(c); DrawSongSetup(c); DrawDiscardConfirmation(c); return; }
         LayoutDockPanels();
-        plot = new(canvas.X + 70, canvas.Y + 140, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 152));
-        overview = new(220, height - 77, Math.Max(100, width - 248), 40);
+        plot = new(canvas.X + 70, canvas.Y + 76 + ObjectTimelineHeight, Math.Max(50, canvas.Width - 198), Math.Max(80, canvas.Height - 88 - ObjectTimelineHeight));
+        overview = new(420, TransportTop + 10 + (TransportRowHeight - OverviewHeight) / 2, Math.Max(100, width - 448), OverviewHeight);
         canvasZoom = Math.Clamp(canvasZoom, MinimumCanvasZoom, MaximumCanvasZoom);
         canvasTimeZoom = UniformCanvasScale ? canvasZoom : Math.Clamp(canvasTimeZoom, MinimumCanvasZoom, 2);
         ClampCanvasPan();
@@ -114,6 +114,7 @@ public sealed partial class EditorView
             DrawCanvasBackgroundDim(c);
         }
         DrawTransport(c);
+        DrawTimelineResizers(c);
         DrawStatus(c);
         DrawUpdateNotice(c);
         DrawDockDrag(c);
@@ -216,13 +217,13 @@ public sealed partial class EditorView
         c.Circle(snapX, snapCenterY, 6, Accent);
         c.Text(L.Get("ui.snapDivisor", divisor), snapSlider.Right - 28, snapTextY, 11, Foreground, 40);
         c.Line(0, canvas.Y + 38, toolbarRight, canvas.Y + 38, Grid);
-        c.Text(L.Get("ui.timeAxis"), canvas.X + 11, canvas.Y + 120, 10, Muted, 43);
+        c.Text(L.Get("ui.timeAxis"), canvas.X + 11, plot.Y - 20, 10, Muted, 43);
         var playfield = Playfield;
-        c.Clip(new(plot.X - 16, canvas.Y + 118, plot.Width + 32, plot.Bottom - canvas.Y - 118));
+        c.Clip(new(plot.X - 16, plot.Y - 22, plot.Width + 32, plot.Height + 22));
         for (int x = 0; x <= 512; x += 128)
         {
             float sx = Screen(new(0, x)).X;
-            c.Text(x.ToString(), sx - 9, canvas.Y + 120, 10, Muted, 30);
+            c.Text(x.ToString(), sx - 9, plot.Y - 20, 10, Muted, 30);
             c.Line(sx, plot.Y, sx, plot.Bottom, x == 256 ? LibrarySettings.CanvasCentreLineColour : LibrarySettings.CanvasGridColour,
                 opacity: LibrarySettings.CanvasGridOpacity / 100f);
         }
@@ -565,37 +566,31 @@ public sealed partial class EditorView
 
     private void DrawTransport(ICanvas c)
     {
-        float top = height - 120;
-        c.Fill(new(0, top, width, 92), 0x20252E);
+        float top = TransportTop;
+        c.Fill(new(0, top, width, height - 28 - top), 0x20252E);
         c.Line(0, top, width, top, Grid);
-        TimeDisplayBounds = new(16, top + 7, 188, 27);
+        float timeY = overview.Y + (overview.Height - 27) / 2;
+        TimeDisplayBounds = new(16, timeY, 188, 27);
         if (TimeDisplayBounds.Contains(mouseX, mouseY)) c.Fill(TimeDisplayBounds, Surface, 4);
         string currentTime = Time(playhead);
-        c.Text(currentTime, 20, top + 10, 17, Foreground, 102, true);
+        c.Text(currentTime, 20, timeY + 3, 17, Foreground, 102, true);
         const float durationX = 125;
-        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), durationX, top + 14, 11, Muted,
+        c.Text("/ " + (AudioLoading ? "--:--:---" : Time(TimelineDurationMs)), durationX, timeY + 7, 11, Muted,
             Math.Max(0, TimeDisplayBounds.Right - durationX));
         hits.Add(new(TimeDisplayBounds, OpenTimeJump, true));
         if (TimeDisplayBounds.Contains(mouseX, mouseY) && !TimeJumpVisible)
             c.Text(L.Get("timeJump.title"), 20, top - 20, 12, Foreground, 200);
-        if (!AudioReady) c.Text(AudioNotice, 16, top + 79, 10, Gold, 192);
-
-        float rateX = overview.Right - 404;
+        if (!AudioReady) c.Text(AudioNotice, 16, height - 39, 10, Gold, 192);
         DrawTransportControls(c);
-        c.Text(L.Get("ui.playbackSpeed"), rateX, top + 12, 11, Muted, 104);
-        foreach (double rate in PlaybackRates)
-        {
-            Button(c, new(rateX + 104, top + 3, 48, 28), L.Get("ui.zoomPercent", rate * 100), () => SetPlaybackSpeed(rate), PlaybackSpeed == rate);
-            rateX += 50;
-        }
         c.Fill(overview, 0x141922, 4);
         if (AudioLoading) return;
         const float timelineMarkerOpacity = .8f;
         float TimelineX(double time) => overview.X + (float)(Math.Clamp(time, 0, TimelineDurationMs) / TimelineDurationMs) * overview.Width;
         var timing = overviewTiming;
-        c.Line(overview.X, overview.Y + 20, overview.Right, overview.Y + 20, 0xA0A0A0, 1, timelineMarkerOpacity);
-        const float spanHeight = 12;
-        float spanY = overview.Y + 20 - spanHeight / 2;
+        float centerY = overview.Y + overview.Height / 2;
+        c.Line(overview.X, centerY, overview.Right, centerY, 0xA0A0A0, 1, timelineMarkerOpacity);
+        float spanHeight = Math.Min(12, overview.Height * .6f);
+        float spanY = centerY - spanHeight / 2;
         double? kiaiStart = null;
         foreach (var transition in kiaiTransitions)
         {
@@ -626,7 +621,7 @@ public sealed partial class EditorView
             var point = timing[i];
             if (point.TimeMs < 0 || point.TimeMs > TimelineDurationMs) continue;
             float x = TimelineX(point.TimeMs);
-            c.Line(x, overview.Y + 2, x, overview.Y + 20, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
+            c.Line(x, overview.Y + 2, x, centerY, point.Uninherited ? 0xEA2222u : 0x7BC600u, 1, timelineMarkerOpacity);
         }
         double visibleStart = Math.Clamp(viewStart, 0, TimelineDurationMs);
         double visibleEnd = Math.Clamp(viewStart + plot.Height / pixelsPerMs, visibleStart, TimelineDurationMs);
@@ -646,7 +641,8 @@ public sealed partial class EditorView
         c.Circle(13, height - 14, 3, IsDirty ? Gold : Accent);
         string notice = workspaceSaveTask is not null ? L.Get("files.saving") : SynchronizationBusy ? L.Get(syncCommitTask is not null ? "sync.applying" : "sync.checking")
             : deferredConversion ? L.Get("editor.status.convertingSlider") : conversion?.Diagnostics.FirstOrDefault() ?? StatusMessage;
-        c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(60, width - 145));
+        float speedLabelX = DrawPlaybackSpeedSelector(c);
+        c.Text(notice, 25, height - 21, 11, !SynchronizationBusy && conversion?.Diagnostics.Count > 0 ? Error : Muted, Math.Max(0, speedLabelX - 33));
         DrawVolumeButton(c);
     }
 

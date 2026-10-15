@@ -114,6 +114,7 @@ public sealed partial class EditorView
         if (LibraryVisible && LibraryPointerDown(x, y, button)) return;
         if (LibraryVisible || ExportVisible) { if (button == 0) for (int i = hits.Count - 1; i >= 0; i--) if (hits[i].Bounds.Contains(x, y)) { if (hits[i].Enabled) hits[i].Action(); break; } return; }
         if (drag != DragKind.None) return;
+        if (BeginTimelinePanelResize(x, y, button)) return;
         if (BeginDockHorizontal(x, y, button)) return;
         if (BeginDockPointer(x, y, button)) return;
         if (AimodPointer(x, y, button, shift, ctrl)) return;
@@ -477,6 +478,7 @@ public sealed partial class EditorView
         if (librarySettingsOpen || ExportVisible || languageMenuOpen) return;
         if (LibraryVisible) { MoveLibraryPointer(y); return; }
         if (tabPointer) { MoveTabPointer(x); return; }
+        if (drag == DragKind.TimelinePanelResize) { MoveTimelinePanelResize(y); return; }
         if (drag == DragKind.PreviewResize)
         {
             ResizePreviewDock(x);
@@ -637,6 +639,7 @@ public sealed partial class EditorView
         if (LibraryVisible) { if (button == 0) EndLibraryPointer(x, y); return; }
         if (librarySettingsOpen || ExportVisible) return;
         if (drag == DragKind.None || button != (drag == DragKind.Pan ? 1 : 0)) return;
+        if (drag == DragKind.TimelinePanelResize) { MoveTimelinePanelResize(y); FinishTimelinePanelResize(cancel: false); return; }
         if (drag == DragKind.Break)
         {
             int end = OverviewTime(x);
@@ -1418,6 +1421,7 @@ public sealed partial class EditorView
 
     public void CancelInteraction(bool preserveTestplay = false)
     {
+        FinishTimelinePanelResize(cancel: true);
         EndTimelineScrub();
         notesSelecting = false; CancelAimodGesture(); aimodFocused = false;
         dockPressed = null; dockDragging = false;

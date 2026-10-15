@@ -12,7 +12,7 @@ public sealed partial class EditorView
         string[] hints = ["timeline.transport.play", "timeline.transport.pause", "timeline.transport.stop", "testplay.start"];
         for (int i = 0; i < actions.Length; i++)
         {
-            var r = new Rect(16 + i * 49, overview.Y + 4, 42, 32);
+            var r = TransportButtonBounds(i);
             if (i == 3) TestplayButtonBounds = r;
             bool hover = r.Contains(mouseX, mouseY);
             if (hover) c.Fill(r, 0x35404D, 4);

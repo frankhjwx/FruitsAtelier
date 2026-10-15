@@ -2,6 +2,15 @@ using FruitsAtelier.App.Editor;
 using FruitsAtelier.App.Rendering;
 using FruitsAtelier.Core;
 
+if (args.Contains("--timeline-layout-check"))
+{
+    TimelineLayoutTests.Run(); TimelineOverviewTests.TransportControls(); TimelineOverviewTests.Run(); TimelineOverviewTests.DetailMarkers();
+    ObjectTimelineTests.SpeedControls(); ObjectTimelineTests.SimultaneousStacks(); ObjectTimelineTests.NavigationAndSelection(); TimeJumpTests.Run();
+    MappingSessionTests.SnapAndVolume(); WheelGestureTests.Run();
+    TimelineDragTests.ReturnToStart(); TimelineDragTests.ClickAndLimits();
+    Console.WriteLine("PASS Resizable timelines, compact transport, speed selector and input"); return 0;
+}
+
 if (args.Contains("--ui-scale-check")) { UiScaleTests.Run(); SettingsTests.Layout(); DisplaySettingsTests.Run(); Console.WriteLine("PASS UI scale preferences, layout and input"); return 0; }
 
 if (args.Contains("--conversion-docks-check")) { ConversionDockShortcutTests.Run(); PatternNotesTests.Run(); Console.WriteLine("PASS Conversion dock shortcuts, action menus and live editing"); return 0; }
@@ -467,7 +476,8 @@ var tests = new (string Name, Action Run)[]
     ("Object timeline selects without seeking and scales independently", ObjectTimelineTests.NavigationAndSelection),
     ("Playing timeline marquee anchors time and retains offscreen selection", ObjectTimelineTests.PlaybackMarquee),
     ("Beat colors and widths agree on canvas and timeline across divisors", ObjectTimelineTests.GridColors),
-    ("Playback speed buttons work in both languages without editing content", ObjectTimelineTests.SpeedControls),
+    ("Playback speed selector works in both languages without editing content", ObjectTimelineTests.SpeedControls),
+    ("Timeline resizing preserves layout, preferences, cancellation and content", TimelineLayoutTests.Run),
     ("Independent canvas scales, pan, persistence and timeline limits", IndependentCanvasScaleTests.Run),
     ("Canvas starts at 60% and retains remembered zoom while enforcing minimum width", CanvasZoomTests.DefaultsAndReset),
     ("Zoom slider and wheel share scale, bounds and content isolation", CanvasZoomTests.SliderAndWheel),

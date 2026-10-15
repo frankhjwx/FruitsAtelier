@@ -80,8 +80,9 @@ internal static class TimelineDragTests
         var ui = new Ui();
         const double duration = 180000;
         ui.View.UpdateTransport(12000, duration, true, false, false, null, "song.mp3"); ui.Paint();
-        const float left = 220, width = 1192;
-        float y = ui.Height - 60;
+        var overview = ui.Canvas.Fills.Single(f => f.Color == 0x141922).Bounds;
+        float left = overview.X, width = overview.Width;
+        float y = overview.Y + overview.Height / 2;
         ui.View.PointerDown(left + width / 2, y, 0, false, false);
         Equal(duration / 2, ui.View.PlayheadMs, "Clicking empty timeline did not seek");
         ui.View.PointerMove(left - 100, y, false, false);

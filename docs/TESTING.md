@@ -652,6 +652,14 @@ are written under `artifacts/tests/banana-edit/native`.
 
 ## Independent viewport scaling
 
+`App.Tests --timeline-layout-check` checks both timelines' 50–100% height limits,
+saved view preferences, cancellation, minimum-height selection and seeking,
+transport alignment and the static playback-speed label with its percentage
+selector. `FruitsAtelier.App.exe --render-check --timeline-layout-render-check`
+exercises resizing and speed selection at every UI-scale step in English and
+Chinese at two client resolutions. Captures, including minimum heights, are
+stored under `artifacts/tests/timeline-layout-native`.
+
 `App.Tests --ui-scale-check` checks the 150% default, supported 25% steps,
 settings normalization, draft cancellation, persistence, layout and content isolation.
 `FruitsAtelier.App.exe --render-check --ui-scale-render-check` exercises every

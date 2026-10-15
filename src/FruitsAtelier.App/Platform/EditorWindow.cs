@@ -153,9 +153,9 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
-            if (Environment.GetCommandLineArgs().Contains("--ui-scale-render-check"))
+            if (Environment.GetCommandLineArgs().Contains("--ui-scale-render-check") || Environment.GetCommandLineArgs().Contains("--timeline-layout-render-check"))
             {
-                CheckUiScale();
+                CheckUiScale(timelineLayout: Environment.GetCommandLineArgs().Contains("--timeline-layout-render-check"));
                 Native.DestroyWindow(hwnd);
                 return 0;
             }
@@ -484,7 +484,7 @@ internal sealed partial class EditorWindow : IDisposable
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0020: // WM_SETCURSOR
                 if ((lParam.ToInt64() & 0xffff) == 1)
-                { Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512))); return 1; }
+                { Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelinePanelResizeCursor ? 32645 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512))); return 1; }
                 break;
             case 0x02A3: // WM_MOUSELEAVE
                 view.PointerLeave(); Invalidate(); return 0;
@@ -493,7 +493,7 @@ internal sealed partial class EditorWindow : IDisposable
                 Native.TrackMouseEvent(ref tracking);
                 view.SetModifiers(Native.Alt, Native.Shift);
                 view.PointerMove(x, y, Native.Shift, Native.Control);
-                Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512)));
+                Native.SetCursor(view.TestplayUsesCursor ? 0 : Native.LoadCursor(0, (nint)(view.TimelinePanelResizeCursor ? 32645 : view.TimelineResizeCursor || view.PreviewResizeCursor || view.AimodColumnResizeCursor || view.SelectionScaleCursor ? 32644 : 32512)));
                 UpdateTitle(); Invalidate(); return 0;
             case 0x0202:
             case 0x0205:

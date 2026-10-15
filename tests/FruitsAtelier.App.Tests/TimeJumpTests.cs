@@ -16,7 +16,8 @@ internal static class TimeJumpTests
             Near((ui.View.ObjectTimelineBounds.Y - 4 + buttons[0].Y) / 2 + 20,
                 (ui.View.SamplesetBounds.Y - 17 + ui.View.AdditionsBounds.Bottom) / 2);
             Check(ui.View.AdditionsBounds.Bottom < buttons[0].Y, "Sample selectors leave space above Select");
-            Near(ui.Height - 120 + 20.5, ui.View.TimeDisplayBounds.Y + ui.View.TimeDisplayBounds.Height / 2);
+            var play = ui.View.TransportButtonBounds(0);
+            Near(play.Y + play.Height / 2, ui.View.TimeDisplayBounds.Y + ui.View.TimeDisplayBounds.Height / 2);
         }
         string copied = "", clipboard = "03:03:311 (2,3) - "; double? seek = null;
         ui.View.RequestCopyText = text => copied = text;
