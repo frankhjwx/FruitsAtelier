@@ -553,9 +553,7 @@ internal static class ObjectTimelineTests
             L.SetLanguage(language); ui.Resize(980, 620);
             foreach (double speed in new[] { .1, .25, .5, .75, 1, 1.5 })
             {
-                var selector = ui.View.PlaybackSpeedSelectorBounds;
-                ui.Click(selector.X + 5, selector.Y + 5);
-                var text = ui.Canvas.Texts.Last(t => t.Value == (ui.View.PlaybackSpeed == speed ? "✓ " : "") + L.Get("ui.zoomPercent", speed * 100));
+                var text = ui.Canvas.Texts.Last(t => t.Value == L.Get("ui.zoomPercent", speed * 100));
                 ui.Click(text.X + 2, text.Y + 2);
                 if (requested != speed || ui.View.PlaybackSpeed != speed || ui.View.IsDirty)
                     throw new Exception("Speed selector did not update transport alone");

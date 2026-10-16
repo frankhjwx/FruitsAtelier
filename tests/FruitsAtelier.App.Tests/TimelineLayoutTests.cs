@@ -58,12 +58,16 @@ internal static class TimelineLayoutTests
                     "Applying other settings reset timeline heights.");
                 var selector = ui.View.PlaybackSpeedSelectorBounds;
                 var label = ui.Canvas.Texts.Single(t => t.Value == L.Get("ui.playbackSpeed"));
-                Check(label.X + label.MaxWidth < selector.X, "Playback speed label is not separate from the percentage selector.");
+                Check(label.X >= 0 && label.X + label.MaxWidth < selector.X, "Playback speed label overlaps the speed buttons or escapes the window.");
                 ui.Click(label.X + 4, label.Y + 4);
-                Check(!ui.Canvas.Texts.Any(t => t.Value.StartsWith("✓ ")), "Static playback speed label opened a menu.");
-                ui.Click(selector.X + 4, selector.Y + 4);
-                ui.Key(27);
-                Check(!ui.View.LibraryVisible && ui.View.PlaybackSpeed == 1, "Dismissing the speed selector changed speed or screen.");
+                Check(!ui.View.LibraryVisible && ui.View.PlaybackSpeed == 1, "Static playback speed label changed speed or screen.");
+                foreach (double rate in new[] { .1, .25, .5, .75, 1, 1.5 })
+                {
+                    var text = ui.Canvas.Texts.Single(t => t.Value == L.Get("ui.zoomPercent", rate * 100)
+                        && t.Y >= selector.Y && t.X >= selector.X && t.X < selector.Right);
+                    ui.Click(text.X + 2, text.Y + 2);
+                    Check(ui.View.PlaybackSpeed == rate, "Expanded playback speed button did not select its rate.");
+                }
                 Check(before.ContentEquals(ui.View.Document) && dirty == ui.View.IsDirty && ui.View.PlayheadMs == playhead,
                     "Layout changes modified beatmap content or playhead.");
 

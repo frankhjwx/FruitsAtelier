@@ -12,7 +12,7 @@ public sealed partial class EditorView
     internal Rect ObjectTimelineResizeBounds => TimingPageVisible ? default
         : new(objectTimeline.X - 42, objectTimeline.Bottom + 1, objectTimeline.Width + 42, 8);
     internal Rect OverviewTimelineResizeBounds => new(0, TransportTop - 4, width, 8);
-    internal Rect PlaybackSpeedSelectorBounds => new(VolumeButtonBounds.X - 86, height - 27, 78, 26);
+    internal Rect PlaybackSpeedSelectorBounds => new(VolumeButtonBounds.X - 8 - PlaybackRates.Length * 50 + 4, height - 27, PlaybackRates.Length * 50 - 4, 26);
     internal Rect TransportButtonBounds(int index) => new(208 + index * 49, overview.Y + (overview.Height - 32) / 2, 42, 32);
     private bool resizingObjectTimeline;
     private float timelineResizeY, timelineResizeHeight, timelineResizeOriginal;
@@ -72,15 +72,12 @@ public sealed partial class EditorView
         float labelWidth = c.MeasureText(label, 11);
         float labelX = bounds.X - labelWidth - 10;
         c.Text(label, labelX, height - 20, 11, Muted, labelWidth);
-        c.Fill(bounds, Surface, 4);
-        c.Stroke(bounds, Grid, radius: 4);
-        Button(c, bounds, L.Get("ui.zoomPercent", PlaybackSpeed * 100) + " ▾", () =>
+        for (int i = 0; i < PlaybackRates.Length; i++)
         {
-            menu = -1; languageMenuOpen = false; contextItems.Clear();
-            foreach (double speed in PlaybackRates)
-                contextItems.Add(new((PlaybackSpeed == speed ? "✓ " : "") + L.Get("ui.zoomPercent", speed * 100), () => SetPlaybackSpeed(speed)));
-            contextBounds = new(bounds.X, Math.Max(0, bounds.Y - ContextMenuHeight - 4), bounds.Width, ContextMenuHeight);
-        }, fontSize: 11, textPadding: 8, textRightPadding: 8);
+            double speed = PlaybackRates[i];
+            Button(c, new(bounds.X + i * 50, bounds.Y, 46, bounds.Height), L.Get("ui.zoomPercent", speed * 100),
+                () => SetPlaybackSpeed(speed), active: PlaybackSpeed == speed, fontSize: 11, textPadding: 6, textRightPadding: 4);
+        }
         return labelX;
     }
 }

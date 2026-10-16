@@ -59,9 +59,7 @@ internal sealed partial class EditorWindow
                         throw new InvalidOperationException("Native timeline resize or transport layout failed.");
                     Capture("resized");
                     var speed = view.PlaybackSpeedSelectorBounds;
-                    Click(speed.X + 8, speed.Y + 12); Paint(); Capture("speed");
-                    float menuY = Math.Max(0, speed.Y - 204 - 4);
-                    Click(speed.X + 20, menuY + 6 + 2 * 32 + 16); Paint();
+                    Click(speed.X + 2 * 50 + 20, speed.Y + 12); Paint(); Capture("speed");
                     if (view.PlaybackSpeed != .5) throw new InvalidOperationException("Native speed selector did not select 50%.");
                     upper = view.ObjectTimelineResizeBounds;
                     Drag(upper.X + 10, upper.Y + 4, -100); Paint();
