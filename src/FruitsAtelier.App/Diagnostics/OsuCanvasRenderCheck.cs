@@ -16,6 +16,11 @@ internal static class OsuCanvasRenderCheck
         string[] arguments = Environment.GetCommandLineArgs();
         var configuredSkin = arguments.Contains("--osu-configured-skin") ? LibrarySettings.Load() : null;
         string? explicitSkin = Argument("--osu-skin-folder"), explicitDefault = Argument("--osu-default-skin");
+        if (Argument("--osu-performance-map") is { } performanceMap)
+        {
+            DenseMapPerformanceCheck.Run(canvas, performanceMap, explicitSkin, explicitDefault);
+            return;
+        }
         if (Argument("--osu-map-folder") is { } mapFolder)
         {
             RenderMaps(mapFolder);
@@ -169,8 +174,16 @@ internal static class OsuCanvasRenderCheck
     private static void VerifyGradient(D2DCanvas canvas, string folder)
     {
         canvas.Resize(512, 256, 96);
+        var dense = new System.Numerics.Vector2[8193];
+        for (int i = 0; i < dense.Length; i++)
+        {
+            float distance = 312f * i / (dense.Length - 1);
+            dense[i] = distance <= 240 ? new(80 + distance, 128) : new(320, 128 + distance - 240);
+        }
+        foreach (bool raster in new[] { false, true })
+        {
         canvas.Begin(); canvas.Fill(new(0, 0, 512, 256), 0x202020);
-        canvas.SliderBody(new System.Numerics.Vector2[] { new(80, 128), new(320, 128), new(320, 200) }, 0, 0, 1,
+        canvas.SliderBody(raster ? dense : new System.Numerics.Vector2[] { new(80, 128), new(320, 128), new(320, 200) }, 0, 0, 1,
             128, 0xFFFFFF, 0xCC2020, 1);
         canvas.End(capture: () =>
         {
@@ -182,7 +195,7 @@ internal static class OsuCanvasRenderCheck
                 throw new InvalidOperationException("Native slider border must retain an independent white ring.");
             if (Math.Abs(center.R - bend.R) > 2 || Math.Abs(center.G - bend.G) > 2)
                 throw new InvalidOperationException("Native slider path joins changed the gradient's centre opacity.");
-            using var output = new BinaryWriter(File.Create(Path.Combine(folder, "gradient-pixels.bmp")));
+            using var output = new BinaryWriter(File.Create(Path.Combine(folder, raster ? "gradient-raster-pixels.bmp" : "gradient-pixels.bmp")));
             output.Write((ushort)0x4D42); output.Write(54 + frame.Pixels.Length); output.Write(0); output.Write(54);
             output.Write(40); output.Write(frame.Width); output.Write(-frame.Height); output.Write((ushort)1); output.Write((ushort)32);
             output.Write(0); output.Write(frame.Pixels.Length); output.Write(0); output.Write(0); output.Write(0); output.Write(0); output.Write(frame.Pixels);
@@ -192,5 +205,33 @@ internal static class OsuCanvasRenderCheck
                 return (frame.Pixels[offset + 2], frame.Pixels[offset + 1], frame.Pixels[offset]);
             }
         });
+        }
+        int builds = canvas.SliderRasterBuildCount;
+        canvas.Begin();
+        canvas.SliderBody(dense, 5, -3, 1.01f, 128, 0xFFFFFF, 0xCC2020, .4f);
+        canvas.End();
+        if (canvas.SliderRasterBuildCount != builds)
+            throw new InvalidOperationException("Slider pan, zoom, or fading rebuilt immutable raster geometry.");
+        for (uint color = 1; color <= 16; color++)
+        {
+            canvas.Begin(); canvas.SliderBody(dense, 0, 0, 1, 128, 0xFFFFFF, color * 1000, 1); canvas.End();
+            if (canvas.CachedSliderRasterBytes > 32L * 1024 * 1024)
+                throw new InvalidOperationException("Slider raster cache exceeded its native memory budget.");
+        }
+        var oversized = (System.Numerics.Vector2[])dense.Clone();
+        oversized[0] = new(-100000, 128);
+        canvas.Begin(); canvas.Fill(new(0, 0, 512, 256), 0x202020);
+        canvas.SliderBody(oversized, 0, 0, 1, 128, 0xFFFFFF, 0xCC2020, 1);
+        canvas.End(capture: () =>
+        {
+            var frame = canvas.CapturePixels();
+            int centre = (128 * frame.Width + 200) * 4;
+            int border = (183 * frame.Width + 200) * 4;
+            if (frame.Pixels[centre + 2] < 150 || frame.Pixels[border] < 230)
+                throw new InvalidOperationException("A cropped oversized slider lost its visible body or border.");
+        });
+        if (canvas.CachedSliderRasterBytes > 32L * 1024 * 1024)
+            throw new InvalidOperationException("An oversized slider exceeded the bounded raster cache.");
+        AppLog.Write("Native vector/raster slider gradient, transform reuse, oversized clipping, and bounded cache checks passed.");
     }
 }

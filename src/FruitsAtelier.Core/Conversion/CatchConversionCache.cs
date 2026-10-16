@@ -97,5 +97,5 @@ public sealed class CatchConversionCache
     // Parent order is applied by the converter before cache lookup; the incoming RNG state is checked separately.
     private static bool Equal(ImportedSlider a, ImportedSlider b) => a.Id == b.Id && a.OriginalLine == b.OriginalLine
         && a.X == b.X && a.Y == b.Y && a.TimeMs == b.TimeMs && a.PathType == b.PathType
-        && a.SpanCount == b.SpanCount && a.PixelLength == b.PixelLength && a.ControlPoints.SequenceEqual(b.ControlPoints);
+        && a.SpanCount == b.SpanCount && a.PixelLength == b.PixelLength && a.ControlPoints.ContentEquals(b.ControlPoints);
 }

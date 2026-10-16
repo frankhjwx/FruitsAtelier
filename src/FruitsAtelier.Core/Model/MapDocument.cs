@@ -133,6 +133,21 @@ public sealed class TimingPoint
 
 public sealed class ImportedSlider
 {
+    private sealed record GeometryMemo(WeakReference<ImportedSliderGeometry> Geometry, SliderControlPoints Controls,
+        long X, long Y, long Length, char PathType);
+    private GeometryMemo? geometryMemo;
+
+    internal ImportedSliderGeometry GetGeometry()
+    {
+        long x = BitConverter.DoubleToInt64Bits(X), y = BitConverter.DoubleToInt64Bits(Y), length = BitConverter.DoubleToInt64Bits(PixelLength);
+        if (geometryMemo is { } memo && memo.X == x && memo.Y == y && memo.Length == length
+            && memo.PathType == PathType && memo.Controls.ContentEquals(ControlPoints)
+            && memo.Geometry.TryGetTarget(out var cached)) return cached;
+        var geometry = new ImportedSliderGeometry(this);
+        geometryMemo = new(new(geometry), ControlPoints.Share(), x, y, length, PathType);
+        return geometry;
+    }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ImportedSlider? RandomizationSource { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -147,7 +162,7 @@ public sealed class ImportedSlider
     public double Y { get; set; }
     public double TimeMs { get; set; }
     public char PathType { get; set; } = 'B';
-    public List<SliderPathPoint> ControlPoints { get; } = new();
+    public SliderControlPoints ControlPoints { get; private set; } = new();
     public int SpanCount { get; set; } = 1;
     public double PixelLength { get; set; }
 
@@ -160,7 +175,8 @@ public sealed class ImportedSlider
             RandomizationSource = RandomizationSource?.DeepClone(), RandomizationTrack = RandomizationTrack?.DeepClone(),
             RandomizationBaseVelocity = RandomizationBaseVelocity
         };
-        copy.ControlPoints.AddRange(ControlPoints);
+        copy.ControlPoints = ControlPoints.Share();
+        copy.geometryMemo = geometryMemo;
         return copy;
     }
 
@@ -168,11 +184,12 @@ public sealed class ImportedSlider
         && OriginalLine == other.OriginalLine && X == other.X && Y == other.Y && TimeMs == other.TimeMs
         && PathType == other.PathType && SpanCount == other.SpanCount && PixelLength == other.PixelLength
         && RandomizationBaseVelocity == other.RandomizationBaseVelocity
-        && ControlPoints.SequenceEqual(other.ControlPoints)
+        && ControlPoints.ContentEquals(other.ControlPoints)
         && (ReferenceEquals(RandomizationTrack, other.RandomizationTrack)
             || RandomizationTrack is not null && other.RandomizationTrack is not null && RandomizationTrack.ContentEquals(other.RandomizationTrack))
         && (ReferenceEquals(RandomizationSource, other.RandomizationSource)
             || RandomizationSource is not null && other.RandomizationSource is not null && RandomizationSource.ContentEquals(other.RandomizationSource));
+
 }
 
 public sealed class BananaShower

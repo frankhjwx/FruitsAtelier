@@ -80,6 +80,19 @@ accepts a folder and verifies the complete multi-difficulty project.
 `--xnor-timing-check` and `--large-imported-path-check` exercise the synthetic
 legacy edge cases and compact project storage without external fixtures.
 
+`--osu-performance-map=/path/to/map.osu` with the native canvas check measures
+pointer movement, seeking, zoom and continuous playback in both canvases at
+168 DPI. It reports CPU and submission frame percentiles, process working-set
+peak, private memory, managed memory and cumulative allocations in
+`artifacts/tests/dense-map-performance.json`. Skin arguments apply to this check.
+Audio samples are not sent to a hardware device. Cumulative allocations are not
+simultaneous memory usage. The check waits for background star ratings before
+sampling interactive frames. `App.Tests --map-performance` additionally reports
+conversion and individual drawing phases with a recording canvas, excluding GPU
+work. `Core.Tests --packed-slider-points-check`, `--hitsound-snapshot-check` and
+`--imported-geometry-memo-check` verify lossless storage, snapshot isolation,
+sample resolution and derived-cache invalidation.
+
 `App.Tests --library-incremental-check` verifies scoped source scans, cached cards
 remaining openable during refresh, standard-source protection and background
 database locks. `App.Tests --benchmark-library-loading` creates 10,000 synthetic

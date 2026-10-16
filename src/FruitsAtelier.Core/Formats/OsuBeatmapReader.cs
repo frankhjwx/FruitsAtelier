@@ -115,6 +115,9 @@ public static class OsuBeatmapReader
 
     internal static bool IsDataLine(string line) => line.Length != 0 && !line.StartsWith("//", StringComparison.Ordinal);
     internal static double Number(string value, bool allowNaN = false)
+        => Number(value.AsSpan(), allowNaN);
+
+    internal static double Number(ReadOnlySpan<char> value, bool allowNaN = false)
     {
         double result = double.Parse(value.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture);
         if (!double.IsFinite(result) && !(allowNaN && double.IsNaN(result))) throw new InvalidDataException(L.Get("core.reader.finiteNumber"));
@@ -153,19 +156,29 @@ public static class OsuBeatmapReader
         else if (kind == 2)
         {
             if (p.Length < 8) throw new InvalidDataException(L.Get("core.reader.sliderFields"));
-            string[] curve = p[5].Split('|');
-            if (curve[0].Length != 1 || !"LBCP".Contains(curve[0][0])) throw new InvalidDataException(L.Get("core.reader.pathType"));
+            ReadOnlySpan<char> curve = p[5].AsSpan();
+            if (curve.Length == 0 || curve.Length > 1 && curve[1] != '|' || !"LBCP".Contains(curve[0])) throw new InvalidDataException(L.Get("core.reader.pathType"));
             var slider = new ImportedSlider
             {
-                X = x, Y = y, TimeMs = time, PathType = curve[0][0], SpanCount = Integer(p[6]), PixelLength = Number(p[7]),
+                X = x, Y = y, TimeMs = time, PathType = curve[0], SpanCount = Integer(p[6]), PixelLength = Number(p[7]),
                 SourceOrder = order, OriginalLine = line
             };
+            int controlCount = 1;
+            foreach (char character in curve) if (character == '|') controlCount++;
+            if (controlCount > ImportedSlider.MaximumControlPoints) throw new InvalidDataException(L.Get("core.reader.importedParameters"));
+            slider.ControlPoints.Capacity = controlCount;
             slider.ControlPoints.Add(new(x, y));
-            foreach (string control in curve.Skip(1))
+            int cursor = 2;
+            while (cursor <= curve.Length)
             {
-                string[] coords = control.Split(':');
-                if (coords.Length != 2) throw new InvalidDataException(L.Get("core.reader.coordinates"));
-                slider.ControlPoints.Add(new(Coordinate(coords[0]), Coordinate(coords[1])));
+                var control = curve[cursor..];
+                int separator = control.IndexOf('|');
+                if (separator >= 0) control = control[..separator];
+                int colon = control.IndexOf(':');
+                if (colon < 0 || control[(colon + 1)..].Contains(':')) throw new InvalidDataException(L.Get("core.reader.coordinates"));
+                slider.ControlPoints.Add(new(Coordinate(control[..colon]), Coordinate(control[(colon + 1)..])));
+                if (separator < 0) break;
+                cursor += separator + 1;
             }
             document.ImportedSliders.Add(slider);
         }
@@ -176,7 +189,7 @@ public static class OsuBeatmapReader
         }
         else throw new InvalidDataException(L.Get("core.reader.objectType", type));
 
-        int Coordinate(string value)
+        int Coordinate(ReadOnlySpan<char> value)
         {
             // v128 retains fractional coordinates; truncating them would change the imported path.
             float coordinate = (float)Number(value);

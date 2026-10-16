@@ -303,6 +303,7 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
         float diameter, uint border, uint accent, float opacity)
     {
         if (points.Count < 2 || diameter <= 0 || scale <= 0 || opacity <= 0) return;
+        if (TryDrawSliderRaster(points, x, y, scale, diameter, border, accent, opacity)) return;
         var geometry = PolylineGeometry(points);
         var key = (points, diameter);
         if (!sliderBorders.TryGetValue(key, out var cached))
@@ -608,6 +609,7 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
 
     public void Dispose()
     {
+        ClearSliderRasters();
         thumbnails.Dispose();
         foreach (var thumbnail in thumbnailImages.Values) thumbnail.Bitmap.Dispose();
         thumbnailImages.Clear();

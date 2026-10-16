@@ -14,6 +14,7 @@ internal static class OsuCanvasInputTests
         ReadOnlyBoundaries();
         DistanceSliderAndNavigation();
         OsuDistanceSpacingCacheTests.Run();
+        ImportedCurveVisibilityTests.Run();
     }
 
     private static void ToggleAndHeldKeys()

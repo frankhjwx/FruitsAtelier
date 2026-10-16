@@ -5,7 +5,7 @@ public sealed record Hitsound(CatchObjectKind Kind, string? FilePath, float Volu
 /// <summary>Resolves preserved osu! object/edge samples against timing and map resources.</summary>
 public sealed class HitsoundResolver
 {
-    private readonly Dictionary<Guid, string?> lines;
+    private readonly Dictionary<Guid, string[]?> sampleFields;
     private readonly Dictionary<(Guid, int), int> edges = new();
     private readonly Dictionary<string, string> files = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> skinFiles = new(StringComparer.OrdinalIgnoreCase);
@@ -17,10 +17,10 @@ public sealed class HitsoundResolver
     {
         overrides = document.HitsoundOverrides.ToDictionary(s => (s.SourceId, s.EventIndex), s => s);
         streams = document.Tracks.Where(t => t.StreamSnapDivisor is not null).ToDictionary(t => t.Id);
-        lines = document.Fruits.Select(f => (f.Id, f.OriginalLine))
+        sampleFields = document.Fruits.Select(f => (f.Id, f.OriginalLine))
             .Concat(document.Tracks.Select(f => (f.Id, f.OriginalLine)))
             .Concat(document.ImportedSliders.Select(f => (f.Id, f.OriginalLine)))
-            .ToDictionary(f => f.Id, f => f.OriginalLine);
+            .ToDictionary(f => f.Id, f => f.OriginalLine is { } line ? SampleFields(line) : null);
         foreach (var group in objects.Where(o => o.Kind == CatchObjectKind.Fruit && !o.IsStandalone).GroupBy(o => o.SourceId))
         {
             int index = 0;
@@ -80,11 +80,10 @@ public sealed class HitsoundResolver
         }
         int additions = 0, additionBank = 0;
         string? custom = null;
-        if (lines.TryGetValue(item.SourceId, out string? line) && line is not null)
+        if (sampleFields.TryGetValue(item.SourceId, out var p) && p is not null)
         {
             if (streams.TryGetValue(item.SourceId, out var stream))
-                line = SliderFruitStream.FruitLine(stream, item.EventIndex, "0", "0");
-            string[] p = line.Split(',');
+                p = SampleFields(SliderFruitStream.FruitLine(stream, item.EventIndex, "0", "0"));
             bool slider = (Number(p, 3) & 2) != 0;
             string[] sample = At(p, slider ? 10 : 5).Split(':', 5);
             int normal = Number(sample, 0); if (normal is >= 1 and <= 3) bank = normal;
@@ -113,12 +112,31 @@ public sealed class HitsoundResolver
         return new(bank, additionBank is >= 1 and <= 3 ? additionBank : bank, Math.Max(0,index), Math.Clamp(volume,0,100), additions & 14, custom ?? "");
     }
 
+    private static string[] SampleFields(string line)
+    {
+        // One resolver owns a content snapshot; nested events never need a copy of its slider geometry text.
+        var fields = new string[11];
+        Array.Fill(fields, "");
+        ReadOnlySpan<char> remaining = line;
+        bool slider = false;
+        for (int index = 0; index < fields.Length; index++)
+        {
+            int comma = remaining.IndexOf(',');
+            var field = comma < 0 ? remaining : remaining[..comma];
+            if (index is 3 or 4 or 8 or 9 or 10 || index == 5 && !slider) fields[index] = field.ToString();
+            if (index == 3) slider = (Number(fields, 3) & 2) != 0;
+            if (comma < 0) break;
+            remaining = remaining[(comma + 1)..];
+        }
+        return fields;
+    }
+
     internal InheritedSampleFields InheritedFields(ConvertedCatchObject item)
     {
         if (overrides.TryGetValue((item.SourceId, item.EventIndex), out var copied)) return copied.InheritedFields;
-        if (!lines.TryGetValue(item.SourceId, out var line) || line is null) return InheritedSampleFields.All;
-        if (streams.TryGetValue(item.SourceId, out var stream)) line = SliderFruitStream.FruitLine(stream, item.EventIndex, "0", "0");
-        var p = line.Split(','); bool slider = (Number(p, 3) & 2) != 0;
+        if (!sampleFields.TryGetValue(item.SourceId, out var p) || p is null) return InheritedSampleFields.All;
+        if (streams.TryGetValue(item.SourceId, out var stream)) p = SampleFields(SliderFruitStream.FruitLine(stream, item.EventIndex, "0", "0"));
+        bool slider = (Number(p, 3) & 2) != 0;
         var sample = At(p, slider ? 10 : 5).Split(':', 5);
         int normal = Number(sample, 0), addition = Number(sample, 1);
         if (slider && edges.TryGetValue((item.SourceId, item.EventIndex), out int edge))

@@ -1,0 +1,80 @@
+using System.Diagnostics;
+using FruitsAtelier.App.Editor;
+using FruitsAtelier.App.Rendering;
+using FruitsAtelier.Core;
+
+namespace FruitsAtelier.App.Diagnostics;
+
+internal static class DenseMapPerformanceCheck
+{
+    internal static void Run(D2DCanvas canvas, string path, string? skinFolder, string? defaultArchive)
+    {
+        long allocated = GC.GetTotalAllocatedBytes();
+        var clock = Stopwatch.StartNew();
+        var map = OsuBeatmapReader.ReadFile(path);
+        double readMs = clock.Elapsed.TotalMilliseconds;
+        var view = new EditorView(false);
+        if (skinFolder is not null || defaultArchive is not null)
+        {
+            if (skinFolder is not null) view.LibrarySettings.SelectedSkin = skinFolder;
+            if (defaultArchive is not null) view.LibrarySettings.DefaultSkin = defaultArchive;
+            view.InitializeSkin();
+        }
+        clock.Restart();
+        view.LoadDocument(map);
+        _ = view.Conversion;
+        double loadMs = clock.Elapsed.TotalMilliseconds;
+        var slider = map.ImportedSliders.MaxBy(s => s.ControlPoints.Count);
+        double time = slider?.TimeMs ?? map.Fruits.FirstOrDefault()?.TimeMs ?? 0;
+        view.UpdateTransport(time, map.DurationMs, true, false, false, null, map.AudioPath);
+        view.UpdateTransport(time, map.DurationMs, true, false, false, null, map.AudioPath);
+        canvas.Resize(2520, 1575, 168);
+        var readyClock = Stopwatch.StartNew();
+        Paint();
+        while (view.StarRatingsRefreshing && readyClock.Elapsed.TotalSeconds < 60)
+        {
+            Paint(); Thread.Sleep(1);
+        }
+        if (view.StarRatingsRefreshing) throw new InvalidOperationException("Dense map ratings did not finish within the check budget.");
+        double backgroundReadyMs = readyClock.Elapsed.TotalMilliseconds;
+        var phases = new List<object>();
+        foreach (bool standard in new[] { false, true })
+        {
+            if (view.IsOsuCanvas != standard) view.ToggleOsuCanvas();
+            view.UpdateTransport(time, map.DurationMs, true, false, false, null, map.AudioPath);
+            for (int i = 0; i < 8; i++) Paint();
+            foreach (string gesture in new[] { "pointer", "seek", "zoom", "playback" })
+            {
+                view.UpdateTransport(time, map.DurationMs, true, false, false, null, map.AudioPath);
+                var cpu = new List<double>(); var frames = new List<double>();
+                for (int i = 0; i < 120; i++)
+                {
+                    clock.Restart();
+                    var plot = view.CanvasPlotBounds;
+                    if (gesture == "pointer") view.PointerMove(plot.X + plot.Width * (.25f + i % 30 / 60f), plot.Y + plot.Height / 2, false, false);
+                    else if (gesture == "seek") view.UpdateTransport(time + i % 60, map.DurationMs, true, false, false, null, map.AudioPath);
+                    else if (gesture == "playback") view.UpdateTransport(time + i * 1000d / 60, map.DurationMs, true, true, false, null, map.AudioPath);
+                    else if (standard) view.ZoomOsuCanvasAt(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, i % 2 == 0 ? 1.01 : 1 / 1.01);
+                    else view.Wheel(plot.X + plot.Width / 2, plot.Y + plot.Height / 2, i % 2 == 0 ? 1 : -1, true, true);
+                    canvas.Begin(); view.Render(canvas, 1440, 900);
+                    double render = clock.Elapsed.TotalMilliseconds;
+                    canvas.End(lowLatency: true);
+                    if (i >= 20) { cpu.Add(render); frames.Add(clock.Elapsed.TotalMilliseconds); }
+                }
+                cpu.Sort(); frames.Sort();
+                phases.Add(new { mode = standard ? "osu" : "catch", gesture, cpuMedianMs = cpu[50], cpuP95Ms = cpu[95], frameMedianMs = frames[50], frameP95Ms = frames[95] });
+                AppLog.Write($"Dense map {(standard ? "osu" : "catch")} {gesture}: CPU p95={cpu[95]:F2} ms; native frame p95={frames[95]:F2} ms.");
+            }
+        }
+        if (view.IsDirty) throw new InvalidOperationException("Dense map interaction check changed content.");
+        using var process = Process.GetCurrentProcess(); process.Refresh();
+        var report = new { path, readMs, loadMs, backgroundReadyMs, dpi = 168, skin = view.SkinName, workingMiB = process.WorkingSet64 / 1048576d,
+            peakWorkingMiB = process.PeakWorkingSet64 / 1048576d, privateMiB = process.PrivateMemorySize64 / 1048576d,
+            managedMiB = GC.GetTotalMemory(false) / 1048576d, allocatedMiB = (GC.GetTotalAllocatedBytes() - allocated) / 1048576d, phases };
+        string output = Path.GetFullPath("artifacts/tests/dense-map-performance.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+        File.WriteAllText(output, System.Text.Json.JsonSerializer.Serialize(report, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+        AppLog.Write($"Dense map native performance check completed. Peak working set={report.peakWorkingMiB:F1} MiB. Report={output}");
+        void Paint() { canvas.Begin(); view.Render(canvas, 1440, 900); canvas.End(lowLatency: true); }
+    }
+}

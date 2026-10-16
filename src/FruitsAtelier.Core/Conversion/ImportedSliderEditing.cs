@@ -116,7 +116,7 @@ public static class ImportedSliderEditing
             cancellation.ThrowIfCancellationRequested();
             try
             {
-                var path = new ImportedSliderGeometry(slider);
+                var path = slider.GetGeometry();
                 var timing = TimingMap.At(document, slider.TimeMs);
                 double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier);
                 if (!double.IsFinite(velocity) || velocity <= 0 || path.Distance <= 0)

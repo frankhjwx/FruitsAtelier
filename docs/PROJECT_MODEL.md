@@ -12,6 +12,11 @@ preserves this coordinate. `OsuDistanceSpacing` is independent of Catch spacing,
 defaults to 1 and accepts 0.1–3.2. It participates in persistence and undo and is
 not exported as the Catch `Editor/DistanceSpacing` value.
 
+Imported slider control points retain the existing JSON array representation.
+In memory, integer coordinates use exact 32-bit pairs; other values preserve
+double precision. Independent mutable collections may share immutable backing
+storage until an edit detaches it. Derived geometry caches are not serialized.
+
 Legacy sliders can retain detached `RandomizationSource` geometry and a fitted
 `RandomizationTrack`. Settings changes derive their path from this baseline so
 repeated strength or seed changes do not compound previous effects. Materialized

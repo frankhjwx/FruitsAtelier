@@ -4,11 +4,11 @@ namespace FruitsAtelier.Core;
 public static class ImportedSliderConverter
 {
     public static IReadOnlyList<SliderPathPoint> Path(ImportedSlider slider)
-        => new ImportedSliderGeometry(slider).AbsolutePoints(slider);
+        => slider.GetGeometry().AbsolutePoints();
 
     public static double DurationMs(MapDocument document, ImportedSlider slider)
     {
-        var path = new ImportedSliderGeometry(slider);
+        var path = slider.GetGeometry();
         var timing = TimingMap.At(document, slider.TimeMs);
         return path.Distance / LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier) * slider.SpanCount;
     }
@@ -17,7 +17,7 @@ public static class ImportedSliderConverter
 
     public static double PositionAtTime(MapDocument document, ImportedSlider slider, double time)
     {
-        var path = new ImportedSliderGeometry(slider);
+        var path = slider.GetGeometry();
         var timing = TimingMap.At(document, slider.TimeMs);
         double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier);
         double spanDuration = path.Distance / velocity;
@@ -37,7 +37,7 @@ public static class ImportedSliderConverter
             || slider.PixelLength < 0 || slider.SpanCount is < 1 or > 9000
             || slider.ControlPoints.Any(p => !double.IsFinite(p.X) || !double.IsFinite(p.GeometryY)))
             throw new CatchConversionException(L.Get("core.importConverter.parameters"));
-        var path = new ImportedSliderGeometry(slider);
+        var path = slider.GetGeometry();
         var timing = lookup.At(slider.TimeMs);
         double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier);
         double duration = path.Distance / velocity;
@@ -60,7 +60,7 @@ public static class ImportedSliderConverter
             ImportedGeometry = path, ImportedOffsets = nested.Select(item => item.RawOffset).ToArray(),
             SourceId = slider.Id, IsImported = true, SpanCount = slider.SpanCount, StartTimeMs = slider.TimeMs,
             DurationMs = duration * slider.SpanCount, Velocity = velocity, SliderVelocityMultiplier = timing.SliderVelocityMultiplier,
-            TickDistance = tickDistance, Length = path.Distance, Path = path.AbsolutePoints(slider), TinyCompensationApplied = false
+            TickDistance = tickDistance, Length = path.Distance, Path = path.AbsolutePoints(), TinyCompensationApplied = false
         }, objects);
     }
 }
