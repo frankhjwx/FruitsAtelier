@@ -19,6 +19,16 @@ internal static class OsuCanvasRenderTests
     public static void Run()
     {
         StableGridAndControlMarkers();
+        QuantizedTrackGeometry();
+        var collapsed = new MapDocument { DurationMs = 10000, IsDemo = false };
+        var collapsedSlider = new ImportedSlider { X = 100, Y = 96, TimeMs = 1000, PixelLength = 140 };
+        collapsedSlider.ControlPoints.AddRange([new(100, 96), new(100, 96)]);
+        collapsed.ImportedSliders.Add(collapsedSlider);
+        var zeroUi = new Ui(); zeroUi.LoadDocument(collapsed); zeroUi.View.ToggleOsuCanvas();
+        zeroUi.View.UpdateTransport(1800, 10000, true, false, false, null, null); zeroUi.Paint();
+        var zeroHead = zeroUi.View.OsuCanvasScreen(100, 96);
+        if (zeroUi.View.OsuCanvasHit(zeroHead.X, zeroHead.Y) == collapsedSlider.Id)
+            throw new Exception("Zero-distance slider used its declared length as its visible duration.");
         var map = Fixture(); var ui = new Ui(); ui.LoadDocument(map);
         var original = ui.View.Document.DeepClone();
         ui.Key(9); ui.View.KeyUp(9);
@@ -104,6 +114,22 @@ internal static class OsuCanvasRenderTests
             var p = ui.View.OsuCanvasScreen(x, y);
             if (!ui.Canvas.Circles.Any(c => c.Filled && Math.Abs(c.X - p.X) < .05 && Math.Abs(c.Y - p.Y) < .05)) throw new Exception(message);
         }
+    }
+
+    private static void QuantizedTrackGeometry()
+    {
+        var map = new MapDocument { DurationMs = 10000, IsDemo = false };
+        var track = new CurveTrack { Kind = CurveKind.Linear };
+        track.Nodes.AddRange([new() { TimeMs = 1000, X = 100.1 }, new() { TimeMs = 2000, X = 300.9 }]);
+        map.Tracks.Add(track);
+        var ui = new Ui(); ui.LoadDocument(map); ui.View.ToggleOsuCanvas(); ui.Paint();
+        const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var output = (OsuWriteResult)typeof(FruitsAtelier.App.Editor.EditorView).GetField("playableExport", flags)!.GetValue(ui.View)!;
+        var expected = ImportedSliderConverter.Path(output.ReadBack.ImportedSliders.Single());
+        var items = (Array)typeof(FruitsAtelier.App.Editor.EditorView).GetField("osuCanvasObjects", flags)!.GetValue(ui.View)!;
+        var item = items.GetValue(0)!;
+        var actual = (SliderPathPoint[])item.GetType().GetField("Path")!.GetValue(item)!;
+        if (!actual.SequenceEqual(expected)) throw new Exception("Readonly FSlider canvas did not use exported integer geometry.");
     }
 
     private static void StableGridAndControlMarkers()

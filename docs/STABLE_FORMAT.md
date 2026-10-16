@@ -5,6 +5,7 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 ## Input and output
 
 - Accept v7 through v14 and stable-compatible lazer v128, in osu!standard Mode=0 or Catch Mode=2. Export retains v7 tick semantics for imported v7 maps; other maps export as v14 with Catch Mode=2. The reader rejects other rulesets, format versions and unsupported object types.
+- Imported spinners with an end before their start use zero playback duration while retaining the original object line.
 - Preserve General, Editor, Metadata, Difficulty, Events, TimingPoints, Colours, HitObjects, and audio/sample references.
 - Import/export `[Editor] DistanceSpacing` as the per-difficulty spacing multiplier.
 - Synchronization accepts osu!'s `Editor/TimelineZoom` without a conflict; it is
@@ -40,6 +41,10 @@ The project implements its own `.osu` reader/writer for the beatmap format used 
 - Save authored anchors, Bezier handles, and editing constraints in the editor project, rather than custom `.osu` object fields.
 
 ## Object and timing rules
+
+Finite red-line beat lengths retain their source values, including zero and negative values. Playback, beat grids and timing edits use beat lengths clamped to 6–60,000 ms, following the pinned legacy decoder and `TimingControlPoint` bounds. Negative red values also supply inherited SV independently (for example, `-50` gives SV 2 with a 6 ms beat). Project saves and unedited exports preserve the raw timing line; nonfinite red values are rejected.
+
+Imported sliders retain their full actual path length and duration. Legacy tick generation caps its distance at 100,000 px and computes tick progress against that cap, while repeat and tail times retain the full span duration. Authored paths retain their 100,000 px limit. A collapsed imported path has zero duration and coincident head, repeat and tail fruits, even when its retained expected length is positive; duplicate final path points prevent extension as in the pinned upstream implementation.
 
 Lazer v128 imports use the same supported object and timing fields. They require integer-valued coordinates after float parsing and ordinary L/B/C/P slider paths. Fractional coordinates, explicit mixed path segments and B-spline degree syntax are rejected; these need a stable-compatible export before import. This prevents interpreting lazer's fractional coordinates with stable's integer truncation. Project saves preserve accepted raw fields, and export still writes v14. See the pinned [ConvertHitObjectParser](https://github.com/ppy/osu/blob/48c4800e3ae4ee752452cdff83bd3787ccf3105f/osu.Game/Rulesets/Objects/Legacy/ConvertHitObjectParser.cs) for the coordinate and path syntax boundaries.
 

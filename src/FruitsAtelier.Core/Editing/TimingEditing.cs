@@ -33,7 +33,7 @@ public static class TimingEditing
         var before = map.DeepClone();
         map.TimingPoints.Clear(); map.TimingPoints.AddRange(points.Select(Copy));
         var first = map.TimingPoints.Where(p => p.Uninherited).OrderBy(p => p.TimeMs).FirstOrDefault();
-        if (first is not null) { map.BeatLengthMs = first.BeatLengthMs; map.TimingOffsetMs = first.TimeMs; }
+        if (first is not null) { map.BeatLengthMs = TimingMap.EffectiveBeatLength(first.BeatLengthMs); map.TimingOffsetMs = first.TimeMs; }
         var oldReds = before.TimingPoints.Where(p => p.Uninherited).OrderBy(p => p.TimeMs).ThenBy(p => p.SourceOrder).GroupBy(p => p.TimeMs).Select(g => g.First()).ToArray();
         (double Time, double Scale) Transform(double time)
         {
@@ -42,7 +42,7 @@ public static class TimingEditing
             var change = changes.LastOrDefault(c => c.Before.Uninherited && c.After.Uninherited
                 && c.Before.TimeMs == red.TimeMs && c.Before.SourceOrder == red.SourceOrder);
             if (change.Before is null) return (time, 1);
-            double scale = change.After.BeatLengthMs / change.Before.BeatLengthMs;
+            double scale = TimingMap.EffectiveBeatLength(change.After.BeatLengthMs) / TimingMap.EffectiveBeatLength(change.Before.BeatLengthMs);
             return (change.After.TimeMs + (time - change.Before.TimeMs) * scale, scale);
         }
         if (options.Scale) TransformObjects(map, Transform);

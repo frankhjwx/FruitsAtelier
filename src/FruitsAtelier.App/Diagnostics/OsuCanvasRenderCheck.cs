@@ -16,6 +16,11 @@ internal static class OsuCanvasRenderCheck
         string[] arguments = Environment.GetCommandLineArgs();
         var configuredSkin = arguments.Contains("--osu-configured-skin") ? LibrarySettings.Load() : null;
         string? explicitSkin = Argument("--osu-skin-folder"), explicitDefault = Argument("--osu-default-skin");
+        if (Argument("--osu-map-folder") is { } mapFolder)
+        {
+            RenderMaps(mapFolder);
+            return;
+        }
         string? expectedSkinName = null;
         if (explicitSkin is not null)
         {
@@ -120,6 +125,44 @@ internal static class OsuCanvasRenderCheck
             if (index + 1 >= arguments.Length || arguments[index + 1].StartsWith("--", StringComparison.Ordinal))
                 throw new ArgumentException("Missing native-check argument: " + name);
             return arguments[index + 1];
+        }
+
+        void RenderMaps(string source)
+        {
+            canvas.Resize(1440, 900, 96);
+            int count = 0;
+            foreach (string file in Directory.EnumerateFiles(source, "*.osu").Order())
+            {
+                var map = OsuBeatmapReader.ReadFile(file);
+                var editor = new EditorView(false);
+                editor.LoadDocument(map);
+                if (!editor.Conversion.Success) throw new InvalidOperationException(string.Join("; ", editor.Conversion.Diagnostics));
+                var largest = map.ImportedSliders.MaxBy(s => s.ControlPoints.Count);
+                double time = largest?.TimeMs ?? map.Fruits.FirstOrDefault()?.TimeMs ?? 0;
+                editor.UpdateTransport(time, map.DurationMs, true, false, false, null, map.AudioPath);
+                editor.UpdateTransport(time, map.DurationMs, true, false, false, null, map.AudioPath);
+                if (Math.Abs(editor.PlayheadMs - time) > .01) throw new InvalidOperationException("Imported map check did not seek to the dense slider.");
+                Capture("catch");
+                editor.ToggleOsuCanvas();
+                Capture("osu");
+                if (editor.IsDirty) throw new InvalidOperationException("Rendering an imported map changed its content.");
+                count++;
+                AppLog.Write($"Imported map native rendering passed: {Path.GetFileName(file)}");
+                void Capture(string mode)
+                {
+                    canvas.Begin(); editor.Render(canvas, 1440, 900);
+                    canvas.End(capture: () =>
+                    {
+                        var frame = canvas.CapturePixels();
+                        using var output = new BinaryWriter(File.Create(Path.Combine(folder, $"import-{count}-{mode}.bmp")));
+                        output.Write((ushort)0x4D42); output.Write(54 + frame.Pixels.Length); output.Write(0); output.Write(54);
+                        output.Write(40); output.Write(frame.Width); output.Write(-frame.Height); output.Write((ushort)1); output.Write((ushort)32);
+                        output.Write(0); output.Write(frame.Pixels.Length); output.Write(0); output.Write(0); output.Write(0); output.Write(0); output.Write(frame.Pixels);
+                    });
+                }
+            }
+            if (count == 0) throw new InvalidOperationException("Native map check found no beatmaps.");
+            AppLog.Write($"Imported map native rendering checks passed: {count} maps, both canvases.");
         }
     }
 

@@ -160,7 +160,7 @@ public static class OsuBeatmapWriter
                 string[] values = shower.OriginalLine.Split(',');
                 if (values.Length < 6) throw new InvalidDataException(L.Get("core.writer.bananaText"));
                 if (OsuBeatmapReader.Number(values[2]) != shower.TimeMs) values[2] = Time(shower.TimeMs);
-                if (OsuBeatmapReader.Number(values[5]) != shower.EndTimeMs) values[5] = Time(shower.EndTimeMs);
+                if (Math.Max(shower.TimeMs, OsuBeatmapReader.Number(values[5])) != shower.EndTimeMs) values[5] = Time(shower.EndTimeMs);
                 lines.Add((shower.TimeMs, shower.SourceOrder, shower.Id, string.Join(',', values)));
             }
             else lines.Add((shower.TimeMs, shower.SourceOrder, shower.Id, $"256,192,{Time(shower.TimeMs)},8,0,{Time(shower.EndTimeMs)},0:0:0:0:"));
@@ -529,7 +529,8 @@ public static class OsuBeatmapWriter
         return (Effective(shower.TimeMs, 2), Effective(shower.EndTimeMs, 5));
 
         double Effective(double time, int field) => values is not null && values.Length > field
-            && OsuBeatmapReader.Number(values[field]) == time ? time : QuantizeTime(time);
+            && (field == 5 ? Math.Max(OsuBeatmapReader.Number(values[2]), OsuBeatmapReader.Number(values[5]))
+                : OsuBeatmapReader.Number(values[field])) == time ? time : QuantizeTime(time);
     }
 
     public static double QuantizeTime(double value) => Math.Truncate(value);

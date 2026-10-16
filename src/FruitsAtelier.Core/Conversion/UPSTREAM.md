@@ -8,7 +8,7 @@ Adapted portions retain the upstream MIT licence in `LICENCE.osu.txt`.
 
 | Source file | Applied behaviour |
 | --- | --- |
-| `osu.Game/Rulesets/Objects/SliderEventGenerator.cs` | Head/tick/legacy-last-tick/tail ordering, 10 ms tick exclusion and 36 ms legacy tail leniency |
+| `osu.Game/Rulesets/Objects/SliderEventGenerator.cs` | Head/tick/legacy-last-tick/tail ordering, 100,000 px tick-distance cap with full span duration, coincident zero-duration fruits, 10 ms tick exclusion and 36 ms legacy tail leniency |
 | `osu.Game.Rulesets.Catch/Objects/JuiceStream.cs` | Scoring distance, independent SliderTickRate, integer event-time differences and recursive halving for TinyDroplet spacing |
 | `osu.Game/Rulesets/Objects/Legacy/LegacyRulesetExtensions.cs` | Float quantisation of inherited beat length and SV limits |
 | `osu.Game/Utils/LegacyRandom.cs` | Seeded xorshift sequence and truncation of ranged draws |
@@ -19,6 +19,7 @@ Adapted portions retain the upstream MIT licence in `LICENCE.osu.txt`.
 | `osu.Game/Rulesets/Objects/SliderPath.cs` | Arc-length lookup of the resulting linear path |
 | `osu.Game/Rulesets/Objects/Legacy/ConvertHitObjectParser.cs` | v7–v14 duplicate-point segmentation, collinear perfect curves, float-to-integer coordinates |
 | `osu.Game/Beatmaps/Formats/LegacyBeatmapDecoder.cs` | Red/green timing precedence, inherited SV and NaN tick metadata |
+| `osu.Game/Beatmaps/ControlPoints/TimingControlPoint.cs` | Effective red beat-length bounds of 6–60,000 ms; raw imported values remain retained separately |
 | `osu.Game.Rulesets.Catch/Objects/BananaShower.cs` | Integer shower endpoints, float halving/accumulation and inclusive banana creation |
 | `osu.Game.Rulesets.Catch/Beatmaps/CatchBeatmapConverter.cs` | Imported path/repeat conversion and Catch-specific tick rules |
 
@@ -84,8 +85,8 @@ object cannot be generated, the result is
 marked incomplete and RNG only describes the successfully generated subset.
 
 Limits are explicit: generated SV at most 10, generated path length at most 100000 units, at most 50000
-nested objects, 30000 authoring samples, 65536 generated path points, 65536
-imported control points, 9000 spans and 200000 imported path samples. Imported
+nested objects, 30000 authoring samples, 65536 generated path points, 262144
+imported control points, 9000 spans and 1000000 imported path samples. Imported
 editing is bounded to 30000 anchors and 20 million simplification checks. Grid
 enumeration is bounded to 10000 lines. Inputs
 outside these bounds fail with diagnostics rather than silently trimming data.

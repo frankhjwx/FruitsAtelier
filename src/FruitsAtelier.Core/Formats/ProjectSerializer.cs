@@ -7,7 +7,7 @@ namespace FruitsAtelier.Core;
 
 public static partial class ProjectSerializer
 {
-    public const int MaximumFileBytes = 128 * 1024 * 1024;
+    public const int MaximumFileBytes = 256 * 1024 * 1024;
 
     private sealed class ProjectFile
     {
@@ -41,6 +41,12 @@ public static partial class ProjectSerializer
         } } }
     };
 
+    private static readonly JsonSerializerOptions compactOptions = new(options) { WriteIndented = false };
+
+    private static JsonSerializerOptions WriteOptions(IEnumerable<MapDocument> documents)
+        => documents.Sum(d => d.ImportedSliders.Sum(s => (long)s.ControlPoints.Count
+            + (s.RandomizationSource?.ControlPoints.Count ?? 0))) > 65536 ? compactOptions : options;
+
     public static string Serialize(MapDocument document, string? projectPath = null)
     {
         OsuBeatmapReader.Validate(document);
@@ -53,7 +59,7 @@ public static partial class ProjectSerializer
             if (copy.AudioPath is not null && Path.IsPathFullyQualified(copy.AudioPath)) copy.AudioPath = Path.GetRelativePath(directory, copy.AudioPath);
             if (copy.SourcePath is not null && Path.IsPathFullyQualified(copy.SourcePath)) copy.SourcePath = Path.GetRelativePath(directory, copy.SourcePath);
         }
-        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = HasOsuCanvasData(copy) ? 27 : HasDropletModes(copy) ? 25 : HasBananaPatterns(copy) ? 21 : copy.LegacySliderTicks ? 19 : HasStreamCombos(copy) ? 17 : copy.HitsoundOverrides.Count > 0 ? 15 : HasDerandomization(copy) ? 11 : HasRandomization(copy) ? 9 : HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, options);
+        string text = JsonSerializer.Serialize(new ProjectFile { SchemaVersion = HasOsuCanvasData(copy) ? 27 : HasDropletModes(copy) ? 25 : HasBananaPatterns(copy) ? 21 : copy.LegacySliderTicks ? 19 : HasStreamCombos(copy) ? 17 : copy.HitsoundOverrides.Count > 0 ? 15 : HasDerandomization(copy) ? 11 : HasRandomization(copy) ? 9 : HasStacks(copy) ? 7 : HasStreams(copy) ? 5 : HasControlCurves(copy) ? 3 : 1, Document = copy }, WriteOptions([copy]));
         if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumFileBytes)
             throw new InvalidDataException(L.Get("core.project.writeLimit"));
         return text;

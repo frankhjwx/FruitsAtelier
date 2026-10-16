@@ -308,10 +308,10 @@ Version browsing decompresses only the selected project file in memory.
 The version 1 envelope contains eight bytes `46 41 43 42 01 00 00 00` (`FACB`,
 version 1), a little-endian signed 32-bit uncompressed byte count, a 32-byte SHA-256
 of the original bytes, and a Brotli payload written with `CompressionLevel.Optimal`.
-Readers bound decompressed authoring files to the 128 MiB project limit and verify
-the length and checksum. Export receipt containers allow 512 MiB for their embedded
+Readers bound decompressed authoring files to the 256 MiB project limit and verify
+the length and checksum. Export receipt containers allow 1024 MiB for their embedded
 project and synchronization baseline strings; the project reader still enforces its
-128 MiB limit. The payload preserves the original serialized bytes, including unknown
+256 MiB limit. The payload preserves the original serialized bytes, including unknown
 source text and synchronization context. This uses .NET's built-in compression on
 both platforms. Backup writes favor lower compression cost over the smallest
 possible payload. Workspace saves, automatic synchronization and storage maintenance

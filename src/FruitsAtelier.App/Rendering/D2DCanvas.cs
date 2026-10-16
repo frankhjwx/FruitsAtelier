@@ -43,7 +43,7 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
     private ID2D1StrokeStyle? roundPathStroke;
     private readonly Dictionary<IReadOnlyList<Vector2>, ID2D1PathGeometry> pathGeometries = new(ReferenceEqualityComparer.Instance);
     private readonly Queue<IReadOnlyList<Vector2>> pathGeometryOrder = new();
-    private readonly Dictionary<(IReadOnlyList<Vector2> Points, float Diameter), (ID2D1PathGeometry Ring, DRect Bounds)> sliderBorders = [];
+    private readonly Dictionary<(IReadOnlyList<Vector2> Points, float Diameter), (ID2D1CommandList Mask, DRect Bounds)> sliderBorders = [];
     private readonly Queue<(IReadOnlyList<Vector2> Points, float Diameter)> sliderBorderOrder = new();
     private readonly Dictionary<(float, bool), IDWriteTextFormat> formats = [];
     private readonly Queue<(float, bool)> formatOrder = new();
@@ -309,24 +309,37 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
         {
             if (sliderBorders.Count >= 128)
             {
-                var oldest = sliderBorderOrder.Dequeue(); sliderBorders[oldest].Ring.Dispose(); sliderBorders.Remove(oldest);
+                var oldest = sliderBorderOrder.Dequeue(); sliderBorders[oldest].Mask.Dispose(); sliderBorders.Remove(oldest);
             }
-            using var outer = factory!.CreatePathGeometry();
-            using (var sink = outer.Open()) { geometry.Widen(diameter * .921875f, roundPathStroke!, .1f, sink); sink.Close(); }
-            using var inner = factory.CreatePathGeometry();
-            using (var sink = inner.Open()) { geometry.Widen(diameter * .8125f, roundPathStroke!, .1f, sink); sink.Close(); }
-            var ring = factory.CreatePathGeometry();
-            using (var sink = ring.Open()) { outer.CombineWithGeometry(inner, CombineMode.Exclude, sink); sink.Close(); }
+            using var recording = drawingDevice!.CreateDeviceContext(DeviceContextOptions.None);
+            var mask = recording.CreateCommandList();
+            recording.Target = mask;
+            using (var brush = recording.CreateSolidColorBrush(new Color4(1, 1, 1, 1)))
+            {
+                recording.BeginDraw();
+                recording.DrawGeometry(geometry, brush, diameter * .8125f, roundPathStroke);
+                recording.EndDraw().CheckError();
+            }
+            recording.Target = null;
+            mask.Close().CheckError();
             float minX = points[0].X, maxX = minX, minY = points[0].Y, maxY = minY;
             for (int i = 1; i < points.Count; i++) { minX = Math.Min(minX, points[i].X); maxX = Math.Max(maxX, points[i].X); minY = Math.Min(minY, points[i].Y); maxY = Math.Max(maxY, points[i].Y); }
-            cached = (ring, new DRect(minX - diameter, minY - diameter, maxX - minX + diameter * 2, maxY - minY + diameter * 2));
+            cached = (mask, new DRect(minX - diameter, minY - diameter, maxX - minX + diameter * 2, maxY - minY + diameter * 2));
             sliderBorders.Add(key, cached); sliderBorderOrder.Enqueue(key);
         }
         var previous = context!.Transform;
         try
         {
             context.Transform = Matrix3x2.CreateScale(scale) * Matrix3x2.CreateTranslation(x, y) * previous;
-            context.FillGeometry(cached.Ring, Brush(border, opacity));
+            // Raster subtraction keeps self-intersecting paths bounded by the visible layer.
+            context.PushLayer(new LayerParameters1 { ContentBounds = cached.Bounds, MaskTransform = Matrix3x2.Identity,
+                MaskAntialiasMode = AntialiasMode.PerPrimitive, Opacity = opacity, LayerOptions = LayerOptions1.None }, null!);
+            try
+            {
+                context.DrawGeometry(geometry, Brush(border), diameter * .921875f, roundPathStroke);
+                context.DrawImage(cached.Mask, null, null, Vortice.Direct2D1.InterpolationMode.Linear, CompositeMode.DestinationOut);
+            }
+            finally { context.PopLayer(); }
             context.PushLayer(new LayerParameters1 { ContentBounds = cached.Bounds, MaskTransform = Matrix3x2.Identity,
                 MaskAntialiasMode = AntialiasMode.PerPrimitive, Opacity = opacity * .7f, LayerOptions = LayerOptions1.None }, null!);
             try
@@ -606,7 +619,7 @@ public sealed partial class D2DCanvas : ICanvas, IDisposable
         foreach (var geometry in pathGeometries.Values) geometry.Dispose();
         pathGeometries.Clear(); pathGeometryOrder.Clear();
         roundPathStroke?.Dispose(); roundPathStroke = null;
-        foreach (var border in sliderBorders.Values) border.Ring.Dispose();
+        foreach (var border in sliderBorders.Values) border.Mask.Dispose();
         sliderBorders.Clear(); sliderBorderOrder.Clear();
         if (context is not null) context.Target = null;
         target?.Dispose(); target = null;

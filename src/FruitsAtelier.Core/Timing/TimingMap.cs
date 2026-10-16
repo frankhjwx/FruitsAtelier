@@ -5,6 +5,9 @@ public readonly record struct BeatGridLine(double TimeMs, bool IsBeat, bool IsTi
 
 public static class TimingMap
 {
+    // Legacy decoding clamps playback timing while retained source values remain exportable.
+    public static double EffectiveBeatLength(double beatLength) => Math.Clamp(beatLength, 6, 60000);
+
     public static TimingState At(MapDocument document, double time) => new Lookup(document).At(time);
 
     // A lookup owns timing values, so callers can reuse it until the document changes.
@@ -40,7 +43,7 @@ public static class TimingMap
                 }
             }
             var firstRed = groups.Select(g => g.Red).FirstOrDefault(p => p is not null);
-            double beatLength = firstRed?.BeatLengthMs ?? document.BeatLengthMs;
+            double beatLength = EffectiveBeatLength(firstRed?.BeatLengthMs ?? document.BeatLengthMs);
             double offset = firstRed?.TimeMs ?? document.TimingOffsetMs;
             int meter = firstRed?.Meter ?? 4;
             // Only retained Legacy heads require exact compensation; FSliders solve their own legal SV.
@@ -52,7 +55,7 @@ public static class TimingMap
             for (int i = 0; i < groups.Length; i++)
             {
                 var group = groups[i];
-                if (group.Red is TimingPoint red) { beatLength = red.BeatLengthMs; offset = red.TimeMs; meter = red.Meter; }
+                if (group.Red is TimingPoint red) { beatLength = EffectiveBeatLength(red.BeatLengthMs); offset = red.TimeMs; meter = red.Meter; }
                 // At equal time a green point overrides red-point SV, even when its source line precedes the red.
                 var difficulty = group.Green ?? group.Red;
                 if (difficulty is not null)

@@ -106,7 +106,7 @@ public sealed partial class EditorView
         {
             if (point.TimeMs < start || point.TimeMs > start + waveformSpanMs) continue;
             float x = r.X + (float)((point.TimeMs - start) / msPerPixel);
-            string label = TimingN(60000 / point.BeatLengthMs) + " BPM";
+            string label = TimingN(60000 / TimingMap.EffectiveBeatLength(point.BeatLengthMs)) + " BPM";
             float labelWidth = Math.Min(r.Width - 1, c.MeasureText(label, 12));
             float labelX = Math.Clamp(x + 5, r.X, r.Right - labelWidth - 1);
             int row = 0;

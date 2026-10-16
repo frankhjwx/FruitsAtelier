@@ -71,6 +71,15 @@ without changing saved preferences.
 Use `--osu-skin-folder=/path/to/skin` and `--osu-default-skin=/path/to/default.osk`
 to keep those fixtures independent of concurrent preference changes.
 
+Add `--osu-map-folder=/path/to/beatmap-set` to load each `.osu` file and capture
+both canvases at the slider with the most control points. The check verifies a
+complete Catch conversion, the requested seek position and unchanged content.
+`Formats.Tests --import-roundtrip /path/to/map.osu` verifies an external map's
+project and Catch export without writing its source. `--import-set-roundtrip`
+accepts a folder and verifies the complete multi-difficulty project.
+`--xnor-timing-check` and `--large-imported-path-check` exercise the synthetic
+legacy edge cases and compact project storage without external fixtures.
+
 `App.Tests --library-incremental-check` verifies scoped source scans, cached cards
 remaining openable during refresh, standard-source protection and background
 database locks. `App.Tests --benchmark-library-loading` creates 10,000 synthetic

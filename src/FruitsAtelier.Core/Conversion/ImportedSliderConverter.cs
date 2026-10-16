@@ -42,9 +42,9 @@ public static class ImportedSliderConverter
         double velocity = LegacyCatchRules.Velocity(timing.BeatLengthMs, document.EffectiveSliderMultiplier, timing.SliderVelocityMultiplier);
         double duration = path.Distance / velocity;
         double tickDistance = LegacyCatchRules.TickDistance(document, velocity, timing.BeatLengthMs, timing.SliderVelocityMultiplier);
-        if (!double.IsFinite(duration) || duration <= 0 || slider.TimeMs + duration * slider.SpanCount > int.MaxValue)
+        if (!double.IsFinite(duration) || duration < 0 || slider.TimeMs + duration * slider.SpanCount > int.MaxValue)
             throw new CatchConversionException(L.Get("core.importConverter.duration"));
-        var nested = LegacyCatchRules.CreateNested(slider.TimeMs, duration, velocity, tickDistance, path.Distance, slider.SpanCount);
+        var nested = LegacyCatchRules.CreateNested(slider.TimeMs, duration, velocity, tickDistance, path.Distance, slider.SpanCount, legacyImported: true);
         LegacyCatchRules.ApplyRandomSequence(nested, ref rng);
         var objects = new List<ConvertedCatchObject>(nested.Count);
         for (int i = 0; i < nested.Count; i++)

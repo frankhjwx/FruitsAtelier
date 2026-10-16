@@ -64,9 +64,9 @@ internal static class LegacyCatchRules
     }
 
     public static List<NestedCatchEvent> CreateNested(double start, double duration, double velocity, double tickDistance, double length, int spanCount = 1,
-        bool quantizeStart = false)
+        bool quantizeStart = false, bool legacyImported = false)
     {
-        if (length > MaximumPathLength)
+        if (!legacyImported && length > MaximumPathLength)
             throw new CatchConversionException(L.Get("core.legacyRules.lengthLimit"));
         var nested = new List<NestedCatchEvent>();
         SliderEvent? previous = null;
@@ -117,6 +117,8 @@ internal static class LegacyCatchRules
 
     private static IEnumerable<SliderEvent> Events(double start, double duration, double velocity, double tickDistance, double length, int spanCount)
     {
+        // Legacy tick progress uses the capped distance while span timing retains the full path duration.
+        length = Math.Min(MaximumPathLength, length);
         tickDistance = Math.Clamp(tickDistance, 0, length);
         yield return new(SliderEventKind.Head, start, 0);
         var tickProgress = new List<double>();
@@ -144,7 +146,7 @@ internal static class LegacyCatchRules
         double finalStart = start + (spanCount - 1) * duration;
         double totalDuration = duration * spanCount;
         double lastTickTime = Math.Max(start + totalDuration / 2, finalStart + duration - 36);
-        double lastProgress = (lastTickTime - finalStart) / duration;
+        double lastProgress = duration == 0 ? 0 : (lastTickTime - finalStart) / duration;
         yield return new(SliderEventKind.LegacyLastTick, lastTickTime, spanCount % 2 == 0 ? 1 - lastProgress : lastProgress);
         yield return new(SliderEventKind.Tail, start + totalDuration, spanCount % 2);
     }

@@ -139,7 +139,7 @@ public sealed class ImportedSlider
     public CurveTrack? RandomizationTrack { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public double? RandomizationBaseVelocity { get; set; }
-    public const int MaximumControlPoints = 65536;
+    public const int MaximumControlPoints = 262144;
     public Guid Id { get; set; } = Guid.NewGuid();
     public int SourceOrder { get; set; } = int.MaxValue;
     public string? OriginalLine { get; set; }

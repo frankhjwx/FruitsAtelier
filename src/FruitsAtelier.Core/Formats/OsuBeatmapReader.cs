@@ -82,7 +82,7 @@ public static class OsuBeatmapReader
             && double.IsFinite(distanceSpacing)) document.DistanceSpacing = Math.Clamp(distanceSpacing, .1, 6);
         var firstTiming = document.TimingPoints.Where(t => t.Uninherited).OrderBy(t => t.TimeMs).FirstOrDefault()
             ?? throw new InvalidDataException(L.Get("core.reader.timingRequired"));
-        document.BeatLengthMs = firstTiming.BeatLengthMs;
+        document.BeatLengthMs = TimingMap.EffectiveBeatLength(firstTiming.BeatLengthMs);
         document.TimingOffsetMs = firstTiming.TimeMs;
         string? audio = Setting(document, "General", "AudioFilename");
         if (!string.IsNullOrWhiteSpace(audio))
@@ -172,7 +172,7 @@ public static class OsuBeatmapReader
         else if (kind == 8)
         {
             if (p.Length < 6) throw new InvalidDataException(L.Get("core.reader.spinnerFields"));
-            document.BananaShowers.Add(new BananaShower { TimeMs = time, EndTimeMs = Number(p[5]), SourceOrder = order, OriginalLine = line });
+            document.BananaShowers.Add(new BananaShower { TimeMs = time, EndTimeMs = Math.Max(time, Number(p[5])), SourceOrder = order, OriginalLine = line });
         }
         else throw new InvalidDataException(L.Get("core.reader.objectType", type));
 
@@ -275,7 +275,7 @@ public static class OsuBeatmapReader
     private static void ValidateTiming(TimingPoint point)
     {
         if (!double.IsFinite(point.TimeMs) || point.TimeMs < -int.MaxValue || point.TimeMs > int.MaxValue
-            || (point.Uninherited ? !double.IsFinite(point.BeatLengthMs) || point.BeatLengthMs <= 0
+            || (point.Uninherited ? !double.IsFinite(point.BeatLengthMs)
                 : double.IsInfinity(point.BeatLengthMs)) || point.Meter <= 0 || point.Volume is < 0 or > 100)
             throw new InvalidDataException(L.Get("core.reader.timingValues"));
     }
